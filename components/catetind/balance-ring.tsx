@@ -1,0 +1,163 @@
+import { BarChart3, DollarSign, LineChart, Users } from 'lucide-react'
+
+const SIZE = 240
+const STROKE = 12
+const R = (SIZE - STROKE) / 2 - 6
+const C = 2 * Math.PI * R
+const PROGRESS = 0.72
+
+const GROWTH_PATH =
+  'M2 36 C 12 30, 20 35, 32 27 S 52 31, 64 21 S 88 25, 102 15 S 126 13, 138 5'
+
+export function BalanceRing() {
+  return (
+    <div className="relative mx-auto w-full max-w-[280px]">
+      <div className="relative aspect-square">
+        <svg
+          viewBox={`0 0 ${SIZE} ${SIZE}`}
+          className="h-full w-full -rotate-90"
+          aria-hidden
+        >
+          <defs>
+            <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="#103a2a" />
+              <stop offset="55%" stopColor="#3f8a5c" />
+              <stop offset="100%" stopColor="#b7e04b" />
+            </linearGradient>
+          </defs>
+          <circle
+            cx={SIZE / 2}
+            cy={SIZE / 2}
+            r={R}
+            fill="none"
+            stroke="#e6efdd"
+            strokeWidth={STROKE}
+          />
+          <circle
+            cx={SIZE / 2}
+            cy={SIZE / 2}
+            r={R}
+            fill="none"
+            stroke="url(#ringGrad)"
+            strokeWidth={STROKE}
+            strokeLinecap="round"
+            strokeDasharray={`${C * PROGRESS} ${C}`}
+          />
+        </svg>
+
+        {/* $ badge on top */}
+        <span className="absolute left-1/2 top-1 flex size-9 -translate-x-1/2 items-center justify-center rounded-full bg-forest text-mint ring-4 ring-cream">
+          <DollarSign className="size-4" strokeWidth={2.5} />
+        </span>
+
+        {/* center content */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          {/* balance growth chart */}
+          <svg
+            viewBox="0 0 140 44"
+            className="mb-1 h-11 w-36 overflow-visible"
+            fill="none"
+            aria-hidden
+          >
+            <defs>
+              <linearGradient id="growthFill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#b7e04b" stopOpacity="0.4" />
+                <stop offset="100%" stopColor="#b7e04b" stopOpacity="0" />
+              </linearGradient>
+              <linearGradient id="growthStroke" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor="#3f8a5c" />
+                <stop offset="100%" stopColor="#b7e04b" />
+              </linearGradient>
+            </defs>
+            {/* grid lines */}
+            <line
+              x1="0"
+              y1="14"
+              x2="140"
+              y2="14"
+              stroke="#12281f"
+              strokeOpacity="0.09"
+              strokeDasharray="3 4"
+            />
+            <line
+              x1="0"
+              y1="29"
+              x2="140"
+              y2="29"
+              stroke="#12281f"
+              strokeOpacity="0.09"
+              strokeDasharray="3 4"
+            />
+            {/* area fill */}
+            <path
+              d={`${GROWTH_PATH} L 138 44 L 2 44 Z`}
+              fill="url(#growthFill)"
+              className="animate-[area-fade_0.9s_ease_0.5s_both]"
+            />
+            {/* growth line */}
+            <path
+              d={GROWTH_PATH}
+              stroke="url(#growthStroke)"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              pathLength={1}
+              strokeDasharray="1 1"
+              className="animate-[line-draw_1.2s_cubic-bezier(0.4,0,0.2,1)_both]"
+            />
+            {/* end point */}
+            <circle cx="138" cy="5" r="5.5" fill="#b7e04b" opacity="0.25" />
+            <circle
+              cx="138"
+              cy="5"
+              r="2.8"
+              fill="#b7e04b"
+              stroke="#f4f8ef"
+              strokeWidth="1.5"
+            />
+          </svg>
+          <div className="flex items-center gap-1.5">
+            <span className="text-2xl font-semibold tracking-tight text-ink tabular-nums">
+              Rp 4.309.573
+            </span>
+          </div>
+          <span className="mt-0.5 text-xs text-ink/45">Saldo</span>
+          <span className="mt-2 rounded-full bg-forest px-2 py-0.5 text-[10px] font-semibold text-mint">
+            -27%
+          </span>
+        </div>
+      </div>
+
+      {/* orbiting quick buttons */}
+      <OrbitButton className="left-0 top-1/2" icon={<Users className="size-4" />} />
+      <OrbitButton
+        className="right-0 top-1/2"
+        icon={<BarChart3 className="size-4" />}
+      />
+      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2">
+        <button
+          className="flex size-14 items-center justify-center rounded-full bg-mint text-forest shadow-[0_12px_28px_-8px_rgba(183,224,75,0.9)] ring-4 ring-cream transition-transform active:translate-y-px"
+          aria-label="Insights"
+        >
+          <LineChart className="size-5" strokeWidth={2.4} />
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function OrbitButton({
+  className,
+  icon,
+}: {
+  className: string
+  icon: React.ReactNode
+}) {
+  return (
+    <button
+      className={`absolute flex size-11 -translate-y-1/2 items-center justify-center rounded-full bg-white text-forest ring-1 ring-black/5 transition-transform active:translate-y-[calc(-50%+1px)] ${className}`}
+      aria-label="Quick action"
+    >
+      {icon}
+    </button>
+  )
+}
