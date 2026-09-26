@@ -1,12 +1,23 @@
-import { Banknote, Coins, QrCode, ShoppingBag, Smartphone, type LucideIcon } from 'lucide-react'
+import {
+  Banknote,
+  Coins,
+  Landmark,
+  QrCode,
+  ShoppingBag,
+  Smartphone,
+  type LucideIcon,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 /* ── Logo metode pembayaran (mock, monokrom) ───────────────────────────────────
    Mark digambar monokrom pakai `currentColor` + filter `grayscale`, jadi TIDAK ada
    warna brand yang masuk ke palet project (aturan: pakai palet CatetInd saja).
-   Strukturnya siap ditukar aset SVG resmi dari Midtrans tanpa ubah pemakaian. */
+   Strukturnya siap ditukar aset SVG resmi dari Midtrans tanpa ubah pemakaian.
 
-export type PaymentMethodId = 'qris' | 'gopay' | 'ovo' | 'shopeepay' | 'dana'
+   `va` = Virtual Account (transfer bank). Mark-nya ikon gedung generik, BUKAN
+   logo bank/QRIS berlisensi — metode hanya boleh disebut sebagai metode. */
+
+export type PaymentMethodId = 'qris' | 'gopay' | 'ovo' | 'shopeepay' | 'dana' | 'va'
 
 export const PAYMENT_METHODS: { id: PaymentMethodId; label: string; icon: LucideIcon }[] = [
   { id: 'qris', label: 'QRIS', icon: QrCode },
@@ -14,6 +25,7 @@ export const PAYMENT_METHODS: { id: PaymentMethodId; label: string; icon: Lucide
   { id: 'ovo', label: 'OVO', icon: Smartphone },
   { id: 'shopeepay', label: 'ShopeePay', icon: ShoppingBag },
   { id: 'dana', label: 'DANA', icon: Banknote },
+  { id: 'va', label: 'Virtual Account', icon: Landmark },
 ]
 
 /** satu chip logo (mark + wordmark) — muted & netral, tanpa warna brand */

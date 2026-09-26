@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
 import { AlignRight, PiggyBank, Target as TargetIcon } from 'lucide-react'
 import { toast } from 'sonner'
@@ -15,27 +16,33 @@ import { AddBudgetSheet } from './add-budget-sheet'
 import { AddGoalSheet } from './add-goal-sheet'
 import { ContributeSheet } from './contribute-sheet'
 import { SweepSheet } from './sweep-sheet'
+import { SpendingReviewSheet } from './spending-review-sheet'
 import { ContextSwitcher } from './context-switcher'
 import { GlobalPrivacyToggle } from './global-privacy-toggle'
 import { useMoneyContext } from './money-context-provider'
 import { usePrivacy } from './privacy-provider'
 import { cn } from '@/lib/utils'
+import { openAICoachWithSeed } from '@/lib/ai-chat-bus'
 import {
   CURRENT_DAY,
-  DAYS_IN_MONTH,
-  HAS_INCOME_THIS_MONTH,
+  FUND_DETAIL_COPY,
   INITIAL_BUDGETS,
   INITIAL_SINKING_FUNDS,
   MONTHLY_INCOME,
   SPENT_THIS_MONTH,
+  SPENDING_REVIEW_COPY,
   TOTAL_INSTALLMENTS,
+  budgetsForPeriod,
   computeDailyHud,
   formatIDR,
+  periodFromTab,
+  periodIncome,
+  periodWindowForTab,
   plantStageFrom,
   sinkingObligationOf,
   totalSurplus,
   type BudgetItem,
-  type BudgetPeriod,
+  type PeriodTab,
   type SinkingFundItem,
 } from '@/lib/data/budget'
 
@@ -57,6 +64,10 @@ import {
 
 type ZoneTab = 'budget' | 'goals'
 
+/** jeda sebelum AI Coach dibuka = sepanjang animasi tutup bottom sheet
+ *  (`SHEET_EASE` di budget-sheet.tsx, ±0,3 detik) — lihat handleContinueToCoach */
+const COACH_HANDOFF_MS = 320
+
 export function BudgetScreen() {
   /* ── STATE ──────────────────────────────────────────────────────────── */
   /* privasi nominal: state GLOBAL (PrivacyProvider) — tombol mata di header
@@ -67,19 +78,22 @@ export function BudgetScreen() {
      header mobile halaman ini — nilainya tetap satu sumber dengan halaman lain. */
   const { context, setContext } = useMoneyContext()
   const [activeTab, setActiveTab] = useState<ZoneTab>('budget')
-  const [periodTab, setPeriodTab] = useState<BudgetPeriod | 'payday'>('monthly')
+  const [periodTab, setPeriodTab] = useState<PeriodTab>('monthly')
   /** audit #5 — Jatah Hari Ini disematkan ke Dashboard (menggantikan "Sinkron") */
   const [hudPinned, setHudPinned] = useState(false)
   const [showAddBudget, setShowAddBudget] = useState(false)
   const [showAddGoal, setShowAddGoal] = useState(false)
   const [showSweepModal, setShowSweepModal] = useState(false)
+  /** panel "Review Pengeluaran Hari Ini" — dibuka CTA over-budget & tombol Review */
+  const [showReview, setShowReview] = useState(false)
   /** celengan yang sedang menerima setoran (null = sheet tertutup) */
   const [contributeTarget, setContributeTarget] = useState<SinkingFundItem | null>(null)
+  /** navigasi proaktif: kartu celengan membuka halaman detail /budget/[id] */
+  const router = useRouter()
 
   /* data halaman (mock lokal — nanti dari Supabase) */
   const [budgets, setBudgets] = useState<BudgetItem[]>(INITIAL_BUDGETS)
   const [funds, setFunds] = useState<SinkingFundItem[]>(INITIAL_SINKING_FUNDS)
-  const hasIncomeThisMonth = HAS_INCOME_THIS_MONTH
 
   /** caption di bawah judul — posisinya sama dengan baris tanggal Dashboard,
    *  jadi user membaca "konteks + isi halaman" dari titik yang sama. */
@@ -90,6 +104,12 @@ export function BudgetScreen() {
         ? 'Rencana uang keluarga'
         : 'Rencana uang bersama'
 
+  /* ── PERIODE AKTIF ─────────────────────────────────────────────────────
+     Satu `window` dipakai bareng oleh kartu Jatah Hari Ini, daftar kategori,
+     dan garis pacing — jadi tidak mungkin ada dua angka periode berbeda di
+     layar yang sama. `payday` cuma nama tampil untuk model 'custom'. */
+  const period = useMemo(() => periodWindowForTab(periodTab), [periodTab])
+
   /* ── DATA TURUNAN — semua ikut konteks (Pribadi / Keluarga) ───────────── */
   const visibleBudgets = useMemo(
     () => budgets.filter((budget) => budget.scope === context),
@@ -99,12 +119,23 @@ export function BudgetScreen() {
     () => funds.filter((fund) => fund.scope === context),
     [funds, context],
   )
+  /** SATU daftar budget, disaring periode aktif (bukan daftar terpisah) */
+  const periodBudgets = useMemo(
+    () => budgetsForPeriod(visibleBudgets, period),
+    [visibleBudgets, period],
+  )
 
   /* ── JATAH HARIAN — dihitung SETELAH cicilan & celengan (audit UX #2) ──
      Kalau kewajiban celengan bulan ini melebihi sisa uang, `hud.shortfall`
      bernilai true → kartu Jatah Hari Ini pindah ke nada terracotta dan jatah
-     harian DITAHAN, bukan ditampilkan seolah aman dibelanjakan. */
-  const sinkingObligation = useMemo(() => sinkingObligationOf(visibleFunds), [visibleFunds])
+     harian DITAHAN, bukan ditampilkan seolah aman dibelanjakan.
+
+     Dua catatan periode:
+     • kewajiban celengan dihitung dari SEMUA fund — kartu ini metrik GLOBAL
+       (audit UX #3) dan disamakan dengan `DAILY_HUD` yang dipakai Home;
+     • `window` membuat pembaginya panjang periode aktif, jadi tab Mingguan
+       membagi sisa uang dengan sisa hari minggu itu, bukan sisa bulan. */
+  const sinkingObligation = useMemo(() => sinkingObligationOf(funds), [funds])
   const hud = useMemo(
     () =>
       computeDailyHud({
@@ -112,11 +143,15 @@ export function BudgetScreen() {
         totalInstallments: TOTAL_INSTALLMENTS,
         sinkingObligation,
         spentThisMonth: SPENT_THIS_MONTH,
-        currentDay: CURRENT_DAY,
-        daysInMonth: DAYS_IN_MONTH,
+        window: period,
       }),
-    [sinkingObligation],
+    [sinkingObligation, period],
   )
+
+  /* ── PEMASUKAN DI PERIODE AKTIF (PRD 2B.3) ─────────────────────────────
+     Tidak ada pemasukan di jendela → kartu Dry Spell (tanpa Rp 0/hari).
+     Pemasukan masuk di tengah periode → catatan kecil di bawah jatah harian. */
+  const income = useMemo(() => periodIncome(period), [period])
 
   /* ── AKSI ────────────────────────────────────────────────────────────── */
 
@@ -187,10 +222,11 @@ export function BudgetScreen() {
   /** 3G — sapu sisa budget ke celengan pilihan */
   function handleSweep(fundId: number) {
     const target = funds.find((fund) => fund.id === fundId)
-    /* yang disapu = sisa budget konteks yang sedang dilihat (sesuai kartu Sapu Bersih) */
-    const swept = totalSurplus(visibleBudgets)
+    /* yang disapu = sisa budget PERIODE yang sedang dilihat (persis yang
+       ditampilkan kartu Sapu Bersih, bukan seluruh daftar konteks) */
+    const swept = totalSurplus(periodBudgets)
     const sweptIds = new Set(
-      visibleBudgets.filter((budget) => budget.limit - budget.spent > 0).map((b) => b.id),
+      periodBudgets.filter((budget) => budget.limit - budget.spent > 0).map((b) => b.id),
     )
 
     setFunds((prev) =>
@@ -215,21 +251,45 @@ export function BudgetScreen() {
     toast.success(`${formatIDR(swept)} disapu ke ${target?.name ?? 'celengan'}! 🧹🎉`)
   }
 
-  /** Detail celengan: progress besar + riwayat setoran + animasi Lottie tanaman */
+  /** Detail celengan: progres besar + riwayat setoran + tanaman yang tumbuh.
+   *  Kartu Celengan Impian (badan kartu) sekarang BENAR-BENAR membuka halaman
+   *  detail — route `app/budget/[id]/page.tsx`. Sebelumnya aksi ini cuma
+   *  memunculkan toast "belum tersedia" (jalan buntu di dalam app, Fase 1
+   *  ROADMAP).
+   *
+   *  Catatan: halaman detail membaca data dari `lib/data/budget.ts`, sedangkan
+   *  celengan yang baru dibuat lewat <AddGoalSheet/> cuma hidup di state halaman
+   *  ini (demo tanpa backend). Untuk celengan baru itu kita jelaskan apa adanya
+   *  — bukan melempar user ke halaman 404. Begitu ada tabel `sinking_funds` +
+   *  endpoint-nya, penjaga `known` di bawah boleh langsung dihapus. */
   function handleOpenFund(fund: SinkingFundItem) {
-    // TODO: /app/budget/[id] — Sinking Fund Detail page. Demo masih satu halaman,
-    // jadi pembukaan detail cukup diumumkan lewat toast.
-    toast(`Buka detail ${fund.name}`, {
-      description: 'Halaman detail celengan segera hadir.',
-    })
+    const known = INITIAL_SINKING_FUNDS.some((item) => item.id === fund.id)
+    if (!known) {
+      toast(FUND_DETAIL_COPY.demoOnlyTitle, { description: FUND_DETAIL_COPY.demoOnlyHint })
+      return
+    }
+    router.push(`/budget/${fund.id}`)
   }
 
-  /** CTA review bareng AI Coach (nada mendampingi, bukan menuduh) */
+  /** CTA "Review Pengeluaran Hari Ini" — dari banner over-budget (Zona A) maupun
+   *  tombol `Review Pengeluaran →` di kartu kategori. Sejak prompt 19 keduanya
+   *  membuka PANEL ringkasan hari ini, bukan toast "panel segera hadir". */
   function handleReviewCoach() {
-    // TODO: Link to AI Coach panel
-    toast('Aku temenin review ya 🤖', {
-      description: 'Panel review pengeluaran hari ini segera hadir.',
-    })
+    setShowReview(true)
+  }
+
+  /** Kaki panel: lanjut ngobrol sama Minca dengan pertanyaan sudah terisi.
+   *  Panel ditutup DULU, baru AI Coach dibuka: dua overlay yang hidup bersamaan
+   *  bikin glitch di mobile (bottom sheet z-[70] menutupi panel chat z-[60]
+   *  selama animasi tutupnya), jadi kita beri jeda sepanjang animasi itu.
+   *  Pertanyaannya dikirim lewat bus event — state percakapan tetap SATU, milik
+   *  `ai-chat-widget.tsx` (lihat lib/ai-chat-bus.ts untuk alasannya). */
+  function handleContinueToCoach() {
+    setShowReview(false)
+    window.setTimeout(
+      () => openAICoachWithSeed(SPENDING_REVIEW_COPY.coachSeed),
+      COACH_HANDOFF_MS,
+    )
   }
 
   /** Tab zona kini HANYA untuk mobile (audit #4: di desktop kedua zona sudah
@@ -312,7 +372,8 @@ export function BudgetScreen() {
         <DailyHudSummary
           hud={hud}
           masked={masked}
-          hasIncomeThisMonth={hasIncomeThisMonth}
+          window={period}
+          income={income}
           pinned={hudPinned}
           onPin={handlePinHud}
         />
@@ -341,14 +402,17 @@ export function BudgetScreen() {
               <h2 className="font-display text-[17px] font-bold tracking-tight text-ink">
                 Budget Kategori
               </h2>
-              <span className="rounded-full bg-cream px-2 py-0.5 text-[10.5px] font-bold text-ink/45 tabular-nums ring-1 ring-soil/12">
-                {visibleBudgets.length}
+              <span
+                className="rounded-full bg-cream px-2 py-0.5 text-[10.5px] font-bold text-ink/45 tabular-nums ring-1 ring-soil/12"
+                aria-label={`Budget pada periode ${period.label}`}
+              >
+                {periodBudgets.length}
               </span>
             </div>
             <BudgetZoneA
-              budgets={visibleBudgets}
+              budgets={periodBudgets}
               masked={masked}
-              currentDay={CURRENT_DAY}
+              window={period}
               periodTab={periodTab}
               onPeriodChange={setPeriodTab}
               onAddBudget={() => setShowAddBudget(true)}
@@ -391,6 +455,7 @@ export function BudgetScreen() {
         open={showAddBudget}
         onClose={() => setShowAddBudget(false)}
         scope={context}
+        initialPeriod={periodFromTab(periodTab)}
         onSave={handleSaveBudget}
       />
       <AddGoalSheet
@@ -409,10 +474,22 @@ export function BudgetScreen() {
       <SweepSheet
         open={showSweepModal}
         onClose={() => setShowSweepModal(false)}
-        budgets={visibleBudgets}
+        budgets={periodBudgets}
         funds={funds}
         masked={masked}
         onConfirm={handleSweep}
+      />
+      {/* Panel review hari ini — dibuka dua CTA over-budget (prompt 19).
+          Menerima `hud`/`period`/`income` yang SAMA dengan kartu di atasnya,
+          jadi angka panel tidak mungkin beda dari layar ini. */}
+      <SpendingReviewSheet
+        open={showReview}
+        onClose={() => setShowReview(false)}
+        hud={hud}
+        window={period}
+        income={income}
+        masked={masked}
+        onContinueChat={handleContinueToCoach}
       />
     </ScreenShell>
   )

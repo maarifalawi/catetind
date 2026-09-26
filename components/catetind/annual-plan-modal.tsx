@@ -5,7 +5,12 @@ import { Check, LoaderCircle, Lock, TriangleAlert, Trophy, X } from 'lucide-reac
 import { cn } from '@/lib/utils'
 import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock'
 import { randomInt, useFomoCounter, type FomoRule } from '@/hooks/use-fomo-counter'
-import { formatIDR } from '@/lib/weekly-recap'
+import {
+  ANNUAL_PLANS,
+  formatIDR,
+  type AnnualPlan,
+  type AnnualPlanId,
+} from '@/lib/data/pricing'
 import { PaymentLogoRow } from './payment-method-logos'
 
 /* ── modal paket tahunan (Annual Subscription) ─────────────────────────────────
@@ -14,70 +19,11 @@ import { PaymentLogoRow } from './payment-method-logos'
    2) FOMO      — counter "orang telah berlangganan" naik tiap 3–8 detik
    3) anchoring — harga tahunan dipecah jadi "per bulan" biar terasa murah
    4) decoy     — 3 tier, tier tengah sengaja paling dominan (hero)
-   5) pro-rate  — user paket bawah lihat "cukup bayar selisih" */
+   5) pro-rate  — user paket bawah lihat "cukup bayar selisih"
 
-export type AnnualPlanId = 'catet-aja' | 'waras' | 'sultan'
-
-type AnnualPlan = {
-  id: AnnualPlanId
-  name: string
-  subtitle: string
-  price: number
-  /** micro-copy anchoring di bawah harga (hero saja) */
-  anchor?: string
-  features: string[]
-  /** base count + aturan increment FOMO per 3–8 detik */
-  fomo: FomoRule
-  /** badge di atas kartu (hero saja) */
-  badge?: string
-  /** kartu dominan — accent color fill + border tebal + glow */
-  hero?: boolean
-}
-
-export const ANNUAL_PLANS: AnnualPlan[] = [
-  {
-    id: 'catet-aja',
-    name: 'Paket Catet Aja',
-    subtitle: 'Catat manual, tanpa AI',
-    price: 49_000,
-    features: ['Catat pemasukan & pengeluaran', 'Budget & kategori manual', 'Pohon Uang (basic)'],
-    /* tier 1: naik stabil +2 */
-    fomo: { base: 840, min: 2, max: 2 },
-  },
-  {
-    id: 'waras',
-    name: 'Paket Waras',
-    subtitle: 'AI yang bantu kamu waras finansial',
-    price: 109_000,
-    anchor: '(Cuma Rp 9.000/bulan — lebih murah dari segelas es kopi ☕)',
-    features: [
-      'Semua fitur Paket Catet Aja',
-      'AI Coach (chat & saran proaktif)',
-      'Scan Struk otomatis (OCR)',
-      'Auto-kategorisasi transaksi',
-      'Insight & laporan mingguan AI',
-      '🎁 Eksklusif: Skin Pot Emas untuk Tanamanmu',
-    ],
-    /* tier 2 (hero): paling ramai + boleh loncat 3–7 */
-    fomo: { base: 2_450, min: 3, max: 7 },
-    badge: 'Pilihan Gen-Z 🏆',
-    hero: true,
-  },
-  {
-    id: 'sultan',
-    name: 'Paket Sultan',
-    subtitle: 'Unlimited AI, tanpa batas',
-    price: 199_000,
-    features: [
-      'Semua fitur Paket Waras',
-      'Kuota AI unlimited (tanpa batas)',
-      'Priority response AI',
-      '🎁 Eksklusif: Skin Pot Emas + Efek Partikel Spesial',
-    ],
-    /* tier 3: paling premium, volume paling kecil */
-    fomo: { base: 420, min: 2, max: 4 },
-  },
-]
+   DAFTAR HARGA & FITUR TIDAK LAGI DI FILE INI — semuanya dibaca dari
+   `lib/data/pricing.ts` (satu sumber harga, PRD 4594–4606). Modal ini hanya
+   menyusun tampilannya. */
 
 const FOMO_RULES = Object.fromEntries(
   ANNUAL_PLANS.map((plan) => [plan.id, plan.fomo]),

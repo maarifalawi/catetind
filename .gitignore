@@ -15,3 +15,9 @@ node_modules
 .DS_Store
 # dev server logs
 dev-server*.log
+
+# TypeScript incremental build artifact.
+# Dihasilkan ulang setiap `tsc` dijalankan, jadi selalu muncul sebagai diff
+# tanpa perubahan kode apa pun. File lokalnya TIDAK dihapus - hanya berhenti
+# dilacak git (task 22).
+tsconfig.tsbuildinfo

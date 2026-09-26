@@ -69,7 +69,7 @@ export function ContributeSheet({
       onClose={onClose}
       title={`Setor ke ${shown?.name ?? 'Celengan'}`}
       description="Nabung kecil-kecilan hari ini, tetap dihitung 🌱"
-      footer={<SheetSubmit onClick={submit} disabled={!ready}>Setor 💰</SheetSubmit>}
+      footer={<SheetSubmit onClick={submit} disabled={!ready} gate>Setor 💰</SheetSubmit>}
     >
       {/* progres sekarang → proyeksi setelah setor */}
       <div className="rounded-2xl bg-cream p-3.5 ring-1 ring-soil/12">

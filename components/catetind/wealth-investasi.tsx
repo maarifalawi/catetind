@@ -15,6 +15,10 @@ import {
 import { cn } from '@/lib/utils'
 import { WealthAssetDonut } from './wealth-asset-donut'
 import {
+  ASSET_HISTORY_EMPTY,
+  ASSET_HISTORY_EMPTY_HINT,
+  ASSET_HISTORY_FOOTNOTE,
+  ASSET_HISTORY_TITLE,
   ASSET_TYPE_META,
   assetHistory,
   assetReturn,
@@ -25,9 +29,12 @@ import {
   formatShortDate,
   isAssetStale,
   maskMoney,
+  priceUpdatedLabel,
+  stalePriceWarning,
   totalPortfolioValue,
   totalInvestedValue,
   unrealizedReturn,
+  type AssetTransaction,
   type Investment,
 } from '@/lib/data/wealth'
 
@@ -45,12 +52,21 @@ import {
        mau tahu total bisa melipat daftarnya, yang mau audit membuka satu per
        satu. Di dalam setiap kartu: geser KIRI → Edit (amber) + Hapus
        (terracotta), tap → riwayat beli/jual aset itu.
+        Geser kiri → "Edit" kini membuka sheet edit aset yang benar-benar
+        menyimpan (paket 17). Riwayat beli/jual adalah TURUNAN dari ledger
+        transaksi aset (`assetHistory`); aset tanpa baris ledger menampilkan
+        empty state jujur, bukan daftar kosong.
+
        AFFORDANCE (audit fintech #6): setiap kartu punya chevron ">" + hover
        state jelas — tidak lagi mengandalkan teks instruksi kecil.
    5D. Banner amber per aset kalau harganya basi (crypto > 10 menit, lain-lain
        > 24 jam) + tombol "Update Manual" — satu sumber gagal tidak mematikan
        aset lain (fallback protocol PRD 2E.1 poin 5). TIDAK ada banner agregat
        kedua di kaki daftar (audit fintech #7): satu pesan, satu tempat, satu aksi.
+       Tombol "Update Manual" membuka modal koreksi harga satu aset
+       (`update-price-modal.tsx`): harga sekarang, akibatnya pada nilai & return,
+       lalu stempel "Terakhir diperbarui" ikut berubah.
+
    5E. Tombol "+ Tambah Investasi" duduk di HEADER "Detail per Aset" (kanan
        atas), bukan di dasar daftar (audit fintech #5) — portofolio panjang tidak
        bisa lagi mengubur primary action ini.
@@ -61,6 +77,7 @@ import {
 
 export function WealthInvestasi({
   investments,
+  transactions,
   masked,
   expandedAssetId,
   onToggleExpand,
@@ -70,6 +87,12 @@ export function WealthInvestasi({
   onDelete,
 }: {
   investments: Investment[]
+  /**
+   * Ledger transaksi beli/jual (satu daftar datar, seperti tabel
+   * `investment_transactions`) — riwayat per aset diturunkan dari sini, jadi
+   * aset yang belum punya baris ledger otomatis tampil sebagai empty state.
+   */
+  transactions: AssetTransaction[]
   masked: boolean
   expandedAssetId: string | null
   onToggleExpand: (id: string) => void
@@ -170,6 +193,7 @@ export function WealthInvestasi({
                   <AssetCard
                     key={asset.id}
                     asset={asset}
+                    transactions={transactions}
                     masked={masked}
                     stale={isAssetStale(asset)}
                     expanded={expandedAssetId === asset.id}
@@ -282,6 +306,7 @@ const SNAP = 44
 
 function AssetCard({
   asset,
+  transactions,
   masked,
   stale,
   expanded,
@@ -292,6 +317,7 @@ function AssetCard({
   onDelete,
 }: {
   asset: Investment
+  transactions: AssetTransaction[]
   masked: boolean
   stale: boolean
   expanded: boolean
@@ -304,7 +330,7 @@ function AssetCard({
   const meta = ASSET_TYPE_META[asset.type]
   const ret = assetReturn(asset)
   const profit = ret.value >= 0
-  const history = assetHistory(asset.id)
+  const history = assetHistory(transactions, asset.id)
 
   const [dx, setDx] = useState(0)
   const [dragging, setDragging] = useState(false)
@@ -400,7 +426,7 @@ function AssetCard({
             <span className="flex min-w-0 flex-1 items-start gap-1.5 text-[11px] leading-snug text-[#b89191]">
               <AlertTriangle className="mt-px size-3.5 shrink-0" strokeWidth={2.4} />
               <span>
-                Harga belum diperbarui. Update terakhir: {formatPriceStamp(asset.lastUpdate)}
+                {stalePriceWarning(meta.label, formatPriceStamp(asset.lastUpdate))}
               </span>
             </span>
             <span
@@ -466,10 +492,10 @@ function AssetCard({
               {profit ? '+' : '−'}
               {formatIDR(Math.abs(ret.value))} ({Math.abs(ret.pct).toFixed(2)}%)
             </span>
-            {/* "Update terakhir" per aset — satu-satunya tempat stempel harga
+            {/* "Terakhir diperbarui" per aset — satu-satunya tempat stempel harga
                 yang sah, karena jadwal update tiap aset berbeda (audit #4) */}
-            <span className="mt-0.5 text-[10px] text-ink/35 tabular-nums">
-              {formatPriceStamp(asset.lastUpdate)}
+            <span className="mt-0.5 text-right text-[10px] text-ink/35 tabular-nums">
+              {priceUpdatedLabel(formatPriceStamp(asset.lastUpdate))}
             </span>
           </span>
 
@@ -501,37 +527,50 @@ function AssetCard({
             <div className="mt-2 rounded-[1.35rem] bg-cream/70 px-3.5 py-3.5 ring-1 ring-inset ring-soil/8">
               <p className="flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-[0.14em] text-ink/40">
                 <History className="size-3.5" strokeWidth={2.6} />
-                Riwayat Beli/Jual
+                {ASSET_HISTORY_TITLE}
               </p>
-              {/* TODO: ambil dari tabel investment_transactions
+              {/* Riwayat datang dari ledger `investment_transactions`
                   (asset_id, type buy/sell, quantity, price_per_unit,
-                   transaction_date, fees, rdn_account) lewat Supabase */}
-              <ul className="mt-2.5 space-y-2">
-                {history.map((tx) => (
-                  <li key={tx.id} className="flex items-center gap-2.5 text-[11.5px]">
-                    <span
-                      className={cn(
-                        'shrink-0 rounded-full px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wide',
-                        tx.side === 'buy'
-                          ? 'bg-hud-sage/25 text-[#000000]'
-                          : 'bg-hud-terracotta/15 text-[#b89191]',
-                      )}
-                    >
-                      {tx.side === 'buy' ? 'Beli' : 'Jual'}
-                    </span>
-                    <span className="min-w-0 flex-1 truncate text-ink/60 tabular-nums">
-                      {formatShortDate(tx.date)} · {formatNumber(tx.quantity, 6)}{' '}
-                      {meta.unit || asset.symbol}
-                    </span>
-                    <span className="shrink-0 font-semibold text-ink/70 tabular-nums">
-                      {maskMoney(tx.price, masked)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              <p className="mt-2.5 text-[10px] text-ink/35">
-                Harga rata-rata dihitung otomatis (weighted average) dari riwayat ini.
-              </p>
+                  transaction_date, fees, rdn_account). Aset yang belum punya
+                  baris di ledger TIDAK dibiarkan menampilkan daftar kosong —
+                  user diberi tahu apa adanya + jalan keluarnya. */}
+              {history.length === 0 ? (
+                <div className="mt-2.5 rounded-2xl bg-cream px-3.5 py-3 ring-1 ring-inset ring-soil/8">
+                  <p className="text-[11.5px] font-semibold leading-relaxed text-ink/60">
+                    {ASSET_HISTORY_EMPTY}
+                  </p>
+                  <p className="mt-1 text-[10.5px] leading-relaxed text-ink/40">
+                    {ASSET_HISTORY_EMPTY_HINT}
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <ul className="mt-2.5 space-y-2">
+                    {history.map((tx) => (
+                      <li key={tx.id} className="flex items-center gap-2.5 text-[11.5px]">
+                        <span
+                          className={cn(
+                            'shrink-0 rounded-full px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wide',
+                            tx.side === 'buy'
+                              ? 'bg-hud-sage/25 text-[#000000]'
+                              : 'bg-hud-terracotta/15 text-[#b89191]',
+                          )}
+                        >
+                          {tx.side === 'buy' ? 'Beli' : 'Jual'}
+                        </span>
+                        <span className="min-w-0 flex-1 truncate text-ink/60 tabular-nums">
+                          {formatShortDate(tx.date)} · {formatNumber(tx.quantity, 6)}{' '}
+                          {meta.unit || asset.symbol}
+                        </span>
+                        <span className="shrink-0 font-semibold text-ink/70 tabular-nums">
+                          {maskMoney(tx.price, masked)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-2.5 text-[10px] text-ink/35">{ASSET_HISTORY_FOOTNOTE}</p>
+                </>
+              )}
             </div>
           </motion.div>
         )}

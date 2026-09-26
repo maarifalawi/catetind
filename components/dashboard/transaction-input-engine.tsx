@@ -26,6 +26,17 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatIDR } from '@/lib/wallets'
+import { SUBSCRIPTION_LOCK_COPY } from '@/lib/data/renewal'
+import { useSubscriptionGate } from '@/components/catetind/subscription-gate-provider'
+import { SubscriptionLockNote } from '@/components/catetind/subscription-lock-note'
+import { MOCK_RECEIPT_AMOUNT, MOCK_RECEIPT_READ_MS, receiptNoteFromFileName } from '@/lib/transaction-ai'
+import {
+  EDIT_TRANSACTION_COPY,
+  TRANSACTION_CATEGORY_OPTIONS,
+  TRANSACTION_INPUT_COPY,
+  TRANSACTION_WALLET_OPTIONS,
+  type HistoryTransaction,
+} from '@/lib/data/history'
 
 /* ── Transaction Input Engine (inventaris 97a/b/c) ────────────────────────────
    Falsafah "Zero Cognitive Load & 4-Tap Strict Rule": tidak ada menu "mau input
@@ -34,9 +45,32 @@ import { formatIDR } from '@/lib/wallets'
 
    Satu engine, dua shell (biar perilaku mobile & web tidak pernah divergen):
    • layout="sheet"  → di dalam Vaul bottom sheet (TransactionBottomSheet)
-   • layout="dialog" → di dalam modal tengah web (TransactionWebModal) */
+   • layout="dialog" → di dalam modal tengah web (TransactionWebModal)
+
+   Sejak paket 03 engine juga melayani MODE EDIT lewat prop `initial`: formnya
+   terbuka sudah terisi (pre-filled) sehingga user cuma perlu membetulkan yang
+   salah — bukan mengisi ulang dari nol. Mode tambah tidak berubah sama sekali. */
 
 export type TransactionTypeId = 'expense' | 'income' | 'saving' | 'transfer'
+
+/**
+ * Payload submit engine.
+ *
+ * `category`/`wallet`/`date` HANYA terisi di mode edit: di mode tambah, tiga
+ * nilai itu belum ada di form (ditentukan AI/backend), sedangkan di mode edit
+ * semuanya sudah punya nilai dan bisa dikoreksi user. Karena opsional, shell
+ * lama (bottom sheet, modal web, onboarding, joint wallet, kalender) tidak perlu
+ * diubah sama sekali.
+ */
+export interface TransactionDraft {
+  amount: number
+  note: string
+  type: TransactionTypeId
+  category?: string
+  wallet?: string
+  /** tanggal lokal `YYYY-MM-DD` */
+  date?: string
+}
 
 /** mode tampilan stage tengah engine */
 type SheetMode = 'manual' | 'ocr' | 'voice'
@@ -108,10 +142,31 @@ const TYPES: TransactionType[] = [
 /** tinggi tiap bar gelombang suara (px) — mode voice */
 const WAVE = [10, 20, 32, 18, 26, 14, 22]
 
+/** daftar opsi + nilai lama yang belum ada di daftar (supaya tidak hilang diam-diam) */
+function withCurrentValue(options: readonly string[], current?: string): string[] {
+  const list = [...options]
+  if (current && !list.includes(current)) list.push(current)
+  return list
+}
+
+/** getar fisik sukses — browser tanpa Vibration API (iOS Safari) cukup diabaikan */
+function haptic(pattern: number[]) {
+  try {
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate(pattern)
+  } catch {
+    /* haptic itu bonus, bukan syarat sukses — jangan sampai blokir submit */
+  }
+}
+
+/** gaya kontrol kecil mode edit — senada dengan field catatan di atasnya */
+const EDIT_CONTROL_CLASS =
+  'w-full rounded-xl bg-soil/[0.09] px-3 py-2.5 text-[12.5px] font-semibold text-ink outline-none ring-1 ring-transparent transition-all focus:bg-cream focus:ring-forest/15'
+
 export function TransactionInputEngine({
   active,
   defaultType = 'expense',
   layout = 'sheet',
+  initial = null,
   onSubmitted,
   sourceLabel,
   extraFields,
@@ -124,10 +179,16 @@ export function TransactionInputEngine({
   defaultType?: TransactionTypeId
   /** 'sheet' = bottom sheet mobile (padat) · 'dialog' = modal web (lega) */
   layout?: 'sheet' | 'dialog'
+  /**
+   * Transaksi yang sedang diubah. Diisi = engine masuk MODE EDIT: tipe, nominal,
+   * deskripsi (nama), kategori, dompet, dan tanggal semuanya terisi dari data
+   * lamanya. `null` (default) = perilaku lama persis (mode tambah).
+   */
+  initial?: HistoryTransaction | null
   /** dipanggil setelah submit valid — shell yang menutup panelnya. Payload
       dikirim supaya shell bisa menyisipkan transaksi ke daftar (halaman Joint
       Wallet memakainya untuk memperbarui timeline tanpa memuat ulang halaman) */
-  onSubmitted: (payload: { amount: number; note: string; type: TransactionTypeId }) => void
+  onSubmitted: (payload: TransactionDraft) => void
   /** opsional: label sumber dana (mis. dompet bersama) yang auto-terpilih */
   sourceLabel?: string
   /** opsional: field tambahan khusus konteks (dipakai halaman Joint Wallet
@@ -138,11 +199,21 @@ export function TransactionInputEngine({
   onAmountChange?: (amount: number) => void
 }) {
   const isDialog = layout === 'dialog'
+  const isEdit = initial !== null
+  /* Masa aktif habis → engine ini pintu input uang, jadi tombol "Catat" mati.
+     Ditempel DI ENGINE, bukan di tiap shell (bottom sheet, modal web, joint,
+     kalender, edit transaksi), supaya nol titik yang bisa terlewat. Form-nya
+     tetap bisa dibuka & dibaca — yang berhenti hanya penyimpanannya. */
+  const { inputLocked } = useSubscriptionGate()
 
   const [typeId, setTypeId] = useState<TransactionTypeId>(defaultType)
   /** digit mentah tanpa titik — satu-satunya sumber kebenaran format Rupiah */
   const [digits, setDigits] = useState('')
   const [note, setNote] = useState('')
+  /* tiga field yang HANYA hidup di mode edit — nilainya dari transaksi aslinya */
+  const [category, setCategory] = useState('')
+  const [wallet, setWallet] = useState('')
+  const [date, setDate] = useState('')
   const [mode, setMode] = useState<SheetMode>('manual')
 
   const amountRef = useRef<HTMLInputElement>(null)
@@ -153,6 +224,12 @@ export function TransactionInputEngine({
   const amount = Number(digits || '0')
   /** 25000 → "25.000" (auto-format Indonesia seketika saat diketik) */
   const display = digits ? amount.toLocaleString('id-ID') : ''
+  /* daftar pilihan kategori & dompet: nilai lama yang tidak ada di daftar kanon
+     (mis. kategori 'Proyek' dari halaman Dompet Detail) DITAMBAHKAN sebagai
+     opsi — tanpa itu, sekadar membuka sheet edit akan diam-diam mengubah data
+     user jadi kategori lain. */
+  const categoryOptions = withCurrentValue(TRANSACTION_CATEGORY_OPTIONS, initial?.category)
+  const walletOptions = withCurrentValue(TRANSACTION_WALLET_OPTIONS, initial?.wallet)
   /* font menyesuaikan panjang angka — nominal besar tetap muat & tetap center */
   const amountFont = isDialog
     ? display.length <= 7
@@ -169,22 +246,27 @@ export function TransactionInputEngine({
     }
   }
 
-  /* Auto-focus nominal + reset form tiap kali panel dibuka: user langsung bisa
-     mengetik tanpa tap tambahan (Zero Cognitive Load). Fokus ditunda ~110ms
-     supaya tidak berebut dengan animasi buka & keyboard native tidak "nabrak"
-     layout di tengah animasi. */
+  /* Reset form tiap kali panel dibuka: mode tambah = form KOSONG + auto-focus
+     nominal (user langsung bisa mengetik tanpa tap tambahan); mode edit = form
+     TERISI dari data lamanya dan TANPA auto-focus, karena yang perlu dibetulkan
+     belum tentu nominalnya — memaksa keyboard numerik terbuka di mode edit
+     justru menambah langkah (harus ditutup dulu sebelum mengubah kategori). */
   useEffect(() => {
     if (!active) {
       clearMock()
       return
     }
-    setTypeId(defaultType)
-    setDigits('')
-    setNote('')
+    setTypeId(initial?.type ?? defaultType)
+    setDigits(initial ? String(initial.amount) : '')
+    setNote(initial?.name ?? '')
+    setCategory(initial?.category ?? '')
+    setWallet(initial?.wallet ?? '')
+    setDate(initial?.date ?? '')
     setMode('manual')
+    if (initial) return
     const id = window.setTimeout(() => amountRef.current?.focus(), 110)
     return () => window.clearTimeout(id)
-  }, [active, defaultType])
+  }, [active, defaultType, initial])
 
   /* buang timer mock saat unmount supaya tidak setState di komponen mati */
   useEffect(() => () => clearMock(), [])
@@ -225,13 +307,18 @@ export function TransactionInputEngine({
     clearMock()
     setMode('ocr')
     mockTimer.current = window.setTimeout(() => {
-      const rawName = file.name.replace(/\.[^.]+$/, '').slice(0, 24)
-      setDigits('87500')
-      onAmountChange?.(87500)
-      setNote(rawName ? `Struk ${rawName}` : 'Belanja dari struk')
+      /* Nominal, nama catatan, dan tempo "baca struk" datang dari
+         `lib/transaction-ai.ts` — sumber yang SAMA dengan alur scan di chat AI
+         Coach (prompt 20). Jadi tidak ada dua logika OCR: kalau nanti hasil
+         aslinya datang dari /api/ocr, keduanya ikut berubah sekali jalan.
+         Perilaku engine sendiri tidak berubah sedikit pun: selalu struk 87.500
+         dengan nama dari nama file. */
+      setDigits(String(MOCK_RECEIPT_AMOUNT))
+      onAmountChange?.(MOCK_RECEIPT_AMOUNT)
+      setNote(receiptNoteFromFileName(file.name))
       setMode('manual')
       amountRef.current?.focus()
-    }, 2200)
+    }, MOCK_RECEIPT_READ_MS)
   }
 
   /** 🎤 Voice (mock Domain 2A.2 Mode 3) — gelombang suara hangat saat listening. */
@@ -257,10 +344,35 @@ export function TransactionInputEngine({
    * Tidak ada modal sukses full-screen, tidak ada `await`, tidak ada spinner.
    */
   function handleSubmit() {
+    /* Kunci ganda: tombolnya sudah `disabled`, tapi Enter di keyboard numerik
+       memanggil fungsi ini langsung — jadi guard-nya harus ada di sini, bukan
+       hanya di markup. */
+    if (inputLocked) {
+      toast(SUBSCRIPTION_LOCK_COPY.inputHint)
+      return
+    }
+
     if (amount <= 0) {
       // guard lembut — tetap non-blocking, panel sengaja TIDAK ditutup
       toast('Isi nominalnya dulu ya 🌿')
       amountRef.current?.focus()
+      return
+    }
+
+    /* MODE EDIT: engine berhenti di menyampaikan hasil. Toast "Sip, udah dicatet!"
+       justru salah di sini (catatannya lama, bukan baru) dan pujian yang tidak
+       nyambung bikin app terasa tidak mendengarkan — jadi yang tampil adalah
+       toast "diperbarui" dari halaman pemanggil. Haptiknya tetap sama. */
+    if (initial) {
+      onSubmitted({
+        amount,
+        note: note.trim() || initial.name,
+        type: typeId,
+        category: category || initial.category,
+        wallet: wallet || initial.wallet,
+        date: date || initial.date,
+      })
+      haptic([30, 50, 30])
       return
     }
 
@@ -269,15 +381,7 @@ export function TransactionInputEngine({
     const message = cheer.replace('{amount}', formatIDR(amount))
 
     onSubmitted({ amount, note: note.trim(), type: typeId }) // 1. tutup seketika; animasi tutup jalan di background
-
-    try {
-      // 2. haptic fisik; browser tanpa Vibration API cukup diabaikan
-      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-        navigator.vibrate([30, 50, 30])
-      }
-    } catch {
-      /* haptic itu bonus, bukan syarat sukses — jangan sampai blokir submit */
-    }
+    haptic([30, 50, 30]) // 2. haptic fisik
 
     toast.success(message) // 3. toast non-blocking, copy gamified acak
 
@@ -376,8 +480,11 @@ export function TransactionInputEngine({
                   /* autoFocus={active}: di bottom sheet engine di-mount saat
                      dibuka (fokus seketika), sedangkan modal web di-mount sejak
                      awal dengan active=false — supaya field tersembunyi ini
-                     tidak mencuri fokus saat halaman baru dimuat. */
-                  autoFocus={active}
+                     tidak mencuri fokus saat halaman baru dimuat. Di mode edit
+                     fokus sengaja TIDAK diambil: yang perlu dibetulkan belum
+                     tentu nominalnya, dan keyboard yang muncul sendiri justru
+                     menghalangi field kategori/dompet/tanggal di bawahnya. */
+                  autoFocus={active && !isEdit}
                   value={display}
                   onChange={handleAmountChange}
                   onKeyDown={handleAmountKeyDown}
@@ -397,17 +504,23 @@ export function TransactionInputEngine({
                 <span aria-hidden className="w-9 shrink-0" />
               </div>
 
-              {/* badge kategori "tebakan AI" (mock Smart Default) */}
-              <div
-                className={cn(
-                  'mt-3.5 inline-flex items-center gap-1.5 rounded-full bg-mint/20 px-3 py-1.5 font-semibold text-forest ring-1 ring-mint/40',
-                  isDialog ? 'text-xs' : 'text-[11.5px]',
-                )}
-              >
-                <Sparkles className="size-3.5" strokeWidth={2.4} />
-                {type.suggested}
-                <span className="font-medium text-forest/50">(AI Suggested)</span>
-              </div>
+              {/* badge kategori "tebakan AI" (mock Smart Default).
+                  Di mode edit badge ini sengaja TIDAK tampil: kategorinya bukan
+                  "tebakan" lagi — nilainya sudah ada dan bisa dikoreksi lewat
+                  field Kategori di bawah, jadi label "(AI Suggested)" di sini
+                  cuma jadi klaim palsu. */}
+              {!isEdit && (
+                <div
+                  className={cn(
+                    'mt-3.5 inline-flex items-center gap-1.5 rounded-full bg-mint/20 px-3 py-1.5 font-semibold text-forest ring-1 ring-mint/40',
+                    isDialog ? 'text-xs' : 'text-[11.5px]',
+                  )}
+                >
+                  <Sparkles className="size-3.5" strokeWidth={2.4} />
+                  {type.suggested}
+                  <span className="font-medium text-forest/50">(AI Suggested)</span>
+                </div>
+              )}
 
               {/* catatan opsional — satu baris, tidak wajib diisi */}
               <input
@@ -417,6 +530,61 @@ export function TransactionInputEngine({
                 aria-label="Catatan transaksi (opsional)"
                 className="mt-4 h-12 w-full rounded-2xl bg-soil/[0.09] px-4 text-[13.5px] font-medium text-ink outline-none ring-1 ring-transparent transition-all placeholder:text-ink/30 focus:bg-cream focus:ring-forest/15"
               />
+
+              {/* ── MODE EDIT: tiga field detail yang nilainya SUDAH ADA ────────
+                  Di mode tambah, kategori/dompet/tanggal ditentukan AI (lihat
+                  badge "AI Suggested") sehingga user tidak perlu memilih apa
+                  pun. Di mode edit nilai itu sudah ada dan justru bagian yang
+                  paling sering salah (kasus paling umum: Minca salah nebak
+                  kategori) — karena itu ketiganya bisa dikoreksi di sini. */}
+              {isEdit && initial && (
+                <div className="mt-3 w-full">
+                  <div className="grid gap-2.5 sm:grid-cols-3">
+                    <EditField label={EDIT_TRANSACTION_COPY.categoryLabel}>
+                      <select
+                        value={category}
+                        onChange={(event) => setCategory(event.target.value)}
+                        aria-label={EDIT_TRANSACTION_COPY.categoryLabel}
+                        className={EDIT_CONTROL_CLASS}
+                      >
+                        {categoryOptions.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </EditField>
+
+                    <EditField label={EDIT_TRANSACTION_COPY.walletLabel}>
+                      <select
+                        value={wallet}
+                        onChange={(event) => setWallet(event.target.value)}
+                        aria-label={EDIT_TRANSACTION_COPY.walletLabel}
+                        className={EDIT_CONTROL_CLASS}
+                      >
+                        {walletOptions.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </EditField>
+
+                    <EditField label={EDIT_TRANSACTION_COPY.dateLabel}>
+                      <input
+                        type="date"
+                        value={date}
+                        onChange={(event) => setDate(event.target.value)}
+                        aria-label={EDIT_TRANSACTION_COPY.dateLabel}
+                        className={EDIT_CONTROL_CLASS}
+                      />
+                    </EditField>
+                  </div>
+                  <p className="mt-2 text-[11px] leading-relaxed text-ink/45">
+                    {EDIT_TRANSACTION_COPY.hint}
+                  </p>
+                </div>
+              )}
             </motion.div>
           )}
           {mode === 'ocr' && (
@@ -529,9 +697,16 @@ export function TransactionInputEngine({
         <button
           type="button"
           onClick={handleSubmit}
-          className="flex h-14 flex-1 items-center justify-center gap-2 rounded-2xl bg-forest text-base font-bold text-cream shadow-[0_14px_28px_-14px_rgba(69,89,78,0.7)] transition-all duration-150 hover:bg-forest-soft active:scale-[0.98]"
+          disabled={inputLocked}
+          aria-disabled={inputLocked || undefined}
+          className={cn(
+            'flex h-14 flex-1 items-center justify-center gap-2 rounded-2xl text-base font-bold transition-all duration-150',
+            inputLocked
+              ? 'cursor-not-allowed bg-ink/[0.07] text-ink/35'
+              : 'bg-forest text-cream shadow-[0_14px_28px_-14px_rgba(69,89,78,0.7)] hover:bg-forest-soft active:scale-[0.98]',
+          )}
         >
-          Catat
+          {isEdit ? TRANSACTION_INPUT_COPY.submitEdit : TRANSACTION_INPUT_COPY.submit}
           <Check className="size-5" strokeWidth={2.8} />
         </button>
 
@@ -565,6 +740,11 @@ export function TransactionInputEngine({
         </button>
       </div>
 
+      {/* penjelasan kenapa tombol Catat mati — hanya saat masa aktif habis */}
+      {inputLocked && (
+        <SubscriptionLockNote className={isDialog ? 'mt-3' : 'mt-2.5'} />
+      )}
+
       {/* field tambahan khusus konteks (opsional) — halaman Joint Wallet memakai
           slot ini untuk pemilih split & toggle "Sembunyikan dari pasangan" */}
       {extraFields && <div className="mt-4">{extraFields}</div>}
@@ -584,5 +764,17 @@ export function TransactionInputEngine({
         </p>
       )}
     </div>
+  )
+}
+
+/* ── komponen kecil engine ─────────────────────────────────────────────────── */
+
+/** label + kontrol untuk field detail yang cuma muncul di mode edit */
+function EditField({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <label className="block text-left">
+      <span className="mb-1 block text-[11px] font-semibold text-ink/50">{label}</span>
+      {children}
+    </label>
   )
 }

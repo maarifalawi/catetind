@@ -174,6 +174,17 @@ export const ONBOARDING_STORE_KEY = 'catet-onboarding'
 export const WELCOME_TOAST_KEY = 'catet-welcome-toast'
 
 /**
+ * Halaman onboarding itu sendiri — tujuan SETELAH pembayaran sukses di
+ * `/checkout` (PRD 5916–5926: "Setelah webhook Midtrans confirm payment →
+ * redirect ke /app/welcome → Onboarding 3 langkah").
+ *
+ * Sengaja dipisah dari `POST_ONBOARDING_ROUTE` supaya dua arah perjalanan user
+ * tidak tertukar: `/app/onboarding` = masuk ke onboarding, `POST_ONBOARDING_ROUTE`
+ * = keluar dari onboarding menuju dashboard.
+ */
+export const ONBOARDING_ROUTE = '/app/onboarding'
+
+/**
  * Tujuan setelah onboarding selesai.
  *
  * PRD Domain 6 menulis `/app` untuk dashboard utama, tapi di repo mockup ini

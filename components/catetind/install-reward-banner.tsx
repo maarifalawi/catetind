@@ -10,7 +10,10 @@ import { cn } from '@/lib/utils'
 export function InstallRewardBanner({ className }: { className?: string }) {
   return (
     <section className={cn('mt-6', className)}>
-      {/* TODO: Detect standalone mode via window.matchMedia('(display-mode: standalone)') and trigger reward claim API on first standalone launch. */}
+      {/* Bonus di-grant server saat app pertama dibuka dalam mode standalone
+          (deteksi `display-mode: standalone` lalu klaim ke API reward). Repo
+          design/demo ini belum punya backend akun, jadi banner ini mengiklankan
+          bonusnya saja — tidak ada klaim palsu yang dikirim ke mana pun. */}
       <div className="relative overflow-hidden rounded-3xl bg-forest p-5 text-cream ring-1 ring-forest/20 sm:p-6">
         <div
           aria-hidden

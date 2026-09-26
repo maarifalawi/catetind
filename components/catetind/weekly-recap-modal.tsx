@@ -1,14 +1,6 @@
 'use client'
 
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type CSSProperties,
-  type PointerEvent as ReactPointerEvent,
-  type ReactNode,
-} from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import {
   ArrowDownLeft,
   BarChart3,
@@ -26,11 +18,23 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock'
+/* gestur panel penuh (swipe-down mobile + deteksi bottom sheet) kini SATU sumber
+   di `hooks/use-sheet-drag.ts` — dipakai bersama Monthly Review (inventaris #i) */
+import { useIsBottomSheet, useSheetDrag } from '@/hooks/use-sheet-drag'
 import { PlantIllustration, STAGE_NAMES, type PlantStage } from './plant-illustration'
+import { ShareProgressPanel } from './share-progress-panel'
 import { WEEK_DATA, WEEK_PLANT, WEEK_PERIOD, WEEK_SEGMENTS, formatIDR } from '@/lib/weekly-recap'
+import { ACTIVE_SHARE_CARD_ID, getShareCard } from '@/lib/data/share'
 
 /* tahap tanaman di slide 3 — level 8/8 = "Berbunga" (selaras WEEK_PLANT) */
 const PLANT_STAGE: PlantStage = 4
+
+/**
+ * Kartu publik yang dibagikan dari rekap (PRD 6614–6615: tombol Share di recap).
+ * Kartunya diambil sekali di tingkat modul: isinya implisit tetap, jadi tidak
+ * perlu dihitung ulang setiap render sheet.
+ */
+const SHARE_CARD = getShareCard(ACTIVE_SHARE_CARD_ID)
 
 type SlideDef = {
   id: string
@@ -125,103 +129,6 @@ function PctBadge({
       {children}
     </span>
   )
-}
-
-/** true kalau viewport < lg → sheet tampil sebagai bottom sheet (swipe-down aktif) */
-function useIsBottomSheet() {
-  const [isBottomSheet, setIsBottomSheet] = useState(false)
-
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width: 1023px)')
-    const sync = () => setIsBottomSheet(mq.matches)
-    sync()
-    mq.addEventListener('change', sync)
-    return () => mq.removeEventListener('change', sync)
-  }, [])
-
-  return isBottomSheet
-}
-
-/**
- * Swipe-down-untuk-menutup — khusus bottom sheet mobile.
- * - ditarik ke ATAS di-resist (dragY × 0.18) supaya sheet tidak terasa "lepas"
- * - dilepas > 96px ATAU velocity > 0.5px/ms → fling keluar dulu, baru onClose()
- * - hanya aktif di < lg (di desktop sheet-nya panel kanan, bukan bottom sheet)
- */
-function useSheetDrag({ enabled, onClose }: { enabled: boolean; onClose: () => void }) {
-  const [dragY, setDragY] = useState(0)
-  const [dragging, setDragging] = useState(false)
-  const [flinging, setFlinging] = useState(false)
-  const startRef = useRef<{ y: number; t: number } | null>(null)
-  const lastRef = useRef({ y: 0, t: 0 })
-  const dragYRef = useRef(0)
-
-  const setY = useCallback((v: number) => {
-    dragYRef.current = v
-    setDragY(v)
-  }, [])
-
-  const onPointerDown = useCallback(
-    (e: ReactPointerEvent<HTMLElement>) => {
-      if (!enabled || flinging) return
-      if (e.pointerType === 'mouse' && e.button !== 0) return
-      const t = performance.now()
-      startRef.current = { y: e.clientY, t }
-      lastRef.current = { y: e.clientY, t }
-      setDragging(true)
-      setY(0)
-      e.currentTarget.setPointerCapture(e.pointerId)
-    },
-    [enabled, flinging, setY],
-  )
-
-  const onPointerMove = useCallback(
-    (e: ReactPointerEvent<HTMLElement>) => {
-      const start = startRef.current
-      if (!start) return
-      const dy = e.clientY - start.y
-      setY(dy > 0 ? dy : dy * 0.18)
-      lastRef.current = { y: e.clientY, t: performance.now() }
-    },
-    [setY],
-  )
-
-  const finish = useCallback(() => {
-    const start = startRef.current
-    if (!start) return
-    const dy = dragYRef.current
-    const duration = Math.max(performance.now() - start.t, 1)
-    const velocity = (lastRef.current.y - start.y) / duration // px/ms, positif = ke bawah
-    startRef.current = null
-    setDragging(false)
-
-    if (dy > 96 || velocity > 0.5) {
-      /* biarkan sheet menyelesaikan gerak turunnya dulu, baru benar-benar ditutup
-         supaya tidak ada "lompatan" posisi */
-      setFlinging(true)
-      window.setTimeout(() => {
-        onClose()
-        setFlinging(false)
-        setY(0)
-      }, 240)
-      return
-    }
-
-    setY(0)
-  }, [onClose, setY])
-
-  return {
-    dragY,
-    dragging,
-    flinging,
-    handlers: {
-      onPointerDown,
-      onPointerMove,
-      onPointerUp: finish,
-      onPointerCancel: finish,
-      onLostPointerCapture: finish,
-    },
-  }
 }
 
 /* ─────────────────────────── Slide 1 — Minggu Kamu Sekilas ─────────────────────────── */
@@ -764,23 +671,35 @@ function SlidePlan() {
  */
 export function WeeklyRecapModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [slide, setSlide] = useState(0)
+  /** panel "Bagikan kartu pencapaian" — dibuka dari tombol Share di kepala sheet */
+  const [shareOpen, setShareOpen] = useState(false)
 
   useBodyScrollLock(open, true)
 
   useEffect(() => {
+    /* dibuka lagi selalu dari slide pertama & panel bagikan tertutup */
     if (open) setSlide(0)
+    else setShareOpen(false)
   }, [open])
 
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') {
+        /* panel bagikan ditutup lebih dulu: Escape jangan langsung membuang rekap */
+        if (shareOpen) setShareOpen(false)
+        else onClose()
+        return
+      }
+      /* selama panel bagikan terbuka, panah kiri/kanan jangan memindah slide —
+         fokus user sedang di panel, bukan di carousel */
+      if (shareOpen) return
       if (e.key === 'ArrowLeft') setSlide((s) => Math.max(0, s - 1))
       if (e.key === 'ArrowRight') setSlide((s) => Math.min(SLIDES.length - 1, s + 1))
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [open, onClose])
+  }, [open, onClose, shareOpen])
 
   const slides: Record<string, ReactNode> = {
     overview: <SlideOverview />,
@@ -796,6 +715,8 @@ export function WeeklyRecapModal({ open, onClose }: { open: boolean; onClose: ()
       slide={slide}
       setSlide={setSlide}
       slides={slides}
+      shareOpen={shareOpen}
+      onToggleShare={() => setShareOpen((prev) => !prev)}
     />
   )
 }
@@ -806,12 +727,16 @@ function WeekRecapSheet({
   slide,
   setSlide,
   slides,
+  shareOpen,
+  onToggleShare,
 }: {
   open: boolean
   onClose: () => void
   slide: number
   setSlide: (n: number) => void
   slides: Record<string, ReactNode>
+  shareOpen: boolean
+  onToggleShare: () => void
 }) {
   const closeRef = useRef<HTMLButtonElement>(null)
   const bodyRef = useRef<HTMLDivElement>(null)
@@ -926,10 +851,21 @@ function WeekRecapSheet({
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
+            {/* Tombol Share dulu yatim (ikon tanpa handler). Sekarang ia membuka
+                panel bagikan: tautan `/share/<id>` + Web Share API/clipboard —
+                PRD 6614–6615 minta tombol ini ada di dalam rekap. */}
             <button
               type="button"
-              aria-label="Bagikan rekap"
-              className="flex size-9 items-center justify-center rounded-full bg-cream text-ink ring-1 ring-soil/12 transition-colors hover:bg-sage"
+              onClick={onToggleShare}
+              aria-label="Bagikan kartu pencapaian"
+              aria-expanded={shareOpen}
+              aria-controls="recap-share-panel"
+              className={cn(
+                'flex size-9 items-center justify-center rounded-full transition-colors',
+                shareOpen
+                  ? 'bg-forest text-mint'
+                  : 'bg-cream text-ink ring-1 ring-soil/12 hover:bg-sage',
+              )}
             >
               <Share2 className="size-4" strokeWidth={2.2} />
             </button>
@@ -944,6 +880,18 @@ function WeekRecapSheet({
             </button>
           </div>
         </div>
+
+        {/* panel bagikan — DI LUAR area scroll: user bisa membuka rekap di slide
+            mana pun, lalu langsung membagikan kartunya. Isinya sengaja tidak
+            menggambar ulang kartu; pratinjau sebenarnya ada di `/share/<id>`. */}
+        {shareOpen && SHARE_CARD !== 'unknown' && (
+          <div id="recap-share-panel" className="shrink-0">
+            <ShareProgressPanel
+              card={SHARE_CARD}
+              className="mt-3 animate-[row-in_240ms_ease-out] motion-reduce:animate-none"
+            />
+          </div>
+        )}
 
         {/* tab slide — label pendek, 4 chip muat sepenuhnya (tidak terpotong) */}
         <div

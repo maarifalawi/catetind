@@ -17,6 +17,13 @@ import { useMoneyContext } from './money-context-provider'
 import { WeeklyRecapBanner } from './weekly-recap-banner'
 import { WeeklyRecapModal } from './weekly-recap-modal'
 import { HomeBanners } from './home-banner'
+import { RenewalModal } from './renewal-modal'
+import { MonthlyReviewModal } from './monthly-review-modal'
+import { MonthlyTargetCard } from './monthly-target-card'
+import { MilestoneCelebration } from './milestone-celebration'
+import { useRenewalReminder } from '@/hooks/use-renewal-reminder'
+import { useMonthlyReview } from '@/hooks/use-monthly-review'
+import { useMilestoneCelebration } from '@/hooks/use-milestone-celebration'
 import { ExpenseDistributionCard } from './expense-distribution-card'
 import { MyGoalsCard } from './my-goals-card'
 import { RecentTransactionsCard } from './recent-transactions-card'
@@ -76,6 +83,19 @@ export function HomeScreen() {
   const closeOverview = useCallback(() => setOverviewOpen(false), [])
   const openRecap = useCallback(() => setRecapOpen(true), [])
   const closeRecap = useCallback(() => setRecapOpen(false), [])
+  /* pengingat perpanjangan (task 14): modal H-1 + banner-nya satu paket.
+     Logika "kapan muncul" ada di hook — Home cuma memasang & meneruskan. */
+  const renewal = useRenewalReminder()
+  /* ritual bulanan (task 15): trigger tanggal 1–3 + target tersimpan.
+     Logikanya juga di hook; Home cuma memasang kartu & modalnya. */
+  const monthly = useMonthlyReview()
+  /* perayaan milestone (inventaris #k, task 16): streak 7/14/21/30 dari state
+     mock `lib/data/milestones.ts`. Logikanya di hook — Home cuma memasang
+     overlay & meneruskan pintu "Lihat perayaan" ke Plant Detail. */
+  const celebration = useMilestoneCelebration()
+  /* Perayaan MENUNGGU popup lain tutup dulu: jangan dua overlay bertumpuk di
+     layar yang sama (alasan yang sama dengan `monthly.open && !renewal.open`). */
+  const celebrationBlocked = renewal.open || monthly.open || overviewOpen || recapOpen
 
   return (
     <ScreenShell>
@@ -138,8 +158,24 @@ export function HomeScreen() {
             + rekap mingguan akhir pekan (WeeklyRecapBanner). Dua-duanya hanya
             muncul saat kondisinya terpenuhi, jadi tinggi halaman ikut menyesuaikan. */}
         <div className="mt-4 space-y-2.5 lg:mt-5">
-          <HomeBanners />
+          <HomeBanners
+            renewalState={renewal.state}
+            renewalHandled={renewal.renewed}
+            onOpenRenewal={renewal.openModal}
+          />
           <WeeklyRecapBanner onOpen={openRecap} />
+          {/* kartu target bulan ini — efek NYATA dari ritual Monthly Review dan
+              satu-satunya jalan membukanya lagi setelah auto-popup 1–3 lewat.
+              `monthly.ready` menahan render sampai penanda localStorage dibaca,
+              supaya kartunya tidak berkedip dari "belum ada" ke nominalnya. */}
+          {monthly.ready && (
+            <MonthlyTargetCard
+              savedThisMonth={monthly.savedThisMonth}
+              amount={monthly.saved?.amount ?? 0}
+              fundId={monthly.saved?.fundId ?? null}
+              onOpen={monthly.openModal}
+            />
+          )}
         </div>
 
         {/* ── baris 1 ────────────────────────────────────────────────────────
@@ -162,7 +198,7 @@ export function HomeScreen() {
         {/* ── baris 2: tanaman (metafora pertumbuhan) + arus uang dua seri ──── */}
         <div className="mt-5 grid grid-cols-1 gap-5 lg:mt-6 lg:grid-cols-12 lg:gap-6">
           <div className="h-full lg:col-span-5">
-            <PlantWidget />
+            <PlantWidget onReplayCelebration={celebration.replay} />
           </div>
           <div className="h-full lg:col-span-7">
             <CashFlowCard />
@@ -186,6 +222,33 @@ export function HomeScreen() {
         selection={overviewSelection}
       />
       <WeeklyRecapModal open={recapOpen} onClose={closeRecap} />
+      {/* ritual bulanan (inventaris #i): auto-popup tanggal 1–3 saja.
+          `!renewal.open` = modal ini MENUNGGU modal Renewal ditutup dulu supaya
+          user tidak dihadapkan dua popup bertumpuk di layar yang sama. */}
+      <MonthlyReviewModal
+        open={monthly.open && !renewal.open}
+        monthKey={monthly.monthKey}
+        saved={monthly.saved}
+        onClose={monthly.close}
+        onSave={monthly.saveTarget}
+      />
+      {/* modal perpanjangan: muncul sendiri 1x di H-1, bisa dibuka ulang dari
+          banner Renewal di atas — sumber kondisi & harganya lib/data/renewal.ts */}
+      <RenewalModal
+        open={renewal.open}
+        state={renewal.state}
+        onDismiss={renewal.dismiss}
+        onRenewed={renewal.markRenewed}
+      />
+      {/* perayaan milestone (inventaris #k) — auto-dismiss ~2.5 detik, bisa
+          langsung ditutup, dan milestone yang sama tidak muncul dua kali
+          (penanda di `milestoneStorageKey()`). Pintu meninjau ulangnya ada di
+          Plant Detail: tombol "Lihat perayaan" di dalam kartu tanaman. */}
+      <MilestoneCelebration
+        open={celebration.open && !celebrationBlocked}
+        milestone={celebration.milestone}
+        onClose={celebration.dismiss}
+      />
     </ScreenShell>
   )
 }

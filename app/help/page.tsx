@@ -1,18 +1,17 @@
 import type { Metadata } from 'next'
+import { HelpCenterScreen } from '@/components/catetind/help-center-screen'
 import { PhoneStage } from '@/components/catetind/phone-stage'
 
 export const metadata: Metadata = {
   title: 'Pusat Bantuan — CatetInd',
+  description:
+    'Cari jawaban pakai bahasa sehari-hari, ikuti langkah singkatnya, atau hubungi founder langsung lewat pintu di kaki artikel. Data keuanganmu tetap hanya milikmu.',
 }
 
 export default function HelpPage() {
   return (
     <PhoneStage>
-      <main className="flex min-h-screen items-center justify-center px-5 pb-32 pt-6">
-        <h1 className="font-display text-3xl font-semibold tracking-tight text-ink lg:text-4xl">
-          Pusat Bantuan
-        </h1>
-      </main>
+      <HelpCenterScreen />
     </PhoneStage>
   )
 }

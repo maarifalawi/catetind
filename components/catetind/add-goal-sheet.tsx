@@ -85,7 +85,7 @@ export function AddGoalSheet({
       onClose={onClose}
       title="Tanam Celengan Baru"
       description="Kasih nama impiannya, lalu kita hitung bareng nabungnya."
-      footer={<SheetSubmit onClick={submit} disabled={!ready}>Tanam Celengan 🌱</SheetSubmit>}
+      footer={<SheetSubmit onClick={submit} disabled={!ready} gate>Tanam Celengan 🌱</SheetSubmit>}
     >
       {/* ── STEP 1 — nama + target ─────────────────────────────────────── */}
       <label className="block">

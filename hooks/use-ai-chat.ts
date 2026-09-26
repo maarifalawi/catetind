@@ -6,6 +6,7 @@ import {
   MOCK_APPRECIATION_REPLY,
   MOCK_FALLBACK_REPLY,
   MOCK_LIMIT_REPLY,
+  MOCK_SPENDING_REVIEW_REPLY,
   PROACTIVE_WELCOME,
   type ChatMessage,
 } from '@/lib/ai-chat'
@@ -19,6 +20,10 @@ const makeId = () => `msg-${++nextId}`
  */
 function mockReply(userText: string): Omit<ChatMessage, 'id'> {
   const t = userText.toLowerCase()
+  /* prompt 19 — seed dari panel "Review Pengeluaran Hari Ini" ("boros nggak nih
+     hari ini?") dicek DULU: kalau jatuh ke pola 'budget', balasannya jadi demo
+     Quick Action yang tidak nyambung dengan panel yang baru ditutup. */
+  if (/(boros|pengeluaran hari ini|review pengeluaran)/.test(t)) return MOCK_SPENDING_REVIEW_REPLY
   if (/(budget|limit|kopi|atur ulang)/.test(t)) return MOCK_LIMIT_REPLY // demo Quick Action (D)
   if (/(ceritain|kondisi)/.test(t)) return MOCK_APPRECIATION_REPLY // demo Appreciation (E)
   return { role: 'ai', kind: 'coaching', content: MOCK_FALLBACK_REPLY }
@@ -83,5 +88,5 @@ export function useAIChat() {
     [append, input, isTyping],
   )
 
-  return { messages, isTyping, input, setInput, sendMessage, startConversation }
+  return { messages, isTyping, input, setInput, sendMessage, startConversation, appendMessage: append }
 }

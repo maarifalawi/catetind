@@ -1,7 +1,8 @@
 'use client'
 
-import { X } from 'lucide-react'
+import { Sparkles, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { CELEBRATION_COPY } from '@/lib/data/milestones'
 import { PlantIllustration, STAGE_NAMES, type PlantStage } from './plant-illustration'
 
 type PlantState = {
@@ -17,16 +18,25 @@ const STAGES: PlantStage[] = [1, 2, 3, 4]
  * Plant Detail View (inventaris modal j, Domain 3B):
  * animasi tanaman + breakdown stats. Framing selalu positif -
  * TIDAK ada angka streak tertulis ("kamu skip Y hari" dilarang, baris 1780).
+ *
+ * Sejak paket Milestone Celebration (inventaris #k) modal ini juga jadi SATU
+ * PINTU meninjau ulang perayaan: perayaan otomatis memang sengaja hanya muncul
+ * sekali, tapi fiturnya tidak boleh tersembunyi — jadi `onReplay` (opsional)
+ * merender tombol di bawah, tepat di zona ibu jari.
  */
 export function PlantDetailModal({
   open,
   onClose,
   plant,
+  onReplay,
 }: {
   open: boolean
   onClose: () => void
   plant: PlantState
+  /** buka lagi overlay perayaan terakhir; kosong = tombolnya tidak dirender */
+  onReplay?: () => void
 }) {
+
   if (!open) return null
 
   return (
@@ -121,6 +131,20 @@ export function PlantDetailModal({
           Kamu udah catat <b className="text-forest">{plant.activeDays} hari</b>{' '}
           bulan ini - tanamanmu tumbuh karena konsistensimu. Lanjutin ya! 💚
         </p>
+
+        {/* pintu meninjau ulang perayaan (inventaris #k) — bukan aksi utama,
+            jadi gayanya sekunder; hanya muncul kalau pemanggil menyediakannya */}
+        {onReplay && (
+          <button
+            type="button"
+            onClick={onReplay}
+            title={CELEBRATION_COPY.replayHint}
+            className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-cream text-[13.5px] font-semibold text-ink ring-1 ring-soil/12 transition-colors hover:bg-sage/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25 active:scale-[0.99] motion-reduce:transition-none"
+          >
+            <Sparkles className="size-4 text-forest" strokeWidth={2.4} aria-hidden />
+            {CELEBRATION_COPY.replayLabel}
+          </button>
+        )}
       </div>
     </div>
   )

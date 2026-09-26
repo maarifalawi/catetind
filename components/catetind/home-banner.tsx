@@ -3,13 +3,26 @@
 import { memo, useEffect, useState } from 'react'
 import { CalendarClock, Fuel, PiggyBank, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import {
+  renewalBannerCopy,
+  shouldShowRenewalBanner,
+  type RenewalState,
+} from '@/lib/data/renewal'
+import { AI_REMAINING_PCT, AI_USED_PCT } from '@/lib/ai-quota'
 
-/* ── mock kondisi — nanti dari backend (Domain 5A, 2C.3, 4B) ── */
+/* ── mock kondisi — nanti dari backend (Domain 5A, 2C.3, 4B) ──
+   Catatan: kondisi RENEWAL tidak lagi hidup di sini. Ia dibaca dari
+   `lib/data/renewal.ts` (satu sumber dengan modal Renewal), supaya banner &
+   modalnya tidak pernah beda cerita soal sisa hari.
+   Sama untuk pemakaian AI: angkanya dibaca dari `lib/ai-quota.ts`, bukan
+   di-mock ulang di sini — soft-nudge ini menilai angka yang sama dengan yang
+   tampil di kartu sidebar, halaman Billing, dan dokumen /terms. */
 const DEMO = {
-  renewalDaysLeft: 3, // banner 7 & 3 hari sebelum expired (Domain 5A)
-  aiUsagePct: 78, // AI Usage Fuel Gauge — muncul saat usage >70%
   sinkingFundPending: true, // tanggal >5 & belum kontribusi (Domain 2C.3)
 }
+
+/** ambang soft-nudge ala PRD 4770/4894: muncul hanya saat pemakaian >70% */
+const SOFT_NUDGE_USAGE_PCT = 70
 
 const KEY = 'catet-home-banners-dismissed'
 
@@ -63,11 +76,27 @@ function BannerShell({
 /**
  * Stack banner conditional di Home — priority: Renewal > AI Fuel Gauge > Sinking Fund.
  * Dismiss per-banner tersimpan di localStorage dan muncul lagi keesokan harinya.
+ *
+ * Banner RENEWAL menerima datanya dari luar (`renewalState`) dan CTA-nya membuka
+ * modal Renewal (`onOpenRenewal`) — jadi ia benar-benar berfungsi, bukan pajangan,
+ * dan modalnya bisa ditinjau ulang kapan saja tanpa menghapus localStorage.
  */
-/** Dibungkus `memo` — tidak menerima props, jadi tidak perlu ikut re-render
- *  saat HomeScreen mengubah state popup (lihat catatan di cash-flow-card.tsx).
+/** Dibungkus `memo` — props-nya primitif/stabil (state dari hook, callback
+ *  `useCallback`), jadi tidak perlu ikut re-render saat HomeScreen mengubah state
+ *  popup lain (lihat catatan di cash-flow-card.tsx).
  *  State dismiss lokalnya tetap jalan normal. */
-export const HomeBanners = memo(function HomeBanners() {
+export const HomeBanners = memo(function HomeBanners({
+  renewalState,
+  renewalHandled,
+  onOpenRenewal,
+}: {
+  /** kondisi langganan (mock) dari `useRenewalReminder` */
+  renewalState: RenewalState
+  /** true = siklus ini sudah diperpanjang → banner renewal berhenti sendiri */
+  renewalHandled: boolean
+  /** buka modal Renewal (One-Tap Renew) */
+  onOpenRenewal: () => void
+}) {
   /* hydrate dismiss dari localStorage (setelah mount — anti hydration mismatch) */
   const [mounted, setMounted] = useState(false)
   const [dismissed, setDismissed] = useState<DismissedMap>({})
@@ -93,13 +122,14 @@ export const HomeBanners = memo(function HomeBanners() {
     localStorage.setItem(KEY, JSON.stringify(next))
   }
 
-  const showRenewal = DEMO.renewalDaysLeft > 0 && DEMO.renewalDaysLeft <= 7
-  const showAiGauge = DEMO.aiUsagePct > 70
+  const showRenewal = !renewalHandled && shouldShowRenewalBanner(renewalState)
+  const renewalCopy = renewalBannerCopy(renewalState)
+  const showAiGauge = AI_USED_PCT > SOFT_NUDGE_USAGE_PCT
   const showFundNudge = DEMO.sinkingFundPending && today.getDate() > 5
 
   return (
     <>
-      {/* 1 — RENEWAL BANNER (7/3 hari sebelum expired, Domain 5A) */}
+      {/* 1 — RENEWAL BANNER (H-7/H-3/H-1 sebelum expired, Domain 5A & task 14) */}
       {showRenewal && !isDismissed('renewal') && (
         <BannerShell
           tone="amber"
@@ -110,14 +140,15 @@ export const HomeBanners = memo(function HomeBanners() {
               <CalendarClock className="size-4.5" strokeWidth={2.2} />
             </span>
           }
-          title={`Masa aktifmu tersisa ${DEMO.renewalDaysLeft} hari lagi`}
-          body="Tanpa auto-renew — data kamu aman kok. Perpanjang kapan pun kamu siap. 💚"
+          title={renewalCopy.title}
+          body={renewalCopy.body}
           cta={
             <button
               type="button"
+              onClick={onOpenRenewal}
               className="shrink-0 rounded-full bg-forest px-4 py-2 text-xs font-semibold text-cream transition-colors hover:bg-forest-soft active:scale-95"
             >
-              Perpanjang
+              {renewalCopy.cta}
             </button>
           }
         />
@@ -140,10 +171,12 @@ export const HomeBanners = memo(function HomeBanners() {
               <span className="h-1.5 w-24 overflow-hidden rounded-full bg-soil/[0.09]">
                 <span
                   className="block h-full rounded-full bg-hud-amber"
-                  style={{ width: `${DEMO.aiUsagePct}%` }}
+                  style={{ width: `${AI_USED_PCT}%` }}
                 />
               </span>
-              <span className="tabular-nums">{DEMO.aiUsagePct}% terpakai</span>
+              <span className="tabular-nums">
+                {AI_USED_PCT}% terpakai · {AI_REMAINING_PCT}% sisa
+              </span>
             </span>
           }
           cta={

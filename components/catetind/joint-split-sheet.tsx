@@ -106,7 +106,7 @@ export function JointSplitSheet({
       title="Atur Pembagian"
       description="Biar adil, biar gak ada yang ngerasa berat sebelah. 💚"
       footer={
-        <SheetSubmit onClick={handleSave} disabled={!nominalReady}>
+        <SheetSubmit onClick={handleSave} disabled={!nominalReady} gate>
           Simpan Pembagian ✓
         </SheetSubmit>
       }

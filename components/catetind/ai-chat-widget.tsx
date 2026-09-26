@@ -1,33 +1,30 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react'
+import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Mic, Plus, ScanLine, Send, Sparkles, X } from 'lucide-react'
+import { ArrowRight, Check, Mic, Plus, ScanLine, Send, Sparkles, X } from 'lucide-react'
+import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { useAIChat } from '@/hooks/use-ai-chat'
 import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock'
+import { useTransactionCapture } from '@/hooks/use-transaction-capture'
+import { AICaptureBubble } from './ai-capture-bubble'
+import { AIAvatar } from './ai-avatar'
+import { usePrivacy } from './privacy-provider'
+import { useSubscriptionGate } from './subscription-gate-provider'
+import { SUBSCRIPTION_LOCK_COPY } from '@/lib/data/renewal'
 import {
-  AI_QUOTA_REMAINING,
+  AI_CAPTURE_COPY,
+  AI_CHAT_COPY,
   QUICK_REPLIES,
   type ChatMessage,
 } from '@/lib/ai-chat'
-
-/** avatar kecil AI — dipakai di header panel & di samping bubble AI */
-function AIAvatar({ className }: { className?: string }) {
-  return (
-    <span
-      className={cn(
-        'flex shrink-0 items-center justify-center rounded-full bg-forest text-mint',
-        className ?? 'size-7',
-      )}
-    >
-      <Sparkles className="size-[55%]" strokeWidth={2} />
-    </span>
-  )
-}
+import { AI_REMAINING_PCT } from '@/lib/ai-quota'
+import { AI_CHAT_SEED_EVENT, type AIChatSeedDetail } from '@/lib/ai-chat-bus'
 
 /** E. satu bubble chat — user di kanan, AI di kiri dengan avatar */
-function ChatBubble({ message }: { message: ChatMessage }) {
+function ChatBubble({ message, onAction }: { message: ChatMessage; onAction: () => void }) {
   if (message.role === 'user') {
     return (
       <div className="flex justify-end">
@@ -56,21 +53,29 @@ function ChatBubble({ message }: { message: ChatMessage }) {
         {appreciation && (
           <span className="mb-1 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-forest-soft">
             <Sparkles className="size-3" />
-            Apresiasi
+            {AI_CHAT_COPY.appreciationBadge}
           </span>
         )}
         <p>{message.content}</p>
 
-        {/* D. Quick Action — tombol aksi inline di dalam bubble AI */}
+        {/* D. Quick Action — tombol aksi inline di dalam bubble AI.
+            Sejak prompt 20 tombolnya BENAR-BENAR jalan: `href` menuju route
+            yang sudah ada (mis. /budget untuk bikin limit, /history untuk
+            melihat catatan yang baru disimpan), dan panelnya ditutup supaya
+            halaman tujuannya tidak ketutupan dialog. */}
         {message.action && (
-          // TODO: Connect to budget creation API
-          <button
-            type="button"
+          <Link
+            href={message.action.href}
+            onClick={onAction}
             className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl bg-forest px-3 py-2 text-xs font-semibold text-cream transition hover:bg-forest-soft active:scale-[0.98]"
           >
-            <Plus className="size-3.5" strokeWidth={2.5} />
+            {message.action.kind === 'create' ? (
+              <Plus className="size-3.5" strokeWidth={2.5} aria-hidden />
+            ) : (
+              <ArrowRight className="size-3.5" strokeWidth={2.5} aria-hidden />
+            )}
             {message.action.label}
-          </button>
+          </Link>
         )}
       </div>
     </div>
@@ -102,16 +107,46 @@ function TypingIndicator() {
  */
 export function AIChatWidget() {
   const pathname = usePathname()
+  /* nominal di bubble/panel chat ikut toggle privasi global (tombol mata di
+     header) — biar sensor layar berlaku juga untuk catatan yang baru dicatat */
+  const { money } = usePrivacy()
+  /* masa aktif habis → "Catat ✓" di kartu konfirmasi AI tidak boleh menyimpan.
+     Percakapan & pemindaian struk tetap jalan (tidak ada yang dikunci diam-diam);
+     yang ditahan hanya komitmen terakhirnya. */
+  const { inputLocked } = useSubscriptionGate()
   const [open, setOpen] = useState(false)
   // A. titik notifikasi berdenyut — AI punya insight proaktif (mock: ada saat
   // load, mis. "spending spike terdeteksi"); hilang setelah panel dibuka
   const [hasInsight, setHasInsight] = useState(true)
-  const [notice, setNotice] = useState<string | null>(null)
-  const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
+  /** input file native untuk scan struk (kamera belakang di HP, galeri di web) */
+  const fileRef = useRef<HTMLInputElement>(null)
 
-  const { messages, isTyping, input, setInput, sendMessage, startConversation } =
+  const { messages, isTyping, input, setInput, sendMessage, startConversation, appendMessage } =
     useAIChat()
+
+  /**
+   * Jejak user masuk ke percakapan sebagai pesan user biasa: nama file struk
+   * yang dipilih, atau transkrip yang barusan didengar mesin STT. Jadi user bisa
+   * melihat persis apa yang AI terima sebelum memutuskan menyimpan — bukan
+   * kotak hitam.
+   */
+  const echoToConversation = useCallback(
+    (text: string) => {
+      appendMessage({ role: 'user', kind: 'coaching', content: text })
+    },
+    [appendMessage],
+  )
+
+  /* Dua pintu masuk AI-conversational-first (prompt 20) — logikanya di hook:
+     baca struk (mock OCR), dengar suara (Web Speech API), dan kartu konfirmasi
+     yang wajib dilewati sebelum apa pun tersimpan. */
+  const capture = useTransactionCapture({ onUserEcho: echoToConversation })
+
+  /* sementara draft menunggu keputusan user, dua pintu masuk ditutup: tidak ada
+     gunanya membuka alur kedua di atas draft yang belum dijawab */
+  const captureLocked = capture.phase === 'confirm' || capture.phase === 'problem'
+  const voiceUnavailable = capture.voiceSupport === 'no'
 
   // kunci scroll background selama panel terbuka — mobile saja; di desktop
   // panel mengambang 420x550 dan scroll halaman tetap diizinkan
@@ -123,13 +158,35 @@ export function AIChatWidget() {
     startConversation() // seed sapaan proaktif hanya kalau history masih kosong
   }
 
-  // auto-scroll ke pesan terbaru setiap ada perubahan
+  /* Buka dari luar widget (prompt 19): panel "Review Pengeluaran Hari Ini" di
+     /budget (dan CTA "Review Pengeluaran Hari Ini" di kartu Jatah Home) mengirim
+     pertanyaan seed lewat bus event — lihat lib/ai-chat-bus.ts untuk alasan
+     memilih bus, bukan menaikkan state chat ke provider. Yang terjadi di sini
+     sama persis dengan user menekan bubble ✨ lalu mengetik pertanyaannya
+     sendiri: panel terbuka, sapaan proaktif disemai kalau history masih kosong,
+     lalu pertanyaannya terkirim sebagai pesan user. */
+  useEffect(() => {
+    function handleSeed(event: Event) {
+      const seed = (event as CustomEvent<AIChatSeedDetail>).detail?.seed ?? ''
+      setOpen(true)
+      setHasInsight(false)
+      startConversation()
+      if (seed) sendMessage(seed)
+    }
+
+    window.addEventListener(AI_CHAT_SEED_EVENT, handleSeed)
+    return () => window.removeEventListener(AI_CHAT_SEED_EVENT, handleSeed)
+  }, [sendMessage, startConversation])
+
+  // auto-scroll ke pesan terbaru setiap ada perubahan (termasuk bubble alur
+  // voice/scan yang muncul & berganti wujud)
   useEffect(() => {
     const el = scrollRef.current
     if (el) el.scrollTop = el.scrollHeight
-  }, [messages, isTyping, open])
+  }, [messages, isTyping, open, capture.phase])
 
-  // tutup panel dengan Escape
+  // tutup panel dengan Escape — draft yang sedang dikonfirmasi TIDAK dibuang
+  // (state-nya milik hook di widget), jadi user bisa lanjut setelah membuka ulang
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
@@ -137,34 +194,90 @@ export function AIChatWidget() {
     return () => window.removeEventListener('keydown', onKey)
   }, [open])
 
-  // bersihkan timer notice saat unmount
-  useEffect(
-    () => () => {
-      if (noticeTimer.current) clearTimeout(noticeTimer.current)
-    },
-    [],
+  /* ── 📸 scan struk: file picker native, bukan kamera palsu di dalam UI ──── */
+  function handleScanClick() {
+    if (capture.phase === 'reading') {
+      capture.cancelCapture() // tombol yang sama membatalkan baca struk
+      return
+    }
+    fileRef.current?.click()
+  }
+
+  function handleReceiptChosen(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    /* reset supaya memilih file yang SAMA dua kali tetap memicu onChange */
+    event.target.value = ''
+    if (!file) return
+    capture.startReceiptScan(file)
+  }
+
+  /* ── 🎤 voice: tombol yang sama jadi "Selesai" saat sedang mendengar ────── */
+  function handleVoiceClick() {
+    if (capture.phase === 'listening') {
+      capture.finishVoice()
+      return
+    }
+    capture.startVoice()
+  }
+
+  /* ── "Catat ✓" di kartu konfirmasi — satu-satunya jalan menuju penyimpanan ─ */
+  function handleConfirmCapture() {
+    /* masa aktif habis: jangan simpan, tapi jangan buang draftnya juga — user
+       bisa membaca kembali isiannya begitu masa aktifnya lanjut (task 23) */
+    if (inputLocked) {
+      toast(SUBSCRIPTION_LOCK_COPY.inputHint)
+      return
+    }
+    try {
+      const transaction = capture.confirmCapture()
+      if (!transaction) return // masih ada yang kurang; kartunya sudah menjelaskan
+      const amountLabel = money(transaction.amount) // hormati sensor layar
+      appendMessage({
+        role: 'ai',
+        kind: 'coaching',
+        content: AI_CAPTURE_COPY.saved(transaction.name, amountLabel),
+        action: { label: AI_CAPTURE_COPY.viewHistory, href: '/history' },
+      })
+      toast.success(AI_CAPTURE_COPY.savedToast.title, {
+        description: AI_CAPTURE_COPY.savedToast.description(amountLabel),
+      })
+    } catch {
+      /* Produksi: kegagalan `POST /api/transactions`. Draftnya sengaja TIDAK
+         dibuang — user tidak boleh kehilangan isian hanya karena jaringan. */
+      appendMessage({ role: 'ai', kind: 'coaching', content: AI_CAPTURE_COPY.saveFailed })
+    }
+  }
+
+  /* Halaman yang TIDAK menampilkan bubble AI:
+       1. `/app/onboarding` — alurnya full-screen; bubble (bottom-24) bakal
+          ketutupan CTA sticky onboarding.
+       2. `/checkout` — halaman publik pembelian (inventaris #3): tanpa chat
+          widget, karena halaman ini harus tetap ringan & lurus ke pembayaran.
+       3. `/login` (+ `/login/verify`) — pintu masuk publik (inventaris #8/#9):
+          widget AI di sini cuma navigasi palsu (user belum punya data apa pun
+          untuk dibahas) dan mengganggu tombol "Buka email"/"Kirim ulang".
+       4. `/join/[code]` — undangan dompet bersama (inventaris #7): bubble-nya
+          menutupi CTA sticky "Gabung Dompet Ini", dan yang membuka halaman ini
+          belum tentu punya akun untuk diajak ngobrol.
+       5. `/share/[id]` — kartu pencapaian publik (inventaris #16): pengunjungnya
+          belum tentu punya akun, dan bubble AI di atas kartu orang lain bikin
+          halaman yang seharusnya jadi pintu masuk hangat terasa seperti app
+          orang lain. CTA "Gabung CatetInd" di halaman itu sudah jadi jalannya.
+       6. `/privacy` & `/terms` — dokumen legal publik (inventaris #4/#5):
+          bubble yang mengambang menutupi paragraf dokumen yang sedang dibaca,
+          dan menawarkan ngobrol dengan AI ke orang yang belum punya data apa
+          pun justru bikin klaim privasinya terasa kurang serius.
+     Guard ditaruh setelah semua hook supaya urutan hook tetap stabil. */
+  if (
+    pathname.startsWith('/app/onboarding') ||
+    pathname.startsWith('/checkout') ||
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/join') ||
+    pathname.startsWith('/share') ||
+    pathname.startsWith('/privacy') ||
+    pathname.startsWith('/terms')
   )
-
-  function showNotice(text: string) {
-    if (noticeTimer.current) clearTimeout(noticeTimer.current)
-    setNotice(text)
-    noticeTimer.current = setTimeout(() => setNotice(null), 2500)
-  }
-
-  function handleVoice() {
-    // TODO: Implement Web Speech API for voice-to-text, then parse with DeepSeek V3
-    showNotice('Fitur voice input segera hadir...')
-  }
-
-  function handleScan() {
-    // TODO: Trigger receipt OCR flow (GPT-4o-mini) from domain4_prd.md
-    showNotice('Fitur scan struk segera hadir...')
-  }
-
-  /* Di onboarding, bubble AI disembunyikan: alurnya full-screen dan posisi
-     bubble (bottom-24) bakal ketutupan CTA sticky onboarding. Guard ditaruh
-     setelah semua hook supaya urutan hook tetap stabil. */
-  if (pathname.startsWith('/app/onboarding')) return null
+    return null
 
   return (
     <>
@@ -175,7 +288,7 @@ export function AIChatWidget() {
         <button
           type="button"
           onClick={openPanel}
-          aria-label="Buka AI Coach"
+          aria-label={AI_CHAT_COPY.openLabel}
           className="animate-bubble-in fixed bottom-24 right-5 z-50 flex size-14 items-center justify-center rounded-full bg-forest text-mint shadow-[0_18px_40px_-12px_rgba(69,89,78,0.45)] ring-1 ring-forest/20 transition-transform duration-150 hover:scale-105 active:scale-95 lg:bottom-8 lg:right-8"
         >
           <Sparkles className="size-6" strokeWidth={2} />
@@ -202,7 +315,7 @@ export function AIChatWidget() {
           <section
             role="dialog"
             aria-modal="true"
-            aria-label="AI Coach CatetInd"
+            aria-label={AI_CHAT_COPY.panelLabel}
             className="animate-in slide-in-from-bottom-6 fade-in fixed inset-x-0 bottom-0 z-[60] flex h-[92dvh] flex-col overflow-hidden rounded-t-[2rem] bg-cream shadow-2xl ring-1 ring-soil/12 duration-300 lg:inset-x-auto lg:bottom-8 lg:right-8 lg:h-[550px] lg:w-[420px] lg:rounded-3xl"
           >
             {/* header — avatar, judul, fuel gauge kuota AI, tombol tutup */}
@@ -211,31 +324,32 @@ export function AIChatWidget() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline justify-between gap-2">
                   <p className="text-sm font-semibold tracking-tight text-ink">
-                    AI Coach
+                    {AI_CHAT_COPY.title}
                   </p>
                   <p className="shrink-0 text-[11px] font-medium text-ink/45">
-                    {AI_QUOTA_REMAINING}% sisa
+                    {AI_CHAT_COPY.quota(AI_REMAINING_PCT)}
                   </p>
                 </div>
-                {/* AI Token Fuel Gauge (Domain 5C) — mint → amber → terracotta */}
+                {/* AI Token Fuel Gauge (Domain 5C) — mint → amber → prem.
+                    Ambangnya dibaca dari SISA kuota, sejalan dengan sidebar. */}
                 <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-soil/[0.09]">
                   <div
                     className={cn(
                       'h-full rounded-full transition-all',
-                      AI_QUOTA_REMAINING <= 10
-                        ? 'bg-[#b89191]'
-                        : AI_QUOTA_REMAINING <= 30
+                      AI_REMAINING_PCT <= 10
+                        ? 'bg-plum'
+                        : AI_REMAINING_PCT <= 30
                           ? 'bg-cantelope'
                           : 'bg-mint',
                     )}
-                    style={{ width: `${AI_QUOTA_REMAINING}%` }}
+                    style={{ width: `${AI_REMAINING_PCT}%` }}
                   />
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                aria-label="Tutup AI Coach"
+                aria-label={AI_CHAT_COPY.closeLabel}
                 className="flex size-8 shrink-0 items-center justify-center rounded-full bg-soil/[0.1] text-ink/60 transition-colors hover:bg-sage hover:text-ink"
               >
                 <X className="size-4" />
@@ -249,14 +363,36 @@ export function AIChatWidget() {
               className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-4"
             >
               {messages.map((m) => (
-                <ChatBubble key={m.id} message={m} />
+                <ChatBubble key={m.id} message={m} onAction={() => setOpen(false)} />
               ))}
+
+              {/* Alur voice & scan struk (prompt 20) — bubble-nya hidup di dalam
+                  percakapan: baca struk → kartu konfirmasi yang bisa diedit →
+                  catat, atau penjelasan jujur kalau perangkatnya tidak mendukung. */}
+              <AICaptureBubble
+                phase={capture.phase}
+                draft={capture.draft}
+                liveTranscript={capture.liveTranscript}
+                problem={capture.problem}
+                formError={capture.formError}
+                voiceSupport={capture.voiceSupport}
+                onDraftChange={capture.updateDraft}
+                onConfirm={handleConfirmCapture}
+                onCancel={capture.cancelCapture}
+                onFinishVoice={capture.finishVoice}
+                onRetryVoice={capture.startVoice}
+              />
 
               {isTyping && <TypingIndicator />}
 
-              {/* C. quick-suggestion chips — hanya tampil tepat setelah sapaan */}
-              {messages.length === 1 && !isTyping && (
-                <div className="flex flex-wrap gap-2 pl-9 pt-1">
+              {/* C. quick-suggestion chips — hanya tampil tepat setelah sapaan
+                  dan tidak saat alur voice/scan sedang berjalan */}
+              {messages.length === 1 && !isTyping && !capture.busy && (
+                <div
+                  role="group"
+                  aria-label={AI_CHAT_COPY.quickRepliesLabel}
+                  className="flex flex-wrap gap-2 pl-9 pt-1"
+                >
                   {QUICK_REPLIES.map((chip) => (
                     <button
                       key={chip}
@@ -275,6 +411,10 @@ export function AIChatWidget() {
             <form
               onSubmit={(e) => {
                 e.preventDefault()
+                /* saat draft menunggu keputusan, pesan baru tidak dikirim supaya
+                   urutan percakapan tidak membingungkan — alasannya tertulis di
+                   atas composer, bukan diam-diam diabaikan */
+                if (captureLocked) return
                 sendMessage()
               }}
               className="relative border-t border-soil/12 bg-cream/85 p-3 backdrop-blur"
@@ -282,49 +422,98 @@ export function AIChatWidget() {
                 paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))',
               }}
             >
-              {/* H. placeholder overlay untuk shortcut voice/scan */}
-              {notice && (
-                <div
-                  role="status"
-                  className="animate-in fade-in slide-in-from-bottom-1 absolute -top-10 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-ink px-3.5 py-1.5 text-xs font-medium text-cream shadow-lg duration-200"
-                >
-                  {notice}
-                </div>
+              {/* pengingat lembut saat kartu konfirmasi masih menunggu jawaban */}
+              {captureLocked && (
+                <p role="status" className="mb-2 text-[11px] leading-relaxed text-ink/45">
+                  {AI_CAPTURE_COPY.finishDraftFirst}
+                </p>
               )}
 
               <div className="flex items-center gap-2">
                 <input
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  placeholder="Tanya apa aja soal keuanganmu..."
-                  aria-label="Ketik pesan untuk AI Coach"
+                  placeholder={AI_CHAT_COPY.inputPlaceholder}
+                  aria-label={AI_CHAT_COPY.inputLabel}
                   className="h-10 min-w-0 flex-1 rounded-full bg-soil/[0.1] px-4 text-sm text-ink outline-none placeholder:text-ink/35 focus:ring-2 focus:ring-forest/20"
                 />
                 <button
                   type="button"
-                  onClick={handleVoice}
-                  aria-label="Voice input"
-                  className="flex size-10 shrink-0 items-center justify-center rounded-full bg-cream text-ink/60 ring-1 ring-soil/12 transition-colors hover:bg-sage hover:text-ink"
+                  onClick={handleVoiceClick}
+                  disabled={isTyping || captureLocked || capture.phase === 'reading'}
+                  aria-label={
+                    capture.phase === 'listening'
+                      ? AI_CAPTURE_COPY.voiceStopLabel
+                      : AI_CAPTURE_COPY.voiceLabel
+                  }
+                  aria-describedby={voiceUnavailable ? 'ai-voice-fallback' : undefined}
+                  className={cn(
+                    'flex size-10 shrink-0 items-center justify-center rounded-full ring-1 transition-colors active:scale-95 disabled:opacity-35',
+                    capture.phase === 'listening'
+                      ? 'bg-forest text-cream ring-forest hover:bg-forest-soft'
+                      : 'bg-cream text-ink/60 ring-soil/12 hover:bg-sage hover:text-ink',
+                    voiceUnavailable && 'text-ink/35',
+                  )}
                 >
-                  <Mic className="size-[18px]" />
+                  {capture.phase === 'listening' ? (
+                    <Check className="size-[18px]" strokeWidth={2.6} />
+                  ) : (
+                    <Mic className="size-[18px]" />
+                  )}
                 </button>
+
+                {/* 📸 scan struk — membuka file picker native (kamera belakang di
+                    HP lewat `capture="environment"`) */}
                 <button
                   type="button"
-                  onClick={handleScan}
-                  aria-label="Scan struk"
-                  className="flex size-10 shrink-0 items-center justify-center rounded-full bg-cream text-ink/60 ring-1 ring-soil/12 transition-colors hover:bg-sage hover:text-ink"
+                  onClick={handleScanClick}
+                  disabled={isTyping || captureLocked}
+                  aria-label={
+                    capture.phase === 'reading' ? AI_CAPTURE_COPY.cancel : AI_CAPTURE_COPY.scanLabel
+                  }
+                  className={cn(
+                    'flex size-10 shrink-0 items-center justify-center rounded-full ring-1 transition-colors active:scale-95 disabled:opacity-35',
+                    capture.phase === 'reading'
+                      ? 'bg-forest text-cream ring-forest hover:bg-forest-soft'
+                      : 'bg-cream text-ink/60 ring-soil/12 hover:bg-sage hover:text-ink',
+                  )}
                 >
-                  <ScanLine className="size-[18px]" />
+                  {capture.phase === 'reading' ? (
+                    <X className="size-[18px]" strokeWidth={2.4} />
+                  ) : (
+                    <ScanLine className="size-[18px]" />
+                  )}
                 </button>
+
+                {/* input file native: kamera belakang di HP, galeri/file picker di web */}
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={handleReceiptChosen}
+                  className="sr-only"
+                  tabIndex={-1}
+                  aria-hidden
+                />
+
                 <button
                   type="submit"
-                  disabled={!input.trim() || isTyping}
-                  aria-label="Kirim pesan"
+                  disabled={!input.trim() || isTyping || captureLocked}
+                  aria-label={AI_CHAT_COPY.sendLabel}
                   className="flex size-10 shrink-0 items-center justify-center rounded-full bg-forest text-cream transition-all hover:bg-forest-soft active:scale-95 disabled:opacity-35 disabled:hover:bg-forest"
                 >
                   <Send className="size-4" />
                 </button>
               </div>
+
+              {/* jalan keluar di perangkat tanpa Speech API — selalu terlihat,
+                  bukan cuma sesaat setelah tombolnya ditekan */}
+              {voiceUnavailable && (
+                <p id="ai-voice-fallback" className="mt-2 text-[11px] leading-relaxed text-ink/45">
+                  {AI_CAPTURE_COPY.voiceUnsupported}
+                </p>
+              )}
             </form>
           </section>
         </>

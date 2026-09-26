@@ -1,22 +1,29 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import { ChevronDown, ChevronUp, MonitorDown, Share, Smartphone, Zap, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useDeviceDetect, type DeviceType } from '@/hooks/use-device-detect'
 import { useInstallPrompt } from '@/hooks/use-install-prompt'
+import {
+  INSTALL_BENEFITS,
+  INSTALL_CHECKOUT_CTA,
+  INSTALL_DETECTING_LABEL,
+  INSTALL_HELP_FOOTER,
+  INSTALL_HERO,
+  INSTALL_IOS_CTA,
+  INSTALL_IOS_PANEL_NOTE,
+  INSTALL_OTHER_GUIDES_LABEL,
+  INSTALL_TABLIST_LABEL,
+  TUTORIALS,
+} from '@/lib/data/install'
 import { InstallCta } from './install-cta'
+import { InstallLimitsCard } from './install-limits-card'
 import { InstallQrHandoff } from './install-qr-handoff'
 import { InstallRewardBanner } from './install-reward-banner'
 import { IosInstallArrow } from './ios-install-arrow'
-import { ManualTutorial, TUTORIALS } from './manual-tutorial'
-
-/** 3 alasan install — bahasa user, bukan bahasa fitur */
-const BENEFITS = [
-  { emoji: '📴', title: 'Bisa Offline', desc: 'Catat walau gak ada sinyal.' },
-  { emoji: '🚀', title: '3x Lebih Cepat', desc: 'Loading instan tanpa nunggu browser.' },
-  { emoji: '💾', title: 'Hemat Storage', desc: 'Gak makan memori berkiga-giga.' },
-]
+import { ManualTutorial } from './manual-tutorial'
 
 const TAB_ORDER: DeviceType[] = ['ios', 'android', 'desktop']
 const TAB_ICON: Record<DeviceType, LucideIcon> = {
@@ -33,7 +40,8 @@ const TAB_ICON: Record<DeviceType, LucideIcon> = {
  *   disembunyikan, bisa dibuka lewat link "Lihat panduan untuk perangkat lain").
  * - Android/desktop dapat tombol install 1-klik (beforeinstallprompt).
  * - iOS dapat panduan manual Safari + panah melayang yang menunjuk tombol Share.
- * - Desktop dapat QR handoff ke HP, dan semua orang dapat banner bonus.
+ * - Desktop dapat serah-terima link ke HP (Bagikan/Salin), semua orang dapat
+ *   kartu batasan PWA yang jujur + banner bonus.
  */
 export function InstallGuideScreen() {
   const { device, browser, isReady } = useDeviceDetect()
@@ -80,19 +88,19 @@ export function InstallGuideScreen() {
         {/* ── HERO: jual alasannya dulu ── */}
         <header>
           <span className="inline-flex items-center gap-1.5 rounded-full bg-cream/70 px-3 py-1 text-[11px] font-semibold tracking-[0.16em] text-forest uppercase ring-1 ring-soil/12">
-            <Zap className="size-3" strokeWidth={2.6} />
-            Gratis · Tanpa App Store
+            <Zap className="size-3" strokeWidth={2.6} aria-hidden />
+            {INSTALL_HERO.badge}
           </span>
 
           <h1 className="mt-4 font-display text-3xl font-semibold tracking-tight text-ink lg:text-4xl">
-            Install CatetInd di HP Kamu
+            {INSTALL_HERO.title}
           </h1>
           <p className="mt-2 text-sm leading-relaxed text-ink/55 sm:text-base">
-            Biar nyatet pengeluaran secepat buka Instagram.
+            {INSTALL_HERO.subtitle}
           </p>
 
           <ul className="mt-6 grid gap-2.5 sm:grid-cols-3">
-            {BENEFITS.map((benefit) => (
+            {INSTALL_BENEFITS.map((benefit) => (
               <li
                 key={benefit.title}
                 className="flex items-center gap-3 rounded-2xl bg-cream/85 px-3.5 py-3 ring-1 ring-soil/12 backdrop-blur-xl sm:flex-col sm:items-start sm:gap-2 sm:py-4"
@@ -114,7 +122,7 @@ export function InstallGuideScreen() {
           <div className="mt-6 space-y-3" aria-live="polite">
             <div className="h-16 animate-pulse rounded-3xl bg-cream/60 ring-1 ring-soil/12" />
             <div className="h-64 animate-pulse rounded-3xl bg-cream/60 ring-1 ring-soil/12" />
-            <p className="text-center text-xs text-ink/40">Mendeteksi perangkat kamu…</p>
+            <p className="text-center text-xs text-ink/40">{INSTALL_DETECTING_LABEL}</p>
           </div>
         ) : (
           <>
@@ -123,8 +131,7 @@ export function InstallGuideScreen() {
               <div className="mt-6 flex items-start gap-3 rounded-3xl bg-sage/70 px-5 py-4 ring-1 ring-forest/10">
                 <Share className="size-5 shrink-0 text-forest" strokeWidth={2.2} />
                 <p className="text-sm leading-relaxed text-forest">
-                  Di iPhone install-nya lewat tombol Share Safari — ikuti{' '}
-                  {TUTORIALS.ios.steps.length} langkah di bawah ya 👇
+                  {INSTALL_IOS_CTA(TUTORIALS.ios.steps.length)}
                 </p>
               </div>
             ) : (
@@ -141,6 +148,8 @@ export function InstallGuideScreen() {
             {/* sentinel: begitu masuk viewport, user sudah lewat langkah tutorial */}
             {device === 'ios' && <div ref={stepsEndRef} aria-hidden className="h-px w-full" />}
             {device === 'desktop' && <InstallQrHandoff className="mt-4" />}
+            {/* ── BATASAN: pasangan jujur dari kartu benefit di hero (PRD 4A) ── */}
+            <InstallLimitsCard className="mt-4" />
             {/* ── PERANGKAT LAIN: panduan lain disembunyikan sampai diminta ── */}
             <div className="mt-6 text-center">
               <button
@@ -149,9 +158,7 @@ export function InstallGuideScreen() {
                 aria-expanded={allGuidesOpen}
                 className="inline-flex items-center gap-1.5 text-xs font-semibold text-forest/70 underline-offset-4 transition-colors duration-200 hover:text-forest hover:underline"
               >
-                {allGuidesOpen
-                  ? 'Sembunyikan panduan perangkat lain'
-                  : 'Lihat panduan untuk perangkat lain'}
+                {allGuidesOpen ? INSTALL_OTHER_GUIDES_LABEL.close : INSTALL_OTHER_GUIDES_LABEL.open}
                 {allGuidesOpen ? (
                   <ChevronUp className="size-3.5" strokeWidth={2.4} />
                 ) : (
@@ -163,7 +170,7 @@ export function InstallGuideScreen() {
               <div className="mt-4">
                 <div
                   role="tablist"
-                  aria-label="Pilih perangkat"
+                  aria-label={INSTALL_TABLIST_LABEL}
                   className="flex w-full items-center gap-1 rounded-full bg-cream p-1 shadow-[0_10px_24px_-18px_rgba(69,89,78,0.55)] ring-1 ring-soil/12"
                 >
                   {TAB_ORDER.map((target) => {
@@ -201,7 +208,7 @@ export function InstallGuideScreen() {
                   {activeTab === 'desktop' && <InstallQrHandoff className="mt-3" />}
                   {activeTab === 'ios' && activeTab !== device && (
                     <p className="mt-3 text-center text-xs text-ink/40">
-                      Panah panduan Share hanya muncul saat halaman ini dibuka di iPhone.
+                      {INSTALL_IOS_PANEL_NOTE}
                     </p>
                   )}
                 </div>
@@ -209,11 +216,23 @@ export function InstallGuideScreen() {
             )}
 
             <p className="mt-6 text-center text-[11px] leading-relaxed text-ink/35">
-              Masih bingung? Buka{' '}
+              {INSTALL_HELP_FOOTER.prefix}
               <a href="/help" className="font-semibold text-forest/70 underline underline-offset-2">
-                Pusat Bantuan
+                {INSTALL_HELP_FOOTER.linkLabel}
               </a>
-              .
+              {INSTALL_HELP_FOOTER.suffix}
+            </p>
+
+            {/* jalan keluar untuk pengunjung yang belum punya akun — menuju /checkout */}
+            <p className="mt-3 text-center text-[11px] leading-relaxed text-ink/35">
+              {INSTALL_CHECKOUT_CTA.prefix}{' '}
+              <Link
+                href={INSTALL_CHECKOUT_CTA.href}
+                className="font-semibold text-forest/70 underline underline-offset-2"
+              >
+                {INSTALL_CHECKOUT_CTA.linkLabel}
+              </Link>{' '}
+              {INSTALL_CHECKOUT_CTA.suffix}
             </p>
 
             {/* ── REWARD: penutup halaman, alasan terakhir buat install ── */}

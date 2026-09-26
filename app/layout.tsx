@@ -8,6 +8,8 @@ import { MoneyContextProvider } from '@/components/catetind/money-context-provid
 import { PrivacyProvider } from '@/components/catetind/privacy-provider'
 import { ServiceWorkerRegistration } from '@/components/catetind/service-worker-registration'
 import { SmoothScrollProvider } from '@/components/catetind/smooth-scroll-provider'
+import { SubscriptionBanner } from '@/components/catetind/subscription-banner'
+import { SubscriptionGateProvider } from '@/components/catetind/subscription-gate-provider'
 import { Toaster } from '@/components/ui/toaster'
 import './globals.css'
 
@@ -84,16 +86,25 @@ export default function RootLayout({
             di root: Sidebar desktop & header mobile membaca nilai yang sama. */}
         <MoneyContextProvider>
           <PrivacyProvider>
-            {children}
-            <MobileBottomNav />
-            {/* Toast non-blocking (sonner, gaya unstyled khas CatetInd) — dipicu
-                setelah bottom sheet ditutup, tanpa modal sukses yang blocking */}
-            <Toaster />
-            {/* Toast "Setup selesai!" — sekali jalan tepat setelah onboarding */}
-            <OnboardingWelcomeToast />
-            {/* Floating AI Chat — AI Coach CatetInd (Domain 4B); state percakapan
-                persisten lintas halaman karena layout tidak unmount saat navigasi */}
-            <AIChatWidget />
+            {/* Gerbang Langganan Global (Grace Period / Post-Grace — inventaris
+                state III/IV & PRD 4534–4547). Satu provider di root memegang
+                status "boleh catat atau tidak" supaya FAB, tombol Tambah sidebar,
+                engine input, dan semua sheet tambah membaca fakta yang sama.
+                Banner-nya ditaruh paling atas supaya langsung terlihat di halaman
+                app mana pun (dan menyembunyikan diri di halaman publik/pre-app). */}
+            <SubscriptionGateProvider>
+              <SubscriptionBanner />
+              {children}
+              <MobileBottomNav />
+              {/* Toast non-blocking (sonner, gaya unstyled khas CatetInd) — dipicu
+                  setelah bottom sheet ditutup, tanpa modal sukses yang blocking */}
+              <Toaster />
+              {/* Toast "Setup selesai!" — sekali jalan tepat setelah onboarding */}
+              <OnboardingWelcomeToast />
+              {/* Floating AI Chat — AI Coach CatetInd (Domain 4B); state percakapan
+                  persisten lintas halaman karena layout tidak unmount saat navigasi */}
+              <AIChatWidget />
+            </SubscriptionGateProvider>
           </PrivacyProvider>
         </MoneyContextProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}

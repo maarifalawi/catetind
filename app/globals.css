@@ -607,3 +607,36 @@
     opacity: 0;
   }
 }
+
+/* ── Denyut "AI lagi kerja" di dalam bubble chat (prompt 20) ─────────────────
+   Dipakai bubble scan struk & indikator mendengar. Sengaja BUKAN `animate-ping`
+   bawaan Tailwind supaya bisa dimatikan sendiri saat user minta gerakan
+   minimal: spinner/denyut yang tak bisa berhenti itu masalah aksesibilitas,
+   bukan sekadar selera. Saat dimatikan, halo-nya tetap terlihat sebagai cincin
+   tipis — statusnya masih terbaca, cuma tanpa gerakan. */
+@keyframes ai-scan-pulse {
+  0% {
+    transform: scale(0.86);
+    opacity: 0.6;
+  }
+  70% {
+    transform: scale(1.3);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.3);
+    opacity: 0;
+  }
+}
+
+.ai-scan-pulse {
+  animation: ai-scan-pulse 1.8s ease-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-scan-pulse {
+    animation: none;
+    opacity: 0.35;
+    transform: scale(1.06);
+  }
+}

@@ -16,15 +16,24 @@ import {
   BILL_EMOJI_MORE,
   BILL_EMOJI_PRESETS,
   BILL_REMINDER_OPTIONS,
+  BILL_SHEET_COPY,
   BILL_WALLET_OPTIONS,
+  billCategoryOptions,
+  billWalletOptions,
   type Bill,
 } from '@/lib/data/bills'
 
-/* ── 9. Tambah Tagihan Baru — bottom sheet dengan progressive disclosure ────
+/* ── 9. Tambah / Edit Tagihan — bottom sheet dengan progressive disclosure ────
    Step 1 identitas (emoji + nama + nominal opsional) → Step 2 jadwal
    (auto-reveal begitu nama terisi) → Step 3 detail tambahan (accordion,
    tertutup default). Tombol simpan baru hidup kalau data wajibnya lengkap,
    jadi tidak ada pesan error yang menghakimi di tengah jalan.
+
+   SATU komponen, DUA mode (paket 03): mode tambah (`initial` kosong) dan mode
+   edit (`initial` = tagihan yang sedang diubah). Yang berganti cuma judul, CTA,
+   dan isi awal formnya — bukan komponen baru yang menyalin 90% logika di sini.
+   Mode edit otomatis membuka accordion "Detail Tambahan" karena isinya memang
+   sudah berisi (kalau dibiarkan tertutup, user diberi kesan datanya kosong).
 
    Shell & atom form-nya memakai kit bersama `budget-sheet.tsx` (Vaul di mobile,
    dialog di desktop) supaya tempo buka/tutup sheet-nya sama dengan halaman
@@ -37,11 +46,23 @@ export function AddBillSheet({
   open,
   onClose,
   onSave,
+  initial = null,
 }: {
   open: boolean
   onClose: () => void
   onSave: (bill: NewBill) => void
+  /**
+   * Tagihan yang sedang diubah. Diisi = MODE EDIT: tipe transaksinya cuma
+   * "mengubah yang salah", jadi seluruh field dibuka sudah terisi data tagihan
+   * itu. `null` (default) = mode tambah, persis seperti sebelumnya.
+   */
+  initial?: Bill | null
 }) {
+  /** mode yang sedang TAMPIL — di-latch saat sheet dibuka supaya judulnya tidak
+   *  berkedip berubah ketika halaman mengosongkan `initial` (sheet menutup) */
+  const [mode, setMode] = useState<'add' | 'edit'>('add')
+  const copy = BILL_SHEET_COPY[mode]
+
   const [emoji, setEmoji] = useState<string>(BILL_EMOJI_PRESETS[0])
   const [moreEmojiOpen, setMoreEmojiOpen] = useState(false)
   const [name, setName] = useState('')
@@ -57,9 +78,35 @@ export function AddBillSheet({
   const [note, setNote] = useState('')
   const nameRef = useRef<HTMLInputElement>(null)
 
-  /* form selalu mulai bersih tiap kali sheet dibuka */
+  const categories = billCategoryOptions(initial?.category)
+  const wallets = billWalletOptions(initial?.walletId)
+
+  /* Form dibuka dengan nilai yang tepat: mode tambah = bersih; mode edit =
+     terisi data tagihannya. Latch-nya ada DI SINI (bukan membaca `initial`
+     langsung saat render) supaya animasi tutup tetap menampilkan form versi
+     terakhir yang dilihat user, bukan versi yang sudah di-reset. */
   useEffect(() => {
     if (!open) return
+    setMode(initial ? 'edit' : 'add')
+    if (initial) {
+      setEmoji(initial.emoji)
+      /* kalau ikonnya dari grid "Lainnya", buka grid-nya supaya ikon terpilih
+         benar-benar terlihat — bukan seolah tidak ada yang dipilih */
+      setMoreEmojiOpen(!(BILL_EMOJI_PRESETS as readonly string[]).includes(initial.emoji))
+      setName(initial.name)
+      setDigits(initial.amount > 0 ? String(initial.amount) : '')
+      setDueDate(String(initial.dueDate))
+      setRecurring(initial.isRecurring)
+      setEndMode(initial.endAfterMonths ? 'limited' : 'unlimited')
+      setEndMonths(initial.endAfterMonths ? String(initial.endAfterMonths) : '')
+      setReminderDays(initial.reminderDaysBefore)
+      /* detail tambahan sudah berisi (kategori/dompet/catatan) → tampilkan */
+      setAdvancedOpen(true)
+      setCategory(initial.category)
+      setWalletId(initial.walletId)
+      setNote(initial.note ?? '')
+      return
+    }
     setEmoji(BILL_EMOJI_PRESETS[0])
     setMoreEmojiOpen(false)
     setName('')
@@ -73,9 +120,12 @@ export function AddBillSheet({
     setCategory(BILL_CATEGORY_OPTIONS[0])
     setWalletId(BILL_WALLET_OPTIONS[0].id)
     setNote('')
-  }, [open])
+  }, [open, initial])
 
-  useFocusOnOpen(open, nameRef)
+  /* auto-focus nama hanya di mode TAMBAH. Di mode edit formnya sudah terisi,
+     jadi mengangkat keyboard sendiri justru menutupi field di bawahnya dan
+     memaksa user menutupnya dulu — padahal yang salah mungkin tanggalnya. */
+  useFocusOnOpen(open && initial === null, nameRef)
 
   const amount = Number(digits || '0')
   const dueDateNumber = Number(dueDate)
@@ -99,22 +149,23 @@ export function AddBillSheet({
       walletId,
       reminderDaysBefore: recurring ? reminderDays : 0,
       endAfterMonths: recurring && endMode === 'limited' ? endMonthsNumber : undefined,
-      currentMonth: recurring && endMode === 'limited' ? 1 : undefined,
+      /* Cicilan yang sudah berjalan TIDAK boleh balik ke bulan ke-1 cuma karena
+         tagihannya diedit — progres tenornya milik user, bukan milik form. */
+      currentMonth:
+        recurring && endMode === 'limited' ? (initial?.currentMonth ?? 1) : undefined,
       note: note.trim() || undefined,
     })
   }
-
-
 
   return (
     <BudgetSheet
       open={open}
       onClose={onClose}
-      title="Tambah Tagihan Baru"
-      description="Cukup nama & tanggal jatuh tempo dulu — sisanya opsional."
+      title={copy.title}
+      description={copy.description}
       footer={
-        <SheetSubmit onClick={submit} disabled={!ready}>
-          Simpan Tagihan ✓
+        <SheetSubmit onClick={submit} disabled={!ready} gate>
+          {copy.submit}
         </SheetSubmit>
       }
     >
@@ -365,7 +416,7 @@ export function AddBillSheet({
                     aria-label="Kategori tagihan"
                     className="flex-1 appearance-none bg-transparent text-[13.5px] font-semibold text-ink outline-none"
                   >
-                    {BILL_CATEGORY_OPTIONS.map((option) => (
+                    {categories.map((option) => (
                       <option key={option} value={option}>
                         {option}
                       </option>
@@ -386,7 +437,7 @@ export function AddBillSheet({
                     aria-label="Dompet pembayaran"
                     className="flex-1 appearance-none bg-transparent text-[13.5px] font-semibold text-ink outline-none"
                   >
-                    {BILL_WALLET_OPTIONS.map((wallet) => (
+                    {wallets.map((wallet) => (
                       <option key={wallet.id} value={wallet.id}>
                         {wallet.name} · {wallet.kind}
                       </option>

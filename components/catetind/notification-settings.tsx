@@ -38,7 +38,14 @@ const PREFS = [
   {
     id: 'tagihan-jatuh-tempo',
     label: 'Tagihan Jatuh Tempo',
-    desc: 'Otomatis H-1 & hari-H sebelum tagihanmu jatuh tempo',
+    desc: 'Otomatis H-3 & H-1 sebelum tagihanmu jatuh tempo',
+  },
+  /* ditambahkan dari brief halaman Pengaturan: peringatan budget hampir habis.
+     Framingnya lembut (bukan alarm) supaya konsisten dengan kanon 2B.2. */
+  {
+    id: 'budget-hampir-habis',
+    label: 'Peringatan Budget Hampir Habis',
+    desc: 'Kabar singkat begitu budget kategori terpakai 80%',
   },
 ] as const
 
@@ -49,6 +56,7 @@ const DEFAULT_PREFS: Record<PrefId, boolean> = {
   'laporan-bulanan': true,
   'tanaman-layu': true,
   'tagihan-jatuh-tempo': true,
+  'budget-hampir-habis': true,
 }
 const PREFS_KEY = 'catet-notif-prefs'
 

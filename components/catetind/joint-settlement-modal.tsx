@@ -18,6 +18,8 @@ import {
 } from '@/lib/data/joint'
 import { toast } from 'sonner'
 import { JointBalanceScale } from './joint-balance-scale'
+import { useSubscriptionGate } from './subscription-gate-provider'
+import { SubscriptionLockNote } from './subscription-lock-note'
 import { cn } from '@/lib/utils'
 
 /* ── Settlement Modal (Section 7) ────────────────────────────────────────────
@@ -52,6 +54,9 @@ export function JointSettlementModal({
   partner?: JointPerson
 }) {
   useBodyScrollLock(open, true)
+  /* menandai bulan "sudah settle" mengubah status data bersama → ikut terkunci
+     saat masa aktif habis (task 23). Rekap & instruksi transfernya tetap terbaca. */
+  const { inputLocked } = useSubscriptionGate()
 
   /* Escape menutup modal (pola yang sama dengan detail transaksi) */
   useEffect(() => {
@@ -66,6 +71,7 @@ export function JointSettlementModal({
   const { whoOwes, whoIsOwed, settlementAmount, difference, settled } = settlement
 
   function handleSettle() {
+    if (inputLocked) return
     try {
       if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
         navigator.vibrate([30, 50, 30])
@@ -220,12 +226,20 @@ export function JointSettlementModal({
                 <button
                   type="button"
                   onClick={handleSettle}
-                  className="mt-3 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-forest text-[14px] font-bold text-mint shadow-[0_16px_32px_-20px_rgba(69,89,78,0.95)] transition-colors hover:bg-forest-soft active:scale-[0.99]"
+                  disabled={inputLocked}
+                  aria-disabled={inputLocked || undefined}
+                  className={cn(
+                    'mt-3 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl text-[14px] font-bold transition-colors',
+                    inputLocked
+                      ? 'cursor-not-allowed bg-ink/[0.07] text-ink/35'
+                      : 'bg-forest text-mint shadow-[0_16px_32px_-20px_rgba(69,89,78,0.95)] hover:bg-forest-soft active:scale-[0.99]',
+                  )}
                 >
                   Tandai Sudah Settle
                   <Check className="size-4" strokeWidth={3} />
                 </button>
               )}
+              {inputLocked && <SubscriptionLockNote />}
 
               <button
                 type="button"

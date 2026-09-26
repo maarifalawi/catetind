@@ -149,7 +149,7 @@ export function AddDebtSheet({
       onClose={onClose}
       title="Tambah Utang / Piutang"
       description="Catat aja dulu — nanti bisa ditandai lunas kapan pun."
-      footer={<SheetSubmit onClick={submit} disabled={!ready}>Simpan ✓</SheetSubmit>}
+      footer={<SheetSubmit onClick={submit} disabled={!ready} gate>Simpan ✓</SheetSubmit>}
     >
       {/* ── arah ─────────────────────────────────────────────────────────── */}
       <span className="text-[13px] font-semibold leading-snug text-ink">Arah</span>

@@ -40,6 +40,19 @@ export function Toaster() {
           description: 'mt-0.5 text-xs leading-relaxed text-ink/55',
           content: 'flex min-w-0 flex-1 flex-col',
           loading: 'text-forest',
+          /* Tombol aksi di dalam toast (mis. "Undo" setelah menghapus) WAJIB
+             punya gaya sendiri: Toaster-nya mode `unstyled`, jadi tanpa ini
+             tombolnya tampil dengan gaya bawaan browser dan merusak palet.
+             Hijau brand = ajakan memulihkan, bukan aksi merusak. */
+          actionButton: [
+            'ml-auto shrink-0 rounded-xl bg-forest px-3 py-2',
+            'text-[12px] font-semibold text-cream transition-colors hover:bg-forest-soft',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25',
+          ].join(' '),
+          cancelButton: [
+            'ml-auto shrink-0 rounded-xl bg-cream px-3 py-2',
+            'text-[12px] font-semibold text-ink/70 ring-1 ring-soil/12 transition-colors hover:bg-sage/60',
+          ].join(' '),
         },
       }}
     />

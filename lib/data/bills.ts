@@ -1,9 +1,9 @@
 import { formatIDR } from '../wallets'
-import { shiftISODate } from './history'
+import { UNDO_WINDOW_MS, shiftISODate } from './history'
 
 /** satu pintu impor untuk halaman Tagihan: komponennya cukup ambil dari sini */
 export { formatIDR }
-export { maskMoney } from './history'
+export { maskMoney, UNDO_WINDOW_MS } from './history'
 
 /* ── Tagihan / Recurring Bills (/app/bills) ──────────────────────────────────
    Satu sumber data + logika murni (tanpa React) untuk halaman Tagihan Rutin:
@@ -479,6 +479,29 @@ export function billWalletName(walletId: string): string {
   return BILL_WALLET_OPTIONS.find((wallet) => wallet.id === walletId)?.name ?? walletId
 }
 
+/* ── OPSI SAAT MODE EDIT ────────────────────────────────────────────────────
+   Dua helper di bawah menjaga prinsip yang sama: sheet edit TIDAK boleh
+   diam-diam mengubah data user. Kalau tagihan lamanya memakai kategori/dompet
+   yang belum ada di daftar kanon (mis. dompet baru dari paket 04), nilainya
+   tetap ditampilkan sebagai opsi — bukan dipaksa pindah ke opsi pertama. */
+
+/** daftar kategori + kategori lama (kalau belum ada di daftar) */
+export function billCategoryOptions(current?: string): string[] {
+  const list: string[] = [...BILL_CATEGORY_OPTIONS]
+  if (current && !list.includes(current)) list.push(current)
+  return list
+}
+
+/** daftar dompet + dompet lama (kalau belum ada di daftar) */
+export function billWalletOptions(
+  currentId?: string,
+): { id: string; name: string; kind: string }[] {
+  if (!currentId || BILL_WALLET_OPTIONS.some((wallet) => wallet.id === currentId)) {
+    return BILL_WALLET_OPTIONS
+  }
+  return [...BILL_WALLET_OPTIONS, { id: currentId, name: billWalletName(currentId), kind: 'Dompet lain' }]
+}
+
 /** 'Ingatkan sebelum jatuh tempo' — nilai = hari (0 = jangan ingatkan) */
 export const BILL_REMINDER_OPTIONS: { days: number; label: string }[] = [
   { days: 1, label: '1 hari' },
@@ -488,6 +511,61 @@ export const BILL_REMINDER_OPTIONS: { days: number; label: string }[] = [
 ]
 
 /* ── COPY TETAP ───────────────────────────────────────────────────────────── */
+
+/* ── SHEET TAMBAH ⇄ EDIT TAGIHAN ────────────────────────────────────────────
+   Satu sheet dipakai untuk dua mode (paket 03). Judul & CTA-nya berganti —
+   kata "Edit" dipakai apa adanya supaya user tahu ia sedang mengubah yang
+   sudah ada, bukan menambah baru. Deskripsi mode edit sengaja menenangkan:
+   yang salah cuma satu bagian, bukan seluruh catatannya. */
+export const BILL_SHEET_COPY = {
+  add: {
+    title: 'Tambah Tagihan Baru',
+    description: 'Cukup nama & tanggal jatuh tempo dulu — sisanya opsional.',
+    submit: 'Simpan Tagihan ✓',
+  },
+  edit: {
+    title: 'Edit Tagihan',
+    description: 'Ubah bagian yang keliru aja — sisanya tetap seperti semula.',
+    submit: 'Simpan Perubahan ✓',
+  },
+} as const
+
+export const ADD_BILL_TOAST = {
+  title: 'Tagihan baru ditambahkan! 🔔',
+} as const
+
+export const UPDATE_BILL_TOAST = {
+  title: 'Tagihan diperbarui 🌿',
+  description: 'Perubahannya langsung tampil di daftar rutinmu.',
+} as const
+
+/** dipakai saat kartu dicap LUNAS (stempel + haptic + toast) */
+export const MARK_PAID_TOAST = (name: string) => `${name} LUNAS! ✅`
+
+/* ── KONFIRMASI & UNDO HAPUS TAGIHAN ────────────────────────────────────────
+   Menghapus tagihan rutin itu merusak kebiasaan yang sudah jalan (tameng
+   proteksi & waterfall ikut berubah). Karena itu hapus SELALU lewat
+   konfirmasi + menyediakan Undo 5 detik — bukan langsung hilang. */
+export const CONFIRM_DELETE_BILL_COPY = {
+  overlay: 'Batal hapus tagihan',
+  title: 'Hapus tagihan ini?',
+  body: (name: string) => `“${name}” bakal keluar dari daftar rutinmu.`,
+  safety: `Tenang — masih bisa kamu balikin lewat tombol Undo selama ${
+    UNDO_WINDOW_MS / 1000
+  } detik.`,
+  cancel: 'Batal',
+  confirm: 'Hapus',
+} as const
+
+export const DELETE_BILL_TOAST = {
+  title: 'Tagihan dihapus',
+  description: (name: string) => `${name} keluar dari daftar rutinmu.`,
+  undo: 'Undo',
+  undoneTitle: 'Tagihan dikembalikan 🌿',
+  undoneDescription: 'Tagihannya balik ke daftar seperti semula.',
+  /** jaring pengaman tetap jujur kalau tombol Undo ditekan setelah jendelanya tutup */
+  expired: 'Jendela Undo-nya sudah lewat — tagihannya bisa ditambahkan lagi kapan aja 🌿',
+} as const
 
 export const HUD_DEDUCTION_HELPER =
   '💡 Tagihan rutin otomatis dipotong dari Jatah Harian kamu'

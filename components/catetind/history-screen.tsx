@@ -1,19 +1,16 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Drawer } from 'vaul'
 import {
-  AlertTriangle,
   Check,
   ChevronDown,
-  Pencil,
   ReceiptText,
   RotateCcw,
   Search,
   SlidersHorizontal,
   Sprout,
-  Trash2,
   X,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -25,9 +22,12 @@ import { InsightCards } from './insight-cards'
 import { SpendingHeatmap } from './spending-heatmap'
 import { HistoryTransactionRow } from './history-transaction-row'
 import { TransactionDetailSheet } from './transaction-detail-sheet'
+import { ConfirmDeleteDialog, TransactionActionsSheet } from './transaction-actions'
+import { EditTransactionSheet } from './edit-transaction-sheet'
 import { WeeklyRecapModal } from './weekly-recap-modal'
 import { TransactionBottomSheet } from '@/components/dashboard/transaction-bottom-sheet'
 import { cn } from '@/lib/utils'
+import { readRecordedTransactions, subscribeRecordedTransactions } from '@/lib/transaction-bus'
 import {
   CATEGORY_FILTERS,
   HEALTH_SCORE,
@@ -37,15 +37,16 @@ import {
   TIME_FILTERS,
   TOTAL_TRANSACTIONS,
   TYPE_FILTERS,
+  UNDO_WINDOW_MS,
   WALLET_FILTERS,
+  DELETE_TRANSACTION_TOAST,
+  UPDATE_TRANSACTION_TOAST,
   filterHistoryTransactions,
   groupTransactionsByDate,
   localISODate,
   maskMoney,
   netLabel,
-  resolveCategoryLabel,
   summarizeTransactions,
-  TRANSACTION_TYPE_LABEL,
   type FilterOption,
   type HistoryFilters,
   type HistoryTransaction,
@@ -90,10 +91,18 @@ export function HistoryScreen() {
 
   /** catatan yang dihapus user di sesi ini (mock — nanti dari backend) */
   const [removedIds, setRemovedIds] = useState<number[]>([])
+  /** transaksi VERSI BARU hasil edit, per id (mock — nanti dari backend) */
+  const [editedTxs, setEditedTxs] = useState<Record<number, HistoryTransaction>>({})
   /** transaksi yang menunggu konfirmasi hapus */
   const [pendingDelete, setPendingDelete] = useState<HistoryTransaction | null>(null)
+  /** transaksi yang sheet EDIT-nya sedang terbuka (paket 03) */
+  const [editingTx, setEditingTx] = useState<HistoryTransaction | null>(null)
   /** transaksi yang sheet aksi (ikon titik tiga) sedang terbuka */
   const [menuTx, setMenuTx] = useState<HistoryTransaction | null>(null)
+  /** id yang hak Undo-nya MASIH hidup (dikosongkan begitu jendelanya lewat) */
+  const undoRef = useRef<number | null>(null)
+  /** timer jendela Undo — dibersihkan saat unmount supaya tidak ada timer nyasar */
+  const undoTimer = useRef<number | null>(null)
   const [recapOpen, setRecapOpen] = useState(false)
   const [recapDismissed, setRecapDismissed] = useState(false)
   /** banner rekap hanya Jumat–Minggu; dihitung di client supaya HTML server
@@ -102,6 +111,18 @@ export function HistoryScreen() {
   /** tanggal hari ini — juga dihitung setelah mount supaya label "Hari Ini"
    *  / "Kemarin" tidak pernah beda antara server & client */
   const [today, setToday] = useState('')
+  /** catatan yang dicatat dari AI Coach (prompt 20) — hidup di memory sesi */
+  const [recordedTxs, setRecordedTxs] = useState<HistoryTransaction[]>([])
+
+  /* Transaksi hasil "Scan struk"/"Voice" di AI Coach disimpan di
+     `lib/transaction-bus.ts` dan dibaca SETELAH mount: HTML server tidak boleh
+     berbeda dari render pertama client (pola sama dengan `lib/data/renewal.ts`).
+     Selama halaman ini terbuka, catatan baru langsung masuk lewat langganan
+     event — jadi user melihat barisnya muncul tanpa reload. */
+  useEffect(() => {
+    setRecordedTxs(readRecordedTransactions())
+    return subscribeRecordedTransactions((tx) => setRecordedTxs((prev) => [...prev, tx]))
+  }, [])
 
   useEffect(() => {
     setToday(localISODate())
@@ -109,10 +130,28 @@ export function HistoryScreen() {
     setRecapWindow(day === 0 || day === 5 || day === 6)
   }, [])
 
+  /* timer Undo dibersihkan saat halaman ditinggalkan */
+  useEffect(
+    () => () => {
+      if (undoTimer.current !== null) window.clearTimeout(undoTimer.current)
+    },
+    [],
+  )
+
   /* ── data turunan ──────────────────────────────────────────────────────── */
+  /* catatan yang dihapus keluar dari daftar; catatan yang diedit tampil versi
+     barunya — sehingga total harian (dayNet) & ringkasan di kepala daftar ikut
+     menyesuaikan dengan sendirinya, tanpa perhitungan ulang terpisah.
+     Catatan dari AI Coach (prompt 20) duduk paling atas — barulah baru dicatat,
+     dan `groupTransactionsByDate` yang mengelompokkannya ke tanggalnya. */
   const transactions = useMemo(
-    () => HISTORY_TRANSACTIONS.filter((tx) => !removedIds.includes(tx.id)),
-    [removedIds],
+    () => [
+      ...recordedTxs,
+      ...HISTORY_TRANSACTIONS.filter((tx) => !removedIds.includes(tx.id)).map(
+        (tx) => editedTxs[tx.id] ?? tx,
+      ),
+    ],
+    [recordedTxs, removedIds, editedTxs],
   )
   const filtered = useMemo(
     () => filterHistoryTransactions(transactions, activeFilters, searchQuery, today),
@@ -139,17 +178,62 @@ export function HistoryScreen() {
   }, [])
 
   const handleEdit = useCallback((tx: HistoryTransaction) => {
-    // TODO: Open Edit Transaction Bottom Sheet pre-filled with this transaction's data
-    toast.success(`Edit ${tx.name}`, { description: 'Bottom sheet edit transaksi segera hadir.' })
+    /* Edit adalah jalur UTAMA perbaikan data (paket 03): tombolnya membuka sheet
+       yang SUDAH TERISI data catatan itu. Detail & sheet titik tiga ditutup dulu
+       supaya tidak ada dua panel bertumpuk di layar yang sama. */
+    setSelectedTransaction(null)
+    setMenuTx(null)
+    setEditingTx(tx)
   }, [])
 
+  /** simpan hasil edit: baris & total harian diganti versi barunya */
+  const handleSaveEdit = useCallback((next: HistoryTransaction) => {
+    setEditedTxs((prev) => ({ ...prev, [next.id]: next }))
+    setEditingTx(null)
+    toast.success(UPDATE_TRANSACTION_TOAST.title, {
+      description: UPDATE_TRANSACTION_TOAST.description,
+    })
+  }, [])
+
+  /** Undo: catatannya balik ke posisi semula tanpa perlu ditulis ulang */
+  const restoreTransaction = useCallback((id: number) => {
+    if (undoRef.current !== id) {
+      toast(DELETE_TRANSACTION_TOAST.expired)
+      return
+    }
+    undoRef.current = null
+    setRemovedIds((prev) => prev.filter((item) => item !== id))
+    toast.success(DELETE_TRANSACTION_TOAST.undoneTitle, {
+      description: DELETE_TRANSACTION_TOAST.undoneDescription,
+    })
+  }, [])
+
+  /**
+   * Hapus sesungguhnya: catatannya keluar dari riwayat, TAPI hak
+   * mengembalikannya masih hidup selama UNDO_WINDOW_MS (PRD 2251). Sesudah
+   * jendelanya tutup, jejaknya dibuang sehingga undo yang terlambat ditolak
+   * dengan jujur — bukan tombol yang diam-diam tidak bekerja.
+   */
   const confirmDelete = useCallback(() => {
     if (!pendingDelete) return
-    setRemovedIds((prev) => [...prev, pendingDelete.id])
+    const id = pendingDelete.id
+    undoRef.current = id
+    setRemovedIds((prev) => (prev.includes(id) ? prev : [...prev, id]))
     setPendingDelete(null)
     setSelectedTransaction(null)
-    toast.success('Catatan dihapus', { description: 'Transaksi sudah dikeluarkan dari riwayat.' })
-  }, [pendingDelete])
+
+    toast.success(DELETE_TRANSACTION_TOAST.title, {
+      description: DELETE_TRANSACTION_TOAST.description,
+      action: { label: DELETE_TRANSACTION_TOAST.undo, onClick: () => restoreTransaction(id) },
+      /* lama toast = lama hak undo; keduanya dari satu konstanta */
+      duration: UNDO_WINDOW_MS,
+    })
+
+    if (undoTimer.current !== null) window.clearTimeout(undoTimer.current)
+    undoTimer.current = window.setTimeout(() => {
+      if (undoRef.current === id) undoRef.current = null
+    }, UNDO_WINDOW_MS)
+  }, [pendingDelete, restoreTransaction])
 
   const handleInsightAction = useCallback((cardId: string, label: string) => {
     // TODO: buka sheet atur limit kategori (Domain 2B) — masih mock
@@ -480,61 +564,19 @@ export function HistoryScreen() {
         </Drawer.Portal>
       </Drawer.Root>
 
-      {/* ── SHEET AKSI BARIS (ikon titik tiga) ────────────────────────────────
+      {/* ── SHEET AKSI BARIS (ikon titik tiga) — komponen bersama ─────────────
           Affordance non-gesture untuk Lihat detail / Edit / Hapus. Menggantikan
           teks instruksi manual "Geser: kanan Edit · kiri Hapus" yang dihapus —
-          kontrolnya sekarang benar-benar bisa ditekan, bukan hafalan gesture. */}
-      <Drawer.Root open={menuTx !== null} onOpenChange={(open) => !open && setMenuTx(null)}>
-        <Drawer.Portal>
-          <Drawer.Overlay className="fixed inset-0 z-[70] bg-ink/40" />
-          <Drawer.Content
-            aria-label="Aksi transaksi"
-            className="fixed inset-x-0 bottom-0 z-[70] mx-auto flex w-full max-w-md flex-col rounded-t-[2rem] bg-cream shadow-2xl outline-none"
-          >
-            <div className="mx-auto mt-3 h-1.5 w-10 shrink-0 rounded-full bg-ink/10" />
-            <div className="px-4 pb-8 pt-4" data-lenis-prevent>
-              <Drawer.Title className="truncate px-1 font-display text-[15px] font-bold tracking-tight text-ink">
-                {menuTx?.name ?? 'Aksi transaksi'}
-              </Drawer.Title>
-              <Drawer.Description className="mt-0.5 px-1 text-[12px] text-ink/50">
-                {menuTx
-                  ? `${TRANSACTION_TYPE_LABEL[menuTx.type]} · ${resolveCategoryLabel(menuTx)} · ${maskMoney(
-                      menuTx.amount,
-                      isMasked,
-                    )}`
-                  : 'Pilih tindakan untuk catatan ini'}
-              </Drawer.Description>
-
-              <div className="mt-3 space-y-1">
-                <button
-                  type="button"
-                  onClick={menuOpenDetail}
-                  className="flex w-full items-center gap-3 rounded-2xl px-3.5 py-3 text-left text-[14px] font-medium text-ink/75 transition-colors hover:bg-cream"
-                >
-                  <ReceiptText className="size-4 shrink-0 text-ink/45" strokeWidth={2.2} />
-                  Lihat detail
-                </button>
-                <button
-                  type="button"
-                  onClick={menuEdit}
-                  className="flex w-full items-center gap-3 rounded-2xl px-3.5 py-3 text-left text-[14px] font-medium text-ink/75 transition-colors hover:bg-cream"
-                >
-                  <Pencil className="size-4 shrink-0 text-forest" strokeWidth={2.2} />
-                  Edit transaksi
-                </button>
-                <button
-                  type="button"
-                  onClick={menuDelete}
-                  className="flex w-full items-center gap-3 rounded-2xl px-3.5 py-3 text-left text-[14px] font-medium text-plum transition-colors hover:bg-plum/15"
-                >
-                  <Trash2 className="size-4 shrink-0" strokeWidth={2.2} />
-                  Hapus catatan
-                </button>
-              </div>
-            </div>
-          </Drawer.Content>
-        </Drawer.Portal>
-      </Drawer.Root>
+          kontrolnya sekarang benar-benar bisa ditekan, bukan hafalan gesture.
+          Wujudnya dipakai bersama halaman Dompet Detail (transaction-actions). */}
+      <TransactionActionsSheet
+        tx={menuTx}
+        masked={isMasked}
+        onClose={() => setMenuTx(null)}
+        onOpenDetail={menuOpenDetail}
+        onEdit={menuEdit}
+        onDelete={menuDelete}
+      />
 
       {/* detail transaksi — modal (desktop) / bottom sheet (mobile) */}
       <TransactionDetailSheet
@@ -543,6 +585,14 @@ export function HistoryScreen() {
         onClose={() => setSelectedTransaction(null)}
         onEdit={handleEdit}
         onDelete={setPendingDelete}
+      />
+
+      {/* sheet EDIT transaksi (paket 03) — engine yang sama dengan tombol "+",
+          tapi terbuka sudah terisi data catatan ini */}
+      <EditTransactionSheet
+        tx={editingTx}
+        onSave={handleSaveEdit}
+        onClose={() => setEditingTx(null)}
       />
 
       {/* konfirmasi hapus */}
@@ -610,85 +660,3 @@ function EmptyState({ onReset, hasFilters }: { onReset: () => void; hasFilters: 
 
 /* ── catatan: baris filter lama (Waktu/Wallet/Tipe/Kategori) sudah digantikan
    chip + bottom sheet di atas, jadi tidak ada lagi 4 baris pill di halaman. */
-
-/** dialog konfirmasi hapus — 'Yakin mau hapus catatan ini?' */
-function ConfirmDeleteDialog({
-  tx,
-  masked,
-  onCancel,
-  onConfirm,
-}: {
-  tx: HistoryTransaction
-  masked: boolean
-  onCancel: () => void
-  onConfirm: () => void
-}) {
-  /* Escape membatalkan (pilihan aman) */
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onCancel()
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [onCancel])
-
-  return (
-    <motion.div
-      className="fixed inset-0 z-[80] flex items-center justify-center p-5"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.18 }}
-    >
-      <button
-        type="button"
-        aria-label="Batal hapus"
-        onClick={onCancel}
-        className="absolute inset-0 cursor-default bg-ink/50"
-      />
-      <motion.div
-        role="alertdialog"
-        aria-modal="true"
-        aria-labelledby="hapus-transaksi-judul"
-        initial={{ opacity: 0, scale: 0.94, y: 10 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.97, y: 6 }}
-        transition={{ duration: 0.24, ease: EASE }}
-        className="relative w-full max-w-sm rounded-[1.75rem] bg-cream p-5 shadow-[0_28px_70px_-24px_rgba(69,89,78,0.5)] ring-1 ring-soil/12"
-      >
-        <span className="flex size-11 items-center justify-center rounded-full bg-plum/15 text-plum">
-          <AlertTriangle className="size-5" strokeWidth={2.2} />
-        </span>
-        <h2
-          id="hapus-transaksi-judul"
-          className="mt-3 font-display text-[16px] font-bold tracking-tight text-ink"
-        >
-          Yakin mau hapus catatan ini?
-        </h2>
-        <p className="mt-1.5 text-[12.5px] leading-relaxed text-ink/55">
-          &ldquo;{tx.name}&rdquo; sebesar{' '}
-          <b className="font-semibold text-ink">{maskMoney(tx.amount, masked)}</b> bakal hilang dari
-          riwayat. Tindakan ini nggak bisa dibatalin.
-        </p>
-        <div className="mt-5 grid grid-cols-2 gap-3">
-          <button
-            type="button"
-            autoFocus
-            onClick={onCancel}
-            className="h-11 rounded-2xl bg-cream text-[13.5px] font-semibold text-ink ring-1 ring-soil/12 transition-colors hover:bg-sage/60 active:scale-[0.98]"
-          >
-            Batal
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-plum text-[13.5px] font-semibold text-cream transition-colors hover:bg-plum active:scale-[0.98]"
-          >
-            <Trash2 className="size-4" strokeWidth={2.3} />
-            Hapus
-          </button>
-        </div>
-      </motion.div>
-    </motion.div>
-  )
-}

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { motion } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import { Flame, Plus, Receipt, Wallet as WalletIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { ScreenShell } from './screen-shell'
@@ -15,12 +15,19 @@ import { BillTimeline } from './bill-timeline'
 import { BillCard, type StampState } from './bill-card'
 import { BillNotifNudge } from './bill-notif-nudge'
 import { AddBillSheet, type NewBill } from './add-bill-sheet'
+import { ConfirmDialog } from './confirm-dialog'
 import { cn } from '@/lib/utils'
 import {
+  ADD_BILL_TOAST,
   BILL_FILTERS,
+  CONFIRM_DELETE_BILL_COPY,
   CURRENT_DAY,
+  DELETE_BILL_TOAST,
   INITIAL_BILLS,
+  MARK_PAID_TOAST,
   MONTHLY_INCOME,
+  UNDO_WINDOW_MS,
+  UPDATE_BILL_TOAST,
   billFilterCounts,
   burnPercentage,
   filterBills,
@@ -62,6 +69,12 @@ export function BillsScreen() {
   const [activeFilter, setActiveFilter] = useState<BillFilter>('semua')
   const [showAddBill, setShowAddBill] = useState(false)
   const [bills, setBills] = useState<Bill[]>(INITIAL_BILLS)
+  /** tagihan yang sedang dibuka di sheet EDIT (null = sheet-nya mode tambah) */
+  const [editingBill, setEditingBill] = useState<Bill | null>(null)
+  /** tagihan yang menunggu konfirmasi hapus — hapus TIDAK pernah langsung jalan */
+  const [pendingDelete, setPendingDelete] = useState<Bill | null>(null)
+  /** jejak Undo yang MASIH berlaku (dikosongkan begitu jendelanya lewat) */
+  const undoRef = useRef<{ bill: Bill; index: number } | null>(null)
   /** tagihan yang stempel LUNAS-nya baru saja dicap (animasi + haptic) */
   const [stampId, setStampId] = useState<string | null>(null)
   /** kartu yang sedang disorot karena tanggalnya dipilih di timeline */
@@ -111,7 +124,7 @@ export function BillsScreen() {
       /* iOS Safari tanpa Vibration API — abaikan */
     }
     setStampId(bill.id)
-    toast.success(`${bill.name} LUNAS! ✅`)
+    toast.success(MARK_PAID_TOAST(bill.name))
 
     later(() => {
       setBills((prev) =>
@@ -121,27 +134,82 @@ export function BillsScreen() {
     later(() => setStampId((current) => (current === bill.id ? null : current)), STAMP_SETTLE)
   }
 
+  /** 7D — Edit: buka sheet yang SAMA dengan sheet tambah, tapi terisi data
+   *  tagihan ini (paket 03). Tidak ada toast "segera hadir" lagi: menekan Edit
+   *  langsung membawa user ke form yang bisa langsung dibetulkan. */
   function handleEdit(bill: Bill) {
-    // TODO: buka bottom sheet edit tagihan (pre-filled) — vaul sheet-nya menyusul
-    toast.success(`Edit ${bill.name}`, { description: 'Sheet edit tagihan segera hadir.' })
+    setEditingBill(bill)
   }
 
+  /** 7D — Hapus: tolak dulu, jangan langsung hilang (aksi merusak + Undo) */
   function handleDelete(bill: Bill) {
+    setPendingDelete(bill)
+  }
+
+  /**
+   * Hapus sesungguhnya: kartunya keluar dari daftar, TAPI hak mengembalikannya
+   * masih hidup selama UNDO_WINDOW_MS (PRD 2251). Toast-nya membawa tombol
+   * Undo; setelah jendelanya tutup, jejaknya dibuang sehingga undo yang datang
+   * terlambat ditolak dengan jujur — bukan diam-diam tidak terjadi apa-apa.
+   */
+  function confirmDelete() {
+    if (!pendingDelete) return
+    const bill = pendingDelete
+    const index = bills.findIndex((item) => item.id === bill.id)
+    const entry = { bill, index: index < 0 ? bills.length : index }
+    undoRef.current = entry
     setBills((prev) => prev.filter((item) => item.id !== bill.id))
-    toast('Tagihan dihapus', {
-      description: `${bill.name} keluar dari daftar rutinmu. Tambahin lagi kapan aja ya 🌿`,
+    setPendingDelete(null)
+
+    toast(DELETE_BILL_TOAST.title, {
+      description: DELETE_BILL_TOAST.description(bill.name),
+      action: { label: DELETE_BILL_TOAST.undo, onClick: () => restoreBill(entry) },
+      /* lama toast = lama hak undo; keduanya dibaca dari satu konstanta */
+      duration: UNDO_WINDOW_MS,
+    })
+
+    later(() => {
+      if (undoRef.current === entry) undoRef.current = null
+    }, UNDO_WINDOW_MS)
+  }
+
+  /** Undo: kartunya balik ke posisi semula — user tidak perlu mengetik ulang */
+  function restoreBill(entry: { bill: Bill; index: number }) {
+    if (undoRef.current !== entry) {
+      toast(DELETE_BILL_TOAST.expired)
+      return
+    }
+    undoRef.current = null
+    setBills((prev) => {
+      if (prev.some((item) => item.id === entry.bill.id)) return prev
+      const next = [...prev]
+      next.splice(Math.min(entry.index, next.length), 0, entry.bill)
+      return next
+    })
+    toast.success(DELETE_BILL_TOAST.undoneTitle, {
+      description: DELETE_BILL_TOAST.undoneDescription,
     })
   }
 
   /** 9D — tagihan baru masuk sebagai lajur kosong berikutnya di tameng */
   function handleSaveBill(data: NewBill) {
+    /* Mode EDIT: id & status "lunas bulan ini" dipertahankan — yang berubah cuma
+       field yang benar-benar dikoreksi user (termasuk tenor & catatannya). */
+    if (editingBill) {
+      const id = editingBill.id
+      setBills((prev) => prev.map((bill) => (bill.id === id ? { ...bill, ...data } : bill)))
+      setEditingBill(null)
+      toast.success(UPDATE_BILL_TOAST.title, { description: UPDATE_BILL_TOAST.description })
+      return
+    }
+
     const nextId = String(
       bills.reduce((max, bill) => Math.max(max, Number(bill.id) || 0), 0) + 1,
     )
     setBills((prev) => [...prev, { ...data, id: nextId, isPaidThisMonth: false }])
     setActiveFilter('semua')
     setShowAddBill(false)
-    toast.success('Tagihan baru ditambahkan! 🔔')
+    toast.success(ADD_BILL_TOAST.title)
   }
 
   /** 5 — tap tanggal di timeline: buka filternya, gulir ke kartu, sorot sebentar */
@@ -362,12 +430,37 @@ export function BillsScreen() {
           </div>
         )}
 
-      {/* bottom sheet (mobile) / dialog (desktop) */}
+      {/* bottom sheet (mobile) / dialog (desktop) — SATU sheet untuk dua mode:
+          mode TAMBAH (`initial` kosong) dan mode EDIT (paket 03). `initial`-lah
+          yang menentukan modenya, jadi tidak ada dua form yang harus dijaga
+          supaya perilakunya tetap sama. */}
       <AddBillSheet
-        open={showAddBill}
-        onClose={() => setShowAddBill(false)}
+        open={showAddBill || editingBill !== null}
+        initial={editingBill}
+        onClose={() => {
+          setShowAddBill(false)
+          setEditingBill(null)
+        }}
         onSave={handleSaveBill}
       />
+
+      {/* konfirmasi hapus: aksi merusak selalu ditolak dulu, baru boleh jalan.
+          Setelah dikonfirmasi pun masih ada Undo di toast-nya (paket 03). */}
+      <AnimatePresence>
+        {pendingDelete && (
+          <ConfirmDialog
+            titleId="hapus-tagihan-judul"
+            overlayLabel={CONFIRM_DELETE_BILL_COPY.overlay}
+            title={CONFIRM_DELETE_BILL_COPY.title}
+            body={CONFIRM_DELETE_BILL_COPY.body(pendingDelete.name)}
+            safety={CONFIRM_DELETE_BILL_COPY.safety}
+            cancelLabel={CONFIRM_DELETE_BILL_COPY.cancel}
+            confirmLabel={CONFIRM_DELETE_BILL_COPY.confirm}
+            onCancel={() => setPendingDelete(null)}
+            onConfirm={confirmDelete}
+          />
+        )}
+      </AnimatePresence>
     </ScreenShell>
   )
 }

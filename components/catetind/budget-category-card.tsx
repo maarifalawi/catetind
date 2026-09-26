@@ -3,39 +3,45 @@
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import {
-  CURRENT_DAY,
-  DAYS_IN_MONTH,
   PACING_HEX,
+  PACING_HINT_COPY,
   pacingOf,
   pacingPercent,
+  periodLimitWord,
   ratioLabel,
   type BudgetItem,
+  type PeriodWindow,
 } from '@/lib/data/budget'
 
 /* ── Satu baris budget kategori (Zona A) ─────────────────────────────────────
    Emoji + nama kategori, nominal terpakai/limit, bar progres berwarna kanon
    (sage → amber → terracotta), plus "ghost pacing line": garis tipis 2px di
-   posisi pengeluaran ideal hari ini. Kalau bar berwarna sudah melewati garis
-   itu, artinya belanja lebih cepat dari pacing — tapi ditampilkan sebagai
-   informasi, bukan teguran (nada PRD: nurturing, bukan menghakimi).
+   posisi pengeluaran ideal hari ini. Garis itu dihitung dari `window` (periode
+   yang sedang aktif) — jadi di tab Mingguan ia bergerak relatif Senin–Minggu,
+   bukan selalu bulan kalender. Kalau bar berwarna sudah melewati garis itu,
+   artinya belanja lebih cepat dari pacing — ditampilkan sebagai informasi,
+   bukan teguran (nada PRD: nurturing, bukan menghakimi).
    ────────────────────────────────────────────────────────────────────────── */
 
 export function BudgetCategoryCard({
   budget,
   masked,
+  window,
   onReview,
 }: {
   budget: BudgetItem
   masked: boolean
+  /** periode aktif — menentukan posisi garis pacing ideal */
+  window: PeriodWindow
   /** CTA sekunder `Review Pengeluaran →` — aktif saat kategori over budget */
   onReview?: () => void
 }) {
   /* tooltip garis pacing: muncul saat hover (CSS) & saat di-tap (state) */
   const [hintOpen, setHintOpen] = useState(false)
 
-  const { tone, percent, copy, fasterThanPacing } = pacingOf(budget, masked)
+  const { tone, percent, copy, fasterThanPacing } = pacingOf(budget, masked, window)
   const over = percent >= 100
-  const pacing = pacingPercent(CURRENT_DAY, DAYS_IN_MONTH)
+  const pacing = pacingPercent(window)
   const fill = Math.min(100, percent)
 
   /* tooltip tidak boleh keluar tepi kartu — merapat ke sisi terdekat */
@@ -54,7 +60,7 @@ export function BudgetCategoryCard({
               {budget.category}
             </span>
             <span className="block text-[10.5px] font-medium text-ink/40">
-              Budget {budget.period === 'weekly' ? 'mingguan' : budget.period === 'custom' ? 'custom' : 'bulanan'}
+              Budget {periodLimitWord(budget.period)}
             </span>
           </span>
         </div>
@@ -79,11 +85,7 @@ export function BudgetCategoryCard({
         {/* ghost pacing line — 2px, nol tambahan ruang vertikal */}
         <button
           type="button"
-          aria-label={
-            fasterThanPacing
-              ? 'Garis abu-abu = target pacing ideal. Pengeluaran kategori ini lebih cepat dari ideal.'
-              : 'Garis abu-abu = target pacing ideal'
-          }
+          aria-label={fasterThanPacing ? PACING_HINT_COPY.faster : PACING_HINT_COPY.base}
           onClick={() => setHintOpen((prev) => !prev)}
           onFocus={() => setHintOpen(true)}
           onBlur={() => setHintOpen(false)}
@@ -100,7 +102,7 @@ export function BudgetCategoryCard({
             hintOpen ? 'opacity-100' : 'opacity-0 group-hover/bar:opacity-100',
           )}
         >
-          Garis abu-abu = target pacing ideal
+          {PACING_HINT_COPY.base}
         </span>
       </div>
 

@@ -1,37 +1,13 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
-import { ChevronLeft } from 'lucide-react'
-import { PhoneStage } from '@/components/catetind/phone-stage'
-import { BillingPanel } from '@/components/catetind/billing-panel'
+import { BillingSettingsPanel } from '@/components/catetind/settings-panel-billing'
+
+/* Sub-section Langganan & Billing (inventaris #18).
+   Isinya `BillingPanel` yang sudah ada + jalur berhenti berlangganan. */
 
 export const metadata: Metadata = {
   title: 'Langganan & Billing — CatetInd',
 }
 
 export default function BillingSettingsPage() {
-  return (
-    <PhoneStage>
-      <main className="min-h-screen px-5 pb-32 pt-6 sm:px-8 lg:px-10 lg:pt-8">
-        <div className="mx-auto w-full max-w-3xl">
-          <Link
-            href="/settings"
-            className="inline-flex items-center gap-1 text-sm font-medium text-ink/50 transition-colors hover:text-ink"
-          >
-            <ChevronLeft className="size-4" strokeWidth={2.4} />
-            Pengaturan
-          </Link>
-          <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight text-ink lg:text-4xl">
-            Langganan & Billing
-          </h1>
-          <p className="mt-1 text-sm text-ink/50">
-            Status paket, perpanjangan manual, dan pemakaian AI Token kamu.
-          </p>
-
-          <div className="mt-6">
-            <BillingPanel />
-          </div>
-        </div>
-      </main>
-    </PhoneStage>
-  )
+  return <BillingSettingsPanel />
 }

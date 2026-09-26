@@ -1,18 +1,18 @@
 import type { Metadata } from 'next'
 import { PhoneStage } from '@/components/catetind/phone-stage'
+import { ReferralScreen } from '@/components/catetind/referral-screen'
 
 export const metadata: Metadata = {
   title: 'Ajak Teman — CatetInd',
+  description:
+    'Bagikan link unikmu ke teman: mereka dapat diskon 10% saat checkout, dan kamu langsung dapat reward AI Token atau tambahan masa aktif — otomatis, tanpa klaim.',
 }
 
 export default function ReferralPage() {
   return (
     <PhoneStage>
-      <main className="flex min-h-screen items-center justify-center px-5 pb-32 pt-6">
-        <h1 className="font-display text-3xl font-semibold tracking-tight text-ink lg:text-4xl">
-          Ajak Teman
-        </h1>
-      </main>
+      <ReferralScreen />
     </PhoneStage>
   )
 }
+

@@ -8,6 +8,7 @@ import {
   Check,
   ChevronDown,
   Plus,
+  Receipt,
   ShieldCheck,
   Snowflake,
   Wallet,
@@ -23,6 +24,9 @@ import {
   EMPTY_PIUTANG_COPY,
   EMPTY_PIUTANG_CTA,
   EMPTY_PIUTANG_TITLE,
+  PAYMENT_HISTORY_EMPTY,
+  PAYMENT_HISTORY_EMPTY_HINT,
+  PAYMENT_HISTORY_TITLE,
   PERSONAL_SECTION_COPY,
   SNOWBALL_EMPTY,
   SNOWBALL_HELP,
@@ -39,8 +43,11 @@ import {
   dtiBadge,
   dtiRatio,
   estimatedInterest,
+  formatShortDate,
   hudDeductionCopy,
   maskMoney,
+  paymentCountLabel,
+  paymentsOfDebt,
   personalDebts,
   platformDebts,
   providerEmoji,
@@ -48,6 +55,7 @@ import {
   snowballRows,
   totalMonthInstallments,
   type Debt,
+  type DebtPayment,
   type DebtView,
   type SnowballRow,
 } from '@/lib/data/wealth'
@@ -70,6 +78,12 @@ import {
    Cicilan platform juga dinyatakan terang-terangan: uangnya sudah dipotong dari
    Jatah Harian (Domain 2B) — user tahu ke mana income pool pergi sebelum
    dana bagi-bagi harian.
+
+   Sejak paket 17, kartu detail tiap hutang platform juga memuat RIWAYAT
+   PEMBAYARAN (`debt_payments`): tanggal + dompet sumber tiap pembayaran. Dulu
+   tempatnya hanya paragraf janji "akan tampil di sini" — sekarang setiap baris
+   adalah pembayaran nyata, termasuk yang baru dicatat lewat "Catat Bayar".
+
    ────────────────────────────────────────────────────────────────────────── */
 
 /** lebar area aksi "Catat Bayar" yang tersingkap (px) saat kartu digeser kanan */
@@ -79,6 +93,7 @@ const SNAP = 44
 
 export function WealthHutang({
   debts,
+  payments,
   view,
   onChangeView,
   masked,
@@ -89,6 +104,8 @@ export function WealthHutang({
   onPayDebt,
 }: {
   debts: Debt[]
+  /** ledger pembayaran hutang (`debt_payments`) — riwayat per hutang diturunkan dari sini */
+  payments: DebtPayment[]
   view: DebtView
   onChangeView: (view: DebtView) => void
   masked: boolean
@@ -98,7 +115,8 @@ export function WealthHutang({
   celebrateId: string | null
   onAddDebt: () => void
   onSettleDebt: (debt: Debt) => void
-  onPayDebt: (debt: Debt, amount: number) => void
+  /** amount + tanggal + dompet sumber ikut dikirim: ketiganya tersimpan di riwayat */
+  onPayDebt: (debt: Debt, amount: number, date: string, walletId: string) => void
 }) {
   const [payTarget, setPayTarget] = useState<Debt | null>(null)
 
@@ -178,6 +196,7 @@ export function WealthHutang({
                         <PlatformDebtCard
                           key={debt.id}
                           debt={debt}
+                          payments={paymentsOfDebt(payments, debt.id)}
                           masked={masked}
                           delay={0.03 * index}
                           onPay={() => setPayTarget(debt)}
@@ -215,9 +234,11 @@ export function WealthHutang({
         debt={payTarget}
         masked={masked}
         onClose={() => setPayTarget(null)}
-        onConfirm={(amount) => {
-          // TODO: simpan juga tanggal & dompet sumber ke tabel debt_payments
-          if (payTarget) onPayDebt(payTarget, amount)
+        onConfirm={(amount, date, wallet) => {
+          /* tanggal & dompet sumbernya ikut dikirim — itulah dua kolom yang
+             membuat riwayat pembayaran bisa diaudit (arah produksi:
+             INSERT ke `debt_payments` (debt_id, amount, payment_date, wallet_id)) */
+          if (payTarget) onPayDebt(payTarget, amount, date, wallet)
           setPayTarget(null)
         }}
       />
@@ -660,11 +681,14 @@ function ConfettiBurst() {
    sisa pokok, sudah dibayar, estimasi total bunga, dan riwayat pembayaran. */
 function PlatformDebtCard({
   debt,
+  payments,
   masked,
   delay,
   onPay,
 }: {
   debt: Debt
+  /** riwayat pembayaran hutang ini, terbaru di atas (turunan `debt_payments`) */
+  payments: DebtPayment[]
   masked: boolean
   delay: number
   onPay: () => void
@@ -841,12 +865,51 @@ function PlatformDebtCard({
                 )}
               </dl>
 
-              {/* riwayat pembayaran — TODO: ambil dari tabel debt_payments
-                  (debt_id, amount, payment_date, wallet_id) lewat Supabase */}
-              <p className="mt-3 text-[10px] leading-relaxed text-ink/35">
-                Riwayat pembayaran akan tampil di sini setelah terhubung ke
-                <span className="mx-1 font-semibold text-ink/50">debt_payments</span>.
-              </p>
+              {/* riwayat pembayaran — turunan ledger `debt_payments`
+                  (debt_id, amount, payment_date, wallet_id). Setiap baris di sini
+                  adalah pembayaran nyata yang user catat, bukan hiasan: tanggal +
+                  dompet sumbernya ikut tersimpan supaya angka "Sudah dibayar" di
+                  atas bisa diaudit baris per baris. */}
+              <div className="mt-3 rounded-2xl bg-cream px-3.5 py-3 ring-1 ring-inset ring-soil/8">
+                <p className="flex items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-ink/40">
+                  <span className="flex items-center gap-1.5">
+                    <Receipt className="size-3.5" strokeWidth={2.6} />
+                    {PAYMENT_HISTORY_TITLE}
+                  </span>
+                  {payments.length > 0 && (
+                    <span className="font-semibold normal-case tracking-normal text-ink/35">
+                      {paymentCountLabel(payments.length)}
+                    </span>
+                  )}
+                </p>
+
+                {payments.length === 0 ? (
+                  <div className="mt-2">
+                    <p className="text-[11px] font-semibold leading-relaxed text-ink/55">
+                      {PAYMENT_HISTORY_EMPTY}
+                    </p>
+                    <p className="mt-1 text-[10.5px] leading-relaxed text-ink/40">
+                      {PAYMENT_HISTORY_EMPTY_HINT}
+                    </p>
+                  </div>
+                ) : (
+                  <ul className="mt-2 space-y-1.5">
+                    {payments.map((payment) => (
+                      <li key={payment.id} className="flex items-center gap-2 text-[11px]">
+                        <span className="shrink-0 text-ink/55 tabular-nums">
+                          {formatShortDate(payment.paidAtISO)}
+                        </span>
+                        <span className="min-w-0 flex-1 truncate text-ink/40">
+                          · {payment.walletName}
+                        </span>
+                        <span className="shrink-0 font-semibold text-ink/75 tabular-nums">
+                          {maskMoney(payment.amount, masked)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
 
               <button
                 type="button"
@@ -900,7 +963,7 @@ function PayDebtSheet({
       title={debt ? `Catat Bayar ${debt.provider}` : 'Catat Bayar'}
       description="Pembayaran langsung mengurangi sisa hutang di snowball tracker."
       footer={
-        <SheetSubmit onClick={() => onConfirm(amount, date, wallet)} disabled={amount <= 0}>
+        <SheetSubmit onClick={() => onConfirm(amount, date, wallet)} disabled={amount <= 0} gate>
           Simpan Pembayaran ✓
         </SheetSubmit>
       }

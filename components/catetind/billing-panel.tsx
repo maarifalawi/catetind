@@ -6,25 +6,49 @@ import {
   Check,
   CreditCard,
   Crown,
+  Hourglass,
   MessageCircle,
+  Mic,
   ReceiptText,
   RefreshCw,
   ScanLine,
   ShieldCheck,
   Sparkles,
   Tags,
+  TriangleAlert,
   Wallet,
+  XCircle,
   Zap,
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { formatIDR } from '@/lib/weekly-recap'
+import { toast } from 'sonner'
+import { CATET_AJA_PLAN, HERO_PLAN, formatIDR } from '@/lib/data/pricing'
+/* Semua angka kuota AI datang dari sini — bagian tampilan tidak menyimpan
+   satu pun kuota/harga add-on (aturan yang sama dengan `lib/data/pricing.ts`). */
+import {
+  AI_ADDON_PACKAGES,
+  AI_ADDON_RECORDS_LEFT,
+  AI_ADDON_TOKENS_REMAINING,
+  AI_BASE_TOKENS_REMAINING,
+  AI_FUEL_COPY,
+  AI_QUOTA_RESET_DATE,
+  AI_RECORDS_LEFT,
+  AI_REMAINING_PCT,
+  AI_RESET_RULE_COPY,
+  AI_USAGE,
+  formatTokens,
+  remainingPercent,
+  type AiQuotaActivityId,
+} from '@/lib/ai-quota'
 import { AnnualPlanModal } from './annual-plan-modal'
+import { ConfirmDialog, DialogButton } from './settings-dialog'
 import { PAYMENT_METHODS } from './payment-method-logos'
 import { TopUpModal } from './top-up-modal'
 
 /* ── Mock data halaman Langganan & Billing (inventaris #18) ────────────────────
-   Satu tempat angka biar kartu plan & fuel gauge tidak pernah beda cerita. */
+   Harga paket dibaca dari `lib/data/pricing.ts`, angka kuota AI dari
+   `lib/ai-quota.ts` — file ini tidak menyimpan nominal milik orang lain. */
 
 type CurrentPlan = {
   name: string
@@ -34,15 +58,42 @@ type CurrentPlan = {
   paymentMethod: string
 }
 
-/* name sengaja di-type `string` (bukan literal) supaya perbandingan paket aktif
-   di modal tahunan (pro-rated upgrade) tetap valid secara tipe */
+/* Angka & nama paket aktif DIBACA dari `lib/data/pricing.ts` — halaman yang
+   menjual (checkout) dan halaman yang menagih (di sini) tidak boleh punya dua
+   daftar harga (PRD 4594–4606). Langganan mock-nya periode TAHUNAN, sama seperti
+   baris "Paket Waras - Annual" di riwayat pembayaran di bawah.
+
+   name sengaja di-type `string` (bukan literal) supaya perbandingan paket aktif
+   di modal tahunan (pro-rated upgrade) tetap valid secara tipe. */
 const CURRENT_PLAN: CurrentPlan = {
-  name: 'Paket Waras',
-  price: 'Rp 49.000',
-  period: '/ bulan',
+  name: HERO_PLAN.name,
+  price: formatIDR(HERO_PLAN.annual),
+  period: '/ tahun',
   activeUntil: '21 Oktober 2026',
   paymentMethod: 'GoPay •••• 4821',
 }
+
+/* STATUS LANGGANAN — satu sumber untuk pill status di kartu paket aktif.
+   Tiga kondisi di inventaris #18: aktif (mint), grace period (amber, masa
+   tenggang 7 hari), dan expired (prem). Warnanya mengikuti kanon Domain 2B.2:
+   tidak ada merah alarm — "lewat batas" = prem, "mendekati batas" = amber. */
+export type SubscriptionStatusId = 'aktif' | 'grace' | 'expired'
+
+const STATUS_META: Record<
+  SubscriptionStatusId,
+  { label: string; pill: string; icon: LucideIcon }
+> = {
+  aktif: { label: 'Aktif', pill: 'bg-mint/30 text-forest', icon: ShieldCheck },
+  grace: {
+    label: 'Grace Period (7 hari tersisa)',
+    pill: 'bg-hud-amber/30 text-ink/70',
+    icon: Hourglass,
+  },
+  expired: { label: 'Expired', pill: 'bg-plum/20 text-plum', icon: TriangleAlert },
+}
+
+/** status aktif sekarang (mock) — ganti ke 'grace'/'expired' saat mereview UI */
+const SUBSCRIPTION_STATUS: SubscriptionStatusId = 'aktif'
 
 /* e-wallet tersimpan (mock) — logo memakai PaymentMethodId yang sama dengan
    baris logo di modal tahunan biar konsisten */
@@ -58,69 +109,67 @@ type BillingHistoryItem = {
   amount: number
 }
 
-/* riwayat pembayaran (mock) — semuanya LUNAS */
+/* paket add-on yang dibeli di riwayat (mock) — dicari dari daftar kanon supaya
+   nominal kwitansi selalu sama dengan harga di modal top-up */
+const SEDANG_PACKAGE =
+  AI_ADDON_PACKAGES.find((pkg) => pkg.id === 'sedang') ?? AI_ADDON_PACKAGES[0]
+
+/* riwayat pembayaran (mock) — semuanya LUNAS. Nominal langganan DITURUNKAN dari
+   tabel harga kanon, jadi kwitansi dan harga jual tidak pernah beda cerita. */
 const BILLING_HISTORY: BillingHistoryItem[] = [
-  { id: 'inv-2026-08', date: '12 Agustus 2026', label: 'Paket Waras - Annual', amount: 109_000 },
+  {
+    id: 'inv-2026-08',
+    date: '12 Agustus 2026',
+    label: `${HERO_PLAN.name} - Annual`,
+    amount: HERO_PLAN.annual,
+  },
   {
     id: 'inv-2026-07',
     date: '5 Juli 2026',
-    label: 'Top Up AI Token - Paket Nongkrong',
-    amount: 29_000,
+    label: `Top Up AI Token - ${SEDANG_PACKAGE.name}`,
+    amount: SEDANG_PACKAGE.price,
   },
-  { id: 'inv-2026-01', date: '1 Januari 2026', label: 'Paket Catet Aja - Annual', amount: 49_000 },
+  {
+    id: 'inv-2026-01',
+    date: '1 Januari 2026',
+    label: `${CATET_AJA_PLAN.name} - Annual`,
+    amount: CATET_AJA_PLAN.annual,
+  },
 ]
 
-type FuelMeter = {
-  id: string
-  label: string
-  icon: LucideIcon
-  used: number
-  limit: number
+/* Ikon per aktivitas kuota — label & angkanya datang dari `lib/ai-quota.ts`;
+   di sini cuma ikonnya, karena ikon adalah lapis tampilan (React), bukan data. */
+const ACTIVITY_ICON: Record<AiQuotaActivityId, LucideIcon> = {
+  categorize: Tags,
+  chat: MessageCircle,
+  ocr: ScanLine,
+  voice: Mic,
+  appreciation: Sparkles,
+  recap: CalendarClock,
 }
 
-/* 3 meter utama AI Token. Framing selalu "kamu sudah pakai X dari Y" —
-   TIDAK ada kata habis/limit & TIDAK ada warna merah (kanon Domain 2B.2 + 5C). */
-const FUEL_METERS: FuelMeter[] = [
-  {
-    id: 'chat',
-    label: 'Chat AI Coach',
-    icon: MessageCircle,
-    used: 145,
-    limit: 150,
-  },
-  {
-    id: 'ocr',
-    label: 'Scan Struk OCR',
-    icon: ScanLine,
-    used: 58,
-    limit: 60,
-  },
-  {
-    id: 'category',
-    label: 'Auto-Kategori',
-    icon: Tags,
-    used: 400,
-    limit: 500,
-  },
-]
-
-/** warna bar naik lembut (leaf → olive → cantelope). Bukan alarm, cuma gradasi hangat. */
-function barTone(pct: number) {
-  if (pct >= 90) return 'bg-hud-amber'
-  if (pct >= 75) return 'bg-hud-sage'
+/** warna bar SISA: makin tipis makin hangat (mint → olive → cantelope). Tidak ada
+    merah — "hampir habis" bukan bahasa yang dipakai app ini (kanon 2B.2 + 5C). */
+function barTone(remainingPct: number) {
+  if (remainingPct <= 15) return 'bg-hud-amber'
+  if (remainingPct <= 35) return 'bg-hud-sage'
   return 'bg-mint'
 }
 
 export function BillingPanel() {
   const [topUpOpen, setTopUpOpen] = useState(false)
-  /** modal paket tahunan — dibuka dari tombol Perpanjang di kartu paket aktif */
+  /**
+   * Modal PAKET TAHUNAN — dibuka dari tombol "Perpanjang" di kartu paket aktif.
+   *
+   * Peran dibagi dua supaya tidak ada dua alur yang saling menabrakan:
+   *   · modal ini (`annual-plan-modal`)  = memilih paket & periode (termasuk
+   *     UPGRADE dengan bayar selisih) — "saya mau paket yang mana";
+   *   · modal Renewal (`renewal-modal`, task 14) = MEMPERPANJANG masa aktif yang
+   *     mau habis di H-1, muncul sendiri di Home, biasanya satu tap — "saya mau
+   *     lanjut pakai yang sekarang".
+   * Keduanya membaca `lib/data/pricing.ts` yang sama, jadi satu harga di mana pun.
+   */
   const [annualOpen, setAnnualOpen] = useState(false)
-
-  /* rata-rata 3 meter — angka turunan, bukan hardcode, biar konsisten */
-  const avgPct = Math.round(
-    FUEL_METERS.reduce((sum, meter) => sum + (meter.used / meter.limit) * 100, 0) /
-      FUEL_METERS.length,
-  )
 
   return (
     <>
@@ -130,21 +179,19 @@ export function BillingPanel() {
           <CurrentPlanCard onUpgrade={() => setAnnualOpen(true)} />
           <PaymentMethodCard />
         </div>
-        <FuelGaugeCard avgPct={avgPct} />
+        <FuelGaugeCard />
       </div>
 
       {/* band CTA — pola kartu "Enterprise plans" referensi: label + copy + CTA besar */}
       <section className="mt-4 rounded-[1.75rem] bg-gradient-to-br from-forest to-forest-soft p-5 ring-1 ring-soil/12 sm:p-6">
         <span className="inline-flex items-center gap-1.5 rounded-full bg-cream/10 px-2.5 py-1 text-[11px] font-medium text-cream/80">
           <Zap className="size-3.5 text-mint" strokeWidth={2.4} />
-          AI Token Add-on
+          {AI_FUEL_COPY.addonBandBadge}
         </span>
 
         <div className="mt-4 lg:flex lg:items-center lg:justify-between lg:gap-6">
           <p className="text-[13px] leading-relaxed break-words text-cream/65 lg:max-w-md">
-            <b className="font-semibold text-cream">
-              Wah, AI Coach kamu udah kerja keras bulan ini!
-            </b>
+            <b className="font-semibold text-cream">{AI_FUEL_COPY.addonBandTitle}</b>
           </p>
 
           <button
@@ -153,12 +200,15 @@ export function BillingPanel() {
             className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-mint px-6 py-3.5 text-sm font-semibold text-forest transition-colors hover:bg-cream active:scale-[0.99] lg:mt-0 lg:w-auto lg:shrink-0"
           >
             <Zap className="size-4" strokeWidth={2.4} />
-            Beli Kuota Tambahan
+            {AI_FUEL_COPY.addonBandCta}
           </button>
         </div>
       </section>
 
       <BillingHistorySection />
+
+      {/* jalur berhenti berlangganan — selalu terlihat, satu klik dari sini */}
+      <CancelSubscriptionCard />
 
       <TopUpModal open={topUpOpen} onClose={() => setTopUpOpen(false)} />
       <AnnualPlanModal
@@ -179,10 +229,7 @@ function CurrentPlanCard({ onUpgrade }: { onUpgrade: () => void }) {
           <Crown className="size-5" strokeWidth={2.2} />
         </span>
         <div className="min-w-0 flex-1">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-mint/30 px-2.5 py-1 text-[11px] font-semibold text-forest">
-            <ShieldCheck className="size-3.5" strokeWidth={2.4} />
-            Aktif
-          </span>
+          <StatusPill status={SUBSCRIPTION_STATUS} />
           <h2 className="mt-2 text-xl font-semibold tracking-tight text-ink">
             {CURRENT_PLAN.name}
           </h2>
@@ -214,6 +261,9 @@ function CurrentPlanCard({ onUpgrade }: { onUpgrade: () => void }) {
       </dl>
 
       <div className="mt-auto pt-5">
+        {/* Tombol ini membuka modal paket tahunan (pilih paket/periode = upgrade),
+            BUKAN modal Renewal yang muncul sendiri di Home saat H-1. Lihat catatan
+            pembagian peran di `BillingPanel`. */}
         <button
           type="button"
           onClick={onUpgrade}
@@ -231,45 +281,183 @@ function CurrentPlanCard({ onUpgrade }: { onUpgrade: () => void }) {
   )
 }
 
-/* ── kartu 2: AI Token fuel gauge ────────────────────────────────────────────── */
-function FuelGaugeCard({ avgPct }: { avgPct: number }) {
+/** pill status langganan — ikon + nada mengikuti STATUS_META */
+function StatusPill({ status }: { status: SubscriptionStatusId }) {
+  const meta = STATUS_META[status]
+  const Icon = meta.icon
+
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold',
+        meta.pill,
+      )}
+    >
+      <Icon className="size-3.5" strokeWidth={2.4} aria-hidden />
+      {meta.label}
+    </span>
+  )
+}
+
+/* ── kartu: berhenti berlangganan (anti dark pattern, Domain 5A) ───────────────
+   Satu tautan jelas di bawah halaman — bukan tombol abu-abu kecil di halaman
+   tersembunyi, bukan alur "hubungi CS dulu". Copy-nya hangat dan jujur: data
+   tetap aman & bisa di-export kapan aja, tanpa guilt-trip. */
+function CancelSubscriptionCard() {
+  const [open, setOpen] = useState(false)
+
+  function handleCancel() {
+    setOpen(false)
+    /* TODO: POST /api/subscription/cancel → Midtrans stop recurring.
+       Demo ini belum punya billing server, jadi cukup diumumkan lewat toast. */
+    toast('Langganan dihentikan. Terima kasih udah bareng kami 💚', {
+      description: 'Aktif sampai akhir periode berjalan. Bisa lanjut lagi kapan aja.',
+    })
+  }
+
+  return (
+    <>
+      <section className="mt-4 rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12 sm:p-6">
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-ink/55 underline decoration-soil/25 underline-offset-4 transition-colors hover:text-plum hover:decoration-plum/40"
+        >
+          <XCircle className="size-4" strokeWidth={2.2} aria-hidden />
+          Berhenti Berlangganan
+        </button>
+        <p className="mt-2 text-[11.5px] leading-relaxed text-ink/45">
+          Tanpa jebakan, tanpa telepon ke retention agent. Satu klik, kelar.
+        </p>
+      </section>
+
+      <ConfirmDialog
+        id="cancel-subscription"
+        open={open}
+        onClose={() => setOpen(false)}
+        icon={XCircle}
+        tone="danger"
+        title="Berhenti berlangganan?"
+        body="Mau istirahat langganan? Nggak masalah. Data keuanganmu tetap aman dan bisa di-export kapan aja. Kami tunggu kamu balik! 💚"
+        actions={
+          <>
+            <DialogButton tone="danger" onClick={handleCancel}>
+              Ya, Berhenti
+            </DialogButton>
+            <DialogButton tone="neutral" onClick={() => setOpen(false)}>
+              Batal
+            </DialogButton>
+          </>
+        }
+      />
+    </>
+  )
+}
+
+/* ── kartu 2: AI Token fuel gauge (inventaris #18) ─────────────────────────────
+   Semua angka datang dari `lib/ai-quota.ts` — kartu ini tidak menyimpan satu pun
+   kuota, jadi ia, kartu sidebar, banner Home, dan dokumen /terms sepakat.
+
+   Struktur mengikuti contoh PRD 4915–4933 (bar + pemisahan base quota vs token
+   tambahan + rincian per aktivitas + tanggal reset), tapi DIPUTAR ke framing
+   SISA: isian bar = kuota yang masih tersisa, tanpa kata habis/limit & tanpa
+   warna merah. Dua kolam TIDAK digabung jadi satu persen — kuota dasar (yang
+   di-reset tanggal 1) adalah angka utama; token add-on punya barisnya sendiri. */
+function FuelGaugeCard() {
+  const baseLeftPct = AI_REMAINING_PCT
+
   return (
     <section className="flex flex-col rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12 sm:p-6">
       <div className="flex items-baseline justify-between gap-2">
-        <h2 className="text-xl font-semibold tracking-tight text-ink">Bahan Bakar AI</h2>
-        <span className="text-sm font-semibold text-ink/45 tabular-nums">{avgPct}% terpakai</span>
+        <h2 className="text-xl font-semibold tracking-tight text-ink">
+          {AI_FUEL_COPY.cardTitle}
+        </h2>
+        <span className="text-sm font-semibold text-ink/45 tabular-nums">
+          {AI_REMAINING_PCT}% {AI_FUEL_COPY.remainingLabel}
+        </span>
       </div>
 
-      <ul className="mt-3.5 space-y-4">
-        {FUEL_METERS.map(({ id, label, icon: Icon, used, limit }) => {
-          const pct = Math.round((used / limit) * 100)
+      {/* bar sisa KUOTA DASAR — nada hangat (mint → olive → cantelope), bukan alarm */}
+      <div
+        role="progressbar"
+        aria-label="Sisa kuota dasar AI bulan ini"
+        aria-valuenow={AI_REMAINING_PCT}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        className="mt-2.5 h-2.5 w-full overflow-hidden rounded-full bg-ink/[0.07]"
+      >
+        <span
+          className={cn(
+            'block h-full rounded-full transition-[width] duration-700 ease-out',
+            barTone(baseLeftPct),
+          )}
+          style={{ width: `${Math.max(2, baseLeftPct)}%` }}
+        />
+      </div>
+
+      {/* pemisahan kolam — "base quota vs add-on" yang diminta inventaris #18 */}
+      <dl className="mt-3 grid grid-cols-2 gap-2.5">
+        <div className="rounded-2xl bg-cream px-3.5 py-3 ring-1 ring-soil/8">
+          <dt className="flex items-center gap-1.5 text-[11px] text-ink/45">
+            <span className="size-2 shrink-0 rounded-full bg-forest" aria-hidden />
+            {AI_FUEL_COPY.baseLabel}
+          </dt>
+          <dd className="mt-1 text-[13px] font-semibold tabular-nums text-ink">
+            {formatTokens(AI_BASE_TOKENS_REMAINING)} sisa
+          </dd>
+          <p className="mt-0.5 text-[11px] text-ink/45 tabular-nums">
+            {AI_FUEL_COPY.recordsLeft(AI_RECORDS_LEFT)}
+          </p>
+        </div>
+        <div className="rounded-2xl bg-cream px-3.5 py-3 ring-1 ring-soil/8">
+          <dt className="flex items-center gap-1.5 text-[11px] text-ink/45">
+            <span className="size-2 shrink-0 rounded-full bg-hud-sage" aria-hidden />
+            {AI_FUEL_COPY.addonLabel}
+          </dt>
+          <dd className="mt-1 text-[13px] font-semibold tabular-nums text-ink">
+            {formatTokens(AI_ADDON_TOKENS_REMAINING)} sisa
+          </dd>
+          <p className="mt-0.5 text-[11px] text-ink/45 tabular-nums">
+            {AI_FUEL_COPY.recordsLeft(AI_ADDON_RECORDS_LEFT)}
+          </p>
+        </div>
+      </dl>
+
+      {/* rincian per aktivitas — angka turunan tabel kanon PRD 4778–4786 */}
+      <p className="mt-4 text-[10px] font-semibold tracking-[0.16em] text-ink/40 uppercase">
+        {AI_FUEL_COPY.detailLabel}
+      </p>
+      <ul className="mt-3 space-y-3.5">
+        {AI_USAGE.map((row) => {
+          const Icon = ACTIVITY_ICON[row.id]
+          const leftPct = remainingPercent(row.callsUsed, row.calls)
 
           return (
-            <li key={id}>
+            <li key={row.id}>
               <div className="flex items-baseline gap-3">
                 <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-sage/20 text-forest">
                   <Icon className="size-3.5" strokeWidth={2.2} />
                 </span>
-                <span className="min-w-0 flex-1">{label}</span>
-                <span className="text-sm font-medium text-ink/35 tabular-nums">
-                  {used}/{limit}
+                <span className="min-w-0 flex-1 text-[13px]">{row.label}</span>
+                <span className="shrink-0 text-[12px] font-medium text-ink/35 tabular-nums">
+                  {AI_FUEL_COPY.callsRemaining(row.callsRemaining, row.calls)}
                 </span>
               </div>
 
               <div
                 role="progressbar"
-                aria-label={`${label} terpakai`}
-                aria-valuenow={used}
+                aria-label={`${row.label} sisa`}
+                aria-valuenow={row.callsRemaining}
                 aria-valuemin={0}
-                aria-valuemax={limit}
+                aria-valuemax={row.calls}
                 className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-ink/[0.07]"
               >
                 <span
                   className={cn(
                     'block h-full rounded-full transition-[width] duration-700 ease-out',
-                    barTone(pct),
+                    barTone(leftPct),
                   )}
-                  style={{ width: `${pct}%` }}
+                  style={{ width: `${leftPct}%` }}
                 />
               </div>
             </li>
@@ -277,9 +465,13 @@ function FuelGaugeCard({ avgPct }: { avgPct: number }) {
         })}
       </ul>
 
-      <p className="mt-4 text-[11px] text-ink/40">
-        Kuota dasar di-reset tiap tanggal 1 · token add-on kepakai sampai habis.
+      {/* tanggal reset + aturannya (kanon PRD 4800–4802) */}
+      <p className="mt-4 flex flex-wrap items-center gap-1.5 text-[12px] font-medium text-ink/55">
+        <CalendarClock className="size-3.5 shrink-0" strokeWidth={2.2} aria-hidden />
+        {AI_FUEL_COPY.resetLabel}:
+        <span className="tabular-nums">{AI_QUOTA_RESET_DATE}</span>
       </p>
+      <p className="mt-1.5 text-[11px] leading-relaxed text-ink/40">{AI_RESET_RULE_COPY}</p>
     </section>
   )
 }

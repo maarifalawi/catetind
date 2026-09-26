@@ -10,21 +10,28 @@ import { usePrivacy } from './privacy-provider'
 import { WealthNetWorthBar } from './wealth-net-worth-bar'
 import { WealthInvestasi } from './wealth-investasi'
 import { WealthHutang } from './wealth-hutang'
-import { AddInvestmentSheet, type NewInvestmentTx } from './add-investment-sheet'
+import { AddInvestmentSheet, type InvestmentEditDraft, type NewInvestmentTx } from './add-investment-sheet'
 import { AddDebtSheet, type NewDebtInput } from './add-debt-sheet'
+import { UpdatePriceModal } from './update-price-modal'
 import { cn } from '@/lib/utils'
 import {
+  ASSET_EDIT_TOAST,
   EMPTY_INVESTASI_COPY,
   EMPTY_INVESTASI_CTA,
   EMPTY_INVESTASI_TITLE,
+  INITIAL_ASSET_TRANSACTIONS,
   INITIAL_DEBTS,
+  INITIAL_DEBT_PAYMENTS,
   INITIAL_INVESTMENTS,
   MONTHLY_INCOME,
+  PRICE_UPDATE_COPY,
   WEALTH_NOW_ISO,
   activeDebtRemaining,
   liquidCashTotal,
   totalPortfolioValue,
+  walletSourceLabel,
   type Debt,
+  type DebtPayment,
   type DebtView,
   type Investment,
   type WealthTab,
@@ -49,6 +56,13 @@ import {
    dipotong dari income pool SEBELUM jatah harian dibagi (Domain 2B). Karena itu
    nilainya ditulis terang-terangan di kartu ringkasan Tab 3.
 
+   Koreksi (paket 17): aset & hutang WAJIB bisa dibetulkan user, karena nilainya
+   diisi manual — tidak ada bank-sync (PRD 2E.1). Tiga jalur koreksinya:
+     - "Edit" di kartu aset → sheet yang sama dengan Tambah Investasi, mode edit.
+     - "Update Manual" di kartu aset basi → modal harga sekarang (update-price-modal).
+     - "Catat Bayar" → sisa hutang berkurang DAN barisnya masuk riwayat pembayaran
+       (tanggal + dompet sumber), jadi angkanya bisa diaudit.
+
    Waktu: "sekarang" memakai WEALTH_NOW_ISO (konstan) — sama seperti halaman
    Tagihan & Riwayat — supaya render server & client identik.
    ────────────────────────────────────────────────────────────────────────── */
@@ -67,6 +81,12 @@ export function WealthScreen() {
   const [expandedAssetId, setExpandedAssetId] = useState<string | null>(null)
   const [investments, setInvestments] = useState<Investment[]>(INITIAL_INVESTMENTS)
   const [debts, setDebts] = useState<Debt[]>(INITIAL_DEBTS)
+  /** ledger pembayaran hutang (produksi: `debt_payments`) */
+  const [payments, setPayments] = useState<DebtPayment[]>(INITIAL_DEBT_PAYMENTS)
+  /** aset yang sedang dibuka di sheet Edit Aset; null = sheet tertutup */
+  const [editingAsset, setEditingAsset] = useState<Investment | null>(null)
+  /** aset yang harganya sedang dikoreksi lewat modal "Update Manual" */
+  const [priceTarget, setPriceTarget] = useState<Investment | null>(null)
   /** hutang platform yang barnya baru lunas — memicu confetti + kolaps */
   const [celebrateId, setCelebrateId] = useState<string | null>(null)
   const monthlyIncome = MONTHLY_INCOME
@@ -98,8 +118,11 @@ export function WealthScreen() {
   /* ── AKSI ───────────────────────────────────────────────────────────────── */
 
   /** transaksi investasi baru dicatat sebagai posisi baru (mock).
-   *  TODO: kirim ke tabel investment_transactions lalu hitung ulang
-   *  avg_buy_price (weighted average) & quantity per aset di server. */
+   *  Arah produksi: `investment_transactions` yang menampung barisnya, lalu
+   *  `avg_buy_price` & quantity per aset DIHITUNG dari ledger itu (weighted
+   *  average, PRD 2E.1 AC2). Karena itu `transactions` tetap state terpisah:
+   *  riwayat yang tampil di kartu aset adalah turunan ledger, bukan pita
+   *  penghapus — aset yang belum punya baris ledger tampil sebagai empty state. */
   const handleSaveInvestment = useCallback((tx: NewInvestmentTx) => {
     const cost = tx.quantity * tx.price + tx.fees
     const entry: Investment = {
@@ -121,30 +144,77 @@ export function WealthScreen() {
     })
   }, [])
 
-  /** fallback protocol 2E.1 poin 4: user memaksa perbarui harga SATU aset */
+  /** fallback protocol 2E.1 poin 4: tombol "Update Manual" di kartu aset basi
+   *  MEMBUKA modal koreksi harga — bukan langsung menulis angka. User harus
+   *  melihat harga sekarang & akibatnya dulu sebelum angkanya masuk ke Net Worth. */
   const handleUpdatePrice = useCallback((asset: Investment) => {
-    setInvestments((prev) =>
-      prev.map((item) =>
-        item.id === asset.id
-          ? {
-              ...item,
-              isStale: false,
-              lastUpdate: WEALTH_NOW_ISO,
-              currentPrice: item.avgBuyPrice,
-              currentValue: item.quantity * item.avgBuyPrice,
-            }
-          : item,
-      ),
-    )
-    toast.info('Harga diperbarui! ✅', {
-      description: `${asset.name} sekarang memakai harga terbaru.`,
-    })
+    setPriceTarget(asset)
   }, [])
 
+  /** simpan harga hasil input user: harga pasar, nilai aset, dan stempel waktu
+   *  ikut berubah — warning amber di kartu itu langsung hilang (isStale: false) */
+  const handleSavePrice = useCallback(
+    (price: number) => {
+      const target = priceTarget
+      if (!target) return
+      setInvestments((prev) =>
+        prev.map((item) =>
+          item.id === target.id
+            ? {
+                ...item,
+                isStale: false,
+                lastUpdate: WEALTH_NOW_ISO,
+                currentPrice: price,
+                currentValue: item.quantity * price,
+              }
+            : item,
+        ),
+      )
+      setPriceTarget(null)
+      toast.success(PRICE_UPDATE_COPY.toastTitle, {
+        description: PRICE_UPDATE_COPY.toastDescription(target.name),
+      })
+    },
+    [priceTarget],
+  )
+
+  /** "Edit" di kartu aset membuka sheet yang sama dengan Tambah Investasi,
+   *  tapi dalam mode edit terisi nilai aset itu (lihat AddInvestmentSheet) */
   const handleEditAsset = useCallback((asset: Investment) => {
-    // TODO: buka sheet edit kuantitas/harga aset ini
-    toast.success(`Edit ${asset.name}`, { description: 'Form edit aset segera hadir.' })
+    setEditingAsset(asset)
   }, [])
+
+  /** koreksi posisi aset: identitas, kuantitas, dan harga rata-rata beli.
+   *  Harga pasar tidak disentuh di sini — jalurnya "Update Manual" di kartu,
+   *  supaya stempel "Terakhir diperbarui" selalu berasal dari satu tindakan nyata. */
+  const handleSaveAssetEdit = useCallback(
+    (draft: InvestmentEditDraft) => {
+      const target = editingAsset
+      if (!target) return
+      const totalInvested = draft.quantity * draft.avgBuyPrice
+      setInvestments((prev) =>
+        prev.map((item) =>
+          item.id === target.id
+            ? {
+                ...item,
+                type: draft.type,
+                name: draft.name,
+                symbol: draft.symbol,
+                quantity: draft.quantity,
+                avgBuyPrice: draft.avgBuyPrice,
+                totalInvested,
+                currentValue: draft.quantity * item.currentPrice,
+              }
+            : item,
+        ),
+      )
+      setEditingAsset(null)
+      toast.success(ASSET_EDIT_TOAST.title, {
+        description: ASSET_EDIT_TOAST.description(draft.name),
+      })
+    },
+    [editingAsset],
+  )
 
   const handleDeleteAsset = useCallback((asset: Investment) => {
     setInvestments((prev) => prev.filter((item) => item.id !== asset.id))
@@ -169,36 +239,53 @@ export function WealthScreen() {
 
   /** platform: catat pembayaran → sisa berkurang, bar snowball menyusut.
    *  Kalau habis, status baru dipindah SETELAH animasi mencair selesai supaya
-   *  barnya sempat terlihat berubah olive penuh + confetti dulu. */
-  const handlePayDebt = useCallback((debt: Debt, amount: number) => {
-    const remaining = Math.max(0, debt.remaining - amount)
-    setDebts((prev) =>
-      prev.map((item) =>
-        item.id === debt.id
-          ? {
-              ...item,
-              remaining,
-              currentMonth: Math.min((item.currentMonth ?? 1) + 1, item.tenor ?? 99),
-            }
-          : item,
-      ),
-    )
-    toast.success(`Pembayaran ${debt.provider} dicatat! 💪`, {
-      description: remaining > 0 ? 'Bar snowball-mu langsung menyusut.' : 'Hutang ini lunas! 🎉',
-    })
+   *  barnya sempat terlihat berubah olive penuh + confetti dulu.
+   *
+   *  Tanggal & dompet sumber ikut dibawa ke ledger pembayaran (`debt_payments`),
+   *  bukan dibuang setelah sisa hutangnya dikurangi — itu yang membuat riwayat
+   *  di kartu hutang bisa diaudit (dan sisa hutang jelas asal-usulnya). */
+  const handlePayDebt = useCallback(
+    (debt: Debt, amount: number, date: string, walletId: string) => {
+      const remaining = Math.max(0, debt.remaining - amount)
+      setDebts((prev) =>
+        prev.map((item) =>
+          item.id === debt.id
+            ? {
+                ...item,
+                remaining,
+                currentMonth: Math.min((item.currentMonth ?? 1) + 1, item.tenor ?? 99),
+              }
+            : item,
+        ),
+      )
+      setPayments((prev) => [
+        {
+          id: `pay-${Date.now()}`,
+          debtId: debt.id,
+          amount,
+          paidAtISO: date,
+          walletName: walletSourceLabel(walletId),
+        },
+        ...prev,
+      ])
+      toast.success(`Pembayaran ${debt.provider} dicatat! 💪`, {
+        description: remaining > 0 ? 'Bar snowball-mu langsung menyusut.' : 'Hutang ini lunas! 🎉',
+      })
 
-    if (remaining === 0) {
-      setCelebrateId(debt.id)
-      later(() => {
-        setDebts((prev) =>
-          prev.map((item) =>
-            item.id === debt.id ? { ...item, status: 'settled' as const } : item,
-          ),
-        )
-        setCelebrateId(null)
-      }, SETTLE_DELAY)
-    }
-  }, [])
+      if (remaining === 0) {
+        setCelebrateId(debt.id)
+        later(() => {
+          setDebts((prev) =>
+            prev.map((item) =>
+              item.id === debt.id ? { ...item, status: 'settled' as const } : item,
+            ),
+          )
+          setCelebrateId(null)
+        }, SETTLE_DELAY)
+      }
+    },
+    [],
+  )
 
   const handleSaveDebt = useCallback((input: NewDebtInput) => {
     setDebts((prev) => [{ id: `debt-${Date.now()}`, status: 'active', ...input }, ...prev])
@@ -264,6 +351,9 @@ export function WealthScreen() {
               ) : (
                 <WealthInvestasi
                   investments={investments}
+                  /* ledger transaksi masih mock (produksi: `investment_transactions`);
+                     riwayat tiap aset diturunkan dari daftar ini di dalam komponen */
+                  transactions={INITIAL_ASSET_TRANSACTIONS}
                   masked={isMasked}
                   expandedAssetId={expandedAssetId}
                   onToggleExpand={(id) =>
@@ -316,6 +406,7 @@ export function WealthScreen() {
             >
               <WealthHutang
                 debts={debts}
+                payments={payments}
                 view={debtView}
                 onChangeView={setDebtView}
                 masked={isMasked}
@@ -330,11 +421,25 @@ export function WealthScreen() {
         </AnimatePresence>
       </div>
 
-      {/* ── Sheet: tambah investasi (5E) & tambah utang/piutang (7F) ─────── */}
+      {/* ── Sheet: tambah/edit investasi (5E) & tambah utang/piutang (7F) ────
+          Satu sheet investasi melayani dua mode: `showAddInvestment` = tambah,
+          `editingAsset` = edit (sheet dibuka terisi nilai aset itu). */}
       <AddInvestmentSheet
-        open={showAddInvestment}
-        onClose={() => setShowAddInvestment(false)}
+        open={showAddInvestment || editingAsset !== null}
+        initial={editingAsset}
+        onClose={() => {
+          setShowAddInvestment(false)
+          setEditingAsset(null)
+        }}
         onSave={handleSaveInvestment}
+        onEdit={handleSaveAssetEdit}
+      />
+      {/* Modal kecil "Update Manual" — koreksi harga SATU aset (PRD 2E.1 poin 4) */}
+      <UpdatePriceModal
+        asset={priceTarget}
+        masked={isMasked}
+        onClose={() => setPriceTarget(null)}
+        onConfirm={handleSavePrice}
       />
       <AddDebtSheet
         open={showAddDebt}

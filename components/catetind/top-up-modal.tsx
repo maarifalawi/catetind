@@ -5,49 +5,19 @@ import { Check, LoaderCircle, Lock, Sparkles, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock'
 import { formatIDR } from '@/lib/weekly-recap'
+import {
+  AI_ADDON_PACKAGES,
+  AI_RESET_RULE_COPY,
+  AI_TOPUP_COPY,
+  formatTokens,
+  type AiAddonPackageId,
+} from '@/lib/ai-quota'
 
 /* ── Add-on AI Token (Domain 5C) ───────────────────────────────────────────────
-   Granularitas sengaja kecil & bahasa kasual ("Ngopi / Nongkrong / Sultan") supaya
-   harga terasa fair — bukan "Basic/Pro/Enterprise". Nama & harga ini FINAL untuk
-   halaman Billing. */
-
-export type TopUpPackageId = 'ngopi' | 'nongkrong' | 'sultan'
-
-export type TopUpPackage = {
-  id: TopUpPackageId
-  name: string
-  price: number
-  /** bonus token + estimasi pemakaian biar user bisa hitung sendiri (transparan) */
-  tokens: string
-  note: string
-  /** paket decoy terbaik — di-highlight penuh pakai accent color brand (leaf) */
-  best?: boolean
-}
-
-export const TOP_UP_PACKAGES: TopUpPackage[] = [
-  {
-    id: 'ngopi',
-    name: 'Paket Ngopi',
-    price: 19_000,
-    tokens: '+200.000 token AI',
-    note: '≈ 50 chat + 20 scan struk',
-  },
-  {
-    id: 'nongkrong',
-    name: 'Paket Nongkrong',
-    price: 29_000,
-    tokens: '+400.000 token AI',
-    note: '≈ 100 chat + 40 scan struk',
-    best: true,
-  },
-  {
-    id: 'sultan',
-    name: 'Paket Sultan Sebulan',
-    price: 49_000,
-    tokens: '+800.000 token AI',
-    note: '≈ 200 chat + 80 scan struk',
-  },
-]
+   Paket, harga, token, dan seluruh copy-nya tinggal di `lib/ai-quota.ts`:
+   granularitasnya sengaja kecil & bahasanya kasual ("Receh / Sedang / Gede") —
+   penamaan kanon PRD 4790–4798, bukan "Basic/Pro/Enterprise". Modal ini tidak
+   menyimpan nominal apa pun, jadi harga di halaman lain tidak bisa berbeda. */
 
 /**
  * Modal Top Up AI Token — bottom sheet di mobile, dialog tengah di desktop.
@@ -56,7 +26,7 @@ export const TOP_UP_PACKAGES: TopUpPackage[] = [
  */
 export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   /** paket yang dipilih user — ini yang bikin tombol Bayar Sekarang aktif */
-  const [selectedPackage, setSelectedPackage] = useState<TopUpPackageId | null>(null)
+  const [selectedPackage, setSelectedPackage] = useState<AiAddonPackageId | null>(null)
   const [paying, setPaying] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
   const payTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -97,7 +67,7 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
     [],
   )
 
-  const selected = TOP_UP_PACKAGES.find((pkg) => pkg.id === selectedPackage) ?? null
+  const selected = AI_ADDON_PACKAGES.find((pkg) => pkg.id === selectedPackage) ?? null
 
   function handlePay() {
     if (!selectedPackage || paying) return
@@ -124,7 +94,7 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
       {/* backdrop */}
       <button
         type="button"
-        aria-label="Tutup top up AI token"
+        aria-label={AI_TOPUP_COPY.backdropLabel}
         tabIndex={open ? 0 : -1}
         onClick={onClose}
         className={cn(
@@ -162,19 +132,19 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
             </span>
             <div className="min-w-0 flex-1">
               <h2 id="topup-title" className="text-xl font-semibold tracking-tight text-ink">
-                Top Up AI Token
+                {AI_TOPUP_COPY.title}
               </h2>
               <p
                 id="topup-desc"
                 className="mt-0.5 text-[13px] leading-relaxed break-words text-ink/55"
               >
-                Tambah napas AI biar pencatatanmu tetap otomatis ⚡
+                {AI_TOPUP_COPY.description}
               </p>
             </div>
             <button
               type="button"
               onClick={onClose}
-              aria-label="Tutup"
+              aria-label={AI_TOPUP_COPY.closeLabel}
               className="flex size-9 shrink-0 items-center justify-center rounded-full bg-cream text-ink ring-1 ring-soil/12 transition-colors hover:bg-sage"
             >
               <X className="size-4" strokeWidth={2.2} />
@@ -188,10 +158,10 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
           >
             <div
               role="radiogroup"
-              aria-label="Pilih paket top up AI token"
+              aria-label={AI_TOPUP_COPY.packageLegend}
               className="grid gap-2.5 pt-2 sm:grid-cols-3"
             >
-              {TOP_UP_PACKAGES.map((pkg) => {
+              {AI_ADDON_PACKAGES.map((pkg) => {
                 const active = pkg.id === selectedPackage
                 const onAccent = Boolean(pkg.best)
 
@@ -214,7 +184,7 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
                   >
                     {onAccent && (
                       <span className="absolute -top-2 right-3 rounded-full bg-forest px-2.5 py-[3px] text-[10px] font-semibold tracking-wide text-mint">
-                        Paling Laris
+                        {AI_TOPUP_COPY.bestBadge}
                       </span>
                     )}
 
@@ -256,7 +226,7 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
                         onAccent ? 'text-forest/60' : 'text-ink/40',
                       )}
                     >
-                      sekali bayar
+                      {AI_TOPUP_COPY.onceLabel}
                     </span>
 
                     <span
@@ -265,7 +235,7 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
                         onAccent ? 'text-forest' : 'text-forest/80',
                       )}
                     >
-                      {pkg.tokens}
+                      +{formatTokens(pkg.tokens)} token AI
                     </span>
                     <span
                       className={cn(
@@ -281,7 +251,7 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
             </div>
 
             <p className="mt-3 mb-1 text-[11px] leading-relaxed text-ink/40">
-              Token tambahan nggak hangus tiap bulan — cuma kuota dasar yang di-reset.
+              {AI_RESET_RULE_COPY}
             </p>
           </div>
 
@@ -289,7 +259,7 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
           <div className="shrink-0 border-t border-soil/12 px-5 pt-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:px-6 lg:pb-5">
             <div className="flex items-center justify-between gap-3 text-sm">
               <span className="min-w-0 truncate text-ink/55">
-                {selected ? selected.name : 'Belum ada paket dipilih'}
+                {selected ? selected.name : AI_TOPUP_COPY.emptySelection}
               </span>
               <span
                 className={cn(
@@ -315,16 +285,16 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
               {paying ? (
                 <>
                   <LoaderCircle className="size-4 animate-spin" strokeWidth={2.4} />
-                  Memproses…
+                  {AI_TOPUP_COPY.payingCta}
                 </>
               ) : (
-                'Bayar Sekarang'
+                AI_TOPUP_COPY.payCta
               )}
             </button>
 
             <p className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-ink/45">
               <Lock className="size-3 shrink-0" strokeWidth={2.4} />
-              Bayar sekali. Tanpa perpanjangan otomatis.
+              {AI_TOPUP_COPY.trustNote}
             </p>
           </div>
         </div>

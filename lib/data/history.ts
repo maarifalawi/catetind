@@ -127,6 +127,22 @@ export const HEALTH_SCORE = 72
  */
 export const TOTAL_TRANSACTIONS = 24
 
+/**
+ * "Hari ini" untuk DATA MOCK transaksi — DIPATOK sebagai konstanta (bukan
+ * `new Date()`), seperti seluruh tanggal mock lain di repo. Dua hal memakainya:
+ *
+ *   1. empat catatan paling baru di `HISTORY_TRANSACTIONS` (hari berjalan), dan
+ *   2. jangkar tanggal halaman /budget (`lib/data/budget.ts` → `TODAY_ISO`).
+ *
+ * Dua hal itu HARUS satu tanggal: panel "Review Pengeluaran Hari Ini" (prompt
+ * 19) membandingkan catatan hari ini dengan jatah harian periode aktif, jadi
+ * kalau jangkarnya beda, panel dan Riwayat bisa bercerita soal hari yang
+ * berbeda. Belum menggantikan `localISODate()` — itu membaca jam PERANGKAT dan
+ * tetap dipakai untuk label "Hari Ini"/"Kemarin" di halaman Riwayat.
+ */
+export const HISTORY_TODAY_ISO = '2026-09-27'
+
+
 export const HISTORY_TRANSACTIONS: HistoryTransaction[] = [
   { id: 1, name: 'Ayam Geprek Bu Rini', amount: 25000, type: 'expense', category: 'Makanan', wallet: 'GoPay', date: '2026-09-25', time: '12:40', aiGenerated: true },
   { id: 2, name: 'Kopi Kenangan Oat Latte', amount: 32000, type: 'expense', category: 'Makanan', wallet: 'GoPay', date: '2026-09-25', time: '09:15', aiGenerated: true },
@@ -140,6 +156,21 @@ export const HISTORY_TRANSACTIONS: HistoryTransaction[] = [
   { id: 10, name: 'Setor Tabungan Darurat', amount: 500000, type: 'saving', category: 'Dana Darurat', wallet: 'BCA', date: '2026-09-24', time: '10:30', aiGenerated: false },
   { id: 11, name: 'Boba Janji Jiwa', amount: 24000, type: 'expense', category: 'Makanan', wallet: 'OVO', date: '2026-09-23', time: '16:40', aiGenerated: true },
   { id: 12, name: 'Spotify Premium', amount: 59900, type: 'expense', category: 'Hiburan', wallet: 'OVO', date: '2026-09-23', time: '20:05', aiGenerated: true },
+  /* ── HARI INI (`HISTORY_TODAY_ISO`) — empat catatan berjalan ──────────────
+     Ditambahkan bersama prompt 19 supaya panel "Review Pengeluaran Hari Ini"
+     membaca catatan HARI INI yang benar-benar ada, bukan hari yang kosong.
+     Empat catatan ini disetel supaya:
+       • totalnya Rp 85.000 — angka yang sama dengan ring "terpakai" di kartu
+         Jatah Hari Ini (Home) dan panel review di /budget (`SPENT_TODAY`),
+       • jumlahnya 4, jadi LEBIH dari ambang 3 catatan → panel boleh menyebut
+         kategori terbesar (kalau dikurangi jadi 2, panel otomatis berpindah ke
+         kartu sabar "aku lagi belajar pola keuanganmu" — PRD 2A.5).
+     Catatan pertama sengaja sama dengan entri 27 Sep di dompet GoPay
+     (`lib/data/wallet-detail.ts` id 201) supaya dua halaman tidak beda cerita. */
+  { id: 13, name: 'Kopi Kenangan Oat Latte', amount: 32000, type: 'expense', category: 'Makanan', wallet: 'GoPay', date: HISTORY_TODAY_ISO, time: '08:10', aiGenerated: true },
+  { id: 14, name: 'Sarapan Nasi Uduk', amount: 15000, type: 'expense', category: 'Makanan', wallet: 'Tunai', date: HISTORY_TODAY_ISO, time: '06:50', aiGenerated: true },
+  { id: 15, name: 'Nasi Padang Sederhana', amount: 25000, type: 'expense', category: 'Makanan', wallet: 'Tunai', date: HISTORY_TODAY_ISO, time: '12:35', aiGenerated: true },
+  { id: 16, name: 'Parkir Motor', amount: 13000, type: 'expense', category: 'Transportasi', wallet: 'Tunai', date: HISTORY_TODAY_ISO, time: '13:15', aiGenerated: false },
 ]
 
 /* ── FILTER ──────────────────────────────────────────────────────────────── */
@@ -213,7 +244,9 @@ export function localISODate(d: Date = new Date()): string {
   return `${d.getFullYear()}-${m}-${day}`
 }
 
-const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
+/** disingkat & diekspor supaya label rentang periode (lib/data/budget.ts) memakai
+ *  satu sumber yang sama — tanpa Intl, jadi bebas pergeseran timezone */
+export const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
 const MONTHS_LONG = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
 
 /** `2026-09-25` → `25 Sep 2026` (tanpa Intl → bebas perbedaan data timezone) */
@@ -467,4 +500,105 @@ export function buildHeatmapMatrix(days: HeatmapDay[]): (HeatmapDay | null)[][] 
   for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7))
   return weeks
 }
+
+
+/* ── JENDELA UNDO HAPUS ──────────────────────────────────────────────────────
+   PRD 2251: hapus transaksi WAJIB punya jaring pengaman "5 detik undo window".
+   Angkanya tinggal di lapis data supaya toast, dialog konfirmasi, dan timer
+   halaman tidak pernah menyebut durasi yang berbeda. */
+export const UNDO_WINDOW_MS = 5000
+
+/* ── COPY AKSI BARIS TRANSAKSI (Riwayat & Insight + Dompet Detail) ────────────
+   Sheet aksi (ikon titik tiga) dan dialog konfirmasi hapus lahir di halaman
+   Riwayat, lalu dipakai juga oleh halaman Dompet Detail. Copy-nya tinggal di
+   lapis data supaya tidak ada kalimat yang ditulis ulang di JSX (kontrak repo)
+   dan supaya dua halaman yang menampilkan baris yang sama tidak pernah
+   memberi kalimat berbeda untuk aksi yang sama. */
+
+export const TRANSACTION_ACTIONS_COPY = {
+  /** judul & keterangan saat tidak ada baris yang dipilih */
+  sheetTitleFallback: 'Aksi transaksi',
+  sheetHintFallback: 'Pilih tindakan untuk catatan ini',
+  detail: 'Lihat detail',
+  edit: 'Edit transaksi',
+  delete: 'Hapus catatan',
+} as const
+
+export const CONFIRM_DELETE_COPY = {
+  /** overlay = tombol "batal" tak terlihat di belakang dialog */
+  overlay: 'Batal hapus',
+  /** netral — tidak ada "kok mau kamu hapus?", cuma pertanyaan biasa */
+  title: 'Hapus catatan ini?',
+  /** dipotong dua supaya nominalnya bisa ditebalkan di tengah kalimat */
+  bodyLead: (name: string) => `\u201C${name}\u201D sebesar `,
+  bodyTail: 'bakal keluar dari riwayat.',
+  /** pengaman psikologis: user tahu ADA jalan balik sebelum menekan Hapus.
+   *  Ini juga yang bikin bodyTail tidak lagi bilang "nggak bisa dibatalin" —
+   *  kalimat itu sudah tidak benar sejak Undo ada. */
+  safety: `Tenang — masih bisa kamu balikin lewat tombol Undo selama ${
+    UNDO_WINDOW_MS / 1000
+  } detik.`,
+  cancel: 'Batal',
+  confirm: 'Hapus',
+} as const
+
+export const DELETE_TRANSACTION_TOAST = {
+  title: 'Catatan dihapus',
+  description: 'Transaksi sudah keluar dari riwayat.',
+  /** label aksi di toast (Sonner) — jaring pengaman 5 detik (PRD 2251) */
+  undo: 'Undo',
+  undoneTitle: 'Catatan dikembalikan 🌿',
+  undoneDescription: 'Catatan itu balik ke tempatnya semula.',
+  /** jaring pengaman tetap jujur kalau tombol Undo ditekan setelah jendelanya tutup */
+  expired: 'Jendela Undo-nya sudah lewat — catatannya bisa dicatat ulang kapan aja 🌿',
+} as const
+
+/* ── COPY INPUT & EDIT TRANSAKSI (engine + sheet edit) ─────────────────────── */
+
+/** label tombol simpan engine — beda satu kata untuk mode edit */
+export const TRANSACTION_INPUT_COPY = {
+  submit: 'Catat',
+  submitEdit: 'Simpan',
+} as const
+
+/* ── OPSI FIELD DI MODE EDIT ─────────────────────────────────────────────────
+   Isinya LABEL yang benar-benar tampil & tersimpan di transaksi ("Makanan",
+   "GoPay") — BUKAN id filter (`makanan`, `gopay`). Dua daftar terpisah itu
+   disengaja: filter mengelompokkan, edit harus menulis nilai aslinya. */
+export const TRANSACTION_CATEGORY_OPTIONS = [
+  'Makanan',
+  'Transportasi',
+  'Belanja',
+  'Tagihan',
+  'Hiburan',
+  'Kesehatan',
+  'Pendidikan',
+  'Gaji Utama',
+  'Dana Darurat',
+  'Transfer',
+  'Tabungan',
+  'Lainnya',
+] as const
+
+export const TRANSACTION_WALLET_OPTIONS = ['BCA', 'GoPay', 'OVO', 'Tunai'] as const
+
+/* ── COPY EDIT TRANSAKSI (paket 03) ──────────────────────────────────────────
+   Edit adalah jalur UTAMA perbaikan data (kasus paling umum: Minca salah nebak
+   kategori), jadi kalimatnya netral & menenangkan — tidak ada "kok salah
+   input?". Sheet-nya sudah terisi (pre-filled); copy-nya cukup menegaskan itu. */
+export const EDIT_TRANSACTION_COPY = {
+  title: (name: string) => `Edit ${name}`,
+  description: 'Ubah yang keliru aja — sisanya tetap seperti semula.',
+  /** label tiga field detail yang HANYA muncul di mode edit */
+  categoryLabel: 'Kategori',
+  walletLabel: 'Dompet',
+  dateLabel: 'Tanggal',
+  /** hasil edit langsung terasa di layar lain — sebut supaya tidak "sunyi" */
+  hint: 'Perubahan langsung tampil di riwayat, total harian, dan dompetnya.',
+} as const
+
+export const UPDATE_TRANSACTION_TOAST = {
+  title: 'Catatan diperbarui 🌿',
+  description: 'Versi barunya sudah dipakai di riwayat & total harian.',
+} as const
 

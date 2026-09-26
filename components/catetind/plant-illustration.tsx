@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils'
+import { PLANT_SLEEP_COPY } from '@/lib/data/renewal'
 
 /* tahap pertumbuhan tanaman - kanon Domain 3B */
 export type PlantStage = 1 | 2 | 3 | 4
@@ -14,22 +15,35 @@ export const STAGE_NAMES: Record<PlantStage, string> = {
  * SVG tanaman statis untuk homescreen (resolusi CANDRA: animasi Lottie penuh
  * hanya di-lazy-load di detail view - home pakai SVG ringan + sway CSS).
  * `wilted` = state Tanaman Layu (HP <=20): daun desaturated & turun.
+ *
+ * `sleeping` = state VI "Tanaman Sleep Mode" (inventaris 137 · PRD 4542), dipakai
+ * saat masa aktif langganan habis: greyscale + mata tertutup + ayunan berhenti
+ * (tanaman benar-benar "istirahat", bukan sekarat). Ini SENGAJA berbeda dari
+ * `wilted`: layu = butuh dirawat, tidur = menunggu — tidak ada rasa bersalah yang
+ * perlu dipasang di layar.
  */
 export function PlantIllustration({
   stage,
   wilted = false,
+  sleeping = false,
   className,
 }: {
   stage: PlantStage
   wilted?: boolean
+  /** true = mode "tidur" selama grace/post-grace (tanpa angka HP) */
+  sleeping?: boolean
   className?: string
 }) {
+  const label = sleeping
+    ? PLANT_SLEEP_COPY.aria
+    : `Tanaman tahap ${STAGE_NAMES[stage]}${wilted ? ' (layu)' : ''}`
+
   return (
-        <svg
+    <svg
       viewBox="0 0 200 220"
-      className={cn('h-auto w-full', className)}
+      className={cn('h-auto w-full', sleeping && 'grayscale', className)}
       role="img"
-      aria-label={`Tanaman tahap ${STAGE_NAMES[stage]}${wilted ? ' (layu)' : ''}`}
+      aria-label={label}
     >
       {/* defs - gradien warna untuk efek modern */}
       <defs>
@@ -54,7 +68,7 @@ export function PlantIllustration({
       {/* batang + dedaunan + bunga - berayun dari pangkal pot */}
       <g
         className={cn(
-          !wilted && 'animate-[plant-sway_5s_ease-in-out_infinite]',
+          !wilted && !sleeping && 'animate-[plant-sway_5s_ease-in-out_infinite]',
           wilted && 'opacity-75 saturate-50',
         )}
         style={{ transformOrigin: '100px 176px' }}
@@ -162,6 +176,22 @@ export function PlantIllustration({
       />
       {/* aksen mint di pot */}
       <circle cx="100" cy="196" r="5" fill="#91bb9e" opacity="0.9" />
+
+      {/* wajah tidur di pot (state VI) — dua mata tertutup, tanpa senyum lebar.
+          Warnanya memakai evergreen yang SUDAH ada di ilustrasi ini (bukan hex
+          baru) dan posisinya di pot supaya geometri tanaman tidak berubah. */}
+      {sleeping && (
+        <g
+          stroke="#45594e"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          fill="none"
+          aria-hidden
+        >
+          <path d="M82 190 q5 5 10 0" />
+          <path d="M108 190 q5 5 10 0" />
+        </g>
+      )}
     </svg>
   )
 }

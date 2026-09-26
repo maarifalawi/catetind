@@ -5,6 +5,8 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { Drawer } from 'vaul'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useSubscriptionGate } from './subscription-gate-provider'
+import { SubscriptionLockNote } from './subscription-lock-note'
 
 /* ── Shell + atom form bersama untuk semua bottom sheet halaman Budget ───────
    Semua modal di /app/budget memakai satu shell ini supaya tempo buka/tutup,
@@ -278,32 +280,50 @@ export function useFocusOnOpen(
   }, [open, ref, delay])
 }
 
-/** Tombol aksi utama sheet — satu gaya untuk semua alur supaya konsisten */
+/** Tombol aksi utama sheet — satu gaya untuk semua alur supaya konsisten.
+ *
+ *  `gate` = tombol ini MENAMBAH data keuangan, jadi ia ikut terkunci saat masa
+ *  aktif langganan habis (task 23). Opt-in, bukan default: `SheetSubmit` juga
+ *  dipakai alur yang HARUS tetap jalan — registrasi & pembayaran di `/checkout`
+ *  (halaman publik), serta "lanjut ngobrol sama Minca" di review pengeluaran.
+ *  Kuncinya diambil dari provider global, jadi tidak ada boolean yang perlu
+ *  dioper berlapis-lapis dari halaman. */
 export function SheetSubmit({
   children,
   onClick,
   disabled,
   className,
+  gate = false,
 }: {
   children: ReactNode
   onClick: () => void
   disabled?: boolean
   className?: string
+  /** true = tombol simpan/tambah data keuangan */
+  gate?: boolean
 }) {
+  const { inputLocked } = useSubscriptionGate()
+  const locked = gate && inputLocked
+  const inert = Boolean(disabled) || locked
+
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={cn(
-        'flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-semibold transition-all',
-        disabled
-          ? 'cursor-not-allowed bg-ink/[0.07] text-ink/35'
-          : 'bg-forest text-mint hover:bg-forest-soft active:scale-[0.99]',
-        className,
-      )}
-    >
-      {children}
-    </button>
+    <div>
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={inert}
+        aria-disabled={locked || undefined}
+        className={cn(
+          'flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-semibold transition-all',
+          inert
+            ? 'cursor-not-allowed bg-ink/[0.07] text-ink/35'
+            : 'bg-forest text-mint hover:bg-forest-soft active:scale-[0.99]',
+          className,
+        )}
+      >
+        {children}
+      </button>
+      {locked && <SubscriptionLockNote />}
+    </div>
   )
 }

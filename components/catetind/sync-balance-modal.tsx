@@ -4,6 +4,8 @@ import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { Drawer } from 'vaul'
 import { Sparkles, Wand2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useSubscriptionGate } from './subscription-gate-provider'
+import { SubscriptionLockNote } from './subscription-lock-note'
 import { formatIDR, type WalletAccount } from '@/lib/wallets'
 
 /* ── SyncBalanceModal — "Magic Vault" Smart Sync (koreksi saldo) ──────────────
@@ -33,6 +35,10 @@ export function SyncBalanceModal({
   /** digit mentah tanpa titik — satu-satunya sumber kebenaran format Rupiah */
   const [digits, setDigits] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
+  /* "Koreksi Otomatis" menulis ulang saldo + menambah pengeluaran tak tercatat —
+     itu input data keuangan, jadi ikut terkunci saat masa aktif habis (task 23).
+     Saldo & selisihnya tetap terbaca; yang berhenti hanya koreksinya. */
+  const { inputLocked } = useSubscriptionGate()
 
   /* Snapshot dompet terakhir: Vaul masih menjalankan animasi tutup setelah
      parent mengosongkan `wallet` — tanpa snapshot, judul & saldo modal berkedip
@@ -67,6 +73,7 @@ export function SyncBalanceModal({
   }
 
   function handleSubmit() {
+    if (inputLocked) return
     if (digits === '') {
       inputRef.current?.focus()
       return
@@ -191,7 +198,8 @@ export function SyncBalanceModal({
             <button
               type="button"
               onClick={handleSubmit}
-              disabled={digits === ''}
+              disabled={digits === '' || inputLocked}
+              aria-disabled={inputLocked || undefined}
               className={cn(
                 'mt-6 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-b from-forest-soft to-forest',
                 'text-[15px] font-semibold text-cream shadow-[0_18px_36px_-16px_rgba(69,89,78,0.85)]',
@@ -202,6 +210,7 @@ export function SyncBalanceModal({
               <Wand2 className="size-4" strokeWidth={2.4} />
               Koreksi Otomatis
             </button>
+            {inputLocked && <SubscriptionLockNote />}
           </div>
         </Drawer.Content>
       </Drawer.Portal>

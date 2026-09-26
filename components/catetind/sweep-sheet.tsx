@@ -52,6 +52,7 @@ export function SweepSheet({
       footer={
         <SheetSubmit
           disabled={!target || total <= 0}
+          gate
           onClick={() => {
             if (!target) return
             onConfirm(target.id)

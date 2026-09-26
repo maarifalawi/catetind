@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Drawer } from 'vaul'
+import { toast } from 'sonner'
 import {
   Home,
   Wallet,
@@ -18,9 +19,12 @@ import {
   Gift,
   CircleHelp,
   Settings,
+  Download,
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { SUBSCRIPTION_LOCK_COPY } from '@/lib/data/renewal'
+import { useSubscriptionGate } from '@/components/catetind/subscription-gate-provider'
 import { TransactionBottomSheet } from '@/components/dashboard/transaction-bottom-sheet'
 
 type NavItem = { href: string; icon: LucideIcon; label: string }
@@ -52,12 +56,44 @@ const menuGroups: { label: string; items: NavItem[] }[] = [
     items: [
       { href: '/referral', icon: Gift, label: 'Ajak Teman' },
       { href: '/help', icon: CircleHelp, label: 'Bantuan' },
+      { href: '/install', icon: Download, label: 'Panduan Install' },
       { href: '/settings', icon: Settings, label: 'Pengaturan' },
     ],
   },
 ]
 
 const menuHrefs = menuGroups.flatMap((g) => g.items.map((i) => i.href))
+
+/**
+ * Halaman yang tampil TANPA navigasi app sama sekali (bottom nav + FAB):
+ *   1. `/app/onboarding` — flow full-screen 3 langkah: user fokus menyelesaikan
+ *      setup dan tidak bisa "kabur" sebelum data wajib terisi (inventaris #10).
+ *   2. `/checkout` — halaman PUBLIK pembelian (inventaris #3): tanpa bottom nav
+ *      & FAB, supaya tidak ada jalan bercabang di tengah alur membayar.
+ *   3. `/login` (+ `/login/verify`) — pintu masuk PUBLIK (inventaris #8/#9):
+ *      user belum tentu punya akun, jadi tidak ada gunanya menawari navigasi app
+ *      yang isinya data keuangan. Tautan keluar sudah tersedia di halamannya.
+ *   4. `/join/[code]` — undangan dompet bersama (inventaris #7): yang membuka
+ *      biasanya BELUM punya akun (pasangan/teman), jadi navigasi app di sini
+ *      cuma bikin bingung. CTA-nya sendiri sudah sticky di zona ibu jari.
+ *   5. `/share/[id]` — kartu pencapaian yang dibuka dari tautan share
+ *      (inventaris #16): pengunjungnya bisa siapa saja dan belum tentu punya
+ *      akun. Navigasi app di atas kartu orang lain malah mengganggu — halaman
+ *      ini harus terasa seperti satu kartu, bukan seperti dashboard.
+ *   6. `/privacy` & `/terms` — dokumen legal PUBLIK (inventaris #4/#5): dibaca
+ *      orang yang ingin tahu datanya aman sebelum daftar. Bottom nav + FAB di
+ *      sini bukan cuma mengganggu bacaan panjang, tapi juga menyiratkan user
+ *      sudah punya data di dalam app.
+ */
+const FOCUS_ROUTES = [
+  '/app/onboarding',
+  '/checkout',
+  '/login',
+  '/join',
+  '/share',
+  '/privacy',
+  '/terms',
+]
 
 function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
   const isActive =
@@ -84,6 +120,9 @@ function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
 export function MobileBottomNav() {
   const pathname = usePathname()
   const [menuOpen, setMenuOpen] = useState(false)
+  /* masa aktif habis → FAB ini satu-satunya pintu input dari bottom nav, jadi
+     ia yang dikunci. Membaca data, pindah halaman, & menu "Lainnya" tetap jalan. */
+  const { inputLocked } = useSubscriptionGate()
 
   const menuActive = menuHrefs.some((href) => pathname.startsWith(href))
   /* Halaman Joint Wallet punya FAB-nya sendiri (form transaksi + split +
@@ -91,10 +130,9 @@ export function MobileBottomNav() {
      SATU tombol tambah di layar. */
   const isJointPage = pathname.startsWith('/joint')
 
-  /* Onboarding (/app/onboarding) = flow full-screen 3 langkah: navigasi bawah &
-     sidebar harus hilang total supaya user fokus menyelesaikan setup, dan tidak
-     bisa "kabur" ke halaman lain sebelum data wajib terisi (inventaris #10). */
-  if (pathname.startsWith('/app/onboarding')) return null
+  /* Flow fokus (onboarding & checkout) = tanpa navigasi bawah sama sekali:
+     lihat catatan FOCUS_ROUTES di atas. */
+  if (FOCUS_ROUTES.some((route) => pathname.startsWith(route))) return null
 
   return (
     <>
@@ -111,6 +149,20 @@ export function MobileBottomNav() {
         <div className="flex flex-1 items-center justify-center">
           {isJointPage ? (
             <span aria-hidden className="size-14" />
+          ) : inputLocked ? (
+            /* Masa aktif habis → FAB dikunci (task 23). Sengaja TIDAK memakai
+               atribut `disabled`: tombol mati yang bisu membuat user mengira
+               appnya rusak. Dengan `aria-disabled` + toast, alasannya langsung
+               terbaca ("Perpanjang dulu buat catat yang baru 🌿"). */
+            <button
+              type="button"
+              aria-disabled="true"
+              aria-label={SUBSCRIPTION_LOCK_COPY.fabAria}
+              onClick={() => toast(SUBSCRIPTION_LOCK_COPY.inputHint)}
+              className="-mt-8 flex size-14 items-center justify-center rounded-full bg-soil/[0.09] text-ink/30 ring-1 ring-soil/12 transition-transform duration-150 active:scale-95"
+            >
+              <Plus className="size-6" strokeWidth={2.4} />
+            </button>
           ) : (
             <TransactionBottomSheet
               trigger={

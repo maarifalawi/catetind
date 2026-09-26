@@ -13,7 +13,6 @@ import {
   CalendarDays,
   Briefcase,
   Users,
-  Heart,
   Gift,
   CircleHelp,
   Settings,
@@ -21,13 +20,29 @@ import {
   Plus,
   PanelLeftClose,
   PanelLeftOpen,
+  Download,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
+import { SUBSCRIPTION_LOCK_COPY } from '@/lib/data/renewal'
 import { TransactionWebModal } from '@/components/dashboard/transaction-web-modal'
+import { useSubscriptionGate } from './subscription-gate-provider'
 import { AiFuelCard } from './ai-fuel-card'
 import { LogoWordmark } from './logo-wordmark'
 import { NavTooltip } from './nav-tooltip'
 
+/* ── CATATAN: ENTRI /family DIHAPUS — KEPUTUSAN SADAR (task 06) ───────────────
+   Dulu grup `Aset & Bersama` punya satu entri menu menuju halaman bernama
+   "Family Wallet". Entri itu masuk lewat skrip sekali-pakai
+   (`temp-write-sidebar.js`, sudah dihapus) dan halamannya cuma markup mentah
+   yang tidak ada di `inventaris_ui_definitif.md`. PRD 2C.2 menegaskan
+   "Keluarga" adalah KONTEKS uang (Pribadi / Keluarga / Bersama), bukan halaman
+   terpisah — hidup di `ContextSwitcher` + `MoneyContextProvider`, dan itu tetap
+   apa adanya. Jangan menghidupkan lagi tautan ini tanpa keputusan produk:
+   PRD 2A.6 melarang dua jalur navigasi paralel (pelajaran dari Fundy), dan
+   modul keluarga yang nyata butuh inventaris baru dulu (PRD 758–807, 3303–3352).
+   Alasan yang sama berlaku untuk route /more: menu "Lainnya" = Vaul bottom sheet
+   di `MobileBottomNav`, jadi route-nya juga sudah dihapus. */
 const sections = [
   {
     label: 'Menu Utama',
@@ -50,7 +65,6 @@ const sections = [
     items: [
       { href: '/wealth', icon: Briefcase, label: 'Kekayaan & Hutang' },
       { href: '/joint', icon: Users, label: 'Joint Wallet' },
-      { href: '/family', icon: Heart, label: 'Family Wallet' },
     ],
   },
   {
@@ -58,6 +72,7 @@ const sections = [
     items: [
       { href: '/referral', icon: Gift, label: 'Ajak Teman' },
       { href: '/help', icon: CircleHelp, label: 'Pusat Bantuan' },
+      { href: '/install', icon: Download, label: 'Panduan Install' },
     ],
   },
   {
@@ -88,6 +103,9 @@ export function DesktopSidebar() {
   const pathname = usePathname()
   const [addOpen, setAddOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
+  /* pintu masuk input utama di desktop (pasangan FAB mobile) — dikunci saat masa
+     aktif habis. Navigasi & pembacaan data tidak tersentuh. */
+  const { inputLocked } = useSubscriptionGate()
 
   // hidrasi preferensi collapse dari localStorage (setelah mount,
   // supaya server & client render identik dan tidak ada hydration mismatch)
@@ -170,12 +188,22 @@ export function DesktopSidebar() {
         </button>
       </div>
 
-      {/* ── quick action — buka laci input transaksi (Inventaris 97a) ── */}
+      {/* ── quick action — buka laci input transaksi (Inventaris 97a) ──
+          Saat masa aktif habis tombolnya jadi non-aktif + menjelaskan alasannya
+          lewat toast (bukan tombol bisu), lihat task 23. */}
       <button
         type="button"
-        onClick={() => setAddOpen(true)}
+        onClick={() =>
+          inputLocked ? toast(SUBSCRIPTION_LOCK_COPY.inputHint) : setAddOpen(true)
+        }
+        aria-disabled={inputLocked || undefined}
+        aria-label={inputLocked ? SUBSCRIPTION_LOCK_COPY.addAria : undefined}
+        title={inputLocked ? SUBSCRIPTION_LOCK_COPY.inputHint : undefined}
         className={cn(
-          'group/item relative mt-6 flex items-center justify-center gap-2 rounded-full bg-forest text-cream transition-all duration-300 hover:bg-forest-soft active:scale-[0.97]',
+          'group/item relative mt-6 flex items-center justify-center gap-2 rounded-full transition-all duration-300',
+          inputLocked
+            ? 'cursor-not-allowed bg-ink/[0.07] text-ink/35'
+            : 'bg-forest text-cream hover:bg-forest-soft active:scale-[0.97]',
           collapsed ? 'mx-auto size-11' : 'w-full py-2.5 text-[13px] font-semibold',
         )}
       >

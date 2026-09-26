@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowRight, Check, Copy, HeartHandshake, Share2 } from 'lucide-react'
+import { ArrowRight, Check, Copy, ExternalLink, HeartHandshake, Share2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock'
 import {
@@ -13,6 +14,7 @@ import {
   buildInviteShareText,
   type JointPerson,
 } from '@/lib/data/joint'
+import { JOIN_PREVIEW_COPY, buildJoinHref } from '@/lib/data/joint-invite'
 
 /* ── Invite Partner Flow (Section 8) ─────────────────────────────────────────
    Tampil saat `partnerJoined === false`: seluruh halaman berubah jadi ajakan
@@ -282,6 +284,21 @@ export function JointInviteCodeModal({
                 <Check className="size-3.5" strokeWidth={2.4} />
                 Simulasi: {partner.name} sudah bergabung
               </button>
+
+              {/* tautan NYATA ke halaman yang dibuka pasangan (/join/[code]) —
+                  supaya user A bisa memeriksa tampilannya sebelum membagikan link */}
+              <p className="mt-4 border-t border-soil/12 pt-3.5 text-center">
+                <Link
+                  href={buildJoinHref(INVITE_CODE)}
+                  className="inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-ink/55 underline underline-offset-4 transition-colors hover:text-ink"
+                >
+                  <ExternalLink className="size-3.5" strokeWidth={2.4} aria-hidden />
+                  {JOIN_PREVIEW_COPY.linkLabel}
+                </Link>
+                <span className="mt-1 block text-[10.5px] leading-relaxed text-ink/35">
+                  {JOIN_PREVIEW_COPY.hint}
+                </span>
+              </p>
             </motion.div>
           </div>
         </motion.div>

@@ -1,0 +1,405 @@
+'use client'
+
+import { useRef, useState, type ChangeEvent } from 'react'
+import Link from 'next/link'
+import { toast } from 'sonner'
+import { BadgeCheck, Camera, ExternalLink, HeartHandshake, LogOut, Save, Unlink, UserPlus, XCircle } from 'lucide-react'
+import { ConfirmDialog, DialogButton } from './settings-dialog'
+import {
+  Segmented,
+  SettingsCard,
+  SettingsField,
+  SettingsInput,
+  SettingsPanel,
+  TonePill,
+} from './settings-ui'
+import { clampPayday, type DashboardPeriod } from '@/lib/onboarding'
+import { LOGIN_PATH, RELOGIN_COPY } from '@/lib/data/auth'
+import { JOIN_PREVIEW_COPY, buildJoinHref } from '@/lib/data/joint-invite'
+import { DEMO_PARTNER_JOINED, INITIAL_JOINT_WALLET, INVITE_CODE, JOINT_PARTNER } from '@/lib/data/joint'
+import { cn } from '@/lib/utils'
+
+/* ── Panel: Profil & Akun + Keluar (inventaris #15, #23) ──────────────────────
+   Isi panel ini mengikuti tiga urutan yang paling sering dibutuhkan user:
+     1. IDENTITAS  — avatar (bisa diganti), nama, email (terkunci), badge member.
+     2. SIKLUS KEUANGAN — satu penentu kapan Dashboard & Kalender di-reset.
+        Nilainya memakai tipe `DashboardPeriod` + `clampPayday()` yang SAMA dengan
+        onboarding (lib/onboarding.ts) supaya aturannya tidak pernah bercabang.
+     3. DOMPET BERSAMA — putus koneksi pasangan dengan dua pilihan yang jujur
+        (simpan riwayat sendiri / hapus semua), bukan satu tombol ambigu. */
+
+const EMAIL = 'jon@snow.com'
+const MEMBER_BADGE = '🏆 Founding Member #47'
+
+/** "2026-07-15" → "15 Juli 2026" — timeZone UTC supaya tanggalnya tidak
+ *  bergeser satu hari antara server & client (SSR-safe). */
+const PARTNER_SINCE = new Intl.DateTimeFormat('id-ID', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+  timeZone: 'UTC',
+}).format(new Date(INITIAL_JOINT_WALLET.createdAt))
+
+export function ProfileSettingsPanel() {
+  const [name, setName] = useState('Jon Snow')
+  const [avatarUrl, setAvatarUrl] = useState('/avatar-maarif.png')
+  const [period, setPeriod] = useState<DashboardPeriod>('calendar')
+  const [payday, setPayday] = useState(25)
+  const [dirty, setDirty] = useState(false)
+
+  /* partner bisa "diputus" di demo ini — state lokal, sumber awal dari mock
+     lib/data/joint.ts (DEMO_PARTNER_JOINED) supaya kedua kondisi bisa direview */
+  const [partner, setPartner] = useState(DEMO_PARTNER_JOINED ? JOINT_PARTNER : null)
+  const [disconnectOpen, setDisconnectOpen] = useState(false)
+  /** konfirmasi kedua khusus opsi destruktif ("Hapus Semua") */
+  const [purgeOpen, setPurgeOpen] = useState(false)
+
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  function handleName(event: ChangeEvent<HTMLInputElement>) {
+    setName(event.target.value)
+    setDirty(true)
+  }
+
+  function handlePeriod(next: DashboardPeriod) {
+    setPeriod(next)
+    setDirty(true)
+  }
+
+  function handlePayday(event: ChangeEvent<HTMLInputElement>) {
+    setPayday(clampPayday(event.target.value))
+    setDirty(true)
+  }
+
+  function handleAvatar(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    if (!file) return
+    /* URL.createObjectURL = preview lokal tanpa upload; produksi: unggah ke
+       storage lalu simpan URL-nya di profil */
+    setAvatarUrl(URL.createObjectURL(file))
+    setDirty(true)
+    toast.success('Foto profil diperbarui 📸')
+  }
+
+  function handleSave() {
+    setDirty(false)
+    toast.success('Perubahan profil tersimpan ✅', {
+      description:
+        period === 'cycle'
+          ? `Periode keuangan di-reset tiap tanggal ${payday}.`
+          : 'Periode keuangan mengikuti bulan kalender.',
+    })
+  }
+
+  function handleKeepHistory() {
+    setPartner(null)
+    setDisconnectOpen(false)
+    toast.success('Dompet dipisah — riwayatmu tetap aman 💚', {
+      description: 'Transaksi pribadimu masih bisa kamu buka seperti biasa.',
+    })
+  }
+
+  function handlePurge() {
+    setPartner(null)
+    setDisconnectOpen(false)
+    setPurgeOpen(false)
+    toast('Dompet bersama dipisah & riwayat bersama dihapus', {
+      description: 'Kamu bisa mulai dompet baru kapan aja.',
+    })
+  }
+
+  return (
+    <SettingsPanel
+      eyebrow="Profil & Akun"
+      title="Profil & Akun"
+      desc="Identitas kamu, siklus keuangan bulanan, dan pasangan dompet bersama."
+    >
+      {/* ── 1. IDENTITAS ─────────────────────────────────────────────────── */}
+      <SettingsCard>
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            aria-label="Ganti foto profil"
+            className="group relative size-20 shrink-0 overflow-hidden rounded-full ring-1 ring-soil/12 transition-shadow focus-visible:ring-2 focus-visible:ring-forest/40"
+          >
+            {/* <img> biasa — sumbernya bisa blob URL hasil pilih file, dan
+                next/image hanya mengoptimasi URL statis/lokal yang dikenal */}
+            <img src={avatarUrl} alt="Foto profil" className="size-full object-cover" />
+            <span className="absolute inset-0 flex items-center justify-center bg-ink/45 opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
+              <Camera className="size-5 text-cream" strokeWidth={2.2} aria-hidden />
+            </span>
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            className="hidden"
+            onChange={handleAvatar}
+          />
+
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-ink">{name}</p>
+            <p className="mt-0.5 truncate text-xs text-ink/50">{EMAIL}</p>
+            <TonePill tone="warning" icon={BadgeCheck} className="mt-2">
+              {MEMBER_BADGE}
+            </TonePill>
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+          <SettingsField label="Nama Lengkap" htmlFor="settings-name">
+            <SettingsInput
+              id="settings-name"
+              value={name}
+              onChange={handleName}
+              autoComplete="name"
+              placeholder="Nama lengkap kamu"
+            />
+          </SettingsField>
+          <SettingsField
+            label="Email"
+            htmlFor="settings-email"
+            note="Hubungi support untuk ganti email."
+          >
+            <SettingsInput id="settings-email" value={EMAIL} disabled readOnly />
+          </SettingsField>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={!dirty}
+          className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-forest py-3.5 text-sm font-semibold text-mint transition-colors hover:bg-forest-soft active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-ink/[0.07] disabled:text-ink/35 sm:w-auto sm:px-6"
+        >
+          <Save className="size-4" strokeWidth={2.4} aria-hidden />
+          Simpan Perubahan
+        </button>
+      </SettingsCard>
+
+      {/* ── 2. SIKLUS KEUANGAN ───────────────────────────────────────────── */}
+      <SettingsCard
+        title="Mulai Periode Keuangan"
+        desc="Ini menentukan kapan dashboard dan kalender kamu di-reset setiap bulannya."
+      >
+        <div className="mt-4">
+          <Segmented
+            label="Mulai periode keuangan"
+            value={period}
+            onChange={handlePeriod}
+            options={[
+              { id: 'calendar', emoji: '📅', label: 'Awal Bulan (Tgl 1)' },
+              { id: 'cycle', emoji: '💰', label: 'Tanggal Gajian' },
+            ]}
+          />
+        </div>
+
+        {period === 'cycle' && (
+          <div className="mt-4 sm:max-w-[13rem]">
+            <SettingsField
+              label="Tanggal Gajian"
+              htmlFor="settings-payday"
+              note="Rentang 1–31. Kalau bulan pendek, kami pakai hari terakhir."
+            >
+              <SettingsInput
+                id="settings-payday"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={31}
+                value={payday}
+                onChange={handlePayday}
+                className="tabular-nums"
+              />
+            </SettingsField>
+          </div>
+        )}
+      </SettingsCard>
+
+      {/* ── 3. DOMPET BERSAMA ────────────────────────────────────────────── */}
+      {partner ? (
+        <SettingsCard title={INITIAL_JOINT_WALLET.name} desc="Dompet bersama aktif.">
+          <div className="mt-4 flex items-center gap-3.5">
+            <span
+              aria-hidden
+              className={cn(
+                'flex size-11 shrink-0 items-center justify-center rounded-full text-lg ring-1',
+                partner.tint,
+              )}
+            >
+              {partner.avatar}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-ink">{partner.name}</p>
+              <p className="mt-0.5 text-xs text-ink/50">Terhubung sejak {PARTNER_SINCE}</p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setDisconnectOpen(true)}
+            className="mt-4 inline-flex items-center gap-2 rounded-2xl bg-cream px-4 py-3 text-sm font-semibold text-ink/60 ring-1 ring-soil/12 transition-colors hover:bg-sage hover:text-ink"
+          >
+            <Unlink className="size-4" strokeWidth={2.2} aria-hidden />
+            Putus Koneksi Dompet
+          </button>
+
+          {/* tautan NYATA ke /join/[code] — sisi yang dibuka pasangan saat
+              menerima undangan. Pintu masuk kedua (selain modal kode di /joint)
+              supaya route undangan nggak pernah jadi halaman yatim. */}
+          <p className="mt-4 border-t border-soil/12 pt-3.5">
+            <Link
+              href={buildJoinHref(INVITE_CODE)}
+              className="inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-ink/55 underline underline-offset-2 transition-colors hover:text-ink"
+            >
+              <ExternalLink className="size-3.5" strokeWidth={2.4} aria-hidden />
+              {JOIN_PREVIEW_COPY.linkLabel}
+            </Link>
+            <span className="mt-1 block text-[11px] leading-relaxed text-ink/40">
+              {JOIN_PREVIEW_COPY.hint}
+            </span>
+          </p>
+        </SettingsCard>
+      ) : (
+        <SettingsCard
+          title="Dompet Bersama"
+          desc="Catat pengeluaran patungan sama pasangan — timbangannya dihitung otomatis."
+        >
+          <Link
+            href="/joint"
+            className="mt-4 inline-flex items-center gap-2 rounded-2xl bg-forest px-5 py-3.5 text-sm font-semibold text-mint transition-colors hover:bg-forest-soft active:scale-[0.99]"
+          >
+            <UserPlus className="size-4" strokeWidth={2.4} aria-hidden />
+            Ajak Pasangan ke Dompet Kita
+          </Link>
+        </SettingsCard>
+      )}
+
+      {/* ── DIALOG: putus koneksi (2 pilihan jujur) ───────────────────────── */}
+      <ConfirmDialog
+        id="disconnect-joint"
+        open={disconnectOpen}
+        onClose={() => setDisconnectOpen(false)}
+        icon={HeartHandshake}
+        title={`Pisah dompet dengan ${JOINT_PARTNER.name}?`}
+        body="Kamu bisa pilih: simpan riwayat transaksimu sendiri, atau hapus seluruh riwayat dompet bersama."
+        actions={
+          <>
+            <DialogButton tone="primary" onClick={handleKeepHistory}>
+              Simpan Riwayat Saya
+            </DialogButton>
+            <DialogButton
+              tone="danger"
+              onClick={() => {
+                setDisconnectOpen(false)
+                setPurgeOpen(true)
+              }}
+            >
+              Hapus Semua
+            </DialogButton>
+            <DialogButton tone="neutral" onClick={() => setDisconnectOpen(false)}>
+              Batal
+            </DialogButton>
+          </>
+        }
+      />
+
+      <ConfirmDialog
+        id="purge-joint"
+        open={purgeOpen}
+        onClose={() => setPurgeOpen(false)}
+        icon={XCircle}
+        tone="danger"
+        title="Hapus semua riwayat dompet bersama?"
+        body="Riwayat patungan, timbangan settle, dan catatan transaksi bersama akan dihapus permanen. Tindakan ini nggak bisa dibatalkan."
+        actions={
+          <>
+            <DialogButton tone="danger" onClick={handlePurge}>
+              Ya, Hapus Semua
+            </DialogButton>
+            <DialogButton tone="neutral" onClick={() => setPurgeOpen(false)}>
+              Batal
+            </DialogButton>
+          </>
+        }
+      />
+
+    </SettingsPanel>
+  )
+}
+
+/* ── Panel: Keluar ─────────────────────────────────────────────────────────────
+   Tombol keluar ada di sini (bukan di menu yang lompat halaman) supaya tetap
+   satu keluarga dengan panel lain: klik → konfirmasi → selesai. */
+export function LogoutSettingsPanel() {
+  const [open, setOpen] = useState(false)
+
+  function handleLogout() {
+    setOpen(false)
+    /* TODO: supabase.auth.signOut() → redirect ke /login.
+       Demo ini belum punya sesi, jadi cukup diumumkan lewat toast. */
+    toast('Sampai jumpa lagi! 👋', {
+      description: 'Demo: sesi belum benar-benar diakhiri.',
+    })
+  }
+
+  return (
+    <SettingsPanel
+      eyebrow="Keluar"
+      title="Keluar"
+      desc="Akhiri sesi di perangkat ini tanpa menghapus data apa pun."
+    >
+      <SettingsCard>
+        <p className="text-[13.5px] leading-relaxed text-ink/60">
+          Data keuanganmu tetap aman di akun. Masuk lagi kapan aja pakai{' '}
+          <b className="font-semibold text-ink">{EMAIL}</b>.
+        </p>
+
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="mt-4 inline-flex items-center gap-2 rounded-2xl bg-plum/20 px-5 py-3.5 text-sm font-semibold text-plum ring-1 ring-plum/30 transition-colors hover:bg-plum/30"
+        >
+          <LogOut className="size-4" strokeWidth={2.4} aria-hidden />
+          Keluar dari Akun
+        </button>
+
+        {/* Jembatan dua arah: panel ini tempat paling wajar untuk menawarkan
+            jalan masuk lagi — sebelumnya kalimat "masuk lagi" ada tanpa tautan
+            apa pun. Prompt 09 melunasi itu setelah /login benar-benar ada. */}
+        <p className="mt-4 text-[11.5px] leading-relaxed text-ink/50">
+          {RELOGIN_COPY.lead}{' '}
+          <Link
+            href={LOGIN_PATH}
+            className="font-semibold text-ink underline underline-offset-2 hover:text-forest"
+          >
+            {RELOGIN_COPY.link}
+          </Link>{' '}
+          {RELOGIN_COPY.suffix}
+        </p>
+      </SettingsCard>
+
+      <ConfirmDialog
+        id="logout-confirm"
+        open={open}
+        onClose={() => setOpen(false)}
+        icon={LogOut}
+        tone="danger"
+        title="Keluar dari akun?"
+        body="Sesi di perangkat ini akan diakhiri. Data tetap tersimpan dan bisa kamu buka lagi dengan email yang sama."
+        actions={
+          <>
+            <DialogButton tone="danger" onClick={handleLogout}>
+              Ya, Keluar
+            </DialogButton>
+            <DialogButton tone="neutral" onClick={() => setOpen(false)}>
+              Batal
+            </DialogButton>
+          </>
+        }
+      />
+    </SettingsPanel>
+  )
+}
+
+

@@ -138,10 +138,41 @@ export interface Debt {
 /** satu baris riwayat beli/jual sebuah aset (mock; nanti investment_transactions) */
 export interface AssetTransaction {
   id: string
+  /**
+   * FK ke `Investment.id` — bentuk yang sama dengan kolom
+   * `investment_transactions.asset_id` di produksi. Karena itu ledger-nya satu
+   * daftar datar, dan riwayat per aset adalah TURUNAN dari daftar itu
+   * (`assetHistory`), bukan peta statis `{ assetId: [...] }` yang harus diurus
+   * manual setiap kali ada aset baru.
+   */
+  assetId: string
   date: string
   side: 'buy' | 'sell'
   quantity: number
   price: number
+}
+
+/**
+ * Satu baris pembayaran hutang (mock; di produksi = tabel `debt_payments`
+ * dengan kolom debt_id, amount, payment_date, wallet_id).
+ *
+ * `walletName` menyimpan NAMA dompet, bukan id — itulah yang ditampilkan di
+ * riwayat, dan baris lama tetap jujur menyebut dompet yang dipakai saat itu
+ * meskipun daftar dompetnya berubah.
+ */
+export interface DebtPayment {
+  id: string
+  debtId: string
+  amount: number
+  /**
+   * ISO. Pembayaran dari mock punya jam (jejak sistem), sedangkan pembayaran
+   * yang dicatat user menyimpan TANGGALNYA saja (`YYYY-MM-DD`) apa adanya —
+   * form "Catat Bayar" cuma bertanya tanggal, dan mengarang jam akan membuat
+   * riwayat terlihat lebih presisi daripada datanya (sama seperti kolom
+   * `payment_date DATE` di produksi).
+   */
+  paidAtISO: string
+  walletName: string
 }
 
 /** potongan donut alokasi aset */
@@ -354,6 +385,41 @@ export const INITIAL_DEBTS: Debt[] = [
     remaining: 0,
     notes: 'Dana darurat',
     status: 'settled',
+  },
+]
+
+/* ── PEMBAYARAN HUTANG (MOCK, Section 7D) ────────────────────────────────────
+   Ledger pembayaran yang membuat angka "Sudah dibayar" di kartu hutang bisa
+   diaudit baris per baris. Jumlahnya sengaja COCOK dengan `debtPaid()` tiap
+   hutang platform (pokok − sisa), jadi cerita di riwayat dan angka di kartu
+   tidak pernah bertengkar:
+
+     Kredivo   : 3.000.000 − 2.500.000 =   500.000 → 1 baris
+     SPayLater : 1.500.000 −   750.000 =   750.000 → 2 baris (520.000 + 230.000)
+
+   Di produksi tabel ini (`debt_payments`) yang jadi sumber kebenaran, dan
+   `remaining` dihitung `pokok − SUM(payments)` (PRD 2E.2 auto-calculate). */
+export const INITIAL_DEBT_PAYMENTS: DebtPayment[] = [
+  {
+    id: 'pay-1',
+    debtId: '2',
+    amount: 520_000,
+    paidAtISO: '2026-09-25T01:05:00Z',
+    walletName: 'GoPay',
+  },
+  {
+    id: 'pay-2',
+    debtId: '1',
+    amount: 500_000,
+    paidAtISO: '2026-08-10T02:15:00Z',
+    walletName: 'BCA',
+  },
+  {
+    id: 'pay-3',
+    debtId: '2',
+    amount: 230_000,
+    paidAtISO: '2026-08-25T13:20:00Z',
+    walletName: 'OVO',
   },
 ]
 
@@ -578,6 +644,24 @@ export function debtPaidPct(debt: Debt): number {
   return Math.round((debtPaid(debt) / debt.principal) * 100)
 }
 
+/**
+ * Riwayat pembayaran satu hutang, TERBARU di atas.
+ *
+ * Urutannya memakai TANGGAL saja (`YYYY-MM-DD`) — form "Catat Bayar" hanya
+ * bertanya tanggal, jadi baris yang baru dicatat tidak boleh tenggelam di bawah
+ * baris mock yang kebetulan punya jam, padahal tanggalnya sama.
+ */
+export function paymentsOfDebt(list: DebtPayment[], debtId: string): DebtPayment[] {
+  return list
+    .filter((payment) => payment.debtId === debtId)
+    .sort((a, b) => b.paidAtISO.slice(0, 10).localeCompare(a.paidAtISO.slice(0, 10)))
+}
+
+/** `1 pembayaran tercatat` / `3 pembayaran tercatat` — label ringkas di header */
+export function paymentCountLabel(count: number): string {
+  return `${count} pembayaran tercatat`
+}
+
 /** estimasi total bunga = (cicilan × tenor) − pokok (PRD 2E.2 auto-calculate) */
 export function estimatedInterest(debt: Debt): number {
   if (debt.type !== 'platform') return 0
@@ -727,30 +811,32 @@ export function debtPointsToMe(debt: Debt): boolean {
 
 
 /* ── RIWAYAT TRANSAKSI ASET (MOCK, Section 5C) ─────────────────────────────
-   TODO: ganti dengan tabel `investment_transactions` (asset_id, type buy/sell,
-   quantity, price_per_unit, transaction_date, fees, rdn_account). Sub-section
-   "Riwayat Beli/Jual" di kartu aset sekarang membaca peta statis ini. */
-export const ASSET_TRANSACTIONS: Record<string, AssetTransaction[]> = {
-  '1': [
-    { id: 't1', date: '2026-07-05', side: 'buy', quantity: 60, price: 41_000 },
-    { id: 't2', date: '2026-08-10', side: 'buy', quantity: 50, price: 42_500 },
-    { id: 't3', date: '2026-09-01', side: 'buy', quantity: 40.5432, price: 41_800 },
-  ],
-  '2': [
-    { id: 't4', date: '2026-08-20', side: 'buy', quantity: 5, price: 9_250 },
-  ],
-  '3': [
-    { id: 't5', date: '2026-09-18', side: 'buy', quantity: 0.00134, price: 940_000_000 },
-    { id: 't6', date: '2026-09-22', side: 'buy', quantity: 0.001, price: 963_400_000 },
-  ],
-  '4': [
-    { id: 't7', date: '2026-06-12', side: 'buy', quantity: 1, price: 1_080_000 },
-    { id: 't8', date: '2026-09-02', side: 'buy', quantity: 1, price: 1_120_000 },
-  ],
-}
+   Arah produksi: tabel `investment_transactions` (asset_id, type buy/sell,
+   quantity, price_per_unit, transaction_date, fees, rdn_account) — dan
+   `avg_buy_price` tiap aset DIHITUNG dari baris-baris ini (weighted average,
+   PRD 2E.1 AC2). Karena itu bentuk mock-nya sudah meniru tabelnya: satu daftar
+   datar dengan `assetId` di tiap baris, bukan peta statis yang isinya harus
+   dirawat manual per aset.
 
-export function assetHistory(assetId: string): AssetTransaction[] {
-  return ASSET_TRANSACTIONS[assetId] ?? []
+   Konsekuensi yang memang diinginkan: aset yang belum punya baris ledger
+   (mis. baru ditambahkan lewat sheet) menghasilkan daftar KOSONG, dan UI-nya
+   menampilkan empty state jujur — bukan daftar tanpa penjelasan. */
+export const INITIAL_ASSET_TRANSACTIONS: AssetTransaction[] = [
+  { id: 't1', assetId: '1', date: '2026-07-05', side: 'buy', quantity: 60, price: 41_000 },
+  { id: 't2', assetId: '1', date: '2026-08-10', side: 'buy', quantity: 50, price: 42_500 },
+  { id: 't3', assetId: '1', date: '2026-09-01', side: 'buy', quantity: 40.5432, price: 41_800 },
+  { id: 't4', assetId: '2', date: '2026-08-20', side: 'buy', quantity: 5, price: 9_250 },
+  { id: 't5', assetId: '3', date: '2026-09-18', side: 'buy', quantity: 0.00134, price: 940_000_000 },
+  { id: 't6', assetId: '3', date: '2026-09-22', side: 'buy', quantity: 0.001, price: 963_400_000 },
+  { id: 't7', assetId: '4', date: '2026-06-12', side: 'buy', quantity: 1, price: 1_080_000 },
+  { id: 't8', assetId: '4', date: '2026-09-02', side: 'buy', quantity: 1, price: 1_120_000 },
+]
+
+/** riwayat satu aset, TERBARU di atas — turunan dari ledger di atas */
+export function assetHistory(list: AssetTransaction[], assetId: string): AssetTransaction[] {
+  return list
+    .filter((tx) => tx.assetId === assetId)
+    .sort((a, b) => b.date.localeCompare(a.date))
 }
 
 /** tanggal pendek untuk riwayat aset: `05 Jul 2026` */
@@ -795,6 +881,15 @@ export const WALLET_SOURCE_OPTIONS: { id: string; label: string }[] = [
   { id: 'tunai', label: 'Tunai' },
 ]
 
+/**
+ * Nama dompet dari id pill di sheet "Catat Bayar" — dipakai saat menyimpan
+ * pembayaran (`debt_payments.wallet_id` → `walletName` di riwayat), jadi riwayat
+ * menyebut nama yang sama dengan yang dipilih user, bukan id mentah.
+ */
+export function walletSourceLabel(id: string): string {
+  return WALLET_SOURCE_OPTIONS.find((option) => option.id === id)?.label ?? id
+}
+
 /* ── COPY TETAP (Section 7E & 8) ───────────────────────────────────────────── */
 
 export const PERSONAL_SECTION_COPY =
@@ -830,5 +925,96 @@ export function netWorthCopy(positive: boolean, ratio: string): string {
   return positive
     ? `Asetmu ${ratio}x lebih besar dari hutang. Keep going! 💚`
     : 'Hutangmu masih lebih besar, tapi kamu udah mulai gerak. That counts! 🌱'
+}
+
+/* ── COPY: SHEET INVESTASI — DUA MODE (Section 5E) ──────────────────────────
+   Satu sheet, dua mode. Yang berganti cuma judul, deskripsi, dan label tombol —
+   formnya sama, jadi tidak ada dua komponen yang harus dijaga supaya perilakunya
+   tetap identik (pola yang sama dengan sheet Tagihan).
+
+   Nada mode edit sengaja tidak menyalahkan: yang user lakukan adalah
+   MEMBETULKAN data (PRD 2E.1 — harga & nilai diisi manual), bukan bikin error. */
+export const INVESTMENT_SHEET_COPY: Record<
+  'add' | 'edit',
+  { title: string; description: string; submit: string }
+> = {
+  add: {
+    title: 'Tambah Investasi',
+    description: 'Catat beli/jualnya — harga rata-rata kamu dihitung otomatis.',
+    submit: 'Simpan Transaksi ✓',
+  },
+  edit: {
+    title: 'Edit Aset',
+    description: 'Perbaiki datanya — kartu & total portofolio langsung ikut berubah.',
+    submit: 'Simpan Perubahan',
+  },
+}
+
+/** label field harga yang ikut berganti arti antar mode */
+export const INVESTMENT_PRICE_FIELD: Record<'add' | 'edit', { label: string; hint: string }> = {
+  add: {
+    label: 'Harga per unit',
+    hint: 'Isi harga saat transaksi ini terjadi, bukan harga hari ini.',
+  },
+  edit: {
+    label: 'Harga rata-rata beli (per unit)',
+    hint: 'Modal kamu dihitung dari jumlah × harga ini. Harga pasar diubah lewat "Update Manual" di kartu aset.',
+  },
+}
+
+/** judul kartu total di sheet, per mode: nilai transaksi vs nilai modal */
+export const INVESTMENT_TOTAL_LABEL: Record<'add' | 'edit', string> = {
+  add: 'Total',
+  edit: 'Nilai modal',
+}
+
+/* ── COPY: HARGA MANUAL / BASI (Section 5D, PRD 2E.1 poin 3–4) ─────────────── */
+
+/**
+ * Warning amber kanon PRD 2E.1 poin 3 — menyebut JENIS asetnya, karena satu
+ * sumber harga gagal tidak boleh terdengar seperti seluruh fitur mati.
+ */
+export function stalePriceWarning(assetTypeLabel: string, stamp: string): string {
+  return `Harga ${assetTypeLabel} belum diperbarui. Update terakhir: ${stamp}`
+}
+
+/** timestamp "Terakhir diperbarui …" — satu-satunya stempel harga yang sah */
+export function priceUpdatedLabel(stamp: string): string {
+  return `Terakhir diperbarui ${stamp}`
+}
+
+export const PRICE_UPDATE_COPY = {
+  title: 'Update Manual',
+  description:
+    'CatetInd gak nyambung ke bank/broker, jadi harga terakhir kamu isi sendiri — apa adanya.',
+  fieldLabel: 'Harga sekarang (per unit)',
+  fieldHint: 'Pakai harga yang kamu lihat di aplikasi broker/bursa hari ini.',
+  submit: 'Simpan Harga Baru ✓',
+  /** catatan transparansi: kapan angka ini dicatat (jam ditulis WIB) */
+  stampNote: (stamp: string) => `Waktu update dicatat ${stamp} WIB.`,
+  toastTitle: 'Harga diperbarui! ✅',
+  toastDescription: (name: string) => `${name} sekarang memakai harga yang baru kamu isi.`,
+  valueLabel: 'Nilai aset setelah update',
+  returnLabel: 'Return setelah update',
+}
+
+/* ── COPY: RIWAYAT TRANSAKSI ASET (Section 5C) ─────────────────────────────── */
+export const ASSET_HISTORY_TITLE = 'Riwayat Beli/Jual'
+export const ASSET_HISTORY_EMPTY = 'Belum ada transaksi beli/jual untuk aset ini.'
+export const ASSET_HISTORY_EMPTY_HINT =
+  'Riwayat dibaca dari transaksi beli/jual aset, bukan dari nilai yang kamu isi di "Edit Aset" — jadi aset yang nilainya diisi manual bisa tampil kosong di sini.'
+export const ASSET_HISTORY_FOOTNOTE =
+  'Harga rata-rata dihitung otomatis (weighted average) dari riwayat ini.'
+
+/* ── COPY: RIWAYAT PEMBAYARAN HUTANG (Section 7D) ──────────────────────────── */
+export const PAYMENT_HISTORY_TITLE = 'Riwayat Pembayaran'
+export const PAYMENT_HISTORY_EMPTY = 'Belum ada pembayaran tercatat untuk hutang ini.'
+export const PAYMENT_HISTORY_EMPTY_HINT =
+  'Setiap kali kamu tekan "Catat Bayar", tanggal & dompet sumbernya tersimpan di sini.'
+
+/* ── COPY: TOAST AKSI ASET (dipakai wealth-screen) ─────────────────────────── */
+export const ASSET_EDIT_TOAST = {
+  title: 'Aset diperbarui ✅',
+  description: (name: string) => `Kartu & total portofolio ${name} sudah disesuaikan.`,
 }
 

@@ -4,22 +4,26 @@ import { motion } from 'framer-motion'
 import { BudgetCategoryCard } from './budget-category-card'
 import { cn } from '@/lib/utils'
 import {
+  BUDGET_ZONE_A_COPY,
+  PERIOD_TABS,
   SWEEP_TRIGGER_DAY,
   maskNominal,
   spentPercent,
   surplusBudgets,
   totalSurplus,
   type BudgetItem,
-  type BudgetPeriod,
+  type PeriodTab,
+  type PeriodWindow,
 } from '@/lib/data/budget'
 
 /* ── ZONA A — Budget Kategori (spending limits) ──────────────────────────────
    Urutan & semua elemennya CONDITIONAL supaya layar tetap lengang:
 
-   1. Kartu Sapu Bersih      → hanya 3 hari terakhir bulan + ada sisa budget
-   2. Pill periode           → Mingguan / Bulanan / Siklus Gajian (placeholder)
-   3. Daftar kategori        → bar progres + ghost pacing line
-   4. Banner AI Coach        → hanya kalau ada kategori over budget
+   1. Kartu Sapu Bersih      → hanya 3 hari terakhir bulan (ritual bulanan) + ada sisa
+   2. Pill periode           → Mingguan / Bulanan / Siklus Gajian (menyaring SATU daftar)
+   3. Daftar kategori        → bar progres + ghost pacing line (pacing ikut periode aktif)
+   4. Banner Review Hari Ini → hanya kalau ada kategori over budget (membuka
+                               panel review, prompt 19)
    5. Tambah budget / empty state
 
    Catatan: kartu "Jatah Hari Ini" / Dry Spell TIDAK lagi di sini. Jatah Harian
@@ -28,35 +32,33 @@ import {
    full-width (audit UX #3) — lihat daily-hud-summary.tsx.
    ────────────────────────────────────────────────────────────────────────── */
 
-const PERIOD_TABS: { id: BudgetPeriod | 'payday'; label: string }[] = [
-  { id: 'weekly', label: 'Mingguan' },
-  { id: 'monthly', label: 'Bulanan' },
-  { id: 'payday', label: 'Siklus Gajian' },
-]
-
 export function BudgetZoneA({
   budgets,
   masked,
-  currentDay,
+  window,
   periodTab,
   onPeriodChange,
   onAddBudget,
   onSweep,
   onReviewCoach,
 }: {
+  /** daftar yang SUDAH disaring untuk periode aktif (lihat `budgetsForPeriod`) */
   budgets: BudgetItem[]
   masked: boolean
-  currentDay: number
-  periodTab: BudgetPeriod | 'payday'
-  onPeriodChange: (tab: BudgetPeriod | 'payday') => void
+  /** periode aktif — menentukan panjang pembagi pacing & rentang tanggal */
+  window: PeriodWindow
+  periodTab: PeriodTab
+  onPeriodChange: (tab: PeriodTab) => void
   onAddBudget: () => void
   onSweep: () => void
   onReviewCoach: () => void
 }) {
   const surplus = surplusBudgets(budgets)
   const sweepTotal = totalSurplus(budgets)
-  /* 3G: hanya di 3 hari terakhir bulan + masih ada sisa budget */
-  const showSweep = currentDay >= SWEEP_TRIGGER_DAY && surplus.length > 0
+  /* 3G: sapu-sapu = ritual akhir BULAN, jadi kartunya hanya di tab Bulanan +
+     masih ada sisa budget. Di tab mingguan/siklus, "sapu" tidak punya arti. */
+  const showSweep =
+    window.period === 'monthly' && window.dayIndex >= SWEEP_TRIGGER_DAY && surplus.length > 0
   const overBudget = budgets.filter((b) => spentPercent(b) >= 100)
 
   return (
@@ -82,17 +84,17 @@ export function BudgetZoneA({
             </span>
             <div className="min-w-0">
               <p className="text-[14.5px] font-bold tracking-tight text-forest">
-                Sapu Bersih Sisa Budget!
+                {BUDGET_ZONE_A_COPY.sweepTitle}
               </p>
               <p className="mt-1 text-[12px] leading-relaxed text-ink/60">
-                Bulan ini kamu hemat{' '}
+                {BUDGET_ZONE_A_COPY.sweepLead}{' '}
                 <b className="font-bold text-ink tabular-nums">
                   {maskNominal(sweepTotal, masked)}
                 </b>{' '}
-                dari budget! Mau disapu masuk ke celengan?
+                {BUDGET_ZONE_A_COPY.sweepTail}
               </p>
               <span className="mt-2 inline-flex items-center gap-1 text-[12px] font-bold text-forest">
-                Sapu ke Celengan
+                {BUDGET_ZONE_A_COPY.sweepCta}
                 <span aria-hidden className="transition-transform group-hover:translate-x-0.5">
                   →
                 </span>
@@ -131,29 +133,24 @@ export function BudgetZoneA({
         })}
       </div>
 
-      {/* ── 3D. DAFTAR BUDGET KATEGORI / 3C placeholder / 5A empty ───────── */}
-      {periodTab !== 'monthly' ? (
-        <div className="rounded-[1.4rem] border border-dashed border-oat bg-cream/50 px-5 py-9 text-center">
-          <p className="text-[13px] font-bold text-ink/50">Segera hadir</p>
-          <p className="mx-auto mt-1.5 max-w-[16rem] text-[11.5px] leading-relaxed text-ink/35">
-            Filter periode {PERIOD_TABS.find((t) => t.id === periodTab)?.label.toLowerCase()}{' '}
-            sedang disiapkan. Sementara daftarnya masih bulanan ya 🌿
-          </p>
-        </div>
-      ) : budgets.length === 0 ? (
-        /* 5A. EMPTY STATE BUDGET */
+      {/* ── 3D. DAFTAR BUDGET KATEGORI / 5A empty state ────────────────────
+          Satu daftar dipakai untuk SEMUA tab: `budgets` sudah disaring periode
+          aktif oleh budget-screen (`budgetsForPeriod`), dan tiap kartu memakai
+          `window` yang sama supaya garis pacing-nya ikut panjang periode. */}
+      {budgets.length === 0 ? (
+        /* 5A. EMPTY STATE BUDGET (termasuk periode yang belum punya budget) */
         <div className="rounded-[1.6rem] border border-dashed border-oat bg-cream/60 px-6 py-9 text-center">
-          {/* TODO: add cute empty state illustration */}
+          {/* emoji jadi ilustrasi ringan — versi gambar menyusul bareng design pass */}
           <span className="text-[28px]">☕🌱</span>
           <p className="mx-auto mt-3 max-w-[19rem] text-[13px] leading-relaxed text-ink/60">
-            Belum ada budget? Santai, mulai dari yang kecil aja. Coba atur limit Kopi dulu!
+            {BUDGET_ZONE_A_COPY.emptyBody}
           </p>
           <button
             type="button"
             onClick={onAddBudget}
             className="mt-4 rounded-full bg-forest px-4 py-2.5 text-[12.5px] font-semibold text-cream transition-colors hover:bg-forest-soft active:scale-95"
           >
-            Buat Budget Pertama
+            {BUDGET_ZONE_A_COPY.emptyCta}
           </button>
         </div>
       ) : (
@@ -166,7 +163,12 @@ export function BudgetZoneA({
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: 0.04 * index, ease: [0.22, 1, 0.36, 1] }}
             >
-              <BudgetCategoryCard budget={budget} masked={masked} onReview={onReviewCoach} />
+              <BudgetCategoryCard
+                budget={budget}
+                masked={masked}
+                window={window}
+                onReview={onReviewCoach}
+              />
             </motion.div>
           ))}
         </div>
@@ -176,18 +178,18 @@ export function BudgetZoneA({
       {overBudget.length > 0 && (
         <div className="flex flex-col gap-3 rounded-[1.5rem] bg-hud-terracotta/[0.07] p-4 ring-1 ring-hud-terracotta/15 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-[12.5px] leading-relaxed text-ink/65">
-            {overBudget.length > 1
-              ? `Ada ${overBudget.length} kategori yang overbudget.`
-              : `Kategori ${overBudget[0].category} overbudget.`}{' '}
-            Mau review bareng AI Coach? 🤖
+            {BUDGET_ZONE_A_COPY.overLead(overBudget.length, overBudget[0].category)}{' '}
+            {BUDGET_ZONE_A_COPY.overQuestion}
           </p>
-          {/* TODO: Link to AI Coach panel */}
+          {/* CTA review (prompt 19): membuka panel "Review Pengeluaran Hari
+              Ini" di halaman ini lewat handler budget-screen — bukan toast dan
+              bukan lompat ke widget AI. */}
           <button
             type="button"
             onClick={onReviewCoach}
             className="shrink-0 rounded-full bg-hud-terracotta/12 px-4 py-2 text-[12px] font-bold text-hud-terracotta transition-colors hover:bg-hud-terracotta/20 active:scale-95"
           >
-            Review Pengeluaran Hari Ini
+            {BUDGET_ZONE_A_COPY.overCta}
           </button>
         </div>
       )}
@@ -199,7 +201,7 @@ export function BudgetZoneA({
         className="flex w-full items-center justify-center gap-2 rounded-[1.4rem] border-2 border-dashed border-oat bg-cream/45 px-4 py-4 text-[12.5px] font-semibold text-ink/45 transition-all hover:border-forest/25 hover:bg-cream hover:text-ink active:scale-[0.99]"
       >
         <span className="text-[15px] leading-none">+</span>
-        Tambah Budget Baru
+        {BUDGET_ZONE_A_COPY.addCta}
       </button>
     </div>
   )

@@ -1,0 +1,16 @@
+
+> my-project@0.1.0 dev C:\Users\maari\Downloads\catet-ind-dashboard-design
+> next dev
+
+▲ Next.js 16.3.3 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.1.13:3000
+- Environments: .env.local
+✓ Ready in 477ms
+✓ Running next.config.mjs took 19ms
+
+ GET / 200 in 564ms (next.js: 169ms, application-code: 395ms)
+ GET /budget/1 200 in 855ms (next.js: 778ms, application-code: 77ms)
+ GET /budget/2 200 in 93ms (next.js: 31ms, application-code: 62ms)
+[?25h
+ ELIFECYCLE  Command failed with exit code 4294967295.

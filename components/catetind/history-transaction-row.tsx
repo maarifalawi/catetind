@@ -37,6 +37,10 @@ const CATEGORY_EMOJI: Record<string, string> = {
   'dana darurat': '🛟',
   transfer: '🔁',
   tabungan: '🌱',
+  /* dua kategori yang dipakai halaman Dompet Detail (proyek & cashback) —
+     tanpa ini ikonnya jatuh ke fallback 🏷️ padahal maknanya sudah jelas */
+  proyek: '🧑‍💻',
+  cashback: '🎁',
 }
 
 /** emoji lingkaran kategori — jatuh ke 🏷️ untuk kategori yang belum dipetakan */
@@ -55,6 +59,7 @@ export function HistoryTransactionRow({
   tx,
   masked,
   delay = 0,
+  showWallet = true,
   onOpen,
   onEdit,
   onDelete,
@@ -64,6 +69,12 @@ export function HistoryTransactionRow({
   masked: boolean
   /** jeda animasi masuk (stagger antar baris) */
   delay?: number
+  /**
+   * tampilkan nama dompet di baris meta. Di Riwayat & Insight ini wajib
+   * (barisnya bercampur banyak dompet); di halaman Dompet Detail yang seluruh
+   * isinya dompet yang sama, nama itu cuma jadi kebisingan berulang.
+   */
+  showWallet?: boolean
   onOpen: (tx: HistoryTransaction) => void
   onEdit: (tx: HistoryTransaction) => void
   onDelete: (tx: HistoryTransaction) => void
@@ -196,7 +207,8 @@ export function HistoryTransactionRow({
                 perlu biru, cukup dikatakan) */}
             <span className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-ink/40">
               <span className="truncate">
-                {tx.wallet} · {tx.time} · {category}
+                {showWallet ? `${tx.wallet} · ` : ''}
+                {tx.time} · {category}
               </span>
               {moves && <span className="shrink-0 font-medium text-ink/40">· pindah dana</span>}
             </span>
