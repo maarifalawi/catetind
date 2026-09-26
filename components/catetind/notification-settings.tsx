@@ -99,7 +99,7 @@ export function NotificationSettings() {
   return (
     <div className="space-y-5">
       {/* ── kartu status push ── */}
-      <section className="rounded-[2rem] bg-cream p-5 ring-1 ring-soil/5 sm:p-6">
+      <section className="rounded-[2rem] bg-cream p-5 ring-1 ring-soil/12 sm:p-6">
         <div className="flex items-start gap-3.5">
           <span
             className={cn(
@@ -135,7 +135,7 @@ export function NotificationSettings() {
           </div>
         )}
         {support === 'unsupported' && (
-          <p className="mt-4 rounded-2xl bg-soil/[0.04] px-4 py-3 text-[13px] text-ink/55">
+          <p className="mt-4 rounded-2xl bg-soil/[0.1] px-4 py-3 text-[13px] text-ink/55">
             Browser ini belum mendukung Web Push — coba Chrome/Edge atau
             Safari iOS 16.4+ yang sudah di-install ke Home Screen.
           </p>
@@ -212,13 +212,13 @@ export function NotificationSettings() {
       </section>
 
       {/* ── kartu toggle per jenis (inventaris #22) ── */}
-      <section className="rounded-[2rem] bg-cream p-5 ring-1 ring-soil/5 sm:p-6">
+      <section className="rounded-[2rem] bg-cream p-5 ring-1 ring-soil/12 sm:p-6">
         <h2 className="text-base font-semibold text-ink">Jenis Notifikasi</h2>
         <p className="mt-0.5 text-sm text-ink/50">
           Pilih yang penting buat kamu — sisanya kita gak ganggu.
         </p>
 
-        <ul className="mt-4 divide-y divide-soil/[0.05]">
+        <ul className="mt-4 divide-y divide-soil/10">
           {PREFS.map((pref) => (
             <li
               key={pref.id}

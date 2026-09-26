@@ -100,7 +100,7 @@ export function MobileBottomNav() {
     <>
       <nav
         aria-label="Navigasi utama"
-        className="fixed inset-x-8 bottom-5 z-40 mx-auto flex h-16 max-w-sm items-center rounded-full bg-cream/95 px-4 shadow-[0_24px_50px_-16px_rgba(36,26,26,0.18)] ring-1 ring-soil/5 backdrop-blur-xl lg:hidden"
+        className="fixed inset-x-8 bottom-5 z-40 mx-auto flex h-16 max-w-sm items-center rounded-full bg-cream/95 px-4 shadow-[0_24px_50px_-16px_rgba(36,26,26,0.18)] ring-1 ring-soil/12 backdrop-blur-xl lg:hidden"
         style={{ marginBottom: 'max(0rem, env(safe-area-inset-bottom))' }}
       >
         <NavLink item={mainItems[0]} pathname={pathname} />
@@ -117,7 +117,7 @@ export function MobileBottomNav() {
                 <button
                   type="button"
                   aria-label="Catat transaksi"
-                  className="-mt-8 flex size-14 items-center justify-center rounded-full bg-[radial-gradient(circle_at_30%_25%,#fbf6d9,#ecd768_35%,#ffb885_60%,#b89191_85%)] text-ink shadow-[0_0_28px_rgba(236,215,104,0.55),0_10px_24px_-8px_rgba(36,26,26,0.6)] ring-1 ring-cream/60 transition-transform duration-150 hover:scale-105 active:scale-95"
+                  className="-mt-8 flex size-14 items-center justify-center rounded-full bg-[radial-gradient(circle_at_30%_25%,#ffffff,#ecd768_35%,#ffb885_60%,#b89191_85%)] text-ink shadow-[0_0_28px_rgba(236,215,104,0.55),0_10px_24px_-8px_rgba(36,26,26,0.6)] ring-1 ring-cream/60 transition-transform duration-150 hover:scale-105 active:scale-95"
                 >
                   <Plus className="size-6" strokeWidth={2.4} />
                 </button>
@@ -182,7 +182,7 @@ export function MobileBottomNav() {
                             'flex flex-col items-center gap-2 rounded-2xl px-2 py-4 text-center transition-all duration-150 active:scale-95',
                             isActive
                               ? 'bg-[#ecd768]/25 font-semibold text-ink'
-                              : 'bg-soil/[0.03] font-medium text-ink/55 hover:bg-soil/[0.05]',
+                              : 'bg-soil/[0.03] font-medium text-ink/55 hover:bg-soil/[0.11]',
                           )}
                         >
                           <Icon className="size-6 text-ink" />

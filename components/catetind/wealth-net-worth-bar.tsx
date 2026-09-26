@@ -66,7 +66,7 @@ export function WealthNetWorthBar({
   return (
     <section
       aria-label="Net worth: total aset (kas likuid + investasi) dibanding hutang"
-      className="relative overflow-hidden rounded-[1.75rem] bg-[#fbf6d9] p-5 shadow-[0_22px_50px_-30px_rgba(69,89,78,0.5)] ring-1 ring-soil/[0.05] sm:p-6"
+      className="relative overflow-hidden rounded-[1.75rem] bg-[#ffffff] p-5 shadow-[0_22px_50px_-30px_rgba(69,89,78,0.5)] ring-1 ring-soil/10 sm:p-6"
     >
       {/* kabut sage (aset) & terracotta (hutang) di dua sudut — penanda siapa
           menarik ke arah mana, tetap di palet kanon */}
@@ -155,7 +155,7 @@ export function WealthNetWorthBar({
             transition={{ type: 'spring', stiffness: 120, damping: 20 }}
             className="pointer-events-none absolute top-1/2 z-10 -translate-x-1/2 -translate-y-1/2"
           >
-            <span className="flex size-8 items-center justify-center rounded-full bg-[#fbf6d9] shadow-[0_8px_18px_-8px_rgba(69,89,78,0.6)] ring-1 ring-forest/10">
+            <span className="flex size-8 items-center justify-center rounded-full bg-[#ffffff] shadow-[0_8px_18px_-8px_rgba(69,89,78,0.6)] ring-1 ring-forest/10">
               <span className="size-2.5 rounded-full bg-gradient-to-br from-hud-sage to-hud-terracotta" />
             </span>
           </motion.span>

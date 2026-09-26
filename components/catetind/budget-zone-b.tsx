@@ -38,7 +38,7 @@ export function BudgetZoneB({
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
-          className="rounded-[1.5rem] bg-cream p-4 ring-1 ring-soil/5"
+          className="rounded-[1.5rem] bg-cream p-4 ring-1 ring-soil/12"
         >
           <div className="flex items-start gap-3">
             <span className="flex size-9 shrink-0 items-center justify-center rounded-2xl bg-sage/70 text-[17px]">

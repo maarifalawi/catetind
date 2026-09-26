@@ -67,7 +67,10 @@
   /* ── LAPIS 1 · PALET KANON (10 warna) ──────────────────────────────────── */
   --color-soil: #503a3a; /* 15% · tanah — teks, garis, scrim gelap */
   --color-evergreen: #45594e; /* 15% · hijau tua — permukaan brand */
-  --color-ivory: #fbf6d9; /* 15% · gading — permukaan kartu/panel */
+  /* Ivory tetap tersimpan di palet, tapi BUKAN permukaan dasar lagi: latar &
+     kartu memakai PUTIH (token `canvas`, alias `cream`) sesuai arah desain.
+     Pakai ivory hanya kalau butuh aksen hangat yang eksplisit. */
+  --color-ivory: #fbf6d9; /* 15% · gading — aksen hangat (bukan permukaan) */
   --color-oat: #ebe4de; /* 15% · gandum — permukaan sekunder */
   --color-plum: #b89191; /* 7.5% · prem — alert / lewat batas */
   --color-olive: #b5b987; /* 7.5% · zaitun — status aman */
@@ -79,9 +82,10 @@
   --color-daisy: #ecd768; /* 5% · kuning — pop brand & highlight */
 
   /* ── NETRAL TEKNIS ─────────────────────────────────────────────────────── */
-  /* Kanvas halaman = PUTIH RATA. Satu-satunya warna di luar 10 warna palet,
-     dipakai KHUSUS untuk latar halaman supaya kartu (Ivory) dan aksen palet
-     yang menonjol. Jangan pakai `canvas` untuk permukaan kartu/chip. */
+  /* Dasar halaman & kartu = PUTIH RATA. Satu-satunya warna di luar 10 warna
+     palet. Karena kartu juga putih, batas antar-permukaan dibawa oleh hairline
+     `ring`/`border`-soil (skala 8–16%) + shadow lembut — bukan perbedaan hue.
+     Jangan pakai `canvas` untuk chip/pill kecil: itu tugasnya Oat (`sage`). */
   --color-canvas: #ffffff;
 
   /* ── LAPIS 2 · ALIAS SEMANTIK (nama yang dipakai komponen) ─────────────── */
@@ -92,7 +96,7 @@
   --color-mint: #91bb9e; /* = leaf (uang/positif) */
   --color-mint-soft: #dbe4c7; /* turunan leaf (tint) */
   --color-sage: #ebe4de; /* = oat (permukaan pucat) */
-  --color-cream: #fbf6d9; /* = ivory (latar utama) */
+  --color-cream: #ffffff; /* = canvas (dasar putih) */
   /* palet status Daily HUD — kanon PRD Domain 2B.2 (BUKAN merah untuk over-budget) */
   --color-hud-sage: #b5b987; /* = olive   · aman / on-track */
   --color-hud-amber: #ffb885; /* = cantelope · mendekati batas */
@@ -142,12 +146,12 @@
   /* token shadcn/ui — dipetakan ke palet kanon "Earth Pastel" (docs/theme/PALETTE.md) */
   --background: #ffffff; /* canvas — latar halaman putih rata */
   --foreground: #503a3a; /* soil */
-  --card: #fbf6d9; /* ivory */
+  --card: #ffffff; /* putih */
   --card-foreground: #503a3a; /* soil */
-  --popover: #fbf6d9; /* ivory */
+  --popover: #ffffff; /* putih */
   --popover-foreground: #503a3a; /* soil */
   --primary: #45594e; /* evergreen */
-  --primary-foreground: #fbf6d9; /* ivory */
+  --primary-foreground: #ffffff; /* putih */
   --secondary: #ebe4de; /* oat */
   --secondary-foreground: #503a3a; /* soil */
   --muted: #ebe4de; /* oat */
@@ -164,10 +168,10 @@
   --chart-4: #b89191; /* plum */
   --chart-5: #ffb885; /* cantelope */
   --radius: 1rem;
-  --sidebar: #fbf6d9; /* ivory */
+  --sidebar: #ffffff; /* putih */
   --sidebar-foreground: #503a3a; /* soil */
   --sidebar-primary: #45594e; /* evergreen */
-  --sidebar-primary-foreground: #fbf6d9; /* ivory */
+  --sidebar-primary-foreground: #ffffff; /* putih */
   --sidebar-accent: #ebe4de; /* oat */
   --sidebar-accent-foreground: #503a3a; /* soil */
   --sidebar-border: #ebe4de; /* oat */
@@ -179,19 +183,19 @@
 .dark {
   color-scheme: dark;
   --background: #241a1a; /* soil-deep */
-  --foreground: #fbf6d9; /* ivory */
+  --foreground: #ffffff; /* putih */
   --card: #503a3a; /* soil */
-  --card-foreground: #fbf6d9; /* ivory */
+  --card-foreground: #ffffff; /* putih */
   --popover: #503a3a; /* soil */
-  --popover-foreground: #fbf6d9; /* ivory */
+  --popover-foreground: #ffffff; /* putih */
   --primary: #b5b987; /* olive */
   --primary-foreground: #241a1a; /* soil-deep */
   --secondary: #45594e; /* evergreen */
-  --secondary-foreground: #fbf6d9; /* ivory */
+  --secondary-foreground: #ffffff; /* putih */
   --muted: #45594e; /* evergreen */
   --muted-foreground: #dbe4c7; /* leaf-light */
   --accent: #45594e; /* evergreen */
-  --accent-foreground: #fbf6d9; /* ivory */
+  --accent-foreground: #ffffff; /* putih */
   --destructive: #b89191; /* plum */
   --border: #534141; /* plum-deep */
   --input: #534141; /* plum-deep */
@@ -202,11 +206,11 @@
   --chart-4: #b89191; /* plum */
   --chart-5: #ffb885; /* cantelope */
   --sidebar: #45594e; /* evergreen */
-  --sidebar-foreground: #fbf6d9; /* ivory */
+  --sidebar-foreground: #ffffff; /* putih */
   --sidebar-primary: #ecd768; /* daisy */
   --sidebar-primary-foreground: #241a1a; /* soil-deep */
   --sidebar-accent: #52685c; /* evergreen-soft */
-  --sidebar-accent-foreground: #fbf6d9; /* ivory */
+  --sidebar-accent-foreground: #ffffff; /* putih */
   --sidebar-border: #52685c; /* evergreen-soft */
   --sidebar-ring: #91a0b8; /* thistle */
 }
@@ -216,19 +220,19 @@
     color-scheme: dark;
     /* nilai SAMA dengan `.dark` di atas — palet kanon, sisi gelap */
     --background: #241a1a; /* soil-deep */
-    --foreground: #fbf6d9; /* ivory */
+    --foreground: #ffffff; /* putih */
     --card: #503a3a; /* soil */
-    --card-foreground: #fbf6d9; /* ivory */
+    --card-foreground: #ffffff; /* putih */
     --popover: #503a3a; /* soil */
-    --popover-foreground: #fbf6d9; /* ivory */
+    --popover-foreground: #ffffff; /* putih */
     --primary: #b5b987; /* olive */
     --primary-foreground: #241a1a; /* soil-deep */
     --secondary: #45594e; /* evergreen */
-    --secondary-foreground: #fbf6d9; /* ivory */
+    --secondary-foreground: #ffffff; /* putih */
     --muted: #45594e; /* evergreen */
     --muted-foreground: #dbe4c7; /* leaf-light */
     --accent: #45594e; /* evergreen */
-    --accent-foreground: #fbf6d9; /* ivory */
+    --accent-foreground: #ffffff; /* putih */
     --destructive: #b89191; /* plum */
     --border: #534141; /* plum-deep */
     --input: #534141; /* plum-deep */
@@ -239,11 +243,11 @@
     --chart-4: #b89191; /* plum */
     --chart-5: #ffb885; /* cantelope */
     --sidebar: #45594e; /* evergreen */
-    --sidebar-foreground: #fbf6d9; /* ivory */
+    --sidebar-foreground: #ffffff; /* putih */
     --sidebar-primary: #ecd768; /* daisy */
     --sidebar-primary-foreground: #241a1a; /* soil-deep */
     --sidebar-accent: #52685c; /* evergreen-soft */
-    --sidebar-accent-foreground: #fbf6d9; /* ivory */
+    --sidebar-accent-foreground: #ffffff; /* putih */
     --sidebar-border: #52685c; /* evergreen-soft */
     --sidebar-ring: #91a0b8; /* thistle */
   }

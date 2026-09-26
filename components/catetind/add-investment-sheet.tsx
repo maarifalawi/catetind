@@ -144,7 +144,7 @@ export function AddInvestmentSheet({
                 'flex items-center gap-2 rounded-2xl px-3.5 py-3 text-left text-[13px] font-semibold transition-all duration-200 active:scale-[0.98]',
                 active
                   ? 'bg-forest text-mint shadow-[0_12px_26px_-16px_rgba(69,89,78,0.85)]'
-                  : 'bg-cream text-ink/65 ring-1 ring-soil/[0.07] hover:bg-cream hover:text-ink',
+                  : 'bg-cream text-ink/65 ring-1 ring-soil/14 hover:bg-cream hover:text-ink',
               )}
             >
               <span aria-hidden className="text-[15px]">
@@ -163,7 +163,7 @@ export function AddInvestmentSheet({
           value={name}
           onChange={(event) => setName(event.target.value)}
           placeholder="Contoh: BBCA, Bitcoin, Bibit RDPU"
-          className="mt-2 w-full rounded-2xl bg-cream px-4 py-3 text-[15px] font-semibold text-ink outline-none ring-1 ring-soil/[0.08] transition-shadow placeholder:font-medium placeholder:text-ink/25 focus:ring-2 focus:ring-forest/35"
+          className="mt-2 w-full rounded-2xl bg-cream px-4 py-3 text-[15px] font-semibold text-ink outline-none ring-1 ring-soil/16 transition-shadow placeholder:font-medium placeholder:text-ink/25 focus:ring-2 focus:ring-forest/35"
         />
       </label>
 
@@ -185,7 +185,7 @@ export function AddInvestmentSheet({
             <span className="text-[13px] font-semibold leading-snug text-ink">
               {quantityFieldLabel(assetType)}
             </span>
-            <span className="mt-2 flex items-center gap-2 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/[0.08] focus-within:ring-2 focus-within:ring-forest/35">
+            <span className="mt-2 flex items-center gap-2 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/16 focus-within:ring-2 focus-within:ring-forest/35">
               <input
                 value={quantityDigits}
                 onChange={(event) => setQuantityDigits(sanitizeDecimal(event.target.value))}
@@ -211,7 +211,7 @@ export function AddInvestmentSheet({
 
           <div>
             <span className="text-[13px] font-semibold leading-snug text-ink">Tanggal</span>
-            <span className="relative mt-2 flex items-center gap-2 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/[0.08] focus-within:ring-2 focus-within:ring-forest/35">
+            <span className="relative mt-2 flex items-center gap-2 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/16 focus-within:ring-2 focus-within:ring-forest/35">
               <CalendarDays className="size-4 shrink-0 text-ink/35" strokeWidth={2.2} />
               <span className="flex-1 text-[14px] font-semibold tabular-nums text-ink">
                 {formatSheetDate(date)}
@@ -240,7 +240,7 @@ export function AddInvestmentSheet({
 
       {/* ── STEP 3 — accordion 'Detail Lanjutan' (tertutup default) ──────── */}
       <RevealStep show={stepOneDone}>
-        <div className="mt-4 overflow-hidden rounded-2xl bg-cream/70 ring-1 ring-soil/[0.06]">
+        <div className="mt-4 overflow-hidden rounded-2xl bg-cream/70 ring-1 ring-soil/12">
           <button
             type="button"
             onClick={() => setAdvancedOpen((prev) => !prev)}
@@ -258,7 +258,7 @@ export function AddInvestmentSheet({
           </button>
 
           <RevealStep show={advancedOpen}>
-            <div className="space-y-4 border-t border-soil/[0.05] px-4 py-4">
+            <div className="space-y-4 border-t border-soil/10 px-4 py-4">
               <RupiahField
                 label="Biaya transaksi (opsional)"
                 digits={feesDigits}
@@ -277,7 +277,7 @@ export function AddInvestmentSheet({
                   <RevealStep show={hasRdn}>
                     <label className="mt-3 block">
                       <span className="text-[12.5px] font-semibold text-ink/70">Akun RDN</span>
-                      <span className="relative mt-2 flex items-center gap-2 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/[0.08] focus-within:ring-2 focus-within:ring-forest/35">
+                      <span className="relative mt-2 flex items-center gap-2 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/16 focus-within:ring-2 focus-within:ring-forest/35">
                         <select
                           value={rdnAccount}
                           onChange={(event) => setRdnAccount(event.target.value)}
@@ -304,7 +304,7 @@ export function AddInvestmentSheet({
                   onChange={(event) => setNote(event.target.value)}
                   rows={3}
                   placeholder="Misal: DCA bulanan rutin"
-                  className="mt-2 w-full resize-none rounded-2xl bg-cream px-4 py-3 text-[13px] leading-relaxed text-ink outline-none ring-1 ring-soil/[0.08] transition-shadow placeholder:text-ink/25 focus:ring-2 focus:ring-forest/35"
+                  className="mt-2 w-full resize-none rounded-2xl bg-cream px-4 py-3 text-[13px] leading-relaxed text-ink outline-none ring-1 ring-soil/16 transition-shadow placeholder:text-ink/25 focus:ring-2 focus:ring-forest/35"
                 />
               </label>
             </div>

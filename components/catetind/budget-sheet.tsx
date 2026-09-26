@@ -59,7 +59,7 @@ export function BudgetSheet({
           aria-label={title}
           className={cn(
             /* mobile — bottom sheet */
-            'fixed inset-x-0 bottom-0 z-[70] mx-auto flex max-h-[92dvh] w-full max-w-md flex-col overflow-hidden rounded-t-[2rem] bg-[#fbf6d9] shadow-[0_-24px_60px_-24px_rgba(69,89,78,0.55)] outline-none',
+            'fixed inset-x-0 bottom-0 z-[70] mx-auto flex max-h-[92dvh] w-full max-w-md flex-col overflow-hidden rounded-t-[2rem] bg-[#ffffff] shadow-[0_-24px_60px_-24px_rgba(69,89,78,0.55)] outline-none',
             /* desktop — dialog tengah (translate = properti terpisah dari transform Vaul) */
             'lg:inset-x-auto lg:bottom-auto lg:top-1/2 lg:left-1/2 lg:max-h-[86dvh] lg:max-w-lg lg:-translate-x-1/2 lg:-translate-y-1/2 lg:rounded-[2rem] lg:shadow-[0_28px_70px_-24px_rgba(69,89,78,0.5)]',
           )}
@@ -89,7 +89,7 @@ export function BudgetSheet({
               type="button"
               onClick={onClose}
               aria-label="Tutup"
-              className="flex size-9 shrink-0 items-center justify-center rounded-full bg-cream text-ink ring-1 ring-soil/5 transition-colors hover:bg-sage active:scale-95"
+              className="flex size-9 shrink-0 items-center justify-center rounded-full bg-cream text-ink ring-1 ring-soil/12 transition-colors hover:bg-sage active:scale-95"
             >
               <X className="size-4" strokeWidth={2.2} />
             </button>
@@ -103,7 +103,7 @@ export function BudgetSheet({
           </div>
 
           {footer && (
-            <div className="shrink-0 border-t border-soil/[0.06] bg-cream/70 px-5 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] lg:px-6 lg:pb-5">
+            <div className="shrink-0 border-t border-soil/12 bg-cream/70 px-5 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] lg:px-6 lg:pb-5">
               {footer}
             </div>
           )}
@@ -189,7 +189,7 @@ export function RupiahField({
       {label && <span className="text-[13px] font-semibold leading-snug text-ink">{label}</span>}
       <span
         className={cn(
-          'mt-2 flex items-center gap-2 rounded-2xl bg-cream px-4 ring-1 ring-soil/[0.08] transition-shadow focus-within:ring-2 focus-within:ring-forest/35',
+          'mt-2 flex items-center gap-2 rounded-2xl bg-cream px-4 ring-1 ring-soil/16 transition-shadow focus-within:ring-2 focus-within:ring-forest/35',
           size === 'lg' ? 'py-3.5' : 'py-3',
         )}
       >
@@ -251,7 +251,7 @@ export function ChoicePills<T extends string>({
               'rounded-full px-3.5 py-2 text-[12.5px] font-semibold transition-all duration-200 active:scale-95',
               active
                 ? 'bg-forest text-mint shadow-[0_10px_22px_-14px_rgba(69,89,78,0.75)]'
-                : 'bg-cream text-ink/60 ring-1 ring-soil/[0.07] hover:bg-cream hover:text-ink',
+                : 'bg-cream text-ink/60 ring-1 ring-soil/14 hover:bg-cream hover:text-ink',
             )}
           >
             {option.label}

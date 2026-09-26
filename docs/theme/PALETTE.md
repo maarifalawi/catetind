@@ -11,8 +11,8 @@ Satu sumber kebenaran warna untuk seluruh sistem. Semua warna di `app/`,
 | --- | --- | --- | --- |
 | **Soil** | `#503A3A` | 15% | Teks utama, garis gelap, scrim overlay (token `ink`) |
 | **Evergreen** | `#45594E` | 15% | Permukaan brand gelap: hero, muka kartu, sidebar (token `forest`) |
-| **Ivory** | `#FBF6D9` | 15% | Latar utama & permukaan kartu (token `cream`) |
-| **Oat** | `#EBE4DE` | 15% | Permukaan sekunder, chip, kanvas pucat (token `sage`) |
+| **Ivory** | `#FBF6D9` | 15% | Aksen hangat opsional — **bukan** permukaan (dasar = putih) |
+| **Oat** | `#EBE4DE` | 15% | Elemen kecil: chip/pill, lingkaran ikon, hover, kotak info (token `sage`) |
 | **Plum** | `#B89191` | 7.5% | Aksen rose: alert / lewat batas (token `hud-terracotta`) |
 | **Olive** | `#B5B987` | 7.5% | Aksen hijau-kuning: status "aman" (token `hud-sage`) |
 | **Thistle** | `#91A0B8` | 7.5% | Aksen biru: info, kategori netral, transport |
@@ -24,10 +24,15 @@ Satu sumber kebenaran warna untuk seluruh sistem. Semua warna di `app/`,
 > `leaf` karena token `--color-sage` sudah lebih dulu dipakai sebagai
 > *permukaan pucat* di ratusan tempat (sekarang = Oat). Jadi `sage` ≠ Sage.
 
-> **Kanvas halaman:** latar halaman memakai **putih rata** —
-> `--color-canvas: #ffffff`, kelas `bg-canvas`. Ini satu-satunya warna di luar
-> 10 warna palet, dan hanya boleh dipakai untuk latar halaman
-> (`components/catetind/phone-stage.tsx`). Kartu & chip tetap Ivory/Oat.
+> **Dasar = PUTIH.** Latar halaman **dan** permukaan kartu/panel memakai putih
+> — token teknis `--color-canvas: #ffffff` (kelas `bg-canvas`) dan alias
+> `--color-cream` (juga putih). **Ivory `#FBF6D9` tidak dipakai sebagai
+> permukaan**; tokennya disimpan di palet hanya sebagai aksen hangat opsional.
+> Pemisah antar-kartu di atas putih datang dari hairline `ring-soil/8`–`/16`
+> + shadow lembut.
+>
+> **Oat `#EBE4DE`** masih dipakai, tapi hanya untuk elemen kecil: chip/pill,
+> lingkaran ikon, hover state, dan kotak info. Tidak untuk permukaan besar.
 
 ---
 
@@ -44,8 +49,9 @@ Lapis 3  NILAI TURUNAN ── tint/shade (mis. #52685c, #dbe4c7) untuk gradien,
          (terhitung dari        bayangan, dan stop gelap kartu
           warna palet)
               │
-PENGECUALIAN                ── `bg-canvas` (#ffffff) — latar halaman putih rata.
-                                Satu-satunya warna di luar palet, khusus kanvas.
+PENGECUALIAN                ── `bg-canvas` (#ffffff) — dasar halaman & permukaan
+                                kartu. `bg-cream` juga = putih (canvas).
+                                Di luar 10 warna palet, khusus permukaan dasar.
 ```
 
 Semua ditulis di satu blok `@theme inline` di `app/globals.css`. Komponen hanya
@@ -58,7 +64,7 @@ boleh memakai **Lapis 1 & 2** — jangan menulis hex baru langsung di komponen.
 | `ink` | `#12281f` | `ink` | **Soil** `#503a3a` |
 | `forest` | `#103a2a` | `forest` | **Evergreen** `#45594e` |
 | `forest-soft` | `#17543c` | `forest-soft` | turunan `#52685c` |
-| `cream` | `#f4f8ef` | `cream` | **Ivory** `#fbf6d9` |
+| `cream` | `#f4f8ef` | `cream` | **Putih / canvas** `#ffffff` |
 | `sage` | `#e3edd8` | `sage` | **Oat** `#ebe4de` |
 | `mint` | `#b7e04b` | `mint` | **Sage (palet)** `#91bb9e` |
 | `mint-soft` | `#d6ef8e` | `mint-soft` | turunan `#dbe4c7` |
@@ -99,8 +105,10 @@ menerima `color-mix`).
 
 ## 3. Aturan pemakaian
 
-- **Latar berlapis:** kanvas = **putih rata** (`bg-canvas`), kartu = Ivory
-  (`bg-cream`), kartu gelap = Evergreen (`forest`).
+- **Latar berlapis:** kanvas = **putih** (`bg-canvas`) dan kartu/panel juga
+  **putih** (`bg-cream` = canvas) — pemisahnya hairline `ring-soil/8`–`/16`
+  plus shadow lembut. Kartu gelap = Evergreen (`forest`).
+- **Ivory tidak dipakai** sebagai permukaan; **Oat** hanya untuk chip/pill kecil.
 - **Teks:** Soil di atas latar terang; Ivory di atas Evergreen/Soil.
 - **Status/uang:** hijau (Sage) = uang masuk & positif · Olive = aman/on-track ·
   Cantelope = hati-hati/pengeluaran · Plum = lewat batas/alert · Thistle = info.
@@ -158,6 +166,19 @@ node scripts/theme/apply-palette.mjs --dry-run  # (padanan tanpa pnpm)
   supaya warna tidak "nyasar" lagi.
 - **`scripts/theme/apply-palette.mjs`** — tabel pemetaan lengkap lama → baru
   (332 hex · 190 rgb · 738 kelas). Sekaligus dokumentasi resmi migrasi ini.
-  Untuk palet berikutnya: ubah `PALETTE` di dalamnya lalu jalankan ulang.
+
+### Riwayat migrasi
+
+1. **Migrasi palet** — Forest/Lime → Earth Pastel (332 hex · 190 rgb · 738 kelas).
+2. **Dasar putih** — latar halaman jadi `bg-canvas` (#ffffff), gradien Oat→Ivory
+   dibuang; `themeColor` + `manifest.background_color` ikut putih.
+3. **Permukaan putih** — seluruh permukaan Ivory `#fbf6d9` → putih (68 tempat),
+   `--color-cream` → `#ffffff`, token shadcn `--card/--popover/--sidebar` → putih.
+   Karena kartu kini putih-di-atas-putih, hairline `ring/border/divide-soil`
+   dinaikkan (`/5` → `/12`, `[0.0x]` → `/8`–`/16`) dan isian tipis `bg-soil`
+   dinaikkan, supaya batas kartu tetap terbaca.
+
+Untuk palet berikutnya: ubah `PALETTE` di `apply-palette.mjs`, lalu jalankan ulang.
+
 
 

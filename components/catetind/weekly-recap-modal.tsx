@@ -299,7 +299,7 @@ function SlideOverview() {
 
       {/* dua tile ringkas */}
       <div className="grid grid-cols-2 gap-3">
-        <section className="rounded-[1.75rem] bg-cream p-4 ring-1 ring-soil/5">
+        <section className="rounded-[1.75rem] bg-cream p-4 ring-1 ring-soil/12">
           <MicroLabel>Transaksi</MicroLabel>
           <p className="mt-1.5 text-3xl font-semibold leading-none tracking-tight tabular-nums text-ink">
             {WEEK_DATA.transactions}
@@ -316,7 +316,7 @@ function SlideOverview() {
       </div>
 
       {/* saving rate */}
-      <section className="rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/5">
+      <section className="rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12">
         <div className="flex items-start justify-between gap-3">
           <div>
             <MicroLabel>Saving rate</MicroLabel>
@@ -438,7 +438,7 @@ function SlideExpenses() {
       </section>
 
       {/* rincian per kategori — bar berwarna + nominal (ala bar chart referensi) */}
-      <section className="rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/5">
+      <section className="rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12">
         <MicroLabel>Pengeluaran per kategori</MicroLabel>
         <ul className="mt-4 space-y-4">
           {WEEK_SEGMENTS.map((seg) => (
@@ -474,7 +474,7 @@ function SlideExpenses() {
       </section>
 
       {/* highlight pos terbesar — ikon bertint warna kategori */}
-      <section className="flex items-start gap-3 rounded-[1.75rem] bg-cream p-4 ring-1 ring-soil/5">
+      <section className="flex items-start gap-3 rounded-[1.75rem] bg-cream p-4 ring-1 ring-soil/12">
         <span
           aria-hidden
           className="flex size-9 shrink-0 items-center justify-center rounded-full"
@@ -500,7 +500,7 @@ function SlidePlant() {
   return (
     <div className="space-y-4">
       {/* kartu tanaman + jalur tahap Benih → Berbunga */}
-      <section className="relative overflow-hidden rounded-[1.75rem] bg-gradient-to-b from-sage/70 via-cream to-cream p-5 ring-1 ring-soil/[0.04]">
+      <section className="relative overflow-hidden rounded-[1.75rem] bg-gradient-to-b from-sage/70 via-cream to-cream p-5 ring-1 ring-soil/8">
         <span
           aria-hidden
           className="pointer-events-none absolute bottom-16 left-1/2 h-20 w-44 -translate-x-1/2 rounded-full bg-mint/30 blur-2xl"
@@ -550,7 +550,7 @@ function SlidePlant() {
       </section>
 
       {/* progres level (streak tersembunyi — yang tampil cuma level & framing positif) */}
-      <section className="rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/5">
+      <section className="rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12">
         <div className="flex items-start justify-between gap-3">
           <div>
             <MicroLabel>Level tanaman</MicroLabel>
@@ -586,7 +586,7 @@ function SlidePlant() {
           </p>
           <p className="mt-1.5 text-[11px] text-forest/60">level naik 🌱</p>
         </section>
-        <section className="rounded-[1.75rem] bg-cream p-4 ring-1 ring-soil/5">
+        <section className="rounded-[1.75rem] bg-cream p-4 ring-1 ring-soil/12">
           <MicroLabel>Bonus HP</MicroLabel>
           <p className="mt-1.5 text-3xl font-semibold leading-none tracking-tight tabular-nums text-ink">
             +{WEEK_PLANT.hpGain}
@@ -643,7 +643,7 @@ function SlidePlan() {
   return (
     <div className="space-y-4">
       {/* insight utama minggu depan */}
-      <section className="flex items-start gap-3 rounded-[1.75rem] bg-sage/60 p-4 ring-1 ring-soil/5">
+      <section className="flex items-start gap-3 rounded-[1.75rem] bg-sage/60 p-4 ring-1 ring-soil/12">
         <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-cream text-forest">
           <Lightbulb className="size-4" strokeWidth={2.2} />
         </span>
@@ -655,7 +655,7 @@ function SlidePlan() {
       </section>
 
       {/* bar perbandingan — nominal di atas bar, tumbuh dari bawah (keyframe bar-grow) */}
-      <section className="rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/5">
+      <section className="rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12">
         <div className="flex items-start justify-between gap-3">
           <MicroLabel className="pt-1">Pengeluaran: sekarang vs rencana</MicroLabel>
           <PctBadge tone="mint">
@@ -710,7 +710,7 @@ function SlidePlan() {
       </section>
 
       {/* tiga langkah kecil */}
-      <section className="rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/5">
+      <section className="rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12">
         <MicroLabel>Langkah kecil minggu depan</MicroLabel>
         <ul className="mt-4 space-y-3.5">
           {steps.map(({ icon: Icon, text, badge }) => (
@@ -739,7 +739,7 @@ function SlidePlan() {
 
         <button
           type="button"
-          className="flex w-full items-center justify-center gap-2 rounded-full bg-cream py-3 text-sm font-medium text-ink/60 ring-1 ring-soil/5 transition-colors hover:bg-sage/40 hover:text-ink active:scale-[0.98]"
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-cream py-3 text-sm font-medium text-ink/60 ring-1 ring-soil/12 transition-colors hover:bg-sage/40 hover:text-ink active:scale-[0.98]"
         >
           <TrendingUp className="size-4" strokeWidth={2.2} />
           Lihat rencana tabungan cerdas
@@ -884,7 +884,7 @@ function WeekRecapSheet({
         aria-label="Rekap mingguan"
         style={sheetStyle}
         className={cn(
-          'absolute inset-x-0 bottom-0 top-8 flex flex-col rounded-t-[2.25rem] bg-cream px-5 pb-6 shadow-[0_-24px_60px_-24px_rgba(69,89,78,0.55)] ring-1 ring-soil/5 transition-[transform,opacity] duration-[650ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform lg:inset-x-auto lg:inset-y-3 lg:right-3 lg:w-[440px] lg:rounded-[2rem] lg:shadow-[-24px_0_60px_-24px_rgba(69,89,78,0.55)]',
+          'absolute inset-x-0 bottom-0 top-8 flex flex-col rounded-t-[2.25rem] bg-cream px-5 pb-6 shadow-[0_-24px_60px_-24px_rgba(69,89,78,0.55)] ring-1 ring-soil/12 transition-[transform,opacity] duration-[650ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform lg:inset-x-auto lg:inset-y-3 lg:right-3 lg:w-[440px] lg:rounded-[2rem] lg:shadow-[-24px_0_60px_-24px_rgba(69,89,78,0.55)]',
           open
             ? 'translate-y-0 opacity-100 lg:translate-x-0'
             : 'translate-y-full opacity-0 lg:translate-y-0 lg:translate-x-[calc(100%+12px)]',
@@ -915,11 +915,11 @@ function WeekRecapSheet({
             </h2>
             {/* meta sebagai chip — bukan tiga baris teks bertingkat */}
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-cream px-2.5 py-1 text-[11px] font-medium text-ink/60 ring-1 ring-soil/5">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-cream px-2.5 py-1 text-[11px] font-medium text-ink/60 ring-1 ring-soil/12">
                 <Calendar className="size-3.5 text-forest/55" strokeWidth={2.2} />
                 {WEEK_PERIOD}
               </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-cream px-2.5 py-1 text-[11px] font-medium text-ink/60 ring-1 ring-soil/5">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-cream px-2.5 py-1 text-[11px] font-medium text-ink/60 ring-1 ring-soil/12">
                 <BarChart3 className="size-3.5 text-forest/55" strokeWidth={2.2} />
                 {WEEK_DATA.transactions} transaksi tercatat
               </span>
@@ -929,7 +929,7 @@ function WeekRecapSheet({
             <button
               type="button"
               aria-label="Bagikan rekap"
-              className="flex size-9 items-center justify-center rounded-full bg-cream text-ink ring-1 ring-soil/5 transition-colors hover:bg-sage"
+              className="flex size-9 items-center justify-center rounded-full bg-cream text-ink ring-1 ring-soil/12 transition-colors hover:bg-sage"
             >
               <Share2 className="size-4" strokeWidth={2.2} />
             </button>
@@ -938,7 +938,7 @@ function WeekRecapSheet({
               type="button"
               onClick={onClose}
               aria-label="Tutup"
-              className="flex size-9 items-center justify-center rounded-full bg-cream text-ink ring-1 ring-soil/5 transition-colors hover:bg-sage"
+              className="flex size-9 items-center justify-center rounded-full bg-cream text-ink ring-1 ring-soil/12 transition-colors hover:bg-sage"
             >
               <X className="size-4" strokeWidth={2.2} />
             </button>
@@ -968,7 +968,7 @@ function WeekRecapSheet({
                   'flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-2 text-xs font-medium transition-colors duration-200',
                   active
                     ? 'bg-forest font-semibold text-mint'
-                    : 'bg-cream text-ink/45 ring-1 ring-soil/5 hover:text-ink',
+                    : 'bg-cream text-ink/45 ring-1 ring-soil/12 hover:text-ink',
                 )}
               >
                 {s.icon}
@@ -1017,14 +1017,14 @@ function WeekRecapSheet({
         </div>
 
         {/* footer — bukan sticky, tidak pakai backdrop-blur */}
-        <div className="mt-3 flex shrink-0 items-center gap-3 border-t border-soil/[0.06] pt-3 pb-[env(safe-area-inset-bottom)]">
+        <div className="mt-3 flex shrink-0 items-center gap-3 border-t border-soil/12 pt-3 pb-[env(safe-area-inset-bottom)]">
           <button
             type="button"
             aria-label="Slide sebelumnya"
             disabled={prevDisabled}
             onClick={() => !prevDisabled && setSlide(slide - 1)}
             className={cn(
-              'flex size-10 shrink-0 items-center justify-center rounded-full bg-cream text-ink ring-1 ring-soil/5 transition-colors hover:bg-sage',
+              'flex size-10 shrink-0 items-center justify-center rounded-full bg-cream text-ink ring-1 ring-soil/12 transition-colors hover:bg-sage',
               prevDisabled && 'opacity-30',
             )}
           >
@@ -1045,7 +1045,7 @@ function WeekRecapSheet({
             disabled={nextDisabled}
             onClick={() => !nextDisabled && setSlide(slide + 1)}
             className={cn(
-              'flex size-10 shrink-0 items-center justify-center rounded-full bg-cream text-ink ring-1 ring-soil/5 transition-colors hover:bg-sage',
+              'flex size-10 shrink-0 items-center justify-center rounded-full bg-cream text-ink ring-1 ring-soil/12 transition-colors hover:bg-sage',
               nextDisabled && 'opacity-30',
             )}
           >

@@ -262,12 +262,12 @@ export function BudgetScreen() {
           <GlobalPrivacyToggle className="size-9" />
           <button
             type="button"
-            className="flex size-9 items-center justify-center rounded-full bg-cream text-ink ring-1 ring-soil/5"
+            className="flex size-9 items-center justify-center rounded-full bg-cream text-ink ring-1 ring-soil/12"
             aria-label="Menu"
           >
             <AlignRight className="size-4" />
           </button>
-          <span className="relative size-9 overflow-hidden rounded-full ring-1 ring-soil/5">
+          <span className="relative size-9 overflow-hidden rounded-full ring-1 ring-soil/12">
             <Image
               src="/avatar-maarif.png"
               alt="Jon Snow"
@@ -341,7 +341,7 @@ export function BudgetScreen() {
               <h2 className="font-display text-[17px] font-bold tracking-tight text-ink">
                 Budget Kategori
               </h2>
-              <span className="rounded-full bg-cream px-2 py-0.5 text-[10.5px] font-bold text-ink/45 tabular-nums ring-1 ring-soil/5">
+              <span className="rounded-full bg-cream px-2 py-0.5 text-[10.5px] font-bold text-ink/45 tabular-nums ring-1 ring-soil/12">
                 {visibleBudgets.length}
               </span>
             </div>
@@ -370,7 +370,7 @@ export function BudgetScreen() {
               <h2 className="font-display text-[17px] font-bold tracking-tight text-ink">
                 Celengan Impian
               </h2>
-              <span className="rounded-full bg-cream px-2 py-0.5 text-[10.5px] font-bold text-ink/45 tabular-nums ring-1 ring-soil/5">
+              <span className="rounded-full bg-cream px-2 py-0.5 text-[10.5px] font-bold text-ink/45 tabular-nums ring-1 ring-soil/12">
                 {visibleFunds.length}
               </span>
             </div>
@@ -440,7 +440,7 @@ function ZoneTabs({ value, onChange }: { value: ZoneTab; onChange: (value: ZoneT
     <div
       role="tablist"
       aria-label="Zona halaman"
-      className="flex items-center gap-1 rounded-full bg-cream/70 p-1 ring-1 ring-soil/[0.06]"
+      className="flex items-center gap-1 rounded-full bg-cream/70 p-1 ring-1 ring-soil/12"
     >
       {ZONE_TABS.map((tab) => {
         const active = value === tab.id

@@ -302,7 +302,7 @@ export function WalletScreen() {
             tombol mata ini. Karena tombolnya membaca state privasi global, satu
             klik menyensor SELURUH halaman — hero, tile likuiditas, dan saldo
             tiap kartu dompet. */}
-        <header className="sticky top-2 z-30 flex items-center justify-between gap-3 rounded-[1.5rem] bg-cream/90 px-4 py-3 shadow-[0_18px_40px_-32px_rgba(69,89,78,0.65)] ring-1 ring-soil/[0.05] backdrop-blur-md">
+        <header className="sticky top-2 z-30 flex items-center justify-between gap-3 rounded-[1.5rem] bg-cream/90 px-4 py-3 shadow-[0_18px_40px_-32px_rgba(69,89,78,0.65)] ring-1 ring-soil/10 backdrop-blur-md">
           <div className="flex min-w-0 items-center gap-3">
             {/* penanda halaman — tile sage→mint (palet brand), bukan kotak putih polos */}
             <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sage via-cream to-mint-soft text-forest shadow-[0_12px_26px_-16px_rgba(69,89,78,0.75)] ring-1 ring-forest/10">
@@ -469,7 +469,7 @@ export function WalletScreen() {
             Rekomendasinya DINAMIS: brand yang sudah dimiliki user disaring keluar
             dari pool, jadi sistem tidak mungkin lagi menawarkan BCA ke user yang
             sudah punya dompet BCA. */}
-        <section className="flex flex-col rounded-[1.75rem] bg-cream p-4 shadow-[0_18px_40px_-34px_rgba(69,89,78,0.55)] ring-1 ring-soil/[0.05] sm:p-5 xl:col-span-4">
+        <section className="flex flex-col rounded-[1.75rem] bg-cream p-4 shadow-[0_18px_40px_-34px_rgba(69,89,78,0.55)] ring-1 ring-soil/10 sm:p-5 xl:col-span-4">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <span className="flex size-7 items-center justify-center rounded-xl bg-gradient-to-br from-sage via-cream to-mint-soft text-forest ring-1 ring-forest/10">
@@ -509,7 +509,7 @@ export function WalletScreen() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.04 * i, ease: EASE }}
                 className={cn(
-                  'group flex w-[104px] shrink-0 snap-start flex-col items-center gap-2.5 rounded-[1.4rem] bg-cream p-3.5 ring-1 ring-soil/[0.05] shadow-[0_14px_30px_-24px_rgba(69,89,78,0.5)] transition-all duration-300 hover:-translate-y-1 active:scale-95 motion-reduce:transition-none xl:w-auto',
+                  'group flex w-[104px] shrink-0 snap-start flex-col items-center gap-2.5 rounded-[1.4rem] bg-cream p-3.5 ring-1 ring-soil/10 shadow-[0_14px_30px_-24px_rgba(69,89,78,0.5)] transition-all duration-300 hover:-translate-y-1 active:scale-95 motion-reduce:transition-none xl:w-auto',
                   brand.frame,
                 )}
               >
@@ -766,7 +766,7 @@ export function WalletScreen() {
                       animate={{ opacity: 1, scale: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.97, y: 6 }}
                       transition={{ duration: 0.16, ease: [0.32, 0.72, 0, 1] }}
-                      className="absolute bottom-16 right-3 z-30 w-56 origin-bottom-right rounded-2xl bg-cream/95 p-1.5 shadow-[0_28px_60px_-22px_rgba(69,89,78,0.55)] ring-1 ring-soil/5 backdrop-blur-xl"
+                      className="absolute bottom-16 right-3 z-30 w-56 origin-bottom-right rounded-2xl bg-cream/95 p-1.5 shadow-[0_28px_60px_-22px_rgba(69,89,78,0.55)] ring-1 ring-soil/12 backdrop-blur-xl"
                     >
                       <MenuItem
                         icon={ArrowLeftRight}

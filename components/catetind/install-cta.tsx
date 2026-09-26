@@ -62,7 +62,7 @@ export function InstallCta({
     return (
       <div
         className={cn(
-          'flex items-start gap-3 rounded-3xl bg-cream/85 px-5 py-4 ring-1 ring-soil/5 backdrop-blur-xl',
+          'flex items-start gap-3 rounded-3xl bg-cream/85 px-5 py-4 ring-1 ring-soil/12 backdrop-blur-xl',
           className,
         )}
       >

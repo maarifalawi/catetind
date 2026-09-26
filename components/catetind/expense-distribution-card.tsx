@@ -44,7 +44,7 @@ export const ExpenseDistributionCard = memo(function ExpenseDistributionCard() {
   const activeSeg = active === null ? null : SEGMENTS[active]
 
   return (
-                <div className="flex flex-col rounded-[2rem] bg-cream p-4 ring-1 ring-soil/5">
+                <div className="flex flex-col rounded-[2rem] bg-cream p-4 ring-1 ring-soil/12">
       {/* header - konsisten dengan kartu lain */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">

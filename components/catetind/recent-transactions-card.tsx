@@ -270,7 +270,7 @@ export const RecentTransactionsCard = memo(function RecentTransactionsCard() {
   })()
 
   return (
-    <div className="flex flex-col rounded-[2rem] bg-cream p-6 ring-1 ring-soil/5">
+    <div className="flex flex-col rounded-[2rem] bg-cream p-6 ring-1 ring-soil/12">
       {/* header — konsisten dengan kartu lain */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2.5">
@@ -327,7 +327,7 @@ export const RecentTransactionsCard = memo(function RecentTransactionsCard() {
                     <span className="relative inline-flex size-1.5 rounded-full bg-mint" />
                   </span>
                 )}
-                <span className="h-px flex-1 bg-soil/5" />
+                <span className="h-px flex-1 bg-soil/8" />
               </div>
 
               <ul className="mt-1.5 flex flex-col gap-0.5">

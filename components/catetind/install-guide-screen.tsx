@@ -79,7 +79,7 @@ export function InstallGuideScreen() {
       <div className="mx-auto w-full max-w-2xl px-5 pt-6 pb-32 sm:px-8 lg:px-10 lg:pt-8">
         {/* ── HERO: jual alasannya dulu ── */}
         <header>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-cream/70 px-3 py-1 text-[11px] font-semibold tracking-[0.16em] text-forest uppercase ring-1 ring-soil/5">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-cream/70 px-3 py-1 text-[11px] font-semibold tracking-[0.16em] text-forest uppercase ring-1 ring-soil/12">
             <Zap className="size-3" strokeWidth={2.6} />
             Gratis · Tanpa App Store
           </span>
@@ -95,7 +95,7 @@ export function InstallGuideScreen() {
             {BENEFITS.map((benefit) => (
               <li
                 key={benefit.title}
-                className="flex items-center gap-3 rounded-2xl bg-cream/85 px-3.5 py-3 ring-1 ring-soil/5 backdrop-blur-xl sm:flex-col sm:items-start sm:gap-2 sm:py-4"
+                className="flex items-center gap-3 rounded-2xl bg-cream/85 px-3.5 py-3 ring-1 ring-soil/12 backdrop-blur-xl sm:flex-col sm:items-start sm:gap-2 sm:py-4"
               >
                 <span aria-hidden className="text-xl">
                   {benefit.emoji}
@@ -112,8 +112,8 @@ export function InstallGuideScreen() {
           /* deteksi perangkat jalan setelah mount — jangan sempat menampilkan
              panduan perangkat yang salah */
           <div className="mt-6 space-y-3" aria-live="polite">
-            <div className="h-16 animate-pulse rounded-3xl bg-cream/60 ring-1 ring-soil/5" />
-            <div className="h-64 animate-pulse rounded-3xl bg-cream/60 ring-1 ring-soil/5" />
+            <div className="h-16 animate-pulse rounded-3xl bg-cream/60 ring-1 ring-soil/12" />
+            <div className="h-64 animate-pulse rounded-3xl bg-cream/60 ring-1 ring-soil/12" />
             <p className="text-center text-xs text-ink/40">Mendeteksi perangkat kamu…</p>
           </div>
         ) : (
@@ -164,7 +164,7 @@ export function InstallGuideScreen() {
                 <div
                   role="tablist"
                   aria-label="Pilih perangkat"
-                  className="flex w-full items-center gap-1 rounded-full bg-cream p-1 shadow-[0_10px_24px_-18px_rgba(69,89,78,0.55)] ring-1 ring-soil/[0.06]"
+                  className="flex w-full items-center gap-1 rounded-full bg-cream p-1 shadow-[0_10px_24px_-18px_rgba(69,89,78,0.55)] ring-1 ring-soil/12"
                 >
                   {TAB_ORDER.map((target) => {
                     const active = activeTab === target

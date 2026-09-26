@@ -38,7 +38,7 @@ export function PlantDetailModal({
         role="dialog"
         aria-modal="true"
         aria-label="Detail tanaman"
-                className="w-full max-w-sm rounded-3xl bg-cream p-6 shadow-[0_20px_60px_-12px_rgba(80,58,58,0.15)] ring-1 ring-soil/5"
+                className="w-full max-w-sm rounded-3xl bg-cream p-6 shadow-[0_20px_60px_-12px_rgba(80,58,58,0.15)] ring-1 ring-soil/12"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
@@ -49,14 +49,14 @@ export function PlantDetailModal({
             type="button"
             aria-label="Tutup"
             onClick={onClose}
-            className="flex size-9 items-center justify-center rounded-full bg-cream text-ink ring-1 ring-soil/5 transition-colors hover:bg-sage"
+            className="flex size-9 items-center justify-center rounded-full bg-cream text-ink ring-1 ring-soil/12 transition-colors hover:bg-sage"
           >
             <X className="size-4" />
           </button>
         </div>
 
         {/* tanaman besar */}
-        <div className="relative mt-2 flex justify-center rounded-2xl bg-gradient-to-b from-sage/60 to-cream py-4 ring-1 ring-soil/[0.04]">
+        <div className="relative mt-2 flex justify-center rounded-2xl bg-gradient-to-b from-sage/60 to-cream py-4 ring-1 ring-soil/8">
           <span
             aria-hidden
             className="pointer-events-none absolute bottom-4 h-16 w-32 rounded-full bg-mint/25 blur-2xl"
@@ -98,7 +98,7 @@ export function PlantDetailModal({
         <div className="mt-5 space-y-2.5">
           <StatRow label="Kesehatan tanaman">
             <span className="flex items-center gap-2">
-              <span className="h-1.5 w-16 overflow-hidden rounded-full bg-soil/[0.08]">
+              <span className="h-1.5 w-16 overflow-hidden rounded-full bg-soil/[0.11]">
                 <span
                   className={cn(
                     'block h-full rounded-full',
@@ -117,7 +117,7 @@ export function PlantDetailModal({
           </StatRow>
         </div>
 
-        <p className="mt-5 rounded-2xl bg-cream/70 px-4 py-3 text-center text-[13px] leading-relaxed text-ink/60 ring-1 ring-soil/[0.04]">
+        <p className="mt-5 rounded-2xl bg-cream/70 px-4 py-3 text-center text-[13px] leading-relaxed text-ink/60 ring-1 ring-soil/8">
           Kamu udah catat <b className="text-forest">{plant.activeDays} hari</b>{' '}
           bulan ini - tanamanmu tumbuh karena konsistensimu. Lanjutin ya! 💚
         </p>

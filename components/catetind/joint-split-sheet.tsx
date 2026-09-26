@@ -112,7 +112,7 @@ export function JointSplitSheet({
       }
     >
       {/* nominal transaksi yang sedang dibagi */}
-      <div className="flex items-center justify-between gap-3 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/[0.06]">
+      <div className="flex items-center justify-between gap-3 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/12">
         <span className="flex items-center gap-2 text-[12.5px] font-semibold text-ink/60">
           <Scale className="size-4 text-forest" strokeWidth={2.3} />
           Nominal transaksi
@@ -137,7 +137,7 @@ export function JointSplitSheet({
       {/* ── kendali per mode (progressive disclosure) ───────────────────── */}
       <div className="mt-4 space-y-3">
         <RevealStep show={mode === 'equal'}>
-          <div className="rounded-2xl bg-cream px-4 py-3.5 ring-1 ring-soil/[0.06]">
+          <div className="rounded-2xl bg-cream px-4 py-3.5 ring-1 ring-soil/12">
             <p className="text-[12.5px] font-semibold text-ink/70">
               {me.name} 50% · {partner.name} 50%
             </p>
@@ -254,7 +254,7 @@ function PercentSlider({
   const mineShare = Math.round((total * percent) / 100)
 
   return (
-    <div className="rounded-2xl bg-cream px-4 py-4 ring-1 ring-soil/[0.06]">
+    <div className="rounded-2xl bg-cream px-4 py-4 ring-1 ring-soil/12">
       <div className="flex items-center justify-between gap-2 text-[12.5px] font-semibold">
         <span className="flex items-center gap-1.5 text-[#503a3a]">
           <span aria-hidden>{me.avatar}</span>
@@ -308,7 +308,7 @@ function PercentSlider({
           animate={{ scale: dragging ? 1.14 : 1 }}
           transition={{ type: 'spring', stiffness: 420, damping: 30 }}
           style={{ left: `${percent}%` }}
-          className="absolute top-1/2 flex size-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-[#fbf6d9] ring-2 ring-forest shadow-[0_8px_18px_-10px_rgba(69,89,78,0.9)]"
+          className="absolute top-1/2 flex size-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-[#ffffff] ring-2 ring-forest shadow-[0_8px_18px_-10px_rgba(69,89,78,0.9)]"
         >
           <span className="size-1.5 rounded-full bg-forest" />
         </motion.span>
@@ -334,7 +334,7 @@ function PercentSlider({
                 'rounded-full px-3 py-1.5 text-[11.5px] font-semibold transition-colors active:scale-95',
                 active
                   ? 'bg-forest text-mint'
-                  : 'bg-soil/[0.04] text-ink/60 hover:bg-soil/[0.07]',
+                  : 'bg-soil/[0.1] text-ink/60 hover:bg-soil/[0.1]',
               )}
             >
               {preset.me}/{preset.partner}

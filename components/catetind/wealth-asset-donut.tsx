@@ -40,7 +40,7 @@ export function WealthAssetDonut({
   if (slices.length === 0) return null
 
   return (
-    <div className="rounded-[1.75rem] bg-[#fbf6d9] p-5 shadow-[0_18px_44px_-30px_rgba(69,89,78,0.45)] ring-1 ring-soil/[0.05] sm:p-6">
+    <div className="rounded-[1.75rem] bg-[#ffffff] p-5 shadow-[0_18px_44px_-30px_rgba(69,89,78,0.45)] ring-1 ring-soil/10 sm:p-6">
       <div className="flex items-baseline justify-between gap-3">
         <h3 className="font-display text-[13.5px] font-bold tracking-tight text-ink">
           Alokasi Aset

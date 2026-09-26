@@ -75,7 +75,7 @@ export function SalaryWaterfall({
     <section
       aria-label="Waterfall gaji"
       className={cn(
-        'mt-5 rounded-[1.75rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(80,58,58,0.06)] ring-1 ring-soil/5 sm:p-6',
+        'mt-5 rounded-[1.75rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(80,58,58,0.06)] ring-1 ring-soil/12 sm:p-6',
         className,
       )}
     >
@@ -124,7 +124,7 @@ export function SalaryWaterfall({
       {/* bar gaji: segmen tagihan (terbesar di kiri) + proyeksi sisa gaji.
           onMouseLeave menutup tooltip supaya bar kembali bersih (audit #6). */}
       <div
-        className="mt-2 flex h-5 w-full overflow-hidden rounded-full bg-cream ring-1 ring-inset ring-soil/[0.06]"
+        className="mt-2 flex h-5 w-full overflow-hidden rounded-full bg-cream ring-1 ring-inset ring-soil/12"
         onMouseLeave={() => setActiveId(null)}
       >
         {waterfall.segments.map((segment) => (

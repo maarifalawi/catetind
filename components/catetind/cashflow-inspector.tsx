@@ -38,12 +38,12 @@ function relativeLabel(cell: CalendarCell) {
   if (cell.daysFromToday > 0) {
     return {
       text: cell.daysFromToday === 1 ? 'Besok' : `${cell.daysFromToday} hari lagi`,
-      className: 'bg-cream text-ink/55 ring-1 ring-inset ring-soil/[0.05]',
+      className: 'bg-cream text-ink/55 ring-1 ring-inset ring-soil/10',
     }
   }
   return {
     text: cell.daysFromToday === -1 ? 'Kemarin' : `${Math.abs(cell.daysFromToday)} hari lalu`,
-    className: 'bg-cream text-ink/45 ring-1 ring-inset ring-soil/[0.05]',
+    className: 'bg-cream text-ink/45 ring-1 ring-inset ring-soil/10',
   }
 }
 
@@ -66,7 +66,7 @@ export function CashflowInspector({
 }) {
   if (!cell) {
     return (
-      <aside className="rounded-[2rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(80,58,58,0.06)] ring-1 ring-soil/5 lg:sticky lg:top-8">
+      <aside className="rounded-[2rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(80,58,58,0.06)] ring-1 ring-soil/12 lg:sticky lg:top-8">
         <h2 className="font-display text-[18px] font-semibold tracking-tight text-ink">
           Pilih tanggal dulu
         </h2>
@@ -91,7 +91,7 @@ export function CashflowInspector({
   ].filter((part): part is string => part !== null)
 
   return (
-    <aside className="flex flex-col rounded-[2rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(80,58,58,0.06)] ring-1 ring-soil/5 lg:sticky lg:top-8">
+    <aside className="flex flex-col rounded-[2rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(80,58,58,0.06)] ring-1 ring-soil/12 lg:sticky lg:top-8">
       {/* ── 3A. TANGGAL + RINGKASAN SATU BARIS ───────────────────────────── */}
       <div className="flex items-center justify-between gap-2">
         <span
@@ -160,7 +160,7 @@ export function CashflowInspector({
 
 
       {/* ── 3C. DAFTAR TRANSAKSI / RAMALAN ───────────────────────────────── */}
-      <section className="mt-5 border-t border-soil/[0.06] pt-4">
+      <section className="mt-5 border-t border-soil/12 pt-4">
         <div className="flex items-center justify-between gap-2">
           <h3 className="text-[11px] font-bold uppercase tracking-[0.12em] text-ink/45">
             {cell.isFuture
@@ -192,7 +192,7 @@ export function CashflowInspector({
         ) : (
           <ul
             data-lenis-prevent
-            className="mt-1 flex max-h-[21rem] flex-col divide-y divide-soil/[0.05] overflow-y-auto pr-0.5"
+            className="mt-1 flex max-h-[21rem] flex-col divide-y divide-soil/10 overflow-y-auto pr-0.5"
           >
             {/* ramalan tampil lebih dulu — inilah yang butuh keputusan user */}
             {cell.forecast.map((entry) => (

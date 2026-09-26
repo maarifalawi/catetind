@@ -58,7 +58,7 @@ export const DailyHudCard = memo(function DailyHudCard() {
   return (
     <section
       aria-label="Jatah hari ini"
-      className="flex h-full flex-col rounded-[2rem] bg-cream p-4 ring-1 ring-soil/5"
+      className="flex h-full flex-col rounded-[2rem] bg-cream p-4 ring-1 ring-soil/12"
     >
       {/* header — konsisten dengan kartu lain */}
       <div className="flex items-center justify-between">
@@ -85,8 +85,8 @@ export const DailyHudCard = memo(function DailyHudCard() {
 
       {DRY_SPELL ? (
         /* ── Dry Spell — PACING LIMITS DISEMBUNYIKAN (PRD 2B.3) ── */
-        <div className="mt-5 flex flex-col items-center rounded-2xl bg-cream px-6 py-8 text-center ring-1 ring-soil/[0.04]">
-          <span className="flex size-12 items-center justify-center rounded-full bg-cream text-forest ring-1 ring-soil/5">
+        <div className="mt-5 flex flex-col items-center rounded-2xl bg-cream px-6 py-8 text-center ring-1 ring-soil/8">
+          <span className="flex size-12 items-center justify-center rounded-full bg-cream text-forest ring-1 ring-soil/12">
             <CircleDashed className="size-6" strokeWidth={1.8} />
           </span>
           <p className="mt-4 text-base font-semibold text-ink">
@@ -163,7 +163,7 @@ export const DailyHudCard = memo(function DailyHudCard() {
           </div>
 
           {/* footer meta — mengisi bawah kartu, jadi tidak ada ruang kosong */}
-          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-soil/[0.06] pt-2.5 text-[11px] text-ink/55">
+          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-soil/12 pt-2.5 text-[11px] text-ink/55">
             <span>
               Sisa bulan{' '}
               <b className="font-semibold text-ink tabular-nums">

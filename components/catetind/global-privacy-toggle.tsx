@@ -34,7 +34,7 @@ export function GlobalPrivacyToggle({ className }: { className?: string }) {
         'lg:h-11 lg:w-auto lg:gap-2 lg:px-4 lg:text-[12.5px] lg:font-semibold',
         masked
           ? 'bg-forest text-mint ring-forest/20 hover:bg-forest-soft'
-          : 'bg-cream text-ink ring-soil/5 hover:bg-sage',
+          : 'bg-cream text-ink ring-soil/12 hover:bg-sage',
         className,
       )}
     >

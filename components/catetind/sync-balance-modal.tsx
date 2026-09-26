@@ -92,7 +92,7 @@ export function SyncBalanceModal({
         <Drawer.Content
           data-catetind-sheet="true"
           aria-label="Sesuaikan saldo dompet"
-          className="fixed inset-x-0 bottom-0 z-[70] mx-auto flex max-h-[92dvh] w-full max-w-md flex-col overflow-hidden rounded-t-[2rem] bg-[#fbf6d9] pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-[0_-24px_60px_-24px_rgba(69,89,78,0.55)] outline-none"
+          className="fixed inset-x-0 bottom-0 z-[70] mx-auto flex max-h-[92dvh] w-full max-w-md flex-col overflow-hidden rounded-t-[2rem] bg-[#ffffff] pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-[0_-24px_60px_-24px_rgba(69,89,78,0.55)] outline-none"
         >
           {/* drag handle khas Vaul */}
           <div className="mx-auto mt-3 h-1.5 w-10 shrink-0 rounded-full bg-ink/10" />
@@ -116,7 +116,7 @@ export function SyncBalanceModal({
               {/* badge brand — warnanya mengikuti kartu dompetnya */}
               <span
                 className={cn(
-                  'flex size-10 shrink-0 items-center justify-center rounded-full text-cream shadow-sm ring-1 ring-soil/5',
+                  'flex size-10 shrink-0 items-center justify-center rounded-full text-cream shadow-sm ring-1 ring-soil/12',
                   shown?.color ?? 'bg-forest',
                 )}
               >

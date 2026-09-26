@@ -74,7 +74,7 @@ export function SpendingHeatmap({ masked }: { masked: boolean }) {
   const activeDays = days.filter((day) => day.total > 0).length
 
   return (
-    <section className="rounded-[2rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(80,58,58,0.06)] ring-1 ring-soil/5 sm:p-6">
+    <section className="rounded-[2rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(80,58,58,0.06)] ring-1 ring-soil/12 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-2.5">
           <span className="flex size-9 items-center justify-center rounded-full bg-sage text-forest">
@@ -87,7 +87,7 @@ export function SpendingHeatmap({ masked }: { masked: boolean }) {
             <p className="text-[11.5px] text-ink/45">{activeDays} hari aktif</p>
           </div>
         </div>
-        <span className="rounded-full bg-cream px-3 py-1.5 text-[11.5px] font-semibold text-ink/60 tabular-nums ring-1 ring-soil/5">
+        <span className="rounded-full bg-cream px-3 py-1.5 text-[11.5px] font-semibold text-ink/60 tabular-nums ring-1 ring-soil/12">
           {maskMoney(totalSpend, masked)} / {DAYS} hari
         </span>
       </div>
@@ -130,7 +130,7 @@ export function SpendingHeatmap({ masked }: { masked: boolean }) {
                       aria-label={`${formatDayLabel(day.date)}: ${maskMoney(day.total, masked)}`}
                       aria-pressed={isActive}
                       className={cn(
-                        'flex aspect-square w-full items-center justify-center rounded-[7px] text-[10px] font-bold tabular-nums ring-1 ring-inset ring-soil/[0.04] transition-[transform,box-shadow,opacity] duration-200 animate-[fade-pop_0.4s_ease_backwards] hover:-translate-y-0.5 hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40',
+                        'flex aspect-square w-full items-center justify-center rounded-[7px] text-[10px] font-bold tabular-nums ring-1 ring-inset ring-soil/8 transition-[transform,box-shadow,opacity] duration-200 animate-[fade-pop_0.4s_ease_backwards] hover:-translate-y-0.5 hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40',
                         LEVEL_CLASS[day.level],
                         LEVEL_TEXT_CLASS[day.level],
                         isActive && 'ring-2 ring-inset ring-forest/70',
@@ -179,7 +179,7 @@ export function SpendingHeatmap({ masked }: { masked: boolean }) {
             <span
               aria-hidden
               className={cn(
-                'size-3 rounded-[4px] ring-1 ring-inset ring-soil/[0.06]',
+                'size-3 rounded-[4px] ring-1 ring-inset ring-soil/12',
                 LEVEL_CLASS[level],
               )}
             />

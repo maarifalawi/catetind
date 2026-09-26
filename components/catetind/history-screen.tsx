@@ -191,7 +191,7 @@ export function HistoryScreen() {
           halaman (antara insight dan list) sehingga terlihat hanya berlaku
           untuk list di bawahnya. Sekarang dia duduk paling atas & diberi label
           "Filter Global" supaya jelas dia menyaring seluruh layar. */}
-      <section className="mt-5 rounded-[1.75rem] bg-cream p-3 shadow-[0_4px_24px_-4px_rgba(80,58,58,0.06)] ring-1 ring-soil/5 sm:p-3.5 lg:mt-6">
+      <section className="mt-5 rounded-[1.75rem] bg-cream p-3 shadow-[0_4px_24px_-4px_rgba(80,58,58,0.06)] ring-1 ring-soil/12 sm:p-3.5 lg:mt-6">
         <div className="flex items-center justify-between gap-2 px-1 pb-2">
           <span className="inline-flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-ink/40">
             <SlidersHorizontal className="size-3.5" strokeWidth={2.4} aria-hidden />
@@ -202,7 +202,7 @@ export function HistoryScreen() {
             <button
               type="button"
               onClick={resetFilters}
-              className="inline-flex items-center gap-1 rounded-full bg-cream px-2.5 py-1 text-[11px] font-semibold text-ink/55 ring-1 ring-soil/[0.04] transition-colors hover:bg-sage/60 hover:text-ink active:scale-95"
+              className="inline-flex items-center gap-1 rounded-full bg-cream px-2.5 py-1 text-[11px] font-semibold text-ink/55 ring-1 ring-soil/8 transition-colors hover:bg-sage/60 hover:text-ink active:scale-95"
             >
               <RotateCcw className="size-3" strokeWidth={2.4} aria-hidden />
               Reset
@@ -212,7 +212,7 @@ export function HistoryScreen() {
 
         {/* pencarian: placeholder adalah CONTOH PROMPT, bukan "Cari catatan",
             supaya user tahu search-nya bisa bahasa sehari-hari */}
-        <label className="flex h-11 min-w-0 items-center gap-2.5 rounded-full bg-cream/80 px-4 ring-1 ring-inset ring-soil/[0.04] transition-shadow focus-within:bg-cream focus-within:ring-2 focus-within:ring-forest/20">
+        <label className="flex h-11 min-w-0 items-center gap-2.5 rounded-full bg-cream/80 px-4 ring-1 ring-inset ring-soil/8 transition-shadow focus-within:bg-cream focus-within:ring-2 focus-within:ring-forest/20">
           <Search className="size-4 shrink-0 text-ink/35" aria-hidden />
           <input
             type="search"
@@ -251,7 +251,7 @@ export function HistoryScreen() {
                   'inline-flex shrink-0 items-center gap-1.5 rounded-full py-2 pl-3.5 pr-3 text-[12.5px] font-semibold transition-all duration-200 active:scale-95',
                   active
                     ? 'bg-forest text-cream shadow-[0_10px_22px_-16px_rgba(69,89,78,0.9)]'
-                    : 'bg-cream text-ink/55 ring-1 ring-soil/[0.05] hover:bg-sage/60 hover:text-ink',
+                    : 'bg-cream text-ink/55 ring-1 ring-soil/10 hover:bg-sage/60 hover:text-ink',
                 )}
               >
                 {active ? selected?.label : row.label}
@@ -271,7 +271,7 @@ export function HistoryScreen() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: EASE }}
-          className="mt-5 flex items-center gap-2 rounded-[1.6rem] bg-gradient-to-r from-forest to-forest-soft pl-4 pr-2 text-cream ring-1 ring-soil/5 lg:mt-6"
+          className="mt-5 flex items-center gap-2 rounded-[1.6rem] bg-gradient-to-r from-forest to-forest-soft pl-4 pr-2 text-cream ring-1 ring-soil/12 lg:mt-6"
         >
           {/* TODO (PRD Domain 3A Habit Loop 2): buka modal Rekap Mingguan
               full-screen 5 slide — sudah tersedia sebagai WeeklyRecapModal */}
@@ -328,7 +328,7 @@ export function HistoryScreen() {
           baris transaksi dipisah garis tipis — tidak ada kotak di dalam kotak.
           Warna nominal seragam lewat `MONEY_TONE` (hijau masuk · terracotta
           keluar · tinta netral untuk pindah dana). */}
-      <section className="mt-5 rounded-[2rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(80,58,58,0.06)] ring-1 ring-soil/5 sm:p-6 lg:mt-6">
+      <section className="mt-5 rounded-[2rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(80,58,58,0.06)] ring-1 ring-soil/12 sm:p-6 lg:mt-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <span className="flex size-9 items-center justify-center rounded-full bg-sage text-forest">
@@ -345,7 +345,7 @@ export function HistoryScreen() {
           {/* pill jumlah hanya muncul saat ada filter — di keadaan normal
               subjudul di kiri sudah cukup, jadi tidak ada angka kembar */}
           {(activeFilterCount > 0 || searchQuery) && (
-            <span className="rounded-full bg-cream px-3 py-1.5 text-[11.5px] font-semibold tabular-nums text-ink/60 ring-1 ring-soil/5">
+            <span className="rounded-full bg-cream px-3 py-1.5 text-[11.5px] font-semibold tabular-nums text-ink/60 ring-1 ring-soil/12">
               {summary.count} dari {transactions.length}
             </span>
           )}
@@ -359,7 +359,7 @@ export function HistoryScreen() {
             <span key={tone.label} className="inline-flex items-center gap-1.5">
               <span
                 aria-hidden
-                className={cn('size-3 rounded-[4px] ring-1 ring-inset ring-soil/[0.06]', tone.dot)}
+                className={cn('size-3 rounded-[4px] ring-1 ring-inset ring-soil/12', tone.dot)}
               />
               {tone.label}
             </span>
@@ -379,7 +379,7 @@ export function HistoryScreen() {
                   <p className="shrink-0 text-[11px] font-bold uppercase tracking-[0.12em] text-ink/45">
                     {group.label}
                   </p>
-                  <span className="h-px min-w-4 flex-1 bg-soil/[0.06]" aria-hidden />
+                  <span className="h-px min-w-4 flex-1 bg-soil/[0.09]" aria-hidden />
                   {group.moved > 0 && (
                     <span className="shrink-0 text-[11px] font-semibold tabular-nums text-ink/40">
                       ⇄ {maskMoney(group.moved, isMasked)}
@@ -399,7 +399,7 @@ export function HistoryScreen() {
                   </span>
                 </div>
 
-                <ul className="mt-0.5 divide-y divide-soil/[0.05]">
+                <ul className="mt-0.5 divide-y divide-soil/10">
                   {group.items.map((tx) => {
                     const delay = 60 + rowIndex++ * 45
                     return (
@@ -595,7 +595,7 @@ function EmptyState({ onReset, hasFilters }: { onReset: () => void; hasFilters: 
           <button
             type="button"
             onClick={onReset}
-            className="inline-flex h-11 items-center rounded-2xl bg-cream px-4 text-[13.5px] font-semibold text-ink/70 ring-1 ring-soil/5 transition-colors hover:bg-sage/50"
+            className="inline-flex h-11 items-center rounded-2xl bg-cream px-4 text-[13.5px] font-semibold text-ink/70 ring-1 ring-soil/12 transition-colors hover:bg-sage/50"
           >
             Reset
           </button>
@@ -654,7 +654,7 @@ function ConfirmDeleteDialog({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.97, y: 6 }}
         transition={{ duration: 0.24, ease: EASE }}
-        className="relative w-full max-w-sm rounded-[1.75rem] bg-cream p-5 shadow-[0_28px_70px_-24px_rgba(69,89,78,0.5)] ring-1 ring-soil/5"
+        className="relative w-full max-w-sm rounded-[1.75rem] bg-cream p-5 shadow-[0_28px_70px_-24px_rgba(69,89,78,0.5)] ring-1 ring-soil/12"
       >
         <span className="flex size-11 items-center justify-center rounded-full bg-plum/15 text-plum">
           <AlertTriangle className="size-5" strokeWidth={2.2} />
@@ -675,7 +675,7 @@ function ConfirmDeleteDialog({
             type="button"
             autoFocus
             onClick={onCancel}
-            className="h-11 rounded-2xl bg-cream text-[13.5px] font-semibold text-ink ring-1 ring-soil/5 transition-colors hover:bg-sage/60 active:scale-[0.98]"
+            className="h-11 rounded-2xl bg-cream text-[13.5px] font-semibold text-ink ring-1 ring-soil/12 transition-colors hover:bg-sage/60 active:scale-[0.98]"
           >
             Batal
           </button>

@@ -1006,7 +1006,7 @@ export const WalletCardStack = memo(function WalletCardStack({
           type="button"
           aria-label="Kartu sebelumnya"
           onClick={() => step(-1)}
-          className="flex size-8 items-center justify-center rounded-full border border-soil/5 bg-cream text-ink transition-colors hover:bg-sage"
+          className="flex size-8 items-center justify-center rounded-full border border-soil/12 bg-cream text-ink transition-colors hover:bg-sage"
         >
           <ChevronLeft className="size-4" />
         </button>
@@ -1051,7 +1051,7 @@ export const WalletCardStack = memo(function WalletCardStack({
           type="button"
           aria-label="Kartu berikutnya"
           onClick={() => step(1)}
-          className="flex size-8 items-center justify-center rounded-full border border-soil/5 bg-cream text-ink transition-colors hover:bg-sage"
+          className="flex size-8 items-center justify-center rounded-full border border-soil/12 bg-cream text-ink transition-colors hover:bg-sage"
         >
           <ChevronRight className="size-4" />
         </button>

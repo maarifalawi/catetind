@@ -64,7 +64,7 @@ export function ManualTutorial({
     <section
       aria-label={`Panduan install ${tutorial.label}`}
       className={cn(
-        'rounded-3xl bg-cream/85 p-4 ring-1 ring-soil/5 backdrop-blur-xl sm:p-5',
+        'rounded-3xl bg-cream/85 p-4 ring-1 ring-soil/12 backdrop-blur-xl sm:p-5',
         className,
       )}
     >

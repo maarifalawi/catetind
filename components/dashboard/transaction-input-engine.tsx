@@ -322,7 +322,7 @@ export function TransactionInputEngine({
                   : 'gap-1 rounded-2xl px-1 py-2.5',
                 active
                   ? cn('font-bold ring-1', item.active)
-                  : 'bg-soil/[0.035] font-medium text-ink/45 hover:bg-soil/[0.06]',
+                  : 'bg-soil/[0.09] font-medium text-ink/45 hover:bg-soil/[0.09]',
               )}
             >
               <Icon
@@ -415,7 +415,7 @@ export function TransactionInputEngine({
                 onChange={(event) => setNote(event.target.value)}
                 placeholder="Catatan (Opsional)"
                 aria-label="Catatan transaksi (opsional)"
-                className="mt-4 h-12 w-full rounded-2xl bg-soil/[0.035] px-4 text-[13.5px] font-medium text-ink outline-none ring-1 ring-transparent transition-all placeholder:text-ink/30 focus:bg-cream focus:ring-forest/15"
+                className="mt-4 h-12 w-full rounded-2xl bg-soil/[0.09] px-4 text-[13.5px] font-medium text-ink outline-none ring-1 ring-transparent transition-all placeholder:text-ink/30 focus:bg-cream focus:ring-forest/15"
               />
             </motion.div>
           )}
@@ -499,7 +499,7 @@ export function TransactionInputEngine({
               : 'size-14 rounded-full',
             mode === 'ocr'
               ? 'bg-forest text-cream'
-              : 'bg-soil/[0.04] text-ink/70 ring-1 ring-soil/5 hover:bg-soil/[0.07]',
+              : 'bg-soil/[0.1] text-ink/70 ring-1 ring-soil/12 hover:bg-soil/[0.1]',
           )}
         >
           {mode === 'ocr' ? (
@@ -549,7 +549,7 @@ export function TransactionInputEngine({
               : 'size-14 rounded-full',
             mode === 'voice'
               ? 'bg-forest text-cream'
-              : 'bg-soil/[0.04] text-ink/70 ring-1 ring-soil/5 hover:bg-soil/[0.07]',
+              : 'bg-soil/[0.1] text-ink/70 ring-1 ring-soil/12 hover:bg-soil/[0.1]',
           )}
         >
           {mode === 'voice' ? (
@@ -573,11 +573,11 @@ export function TransactionInputEngine({
       {isDialog && (
         <p className="mt-4 text-center text-[11.5px] text-ink/35">
           Tekan{' '}
-          <kbd className="rounded-md bg-soil/[0.05] px-1.5 py-0.5 font-sans text-[10.5px] font-semibold text-ink/50">
+          <kbd className="rounded-md bg-soil/[0.11] px-1.5 py-0.5 font-sans text-[10.5px] font-semibold text-ink/50">
             Enter
           </kbd>{' '}
           buat simpan ·{' '}
-          <kbd className="rounded-md bg-soil/[0.05] px-1.5 py-0.5 font-sans text-[10.5px] font-semibold text-ink/50">
+          <kbd className="rounded-md bg-soil/[0.11] px-1.5 py-0.5 font-sans text-[10.5px] font-semibold text-ink/50">
             Esc
           </kbd>{' '}
           buat tutup

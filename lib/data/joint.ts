@@ -127,7 +127,7 @@ export const JOINT_ME: JointPerson = {
   name: 'Jon',
   avatar: '🧑',
   tint: 'bg-hud-sage/25 text-[#503a3a] ring-hud-sage/50',
-  dot: 'bg-hud-sage ring-[#fbf6d9]',
+  dot: 'bg-hud-sage ring-[#ffffff]',
   rail: 'border-hud-sage',
 }
 
@@ -136,7 +136,7 @@ export const JOINT_PARTNER: JointPerson = {
   name: 'Dany',
   avatar: '👩',
   tint: 'bg-hud-amber/25 text-[#b89191] ring-hud-amber/50',
-  dot: 'bg-hud-amber ring-[#fbf6d9]',
+  dot: 'bg-hud-amber ring-[#ffffff]',
   rail: 'border-hud-amber',
 }
 

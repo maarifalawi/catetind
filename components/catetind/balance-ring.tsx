@@ -133,7 +133,7 @@ export function BalanceRing({
               cy="5"
               r="2.8"
               fill="#91bb9e"
-              stroke="#fbf6d9"
+              stroke="#ffffff"
               strokeWidth="1.5"
             />
           </svg>
@@ -182,7 +182,7 @@ function OrbitButton({
 }) {
   return (
     <button
-      className={`absolute flex size-11 -translate-y-1/2 items-center justify-center rounded-full bg-cream text-forest ring-1 ring-soil/5 transition-transform active:translate-y-[calc(-50%+1px)] ${className}`}
+      className={`absolute flex size-11 -translate-y-1/2 items-center justify-center rounded-full bg-cream text-forest ring-1 ring-soil/12 transition-transform active:translate-y-[calc(-50%+1px)] ${className}`}
       aria-label="Quick action"
     >
       {icon}

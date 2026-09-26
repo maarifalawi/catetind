@@ -77,7 +77,7 @@ export function BudgetZoneA({
             className="pointer-events-none absolute -right-8 -top-10 size-28 rounded-full bg-mint/45 blur-2xl"
           />
           <div className="relative flex items-start gap-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-cream text-[19px] ring-1 ring-soil/[0.04]">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-cream text-[19px] ring-1 ring-soil/8">
               🧹
             </span>
             <div className="min-w-0">

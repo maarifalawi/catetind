@@ -110,7 +110,7 @@ export function TransactionWebModal({
           aria-describedby="transaction-web-desc"
           tabIndex={-1}
           className={cn(
-            'pointer-events-auto flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-[2rem] bg-[#fbf6d9] shadow-[0_-24px_60px_-24px_rgba(69,89,78,0.55)] ring-1 ring-soil/5 outline-none',
+            'pointer-events-auto flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-[2rem] bg-[#ffffff] shadow-[0_-24px_60px_-24px_rgba(69,89,78,0.55)] ring-1 ring-soil/12 outline-none',
             'transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] will-change-transform',
             'lg:max-w-lg lg:rounded-[2rem] lg:shadow-[0_28px_70px_-24px_rgba(69,89,78,0.5)]',
             open
@@ -147,7 +147,7 @@ export function TransactionWebModal({
               type="button"
               aria-label="Tutup"
               onClick={close}
-              className="flex size-9 shrink-0 items-center justify-center rounded-full bg-cream text-ink ring-1 ring-soil/5 transition-colors hover:bg-sage"
+              className="flex size-9 shrink-0 items-center justify-center rounded-full bg-cream text-ink ring-1 ring-soil/12 transition-colors hover:bg-sage"
             >
               <X className="size-4" />
             </button>

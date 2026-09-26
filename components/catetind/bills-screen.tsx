@@ -272,7 +272,7 @@ export function BillsScreen() {
                             ? 'bg-hud-terracotta/15 text-hud-terracotta ring-1 ring-inset ring-hud-terracotta/30'
                             : isPaidPill
                               ? 'bg-hud-sage/15 text-[#503a3a] ring-1 ring-inset ring-hud-sage/25'
-                              : 'bg-cream text-ink/60 ring-1 ring-soil/[0.07] hover:bg-cream hover:text-ink',
+                              : 'bg-cream text-ink/60 ring-1 ring-soil/14 hover:bg-cream hover:text-ink',
                       )}
                     >
                       {/* titik berdenyut kalau memang ada yang telat */}
@@ -296,7 +296,7 @@ export function BillsScreen() {
               {/* 7. DAFTAR TAGIHAN — dikelompokkan per status */}
               <div className="mt-3 flex flex-col gap-6 pb-1">
                 {groups.length === 0 ? (
-                  <p className="rounded-2xl bg-cream/70 px-4 py-6 text-center text-[12.5px] font-medium text-ink/45 ring-1 ring-soil/[0.04]">
+                  <p className="rounded-2xl bg-cream/70 px-4 py-6 text-center text-[12.5px] font-medium text-ink/45 ring-1 ring-soil/8">
                     Gak ada tagihan di filter ini. Coba “Semua” ya 🌿
                   </p>
                 ) : (
@@ -313,7 +313,7 @@ export function BillsScreen() {
                       <div className="flex items-center gap-2">
                         <span
                           className={cn(
-                            'inline-flex items-center gap-1.5 rounded-full bg-cream/95 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] ring-1 ring-soil/[0.05]',
+                            'inline-flex items-center gap-1.5 rounded-full bg-cream/95 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] ring-1 ring-soil/10',
                             group.meta.labelClass,
                           )}
                         >

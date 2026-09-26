@@ -82,7 +82,7 @@ export function JointPushBanner({
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -14 }}
           transition={{ duration: 0.3, ease: EASE }}
-          className="mt-3 flex items-start gap-3 rounded-[1.5rem] bg-[#fbf6d9] px-4 py-3.5 ring-1 ring-hud-amber/45 shadow-[0_20px_44px_-34px_rgba(255,184,133,0.95)]"
+          className="mt-3 flex items-start gap-3 rounded-[1.5rem] bg-[#ffffff] px-4 py-3.5 ring-1 ring-hud-amber/45 shadow-[0_20px_44px_-34px_rgba(255,184,133,0.95)]"
         >
           <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-hud-amber/25 text-[#b89191]">
             <BellRing className="size-4" strokeWidth={2.3} />
@@ -112,7 +112,7 @@ export function JointPushBanner({
             type="button"
             onClick={onDismiss}
             aria-label="Tutup notifikasi"
-            className="flex size-7 shrink-0 items-center justify-center rounded-full text-ink/35 transition-colors hover:bg-soil/[0.05] hover:text-ink/60"
+            className="flex size-7 shrink-0 items-center justify-center rounded-full text-ink/35 transition-colors hover:bg-soil/[0.11] hover:text-ink/60"
           >
             <X className="size-3.5" strokeWidth={2.4} />
           </button>
@@ -139,7 +139,7 @@ export function JointWeeklyRecapBanner({ show }: { show: boolean }) {
       : JOINT_ME
 
   return (
-    <div className="mt-3 overflow-hidden rounded-[1.5rem] bg-forest px-4 py-3.5 text-cream ring-1 ring-soil/5">
+    <div className="mt-3 overflow-hidden rounded-[1.5rem] bg-forest px-4 py-3.5 text-cream ring-1 ring-soil/12">
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
@@ -239,7 +239,7 @@ export function JointMonthlyRecapBanner({
   return (
     <div
       className={cn(
-        'mt-3 rounded-[1.5rem] bg-[#fbf6d9] px-4 py-4 ring-1',
+        'mt-3 rounded-[1.5rem] bg-[#ffffff] px-4 py-4 ring-1',
         promptSettle
           ? 'ring-hud-terracotta/25 shadow-[0_26px_52px_-40px_rgba(184,145,145,0.95)]'
           : 'ring-hud-sage/35 shadow-[0_26px_52px_-44px_rgba(69,89,78,0.6)]',
@@ -292,7 +292,7 @@ export function JointMonthlyRecapBanner({
         <button
           type="button"
           onClick={onOpenSettlement}
-          className="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-hud-terracotta text-[13.5px] font-semibold text-[#fbf6d9] shadow-[0_16px_32px_-22px_rgba(184,145,145,0.95)] transition-colors hover:bg-hud-terracotta/90 active:scale-[0.99]"
+          className="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-hud-terracotta text-[13.5px] font-semibold text-[#ffffff] shadow-[0_16px_32px_-22px_rgba(184,145,145,0.95)] transition-colors hover:bg-hud-terracotta/90 active:scale-[0.99]"
         >
           Lihat Detail &amp; Settle
           <ArrowRight className="size-4" strokeWidth={2.6} />

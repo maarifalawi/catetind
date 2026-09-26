@@ -43,10 +43,10 @@ export function BudgetCategoryCard({
     pacing >= 70 ? 'right-0' : pacing <= 30 ? 'left-0' : 'left-1/2 -translate-x-1/2'
 
   return (
-    <article className="rounded-[1.5rem] bg-cream p-4 ring-1 ring-soil/5 shadow-[0_12px_28px_-24px_rgba(69,89,78,0.5)] transition-shadow duration-300 hover:shadow-[0_18px_34px_-22px_rgba(69,89,78,0.45)]">
+    <article className="rounded-[1.5rem] bg-cream p-4 ring-1 ring-soil/12 shadow-[0_12px_28px_-24px_rgba(69,89,78,0.5)] transition-shadow duration-300 hover:shadow-[0_18px_34px_-22px_rgba(69,89,78,0.45)]">
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2.5">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-2xl bg-sage/70 text-[17px] ring-1 ring-soil/[0.04]">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-2xl bg-sage/70 text-[17px] ring-1 ring-soil/8">
             {budget.icon}
           </span>
           <span className="min-w-0">

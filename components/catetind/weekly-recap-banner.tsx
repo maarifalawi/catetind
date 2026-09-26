@@ -32,7 +32,7 @@ export const WeeklyRecapBanner = memo(function WeeklyRecapBanner({
       type="button"
       onClick={onOpen}
       aria-label="Buka rekap mingguan"
-      className="group flex w-full items-center gap-4 rounded-[1.75rem] bg-gradient-to-r from-forest to-forest-soft p-5 text-left ring-1 ring-soil/5 transition-transform duration-200 hover:scale-[1.005] active:scale-[0.99]"
+      className="group flex w-full items-center gap-4 rounded-[1.75rem] bg-gradient-to-r from-forest to-forest-soft p-5 text-left ring-1 ring-soil/12 transition-transform duration-200 hover:scale-[1.005] active:scale-[0.99]"
     >
       <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-mint/20 text-mint">
         <CalendarRange className="size-5" strokeWidth={2.2} />

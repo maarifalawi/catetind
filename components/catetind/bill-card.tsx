@@ -188,7 +188,7 @@ export function BillCard({
           'transition-[background-color,box-shadow,opacity] duration-200 animate-[row-in_0.5s_ease_backwards]',
           paid
             ? 'opacity-75 ring-1 ring-inset ring-hud-sage/25'
-            : 'ring-1 ring-inset ring-soil/[0.04] hover:bg-cream',
+            : 'ring-1 ring-inset ring-soil/8 hover:bg-cream',
           highlighted && 'bg-sage/35 ring-2 ring-forest/45',
         )}
         style={{

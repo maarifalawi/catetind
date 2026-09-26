@@ -43,8 +43,8 @@ export function PlantIllustration({
         </linearGradient>
         {/* Highlight cahaya di daun - efek fresi */}
         <radialGradient id="leafHighlight" cx="30%" cy="30%" r="70%" fx="30%" fy="30%">
-          <stop offset="0%" stopColor="#fbf6d9" stopOpacity="0.4" />
-          <stop offset="100%" stopColor="#fbf6d9" stopOpacity="0" />
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.4" />
+          <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
         </radialGradient>
       </defs>
 

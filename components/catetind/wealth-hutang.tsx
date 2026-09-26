@@ -245,7 +245,7 @@ function SegmentedControl({
     <div
       role="tablist"
       aria-label="Jenis catatan hutang"
-      className="relative flex items-center rounded-full bg-cream p-1 shadow-[0_12px_28px_-22px_rgba(69,89,78,0.6)] ring-1 ring-soil/[0.06]"
+      className="relative flex items-center rounded-full bg-cream p-1 shadow-[0_12px_28px_-22px_rgba(69,89,78,0.6)] ring-1 ring-soil/12"
     >
       <motion.span
         aria-hidden
@@ -308,7 +308,7 @@ function SummaryCard({
   const piutang = view === 'piutangku'
 
   return (
-    <section className="relative mt-4 overflow-hidden rounded-[1.75rem] bg-[#fbf6d9] p-5 shadow-[0_20px_46px_-30px_rgba(69,89,78,0.5)] ring-1 ring-soil/[0.05] sm:p-6">
+    <section className="relative mt-4 overflow-hidden rounded-[1.75rem] bg-[#ffffff] p-5 shadow-[0_20px_46px_-30px_rgba(69,89,78,0.5)] ring-1 ring-soil/10 sm:p-6">
       <div
         aria-hidden
         className={cn(
@@ -392,7 +392,7 @@ function EmptyDebtState({
   /* semua hutang lunas — perayaan khusus, bukan empty state biasa */
   if (allSettled) {
     return (
-      <div className="mt-5 flex flex-col items-center overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-sage via-[#fbf6d9] to-mint-soft/60 px-6 py-10 text-center ring-1 ring-hud-sage/40">
+      <div className="mt-5 flex flex-col items-center overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-sage via-[#ffffff] to-mint-soft/60 px-6 py-10 text-center ring-1 ring-hud-sage/40">
         <motion.span
           initial={{ scale: 0.7, opacity: 0, rotate: -8 }}
           animate={{ scale: 1, opacity: 1, rotate: 0 }}
@@ -456,7 +456,7 @@ function SnowballTracker({
   celebrateId: string | null
 }) {
   return (
-    <section className="relative overflow-hidden rounded-[1.75rem] bg-[#fbf6d9] p-5 shadow-[0_20px_46px_-30px_rgba(69,89,78,0.5)] ring-1 ring-soil/[0.05] sm:p-6">
+    <section className="relative overflow-hidden rounded-[1.75rem] bg-[#ffffff] p-5 shadow-[0_20px_46px_-30px_rgba(69,89,78,0.5)] ring-1 ring-soil/10 sm:p-6">
       <div
         aria-hidden
         className="pointer-events-none absolute -left-16 -top-20 size-52 rounded-full bg-hud-terracotta/12 blur-3xl"
@@ -746,12 +746,12 @@ function PlatformDebtCard({
         animate={{ x: dx }}
         transition={dragging ? { duration: 0 } : { type: 'spring', stiffness: 320, damping: 30 }}
         style={{ touchAction: 'pan-y' }}
-        className="relative w-full cursor-pointer touch-pan-y rounded-[1.35rem] bg-cream px-3.5 py-3.5 text-left shadow-[0_10px_28px_-24px_rgba(69,89,78,0.6)] ring-1 ring-soil/[0.05] outline-none focus-visible:ring-2 focus-visible:ring-forest/30"
+        className="relative w-full cursor-pointer touch-pan-y rounded-[1.35rem] bg-cream px-3.5 py-3.5 text-left shadow-[0_10px_28px_-24px_rgba(69,89,78,0.6)] ring-1 ring-soil/10 outline-none focus-visible:ring-2 focus-visible:ring-forest/30"
       >
         <span className="flex items-center gap-3">
           <span
             aria-hidden
-            className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-cream text-[17px] ring-1 ring-inset ring-soil/[0.04]"
+            className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-cream text-[17px] ring-1 ring-inset ring-soil/8"
           >
             {providerEmoji(debt.provider)}
           </span>
@@ -813,7 +813,7 @@ function PlatformDebtCard({
             transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
             className="overflow-hidden"
           >
-            <div className="mt-2 rounded-[1.35rem] bg-cream/70 px-3.5 py-3.5 ring-1 ring-inset ring-soil/[0.04]">
+            <div className="mt-2 rounded-[1.35rem] bg-cream/70 px-3.5 py-3.5 ring-1 ring-inset ring-soil/8">
               <dl className="space-y-2 text-[11.5px]">
                 <div className="flex items-center justify-between gap-3">
                   <dt className="text-ink/50">Sisa pokok</dt>
@@ -1056,7 +1056,7 @@ function PersonalDebtCard({
       transition={{ duration: 0.34, delay, ease: [0.22, 1, 0.36, 1] }}
       className={cn(
         'relative flex items-center gap-3 overflow-hidden rounded-[1.35rem] bg-cream px-3.5 py-3.5 ring-1',
-        settled ? 'ring-soil/[0.03]' : 'shadow-[0_10px_28px_-24px_rgba(69,89,78,0.6)] ring-soil/[0.05]',
+        settled ? 'ring-soil/8' : 'shadow-[0_10px_28px_-24px_rgba(69,89,78,0.6)] ring-soil/10',
       )}
     >
       {settled && <LunasStamp />}
@@ -1149,7 +1149,7 @@ function DateField({
   return (
     <div className="mt-4">
       <span className="text-[13px] font-semibold leading-snug text-ink">{label}</span>
-      <span className="relative mt-2 flex items-center gap-2 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/[0.08] focus-within:ring-2 focus-within:ring-forest/35">
+      <span className="relative mt-2 flex items-center gap-2 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/16 focus-within:ring-2 focus-within:ring-forest/35">
         <Wallet className="size-4 shrink-0 text-ink/30" strokeWidth={2.2} />
         <span className="flex-1 text-[14px] font-semibold tabular-nums text-ink">
           {formatSheetDate(value)}

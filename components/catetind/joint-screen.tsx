@@ -313,7 +313,7 @@ export function JointScreen() {
         ) : (
           <>
             {/* ── SECTION 2: header (nama dompet editable) + saldo ────────── */}
-            <header className="sticky top-2 z-30 rounded-[1.5rem] bg-[#fbf6d9]/90 px-4 py-3.5 shadow-[0_18px_40px_-32px_rgba(69,89,78,0.65)] ring-1 ring-soil/[0.05] backdrop-blur-md">
+            <header className="sticky top-2 z-30 rounded-[1.5rem] bg-[#ffffff]/90 px-4 py-3.5 shadow-[0_18px_40px_-32px_rgba(69,89,78,0.65)] ring-1 ring-soil/10 backdrop-blur-md">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex min-w-0 items-start gap-3">
                   <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-hud-sage/60 via-cream to-hud-amber/40 text-forest ring-1 ring-forest/10">
@@ -381,7 +381,7 @@ export function JointScreen() {
                   dikumpulkan di satu rekening, jadi "saldo bersama" itu angka
                   fiktif dan dihapus. Yang benar-benar bisa dipertanggungjawabkan
                   adalah TOTAL PENGELUARAN BERSAMA bulan ini. */}
-              <div className="mt-3 border-t border-soil/[0.05] pt-3">
+              <div className="mt-3 border-t border-soil/10 pt-3">
                 <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10.5px] font-bold uppercase tracking-[0.14em] text-ink/40">
                   <ReceiptText className="size-3.5 shrink-0" strokeWidth={2.4} />
                   Total Pengeluaran Bersama
@@ -416,7 +416,7 @@ export function JointScreen() {
               {/* ── KIRI (5/12): ringkasan ─────────────────────────────────── */}
               <div className="lg:col-span-5">
                 {/* ── SECTION 3: Balance Scale Settlement Gauge (hero visual) ── */}
-                <section className="mt-4 rounded-[1.75rem] bg-[#fbf6d9] px-4 pb-4 pt-5 ring-1 ring-soil/[0.05] sm:px-6 lg:mt-6">
+                <section className="mt-4 rounded-[1.75rem] bg-[#ffffff] px-4 pb-4 pt-5 ring-1 ring-soil/10 sm:px-6 lg:mt-6">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <h2 className="flex items-center gap-2 font-display text-[15px] font-black tracking-tight text-ink">
@@ -493,7 +493,7 @@ export function JointScreen() {
 
                 {isEmptyJoint ? (
                   /* SECTION 12: pasangan sudah gabung tapi belum ada transaksi */
-                  <div className="mt-4 rounded-[1.75rem] border-2 border-dashed border-hud-sage/45 bg-[#fbf6d9] px-6 py-10 text-center">
+                  <div className="mt-4 rounded-[1.75rem] border-2 border-dashed border-hud-sage/45 bg-[#ffffff] px-6 py-10 text-center">
                     <span aria-hidden className="text-[30px]">
                       🌱
                     </span>
@@ -514,7 +514,7 @@ export function JointScreen() {
                       <button
                         type="button"
                         onClick={() => toast.info(`Notifikasi dikirim ke ${partner.name}! 📩`)}
-                        className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-cream px-5 text-[13.5px] font-semibold text-ink ring-1 ring-soil/[0.08] transition-colors hover:bg-cream active:scale-[0.99]"
+                        className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-cream px-5 text-[13.5px] font-semibold text-ink ring-1 ring-soil/16 transition-colors hover:bg-cream active:scale-[0.99]"
                       >
                         <HeartHandshake className="size-4" strokeWidth={2.3} />
                         Tantang {partner.name}! 💬

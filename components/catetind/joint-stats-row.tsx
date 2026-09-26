@@ -121,7 +121,7 @@ export function JointStatsRow({
             transition={{ duration: 0.28, ease: EASE }}
             className="overflow-hidden"
           >
-            <div className="mt-2.5 rounded-[1.5rem] bg-[#fbf6d9] px-4 py-3.5 ring-1 ring-soil/[0.05]">
+            <div className="mt-2.5 rounded-[1.5rem] bg-[#ffffff] px-4 py-3.5 ring-1 ring-soil/10">
               <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink/40">
                 Rincian{' '}
                 {openCard === 'total'
@@ -150,7 +150,7 @@ export function JointStatsRow({
                             <span className="ml-1 font-medium text-ink/40">{slice.pct}%</span>
                           </span>
                         </span>
-                        <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-soil/[0.05]">
+                        <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-soil/[0.11]">
                           <motion.span
                             initial={{ width: 0 }}
                             animate={{ width: `${slice.pct}%` }}
@@ -201,7 +201,7 @@ function StatCard({
         'ring-1 active:scale-[0.98]',
         active
           ? 'bg-forest text-cream ring-forest shadow-[0_18px_36px_-26px_rgba(69,89,78,0.95)]'
-          : 'bg-[#fbf6d9] ring-soil/[0.05] hover:bg-cream',
+          : 'bg-[#ffffff] ring-soil/10 hover:bg-cream',
       )}
     >
       <span className="flex items-center gap-1.5">

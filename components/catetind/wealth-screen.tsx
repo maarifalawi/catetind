@@ -220,7 +220,7 @@ export function WealthScreen() {
           donut & daftar aset bisa berdampingan (bukan ponsel yang direntangkan) */}
       <div className="mx-auto w-full max-w-[760px] xl:max-w-[1060px]">
         {/* ── SECTION 2: header halaman (sticky) + toggle privasi ────────── */}
-        <header className="sticky top-2 z-30 mb-5 flex items-center justify-between gap-3 rounded-[1.5rem] bg-[#fbf6d9]/90 px-4 py-3 shadow-[0_18px_40px_-32px_rgba(69,89,78,0.65)] ring-1 ring-soil/[0.05] backdrop-blur-md">
+        <header className="sticky top-2 z-30 mb-5 flex items-center justify-between gap-3 rounded-[1.5rem] bg-[#ffffff]/90 px-4 py-3 shadow-[0_18px_40px_-32px_rgba(69,89,78,0.65)] ring-1 ring-soil/10 backdrop-blur-md">
           <div className="flex min-w-0 items-center gap-3">
             <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sage via-cream to-mint-soft text-forest shadow-[0_12px_26px_-16px_rgba(69,89,78,0.7)] ring-1 ring-forest/10">
               <LineChart className="size-[18px]" strokeWidth={2.1} />
@@ -288,7 +288,7 @@ export function WealthScreen() {
               className="mt-5"
             >
               {/* ── SECTION 6: properti = V1 placeholder (PRD Decision A12) ── */}
-              <div className="flex flex-col items-center rounded-[1.75rem] border-2 border-dashed border-hud-amber/35 bg-[#fbf6d9] px-6 py-14 text-center">
+              <div className="flex flex-col items-center rounded-[1.75rem] border-2 border-dashed border-hud-amber/35 bg-[#ffffff] px-6 py-14 text-center">
                 <span aria-hidden className="text-[34px]">
                   🏠
                 </span>
@@ -380,7 +380,7 @@ function WealthTabs({
             onClick={() => onChange(tab.id)}
             className={cn(
               'relative flex shrink-0 items-center gap-2 rounded-full px-4 py-2.5 text-[13px] font-bold transition-colors duration-200',
-              isActive ? 'text-mint' : 'bg-cream text-ink/55 ring-1 ring-soil/[0.06] hover:text-ink',
+              isActive ? 'text-mint' : 'bg-cream text-ink/55 ring-1 ring-soil/12 hover:text-ink',
             )}
           >
             {isActive && (

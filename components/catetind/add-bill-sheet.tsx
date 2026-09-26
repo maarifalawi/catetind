@@ -140,7 +140,7 @@ export function AddBillSheet({
                   'flex h-10 items-center justify-center rounded-xl text-[19px] transition-all duration-200 active:scale-90',
                   active
                     ? 'bg-forest ring-2 ring-forest'
-                    : 'bg-cream ring-1 ring-soil/[0.07] hover:bg-cream',
+                    : 'bg-cream ring-1 ring-soil/14 hover:bg-cream',
                 )}
               >
                 <span aria-hidden>{option}</span>
@@ -154,7 +154,7 @@ export function AddBillSheet({
           type="button"
           aria-expanded={moreEmojiOpen}
           onClick={() => setMoreEmojiOpen((prev) => !prev)}
-          className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-cream px-3 py-1.5 text-[11.5px] font-semibold text-ink/60 ring-1 ring-soil/[0.07] transition-colors hover:bg-cream hover:text-ink"
+          className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-cream px-3 py-1.5 text-[11.5px] font-semibold text-ink/60 ring-1 ring-soil/14 transition-colors hover:bg-cream hover:text-ink"
         >
           Lainnya
           <ChevronDown
@@ -186,7 +186,7 @@ export function AddBillSheet({
                     'flex h-10 items-center justify-center rounded-xl text-[19px] transition-all duration-200 active:scale-90',
                     active
                       ? 'bg-forest ring-2 ring-forest'
-                      : 'bg-cream ring-1 ring-soil/[0.07] hover:bg-cream',
+                      : 'bg-cream ring-1 ring-soil/14 hover:bg-cream',
                   )}
                 >
                   <span aria-hidden>{option}</span>
@@ -205,7 +205,7 @@ export function AddBillSheet({
             value={name}
             onChange={(event) => setName(event.target.value)}
             placeholder="Contoh: Kos Bulanan, Netflix"
-            className="mt-2 w-full rounded-2xl bg-cream px-4 py-3 text-[15px] font-semibold text-ink outline-none ring-1 ring-soil/[0.08] transition-shadow placeholder:font-medium placeholder:text-ink/25 focus:ring-2 focus:ring-forest/35"
+            className="mt-2 w-full rounded-2xl bg-cream px-4 py-3 text-[15px] font-semibold text-ink outline-none ring-1 ring-soil/16 transition-shadow placeholder:font-medium placeholder:text-ink/25 focus:ring-2 focus:ring-forest/35"
           />
         </label>
 
@@ -226,7 +226,7 @@ export function AddBillSheet({
             <span className="text-[13px] font-semibold leading-snug text-ink">
               Jatuh Tempo Setiap Tanggal
             </span>
-            <span className="relative mt-2 flex items-center gap-2 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/[0.08] transition-shadow focus-within:ring-2 focus-within:ring-forest/35">
+            <span className="relative mt-2 flex items-center gap-2 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/16 transition-shadow focus-within:ring-2 focus-within:ring-forest/35">
               <input
                 type="number"
                 min={1}
@@ -253,7 +253,7 @@ export function AddBillSheet({
           </label>
 
           {/* berulang setiap bulan + batas tenor */}
-          <div className="mt-4 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/[0.06]">
+          <div className="mt-4 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/12">
             <div className="flex items-center justify-between gap-3">
               <span className="text-[12.5px] font-semibold text-ink/70">
                 Berulang setiap bulan
@@ -314,7 +314,7 @@ export function AddBillSheet({
             <span className="text-[12.5px] font-semibold text-ink/70">
               Ingatkan sebelum jatuh tempo
             </span>
-            <span className="relative mt-2 flex items-center gap-2 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/[0.08] focus-within:ring-2 focus-within:ring-forest/35">
+            <span className="relative mt-2 flex items-center gap-2 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/16 focus-within:ring-2 focus-within:ring-forest/35">
               <select
                 value={reminderDays}
                 onChange={(event) => setReminderDays(Number(event.target.value))}
@@ -340,7 +340,7 @@ export function AddBillSheet({
             type="button"
             aria-expanded={advancedOpen}
             onClick={() => setAdvancedOpen((prev) => !prev)}
-            className="flex w-full items-center justify-between gap-2 rounded-2xl bg-cream/70 px-4 py-3 text-left ring-1 ring-soil/[0.06] transition-colors hover:bg-cream"
+            className="flex w-full items-center justify-between gap-2 rounded-2xl bg-cream/70 px-4 py-3 text-left ring-1 ring-soil/12 transition-colors hover:bg-cream"
           >
             <span className="text-[12.5px] font-semibold text-ink/60">
               Detail Tambahan (Opsional)
@@ -358,7 +358,7 @@ export function AddBillSheet({
             <div className="mt-4 space-y-4">
               <label className="block">
                 <span className="text-[12.5px] font-semibold text-ink/70">Kategori</span>
-                <span className="relative mt-2 flex items-center gap-2 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/[0.08] focus-within:ring-2 focus-within:ring-forest/35">
+                <span className="relative mt-2 flex items-center gap-2 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/16 focus-within:ring-2 focus-within:ring-forest/35">
                   <select
                     value={category}
                     onChange={(event) => setCategory(event.target.value)}
@@ -379,7 +379,7 @@ export function AddBillSheet({
                 <span className="text-[12.5px] font-semibold text-ink/70">
                   Dompet pembayaran
                 </span>
-                <span className="relative mt-2 flex items-center gap-2 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/[0.08] focus-within:ring-2 focus-within:ring-forest/35">
+                <span className="relative mt-2 flex items-center gap-2 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/16 focus-within:ring-2 focus-within:ring-forest/35">
                   <select
                     value={walletId}
                     onChange={(event) => setWalletId(event.target.value)}
@@ -403,7 +403,7 @@ export function AddBillSheet({
                   onChange={(event) => setNote(event.target.value)}
                   rows={3}
                   placeholder="Nomor pelanggan, kode langganan, dll."
-                  className="mt-2 w-full resize-none rounded-2xl bg-cream px-4 py-3 text-[13px] leading-relaxed text-ink outline-none ring-1 ring-soil/[0.08] transition-shadow placeholder:text-ink/25 focus:ring-2 focus:ring-forest/35"
+                  className="mt-2 w-full resize-none rounded-2xl bg-cream px-4 py-3 text-[13px] leading-relaxed text-ink outline-none ring-1 ring-soil/16 transition-shadow placeholder:text-ink/25 focus:ring-2 focus:ring-forest/35"
                 />
               </label>
             </div>

@@ -56,7 +56,7 @@ const TINTS = [
 function GrowthTrack({ pct, stage }: { pct: number; stage: PlantStage }) {
   return (
     <div>
-      <div className="h-2 w-full overflow-hidden rounded-full bg-soil/[0.06]">
+      <div className="h-2 w-full overflow-hidden rounded-full bg-soil/[0.09]">
         <div
           className="h-full rounded-full bg-gradient-to-r from-[#b89191] via-[#b5b987] to-mint"
           style={{ width: `${pct}%` }}
@@ -91,7 +91,7 @@ export const MyGoalsCard = memo(function MyGoalsCard() {
   const stage = stageFromPercent(PRIMARY.pct)
 
   return (
-    <div className="flex h-full flex-col rounded-[2rem] bg-cream p-4 ring-1 ring-soil/5 sm:p-5">
+    <div className="flex h-full flex-col rounded-[2rem] bg-cream p-4 ring-1 ring-soil/12 sm:p-5">
       {/* header — konsisten dengan kartu lain */}
       <div className="flex items-center justify-between px-1 pt-1">
         <div className="flex items-center gap-2.5">
@@ -106,14 +106,14 @@ export const MyGoalsCard = memo(function MyGoalsCard() {
         <button
           type="button"
           aria-label="Tambah goal baru"
-          className="flex size-8 items-center justify-center rounded-full bg-cream text-ink ring-1 ring-soil/10 transition-colors hover:bg-sage active:scale-95"
+          className="flex size-8 items-center justify-center rounded-full bg-cream text-ink ring-1 ring-soil/16 transition-colors hover:bg-sage active:scale-95"
         >
           <Plus className="size-4" strokeWidth={2.4} />
         </button>
       </div>
 
       {/* hero — tanaman sebagai wajah dari progress tabungan (bukan donat/gauge) */}
-      <div className="relative mt-4 overflow-hidden rounded-2xl bg-gradient-to-b from-sage/70 via-cream to-cream p-4 ring-1 ring-soil/[0.04] sm:p-5">
+      <div className="relative mt-4 overflow-hidden rounded-2xl bg-gradient-to-b from-sage/70 via-cream to-cream p-4 ring-1 ring-soil/8 sm:p-5">
         {/* glow mint sangat lembut di belakang tanaman */}
         <div
           aria-hidden
@@ -128,7 +128,7 @@ export const MyGoalsCard = memo(function MyGoalsCard() {
           <button
             type="button"
             aria-label="Lihat detail goal"
-            className="flex size-7 shrink-0 items-center justify-center rounded-full bg-cream text-ink ring-1 ring-soil/5 transition-colors hover:bg-sage"
+            className="flex size-7 shrink-0 items-center justify-center rounded-full bg-cream text-ink ring-1 ring-soil/12 transition-colors hover:bg-sage"
           >
             <ArrowUpRight className="size-3.5" strokeWidth={2.4} />
           </button>
@@ -154,7 +154,7 @@ export const MyGoalsCard = memo(function MyGoalsCard() {
         </div>
 
         {/* nominal — di luar area tanaman, angka besar tidak menimpa ilustrasi */}
-        <div className="relative mt-4 border-t border-soil/[0.06] pt-3.5">
+        <div className="relative mt-4 border-t border-soil/12 pt-3.5">
           <div className="flex items-center justify-between gap-3">
             <p className="shrink-0 text-[11px] font-medium uppercase tracking-[0.12em] text-ink/40">
               Terkumpul
@@ -183,7 +183,7 @@ export const MyGoalsCard = memo(function MyGoalsCard() {
           return (
             <div
               key={goal.name}
-              className="rounded-xl bg-cream px-3.5 py-2.5 ring-1 ring-soil/[0.03] transition-colors hover:bg-sage/60"
+              className="rounded-xl bg-cream px-3.5 py-2.5 ring-1 ring-soil/8 transition-colors hover:bg-sage/60"
             >
               <div className="flex items-center justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-2">
@@ -207,7 +207,7 @@ export const MyGoalsCard = memo(function MyGoalsCard() {
                   <button
                     type="button"
                     aria-label={`Detail ${goal.name}`}
-                    className="flex size-6 items-center justify-center rounded-full text-ink/35 transition-colors hover:bg-soil/5 hover:text-ink"
+                    className="flex size-6 items-center justify-center rounded-full text-ink/35 transition-colors hover:bg-soil/8 hover:text-ink"
                   >
                     <ChevronDown className="size-3.5" strokeWidth={2.2} />
                   </button>
@@ -222,7 +222,7 @@ export const MyGoalsCard = memo(function MyGoalsCard() {
                       'h-1.5 flex-1 rounded-full transition-colors',
                       s <= goalStage
                         ? 'bg-gradient-to-r from-[#b5b987] to-mint'
-                        : 'bg-soil/[0.06]',
+                        : 'bg-soil/[0.09]',
                     )}
                   />
                 ))}

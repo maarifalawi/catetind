@@ -146,7 +146,7 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
           aria-describedby="topup-desc"
           tabIndex={-1}
           className={cn(
-            'pointer-events-auto flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-[2rem] bg-cream shadow-[0_-24px_60px_-24px_rgba(69,89,78,0.55)] ring-1 ring-soil/5 outline-none transition-[transform,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform lg:max-w-lg lg:rounded-[2rem] lg:shadow-[0_28px_70px_-24px_rgba(69,89,78,0.5)]',
+            'pointer-events-auto flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-[2rem] bg-cream shadow-[0_-24px_60px_-24px_rgba(69,89,78,0.55)] ring-1 ring-soil/12 outline-none transition-[transform,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform lg:max-w-lg lg:rounded-[2rem] lg:shadow-[0_28px_70px_-24px_rgba(69,89,78,0.5)]',
             open
               ? 'translate-y-0 opacity-100 lg:scale-100'
               : 'translate-y-full opacity-0 lg:translate-y-6 lg:scale-95',
@@ -175,7 +175,7 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
               type="button"
               onClick={onClose}
               aria-label="Tutup"
-              className="flex size-9 shrink-0 items-center justify-center rounded-full bg-cream text-ink ring-1 ring-soil/5 transition-colors hover:bg-sage"
+              className="flex size-9 shrink-0 items-center justify-center rounded-full bg-cream text-ink ring-1 ring-soil/12 transition-colors hover:bg-sage"
             >
               <X className="size-4" strokeWidth={2.2} />
             </button>
@@ -207,7 +207,7 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
                       /* Paket Paling Laris: fill accent color + border tebal biar paling menonjol */
                       onAccent
                         ? 'bg-mint ring-2 ring-forest shadow-[0_14px_28px_-16px_rgba(69,89,78,0.55)]'
-                        : 'bg-cream ring-1 ring-soil/[0.06] hover:ring-forest/25',
+                        : 'bg-cream ring-1 ring-soil/12 hover:ring-forest/25',
                       active && !onAccent && 'ring-2 ring-forest',
                       active && onAccent && 'ring-[3px]',
                     )}
@@ -286,7 +286,7 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
           </div>
 
           {/* footer — total, CTA, trust badge */}
-          <div className="shrink-0 border-t border-soil/[0.06] px-5 pt-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:px-6 lg:pb-5">
+          <div className="shrink-0 border-t border-soil/12 px-5 pt-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:px-6 lg:pb-5">
             <div className="flex items-center justify-between gap-3 text-sm">
               <span className="min-w-0 truncate text-ink/55">
                 {selected ? selected.name : 'Belum ada paket dipilih'}

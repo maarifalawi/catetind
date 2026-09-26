@@ -76,7 +76,7 @@ export function ShieldMeter({
     <section
       aria-label="Tameng proteksi tagihan"
       className={cn(
-        'mt-5 overflow-hidden rounded-[2rem] bg-cream p-5 text-center shadow-[0_4px_24px_-4px_rgba(80,58,58,0.06)] ring-1 ring-soil/5 sm:p-6',
+        'mt-5 overflow-hidden rounded-[2rem] bg-cream p-5 text-center shadow-[0_4px_24px_-4px_rgba(80,58,58,0.06)] ring-1 ring-soil/12 sm:p-6',
         allPaid &&
           'ring-hud-amber/45 shadow-[0_18px_46px_-24px_rgba(255,184,133,0.75),0_0_0_1px_rgba(255,184,133,0.35)]',
         className,
@@ -174,7 +174,7 @@ export function ShieldMeter({
             {headline}
           </p>
 
-          <div className="mt-4 h-px w-full bg-soil/[0.06]" aria-hidden />
+          <div className="mt-4 h-px w-full bg-soil/[0.09]" aria-hidden />
 
           <p className="mt-3 text-[12.5px] font-semibold tabular-nums text-ink/70">
             Sudah: {maskMoney(paidAmount, masked)} · Belum:{' '}

@@ -4,8 +4,9 @@ import { LogoWordmark } from './logo-wordmark'
 /**
  * Bingkai "panggung ponsel" untuk halaman-halaman app.
  *
- * Kanvasnya PUTIH RATA (`bg-canvas`) — tanpa gradien — sesuai arah desain:
- * latar harus netral supaya kartu Ivory dan aksen palet yang berbicara.
+ * Dasar halaman PUTIH RATA (`bg-canvas`) — tanpa gradien — dan kartu juga
+ * putih (`bg-cream`), jadi latar harus netral supaya aksen palet yang
+ * berbicara. Batas antar-kartu dibawa hairline `ring-soil` + shadow lembut.
  *
  * `plain` dipakai flow onboarding (inventaris #10): kanvasnya rata tanpa
  * wordmark raksasa di latar, supaya layar setup yang minimalis tidak bersaing

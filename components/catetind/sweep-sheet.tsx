@@ -62,14 +62,14 @@ export function SweepSheet({
       }
     >
       {/* rincian sisa per kategori */}
-      <div className="overflow-hidden rounded-2xl bg-cream ring-1 ring-soil/[0.06]">
+      <div className="overflow-hidden rounded-2xl bg-cream ring-1 ring-soil/12">
         {surplus.map((budget, index) => (
           <div
             key={budget.id}
             className={
               index === 0
                 ? 'flex items-center justify-between gap-3 px-4 py-3'
-                : 'flex items-center justify-between gap-3 border-t border-soil/[0.05] px-4 py-3'
+                : 'flex items-center justify-between gap-3 border-t border-soil/10 px-4 py-3'
             }
           >
             <span className="flex min-w-0 items-center gap-2.5">
@@ -96,7 +96,7 @@ export function SweepSheet({
       {/* tujuan celengan — dropdown, hemat ruang */}
       <div className="mt-5 pb-1">
         <p className="text-[13px] font-semibold text-ink">Sapu ke celengan mana?</p>
-        <span className="relative mt-2 flex items-center gap-2 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/[0.08] focus-within:ring-2 focus-within:ring-forest/35">
+        <span className="relative mt-2 flex items-center gap-2 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/16 focus-within:ring-2 focus-within:ring-forest/35">
           <select
             value={fundId ?? ''}
             onChange={(event) => setFundId(Number(event.target.value))}

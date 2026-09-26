@@ -61,7 +61,7 @@ export function AddCalendarNoteSheet({
       description={`Catat pengeluaran atau pemasukan di ${longDateLabel(dateValue)}.`}
     >
       {/* ── field tanggal: terisi otomatis & terkunci ────────────────────── */}
-      <div className="rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/[0.06]">
+      <div className="rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/12">
         <div className="flex items-center justify-between gap-3">
           <span className="flex items-center gap-2 text-[12.5px] font-semibold text-ink">
             <CalendarDays className="size-4 shrink-0 text-forest" strokeWidth={2.3} />

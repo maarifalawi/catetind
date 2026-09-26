@@ -136,7 +136,7 @@ export const INITIAL_WALLETS: Wallet[] = [
     number: '•••• 0849',
     network: 'VISA',
     balance: 2500000,
-    bandClass: 'from-[#c4c7af] via-[#fbf6d9] to-[#c4c7af]',
+    bandClass: 'from-[#c4c7af] via-[#ffffff] to-[#c4c7af]',
     faceClass: 'from-[#52685c] via-[#45594e] to-[#161c19]', // evergreen
     glowClass: 'bg-evergreen/25',
     art: 'parang',
@@ -150,7 +150,7 @@ export const INITIAL_WALLETS: Wallet[] = [
     number: '•••• 2210',
     network: 'E-WALLET',
     balance: 1309573,
-    bandClass: 'from-[#dbe4c7] via-[#fbf6d9] to-[#dbe4c7]',
+    bandClass: 'from-[#dbe4c7] via-[#ffffff] to-[#dbe4c7]',
     faceClass: 'from-[#91bb9e] via-[#52685c] to-[#161c19]', // leaf
     glowClass: 'bg-leaf/25',
     art: 'mendung',
@@ -164,7 +164,7 @@ export const INITIAL_WALLETS: Wallet[] = [
     number: 'Uang cash',
     network: 'TUNAI',
     balance: 500000,
-    bandClass: 'from-[#e6e4c0] via-[#fbf6d9] to-[#e6e4c0]',
+    bandClass: 'from-[#e6e4c0] via-[#ffffff] to-[#e6e4c0]',
     faceClass: 'from-[#b5b987] via-[#51533d] to-[#241a1a]', // olive
     glowClass: 'bg-olive/30',
     art: 'kawung',
@@ -182,7 +182,7 @@ export const WALLET_POOL: Wallet[] = [
     number: '•••• 5566',
     network: 'E-WALLET',
     balance: 750000,
-    bandClass: 'from-[#e7d8c3] via-[#fbf6d9] to-[#e7d8c3]',
+    bandClass: 'from-[#e7d8c3] via-[#ffffff] to-[#e7d8c3]',
     faceClass: 'from-[#b89191] via-[#534141] to-[#241a1a]', // plum
     glowClass: 'bg-plum/30',
     art: 'rings',
@@ -196,7 +196,7 @@ export const WALLET_POOL: Wallet[] = [
     number: '•••• 8890',
     network: 'E-WALLET',
     balance: 425000,
-    bandClass: 'from-[#dbdccf] via-[#fbf6d9] to-[#dbdccf]',
+    bandClass: 'from-[#dbdccf] via-[#ffffff] to-[#dbdccf]',
     faceClass: 'from-[#91a0b8] via-[#414853] to-[#161c19]', // thistle
     glowClass: 'bg-thistle/25',
     art: 'mendung',
@@ -210,7 +210,7 @@ export const WALLET_POOL: Wallet[] = [
     number: '•••• 7712',
     network: 'DEBIT',
     balance: 5250000,
-    bandClass: 'from-[#f6edb7] via-[#fbf6d9] to-[#f6edb7]',
+    bandClass: 'from-[#f6edb7] via-[#ffffff] to-[#f6edb7]',
     faceClass: 'from-[#ecd768] via-[#6a612f] to-[#241a1a]', // daisy
     glowClass: 'bg-daisy/30',
     art: 'parang',
@@ -224,7 +224,7 @@ export const WALLET_POOL: Wallet[] = [
     number: '•••• 3345',
     network: 'VISA',
     balance: 1100000,
-    bandClass: 'from-[#fbe3c0] via-[#fbf6d9] to-[#fbe3c0]',
+    bandClass: 'from-[#fbe3c0] via-[#ffffff] to-[#fbe3c0]',
     faceClass: 'from-[#ffb885] via-[#73533c] to-[#241a1a]', // cantelope
     glowClass: 'bg-cantelope/25',
     art: 'kawung',

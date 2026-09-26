@@ -113,7 +113,7 @@ export function WealthInvestasi({
 
             Struktur tombol dipisah (bukan <button> di dalam <button>) supaya
             HTML-nya valid: toggle lipat = satu tombol, aksi tambah = tombol lain. */}
-        <div className="flex items-center gap-2 rounded-[1.5rem] bg-[#fbf6d9] px-4 py-3.5 shadow-[0_14px_34px_-28px_rgba(69,89,78,0.5)] ring-1 ring-soil/[0.05] sm:px-5 sm:py-4">
+        <div className="flex items-center gap-2 rounded-[1.5rem] bg-[#ffffff] px-4 py-3.5 shadow-[0_14px_34px_-28px_rgba(69,89,78,0.5)] ring-1 ring-soil/10 sm:px-5 sm:py-4">
           <button
             type="button"
             onClick={() => setDetailOpen((prev) => !prev)}
@@ -218,7 +218,7 @@ function PortfolioSummaryCard({
 }) {
   const positive = returnValue >= 0
   return (
-    <section className="relative overflow-hidden rounded-[1.75rem] bg-[#fbf6d9] p-5 shadow-[0_20px_46px_-30px_rgba(69,89,78,0.5)] ring-1 ring-soil/[0.05] sm:p-6">
+    <section className="relative overflow-hidden rounded-[1.75rem] bg-[#ffffff] p-5 shadow-[0_20px_46px_-30px_rgba(69,89,78,0.5)] ring-1 ring-soil/10 sm:p-6">
       <div
         aria-hidden
         className="pointer-events-none absolute -right-14 -top-16 size-48 rounded-full bg-hud-sage/25 blur-3xl"
@@ -392,7 +392,7 @@ function AssetCard({
         animate={{ x: dx }}
         transition={dragging ? { duration: 0 } : { type: 'spring', stiffness: 320, damping: 30 }}
         style={{ touchAction: 'pan-y' }}
-        className="group relative w-full cursor-pointer touch-pan-y overflow-hidden rounded-[1.35rem] bg-cream px-3.5 py-3.5 text-left shadow-[0_10px_28px_-24px_rgba(69,89,78,0.6)] ring-1 ring-soil/[0.05] transition-[box-shadow,background-color,ring-color] duration-200 outline-none hover:bg-[#fbf6d9] hover:shadow-[0_18px_34px_-24px_rgba(69,89,78,0.75)] hover:ring-forest/20 focus-visible:ring-2 focus-visible:ring-forest/30"
+        className="group relative w-full cursor-pointer touch-pan-y overflow-hidden rounded-[1.35rem] bg-cream px-3.5 py-3.5 text-left shadow-[0_10px_28px_-24px_rgba(69,89,78,0.6)] ring-1 ring-soil/10 transition-[box-shadow,background-color,ring-color] duration-200 outline-none hover:bg-[#ffffff] hover:shadow-[0_18px_34px_-24px_rgba(69,89,78,0.75)] hover:ring-forest/20 focus-visible:ring-2 focus-visible:ring-forest/30"
       >
         {/* 5D — harga basi: banner amber tepat di atas isi kartu aset ini */}
         {stale && (
@@ -498,7 +498,7 @@ function AssetCard({
             transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
             className="overflow-hidden"
           >
-            <div className="mt-2 rounded-[1.35rem] bg-cream/70 px-3.5 py-3.5 ring-1 ring-inset ring-soil/[0.04]">
+            <div className="mt-2 rounded-[1.35rem] bg-cream/70 px-3.5 py-3.5 ring-1 ring-inset ring-soil/8">
               <p className="flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-[0.14em] text-ink/40">
                 <History className="size-3.5" strokeWidth={2.6} />
                 Riwayat Beli/Jual
