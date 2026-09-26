@@ -72,37 +72,37 @@ const GHOST_BRAND_POOL = [
   },
   {
     name: 'GoPay',
-    tile: 'bg-gradient-to-br from-[#dbdccf] via-[#91a0b8] to-[#91a0b8] text-[#503a3a] ring-[#91a0b8]/50',
+    tile: 'bg-gradient-to-br from-[#dbdccf] via-[#91a0b8] to-[#91a0b8] text-[#000000] ring-[#91a0b8]/50',
     frame: 'hover:shadow-[0_22px_40px_-26px_rgba(145,160,184,0.75)]',
   },
   {
     name: 'GoPay',
-    tile: 'bg-gradient-to-br from-[#dbe4c7] via-[#91bb9e] to-[#91bb9e] text-[#503a3a] ring-[#91bb9e]/50',
+    tile: 'bg-gradient-to-br from-[#dbe4c7] via-[#91bb9e] to-[#91bb9e] text-[#000000] ring-[#91bb9e]/50',
     frame: 'hover:shadow-[0_22px_40px_-26px_rgba(145,187,158,0.75)]',
   },
   {
     name: 'Mandiri',
-    tile: 'bg-gradient-to-br from-[#f6edb7] via-[#ecd768] to-[#ecd768] text-[#503a3a] ring-[#ecd768]/60',
+    tile: 'bg-gradient-to-br from-[#f6edb7] via-[#ecd768] to-[#ecd768] text-[#000000] ring-[#ecd768]/60',
     frame: 'hover:shadow-[0_22px_40px_-26px_rgba(236,215,104,0.85)]',
   },
   {
     name: 'BNI',
-    tile: 'bg-gradient-to-br from-[#fbe3c0] via-[#ffb885] to-[#ffb885] text-[#503a3a] ring-[#ffb885]/60',
+    tile: 'bg-gradient-to-br from-[#fbe3c0] via-[#ffb885] to-[#ffb885] text-[#000000] ring-[#ffb885]/60',
     frame: 'hover:shadow-[0_22px_40px_-26px_rgba(255,184,133,0.8)]',
   },
   {
     name: 'OVO',
-    tile: 'bg-gradient-to-br from-[#e7d8c3] via-[#b89191] to-[#b89191] text-[#503a3a] ring-[#b89191]/50',
+    tile: 'bg-gradient-to-br from-[#e7d8c3] via-[#b89191] to-[#b89191] text-[#000000] ring-[#b89191]/50',
     frame: 'hover:shadow-[0_22px_40px_-26px_rgba(184,145,145,0.8)]',
   },
   {
     name: 'Dana',
-    tile: 'bg-gradient-to-br from-[#e6e4c0] via-[#b5b987] to-[#b5b987] text-[#503a3a] ring-[#b5b987]/50',
+    tile: 'bg-gradient-to-br from-[#e6e4c0] via-[#b5b987] to-[#b5b987] text-[#000000] ring-[#b5b987]/50',
     frame: 'hover:shadow-[0_22px_40px_-26px_rgba(181,185,135,0.9)]',
   },
   {
     name: 'Jago',
-    tile: 'bg-gradient-to-br from-sage via-[#c4c7af] to-[#c4c7af] text-[#503a3a] ring-[#c4c7af]/60',
+    tile: 'bg-gradient-to-br from-sage via-[#c4c7af] to-[#c4c7af] text-[#000000] ring-[#c4c7af]/60',
     frame: 'hover:shadow-[0_22px_40px_-26px_rgba(196,199,175,0.9)]',
   },
 ] as const
@@ -122,7 +122,7 @@ const TYPE_LABEL: Record<WalletAccount['type'], string> = {
 
 
 /** bayangan teks lembut — nama & saldo tetap terbaca di atas stop gradien termuda */
-const CARD_TEXT_SHADOW = '[text-shadow:0_1px_9px_rgba(36,26,26,0.55)]'
+const CARD_TEXT_SHADOW = '[text-shadow:0_1px_9px_rgba(0,0,0,0.55)]'
 
 /** aset yang ditahan/dikunci — mock statis (Rp 0) */
 const HELD_ASSETS = 0
@@ -592,8 +592,8 @@ export function WalletScreen() {
                 <article
                   className={cn(
                     'relative overflow-hidden rounded-[1.85rem] p-5 text-cream ring-1 ring-inset ring-cream/30',
-                    'shadow-[0_26px_52px_-26px_rgba(36,26,26,0.6)] transition-all duration-300 ease-out',
-                    'group-hover:-translate-y-1.5 group-hover:ring-cream/45 group-hover:shadow-[0_36px_66px_-28px_rgba(36,26,26,0.7)]',
+                    'shadow-[0_26px_52px_-26px_rgba(0,0,0,0.6)] transition-all duration-300 ease-out',
+                    'group-hover:-translate-y-1.5 group-hover:ring-cream/45 group-hover:shadow-[0_36px_66px_-28px_rgba(0,0,0,0.7)]',
                     'motion-reduce:transition-none',
                     CARD_TEXT_SHADOW,
                     wallet.face,
@@ -677,7 +677,7 @@ export function WalletScreen() {
                         {/* chip EMV mock di kanan atas */}
                         <ChipIcon
                           id={`wallet-chip-${wallet.id}`}
-                          className="mt-0.5 h-6 w-8 shrink-0 drop-shadow-[0_2px_5px_rgba(36,26,26,0.35)]"
+                          className="mt-0.5 h-6 w-8 shrink-0 drop-shadow-[0_2px_5px_rgba(0,0,0,0.35)]"
                         />
                         {/* untaian mutiara kecil di bawah chip — sentuhan perhiasan */}
                         <span aria-hidden className="flex items-center gap-1 pr-0.5">

@@ -191,7 +191,7 @@ export function HistoryScreen() {
           halaman (antara insight dan list) sehingga terlihat hanya berlaku
           untuk list di bawahnya. Sekarang dia duduk paling atas & diberi label
           "Filter Global" supaya jelas dia menyaring seluruh layar. */}
-      <section className="mt-5 rounded-[1.75rem] bg-cream p-3 shadow-[0_4px_24px_-4px_rgba(80,58,58,0.06)] ring-1 ring-soil/12 sm:p-3.5 lg:mt-6">
+      <section className="mt-5 rounded-[1.75rem] bg-cream p-3 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] ring-1 ring-soil/12 sm:p-3.5 lg:mt-6">
         <div className="flex items-center justify-between gap-2 px-1 pb-2">
           <span className="inline-flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-ink/40">
             <SlidersHorizontal className="size-3.5" strokeWidth={2.4} aria-hidden />
@@ -328,7 +328,7 @@ export function HistoryScreen() {
           baris transaksi dipisah garis tipis — tidak ada kotak di dalam kotak.
           Warna nominal seragam lewat `MONEY_TONE` (hijau masuk · terracotta
           keluar · tinta netral untuk pindah dana). */}
-      <section className="mt-5 rounded-[2rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(80,58,58,0.06)] ring-1 ring-soil/12 sm:p-6 lg:mt-6">
+      <section className="mt-5 rounded-[2rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] ring-1 ring-soil/12 sm:p-6 lg:mt-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <span className="flex size-9 items-center justify-center rounded-full bg-sage text-forest">

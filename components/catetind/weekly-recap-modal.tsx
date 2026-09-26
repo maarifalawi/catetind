@@ -363,7 +363,7 @@ function SlideExpenses() {
   return (
     <div className="space-y-4">
       {/* kartu gelap: donut + ringkasan (ala kartu "EXPENSES" di referensi desain) */}
-      <section className="relative overflow-hidden rounded-[1.75rem] bg-gradient-to-b from-[#241a1a] to-[#161010] p-5 text-cream ring-1 ring-inset ring-cream/10 shadow-[0_20px_44px_-28px_rgba(36,26,26,0.85)]">
+      <section className="relative overflow-hidden rounded-[1.75rem] bg-gradient-to-b from-[#000000] to-[#000000] p-5 text-cream ring-1 ring-inset ring-cream/10 shadow-[0_20px_44px_-28px_rgba(0,0,0,0.85)]">
         <span
           aria-hidden
           className="pointer-events-none absolute -left-16 top-10 size-40 rounded-full bg-mint/10 blur-3xl"

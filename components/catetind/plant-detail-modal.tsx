@@ -38,7 +38,7 @@ export function PlantDetailModal({
         role="dialog"
         aria-modal="true"
         aria-label="Detail tanaman"
-                className="w-full max-w-sm rounded-3xl bg-cream p-6 shadow-[0_20px_60px_-12px_rgba(80,58,58,0.15)] ring-1 ring-soil/12"
+                className="w-full max-w-sm rounded-3xl bg-cream p-6 shadow-[0_20px_60px_-12px_rgba(0,0,0,0.15)] ring-1 ring-soil/12"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">

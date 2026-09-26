@@ -66,7 +66,7 @@ export function CashflowInspector({
 }) {
   if (!cell) {
     return (
-      <aside className="rounded-[2rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(80,58,58,0.06)] ring-1 ring-soil/12 lg:sticky lg:top-8">
+      <aside className="rounded-[2rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] ring-1 ring-soil/12 lg:sticky lg:top-8">
         <h2 className="font-display text-[18px] font-semibold tracking-tight text-ink">
           Pilih tanggal dulu
         </h2>
@@ -91,7 +91,7 @@ export function CashflowInspector({
   ].filter((part): part is string => part !== null)
 
   return (
-    <aside className="flex flex-col rounded-[2rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(80,58,58,0.06)] ring-1 ring-soil/12 lg:sticky lg:top-8">
+    <aside className="flex flex-col rounded-[2rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] ring-1 ring-soil/12 lg:sticky lg:top-8">
       {/* ── 3A. TANGGAL + RINGKASAN SATU BARIS ───────────────────────────── */}
       <div className="flex items-center justify-between gap-2">
         <span
@@ -288,7 +288,7 @@ function CashflowEntryRow({
         {forecast && (
           <span className="mt-2 flex items-center gap-2">
             {paid ? (
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#503a3a]">
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#000000]">
                 <Check className="size-3" strokeWidth={3} />
                 Sudah ditandai lunas
               </span>

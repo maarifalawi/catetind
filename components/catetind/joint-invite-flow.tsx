@@ -260,7 +260,7 @@ export function JointInviteCodeModal({
                       >
                         💚
                       </motion.span>
-                      <p className="mt-2 text-[12.5px] font-semibold text-[#503a3a]">
+                      <p className="mt-2 text-[12.5px] font-semibold text-[#000000]">
                         Menunggu pasanganmu bergabung...
                       </p>
                     </div>

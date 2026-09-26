@@ -134,7 +134,7 @@ export function BillCard({
           setDx(0)
           onMarkPaid(bill)
         }}
-        className="absolute inset-y-1 left-0 flex w-[116px] flex-col items-center justify-center gap-1 rounded-2xl bg-hud-sage text-[#503a3a] transition-opacity focus-visible:z-20 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-forest/40"
+        className="absolute inset-y-1 left-0 flex w-[116px] flex-col items-center justify-center gap-1 rounded-2xl bg-hud-sage text-[#000000] transition-opacity focus-visible:z-20 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-forest/40"
         style={{ opacity: dx > 0 ? exposed : 0, pointerEvents: dx > 24 ? 'auto' : 'none' }}
       >
         <Check className="size-4" strokeWidth={2.8} />
@@ -154,7 +154,7 @@ export function BillCard({
             setDx(0)
             onEdit(bill)
           }}
-          className="flex w-[82px] flex-col items-center justify-center gap-1 rounded-2xl bg-hud-amber text-[#503a3a] focus-visible:z-20 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-forest/40"
+          className="flex w-[82px] flex-col items-center justify-center gap-1 rounded-2xl bg-hud-amber text-[#000000] focus-visible:z-20 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-forest/40"
         >
           <Pencil className="size-4" strokeWidth={2.4} />
           <span className="text-[10px] font-bold">Edit</span>

@@ -95,7 +95,7 @@ const TYPES: TransactionType[] = [
     id: 'transfer',
     label: 'Transfer',
     icon: ArrowLeftRight,
-    active: 'bg-hud-sage/[0.3] text-[#503a3a] ring-hud-sage/50',
+    active: 'bg-hud-sage/[0.3] text-[#000000] ring-hud-sage/50',
     suggested: 'Antar Dompet',
     cheers: [
       'Oke, {amount} dipindahin! 🌿',
@@ -291,7 +291,7 @@ export function TransactionInputEngine({
       {/* sumber dana terpilih (opsional) — halaman Joint Wallet memakai ini untuk
           menegaskan dompet bersama sudah otomatis jadi sumber transaksi */}
       {sourceLabel && (
-        <div className="mb-3 flex items-center justify-center gap-2 rounded-2xl bg-hud-sage/15 px-3.5 py-2.5 text-[12px] font-semibold text-[#503a3a] ring-1 ring-hud-sage/30">
+        <div className="mb-3 flex items-center justify-center gap-2 rounded-2xl bg-hud-sage/15 px-3.5 py-2.5 text-[12px] font-semibold text-[#000000] ring-1 ring-hud-sage/30">
           <Wallet className="size-3.5" strokeWidth={2.4} />
           Dompet: {sourceLabel}
         </div>

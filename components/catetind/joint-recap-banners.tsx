@@ -247,7 +247,7 @@ export function JointMonthlyRecapBanner({
     >
       <p className="flex items-center justify-center gap-2 text-[13.5px] font-bold text-ink">
         <CalendarDays
-          className={cn('size-4', promptSettle ? 'text-hud-terracotta' : 'text-[#503a3a]')}
+          className={cn('size-4', promptSettle ? 'text-hud-terracotta' : 'text-[#000000]')}
           strokeWidth={2.3}
         />
         📅 Rekap {monthName} hampir selesai!
@@ -265,17 +265,17 @@ export function JointMonthlyRecapBanner({
       </div>
 
       {settlement.settled ? (
-        <p className="text-center text-[12.5px] leading-relaxed text-[#503a3a]">
+        <p className="text-center text-[12.5px] leading-relaxed text-[#000000]">
           Bulan ini sudah kamu tandai settle ✅ Scale-nya rata, mulai dari nol lagi bulan depan 💚
         </p>
       ) : settlement.level === 'equal' ? (
-        <p className="text-center text-[12.5px] leading-relaxed text-[#503a3a]">
+        <p className="text-center text-[12.5px] leading-relaxed text-[#000000]">
           Total patungan {moneyLabel(settlement.weighedTotal, masked)} — kalian impas, kompak banget
           ⚖️✨
         </p>
       ) : settlement.level === 'close' ? (
         /* audit #6: selisih di bawah ambang A7 → nada hijau, TANPA tombol settle */
-        <p className="text-center text-[12.5px] leading-relaxed text-[#503a3a]">
+        <p className="text-center text-[12.5px] leading-relaxed text-[#000000]">
           Hampir impas! Selisih yang ditimbang cuma{' '}
           <b className="font-bold">{moneyLabel(settlement.difference, masked)}</b> — di bawah Rp
           {SETTLEMENT_THRESHOLD.toLocaleString('id-ID')}, gak perlu settle 💚

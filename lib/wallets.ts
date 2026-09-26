@@ -106,7 +106,7 @@ export const INITIAL_WALLET_ACCOUNTS: WalletAccount[] = [
        chip EMV / contactless / nomor akun */
     balance: 50_000,
     color: 'bg-gradient-to-r from-[#e6e4c0] to-[#b5b987]',
-    face: 'bg-gradient-to-br from-[#b5b987] via-[#51533d] to-[#241a1a]', // olive → gelap
+    face: 'bg-gradient-to-br from-[#b5b987] via-[#51533d] to-[#000000]', // olive → gelap
     art: 'kawung',
   },
 ]
@@ -165,7 +165,7 @@ export const INITIAL_WALLETS: Wallet[] = [
     network: 'TUNAI',
     balance: 500000,
     bandClass: 'from-[#e6e4c0] via-[#ffffff] to-[#e6e4c0]',
-    faceClass: 'from-[#b5b987] via-[#51533d] to-[#241a1a]', // olive
+    faceClass: 'from-[#b5b987] via-[#51533d] to-[#000000]', // olive
     glowClass: 'bg-olive/30',
     art: 'kawung',
     kind: 'cash',
@@ -183,7 +183,7 @@ export const WALLET_POOL: Wallet[] = [
     network: 'E-WALLET',
     balance: 750000,
     bandClass: 'from-[#e7d8c3] via-[#ffffff] to-[#e7d8c3]',
-    faceClass: 'from-[#b89191] via-[#534141] to-[#241a1a]', // plum
+    faceClass: 'from-[#b89191] via-[#534141] to-[#000000]', // plum
     glowClass: 'bg-plum/30',
     art: 'rings',
     kind: 'ewallet',
@@ -211,7 +211,7 @@ export const WALLET_POOL: Wallet[] = [
     network: 'DEBIT',
     balance: 5250000,
     bandClass: 'from-[#f6edb7] via-[#ffffff] to-[#f6edb7]',
-    faceClass: 'from-[#ecd768] via-[#6a612f] to-[#241a1a]', // daisy
+    faceClass: 'from-[#ecd768] via-[#6a612f] to-[#000000]', // daisy
     glowClass: 'bg-daisy/30',
     art: 'parang',
     kind: 'bank',
@@ -225,7 +225,7 @@ export const WALLET_POOL: Wallet[] = [
     network: 'VISA',
     balance: 1100000,
     bandClass: 'from-[#fbe3c0] via-[#ffffff] to-[#fbe3c0]',
-    faceClass: 'from-[#ffb885] via-[#73533c] to-[#241a1a]', // cantelope
+    faceClass: 'from-[#ffb885] via-[#73533c] to-[#000000]', // cantelope
     glowClass: 'bg-cantelope/25',
     art: 'kawung',
     kind: 'bank',

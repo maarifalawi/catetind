@@ -385,7 +385,7 @@ export function JointScreen() {
                 <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10.5px] font-bold uppercase tracking-[0.14em] text-ink/40">
                   <ReceiptText className="size-3.5 shrink-0" strokeWidth={2.4} />
                   Total Pengeluaran Bersama
-                  <span className="rounded-full bg-hud-sage/20 px-2 py-0.5 text-[9.5px] font-bold tracking-wide text-[#503a3a] ring-1 ring-hud-sage/30">
+                  <span className="rounded-full bg-hud-sage/20 px-2 py-0.5 text-[9.5px] font-bold tracking-wide text-[#000000] ring-1 ring-hud-sage/30">
                     {JOINT_MONTH_LABEL}
                   </span>
                 </p>
@@ -427,7 +427,7 @@ export function JointScreen() {
                         Sisi yang turun = yang nalangin lebih banyak (patungan saja)
                       </p>
                     </div>
-                    <span className="shrink-0 rounded-full bg-hud-sage/15 px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-wide text-[#503a3a] ring-1 ring-hud-sage/30">
+                    <span className="shrink-0 rounded-full bg-hud-sage/15 px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-wide text-[#000000] ring-1 ring-hud-sage/30">
                       {JOINT_MONTH_LABEL.split(' ')[0]}
                     </span>
                   </div>

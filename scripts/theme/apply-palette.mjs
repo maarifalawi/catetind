@@ -13,6 +13,16 @@
  *   node scripts/theme/apply-palette.mjs --dry-run   # lihat rencana saja
  *   node scripts/theme/apply-palette.mjs             # terapkan
  *
+ * REVISI setelah migrasi 1 (dijalankan manual, tapi PALETTE & T di bawah sudah
+ * dikoreksi supaya selalu = kondisi nyata di repo):
+ *   R1 · dasar putih   : ivory `#fbf6d9` sebagai permukaan → putih `#ffffff`
+ *   R2 · surface putih : seluruh permukaan ivory di komponen → putih; hairline
+ *                        `ring/border/divide-soil` dinaikkan ke skala 8–16
+ *   R3 · soil hitam    : `#503a3a` → `#000000`; soilDeep/soilDeepest → hitam;
+ *                        soilMuted → `#767676`; rgba(80,58,58) & rgba(36,26,26)
+ *                        → rgba(0, 0, 0)
+ * Penjaga palet: `scripts/theme/audit-palette.mjs` → `pnpm theme:audit`.
+ *
  * Untuk palet berikutnya: ubah PALETTE + tabel di bawah, lalu jalankan ulang.
  * Cara kembali ke palet lama: docs/theme/PALETTE.md §4.
  * ─────────────────────────────────────────────────────────────────────────────
@@ -22,7 +32,7 @@ import path from 'node:path'
 
 /* ═══ LAPIS 1 · PALET KANON (10 warna) ═══════════════════════════════════════ */
 const PALETTE = {
-  soil: '#503a3a', // 15%
+  soil: '#000000', // 15% — REVISI: hitam (awalnya #503a3a)
   evergreen: '#45594e', // 15%
   ivory: '#fbf6d9', // 15%
   oat: '#ebe4de', // 15%
@@ -40,9 +50,9 @@ const T = {
   evergreenLight: '#c4c7af', // Evergreen + Ivory 70%
   evergreenDeep: '#1f2823', // Evergreen ×0.45
   evergreenDeeper: '#161c19', // Evergreen ×0.32
-  soilDeep: '#241a1a', // Soil ×0.45
-  soilDeepest: '#161010', // Soil ×0.32
-  soilMuted: '#94857a', // Soil + Ivory 40%
+  soilDeep: '#000000', // Soil ×0.45 — hitam sudah paling gelap
+  soilDeepest: '#000000', // Soil ×0.32 — idem
+  soilMuted: '#767676', // netral: hitam + putih
   leafLight: '#dbe4c7', // Sage + Ivory 70%
   oliveLight: '#e6e4c0', // Olive + Ivory 70%
   oliveDeep: '#51533d', // Olive ×0.45
@@ -196,7 +206,6 @@ const HEX = {
   /* — hampir hitam → Soil — */
   '#0d0d0d': T.soilDeepest,
   '#1b1b1b': T.soilDeep,
-  '#000000': T.soilDeep,
 }
 
 /* ═══ TABEL 2 · RGB/RGBA  (bayangan, glow, scrim) ══════════════════════════ */

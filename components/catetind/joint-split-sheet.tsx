@@ -201,16 +201,16 @@ export function JointSplitSheet({
 
       {/* ringkasan hasil pembagian — selalu terlihat sebelum simpan */}
       <div className="mt-4 rounded-2xl bg-hud-sage/15 px-4 py-3 ring-1 ring-hud-sage/30">
-        <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#503a3a]/70">
+        <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#000000]/70">
           Hasil pembagian
         </p>
-        <p className="mt-2 flex items-center justify-between gap-3 text-[12.5px] font-semibold text-[#503a3a]">
+        <p className="mt-2 flex items-center justify-between gap-3 text-[12.5px] font-semibold text-[#000000]">
           <span>
             {me.avatar} {me.name}
           </span>
           <span className="tabular-nums">{moneyLabel(mineShare, false)}</span>
         </p>
-        <p className="mt-1 flex items-center justify-between gap-3 text-[12.5px] font-semibold text-[#503a3a]">
+        <p className="mt-1 flex items-center justify-between gap-3 text-[12.5px] font-semibold text-[#000000]">
           <span>
             {partner.avatar} {partner.name}
           </span>
@@ -256,7 +256,7 @@ function PercentSlider({
   return (
     <div className="rounded-2xl bg-cream px-4 py-4 ring-1 ring-soil/12">
       <div className="flex items-center justify-between gap-2 text-[12.5px] font-semibold">
-        <span className="flex items-center gap-1.5 text-[#503a3a]">
+        <span className="flex items-center gap-1.5 text-[#000000]">
           <span aria-hidden>{me.avatar}</span>
           {me.name} {percent}%
         </span>

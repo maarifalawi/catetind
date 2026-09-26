@@ -49,7 +49,7 @@ export function PlantIllustration({
       </defs>
 
       {/* bayangan tanah lembut */}
-      <ellipse cx="100" cy="212" rx="46" ry="6" fill="#503a3a" opacity="0.08" />
+      <ellipse cx="100" cy="212" rx="46" ry="6" fill="#000000" opacity="0.08" />
 
       {/* batang + dedaunan + bunga - berayun dari pangkal pot */}
       <g

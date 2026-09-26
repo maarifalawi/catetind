@@ -178,7 +178,7 @@ export const CashFlowCard = memo(function CashFlowCard() {
               y1={y}
               x2={W - PAD_R}
               y2={y}
-              stroke="#503a3a"
+              stroke="#000000"
               strokeOpacity="0.08"
               strokeDasharray="3 4"
             />

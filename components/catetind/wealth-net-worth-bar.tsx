@@ -87,7 +87,7 @@ export function WealthNetWorthBar({
         {/* 1. label + nominal di dua sisi bar (kiri Aset, kanan Hutang) */}
         <div className="flex items-end justify-between gap-3">
           <div className="min-w-0">
-            <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.16em] text-[#503a3a]">
+            <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.16em] text-[#000000]">
               <TrendingUp className="size-3.5" strokeWidth={2.6} />
               Aset
             </span>

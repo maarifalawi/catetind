@@ -100,7 +100,7 @@ export function MobileBottomNav() {
     <>
       <nav
         aria-label="Navigasi utama"
-        className="fixed inset-x-8 bottom-5 z-40 mx-auto flex h-16 max-w-sm items-center rounded-full bg-cream/95 px-4 shadow-[0_24px_50px_-16px_rgba(36,26,26,0.18)] ring-1 ring-soil/12 backdrop-blur-xl lg:hidden"
+        className="fixed inset-x-8 bottom-5 z-40 mx-auto flex h-16 max-w-sm items-center rounded-full bg-cream/95 px-4 shadow-[0_24px_50px_-16px_rgba(0,0,0,0.18)] ring-1 ring-soil/12 backdrop-blur-xl lg:hidden"
         style={{ marginBottom: 'max(0rem, env(safe-area-inset-bottom))' }}
       >
         <NavLink item={mainItems[0]} pathname={pathname} />
@@ -117,7 +117,7 @@ export function MobileBottomNav() {
                 <button
                   type="button"
                   aria-label="Catat transaksi"
-                  className="-mt-8 flex size-14 items-center justify-center rounded-full bg-[radial-gradient(circle_at_30%_25%,#ffffff,#ecd768_35%,#ffb885_60%,#b89191_85%)] text-ink shadow-[0_0_28px_rgba(236,215,104,0.55),0_10px_24px_-8px_rgba(36,26,26,0.6)] ring-1 ring-cream/60 transition-transform duration-150 hover:scale-105 active:scale-95"
+                  className="-mt-8 flex size-14 items-center justify-center rounded-full bg-[radial-gradient(circle_at_30%_25%,#ffffff,#ecd768_35%,#ffb885_60%,#b89191_85%)] text-ink shadow-[0_0_28px_rgba(236,215,104,0.55),0_10px_24px_-8px_rgba(0,0,0,0.6)] ring-1 ring-cream/60 transition-transform duration-150 hover:scale-105 active:scale-95"
                 >
                   <Plus className="size-6" strokeWidth={2.4} />
                 </button>

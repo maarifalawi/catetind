@@ -18,15 +18,14 @@ import path from 'node:path'
 /* warna yang DIIZINKAN = 10 palet kanon + turunan (tint/shade) + netral teknis */
 const ALLOWED = new Set(
   [
-    /* palet kanon */
-    '#503a3a', '#45594e', '#fbf6d9', '#ebe4de', '#b89191',
+    /* palet kanon — Soil = HITAM (revisi dari #503a3a) */
+    '#000000', '#45594e', '#fbf6d9', '#ebe4de', '#b89191',
     '#b5b987', '#91a0b8', '#91bb9e', '#ffb885', '#ecd768',
     /* turunan */
-    '#52685c', '#c4c7af', '#1f2823', '#161c19', '#241a1a', '#161010', '#94857a',
+    '#52685c', '#c4c7af', '#1f2823', '#161c19', '#767676',
     '#dbe4c7', '#e6e4c0', '#51533d', '#dbdccf', '#414853', '#e7d8c3', '#534141',
     '#fbe3c0', '#e8b06a', '#73533c', '#f6edb7', '#6a612f',
-    /* netral teknis — kanvas halaman putih rata (token `--color-canvas`);
-       satu-satunya warna di luar 10 warna palet, hanya untuk latar halaman */
+    /* netral teknis — dasar permukaan putih (token `--color-canvas` / `--color-cream`) */
     '#ffffff',
   ].map((h) => h.toLowerCase()),
 )

@@ -70,7 +70,11 @@
      ═══════════════════════════════════════════════════════════════════════════ */
 
   /* ── LAPIS 1 · PALET KANON (10 warna) ──────────────────────────────────── */
-  --color-soil: #503a3a; /* 15% · tanah — teks, garis, scrim gelap */
+  /* REVISI: Soil awalnya coklat tanah `503A3A`. Atas permintaan desain diganti
+     HITAM murni — porsi & perannya tetap (teks, garis, scrim). Karena hitam
+     sudah paling gelap, turunan "soil-deep/deepest" ikut jadi hitam dan
+     bayangan memakai rgba(0, 0, 0, …) yang netral. */
+  --color-soil: #000000; /* 15% · hitam — teks, garis, scrim gelap */
   --color-evergreen: #45594e; /* 15% · hijau tua — permukaan brand */
   /* Ivory tetap tersimpan di palet, tapi BUKAN permukaan dasar lagi: latar &
      kartu memakai PUTIH (token `canvas`, alias `cream`) sesuai arah desain.
@@ -94,7 +98,7 @@
   --color-canvas: #ffffff;
 
   /* ── LAPIS 2 · ALIAS SEMANTIK (nama yang dipakai komponen) ─────────────── */
-  --color-ink: #503a3a; /* = soil */
+  --color-ink: #000000; /* = soil (hitam) */
   --color-forest: #45594e; /* = evergreen */
   --color-forest-soft: #52685c; /* turunan evergreen (dicerahkan) */
   --color-brand: #ecd768; /* = daisy */
@@ -150,19 +154,19 @@
   color-scheme: light;
   /* token shadcn/ui — dipetakan ke palet kanon "Earth Pastel" (docs/theme/PALETTE.md) */
   --background: #ffffff; /* canvas — latar halaman putih rata */
-  --foreground: #503a3a; /* soil */
+  --foreground: #000000; /* hitam */
   --card: #ffffff; /* putih */
-  --card-foreground: #503a3a; /* soil */
+  --card-foreground: #000000; /* hitam */
   --popover: #ffffff; /* putih */
-  --popover-foreground: #503a3a; /* soil */
+  --popover-foreground: #000000; /* hitam */
   --primary: #45594e; /* evergreen */
   --primary-foreground: #ffffff; /* putih */
   --secondary: #ebe4de; /* oat */
-  --secondary-foreground: #503a3a; /* soil */
+  --secondary-foreground: #000000; /* hitam */
   --muted: #ebe4de; /* oat */
-  --muted-foreground: #94857a; /* soil + ivory */
+  --muted-foreground: #767676; /* netral: hitam dicampur putih */
   --accent: #ebe4de; /* oat */
-  --accent-foreground: #503a3a; /* soil */
+  --accent-foreground: #000000; /* hitam */
   --destructive: #b89191; /* plum */
   --border: #ebe4de; /* oat */
   --input: #ebe4de; /* oat */
@@ -174,11 +178,11 @@
   --chart-5: #ffb885; /* cantelope */
   --radius: 1rem;
   --sidebar: #ffffff; /* putih */
-  --sidebar-foreground: #503a3a; /* soil */
+  --sidebar-foreground: #000000; /* hitam */
   --sidebar-primary: #45594e; /* evergreen */
   --sidebar-primary-foreground: #ffffff; /* putih */
   --sidebar-accent: #ebe4de; /* oat */
-  --sidebar-accent-foreground: #503a3a; /* soil */
+  --sidebar-accent-foreground: #000000; /* hitam */
   --sidebar-border: #ebe4de; /* oat */
   --sidebar-ring: #91a0b8; /* thistle */
 }
@@ -187,14 +191,14 @@
    permukaan) supaya primitif shadcn/ui tidak pernah keluar dari palet kanon. */
 .dark {
   color-scheme: dark;
-  --background: #241a1a; /* soil-deep */
+  --background: #000000; /* hitam */
   --foreground: #ffffff; /* putih */
-  --card: #503a3a; /* soil */
+  --card: #000000; /* hitam */
   --card-foreground: #ffffff; /* putih */
-  --popover: #503a3a; /* soil */
+  --popover: #000000; /* hitam */
   --popover-foreground: #ffffff; /* putih */
   --primary: #b5b987; /* olive */
-  --primary-foreground: #241a1a; /* soil-deep */
+  --primary-foreground: #000000; /* hitam */
   --secondary: #45594e; /* evergreen */
   --secondary-foreground: #ffffff; /* putih */
   --muted: #45594e; /* evergreen */
@@ -213,7 +217,7 @@
   --sidebar: #45594e; /* evergreen */
   --sidebar-foreground: #ffffff; /* putih */
   --sidebar-primary: #ecd768; /* daisy */
-  --sidebar-primary-foreground: #241a1a; /* soil-deep */
+  --sidebar-primary-foreground: #000000; /* hitam */
   --sidebar-accent: #52685c; /* evergreen-soft */
   --sidebar-accent-foreground: #ffffff; /* putih */
   --sidebar-border: #52685c; /* evergreen-soft */
@@ -224,14 +228,14 @@
   :root:not(.light) {
     color-scheme: dark;
     /* nilai SAMA dengan `.dark` di atas — palet kanon, sisi gelap */
-    --background: #241a1a; /* soil-deep */
+    --background: #000000; /* hitam */
     --foreground: #ffffff; /* putih */
-    --card: #503a3a; /* soil */
+    --card: #000000; /* hitam */
     --card-foreground: #ffffff; /* putih */
-    --popover: #503a3a; /* soil */
+    --popover: #000000; /* hitam */
     --popover-foreground: #ffffff; /* putih */
     --primary: #b5b987; /* olive */
-    --primary-foreground: #241a1a; /* soil-deep */
+    --primary-foreground: #000000; /* hitam */
     --secondary: #45594e; /* evergreen */
     --secondary-foreground: #ffffff; /* putih */
     --muted: #45594e; /* evergreen */
@@ -250,7 +254,7 @@
     --sidebar: #45594e; /* evergreen */
     --sidebar-foreground: #ffffff; /* putih */
     --sidebar-primary: #ecd768; /* daisy */
-    --sidebar-primary-foreground: #241a1a; /* soil-deep */
+    --sidebar-primary-foreground: #000000; /* hitam */
     --sidebar-accent: #52685c; /* evergreen-soft */
     --sidebar-accent-foreground: #ffffff; /* putih */
     --sidebar-border: #52685c; /* evergreen-soft */

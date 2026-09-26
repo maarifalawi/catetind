@@ -158,7 +158,7 @@ export function JointSettlementModal({
               </div>
 
               <div className="mt-3 space-y-2 rounded-[1.5rem] bg-hud-sage/12 px-4 py-3.5 ring-1 ring-hud-sage/25">
-                <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-[#503a3a]">
+                <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-[#000000]">
                   Yang ditimbang (patungan)
                 </p>
                 <RecapRow
@@ -178,20 +178,20 @@ export function JointSettlementModal({
                 <div className="border-t border-soil/12 pt-2">
                   <RecapRow label="Selisih" value={moneyLabel(difference, masked)} strong />
                 </div>
-                <p className="text-[10.5px] leading-relaxed text-[#503a3a]/85">
+                <p className="text-[10.5px] leading-relaxed text-[#000000]/85">
                   {SETTLEMENT_SCOPE_SHORT}
                 </p>
               </div>
 
               {settled ? (
                 <div className="mt-4 rounded-[1.5rem] bg-hud-sage/15 px-4 py-3.5 text-center ring-1 ring-hud-sage/35">
-                  <p className="text-[13px] font-semibold leading-relaxed text-[#503a3a]">
+                  <p className="text-[13px] font-semibold leading-relaxed text-[#000000]">
                     Bulan ini sudah ditandai settle ✅ Scale-nya rata, gak ada yang perlu transfer.
                   </p>
                 </div>
               ) : settlement.level === 'equal' ? (
                 <div className="mt-4 rounded-[1.5rem] bg-hud-sage/15 px-4 py-3.5 text-center ring-1 ring-hud-sage/35">
-                  <p className="text-[13px] font-semibold leading-relaxed text-[#503a3a]">
+                  <p className="text-[13px] font-semibold leading-relaxed text-[#000000]">
                     Kalian impas — gak ada yang perlu transfer bulan ini ⚖️✨
                   </p>
                 </div>
@@ -199,7 +199,7 @@ export function JointSettlementModal({
                 /* audit #6: di bawah ambang A7 modal cuma jadi rekap, TANPA
                    ajakan transfer supaya tidak bertabrakan dengan copy di atas */
                 <div className="mt-4 rounded-[1.5rem] bg-hud-sage/15 px-4 py-3.5 text-center ring-1 ring-hud-sage/35">
-                  <p className="text-[13px] font-semibold leading-relaxed text-[#503a3a]">
+                  <p className="text-[13px] font-semibold leading-relaxed text-[#000000]">
                     Hampir impas! Selisihnya cuma {moneyLabel(difference, masked)} — gak perlu
                     settle 💚
                   </p>

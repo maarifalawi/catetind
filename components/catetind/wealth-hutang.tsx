@@ -474,7 +474,7 @@ function SnowballTracker({
             </h3>
             <p className="mt-1 text-[11px] leading-relaxed text-ink/45">{SNOWBALL_HELP}</p>
           </div>
-          <span className="shrink-0 rounded-full bg-hud-sage/25 px-2.5 py-1 text-[10.5px] font-bold text-[#503a3a] tabular-nums">
+          <span className="shrink-0 rounded-full bg-hud-sage/25 px-2.5 py-1 text-[10.5px] font-bold text-[#000000] tabular-nums">
             {progress.pct}% lunas
           </span>
         </div>
@@ -727,7 +727,7 @@ function PlatformDebtCard({
             setDx(0)
             onPay()
           }}
-          className="flex w-[116px] flex-col items-center justify-center gap-1 bg-hud-sage text-[10.5px] font-bold text-[#503a3a] transition-colors hover:brightness-105"
+          className="flex w-[116px] flex-col items-center justify-center gap-1 bg-hud-sage text-[10.5px] font-bold text-[#000000] transition-colors hover:brightness-105"
         >
           <Wallet className="size-4" strokeWidth={2.4} />
           Catat Bayar
@@ -759,7 +759,7 @@ function PlatformDebtCard({
             <span className="flex items-center gap-1.5">
               <span className="truncate text-[13.5px] font-bold text-ink">{debt.provider}</span>
               {done && (
-                <span className="shrink-0 rounded-full bg-hud-sage/30 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-[#503a3a]">
+                <span className="shrink-0 rounded-full bg-hud-sage/30 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-[#000000]">
                   Lunas
                 </span>
               )}
@@ -1066,7 +1066,7 @@ function PersonalDebtCard({
         className={cn(
           'flex size-10 shrink-0 items-center justify-center rounded-2xl ring-1 ring-inset',
           incoming
-            ? 'bg-hud-sage/25 text-[#503a3a] ring-hud-sage/30'
+            ? 'bg-hud-sage/25 text-[#000000] ring-hud-sage/30'
             : 'bg-hud-terracotta/12 text-[#b89191] ring-hud-terracotta/20',
         )}
       >
@@ -1103,14 +1103,14 @@ function PersonalDebtCard({
           {maskMoney(settled ? debt.principal : debt.remaining, masked)}
         </span>
         {settled ? (
-          <span className="rounded-full bg-hud-sage/30 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-[#503a3a]">
+          <span className="rounded-full bg-hud-sage/30 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-[#000000]">
             Lunas
           </span>
         ) : (
           <button
             type="button"
             onClick={onSettle}
-            className="inline-flex items-center gap-1 rounded-full bg-hud-sage px-2.5 py-1 text-[10.5px] font-bold text-[#503a3a] transition-colors hover:brightness-105 active:scale-95"
+            className="inline-flex items-center gap-1 rounded-full bg-hud-sage px-2.5 py-1 text-[10.5px] font-bold text-[#000000] transition-colors hover:brightness-105 active:scale-95"
           >
             <Check className="size-3" strokeWidth={3} />
             Tandai Lunas

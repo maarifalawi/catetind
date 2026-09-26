@@ -50,7 +50,7 @@ export function BillTimeline({
     <section
       aria-label="Tagihan 7 hari ke depan"
       className={cn(
-        'mt-5 rounded-[1.75rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(80,58,58,0.06)] ring-1 ring-soil/12 sm:p-6',
+        'mt-5 rounded-[1.75rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] ring-1 ring-soil/12 sm:p-6',
         className,
       )}
     >

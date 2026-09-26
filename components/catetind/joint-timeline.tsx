@@ -285,7 +285,7 @@ function TimelineCard({
             </span>
 
             <span className="flex items-center gap-1.5">
-              <span className="rounded-full bg-hud-sage/15 px-2 py-0.5 text-[10.5px] font-semibold text-[#503a3a] ring-1 ring-hud-sage/25">
+              <span className="rounded-full bg-hud-sage/15 px-2 py-0.5 text-[10.5px] font-semibold text-[#000000] ring-1 ring-hud-sage/25">
                 {view.category === '🔒'
                   ? '🔒 Privat'
                   : `${categoryEmoji(view.category)} ${view.category}`}

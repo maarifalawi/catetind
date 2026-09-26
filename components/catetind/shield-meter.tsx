@@ -65,7 +65,7 @@ export function ShieldMeter({
       ? `${overdueCount} tagihan telat — tamengmu retak! 🛡️⚠️`
       : `${total - paidCount} tagihan lagi buat tameng penuh 🌿`
   const headlineClass = allPaid
-    ? 'text-[#503a3a]'
+    ? 'text-[#000000]'
     : overdueCount > 0
       ? 'text-hud-terracotta'
       : 'text-ink/55'
@@ -76,7 +76,7 @@ export function ShieldMeter({
     <section
       aria-label="Tameng proteksi tagihan"
       className={cn(
-        'mt-5 overflow-hidden rounded-[2rem] bg-cream p-5 text-center shadow-[0_4px_24px_-4px_rgba(80,58,58,0.06)] ring-1 ring-soil/12 sm:p-6',
+        'mt-5 overflow-hidden rounded-[2rem] bg-cream p-5 text-center shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] ring-1 ring-soil/12 sm:p-6',
         allPaid &&
           'ring-hud-amber/45 shadow-[0_18px_46px_-24px_rgba(255,184,133,0.75),0_0_0_1px_rgba(255,184,133,0.35)]',
         className,

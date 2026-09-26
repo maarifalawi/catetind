@@ -678,7 +678,7 @@ export const WalletCardStack = memo(function WalletCardStack({
   }) => {
     const face = faceOf(entry)
     return (
-      <div className="relative h-full overflow-hidden rounded-[1.75rem] bg-forest text-cream shadow-[0_2px_4px_rgba(80,58,58,0.2),0_16px_32px_-12px_rgba(80,58,58,0.45),0_40px_72px_-24px_rgba(80,58,58,0.5)] ring-1 ring-cream/10">
+      <div className="relative h-full overflow-hidden rounded-[1.75rem] bg-forest text-cream shadow-[0_2px_4px_rgba(0,0,0,0.2),0_16px_32px_-12px_rgba(0,0,0,0.45),0_40px_72px_-24px_rgba(0,0,0,0.5)] ring-1 ring-cream/10">
         {/* dasar gradient vivid khas dompet */}
         <div aria-hidden className={cn('absolute inset-0 bg-gradient-to-br', face.face)} />
         {/* aksen seni per dompet: motif batik/geometris terpusat di kanan atas,
@@ -714,7 +714,7 @@ export const WalletCardStack = memo(function WalletCardStack({
             <div className="flex min-w-0 items-center gap-3">
               <span
                 className={cn(
-                  'flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-forest shadow-[0_6px_16px_-6px_rgba(36,26,26,0.45)] ring-1 ring-cream/30',
+                  'flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-forest shadow-[0_6px_16px_-6px_rgba(0,0,0,0.45)] ring-1 ring-cream/30',
                   face.swatch,
                 )}
               >
@@ -732,7 +732,7 @@ export const WalletCardStack = memo(function WalletCardStack({
           <div className="mt-4 flex items-center gap-3">
             <span
               aria-hidden
-              className="relative h-7 w-9 shrink-0 overflow-hidden rounded-md bg-gradient-to-br from-[#ecd768] via-[#ecd768] to-[#6a612f] shadow-[inset_0_1px_2px_rgba(255,255,255,0.45),0_2px_6px_rgba(36,26,26,0.3)]"
+              className="relative h-7 w-9 shrink-0 overflow-hidden rounded-md bg-gradient-to-br from-[#ecd768] via-[#ecd768] to-[#6a612f] shadow-[inset_0_1px_2px_rgba(255,255,255,0.45),0_2px_6px_rgba(0,0,0,0.3)]"
             >
               <span className="absolute inset-y-1 left-1/2 w-px -translate-x-1/2 bg-soil/20" />
               <span className="absolute inset-x-1 top-1/2 h-px -translate-y-1/2 bg-soil/20" />
@@ -876,7 +876,7 @@ export const WalletCardStack = memo(function WalletCardStack({
             menyembul keluar dari kantongnya; jahitan dashed + bayangan dalam untuk kedalaman */}
         <div
           aria-hidden
-          className="pointer-events-none absolute rounded-[2.25rem] bg-gradient-to-b from-[#52685c] via-forest to-[#1f2823] shadow-[0_2px_6px_rgba(36,26,26,0.25),0_24px_48px_-16px_rgba(36,26,26,0.5),0_48px_90px_-32px_rgba(36,26,26,0.45)] ring-1 ring-cream/10"
+          className="pointer-events-none absolute rounded-[2.25rem] bg-gradient-to-b from-[#52685c] via-forest to-[#1f2823] shadow-[0_2px_6px_rgba(0,0,0,0.25),0_24px_48px_-16px_rgba(0,0,0,0.5),0_48px_90px_-32px_rgba(0,0,0,0.45)] ring-1 ring-cream/10"
           style={{
             top: SCENE_PAD - SLEEVE_TOP,
             height: `calc(var(--card-h, ${CARD_H}px) + ${SLEEVE_TOP + SLEEVE_BOTTOM}px)`,
@@ -988,7 +988,7 @@ export const WalletCardStack = memo(function WalletCardStack({
           {/* bayangan yang jatuh ke kartu tepat di atas bibir */}
           <div className="absolute inset-x-3 -top-4 h-4 bg-gradient-to-t from-soil/30 to-transparent" />
           {/* flap kulit */}
-          <div className="absolute inset-0 rounded-b-[2.25rem] rounded-t-[0.85rem] bg-gradient-to-b from-[#52685c] via-forest to-[#1f2823] shadow-[0_20px_40px_-14px_rgba(36,26,26,0.6)] ring-1 ring-cream/10">
+          <div className="absolute inset-0 rounded-b-[2.25rem] rounded-t-[0.85rem] bg-gradient-to-b from-[#52685c] via-forest to-[#1f2823] shadow-[0_20px_40px_-14px_rgba(0,0,0,0.6)] ring-1 ring-cream/10">
             {/* tekstur kulit */}
             <div className="absolute inset-0 rounded-[inherit] [background-image:radial-gradient(rgba(255,255,255,0.045)_1px,transparent_1.5px)] [background-size:9px_9px]" />
             {/* rim atas bibir — tepi kulit yang menahan kartu */}

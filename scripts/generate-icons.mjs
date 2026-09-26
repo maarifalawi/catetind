@@ -56,8 +56,8 @@ function background(size) {
       <stop offset="100%" stop-color="#91bb9e" stop-opacity="0"/>
     </radialGradient>
     <radialGradient id="shade" cx="0.12" cy="0.92" r="0.8">
-      <stop offset="0%" stop-color="#241a1a" stop-opacity="0.28"/>
-      <stop offset="100%" stop-color="#241a1a" stop-opacity="0"/>
+      <stop offset="0%" stop-color="#000000" stop-opacity="0.28"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
     </radialGradient>
   </defs>
   <rect width="${size}" height="${size}" fill="url(#base)"/>

@@ -79,7 +79,7 @@ export function JointStatsRow({
             <span
               className={cn(
                 'inline-flex shrink-0 items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold',
-                spendingDown ? 'bg-hud-sage/25 text-[#503a3a]' : 'bg-hud-amber/25 text-[#b89191]',
+                spendingDown ? 'bg-hud-sage/25 text-[#000000]' : 'bg-hud-amber/25 text-[#b89191]',
               )}
             >
               {spendingDown ? (

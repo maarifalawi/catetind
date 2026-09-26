@@ -271,7 +271,7 @@ export function BillsScreen() {
                           : isLate && count > 0
                             ? 'bg-hud-terracotta/15 text-hud-terracotta ring-1 ring-inset ring-hud-terracotta/30'
                             : isPaidPill
-                              ? 'bg-hud-sage/15 text-[#503a3a] ring-1 ring-inset ring-hud-sage/25'
+                              ? 'bg-hud-sage/15 text-[#000000] ring-1 ring-inset ring-hud-sage/25'
                               : 'bg-cream text-ink/60 ring-1 ring-soil/14 hover:bg-cream hover:text-ink',
                       )}
                     >

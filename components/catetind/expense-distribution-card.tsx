@@ -66,7 +66,7 @@ export const ExpenseDistributionCard = memo(function ExpenseDistributionCard() {
         {activeSeg !== null && active !== null && (
           <div
             key={activeSeg.label}
-            className="pointer-events-none absolute bottom-[calc(100%+10px)] z-10 -translate-x-1/2 whitespace-nowrap rounded-full bg-ink px-3 py-1 text-[11px] font-semibold text-cream shadow-[0_10px_24px_-10px_rgba(80,58,58,0.6)] animate-[fade-pop_0.25s_ease_both]"
+            className="pointer-events-none absolute bottom-[calc(100%+10px)] z-10 -translate-x-1/2 whitespace-nowrap rounded-full bg-ink px-3 py-1 text-[11px] font-semibold text-cream shadow-[0_10px_24px_-10px_rgba(0,0,0,0.6)] animate-[fade-pop_0.25s_ease_both]"
             style={{
               left: `clamp(64px, ${STARTS[active] + activeSeg.pct / 2}%, calc(100% - 64px))`,
             }}

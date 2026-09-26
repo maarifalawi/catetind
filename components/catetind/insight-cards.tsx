@@ -127,7 +127,7 @@ export function InsightCards({
   /* belum ada satu pun insight yang lolos ambang → kartu nurturing, bukan klaim */
   if (visible.length === 0) {
     return (
-      <section className="flex h-full flex-col justify-center rounded-[2rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(80,58,58,0.06)] ring-1 ring-soil/12 sm:p-6">
+      <section className="flex h-full flex-col justify-center rounded-[2rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] ring-1 ring-soil/12 sm:p-6">
         {header}
         <p className="mt-3 text-[13px] leading-relaxed text-ink/60">
           Aku masih belajar polamu. Terus catat ya 📊
@@ -137,7 +137,7 @@ export function InsightCards({
   }
 
   return (
-    <section className="flex h-full flex-col rounded-[2rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(80,58,58,0.06)] ring-1 ring-soil/12 sm:p-6">
+    <section className="flex h-full flex-col rounded-[2rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] ring-1 ring-soil/12 sm:p-6">
       {header}
 
       {/* deret horizontal: snap per kartu, scrollbar disembunyikan */}

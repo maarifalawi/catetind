@@ -36,7 +36,7 @@ export const PlantWidget = memo(function PlantWidget() {
     <>
               <section
         aria-label="Tanaman kamu"
-        className="flex h-full flex-col rounded-[2rem] bg-cream p-6 shadow-[0_4px_24px_-4px_rgba(80,58,58,0.06)] ring-1 ring-soil/12"
+        className="flex h-full flex-col rounded-[2rem] bg-cream p-6 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] ring-1 ring-soil/12"
       >
         {/* header - konsisten dengan kartu lain */}
         <div className="flex items-center justify-between">
@@ -76,7 +76,7 @@ export const PlantWidget = memo(function PlantWidget() {
           type="button"
           onClick={() => setDetailOpen(true)}
           aria-label="Lihat detail tanaman"
-          className="group relative mt-3 flex flex-1 flex-col items-center justify-center rounded-2xl bg-gradient-to-b from-sage/50 via-cream to-cream px-4 pb-6 pt-8 ring-1 ring-soil/8 shadow-[0_4px_20px_-4px_rgba(80,58,58,0.08)] transition-all duration-300 hover:from-sage/70 hover:shadow-[0_8px_32px_-4px_rgba(80,58,58,0.12)]"
+          className="group relative mt-3 flex flex-1 flex-col items-center justify-center rounded-2xl bg-gradient-to-b from-sage/50 via-cream to-cream px-4 pb-6 pt-8 ring-1 ring-soil/8 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.08)] transition-all duration-300 hover:from-sage/70 hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)]"
         >
           {/* glow mint lembut di belakang tanaman */}
           <span

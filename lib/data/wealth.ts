@@ -209,7 +209,7 @@ export const ASSET_TYPE_META: Record<
     unit: 'unit',
     color: '#b5b987' /* sage paling tua */,
     dotClass: 'bg-[#b5b987]',
-    chipClass: 'bg-[#b5b987]/12 text-[#503a3a]',
+    chipClass: 'bg-[#b5b987]/12 text-[#000000]',
   },
   stock: {
     label: 'Saham',
@@ -217,7 +217,7 @@ export const ASSET_TYPE_META: Record<
     unit: 'lot',
     color: '#b5b987' /* sage kanon */,
     dotClass: 'bg-hud-sage',
-    chipClass: 'bg-hud-sage/25 text-[#503a3a]',
+    chipClass: 'bg-hud-sage/25 text-[#000000]',
   },
   gold: {
     label: 'Emas',
@@ -233,7 +233,7 @@ export const ASSET_TYPE_META: Record<
     unit: '' /* crypto memakai satuan raw koin */,
     color: '#e6e4c0' /* sage paling muda */,
     dotClass: 'bg-[#e6e4c0]',
-    chipClass: 'bg-[#e6e4c0]/35 text-[#503a3a]',
+    chipClass: 'bg-[#e6e4c0]/35 text-[#000000]',
   },
 }
 
@@ -548,7 +548,7 @@ export function dtiBadge(ratio: number): DtiBadge {
       tone: 'sage',
       label: 'Sehat',
       copy: 'Beban cicilanmu ringan, mantap!',
-      pillClassName: 'bg-hud-sage/25 text-[#503a3a] ring-hud-sage/45',
+      pillClassName: 'bg-hud-sage/25 text-[#000000] ring-hud-sage/45',
     }
   }
   if (ratio <= DTI_CAREFUL) {

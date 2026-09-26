@@ -138,7 +138,7 @@ export function OnboardingStepSituation({
                 className={cn(
                   'flex-1 rounded-full py-2.5 text-[13px] font-medium tracking-[-0.01em] transition-all duration-200',
                   active
-                    ? 'bg-cream text-ink shadow-[0_1px_3px_rgba(80,58,58,0.12)]'
+                    ? 'bg-cream text-ink shadow-[0_1px_3px_rgba(0,0,0,0.12)]'
                     : 'text-ink/45 hover:text-ink/70',
                 )}
               >

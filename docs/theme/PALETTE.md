@@ -3,13 +3,17 @@
 Satu sumber kebenaran warna untuk seluruh sistem. Semua warna di `app/`,
 `components/`, `lib/`, dan `scripts/` mengikuti palet ini.
 
+> **Untuk agent/AI yang mengerjakan task baru:** tempel prompt di
+> [`docs/theme/AGENT-PROMPT.md`](./AGENT-PROMPT.md) di awal sesi supaya konsistensi
+> warna terjaga otomatis.
+
 ---
 
 ## 1. Palet kanon (10 warna)
 
 | Nama | Hex | Porsi | Peran di sistem |
 | --- | --- | --- | --- |
-| **Soil** | `#503A3A` | 15% | Teks utama, garis gelap, scrim overlay (token `ink`) |
+| **Soil** | `#000000` | 15% | **Hitam** — teks utama, garis, scrim overlay (token `ink`). *Revisi: awalnya `#503A3A`.* |
 | **Evergreen** | `#45594E` | 15% | Permukaan brand gelap: hero, muka kartu, sidebar (token `forest`) |
 | **Ivory** | `#FBF6D9` | 15% | Aksen hangat opsional — **bukan** permukaan (dasar = putih) |
 | **Oat** | `#EBE4DE` | 15% | Elemen kecil: chip/pill, lingkaran ikon, hover, kotak info (token `sage`) |
@@ -85,9 +89,9 @@ menerima `color-mix`).
 | evergreen-light | `#c4c7af` | Evergreen + Ivory 70% |
 | evergreen-deep | `#1f2823` | Evergreen ×0.45 |
 | evergreen-deeper | `#161c19` | Evergreen ×0.32 |
-| soil-deep | `#241a1a` | Soil ×0.45 |
-| soil-deepest | `#161010` | Soil ×0.32 |
-| soil-muted | `#94857a` | Soil + Ivory 40% |
+| soil-deep | `#000000` | Soil — hitam sudah paling gelap, jadi deep = hitam |
+| soil-deepest | `#000000` | idem |
+| soil-muted | `#767676` | Netral: hitam + putih (teks sekunder) |
 | leaf-light | `#dbe4c7` | Sage + Ivory 70% |
 | olive-light | `#e6e4c0` | Olive + Ivory 70% |
 | olive-deep | `#51533d` | Olive ×0.45 |
@@ -107,13 +111,16 @@ menerima `color-mix`).
 
 - **Latar berlapis:** kanvas = **putih** (`bg-canvas`) dan kartu/panel juga
   **putih** (`bg-cream` = canvas) — pemisahnya hairline `ring-soil/8`–`/16`
-  plus shadow lembut. Kartu gelap = Evergreen (`forest`).
+  (abu-abu netral, karena Soil = hitam) plus shadow lembut. Kartu gelap =
+  Evergreen (`forest`).
 - **Ivory tidak dipakai** sebagai permukaan; **Oat** hanya untuk chip/pill kecil.
-- **Teks:** Soil di atas latar terang; Ivory di atas Evergreen/Soil.
+- **Teks:** hitam (Soil/`ink`) di atas latar terang; putih di atas
+  Evergreen/hitam. Teks sekunder pakai opasitas `text-ink/45`–`/65` atau
+  `text-ink/…`, jangan bikin abu-abu baru.
 - **Status/uang:** hijau (Sage) = uang masuk & positif · Olive = aman/on-track ·
   Cantelope = hati-hati/pengeluaran · Plum = lewat batas/alert · Thistle = info.
-- **Border halus:** pakai `ring-soil/[0.06]` (dulu `ring-black/[0.06]`) supaya
-  tetap hangat, bukan abu-abu netral.
+- **Border & bayangan netral:** hairline `ring-soil/8`–`/16`, bayangan
+  `rgba(0,0,0,…)`.
 - **Jangan** menulis hex atau kelas warna bawaan Tailwind (`text-slate-500`,
   `bg-blue-600`, dst.) — semuanya sudah dipetakan ke palet.
 
@@ -177,6 +184,10 @@ node scripts/theme/apply-palette.mjs --dry-run  # (padanan tanpa pnpm)
    Karena kartu kini putih-di-atas-putih, hairline `ring/border/divide-soil`
    dinaikkan (`/5` → `/12`, `[0.0x]` → `/8`–`/16`) dan isian tipis `bg-soil`
    dinaikkan, supaya batas kartu tetap terbaca.
+4. **Soil → hitam** — `#503a3a` → `#000000` (termasuk alias `ink`, token shadcn
+   `--foreground`, dan 130 penggantian di 41 file). Turunan soil ikut netral:
+   `soil-deep`/`soil-deepest` → hitam, `soil-muted` → `#767676`, dan semua
+   `rgba(80,58,58,…)` / `rgba(36,26,26,…)` → `rgba(0,0,0,…)`.
 
 Untuk palet berikutnya: ubah `PALETTE` di `apply-palette.mjs`, lalu jalankan ulang.
 

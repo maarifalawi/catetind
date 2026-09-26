@@ -97,7 +97,7 @@ export function BalanceRing({
               y1="14"
               x2="140"
               y2="14"
-              stroke="#503a3a"
+              stroke="#000000"
               strokeOpacity="0.09"
               strokeDasharray="3 4"
             />
@@ -106,7 +106,7 @@ export function BalanceRing({
               y1="29"
               x2="140"
               y2="29"
-              stroke="#503a3a"
+              stroke="#000000"
               strokeOpacity="0.09"
               strokeDasharray="3 4"
             />

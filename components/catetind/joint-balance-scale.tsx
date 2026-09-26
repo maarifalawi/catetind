@@ -349,7 +349,7 @@ function CopyCard({ copy, glow = false }: { copy: string; glow?: boolean }) {
         glow && 'shadow-[0_0_0_7px_rgba(181,185,135,0.13)]',
       )}
     >
-      <p className="text-[13px] font-semibold leading-relaxed text-[#503a3a]">{copy}</p>
+      <p className="text-[13px] font-semibold leading-relaxed text-[#000000]">{copy}</p>
     </div>
   )
 }

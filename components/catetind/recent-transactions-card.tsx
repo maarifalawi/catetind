@@ -162,7 +162,7 @@ function SwipeRow({
         onPointerUp={settle}
         onPointerCancel={settle}
         onClick={onClick}
-        className="group relative flex w-full cursor-pointer touch-pan-y items-center gap-3 rounded-2xl bg-cream px-2 py-2.5 text-left outline-none transition-[background,box-shadow,transform] duration-200 animate-[row-in_0.5s_ease_backwards] hover:bg-cream hover:shadow-[0_10px_24px_-14px_rgba(80,58,58,0.35)] focus-visible:bg-cream focus-visible:ring-2 focus-visible:ring-forest/20"
+        className="group relative flex w-full cursor-pointer touch-pan-y items-center gap-3 rounded-2xl bg-cream px-2 py-2.5 text-left outline-none transition-[background,box-shadow,transform] duration-200 animate-[row-in_0.5s_ease_backwards] hover:bg-cream hover:shadow-[0_10px_24px_-14px_rgba(0,0,0,0.35)] focus-visible:bg-cream focus-visible:ring-2 focus-visible:ring-forest/20"
         style={{
           transform: `translateX(${dx}px)`,
           transitionDuration: dragging ? '0ms' : undefined,

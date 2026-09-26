@@ -115,7 +115,7 @@ export function OnboardingStepFirstTransaction({
               className={cn(
                 'flex flex-1 flex-col items-center gap-1 rounded-[0.9rem] py-2 transition-all duration-200',
                 active
-                  ? 'bg-cream text-ink shadow-[0_1px_3px_rgba(80,58,58,0.12)]'
+                  ? 'bg-cream text-ink shadow-[0_1px_3px_rgba(0,0,0,0.12)]'
                   : 'text-ink/45 hover:text-ink/70',
               )}
             >

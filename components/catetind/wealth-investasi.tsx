@@ -228,7 +228,7 @@ function PortfolioSummaryCard({
           <span className="text-[10.5px] font-bold uppercase tracking-[0.2em] text-ink/40">
             Total Aset Investasi
           </span>
-          <span className="rounded-full bg-hud-sage/25 px-2.5 py-1 text-[10.5px] font-bold text-[#503a3a]">
+          <span className="rounded-full bg-hud-sage/25 px-2.5 py-1 text-[10.5px] font-bold text-[#000000]">
             {assetCount} aset
           </span>
         </div>
@@ -362,7 +362,7 @@ function AssetCard({
             setDx(0)
             onEdit()
           }}
-          className="flex w-[84px] flex-col items-center justify-center gap-1 bg-hud-amber text-[10.5px] font-bold text-[#503a3a] transition-colors hover:brightness-105"
+          className="flex w-[84px] flex-col items-center justify-center gap-1 bg-hud-amber text-[10.5px] font-bold text-[#000000] transition-colors hover:brightness-105"
         >
           <Pencil className="size-4" strokeWidth={2.4} />
           Edit
@@ -513,7 +513,7 @@ function AssetCard({
                       className={cn(
                         'shrink-0 rounded-full px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wide',
                         tx.side === 'buy'
-                          ? 'bg-hud-sage/25 text-[#503a3a]'
+                          ? 'bg-hud-sage/25 text-[#000000]'
                           : 'bg-hud-terracotta/15 text-[#b89191]',
                       )}
                     >
