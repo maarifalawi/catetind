@@ -55,7 +55,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   colorScheme: 'light',
-  themeColor: '#fbf6d9',
+  themeColor: '#ffffff',
   userScalable: false,
 }
 
@@ -65,7 +65,12 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${jakarta.variable}`}>
+    /* `light` mengunci palet terang: app/globals.css punya blok
+       `@media (prefers-color-scheme: dark) { :root:not(.light) { … } }`.
+       Kanvas halaman sudah eksplisit putih (`bg-canvas`), jadi tanpa kelas ini
+       perangkat bermode gelap akan mendapat kanvas putih + permukaan shadcn
+       gelap — tidak konsisten. Sesuai `viewport.colorScheme: 'light'`. */
+    <html lang="en" className={`light ${inter.variable} ${jakarta.variable}`}>
       <body className="font-sans antialiased">
         <ServiceWorkerRegistration />
         {/* Smooth scroll global (Lenis) — dipasang di root layout supaya

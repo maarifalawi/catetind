@@ -78,6 +78,12 @@
   --color-cantelope: #ffb885; /* 5% · melon — pengeluaran / hati-hati */
   --color-daisy: #ecd768; /* 5% · kuning — pop brand & highlight */
 
+  /* ── NETRAL TEKNIS ─────────────────────────────────────────────────────── */
+  /* Kanvas halaman = PUTIH RATA. Satu-satunya warna di luar 10 warna palet,
+     dipakai KHUSUS untuk latar halaman supaya kartu (Ivory) dan aksen palet
+     yang menonjol. Jangan pakai `canvas` untuk permukaan kartu/chip. */
+  --color-canvas: #ffffff;
+
   /* ── LAPIS 2 · ALIAS SEMANTIK (nama yang dipakai komponen) ─────────────── */
   --color-ink: #503a3a; /* = soil */
   --color-forest: #45594e; /* = evergreen */
@@ -134,7 +140,7 @@
 :root {
   color-scheme: light;
   /* token shadcn/ui — dipetakan ke palet kanon "Earth Pastel" (docs/theme/PALETTE.md) */
-  --background: #ebe4de; /* oat */
+  --background: #ffffff; /* canvas — latar halaman putih rata */
   --foreground: #503a3a; /* soil */
   --card: #fbf6d9; /* ivory */
   --card-foreground: #503a3a; /* soil */

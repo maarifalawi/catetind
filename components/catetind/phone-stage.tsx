@@ -1,31 +1,26 @@
 import type { ReactNode } from 'react'
-import { cn } from '@/lib/utils'
 import { LogoWordmark } from './logo-wordmark'
 
 /**
  * Bingkai "panggung ponsel" untuk halaman-halaman app.
  *
- * `plain` dipakai flow onboarding (inventaris #10): kanvasnya rata (bg-cream)
- * tanpa gradien hijau + wordmark raksasa, supaya layar setup yang minimalis
- * tidak bersaing dengan latar. Halaman lain tetap memakai versi bergradien.
+ * Kanvasnya PUTIH RATA (`bg-canvas`) — tanpa gradien — sesuai arah desain:
+ * latar harus netral supaya kartu Ivory dan aksen palet yang berbicara.
+ *
+ * `plain` dipakai flow onboarding (inventaris #10): kanvasnya rata tanpa
+ * wordmark raksasa di latar, supaya layar setup yang minimalis tidak bersaing
+ * dengan latar. Halaman lain tetap menampilkan wordmark sebagai watermark.
  */
 export function PhoneStage({
   children,
   plain = false,
 }: {
   children: ReactNode
-  /** true = kanvas rata tanpa watermark (dipakai onboarding) */
+  /** true = tanpa watermark wordmark (dipakai onboarding) */
   plain?: boolean
 }) {
   return (
-    <main
-      className={cn(
-        'relative min-h-screen w-full',
-        plain
-          ? 'bg-cream'
-          : 'bg-gradient-to-br from-[#ebe4de] via-[#fbf6d9] to-[#ebe4de]',
-      )}
-    >
+    <main className="relative min-h-screen w-full bg-canvas">
       {/* giant background wordmark — versi gambar: lebar relatif (vw) + opasitas
           sangat rendah supaya tetap terasa seperti watermark, bukan logo */}
       {!plain && (

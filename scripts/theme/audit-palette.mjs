@@ -25,6 +25,9 @@ const ALLOWED = new Set(
     '#52685c', '#c4c7af', '#1f2823', '#161c19', '#241a1a', '#161010', '#94857a',
     '#dbe4c7', '#e6e4c0', '#51533d', '#dbdccf', '#414853', '#e7d8c3', '#534141',
     '#fbe3c0', '#e8b06a', '#73533c', '#f6edb7', '#6a612f',
+    /* netral teknis — kanvas halaman putih rata (token `--color-canvas`);
+       satu-satunya warna di luar 10 warna palet, hanya untuk latar halaman */
+    '#ffffff',
   ].map((h) => h.toLowerCase()),
 )
 

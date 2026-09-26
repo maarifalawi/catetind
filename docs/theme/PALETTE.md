@@ -24,6 +24,11 @@ Satu sumber kebenaran warna untuk seluruh sistem. Semua warna di `app/`,
 > `leaf` karena token `--color-sage` sudah lebih dulu dipakai sebagai
 > *permukaan pucat* di ratusan tempat (sekarang = Oat). Jadi `sage` ≠ Sage.
 
+> **Kanvas halaman:** latar halaman memakai **putih rata** —
+> `--color-canvas: #ffffff`, kelas `bg-canvas`. Ini satu-satunya warna di luar
+> 10 warna palet, dan hanya boleh dipakai untuk latar halaman
+> (`components/catetind/phone-stage.tsx`). Kartu & chip tetap Ivory/Oat.
+
 ---
 
 ## 2. Arsitektur token (3 lapis)
@@ -38,6 +43,9 @@ Lapis 2  ALIAS SEMANTIK ── bg-ink · bg-forest · bg-mint · bg-sage · bg-c
 Lapis 3  NILAI TURUNAN ── tint/shade (mis. #52685c, #dbe4c7) untuk gradien,
          (terhitung dari        bayangan, dan stop gelap kartu
           warna palet)
+              │
+PENGECUALIAN                ── `bg-canvas` (#ffffff) — latar halaman putih rata.
+                                Satu-satunya warna di luar palet, khusus kanvas.
 ```
 
 Semua ditulis di satu blok `@theme inline` di `app/globals.css`. Komponen hanya
@@ -91,7 +99,8 @@ menerima `color-mix`).
 
 ## 3. Aturan pemakaian
 
-- **Latar berlapis:** kanvas = Oat, kartu = Ivory, kartu gelap = Evergreen.
+- **Latar berlapis:** kanvas = **putih rata** (`bg-canvas`), kartu = Ivory
+  (`bg-cream`), kartu gelap = Evergreen (`forest`).
 - **Teks:** Soil di atas latar terang; Ivory di atas Evergreen/Soil.
 - **Status/uang:** hijau (Sage) = uang masuk & positif · Olive = aman/on-track ·
   Cantelope = hati-hati/pengeluaran · Plum = lewat batas/alert · Thistle = info.
@@ -144,8 +153,9 @@ node scripts/theme/apply-palette.mjs --dry-run  # (padanan tanpa pnpm)
 ```
 
 - **`scripts/theme/audit-palette.mjs`** — penjaga palet. Menolak hex, `rgb()`/`rgba()`,
-  dan kelas warna bawaan Tailwind yang tidak ada di palet. Jalankan sebelum commit
-  atau di CI supaya warna tidak "nyasar" lagi.
+  dan kelas warna bawaan Tailwind yang tidak ada di palet. Satu-satunya
+  pengecualian: `#ffffff` untuk `bg-canvas`. Jalankan sebelum commit atau di CI
+  supaya warna tidak "nyasar" lagi.
 - **`scripts/theme/apply-palette.mjs`** — tabel pemetaan lengkap lama → baru
   (332 hex · 190 rgb · 738 kelas). Sekaligus dokumentasi resmi migrasi ini.
   Untuk palet berikutnya: ubah `PALETTE` di dalamnya lalu jalankan ulang.
