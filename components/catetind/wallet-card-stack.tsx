@@ -732,7 +732,7 @@ export const WalletCardStack = memo(function WalletCardStack({
           <div className="mt-4 flex items-center gap-3">
             <span
               aria-hidden
-              className="relative h-7 w-9 shrink-0 overflow-hidden rounded-md bg-gradient-to-br from-[#ecd768] via-[#ecd768] to-[#6a612f] shadow-[inset_0_1px_2px_rgba(251,246,217,0.45),0_2px_6px_rgba(36,26,26,0.3)]"
+              className="relative h-7 w-9 shrink-0 overflow-hidden rounded-md bg-gradient-to-br from-[#ecd768] via-[#ecd768] to-[#6a612f] shadow-[inset_0_1px_2px_rgba(255,255,255,0.45),0_2px_6px_rgba(36,26,26,0.3)]"
             >
               <span className="absolute inset-y-1 left-1/2 w-px -translate-x-1/2 bg-soil/20" />
               <span className="absolute inset-x-1 top-1/2 h-px -translate-y-1/2 bg-soil/20" />
@@ -885,7 +885,7 @@ export const WalletCardStack = memo(function WalletCardStack({
           }}
         >
           {/* tekstur kulit halus (polka dot timbul) */}
-          <div className="absolute inset-0 rounded-[2.25rem] [background-image:radial-gradient(rgba(251,246,217,0.045)_1px,transparent_1.5px)] [background-size:9px_9px]" />
+          <div className="absolute inset-0 rounded-[2.25rem] [background-image:radial-gradient(rgba(255,255,255,0.045)_1px,transparent_1.5px)] [background-size:9px_9px]" />
           {/* jahitan mengikuti bibir sleeve */}
           <div className="absolute inset-2.5 rounded-[1.9rem] border-2 border-dashed border-cream/[0.13]" />
           {/* bayangan dalam di mulut kantong — kesan kartu masuk ke dalam */}
@@ -990,7 +990,7 @@ export const WalletCardStack = memo(function WalletCardStack({
           {/* flap kulit */}
           <div className="absolute inset-0 rounded-b-[2.25rem] rounded-t-[0.85rem] bg-gradient-to-b from-[#52685c] via-forest to-[#1f2823] shadow-[0_20px_40px_-14px_rgba(36,26,26,0.6)] ring-1 ring-cream/10">
             {/* tekstur kulit */}
-            <div className="absolute inset-0 rounded-[inherit] [background-image:radial-gradient(rgba(251,246,217,0.045)_1px,transparent_1.5px)] [background-size:9px_9px]" />
+            <div className="absolute inset-0 rounded-[inherit] [background-image:radial-gradient(rgba(255,255,255,0.045)_1px,transparent_1.5px)] [background-size:9px_9px]" />
             {/* rim atas bibir — tepi kulit yang menahan kartu */}
             <div className="absolute inset-x-5 top-0 h-[3px] rounded-full bg-gradient-to-r from-transparent via-cream/35 to-transparent" />
             {/* jahitan flap */}

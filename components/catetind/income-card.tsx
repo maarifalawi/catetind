@@ -18,7 +18,7 @@ export function IncomeCard() {
       {/* edge light */}
       <div
         className="pointer-events-none absolute inset-0 rounded-[1.9rem] ring-1 ring-inset ring-cream/10"
-        style={{ boxShadow: 'inset 0 1px 0 rgba(251,246,217,0.18)' }}
+        style={{ boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.18)' }}
         aria-hidden
       />
 

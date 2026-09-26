@@ -353,7 +353,7 @@ export function WalletScreen() {
             <div
               aria-hidden
               className="pointer-events-none absolute inset-0 rounded-[2.25rem] ring-1 ring-inset ring-cream/10"
-              style={{ boxShadow: 'inset 0 1px 0 rgba(251,246,217,0.18)' }}
+              style={{ boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.18)' }}
             />
             {/* hairline bercahaya di bibir atas — sama seperti kartu dompet, biar
                 hero dan grid kartu terasa satu keluarga */}
@@ -363,7 +363,7 @@ export function WalletScreen() {
             />
             <div
               aria-hidden
-              className="pointer-events-none absolute inset-0 rounded-[2.25rem] opacity-[0.05] [background-image:radial-gradient(rgba(251,246,217,0.9)_1px,transparent_1.2px)] [background-size:10px_10px]"
+              className="pointer-events-none absolute inset-0 rounded-[2.25rem] opacity-[0.05] [background-image:radial-gradient(rgba(255,255,255,0.9)_1px,transparent_1.2px)] [background-size:10px_10px]"
             />
 
             {/* di layar lebar hero dipecah dua kolom: nominal+konteks di kiri,
@@ -607,7 +607,7 @@ export function WalletScreen() {
                   {/* kilau holografik blush-lila menyapu diagonal — ciri kartu edisi khusus */}
                   <div
                     aria-hidden
-                    className="absolute inset-0 [background-image:linear-gradient(112deg,rgba(251,246,217,0.34)_0%,rgba(251,246,217,0)_32%,rgba(231,216,195,0.42)_56%,rgba(231,216,195,0.3)_72%,rgba(251,246,217,0)_92%)]"
+                    className="absolute inset-0 [background-image:linear-gradient(112deg,rgba(255,255,255,0.34)_0%,rgba(255,255,255,0)_32%,rgba(231,216,195,0.42)_56%,rgba(231,216,195,0.3)_72%,rgba(255,255,255,0)_92%)]"
                   />
                   {/* scrim halus di sisi kiri — jaga kontras teks di atas stop terang */}
                   <div
@@ -617,7 +617,7 @@ export function WalletScreen() {
                   {/* tekstur noise halus supaya muka kartu tidak terasa flat */}
                   <div
                     aria-hidden
-                    className="absolute inset-0 opacity-[0.16] [background-image:radial-gradient(rgba(251,246,217,0.9)_1px,transparent_1.2px)] [background-size:9px_9px]"
+                    className="absolute inset-0 opacity-[0.16] [background-image:radial-gradient(rgba(255,255,255,0.9)_1px,transparent_1.2px)] [background-size:9px_9px]"
                   />
                   {/* aksen batik khas kartu (parang/mendung/kawung/rings) — tema
                       per dompet seperti kartu bank edisi batik. Duduk di atas
@@ -682,7 +682,7 @@ export function WalletScreen() {
                         {/* untaian mutiara kecil di bawah chip — sentuhan perhiasan */}
                         <span aria-hidden className="flex items-center gap-1 pr-0.5">
                           <span className="size-1 rounded-full bg-cream/45" />
-                          <span className="size-1.5 rounded-full bg-cream/70 shadow-[0_0_6px_rgba(251,246,217,0.6)]" />
+                          <span className="size-1.5 rounded-full bg-cream/70 shadow-[0_0_6px_rgba(255,255,255,0.6)]" />
                           <span className="size-1 rounded-full bg-cream/40" />
                         </span>
                       </div>
@@ -968,7 +968,7 @@ function ChipIcon({ id, className }: { id: string; className?: string }) {
         height="22.4"
         rx="4.2"
         fill={`url(#${id})`}
-        stroke="rgba(251,246,217,0.45)"
+        stroke="rgba(255,255,255,0.45)"
         strokeWidth="0.9"
       />
       <g stroke="rgba(115,83,60,0.45)" strokeWidth="0.9" fill="none">

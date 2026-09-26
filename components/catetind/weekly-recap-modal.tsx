@@ -385,7 +385,7 @@ function SlideExpenses() {
                   cy="40"
                   r={R}
                   fill="none"
-                  stroke="rgba(251,246,217,0.10)"
+                  stroke="rgba(255,255,255,0.10)"
                   strokeWidth={STROKE}
                 />
                 {rings.map((seg) => (

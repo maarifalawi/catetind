@@ -5,6 +5,11 @@
    di-prevent (data-lenis-prevent), dan kunci overflow saat instance di-stop */
 @import 'lenis/dist/lenis.css';
 
+/* Docs tidak pernah dirender — jangan ikut dipindai Tailwind sebagai sumber
+   kelas. Tanpa ini, contoh nama kelas di docs/theme/PALETTE.md ikut
+   menghasilkan utility nyasar di CSS produksi (mis. `bg-ivory`). */
+@source not '../docs';
+
 @custom-variant dark (&:is(.dark *));
 
 /* ── TIPOGRAFI — HANYA DUA FONT DI SELURUH SISTEM ────────────────────────────
@@ -308,7 +313,7 @@
   background-image: linear-gradient(
     100deg,
     transparent 20%,
-    rgb(251 246 217 / 0.55) 45%,
+    rgb(255 255 255 / 0.55) 45%,
     transparent 70%
   );
   background-size: 220% 100%;
