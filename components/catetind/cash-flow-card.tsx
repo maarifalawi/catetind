@@ -85,7 +85,7 @@ export const CashFlowCard = memo(function CashFlowCard() {
   const expenseShare = ((EXPENSE / INCOME) * 100).toFixed(1).replace('.', ',')
 
   return (
-    <div className="flex h-full flex-col rounded-[2rem] bg-white p-6 ring-1 ring-black/5">
+    <div className="flex h-full flex-col rounded-[2rem] bg-cream p-6 ring-1 ring-soil/5">
       {/* header — konsisten dengan kartu lain */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2.5">
@@ -134,7 +134,7 @@ export const CashFlowCard = memo(function CashFlowCard() {
       {/* legenda dua seri — warna garis dibaca tanpa harus menebak */}
       <div className="mt-4 flex items-center gap-4 text-[11px] font-medium text-ink/50">
         <span className="flex items-center gap-1.5">
-          <span className="h-1.5 w-4 rounded-full bg-[#3f8a5c]" aria-hidden />
+          <span className="h-1.5 w-4 rounded-full bg-[#45594e]" aria-hidden />
           Pemasukan
         </span>
         <span className="flex items-center gap-1.5">
@@ -161,12 +161,12 @@ export const CashFlowCard = memo(function CashFlowCard() {
         >
           <defs>
             <linearGradient id="cf-income" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor="#b7e04b" stopOpacity="0.5" />
-              <stop offset="1" stopColor="#b7e04b" stopOpacity="0" />
+              <stop offset="0" stopColor="#91bb9e" stopOpacity="0.5" />
+              <stop offset="1" stopColor="#91bb9e" stopOpacity="0" />
             </linearGradient>
             <linearGradient id="cf-expense" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor="#dda15e" stopOpacity="0.45" />
-              <stop offset="1" stopColor="#dda15e" stopOpacity="0.05" />
+              <stop offset="0" stopColor="#ffb885" stopOpacity="0.45" />
+              <stop offset="1" stopColor="#ffb885" stopOpacity="0.05" />
             </linearGradient>
           </defs>
 
@@ -178,7 +178,7 @@ export const CashFlowCard = memo(function CashFlowCard() {
               y1={y}
               x2={W - PAD_R}
               y2={y}
-              stroke="#12281f"
+              stroke="#503a3a"
               strokeOpacity="0.08"
               strokeDasharray="3 4"
             />
@@ -192,7 +192,7 @@ export const CashFlowCard = memo(function CashFlowCard() {
           <path
             d={EXPENSE_LINE}
             fill="none"
-            stroke="#bc6c25"
+            stroke="#b89191"
             strokeWidth="2"
             strokeLinecap="round"
             pathLength={1}
@@ -204,7 +204,7 @@ export const CashFlowCard = memo(function CashFlowCard() {
           <path
             d={INCOME_LINE}
             fill="none"
-            stroke="#3f8a5c"
+            stroke="#45594e"
             strokeWidth="2.4"
             strokeLinecap="round"
             pathLength={1}
@@ -214,24 +214,24 @@ export const CashFlowCard = memo(function CashFlowCard() {
 
           {/* penanda titik: puncak pemasukan & pengeluaran tertinggi */}
           <g className="animate-[fade-pop_0.4s_ease_1.4s_backwards]">
-            <circle cx={INCOME_PEAK.x} cy={INCOME_PEAK.y} r="7" fill="none" stroke="#b7e04b" strokeOpacity="0.5" strokeWidth="1.5" />
-            <circle cx={INCOME_PEAK.x} cy={INCOME_PEAK.y} r="3" fill="#3f8a5c" />
+            <circle cx={INCOME_PEAK.x} cy={INCOME_PEAK.y} r="7" fill="none" stroke="#91bb9e" strokeOpacity="0.5" strokeWidth="1.5" />
+            <circle cx={INCOME_PEAK.x} cy={INCOME_PEAK.y} r="3" fill="#45594e" />
           </g>
           <g className="animate-[fade-pop_0.4s_ease_1.55s_backwards]">
-            <circle cx={EXPENSE_PEAK.x} cy={EXPENSE_PEAK.y} r="6" fill="none" stroke="#bc6c25" strokeOpacity="0.5" strokeWidth="1.5" />
-            <circle cx={EXPENSE_PEAK.x} cy={EXPENSE_PEAK.y} r="3" fill="#bc6c25" />
+            <circle cx={EXPENSE_PEAK.x} cy={EXPENSE_PEAK.y} r="6" fill="none" stroke="#b89191" strokeOpacity="0.5" strokeWidth="1.5" />
+            <circle cx={EXPENSE_PEAK.x} cy={EXPENSE_PEAK.y} r="3" fill="#b89191" />
           </g>
 
           {/* komet cahaya yang berjalan di garis pemasukan */}
           <path
             d={INCOME_LINE}
             fill="none"
-            stroke="#b7e04b"
+            stroke="#91bb9e"
             strokeWidth="3.4"
             strokeLinecap="round"
             pathLength={1}
             strokeDasharray="0.055 0.945"
-            className="animate-[comet-run_4.5s_linear_1.7s_infinite] [filter:drop-shadow(0_0_5px_rgba(183,224,75,0.95))]"
+            className="animate-[comet-run_4.5s_linear_1.7s_infinite] [filter:drop-shadow(0_0_5px_rgba(145,187,158,0.95))]"
           />
         </svg>
 
@@ -239,7 +239,7 @@ export const CashFlowCard = memo(function CashFlowCard() {
         {GRID_Y.map((y, i) => (
           <span
             key={`axis-income-${y}`}
-            className="pointer-events-none absolute left-0 -translate-y-1/2 text-[9px] font-medium tabular-nums text-[#3f8a5c]"
+            className="pointer-events-none absolute left-0 -translate-y-1/2 text-[9px] font-medium tabular-nums text-[#45594e]"
             style={{ top: `${(y / H) * 100}%` }}
           >
             {INCOME_AXIS[i]}

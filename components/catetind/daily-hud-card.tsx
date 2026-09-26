@@ -24,17 +24,17 @@ const STATUS: Record<HudStatus, { label: string; ring: string; copy: string }> =
   {
     onTrack: {
       label: 'On track',
-      ring: '#a3b18a',
+      ring: '#b5b987',
       copy: 'Masih banyak ruang hari ini! 🌿',
     },
     approaching: {
       label: 'Hampir habis',
-      ring: '#dda15e',
+      ring: '#ffb885',
       copy: 'Pelan-pelan ya, sisa jatah harianmu tinggal dikit 🌤️',
     },
     over: {
       label: 'Lewat jatah',
-      ring: '#bc6c25',
+      ring: '#b89191',
       copy: 'Gapapa, besok kita atur ulang bareng! 🌱',
     },
   }
@@ -58,7 +58,7 @@ export const DailyHudCard = memo(function DailyHudCard() {
   return (
     <section
       aria-label="Jatah hari ini"
-      className="flex h-full flex-col rounded-[2rem] bg-white p-4 ring-1 ring-black/5"
+      className="flex h-full flex-col rounded-[2rem] bg-cream p-4 ring-1 ring-soil/5"
     >
       {/* header — konsisten dengan kartu lain */}
       <div className="flex items-center justify-between">
@@ -74,8 +74,8 @@ export const DailyHudCard = memo(function DailyHudCard() {
         <span
           className={cn(
             'rounded-full px-2 py-0.5 text-[10px] font-semibold',
-            status === 'onTrack' && 'bg-hud-sage/15 text-[#6f8059]',
-            status === 'approaching' && 'bg-hud-amber/15 text-[#a06a2c]',
+            status === 'onTrack' && 'bg-hud-sage/15 text-[#b5b987]',
+            status === 'approaching' && 'bg-hud-amber/15 text-[#b89191]',
             status === 'over' && 'bg-hud-terracotta/15 text-hud-terracotta',
           )}
         >
@@ -85,8 +85,8 @@ export const DailyHudCard = memo(function DailyHudCard() {
 
       {DRY_SPELL ? (
         /* ── Dry Spell — PACING LIMITS DISEMBUNYIKAN (PRD 2B.3) ── */
-        <div className="mt-5 flex flex-col items-center rounded-2xl bg-cream px-6 py-8 text-center ring-1 ring-black/[0.04]">
-          <span className="flex size-12 items-center justify-center rounded-full bg-white text-forest ring-1 ring-black/5">
+        <div className="mt-5 flex flex-col items-center rounded-2xl bg-cream px-6 py-8 text-center ring-1 ring-soil/[0.04]">
+          <span className="flex size-12 items-center justify-center rounded-full bg-cream text-forest ring-1 ring-soil/5">
             <CircleDashed className="size-6" strokeWidth={1.8} />
           </span>
           <p className="mt-4 text-base font-semibold text-ink">
@@ -117,7 +117,7 @@ export const DailyHudCard = memo(function DailyHudCard() {
                   cy={SIZE / 2}
                   r={R}
                   fill="none"
-                  stroke="#e6efdd"
+                  stroke="#ebe4de"
                   strokeWidth={STROKE}
                 />
                 <circle
@@ -163,7 +163,7 @@ export const DailyHudCard = memo(function DailyHudCard() {
           </div>
 
           {/* footer meta — mengisi bawah kartu, jadi tidak ada ruang kosong */}
-          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-black/[0.06] pt-2.5 text-[11px] text-ink/55">
+          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-soil/[0.06] pt-2.5 text-[11px] text-ink/55">
             <span>
               Sisa bulan{' '}
               <b className="font-semibold text-ink tabular-nums">

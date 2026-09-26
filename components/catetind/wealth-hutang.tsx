@@ -200,7 +200,7 @@ export function WealthHutang({
                 <button
                   type="button"
                   onClick={onAddDebt}
-                  className="flex w-full items-center justify-center gap-2 rounded-[1.5rem] border-2 border-dashed border-forest/20 bg-white/60 px-5 py-4 text-[13.5px] font-semibold text-ink/60 transition-colors hover:border-forest/35 hover:bg-white hover:text-ink active:scale-[0.99]"
+                  className="flex w-full items-center justify-center gap-2 rounded-[1.5rem] border-2 border-dashed border-forest/20 bg-cream/60 px-5 py-4 text-[13.5px] font-semibold text-ink/60 transition-colors hover:border-forest/35 hover:bg-cream hover:text-ink active:scale-[0.99]"
                 >
                   <Plus className="size-4" strokeWidth={2.6} />
                   Tambah Utang/Piutang
@@ -245,7 +245,7 @@ function SegmentedControl({
     <div
       role="tablist"
       aria-label="Jenis catatan hutang"
-      className="relative flex items-center rounded-full bg-white p-1 shadow-[0_12px_28px_-22px_rgba(16,58,42,0.6)] ring-1 ring-black/[0.06]"
+      className="relative flex items-center rounded-full bg-cream p-1 shadow-[0_12px_28px_-22px_rgba(69,89,78,0.6)] ring-1 ring-soil/[0.06]"
     >
       <motion.span
         aria-hidden
@@ -308,7 +308,7 @@ function SummaryCard({
   const piutang = view === 'piutangku'
 
   return (
-    <section className="relative mt-4 overflow-hidden rounded-[1.75rem] bg-[#FFFDF7] p-5 shadow-[0_20px_46px_-30px_rgba(16,58,42,0.5)] ring-1 ring-black/[0.05] sm:p-6">
+    <section className="relative mt-4 overflow-hidden rounded-[1.75rem] bg-[#fbf6d9] p-5 shadow-[0_20px_46px_-30px_rgba(69,89,78,0.5)] ring-1 ring-soil/[0.05] sm:p-6">
       <div
         aria-hidden
         className={cn(
@@ -329,7 +329,7 @@ function SummaryCard({
         </p>
 
         {piutang ? (
-          <p className="mt-4 rounded-2xl bg-hud-amber/12 px-3.5 py-3 text-[12px] leading-relaxed text-[#8a5a1f] ring-1 ring-inset ring-hud-amber/25">
+          <p className="mt-4 rounded-2xl bg-hud-amber/12 px-3.5 py-3 text-[12px] leading-relaxed text-[#b89191] ring-1 ring-inset ring-hud-amber/25">
             Catat aja biar gak lupa, bukan buat ngejar-ngejar ya 😊
           </p>
         ) : (
@@ -392,12 +392,12 @@ function EmptyDebtState({
   /* semua hutang lunas — perayaan khusus, bukan empty state biasa */
   if (allSettled) {
     return (
-      <div className="mt-5 flex flex-col items-center overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-sage via-[#FFFDF7] to-mint-soft/60 px-6 py-10 text-center ring-1 ring-hud-sage/40">
+      <div className="mt-5 flex flex-col items-center overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-sage via-[#fbf6d9] to-mint-soft/60 px-6 py-10 text-center ring-1 ring-hud-sage/40">
         <motion.span
           initial={{ scale: 0.7, opacity: 0, rotate: -8 }}
           animate={{ scale: 1, opacity: 1, rotate: 0 }}
           transition={{ type: 'spring', stiffness: 160, damping: 14 }}
-          className="flex size-16 items-center justify-center rounded-full bg-white/80 text-hud-sage shadow-[0_18px_36px_-20px_rgba(16,58,42,0.5)] ring-1 ring-hud-sage/30"
+          className="flex size-16 items-center justify-center rounded-full bg-cream/80 text-hud-sage shadow-[0_18px_36px_-20px_rgba(69,89,78,0.5)] ring-1 ring-hud-sage/30"
         >
           <ShieldCheck className="size-8" strokeWidth={2.2} />
         </motion.span>
@@ -456,7 +456,7 @@ function SnowballTracker({
   celebrateId: string | null
 }) {
   return (
-    <section className="relative overflow-hidden rounded-[1.75rem] bg-[#FFFDF7] p-5 shadow-[0_20px_46px_-30px_rgba(16,58,42,0.5)] ring-1 ring-black/[0.05] sm:p-6">
+    <section className="relative overflow-hidden rounded-[1.75rem] bg-[#fbf6d9] p-5 shadow-[0_20px_46px_-30px_rgba(69,89,78,0.5)] ring-1 ring-soil/[0.05] sm:p-6">
       <div
         aria-hidden
         className="pointer-events-none absolute -left-16 -top-20 size-52 rounded-full bg-hud-terracotta/12 blur-3xl"
@@ -474,7 +474,7 @@ function SnowballTracker({
             </h3>
             <p className="mt-1 text-[11px] leading-relaxed text-ink/45">{SNOWBALL_HELP}</p>
           </div>
-          <span className="shrink-0 rounded-full bg-hud-sage/25 px-2.5 py-1 text-[10.5px] font-bold text-[#4F5C3C] tabular-nums">
+          <span className="shrink-0 rounded-full bg-hud-sage/25 px-2.5 py-1 text-[10.5px] font-bold text-[#503a3a] tabular-nums">
             {progress.pct}% lunas
           </span>
         </div>
@@ -489,7 +489,7 @@ function SnowballTracker({
             initial={false}
             animate={{ width: `${progress.pct}%` }}
             transition={{ type: 'spring', stiffness: 130, damping: 20 }}
-            className="relative block h-full rounded-full bg-gradient-to-r from-hud-sage to-[#8B9973]"
+            className="relative block h-full rounded-full bg-gradient-to-r from-hud-sage to-[#b5b987]"
           >
             <span aria-hidden className="progress-shimmer" />
           </motion.span>
@@ -572,14 +572,14 @@ function SnowballBar({
         </span>
         <span className="flex shrink-0 items-center gap-2">
           {first && !done && (
-            <span className="rounded-full bg-hud-amber/25 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-[#8a5a1f]">
+            <span className="rounded-full bg-hud-amber/25 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-[#b89191]">
               Mulai dari sini
             </span>
           )}
           <span
             className={cn(
               'text-[11.5px] font-bold tabular-nums',
-              done ? 'text-[#7D8B65]' : 'text-ink/55',
+              done ? 'text-[#b5b987]' : 'text-ink/55',
             )}
           >
             {paidPct}% lunas
@@ -594,15 +594,15 @@ function SnowballBar({
             initial={false}
             animate={{ width: `${remainingPct}%` }}
             transition={{ type: 'spring', stiffness: 130, damping: 20 }}
-            className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-hud-terracotta via-[#C97F3E] to-hud-amber"
+            className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-hud-terracotta via-[#ffb885] to-hud-amber"
           >
-            <span aria-hidden className="absolute inset-x-0 top-0 h-px bg-white/35" />
+            <span aria-hidden className="absolute inset-x-0 top-0 h-px bg-cream/35" />
           </motion.span>
           {done && (
             <motion.span
               initial={{ opacity: 0.9 }}
               animate={{ opacity: 1 }}
-              className="absolute inset-0 rounded-full bg-gradient-to-r from-hud-sage to-[#8B9973]"
+              className="absolute inset-0 rounded-full bg-gradient-to-r from-hud-sage to-[#b5b987]"
             />
           )}
         </div>
@@ -616,18 +616,18 @@ function SnowballBar({
    memudar ~0.9 detik. Dipakai dua tempat: bar snowball yang lunas dan kartu
    personal yang ditandai lunas (Section 7C & 7E). */
 const CONFETTI_PIECES = [
-  { x: -46, y: -30, r: -40, color: '#A3B18A', delay: 0 },
-  { x: -30, y: -46, r: 25, color: '#DDA15E', delay: 0.02 },
-  { x: -10, y: -52, r: -12, color: '#BC6C25', delay: 0.03 },
-  { x: 12, y: -48, r: 40, color: '#B7E04B', delay: 0.01 },
-  { x: 34, y: -38, r: -26, color: '#C2CDAC', delay: 0.04 },
-  { x: 48, y: -18, r: 18, color: '#A3B18A', delay: 0.02 },
-  { x: 46, y: 8, r: -34, color: '#DDA15E', delay: 0.05 },
-  { x: 28, y: 26, r: 22, color: '#BC6C25', delay: 0.03 },
-  { x: 6, y: 34, r: -18, color: '#A3B18A', delay: 0.01 },
-  { x: -18, y: 30, r: 36, color: '#B7E04B', delay: 0.04 },
-  { x: -38, y: 16, r: -22, color: '#DDA15E', delay: 0.02 },
-  { x: -48, y: -6, r: 30, color: '#C2CDAC', delay: 0.05 },
+  { x: -46, y: -30, r: -40, color: '#b5b987', delay: 0 },
+  { x: -30, y: -46, r: 25, color: '#ffb885', delay: 0.02 },
+  { x: -10, y: -52, r: -12, color: '#b89191', delay: 0.03 },
+  { x: 12, y: -48, r: 40, color: '#91bb9e', delay: 0.01 },
+  { x: 34, y: -38, r: -26, color: '#e6e4c0', delay: 0.04 },
+  { x: 48, y: -18, r: 18, color: '#b5b987', delay: 0.02 },
+  { x: 46, y: 8, r: -34, color: '#ffb885', delay: 0.05 },
+  { x: 28, y: 26, r: 22, color: '#b89191', delay: 0.03 },
+  { x: 6, y: 34, r: -18, color: '#b5b987', delay: 0.01 },
+  { x: -18, y: 30, r: 36, color: '#91bb9e', delay: 0.04 },
+  { x: -38, y: 16, r: -22, color: '#ffb885', delay: 0.02 },
+  { x: -48, y: -6, r: 30, color: '#e6e4c0', delay: 0.05 },
 ]
 
 function ConfettiBurst() {
@@ -727,7 +727,7 @@ function PlatformDebtCard({
             setDx(0)
             onPay()
           }}
-          className="flex w-[116px] flex-col items-center justify-center gap-1 bg-hud-sage text-[10.5px] font-bold text-[#2f3a22] transition-colors hover:brightness-105"
+          className="flex w-[116px] flex-col items-center justify-center gap-1 bg-hud-sage text-[10.5px] font-bold text-[#503a3a] transition-colors hover:brightness-105"
         >
           <Wallet className="size-4" strokeWidth={2.4} />
           Catat Bayar
@@ -746,12 +746,12 @@ function PlatformDebtCard({
         animate={{ x: dx }}
         transition={dragging ? { duration: 0 } : { type: 'spring', stiffness: 320, damping: 30 }}
         style={{ touchAction: 'pan-y' }}
-        className="relative w-full cursor-pointer touch-pan-y rounded-[1.35rem] bg-white px-3.5 py-3.5 text-left shadow-[0_10px_28px_-24px_rgba(16,58,42,0.6)] ring-1 ring-black/[0.05] outline-none focus-visible:ring-2 focus-visible:ring-forest/30"
+        className="relative w-full cursor-pointer touch-pan-y rounded-[1.35rem] bg-cream px-3.5 py-3.5 text-left shadow-[0_10px_28px_-24px_rgba(69,89,78,0.6)] ring-1 ring-soil/[0.05] outline-none focus-visible:ring-2 focus-visible:ring-forest/30"
       >
         <span className="flex items-center gap-3">
           <span
             aria-hidden
-            className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-cream text-[17px] ring-1 ring-inset ring-black/[0.04]"
+            className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-cream text-[17px] ring-1 ring-inset ring-soil/[0.04]"
           >
             {providerEmoji(debt.provider)}
           </span>
@@ -759,7 +759,7 @@ function PlatformDebtCard({
             <span className="flex items-center gap-1.5">
               <span className="truncate text-[13.5px] font-bold text-ink">{debt.provider}</span>
               {done && (
-                <span className="shrink-0 rounded-full bg-hud-sage/30 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-[#4F5C3C]">
+                <span className="shrink-0 rounded-full bg-hud-sage/30 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-[#503a3a]">
                   Lunas
                 </span>
               )}
@@ -813,7 +813,7 @@ function PlatformDebtCard({
             transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
             className="overflow-hidden"
           >
-            <div className="mt-2 rounded-[1.35rem] bg-cream/70 px-3.5 py-3.5 ring-1 ring-inset ring-black/[0.04]">
+            <div className="mt-2 rounded-[1.35rem] bg-cream/70 px-3.5 py-3.5 ring-1 ring-inset ring-soil/[0.04]">
               <dl className="space-y-2 text-[11.5px]">
                 <div className="flex items-center justify-between gap-3">
                   <dt className="text-ink/50">Sisa pokok</dt>
@@ -823,7 +823,7 @@ function PlatformDebtCard({
                 </div>
                 <div className="flex items-center justify-between gap-3">
                   <dt className="text-ink/50">Sudah dibayar</dt>
-                  <dd className="font-bold text-[#7D8B65] tabular-nums">
+                  <dd className="font-bold text-[#b5b987] tabular-nums">
                     {maskMoney(paid, masked)}
                   </dd>
                 </div>
@@ -1055,8 +1055,8 @@ function PersonalDebtCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.34, delay, ease: [0.22, 1, 0.36, 1] }}
       className={cn(
-        'relative flex items-center gap-3 overflow-hidden rounded-[1.35rem] bg-white px-3.5 py-3.5 ring-1',
-        settled ? 'ring-black/[0.03]' : 'shadow-[0_10px_28px_-24px_rgba(16,58,42,0.6)] ring-black/[0.05]',
+        'relative flex items-center gap-3 overflow-hidden rounded-[1.35rem] bg-cream px-3.5 py-3.5 ring-1',
+        settled ? 'ring-soil/[0.03]' : 'shadow-[0_10px_28px_-24px_rgba(69,89,78,0.6)] ring-soil/[0.05]',
       )}
     >
       {settled && <LunasStamp />}
@@ -1066,8 +1066,8 @@ function PersonalDebtCard({
         className={cn(
           'flex size-10 shrink-0 items-center justify-center rounded-2xl ring-1 ring-inset',
           incoming
-            ? 'bg-hud-sage/25 text-[#4F5C3C] ring-hud-sage/30'
-            : 'bg-hud-terracotta/12 text-[#8f4f18] ring-hud-terracotta/20',
+            ? 'bg-hud-sage/25 text-[#503a3a] ring-hud-sage/30'
+            : 'bg-hud-terracotta/12 text-[#b89191] ring-hud-terracotta/20',
         )}
       >
         {incoming ? (
@@ -1103,14 +1103,14 @@ function PersonalDebtCard({
           {maskMoney(settled ? debt.principal : debt.remaining, masked)}
         </span>
         {settled ? (
-          <span className="rounded-full bg-hud-sage/30 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-[#4F5C3C]">
+          <span className="rounded-full bg-hud-sage/30 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-[#503a3a]">
             Lunas
           </span>
         ) : (
           <button
             type="button"
             onClick={onSettle}
-            className="inline-flex items-center gap-1 rounded-full bg-hud-sage px-2.5 py-1 text-[10.5px] font-bold text-[#2f3a22] transition-colors hover:brightness-105 active:scale-95"
+            className="inline-flex items-center gap-1 rounded-full bg-hud-sage px-2.5 py-1 text-[10.5px] font-bold text-[#503a3a] transition-colors hover:brightness-105 active:scale-95"
           >
             <Check className="size-3" strokeWidth={3} />
             Tandai Lunas
@@ -1124,7 +1124,7 @@ function PersonalDebtCard({
 
 /* ── atom lokal halaman ini ───────────────────────────────────────────────── */
 
-/** stempel LUNAS diagonal ala halaman Tagihan (sage, tepi bertitik) */
+/** stempel LUNAS diagonal ala halaman Tagihan (olive, tepi bertitik) */
 function LunasStamp() {
   return (
     <span
@@ -1149,7 +1149,7 @@ function DateField({
   return (
     <div className="mt-4">
       <span className="text-[13px] font-semibold leading-snug text-ink">{label}</span>
-      <span className="relative mt-2 flex items-center gap-2 rounded-2xl bg-white px-4 py-3 ring-1 ring-black/[0.08] focus-within:ring-2 focus-within:ring-forest/35">
+      <span className="relative mt-2 flex items-center gap-2 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/[0.08] focus-within:ring-2 focus-within:ring-forest/35">
         <Wallet className="size-4 shrink-0 text-ink/30" strokeWidth={2.2} />
         <span className="flex-1 text-[14px] font-semibold tabular-nums text-ink">
           {formatSheetDate(value)}

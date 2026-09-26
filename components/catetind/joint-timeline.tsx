@@ -76,7 +76,7 @@ export function JointTimeline({
                 partner.dot,
               )}
             />
-            <div className="inline-flex items-center gap-2 rounded-full bg-[#FFFDF7] px-3 py-1.5 text-[11.5px] font-semibold text-ink/60 ring-1 ring-black/[0.05]">
+            <div className="inline-flex items-center gap-2 rounded-full bg-[#fbf6d9] px-3 py-1.5 text-[11.5px] font-semibold text-ink/60 ring-1 ring-soil/[0.05]">
               <span aria-hidden>{partner.avatar}</span>
               {partner.name} sedang mencatat
               <span className="flex items-end gap-0.5" aria-hidden>
@@ -97,7 +97,7 @@ export function JointTimeline({
         {groups.map((group) => (
           <section key={group.date} className="relative pt-3">
             {/* separator tanggal yang menyeberangi garis */}
-            <h3 className="relative z-10 mb-3 ml-6 w-fit rounded-full bg-[#FFFDF7] px-3 py-1 text-[10.5px] font-bold uppercase tracking-[0.14em] text-ink/40 ring-1 ring-black/[0.05] sm:mx-auto sm:ml-auto">
+            <h3 className="relative z-10 mb-3 ml-6 w-fit rounded-full bg-[#fbf6d9] px-3 py-1 text-[10.5px] font-bold uppercase tracking-[0.14em] text-ink/40 ring-1 ring-soil/[0.05] sm:mx-auto sm:ml-auto">
               {group.label}
             </h3>
 
@@ -209,13 +209,13 @@ function TimelineCard({
             person.rail,
             /* privat milik sendiri: latar warm grey + gembok */
             isPrivateMine
-              ? 'bg-[#F5F5F0] ring-black/[0.07]'
+              ? 'bg-[#ebe4de] ring-soil/[0.07]'
               : view.hiddenFromMe
                 ? /* privat milik pasangan: border putus-putus, tanpa detail */
-                  'border border-dashed border-hud-amber/50 bg-[#FFFDF7] ring-transparent'
-                : 'bg-[#FFFDF7] ring-black/[0.05]',
-            expandable && 'cursor-pointer hover:shadow-[0_18px_38px_-30px_rgba(16,58,42,0.85)]',
-            expandable && open && 'shadow-[0_18px_38px_-30px_rgba(16,58,42,0.85)]',
+                  'border border-dashed border-hud-amber/50 bg-[#fbf6d9] ring-transparent'
+                : 'bg-[#fbf6d9] ring-soil/[0.05]',
+            expandable && 'cursor-pointer hover:shadow-[0_18px_38px_-30px_rgba(69,89,78,0.85)]',
+            expandable && open && 'shadow-[0_18px_38px_-30px_rgba(69,89,78,0.85)]',
           )}
         >
           {/* baris 1: siapa & kapan */}
@@ -237,7 +237,7 @@ function TimelineCard({
 
             <span className="flex shrink-0 items-center gap-1.5">
               {tx.justArrived && (
-                <span className="rounded-full bg-hud-amber/25 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-[#8a5a1f]">
+                <span className="rounded-full bg-hud-amber/25 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-[#b89191]">
                   Baru
                 </span>
               )}
@@ -285,13 +285,13 @@ function TimelineCard({
             </span>
 
             <span className="flex items-center gap-1.5">
-              <span className="rounded-full bg-hud-sage/15 px-2 py-0.5 text-[10.5px] font-semibold text-[#4c5a3a] ring-1 ring-hud-sage/25">
+              <span className="rounded-full bg-hud-sage/15 px-2 py-0.5 text-[10.5px] font-semibold text-[#503a3a] ring-1 ring-hud-sage/25">
                 {view.category === '🔒'
                   ? '🔒 Privat'
                   : `${categoryEmoji(view.category)} ${view.category}`}
               </span>
               {!view.hiddenFromMe && (
-                <span className="rounded-full bg-black/[0.04] px-2 py-0.5 text-[10.5px] font-medium text-ink/50">
+                <span className="rounded-full bg-soil/[0.04] px-2 py-0.5 text-[10.5px] font-medium text-ink/50">
                   {splitLabel(tx, masked)}
                 </span>
               )}
@@ -309,7 +309,7 @@ function TimelineCard({
                 transition={{ duration: 0.26, ease: EASE }}
                 className="overflow-hidden"
               >
-                <div className="mt-3 border-t border-black/[0.06] pt-3">
+                <div className="mt-3 border-t border-soil/[0.06] pt-3">
                   <p className="text-[11.5px] text-ink/45">
                     Split: <b className="font-semibold text-ink/70">{splitLabel(tx, masked)}</b>
                   </p>
@@ -339,7 +339,7 @@ function TimelineCard({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 4 }}
               transition={{ duration: 0.16 }}
-              className="relative z-20 mt-2 w-fit rounded-2xl bg-ink px-3 py-2 text-[11px] font-medium leading-relaxed text-cream shadow-[0_14px_30px_-18px_rgba(16,58,42,0.9)]"
+              className="relative z-20 mt-2 w-fit rounded-2xl bg-ink px-3 py-2 text-[11px] font-medium leading-relaxed text-cream shadow-[0_14px_30px_-18px_rgba(69,89,78,0.9)]"
             >
               {PRIVATE_OWNER_HINT}
             </motion.p>

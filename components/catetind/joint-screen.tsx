@@ -313,7 +313,7 @@ export function JointScreen() {
         ) : (
           <>
             {/* ── SECTION 2: header (nama dompet editable) + saldo ────────── */}
-            <header className="sticky top-2 z-30 rounded-[1.5rem] bg-[#FFFDF7]/90 px-4 py-3.5 shadow-[0_18px_40px_-32px_rgba(16,58,42,0.65)] ring-1 ring-black/[0.05] backdrop-blur-md">
+            <header className="sticky top-2 z-30 rounded-[1.5rem] bg-[#fbf6d9]/90 px-4 py-3.5 shadow-[0_18px_40px_-32px_rgba(69,89,78,0.65)] ring-1 ring-soil/[0.05] backdrop-blur-md">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex min-w-0 items-start gap-3">
                   <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-hud-sage/60 via-cream to-hud-amber/40 text-forest ring-1 ring-forest/10">
@@ -334,7 +334,7 @@ export function JointScreen() {
                           }
                         }}
                         aria-label="Nama dompet bersama"
-                        className="w-full rounded-xl bg-white px-2.5 py-1 font-display text-[19px] font-black tracking-tight text-ink outline-none ring-2 ring-forest/35 lg:text-[22px]"
+                        className="w-full rounded-xl bg-cream px-2.5 py-1 font-display text-[19px] font-black tracking-tight text-ink outline-none ring-2 ring-forest/35 lg:text-[22px]"
                       />
                     ) : (
                       <button
@@ -381,11 +381,11 @@ export function JointScreen() {
                   dikumpulkan di satu rekening, jadi "saldo bersama" itu angka
                   fiktif dan dihapus. Yang benar-benar bisa dipertanggungjawabkan
                   adalah TOTAL PENGELUARAN BERSAMA bulan ini. */}
-              <div className="mt-3 border-t border-black/[0.05] pt-3">
+              <div className="mt-3 border-t border-soil/[0.05] pt-3">
                 <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10.5px] font-bold uppercase tracking-[0.14em] text-ink/40">
                   <ReceiptText className="size-3.5 shrink-0" strokeWidth={2.4} />
                   Total Pengeluaran Bersama
-                  <span className="rounded-full bg-hud-sage/20 px-2 py-0.5 text-[9.5px] font-bold tracking-wide text-[#3f4a30] ring-1 ring-hud-sage/30">
+                  <span className="rounded-full bg-hud-sage/20 px-2 py-0.5 text-[9.5px] font-bold tracking-wide text-[#503a3a] ring-1 ring-hud-sage/30">
                     {JOINT_MONTH_LABEL}
                   </span>
                 </p>
@@ -416,7 +416,7 @@ export function JointScreen() {
               {/* ── KIRI (5/12): ringkasan ─────────────────────────────────── */}
               <div className="lg:col-span-5">
                 {/* ── SECTION 3: Balance Scale Settlement Gauge (hero visual) ── */}
-                <section className="mt-4 rounded-[1.75rem] bg-[#FFFDF7] px-4 pb-4 pt-5 ring-1 ring-black/[0.05] sm:px-6 lg:mt-6">
+                <section className="mt-4 rounded-[1.75rem] bg-[#fbf6d9] px-4 pb-4 pt-5 ring-1 ring-soil/[0.05] sm:px-6 lg:mt-6">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <h2 className="flex items-center gap-2 font-display text-[15px] font-black tracking-tight text-ink">
@@ -427,7 +427,7 @@ export function JointScreen() {
                         Sisi yang turun = yang nalangin lebih banyak (patungan saja)
                       </p>
                     </div>
-                    <span className="shrink-0 rounded-full bg-hud-sage/15 px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-wide text-[#3f4a30] ring-1 ring-hud-sage/30">
+                    <span className="shrink-0 rounded-full bg-hud-sage/15 px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-wide text-[#503a3a] ring-1 ring-hud-sage/30">
                       {JOINT_MONTH_LABEL.split(' ')[0]}
                     </span>
                   </div>
@@ -493,7 +493,7 @@ export function JointScreen() {
 
                 {isEmptyJoint ? (
                   /* SECTION 12: pasangan sudah gabung tapi belum ada transaksi */
-                  <div className="mt-4 rounded-[1.75rem] border-2 border-dashed border-hud-sage/45 bg-[#FFFDF7] px-6 py-10 text-center">
+                  <div className="mt-4 rounded-[1.75rem] border-2 border-dashed border-hud-sage/45 bg-[#fbf6d9] px-6 py-10 text-center">
                     <span aria-hidden className="text-[30px]">
                       🌱
                     </span>
@@ -514,7 +514,7 @@ export function JointScreen() {
                       <button
                         type="button"
                         onClick={() => toast.info(`Notifikasi dikirim ke ${partner.name}! 📩`)}
-                        className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-white px-5 text-[13.5px] font-semibold text-ink ring-1 ring-black/[0.08] transition-colors hover:bg-cream active:scale-[0.99]"
+                        className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-cream px-5 text-[13.5px] font-semibold text-ink ring-1 ring-soil/[0.08] transition-colors hover:bg-cream active:scale-[0.99]"
                       >
                         <HeartHandshake className="size-4" strokeWidth={2.3} />
                         Tantang {partner.name}! 💬
@@ -547,7 +547,7 @@ export function JointScreen() {
           aria-label="Catat transaksi bareng"
           className={cn(
             'fixed bottom-8 left-1/2 z-50 flex size-14 -translate-x-1/2 items-center justify-center rounded-full',
-            'bg-forest text-mint shadow-[0_18px_36px_-14px_rgba(16,58,42,0.65)] ring-1 ring-forest/25',
+            'bg-forest text-mint shadow-[0_18px_36px_-14px_rgba(69,89,78,0.65)] ring-1 ring-forest/25',
             'transition-transform duration-150 hover:scale-105 active:scale-95',
             'lg:bottom-8 lg:left-auto lg:right-24 lg:h-12 lg:w-auto lg:translate-x-0 lg:gap-2 lg:px-5 lg:text-[13px] lg:font-bold',
           )}

@@ -169,7 +169,7 @@ export function WealthScreen() {
 
   /** platform: catat pembayaran → sisa berkurang, bar snowball menyusut.
    *  Kalau habis, status baru dipindah SETELAH animasi mencair selesai supaya
-   *  barnya sempat terlihat berubah sage penuh + confetti dulu. */
+   *  barnya sempat terlihat berubah olive penuh + confetti dulu. */
   const handlePayDebt = useCallback((debt: Debt, amount: number) => {
     const remaining = Math.max(0, debt.remaining - amount)
     setDebts((prev) =>
@@ -220,9 +220,9 @@ export function WealthScreen() {
           donut & daftar aset bisa berdampingan (bukan ponsel yang direntangkan) */}
       <div className="mx-auto w-full max-w-[760px] xl:max-w-[1060px]">
         {/* ── SECTION 2: header halaman (sticky) + toggle privasi ────────── */}
-        <header className="sticky top-2 z-30 mb-5 flex items-center justify-between gap-3 rounded-[1.5rem] bg-[#FFFDF7]/90 px-4 py-3 shadow-[0_18px_40px_-32px_rgba(16,58,42,0.65)] ring-1 ring-black/[0.05] backdrop-blur-md">
+        <header className="sticky top-2 z-30 mb-5 flex items-center justify-between gap-3 rounded-[1.5rem] bg-[#fbf6d9]/90 px-4 py-3 shadow-[0_18px_40px_-32px_rgba(69,89,78,0.65)] ring-1 ring-soil/[0.05] backdrop-blur-md">
           <div className="flex min-w-0 items-center gap-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sage via-cream to-mint-soft text-forest shadow-[0_12px_26px_-16px_rgba(16,58,42,0.7)] ring-1 ring-forest/10">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sage via-cream to-mint-soft text-forest shadow-[0_12px_26px_-16px_rgba(69,89,78,0.7)] ring-1 ring-forest/10">
               <LineChart className="size-[18px]" strokeWidth={2.1} />
             </span>
             <div className="min-w-0">
@@ -288,14 +288,14 @@ export function WealthScreen() {
               className="mt-5"
             >
               {/* ── SECTION 6: properti = V1 placeholder (PRD Decision A12) ── */}
-              <div className="flex flex-col items-center rounded-[1.75rem] border-2 border-dashed border-hud-amber/35 bg-[#FFFDF7] px-6 py-14 text-center">
+              <div className="flex flex-col items-center rounded-[1.75rem] border-2 border-dashed border-hud-amber/35 bg-[#fbf6d9] px-6 py-14 text-center">
                 <span aria-hidden className="text-[34px]">
                   🏠
                 </span>
                 <h2 className="mt-3 font-display text-[17px] font-black tracking-tight text-ink">
                   Properti &amp; Aset Fisik
                 </h2>
-                <span className="mt-2.5 rounded-full bg-hud-amber/25 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-[#8a5a1f] ring-1 ring-inset ring-hud-amber/40">
+                <span className="mt-2.5 rounded-full bg-hud-amber/25 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-[#b89191] ring-1 ring-inset ring-hud-amber/40">
                   Segera Hadir
                 </span>
                 <p className="mt-3 max-w-sm text-[13px] leading-relaxed text-ink/55">
@@ -380,14 +380,14 @@ function WealthTabs({
             onClick={() => onChange(tab.id)}
             className={cn(
               'relative flex shrink-0 items-center gap-2 rounded-full px-4 py-2.5 text-[13px] font-bold transition-colors duration-200',
-              isActive ? 'text-mint' : 'bg-white text-ink/55 ring-1 ring-black/[0.06] hover:text-ink',
+              isActive ? 'text-mint' : 'bg-cream text-ink/55 ring-1 ring-soil/[0.06] hover:text-ink',
             )}
           >
             {isActive && (
               <motion.span
                 layoutId="wealth-tab-pill"
                 transition={{ type: 'spring', stiffness: 340, damping: 32 }}
-                className="absolute inset-0 rounded-full bg-forest shadow-[0_14px_30px_-18px_rgba(16,58,42,0.9)]"
+                className="absolute inset-0 rounded-full bg-forest shadow-[0_14px_30px_-18px_rgba(69,89,78,0.9)]"
               />
             )}
             <span className="relative z-10 flex items-center gap-1.5">
@@ -399,7 +399,7 @@ function WealthTabs({
                     'rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide',
                     isActive
                       ? 'bg-mint/25 text-mint'
-                      : 'bg-hud-amber/25 text-[#8a5a1f]',
+                      : 'bg-hud-amber/25 text-[#b89191]',
                   )}
                 >
                   {tab.badge}

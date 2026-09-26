@@ -23,8 +23,8 @@ import type { TransactionTypeId } from '@/components/dashboard/transaction-input
  * satu tombol di CTA bawah. Setelah tersimpan, form diganti Upacara Tanaman (4C).
  *
  * Redesign: pemilih tipe jadi SEGMENTED CONTROL satu baris (ikon + label kecil)
- * dengan satu warna aktif (forest) — warna status per tipe (terracotta/amber/
- * sage) sengaja tidak dipakai di sini supaya layar onboarding tetap tenang.
+ * dengan satu warna aktif (forest) — warna status per tipe (plum/cantelope/
+ * olive) sengaja tidak dipakai di sini supaya layar onboarding tetap tenang.
  */
 
 /** 4 tipe transaksi — id, urutan, ikon, dan label sama dengan engine */
@@ -115,7 +115,7 @@ export function OnboardingStepFirstTransaction({
               className={cn(
                 'flex flex-1 flex-col items-center gap-1 rounded-[0.9rem] py-2 transition-all duration-200',
                 active
-                  ? 'bg-white text-ink shadow-[0_1px_3px_rgba(18,40,31,0.12)]'
+                  ? 'bg-cream text-ink shadow-[0_1px_3px_rgba(80,58,58,0.12)]'
                   : 'text-ink/45 hover:text-ink/70',
               )}
             >
@@ -174,7 +174,7 @@ export function OnboardingStepFirstTransaction({
         }}
         placeholder="Contoh: Kopi Kenangan pagi tadi"
         aria-label="Catatan transaksi (opsional)"
-        className="mt-8 h-14 w-full rounded-[1.35rem] bg-white px-4 text-[14px] font-medium tracking-[-0.01em] text-ink outline-none ring-1 ring-ink/[0.06] transition-all placeholder:text-ink/30 focus:ring-forest/25"
+        className="mt-8 h-14 w-full rounded-[1.35rem] bg-cream px-4 text-[14px] font-medium tracking-[-0.01em] text-ink outline-none ring-1 ring-ink/[0.06] transition-all placeholder:text-ink/30 focus:ring-forest/25"
       />
     </div>
   )

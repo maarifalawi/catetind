@@ -104,7 +104,7 @@ const FUEL_METERS: FuelMeter[] = [
   },
 ]
 
-/** warna bar naik lembut (mint → sage → amber). Bukan alarm, cuma gradasi hangat. */
+/** warna bar naik lembut (leaf → olive → cantelope). Bukan alarm, cuma gradasi hangat. */
 function barTone(pct: number) {
   if (pct >= 90) return 'bg-hud-amber'
   if (pct >= 75) return 'bg-hud-sage'
@@ -134,8 +134,8 @@ export function BillingPanel() {
       </div>
 
       {/* band CTA — pola kartu "Enterprise plans" referensi: label + copy + CTA besar */}
-      <section className="mt-4 rounded-[1.75rem] bg-gradient-to-br from-forest to-forest-soft p-5 ring-1 ring-black/5 sm:p-6">
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-medium text-cream/80">
+      <section className="mt-4 rounded-[1.75rem] bg-gradient-to-br from-forest to-forest-soft p-5 ring-1 ring-soil/5 sm:p-6">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-cream/10 px-2.5 py-1 text-[11px] font-medium text-cream/80">
           <Zap className="size-3.5 text-mint" strokeWidth={2.4} />
           AI Token Add-on
         </span>
@@ -173,7 +173,7 @@ export function BillingPanel() {
 /* ── kartu 1: paket aktif + perpanjang ───────────────────────────────────────── */
 function CurrentPlanCard({ onUpgrade }: { onUpgrade: () => void }) {
   return (
-    <section className="flex flex-col rounded-[1.75rem] bg-white p-5 ring-1 ring-black/5 sm:p-6">
+    <section className="flex flex-col rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/5 sm:p-6">
       <div className="flex items-start gap-3">
         <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-forest text-mint">
           <Crown className="size-5" strokeWidth={2.2} />
@@ -193,7 +193,7 @@ function CurrentPlanCard({ onUpgrade }: { onUpgrade: () => void }) {
       </div>
 
       <dl className="mt-5 grid grid-cols-2 gap-2.5">
-        <div className="rounded-2xl bg-cream px-3.5 py-3 ring-1 ring-black/[0.04]">
+        <div className="rounded-2xl bg-cream px-3.5 py-3 ring-1 ring-soil/[0.04]">
           <dt className="flex items-center gap-1.5 text-[11px] text-ink/45">
             <CalendarClock className="size-3.5" strokeWidth={2.2} />
             Aktif sampai
@@ -202,7 +202,7 @@ function CurrentPlanCard({ onUpgrade }: { onUpgrade: () => void }) {
             {CURRENT_PLAN.activeUntil}
           </dd>
         </div>
-        <div className="rounded-2xl bg-cream px-3.5 py-3 ring-1 ring-black/[0.04]">
+        <div className="rounded-2xl bg-cream px-3.5 py-3 ring-1 ring-soil/[0.04]">
           <dt className="flex items-center gap-1.5 text-[11px] text-ink/45">
             <CreditCard className="size-3.5" strokeWidth={2.2} />
             Metode tersimpan
@@ -234,7 +234,7 @@ function CurrentPlanCard({ onUpgrade }: { onUpgrade: () => void }) {
 /* ── kartu 2: AI Token fuel gauge ────────────────────────────────────────────── */
 function FuelGaugeCard({ avgPct }: { avgPct: number }) {
   return (
-    <section className="flex flex-col rounded-[1.75rem] bg-white p-5 ring-1 ring-black/5 sm:p-6">
+    <section className="flex flex-col rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/5 sm:p-6">
       <div className="flex items-baseline justify-between gap-2">
         <h2 className="text-xl font-semibold tracking-tight text-ink">Bahan Bakar AI</h2>
         <span className="text-sm font-semibold text-ink/45 tabular-nums">{avgPct}% terpakai</span>
@@ -292,7 +292,7 @@ function PaymentMethodCard() {
   const SavedIcon = savedMethod?.icon ?? Wallet
 
   return (
-    <section className="flex items-center gap-3.5 rounded-[1.75rem] bg-white p-5 ring-1 ring-black/5 sm:px-6">
+    <section className="flex items-center gap-3.5 rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/5 sm:px-6">
       <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-sage text-forest">
         <SavedIcon className="size-5" strokeWidth={2.2} />
       </span>
@@ -316,7 +316,7 @@ function PaymentMethodCard() {
 /* ── section: riwayat pembayaran ─────────────────────────────────────────────── */
 function BillingHistorySection() {
   return (
-    <section className="mt-4 rounded-[1.75rem] bg-white p-5 ring-1 ring-black/5 sm:p-6">
+    <section className="mt-4 rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/5 sm:p-6">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 className="text-xl font-semibold tracking-tight text-ink">Riwayat Pembayaran</h2>
@@ -329,7 +329,7 @@ function BillingHistorySection() {
         </span>
       </div>
 
-      <ul className="mt-4 divide-y divide-black/[0.06] border-t border-black/[0.06]">
+      <ul className="mt-4 divide-y divide-soil/[0.06] border-t border-soil/[0.06]">
         {BILLING_HISTORY.map((item) => (
           <li key={item.id} className="flex items-center gap-3 py-3.5">
             <span className="min-w-0 flex-1">

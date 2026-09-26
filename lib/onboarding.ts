@@ -127,8 +127,9 @@ export const BUDGET_SPLITS: {
 
 /**
  * Quick-Pick dompet (Step 2D) — ghost card 1 ketukan. `tile` memakai keluarga
- * warna yang sudah dipakai app (biru/biru tua/emerald/violet/cyan/slate — lihat
- * lib/wallets.ts & wallet-screen.tsx), jadi tidak ada warna baru.
+ * warna yang sudah dipakai app (Evergreen, Leaf, Olive, Thistle, Plum,
+ * Cantelope, Daisy — lihat docs/theme/PALETTE.md, lib/wallets.ts &
+ * wallet-screen.tsx), jadi tidak ada warna baru.
  */
 export const QUICK_WALLET_PICKS: {
   name: string
@@ -138,32 +139,32 @@ export const QUICK_WALLET_PICKS: {
   {
     name: 'BCA',
     type: 'Bank',
-    tile: 'bg-gradient-to-br from-sky-100 via-blue-100 to-blue-200 text-blue-600 ring-blue-300/50',
+    tile: 'bg-gradient-to-br from-thistle/20 via-thistle/20 to-thistle/25 text-thistle ring-thistle/40',
   },
   {
     name: 'Mandiri',
     type: 'Bank',
-    tile: 'bg-gradient-to-br from-blue-200 via-blue-300 to-blue-400 text-blue-900 ring-blue-300/60',
+    tile: 'bg-gradient-to-br from-thistle/25 via-thistle/35 to-thistle/45 text-soil ring-thistle/40',
   },
   {
     name: 'GoPay',
     type: 'E-Wallet',
-    tile: 'bg-gradient-to-br from-emerald-100 via-emerald-200 to-teal-200 text-emerald-700 ring-emerald-300/50',
+    tile: 'bg-gradient-to-br from-olive/25 via-olive/30 to-leaf/25 text-evergreen ring-leaf/40',
   },
   {
     name: 'OVO',
     type: 'E-Wallet',
-    tile: 'bg-gradient-to-br from-violet-100 via-purple-100 to-fuchsia-200 text-violet-600 ring-violet-300/50',
+    tile: 'bg-gradient-to-br from-plum/20 via-plum/20 to-plum/30 text-plum ring-plum/40',
   },
   {
     name: 'Dana',
     type: 'E-Wallet',
-    tile: 'bg-gradient-to-br from-cyan-100 via-cyan-200 to-sky-200 text-cyan-700 ring-cyan-300/50',
+    tile: 'bg-gradient-to-br from-thistle/20 via-thistle/25 to-thistle/25 text-evergreen ring-thistle/40',
   },
   {
     name: 'Tunai',
     type: 'Cash',
-    tile: 'bg-gradient-to-br from-slate-100 via-slate-100 to-slate-200 text-slate-600 ring-slate-300/60',
+    tile: 'bg-gradient-to-br from-oat via-oat to-oat text-ink/55 ring-ink/15',
   },
 ]
 /* ── Kunci penyimpanan ──────────────────────────────────────────────────────

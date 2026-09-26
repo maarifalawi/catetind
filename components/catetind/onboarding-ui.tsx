@@ -31,7 +31,7 @@ export const ONBOARD_SUBTITLE =
     Ring sengaja TIDAK ikut di sini — setiap pemakaian menulis ringnya sendiri
     (`ring-1 ring-ink/[0.06]`, atau `ring-[1.5px] ring-forest` saat aktif) supaya
     tidak ada dua utility lebar-ring yang bentrok di satu elemen. */
-export const ONBOARD_CARD = 'rounded-[1.35rem] bg-white'
+export const ONBOARD_CARD = 'rounded-[1.35rem] bg-cream'
 
 /** label kecil di atas sekelompok kontrol (uppercase, sengaja jauh dari ramai) */
 export function OnboardLabel({

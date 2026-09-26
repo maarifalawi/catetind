@@ -113,7 +113,7 @@ export function WealthInvestasi({
 
             Struktur tombol dipisah (bukan <button> di dalam <button>) supaya
             HTML-nya valid: toggle lipat = satu tombol, aksi tambah = tombol lain. */}
-        <div className="flex items-center gap-2 rounded-[1.5rem] bg-[#FFFDF7] px-4 py-3.5 shadow-[0_14px_34px_-28px_rgba(16,58,42,0.5)] ring-1 ring-black/[0.05] sm:px-5 sm:py-4">
+        <div className="flex items-center gap-2 rounded-[1.5rem] bg-[#fbf6d9] px-4 py-3.5 shadow-[0_14px_34px_-28px_rgba(69,89,78,0.5)] ring-1 ring-soil/[0.05] sm:px-5 sm:py-4">
           <button
             type="button"
             onClick={() => setDetailOpen((prev) => !prev)}
@@ -144,7 +144,7 @@ export function WealthInvestasi({
                supaya judul "Detail per Aset" tidak terpotong */
             aria-label="Tambah investasi"
             title="Tambah investasi"
-            className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-2xl bg-forest px-3 text-[12.5px] font-semibold text-cream shadow-[0_12px_26px_-16px_rgba(16,58,42,0.8)] transition-colors hover:bg-forest-soft active:scale-[0.98] sm:px-4"
+            className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-2xl bg-forest px-3 text-[12.5px] font-semibold text-cream shadow-[0_12px_26px_-16px_rgba(69,89,78,0.8)] transition-colors hover:bg-forest-soft active:scale-[0.98] sm:px-4"
           >
             <Plus className="size-4" strokeWidth={2.6} />
             <span className="hidden sm:inline">Tambah Investasi</span>
@@ -218,7 +218,7 @@ function PortfolioSummaryCard({
 }) {
   const positive = returnValue >= 0
   return (
-    <section className="relative overflow-hidden rounded-[1.75rem] bg-[#FFFDF7] p-5 shadow-[0_20px_46px_-30px_rgba(16,58,42,0.5)] ring-1 ring-black/[0.05] sm:p-6">
+    <section className="relative overflow-hidden rounded-[1.75rem] bg-[#fbf6d9] p-5 shadow-[0_20px_46px_-30px_rgba(69,89,78,0.5)] ring-1 ring-soil/[0.05] sm:p-6">
       <div
         aria-hidden
         className="pointer-events-none absolute -right-14 -top-16 size-48 rounded-full bg-hud-sage/25 blur-3xl"
@@ -228,7 +228,7 @@ function PortfolioSummaryCard({
           <span className="text-[10.5px] font-bold uppercase tracking-[0.2em] text-ink/40">
             Total Aset Investasi
           </span>
-          <span className="rounded-full bg-hud-sage/25 px-2.5 py-1 text-[10.5px] font-bold text-[#4F5C3C]">
+          <span className="rounded-full bg-hud-sage/25 px-2.5 py-1 text-[10.5px] font-bold text-[#503a3a]">
             {assetCount} aset
           </span>
         </div>
@@ -240,7 +240,7 @@ function PortfolioSummaryCard({
         <p
           className={cn(
             'mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13.5px] font-bold tabular-nums',
-            positive ? 'text-[#7D8B65]' : 'text-hud-terracotta',
+            positive ? 'text-[#b5b987]' : 'text-hud-terracotta',
           )}
         >
           <span>
@@ -362,7 +362,7 @@ function AssetCard({
             setDx(0)
             onEdit()
           }}
-          className="flex w-[84px] flex-col items-center justify-center gap-1 bg-hud-amber text-[10.5px] font-bold text-[#4a2f10] transition-colors hover:brightness-105"
+          className="flex w-[84px] flex-col items-center justify-center gap-1 bg-hud-amber text-[10.5px] font-bold text-[#503a3a] transition-colors hover:brightness-105"
         >
           <Pencil className="size-4" strokeWidth={2.4} />
           Edit
@@ -392,12 +392,12 @@ function AssetCard({
         animate={{ x: dx }}
         transition={dragging ? { duration: 0 } : { type: 'spring', stiffness: 320, damping: 30 }}
         style={{ touchAction: 'pan-y' }}
-        className="group relative w-full cursor-pointer touch-pan-y overflow-hidden rounded-[1.35rem] bg-white px-3.5 py-3.5 text-left shadow-[0_10px_28px_-24px_rgba(16,58,42,0.6)] ring-1 ring-black/[0.05] transition-[box-shadow,background-color,ring-color] duration-200 outline-none hover:bg-[#FFFDF7] hover:shadow-[0_18px_34px_-24px_rgba(16,58,42,0.75)] hover:ring-forest/20 focus-visible:ring-2 focus-visible:ring-forest/30"
+        className="group relative w-full cursor-pointer touch-pan-y overflow-hidden rounded-[1.35rem] bg-cream px-3.5 py-3.5 text-left shadow-[0_10px_28px_-24px_rgba(69,89,78,0.6)] ring-1 ring-soil/[0.05] transition-[box-shadow,background-color,ring-color] duration-200 outline-none hover:bg-[#fbf6d9] hover:shadow-[0_18px_34px_-24px_rgba(69,89,78,0.75)] hover:ring-forest/20 focus-visible:ring-2 focus-visible:ring-forest/30"
       >
         {/* 5D — harga basi: banner amber tepat di atas isi kartu aset ini */}
         {stale && (
           <span className="mb-3 flex flex-wrap items-center gap-2 rounded-2xl bg-hud-amber/12 px-3 py-2 ring-1 ring-inset ring-hud-amber/25">
-            <span className="flex min-w-0 flex-1 items-start gap-1.5 text-[11px] leading-snug text-[#8a5a1f]">
+            <span className="flex min-w-0 flex-1 items-start gap-1.5 text-[11px] leading-snug text-[#b89191]">
               <AlertTriangle className="mt-px size-3.5 shrink-0" strokeWidth={2.4} />
               <span>
                 Harga belum diperbarui. Update terakhir: {formatPriceStamp(asset.lastUpdate)}
@@ -416,7 +416,7 @@ function AssetCard({
                 event.stopPropagation()
                 onUpdatePrice()
               }}
-              className="inline-flex shrink-0 items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[10.5px] font-bold text-[#8a5a1f] ring-1 ring-hud-amber/40 transition-colors hover:bg-hud-amber/15"
+              className="inline-flex shrink-0 items-center gap-1 rounded-full bg-cream px-2.5 py-1 text-[10.5px] font-bold text-[#b89191] ring-1 ring-hud-amber/40 transition-colors hover:bg-hud-amber/15"
             >
               <RefreshCw className="size-3" strokeWidth={2.6} />
               Update Manual
@@ -460,7 +460,7 @@ function AssetCard({
             <span
               className={cn(
                 'mt-0.5 text-[11px] font-bold tabular-nums',
-                profit ? 'text-[#7D8B65]' : 'text-hud-terracotta',
+                profit ? 'text-[#b5b987]' : 'text-hud-terracotta',
               )}
             >
               {profit ? '+' : '−'}
@@ -498,7 +498,7 @@ function AssetCard({
             transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
             className="overflow-hidden"
           >
-            <div className="mt-2 rounded-[1.35rem] bg-cream/70 px-3.5 py-3.5 ring-1 ring-inset ring-black/[0.04]">
+            <div className="mt-2 rounded-[1.35rem] bg-cream/70 px-3.5 py-3.5 ring-1 ring-inset ring-soil/[0.04]">
               <p className="flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-[0.14em] text-ink/40">
                 <History className="size-3.5" strokeWidth={2.6} />
                 Riwayat Beli/Jual
@@ -513,8 +513,8 @@ function AssetCard({
                       className={cn(
                         'shrink-0 rounded-full px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wide',
                         tx.side === 'buy'
-                          ? 'bg-hud-sage/25 text-[#4F5C3C]'
-                          : 'bg-hud-terracotta/15 text-[#8f4f18]',
+                          ? 'bg-hud-sage/25 text-[#503a3a]'
+                          : 'bg-hud-terracotta/15 text-[#b89191]',
                       )}
                     >
                       {tx.side === 'buy' ? 'Beli' : 'Jual'}

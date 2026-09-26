@@ -228,7 +228,7 @@ export function AnnualPlanModal({
           aria-describedby="annual-desc"
           tabIndex={-1}
           className={cn(
-            'pointer-events-auto flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-[2rem] bg-cream shadow-[0_-24px_60px_-24px_rgba(16,58,42,0.55)] ring-1 ring-black/5 outline-none transition-[transform,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform lg:max-w-4xl lg:rounded-[2rem] lg:shadow-[0_28px_70px_-24px_rgba(16,58,42,0.5)]',
+            'pointer-events-auto flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-[2rem] bg-cream shadow-[0_-24px_60px_-24px_rgba(69,89,78,0.55)] ring-1 ring-soil/5 outline-none transition-[transform,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform lg:max-w-4xl lg:rounded-[2rem] lg:shadow-[0_28px_70px_-24px_rgba(69,89,78,0.5)]',
             open
               ? 'translate-y-0 opacity-100 lg:scale-100'
               : 'translate-y-full opacity-0 lg:translate-y-6 lg:scale-95',
@@ -286,7 +286,7 @@ export function AnnualPlanModal({
               type="button"
               onClick={onClose}
               aria-label="Tutup"
-              className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white text-ink ring-1 ring-black/5 transition-colors hover:bg-sage"
+              className="flex size-9 shrink-0 items-center justify-center rounded-full bg-cream text-ink ring-1 ring-soil/5 transition-colors hover:bg-sage"
             >
               <X className="size-4" strokeWidth={2.2} />
             </button>
@@ -318,7 +318,7 @@ export function AnnualPlanModal({
           </div>
 
           {/* E. payment trust + CTA */}
-          <div className="shrink-0 border-t border-black/[0.06] px-5 pt-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:px-6 lg:pb-5">
+          <div className="shrink-0 border-t border-soil/[0.06] px-5 pt-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:px-6 lg:pb-5">
             <div className="flex items-center justify-between gap-3 text-[13px]">
               <span className="min-w-0 truncate text-ink/55">
                 {selected ? selected.name : 'Belum ada paket dipilih'}
@@ -392,7 +392,7 @@ function PlanCard({
   upgradeDiff: number
 }) {
   const onAccent = Boolean(plan.hero)
-  const borderTone = onAccent ? 'border-forest/15' : 'border-black/[0.06]'
+  const borderTone = onAccent ? 'border-forest/15' : 'border-soil/[0.06]'
   const mutedTone = onAccent ? 'text-forest/65' : 'text-ink/50'
   const bodyTone = onAccent ? 'text-forest' : 'text-ink'
 
@@ -406,8 +406,8 @@ function PlanCard({
         'relative flex flex-col rounded-2xl p-4 text-left transition-all duration-200',
         /* tier hero: accent color fill + border tebal + glow biar paling dominan */
         onAccent
-          ? 'bg-mint ring-[3px] ring-forest shadow-[0_0_0_4px_rgba(183,224,75,0.45),0_24px_50px_-24px_rgba(16,58,42,0.55)]'
-          : 'bg-white ring-1 ring-black/[0.06] hover:ring-forest/25',
+          ? 'bg-mint ring-[3px] ring-forest shadow-[0_0_0_4px_rgba(145,187,158,0.45),0_24px_50px_-24px_rgba(69,89,78,0.55)]'
+          : 'bg-cream ring-1 ring-soil/[0.06] hover:ring-forest/25',
         active && !onAccent && 'ring-2 ring-forest',
       )}
     >
@@ -433,8 +433,8 @@ function PlanCard({
             active
               ? 'border-forest bg-forest text-mint'
               : onAccent
-                ? 'border-forest/40 bg-white/60 text-transparent'
-                : 'border-ink/20 bg-white text-transparent',
+                ? 'border-forest/40 bg-cream/60 text-transparent'
+                : 'border-ink/20 bg-cream text-transparent',
           )}
           aria-hidden
         >

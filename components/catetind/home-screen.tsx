@@ -85,10 +85,10 @@ export function HomeScreen() {
           <div className="flex items-center gap-2">
             {/* sensor layar global — versi kompak untuk header mobile */}
             <GlobalPrivacyToggle className="size-9" />
-            <button className="flex size-9 items-center justify-center rounded-full bg-white text-ink ring-1 ring-black/5" aria-label="Menu">
+            <button className="flex size-9 items-center justify-center rounded-full bg-cream text-ink ring-1 ring-soil/5" aria-label="Menu">
               <AlignRight className="size-4" />
             </button>
-            <span className="relative size-9 overflow-hidden rounded-full ring-1 ring-black/5">
+            <span className="relative size-9 overflow-hidden rounded-full ring-1 ring-soil/5">
               <Image src="/avatar-maarif.png" alt="Jon Snow" fill sizes="36px" className="object-cover" />
             </span>
           </div>
@@ -119,17 +119,17 @@ export function HomeScreen() {
             </div>
           </div>
           <div className="hidden items-center gap-3 lg:flex">
-            <label className="flex h-11 w-48 items-center gap-2.5 rounded-full bg-white px-4 ring-1 ring-black/5 transition-shadow focus-within:ring-2 focus-within:ring-forest/30 xl:w-64">
+            <label className="flex h-11 w-48 items-center gap-2.5 rounded-full bg-cream px-4 ring-1 ring-soil/5 transition-shadow focus-within:ring-2 focus-within:ring-forest/30 xl:w-64">
               <Search className="size-4 shrink-0 text-ink/40" />
               <input type="search" placeholder="Cari transaksi..." className="w-full bg-transparent text-sm text-ink outline-none placeholder:text-ink/35" />
             </label>
             {/* Global Eye — sensor SEMUA nominal di layar (KRL/kafe friendly) */}
             <GlobalPrivacyToggle />
-            <button className="relative flex size-11 shrink-0 items-center justify-center rounded-full bg-white text-ink ring-1 ring-black/5 transition-colors hover:bg-sage" aria-label="Notifications">
+            <button className="relative flex size-11 shrink-0 items-center justify-center rounded-full bg-cream text-ink ring-1 ring-soil/5 transition-colors hover:bg-sage" aria-label="Notifications">
               <Bell className="size-4" />
-              <span className="absolute right-3 top-3 size-2 rounded-full bg-mint ring-2 ring-white" />
+              <span className="absolute right-3 top-3 size-2 rounded-full bg-mint ring-2 ring-cream" />
             </button>
-            <span className="relative size-11 shrink-0 overflow-hidden rounded-full ring-1 ring-black/5">
+            <span className="relative size-11 shrink-0 overflow-hidden rounded-full ring-1 ring-soil/5">
               <Image src="/avatar-maarif.png" alt="Jon Snow" fill sizes="44px" className="object-cover" />
             </span>
           </div>
@@ -149,7 +149,7 @@ export function HomeScreen() {
             adalah alasan user membuka app 3x sehari, jadi ia yang dominan. */}
         <div className="mt-6 grid grid-cols-1 gap-5 lg:mt-8 lg:grid-cols-12 lg:gap-6">
           <div className="lg:col-span-5">
-            <div className="flex h-full flex-col justify-center rounded-[2rem] bg-white p-4 ring-1 ring-black/5 sm:p-5">
+            <div className="flex h-full flex-col justify-center rounded-[2rem] bg-cream p-4 ring-1 ring-soil/5 sm:p-5">
               <WalletCardStack onOpen={handleDeckOpen} />
             </div>
           </div>

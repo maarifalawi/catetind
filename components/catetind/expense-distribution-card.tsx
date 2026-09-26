@@ -12,16 +12,15 @@ type Segment = {
   color: string
 }
 
-/* Palet kategori — SENGAJA bukan monokrom hijau lagi. Sebelumnya Makanan
-   (hitam), Transport (biru), Tagihan (hijau sedang), Belanja (hijau muda):
-   estetik, tapi user harus menyipitkan mata untuk membedakan hijau tua vs
-   hijau sedang. Sekarang 4 warna pastel yang benar-benar berbeda namun tetap
-   lembut: Sage · Slate · Mustard · Terracotta (audit #3). */
+/* Palet kategori — 4 warna dari palet kanon CatetInd dengan hue yang
+   benar-benar berbeda, supaya segmen bar langsung terbaca tanpa user harus
+   menyipitkan mata membedakan dua hijau yang mirip (audit #3):
+   Olive · Thistle · Cantelope · Plum. Rujukan: docs/theme/PALETTE.md */
 const SEGMENTS: Segment[] = [
-  { label: 'Makanan', amount: 1_260_000, pct: 40, color: '#a3b18a' }, // sage
-  { label: 'Transport', amount: 819_000, pct: 26, color: '#7c8ba1' }, // slate
-  { label: 'Tagihan', amount: 630_000, pct: 20, color: '#dda15e' }, // mustard
-  { label: 'Belanja', amount: 441_000, pct: 14, color: '#bc6c25' }, // terracotta
+  { label: 'Makanan', amount: 1_260_000, pct: 40, color: '#b5b987' }, // olive
+  { label: 'Transport', amount: 819_000, pct: 26, color: '#91a0b8' }, // thistle
+  { label: 'Tagihan', amount: 630_000, pct: 20, color: '#ffb885' }, // cantelope
+  { label: 'Belanja', amount: 441_000, pct: 14, color: '#b89191' }, // plum
 ]
 
 const TOTAL = 3_150_000
@@ -45,7 +44,7 @@ export const ExpenseDistributionCard = memo(function ExpenseDistributionCard() {
   const activeSeg = active === null ? null : SEGMENTS[active]
 
   return (
-                <div className="flex flex-col rounded-[2rem] bg-white p-4 ring-1 ring-black/5">
+                <div className="flex flex-col rounded-[2rem] bg-cream p-4 ring-1 ring-soil/5">
       {/* header - konsisten dengan kartu lain */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -67,7 +66,7 @@ export const ExpenseDistributionCard = memo(function ExpenseDistributionCard() {
         {activeSeg !== null && active !== null && (
           <div
             key={activeSeg.label}
-            className="pointer-events-none absolute bottom-[calc(100%+10px)] z-10 -translate-x-1/2 whitespace-nowrap rounded-full bg-ink px-3 py-1 text-[11px] font-semibold text-cream shadow-[0_10px_24px_-10px_rgba(18,40,31,0.6)] animate-[fade-pop_0.25s_ease_both]"
+            className="pointer-events-none absolute bottom-[calc(100%+10px)] z-10 -translate-x-1/2 whitespace-nowrap rounded-full bg-ink px-3 py-1 text-[11px] font-semibold text-cream shadow-[0_10px_24px_-10px_rgba(80,58,58,0.6)] animate-[fade-pop_0.25s_ease_both]"
             style={{
               left: `clamp(64px, ${STARTS[active] + activeSeg.pct / 2}%, calc(100% - 64px))`,
             }}

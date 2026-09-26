@@ -75,7 +75,7 @@ export function SalaryWaterfall({
     <section
       aria-label="Waterfall gaji"
       className={cn(
-        'mt-5 rounded-[1.75rem] bg-white p-5 shadow-[0_4px_24px_-4px_rgba(18,40,31,0.06)] ring-1 ring-black/5 sm:p-6',
+        'mt-5 rounded-[1.75rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(80,58,58,0.06)] ring-1 ring-soil/5 sm:p-6',
         className,
       )}
     >
@@ -97,7 +97,7 @@ export function SalaryWaterfall({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
               transition={{ duration: 0.16, ease: 'easeOut' }}
-              className="inline-flex items-center gap-1.5 rounded-full bg-forest px-2.5 py-1 text-[11px] font-semibold text-cream shadow-[0_10px_22px_-14px_rgba(16,58,42,0.85)]"
+              className="inline-flex items-center gap-1.5 rounded-full bg-forest px-2.5 py-1 text-[11px] font-semibold text-cream shadow-[0_10px_22px_-14px_rgba(69,89,78,0.85)]"
             >
               <span aria-hidden>{active.emoji}</span>
               <span>{active.name}</span>
@@ -124,7 +124,7 @@ export function SalaryWaterfall({
       {/* bar gaji: segmen tagihan (terbesar di kiri) + proyeksi sisa gaji.
           onMouseLeave menutup tooltip supaya bar kembali bersih (audit #6). */}
       <div
-        className="mt-2 flex h-5 w-full overflow-hidden rounded-full bg-cream ring-1 ring-inset ring-black/[0.06]"
+        className="mt-2 flex h-5 w-full overflow-hidden rounded-full bg-cream ring-1 ring-inset ring-soil/[0.06]"
         onMouseLeave={() => setActiveId(null)}
       >
         {waterfall.segments.map((segment) => (

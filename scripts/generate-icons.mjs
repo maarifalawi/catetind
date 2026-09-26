@@ -39,25 +39,25 @@ const OUT_DIR = path.join(root, 'public', 'icons')
 /** rasio lebar wordmark terhadap sisi ikon — aman di dalam safe zone maskable */
 const LOGO_RATIO = 0.7
 /** warna wordmark di atas latar gelap (krem khas brand) */
-const WORDMARK_TINT = '#f4f8ef'
+const WORDMARK_TINT = '#fbf6d9'
 
 /** latar kotak penuh: gradien forest + aurora mint kanan atas */
 function background(size) {
   return Buffer.from(`<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="base" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#17543c"/>
-      <stop offset="52%" stop-color="#103a2a"/>
-      <stop offset="100%" stop-color="#06231a"/>
+      <stop offset="0%" stop-color="#52685c"/>
+      <stop offset="52%" stop-color="#45594e"/>
+      <stop offset="100%" stop-color="#1f2823"/>
     </linearGradient>
     <radialGradient id="mint" cx="0.82" cy="0.14" r="0.72">
-      <stop offset="0%" stop-color="#b7e04b" stop-opacity="0.34"/>
-      <stop offset="60%" stop-color="#b7e04b" stop-opacity="0.08"/>
-      <stop offset="100%" stop-color="#b7e04b" stop-opacity="0"/>
+      <stop offset="0%" stop-color="#91bb9e" stop-opacity="0.34"/>
+      <stop offset="60%" stop-color="#91bb9e" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#91bb9e" stop-opacity="0"/>
     </radialGradient>
     <radialGradient id="shade" cx="0.12" cy="0.92" r="0.8">
-      <stop offset="0%" stop-color="#000000" stop-opacity="0.28"/>
-      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="0%" stop-color="#241a1a" stop-opacity="0.28"/>
+      <stop offset="100%" stop-color="#241a1a" stop-opacity="0"/>
     </radialGradient>
   </defs>
   <rect width="${size}" height="${size}" fill="url(#base)"/>

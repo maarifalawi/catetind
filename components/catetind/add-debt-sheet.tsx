@@ -170,7 +170,7 @@ export function AddDebtSheet({
             value={name}
             onChange={(event) => setName(event.target.value)}
             placeholder="Nama teman/keluarga"
-            className="mt-2 w-full rounded-2xl bg-white px-4 py-3 text-[15px] font-semibold text-ink outline-none ring-1 ring-black/[0.08] transition-shadow placeholder:font-medium placeholder:text-ink/25 focus:ring-2 focus:ring-forest/35"
+            className="mt-2 w-full rounded-2xl bg-cream px-4 py-3 text-[15px] font-semibold text-ink outline-none ring-1 ring-soil/[0.08] transition-shadow placeholder:font-medium placeholder:text-ink/25 focus:ring-2 focus:ring-forest/35"
           />
         </label>
       </RevealStep>
@@ -194,14 +194,14 @@ export function AddDebtSheet({
               onChange={(event) => setNote(event.target.value)}
               rows={3}
               placeholder="Misal: makan siang kemarin"
-              className="mt-2 w-full resize-none rounded-2xl bg-white px-4 py-3 text-[13px] leading-relaxed text-ink outline-none ring-1 ring-black/[0.08] transition-shadow placeholder:text-ink/25 focus:ring-2 focus:ring-forest/35"
+              className="mt-2 w-full resize-none rounded-2xl bg-cream px-4 py-3 text-[13px] leading-relaxed text-ink outline-none ring-1 ring-soil/[0.08] transition-shadow placeholder:text-ink/25 focus:ring-2 focus:ring-forest/35"
             />
           </label>
         </div>
       </RevealStep>
 
       {/* ── toggle pembuka bentuk PLATFORM ──────────────────────────────── */}
-      <div className="mt-5 flex items-center justify-between gap-3 rounded-2xl bg-white/70 px-4 py-3.5 ring-1 ring-black/[0.06]">
+      <div className="mt-5 flex items-center justify-between gap-3 rounded-2xl bg-cream/70 px-4 py-3.5 ring-1 ring-soil/[0.06]">
         <span className="pr-2 text-[13px] font-semibold leading-snug text-ink">
           Ini pinjaman platform/berbunga
           <span className="mt-0.5 block text-[11px] font-medium text-ink/45">
@@ -230,8 +230,8 @@ export function AddDebtSheet({
                     className={cn(
                       'shrink-0 rounded-full px-3.5 py-2 text-[12.5px] font-semibold transition-all duration-200 active:scale-95',
                       active
-                        ? 'bg-forest text-mint shadow-[0_10px_22px_-14px_rgba(16,58,42,0.75)]'
-                        : 'bg-white text-ink/60 ring-1 ring-black/[0.07] hover:bg-cream hover:text-ink',
+                        ? 'bg-forest text-mint shadow-[0_10px_22px_-14px_rgba(69,89,78,0.75)]'
+                        : 'bg-cream text-ink/60 ring-1 ring-soil/[0.07] hover:bg-cream hover:text-ink',
                     )}
                   >
                     {option}
@@ -247,7 +247,7 @@ export function AddDebtSheet({
                 onChange={(event) => setCustomProvider(event.target.value)}
                 placeholder="Tulis nama provider…"
                 aria-label="Nama provider lainnya"
-                className="mt-2 w-full rounded-2xl bg-white px-4 py-3 text-[14px] font-semibold text-ink outline-none ring-1 ring-black/[0.08] transition-shadow placeholder:font-medium placeholder:text-ink/25 focus:ring-2 focus:ring-forest/35"
+                className="mt-2 w-full rounded-2xl bg-cream px-4 py-3 text-[14px] font-semibold text-ink outline-none ring-1 ring-soil/[0.08] transition-shadow placeholder:font-medium placeholder:text-ink/25 focus:ring-2 focus:ring-forest/35"
               />
             </RevealStep>
           </div>
@@ -261,7 +261,7 @@ export function AddDebtSheet({
                 inputMode="numeric"
                 placeholder="6"
                 aria-label="Tenor dalam bulan"
-                className="mt-2 w-full rounded-2xl bg-white px-4 py-3 text-[15px] font-semibold tabular-nums text-ink outline-none ring-1 ring-black/[0.08] transition-shadow placeholder:font-medium placeholder:text-ink/25 focus:ring-2 focus:ring-forest/35"
+                className="mt-2 w-full rounded-2xl bg-cream px-4 py-3 text-[15px] font-semibold tabular-nums text-ink outline-none ring-1 ring-soil/[0.08] transition-shadow placeholder:font-medium placeholder:text-ink/25 focus:ring-2 focus:ring-forest/35"
               />
             </label>
             <label className="block">
@@ -273,10 +273,10 @@ export function AddDebtSheet({
                 placeholder="10"
                 aria-label="Tanggal jatuh tempo"
                 className={cn(
-                  'mt-2 w-full rounded-2xl bg-white px-4 py-3 text-[15px] font-semibold tabular-nums text-ink outline-none ring-1 transition-shadow placeholder:font-medium placeholder:text-ink/25 focus:ring-2',
+                  'mt-2 w-full rounded-2xl bg-cream px-4 py-3 text-[15px] font-semibold tabular-nums text-ink outline-none ring-1 transition-shadow placeholder:font-medium placeholder:text-ink/25 focus:ring-2',
                   dueDateInvalid
                     ? 'ring-hud-terracotta/50 focus:ring-hud-terracotta/60'
-                    : 'ring-black/[0.08] focus:ring-forest/35',
+                    : 'ring-soil/[0.08] focus:ring-forest/35',
                 )}
               />
             </label>
@@ -297,7 +297,7 @@ export function AddDebtSheet({
               inputMode="decimal"
               placeholder="2,95"
               aria-label="Bunga per bulan"
-              className="mt-2 w-full rounded-2xl bg-white px-4 py-3 text-[15px] font-semibold tabular-nums text-ink outline-none ring-1 ring-black/[0.08] transition-shadow placeholder:font-medium placeholder:text-ink/25 focus:ring-2 focus:ring-forest/35"
+              className="mt-2 w-full rounded-2xl bg-cream px-4 py-3 text-[15px] font-semibold tabular-nums text-ink outline-none ring-1 ring-soil/[0.08] transition-shadow placeholder:font-medium placeholder:text-ink/25 focus:ring-2 focus:ring-forest/35"
             />
           </label>
 
@@ -308,7 +308,7 @@ export function AddDebtSheet({
               onChange={(event) => setNote(event.target.value)}
               rows={3}
               placeholder="Misal: buat beli HP baru"
-              className="mt-2 w-full resize-none rounded-2xl bg-white px-4 py-3 text-[13px] leading-relaxed text-ink outline-none ring-1 ring-black/[0.08] transition-shadow placeholder:text-ink/25 focus:ring-2 focus:ring-forest/35"
+              className="mt-2 w-full resize-none rounded-2xl bg-cream px-4 py-3 text-[13px] leading-relaxed text-ink outline-none ring-1 ring-soil/[0.08] transition-shadow placeholder:text-ink/25 focus:ring-2 focus:ring-forest/35"
             />
           </label>
         </div>
@@ -354,7 +354,7 @@ function DateField({
   return (
     <div>
       <span className="text-[13px] font-semibold leading-snug text-ink">{label}</span>
-      <span className="relative mt-2 flex items-center gap-2 rounded-2xl bg-white px-4 py-3 ring-1 ring-black/[0.08] focus-within:ring-2 focus-within:ring-forest/35">
+      <span className="relative mt-2 flex items-center gap-2 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/[0.08] focus-within:ring-2 focus-within:ring-forest/35">
         <CalendarDays className="size-4 shrink-0 text-ink/35" strokeWidth={2.2} />
         <span
           className={cn(
@@ -402,7 +402,7 @@ function Switch({
     >
       <span
         className={cn(
-          'absolute top-0.5 size-5 rounded-full bg-white shadow-sm transition-transform duration-200',
+          'absolute top-0.5 size-5 rounded-full bg-cream shadow-sm transition-transform duration-200',
           checked ? 'translate-x-[22px]' : 'translate-x-0.5',
         )}
       />

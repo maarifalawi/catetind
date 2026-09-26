@@ -69,7 +69,7 @@ export function BudgetZoneA({
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
-          className="group relative w-full overflow-hidden rounded-[1.6rem] bg-gradient-to-br from-sage via-cream to-white p-4 text-left ring-1 ring-hud-sage/40 shadow-[0_20px_44px_-24px_rgba(163,177,138,0.95)] transition-transform duration-300 active:scale-[0.99]"
+          className="group relative w-full overflow-hidden rounded-[1.6rem] bg-gradient-to-br from-sage via-cream to-cream p-4 text-left ring-1 ring-hud-sage/40 shadow-[0_20px_44px_-24px_rgba(181,185,135,0.95)] transition-transform duration-300 active:scale-[0.99]"
         >
           {/* glow lembut — satu-satunya elemen "bersinar" di halaman */}
           <span
@@ -77,7 +77,7 @@ export function BudgetZoneA({
             className="pointer-events-none absolute -right-8 -top-10 size-28 rounded-full bg-mint/45 blur-2xl"
           />
           <div className="relative flex items-start gap-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-white text-[19px] ring-1 ring-black/[0.04]">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-cream text-[19px] ring-1 ring-soil/[0.04]">
               🧹
             </span>
             <div className="min-w-0">
@@ -121,7 +121,7 @@ export function BudgetZoneA({
               className={cn(
                 'rounded-full px-3 py-1.5 text-[11.5px] font-semibold transition-all duration-200 active:scale-95',
                 active
-                  ? 'bg-white text-forest ring-1 ring-forest/20 shadow-[0_8px_18px_-14px_rgba(16,58,42,0.7)]'
+                  ? 'bg-cream text-forest ring-1 ring-forest/20 shadow-[0_8px_18px_-14px_rgba(69,89,78,0.7)]'
                   : 'text-ink/40 hover:text-ink/70',
               )}
             >
@@ -133,7 +133,7 @@ export function BudgetZoneA({
 
       {/* ── 3D. DAFTAR BUDGET KATEGORI / 3C placeholder / 5A empty ───────── */}
       {periodTab !== 'monthly' ? (
-        <div className="rounded-[1.4rem] border border-dashed border-slate-200 bg-white/50 px-5 py-9 text-center">
+        <div className="rounded-[1.4rem] border border-dashed border-oat bg-cream/50 px-5 py-9 text-center">
           <p className="text-[13px] font-bold text-ink/50">Segera hadir</p>
           <p className="mx-auto mt-1.5 max-w-[16rem] text-[11.5px] leading-relaxed text-ink/35">
             Filter periode {PERIOD_TABS.find((t) => t.id === periodTab)?.label.toLowerCase()}{' '}
@@ -142,7 +142,7 @@ export function BudgetZoneA({
         </div>
       ) : budgets.length === 0 ? (
         /* 5A. EMPTY STATE BUDGET */
-        <div className="rounded-[1.6rem] border border-dashed border-slate-200 bg-white/60 px-6 py-9 text-center">
+        <div className="rounded-[1.6rem] border border-dashed border-oat bg-cream/60 px-6 py-9 text-center">
           {/* TODO: add cute empty state illustration */}
           <span className="text-[28px]">☕🌱</span>
           <p className="mx-auto mt-3 max-w-[19rem] text-[13px] leading-relaxed text-ink/60">
@@ -196,7 +196,7 @@ export function BudgetZoneA({
       <button
         type="button"
         onClick={onAddBudget}
-        className="flex w-full items-center justify-center gap-2 rounded-[1.4rem] border-2 border-dashed border-slate-200 bg-white/45 px-4 py-4 text-[12.5px] font-semibold text-ink/45 transition-all hover:border-forest/25 hover:bg-white hover:text-ink active:scale-[0.99]"
+        className="flex w-full items-center justify-center gap-2 rounded-[1.4rem] border-2 border-dashed border-oat bg-cream/45 px-4 py-4 text-[12.5px] font-semibold text-ink/45 transition-all hover:border-forest/25 hover:bg-cream hover:text-ink active:scale-[0.99]"
       >
         <span className="text-[15px] leading-none">+</span>
         Tambah Budget Baru

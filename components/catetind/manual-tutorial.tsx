@@ -64,7 +64,7 @@ export function ManualTutorial({
     <section
       aria-label={`Panduan install ${tutorial.label}`}
       className={cn(
-        'rounded-3xl bg-white/85 p-4 ring-1 ring-black/5 backdrop-blur-xl sm:p-5',
+        'rounded-3xl bg-cream/85 p-4 ring-1 ring-soil/5 backdrop-blur-xl sm:p-5',
         className,
       )}
     >
@@ -94,7 +94,7 @@ export function ManualTutorial({
             </div>
 
             {/* TODO: Add animated GIF or Lottie illustration for this step */}
-            <div className="mt-3 flex h-24 items-center justify-center rounded-xl border-2 border-dashed border-forest/15 bg-white/70 text-[11px] font-medium text-ink/35">
+            <div className="mt-3 flex h-24 items-center justify-center rounded-xl border-2 border-dashed border-forest/15 bg-cream/70 text-[11px] font-medium text-ink/35">
               [Ilustrasi segera hadir]
             </div>
           </li>

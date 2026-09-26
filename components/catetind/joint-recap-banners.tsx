@@ -82,14 +82,14 @@ export function JointPushBanner({
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -14 }}
           transition={{ duration: 0.3, ease: EASE }}
-          className="mt-3 flex items-start gap-3 rounded-[1.5rem] bg-[#FFFDF7] px-4 py-3.5 ring-1 ring-hud-amber/45 shadow-[0_20px_44px_-34px_rgba(221,161,94,0.95)]"
+          className="mt-3 flex items-start gap-3 rounded-[1.5rem] bg-[#fbf6d9] px-4 py-3.5 ring-1 ring-hud-amber/45 shadow-[0_20px_44px_-34px_rgba(255,184,133,0.95)]"
         >
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-hud-amber/25 text-[#8a5a1f]">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-hud-amber/25 text-[#b89191]">
             <BellRing className="size-4" strokeWidth={2.3} />
           </span>
           <div className="min-w-0 flex-1">
             <p className="flex items-center gap-1.5">
-              <span className="rounded-full bg-hud-amber/25 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#8a5a1f]">
+              <span className="rounded-full bg-hud-amber/25 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#b89191]">
                 Push
               </span>
               <span className="text-[10.5px] font-semibold text-ink/40">Pengeluaran besar</span>
@@ -112,7 +112,7 @@ export function JointPushBanner({
             type="button"
             onClick={onDismiss}
             aria-label="Tutup notifikasi"
-            className="flex size-7 shrink-0 items-center justify-center rounded-full text-ink/35 transition-colors hover:bg-black/[0.05] hover:text-ink/60"
+            className="flex size-7 shrink-0 items-center justify-center rounded-full text-ink/35 transition-colors hover:bg-soil/[0.05] hover:text-ink/60"
           >
             <X className="size-3.5" strokeWidth={2.4} />
           </button>
@@ -139,7 +139,7 @@ export function JointWeeklyRecapBanner({ show }: { show: boolean }) {
       : JOINT_ME
 
   return (
-    <div className="mt-3 overflow-hidden rounded-[1.5rem] bg-forest px-4 py-3.5 text-cream ring-1 ring-black/5">
+    <div className="mt-3 overflow-hidden rounded-[1.5rem] bg-forest px-4 py-3.5 text-cream ring-1 ring-soil/5">
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
@@ -212,7 +212,7 @@ export function JointWeeklyRecapBanner({ show }: { show: boolean }) {
  * Audit #6 + kanon PRD A7: ajakan settle (tombol transfer cokelat) BARU muncul
  * kalau `shouldPromptSettlement()` true (selisih > Rp100.000). Selama statusnya
  * "Gak perlu settle" atau bulan sudah ditandai settle, banner turun nada jadi
- * hijau sage tanpa CTA — jangan pernah mendesak user men-transfer padahal
+ * hijau olive tanpa CTA — jangan pernah mendesak user men-transfer padahal
  * kalimat di atasnya bilang tidak perlu.
  */
 export function JointMonthlyRecapBanner({
@@ -239,15 +239,15 @@ export function JointMonthlyRecapBanner({
   return (
     <div
       className={cn(
-        'mt-3 rounded-[1.5rem] bg-[#FFFDF7] px-4 py-4 ring-1',
+        'mt-3 rounded-[1.5rem] bg-[#fbf6d9] px-4 py-4 ring-1',
         promptSettle
-          ? 'ring-hud-terracotta/25 shadow-[0_26px_52px_-40px_rgba(188,108,37,0.95)]'
-          : 'ring-hud-sage/35 shadow-[0_26px_52px_-44px_rgba(16,58,42,0.6)]',
+          ? 'ring-hud-terracotta/25 shadow-[0_26px_52px_-40px_rgba(184,145,145,0.95)]'
+          : 'ring-hud-sage/35 shadow-[0_26px_52px_-44px_rgba(69,89,78,0.6)]',
       )}
     >
       <p className="flex items-center justify-center gap-2 text-[13.5px] font-bold text-ink">
         <CalendarDays
-          className={cn('size-4', promptSettle ? 'text-hud-terracotta' : 'text-[#6b7a55]')}
+          className={cn('size-4', promptSettle ? 'text-hud-terracotta' : 'text-[#503a3a]')}
           strokeWidth={2.3}
         />
         📅 Rekap {monthName} hampir selesai!
@@ -265,17 +265,17 @@ export function JointMonthlyRecapBanner({
       </div>
 
       {settlement.settled ? (
-        <p className="text-center text-[12.5px] leading-relaxed text-[#3f4a30]">
+        <p className="text-center text-[12.5px] leading-relaxed text-[#503a3a]">
           Bulan ini sudah kamu tandai settle ✅ Scale-nya rata, mulai dari nol lagi bulan depan 💚
         </p>
       ) : settlement.level === 'equal' ? (
-        <p className="text-center text-[12.5px] leading-relaxed text-[#3f4a30]">
+        <p className="text-center text-[12.5px] leading-relaxed text-[#503a3a]">
           Total patungan {moneyLabel(settlement.weighedTotal, masked)} — kalian impas, kompak banget
           ⚖️✨
         </p>
       ) : settlement.level === 'close' ? (
         /* audit #6: selisih di bawah ambang A7 → nada hijau, TANPA tombol settle */
-        <p className="text-center text-[12.5px] leading-relaxed text-[#3f4a30]">
+        <p className="text-center text-[12.5px] leading-relaxed text-[#503a3a]">
           Hampir impas! Selisih yang ditimbang cuma{' '}
           <b className="font-bold">{moneyLabel(settlement.difference, masked)}</b> — di bawah Rp
           {SETTLEMENT_THRESHOLD.toLocaleString('id-ID')}, gak perlu settle 💚
@@ -292,7 +292,7 @@ export function JointMonthlyRecapBanner({
         <button
           type="button"
           onClick={onOpenSettlement}
-          className="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-hud-terracotta text-[13.5px] font-semibold text-[#FFFDF7] shadow-[0_16px_32px_-22px_rgba(188,108,37,0.95)] transition-colors hover:bg-hud-terracotta/90 active:scale-[0.99]"
+          className="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-hud-terracotta text-[13.5px] font-semibold text-[#fbf6d9] shadow-[0_16px_32px_-22px_rgba(184,145,145,0.95)] transition-colors hover:bg-hud-terracotta/90 active:scale-[0.99]"
         >
           Lihat Detail &amp; Settle
           <ArrowRight className="size-4" strokeWidth={2.6} />

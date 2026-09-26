@@ -38,7 +38,7 @@ export function BudgetZoneB({
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
-          className="rounded-[1.5rem] bg-white p-4 ring-1 ring-black/5"
+          className="rounded-[1.5rem] bg-cream p-4 ring-1 ring-soil/5"
         >
           <div className="flex items-start gap-3">
             <span className="flex size-9 shrink-0 items-center justify-center rounded-2xl bg-sage/70 text-[17px]">
@@ -60,7 +60,7 @@ export function BudgetZoneB({
 
       {/* ── 4A. DAFTAR CELENGAN / 5B. EMPTY STATE ─────────────────────────── */}
       {funds.length === 0 ? (
-        <div className="rounded-[1.6rem] border border-dashed border-slate-200 bg-white/60 px-6 py-9 text-center">
+        <div className="rounded-[1.6rem] border border-dashed border-oat bg-cream/60 px-6 py-9 text-center">
           {/* TODO: add cute empty state illustration */}
           <span className="text-[28px]">🎬🌱</span>
           <p className="mx-auto mt-3 max-w-[19rem] text-[13px] leading-relaxed text-ink/60">
@@ -100,7 +100,7 @@ export function BudgetZoneB({
       <button
         type="button"
         onClick={onAddGoal}
-        className="flex w-full items-center justify-center gap-2 rounded-[1.4rem] border-2 border-dashed border-slate-200 bg-white/45 px-4 py-4 text-[12.5px] font-semibold text-ink/45 transition-all hover:border-forest/25 hover:bg-white hover:text-ink active:scale-[0.99]"
+        className="flex w-full items-center justify-center gap-2 rounded-[1.4rem] border-2 border-dashed border-oat bg-cream/45 px-4 py-4 text-[12.5px] font-semibold text-ink/45 transition-all hover:border-forest/25 hover:bg-cream hover:text-ink active:scale-[0.99]"
       >
         <span className="text-[15px] leading-none">+</span>
         Tambah Celengan Baru

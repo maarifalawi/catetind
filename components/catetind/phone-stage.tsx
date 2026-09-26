@@ -23,7 +23,7 @@ export function PhoneStage({
         'relative min-h-screen w-full',
         plain
           ? 'bg-cream'
-          : 'bg-gradient-to-br from-[#e8f1de] via-[#f4f8ef] to-[#dfead2]',
+          : 'bg-gradient-to-br from-[#ebe4de] via-[#fbf6d9] to-[#ebe4de]',
       )}
     >
       {/* giant background wordmark — versi gambar: lebar relatif (vw) + opasitas

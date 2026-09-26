@@ -139,11 +139,11 @@ const faceOf = (
     ? {
         face: entry.wallet.faceClass,
         swatch: entry.wallet.bandClass,
-        glow: entry.wallet.glowClass ?? 'bg-white/20',
+        glow: entry.wallet.glowClass ?? 'bg-cream/20',
         art: entry.wallet.art,
       }
     : {
-        face: 'from-[#1c6146] via-forest to-[#03130d]',
+        face: 'from-[#45594e] via-forest to-[#161c19]',
         swatch: 'from-mint to-mint-soft',
         glow: 'bg-mint/25',
         art: 'kawung',
@@ -678,7 +678,7 @@ export const WalletCardStack = memo(function WalletCardStack({
   }) => {
     const face = faceOf(entry)
     return (
-      <div className="relative h-full overflow-hidden rounded-[1.75rem] bg-forest text-cream shadow-[0_2px_4px_rgba(18,40,31,0.2),0_16px_32px_-12px_rgba(18,40,31,0.45),0_40px_72px_-24px_rgba(18,40,31,0.5)] ring-1 ring-white/10">
+      <div className="relative h-full overflow-hidden rounded-[1.75rem] bg-forest text-cream shadow-[0_2px_4px_rgba(80,58,58,0.2),0_16px_32px_-12px_rgba(80,58,58,0.45),0_40px_72px_-24px_rgba(80,58,58,0.5)] ring-1 ring-cream/10">
         {/* dasar gradient vivid khas dompet */}
         <div aria-hidden className={cn('absolute inset-0 bg-gradient-to-br', face.face)} />
         {/* aksen seni per dompet: motif batik/geometris terpusat di kanan atas,
@@ -696,17 +696,17 @@ export const WalletCardStack = memo(function WalletCardStack({
         />
         <div
           aria-hidden
-          className="absolute -bottom-28 -left-12 h-64 w-64 rounded-full bg-black/30 blur-3xl"
+          className="absolute -bottom-28 -left-12 h-64 w-64 rounded-full bg-soil/30 blur-3xl"
         />
         {/* kilau diagonal halus seperti kartu fisik */}
         <div
           aria-hidden
-          className="absolute inset-0 bg-gradient-to-br from-white/[0.13] via-white/[0.03] to-transparent [mask-image:linear-gradient(135deg,black_0%,transparent_55%)]"
+          className="absolute inset-0 bg-gradient-to-br from-cream/[0.13] via-cream/[0.03] to-transparent [mask-image:linear-gradient(135deg,black_0%,transparent_55%)]"
         />
         {/* garis highlight tipis di bibir atas kartu */}
         <div
           aria-hidden
-          className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent"
+          className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-cream/40 to-transparent"
         />
 
         <div className="relative flex h-full flex-col p-5 pb-6">
@@ -714,7 +714,7 @@ export const WalletCardStack = memo(function WalletCardStack({
             <div className="flex min-w-0 items-center gap-3">
               <span
                 className={cn(
-                  'flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-forest shadow-[0_6px_16px_-6px_rgba(0,0,0,0.45)] ring-1 ring-white/30',
+                  'flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-forest shadow-[0_6px_16px_-6px_rgba(36,26,26,0.45)] ring-1 ring-cream/30',
                   face.swatch,
                 )}
               >
@@ -732,11 +732,11 @@ export const WalletCardStack = memo(function WalletCardStack({
           <div className="mt-4 flex items-center gap-3">
             <span
               aria-hidden
-              className="relative h-7 w-9 shrink-0 overflow-hidden rounded-md bg-gradient-to-br from-[#f4d47c] via-[#e3b752] to-[#b98a2e] shadow-[inset_0_1px_2px_rgba(255,255,255,0.45),0_2px_6px_rgba(0,0,0,0.3)]"
+              className="relative h-7 w-9 shrink-0 overflow-hidden rounded-md bg-gradient-to-br from-[#ecd768] via-[#ecd768] to-[#6a612f] shadow-[inset_0_1px_2px_rgba(251,246,217,0.45),0_2px_6px_rgba(36,26,26,0.3)]"
             >
-              <span className="absolute inset-y-1 left-1/2 w-px -translate-x-1/2 bg-black/20" />
-              <span className="absolute inset-x-1 top-1/2 h-px -translate-y-1/2 bg-black/20" />
-              <span className="absolute left-1/2 top-1/2 h-3 w-4 -translate-x-1/2 -translate-y-1/2 rounded-[4px] border border-black/25" />
+              <span className="absolute inset-y-1 left-1/2 w-px -translate-x-1/2 bg-soil/20" />
+              <span className="absolute inset-x-1 top-1/2 h-px -translate-y-1/2 bg-soil/20" />
+              <span className="absolute left-1/2 top-1/2 h-3 w-4 -translate-x-1/2 -translate-y-1/2 rounded-[4px] border border-soil/25" />
             </span>
             <Wifi className="size-4 rotate-90 text-cream/50" strokeWidth={2.25} aria-hidden />
           </div>
@@ -773,13 +773,13 @@ export const WalletCardStack = memo(function WalletCardStack({
     )
   }
   const networkBadge = (network: string) => (
-    <span className="shrink-0 rounded-full border border-white/20 bg-white/[0.1] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-cream/75 backdrop-blur">
+    <span className="shrink-0 rounded-full border border-cream/20 bg-cream/[0.1] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-cream/75 backdrop-blur">
       {network}
     </span>
   )
 
   const addFace = (
-    <div className="relative flex h-full flex-col items-center justify-center overflow-hidden rounded-[1.75rem] border-2 border-dashed border-forest/20 bg-white p-6 text-center">
+    <div className="relative flex h-full flex-col items-center justify-center overflow-hidden rounded-[1.75rem] border-2 border-dashed border-forest/20 bg-cream p-6 text-center">
       <div
         aria-hidden
         className="absolute -right-10 -top-12 h-36 w-36 rounded-full bg-sage/60 blur-2xl"
@@ -788,7 +788,7 @@ export const WalletCardStack = memo(function WalletCardStack({
         aria-hidden
         className="absolute -bottom-14 -left-8 h-36 w-36 rounded-full bg-mint/20 blur-2xl"
       />
-      <span className="relative flex size-12 items-center justify-center rounded-full bg-gradient-to-br from-mint to-mint-soft text-forest shadow-[0_10px_20px_-8px_rgba(183,224,75,0.7)] ring-4 ring-mint/15">
+      <span className="relative flex size-12 items-center justify-center rounded-full bg-gradient-to-br from-mint to-mint-soft text-forest shadow-[0_10px_20px_-8px_rgba(145,187,158,0.7)] ring-4 ring-mint/15">
         <Plus className="size-5" strokeWidth={2.5} />
       </span>
       <p className="relative mt-3 text-sm font-semibold text-ink">Tambah Dompet</p>
@@ -876,7 +876,7 @@ export const WalletCardStack = memo(function WalletCardStack({
             menyembul keluar dari kantongnya; jahitan dashed + bayangan dalam untuk kedalaman */}
         <div
           aria-hidden
-          className="pointer-events-none absolute rounded-[2.25rem] bg-gradient-to-b from-[#1a4a34] via-forest to-[#071c12] shadow-[0_2px_6px_rgba(9,30,22,0.25),0_24px_48px_-16px_rgba(9,30,22,0.5),0_48px_90px_-32px_rgba(9,30,22,0.45)] ring-1 ring-white/10"
+          className="pointer-events-none absolute rounded-[2.25rem] bg-gradient-to-b from-[#52685c] via-forest to-[#1f2823] shadow-[0_2px_6px_rgba(36,26,26,0.25),0_24px_48px_-16px_rgba(36,26,26,0.5),0_48px_90px_-32px_rgba(36,26,26,0.45)] ring-1 ring-cream/10"
           style={{
             top: SCENE_PAD - SLEEVE_TOP,
             height: `calc(var(--card-h, ${CARD_H}px) + ${SLEEVE_TOP + SLEEVE_BOTTOM}px)`,
@@ -885,13 +885,13 @@ export const WalletCardStack = memo(function WalletCardStack({
           }}
         >
           {/* tekstur kulit halus (polka dot timbul) */}
-          <div className="absolute inset-0 rounded-[2.25rem] [background-image:radial-gradient(rgba(255,255,255,0.045)_1px,transparent_1.5px)] [background-size:9px_9px]" />
+          <div className="absolute inset-0 rounded-[2.25rem] [background-image:radial-gradient(rgba(251,246,217,0.045)_1px,transparent_1.5px)] [background-size:9px_9px]" />
           {/* jahitan mengikuti bibir sleeve */}
-          <div className="absolute inset-2.5 rounded-[1.9rem] border-2 border-dashed border-white/[0.13]" />
+          <div className="absolute inset-2.5 rounded-[1.9rem] border-2 border-dashed border-cream/[0.13]" />
           {/* bayangan dalam di mulut kantong — kesan kartu masuk ke dalam */}
-          <div className="absolute inset-x-0 top-0 h-28 rounded-t-[2.25rem] bg-gradient-to-b from-black/40 via-black/15 to-transparent" />
+          <div className="absolute inset-x-0 top-0 h-28 rounded-t-[2.25rem] bg-gradient-to-b from-soil/40 via-soil/15 to-transparent" />
           {/* highlight rim atas kulit */}
-          <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+          <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-cream/30 to-transparent" />
         </div>
 
         {/* SEMUA kartu dirender full-size menumpuk. transform / opacity / z-index /
@@ -986,15 +986,15 @@ export const WalletCardStack = memo(function WalletCardStack({
           }}
         >
           {/* bayangan yang jatuh ke kartu tepat di atas bibir */}
-          <div className="absolute inset-x-3 -top-4 h-4 bg-gradient-to-t from-black/30 to-transparent" />
+          <div className="absolute inset-x-3 -top-4 h-4 bg-gradient-to-t from-soil/30 to-transparent" />
           {/* flap kulit */}
-          <div className="absolute inset-0 rounded-b-[2.25rem] rounded-t-[0.85rem] bg-gradient-to-b from-[#1d5238] via-forest to-[#071c12] shadow-[0_20px_40px_-14px_rgba(9,30,22,0.6)] ring-1 ring-white/10">
+          <div className="absolute inset-0 rounded-b-[2.25rem] rounded-t-[0.85rem] bg-gradient-to-b from-[#52685c] via-forest to-[#1f2823] shadow-[0_20px_40px_-14px_rgba(36,26,26,0.6)] ring-1 ring-cream/10">
             {/* tekstur kulit */}
-            <div className="absolute inset-0 rounded-[inherit] [background-image:radial-gradient(rgba(255,255,255,0.045)_1px,transparent_1.5px)] [background-size:9px_9px]" />
+            <div className="absolute inset-0 rounded-[inherit] [background-image:radial-gradient(rgba(251,246,217,0.045)_1px,transparent_1.5px)] [background-size:9px_9px]" />
             {/* rim atas bibir — tepi kulit yang menahan kartu */}
-            <div className="absolute inset-x-5 top-0 h-[3px] rounded-full bg-gradient-to-r from-transparent via-white/35 to-transparent" />
+            <div className="absolute inset-x-5 top-0 h-[3px] rounded-full bg-gradient-to-r from-transparent via-cream/35 to-transparent" />
             {/* jahitan flap */}
-            <div className="absolute inset-x-6 top-3.5 border-t-2 border-dashed border-white/[0.13]" />
+            <div className="absolute inset-x-6 top-3.5 border-t-2 border-dashed border-cream/[0.13]" />
           </div>
         </div>
       </div>
@@ -1006,7 +1006,7 @@ export const WalletCardStack = memo(function WalletCardStack({
           type="button"
           aria-label="Kartu sebelumnya"
           onClick={() => step(-1)}
-          className="flex size-8 items-center justify-center rounded-full border border-black/5 bg-white text-ink transition-colors hover:bg-sage"
+          className="flex size-8 items-center justify-center rounded-full border border-soil/5 bg-cream text-ink transition-colors hover:bg-sage"
         >
           <ChevronLeft className="size-4" />
         </button>
@@ -1051,7 +1051,7 @@ export const WalletCardStack = memo(function WalletCardStack({
           type="button"
           aria-label="Kartu berikutnya"
           onClick={() => step(1)}
-          className="flex size-8 items-center justify-center rounded-full border border-black/5 bg-white text-ink transition-colors hover:bg-sage"
+          className="flex size-8 items-center justify-center rounded-full border border-soil/5 bg-cream text-ink transition-colors hover:bg-sage"
         >
           <ChevronRight className="size-4" />
         </button>

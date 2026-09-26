@@ -71,7 +71,7 @@ export function DailyNudge() {
           'flex items-start gap-3 rounded-[2rem] bg-gradient-to-br from-sage/80 via-cream to-cream p-4 ring-1 ring-forest/10',
         )}
       >
-        <span className="relative flex size-9 shrink-0 items-center justify-center rounded-full bg-white text-forest ring-1 ring-black/5">
+        <span className="relative flex size-9 shrink-0 items-center justify-center rounded-full bg-cream text-forest ring-1 ring-soil/5">
           <Sprout className="size-4" strokeWidth={2.4} aria-hidden />
           <Sparkles
             className="absolute -right-0.5 -top-0.5 size-3 text-mint"
@@ -104,7 +104,7 @@ export function DailyNudge() {
           type="button"
           onClick={dismiss}
           aria-label="Tutup pengingat hari ini"
-          className="flex size-7 shrink-0 items-center justify-center rounded-full text-ink/35 transition-colors hover:bg-black/5 hover:text-ink"
+          className="flex size-7 shrink-0 items-center justify-center rounded-full text-ink/35 transition-colors hover:bg-soil/5 hover:text-ink"
         >
           <X className="size-3.5" strokeWidth={2.4} aria-hidden />
         </button>

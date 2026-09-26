@@ -84,7 +84,7 @@ export function AddBudgetSheet({
                 'flex items-center gap-2 rounded-2xl px-3 py-2.5 text-left text-[12.5px] font-semibold transition-all duration-200 active:scale-95',
                 active
                   ? 'bg-forest text-mint ring-2 ring-forest'
-                  : 'bg-white text-ink/70 ring-1 ring-black/[0.07] hover:bg-cream hover:text-ink',
+                  : 'bg-cream text-ink/70 ring-1 ring-soil/[0.07] hover:bg-cream hover:text-ink',
               )}
             >
               <span className="text-[16px] leading-none">{option.icon}</span>

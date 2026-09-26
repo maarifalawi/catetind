@@ -40,7 +40,7 @@ export function WealthAssetDonut({
   if (slices.length === 0) return null
 
   return (
-    <div className="rounded-[1.75rem] bg-[#FFFDF7] p-5 shadow-[0_18px_44px_-30px_rgba(16,58,42,0.45)] ring-1 ring-black/[0.05] sm:p-6">
+    <div className="rounded-[1.75rem] bg-[#fbf6d9] p-5 shadow-[0_18px_44px_-30px_rgba(69,89,78,0.45)] ring-1 ring-soil/[0.05] sm:p-6">
       <div className="flex items-baseline justify-between gap-3">
         <h3 className="font-display text-[13.5px] font-bold tracking-tight text-ink">
           Alokasi Aset
@@ -52,7 +52,7 @@ export function WealthAssetDonut({
 
       {/* dudukan chart + readout tengah */}
       <div className="relative mx-auto mt-3 w-full max-w-[280px]">
-        <div className="h-[212px] w-full [filter:drop-shadow(0_14px_22px_rgba(16,58,42,0.12))] sm:h-[232px]">
+        <div className="h-[212px] w-full [filter:drop-shadow(0_14px_22px_rgba(69,89,78,0.12))] sm:h-[232px]">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
@@ -139,7 +139,7 @@ export function WealthAssetDonut({
               >
                 <span
                   aria-hidden
-                  className="size-2.5 shrink-0 rounded-full ring-2 ring-white"
+                  className="size-2.5 shrink-0 rounded-full ring-2 ring-cream"
                   style={{ backgroundColor: slice.color }}
                 />
                 <span className="min-w-0 flex-1 truncate text-[12.5px] font-semibold text-ink/75">
@@ -175,7 +175,7 @@ function DonutTooltip({
   const slice = payload?.[0]?.payload
   if (!active || !slice) return null
   return (
-    <div className="rounded-2xl bg-ink px-3.5 py-2.5 text-cream shadow-[0_16px_34px_-16px_rgba(16,58,42,0.8)]">
+    <div className="rounded-2xl bg-ink px-3.5 py-2.5 text-cream shadow-[0_16px_34px_-16px_rgba(69,89,78,0.8)]">
       <p className="flex items-center gap-1.5 text-[11.5px] font-semibold">
         <span aria-hidden>{slice.emoji}</span>
         {slice.label}

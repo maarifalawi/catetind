@@ -39,7 +39,7 @@ export function ContextSwitcher({
       role="tablist"
       aria-label="Konteks keuangan"
       className={cn(
-        'relative flex w-full max-w-[300px] items-center rounded-full bg-white p-1 ring-1 ring-black/[0.06] shadow-[0_10px_24px_-18px_rgba(16,58,42,0.55)]',
+        'relative flex w-full max-w-[300px] items-center rounded-full bg-cream p-1 ring-1 ring-soil/[0.06] shadow-[0_10px_24px_-18px_rgba(69,89,78,0.55)]',
         className,
       )}
     >

@@ -103,7 +103,7 @@ export function CashflowCalendarGrid({
   ]
 
   return (
-    <section className="rounded-[2rem] bg-white p-5 shadow-[0_4px_24px_-4px_rgba(18,40,31,0.06)] ring-1 ring-black/5 sm:p-6">
+    <section className="rounded-[2rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(80,58,58,0.06)] ring-1 ring-soil/5 sm:p-6">
       {/* ── 2A. HEADER: judul periode + navigator ────────────────────────────
           Cukup dua baris tenang — bukan tiga baris chip seperti versi lama.
           Baris 1 menyebut periode apa yang sedang dibaca (rentang tanggal dan
@@ -156,7 +156,7 @@ export function CashflowCalendarGrid({
         <div
           role="group"
           aria-label="Mode periode kalender"
-          className="flex rounded-full bg-cream p-0.5 ring-1 ring-inset ring-black/[0.05]"
+          className="flex rounded-full bg-cream p-0.5 ring-1 ring-inset ring-soil/[0.05]"
         >
           {modeOptions.map((option) => {
             const active = option.id === mode
@@ -236,7 +236,7 @@ export function CashflowCalendarGrid({
             <span
               aria-hidden
               className={cn(
-                'size-3 rounded-[4px] ring-1 ring-inset ring-black/[0.06]',
+                'size-3 rounded-[4px] ring-1 ring-inset ring-soil/[0.06]',
                 CALENDAR_LOOK_CELL[item.id],
               )}
             />
@@ -294,7 +294,7 @@ function CalendarDayCell({
         aria-label={ariaLabel}
         title={ariaLabel}
         className={cn(
-          'relative flex aspect-square w-full items-center justify-center rounded-[10px] text-[11.5px] font-semibold tabular-nums ring-1 ring-inset ring-black/[0.04] transition-[transform,background-color,box-shadow] duration-200 animate-[fade-pop_0.4s_ease_backwards] hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40 sm:aspect-auto sm:min-h-[56px] sm:text-[12.5px] lg:min-h-[68px]',
+          'relative flex aspect-square w-full items-center justify-center rounded-[10px] text-[11.5px] font-semibold tabular-nums ring-1 ring-inset ring-soil/[0.04] transition-[transform,background-color,box-shadow] duration-200 animate-[fade-pop_0.4s_ease_backwards] hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40 sm:aspect-auto sm:min-h-[56px] sm:text-[12.5px] lg:min-h-[68px]',
           CALENDAR_LOOK_CELL[look],
           selected
             ? darkFill
@@ -318,7 +318,7 @@ function CalendarDayCell({
       <span
         role="tooltip"
         className={cn(
-          'pointer-events-none absolute bottom-full z-20 mb-2 w-max max-w-[11rem] rounded-xl bg-ink px-2.5 py-1.5 text-center text-[10.5px] font-semibold leading-tight text-cream shadow-[0_12px_28px_-12px_rgba(16,58,42,0.7)] transition-opacity duration-150 motion-reduce:transition-none',
+          'pointer-events-none absolute bottom-full z-20 mb-2 w-max max-w-[11rem] rounded-xl bg-ink px-2.5 py-1.5 text-center text-[10.5px] font-semibold leading-tight text-cream shadow-[0_12px_28px_-12px_rgba(69,89,78,0.7)] transition-opacity duration-150 motion-reduce:transition-none',
           placement.bubble,
           selected ? 'opacity-100' : 'opacity-0',
         )}

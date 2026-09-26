@@ -45,7 +45,7 @@ type TransactionType = {
   id: TransactionTypeId
   label: string
   icon: LucideIcon
-  /** kelas pil saat aktif — accent per tipe (terracotta/sage/amber) */
+  /** kelas pil saat aktif — accent per tipe (plum/olive/cantelope) */
   active: string
   /** kategori yang "ditebak AI" (mock Domain 2A.2 Smart Default) */
   suggested: string
@@ -83,7 +83,7 @@ const TYPES: TransactionType[] = [
     id: 'saving',
     label: 'Tabungan',
     icon: PiggyBank,
-    active: 'bg-hud-amber/[0.18] text-[#8a5a12] ring-hud-amber/40',
+    active: 'bg-hud-amber/[0.18] text-[#b89191] ring-hud-amber/40',
     suggested: 'Dana Darurat',
     cheers: [
       'Sip, nabung {amount} lagi! 🌱',
@@ -95,7 +95,7 @@ const TYPES: TransactionType[] = [
     id: 'transfer',
     label: 'Transfer',
     icon: ArrowLeftRight,
-    active: 'bg-hud-sage/[0.3] text-[#4c5a3a] ring-hud-sage/50',
+    active: 'bg-hud-sage/[0.3] text-[#503a3a] ring-hud-sage/50',
     suggested: 'Antar Dompet',
     cheers: [
       'Oke, {amount} dipindahin! 🌿',
@@ -291,7 +291,7 @@ export function TransactionInputEngine({
       {/* sumber dana terpilih (opsional) — halaman Joint Wallet memakai ini untuk
           menegaskan dompet bersama sudah otomatis jadi sumber transaksi */}
       {sourceLabel && (
-        <div className="mb-3 flex items-center justify-center gap-2 rounded-2xl bg-hud-sage/15 px-3.5 py-2.5 text-[12px] font-semibold text-[#3f4a30] ring-1 ring-hud-sage/30">
+        <div className="mb-3 flex items-center justify-center gap-2 rounded-2xl bg-hud-sage/15 px-3.5 py-2.5 text-[12px] font-semibold text-[#503a3a] ring-1 ring-hud-sage/30">
           <Wallet className="size-3.5" strokeWidth={2.4} />
           Dompet: {sourceLabel}
         </div>
@@ -322,7 +322,7 @@ export function TransactionInputEngine({
                   : 'gap-1 rounded-2xl px-1 py-2.5',
                 active
                   ? cn('font-bold ring-1', item.active)
-                  : 'bg-black/[0.035] font-medium text-ink/45 hover:bg-black/[0.06]',
+                  : 'bg-soil/[0.035] font-medium text-ink/45 hover:bg-soil/[0.06]',
               )}
             >
               <Icon
@@ -415,7 +415,7 @@ export function TransactionInputEngine({
                 onChange={(event) => setNote(event.target.value)}
                 placeholder="Catatan (Opsional)"
                 aria-label="Catatan transaksi (opsional)"
-                className="mt-4 h-12 w-full rounded-2xl bg-black/[0.035] px-4 text-[13.5px] font-medium text-ink outline-none ring-1 ring-transparent transition-all placeholder:text-ink/30 focus:bg-white focus:ring-forest/15"
+                className="mt-4 h-12 w-full rounded-2xl bg-soil/[0.035] px-4 text-[13.5px] font-medium text-ink outline-none ring-1 ring-transparent transition-all placeholder:text-ink/30 focus:bg-cream focus:ring-forest/15"
               />
             </motion.div>
           )}
@@ -499,7 +499,7 @@ export function TransactionInputEngine({
               : 'size-14 rounded-full',
             mode === 'ocr'
               ? 'bg-forest text-cream'
-              : 'bg-black/[0.04] text-ink/70 ring-1 ring-black/5 hover:bg-black/[0.07]',
+              : 'bg-soil/[0.04] text-ink/70 ring-1 ring-soil/5 hover:bg-soil/[0.07]',
           )}
         >
           {mode === 'ocr' ? (
@@ -529,7 +529,7 @@ export function TransactionInputEngine({
         <button
           type="button"
           onClick={handleSubmit}
-          className="flex h-14 flex-1 items-center justify-center gap-2 rounded-2xl bg-forest text-base font-bold text-cream shadow-[0_14px_28px_-14px_rgba(16,58,42,0.7)] transition-all duration-150 hover:bg-forest-soft active:scale-[0.98]"
+          className="flex h-14 flex-1 items-center justify-center gap-2 rounded-2xl bg-forest text-base font-bold text-cream shadow-[0_14px_28px_-14px_rgba(69,89,78,0.7)] transition-all duration-150 hover:bg-forest-soft active:scale-[0.98]"
         >
           Catat
           <Check className="size-5" strokeWidth={2.8} />
@@ -549,7 +549,7 @@ export function TransactionInputEngine({
               : 'size-14 rounded-full',
             mode === 'voice'
               ? 'bg-forest text-cream'
-              : 'bg-black/[0.04] text-ink/70 ring-1 ring-black/5 hover:bg-black/[0.07]',
+              : 'bg-soil/[0.04] text-ink/70 ring-1 ring-soil/5 hover:bg-soil/[0.07]',
           )}
         >
           {mode === 'voice' ? (
@@ -573,11 +573,11 @@ export function TransactionInputEngine({
       {isDialog && (
         <p className="mt-4 text-center text-[11.5px] text-ink/35">
           Tekan{' '}
-          <kbd className="rounded-md bg-black/[0.05] px-1.5 py-0.5 font-sans text-[10.5px] font-semibold text-ink/50">
+          <kbd className="rounded-md bg-soil/[0.05] px-1.5 py-0.5 font-sans text-[10.5px] font-semibold text-ink/50">
             Enter
           </kbd>{' '}
           buat simpan ·{' '}
-          <kbd className="rounded-md bg-black/[0.05] px-1.5 py-0.5 font-sans text-[10.5px] font-semibold text-ink/50">
+          <kbd className="rounded-md bg-soil/[0.05] px-1.5 py-0.5 font-sans text-[10.5px] font-semibold text-ink/50">
             Esc
           </kbd>{' '}
           buat tutup

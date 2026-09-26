@@ -35,8 +35,8 @@ export function DailyHudSummary({
     <section aria-label="Jatah hari ini" className="w-full">
       {!hasIncomeThisMonth ? (
         /* ── 3B. DRY SPELL — menggantikan SELURUH HUD (tanpa Rp 0/hari) ──── */
-        <div className="rounded-[1.6rem] bg-white p-4 ring-1 ring-black/5 shadow-[0_12px_28px_-24px_rgba(16,58,42,0.5)]">
-          <div className="flex flex-col items-center rounded-[1.3rem] bg-cream px-6 py-7 text-center ring-1 ring-black/[0.04]">
+        <div className="rounded-[1.6rem] bg-cream p-4 ring-1 ring-soil/5 shadow-[0_12px_28px_-24px_rgba(69,89,78,0.5)]">
+          <div className="flex flex-col items-center rounded-[1.3rem] bg-cream px-6 py-7 text-center ring-1 ring-soil/[0.04]">
             <span className="text-[26px]">💼</span>
             <p className="mt-3 text-[14.5px] font-bold leading-snug text-ink">
               Belum ada pemasukan bulan ini.
@@ -60,7 +60,7 @@ export function DailyHudSummary({
         </div>
       ) : hud.shortfall ? (
         /* ── SHORTFALL — saldo tidak cukup untuk celengan bulan ini ───────── */
-        <div className="relative overflow-hidden rounded-[1.6rem] bg-gradient-to-br from-hud-terracotta/[0.14] via-white to-hud-amber/[0.14] p-4 ring-1 ring-hud-terracotta/25 shadow-[0_14px_30px_-24px_rgba(188,108,37,0.85)]">
+        <div className="relative overflow-hidden rounded-[1.6rem] bg-gradient-to-br from-hud-terracotta/[0.14] via-cream to-hud-amber/[0.14] p-4 ring-1 ring-hud-terracotta/25 shadow-[0_14px_30px_-24px_rgba(184,145,145,0.85)]">
           <div className="flex items-center justify-between gap-3">
             <p className="text-[12.5px] font-semibold text-hud-terracotta">Jatah Hari Ini</p>
             <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-hud-terracotta/12 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-hud-terracotta ring-1 ring-hud-terracotta/20">
@@ -77,7 +77,7 @@ export function DailyHudSummary({
           </p>
 
           {/* pesan AI — menahan tanpa menuduh (nada PRD) */}
-          <div className="mt-3 flex items-start gap-2.5 rounded-2xl bg-white/70 px-3.5 py-3 ring-1 ring-hud-terracotta/15">
+          <div className="mt-3 flex items-start gap-2.5 rounded-2xl bg-cream/70 px-3.5 py-3 ring-1 ring-hud-terracotta/15">
             <Sparkles className="mt-0.5 size-4 shrink-0 text-hud-terracotta" strokeWidth={2.4} />
             <p className="text-[12px] font-medium leading-relaxed text-ink/70">
               ⚠️ Saldo tidak cukup untuk penuhi target celengan bulan ini. Jatah harianmu ditahan.
@@ -105,7 +105,7 @@ export function DailyHudSummary({
         </div>
       ) : (
         /* ── 3A. DAILY HUD NORMAL — jatah aman SETELAH celengan ───────────── */
-        <div className="rounded-[1.6rem] bg-white p-4 ring-1 ring-black/5 shadow-[0_12px_28px_-24px_rgba(16,58,42,0.5)]">
+        <div className="rounded-[1.6rem] bg-cream p-4 ring-1 ring-soil/5 shadow-[0_12px_28px_-24px_rgba(69,89,78,0.5)]">
           <div className="flex items-center justify-between gap-3">
             <span className="inline-flex items-center gap-2 text-[12.5px] font-semibold text-ink/55">
               <span className="flex size-6 items-center justify-center rounded-full bg-sage text-forest">
@@ -122,7 +122,7 @@ export function DailyHudSummary({
                 'inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold ring-1 transition-colors active:scale-95',
                 pinned
                   ? 'bg-forest text-mint ring-forest/20 hover:bg-forest-soft'
-                  : 'bg-cream text-ink/45 ring-black/[0.04] hover:bg-sage hover:text-forest',
+                  : 'bg-cream text-ink/45 ring-soil/[0.04] hover:bg-sage hover:text-forest',
               )}
             >
               <Pin className="size-3" strokeWidth={2.4} />
@@ -143,7 +143,7 @@ export function DailyHudSummary({
           </p>
 
           {/* kenapa pool-nya lebih kecil — cicilan & celengan dipotong DULU */}
-          <p className="mt-2 border-t border-black/[0.06] pt-2 text-[10.5px] text-ink/35">
+          <p className="mt-2 border-t border-soil/[0.06] pt-2 text-[10.5px] text-ink/35">
             Setelah dipotong cicilan {maskNominal(hud.installments, masked)} &amp; celengan{' '}
             {maskNominal(hud.sinkingObligation, masked)}
           </p>

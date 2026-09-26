@@ -21,10 +21,10 @@ export function IosInstallArrow({ show }: { show: boolean }) {
       style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 5.75rem)' }}
       className="pointer-events-none fixed inset-x-0 z-30 flex items-center justify-center gap-2 px-5"
     >
-      <span className="rounded-full bg-forest px-3.5 py-2 text-[11px] font-semibold text-cream shadow-[0_14px_30px_-12px_rgba(16,58,42,0.6)]">
+      <span className="rounded-full bg-forest px-3.5 py-2 text-[11px] font-semibold text-cream shadow-[0_14px_30px_-12px_rgba(69,89,78,0.6)]">
         Tap tombol ini dulu ya! 👇
       </span>
-      <span className="animate-install-arrow-bounce flex size-10 shrink-0 items-center justify-center rounded-full bg-mint text-forest shadow-[0_14px_30px_-12px_rgba(16,58,42,0.6)] ring-1 ring-forest/15 motion-reduce:animate-none">
+      <span className="animate-install-arrow-bounce flex size-10 shrink-0 items-center justify-center rounded-full bg-mint text-forest shadow-[0_14px_30px_-12px_rgba(69,89,78,0.6)] ring-1 ring-forest/15 motion-reduce:animate-none">
         <ArrowDown className="size-5" strokeWidth={2.6} />
       </span>
     </div>

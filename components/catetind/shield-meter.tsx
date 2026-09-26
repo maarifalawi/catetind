@@ -24,7 +24,7 @@ const BAND_WIDTH = 58
 const BAND_GAP = 1.4
 const VIEW_BOX = '0 0 64 82'
 /** abu-abu netral untuk lajur yang belum tertutup (bukan warna aksen baru) */
-const EMPTY_FILL_CLASS = 'fill-[#E5E7EB]'
+const EMPTY_FILL_CLASS = 'fill-[#ebe4de]'
 
 export function ShieldMeter({
   bills,
@@ -65,7 +65,7 @@ export function ShieldMeter({
       ? `${overdueCount} tagihan telat — tamengmu retak! 🛡️⚠️`
       : `${total - paidCount} tagihan lagi buat tameng penuh 🌿`
   const headlineClass = allPaid
-    ? 'text-[#5c6b47]'
+    ? 'text-[#503a3a]'
     : overdueCount > 0
       ? 'text-hud-terracotta'
       : 'text-ink/55'
@@ -76,9 +76,9 @@ export function ShieldMeter({
     <section
       aria-label="Tameng proteksi tagihan"
       className={cn(
-        'mt-5 overflow-hidden rounded-[2rem] bg-white p-5 text-center shadow-[0_4px_24px_-4px_rgba(18,40,31,0.06)] ring-1 ring-black/5 sm:p-6',
+        'mt-5 overflow-hidden rounded-[2rem] bg-cream p-5 text-center shadow-[0_4px_24px_-4px_rgba(80,58,58,0.06)] ring-1 ring-soil/5 sm:p-6',
         allPaid &&
-          'ring-hud-amber/45 shadow-[0_18px_46px_-24px_rgba(221,161,94,0.75),0_0_0_1px_rgba(221,161,94,0.35)]',
+          'ring-hud-amber/45 shadow-[0_18px_46px_-24px_rgba(255,184,133,0.75),0_0_0_1px_rgba(255,184,133,0.35)]',
         className,
       )}
     >
@@ -102,7 +102,7 @@ export function ShieldMeter({
           viewBox={VIEW_BOX}
           className={cn(
             'relative h-20 w-auto',
-            allPaid && 'drop-shadow-[0_6px_14px_rgba(221,161,94,0.55)]',
+            allPaid && 'drop-shadow-[0_6px_14px_rgba(255,184,133,0.55)]',
           )}
           role="img"
           aria-label={`${paidCount} dari ${total} tagihan terlindungi`}
@@ -174,7 +174,7 @@ export function ShieldMeter({
             {headline}
           </p>
 
-          <div className="mt-4 h-px w-full bg-black/[0.06]" aria-hidden />
+          <div className="mt-4 h-px w-full bg-soil/[0.06]" aria-hidden />
 
           <p className="mt-3 text-[12.5px] font-semibold tabular-nums text-ink/70">
             Sudah: {maskMoney(paidAmount, masked)} · Belum:{' '}

@@ -143,7 +143,7 @@ export function HistoryTransactionRow({
           setDx(0)
           onDelete(tx)
         }}
-        className="absolute inset-y-0 right-0 flex w-[88px] flex-col items-center justify-center gap-1 rounded-xl bg-rose-500 text-white transition-opacity"
+        className="absolute inset-y-0 right-0 flex w-[88px] flex-col items-center justify-center gap-1 rounded-xl bg-plum text-cream transition-opacity"
         style={{ opacity: dx < 0 ? exposed : 0, pointerEvents: dx < -24 ? 'auto' : 'none' }}
       >
         <Trash2 className="size-4" strokeWidth={2.3} />
@@ -155,7 +155,7 @@ export function HistoryTransactionRow({
           transaksi adalah garis rambut di <ul>, jadi tidak ada kotak di dalam
           kotak. Affordance aksinya adalah ikon titik tiga yang bisa ditekan. */}
       <div
-        className="group relative flex cursor-pointer touch-pan-y items-center rounded-xl bg-white transition-colors duration-200 animate-[row-in_0.5s_ease_backwards] hover:bg-cream focus-within:bg-cream"
+        className="group relative flex cursor-pointer touch-pan-y items-center rounded-xl bg-cream transition-colors duration-200 animate-[row-in_0.5s_ease_backwards] hover:bg-cream focus-within:bg-cream"
         style={{
           transform: `translateX(${dx}px)`,
           transitionDuration: dragging ? '0ms' : undefined,

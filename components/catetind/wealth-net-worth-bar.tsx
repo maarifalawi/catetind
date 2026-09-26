@@ -59,14 +59,14 @@ export function WealthNetWorthBar({
   /* porsi 0 tetap 0 — kalau HUTANG nol, hijau memenuhi bar (bukan terbelah dua) */
   const assetWeight = tug.assets
   const debtWeight = tug.debts
-  /* portofolio & hutang dua-duanya kosong: tampilkan bar sage penuh supaya
+  /* portofolio & hutang dua-duanya kosong: tampilkan bar olive penuh supaya
      empty state tidak terlihat seperti komponen rusak */
   const spanEmpty = assetWeight === 0 && debtWeight === 0
 
   return (
     <section
       aria-label="Net worth: total aset (kas likuid + investasi) dibanding hutang"
-      className="relative overflow-hidden rounded-[1.75rem] bg-[#FFFDF7] p-5 shadow-[0_22px_50px_-30px_rgba(16,58,42,0.5)] ring-1 ring-black/[0.05] sm:p-6"
+      className="relative overflow-hidden rounded-[1.75rem] bg-[#fbf6d9] p-5 shadow-[0_22px_50px_-30px_rgba(69,89,78,0.5)] ring-1 ring-soil/[0.05] sm:p-6"
     >
       {/* kabut sage (aset) & terracotta (hutang) di dua sudut — penanda siapa
           menarik ke arah mana, tetap di palet kanon */}
@@ -80,18 +80,18 @@ export function WealthNetWorthBar({
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-50 [background-image:radial-gradient(rgba(163,177,138,0.35)_0.6px,transparent_0.9px)] [background-size:12px_12px]"
+        className="pointer-events-none absolute inset-0 opacity-50 [background-image:radial-gradient(rgba(181,185,135,0.35)_0.6px,transparent_0.9px)] [background-size:12px_12px]"
       />
 
       <div className="relative">
         {/* 1. label + nominal di dua sisi bar (kiri Aset, kanan Hutang) */}
         <div className="flex items-end justify-between gap-3">
           <div className="min-w-0">
-            <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.16em] text-[#5F6B4C]">
+            <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.16em] text-[#503a3a]">
               <TrendingUp className="size-3.5" strokeWidth={2.6} />
               Aset
             </span>
-            <span className="mt-1 block truncate font-display text-[19px] font-black leading-none tracking-tight text-[#7D8B65] tabular-nums sm:text-[22px]">
+            <span className="mt-1 block truncate font-display text-[19px] font-black leading-none tracking-tight text-[#b5b987] tabular-nums sm:text-[22px]">
               {assetLabel}
             </span>
             {/* #1 — komposisi aset dibuka terang-terangan: user langsung lihat
@@ -131,9 +131,9 @@ export function WealthNetWorthBar({
               animate={{ flexGrow: spanEmpty ? 1 : assetWeight }}
               transition={{ type: 'spring', stiffness: 120, damping: 20 }}
               style={{ flexBasis: 0 }}
-              className="relative h-full min-w-0 bg-gradient-to-r from-[#8B9973] to-hud-sage"
+              className="relative h-full min-w-0 bg-gradient-to-r from-[#b5b987] to-hud-sage"
             >
-              <span aria-hidden className="absolute inset-x-0 top-0 h-px bg-white/40" />
+              <span aria-hidden className="absolute inset-x-0 top-0 h-px bg-cream/40" />
             </motion.span>
             {/* hutang menarik ke kanan (terracotta) */}
             <motion.span
@@ -141,9 +141,9 @@ export function WealthNetWorthBar({
               animate={{ flexGrow: spanEmpty ? 0 : debtWeight }}
               transition={{ type: 'spring', stiffness: 120, damping: 20 }}
               style={{ flexBasis: 0 }}
-              className="relative h-full min-w-0 bg-gradient-to-r from-hud-terracotta to-[#D08A45]"
+              className="relative h-full min-w-0 bg-gradient-to-r from-hud-terracotta to-[#ffb885]"
             >
-              <span aria-hidden className="absolute inset-x-0 top-0 h-px bg-white/30" />
+              <span aria-hidden className="absolute inset-x-0 top-0 h-px bg-cream/30" />
             </motion.span>
           </div>
 
@@ -155,7 +155,7 @@ export function WealthNetWorthBar({
             transition={{ type: 'spring', stiffness: 120, damping: 20 }}
             className="pointer-events-none absolute top-1/2 z-10 -translate-x-1/2 -translate-y-1/2"
           >
-            <span className="flex size-8 items-center justify-center rounded-full bg-[#FFFDF7] shadow-[0_8px_18px_-8px_rgba(16,58,42,0.6)] ring-1 ring-forest/10">
+            <span className="flex size-8 items-center justify-center rounded-full bg-[#fbf6d9] shadow-[0_8px_18px_-8px_rgba(69,89,78,0.6)] ring-1 ring-forest/10">
               <span className="size-2.5 rounded-full bg-gradient-to-br from-hud-sage to-hud-terracotta" />
             </span>
           </motion.span>
@@ -177,7 +177,7 @@ export function WealthNetWorthBar({
           <p
             className={cn(
               'mt-1.5 flex items-center justify-center gap-2 font-display text-[1.9rem] font-black leading-none tracking-tight tabular-nums sm:text-[2.3rem]',
-              tug.positive ? 'text-[#7D8B65]' : 'text-hud-terracotta',
+              tug.positive ? 'text-[#b5b987]' : 'text-hud-terracotta',
             )}
           >
             <span className="truncate">{netLabel}</span>

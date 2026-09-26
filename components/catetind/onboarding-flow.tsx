@@ -342,7 +342,7 @@ export function OnboardingFlow() {
               'group flex h-14 w-full items-center justify-between gap-3 rounded-full pl-6 pr-2 transition-all duration-200',
               cta.disabled
                 ? 'cursor-not-allowed bg-ink/[0.06] text-ink/35'
-                : 'bg-forest text-cream shadow-[0_16px_34px_-18px_rgba(16,58,42,0.85)] hover:bg-forest-soft active:scale-[0.98]',
+                : 'bg-forest text-cream shadow-[0_16px_34px_-18px_rgba(69,89,78,0.85)] hover:bg-forest-soft active:scale-[0.98]',
             )}
           >
             <span className="text-[15.5px] font-medium tracking-[-0.01em]">
@@ -352,7 +352,7 @@ export function OnboardingFlow() {
               className={cn(
                 'flex size-10 shrink-0 items-center justify-center rounded-full transition-colors duration-200',
                 cta.disabled
-                  ? 'bg-white text-ink/25'
+                  ? 'bg-cream text-ink/25'
                   : 'bg-cream text-forest group-hover:bg-mint',
               )}
             >

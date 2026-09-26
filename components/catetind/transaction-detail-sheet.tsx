@@ -79,7 +79,7 @@ export function TransactionDetailSheet({
               animate={{ y: 0, opacity: 1, scale: 1 }}
               exit={{ y: 64, opacity: 0, scale: 0.98 }}
               transition={{ duration: 0.34, ease: EASE }}
-              className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-[2rem] bg-white p-5 pb-7 shadow-[0_-24px_60px_-24px_rgba(16,58,42,0.55)] ring-1 ring-black/5 sm:rounded-[2rem] sm:p-6 sm:shadow-[0_28px_70px_-24px_rgba(16,58,42,0.5)]"
+              className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-[2rem] bg-cream p-5 pb-7 shadow-[0_-24px_60px_-24px_rgba(69,89,78,0.55)] ring-1 ring-soil/5 sm:rounded-[2rem] sm:p-6 sm:shadow-[0_28px_70px_-24px_rgba(69,89,78,0.5)]"
               data-lenis-prevent
             >
               <DetailBody tx={tx} masked={masked} onClose={onClose} onEdit={onEdit} onDelete={onDelete} />
@@ -197,7 +197,7 @@ function DetailBody({
         <span className="inline-flex items-center gap-1.5 rounded-full bg-sage/60 px-3 py-1.5 text-[11.5px] font-semibold text-forest">
           {categoryEmoji(tx.category)} {tx.category}
         </span>
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-cream px-3 py-1.5 text-[11.5px] font-semibold text-ink/70 ring-1 ring-black/5">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-cream px-3 py-1.5 text-[11.5px] font-semibold text-ink/70 ring-1 ring-soil/5">
           <WalletIcon className="size-3.5 text-forest/70" strokeWidth={2.2} />
           {tx.wallet}
         </span>
@@ -245,7 +245,7 @@ function DetailBody({
         <button
           type="button"
           onClick={() => onDelete(tx)}
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-rose-500 text-[13.5px] font-semibold text-white transition-colors hover:bg-rose-600 active:scale-[0.98]"
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-plum text-[13.5px] font-semibold text-cream transition-colors hover:bg-plum active:scale-[0.98]"
         >
           <Trash2 className="size-4" strokeWidth={2.3} />
           Hapus

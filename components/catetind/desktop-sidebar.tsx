@@ -135,7 +135,7 @@ export function DesktopSidebar() {
            halaman. Elemen `fixed` selalu mengikat ke viewport, jadi kebal.
            Konsekuensinya kolom konten digeser lewat var --catet-sidebar-w
            (dipublikasikan di effect atas, dibaca screen-shell.tsx). */
-        'fixed inset-y-0 left-0 z-30 hidden flex-col border-r border-ink/[0.06] bg-white px-4 py-5 transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] lg:flex',
+        'fixed inset-y-0 left-0 z-30 hidden flex-col border-r border-ink/[0.06] bg-cream px-4 py-5 transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] lg:flex',
         collapsed ? 'w-[76px]' : 'w-[280px]',
       )}
     >
@@ -263,7 +263,7 @@ export function DesktopSidebar() {
           <button
             type="button"
             className={cn(
-              'group/item relative flex w-full items-center text-[13px] font-medium text-ink/55 transition-all duration-200 hover:bg-rose-50 hover:text-rose-600',
+              'group/item relative flex w-full items-center text-[13px] font-medium text-ink/55 transition-all duration-200 hover:bg-plum/15 hover:text-plum',
               collapsed
                 ? 'justify-center rounded-2xl px-0 py-2.5'
                 : 'gap-3 rounded-full px-3.5 py-2',

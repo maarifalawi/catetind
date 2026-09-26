@@ -66,7 +66,7 @@ export function JointAddSheet({
     <div className="space-y-2.5">
       {/* 1. pemilih split — disembunyikan saat transaksi privat */}
       {!privateOn && (
-        <div className="flex items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 ring-1 ring-black/[0.06]">
+        <div className="flex items-center justify-between gap-3 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/[0.06]">
           <span className="flex min-w-0 items-center gap-2">
             <SlidersHorizontal className="size-4 shrink-0 text-forest" strokeWidth={2.3} />
             <span className="min-w-0">
@@ -89,7 +89,7 @@ export function JointAddSheet({
       )}
 
       {/* 2. toggle privasi */}
-      <div className="rounded-2xl bg-white px-4 py-3 ring-1 ring-black/[0.06]">
+      <div className="rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/[0.06]">
         <div className="flex items-center justify-between gap-3">
           <span className="flex items-center gap-2 text-[12.5px] font-semibold text-ink/80">
             <EyeOff className="size-4 text-ink/40" strokeWidth={2.3} />
@@ -108,7 +108,7 @@ export function JointAddSheet({
           >
             <span
               className={cn(
-                'absolute top-0.5 size-5 rounded-full bg-white shadow-sm transition-transform duration-200',
+                'absolute top-0.5 size-5 rounded-full bg-cream shadow-sm transition-transform duration-200',
                 privateOn ? 'translate-x-[22px]' : 'translate-x-0.5',
               )}
             />
@@ -135,7 +135,7 @@ export function JointAddSheet({
         <Drawer.Content
           data-catetind-sheet="true"
           aria-label="Catat transaksi bareng"
-          className="fixed inset-x-0 bottom-0 z-[70] mx-auto flex max-h-[94dvh] w-full max-w-md flex-col rounded-t-[2rem] bg-[#FFFDF9] shadow-[0_-24px_60px_-24px_rgba(16,58,42,0.55)] outline-none"
+          className="fixed inset-x-0 bottom-0 z-[70] mx-auto flex max-h-[94dvh] w-full max-w-md flex-col rounded-t-[2rem] bg-[#fbf6d9] shadow-[0_-24px_60px_-24px_rgba(69,89,78,0.55)] outline-none"
         >
           <div className="mx-auto mt-3 h-1.5 w-10 shrink-0 rounded-full bg-ink/10" />
           <Drawer.Title className="sr-only">Catat transaksi bareng</Drawer.Title>

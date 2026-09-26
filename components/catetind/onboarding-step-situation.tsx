@@ -138,7 +138,7 @@ export function OnboardingStepSituation({
                 className={cn(
                   'flex-1 rounded-full py-2.5 text-[13px] font-medium tracking-[-0.01em] transition-all duration-200',
                   active
-                    ? 'bg-white text-ink shadow-[0_1px_3px_rgba(18,40,31,0.12)]'
+                    ? 'bg-cream text-ink shadow-[0_1px_3px_rgba(80,58,58,0.12)]'
                     : 'text-ink/45 hover:text-ink/70',
                 )}
               >
@@ -179,7 +179,7 @@ export function OnboardingStepSituation({
                   value={paydayDate}
                   onChange={(event) => onPaydayChange(clampPayday(event.target.value))}
                   aria-label="Tanggal gajian (1 sampai 31)"
-                  className="w-16 rounded-xl bg-ink/[0.04] py-1.5 text-center text-[15px] font-semibold tabular-nums text-ink outline-none ring-1 ring-transparent transition-all focus:bg-white focus:ring-forest/25"
+                  className="w-16 rounded-xl bg-ink/[0.04] py-1.5 text-center text-[15px] font-semibold tabular-nums text-ink outline-none ring-1 ring-transparent transition-all focus:bg-cream focus:ring-forest/25"
                 />
               </label>
             </motion.div>

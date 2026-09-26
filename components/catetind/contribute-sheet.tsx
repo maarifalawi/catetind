@@ -72,7 +72,7 @@ export function ContributeSheet({
       footer={<SheetSubmit onClick={submit} disabled={!ready}>Setor 💰</SheetSubmit>}
     >
       {/* progres sekarang → proyeksi setelah setor */}
-      <div className="rounded-2xl bg-white p-3.5 ring-1 ring-black/[0.06]">
+      <div className="rounded-2xl bg-cream p-3.5 ring-1 ring-soil/[0.06]">
         <div className="flex items-center justify-between gap-3 text-[11.5px] font-medium text-ink/50">
           <span className="tabular-nums">
             {maskNominal(shown?.current ?? 0, masked)} dari{' '}
@@ -80,7 +80,7 @@ export function ContributeSheet({
           </span>
           <span className="tabular-nums">{Math.round(percent)}%</span>
         </div>
-        <div className="relative mt-2 h-2.5 w-full overflow-hidden rounded-full bg-cream ring-1 ring-black/[0.04]">
+        <div className="relative mt-2 h-2.5 w-full overflow-hidden rounded-full bg-cream ring-1 ring-soil/[0.04]">
           <div className="h-full rounded-full bg-hud-sage/70" style={{ width: `${percent}%` }} />
           {/* bayangan progres tambahan dari setoran yang sedang diketik */}
           <div
@@ -115,7 +115,7 @@ export function ContributeSheet({
               'rounded-full px-3 py-1.5 text-[11.5px] font-semibold tabular-nums transition-all active:scale-95',
               Number(digits) === value
                 ? 'bg-forest text-mint'
-                : 'bg-white text-ink/55 ring-1 ring-black/[0.07] hover:bg-cream hover:text-ink',
+                : 'bg-cream text-ink/55 ring-1 ring-soil/[0.07] hover:bg-cream hover:text-ink',
             )}
           >
             {maskNominal(value, masked)}
@@ -143,8 +143,8 @@ export function ContributeSheet({
                 className={cn(
                   'flex flex-col items-center gap-1.5 rounded-2xl px-2 py-3 transition-all duration-200 active:scale-95',
                   active
-                    ? 'bg-white ring-2 ring-forest shadow-[0_12px_26px_-18px_rgba(16,58,42,0.65)]'
-                    : 'bg-white/60 ring-1 ring-black/[0.06] hover:bg-white',
+                    ? 'bg-cream ring-2 ring-forest shadow-[0_12px_26px_-18px_rgba(69,89,78,0.65)]'
+                    : 'bg-cream/60 ring-1 ring-soil/[0.06] hover:bg-cream',
                 )}
               >
                 <span

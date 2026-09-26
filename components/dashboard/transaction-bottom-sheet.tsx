@@ -46,7 +46,7 @@ export function TransactionBottomSheet({
         <Drawer.Content
           data-catetind-sheet="true"
           aria-label="Catat transaksi"
-          className="fixed inset-x-0 bottom-0 z-[70] mx-auto flex max-h-[94dvh] w-full max-w-md flex-col rounded-t-[2rem] bg-[#FFFDF9] shadow-[0_-24px_60px_-24px_rgba(16,58,42,0.55)] outline-none"
+          className="fixed inset-x-0 bottom-0 z-[70] mx-auto flex max-h-[94dvh] w-full max-w-md flex-col rounded-t-[2rem] bg-[#fbf6d9] shadow-[0_-24px_60px_-24px_rgba(69,89,78,0.55)] outline-none"
         >
           {/* drag handle khas Vaul — nuansa warm white */}
           <div className="mx-auto mt-3 h-1.5 w-10 shrink-0 rounded-full bg-ink/10" />

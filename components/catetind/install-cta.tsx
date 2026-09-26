@@ -62,7 +62,7 @@ export function InstallCta({
     return (
       <div
         className={cn(
-          'flex items-start gap-3 rounded-3xl bg-white/85 px-5 py-4 ring-1 ring-black/5 backdrop-blur-xl',
+          'flex items-start gap-3 rounded-3xl bg-cream/85 px-5 py-4 ring-1 ring-soil/5 backdrop-blur-xl',
           className,
         )}
       >
@@ -82,7 +82,7 @@ export function InstallCta({
         type="button"
         onClick={handleInstall}
         disabled={isPrompting}
-        className="flex w-full items-center justify-center gap-2.5 rounded-2xl bg-mint px-6 py-4 text-base font-semibold text-forest shadow-[0_20px_44px_-18px_rgba(16,58,42,0.6)] ring-1 ring-forest/10 transition-all duration-200 hover:bg-mint-soft hover:shadow-[0_24px_48px_-18px_rgba(16,58,42,0.65)] active:scale-[0.98] disabled:opacity-70 sm:text-lg"
+        className="flex w-full items-center justify-center gap-2.5 rounded-2xl bg-mint px-6 py-4 text-base font-semibold text-forest shadow-[0_20px_44px_-18px_rgba(69,89,78,0.6)] ring-1 ring-forest/10 transition-all duration-200 hover:bg-mint-soft hover:shadow-[0_24px_48px_-18px_rgba(69,89,78,0.65)] active:scale-[0.98] disabled:opacity-70 sm:text-lg"
       >
         {isPrompting ? (
           <Loader2 className="size-5 animate-spin" strokeWidth={2.4} />

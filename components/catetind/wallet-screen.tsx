@@ -56,10 +56,10 @@ import { formatIDR, INITIAL_WALLET_ACCOUNTS, type WalletAccount } from '@/lib/wa
  *
  * `tile` = warna monogram, `frame` = bayangan saat kartu di-hover.
  *
- * Paletnya SENGAJA ikut bahasa warna CatetInd (forest, mint, sage, amber–terracotta
- * dari palet status HUD) — bukan merah muda/ungu, supaya halaman Dompet & Akun
- * nyambung dengan Home, Riwayat, dan sidebar. Kelas ditulis LITERAL supaya
- * terbaca scanner Tailwind.
+ * Paletnya ikut bahasa warna kanon CatetInd (Evergreen, Leaf, Olive, Thistle,
+ * Plum, Cantelope, Daisy — lihat docs/theme/PALETTE.md), bukan warna acak,
+ * supaya halaman Dompet & Akun nyambung dengan Home, Riwayat, dan sidebar.
+ * Kelas ditulis LITERAL supaya terbaca scanner Tailwind.
  *
  * PENTING: ini POOL, bukan daftar yang langsung tampil. Yang dirender adalah
  * `suggestedBrands` — hasil penyaringan terhadap dompet yang SUDAH dimiliki user.
@@ -68,37 +68,42 @@ const GHOST_BRAND_POOL = [
   {
     name: 'BCA',
     tile: 'bg-gradient-to-br from-sage via-mint-soft to-mint text-forest ring-mint/40',
-    frame: 'hover:shadow-[0_22px_40px_-26px_rgba(16,58,42,0.55)]',
+    frame: 'hover:shadow-[0_22px_40px_-26px_rgba(69,89,78,0.55)]',
   },
   {
     name: 'GoPay',
-    tile: 'bg-gradient-to-br from-[#d7efe6] via-[#8fd0c0] to-[#0f766e] text-[#0f3d34] ring-[#8fd0c0]/50',
-    frame: 'hover:shadow-[0_22px_40px_-26px_rgba(15,118,110,0.65)]',
+    tile: 'bg-gradient-to-br from-[#dbdccf] via-[#91a0b8] to-[#91a0b8] text-[#503a3a] ring-[#91a0b8]/50',
+    frame: 'hover:shadow-[0_22px_40px_-26px_rgba(145,160,184,0.75)]',
+  },
+  {
+    name: 'GoPay',
+    tile: 'bg-gradient-to-br from-[#dbe4c7] via-[#91bb9e] to-[#91bb9e] text-[#503a3a] ring-[#91bb9e]/50',
+    frame: 'hover:shadow-[0_22px_40px_-26px_rgba(145,187,158,0.75)]',
   },
   {
     name: 'Mandiri',
-    tile: 'bg-gradient-to-br from-[#f6e3b6] via-hud-amber to-hud-terracotta text-[#5a3208] ring-hud-amber/40',
-    frame: 'hover:shadow-[0_22px_40px_-26px_rgba(188,108,37,0.75)]',
+    tile: 'bg-gradient-to-br from-[#f6edb7] via-[#ecd768] to-[#ecd768] text-[#503a3a] ring-[#ecd768]/60',
+    frame: 'hover:shadow-[0_22px_40px_-26px_rgba(236,215,104,0.85)]',
   },
   {
     name: 'BNI',
-    tile: 'bg-gradient-to-br from-[#e6f4ea] via-[#a9d6bd] to-[#4d8f6b] text-[#0f3d34] ring-[#9fd0b4]/60',
-    frame: 'hover:shadow-[0_22px_40px_-26px_rgba(45,110,78,0.7)]',
+    tile: 'bg-gradient-to-br from-[#fbe3c0] via-[#ffb885] to-[#ffb885] text-[#503a3a] ring-[#ffb885]/60',
+    frame: 'hover:shadow-[0_22px_40px_-26px_rgba(255,184,133,0.8)]',
   },
   {
     name: 'OVO',
-    tile: 'bg-gradient-to-br from-cream via-hud-sage/70 to-[#8fa07a] text-[#2f3d24] ring-hud-sage/50',
-    frame: 'hover:shadow-[0_22px_40px_-26px_rgba(163,177,138,0.95)]',
+    tile: 'bg-gradient-to-br from-[#e7d8c3] via-[#b89191] to-[#b89191] text-[#503a3a] ring-[#b89191]/50',
+    frame: 'hover:shadow-[0_22px_40px_-26px_rgba(184,145,145,0.8)]',
   },
   {
     name: 'Dana',
-    tile: 'bg-gradient-to-br from-[#d7efe6] via-[#a7ded1] to-[#5fb9a6] text-[#0f3d34] ring-[#8fd0c0]',
-    frame: 'hover:shadow-[0_22px_40px_-26px_rgba(15,118,110,0.65)]',
+    tile: 'bg-gradient-to-br from-[#e6e4c0] via-[#b5b987] to-[#b5b987] text-[#503a3a] ring-[#b5b987]/50',
+    frame: 'hover:shadow-[0_22px_40px_-26px_rgba(181,185,135,0.9)]',
   },
   {
     name: 'Jago',
-    tile: 'bg-gradient-to-br from-[#f7e2c8] via-[#e0b183] to-[#a86b32] text-[#4a2a08] ring-[#e0b183]/60',
-    frame: 'hover:shadow-[0_22px_40px_-26px_rgba(168,107,50,0.7)]',
+    tile: 'bg-gradient-to-br from-sage via-[#c4c7af] to-[#c4c7af] text-[#503a3a] ring-[#c4c7af]/60',
+    frame: 'hover:shadow-[0_22px_40px_-26px_rgba(196,199,175,0.9)]',
   },
 ] as const
 
@@ -117,7 +122,7 @@ const TYPE_LABEL: Record<WalletAccount['type'], string> = {
 
 
 /** bayangan teks lembut — nama & saldo tetap terbaca di atas stop gradien termuda */
-const CARD_TEXT_SHADOW = '[text-shadow:0_1px_9px_rgba(6,35,26,0.55)]'
+const CARD_TEXT_SHADOW = '[text-shadow:0_1px_9px_rgba(36,26,26,0.55)]'
 
 /** aset yang ditahan/dikunci — mock statis (Rp 0) */
 const HELD_ASSETS = 0
@@ -297,10 +302,10 @@ export function WalletScreen() {
             tombol mata ini. Karena tombolnya membaca state privasi global, satu
             klik menyensor SELURUH halaman — hero, tile likuiditas, dan saldo
             tiap kartu dompet. */}
-        <header className="sticky top-2 z-30 flex items-center justify-between gap-3 rounded-[1.5rem] bg-white/90 px-4 py-3 shadow-[0_18px_40px_-32px_rgba(16,58,42,0.65)] ring-1 ring-black/[0.05] backdrop-blur-md">
+        <header className="sticky top-2 z-30 flex items-center justify-between gap-3 rounded-[1.5rem] bg-cream/90 px-4 py-3 shadow-[0_18px_40px_-32px_rgba(69,89,78,0.65)] ring-1 ring-soil/[0.05] backdrop-blur-md">
           <div className="flex min-w-0 items-center gap-3">
             {/* penanda halaman — tile sage→mint (palet brand), bukan kotak putih polos */}
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sage via-cream to-mint-soft text-forest shadow-[0_12px_26px_-16px_rgba(16,58,42,0.75)] ring-1 ring-forest/10">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sage via-cream to-mint-soft text-forest shadow-[0_12px_26px_-16px_rgba(69,89,78,0.75)] ring-1 ring-forest/10">
               <WalletIcon className="size-[18px]" strokeWidth={2.1} />
             </span>
             <div className="min-w-0">
@@ -317,7 +322,7 @@ export function WalletScreen() {
 
         <div className="mt-5 grid grid-cols-1 gap-5 xl:mt-6 xl:grid-cols-12 xl:gap-6">
           {/* ── HERO (8/12): TOTAL SALDO + KOMPOSISI + LIKUIDITAS ─────────── */}
-          <section className="relative overflow-hidden rounded-[2.25rem] bg-gradient-to-br from-forest-soft via-forest to-[#06231a] p-5 text-cream shadow-[0_30px_70px_-30px_rgba(16,58,42,0.8)] sm:p-6 xl:col-span-8 xl:p-7">
+          <section className="relative overflow-hidden rounded-[2.25rem] bg-gradient-to-br from-forest-soft via-forest to-[#1f2823] p-5 text-cream shadow-[0_30px_70px_-30px_rgba(69,89,78,0.8)] sm:p-6 xl:col-span-8 xl:p-7">
             {/* aurora mint kanan atas (warna brand) + kabut sage/amber hangat —
                 tetap di palet CatetInd supaya hero nyambung dengan kartu dompet */}
             <div
@@ -326,7 +331,7 @@ export function WalletScreen() {
             />
             <div
               aria-hidden
-              className="pointer-events-none absolute -left-24 top-1/3 size-64 rounded-full bg-[#2f7d5e]/45 blur-3xl"
+              className="pointer-events-none absolute -left-24 top-1/3 size-64 rounded-full bg-[#45594e]/45 blur-3xl"
             />
             <div
               aria-hidden
@@ -347,18 +352,18 @@ export function WalletScreen() {
             {/* edge light + tekstur titik supaya muka kartu tidak terasa flat */}
             <div
               aria-hidden
-              className="pointer-events-none absolute inset-0 rounded-[2.25rem] ring-1 ring-inset ring-white/10"
-              style={{ boxShadow: 'inset 0 1px 0 rgba(244,248,239,0.18)' }}
+              className="pointer-events-none absolute inset-0 rounded-[2.25rem] ring-1 ring-inset ring-cream/10"
+              style={{ boxShadow: 'inset 0 1px 0 rgba(251,246,217,0.18)' }}
             />
             {/* hairline bercahaya di bibir atas — sama seperti kartu dompet, biar
                 hero dan grid kartu terasa satu keluarga */}
             <div
               aria-hidden
-              className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-white/45 to-transparent"
+              className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-cream/45 to-transparent"
             />
             <div
               aria-hidden
-              className="pointer-events-none absolute inset-0 rounded-[2.25rem] opacity-[0.05] [background-image:radial-gradient(rgba(255,255,255,0.9)_1px,transparent_1.2px)] [background-size:10px_10px]"
+              className="pointer-events-none absolute inset-0 rounded-[2.25rem] opacity-[0.05] [background-image:radial-gradient(rgba(251,246,217,0.9)_1px,transparent_1.2px)] [background-size:10px_10px]"
             />
 
             {/* di layar lebar hero dipecah dua kolom: nominal+konteks di kiri,
@@ -369,7 +374,7 @@ export function WalletScreen() {
                 <span
                   className={cn(
                     AMOUNT_LABEL,
-                    'inline-flex items-center gap-2 rounded-full bg-white/[0.08] px-2.5 py-1.5 text-cream/55 ring-1 ring-inset ring-white/10',
+                    'inline-flex items-center gap-2 rounded-full bg-cream/[0.08] px-2.5 py-1.5 text-cream/55 ring-1 ring-inset ring-cream/10',
                   )}
                 >
                   <span className="relative flex size-1.5">
@@ -415,7 +420,7 @@ export function WalletScreen() {
               </div>
 
               {/* KANAN: komposisi saldo per dompet — panel kaca, bar, lalu legenda pill */}
-              <div className="rounded-[1.4rem] bg-white/[0.07] p-3.5 ring-1 ring-inset ring-white/10">
+              <div className="rounded-[1.4rem] bg-cream/[0.07] p-3.5 ring-1 ring-inset ring-cream/10">
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-cream/45">
                     Komposisi
@@ -444,10 +449,10 @@ export function WalletScreen() {
                   {wallets.map((wallet, i) => (
                     <span
                       key={wallet.id}
-                      className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.06] py-1 pl-1.5 pr-2.5 text-[11px] ring-1 ring-inset ring-white/[0.08]"
+                      className="inline-flex items-center gap-1.5 rounded-full bg-cream/[0.06] py-1 pl-1.5 pr-2.5 text-[11px] ring-1 ring-inset ring-cream/[0.08]"
                     >
                       <span
-                        className={cn('size-2 rounded-full ring-1 ring-white/25', wallet.color)}
+                        className={cn('size-2 rounded-full ring-1 ring-cream/25', wallet.color)}
                       />
                       <span className="font-medium text-cream/80">{wallet.name}</span>
                       <span className="font-semibold tabular-nums text-cream/50">
@@ -464,7 +469,7 @@ export function WalletScreen() {
             Rekomendasinya DINAMIS: brand yang sudah dimiliki user disaring keluar
             dari pool, jadi sistem tidak mungkin lagi menawarkan BCA ke user yang
             sudah punya dompet BCA. */}
-        <section className="flex flex-col rounded-[1.75rem] bg-white p-4 shadow-[0_18px_40px_-34px_rgba(16,58,42,0.55)] ring-1 ring-black/[0.05] sm:p-5 xl:col-span-4">
+        <section className="flex flex-col rounded-[1.75rem] bg-cream p-4 shadow-[0_18px_40px_-34px_rgba(69,89,78,0.55)] ring-1 ring-soil/[0.05] sm:p-5 xl:col-span-4">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <span className="flex size-7 items-center justify-center rounded-xl bg-gradient-to-br from-sage via-cream to-mint-soft text-forest ring-1 ring-forest/10">
@@ -504,7 +509,7 @@ export function WalletScreen() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.04 * i, ease: EASE }}
                 className={cn(
-                  'group flex w-[104px] shrink-0 snap-start flex-col items-center gap-2.5 rounded-[1.4rem] bg-white p-3.5 ring-1 ring-black/[0.05] shadow-[0_14px_30px_-24px_rgba(16,58,42,0.5)] transition-all duration-300 hover:-translate-y-1 active:scale-95 motion-reduce:transition-none xl:w-auto',
+                  'group flex w-[104px] shrink-0 snap-start flex-col items-center gap-2.5 rounded-[1.4rem] bg-cream p-3.5 ring-1 ring-soil/[0.05] shadow-[0_14px_30px_-24px_rgba(69,89,78,0.5)] transition-all duration-300 hover:-translate-y-1 active:scale-95 motion-reduce:transition-none xl:w-auto',
                   brand.frame,
                 )}
               >
@@ -519,7 +524,7 @@ export function WalletScreen() {
                   >
                     {brand.name.charAt(0)}
                   </span>
-                  <span className="absolute -bottom-1 -right-1 flex size-5 items-center justify-center rounded-full bg-forest text-mint shadow-[0_6px_14px_-6px_rgba(16,58,42,0.95)] ring-2 ring-white transition-transform duration-300 group-hover:scale-110">
+                  <span className="absolute -bottom-1 -right-1 flex size-5 items-center justify-center rounded-full bg-forest text-mint shadow-[0_6px_14px_-6px_rgba(69,89,78,0.95)] ring-2 ring-cream transition-transform duration-300 group-hover:scale-110">
                     <Plus className="size-3" strokeWidth={3.2} />
                   </span>
                 </span>
@@ -533,7 +538,7 @@ export function WalletScreen() {
             <button
               type="button"
               onClick={() => handleGhostTap('Dompet lain')}
-              className="group flex w-[104px] shrink-0 snap-start flex-col items-center gap-2.5 rounded-[1.4rem] border-2 border-dashed border-ink/[0.1] bg-white/50 p-3.5 transition-all duration-300 hover:-translate-y-1 hover:border-forest/25 hover:bg-white active:scale-95 motion-reduce:transition-none xl:w-auto"
+              className="group flex w-[104px] shrink-0 snap-start flex-col items-center gap-2.5 rounded-[1.4rem] border-2 border-dashed border-ink/[0.1] bg-cream/50 p-3.5 transition-all duration-300 hover:-translate-y-1 hover:border-forest/25 hover:bg-cream active:scale-95 motion-reduce:transition-none xl:w-auto"
             >
               <span className="flex size-11 items-center justify-center rounded-[1rem] bg-cream text-ink/40 transition-colors group-hover:bg-sage/70 group-hover:text-forest">
                 <Plus className="size-5" strokeWidth={2.6} />
@@ -586,9 +591,9 @@ export function WalletScreen() {
                 />
                 <article
                   className={cn(
-                    'relative overflow-hidden rounded-[1.85rem] p-5 text-white ring-1 ring-inset ring-white/30',
-                    'shadow-[0_26px_52px_-26px_rgba(6,35,26,0.6)] transition-all duration-300 ease-out',
-                    'group-hover:-translate-y-1.5 group-hover:ring-white/45 group-hover:shadow-[0_36px_66px_-28px_rgba(6,35,26,0.7)]',
+                    'relative overflow-hidden rounded-[1.85rem] p-5 text-cream ring-1 ring-inset ring-cream/30',
+                    'shadow-[0_26px_52px_-26px_rgba(36,26,26,0.6)] transition-all duration-300 ease-out',
+                    'group-hover:-translate-y-1.5 group-hover:ring-cream/45 group-hover:shadow-[0_36px_66px_-28px_rgba(36,26,26,0.7)]',
                     'motion-reduce:transition-none',
                     CARD_TEXT_SHADOW,
                     wallet.face,
@@ -597,22 +602,22 @@ export function WalletScreen() {
                   {/* lapisan kaca: sorot lembut kiri atas + sudut gelap → kedalaman */}
                   <div
                     aria-hidden
-                    className="absolute inset-0 bg-gradient-to-br from-white/20 via-white/[0.04] to-black/25"
+                    className="absolute inset-0 bg-gradient-to-br from-cream/20 via-cream/[0.04] to-soil/25"
                   />
                   {/* kilau holografik blush-lila menyapu diagonal — ciri kartu edisi khusus */}
                   <div
                     aria-hidden
-                    className="absolute inset-0 [background-image:linear-gradient(112deg,rgba(255,255,255,0.34)_0%,rgba(255,255,255,0)_32%,rgba(255,214,231,0.42)_56%,rgba(216,180,254,0.3)_72%,rgba(255,255,255,0)_92%)]"
+                    className="absolute inset-0 [background-image:linear-gradient(112deg,rgba(251,246,217,0.34)_0%,rgba(251,246,217,0)_32%,rgba(231,216,195,0.42)_56%,rgba(231,216,195,0.3)_72%,rgba(251,246,217,0)_92%)]"
                   />
                   {/* scrim halus di sisi kiri — jaga kontras teks di atas stop terang */}
                   <div
                     aria-hidden
-                    className="absolute inset-0 bg-gradient-to-r from-[#04211d]/35 via-transparent to-transparent"
+                    className="absolute inset-0 bg-gradient-to-r from-[#1f2823]/35 via-transparent to-transparent"
                   />
                   {/* tekstur noise halus supaya muka kartu tidak terasa flat */}
                   <div
                     aria-hidden
-                    className="absolute inset-0 opacity-[0.16] [background-image:radial-gradient(rgba(255,255,255,0.9)_1px,transparent_1.2px)] [background-size:9px_9px]"
+                    className="absolute inset-0 opacity-[0.16] [background-image:radial-gradient(rgba(251,246,217,0.9)_1px,transparent_1.2px)] [background-size:9px_9px]"
                   />
                   {/* aksen batik khas kartu (parang/mendung/kawung/rings) — tema
                       per dompet seperti kartu bank edisi batik. Duduk di atas
@@ -626,17 +631,17 @@ export function WalletScreen() {
                   </svg>
                   <div
                     aria-hidden
-                    className="absolute -right-12 -top-16 size-40 rounded-full bg-white/25 blur-3xl"
+                    className="absolute -right-12 -top-16 size-40 rounded-full bg-cream/25 blur-3xl"
                   />
                   {/* highlight tipis di bibir atas kartu */}
                   <div
                     aria-hidden
-                    className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/50 to-transparent"
+                    className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-cream/50 to-transparent"
                   />
                   {/* kilau menyapu saat kartu di-hover */}
                   <div
                     aria-hidden
-                    className="pointer-events-none absolute inset-y-0 left-0 w-1/3 -translate-x-[320%] -skew-x-12 bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-[900ms] ease-out group-hover:translate-x-[420%] motion-reduce:transition-none"
+                    className="pointer-events-none absolute inset-y-0 left-0 w-1/3 -translate-x-[320%] -skew-x-12 bg-gradient-to-r from-transparent via-cream/30 to-transparent transition-transform duration-[900ms] ease-out group-hover:translate-x-[420%] motion-reduce:transition-none"
                   />
 
                   <div className="relative flex items-start justify-between gap-3">
@@ -648,19 +653,19 @@ export function WalletScreen() {
                         {/* ikon contactless HANYA untuk kartu bank — benda aslinya
                             (uang kertas & saldo e-wallet) tidak punya RFID */}
                         {wallet.type === 'Bank' && (
-                          <ContactlessIcon className="size-4 shrink-0 text-white/55" />
+                          <ContactlessIcon className="size-4 shrink-0 text-cream/55" />
                         )}
                       </div>
                       {/* nomor akun tersamarkan — HANYA kartu bank yang punya nomor.
                           e-wallet & tunai tidak dipaksa memakai nomor seri. */}
                       {wallet.type === 'Bank' && wallet.number && (
-                        <p className="mt-1.5 truncate text-[10.5px] font-semibold tracking-[0.2em] text-white/60 tabular-nums">
+                        <p className="mt-1.5 truncate text-[10.5px] font-semibold tracking-[0.2em] text-cream/60 tabular-nums">
                           {wallet.number}
                         </p>
                       )}
                       {/* jenis akun sebagai pil kaca, bukan teks polos */}
-                      <span className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-white/90 ring-1 ring-inset ring-white/30 backdrop-blur-[2px]">
-                        <span aria-hidden className="size-1.5 rounded-full bg-white/70" />
+                      <span className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-cream/20 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-cream/90 ring-1 ring-inset ring-cream/30 backdrop-blur-[2px]">
+                        <span aria-hidden className="size-1.5 rounded-full bg-cream/70" />
                         {TYPE_LABEL[wallet.type]}
                       </span>
                     </div>
@@ -672,25 +677,25 @@ export function WalletScreen() {
                         {/* chip EMV mock di kanan atas */}
                         <ChipIcon
                           id={`wallet-chip-${wallet.id}`}
-                          className="mt-0.5 h-6 w-8 shrink-0 drop-shadow-[0_2px_5px_rgba(0,0,0,0.35)]"
+                          className="mt-0.5 h-6 w-8 shrink-0 drop-shadow-[0_2px_5px_rgba(36,26,26,0.35)]"
                         />
                         {/* untaian mutiara kecil di bawah chip — sentuhan perhiasan */}
                         <span aria-hidden className="flex items-center gap-1 pr-0.5">
-                          <span className="size-1 rounded-full bg-white/45" />
-                          <span className="size-1.5 rounded-full bg-white/70 shadow-[0_0_6px_rgba(255,255,255,0.6)]" />
-                          <span className="size-1 rounded-full bg-white/40" />
+                          <span className="size-1 rounded-full bg-cream/45" />
+                          <span className="size-1.5 rounded-full bg-cream/70 shadow-[0_0_6px_rgba(251,246,217,0.6)]" />
+                          <span className="size-1 rounded-full bg-cream/40" />
                         </span>
                       </div>
                     ) : wallet.type === 'E-Wallet' ? (
                       /* e-wallet = aplikasi digital, bukan kartu plastik: cukup
                          logo/monogram brand — tanpa chip EMV & tanpa contactless */
-                      <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-white/20 text-[13px] font-black text-white ring-1 ring-inset ring-white/30">
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-cream/20 text-[13px] font-black text-cream ring-1 ring-inset ring-cream/30">
                         {wallet.name.charAt(0)}
                       </span>
                     ) : (
                       /* tunai = uang kertas: yang relevan hanya tumpukan
                          lembarannya, bukan chip kuningan atau nomor seri */
-                      <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-white/20 text-white ring-1 ring-inset ring-white/30">
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-cream/20 text-cream ring-1 ring-inset ring-cream/30">
                         <CashStackIcon className="size-5" />
                       </span>
                     )}
@@ -698,7 +703,7 @@ export function WalletScreen() {
 
                   <div className="relative mt-8 flex items-end justify-between gap-3">
                     <div className="min-w-0">
-                      <p className={cn(AMOUNT_LABEL, 'text-white/60')}>Saldo</p>
+                      <p className={cn(AMOUNT_LABEL, 'text-cream/60')}>Saldo</p>
                       <div className="mt-2">
                         <MaskedAmount
                           value={formatIDR(wallet.balance)}
@@ -719,7 +724,7 @@ export function WalletScreen() {
                       aria-label={`Opsi untuk ${wallet.name}`}
                       aria-haspopup="menu"
                       aria-expanded={openMenuId === wallet.id}
-                      className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white/20 text-white ring-1 ring-inset ring-white/35 backdrop-blur-[2px] transition-all hover:bg-white/35 active:scale-95"
+                      className="flex size-9 shrink-0 items-center justify-center rounded-full bg-cream/20 text-cream ring-1 ring-inset ring-cream/35 backdrop-blur-[2px] transition-all hover:bg-cream/35 active:scale-95"
                     >
                       <MoreHorizontal className="size-4" strokeWidth={2.4} />
                     </button>
@@ -735,16 +740,16 @@ export function WalletScreen() {
                       aria-valuenow={shares[i]}
                       aria-valuemin={0}
                       aria-valuemax={100}
-                      className="h-1 min-w-0 flex-1 overflow-hidden rounded-full bg-white/15"
+                      className="h-1 min-w-0 flex-1 overflow-hidden rounded-full bg-cream/15"
                     >
                       <motion.span
-                        className="block h-full rounded-full bg-gradient-to-r from-white/60 via-white/85 to-white"
+                        className="block h-full rounded-full bg-gradient-to-r from-cream/60 via-cream/85 to-cream"
                         initial={{ width: 0 }}
                         animate={{ width: `${shares[i]}%` }}
                         transition={{ duration: 0.7, delay: 0.25 + i * 0.07, ease: EASE }}
                       />
                     </span>
-                    <span className="shrink-0 text-[10px] font-semibold tabular-nums text-white/70">
+                    <span className="shrink-0 text-[10px] font-semibold tabular-nums text-cream/70">
                       {shares[i]}% dari total
                     </span>
                   </div>
@@ -761,7 +766,7 @@ export function WalletScreen() {
                       animate={{ opacity: 1, scale: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.97, y: 6 }}
                       transition={{ duration: 0.16, ease: [0.32, 0.72, 0, 1] }}
-                      className="absolute bottom-16 right-3 z-30 w-56 origin-bottom-right rounded-2xl bg-white/95 p-1.5 shadow-[0_28px_60px_-22px_rgba(16,58,42,0.55)] ring-1 ring-black/5 backdrop-blur-xl"
+                      className="absolute bottom-16 right-3 z-30 w-56 origin-bottom-right rounded-2xl bg-cream/95 p-1.5 shadow-[0_28px_60px_-22px_rgba(69,89,78,0.55)] ring-1 ring-soil/5 backdrop-blur-xl"
                     >
                       <MenuItem
                         icon={ArrowLeftRight}
@@ -857,7 +862,7 @@ function MaskedAmount({
 
 /**
  * Chip likuiditas di hero gelap.
- * `liquid` = uang cair yang bisa langsung dipakai (aksen mint),
+ * `liquid` = uang cair yang bisa langsung dipakai (aksen leaf),
  * `held` = aset ditahan/dikunci (aksen kaca netral + ikon gembok).
  */
 function LiquidityPill({
@@ -880,13 +885,13 @@ function LiquidityPill({
         'flex items-center gap-2.5 rounded-[1.25rem] px-3 py-2.5 ring-1 ring-inset transition-colors',
         isLiquid
           ? 'bg-mint/[0.14] ring-mint/25'
-          : 'bg-white/[0.06] ring-white/10',
+          : 'bg-cream/[0.06] ring-cream/10',
       )}
     >
       <span
         className={cn(
           'flex size-8 shrink-0 items-center justify-center rounded-full',
-          isLiquid ? 'bg-mint/25 text-mint' : 'bg-white/10 text-cream/60',
+          isLiquid ? 'bg-mint/25 text-mint' : 'bg-cream/10 text-cream/60',
         )}
       >
         <Icon className="size-4" strokeWidth={2.4} />
@@ -951,9 +956,9 @@ function ChipIcon({ id, className }: { id: string; className?: string }) {
     <svg viewBox="0 0 32 24" className={className} aria-hidden>
       <defs>
         <linearGradient id={id} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#fef3c7" />
-          <stop offset="45%" stopColor="#d4a437" />
-          <stop offset="100%" stopColor="#fbbf24" />
+          <stop offset="0%" stopColor="#f6edb7" />
+          <stop offset="45%" stopColor="#ecd768" />
+          <stop offset="100%" stopColor="#ffb885" />
         </linearGradient>
       </defs>
       <rect
@@ -963,10 +968,10 @@ function ChipIcon({ id, className }: { id: string; className?: string }) {
         height="22.4"
         rx="4.2"
         fill={`url(#${id})`}
-        stroke="rgba(255,255,255,0.45)"
+        stroke="rgba(251,246,217,0.45)"
         strokeWidth="0.9"
       />
-      <g stroke="rgba(120,80,10,0.45)" strokeWidth="0.9" fill="none">
+      <g stroke="rgba(115,83,60,0.45)" strokeWidth="0.9" fill="none">
         <path d="M0.8 8.4h9.6M0.8 15.6h9.6" />
         <path d="M21.6 0.8v22.4" />
         <path d="M21.6 8.4h9.6M21.6 15.6h9.6" />

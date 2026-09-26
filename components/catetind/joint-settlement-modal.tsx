@@ -104,7 +104,7 @@ export function JointSettlementModal({
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 64, opacity: 0 }}
               transition={{ duration: 0.34, ease: EASE }}
-              className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-t-[2rem] bg-[#FFFDF7] px-5 pb-7 pt-4 shadow-[0_-24px_60px_-24px_rgba(16,58,42,0.55)] sm:rounded-[2rem] sm:px-6 sm:shadow-[0_28px_70px_-24px_rgba(16,58,42,0.5)]"
+              className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-t-[2rem] bg-[#fbf6d9] px-5 pb-7 pt-4 shadow-[0_-24px_60px_-24px_rgba(69,89,78,0.55)] sm:rounded-[2rem] sm:px-6 sm:shadow-[0_28px_70px_-24px_rgba(69,89,78,0.5)]"
               data-lenis-prevent
             >
               <div className="flex items-start justify-between gap-3">
@@ -120,7 +120,7 @@ export function JointSettlementModal({
                   type="button"
                   onClick={onClose}
                   aria-label="Tutup"
-                  className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white text-ink ring-1 ring-black/5 transition-colors hover:bg-sage active:scale-95"
+                  className="flex size-9 shrink-0 items-center justify-center rounded-full bg-cream text-ink ring-1 ring-soil/5 transition-colors hover:bg-sage active:scale-95"
                 >
                   <X className="size-4" strokeWidth={2.2} />
                 </button>
@@ -139,7 +139,7 @@ export function JointSettlementModal({
               </div>
               {/* dua lapisan angka (audit #1–#3): seluruh catatan vs yang benar-
                   benar ditimbang — supaya "Selisih" di bawah bisa ditelusuri */}
-              <div className="mt-3 space-y-2 rounded-[1.5rem] bg-white px-4 py-3.5 ring-1 ring-black/[0.05]">
+              <div className="mt-3 space-y-2 rounded-[1.5rem] bg-cream px-4 py-3.5 ring-1 ring-soil/[0.05]">
                 <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-ink/35">
                   Semua catatan bulan ini
                 </p>
@@ -158,7 +158,7 @@ export function JointSettlementModal({
               </div>
 
               <div className="mt-3 space-y-2 rounded-[1.5rem] bg-hud-sage/12 px-4 py-3.5 ring-1 ring-hud-sage/25">
-                <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-[#4c5a3a]">
+                <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-[#503a3a]">
                   Yang ditimbang (patungan)
                 </p>
                 <RecapRow
@@ -175,23 +175,23 @@ export function JointSettlementModal({
                     value={moneyLabel(settlement.treatTotal, masked)}
                   />
                 )}
-                <div className="border-t border-black/[0.06] pt-2">
+                <div className="border-t border-soil/[0.06] pt-2">
                   <RecapRow label="Selisih" value={moneyLabel(difference, masked)} strong />
                 </div>
-                <p className="text-[10.5px] leading-relaxed text-[#4c5a3a]/85">
+                <p className="text-[10.5px] leading-relaxed text-[#503a3a]/85">
                   {SETTLEMENT_SCOPE_SHORT}
                 </p>
               </div>
 
               {settled ? (
                 <div className="mt-4 rounded-[1.5rem] bg-hud-sage/15 px-4 py-3.5 text-center ring-1 ring-hud-sage/35">
-                  <p className="text-[13px] font-semibold leading-relaxed text-[#3f4a30]">
+                  <p className="text-[13px] font-semibold leading-relaxed text-[#503a3a]">
                     Bulan ini sudah ditandai settle ✅ Scale-nya rata, gak ada yang perlu transfer.
                   </p>
                 </div>
               ) : settlement.level === 'equal' ? (
                 <div className="mt-4 rounded-[1.5rem] bg-hud-sage/15 px-4 py-3.5 text-center ring-1 ring-hud-sage/35">
-                  <p className="text-[13px] font-semibold leading-relaxed text-[#3f4a30]">
+                  <p className="text-[13px] font-semibold leading-relaxed text-[#503a3a]">
                     Kalian impas — gak ada yang perlu transfer bulan ini ⚖️✨
                   </p>
                 </div>
@@ -199,7 +199,7 @@ export function JointSettlementModal({
                 /* audit #6: di bawah ambang A7 modal cuma jadi rekap, TANPA
                    ajakan transfer supaya tidak bertabrakan dengan copy di atas */
                 <div className="mt-4 rounded-[1.5rem] bg-hud-sage/15 px-4 py-3.5 text-center ring-1 ring-hud-sage/35">
-                  <p className="text-[13px] font-semibold leading-relaxed text-[#3f4a30]">
+                  <p className="text-[13px] font-semibold leading-relaxed text-[#503a3a]">
                     Hampir impas! Selisihnya cuma {moneyLabel(difference, masked)} — gak perlu
                     settle 💚
                   </p>
@@ -220,7 +220,7 @@ export function JointSettlementModal({
                 <button
                   type="button"
                   onClick={handleSettle}
-                  className="mt-3 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-forest text-[14px] font-bold text-mint shadow-[0_16px_32px_-20px_rgba(16,58,42,0.95)] transition-colors hover:bg-forest-soft active:scale-[0.99]"
+                  className="mt-3 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-forest text-[14px] font-bold text-mint shadow-[0_16px_32px_-20px_rgba(69,89,78,0.95)] transition-colors hover:bg-forest-soft active:scale-[0.99]"
                 >
                   Tandai Sudah Settle
                   <Check className="size-4" strokeWidth={3} />
@@ -230,7 +230,7 @@ export function JointSettlementModal({
               <button
                 type="button"
                 onClick={onClose}
-                className="mt-2 inline-flex h-11 w-full items-center justify-center rounded-2xl bg-transparent text-[13px] font-semibold text-ink/55 transition-colors hover:bg-black/[0.04]"
+                className="mt-2 inline-flex h-11 w-full items-center justify-center rounded-2xl bg-transparent text-[13px] font-semibold text-ink/55 transition-colors hover:bg-soil/[0.04]"
               >
                 Nanti aja
               </button>

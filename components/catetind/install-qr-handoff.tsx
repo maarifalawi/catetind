@@ -30,7 +30,7 @@ export function InstallQrHandoff({ className }: { className?: string }) {
     <section
       aria-label="Buka CatetInd di HP lewat QR Code"
       className={cn(
-        'rounded-3xl bg-white/85 p-4 ring-1 ring-black/5 backdrop-blur-xl sm:p-5',
+        'rounded-3xl bg-cream/85 p-4 ring-1 ring-soil/5 backdrop-blur-xl sm:p-5',
         className,
       )}
     >

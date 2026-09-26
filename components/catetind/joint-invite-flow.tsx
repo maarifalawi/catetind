@@ -90,7 +90,7 @@ export function JointInviteFlow({
           value={walletName}
           onChange={(event) => setWalletName(event.target.value)}
           placeholder="Dompet Kita 💚"
-          className="mt-2 w-full rounded-2xl bg-white px-4 py-3.5 text-[15px] font-semibold text-ink outline-none ring-1 ring-black/[0.08] transition-shadow placeholder:font-medium placeholder:text-ink/25 focus:ring-2 focus:ring-forest/35"
+          className="mt-2 w-full rounded-2xl bg-cream px-4 py-3.5 text-[15px] font-semibold text-ink outline-none ring-1 ring-soil/[0.08] transition-shadow placeholder:font-medium placeholder:text-ink/25 focus:ring-2 focus:ring-forest/35"
         />
       </label>
 
@@ -100,7 +100,7 @@ export function JointInviteFlow({
         disabled={!ready}
         className={
           ready
-            ? 'mt-4 inline-flex h-12 w-full max-w-[380px] items-center justify-center gap-2 rounded-2xl bg-forest text-[14px] font-bold text-mint shadow-[0_16px_32px_-20px_rgba(16,58,42,0.95)] transition-colors hover:bg-forest-soft active:scale-[0.99]'
+            ? 'mt-4 inline-flex h-12 w-full max-w-[380px] items-center justify-center gap-2 rounded-2xl bg-forest text-[14px] font-bold text-mint shadow-[0_16px_32px_-20px_rgba(69,89,78,0.95)] transition-colors hover:bg-forest-soft active:scale-[0.99]'
             : 'mt-4 inline-flex h-12 w-full max-w-[380px] cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-ink/[0.07] text-[14px] font-bold text-ink/35'
         }
       >
@@ -205,7 +205,7 @@ export function JointInviteCodeModal({
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 64, opacity: 0 }}
               transition={{ duration: 0.34, ease: EASE }}
-              className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-t-[2rem] bg-[#FFFDF7] px-5 pb-7 pt-5 shadow-[0_-24px_60px_-24px_rgba(16,58,42,0.55)] sm:rounded-[2rem] sm:px-6 sm:shadow-[0_28px_70px_-24px_rgba(16,58,42,0.5)]"
+              className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-t-[2rem] bg-[#fbf6d9] px-5 pb-7 pt-5 shadow-[0_-24px_60px_-24px_rgba(69,89,78,0.55)] sm:rounded-[2rem] sm:px-6 sm:shadow-[0_28px_70px_-24px_rgba(69,89,78,0.5)]"
               data-lenis-prevent
             >
               <h2 className="font-display text-xl font-black tracking-tight text-ink">
@@ -216,7 +216,7 @@ export function JointInviteCodeModal({
                 <b className="font-semibold text-ink/75">{walletName}</b>.
               </p>
               {/* kode undangan — monospace, spasi antar huruf lebar */}
-              <div className="mt-4 rounded-[1.5rem] border-2 border-dashed border-hud-sage/50 bg-white px-4 py-5 text-center">
+              <div className="mt-4 rounded-[1.5rem] border-2 border-dashed border-hud-sage/50 bg-cream px-4 py-5 text-center">
                 <p className="font-mono text-[34px] font-black leading-none tracking-[0.3em] text-ink">
                   {INVITE_CODE}
                 </p>
@@ -226,7 +226,7 @@ export function JointInviteCodeModal({
               <button
                 type="button"
                 onClick={handleShare}
-                className="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-forest text-[14px] font-bold text-mint shadow-[0_16px_32px_-20px_rgba(16,58,42,0.95)] transition-colors hover:bg-forest-soft active:scale-[0.99]"
+                className="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-forest text-[14px] font-bold text-mint shadow-[0_16px_32px_-20px_rgba(69,89,78,0.95)] transition-colors hover:bg-forest-soft active:scale-[0.99]"
               >
                 <Share2 className="size-4" strokeWidth={2.4} />
                 Bagikan Link 📤
@@ -234,7 +234,7 @@ export function JointInviteCodeModal({
               <button
                 type="button"
                 onClick={handleCopyCode}
-                className="mt-2 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-white text-[13.5px] font-semibold text-ink ring-1 ring-black/[0.08] transition-colors hover:bg-cream active:scale-[0.99]"
+                className="mt-2 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-cream text-[13.5px] font-semibold text-ink ring-1 ring-soil/[0.08] transition-colors hover:bg-cream active:scale-[0.99]"
               >
                 <Copy className="size-4" strokeWidth={2.4} />
                 Salin Kode
@@ -260,7 +260,7 @@ export function JointInviteCodeModal({
                       >
                         💚
                       </motion.span>
-                      <p className="mt-2 text-[12.5px] font-semibold text-[#3f4a30]">
+                      <p className="mt-2 text-[12.5px] font-semibold text-[#503a3a]">
                         Menunggu pasanganmu bergabung...
                       </p>
                     </div>
@@ -322,7 +322,7 @@ export function JointJoinedCelebration({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.3 }}
-          className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-[#FFFDF7] px-6 text-center"
+          className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-[#fbf6d9] px-6 text-center"
         >
           <div className="relative flex h-32 w-full max-w-[320px] items-center justify-center">
             <motion.span
@@ -377,7 +377,7 @@ export function JointJoinedCelebration({
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 1, duration: 0.35 }}
             onClick={onStart}
-            className="mt-6 inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-forest px-6 text-[14px] font-bold text-mint shadow-[0_16px_32px_-20px_rgba(16,58,42,0.95)] transition-colors hover:bg-forest-soft active:scale-[0.99]"
+            className="mt-6 inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-forest px-6 text-[14px] font-bold text-mint shadow-[0_16px_32px_-20px_rgba(69,89,78,0.95)] transition-colors hover:bg-forest-soft active:scale-[0.99]"
           >
             Mulai Catat Bareng
             <ArrowRight className="size-4" strokeWidth={2.6} />

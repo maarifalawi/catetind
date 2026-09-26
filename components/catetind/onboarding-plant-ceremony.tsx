@@ -61,7 +61,7 @@ export function OnboardingPlantCeremony({
             {[0, 1, 2].map((index) => (
               <span
                 key={index}
-                className="water-drop absolute size-1.5 rounded-full bg-sky-300/80"
+                className="water-drop absolute size-1.5 rounded-full bg-thistle/30"
                 style={{
                   left: 38 + index * 7 + '%',
                   animationDelay: index * 520 + 'ms',

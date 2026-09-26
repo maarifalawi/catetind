@@ -1,0 +1,86 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   CATETIND — SNAPSHOT PALET LAMA (Forest / Lime)  ·  BEKU, JANGAN DIEDIT
+   ═══════════════════════════════════════════════════════════════════════════
+   File ini adalah SALINAN BEKU dari blok warna app/globals.css SEBELUM migrasi
+   ke palet baru. Gunanya: mengembalikan seluruh warna situs ke versi lama
+   cukup dengan menyalin-tempel blok di bawah ke app/globals.css.
+
+   Diambil dari : commit ba9f3ce  (tag: theme/legacy-forest-lime)
+   Tanggal      : 2026-09-26
+
+   CARA PAKAI (lihat docs/theme/PALETTE.md untuk prosedur lengkap):
+     1. Cepat & total  →  git checkout theme/legacy-forest-lime -- .
+     2. Hanya warna    →  salin blok "A. @theme inline" ke blok @theme inline di
+                          app/globals.css, lalu salin blok "B. :root" ke blok
+                          :root di file yang sama.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── A. TOKEN WARNA @theme inline (potongan dari app/globals.css) ──────────── */
+
+:root-snapshot-for-reference {
+  --color-brand: #b7e04b;
+  --color-forest: #103a2a;
+  --color-forest-soft: #17543c;
+  --color-mint: #b7e04b;
+  --color-mint-soft: #d6ef8e;
+  --color-sage: #e3edd8;
+  --color-cream: #f4f8ef;
+  --color-ink: #12281f;
+  --color-hud-sage: #a3b18a;
+  --color-hud-amber: #dda15e;
+  --color-hud-terracotta: #bc6c25;
+}
+
+/* ── B. TOKEN shadcn/ui dari blok :root (potongan dari app/globals.css) ─────── */
+
+:root-snapshot-shadcn {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --radius: 1rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+/* ── C. WARNA LITERAL (hex/rgba) YANG DULU TERSebar DI KOMPONEN ──────────────
+   Ini daftar warna literal PALING SERING dipakai di luar globals.css pada versi
+   lama. Kalau ingin balik ke versi lama tanpa `git checkout`, ganti balik
+   nilai-nilai ini (tabel lengkap ada di scripts/theme/apply-palette.mjs,
+   konstanta LEGACY_TO_NEW — balik arahnya).
+
+   #b7e04b  brand / mint (lime)          #a3b18a  hud-sage
+   #dda15e  hud-amber                    #bc6c25  hud-terracotta
+   #103a2a  forest                       #17543c  forest-soft
+   #12281f  ink                          #f4f8ef  cream
+   #e3edd8  sage (permukaan pucat)       #d6ef8e  mint-soft
+   #fffdf7 / #fffdf9  permukaan hampir putih (kartu sheet)
+   rgba(16,58,42,* )   bayangan forest   rgba(18,40,31,* )  bayangan ink
+   rgba(183,224,75,*)  bayangan mint     rgba(163,177,138,*) bayangan hud-sage
+   rgba(221,161,94,*)  bayangan hud-amber rgba(188,108,37,*) bayangan hud-terracotta
+   ────────────────────────────────────────────────────────────────────────── */

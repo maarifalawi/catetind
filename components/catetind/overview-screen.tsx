@@ -19,7 +19,7 @@ export function OverviewScreen() {
             </p>
           </div>
           <button
-            className="flex size-9 items-center justify-center rounded-full bg-white text-ink ring-1 ring-black/5"
+            className="flex size-9 items-center justify-center rounded-full bg-cream text-ink ring-1 ring-soil/5"
             aria-label="Options"
           >
             <MoreVertical className="size-4" />

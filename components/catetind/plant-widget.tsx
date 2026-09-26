@@ -36,7 +36,7 @@ export const PlantWidget = memo(function PlantWidget() {
     <>
               <section
         aria-label="Tanaman kamu"
-        className="flex h-full flex-col rounded-[2rem] bg-white p-6 shadow-[0_4px_24px_-4px_rgba(18,40,31,0.06)] ring-1 ring-black/5"
+        className="flex h-full flex-col rounded-[2rem] bg-cream p-6 shadow-[0_4px_24px_-4px_rgba(80,58,58,0.06)] ring-1 ring-soil/5"
       >
         {/* header - konsisten dengan kartu lain */}
         <div className="flex items-center justify-between">
@@ -63,7 +63,7 @@ export const PlantWidget = memo(function PlantWidget() {
                   'size-3',
                   i < Math.round((MOCK.hp / 100) * 5)
                     ? 'fill-mint text-mint-soft'
-                    : 'text-black/10',
+                    : 'text-soil/10',
                 )}
                 strokeWidth={1.6}
               />
@@ -76,7 +76,7 @@ export const PlantWidget = memo(function PlantWidget() {
           type="button"
           onClick={() => setDetailOpen(true)}
           aria-label="Lihat detail tanaman"
-          className="group relative mt-3 flex flex-1 flex-col items-center justify-center rounded-2xl bg-gradient-to-b from-sage/50 via-cream to-cream px-4 pb-6 pt-8 ring-1 ring-black/[0.04] shadow-[0_4px_20px_-4px_rgba(18,40,31,0.08)] transition-all duration-300 hover:from-sage/70 hover:shadow-[0_8px_32px_-4px_rgba(18,40,31,0.12)]"
+          className="group relative mt-3 flex flex-1 flex-col items-center justify-center rounded-2xl bg-gradient-to-b from-sage/50 via-cream to-cream px-4 pb-6 pt-8 ring-1 ring-soil/[0.04] shadow-[0_4px_20px_-4px_rgba(80,58,58,0.08)] transition-all duration-300 hover:from-sage/70 hover:shadow-[0_8px_32px_-4px_rgba(80,58,58,0.12)]"
         >
           {/* glow mint lembut di belakang tanaman */}
           <span
@@ -109,7 +109,7 @@ export const PlantWidget = memo(function PlantWidget() {
         </div>
 
         {/* footer - progress menuju tahap berikutnya, mengisi bawah kartu */}
-        <div className="mt-3 border-t border-black/[0.06] pt-3.5">
+        <div className="mt-3 border-t border-soil/[0.06] pt-3.5">
           <div className="flex items-center justify-between text-[11px]">
             <span className="font-medium text-ink/45">
               Menuju tahap {Math.min(MOCK.stage + 1, 4)} - {' '}
@@ -117,7 +117,7 @@ export const PlantWidget = memo(function PlantWidget() {
             </span>
             <span className="font-semibold text-forest tabular-nums">68%</span>
           </div>
-          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-black/[0.06]">
+          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-soil/[0.06]">
             <div
               className="h-full rounded-full bg-gradient-to-r from-forest to-mint"
               style={{ width: '68%' }}

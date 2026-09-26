@@ -34,22 +34,22 @@ export function PlantIllustration({
       {/* defs - gradien warna untuk efek modern */}
       <defs>
         <linearGradient id="leafGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#4f9e6b" />
-          <stop offset="100%" stopColor="#3f8a5c" />
+          <stop offset="0%" stopColor="#91bb9e" />
+          <stop offset="100%" stopColor="#45594e" />
         </linearGradient>
         <linearGradient id="leafGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#5cb87f" />
-          <stop offset="100%" stopColor="#4f9e6b" />
+          <stop offset="0%" stopColor="#91bb9e" />
+          <stop offset="100%" stopColor="#91bb9e" />
         </linearGradient>
         {/* Highlight cahaya di daun - efek fresi */}
         <radialGradient id="leafHighlight" cx="30%" cy="30%" r="70%" fx="30%" fy="30%">
-          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.4" />
-          <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+          <stop offset="0%" stopColor="#fbf6d9" stopOpacity="0.4" />
+          <stop offset="100%" stopColor="#fbf6d9" stopOpacity="0" />
         </radialGradient>
       </defs>
 
       {/* bayangan tanah lembut */}
-      <ellipse cx="100" cy="212" rx="46" ry="6" fill="#12281f" opacity="0.08" />
+      <ellipse cx="100" cy="212" rx="46" ry="6" fill="#503a3a" opacity="0.08" />
 
       {/* batang + dedaunan + bunga - berayun dari pangkal pot */}
       <g
@@ -64,11 +64,11 @@ export function PlantIllustration({
           <g>
             <path
               d="M84 176 Q100 162 116 176 Z"
-              fill="#8a5a33"
+              fill="#b89191"
               opacity="0.85"
             />
-            <ellipse cx="100" cy="168" rx="5.5" ry="4.5" fill="#dda15e" />
-            <circle cx="98" cy="166.5" r="1.4" fill="#f4e3c2" />
+            <ellipse cx="100" cy="168" rx="5.5" ry="4.5" fill="#ffb885" />
+            <circle cx="98" cy="166.5" r="1.4" fill="#ebe4de" />
           </g>
         )}
 
@@ -77,7 +77,7 @@ export function PlantIllustration({
           <path
             d={stage === 2 ? 'M100 176 C 100 166 100 160 100 152' : 'M100 176 C 101 158 99 138 100 108'}
             fill="none"
-            stroke="#3f8a5c"
+            stroke="#45594e"
             strokeWidth={stage === 2 ? 4 : 5}
             strokeLinecap="round"
           />
@@ -134,7 +134,7 @@ export function PlantIllustration({
         )}
 
         {stage === 4 && (
-          /* bunga di pucuk - kelopak rose lembut + inti amber */
+          /* bunga di pucuk - kelopak plum lembut + inti cantelope */
           <g style={{ transformOrigin: '100px 96px' }}>
             {[0, 72, 144, 216, 288].map((deg) => (
               <ellipse
@@ -143,25 +143,25 @@ export function PlantIllustration({
                 cy="84"
                 rx="7"
                 ry="12"
-                fill="#fb7185"
+                fill="#b89191"
                 opacity="0.9"
                 transform={`rotate(${deg} 100 96)`}
               />
             ))}
-            <circle cx="100" cy="96" r="6.5" fill="#dda15e" />
-            <circle cx="100" cy="96" r="3" fill="#f4e3c2" />
+            <circle cx="100" cy="96" r="6.5" fill="#ffb885" />
+            <circle cx="100" cy="96" r="3" fill="#ebe4de" />
           </g>
         )}
       </g>
 
       {/* pot - rim + body */}
-      <rect x="58" y="168" width="84" height="12" rx="6" fill="#17543c" />
+      <rect x="58" y="168" width="84" height="12" rx="6" fill="#52685c" />
       <path
         d="M64 180 h72 l-7.5 28 a6 6 0 0 1 -5.8 4.6 H77.3 a6 6 0 0 1 -5.8 -4.6 Z"
-        fill="#103a2a"
+        fill="#45594e"
       />
       {/* aksen mint di pot */}
-      <circle cx="100" cy="196" r="5" fill="#b7e04b" opacity="0.9" />
+      <circle cx="100" cy="196" r="5" fill="#91bb9e" opacity="0.9" />
     </svg>
   )
 }

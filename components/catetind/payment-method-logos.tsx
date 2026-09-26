@@ -25,7 +25,7 @@ export function PaymentLogo({ id, className }: { id: PaymentMethodId; className?
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-lg bg-white px-2 py-1 ring-1 ring-black/[0.06]',
+        'inline-flex items-center gap-1.5 rounded-lg bg-cream px-2 py-1 ring-1 ring-soil/[0.06]',
         className,
       )}
     >

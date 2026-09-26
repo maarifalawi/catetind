@@ -207,33 +207,33 @@ export const ASSET_TYPE_META: Record<
     label: 'Reksadana',
     emoji: '📊',
     unit: 'unit',
-    color: '#7D8B65' /* sage paling tua */,
-    dotClass: 'bg-[#7D8B65]',
-    chipClass: 'bg-[#7D8B65]/12 text-[#5F6B4C]',
+    color: '#b5b987' /* sage paling tua */,
+    dotClass: 'bg-[#b5b987]',
+    chipClass: 'bg-[#b5b987]/12 text-[#503a3a]',
   },
   stock: {
     label: 'Saham',
     emoji: '📈',
     unit: 'lot',
-    color: '#A3B18A' /* sage kanon */,
+    color: '#b5b987' /* sage kanon */,
     dotClass: 'bg-hud-sage',
-    chipClass: 'bg-hud-sage/25 text-[#5F6B4C]',
+    chipClass: 'bg-hud-sage/25 text-[#503a3a]',
   },
   gold: {
     label: 'Emas',
     emoji: '🪙',
     unit: 'gram',
-    color: '#DDA15E' /* amber hangat kanon */,
+    color: '#ffb885' /* amber hangat kanon */,
     dotClass: 'bg-hud-amber',
-    chipClass: 'bg-hud-amber/25 text-[#a06a2c]',
+    chipClass: 'bg-hud-amber/25 text-[#b89191]',
   },
   crypto: {
     label: 'Crypto',
     emoji: '₿',
     unit: '' /* crypto memakai satuan raw koin */,
-    color: '#C2CDAC' /* sage paling muda */,
-    dotClass: 'bg-[#C2CDAC]',
-    chipClass: 'bg-[#C2CDAC]/35 text-[#5F6B4C]',
+    color: '#e6e4c0' /* sage paling muda */,
+    dotClass: 'bg-[#e6e4c0]',
+    chipClass: 'bg-[#e6e4c0]/35 text-[#503a3a]',
   },
 }
 
@@ -548,7 +548,7 @@ export function dtiBadge(ratio: number): DtiBadge {
       tone: 'sage',
       label: 'Sehat',
       copy: 'Beban cicilanmu ringan, mantap!',
-      pillClassName: 'bg-hud-sage/25 text-[#4F5C3C] ring-hud-sage/45',
+      pillClassName: 'bg-hud-sage/25 text-[#503a3a] ring-hud-sage/45',
     }
   }
   if (ratio <= DTI_CAREFUL) {
@@ -557,7 +557,7 @@ export function dtiBadge(ratio: number): DtiBadge {
       tone: 'amber',
       label: 'Perlu perhatian',
       copy: 'Cicilan mulai lumayan — pantau terus ya',
-      pillClassName: 'bg-hud-amber/25 text-[#8a5a1f] ring-hud-amber/45',
+      pillClassName: 'bg-hud-amber/25 text-[#b89191] ring-hud-amber/45',
     }
   }
   return {
@@ -565,7 +565,7 @@ export function dtiBadge(ratio: number): DtiBadge {
     tone: 'terracotta',
     label: 'Hati-hati',
     copy: 'Beban cicilanmu agak tinggi. Yuk fokus lunasin dulu ya',
-    pillClassName: 'bg-hud-terracotta/20 text-[#8f4f18] ring-hud-terracotta/45',
+    pillClassName: 'bg-hud-terracotta/20 text-[#b89191] ring-hud-terracotta/45',
   }
 }
 

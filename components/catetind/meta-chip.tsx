@@ -19,7 +19,7 @@ export function MetaChip({
 }: {
   icon: LucideIcon
   children: ReactNode
-  /** `scope` = nada sage/forest untuk penanda konteks uang */
+  /** `scope` = nada olive/forest untuk penanda konteks uang */
   tone?: 'default' | 'scope'
   className?: string
 }) {
@@ -30,7 +30,7 @@ export function MetaChip({
         'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ring-1',
         isScope
           ? 'bg-sage/70 text-forest ring-forest/10'
-          : 'bg-white text-ink/60 ring-black/5',
+          : 'bg-cream text-ink/60 ring-soil/5',
         className,
       )}
     >

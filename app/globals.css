@@ -54,18 +54,43 @@
   /* animasi panah panduan install iOS — token @theme supaya utility-nya tetap
      bisa dimatikan lewat varian motion-reduce:animate-none */
   --animate-install-arrow-bounce: install-arrow-bounce 1.5s ease-in-out infinite;
-  --color-brand: #b7e04b;
-  --color-forest: #103a2a;
-  --color-forest-soft: #17543c;
-  --color-mint: #b7e04b;
-  --color-mint-soft: #d6ef8e;
-  --color-sage: #e3edd8;
-  --color-cream: #f4f8ef;
-  --color-ink: #12281f;
+  /* ═══════════════════════════════════════════════════════════════════════════
+     PALET WARNA KANON — "EARTH PASTEL"  ·  SATU SUMBER KEBENARAN WARNA
+     Dokumen lengkap + cara kembali ke palet lama: docs/theme/PALETTE.md
+     Snapshot palet lama (Forest/Lime): docs/theme/legacy-palette-forest-lime.css
+
+     Aturan: komponen HANYA memakai token di bawah ini (lapis 1 & 2). Jangan
+     menulis hex baru langsung di komponen, dan jangan memakai kelas warna
+     bawaan Tailwind (`{prefix}-{keluarga}-{shade}`).
+     ═══════════════════════════════════════════════════════════════════════════ */
+
+  /* ── LAPIS 1 · PALET KANON (10 warna) ──────────────────────────────────── */
+  --color-soil: #503a3a; /* 15% · tanah — teks, garis, scrim gelap */
+  --color-evergreen: #45594e; /* 15% · hijau tua — permukaan brand */
+  --color-ivory: #fbf6d9; /* 15% · gading — latar utama */
+  --color-oat: #ebe4de; /* 15% · gandum — permukaan sekunder */
+  --color-plum: #b89191; /* 7.5% · prem — alert / lewat batas */
+  --color-olive: #b5b987; /* 7.5% · zaitun — status aman */
+  --color-thistle: #91a0b8; /* 7.5% · biru dusty — info / netral */
+  /* `leaf` = palet "Sage" (#91bb9e). Dinamai leaf karena `--color-sage`
+     sudah dipakai sebagai PERMUKAAN PUCAT (kini = Oat) di ratusan tempat. */
+  --color-leaf: #91bb9e; /* 7.5% · hijau sage — uang & positif */
+  --color-cantelope: #ffb885; /* 5% · melon — pengeluaran / hati-hati */
+  --color-daisy: #ecd768; /* 5% · kuning — pop brand & highlight */
+
+  /* ── LAPIS 2 · ALIAS SEMANTIK (nama yang dipakai komponen) ─────────────── */
+  --color-ink: #503a3a; /* = soil */
+  --color-forest: #45594e; /* = evergreen */
+  --color-forest-soft: #52685c; /* turunan evergreen (dicerahkan) */
+  --color-brand: #ecd768; /* = daisy */
+  --color-mint: #91bb9e; /* = leaf (uang/positif) */
+  --color-mint-soft: #dbe4c7; /* turunan leaf (tint) */
+  --color-sage: #ebe4de; /* = oat (permukaan pucat) */
+  --color-cream: #fbf6d9; /* = ivory (latar utama) */
   /* palet status Daily HUD — kanon PRD Domain 2B.2 (BUKAN merah untuk over-budget) */
-  --color-hud-sage: #a3b18a;
-  --color-hud-amber: #dda15e;
-  --color-hud-terracotta: #bc6c25;
+  --color-hud-sage: #b5b987; /* = olive   · aman / on-track */
+  --color-hud-amber: #ffb885; /* = cantelope · mendekati batas */
+  --color-hud-terracotta: #b89191; /* = plum  · lewat batas */
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -108,109 +133,113 @@
 
 :root {
   color-scheme: light;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  /* token shadcn/ui — dipetakan ke palet kanon "Earth Pastel" (docs/theme/PALETTE.md) */
+  --background: #ebe4de; /* oat */
+  --foreground: #503a3a; /* soil */
+  --card: #fbf6d9; /* ivory */
+  --card-foreground: #503a3a; /* soil */
+  --popover: #fbf6d9; /* ivory */
+  --popover-foreground: #503a3a; /* soil */
+  --primary: #45594e; /* evergreen */
+  --primary-foreground: #fbf6d9; /* ivory */
+  --secondary: #ebe4de; /* oat */
+  --secondary-foreground: #503a3a; /* soil */
+  --muted: #ebe4de; /* oat */
+  --muted-foreground: #94857a; /* soil + ivory */
+  --accent: #ebe4de; /* oat */
+  --accent-foreground: #503a3a; /* soil */
+  --destructive: #b89191; /* plum */
+  --border: #ebe4de; /* oat */
+  --input: #ebe4de; /* oat */
+  --ring: #91a0b8; /* thistle */
+  --chart-1: #b5b987; /* olive */
+  --chart-2: #91bb9e; /* leaf */
+  --chart-3: #91a0b8; /* thistle */
+  --chart-4: #b89191; /* plum */
+  --chart-5: #ffb885; /* cantelope */
   --radius: 1rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar: #fbf6d9; /* ivory */
+  --sidebar-foreground: #503a3a; /* soil */
+  --sidebar-primary: #45594e; /* evergreen */
+  --sidebar-primary-foreground: #fbf6d9; /* ivory */
+  --sidebar-accent: #ebe4de; /* oat */
+  --sidebar-accent-foreground: #503a3a; /* soil */
+  --sidebar-border: #ebe4de; /* oat */
+  --sidebar-ring: #91a0b8; /* thistle */
 }
 
+/* Varian gelap memakai palet yang SAMA (Soil sebagai kanvas, Evergreen sebagai
+   permukaan) supaya primitif shadcn/ui tidak pernah keluar dari palet kanon. */
 .dark {
   color-scheme: dark;
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: #241a1a; /* soil-deep */
+  --foreground: #fbf6d9; /* ivory */
+  --card: #503a3a; /* soil */
+  --card-foreground: #fbf6d9; /* ivory */
+  --popover: #503a3a; /* soil */
+  --popover-foreground: #fbf6d9; /* ivory */
+  --primary: #b5b987; /* olive */
+  --primary-foreground: #241a1a; /* soil-deep */
+  --secondary: #45594e; /* evergreen */
+  --secondary-foreground: #fbf6d9; /* ivory */
+  --muted: #45594e; /* evergreen */
+  --muted-foreground: #dbe4c7; /* leaf-light */
+  --accent: #45594e; /* evergreen */
+  --accent-foreground: #fbf6d9; /* ivory */
+  --destructive: #b89191; /* plum */
+  --border: #534141; /* plum-deep */
+  --input: #534141; /* plum-deep */
+  --ring: #91a0b8; /* thistle */
+  --chart-1: #b5b987; /* olive */
+  --chart-2: #91bb9e; /* leaf */
+  --chart-3: #91a0b8; /* thistle */
+  --chart-4: #b89191; /* plum */
+  --chart-5: #ffb885; /* cantelope */
+  --sidebar: #45594e; /* evergreen */
+  --sidebar-foreground: #fbf6d9; /* ivory */
+  --sidebar-primary: #ecd768; /* daisy */
+  --sidebar-primary-foreground: #241a1a; /* soil-deep */
+  --sidebar-accent: #52685c; /* evergreen-soft */
+  --sidebar-accent-foreground: #fbf6d9; /* ivory */
+  --sidebar-border: #52685c; /* evergreen-soft */
+  --sidebar-ring: #91a0b8; /* thistle */
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not(.light) {
     color-scheme: dark;
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
+    /* nilai SAMA dengan `.dark` di atas — palet kanon, sisi gelap */
+    --background: #241a1a; /* soil-deep */
+    --foreground: #fbf6d9; /* ivory */
+    --card: #503a3a; /* soil */
+    --card-foreground: #fbf6d9; /* ivory */
+    --popover: #503a3a; /* soil */
+    --popover-foreground: #fbf6d9; /* ivory */
+    --primary: #b5b987; /* olive */
+    --primary-foreground: #241a1a; /* soil-deep */
+    --secondary: #45594e; /* evergreen */
+    --secondary-foreground: #fbf6d9; /* ivory */
+    --muted: #45594e; /* evergreen */
+    --muted-foreground: #dbe4c7; /* leaf-light */
+    --accent: #45594e; /* evergreen */
+    --accent-foreground: #fbf6d9; /* ivory */
+    --destructive: #b89191; /* plum */
+    --border: #534141; /* plum-deep */
+    --input: #534141; /* plum-deep */
+    --ring: #91a0b8; /* thistle */
+    --chart-1: #b5b987; /* olive */
+    --chart-2: #91bb9e; /* leaf */
+    --chart-3: #91a0b8; /* thistle */
+    --chart-4: #b89191; /* plum */
+    --chart-5: #ffb885; /* cantelope */
+    --sidebar: #45594e; /* evergreen */
+    --sidebar-foreground: #fbf6d9; /* ivory */
+    --sidebar-primary: #ecd768; /* daisy */
+    --sidebar-primary-foreground: #241a1a; /* soil-deep */
+    --sidebar-accent: #52685c; /* evergreen-soft */
+    --sidebar-accent-foreground: #fbf6d9; /* ivory */
+    --sidebar-border: #52685c; /* evergreen-soft */
+    --sidebar-ring: #91a0b8; /* thistle */
   }
 }
 
@@ -226,7 +255,7 @@
 /* thin, brand-tinted scrollbar for the desktop sidebar nav */
 .sidebar-scroll {
   scrollbar-width: thin;
-  scrollbar-color: rgb(16 58 42 / 0.18) transparent;
+  scrollbar-color: rgb(69 89 78 / 0.18) transparent;
 }
 .sidebar-scroll::-webkit-scrollbar {
   width: 4px;
@@ -239,10 +268,10 @@
   border-radius: 999px;
 }
 .sidebar-scroll:hover::-webkit-scrollbar-thumb {
-  background: rgb(16 58 42 / 0.18);
+  background: rgb(69 89 78 / 0.18);
 }
 .sidebar-scroll::-webkit-scrollbar-thumb:hover {
-  background: rgb(16 58 42 / 0.32);
+  background: rgb(69 89 78 / 0.32);
 }
 
 /* kontainer gulir horizontal (deret ghost card "Tambah Dompet Cepat" di
@@ -269,7 +298,7 @@
   background-image: linear-gradient(
     100deg,
     transparent 20%,
-    rgb(255 255 255 / 0.55) 45%,
+    rgb(251 246 217 / 0.55) 45%,
     transparent 70%
   );
   background-size: 220% 100%;

@@ -73,7 +73,7 @@ function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
       <Icon
         className={cn(
           'size-[22px] transition-all duration-200',
-          isActive ? 'text-forest' : 'text-slate-300 hover:text-slate-500',
+          isActive ? 'text-forest' : 'text-ink/25 hover:text-ink/45',
         )}
         strokeWidth={1.8}
       />
@@ -100,7 +100,7 @@ export function MobileBottomNav() {
     <>
       <nav
         aria-label="Navigasi utama"
-        className="fixed inset-x-8 bottom-5 z-40 mx-auto flex h-16 max-w-sm items-center rounded-full bg-white/95 px-4 shadow-[0_24px_50px_-16px_rgba(0,0,0,0.18)] ring-1 ring-black/5 backdrop-blur-xl lg:hidden"
+        className="fixed inset-x-8 bottom-5 z-40 mx-auto flex h-16 max-w-sm items-center rounded-full bg-cream/95 px-4 shadow-[0_24px_50px_-16px_rgba(36,26,26,0.18)] ring-1 ring-soil/5 backdrop-blur-xl lg:hidden"
         style={{ marginBottom: 'max(0rem, env(safe-area-inset-bottom))' }}
       >
         <NavLink item={mainItems[0]} pathname={pathname} />
@@ -117,7 +117,7 @@ export function MobileBottomNav() {
                 <button
                   type="button"
                   aria-label="Catat transaksi"
-                  className="-mt-8 flex size-14 items-center justify-center rounded-full bg-[radial-gradient(circle_at_30%_25%,#ffffff,#e4eaff_35%,#cdd6f7_60%,#f3d9e8_85%)] text-zinc-900 shadow-[0_0_28px_rgba(180,195,255,0.55),0_10px_24px_-8px_rgba(0,0,0,0.6)] ring-1 ring-white/60 transition-transform duration-150 hover:scale-105 active:scale-95"
+                  className="-mt-8 flex size-14 items-center justify-center rounded-full bg-[radial-gradient(circle_at_30%_25%,#fbf6d9,#ecd768_35%,#ffb885_60%,#b89191_85%)] text-ink shadow-[0_0_28px_rgba(236,215,104,0.55),0_10px_24px_-8px_rgba(36,26,26,0.6)] ring-1 ring-cream/60 transition-transform duration-150 hover:scale-105 active:scale-95"
                 >
                   <Plus className="size-6" strokeWidth={2.4} />
                 </button>
@@ -138,7 +138,7 @@ export function MobileBottomNav() {
           <LayoutGrid
             className={cn(
               'size-[22px] transition-all duration-200',
-              menuActive ? 'text-forest' : 'text-slate-300 hover:text-slate-500',
+              menuActive ? 'text-forest' : 'text-ink/25 hover:text-ink/45',
             )}
             strokeWidth={1.8}
           />
@@ -148,16 +148,16 @@ export function MobileBottomNav() {
       {/* Laci menu sekunder — struktur sama dengan sidebar desktop */}
       <Drawer.Root open={menuOpen} onOpenChange={setMenuOpen}>
         <Drawer.Portal>
-          <Drawer.Overlay className="fixed inset-0 z-[70] bg-black/40" />
+          <Drawer.Overlay className="fixed inset-0 z-[70] bg-soil/40" />
           <Drawer.Content
             aria-label="Menu lainnya"
-            className="fixed inset-x-0 bottom-0 z-[70] mx-auto flex max-h-[85vh] w-full max-w-md flex-col rounded-t-[2rem] bg-white shadow-2xl outline-none"
+            className="fixed inset-x-0 bottom-0 z-[70] mx-auto flex max-h-[85vh] w-full max-w-md flex-col rounded-t-[2rem] bg-cream shadow-2xl outline-none"
           >
             {/* drag handle khas Vaul */}
-            <div className="mx-auto mt-3 h-1.5 w-10 shrink-0 rounded-full bg-slate-200" />
+            <div className="mx-auto mt-3 h-1.5 w-10 shrink-0 rounded-full bg-oat" />
 
             <div className="overflow-y-auto px-6 pb-10 pt-4" data-lenis-prevent>
-              <Drawer.Title className="text-center text-base font-bold tracking-tight text-slate-950">
+              <Drawer.Title className="text-center text-base font-bold tracking-tight text-ink">
                 Lainnya
               </Drawer.Title>
               <Drawer.Description className="sr-only">
@@ -166,7 +166,7 @@ export function MobileBottomNav() {
 
               {menuGroups.map((group) => (
                 <section key={group.label} className="mt-6">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-ink/35">
                     {group.label}
                   </p>
                   <div className="mt-3 grid grid-cols-3 gap-2.5">
@@ -181,11 +181,11 @@ export function MobileBottomNav() {
                           className={cn(
                             'flex flex-col items-center gap-2 rounded-2xl px-2 py-4 text-center transition-all duration-150 active:scale-95',
                             isActive
-                              ? 'bg-[#fff100]/25 font-semibold text-slate-950'
-                              : 'bg-black/[0.03] font-medium text-slate-600 hover:bg-black/[0.05]',
+                              ? 'bg-[#ecd768]/25 font-semibold text-ink'
+                              : 'bg-soil/[0.03] font-medium text-ink/55 hover:bg-soil/[0.05]',
                           )}
                         >
-                          <Icon className="size-6 text-slate-900" />
+                          <Icon className="size-6 text-ink" />
                           <span className="text-xs font-medium leading-tight">
                             {label}
                           </span>

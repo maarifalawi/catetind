@@ -127,7 +127,7 @@ export function InsightCards({
   /* belum ada satu pun insight yang lolos ambang → kartu nurturing, bukan klaim */
   if (visible.length === 0) {
     return (
-      <section className="flex h-full flex-col justify-center rounded-[2rem] bg-white p-5 shadow-[0_4px_24px_-4px_rgba(18,40,31,0.06)] ring-1 ring-black/5 sm:p-6">
+      <section className="flex h-full flex-col justify-center rounded-[2rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(80,58,58,0.06)] ring-1 ring-soil/5 sm:p-6">
         {header}
         <p className="mt-3 text-[13px] leading-relaxed text-ink/60">
           Aku masih belajar polamu. Terus catat ya 📊
@@ -137,7 +137,7 @@ export function InsightCards({
   }
 
   return (
-    <section className="flex h-full flex-col rounded-[2rem] bg-white p-5 shadow-[0_4px_24px_-4px_rgba(18,40,31,0.06)] ring-1 ring-black/5 sm:p-6">
+    <section className="flex h-full flex-col rounded-[2rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(80,58,58,0.06)] ring-1 ring-soil/5 sm:p-6">
       {header}
 
       {/* deret horizontal: snap per kartu, scrollbar disembunyikan */}
@@ -167,7 +167,7 @@ function InsightCardItem({
       initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, delay, ease: EASE }}
-      className="flex min-w-[260px] max-w-[320px] shrink-0 snap-start flex-col gap-3 rounded-[1.6rem] bg-cream/70 p-4 ring-1 ring-black/[0.05] sm:min-w-[280px]"
+      className="flex min-w-[260px] max-w-[320px] shrink-0 snap-start flex-col gap-3 rounded-[1.6rem] bg-cream/70 p-4 ring-1 ring-soil/[0.05] sm:min-w-[280px]"
     >
       <div className="flex items-center gap-2.5">
         <span
@@ -193,7 +193,7 @@ function InsightCardItem({
                   'inline-flex w-fit items-center gap-1 rounded-full px-3 py-1.5 text-[11.5px] font-semibold transition-colors active:scale-[0.97]',
                   i === 0
                     ? 'bg-forest text-cream hover:bg-forest-soft'
-                    : 'bg-white text-forest ring-1 ring-inset ring-forest/20 hover:bg-sage/60',
+                    : 'bg-cream text-forest ring-1 ring-inset ring-forest/20 hover:bg-sage/60',
                 )}
               >
                 {action.label}

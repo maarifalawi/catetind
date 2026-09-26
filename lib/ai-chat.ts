@@ -12,7 +12,7 @@ export type ChatRole = 'user' | 'ai'
  * Jenis pesan AI (Domain 3C):
  * - 'coaching'     → jawaban/coaching biasa
  * - 'appreciation' → pujian acak setelah user mencatat transaksi;
- *                    dapat treatment visual beda (highlight sage + sparkle)
+ *                    dapat treatment visual beda (highlight olive + sparkle)
  */
 export type AIMessageKind = 'coaching' | 'appreciation'
 

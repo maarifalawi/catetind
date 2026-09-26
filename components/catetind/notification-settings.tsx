@@ -99,7 +99,7 @@ export function NotificationSettings() {
   return (
     <div className="space-y-5">
       {/* ── kartu status push ── */}
-      <section className="rounded-[2rem] bg-white p-5 ring-1 ring-black/5 sm:p-6">
+      <section className="rounded-[2rem] bg-cream p-5 ring-1 ring-soil/5 sm:p-6">
         <div className="flex items-start gap-3.5">
           <span
             className={cn(
@@ -135,7 +135,7 @@ export function NotificationSettings() {
           </div>
         )}
         {support === 'unsupported' && (
-          <p className="mt-4 rounded-2xl bg-black/[0.04] px-4 py-3 text-[13px] text-ink/55">
+          <p className="mt-4 rounded-2xl bg-soil/[0.04] px-4 py-3 text-[13px] text-ink/55">
             Browser ini belum mendukung Web Push — coba Chrome/Edge atau
             Safari iOS 16.4+ yang sudah di-install ke Home Screen.
           </p>
@@ -212,13 +212,13 @@ export function NotificationSettings() {
       </section>
 
       {/* ── kartu toggle per jenis (inventaris #22) ── */}
-      <section className="rounded-[2rem] bg-white p-5 ring-1 ring-black/5 sm:p-6">
+      <section className="rounded-[2rem] bg-cream p-5 ring-1 ring-soil/5 sm:p-6">
         <h2 className="text-base font-semibold text-ink">Jenis Notifikasi</h2>
         <p className="mt-0.5 text-sm text-ink/50">
           Pilih yang penting buat kamu — sisanya kita gak ganggu.
         </p>
 
-        <ul className="mt-4 divide-y divide-black/[0.05]">
+        <ul className="mt-4 divide-y divide-soil/[0.05]">
           {PREFS.map((pref) => (
             <li
               key={pref.id}
@@ -238,12 +238,12 @@ export function NotificationSettings() {
                 onClick={() => toggle(pref.id)}
                 className={cn(
                   'relative h-7 w-12 shrink-0 rounded-full transition-colors duration-200',
-                  prefs[pref.id] ? 'bg-forest' : 'bg-black/[0.12]',
+                  prefs[pref.id] ? 'bg-forest' : 'bg-soil/[0.12]',
                 )}
               >
                 <span
                   className={cn(
-                    'absolute left-0.5 top-0.5 size-6 rounded-full bg-white shadow-sm transition-transform duration-200',
+                    'absolute left-0.5 top-0.5 size-6 rounded-full bg-cream shadow-sm transition-transform duration-200',
                     prefs[pref.id] && 'translate-x-5',
                   )}
                 />

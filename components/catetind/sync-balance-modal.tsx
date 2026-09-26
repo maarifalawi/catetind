@@ -59,7 +59,7 @@ export function SyncBalanceModal({
   /** 1000000 → "1.000.000" (auto-format Indonesia seketika saat diketik) */
   const display = digits ? entered.toLocaleString('id-ID') : ''
   const diffText = `${diff < 0 ? '-' : diff > 0 ? '+' : ''}${formatIDR(Math.abs(diff))}`
-  const diffTone = diff === 0 ? 'text-ink/45' : diff < 0 ? 'text-red-500' : 'text-green-600'
+  const diffTone = diff === 0 ? 'text-ink/45' : diff < 0 ? 'text-plum' : 'text-leaf'
 
   function handleChange(event: ChangeEvent<HTMLInputElement>) {
     // buang semua non-digit, batasi 12 digit (maks Rp 999.999.999.999)
@@ -92,7 +92,7 @@ export function SyncBalanceModal({
         <Drawer.Content
           data-catetind-sheet="true"
           aria-label="Sesuaikan saldo dompet"
-          className="fixed inset-x-0 bottom-0 z-[70] mx-auto flex max-h-[92dvh] w-full max-w-md flex-col overflow-hidden rounded-t-[2rem] bg-[#FFFDF9] pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-[0_-24px_60px_-24px_rgba(16,58,42,0.55)] outline-none"
+          className="fixed inset-x-0 bottom-0 z-[70] mx-auto flex max-h-[92dvh] w-full max-w-md flex-col overflow-hidden rounded-t-[2rem] bg-[#fbf6d9] pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-[0_-24px_60px_-24px_rgba(69,89,78,0.55)] outline-none"
         >
           {/* drag handle khas Vaul */}
           <div className="mx-auto mt-3 h-1.5 w-10 shrink-0 rounded-full bg-ink/10" />
@@ -116,7 +116,7 @@ export function SyncBalanceModal({
               {/* badge brand — warnanya mengikuti kartu dompetnya */}
               <span
                 className={cn(
-                  'flex size-10 shrink-0 items-center justify-center rounded-full text-white shadow-sm ring-1 ring-black/5',
+                  'flex size-10 shrink-0 items-center justify-center rounded-full text-cream shadow-sm ring-1 ring-soil/5',
                   shown?.color ?? 'bg-forest',
                 )}
               >
@@ -136,7 +136,7 @@ export function SyncBalanceModal({
             </div>
 
             {/* input saldo asli — nominal raksasa, keyboard numerik */}
-            <label className="mt-3 flex cursor-text items-baseline gap-2 rounded-2xl border-2 border-dashed border-slate-200 px-4 py-4 transition-colors focus-within:border-mint focus-within:bg-mint/[0.07]">
+            <label className="mt-3 flex cursor-text items-baseline gap-2 rounded-2xl border-2 border-dashed border-oat px-4 py-4 transition-colors focus-within:border-mint focus-within:bg-mint/[0.07]">
               <span aria-hidden className="shrink-0 text-xl font-bold text-ink/25">
                 Rp
               </span>
@@ -168,8 +168,8 @@ export function SyncBalanceModal({
                   diff === 0
                     ? 'bg-ink/[0.06] text-ink/45'
                     : diff < 0
-                      ? 'bg-red-500/[0.13] text-red-500'
-                      : 'bg-green-600/[0.13] text-green-600',
+                      ? 'bg-plum/[0.13] text-plum'
+                      : 'bg-leaf/[0.13] text-leaf',
                 )}
               >
                 <Sparkles className="size-3.5" strokeWidth={2.4} />
@@ -194,7 +194,7 @@ export function SyncBalanceModal({
               disabled={digits === ''}
               className={cn(
                 'mt-6 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-b from-forest-soft to-forest',
-                'text-[15px] font-semibold text-cream shadow-[0_18px_36px_-16px_rgba(16,58,42,0.85)]',
+                'text-[15px] font-semibold text-cream shadow-[0_18px_36px_-16px_rgba(69,89,78,0.85)]',
                 'transition-all hover:brightness-[1.08] active:scale-[0.99]',
                 'disabled:cursor-not-allowed disabled:from-forest/20 disabled:to-forest/20 disabled:text-cream/70 disabled:shadow-none',
               )}

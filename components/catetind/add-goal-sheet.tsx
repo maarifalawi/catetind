@@ -94,7 +94,7 @@ export function AddGoalSheet({
           value={name}
           onChange={(event) => setName(event.target.value)}
           placeholder="Biaya Operasi Mama"
-          className="mt-2 w-full rounded-2xl bg-white px-4 py-3 text-[15px] font-semibold text-ink outline-none ring-1 ring-black/[0.08] transition-shadow placeholder:font-medium placeholder:text-ink/25 focus:ring-2 focus:ring-forest/35"
+          className="mt-2 w-full rounded-2xl bg-cream px-4 py-3 text-[15px] font-semibold text-ink outline-none ring-1 ring-soil/[0.08] transition-shadow placeholder:font-medium placeholder:text-ink/25 focus:ring-2 focus:ring-forest/35"
         />
       </label>
 
@@ -119,7 +119,7 @@ export function AddGoalSheet({
             Mau tercapai kapan?
           </span>
           {/* field tanggal: placeholder custom + input date native transparan di atasnya */}
-          <span className="relative mt-2 flex items-center gap-2 rounded-2xl bg-white px-4 py-3 ring-1 ring-black/[0.08] focus-within:ring-2 focus-within:ring-forest/35">
+          <span className="relative mt-2 flex items-center gap-2 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/[0.08] focus-within:ring-2 focus-within:ring-forest/35">
             <CalendarDays className="size-4 shrink-0 text-ink/35" strokeWidth={2.2} />
             <span
               className={cn(
@@ -174,7 +174,7 @@ export function AddGoalSheet({
             type="button"
             aria-expanded={advancedOpen}
             onClick={() => setAdvancedOpen((prev) => !prev)}
-            className="flex w-full items-center justify-between gap-2 rounded-2xl bg-white/70 px-4 py-3 text-left ring-1 ring-black/[0.06] transition-colors hover:bg-white"
+            className="flex w-full items-center justify-between gap-2 rounded-2xl bg-cream/70 px-4 py-3 text-left ring-1 ring-soil/[0.06] transition-colors hover:bg-cream"
           >
             <span className="text-[12.5px] font-semibold text-ink/60">
               Pengaturan Lanjutan (Opsional)
@@ -198,7 +198,7 @@ export function AddGoalSheet({
                       onChange={(event) => setNote(event.target.value)}
                       rows={3}
                       placeholder="Kenapa ini penting buat kamu?"
-                      className="mt-2 w-full resize-none rounded-2xl bg-white px-4 py-3 text-[13px] leading-relaxed text-ink outline-none ring-1 ring-black/[0.08] transition-shadow placeholder:text-ink/25 focus:ring-2 focus:ring-forest/35"
+                      className="mt-2 w-full resize-none rounded-2xl bg-cream px-4 py-3 text-[13px] leading-relaxed text-ink outline-none ring-1 ring-soil/[0.08] transition-shadow placeholder:text-ink/25 focus:ring-2 focus:ring-forest/35"
                     />
                   </label>
 
@@ -207,7 +207,7 @@ export function AddGoalSheet({
                     <span className="text-[12.5px] font-semibold text-ink/70">
                       Dompet buat setor
                     </span>
-                    <span className="relative mt-2 flex items-center gap-2 rounded-2xl bg-white px-4 py-3 ring-1 ring-black/[0.08] focus-within:ring-2 focus-within:ring-forest/35">
+                    <span className="relative mt-2 flex items-center gap-2 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/[0.08] focus-within:ring-2 focus-within:ring-forest/35">
                       <WalletIcon className="size-4 shrink-0 text-ink/35" strokeWidth={2.2} />
                       <select
                         value={wallet}
@@ -225,7 +225,7 @@ export function AddGoalSheet({
                   </label>
 
                   {/* pengingat nabung */}
-                  <div className="rounded-2xl bg-white px-4 py-3 ring-1 ring-black/[0.06]">
+                  <div className="rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/[0.06]">
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-[12.5px] font-semibold text-ink/70">
                         Pengingat nabung
@@ -243,7 +243,7 @@ export function AddGoalSheet({
                       >
                         <span
                           className={cn(
-                            'absolute top-0.5 size-5 rounded-full bg-white shadow-sm transition-transform duration-200',
+                            'absolute top-0.5 size-5 rounded-full bg-cream shadow-sm transition-transform duration-200',
                             reminderOn ? 'translate-x-[22px]' : 'translate-x-0.5',
                           )}
                         />

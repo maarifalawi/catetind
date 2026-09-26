@@ -46,11 +46,11 @@ function ChatBubble({ message }: { message: ChatMessage }) {
       <div
         className={cn(
           'max-w-[82%] rounded-2xl rounded-bl-md px-3.5 py-2.5 text-sm leading-relaxed shadow-sm ring-1',
-          // Domain 3C — pesan apresiasi dapat treatment visual beda (highlight sage
+          // Domain 3C — pesan apresiasi dapat treatment visual beda (highlight olive
           // + prefix sparkle) supaya kebaca sebagai "pujian", bukan coaching biasa
           appreciation
             ? 'bg-sage text-ink ring-mint/50'
-            : 'bg-white text-ink ring-black/5',
+            : 'bg-cream text-ink ring-soil/5',
         )}
       >
         {appreciation && (
@@ -82,7 +82,7 @@ function TypingIndicator() {
   return (
     <div className="flex items-start gap-2">
       <AIAvatar className="mt-0.5 size-7" />
-      <div className="flex items-center gap-1.5 rounded-2xl rounded-bl-md bg-white px-4 py-3.5 shadow-sm ring-1 ring-black/5">
+      <div className="flex items-center gap-1.5 rounded-2xl rounded-bl-md bg-cream px-4 py-3.5 shadow-sm ring-1 ring-soil/5">
         {[0, 1, 2].map((i) => (
           <span
             key={i}
@@ -176,7 +176,7 @@ export function AIChatWidget() {
           type="button"
           onClick={openPanel}
           aria-label="Buka AI Coach"
-          className="animate-bubble-in fixed bottom-24 right-5 z-50 flex size-14 items-center justify-center rounded-full bg-forest text-mint shadow-[0_18px_40px_-12px_rgba(16,58,42,0.45)] ring-1 ring-forest/20 transition-transform duration-150 hover:scale-105 active:scale-95 lg:bottom-8 lg:right-8"
+          className="animate-bubble-in fixed bottom-24 right-5 z-50 flex size-14 items-center justify-center rounded-full bg-forest text-mint shadow-[0_18px_40px_-12px_rgba(69,89,78,0.45)] ring-1 ring-forest/20 transition-transform duration-150 hover:scale-105 active:scale-95 lg:bottom-8 lg:right-8"
         >
           <Sparkles className="size-6" strokeWidth={2} />
           {hasInsight && (
@@ -203,10 +203,10 @@ export function AIChatWidget() {
             role="dialog"
             aria-modal="true"
             aria-label="AI Coach CatetInd"
-            className="animate-in slide-in-from-bottom-6 fade-in fixed inset-x-0 bottom-0 z-[60] flex h-[92dvh] flex-col overflow-hidden rounded-t-[2rem] bg-cream shadow-2xl ring-1 ring-black/5 duration-300 lg:inset-x-auto lg:bottom-8 lg:right-8 lg:h-[550px] lg:w-[420px] lg:rounded-3xl"
+            className="animate-in slide-in-from-bottom-6 fade-in fixed inset-x-0 bottom-0 z-[60] flex h-[92dvh] flex-col overflow-hidden rounded-t-[2rem] bg-cream shadow-2xl ring-1 ring-soil/5 duration-300 lg:inset-x-auto lg:bottom-8 lg:right-8 lg:h-[550px] lg:w-[420px] lg:rounded-3xl"
           >
             {/* header — avatar, judul, fuel gauge kuota AI, tombol tutup */}
-            <header className="flex items-center gap-3 border-b border-black/5 bg-white/85 px-4 py-3 backdrop-blur">
+            <header className="flex items-center gap-3 border-b border-soil/5 bg-cream/85 px-4 py-3 backdrop-blur">
               <AIAvatar className="size-9" />
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline justify-between gap-2">
@@ -218,14 +218,14 @@ export function AIChatWidget() {
                   </p>
                 </div>
                 {/* AI Token Fuel Gauge (Domain 5C) — mint → amber → terracotta */}
-                <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-black/[0.06]">
+                <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-soil/[0.06]">
                   <div
                     className={cn(
                       'h-full rounded-full transition-all',
                       AI_QUOTA_REMAINING <= 10
-                        ? 'bg-[#e07856]'
+                        ? 'bg-[#b89191]'
                         : AI_QUOTA_REMAINING <= 30
-                          ? 'bg-amber-400'
+                          ? 'bg-cantelope'
                           : 'bg-mint',
                     )}
                     style={{ width: `${AI_QUOTA_REMAINING}%` }}
@@ -236,7 +236,7 @@ export function AIChatWidget() {
                 type="button"
                 onClick={() => setOpen(false)}
                 aria-label="Tutup AI Coach"
-                className="flex size-8 shrink-0 items-center justify-center rounded-full bg-black/[0.04] text-ink/60 transition-colors hover:bg-sage hover:text-ink"
+                className="flex size-8 shrink-0 items-center justify-center rounded-full bg-soil/[0.04] text-ink/60 transition-colors hover:bg-sage hover:text-ink"
               >
                 <X className="size-4" />
               </button>
@@ -262,7 +262,7 @@ export function AIChatWidget() {
                       key={chip}
                       type="button"
                       onClick={() => sendMessage(chip)}
-                      className="rounded-full bg-white px-3 py-1.5 text-xs font-medium text-forest ring-1 ring-forest/15 transition hover:bg-sage active:scale-95"
+                      className="rounded-full bg-cream px-3 py-1.5 text-xs font-medium text-forest ring-1 ring-forest/15 transition hover:bg-sage active:scale-95"
                     >
                       {chip}
                     </button>
@@ -277,7 +277,7 @@ export function AIChatWidget() {
                 e.preventDefault()
                 sendMessage()
               }}
-              className="relative border-t border-black/5 bg-white/85 p-3 backdrop-blur"
+              className="relative border-t border-soil/5 bg-cream/85 p-3 backdrop-blur"
               style={{
                 paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))',
               }}
@@ -298,13 +298,13 @@ export function AIChatWidget() {
                   onChange={(e) => setInput(e.target.value)}
                   placeholder="Tanya apa aja soal keuanganmu..."
                   aria-label="Ketik pesan untuk AI Coach"
-                  className="h-10 min-w-0 flex-1 rounded-full bg-black/[0.04] px-4 text-sm text-ink outline-none placeholder:text-ink/35 focus:ring-2 focus:ring-forest/20"
+                  className="h-10 min-w-0 flex-1 rounded-full bg-soil/[0.04] px-4 text-sm text-ink outline-none placeholder:text-ink/35 focus:ring-2 focus:ring-forest/20"
                 />
                 <button
                   type="button"
                   onClick={handleVoice}
                   aria-label="Voice input"
-                  className="flex size-10 shrink-0 items-center justify-center rounded-full bg-white text-ink/60 ring-1 ring-black/5 transition-colors hover:bg-sage hover:text-ink"
+                  className="flex size-10 shrink-0 items-center justify-center rounded-full bg-cream text-ink/60 ring-1 ring-soil/5 transition-colors hover:bg-sage hover:text-ink"
                 >
                   <Mic className="size-[18px]" />
                 </button>
@@ -312,7 +312,7 @@ export function AIChatWidget() {
                   type="button"
                   onClick={handleScan}
                   aria-label="Scan struk"
-                  className="flex size-10 shrink-0 items-center justify-center rounded-full bg-white text-ink/60 ring-1 ring-black/5 transition-colors hover:bg-sage hover:text-ink"
+                  className="flex size-10 shrink-0 items-center justify-center rounded-full bg-cream text-ink/60 ring-1 ring-soil/5 transition-colors hover:bg-sage hover:text-ink"
                 >
                   <ScanLine className="size-[18px]" />
                 </button>

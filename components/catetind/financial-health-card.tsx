@@ -54,7 +54,7 @@ export function FinancialHealthCard({
   const subtitle = unlocked ? 'Diperbarui tiap akhir pekan' : 'AI Coach sedang menyelaraskan polamu'
 
   return (
-    <section className="flex h-full flex-col rounded-[2rem] bg-white p-5 shadow-[0_4px_24px_-4px_rgba(18,40,31,0.06)] ring-1 ring-black/5 sm:p-6">
+    <section className="flex h-full flex-col rounded-[2rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(80,58,58,0.06)] ring-1 ring-soil/5 sm:p-6">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2.5">
           <span className="flex size-9 items-center justify-center rounded-full bg-sage text-forest">
@@ -65,7 +65,7 @@ export function FinancialHealthCard({
             <p className="text-[11.5px] text-ink/45">{subtitle}</p>
           </div>
         </div>
-        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-cream px-2.5 py-1 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-ink/45 ring-1 ring-black/5">
+        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-cream px-2.5 py-1 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-ink/45 ring-1 ring-soil/5">
           <Sparkles className="size-3 text-forest" strokeWidth={2.4} />
           {unlocked ? 'AI' : 'AI Coach'}
         </span>
@@ -87,9 +87,9 @@ function ScoreGauge({ score }: { score: number }) {
         <svg viewBox={`0 0 ${SIZE} ${CENTER + 6}`} className="w-full overflow-visible" aria-hidden>
           <defs>
             <linearGradient id="health-gauge-fill" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="#b7e04b" />
-              <stop offset="55%" stopColor="#17543c" />
-              <stop offset="100%" stopColor="#103a2a" />
+              <stop offset="0%" stopColor="#91bb9e" />
+              <stop offset="55%" stopColor="#52685c" />
+              <stop offset="100%" stopColor="#45594e" />
             </linearGradient>
           </defs>
 

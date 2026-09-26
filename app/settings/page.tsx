@@ -59,7 +59,7 @@ export default function SettingsPage() {
                   aria-disabled={!ready}
                   tabIndex={ready ? 0 : -1}
                   className={cn(
-                    'group flex items-center gap-3.5 rounded-2xl bg-white px-4 py-3.5 ring-1 ring-black/5 transition-colors',
+                    'group flex items-center gap-3.5 rounded-2xl bg-cream px-4 py-3.5 ring-1 ring-soil/5 transition-colors',
                     ready
                       ? 'hover:bg-sage/40'
                       : 'pointer-events-none opacity-55',
@@ -79,7 +79,7 @@ export default function SettingsPage() {
                   {ready ? (
                     <ChevronRight className="size-4 shrink-0 text-ink/30 transition-transform group-hover:translate-x-0.5" />
                   ) : (
-                    <span className="shrink-0 rounded-full bg-black/[0.05] px-2 py-0.5 text-[10px] font-semibold text-ink/40">
+                    <span className="shrink-0 rounded-full bg-soil/[0.05] px-2 py-0.5 text-[10px] font-semibold text-ink/40">
                       Segera
                     </span>
                   )}
@@ -92,7 +92,7 @@ export default function SettingsPage() {
           <div className="mt-6 space-y-2.5">
             <button
               type="button"
-              className="glass-button group relative flex w-full items-center gap-3.5 rounded-2xl bg-white/85 px-4 py-3.5 text-left ring-1 ring-black/5 backdrop-blur-xl backdrop-saturate-150 border border-white/40 transition-all duration-200 hover:bg-white/95 hover:shadow-md"
+              className="glass-button group relative flex w-full items-center gap-3.5 rounded-2xl bg-cream/85 px-4 py-3.5 text-left ring-1 ring-soil/5 backdrop-blur-xl backdrop-saturate-150 border border-cream/40 transition-all duration-200 hover:bg-cream/95 hover:shadow-md"
             >
               <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sage text-forest">
                 <Download className="size-4" strokeWidth={2.2} />
@@ -109,13 +109,13 @@ export default function SettingsPage() {
 
             <button
               type="button"
-              className="glass-button group relative flex w-full items-center gap-3.5 rounded-2xl bg-white/85 px-4 py-3.5 text-left ring-1 ring-black/5 backdrop-blur-xl backdrop-saturate-150 border border-white/40 transition-all duration-200 hover:bg-white/95 hover:shadow-md"
+              className="glass-button group relative flex w-full items-center gap-3.5 rounded-2xl bg-cream/85 px-4 py-3.5 text-left ring-1 ring-soil/5 backdrop-blur-xl backdrop-saturate-150 border border-cream/40 transition-all duration-200 hover:bg-cream/95 hover:shadow-md"
             >
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-500">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-plum/20 text-plum">
                 <LogOut className="size-4" strokeWidth={2.2} />
               </span>
               <span className="flex-1">
-                <span className="block text-sm font-semibold text-rose-600">
+                <span className="block text-sm font-semibold text-plum">
                   Keluar
                 </span>
                 <span className="mt-0.5 block text-xs text-ink/50">

@@ -39,7 +39,7 @@ function BannerShell({
       className={cn(
         'flex items-center gap-3 rounded-2xl px-4 py-3 ring-1',
         tone === 'amber' && 'bg-hud-amber/10 ring-hud-amber/25',
-        tone === 'white' && 'bg-white ring-black/5',
+        tone === 'white' && 'bg-cream ring-soil/5',
       )}
     >
       {icon}
@@ -52,7 +52,7 @@ function BannerShell({
         type="button"
         aria-label={dismissLabel}
         onClick={onDismiss}
-        className="flex size-7 shrink-0 items-center justify-center rounded-full text-ink/35 transition-colors hover:bg-black/5 hover:text-ink"
+        className="flex size-7 shrink-0 items-center justify-center rounded-full text-ink/35 transition-colors hover:bg-soil/5 hover:text-ink"
       >
         <X className="size-3.5" strokeWidth={2.4} />
       </button>
@@ -137,7 +137,7 @@ export const HomeBanners = memo(function HomeBanners() {
           title="Kuota AI-mu menyusut"
           body={
             <span className="flex items-center gap-2">
-              <span className="h-1.5 w-24 overflow-hidden rounded-full bg-black/[0.06]">
+              <span className="h-1.5 w-24 overflow-hidden rounded-full bg-soil/[0.06]">
                 <span
                   className="block h-full rounded-full bg-hud-amber"
                   style={{ width: `${DEMO.aiUsagePct}%` }}

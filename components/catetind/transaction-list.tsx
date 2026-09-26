@@ -7,7 +7,7 @@ interface TransactionListProps {
 
 export function TransactionList({ transactions }: TransactionListProps) {
  if (transactions.length === 0) {
- return <p className="text-center text-gray-500 py-8">Belum ada transaksi</p>
+ return <p className="text-center text-ink/45 py-8">Belum ada transaksi</p>
  }
 
  return (
@@ -16,14 +16,14 @@ export function TransactionList({ transactions }: TransactionListProps) {
  <li key={tx.id} className="rounded-lg border p-3 shadow-sm">
  <div className="flex justify-between">
  <span>{tx.description}</span>
- <span className={cn("font-medium", tx.amount > 0 ? "text-green-600" : "text-red-600")}>
+ <span className={cn("font-medium", tx.amount > 0 ? "text-leaf" : "text-plum")}>
  {tx.amount > 0 ? '+' : '-'}Rp{tx.amount.toLocaleString()}
  </span>
  </div>
  <div className="mt-1">
- <span className="text-xs text-gray-500">{tx.category}</span>
- <span className="text-xs text-gray-400"> • </span>
- <span className="text-xs text-gray-500">{tx.date.toLocaleDateString()}</span>
+ <span className="text-xs text-ink/45">{tx.category}</span>
+ <span className="text-xs text-ink/35"> • </span>
+ <span className="text-xs text-ink/45">{tx.date.toLocaleDateString()}</span>
  </div>
  </li>
  ))}

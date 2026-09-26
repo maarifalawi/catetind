@@ -191,7 +191,7 @@ export function HistoryScreen() {
           halaman (antara insight dan list) sehingga terlihat hanya berlaku
           untuk list di bawahnya. Sekarang dia duduk paling atas & diberi label
           "Filter Global" supaya jelas dia menyaring seluruh layar. */}
-      <section className="mt-5 rounded-[1.75rem] bg-white p-3 shadow-[0_4px_24px_-4px_rgba(18,40,31,0.06)] ring-1 ring-black/5 sm:p-3.5 lg:mt-6">
+      <section className="mt-5 rounded-[1.75rem] bg-cream p-3 shadow-[0_4px_24px_-4px_rgba(80,58,58,0.06)] ring-1 ring-soil/5 sm:p-3.5 lg:mt-6">
         <div className="flex items-center justify-between gap-2 px-1 pb-2">
           <span className="inline-flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-ink/40">
             <SlidersHorizontal className="size-3.5" strokeWidth={2.4} aria-hidden />
@@ -202,7 +202,7 @@ export function HistoryScreen() {
             <button
               type="button"
               onClick={resetFilters}
-              className="inline-flex items-center gap-1 rounded-full bg-cream px-2.5 py-1 text-[11px] font-semibold text-ink/55 ring-1 ring-black/[0.04] transition-colors hover:bg-sage/60 hover:text-ink active:scale-95"
+              className="inline-flex items-center gap-1 rounded-full bg-cream px-2.5 py-1 text-[11px] font-semibold text-ink/55 ring-1 ring-soil/[0.04] transition-colors hover:bg-sage/60 hover:text-ink active:scale-95"
             >
               <RotateCcw className="size-3" strokeWidth={2.4} aria-hidden />
               Reset
@@ -212,7 +212,7 @@ export function HistoryScreen() {
 
         {/* pencarian: placeholder adalah CONTOH PROMPT, bukan "Cari catatan",
             supaya user tahu search-nya bisa bahasa sehari-hari */}
-        <label className="flex h-11 min-w-0 items-center gap-2.5 rounded-full bg-cream/80 px-4 ring-1 ring-inset ring-black/[0.04] transition-shadow focus-within:bg-cream focus-within:ring-2 focus-within:ring-forest/20">
+        <label className="flex h-11 min-w-0 items-center gap-2.5 rounded-full bg-cream/80 px-4 ring-1 ring-inset ring-soil/[0.04] transition-shadow focus-within:bg-cream focus-within:ring-2 focus-within:ring-forest/20">
           <Search className="size-4 shrink-0 text-ink/35" aria-hidden />
           <input
             type="search"
@@ -250,8 +250,8 @@ export function HistoryScreen() {
                 className={cn(
                   'inline-flex shrink-0 items-center gap-1.5 rounded-full py-2 pl-3.5 pr-3 text-[12.5px] font-semibold transition-all duration-200 active:scale-95',
                   active
-                    ? 'bg-forest text-cream shadow-[0_10px_22px_-16px_rgba(16,58,42,0.9)]'
-                    : 'bg-cream text-ink/55 ring-1 ring-black/[0.05] hover:bg-sage/60 hover:text-ink',
+                    ? 'bg-forest text-cream shadow-[0_10px_22px_-16px_rgba(69,89,78,0.9)]'
+                    : 'bg-cream text-ink/55 ring-1 ring-soil/[0.05] hover:bg-sage/60 hover:text-ink',
                 )}
               >
                 {active ? selected?.label : row.label}
@@ -271,7 +271,7 @@ export function HistoryScreen() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: EASE }}
-          className="mt-5 flex items-center gap-2 rounded-[1.6rem] bg-gradient-to-r from-forest to-forest-soft pl-4 pr-2 text-cream ring-1 ring-black/5 lg:mt-6"
+          className="mt-5 flex items-center gap-2 rounded-[1.6rem] bg-gradient-to-r from-forest to-forest-soft pl-4 pr-2 text-cream ring-1 ring-soil/5 lg:mt-6"
         >
           {/* TODO (PRD Domain 3A Habit Loop 2): buka modal Rekap Mingguan
               full-screen 5 slide — sudah tersedia sebagai WeeklyRecapModal */}
@@ -294,7 +294,7 @@ export function HistoryScreen() {
             type="button"
             onClick={() => setRecapDismissed(true)}
             aria-label="Tutup banner rekap mingguan"
-            className="flex size-8 shrink-0 items-center justify-center rounded-full text-cream/60 transition-colors hover:bg-white/10 hover:text-cream"
+            className="flex size-8 shrink-0 items-center justify-center rounded-full text-cream/60 transition-colors hover:bg-cream/10 hover:text-cream"
           >
             <X className="size-3.5" strokeWidth={2.6} />
           </button>
@@ -328,7 +328,7 @@ export function HistoryScreen() {
           baris transaksi dipisah garis tipis — tidak ada kotak di dalam kotak.
           Warna nominal seragam lewat `MONEY_TONE` (hijau masuk · terracotta
           keluar · tinta netral untuk pindah dana). */}
-      <section className="mt-5 rounded-[2rem] bg-white p-5 shadow-[0_4px_24px_-4px_rgba(18,40,31,0.06)] ring-1 ring-black/5 sm:p-6 lg:mt-6">
+      <section className="mt-5 rounded-[2rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(80,58,58,0.06)] ring-1 ring-soil/5 sm:p-6 lg:mt-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <span className="flex size-9 items-center justify-center rounded-full bg-sage text-forest">
@@ -345,7 +345,7 @@ export function HistoryScreen() {
           {/* pill jumlah hanya muncul saat ada filter — di keadaan normal
               subjudul di kiri sudah cukup, jadi tidak ada angka kembar */}
           {(activeFilterCount > 0 || searchQuery) && (
-            <span className="rounded-full bg-cream px-3 py-1.5 text-[11.5px] font-semibold tabular-nums text-ink/60 ring-1 ring-black/5">
+            <span className="rounded-full bg-cream px-3 py-1.5 text-[11.5px] font-semibold tabular-nums text-ink/60 ring-1 ring-soil/5">
               {summary.count} dari {transactions.length}
             </span>
           )}
@@ -359,7 +359,7 @@ export function HistoryScreen() {
             <span key={tone.label} className="inline-flex items-center gap-1.5">
               <span
                 aria-hidden
-                className={cn('size-3 rounded-[4px] ring-1 ring-inset ring-black/[0.06]', tone.dot)}
+                className={cn('size-3 rounded-[4px] ring-1 ring-inset ring-soil/[0.06]', tone.dot)}
               />
               {tone.label}
             </span>
@@ -379,7 +379,7 @@ export function HistoryScreen() {
                   <p className="shrink-0 text-[11px] font-bold uppercase tracking-[0.12em] text-ink/45">
                     {group.label}
                   </p>
-                  <span className="h-px min-w-4 flex-1 bg-black/[0.06]" aria-hidden />
+                  <span className="h-px min-w-4 flex-1 bg-soil/[0.06]" aria-hidden />
                   {group.moved > 0 && (
                     <span className="shrink-0 text-[11px] font-semibold tabular-nums text-ink/40">
                       ⇄ {maskMoney(group.moved, isMasked)}
@@ -399,7 +399,7 @@ export function HistoryScreen() {
                   </span>
                 </div>
 
-                <ul className="mt-0.5 divide-y divide-black/[0.05]">
+                <ul className="mt-0.5 divide-y divide-soil/[0.05]">
                   {group.items.map((tx) => {
                     const delay = 60 + rowIndex++ * 45
                     return (
@@ -431,7 +431,7 @@ export function HistoryScreen() {
           <Drawer.Overlay className="fixed inset-0 z-[70] bg-ink/40" />
           <Drawer.Content
             aria-label={openFilterRow ? `Filter ${openFilterRow.label}` : 'Filter'}
-            className="fixed inset-x-0 bottom-0 z-[70] mx-auto flex max-h-[80vh] w-full max-w-md flex-col rounded-t-[2rem] bg-white shadow-2xl outline-none"
+            className="fixed inset-x-0 bottom-0 z-[70] mx-auto flex max-h-[80vh] w-full max-w-md flex-col rounded-t-[2rem] bg-cream shadow-2xl outline-none"
           >
             <div className="mx-auto mt-3 h-1.5 w-10 shrink-0 rounded-full bg-ink/10" />
 
@@ -489,7 +489,7 @@ export function HistoryScreen() {
           <Drawer.Overlay className="fixed inset-0 z-[70] bg-ink/40" />
           <Drawer.Content
             aria-label="Aksi transaksi"
-            className="fixed inset-x-0 bottom-0 z-[70] mx-auto flex w-full max-w-md flex-col rounded-t-[2rem] bg-white shadow-2xl outline-none"
+            className="fixed inset-x-0 bottom-0 z-[70] mx-auto flex w-full max-w-md flex-col rounded-t-[2rem] bg-cream shadow-2xl outline-none"
           >
             <div className="mx-auto mt-3 h-1.5 w-10 shrink-0 rounded-full bg-ink/10" />
             <div className="px-4 pb-8 pt-4" data-lenis-prevent>
@@ -525,7 +525,7 @@ export function HistoryScreen() {
                 <button
                   type="button"
                   onClick={menuDelete}
-                  className="flex w-full items-center gap-3 rounded-2xl px-3.5 py-3 text-left text-[14px] font-medium text-rose-600 transition-colors hover:bg-rose-50"
+                  className="flex w-full items-center gap-3 rounded-2xl px-3.5 py-3 text-left text-[14px] font-medium text-plum transition-colors hover:bg-plum/15"
                 >
                   <Trash2 className="size-4 shrink-0" strokeWidth={2.2} />
                   Hapus catatan
@@ -572,7 +572,7 @@ function EmptyState({ onReset, hasFilters }: { onReset: () => void; hasFilters: 
     <div className="mt-4 flex flex-col items-center rounded-[1.75rem] border-2 border-dashed border-forest/15 bg-cream/50 px-6 py-12 text-center">
       {/* TODO: ganti dengan ilustrasi empty state yang lucu */}
       <div
-        className="flex size-16 items-center justify-center rounded-2xl border-2 border-dashed border-forest/20 bg-white/60"
+        className="flex size-16 items-center justify-center rounded-2xl border-2 border-dashed border-forest/20 bg-cream/60"
         aria-hidden
       >
         <Sprout className="size-7 text-forest/45" strokeWidth={1.8} />
@@ -595,7 +595,7 @@ function EmptyState({ onReset, hasFilters }: { onReset: () => void; hasFilters: 
           <button
             type="button"
             onClick={onReset}
-            className="inline-flex h-11 items-center rounded-2xl bg-white px-4 text-[13.5px] font-semibold text-ink/70 ring-1 ring-black/5 transition-colors hover:bg-sage/50"
+            className="inline-flex h-11 items-center rounded-2xl bg-cream px-4 text-[13.5px] font-semibold text-ink/70 ring-1 ring-soil/5 transition-colors hover:bg-sage/50"
           >
             Reset
           </button>
@@ -654,9 +654,9 @@ function ConfirmDeleteDialog({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.97, y: 6 }}
         transition={{ duration: 0.24, ease: EASE }}
-        className="relative w-full max-w-sm rounded-[1.75rem] bg-white p-5 shadow-[0_28px_70px_-24px_rgba(16,58,42,0.5)] ring-1 ring-black/5"
+        className="relative w-full max-w-sm rounded-[1.75rem] bg-cream p-5 shadow-[0_28px_70px_-24px_rgba(69,89,78,0.5)] ring-1 ring-soil/5"
       >
-        <span className="flex size-11 items-center justify-center rounded-full bg-rose-50 text-rose-500">
+        <span className="flex size-11 items-center justify-center rounded-full bg-plum/15 text-plum">
           <AlertTriangle className="size-5" strokeWidth={2.2} />
         </span>
         <h2
@@ -675,14 +675,14 @@ function ConfirmDeleteDialog({
             type="button"
             autoFocus
             onClick={onCancel}
-            className="h-11 rounded-2xl bg-cream text-[13.5px] font-semibold text-ink ring-1 ring-black/5 transition-colors hover:bg-sage/60 active:scale-[0.98]"
+            className="h-11 rounded-2xl bg-cream text-[13.5px] font-semibold text-ink ring-1 ring-soil/5 transition-colors hover:bg-sage/60 active:scale-[0.98]"
           >
             Batal
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-rose-500 text-[13.5px] font-semibold text-white transition-colors hover:bg-rose-600 active:scale-[0.98]"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-plum text-[13.5px] font-semibold text-cream transition-colors hover:bg-plum active:scale-[0.98]"
           >
             <Trash2 className="size-4" strokeWidth={2.3} />
             Hapus

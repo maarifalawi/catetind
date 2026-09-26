@@ -120,14 +120,14 @@ export const PERCENT_PRESETS = [
 ] as const
 
 /* ── IDENTITAS ───────────────────────────────────────────────────────────── */
-/* Tint dua orang sengaja diambil dari palet status HUD (sage #A3B18A &
-   amber #DDA15E) supaya warna orang = bahasa warna CatetInd, bukan warna baru. */
+/* Tint dua orang sengaja diambil dari palet status HUD (sage #b5b987 &
+   amber #ffb885) supaya warna orang = bahasa warna CatetInd, bukan warna baru. */
 export const JOINT_ME: JointPerson = {
   id: 'user_a',
   name: 'Jon',
   avatar: '🧑',
-  tint: 'bg-hud-sage/25 text-[#4c5a3a] ring-hud-sage/50',
-  dot: 'bg-hud-sage ring-[#FFFDF7]',
+  tint: 'bg-hud-sage/25 text-[#503a3a] ring-hud-sage/50',
+  dot: 'bg-hud-sage ring-[#fbf6d9]',
   rail: 'border-hud-sage',
 }
 
@@ -135,8 +135,8 @@ export const JOINT_PARTNER: JointPerson = {
   id: 'user_b',
   name: 'Dany',
   avatar: '👩',
-  tint: 'bg-hud-amber/25 text-[#8a5a1f] ring-hud-amber/50',
-  dot: 'bg-hud-amber ring-[#FFFDF7]',
+  tint: 'bg-hud-amber/25 text-[#b89191] ring-hud-amber/50',
+  dot: 'bg-hud-amber ring-[#fbf6d9]',
   rail: 'border-hud-amber',
 }
 

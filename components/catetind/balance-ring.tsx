@@ -42,9 +42,9 @@ export function BalanceRing({
         >
           <defs>
             <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="#103a2a" />
-              <stop offset="55%" stopColor="#3f8a5c" />
-              <stop offset="100%" stopColor="#b7e04b" />
+              <stop offset="0%" stopColor="#45594e" />
+              <stop offset="55%" stopColor="#45594e" />
+              <stop offset="100%" stopColor="#91bb9e" />
             </linearGradient>
           </defs>
           <circle
@@ -52,7 +52,7 @@ export function BalanceRing({
             cy={SIZE / 2}
             r={R}
             fill="none"
-            stroke="#e6efdd"
+            stroke="#ebe4de"
             strokeWidth={STROKE}
           />
           <circle
@@ -83,12 +83,12 @@ export function BalanceRing({
           >
             <defs>
               <linearGradient id="growthFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#b7e04b" stopOpacity="0.4" />
-                <stop offset="100%" stopColor="#b7e04b" stopOpacity="0" />
+                <stop offset="0%" stopColor="#91bb9e" stopOpacity="0.4" />
+                <stop offset="100%" stopColor="#91bb9e" stopOpacity="0" />
               </linearGradient>
               <linearGradient id="growthStroke" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="#3f8a5c" />
-                <stop offset="100%" stopColor="#b7e04b" />
+                <stop offset="0%" stopColor="#45594e" />
+                <stop offset="100%" stopColor="#91bb9e" />
               </linearGradient>
             </defs>
             {/* grid lines */}
@@ -97,7 +97,7 @@ export function BalanceRing({
               y1="14"
               x2="140"
               y2="14"
-              stroke="#12281f"
+              stroke="#503a3a"
               strokeOpacity="0.09"
               strokeDasharray="3 4"
             />
@@ -106,7 +106,7 @@ export function BalanceRing({
               y1="29"
               x2="140"
               y2="29"
-              stroke="#12281f"
+              stroke="#503a3a"
               strokeOpacity="0.09"
               strokeDasharray="3 4"
             />
@@ -127,13 +127,13 @@ export function BalanceRing({
               className="animate-[line-draw_1.2s_cubic-bezier(0.4,0,0.2,1)_both]"
             />
             {/* end point */}
-            <circle cx="138" cy="5" r="5.5" fill="#b7e04b" opacity="0.25" />
+            <circle cx="138" cy="5" r="5.5" fill="#91bb9e" opacity="0.25" />
             <circle
               cx="138"
               cy="5"
               r="2.8"
-              fill="#b7e04b"
-              stroke="#f4f8ef"
+              fill="#91bb9e"
+              stroke="#fbf6d9"
               strokeWidth="1.5"
             />
           </svg>
@@ -163,7 +163,7 @@ export function BalanceRing({
       />
       <div className="absolute -bottom-1 left-1/2 -translate-x-1/2">
         <button
-          className="flex size-14 items-center justify-center rounded-full bg-mint text-forest shadow-[0_12px_28px_-8px_rgba(183,224,75,0.9)] ring-4 ring-cream transition-transform active:translate-y-px"
+          className="flex size-14 items-center justify-center rounded-full bg-mint text-forest shadow-[0_12px_28px_-8px_rgba(145,187,158,0.9)] ring-4 ring-cream transition-transform active:translate-y-px"
           aria-label="Insights"
         >
           <LineChart className="size-5" strokeWidth={2.4} />
@@ -182,7 +182,7 @@ function OrbitButton({
 }) {
   return (
     <button
-      className={`absolute flex size-11 -translate-y-1/2 items-center justify-center rounded-full bg-white text-forest ring-1 ring-black/5 transition-transform active:translate-y-[calc(-50%+1px)] ${className}`}
+      className={`absolute flex size-11 -translate-y-1/2 items-center justify-center rounded-full bg-cream text-forest ring-1 ring-soil/5 transition-transform active:translate-y-[calc(-50%+1px)] ${className}`}
       aria-label="Quick action"
     >
       {icon}

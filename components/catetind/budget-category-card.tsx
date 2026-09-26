@@ -43,10 +43,10 @@ export function BudgetCategoryCard({
     pacing >= 70 ? 'right-0' : pacing <= 30 ? 'left-0' : 'left-1/2 -translate-x-1/2'
 
   return (
-    <article className="rounded-[1.5rem] bg-white p-4 ring-1 ring-black/5 shadow-[0_12px_28px_-24px_rgba(16,58,42,0.5)] transition-shadow duration-300 hover:shadow-[0_18px_34px_-22px_rgba(16,58,42,0.45)]">
+    <article className="rounded-[1.5rem] bg-cream p-4 ring-1 ring-soil/5 shadow-[0_12px_28px_-24px_rgba(69,89,78,0.5)] transition-shadow duration-300 hover:shadow-[0_18px_34px_-22px_rgba(69,89,78,0.45)]">
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2.5">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-2xl bg-sage/70 text-[17px] ring-1 ring-black/[0.04]">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-2xl bg-sage/70 text-[17px] ring-1 ring-soil/[0.04]">
             {budget.icon}
           </span>
           <span className="min-w-0">
@@ -69,7 +69,7 @@ export function BudgetCategoryCard({
         className="group/bar relative mt-3.5"
         onMouseLeave={() => setHintOpen(false)}
       >
-        <div className="h-2 w-full overflow-hidden rounded-full bg-[#e6efdd]">
+        <div className="h-2 w-full overflow-hidden rounded-full bg-[#ebe4de]">
           <div
             className="h-full rounded-full transition-[width] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]"
             style={{ width: `${fill}%`, backgroundColor: PACING_HEX[tone] }}
@@ -87,7 +87,7 @@ export function BudgetCategoryCard({
           onClick={() => setHintOpen((prev) => !prev)}
           onFocus={() => setHintOpen(true)}
           onBlur={() => setHintOpen(false)}
-          className="absolute -bottom-1.5 -top-1.5 w-0.5 -translate-x-1/2 cursor-help rounded-full bg-slate-300/50 transition-colors hover:bg-slate-400/60"
+          className="absolute -bottom-1.5 -top-1.5 w-0.5 -translate-x-1/2 cursor-help rounded-full bg-ink/15 transition-colors hover:bg-ink/20"
           style={{ left: `${pacing}%` }}
         />
 
@@ -95,7 +95,7 @@ export function BudgetCategoryCard({
         <span
           role="tooltip"
           className={cn(
-            'pointer-events-none absolute top-full z-10 mt-2 w-max max-w-[13rem] rounded-xl bg-ink px-2.5 py-1.5 text-[10.5px] font-medium leading-snug text-cream shadow-[0_12px_26px_-14px_rgba(16,58,42,0.7)] transition-opacity duration-200',
+            'pointer-events-none absolute top-full z-10 mt-2 w-max max-w-[13rem] rounded-xl bg-ink px-2.5 py-1.5 text-[10.5px] font-medium leading-snug text-cream shadow-[0_12px_26px_-14px_rgba(69,89,78,0.7)] transition-opacity duration-200',
             hintAnchor,
             hintOpen ? 'opacity-100' : 'opacity-0 group-hover/bar:opacity-100',
           )}
@@ -109,8 +109,8 @@ export function BudgetCategoryCard({
         <p
           className={cn(
             'text-[11.5px] font-medium leading-snug',
-            tone === 'sage' && 'text-[#6f8059]',
-            tone === 'amber' && 'text-[#a06a2c]',
+            tone === 'sage' && 'text-[#b5b987]',
+            tone === 'amber' && 'text-[#b89191]',
             tone === 'terracotta' && 'text-hud-terracotta',
           )}
         >

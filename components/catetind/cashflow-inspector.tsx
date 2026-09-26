@@ -38,12 +38,12 @@ function relativeLabel(cell: CalendarCell) {
   if (cell.daysFromToday > 0) {
     return {
       text: cell.daysFromToday === 1 ? 'Besok' : `${cell.daysFromToday} hari lagi`,
-      className: 'bg-cream text-ink/55 ring-1 ring-inset ring-black/[0.05]',
+      className: 'bg-cream text-ink/55 ring-1 ring-inset ring-soil/[0.05]',
     }
   }
   return {
     text: cell.daysFromToday === -1 ? 'Kemarin' : `${Math.abs(cell.daysFromToday)} hari lalu`,
-    className: 'bg-cream text-ink/45 ring-1 ring-inset ring-black/[0.05]',
+    className: 'bg-cream text-ink/45 ring-1 ring-inset ring-soil/[0.05]',
   }
 }
 
@@ -66,7 +66,7 @@ export function CashflowInspector({
 }) {
   if (!cell) {
     return (
-      <aside className="rounded-[2rem] bg-white p-5 shadow-[0_4px_24px_-4px_rgba(18,40,31,0.06)] ring-1 ring-black/5 lg:sticky lg:top-8">
+      <aside className="rounded-[2rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(80,58,58,0.06)] ring-1 ring-soil/5 lg:sticky lg:top-8">
         <h2 className="font-display text-[18px] font-semibold tracking-tight text-ink">
           Pilih tanggal dulu
         </h2>
@@ -91,7 +91,7 @@ export function CashflowInspector({
   ].filter((part): part is string => part !== null)
 
   return (
-    <aside className="flex flex-col rounded-[2rem] bg-white p-5 shadow-[0_4px_24px_-4px_rgba(18,40,31,0.06)] ring-1 ring-black/5 lg:sticky lg:top-8">
+    <aside className="flex flex-col rounded-[2rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(80,58,58,0.06)] ring-1 ring-soil/5 lg:sticky lg:top-8">
       {/* ── 3A. TANGGAL + RINGKASAN SATU BARIS ───────────────────────────── */}
       <div className="flex items-center justify-between gap-2">
         <span
@@ -152,7 +152,7 @@ export function CashflowInspector({
       <button
         type="button"
         onClick={onAddNote}
-        className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-forest px-4 text-[13px] font-semibold text-mint shadow-[0_16px_34px_-20px_rgba(16,58,42,0.9)] transition-colors hover:bg-forest-soft active:scale-[0.99]"
+        className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-forest px-4 text-[13px] font-semibold text-mint shadow-[0_16px_34px_-20px_rgba(69,89,78,0.9)] transition-colors hover:bg-forest-soft active:scale-[0.99]"
       >
         <Plus className="size-4" strokeWidth={2.8} />
         Tambah Catatan di Tgl {cell.day}
@@ -160,7 +160,7 @@ export function CashflowInspector({
 
 
       {/* ── 3C. DAFTAR TRANSAKSI / RAMALAN ───────────────────────────────── */}
-      <section className="mt-5 border-t border-black/[0.06] pt-4">
+      <section className="mt-5 border-t border-soil/[0.06] pt-4">
         <div className="flex items-center justify-between gap-2">
           <h3 className="text-[11px] font-bold uppercase tracking-[0.12em] text-ink/45">
             {cell.isFuture
@@ -192,7 +192,7 @@ export function CashflowInspector({
         ) : (
           <ul
             data-lenis-prevent
-            className="mt-1 flex max-h-[21rem] flex-col divide-y divide-black/[0.05] overflow-y-auto pr-0.5"
+            className="mt-1 flex max-h-[21rem] flex-col divide-y divide-soil/[0.05] overflow-y-auto pr-0.5"
           >
             {/* ramalan tampil lebih dulu — inilah yang butuh keputusan user */}
             {cell.forecast.map((entry) => (
@@ -234,9 +234,9 @@ export function CashflowInspector({
    dengan legenda di kalender. */
 const ENTRY_CHIP: Record<CalendarEntry['type'], { label: string; className: string }> = {
   income: { label: 'Pemasukan', className: 'text-forest' },
-  fixed_bill: { label: PLANNED_BADGE_LABEL, className: 'text-blue-600' },
+  fixed_bill: { label: PLANNED_BADGE_LABEL, className: 'text-thistle' },
   variable_expense: { label: 'Variabel', className: 'text-hud-terracotta' },
-  money_movement: { label: 'Pindah dana', className: 'text-blue-600' },
+  money_movement: { label: 'Pindah dana', className: 'text-thistle' },
 }
 
 function CashflowEntryRow({
@@ -251,7 +251,7 @@ function CashflowEntryRow({
   masked: boolean
   forecast: boolean
   paid: boolean
-  /** hari itu ditandai boros → nominal variabel ditebalkan terracotta */
+  /** hari itu ditandai boros → nominal variabel ditebalkan plum */
   deficitDay: boolean
   onPay: (entry: CalendarEntry) => void
 }) {
@@ -288,7 +288,7 @@ function CashflowEntryRow({
         {forecast && (
           <span className="mt-2 flex items-center gap-2">
             {paid ? (
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#4c5a3a]">
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#503a3a]">
                 <Check className="size-3" strokeWidth={3} />
                 Sudah ditandai lunas
               </span>
@@ -313,7 +313,7 @@ function CashflowEntryRow({
           isIncome
             ? 'text-forest'
             : isMovement
-              ? 'text-blue-600'
+              ? 'text-thistle'
               : deficitDay
                 ? 'text-hud-terracotta'
                 : 'text-ink/75',

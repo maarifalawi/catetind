@@ -61,7 +61,7 @@ export function AddCalendarNoteSheet({
       description={`Catat pengeluaran atau pemasukan di ${longDateLabel(dateValue)}.`}
     >
       {/* ── field tanggal: terisi otomatis & terkunci ────────────────────── */}
-      <div className="rounded-2xl bg-white px-4 py-3 ring-1 ring-black/[0.06]">
+      <div className="rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/[0.06]">
         <div className="flex items-center justify-between gap-3">
           <span className="flex items-center gap-2 text-[12.5px] font-semibold text-ink">
             <CalendarDays className="size-4 shrink-0 text-forest" strokeWidth={2.3} />
@@ -74,7 +74,7 @@ export function AddCalendarNoteSheet({
               value={dateValue}
               onChange={(event) => setDateValue(event.target.value)}
               aria-label="Tanggal catatan"
-              className="rounded-xl bg-ink/[0.04] px-2.5 py-1.5 text-[12.5px] font-semibold tabular-nums text-ink outline-none ring-1 ring-transparent transition-all focus:bg-white focus:ring-forest/25"
+              className="rounded-xl bg-ink/[0.04] px-2.5 py-1.5 text-[12.5px] font-semibold tabular-nums text-ink outline-none ring-1 ring-transparent transition-all focus:bg-cream focus:ring-forest/25"
             />
           ) : (
             <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-sage px-2.5 py-1 text-[11.5px] font-semibold text-forest">

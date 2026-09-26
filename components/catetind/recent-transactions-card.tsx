@@ -34,7 +34,7 @@ type Transaction = {
 
 type TransactionGroup = {
   label: string
-  /* grup hari ini dapat dot mint berdenyut */
+  /* grup hari ini dapat dot leaf berdenyut */
   live?: boolean
   items: Transaction[]
 }
@@ -44,21 +44,21 @@ const GROUPS: TransactionGroup[] = [
     label: 'Hari ini',
     live: true,
     items: [
-      { icon: Coffee, title: 'Starbucks', category: 'Makanan & Minuman', time: '14:32', amount: '-Rp 85.000', type: 'expense', tile: 'bg-gradient-to-br from-amber-100 to-amber-50 text-amber-600 shadow-[0_8px_16px_-8px_rgba(217,119,6,0.45)] group-hover:shadow-[0_14px_24px_-8px_rgba(217,119,6,0.6)]' },
+      { icon: Coffee, title: 'Starbucks', category: 'Makanan & Minuman', time: '14:32', amount: '-Rp 85.000', type: 'expense', tile: 'bg-gradient-to-br from-cantelope/25 to-cantelope/10 text-cantelope shadow-[0_8px_16px_-8px_rgba(255,184,133,0.45)] group-hover:shadow-[0_14px_24px_-8px_rgba(255,184,133,0.6)]' },
     ],
   },
   {
     label: 'Kemarin',
     items: [
-      { icon: Banknote, title: 'Gaji Bulanan', category: 'Pemasukan', time: '09:00', amount: '+Rp 8.500.000', type: 'income', tile: 'bg-gradient-to-br from-mint/80 to-mint/25 text-forest shadow-[0_8px_16px_-8px_rgba(183,224,75,0.55)] group-hover:shadow-[0_14px_24px_-8px_rgba(183,224,75,0.7)]' },
-      { icon: Car, title: 'Grab', category: 'Transport', time: '08:15', amount: '-Rp 42.000', type: 'expense', tile: 'bg-gradient-to-br from-blue-100 to-blue-50 text-blue-600 shadow-[0_8px_16px_-8px_rgba(37,99,235,0.4)] group-hover:shadow-[0_14px_24px_-8px_rgba(37,99,235,0.55)]' },
+      { icon: Banknote, title: 'Gaji Bulanan', category: 'Pemasukan', time: '09:00', amount: '+Rp 8.500.000', type: 'income', tile: 'bg-gradient-to-br from-mint/80 to-mint/25 text-forest shadow-[0_8px_16px_-8px_rgba(145,187,158,0.55)] group-hover:shadow-[0_14px_24px_-8px_rgba(145,187,158,0.7)]' },
+      { icon: Car, title: 'Grab', category: 'Transport', time: '08:15', amount: '-Rp 42.000', type: 'expense', tile: 'bg-gradient-to-br from-thistle/20 to-thistle/10 text-thistle shadow-[0_8px_16px_-8px_rgba(145,160,184,0.4)] group-hover:shadow-[0_14px_24px_-8px_rgba(145,160,184,0.55)]' },
     ],
   },
   {
     label: '21 Sep',
     items: [
-      { icon: Zap, title: 'Listrik PLN', category: 'Tagihan', time: '19:40', amount: '-Rp 350.000', type: 'expense', tile: 'bg-gradient-to-br from-yellow-100 to-yellow-50 text-yellow-700 shadow-[0_8px_16px_-8px_rgba(202,138,4,0.45)] group-hover:shadow-[0_14px_24px_-8px_rgba(202,138,4,0.6)]' },
-      { icon: ShoppingBag, title: 'Shopee', category: 'Belanja', time: '16:05', amount: '-Rp 275.000', type: 'expense', tile: 'bg-gradient-to-br from-rose-100 to-rose-50 text-rose-500 shadow-[0_8px_16px_-8px_rgba(244,63,94,0.4)] group-hover:shadow-[0_14px_24px_-8px_rgba(244,63,94,0.55)]' },
+      { icon: Zap, title: 'Listrik PLN', category: 'Tagihan', time: '19:40', amount: '-Rp 350.000', type: 'expense', tile: 'bg-gradient-to-br from-daisy/25 to-daisy/10 text-soil shadow-[0_8px_16px_-8px_rgba(255,184,133,0.45)] group-hover:shadow-[0_14px_24px_-8px_rgba(255,184,133,0.6)]' },
+      { icon: ShoppingBag, title: 'Shopee', category: 'Belanja', time: '16:05', amount: '-Rp 275.000', type: 'expense', tile: 'bg-gradient-to-br from-plum/20 to-plum/10 text-plum shadow-[0_8px_16px_-8px_rgba(184,145,145,0.4)] group-hover:shadow-[0_14px_24px_-8px_rgba(184,145,145,0.55)]' },
     ],
   },
 ]
@@ -76,7 +76,7 @@ const OFFSETS: number[] = []
 
 /**
  * Baris transaksi swipeable (tabel gesture Domain 3D):
- * geser KANAN → reveal tombol "Edit" (sage) · geser KIRI → reveal "Hapus" (rose).
+ * geser KANAN → reveal tombol "Edit" (olive) · geser KIRI → reveal "Hapus" (plum).
  * Works via pointer events — mouse drag di desktop & touch di mobile.
  */
 function SwipeRow({
@@ -134,7 +134,7 @@ function SwipeRow({
         type="button"
         aria-label={`Hapus ${tx.title}`}
         onClick={onDelete}
-        className="absolute inset-y-0 right-0 flex w-[84px] flex-col items-center justify-center gap-1 rounded-r-2xl bg-rose-50 text-rose-500 transition-opacity"
+        className="absolute inset-y-0 right-0 flex w-[84px] flex-col items-center justify-center gap-1 rounded-r-2xl bg-plum/15 text-plum transition-opacity"
         style={{ opacity: dx < 0 ? exposed : 0, pointerEvents: dx < -20 ? 'auto' : 'none' }}
       >
         <Trash2 className="size-4" strokeWidth={2.2} />
@@ -162,7 +162,7 @@ function SwipeRow({
         onPointerUp={settle}
         onPointerCancel={settle}
         onClick={onClick}
-        className="group relative flex w-full cursor-pointer touch-pan-y items-center gap-3 rounded-2xl bg-white px-2 py-2.5 text-left outline-none transition-[background,box-shadow,transform] duration-200 animate-[row-in_0.5s_ease_backwards] hover:bg-cream hover:shadow-[0_10px_24px_-14px_rgba(18,40,31,0.35)] focus-visible:bg-cream focus-visible:ring-2 focus-visible:ring-forest/20"
+        className="group relative flex w-full cursor-pointer touch-pan-y items-center gap-3 rounded-2xl bg-cream px-2 py-2.5 text-left outline-none transition-[background,box-shadow,transform] duration-200 animate-[row-in_0.5s_ease_backwards] hover:bg-cream hover:shadow-[0_10px_24px_-14px_rgba(80,58,58,0.35)] focus-visible:bg-cream focus-visible:ring-2 focus-visible:ring-forest/20"
         style={{
           transform: `translateX(${dx}px)`,
           transitionDuration: dragging ? '0ms' : undefined,
@@ -181,12 +181,12 @@ function SwipeRow({
             {/* kilau atas ala kaca */}
             <span
               aria-hidden
-              className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/60 to-transparent"
+              className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-cream/60 to-transparent"
             />
             {/* shine sweep saat hover */}
             <span
               aria-hidden
-              className="absolute inset-0 -translate-x-[110%] skew-x-12 bg-gradient-to-r from-transparent via-white/70 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-[110%]"
+              className="absolute inset-0 -translate-x-[110%] skew-x-12 bg-gradient-to-r from-transparent via-cream/70 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-[110%]"
             />
             <tx.icon
               className="relative size-5 drop-shadow-sm transition-transform duration-300 group-hover:scale-110"
@@ -196,8 +196,8 @@ function SwipeRow({
           {/* badge arah — masuk ↙ mint solid, keluar ↗ rose solid */}
           <span
             className={cn(
-              'absolute -bottom-1 -right-1 flex size-5 items-center justify-center rounded-full shadow-sm ring-2 ring-white transition-transform duration-300 animate-[fade-pop_0.4s_ease_backwards] group-hover:scale-110',
-              tx.type === 'income' ? 'bg-mint text-forest' : 'bg-rose-400 text-white',
+              'absolute -bottom-1 -right-1 flex size-5 items-center justify-center rounded-full shadow-sm ring-2 ring-cream transition-transform duration-300 animate-[fade-pop_0.4s_ease_backwards] group-hover:scale-110',
+              tx.type === 'income' ? 'bg-mint text-forest' : 'bg-plum text-cream',
             )}
             style={{ animationDelay: `${delay + 280}ms` }}
           >
@@ -270,7 +270,7 @@ export const RecentTransactionsCard = memo(function RecentTransactionsCard() {
   })()
 
   return (
-    <div className="flex flex-col rounded-[2rem] bg-white p-6 ring-1 ring-black/5">
+    <div className="flex flex-col rounded-[2rem] bg-cream p-6 ring-1 ring-soil/5">
       {/* header — konsisten dengan kartu lain */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2.5">
@@ -327,7 +327,7 @@ export const RecentTransactionsCard = memo(function RecentTransactionsCard() {
                     <span className="relative inline-flex size-1.5 rounded-full bg-mint" />
                   </span>
                 )}
-                <span className="h-px flex-1 bg-black/5" />
+                <span className="h-px flex-1 bg-soil/5" />
               </div>
 
               <ul className="mt-1.5 flex flex-col gap-0.5">

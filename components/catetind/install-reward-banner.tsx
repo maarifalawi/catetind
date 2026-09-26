@@ -29,11 +29,11 @@ export function InstallRewardBanner({ className }: { className?: string }) {
           </h2>
 
           <ul className="mt-4 grid gap-2.5 sm:grid-cols-2">
-            <li className="flex items-center gap-2.5 rounded-2xl bg-white/10 px-3.5 py-3 ring-1 ring-white/10">
+            <li className="flex items-center gap-2.5 rounded-2xl bg-cream/10 px-3.5 py-3 ring-1 ring-cream/10">
               <span className="text-base">💚</span>
               <span className="text-sm font-medium">+100 Nyawa AI gratis</span>
             </li>
-            <li className="flex items-center gap-2.5 rounded-2xl bg-white/10 px-3.5 py-3 ring-1 ring-white/10">
+            <li className="flex items-center gap-2.5 rounded-2xl bg-cream/10 px-3.5 py-3 ring-1 ring-cream/10">
               <span className="text-base">🪴</span>
               <span className="text-sm font-medium">Skin Pot Emas untuk Tanamanmu</span>
             </li>

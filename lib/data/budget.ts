@@ -190,9 +190,9 @@ export const PRIORITY_OPTIONS: {
   badge: string
   dot: string
 }[] = [
-  { id: 'rendah', label: 'Rendah', badge: 'bg-slate-100 text-slate-600 ring-1 ring-slate-400/20', dot: 'bg-slate-400' },
-  { id: 'sedang', label: 'Sedang', badge: 'bg-hud-sage/20 text-[#6f8059] ring-1 ring-hud-sage/30', dot: 'bg-hud-sage' },
-  { id: 'tinggi', label: 'Tinggi', badge: 'bg-hud-amber/20 text-[#a06a2c] ring-1 ring-hud-amber/30', dot: 'bg-hud-amber' },
+  { id: 'rendah', label: 'Rendah', badge: 'bg-oat text-ink/55 ring-1 ring-ink/20', dot: 'bg-ink/20' },
+  { id: 'sedang', label: 'Sedang', badge: 'bg-hud-sage/20 text-[#b5b987] ring-1 ring-hud-sage/30', dot: 'bg-hud-sage' },
+  { id: 'tinggi', label: 'Tinggi', badge: 'bg-hud-amber/20 text-[#b89191] ring-1 ring-hud-amber/30', dot: 'bg-hud-amber' },
   { id: 'kritis', label: 'Kritis', badge: 'bg-hud-terracotta/15 text-hud-terracotta ring-1 ring-hud-terracotta/25', dot: 'bg-hud-terracotta' },
 ]
 
@@ -233,9 +233,9 @@ export function plantStageFrom(current: number, target: number): PlantStage {
 /* ── SUMBER DOMPET untuk setoran (mock — disamakan dengan halaman Dompet) ───
    Tile berwarna brand supaya pemilih dompet terasa hidup, bukan dropdown abu-abu. */
 export const WALLET_SOURCES: { id: string; name: string; kind: string; tile: string; dot: string }[] = [
-  { id: 'bca', name: 'BCA', kind: 'Bank', tile: 'bg-blue-50 text-blue-600 ring-blue-500/15', dot: 'bg-blue-500' },
-  { id: 'gopay', name: 'GoPay', kind: 'E-Wallet', tile: 'bg-teal-50 text-teal-600 ring-teal-500/15', dot: 'bg-teal-500' },
-  { id: 'tunai', name: 'Tunai', kind: 'Uang cash', tile: 'bg-amber-50 text-amber-600 ring-amber-500/15', dot: 'bg-amber-500' },
+  { id: 'bca', name: 'BCA', kind: 'Bank', tile: 'bg-thistle/15 text-thistle ring-thistle/15', dot: 'bg-thistle' },
+  { id: 'gopay', name: 'GoPay', kind: 'E-Wallet', tile: 'bg-leaf/15 text-evergreen ring-leaf/15', dot: 'bg-leaf' },
+  { id: 'tunai', name: 'Tunai', kind: 'Uang cash', tile: 'bg-cantelope/15 text-cantelope ring-cantelope/15', dot: 'bg-cantelope' },
 ]
 
 /* ── COPY TETAP (social proof & nudge) ───────────────────────────────────── */
@@ -272,9 +272,9 @@ export function pacingPercent(currentDay = CURRENT_DAY, daysInMonth = DAYS_IN_MO
 
 /** hex warna bar progres kategori — tiga warna kanon Daily HUD (PRD 2B.2) */
 export const PACING_HEX: Record<PacingTone, string> = {
-  sage: '#a3b18a',
-  amber: '#dda15e',
-  terracotta: '#bc6c25',
+  sage: '#b5b987',
+  amber: '#ffb885',
+  terracotta: '#b89191',
 }
 
 /** warna + copy status pacing sebuah kategori (nominal ikut mode privasi) */

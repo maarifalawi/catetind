@@ -20,7 +20,7 @@ export interface Wallet {
  * Bentuk dompet untuk halaman Dompet & Akun (`/wallet`).
  *
  * Beda dengan `Wallet` (yang dipakai deck kartu Home): di sini `color` adalah
- * kelas latar Tailwind utuh (mis. `'bg-blue-600'`) supaya kartu bisa diwarnai
+ * kelas latar Tailwind utuh (mis. `'bg-thistle'`) supaya kartu bisa diwarnai
  * langsung dari data tanpa lookup map — dan `id` berupa number karena state
  * halaman ini murni mock lokal.
  */
@@ -34,21 +34,21 @@ export interface WalletAccount {
    *  bikin kartunya terasa seperti kartu asli, bukan kotak saldo */
   number?: string
   /**
-   * Kelas GRADIEN aksen Tailwind (mis. `'bg-gradient-to-r from-mint-soft to-mint'`).
+   * Kelas GRADIEN aksen Tailwind (mis. `'bg-gradient-to-r from-[#dbe4c7] to-[#91bb9e]'`).
    *
    * Dipakai untuk halo cahaya di belakang kartu, segmen bar komposisi di hero, dan
    * titik legenda. Sengaja gradien — bukan warna solid — supaya aksennya lembut,
-   * tidak "blok warna" keras; semuanya tetap di palet brand (mint, sakura-sage,
-   * amber–terracotta dari palet status HUD) supaya nyambung dengan halaman lain.
+   * tidak "blok warna" keras; semuanya tetap di palet kanon (Olive, Leaf, Thistle,
+   * Plum, Cantelope, Daisy). Rujukan: docs/theme/PALETTE.md
    */
   color: string
   /**
-   * Kelas gradien MUKA kartu (mis. `'bg-gradient-to-br from-[#43c08a] via-[#17543c] to-[#06231a]'`).
+   * Kelas gradien MUKA kartu (mis. `'bg-gradient-to-br from-[#91bb9e] via-[#52685c] to-[#161c19]'`).
    *
-   * Palet: forest emerald (bank), deep teal (e-wallet), amber–terracotta (tunai) —
-   * satu keluarga dengan hero Dompet & Akun dan deck kartu di Home. Aturan penting:
-   * stop TERAKHIR selalu gelap (near-black bernuansa sama) supaya nama & saldo putih
-   * tetap kontras di atasnya.
+   * Resep kanon: stop PERTAMA = warna aksen palet, stop TERAKHIR selalu shade
+   * gelap dari aksen yang sama (×0.45 → ×0.32) supaya nama & saldo putih tetap
+   * kontras di atasnya. Satu dompet = satu keluarga warna palet, jadi seluruh
+   * deck kartu terasa satu sistem, bukan kumpulan warna acak.
    */
   face: string
   /** motif aksen muka kartu — sama seperti deck di Home, jadi tiap kartu punya
@@ -81,10 +81,10 @@ export const INITIAL_WALLET_ACCOUNTS: WalletAccount[] = [
     type: 'Bank',
     number: '•••• 0849',
     balance: 1_450_000,
-    /* aksen & muka kartu sengaja diambil dari palet brand (forest–mint),
-       bukan merah muda: satu keluarga dengan hero & halaman lain */
-    color: 'bg-gradient-to-r from-mint-soft to-mint',
-    face: 'bg-gradient-to-br from-[#43c08a] via-[#17543c] to-[#06231a]', // forest emerald
+    /* aksen & muka kartu diambil dari palet kanon (Evergreen family),
+       satu keluarga dengan hero & halaman lain — lihat docs/theme/PALETTE.md */
+    color: 'bg-gradient-to-r from-[#c4c7af] to-[#45594e]',
+    face: 'bg-gradient-to-br from-[#52685c] via-[#45594e] to-[#161c19]', // evergreen → gelap
     art: 'parang',
   },
   {
@@ -93,8 +93,8 @@ export const INITIAL_WALLET_ACCOUNTS: WalletAccount[] = [
     type: 'E-Wallet',
     number: '•••• 2210',
     balance: 350_000,
-    color: 'bg-gradient-to-r from-[#a7ded1] to-[#0f766e]',
-    face: 'bg-gradient-to-br from-[#2dd4bf] via-[#0d6e63] to-[#04211f]', // deep teal
+    color: 'bg-gradient-to-r from-[#dbe4c7] to-[#91bb9e]',
+    face: 'bg-gradient-to-br from-[#91bb9e] via-[#52685c] to-[#161c19]', // leaf → gelap
     art: 'mendung',
   },
   {
@@ -105,8 +105,8 @@ export const INITIAL_WALLET_ACCOUNTS: WalletAccount[] = [
        varian muka kartu Tunai memakai ilustrasi tumpukan uang, bukan
        chip EMV / contactless / nomor akun */
     balance: 50_000,
-    color: 'bg-gradient-to-r from-hud-amber to-hud-terracotta',
-    face: 'bg-gradient-to-br from-[#e8bd7f] via-[#b06a27] to-[#3a1d06]', // amber → terracotta
+    color: 'bg-gradient-to-r from-[#e6e4c0] to-[#b5b987]',
+    face: 'bg-gradient-to-br from-[#b5b987] via-[#51533d] to-[#241a1a]', // olive → gelap
     art: 'kawung',
   },
 ]
@@ -136,9 +136,9 @@ export const INITIAL_WALLETS: Wallet[] = [
     number: '•••• 0849',
     network: 'VISA',
     balance: 2500000,
-    bandClass: 'from-[#bfe3f7] via-[#dcf0fc] to-[#a8d5f2]',
-    faceClass: 'from-[#3b82f6] via-[#1d4ed8] to-[#172554]',
-    glowClass: 'bg-cyan-300/25',
+    bandClass: 'from-[#c4c7af] via-[#fbf6d9] to-[#c4c7af]',
+    faceClass: 'from-[#52685c] via-[#45594e] to-[#161c19]', // evergreen
+    glowClass: 'bg-evergreen/25',
     art: 'parang',
     kind: 'bank',
     context: 'pribadi',
@@ -150,9 +150,9 @@ export const INITIAL_WALLETS: Wallet[] = [
     number: '•••• 2210',
     network: 'E-WALLET',
     balance: 1309573,
-    bandClass: 'from-[#b5ebe1] via-[#d3f6ef] to-[#9fe0d4]',
-    faceClass: 'from-[#22d3ee] via-[#0891b2] to-[#083344]',
-    glowClass: 'bg-teal-200/30',
+    bandClass: 'from-[#dbe4c7] via-[#fbf6d9] to-[#dbe4c7]',
+    faceClass: 'from-[#91bb9e] via-[#52685c] to-[#161c19]', // leaf
+    glowClass: 'bg-leaf/25',
     art: 'mendung',
     kind: 'ewallet',
     context: 'pribadi',
@@ -164,9 +164,9 @@ export const INITIAL_WALLETS: Wallet[] = [
     number: 'Uang cash',
     network: 'TUNAI',
     balance: 500000,
-    bandClass: 'from-sage via-cream to-sage',
-    faceClass: 'from-[#34d399] via-[#059669] to-[#022c22]',
-    glowClass: 'bg-lime-300/25',
+    bandClass: 'from-[#e6e4c0] via-[#fbf6d9] to-[#e6e4c0]',
+    faceClass: 'from-[#b5b987] via-[#51533d] to-[#241a1a]', // olive
+    glowClass: 'bg-olive/30',
     art: 'kawung',
     kind: 'cash',
     context: 'keluarga',
@@ -182,9 +182,9 @@ export const WALLET_POOL: Wallet[] = [
     number: '•••• 5566',
     network: 'E-WALLET',
     balance: 750000,
-    bandClass: 'from-[#e4d8f8] via-[#f0e9fc] to-[#d5c3f3]',
-    faceClass: 'from-[#a78bfa] via-[#7c3aed] to-[#2e1065]',
-    glowClass: 'bg-fuchsia-300/25',
+    bandClass: 'from-[#e7d8c3] via-[#fbf6d9] to-[#e7d8c3]',
+    faceClass: 'from-[#b89191] via-[#534141] to-[#241a1a]', // plum
+    glowClass: 'bg-plum/30',
     art: 'rings',
     kind: 'ewallet',
     context: 'keluarga',
@@ -196,9 +196,9 @@ export const WALLET_POOL: Wallet[] = [
     number: '•••• 8890',
     network: 'E-WALLET',
     balance: 425000,
-    bandClass: 'from-[#a9d6fb] via-[#cbe7fd] to-[#93c9f8]',
-    faceClass: 'from-[#38bdf8] via-[#0284c7] to-[#082f49]',
-    glowClass: 'bg-sky-200/30',
+    bandClass: 'from-[#dbdccf] via-[#fbf6d9] to-[#dbdccf]',
+    faceClass: 'from-[#91a0b8] via-[#414853] to-[#161c19]', // thistle
+    glowClass: 'bg-thistle/25',
     art: 'mendung',
     kind: 'ewallet',
     context: 'bersama',
@@ -210,9 +210,9 @@ export const WALLET_POOL: Wallet[] = [
     number: '•••• 7712',
     network: 'DEBIT',
     balance: 5250000,
-    bandClass: 'from-[#fbe9a8] via-[#fdf3c9] to-[#f6dd85]',
-    faceClass: 'from-[#fbbf24] via-[#d97706] to-[#451a03]',
-    glowClass: 'bg-yellow-200/30',
+    bandClass: 'from-[#f6edb7] via-[#fbf6d9] to-[#f6edb7]',
+    faceClass: 'from-[#ecd768] via-[#6a612f] to-[#241a1a]', // daisy
+    glowClass: 'bg-daisy/30',
     art: 'parang',
     kind: 'bank',
     context: 'bersama',
@@ -224,9 +224,9 @@ export const WALLET_POOL: Wallet[] = [
     number: '•••• 3345',
     network: 'VISA',
     balance: 1100000,
-    bandClass: 'from-[#ffd9b8] via-[#ffe9d4] to-[#ffc994]',
-    faceClass: 'from-[#fb923c] via-[#ea580c] to-[#431407]',
-    glowClass: 'bg-orange-200/30',
+    bandClass: 'from-[#fbe3c0] via-[#fbf6d9] to-[#fbe3c0]',
+    faceClass: 'from-[#ffb885] via-[#73533c] to-[#241a1a]', // cantelope
+    glowClass: 'bg-cantelope/25',
     art: 'kawung',
     kind: 'bank',
     context: 'bersama',

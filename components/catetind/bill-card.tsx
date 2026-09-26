@@ -134,7 +134,7 @@ export function BillCard({
           setDx(0)
           onMarkPaid(bill)
         }}
-        className="absolute inset-y-1 left-0 flex w-[116px] flex-col items-center justify-center gap-1 rounded-2xl bg-hud-sage text-[#2f3d24] transition-opacity focus-visible:z-20 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-forest/40"
+        className="absolute inset-y-1 left-0 flex w-[116px] flex-col items-center justify-center gap-1 rounded-2xl bg-hud-sage text-[#503a3a] transition-opacity focus-visible:z-20 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-forest/40"
         style={{ opacity: dx > 0 ? exposed : 0, pointerEvents: dx > 24 ? 'auto' : 'none' }}
       >
         <Check className="size-4" strokeWidth={2.8} />
@@ -154,7 +154,7 @@ export function BillCard({
             setDx(0)
             onEdit(bill)
           }}
-          className="flex w-[82px] flex-col items-center justify-center gap-1 rounded-2xl bg-hud-amber text-[#5a3208] focus-visible:z-20 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-forest/40"
+          className="flex w-[82px] flex-col items-center justify-center gap-1 rounded-2xl bg-hud-amber text-[#503a3a] focus-visible:z-20 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-forest/40"
         >
           <Pencil className="size-4" strokeWidth={2.4} />
           <span className="text-[10px] font-bold">Edit</span>
@@ -184,11 +184,11 @@ export function BillCard({
         onClick={onClick}
         aria-label={`${bill.name}, ${maskMoney(bill.amount, masked)}. ${due.text}.`}
         className={cn(
-          'group relative flex w-full cursor-pointer touch-pan-y items-center gap-3 rounded-2xl bg-white px-3.5 py-3 text-left outline-none',
+          'group relative flex w-full cursor-pointer touch-pan-y items-center gap-3 rounded-2xl bg-cream px-3.5 py-3 text-left outline-none',
           'transition-[background-color,box-shadow,opacity] duration-200 animate-[row-in_0.5s_ease_backwards]',
           paid
             ? 'opacity-75 ring-1 ring-inset ring-hud-sage/25'
-            : 'ring-1 ring-inset ring-black/[0.04] hover:bg-cream',
+            : 'ring-1 ring-inset ring-soil/[0.04] hover:bg-cream',
           highlighted && 'bg-sage/35 ring-2 ring-forest/45',
         )}
         style={{
@@ -248,7 +248,7 @@ export function BillCard({
             </span>
           )}
           {status === 'due_today' && (
-            <span className="rounded-full bg-hud-amber/20 px-2 py-0.5 text-[10px] font-bold text-[#a06a2c] ring-1 ring-inset ring-hud-amber/30">
+            <span className="rounded-full bg-hud-amber/20 px-2 py-0.5 text-[10px] font-bold text-[#b89191] ring-1 ring-inset ring-hud-amber/30">
               Hari Ini
             </span>
           )}
@@ -287,7 +287,7 @@ function LunasStamp({ variant }: { variant: 'fresh' | 'settled' }) {
                 opacity: 1,
                 scale: [0, 1.1, 1],
                 rotate: -15,
-                boxShadow: ['0 0 0 0 rgba(163,177,138,0.55)', '0 0 0 12px rgba(163,177,138,0)'],
+                boxShadow: ['0 0 0 0 rgba(181,185,135,0.55)', '0 0 0 12px rgba(181,185,135,0)'],
               }
             : { opacity: 0.18, scale: 1, rotate: -15 }
         }
@@ -296,7 +296,7 @@ function LunasStamp({ variant }: { variant: 'fresh' | 'settled' }) {
           'relative block select-none rounded-md border-2 border-hud-sage px-2 py-0.5 font-display text-[13px] font-black uppercase leading-tight tracking-[0.22em] text-hud-sage',
           /* tepi kasar ala stempel karet: garis dalam putus-putus + tekstur tinta */
           'after:absolute after:inset-[2.5px] after:rounded-[3px] after:border after:border-dashed after:border-hud-sage/45',
-          '[background-image:radial-gradient(rgba(163,177,138,0.28)_0.6px,transparent_0.9px)] [background-size:4px_4px]',
+          '[background-image:radial-gradient(rgba(181,185,135,0.28)_0.6px,transparent_0.9px)] [background-size:4px_4px]',
         )}
       >
         LUNAS

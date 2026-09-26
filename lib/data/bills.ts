@@ -356,7 +356,7 @@ export function burnTone(
     return {
       tone: 'sage',
       copy: 'Beban tetapmu ringan. Banyak ruang buat nabung! 🌿',
-      textClass: 'text-[#5c6b47]',
+      textClass: 'text-[#503a3a]',
       panelClass: 'bg-hud-sage/15 ring-hud-sage/25',
     }
   }
@@ -364,7 +364,7 @@ export function burnTone(
     return {
       tone: 'amber',
       copy: 'Lumayan padat. Ada yang bisa dipangkas? 🌤️',
-      textClass: 'text-[#a06a2c]',
+      textClass: 'text-[#b89191]',
       panelClass: 'bg-hud-amber/15 ring-hud-amber/25',
     }
   }
