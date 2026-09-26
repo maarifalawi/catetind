@@ -1,18 +1,17 @@
 import type { Metadata } from 'next'
 import { PhoneStage } from '@/components/catetind/phone-stage'
+import { BudgetScreen } from '@/components/catetind/budget-screen'
 
 export const metadata: Metadata = {
   title: 'Budget & Target — CatetInd',
+  description:
+    'Atur limit pengeluaran per kategori dan tumbuhkan celengan impian: jatah harian, pacing ideal, sapu bersih sisa budget, dan sinking fund dengan metafora tanaman.',
 }
 
 export default function BudgetPage() {
   return (
     <PhoneStage>
-      <main className="flex min-h-screen items-center justify-center px-5 pb-32 pt-6">
-        <h1 className="text-3xl font-semibold tracking-tight text-ink">
-          Budget & Target Nabung
-        </h1>
-      </main>
+      <BudgetScreen />
     </PhoneStage>
   )
 }

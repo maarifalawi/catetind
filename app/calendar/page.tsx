@@ -1,18 +1,17 @@
 import type { Metadata } from 'next'
 import { PhoneStage } from '@/components/catetind/phone-stage'
+import { CashflowCalendarScreen } from '@/components/catetind/cashflow-calendar-screen'
 
 export const metadata: Metadata = {
   title: 'Kalender Cashflow — CatetInd',
+  description:
+    'Peta kebiasaan belanja harian: heatmap bulan yang memisahkan belanja impulsif dari tagihan terjadwal, plus siklus gajian yang mengikuti tanggal gajimu.',
 }
 
 export default function CalendarPage() {
   return (
     <PhoneStage>
-      <main className="flex min-h-screen items-center justify-center px-5 pb-32 pt-6">
-        <h1 className="text-3xl font-semibold tracking-tight text-ink">
-          Kalender Cashflow
-        </h1>
-      </main>
+      <CashflowCalendarScreen />
     </PhoneStage>
   )
 }

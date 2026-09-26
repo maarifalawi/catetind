@@ -9,7 +9,7 @@ export default function MorePage() {
   return (
     <PhoneStage>
       <main className="flex min-h-screen items-center justify-center px-5 pb-32 pt-6">
-        <h1 className="text-3xl font-semibold tracking-tight text-ink">Lainnya</h1>
+        <h1 className="font-display text-3xl font-semibold tracking-tight text-ink lg:text-4xl">Lainnya</h1>
       </main>
     </PhoneStage>
   )

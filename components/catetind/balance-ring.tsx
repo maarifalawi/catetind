@@ -1,4 +1,7 @@
+'use client'
+
 import { BarChart3, DollarSign, LineChart, Users } from 'lucide-react'
+import { usePrivacy } from './privacy-provider'
 
 const SIZE = 240
 const STROKE = 12
@@ -9,7 +12,26 @@ const PROGRESS = 0.72
 const GROWTH_PATH =
   'M2 36 C 12 30, 20 35, 32 27 S 52 31, 64 21 S 88 25, 102 15 S 126 13, 138 5'
 
-export function BalanceRing() {
+/**
+ * Donat saldo di panel "Your Balance Overview".
+ *
+ * `amount` + `caption` dikirim dari kartu yang sedang dipencet user di deck
+ * dompet (kartu BCA → saldo BCA, kartu GoPay → saldo GoPay). Kartu "Semua
+ * Dompet" mengirim total gabungan. Angka akan pop tiap kali nilainya berubah.
+ */
+export function BalanceRing({
+  amount = 4309573,
+  caption = 'Total saldo',
+  trend = '-27%',
+}: {
+  /** saldo yang ditampilkan di tengah donat (Rp) */
+  amount?: number
+  /** label kecil di bawah nominal — nama dompet atau "Total saldo" */
+  caption?: string
+  /** badge persentase (mock) di bawah caption */
+  trend?: string
+} = {}) {
+  const { money } = usePrivacy()
   return (
     <div className="relative mx-auto w-full max-w-[280px]">
       <div className="relative aspect-square">
@@ -116,13 +138,19 @@ export function BalanceRing() {
             />
           </svg>
           <div className="flex items-center gap-1.5">
-            <span className="text-2xl font-semibold tracking-tight text-ink tabular-nums">
-              Rp 4.309.573
+            {/* key={amount} → elemen remount & animasi pop terputar ulang tiap
+                kali kartu yang dipencet berganti, jadi mata user langsung
+                tertuju ke saldo dompet yang baru dipilih */}
+            <span
+              key={amount}
+              className="animate-[fade-pop_0.4s_ease-out] text-2xl font-semibold tracking-tight text-ink tabular-nums"
+            >
+              {money(amount)}
             </span>
           </div>
-          <span className="mt-0.5 text-xs text-ink/45">Saldo</span>
+          <span className="mt-0.5 max-w-[9.5rem] truncate text-xs text-ink/45">{caption}</span>
           <span className="mt-2 rounded-full bg-forest px-2 py-0.5 text-[10px] font-semibold text-mint">
-            -27%
+            {trend}
           </span>
         </div>
       </div>

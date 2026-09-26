@@ -1,13 +1,59 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
+/* CSS wajib Lenis (smooth scroll global) — mengatur tinggi wrapper, area yang
+   di-prevent (data-lenis-prevent), dan kunci overflow saat instance di-stop */
+@import 'lenis/dist/lenis.css';
 
 @custom-variant dark (&:is(.dark *));
 
+/* ── TIPOGRAFI — HANYA DUA FONT DI SELURUH SISTEM ────────────────────────────
+   1. Inter             → teks/body  → utility `font-sans` (+ default <body>)
+   2. Plus Jakarta Sans → judul, angka besar & metrik → utility `font-display`
+
+   Keduanya dimuat `next/font/google` di app/layout.tsx dan ikut di-self-host
+   saat build, jadi TIDAK ada `@font-face` manual di file ini, tidak ada
+   request ke CDN font saat runtime, dan tidak ada layout shift.
+
+   Kenapa Plus Jakarta Sans menggantikan 'SF Pro Display' yang dulu ada di
+   slot `--font-display` lewat `@font-face` + `src: local(...)`:
+     • `local(...)` hanya menyala di perangkat Apple, jadi mayoritas pengguna
+       CatetInd (Android) tidak pernah melihat SF Pro dan otomatis jatuh ke
+       Inter — slot display praktis kosong.
+     • File resmi SF Pro TIDAK boleh di-self-host: lisensi Apple membatasi
+       penggunaannya untuk aplikasi yang berjalan di platform Apple.
+     • Plus Jakarta Sans = typeface buatan Tokotype untuk identitas visual
+       kota Jakarta, jadi merek ini punya akar tipografi Indonesia, dan
+       filenya legal untuk kami hosting sendiri.
+
+   Catatan bobot: Plus Jakarta Sans mentok di 800 (ExtraBold), sementara
+   judul/metrik di app ini banyak menulis `font-black` (900). Browser
+   menge-clamp permintaan 900 ke bobot 800 yang tersedia — ini sengaja
+   dibiarkan supaya tidak perlu menyunting puluhan kelas, dan secara visual
+   tetap terbaca sebagai bobot paling tebal.
+
+   ── RESEP JUDUL HALAMAN (H1) — SATU RESEP UNTUK SEMUA HALAMAN ──────────────
+   Sebelumnya tiap halaman menulis resepnya sendiri: ada yang `font-black`
+   26px, ada yang lupa `font-display` sama sekali sehingga H1-nya jatuh ke
+   Inter sementara halaman lain memakai Plus Jakarta Sans — judul antar
+   halaman jadi terasa beda font. Resep kanonik (dipakai Dashboard, Riwayat &
+   Insight, Tagihan Rutin, Budget & Target, Pengaturan + sub-halaman,
+   Kalender, Bantuan, Lainnya, Ajak Teman, Panduan Install, Overview):
+
+     font-display text-3xl font-semibold tracking-tight text-ink lg:text-4xl
+
+   Semibold — BUKAN font-black — supaya konsisten dengan arah visual
+   "headline iOS" di components/catetind/onboarding-ui.tsx.
+   Header kompak 19–22px (Dompet & Akun, Kekayaan & Hutang, Joint) adalah
+   tier terpisah yang memang lebih kecil karena berdampingan dengan tombol
+   back, jadi resep di atas tidak berlaku untuknya. */
+
 @theme inline {
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-jakarta: var(--font-plus-jakarta), ui-sans-serif, system-ui, sans-serif;
-  --font-yaldevi: var(--font-yaldevi-colombo), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-jakarta), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  /* animasi panah panduan install iOS — token @theme supaya utility-nya tetap
+     bisa dimatikan lewat varian motion-reduce:animate-none */
+  --animate-install-arrow-bounce: install-arrow-bounce 1.5s ease-in-out infinite;
   --color-brand: #b7e04b;
   --color-forest: #103a2a;
   --color-forest-soft: #17543c;
@@ -16,6 +62,10 @@
   --color-sage: #e3edd8;
   --color-cream: #f4f8ef;
   --color-ink: #12281f;
+  /* palet status Daily HUD — kanon PRD Domain 2B.2 (BUKAN merah untuk over-budget) */
+  --color-hud-sage: #a3b18a;
+  --color-hud-amber: #dda15e;
+  --color-hud-terracotta: #bc6c25;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -195,6 +245,52 @@
   background: rgb(16 58 42 / 0.32);
 }
 
+/* kontainer gulir horizontal (deret ghost card "Tambah Dompet Cepat" di
+   halaman Dompet & Akun) — scrollbar disembunyikan supaya tepi kartu tidak
+   terpotong garis; gulir tetap jalan lewat swipe jari / trackpad. Dipakai
+   bersama `snap-x snap-mandatory` sehingga kartu berhenti rapi di tepi. */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* kilau berjalan di bar progres "Progress to Unlock" (Riwayat & Insight) —
+   garis cahaya tipis menyapu dari kiri ke kanan supaya progres yang belum
+   selesai terasa hidup & bikin penasaran. Dipakai via `.progress-shimmer`
+   (posisi absolut di dalam isi bar). */
+.progress-shimmer {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  pointer-events: none;
+  background-image: linear-gradient(
+    100deg,
+    transparent 20%,
+    rgb(255 255 255 / 0.55) 45%,
+    transparent 70%
+  );
+  background-size: 220% 100%;
+  animation: shimmer-sweep 2.4s linear infinite;
+}
+
+@keyframes shimmer-sweep {
+  from {
+    background-position: 160% 0;
+  }
+  to {
+    background-position: -60% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress-shimmer {
+    animation: none;
+  }
+}
+
 @keyframes bar-grow {
   from {
     transform: scaleY(0);
@@ -255,6 +351,17 @@
   }
 }
 
+/* komet cahaya yang berjalan terus sepanjang garis denyut arus kas
+   (dipakai dengan pathLength=1 + dasharray pendek; offset digeser 0 → -1) */
+@keyframes comet-run {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: -1;
+  }
+}
+
 /* deck dompet memakai engine slot-based di wallet-card-stack.tsx —
    transisi kartu dihitung per frame via rAF, bukan keyframe CSS */
 /* baris transaksi masuk satu per satu dari bawah */
@@ -278,5 +385,177 @@
   to {
     opacity: 1;
     transform: scale(1) rotate(0deg);
+  }
+}
+
+/* bubble AI Coach masuk dengan pop pegas saat halaman load */
+@keyframes bubble-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+  80% {
+    transform: scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* titik-titik "AI lagi ngetik" — naik turun berurutan via animation-delay inline */
+@keyframes typing-dot {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.35;
+  }
+  30% {
+    transform: translateY(-3px);
+    opacity: 1;
+  }
+}
+
+.animate-bubble-in {
+  animation: bubble-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* ayunan lembut tanaman di homescreen — transform-origin di-set inline (pangkal batang) */
+@keyframes plant-sway {
+  0%,
+  100% {
+    transform: rotate(-1.6deg);
+  }
+  50% {
+    transform: rotate(1.6deg);
+  }
+}
+
+.ai-typing-dot {
+  animation: typing-dot 1.1s ease-in-out infinite;
+}
+
+/* angka live (FOMO counter & sisa slot early bird) — pop halus tiap kali
+   bertambah/berkurang supaya mata user tertarik ke perubahannya. Elemen
+   di-remount via key={angka} sehingga animasi ikut terputar ulang. */
+@keyframes count-pop {
+  from {
+    opacity: 0.35;
+    transform: translateY(2px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ── ATURAN PERFORMA: overlay fullscreen JANGAN pakai backdrop-blur ──────────
+   `backdrop-filter: blur()` seluas viewport memaksa browser menghitung ulang
+   blur di SETIAP frame selama overlay beranimasi (buka/tutup). Konten di
+   belakang overlay memang terus repaint — komet CashFlowCard, ayunan tanaman,
+   titik `animate-ping`, `.progress-shimmer` — sehingga hasilnya frame drop
+   besar: popup terasa "patah-patah".
+
+   Overlay CatetInd (Vaul sheet, modal web, dialog konfirmasi) karenanya hanya
+   DIGELAPKAN (`bg-ink/50`–`/60`) tanpa blur. Kalau suatu saat efek kaca mau
+   dikembalikan di overlay, pilihannya cuma dua:
+   1. pakai blur tapi PAUSE semua animasi halaman di belakangnya
+      (`animation-play-state: paused` pada subtree halaman), atau
+   2. batasi blur ke area panel saja, bukan selebar viewport.
+   Blur di panel/kartu kecil (mis. headerAI Coach, kartu kaca) tetap boleh —
+   luasnya kecil dan backdrop-nya relatif statis. */
+
+/* ── Transaction Input Engine (Vaul bottom sheet, inventaris 97a/b/c) ─────────
+   Vaul menyuntik animasi slide `.5s cubic-bezier(.32,.72,0,1)` ke semua
+   [data-vaul-drawer]. PRD (Domain 2A.2) minta pegas cepat ~300ms, jadi kita
+   pangkas ke 280ms dengan easing pegas ringan. Selector 2-atribut dibuat lebih
+   spesifik dari style bawaan Vaul (1-atribut) supaya menang tanpa !important. */
+[data-vaul-drawer][data-catetind-sheet='true'] {
+  animation-duration: 0.28s;
+  animation-timing-function: cubic-bezier(0.34, 1.18, 0.64, 1);
+  transition-duration: 0.28s;
+}
+
+/* overlay ikut menutup lebih cepat — jangan ada delay yang bikin terasa berat */
+[data-vaul-overlay][data-catetind-overlay='true'] {
+  animation-duration: 0.22s;
+  animation-timing-function: ease-out;
+}
+
+/* gelombang suara hangat untuk mode Voice Input (TransactionBottomSheet):
+   tiap bar di-scale naik-turun berurutan lewat animation-delay inline */
+@keyframes sound-wave {
+  0%,
+  100% {
+    transform: scaleY(0.28);
+    opacity: 0.45;
+  }
+  50% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+.sound-wave-bar {
+  transform-origin: center;
+  animation: sound-wave 0.9s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-vaul-drawer][data-catetind-sheet='true'],
+  [data-vaul-overlay][data-catetind-overlay='true'] {
+    animation-duration: 0.01s;
+  }
+
+  .sound-wave-bar {
+    animation: none;
+  }
+}
+
+/* panah panduan install iOS — naik-turun lembut biar mata user tertuju ke
+   tombol Share Safari di toolbar bawah (dipakai ios-install-arrow.tsx via
+   token --animate-install-arrow-bounce) */
+@keyframes install-arrow-bounce {
+  0%,
+  100% {
+    transform: translateY(-4px);
+  }
+  50% {
+    transform: translateY(3px);
+  }
+}
+
+
+/* ── Upacara Tanaman onboarding (inventaris #10, section 4C) ────────────────
+   Tetes air jatuh bergantian menyiram benih pertama user. Elemennya di-
+   absolute-kan di atas pot (onboarding-plant-ceremony.tsx) dan delay tiap
+   tetes di-set inline supaya terlihat mengalir, bukan berkedip bareng. */
+@keyframes water-drop {
+  0% {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.85);
+  }
+  25% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(26px) scale(1);
+  }
+}
+
+.water-drop {
+  animation: water-drop 1.6s ease-in infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .water-drop {
+    animation: none;
+    opacity: 0;
   }
 }

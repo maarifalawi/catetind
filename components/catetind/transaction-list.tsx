@@ -1,0 +1,32 @@
+import type { Transaction } from '@/lib/types'
+import { cn } from '@/lib/utils'
+
+interface TransactionListProps {
+ transactions: Transaction[]
+}
+
+export function TransactionList({ transactions }: TransactionListProps) {
+ if (transactions.length === 0) {
+ return <p className="text-center text-gray-500 py-8">Belum ada transaksi</p>
+ }
+
+ return (
+ <ul className="mt-4 space-y-2">
+ {transactions.map((tx) => (
+ <li key={tx.id} className="rounded-lg border p-3 shadow-sm">
+ <div className="flex justify-between">
+ <span>{tx.description}</span>
+ <span className={cn("font-medium", tx.amount > 0 ? "text-green-600" : "text-red-600")}>
+ {tx.amount > 0 ? '+' : '-'}Rp{tx.amount.toLocaleString()}
+ </span>
+ </div>
+ <div className="mt-1">
+ <span className="text-xs text-gray-500">{tx.category}</span>
+ <span className="text-xs text-gray-400"> • </span>
+ <span className="text-xs text-gray-500">{tx.date.toLocaleDateString()}</span>
+ </div>
+ </li>
+ ))}
+ </ul>
+ )
+}

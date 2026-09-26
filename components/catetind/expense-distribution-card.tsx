@@ -1,27 +1,32 @@
 'use client'
 
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import { ChartPie, Flame } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { usePrivacy } from './privacy-provider'
 
 type Segment = {
   label: string
-  amount: string
+  amount: number
   pct: number
   color: string
 }
 
-/* slate gelap -> biru -> yellow-green (brand) -> hijau lembut */
+/* Palet kategori — SENGAJA bukan monokrom hijau lagi. Sebelumnya Makanan
+   (hitam), Transport (biru), Tagihan (hijau sedang), Belanja (hijau muda):
+   estetik, tapi user harus menyipitkan mata untuk membedakan hijau tua vs
+   hijau sedang. Sekarang 4 warna pastel yang benar-benar berbeda namun tetap
+   lembut: Sage · Slate · Mustard · Terracotta (audit #3). */
 const SEGMENTS: Segment[] = [
-  { label: 'Makanan', amount: 'Rp 1.260.000', pct: 40, color: '#12281f' },
-  { label: 'Transport', amount: 'Rp 819.000', pct: 26, color: '#3b82f6' },
-  { label: 'Tagihan', amount: 'Rp 630.000', pct: 20, color: '#b7e04b' },
-  { label: 'Belanja', amount: 'Rp 441.000', pct: 14, color: '#6fb052' },
+  { label: 'Makanan', amount: 1_260_000, pct: 40, color: '#a3b18a' }, // sage
+  { label: 'Transport', amount: 819_000, pct: 26, color: '#7c8ba1' }, // slate
+  { label: 'Tagihan', amount: 630_000, pct: 20, color: '#dda15e' }, // mustard
+  { label: 'Belanja', amount: 441_000, pct: 14, color: '#bc6c25' }, // terracotta
 ]
 
-const TOTAL = 'Rp 3.150.000'
+const TOTAL = 3_150_000
 
-/* posisi awal kumulatif tiap segmen — untuk tooltip */
+/* posisi awal kumulatif tiap segmen - untuk tooltip */
 const STARTS: number[] = []
 {
   let acc = 0
@@ -31,30 +36,34 @@ const STARTS: number[] = []
   }
 }
 
-export function ExpenseDistributionCard() {
+/** Dibungkus `memo` — kartu ini tidak menerima props, jadi tidak perlu ikut
+ *  re-render saat HomeScreen mengubah state popup (lihat catatan di
+ *  cash-flow-card.tsx). */
+export const ExpenseDistributionCard = memo(function ExpenseDistributionCard() {
+  const { money } = usePrivacy()
   const [active, setActive] = useState<number | null>(null)
   const activeSeg = active === null ? null : SEGMENTS[active]
 
   return (
-    <div className="flex flex-col rounded-[2rem] bg-white p-6 ring-1 ring-black/5">
-      {/* header — konsisten dengan kartu lain */}
+                <div className="flex flex-col rounded-[2rem] bg-white p-4 ring-1 ring-black/5">
+      {/* header - konsisten dengan kartu lain */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <span className="flex size-8 items-center justify-center rounded-full bg-sage text-forest">
-            <ChartPie className="size-4" strokeWidth={2.4} />
+        <div className="flex items-center gap-2">
+          <span className="flex size-7 items-center justify-center rounded-full bg-sage text-forest">
+            <ChartPie className="size-3.5" strokeWidth={2.4} />
           </span>
           <div>
             <p className="text-sm font-semibold text-ink">Distribusi Pengeluaran</p>
-            <p className="text-xs text-ink/45">Bulan ini</p>
+            <p className="text-[10px] text-ink/45">Bulan ini</p>
           </div>
         </div>
-        <span className="rounded-full bg-sage px-2.5 py-1 text-[11px] font-semibold text-forest tabular-nums">
-          {TOTAL}
+        <span className="rounded-full bg-sage px-2 py-0.5 text-[10px] font-semibold text-forest tabular-nums">
+          {money(TOTAL)}
         </span>
       </div>
 
       {/* segmented horizontal bar + tooltip mengambang */}
-      <div className="relative mt-10">
+      <div className="relative mt-5">
         {activeSeg !== null && active !== null && (
           <div
             key={activeSeg.label}
@@ -63,13 +72,15 @@ export function ExpenseDistributionCard() {
               left: `clamp(64px, ${STARTS[active] + activeSeg.pct / 2}%, calc(100% - 64px))`,
             }}
           >
-            {activeSeg.amount} · {activeSeg.pct}%
+            {money(activeSeg.amount)} - {activeSeg.pct}%
             <span className="absolute left-1/2 top-full size-2 -translate-x-1/2 -translate-y-1 rotate-45 rounded-[2px] bg-ink" />
           </div>
         )}
 
+        
+
         {/* satu bar penuh, 4 segmen dengan celah tipis */}
-        <div className="flex h-3 w-full gap-[3px]">
+        <div className="flex h-2.5 w-full gap-[3px]">
           {SEGMENTS.map((seg, i) => {
             const isActive = active === i
             const dimmed = active !== null && !isActive
@@ -77,7 +88,7 @@ export function ExpenseDistributionCard() {
               <button
                 key={seg.label}
                 type="button"
-                aria-label={`${seg.label} ${seg.pct}% — ${seg.amount}`}
+                aria-label={`${seg.label} ${seg.pct}% - ${seg.amount}`}
                 onMouseEnter={() => setActive(i)}
                 onMouseLeave={() => setActive(null)}
                 onFocus={() => setActive(i)}
@@ -98,8 +109,8 @@ export function ExpenseDistributionCard() {
         </div>
       </div>
 
-      {/* legend minimalis — dot kecil + nama kategori inline */}
-      <div className="mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+      {/* legend minimalis - dot kecil + nama kategori inline */}
+      <div className="mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 break-words">
         {SEGMENTS.map((seg, i) => {
           const isActive = active === i
           return (
@@ -113,14 +124,14 @@ export function ExpenseDistributionCard() {
               onBlur={() => setActive(null)}
               onClick={() => setActive(isActive ? null : i)}
               className={cn(
-                'flex items-center gap-1.5 text-xs transition-colors duration-200',
+                'flex items-center gap-1.5 text-[11px] transition-colors duration-200',
                 isActive
                   ? 'font-semibold text-ink'
                   : 'font-medium text-ink/55 hover:text-ink',
               )}
             >
               <span
-                className="size-2 shrink-0 rounded-full transition-opacity duration-300"
+                className="size-1.5 shrink-0 rounded-full transition-opacity duration-300"
                 style={{
                   backgroundColor: seg.color,
                   opacity: active !== null && !isActive ? 0.35 : 1,
@@ -135,22 +146,23 @@ export function ExpenseDistributionCard() {
         })}
       </div>
 
-      {/* insight dinamis — mengikuti kategori aktif */}
-      <div className="mt-5 flex items-center justify-center gap-2 rounded-2xl bg-cream px-4 py-2.5 text-center text-xs leading-relaxed text-ink/55">
-        <Flame className="size-3.5 shrink-0 text-forest" strokeWidth={2.2} />
-        {activeSeg === null ? (
-          <span key="insight-total" className="animate-[fade-pop_0.3s_ease_both]">
-            <b className="font-semibold text-ink">Makanan</b> jadi pos terbesar —
-            40% dari total pengeluaran
-          </span>
-        ) : (
-          <span key={activeSeg.label} className="animate-[fade-pop_0.3s_ease_both]">
-            <b className="font-semibold text-ink">{activeSeg.label}</b> —{' '}
-            {activeSeg.amount} ({activeSeg.pct}% dari total)
-          </span>
-        )}
+      {/* insight dinamis - mengikuti kategori aktif */}
+      <div className="mt-2.5">
+        <div className="flex items-center justify-center gap-1.5 rounded-xl bg-cream px-3 py-2 text-center text-[11px] leading-relaxed text-ink/55">
+          <Flame className="size-3 shrink-0 text-forest" strokeWidth={2.2} />
+          {activeSeg === null ? (
+            <span key="insight-total" className="animate-[fade-pop_0.3s_ease_both]">
+              <b className="font-semibold text-ink">Makanan</b> jadi pos terbesar -
+              40% dari total pengeluaran
+            </span>
+          ) : (
+            <span key={activeSeg.label} className="animate-[fade-pop_0.3s_ease_both]">
+              <b className="font-semibold text-ink">{activeSeg.label}</b> -{' '}
+              {money(activeSeg.amount)} ({activeSeg.pct}% dari total)
+            </span>
+          )}
+        </div>
       </div>
     </div>
   )
-}
-
+})

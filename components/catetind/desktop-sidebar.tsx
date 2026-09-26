@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Home,
   PieChart,
@@ -13,22 +13,27 @@ import {
   CalendarDays,
   Briefcase,
   Users,
+  Heart,
   Gift,
   CircleHelp,
   Settings,
   LogOut,
   Plus,
-  X,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { TransactionWebModal } from '@/components/dashboard/transaction-web-modal'
+import { AiFuelCard } from './ai-fuel-card'
 import { LogoWordmark } from './logo-wordmark'
+import { NavTooltip } from './nav-tooltip'
 
 const sections = [
   {
     label: 'Menu Utama',
     items: [
       { href: '/', icon: Home, label: 'Dashboard' },
-      { href: '/insight', icon: PieChart, label: 'Riwayat & Insight' },
+      { href: '/history', icon: PieChart, label: 'Riwayat & Insight' },
     ],
   },
   {
@@ -45,6 +50,7 @@ const sections = [
     items: [
       { href: '/wealth', icon: Briefcase, label: 'Kekayaan & Hutang' },
       { href: '/joint', icon: Users, label: 'Joint Wallet' },
+      { href: '/family', icon: Heart, label: 'Family Wallet' },
     ],
   },
   {
@@ -60,30 +66,155 @@ const sections = [
   },
 ]
 
+const COLLAPSED_KEY = 'catet-sidebar-collapsed'
+
+/** lebar sidebar (px) — dipakai `aside` DAN variabel CSS untuk kolom konten.
+ *  Audit UX #10: expanded dinaikkan 264 → 280 supaya teks status AI di kartu
+ *  "Bahan Bakar AI" (mis. "Voice 5 j 59 m sisa") punya ruang cukup dan tidak
+ *  pernah terpotong. */
+const SIDEBAR_WIDTH = { expanded: 280, collapsed: 76 } as const
+
+/** nama variabel CSS tempat lebar sidebar dipublikasikan ke kolom konten */
+const SIDEBAR_WIDTH_VAR = '--catet-sidebar-w'
+
+/* ── CATATAN: "KONTEKS UANG" DIPINDAHKAN KELUAR DARI SIDEBAR ──────────────────
+   Blok switcher Pribadi/Keluarga/Bersama (dulu `EnvironmentSwitch`, lengkap
+   dengan label "Konteks Uang" di atasnya) DIHAPUS dari sidebar supaya kolom
+   navigasi hanya berisi menu + aksi. State-nya sendiri tetap hidup di
+   `MoneyContextProvider` (root layout), jadi switcher yang muncul di header
+   mobile halaman Dashboard & Budget tetap berfungsi normal. */
+
 export function DesktopSidebar() {
   const pathname = usePathname()
   const [addOpen, setAddOpen] = useState(false)
+  const [collapsed, setCollapsed] = useState(false)
+
+  // hidrasi preferensi collapse dari localStorage (setelah mount,
+  // supaya server & client render identik dan tidak ada hydration mismatch)
+  useEffect(() => {
+    setCollapsed(localStorage.getItem(COLLAPSED_KEY) === '1')
+  }, [])
+
+  useEffect(() => {
+    localStorage.setItem(COLLAPSED_KEY, collapsed ? '1' : '0')
+    /* Publikasikan lebar sidebar ke CSS var: sidebar-nya `fixed` (keluar dari
+       alur), jadi kolom konten yang menggeser dirinya sendiri (lihat
+       screen-shell.tsx). Nilai dipasang di <html> supaya terbaca lintas pohon,
+       dan transisi padding di kolom konten dibikin sama durasinya supaya
+       buka/tutup sidebar tetap terasa satu gerakan. */
+    const root = document.documentElement
+    root.style.setProperty(
+      SIDEBAR_WIDTH_VAR,
+      `${collapsed ? SIDEBAR_WIDTH.collapsed : SIDEBAR_WIDTH.expanded}px`,
+    )
+    return () => {
+      root.style.removeProperty(SIDEBAR_WIDTH_VAR)
+    }
+  }, [collapsed])
+
+  // shortcut modern ala Linear: "[" untuk toggle sidebar
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== '[') return
+      const target = e.target as HTMLElement | null
+      if (target?.closest('input, textarea, select, [contenteditable]')) return
+      setCollapsed((v) => !v)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
 
   return (
-    <aside className="sticky top-0 hidden h-screen w-[272px] shrink-0 flex-col border-r border-black/5 bg-white/70 px-5 py-6 backdrop-blur-xl lg:flex">
-      <LogoWordmark />
+    <aside
+      className={cn(
+        /* `fixed`, BUKAN `sticky`: saat drawer/modal terbuka, scroll-lock
+           (react-remove-scroll lewat Vaul/Radix) menjadikan <body> sebagai
+           scroll container (`overflow: hidden`). Elemen `sticky` lalu mengikat
+           diri ke scroll container terdekat — yaitu <body> yang scrollTop-nya 0
+           — sehingga sidebar tampak "geser ke atas" sejauh offset scroll
+           halaman. Elemen `fixed` selalu mengikat ke viewport, jadi kebal.
+           Konsekuensinya kolom konten digeser lewat var --catet-sidebar-w
+           (dipublikasikan di effect atas, dibaca screen-shell.tsx). */
+        'fixed inset-y-0 left-0 z-30 hidden flex-col border-r border-ink/[0.06] bg-white px-4 py-5 transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] lg:flex',
+        collapsed ? 'w-[76px]' : 'w-[280px]',
+      )}
+    >
+      {/* ── header: wordmark + toggle collapse ─────────────────────── */}
+      <div
+        className={cn(
+          'flex items-center',
+          collapsed ? 'flex-col gap-3' : 'justify-between',
+        )}
+      >
+        <div
+          className={cn(
+            'overflow-hidden transition-all duration-300',
+            collapsed ? 'w-0 opacity-0' : 'w-auto opacity-100',
+          )}
+        >
+          <LogoWordmark className="h-6 pl-1" />
+        </div>
+        <button
+          type="button"
+          onClick={() => setCollapsed((v) => !v)}
+          aria-expanded={!collapsed}
+          aria-label={collapsed ? 'Buka sidebar' : 'Tutup sidebar'}
+          title={collapsed ? 'Buka sidebar  [  ]' : 'Tutup sidebar  [  ]'}
+          className="flex size-8 shrink-0 items-center justify-center rounded-full text-ink/40 ring-1 ring-ink/[0.08] transition-all duration-200 hover:bg-cream hover:text-ink active:scale-95"
+        >
+          {collapsed ? (
+            <PanelLeftOpen className="size-4" strokeWidth={2} />
+          ) : (
+            <PanelLeftClose className="size-4" strokeWidth={2} />
+          )}
+        </button>
+      </div>
 
-      {/* quick action — opens the transaction input drawer (Inventaris 97a) */}
+      {/* ── quick action — buka laci input transaksi (Inventaris 97a) ── */}
       <button
         type="button"
         onClick={() => setAddOpen(true)}
-        className="mt-7 flex w-full items-center justify-center gap-2 rounded-xl bg-forest py-2.5 text-[13px] font-semibold text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
+        className={cn(
+          'group/item relative mt-6 flex items-center justify-center gap-2 rounded-full bg-forest text-cream transition-all duration-300 hover:bg-forest-soft active:scale-[0.97]',
+          collapsed ? 'mx-auto size-11' : 'w-full py-2.5 text-[13px] font-semibold',
+        )}
       >
-        <Plus className="size-4" strokeWidth={2.5} />
-        Tambah Transaksi
+        <Plus
+          className={cn('shrink-0', collapsed ? 'size-5' : 'size-4')}
+          strokeWidth={2.5}
+        />
+        <span
+          className={cn(
+            'max-w-[140px] overflow-hidden whitespace-nowrap transition-all duration-300',
+            collapsed ? 'max-w-0 opacity-0' : 'opacity-100',
+          )}
+        >
+          Tambah Transaksi
+        </span>
+        {collapsed && <NavTooltip label="Tambah Transaksi" />}
       </button>
 
-      <nav className="sidebar-scroll -mr-2 mt-8 flex-1 space-y-7 overflow-y-auto overflow-x-hidden pr-2">
+      {/* ── navigasi ───────────────────────────────────────────────── */}
+      {/* min-h-0 WAJIB: di flex column, `min-height:auto` membuat daftar menu
+          menolak menyusut — akibatnya kartu Bahan Bakar AI & baris profil di
+          bawah tertindih/terpotong saat viewport pendek. Dengan min-h-0 daftar
+          menu yang menyusut + menggulir sendiri, dan elemen bawah tetap utuh. */}
+      <nav
+        data-lenis-prevent
+        className={cn(
+          'sidebar-scroll -mx-1 mt-7 min-h-0 flex-1 space-y-6 px-1',
+          collapsed ? 'overflow-visible' : 'overflow-y-auto overflow-x-hidden',
+        )}
+      >
         {sections.map((section) => (
           <div key={section.label}>
-            <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-ink/30">
-              {section.label}
-            </p>
+            {collapsed ? (
+              <div className="mx-3 mb-2 h-px bg-ink/[0.07]" aria-hidden />
+            ) : (
+              <p className="px-3.5 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-ink/30">
+                {section.label}
+              </p>
+            )}
             <div className="flex flex-col gap-0.5">
               {section.items.map(({ href, icon: Icon, label }) => {
                 const isActive = pathname === href
@@ -93,25 +224,30 @@ export function DesktopSidebar() {
                     href={href}
                     aria-current={isActive ? 'page' : undefined}
                     className={cn(
-                      'relative flex items-center gap-3 whitespace-nowrap rounded-lg px-3 py-2 text-[13px] transition-colors',
+                      'group/item relative flex items-center text-[13px] transition-all duration-200',
+                      collapsed
+                        ? 'justify-center rounded-2xl px-0 py-2.5'
+                        : 'gap-3 rounded-full px-3.5 py-2',
                       isActive
                         ? 'bg-forest/[0.07] font-semibold text-forest'
-                        : 'font-medium text-ink/50 hover:bg-black/[0.03] hover:text-ink',
+                        : 'font-medium text-ink/55 hover:bg-ink/[0.03] hover:text-ink',
                     )}
                   >
-                    {/* indikator bar mint untuk item aktif */}
-                    <span
-                      aria-hidden
-                      className={cn(
-                        'absolute left-0 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-full bg-mint transition-opacity',
-                        isActive ? 'opacity-100' : 'opacity-0',
-                      )}
-                    />
                     <Icon
                       className="size-[18px] shrink-0"
                       strokeWidth={isActive ? 2.2 : 1.8}
                     />
-                    {label}
+                    <span
+                      className={cn(
+                        'overflow-hidden whitespace-nowrap transition-all duration-300',
+                        collapsed
+                          ? 'max-w-0 opacity-0'
+                          : 'max-w-[160px] opacity-100',
+                      )}
+                    >
+                      {label}
+                    </span>
+                    {collapsed && <NavTooltip label={label} />}
                   </Link>
                 )
               })}
@@ -119,65 +255,77 @@ export function DesktopSidebar() {
           </div>
         ))}
 
-        {/* logout — part of the Sistem group per inventory */}
-        <button
-          type="button"
-          className="flex w-full items-center gap-3 whitespace-nowrap rounded-lg px-3 py-2 text-[13px] font-medium text-ink/50 transition-colors hover:bg-rose-50 hover:text-rose-600"
-        >
-          <LogOut className="size-[18px] shrink-0" strokeWidth={1.8} />
-          Keluar
-        </button>
+        {/* logout — bagian grup Sistem per inventaris */}
+        <div>
+          {collapsed && (
+            <div className="mx-3 mb-2 h-px bg-ink/[0.07]" aria-hidden />
+          )}
+          <button
+            type="button"
+            className={cn(
+              'group/item relative flex w-full items-center text-[13px] font-medium text-ink/55 transition-all duration-200 hover:bg-rose-50 hover:text-rose-600',
+              collapsed
+                ? 'justify-center rounded-2xl px-0 py-2.5'
+                : 'gap-3 rounded-full px-3.5 py-2',
+            )}
+          >
+            <LogOut className="size-[18px] shrink-0" strokeWidth={1.8} />
+            <span
+              className={cn(
+                'overflow-hidden whitespace-nowrap transition-all duration-300',
+                collapsed ? 'max-w-0 opacity-0' : 'max-w-[160px] opacity-100',
+              )}
+            >
+              Keluar
+            </span>
+            {collapsed && <NavTooltip label="Keluar" />}
+          </button>
+        </div>
       </nav>
 
-      <div className="mt-4 flex items-center gap-3 rounded-xl bg-black/[0.02] p-3 ring-1 ring-black/[0.04]">
-        <span className="relative size-9 shrink-0 overflow-hidden rounded-full ring-1 ring-black/5">
+        {/* ── BAHAN BAKAR AI ─────────────────────────────────────────────────
+            Sisa kuota AI (token + voice) selalu terlihat di sidebar desktop;
+            detail lengkapnya tetap di Settings → Billing (klik kartunya). */}
+        <AiFuelCard collapsed={collapsed} />
+
+      {/* ── profil user ────────────────────────────────────────────── */}
+      <div
+        className={cn(
+          'mt-4 flex shrink-0 items-center border-t border-ink/[0.06] pt-4',
+          collapsed ? 'justify-center' : 'gap-3 px-1.5',
+        )}
+      >
+        <span
+          className={cn(
+            'relative shrink-0 overflow-hidden rounded-full ring-1 transition-shadow duration-200 hover:ring-2 hover:ring-forest/30',
+            collapsed ? 'size-10' : 'size-9',
+          )}
+        >
           <Image
             src="/avatar-maarif.png"
             alt="Jon Snow"
             fill
-            sizes="36px"
+            sizes="40px"
             className="object-cover"
           />
         </span>
-        <div className="min-w-0 flex-1">
+        <div
+          className={cn(
+            'min-w-0 overflow-hidden transition-all duration-300',
+            collapsed
+              ? 'max-w-0 opacity-0'
+              : 'max-w-[180px] flex-1 opacity-100',
+          )}
+        >
           <p className="truncate text-sm font-semibold text-ink">Jon Snow</p>
           <p className="truncate text-xs text-ink/45">jon@snow.com</p>
         </div>
       </div>
 
-      {/* add-transaction modal shell — full input drawer (97a) plugs in here */}
-      {addOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-5 backdrop-blur-sm"
-          onClick={() => setAddOpen(false)}
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-label="Tambah Transaksi"
-            className="w-full max-w-md rounded-3xl bg-cream p-6 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold tracking-tight text-ink">
-                Tambah Transaksi
-              </h2>
-              <button
-                type="button"
-                aria-label="Tutup"
-                onClick={() => setAddOpen(false)}
-                className="flex size-9 items-center justify-center rounded-full bg-white text-ink ring-1 ring-black/5 transition-colors hover:bg-sage"
-              >
-                <X className="size-4" />
-              </button>
-            </div>
-            <p className="mt-4 text-sm leading-relaxed text-ink/55">
-              Laci input transaksi (Halaman 97a di Inventaris UI) akan tampil di
-              sini.
-            </p>
-          </div>
-        </div>
-      )}
+      {/* modal input transaksi versi WEB (inventaris 97a) — shell dialog yang
+          membungkus engine yang sama dengan bottom sheet mobile */}
+      <TransactionWebModal open={addOpen} onOpenChange={setAddOpen} />
     </aside>
   )
 }
+

@@ -21,14 +21,14 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { AddTransactionDrawer } from '@/components/dashboard/add-transaction-drawer'
+import { TransactionBottomSheet } from '@/components/dashboard/transaction-bottom-sheet'
 
 type NavItem = { href: string; icon: LucideIcon; label: string }
 
 const mainItems: NavItem[] = [
   { href: '/', icon: Home, label: 'Home' },
   { href: '/wallet', icon: Wallet, label: 'Wallet' },
-  { href: '/insight', icon: PieChart, label: 'Insight' },
+  { href: '/history', icon: PieChart, label: 'Insight' },
 ]
 
 const menuGroups: { label: string; items: NavItem[] }[] = [
@@ -86,30 +86,44 @@ export function MobileBottomNav() {
   const [menuOpen, setMenuOpen] = useState(false)
 
   const menuActive = menuHrefs.some((href) => pathname.startsWith(href))
+  /* Halaman Joint Wallet punya FAB-nya sendiri (form transaksi + split +
+     privasi), jadi FAB bottom-nav disembunyikan di sana supaya tetap hanya ada
+     SATU tombol tambah di layar. */
+  const isJointPage = pathname.startsWith('/joint')
+
+  /* Onboarding (/app/onboarding) = flow full-screen 3 langkah: navigasi bawah &
+     sidebar harus hilang total supaya user fokus menyelesaikan setup, dan tidak
+     bisa "kabur" ke halaman lain sebelum data wajib terisi (inventaris #10). */
+  if (pathname.startsWith('/app/onboarding')) return null
 
   return (
     <>
       <nav
         aria-label="Navigasi utama"
-        className="fixed inset-x-8 bottom-5 z-50 mx-auto flex h-16 max-w-sm items-center rounded-full bg-white/95 px-4 shadow-[0_24px_50px_-16px_rgba(0,0,0,0.18)] ring-1 ring-black/5 backdrop-blur-xl lg:hidden"
+        className="fixed inset-x-8 bottom-5 z-40 mx-auto flex h-16 max-w-sm items-center rounded-full bg-white/95 px-4 shadow-[0_24px_50px_-16px_rgba(0,0,0,0.18)] ring-1 ring-black/5 backdrop-blur-xl lg:hidden"
         style={{ marginBottom: 'max(0rem, env(safe-area-inset-bottom))' }}
       >
         <NavLink item={mainItems[0]} pathname={pathname} />
         <NavLink item={mainItems[1]} pathname={pathname} />
 
-        {/* FAB (+) Catat — trigger drawer input transaksi */}
+        {/* FAB (+) Catat — langsung membuka Transaction Input Engine.
+            Di /joint slot ini dikosongkan: halaman Joint punya FAB sendiri. */}
         <div className="flex flex-1 items-center justify-center">
-          <AddTransactionDrawer
-            trigger={
-              <button
-                type="button"
-                aria-label="Catat transaksi"
-                className="-mt-8 flex size-14 items-center justify-center rounded-full bg-[radial-gradient(circle_at_30%_25%,#ffffff,#e4eaff_35%,#cdd6f7_60%,#f3d9e8_85%)] text-zinc-900 shadow-[0_0_28px_rgba(180,195,255,0.55),0_10px_24px_-8px_rgba(0,0,0,0.6)] ring-1 ring-white/60 transition-transform duration-150 hover:scale-105 active:scale-95"
-              >
-                <Plus className="size-6" strokeWidth={2.4} />
-              </button>
-            }
-          />
+          {isJointPage ? (
+            <span aria-hidden className="size-14" />
+          ) : (
+            <TransactionBottomSheet
+              trigger={
+                <button
+                  type="button"
+                  aria-label="Catat transaksi"
+                  className="-mt-8 flex size-14 items-center justify-center rounded-full bg-[radial-gradient(circle_at_30%_25%,#ffffff,#e4eaff_35%,#cdd6f7_60%,#f3d9e8_85%)] text-zinc-900 shadow-[0_0_28px_rgba(180,195,255,0.55),0_10px_24px_-8px_rgba(0,0,0,0.6)] ring-1 ring-white/60 transition-transform duration-150 hover:scale-105 active:scale-95"
+                >
+                  <Plus className="size-6" strokeWidth={2.4} />
+                </button>
+              }
+            />
+          )}
         </div>
 
         <NavLink item={mainItems[2]} pathname={pathname} />
@@ -134,15 +148,15 @@ export function MobileBottomNav() {
       {/* Laci menu sekunder — struktur sama dengan sidebar desktop */}
       <Drawer.Root open={menuOpen} onOpenChange={setMenuOpen}>
         <Drawer.Portal>
-          <Drawer.Overlay className="fixed inset-0 z-50 bg-black/40" />
+          <Drawer.Overlay className="fixed inset-0 z-[70] bg-black/40" />
           <Drawer.Content
             aria-label="Menu lainnya"
-            className="fixed inset-x-0 bottom-0 z-50 mx-auto flex max-h-[85vh] w-full max-w-md flex-col rounded-t-[2rem] bg-white shadow-2xl outline-none"
+            className="fixed inset-x-0 bottom-0 z-[70] mx-auto flex max-h-[85vh] w-full max-w-md flex-col rounded-t-[2rem] bg-white shadow-2xl outline-none"
           >
             {/* drag handle khas Vaul */}
             <div className="mx-auto mt-3 h-1.5 w-10 shrink-0 rounded-full bg-slate-200" />
 
-            <div className="overflow-y-auto px-6 pb-10 pt-4">
+            <div className="overflow-y-auto px-6 pb-10 pt-4" data-lenis-prevent>
               <Drawer.Title className="text-center text-base font-bold tracking-tight text-slate-950">
                 Lainnya
               </Drawer.Title>
@@ -188,4 +202,3 @@ export function MobileBottomNav() {
     </>
   )
 }
-

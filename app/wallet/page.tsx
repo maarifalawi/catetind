@@ -1,16 +1,17 @@
 import type { Metadata } from 'next'
 import { PhoneStage } from '@/components/catetind/phone-stage'
+import { WalletScreen } from '@/components/catetind/wallet-screen'
 
 export const metadata: Metadata = {
-  title: 'Wallet — CatetInd',
+  title: 'Dompet & Akun — CatetInd',
+  description:
+    'Kelola semua dompet, rekening bank, dan e-wallet kamu dalam satu tempat: total saldo kas, porsi tiap akun, dan koreksi saldo manual.',
 }
 
 export default function WalletPage() {
   return (
     <PhoneStage>
-      <main className="flex min-h-screen items-center justify-center px-5 pb-32 pt-6">
-        <h1 className="text-3xl font-semibold tracking-tight text-ink">Wallet</h1>
-      </main>
+      <WalletScreen />
     </PhoneStage>
   )
 }

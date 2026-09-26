@@ -1,10 +1,14 @@
+'use client'
+
 import { ChevronDown, DollarSign } from 'lucide-react'
+import { usePrivacy } from './privacy-provider'
 
 const MONTHS = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D']
 const BARS = [34, 46, 38, 58, 50, 72, 64, 88, 60, 54, 80, 96]
 const ACTIVE = 1 // February
 
 export function IncomeCard() {
+  const { hide } = usePrivacy()
   return (
     <div className="relative overflow-hidden rounded-[1.9rem] bg-gradient-to-br from-forest-soft via-forest to-[#0a2a1f] p-5 text-cream shadow-[0_24px_50px_-24px_rgba(16,58,42,0.55)]">
       <div
@@ -36,7 +40,7 @@ export function IncomeCard() {
       <div className="relative mt-5 flex items-end justify-between">
         <div>
           <span className="text-3xl font-semibold tracking-tight tabular-nums">
-            Rp 8.900.000
+            {hide('Rp 8.900.000')}
           </span>
           <span className="mt-1 block text-xs text-cream/50">
             Total income this month
@@ -59,7 +63,7 @@ export function IncomeCard() {
               <div key={i} className="group relative flex h-full flex-1 items-end">
                 {active && (
                   <span className="absolute -top-1 left-1/2 -translate-x-1/2 -translate-y-full rounded-full bg-mint px-1.5 py-0.5 text-[9px] font-bold text-forest shadow-[0_6px_14px_-4px_rgba(183,224,75,0.8)]">
-                    Rp 8,9jt
+                    {hide('Rp 8,9jt')}
                   </span>
                 )}
                 <div

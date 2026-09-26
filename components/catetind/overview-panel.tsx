@@ -1,19 +1,44 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { X } from 'lucide-react'
+import { Wallet, X } from 'lucide-react'
 import { BalanceRing } from './balance-ring'
 import { IncomeCard } from './income-card'
 import { cn } from '@/lib/utils'
+import type { DeckSelection } from '@/lib/wallets'
+import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock'
 
 export function OverviewPanel({
   open,
   onClose,
+  selection,
 }: {
   open: boolean
   onClose: () => void
+  /**
+   * Kartu yang dipencet user di deck dompet. Isi panel MENGIKUTI kartu ini —
+   * kartu BCA → detail BCA, kartu GoPay → detail GoPay — bukan selalu total
+   * gabungan semua dompet.
+   */
+  selection?: DeckSelection
 }) {
   const closeRef = useRef<HTMLButtonElement>(null)
+
+  /* saldo + label yang tampil di donat, diturunkan dari kartu yang dipencet */
+  const ring =
+    selection?.type === 'wallet'
+      ? {
+          amount: selection.wallet.balance,
+          caption: selection.wallet.name,
+          subtitle: `${selection.wallet.network} · ${selection.wallet.number}`,
+          title: `Dompet ${selection.wallet.name}`,
+        }
+      : {
+          amount: selection?.total ?? 0,
+          caption: 'Total saldo',
+          subtitle: 'Track spending, earnings, and insights',
+          title: 'Semua Dompet',
+        }
 
   useEffect(() => {
     if (!open) return
@@ -25,9 +50,13 @@ export function OverviewPanel({
     return () => window.removeEventListener('keydown', onKey)
   }, [open, onClose])
 
+  // kunci scroll background selama panel terbuka — mobile saja; di desktop
+  // panel jadi sidebar kanan, scroll konten utama tetap diizinkan
+  useBodyScrollLock(open, true)
+
   return (
     <div
-      className={cn('fixed inset-0 z-50', !open && 'pointer-events-none')}
+      className={cn('fixed inset-0 z-[70]', !open && 'pointer-events-none')}
       inert={!open}
       aria-hidden={!open}
     >
@@ -63,9 +92,13 @@ export function OverviewPanel({
               <br />
               Overview
             </h2>
-            <p className="mt-1 text-sm text-ink/50">
-              Track spending, earnings, and insights
-            </p>
+            <p className="mt-1 text-sm text-ink/50">{ring.subtitle}</p>
+            {/* penanda kartu mana yang sedang ditampilkan — panel ini mengikuti
+                kartu yang dipencet user di deck dompet */}
+            <span className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-sage/70 px-2.5 py-1 text-[11px] font-semibold text-forest ring-1 ring-forest/10">
+              <Wallet className="size-3.5" strokeWidth={2.2} />
+              {ring.title}
+            </span>
           </div>
           <button
             ref={closeRef}
@@ -77,20 +110,23 @@ export function OverviewPanel({
           </button>
         </div>
 
-        <div className="mt-2 flex-1 overflow-y-auto overscroll-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div
+          data-lenis-prevent
+          className="mt-2 flex-1 overflow-y-auto overscroll-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
           <div
             className={cn(
-              'pt-4 transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]',
+              'pt-4 transition-[transform,opacity] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]',
               open ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0',
             )}
             style={{ transitionDelay: open ? '160ms' : '0ms' }}
           >
-            <BalanceRing />
+            <BalanceRing amount={ring.amount} caption={ring.caption} />
           </div>
 
           <div
             className={cn(
-              'mt-8 transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]',
+              'mt-8 transition-[transform,opacity] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]',
               open ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0',
             )}
             style={{ transitionDelay: open ? '280ms' : '0ms' }}

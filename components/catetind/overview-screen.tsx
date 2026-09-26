@@ -9,7 +9,7 @@ export function OverviewScreen() {
       <div className="lg:grid lg:min-h-[calc(100vh-8rem)] lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-center lg:gap-12">
         <header className="flex items-start justify-between lg:col-start-1 lg:row-start-1">
           <div>
-            <h1 className="text-3xl font-semibold leading-tight tracking-tight text-ink lg:text-4xl">
+            <h1 className="font-display text-3xl font-semibold leading-tight tracking-tight text-ink lg:text-4xl">
               Your Balance
               <br />
               Overview

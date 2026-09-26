@@ -1,18 +1,17 @@
 import type { Metadata } from 'next'
 import { PhoneStage } from '@/components/catetind/phone-stage'
+import { BillsScreen } from '@/components/catetind/bills-screen'
 
 export const metadata: Metadata = {
   title: 'Tagihan Rutin — CatetInd',
+  description:
+    'Catat tagihan rutin bulanan — kos, langganan, cicilan — supaya jatah harian kamu lebih akurat. Tiap tagihan yang lunas menutup satu lajur tameng proteksi.',
 }
 
 export default function BillsPage() {
   return (
     <PhoneStage>
-      <main className="flex min-h-screen items-center justify-center px-5 pb-32 pt-6">
-        <h1 className="text-3xl font-semibold tracking-tight text-ink">
-          Tagihan Rutin
-        </h1>
-      </main>
+      <BillsScreen />
     </PhoneStage>
   )
 }
