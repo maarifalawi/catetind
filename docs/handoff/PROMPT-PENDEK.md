@@ -127,6 +127,24 @@ Kalau ada ambiguitas: ambil keputusan paling konservatif, tulis asumsimu di lapo
 
 > **Saran urutan:** 25 dulu (biar repo bersih + commit titik aman) → 24 (kecil) → 26 (medium).
 
+### Fase 9 — SISA dari audit hasil 25/24/26
+
+```text
+29. Baca docs/handoff/CONTEXT-WAJIB.md lalu kerjakan docs/handoff/prompts/29-sweep-kontrol-mati.md sampai tuntas — implementasi penuh, bukan rencana. Jalankan validasi di bagian akhir prompt itu (pnpm theme:audit, pnpm exec tsc --noEmit, pnpm build) dan laporkan hasilnya apa adanya.
+```
+```text
+27. Baca docs/handoff/CONTEXT-WAJIB.md lalu kerjakan docs/handoff/prompts/27-sinking-obligation-prorata.md sampai tuntas — implementasi penuh, bukan rencana. Jalankan validasi di bagian akhir prompt itu (pnpm theme:audit, pnpm exec tsc --noEmit, pnpm build) dan laporkan hasilnya apa adanya.
+```
+```text
+28. Baca docs/handoff/CONTEXT-WAJIB.md lalu kerjakan docs/handoff/prompts/28-budget-kategori-ganda.md sampai tuntas — implementasi penuh, bukan rencana. Jalankan validasi di bagian akhir prompt itu (pnpm theme:audit, pnpm exec tsc --noEmit, pnpm build) dan laporkan hasilnya apa adanya.
+```
+
+| # | Menutup apa |
+|---|---|
+| 29 | **10+ kontrol mati**: tombol Menu & Notifications di Home, input "Cari transaksi…", tombol Tambah/Detail goal, chevron per goal, CTA "+ Catat Transaksi", orbit `balance-ring`, dropdown bulan "February", 2 CTA Weekly Recap |
+| 27 | `sinkingObligation` **tidak diprorata** → tab Mingguan menampilkan Rp 742.100/hari (dilaporkan task 26) |
+| 28 | Insight → budget bisa membuat **baris kategori ganda** (mis. Kopi dua kali) — dilaporkan task 24 |
+
 ---
 
 ## 4. Urutan pengerjaan (ringkasan)

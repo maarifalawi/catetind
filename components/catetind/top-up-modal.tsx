@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Check, LoaderCircle, Lock, Sparkles, X } from 'lucide-react'
+import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock'
 import { formatIDR } from '@/lib/weekly-recap'
@@ -12,6 +13,7 @@ import {
   formatTokens,
   type AiAddonPackageId,
 } from '@/lib/ai-quota'
+import { purchaseAiAddon } from '@/lib/ai-quota-bus'
 
 /* ── Add-on AI Token (Domain 5C) ───────────────────────────────────────────────
    Paket, harga, token, dan seluruh copy-nya tinggal di `lib/ai-quota.ts`:
@@ -75,13 +77,27 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
     // TODO: Integrate Midtrans Snap API for payment processing.
     // Alur produksi: POST /api/payment/topup → server bikin snap token →
     // window.snap.pay(snapToken) → webhook Midtrans nambah addon_tokens_remaining.
+    const pkg = selected
+    if (!pkg) return
     setPaying(true)
 
-    /* MOCK alur pembayaran: timer ini yang nanti digantikan Midtrans Snap */
+    /* MOCK alur pembayaran: timer ini yang nanti digantikan Midtrans Snap.
+       Yang PENTING dan bukan mock: begitu "pembayaran" selesai, token add-on
+       benar-benar masuk ke tangki sesi ini (`lib/ai-quota-bus.ts`) supaya banner
+       kuota di Home berhenti mengajak beli dan baris "Token tambahan" di Billing
+       ikut bertambah — tombol yang cuma menutup modal = janji yang tidak ditepati. */
     payTimer.current = setTimeout(() => {
       payTimer.current = null
       setPaying(false)
+      purchaseAiAddon(pkg.tokens)
+      /* pilihan dikosongkan lagi supaya membuka modal berikutnya kembali ke
+         keadaan awal (tombol Bayar nonaktif) — bukan satu tap yang tidak sengaja
+         membeli paket yang sama dua kali. */
+      setSelectedPackage(null)
       onClose()
+      toast.success(AI_TOPUP_COPY.successTitle(pkg.name), {
+        description: AI_TOPUP_COPY.successDescription(pkg.tokens),
+      })
     }, 1600)
   }
 

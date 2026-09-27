@@ -165,6 +165,38 @@ export const AI_RECORDS_LEFT = estimateRecords(AI_BASE_TOKENS_REMAINING)
 /** token add-on diterjemahkan dengan ukuran yang sama biar bisa dibandingkan */
 export const AI_ADDON_RECORDS_LEFT = estimateRecords(AI_ADDON_TOKENS_REMAINING)
 
+/* ── 4b. TANGKI ADD-ON YANG BERJALAN (pembelian SESI INI) ─────────────────────
+   Prompt 24: tombol "Beli Add-On →" di Home harus benar-benar MENAMBAH kuota,
+   bukan menutup modal lalu diam. Tanpa backend, satu-satunya tempat yang bisa
+   "bertambah" adalah sesi yang sedang jalan (lihat `lib/ai-quota-bus.ts`) — dan
+   turunannya ditulis DI SINI, bukan di komponen, supaya angka add-on di banner
+   Home, Fuel Gauge Billing, dan toast sesudah bayar tidak mungkin berbeda
+   (aturan yang sama dengan §4 di atas).
+
+   Kuota dasar sengaja TIDAK ikut berubah: token add-on masuk ke tangki
+   tambahan yang tidak hangus saat reset (PRD 4790–4802), jadi persen utama
+   ("X% sisa" dari kuota dasar) tetap jadi angka utama — persis contoh PRD
+   4919–4930. Yang bertambah adalah baris "Token tambahan". */
+export interface AiAddonTank {
+  /** token add-on yang dibeli di sesi demo ini (0 = belum pernah beli) */
+  purchasedTokens: number
+  /** sisa token add-on = jatah mock bawaan + pembelian sesi ini */
+  tokensRemaining: number
+  /** terjemahan ke jumlah catatan AI — satuan yang user rasakan */
+  recordsLeft: number
+}
+
+/** jatah add-on bawaan (mock) + pembelian sesi ini → satu angka siap render */
+export function aiAddonTank(purchasedTokens: number): AiAddonTank {
+  const purchased = Math.max(0, Math.round(purchasedTokens))
+  const tokensRemaining = AI_ADDON_TOKENS_REMAINING + purchased
+  return {
+    purchasedTokens: purchased,
+    tokensRemaining,
+    recordsLeft: estimateRecords(tokensRemaining),
+  }
+}
+
 /* Voice: PRD menghitung PANGGILAN (150/bulan), bukan jam. Kalau UI masih ingin
    menampilkan satuan waktu, waktunya DITURUNKAN dari sisa panggilan dengan asumsi
    rata-rata satu catatan suara ≈ 30 detik — angka panggilan kanon tetap utuh. */
@@ -263,4 +295,23 @@ export const AI_TOPUP_COPY = {
   trustNote: 'Bayar sekali. Tanpa perpanjangan otomatis.',
   closeLabel: 'Tutup',
   backdropLabel: 'Tutup top up AI token',
+  /* Konfirmasi sesudah bayar (mock). Nominal RUPIAH sengaja tidak diulang di
+     sini: yang user butuh tahu cuma "token-ku nambah berapa" — dan angka token
+     itu dibaca dari paket yang sama, bukan disalin manual. */
+  successTitle: (packageName: string) => `${packageName} masuk! ⚡`,
+  successDescription: (tokens: number) =>
+    `+${formatTokens(tokens)} token siap dipakai. Gak ada perpanjangan otomatis.`,
+} as const
+
+/* ── 8. COPY BANNER SOFT-NUDGE DI HOME (kuota AI >70%) ──────────────────────
+   Banner ini AJAKAN menambah token, bukan pajangan statistik — karena itu
+   kalimatnya menyebut keadaan ("menyusut"), bukan menuduh. Angka pemakaian tetap
+   ditulis di data, bukan di JSX, supaya bar + teks di banner tidak bisa beda. */
+export const AI_GAUGE_BANNER_COPY = {
+  title: 'Kuota AI-mu menyusut',
+  dismissLabel: 'Tutup info kuota AI',
+  cta: 'Beli Add-On →',
+  /** dua angka dalam satu baris — disusun di data, bukan di komponen */
+  usage: (usedPct: number, remainingPct: number) =>
+    `${usedPct}% terpakai · ${remainingPct}% sisa`,
 } as const

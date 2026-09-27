@@ -13,8 +13,11 @@ __v0_jsx-dev-runtime.ts
 node_modules
 .next/
 .DS_Store
-# dev server logs
-dev-server*.log
+
+# Log dev lokal (dev-server, dev-smoke, probe sekali-pakai).
+# Pola ini sengaja lebar: repo ini tidak punya satu pun log yang perlu di-track,
+# dan log yang ikut ter-commit pernah bikin `git status` penuh noise (task 25).
+*.log
 
 # TypeScript incremental build artifact.
 # Dihasilkan ulang setiap `tsc` dijalankan, jadi selalu muncul sebagai diff

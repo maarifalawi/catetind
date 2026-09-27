@@ -28,10 +28,7 @@ import {
   FUND_DETAIL_COPY,
   INITIAL_BUDGETS,
   INITIAL_SINKING_FUNDS,
-  MONTHLY_INCOME,
-  SPENT_THIS_MONTH,
   SPENDING_REVIEW_COPY,
-  TOTAL_INSTALLMENTS,
   budgetsForPeriod,
   computeDailyHud,
   formatIDR,
@@ -68,7 +65,7 @@ type ZoneTab = 'budget' | 'goals'
  *  (`SHEET_EASE` di budget-sheet.tsx, ±0,3 detik) — lihat handleContinueToCoach */
 const COACH_HANDOFF_MS = 320
 
-export function BudgetScreen() {
+export function BudgetScreen({ initialAddCategory }: { initialAddCategory?: string }) {
   /* ── STATE ──────────────────────────────────────────────────────────── */
   /* privasi nominal: state GLOBAL (PrivacyProvider) — tombol mata di header
      halaman ini kini komponen baku <GlobalPrivacyToggle /> (audit UX #7). */
@@ -81,7 +78,15 @@ export function BudgetScreen() {
   const [periodTab, setPeriodTab] = useState<PeriodTab>('monthly')
   /** audit #5 — Jatah Hari Ini disematkan ke Dashboard (menggantikan "Sinkron") */
   const [hudPinned, setHudPinned] = useState(false)
-  const [showAddBudget, setShowAddBudget] = useState(false)
+  const [showAddBudget, setShowAddBudget] = useState(initialAddCategory !== undefined)
+  /* Jalur pintas dari insight /history (`/budget?add=Kopi`): sheet tambah budget
+     TERBUKA SEJAK RENDER PERTAMA dengan kategori itu terpilih, jadi user cuma
+     perlu isi nominalnya. Kategorinya dipakai SEKALI — begitu sheet ditutup, ia
+     dilepas supaya tombol "+ Tambah Budget Baru" kembali membuka form dari Step 1.
+     URL-nya sendiri dibiarkan apa adanya: refresh = niat yang sama, dan tidak ada
+     navigasi router yang bisa mem-mount ulang komponen ini tepat saat sheet-nya
+     baru terbuka. */
+  const [prefilledCategory, setPrefilledCategory] = useState<string | undefined>(initialAddCategory)
   const [showAddGoal, setShowAddGoal] = useState(false)
   const [showSweepModal, setShowSweepModal] = useState(false)
   /** panel "Review Pengeluaran Hari Ini" — dibuka CTA over-budget & tombol Review */
@@ -90,6 +95,7 @@ export function BudgetScreen() {
   const [contributeTarget, setContributeTarget] = useState<SinkingFundItem | null>(null)
   /** navigasi proaktif: kartu celengan membuka halaman detail /budget/[id] */
   const router = useRouter()
+
 
   /* data halaman (mock lokal — nanti dari Supabase) */
   const [budgets, setBudgets] = useState<BudgetItem[]>(INITIAL_BUDGETS)
@@ -130,21 +136,21 @@ export function BudgetScreen() {
      bernilai true → kartu Jatah Hari Ini pindah ke nada terracotta dan jatah
      harian DITAHAN, bukan ditampilkan seolah aman dibelanjakan.
 
-     Dua catatan periode:
+     Tiga catatan periode (prompt 26):
      • kewajiban celengan dihitung dari SEMUA fund — kartu ini metrik GLOBAL
        (audit UX #3) dan disamakan dengan `DAILY_HUD` yang dipakai Home;
-     • `window` membuat pembaginya panjang periode aktif, jadi tab Mingguan
-       membagi sisa uang dengan sisa hari minggu itu, bukan sisa bulan. */
+     • `window` bukan cuma panjang pembagi: kolam uangnya (pemasukan, uang
+       keluar, cicilan) ikut window lewat `periodPool()` — jadi tab Mingguan
+       memakai pemasukan & pengeluaran MINGGU itu, dan tab Siklus Gajian
+       memakai rentang 25-an, bukan bulan kalender;
+     • tab Bulanan tetap memakai konstanta kanon (lewat `periodPool()`), jadi
+       angkanya tidak berubah dari sebelumnya dan sama dengan kartu Home.
+
+     Angka panel Review & kartu kategori membaca `hud` dan `window` yang sama
+     (lihat `spendingReview()`), jadi satu layar tidak mungkin punya dua cerita. */
   const sinkingObligation = useMemo(() => sinkingObligationOf(funds), [funds])
   const hud = useMemo(
-    () =>
-      computeDailyHud({
-        monthlyIncome: MONTHLY_INCOME,
-        totalInstallments: TOTAL_INSTALLMENTS,
-        sinkingObligation,
-        spentThisMonth: SPENT_THIS_MONTH,
-        window: period,
-      }),
+    () => computeDailyHud({ sinkingObligation, window: period }),
     [sinkingObligation, period],
   )
 
@@ -171,10 +177,17 @@ export function BudgetScreen() {
       ...prev,
       { ...data, id: prev.reduce((max, item) => Math.max(max, item.id), 0) + 1, spent: 0 },
     ])
-    setShowAddBudget(false)
+    handleCloseAddBudget()
     toast.success(`Budget ${data.category} dibuat! 🌿`, {
       description: `${formatIDR(data.limit)} siap kamu jaga bersama.`,
     })
+  }
+
+  /** tutup sheet tambah budget — sekaligus melepas kategori yang datang dari URL
+   *  (dipakai sekali), jadi form berikutnya kembali mulai dari Step 1 */
+  function handleCloseAddBudget() {
+    setShowAddBudget(false)
+    setPrefilledCategory(undefined)
   }
 
   /** 4C — celengan baru selalu mulai dari benih 🌱 */
@@ -453,9 +466,10 @@ export function BudgetScreen() {
       {/* ── BOTTOM SHEET (mobile) / DIALOG (desktop) ─────────────────────── */}
       <AddBudgetSheet
         open={showAddBudget}
-        onClose={() => setShowAddBudget(false)}
+        onClose={handleCloseAddBudget}
         scope={context}
         initialPeriod={periodFromTab(periodTab)}
+        initialCategory={prefilledCategory}
         onSave={handleSaveBudget}
       />
       <AddGoalSheet

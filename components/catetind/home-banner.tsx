@@ -1,6 +1,7 @@
 'use client'
 
 import { memo, useEffect, useState } from 'react'
+import Link from 'next/link'
 import { CalendarClock, Fuel, PiggyBank, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
@@ -8,7 +9,14 @@ import {
   shouldShowRenewalBanner,
   type RenewalState,
 } from '@/lib/data/renewal'
-import { AI_REMAINING_PCT, AI_USED_PCT } from '@/lib/ai-quota'
+import { SINKING_NUDGE_COPY } from '@/lib/data/budget'
+import {
+  AI_GAUGE_BANNER_COPY,
+  AI_REMAINING_PCT,
+  AI_USED_PCT,
+} from '@/lib/ai-quota'
+import { useAiAddon } from '@/hooks/use-ai-addon'
+import { TopUpModal } from './top-up-modal'
 
 /* ── mock kondisi — nanti dari backend (Domain 5A, 2C.3, 4B) ──
    Catatan: kondisi RENEWAL tidak lagi hidup di sini. Ia dibaca dari
@@ -80,6 +88,13 @@ function BannerShell({
  * Banner RENEWAL menerima datanya dari luar (`renewalState`) dan CTA-nya membuka
  * modal Renewal (`onOpenRenewal`) — jadi ia benar-benar berfungsi, bukan pajangan,
  * dan modalnya bisa ditinjau ulang kapan saja tanpa menghapus localStorage.
+ *
+ * Banner KUOTA AI (prompt 24) sekarang juga berfungsi penuh: CTA-nya membuka
+ * `TopUpModal` yang sudah ada (bukan modal kedua), dan setelah "pembayaran" mock
+ * masuk, token add-on bertambah di sesi ini sehingga banner-nya berhenti sendiri.
+ * Nudge yang tetap menagih beli SESUDAH user beli = dark pattern, dan repo ini
+ * menolaknya (PRD 4507–4509/4594: tanpa auto-renew, transparan, tanpa dorongan
+ * berulang).
  */
 /** Dibungkus `memo` — props-nya primitif/stabil (state dari hook, callback
  *  `useCallback`), jadi tidak perlu ikut re-render saat HomeScreen mengubah state
@@ -100,6 +115,11 @@ export const HomeBanners = memo(function HomeBanners({
   /* hydrate dismiss dari localStorage (setelah mount — anti hydration mismatch) */
   const [mounted, setMounted] = useState(false)
   const [dismissed, setDismissed] = useState<DismissedMap>({})
+  /** modal Top Up AI — dibuka CTA banner kuota (reuse komponen yang sama
+   *  dengan /settings/billing; harga & token tetap dari `lib/ai-quota.ts`) */
+  const [topUpOpen, setTopUpOpen] = useState(false)
+  /** sisa token add-on sesi ini — setelah pembelian, nudge kuota berhenti */
+  const addon = useAiAddon()
 
   useEffect(() => {
     try {
@@ -124,7 +144,9 @@ export const HomeBanners = memo(function HomeBanners({
 
   const showRenewal = !renewalHandled && shouldShowRenewalBanner(renewalState)
   const renewalCopy = renewalBannerCopy(renewalState)
-  const showAiGauge = AI_USED_PCT > SOFT_NUDGE_USAGE_PCT
+  /* soft-nudge kuota: pemakaian kuota dasar >70% DAN user belum menambah token
+     di sesi ini — begitu sudah beli, ajakannya selesai (lihat catatan komponen) */
+  const showAiGauge = AI_USED_PCT > SOFT_NUDGE_USAGE_PCT && addon.purchasedTokens === 0
   const showFundNudge = DEMO.sinkingFundPending && today.getDate() > 5
 
   return (
@@ -154,18 +176,18 @@ export const HomeBanners = memo(function HomeBanners({
         />
       )}
 
-      {/* 2 — AI USAGE FUEL GAUGE (muncul saat >70% usage) */}
+      {/* 2 — AI USAGE FUEL GAUGE (muncul saat >70% usage, berhenti setelah top up) */}
       {showAiGauge && !isDismissed('ai-gauge') && (
         <BannerShell
           tone="white"
-          dismissLabel="Tutup info kuota AI"
+          dismissLabel={AI_GAUGE_BANNER_COPY.dismissLabel}
           onDismiss={() => dismiss('ai-gauge')}
           icon={
             <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sage text-forest">
               <Fuel className="size-4.5" strokeWidth={2.2} />
             </span>
           }
-          title="Kuota AI-mu menyusut"
+          title={AI_GAUGE_BANNER_COPY.title}
           body={
             <span className="flex items-center gap-2">
               <span className="h-1.5 w-24 overflow-hidden rounded-full bg-soil/[0.09]">
@@ -175,44 +197,52 @@ export const HomeBanners = memo(function HomeBanners({
                 />
               </span>
               <span className="tabular-nums">
-                {AI_USED_PCT}% terpakai · {AI_REMAINING_PCT}% sisa
+                {AI_GAUGE_BANNER_COPY.usage(AI_USED_PCT, AI_REMAINING_PCT)}
               </span>
             </span>
           }
           cta={
             <button
               type="button"
+              onClick={() => setTopUpOpen(true)}
               className="shrink-0 rounded-full px-2 py-1 text-xs font-semibold text-forest transition-colors hover:bg-sage/60"
             >
-              Beli Add-On →
+              {AI_GAUGE_BANNER_COPY.cta}
             </button>
           }
         />
       )}
 
-      {/* 3 — SINKING FUND NUDGE (tanggal >5, belum kontribusi) */}
+      {/* 3 — SINKING FUND NUDGE (tanggal >5, belum kontribusi).
+          CTA-nya TAUTAN, bukan tombol diam: setoran dikerjakan di kartu Celengan
+          Impian (/budget) karena di sanalah daftar dana & sheet setornya hidup —
+          Home tidak boleh menyimpan salinan state dana yang bisa beda cerita. */}
       {showFundNudge && !isDismissed('fund-nudge') && (
         <BannerShell
           tone="white"
-          dismissLabel="Tutup pengingat nabung"
+          dismissLabel={SINKING_NUDGE_COPY.dismissLabel}
           onDismiss={() => dismiss('fund-nudge')}
           icon={
             <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-mint/25 text-forest">
               <PiggyBank className="size-4.5" strokeWidth={2.2} />
             </span>
           }
-          title="Dana Darurat belum dikasih jatah bulan ini"
-          body="Udah lewat tanggal 5 — yuk sisihkan sedikit. Tanamanmu senang kalau kamu konsisten 🌱"
+          title={SINKING_NUDGE_COPY.title}
+          body={SINKING_NUDGE_COPY.body}
           cta={
-            <button
-              type="button"
+            <Link
+              href={SINKING_NUDGE_COPY.ctaHref}
               className="shrink-0 rounded-full bg-sage px-4 py-2 text-xs font-semibold text-forest transition-colors hover:bg-mint/40 active:scale-95"
             >
-              Setor
-            </button>
+              {SINKING_NUDGE_COPY.cta}
+            </Link>
           }
         />
       )}
+
+      {/* modal Top Up AI (prompt 24) — satu komponen untuk Home & Billing, jadi
+          harga, token, dan aturan reset tidak punya salinan kedua di repo ini */}
+      <TopUpModal open={topUpOpen} onClose={() => setTopUpOpen(false)} />
     </>
   )
 })

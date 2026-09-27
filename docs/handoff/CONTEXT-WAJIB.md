@@ -212,6 +212,23 @@ Implikasi desain: mereka bukan ahli keuangan, **tidak** mau membaca, dan
   "insight/informasi", dan untuk topik sensitif tambahkan disclaimer
   *"ℹ️ Ini informasi edukatif, bukan saran keuangan profesional."* (PRD 5075–5132).
 
+### 5.7 Aturan privasi: yang **dibaca** disensor, yang **disunting** tidak
+
+Keputusan produk (27 Sep 2026) — **jangan "diperbaiki"**:
+
+- Tombol mata global (`usePrivacy()`) menyensor **permukaan yang dibaca**:
+  kartu, daftar transaksi, riwayat, ringkasan, tooltip chart.
+- Field **input/sheet yang sedang disunting** (mis. nominal di sheet edit aset,
+  setor, tagihan, dompet) **TIDAK disensor**. Alasannya: user sedang mengurus
+  datanya sendiri; angka tersembunyi di field editable berisiko bikin salah input
+  (integritas data lebih penting daripada kosmetik), dan menyensor field membuat
+  satu-satunya tempat user *butuh* melihat angka justru buta.
+- Jadi: **"privasi menyensor yang terbaca, bukan yang disunting."** Satu aturan,
+  berlaku rata di semua sheet — tidak perlu prop `masked` baru di `RupiahField`.
+- Kandidat penyempurnaan (belum dikerjakan): nominal di **toast/ringkasan sesudah aksi**
+  (mis. "Rp 250.000 disapu ke celengan") — itu pajangan yang tetap tinggal di layar,
+  jadi layak ikut disensor kalau nanti diambil.
+
 ---
 
 ## 6. Peta baca PRD (jangan baca 7.000 baris)

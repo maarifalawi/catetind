@@ -235,10 +235,6 @@ export function HistoryScreen() {
     }, UNDO_WINDOW_MS)
   }, [pendingDelete, restoreTransaction])
 
-  const handleInsightAction = useCallback((cardId: string, label: string) => {
-    // TODO: buka sheet atur limit kategori (Domain 2B) — masih mock
-    toast.success(label, { description: `Aksi insight "${cardId}" segera tersedia.` })
-  }, [])
 
   /* ── aksi dari sheet titik tiga (alternatif non-gesture) ──────────────── */
   const menuOpenDetail = useCallback(() => {
@@ -391,11 +387,9 @@ export function HistoryScreen() {
           <FinancialHealthCard totalTransactions={totalTransactions} score={HEALTH_SCORE} />
         </div>
         <div className="lg:col-span-7">
-          <InsightCards
-            totalTransactions={totalTransactions}
-            hasIncome={hasIncome}
-            onAction={handleInsightAction}
-          />
+          {/* CTA tiap insight punya tujuan nyata: "Atur Limit Kopi" membuka sheet
+              budget dengan kategori Kopi sudah terpilih di /budget (prompt 24). */}
+          <InsightCards totalTransactions={totalTransactions} hasIncome={hasIncome} />
         </div>
       </div>
 

@@ -148,6 +148,13 @@ navigasi publik + komponen harga yang sama dengan `/settings/billing`.
 | 25 | Hygiene repo & titik aman git | root, `next.config.mjs` | `25-hygiene-repo-git.md` | `cline-dev-server.log` **ter-track** (432 KB) · `dev-smoke*.log` tak ter-ignore · `ignoreBuildErrors: true` · **158 baris belum di-commit** |
 | 26 | Pacing pool per-periode | `/budget` | `26-pacing-pool-per-periode.md` | pool uang Mingguan/Siklus masih bulanan (keterbatasan yang dilaporkan task 18) |
 
+### FASE 9 — Sisa dari audit hasil 25/24/26
+| # | Paket | Di mana | Prompt | Menutup apa |
+|---|---|---|---|---|
+| 29 | Sweep kontrol mati | Home, `/history`, recap | `29-sweep-kontrol-mati.md` | 10+ tombol/input tanpa aksi: Menu & Notifications (Home), "Cari transaksi…", Tambah/Detail goal, chevron goal, "+ Catat Transaksi", orbit `balance-ring`, dropdown bulan, 2 CTA Weekly Recap |
+| 27 | Prorata kewajiban celengan | `/budget` | `27-sinking-obligation-prorata.md` | `sinkingObligation` penuh di semua tab → jatah mingguan Rp 742.100/hari (dilaporkan task 26) |
+| 28 | Satu kategori = satu budget | `/history` → `/budget` | `28-budget-kategori-ganda.md` | insight bisa membuat baris kategori ganda (Kopi dua kali) — dilaporkan task 24 |
+
 ---
 
 ## 3. SENGAJA tidak dikerjakan (jangan dianggap utang)

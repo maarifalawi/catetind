@@ -14,6 +14,7 @@ import {
   BUDGET_ADD_COPY,
   BUDGET_CATEGORY_OPTIONS,
   BUDGET_PERIOD_OPTIONS,
+  categoryOptionOf,
   formatIDR,
   periodLimitWord,
   periodUnitWord,
@@ -38,6 +39,7 @@ export function AddBudgetSheet({
   onClose,
   scope,
   initialPeriod,
+  initialCategory,
   onSave,
 }: {
   open: boolean
@@ -46,20 +48,32 @@ export function AddBudgetSheet({
   scope: BudgetScope
   /** periode tab yang sedang aktif di halaman — jadi nilai awal form */
   initialPeriod: BudgetPeriod
+  /** label kategori yang sudah terpilih saat sheet dibuka (mis. dari insight
+   *  "Atur Limit Kopi" di /history). Opsional: /budget sendiri tetap membuka
+   *  sheet tanpa pilihan, jadi alurnya tidak berubah. Label yang tidak ada di
+   *  `BUDGET_CATEGORY_OPTIONS` diabaikan — bukan dilempar sebagai error. */
+  initialCategory?: string
   onSave: (budget: Omit<BudgetItem, 'id' | 'spent'>) => void
 }) {
-  const [category, setCategory] = useState<{ label: string; icon: string } | null>(null)
+  /* Kalau sheet dibuka LANGSUNG dari tautan insight (mis. /budget?add=Kopi),
+     kategori sudah terisi sejak render PERTAMA - supaya HTML server pun sudah
+     menampilkan Step 2 (nominal), tanpa kedipan Step 1 yang masih kosong. */
+  const [category, setCategory] = useState<{ label: string; icon: string } | null>(() =>
+    open ? categoryOptionOf(initialCategory) : null,
+  )
   const [digits, setDigits] = useState('')
   const [period, setPeriod] = useState<BudgetPeriod>(initialPeriod)
   const amountRef = useRef<HTMLInputElement>(null)
 
-  /* form selalu mulai bersih tiap kali dibuka, tapi periode ikut tab aktif */
+  /* form selalu mulai bersih tiap kali dibuka, tapi periode ikut tab aktif.
+     `initialCategory` (kalau ada) memangkas Step 1: user langsung di Step 2
+     (nominal) — jalur pintas dari insight "kamu boros di Kopi, atur limitnya". */
   useEffect(() => {
     if (!open) return
-    setCategory(null)
+    setCategory(categoryOptionOf(initialCategory))
     setDigits('')
     setPeriod(initialPeriod)
-  }, [open, initialPeriod])
+  }, [open, initialPeriod, initialCategory])
 
   useFocusOnOpen(open && category !== null, amountRef)
 

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { PhoneStage } from '@/components/catetind/phone-stage'
 import { BudgetScreen } from '@/components/catetind/budget-screen'
+import { BUDGET_ADD_PARAM, categoryOptionOf } from '@/lib/data/budget'
 
 export const metadata: Metadata = {
   title: 'Budget & Target — CatetInd',
@@ -8,10 +9,30 @@ export const metadata: Metadata = {
     'Atur limit pengeluaran per kategori dan tumbuhkan celengan impian: jatah harian, pacing ideal, sapu bersih sisa budget, dan sinking fund dengan metafora tanaman.',
 }
 
-export default function BudgetPage() {
+/**
+ * `?add=Kopi` — jalur pintas dari kartu Insight di /history ("Atur Limit Kopi"):
+ * sheet tambah budget dibuka dengan kategori itu sudah terpilih. Kategori dari
+ * URL divalidasi di sini (label asing diabaikan), jadi komponen halaman tetap
+ * menerima nilai yang sudah pasti ada di `BUDGET_CATEGORY_OPTIONS`.
+ *
+ * Dibaca lewat prop server karena di Next 16 `searchParams` adalah Promise; cara
+ * ini menghindari `useSearchParams()` + Suspense boundary di komponen klien
+ * (pola yang sama dengan `app/login/verify/page.tsx`).
+ */
+export default async function BudgetPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [BUDGET_ADD_PARAM]?: string | string[] }>
+}) {
+  const params = await searchParams
+  const addParam = params[BUDGET_ADD_PARAM]
+  const initialAddCategory = categoryOptionOf(
+    Array.isArray(addParam) ? addParam[0] : addParam,
+  )?.label
+
   return (
     <PhoneStage>
-      <BudgetScreen />
+      <BudgetScreen initialAddCategory={initialAddCategory} />
     </PhoneStage>
   )
 }

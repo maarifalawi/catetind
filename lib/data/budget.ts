@@ -97,6 +97,14 @@ export const MONTHLY_INCOME = 7_500_000
 export const TOTAL_INSTALLMENTS = 800_000
 export const SPENT_THIS_MONTH = 2_300_000
 
+/** Tanggal jatuh tempo cicilan platform (mock) — dipakai aturan prorata
+ *  `periodInstallments()` (prompt 26): window yang memuat salah satu tanggal ini
+ *  memotong cicilan PENUH, window lain memotong prorata harian.
+ *  Dua tanggalnya diambil dari jadwal hutang mock yang memang ada di repo
+ *  (`lib/data/wealth.ts`: Kredivo tgl 10, SPayLater tgl 25) supaya tidak
+ *  mengarang tanggal baru — nominalnya sendiri tetap kanon HUD (Rp 800.000). */
+export const INSTALLMENT_DUE_DAYS = [10, 25]
+
 /* ── PERIODE BUDGET (Mingguan / Bulanan / Siklus Gajian) ─────────────────────
    Modul 2B dibangun untuk income TIDAK tetap — justru orang seperti itu yang
    berpikir dalam minggu & siklus gajian, bukan bulan kalender. Jadi "jatah
@@ -313,6 +321,131 @@ export function hasIncomeInWindow(
   return periodIncome(window, txs).hasIncome
 }
 
+/* ── KOLAM UANG PER PERIODE (prompt 26) ─────────────────────────────────────
+   Sebelum ini `computeDailyHud({ window })` cuma mengganti PANJANG PEMBAGI-nya,
+   sementara pool uangnya tetap angka BULANAN. Akibatnya tab Mingguan membagi
+   sisa sebulan dengan 1 hari (mis. Rp 800.000/hari) — padahal seluruh modul 2B
+   dirancang untuk income tidak tetap yang berpikir per minggu / per siklus
+   gajian (PRD 655–681). Sekarang uangnya ikut window:
+
+     • income       = Σ transaksi pemasukan yang MASUK di dalam window,
+     • spent        = uang keluar di dalam window — memakai definisi app-wide
+                      `summarizeTransactions` (pengeluaran + setoran tabungan;
+                      transfer netral) supaya sama dengan `SPENT_TODAY` dan
+                      angka "terpakai" di panel review,
+     • installments = cicilan yang relevan untuk window (aturan di bawah),
+     • available    = income − installments (kanon PRD 1154: cicilan dipotong
+                      DULU). Dijaga ≥ 0 supaya saat pemasukan window lebih kecil
+                      dari cicilannya tidak lahir "jatah" dari angka minus.
+
+   BULAN KALENDER tetap memakai konstanta kanon (`MONTHLY_INCOME` /
+   `SPENT_THIS_MONTH` / `TOTAL_INSTALLMENTS`) — angka itulah patokan demo
+   (PRD 678) dan yang dibaca Home lewat `DAILY_HUD`; mengubahnya berarti
+   mengubah layar Home, di luar paket ini. Di produksi kedua jalur datang dari
+   tabel yang sama (transaksi + hutang bulan berjalan), jadi percabangan ini
+   bisa dicabut. */
+export interface PeriodPool {
+  /** pemasukan yang masuk di dalam window */
+  income: number
+  /** uang keluar di dalam window (definisi `summarizeTransactions`) */
+  spent: number
+  /** cicilan yang jatuh / menjadi bagian window ini */
+  installments: number
+  /** income − installments (selalu ≥ 0) — kolam yang dibagi ke sisa hari */
+  available: number
+  /** true = memakai konstanta kanon bulan kalender (bukan jumlah transaksi) */
+  canonicalMonthly: boolean
+}
+
+/** jumlah hari satu bulan kalender — Februari ikut benar (bukan `DAYS_IN_MONTH`) */
+function daysInMonthOf(year: number, month: number): number {
+  return new Date(Date.UTC(year, month, 0)).getUTCDate()
+}
+
+/** potongan window per bulan kalender — dipakai prorata cicilan */
+function monthSpansOf(startISO: string, endISO: string): { firstISO: string; lastISO: string }[] {
+  const spans: { firstISO: string; lastISO: string }[] = []
+  let cursor = startISO
+  while (cursor <= endISO) {
+    const [y, m] = cursor.split('-').map(Number)
+    const lastOfMonth = `${y}-${pad2(m)}-${pad2(daysInMonthOf(y, m))}`
+    const lastISO = lastOfMonth < endISO ? lastOfMonth : endISO
+    spans.push({ firstISO: cursor, lastISO })
+    cursor = shiftISODate(lastISO, 1)
+  }
+  return spans
+}
+
+/**
+ * Cicilan untuk satu window — aturan SEDERHANA yang disengaja, dan ini
+ * keputusan produk yang paling mungkin direvisi saat data hutang nyata masuk:
+ *
+ *   1. Kalau salah satu tanggal jatuh tempo (`INSTALLMENT_DUE_DAYS`) jatuh di
+ *      dalam window → potong PENUH cicilan bulanan. Cicilan memang dibayar
+ *      sekali di tanggal itu, jadi angkanya nyata untuk window tersebut.
+ *   2. Kalau tidak ada → PRORATA: setiap hari window "membawa"
+ *      1/(jumlah hari bulan itu) bagian dari cicilan bulanan (1 bulan = 4
+ *      minggu ⇒ ±¼ per minggu). Window yang melintasi dua bulan dijumlahkan
+ *      per bulan, jadi siklus gajian 25 Sep–24 Okt = 6/30 + 24/31 cicilan.
+ *
+ * Catatan asumsi: jadwal hutang mock di `lib/data/wealth.ts` punya tanggal
+ * sendiri (Kredivo tgl 10, SPayLater tgl 25) dengan total berbeda
+ * (Rp 1.070.000), sementara HUD memakai kanon PRD 678 (Rp 800.000). Menyatukan
+ * dua mock itu akan mengubah angka Home, jadi TIDAK dikerjakan di sini —
+ * `INSTALLMENT_DUE_DAYS` hanya meminjam TANGGAL-nya, nominalnya tetap kanon HUD.
+ */
+export function periodInstallments(window: PeriodWindow): number {
+  const spans = monthSpansOf(window.startISO, window.endISO)
+
+  /* Poin 1 — ada tanggal jatuh tempo di dalam window ⇒ potong penuh. */
+  const dueInside = spans.some((span) => {
+    const [y, m] = span.firstISO.split('-').map(Number)
+    return INSTALLMENT_DUE_DAYS.some((day) => {
+      if (day > daysInMonthOf(y, m)) return false
+      const dueISO = `${y}-${pad2(m)}-${pad2(day)}`
+      return dueISO >= window.startISO && dueISO <= window.endISO
+    })
+  })
+  if (dueInside) return TOTAL_INSTALLMENTS
+
+  /* Poin 2 — tidak ada: prorata per bulan yang disentuh window. */
+  const prorated = spans.reduce((sum, span) => {
+    const [y, m] = span.firstISO.split('-').map(Number)
+    const daysInWindowMonth = daysBetween(span.firstISO, span.lastISO) + 1
+    return sum + TOTAL_INSTALLMENTS * (daysInWindowMonth / daysInMonthOf(y, m))
+  }, 0)
+  return Math.round(prorated)
+}
+
+/** kolam uang untuk window aktif — satu pintu, dipakai `computeDailyHud()` */
+export function periodPool(
+  window: PeriodWindow,
+  txs: HistoryTransaction[] = HISTORY_TRANSACTIONS,
+): PeriodPool {
+  if (window.period === 'monthly') {
+    return {
+      income: MONTHLY_INCOME,
+      spent: SPENT_THIS_MONTH,
+      installments: TOTAL_INSTALLMENTS,
+      available: Math.max(0, MONTHLY_INCOME - TOTAL_INSTALLMENTS),
+      canonicalMonthly: true,
+    }
+  }
+
+  const inWindow = txs.filter((tx) => tx.date >= window.startISO && tx.date <= window.endISO)
+  const { income, expense } = summarizeTransactions(inWindow)
+  const installments = periodInstallments(window)
+
+  return {
+    income,
+    spent: expense,
+    installments,
+    /* PRD 1154 — cicilan dipotong lebih dulu, dan tidak boleh negatif */
+    available: Math.max(0, income - installments),
+    canonicalMonthly: false,
+  }
+}
+
 /** kata sifat periode untuk label kartu budget (tanpa string di JSX) */
 export function periodLimitWord(period: BudgetPeriod): string {
   if (period === 'weekly') return 'mingguan'
@@ -347,41 +480,56 @@ export interface BudgetHud {
   daysLeft: number
   /** jatah harian — 0 saat `shortfall` (jatah ditahan, bukan ditawarkan) */
   dailyBudget: number
-  /** cicilan platform aktif yang dipotong lebih dulu (PRD 2B.1) */
+  /** cicilan platform aktif yang dipotong lebih dulu (PRD 2B.1). Untuk window
+   *  non-bulanan ini cicilan milik window itu (prorata/penuh), bukan angka bulanan */
   installments: number
   /** total kewajiban celengan bulan ini (sinking funds belum disetor) */
   sinkingObligation: number
-  spentThisMonth: number
+  /** uang keluar periode aktif - `SPENT_THIS_MONTH` hanya untuk bulan kalender */
+  spent: number
   /** true = `remaining` < 0: saldo tidak cukup memenuhi celengan bulan ini */
   shortfall: boolean
 }
 
 export function computeDailyHud({
-  monthlyIncome,
-  totalInstallments,
+  monthlyIncome = MONTHLY_INCOME,
+  totalInstallments = TOTAL_INSTALLMENTS,
   sinkingObligation = 0,
-  spentThisMonth,
+  spent = SPENT_THIS_MONTH,
   currentDay,
   daysInMonth,
-  window,
+  window: period,
 }: {
-  monthlyIncome: number
-  totalInstallments: number
+  /** dipakai kalau `window` tidak diberikan (jangkar bulan kalender) */
+  monthlyIncome?: number
+  totalInstallments?: number
   /** kewajiban celengan bulan ini — dipotong sebelum jatah harian dihitung */
   sinkingObligation?: number
-  spentThisMonth: number
-  /** dipakai kalau `window` tidak diberikan (jangkar bulan kalender) */
+  spent?: number
   currentDay?: number
   daysInMonth?: number
-  /** periode aktif — menimpa `currentDay`/`daysInMonth` dengan milik periode */
+  /** periode aktif — menimpa `currentDay`/`daysInMonth` DAN KOLAM UANG-nya
+   *  (prompt 26: pemasukan & pengeluaran dihitung untuk window ini, bukan selalu
+   *  sebulan). Saat diisi, argumen konstanta di atas tidak dipakai. */
   window?: PeriodWindow
 }): BudgetHud {
-  const availablePool = monthlyIncome - totalInstallments - sinkingObligation
-  const remaining = availablePool - spentThisMonth
+  /* Kolam window aktif (kalau ada). Untuk bulan kalender `periodPool()` memakai
+     konstanta kanon — jadi angka Home = tab Bulanan tetap identik. */
+  const pool = period ? periodPool(period) : null
+  const income = pool ? pool.income : monthlyIncome
+  const installments = pool ? pool.installments : totalInstallments
+  const spentInPeriod = pool ? pool.spent : spent
+
+  /* PRD 2B.1/1154 — cicilan dipotong dari pool income SEBELUM dibagi hari;
+     `available` sudah dijaga >= 0 di `periodPool()` supaya pemasukan window yang
+     lebih kecil dari cicilannya tidak berubah jadi jatah minus. */
+  const availablePool =
+    (pool ? pool.available : Math.max(0, income - installments)) - sinkingObligation
+  const remaining = availablePool - spentInPeriod
   /* periode aktif menentukan pembaginya; guard eksplisit supaya tidak pernah
      ada pembagian nol walau periode berakhir hari ini */
-  const activeDay = window?.dayIndex ?? currentDay ?? CURRENT_DAY
-  const periodDays = Math.max(1, window?.daysInPeriod ?? daysInMonth ?? DAYS_IN_MONTH)
+  const activeDay = period?.dayIndex ?? currentDay ?? CURRENT_DAY
+  const periodDays = Math.max(1, period?.daysInPeriod ?? daysInMonth ?? DAYS_IN_MONTH)
   const daysLeft = Math.max(1, periodDays - activeDay + 1) // termasuk hari ini
   const shortfall = remaining < 0
   // saat shortfall jatah DITAHAN (0) — jangan pernah tawarkan uang yang belum ada
@@ -391,9 +539,9 @@ export function computeDailyHud({
     remaining,
     daysLeft,
     dailyBudget,
-    installments: totalInstallments,
+    installments,
     sinkingObligation,
-    spentThisMonth,
+    spent: spentInPeriod,
     shortfall,
   }
 }
@@ -460,7 +608,7 @@ export const DAILY_HUD = computeDailyHud({
   monthlyIncome: MONTHLY_INCOME,
   totalInstallments: TOTAL_INSTALLMENTS,
   sinkingObligation: SINKING_OBLIGATION_ALL,
-  spentThisMonth: SPENT_THIS_MONTH,
+  spent: SPENT_THIS_MONTH,
   window: MONTHLY_WINDOW,
 })
 
@@ -530,6 +678,33 @@ export const BUDGET_PERIOD_OPTIONS: { id: BudgetPeriod; label: string }[] = [
   { id: 'monthly', label: 'Bulanan' },
   { id: 'custom', label: 'Custom' },
 ]
+
+/* ── JEMBATAN INSIGHT → SHEET TAMBAH BUDGET (prompt 24) ─────────────────────
+   Insight "Spending Spike: Kopi" di /history mengajak user MENGATUR LIMIT, dan
+   itu harus jadi sheet tambah budget yang benar-benar terbuka — dulu aksinya
+   cuma toast "segera tersedia".
+
+   Kenapa lewat URL (`/budget?add=Kopi`) dan bukan tulis ke localStorage:
+   daftar budget mock hidup di state `BudgetScreen` (/budget). Budget yang
+   ditulis dari /history ke localStorage TIDAK dibaca halaman mana pun — user
+   akan menyimpan sesuatu yang tidak pernah muncul lagi (janji palsu, persis
+   yang dilarang aturan "jangan ada tombol mati"). Dengan membawa kategorinya
+   lewat URL, budget-nya mendarat di satu-satunya tempat yang memilikinya: sheet
+   terbuka sudah terisi kategori, dan begitu disimpan barisnya langsung tampil. */
+export const BUDGET_ADD_PARAM = 'add'
+
+/** tautan `+ Tambah budget` untuk satu kategori — dipakai kartu Insight di /history */
+export function budgetAddHref(categoryLabel: string): string {
+  return `/budget?${BUDGET_ADD_PARAM}=${encodeURIComponent(categoryLabel)}`
+}
+
+/** kategori dari URL → opsi sheet. Label asing/typo diabaikan (null) supaya
+ *  URL karangan tidak bisa membuka sheet dengan kategori yang tidak ada. */
+export function categoryOptionOf(label: string | undefined | null): { label: string; icon: string } | null {
+  const wanted = label?.trim().toLowerCase()
+  if (!wanted) return null
+  return BUDGET_CATEGORY_OPTIONS.find((option) => option.label.toLowerCase() === wanted) ?? null
+}
 
 /* ── PRIORITAS CELENGAN — badge & dot, semua warna dari design system ─────── */
 export const PRIORITY_OPTIONS: {
@@ -650,6 +825,20 @@ export const HOME_HUD_COPY = {
     },
     over: { label: 'Lewat jatah', ring: '#b89191', copy: 'Gapapa, besok kita atur ulang bareng! 🌱' },
   },
+} as const
+
+/* ── COPY NUDGE CELENGAN DI BERANDA (banner `home-banner.tsx`) ──────────────
+   Dulu judul, badan, dan label tombol banner ini ditulis langsung di JSX —
+   satu-satunya banner Home yang copy-nya tidak lewat `lib/data/*`. Sekarang ikut
+   aturan repo, dan CTA-nya menunjuk halaman yang benar-benar memegang aksi setor
+   (/budget → kartu Celengan Impian, satu-satunya tempat state dana hidup),
+   bukan tombol yang diam (prompt 24). */
+export const SINKING_NUDGE_COPY = {
+  title: 'Dana Darurat belum dikasih jatah bulan ini',
+  body: 'Udah lewat tanggal 5 — yuk sisihkan sedikit. Tanamanmu senang kalau kamu konsisten 🌱',
+  cta: 'Setor',
+  ctaHref: '/budget',
+  dismissLabel: 'Tutup pengingat nabung',
 } as const
 
 /* ── COPY CTA REVIEW (Zona A) ──────────────────────────────────────────────

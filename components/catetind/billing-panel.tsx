@@ -28,8 +28,6 @@ import { CATET_AJA_PLAN, HERO_PLAN, formatIDR } from '@/lib/data/pricing'
    satu pun kuota/harga add-on (aturan yang sama dengan `lib/data/pricing.ts`). */
 import {
   AI_ADDON_PACKAGES,
-  AI_ADDON_RECORDS_LEFT,
-  AI_ADDON_TOKENS_REMAINING,
   AI_BASE_TOKENS_REMAINING,
   AI_FUEL_COPY,
   AI_QUOTA_RESET_DATE,
@@ -41,6 +39,7 @@ import {
   remainingPercent,
   type AiQuotaActivityId,
 } from '@/lib/ai-quota'
+import { useAiAddon } from '@/hooks/use-ai-addon'
 import { AnnualPlanModal } from './annual-plan-modal'
 import { ConfirmDialog, DialogButton } from './settings-dialog'
 import { PAYMENT_METHODS } from './payment-method-logos'
@@ -362,9 +361,13 @@ function CancelSubscriptionCard() {
    tambahan + rincian per aktivitas + tanggal reset), tapi DIPUTAR ke framing
    SISA: isian bar = kuota yang masih tersisa, tanpa kata habis/limit & tanpa
    warna merah. Dua kolam TIDAK digabung jadi satu persen — kuota dasar (yang
-   di-reset tanggal 1) adalah angka utama; token add-on punya barisnya sendiri. */
+   di-reset tanggal 1) adalah angka utama; token add-on punya barisnya sendiri.
+   Sejak prompt 24, baris token add-on itu IKUT hidup: ia membaca pembelian dari
+   modal Top Up lewat `useAiAddon()` (satu turunan di `lib/ai-quota.ts`), jadi
+   banner kuota di Home dan angka di kartu ini tidak mungkin beda cerita. */
 function FuelGaugeCard() {
   const baseLeftPct = AI_REMAINING_PCT
+  const addon = useAiAddon()
 
   return (
     <section className="flex flex-col rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12 sm:p-6">
@@ -415,10 +418,10 @@ function FuelGaugeCard() {
             {AI_FUEL_COPY.addonLabel}
           </dt>
           <dd className="mt-1 text-[13px] font-semibold tabular-nums text-ink">
-            {formatTokens(AI_ADDON_TOKENS_REMAINING)} sisa
+            {formatTokens(addon.tokensRemaining)} sisa
           </dd>
           <p className="mt-0.5 text-[11px] text-ink/45 tabular-nums">
-            {AI_FUEL_COPY.recordsLeft(AI_ADDON_RECORDS_LEFT)}
+            {AI_FUEL_COPY.recordsLeft(addon.recordsLeft)}
           </p>
         </div>
       </dl>

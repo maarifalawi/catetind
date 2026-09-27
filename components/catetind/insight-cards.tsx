@@ -11,6 +11,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { budgetAddHref } from '@/lib/data/budget'
 
 /* ── AI Insight Cards (Riwayat & Insight) ────────────────────────────────────
    Deret horizontal yang bisa di-snap. HANYA insight yang ambang datanya sudah
@@ -38,8 +39,10 @@ const TONES: Record<Tone, { tile: string; eyebrow: string }> = {
 
 interface InsightAction {
   label: string
-  /** kalau diisi, tombol jadi navigasi ke fitur internal (cross-sell) */
-  href?: string
+  /** tujuan aksi — SELALU ada: insight tanpa jalan keluar = dead-end
+   *  (PRD 2A.5), jadi tidak ada lagi bentuk aksi "callback" yang bisa jatuh
+   *  ke toast "segera tersedia" (prompt 24). */
+  href: string
 }
 
 interface InsightCard {
@@ -64,7 +67,12 @@ const INSIGHT_CARDS: InsightCard[] = [
     eyebrow: 'Spending Spike',
     copy: 'Pengeluaran Kopi minggu ini naik 40% dari minggu lalu ☕',
     tone: 'alert',
-    actions: [{ label: 'Atur Limit Kopi' }],
+    /* Jalur keluar untuk "boros di Kopi" = ATUR LIMITNYA, bukan pesan penenang.
+       Sheet-nya dibuka di /budget (satu-satunya halaman yang menyimpan budget)
+       dengan kategori Kopi sudah terpilih — labelnya dibaca dari
+       `BUDGET_CATEGORY_OPTIONS`, jadi tidak mungkin ada kategori yang tidak
+       dikenal form. Alasan jalur URL (bukan localStorage) ada di `budgetAddHref`. */
+    actions: [{ label: 'Atur Limit Kopi', href: budgetAddHref('Kopi') }],
     threshold: 5,
   },
   {
@@ -95,14 +103,11 @@ const INSIGHT_CARDS: InsightCard[] = [
 export function InsightCards({
   totalTransactions,
   hasIncome,
-  onAction,
 }: {
   /** jumlah transaksi user (dipakai sebagai gate ambang data) */
   totalTransactions: number
   /** true kalau sudah ada minimal 1 transaksi pemasukan */
   hasIncome: boolean
-  /** aksi tombol kecil di kartu (mis. "Atur Limit Kopi") */
-  onAction?: (cardId: string, label: string) => void
 }) {
   const visible = INSIGHT_CARDS.filter(
     (card) => totalTransactions >= card.threshold && (!card.needsIncome || hasIncome),
@@ -143,7 +148,7 @@ export function InsightCards({
       {/* deret horizontal: snap per kartu, scrollbar disembunyikan */}
       <div className="hide-scrollbar -mx-5 mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto px-5 pb-1 sm:-mx-6 sm:px-6">
         {visible.map((card, i) => (
-          <InsightCardItem key={card.id} card={card} delay={0.08 * i} onAction={onAction} />
+          <InsightCardItem key={card.id} card={card} delay={0.08 * i} />
         ))}
       </div>
     </section>
@@ -153,11 +158,9 @@ export function InsightCards({
 function InsightCardItem({
   card,
   delay,
-  onAction,
 }: {
   card: InsightCard
   delay: number
-  onAction?: (cardId: string, label: string) => void
 }) {
   const tone = TONES[card.tone]
   const Icon = card.icon
@@ -184,32 +187,23 @@ function InsightCardItem({
 
       {card.actions && card.actions.length > 0 && (
         <div className="mt-auto flex flex-wrap items-center gap-2">
-          {card.actions.map((action, i) =>
-            action.href ? (
-              <Link
-                key={action.label}
-                href={action.href}
-                className={cn(
-                  'inline-flex w-fit items-center gap-1 rounded-full px-3 py-1.5 text-[11.5px] font-semibold transition-colors active:scale-[0.97]',
-                  i === 0
-                    ? 'bg-forest text-cream hover:bg-forest-soft'
-                    : 'bg-cream text-forest ring-1 ring-inset ring-forest/20 hover:bg-sage/60',
-                )}
-              >
-                {action.label}
-                <ArrowUpRight className="size-3" strokeWidth={2.6} aria-hidden />
-              </Link>
-            ) : (
-              <button
-                key={action.label}
-                type="button"
-                onClick={() => onAction?.(card.id, action.label)}
-                className="inline-flex w-fit items-center gap-1 rounded-full bg-forest px-3 py-1.5 text-[11.5px] font-semibold text-cream transition-colors hover:bg-forest-soft active:scale-[0.97]"
-              >
-                {action.label}
-              </button>
-            ),
-          )}
+          {/* tiap aksi WAJIB punya tujuan (Link) — cabang tombol callback yang
+              bisa jatuh ke toast "segera tersedia" sudah dicabut (prompt 24) */}
+          {card.actions.map((action, i) => (
+            <Link
+              key={action.label}
+              href={action.href}
+              className={cn(
+                'inline-flex w-fit items-center gap-1 rounded-full px-3 py-1.5 text-[11.5px] font-semibold transition-colors active:scale-[0.97]',
+                i === 0
+                  ? 'bg-forest text-cream hover:bg-forest-soft'
+                  : 'bg-cream text-forest ring-1 ring-inset ring-forest/20 hover:bg-sage/60',
+              )}
+            >
+              {action.label}
+              <ArrowUpRight className="size-3" strokeWidth={2.6} aria-hidden />
+            </Link>
+          ))}
         </div>
       )}
     </motion.article>
