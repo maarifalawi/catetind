@@ -40,3 +40,23 @@ export const WEEK_SEGMENTS: ExpenseSegment[] = [
 ]
 
 export const formatIDR = (n: number) => `Rp ${n.toLocaleString('id-ID')}`
+
+/* ── CTA SLIDE "RENCANA MINGGU DEPAN" (paket 29) ─────────────────────────────
+   Dua tombol di bawah slide ini dulu MATI, padahal PRD 2141–2145 minta CTA-nya
+   duduk di zona ibu jari — jadi justru tombol paling mudah dijangkau yang tidak
+   bisa ditekan. Sekarang keduanya punya tujuan nyata:
+
+     • `setTarget` → alur target nabung yang SUDAH ada di app (modal Target
+       bulanan; dibuka dari kartu Target — Home maupun /history — atau dari CTA
+       recap ini sendiri). Labelnya sengaja "Atur target nabung", BUKAN "target
+       minggu depan": yang disimpan app adalah target bulanan, dan menulis
+       minggu sementara data menyimpan bulan = janji yang tidak dipenuhi angka.
+       CTA ini WAJIB membuka modalnya (paket 32) — dulu, saat prop `onSetTarget`
+       tidak dikirim (/history), label ini jatuh ke tautan /budget: tujuan nyata,
+       tapi bukan alur target.
+     • `planLink` → `/budget`, halaman "rencana tabungan" yang sungguhan (limit
+       per kategori + celengan impian). */
+export const WEEKLY_RECAP_CTA_COPY = {
+  setTarget: 'Atur target nabung',
+  planLink: 'Lihat rencana tabungan cerdas',
+} as const

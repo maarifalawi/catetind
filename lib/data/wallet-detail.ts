@@ -1,4 +1,5 @@
 import type { WalletAccount } from '../wallets'
+import { TRANSFER_DOOR_COPY } from './add-wallet'
 import {
   formatDayLabel,
   shiftISODate,
@@ -41,26 +42,25 @@ export const WALLET_DETAIL_WINDOW_DAYS = 30
 export const INSIGHT_MIN_TRANSACTIONS = 7
 
 /**
- * Mock transaksi per dompet (`WalletAccount.id` → daftar catatan).
+ * Mock transaksi per dompet (kunci = `WalletSeed.id`, mis. `bca`).
  *
  * Bentuknya `HistoryTransaction` supaya komponen yang sudah ada
  * (`history-transaction-row`, `transaction-detail-sheet`) bisa dipakai ulang
  * tanpa adaptor — dan tiap dompet sengaja punya ketebalan data yang BERBEDA
  * karena tiga state halaman ini harus bisa didemokan:
  *
- *   · id 1 BCA   → 9 catatan → data cukup: ringkasan + garis arah saldo
- *   · id 2 GoPay → 5 catatan → data tipis: kartu sabar (5/7), tanpa trend
- *   · id 3 Tunai → 0 catatan → empty state nurturing
+ *   · `bca`   → 9 catatan → data cukup: ringkasan + garis arah saldo
+ *   · `gopay` → 5 catatan → data tipis: kartu sabar (5/7), tanpa trend
+ *   · `tunai` → 0 catatan → empty state nurturing
  *
  * SENGAJA TANPA `transfer`: tipe 'transfer' cuma bilang "pindah dana" tanpa
  * arah masuk/keluar, sehingga Net dompet bisa salah kalau catatannya top-up
- * MASUK ke dompet ini. Arah pindah dana butuh field `direction` /
- * `counter_wallet_id` yang belum ada di V1 (lihat prompt 04). Setelah field itu
- * ada, catatan transfer boleh ikut di sini dan `walletDelta()` di bawah tinggal
- * membaca field tersebut.
+ * MASUK ke dompet ini. Sejak paket 40 arah pindah dana MEMANG ada di ledger
+ * (`counterWalletId`), tapi mock lama ini belum ikut dipindah ke ledger — jadi
+ * aturannya tetap: baris mock tidak berpindah dompet.
  */
-export const WALLET_DETAIL_TRANSACTIONS: Record<number, HistoryTransaction[]> = {
-  1: [
+export const WALLET_DETAIL_TRANSACTIONS: Record<string, HistoryTransaction[]> = {
+  bca: [
     { id: 101, name: 'Kopi Kenangan Oat Latte', amount: 32_000, type: 'expense', category: 'Makanan', wallet: 'BCA', date: '2026-09-27', time: '07:30', aiGenerated: true },
     { id: 102, name: 'Ayam Geprek Bu Rini', amount: 25_000, type: 'expense', category: 'Makanan', wallet: 'BCA', date: '2026-09-26', time: '12:40', aiGenerated: true },
     { id: 103, name: 'Belanja Bulanan Superindo', amount: 285_000, type: 'expense', category: 'Makanan', wallet: 'BCA', date: '2026-09-25', time: '19:20', aiGenerated: true },
@@ -71,18 +71,18 @@ export const WALLET_DETAIL_TRANSACTIONS: Record<number, HistoryTransaction[]> = 
     { id: 108, name: 'Proyek Desain Sampingan', amount: 750_000, type: 'income', category: 'Proyek', wallet: 'BCA', date: '2026-09-21', time: '09:15', aiGenerated: false },
     { id: 109, name: 'Paket Data Telkomsel', amount: 100_000, type: 'expense', category: 'Tagihan', wallet: 'BCA', date: '2026-09-19', time: '19:00', aiGenerated: true },
   ],
-  2: [
+  gopay: [
     { id: 201, name: 'Kopi Kenangan Oat Latte', amount: 32_000, type: 'expense', category: 'Makanan', wallet: 'GoPay', date: '2026-09-27', time: '08:10', aiGenerated: true },
     { id: 202, name: 'Ayam Geprek Bu Rini', amount: 25_000, type: 'expense', category: 'Makanan', wallet: 'GoPay', date: '2026-09-26', time: '12:40', aiGenerated: true },
     { id: 203, name: 'Grab ke Kantor', amount: 45_000, type: 'expense', category: 'Transportasi', wallet: 'GoPay', date: '2026-09-25', time: '07:45', aiGenerated: true },
     { id: 204, name: 'Boba Janji Jiwa', amount: 24_000, type: 'expense', category: 'Makanan', wallet: 'GoPay', date: '2026-09-24', time: '16:40', aiGenerated: true },
     { id: 205, name: 'Cashback GoPay', amount: 15_000, type: 'income', category: 'Cashback', wallet: 'GoPay', date: '2026-09-23', time: '09:05', aiGenerated: false },
   ],
-  3: [],
+  tunai: [],
 }
 
-/** catatan milik satu dompet (kosong = dompet itu belum pernah dicatat) */
-export function walletTransactions(walletId: number): HistoryTransaction[] {
+/** catatan mock milik satu dompet (id = `WalletSeed.id`) */
+export function walletTransactions(walletId: string): HistoryTransaction[] {
   return WALLET_DETAIL_TRANSACTIONS[walletId] ?? []
 }
 
@@ -216,6 +216,10 @@ export const WALLET_DETAIL_COPY = {
   heroScope: 'Saldo dompet ini saja.',
   /** kalau id di URL tidak ada dompetnya */
   notFoundTitle: 'Dompet tidak ditemukan',
+  /** penjelasan + jalan keluar — bukan halaman kosong */
+  notFoundHint:
+    'Dompet dengan id itu tidak ada di daftarmu. Mungkin tautannya sudah lama, atau dompetnya memang sudah dihapus.',
+  notFoundAction: 'Kembali ke Dompet & Akun',
 } as const
 
 export const WALLET_PERIOD_COPY = {
@@ -259,6 +263,74 @@ export const WALLET_QUICK_ACTION_COPY = {
   sync: 'Sesuaikan Saldo',
   syncHint: 'Saldo dompet ini berubah? Tulis angka aslinya.',
   syncToastTitle: 'Saldo dikoreksi. Selisihnya tercatat otomatis. 🪄',
+  /**
+   * Aksi ketiga (paket 55): pindah dana DARI dompet halaman ini. Label & hint-nya
+   * dibaca dari `TRANSFER_DOOR_COPY` (`lib/data/add-wallet.ts`) — aksi ini sama
+   * persis dengan entri menu “Lainnya” dan popover kartu di /wallet, jadi namanya
+   * tidak boleh ditulis ulang di sini. Sebelum paket ini halaman detail dompet
+   * hanya MENYEBUT “pindah dana” di komentar: tidak ada tombolnya sama sekali.
+   */
+  transferLabel: TRANSFER_DOOR_COPY.detailLabel,
+  transferHint: TRANSFER_DOOR_COPY.detailHint,
+} as const
+
+/**
+ * Label "Total Saldo" di halaman Dompet & Akun (paket 44).
+ *
+ * Angka hero-nya adalah `cashTotal()` dari store: jumlah SELURUH dompet, dan
+ * halaman ini memang menampilkan semua dompet (tidak disaring konteks uang).
+ * Kalimatnya karena itu menyebut cakupannya terang-terangan — dan menegaskan
+ * bahwa konteks uang menyaring daftar/arus, bukan total ini. Itu yang menutup
+ * keluhan "angka saldo beda antar halaman": bedanya dulu bukan cakupan, tapi
+ * HOME yang menjumlahkan daftar tersaring sementara halaman ini menjumlahkan
+ * semuanya.
+ */
+export const WALLET_TOTAL_COPY = {
+  /** baris di bawah nominal hero: "Total Saldo semua dompet · 3 dompet aktif" */
+  heroSubtitle: (count: number) => `Total Saldo semua dompet · ${count} dompet aktif`,
+  /** penegas: konteks uang TIDAK mengubah angka ini */
+  contextNote: 'Konteks uang menyaring daftar & arus — bukan angka total di atas.',
+  /** aria-label nominal hero, supaya pembaca layar mendengar cakupannya */
+  heroAmountLabel: (amount: string) => `Total Saldo semua dompet: ${amount}`,
+  /**
+   * Kepala panel "Komposisi" — jumlah akun + cakupannya.
+   *
+   * Komposisi memecah TOTAL SALDO, jadi ia memuat SELURUH dompet walaupun daftar
+   * kartu di bawahnya disaring konteks (paket 47). Menuliskan cakupannya di sini
+   * membuat dua angka di satu layar tidak terasa bertentangan.
+   */
+  compositionAccounts: (count: number) => `${count} akun · semua dompet`,
+} as const
+
+/**
+ * Nama baris yang lahir dari Koreksi Saldo (Smart Sync) — SATU sumber untuk
+ * modal, toast, DAN baris ledger yang benar-benar ditulis
+ * (`postBalanceAdjustment` di `lib/money/store.ts`).
+ *
+ * Sebelum paket 40, modal menjanjikan "Pengeluaran Tak Tercatat akan
+ * ditambahkan otomatis ke catatanmu" sementara yang terjadi cuma saldo lokal
+ * yang berubah: janji yang tidak ditepati, dan tidak ada satu pun baris di
+ * Riwayat (temuan audit #4 & #5). Sekarang teks yang sama dipakai sebagai NAMA
+ * baris ledger-nya, jadi kalimat modal itu benar apa adanya — bukan janji
+ * kosong, dan bukan dua catatan untuk satu koreksi (yang bikin saldo terpotong
+ * dua kali).
+ */
+export const WALLET_SYNC_ADJUSTMENT_COPY = {
+  /** selisih negatif: saldo catatan lebih besar dari saldo asli di bank */
+  untrackedExpense: 'Pengeluaran Tak Tercatat',
+  /** selisih positif: ada uang masuk yang belum pernah dicatat */
+  untrackedIncome: 'Pemasukan Tak Tercatat',
+  /** kategori barisnya di Riwayat — bukan "koreksi" yang bikin bingung */
+  adjustmentCategory: 'Koreksi Saldo',
+  /** toast setelah koreksi benar-benar menulis baris (satu per arah selisih) */
+  toastExpense: 'Saldo dikoreksi. Pengeluaran Tak Tercatat ditambahkan. 🪄',
+  toastIncome: 'Saldo dikoreksi. Pemasukan Tak Tercatat ditambahkan. 🪄',
+  /** keterangan live di modal, satu per arah selisih */
+  modalHint: {
+    expense: 'Pengeluaran Tak Tercatat akan ditambahkan otomatis ke catatanmu.',
+    income: 'Pemasukan Tak Tercatat akan ditambahkan otomatis ke catatanmu.',
+    none: 'Saldo di catatanmu sudah sama dengan saldo asli — tidak ada yang perlu dikoreksi.',
+  },
 } as const
 
 /**
@@ -286,8 +358,16 @@ export const WALLET_TREND_COLORS = {
 export const WALLET_CARD_MENU_COPY = {
   openDetail: 'Buka detail',
   openDetailHint: 'Saldo & riwayat dompet ini',
-  transfer: 'Pindah Saldo',
-  transferHint: 'Transfer antar dompet',
+  /**
+   * Nama aksi diseragamkan jadi “Pindah Dana” (paket 55) — labelnya dibaca dari
+   * `TRANSFER_DOOR_COPY` di `lib/data/add-wallet.ts`, sumber yang sama dengan
+   * entri menu “Lainnya”, sidebar desktop, dan judul sheetnya. Sebelumnya
+   * popover ini bilang “Pindah Saldo” sementara halaman lain menyebut aksi yang
+   * sama dengan nama berbeda — dan satu aksi dengan dua nama adalah bentuk
+   * paling halus dari navigasi paralel yang dilarang PRD 2A.6.
+   */
+  transfer: TRANSFER_DOOR_COPY.menuLabel,
+  transferHint: TRANSFER_DOOR_COPY.menuHint,
   syncHint: 'Smart Sync',
 } as const
 

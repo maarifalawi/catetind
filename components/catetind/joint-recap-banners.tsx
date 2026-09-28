@@ -19,6 +19,8 @@ import {
   SETTLEMENT_THRESHOLD,
   categoryEmoji,
   moneyLabel,
+  netOf,
+  netPhrase,
   shouldPromptSettlement,
   type JointPerson,
   type JointTransaction,
@@ -282,9 +284,14 @@ export function JointMonthlyRecapBanner({
         </p>
       ) : (
         <p className="text-center text-[12.5px] leading-relaxed text-ink/60">
-          Yang ditimbang: {moneyLabel(settlement.weighedTotal, masked)}.{' '}
-          {settlement.whoIsOwed.name} nalangin lebih banyak{' '}
-          <b className="font-bold text-ink">{moneyLabel(settlement.difference, masked)}</b>.
+          {/* Stage 2: banner ikut bicara NET — angka & arahnya sama dengan panci
+              timbangan dan modal, jadi tidak ada lagi "yang ditimbang" vs
+              "nalangin lebih banyak" yang terbaca sebagai dua tagihan berbeda */}
+          {settlement.whoIsOwed.name}{' '}
+          <b className="font-bold text-ink">
+            {netPhrase(netOf(settlement, settlement.whoIsOwed.id), masked)}
+          </b>{' '}
+          · {settlement.whoOwes.name} yang transfer.
         </p>
       )}
 

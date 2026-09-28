@@ -225,9 +225,13 @@ Keputusan produk (27 Sep 2026) — **jangan "diperbaiki"**:
   satu-satunya tempat user *butuh* melihat angka justru buta.
 - Jadi: **"privasi menyensor yang terbaca, bukan yang disunting."** Satu aturan,
   berlaku rata di semua sheet — tidak perlu prop `masked` baru di `RupiahField`.
-- Kandidat penyempurnaan (belum dikerjakan): nominal di **toast/ringkasan sesudah aksi**
-  (mis. "Rp 250.000 disapu ke celengan") — itu pajangan yang tetap tinggal di layar,
-  jadi layak ikut disensor kalau nanti diambil.
+- **Toasts juga disensor** (paket 31, 27 Sep 2026): nominal di **toast/ringkasan
+  sesudah aksi** (mis. "Rp 250.000 disapu ke celengan") ikut tombol mata, karena
+  itu pajangan yang tetap tinggal di layar. Caranya: `hide()`/`money()` dipanggil
+  **DI TITIK TOAST DIBUAT** (bukan di dalam salinan copy), sedangkan **nama**
+  tujuan/dompet tetap terbaca. Format sensor punya SATU definisi —
+  `MASKED_AMOUNT` di `lib/data/history.ts` — dipakai `hide`/`money`
+  (`privacy-provider.tsx`) dan `maskMoney`/`maskNominal`/`moneyLabel`.
 
 ---
 
@@ -250,6 +254,58 @@ Semua nomor = `CatetInd_Master_PRD_Lengkap.md`.
 | Ergonomi mobile + FAB + gesture | 2133–2290 |
 | Privasi/RLS + screenshot policy | 3064–3504 |
 | Renewal + One-Tap Renew + trust badge | 4503–4607 |
+
+---
+
+## 10. Baseline uang pasca-audit (Stage 1–6 · 27 Sep 2026)
+
+Audit fintech + 6 paket perbaikan sudah dijalankan. Bagian ini mengikat angka &
+struktur yang **TIDAK BOLEH "diperbaiki balik"** oleh task berikutnya. Rincian:
+`FIXPLAN-AUDIT.md` + `docs/handoff/laporan/*-laporan.md`.
+
+### 10.1 Angka kanon yang SAH sekarang
+
+| Angka | Nilai sah | Catatan |
+|---|---|---|
+| Saldo kas likuid (Home / Dompet / Kekayaan) | **Rp 1.850.000** (BCA 1.450.000 + GoPay 350.000 + Tunai 50.000) | `WALLET_SEED.opening` di `lib/wallets.ts` — satu daftar. Angka lama Rp 4.309.573 (`INITIAL_WALLETS`) sudah **DIHAPUS**; kalau muncul lagi di UI, itu regresi |
+| Settlement joint (data seed) | **Jon transfer Rp 25.000 ke Dany** | dikunci di `lib/data/joint.test.ts`; dihitung dari `net = bayar − kewajiban`, jadi split 60/40 benar-benar dipakai |
+| Settlement joint + `REALTIME_ARRIVAL` | **Rp 250.000** | idem |
+| `PRIVATE_EXPENSE_POLICY` | `'shared'` + pengungkapan nominal | `lib/data/joint-ledger.ts`; nilai `'excluded'` sudah diuji, jadi keputusan produk tinggal ganti satu baris |
+| `DAILY_HUD` | tidak bergeser (`Rp 800.000`×2 · `Rp 200.000`×1 · `4 hari`×1) | kalau berubah karena paket lain, sebut alasannya |
+
+### 10.2 Struktur yang sudah benar (jangan bikin jalur kedua)
+
+- **Satu ledger kas:** `lib/money/{ledger,store,idb}.ts`. `balance = opening + Σ baris`; `walletAccountsTotal()` wajib argumen; `liquidCashTotal()` sudah dihapus. Dilarang menyimpan saldo di state komponen/halaman.
+- **Joint:** `lib/data/joint-ledger.ts` (`SplitSpec`, `sharesOf`, `ledgerTotals`) = satu-satunya rumus uang bersama. Komponen tidak boleh menghitung utang sendiri.
+- **API:** setiap handler `app/api/**` diawali `requireUser()` (`lib/session.ts`); identitas SELALU dari sesi, tidak pernah dari body request.
+- **Sesi & kunci:** `lib/session.ts` (+ `/api/session`) — sejak paket 45 sesinya Supabase Auth (`lib/supabase/session-cookie.ts`), `requireUser()` tetap API yang sama; `lib/app-lock-store.ts` (PBKDF2) + `components/catetind/app-lock-provider.tsx` di `app/layout.tsx`; route publik di `lib/public-routes.ts`.
+- **Backend (paket 45):** `supabase/migrations/*.sql` = satu-satunya tempat skema & policy RLS diubah (jangan mengubah tabel lewat dashboard tanpa menulis migrasinya). Jalur data app: `lib/supabase/{client,server,rest,mappers,money-remote,local-migration,user-settings-remote,ai-usage-remote,invite-remote,realtime}.ts`. **Dilarang** menaruh kunci rahasia peran server di klien/repo/`NEXT_PUBLIC_*`.
+- **Persistensi:** `lib/money/idb.ts` (IndexedDB = cache + antrean offline) + penanda `purged` supaya data yang dihapus user tidak "lahir lagi"; server = sumber utama saat login (`mergeWithRemote`).
+
+- **Edit satu pintu (paket 48):** mengubah catatan lewat `editRow()` di `lib/money/store.ts` (baris store diperbarui di barisnya; baris mock lewat `rowOverrides`, diterapkan `applyRowOverride()`). **Dilarang** menyimpan hasil edit di state halaman (`editedTxs` sudah dihapus dari `/history` & `/wallet/[id]`).
+
+- **Idempotensi:** `clientTxId` dari `lib/client-tx.ts`; store menolak kunci kembar.
+
+### 10.3 Validasi wajib (DIPERBARUI — `pnpm test` masuk checklist)
+
+```bash
+pnpm test          # 319 test / 24 file — wajib hijau, tidak boleh ada .skip
+pnpm exec tsc --noEmit
+pnpm build
+pnpm theme:audit
+```
+
+Catatan mesin: pnpm lokal 9.12.0 sedangkan `package.json` menulis `packageManager: pnpm@12.3.4` (versi itu tidak ada) → tambahkan `--config.manage-package-manager-versions=false`; perbaiki field itu sebelum membuat CI.
+
+### 10.4 Yang BELUM ada (jangan diklaim sudah selesai)
+
+- **Backend/RLS sudah NYATA (paket 45)** di project `wmswtoyikvgzcvbgdceo`: 16 tabel, 10 view turunan, 67 policy RLS, sesi Supabase Auth, dan store uang baca/tulis server. Bukti `curl` + laporan: `docs/handoff/laporan/45-stage7-supabase-backend-laporan.md`.
+- Yang **masih mock**: provider AI (DeepSeek) — yang nyata hanya METER pemakaian (`ai_usage`); Midtrans; layar Kekayaan/Utang, Celengan, Tagihan masih membaca konstanta `lib/data/*` (tabelnya sudah ada + RLS, UI-nya belum pindah); rate limit push masih per-instance; `lib/api/wallets` seed demo tetap dipakai di build tanpa env Supabase.
+- **Tidak ada CI** (`.github/workflows` tidak ada) dan **tidak ada ESLint/lint script** → 319 test belum pernah dijalankan otomatis.
+- Uji browser (offline, PIN, hapus akun, SW) baru terverifikasi lewat test murni + build, belum di perangkat sungguhan.
+- Kerja paket-paket ini **belum di-commit** (semuanya masih di working tree).
+
+
 | Harga, token AI, Fuel Gauge | 4759–4937 |
 | Disclaimer OJK (ToS, AI, footer) | 4982–5135 |
 | Checkout 3 langkah + registrasi | 5887–5935 |

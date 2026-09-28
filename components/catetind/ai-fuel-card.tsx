@@ -3,16 +3,14 @@
 import Link from 'next/link'
 import { ArrowUpRight, Mic, RotateCcw } from 'lucide-react'
 import {
-  AI_BASE_TOKENS_REMAINING,
   AI_FUEL_COPY,
+  AI_QUOTA_EXHAUSTED_COPY,
+  AI_QUOTA_RESET_DATE,
   AI_QUOTA_RESET_DAYS,
-  AI_RECORDS_LEFT,
-  AI_REMAINING_PCT,
-  AI_VOICE_CALLS_REMAINING,
-  AI_VOICE_REMAINING_SECONDS,
   compactNumber,
   formatDuration,
 } from '@/lib/ai-quota'
+import { useAiQuota } from '@/hooks/use-ai-quota'
 /* Nama paket aktif dibaca dari sumber harga (bukan disalin ke lib/ai-quota.ts):
    label di sidebar harus sama dengan label di /settings/billing & /checkout. */
 import { HERO_PLAN } from '@/lib/data/pricing'
@@ -44,17 +42,19 @@ import { NavTooltip } from './nav-tooltip'
    Saat sidebar collapsed, kartu mengecil jadi angka persentase + tooltip. */
 
 export function AiFuelCard({ collapsed }: { collapsed: boolean }) {
-  /* NOL angka di komponen ini — semuanya turunan `lib/ai-quota.ts`, jadi kartu
-     sidebar tidak mungkin beda cerita dengan /settings/billing atau /terms. */
-  const recordsLeft = AI_RECORDS_LEFT
+  /* NOL angka di komponen ini — semuanya dari satu snapshot kuota hidup
+     (`useAiQuota()` → `lib/ai-usage-store.ts` + `lib/ai-quota.ts`), jadi kartu
+     sidebar tidak mungkin beda cerita dengan /settings/billing atau /terms,
+     dan angkanya BENAR-BENAR turun setiap kali user memakai AI. */
+  const quota = useAiQuota()
+  const recordsLeft = quota.recordsLeft
 
   /* satu label untuk tooltip (collapsed) & pembaca layar. Durasi voice di sini
-     cuma terjemahan turunan dari sisa PANGGILAN (asumsi di lib/ai-quota.ts),
-     bukan angka tersendiri. */
-  const summary = `${AI_FUEL_COPY.cardTitle} ${HERO_PLAN.name}: ${AI_REMAINING_PCT}% sisa · ${compactNumber(
-    AI_BASE_TOKENS_REMAINING,
-  )} token (≈ ${recordsLeft.toLocaleString('id-ID')} catatan AI) · voice ${AI_VOICE_CALLS_REMAINING} panggilan sisa (≈ ${formatDuration(
-    AI_VOICE_REMAINING_SECONDS,
+     cuma terjemahan turunan dari sisa PANGGILAN, bukan angka tersendiri. */
+  const summary = `${AI_FUEL_COPY.cardTitle} ${HERO_PLAN.name}: ${quota.remainingPct}% sisa · ${compactNumber(
+    quota.baseTokensRemaining,
+  )} token (≈ ${recordsLeft.toLocaleString('id-ID')} catatan AI) · voice ${quota.voiceCallsRemaining} panggilan sisa (≈ ${formatDuration(
+    quota.voiceRemainingSeconds,
   )}) · reset ${AI_QUOTA_RESET_DAYS} hari lagi`
 
   /* versi collapsed: cukup angkanya, detail lengkap lewat tooltip.
@@ -68,7 +68,7 @@ export function AiFuelCard({ collapsed }: { collapsed: boolean }) {
         aria-label={summary}
         className="group/item relative mt-4 flex size-11 shrink-0 items-center justify-center rounded-2xl bg-cream text-[10px] font-semibold tabular-nums text-forest ring-1 ring-ink/[0.06] transition-colors duration-200 hover:bg-sage active:scale-95 motion-reduce:transition-none"
       >
-        <span className="relative">{AI_REMAINING_PCT}%</span>
+        <span className="relative">{quota.remainingPct}%</span>
         <NavTooltip
           label={summary}
           className="max-w-[240px] whitespace-normal text-left leading-snug"
@@ -97,28 +97,37 @@ export function AiFuelCard({ collapsed }: { collapsed: boolean }) {
       {/* satu angka besar yang langsung terbaca */}
       <span className="mt-2.5 flex items-baseline gap-1.5 text-forest">
         <span className="text-[26px] font-semibold leading-none tracking-[-0.04em] tabular-nums">
-          {AI_REMAINING_PCT}%
+          {quota.remainingPct}%
         </span>
         <span className="text-[11.5px] font-medium text-ink/45">{AI_FUEL_COPY.remainingLabel}</span>
       </span>
       <span className="mt-1.5 block break-words text-[11.5px] leading-snug tabular-nums text-ink/50">
-        {compactNumber(AI_BASE_TOKENS_REMAINING)} token {AI_FUEL_COPY.recordsLeft(recordsLeft)}
+        {compactNumber(quota.baseTokensRemaining)} token {AI_FUEL_COPY.recordsLeft(recordsLeft)}
       </span>
 
       {/* hairline sisa kuota — arah isian = kuota yang MASIH tersisa */}
       <span
         role="progressbar"
-        aria-label="Sisa kuota AI"
-        aria-valuenow={AI_REMAINING_PCT}
+        aria-label={quota.exhausted ? AI_QUOTA_EXHAUSTED_COPY.progressLabel : 'Sisa kuota AI'}
+        aria-valuenow={quota.remainingPct}
         aria-valuemin={0}
         aria-valuemax={100}
         className="mt-3 block h-[3px] w-full overflow-hidden rounded-full bg-ink/[0.08]"
       >
         <span
           className="block h-full rounded-full bg-forest"
-          style={{ width: `${Math.max(2, AI_REMAINING_PCT)}%` }}
+          style={{ width: `${Math.max(2, quota.remainingPct)}%` }}
         />
       </span>
+
+      {/* STATE KOSONG (paket 42): kalau dua kolam benar-benar habis, kartu ini
+          menyebut jalan keluarnya alih-alih menampilkan "0%" tanpa penjelasan —
+          user tetap tahu bahwa mencatat MANUAL belum ikut berhenti. */}
+      {quota.exhausted && (
+        <span className="mt-2.5 block text-[11px] leading-snug text-ink/55">
+          {AI_QUOTA_EXHAUSTED_COPY.gaugeNote(AI_QUOTA_RESET_DATE)}
+        </span>
+      )}
 
       {/* ekor: DUA baris penuh — sengaja TIDAK memakai `truncate`.
           Sebelumnya "Voice ... · Reset ..." dan "Top up" berebut ruang di lebar
@@ -128,7 +137,7 @@ export function AiFuelCard({ collapsed }: { collapsed: boolean }) {
         <span className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
           <span className="inline-flex items-center gap-1.5 font-medium tabular-nums text-ink/45">
             <Mic className="size-3 shrink-0" strokeWidth={2.2} aria-hidden />
-            Voice {AI_VOICE_CALLS_REMAINING} panggilan sisa
+            Voice {quota.voiceCallsRemaining} panggilan sisa
           </span>
           <span className="inline-flex shrink-0 items-center gap-0.5 font-semibold text-forest">
             Top up

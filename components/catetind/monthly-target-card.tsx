@@ -4,15 +4,9 @@ import { memo } from 'react'
 import Link from 'next/link'
 import { ChevronRight, PiggyBank, Target } from 'lucide-react'
 import { usePrivacy } from './privacy-provider'
-import {
-  MONTHLY_TARGET_CARD_COPY as COPY,
-  fundNameOf,
-  fundSuggestions,
-} from '@/lib/data/monthly-review'
-
-/* nominal saran per celengan — dibaca dari `monthlyNeeded()` yang sama dengan
-   panel 2 modal & halaman /budget, jadi angkanya tidak bisa beda antar layar */
-const FUND_MONTHLY = new Map(fundSuggestions().map((item) => [item.fund.id, item.monthly]))
+import { monthlyNeeded } from '@/lib/data/budget'
+import { MONTHLY_TARGET_CARD_COPY as COPY } from '@/lib/data/monthly-review'
+import { useFundsStore } from '@/lib/money/funds-store'
 
 /**
  * Kartu kecil "Target bulan ini" di Home — efek NYATA dari ritual bulanan.
@@ -24,6 +18,12 @@ const FUND_MONTHLY = new Map(fundSuggestions().map((item) => [item.fund.id, item
  * Dua wajah:
  *   • sudah ada target   → nominalnya + celengan pilihannya, tombol "Ubah"
  *   • belum ada target   → ajakan set target (20 detik), tombol "Set target 📌"
+ *
+ * Nama & saran bulanan celengan dibaca dari STORE (`useFundsStore()`), bukan
+ * konstanta: kalau celengan yang dipilih ternyata sudah dihapus/diganti nama,
+ * kartu ini ikut menyesuaikan — dan celengan yang baru ditanam juga langsung
+ * dikenali. Nominal sarannya tetap dari `monthlyNeeded()` yang sama dengan
+ * /budget, jadi angkanya tidak bisa berbeda antar layar.
  *
  * Dibungkus `memo` dan props-nya primitif/stabil (callback `useCallback` dari
  * HomeScreen), jadi kartu ini tidak ikut re-render saat state popup lain berubah.
@@ -41,8 +41,12 @@ export const MonthlyTargetCard = memo(function MonthlyTargetCard({
   onOpen: () => void
 }) {
   const { money } = usePrivacy()
-  const fundName = fundNameOf(fundId)
-  const fundMonthly = fundId === null ? null : (FUND_MONTHLY.get(fundId) ?? null)
+  const { funds } = useFundsStore()
+  const fund = fundId === null ? null : (funds.find((item) => item.id === fundId) ?? null)
+  const fundName = fund?.name ?? null
+  const fundMonthly = fund
+    ? monthlyNeeded(fund.target, fund.current, fund.deadline)
+    : null
   /* tautan ke /budget hanya masuk akal kalau memang ada celengan yang dipilih &
      nominal sarannya dihitung dari sisa target celengan itu */
   const showFundLink = savedThisMonth && fundName !== null && fundMonthly !== null

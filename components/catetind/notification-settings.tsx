@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import {
   Bell,
   BellOff,
@@ -9,8 +10,10 @@ import {
   Loader2,
   Send,
   Smartphone,
+  UserRoundCheck,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { LOGIN_PATH, SESSION_COPY } from '@/lib/data/auth'
 import { usePushNotifications } from '@/lib/use-push-notifications'
 
 /* 5 jenis notifikasi kanon inventaris #22 (Domain 3A) */
@@ -65,6 +68,7 @@ export function NotificationSettings() {
     support,
     permission,
     subscribed,
+    sessionMissing,
     activate,
     deactivate,
     testLocal,
@@ -98,9 +102,16 @@ export function NotificationSettings() {
   }
   const handleTestRemote = async () => {
     setBusy(true)
-    await testRemote()
-    setSentMsg('Push dikirim! Cek tray notifikasi HP kamu 🚀')
+    const result = await testRemote()
     setBusy(false)
+    if (result === 'ok') {
+      setSentMsg('Push dikirim! Cek tray notifikasi HP kamu 🚀')
+    } else if (result === 'no-session') {
+      /* jujur: endpoint-nya memang menolak tanpa sesi (401) sejak paket 39 */
+      setSentMsg(null)
+    } else {
+      setSentMsg('Push belum terkirim — coba lagi sebentar ya.')
+    }
     setTimeout(() => setSentMsg(null), 4000)
   }
 
@@ -210,6 +221,26 @@ export function NotificationSettings() {
             <CheckCircle2 className="size-4" strokeWidth={2.2} />
             {sentMsg}
           </p>
+        )}
+
+        {/* 401 dari server (paket 39): tanpa sesi, subscription tidak punya
+            pemilik — jadi bukan "berhasil", dan user diberi jalan keluarnya. */}
+        {sessionMissing && (
+          <div className="mt-3 rounded-2xl bg-hud-amber/20 px-4 py-3 ring-1 ring-hud-amber/50">
+            <p className="flex items-center gap-2 text-[12.5px] font-semibold text-ink">
+              <UserRoundCheck className="size-4 shrink-0 text-ink/60" strokeWidth={2.2} aria-hidden />
+              {SESSION_COPY.noSessionTitle}
+            </p>
+            <p className="mt-1 text-[11.5px] leading-relaxed text-ink/60">
+              {SESSION_COPY.noSessionBody}
+            </p>
+            <Link
+              href={LOGIN_PATH}
+              className="mt-2 inline-flex text-[11.5px] font-semibold text-forest underline underline-offset-2 hover:text-ink"
+            >
+              {SESSION_COPY.noSessionCta}
+            </Link>
+          </div>
         )}
 
         <p className="mt-4 flex items-start gap-2 rounded-2xl bg-cream px-4 py-3 text-xs leading-relaxed text-ink/50">

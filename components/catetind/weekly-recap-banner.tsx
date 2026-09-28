@@ -3,11 +3,13 @@
 import { memo, useEffect, useState } from 'react'
 import { CalendarRange, ChevronRight } from 'lucide-react'
 import { WEEK_DATA } from '@/lib/weekly-recap'
+import { DEMO_MODE } from '@/lib/demo'
 import { usePrivacy } from './privacy-provider'
 
-/* paksa tampil untuk kebutuhan review desain - set false untuk perilaku produksi
-   (banner HANYA muncul Jumat-Sabtu-Minggu, PRD Domain 3A Habit Loop 2) */
-const DEMO_FORCE_SHOW = true
+/* paksa tampil untuk kebutuhan review desain — perilaku produksi (default):
+   banner HANYA muncul Jumat-Sabtu-Minggu, PRD Domain 3A Habit Loop 2.
+   Saklarnya ikut `NEXT_PUBLIC_DEMO` (paket 42). */
+const DEMO_FORCE_SHOW = DEMO_MODE
 
 /** banner conditional "Recap Mingguan Siap! Lihat" - trigger modal 5 slide (inventaris g) */
 /** Dibungkus `memo` — props-nya cuma `onOpen` yang di HomeScreen sudah

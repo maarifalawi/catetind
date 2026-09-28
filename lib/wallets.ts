@@ -25,7 +25,8 @@ export interface Wallet {
  * halaman ini murni mock lokal.
  */
 export interface WalletAccount {
-  id: number
+  /** id dompet kanon (string) — sama dengan `WalletSeed.id`, dipakai URL detail */
+  id: string
   name: string
   /** jenis akun — dipakai sebagai label kecil di kartu */
   type: 'Bank' | 'E-Wallet' | 'Cash'
@@ -54,33 +55,78 @@ export interface WalletAccount {
   /** motif aksen muka kartu — sama seperti deck di Home, jadi tiap kartu punya
    *  "tema" sendiri (parang/mendung/kawung/rings) seperti kartu bank edisi batik */
   art: WalletArt
+  /**
+   * Konteks uang dompet ini (PRD Domain 2C.2) — ikut dibawa ke bentuk KARTU
+   * sejak paket 55.
+   *
+   * Sebelumnya konteks hanya hidup di `WalletSeed`/`Wallet` (deck Home), padahal
+   * sheet pindah dana bekerja dengan bentuk kartu ini. Akibatnya sheet tidak bisa
+   * memberi tahu bahwa dompet TUJUAN berada di konteks uang lain — padahal
+   * pindah dana antar konteks itu sah dan perlu disadari user (paket 47).
+   */
+  context: 'pribadi' | 'keluarga' | 'bersama'
 }
 
 /**
- * Dompet awal yang terdaftar di halaman Dompet & Akun (`/wallet`) — SATU sumber
- * kebenaran untuk KAS LIKUID user.
+ * DOMPET KANON — SATU-SATUNYA sumber identitas dompet, warna kartunya, dan
+ * saldo PEMBUKA-nya (paket 40).
  *
- * PENTING (audit fintech #1): daftar ini bukan cuma data pajangan halaman
- * Dompet. `walletAccountsTotal()` di bawah dipakai halaman Kekayaan & Hutang
- * untuk menghitung sisi ASET pada Net Worth
- * (`Net Worth = Kas Likuid + Aset Investasi − Hutang`). Sebelumnya Net Worth
- * hanya menjumlahkan investasi, sehingga user yang uangnya penuh di rekening
- * tapi belum punya saham akan ditampilkan ber-Net-Worth nol — cacat akuntansi.
- * Karena itu angkanya tidak boleh lagi disalin-tempel di komponen: satu
- * perubahan di sini otomatis ikut ke halaman Dompet DAN ke perhitungan Net Worth.
+ * Sebelum paket 40 ada DUA daftar dengan nama dompet yang sama tapi saldo
+ * berbeda: satu berbunyi Rp 1.850.000 (dipakai Dompet & Kekayaan) dan satu lagi
+ * Rp 4.309.573 (dipakai Home & API). Satu user punya dua
+ * "Total Saldo" yang berbeda Rp 2.459.573. Sekarang definisinya satu, dan
+ * angka `opening` di bawah adalah angka kanon yang dipakai SEMUA halaman:
  *
- * Total ketiganya = Rp 1.850.000 (BCA Rp 1.450.000 + GoPay Rp 350.000 + Tunai Rp 50.000).
- * TODO: saat Supabase aktif, ganti dengan `SUM(balance) FROM wallets WHERE user_id = …`
- * (bandingkan view `user_net_worth` di PRD) — halaman Dompet & Kekayaan harus
- * membaca angka yang sama.
+ *   total = Rp 1.850.000 (BCA Rp 1.450.000 + GoPay Rp 350.000 + Tunai Rp 50.000)
+ *
+ * `opening` = saldo SEBELUM baris ledger apa pun (`lib/money/ledger.ts`).
+ * Saldo yang dibaca halaman SELALU `opening + Σ baris ledger` (lihat
+ * `lib/money/store.ts`) — tidak ada lagi angka saldo yang disimpan di komponen.
+ *
+ * 🚧 Produksi: `SELECT id, name, opening_balance, … FROM wallets WHERE user_id = auth.uid()`.
  */
-export const INITIAL_WALLET_ACCOUNTS: WalletAccount[] = [
+export interface WalletSeed {
+  /** id publik dompet — dipakai URL `/wallet/[id]` dan kunci baris ledger */
+  id: string
+  name: string
+  holder: string
+  /** nomor akun tersamarkan (`•••• 0849`) atau keterangan cash (`Uang cash`) */
+  number: string
+  network: string
+  /** saldo pembuka (kas awal user) — integer rupiah */
+  opening: number
+  /** jenis untuk muka kartu Home (deck) */
+  kind: WalletKind
+  /** jenis untuk kartu halaman Dompet & Akun */
+  type: WalletAccount['type']
+  /** konteks uang (PRD Domain 2C.2) */
+  context: 'pribadi' | 'keluarga' | 'bersama'
+  /** gelombang warna header kartu (deck Home) */
+  bandClass: string
+  /** muka kartu versi deck Home */
+  faceClass: string
+  glowClass?: string
+  /** halo aksen muka kartu halaman Dompet & Akun */
+  color: string
+  /** muka kartu halaman Dompet & Akun */
+  face: string
+  art: WalletArt
+}
+
+export const WALLET_SEED: WalletSeed[] = [
   {
-    id: 1,
+    id: 'bca',
     name: 'BCA',
-    type: 'Bank',
+    holder: 'Jon Snow',
     number: '•••• 0849',
-    balance: 1_450_000,
+    network: 'VISA',
+    opening: 1_450_000,
+    kind: 'bank',
+    type: 'Bank',
+    context: 'pribadi',
+    bandClass: 'from-[#c4c7af] via-[#ffffff] to-[#c4c7af]',
+    faceClass: 'from-[#52685c] via-[#45594e] to-[#161c19]', // evergreen
+    glowClass: 'bg-evergreen/25',
     /* aksen & muka kartu diambil dari palet kanon (Evergreen family),
        satu keluarga dengan hero & halaman lain — lihat docs/theme/PALETTE.md */
     color: 'bg-gradient-to-r from-[#c4c7af] to-[#45594e]',
@@ -88,39 +134,120 @@ export const INITIAL_WALLET_ACCOUNTS: WalletAccount[] = [
     art: 'parang',
   },
   {
-    id: 2,
+    id: 'gopay',
     name: 'GoPay',
-    type: 'E-Wallet',
+    holder: 'Jon Snow',
     number: '•••• 2210',
-    balance: 350_000,
+    network: 'E-WALLET',
+    opening: 350_000,
+    kind: 'ewallet',
+    type: 'E-Wallet',
+    context: 'pribadi',
+    bandClass: 'from-[#dbe4c7] via-[#ffffff] to-[#dbe4c7]',
+    faceClass: 'from-[#91bb9e] via-[#52685c] to-[#161c19]', // leaf
+    glowClass: 'bg-leaf/25',
     color: 'bg-gradient-to-r from-[#dbe4c7] to-[#91bb9e]',
     face: 'bg-gradient-to-br from-[#91bb9e] via-[#52685c] to-[#161c19]', // leaf → gelap
     art: 'mendung',
   },
   {
-    id: 3,
+    id: 'tunai',
     name: 'Tunai',
-    type: 'Cash',
+    holder: 'Jon Snow',
     /* uang kertas tidak punya nomor seri yang ditampilkan di muka kartu —
        varian muka kartu Tunai memakai ilustrasi tumpukan uang, bukan
        chip EMV / contactless / nomor akun */
-    balance: 50_000,
+    number: 'Uang cash',
+    network: 'TUNAI',
+    opening: 50_000,
+    kind: 'cash',
+    type: 'Cash',
+    context: 'keluarga',
+    bandClass: 'from-[#e6e4c0] via-[#ffffff] to-[#e6e4c0]',
+    faceClass: 'from-[#b5b987] via-[#51533d] to-[#000000]', // olive
+    glowClass: 'bg-olive/30',
     color: 'bg-gradient-to-r from-[#e6e4c0] to-[#b5b987]',
     face: 'bg-gradient-to-br from-[#b5b987] via-[#51533d] to-[#000000]', // olive → gelap
     art: 'kawung',
   },
 ]
 
-/** Total saldo SELURUH dompet likuid (kas) — dipakai Dompet & Akun + Net Worth. */
-export function walletAccountsTotal(accounts: WalletAccount[] = INITIAL_WALLET_ACCOUNTS): number {
+/**
+ * Total saldo SELURUH dompet likuid (kas) — dipakai Dompet & Akun, Net Worth,
+ * Home, dan `/wallet/[id]`.
+ *
+ * Daftarnya WAJIB datang dari pemanggil (state `lib/money/store.ts`); tidak ada
+ * lagi nilai default yang membaca konstanta, karena justru itu yang dulu bikin
+ * halaman berbeda angka. Satu implementasi, dipakai semua halaman.
+ */
+export function walletAccountsTotal(accounts: readonly WalletAccount[]): number {
   return accounts.reduce((sum, account) => sum + account.balance, 0)
 }
+
+/** dompet kanon → bentuk muka kartu halaman Dompet & Akun (`balance` dihitung store) */
+export function toWalletAccount(record: WalletSeed, balance: number): WalletAccount {
+  return {
+    id: record.id,
+    name: record.name,
+    type: record.type,
+    balance,
+    ...(record.number ? { number: record.number } : {}),
+    color: record.color,
+    face: record.face,
+    art: record.art,
+    /* konteks ikut dibawa (paket 55): sheet pindah dana perlu tahu dompet tujuan
+       ada di konteks uang mana, supaya pindah antar konteks tidak terjadi diam-diam */
+    context: record.context,
+  }
+}
+
+/** dompet kanon → bentuk kartu deck Home (`balance` dihitung store) */
+export function toHomeWallet(record: WalletSeed, balance: number): Wallet {
+  return {
+    id: record.id,
+    name: record.name,
+    holder: record.holder,
+    number: record.number,
+    network: record.network,
+    balance,
+    bandClass: record.bandClass,
+    faceClass: record.faceClass,
+    glowClass: record.glowClass,
+    art: record.art,
+    kind: record.kind,
+    context: record.context,
+  }
+}
+
+/** jenis akun → jenis kartu deck Home (satu pemetaan, dipakai dompet baru juga) */
+export function walletKindOf(type: WalletAccount['type']): WalletKind {
+  if (type === 'Bank') return 'bank'
+  if (type === 'E-Wallet') return 'ewallet'
+  return 'cash'
+}
+
+/** jenis akun → label jaringan di muka kartu (bukan pilihan user) */
+export function walletNetworkOf(type: WalletAccount['type']): string {
+  if (type === 'Bank') return 'DEBIT'
+  if (type === 'E-Wallet') return 'E-WALLET'
+  return 'TUNAI'
+}
+
+/** filter dompet kanon per konteks uang (PRD Domain 2C.2) */
+export function filterWalletsByContext<T extends { context: WalletSeed['context'] }>(
+  wallets: readonly T[],
+  ctx: 'pribadi' | 'keluarga' | 'bersama' | 'all',
+): T[] {
+  if (ctx === 'all') return [...wallets]
+  return wallets.filter((wallet) => wallet.context === ctx)
+}
+
 
 /* ── SISTEM WARNA & IDENTITAS DOMPET BARU (paket 04) ──────────────────────────
    Modal "Tambah Dompet" tidak boleh mengarang gradien/hex baru: kalau boleh,
    deck kartu di /wallet perlahan jadi kumpulan warna acak dan halaman berhenti
    terasa satu sistem. Karena itu warna dompet baru DIBACA dari resep yang sudah
-   ada di INITIAL_WALLET_ACCOUNTS — bukan diisi dari form.
+   ada di `WALLET_SEED` — bukan diisi dari form.
 
    Resepnya diangkat ke array sendiri supaya pemakaiannya bisa memutar (siklus):
    dompet ke-4 memakai lagi kartu Evergreen, ke-5 Leaf, ke-6 Olive, dan
@@ -137,7 +264,7 @@ export interface WalletCardRecipe {
 }
 
 /** resep warna muka kartu dompet — SATU-SATUNYA sumber untuk kartu dompet baru */
-export const WALLET_CARD_RECIPES: WalletCardRecipe[] = INITIAL_WALLET_ACCOUNTS.map(
+export const WALLET_CARD_RECIPES: WalletCardRecipe[] = WALLET_SEED.map(
   ({ color, face, art }) => ({ color, face, art }),
 )
 
@@ -231,16 +358,11 @@ export function walletBrandsByKind(kind: WalletAccount['type']): WalletBrandOpti
   return WALLET_BRAND_OPTIONS.filter((brand) => brand.type === kind)
 }
 
-/** id dompet berikutnya — selalu 1 lebih besar dari id tertinggi yang ada */
-export function nextWalletId(accounts: WalletAccount[]): number {
-  return accounts.reduce((max, account) => Math.max(max, account.id), 0) + 1
-}
-
 /**
  * Simbol sensor di depan nomor akun (mis. `•••• 0849`).
  *
  * Ditaruh di lapis data, bukan ditulis di JSX: muka kartu, pratinjau dompet baru,
- * dan data awal di INITIAL_WALLET_ACCOUNTS memakai simbol yang SAMA supaya bentuk
+ * dan data awal di `WALLET_SEED` memakai simbol yang SAMA supaya bentuk
  * nomor tersamarkan tidak pernah beda antar tempat.
  */
 export const WALLET_NUMBER_MASK = '••••'
@@ -268,19 +390,28 @@ export interface WalletDraft {
  * jadi mustahil ada kartu dengan gradien di luar palet. `number` cuma dipasang
  * kalau memang ada isinya, supaya muka kartu tidak pernah mencetak "undefined".
  *
- * `id` sengaja dibiarkan 0 di sini: pemanggil yang tahu daftar dompet terkini
- * mengisinya lewat `nextWalletId()`.
+ * `id` sengaja TIDAK ada di sini (paket 40): yang menentukan id adalah store
+ * (`lib/money/store.ts`) — satu tempat yang juga menulis baris ledger-nya, jadi
+ * mustahil ada dompet di halaman Dompet yang tidak dikenal ledger.
  */
-export function createWalletAccount(draft: WalletDraft, index: number): WalletAccount {
+export function createWalletAccount(
+  draft: WalletDraft,
+  index: number,
+): Omit<WalletAccount, 'id'> {
   const recipe = walletCardRecipe(index)
   const number = draft.number?.trim()
   return {
-    id: 0,
     name: draft.name.trim(),
     type: draft.type,
     balance: Math.max(0, Math.round(draft.balance)),
     ...(number ? { number } : {}),
     ...recipe,
+    /* Pratinjau kartu di modal Tambah Dompet tidak punya pilihan konteks: yang
+       menentukan konteks dompet baru adalah KONTEKS UANG YANG SEDANG AKTIF, dan
+       itu diputuskan store saat menyimpan (`addWalletAccount(input.context)`).
+       Nilai di sini cuma dipakai muka kartu pratinjau, jadi selalu 'pribadi'
+       sampai store menggantinya (paket 55). */
+    context: 'pribadi',
   }
 }
 
@@ -298,53 +429,11 @@ export type DeckSelection =
   | { type: 'all'; total: number }
   | { type: 'wallet'; wallet: Wallet }
 
-/** Dompet bawaan — total saldonya Rp 4.309.573, sama seperti saldo yang selama ini tampil */
-export const INITIAL_WALLETS: Wallet[] = [
-  {
-    id: 'bca',
-    name: 'BCA',
-    holder: 'Jon Snow',
-    number: '•••• 0849',
-    network: 'VISA',
-    balance: 2500000,
-    bandClass: 'from-[#c4c7af] via-[#ffffff] to-[#c4c7af]',
-    faceClass: 'from-[#52685c] via-[#45594e] to-[#161c19]', // evergreen
-    glowClass: 'bg-evergreen/25',
-    art: 'parang',
-    kind: 'bank',
-    context: 'pribadi',
-  },
-  {
-    id: 'gopay',
-    name: 'GoPay',
-    holder: 'Jon Snow',
-    number: '•••• 2210',
-    network: 'E-WALLET',
-    balance: 1309573,
-    bandClass: 'from-[#dbe4c7] via-[#ffffff] to-[#dbe4c7]',
-    faceClass: 'from-[#91bb9e] via-[#52685c] to-[#161c19]', // leaf
-    glowClass: 'bg-leaf/25',
-    art: 'mendung',
-    kind: 'ewallet',
-    context: 'pribadi',
-  },
-  {
-    id: 'tunai',
-    name: 'Tunai',
-    holder: 'Jon Snow',
-    number: 'Uang cash',
-    network: 'TUNAI',
-    balance: 500000,
-    bandClass: 'from-[#e6e4c0] via-[#ffffff] to-[#e6e4c0]',
-    faceClass: 'from-[#b5b987] via-[#51533d] to-[#000000]', // olive
-    glowClass: 'bg-olive/30',
-    art: 'kawung',
-    kind: 'cash',
-    context: 'keluarga',
-  },
-]
-
-/** Pool kandidat saat user menekan "Tambah Dompet" (demo). */
+/**
+ * Pool kandidat saat user menekan "Tambah Dompet" (demo) — dipakai deck Home.
+ * Saldonya jadi `opening` dompet baru saat store menambahkannya, jadi kandidat
+ * ini juga ikut terhitung di "Total Saldo" baik di Home maupun `/wallet`.
+ */
 export const WALLET_POOL: Wallet[] = [
   {
     id: 'ovo',
@@ -403,12 +492,6 @@ export const WALLET_POOL: Wallet[] = [
     context: 'bersama',
   },
 ]
-
-/** Filter dompet berdasarkan konteks keuangan (PRD Domain 2C.2). */
-export function getWalletsByContext(ctx: 'pribadi' | 'keluarga' | 'bersama' | 'all'): Wallet[] {
-  if (ctx === 'all') return INITIAL_WALLETS
-  return INITIAL_WALLETS.filter((w) => w.context === ctx)
-}
 
 export function formatIDR(value: number) {
   return `Rp ${value.toLocaleString('id-ID')}`

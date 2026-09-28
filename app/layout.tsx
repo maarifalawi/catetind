@@ -2,9 +2,11 @@ import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import { Inter, Plus_Jakarta_Sans } from 'next/font/google'
 import { AIChatWidget } from '@/components/catetind/ai-chat-widget'
+import { AppLockProvider } from '@/components/catetind/app-lock-provider'
 import { OnboardingWelcomeToast } from '@/components/catetind/onboarding-welcome-toast'
 import { MobileBottomNav } from '@/components/MobileBottomNav'
 import { MoneyContextProvider } from '@/components/catetind/money-context-provider'
+import { OfflineBanner } from '@/components/catetind/offline-banner'
 import { PrivacyProvider } from '@/components/catetind/privacy-provider'
 import { ServiceWorkerRegistration } from '@/components/catetind/service-worker-registration'
 import { SmoothScrollProvider } from '@/components/catetind/smooth-scroll-provider'
@@ -93,17 +95,28 @@ export default function RootLayout({
                 Banner-nya ditaruh paling atas supaya langsung terlihat di halaman
                 app mana pun (dan menyembunyikan diri di halaman publik/pre-app). */}
             <SubscriptionGateProvider>
-              <SubscriptionBanner />
-              {children}
-              <MobileBottomNav />
-              {/* Toast non-blocking (sonner, gaya unstyled khas CatetInd) — dipicu
-                  setelah bottom sheet ditutup, tanpa modal sukses yang blocking */}
-              <Toaster />
-              {/* Toast "Setup selesai!" — sekali jalan tepat setelah onboarding */}
-              <OnboardingWelcomeToast />
-              {/* Floating AI Chat — AI Coach CatetInd (Domain 4B); state percakapan
-                  persisten lintas halaman karena layout tidak unmount saat navigasi */}
-              <AIChatWidget />
+              {/* Gerbang Kunci Perangkat (paket 39): kalau PIN app aktif &
+                  belum dibuka, provider ini MENGGANTIKAN seluruh isi app —
+                  termasuk bottom nav, tombol mata, toast, dan AI chat — dengan
+                  layar kunci. Dulu toggle PIN di Pengaturan cuma `useState`
+                  yang tidak dibaca siapa pun. */}
+              <AppLockProvider>
+                <SubscriptionBanner />
+                {/* Banner Offline & Antrean Lokal (paket 42) — di bawah banner
+                    langganan supaya saat keduanya tampil user melihat dua-duanya.
+                    Menyembunyikan diri sendiri kalau online & antrean kosong. */}
+                <OfflineBanner />
+                {children}
+                <MobileBottomNav />
+                {/* Toast non-blocking (sonner, gaya unstyled khas CatetInd) — dipicu
+                    setelah bottom sheet ditutup, tanpa modal sukses yang blocking */}
+                <Toaster />
+                {/* Toast "Setup selesai!" — sekali jalan tepat setelah onboarding */}
+                <OnboardingWelcomeToast />
+                {/* Floating AI Chat — AI Coach CatetInd (Domain 4B); state percakapan
+                    persisten lintas halaman karena layout tidak unmount saat navigasi */}
+                <AIChatWidget />
+              </AppLockProvider>
             </SubscriptionGateProvider>
           </PrivacyProvider>
         </MoneyContextProvider>

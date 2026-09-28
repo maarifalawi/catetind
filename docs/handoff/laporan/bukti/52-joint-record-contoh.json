@@ -1,0 +1,185 @@
+{
+  "diambilDengan": "probe `lib/money/joint-store.probe.test.ts` (jalur memory `lib/money/idb.ts` — sama dengan app saat IndexedDB diblokir)",
+  "skenario": [
+    "pasangan (user_b) dicatat sebagai anggota",
+    "nama kantong diubah jadi \"Dompet Kita 💚\"",
+    "catatan Rp 300.000 split 60/40 oleh user_a, lalu pembagiannya diubah jadi 70/30",
+    "baris realtime partner: Listrik PLN Rp 450.000 (id rt-1, badge justArrived)",
+    "settle bulan ini lewat GoPay dengan sisa carry-over Rp 25.000"
+  ],
+  "tersimpan": {
+    "version": 1,
+    "wallet": {
+      "id": "joint_1",
+      "name": "Dompet Kita 💚",
+      "createdAt": "2026-07-15"
+    },
+    "transactions": [
+      {
+        "id": "rt-1",
+        "userId": "user_b",
+        "paidByUserId": "user_b",
+        "description": "Listrik PLN",
+        "amount": 450000,
+        "category": "Tagihan",
+        "date": "2026-09-25",
+        "time": "21:07",
+        "splitType": "equal"
+      },
+      {
+        "id": "joint-mul1hsdl-1",
+        "userId": "user_a",
+        "paidByUserId": "user_a",
+        "description": "Makan bareng",
+        "amount": 300000,
+        "category": "Lainnya",
+        "date": "2026-09-25",
+        "time": "16:22",
+        "split": {
+          "type": "percentage",
+          "percents": {
+            "user_a": 70,
+            "user_b": 30
+          }
+        }
+      },
+      {
+        "id": "1",
+        "userId": "user_a",
+        "description": "Groceries Superindo",
+        "amount": 285000,
+        "category": "Makanan",
+        "date": "2026-09-25",
+        "time": "14:32",
+        "splitType": "equal"
+      },
+      {
+        "id": "2",
+        "userId": "user_b",
+        "description": "Listrik PLN September",
+        "amount": 450000,
+        "category": "Tagihan",
+        "date": "2026-09-25",
+        "time": "10:15",
+        "splitType": "equal"
+      },
+      {
+        "id": "3",
+        "userId": "user_a",
+        "description": "Makan malam anniversary",
+        "amount": 380000,
+        "category": "Makanan",
+        "date": "2026-09-24",
+        "time": "19:45",
+        "splitType": "single_payer",
+        "payerId": "user_a"
+      },
+      {
+        "id": "4",
+        "userId": "user_b",
+        "description": "Pengeluaran Privat Partner",
+        "amount": 150000,
+        "category": "🔒",
+        "date": "2026-09-24",
+        "time": "16:00",
+        "splitType": "equal",
+        "isPrivate": true,
+        "privateForUser": "user_b"
+      },
+      {
+        "id": "5",
+        "userId": "user_a",
+        "description": "WiFi IndiHome",
+        "amount": 350000,
+        "category": "Tagihan",
+        "date": "2026-09-23",
+        "time": "09:00",
+        "splitType": "percentage",
+        "splits": {
+          "user_a": 60,
+          "user_b": 40
+        }
+      },
+      {
+        "id": "6",
+        "userId": "user_b",
+        "description": "Bensin motor",
+        "amount": 50000,
+        "category": "Transportasi",
+        "date": "2026-09-23",
+        "time": "08:30",
+        "splitType": "equal"
+      },
+      {
+        "id": "7",
+        "userId": "user_a",
+        "description": "Groceries Alfamart",
+        "amount": 120000,
+        "category": "Makanan",
+        "date": "2026-09-22",
+        "time": "17:00",
+        "splitType": "equal"
+      },
+      {
+        "id": "8",
+        "userId": "user_b",
+        "description": "Sabun & shampoo",
+        "amount": 85000,
+        "category": "Belanja",
+        "date": "2026-09-22",
+        "time": "11:20",
+        "splitType": "equal"
+      }
+    ],
+    "settlements": {
+      "2026-09": {
+        "month": "2026-09",
+        "from": "user_a",
+        "to": "user_b",
+        "amount": 160000,
+        "method": "GoPay",
+        "carryOver": 25000
+      }
+    },
+    "members": [
+      "user_a",
+      "user_b"
+    ],
+    "purged": false
+  },
+  "bukti": {
+    "seedCatatan": 8,
+    "feedBulanIni": [
+      "settle-2026-09-user_a-user_b",
+      "rt-1",
+      "joint-mul1hsdl-1",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8"
+    ],
+    "barisSettleDiturunkan": [
+      "settle-2026-09-user_a-user_b"
+    ],
+    "carryOverBulanBerikutnya": "carry-2026-09-user_a-user_b",
+    "penandaSettleBulanIni": {
+      "month": "2026-09",
+      "from": "user_a",
+      "to": "user_b",
+      "amount": 160000,
+      "method": "GoPay",
+      "carryOver": 25000
+    },
+    "setelahSettle": {
+      "myNet": 0,
+      "partnerNet": 0,
+      "totalSpent": 2620000
+    },
+    "totalPengeluaranSebelumSettle": 2620000,
+    "cashTotalTidakBerubah": true
+  }
+}

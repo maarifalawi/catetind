@@ -105,9 +105,13 @@ export function AddWalletSheet({
     type === 'Bank' && last4 ? maskedAccountNumber(last4) : undefined
 
   /** kartu yang dilihat user di atas form — resep warnanya dari siklus palet */
-  const preview = useMemo(
-    () =>
-      createWalletAccount(
+  const preview = useMemo<WalletAccount>(
+    () => ({
+      /* id placeholder: yang menentukan id dompet sungguhan adalah store
+         (`lib/money/store.ts`, paket 40). Kartu preview cuma perlu kunci stabil
+         untuk id gradien chip-nya. */
+      id: 'preview',
+      ...createWalletAccount(
         {
           name: trimmedName || ADD_WALLET_SHEET_COPY.previewFallbackName,
           type,
@@ -116,6 +120,7 @@ export function AddWalletSheet({
         },
         cardIndex,
       ),
+    }),
     [trimmedName, type, balance, previewNumber, cardIndex],
   )
 

@@ -158,7 +158,15 @@ const AMOUNT_SLANG: { pattern: RegExp; value: number }[] = [
   { pattern: /\bceban\b/, value: 10_000 },
 ]
 
-/** kata kunci tipe transaksi (PRD 484–488); urutan = prioritas */
+/** kata kunci tipe transaksi (PRD 484–488); urutan = prioritas.
+ *
+ *  PAKET 55: `transfer` tetap DIDENGAR di sini — AI tidak boleh pura-pura tidak
+ *  mendengar kata "transfer"/"pindah dana" (itu membuat hasil bacanya meleset).
+ *  Yang berubah adalah apa yang boleh DILAKUKAN dengan hasilnya: jalur capture
+ *  (chat/voice) hanya bisa mencatat satu sisi, jadi kartu konfirmasi menahan
+ *  simpan & mengarahkan user ke alur “Pindah Dana” yang menanyakan dompet tujuan
+ *  (`AI_CAPTURE_COPY.needTransferFlow`), dan store menolaknya sebagai jaring
+ *  terakhir (`postTransaction` → `null` untuk `type: 'transfer'`). */
 const TYPE_KEYWORDS: { type: TransactionType; pattern: RegExp }[] = [
   { type: 'saving', pattern: /\b(nabung|menabung|sisihkan|simpan|tabung|celengan)\b/ },
   { type: 'transfer', pattern: /\b(transfer|tf|kirim|pindahin|pindah\s?dana)\b/ },

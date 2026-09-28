@@ -15,7 +15,10 @@ import { BillTimeline } from './bill-timeline'
 import { BillCard, type StampState } from './bill-card'
 import { BillNotifNudge } from './bill-notif-nudge'
 import { AddBillSheet, type NewBill } from './add-bill-sheet'
+import { MarkBillPaidSheet } from './mark-bill-paid-sheet'
 import { ConfirmDialog } from './confirm-dialog'
+import { ContextSwitcher } from './context-switcher'
+import { useMoneyContext } from './money-context-provider'
 import { cn } from '@/lib/utils'
 import {
   ADD_BILL_TOAST,
@@ -23,8 +26,9 @@ import {
   CONFIRM_DELETE_BILL_COPY,
   CURRENT_DAY,
   DELETE_BILL_TOAST,
-  INITIAL_BILLS,
+  MARK_PAID_SHEET_COPY,
   MARK_PAID_TOAST,
+  MARK_PAID_TOAST_EXTRA,
   MONTHLY_INCOME,
   UNDO_WINDOW_MS,
   UPDATE_BILL_TOAST,
@@ -37,6 +41,24 @@ import {
   type Bill,
   type BillFilter,
 } from '@/lib/data/bills'
+import {
+  CONTEXT_EMPTY_COPY,
+  CONTEXT_LABEL,
+  SCOPE_NOTE,
+  contextCaption,
+} from '@/lib/data/money-context'
+import {
+  addBill,
+  billsForContext,
+  deleteBill,
+  editBill,
+  liveBills,
+  markBillPaid,
+  restoreBill as restoreBillInStore,
+  unmarkBillPaid,
+  useBillsStore,
+} from '@/lib/money/bills-store'
+import { defaultWalletNameFor, useMoneyStore, walletIdOfName, walletOptionsFor } from '@/lib/money/store'
 
 /* ── Tagihan Rutin (/app/bills) ──────────────────────────────────────────────
    Halaman ini SENGAJA bukan tabel daftar tagihan. Alurnya dibikin seperti
@@ -55,9 +77,10 @@ import {
    CURRENT_DAY supaya hasil render server & client identik.
    ────────────────────────────────────────────────────────────────────────── */
 
-/** jeda sebelum kartu benar-benar pindah grup (stempel sempat terlihat dulu) */
-const MOVE_DELAY = 600
-/** jeda sampai stempel "fresh" menyusut jadi stempel samar milik kartu lunas */
+/** jeda sampai stempel "fresh" menyusut jadi stempel samar milik kartu lunas.
+ *  (Dulu ada jeda 600ms sebelum kartunya pindah grup supaya stempelnya sempat
+ *  terlihat. Sejak paket 51 statusnya berubah BEGITU baris kasnya tertulis —
+ *  uangnya harus bergerak saat itu juga, bukan setengah detik kemudian.) */
 const STAMP_SETTLE = 1600
 /** cubic-bezier khas app: masuk cepat lalu settle lembut */
 const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1]
@@ -66,17 +89,39 @@ export function BillsScreen() {
   /* ── STATE ──────────────────────────────────────────────────────────────── */
   /* privasi nominal: state GLOBAL (PrivacyProvider) */
   const { masked } = usePrivacy()
+  /* konteks uang (Pribadi/Keluarga/Bersama) — state GLOBAL yang sama dengan
+     switcher halaman lain (paket 47). Daftar tagihan mengikutinya; ringkasan
+     (tameng, waterfall, % beban tetap) tetap menghitung SEMUA tagihan. */
+  const { context, setContext } = useMoneyContext()
   const [activeFilter, setActiveFilter] = useState<BillFilter>('semua')
   const [showAddBill, setShowAddBill] = useState(false)
-  const [bills, setBills] = useState<Bill[]>(INITIAL_BILLS)
   /** tagihan yang sedang dibuka di sheet EDIT (null = sheet-nya mode tambah) */
   const [editingBill, setEditingBill] = useState<Bill | null>(null)
   /** tagihan yang menunggu konfirmasi hapus — hapus TIDAK pernah langsung jalan */
   const [pendingDelete, setPendingDelete] = useState<Bill | null>(null)
-  /** jejak Undo yang MASIH berlaku (dikosongkan begitu jendelanya lewat) */
-  const undoRef = useRef<{ bill: Bill; index: number } | null>(null)
+  /** tagihan yang sedang dibayar (null = sheet "Tandai Lunas" tertutup) */
+  const [payTarget, setPayTarget] = useState<Bill | null>(null)
+  /** jejak Undo HAPUS yang MASIH berlaku (dikosongkan begitu jendelanya lewat) */
+  const undoRef = useRef<string | null>(null)
+  /** jejak Undo "LUNAS" yang masih berlaku — untuk mencabut stempel + barisnya */
+  const paidUndoRef = useRef<string | null>(null)
+  /** true = sheet bayar ditutup karena baris kasnya sudah tertulis (bukan batal) */
+  const paidRef = useRef(false)
   /** tagihan yang stempel LUNAS-nya baru saja dicap (animasi + haptic) */
   const [stampId, setStampId] = useState<string | null>(null)
+
+  /* ── SATU SUMBER TAGIHAN (paket 51 · temuan E laporan 46) ────────────────
+     Daftar tagihan sekarang hidup di `lib/money/bills-store.ts`, bukan di
+     `useState` halaman ini. Sebelumnya: tagihan yang ditambah/diubah/dihapus
+     hilang setelah refresh, dan "Tandai Lunas" cuma menempelkan stempel — kasnya
+     tidak bergerak sama sekali. Dengan store ini, halaman Tagihan, file ekspor
+     (`/settings/data` & `/help`), dan alur "Hapus Akun" membaca data yang SAMA. */
+  const billsStore = useBillsStore()
+  const bills = useMemo(() => liveBills(billsStore), [billsStore])
+  /* Kas tetap milik store uang (paket 40): pilihan dompet di sheet "Tandai Lunas"
+     dibaca dari ledger yang asli, lengkap dengan saldonya. */
+  const money = useMoneyStore()
+  const walletChoices = useMemo(() => walletOptionsFor(money), [money])
   /** kartu yang sedang disorot karena tanggalnya dipilih di timeline */
   const [highlightId, setHighlightId] = useState<string | null>(null)
 
@@ -95,24 +140,45 @@ export function BillsScreen() {
   }
 
   /* ── DATA TURUNAN ───────────────────────────────────────────────────────── */
-  const counts = useMemo(() => billFilterCounts(bills, currentDay), [bills, currentDay])
+  /** tagihan konteks aktif (paket 47) — dasar chip jumlah & angka filter.
+   *  Penyaringnya `billsForContext()` dari store (memakai `scopedItems` kanon),
+   *  jadi tidak ada logika penyaring kedua di komponen. */
+  const scopedBills = useMemo(() => billsForContext(billsStore, context), [billsStore, context])
+  /** angka di pill filter dihitung dari DAFTAR YANG DISARING (scopedBills), bukan
+   *  dari seluruh tagihan: pill "Telat (1)" yang membuka daftar kosong adalah
+   *  janji palsu — angka itu milik daftar yang benar-benar ia saring. */
+  const counts = useMemo(
+    () => billFilterCounts(scopedBills, currentDay),
+    [scopedBills, currentDay],
+  )
   const visibleBills = useMemo(
-    () => filterBills(bills, activeFilter, currentDay),
-    [bills, activeFilter, currentDay],
+    () => filterBills(scopedBills, activeFilter, currentDay),
+    [scopedBills, activeFilter, currentDay],
   )
   const groups = useMemo(() => groupBills(visibleBills, currentDay), [visibleBills, currentDay])
+  /** TOTAL & beban tetap = SEMUA tagihan (kanon paket 47 #1: konteks menyaring
+   *  daftar, bukan total). Angkanya dipakai MetaChip, tameng, dan waterfall. */
   const totalAmount = useMemo(() => totalMonthlyBills(bills), [bills])
   const burn = useMemo(() => burnPercentage(bills, monthlyIncome), [bills, monthlyIncome])
   /** tagihan yang benar-benar ada di list "Aktif" (belum lunas) — dipakai
    *  timeline supaya kalender & daftar tidak kontradiksi (audit #3) */
   const activeBills = useMemo(() => bills.filter((bill) => !bill.isPaidThisMonth), [bills])
+  /** Dompet awal di sheet "Tandai Lunas": dompet tagihannya (kalau masih ada di
+   *  ledger), kalau tidak → dompet pertama konteks uang aktif (paket 47). Dua
+   *  jawaban itu bisa dijelaskan ke user; tidak ada tebakan baru. */
+  const defaultPayWalletId = useMemo(() => {
+    if (!payTarget) return walletChoices[0]?.id ?? ''
+    if (walletChoices.some((option) => option.id === payTarget.walletId)) return payTarget.walletId
+    return walletIdOfName(money, defaultWalletNameFor(context))
+  }, [payTarget, walletChoices, money, context])
 
   /* ── AKSI ───────────────────────────────────────────────────────────────── */
 
   /**
-   * 7C — cap LUNAS: stempel muncul di kartu, haptic tiga ketuk, toast, lalu
-   * setelah 600ms kartunya pindah ke grup "Sudah Dibayar" (layoutId framer yang
-   * menggeser) sehingga terasa seperti satu gerakan, bukan dua kejadian.
+   * 7C — "Tandai Lunas" (paket 51): sekarang MEMBUKA pemilih dompet, bukan
+   * langsung menempelkan stempel. Sebabnya bisa dibuktikan: stempel LUNAS tanpa
+   * uang keluar adalah klaim palsu (temuan E laporan 46). Uangnya benar-benar
+   * keluar dari dompet yang dipilih user di `confirmBillPaid()` di bawah.
    */
   function handleMarkPaid(bill: Bill) {
     if (bill.isPaidThisMonth) return
@@ -123,15 +189,73 @@ export function BillsScreen() {
     } catch {
       /* iOS Safari tanpa Vibration API — abaikan */
     }
-    setStampId(bill.id)
-    toast.success(MARK_PAID_TOAST(bill.name))
+    setPayTarget(bill)
+  }
 
+  /**
+   * Baris kasnya ditulis DI SINI (lewat `markBillPaid` → `postExpense`), baru
+   * stempelnya naik. `false` = store menolak (dompet tidak dikenal / saldo
+   * kurang) dan TIDAK ada yang berubah — sheet yang menampilkan alasannya,
+   * bukan layar yang berbunyi "lunas".
+   */
+  function confirmBillPaid(amount: number, walletName: string): boolean {
+    if (!payTarget) return false
+    const result = markBillPaid(payTarget.id, walletName, amount)
+    if (!result) return false
+
+    paidRef.current = true
+    setPayTarget(null)
+    paidUndoRef.current = result.bill.id
+    setStampId(result.bill.id)
+    /* Toast-nya menyebut NOMINAL + DOMPET — itulah bukti yang bisa dicek user
+       sendiri di /wallet, Home, dan Riwayat. */
+    toast.success(
+      MARK_PAID_TOAST(result.bill.name, maskMoney(result.amount, masked), result.walletName),
+      {
+        description: MARK_PAID_TOAST_EXTRA.description,
+        action: { label: MARK_PAID_TOAST_EXTRA.undo, onClick: () => undoPaid(result.bill.id) },
+        /* lama toast = lama hak membatalkan; keduanya dibaca dari satu konstanta */
+        duration: UNDO_WINDOW_MS,
+      },
+    )
     later(() => {
-      setBills((prev) =>
-        prev.map((item) => (item.id === bill.id ? { ...item, isPaidThisMonth: true } : item)),
-      )
-    }, MOVE_DELAY)
-    later(() => setStampId((current) => (current === bill.id ? null : current)), STAMP_SETTLE)
+      if (paidUndoRef.current === result.bill.id) paidUndoRef.current = null
+    }, UNDO_WINDOW_MS)
+    later(() => setStampId((current) => (current === result.bill.id ? null : current)), STAMP_SETTLE)
+    return true
+  }
+
+  /**
+   * Batal "Lunas" (salah tekan): `unmarkBillPaid()` mencabut stempelnya DAN
+   * membalikkan baris kasnya (`removeRow`), jadi saldo dompetnya pulih — bukan
+   * cuma tanda di layar yang hilang.
+   */
+  function undoPaid(billId: string) {
+    if (paidUndoRef.current !== billId) {
+      toast(MARK_PAID_TOAST_EXTRA.expired)
+      return
+    }
+    paidUndoRef.current = null
+    const result = unmarkBillPaid(billId)
+    if (!result) {
+      toast(MARK_PAID_TOAST_EXTRA.expired)
+      return
+    }
+    setStampId((current) => (current === billId ? null : current))
+    toast.success(MARK_PAID_TOAST_EXTRA.undoneTitle, {
+      description: MARK_PAID_TOAST_EXTRA.undoneDescription,
+    })
+  }
+
+  /**
+   * Sheet bayar ditutup tanpa menekan simpan → tidak ada yang dibayar, dan itu
+   * DIKATAKAN apa adanya supaya user tidak menduga tagihannya sudah lunas.
+   */
+  function closePaySheet() {
+    const paid = paidRef.current
+    paidRef.current = false
+    setPayTarget(null)
+    if (!paid) toast(MARK_PAID_SHEET_COPY.closedNote)
   }
 
   /** 7D — Edit: buka sheet yang SAMA dengan sheet tambah, tapi terisi data
@@ -147,45 +271,51 @@ export function BillsScreen() {
   }
 
   /**
-   * Hapus sesungguhnya: kartunya keluar dari daftar, TAPI hak mengembalikannya
-   * masih hidup selama UNDO_WINDOW_MS (PRD 2251). Toast-nya membawa tombol
-   * Undo; setelah jendelanya tutup, jejaknya dibuang sehingga undo yang datang
+   * Hapus sesungguhnya: `deleteBill()` memasang TOMBSTONE di store — barisnya
+   * tetap disimpan beserta status lunasnya — TAPI hak mengembalikannya masih
+   * hidup selama UNDO_WINDOW_MS (PRD 2251). Toast-nya membawa tombol Undo;
+   * setelah jendelanya tutup, jejaknya dibuang sehingga undo yang datang
    * terlambat ditolak dengan jujur — bukan diam-diam tidak terjadi apa-apa.
+   *
+   * Baris kas pembayarannya sengaja TIDAK ikut dihapus: kalau uangnya memang
+   * sudah keluar, menghapus tagihannya bukan alasan menghapus jejak uang itu.
    */
   function confirmDelete() {
     if (!pendingDelete) return
     const bill = pendingDelete
-    const index = bills.findIndex((item) => item.id === bill.id)
-    const entry = { bill, index: index < 0 ? bills.length : index }
-    undoRef.current = entry
-    setBills((prev) => prev.filter((item) => item.id !== bill.id))
+    if (!deleteBill(bill.id)) {
+      /* sudah dihapus sebelumnya (mis. dari perangkat lain) — tidak ada yang
+         berubah, jadi tidak ada toast "berhasil" */
+      setPendingDelete(null)
+      return
+    }
+    undoRef.current = bill.id
     setPendingDelete(null)
 
     toast(DELETE_BILL_TOAST.title, {
       description: DELETE_BILL_TOAST.description(bill.name),
-      action: { label: DELETE_BILL_TOAST.undo, onClick: () => restoreBill(entry) },
+      action: { label: DELETE_BILL_TOAST.undo, onClick: () => undoDelete(bill.id) },
       /* lama toast = lama hak undo; keduanya dibaca dari satu konstanta */
       duration: UNDO_WINDOW_MS,
     })
 
     later(() => {
-      if (undoRef.current === entry) undoRef.current = null
+      if (undoRef.current === bill.id) undoRef.current = null
     }, UNDO_WINDOW_MS)
   }
 
-  /** Undo: kartunya balik ke posisi semula — user tidak perlu mengetik ulang */
-  function restoreBill(entry: { bill: Bill; index: number }) {
-    if (undoRef.current !== entry) {
+  /** Undo: cabut tombstone-nya — tagihannya balik BESERTA status "lunas bulan
+   *  ini"-nya, jadi jendela Undo tidak pernah menelan status yang benar. */
+  function undoDelete(billId: string) {
+    if (undoRef.current !== billId) {
       toast(DELETE_BILL_TOAST.expired)
       return
     }
     undoRef.current = null
-    setBills((prev) => {
-      if (prev.some((item) => item.id === entry.bill.id)) return prev
-      const next = [...prev]
-      next.splice(Math.min(entry.index, next.length), 0, entry.bill)
-      return next
-    })
+    if (!restoreBillInStore(billId)) {
+      toast(DELETE_BILL_TOAST.expired)
+      return
+    }
     toast.success(DELETE_BILL_TOAST.undoneTitle, {
       description: DELETE_BILL_TOAST.undoneDescription,
     })
@@ -194,19 +324,26 @@ export function BillsScreen() {
   /** 9D — tagihan baru masuk sebagai lajur kosong berikutnya di tameng */
   function handleSaveBill(data: NewBill) {
     /* Mode EDIT: id & status "lunas bulan ini" dipertahankan — yang berubah cuma
-       field yang benar-benar dikoreksi user (termasuk tenor & catatannya). */
+       field yang benar-benar dikoreksi user (termasuk tenor & catatannya). Yang
+       mengubahnya store, jadi halaman lain & file ekspor ikut melihatnya. */
     if (editingBill) {
-      const id = editingBill.id
-      setBills((prev) => prev.map((bill) => (bill.id === id ? { ...bill, ...data } : bill)))
+      const updated = editBill(editingBill.id, data)
       setEditingBill(null)
+      if (!updated) {
+        toast.error(UPDATE_BILL_TOAST.expired)
+        return
+      }
       toast.success(UPDATE_BILL_TOAST.title, { description: UPDATE_BILL_TOAST.description })
       return
     }
 
-    const nextId = String(
-      bills.reduce((max, bill) => Math.max(max, Number(bill.id) || 0), 0) + 1,
-    )
-    setBills((prev) => [...prev, { ...data, id: nextId, isPaidThisMonth: false }])
+    /* `scope` ditempelkan DI SINI, dari konteks yang sedang aktif (paket 47):
+       tagihan yang dicatat saat konteks "Keluarga" masuk konteks Keluarga, jadi
+       ia langsung terlihat di daftar yang user lihat sendiri. Sheet-nya sengaja
+       tidak punya kontrol konteks — konteks itu satu state global.
+       `id` dibuat store (dan langsung disimpan ke perangkat), jadi tagihan baru
+       tidak lagi hilang saat halaman di-refresh (temuan E laporan 46). */
+    addBill({ ...data, isPaidThisMonth: false, scope: context })
     setActiveFilter('semua')
     setShowAddBill(false)
     toast.success(ADD_BILL_TOAST.title)
@@ -246,21 +383,33 @@ export function BillsScreen() {
         <GlobalPrivacyToggle />
       </header>
 
+      {/* switcher konteks (mobile): baris sendiri di bawah header — persis pola
+          Home & Budget (paket 47). */}
+      <div className="mt-4 flex justify-center lg:hidden">
+        <ContextSwitcher value={context} onChange={setContext} />
+      </div>
+
       <div className="mt-4 lg:mt-0 lg:flex lg:items-end lg:justify-between lg:gap-8">
         <div className="min-w-0">
-          <p className="hidden text-[13px] font-medium text-ink/45 lg:block">
-            Pengeluaran tetap bulan ini
+          <p className="text-[13px] font-medium text-ink/45">
+            {contextCaption(context)} · pengeluaran tetap bulan ini
           </p>
           <h1 className="font-display text-3xl font-semibold tracking-tight text-ink lg:text-4xl">
             Tagihan Rutin
           </h1>
           <div className="mt-2 flex flex-wrap items-center gap-2 lg:mt-3">
+            {/* chip ini menghitung SEMUA tagihan (bukan yang tersaring) supaya
+                tidak ada dua angka untuk satu label di satu layar */}
             <MetaChip icon={Receipt}>{bills.length} tagihan</MetaChip>
             <MetaChip icon={WalletIcon}>{maskMoney(totalAmount, masked)}/bulan</MetaChip>
             <MetaChip icon={Flame}>{burn}% dari gaji</MetaChip>
           </div>
+          {/* catatan cakupan: tameng, waterfall, dan chip di atas = SELURUH
+              tagihan, sementara daftar di kanan mengikuti konteks aktif */}
+          <p className="mt-1.5 text-[11.5px] font-medium text-ink/45">{SCOPE_NOTE.bills}</p>
         </div>
-        <div className="hidden shrink-0 lg:block">
+        <div className="hidden shrink-0 items-center gap-3 lg:flex">
+          <ContextSwitcher value={context} onChange={setContext} className="w-[280px]" />
           <GlobalPrivacyToggle />
         </div>
       </div>
@@ -268,6 +417,29 @@ export function BillsScreen() {
         {bills.length === 0 ? (
           /* 10. EMPTY STATE — tameng kelabu 0/0 + ajakan mencatat tagihan pertama */
           <EmptyState masked={masked} onAdd={() => setShowAddBill(true)} />
+        ) : scopedBills.length === 0 ? (
+          /* EMPTY STATE PER KONTEKS (paket 47): tagihan ada, tapi tidak satu pun
+             milik konteks aktif. Daftar kosong tanpa penjelasan = user mengira
+             datanya hilang; di sini alasannya disebut + ada CTA menambah. */
+          <div className="mt-5 lg:mt-6">
+            <ShieldMeter bills={[]} masked={masked} currentDay={currentDay} variant="compact" />
+            <div className="mt-5 flex flex-col items-center rounded-[1.75rem] border-2 border-dashed border-forest/15 bg-cream/50 px-6 py-10 text-center">
+              <h2 className="font-display text-[16px] font-bold tracking-tight text-ink">
+                {CONTEXT_EMPTY_COPY.bills.title(CONTEXT_LABEL[context])}
+              </h2>
+              <p className="mt-1.5 max-w-sm text-[13px] leading-relaxed text-ink/55">
+                {CONTEXT_EMPTY_COPY.bills.body}
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowAddBill(true)}
+                className="mt-5 inline-flex h-11 items-center gap-2 rounded-2xl bg-forest px-5 text-[13.5px] font-semibold text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
+              >
+                <Plus className="size-4" strokeWidth={2.6} />
+                {CONTEXT_EMPTY_COPY.bills.cta}
+              </button>
+            </div>
+          </div>
         ) : (
           /* ── FULL-WIDTH 2 KOLOM (audit UX #1) ─────────────────────────────
              KIRI  (5/12) — insight & visual : tameng, waterfall gaji, timeline
@@ -302,9 +474,16 @@ export function BillsScreen() {
               {/* kepala daftar: judul + tombol tambah ringkas (audit #7 —
                   tidak lagi membentang penuh seperti footer di dasar layar) */}
               <div className="flex items-center justify-between gap-3">
-                <h2 className="font-display text-[17px] font-bold tracking-tight text-ink">
-                  Daftar Tagihan
-                </h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="font-display text-[17px] font-bold tracking-tight text-ink">
+                    Daftar Tagihan
+                  </h2>
+                  {/* jumlah tagihan di KONTEKS AKTIF (paket 47) — pill filter di
+                      bawah memakai angka yang sama, jadi tidak ada dua hitungan */}
+                  <span className="rounded-full bg-sage px-2 py-0.5 text-[10.5px] font-bold tabular-nums text-forest ring-1 ring-forest/10">
+                    {scopedBills.length}
+                  </span>
+                </div>
                 <button
                   type="button"
                   onClick={() => setShowAddBill(true)}
@@ -442,6 +621,19 @@ export function BillsScreen() {
           setEditingBill(null)
         }}
         onSave={handleSaveBill}
+      />
+
+      {/* sheet "Tandai Lunas" (paket 51) — pemilih DOMPET, bukan stempel. Ini
+          satu-satunya jalan stempel LUNAS muncul: baris kasnya ditulis lebih dulu
+          (`markBillPaid` → `postExpense`), jadi tidak ada status lunas tanpa uang
+          yang benar-benar keluar dari dompet yang dipilih user. */}
+      <MarkBillPaidSheet
+        bill={payTarget}
+        masked={masked}
+        walletOptions={walletChoices}
+        defaultWalletId={defaultPayWalletId}
+        onClose={closePaySheet}
+        onConfirm={confirmBillPaid}
       />
 
       {/* konfirmasi hapus: aksi merusak selalu ditolak dulu, baru boleh jalan.

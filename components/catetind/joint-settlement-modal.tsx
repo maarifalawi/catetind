@@ -1,23 +1,34 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Check, X } from 'lucide-react'
 import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock'
 import {
+  DEFAULT_SETTLEMENT_METHOD,
   JOINT_ME,
   JOINT_MONTH_LABEL,
   JOINT_PARTNER,
+  NET_SECTION_TITLE,
   SETTLEMENT_DISCLAIMER,
+  SETTLEMENT_METHODS,
   SETTLEMENT_SCOPE_SHORT,
+  SETTLE_METHOD_LABEL,
+  SETTLE_ONE_TRANSFER_HINT,
+  SETTLE_ONE_TRANSFER_LABEL,
   SETTLED_TOAST,
   moneyLabel,
+  netPhrase,
+  settlementCarryCopy,
   shouldPromptSettlement,
   type JointPerson,
+  type JointSettlementRecord,
+  type SettlementMethod,
   type SettlementState,
 } from '@/lib/data/joint'
 import { toast } from 'sonner'
 import { JointBalanceScale } from './joint-balance-scale'
+import { ChoicePills } from './budget-sheet'
 import { useSubscriptionGate } from './subscription-gate-provider'
 import { SubscriptionLockNote } from './subscription-lock-note'
 import { cn } from '@/lib/utils'
@@ -26,6 +37,15 @@ import { cn } from '@/lib/utils'
    Rekap bulanan + instruksi transfer + tombol "Tandai Sudah Settle ✓".
    Sengaja dibuka dari Balance Scale ("Settle Sekarang") ATAU dari banner rekap
    bulanan — dua pintu ke satu layar yang sama.
+
+   Stage 2 #1 & #2:
+   • Blok rekap menampilkan NET per orang (`netPhrase`) — dulu isinya "patungan"
+     lalu "Selisih" tanpa pernah menyebut siapa berhak menerima berapa.
+   • Baris "Satu transfer" memberi nama pada nominalnya: satu transfer penuh
+     memang menyelesaikan bulan ini (dulu user tidak tahu itu setengah selisih
+     atau transfer penuh).
+   • User memilih metode transfernya, dan pilihannya dibawa ke halaman supaya
+     baris ledger `settlement {from, to, amount, method, month}` punya isi.
 
    Mobile: bottom sheet. Desktop: dialog tengah (translate dipakai sebagai
    properti terpisah supaya tidak bentrok dengan animasi y Framer Motion).
@@ -41,6 +61,7 @@ export function JointSettlementModal({
   settlement,
   masked,
   onSettle,
+  carryOverRecord = null,
   me = JOINT_ME,
   partner = JOINT_PARTNER,
 }: {
@@ -48,8 +69,10 @@ export function JointSettlementModal({
   onClose: () => void
   settlement: SettlementState
   masked: boolean
-  /** user menekan "Tandai Sudah Settle ✓" — scale di halaman kembali rata */
-  onSettle: () => void
+  /** user menekan "Tandai Sudah Settle ✓" — halaman menulis entri ledger-nya */
+  onSettle: (method: SettlementMethod) => void
+  /** penanda bulan lalu yang masih menyisakan utang (null = tidak ada sisa) */
+  carryOverRecord?: JointSettlementRecord | null
   me?: JointPerson
   partner?: JointPerson
 }) {
@@ -57,6 +80,8 @@ export function JointSettlementModal({
   /* menandai bulan "sudah settle" mengubah status data bersama → ikut terkunci
      saat masa aktif habis (task 23). Rekap & instruksi transfernya tetap terbaca. */
   const { inputLocked } = useSubscriptionGate()
+  /* metode transfer yang dipilih user — ikut tersimpan di baris ledger */
+  const [method, setMethod] = useState<SettlementMethod>(DEFAULT_SETTLEMENT_METHOD)
 
   /* Escape menutup modal (pola yang sama dengan detail transaksi) */
   useEffect(() => {
@@ -80,7 +105,9 @@ export function JointSettlementModal({
       /* haptic itu bonus — jangan sampai memblokir aksi utama */
     }
     toast.success(SETTLED_TOAST)
-    onSettle()
+    /* metode transfer ikut dikirim: halaman yang menulis baris ledger-nya
+       (`settlement {from, to, amount, method, month}`), bukan modal ini */
+    onSettle(method)
     onClose()
   }
 
@@ -143,8 +170,9 @@ export function JointSettlementModal({
                   showCopy={false}
                 />
               </div>
-              {/* dua lapisan angka (audit #1–#3): seluruh catatan vs yang benar-
-                  benar ditimbang — supaya "Selisih" di bawah bisa ditelusuri */}
+              {/* dua lapisan angka (audit #1–#3): seluruh catatan vs POSISI BERSIH
+                  yang benar-benar menentukan transfer — supaya baris "Satu transfer"
+                  di bawah bisa ditelusuri */}
               <div className="mt-3 space-y-2 rounded-[1.5rem] bg-cream px-4 py-3.5 ring-1 ring-soil/10">
                 <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-ink/35">
                   Semua catatan bulan ini
@@ -163,26 +191,42 @@ export function JointSettlementModal({
                 />
               </div>
 
+              {/* Stage 2 #1 & #2: dulu blok ini menulis "patungan" lalu "Selisih"
+                  tanpa pernah menyebut siapa berhak menerima berapa. Sekarang
+                  nilainya NET per orang + artinya, lalu satu baris transfer yang
+                  benar-benar menyelesaikan bulan ini. */}
               <div className="mt-3 space-y-2 rounded-[1.5rem] bg-hud-sage/12 px-4 py-3.5 ring-1 ring-hud-sage/25">
                 <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-[#000000]">
-                  Yang ditimbang (patungan)
+                  {NET_SECTION_TITLE}
                 </p>
                 <RecapRow
-                  label={`${me.avatar} ${me.name} patungan`}
-                  value={moneyLabel(settlement.myWeighedSpent, masked)}
+                  label={`${me.avatar} ${me.name}`}
+                  value={netPhrase(settlement.myNet, masked)}
                 />
                 <RecapRow
-                  label={`${partner.avatar} ${partner.name} patungan`}
-                  value={moneyLabel(settlement.partnerWeighedSpent, masked)}
+                  label={`${partner.avatar} ${partner.name}`}
+                  value={netPhrase(settlement.partnerNet, masked)}
                 />
-                {settlement.treatTotal > 0 && (
-                  <RecapRow
-                    label="Traktiran (tidak ditimbang)"
-                    value={moneyLabel(settlement.treatTotal, masked)}
-                  />
+                {carryOverRecord && (
+                  <p className="rounded-2xl bg-[#ffffff]/75 px-2.5 py-2 text-[10.5px] leading-relaxed text-[#000000]/85">
+                    {settlementCarryCopy(carryOverRecord, masked)}
+                  </p>
                 )}
+                <p className="text-[10.5px] leading-relaxed text-[#000000]/70">
+                  Yang ditimbang {moneyLabel(settlement.weighedTotal, masked)}
+                  {settlement.treatTotal > 0
+                    ? ` · traktiran ${moneyLabel(settlement.treatTotal, masked)} tidak ditimbang`
+                    : ''}
+                </p>
                 <div className="border-t border-soil/12 pt-2">
-                  <RecapRow label="Selisih" value={moneyLabel(difference, masked)} strong />
+                  <RecapRow
+                    label={SETTLE_ONE_TRANSFER_LABEL}
+                    value={moneyLabel(difference, masked)}
+                    strong
+                  />
+                  <p className="mt-1 text-[10.5px] leading-relaxed text-[#000000]/85">
+                    {SETTLE_ONE_TRANSFER_HINT}
+                  </p>
                 </div>
                 <p className="text-[10.5px] leading-relaxed text-[#000000]/85">
                   {SETTLEMENT_SCOPE_SHORT}
@@ -206,8 +250,8 @@ export function JointSettlementModal({
                    ajakan transfer supaya tidak bertabrakan dengan copy di atas */
                 <div className="mt-4 rounded-[1.5rem] bg-hud-sage/15 px-4 py-3.5 text-center ring-1 ring-hud-sage/35">
                   <p className="text-[13px] font-semibold leading-relaxed text-[#000000]">
-                    Hampir impas! Selisihnya cuma {moneyLabel(difference, masked)} — gak perlu
-                    settle 💚
+                    Hampir impas! Posisi bersih kalian beda cuma {moneyLabel(difference, masked)} — gak
+                    perlu settle 💚
                   </p>
                 </div>
               ) : (
@@ -217,8 +261,25 @@ export function JointSettlementModal({
                     <b className="font-bold tabular-nums text-hud-terracotta">
                       {moneyLabel(settlementAmount, masked)}
                     </b>{' '}
-                    ke <b className="font-bold">{whoIsOwed.name}</b>.
+                    ke <b className="font-bold">{whoIsOwed.name}</b> — satu transfer, langsung lunas.
                   </p>
+                </div>
+              )}
+
+              {/* metode transfer: pilihannya dibawa ke penanda settle supaya baris
+                  ledger-nya punya isi `method` (Stage 2 #5) */}
+              {shouldPromptSettlement(settlement) && (
+                <div className="mt-3 rounded-2xl bg-cream px-3.5 py-3 ring-1 ring-soil/12">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink/45">
+                    {SETTLE_METHOD_LABEL}
+                  </p>
+                  <ChoicePills
+                    className="mt-2"
+                    options={SETTLEMENT_METHODS.map((item) => ({ id: item, label: item }))}
+                    value={method}
+                    onChange={setMethod}
+                    ariaLabel={SETTLE_METHOD_LABEL}
+                  />
                 </div>
               )}
 

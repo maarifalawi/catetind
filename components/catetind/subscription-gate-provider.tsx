@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from 'react'
 import { usePathname } from 'next/navigation'
+import { PUBLIC_ROUTES, isPublicRoute } from '@/lib/public-routes'
 import {
   RENEWAL_STATE,
   readRenewalMarker,
@@ -37,7 +38,7 @@ import {
 
 /**
  * Route PUBLIK / pre-app yang TIDAK boleh kena gerbang — di sini user mungkin
- * belum bisa login, jadi berhenti di gerbang sama saja memenjarakannya:
+ * belum bisa login, jadi berhenti di gerbang sama saja memenjarakannya.
  *
  *   • `/login`, `/login/verify` — pintu masuk akun
  *   • `/checkout`               — WAJIB tetap bisa membayar (termasuk memperpanjang!)
@@ -47,25 +48,15 @@ import {
  *   • `/install`                — panduan install PWA
  *   • `/app/onboarding`         — flow setup pertama setelah membayar
  *
- * Daftar ini sejajar dengan `FOCUS_ROUTES` di MobileBottomNav: di route yang
- * sama, navigasi app memang sengaja tidak ditampilkan.
+ * Daftarnya sekarang tinggal di `lib/public-routes.ts` karena dipakai DUA
+ * gerbang (langganan + kunci PIN perangkat). Nama lama tetap di-export supaya
+ * pemanggil & komentar yang sudah ada tidak perlu berubah.
  */
-export const SUBSCRIPTION_PUBLIC_ROUTES = [
-  '/login',
-  '/checkout',
-  '/privacy',
-  '/terms',
-  '/join',
-  '/share',
-  '/install',
-  '/app/onboarding',
-] as const
+export const SUBSCRIPTION_PUBLIC_ROUTES = PUBLIC_ROUTES
 
 /** true kalau pathname berada di (atau di bawah) halaman publik/pre-app */
 export function isSubscriptionPublicRoute(pathname: string): boolean {
-  return SUBSCRIPTION_PUBLIC_ROUTES.some(
-    (route) => pathname === route || pathname.startsWith(`${route}/`),
-  )
+  return isPublicRoute(pathname)
 }
 
 type SubscriptionGateValue = {

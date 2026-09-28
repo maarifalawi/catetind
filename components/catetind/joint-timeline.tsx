@@ -2,18 +2,23 @@
 
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ChevronDown, Lock, SlidersHorizontal } from 'lucide-react'
+import { ChevronDown, Lock, SlidersHorizontal, Wallet } from 'lucide-react'
 import {
   JOINT_ME,
   JOINT_PARTNER,
+  PAID_BY_HINT,
+  PAID_BY_LABEL,
+  PAID_BY_ME_LABEL,
   PRIVATE_OWNER_HINT,
   categoryEmoji,
   groupJointTransactions,
   moneyLabel,
+  pocketOf,
   splitLabel,
   type JointPerson,
   type JointTransaction,
 } from '@/lib/data/joint'
+import { ChoicePills } from './budget-sheet'
 import { cn } from '@/lib/utils'
 
 /* ── Together Timeline (Section 5) ───────────────────────────────────────────
@@ -39,6 +44,7 @@ export function JointTimeline({
   partner = JOINT_PARTNER,
   partnerTyping = false,
   onOpenSplit,
+  onChangePaidBy,
 }: {
   transactions: JointTransaction[]
   masked: boolean
@@ -48,6 +54,11 @@ export function JointTimeline({
   partnerTyping?: boolean
   /** buka Split Bill Sheet untuk transaksi ini (Section 6) */
   onOpenSplit: (tx: JointTransaction) => void
+  /**
+   * Koreksi kantong yang keluar uang ("Siapa yang nalangin?", paket 52).
+   * Opsional supaya timeline tetap bisa dipakai tanpa jalur tulis.
+   */
+  onChangePaidBy?: (tx: JointTransaction, userId: string) => void
 }) {
   const groups = groupJointTransactions(transactions)
 
@@ -110,6 +121,7 @@ export function JointTimeline({
                   me={me}
                   partner={partner}
                   onOpenSplit={onOpenSplit}
+                  onChangePaidBy={onChangePaidBy}
                 />
               ))}
             </div>
@@ -154,21 +166,26 @@ function TimelineCard({
   me,
   partner,
   onOpenSplit,
+  onChangePaidBy,
 }: {
   tx: JointTransaction
   masked: boolean
   me: JointPerson
   partner: JointPerson
   onOpenSplit: (tx: JointTransaction) => void
+  onChangePaidBy?: (tx: JointTransaction, userId: string) => void
 }) {
   const view = presentTransaction(tx, me)
   const person = view.isMine ? me : partner
+  const pocket = pocketOf(tx)
   const [open, setOpen] = useState(false)
   const [lockHint, setLockHint] = useState(false)
 
   const isPrivateMine = Boolean(tx.isPrivate) && view.isMine
-  /** privat milik pasangan: tidak ada detail lagi yang bisa dibuka (5B) */
-  const expandable = !view.hiddenFromMe
+  /** privat milik pasangan: tidak ada detail lagi yang bisa dibuka (5B).
+   *  Stage 2: baris settlement juga tidak bisa dibuka — pembagiannya bukan
+   *  urusan user, ia jejak transfer yang sudah disepakati. */
+  const expandable = !view.hiddenFromMe && !tx.isSettlement
 
   return (
     <motion.div
@@ -324,6 +341,39 @@ function TimelineCard({
                     <SlidersHorizontal className="size-3.5" strokeWidth={2.4} />
                     Atur pembagian →
                   </button>
+
+                  {/* ── "Siapa yang nalangin?" ──────────────────────────────
+                      Pintu KOREKSI (paket 52). Sebelumnya atribusi kantong
+                      hanya bisa diisi saat mencatat, jadi salah pilih = angka
+                      timbangan salah selamanya. Pilihan di sini menulis ke
+                      store (`setPaidBy`), bukan menyimpan salinan di layar.
+                      Pembungkusnya menghentikan propagasi karena kartunya
+                      sendiri ber-`role="button"` (tap = buka/tutup detail). */}
+                  {onChangePaidBy && (
+                    <div
+                      className="mt-3"
+                      onClick={(event) => event.stopPropagation()}
+                      onKeyDown={(event) => event.stopPropagation()}
+                    >
+                      <p className="flex items-center gap-1.5 text-[11px] font-semibold text-ink/50">
+                        <Wallet className="size-3.5 shrink-0 text-forest" strokeWidth={2.4} />
+                        {PAID_BY_LABEL}
+                      </p>
+                      <ChoicePills
+                        className="mt-2"
+                        options={[
+                          { id: me.id, label: `${PAID_BY_ME_LABEL} (${me.name})` },
+                          { id: partner.id, label: partner.name },
+                        ]}
+                        value={pocket}
+                        onChange={(userId) => onChangePaidBy(tx, userId)}
+                        ariaLabel={PAID_BY_LABEL}
+                      />
+                      <p className="mt-1.5 text-[10.5px] leading-relaxed text-ink/40">
+                        {PAID_BY_HINT}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             )}

@@ -1,27 +1,42 @@
 'use client'
 
-import { memo } from 'react'
+import { memo, useMemo } from 'react'
 import { ArrowDownLeft, ArrowUpRight, PiggyBank, Waves } from 'lucide-react'
+import {
+  HOME_MONEY_COPY,
+  HOME_MONEY_MONTH_SHORT,
+  HOME_MONEY_ROWS,
+  axisLabel,
+  axisTicks,
+  homeCashFlowSeries,
+  homeMoneyRowFrom,
+  niceAxisMax,
+  summarizeCashFlowSeries,
+  type HomeCashFlowPoint,
+} from '@/lib/data/home-money'
+import {
+  applyRowOverride,
+  isRowRemoved,
+  recordedTransactions,
+  useMoneyStore,
+} from '@/lib/money/store'
 import { usePrivacy } from './privacy-provider'
 
-/* data bulan ini — selaras dengan ringkasan di kartu Transaksi Terakhir */
-const INCOME = 8_500_000
-const EXPENSE = 752_000
+/* ── ATURAN FINAL (paket 35): angka kartu ini TURUNAN, bukan konstanta ───────
+   Dulu di sini ada `INCOME = 8_500_000` / `EXPENSE = 752_000` plus `SERIES` 5
+   titik yang ditulis keras, dengan komentar "selaras dengan ringkasan di kartu
+   Transaksi Terakhir". Nilainya memang SAMA saat seed — tapi hanya karena
+   kebetulan seed-nya segitu. Begitu user mencatat pengeluaran, kartu sebelahnya
+   bergerak sementara chart ini masih menulis "surplus Rp 7.748.000": dua angka
+   berbeda untuk uang yang sama di satu layar.
 
-type Point = { label: string; income: number; expense: number }
-
-/* 5 titik = 5 pekan dalam sebulan. Jumlah `expense` = EXPENSE dan puncak
-   `income` = INCOME, jadi kartu ini betul-betul membandingkan DUA metrik
-   cashflow. (Sebelumnya hanya ada SATU garis lintasan padahal judulnya
-   "Pemasukan vs Pengeluaran" — secara analitik itu grafik saldo harian /
-   net balance, bukan perbandingan. Lihat audit #2.) */
-const SERIES: Point[] = [
-  { label: '1 Sep', income: 0, expense: 168_000 },
-  { label: '8 Sep', income: 8_500_000, expense: 214_000 },
-  { label: '15 Sep', income: 0, expense: 186_000 },
-  { label: '22 Sep', income: 0, expense: 96_000 },
-  { label: '29 Sep', income: 0, expense: 88_000 },
-]
+   Sekarang kartu ini membaca himpunan baris yang SAMA dengan kartu "Transaksi
+   Terakhir" — `HOME_MONEY_ROWS` (seed) + catatan sesi dari satu store uang
+   (`lib/money/store.ts`, sejak paket 40; baris yang dihapus ikut tersaring) —
+   dan menyebut periode yang SAMA
+   (`HOME_MONEY_COPY.period`). Seri 5 pekan & sumbu-Y-nya diturunkan di
+   `lib/data/home-money.ts` (`homeCashFlowSeries`, `niceAxisMax`), jadi tidak ada
+   lagi satu pun nominal keras di komponen ini. */
 
 /* ── geometri kanvas grafik (viewBox 0 0 320 132) ─────────────────────────── */
 const W = 320
@@ -31,22 +46,6 @@ const PAD_R = 8
 const TOP = 10
 const BASE = 100
 const GRID_Y = [TOP, (TOP + BASE) / 2, BASE]
-
-/* SUMBU KEMBAR: skala pemasukan & pengeluaran beda jauh (Rp 8,5 jt vs Rp 752 rb),
-   jadi tiap seri punya sumbu-Y sendiri — kiri (pemasukan), kanan (pengeluaran).
-   Tanpa ini garis pengeluaran cuma jadi garis rata di dasar chart sehingga
-   perbandingannya tidak terbaca. */
-const INCOME_MAX = 8_500_000
-const EXPENSE_MAX = 250_000
-const INCOME_AXIS = ['8,5 jt', '4,25 jt', '0']
-const EXPENSE_AXIS = ['250 rb', '125 rb', '0']
-
-const X = SERIES.map((_, i) => PAD_L + (i * (W - PAD_L - PAD_R)) / (SERIES.length - 1))
-const incomeY = (v: number) => BASE - (v / INCOME_MAX) * (BASE - TOP)
-const expenseY = (v: number) => BASE - (v / EXPENSE_MAX) * (BASE - TOP)
-
-const INCOME_PTS = SERIES.map((d, i) => ({ x: X[i], y: incomeY(d.income) }))
-const EXPENSE_PTS = SERIES.map((d, i) => ({ x: X[i], y: expenseY(d.expense) }))
 
 /** kurva halus (Catmull-Rom → Bézier) — spline yang sama enaknya dengan versi
  *  lama, tapi sekarang dipakai untuk DUA garis sekaligus */
@@ -66,23 +65,102 @@ function smoothPath(pts: { x: number; y: number }[]) {
   return d
 }
 
-const INCOME_LINE = smoothPath(INCOME_PTS)
-const EXPENSE_LINE = smoothPath(EXPENSE_PTS)
-const INCOME_AREA = `${INCOME_LINE} L ${X[X.length - 1]} ${BASE} L ${X[0]} ${BASE} Z`
-const EXPENSE_AREA = `${EXPENSE_LINE} L ${X[X.length - 1]} ${BASE} L ${X[0]} ${BASE} Z`
+/** semua yang dulu konstanta keras (X, INCOME_MAX, INCOME_AXIS, INCOME_PTS,
+ *  INCOME_LINE, INCOME_AREA, INCOME_PEAK, …) kini satu turunan dari seri */
+interface CashFlowGeometry {
+  /** posisi x tiap titik data — label sumbu-X ditempel di sini */
+  x: number[]
+  incomeLine: string
+  expenseLine: string
+  incomeArea: string
+  expenseArea: string
+  incomePeak: { x: number; y: number }
+  expensePeak: { x: number; y: number }
+  /** tiga tick sumbu-Y kiri & kanan (diturunkan, bukan '8,5 jt'/'250 rb') */
+  incomeTicks: number[]
+  expenseTicks: number[]
+}
 
-/* titik puncak pemasukan (gajian) & pengeluaran tertinggi — penanda baca */
-const INCOME_PEAK = INCOME_PTS.reduce((a, b) => (b.y < a.y ? b : a))
-const EXPENSE_PEAK = EXPENSE_PTS.reduce((a, b) => (b.y < a.y ? b : a))
+/**
+ * Geometri grafik diturunkan dari seri — tidak ada satu pun nominal maupun
+ * koordinat keras di sini. Dipanggil sekali per perubahan seri (`useMemo` di
+ * komponen), jadi chart ikut bergerak begitu user mencatat transaksi.
+ *
+ * SUMBU KEMBAR tetap dipertahankan: skala pemasukan & pengeluaran beda jauh
+ * (juta vs ratus ribu), jadi tiap seri punya sumbu-Y sendiri — kiri
+ * (pemasukan), kanan (pengeluaran). Tanpa itu garis pengeluaran cuma jadi garis
+ * rata di dasar chart sehingga perbandingannya tidak terbaca. Batas atasnya kini
+ * `niceAxisMax()` (dibulatkan ke atas), bukan angka 8,5 jt / 250 rb yang ditulis
+ * tangan.
+ */
+function buildGeometry(series: HomeCashFlowPoint[]): CashFlowGeometry {
+  /* jarak antar pekan: aman walau serinya cuma satu titik (defensif) */
+  const lastIndex = Math.max(series.length - 1, 1)
+  const x = series.map((_, i) => PAD_L + (i * (W - PAD_L - PAD_R)) / lastIndex)
+
+  const incomeMax = niceAxisMax(Math.max(...series.map((point) => point.income)))
+  const expenseMax = niceAxisMax(Math.max(...series.map((point) => point.expense)))
+  /* seri yang masih nol (belum ada data) → garis rata di dasar, bukan NaN/Infinity */
+  const incomeY = (v: number) => (incomeMax > 0 ? BASE - (v / incomeMax) * (BASE - TOP) : BASE)
+  const expenseY = (v: number) => (expenseMax > 0 ? BASE - (v / expenseMax) * (BASE - TOP) : BASE)
+
+  const incomePts = series.map((point, i) => ({ x: x[i], y: incomeY(point.income) }))
+  const expensePts = series.map((point, i) => ({ x: x[i], y: expenseY(point.expense) }))
+  const incomeLine = smoothPath(incomePts)
+  const expenseLine = smoothPath(expensePts)
+
+  return {
+    x,
+    incomeLine,
+    expenseLine,
+    incomeArea: `${incomeLine} L ${x[x.length - 1]} ${BASE} L ${x[0]} ${BASE} Z`,
+    expenseArea: `${expenseLine} L ${x[x.length - 1]} ${BASE} L ${x[0]} ${BASE} Z`,
+    /* titik puncak pemasukan (gajian) & pengeluaran tertinggi — penanda baca */
+    incomePeak: incomePts.reduce((a, b) => (b.y < a.y ? b : a)),
+    expensePeak: expensePts.reduce((a, b) => (b.y < a.y ? b : a)),
+    incomeTicks: axisTicks(incomeMax),
+    expenseTicks: axisTicks(expenseMax),
+  }
+}
 
 /** Dibungkus `memo` — kartu ini tidak menerima props, jadi tidak perlu ikut
- *  re-render saat HomeScreen mengubah state popup. Nominal di sini ikut
- *  Global Eye lewat context privasi. */
+ *  re-render saat HomeScreen mengubah state popup. Nominal maupun label
+ *  sumbu-Y di sini ikut Global Eye lewat context privasi. */
 export const CashFlowCard = memo(function CashFlowCard() {
-  const { money } = usePrivacy()
-  const net = INCOME - EXPENSE
-  const saveRate = Math.round((net / INCOME) * 100)
-  const expenseShare = ((EXPENSE / INCOME) * 100).toFixed(1).replace('.', ',')
+  const { money, masked } = usePrivacy()
+  /* Catatan sesi dari SATU store uang (`lib/money/store.ts`) — dibaca lewat
+     `useSyncExternalStore`, jadi HTML server tetap sama dengan render pertama
+     client (pola yang sama dengan kartu "Transaksi Terakhir"). Baris yang
+     dihapus user (tombstone) ikut hilang di sini juga: dulu kartu ini sengaja
+     menghitung total dari seluruh baris seed supaya tidak bertentangan dengan
+     chart, tapi sekarang keduanya membaca himpunan yang sama. */
+  const snapshot = useMoneyStore()
+  const recorded = useMemo(() => recordedTransactions(snapshot), [snapshot])
+
+  /* himpunan baris yang SAMA dengan kartu "Transaksi Terakhir": seed + catatan
+     sesi. Catatan sesi bertanggal `localISODate()` (hari ini), jadi ia jatuh ke
+     pekan bulan berjalan. Baris seed yang dihapus user tidak ikut dihitung, dan
+     baris yang DIEDIT memakai nilai barunya (`applyRowOverride`, paket 48) —
+     kalau tidak, grafik ini yang paling gampang tertinggal angka lama. */
+  const rows = useMemo(
+    () => [
+      ...recorded.map(homeMoneyRowFrom),
+      ...HOME_MONEY_ROWS.filter((row) => !isRowRemoved(snapshot, row.id)).map((row) =>
+        applyRowOverride(snapshot, row),
+      ),
+    ],
+    [recorded, snapshot],
+  )
+  const series = useMemo(() => homeCashFlowSeries(rows), [rows])
+  /* total dibaca dari SERI, bukan dari daftar baris — supaya jumlah pengeluaran
+     di strip mustahil berbeda dari jumlah titik di grafik ini sendiri */
+  const totals = useMemo(() => summarizeCashFlowSeries(series), [series])
+  const geo = useMemo(() => buildGeometry(series), [series])
+
+  const net = totals.net
+  const saveRate = totals.income > 0 ? Math.round((net / totals.income) * 100) : 0
+  const expenseShare =
+    totals.income > 0 ? ((totals.expense / totals.income) * 100).toFixed(1).replace('.', ',') : '0'
 
   return (
     <div className="flex h-full flex-col rounded-[2rem] bg-cream p-6 ring-1 ring-soil/12">
@@ -98,7 +176,9 @@ export const CashFlowCard = memo(function CashFlowCard() {
           </div>
         </div>
         <span className="rounded-full bg-forest px-2.5 py-1 text-[11px] font-semibold text-mint tabular-nums">
-          Surplus {saveRate}%
+          {net < 0
+            ? HOME_MONEY_COPY.chartBadgeDeficit(Math.abs(saveRate))
+            : HOME_MONEY_COPY.chartBadgeSurplus(saveRate)}
         </span>
       </div>
 
@@ -112,7 +192,7 @@ export const CashFlowCard = memo(function CashFlowCard() {
             Pemasukan
           </p>
           <p className="mt-1 text-2xl font-semibold tracking-tight text-forest tabular-nums">
-            {money(INCOME)}
+            {money(totals.income)}
           </p>
         </div>
         <div className="animate-[fade-pop_0.4s_ease_0.25s_backwards] text-right">
@@ -123,7 +203,7 @@ export const CashFlowCard = memo(function CashFlowCard() {
             </span>
           </p>
           <p className="mt-1 text-2xl font-semibold tracking-tight text-ink/80 tabular-nums">
-            {money(EXPENSE)}
+            {money(totals.expense)}
           </p>
           <p className="mt-0.5 text-[11px] text-ink/40 tabular-nums">
             {expenseShare}% dari pemasukan
@@ -141,17 +221,24 @@ export const CashFlowCard = memo(function CashFlowCard() {
           <span className="h-1.5 w-4 rounded-full bg-hud-terracotta" aria-hidden />
           Pengeluaran
         </span>
-        <span className="ml-auto text-ink/35">per pekan · Sep</span>
+        {/* periode yang disinggung chart ini — string yang SAMA dengan strip
+            kartu "Transaksi Terakhir" (`HOME_MONEY_COPY.period`) + nama bulannya,
+            jadi tidak ada lagi "bulan ini" vs "Minggu ini" untuk total yang sama */}
+        <span className="ml-auto text-ink/35">
+          {HOME_MONEY_COPY.period} · {HOME_MONEY_MONTH_SHORT}
+        </span>
       </div>
 
       {/* ── grafik: dua spline + sumbu Y kembar + SUMBU X (tanggal) ──────────
           Sumbu X dulu hilang total, jadi user bisa lihat ada "gunung" merah
           tapi tidak tahu itu terjadi tanggal berapa. Label hari/tanggal tipis
-          sekarang ditempel persis di bawah tiap titik data. */}
+          sekarang ditempel persis di bawah tiap titik data. Semua koordinat &
+          nominal di dalamnya datang dari `geo` (turunan seri), bukan angka
+          keras — lihat `buildGeometry`. */}
       <div
         className="relative mt-3 h-[116px] w-full"
         role="img"
-        aria-label={`Grafik arus uang per pekan: pemasukan ${money(INCOME)}, pengeluaran ${money(EXPENSE)}`}
+        aria-label={`Grafik arus uang per pekan: pemasukan ${money(totals.income)}, pengeluaran ${money(totals.expense)}`}
       >
         <svg
           viewBox={`0 0 ${W} ${H}`}
@@ -185,12 +272,12 @@ export const CashFlowCard = memo(function CashFlowCard() {
           ))}
 
           {/* area isi tiap seri */}
-          <path d={EXPENSE_AREA} fill="url(#cf-expense)" className="animate-[area-fade_0.8s_ease_0.6s_both]" />
-          <path d={INCOME_AREA} fill="url(#cf-income)" className="animate-[area-fade_0.8s_ease_0.9s_both]" />
+          <path d={geo.expenseArea} fill="url(#cf-expense)" className="animate-[area-fade_0.8s_ease_0.6s_both]" />
+          <path d={geo.incomeArea} fill="url(#cf-income)" className="animate-[area-fade_0.8s_ease_0.9s_both]" />
 
           {/* garis pengeluaran (terracotta) — digambar lebih dulu, mint di atasnya */}
           <path
-            d={EXPENSE_LINE}
+            d={geo.expenseLine}
             fill="none"
             stroke="#b89191"
             strokeWidth="2"
@@ -202,7 +289,7 @@ export const CashFlowCard = memo(function CashFlowCard() {
 
           {/* garis pemasukan (hijau tua, puncaknya = gajian) */}
           <path
-            d={INCOME_LINE}
+            d={geo.incomeLine}
             fill="none"
             stroke="#45594e"
             strokeWidth="2.4"
@@ -212,19 +299,20 @@ export const CashFlowCard = memo(function CashFlowCard() {
             className="animate-[line-draw_1.3s_ease-in-out_0.2s_both]"
           />
 
-          {/* penanda titik: puncak pemasukan & pengeluaran tertinggi */}
+          {/* penanda titik: puncak pemasukan & pengeluaran tertinggi — koordinatnya
+              dari seri yang sedang tampil, jadi ia pindah sendiri saat user mencatat */}
           <g className="animate-[fade-pop_0.4s_ease_1.4s_backwards]">
-            <circle cx={INCOME_PEAK.x} cy={INCOME_PEAK.y} r="7" fill="none" stroke="#91bb9e" strokeOpacity="0.5" strokeWidth="1.5" />
-            <circle cx={INCOME_PEAK.x} cy={INCOME_PEAK.y} r="3" fill="#45594e" />
+            <circle cx={geo.incomePeak.x} cy={geo.incomePeak.y} r="7" fill="none" stroke="#91bb9e" strokeOpacity="0.5" strokeWidth="1.5" />
+            <circle cx={geo.incomePeak.x} cy={geo.incomePeak.y} r="3" fill="#45594e" />
           </g>
           <g className="animate-[fade-pop_0.4s_ease_1.55s_backwards]">
-            <circle cx={EXPENSE_PEAK.x} cy={EXPENSE_PEAK.y} r="6" fill="none" stroke="#b89191" strokeOpacity="0.5" strokeWidth="1.5" />
-            <circle cx={EXPENSE_PEAK.x} cy={EXPENSE_PEAK.y} r="3" fill="#b89191" />
+            <circle cx={geo.expensePeak.x} cy={geo.expensePeak.y} r="6" fill="none" stroke="#b89191" strokeOpacity="0.5" strokeWidth="1.5" />
+            <circle cx={geo.expensePeak.x} cy={geo.expensePeak.y} r="3" fill="#b89191" />
           </g>
 
           {/* komet cahaya yang berjalan di garis pemasukan */}
           <path
-            d={INCOME_LINE}
+            d={geo.incomeLine}
             fill="none"
             stroke="#91bb9e"
             strokeWidth="3.4"
@@ -235,46 +323,70 @@ export const CashFlowCard = memo(function CashFlowCard() {
           />
         </svg>
 
-        {/* label sumbu-Y KIRI (skala pemasukan) */}
-        {GRID_Y.map((y, i) => (
+        {/* label sumbu-Y KIRI (skala pemasukan). Skala seperti "8,5 jt"/"10 jt"
+            menyiratkan nominal, jadi saat mata privasi aktif ia disensor lewat
+            `axisLabel()` — satu definisi `MASKED_AMOUNT` bersama `hide()`/`money()`. */}
+        {geo.incomeTicks.map((tick, i) => (
           <span
-            key={`axis-income-${y}`}
+            key={`axis-income-${GRID_Y[i]}`}
             className="pointer-events-none absolute left-0 -translate-y-1/2 text-[9px] font-medium tabular-nums text-[#45594e]"
-            style={{ top: `${(y / H) * 100}%` }}
+            style={{ top: `${(GRID_Y[i] / H) * 100}%` }}
           >
-            {INCOME_AXIS[i]}
+            {axisLabel(tick, masked)}
           </span>
         ))}
 
-        {/* label sumbu-Y KANAN (skala pengeluaran) */}
-        {GRID_Y.map((y, i) => (
+        {/* label sumbu-Y KANAN (skala pengeluaran) — aturan sensor sama */}
+        {geo.expenseTicks.map((tick, i) => (
           <span
-            key={`axis-expense-${y}`}
+            key={`axis-expense-${GRID_Y[i]}`}
             className="pointer-events-none absolute right-0 -translate-y-1/2 text-[9px] font-medium tabular-nums text-hud-terracotta/80"
-            style={{ top: `${(y / H) * 100}%` }}
+            style={{ top: `${(GRID_Y[i] / H) * 100}%` }}
           >
-            {EXPENSE_AXIS[i]}
+            {axisLabel(tick, masked)}
           </span>
         ))}
 
-        {/* SUMBU X — label tanggal tipis (muted) di bawah tiap titik data */}
-        {SERIES.map((d, i) => (
+        {/* SUMBU X — label tanggal tipis (muted) di bawah tiap titik data; label
+            pekannya datang dari seri turunan, bukan daftar '1 Sep'/'8 Sep' manual */}
+        {series.map((point, i) => (
           <span
-            key={d.label}
+            key={point.label}
             className="pointer-events-none absolute top-[86%] -translate-x-1/2 whitespace-nowrap text-[9.5px] font-medium tabular-nums text-ink/40"
-            style={{ left: `${(X[i] / W) * 100}%` }}
+            style={{ left: `${(geo.x[i] / W) * 100}%` }}
           >
-            {d.label}
+            {point.label}
           </span>
         ))}
       </div>
 
-      {/* strip insight — pola yang sama dengan kartu lain */}
+      {/* strip insight — pola yang sama dengan kartu lain. Copy-nya dari
+          `HOME_MONEY_COPY` dan angkanya dari seri di atas, jadi ia mustahil
+          bilang "surplus Rp 7.748.000" sementara kartu sebelahnya lain. Tiga
+          varian jujur: belum ada pemasukan · surplus · pengeluaran lebih besar
+          dari pemasukan. */}
       <div className="mt-4 flex items-center justify-center gap-2 rounded-2xl bg-cream px-4 py-2.5 text-center text-xs leading-relaxed text-ink/55">
         <PiggyBank className="size-3.5 shrink-0 text-forest" strokeWidth={2.2} />
         <span>
-          <b className="font-semibold text-forest">{saveRate}% pemasukan</b> berhasil
-          disimpan — surplus <b className="font-semibold text-ink">{money(net)}</b>
+          {totals.income <= 0 ? (
+            HOME_MONEY_COPY.chartNoIncome
+          ) : net >= 0 ? (
+            <>
+              <b className="font-semibold text-forest">
+                {saveRate}% {HOME_MONEY_COPY.chartSavedLabel}
+              </b>{' '}
+              {HOME_MONEY_COPY.chartSavedTail}{' '}
+              <b className="font-semibold text-ink">{money(net)}</b>
+            </>
+          ) : (
+            <>
+              <b className="font-semibold text-forest">
+                {Math.abs(saveRate)}% {HOME_MONEY_COPY.chartSpentLabel}
+              </b>{' '}
+              {HOME_MONEY_COPY.chartOverspendTail}{' '}
+              <b className="font-semibold text-hud-terracotta">{money(Math.abs(net))}</b>
+            </>
+          )}
         </span>
       </div>
     </div>

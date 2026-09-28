@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
+import { MASKED_AMOUNT } from '@/lib/data/history'
 import type { WalletAccount } from '@/lib/wallets'
 
 /* ── Muka kartu dompet — SATU sumber visual untuk /wallet DAN detailnya ──────
@@ -232,6 +233,14 @@ export function WalletTypeMark({
  * Lebar layout tetap dikunci oleh nominal aslinya (opacity-0 tapi masih memakai
  * ruang) supaya tidak ada "lompatan" tata letak saat di-toggle.
  *
+ * SENSORNYA SATU — `MASKED_AMOUNT` (`lib/data/history.ts`), bukan titik lepas
+ * yang ditulis per pemanggil. Keputusan 27 Sep 2026: dua dialek titik yang dulu
+ * hidup di muka kartu ('••••••' sebagai default & '••••' yang dioper /wallet,
+ * keduanya TANPA "Rp") dihapus supaya nominal tersensor selalu berbentuk
+ * `Rp •••••••` di permukaan mana pun — sama seperti kartu, daftar transaksi, dan
+ * toast. Yang hilang hanya dialeknya: angka rahasianya tetap tak terbaca, dan
+ * karena lebar dikunci nilai asli, panjang titik tidak menggeser tata letak.
+ *
  * Catatan: `className` HANYA untuk tipografi/warna — jangan taruh margin di
  * sini, karena kelas yang sama dipakai juga oleh lapisan titik yang
  * ber-posisi absolut.
@@ -240,13 +249,10 @@ export function MaskedAmount({
   value,
   masked,
   className,
-  dots = '••••••',
 }: {
   value: string
   masked: boolean
   className?: string
-  /** titik sensor yang menggantikan nominal */
-  dots?: string
 }) {
   const fade = 'transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]'
   return (
@@ -266,7 +272,7 @@ export function MaskedAmount({
           className,
         )}
       >
-        {dots}
+        {MASKED_AMOUNT}
       </span>
     </span>
   )

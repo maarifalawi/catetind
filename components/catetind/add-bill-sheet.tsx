@@ -40,7 +40,13 @@ import {
    lain di app — bukan modal baru dengan ritme sendiri.
    ────────────────────────────────────────────────────────────────────────── */
 
-export type NewBill = Omit<Bill, 'id' | 'isPaidThisMonth'>
+/**
+ * Bentuk tagihan yang DIKIRIM sheet ke halaman. `scope` sengaja tidak ada di
+ * sini: sheet tidak punya kontrol konteks (dan tidak boleh punya — konteks itu
+ * satu state global), jadi halaman Tagihan yang menempelkan konteks aktif saat
+ * menyimpan (paket 47). `id` & `isPaidThisMonth` juga milik halaman.
+ */
+export type NewBill = Omit<Bill, 'id' | 'isPaidThisMonth' | 'scope'>
 
 export function AddBillSheet({
   open,

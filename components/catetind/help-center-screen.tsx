@@ -61,6 +61,9 @@ import {
   type SystemHealth,
   type SystemIndicator,
 } from '@/lib/data/help'
+import { getBillsSnapshot, liveBills } from '@/lib/money/bills-store'
+import { getFundsSnapshot } from '@/lib/money/funds-store'
+import { getWealthSnapshot } from '@/lib/money/wealth-store'
 import { MetaChip } from './meta-chip'
 import { ScreenShell } from './screen-shell'
 
@@ -113,9 +116,29 @@ type FeedbackVote = 'up' | 'down'
  */
 function handleExportData() {
   try {
-    const blob = new Blob([JSON.stringify(buildHelpExportPayload(), null, 2)], {
-      type: 'application/json',
-    })
+    /* tagihan, celengan, & kekayaan dibaca dari store perangkat (paket 46, 50, &
+       51) — sama seperti ekspor di `/settings/data`, supaya file ini memuat
+       catatan yang benar-benar dimiliki user, bukan hanya daftar contoh dari
+       konstanta */
+    const wealth = getWealthSnapshot()
+    const blob = new Blob(
+      [
+        JSON.stringify(
+          buildHelpExportPayload(
+            new Date(),
+            liveBills(getBillsSnapshot()),
+            getFundsSnapshot().funds,
+            {
+              debts: wealth.debts,
+              investments: wealth.investments,
+            },
+          ),
+          null,
+          2,
+        ),
+      ],
+      { type: 'application/json' },
+    )
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url

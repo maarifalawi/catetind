@@ -3,27 +3,30 @@
 import { memo, useState } from 'react'
 import { Droplet, Moon, Sprout } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { fundPercentRounded, heroFundOf } from '@/lib/data/budget'
+import { useFundsStore } from '@/lib/money/funds-store'
+import { HOME_PLANT_COPY } from '@/lib/data/home'
 import { PLANT_SLEEP_COPY } from '@/lib/data/renewal'
 import { useSubscriptionGate } from './subscription-gate-provider'
 import { PlantIllustration, STAGE_NAMES, type PlantStage } from './plant-illustration'
 import { PlantDetailModal } from './plant-detail-modal'
+/* SATU tabel tahap untuk Home: `stageFromPercent()` & `stageBandProgress()`
+   tinggal di kartu Tabungan Impian (my-goals-card.tsx). Widget ini memakainya
+   juga supaya pada layar yang SAMA tidak ada dua tahap berbeda untuk satu
+   celengan — persis itu yang terjadi sebelum paket 30: baris "nutrisi" di sini
+   memakai mock tampilan kedua yang persennya ditulis tetap, sementara kartu di
+   sebelahnya kini membaca celengan yang benar-benar ada. */
+import { stageBandProgress, stageFromPercent } from './my-goals-card'
 
-/* mock state tanaman - nanti dihitung dari habit loop (Domain 3B) */
+/* mock state tanaman - nanti dihitung dari habit loop (Domain 3B).
+   `stage` SENGAJA tidak lagi di sini: tahap tanaman = progres celengan
+   (`stageFromPercent()` di bawah), bukan state kedua yang bisa berbeda dari
+   kartu Tabungan Impian di layar yang sama. Yang tinggal di sini memang milik
+   habit loop: HP dan hari aktif. */
 const MOCK = {
-  stage: 3 as PlantStage,
   hp: 82, // Health Points tanaman (streak tersembunyi di balik ini)
   activeDays: 21, // "kamu udah catat 21 hari bulan ini" - framing positif
   wilted: false, // state Layu saat HP <=20
-}
-
-/* "nutrisi" tanaman = sinking fund yang sedang dikejar. Dulu widget ini berdiri
-   sendiri tanpa konteks ("apa yang bikin tanaman ini tumbuh?"), padahal PRD
-   Domain 3B mengikat pertumbuhan tanaman ke progress Tabungan Impian. Angka ini
-   nanti dibaca dari sinking_funds; sekarang mock yang selaras dengan kartu
-   Tabungan Impian (goal utama, 50%). */
-const NUTRITION = {
-  goal: 'Liburan ke Jepang',
-  pct: 50,
 }
 
 /** widget tanaman di homescreen - "teman visual", tap -> Plant Detail (modal j) */
@@ -43,6 +46,30 @@ export const PlantWidget = memo(function PlantWidget({
      Detail tanaman tetap bisa dibuka: membaca tidak pernah dikunci. */
   const { inputLocked } = useSubscriptionGate()
   const sleeping = inputLocked
+
+  /* ── NUTRISI = CELENGAN, SATU SUMBER ────────────────────────────────────────
+     "Apa yang bikin tanaman ini tumbuh?" dijawab celengan yang jadi wajah kartu
+     Tabungan Impian (`heroFundOf()` dari STORE, bukan konstanta). Persen, tahap
+     tanaman, dan bar "menuju tahap berikutnya" semuanya turunan dari satu angka
+     itu — tidak ada mock kedua, dan tidak ada angka pajangan seperti 68% yang
+     dulu tidak berasal dari mana pun. Belum ada celengan ⇒ 0% ⇒ tahap 1
+     (Benih), yang jujur: belum ada yang dikejar.
+
+     Sejak paket 46 sumbernya `useFundsStore()` — sama dengan kartu di
+     sebelahnya, jadi setoran dari halaman detail langsung menumbuhkan tanaman
+     ini tanpa perlu refresh. */
+  const { funds } = useFundsStore()
+  const nutrition = heroFundOf(funds)
+  const nutritionPct = nutrition ? fundPercentRounded(nutrition) : 0
+  const stage = stageFromPercent(nutritionPct)
+  const bandPct = stageBandProgress(nutritionPct)
+  const nextStage = Math.min(stage + 1, 4) as PlantStage
+  const footerLabel =
+    stage === 4
+      ? nutritionPct >= 100
+        ? HOME_PLANT_COPY.targetReached
+        : HOME_PLANT_COPY.lastStage
+      : HOME_PLANT_COPY.nextStage(nextStage, STAGE_NAMES[nextStage])
 
   return (
     <>
@@ -73,7 +100,7 @@ export const PlantWidget = memo(function PlantWidget({
                 <p className="text-xs text-ink/45">{PLANT_SLEEP_COPY.badge}</p>
               ) : (
                 <p className="text-xs text-ink/45">
-                  Tahap {MOCK.stage} - {STAGE_NAMES[MOCK.stage]}
+                  Tahap {stage} - {STAGE_NAMES[stage]}
                 </p>
               )}
             </div>
@@ -122,7 +149,7 @@ export const PlantWidget = memo(function PlantWidget({
             />
           )}
           <PlantIllustration
-            stage={MOCK.stage}
+            stage={stage}
             wilted={MOCK.wilted}
             sleeping={sleeping}
             className={cn(
@@ -142,8 +169,10 @@ export const PlantWidget = memo(function PlantWidget({
         </button>
 
         {/* konteks: apa yang membuat tanaman ini tumbuh — jahitan antara widget
-            tanaman dan Tabungan Impian (PRD Domain 2C & 3B). Saat tidur, baris
-            "setor lagi biar naik tahap" diganti kalimat menunggu: tidak ada
+            tanaman dan Tabungan Impian (PRD Domain 2C & 3B). Namanya diambil dari
+            celengan yang sama dengan kartu Tabungan Impian di sebelahnya, jadi
+            dua kartu itu tidak mungkin menyebut celengan yang berbeda. Saat tidur,
+            baris "setor lagi biar naik tahap" diganti kalimat menunggu: tidak ada
             ajakan mencatat yang sedang tidak mungkin dilakukan. */}
         <div className="mt-3 flex items-center gap-2 rounded-xl bg-sage/60 px-3 py-2 ring-1 ring-forest/[0.06]">
           {sleeping ? (
@@ -151,31 +180,43 @@ export const PlantWidget = memo(function PlantWidget({
               <Moon className="size-3.5 shrink-0 text-forest" strokeWidth={2.4} aria-hidden />
               <p className="text-[11.5px] leading-snug text-ink/65">{PLANT_SLEEP_COPY.caption}</p>
             </>
+          ) : nutrition ? (
+            <>
+              <Sprout className="size-3.5 shrink-0 text-forest" strokeWidth={2.4} aria-hidden />
+              <p className="text-[11.5px] leading-snug text-ink/65">
+                {HOME_PLANT_COPY.nutritionBefore}{' '}
+                <b className="font-semibold text-forest">{nutrition.name}</b>{' '}
+                <span className="tabular-nums">
+                  {HOME_PLANT_COPY.nutritionPercent(nutritionPct)}
+                </span>{' '}
+                {HOME_PLANT_COPY.nutritionAfter}
+              </p>
+            </>
           ) : (
             <>
               <Sprout className="size-3.5 shrink-0 text-forest" strokeWidth={2.4} aria-hidden />
               <p className="text-[11.5px] leading-snug text-ink/65">
-                Tumbuh dari <b className="font-semibold text-forest">{NUTRITION.goal}</b>{' '}
-                <span className="tabular-nums">({NUTRITION.pct}%)</span> — setor lagi
-                biar naik tahap 🌿
+                {HOME_PLANT_COPY.noNutrition}
               </p>
             </>
           )}
         </div>
 
-        {/* footer - progress menuju tahap berikutnya, mengisi bawah kartu */}
+        {/* footer - progress menuju tahap berikutnya, mengisi bawah kartu.
+            Angkanya jarak ke tahap berikutnya, diturunkan dari persen celengan
+            yang sama (`stageBandProgress`) — dulu di sini tertulis 68% yang tidak
+            berasal dari data mana pun dan bertabrakan dengan persen di baris
+            atasnya. Tahap terakhir tidak punya "tahap berikutnya": labelnya
+            diganti kalimat target, bukan "menuju tahap 4 - Berbunga". */}
         <div className="mt-3 border-t border-soil/12 pt-3.5">
           <div className="flex items-center justify-between text-[11px]">
-            <span className="font-medium text-ink/45">
-              Menuju tahap {Math.min(MOCK.stage + 1, 4)} - {' '}
-              {STAGE_NAMES[Math.min(MOCK.stage + 1, 4) as PlantStage]}
-            </span>
-            <span className="font-semibold text-forest tabular-nums">68%</span>
+            <span className="font-medium text-ink/45">{footerLabel}</span>
+            <span className="font-semibold text-forest tabular-nums">{bandPct}%</span>
           </div>
           <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-soil/[0.09]">
             <div
               className="h-full rounded-full bg-gradient-to-r from-forest to-mint"
-              style={{ width: '68%' }}
+              style={{ width: `${bandPct}%` }}
             />
           </div>
         </div>
@@ -184,7 +225,7 @@ export const PlantWidget = memo(function PlantWidget({
       <PlantDetailModal
         open={detailOpen}
         onClose={() => setDetailOpen(false)}
-        plant={MOCK}
+        plant={{ ...MOCK, stage }}
         onReplay={onReplayCelebration}
       />
     </>

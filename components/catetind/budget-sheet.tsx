@@ -1,10 +1,12 @@
 'use client'
 
 import { useEffect, useRef, useState, type ChangeEvent, type ReactNode, type RefObject } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { Drawer } from 'vaul'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { cleanDigits, groupDigits } from '@/lib/money/amount-input'
+import { AMOUNT_INPUT_FIELD } from '@/lib/typography'
 import { useSubscriptionGate } from './subscription-gate-provider'
 import { SubscriptionLockNote } from './subscription-lock-note'
 
@@ -133,6 +135,10 @@ export function RevealStep({
   className?: string
 }) {
   const [clipped, setClipped] = useState(false)
+  /* `prefers-reduced-motion` dihormati (pola yang sama dengan
+     `joint-balance-scale`/`shield-meter`): langkahnya tetap MUNCUL, tapi tanpa
+     gerak mengembang — yang berubah cuma kedatangannya, bukan informasinya. */
+  const reduceMotion = useReducedMotion()
 
   return (
     <AnimatePresence initial={false}>
@@ -142,7 +148,7 @@ export function RevealStep({
           initial={{ opacity: 0, y: -6, height: 0 }}
           animate={{ opacity: 1, y: 0, height: 'auto' }}
           exit={{ opacity: 0, y: -6, height: 0 }}
-          transition={{ duration: 0.28, ease: SHEET_EASE }}
+          transition={{ duration: reduceMotion ? 0 : 0.28, ease: SHEET_EASE }}
           onAnimationStart={() => setClipped(true)}
           onAnimationComplete={() => setClipped(false)}
           className={cn(clipped ? 'overflow-hidden' : 'overflow-visible', className)}
@@ -157,6 +163,22 @@ export function RevealStep({
 /**
  * Input nominal Rupiah: satu state `digits` (angka mentah) → tampilan otomatis
  * berformat `1.500.000`. `inputMode="numeric"` memunculkan keypad angka di HP.
+ *
+ * PAKET 53 — satu aturan pengelompokan untuk seluruh app: tampilannya dihitung
+ * `groupDigits()` dari `lib/money/amount-input.ts`, modul yang sama dengan field
+ * nominal engine. Sebelumnya baris ini memakai `Number(digits).toLocaleString('id-ID')`
+ * — hasilnya sama untuk angka biasa, tapi itu artinya app punya DUA cara
+ * mengelompokkan ribuan (dan cara kedua itu bergantung ICU mesin, padahal pola
+ * repo ini menuntut hasil deterministik yang sama di server & klien).
+ *
+ * Bobot & ritme angkanya ikut token `AMOUNT_INPUT_FIELD` supaya nominal yang
+ * diketik terasa sama dengan yang diketik di engine — hanya ukurannya yang
+ * berbeda karena kolomnya lebih kecil.
+ *
+ * Beda yang DISENGAJA dari engine: batasnya 12 digit (`Rp 999.999.999.999`),
+ * bukan 13 digit. Angka itu batas form sheet sejak awal dan dipakai juga oleh
+ * form lain di halaman yang sama (`sync-balance-modal`); menaikkannya adalah
+ * keputusan produk tersendiri, jadi jangan disamakan diam-diam di sini.
  */
 export function RupiahField({
   label,
@@ -178,12 +200,13 @@ export function RupiahField({
   inputRef?: RefObject<HTMLInputElement | null>
   className?: string
 }) {
-  const entered = Number(digits || '0')
-  const display = digits ? entered.toLocaleString('id-ID') : ''
+  const display = digits ? groupDigits(cleanDigits(digits)) : ''
 
   function handleChange(event: ChangeEvent<HTMLInputElement>) {
-    // buang semua non-digit, batasi 12 digit (maks Rp 999.999.999.999)
-    onDigitsChange(event.target.value.replace(/\D/g, '').slice(0, 12))
+    /* buang semua non-digit + nol di depan (satu bentuk untuk satu nominal),
+       lalu batasi 12 digit (maks Rp 999.999.999.999) */
+    const next = cleanDigits(event.target.value.replace(/\D/g, ''))
+    onDigitsChange(next.slice(0, 12))
   }
 
   return (
@@ -208,7 +231,8 @@ export function RupiahField({
           autoComplete="off"
           placeholder={placeholder.replace(/^Rp\s*/, '')}
           className={cn(
-            'min-w-0 flex-1 bg-transparent font-semibold tabular-nums text-ink outline-none placeholder:font-medium placeholder:text-ink/25',
+            'min-w-0 flex-1 bg-transparent text-ink outline-none placeholder:font-medium placeholder:text-ink/25',
+            AMOUNT_INPUT_FIELD,
             size === 'lg' ? 'text-xl' : 'text-[15px]',
           )}
         />

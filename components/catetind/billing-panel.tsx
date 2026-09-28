@@ -28,18 +28,15 @@ import { CATET_AJA_PLAN, HERO_PLAN, formatIDR } from '@/lib/data/pricing'
    satu pun kuota/harga add-on (aturan yang sama dengan `lib/data/pricing.ts`). */
 import {
   AI_ADDON_PACKAGES,
-  AI_BASE_TOKENS_REMAINING,
   AI_FUEL_COPY,
+  AI_QUOTA_EXHAUSTED_COPY,
   AI_QUOTA_RESET_DATE,
-  AI_RECORDS_LEFT,
-  AI_REMAINING_PCT,
   AI_RESET_RULE_COPY,
-  AI_USAGE,
   formatTokens,
   remainingPercent,
   type AiQuotaActivityId,
 } from '@/lib/ai-quota'
-import { useAiAddon } from '@/hooks/use-ai-addon'
+import { useAiQuota } from '@/hooks/use-ai-quota'
 import { AnnualPlanModal } from './annual-plan-modal'
 import { ConfirmDialog, DialogButton } from './settings-dialog'
 import { PAYMENT_METHODS } from './payment-method-logos'
@@ -363,11 +360,16 @@ function CancelSubscriptionCard() {
    warna merah. Dua kolam TIDAK digabung jadi satu persen — kuota dasar (yang
    di-reset tanggal 1) adalah angka utama; token add-on punya barisnya sendiri.
    Sejak prompt 24, baris token add-on itu IKUT hidup: ia membaca pembelian dari
-   modal Top Up lewat `useAiAddon()` (satu turunan di `lib/ai-quota.ts`), jadi
-   banner kuota di Home dan angka di kartu ini tidak mungkin beda cerita. */
+   modal Top Up, dan sejak paket 42 ia juga membaca LIMPAHAN pemakaian lewat satu
+   snapshot kuota (`useAiQuota()` di `lib/ai-usage-store.ts`) — jadi banner kuota
+   di Home dan angka di kartu ini tidak mungkin beda cerita. */
 function FuelGaugeCard() {
-  const baseLeftPct = AI_REMAINING_PCT
-  const addon = useAiAddon()
+  /* Satu snapshot kuota HIDUP (paket 42): angka di kartu ini turun setiap kali
+     user memakai AI/voice/OCR dan naik saat top up — sama persis dengan kartu
+     sidebar, banner Home, dan header AI Coach (`lib/ai-usage-store.ts`). */
+  const quota = useAiQuota()
+  const baseLeftPct = quota.remainingPct
+  const addon = quota.addon
 
   return (
     <section className="flex flex-col rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12 sm:p-6">
@@ -376,15 +378,17 @@ function FuelGaugeCard() {
           {AI_FUEL_COPY.cardTitle}
         </h2>
         <span className="text-sm font-semibold text-ink/45 tabular-nums">
-          {AI_REMAINING_PCT}% {AI_FUEL_COPY.remainingLabel}
+          {quota.remainingPct}% {AI_FUEL_COPY.remainingLabel}
         </span>
       </div>
 
       {/* bar sisa KUOTA DASAR — nada hangat (mint → olive → cantelope), bukan alarm */}
       <div
         role="progressbar"
-        aria-label="Sisa kuota dasar AI bulan ini"
-        aria-valuenow={AI_REMAINING_PCT}
+        aria-label={
+          quota.exhausted ? AI_QUOTA_EXHAUSTED_COPY.progressLabel : 'Sisa kuota dasar AI bulan ini'
+        }
+        aria-valuenow={quota.remainingPct}
         aria-valuemin={0}
         aria-valuemax={100}
         className="mt-2.5 h-2.5 w-full overflow-hidden rounded-full bg-ink/[0.07]"
@@ -406,10 +410,10 @@ function FuelGaugeCard() {
             {AI_FUEL_COPY.baseLabel}
           </dt>
           <dd className="mt-1 text-[13px] font-semibold tabular-nums text-ink">
-            {formatTokens(AI_BASE_TOKENS_REMAINING)} sisa
+            {formatTokens(quota.baseTokensRemaining)} sisa
           </dd>
           <p className="mt-0.5 text-[11px] text-ink/45 tabular-nums">
-            {AI_FUEL_COPY.recordsLeft(AI_RECORDS_LEFT)}
+            {AI_FUEL_COPY.recordsLeft(quota.recordsLeft)}
           </p>
         </div>
         <div className="rounded-2xl bg-cream px-3.5 py-3 ring-1 ring-soil/8">
@@ -431,9 +435,12 @@ function FuelGaugeCard() {
         {AI_FUEL_COPY.detailLabel}
       </p>
       <ul className="mt-3 space-y-3.5">
-        {AI_USAGE.map((row) => {
+        {quota.rows.map((row) => {
           const Icon = ACTIVITY_ICON[row.id]
-          const leftPct = remainingPercent(row.callsUsed, row.calls)
+          /* Math.max(0, …): baris yang pemakaiannya sudah melewati jatah
+             aktivitas (tokennya diambil dari add-on) tidak boleh menghasilkan
+             lebar bar negatif */
+          const leftPct = Math.max(0, remainingPercent(row.callsUsed, row.calls))
 
           return (
             <li key={row.id}>
@@ -468,6 +475,15 @@ function FuelGaugeCard() {
         })}
       </ul>
 
+      {/* STATE KUOTA HABIS (paket 42): dijelaskan apa adanya — apa yang berhenti
+          (voice & scan struk) dan apa yang TETAP jalan (catat manual), plus dua
+          jalan keluarnya. Tombol yang mati tanpa penjelasan = teka-teki. */}
+      {quota.exhausted && (
+        <p className="mt-4 rounded-2xl bg-hud-amber/15 px-3.5 py-3 text-[12px] leading-relaxed text-ink/70 ring-1 ring-hud-amber/30">
+          {AI_QUOTA_EXHAUSTED_COPY.body}
+        </p>
+      )}
+
       {/* tanggal reset + aturannya (kanon PRD 4800–4802) */}
       <p className="mt-4 flex flex-wrap items-center gap-1.5 text-[12px] font-medium text-ink/55">
         <CalendarClock className="size-3.5 shrink-0" strokeWidth={2.2} aria-hidden />
@@ -498,12 +514,13 @@ function PaymentMethodCard() {
         <p className="mt-1 truncate text-sm font-semibold text-ink">{SAVED_PAYMENT.label}</p>
         <p className="mt-0.5 text-[11px] text-ink/45">Dipakai buat perpanjang satu tap</p>
       </div>
-      <button
-        type="button"
-        className="shrink-0 rounded-full px-3 py-1.5 text-[12px] font-semibold text-forest ring-1 ring-forest/20 transition-colors hover:bg-sage"
-      >
-        Ubah
-      </button>
+      {/* Tombol "Ubah" DIHAPUS (paket 29). Alasannya apa adanya: mengganti metode
+          pembayaran tersimpan butuh manajemen token di sisi Midtrans
+          (POST /api/payment/methods → hapus/daftarkan ulang token), dan
+          integrasi Midtrans memang SENGAJA belum dikerjakan di repo demo ini
+          (lihat ROADMAP-HALAMAN §3/§5). Tombol yang tetap dipasang sambil
+          menunggu API = kontrol mati; jadi lebih jujur kontrolnya tidak ada,
+          dan kartunya cukup menjelaskan metode mana yang akan dipakai. */}
     </section>
   )
 }

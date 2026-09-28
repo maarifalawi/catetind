@@ -5,6 +5,10 @@ import { createPortal } from 'react-dom'
 import { Plus, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock'
+import { useTransactionSubmit } from '@/hooks/use-transaction-submit'
+import { useMoneyContext } from '@/components/catetind/money-context-provider'
+import { usePrivacy } from '@/components/catetind/privacy-provider'
+import { defaultWalletNameFor } from '@/lib/money/store'
 import {
   TransactionInputEngine,
   type TransactionTypeId,
@@ -18,6 +22,10 @@ import {
  * layar kecil, panel ngambang di tengah begitu viewport >= lg. Isinya tetap
  * engine yang sama dengan versi mobile — bedanya layout="dialog" (tipografi
  * lebih lega + tombol OCR/Voice jadi pil berlabel karena ruangnya cukup).
+ *
+ * PAKET 33: shell ini juga menyimpan hasilnya (dulu `onSubmitted={close}` saja,
+ * jadi catatannya hilang) — urutannya tulis → tutup → toast, sama seperti
+ * `transaction-bottom-sheet.tsx`, lewat hook bersama `useTransactionSubmit`.
  */
 export function TransactionWebModal({
   open,
@@ -29,6 +37,14 @@ export function TransactionWebModal({
   defaultType?: TransactionTypeId
 }) {
   const panelRef = useRef<HTMLDivElement>(null)
+  /* dompet default ikut konteks uang aktif (paket 33) — sumber yang sama dengan
+     penyaring dompet di halaman lain */
+  const { context } = useMoneyContext()
+  /* Toast sukses menampilkan nominal transaksi — jadi ia WAJIB ikut sensor tombol
+     mata (paket 31). `hooks/` sengaja tidak mengimpor provider dari `components/`,
+     jadi statusnya dioper dari sini. */
+  const { masked } = usePrivacy()
+  const submit = useTransactionSubmit(defaultWalletNameFor(context), masked)
 
   /**
    * Overlay HARUS hidup di `document.body`, bukan di dalam `<aside>` sidebar.
@@ -159,7 +175,7 @@ export function TransactionWebModal({
               active={open}
               layout="dialog"
               defaultType={defaultType}
-              onSubmitted={close}
+              onSubmitted={(draft) => submit(draft, close)}
             />
           </div>
         </div>

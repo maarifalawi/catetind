@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AI_CAPTURE_COPY } from '@/lib/ai-chat'
+import { readAiPrefs, withCapturePrefs } from '@/lib/ai-prefs'
+import { recordAiUsage } from '@/lib/ai-usage-store'
 import type { HistoryTransaction } from '@/lib/data/history'
 import { recordTransaction } from '@/lib/transaction-bus'
 import {
@@ -26,6 +28,12 @@ import {
 
    Yang TIDAK dilakukannya: menyimpan tanpa konfirmasi user. `confirmCapture()`
    hanya jalan kalau user benar-benar menekan "Catat ✓".
+
+   PAKET 54: draft yang datang dari AI melewati `withCapturePrefs()` dulu —
+   itulah tempat dua saklar di Pengaturan ("Kategorisasi/Penamaan Otomatis oleh
+   AI", `lib/ai-prefs.ts`) benar-benar bekerja. Saklar mati = field itu
+   dikosongkan supaya user yang mengisi di kartu konfirmasi; jalur manual tidak
+   membaca preferensi ini sama sekali karena di sana tidak ada tebakan.
 
    Widget-nya hidup di root layout (tidak unmount saat pindah halaman), jadi
    draft yang belum diputuskan tetap ada saat panel ditutup & dibuka lagi —
@@ -173,11 +181,17 @@ export function useTransactionCapture({
       setFormError(null)
       setLiveTranscript('')
       setPhase('reading')
+      /* METERING AI (paket 42): struk yang dibaca = satu panggilan OCR. Dulu
+         kuota tidak pernah bergerak walau fitur ini dipakai berapa kali pun. */
+      recordAiUsage('ocr')
       onUserEcho(AI_CAPTURE_COPY.photoEcho(file.name))
 
       readTimer.current = window.setTimeout(() => {
         readTimer.current = null
-        setDraft(draftFormFrom(mockReceiptScan(file.name)))
+        /* preferensi user diterapkan SEBELUM draft masuk kartu konfirmasi
+           (paket 54): kalau "Kategorisasi/Penamaan Otomatis" dimatikan, field
+           itu kosong dan user yang mengisinya. */
+        setDraft(withCapturePrefs(draftFormFrom(mockReceiptScan(file.name))))
         setPhase('confirm')
       }, MOCK_RECEIPT_READ_MS)
     },
@@ -261,8 +275,13 @@ export function useTransactionCapture({
         setPhase('problem')
         return
       }
+      /* METERING AI (paket 42): hanya transkrip yang BERHASIL jadi draft yang
+         dihitung — percobaan tanpa suara tidak mengambil kuota user */
+      recordAiUsage('voice')
       onUserEcho(transcript)
-      setDraft(draftFormFrom(parseSpokenTransaction(transcript), transcript))
+      setDraft(
+        withCapturePrefs(draftFormFrom(parseSpokenTransaction(transcript), transcript)),
+      )
       setPhase('confirm')
     }
 
@@ -333,6 +352,28 @@ export function useTransactionCapture({
       return null
     }
 
+    /* KATEGORI (paket 54): draft bisa datang tanpa kategori — keadaan sah saat
+       user mematikan "Kategorisasi Otomatis oleh AI" di Pengaturan. Kartu
+       konfirmasi sudah meminta pilihan itu (opsi kosong, bukan kategori yang
+       disembunyikan); penjaganya di sini supaya catatan yang kategori belum
+       diputuskan tidak tersimpan sebagai 'Lainnya' — di Riwayat itu terbaca
+       seolah user memilih, padahal ia belum memilih apa pun. */
+    if (!draft.category) {
+      setFormError(AI_CAPTURE_COPY.needCategory)
+      return null
+    }
+
+    /* PINDAH DANA (paket 55): parser suara bisa menghasilkan tipe `transfer`
+       (mis. "transfer 200 ribu ke gopay"), tapi kartu konfirmasi ini tidak punya
+       dompet TUJUAN — jalur ini hanya bisa mencatat satu sisi. Store pun menolak
+       baris seperti itu (`postTransaction` → `null`), dan dulu penolakan itu
+       muncul sebagai "nominalnya tidak sah" yang tidak masuk akal. Jadi
+       ditahan di sini dengan kalimat yang benar + arahan ke alur Pindah Dana. */
+    if (draft.type === 'transfer') {
+      setFormError(AI_CAPTURE_COPY.needTransferFlow)
+      return null
+    }
+
     const transaction = recordTransaction({
       name: draft.name.trim() || AI_CAPTURE_COPY.untitled,
       amount,
@@ -341,6 +382,15 @@ export function useTransactionCapture({
       wallet: draft.wallet,
       date: draft.date,
     })
+
+    /* METERING AI (paket 42, disesuaikan paket 54): jalur INI benar-benar memakai
+       AI untuk mengisi kategori & menamai catatan — tapi hanya kalau saklarnya
+       menyala. Dicatat setelah barisnya tertulis (bukan saat draft dibuat),
+       supaya yang dihitung cuma catatan yang benar-benar tersimpan; sementara
+       jalur MANUAL tidak lagi menghitung apa pun karena AI tidak dipanggil di
+       sana (dulu setiap catatan manual dihitung sebagai satu 'categorize'). */
+    const prefs = readAiPrefs()
+    if (prefs.autoCategory || prefs.autoNaming) recordAiUsage('categorize')
 
     transcriptRef.current = ''
     setPhase('idle')

@@ -39,19 +39,40 @@ export interface ChatMessage {
   kind: AIMessageKind
   content: string
   action?: ChatAction
+  /**
+   * Jawaban ini datang dari ATURAN LOKAL, bukan dari model AI (paket 44).
+   *
+   * Dipakai widget untuk mencetak label kecil **"belum pakai model"** di bubble
+   * — keputusan produk paket 44: selama provider LLM belum tersambung (butuh API
+   * key di server, lihat §AI prompt 44), copy tidak boleh menyiratkan kemampuan
+   * yang belum ada. Jawaban berbasis data lokal tetap berguna, jadi ia TIDAK
+   * dihapus — cuma diberi label yang jujur.
+   */
+  ruleBased?: boolean
 }
 
 /** Domain 4B — sliding window: maks 10 pesan terakhir sebagai context window */
 export const AI_CONTEXT_WINDOW = 10
 
-/* Sisa kuota AI TIDAK didefinisikan di sini — angka itu milik `lib/ai-quota.ts`
-   (satu sumber kebenaran). Widget AI Coach membaca `AI_REMAINING_PCT` dari sana
-   supaya gauge di header tidak beda cerita dengan kartu sidebar / halaman Billing. */
+/* ── JALAN MENUJU AI YANG SUNGGUHAN (paket 44) ───────────────────────────────
+   Label & route-nya tinggal di sini karena dipakai DUA tempat: tombol di bubble
+   balasan jujur dan banner status di panel AI Coach. Satu literal, satu route —
+   dan route-nya harus route yang SUDAH ada (`app/settings/ai/page.tsx`). */
+export const AI_CONNECT_LABEL = 'Hubungkan AI'
+export const AI_CONNECT_HREF = '/settings/ai'
+
+/* Sisa kuota AI TIDAK didefinisikan di sini — angka itu milik
+   `lib/ai-usage-store.ts` + `lib/ai-quota.ts` (satu sumber kebenaran). Widget AI
+   Coach membaca `useAiQuota().remainingPct` dari sana supaya gauge di header
+   tidak beda cerita dengan kartu sidebar / halaman Billing, dan angkanya BENAR-
+   BENAR turun setiap kali user memakai AI (paket 42). */
 
 /** C. Sapaan proaktif saat panel pertama dibuka — refer ke kondisi finansial user, bukan "Hello!" generik */
 export const PROACTIVE_WELCOME: Omit<ChatMessage, 'id'> = {
   role: 'ai',
   kind: 'coaching',
+  /** catatan finansial di kalimat ini dibaca dari DATA LOKAL app, bukan model */
+  ruleBased: true,
   content:
     "Halo Jon! Sisa jatah kamu hari ini Rp 150.000 — masih aman nih. Btw, pengeluaran 'Kopi' minggu ini naik 35% dari minggu lalu. Mau aku bantu atur ulang limit jajan? ☕",
 }
@@ -64,9 +85,25 @@ export const QUICK_REPLIES = [
   'Ceritain kondisi keuangan gue',
 ] as const
 
-/** G. Balasan generik selama API asli belum disambungkan */
-export const MOCK_FALLBACK_REPLY =
-  'Fitur AI Coach sedang dalam pengembangan. Nanti aku bisa bantu analisis keuanganmu secara real-time! 🌿'
+/**
+ * G. AI BELUM TERSAMBUNG KE MODEL — jawaban jujur + jalan keluarnya (paket 44).
+ *
+ * Menggantikan `MOCK_FALLBACK_REPLY` yang berbunyi "Fitur AI Coach sedang dalam
+ * pengembangan. Nanti aku bisa bantu analisis keuanganmu secara real-time!" —
+ * kalimat yang (a) menjanjikan kemampuan yang belum ada, dan (b) tidak
+ * menyebutkan satu pun jalan keluar, sehingga user hanya bisa menunggu.
+ *
+ * Versi ini melakukan tiga hal sekaligus: menyebut apa yang TIDAK bisa dilakukan,
+ * menyebut apa yang MASIH bisa (pertanyaan yang jawabannya ada di data lokal),
+ * dan menyediakan tombol menuju tempat AI benar-benar disambungkan.
+ */
+export const AI_NOT_CONNECTED_REPLY: Omit<ChatMessage, 'id'> = {
+  role: 'ai',
+  kind: 'coaching',
+  content:
+    'Jujur ya: aku belum tersambung ke model AI, jadi pertanyaan bebas belum bisa aku jawab. Yang bisa aku bantu sekarang: hal-hal yang jawabannya ada di data app kamu (pengeluaran hari ini, limit kategori, ringkasan arus uang). Mau aku bisa mikir lebih jauh? Hubungkan AI-nya dulu ya 🌿',
+  action: { label: AI_CONNECT_LABEL, href: AI_CONNECT_HREF },
+}
 
 /** D. Demo Quick Action — dipicu chip "Bantu atur ulang budget".
  *  `href` menuju halaman Budget yang SUDAH ada, tempat limit kategori dibuat:
@@ -75,6 +112,8 @@ export const MOCK_FALLBACK_REPLY =
 export const MOCK_LIMIT_REPLY: Omit<ChatMessage, 'id'> = {
   role: 'ai',
   kind: 'coaching',
+  /** angkanya dibaca dari data lokal (Ringkasan/limit kategori mock) — bukan model */
+  ruleBased: true,
   content:
     'Pengeluaran kopi kamu Rp 350.000 bulan ini. Mau aku buatin limit khusus buat kategori Kopi?',
   action: {
@@ -93,6 +132,8 @@ export const MOCK_LIMIT_REPLY: Omit<ChatMessage, 'id'> = {
 export const MOCK_SPENDING_REVIEW_REPLY: Omit<ChatMessage, 'id'> = {
   role: 'ai',
   kind: 'coaching',
+  /** melanjutkan panel yang angkanya dihitung data lokal — tanpa model */
+  ruleBased: true,
   content:
     'Barusan kita lihat bareng di panel ya — jadi aku nggak ngulang angkanya di sini 🌿 Mau lanjut yang mana dulu: rapikan limit kategori, atau cari celah buat nyisihin ke celengan?',
 }
@@ -114,6 +155,22 @@ export const AI_CHAT_COPY = {
   openLabel: 'Buka AI Coach',
   appreciationBadge: 'Apresiasi',
   quickRepliesLabel: 'Saran pertanyaan',
+  /**
+   * Label kecil di bubble yang jawabannya datang dari ATURAN LOKAL (paket 44).
+   * Sengaja menyebut mekanismenya, bukan menyamarkan: user berhak tahu bahwa ia
+   * belum bicara dengan model — dan bahwa pertanyaan bebas belum bisa dijawab.
+   */
+  ruleBasedBadge: 'belum pakai model',
+  /**
+   * Status AI di panel (paket 44, keputusan §AI = opsi b): provider LLM belum
+   * tersambung karena belum ada API key yang boleh disimpan di server. Daripada
+   * membiarkan janji "Nanti aku bisa analisis real-time", panelnya menjelaskan
+   * keadaan hari ini + satu tombol ke tempat AI disambungkan.
+   */
+  notConnectedNote:
+    'AI Coach masih menjawab dari aturan lokal (belum pakai model), jadi pertanyaan bebas belum bisa dijawab.',
+  connectLabel: AI_CONNECT_LABEL,
+  connectHint: 'Buka Pengaturan → AI',
 } as const
 
 /* ── COPY ALUR VOICE & SCAN STRUK (prompt 20) ────────────────────────────────
@@ -160,6 +217,23 @@ export const AI_CAPTURE_COPY = {
   /** penanda per-field di bawah field yang keyakinannya rendah */
   lowFieldHint: 'Yang ini aku belum yakin — boleh dicek dulu?',
   needAmount: 'Isi nominalnya dulu ya 🌿',
+  /**
+   * PAKET 54: hasil ekstraksi bisa datang tanpa kategori — itu keadaan sah saat
+   * user mematikan "Kategorisasi Otomatis oleh AI" di Pengaturan
+   * (`lib/ai-prefs.ts`), bukan hasil AI yang ragu. Karena itu kalimatnya bukan
+   * "aku belum yakin", tapi ajakan memilih: kategori karangan tidak boleh
+   * tersimpan, dan 'Lainnya' bukan pilihan kalau user belum memutuskan.
+   */
+  needCategory: 'Pilih kategorinya dulu ya 🌿 Kategori di Riwayat ikut pilihanmu.',
+  /**
+   * PAKET 55: parser suara bisa MENDENGAR kata "transfer", tapi jalur ini tidak
+   * punya tempat menanyakan dompet TUJUAN — dan pindah dana tanpa tujuan bikin
+   * saldo dompet berbeda dari cerita (uang keluar, tidak mendarat di mana pun).
+   * Jadi kalimatnya mengarahkan ke alur yang benar, bukan menawarkan simpan.
+   */
+  needTransferFlow:
+    'Ini kedengeran seperti pindah dana. Pindah dana dicatat lewat alur “Pindah Dana” ya — di situ dompet asal & tujuannya ditanyakan sekali jalan.',
+  transferFlowCta: 'Buka Dompet & Akun → Pindah Dana',
   save: 'Catat ✓',
   /** dipakai kalau user mengosongkan nama catatannya sendiri */
   untitled: 'Catatan dari AI Coach',
@@ -196,6 +270,24 @@ export const AI_CAPTURE_COPY = {
 export const MOCK_APPRECIATION_REPLY: Omit<ChatMessage, 'id'> = {
   role: 'ai',
   kind: 'appreciation',
+  /** pujian terkurasi (bukan hasil model) — labelnya jujur karena itu */
+  ruleBased: true,
   content:
     'Makasih udah mau cerita, Jon! Ngomongin duit itu nggak gampang — dan kamu udah ambil langkah paling penting 💚',
 }
+
+/* ── STATUS AI DI HALAMAN PENGATURAN → AI (paket 44) ─────────────────────────
+   Tombol "Hubungkan AI" di AI Coach menuju `/settings/ai`. Supaya tujuannya
+   bukan jalan buntu, halaman itu menyebut keadaannya apa adanya: hari ini app
+   menjawab dari aturan lokal, dan semua saklar di halaman ini baru berlaku penuh
+   saat model AI disambungkan (butuh API key LLM yang disimpan SERVER-side —
+   `§AI` opsi (a) prompt 44; belum ada di build ini, jadi keputusannya opsi (b)).
+
+   Kalimatnya sengaja tidak menyebut "segera hadir" maupun tanggal: yang bisa
+   dijanjikan tanpa backend hanya keadaan hari ini + apa yang tetap berguna. */
+export const AI_STATUS_COPY = {
+  badge: 'Belum tersambung ke model',
+  title: 'Status AI hari ini',
+  body: 'AI Coach CatetInd masih menjawab dari aturan lokal + data di perangkat ini, jadi preferensi di bawah belum dijalankan oleh model AI. Begitu provider AI disambungkan (butuh API key LLM yang disimpan di server — belum ada di build ini), semua saklar ini langsung berlaku apa adanya tanpa kamu atur ulang.',
+  worksNow: 'Yang tetap jalan sekarang: catat transaksi manual (kategorinya kamu pilih sendiri — bukan tebakan app), scan struk, input suara, dan AI Coach menjawab dari data lokalmu.',
+} as const

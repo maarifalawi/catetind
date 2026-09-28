@@ -1,13 +1,13 @@
 'use client'
 
-import { CalendarCheck, Check, Plus, Sparkles, TriangleAlert } from 'lucide-react'
+import { CalendarCheck, Plus, Sparkles, TriangleAlert } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { maskMoney } from '@/lib/data/history'
 import {
+  CALENDAR_DAY_COPY,
+  CALENDAR_ENTRY_CHIP,
   CLEAN_STREAK_MILESTONE,
-  EMPTY_DAY_AI_MESSAGE,
   FIXED_BILL_SAFE_NOTE,
-  PLANNED_BADGE_LABEL,
   longDateLabel,
   type CalendarCell,
   type CalendarEntry,
@@ -24,9 +24,16 @@ import {
      3B  Satu tombol "Tambah Catatan di Tgl X" — zero-friction backdating
          (tanggalnya terkunci ke tanggal yang dipilih; modalnya:
          components/catetind/add-calendar-note-sheet.tsx).
-     3C  Daftar transaksi hari itu. Kalau tanggalnya masih di depan, yang muncul
-         adalah RAMALAN tagihan + aksi [Bayar Sekarang]; kalau hari yang sudah
-         lewat benar-benar kosong, muncul pesan AI yang menenangkan.
+     3C  Daftar uang yang BENAR-BENAR tercatat di hari itu.
+
+   PAKET 56 — yang dihapus dari panel ini beserta alasannya:
+     • judul "Ramalan Tagihan" + badge `ramalan`, karena tidak ada lagi angka masa
+       depan yang ditampilkan panel ini;
+     • aksi [Bayar Sekarang], karena ia menandai lunas tanpa membayar apa pun
+       (tidak ada baris kas, tidak ada saldo yang bergerak). Rumah tagihan adalah
+       `/bills`, dan di sana "Lunas" memang menggerakkan uang (paket 51);
+     • janji "Belum ada tagihan terjadwal" untuk hari mendatang — diganti empty
+       state jujur yang mengarahkan user ke tombol catat di atasnya.
 
    Sticky di desktop (`lg:sticky lg:top-8`) supaya saat halaman digulir, detail
    tanggal tetap terlihat.
@@ -51,36 +58,31 @@ export function CashflowInspector({
   cell,
   masked,
   dailyAverage,
-  paidForecastIds,
   onAddNote,
-  onPayForecast,
 }: {
   cell: CalendarCell | null
   masked: boolean
   /** rata-rata belanja variabel per hari — pembanding pesan "boros" */
   dailyAverage: number
-  /** id ramalan yang sudah ditandai lunas di sesi ini */
-  paidForecastIds: string[]
+  /** buka `AddCalendarNoteSheet` untuk tanggal yang sedang dipilih */
   onAddNote: () => void
-  onPayForecast: (entry: CalendarEntry) => void
 }) {
   if (!cell) {
     return (
       <aside className="rounded-[2rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] ring-1 ring-soil/12 lg:sticky lg:top-8">
         <h2 className="font-display text-[18px] font-semibold tracking-tight text-ink">
-          Pilih tanggal dulu
+          {CALENDAR_DAY_COPY.pickTitle}
         </h2>
-        <p className="mt-1 text-[12.5px] text-ink/50">
-          Tap salah satu tanggal di kalender untuk melihat detail harinya.
-        </p>
+        <p className="mt-1 text-[12.5px] text-ink/50">{CALENDAR_DAY_COPY.pickBody}</p>
       </aside>
     )
   }
 
   const relative = relativeLabel(cell)
   const streakMilestone = cell.cleanDay && cell.streak >= CLEAN_STREAK_MILESTONE
-  const isEmptyDay = cell.entries.length === 0 && cell.forecast.length === 0
-  /* hari yang cuma berisi tagihan terjadwal → beri tahu user bahwa itu netral */
+  /* PAKET 56: satu-satunya isi hari = entri yang benar-benar tercatat */
+  const isEmptyDay = cell.entries.length === 0
+  /* hari yang cuma berisi tagihan tetap → beri tahu user bahwa itu netral */
   const plannedOnly = cell.fixedSpend > 0 && cell.variableSpend === 0
   /* rincian cuma ditulis kalau memang ada lebih dari satu jenis uang di hari itu
      — kalau hanya satu, baris ringkasan di atas sudah mewakilinya */
@@ -102,9 +104,6 @@ export function CashflowInspector({
         >
           {relative.text}
         </span>
-        {cell.isFuture && !isEmptyDay && (
-          <span className="text-[11px] font-medium text-ink/35">ramalan</span>
-        )}
       </div>
 
       <h2 className="mt-2 font-display text-[20px] font-semibold leading-tight tracking-tight text-ink">
@@ -118,7 +117,7 @@ export function CashflowInspector({
           <span className="text-ink/70">−{maskMoney(cell.totalSpend, masked)} keluar</span>
         )}
         {cell.income === 0 && cell.totalSpend === 0 && (
-          <span className="font-medium text-ink/40">Tidak ada uang yang bergerak</span>
+          <span className="font-medium text-ink/40">{CALENDAR_DAY_COPY.neutralSummary}</span>
         )}
       </p>
       {breakdown.length > 1 && (
@@ -155,38 +154,40 @@ export function CashflowInspector({
         className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-forest px-4 text-[13px] font-semibold text-mint shadow-[0_16px_34px_-20px_rgba(69,89,78,0.9)] transition-colors hover:bg-forest-soft active:scale-[0.99]"
       >
         <Plus className="size-4" strokeWidth={2.8} />
-        Tambah Catatan di Tgl {cell.day}
+        {CALENDAR_DAY_COPY.addNote(cell.day)}
       </button>
 
 
-      {/* ── 3C. DAFTAR TRANSAKSI / RAMALAN ───────────────────────────────── */}
+      {/* ── 3C. DAFTAR CATATAN HARI ITU (hanya yang benar-benar tercatat) ──── */}
       <section className="mt-5 border-t border-soil/12 pt-4">
         <div className="flex items-center justify-between gap-2">
           <h3 className="text-[11px] font-bold uppercase tracking-[0.12em] text-ink/45">
-            {cell.isFuture
-              ? cell.forecast.length > 0
-                ? 'Ramalan Tagihan'
-                : 'Catatan Tercatat'
-              : 'Transaksi Hari Ini'}
+            {CALENDAR_DAY_COPY.listTitle(cell.isFuture)}
           </h3>
           <span className="text-[11px] font-semibold tabular-nums text-ink/40">
-            {cell.entries.length + cell.forecast.length} catatan
+            {CALENDAR_DAY_COPY.countLabel(cell.entries.length)}
           </span>
         </div>
 
         {isEmptyDay ? (
-          /* hari kosong: pesan yang menenangkan, tanpa kotak bergaris putus */
+          /* hari kosong: masa depan tidak dijanjikan apa pun (dulu "Belum ada
+             tagihan terjadwal"), hari yang sudah lewat dapat pesan menenangkan.
+             Keduanya menunjuk ke tombol catat di atas — bukan kotak mati. */
           <div className="mt-4 flex flex-col items-center px-2 pb-2 text-center">
             <span aria-hidden className="text-[22px] leading-none opacity-80">
-              {cell.isFuture ? '🗓' : '🌿'}
+              {cell.isFuture
+                ? CALENDAR_DAY_COPY.emptyFuture.emoji
+                : CALENDAR_DAY_COPY.emptyPast.emoji}
             </span>
             <p className="mt-2 font-display text-[13px] font-bold tracking-tight text-ink">
-              {cell.isFuture ? 'Belum ada tagihan terjadwal' : 'Kosong & aman'}
+              {cell.isFuture
+                ? CALENDAR_DAY_COPY.emptyFuture.title
+                : CALENDAR_DAY_COPY.emptyPast.title}
             </p>
             <p className="mt-1 max-w-[16rem] text-[11.5px] leading-relaxed text-ink/45">
               {cell.isFuture
-                ? 'Tidak ada tagihan jatuh tempo di tanggal ini. Tenang aja 🌿'
-                : EMPTY_DAY_AI_MESSAGE}
+                ? CALENDAR_DAY_COPY.emptyFuture.body
+                : CALENDAR_DAY_COPY.emptyPast.body}
             </p>
           </div>
         ) : (
@@ -194,27 +195,12 @@ export function CashflowInspector({
             data-lenis-prevent
             className="mt-1 flex max-h-[21rem] flex-col divide-y divide-soil/10 overflow-y-auto pr-0.5"
           >
-            {/* ramalan tampil lebih dulu — inilah yang butuh keputusan user */}
-            {cell.forecast.map((entry) => (
-              <CashflowEntryRow
-                key={entry.id}
-                entry={entry}
-                masked={masked}
-                forecast
-                paid={paidForecastIds.includes(entry.id)}
-                deficitDay={false}
-                onPay={onPayForecast}
-              />
-            ))}
             {cell.entries.map((entry) => (
               <CashflowEntryRow
                 key={entry.id}
                 entry={entry}
                 masked={masked}
-                forecast={false}
-                paid={false}
                 deficitDay={cell.tone === 'deficit'}
-                onPay={onPayForecast}
               />
             ))}
           </ul>
@@ -230,44 +216,30 @@ export function CashflowInspector({
      hitam  → uang KELUAR (variabel; terracotta kalau hari itu memang boros)
      biru   → cuma PINDAH DANA (net worth tidak berubah)
    Barisnya dipisah garis tipis, bukan dibungkus kartu kecil — daftar jadi
-   terasa lebih tenang. Tagihan terjadwal memakai label "Terencana", sama
-   dengan legenda di kalender. */
-const ENTRY_CHIP: Record<CalendarEntry['type'], { label: string; className: string }> = {
-  income: { label: 'Pemasukan', className: 'text-forest' },
-  fixed_bill: { label: PLANNED_BADGE_LABEL, className: 'text-thistle' },
-  variable_expense: { label: 'Variabel', className: 'text-hud-terracotta' },
-  money_movement: { label: 'Pindah dana', className: 'text-thistle' },
-}
+   terasa lebih tenang. Label chip-nya tinggal di `lib/data/calendar.ts`
+   (`CALENDAR_ENTRY_CHIP`) supaya tagihan tetap berbunyi sama dengan legenda
+   kalender — tidak ada dua versi label di dua berkas.
 
+   PAKET 56: baris ini tidak lagi punya cabang ramalan — tidak ada chip
+   "ramalan", tidak ada [Bayar Sekarang], tidak ada "Menunggu masuk otomatis".
+   Yang tampil hanya catatan yang benar-benar ada. */
 function CashflowEntryRow({
   entry,
   masked,
-  forecast,
-  paid,
   deficitDay,
-  onPay,
 }: {
   entry: CalendarEntry
   masked: boolean
-  forecast: boolean
-  paid: boolean
   /** hari itu ditandai boros → nominal variabel ditebalkan plum */
   deficitDay: boolean
-  onPay: (entry: CalendarEntry) => void
 }) {
-  const chip = ENTRY_CHIP[entry.type]
+  const chip = CALENDAR_ENTRY_CHIP[entry.type]
   const isIncome = entry.type === 'income'
   const isMovement = entry.type === 'money_movement'
 
   return (
     <li className="flex items-start gap-3 py-3 first:pt-2 last:pb-1">
-      <span
-        aria-hidden
-        className={cn(
-          'mt-0.5 shrink-0 text-[15px] leading-none',
-          forecast && 'opacity-60 saturate-50',
-        )}
-      >
+      <span aria-hidden className="mt-0.5 shrink-0 text-[15px] leading-none">
         {entry.emoji}
       </span>
 
@@ -283,28 +255,6 @@ function CashflowEntryRow({
             {entry.time ? ` · ${entry.time}` : ''}
           </span>
         </span>
-
-        {/* aksi kontekstual khusus ramalan tagihan */}
-        {forecast && (
-          <span className="mt-2 flex items-center gap-2">
-            {paid ? (
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#000000]">
-                <Check className="size-3" strokeWidth={3} />
-                Sudah ditandai lunas
-              </span>
-            ) : entry.type === 'income' ? (
-              <span className="text-[11px] text-ink/40">Menunggu masuk otomatis</span>
-            ) : (
-              <button
-                type="button"
-                onClick={() => onPay(entry)}
-                className="inline-flex h-7 items-center gap-1.5 rounded-full bg-forest px-3 text-[11px] font-semibold text-mint transition-colors hover:bg-forest-soft active:scale-95"
-              >
-                Bayar Sekarang
-              </button>
-            )}
-          </span>
-        )}
       </span>
 
       <span
@@ -321,9 +271,6 @@ function CashflowEntryRow({
       >
         {isIncome ? '+' : isMovement ? '⇄ ' : '−'}
         {maskMoney(entry.amount, masked)}
-        {forecast && (
-          <span className="mt-0.5 block text-[10px] font-medium text-ink/35">ramalan</span>
-        )}
       </span>
     </li>
   )

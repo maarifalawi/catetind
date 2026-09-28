@@ -31,8 +31,11 @@ export const REGISTRATION_COPY = {
   /** tautan dua arah ke /login — dilunasi di prompt 09 setelah route-nya ada */
   hasAccountLead: 'Sudah punya akun?',
   hasAccountLink: 'Masuk',
-  /** jujur soal status demo — bukan dipura-pura seperti jaringan sungguhan */
-  mockNote: 'Demo: pendaftaran belum tersambung ke server, jadi tidak ada email yang benar-benar dikirim.',
+  /** status pendaftaran: email konfirmasi memang wajib di project ini
+   *  (`mailer_autoconfirm: false`) — jadi kalimatnya menyiapkan langkah itu,
+   *  bukan mengaku "tidak ada email yang dikirim" (sejak paket 45 emailnya NYATA). */
+  mockNote:
+    'Setelah ini cek inbox: Supabase mengirim tautan konfirmasi ke emailmu, dan tautan itu sekaligus jadi jalan masukmu.',
 } as const
 
 /**
@@ -84,19 +87,14 @@ export const RESEND_SECONDS = 60
  * menyamar sebagai request nyata. Di produksi nilai ini digantikan oleh
  * `await supabase.auth.signInWithOtp(...)`.
  */
-export const SEND_SIMULATION_MS = 900
-
-/** nama pengirim email — dipakai di kartu demo halaman cek email */
 export const MAGIC_LINK_SENDER = 'CatetInd'
 
 /** berapa lama konfirmasi "tautan baru sudah dikirim" tampil di halaman (ms) */
 export const RESENT_NOTE_MS = 6000
 
 /** basis tautan di dalam email (absolute, karena dibuka dari app email) */
-export const MAGIC_LINK_BASE = 'https://catetind.com'
 
 /** token demo statis — di produksi tokennya sekali pakai & digenerate Supabase */
-const MOCK_MAGIC_TOKEN = 'demo-7k2r'
 
 /** halaman masuk & halaman tujuan tautan — satu sumber supaya tidak bercabang */
 export const LOGIN_PATH = '/login'
@@ -158,14 +156,20 @@ export const VERIFY_COPY = {
   resendSentNote: 'Tautan baru sudah dikirim. Cek inbox lagi ya 📩',
   /** state #9b: tautan kedaluwarsa / sudah dipakai (jangan pernah layar buntu) */
   expiredTitle: 'Tautan ini sudah dipakai atau kedaluwarsa.',
+
   expiredBody: 'Kirim ulang ya — nggak ada yang hilang.',
   changeEmailLabel: 'Ganti email',
-  /** kartu demo: alur bisa diklik sampai ujung, tapi berlabel jelas */
-  demoTitle: 'Di build demo',
-  demoLabel: 'Lanjut masuk (demo)',
-  demoHint:
-    'Demo ini belum punya sesi nyata, jadi tombol ini langsung membuka dashboard tanpa login.',
-  demoLinkLabel: 'Tautan yang "dikirim" (demo)',
+  /** kartu masuk dengan KODE dari email (paket 45: Supabase Auth, bukan demo) */
+  otpTitle: 'Masuk pakai kode dari email',
+  otpLabel: 'Kode 6 angka dari email',
+  otpHint: 'Tulis 6 angka yang ada di emailnya — atau klik tautannya langsung dari inbox.',
+  otpSubmitLabel: 'Masuk sekarang',
+  otpNote:
+    'Kode ini sekali pakai dan berlaku sebentar. Kalau kamu membuka email di perangkat ini, klik tautannya saja — halaman ini yang menyelesaikannya.',
+  otpFailedTitle: 'Kodenya belum bisa dipakai',
+  /** tautan email gagal ditukar jadi sesi (sudah dipakai / kedaluwarsa) */
+  linkFailedTitle: 'Tautan masuknya tidak berlaku lagi',
+  resendFailed: 'Gagal mengirim ulang tautan',
   expiredPreviewLabel: 'Lihat state tautan kedaluwarsa',
   expiredPreviewHint:
     'Contoh tampilan kalau user membuka tautan lama — buat review state, bukan error sungguhan.',
@@ -181,18 +185,41 @@ export const RELOGIN_COPY = {
   suffix: '— tanpa password, cukup dari inbox.',
 } as const
 
+/* ── SESI (paket 39) ────────────────────────────────────────────────────────
+   Copy untuk UI yang MEMBUAT & MENGAKHIRI sesi: tombol "Lanjut masuk (demo)" di
+   /login/verify, panel Keluar, dan alur "Lupa PIN" di layar kunci.
+
+   Nada yang dijaga: tidak pernah berpura-pura ada sesi produksi. Tombol yang
+   membuat sesi diberi label "demo", dan konfirmasi keluar menyebut apa yang
+   benar-benar terjadi ("sesi di perangkat ini diakhiri") — dulu panel Keluar
+   justru mengaku "sesi belum benar-benar diakhiri" padahal tidak ada sesi
+   sama sekali. */
+export const SESSION_COPY = {
+  /** label tombol saat permintaan sesi sedang berjalan (tukar tautan / kode) */
+  signingIn: 'Menyambungkan ke akunmu…',
+  signInToast: 'Kamu sudah masuk 🌿',
+  signInToastDescription:
+    'Sesi ini milik Supabase Auth: tokennya ditandatangani server, dan datamu hanya bisa dibaca atas nama akunmu (RLS di database).',
+  signInFailed: 'Gagal masuk',
+  /** panel Keluar */
+  signedOutToast: 'Sampai jumpa lagi! 👋',
+  signedOutToastDescription: 'Sesi di perangkat ini sudah diakhiri. Datamu tetap tersimpan di akun.',
+  signOutFailed: 'Sesi tidak bisa diakhiri dari sini',
+  signOutFailedDescription: 'Jaringan tidak bisa dihubungi. Coba lagi sebentar ya.',
+  /**
+   * Dipakai titik yang MEMBUTUHKAN sesi (mis. tombol tes push) saat endpoint
+   * menjawab 401. Sebelum paket 39 titik itu menganggap dirinya berhasil, karena
+   * endpoint-nya memang tidak pernah memeriksa sesi.
+   */
+  noSessionTitle: 'Sesi belum aktif',
+  noSessionBody:
+    'Masuk dulu lewat halaman masuk (tautan atau kode dari email) supaya notifikasi ini tersimpan atas namamu — bukan atas nama pemanggil anonim.',
+  noSessionCta: 'Buka halaman masuk',
+} as const
+
 /** halaman masuk in-app (bukan tautan absolute yang ada di email) */
 export function buildVerifyHref(email: string): string {
   return `${VERIFY_PATH}?email=${encodeURIComponent(email.trim())}`
-}
-
-/**
- * Tautan yang "ada di dalam email". Di produksi tautan ini dibuat Supabase
- * beserta token sekali pakainya; di demo tokennya statis supaya halaman bisa
- * direview tanpa server — tapi tetap berbentuk URL asli, bukan pura-pura.
- */
-export function buildMockMagicLink(email: string): string {
-  return `${MAGIC_LINK_BASE}${buildVerifyHref(email)}&token=${MOCK_MAGIC_TOKEN}`
 }
 
 /**

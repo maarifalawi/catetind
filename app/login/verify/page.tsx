@@ -34,15 +34,24 @@ function firstValue(value: string | string[] | undefined): string {
 export default async function VerifyEmailPage({
   searchParams,
 }: {
-  searchParams: Promise<{ email?: string | string[]; status?: string | string[] }>
+  searchParams: Promise<{
+    email?: string | string[]
+    status?: string | string[]
+    code?: string | string[]
+    error?: string | string[]
+  }>
 }) {
   const params = await searchParams
+  /* Supabase mengirim `?error=…` (mis. tautan kedaluwarsa) atau `?code=…` (PKCE) */
+  const status = firstValue(params.status)
+  const errorParam = firstValue(params.error)
 
   return (
     <PhoneStage plain>
       <VerifyEmailScreen
         email={firstValue(params.email)}
-        expired={firstValue(params.status) === 'expired'}
+        expired={status === 'expired' || errorParam.length > 0}
+        code={firstValue(params.code) || undefined}
       />
     </PhoneStage>
   )

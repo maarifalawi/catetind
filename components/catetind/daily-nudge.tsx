@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Sparkles, Sprout, X } from 'lucide-react'
 import { TransactionWebModal } from '@/components/dashboard/transaction-web-modal'
+import { DEMO_MODE } from '@/lib/demo'
 import { cn } from '@/lib/utils'
 
 /* ── Slot Nudge Kontekstual (Habit Loop, PRD Domain 3A) ───────────────────────
@@ -17,9 +18,10 @@ import { cn } from '@/lib/utils'
      menyentuh kebiasaan harian, CTA-nya membuka modal input yang SAMA dengan
      tombol utama di sidebar (Single Entry Point). */
 
-/** paksa tampil untuk kebutuhan review desain — set false untuk perilaku
- *  produksi (nudge hanya muncul sore hari & hanya kalau hari ini belum dicatat) */
-const DEMO_FORCE_SHOW = true
+/** paksa tampil untuk kebutuhan review desain — perilaku produksi (default):
+ *  nudge hanya muncul sore hari & hanya kalau hari ini belum dicatat.
+ *  Saklarnya ikut `NEXT_PUBLIC_DEMO` (paket 42). */
+const DEMO_FORCE_SHOW = DEMO_MODE
 
 /** batas jam: sebelum ini, "belum catat" masih wajar (orang baru bangun) */
 const HOUR_THRESHOLD = 15

@@ -10,12 +10,9 @@ import {
   type RenewalState,
 } from '@/lib/data/renewal'
 import { SINKING_NUDGE_COPY } from '@/lib/data/budget'
-import {
-  AI_GAUGE_BANNER_COPY,
-  AI_REMAINING_PCT,
-  AI_USED_PCT,
-} from '@/lib/ai-quota'
-import { useAiAddon } from '@/hooks/use-ai-addon'
+import { AI_GAUGE_BANNER_COPY, AI_QUOTA_EXHAUSTED_COPY } from '@/lib/ai-quota'
+import { useAiQuota } from '@/hooks/use-ai-quota'
+import { DEMO_MODE } from '@/lib/demo'
 import { TopUpModal } from './top-up-modal'
 
 /* ── mock kondisi — nanti dari backend (Domain 5A, 2C.3, 4B) ──
@@ -26,7 +23,10 @@ import { TopUpModal } from './top-up-modal'
    di-mock ulang di sini — soft-nudge ini menilai angka yang sama dengan yang
    tampil di kartu sidebar, halaman Billing, dan dokumen /terms. */
 const DEMO = {
-  sinkingFundPending: true, // tanggal >5 & belum kontribusi (Domain 2C.3)
+  /* tanggal >5 & belum kontribusi (Domain 2C.3). Saklarnya ikut
+     `NEXT_PUBLIC_DEMO` (paket 42): di produksi nudge ini hanya boleh muncul
+     kalau kondisinya BENAR-BENAR terjadi, bukan selalu. */
+  sinkingFundPending: DEMO_MODE,
 }
 
 /** ambang soft-nudge ala PRD 4770/4894: muncul hanya saat pemakaian >70% */
@@ -118,8 +118,9 @@ export const HomeBanners = memo(function HomeBanners({
   /** modal Top Up AI — dibuka CTA banner kuota (reuse komponen yang sama
    *  dengan /settings/billing; harga & token tetap dari `lib/ai-quota.ts`) */
   const [topUpOpen, setTopUpOpen] = useState(false)
-  /** sisa token add-on sesi ini — setelah pembelian, nudge kuota berhenti */
-  const addon = useAiAddon()
+  /** snapshot kuota AI hidup (paket 42): angka yang sama dengan kartu sidebar,
+   *  Fuel Gauge Billing, dan header AI Coach — dan angka itu TURUN saat dipakai */
+  const quota = useAiQuota()
 
   useEffect(() => {
     try {
@@ -145,8 +146,11 @@ export const HomeBanners = memo(function HomeBanners({
   const showRenewal = !renewalHandled && shouldShowRenewalBanner(renewalState)
   const renewalCopy = renewalBannerCopy(renewalState)
   /* soft-nudge kuota: pemakaian kuota dasar >70% DAN user belum menambah token
-     di sesi ini — begitu sudah beli, ajakannya selesai (lihat catatan komponen) */
-  const showAiGauge = AI_USED_PCT > SOFT_NUDGE_USAGE_PCT && addon.purchasedTokens === 0
+     di sesi ini — begitu sudah beli, ajakannya selesai (lihat catatan komponen).
+     Saat kuota benar-benar habis, banner tetap muncul (persen sisa 0) tapi
+     kalimatnya berganti jadi penjelasan + jalan keluar, bukan ajakan halus. */
+  const showAiGauge =
+    quota.usedPct > SOFT_NUDGE_USAGE_PCT && quota.addon.purchasedTokens === 0
   const showFundNudge = DEMO.sinkingFundPending && today.getDate() > 5
 
   return (
@@ -187,19 +191,23 @@ export const HomeBanners = memo(function HomeBanners({
               <Fuel className="size-4.5" strokeWidth={2.2} />
             </span>
           }
-          title={AI_GAUGE_BANNER_COPY.title}
+          title={quota.exhausted ? AI_QUOTA_EXHAUSTED_COPY.bannerTitle : AI_GAUGE_BANNER_COPY.title}
           body={
-            <span className="flex items-center gap-2">
-              <span className="h-1.5 w-24 overflow-hidden rounded-full bg-soil/[0.09]">
-                <span
-                  className="block h-full rounded-full bg-hud-amber"
-                  style={{ width: `${AI_USED_PCT}%` }}
-                />
+            quota.exhausted ? (
+              <span>{AI_QUOTA_EXHAUSTED_COPY.body}</span>
+            ) : (
+              <span className="flex items-center gap-2">
+                <span className="h-1.5 w-24 overflow-hidden rounded-full bg-soil/[0.09]">
+                  <span
+                    className="block h-full rounded-full bg-hud-amber"
+                    style={{ width: `${quota.usedPct}%` }}
+                  />
+                </span>
+                <span className="tabular-nums">
+                  {AI_GAUGE_BANNER_COPY.usage(quota.usedPct, quota.remainingPct)}
+                </span>
               </span>
-              <span className="tabular-nums">
-                {AI_GAUGE_BANNER_COPY.usage(AI_USED_PCT, AI_REMAINING_PCT)}
-              </span>
-            </span>
+            )
           }
           cta={
             <button

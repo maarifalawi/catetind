@@ -1,9 +1,10 @@
 'use client'
 
-import { memo, useRef, useState } from 'react'
+import { memo, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import {
   ArrowDownLeft,
+  ArrowLeftRight,
   ArrowUpRight,
   Banknote,
   Car,
@@ -19,15 +20,51 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { formatIDR } from '@/lib/wallets'
+import { amountSign, type HistoryTransaction } from '@/lib/data/history'
+import {
+  HOME_MONEY_COPY,
+  HOME_MONEY_GROUPS,
+  HOME_MONEY_ROWS,
+  homeMoneyRowFrom,
+  summarizeHomeMoney,
+  type HomeMoneyRow,
+} from '@/lib/data/home-money'
+import {
+  applyRowOverride,
+  cancelTransferRow,
+  isRowRemoved,
+  recordedTransactions,
+  removeRow,
+  useMoneyStore,
+  type MoneySnapshot,
+} from '@/lib/money/store'
+import type { TransactionType } from '@/lib/types'
+import { TransactionBottomSheet } from '@/components/dashboard/transaction-bottom-sheet'
 import { usePrivacy } from './privacy-provider'
 
+/**
+ * Satu baris di kartu "Transaksi Terakhir" Home.
+ *
+ * `value` (angka) adalah SATU-SATUNYA sumber nominalnya; label `-Rp 85.000`
+ * diturunkan dari angka itu lewat `moneyLabel()`. Dulu labelnya ditulis manual
+ * DAN ringkasan di bawah kartu juga angka manual — begitu ada catatan baru
+ * (paket 33), dua tempat itu tidak mungkin ikut bergerak. Sejak paket 35 barisnya
+ * lahir dari `lib/data/home-money.ts` (satu sumber dengan kartu "Arus Uang"),
+ * jadi nominal tidak lagi ditulis di komponen ini.
+ */
 type Transaction = {
+  /** id unik — key React & sasaran hapus (judul bisa kembar: dua "Kopi") */
+  id: string
   icon: LucideIcon
   title: string
   category: string
   time: string
-  amount: string
-  type: 'income' | 'expense'
+  /** nominal asli (selalu positif; arah uang ditentukan `type`) */
+  value: number
+  /** ikut tipe transaksi app-wide, bukan cuma masuk/keluar — catatan baru dari
+   *  panel input bisa berupa tabungan/transfer dan tidak boleh hilang di sini */
+  type: TransactionType
   /* tile ikon: gradient + drop shadow warna per kategori (makin kuat saat hover) */
   tile: string
 }
@@ -39,39 +76,122 @@ type TransactionGroup = {
   items: Transaction[]
 }
 
-const GROUPS: TransactionGroup[] = [
-  {
-    label: 'Hari ini',
-    live: true,
-    items: [
-      { icon: Coffee, title: 'Starbucks', category: 'Makanan & Minuman', time: '14:32', amount: '-Rp 85.000', type: 'expense', tile: 'bg-gradient-to-br from-cantelope/25 to-cantelope/10 text-cantelope shadow-[0_8px_16px_-8px_rgba(255,184,133,0.45)] group-hover:shadow-[0_14px_24px_-8px_rgba(255,184,133,0.6)]' },
-    ],
-  },
-  {
-    label: 'Kemarin',
-    items: [
-      { icon: Banknote, title: 'Gaji Bulanan', category: 'Pemasukan', time: '09:00', amount: '+Rp 8.500.000', type: 'income', tile: 'bg-gradient-to-br from-mint/80 to-mint/25 text-forest shadow-[0_8px_16px_-8px_rgba(145,187,158,0.55)] group-hover:shadow-[0_14px_24px_-8px_rgba(145,187,158,0.7)]' },
-      { icon: Car, title: 'Grab', category: 'Transport', time: '08:15', amount: '-Rp 42.000', type: 'expense', tile: 'bg-gradient-to-br from-thistle/20 to-thistle/10 text-thistle shadow-[0_8px_16px_-8px_rgba(145,160,184,0.4)] group-hover:shadow-[0_14px_24px_-8px_rgba(145,160,184,0.55)]' },
-    ],
-  },
-  {
-    label: '21 Sep',
-    items: [
-      { icon: Zap, title: 'Listrik PLN', category: 'Tagihan', time: '19:40', amount: '-Rp 350.000', type: 'expense', tile: 'bg-gradient-to-br from-daisy/25 to-daisy/10 text-soil shadow-[0_8px_16px_-8px_rgba(255,184,133,0.45)] group-hover:shadow-[0_14px_24px_-8px_rgba(255,184,133,0.6)]' },
-      { icon: ShoppingBag, title: 'Shopee', category: 'Belanja', time: '16:05', amount: '-Rp 275.000', type: 'expense', tile: 'bg-gradient-to-br from-plum/20 to-plum/10 text-plum shadow-[0_8px_16px_-8px_rgba(184,145,145,0.4)] group-hover:shadow-[0_14px_24px_-8px_rgba(184,145,145,0.55)]' },
-    ],
-  },
-]
+/** label nominal satu baris — tanda arah dari kanon `amountSign`, angka dari `formatIDR` */
+function moneyLabel(value: number, type: TransactionType): string {
+  return `${amountSign(type)}${formatIDR(value)}`
+}
 
-/* offset item kumulatif per grup — untuk delay animasi staggered */
-const OFFSETS: number[] = []
-{
-  let acc = 0
-  for (const group of GROUPS) {
-    OFFSETS.push(acc)
-    acc += group.items.length
+/** warna nominal & badge arah per tipe — senada `MONEY_TONE` (lib/data/history):
+ *  pindah dana (tabungan/transfer) NETRAL, bukan merah — net worth tidak berubah. */
+const ROW_TONE: Record<TransactionType, { text: string; badge: string }> = {
+  income: { text: 'text-forest', badge: 'bg-mint text-forest' },
+  expense: { text: 'text-ink/80', badge: 'bg-plum text-cream' },
+  saving: { text: 'text-ink/55', badge: 'bg-ink/30 text-cream' },
+  transfer: { text: 'text-ink/55', badge: 'bg-ink/30 text-cream' },
+}
+
+/**
+ * Ikon + tile untuk catatan yang BARU dicatat dari panel input (tidak ada di
+ * seed di bawah, jadi tidak punya visual sendiri). Ikon React sengaja dipetakan
+ * di komponen ini — pola yang sama dengan `SHORTCUT_ICON` di `not-found-screen.tsx`
+ * — supaya `lib/data/*` tetap murni tanpa komponen. Kelas tile-nya MEMINJAM
+ * string yang sudah ada di seed (nol warna baru); yang tidak terpetakan jatuh ke
+ * `bg-sage` + `ReceiptText` alias "catatan lain-lain".
+ */
+const CATEGORY_VISUAL: Record<string, { icon: LucideIcon; tile: string }> = {
+  Makanan: {
+    icon: Coffee,
+    tile: 'bg-gradient-to-br from-cantelope/25 to-cantelope/10 text-cantelope shadow-[0_8px_16px_-8px_rgba(255,184,133,0.45)] group-hover:shadow-[0_14px_24px_-8px_rgba(255,184,133,0.6)]',
+  },
+  Transportasi: {
+    icon: Car,
+    tile: 'bg-gradient-to-br from-thistle/20 to-thistle/10 text-thistle shadow-[0_8px_16px_-8px_rgba(145,160,184,0.4)] group-hover:shadow-[0_14px_24px_-8px_rgba(145,160,184,0.55)]',
+  },
+  Belanja: {
+    icon: ShoppingBag,
+    tile: 'bg-gradient-to-br from-plum/20 to-plum/10 text-plum shadow-[0_8px_16px_-8px_rgba(184,145,145,0.4)] group-hover:shadow-[0_14px_24px_-8px_rgba(184,145,145,0.55)]',
+  },
+  Tagihan: {
+    icon: Zap,
+    tile: 'bg-gradient-to-br from-daisy/25 to-daisy/10 text-soil shadow-[0_8px_16px_-8px_rgba(255,184,133,0.45)] group-hover:shadow-[0_14px_24px_-8px_rgba(255,184,133,0.6)]',
+  },
+  'Gaji Utama': {
+    icon: Banknote,
+    tile: 'bg-gradient-to-br from-mint/80 to-mint/25 text-forest shadow-[0_8px_16px_-8px_rgba(145,187,158,0.55)] group-hover:shadow-[0_14px_24px_-8px_rgba(145,187,158,0.7)]',
+  },
+}
+
+const FALLBACK_VISUAL: { icon: LucideIcon; tile: string } = {
+  icon: ReceiptText,
+  tile: 'bg-sage text-forest',
+}
+
+/**
+ * Visual baris SEED — kategori seed ("Makanan & Minuman", "Transport",
+ * "Pemasukan") sengaja dipetakan ke kelas yang SUDAH ada di `CATEGORY_VISUAL`
+ * di atas: nol warna baru, dan kalau kelasnya diubah di satu tempat, dua-duanya
+ * ikut berubah.
+ */
+const SEED_VISUAL: Record<string, { icon: LucideIcon; tile: string }> = {
+  'Makanan & Minuman': CATEGORY_VISUAL.Makanan,
+  Transport: CATEGORY_VISUAL.Transportasi,
+  Pemasukan: CATEGORY_VISUAL['Gaji Utama'],
+}
+
+function visualFor(category: string): { icon: LucideIcon; tile: string } {
+  return SEED_VISUAL[category] ?? CATEGORY_VISUAL[category] ?? FALLBACK_VISUAL
+}
+
+/**
+ * baris ringkasan Home (seed ATAU catatan sesi) → bentuk yang dipakai kartu ini.
+ * Satu jalur konversi untuk dua sumber, jadi visual kategori mustahil berbeda
+ * antara catatan lama & catatan yang baru dicatat.
+ */
+function cardRow(row: HomeMoneyRow): Transaction {
+  const visual = visualFor(row.category)
+  return {
+    id: row.id,
+    icon: visual.icon,
+    title: row.name,
+    category: row.category,
+    time: row.time,
+    value: row.amount,
+    type: row.type,
+    tile: visual.tile,
   }
 }
+
+/**
+ * Seed kartu ini — nominal, jam, & tanggalnya dari SATU SUMBER
+ * (`HOME_MONEY_GROUPS` di `lib/data/home-money.ts`), himpunan yang SAMA dengan
+ * yang dihitung kartu "Arus Uang" di layar ini. Nominalnya TIDAK bergeser dari
+ * seed lama: 8.500.000 masuk (Gaji Bulanan) & 752.000 keluar — angka patokan
+ * audit paket 35. Komponen ini tinggal menempelkan visual (ikon + kelas tile).
+ *
+ * Sejak paket 48 daftarnya DITURUNKAN DI KOMPONEN (bukan konstanta tingkat modul):
+ * tiap baris melewati `applyRowOverride()`, jadi hasil edit dari Riwayat /
+ * `/wallet/[id]` tidak bisa tertinggal di kartu Home ini.
+ */
+function seedGroups(snapshot: MoneySnapshot): TransactionGroup[] {
+  return HOME_MONEY_GROUPS.map((group) => ({
+    label: group.label,
+    live: group.live,
+    items: group.rows
+      .filter((row) => !isRowRemoved(snapshot, row.id))
+      .map((row) => cardRow(applyRowOverride(snapshot, row))),
+  }))
+}
+
+/** terjemahkan catatan sesi (bus transaksi) jadi baris kartu ini */
+function sessionRow(record: HistoryTransaction): Transaction {
+  return cardRow(homeMoneyRowFrom(record))
+}
+
+
+
+/* offset item kumulatif per grup dihitung ulang di dalam komponen (`delays`)
+   dari grup yang MASIH tampil — angka statis di tingkat modul dulu tidak pernah
+   dipakai lagi setelah baris bisa dihapus, jadi ia dibuang di paket 33. */
 
 
 /**
@@ -156,7 +276,7 @@ function SwipeRow({
       {/* konten baris */}
       <button
         type="button"
-        aria-label={`${tx.title}, ${tx.category}, ${hide(tx.amount)}`}
+        aria-label={`${tx.title}, ${tx.category}, ${hide(moneyLabel(tx.value, tx.type))}`}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={settle}
@@ -197,14 +317,17 @@ function SwipeRow({
           <span
             className={cn(
               'absolute -bottom-1 -right-1 flex size-5 items-center justify-center rounded-full shadow-sm ring-2 ring-cream transition-transform duration-300 animate-[fade-pop_0.4s_ease_backwards] group-hover:scale-110',
-              tx.type === 'income' ? 'bg-mint text-forest' : 'bg-plum text-cream',
+              ROW_TONE[tx.type].badge,
             )}
             style={{ animationDelay: `${delay + 280}ms` }}
           >
             {tx.type === 'income' ? (
               <ArrowDownLeft className="size-3" strokeWidth={3} />
-            ) : (
+            ) : tx.type === 'expense' ? (
               <ArrowUpRight className="size-3" strokeWidth={3} />
+            ) : (
+              /* tabungan & transfer: badan uang pindah, bukan masuk/keluar */
+              <ArrowLeftRight className="size-3" strokeWidth={3} />
             )}
           </span>
         </span>
@@ -221,10 +344,10 @@ function SwipeRow({
         <span
           className={cn(
             'shrink-0 text-sm font-semibold tabular-nums',
-            tx.type === 'income' ? 'text-forest' : 'text-ink/80',
+            ROW_TONE[tx.type].text,
           )}
         >
-          {hide(tx.amount)}
+          {hide(moneyLabel(tx.value, tx.type))}
         </span>
 
         {/* Affordance geser (pengganti teks manual "💡 Geser baris..."):
@@ -245,19 +368,75 @@ function SwipeRow({
  *  cash-flow-card.tsx). Baris-baris swipe tetap punya state sendiri. */
 export const RecentTransactionsCard = memo(function RecentTransactionsCard() {
   const { hide } = usePrivacy()
-  /* daftar transaksi jadi state — baris bisa dihapus via swipe kiri */
-  const [groups, setGroups] = useState(GROUPS)
-  const visibleGroups = groups.filter((g) => g.items.length > 0)
-  const totalItems = groups.reduce((acc, g) => acc + g.items.length, 0)
+  /* Catatan sesi dibaca dari SATU store uang (`lib/money/store.ts`), bukan lagi
+     dari bus + state lokal: dulu kartu ini punya `groups` + `recordedTxs` sendiri,
+     jadi hapus di Home tidak pernah terdengar halaman lain (audit #7). Sekarang
+     baris seed & baris sesi disaring dengan TOMBSTONE yang sama
+     (`isRowRemoved`), dan hapusnya lewat `removeRow()` — satu jalur tulis. */
+  const snapshot = useMoneyStore()
+  const recordedTxs = useMemo(() => recordedTransactions(snapshot), [snapshot])
+  /* Baris seed: dihapus → hilang (`isRowRemoved`), diedit → tampil nilai baru
+     (`applyRowOverride`) — dua-duanya dari store yang sama, jadi kartu ini tidak
+     pernah bercerita beda dengan Riwayat. */
+  const groups = useMemo(() => seedGroups(snapshot), [snapshot])
 
-  const deleteTx = (label: string, title: string) =>
-    setGroups((prev) =>
-      prev.map((g) =>
-        g.label === label
-          ? { ...g, items: g.items.filter((t) => t.title !== title) }
-          : g,
-      ),
-    )
+  /* Catatan sesi disisipkan ke grup "Hari ini" (paling atas). Panel tambah memang
+     selalu bertanggal hari ini — form tambah tidak punya pemilih tanggal, dan
+     `recordTransaction()` memakai `localISODate()` — jadi kartu ringkas ini tidak
+     perlu membuat grup baru per tanggal. Kalau nanti ada catatan bertanggal lain,
+     ia tetap TAMPIL (tidak dibuang) sampai ada aturan pengelompokan sendiri untuk
+     kartu ini. */
+  const mergedGroups = useMemo(
+    () =>
+      recordedTxs.length === 0
+        ? groups
+        : groups.map((group) =>
+            group.live
+              ? { ...group, items: [...recordedTxs.map(sessionRow), ...group.items] }
+              : group,
+          ),
+    [groups, recordedTxs],
+  )
+
+  const visibleGroups = mergedGroups.filter((g) => g.items.length > 0)
+  const totalItems = mergedGroups.reduce((acc, g) => acc + g.items.length, 0)
+
+  /* Ringkasan periode TURUNAN dari himpunan baris yang SAMA dengan kartu "Arus
+     Uang": seed + catatan sesi, lewat `summarizeHomeMoney` (satu definisi uang
+     masuk/keluar, pindah dana netral). Labelnya `HOME_MONEY_COPY.period`
+     ("Bulan ini") — string yang sama dengan yang dipakai chart.
+     Baris yang dihapus user (tombstone di store) tidak ikut dihitung di sini
+     MAUPUN di chart, karena keduanya membaca `isRowRemoved` yang sama — dan baris
+     yang DIEDIT memakai nilai barunya (`applyRowOverride`) di kedua tempat. */
+  const period = useMemo(
+    () =>
+      summarizeHomeMoney([
+        ...recordedTxs.map(homeMoneyRowFrom),
+        ...HOME_MONEY_ROWS.filter((row) => !isRowRemoved(snapshot, row.id)).map((row) =>
+          applyRowOverride(snapshot, row),
+        ),
+      ]),
+    [recordedTxs, snapshot],
+  )
+
+  /**
+   * Hapus baris lewat SATU pintu: `removeRow()` menulis tombstone di store, jadi
+   * barisnya hilang dari SEMUA halaman yang menampilkan catatan — Home, `/history`,
+   * dan `/wallet/[id]` — dan tetap hilang setelah pindah halaman. Itu alasan dulu
+   * kartu ini "menyembunyikan" barisnya sendiri saja: bus tidak punya API hapus.
+   *
+   * PAKET 55 — baris `transfer` tidak cukup di-tombstone: ia menggerakkan DUA
+   * dompet, jadi uangnya harus dikembalikan ke kedua sisi. `cancelTransferRow()`
+   * melakukannya (dan mengembalikan `null` kalau barisnya bukan pindah dana,
+   * mis. catatan demo, atau uangnya sudah terpakai di dompet tujuan) — kalau
+   * `null`, hapus biasa yang berlaku. Kartu ini tidak memasang toast Undo, jadi
+   * pembatalan di sini bersifat final; jejaknya tetap terbaca di Riwayat sebagai
+   * dua baris koreksi bernama jelas.
+   */
+  const deleteTx = (tx: { id: string; type: TransactionType }) => {
+    const cancellation = tx.type === 'transfer' ? cancelTransferRow(tx.id) : null
+    if (!cancellation) removeRow(tx.id)
+  }
 
   /* delay staggered kumulatif — direcompute dari grup yang masih tampil */
   const delays: number[] = (() => {
@@ -279,7 +458,7 @@ export const RecentTransactionsCard = memo(function RecentTransactionsCard() {
           </span>
           <div>
             <p className="text-sm font-semibold text-ink">Transaksi Terakhir</p>
-            <p className="text-xs text-ink/45">Aktivitas 3 hari terakhir</p>
+            <p className="text-xs text-ink/45">{HOME_MONEY_COPY.txnSubtitle}</p>
           </div>
         </div>
         <Link
@@ -305,12 +484,20 @@ export const RecentTransactionsCard = memo(function RecentTransactionsCard() {
           <p className="mt-1 text-xs text-ink/50">
             Catat yang pertama yuk! 🌱
           </p>
-          <button
-            type="button"
-            className="mt-4 rounded-full bg-forest px-5 py-2.5 text-[13px] font-semibold text-cream transition-colors hover:bg-forest-soft active:scale-[0.97]"
-          >
-            + Catat Transaksi
-          </button>
+          {/* CTA empty state: dulu tombol MATI (bisa dipencet, tidak terjadi apa
+              pun). Sekarang membuka Transaction Input Engine — pola `trigger=`
+              yang sama dengan FAB di bottom nav dan tombol di kartu dompet, jadi
+              user bisa langsung mencatat tanpa keluar dari Home. */}
+          <TransactionBottomSheet
+            trigger={
+              <button
+                type="button"
+                className="mt-4 rounded-full bg-forest px-5 py-2.5 text-[13px] font-semibold text-cream transition-colors hover:bg-forest-soft active:scale-[0.97]"
+              >
+                + Catat Transaksi
+              </button>
+            }
+          />
         </div>
       ) : (
         /* ── daftar transaksi — dikelompokkan per hari ── */
@@ -333,10 +520,10 @@ export const RecentTransactionsCard = memo(function RecentTransactionsCard() {
               <ul className="mt-1.5 flex flex-col gap-0.5">
                 {group.items.map((tx, i) => (
                   <SwipeRow
-                    key={tx.title}
+                    key={tx.id}
                     tx={tx}
                     delay={120 + (delays[gi] + i) * 70}
-                    onDelete={() => deleteTx(group.label, tx.title)}
+                    onDelete={() => deleteTx(tx)}
                   />
                 ))}
               </ul>
@@ -345,13 +532,27 @@ export const RecentTransactionsCard = memo(function RecentTransactionsCard() {
         </div>
       )}
 
-      {/* insight mingguan — pola strip yang sama dengan kartu distribusi */}
+      {/* insight periode — pola strip yang sama dengan kartu distribusi. Label
+          periode & kata sambungnya dari `HOME_MONEY_COPY` (string yang SAMA
+          dengan legend kartu "Arus Uang"), angkanya dari `period` (turunan). */}
       <div className="mt-4 flex items-center justify-center gap-2 rounded-2xl bg-cream px-4 py-2.5 text-center text-xs leading-relaxed text-ink/55">
         <Sparkles className="size-3.5 shrink-0 text-forest" strokeWidth={2.2} />
         <span>
-          Minggu ini <b className="font-semibold text-forest">{hide('+Rp 8.500.000')}</b>{' '}
-          masuk, <b className="font-semibold text-ink">{hide('-Rp 752.000')}</b> keluar —
-          net <b className="font-semibold text-forest">{hide('+Rp 7.748.000')}</b>
+          {HOME_MONEY_COPY.period}{' '}
+          <b className="font-semibold text-forest">{hide(`+${formatIDR(period.income)}`)}</b>{' '}
+          {HOME_MONEY_COPY.txnInflow}{' '}
+          <b className="font-semibold text-ink">{hide(`-${formatIDR(period.expense)}`)}</b>{' '}
+          {HOME_MONEY_COPY.txnOutflow}{' '}
+          <b
+            className={cn(
+              'font-semibold',
+              /* negatif = pengeluaran lebih besar; tetap terracotta lembut, bukan merah
+                 (kanon warna status: "lewat batas" tidak diteriakkan) */
+              period.net < 0 ? 'text-hud-terracotta' : 'text-forest',
+            )}
+          >
+            {hide(`${period.net < 0 ? '-' : '+'}${formatIDR(Math.abs(period.net))}`)}
+          </b>
         </span>
       </div>
     </div>

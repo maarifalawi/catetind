@@ -12,6 +12,7 @@ export function OverviewPanel({
   open,
   onClose,
   selection,
+  allTotal = 0,
 }: {
   open: boolean
   onClose: () => void
@@ -21,6 +22,13 @@ export function OverviewPanel({
    * gabungan semua dompet.
    */
   selection?: DeckSelection
+  /**
+   * Total Saldo SELURUH dompet (`cashTotal()`) — dipakai sebagai cadangan saat
+   * panel belum punya pilihan kartu. Sebelum paket 44 cadangannya `0`, sehingga
+   * satu kondisi balapan kecil (panel terbuka sebelum kartu depan terpilih)
+   * menampilkan donat Rp 0 — angka yang tidak pernah benar.
+   */
+  allTotal?: number
 }) {
   const closeRef = useRef<HTMLButtonElement>(null)
 
@@ -34,7 +42,7 @@ export function OverviewPanel({
           title: `Dompet ${selection.wallet.name}`,
         }
       : {
-          amount: selection?.total ?? 0,
+          amount: selection?.total ?? allTotal,
           caption: 'Total saldo',
           subtitle: 'Track spending, earnings, and insights',
           title: 'Semua Dompet',

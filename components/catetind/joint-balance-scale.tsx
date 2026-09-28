@@ -3,7 +3,15 @@
 import { motion, useReducedMotion } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
 import type { JointPerson, SettlementState } from '@/lib/data/joint'
-import { JOINT_ME, JOINT_PARTNER, SETTLEMENT_SCOPE_COPY, moneyLabel } from '@/lib/data/joint'
+import {
+  JOINT_ME,
+  JOINT_PARTNER,
+  SETTLEMENT_SCOPE_COPY,
+  moneyLabel,
+  netPhrase,
+  netShortLabel,
+  signedMoneyLabel,
+} from '@/lib/data/joint'
 import { cn } from '@/lib/utils'
 
 /* ── Balance Scale Settlement Gauge (Section 3) ──────────────────────────────
@@ -15,10 +23,16 @@ import { cn } from '@/lib/utils'
      sesuai `settlement.tiltDeg`; sisi yang menanggung beban LEBIH BESAR TURUN
      (hukum berat dasar — audit #5): kalau aku yang mengeluarkan lebih banyak
      untuk pengeluaran patungan, panci kiriku ada di posisi lebih rendah.
-   • Isi panci = `myWeighedSpent`/`partnerWeighedSpent`, yaitu angka yang
-     DITIMBANG: hanya pengeluaran patungan. Traktiran ("Yang Ini Gue Yang Bayar"
-     = 100% ditanggung sendiri) dan nominal privat TIDAK boleh menggeser palang
-     dengan cara yang berbeda dari rumus di `lib/data/joint.ts` (audit #2 & #3).
+   • Isi panci = NET tiap orang (`myNet`/`partnerNet` = bayar − kewajiban), yaitu
+     angka yang SAMA dengan yang menentukan arah & nominal transfer. Sebelum
+     Stage 2 panci menampilkan "uang yang keluar dari kantong" sementara palang
+     sudah dibaca dari net — dua bahasa di satu komponen, dan utangnya jadi
+     tidak bisa ditelusuri. Sekarang nominal panci selalu berlabel
+     (`+Rp X · berhak menerima` / `-Rp X · harus transfer`), jadi tidak ada
+     angka negatif telanjang di layar.
+     Aturan "apa yang ditimbang" (traktiran keluar, nominal 🔒 privat tetap
+     masuk) tetap diputuskan di `lib/data/joint.ts` (audit #2 & #3) — komponen
+     ini tidak menghitung ulang apa pun.
    • Panci digantung di kedua ujung beam. Karena panci adalah ANAK dari beam
      yang berputar, posisinya otomatis ikut turun/naik seperti timbangan asli.
    • Isi panci diberi rotasi berlawanan (`-beamDeg`) supaya selalu tegak — sama
@@ -43,19 +57,24 @@ const SWING = { type: 'spring' as const, damping: 15, stiffness: 80 }
  */
 const SIZES = {
   lg: {
-    frame: 'h-[196px] sm:h-[214px] max-w-[430px]',
+    /* +14px dari sebelumnya: panci kini memuat baris label arah net di bawah
+       nominalnya, jadi tinggi frame ikut naik supaya labelnya tidak menabrak
+       copy di bawah timbangan */
+    frame: 'h-[210px] sm:h-[228px] max-w-[430px]',
     beamTop: 'top-10',
-    /* lebar beam sengaja lebih sempit di mobile: panci (96px) + ujung beam
-       (±62% × 318px) tetap muat di layar 360–390px tanpa geser horizontal */
+    /* lebar beam sengaja lebih sempit di mobile: panci + ujung beam
+       (±62% × 318px) tetap muat di layar 360–390px tanpa geser horizontal.
+       Panci 112px dipilih supaya net terpanjang yang realistis di demo
+       ("+Rp 250.000") masih satu baris di dalam chip. */
     beam: 'h-2 w-[62%] sm:w-[76%]',
     fulcrum: 'top-[44px] w-[118px]',
     base: 'top-[100px] h-2.5 w-[132px]',
     strings: 'h-[30px]',
-    panWrap: 'w-[96px] sm:w-[126px]',
-    chip: 'w-[96px] px-2 py-1.5 sm:w-[126px] sm:px-2.5 sm:py-2',
+    panWrap: 'w-[112px] sm:w-[126px]',
+    chip: 'w-[112px] px-2 py-1.5 sm:w-[126px] sm:px-2.5 sm:py-2',
     chipText: 'text-[12px] sm:text-[13.5px]',
     avatar: 'size-6 text-[13px] sm:size-7 sm:text-[15px]',
-    plate: 'mt-1 h-2 w-[104px] sm:w-[136px]',
+    plate: 'mt-1 h-2 w-[120px] sm:w-[136px]',
   },
   sm: {
     frame: 'h-[126px] max-w-[260px]',
@@ -103,12 +122,12 @@ export function JointBalanceScale({
     <div className="flex flex-col items-center">
       <div
         role="img"
-        aria-label={`Timbangan pengeluaran bersama (hanya patungan, tanpa traktiran). ${
+        aria-label={`Timbangan posisi bersih pengeluaran patungan (tanpa traktiran). ${
           me.name
-        } ${moneyLabel(settlement.myWeighedSpent, masked)}, ${partner.name} ${moneyLabel(
-          settlement.partnerWeighedSpent,
+        } ${netPhrase(settlement.myNet, masked)}, ${partner.name} ${netPhrase(
+          settlement.partnerNet,
           masked,
-        )}. Sisi yang lebih besar turun.`}
+        )}. Sisi yang lebih berat turun.`}
         className={cn('relative w-full', dim.frame)}
       >
         {/* ── fulcrum: segitiga poros + pelat dasar ─────────────────────── */}
@@ -153,7 +172,7 @@ export function JointBalanceScale({
           />
           <ScalePan
             person={me}
-            amount={settlement.myWeighedSpent}
+            net={settlement.myNet}
             masked={masked}
             side="left"
             dim={dim}
@@ -163,7 +182,7 @@ export function JointBalanceScale({
           />
           <ScalePan
             person={partner}
-            amount={settlement.partnerWeighedSpent}
+            net={settlement.partnerNet}
             masked={masked}
             side="right"
             dim={dim}
@@ -189,12 +208,14 @@ export function JointBalanceScale({
 }
 
 /**
- * Satu panci timbangan: tali + pelat + chip "barang" (avatar, nama, nominal).
- * `side` menentukan sisi beam tempat panci digantung; nominal ikut toggle privasi.
+ * Satu panci timbangan: tali + pelat + chip "barang" (avatar, nama, NOMINAL NET
+ * + artinya). `side` menentukan sisi beam tempat panci digantung; nominal ikut
+ * toggle privasi, dan label arahnya (`berhak menerima` / `harus transfer`)
+ * selalu tampil supaya angka negatif tidak pernah berdiri sendiri.
  */
 function ScalePan({
   person,
-  amount,
+  net,
   masked,
   side,
   dim,
@@ -203,7 +224,8 @@ function ScalePan({
   compact = false,
 }: {
   person: JointPerson
-  amount: number
+  /** posisi bersih orang ini: `bayar − kewajiban` (positif = berhak menerima) */
+  net: number
   masked: boolean
   side: 'left' | 'right'
   dim: (typeof SIZES)['lg'] | (typeof SIZES)['sm']
@@ -269,7 +291,18 @@ function ScalePan({
             </span>
           )}
           <span className={cn('mt-1 font-black tabular-nums leading-none text-ink', dim.chipText)}>
-            {moneyLabel(amount, masked)}
+            {signedMoneyLabel(net, masked)}
+          </span>
+          {/* label arah net — WAJIB ada di SEMUA varian supaya nominal negatif
+              tidak pernah tampil telanjang. Varian `sm` (banner & modal) memakai
+              huruf lebih kecil, bukan menghilangkan labelnya. */}
+          <span
+            className={cn(
+              'mt-0.5 font-semibold leading-none text-ink/45',
+              compact ? 'text-[8px]' : 'text-[9.5px]',
+            )}
+          >
+            {netShortLabel(net)}
           </span>
         </div>
 
@@ -314,7 +347,7 @@ export function SettlementCopy({
   if (level === 'close') {
     return (
       <CopyCard
-        copy={`Hampir impas! Selisihnya cuma ${moneyLabel(difference, masked)}. Gak perlu settle 💚`}
+        copy={`Hampir impas! Posisi bersih kalian beda cuma ${moneyLabel(difference, masked)}. Gak perlu settle 💚`}
       />
     )
   }
@@ -326,7 +359,7 @@ export function SettlementCopy({
         <b className="font-bold tabular-nums text-hud-terracotta">
           {moneyLabel(settlementAmount, masked)}
         </b>{' '}
-        ke <b className="font-bold">{whoIsOwed.name}</b> biar impas ⚖️
+        ke <b className="font-bold">{whoIsOwed.name}</b> — satu transfer aja langsung impas ⚖️
       </p>
       <button
         type="button"

@@ -37,6 +37,7 @@ import {
   type AssetTransaction,
   type Investment,
 } from '@/lib/data/wealth'
+import { CONTEXT_LABEL } from '@/lib/data/money-context'
 
 /* ── TAB 1 — INVESTASI (Section 5) ──────────────────────────────────────────
    Alur pandang (sengaja berlapis, bukan tabel):
@@ -468,6 +469,11 @@ function AssetCard({
               <span className="truncate text-[13.5px] font-bold text-ink">{asset.name}</span>
               <span className="shrink-0 rounded-full bg-ink/[0.05] px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-ink/50">
                 {asset.symbol}
+              </span>
+              {/* badge konteks uang aset ini (paket 47) — aset yang muncul di
+                  beberapa halaman harus menyebut milik siapa */}
+              <span className="shrink-0 rounded-full bg-sage/70 px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-forest ring-1 ring-inset ring-forest/10">
+                {CONTEXT_LABEL[asset.scope]}
               </span>
             </span>
             <span className="mt-1 block truncate text-[11.5px] text-ink/50 tabular-nums">

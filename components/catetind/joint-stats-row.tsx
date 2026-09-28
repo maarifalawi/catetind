@@ -10,7 +10,9 @@ import {
   categoryBreakdown,
   categoryEmoji,
   categoryLabel,
+  hiddenPrivateBurdenOf,
   moneyLabel,
+  privateBurdenCopy,
   type JointPerson,
   type JointTransaction,
   type SettlementState,
@@ -62,7 +64,14 @@ export function JointStatsRow({
   const breakdown = categoryBreakdown(
     transactions,
     openCard === 'me' ? me.id : openCard === 'partner' ? partner.id : undefined,
+    { viewerId: me.id },
   )
+  /**
+   * Beban privat yang tidak bisa dilihat viewer (`PRIVATE_EXPENSE_POLICY` =
+   * `'shared'` → nominalnya tetap ikut kewajiban). Diungkapkan di panel rincian
+   * supaya tidak ada tagihan diam-diam (audit Stage 4 #6).
+   */
+  const burden = hiddenPrivateBurdenOf(transactions, { viewerId: me.id })
 
   const toggle = (id: StatId) => setOpenCard((prev) => (prev === id ? null : id))
 
@@ -162,6 +171,21 @@ export function JointStatsRow({
                     </li>
                   ))}
                 </ul>
+              )}
+
+              {/* PENGUNGKAPAN WAJIB (paket 41, audit Stage 4 #6) — dulu nominal
+                  transaksi privat milik pasangan tampil sebagai irisan
+                  "🔒 Privat Rp …" di rincian ini: nominalnya bocor, sementara
+                  user tetap ditagih separuhnya tanpa tahu alasannya. Irisan itu
+                  sudah dihapus (`categoryBreakdown`), dan sebagai gantinya
+                  kewajiban yang benar-benar ditanggung user diucapkan terang. */}
+              {burden.count > 0 && (
+                <p className="mt-3 rounded-2xl bg-cream/70 px-3.5 py-3 text-[11.5px] leading-relaxed text-ink/60">
+                  <span aria-hidden className="mr-1">
+                    🔒
+                  </span>
+                  {privateBurdenCopy(burden, masked)}
+                </p>
               )}
             </div>
           </motion.div>

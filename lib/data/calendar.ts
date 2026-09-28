@@ -13,18 +13,29 @@ import {
   subMonths,
 } from 'date-fns'
 import { id as localeId } from 'date-fns/locale'
+import type { BudgetScope } from './budget'
+import type { MoneyContext, TransactionType } from '../types'
+import { matchesContext, tagTransactionsForContext, type ContextTransaction, type RowContext } from '../money/context-filter'
+import { recordedTransactions, type MoneySnapshot } from '../money/store'
 import { localISODate, mulberry32 } from './history'
 
 /* ── Kalender Cashflow (/app/calendar) ───────────────────────────────────────
    Satu sumber data + logika murni (TANPA React) untuk halaman Kalender, persis
    pola `lib/data/bills.ts` & `lib/data/history.ts`:
 
-     1. Kontrak data transaksi kalender (type + status).
+     1. Kontrak data transaksi kalender (hanya tipe — tidak ada status ramalan).
      2. Matematika GRID GAJIAN — inti halaman ini (lihat `periodBounds`).
      3. Klasifikasi heatmap harian yang memisahkan belanja impulsif (boleh
         merah) dari tagihan terjadwal (WAJIB netral) — lihat `calendarTone`.
      4. Data mock DETERMINISTIK (seeded PRNG + seri tagihan tetap) supaya HTML
         server & render pertama client identik → tidak ada hydration mismatch.
+     5. Jembatan dari LEDGER (paket 49): baris catatan sungguhan
+        (`recordedTransactions()`) diterjemahkan jadi entri grid lewat
+        `calendarEntriesFromLedger()` — halaman Kalender membaca, tidak menulis.
+     6. TANPA RAMALAN (paket 56): grid hanya menggambar uang yang sudah terjadi —
+        entri demo dipotong di hari ini (`buildCalendarEntries()`), tidak ada
+        status `upcoming_forecast`, dan tidak ada angka tagihan masa depan yang
+        belum dibayar. Kewajiban yang belum dibayar rumahnya di `/bills`.
 
    Kenapa pustaka tanggal: matematika siklus gajian gampang salah kalau diketik
    manual (bulan 28/29/30/31 hari, geser lintas tahun). `date-fns` dipakai untuk
@@ -32,8 +43,10 @@ import { localISODate, mulberry32 } from './history'
    (`locale` id) — bukan `Intl`, bukan `toLocaleDateString()`.
 
    Catatan "hari ini": dipatok KONSTAN `CALENDAR_TODAY_ISO` (25 Sep 2026) sama
-   seperti halaman Tagihan. Dua manfaat: (1) server & client selalu sepakat soal
-   "masa depan vs masa lalu"; (2) demo bisa dipindah tanggal dengan satu baris.
+   seperti halaman Tagihan. Tiga manfaat: (1) server & client selalu sepakat soal
+   "masa depan vs masa lalu"; (2) demo bisa dipindah tanggal dengan satu baris;
+   (3) seluruh entri demo dipotong di tanggal ini, jadi grid tidak pernah
+   menampilkan uang yang belum terjadi (paket 56).
    ────────────────────────────────────────────────────────────────────────── */
 
 /* ── KONTRAK DATA ─────────────────────────────────────────────────────────── */
@@ -56,7 +69,12 @@ export type CalendarEntryType =
   | 'income'
   | 'money_movement'
 
-export type CalendarEntryStatus = 'cleared' | 'upcoming_forecast'
+/* PAKET 56 — status entri DIHAPUS TOTAL.
+   Dulu setiap entri membawa `status: 'cleared' | 'upcoming_forecast'`, dan
+   seluruh entri demo bertanggal setelah hari ini lahir sebagai ramalan
+   (`statusFor()`). Sekarang satu entri hanya berarti satu hal: uang yang SUDAH
+   terjadi — catatan user, transaksi store, atau riwayat demo ≤ hari ini. Field
+   yang nilainya cuma bisa satu adalah janji palsu, jadi ia tidak dibiarkan. */
 
 export interface CalendarEntry {
   id: string
@@ -66,13 +84,33 @@ export interface CalendarEntry {
   /** selalu angka positif — arah uang ditentukan `type` */
   amount: number
   type: CalendarEntryType
-  status: CalendarEntryStatus
   category: string
   wallet: string
   /** emoji identitas — dipakai sebagai ikon kecil di sel kalender */
   emoji: string
   /** jam lokal `HH:MM` (hanya untuk entri yang sudah tercatat) */
   time?: string
+  /**
+   * Konteks uang entri ini (paket 47) — Pribadi / Keluarga / Bersama.
+   *
+   * Entri kalender adalah baris PAJANGAN (bukan baris ledger), jadi konteksnya
+   * datang dari definisi serinya: tiap seri mock sudah ditulis sebagai milik
+   * konteks tertentu (kos = pribadi, WiFi rumah = bersama, belanja sayur =
+   * keluarga). Halaman Kalender menyaring entri dengan kolom ini, sementara
+   * ringkasan periode tetap menghitung seluruh periode (kanon paket 47:
+   * konteks menyaring daftar & arus, bukan total).
+   */
+  scope: BudgetScope
+  /**
+   * Konteks SEBENARNYA untuk entri TURUNAN dari ledger (paket 49) — dibaca dari
+   * dompet barisnya, dan bisa `'unknown'` (dompet belum ada di daftar dompet →
+   * tetap tampil di semua konteks, kanon #2 paket 47).
+   *
+   * Entri MOCK (`CALENDAR_ENTRIES`) tidak punya kolom ini: konteksnya memang
+   * ditulis tangan di definisi serinya (`scope`). Penyaringan memakai
+   * `calendarEntryVisible()` supaya keduanya tidak punya dua aturan saring.
+   */
+  context?: RowContext
 }
 
 /** mode periode grid: bulan kalender penuh vs siklus gajian */
@@ -80,8 +118,11 @@ export type PeriodMode = 'standard' | 'payday'
 
 /**
  * Nada dasar sebuah sel (SATU latar per sel, prioritas: defisit → surplus →
- * terencana → biasa). Penanda lain (🌱 hari bersih, titik biru tagihan
- * terjadwal) MENEMPEL di atas nada ini, bukan menggantikannya.
+ * tagihan tetap → biasa). Penanda lain (🌱 hari bersih) MENEMPEL di atas nada
+ * ini, bukan menggantikannya.
+ *
+ * PAKET 56: 'planned' bukan lagi "hari masa depan berisi ramalan" — ia berarti
+ * hari yang isinya MURNI tagihan tetap yang sudah tercatat (lihat calendarTone).
  */
 export type CalendarTone = 'none' | 'surplus' | 'deficit' | 'planned'
 
@@ -113,16 +154,14 @@ export interface CalendarCell {
   net: number
   /** pindah dana — tidak dihitung di angka mana pun */
   moved: number
+  /** semua uang tercatat di tanggal ini — tidak ada daftar kedua untuk ramalan */
   entries: CalendarEntry[]
-  forecast: CalendarEntry[]
   tone: CalendarTone
   /** true = hari itu NOL belanja variabel → benih 🌱 (gamifikasi) */
   cleanDay: boolean
   /** panjang rentetan hari bersih yang berakhir di tanggal ini */
   streak: number
-  /** jumlah tagihan terjadwal (penanda titik biru) */
-  plannedCount: number
-  /** emoji tagihan terjadwal/forecast di tanggal ini (maks 3) */
+  /** emoji entri tercatat di tanggal ini (maks 3) */
   markers: string[]
 }
 
@@ -262,13 +301,11 @@ export function periodRangeLabel(
 /* ── KLASIFIKASI HEATMAP (PEMISAH IMPULSIF vs TERENCANA) ─────────────────── */
 
 export interface DayMetrics {
-  isFuture: boolean
   income: number
   /** total belanja VARIABEL saja */
   variableSpend: number
   /** total tagihan TERJADWAL saja */
   fixedSpend: number
-  hasForecast: boolean
 }
 
 /**
@@ -277,15 +314,18 @@ export interface DayMetrics {
  * ATURAN EMAS — "THE RENT PENALTY FIX":
  * `fixedSpend` TIDAK PERNAH masuk perhitungan cabang `deficit`. Hari yang
  * pengeluarannya besar cuma karena Kos/cicilan (uang yang memang sudah
- * direncanakan) MUSTAHIL berwarna merah; ia jatuh ke `planned` (latar abu-abu
- * bergaris) atau `surplus` kalau ada gajian di hari yang sama. Yang boleh merah
+ * direncanakan) MUSTAHIL berwarna merah; ia jatuh ke `planned` (latar netral
+ * abu tipis) atau `surplus` kalau ada gajian di hari yang sama. Yang boleh merah
  * hanya `variableSpend` yang melonjak di atas ambang — jajan/kopi/shopping.
  *
- * Prioritas: defisit → surplus → terencana → biasa.
+ * Prioritas: defisit → surplus → tagihan tetap → biasa.
+ *
+ * PAKET 56: cabang "masa depan tidak dihakimi" DIHAPUS bersama ramalan. Grid
+ * sekarang hanya berisi uang yang sudah terjadi, jadi hari mendatang yang kosong
+ * jatuh ke 'none' (netral) dengan sendirinya — bukan karena aturan khusus untuk
+ * masa depan. 'planned' hanya lahir dari tagihan tetap yang SUDAH tercatat.
  */
 export function calendarTone(metrics: DayMetrics, deficitThreshold: number): CalendarTone {
-  /* masa depan tidak dihakimi — hanya menampilkan ramalan tagihan */
-  if (metrics.isFuture) return metrics.hasForecast ? 'planned' : 'none'
   /* 1. belanja impulsif melonjak (tagihan terjadwal tidak ikut dihitung) */
   if (metrics.variableSpend > 0 && metrics.variableSpend >= deficitThreshold) return 'deficit'
   /* 2. uang masuk menutup seluruh pengeluaran hari itu */
@@ -320,20 +360,16 @@ interface CellTotals {
   fixedSpend: number
   moved: number
   entries: CalendarEntry[]
-  forecast: CalendarEntry[]
-  plannedCount: number
 }
 
 /**
  * Akumulasi entri per tanggal.
  *
- * Ramalan ditentukan oleh STATUS (`upcoming_forecast`), BUKAN oleh tanggalnya.
- * Kenapa: begitu user menekan [Bayar Sekarang] pada tagihan masa depan, statusnya
- * berubah jadi `cleared` dan item itu harus langsung berhenti dihitung sebagai
- * "tagihan menunggu" — walau tanggalnya masih di depan. Sebaliknya, catatan yang
- * user ketik sendiri untuk tanggal mendatang tetap sah sebagai uang tercatat.
- * (Seed mock tetap berstatus `upcoming_forecast` untuk semua tanggal > hari ini,
- * lihat `statusFor()`.)
+ * PAKET 56: tidak ada lagi keranjang `forecast`. Setiap entri yang tiba di sini
+ * adalah uang yang SUDAH tercatat (catatan user, transaksi store, riwayat demo),
+ * jadi tidak ada yang perlu dipisah antara "fakta" dan "ramalan" — pemisahan itu
+ * yang dulu membuat sel bertanggal masa depan menampilkan angka yang belum
+ * terjadi. Aturan lamanya (`status === 'upcoming_forecast'`) ikut dihapus.
  */
 function totalsByDate(entries: CalendarEntry[]) {
   const map = new Map<string, CellTotals>()
@@ -346,22 +382,13 @@ function totalsByDate(entries: CalendarEntry[]) {
         fixedSpend: 0,
         moved: 0,
         entries: [],
-        forecast: [],
-        plannedCount: 0,
       } satisfies CellTotals)
 
-    if (entry.status === 'upcoming_forecast') {
-      bucket.forecast.push(entry)
-      if (entry.type === 'fixed_bill') bucket.plannedCount += 1
-    } else {
-      bucket.entries.push(entry)
-      if (entry.type === 'income') bucket.income += entry.amount
-      else if (entry.type === 'fixed_bill') {
-        bucket.fixedSpend += entry.amount
-        bucket.plannedCount += 1
-      } else if (entry.type === 'variable_expense') bucket.variableSpend += entry.amount
-      else bucket.moved += entry.amount
-    }
+    bucket.entries.push(entry)
+    if (entry.type === 'income') bucket.income += entry.amount
+    else if (entry.type === 'fixed_bill') bucket.fixedSpend += entry.amount
+    else if (entry.type === 'variable_expense') bucket.variableSpend += entry.amount
+    else bucket.moved += entry.amount
     map.set(entry.date, bucket)
   }
   return map
@@ -373,8 +400,6 @@ const EMPTY_TOTALS: CellTotals = {
   fixedSpend: 0,
   moved: 0,
   entries: [],
-  forecast: [],
-  plannedCount: 0,
 }
 
 export interface CalendarGrid {
@@ -442,13 +467,11 @@ export function buildCalendarGrid({
       net: bucket.income - bucket.variableSpend - bucket.fixedSpend,
       moved: bucket.moved,
       entries: bucket.entries,
-      forecast: bucket.forecast,
       /* diisi di langkah kedua — butuh rata-rata seluruh periode dulu */
       tone: 'none',
       cleanDay: false,
       streak: 0,
-      plannedCount: bucket.plannedCount,
-      markers: [...bucket.forecast, ...bucket.entries]
+      markers: bucket.entries
         .map((entry) => entry.emoji)
         .filter(Boolean)
         .slice(0, 3),
@@ -473,11 +496,9 @@ export function buildCalendarGrid({
     if (!cell.inPeriod) continue
     cell.tone = calendarTone(
       {
-        isFuture: cell.isFuture,
         income: cell.income,
         variableSpend: cell.variableSpend,
         fixedSpend: cell.fixedSpend,
-        hasForecast: cell.forecast.length > 0,
       },
       deficitThreshold,
     )
@@ -505,7 +526,9 @@ export function buildCalendarGrid({
 const DATA_WINDOW_START = '2026-07-01'
 const DATA_WINDOW_END = '2026-11-30'
 
-/** tagihan berulang — sumbernya sama dengan halaman Tagihan Rutin */
+/** tagihan berulang — sumbernya sama dengan halaman Tagihan Rutin.
+ *  `scope` (paket 47) menentukan konteks uangnya, jadi Kalender bisa disaring
+ *  per Pribadi/Keluarga/Bersama sementara ringkasan periode tetap utuh. */
 const FIXED_BILL_SERIES: {
   name: string
   emoji: string
@@ -513,15 +536,16 @@ const FIXED_BILL_SERIES: {
   day: number
   category: string
   wallet: string
+  scope: BudgetScope
 }[] = [
-  { name: 'Kos Bulanan', emoji: '🏠', amount: 1_500_000, day: 1, category: 'Tempat Tinggal', wallet: 'BCA' },
-  { name: 'Cicilan Motor', emoji: '🏍️', amount: 850_000, day: 5, category: 'Cicilan', wallet: 'BCA' },
-  { name: 'IndiHome', emoji: '📶', amount: 350_000, day: 10, category: 'Tagihan', wallet: 'BCA' },
-  { name: 'Netflix', emoji: '🎬', amount: 54_000, day: 15, category: 'Hiburan', wallet: 'GoPay' },
-  { name: 'Spotify', emoji: '🎵', amount: 55_000, day: 15, category: 'Hiburan', wallet: 'GoPay' },
-  { name: 'Asuransi Jiwa', emoji: '🛡️', amount: 250_000, day: 20, category: 'Asuransi', wallet: 'BCA' },
-  { name: 'Cicilan HP', emoji: '📱', amount: 600_000, day: 22, category: 'Cicilan', wallet: 'GoPay' },
-  { name: 'Kredivo', emoji: '💳', amount: 420_000, day: 28, category: 'Cicilan', wallet: 'OVO' },
+  { name: 'Kos Bulanan', emoji: '🏠', amount: 1_500_000, day: 1, category: 'Tempat Tinggal', wallet: 'BCA', scope: 'pribadi' },
+  { name: 'Cicilan Motor', emoji: '🏍️', amount: 850_000, day: 5, category: 'Cicilan', wallet: 'BCA', scope: 'pribadi' },
+  { name: 'IndiHome', emoji: '📶', amount: 350_000, day: 10, category: 'Tagihan', wallet: 'BCA', scope: 'bersama' },
+  { name: 'Netflix', emoji: '🎬', amount: 54_000, day: 15, category: 'Hiburan', wallet: 'GoPay', scope: 'keluarga' },
+  { name: 'Spotify', emoji: '🎵', amount: 55_000, day: 15, category: 'Hiburan', wallet: 'GoPay', scope: 'pribadi' },
+  { name: 'Asuransi Jiwa', emoji: '🛡️', amount: 250_000, day: 20, category: 'Asuransi', wallet: 'BCA', scope: 'keluarga' },
+  { name: 'Cicilan HP', emoji: '📱', amount: 600_000, day: 22, category: 'Cicilan', wallet: 'GoPay', scope: 'pribadi' },
+  { name: 'Kredivo', emoji: '💳', amount: 420_000, day: 28, category: 'Cicilan', wallet: 'OVO', scope: 'pribadi' },
 ]
 
 /** uang masuk tetap: gaji tiap tgl 25 + freelance tiap tgl 12 */
@@ -532,13 +556,20 @@ const INCOME_SERIES: {
   day: number
   category: string
   wallet: string
+  scope: BudgetScope
 }[] = [
-  { name: 'Gaji Bulanan', emoji: '💰', amount: 8_500_000, day: 25, category: 'Gaji', wallet: 'BCA' },
-  { name: 'Proyek Freelance', emoji: '💻', amount: 1_250_000, day: 12, category: 'Sampingan', wallet: 'BCA' },
+  { name: 'Gaji Bulanan', emoji: '💰', amount: 8_500_000, day: 25, category: 'Gaji', wallet: 'BCA', scope: 'pribadi' },
+  { name: 'Proyek Freelance', emoji: '💻', amount: 1_250_000, day: 12, category: 'Sampingan', wallet: 'BCA', scope: 'pribadi' },
 ]
 
 /** pindah dana: setoran tabungan otomatis tgl 26 (tidak pernah bikin sel merah) */
-const SAVING_SERIES = { name: 'Setor Dana Darurat', emoji: '🏦', day: 26, amount: 750_000 }
+const SAVING_SERIES = {
+  name: 'Setor Dana Darurat',
+  emoji: '🏦',
+  day: 26,
+  amount: 750_000,
+  scope: 'pribadi' as BudgetScope,
+}
 
 /** hari yang SENGAJA dibuat nol belanja variabel → memunculkan rentetan 🌱 */
 const CLEAN_WINDOWS: [string, string][] = [
@@ -550,35 +581,47 @@ const CLEAN_WINDOWS: [string, string][] = [
   ['2026-10-02', '2026-10-04'],
 ]
 
-/** hari "kalap belanja" — belanja VARIABEL besar, pemicu warna terracotta */
-const SPIKE_DAYS: { date: string; items: { name: string; emoji: string; amount: number; category: string }[] }[] = [
+/** hari "kalap belanja" — belanja VARIABEL besar, pemicu warna terracotta.
+ *  `scope` per item (paket 47) supaya belanja impulsif pun bisa dimiliki
+ *  konteksnya masing-masing — bukan semua dianggap pribadi. */
+const SPIKE_DAYS: {
+  date: string
+  items: { name: string; emoji: string; amount: number; category: string; scope: BudgetScope }[]
+}[] = [
   {
     date: '2026-08-29',
     items: [
-      { name: 'Belanja online Shopee', emoji: '🛍️', amount: 620_000, category: 'Keinginan' },
+      { name: 'Belanja online Shopee', emoji: '🛍️', amount: 620_000, category: 'Keinginan', scope: 'pribadi' },
     ],
   },
   {
     date: '2026-09-05',
-    items: [{ name: 'Sepatu lari', emoji: '👟', amount: 390_000, category: 'Keinginan' }],
+    items: [{ name: 'Sepatu lari', emoji: '👟', amount: 390_000, category: 'Keinginan', scope: 'pribadi' }],
   },
   {
     date: '2026-09-19',
     items: [
-      { name: 'Gadget baru', emoji: '🎧', amount: 780_000, category: 'Keinginan' },
-      { name: 'Baju kerja', emoji: '👕', amount: 240_000, category: 'Keinginan' },
+      { name: 'Gadget baru', emoji: '🎧', amount: 780_000, category: 'Keinginan', scope: 'pribadi' },
+      { name: 'Baju kerja', emoji: '👕', amount: 240_000, category: 'Keinginan', scope: 'keluarga' },
     ],
   },
 ]
 
 /** belanja variabel rutin — dipilih bergilir oleh PRNG */
-const ROUTINE_ITEMS = [
-  { name: 'Makan siang warteg', emoji: '🍛', category: 'Makanan', min: 15_000, max: 28_000 },
-  { name: 'Kopi Kenangan', emoji: '☕', category: 'Makanan', min: 18_000, max: 32_000 },
-  { name: 'Gojek ke kantor', emoji: '🛵', category: 'Transportasi', min: 12_000, max: 26_000 },
-  { name: 'Belanja sayur', emoji: '🥬', category: 'Kebutuhan', min: 22_000, max: 48_000 },
-  { name: 'Jajan online', emoji: '🍔', category: 'Makanan', min: 25_000, max: 55_000 },
-  { name: 'Skincare', emoji: '🧴', category: 'Keinginan', min: 35_000, max: 89_000 },
+const ROUTINE_ITEMS: {
+  name: string
+  emoji: string
+  category: string
+  min: number
+  max: number
+  scope: BudgetScope
+}[] = [
+  { name: 'Makan siang warteg', emoji: '🍛', category: 'Makanan', min: 15_000, max: 28_000, scope: 'pribadi' },
+  { name: 'Kopi Kenangan', emoji: '☕', category: 'Makanan', min: 18_000, max: 32_000, scope: 'pribadi' },
+  { name: 'Gojek ke kantor', emoji: '🛵', category: 'Transportasi', min: 12_000, max: 26_000, scope: 'pribadi' },
+  { name: 'Belanja sayur', emoji: '🥬', category: 'Kebutuhan', min: 22_000, max: 48_000, scope: 'keluarga' },
+  { name: 'Jajan online', emoji: '🍔', category: 'Makanan', min: 25_000, max: 55_000, scope: 'keluarga' },
+  { name: 'Skincare', emoji: '🧴', category: 'Keinginan', min: 35_000, max: 89_000, scope: 'pribadi' },
 ]
 
 const ROUTINE_WALLETS = ['GoPay', 'Tunai', 'OVO']
@@ -592,20 +635,25 @@ function inCleanWindow(iso: string) {
   return CLEAN_WINDOWS.some(([from, to]) => iso >= from && iso <= to)
 }
 
-/** tanggal gajian tiap bulan dalam jendela data */
-function monthlyDates(day: number) {
+/**
+ * Tanggal berulang tiap bulan dalam jendela data — DIPOTONG di hari ini.
+ *
+ * PAKET 56: dulu fungsi ini mengembalikan seluruh jendela (sampai Nov 2026) dan
+ * setiap tanggal setelah hari ini lahir sebagai ramalan lewat `statusFor()`.
+ * Setelah ramalan dihapus, entri bertanggal masa depan tidak punya arti lain
+ * selain "uang yang belum terjadi" — dan kalender tidak pernah menggambar itu.
+ * Jadi seri demo (tagihan/gaji/setoran tabungan) hanya sampai hari ini, sama
+ * seperti aturan yang sudah dipakai belanja rutin di bagian B.
+ */
+function monthlyDates(day: number, todayIso: string) {
   const dates: string[] = []
   const start = parseISO(DATA_WINDOW_START)
   const end = parseISO(DATA_WINDOW_END)
   for (const date of eachDayOfInterval({ start, end })) {
-    if (getDate(date) === day) dates.push(localISODate(date))
+    const iso = localISODate(date)
+    if (getDate(date) === day && iso <= todayIso) dates.push(iso)
   }
   return dates
-}
-
-/** entri bertanggal setelah hari ini otomatis berstatus ramalan */
-function statusFor(iso: string, todayIso: string): CalendarEntryStatus {
-  return iso > todayIso ? 'upcoming_forecast' : 'cleared'
 }
 
 /** jam lokal deterministik untuk entri rutin (07:00–21:00) */
@@ -618,6 +666,9 @@ function routineTime(rand: () => number) {
 /**
  * Bangun seluruh entri kalender: seri tetap (gaji/tagihan/tabungan/kalap) +
  * belanja rutin ber-seed. Semua deterministik — aman dipanggil saat SSR.
+ *
+ * PAKET 56: seluruh entri berhenti di hari ini. Tidak ada lagi entri yang
+ * "belum terjadi" — dan karena itu tidak ada satupun yang perlu ditandai ramalan.
  */
 export function buildCalendarEntries(todayIso: string = CALENDAR_TODAY_ISO): CalendarEntry[] {
   const rand = mulberry32(20260925)
@@ -625,53 +676,53 @@ export function buildCalendarEntries(todayIso: string = CALENDAR_TODAY_ISO): Cal
 
   /* A1. tagihan terjadwal */
   for (const bill of FIXED_BILL_SERIES) {
-    for (const date of monthlyDates(bill.day)) {
+    for (const date of monthlyDates(bill.day, todayIso)) {
       entries.push({
         id: `bill-${bill.day}-${date}`,
         date,
         name: bill.name,
         amount: bill.amount,
         type: 'fixed_bill',
-        status: statusFor(date, todayIso),
         category: bill.category,
         wallet: bill.wallet,
         emoji: bill.emoji,
         time: '08:00',
+        scope: bill.scope,
       })
     }
   }
 
   /* A2. uang masuk */
   for (const income of INCOME_SERIES) {
-    for (const date of monthlyDates(income.day)) {
+    for (const date of monthlyDates(income.day, todayIso)) {
       entries.push({
         id: `income-${income.day}-${date}`,
         date,
         name: income.name,
         amount: income.amount,
         type: 'income',
-        status: statusFor(date, todayIso),
         category: income.category,
         wallet: income.wallet,
         emoji: income.emoji,
         time: '09:15',
+        scope: income.scope,
       })
     }
   }
 
   /* A3. pindah dana (setoran tabungan) — tidak pernah dihitung "belanja" */
-  for (const date of monthlyDates(SAVING_SERIES.day)) {
+  for (const date of monthlyDates(SAVING_SERIES.day, todayIso)) {
     entries.push({
       id: `saving-${date}`,
       date,
       name: SAVING_SERIES.name,
       amount: SAVING_SERIES.amount,
       type: 'money_movement',
-      status: statusFor(date, todayIso),
       category: 'Tabungan',
       wallet: 'BCA',
       emoji: SAVING_SERIES.emoji,
       time: '07:30',
+      scope: SAVING_SERIES.scope,
     })
   }
 
@@ -689,11 +740,11 @@ export function buildCalendarEntries(todayIso: string = CALENDAR_TODAY_ISO): Cal
           name: item.name,
           amount: item.amount,
           type: 'variable_expense',
-          status: 'cleared',
           category: item.category,
           wallet: 'GoPay',
           emoji: item.emoji,
           time: routineTime(rand),
+          scope: item.scope,
         })
       })
       continue
@@ -715,11 +766,11 @@ export function buildCalendarEntries(todayIso: string = CALENDAR_TODAY_ISO): Cal
         name: item.name,
         amount: round500(item.min + rand() * (item.max - item.min)),
         type: 'variable_expense',
-        status: 'cleared',
         category: item.category,
         wallet: ROUTINE_WALLETS[Math.floor(rand() * ROUTINE_WALLETS.length)],
         emoji: item.emoji,
         time: routineTime(rand),
+        scope: item.scope,
       })
     }
   }
@@ -730,6 +781,135 @@ export function buildCalendarEntries(todayIso: string = CALENDAR_TODAY_ISO): Cal
 /** dataset kalender siap pakai (deterministik) */
 export const CALENDAR_ENTRIES: CalendarEntry[] = buildCalendarEntries()
 
+/* ── CATATAN SUNGGUHAN: JEMBATAN LEDGER → GRID (paket 49) ─────────────────────
+   Masalah yang ditutup di sini: halaman Kalender dulu menyimpan daftar
+   catatannya SENDIRI (`useState<CalendarEntry[]>` di screen) sambil menembak
+   toast "Catatan … tersimpan". Satu tindakan jadi dua cerita — user mencatat
+   pengeluaran dari kalender, lalu tidak menemukannya di Riwayat, kartu Home,
+   maupun saldo dompet (PRD 244: "jujur di setiap klaim").
+
+   Sekarang kalender adalah PEMBACA. Entri satu hari = konstanta demo
+   (`CALENDAR_ENTRIES`, deterministik & sudah ada sejak awal) + baris ledger
+   yang benar-benar tertulis (`lib/money/store.ts`). Fungsi di bawah adalah
+   SATU-SATUNYA penerjemah baris ledger → entri grid, jadi tidak ada rumus kedua
+   yang bisa menyimpang dari Riwayat.
+
+   Yang TIDAK ada di sini: penulisan. Semua tulisan tetap lewat
+   `hooks/use-transaction-submit.ts` → `recordDraftTransaction()` → store.
+   ────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Tipe catatan yang DITAWARKAN halaman Kalender (paket 49, ditegaskan paket 55).
+ *
+ * Sengaja tanpa `transfer` & `saving`: catatan dari kalender cuma bisa menulis
+ * SATU sisi uang, sedangkan pindah dana WAJIB dua sisi (dompet asal → dompet
+ * tujuan). Kalau tipe itu ditawarkan di sini, saldo dompet akan berbeda dari
+ * cerita yang dibaca user — persis keluhan “fitur transfer masih ngambang”.
+ *
+ * PAKET 55: alur pindah dana yang benar sekarang ada (`TransferFlow` — dari
+ * dompet → ke dompet → berapa), dan store MENOLAK `type: 'transfer'` dari jalur
+ * catatan umum (`postTransaction` → `null`). Jadi jalur kalender ini aman di dua
+ * lapis: tidak ditawarkan, dan ditolak kalau toh dicoba.
+ *
+ * Yang perlu diingat: entri demo `money_movement` di `CALENDAR_ENTRIES` (mis.
+ * seri setoran tabungan) adalah PAJANGAN — konstanta contoh, tanpa baris ledger,
+ * sama seperti seluruh baris mock lain (lihat kepala `lib/money/ledger.ts`).
+ * Satu-satunya entri “pindah dana” yang benar-benar menggerakkan saldo adalah
+ * baris `transfer` hasil `postTransfer()`, yang sampai ke grid lewat
+ * `calendarEntriesFromLedger()` di bawah.
+ */
+export const CALENDAR_NOTE_TYPES: readonly TransactionType[] = ['expense', 'income']
+
+/**
+ * Emoji entri TURUNAN (baris ledger tidak menyimpan emoji sendiri) — dipakai
+ * sebagai penanda kecil di sel & daftar hari, sama seperti entri mock.
+ */
+export const CALENDAR_LEDGER_EMOJI: Record<CalendarEntryType, string> = {
+  income: '💰',
+  variable_expense: '🧾',
+  fixed_bill: '📋',
+  money_movement: '🏦',
+}
+
+/** jenis transaksi app (`lib/types.ts`) → jenis entri kalender */
+export function calendarLedgerType(type: TransactionType): CalendarEntryType {
+  if (type === 'income') return 'income'
+  /* catatan pengeluaran yang DIKETIK USER masuk "belanja variabel": ia bukan
+     tagihan terjadwal (tagihan datang dari halaman Tagihan), jadi boleh terlihat
+     sebagai lonjakan. Ini sebabnya "The Rent Penalty Fix" tetap utuh — yang
+     tidak pernah dihukum merah adalah uang yang MEMANG sudah direncanakan. */
+  if (type === 'expense') return 'variable_expense'
+  /* 'transfer' & 'saving' = pindah dana: net worth tidak berubah dan tidak
+     pernah dihitung sebagai belanja (aturan yang sama dengan chip ⇄ di Riwayat) */
+  return 'money_movement'
+}
+
+/**
+ * Satu baris ledger → satu entri grid.
+ *
+ * `fallbackScope` hanya dipakai kalau dompet barisnya belum ada di daftar
+ * dompet: `CalendarEntry.scope` wajib terisi sementara penyaringan sebenarnya
+ * memakai `context` (kanon #2 paket 47 — baris seperti itu tampil di SEMUA
+ * konteks), jadi nilai ini tidak pernah menyembunyikan apa pun.
+ */
+export function calendarEntryFromTransaction(
+  tx: ContextTransaction,
+  fallbackScope: BudgetScope,
+): CalendarEntry {
+  const type = calendarLedgerType(tx.type)
+  return {
+    id: `ledger-${tx.id}`,
+    date: tx.date,
+    name: tx.name,
+    amount: tx.amount,
+    type,
+    category: tx.category,
+    wallet: tx.wallet,
+    emoji: CALENDAR_LEDGER_EMOJI[type],
+    time: tx.time,
+    /* konteks dibaca dari DOMPET barisnya, bukan dari konteks yang sedang
+       dibuka: pengeluaran dari Tunai tetap milik Keluarga walau user sedang
+       membuka konteks Pribadi */
+    context: tx.context,
+    scope: tx.context === 'unknown' ? fallbackScope : tx.context,
+  }
+}
+
+/**
+ * Entri grid dari CATATAN SUNGGUHAN: baris ledger yang lolos tombstone & sudah
+ * kena override edit (`recordedTransactions()`), disaring ke jendela periode
+ * yang sedang dibaca (`isWithinPeriod` + `periodBounds`).
+ *
+ * `scope: 'all'` = seluruh konteks — dipakai ringkasan periode (kanon paket 47
+ * #1: konteks menyaring daftar & arus, bukan total). Mengisi `MoneyContext`
+ * berarti daftar hari/tombol mengikuti konteks aktif.
+ */
+export function calendarEntriesFromLedger(
+  snapshot: MoneySnapshot,
+  bounds: PeriodBounds,
+  scope: MoneyContext | 'all' = 'all',
+): CalendarEntry[] {
+  const tagged = tagTransactionsForContext(recordedTransactions(snapshot), snapshot)
+  /* nilai cadangan `scope` entri turunan = konteks yang sedang diminta
+     ('pribadi' saat 'all'); tidak pernah dibaca penyaring karena entri turunan
+     selalu punya `context` */
+  const fallbackScope: BudgetScope = scope === 'all' ? 'pribadi' : scope
+  return tagged
+    .filter((tx) => isWithinPeriod(tx.date, bounds))
+    .filter((tx) => scope === 'all' || matchesContext(tx.context, scope))
+    .map((tx) => calendarEntryFromTransaction(tx, fallbackScope))
+}
+
+/**
+ * Satu keputusan saring untuk SEMUA entri kalender (paket 49): entri mock lewat
+ * `scope`, entri turunan lewat `context` yang dibaca lebih dulu. Halaman
+ * Kalender memakai fungsi ini menggantikan `scopedItems()` supaya dua jenis
+ * entri dalam satu grid tidak punya dua aturan saring yang bisa berbeda.
+ */
+export function calendarEntryVisible(entry: CalendarEntry, ctx: MoneyContext): boolean {
+  return matchesContext(entry.context ?? entry.scope, ctx)
+}
+
 /* ── SELEKTOR & RINGKASAN PERIODE ────────────────────────────────────────── */
 
 /** sel untuk satu tanggal (null kalau tanggal itu di luar grid) */
@@ -737,21 +917,24 @@ export function selectCell(grid: CalendarGrid, iso: string): CalendarCell | null
   return grid.cells.find((cell) => cell.date === iso) ?? null
 }
 
+/**
+ * Rekap seluruh periode yang sedang tampil (hanya hari di dalam periode).
+ *
+ * PAKET 56: `forecastTotal`/`forecastCount`/`plannedDays` DIHAPUS — semuanya
+ * menghitung uang yang belum terjadi (atau menandai hari "berencana"). Angka
+ * yang tersisa semuanya fakta: apa yang masuk, apa yang keluar, dan seberapa
+ * sering user berhasil nol belanja variabel.
+ */
 export interface PeriodSummary {
   income: number
   variableSpend: number
   fixedSpend: number
   moved: number
   net: number
-  /** total tagihan yang masih jadi ramalan (belum dibayar) */
-  forecastTotal: number
-  forecastCount: number
   /** hari tanpa belanja variabel sama sekali */
   cleanDays: number
   /** hari yang ditandai boros (variabel melonjak) */
   deficitDays: number
-  /** hari yang berisi tagihan terjadwal */
-  plannedDays: number
   /** rentetan hari bersih yang sedang berjalan */
   currentStreak: number
 }
@@ -765,11 +948,8 @@ export function summarizePeriod(cells: CalendarCell[]): PeriodSummary {
     fixedSpend: 0,
     moved: 0,
     net: 0,
-    forecastTotal: 0,
-    forecastCount: 0,
     cleanDays: 0,
     deficitDays: 0,
-    plannedDays: 0,
     currentStreak: 0,
   }
 
@@ -778,13 +958,8 @@ export function summarizePeriod(cells: CalendarCell[]): PeriodSummary {
     summary.variableSpend += cell.variableSpend
     summary.fixedSpend += cell.fixedSpend
     summary.moved += cell.moved
-    summary.forecastCount += cell.forecast.filter((entry) => entry.type !== 'income').length
-    summary.forecastTotal += cell.forecast
-      .filter((entry) => entry.type !== 'income')
-      .reduce((sum, entry) => sum + entry.amount, 0)
     if (cell.cleanDay) summary.cleanDays += 1
     if (cell.tone === 'deficit') summary.deficitDays += 1
-    if (cell.plannedCount > 0) summary.plannedDays += 1
     /* rentetan berjalan = rentetan hari terakhir yang sudah berlalu */
     if (cell.isPast) summary.currentStreak = cell.streak
   }
@@ -798,12 +973,72 @@ export function summarizePeriod(cells: CalendarCell[]): PeriodSummary {
 /** pesan AI saat hari yang dipilih benar-benar kosong (bukan menghakimi) */
 export const EMPTY_DAY_AI_MESSAGE = 'Hari ini aman terkendali. Tidak ada pengeluaran.'
 
-/** penjelasan yang membedakan belanja impulsif dari tagihan terencana */
+/** penjelasan yang membedakan belanja impulsif dari tagihan tetap yang aman */
 export const FIXED_BILL_SAFE_NOTE =
   'Tagihan terjadwal tampil netral — uang yang sudah direncanakan tidak dihitung boros.'
 
-/** label penanda tagihan terjadwal (dipakai di legenda kalender) */
-export const PLANNED_BADGE_LABEL = 'Terencana'
+/**
+ * Label tagihan tetap (paket 56).
+ *
+ * Dulu bernama `PLANNED_BADGE_LABEL` dan berbunyi "Terencana" — kata yang dipakai
+ * halaman ini untuk menandai RAMALAN tagihan. Sekarang label yang sama hanya
+ * dipakai untuk dua hal yang keduanya fakta: sel yang isinya MURNI tagihan tetap
+ * yang sudah tercatat, dan baris tagihan tetap di daftar hari. Karena artinya
+ * sudah berubah, namanya ikut diubah — nama `planned` yang bermakna "rencana
+ * masa depan" tidak boleh diwariskan diam-diam.
+ */
+export const FIXED_BILL_BADGE_LABEL = 'Tagihan Tetap'
+
+/**
+ * Chip label per jenis entri di daftar hari (satu sumber untuk panel detail).
+ * `className` boleh tinggal di sini: warna teks baris memang bahasa visual,
+ * sama seperti `CALENDAR_LOOK_CELL` di bawah.
+ */
+export const CALENDAR_ENTRY_CHIP: Record<
+  CalendarEntryType,
+  { label: string; className: string }
+> = {
+  income: { label: 'Pemasukan', className: 'text-forest' },
+  fixed_bill: { label: FIXED_BILL_BADGE_LABEL, className: 'text-thistle' },
+  variable_expense: { label: 'Variabel', className: 'text-hud-terracotta' },
+  money_movement: { label: 'Pindah dana', className: 'text-thistle' },
+}
+
+/**
+ * Copy panel detail tanggal (paket 56) — semua kalimat yang dibaca user di panel
+ * hari tinggal di sini, bukan di JSX. Dua kalimat yang paling penting berubah:
+ *
+ *   • judul daftar tidak pernah lagi menyebut "Ramalan Tagihan" — hari mendatang
+ *     yang punya isi hanya berisi CATATAN yang benar-benar tercatat;
+ *   • hari kosong di masa depan tidak lagi MENJANJIKAN apa pun ("Belum ada
+ *     tagihan terjadwal" itu klaim tentang masa depan yang tidak kita punya).
+ */
+export const CALENDAR_DAY_COPY = {
+  /** panel belum punya tanggal terpilih */
+  pickTitle: 'Pilih tanggal dulu',
+  pickBody: 'Tap salah satu tanggal di kalender untuk melihat detail harinya.',
+  /** CTA zero-friction backdating — tanggalnya terkunci ke tanggal terpilih */
+  addNote: (day: number) => `Tambah Catatan di Tgl ${day}`,
+  /** judul daftar: hari yang belum lewat belum punya "transaksi", hanya catatan */
+  listTitle: (isFuture: boolean) => (isFuture ? 'Catatan Tercatat' : 'Transaksi Hari Ini'),
+  countLabel: (count: number) => `${count} catatan`,
+  /** baris ringkasan saat tidak ada satu pun uang bergerak di hari itu */
+  neutralSummary: 'Tidak ada uang yang bergerak',
+  /** bubble di atas sel saat tanggalnya tidak punya catatan sama sekali */
+  bubbleEmpty: 'Belum ada catatan',
+  /** hari kosong: arahkan ke tombol catat, jangan janjikan apa pun */
+  emptyFuture: {
+    emoji: '🗓️',
+    title: 'Belum ada catatan',
+    body: 'Tidak ada uang tercatat di tanggal ini. Kalau ada yang perlu dicatat, pakai tombol di atas — tanggalnya sudah menunjuk hari ini.',
+  },
+  /** hari yang sudah lewat dan benar-benar kosong (pesan AI yang menenangkan) */
+  emptyPast: {
+    emoji: '🌿',
+    title: 'Kosong & aman',
+    body: EMPTY_DAY_AI_MESSAGE,
+  },
+} as const
 
 /* ── TAMPILAN SEL: PALET BERSIH (satu sumber untuk grid & legenda) ────────────
    Redesign: sel kalender tidak lagi memakai corak garis diagonal, glow
@@ -816,7 +1051,7 @@ export const PLANNED_BADGE_LABEL = 'Terencana'
      terracotta → belanja variabel melonjak (satu-satunya yang boleh "marah")
      forest     → surplus / ada belanja biasa
      mint       → hari bersih (nol belanja variabel)
-     ink        → netral: tagihan terencana atau belum ada catatan
+     ink        → netral: tagihan tetap yang tercatat atau belum ada catatan
    ────────────────────────────────────────────────────────────────────────── */
 
 export type CalendarLook = 'deficit' | 'surplus' | 'clean' | 'spend' | 'planned' | 'empty'
@@ -836,9 +1071,9 @@ export const CALENDAR_LOOK_CELL: Record<CalendarLook, string> = {
  *   1. `deficit`  spike belanja variabel (paling butuh perhatian)
  *   2. `surplus`  uang masuk menutup seluruh pengeluaran hari itu
  *   3. `clean`    nol belanja variabel → "prestasi", bukan kotak kosong
- *   4. `planned`  tagihan terjadwal / ramalan → netral, tidak dihukum
+ *   4. `planned`  hari yang isinya MURNI tagihan tetap → netral, tidak dihukum
  *   5. `spend`    belanja variabel di bawah ambang → hijau tipis
- *   6. `empty`    hari mendatang tanpa agenda / belum ada catatan
+ *   6. `empty`    belum ada catatan (termasuk hari mendatang yang kosong)
  */
 export function calendarCellLook(cell: CalendarCell): CalendarLook {
   if (cell.tone === 'deficit') return 'deficit'
@@ -849,13 +1084,16 @@ export function calendarCellLook(cell: CalendarCell): CalendarLook {
   return 'empty'
 }
 
-/** keterangan warna untuk pengguna — satu baris, label sependek mungkin */
+/** keterangan warna untuk pengguna — satu baris, label sependek mungkin.
+ *  PAKET 56: tidak ada lagi penanda "Terencana"/ramalan di daftar ini; yang
+ *  tersisa hanya penjelasan warna sel, jadi tiap muka yang masih dipakai tetap
+ *  punya keterangannya sendiri. */
 export const CALENDAR_LEGEND: { id: CalendarLook; label: string }[] = [
   { id: 'deficit', label: 'Boros' },
   { id: 'surplus', label: 'Surplus' },
   { id: 'clean', label: 'Nol jajan' },
   { id: 'spend', label: 'Ada belanja' },
-  { id: 'planned', label: PLANNED_BADGE_LABEL },
+  { id: 'planned', label: FIXED_BILL_BADGE_LABEL },
 ]
 
 /** kalimat pembaca layar untuk tiap muka sel (dipakai aria-label tombol tanggal) */
@@ -864,7 +1102,7 @@ export const CALENDAR_LOOK_WORD: Record<CalendarLook, string> = {
   surplus: 'surplus',
   clean: 'nol jajan',
   spend: 'ada belanja',
-  planned: 'tagihan terjadwal',
+  planned: 'tagihan tetap',
   empty: 'belum ada catatan',
 }
 

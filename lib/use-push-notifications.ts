@@ -13,15 +13,25 @@ function urlBase64ToUint8Array(base64: string): Uint8Array {
 
 export type PushSupport = 'checking' | 'unsupported' | 'needs-install' | 'supported'
 
+/** hasil aksi yang menembak endpoint bersesi (paket 39) */
+export type PushActionResult = 'ok' | 'no-session' | 'failed'
+
 /**
  * Hook Web Push — permission, subscribe/unsubscribe, test lokal & remote.
  * iOS: butuh install ke Home Screen dulu (audit PRD evidence #18).
+ *
+ * Sejak paket 39, `POST /api/push/subscribe` & `/api/push/send` MENOLAK request
+ * tanpa sesi (401) karena subscription kini disimpan per user. Hook ini
+ * meneruskan fakta itu apa adanya (`'no-session'`) — dulu respons gagal pun
+ * dianggap sukses karena endpoint-nya tidak memeriksa apa pun.
  */
 export function usePushNotifications() {
   const [support, setSupport] = useState<PushSupport>('checking')
   const [permission, setPermission] =
     useState<NotificationPermission>('default')
   const [subscribed, setSubscribed] = useState(false)
+  /** true = endpoint menjawab 401: sesi demo belum dibuat di perangkat ini */
+  const [sessionMissing, setSessionMissing] = useState(false)
 
   useEffect(() => {
     const hasPush =
@@ -65,6 +75,12 @@ export function usePushNotifications() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(sub),
     })
+    if (res.status === 401) {
+      setSessionMissing(true)
+      setSubscribed(false)
+      return false
+    }
+    setSessionMissing(false)
     setSubscribed(res.ok)
     return res.ok
   }, [support])
@@ -93,17 +109,36 @@ export function usePushNotifications() {
   }, [])
 
   /** test remote — dikirim server, muncul walau tab app ditutup */
-  const testRemote = useCallback(async () => {
-    await fetch('/api/push/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title: 'CatetInd 🌿',
-        body: 'Push remote BERHASIL! Ini dikirim server — muncul walau app ditutup.',
-        url: '/',
-      }),
-    })
+  const testRemote = useCallback(async (): Promise<PushActionResult> => {
+    try {
+      const res = await fetch('/api/push/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: 'CatetInd 🌿',
+          body: 'Push remote BERHASIL! Ini dikirim server — muncul walau app ditutup.',
+          url: '/',
+        }),
+      })
+      if (res.status === 401) {
+        setSessionMissing(true)
+        return 'no-session'
+      }
+      setSessionMissing(false)
+      return res.ok ? 'ok' : 'failed'
+    } catch {
+      return 'failed'
+    }
   }, [])
 
-  return { support, permission, subscribed, activate, deactivate, testLocal, testRemote }
+  return {
+    support,
+    permission,
+    subscribed,
+    sessionMissing,
+    activate,
+    deactivate,
+    testLocal,
+    testRemote,
+  }
 }

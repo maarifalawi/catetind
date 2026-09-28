@@ -2,6 +2,7 @@
 
 import {
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ChangeEvent,
@@ -18,6 +19,7 @@ import {
   PiggyBank,
   ScanLine,
   Sparkles,
+  Tag,
   TrendingDown,
   TrendingUp,
   Wallet,
@@ -25,7 +27,16 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { formatIDR } from '@/lib/wallets'
+import { newClientTxId } from '@/lib/client-tx'
+import { AI_QUOTA_EXHAUSTED_COPY } from '@/lib/ai-quota'
+import {
+  AMOUNT_MAX_DIGITS,
+  formatAmountDigits,
+  parseAmountInput,
+  type AmountInputProblem,
+} from '@/lib/money/amount-input'
+import { amountInputFont } from '@/lib/typography'
+import { useAiQuota } from '@/hooks/use-ai-quota'
 import { SUBSCRIPTION_LOCK_COPY } from '@/lib/data/renewal'
 import { useSubscriptionGate } from '@/components/catetind/subscription-gate-provider'
 import { SubscriptionLockNote } from '@/components/catetind/subscription-lock-note'
@@ -33,11 +44,12 @@ import { MOCK_RECEIPT_AMOUNT, MOCK_RECEIPT_READ_MS, receiptNoteFromFileName } fr
 import {
   EDIT_TRANSACTION_COPY,
   TRANSACTION_CATEGORY_OPTIONS,
+  TRANSACTION_FIXED_CATEGORY,
   TRANSACTION_INPUT_COPY,
   TRANSACTION_WALLET_OPTIONS,
+  manualCategoryChoice,
   type HistoryTransaction,
 } from '@/lib/data/history'
-
 /* ── Transaction Input Engine (inventaris 97a/b/c) ────────────────────────────
    Falsafah "Zero Cognitive Load & 4-Tap Strict Rule": tidak ada menu "mau input
    bagaimana?". Panel langsung membuka form manual — OCR & Voice cuma
@@ -49,7 +61,46 @@ import {
 
    Sejak paket 03 engine juga melayani MODE EDIT lewat prop `initial`: formnya
    terbuka sudah terisi (pre-filled) sehingga user cuma perlu membetulkan yang
-   salah — bukan mengisi ulang dari nol. Mode tambah tidak berubah sama sekali. */
+   salah — bukan mengisi ulang dari nol. Mode tambah tidak berubah sama sekali.
+
+   PAKET 42 (audit Stage 5) menambahkan empat hal yang semuanya di file ini:
+     1. KUNCI SUBMIT + `clientTxId` → double-tap / Enter-lalu-tap tidak pernah
+        jadi dua catatan (kuncinya diteruskan ke store lewat draft);
+     2. NOMINAL MANUSIAWI → "2,5jt" = 2.500.000 (dulu 15!), batas 13 digit, dan
+        input yang tak terbaca DIKATAKAN, bukan dibuang diam-diam;
+     3. CHIP KONFIRMASI → nilai hasil parsing singkatan ditampilkan sebelum
+        disimpan ("Rp 2.500.000?");
+     4. KUOTA AI HABIS → tombol scan struk & input suara mati dengan penjelasan,
+        sementara Catat manual tetap jalan penuh.
+
+   PAKET 44 menahan pesan masalah sampai field ditinggalkan (blur) / submit,
+   supaya user tidak dimarahi di tengah ketikan.
+
+   PAKET 53 mengubah DUA hal di field nominal:
+     1. TITIK RIBUAN DIRAPIKAN SAAT MENGETIK — field menampilkan `display` dari
+        `parseAmountInput()` (bukan teks mentah), jadi "2000000" langsung terbaca
+        "2.000.000" dan "2.000000" ikut dirapikan. Aman karena field ini
+        `inputMode="numeric"`, ter-center, dan kursor selalu di ujung (lihat
+        komentar kebijakan di `lib/money/amount-input.ts`);
+     2. TIPOGRAFI — bobot turun dari `font-black` ke resep kanon angka app
+        (`AMOUNT_INPUT*` di `lib/typography.ts`), dengan tiga tingkat ukuran yang
+        mengecil saat angka makin panjang supaya 13 digit tetap muat di 375 px.
+   Blur/submit menormalkan field ke bentuk kanon (`formatAmountDigits`) supaya
+   satu nominal hanya punya SATU bentuk di layar — termasuk input singkatan.
+
+   PAKET 54 (uji pemakaian 28 Sep 2026) mencabut TEBAKAN KATEGORI dari jalur
+   manual, karena kategori disimpan sebagai fakta tanpa pernah dipilih user dan
+   Riwayat jadi penuh kategori karangan:
+     1. form TAMBAH punya PEMILIH KATEGORI sendiri — sumbernya hanya
+        `TRANSACTION_CATEGORY_OPTIONS` (daftar kanon, satu-satunya yang sah);
+     2. badge "AI Suggested" + field `suggested` per tipe DIHAPUS: tidak ada lagi
+        kategori yang tampil mengaku hasil AI lalu tersimpan tanpa persetujuan;
+     3. form TERTAHAN tanpa pilihan user (tombol Catat nonaktif + petunjuk dari
+        `lib/data/history.ts`); `'Lainnya'` tidak pernah dikirim diam-diam —
+        kecuali Tabungan/Transfer, yang kategorinya memang aturan dan alasannya
+        ditulis di layar (bukan tebakan, bukan pilihan).
+   Aturan nilainya tinggal di `manualCategoryChoice()` (`lib/data/history.ts`),
+   jadi yang diuji murni & yang dipakai engine adalah aturan yang sama. */
 
 export type TransactionTypeId = 'expense' | 'income' | 'saving' | 'transfer'
 
@@ -70,6 +121,13 @@ export interface TransactionDraft {
   wallet?: string
   /** tanggal lokal `YYYY-MM-DD` */
   date?: string
+  /**
+   * Kunci idempotensi aksi tulis (paket 42). Diisi engine untuk mode TAMBAH;
+   * shell meneruskannya ke store, dan store menolak baris kedua dengan kunci
+   * yang sama — jadi double-tap/Enter-lalu-tap tidak pernah jadi dua catatan.
+   * Mode edit sengaja tidak mengirimnya (edit tidak menulis baris baru).
+   */
+  clientTxId?: string
 }
 
 /** mode tampilan stage tengah engine */
@@ -81,66 +139,116 @@ type TransactionType = {
   icon: LucideIcon
   /** kelas pil saat aktif — accent per tipe (plum/olive/cantelope) */
   active: string
-  /** kategori yang "ditebak AI" (mock Domain 2A.2 Smart Default) */
-  suggested: string
-  /** pool copy toast gamified — `{amount}` diganti nominal terformat */
-  cheers: string[]
 }
 
+/**
+ * Daftar tipe uang di engine.
+ *
+ * Field `suggested` DIHAPUS di paket 54: dulu tiap tipe membawa kategori
+ * "tebakan AI" (Pengeluaran→Makanan, Pemasukan→Gaji Utama, Tabungan→Dana
+ * Darurat) yang ikut TERSIMPAN tanpa user pernah memilihnya. Sekarang kategori
+ * datang dari pilihan user (form tambah) atau dari aturan tipe
+ * (`TRANSACTION_FIXED_CATEGORY` di `lib/data/history.ts`) — tidak ada tebakan.
+ *
+ * Chip `transfer` DIHAPUS di paket 55 — keputusannya sengaja (opsi b), bukan
+ * lupa:
+ *
+ *   Engine ini TIDAK PUNYA dompet tujuan (formnya cuma membawa satu nama dompet
+ *   dari konteks aktif), jadi chip Transfer di sini menulis baris `transfer` SATU
+ *   SISI: uangnya keluar dari dompet dan tidak mendarat di mana pun — persis
+ *   keluhan "fitur transfer masih ngambang". Sejak paket 55 store MENOLAK
+ *   tulisan seperti itu (`postTransaction` mengembalikan `null` untuk
+ *   `type: 'transfer'`), dan chip yang selalu gagal lebih buruk daripada chip
+ *   yang tidak ada.
+ *
+ *   Pintu pindah dana sekarang berada di tempat yang memang punya kedua ujungnya:
+ *   sheet `TransferFlow` (dari-dompet → ke-dompet → berapa) yang dibuka dari
+ *   popover kartu dompet di /wallet, tombol “Pindah Dana” di /wallet/[id], entri
+ *   menu “Lainnya” di bottom nav, dan sidebar desktop. Satu aksi, satu alur.
+ */
 const TYPES: TransactionType[] = [
   {
     id: 'expense',
     label: 'Pengeluaran',
     icon: TrendingDown,
     active: 'bg-hud-terracotta/[0.12] text-hud-terracotta ring-hud-terracotta/25',
-    suggested: 'Makanan',
-    cheers: [
-      'Sip, {amount} dicatat! 🌿',
-      'Mantap, pengeluaran kopi masih aman! 🎉',
-      'Beres, {amount} kecatat rapi ✨',
-      'Catat 1, aman 1 — {amount} tersimpan 🌱',
-    ],
   },
   {
     id: 'income',
     label: 'Pemasukan',
     icon: TrendingUp,
     active: 'bg-sage text-forest ring-forest/15',
-    suggested: 'Gaji',
-    cheers: [
-      'Asik, {amount} masuk! 🌿',
-      'Mantap, pemasukan {amount} nambah! 🎉',
-      'Yeay, {amount} udah kecatat ✨',
-    ],
   },
   {
     id: 'saving',
     label: 'Tabungan',
     icon: PiggyBank,
     active: 'bg-hud-amber/[0.18] text-[#b89191] ring-hud-amber/40',
-    suggested: 'Dana Darurat',
-    cheers: [
-      'Sip, nabung {amount} lagi! 🌱',
-      'Tabungan nambah {amount} 🎉',
-      'Mantap, {amount} disisihkan buat masa depan ✨',
-    ],
   },
+]
+
+/**
+ * Meta tipe yang TIDAK ditawarkan lagi sebagai pilihan BARU, tapi tetap harus
+ * bisa ditampilkan kalau baris yang sedang dibuka MEMANG sudah bertipe itu
+ * (mode edit) — paket 55.
+ *
+ * Alasannya: baris `transfer` yang dibuat lewat alur Pindah Dana tetap bisa
+ * dibuka di sheet Edit dari Riwayat. Kalau chipnya hilang sama sekali dari
+ * daftar, header tipe di sheet itu tidak menunjukkan apa-apa padahal barisnya
+ * jelas-jelas pindah dana — dan menekan chip mana pun di situ berarti mengubah
+ * baris pindah dana menjadi catatan belanja (yang melepas dompet lawannya).
+ * Karena itu tipenya ditampilkan apa adanya, tapi tidak pernah jadi tawaran.
+ */
+const RETIRED_TYPES: TransactionType[] = [
   {
     id: 'transfer',
     label: 'Transfer',
     icon: ArrowLeftRight,
     active: 'bg-hud-sage/[0.3] text-[#000000] ring-hud-sage/50',
-    suggested: 'Antar Dompet',
-    cheers: [
-      'Oke, {amount} dipindahin! 🌿',
-      'Transfer {amount} kecatat 🎉',
-      'Sip, {amount} pindah dompet ✨',
-    ],
   },
 ]
 
+/**
+ * SEMUA tipe yang tersedia di engine. Dipakai sebagai nilai default prop
+ * `types`, jadi shell yang tidak peduli urusan ini tidak berubah perilakunya.
+ */
+const ALL_TYPE_IDS: readonly TransactionTypeId[] = TYPES.map((item) => item.id)
+
+/**
+ * Kelas kolom sesuai jumlah tipe yang DITAWARKAN shell.
+ *
+ * Sengaja peta kelas literal (bukan `grid-cols-${n}` atau `style`): kelas yang
+ * dirakit dinamis tidak terlihat oleh pemindai Tailwind, dan nilai yang tidak
+ * ada di peta jatuh ke 4 kolom — grid tetap rapi walau daftarnya keliru.
+ */
+const TYPE_COLUMNS: Record<number, string> = {
+  2: 'grid-cols-2',
+  3: 'grid-cols-3',
+  4: 'grid-cols-4',
+}
+
 /** tinggi tiap bar gelombang suara (px) — mode voice */
 const WAVE = [10, 20, 32, 18, 26, 14, 22]
+/**
+ * Lama kunci submit (paket 42). Cukup lama untuk menelan double-tap & Enter-tap,
+ * cukup pendek supaya tombol tidak terasa "nyangkut" kalau shell-nya tidak
+ * menutup panel (mis. dari halaman Joint yang membiarkan sheet terbuka).
+ */
+const SUBMIT_LOCK_MS = 600
+
+/** masalah input nominal → kalimat yang menyebut jalan keluarnya (`lib/data/history.ts`) */
+function amountProblemCopy(problem: AmountInputProblem): string {
+  switch (problem) {
+    case 'tooBig':
+      return TRANSACTION_INPUT_COPY.amountTooBig(AMOUNT_MAX_DIGITS)
+    case 'negative':
+      return TRANSACTION_INPUT_COPY.amountNegative
+    case 'fraction':
+      return TRANSACTION_INPUT_COPY.amountFraction
+    default:
+      return TRANSACTION_INPUT_COPY.amountUnsupported
+  }
+}
 
 /** daftar opsi + nilai lama yang belum ada di daftar (supaya tidak hilang diam-diam) */
 function withCurrentValue(options: readonly string[], current?: string): string[] {
@@ -171,6 +279,7 @@ export function TransactionInputEngine({
   sourceLabel,
   extraFields,
   onAmountChange,
+  types = ALL_TYPE_IDS,
 }: {
   /** panel sedang terbuka — pemicu reset form + auto-focus (bekerja baik saat
       engine di-unmount maupun dibiarkan ter-mount oleh shell yang inert) */
@@ -197,6 +306,22 @@ export function TransactionInputEngine({
   /** opsional: laporan nominal yang sedang diketik (dipakai Split Bill Sheet
       supaya tahu total yang dibagi) */
   onAmountChange?: (amount: number) => void
+  /**
+   * Tipe yang DITAWARKAN shell ini (paket 49). Default = ketiga tipe uang yang
+   * memang bisa dicatat dari form ini (Pengeluaran/Pemasukan/Tabungan), jadi
+   * shell lama tetap berperilaku sama.
+   *
+   * PAKET 55: `transfer` TIDAK PERNAH ditawarkan — form ini tidak punya dompet
+   * tujuan, jadi catatan transfer dari sini selalu sepihak (uang keluar tanpa
+   * mendarat di dompet mana pun). Pindah dana punya alurnya sendiri
+   * (`TransferFlow`) yang menanyakan dompet asal DAN tujuan. Halaman Kalender
+   * memakai prop ini untuk membatasi catatannya ke pemasukan & pengeluaran.
+   *
+   * Dikirim sebagai array KONSTAN (bukan literal di dalam render) supaya
+   * identitasnya stabil — engine memakai nilai ini sebagai dependensi effect
+   * reset form.
+   */
+  types?: readonly TransactionTypeId[]
 }) {
   const isDialog = layout === 'dialog'
   const isEdit = initial !== null
@@ -205,45 +330,163 @@ export function TransactionInputEngine({
      kalender, edit transaksi), supaya nol titik yang bisa terlewat. Form-nya
      tetap bisa dibuka & dibaca — yang berhenti hanya penyimpanannya. */
   const { inputLocked } = useSubscriptionGate()
+  /* Kuota AI yang BENAR-BENAR terpakai (paket 42): dua quick-action di stage ini
+     (scan struk & input suara) memang memanggil AI, jadi keduanya mati saat kuota
+     habis — dengan penjelasan, dan TANPA mengunci pencatatan manual. */
+  const quota = useAiQuota()
+  const quotaExhausted = quota.exhausted
 
   const [typeId, setTypeId] = useState<TransactionTypeId>(defaultType)
-  /** digit mentah tanpa titik — satu-satunya sumber kebenaran format Rupiah */
-  const [digits, setDigits] = useState('')
+  /**
+   * Apa yang benar-benar diketik user — digit, titik ribuan, atau singkatan.
+   *
+   * PAKET 53: isi state ini adalah `display` dari parser (bukan teks mentah
+   * DOM), jadi titik ribuan sudah rapi di sini: "2000000" → "2.000.000".
+   * Singkatan ("2,5jt") & input bermasalah sengaja tetap mentah (lihat
+   * kebijakan di `lib/money/amount-input.ts`).
+   */
+  const [amountText, setAmountText] = useState('')
+  /**
+   * Field nominal sudah DITINGGALKAN (blur) atau submit sudah dicoba?
+   *
+   * PAKET 44 — "jangan marah saat user masih mengetik". Sebelumnya pesan masalah
+   * muncul di setiap ketikan, sehingga mengetik "25.000" berhenti di "25." atau
+   * "2,5" dan langsung teriak "Nominalnya belum kebaca" padahal user baru setengah
+   * jalan. Sekarang `problem` hanya DIKATAKAN setelah:
+   *   · user meninggalkan field (blur) — di situ ia memang sudah selesai mengetik, atau
+   *   · user menekan Catat/Enter (submit) — di situ ia perlu tahu kenapa tertahan.
+   * Ketikan berikutnya melepas penanda ini lagi (`handleAmountChange`), jadi begitu
+   * user membetulkan angkanya, pesan lama tidak menempel di layar.
+   */
+  const [amountSettled, setAmountSettled] = useState(false)
   const [note, setNote] = useState('')
   /* tiga field yang HANYA hidup di mode edit — nilainya dari transaksi aslinya */
   const [category, setCategory] = useState('')
   const [wallet, setWallet] = useState('')
   const [date, setDate] = useState('')
   const [mode, setMode] = useState<SheetMode>('manual')
+  /** tombol Catat sedang memproses satu penyimpanan (paket 42) */
+  const [submitting, setSubmitting] = useState(false)
 
   const amountRef = useRef<HTMLInputElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  /* fokus pemilih kategori — dipakai saat Enter ditekan tanpa kategori dipilih */
+  const categoryRef = useRef<HTMLSelectElement>(null)
   const mockTimer = useRef<number | null>(null)
+  /**
+   * KUNCI SUBMIT (paket 42) — sengaja `ref`, bukan state: dua pemanggilan
+   * SINKRON dalam satu tick (Enter di keyboard numerik lalu tap tombol, atau
+   * double-tap cepat) membaca state yang BELUM di-render ulang, jadi `useState`
+   * saja tidak cukup menutup lubang itu.
+   */
+  const submitLock = useRef(false)
+  const unlockTimer = useRef<number | null>(null)
+  /**
+   * KUNCI IDEMPOTENSI aksi tulis — dibuat sekali per PEMBUKAAN panel dan
+   * diteruskan ke store lewat draft. Jadi tap kedua (walau lolos kunci) tetap
+   * ditolak sebagai pengulangan, bukan jadi catatan kedua.
+   */
+  const clientTxId = useRef('')
 
-  const type = TYPES.find((item) => item.id === typeId) ?? TYPES[0]
-  const amount = Number(digits || '0')
-  /** 25000 → "25.000" (auto-format Indonesia seketika saat diketik) */
-  const display = digits ? amount.toLocaleString('id-ID') : ''
+  /* tipe yang benar-benar ditawarkan shell ini (default: Pengeluaran/Pemasukan/Tabungan) */
+  const typeOptions = useMemo(
+    () => TYPES.filter((item) => types.includes(item.id)),
+    [types],
+  )
+  /* daftar kosong = kesalahan pemanggil, bukan alasan panel kosong: engine jatuh
+     ke daftar penuh supaya pintu input tidak pernah mati tanpa penjelasan */
+  const offeredTypes = typeOptions.length > 0 ? typeOptions : TYPES
+  /**
+   * Yang benar-benar DIRENDER: tawaran shell, ditambah tipe baris yang sedang
+   * diedit kalau tipe itu sudah tidak ditawarkan lagi (`RETIRED_TYPES` — paket
+   * 55). Tanpa ini, membuka baris pindah dana di sheet Edit akan menampilkan
+   * pemilih tipe tanpa satu pun chip aktif.
+   */
+  const visibleTypes = useMemo(() => {
+    const current = initial ? RETIRED_TYPES.find((item) => item.id === initial.type) : undefined
+    if (!current) return offeredTypes
+    if (offeredTypes.some((item) => item.id === current.id)) return offeredTypes
+    return [...offeredTypes, current]
+  }, [initial, offeredTypes])
+
+  /* `type` (objek tipe terpilih) TIDAK LAGI dihitung di sini (paket 54): satu-
+     satunya yang pernah dibacanya adalah `type.suggested` (kategori tebakan),
+     dan itu sudah dihapus. Yang dibutuhkan sekarang `typeId` — kategori tetapnya
+     datang dari `TRANSACTION_FIXED_CATEGORY`. */
+  /* NOMINAL: parsing manusiawi (paket 42) — "1,5jt" = 1.500.000, bukan Rp 15.
+     Sejak paket 53 yang DIHITUNG dan yang DITAMPILKAN sama-sama dari hasil
+     parsing ini: `display`-nya yang dipasang ke field, jadi titik ribuan rapi
+     saat mengetik. */
+  const amountInput = parseAmountInput(amountText)
+  const amount = amountInput.amount ?? 0
+  const amountProblem = amountInput.problem
+  /**
+   * Masalah nominal baru "bicara" setelah blur/submit (paket 44) — bukan di tiap
+   * ketikan. Ketikan berikutnya menutupnya lagi (`setAmountSettled(false)` di
+   * `handleAmountChange`), karena saat itu user sedang membetulkan, bukan butuh
+   * diingatkan ulang.
+   */
+  const showAmountProblem = amountProblem !== null && amountSettled
+  /**
+   * CHIP KONFIRMASI ("Rp 1.500.000?") — muncul saat `shorthand` (rb/jt, user harus
+   * melihat angka penuhnya) ATAU saat field sudah ditinggalkan dengan angka yang
+   * sah. Jadi nominal apa pun yang baru di-blur selalu bisa dicek sekali lagi
+   * sebelum disimpan — termasuk angka biasa yang tidak lewat singkatan.
+   */
+  const showAmountConfirm =
+    amountInput.amount !== null &&
+    amountInput.amount > 0 &&
+    (amountInput.shorthand || (amountSettled && amountProblem === null))
+  const display = amountInput.display
+  /* KATEGORI (paket 54): form TAMBAH tidak menebak. Nilainya = pilihan user,
+     kecuali tipe yang kategorinya memang aturan (Tabungan/Transfer) — lihat
+     `TRANSACTION_FIXED_CATEGORY`. Aturan "apa yang boleh tersimpan" tinggal di
+     `manualCategoryChoice()` (`lib/data/history.ts`) dan diuji murni di sana. */
+  const fixedCategory = TRANSACTION_FIXED_CATEGORY[typeId]
+  const categoryChoice = manualCategoryChoice({
+    editing: isEdit,
+    type: typeId,
+    picked: category,
+    currentCategory: initial?.category,
+  })
+  /**
+   * Petunjuk "pilih kategori dulu" — baru muncul saat form selebihnya sudah
+   * siap (nominal sudah diketik/ditinggalkan). Sebelum itu user belum selesai
+   * dengan langkah pertamanya, jadi tidak ada yang perlu dimarahi (sama seperti
+   * kebijakan pesan nominal di paket 44).
+   */
+  const showCategoryNeeded = categoryChoice.needsChoice && (amountSettled || amount > 0)
   /* daftar pilihan kategori & dompet: nilai lama yang tidak ada di daftar kanon
      (mis. kategori 'Proyek' dari halaman Dompet Detail) DITAMBAHKAN sebagai
      opsi — tanpa itu, sekadar membuka sheet edit akan diam-diam mengubah data
      user jadi kategori lain. */
   const categoryOptions = withCurrentValue(TRANSACTION_CATEGORY_OPTIONS, initial?.category)
   const walletOptions = withCurrentValue(TRANSACTION_WALLET_OPTIONS, initial?.wallet)
-  /* font menyesuaikan panjang angka — nominal besar tetap muat & tetap center */
-  const amountFont = isDialog
-    ? display.length <= 7
-      ? 'text-[3.25rem]'
-      : 'text-[2.4rem]'
-    : display.length <= 7
-      ? 'text-[2.75rem] sm:text-[3.25rem]'
-      : 'text-[2.1rem] sm:text-[2.6rem]'
+  /* font menyesuaikan panjang angka — memakai banyak DIGIT (bukan panjang string:
+     titik ribuan ikut terhitung di `display`) dan token dari `lib/typography.ts`,
+     jadi tidak ada lagi ukuran/bobot karangan di file ini (paket 53). */
+  const amountFont = amountInputFont(amountText.replace(/\D/g, '').length)
 
   function clearMock() {
     if (mockTimer.current !== null) {
       window.clearTimeout(mockTimer.current)
       mockTimer.current = null
     }
+  }
+
+  /**
+   * Lepas kunci submit. Dipanggil sengaja dua kali: (1) setelah jeda aman
+   * (`SUBMIT_LOCK_MS`) supaya tombol tidak terkunci selamanya kalau shell-nya
+   * ternyata tidak menutup panel, dan (2) saat panel dibuka lagi. Yang membuat
+   * catatan ganda mustahil tetap `clientTxId`, bukan timer ini.
+   */
+  function releaseSubmitLock() {
+    if (unlockTimer.current !== null) {
+      window.clearTimeout(unlockTimer.current)
+      unlockTimer.current = null
+    }
+    submitLock.current = false
+    setSubmitting(false)
   }
 
   /* Reset form tiap kali panel dibuka: mode tambah = form KOSONG + auto-focus
@@ -256,29 +499,80 @@ export function TransactionInputEngine({
       clearMock()
       return
     }
-    setTypeId(initial?.type ?? defaultType)
-    setDigits(initial ? String(initial.amount) : '')
+    /* tipe awal: tipe data lama (mode edit) atau default shell. Kalau default
+       shell tidak ditawarkan di panel ini (mis. kalender yang cuma punya
+       pemasukan & pengeluaran), pakai tipe pertama yang memang ada — panel
+       tidak pernah terbuka dalam keadaan tanpa tipe terpilih (paket 49). */
+    const starterType = offeredTypes.some((item) => item.id === defaultType)
+      ? defaultType
+      : offeredTypes[0].id
+    setTypeId(initial?.type ?? starterType)
+    /* nominal dari data lama diformat ribuan ("1.500.000") supaya bisa dibaca
+       sekilas, persis seperti yang tampil setelah user mengetiknya sendiri */
+    setAmountText(initial ? parseAmountInput(String(initial.amount)).display : '')
+    /* panel baru dibuka = belum ada masalah nominal yang perlu diumumkan; pesan
+       /chip konfirmasi hanya muncul setelah user blur atau menekan Catat (paket 44) */
+    setAmountSettled(false)
     setNote(initial?.name ?? '')
     setCategory(initial?.category ?? '')
     setWallet(initial?.wallet ?? '')
     setDate(initial?.date ?? '')
     setMode('manual')
+    releaseSubmitLock()
+    /* kunci idempotensi BARU tiap panel dibuka; di mode edit dibiarkan kosong
+       karena mode edit tidak pernah menulis baris baru (lihat `useTransactionSubmit`) */
+    clientTxId.current = initial ? '' : newClientTxId()
     if (initial) return
     const id = window.setTimeout(() => amountRef.current?.focus(), 110)
     return () => window.clearTimeout(id)
-  }, [active, defaultType, initial])
+  }, [active, defaultType, initial, offeredTypes])
 
-  /* buang timer mock saat unmount supaya tidak setState di komponen mati */
-  useEffect(() => () => clearMock(), [])
+  /* buang timer mock & timer kunci saat unmount supaya tidak setState di
+     komponen yang sudah mati */
+  useEffect(
+    () => () => {
+      clearMock()
+      if (unlockTimer.current !== null) window.clearTimeout(unlockTimer.current)
+    },
+    [],
+  )
 
+  /**
+   * Setiap ketikan = titik ribuan dirapikan (paket 53).
+   *
+   * Yang dipasang ke field adalah `display` hasil parser, bukan teks mentah DOM:
+   * "2000000" → "2.000.000", "2.000000" → "2.000.000" (titik lama dibuang lalu
+   * dikelompokkan ulang). Singkatan & input bermasalah tetap apa adanya — lihat
+   * kebijakan panjang di `lib/money/amount-input.ts` (termasuk syarat "kursor
+   * selalu di ujung" yang membuat ini aman).
+   *
+   * PAKET 44 tetap berlaku: masalah nominal belum diumumkan di sini, karena user
+   * masih mengetik (pesannya baru muncul saat blur/submit).
+   */
   function handleAmountChange(event: ChangeEvent<HTMLInputElement>) {
-    // buang semua non-digit lalu batasi 9 digit (maks Rp 999.999.999)
-    const next = event.target.value.replace(/\D/g, '').slice(0, 9)
-    setDigits(next)
+    const next = parseAmountInput(event.target.value)
+    setAmountText(next.display)
+    /* user masih mengetik → masalah nominal belum diumumkan (baru saat blur/submit) */
+    setAmountSettled(false)
     /* laporan ke shell luar (opsional) — dipakai Split Bill Sheet halaman Joint
        Wallet untuk tahu total yang sedang dibagi, tanpa mengubah perilaku
        shell lama yang tidak mengirim prop ini. */
-    onAmountChange?.(Number(next || '0'))
+    onAmountChange?.(next.amount ?? 0)
+  }
+
+  /**
+   * Field ditinggalkan = momen MENORMALKAN + momen JUJUR (paket 44 & 53):
+   *   · nominal yang sah dirapikan ke BENTUK KANON (`formatAmountDigits`), jadi
+   *     singkatan pun berubah jadi digit bergrup — "2jt" → "2.000.000" — dan
+   *     satu angka hanya punya satu bentuk di layar;
+   *   · masalah input (kalau ada) baru dikatakan di sini, bersamaan dengan chip
+   *     konfirmasi yang menampilkan angka yang akan disimpan.
+   */
+  function handleAmountBlur() {
+    setAmountSettled(true)
+    const next = parseAmountInput(amountText)
+    if (next.problem) return
+    setAmountText(next.amount === null ? next.display : formatAmountDigits(next.amount))
   }
 
   /** Enter / "done" di keyboard numerik = langsung Catat (hemat satu tap) */
@@ -294,6 +588,12 @@ export function TransactionInputEngine({
     if (mode === 'ocr') {
       clearMock()
       setMode('manual')
+      return
+    }
+    /* Kuota AI habis = AI tidak bisa membaca struk. Tombolnya memang sudah mati,
+       tapi guard ini menjaga jalur lain (mis. Enter) tetap jujur. */
+    if (quotaExhausted) {
+      toast(AI_QUOTA_EXHAUSTED_COPY.ocrOff)
       return
     }
     fileRef.current?.click()
@@ -313,7 +613,11 @@ export function TransactionInputEngine({
          aslinya datang dari /api/ocr, keduanya ikut berubah sekali jalan.
          Perilaku engine sendiri tidak berubah sedikit pun: selalu struk 87.500
          dengan nama dari nama file. */
-      setDigits(String(MOCK_RECEIPT_AMOUNT))
+      setAmountText(parseAmountInput(String(MOCK_RECEIPT_AMOUNT)).display)
+      /* hasil AI dipasang sudah "settled": chip konfirmasi langsung tampil supaya
+         user melihat angka yang benar-benar akan disimpan (paket 44) — nominal dari
+         mesin justru yang paling perlu dikonfirmasi manusia. */
+      setAmountSettled(true)
       onAmountChange?.(MOCK_RECEIPT_AMOUNT)
       setNote(receiptNoteFromFileName(file.name))
       setMode('manual')
@@ -328,10 +632,18 @@ export function TransactionInputEngine({
       setMode('manual')
       return
     }
+    /* alasan yang sama dengan OCR: mengaku "mendengar" padahal kuota AI habis
+       adalah janji yang tidak bisa ditepati */
+    if (quotaExhausted) {
+      toast(AI_QUOTA_EXHAUSTED_COPY.voiceOff)
+      return
+    }
     clearMock()
     setMode('voice')
     mockTimer.current = window.setTimeout(() => {
-      setDigits('25000') // hasil "beli kopi 25 ribu"
+      setAmountText(parseAmountInput('25000').display) // hasil "beli kopi 25 ribu"
+      /* sama seperti OCR: hasil mesin langsung "settled" → chip konfirmasi tampil */
+      setAmountSettled(true)
       onAmountChange?.(25000)
       setNote('Beli kopi')
       setMode('manual')
@@ -340,24 +652,70 @@ export function TransactionInputEngine({
   }
 
   /**
-   * ANTI-BLOCKING (Domain 2A.4): tutup panel 0ms → haptic → toast.
-   * Tidak ada modal sukses full-screen, tidak ada `await`, tidak ada spinner.
+   * ANTI-BLOCKING (Domain 2A.4): serahkan payload 0ms → haptic → (shell menutup
+   * panel & menembak toast). Tidak ada modal sukses full-screen, tidak ada
+   * `await`, tidak ada spinner.
+   *
+   * PAKET 33: engine BERHENTI di menyerahkan payload. Toast sukses TIDAK lagi
+   * ditembak dari sini — engine tidak tahu apakah catatannya tersimpan, dan dulu
+   * itulah sumber klaim "kecatat" yang tidak benar. Shell yang menyimpannya
+   * (`useTransactionSubmit` → `recordDraftTransaction`) yang menembak toast,
+   * memakai copy dari `lib/data/history.ts`. Kalau ada shell baru: pakai hook
+   * yang sama, jangan menembak sukses sendiri.
    */
   function handleSubmit() {
-    /* Kunci ganda: tombolnya sudah `disabled`, tapi Enter di keyboard numerik
-       memanggil fungsi ini langsung — jadi guard-nya harus ada di sini, bukan
-       hanya di markup. */
+    /* TIGA lapis penjaga (paket 42 — audit #1):
+         1. kunci SUBMIT sinkron di sini (Enter di keyboard numerik memanggil
+            fungsi ini langsung, jadi guard-nya tidak boleh hanya di markup);
+         2. `clientTxId` yang sama untuk satu pembukaan panel → store menolak
+            baris kembar walau tap kedua lolos;
+         3. tombolnya `disabled` selama `submitting` (umpan balik visual). */
+    if (submitLock.current || submitting) return
+
     if (inputLocked) {
       toast(SUBSCRIPTION_LOCK_COPY.inputHint)
       return
     }
 
-    if (amount <= 0) {
-      // guard lembut — tetap non-blocking, panel sengaja TIDAK ditutup
-      toast('Isi nominalnya dulu ya 🌿')
+    /* Input nominal yang tidak terbaca DIKATAKAN, bukan dibuang diam-diam.
+       PAKET 44: submit = salah satu momen sah untuk mengumumkan masalah, jadi
+       penandanya dipasang lebih dulu supaya kalimatnya ikut tampil di field
+       (bukan cuma lewat toast yang bisa lewat begitu saja). */
+    if (amountProblem) {
+      setAmountSettled(true)
+      toast(amountProblemCopy(amountProblem))
       amountRef.current?.focus()
       return
     }
+
+    if (amount <= 0) {
+      // guard lembut — tetap non-blocking, panel sengaja TIDAK ditutup
+      toast(TRANSACTION_INPUT_COPY.amountNeeded)
+      amountRef.current?.focus()
+      return
+    }
+
+    /* FORM TAMBAH: kategori = PILIHAN USER (paket 54). Tombolnya memang sudah
+       nonaktif selama belum ada pilihan, tapi Enter di keyboard numerik memanggil
+       fungsi ini langsung — jadi penjaganya harus hidup di sini juga. Panelnya
+       TIDAK ditutup dan formnya tidak dikosongkan: user tinggal memilih.
+       (Mode edit tidak pernah sampai ke sini: kategorinya sudah ada di data.) */
+    const chosenCategory = categoryChoice.category
+    if (chosenCategory === null) {
+      toast(TRANSACTION_INPUT_COPY.categoryNeeded)
+      categoryRef.current?.focus()
+      return
+    }
+
+    /* Bentuk kanon juga saat submit (paket 53): panel biasanya langsung ditutup,
+       tapi jalur yang membiarkannya terbuka (submit gagal di store, mode edit,
+       Enter di keyboard) tetap menampilkan satu bentuk angka saja. */
+    setAmountText(formatAmountDigits(amount))
+
+    /* kunci dipasang SEBELUM `onSubmitted` — di sinilah double-tap dulu lolos */
+    submitLock.current = true
+    setSubmitting(true)
+    unlockTimer.current = window.setTimeout(releaseSubmitLock, SUBMIT_LOCK_MS)
 
     /* MODE EDIT: engine berhenti di menyampaikan hasil. Toast "Sip, udah dicatet!"
        justru salah di sini (catatannya lama, bukan baru) dan pujian yang tidak
@@ -368,7 +726,7 @@ export function TransactionInputEngine({
         amount,
         note: note.trim() || initial.name,
         type: typeId,
-        category: category || initial.category,
+        category: chosenCategory || initial.category,
         wallet: wallet || initial.wallet,
         date: date || initial.date,
       })
@@ -376,18 +734,25 @@ export function TransactionInputEngine({
       return
     }
 
-    const pool = type.cheers
-    const cheer = pool[Math.floor(Math.random() * pool.length)] ?? pool[0]
-    const message = cheer.replace('{amount}', formatIDR(amount))
-
-    onSubmitted({ amount, note: note.trim(), type: typeId }) // 1. tutup seketika; animasi tutup jalan di background
-    haptic([30, 50, 30]) // 2. haptic fisik
-
-    toast.success(message) // 3. toast non-blocking, copy gamified acak
+    /* Kategori yang dikirim = pilihan user (form TAMBAH) atau kategori tetap
+       tipe (Tabungan/Transfer) — tidak pernah tebakan lagi (paket 54). Nilainya
+       dijamin salah satu kategori kanon oleh `manualCategoryChoice()`, jadi
+       barisnya pasti terjaring filter kategori di Riwayat.
+       `clientTxId` = kunci idempotensi aksi tulis ini (paket 42). */
+    onSubmitted({
+      amount,
+      note: note.trim(),
+      type: typeId,
+      category: chosenCategory,
+      clientTxId: clientTxId.current,
+    })
+    haptic([30, 50, 30]) // getar fisik sukses — bonus, bukan syarat (lihat `haptic`)
 
     /* Catatan: form TIDAK dikosongkan di sini. Reset dilakukan di effect saat
        panel dibuka lagi, supaya animasi tutup tetap menampilkan nominal yang
-       barusan dicatat — kalau dibersihkan sekarang, angkanya berkedip. */
+       barusan dicatat — kalau dibersihkan sekarang, angkanya berkedip.
+
+       Toast & penutupan panel dipegang shell (lihat doc di atas fungsi ini). */
   }
 
   return (
@@ -401,11 +766,18 @@ export function TransactionInputEngine({
         </div>
       )}
 
-      {/* ── 1. TYPE SELECTOR — satu baris horizontal, 4 pil ──────────────
+      {/* ── 1. TYPE SELECTOR — satu baris horizontal ────────────────────────
           Pengeluaran DEFAULT (accent terracotta). Tap langsung, tanpa menu
-          "mau input bagaimana". */}
-      <div className={cn('grid grid-cols-4', isDialog ? 'gap-2.5' : 'gap-2')}>
-        {TYPES.map((item) => {
+          "mau input bagaimana". Jumlah pilnya mengikuti tipe yang ditawarkan
+          shell (default 3; kalender cuma 2 — paket 49). */}
+      <div
+        className={cn(
+          'grid',
+          TYPE_COLUMNS[visibleTypes.length] ?? 'grid-cols-4',
+          isDialog ? 'gap-2.5' : 'gap-2',
+        )}
+      >
+        {visibleTypes.map((item) => {
           const active = item.id === typeId
           const Icon = item.icon
           return (
@@ -450,7 +822,15 @@ export function TransactionInputEngine({
       <div
         className={cn(
           'mt-4 flex flex-col justify-center',
-          isDialog ? 'min-h-[210px]' : 'min-h-[188px]',
+          /* saat ada field tambahan (halaman Joint), stage diringkas supaya
+             tombol Catat & opsi pembagian tetap muat satu layar tanpa scroll */
+          extraFields
+            ? isDialog
+              ? 'min-h-[150px]'
+              : 'min-h-[140px]'
+            : isDialog
+              ? 'min-h-[210px]'
+              : 'min-h-[188px]',
         )}
       >
         <AnimatePresence mode="wait" initial={false}>
@@ -464,12 +844,23 @@ export function TransactionInputEngine({
               className="flex flex-col items-center"
             >
               {/* nominal RAKSASA — prefix "Rp" + spacer kembar supaya angkanya
-                  benar-benar center panel, bukan center area sisa */}
-              <div className="flex w-full items-baseline justify-center gap-2">
+                  benar-benar center panel, bukan center area sisa.
+                  Tinggi baris DIPAKU (`min-h`) dan isinya di-center: ukuran font
+                  mengecil saat angka makin panjang (paket 53), jadi tanpa paku ini
+                  chip bantuan di bawahnya ikut naik-turun tiap digit. */}
+              <div
+                className={cn(
+                  'flex w-full items-center justify-center gap-2',
+                  isDialog ? 'min-h-[3.25rem]' : 'min-h-[2.75rem] sm:min-h-[3.25rem]',
+                )}
+              >
                 <span
                   aria-hidden
                   className={cn(
-                    'w-9 shrink-0 text-right font-bold text-ink/25',
+                    /* bobot prefix sengaja setara nominal (semibold, bukan bold):
+                       angka di sampingnya kini semibold, dan prefix yang lebih
+                       tebal dari nominalnya justru bikin mata tertarik ke "Rp" */
+                    'w-9 shrink-0 text-right font-semibold text-ink/25',
                     isDialog ? 'text-2xl' : 'text-xl',
                   )}
                 >
@@ -487,6 +878,7 @@ export function TransactionInputEngine({
                   autoFocus={active && !isEdit}
                   value={display}
                   onChange={handleAmountChange}
+                  onBlur={handleAmountBlur}
                   onKeyDown={handleAmountKeyDown}
                   inputMode="numeric"
                   pattern="[0-9]*"
@@ -494,9 +886,15 @@ export function TransactionInputEngine({
                   enterKeyHint="done"
                   placeholder="0"
                   aria-label="Nominal transaksi"
+                  aria-invalid={showAmountProblem || undefined}
+                  aria-describedby="tx-amount-help"
                   className={cn(
-                    'min-w-0 flex-1 bg-transparent text-center font-black leading-none',
-                    'tracking-tighter text-ink tabular-nums outline-none',
+                    /* TIPOGRAFI NOMINAL (paket 53): kelas datang dari token
+                       `lib/typography.ts` (`AMOUNT_INPUT*` lewat `amountInputFont`)
+                       — bukan `font-black tracking-tighter` seperti dulu, karena
+                       input yang sedang diketik harus terasa ringan sementara
+                       identitas angka app ini semibold. */
+                    'min-w-0 flex-1 bg-transparent text-center text-ink outline-none',
                     'placeholder:text-ink/15',
                     amountFont,
                   )}
@@ -504,21 +902,117 @@ export function TransactionInputEngine({
                 <span aria-hidden className="w-9 shrink-0" />
               </div>
 
-              {/* badge kategori "tebakan AI" (mock Smart Default).
-                  Di mode edit badge ini sengaja TIDAK tampil: kategorinya bukan
-                  "tebakan" lagi — nilainya sudah ada dan bisa dikoreksi lewat
-                  field Kategori di bawah, jadi label "(AI Suggested)" di sini
-                  cuma jadi klaim palsu. */}
-              {!isEdit && (
-                <div
+              {/* ── BANTUAN NOMINAL (paket 42, disetel ulang paket 44) ─────────
+                  Tiga keadaannya saling menggantikan, sesuai isi field:
+                    1. belum ada masalah → petunjuk singkatan + batas digit;
+                    2. input tidak terbaca **dan** field sudah ditinggalkan /
+                       submit dicoba → KALIMAT masalahnya. Selama user masih
+                       mengetik, kalimat ini sengaja TIDAK muncul (paket 44);
+                    3. hasil parsing singkatan, atau field baru di-blur dengan
+                       angka sah → chip konfirmasi "Rp 2.500.000?" supaya user
+                       melihat angka yang benar-benar akan disimpan. */}
+              {showAmountProblem ? (
+                <p
+                  id="tx-amount-help"
+                  role="alert"
                   className={cn(
-                    'mt-3.5 inline-flex items-center gap-1.5 rounded-full bg-mint/20 px-3 py-1.5 font-semibold text-forest ring-1 ring-mint/40',
+                    'mt-2.5 max-w-[20rem] text-center leading-relaxed text-hud-terracotta',
+                    isDialog ? 'text-[12.5px]' : 'text-[11.5px]',
+                  )}
+                >
+                  {amountProblemCopy(amountProblem)}
+                </p>
+              ) : showAmountConfirm ? (
+                <p
+                  id="tx-amount-help"
+                  className={cn(
+                    'mt-2.5 inline-flex flex-wrap items-center justify-center gap-1.5 rounded-full bg-sage/40 px-3 py-1.5 font-semibold text-forest ring-1 ring-mint/40',
                     isDialog ? 'text-xs' : 'text-[11.5px]',
                   )}
                 >
-                  <Sparkles className="size-3.5" strokeWidth={2.4} />
-                  {type.suggested}
-                  <span className="font-medium text-forest/50">(AI Suggested)</span>
+                  {TRANSACTION_INPUT_COPY.amountConfirm(amount)}
+                  <span className="font-medium text-forest/55">
+                    {TRANSACTION_INPUT_COPY.amountConfirmHint}
+                  </span>
+                </p>
+              ) : (
+                <p
+                  id="tx-amount-help"
+                  className={cn(
+                    'mt-2.5 text-center leading-relaxed text-ink/40',
+                    isDialog ? 'text-[12px]' : 'text-[11px]',
+                  )}
+                >
+                  {TRANSACTION_INPUT_COPY.amountHint(AMOUNT_MAX_DIGITS)}
+                </p>
+              )}
+
+              {/* ── KATEGORI (paket 54) ────────────────────────────────────────
+                  Form TAMBAH TIDAK menebak kategori lagi. Dua wujudnya:
+                    • tipe yang punya pilihan (Pengeluaran/Pemasukan) → pemilih
+                      kategori, sumbernya hanya `TRANSACTION_CATEGORY_OPTIONS`;
+                      belum memilih = form tertahan (tombol Catat nonaktif);
+                    • tipe yang kategorinya memang ATURAN (Tabungan/Transfer) →
+                      kategori tetapnya disebut apa adanya + alasannya, jadi tidak
+                      ada kontrol mati dan tidak ada tebakan yang disembunyikan.
+                  Di mode edit blok ini tidak tampil: nilainya sudah ada di data
+                  dan dikoreksi lewat field Kategori di bawah. */}
+              {!isEdit && (
+                <div className="mt-4 w-full text-left">
+                  {fixedCategory ? (
+                    <div className="rounded-2xl bg-cream px-3.5 py-2.5 ring-1 ring-soil/12">
+                      <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] font-semibold text-ink">
+                        <Tag className="size-3.5 shrink-0 text-forest" strokeWidth={2.3} aria-hidden />
+                        {TRANSACTION_INPUT_COPY.categoryLabel}
+                        <span className="inline-flex items-center rounded-full bg-sage px-2.5 py-0.5 text-[11.5px] font-semibold text-forest">
+                          {fixedCategory.category}
+                        </span>
+                      </p>
+                      <p className="mt-1.5 text-[11px] leading-relaxed text-ink/45">
+                        {fixedCategory.reason}
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <EditField label={TRANSACTION_INPUT_COPY.categoryLabel}>
+                        <select
+                          ref={categoryRef}
+                          value={category}
+                          onChange={(event) => setCategory(event.target.value)}
+                          aria-label={TRANSACTION_INPUT_COPY.categoryLabel}
+                          aria-describedby="tx-category-help"
+                          aria-invalid={showCategoryNeeded || undefined}
+                          className={cn(
+                            EDIT_CONTROL_CLASS,
+                            showCategoryNeeded && 'bg-cream ring-hud-amber/45',
+                          )}
+                        >
+                          {/* opsi kosong = BELUM memilih, bukan kategori yang
+                              disembunyikan: `category` tetap '' sampai user
+                              menekan satu pilihan, dan '' tidak pernah dikirim */}
+                          <option value="" disabled>
+                            {TRANSACTION_INPUT_COPY.categoryPlaceholder}
+                          </option>
+                          {TRANSACTION_CATEGORY_OPTIONS.map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
+                      </EditField>
+                      <p
+                        id="tx-category-help"
+                        className={cn(
+                          'mt-1.5 text-[11px] leading-relaxed',
+                          showCategoryNeeded ? 'font-semibold text-ink/70' : 'text-ink/45',
+                        )}
+                      >
+                        {showCategoryNeeded
+                          ? TRANSACTION_INPUT_COPY.categoryNeeded
+                          : TRANSACTION_INPUT_COPY.categoryHint}
+                      </p>
+                    </>
+                  )}
                 </div>
               )}
 
@@ -532,11 +1026,13 @@ export function TransactionInputEngine({
               />
 
               {/* ── MODE EDIT: tiga field detail yang nilainya SUDAH ADA ────────
-                  Di mode tambah, kategori/dompet/tanggal ditentukan AI (lihat
-                  badge "AI Suggested") sehingga user tidak perlu memilih apa
-                  pun. Di mode edit nilai itu sudah ada dan justru bagian yang
-                  paling sering salah (kasus paling umum: Minca salah nebak
-                  kategori) — karena itu ketiganya bisa dikoreksi di sini. */}
+                  Di mode tambah, kategori/dompet/tanggal tidak ditentukan AI:
+                  kategori dipilih user (blok di atas), dompet & tanggal dari
+                  konteks. Di mode edit ketiganya sudah punya nilai dan justru
+                  bagian yang paling sering salah (kasus paling umum: Minca salah
+                  nebak kategori) — karena itu bisa dikoreksi di sini, dan nilai
+                  lama yang tidak ada di daftar kanon tetap disertakan
+                  (`withCurrentValue`). */}
               {isEdit && initial && (
                 <div className="mt-3 w-full">
                   <div className="grid gap-2.5 sm:grid-cols-3">
@@ -651,23 +1147,47 @@ export function TransactionInputEngine({
       </div>
       {/* ── 3. AKSI — 📸 & 🎤 mengapit CTA "Catat" ─────────────────────
           layout dialog (web): tombol sekunder jadi pil berlabel karena
-          ruangnya lega; layout sheet (mobile): tetap ikon bulat 56px. */}
-      <div className={cn('flex items-center gap-3', isDialog ? 'mt-6' : 'mt-5')}>
+          ruangnya lega; layout sheet (mobile): tetap ikon bulat 56px.
+
+          Catatan urutan (Stage 2): baris aksinya sengaja berada SETELAH field
+          tambahan di bawah ini — opsi pembagian dulu, baru tombol simpan. */}
+      {/* ── 3a. FIELD TAMBAHAN KONTEKS (opsional) ──────────────────────
+          Halaman Joint Wallet memakai slot ini untuk pemilih split, pemilih
+          "Siapa yang nalangin?", & toggle privasi. Stage 2: posisinya DI ATAS
+          tombol Catat supaya opsi pembagian terlihat SEBELUM user menyimpan —
+          dulu user bisa mencatat tanpa pernah melihat opsinya sama sekali. */}
+      {extraFields && (
+        <div className="mt-4">{extraFields}</div>
+      )}
+
+      <div
+        className={cn(
+          'flex items-center gap-3',
+          extraFields ? 'mt-3' : isDialog ? 'mt-6' : 'mt-5',
+        )}
+      >
         <button
           type="button"
           onClick={handlePickPhoto}
+          /* kuota AI habis → OCR mati (paket 42); alasannya ditulis di bawah baris
+             aksi, bukan dibiarkan sebagai tombol yang tidak menjawab */
+          disabled={quotaExhausted}
+          aria-disabled={quotaExhausted || undefined}
+          aria-describedby={quotaExhausted ? 'tx-ai-off' : undefined}
           aria-label={
             mode === 'ocr' ? 'Batal scan struk' : 'Scan struk dengan kamera'
           }
           className={cn(
             'flex shrink-0 items-center justify-center',
-            'transition-all duration-150 active:scale-95',
+            'transition-all duration-150 active:scale-95 disabled:active:scale-100',
             isDialog
               ? 'h-14 gap-2 rounded-2xl px-5 text-[13px] font-semibold max-lg:px-3.5'
               : 'size-14 rounded-full',
-            mode === 'ocr'
-              ? 'bg-forest text-cream'
-              : 'bg-soil/[0.1] text-ink/70 ring-1 ring-soil/12 hover:bg-soil/[0.1]',
+            quotaExhausted
+              ? 'cursor-not-allowed bg-soil/[0.07] text-ink/30 ring-1 ring-soil/12'
+              : mode === 'ocr'
+                ? 'bg-forest text-cream'
+                : 'bg-soil/[0.1] text-ink/70 ring-1 ring-soil/12 hover:bg-soil/[0.1]',
           )}
         >
           {mode === 'ocr' ? (
@@ -697,34 +1217,54 @@ export function TransactionInputEngine({
         <button
           type="button"
           onClick={handleSubmit}
-          disabled={inputLocked}
-          aria-disabled={inputLocked || undefined}
+          /* Tiga alasan tombol ini bisa mati, dan ketiganya dijelaskan di layar
+             (tidak ada tombol mati tanpa sebab):
+               · `inputLocked`  → masa aktif langganan habis (SubscriptionLockNote)
+               · `submitting`   → satu simpanan sedang jalan ("Menyimpan…")
+               · belum ada kategori (paket 54) → petunjuk "Pilih kategori dulu"
+                 tepat di bawah pemilihnya (`tx-category-help`) */
+          disabled={inputLocked || submitting || categoryChoice.needsChoice}
+          aria-disabled={
+            inputLocked || submitting || categoryChoice.needsChoice || undefined
+          }
+          aria-describedby={categoryChoice.needsChoice ? 'tx-category-help' : undefined}
           className={cn(
             'flex h-14 flex-1 items-center justify-center gap-2 rounded-2xl text-base font-bold transition-all duration-150',
-            inputLocked
+            inputLocked || submitting || categoryChoice.needsChoice
               ? 'cursor-not-allowed bg-ink/[0.07] text-ink/35'
               : 'bg-forest text-cream shadow-[0_14px_28px_-14px_rgba(69,89,78,0.7)] hover:bg-forest-soft active:scale-[0.98]',
           )}
         >
-          {isEdit ? TRANSACTION_INPUT_COPY.submitEdit : TRANSACTION_INPUT_COPY.submit}
+          {submitting
+            ? TRANSACTION_INPUT_COPY.submitting
+            : isEdit
+              ? TRANSACTION_INPUT_COPY.submitEdit
+              : TRANSACTION_INPUT_COPY.submit}
           <Check className="size-5" strokeWidth={2.8} />
         </button>
 
         <button
           type="button"
           onClick={handleVoiceToggle}
+          /* kuota AI habis → input suara mati (paket 42), dengan penjelasan
+             di bawah baris aksi. Catat manual tetap jalan penuh. */
+          disabled={quotaExhausted}
+          aria-disabled={quotaExhausted || undefined}
+          aria-describedby={quotaExhausted ? 'tx-ai-off' : undefined}
           aria-label={
             mode === 'voice' ? 'Batal input suara' : 'Catat pakai suara'
           }
           className={cn(
             'flex shrink-0 items-center justify-center',
-            'transition-all duration-150 active:scale-95',
+            'transition-all duration-150 active:scale-95 disabled:active:scale-100',
             isDialog
               ? 'h-14 gap-2 rounded-2xl px-5 text-[13px] font-semibold max-lg:px-3.5'
               : 'size-14 rounded-full',
-            mode === 'voice'
-              ? 'bg-forest text-cream'
-              : 'bg-soil/[0.1] text-ink/70 ring-1 ring-soil/12 hover:bg-soil/[0.1]',
+            quotaExhausted
+              ? 'cursor-not-allowed bg-soil/[0.07] text-ink/30 ring-1 ring-soil/12'
+              : mode === 'voice'
+                ? 'bg-forest text-cream'
+                : 'bg-soil/[0.1] text-ink/70 ring-1 ring-soil/12 hover:bg-soil/[0.1]',
           )}
         >
           {mode === 'voice' ? (
@@ -745,9 +1285,24 @@ export function TransactionInputEngine({
         <SubscriptionLockNote className={isDialog ? 'mt-3' : 'mt-2.5'} />
       )}
 
-      {/* field tambahan khusus konteks (opsional) — halaman Joint Wallet memakai
-          slot ini untuk pemilih split & toggle "Sembunyikan dari pasangan" */}
-      {extraFields && <div className="mt-4">{extraFields}</div>}
+      {/* penjelasan kenapa scan struk & input suara mati (paket 42): kuota AI
+          habis. Dua tombol itu memang dimatikan, tapi yang TIDAK ikut mati
+          disebutkan juga — user butuh tahu ia masih bisa mencatat. */}
+      {quotaExhausted && (
+        <p
+          id="tx-ai-off"
+          role="status"
+          className={cn(
+            'rounded-2xl bg-hud-amber/15 px-3.5 py-2.5 leading-relaxed text-ink/65 ring-1 ring-hud-amber/25',
+            isDialog ? 'mt-3 text-[12.5px]' : 'mt-2.5 text-[11.5px]',
+          )}
+        >
+          <span className="mr-1.5 inline-flex items-center rounded-full bg-hud-amber/40 px-2 py-0.5 text-[10px] font-bold tracking-[0.08em] text-ink/70 uppercase">
+            {AI_QUOTA_EXHAUSTED_COPY.badge}
+          </span>
+          {AI_QUOTA_EXHAUSTED_COPY.body}
+        </p>
+      )}
 
       {/* petunjuk pintasan keyboard — cuma relevan di web */}
       {isDialog && (

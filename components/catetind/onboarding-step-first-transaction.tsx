@@ -2,9 +2,7 @@
 
 import { useEffect, useRef, type KeyboardEvent } from 'react'
 import {
-  ArrowLeftRight,
   PiggyBank,
-  Sparkles,
   TrendingDown,
   TrendingUp,
   type LucideIcon,
@@ -27,18 +25,34 @@ import type { TransactionTypeId } from '@/components/dashboard/transaction-input
  * olive) sengaja tidak dipakai di sini supaya layar onboarding tetap tenang.
  */
 
-/** 4 tipe transaksi — id, urutan, ikon, dan label sama dengan engine */
+/**
+ * Tipe transaksi pertama — id, urutan, ikon, dan label sama dengan engine.
+ *
+ * PAKET 54: field `suggested` DIHAPUS dari sini bersama baris "· tebakan AI"
+ * di bawah nominal. Dua alasan:
+ *   1. kategorinya memang TIDAK PERNAH disimpan — `OnboardingResult.firstTransaction`
+ *      cuma membawa tipe, nominal, dan deskripsi, jadi label itu mengaku-ngaku
+ *      sesuatu yang tidak ada di data user (bukan sekadar tebakan: karangan);
+ *   2. tebakan kategori di jalur manual sudah dicabut dari engine, dan form ini
+ *      adalah versi ringkas dari engine yang sama — perilakunya tidak boleh
+ *      berbeda cerita.
+ * Kategori catatan pertama bisa dipilih user kapan saja lewat mode edit di
+ * Riwayat (`EDIT_TRANSACTION_COPY`) setelah catatannya benar-benar tercatat.
+ *
+ * PAKET 55: chip `Transfer` juga DIHAPUS dari sini, sejalan dengan engine (satu
+ * alur, satu sumber tipe). Pindah dana butuh dompet tujuan; form tiga ketukan
+ * ini tidak punya tempat untuk menanyakannya, jadi menawarkannya di sini cuma
+ * membuat user memilih aksi yang tidak bisa diselesaikan (dan saldo dompetnya
+ * akan berbeda dari cerita di onboarding).
+ */
 const TX_TYPES: {
   id: TransactionTypeId
   label: string
   icon: LucideIcon
-  /** kategori "tebakan AI" (mock Smart Default, Domain 2A.2) */
-  suggested: string
 }[] = [
-  { id: 'expense', label: 'Keluar', icon: TrendingDown, suggested: 'Makanan' },
-  { id: 'income', label: 'Masuk', icon: TrendingUp, suggested: 'Gaji' },
-  { id: 'saving', label: 'Tabungan', icon: PiggyBank, suggested: 'Dana Darurat' },
-  { id: 'transfer', label: 'Transfer', icon: ArrowLeftRight, suggested: 'Antar Dompet' },
+  { id: 'expense', label: 'Keluar', icon: TrendingDown },
+  { id: 'income', label: 'Masuk', icon: TrendingUp },
+  { id: 'saving', label: 'Tabungan', icon: PiggyBank },
 ]
 
 export function OnboardingStepFirstTransaction({
@@ -75,7 +89,6 @@ export function OnboardingStepFirstTransaction({
     return () => window.clearTimeout(id)
   }, [done])
 
-  const suggested = TX_TYPES.find((item) => item.id === type) ?? TX_TYPES[0]
   const display = digitsToDisplay(amountDigits)
 
   function handleAmountKeyDown(event: KeyboardEvent<HTMLInputElement>) {
@@ -154,13 +167,6 @@ export function OnboardingStepFirstTransaction({
         />
         <span aria-hidden className="w-7 shrink-0" />
       </div>
-
-      {/* kategori tebakan AI — satu baris redup, bukan chip besar */}
-      <p className="mt-3 flex items-center justify-center gap-1.5 text-[12px] font-medium text-ink/40">
-        <Sparkles className="size-3.5 text-forest" strokeWidth={2.2} aria-hidden />
-        {suggested.suggested}
-        <span className="text-ink/25">· tebakan AI</span>
-      </p>
 
       {/* ── catatan (opsional) ─────────────────────────────────────────── */}
       <input

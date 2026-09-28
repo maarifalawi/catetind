@@ -1,11 +1,12 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
 import { toast } from 'sonner'
 import { Heart, HeartHandshake, Pencil, Plus, ReceiptText, Scale } from 'lucide-react'
 import { ScreenShell } from './screen-shell'
 import { GlobalPrivacyToggle } from './global-privacy-toggle'
+import { ContextSwitcher } from './context-switcher'
+import { useMoneyContext } from './money-context-provider'
 import { usePrivacy } from './privacy-provider'
 import { JointBalanceScale } from './joint-balance-scale'
 import { JointStatsRow } from './joint-stats-row'
@@ -19,20 +20,16 @@ import {
   JointPushBanner,
   JointWeeklyRecapBanner,
 } from './joint-recap-banners'
-import { formatIDR } from '@/lib/wallets'
 import {
   DEMO_FORCE_MONTHLY_RECAP,
   DEMO_FORCE_WEEKLY_RECAP,
   DEMO_JOINED_CELEBRATION,
-  DEMO_PARTNER_JOINED,
   DEMO_REALTIME_MOCK,
-  INITIAL_JOINT_TRANSACTIONS,
-  INITIAL_JOINT_WALLET,
   JOINT_ME,
+  JOINT_ADDED_TOAST,
+  JOINT_MONTH_KEY,
   JOINT_MONTH_LABEL,
   JOINT_PARTNER,
-  JOINT_TODAY_ISO,
-  PRIVATE_CATEGORY,
   PUSH_ALERT_THRESHOLD,
   REALTIME_ARRIVAL,
   REALTIME_ARRIVAL_DELAY,
@@ -41,10 +38,32 @@ import {
   jointDateLong,
   moneyLabel,
   recapBannerVisibility,
+  splitSpecOf,
   type JointPerson,
+  type JointSettlementRecord,
   type JointTransaction,
-  type JointWallet,
+  type SettlementMethod,
 } from '@/lib/data/joint'
+import {
+  addJointMember,
+  addJointTransaction,
+  applyJointRow,
+  carryOverRecordFor,
+  clearJointArrivalBadge,
+  jointLedgerFeed,
+  jointNotes,
+  jointPartnerJoined,
+  recordSettlement,
+  renameJointWallet,
+  /* alias: halaman ini punya state pajangan `paidBy` untuk form tambah, jadi
+     setter store-nya diberi nama sendiri supaya tidak tertukar */
+  setPaidBy as setJointPaidBy,
+  settlementRecordFor,
+  updateSplit,
+  useJointStore,
+} from '@/lib/money/joint-store'
+import { trackMoneyEvent } from '@/lib/analytics'
+import { JOINT_CONTEXT_COPY, CONTEXT_LABEL, contextCaption } from '@/lib/data/money-context'
 import { cn } from '@/lib/utils'
 
 /* ── Joint Wallet (/app/joint) — PRD Domain 2D ───────────────────────────────
@@ -68,9 +87,20 @@ import { cn } from '@/lib/utils'
    jangan menghitung ulang nominal di komponen.
 
    Lapisan "trust"-nya: toggle privasi (🔒) yang menyembunyikan detail transaksi
-   dari pasangan tanpa mengubah nominal yang ikut dihitung (audit #3). Semua
-   state di halaman ini mock lokal — tinggal diganti langganan Supabase Realtime
-   + tabel `wallets`/`transactions`.
+   dari pasangan tanpa mengubah nominal yang ikut dihitung (audit #3).
+
+   PEMILIK DATA (paket 52 · temuan F laporan 46): halaman ini berhenti memegang
+   salinan datanya sendiri. Kantong, buku besar, penanda settle, dan daftar
+   anggota hidup di `lib/money/joint-store.ts` (persist IndexedDB key `joint`),
+   jadi refresh tidak mengembalikannya ke seed dan dua tab melihat state yang
+   sama. Yang tinggal di sini HANYA state pajangan: sheet terbuka/tutup, draft
+   pembagian, nominal yang sedang diketik, dan indikator "sedang mencatat".
+
+   Realtime: baris dari server masuk lewat STORE (`applyRemoteJointRow()`).
+   Di demo TANPA sesi Supabase, yang hidup tetap TIMER MOCK di bawah — dan itu
+   jujur disebut mock: hanya menyala saat `DEMO_REALTIME_MOCK`
+   (`NEXT_PUBLIC_DEMO=1`), tidak pernah menimpa baris yang sudah ada (dedupe di
+   store), dan tidak diklaim sebagai sinkronisasi antar-perangkat.
    ────────────────────────────────────────────────────────────────────────── */
 
 export function JointScreen() {
@@ -78,28 +108,47 @@ export function JointScreen() {
   const me: JointPerson = JOINT_ME
   const partner: JointPerson = JOINT_PARTNER
 
+  /* konteks uang (Pribadi/Keluarga/Bersama) — state GLOBAL (paket 47).
+     Halaman ini MEMANG konteks `bersama` (PRD Domain 2D): kantong ini khusus
+     uang patungan, jadi kalau konteks aktif bukan `bersama`, halaman tidak
+     menampilkan daftar kosong tanpa sebab — ia menjelaskan + menyediakan satu
+     ketukan untuk pindah (`setContext('bersama')`). */
+  const { context, setContext } = useMoneyContext()
+
   /* privasi nominal: state GLOBAL (PrivacyProvider) */
   const { masked: isMasked } = usePrivacy()
-  const [wallet, setWallet] = useState<JointWallet>(INITIAL_JOINT_WALLET)
-  const [nameDraft, setNameDraft] = useState(INITIAL_JOINT_WALLET.name)
+  /* Timer mock realtime di bawah menembak toast dari dalam callback, jadi ia
+     membaca sensor lewat ref ini — nilai TERKINI selalu dipakai, tapi mengubah
+     tombol mata tidak me-restart urutan "sedang mencatat → transaksi masuk"
+     (yang bikin transaksi & toast tampil dua kali). */
+  const maskedRef = useRef(isMasked)
+  maskedRef.current = isMasked
+
+  /* ── SUMBER TUNGGAL: kantong bersama (store) ───────────────────────────── */
+  const joint = useJointStore()
+  const wallet = joint.wallet
+  const partnerJoined = jointPartnerJoined(joint)
+  const [nameDraft, setNameDraft] = useState(wallet.name)
   const [editingName, setEditingName] = useState(false)
-  const [partnerJoined, setPartnerJoined] = useState(DEMO_PARTNER_JOINED)
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [showCelebration, setShowCelebration] = useState(DEMO_JOINED_CELEBRATION)
-  const [transactions, setTransactions] = useState<JointTransaction[]>(INITIAL_JOINT_TRANSACTIONS)
-  /** settlement bulan ini sudah ditandai beres → timbangan dikunci rata */
-  const [settled, setSettled] = useState(false)
+  /**
+   * Settlement bukan lagi state halaman: penanda per bulannya hidup di store,
+   * dan baris ledger-nya DITURUNKAN dari penanda itu (`jointLedgerFeed`) — jadi
+   * membuka halaman berkali-kali tidak pernah menggandakan barisnya, dan bulan
+   * berikutnya otomatis menerima sisa yang belum tertutup.
+   */
   const [showSettlementModal, setShowSettlementModal] = useState(false)
-  /** pembagian yang diganti user per transaksi (id → draft) */
-  const [splitOverrides, setSplitOverrides] = useState<Record<string, JointSplitDraft>>({})
-  /** transaksi yang sedang diatur pembagiannya ('new' = transaksi baru di form) */
+  /** catatan yang sedang diatur pembagiannya ('new' = catatan baru di form) */
   const [splitTarget, setSplitTarget] = useState<string | null>(null)
   const [showSplitSheet, setShowSplitSheet] = useState(false)
-  /** pembagian untuk transaksi yang belum dicatat */
+  /** pembagian untuk catatan yang belum dicatat */
   const [draftSplit, setDraftSplit] = useState<JointSplitDraft | null>(null)
   const [showAddSheet, setShowAddSheet] = useState(false)
   const [pendingAmount, setPendingAmount] = useState(0)
   const [privateOn, setPrivateOn] = useState(false)
+  /** kantong yang nalangin di form tambah — default Aku (Stage 2 #3) */
+  const [paidBy, setPaidBy] = useState<string>(me.id)
   /* mock Supabase Realtime (5C) */
   const [partnerTyping, setPartnerTyping] = useState(false)
   const [pushTx, setPushTx] = useState<JointTransaction | null>(null)
@@ -122,6 +171,10 @@ export function JointScreen() {
   const showMonthlyRecap = recapWindow?.monthly ?? false
   const showWeeklyRecap = recapWindow?.weekly ?? false
 
+  /* Penanda settle (Stage 2 #5) tidak lagi dipulihkan lewat efek mount: ia hidup
+     di store, dan halaman cuma membaca turunannya — lihat blok "DATA TURUNAN"
+     di bawah (`settlementRecordFor`, `carryOverRecordFor`, `jointLedgerFeed`). */
+
   /** semua timer halaman dibersihkan saat unmount (pola yang sama dengan
    *  halaman Tagihan & Kekayaan) supaya tidak ada set-state di komponen mati */
   const timers = useRef<number[]>([])
@@ -133,58 +186,69 @@ export function JointScreen() {
     timers.current.push(window.setTimeout(fn, ms))
   }, [])
   /* ── DATA TURUNAN ──────────────────────────────────────────────────────── */
-  /** pembagian pilihan user ditempelkan ke transaksinya supaya label di
-   *  timeline & angka di Balance Scale selalu berasal dari data yang sama */
-  const feed = useMemo<JointTransaction[]>(
-    () =>
-      transactions.map((tx) => {
-        const override = splitOverrides[tx.id]
-        if (!override) return tx
-        return {
-          ...tx,
-          splitType: override.splitType,
-          splits: override.splits,
-          payerId: override.payerId,
-        }
-      }),
-    [transactions, splitOverrides],
-  )
+  /**
+   * Pembagian tidak lagi ditempel dari `splitOverrides` milik halaman: pilihan
+   * user DITULIS ke catatannya (`updateSplit()` di store), jadi label timeline,
+   * angka timbangan, dan baris ledger membaca objek yang sama — tidak ada dua
+   * sumber kebenaran yang bisa berbeda cerita.
+   */
+  const feed = useMemo(() => jointLedgerFeed(joint, JOINT_MONTH_KEY), [joint])
+  /** bulan ini sudah disettle? → timbangan dikunci rata (Stage 2 #5) */
+  const settled = settlementRecordFor(joint, JOINT_MONTH_KEY) !== null
+  /** sisa bulan lalu yang belum tertutup → baris pembuka bulan ini */
+  const carryOverRecord = carryOverRecordFor(joint, JOINT_MONTH_KEY)
 
   const settlement = useMemo(() => computeSettlement(feed, { settled }), [feed, settled])
 
-  /* ── MOCK SUPABASE REALTIME (Section 5C) ────────────────────────────────
-     Dua tahap: indikator "Dany sedang mencatat..." → transaksi partner masuk
-     (slide-in dari kanan) + toast ringan. Semua di-unmount-safe lewat timers. */
+  /* ── MOCK SUPABASE REALTIME (Section 5C) — demo yang jujur disebut demo ───
+     Dua tahap: indikator "Dany sedang mencatat..." → catatan partner masuk
+     (slide-in dari kanan) + toast ringan.
+
+     PAKET 52: timer ini BUKAN realtime. Ia hidup HANYA saat `DEMO_REALTIME_MOCK`
+     (`NEXT_PUBLIC_DEMO=1`) dan hanya kalau kantong ini sudah punya anggota lain;
+     di build produksi saklarnya mati, jadi tidak ada satu pun catatan yang
+     "muncul sendiri". Barisnya masuk lewat STORE (`applyJointRow`) — jalur yang
+     sama dengan baris dari Postgres Changes — sehingga dedupe & penyimpanannya
+     gratis: kalau id-nya sudah ada, tidak ada yang ditulis dan toast-nya tidak
+     diulang. Konsekuensinya jujur: animasi "baris partner masuk" hanya terjadi
+     sekali per perangkat, karena barisnya kini benar-benar tersimpan. */
   useEffect(() => {
     if (!DEMO_REALTIME_MOCK || !partnerJoined) return
 
     const typing = window.setTimeout(() => setPartnerTyping(true), REALTIME_TYPING_DELAY)
     const arrival = window.setTimeout(() => {
       setPartnerTyping(false)
-      setTransactions((prev) =>
-        prev.some((tx) => tx.id === REALTIME_ARRIVAL.id) ? prev : [REALTIME_ARRIVAL, ...prev],
-      )
-      toast(
-        `${partner.avatar} ${partner.name} baru catat: ${REALTIME_ARRIVAL.description} ${formatIDR(
-          REALTIME_ARRIVAL.amount,
-        )} 🛒`,
-      )
+      const stored = applyJointRow(REALTIME_ARRIVAL)
+      /* hanya baris yang BENAR-BENAR baru yang dikabarkan */
+      if (stored) {
+        toast(
+          `${partner.avatar} ${partner.name} baru catat: ${stored.description} ${moneyLabel(
+            stored.amount,
+            maskedRef.current,
+          )} 🛒`,
+        )
+      }
       /* badge "Baru" dilepas lagi setelah animasi slide-in selesai */
-      const clearBadge = window.setTimeout(
-        () =>
-          setTransactions((prev) =>
-            prev.map((tx) => (tx.id === REALTIME_ARRIVAL.id ? { ...tx, justArrived: false } : tx)),
-          ),
-        4200,
-      )
-      timers.current.push(clearBadge)
+      later(() => clearJointArrivalBadge(REALTIME_ARRIVAL.id), 4200)
     }, REALTIME_ARRIVAL_DELAY)
 
     return () => {
       window.clearTimeout(typing)
       window.clearTimeout(arrival)
     }
-  }, [partnerJoined, partner.avatar, partner.name])
+  }, [partnerJoined, partner.avatar, partner.name, later])
+
+  /* ── REALTIME SUNGGUHAN — sekarang milik STORE (paket 52) ────────────────
+     Langganan Postgres Changes pada `joint_transactions` tidak lagi dipegang
+     halaman ini. `lib/money/joint-store.ts` yang membaca id dompet dari tabel
+     `joint_wallets` (bukan id kanon `joint_1` yang tidak pernah ada di sana),
+     menarik baris yang sudah ada, lalu membuka channel untuk id itu dan
+     menerima tiap baris lewat `applyRemoteJointRow()`. Alasannya sederhana:
+     kalau halaman yang berlangganan, dua tab bisa punya dua channel untuk satu
+     kantong yang sama — dan baris yang diterima salah satu tab tidak pernah
+     sampai ke tab lain. Channel tetap dibuang saat tab disembunyikan
+     (`lib/supabase/realtime.ts`). */
+
 
   /* ── HANDLER ───────────────────────────────────────────────────────────── */
 
@@ -192,8 +256,10 @@ export function JointScreen() {
     const next = nameDraft.trim()
     setEditingName(false)
     if (!next || next === wallet.name) return
-    setWallet((prev) => ({ ...prev, name: next }))
-    toast.success('Nama dompet diperbarui 💚')
+    /* satu pintu: nama kantong ditulis ke store (persist IndexedDB) — dulu
+       `setWallet()` halaman saja, jadi nama yang diubah user hilang saat refresh */
+    const saved = renameJointWallet(next)
+    if (saved) toast.success('Nama dompet diperbarui 💚')
   }, [nameDraft, wallet.name])
 
   /** buka Split Bill Sheet untuk transaksi tertentu, atau untuk transaksi baru */
@@ -202,7 +268,17 @@ export function JointScreen() {
     setShowSplitSheet(true)
   }, [])
 
+  /**
+   * Buka Split Bill Sheet untuk transaksi BARU.
+   *
+   * Stage 2 #4 & #6: sheet add DITUTUP dulu sebelum sheet split dibuka. Dulu
+   * dua `Drawer.Root` z-[70] bisa hidup bersamaan (nested Vaul), sehingga fokus
+   * & tombol back jadi tidak menentu. Setelah pembagian disimpan, sheet add
+   * dibuka lagi supaya user tinggal menekan "Catat" — total ≤ 3 tap dari FAB
+   * (Atur pembagian → preset 60/40 → Simpan Pembagian).
+   */
   const openSplitForNew = useCallback(() => {
+    setShowAddSheet(false)
     setSplitTarget('new')
     setShowSplitSheet(true)
   }, [])
@@ -210,71 +286,196 @@ export function JointScreen() {
   const handleSaveSplit = useCallback(
     (draft: JointSplitDraft) => {
       setShowSplitSheet(false)
+      /* JEJAK (paket 43): pembagian menentukan siapa menanggung berapa. Yang
+         dikirim cuma MODE-nya (+ persen untuk mode persentase) — nominalnya,
+         bahkan untuk mode nominal, tidak pernah ikut. */
+      const split = draft.split
+      trackMoneyEvent(
+        'joint_split_changed',
+        split.type === 'percentage'
+          ? {
+              mode: split.type,
+              me_percent: split.percents[me.id] ?? null,
+              partner_percent: split.percents[partner.id] ?? null,
+            }
+          : { mode: split.type },
+      )
       if (splitTarget === 'new') {
         setDraftSplit(draft)
         toast.success('Pembagian disiapkan ✓', {
           description: 'Berlaku saat transaksinya dicatat.',
         })
+        /* lanjutkan form-nya: nominal, "siapa yang nalangin", & toggle privasi
+           tidak perlu diisi ulang karena semuanya milik halaman, bukan sheet */
+        setShowAddSheet(true)
         return
       }
       if (!splitTarget) return
-      setSplitOverrides((prev) => ({ ...prev, [splitTarget]: draft }))
-      toast.success('Pembagian diperbarui ✓')
+      /* pembagian pilihan user DITULIS ke catatannya (store) — bukan disimpan
+         sebagai override di halaman, supaya angka yang dilihat halaman lain &
+         ekspor membaca pembagian yang sama */
+      const updated = updateSplit(splitTarget, split)
+      if (updated) toast.success('Pembagian diperbarui ✓')
+      else toast.error('Catatan itu tidak bisa diubah pembagiannya')
     },
-    [splitTarget],
+    [splitTarget, me.id, partner.id],
   )
 
-  /** transaksi baru dari FAB: disisipkan ke timeline (dan ikut hitungan
-   *  settlement + hero "Total Pengeluaran Bersama" — TIDAK ada saldo dompet
-   *  yang dikurangi, karena dompet ini buku besar bersama, bukan rekening). */
+  /**
+   * transaksi baru dari FAB: disisipkan ke timeline (dan ikut hitungan
+   * settlement + hero "Total Pengeluaran Bersama" — TIDAK ada saldo dompet
+   * yang dikurangi, karena dompet ini buku besar bersama, bukan rekening).
+   *
+   * KEPUTUSAN TERTULIS (paket 37/49) — buku besar BERSAMA ini SENGAJA terpisah
+   * dari ledger pribadi (`lib/money/store.ts`), dan itu bukan kelalaian:
+   *
+   *   1. Yang menanggung uangnya adalah orang, bukan dompet. Satu pengeluaran
+   *      bareng punya `paidByUserId` + pembagian (`SplitSpec`) yang tidak punya
+   *      padanan di ledger pribadi — memaksakannya ke sana berarti mengarang
+   *      dompet pribadi yang tidak ada, atau menggeser saldo dompet user tanpa
+   *      satu pun rupiah benar-benar berpindah.
+   *   2. Cerita yang dibaca user juga beda: Riwayat pribadi menjawab "dompetku
+   *      berapa", halaman ini menjawab "siapa berutang berapa". Menggabungkan
+   *      keduanya membuat dua pertanyaan itu dijawab satu angka.
+   *   3. Karena itu pemilik data di sini adalah STORE kantong bersama
+   *      (`lib/money/joint-store.ts` — paket 52), dan toast-nya
+   *      (`JOINT_ADDED_TOAST`) muncul setelah baris itu BENAR-BENAR ditulis —
+   *      bukan setelah `bus` pribadi yang tidak tahu apa-apa.
+   *
+   * Yang wajib tetap berlaku: kalau alur joint ini kelak menyentuh kas pribadi
+   * (mis. menarik biaya bareng dari BCA), jalurnya `postTransfer()` /
+   * `postTransaction()` di store uang — bukan disisipkan diam-diam ke daftar di
+   * sini.
+   */
   const handleAddTransaction = useCallback(
     (input: {
       description: string
       amount: number
+      /** kategori pilihan user dari form engine (paket 54) */
+      category?: string
       isPrivate: boolean
       split: JointSplitDraft | null
+      /** kantong yang keluar uang (dari pemilih "Siapa yang nalangin?") */
+      paidByUserId: string
     }) => {
-      const now = new Date()
-      const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
-      const tx: JointTransaction = {
-        id: `tx-${now.getTime()}`,
-        userId: me.id,
+      const tx = addJointTransaction({
         description: input.description,
         amount: input.amount,
-        category: input.isPrivate ? PRIVATE_CATEGORY : 'Lainnya',
-        date: JOINT_TODAY_ISO,
-        time,
-        splitType: input.split?.splitType ?? 'equal',
-        splits: input.split?.splits,
-        payerId: input.split?.payerId,
+        /* kategori datang dari PILIHAN USER di form (paket 54). Sebelumnya
+           halaman ini tidak pernah mengirimkannya, jadi setiap catatan baru
+           masuk sebagai `JOINT_DEFAULT_CATEGORY` dan rincian kategori di halaman
+           ini tidak pernah mencerminkan apa yang user pilih. Catatan privat
+           tetap dianonimkan store (`PRIVATE_CATEGORY`) — aturan privasi, bukan
+           kelalaian. */
+        category: input.category,
         isPrivate: input.isPrivate,
-        privateForUser: input.isPrivate ? me.id : undefined,
+        /* kantong yang keluar uang datang dari pemilih "Siapa yang nalangin?"
+           (Stage 2 #3) — bukan lagi selalu pencatat. Catatan yang Dany talangi
+           tetap dihitung sebagai pengeluaran Dany walau Jon yang mengetiknya
+           (audit fintech #4). */
+        paidByUserId: input.paidByUserId,
+        /* saat privat, pembagiannya TIDAK dikirim: porsi catatan privat bukan
+           urusan pasangan — dan store memaksa pembagiannya jadi bagi rata,
+           sementara NOMINALnya tetap ikut ditimbang (audit fintech #3). */
+        split: input.isPrivate ? null : (input.split?.split ?? null),
+      })
+
+      /* store menolak (nominal ≤ 0 / kantong bukan anggota) → TIDAK ada yang
+         ditulis, jadi jangan mengabarkan "tersimpan" */
+      if (!tx) {
+        toast.error('Catatan bareng gagal disimpan — cek nominalnya ya')
+        return
       }
 
-      setTransactions((prev) => [tx, ...prev])
       setDraftSplit(null)
       setPrivateOn(false)
       setPendingAmount(0)
+      setPaidBy(me.id)
+
+      /* Konfirmasi ditembak DI SINI (bukan oleh panel input) sejak paket 33:
+         panel cuma menyerahkan draft, pemilik datanya yang tahu catatannya
+         tersimpan. */
+      toast.success(JOINT_ADDED_TOAST)
 
       /* Section 11: pengeluaran bareng > Rp 500.000 memicu banner gaya push */
-      if (!input.isPrivate && input.amount > PUSH_ALERT_THRESHOLD) setPushTx(tx)
+      if (!input.isPrivate && tx.amount > PUSH_ALERT_THRESHOLD) setPushTx(tx)
     },
     [me.id],
   )
 
-  const handleSettle = useCallback(() => setSettled(true), [])
+  /**
+   * "Tandai Sudah Settle" = MENULIS penanda, bukan sekadar mengubah tampilan
+   * (Stage 2 #5 · dipindah ke store di paket 52).
+   *
+   * Yang ditulis hanya PENANDA bulan itu (`recordSettlement`) ke store; baris
+   * ledger `settlement {from, to, amount, method, month}` DITURUNKAN dari
+   * penanda tersebut oleh `jointLedgerFeed()` — ditandai `isSettlement` supaya
+   * tidak ikut "Total Pengeluaran Bersama", tapi tetap masuk lapisan net
+   * sehingga timbangannya benar-benar rata. Karena barisnya turunan (id-nya
+   * `settle-<bulan>-<dari>-<ke>`), refresh berkali-kali tidak pernah
+   * menggandakannya.
+   *
+   * `carryOver` = bagian utang yang TIDAK tertutup transfer ini. Alur sekarang
+   * selalu mentransfer penuh (tombolnya baru muncul di atas ambang settle), jadi
+   * nilainya 0 — tapi jalurnya tetap ada & teruji: sisanya otomatis jadi
+   * pembuka bulan berikutnya lewat `buildCarryOverEntry()`.
+   */
+  const handleSettle = useCallback(
+    (method: SettlementMethod) => {
+      const record: JointSettlementRecord = {
+        month: settlement.month,
+        from: settlement.whoOwes.id,
+        to: settlement.whoIsOwed.id,
+        amount: settlement.settlementAmount,
+        method,
+        carryOver: Math.max(
+          0,
+          Math.round(Math.abs(settlement.myNet) - settlement.settlementAmount),
+        ),
+      }
+      const stored = recordSettlement(record)
+      if (!stored) {
+        toast.error('Settle-nya gagal disimpan — coba lagi ya')
+        return
+      }
+      /* JEJAK (paket 43): settle menyelesaikan kewajiban bulan ini. Yang dikirim
+         hanya arah + metode transfernya — nominal transfer TIDAK dikirim. */
+      trackMoneyEvent('settlement_recorded', {
+        scope: 'joint',
+        direction: stored.from === me.id ? 'out' : 'in',
+        method,
+      })
+    },
+    [settlement, me.id],
+  )
 
-  /** pasangan bergabung (mock 8C): selebrasi singkat → dompet bersama aktif */
+  /** pasangan bergabung (8C): selebrasi singkat → kantong bersama aktif */
   const handlePartnerJoined = useCallback(() => {
     setShowInviteModal(false)
     setShowCelebration(true)
   }, [])
 
+  /**
+   * Selebrasi selesai = pasangan BENAR-BENAR tercatat sebagai anggota
+   * (`addJointMember`) — dulu cuma `setPartnerJoined(true)` di halaman, jadi
+   * status "sudah gabung" hilang setiap refresh.
+   */
   const finishCelebration = useCallback(() => {
     setShowCelebration(false)
-    setPartnerJoined(true)
+    addJointMember(partner.id)
     later(() => toast.success('Dompet bersama kalian aktif 💚'), 400)
-  }, [later])
+  }, [later, partner.id])
+
+  /**
+   * Koreksi kantong yang keluar uang ("Siapa yang nalangin?" yang salah pilih).
+   * Uangnya tidak berpindah, tapi timbangan & arah transfer ikut berubah — dan
+   * itu memang tujuannya (audit fintech #4).
+   */
+  const handleChangePaidBy = useCallback((tx: JointTransaction, userId: string) => {
+    const updated = setJointPaidBy(tx.id, userId)
+    if (!updated) return
+    toast.success(`Dicatat dari kantong ${userId === JOINT_ME.id ? me.name : partner.name} ✓`)
+  }, [me.name, partner.name])
 
   /* nilai awal Split Bill Sheet: pembagian transaksi terpilih / draft transaksi baru */
   const splitTargetTx =
@@ -284,14 +485,14 @@ export function JointScreen() {
     splitTarget === 'new'
       ? (draftSplit ?? undefined)
       : splitTargetTx
-        ? {
-            splitType: splitTargetTx.splitType,
-            splits: splitTargetTx.splits,
-            payerId: splitTargetTx.payerId,
-          }
+        ? /* bentuk kanonik lewat `splitSpecOf()` — jalur migrasi data lama
+             (splitType/splits) hidup di lib, bukan di komponen */
+          { split: splitSpecOf(splitTargetTx) }
         : undefined
 
-  const isEmptyJoint = partnerJoined && feed.length === 0
+  /* baris settlement bukan "catatan": kalau yang ada cuma baris settle, empty
+     state-nya harus tetap muncul */
+  const isEmptyJoint = partnerJoined && jointNotes(joint).length === 0
   return (
     <ScreenShell>
       {/* FULL-WIDTH (audit #4): halaman ini dulu dikurung dalam satu kolom
@@ -299,13 +500,58 @@ export function JointScreen() {
           konten melebar penuh (offset sidebar ditangani ScreenShell) dan
           dipecah dua kolom di desktop — lihat grid di bawah. */}
       <div className="w-full">
+        {/* ── KONTEKS UANG (paket 47) ─────────────────────────────────────────
+            Halaman ini MEMANG konteks `bersama` (PRD 2D) dan punya DUA wujud:
+            flow "Ajak Pasangan" (belum gabung) dan kantong bersama. Bar konteks
+            ini diletakkan di ATAS percabangan itu supaya kedua wujud sama-sama
+            punya switcher (mobile + desktop) dan sama-sama jujur saat konteks
+            aktif bukan `bersama`. */}
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
+          <p className="text-center text-[11.5px] font-medium text-ink/45 lg:text-left">
+            {contextCaption(context)}
+          </p>
+          {/* dua penempatan seperti Home/Budget: satu untuk mobile, satu untuk
+              desktop (paket 47) — bukan satu kontrol yang direntangkan */}
+          <div className="flex justify-center lg:hidden">
+            <ContextSwitcher value={context} onChange={setContext} className="max-w-[300px]" />
+          </div>
+          <div className="hidden shrink-0 items-center gap-3 lg:flex">
+            <ContextSwitcher value={context} onChange={setContext} className="w-[280px]" />
+            <GlobalPrivacyToggle />
+          </div>
+        </div>
+
+        {/* notice jujur: halaman ini milik konteks Bersama — bukan daftar kosong
+            tanpa penjelasan, tapi satu ketukan untuk pindah ke sana */}
+        {context !== 'bersama' && (
+          <div className="mt-3 flex flex-col gap-3 rounded-[1.75rem] border-2 border-dashed border-hud-amber/40 bg-cream/70 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <p className="font-display text-[14.5px] font-bold tracking-tight text-ink">
+                {JOINT_CONTEXT_COPY.title}
+              </p>
+              <p className="mt-1 text-[12.5px] leading-relaxed text-ink/55">
+                {JOINT_CONTEXT_COPY.body(CONTEXT_LABEL[context])}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setContext('bersama')}
+              className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-2xl bg-forest px-5 text-[13px] font-semibold text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
+            >
+              <HeartHandshake className="size-4" strokeWidth={2.4} />
+              {JOINT_CONTEXT_COPY.cta}
+            </button>
+          </div>
+        )}
+
         {!partnerJoined ? (
           /* ── SECTION 8: invite flow (halaman berubah total) ────────────── */
           <JointInviteFlow
             defaultWalletName={wallet.name}
             partner={partner}
             onCreated={(name) => {
-              setWallet((prev) => ({ ...prev, name }))
+              /* nama kantong ditulis ke store (persist), bukan ke state halaman */
+              renameJointWallet(name)
               setShowInviteModal(true)
             }}
             onSimulatePartnerJoined={handlePartnerJoined}
@@ -529,6 +775,7 @@ export function JointScreen() {
                     partner={partner}
                     partnerTyping={partnerTyping}
                     onOpenSplit={openSplitFor}
+                    onChangePaidBy={handleChangePaidBy}
                   />
                 )}
               </section>
@@ -565,9 +812,11 @@ export function JointScreen() {
         walletName={wallet.name}
         splitDraft={draftSplit}
         privateOn={privateOn}
+        paidBy={paidBy}
         onAmountChange={setPendingAmount}
         onOpenSplit={openSplitForNew}
         onTogglePrivate={() => setPrivateOn((prev) => !prev)}
+        onPaidByChange={setPaidBy}
         onSubmitted={handleAddTransaction}
         me={me}
         partner={partner}
@@ -592,6 +841,7 @@ export function JointScreen() {
         settlement={settlement}
         masked={isMasked}
         onSettle={handleSettle}
+        carryOverRecord={carryOverRecord}
         me={me}
         partner={partner}
       />
@@ -600,6 +850,7 @@ export function JointScreen() {
       <JointInviteCodeModal
         open={showInviteModal}
         onClose={() => setShowInviteModal(false)}
+        walletId={wallet.id}
         walletName={wallet.name}
         onSimulateJoin={handlePartnerJoined}
         me={me}

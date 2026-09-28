@@ -2,6 +2,7 @@
 
 import { ChevronRight, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { CONTEXT_LABEL } from '@/lib/data/money-context'
 import { PlantIllustration, type PlantStage as IllustrationStage } from './plant-illustration'
 import {
   PLANT_STAGES,
@@ -63,7 +64,12 @@ export function SinkingFundCard({
             <span className="block truncate text-[15px] font-bold leading-tight tracking-tight text-ink">
               {fund.name}
             </span>
-            <span className="mt-0.5 block text-[10.5px] font-semibold text-[#b5b987]">
+            <span className="mt-0.5 flex items-center gap-1.5 text-[10.5px] font-semibold text-[#b5b987]">
+              {/* badge konteks uang celengan (paket 47) — supaya jelas celengan
+                  ini milik Pribadi, Keluarga, atau Bersama di halaman mana pun */}
+              <span className="rounded-full bg-sage/70 px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-forest ring-1 ring-inset ring-forest/10">
+                {CONTEXT_LABEL[fund.scope]}
+              </span>
               {stage.label}
             </span>
           </span>

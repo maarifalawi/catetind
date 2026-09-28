@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion'
 import { TrendingDown, TrendingUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { formatIDR, maskMoney, netWorthCopy, tugOfWar } from '@/lib/data/wealth'
+import { formatIDR, maskMoney, netWorthCopy, netWorthParts, tugOfWar } from '@/lib/data/wealth'
 
 /* ── NET WORTH "TUG-OF-WAR" BAR (Section 3) ─────────────────────────────────
    Alih-alih dua kartu angka yang membosankan ("Total Aset" / "Total Hutang"),
@@ -21,7 +21,7 @@ import { formatIDR, maskMoney, netWorthCopy, tugOfWar } from '@/lib/data/wealth'
    DUA PERBAIKAN AUDIT yang mengikat komponen ini:
 
    1. #1 — `Aset` BUKAN cuma portofolio investasi. Komponen ini menerima `cash`
-      (kas likuid: BCA + GoPay + Tunai, sumber `INITIAL_WALLET_ACCOUNTS`) dan
+      (kas likuid: BCA + GoPay + Tunai, dari store uang `lib/money/store.ts`) dan
       `investments`, lalu menjumlahkan keduanya SENDIRI. Jadi total aset tidak
       bisa lagi diam-diam kehilangan uang rekening.
    2. #2 — Lebar bar diikat ke DATA (`flexGrow` dari nominal asli, `flexBasis: 0`),
@@ -38,6 +38,7 @@ const BAR_HEIGHT = 'h-6' /* ~24px sesuai spesifikasi */
 export function WealthNetWorthBar({
   cash,
   investments,
+  receivables,
   debts,
   masked,
 }: {
@@ -45,12 +46,15 @@ export function WealthNetWorthBar({
   cash: number
   /** total nilai portofolio investasi (saham, reksadana, emas, crypto) */
   investments: number
+  /** total piutang aktif — uang kita yang masih dipegang orang lain (paket 41) */
+  receivables: number
   debts: number
   masked: boolean
 }) {
-  /* #1 — sisi ASET = KAS LIKUID + ASET INVESTASI (definisi di lib/data/wealth.ts) */
-  const assets = cash + investments
-  const tug = tugOfWar(assets, debts)
+  /* #1 — sisi ASET = KAS LIKUID + ASET INVESTASI + PIUTANG (definisi tunggal di
+     `netWorthParts()`; piutang dulu cuma pajangan di tab "Piutangku") */
+  const parts = netWorthParts({ cash, investments, receivables, debts })
+  const tug = tugOfWar(parts.assets, parts.debts)
   const assetLabel = maskMoney(tug.assets, masked)
   const debtLabel = maskMoney(tug.debts, masked)
   const netLabel = maskMoney(tug.netWorth, masked)
@@ -65,7 +69,7 @@ export function WealthNetWorthBar({
 
   return (
     <section
-      aria-label="Net worth: total aset (kas likuid + investasi) dibanding hutang"
+      aria-label="Net worth: total aset (kas likuid + investasi + piutang) dibanding hutang"
       className="relative overflow-hidden rounded-[1.75rem] bg-[#ffffff] p-5 shadow-[0_22px_50px_-30px_rgba(69,89,78,0.5)] ring-1 ring-soil/10 sm:p-6"
     >
       {/* kabut sage (aset) & terracotta (hutang) di dua sudut — penanda siapa
@@ -188,16 +192,31 @@ export function WealthNetWorthBar({
           <p className="mx-auto mt-2 max-w-[24rem] text-[12.5px] leading-relaxed text-ink/55">
             {netWorthCopy(tug.positive, ratioText)}
           </p>
-          {/* hitungan terbuka (aset − hutang = net worth) hanya saat tidak dimask.
-              #1 — bagian "aset" di sini adalah KAS + INVESTASI, bukan investasi saja. */}
+          {/* hitungan terbuka hanya saat tidak dimask. Paket 41 membukanya lebih
+              lebar: sisi aset dipecah jadi kas + investasi + PIUTANG supaya
+              konversi piutang → kas kelihatan sebagai perpindahan potongan, bukan
+              angka aset yang berubah-ubah tanpa sebab. */}
           {!masked && (
-            <p className="mt-1.5 flex flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5 text-[10.5px] text-ink/35 tabular-nums">
-              <span>aset {formatIDR(tug.assets)}</span>
-              <span aria-hidden>−</span>
-              <span>hutang {formatIDR(tug.debts)}</span>
-              <span aria-hidden>=</span>
-              <span className="font-semibold text-ink/50">net worth</span>
-            </p>
+            <div className="mt-1.5 space-y-1 text-[10.5px] text-ink/35 tabular-nums">
+              <p className="flex flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5">
+                <span>kas {formatIDR(parts.cash)}</span>
+                <span aria-hidden>+</span>
+                <span>investasi {formatIDR(parts.investments)}</span>
+                <span aria-hidden>+</span>
+                <span className={cn(parts.receivables > 0 && 'text-ink/55')}>
+                  piutang {formatIDR(parts.receivables)}
+                </span>
+                <span aria-hidden>=</span>
+                <span className="font-semibold text-ink/50">aset {formatIDR(parts.assets)}</span>
+              </p>
+              <p className="flex flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5">
+                <span>aset {formatIDR(parts.assets)}</span>
+                <span aria-hidden>−</span>
+                <span>hutang {formatIDR(parts.debts)}</span>
+                <span aria-hidden>=</span>
+                <span className="font-semibold text-ink/50">net worth</span>
+              </p>
+            </div>
           )}
         </div>
       </div>

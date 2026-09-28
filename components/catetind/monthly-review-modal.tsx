@@ -38,7 +38,6 @@ import {
   TARGET_TRANSACTION_THRESHOLD,
   canShowRecap,
   clampTarget,
-  fundNameOf,
   fundSuggestions,
   prefillTarget,
   recapReadiness,
@@ -47,7 +46,9 @@ import {
   type MonthlyRecap,
   type PrefillTarget,
   type SavedMonthlyTarget,
+  type FundSuggestion,
 } from '@/lib/data/monthly-review'
+import { useFundsStore } from '@/lib/money/funds-store'
 
 /* ── Monthly Review & Target Setup (inventaris #i · PRD 1878–1918) ───────────
    Modal penuh dua panel — "ritual" bulanan: user berhenti sejenak, melihat recap
@@ -74,10 +75,11 @@ const PANELS: { id: PanelId; label: string; icon: ReactNode }[] = [
   { id: 'target', label: COPY.tabTarget, icon: <Target className="size-3.5" /> },
 ]
 
-/* Celengan + nominal saran dihitung SEKALI di tingkat modul: datanya mock statis,
-   dan angkanya datang dari `monthlyNeeded()` di lib/data/budget.ts — bukan
-   hitungan ulang di sini. Jadi saran di modal & di /budget tidak bisa berbeda. */
-const FUNDS = fundSuggestions()
+/* Celengan + nominal saran dihitung dari STORE (`useFundsStore()`), bukan dari
+   konstanta seed: celengan yang baru ditanam user harus bisa dipilih sebagai
+   tujuan target bulanan ini. Angkanya tetap datang dari `monthlyNeeded()` di
+   lib/data/budget.ts — bukan hitungan ulang di sini — jadi saran di modal, kartu
+   Target di Home, dan halaman /budget tidak bisa berbeda. */
 
 export function MonthlyReviewModal({
   open,
@@ -101,6 +103,10 @@ export function MonthlyReviewModal({
 }) {
   const { money } = usePrivacy()
   const router = useRouter()
+  /* daftar celengan untuk quick-pick — dibaca dari store yang sama dengan kartu
+     "Tabungan Impian" di Home & halaman /budget (paket 46) */
+  const { funds } = useFundsStore()
+  const FUNDS = fundSuggestions(funds)
   /* menyimpan "target bulan ini" = menulis rencana keuangan baru → ikut terkunci
      saat masa aktif habis (task 23). Recap-nya tetap bisa dibaca. */
   const { inputLocked } = useSubscriptionGate()
@@ -191,7 +197,9 @@ export function MonthlyReviewModal({
        tidak ada jalur pemanggilan lain yang bisa menembusnya */
     if (inputLocked) return
     const finalAmount = clampTarget(amount)
-    const fundName = fundNameOf(fundId)
+    /* nama celengan dibaca dari daftar yang SAMA dengan chip quick-pick di atas,
+       jadi toast tidak bisa menyebut celengan yang tidak ada di layar */
+    const fundName = fundId === null ? null : (funds.find((item) => item.id === fundId)?.name ?? null)
     onSave({ amount: finalAmount, fundId })
     toast.success(COPY.savedToastTitle, {
       description: fundName
@@ -357,6 +365,7 @@ export function MonthlyReviewModal({
                 onFundChange={setFundId}
                 onStep={handleStep}
                 onReset={handleReset}
+                funds={FUNDS}
               />
             )}
           </div>
@@ -642,6 +651,7 @@ function TargetPanel({
   onFundChange,
   onStep,
   onReset,
+  funds,
 }: {
   digits: string
   onDigitsChange: (digits: string) => void
@@ -652,6 +662,9 @@ function TargetPanel({
   onFundChange: (id: number | null) => void
   onStep: (delta: number) => void
   onReset: () => void
+  /** saran celengan dari STORE (paket 46) — daftar kosong = blok quick-pick
+   *  disembunyikan seluruhnya, bukan menyisakan bagian kosong */
+  funds: FundSuggestion[]
 }) {
   const { money } = usePrivacy()
   const steps = [-TARGET_STEP_LARGE, -TARGET_STEP_SMALL, TARGET_STEP_SMALL, TARGET_STEP_LARGE]
@@ -719,13 +732,13 @@ function TargetPanel({
       {/* quick-pick celengan — satu ketukan memilih, saran nominal dari
           `monthlyNeeded()`. Disembunyikan seluruhnya kalau tidak ada celengan
           yang masih bisa ditambah (jangan menyisakan bagian kosong). */}
-      {FUNDS.length > 0 && (
+      {funds.length > 0 && (
         <section className="rounded-2xl bg-cream p-4 ring-1 ring-soil/12">
           <p className="text-[13px] font-semibold text-ink">{COPY.fundTitle}</p>
           <p className="mt-0.5 text-[11px] leading-relaxed text-ink/45">{COPY.fundCaption}</p>
 
           <div role="radiogroup" aria-label={COPY.fundTitle} className="mt-3 space-y-2">
-            {FUNDS.map(({ fund, monthly, percent }) => {
+            {funds.map(({ fund, monthly, percent }) => {
               const active = fundId === fund.id
               return (
                 <button

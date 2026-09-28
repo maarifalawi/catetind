@@ -1,10 +1,11 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { recordAiUsage } from '@/lib/ai-usage-store'
 import {
   AI_CONTEXT_WINDOW,
+  AI_NOT_CONNECTED_REPLY,
   MOCK_APPRECIATION_REPLY,
-  MOCK_FALLBACK_REPLY,
   MOCK_LIMIT_REPLY,
   MOCK_SPENDING_REVIEW_REPLY,
   PROACTIVE_WELCOME,
@@ -15,10 +16,23 @@ let nextId = 0
 const makeId = () => `msg-${++nextId}`
 
 /**
- * Routing mock — meniru intent detection keyword sederhana dari Domain 4B
- * (zero API cost). Menentukan mock reply mana yang keluar per pesan user.
+ * Routing berbasis ATURAN LOKAL — meniru intent detection keyword sederhana dari
+ * Domain 4B (zero API cost), TANPA memanggil model.
+ *
+ * KEPUTUSAN PAKET 44 (§AI, opsi b): model LLM belum disambungkan karena app ini
+ * belum punya API key provider, dan kunci itu tidak boleh dikarang di repo demo
+ * (`§AI` opsi a menuntut key disimpan server-side di `.env.local` oleh pemilik
+ * produk). Karena itu fungsi ini SENGAJA hanya menjawab pertanyaan yang
+ * jawabannya ada di data lokal, dan setiap jawabannya membawa penanda
+ * `ruleBased: true` — widget mencetak label "belum pakai model" dari penanda itu.
+ *
+ * Pertanyaan yang TIDAK bisa dijawab dari data lokal jatuh ke
+ * `AI_NOT_CONNECTED_REPLY`: jujur soal keadaan hari ini + tombol "Hubungkan AI".
+ *
+ * Kalau nanti provider disambungkan, ganti isi `aiReply()` dengan
+ * `fetch('/api/ai/text')` — bentuk pesannya sudah sama.
  */
-function mockReply(userText: string): Omit<ChatMessage, 'id'> {
+function aiReply(userText: string): Omit<ChatMessage, 'id'> {
   const t = userText.toLowerCase()
   /* prompt 19 — seed dari panel "Review Pengeluaran Hari Ini" ("boros nggak nih
      hari ini?") dicek DULU: kalau jatuh ke pola 'budget', balasannya jadi demo
@@ -26,15 +40,19 @@ function mockReply(userText: string): Omit<ChatMessage, 'id'> {
   if (/(boros|pengeluaran hari ini|review pengeluaran)/.test(t)) return MOCK_SPENDING_REVIEW_REPLY
   if (/(budget|limit|kopi|atur ulang)/.test(t)) return MOCK_LIMIT_REPLY // demo Quick Action (D)
   if (/(ceritain|kondisi)/.test(t)) return MOCK_APPRECIATION_REPLY // demo Appreciation (E)
-  return { role: 'ai', kind: 'coaching', content: MOCK_FALLBACK_REPLY }
+  return AI_NOT_CONNECTED_REPLY
 }
 
 /**
  * useAIChat — state & logic percakapan AI Coach.
  *
- * Sengaja dipisah dari UI supaya API asli tinggal "dicolok" di sini:
- * ganti isi mockReply/setTimeout di sendMessage dengan fetch ke endpoint,
+ * Sengaja dipisah dari UI supaya provider asli tinggal "dicolok" di sini:
+ * ganti isi `aiReply()` (dan timer 1–1.5 detiknya) dengan `fetch('/api/ai/text')`,
  * tanpa mengubah ai-chat-widget sama sekali.
+ *
+ * PAKET 44: balasan yang keluar dari sini masih berbasis ATURAN LOKAL (belum ada
+ * model — lihat catatan di `aiReply`), dan penandanya (`ruleBased`) ikut sampai
+ * ke UI supaya label "belum pakai model" tidak bisa lupa dipasang.
  *
  * Memory: widget-nya di-mount di root layout (tidak unmount saat navigasi),
  * jadi history bertahan selama sesi dan reset saat full page refresh.
@@ -75,13 +93,18 @@ export function useAIChat() {
       append({ role: 'user', kind: 'coaching', content: text })
       setInput('')
       setIsTyping(true)
+      /* METERING AI (paket 42): satu pesan = satu panggilan chat. Dihitung di
+         sini (titik user benar-benar mengirim), bukan di mock reply — kalau
+         nanti diganti `POST /api/ai/text`, tempatnya tetap sama. */
+      recordAiUsage('chat')
 
-      // Simulasi "thinking" 1–1.5 detik sebelum AI membalas
+      // Simulasi "thinking" 1–1.5 detik sebelum balasan aturan lokal keluar.
+      // Saat provider LLM disambungkan (paket lanjutan, butuh API key di server):
+      // ganti `append(aiReply(text))` dengan `POST /api/ai/text`, dan pakai
+      // `AI_CAPTURE_COPY.saveFailed` sebagai state gagal yang sudah ada.
       const delay = 1000 + Math.random() * 500
       replyTimer.current = setTimeout(() => {
-        // TODO: Connect to DeepSeek V3 via /api/ai/text endpoint.
-        // See domain4_prd.md section 4B for system prompt and context window management.
-        append(mockReply(text))
+        append(aiReply(text))
         setIsTyping(false)
       }, delay)
     },

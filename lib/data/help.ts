@@ -14,7 +14,10 @@
     5. PAYLOAD EXPORT — `buildHelpExportPayload()` menyusun JSON untuk tombol
        "Export Data Saya" di dalam deflection loop (PRD Domain 4C, Mekanisme 1).
        Di produksi data ini di-compile di server lalu dikirim ke email user
-       sendiri; di prototipe ini disusun di klien supaya tombolnya bekerja.
+       sendiri; di prototipe ini disusun di klien supaya tombolnya bekerja —
+       celengan & kekayaan (hutang/piutang/investasi) dioper dari store
+       perangkat (`lib/money/*-store.ts`) supaya file-nya memuat data yang
+       benar-benar dimiliki user, bukan hanya daftar contoh.
 
    Catatan: semua angka/teks di bawah masih MOCK. Begitu endpoint asli siap,
    cukup ganti nilai di file ini — komponen halaman hanya membaca turunan dari
@@ -27,7 +30,7 @@ import { INITIAL_DEBTS, INITIAL_INVESTMENTS } from './wealth'
 import { ALL_TRANSACTIONS } from './transactions'
 import { PRIVACY_LINK_COPY } from '../legal/privacy'
 import { TERMS_LINK_COPY } from '../legal/terms'
-import { INITIAL_WALLETS, INITIAL_WALLET_ACCOUNTS } from '../wallets'
+import { WALLET_SEED } from '../wallets'
 
 /* ── 1. STATUS SISTEM ─────────────────────────────────────────────────────── */
 
@@ -706,9 +709,17 @@ export interface HelpExportPayload {
   /** pengingat di dalam file: tidak ada manusia di CatetInd yang membacanya */
   note: string
   data: {
-    wallets: typeof INITIAL_WALLETS
-    /** akun bank/e-wallet yang tersambung sebagai sumber saldo */
-    wallet_accounts: typeof INITIAL_WALLET_ACCOUNTS
+    /** dompet & saldo PEMBUKA-nya — satu daftar kanon sejak paket 40 */
+    wallets: typeof WALLET_SEED
+    /**
+     * akun bank/e-wallet yang tersambung sebagai sumber saldo.
+     *
+     * Nama kolomnya dipertahankan supaya bentuk file export tetap sama dengan
+     * `/api/user/export` di PRD. Isinya kini daftar yang SAMA dengan `wallets`:
+     * app ini sudah tidak punya dua daftar dompet (dulu justru itu yang membuat
+     * saldo user berbeda antar halaman).
+     */
+    wallet_accounts: typeof WALLET_SEED
     transactions: typeof ALL_TRANSACTIONS
     bills: typeof INITIAL_BILLS
     sinking_funds: typeof INITIAL_SINKING_FUNDS
@@ -722,20 +733,35 @@ export interface HelpExportPayload {
  * sama seperti respons `/api/user/export` di PRD Domain 4C supaya begitu
  * endpoint aslinya siap, komponen halaman tidak perlu diubah — cukup ganti
  * sumbernya dari mock ke `fetch`.
+ *
+ * `bills`, `sinkingFunds`, & `wealth` boleh dioper dari store perangkat
+ * (`lib/money/bills-store.ts`, `lib/money/funds-store.ts`,
+ * `lib/money/wealth-store.ts`) supaya file ekspor memuat tagihan, celengan,
+ * hutang/piutang, dan investasi yang BENAR-BENAR dimiliki user — bukan hanya
+ * daftar contoh dari konstanta (temuan D & E laporan 46). Default-nya tetap
+ * daftar seed: fungsi murni ini juga dipakai test tanpa browser.
  */
-export function buildHelpExportPayload(now: Date = new Date()): HelpExportPayload {
+export function buildHelpExportPayload(
+  now: Date = new Date(),
+  bills: typeof INITIAL_BILLS = INITIAL_BILLS,
+  sinkingFunds: typeof INITIAL_SINKING_FUNDS = INITIAL_SINKING_FUNDS,
+  wealth: { debts: typeof INITIAL_DEBTS; investments: typeof INITIAL_INVESTMENTS } = {
+    debts: INITIAL_DEBTS,
+    investments: INITIAL_INVESTMENTS,
+  },
+): HelpExportPayload {
   return {
     exported_at: now.toISOString(),
     source: 'catetind.app/help',
     note: 'File ini dibuat atas permintaanmu sendiri. Tim CatetInd tidak memiliki salinan datamu.',
     data: {
-      wallets: INITIAL_WALLETS,
-      wallet_accounts: INITIAL_WALLET_ACCOUNTS,
+      wallets: WALLET_SEED,
+      wallet_accounts: WALLET_SEED,
       transactions: ALL_TRANSACTIONS,
-      bills: INITIAL_BILLS,
-      sinking_funds: INITIAL_SINKING_FUNDS,
-      debts: INITIAL_DEBTS,
-      investments: INITIAL_INVESTMENTS,
+      bills,
+      sinking_funds: sinkingFunds,
+      debts: wealth.debts,
+      investments: wealth.investments,
     },
   }
 }

@@ -1,4 +1,5 @@
 import { formatIDR } from '../wallets'
+import type { BudgetScope } from './budget'
 import { UNDO_WINDOW_MS, shiftISODate } from './history'
 
 /** satu pintu impor untuk halaman Tagihan: komponennya cukup ambil dari sini */
@@ -44,10 +45,31 @@ export interface Bill {
   isPaidThisMonth: boolean
   /** ingatkan sekian hari sebelum jatuh tempo (0 = jangan ingatkan) */
   reminderDaysBefore: number
+  /**
+   * Konteks uang tagihan ini (paket 47) — Pribadi / Keluarga / Bersama
+   * (PRD Domain 2C.2). Tipenya diimpor dari `lib/data/budget.ts` supaya app
+   * hanya punya SATU definisi konteks; tidak ada tipe konteks kedua.
+   *
+   * Halaman Tagihan menyaring daftarnya dengan kolom ini, sementara ringkasan
+   * (tameng proteksi, waterfall gaji, % beban tetap) tetap menghitung SEMUA
+   * tagihan — konteks menyaring daftar & arus, bukan total (kanon paket 47).
+   */
+  scope: BudgetScope
   /** cicilan berbatas: total tenor dalam bulan (kosong = tanpa batas) */
   endAfterMonths?: number
   /** bulan ke-berapa sekarang (1..endAfterMonths) */
   currentMonth?: number
+  /**
+   * id baris ledger pembayaran bulan ini (paket 51).
+   *
+   * Diisi HANYA oleh `markBillPaid()` — tagihan yang benar-benar dibayar lewat
+   * app, bukan stempel contoh. Yang disimpan id barisnya (bukan cuma boolean)
+   * supaya `unmarkBillPaid()` bisa membalikkan baris kas yang SAMA ketika user
+   * salah tekan, dan supaya jejak uangnya bisa ditelusuri dari kartunya.
+   * Tagihan contoh yang sudah "Lunas" di seed tidak punya kolom ini: barisnya
+   * memang tidak pernah ada di ledger (lihat catatan di `lib/money/bills-store.ts`).
+   */
+  paidRowId?: string
   note?: string
 }
 
@@ -62,7 +84,11 @@ export const TIMELINE_DAYS = 7
 /* ── MOCK TAGIHAN BULAN INI ─────────────────────────────────────────────────
    Sengaja campur: 4 sudah lunas, 1 jatuh tempo HARI INI (Cicilan HP), 1 masih
    akan datang (Kredivo tgl 28). Untuk menguji tampilan "telat", turunkan
-   CURRENT_DAY atau majukan dueDate salah satu tagihan yang belum dibayar. */
+   CURRENT_DAY atau majukan dueDate salah satu tagihan yang belum dibayar.
+
+   `scope` (paket 47) mengikuti arti tagihannya: mayoritas milik Pribadi, tapi
+   ketiga konteks sengaja punya isi nyata — kalau semua `pribadi`, bug penyaring
+   (daftar tidak berubah saat konteks ditukar) justru tidak akan pernah terlihat. */
 export const INITIAL_BILLS: Bill[] = [
   {
     id: '1',
@@ -75,6 +101,7 @@ export const INITIAL_BILLS: Bill[] = [
     walletId: 'bca',
     isPaidThisMonth: true,
     reminderDaysBefore: 3,
+    scope: 'pribadi',
   },
   {
     id: '2',
@@ -87,6 +114,8 @@ export const INITIAL_BILLS: Bill[] = [
     walletId: 'gopay',
     isPaidThisMonth: true,
     reminderDaysBefore: 1,
+    /* langganan ini dipakai berdua di rumah → masuk konteks Keluarga */
+    scope: 'keluarga',
   },
   {
     id: '3',
@@ -99,6 +128,7 @@ export const INITIAL_BILLS: Bill[] = [
     walletId: 'gopay',
     isPaidThisMonth: true,
     reminderDaysBefore: 1,
+    scope: 'pribadi',
   },
   {
     id: '4',
@@ -113,6 +143,7 @@ export const INITIAL_BILLS: Bill[] = [
     endAfterMonths: 12,
     currentMonth: 5,
     reminderDaysBefore: 3,
+    scope: 'pribadi',
   },
   {
     id: '5',
@@ -127,6 +158,7 @@ export const INITIAL_BILLS: Bill[] = [
     endAfterMonths: 6,
     currentMonth: 3,
     reminderDaysBefore: 3,
+    scope: 'pribadi',
   },
   {
     id: '6',
@@ -139,6 +171,8 @@ export const INITIAL_BILLS: Bill[] = [
     walletId: 'tunai',
     isPaidThisMonth: true,
     reminderDaysBefore: 1,
+    /* WiFi rumah dibayar dari uang patungan → konteks Bersama */
+    scope: 'bersama',
   },
 ]
 
@@ -537,10 +571,19 @@ export const ADD_BILL_TOAST = {
 export const UPDATE_BILL_TOAST = {
   title: 'Tagihan diperbarui 🌿',
   description: 'Perubahannya langsung tampil di daftar rutinmu.',
+  /** jaring pengaman: tagihannya sudah tidak ada (mis. dihapus di tab lain) */
+  expired: 'Tagihannya sudah tidak ada di daftar, jadi tidak ada yang diubah 🌿',
 } as const
 
-/** dipakai saat kartu dicap LUNAS (stempel + haptic + toast) */
-export const MARK_PAID_TOAST = (name: string) => `${name} LUNAS! ✅`
+/**
+ * Dipakai saat kartu dicap LUNAS (stempel + haptic + toast) — dan sejak paket 51
+ * kalimatnya menyebut NOMINAL + DOMPET, karena uangnya benar-benar keluar dari
+ * dompet itu sebelum stempelnya naik (satu baris ledger ditulis `markBillPaid()`
+ * lebih dulu). Toast "LUNAS!" yang tidak menyebut dari mana uangnya keluar
+ * adalah jenis klaim yang justru ditutup paket ini.
+ */
+export const MARK_PAID_TOAST = (name: string, amount: string, walletName: string) =>
+  `${name} ${amount} lunas dari ${walletName} ✅`
 
 /* ── KONFIRMASI & UNDO HAPUS TAGIHAN ────────────────────────────────────────
    Menghapus tagihan rutin itu merusak kebiasaan yang sudah jalan (tameng
@@ -575,3 +618,65 @@ export const NOTIF_NUDGE_COPY =
 export const NOTIF_NUDGE_HELPER = 'Diingatkan 1-3 hari sebelum jatuh tempo. Gak spam.'
 /** kunci localStorage penolakan permanen banner notifikasi */
 export const NOTIF_NUDGE_KEY = 'catetind-bills-notif-nudge'
+
+/* ── BAYAR TAGIHAN YANG BENAR-BENAR MENGGERAKKAN UANG (paket 51) ─────────────
+   Sebelum paket ini, satu geser ke kanan hanya menempelkan stempel LUNAS + toast
+   "sudah dibayar": tidak ada satu baris pun di ledger kas, jadi saldo dompet
+   tidak berkurang (temuan E laporan 46 — jenis yang SAMA dengan audit #1 paket
+   41, dan dilarang kanon "jujur di setiap klaim" PRD 244: kata "LUNAS" di layar
+   tidak boleh berarti uangnya masih utuh).
+
+   Sekarang "Tandai Lunas" membuka pemilih DOMPET, dan baris kasnya ditulis
+   (kategori `BILL_PAYMENT_CATEGORY`) SEBELUM statusnya berubah. Semua kalimatnya
+   tinggal di sini — termasuk yang menjelaskan bahwa uangnya benar-benar keluar —
+   supaya tidak ada halaman yang mengarang versinya sendiri. */
+
+/** kategori baris ledger untuk pembayaran tagihan (satu nilai, satu tempat) */
+export const BILL_PAYMENT_CATEGORY = 'Tagihan'
+
+/** sheet "Tandai Lunas" — pemilih dompet + nominal yang benar-benar dibayar */
+export const MARK_PAID_SHEET_COPY = {
+  title: (name: string) => `Tandai ${name} lunas`,
+  description:
+    'Pilih dompet yang benar-benar kamu pakai bayar: saldonya langsung berkurang dan catatannya muncul di Riwayat.',
+  amountLabel: 'Nominal dibayar',
+  walletLabel: 'Dompet sumber',
+  submit: 'Tandai Lunas ✓',
+  /** pengingat sebelum menekan simpan: uangnya keluar dari dompet mana */
+  cashLine: (amount: string, walletName: string) => `${amount} akan keluar dari ${walletName}.`,
+  walletBalance: (value: string) => `Saldo sekarang ${value}`,
+  noWallet: 'Belum ada dompet yang bisa dipakai. Tambah dompet dulu di halaman Dompet & Akun.',
+  invalid: 'Nominalnya belum sah — isi angka rupiah lebih dari nol.',
+  insufficient: (walletName: string) =>
+    `Saldo ${walletName} gak cukup untuk ini. Pilih dompet lain atau catat nominal yang lebih kecil.`,
+  /** ditolak store (mis. statusnya keburu berubah / dompetnya sudah tidak ada) */
+  rejected: 'Tagihannya belum bisa ditandai lunas sekarang. Buka ulang halamannya ya 🌿',
+  /**
+   * Saat sheet DITUTUP tanpa menekan simpan: tidak ada yang dibayar, jadi
+   * statusnya sengaja TIDAK berubah. Kalimat ini yang dikatakan ke user — bukan
+   * stempel LUNAS tanpa uang keluar.
+   */
+  closedNote: 'Belum ada yang dibayar — status tagihannya masih seperti semula.',
+} as const
+
+/** detail toast setelah baris kasnya benar-benar tertulis */
+export const MARK_PAID_TOAST_EXTRA = {
+  description: 'Saldo dompetnya sudah berkurang & catatannya masuk Riwayat.',
+  /** tombol batal di toast: membalikkan baris kas yang baru ditulis */
+  undo: 'Batal',
+  undoneTitle: 'Tanda lunas dibatalkan',
+  undoneDescription: 'Catatan pembayarannya ikut dibatalkan, saldo dompetmu kembali seperti semula.',
+  /** jaring pengaman kalau tombolnya ditekan setelah jendelanya tutup */
+  expired: 'Jendela batal-nya sudah lewat — catatan pembayarannya tetap ada di Riwayat 🌿',
+} as const
+
+/**
+ * Nama baris kas yang MENGEMBALIKAN uang saat pembatalan "Lunas".
+ *
+ * Ditulis apa adanya ("Batal bayar Kredivo") karena:
+ *   · `removeRow()` saja hanya menyembunyikan barisnya — saldo dompet tidak ikut
+ *     pulih (kanon paket 46), jadi pengembaliannya harus ditulis;
+ *   · kalau baris itu memakai copy koreksi saldo bawaan ("Pemasukan tak
+ *     tercatat"), user membaca seolah mendapat uang entah dari mana.
+ */
+export const BILL_UNPAID_REVERSAL_NOTE = (name: string) => `Batal bayar ${name}`

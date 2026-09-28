@@ -2,11 +2,13 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import {
   ArrowRight,
   CircleHelp,
   Clock,
+  LoaderCircle,
   Mail,
   MailCheck,
   RefreshCw,
@@ -21,12 +23,13 @@ import {
   MAGIC_LINK_SENDER,
   RESEND_SECONDS,
   RESENT_NOTE_MS,
+  SESSION_COPY,
   VERIFY_COPY,
   buildExpiredPreviewHref,
-  buildMockMagicLink,
   resendCountdownLabel,
 } from '@/lib/data/auth'
 import { LogoWordmark } from './logo-wordmark'
+import { completeMagicLink, sendLoginLink, verifyEmailOtp } from '@/lib/session-client'
 
 /* ── Cek Email / Callback (/login/verify) — inventaris #9 · PRD 5931–5933 ─────
    Halaman ini adalah tempat user MENUNGGU, dan menunggu yang hampa adalah
@@ -48,8 +51,28 @@ import { LogoWordmark } from './logo-wordmark'
 /** easing khas app: masuk cepat lalu settle lembut */
 const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1]
 
-export function VerifyEmailScreen({ email, expired }: { email: string; expired: boolean }) {
+export function VerifyEmailScreen({
+  email,
+  expired,
+  code,
+}: {
+  email: string
+  expired: boolean
+  /** `?code=` dari tautan email (PKCE) — ditukar jadi sesi saat halaman dibuka */
+  code?: string
+}) {
   const reduceMotion = useReducedMotion()
+  const router = useRouter()
+
+  /**
+   * Permintaan sesi sedang berjalan — baik menukar `?code=` dari tautan email
+   * maupun memverifikasi kode 6 angka yang diketik user.
+   */
+  const [signingIn, setSigningIn] = useState(false)
+  /** kode 6 angka dari email (`{{ .Token }}`) */
+  const [otp, setOtp] = useState('')
+  /** true = tautan/kode sudah terbukti tidak berlaku lagi (state kedaluwarsa) */
+  const [linkExpired, setLinkExpired] = useState(expired)
 
   /** hitung mundur kirim ulang — mulai dari penuh karena email barusan dikirim */
   const [secondsLeft, setSecondsLeft] = useState(RESEND_SECONDS)
@@ -62,8 +85,6 @@ export function VerifyEmailScreen({ email, expired }: { email: string; expired: 
   /** kalau `?email=` kosong (bookmark lama) jangan tampilkan alamat kosong */
   const displayEmail = trimmedEmail || VERIFY_COPY.emailFallback
   const canResend = secondsLeft === 0
-  /** tautan demo hanya masuk akal kalau kita tahu alamat tujuannya */
-  const demoLink = trimmedEmail ? buildMockMagicLink(trimmedEmail) : null
 
   /**
    * Satu timer hidup pada satu waktu (timeout berantai, bukan interval): lebih
@@ -75,14 +96,57 @@ export function VerifyEmailScreen({ email, expired }: { email: string; expired: 
     return () => window.clearTimeout(id)
   }, [secondsLeft])
 
+  /**
+   * Tukar `?code=` dari tautan email jadi sesi begitu halaman dibuka. Ini jalur
+   * yang menyelesaikan login tanpa user mengetik apa pun; kalau kodenya sudah
+   * tidak berlaku, kartu "tautan kedaluwarsa" yang tampil (bukan layar buntu).
+   */
+  useEffect(() => {
+    if (!code) return
+    let alive = true
+    setSigningIn(true)
+    void (async () => {
+      const result = await completeMagicLink(code)
+      if (!alive) return
+      setSigningIn(false)
+      if (!result.ok) {
+        setLinkExpired(true)
+        toast.error(VERIFY_COPY.linkFailedTitle, { description: result.error })
+        return
+      }
+      toast.success(SESSION_COPY.signInToast, { description: SESSION_COPY.signInToastDescription })
+      router.push('/')
+    })()
+    return () => {
+      alive = false
+    }
+  }, [code, router])
+
+  /** masuk dengan kode 6 angka dari email — jalur kedua, untuk kode yang diketik */
+  async function handleVerifyOtp() {
+    if (signingIn) return
+    setSigningIn(true)
+    const result = await verifyEmailOtp(trimmedEmail, otp)
+    setSigningIn(false)
+    if (!result.ok) {
+      toast.error(VERIFY_COPY.otpFailedTitle, { description: result.error })
+      return
+    }
+    toast.success(SESSION_COPY.signInToast, { description: SESSION_COPY.signInToastDescription })
+    router.push('/')
+  }
+
+
   function handleResend() {
     if (!canResend) return
     setSecondsLeft(RESEND_SECONDS)
     setResent(true)
-    /* MOCK — kirim ulang disimulasikan di klien. Di produksi panggilan
-       `signInWithOtp` diulang dan rate-limit aslinya dijaga Supabase (server),
-       jadi timer di sini kenyamanan UI, bukan pengaman. */
-    toast.success(VERIFY_COPY.resendSentNote)
+    /* Kirim ulang NYATA: `signInWithOtp` diulang, dan rate-limit aslinya dijaga
+       Supabase (server). Timer hitung mundur di sini kenyamanan UI, bukan pengaman. */
+    void sendLoginLink(trimmedEmail).then((result) => {
+      if (result.ok) toast.success(VERIFY_COPY.resendSentNote)
+      else toast.error(VERIFY_COPY.resendFailed, { description: result.error })
+    })
 
     /* konfirmasi di halaman tampil sebentar saja: cukup untuk dibaca, tidak
        menetap sampai user bingung kenapa masih ada tulisan "baru dikirim" */
@@ -112,7 +176,7 @@ export function VerifyEmailScreen({ email, expired }: { email: string; expired: 
 
       {/* ── 2. kartu status: terkirim ATAU kedaluwarsa (dua-duanya punya jalan keluar) ── */}
       <AnimatePresence mode="wait" initial={false}>
-        {expired ? (
+        {linkExpired ? (
           <ExpiredCard
             key="expired"
             secondsLeft={secondsLeft}
@@ -151,7 +215,7 @@ export function VerifyEmailScreen({ email, expired }: { email: string; expired: 
       </AnimatePresence>
 
       {/* ── 3. langkah berikutnya: user tahu harus ngapain setelah ini ─────── */}
-      {!expired && (
+      {!linkExpired && (
         <section className="mt-4 rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12">
           <h2 className="font-display text-[15px] font-semibold tracking-tight text-ink">
             {VERIFY_COPY.stepsTitle}
@@ -172,7 +236,7 @@ export function VerifyEmailScreen({ email, expired }: { email: string; expired: 
         </section>
       )}
 
-      {/* ── 4. kartu demo: alur bisa diklik sampai ujung, tapi berlabel jujur ── */}
+      {/* ── 4. masuk dengan KODE dari email (bukan tombol demo lagi) ────────── */}
       <section className="mt-4 rounded-[1.75rem] bg-sage/60 p-5 ring-1 ring-soil/12">
         <div className="flex items-start gap-3">
           <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-cream text-forest">
@@ -180,38 +244,59 @@ export function VerifyEmailScreen({ email, expired }: { email: string; expired: 
           </span>
           <div className="min-w-0">
             <h2 className="font-display text-[15px] font-semibold tracking-tight text-ink">
-              {VERIFY_COPY.demoTitle}
+              {VERIFY_COPY.otpTitle}
             </h2>
-            <p className="mt-1 text-[12px] leading-relaxed text-ink/60">
-              {VERIFY_COPY.demoHint}
-            </p>
+            <p className="mt-1 text-[12px] leading-relaxed text-ink/60">{VERIFY_COPY.otpHint}</p>
           </div>
         </div>
 
-        <Link
-          href="/"
-          className="group mt-4 flex h-12 items-center justify-between gap-3 rounded-full bg-forest pr-1.5 pl-5 text-cream transition-colors duration-200 hover:bg-forest-soft active:scale-[0.98] motion-reduce:transition-none"
+        <form
+          className="mt-4"
+          onSubmit={(event) => {
+            event.preventDefault()
+            void handleVerifyOtp()
+          }}
         >
-          <span className="text-[14px] font-semibold">{VERIFY_COPY.demoLabel}</span>
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-cream text-forest transition-colors duration-200 group-hover:bg-mint">
-            <ArrowRight className="size-4" strokeWidth={2.4} aria-hidden />
-          </span>
-        </Link>
+          <label htmlFor="otp" className="sr-only">
+            {VERIFY_COPY.otpLabel}
+          </label>
+          <input
+            id="otp"
+            name="otp"
+            value={otp}
+            onChange={(event) => setOtp(event.target.value.replace(/\D/g, '').slice(0, 6))}
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            placeholder="000000"
+            aria-label={VERIFY_COPY.otpLabel}
+            className={cn(
+              'h-12 w-full rounded-2xl bg-cream text-center font-mono text-[20px] tracking-[0.4em] text-ink ring-1 ring-soil/12',
+              'placeholder:text-ink/25 focus-visible:ring-2 focus-visible:ring-forest focus-visible:outline-none',
+            )}
+          />
 
-        {/* tautan yang "ada di email" — ditampilkan supaya bisa diaudit, bukan buat diklik */}
-        {demoLink && (
-          <p className="mt-3.5 rounded-2xl bg-cream px-3.5 py-3 ring-1 ring-soil/8">
-            <span className="block text-[11px] font-semibold text-ink/55">
-              {VERIFY_COPY.demoLinkLabel}
+          <button
+            type="submit"
+            disabled={signingIn || otp.length < 6}
+            className="group mt-3 flex h-12 w-full items-center justify-between gap-3 rounded-full bg-forest pr-1.5 pl-5 text-cream transition-colors duration-200 hover:bg-forest-soft active:scale-[0.98] motion-reduce:transition-none disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <span className="text-[14px] font-semibold">
+              {signingIn ? SESSION_COPY.signingIn : VERIFY_COPY.otpSubmitLabel}
             </span>
-            <span className="mt-1 block font-mono text-[11px] leading-relaxed break-all text-ink/50">
-              {demoLink}
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-cream text-forest transition-colors duration-200 group-hover:bg-mint">
+              {signingIn ? (
+                <LoaderCircle className="size-4 animate-spin" strokeWidth={2.4} aria-hidden />
+              ) : (
+                <ArrowRight className="size-4" strokeWidth={2.4} aria-hidden />
+              )}
             </span>
-          </p>
-        )}
+          </button>
+        </form>
+
+        <p className="mt-3 text-[11px] leading-relaxed text-ink/45">{VERIFY_COPY.otpNote}</p>
 
         {/* pratinjau state kedaluwarsa supaya review tidak perlu menebak tampilannya */}
-        {!expired && trimmedEmail && (
+        {!linkExpired && trimmedEmail && (
           <div className="mt-3.5 border-t border-soil/12 pt-3">
             <Link
               href={buildExpiredPreviewHref(trimmedEmail)}

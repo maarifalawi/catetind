@@ -5,26 +5,37 @@ import { GoalDetailScreen } from '@/components/catetind/goal-detail-screen'
 import { FUND_DETAIL_COPY, INITIAL_SINKING_FUNDS } from '@/lib/data/budget'
 
 /* ── Celengan Detail (/budget/[id]) — inventaris #25 ──────────────────────────
-   Route TIPIS: cuma menerjemahkan `id` di URL jadi data celengan, lalu menyusun
-   judul tab-nya. Seluruh isi halaman ada di <GoalDetailScreen/>.
+   Route TIPIS: cuma menerjemahkan `id` di URL jadi angka + judul tab-nya.
+   Seluruh isi halaman ada di <GoalDetailScreen/>.
 
-   Penerjemahannya WAJIB lewat `INITIAL_SINKING_FUNDS` (lib/data/budget.ts) —
-   sumber yang sama dengan kartu Celengan Impian di /budget — jadi halaman ini
-   mustahil menampilkan target/terkumpul yang berbeda dari halaman induk.
+   PAKET 46 — siapa pemilik datanya berubah, dan itu disengaja:
+   celengan sekarang hidup di STORE perangkat (`lib/money/funds-store.ts`), bukan
+   di konstanta `lib/data/budget.ts`. Jadi route ini TIDAK boleh 404 hanya karena
+   id-nya tidak ada di `INITIAL_SINKING_FUNDS`: celengan yang baru ditanam user di
+   /budget ada di store perangkat, dan halaman ini harus bisa membukanya.
+   Karena itu:
+
+     · `id` non-angka (`/budget/abc`) → `notFound()` — itu memang bukan celengan;
+     · `id` angka tapi belum dikenal di perangkat → SCREEN yang memutuskannya
+       (keadaan "belum ada" + CTA kembali, bukan 404 mentah), karena di server
+       tidak ada cara mengetahui celengan lokal user;
+     · metadata tetap dibaca dari konstanta seed (satu-satunya data yang dikenal
+       server) — celengan buatan user tidak bisa punya judul tab server-side,
+       dan itu ditulis apa adanya, bukan ditutup dengan klaim palsu.
 
    Di Next 16 `params` adalah Promise, makanya di-await (pola yang sama dengan
    app/wallet/[id]/page.tsx). */
 
 type GoalDetailPageProps = { params: Promise<{ id: string }> }
 
-/** satu-satunya jembatan `id` URL → celengan, dipakai badan halaman DAN metadata */
-function findFund(id: string) {
+/** satu-satunya jembatan `id` URL → celengan SEED, dipakai metadata saja */
+function findSeedFund(id: string) {
   return INITIAL_SINKING_FUNDS.find((fund) => fund.id === Number(id))
 }
 
 export async function generateMetadata({ params }: GoalDetailPageProps): Promise<Metadata> {
   const { id } = await params
-  const fund = findFund(id)
+  const fund = findSeedFund(id)
   if (!fund) return { title: `${FUND_DETAIL_COPY.notFoundTitle} — CatetInd` }
 
   return {
@@ -35,14 +46,14 @@ export async function generateMetadata({ params }: GoalDetailPageProps): Promise
 
 export default async function GoalDetailPage({ params }: GoalDetailPageProps) {
   const { id } = await params
-  const fund = findFund(id)
+  const fundId = Number(id)
 
-  /* id yang tidak ada (mis. /budget/999) tidak boleh jadi halaman kosong */
-  if (!fund) notFound()
+  /* id yang BUKAN angka tidak mungkin celengan — 404 di sini benar */
+  if (!Number.isInteger(fundId) || fundId <= 0) notFound()
 
   return (
     <PhoneStage>
-      <GoalDetailScreen fund={fund} />
+      <GoalDetailScreen fundId={fundId} />
     </PhoneStage>
   )
 }

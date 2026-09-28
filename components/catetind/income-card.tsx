@@ -1,6 +1,7 @@
 'use client'
 
-import { ChevronDown, DollarSign } from 'lucide-react'
+import { DollarSign } from 'lucide-react'
+import { HOME_INCOME_COPY } from '@/lib/data/home'
 import { usePrivacy } from './privacy-provider'
 
 const MONTHS = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D']
@@ -30,10 +31,15 @@ export function IncomeCard() {
           </span>
           <span className="text-sm font-medium text-cream/85">Income</span>
         </div>
-        <button className="flex items-center gap-1 rounded-full bg-cream/10 px-3 py-1 text-xs font-medium text-cream/85 transition-colors hover:bg-cream/15">
-          February
-          <ChevronDown className="size-3.5" />
-        </button>
+        {/* Label bulan STATIS — dulu tombol dengan chevron ke bawah yang tidak
+            bisa diklik sama sekali (tidak ada nilai/handler). Chevron itu
+            menjanjikan pemilih bulan, padahal mock hanya punya SATU bulan berisi
+            angka nyata; memilih bulan lain hanya akan memindahkan bar yang sama.
+            Jadi kontraknya diluruskan: ini keterangan, bukan kontrol. Kalau nanti
+            ada daftar bulan sungguhan, ubah kembali jadi elemen seleksi. */}
+        <span className="flex items-center gap-1 rounded-full bg-cream/10 px-3 py-1 text-xs font-medium text-cream/85">
+          {HOME_INCOME_COPY.monthLabel}
+        </span>
       </div>
 
       {/* value */}

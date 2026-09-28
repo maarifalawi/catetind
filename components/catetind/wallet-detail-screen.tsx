@@ -5,18 +5,21 @@ import Link from 'next/link'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   ArrowLeft,
+  ArrowLeftRight,
   Plus,
   ReceiptText,
   SlidersHorizontal,
   Sparkles,
   Sprout,
   TrendingUp,
+  Wallet as WalletIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { ScreenShell } from './screen-shell'
 import { GlobalPrivacyToggle } from './global-privacy-toggle'
 import { usePrivacy } from './privacy-provider'
 import { SyncBalanceModal } from './sync-balance-modal'
+import { TransferFlow } from './transfer-flow'
 import {
   ContactlessIcon,
   MaskedAmount,
@@ -31,10 +34,26 @@ import { ConfirmDeleteDialog, TransactionActionsSheet } from './transaction-acti
 import { EditTransactionSheet } from './edit-transaction-sheet'
 import { WalletDetailTrend } from './wallet-detail-trend'
 import { TransactionBottomSheet } from '@/components/dashboard/transaction-bottom-sheet'
+import {
+  applyRowOverride,
+  cancelTransferRow,
+  editRow,
+  incomingTransfersFor,
+  isRowRemoved,
+  postBalanceAdjustment,
+  recordedTransactions,
+  removeRow,
+  restoreRow,
+  undoTransferCancellation,
+  useMoneyStore,
+  walletAccountOf,
+  type TransferCancellation,
+} from '@/lib/money/store'
 import { useCountUp } from '@/hooks/use-count-up'
 import { cn } from '@/lib/utils'
 import { AMOUNT_LABEL, AMOUNT_XL } from '@/lib/typography'
 import { formatIDR, type WalletAccount } from '@/lib/wallets'
+import { TRANSFER_SHEET_COPY } from '@/lib/data/add-wallet'
 import {
   DELETE_TRANSACTION_TOAST,
   MONEY_TONE,
@@ -54,6 +73,7 @@ import {
   WALLET_PATIENT_COPY,
   WALLET_PERIOD_COPY,
   WALLET_QUICK_ACTION_COPY,
+  WALLET_SYNC_ADJUSTMENT_COPY,
   walletSparkline,
   walletSummary30d,
   walletTransactions,
@@ -85,29 +105,40 @@ import {
 /** cubic-bezier khas app: masuk cepat lalu settle lembut */
 const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1]
 
-export function WalletDetailScreen({ wallet }: { wallet: WalletAccount }) {
+export function WalletDetailScreen({ walletId }: { walletId: string }) {
   /* privasi = state GLOBAL app; satu klik menyensor SEMUA nominal halaman ini,
      termasuk angka di tooltip grafik */
   const { masked } = usePrivacy()
 
-  /* saldo lokal: diinisialisasi dari data dompet, lalu diubah Smart Sync.
-     Sumber angkanya tetap `WalletAccount.balance` — tidak ada salinan angka
-     yang ditulis ulang di komponen. */
-  const [balance, setBalance] = useState(wallet.balance)
+  /* Dompet & saldonya dari SATU store uang (`lib/money/store.ts`) — bukan lagi
+     prop yang dirender server dari konstanta. Sebabnya audit #6: koreksi saldo
+     yang ditulis user di halaman lain tidak pernah terlihat di sini, karena
+     halaman ini memegang salinan `wallet.balance` sejak HTML pertama. Sekarang
+     saldonya `opening + Σ baris ledger`, jadi koreksi di `/wallet` langsung
+     terbaca di sini (dan sebaliknya). */
+  const snapshot = useMoneyStore()
+  const wallet = walletAccountOf(snapshot, walletId)
+  /** catatan sesi dari store — tombstone sudah disaring di dalamnya */
+  const recordedTxs = useMemo(() => recordedTransactions(snapshot), [snapshot])
+
   const [syncOpen, setSyncOpen] = useState(false)
+  /** alur pindah dana dari dompet halaman ini (paket 55) */
+  const [transferOpen, setTransferOpen] = useState(false)
   const [selected, setSelected] = useState<HistoryTransaction | null>(null)
   /** baris yang sheet aksi titik-tiganya sedang terbuka */
   const [menuTx, setMenuTx] = useState<HistoryTransaction | null>(null)
   /** transaksi yang sheet EDIT-nya sedang terbuka (paket 03) */
   const [editingTx, setEditingTx] = useState<HistoryTransaction | null>(null)
   const [pendingDelete, setPendingDelete] = useState<HistoryTransaction | null>(null)
-  /** catatan yang dihapus di sesi ini (mock — nanti dari backend) */
-  const [removedIds, setRemovedIds] = useState<number[]>([])
-  /** catatan VERSI BARU hasil edit, per id (mock — nanti dari backend) */
-  const [editedTxs, setEditedTxs] = useState<Record<number, HistoryTransaction>>({})
   /** id yang hak Undo-nya MASIH hidup + timer jendelanya */
   const undoRef = useRef<number | null>(null)
   const undoTimer = useRef<number | null>(null)
+  /**
+   * Pembatalan pindah dana yang sedang bisa di-Undo (paket 55). Disimpan di ref
+   * karena ia bukan untuk dirender: isinya dua baris koreksi yang harus dicabut
+   * bersama tombol Undo, dan hanya aksi Undo yang membacanya.
+   */
+  const undoCancelRef = useRef<TransferCancellation | null>(null)
   /** tanggal hari ini baru dihitung SETELAH mount, supaya label "Hari Ini" /
      "Kemarin" tidak pernah beda antara HTML server & client */
   const [today, setToday] = useState('')
@@ -127,31 +158,58 @@ export function WalletDetailScreen({ wallet }: { wallet: WalletAccount }) {
   /* ── data turunan ──────────────────────────────────────────────────────── */
   /* catatan yang dihapus keluar dari daftar; yang diedit tampil versi barunya —
      ringkasan 30 hari & grafiknya ikut menyesuaikan karena keduanya membaca
-     daftar yang sama, bukan angka yang disalin ulang */
+     daftar yang sama, bukan angka yang disalin ulang.
+     Baris MOCK dompet ini (`WALLET_DETAIL_TRANSACTIONS`) memakai
+     `applyRowOverride()` yang SAMA dengan Riwayat & Home (paket 48): dulu hasil
+     editnya hidup di `useState(editedTxs)` halaman ini saja.
+     Catatan BARU dari panel input ikut di depan — hanya yang dompetnya memang
+     dompet halaman ini, jadi user yang mencatat dari FAB melihat barisnya
+     muncul di sini tanpa reload. */
   const txs = useMemo(
     () =>
-      walletTransactions(wallet.id)
-        .filter((tx) => !removedIds.includes(tx.id))
-        .map((tx) => editedTxs[tx.id] ?? tx),
-    [wallet.id, removedIds, editedTxs],
+      wallet
+        ? [
+            ...recordedTxs
+              .filter((tx) => tx.wallet === wallet.name && !isRowRemoved(snapshot, tx.id))
+              .map((tx) => applyRowOverride(snapshot, tx)),
+            /* sisi MASUK dari pindah dana (paket 55): baris `transfer` menyimpan
+               dompet ASAL di kolom `wallet`, jadi tanpa ini halaman dompet tujuan
+               tidak menampilkan apa pun padahal saldonya baru saja bertambah */
+            ...incomingTransfersFor(snapshot, wallet.id),
+            ...walletTransactions(wallet.id)
+              .filter((tx) => !isRowRemoved(snapshot, tx.id))
+              .map((tx) => applyRowOverride(snapshot, tx)),
+          ]
+        : [],
+    [wallet, recordedTxs, snapshot],
   )
   const summary = useMemo(() => walletSummary30d(txs), [txs])
   const groups = useMemo(() => groupTransactionsByDate(txs, today), [txs, today])
-  /** saldo yang sedang tampil — dasar grafik & modal Smart Sync */
-  const walletView = useMemo<WalletAccount>(() => ({ ...wallet, balance }), [wallet, balance])
+  const balance = wallet?.balance ?? 0
   const trend = useMemo(
-    () => (txs.length >= INSIGHT_MIN_TRANSACTIONS ? walletSparkline(walletView, txs) : []),
-    [walletView, txs],
+    () => (wallet && txs.length >= INSIGHT_MIN_TRANSACTIONS ? walletSparkline(wallet, txs) : []),
+    [wallet, txs],
   )
   const counted = useCountUp(balance)
 
   /* ── aksi ──────────────────────────────────────────────────────────────── */
 
-  /** Smart Sync: user menulis saldo ASLI yang ia baca sendiri di m-banking-nya */
+  /**
+   * Smart Sync: user menulis saldo ASLI yang ia baca sendiri di m-banking-nya.
+   * Yang ditulis bukan cuma angka di layar, tapi BARIS LEDGER
+   * (`balance_adjustment` bertanda) — sehingga selisihnya benar-benar jadi
+   * catatan di Riwayat, persis seperti yang dijanjikan modal, dan Net Worth ikut
+   * bergerak. Kalau saldonya sudah sama, tidak ada baris yang dibuat.
+   */
   function handleSyncConfirm(newBalance: number) {
-    setBalance(newBalance)
+    if (!wallet) return
+    const row = postBalanceAdjustment({ walletId: wallet.id, newBalance })
     setSyncOpen(false) // tutup seketika; animasi keluar jalan di background
-    toast.success(WALLET_QUICK_ACTION_COPY.syncToastTitle)
+    if (row) {
+      toast.success(WALLET_QUICK_ACTION_COPY.syncToastTitle)
+      return
+    }
+    toast.success(WALLET_SYNC_ADJUSTMENT_COPY.modalHint.none)
   }
 
   /** Edit: buka sheet yang sudah terisi data catatan ini (paket 03) */
@@ -161,10 +219,25 @@ export function WalletDetailScreen({ wallet }: { wallet: WalletAccount }) {
     setEditingTx(tx)
   }
 
-  /** simpan hasil edit — baris, ringkasan 30 hari, dan grafik ikut berubah */
+  /**
+   * Simpan hasil edit lewat SATU pintu tulis (`editRow` di store uang) — baris
+   * store diperbarui di barisnya, baris mock lewat `rowOverrides` yang diterapkan
+   * SEMUA halaman (Riwayat, Home, grafik arus uang). Dulu versi barunya hidup di
+   * `useState` halaman ini saja, jadi halaman lain tetap menampilkan angka lama
+   * (temuan B laporan 46). Toast hanya berbunyi kalau penulisannya berhasil.
+   */
   function handleSaveEdit(next: HistoryTransaction) {
-    setEditedTxs((prev) => ({ ...prev, [next.id]: next }))
+    const written = editRow(next.id, {
+      name: next.name,
+      amount: next.amount,
+      type: next.type,
+      category: next.category,
+      wallet: next.wallet,
+      dateISO: next.date,
+      aiGenerated: next.aiGenerated,
+    })
     setEditingTx(null)
+    if (!written) return
     toast.success(UPDATE_TRANSACTION_TOAST.title, {
       description: UPDATE_TRANSACTION_TOAST.description,
     })
@@ -181,29 +254,67 @@ export function WalletDetailScreen({ wallet }: { wallet: WalletAccount }) {
       return
     }
     undoRef.current = null
-    setRemovedIds((prev) => prev.filter((item) => item !== id))
+    /* kalau yang tadi dibatalkan adalah pindah dana, Undo-nya juga mencabut dua
+       baris koreksinya — bukan cuma mengembalikan catatannya (paket 55) */
+    const cancellation = undoCancelRef.current
+    undoCancelRef.current = null
+    if (cancellation) {
+      undoTransferCancellation(cancellation)
+      toast.success(DELETE_TRANSACTION_TOAST.undoneTitle, {
+        description: DELETE_TRANSACTION_TOAST.undoneDescription,
+      })
+      return
+    }
+    restoreRow(id)
     toast.success(DELETE_TRANSACTION_TOAST.undoneTitle, {
       description: DELETE_TRANSACTION_TOAST.undoneDescription,
     })
   }
 
+  /**
+   * Hapus catatan. Satu jenis baris diperlakukan istimewa: `transfer`.
+   *
+   * Baris pindah dana menggerakkan DUA dompet, jadi tombstone saja akan
+   * menyisakan uang di dompet tujuan sementara dompet asal tetap kosong. Karena
+   * itu `cancelTransferRow()` (store) menghapus barisnya SEKALIGUS menulis dua
+   * baris koreksi yang mengembalikan uangnya — dan mengembalikan `null` kalau
+   * barisnya bukan pindah dana (atau uangnya sudah terpakai di tujuan).
+   * Kalau `null`, jatuh ke jalur hapus biasa: satu pintu, dua kemungkinan yang
+   * dikatakan apa adanya lewat toast.
+   */
   function confirmDelete() {
     if (!pendingDelete) return
     const id = pendingDelete.id
     undoRef.current = id
-    setRemovedIds((prev) => (prev.includes(id) ? prev : [...prev, id]))
+    const cancellation =
+      pendingDelete.type === 'transfer' ? cancelTransferRow(id) : null
+    undoCancelRef.current = cancellation
+    /* `cancelTransferRow` sudah menulis tombstone-nya sendiri */
+    if (!cancellation) removeRow(id)
     setPendingDelete(null)
     setSelected(null)
 
-    toast.success(DELETE_TRANSACTION_TOAST.title, {
-      description: DELETE_TRANSACTION_TOAST.description,
-      action: { label: DELETE_TRANSACTION_TOAST.undo, onClick: () => restoreTransaction(id) },
-      duration: UNDO_WINDOW_MS,
-    })
+    if (cancellation) {
+      toast.success(TRANSFER_SHEET_COPY.cancelToastTitle, {
+        description: TRANSFER_SHEET_COPY.cancelToastDescription(
+          cancellation.fromName,
+          cancellation.toName,
+        ),
+        action: { label: DELETE_TRANSACTION_TOAST.undo, onClick: () => restoreTransaction(id) },
+        duration: UNDO_WINDOW_MS,
+      })
+    } else {
+      toast.success(DELETE_TRANSACTION_TOAST.title, {
+        description: DELETE_TRANSACTION_TOAST.description,
+        action: { label: DELETE_TRANSACTION_TOAST.undo, onClick: () => restoreTransaction(id) },
+        duration: UNDO_WINDOW_MS,
+      })
+    }
 
     if (undoTimer.current !== null) window.clearTimeout(undoTimer.current)
     undoTimer.current = window.setTimeout(() => {
       if (undoRef.current === id) undoRef.current = null
+      undoCancelRef.current = null
     }, UNDO_WINDOW_MS)
   }
 
@@ -225,6 +336,35 @@ export function WalletDetailScreen({ wallet }: { wallet: WalletAccount }) {
 
   /** nomor baris global supaya animasi masuk tetap berurutan antar grup */
   let rowIndex = 0
+
+  /* id di URL tidak ketemu (mis. `/wallet/999`) → halaman penjelas, bukan layar
+     kosong. SENGAJA bukan `notFound()`: dompet yang dibuat user baru ada setelah
+     IndexedDB selesai dibaca, jadi render pertama (yang masih memakai snapshot
+     server) tidak boleh langsung memutuskan halaman ini tidak ada. */
+  if (!wallet) {
+    return (
+      <ScreenShell>
+        <div className="mx-auto flex w-full max-w-[560px] flex-col items-center rounded-[2rem] bg-cream px-6 py-14 text-center ring-1 ring-soil/12">
+          <span className="flex size-14 items-center justify-center rounded-full bg-sage text-forest">
+            <WalletIcon className="size-6" strokeWidth={2} />
+          </span>
+          <p className="mt-5 font-display text-xl font-bold tracking-tight text-ink">
+            {WALLET_DETAIL_COPY.notFoundTitle}
+          </p>
+          <p className="mt-2 text-[13px] leading-relaxed text-ink/55">
+            {WALLET_DETAIL_COPY.notFoundHint}
+          </p>
+          <Link
+            href="/wallet"
+            className="mt-6 inline-flex items-center gap-2 rounded-full bg-forest px-5 py-3 text-[13px] font-semibold text-cream transition-colors hover:bg-forest-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40"
+          >
+            <ArrowLeft className="size-4" strokeWidth={2.4} aria-hidden />
+            {WALLET_DETAIL_COPY.notFoundAction}
+          </Link>
+        </div>
+      </ScreenShell>
+    )
+  }
 
   return (
     <ScreenShell>
@@ -265,7 +405,7 @@ export function WalletDetailScreen({ wallet }: { wallet: WalletAccount }) {
               ubah di wallet-card-face.tsx supaya dua halaman ikut berubah. */}
           <div className="group relative xl:col-span-7">
             <WalletFace
-              wallet={walletView}
+              wallet={wallet}
               haloClassName="absolute -inset-x-4 -bottom-6 top-8 rounded-[3rem] opacity-50 blur-2xl transition-all duration-500 ease-out group-hover:-bottom-8 group-hover:opacity-70 motion-reduce:transition-none"
               className="rounded-[2.25rem] p-5 shadow-[0_26px_52px_-26px_rgba(0,0,0,0.6)] sm:p-6"
             >
@@ -386,8 +526,14 @@ export function WalletDetailScreen({ wallet }: { wallet: WalletAccount }) {
         </section>
 
         {/* ── AKSI CEPAT — STICKY DI ZONA IBU JARI (PRD 2141–2145) ───────────
-            Dua aksi primer halaman ini duduk di BAWAH, bukan di header: ibu jari
+            Tiga aksi primer halaman ini duduk di BAWAH, bukan di header: ibu jari
             menjangkau dasar layar, sedangkan header adalah hard-reach area.
+
+            “Pindah Dana” (paket 55) ditambahkan di sini karena halaman inilah
+            satu-satunya tempat yang tahu dompet MANA yang sedang dibaca:
+            sebelumnya alur pindah dana hanya bisa dibuka dari popover kartu di
+            /wallet, dan halaman ini hanya menyebutnya di komentar — pintu yang
+            benar-benar tidak ada.
 
             `bottom-[5.5rem]` di mobile = duduk TEPAT DI ATAS bottom nav
             (nav = bottom-5 + tinggi 16 ≈ 84px); di desktop nav-nya hilang jadi
@@ -416,16 +562,32 @@ export function WalletDetailScreen({ wallet }: { wallet: WalletAccount }) {
               <SlidersHorizontal className="size-4 text-forest" strokeWidth={2.4} aria-hidden />
               {WALLET_QUICK_ACTION_COPY.sync}
             </button>
+            {/* dompet asalnya SUDAH jelas (halaman ini) → user tidak memilih dua
+                kali; alurnya tetap sheet yang sama dengan pintu lain */}
+            <button
+              type="button"
+              onClick={() => setTransferOpen(true)}
+              title={WALLET_QUICK_ACTION_COPY.transferHint}
+              className="inline-flex h-12 w-full flex-1 items-center justify-center gap-2 rounded-[1.1rem] bg-cream text-[14px] font-semibold text-ink ring-1 ring-soil/12 transition-colors hover:bg-sage/60 active:scale-[0.99] sm:w-auto"
+            >
+              <ArrowLeftRight className="size-4 text-forest" strokeWidth={2.4} aria-hidden />
+              {WALLET_QUICK_ACTION_COPY.transferLabel}
+            </button>
           </div>
         </div>
       </div>
+
+      {/* ── ALUR PINDAH DANA (paket 55) ────────────────────────────────────────
+          Satu host alur yang sama dipakai popover kartu /wallet, tombol di sini,
+          menu “Lainnya”, dan sidebar desktop. `source` = dompet halaman ini. */}
+      <TransferFlow open={transferOpen} onOpenChange={setTransferOpen} source={wallet} />
 
       {/* ── SMART SYNC (Magic Vault) — koreksi saldo ke angka ASLI ──────────
           Modal yang sama dengan halaman Dompet & Akun: user menulis saldo yang
           ia baca sendiri di m-banking-nya (tanpa open-banking), selisihnya
           dihitung live, lalu hero & grafik halaman ini ikut bergerak. */}
       <SyncBalanceModal
-        wallet={syncOpen ? walletView : null}
+        wallet={syncOpen ? wallet : null}
         open={syncOpen}
         onClose={() => setSyncOpen(false)}
         onConfirm={handleSyncConfirm}

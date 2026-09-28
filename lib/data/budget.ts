@@ -94,6 +94,35 @@ export const SWEEP_TRIGGER_DAY = 28
    Turunkan angka `SPENT_THIS_MONTH` (atau naikkan kewajiban celengan) kalau mau
    menguji state "jatah ditahan" (audit UX #2) di kartu Jatah Hari Ini. */
 export const MONTHLY_INCOME = 7_500_000
+
+/* ── KANON CICILAN (paket 27) ────────────────────────────────────────────────
+   SATU angka cicilan untuk SELURUH perhitungan Jatah Harian: `periodPool()`,
+   `periodInstallments()`, dan prorata window non-bulanan semuanya membaca
+   konstanta ini. Dulu ia ikut terduplikasi di beberapa mock (inventaris di
+   bawah) — sejak paket ini konstanta ini yang ditunjuk sebagai kanon.
+
+   Hasil sisir SEMUA angka cicilan yang di-hardcode di repo (`grep`):
+     1. lib/data/budget.ts  → TOTAL_INSTALLMENTS = 800.000  ← KANON (dipakai hitungan)
+     2. lib/data/wealth.ts  → `totalMonthInstallments(INITIAL_DEBTS)` = 1.070.000
+        (Kredivo 550.000 jatuh tempo tgl 10 + SPayLater 520.000 tgl 25) — halaman /wealth
+     3. lib/data/calendar.ts → jadwal tagihan: Cicilan Motor 850.000 (tgl 5),
+        Cicilan HP 600.000 (tgl 22), Kredivo 420.000 (tgl 28) = 1.870.000 — Kalender
+     4. lib/data/bills.ts   → tagihan 'Cicilan HP' 450.000 & 'Kredivo' 350.000 — /bills
+     5. lib/data/wealth.ts  → `hudDeductionCopy()` cuma menyebut nominalnya (bukan angka baru)
+
+   Selisih 800.000 vs 1.070.000 SENGAJA tidak disatukan di paket ini: 800.000
+   adalah angka patokan demo (PRD 678) yang sudah tampil di Home & tab Bulanan,
+   dan menggantinya berarti mengubah layar Home — di luar mandat paket ini
+   (aturan paket: angka Home tidak boleh berubah). Jadi dilaporkan sebagai
+   usulan, bukan dikerjakan.
+
+   ARAH PRODUKSI (satu-satunya jalan yang benar): nominalnya DITURUNKAN dari tabel
+   hutang, bukan ditulis tangan —
+     platformDebts(debts).reduce((sum, d) => sum + (d.monthlyInstallment ?? 0), 0)
+   (sudah ada sebagai `totalMonthInstallments()` di lib/data/wealth.ts), dan
+   `INSTALLMENT_DUE_DAYS` di bawah diambil dari `dueDate` tiap hutang. Sesudah itu
+   lima daftar mock di atas harus mengecil jadi satu sumber (tabel debts), dan
+   tiga mock tampilan (wealth/calendar/bills) membaca turunan yang sama. */
 export const TOTAL_INSTALLMENTS = 800_000
 export const SPENT_THIS_MONTH = 2_300_000
 
@@ -377,44 +406,68 @@ function monthSpansOf(startISO: string, endISO: string): { firstISO: string; las
 }
 
 /**
- * Cicilan untuk satu window — aturan SEDERHANA yang disengaja, dan ini
- * keputusan produk yang paling mungkin direvisi saat data hutang nyata masuk:
+ * Potongan BULANAN untuk satu window — SATU rumus, dipakai bersama oleh cicilan
+ * (`periodInstallments()` di bawah) dan kewajiban celengan (`sinkingObligationFor()`).
  *
- *   1. Kalau salah satu tanggal jatuh tempo (`INSTALLMENT_DUE_DAYS`) jatuh di
- *      dalam window → potong PENUH cicilan bulanan. Cicilan memang dibayar
- *      sekali di tanggal itu, jadi angkanya nyata untuk window tersebut.
+ * Paket 26 menulis aturan ini khusus untuk cicilan; paket 27 mengangkatnya jadi
+ * helper bersama supaya celengan memakai aturan yang SAMA PERSIS — bukan aturan
+ * kedua yang mirip tapi beda di ujung pembulatan.
+ *
+ *   1. Kalau salah satu tanggal jatuh tempo (`dueDays`) jatuh di dalam window →
+ *      potong PENUH. Cicilan memang dibayar sekali di tanggal itu, jadi angkanya
+ *      nyata untuk window tersebut. (`dueDays` kosong = tidak punya jatuh tempo.)
  *   2. Kalau tidak ada → PRORATA: setiap hari window "membawa"
- *      1/(jumlah hari bulan itu) bagian dari cicilan bulanan (1 bulan = 4
- *      minggu ⇒ ±¼ per minggu). Window yang melintasi dua bulan dijumlahkan
- *      per bulan, jadi siklus gajian 25 Sep–24 Okt = 6/30 + 24/31 cicilan.
+ *      1/(jumlah hari bulan itu) bagian dari nominal bulanan (1 bulan ≈ 4 minggu
+ *      ⇒ ±¼ per minggu). Window yang melintasi dua bulan dijumlahkan per bulan,
+ *      jadi siklus gajian 25 Sep–24 Okt = 6/30 + 24/31 dari nominalnya.
  *
- * Catatan asumsi: jadwal hutang mock di `lib/data/wealth.ts` punya tanggal
- * sendiri (Kredivo tgl 10, SPayLater tgl 25) dengan total berbeda
- * (Rp 1.070.000), sementara HUD memakai kanon PRD 678 (Rp 800.000). Menyatukan
- * dua mock itu akan mengubah angka Home, jadi TIDAK dikerjakan di sini —
- * `INSTALLMENT_DUE_DAYS` hanya meminjam TANGGAL-nya, nominalnya tetap kanon HUD.
+ * Hasilnya dibulatkan ke rupiah penuh (`Math.round`) supaya tidak ada pecahan
+ * sen yang bocor ke copy. Untuk window SATU BULAN PENUH faktor proratanya 1
+ * (30/30, 31/31, 28/28), jadi angka kanon bulan kalender tidak bergeser —
+ * itulah yang menjaga Home & tab Bulanan tetap identik setelah paket ini.
  */
-export function periodInstallments(window: PeriodWindow): number {
+export function prorateMonthly(
+  amount: number,
+  window: PeriodWindow,
+  dueDays: number[] = [],
+): number {
   const spans = monthSpansOf(window.startISO, window.endISO)
 
   /* Poin 1 — ada tanggal jatuh tempo di dalam window ⇒ potong penuh. */
-  const dueInside = spans.some((span) => {
-    const [y, m] = span.firstISO.split('-').map(Number)
-    return INSTALLMENT_DUE_DAYS.some((day) => {
-      if (day > daysInMonthOf(y, m)) return false
-      const dueISO = `${y}-${pad2(m)}-${pad2(day)}`
-      return dueISO >= window.startISO && dueISO <= window.endISO
+  if (dueDays.length > 0) {
+    const dueInside = spans.some((span) => {
+      const [y, m] = span.firstISO.split('-').map(Number)
+      return dueDays.some((day) => {
+        if (day > daysInMonthOf(y, m)) return false
+        const dueISO = `${y}-${pad2(m)}-${pad2(day)}`
+        return dueISO >= window.startISO && dueISO <= window.endISO
+      })
     })
-  })
-  if (dueInside) return TOTAL_INSTALLMENTS
+    if (dueInside) return amount
+  }
 
   /* Poin 2 — tidak ada: prorata per bulan yang disentuh window. */
   const prorated = spans.reduce((sum, span) => {
     const [y, m] = span.firstISO.split('-').map(Number)
     const daysInWindowMonth = daysBetween(span.firstISO, span.lastISO) + 1
-    return sum + TOTAL_INSTALLMENTS * (daysInWindowMonth / daysInMonthOf(y, m))
+    return sum + amount * (daysInWindowMonth / daysInMonthOf(y, m))
   }, 0)
   return Math.round(prorated)
+}
+
+/**
+ * Cicilan untuk satu window — memakai helper di atas dengan tanggal jatuh tempo
+ * platform (`INSTALLMENT_DUE_DAYS`).
+ *
+ * Catatan asumsi: jadwal hutang mock di `lib/data/wealth.ts` punya tanggal
+ * sendiri (Kredivo tgl 10, SPayLater tgl 25) dengan total berbeda
+ * (Rp 1.070.000), sementara HUD memakai kanon PRD 678 (Rp 800.000) — lihat blok
+ * "KANON CICILAN". Menyatukan dua mock itu akan mengubah angka Home, jadi TIDAK
+ * dikerjakan di sini: `INSTALLMENT_DUE_DAYS` hanya meminjam TANGGAL-nya,
+ * nominalnya tetap kanon HUD.
+ */
+export function periodInstallments(window: PeriodWindow): number {
+  return prorateMonthly(TOTAL_INSTALLMENTS, window, INSTALLMENT_DUE_DAYS)
 }
 
 /** kolam uang untuk window aktif — satu pintu, dipakai `computeDailyHud()` */
@@ -483,7 +536,8 @@ export interface BudgetHud {
   /** cicilan platform aktif yang dipotong lebih dulu (PRD 2B.1). Untuk window
    *  non-bulanan ini cicilan milik window itu (prorata/penuh), bukan angka bulanan */
   installments: number
-  /** total kewajiban celengan bulan ini (sinking funds belum disetor) */
+  /** kewajiban celengan yang dipotong untuk PERIODE INI. Window non-bulanan
+   *  memakai prorata (paket 27), bukan kewajiban bulan penuh */
   sinkingObligation: number
   /** uang keluar periode aktif - `SPENT_THIS_MONTH` hanya untuk bulan kalender */
   spent: number
@@ -495,6 +549,7 @@ export function computeDailyHud({
   monthlyIncome = MONTHLY_INCOME,
   totalInstallments = TOTAL_INSTALLMENTS,
   sinkingObligation = 0,
+  sinkingFunds,
   spent = SPENT_THIS_MONTH,
   currentDay,
   daysInMonth,
@@ -503,8 +558,14 @@ export function computeDailyHud({
   /** dipakai kalau `window` tidak diberikan (jangkar bulan kalender) */
   monthlyIncome?: number
   totalInstallments?: number
-  /** kewajiban celengan bulan ini — dipotong sebelum jatah harian dihitung */
+  /* kewajiban celengan bulan ini — dipotong sebelum jatah harian dihitung.
+   *  Window non-bulanan memakai PRORATA dari angka ini (paket 27). */
   sinkingObligation?: number
+  /** daftar celengan sebagai sumber kewajiban — kalau diisi, `sinkingObligation`
+   *  di atas DIABAIKAN dan kewajibannya dihitung dari `monthlyNeeded()` tiap
+   *  celengan (`sinkingObligationOf()`). Dipakai /budget supaya celengan yang
+   *  baru ditambahkan user langsung ikut terhitung. */
+  sinkingFunds?: SinkingFundItem[]
   spent?: number
   currentDay?: number
   daysInMonth?: number
@@ -520,11 +581,29 @@ export function computeDailyHud({
   const installments = pool ? pool.installments : totalInstallments
   const spentInPeriod = pool ? pool.spent : spent
 
+  /* Kewajiban celengan untuk periode aktif. Ada DUA bentuk sumber yang setara —
+     daftar celengan (`sinkingFunds`, mis. state `funds` di /budget) atau angka
+     bulanannya saja (`sinkingObligation`, mis. kanon `SINKING_OBLIGATION_ALL`) —
+     dan dua-duanya lewat SATU rumus: `prorateMonthly()` (yang juga dipakai
+     `sinkingObligationFor()` & cicilan). Tidak ada salinan logika di sini.
+
+     Paket 27: sebelum ini nilainya selalu kewajiban BULAN PENUH, jadi tab
+     Mingguan memotong 3,6jt dari pemasukan seminggu — "benar menurut rumus",
+     tapi bukan uang minggu itu (PRD 655–681: pacing harus bisa dipercaya).
+     Untuk window satu bulan penuh faktor proratanya 1, jadi `DAILY_HUD`
+     (Home & tab Bulanan) tetap 3.600.000 apa adanya. */
+  const monthlyObligation = sinkingFunds ? sinkingObligationOf(sinkingFunds) : sinkingObligation
+  const periodSinking = period
+    ? sinkingFunds
+      ? sinkingObligationFor(period, sinkingFunds)
+      : prorateMonthly(monthlyObligation, period, SINKING_FUND_DUE_DAYS)
+    : monthlyObligation
+
   /* PRD 2B.1/1154 — cicilan dipotong dari pool income SEBELUM dibagi hari;
      `available` sudah dijaga >= 0 di `periodPool()` supaya pemasukan window yang
      lebih kecil dari cicilannya tidak berubah jadi jatah minus. */
   const availablePool =
-    (pool ? pool.available : Math.max(0, income - installments)) - sinkingObligation
+    (pool ? pool.available : Math.max(0, income - installments)) - periodSinking
   const remaining = availablePool - spentInPeriod
   /* periode aktif menentukan pembaginya; guard eksplisit supaya tidak pernah
      ada pembagian nol walau periode berakhir hari ini */
@@ -540,7 +619,10 @@ export function computeDailyHud({
     daysLeft,
     dailyBudget,
     installments,
-    sinkingObligation,
+    /* kewajiban yang BENAR-BENAR dipotong untuk window ini (prorata), bukan
+       angka bulanan — supaya copy "Setelah dipotong … & celengan …" cocok
+       dengan kolom yang dihitung */
+    sinkingObligation: periodSinking,
     spent: spentInPeriod,
     shortfall,
   }
@@ -603,6 +685,40 @@ export const INITIAL_SINKING_FUNDS: SinkingFundItem[] = [
        periodWindow('monthly') })` di halaman Budget menghasilkan angka yang
        IDENTIK dengan `DAILY_HUD` (acceptance: angka bulanan Home = /budget). */
 export const SINKING_OBLIGATION_ALL = sinkingObligationOf(INITIAL_SINKING_FUNDS)
+
+/** Tanggal "jatuh tempo" celengan — SENGAJA KOSONG, dan itu keputusan produk
+ *  (paket 27), bukan kelalaian.
+ *
+ *  Celengan mock tidak punya tanggal setor wajib bulanan: `SinkingFundItem`
+ *  cuma menyimpan `deadline` (kapan targetnya ingin dicapai), dan deadline itu
+ *  TIDAK berarti "bayar penuh bulan ini". Kalau deadline dipakai sebagai pemicu
+ *  "potong penuh", siklus gajian yang kebetulan memuat deadline akan memotong
+ *  3,6jt sekaligus — persis jenis lompatan angka yang bikin user berhenti
+ *  percaya pada pacing (PRD 655–681, PRD 809–865).
+ *
+ *  Jadi kewajiban celengan memakai PRORATA MURNI: window membawa 1/(jumlah hari
+ *  bulan itu) bagian tiap bulan yang disentuhnya. Asumsi ini yang paling
+ *  mungkin direvisi saat ada fitur "tanggal setor rutin per celengan" — ubah
+ *  konstanta ini jadi daftar tanggalnya, dan rumusnya sudah siap (helper yang
+ *  sama dengan cicilan). */
+export const SINKING_FUND_DUE_DAYS: number[] = []
+
+/**
+ * Kewajiban celengan untuk satu WINDOW (paket 27) — satu pintu untuk pemanggil
+ * yang punya daftar celengan sendiri (mis. state `funds` di /budget).
+ *
+ * Isinya = `sinkingObligationOf(funds)` (kewajiban bulanan) dipotong dengan
+ * `prorateMonthly()` — rumus yang SAMA dengan cicilan, jadi tidak ada dua
+ * perhitungan yang bisa berbeda. `computeDailyHud()` memakai jalan yang sama
+ * untuk argumen `sinkingObligation`-nya, sehingga angka kartu Jatah Hari Ini dan
+ * angka yang dihitung halaman selalu identik.
+ */
+export function sinkingObligationFor(
+  window: PeriodWindow,
+  funds: SinkingFundItem[] = INITIAL_SINKING_FUNDS,
+): number {
+  return prorateMonthly(sinkingObligationOf(funds), window, SINKING_FUND_DUE_DAYS)
+}
 
 export const DAILY_HUD = computeDailyHud({
   monthlyIncome: MONTHLY_INCOME,
@@ -698,6 +814,111 @@ export function budgetAddHref(categoryLabel: string): string {
   return `/budget?${BUDGET_ADD_PARAM}=${encodeURIComponent(categoryLabel)}`
 }
 
+/* ── JEMBATAN HOME → SHEET CELENGAN (paket 29) ───────────────────────────────
+   Tombol `+` di kartu "Tabungan Impian" Home dulu MATI. Pilihannya dua: buka
+   `AddGoalSheet` langsung dari Home (tapi celengan itu milik state `funds` di
+   /budget — menyimpannya dari Home berarti menulis ke tempat yang tidak dibaca
+   halaman mana pun: janji palsu), atau bawa user ke halaman yang MEMILIKI
+   datanya sambil membuka sheet-nya. Yang kedua dipakai, dan caranya sama persis
+   dengan `budgetAddHref()` di atas: lewat URL, divalidasi di route, lalu
+   diteruskan sebagai prop awal ke komponen halaman.
+
+   Bedanya cuma satu: parameter ini tidak butuh nilai (tidak ada kategori yang
+   harus dibawa), jadi isinya `1` — "tolong buka sheet tanam celengan". */
+export const BUDGET_PLANT_PARAM = 'tanam'
+
+/** tautan `+ Tanam celengan` dari Home → /budget dengan sheet celengan terbuka */
+export function budgetPlantHref(): string {
+  return `/budget?${BUDGET_PLANT_PARAM}=1`
+}
+
+/** baca parameter URL apa pun menjadi boolean — `?tanam=1` / `?tanam=true` */
+export function flagParamOf(value: string | string[] | undefined): boolean {
+  const raw = Array.isArray(value) ? value[0] : value
+  const normalized = raw?.trim().toLowerCase()
+  return normalized === '1' || normalized === 'true' || normalized === 'ya'
+}
+
+/* ── SATU KATEGORI = SATU LIMIT (paket 28) ───────────────────────────────────
+   Insight "Spending Spike: Kopi" di /history mengajak user MENGATUR LIMIT lewat
+   `/budget?add=Kopi`, tetapi sheet-nya selalu mode TAMBAH — padahal
+   `INITIAL_BUDGETS` sudah punya baris Kopi. Hasilnya dua baris untuk kategori
+   yang sama: limit jadi ambigu, pacing per kategori bercabang, dan user tidak
+   punya cara menghapusnya dengan yakin. Menambah data yang bertentangan dengan
+   data yang sudah ada adalah cara tercepat kehilangan kepercayaan user
+   (kanon "jujur di setiap klaim", PRD 244) — jadi aturannya ditetapkan di sini.
+
+   Aturannya: satu kategori = satu limit **per konteks uang** (pribadi /
+   keluarga / bersama). Konteks jadi batasnya karena halaman Budget sendiri
+   menyaring daftar per konteks — dan mock repo ini memang begitu: 'Transportasi'
+   punya baris bulanan (pribadi) DAN baris mingguan (keluarga); kalau aturannya
+   dibuat global, data mock-nya sendiri langsung melanggar. Yang benar-benar
+   dilarang: kategori muncul DUA KALI di ruang yang sama-sama dilihat user.
+
+   Konsekuensinya PERIODE tidak ikut jadi kunci: kalau Kopi cuma ada sebagai
+   limit mingguan, mengatur ulang limitnya mengubah baris ITU (periodenya ikut
+   tampil & bisa diganti di sheet) — bukan menambah baris bulanan kedua. */
+
+/** cari baris budget satu kategori di dalam daftar yang diberikan.
+ *  Perbandingan label tidak peduli huruf besar/kecil & spasi pinggir, karena
+ *  kategorinya bisa datang dari URL (`?add=Kopi`). */
+export function findBudgetByCategory(
+  budgets: BudgetItem[],
+  category: string | undefined | null,
+): BudgetItem | undefined {
+  const wanted = category?.trim().toLowerCase()
+  if (!wanted) return undefined
+  return budgets.find((budget) => budget.category.trim().toLowerCase() === wanted)
+}
+
+/**
+ * Keputusan mode sheet untuk satu kategori — inilah yang mencegah baris ganda.
+ *
+ * `budgets` yang dikirim adalah daftar yang SAMA dengan yang dibaca kartu
+ * kategori (sudah disaring konteks uang), jadi "sudah ada" di sini berarti
+ * "sudah terlihat oleh user", bukan sekadar ada di data.
+ */
+export function budgetSheetMode(
+  budgets: BudgetItem[],
+  category: string | undefined | null,
+): { mode: 'create' | 'edit'; existing?: BudgetItem } {
+  const existing = findBudgetByCategory(budgets, category)
+  return existing ? { mode: 'edit', existing } : { mode: 'create' }
+}
+
+/**
+ * Satu-satunya jalur TULIS budget di halaman /budget.
+ *
+ * Kategori yang sudah ada di konteks itu → barisnya DIPERBARUI (`id` & `spent`
+ * tetap, jadi riwayat pengeluaran kategori itu tidak hilang); kategori baru →
+ * baris ditambahkan dengan `spent` 0. Karena keputusan ini ada di satu fungsi
+ * murni, tidak ada cabang di komponen yang bisa lupa memeriksanya — dan
+ * aturannya bisa diuji tanpa browser (dipakai di validasi paket 28).
+ *
+ * `mode` yang dikembalikan adalah mode yang BENAR-BENAR terjadi. Komponen
+ * memakainya untuk memilih toast (dibuat vs diperbarui), bukan untuk menebak.
+ */
+export function applyBudgetSave(
+  budgets: BudgetItem[],
+  data: Omit<BudgetItem, 'id' | 'spent'>,
+): { budgets: BudgetItem[]; mode: 'create' | 'edit'; id: number } {
+  const existing = findBudgetByCategory(
+    budgets.filter((item) => item.scope === data.scope),
+    data.category,
+  )
+
+  if (existing) {
+    return {
+      budgets: budgets.map((item) => (item.id === existing.id ? { ...item, ...data } : item)),
+      mode: 'edit',
+      id: existing.id,
+    }
+  }
+
+  const id = budgets.reduce((max, item) => Math.max(max, item.id), 0) + 1
+  return { budgets: [...budgets, { ...data, id, spent: 0 }], mode: 'create', id }
+}
+
 /** kategori dari URL → opsi sheet. Label asing/typo diabaikan (null) supaya
  *  URL karangan tidak bisa membuka sheet dengan kategori yang tidak ada. */
 export function categoryOptionOf(label: string | undefined | null): { label: string; icon: string } | null {
@@ -721,6 +942,64 @@ export const PRIORITY_OPTIONS: {
 
 export function priorityStyle(priority: GoalPriority) {
   return PRIORITY_OPTIONS.find((p) => p.id === priority) ?? PRIORITY_OPTIONS[0]
+}
+
+/* ── SATU SUMBER CELENGAN UNTUK KARTU HOME (paket 30) ───────────────────────
+   Kartu "Tabungan Impian" di Home dan baris "nutrisi" di widget tanaman harus
+   membaca daftar yang SAMA dengan /budget & /budget/<id>. Dulu dua-duanya punya
+   daftar tampilan sendiri (nama & nominal yang tidak ada di
+   `INITIAL_SINKING_FUNDS`) — akibatnya tautannya cuma bisa menunjuk /budget
+   generik, dan label yang tidak bisa ditemukan user di halaman tujuan itu persis
+   yang dilarang kanon "jujur di setiap klaim" (PRD 244).
+
+   Dua helper di bawah menjaga itu: SIAPA yang jadi wajah kartu, dan urutan baris
+   mini-nya. Keduanya logika murni di lapis data supaya aturan pemilihannya
+   terbaca sekali dan bisa dipakai lebih dari satu kartu Home. */
+
+/** bobot "mendesak" prioritas celengan — makin besar makin mendesak. Ditulis
+ *  eksplisit (bukan mengandalkan urutan array pil `PRIORITY_OPTIONS`) supaya
+ *  mengubah urutan tampilan pil tidak diam-diam mengubah pilihan kartu Home. */
+export const PRIORITY_RANK: Record<GoalPriority, number> = {
+  rendah: 0,
+  sedang: 1,
+  tinggi: 2,
+  kritis: 3,
+}
+
+/** progres tertinggi dalam satu daftar (null kalau daftarnya kosong) */
+function highestProgress(funds: SinkingFundItem[]): SinkingFundItem | null {
+  return funds.reduce<SinkingFundItem | null>(
+    (best, fund) => (best === null || fundPercent(fund) > fundPercent(best) ? fund : best),
+    null,
+  )
+}
+
+/**
+ * Celengan yang jadi WAJAH kartu Tabungan Impian di Home.
+ *
+ * Aturannya (PRD 178–191: kartu ringkasan = nudge, bukan pajangan): prioritas
+ * `'kritis'` lebih dulu — kalau ada beberapa, progres tertinggi yang menang;
+ * kalau tidak ada yang kritis, progres tertinggi dari SELURUH daftar (bukan
+ * "prioritas tertinggi yang ada", karena itu bisa memilih celengan yang baru
+ * 10% hanya karena labelnya 'tinggi').
+ */
+export function heroFundOf(
+  funds: SinkingFundItem[] = INITIAL_SINKING_FUNDS,
+): SinkingFundItem | null {
+  const critical = funds.filter((fund) => fund.priority === 'kritis')
+  return highestProgress(critical.length > 0 ? critical : funds)
+}
+
+/** urutan baris mini di kartu Home: prioritas dulu (kritis → rendah), lalu
+ *  progres tertinggi. Progresnya langsung dari `fundPercent()` — tidak ada
+ *  rumus kedua yang bisa berbeda dari halaman detail. */
+export function sortFundsByUrgency(
+  funds: SinkingFundItem[] = INITIAL_SINKING_FUNDS,
+): SinkingFundItem[] {
+  return [...funds].sort(
+    (a, b) =>
+      PRIORITY_RANK[b.priority] - PRIORITY_RANK[a.priority] || fundPercent(b) - fundPercent(a),
+  )
 }
 
 /* ── METAFORA TANAMAN — tahap pertumbuhan celengan (PRD 2C.3) ─────────────── */
@@ -754,12 +1033,39 @@ export function plantStageFrom(current: number, target: number): PlantStage {
 }
 
 /* ── SUMBER DOMPET untuk setoran (mock — disamakan dengan halaman Dompet) ───
-   Tile berwarna brand supaya pemilih dompet terasa hidup, bukan dropdown abu-abu. */
+   Tile berwarna brand supaya pemilih dompet terasa hidup, bukan dropdown abu-abu.
+   CATATAN (paket 46): daftar ini adalah PILIHAN yang bisa ditekan user di sheet
+   "Setor" & "Tanam Celengan" — jangan tambahkan sumber yang bukan dompet di sini.
+   Sumber non-dompet (mis. sisa budget dari Sapu Bersih) ada di
+   `CONTRIBUTION_SOURCES` di bawah dan HANYA dipakai untuk membaca riwayat. */
 export const WALLET_SOURCES: { id: string; name: string; kind: string; tile: string; dot: string }[] = [
   { id: 'bca', name: 'BCA', kind: 'Bank', tile: 'bg-thistle/15 text-thistle ring-thistle/15', dot: 'bg-thistle' },
   { id: 'gopay', name: 'GoPay', kind: 'E-Wallet', tile: 'bg-leaf/15 text-evergreen ring-leaf/15', dot: 'bg-leaf' },
   { id: 'tunai', name: 'Tunai', kind: 'Uang cash', tile: 'bg-cantelope/15 text-cantelope ring-cantelope/15', dot: 'bg-cantelope' },
 ]
+
+/** id sumber setoran "Sisa budget" — dipakai `sweepIntoFund()` di funds-store */
+export const SWEEP_SOURCE_ID = 'sweep'
+
+/**
+ * Sumber setoran yang BUKAN dompet — hanya untuk menampilkan riwayat setoran.
+ *
+ * Sapu Bersih (3G) memindahkan sisa limit kategori ke celengan; uangnya tidak
+ * keluar dari satu dompet, jadi baris riwayatnya tidak boleh menyebut BCA/GoPay
+ * (itu akan jadi klaim palsu). Ia punya nama sendiri di sini, dan sengaja TIDAK
+ * ikut masuk `WALLET_SOURCES` supaya tidak muncul sebagai pilihan dompet di
+ * sheet setor.
+ */
+export const CONTRIBUTION_SOURCES: { id: string; name: string; kind: string; tile: string; dot: string }[] = [
+  {
+    id: SWEEP_SOURCE_ID,
+    name: 'Sisa budget',
+    kind: 'Sapu Bersih',
+    tile: 'bg-hud-sage/25 text-forest ring-forest/15',
+    dot: 'bg-forest',
+  },
+]
+
 
 /* ── COPY TETAP (social proof & nudge) ───────────────────────────────────── */
 export const SOCIAL_PROOF_COPY =
@@ -796,7 +1102,9 @@ export const HUD_COPY = {
   shortfallBody:
     '⚠️ Saldo tidak cukup untuk penuhi target celengan bulan ini. Jatah harianmu ditahan.',
   shortfallShortBy: 'Kurang',
-  shortfallObligationLead: 'Celengan bulan ini',
+  /* netral periode: kewajiban celengan di window non-bulanan memang prorata
+     (paket 27), jadi jangan lagi disebut "bulan ini" */
+  shortfallObligationLead: 'Celengan periode ini',
 } as const
 
 /* ── COPY KARTU JATAH HARI INI DI HOME ────────────────────────────────────
@@ -931,6 +1239,31 @@ export const BUDGET_ADD_COPY = {
   submit: 'Simpan Budget ✓',
 } as const
 
+/* ── COPY MODE ATUR ULANG LIMIT (paket 28) ───────────────────────────────────
+   Satu sheet, dua mode. Kalau kategorinya SUDAH punya limit, kalimatnya harus
+   berubah — bukan cuma angkanya: "Atur Ulang Limit" berarti user tidak sedang
+   membuat baris kedua, dan deskripsinya menegaskan bahwa yang ia lihat memang
+   limit yang sudah ada. Ini jawaban jujur untuk jalur insight "Spending Spike:
+   Kopi" di /history, yang dulu selalu membuka mode tambah. */
+export const BUDGET_EDIT_COPY = {
+  title: 'Atur Ulang Limit',
+  description: 'Kategori ini sudah punya limit — ubah angkanya ya.',
+  submit: 'Simpan Limit ✓',
+  /** hint kecil di atas field nominal (jangkar konteks, bukan peringatan) */
+  hint: 'Angka lama sudah terisi, jadi kamu cuma perlu menyesuaikan.',
+} as const
+
+/* ── TOAST SIMPAN BUDGET — create vs edit ────────────────────────────────────
+   Dua kalimat yang sengaja BEDA supaya user tahu baris barunya tidak digandakan:
+   "dibuat" untuk kategori baru, "diperbarui" untuk limit yang diubah. Ditulis di
+   sini (bukan di JSX) mengikuti aturan copy repo ini. */
+export const BUDGET_SAVE_TOAST = {
+  created: (category: string) => `Budget ${category} dibuat! 🌿`,
+  createdBody: (limitLabel: string) => `${limitLabel} siap kamu jaga bersama.`,
+  updated: (category: string) => `Limit ${category} diperbarui 🌿`,
+  updatedBody: (limitLabel: string) => `Baris yang sama — sekarang limitnya ${limitLabel}.`,
+} as const
+
 
 /* ── COPY HALAMAN DETAIL CELENGAN (/budget/[id]) ─────────────────────────────
    Semua teks halaman detail tinggal di sini — tidak ada satu kalimat pun yang
@@ -958,13 +1291,29 @@ export const FUND_DETAIL_COPY = {
   /** toast setelah setor — pemisah `{amount}` & `{name}` diisi di handler */
   setToastTitle: (amountLabel: string, name: string) => `${amountLabel} disetor ke ${name}! 🌱`,
   setToastHint: (walletName: string) => `Dari ${walletName} — tanamannya makin subur.`,
-  /** celengan yang BARU dibuat di sesi demo: halaman detail /budget/[id] membaca
-   *  data dari lib/data/budget.ts, sedangkan celengan baru hanya hidup di state
-   *  halaman /budget (demo tanpa backend). Jadi bukannya halaman 404, kita
-   *  jelaskan apa adanya. Hilangkan copy ini begitu ada tabel `sinking_funds`. */
-  demoOnlyTitle: 'Celengan barumu cuma ada di halaman ini 🌱',
-  demoOnlyHint: 'Demo ini belum menyimpan celengan baru, jadi halaman detailnya belum punya data untuk dibuka.',
+  /** halaman detail dibuka dari id yang belum ada di perangkat ini — HOT di
+   *  client (`useFundsStore`) karena celengan baru hidup di store perangkat,
+   *  bukan di konstanta `lib/data/*`. Kopi jujur, bukan "Error 404". */
+  notFoundBody:
+    'Celengan ini nggak ada di perangkatmu. Kalau kamu baru menanamnya di perangkat lain, celengannya belum ikut ke sini — cek daftar di halaman Budget & Target.',
+  notFoundCta: 'Lihat daftar celengan',
+  /** jeda singkat saat id belum dikenal & store perangkat belum selesai dibaca.
+   *  Tanpa copy ini, celengan buatan user sempat terlihat "tidak ditemukan". */
+  loadingLabel: 'Menyiapkan celenganmu…',
 } as const
+
+/** toast halaman /budget setelah celengan baru disimpan (4C "Tanam Celengan") */
+export const FUND_CREATE_TOAST = {
+  title: 'Celengan baru ditanam! 🌱',
+  body: (name: string) => `${name} siap dikejar — setor kapan aja ya.`,
+} as const
+
+/** toast 3G "Sapu Bersih" setelah sisa limit dipindahkan ke celengan */
+export const FUND_SWEEP_TOAST = {
+  title: (amountLabel: string, name: string) => `${amountLabel} disapu ke ${name}! 🧹🎉`,
+  body: 'Sisa limit kategori periode ini dianggap terpakai, jadi bulan depan mulai dari nol lagi.',
+} as const
+
 
 /** auto-kalkulasi PRD 2C.3 dipecah dua potong supaya nominalnya bisa di-tebalkan
  *  di UI, dengan versi satu kalimat untuk pembaca layar. */
@@ -1281,6 +1630,14 @@ export function fundPercent(fund: SinkingFundItem): number {
   return Math.min(100, (fund.current / fund.target) * 100)
 }
 
+/** persen progres SIAP TAMPIL (bulat 0–100). Dibulatkan di lapis data supaya
+ *  kartu yang menampilkan celengan yang sama tidak pernah beda angka karena
+ *  membulatkan sendiri-sendiri (nudge hero Home, baris mini, dan bar "menuju
+ *  tahap berikutnya" di widget tanaman memakai angka ini). */
+export function fundPercentRounded(fund: SinkingFundItem): number {
+  return Math.round(fundPercent(fund))
+}
+
 /** `2026-12-15` → `15 Des 2026` (UTC dipatok supaya tidak bergeser karena timezone) */
 export function formatDeadline(iso: string): string {
   const [year, month, day] = iso.split('-').map(Number)
@@ -1344,9 +1701,15 @@ export function fundContributions(
 /** nama dompet pengganti kalau id-nya tidak dikenal (jangan pernah tampil kosong) */
 export const FALLBACK_WALLET_NAME = 'Dompet'
 
-/** entri dompet sumber (tile warna + dot) untuk baris riwayat setoran */
+/** entri sumber setoran (tile warna + dot) untuk baris riwayat setoran.
+ *  Mencakup sumber non-dompet (`CONTRIBUTION_SOURCES`, mis. "Sisa budget") supaya
+ *  baris Sapu Bersih tidak pernah tampil sebagai dompet yang salah. */
 export function walletSourceById(walletId: string) {
-  return WALLET_SOURCES.find((source) => source.id === walletId) ?? null
+  return (
+    WALLET_SOURCES.find((source) => source.id === walletId) ??
+    CONTRIBUTION_SOURCES.find((source) => source.id === walletId) ??
+    null
+  )
 }
 
 /** nama dompet sumber setoran (cocok dengan id di `WALLET_SOURCES`) */

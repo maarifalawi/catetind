@@ -21,7 +21,7 @@ Kalau ada ambiguitas: ambil keputusan paling konservatif, tulis asumsimu di lapo
 > `CONTEXT-WAJIB.md`, ia akan salah/gagal menyebutkannya. Ini penjaga murah
 > supaya perintah "baca file" benar-benar dijalankan.
 
-## 3. Daftar 16 baris siap-tempel (urut prioritas)
+## 3. Daftar baris siap-tempel (urut prioritas)
 
 ```text
 01. Baca docs/handoff/CONTEXT-WAJIB.md lalu kerjakan docs/handoff/prompts/01-wallet-detail.md sampai tuntas — implementasi penuh, bukan rencana. Jalankan validasi di bagian akhir prompt itu (pnpm theme:audit, pnpm exec tsc --noEmit, pnpm build) dan laporkan hasilnya apa adanya.
@@ -145,13 +145,106 @@ Kalau ada ambiguitas: ambil keputusan paling konservatif, tulis asumsimu di lapo
 | 27 | `sinkingObligation` **tidak diprorata** → tab Mingguan menampilkan Rp 742.100/hari (dilaporkan task 26) |
 | 28 | Insight → budget bisa membuat **baris kategori ganda** (mis. Kopi dua kali) — dilaporkan task 24 |
 
+### Fase 10 — SISA dari audit hasil 29/27/28 — **30 · 31 · 32 ✅ TUNTAS (27 Sep 2026, diverifikasi audit)**
+
+```text
+30. Baca docs/handoff/CONTEXT-WAJIB.md lalu kerjakan docs/handoff/prompts/30-celengan-home-satu-sumber.md sampai tuntas — implementasi penuh, bukan rencana. Jalankan validasi di bagian akhir prompt itu (pnpm theme:audit, pnpm exec tsc --noEmit, pnpm build) dan laporkan hasilnya apa adanya.
+```
+```text
+31. Baca docs/handoff/CONTEXT-WAJIB.md lalu kerjakan docs/handoff/prompts/31-privasi-nominal-toast.md sampai tuntas — implementasi penuh, bukan rencana. Jalankan validasi di bagian akhir prompt itu (pnpm theme:audit, pnpm exec tsc --noEmit, pnpm build) dan laporkan hasilnya apa adanya.
+```
+```text
+32. Baca docs/handoff/CONTEXT-WAJIB.md lalu kerjakan docs/handoff/prompts/32-target-bulanan-lintas-halaman.md sampai tuntas — implementasi penuh, bukan rencana. Jalankan validasi di bagian akhir prompt itu (pnpm theme:audit, pnpm exec tsc --noEmit, pnpm build) dan laporkan hasilnya apa adanya.
+```
+
+| # | Menutup apa |
+|---|---|
+| 30 | Kartu "Tabungan Impian" Home masih memakai **mock kedua** (`Liburan ke Jepang`/`MacBook Air M4`/`Dana Umroh`) → 3 tautannya berhenti di `/budget` generik, bukan `/budget/<id>` (butir 5 paket 29 dilaporkan separuh) |
+| 31 | **Nominal di toast tidak disensor** saat Mata Privasi ON (`budget-screen.tsx:252/286`, `wallet-screen.tsx:283`, `ai-chat-widget.tsx:241`, `monthly-review.ts:618-622`) — kandidat yang `CONTEXT-WAJIB.md:228-230` sendiri catat belum dikerjakan |
+| 32 | **Target bulanan hanya hidup di Home**; CTA recap "Atur target nabung" di `/history` berhenti di `/budget` yang tidak punya alur target (`lib/data/monthly-review.ts:436-439` mengakui jalurnya) |
+
+> **✅ Ketiganya sudah dikerjakan & diverifikasi audit 27 Sep 2026.** 30: kartu "Tabungan Impian" kini
+> membaca `INITIAL_SINKING_FUNDS` dan setiap panah menuju `/budget/<id>` yang ada (nama fiktif tinggal
+> di dokumen). 31: seluruh toast ber-nominal disensor lewat `hide()`/`money()` di titik toast dibuat,
+> satu definisi `MASKED_AMOUNT`. 32: `/history` memasang `useMonthlyReview({ auto: false })` +
+> `MonthlyTargetCard` + `onSetTarget` **wajib**.
+> **Perlu di-commit:** 30/31/32 (bersama 29/27/28 & 33) masih di working tree.
+
+
+
+### Fase 11 — Sisa dari uji pakai langsung (27 Sep 2026) — **33 ✅ TUNTAS**
+
+> **Sudah dikerjakan 27 Sep 2026.** Panel input manual sekarang MENULIS ke
+> `lib/transaction-bus.ts` (`transaction-bottom-sheet.tsx`, `transaction-web-modal.tsx` lewat hook
+> `use-transaction-submit.ts`), toast sukses pindah dari engine ke shell, dan Home + `/wallet/[id]`
+> ikut menampilkan catatan baru. Sisa Fase 10 (31 → 30 → 32) tetap berlaku di bawah.
+
+```text
+33. Baca docs/handoff/CONTEXT-WAJIB.md lalu kerjakan docs/handoff/prompts/33-transaksi-baru-tercatat.md sampai tuntas — implementasi penuh, bukan rencana. Jalankan validasi di bagian akhir prompt itu (pnpm theme:audit, pnpm exec tsc --noEmit, pnpm build) dan laporkan hasilnya apa adanya.
+```
+
+| # | Menutup apa |
+|---|---|
+| 33 | **Mencatat transaksi = no-op.** FAB `+` & semua CTA input membuang payload (`transaction-bottom-sheet.tsx:71` = `onSubmitted={() => setOpen(false)}`, `transaction-web-modal.tsx:162` = `close`), sementara toast sukses tetap berbunyi (`transaction-input-engine.tsx:386`). `recordTransaction()` cuma dipanggil jalur AI capture ⇒ catatan tidak pernah muncul di `/history`, Home, maupun `/wallet/[id]` |
+
+> **✅ Dikerjakan 27 Sep 2026, lalu diverifikasi audit:** `onSubmitted` kedua shell kini MENULIS lewat
+> `hooks/use-transaction-submit.ts` → `recordDraftTransaction()`; toast sukses sudah dicabut dari engine
+> dan ditembak setelah penulisan; Home (`recent-transactions-card.tsx`) & `/wallet/[id]` berlangganan bus.
+> **Tiga batas yang tetap terbuka** (jadi paket 36 & 37 di bawah): hapus lintas halaman, catatan
+> `/calendar` yang belum masuk riwayat — ringkasan chart Home yang dulu statis **sudah ditutup paket 35
+> (27 Sep 2026)**.
+
+### Fase 12 — Temuan BARU dari audit verifikasi 30/31/32/33 — **34 · 35 ✅ TUNTAS, sisa 36 → 37**
+
+```text
+34. Baca docs/handoff/CONTEXT-WAJIB.md lalu kerjakan docs/handoff/prompts/34-privasi-ringkasan-mingguan.md sampai tuntas — implementasi penuh, bukan rencana. Jalankan validasi di bagian akhir prompt itu (pnpm theme:audit, pnpm exec tsc --noEmit, pnpm build) dan laporkan hasilnya apa adanya.
+```
+```text
+35. Baca docs/handoff/CONTEXT-WAJIB.md lalu kerjakan docs/handoff/prompts/35-ringkasan-uang-home-satu-sumber.md sampai tuntas — implementasi penuh, bukan rencana. Jalankan validasi di bagian akhir prompt itu (pnpm theme:audit, pnpm exec tsc --noEmit, pnpm build) dan laporkan hasilnya apa adanya.
+```
+```text
+36. Baca docs/handoff/CONTEXT-WAJIB.md lalu kerjakan docs/handoff/prompts/36-hapus-catatan-lintas-halaman.md sampai tuntas — implementasi penuh, bukan rencana. Jalankan validasi di bagian akhir prompt itu (pnpm theme:audit, pnpm exec tsc --noEmit, pnpm build) dan laporkan hasilnya apa adanya.
+```
+```text
+37. Baca docs/handoff/CONTEXT-WAJIB.md lalu kerjakan docs/handoff/prompts/37-catatan-kalender-jalur-tulis-sama.md sampai tuntas — implementasi penuh, bukan rencana. Jalankan validasi di bagian akhir prompt itu (pnpm theme:audit, pnpm exec tsc --noEmit, pnpm build) dan laporkan hasilnya apa adanya.
+```
+
+| # | Menutup apa |
+|---|---|
+| 34 ✅ | **Modal Rekap Mingguan kebal tombol mata** — `weekly-recap-modal.tsx` memakai `formatIDR` di 16 situs (slide 1–5) tanpa pernah mengimpor `usePrivacy`, padahal ia dibuka dari Home & `/history`; plus komentar basi `:514-516` |
+| 35 ✅ | **Dua ringkasan uang di Home saling bertentangan** — `cash-flow-card.tsx:7-24` masih konstanta keras (`INCOME 8.500.000`/`EXPENSE 752.000`/`SERIES`) sementara `recent-transactions-card.tsx:371-381` sudah turunan data ⇒ setelah user mencatat, dua kartu di satu layar menampilkan surplus berbeda |
+| 36 | **Hapus catatan sesi tidak lintas halaman** — `recent-transactions-card.tsx:393-400` hapus page-local; bus belum punya event "removed" (komentar paket 33 menunjuk solusinya sendiri) |
+| 37 | **Catatan `/calendar` mengaku "tercatat" tapi tak pernah masuk Riwayat** — `cashflow-calendar-screen.tsx:184-210` menyimpan ke `noteEntries` halaman + toast "tersimpan" |
+
+> **34 ✅ TUNTAS & diverifikasi 27 Sep 2026** (grep saya: `formatIDR` tinggal 1 situs yaitu di dalam
+> `hide()`; `dots=` 0 hasil ⇒ dua dialek titik disatukan ke `MASKED_AMOUNT`; `onSetTarget` di `SlidePlan`
+> kini wajib). **35 ✅ TUNTAS & diverifikasi 27 Sep 2026** (nol nominal keras di `cash-flow-card.tsx` —
+> baris seed & turunannya pindah ke `lib/data/home-money.ts`; kedua kartu berbagi
+> `HOME_MONEY_COPY.period` = "Bulan ini" lewat satu bus. Probe: sebelum 8.500.000/752.000/net 7.748.000
+> → sesudah 1 catatan 8.500.000/777.000/net 7.723.000 di **kedua** kartu; sumbu-Y ikut
+> `MASKED_AMOUNT`). **Urutan sisa: 36 → 37.** Alasan: 36 menutup hapus catatan lintas halaman (penerima
+> bus-nya sudah ada), 37 menutup catatan `/calendar` yang mengaku "tercatat" tapi tak pernah masuk
+> Riwayat. Keduanya tidak saling bergantung dan tidak menyentuh angka patokan demo.
+
+
+
+
+
 ---
 
 ## 4. Urutan pengerjaan (ringkasan)
 
 1 → 2 (tutup jalan buntu) · 3 → 4 (modal menggantung) · 5 → 6 → 7 (bersih-bersih) ·
 8 → 9 → 10 → 11 (publik) · 12 → 13 (legal) · 14 → 15 → 16 (modal kebiasaan) ·
-**17 → 18 → 19 → 20 → 21 → 22 → 23 (sisa audit)**.
+**17 → 18 → 19 → 20 → 21 → 22 → 23 (sisa audit)** · **24 → 25 → 26 (sisa terakhir)** ·
+**29 → 27 → 28 (sweep kontrol mati, pacing, kategori ganda)** ·
+**33 (transaksi baru tersimpan — prioritas tertinggi, ketemu saat uji pakai)** ·
+**31 → 30 → 32 (sisa audit hasil 29/27/28)** — ✅ semua sudah dijalankan, ada di working tree · **belum di-commit** ·
+**34 → 35 (privasi rekap mingguan · ringkasan uang Home satu sumber) ✅ selesai · sisa 36 → 37
+(hapus catatan lintas halaman · catatan kalender masuk jalur tulis yang sama)**.
+
+
+
 
 Detail alasan & dependensi: `ROADMAP-HALAMAN.md`.
 
@@ -174,4 +267,140 @@ ketiganya tanpa menambah teks konteks.
 | "Agent bakal males baca" | Dinetralkan oleh: perintah baca eksplisit + kewajiban menyebut 3 aturan warna + laporan file yang dibaca |
 | "Teks panjang lebih aman" | Teks panjang justru bisa **basi** (beda versi dengan file) dan makan context window — kualitas prompt turun, bukan naik |
 | "Bedanya apa?" | Prompt panjang = satu sumber kebenaran **per prompt**. Prompt pendek = satu sumber kebenaran **per repo**. Yang kedua lebih tahan lama |
+
+---
+
+## 7. Prompt audit fintech (Stage 2–6) — hasil audit 27 Sep 2026
+
+Enam prompt ini mengikuti `docs/handoff/FIXPLAN-AUDIT.md`. **Stage 1 sudah selesai** (mesin uang + 23 test
+hijau) — jangan dikerjakan ulang, dan jangan "mengembalikan" angka joint ke nilai lama: yang sah sekarang
+adalah **Jon transfer Rp 25.000 ke Dany** (dengan `REALTIME_ARRIVAL`: Rp 250.000).
+
+Catatan mesin ini: pnpm lokal 9.12.0 sedangkan `package.json` menulis `packageManager: pnpm@12.3.4`, jadi
+tambahkan `--config.manage-package-manager-versions=false` pada perintah pnpm (`-w` khusus `pnpm add`).
+
+```text
+38. Baca docs/handoff/CONTEXT-WAJIB.md lalu kerjakan docs/handoff/prompts/38-stage2-ui-uang-benar.md sampai tuntas — implementasi penuh, bukan rencana. Jalankan validasi di bagian akhir prompt itu (pnpm test, pnpm exec tsc --noEmit, pnpm build) dan laporkan hasilnya apa adanya.
+```
+```text
+39. Baca docs/handoff/CONTEXT-WAJIB.md lalu kerjakan docs/handoff/prompts/39-stage3-sesi-dan-keamanan-api.md sampai tuntas — implementasi penuh, bukan rencana. Jalankan validasi di bagian akhir prompt itu (pnpm test, pnpm exec tsc --noEmit, pnpm build) dan laporkan hasilnya apa adanya.
+```
+```text
+40. Baca docs/handoff/CONTEXT-WAJIB.md lalu kerjakan docs/handoff/prompts/40-stage4a-satu-ledger-kas.md sampai tuntas — implementasi penuh, bukan rencana. Jalankan validasi di bagian akhir prompt itu (pnpm test, pnpm exec tsc --noEmit, pnpm build) dan laporkan hasilnya apa adanya.
+```
+```text
+41. Baca docs/handoff/CONTEXT-WAJIB.md lalu kerjakan docs/handoff/prompts/41-stage4b-utang-piutang-net-worth.md sampai tuntas — implementasi penuh, bukan rencana. Jalankan validasi di bagian akhir prompt itu (pnpm test, pnpm exec tsc --noEmit, pnpm build) dan laporkan hasilnya apa adanya.
+```
+```text
+42. Baca docs/handoff/CONTEXT-WAJIB.md lalu kerjakan docs/handoff/prompts/42-stage5-offline-idempotency-input.md sampai tuntas — implementasi penuh, bukan rencana. Jalankan validasi di bagian akhir prompt itu (pnpm test, pnpm exec tsc --noEmit, pnpm build) dan laporkan hasilnya apa adanya.
+```
+```text
+43. Baca docs/handoff/CONTEXT-WAJIB.md lalu kerjakan docs/handoff/prompts/43-stage6-kepatuhan-export-ops.md sampai tuntas — implementasi penuh, bukan rencana. Jalankan validasi di bagian akhir prompt itu (pnpm test, pnpm exec tsc --noEmit, pnpm build) dan laporkan hasilnya apa adanya.
+```
+
+
+---
+
+
+
+**Urutan wajib: 38 → 39 → 40 → 41 → 42 → 43.** Alasan singkat: 38 membuat layar jujur soal uang, 39
+menutup lubang keamanan sebelum data dipindah, 40 membangun satu ledger kas (fondasi persistensi), 41
+menyambungkan utang/piutang ke kas itu, 42 menambah daya tahan (idempotency/offline), 43 menutup
+kepatuhan & operasional. Jangan melompat ke 40 sebelum 39: memindahkan data ke store tanpa otorisasi
+hanya memindahkan masalah.
+
+**Baris tambahan "mode ketat"** (tempel sebagai baris kedua untuk task 40 & 41 — keduanya menyentuh saldo):
+
+```text
+Kalau ada ambiguitas: ambil keputusan paling konservatif, tulis asumsimu di laporan, lanjutkan — JANGAN berhenti untuk minta izin. Bukti yang wajib kau tunjukkan: (a) daftar file yang dibuat/diubah, (b) angka saldo/Net Worth sebelum & sesudah, (c) output 3 perintah validasi.
+```
+
+---
+
+## 8. Lanjutan setelah uji pemakaian (27 Sep 2026)
+
+Dua prompt terakhir. Urutannya wajib: **44 dulu** (perbaikan hasil uji + dua bug yang sudah dipatch:
+parser nominal `2.5000`/`25.000` dan mask yang tidak lagi "terkurung"), **baru 45** (Supabase).
+
+```text
+44. Baca docs/handoff/CONTEXT-WAJIB.md lalu kerjakan docs/handoff/prompts/44-perbaikan-uji-pemakaian.md sampai tuntas — implementasi penuh, bukan rencana. Jalankan validasi di bagian akhir prompt itu (pnpm test, pnpm exec tsc --noEmit, pnpm build, pnpm theme:audit) dan laporkan hasilnya apa adanya.
+```
+```text
+45. Baca docs/handoff/CONTEXT-WAJIB.md lalu kerjakan docs/handoff/prompts/45-stage7-supabase-backend.md sampai tuntas — implementasi penuh, bukan rencana. Jalankan validasi di bagian akhir prompt itu (pnpm test, pnpm exec tsc --noEmit, pnpm build, pnpm theme:audit) + bukti server (curl REST tanpa login, isolasi dua akun) dan laporkan hasilnya apa adanya.
+```
+
+**Catatan pnpm (mesin ini):** tambahkan `--config.manage-package-manager-versions=false` pada perintah
+pnpm yang meng-`add` dependency, karena `packageManager: pnpm@12.3.4` di `package.json` menunjuk versi
+yang tidak ada di registry. `pnpm test` / `pnpm build` jalan tanpa flag itu.
+
+**Setelah #44 & #45 selesai:** perbarui `CONTEXT-WAJIB.md` §10 (angka kanon + daftar "yang belum ada")
+supaya baseline tidak jadi basi, dan commit pekerjaan per paket — sampai sekarang semua perubahan masih
+di working tree.
+
+---
+
+## 9. FASE 13 — temuan pemilik produk (28 Sep 2026): sinkronisasi, nominal, kategori, transfer, ramalan
+
+Sumber temuan: `docs/handoff/laporan/46-sinkronisasi-celengan-konteks-install-laporan.md` §6 (tabel A–F)
++ keluhan langsung pemilik produk (nominal, kategori, transfer, ramalan kalender).
+
+**Urutan wajib: 47 → (48, 49) → (50, 51, 52) → (53, 54, 55, 56).**
+Alasannya: 47 memperkenalkan `scope` pada model Tagihan/Kalender/Kekayaan/Investasi yang dipakai 50/51;
+48 & 49 menutup dua "satu tindakan dua cerita" yang paling sering kena (edit Riwayat & catatan kalender);
+53–56 tidak saling bergantung tapi 55 & 56 menyentuh kalender/engine yang sama dengan 49 & 54, jadi
+kerjakan setelahnya supaya konfliknya kecil.
+
+| # | Paket | File prompt | Menutup apa |
+|---|---|---|---|
+| 47 | Konteks uang dihormati seluruh halaman | `47-konteks-uang-semua-halaman.md` | temuan A — `/wallet`, `/history`, `/calendar`, `/bills`, `/wealth`, `/insight`, `/joint` mengabaikan konteks |
+| 48 | Edit catatan lintas halaman | `48-edit-catatan-lintas-halaman.md` | temuan B — `editedTxs` di `history-screen.tsx:109,216-222` |
+| 49 | Catatan `/calendar` masuk jalur catatan | `49-catatan-kalender-jalur-tulis-sama.md` | temuan C (= #37) + dompet `'Tunai'` hardcoded + `money_movement` palsu |
+| 50 | Satu store Kekayaan | `50-store-kekayaan-lintas-halaman.md` | temuan D — `useState(INITIAL_DEBTS/…)` + ekspor membaca konstanta |
+| 51 | Satu store Tagihan + "Lunas" jujur | `51-store-tagihan-lunas-jujur.md` | temuan E — `useState(INITIAL_BILLS)` + "Lunas" tanpa uang keluar |
+| 52 | `/joint` satu sumber + realtime nyata | `52-joint-satu-sumber-realtime.md` | temuan F — state halaman + id kanon `joint-1` |
+| 53 | Input nominal: tipografi + titik ribuan | `53-input-nominal-tipografi-titik-ribuan.md` | font nominal terlalu tebal + `2.000000` |
+| 54 | Kategori dipilih user | `54-kategori-transaksi-dipilih-user.md` | `category: type.suggested` + badge "AI Suggested" + saklar mati |
+| 55 | Alur transfer jelas | `55-alur-transfer-pindah-dana.md` | chip "Transfer" menulis baris satu sisi + pintu masuk cuma satu |
+| 56 | Hilangkan ramalan kalender | `56-hapus-ramalan-kalender-cashflow.md` | `upcoming_forecast`, bubble "· ramalan", [Bayar Sekarang] |
+
+Salin-tempel satu per satu (sesuaikan nomornya):
+
+```text
+47. Baca docs/handoff/CONTEXT-WAJIB.md lalu kerjakan docs/handoff/prompts/47-konteks-uang-semua-halaman.md sampai tuntas — implementasi penuh, bukan rencana. Jalankan validasi di bagian akhir prompt itu (pnpm test, pnpm exec tsc --noEmit, pnpm build, pnpm theme:audit) dan laporkan hasilnya apa adanya.
+```
+```text
+48. Baca docs/handoff/CONTEXT-WAJIB.md lalu kerjakan docs/handoff/prompts/48-edit-catatan-lintas-halaman.md sampai tuntas — implementasi penuh, bukan rencana. Jalankan validasi di bagian akhir prompt itu dan laporkan hasilnya apa adanya.
+```
+```text
+49. Baca docs/handoff/CONTEXT-WAJIB.md lalu kerjakan docs/handoff/prompts/49-catatan-kalender-jalur-tulis-sama.md sampai tuntas (ini lanjutan #37) — implementasi penuh, bukan rencana. Jalankan validasi di bagian akhir prompt itu dan laporkan hasilnya apa adanya.
+```
+```text
+50. Baca docs/handoff/CONTEXT-WAJIB.md lalu kerjakan docs/handoff/prompts/50-store-kekayaan-lintas-halaman.md sampai tuntas — implementasi penuh, bukan rencana. Jalankan validasi di bagian akhir prompt itu dan laporkan hasilnya apa adanya.
+```
+```text
+51. Baca docs/handoff/CONTEXT-WAJIB.md lalu kerjakan docs/handoff/prompts/51-store-tagihan-lunas-jujur.md sampai tuntas — implementasi penuh, bukan rencana. Jalankan validasi di bagian akhir prompt itu dan laporkan hasilnya apa adanya.
+```
+```text
+52. Baca docs/handoff/CONTEXT-WAJIB.md lalu kerjakan docs/handoff/prompts/52-joint-satu-sumber-realtime.md sampai tuntas — implementasi penuh, bukan rencana. Jalankan validasi di bagian akhir prompt itu dan laporkan hasilnya apa adanya.
+```
+```text
+53. Baca docs/handoff/CONTEXT-WAJIB.md lalu kerjakan docs/handoff/prompts/53-input-nominal-tipografi-titik-ribuan.md sampai tuntas — implementasi penuh, bukan rencana. Jalankan validasi di bagian akhir prompt itu dan laporkan hasilnya apa adanya.
+```
+```text
+54. Baca docs/handoff/CONTEXT-WAJIB.md lalu kerjakan docs/handoff/prompts/54-kategori-transaksi-dipilih-user.md sampai tuntas — implementasi penuh, bukan rencana. Jalankan validasi di bagian akhir prompt itu dan laporkan hasilnya apa adanya.
+```
+```text
+55. Baca docs/handoff/CONTEXT-WAJIB.md lalu kerjakan docs/handoff/prompts/55-alur-transfer-pindah-dana.md sampai tuntas — implementasi penuh, bukan rencana. Jalankan validasi di bagian akhir prompt itu dan laporkan hasilnya apa adanya.
+```
+```text
+56. Baca docs/handoff/CONTEXT-WAJIB.md lalu kerjakan docs/handoff/prompts/56-hapus-ramalan-kalender-cashflow.md sampai tuntas — implementasi penuh, bukan rencana. Jalankan validasi di bagian akhir prompt itu dan laporkan hasilnya apa adanya.
+```
+
+**Baris tambahan "mode ketat"** (tempel sebagai baris kedua untuk 47, 48, 50, 51, 52 — semuanya
+menyentuh data uang yang dipakai lintas halaman):
+
+```text
+Kalau ada ambiguitas: ambil keputusan paling konservatif, tulis asumsimu di laporan, lanjutkan — JANGAN berhenti untuk minta izin. Bukti yang wajib kau tunjukkan: (a) daftar file yang dibuat/diubah, (b) angka sebelum & sesudah untuk setiap klaim sinkron (saldo/Net Worth/timbangan/ekspor), (c) output 4 perintah validasi.
+```
+
 

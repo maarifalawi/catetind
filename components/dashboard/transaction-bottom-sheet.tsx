@@ -6,6 +6,10 @@ import {
   TransactionInputEngine,
   type TransactionTypeId,
 } from './transaction-input-engine'
+import { useMoneyContext } from '@/components/catetind/money-context-provider'
+import { usePrivacy } from '@/components/catetind/privacy-provider'
+import { defaultWalletNameFor } from '@/lib/money/store'
+import { useTransactionSubmit } from '@/hooks/use-transaction-submit'
 
 /**
  * Shell MOBILE dari Transaction Input Engine (inventaris 97a/b/c).
@@ -16,6 +20,12 @@ import {
  *
  * Versi web-nya ada di `transaction-web-modal.tsx`; keduanya memakai engine yang
  * sama supaya perilaku mobile & web tidak pernah divergen.
+ *
+ * PAKET 33: shell ini yang MENYIMPAN hasilnya. Sebelumnya ia cuma menutup panel
+ * (`onSubmitted={() => setOpen(false)}`), jadi semua pintu yang memakai sheet ini
+ * — FAB, "+ Catat Transaksi" di Home, tombol di dompet, CTA Dry Spell di /budget
+ * — menghasilkan catatan yang tidak ada di mana pun. Sekarang urutannya:
+ * tulis (`useTransactionSubmit`) → tutup → toast.
  */
 export function TransactionBottomSheet({
   trigger,
@@ -26,6 +36,14 @@ export function TransactionBottomSheet({
   defaultType?: TransactionTypeId
 }) {
   const [open, setOpen] = useState(false)
+  /* dompet default ikut konteks uang aktif (Pribadi/Keluarga/Bersama) — sumber
+     yang sama dengan penyaring dompet & budget di halaman lain */
+  const { context } = useMoneyContext()
+  /* Toast sukses menampilkan nominal transaksi — jadi ia WAJIB ikut sensor tombol
+     mata (paket 31). `hooks/` sengaja tidak mengimpor provider dari `components/`,
+     jadi statusnya dioper dari sini. */
+  const { masked } = usePrivacy()
+  const submit = useTransactionSubmit(defaultWalletNameFor(context), masked)
 
   return (
     <Drawer.Root open={open} onOpenChange={setOpen} autoFocus={false}>
@@ -68,7 +86,7 @@ export function TransactionBottomSheet({
               active={open}
               layout="sheet"
               defaultType={defaultType}
-              onSubmitted={() => setOpen(false)}
+              onSubmitted={(draft) => submit(draft, () => setOpen(false))}
             />
           </div>
         </Drawer.Content>
@@ -76,3 +94,5 @@ export function TransactionBottomSheet({
     </Drawer.Root>
   )
 }
+
+

@@ -1,4 +1,4 @@
-import type { TransactionType } from '../types'
+import type { MoneyContext, TransactionType } from '../types'
 import { formatIDR } from '../wallets'
 
 /* ── Riwayat & Insight (/app/history) ────────────────────────────────────────
@@ -295,12 +295,12 @@ function matchesTime(tx: HistoryTransaction, time: TimeFilter, todayIso: string)
 }
 
 /** saring transaksi berdasarkan 4 filter + kata kunci pencarian */
-export function filterHistoryTransactions(
-  txs: HistoryTransaction[],
+export function filterHistoryTransactions<T extends HistoryTransaction>(
+  txs: T[],
   filters: HistoryFilters,
   query: string,
   todayIso: string,
-): HistoryTransaction[] {
+): T[] {
   return txs.filter((tx) => {
     if (!matchesSearch(tx, query)) return false
     if (!matchesTime(tx, filters.time, todayIso)) return false
@@ -315,7 +315,7 @@ export function filterHistoryTransactions(
   })
 }
 
-export interface HistoryDayGroup {
+export interface HistoryDayGroup<T extends HistoryTransaction = HistoryTransaction> {
   date: string
   /** `Hari Ini — 25 Sep 2026` / `Kemarin — 24 Sep 2026` / `23 Sep 2026` */
   label: string
@@ -324,9 +324,15 @@ export interface HistoryDayGroup {
   /** total uang yang cuma DIPINDAH (setoran tabungan + transfer) — net worth tetap,
    *  jadi pill harian perlu menjelaskan angkanya secara terpisah */
   moved: number
-  items: HistoryTransaction[]
+  /**
+   * Baris grup. Generik (paket 47) supaya pemanggil yang memakai bentuk
+   * turunan — mis. `ContextTransaction` dari `lib/money/context-filter.ts`
+   * (baris + penanda konteks) — tidak kehilangan field tambahannya saat
+   * dikelompokkan. Default-nya tetap `HistoryTransaction`, jadi pemanggil lama
+   * tidak berubah.
+   */
+  items: T[]
 }
-
 /** label relatif hari (butuh `todayIso`; tanpa itu jatuh ke tanggal polos) */
 export function resolveDayLabel(iso: string, todayIso: string): string {
   if (!todayIso) return formatDayLabel(iso)
@@ -345,11 +351,11 @@ export function dayNet(txs: HistoryTransaction[]): number {
 }
 
 /** kelompokkan per tanggal, urut dari hari terbaru; tiap hari urut jam terbaru */
-export function groupTransactionsByDate(
-  txs: HistoryTransaction[],
+export function groupTransactionsByDate<T extends HistoryTransaction>(
+  txs: T[],
   todayIso: string,
-): HistoryDayGroup[] {
-  const map = new Map<string, HistoryTransaction[]>()
+): HistoryDayGroup<T>[] {
+  const map = new Map<string, T[]>()
   for (const tx of txs) {
     const bucket = map.get(tx.date)
     if (bucket) bucket.push(tx)
@@ -437,13 +443,39 @@ export function mulberry32(seed: number) {
 }
 
 /**
+ * Seed heatmap PER KONTEKS UANG (paket 47).
+ *
+ * Heatmap "Kapan Kamu Sering Boros?" adalah satu-satunya permukaan di Riwayat
+ * yang angkanya dibangkitkan (bukan dibaca dari baris ledger), jadi ia tidak
+ * bisa mengikuti konteks dengan cara yang sama seperti daftar. Yang dilakukan
+ * paket 47: seed-nya DISUNTIKKAN dari konteks aktif, jadi tiap konteks punya
+ * polanya sendiri (deterministik, aman SSR) dan labelnya menyebut konteks yang
+ * sedang dibaca. Di produksi angkanya datang dari
+ * `SELECT occurred_at, SUM(amount) … WHERE context = $1 GROUP BY 1` — kolom
+ * `context` memang sudah ada di tabel transaksi.
+ */
+export const CONTEXT_HEATMAP_SEED: Record<MoneyContext, number> = {
+  pribadi: 20260925,
+  keluarga: 20260926,
+  bersama: 20260927,
+}
+
+/**
  * Data mock pengeluaran harian `days` hari terakhir (termasuk hari ini).
  * Akhir pekan dibuat lebih boros dan ada beberapa hari tanpa pengeluaran, jadi
  * pola "kapan sering boros" terlihat hidup — bukan deret angka rata.
+ *
+ * `seed` opsional (paket 47) — halaman Riwayat mengirim
+ * `CONTEXT_HEATMAP_SEED[konteks]` supaya pola tiap konteks berbeda & tetap
+ * deterministik (server = client, tidak ada hydration mismatch).
  */
-export function buildSpendingHeatmap(days = 30, todayIso = localISODate()): HeatmapDay[] {
+export function buildSpendingHeatmap(
+  days = 30,
+  todayIso = localISODate(),
+  seed: number = CONTEXT_HEATMAP_SEED.pribadi,
+): HeatmapDay[] {
   const [y, m, d] = todayIso.split('-').map(Number)
-  const rand = mulberry32(20260925)
+  const rand = mulberry32(seed)
   const raw: { date: string; total: number }[] = []
 
   for (let i = days - 1; i >= 0; i--) {
@@ -559,6 +591,51 @@ export const DELETE_TRANSACTION_TOAST = {
 export const TRANSACTION_INPUT_COPY = {
   submit: 'Catat',
   submitEdit: 'Simpan',
+
+  /* ── NOMINAL (paket 42 · audit Stage 5 #2) ──────────────────────────────────
+     Dulu field ini membuang semua non-digit (`"1,5jt"` → Rp 15) dan memotong
+     input panjang tanpa pesan. Sekarang: singkatan dihormati, nilai yang tidak
+     terbaca DIKATAKAN, dan hasil parsing singkatan dikonfirmasi lewat chip
+     sebelum disimpan — copy-nya tinggal di sini supaya engine tidak menyimpan
+     satu pun string user-facing (aturan repo). */
+  /** petunjuk format — singkatan yang benar-benar dipakai orang, bukan teori */
+  amountHint: (maxDigits: number) =>
+    `Bisa tulis singkat: 50rb, 2,5jt — atau angka penuh (maks ${maxDigits} digit). Titik ribuan muncul sendiri kok.`,
+  /** chip konfirmasi untuk nilai hasil parsing, mis. "Rp 2.500.000?" */
+  amountConfirm: (amount: number) => `Rp ${amount.toLocaleString('id-ID')}?`,
+  amountConfirmHint: 'Nilai ini yang bakal disimpan.',
+  /** pesan per jenis masalah — input tidak valid TIDAK boleh gagal diam-diam */
+  amountUnsupported: 'Nominalnya belum kebaca. Coba tulis angka aja — misal 50000 atau 50rb.',
+  amountTooBig: (maxDigits: number) =>
+    `Nominalnya kelebihan: maksimal ${maxDigits} digit (Rp 9.999.999.999.999).`,
+  amountNegative:
+    'Nominal minus tidak bisa dicatat. Kalau ini uang yang kembali ke kamu, catat sebagai pemasukan ya.',
+  amountFraction:
+    'Angkanya masih ambigu. Kalau maksudnya 1,5 juta, tulis "1,5jt"; kalau 1.500, tulis "1500".',
+  /** guard saat nominal masih kosong / nol */
+  amountNeeded: 'Isi nominalnya dulu ya 🌿',
+
+  /* ── ANTI DOUBLE-TAP (paket 42 · audit Stage 5 #1) ──────────────────────────
+     Kunci submit membuat tombolnya benar-benar mati selama satu siklus simpan —
+     labelnya ikut berubah supaya user tahu app sedang bekerja, bukan diam. */
+  submitting: 'Menyimpan…',
+
+  /* ── KATEGORI DIPILIH USER (paket 54 · uji pemakaian 28 Sep 2026) ────────────
+     Dulu form TAMBAH tidak punya kontrol kategori sama sekali: yang tersimpan
+     adalah tebakan per tipe (`suggested` → 'Makanan'/'Gaji Utama'/…), padahal
+     badge di panel menampilkannya seolah-olah keputusan AI atas catatan user —
+     jadi Riwayat penuh kategori yang tidak pernah dipilih siapa pun. Sekarang
+     kategori di form tambah HANYA datang dari pilihan user
+     (`TRANSACTION_CATEGORY_OPTIONS`), dan formnya tertahan sampai pilihan itu
+     ada. Copy di bawah yang menjelaskan kenapa — bukan JSX (aturan repo). */
+  /** label pemilih kategori di form TAMBAH (mode edit pakai `EDIT_TRANSACTION_COPY`) */
+  categoryLabel: 'Kategori',
+  /** opsi kosong di `<select>` — bukan kategori, jadi tidak boleh jadi nilai tersimpan */
+  categoryPlaceholder: 'Pilih kategori…',
+  /** petunjuk tetap di bawah pemilih kategori */
+  categoryHint: 'Kategori ini yang dipakai filter Riwayat & rincian pengeluaranmu.',
+  /** petunjuk + toast saat form selebihnya sudah siap, kecuali kategorinya */
+  categoryNeeded: 'Pilih kategori dulu ya 🌿 Cuma kategori yang kamu pilih yang disimpan.',
 } as const
 
 /* ── OPSI FIELD DI MODE EDIT ─────────────────────────────────────────────────
@@ -580,6 +657,87 @@ export const TRANSACTION_CATEGORY_OPTIONS = [
   'Lainnya',
 ] as const
 
+/**
+ * Kategori TETAP untuk tipe yang kategorinya memang ATURAN (paket 54).
+ *
+ * Tabungan & Transfer tidak meminta user memilih kategori — dan itu bukan
+ * tebakan yang disembunyikan: uangnya pindah, bukan dibelanjakan, jadi labelnya
+ * memang begitu. `reason`-nya ditampilkan apa adanya di form TAMBAH supaya user
+ * tahu kenapa di tipe itu tidak ada pemilih kategori (larangan "jangan ada
+ * kontrol mati / janji tanpa penjelasan").
+ */
+export const TRANSACTION_FIXED_CATEGORY: Partial<
+  Record<TransactionType, { category: string; reason: string }>
+> = {
+  saving: {
+    category: 'Tabungan',
+    reason:
+      'Setoran selalu tercatat "Tabungan" — bukan tebakan: uangnya pindah ke celengan, bukan dibelanjakan.',
+  },
+  transfer: {
+    category: 'Transfer',
+    reason:
+      'Pindah dana selalu tercatat "Transfer" — bukan tebakan: uangnya cuma pindah dompet, bukan pengeluaran baru.',
+  },
+}
+
+/** kategori kanon = satu-satunya nilai yang sah disimpan dari jalur manual */
+function isCanonicalCategory(value: string): boolean {
+  return (TRANSACTION_CATEGORY_OPTIONS as readonly string[]).includes(value)
+}
+
+export interface ManualCategoryChoice {
+  /** kategori yang benar-benar dikirim ke store; `null` = form belum siap disimpan */
+  category: string | null
+  /** user masih harus memilih (form TAMBAH pada tipe yang memang punya pilihan) */
+  needsChoice: boolean
+}
+
+/**
+ * SATU-SATUNYA aturan "kategori apa yang boleh tersimpan dari jalur MANUAL"
+ * (paket 54) — fungsi murni, dipakai langsung oleh engine, dikunci
+ * `lib/data/history.test.ts`. Empat tipe uang melewatinya semua:
+ *
+ *   • TAMBAH + tipe ber-kategori-tetap (Tabungan/Transfer) → kategori tetap itu,
+ *     tanpa bertanya: nilainya aturan, bukan tebakan;
+ *   • TAMBAH lainnya → kategori PILIHAN USER. Belum memilih berarti
+ *     `category: null` + `needsChoice: true`: formnya tertahan, dan `'Lainnya'`
+ *     tidak pernah dikirim diam-diam sebagai default (kalau user memilih
+ *     "Lainnya", itu pilihan sadar);
+ *   • nilai di luar `TRANSACTION_CATEGORY_OPTIONS` DITOLAK (`null`) — supaya
+ *     tidak ada baris yang mustahil dijaring filter kategori di Riwayat;
+ *   • EDIT → koreksi user, atau nilai lama apa adanya: sekadar membuka form edit
+ *     tidak pernah mengubah data user diam-diam.
+ */
+export function manualCategoryChoice(input: {
+  /** form sedang mengedit catatan lama (= mode EDIT engine) */
+  editing: boolean
+  type: TransactionType
+  /** kategori yang dipilih user di form ('' = belum memilih) */
+  picked: string
+  /** kategori catatan lama — dipakai HANYA saat `editing` */
+  currentCategory?: string
+}): ManualCategoryChoice {
+  if (input.editing) {
+    return {
+      category: input.picked || input.currentCategory || '',
+      needsChoice: false,
+    }
+  }
+
+  const fixed = TRANSACTION_FIXED_CATEGORY[input.type]
+  if (fixed) return { category: fixed.category, needsChoice: false }
+
+  if (!isCanonicalCategory(input.picked)) return { category: null, needsChoice: true }
+  return { category: input.picked, needsChoice: false }
+}
+
+/**
+ * Dompet default untuk catatan baru TIDAK LAGI dihitung dari konstanta dompet di
+ * sini (paket 40): daftar dompet hidup di store (`lib/money/store.ts`), karena
+ * hanya store yang tahu dompet mana yang benar-benar ada — termasuk dompet yang
+ * baru ditambahkan user. Fungsinya sekarang `defaultWalletNameFor(ctx)`.
+ */
 export const TRANSACTION_WALLET_OPTIONS = ['BCA', 'GoPay', 'OVO', 'Tunai'] as const
 
 /* ── COPY EDIT TRANSAKSI (paket 03) ──────────────────────────────────────────
@@ -601,4 +759,106 @@ export const UPDATE_TRANSACTION_TOAST = {
   title: 'Catatan diperbarui 🌿',
   description: 'Versi barunya sudah dipakai di riwayat & total harian.',
 } as const
+
+/* ── CATATAN BARU DARI PANEL INPUT (paket 33) ────────────────────────────────
+   Sebelum paket 33, panel input manual (FAB `+`, modal web, tombol "+ Catat
+   Transaksi" di Home, tombol di dompet, CTA Dry Spell) hanya MENUTUP panelnya:
+   payload engine dibuang di shell, sementara toast "kecatat" sudah keburu
+   berbunyi. Sekarang shell-nya MENULIS lebih dulu lewat
+   `recordDraftTransaction()` (`lib/transaction-bus.ts`), dan tiga hal di bawah
+   ini yang menentukan isi catatannya — semuanya tinggal di sini supaya tidak ada
+   string tersembunyi di komponen.
+
+   Catatan asumsi (dan arah produksinya): kategori & dompet TIDAK ditebak di
+   klien. PAKET 54: form TAMBAH meminta USER memilih kategorinya
+   (`manualCategoryChoice()` di atas), dan payload submit membawa pilihan itu apa
+   adanya — jalur manual tidak punya tebakan lagi. Dompetnya tetap dari konteks
+   uang aktif (produksi: `POST /api/transactions` menerima `category` + dompet). */
+
+/** jaring pengaman TERAKHIR kalau pemanggil tidak membawa kategori sama sekali
+ *  (bukan default form: form tambah tertahan sampai user memilih — paket 54) */
+export const TRANSACTION_FALLBACK_CATEGORY = 'Lainnya'
+
+/** dompet terakhir kalau konteks aktif tidak punya dompet di daftar kanon */
+export const TRANSACTION_FALLBACK_WALLET = 'Tunai'
+
+/** nama catatan kalau user tidak mengisi catatan (netral — bukan nama merchant karangan) */
+export const TRANSACTION_DEFAULT_NAME: Record<TransactionType, string> = {
+  expense: 'Pengeluaran cepat',
+  income: 'Pemasukan cepat',
+  saving: 'Setoran tabungan',
+  transfer: 'Pindah dana',
+}
+
+/**
+ * Dompet default untuk catatan baru: dompet PERTAMA di konteks uang aktif yang
+ * memang ada di daftar dompet kanon (`TRANSACTION_WALLET_OPTIONS`) — jadi
+ * catatan barunya bisa muncul di halaman dompet itu (`/wallet/[id]`), bukan di
+ * dompet yang tidak pernah ditampilkan app.
+ *
+ * Konteks `bersama` belum punya dompet di daftar kanon (dompet bersama hidup di
+ * halaman Joint Wallet), jadi jatuh ke `Tunai`: pilihan paling netral — dan
+ * tetap ditulis apa adanya di Riwayat, tidak disembunyikan.
+ *
+ * Pindah ke `defaultWalletNameFor()` di `lib/money/store.ts` (paket 40).
+ */
+
+/* ── TOAST SUKSES INPUT TRANSAKSI ────────────────────────────────────────────
+   Toast ini dulu ditembak dari DALAM engine — pihak yang tidak tahu apakah
+   catatannya benar-benar tersimpan (paket 33). Sekarang copy-nya tinggal di
+   sini, dan yang menembakkannya adalah SHELL, setelah `recordDraftTransaction()`
+   benar-benar menulis. Dengan begitu "kecatat" mustahil diucapkan untuk catatan
+   yang tidak ada.
+
+   `{amount}` diganti nominal terformat; cheer yang tidak memuat placeholder itu
+   tetap sah (mis. apresiasi tanpa angka). Pool-nya sengaja beberapa pilihan:
+   imbalan yang tidak selalu sama = variable reward (PRD 1819–1823). */
+export const TRANSACTION_SUCCESS_CHEER: Record<TransactionType, readonly string[]> = {
+  expense: [
+    'Sip, {amount} dicatat! 🌿',
+    'Mantap, pengeluaran kopi masih aman! 🎉',
+    'Beres, {amount} kecatat rapi ✨',
+    'Catat 1, aman 1 — {amount} tersimpan 🌱',
+  ],
+  income: [
+    'Asik, {amount} masuk! 🌿',
+    'Mantap, pemasukan {amount} nambah! 🎉',
+    'Yeay, {amount} udah kecatat ✨',
+  ],
+  saving: [
+    'Sip, nabung {amount} lagi! 🌱',
+    'Tabungan nambah {amount} 🎉',
+    'Mantap, {amount} disisihkan buat masa depan ✨',
+  ],
+  transfer: [
+    'Oke, {amount} dipindahin! 🌿',
+    'Transfer {amount} kecatat 🎉',
+    'Sip, {amount} pindah dompet ✨',
+  ],
+}
+
+/** satu kalimat apresiasi acak untuk catatan yang BARU SAJA tersimpan */
+export function successCheerFor(type: TransactionType, amountLabel: string): string {
+  const pool = TRANSACTION_SUCCESS_CHEER[type]
+  const cheer = pool[Math.floor(Math.random() * pool.length)] ?? pool[0]
+  return cheer.replace('{amount}', amountLabel)
+}
+
+/* ── PENCARIAN DARI LUAR HALAMAN (paket 29) ─────────────────────────────────
+   Kolom "Cari transaksi..." di header Home dulu input MATI (tanpa value &
+   onChange) — user bisa mengetik, tapi tidak ada yang terjadi. Pencarian
+   sungguhan memang sudah ada di halaman Riwayat, jadi yang dibutuhkan cuma
+   jembatan: Home mengirim kata kuncinya lewat URL, `/history` membacanya dan
+   mengisi kolom di sana (pola yang sama dengan `?add=` → sheet budget).
+
+   Kenapa lewat URL, bukan state global/localStorage: pencarian itu milik
+   halaman Riwayat (satu sumber kebenaran). Kalau kata kuncinya dikirim di luar
+   URL, halaman itu tidak akan tahu apa yang harus disaring — dan user melihat
+   kolom kosong padahal ia baru saja mengetik. */
+export const HISTORY_SEARCH_PARAM = 'q'
+
+/** tautan pencarian riwayat — dipakai kolom cari di header Home */
+export function historySearchHref(query: string): string {
+  return `/history?${HISTORY_SEARCH_PARAM}=${encodeURIComponent(query.trim())}`
+}
 

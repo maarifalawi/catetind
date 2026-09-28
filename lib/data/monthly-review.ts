@@ -1,4 +1,5 @@
 import { formatIDR } from '../wallets'
+import { DEMO_MODE } from '../demo'
 import { INITIAL_SINKING_FUNDS, monthlyNeeded, type SinkingFundItem } from './budget'
 import { localISODate, type HistoryTransaction } from './history'
 
@@ -89,7 +90,10 @@ export const MONTHLY_PLANT_STAGE: RecapPlantStage = 3
       bisa ditinjau padahal tanggal sistem sudah lewat. `null` = perilaku
       produksi (tanggal sistem apa adanya); logic trigger-nya tidak berubah. */
 export const DEMO_THIN_DATA = false
-export const DEMO_DAY_OVERRIDE: number | null = 2
+/* Saklar tanggal ikut `NEXT_PUBLIC_DEMO` (paket 42): di produksi jendela
+   trigger recap dibaca dari tanggal sistem apa adanya. Sebelumnya angka 2
+   dipatok keras, jadi recap bisa muncul di luar jendela 1–3 di rilis nyata. */
+export const DEMO_DAY_OVERRIDE: number | null = DEMO_MODE ? 2 : null
 
 /* ── BENTUK DATA RECAP ─────────────────────────────────────────────────────── */
 
@@ -409,10 +413,16 @@ export function fundSuggestions(
     .filter((item) => item.monthly > 0)
 }
 
-/** nama celengan dari id tersimpan (null = tidak ketemu / user tidak memilih) */
-export function fundNameOf(fundId: number | null): string | null {
+/** nama celengan dari id tersimpan (null = tidak ketemu / user tidak memilih).
+ *  `funds` boleh dioper dari store celengan (`lib/money/funds-store.ts`) supaya
+ *  celengan yang baru ditanam user ikut dikenali — default seed hanya untuk
+ *  pemanggil yang tidak punya akses store (mis. test murni). */
+export function fundNameOf(
+  fundId: number | null,
+  funds: SinkingFundItem[] = INITIAL_SINKING_FUNDS,
+): string | null {
   if (fundId === null) return null
-  return INITIAL_SINKING_FUNDS.find((fund) => fund.id === fundId)?.name ?? null
+  return funds.find((fund) => fund.id === fundId)?.name ?? null
 }
 
 /** recap bulan lalu yang dipakai modal (satu sumber, dihitung sekali di modul) */
@@ -448,7 +458,12 @@ export function monthlyMarkerKey(monthKey: string): string {
   return `catet-ind-monthly-review:${monthKey}`
 }
 
-const TARGET_STORE_KEY = 'catet-ind-monthly-target'
+/**
+ * Kunci localStorage target bulanan. Diekspor (paket 45) karena migrasi
+ * lokal→server (`lib/supabase/local-migration.ts`) harus membaca nilai yang sama
+ * dengan yang ditulis di sini — satu konstanta, bukan dua string yang bisa lepas.
+ */
+export const TARGET_STORE_KEY = 'catet-ind-monthly-target'
 
 /** Aman untuk SSR (mengembalikan "belum ditutup"), jadi komponen boleh
  *  memanggilnya tanpa menduplikasi cek `typeof window`. */

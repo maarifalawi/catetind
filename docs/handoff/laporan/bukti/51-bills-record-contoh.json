@@ -1,0 +1,228 @@
+{
+  "_catatan": "Bukti paket 51: bentuk record yang benar-benar ditulis store tagihan ke perangkat. Diambil dengan menjalankan `lib/money/zz-probe.test.ts` (file sementara) di lingkungan test, yaitu jalur memory yang SAMA dengan yang dipakai app saat IndexedDB diblokir (`lib/money/idb.ts`). Skenario: tambah tagihan Gym Bulanan Rp 200.000 lalu diubah jadi Rp 250.000, bayar Kredivo Rp 350.000 dari BCA, lalu hapus Netflix (tombstone, belum lewat jendela Undo).",
+  "key": "bills",
+  "db": "catetind-money",
+  "store": "state",
+  "record": {
+    "version": 1,
+    "purged": false,
+    "counts": {
+      "bills": 7,
+      "removedIds": 1
+    },
+    "removedIds": [
+      "2"
+    ],
+    "bills": [
+      {
+        "id": "1",
+        "emoji": "🏠",
+        "name": "Kos Bulanan",
+        "amount": 1500000,
+        "dueDate": 1,
+        "isRecurring": true,
+        "category": "Tagihan",
+        "walletId": "bca",
+        "isPaidThisMonth": true,
+        "reminderDaysBefore": 3,
+        "scope": "pribadi"
+      },
+      {
+        "id": "2",
+        "emoji": "🎬",
+        "name": "Netflix",
+        "amount": 54000,
+        "dueDate": 15,
+        "isRecurring": true,
+        "category": "Hiburan",
+        "walletId": "gopay",
+        "isPaidThisMonth": true,
+        "reminderDaysBefore": 1,
+        "scope": "keluarga"
+      },
+      {
+        "id": "3",
+        "emoji": "🎵",
+        "name": "Spotify",
+        "amount": 54990,
+        "dueDate": 20,
+        "isRecurring": true,
+        "category": "Hiburan",
+        "walletId": "gopay",
+        "isPaidThisMonth": true,
+        "reminderDaysBefore": 1,
+        "scope": "pribadi"
+      },
+      {
+        "id": "4",
+        "emoji": "📱",
+        "name": "Cicilan HP",
+        "amount": 450000,
+        "dueDate": 25,
+        "isRecurring": true,
+        "category": "Tagihan",
+        "walletId": "bca",
+        "isPaidThisMonth": false,
+        "endAfterMonths": 12,
+        "currentMonth": 5,
+        "reminderDaysBefore": 3,
+        "scope": "pribadi"
+      },
+      {
+        "id": "5",
+        "emoji": "💳",
+        "name": "Kredivo",
+        "amount": 350000,
+        "dueDate": 28,
+        "isRecurring": true,
+        "category": "Tagihan",
+        "walletId": "bca",
+        "isPaidThisMonth": true,
+        "endAfterMonths": 6,
+        "currentMonth": 3,
+        "reminderDaysBefore": 3,
+        "scope": "pribadi",
+        "paidRowId": "session-9001"
+      },
+      {
+        "id": "6",
+        "emoji": "📶",
+        "name": "Paket Internet",
+        "amount": 100000,
+        "dueDate": 10,
+        "isRecurring": true,
+        "category": "Tagihan",
+        "walletId": "tunai",
+        "isPaidThisMonth": true,
+        "reminderDaysBefore": 1,
+        "scope": "bersama"
+      },
+      {
+        "emoji": "🧾",
+        "name": "Gym Bulanan (naik)",
+        "amount": 250000,
+        "dueDate": 12,
+        "isRecurring": true,
+        "category": "Tagihan",
+        "walletId": "bca",
+        "isPaidThisMonth": false,
+        "reminderDaysBefore": 1,
+        "scope": "pribadi",
+        "id": "1000000"
+      }
+    ]
+  },
+  "tagihanBaru": {
+    "emoji": "🧾",
+    "name": "Gym Bulanan",
+    "amount": 200000,
+    "dueDate": 12,
+    "isRecurring": true,
+    "category": "Tagihan",
+    "walletId": "bca",
+    "isPaidThisMonth": false,
+    "reminderDaysBefore": 1,
+    "scope": "pribadi",
+    "id": "1000000"
+  },
+  "tagihanBaruSetelahEdit": {
+    "emoji": "🧾",
+    "name": "Gym Bulanan (naik)",
+    "amount": 250000,
+    "dueDate": 12,
+    "isRecurring": true,
+    "category": "Tagihan",
+    "walletId": "bca",
+    "isPaidThisMonth": false,
+    "reminderDaysBefore": 1,
+    "scope": "pribadi",
+    "id": "1000000"
+  },
+  "tagihanLunas": {
+    "id": "5",
+    "emoji": "💳",
+    "name": "Kredivo",
+    "amount": 350000,
+    "dueDate": 28,
+    "isRecurring": true,
+    "category": "Tagihan",
+    "walletId": "bca",
+    "isPaidThisMonth": true,
+    "endAfterMonths": 6,
+    "currentMonth": 3,
+    "reminderDaysBefore": 3,
+    "scope": "pribadi",
+    "paidRowId": "session-9001"
+  },
+  "barisKasPembayaran": {
+    "id": "session-9001",
+    "walletId": "bca",
+    "type": "expense",
+    "amount": 350000,
+    "dateISO": "2026-09-25",
+    "note": "Kredivo",
+    "category": "Tagihan",
+    "clientTxId": "886a3df7-a760-467f-be02-188bb9b3483e",
+    "seq": 9001,
+    "time": "16:03",
+    "aiGenerated": false,
+    "walletName": "BCA"
+  },
+  "saldoDompet": {
+    "bca": 1100000,
+    "gopay": 350000,
+    "tunai": 50000,
+    "bcaSetelahBayar": 1100000
+  },
+  "riwayatKas": [
+    {
+      "id": 9001,
+      "name": "Kredivo",
+      "amount": 350000,
+      "type": "expense",
+      "category": "Tagihan",
+      "wallet": "BCA",
+      "date": "2026-09-25",
+      "time": "16:03",
+      "aiGenerated": false
+    }
+  ],
+  "daftarYangDibacaHalaman": [
+    {
+      "id": "1",
+      "name": "Kos Bulanan",
+      "amount": 1500000,
+      "isPaidThisMonth": true
+    },
+    {
+      "id": "3",
+      "name": "Spotify",
+      "amount": 54990,
+      "isPaidThisMonth": true
+    },
+    {
+      "id": "4",
+      "name": "Cicilan HP",
+      "amount": 450000,
+      "isPaidThisMonth": false
+    },
+    {
+      "id": "5",
+      "name": "Kredivo",
+      "amount": 350000,
+      "isPaidThisMonth": true
+    },
+    {
+      "id": "6",
+      "name": "Paket Internet",
+      "amount": 100000,
+      "isPaidThisMonth": true
+    },
+    {
+      "id": "1000000",
+      "name": "Gym Bulanan (naik)",
+      "amount": 250000,
+      "isPaidThisMonth": false
+    }
+  ]
+}

@@ -21,11 +21,14 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Download,
+  ArrowLeftRight,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { SUBSCRIPTION_LOCK_COPY } from '@/lib/data/renewal'
+import { TRANSFER_DOOR_COPY } from '@/lib/data/add-wallet'
 import { TransactionWebModal } from '@/components/dashboard/transaction-web-modal'
+import { TransferFlow } from './transfer-flow'
 import { useSubscriptionGate } from './subscription-gate-provider'
 import { AiFuelCard } from './ai-fuel-card'
 import { LogoWordmark } from './logo-wordmark'
@@ -102,6 +105,13 @@ const SIDEBAR_WIDTH_VAR = '--catet-sidebar-w'
 export function DesktopSidebar() {
   const pathname = usePathname()
   const [addOpen, setAddOpen] = useState(false)
+  /**
+   * Alur “Pindah Dana” (paket 55) — entri sidebar ini membuka SHEET, bukan
+   * halaman: `TransferFlow` yang sama dengan pintu lain (popover kartu dompet,
+   * dompet detail, menu “Lainnya”). Dompet asalnya belum dipilih di sini, jadi
+   * sheet membuka langkah 1 (pemilih dompet) — bukan menebak dompet konteks.
+   */
+  const [transferOpen, setTransferOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
   /* pintu masuk input utama di desktop (pasangan FAB mobile) — dikunci saat masa
      aktif habis. Navigasi & pembacaan data tidak tersentuh. */
@@ -279,6 +289,38 @@ export function DesktopSidebar() {
                   </Link>
                 )
               })}
+
+              {/* ── PINDAH DANA (paket 55) ────────────────────────────────────
+                  Satu-satunya entri di sidebar yang BUKAN tautan halaman: ia
+                  membuka alur (sheet) yang sama dengan popover kartu dompet,
+                  tombol di dompet detail, dan menu “Lainnya” di mobile. Dulu
+                  aksi ini tidak punya pintu apa pun di desktop selain popover
+                  kecil di dalam kartu — aksi yang tersembunyi di situasi yang
+                  sama dengan “tidak ada fiturnya”. */}
+              {section.label === 'Kelola Uang' && (
+                <button
+                  type="button"
+                  onClick={() => setTransferOpen(true)}
+                  title={TRANSFER_DOOR_COPY.menuHint}
+                  className={cn(
+                    'group/item relative flex w-full items-center text-[13px] font-medium text-ink/55 transition-all duration-200 hover:bg-ink/[0.03] hover:text-ink',
+                    collapsed
+                      ? 'justify-center rounded-2xl px-0 py-2.5'
+                      : 'gap-3 rounded-full px-3.5 py-2',
+                  )}
+                >
+                  <ArrowLeftRight className="size-[18px] shrink-0" strokeWidth={1.8} />
+                  <span
+                    className={cn(
+                      'overflow-hidden whitespace-nowrap text-left transition-all duration-300',
+                      collapsed ? 'max-w-0 opacity-0' : 'max-w-[160px] opacity-100',
+                    )}
+                  >
+                    {TRANSFER_DOOR_COPY.menuLabel}
+                  </span>
+                  {collapsed && <NavTooltip label={TRANSFER_DOOR_COPY.menuLabel} />}
+                </button>
+              )}
             </div>
           </div>
         ))}
@@ -288,8 +330,12 @@ export function DesktopSidebar() {
           {collapsed && (
             <div className="mx-3 mb-2 h-px bg-ink/[0.07]" aria-hidden />
           )}
-          <button
-            type="button"
+          {/* Keluar — dulu tombol MATI (tidak ada onClick). Route-nya sudah ada
+              sejak lama (`/settings/logout` → panel konfirmasi keluar), jadi
+              yang kurang cuma tautannya; sekarang ia jadi link seperti item
+              navigasi lain di sidebar ini. */}
+          <Link
+            href="/settings/logout"
             className={cn(
               'group/item relative flex w-full items-center text-[13px] font-medium text-ink/55 transition-all duration-200 hover:bg-plum/15 hover:text-plum',
               collapsed
@@ -297,7 +343,7 @@ export function DesktopSidebar() {
                 : 'gap-3 rounded-full px-3.5 py-2',
             )}
           >
-            <LogOut className="size-[18px] shrink-0" strokeWidth={1.8} />
+            <LogOut className="size-[18px] shrink-0" strokeWidth={1.8} aria-hidden />
             <span
               className={cn(
                 'overflow-hidden whitespace-nowrap transition-all duration-300',
@@ -307,7 +353,7 @@ export function DesktopSidebar() {
               Keluar
             </span>
             {collapsed && <NavTooltip label="Keluar" />}
-          </button>
+          </Link>
         </div>
       </nav>
 
@@ -353,6 +399,9 @@ export function DesktopSidebar() {
       {/* modal input transaksi versi WEB (inventaris 97a) — shell dialog yang
           membungkus engine yang sama dengan bottom sheet mobile */}
       <TransactionWebModal open={addOpen} onOpenChange={setAddOpen} />
+
+      {/* alur pindah dana (paket 55) — sumber dompet asalnya dipilih di sheet */}
+      <TransferFlow open={transferOpen} onOpenChange={setTransferOpen} />
     </aside>
   )
 }

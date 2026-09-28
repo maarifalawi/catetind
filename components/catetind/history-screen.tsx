@@ -16,6 +16,8 @@ import {
 import { toast } from 'sonner'
 import { ScreenShell } from './screen-shell'
 import { GlobalPrivacyToggle } from './global-privacy-toggle'
+import { ContextSwitcher } from './context-switcher'
+import { useMoneyContext } from './money-context-provider'
 import { usePrivacy } from './privacy-provider'
 import { FinancialHealthCard } from './financial-health-card'
 import { InsightCards } from './insight-cards'
@@ -25,9 +27,31 @@ import { TransactionDetailSheet } from './transaction-detail-sheet'
 import { ConfirmDeleteDialog, TransactionActionsSheet } from './transaction-actions'
 import { EditTransactionSheet } from './edit-transaction-sheet'
 import { WeeklyRecapModal } from './weekly-recap-modal'
+import { MonthlyReviewModal } from './monthly-review-modal'
+import { MonthlyTargetCard } from './monthly-target-card'
 import { TransactionBottomSheet } from '@/components/dashboard/transaction-bottom-sheet'
+import { useMonthlyReview } from '@/hooks/use-monthly-review'
 import { cn } from '@/lib/utils'
-import { readRecordedTransactions, subscribeRecordedTransactions } from '@/lib/transaction-bus'
+import {
+  applyRowOverride,
+  cancelTransferRow,
+  editRow,
+  isRowRemoved,
+  recordedTransactions,
+  removeRow,
+  restoreRow,
+  undoTransferCancellation,
+  useMoneyStore,
+  type TransferCancellation,
+} from '@/lib/money/store'
+import { TRANSFER_SHEET_COPY } from '@/lib/data/add-wallet'
+import { tagTransactionsForContext, matchesContext, type ContextTransaction } from '@/lib/money/context-filter'
+import {
+  CONTEXT_EMPTY_COPY,
+  CONTEXT_LABEL,
+  SCOPE_NOTE,
+  contextCaption,
+} from '@/lib/data/money-context'
 import {
   CATEGORY_FILTERS,
   HEALTH_SCORE,
@@ -77,22 +101,35 @@ const FILTER_ROWS: { key: FilterKey; label: string; options: FilterOption<string
   { key: 'category', label: 'Kategori', options: CATEGORY_FILTERS },
 ]
 
-export function HistoryScreen() {
+export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
   /* ── state ─────────────────────────────────────────────────────────────── */
   /* privasi nominal: state GLOBAL (PrivacyProvider) — toggle di header
      menyensor halaman ini dengan state yang sama seperti halaman lain */
   const { masked: isMasked } = usePrivacy()
-  const [searchQuery, setSearchQuery] = useState('')
+  /* konteks uang (Pribadi/Keluarga/Bersama) — state GLOBAL (paket 47). Daftar,
+     ringkasan, insight, dan heatmap halaman ini mengikutinya; angka yang memang
+     total (skor kewarasan) tetap seluruh catatan. */
+  const { context, setContext } = useMoneyContext()
+  /* Kata kunci awal dari URL (`/history?q=...`) — jalur pintas dari kolom cari di
+     header Home (paket 29). Nilainya datang sebagai PROP SERVER, bukan
+     `useSearchParams()`: HTML server & render pertama client jadi identik (tidak
+     ada kedipan kolom kosong → terisi), dan tidak perlu Suspense boundary.
+     Setelahnya kolom ini tetap milik user — ia bisa mengubah/menghapusnya. */
+  const [searchQuery, setSearchQuery] = useState(initialQuery ?? '')
   const [activeFilters, setActiveFilters] = useState<HistoryFilters>(INITIAL_FILTERS)
   /** filter yang sheet opsinya sedang terbuka (null = tertutup) */
   const [openFilter, setOpenFilter] = useState<FilterKey | null>(null)
   const [selectedTransaction, setSelectedTransaction] = useState<HistoryTransaction | null>(null)
   const totalTransactions = TOTAL_TRANSACTIONS
 
-  /** catatan yang dihapus user di sesi ini (mock — nanti dari backend) */
-  const [removedIds, setRemovedIds] = useState<number[]>([])
-  /** transaksi VERSI BARU hasil edit, per id (mock — nanti dari backend) */
-  const [editedTxs, setEditedTxs] = useState<Record<number, HistoryTransaction>>({})
+  /**
+   * Catatan yang dihapus user + catatan sesi — keduanya dari SATU store uang
+   * (`lib/money/store.ts`). Tidak ada state `removedIds` per halaman lagi: dulu
+   * hapus di Home tidak terlihat di sini (dan sebaliknya) karena daftar hapusnya
+   * hidup di masing-masing komponen (audit #7).
+   */
+  const snapshot = useMoneyStore()
+  const recordedTxs = useMemo(() => recordedTransactions(snapshot), [snapshot])
   /** transaksi yang menunggu konfirmasi hapus */
   const [pendingDelete, setPendingDelete] = useState<HistoryTransaction | null>(null)
   /** transaksi yang sheet EDIT-nya sedang terbuka (paket 03) */
@@ -101,6 +138,12 @@ export function HistoryScreen() {
   const [menuTx, setMenuTx] = useState<HistoryTransaction | null>(null)
   /** id yang hak Undo-nya MASIH hidup (dikosongkan begitu jendelanya lewat) */
   const undoRef = useRef<number | null>(null)
+  /**
+   * Pembatalan pindah dana yang sedang bisa di-Undo (paket 55) — ref, bukan
+   * state: isinya dipakai HANYA oleh tombol Undo (dua baris koreksi yang harus
+   * dicabut bersamanya), bukan untuk dirender.
+   */
+  const undoCancelRef = useRef<TransferCancellation | null>(null)
   /** timer jendela Undo — dibersihkan saat unmount supaya tidak ada timer nyasar */
   const undoTimer = useRef<number | null>(null)
   const [recapOpen, setRecapOpen] = useState(false)
@@ -111,18 +154,18 @@ export function HistoryScreen() {
   /** tanggal hari ini — juga dihitung setelah mount supaya label "Hari Ini"
    *  / "Kemarin" tidak pernah beda antara server & client */
   const [today, setToday] = useState('')
-  /** catatan yang dicatat dari AI Coach (prompt 20) — hidup di memory sesi */
-  const [recordedTxs, setRecordedTxs] = useState<HistoryTransaction[]>([])
+  /* Target bulanan (paket 32) — alur target ikut hidup di /history supaya CTA
+     recap "Atur target nabung" tidak lagi menjanjikan modal lalu mendarat di
+     halaman lain. State-nya TETAP satu: hook yang sama dengan Home (localStorage
+     `catet-ind-monthly-target`), jadi target yang disimpan di sini langsung
+     terbaca kartu Target di Home — bukan store/context kedua.
+     `auto: false` = ritual tanggal 1–3 tetap milik Home: di halaman riwayat,
+     modal ini hanya terbuka karena aksi user (kartu Target atau CTA recap). */
+  const monthly = useMonthlyReview({ auto: false })
 
-  /* Transaksi hasil "Scan struk"/"Voice" di AI Coach disimpan di
-     `lib/transaction-bus.ts` dan dibaca SETELAH mount: HTML server tidak boleh
-     berbeda dari render pertama client (pola sama dengan `lib/data/renewal.ts`).
-     Selama halaman ini terbuka, catatan baru langsung masuk lewat langganan
-     event — jadi user melihat barisnya muncul tanpa reload. */
-  useEffect(() => {
-    setRecordedTxs(readRecordedTransactions())
-    return subscribeRecordedTransactions((tx) => setRecordedTxs((prev) => [...prev, tx]))
-  }, [])
+  /* Catatan sesi dari store uang (bukan bus lagi) — lihat `useMoneyStore` di
+     atas. Baris yang sudah dihapus (tombstone) juga tersaring dari mock
+     `HISTORY_TRANSACTIONS`, jadi halaman ini & Home tidak pernah beda daftar. */
 
   useEffect(() => {
     setToday(localISODate())
@@ -142,24 +185,54 @@ export function HistoryScreen() {
   /* catatan yang dihapus keluar dari daftar; catatan yang diedit tampil versi
      barunya — sehingga total harian (dayNet) & ringkasan di kepala daftar ikut
      menyesuaikan dengan sendirinya, tanpa perhitungan ulang terpisah.
-     Catatan dari AI Coach (prompt 20) duduk paling atas — barulah baru dicatat,
-     dan `groupTransactionsByDate` yang mengelompokkannya ke tanggalnya. */
-  const transactions = useMemo(
-    () => [
-      ...recordedTxs,
-      ...HISTORY_TRANSACTIONS.filter((tx) => !removedIds.includes(tx.id)).map(
-        (tx) => editedTxs[tx.id] ?? tx,
+     Baris MOCK (`HISTORY_TRANSACTIONS`) memakai `applyRowOverride()` yang SAMA
+     dengan Home & `/wallet/[id]`, jadi tidak ada halaman yang tertinggal angka
+     lama (temuan B laporan 46).
+     Catatan SESI ini (panel input manual + AI Coach) duduk paling atas — barulah
+     baru dicatat, dan `groupTransactionsByDate` yang mengelompokkannya ke
+     tanggalnya. */
+  const transactions = useMemo<ContextTransaction[]>(
+    () =>
+      tagTransactionsForContext(
+        [
+          ...recordedTxs,
+          ...HISTORY_TRANSACTIONS.filter((tx) => !isRowRemoved(snapshot, tx.id)).map((tx) =>
+            applyRowOverride(snapshot, tx),
+          ),
+        ],
+        snapshot,
       ),
-    ],
-    [recordedTxs, removedIds, editedTxs],
+    [recordedTxs, snapshot],
+  )
+  /**
+   * DAFTAR & ARUS IKUT KONTEKS (paket 47).
+   *
+   * Konteks dibaca dari DOMPET catatan (`lib/money/context-filter.ts`), bukan
+   * dari kolom `context` di baris: dompet sudah satu-satunya pemilik fakta itu.
+   * Catatan yang dompetnya belum ada di daftar dompet TIDAK hilang — ia ditandai
+   * "Belum berkonteks" dan tetap tampil di semua konteks (aturan kanon #2).
+   */
+  const visibleTransactions = useMemo(
+    () => transactions.filter((tx) => matchesContext(tx.context, context)),
+    [transactions, context],
   )
   const filtered = useMemo(
-    () => filterHistoryTransactions(transactions, activeFilters, searchQuery, today),
-    [transactions, activeFilters, searchQuery, today],
+    () => filterHistoryTransactions(visibleTransactions, activeFilters, searchQuery, today),
+    [visibleTransactions, activeFilters, searchQuery, today],
   )
   const groups = useMemo(() => groupTransactionsByDate(filtered, today), [filtered, today])
   const summary = useMemo(() => summarizeTransactions(filtered), [filtered])
-  const hasIncome = useMemo(() => transactions.some((tx) => tx.type === 'income'), [transactions])
+  const hasIncome = useMemo(
+    () => visibleTransactions.some((tx) => tx.type === 'income'),
+    [visibleTransactions],
+  )
+  /**
+   * Jumlah catatan yang DIKONTEKS ini punya (sebelum filter/pencarian user) —
+   * dipakai pill "x dari y", empty state, dan ambang insight: kalau konteksnya
+   * memang belum punya catatan, insight yang mengklaim sesuatu soal konteks itu
+   * harus ikut hilang (kanon "jangan pernah kasih false insight").
+   */
+  const contextCount = visibleTransactions.length
 
   const activeFilterCount =
     (activeFilters.time !== 'all' ? 1 : 0) +
@@ -177,6 +250,17 @@ export function HistoryScreen() {
     setSearchQuery('')
   }, [])
 
+  /* "Atur target nabung" di recap mingguan menyambung ke alur target yang sama
+     dengan Home (`useMonthlyReview` + `MonthlyReviewModal`). Recap ditutup DULU
+     supaya tidak ada dua overlay bertumpuk di layar — aturan yang sama dengan
+     `monthly.open && !renewal.open` di Home. `monthly.openModal` disimpan sebagai
+     variabel supaya callback ini stabil antar render. */
+  const openMonthlyTarget = monthly.openModal
+  const handleSetRecapTarget = useCallback(() => {
+    setRecapOpen(false)
+    openMonthlyTarget()
+  }, [openMonthlyTarget])
+
   const handleEdit = useCallback((tx: HistoryTransaction) => {
     /* Edit adalah jalur UTAMA perbaikan data (paket 03): tombolnya membuka sheet
        yang SUDAH TERISI data catatan itu. Detail & sheet titik tiga ditutup dulu
@@ -186,23 +270,51 @@ export function HistoryScreen() {
     setEditingTx(tx)
   }, [])
 
-  /** simpan hasil edit: baris & total harian diganti versi barunya */
+  /**
+   * Simpan hasil edit lewat SATU pintu tulis (`editRow` di store uang).
+   *
+   * Baris store (`session-*`) → barisnya benar-benar diperbarui, jadi Home,
+   * `/wallet/[id]`, dan grafik arus uang membaca angka yang sama.
+   * Baris MOCK → override di store (konstanta `lib/data/*` tidak disunting).
+   * Toast hanya berbunyi kalau store benar-benar menulis sesuatu — `null` berarti
+   * input ditolak atau barisnya sudah dihapus, dan itu bukan "tersimpan".
+   */
   const handleSaveEdit = useCallback((next: HistoryTransaction) => {
-    setEditedTxs((prev) => ({ ...prev, [next.id]: next }))
+    const written = editRow(next.id, {
+      name: next.name,
+      amount: next.amount,
+      type: next.type,
+      category: next.category,
+      wallet: next.wallet,
+      dateISO: next.date,
+      aiGenerated: next.aiGenerated,
+    })
     setEditingTx(null)
+    if (!written) return
     toast.success(UPDATE_TRANSACTION_TOAST.title, {
       description: UPDATE_TRANSACTION_TOAST.description,
     })
   }, [])
 
-  /** Undo: catatannya balik ke posisi semula tanpa perlu ditulis ulang */
+  /** Undo: catatannya balik ke posisi semula — tombstone di store dibuang */
   const restoreTransaction = useCallback((id: number) => {
     if (undoRef.current !== id) {
       toast(DELETE_TRANSACTION_TOAST.expired)
       return
     }
     undoRef.current = null
-    setRemovedIds((prev) => prev.filter((item) => item !== id))
+    /* kalau yang dibatalkan tadi adalah pindah dana, Undo juga mencabut dua
+       baris koreksi pengembalian uangnya (paket 55) */
+    const cancellation = undoCancelRef.current
+    undoCancelRef.current = null
+    if (cancellation) {
+      undoTransferCancellation(cancellation)
+      toast.success(DELETE_TRANSACTION_TOAST.undoneTitle, {
+        description: DELETE_TRANSACTION_TOAST.undoneDescription,
+      })
+      return
+    }
+    restoreRow(id)
     toast.success(DELETE_TRANSACTION_TOAST.undoneTitle, {
       description: DELETE_TRANSACTION_TOAST.undoneDescription,
     })
@@ -213,25 +325,49 @@ export function HistoryScreen() {
    * mengembalikannya masih hidup selama UNDO_WINDOW_MS (PRD 2251). Sesudah
    * jendelanya tutup, jejaknya dibuang sehingga undo yang terlambat ditolak
    * dengan jujur — bukan tombol yang diam-diam tidak bekerja.
+   *
+   * PAKET 55 — baris `transfer` diperlakukan istimewa: ia menggerakkan DUA
+   * dompet, jadi tombstone saja menyisakan uang di dompet tujuan sementara
+   * dompet asal tetap kosong. `cancelTransferRow()` menghapus catatannya
+   * SEKALIGUS mengembalikan uangnya ke kedua sisi lewat dua baris koreksi; kalau
+   * barisnya bukan pindah dana (atau uangnya sudah terpakai di tujuan), ia
+   * mengembalikan `null` dan jalur hapus biasa yang dipakai.
    */
   const confirmDelete = useCallback(() => {
     if (!pendingDelete) return
     const id = pendingDelete.id
     undoRef.current = id
-    setRemovedIds((prev) => (prev.includes(id) ? prev : [...prev, id]))
+    const cancellation =
+      pendingDelete.type === 'transfer' ? cancelTransferRow(id) : null
+    undoCancelRef.current = cancellation
+    /* `cancelTransferRow` sudah menulis tombstone-nya sendiri */
+    if (!cancellation) removeRow(id)
     setPendingDelete(null)
     setSelectedTransaction(null)
 
-    toast.success(DELETE_TRANSACTION_TOAST.title, {
-      description: DELETE_TRANSACTION_TOAST.description,
-      action: { label: DELETE_TRANSACTION_TOAST.undo, onClick: () => restoreTransaction(id) },
-      /* lama toast = lama hak undo; keduanya dari satu konstanta */
-      duration: UNDO_WINDOW_MS,
-    })
+    if (cancellation) {
+      toast.success(TRANSFER_SHEET_COPY.cancelToastTitle, {
+        description: TRANSFER_SHEET_COPY.cancelToastDescription(
+          cancellation.fromName,
+          cancellation.toName,
+        ),
+        action: { label: DELETE_TRANSACTION_TOAST.undo, onClick: () => restoreTransaction(id) },
+        /* lama toast = lama hak undo; keduanya dari satu konstanta */
+        duration: UNDO_WINDOW_MS,
+      })
+    } else {
+      toast.success(DELETE_TRANSACTION_TOAST.title, {
+        description: DELETE_TRANSACTION_TOAST.description,
+        action: { label: DELETE_TRANSACTION_TOAST.undo, onClick: () => restoreTransaction(id) },
+        /* lama toast = lama hak undo; keduanya dari satu konstanta */
+        duration: UNDO_WINDOW_MS,
+      })
+    }
 
     if (undoTimer.current !== null) window.clearTimeout(undoTimer.current)
     undoTimer.current = window.setTimeout(() => {
       if (undoRef.current === id) undoRef.current = null
+      undoCancelRef.current = null
     }, UNDO_WINDOW_MS)
   }, [pendingDelete, restoreTransaction])
 
@@ -260,11 +396,27 @@ export function HistoryScreen() {
     <ScreenShell>
       {/* header halaman + toggle privasi */}
       <header className="flex items-start justify-between gap-4">
-        <h1 className="font-display text-3xl font-semibold tracking-tight text-ink lg:text-4xl">
-          Riwayat &amp; Insight
-        </h1>
-        <GlobalPrivacyToggle />
+        <div className="min-w-0">
+          <p className="text-[13px] font-medium text-ink/45">{contextCaption(context)}</p>
+          <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-ink lg:text-4xl">
+            Riwayat &amp; Insight
+          </h1>
+          <p className="mt-1.5 text-[11.5px] font-medium text-ink/45">{SCOPE_NOTE.history}</p>
+        </div>
+        {/* cluster aksi desktop: switcher konteks + tombol mata global (paket 47) */}
+        <div className="hidden shrink-0 items-center gap-3 lg:flex">
+          <ContextSwitcher value={context} onChange={setContext} className="w-[280px]" />
+          <GlobalPrivacyToggle />
+        </div>
+        <div className="lg:hidden">
+          <GlobalPrivacyToggle />
+        </div>
       </header>
+
+      {/* switcher konteks (mobile) — baris sendiri di bawah header, pola Home/Budget */}
+      <div className="mt-4 flex justify-center lg:hidden">
+        <ContextSwitcher value={context} onChange={setContext} />
+      </div>
 
       {/* ── FILTER GLOBAL — tepat di bawah judul, di ATAS semua konten ──────────
           Audit hierarki (Gestalt): dulu search + filter nyempil di TENGAH
@@ -353,8 +505,9 @@ export function HistoryScreen() {
           transition={{ duration: 0.4, ease: EASE }}
           className="mt-5 flex items-center gap-2 rounded-[1.6rem] bg-gradient-to-r from-forest to-forest-soft pl-4 pr-2 text-cream ring-1 ring-soil/12 lg:mt-6"
         >
-          {/* TODO (PRD Domain 3A Habit Loop 2): buka modal Rekap Mingguan
-              full-screen 5 slide — sudah tersedia sebagai WeeklyRecapModal */}
+          {/* Buka modal Rekap Mingguan (5 slide). Komponennya SUDAH ada dan
+              dipasang di bagian bawah halaman ini; kartu ini pintu manualnya di
+              /history (di Home pintunya adalah banner rekap). */}
           <button
             type="button"
             onClick={() => setRecapOpen(true)}
@@ -381,21 +534,43 @@ export function HistoryScreen() {
         </motion.div>
       )}
 
+      {/* kartu Target bulan ini (paket 32) — slot yang sama dengan Home:
+          tepat di bawah "pintu" recap. Dua pintu ke alur yang sama: recap
+          (recapnya dibaca dulu) dan kartu ini (targetnya ditinjau langsung,
+          bahkan di hari kerja saat banner recap sedang tidak muncul).
+          `monthly.ready` menahan render sampai penanda localStorage dibaca,
+          supaya kartunya tidak berkedip dari "belum ada" ke nominalnya. */}
+      {monthly.ready && (
+        <div className="mt-2.5">
+          <MonthlyTargetCard
+            savedThisMonth={monthly.savedThisMonth}
+            amount={monthly.saved?.amount ?? 0}
+            fundId={monthly.saved?.fundId ?? null}
+            onOpen={monthly.openModal}
+          />
+        </div>
+      )}
+
       {/* hero: kalibrasi profil AI / skor kewarasan + insight AI */}
       <div className="mt-5 grid grid-cols-1 gap-5 lg:mt-6 lg:grid-cols-12 lg:gap-6">
         <div className="lg:col-span-5">
+          {/* skor kewarasan = metrik GLOBAL user (ambangnya dihitung dari seluruh
+              catatan), jadi tidak ikut mengecil saat konteks disaring — pola yang
+              sama dengan "Total Saldo" (kanon paket 47 #1). */}
           <FinancialHealthCard totalTransactions={totalTransactions} score={HEALTH_SCORE} />
         </div>
         <div className="lg:col-span-7">
           {/* CTA tiap insight punya tujuan nyata: "Atur Limit Kopi" membuka sheet
-              budget dengan kategori Kopi sudah terpilih di /budget (prompt 24). */}
-          <InsightCards totalTransactions={totalTransactions} hasIncome={hasIncome} />
+              budget dengan kategori Kopi sudah terpilih di /budget (prompt 24).
+              Ambangnya dihitung dari catatan KONTEKS AKTIF (paket 47): konteks
+              yang belum punya cukup data tidak boleh diberi klaim. */}
+          <InsightCards totalTransactions={contextCount} hasIncome={hasIncome} />
         </div>
       </div>
 
-      {/* heatmap keborosan 30 hari */}
+      {/* heatmap keborosan 30 hari — pola mengikuti konteks aktif (paket 47) */}
       <div className="mt-5 lg:mt-6">
-        <SpendingHeatmap masked={isMasked} />
+        <SpendingHeatmap masked={isMasked} context={context} />
       </div>
 
       {/* ── CATATAN: daftar transaksi dikelompokkan per tanggal ─────────────────
@@ -424,7 +599,7 @@ export function HistoryScreen() {
               subjudul di kiri sudah cukup, jadi tidak ada angka kembar */}
           {(activeFilterCount > 0 || searchQuery) && (
             <span className="rounded-full bg-cream px-3 py-1.5 text-[11.5px] font-semibold tabular-nums text-ink/60 ring-1 ring-soil/12">
-              {summary.count} dari {transactions.length}
+              {summary.count} dari {contextCount}
             </span>
           )}
         </div>
@@ -445,7 +620,15 @@ export function HistoryScreen() {
         </div>
 
         {filtered.length === 0 ? (
-          <EmptyState onReset={resetFilters} hasFilters={activeFilterCount > 0 || !!searchQuery} />
+          <EmptyState
+            onReset={resetFilters}
+            hasFilters={activeFilterCount > 0 || !!searchQuery}
+            /* konteks yang memang belum punya catatan: sebut apa adanya + CTA
+               (paket 47) — bukan "belum ada catatan di sini" yang bikin user
+               mengira datanya hilang */
+            emptyContext={contextCount === 0}
+            contextLabel={CONTEXT_LABEL[context]}
+          />
         ) : (
           <div className="mt-5 space-y-5">
             {groups.map((group) => (
@@ -486,6 +669,10 @@ export function HistoryScreen() {
                         tx={tx}
                         masked={isMasked}
                         delay={delay}
+                        /* penanda "Belum berkonteks" (paket 47) — baris yang
+                           dompetnya belum ada di daftar dompet tetap tampil di
+                           semua konteks, jadi ia harus berlabel apa adanya */
+                        unknownContext={tx.unknownContext}
                         onOpen={setSelectedTransaction}
                         onEdit={handleEdit}
                         onDelete={setPendingDelete}
@@ -601,8 +788,25 @@ export function HistoryScreen() {
         )}
       </AnimatePresence>
 
-      {/* Rekap Mingguan 5 slide (inventaris g) */}
-      <WeeklyRecapModal open={recapOpen} onClose={() => setRecapOpen(false)} />
+      {/* Rekap Mingguan 5 slide (inventaris g). `onSetTarget` WAJIB & diisi
+          (paket 32): CTA "Atur target nabung" di slide Rencana Minggu Depan
+          membuka modal target di bawah — recap ditutup dulu oleh handler. */}
+      <WeeklyRecapModal
+        open={recapOpen}
+        onClose={() => setRecapOpen(false)}
+        onSetTarget={handleSetRecapTarget}
+      />
+
+      {/* Modal Monthly Review & Target Setup (inventaris #i) — komponen yang SAMA
+          dengan Home, bukan modal kedua. Di sini `open` hanya bisa jadi true dari
+          aksi user (`auto: false`): kartu Target di atas atau CTA recap. */}
+      <MonthlyReviewModal
+        open={monthly.open}
+        monthKey={monthly.monthKey}
+        saved={monthly.saved}
+        onClose={monthly.close}
+        onSave={monthly.saveTarget}
+      />
     </ScreenShell>
   )
 }
@@ -611,10 +815,23 @@ export function HistoryScreen() {
 
 /** Empty state nurturing (PRD State I): tidak ada catatan sama sekali
  *  atau hasil filter/pencarian kosong */
-function EmptyState({ onReset, hasFilters }: { onReset: () => void; hasFilters: boolean }) {
+function EmptyState({
+  onReset,
+  hasFilters,
+  emptyContext = false,
+  contextLabel,
+}: {
+  onReset: () => void
+  hasFilters: boolean
+  /**
+   * true = konteks aktif memang belum punya satu catatan pun (paket 47), jadi
+   * pesannya menyebut konteks + menjelaskan catatan baru akan masuk ke situ.
+   */
+  emptyContext?: boolean
+  contextLabel?: string
+}) {
   return (
     <div className="mt-4 flex flex-col items-center rounded-[1.75rem] border-2 border-dashed border-forest/15 bg-cream/50 px-6 py-12 text-center">
-      {/* TODO: ganti dengan ilustrasi empty state yang lucu */}
       <div
         className="flex size-16 items-center justify-center rounded-2xl border-2 border-dashed border-forest/20 bg-cream/60"
         aria-hidden
@@ -622,8 +839,15 @@ function EmptyState({ onReset, hasFilters }: { onReset: () => void; hasFilters: 
         <Sprout className="size-7 text-forest/45" strokeWidth={1.8} />
       </div>
       <p className="mt-4 max-w-xs text-[13.5px] font-medium leading-relaxed text-ink">
-        Belum ada catatan di sini 🌱
+        {emptyContext && contextLabel
+          ? CONTEXT_EMPTY_COPY.history.title(contextLabel)
+          : 'Belum ada catatan di sini 🌱'}
       </p>
+      {emptyContext && (
+        <p className="mt-1.5 max-w-sm text-[12.5px] leading-relaxed text-ink/55">
+          {CONTEXT_EMPTY_COPY.history.body}
+        </p>
+      )}
       <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
         <TransactionBottomSheet
           trigger={
@@ -631,7 +855,7 @@ function EmptyState({ onReset, hasFilters }: { onReset: () => void; hasFilters: 
               type="button"
               className="inline-flex h-11 items-center gap-2 rounded-2xl bg-forest px-5 text-[13.5px] font-semibold text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
             >
-              Catat Sekarang
+              {emptyContext ? CONTEXT_EMPTY_COPY.history.cta : 'Catat Sekarang'}
             </button>
           }
         />

@@ -12,9 +12,12 @@ import {
   maskMoney,
   type Bill,
 } from '@/lib/data/bills'
+import { CONTEXT_LABEL } from '@/lib/data/money-context'
 
 /* ── Kartu tagihan: geser untuk aksi + stempel LUNAS (Section 7B–7D) ────────
-   - Geser KANAN → area sage 'Tandai Lunas ✓' (cap LUNAS + haptic + toast)
+   - Geser KANAN → area sage 'Tandai Lunas ✓' — membuka pemilih DOMPET (paket
+     51). Stempel LUNAS baru muncul setelah baris kasnya benar-benar ditulis
+     (`markBillPaid`), jadi kartu ini tidak pernah mengaku lunas tanpa uang keluar
    - Geser KIRI  → area amber 'Edit' + terracotta 'Hapus'
    - Tap         → cuma menutup area aksi (tidak ada teks instruksi apa pun)
 
@@ -63,7 +66,15 @@ export function BillCard({
   const status = getBillStatus(bill, currentDay)
   const paid = status === 'paid'
   const due = dueContext(bill, status, currentDay)
-  const meta = [billWalletName(bill.walletId), bill.category, endAfterLabel(bill)]
+  /* badge konteks (paket 47): tagihan ini milik konteks uang yang mana. Ditulis
+     di baris meta (bukan tooltip) supaya user tahu kepemilikannya tanpa hover —
+     penting karena satu tagihan bisa dibuka dari halaman lain/konteks lain. */
+  const meta = [
+    CONTEXT_LABEL[bill.scope],
+    billWalletName(bill.walletId),
+    bill.category,
+    endAfterLabel(bill),
+  ]
     .filter(Boolean)
     .join(' · ')
 

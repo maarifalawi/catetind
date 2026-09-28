@@ -22,13 +22,8 @@ import { LogoWordmark } from './logo-wordmark'
 import { usePrivacy } from './privacy-provider'
 import { cn } from '@/lib/utils'
 import { AMOUNT_LABEL, AMOUNT_XL } from '@/lib/typography'
-import {
-  INITIAL_WALLETS,
-  WALLET_POOL,
-  type DeckSelection,
-  type Wallet,
-  type WalletArt,
-} from '@/lib/wallets'
+import { homeWallets, addPoolWallet, cashTotal, useMoneyStore } from '@/lib/money/store'
+import { type DeckSelection, type Wallet, type WalletArt } from '@/lib/wallets'
 
 const TAP_THRESHOLD = 10 // px — gerakan di bawah ini dianggap tap, bukan drag
 const DRAG_START = 14 // px — gerakan horizontal yang mengubah tekanan jadi swipe
@@ -165,12 +160,17 @@ export const WalletCardStack = memo(function WalletCardStack({
    */
   onOpen?: (selection: DeckSelection) => void
 }) {
-  const [wallets, setWallets] = useState<Wallet[]>(INITIAL_WALLETS)
+  /* Deck dompet dari SATU store uang — bukan salinan daftar dompet di state
+     halaman ini. Sebelum paket 40 deck menghitung totalnya sendiri (Rp 4.309.573)
+     sementara halaman Dompet & Kekayaan memakai angka lain; sekarang ketiganya
+     membaca `opening + Σ baris ledger` yang sama, dan dompet yang ditambahkan
+     dari deck ini pun ikut muncul di `/wallet`. */
+  const snapshot = useMoneyStore()
+  const wallets = useMemo(() => homeWallets(snapshot, 'all'), [snapshot])
   /* sensor nominal global — saldo di muka kartu ikut tombol mata di header */
   const { money } = usePrivacy()
   // rotasi deck — urutan melingkar tanpa akhir; swipe kartu depan = pindah ke belakang
   const [rot, setRot] = useState(0)
-  const poolIdx = useRef(0)
 
   // deck: kartu agregat dulu, lalu tiap dompet, terakhir kartu "tambah dompet"
   const deck = useMemo<DeckEntry[]>(
@@ -189,10 +189,15 @@ export const WalletCardStack = memo(function WalletCardStack({
     return [...deck.slice(k), ...deck.slice(0, k)]
   }, [deck, rot])
 
-  const totalBalance = useMemo(
-    () => wallets.reduce((sum, wallet) => sum + wallet.balance, 0),
-    [wallets],
-  )
+  /**
+   * TOTAL SALDO deck = `cashTotal(snapshot)` — SATU definisi untuk seluruh app
+   * (paket 44). Sebelumnya baris ini menjumlahkan sendiri daftar yang sedang
+   * dipakai component ini; sekarang angkanya datang dari helper yang sama dengan
+   * hero `/wallet` dan kas likuid Kekayaan, jadi mustahil ada dua "Total Saldo":
+   * kartu depan ("Semua Dompet"), panel Overview, dan label pembaca layar
+   * semuanya membaca angka ini.
+   */
+  const totalBalance = useMemo(() => cashTotal(snapshot), [snapshot])
 
   // mirror state ke ref supaya rAF loop & pointer handler selalu baca nilai terbaru
   const orderRef = useRef(order)
@@ -312,16 +317,17 @@ export const WalletCardStack = memo(function WalletCardStack({
     [startNext, startPrev],
   )
 
-  // demo "user bisa nambahin dompet": ambil kandidat dari pool. Kartu Semua Dompet
-  // otomatis menghitung ulang total karena nilainya di-derive dari daftar wallets
+  // demo "user bisa nambahin dompet": store memilih kandidat pool berikutnya.
+  // Kartu Semua Dompet otomatis menghitung ulang total karena nilainya di-derive
+  // dari daftar wallets store — dan dompet barunya ikut muncul di `/wallet`.
   const goAfterAdd = useRef<string | null>(null)
   const addWallet = useCallback(() => {
     if (swipe.current === 'exiting') return
-    const candidate = WALLET_POOL[poolIdx.current % WALLET_POOL.length]
-    poolIdx.current += 1
-    const wallet: Wallet = { ...candidate, id: `${candidate.id}-${poolIdx.current}` }
-    goAfterAdd.current = wallet.id
-    setWallets((prev) => [...prev, wallet])
+    /* store yang menambah dompetnya (id dibuat di sana) — deck cuma menunggu
+       kartunya muncul lalu memutarnya ke depan */
+    const newId = addPoolWallet()
+    if (!newId) return
+    goAfterAdd.current = newId
     // kartu baru di-"deal" masuk dari bawah deck — engine harus hidup untuk itu
     startEngine()
   }, [startEngine])

@@ -1,8 +1,17 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Check, Pencil, Plus, Trash2 } from 'lucide-react'
+import { Check, Info, Pencil, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { AI_STATUS_COPY } from '@/lib/ai-chat'
+import {
+  AI_PREFS_COPY,
+  AI_PREFS_DEFAULT,
+  readAiPrefs,
+  writeAiPrefs,
+  type AiPrefs,
+  type MincaMode,
+} from '@/lib/ai-prefs'
 import { NotificationSettings } from './notification-settings'
 import {
   Segmented,
@@ -460,9 +469,15 @@ function CategoryForm({
 /* ── Panel: AI Preferences (Domain 4B) ─────────────────────────────────────────
    Dua switch perilaku AI saat mencatat + satu pilihan "kepribadian" Minca.
    Mode bicara ini bukan hiasan: ia yang menentukan nada balasan AI Coach dan
-   copy toast — jadi posisinya sengaja setara dengan switch fungsional lain. */
+   copy toast — jadi posisinya sengaja setara dengan switch fungsional lain.
 
-type MincaMode = 'bestie' | 'savage'
+   PAKET 54: kunci & bentuk preferensinya pindah ke `lib/ai-prefs.ts` karena
+   dua switch di atasnya dulu TIDAK DIBACA siapa pun (grep berhenti di berkas
+   ini) — kontrol yang tidak mengontrol apa pun. Sekarang switch
+   "Kategorisasi/Penamaan Otomatis" dibaca jalur AI capture
+   (`hooks/use-transaction-capture.ts` → `withCapturePrefs()`), dan helper-nya
+   menyebut batas itu apa adanya: catatan manual selalu memakai kategori pilihan
+   user sendiri. */
 
 const MINCA_MODES: { id: MincaMode; emoji: string; label: string; desc: string }[] = [
   {
@@ -479,35 +494,22 @@ const MINCA_MODES: { id: MincaMode; emoji: string; label: string; desc: string }
   },
 ]
 
-const AI_PREFS_KEY = 'catet-ai-prefs'
-
-type AiPrefs = { autoCategory: boolean; autoNaming: boolean; mincaMode: MincaMode }
-
 export function AiSettingsPanel() {
-  const [prefs, setPrefs] = useState<AiPrefs>({
-    autoCategory: true,
-    autoNaming: true,
-    mincaMode: 'bestie',
-  })
+  const [prefs, setPrefs] = useState<AiPrefs>(AI_PREFS_DEFAULT)
 
+  /* hidrasi preferensi dari localStorage SETELAH mount supaya render server &
+     client identik (pola yang sama dengan preferensi tema & notifikasi).
+     Pembacanya satu sumber dengan jalur AI capture — `readAiPrefs()`. */
   useEffect(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem(AI_PREFS_KEY) ?? 'null') as Partial<AiPrefs> | null
-      if (saved) setPrefs((prev) => ({ ...prev, ...saved }))
-    } catch {
-      /* JSON rusak / storage diblokir — pakai default (semua ON, Mode Bestie) */
-    }
+    setPrefs(readAiPrefs())
   }, [])
 
   function update(next: Partial<AiPrefs>, message?: string) {
     setPrefs((prev) => {
-      const merged = { ...prev, ...next }
-      try {
-        localStorage.setItem(AI_PREFS_KEY, JSON.stringify(merged))
-      } catch {
-        /* abaikan — preferensi tetap berlaku untuk sesi ini */
-      }
-      return merged
+      /* ditulis lewat satu pintu `lib/ai-prefs.ts` supaya Pengaturan & jalur AI
+         capture memakai kunci yang sama; saat storage diblokir, preferensinya
+         tetap berlaku untuk sesi ini */
+      return writeAiPrefs({ ...prev, ...next })
     })
     if (message) toast.success(message)
   }
@@ -518,22 +520,44 @@ export function AiSettingsPanel() {
       title="AI Preferences"
       desc="Atur seberapa jauh Minca boleh bantu di catatanmu."
     >
-      {/* ── 1. BANTUAN SAAT MENCATAT ─────────────────────────────────────── */}
+      {/* ── 0. STATUS AI (paket 44) ─────────────────────────────────────────
+          Tombol "Hubungkan AI" di AI Coach mendarat di halaman ini, jadi
+          keadaannya disebut lebih dulu sebelum saklar-saklarnya: AI belum
+          tersambung ke model, saklar di bawah baru berlaku penuh setelah
+          tersambung, dan pencatatan manual tetap jalan. Copy-nya di
+          `lib/ai-chat.ts` (`AI_STATUS_COPY`) — satu sumber dengan widget chat. */}
+      <SettingsCard title={AI_STATUS_COPY.title}>
+        <span className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-hud-amber/20 px-2.5 py-1 text-[11px] font-semibold text-ink ring-1 ring-hud-amber/30">
+          <Info className="size-3.5" strokeWidth={2.4} aria-hidden />
+          {AI_STATUS_COPY.badge}
+        </span>
+        <p className="mt-2.5 text-[12.5px] leading-relaxed text-ink/60">{AI_STATUS_COPY.body}</p>
+        <p className="mt-2 text-[12.5px] leading-relaxed text-ink/45">{AI_STATUS_COPY.worksNow}</p>
+      </SettingsCard>
+
+      {/* ── 1. BANTUAN SAAT MENCATAT ───────────────────────────────────────
+          Dua saklar ini hidup di jalur AI capture (scan struk & input suara) dan
+          tidak pernah menyentuh catatan manual — kalimatnya tinggal di
+          `lib/ai-prefs.ts` (`AI_PREFS_COPY`), sehingga tidak ada lagi kontrol
+          yang menjanjikan sesuatu yang tidak terjadi (paket 54). */}
       <SettingsCard title="Bantuan AI saat Mencatat">
         <div className="mt-2 divide-y divide-soil/10">
           <ToggleRow
-            label="Kategorisasi Otomatis oleh AI"
-            helper="Minca akan otomatis menebak kategori transaksi berdasarkan deskripsi yang kamu tulis"
+            label={AI_PREFS_COPY.toggles.autoCategory.label}
+            helper={AI_PREFS_COPY.toggles.autoCategory.helper}
             checked={prefs.autoCategory}
             onToggle={() => update({ autoCategory: !prefs.autoCategory })}
           />
           <ToggleRow
-            label="Penamaan Otomatis Transaksi"
-            helper='Minca akan merapikan nama transaksi (misal: "indmrt" → "Indomaret")'
+            label={AI_PREFS_COPY.toggles.autoNaming.label}
+            helper={AI_PREFS_COPY.toggles.autoNaming.helper}
             checked={prefs.autoNaming}
             onToggle={() => update({ autoNaming: !prefs.autoNaming })}
           />
         </div>
+        <p className="mt-3 text-[11.5px] leading-relaxed text-ink/50">
+          {AI_PREFS_COPY.manualScopeNote}
+        </p>
       </SettingsCard>
 
       {/* ── 2. GAYA BICARA MINCA ─────────────────────────────────────────── */}

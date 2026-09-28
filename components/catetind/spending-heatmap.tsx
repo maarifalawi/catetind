@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { Flame } from 'lucide-react'
 import {
+  CONTEXT_HEATMAP_SEED,
   HEATMAP_WEEKDAYS,
   buildHeatmapMatrix,
   buildSpendingHeatmap,
@@ -10,6 +11,8 @@ import {
   maskMoney,
   type HeatmapDay,
 } from '@/lib/data/history'
+import { CONTEXT_LABEL } from '@/lib/data/money-context'
+import type { MoneyContext } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 /* ── Heatmap "Kapan Kamu Sering Boros?" (matriks kalender 7 kolom) ───────────
@@ -57,8 +60,23 @@ function tooltipPlacement(col: number) {
   return { bubble: 'left-1/2 -translate-x-1/2', caret: 'left-1/2 -translate-x-1/2' }
 }
 
-export function SpendingHeatmap({ masked }: { masked: boolean }) {
-  const days = useMemo(() => buildSpendingHeatmap(DAYS), [])
+export function SpendingHeatmap({
+  masked,
+  context,
+}: {
+  masked: boolean
+  /**
+   * Konteks uang aktif (paket 47). Heatmap ini satu-satunya permukaan Riwayat
+   * yang angkanya DIBANGKITKAN (bukan dibaca dari baris ledger), jadi konteksnya
+   * dipakai sebagai SEED pola + label cakupan: tiap konteks punya polanya sendiri
+   * (deterministik, aman SSR) dan user tahu pola ini milik konteks yang mana.
+   */
+  context: MoneyContext
+}) {
+  const days = useMemo(
+    () => buildSpendingHeatmap(DAYS, undefined, CONTEXT_HEATMAP_SEED[context]),
+    [context],
+  )
   const weeks = useMemo(() => buildHeatmapMatrix(days), [days])
   /* hari terboros dipilih sejak awal — sudah deterministik, jadi aman di SSR */
   const [activeDate, setActiveDate] = useState(() => {
@@ -84,7 +102,10 @@ export function SpendingHeatmap({ masked }: { masked: boolean }) {
             <h2 className="font-display text-[15px] font-bold tracking-tight text-ink">
               Kapan Kamu Sering Boros?
             </h2>
-            <p className="text-[11.5px] text-ink/45">{activeDays} hari aktif</p>
+            {/* label konteks (paket 47) — pola ini milik konteks yang aktif */}
+            <p className="text-[11.5px] text-ink/45">
+              {activeDays} hari aktif · {CONTEXT_LABEL[context]}
+            </p>
           </div>
         </div>
         <span className="rounded-full bg-cream px-3 py-1.5 text-[11.5px] font-semibold text-ink/60 tabular-nums ring-1 ring-soil/12">

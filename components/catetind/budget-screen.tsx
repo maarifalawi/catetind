@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
-import { AlignRight, PiggyBank, Target as TargetIcon } from 'lucide-react'
+import { PiggyBank, Target as TargetIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { ScreenShell } from './screen-shell'
 import { LogoWordmark } from './logo-wordmark'
@@ -24,24 +24,26 @@ import { usePrivacy } from './privacy-provider'
 import { cn } from '@/lib/utils'
 import { openAICoachWithSeed } from '@/lib/ai-chat-bus'
 import {
+  BUDGET_SAVE_TOAST,
   CURRENT_DAY,
+  FUND_CREATE_TOAST,
   FUND_DETAIL_COPY,
+  FUND_SWEEP_TOAST,
   INITIAL_BUDGETS,
-  INITIAL_SINKING_FUNDS,
   SPENDING_REVIEW_COPY,
+  applyBudgetSave,
   budgetsForPeriod,
   computeDailyHud,
-  formatIDR,
   periodFromTab,
   periodIncome,
   periodWindowForTab,
-  plantStageFrom,
-  sinkingObligationOf,
   totalSurplus,
+  walletSourceName,
   type BudgetItem,
   type PeriodTab,
   type SinkingFundItem,
 } from '@/lib/data/budget'
+import { addFund, contributeToFund, sweepIntoFund, useFundsStore } from '@/lib/money/funds-store'
 
 /* ── Budget & Target (/app/budget) ───────────────────────────────────────────
    Satu halaman, dua zona:
@@ -65,16 +67,28 @@ type ZoneTab = 'budget' | 'goals'
  *  (`SHEET_EASE` di budget-sheet.tsx, ±0,3 detik) — lihat handleContinueToCoach */
 const COACH_HANDOFF_MS = 320
 
-export function BudgetScreen({ initialAddCategory }: { initialAddCategory?: string }) {
+export function BudgetScreen({
+  initialAddCategory,
+  initialPlantGoal = false,
+}: {
+  initialAddCategory?: string
+  /** `?tanam=1` dari Home (tombol `+` di kartu Tabungan Impian, paket 29):
+   *  halaman membuka Zona Celengan + sheet "Tanam Celengan Baru" sejak render
+   *  pertama, jadi satu tap dari Home langsung mendarat di formnya. */
+  initialPlantGoal?: boolean
+}) {
   /* ── STATE ──────────────────────────────────────────────────────────── */
   /* privasi nominal: state GLOBAL (PrivacyProvider) — tombol mata di header
      halaman ini kini komponen baku <GlobalPrivacyToggle /> (audit UX #7). */
-  const { masked } = usePrivacy()
+  const { masked, money } = usePrivacy()
+  /* catatan: semua `money(...)` di bawah = nominal + sensor dalam satu langkah,
+     diambil dari PrivacyProvider (definisi aturan sensor cuma di satu tempat) —
+     toast ikut disensor karena ia pajangan yang tinggal di layar (§5.7). */
   /* konteks Pribadi/Keluarga/Bersama: state GLOBAL (MoneyContextProvider).
      Sejak blok "Konteks Uang" dihapus dari Sidebar, pill-nya hanya tampil di
      header mobile halaman ini — nilainya tetap satu sumber dengan halaman lain. */
   const { context, setContext } = useMoneyContext()
-  const [activeTab, setActiveTab] = useState<ZoneTab>('budget')
+  const [activeTab, setActiveTab] = useState<ZoneTab>(initialPlantGoal ? 'goals' : 'budget')
   const [periodTab, setPeriodTab] = useState<PeriodTab>('monthly')
   /** audit #5 — Jatah Hari Ini disematkan ke Dashboard (menggantikan "Sinkron") */
   const [hudPinned, setHudPinned] = useState(false)
@@ -87,7 +101,7 @@ export function BudgetScreen({ initialAddCategory }: { initialAddCategory?: stri
      navigasi router yang bisa mem-mount ulang komponen ini tepat saat sheet-nya
      baru terbuka. */
   const [prefilledCategory, setPrefilledCategory] = useState<string | undefined>(initialAddCategory)
-  const [showAddGoal, setShowAddGoal] = useState(false)
+  const [showAddGoal, setShowAddGoal] = useState(initialPlantGoal)
   const [showSweepModal, setShowSweepModal] = useState(false)
   /** panel "Review Pengeluaran Hari Ini" — dibuka CTA over-budget & tombol Review */
   const [showReview, setShowReview] = useState(false)
@@ -99,7 +113,12 @@ export function BudgetScreen({ initialAddCategory }: { initialAddCategory?: stri
 
   /* data halaman (mock lokal — nanti dari Supabase) */
   const [budgets, setBudgets] = useState<BudgetItem[]>(INITIAL_BUDGETS)
-  const [funds, setFunds] = useState<SinkingFundItem[]>(INITIAL_SINKING_FUNDS)
+  /* celengan = SATU STORE untuk seluruh app (paket 46). Dulu halaman ini punya
+     `useState(INITIAL_SINKING_FUNDS)` sendiri, sehingga celengan yang ditanam di
+     sini tidak pernah muncul di kartu "Tabungan Impian" Home dan setoran di
+     /budget/<id> tidak terlihat di sini. Sekarang tiga tempat itu membaca state
+     yang sama (`lib/money/funds-store.ts`). */
+  const { funds } = useFundsStore()
 
   /** caption di bawah judul — posisinya sama dengan baris tanggal Dashboard,
    *  jadi user membaca "konteks + isi halaman" dari titik yang sama. */
@@ -136,9 +155,13 @@ export function BudgetScreen({ initialAddCategory }: { initialAddCategory?: stri
      bernilai true → kartu Jatah Hari Ini pindah ke nada terracotta dan jatah
      harian DITAHAN, bukan ditampilkan seolah aman dibelanjakan.
 
-     Tiga catatan periode (prompt 26):
+     Tiga catatan periode (prompt 26 & 27):
      • kewajiban celengan dihitung dari SEMUA fund — kartu ini metrik GLOBAL
-       (audit UX #3) dan disamakan dengan `DAILY_HUD` yang dipakai Home;
+       (audit UX #3) dan disamakan dengan `DAILY_HUD` yang dipakai Home.
+       Sejak paket 27 daftar `funds` itu DIKIRIM APA ADANYA (`sinkingFunds`),
+       bukan diubah jadi satu angka bulanan dulu: jatah harian memotong
+       kewajiban periode ini (prorata per window, satu rumus dengan cicilan),
+       dan begitu user menambah celengan baru, angkanya ikut berubah;
      • `window` bukan cuma panjang pembagi: kolam uangnya (pemasukan, uang
        keluar, cicilan) ikut window lewat `periodPool()` — jadi tab Mingguan
        memakai pemasukan & pengeluaran MINGGU itu, dan tab Siklus Gajian
@@ -148,10 +171,9 @@ export function BudgetScreen({ initialAddCategory }: { initialAddCategory?: stri
 
      Angka panel Review & kartu kategori membaca `hud` dan `window` yang sama
      (lihat `spendingReview()`), jadi satu layar tidak mungkin punya dua cerita. */
-  const sinkingObligation = useMemo(() => sinkingObligationOf(funds), [funds])
   const hud = useMemo(
-    () => computeDailyHud({ sinkingObligation, window: period }),
-    [sinkingObligation, period],
+    () => computeDailyHud({ sinkingFunds: funds, window: period }),
+    [funds, period],
   )
 
   /* ── PEMASUKAN DI PERIODE AKTIF (PRD 2B.3) ─────────────────────────────
@@ -171,15 +193,24 @@ export function BudgetScreen({ initialAddCategory }: { initialAddCategory?: stri
     }
   }
 
-  /** 3F — budget baru masuk konteks yang sedang aktif */
+  /** 3F — simpan budget. Satu jalur untuk tambah & atur ulang limit: keputusan
+   *  "baris baru atau baris yang sama" ada di `applyBudgetSave()` (paket 28),
+   *  yang memakai kategori + konteks uang sebagai kunci. Jadi mustahil ada dua
+   *  baris untuk satu kategori, dari jalan mana pun — dan toast-nya mengikuti
+   *  mode yang BENAR-BENAR terjadi, bukan yang ditebak komponen. */
   function handleSaveBudget(data: Omit<BudgetItem, 'id' | 'spent'>) {
-    setBudgets((prev) => [
-      ...prev,
-      { ...data, id: prev.reduce((max, item) => Math.max(max, item.id), 0) + 1, spent: 0 },
-    ])
+    const result = applyBudgetSave(budgets, data)
+    setBudgets(result.budgets)
     handleCloseAddBudget()
-    toast.success(`Budget ${data.category} dibuat! 🌿`, {
-      description: `${formatIDR(data.limit)} siap kamu jaga bersama.`,
+
+    if (result.mode === 'edit') {
+      toast.success(BUDGET_SAVE_TOAST.updated(data.category), {
+        description: BUDGET_SAVE_TOAST.updatedBody(money(data.limit)),
+      })
+      return
+    }
+    toast.success(BUDGET_SAVE_TOAST.created(data.category), {
+      description: BUDGET_SAVE_TOAST.createdBody(money(data.limit)),
     })
   }
 
@@ -190,45 +221,31 @@ export function BudgetScreen({ initialAddCategory }: { initialAddCategory?: stri
     setPrefilledCategory(undefined)
   }
 
-  /** 4C — celengan baru selalu mulai dari benih 🌱 */
+  /** 4C — celengan baru selalu mulai dari benih 🌱 (ditulis lewat store, jadi
+   *  ia langsung muncul juga di Home & bisa dibuka halaman detailnya) */
   function handleSaveGoal(
     data: Omit<SinkingFundItem, 'id' | 'current' | 'stage' | 'contributedThisMonth'>,
   ) {
-    setFunds((prev) => [
-      ...prev,
-      {
-        ...data,
-        id: prev.reduce((max, item) => Math.max(max, item.id), 0) + 1,
-        current: 0,
-        stage: 'seed',
-        contributedThisMonth: false,
-      },
-    ])
+    addFund({
+      name: data.name,
+      target: data.target,
+      deadline: data.deadline,
+      priority: data.priority,
+      scope: data.scope,
+    })
     setShowAddGoal(false)
-    toast.success('Celengan baru ditanam! 🌱')
+    toast.success(FUND_CREATE_TOAST.title, { description: FUND_CREATE_TOAST.body(data.name) })
   }
 
-  /** 4B — setoran: saldo celengan naik & tanamannya ikut tumbuh */
+  /** 4B — setoran: saldo celengan naik, tanaman tumbuh, & riwayat setoran
+   *  bertambah SEKALIGUS (satu tulisan di store, jadi halaman detail yang
+   *  membaca setoran yang sama tidak mungkin bercerita beda) */
   function handleContribute(fundId: number, amount: number, walletId: string) {
-    const fund = funds.find((item) => item.id === fundId)
-    const walletName =
-      walletId === 'bca' ? 'BCA' : walletId === 'gopay' ? 'GoPay' : 'Tunai'
-
-    setFunds((prev) =>
-      prev.map((item) =>
-        item.id === fundId
-          ? {
-              ...item,
-              current: item.current + amount,
-              stage: plantStageFrom(item.current + amount, item.target),
-              contributedThisMonth: true,
-            }
-          : item,
-      ),
-    )
+    const result = contributeToFund(fundId, amount, walletId)
+    if (!result) return
     setContributeTarget(null)
-    toast.success(`${formatIDR(amount)} disetor ke ${fund?.name ?? 'celengan'}! 🌱`, {
-      description: `Dari ${walletName} — tanamannya makin subur.`,
+    toast.success(FUND_DETAIL_COPY.setToastTitle(money(amount), result.fund.name), {
+      description: FUND_DETAIL_COPY.setToastHint(walletSourceName(walletId)),
     })
   }
 
@@ -242,18 +259,9 @@ export function BudgetScreen({ initialAddCategory }: { initialAddCategory?: stri
       periodBudgets.filter((budget) => budget.limit - budget.spent > 0).map((b) => b.id),
     )
 
-    setFunds((prev) =>
-      prev.map((fund) =>
-        fund.id === fundId
-          ? {
-              ...fund,
-              current: fund.current + swept,
-              stage: plantStageFrom(fund.current + swept, fund.target),
-              contributedThisMonth: true,
-            }
-          : fund,
-      ),
-    )
+    /* satu tulisan ke store: progres + baris riwayat "Sisa budget" (Sapu Bersih
+       bukan dompet, jadi sumbernya punya nama sendiri — lihat CONTRIBUTION_SOURCES) */
+    sweepIntoFund(fundId, swept)
     /* sisa dianggap terpakai → limit mulai dari nol lagi bulan depan */
     setBudgets((prev) =>
       prev.map((budget) =>
@@ -261,26 +269,21 @@ export function BudgetScreen({ initialAddCategory }: { initialAddCategory?: stri
       ),
     )
     setShowSweepModal(false)
-    toast.success(`${formatIDR(swept)} disapu ke ${target?.name ?? 'celengan'}! 🧹🎉`)
+    toast.success(FUND_SWEEP_TOAST.title(money(swept), target?.name ?? 'celengan'), {
+      description: FUND_SWEEP_TOAST.body,
+    })
   }
 
   /** Detail celengan: progres besar + riwayat setoran + tanaman yang tumbuh.
-   *  Kartu Celengan Impian (badan kartu) sekarang BENAR-BENAR membuka halaman
-   *  detail — route `app/budget/[id]/page.tsx`. Sebelumnya aksi ini cuma
-   *  memunculkan toast "belum tersedia" (jalan buntu di dalam app, Fase 1
-   *  ROADMAP).
+   *  Kartu Celengan Impian (badan kartu) BENAR-BENAR membuka halaman detail —
+   *  route `app/budget/[id]/page.tsx`. Sebelumnya aksi ini cuma memunculkan
+   *  toast "belum tersedia" (jalan buntu di dalam app, Fase 1 ROADMAP).
    *
-   *  Catatan: halaman detail membaca data dari `lib/data/budget.ts`, sedangkan
-   *  celengan yang baru dibuat lewat <AddGoalSheet/> cuma hidup di state halaman
-   *  ini (demo tanpa backend). Untuk celengan baru itu kita jelaskan apa adanya
-   *  — bukan melempar user ke halaman 404. Begitu ada tabel `sinking_funds` +
-   *  endpoint-nya, penjaga `known` di bawah boleh langsung dihapus. */
+   *  Penjaga "celengan baru cuma ada di halaman ini" DIHAPUS di paket 46:
+   *  celengan sekarang hidup di store yang sama dengan halaman detailnya
+   *  (`lib/money/funds-store.ts`), jadi SEMUA celengan di daftar ini — termasuk
+   *  yang baru ditanam — punya halaman yang benar-benar bisa dibuka. */
   function handleOpenFund(fund: SinkingFundItem) {
-    const known = INITIAL_SINKING_FUNDS.some((item) => item.id === fund.id)
-    if (!known) {
-      toast(FUND_DETAIL_COPY.demoOnlyTitle, { description: FUND_DETAIL_COPY.demoOnlyHint })
-      return
-    }
     router.push(`/budget/${fund.id}`)
   }
 
@@ -333,13 +336,10 @@ export function BudgetScreen({ initialAddCategory }: { initialAddCategory?: stri
         <div className="flex items-center gap-2">
           {/* sensor layar global — versi kompak untuk header mobile */}
           <GlobalPrivacyToggle className="size-9" />
-          <button
-            type="button"
-            className="flex size-9 items-center justify-center rounded-full bg-cream text-ink ring-1 ring-soil/12"
-            aria-label="Menu"
-          >
-            <AlignRight className="size-4" />
-          </button>
+          {/* Tombol "Menu" DIHAPUS di sini juga (paket 29) — satu keputusan untuk
+              Home & Budget sekaligus, supaya dua header mobile berperilaku sama.
+              Navigasi sekunder cuma punya SATU sumber kebenaran: bottom-nav
+              "Lainnya" (kanon 2A.6). Tombol ini dulu tidak membuka apa pun. */}
           <span className="relative size-9 overflow-hidden rounded-full ring-1 ring-soil/12">
             <Image
               src="/avatar-maarif.png"
@@ -352,10 +352,12 @@ export function BudgetScreen({ initialAddCategory }: { initialAddCategory?: stri
         </div>
       </header>
 
-      {/* switcher konteks + tab zona (khusus mobile) — Konteks Uang tidak lagi
-          ada di Sidebar, jadi di mobile ia tetap muncul di sini mengikuti pola
+      {/* switcher konteks (mobile) + tab zona — Konteks Uang tidak lagi ada di
+          Sidebar, jadi di mobile ia tetap muncul di sini mengikuti pola
           Dashboard. Di desktop tab zona disembunyikan karena kedua zona sudah
-          tampil berdampingan. */}
+          tampil berdampingan, sementara switcher konteksnya PINDAH ke baris judul
+          di bawah (audit 46) — di desktop switcher-nya dulu tidak ada sama sekali
+          sehingga konteks terkunci di "Pribadi". */}
       <div className="mt-4 flex flex-wrap items-center justify-center gap-2.5 lg:hidden">
         <ContextSwitcher value={context} onChange={setContext} className="max-w-[260px]" />
         <ZoneTabs value={activeTab} onChange={handleZoneTab} />
@@ -374,6 +376,11 @@ export function BudgetScreen({ initialAddCategory }: { initialAddCategory?: stri
           </div>
         </div>
         <div className="hidden items-center gap-3 lg:flex">
+          {/* audit 46: switcher konteks untuk DESKTOP. Dulu ia hanya hidup di
+              header mobile, sementara blok "Konteks Uang" sudah dihapus dari
+              Sidebar → user desktop tidak punya cara berpindah ke Keluarga /
+              Bersama, jadi Budget & Dashboard tampak "cuma Pribadi". */}
+          <ContextSwitcher value={context} onChange={setContext} className="w-[280px]" />
           <GlobalPrivacyToggle />
         </div>
       </div>
@@ -470,6 +477,10 @@ export function BudgetScreen({ initialAddCategory }: { initialAddCategory?: stri
         scope={context}
         initialPeriod={periodFromTab(periodTab)}
         initialCategory={prefilledCategory}
+        /* daftar yang SAMA dengan yang dibaca kartu kategori (tersaring konteks):
+           dari sini sheet tahu kategori mana yang sudah punya limit → mode
+           "Atur Ulang Limit", jadi baris ganda tidak mungkin lahir (paket 28) */
+        existingBudgets={visibleBudgets}
         onSave={handleSaveBudget}
       />
       <AddGoalSheet

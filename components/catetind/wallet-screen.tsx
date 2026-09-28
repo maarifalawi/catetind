@@ -18,10 +18,12 @@ import {
 } from 'lucide-react'
 import { ScreenShell } from './screen-shell'
 import { GlobalPrivacyToggle } from './global-privacy-toggle'
+import { ContextSwitcher } from './context-switcher'
+import { useMoneyContext } from './money-context-provider'
 import { SyncBalanceModal } from './sync-balance-modal'
 import { AddWalletSheet } from './add-wallet-sheet'
-import { TransferSheet } from './transfer-sheet'
-import { usePrivacy } from './privacy-provider'
+import { TransferFlow } from './transfer-flow'
+import { MASKED_AMOUNT, usePrivacy } from './privacy-provider'
 import {
   ContactlessIcon,
   MaskedAmount,
@@ -33,25 +35,30 @@ import {
 import { useCountUp } from '@/hooks/use-count-up'
 import { cn } from '@/lib/utils'
 import { AMOUNT_LABEL, AMOUNT_LG, AMOUNT_XL } from '@/lib/typography'
+import { WALLET_BRAND_OPTIONS, formatIDR, type WalletAccount, type WalletDraft } from '@/lib/wallets'
 import {
-  WALLET_BRAND_OPTIONS,
-  createWalletAccount,
-  formatIDR,
-  INITIAL_WALLET_ACCOUNTS,
-  nextWalletId,
-  walletAccountsTotal,
-  type WalletAccount,
-  type WalletDraft,
-} from '@/lib/wallets'
-import { WALLET_CARD_MENU_COPY, WALLET_QUICK_ACTION_COPY } from '@/lib/data/wallet-detail'
+  addWalletAccount,
+  cashTotal,
+  cashTotalByContext,
+  homeWallets,
+  postBalanceAdjustment,
+  transferLogOf,
+  useMoneyStore,
+  walletAccounts,
+} from '@/lib/money/store'
+import { contextOfTransaction, matchesContext } from '@/lib/money/context-filter'
+import { HOME_TOTAL_COPY } from '@/lib/data/home'
+import {
+  CONTEXT_EMPTY_COPY,
+  CONTEXT_LABEL,
+  SCOPE_NOTE,
+  contextCaption,
+} from '@/lib/data/money-context'
+import { WALLET_CARD_MENU_COPY, WALLET_QUICK_ACTION_COPY, WALLET_SYNC_ADJUSTMENT_COPY, WALLET_TOTAL_COPY } from '@/lib/data/wallet-detail'
 import { MONEY_TONE, amountSign, isMoneyMovement, maskMoney } from '@/lib/data/history'
 import {
   ADD_WALLET_SHEET_COPY,
-  TRANSFER_SHEET_COPY,
-  WALLET_NEW_CARD_COPY,
   WALLET_TRANSFER_LOG_COPY,
-  buildTransferRecord,
-  nextTransferId,
   type WalletTransferRecord,
 } from '@/lib/data/add-wallet'
 
@@ -82,10 +89,12 @@ import {
         · Bank     → chip EMV + ikon contactless + nomor rekening tersamarkan
         · E-Wallet → monogram brand saja (tanpa chip/contactless/nomor kartu)
         · Tunai    → ilustrasi tumpukan uang kertas (tanpa chip/nomor seri)
-   6. Quick action per kartu — popover menu (Buka detail / Pindah Saldo /
+   6. Quick action per kartu — popover menu (Buka detail / Pindah Dana /
       Sesuaikan Saldo) dan Vaul drawer Smart Sync untuk mengoreksi saldo ke angka
       asli yang user baca SENDIRI di m-banking-nya (manual, tanpa open-banking).
-      "Buka detail" + lapisan Link di muka kartu membawa user ke /wallet/[id]. */
+      "Buka detail" + lapisan Link di muka kartu membawa user ke /wallet/[id].
+      Sejak paket 55 aksi "Pindah Dana" membuka ALUR yang sama dengan tombol di
+      /wallet/[id], menu "Lainnya", dan sidebar desktop (`TransferFlow`). */
 
 
 /**
@@ -111,42 +120,74 @@ export function WalletScreen() {
   /* Privasi = state GLOBAL app (PrivacyProvider), bukan state lokal halaman:
      satu tombol mata menyensor nominal hero, tile likuiditas, DAN saldo semua
      kartu sekaligus — dan tetap sinkron dengan tombol mata di Dashboard. */
-  const { masked } = usePrivacy()
-  /* Daftar dompet awal dibaca dari SATU sumber (lib/wallets.ts) — bukan array
-     lokal lagi. Sebabnya audit fintech #1: saldo di halaman ini adalah "Kas
-     Likuid" yang WAJIB ikut dijumlahkan ke sisi Aset pada Net Worth di halaman
-     Kekayaan & Hutang (`walletAccountsTotal()`). Kalau angkanya disalin-tempel
-     di dua tempat, Net Worth bisa diam-diam salah. */
-  const [wallets, setWallets] = useState<WalletAccount[]>(INITIAL_WALLET_ACCOUNTS)
+  const { masked, money } = usePrivacy()
+  /* Daftar dompet + saldonya dari SATU store uang (`lib/money/store.ts`).
+     Saldo = `opening + Σ baris ledger`, jadi koreksi saldo, pindah dana, catatan
+     baru, dan dompet yang ditambahkan user semuanya mengalir ke halaman ini,
+     Home, `/wallet/[id]`, dan Net Worth tanpa ada angka yang disalin-tempel. */
+  const snapshot = useMoneyStore()
+  /* konteks uang (Pribadi/Keluarga/Bersama) — state GLOBAL (paket 47). Sebelum
+     paket ini halaman Dompet tidak membacanya sama sekali: memilih "Keluarga"
+     tetap menampilkan dompet pribadi. */
+  const { context, setContext } = useMoneyContext()
+  /**
+   * `allWallets` = SELURUH dompet. Dipakai tiga hal yang memang global:
+   *   · hero "Total Saldo" & panel Komposisi (total = semua dompet, kanon #1),
+   *   · baris "Dompet {konteks}: Rp X" (subtotal konteks, pola yang sama dengan
+   *     Home — bukan versi kedua),
+   *   · rekomendasi brand: brand yang sudah dimiliki user tidak boleh ditawarkan
+   *     lagi walau dompetnya ada di konteks lain.
+   */
+  const allWallets = useMemo(() => walletAccounts(snapshot), [snapshot])
+  /**
+   * `wallets` = kartu dompet yang TAMPIL, disaring konteks aktif lewat penyaring
+   * kanon `homeWallets()` (bukan saringan kedua yang ditulis di komponen ini).
+   * Urutannya tetap urutan kanon, jadi tidak ada kartu yang melompat.
+   */
+  const wallets = useMemo(() => {
+    const visibleIds = new Set(homeWallets(snapshot, context).map((wallet) => wallet.id))
+    return allWallets.filter((wallet) => visibleIds.has(wallet.id))
+  }, [allWallets, snapshot, context])
   /** dompet yang sedang dibuka di Smart Sync modal (null = modal tertutup) */
   const [syncTarget, setSyncTarget] = useState<WalletAccount | null>(null)
   /** id dompet yang dropdown "More Options"-nya sedang terbuka */
-  const [openMenuId, setOpenMenuId] = useState<number | null>(null)
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   /** modal Tambah Dompet + brand yang dibawa rail ghost card (null = form bersih) */
   const [addOpen, setAddOpen] = useState(false)
   const [addBrand, setAddBrand] = useState<string | null>(null)
   /** dompet sumber yang saldonya sedang dipindah (null = sheet tertutup) */
   const [transferSource, setTransferSource] = useState<WalletAccount | null>(null)
-  /** catatan pindah dana sesi ini — bentuknya HistoryTransaction (type 'transfer') */
-  const [transfers, setTransfers] = useState<WalletTransferRecord[]>([])
-  /**
-   * Id dompet yang berasal dari data DEMO (lib/wallets.ts). Dipakai untuk dua
-   * hal yang berkaitan dengan halaman detail: dompet yang dibuat user cuma hidup
-   * di state halaman ini, sedangkan /wallet/[id] dibaca server dari data demo —
-   * jadi kartunya tidak boleh diberi tautan ke halaman yang pasti "tidak
-   * ditemukan" hanya supaya terlihat seragam.
-   */
-  const seededIds = useMemo(
-    () => new Set(INITIAL_WALLET_ACCOUNTS.map((account) => account.id)),
-    [],
+  /** catatan pindah dana sesi ini — bentuknya HistoryTransaction (type 'transfer').
+   *  Disaring konteks (paket 47): arus juga ikut konteks, jadi log ini hanya
+   *  memuat perpindahan yang dompet sumbernya di konteks aktif. Catatan yang
+   *  dompetnya tak dikenal tetap ikut tampil (kanon #2) — bukan disembunyikan. */
+  const transfers = useMemo<WalletTransferRecord[]>(
+    () =>
+      transferLogOf(snapshot).filter((record) =>
+        matchesContext(contextOfTransaction(snapshot, record.transaction), context),
+      ),
+    [snapshot, context],
   )
+  /**
+   * Semua dompet kini punya halaman detail (`/wallet/[id]` membaca store yang
+   * sama), termasuk dompet yang baru ditambahkan user — jadi tautan detailnya
+   * tidak perlu lagi dibatasi ke data demo.
+   */
 
   /** Total Saldo = jumlah saldo seluruh dompet. Halaman ini soal KAS likuid —
       "Total Kekayaan" (Net Worth) dihitung di halaman Kekayaan & Hutang.
-      Angkanya dibaca dari `walletAccountsTotal()` (lib/wallets.ts) — helper yang
-      SAMA dengan halaman Kekayaan & Hutang, jadi dompet yang baru ditambahkan
-      user mustahil "hilang" dari Net Worth. */
-  const total = useMemo(() => walletAccountsTotal(wallets), [wallets])
+      Angkanya dibaca dari `cashTotal()` (store) yang memakai
+      `walletAccountsTotal()`: SATU helper yang sama dengan halaman Kekayaan &
+      Hutang, jadi dompet yang baru ditambahkan user mustahil "hilang" dari Net
+      Worth. */
+  const total = useMemo(() => cashTotal(snapshot), [snapshot])
+  /** SUBTOTAL konteks aktif — baris kecil "Dompet {konteks}: Rp X" di bawah
+   *  nominal hero (pola yang sama dengan Home), supaya user paham kenapa daftar
+   *  kartunya lebih pendek tanpa mengira totalnya salah. */
+  const contextTotal = useMemo(
+    () => cashTotalByContext(snapshot, context),
+    [snapshot, context],
+  )
   /** angka yang dianimasikan (count-up). Nilai awal = total, jadi HTML hasil
       render server & render pertama client tetap identik (tanpa hydration
       mismatch) — animasi hanya jalan saat saldonya benar-benar berubah. */
@@ -162,8 +203,8 @@ export function WalletScreen() {
    * "3%" yang digambar sepanjang 20%.
    */
   const shares = useMemo(() => {
-    if (total <= 0) return wallets.map(() => 0)
-    const exact = wallets.map((w) => (w.balance / total) * 100)
+    if (total <= 0) return allWallets.map(() => 0)
+    const exact = allWallets.map((w) => (w.balance / total) * 100)
     const out = exact.map((value) => Math.floor(value))
     let remainder = 100 - out.reduce((sum, value) => sum + value, 0)
     const byFraction = exact
@@ -175,22 +216,23 @@ export function WalletScreen() {
       remainder -= 1
     }
     return out
-  }, [wallets, total])
+  }, [allWallets, total])
 
   /**
    * Rekomendasi "Tambah Dompet Cepat" — DINAMIS, bukan daftar hardcoded:
-   * brand yang sudah ada di `wallets` disaring keluar dulu (case-insensitive),
+   * brand yang sudah ada di `allWallets` disaring keluar dulu (case-insensitive),
    * baru dijatah `SUGGESTION_LIMIT`. Jadi user yang sudah punya dompet BCA
    * tidak akan ditawari BCA lagi — yang muncul justru bank/e-wallet yang BELUM
-   * ia pakai.
+   * ia pakai. Sengaja memakai DAFTAR PENUH (bukan yang tersaring konteks):
+   * menawarkan dompet yang sudah dimiliki user di konteks lain itu keliru.
    */
   const suggestedBrands = useMemo(() => {
-    const owned = new Set(wallets.map((wallet) => wallet.name.toLowerCase()))
+    const owned = new Set(allWallets.map((wallet) => wallet.name.toLowerCase()))
     return WALLET_BRAND_OPTIONS.filter((brand) => !owned.has(brand.name.toLowerCase())).slice(
       0,
       SUGGESTION_LIMIT,
     )
-  }, [wallets])
+  }, [allWallets])
 
   /* ── 2. TAMBAH DOMPET — dari ghost card rail & tombol "Lainnya" ───────────
      Rail "Tambah Dompet Cepat" adalah JALAN MASUK utama menambah dompet, jadi
@@ -202,15 +244,20 @@ export function WalletScreen() {
     setAddOpen(true)
   }
 
-  /* Warna dompet baru TIDAK datang dari form: indeksnya menentukan resep palet
-     (siklus Evergreen → Leaf → Olive, lihat `createWalletAccount`), jadi kartu
-     baru mustahil keluar dari sistem warna yang sudah ada. */
+  /* Warna dompet baru TIDAK datang dari form: store yang menentukan resep
+     paletnya (`walletRecipeFor`), jadi kartu baru mustahil keluar dari sistem
+     warna yang sudah ada — dan dompetnya langsung ikut terhitung di Home,
+     `/wallet/[id]`, dan Net Worth karena hidup di store yang sama. */
   function handleAddWalletSave(draft: WalletDraft) {
-    const account: WalletAccount = {
-      ...createWalletAccount(draft, wallets.length),
-      id: nextWalletId(wallets),
-    }
-    setWallets((prev) => [...prev, account])
+    const account = addWalletAccount({
+      name: draft.name,
+      type: draft.type,
+      number: draft.number,
+      opening: draft.balance,
+      /* konteks yang sedang aktif (paket 47) — dompet baru langsung muncul di
+         daftar yang user lihat, jadi empty state per konteks bukan jalan buntu */
+      context,
+    })
     setAddOpen(false) // tutup seketika; animasi keluar jalan di background
     toast.success(ADD_WALLET_SHEET_COPY.toastTitle, {
       description: ADD_WALLET_SHEET_COPY.toastDescription(account.name),
@@ -240,49 +287,37 @@ export function WalletScreen() {
   /* ── 5. SMART SYNC: koreksi saldo otomatis ──────────────────────────────── */
   function handleSyncConfirm(newBalance: number) {
     if (!syncTarget) return
-    const id = syncTarget.id
-    setWallets((prev) => prev.map((w) => (w.id === id ? { ...w, balance: newBalance } : w)))
+    /**
+     * Koreksi saldo menulis BARIS LEDGER (`balance_adjustment` bertanda) di
+     * store — bukan cuma mengubah angka di layar. Itu yang membuat tiga janji
+     * sekaligus benar: saldonya berubah di SEMUA halaman, Net Worth/Kekayaan
+     * ikut bergerak, dan barisnya muncul di Riwayat dengan nama yang sama
+     * seperti yang dijanjikan modal.
+     */
+    const row = postBalanceAdjustment({ walletId: syncTarget.id, newBalance })
     setSyncTarget(null) // tutup modal seketika (animasi tutup jalan di background)
-    toast.success('Saldo dikoreksi. Pengeluaran Tak Tercatat ditambahkan. 🪄')
+    if (!row) {
+      /* nominal yang diketik sama dengan saldo catatan → tidak ada yang dikoreksi */
+      toast.success(WALLET_SYNC_ADJUSTMENT_COPY.modalHint.none)
+      return
+    }
+    toast.success(
+      row.amount < 0
+        ? WALLET_SYNC_ADJUSTMENT_COPY.toastExpense
+        : WALLET_SYNC_ADJUSTMENT_COPY.toastIncome,
+    )
   }
 
-  /* ── 6. PINDAH SALDO antar dompet sendiri ────────────────────────────────
+  /* ── 6. PINDAH DANA antar dompet sendiri ──────────────────────────────────
      Satu tindakan mengubah TIGA hal: saldo dompet sumber, saldo dompet tujuan,
-     dan satu CATATAN bertipe `transfer`. Bentuk catatannya memakai
-     `HistoryTransaction` yang sama dengan halaman Riwayat, jadi chip "pindah
-     dana" (`isMoneyMovement()`) di sana punya makna yang sama persis — tidak ada
-     tipe data kedua yang bisa melenceng diam-diam. */
+     dan satu CATATAN bertipe `transfer`. Semua tulisan itu dilakukan SATU baris
+     ledger (`postTransfer`) lewat `<TransferFlow/>` di bawah — halaman ini hanya
+     membuka sheetnya dengan dompet asal yang sudah dipilih user dari kartunya.
+     Catatannya memakai `HistoryTransaction` yang sama dengan halaman Riwayat,
+     jadi chip "pindah dana" (`isMoneyMovement()`) di sana punya makna yang sama
+     persis — tidak ada tipe data kedua yang bisa melenceng diam-diam. */
   function openTransfer(wallet: WalletAccount) {
     setTransferSource(wallet)
-  }
-
-  function handleTransferConfirm(destinationId: number, amount: number, note?: string) {
-    const source = transferSource
-    const destination = wallets.find((wallet) => wallet.id === destinationId)
-    if (!source || !destination || amount <= 0) return
-
-    setWallets((prev) =>
-      prev.map((wallet) => {
-        if (wallet.id === source.id) return { ...wallet, balance: wallet.balance - amount }
-        if (wallet.id === destination.id) return { ...wallet, balance: wallet.balance + amount }
-        return wallet
-      }),
-    )
-    setTransfers((prev) => [
-      buildTransferRecord({
-        id: nextTransferId(prev),
-        amount,
-        fromName: source.name,
-        toName: destination.name,
-        time: clockLabel(),
-        note,
-      }),
-      ...prev,
-    ])
-    setTransferSource(null)
-    toast.success(TRANSFER_SHEET_COPY.toastTitle, {
-      description: TRANSFER_SHEET_COPY.toastDescription(amount, source.name, destination.name),
-    })
   }
 
   /* ── 7. BUKA DETAIL DOMPET (/wallet/[id]) ────────────────────────────────
@@ -312,22 +347,37 @@ export function WalletScreen() {
             tombol mata ini. Karena tombolnya membaca state privasi global, satu
             klik menyensor SELURUH halaman — hero, tile likuiditas, dan saldo
             tiap kartu dompet. */}
-        <header className="sticky top-2 z-30 flex items-center justify-between gap-3 rounded-[1.5rem] bg-cream/90 px-4 py-3 shadow-[0_18px_40px_-32px_rgba(69,89,78,0.65)] ring-1 ring-soil/10 backdrop-blur-md">
-          <div className="flex min-w-0 items-center gap-3">
-            {/* penanda halaman — tile sage→mint (palet brand), bukan kotak putih polos */}
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sage via-cream to-mint-soft text-forest shadow-[0_12px_26px_-16px_rgba(69,89,78,0.75)] ring-1 ring-forest/10">
-              <WalletIcon className="size-[18px]" strokeWidth={2.1} />
-            </span>
-            <div className="min-w-0">
-              <h1 className="truncate font-display text-[19px] font-black tracking-tight text-ink lg:text-[22px]">
-                Dompet &amp; Akun
-              </h1>
-              <p className="truncate text-[11px] text-ink/45">
-                Semua saldo kamu dalam satu tempat.
-              </p>
+        <header className="sticky top-2 z-30 rounded-[1.5rem] bg-cream/90 px-4 py-3 shadow-[0_18px_40px_-32px_rgba(69,89,78,0.65)] ring-1 ring-soil/10 backdrop-blur-md">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
+              {/* penanda halaman — tile sage→mint (palet brand), bukan kotak putih polos */}
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sage via-cream to-mint-soft text-forest shadow-[0_12px_26px_-16px_rgba(69,89,78,0.75)] ring-1 ring-forest/10">
+                <WalletIcon className="size-[18px]" strokeWidth={2.1} />
+              </span>
+              <div className="min-w-0">
+                <h1 className="truncate font-display text-[19px] font-black tracking-tight text-ink lg:text-[22px]">
+                  Dompet &amp; Akun
+                </h1>
+                <p className="truncate text-[11px] text-ink/45">
+                  {contextCaption(context)} · semua saldo di satu tempat
+                </p>
+              </div>
+            </div>
+            {/* cluster aksi: switcher konteks (desktop) + tombol mata global */}
+            <div className="hidden shrink-0 items-center gap-3 lg:flex">
+              <ContextSwitcher value={context} onChange={setContext} className="w-[280px]" />
+              <GlobalPrivacyToggle />
+            </div>
+            <div className="lg:hidden">
+              <GlobalPrivacyToggle />
             </div>
           </div>
-          <GlobalPrivacyToggle />
+
+          {/* switcher konteks (mobile): barisnya sendiri di dalam header sticky —
+              pola penempatan yang sama dengan Home & Budget (paket 47) */}
+          <div className="mt-3 flex justify-center lg:hidden">
+            <ContextSwitcher value={context} onChange={setContext} />
+          </div>
         </header>
 
         <div className="mt-5 grid grid-cols-1 gap-5 xl:mt-6 xl:grid-cols-12 xl:gap-6">
@@ -404,10 +454,25 @@ export function WalletScreen() {
                   />
                 </div>
 
-                {/* konteks angka. SENGAJA bukan "tersinkron m-banking": CatetInd
-                    100% berbasis input manual/AI + OCR, tanpa open-banking. */}
+                {/* konteks angka (paket 44): halaman ini menampilkan SELURUH dompet,
+                    dan totalnya `cashTotal()` — konteks uang tidak mengubahnya.
+                    SENGAJA bukan "tersinkron m-banking": CatetInd 100% berbasis
+                    input manual/AI + OCR, tanpa open-banking. */}
                 <p className="mt-3 text-[11.5px] font-medium text-cream/50">
-                  Total dari {wallets.length} dompet aktif
+                  {WALLET_TOTAL_COPY.heroSubtitle(allWallets.length)}
+                  <span className="mt-0.5 block text-[11px] text-cream/35">
+                    {WALLET_TOTAL_COPY.contextNote}
+                  </span>
+                </p>
+                {/* ── BARIS KONTEKS (paket 47) ────────────────────────────────
+                    Persis pola Home: total di atas TIDAK mengecil saat konteks
+                    aktif (kanon #1), sementara daftar kartu & log pindah dana
+                    mengikuti konteks. Dua baris ini menjelaskan keduanya:
+                    subtotal konteks + penegas cakupan total.
+                    Nominalnya lewat `money()` supaya tombol mata tetap berlaku. */}
+                <p className="mt-2 text-[11px] font-medium text-cream/55">
+                  {HOME_TOTAL_COPY.contextLine(CONTEXT_LABEL[context], money(contextTotal))}
+                  <span className="text-cream/30"> · {HOME_TOTAL_COPY.scopeNote}</span>
                 </p>
 
                 {/* likuiditas: uang cair vs aset ditahan */}
@@ -435,8 +500,10 @@ export function WalletScreen() {
                   <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-cream/45">
                     Komposisi
                   </span>
+                  {/* komposisi ini memecah TOTAL di atas — jadi ia memuat seluruh
+                      dompet, bukan hanya konteks aktif (kanon paket 47 #1) */}
                   <span className="text-[10.5px] font-semibold text-cream/40 tabular-nums">
-                    {wallets.length} akun
+                    {WALLET_TOTAL_COPY.compositionAccounts(allWallets.length)}
                   </span>
                 </div>
 
@@ -444,7 +511,7 @@ export function WalletScreen() {
                     tidak boleh punya celah gelap, karena itu terbaca seolah ada
                     dana yang belum teralokasi. Lebarnya dibaca dari `shares`. */}
                 <div className="mt-3 flex h-2.5 w-full overflow-hidden rounded-full">
-                  {wallets.map((wallet, i) => (
+                  {allWallets.map((wallet, i) => (
                     <motion.span
                       key={wallet.id}
                       className={cn('h-full', wallet.color)}
@@ -456,7 +523,7 @@ export function WalletScreen() {
                 </div>
 
                 <div className="mt-3 flex flex-wrap gap-1.5">
-                  {wallets.map((wallet, i) => (
+                  {allWallets.map((wallet, i) => (
                     <span
                       key={wallet.id}
                       className="inline-flex items-center gap-1.5 rounded-full bg-cream/[0.06] py-1 pl-1.5 pr-2.5 text-[11px] ring-1 ring-inset ring-cream/[0.08]"
@@ -645,9 +712,39 @@ export function WalletScreen() {
               <span className="rounded-full bg-sage px-2 py-0.5 text-[10.5px] font-bold text-forest tabular-nums ring-1 ring-forest/10">
                 {wallets.length}
               </span>
+              {/* label konteks di kepala daftar (paket 47): daftar kartu INI yang
+                  disaring konteks, sementara hero & komposisi di atas tetap total */}
+              <span className="hidden rounded-full bg-cream px-2 py-0.5 text-[10.5px] font-semibold text-ink/50 ring-1 ring-soil/12 sm:inline-flex">
+                {CONTEXT_LABEL[context]}
+              </span>
             </div>
           </div>
 
+          {wallets.length === 0 ? (
+            /* EMPTY STATE PER KONTEKS (paket 47): user punya dompet, tapi tidak
+               satu pun di konteks ini. CTA-nya menambah dompet DI KONTEKS INI
+               (`context` diteruskan ke store), jadi tombolnya benar-benar
+               menutup keadaan ini — bukan jalan buntu. */
+            <div className="mt-4 flex flex-col items-center rounded-[1.75rem] border-2 border-dashed border-forest/15 bg-cream/50 px-6 py-10 text-center">
+              <h3 className="font-display text-[16px] font-bold tracking-tight text-ink">
+                {CONTEXT_EMPTY_COPY.wallet.title(CONTEXT_LABEL[context])}
+              </h3>
+              <p className="mt-1.5 max-w-md text-[13px] leading-relaxed text-ink/55">
+                {CONTEXT_EMPTY_COPY.wallet.body}
+              </p>
+              <p className="mt-2 max-w-md text-[11.5px] leading-relaxed text-ink/40">
+                {SCOPE_NOTE.walletComposition}
+              </p>
+              <button
+                type="button"
+                onClick={() => openAddWallet(null)}
+                className="mt-5 inline-flex h-11 items-center gap-2 rounded-2xl bg-forest px-5 text-[13.5px] font-semibold text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
+              >
+                <Plus className="size-4" strokeWidth={2.6} />
+                {CONTEXT_EMPTY_COPY.wallet.cta(CONTEXT_LABEL[context])}
+              </button>
+            </div>
+          ) : (
           <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             {wallets.map((wallet, i) => (
               <motion.div
@@ -707,22 +804,15 @@ export function WalletScreen() {
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className={cn(AMOUNT_LABEL, 'text-cream/60')}>Saldo</p>
-                        {/* dompet yang baru ditambahkan user ditandai jujur: kartunya
-                            belum punya halaman detail (lihat catatan di bawah) */}
-                        {!seededIds.has(wallet.id) && (
-                          <span
-                            aria-label={WALLET_NEW_CARD_COPY.ariaLabel}
-                            className="inline-flex items-center rounded-full bg-mint/25 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-[0.12em] text-cream ring-1 ring-inset ring-cream/30"
-                          >
-                            {WALLET_NEW_CARD_COPY.badge}
-                          </span>
-                        )}
+                        {/* badge "Baru" DIHAPUS (paket 40): dulu kartu yang dibuat user
+                            tidak punya halaman detail, jadi ia harus dibedakan. Sekarang
+                            SEMUA dompet hidup di satu store & punya `/wallet/[id]`, jadi
+                            pembeda itu tidak lagi benar. */}
                       </div>
                       <div className="mt-2">
                         <MaskedAmount
                           value={formatIDR(wallet.balance)}
                           masked={masked}
-                          dots="••••"
                           className={AMOUNT_LG}
                         />
                       </div>
@@ -777,24 +867,18 @@ export function WalletScreen() {
                       tetap sah: tidak ada <button> di dalam <a>. Tombol titik
                       tiga di atas sudah diberi `z-20` supaya tetap bisa ditekan.
 
-                      Tautan ini HANYA dipasang untuk dompet demo: halaman
-                      /wallet/[id] dibaca SERVER dari INITIAL_WALLET_ACCOUNTS,
-                      sementara dompet yang dibuat user hidup di state halaman ini
-                      — menautkannya berarti mengirim user ke halaman "Dompet tidak
-                      ditemukan". Karena itu kartu baru ditandai "Baru" dan tidak
-                      diberi tautan, sementara Pindah Saldo & Sesuaikan Saldo tetap
-                      bisa diakses dari popover titik tiga. */}
-                  {seededIds.has(wallet.id) && (
-                    <Link
-                      href={`/wallet/${wallet.id}`}
-                      aria-label={`Buka detail ${wallet.name}`}
-                      className="absolute inset-0 z-10 rounded-[1.85rem] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream/60"
-                    >
-                      <span className="sr-only">
-                        Lihat saldo, arus 30 hari, dan catatan {wallet.name}
-                      </span>
-                    </Link>
-                  )}
+                      Berlaku untuk SEMUA dompet (paket 40): halaman detail
+                      membaca store yang sama, jadi dompet yang dibuat user pun
+                      punya halamannya sendiri. */}
+                  <Link
+                    href={`/wallet/${wallet.id}`}
+                    aria-label={`Buka detail ${wallet.name}`}
+                    className="absolute inset-0 z-10 rounded-[1.85rem] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream/60"
+                  >
+                    <span className="sr-only">
+                      Lihat saldo, arus 30 hari, dan catatan {wallet.name}
+                    </span>
+                  </Link>
                 </WalletFace>
 
                 {/* QUICK ACTIONS — popover, bukan swipe library */}
@@ -810,17 +894,14 @@ export function WalletScreen() {
                       transition={{ duration: 0.16, ease: [0.32, 0.72, 0, 1] }}
                       className="absolute bottom-16 right-3 z-30 w-56 origin-bottom-right rounded-2xl bg-cream/95 p-1.5 shadow-[0_28px_60px_-22px_rgba(69,89,78,0.55)] ring-1 ring-soil/12 backdrop-blur-xl"
                     >
-                      {/* dompet yang baru dibuat user belum punya halaman detail
-                          (/wallet/[id] dibaca server dari data demo) → itemnya tidak
-                          ditawarkan supaya tidak menabrak halaman "tidak ditemukan" */}
-                      {seededIds.has(wallet.id) && (
-                        <MenuItem
-                          icon={ChevronRight}
-                          label={WALLET_CARD_MENU_COPY.openDetail}
-                          hint={WALLET_CARD_MENU_COPY.openDetailHint}
-                          onClick={() => handleOpenDetail(wallet)}
-                        />
-                      )}
+                      {/* "Buka detail" berlaku untuk semua dompet sekarang: halaman
+                          /wallet/[id] membaca store yang sama dengan halaman ini */}
+                      <MenuItem
+                        icon={ChevronRight}
+                        label={WALLET_CARD_MENU_COPY.openDetail}
+                        hint={WALLET_CARD_MENU_COPY.openDetailHint}
+                        onClick={() => handleOpenDetail(wallet)}
+                      />
                       <MenuItem
                         icon={ArrowLeftRight}
                         label={WALLET_CARD_MENU_COPY.transfer}
@@ -845,6 +926,7 @@ export function WalletScreen() {
               </motion.div>
             ))}
           </div>
+          )}
         </section>
       </div>
 
@@ -864,36 +946,28 @@ export function WalletScreen() {
         open={addOpen}
         onClose={() => setAddOpen(false)}
         onSave={handleAddWalletSave}
-        cardIndex={wallets.length}
+        /* indeks resep warna dari SELURUH dompet (bukan yang tersaring): resep
+           berputar menurut urutan penyimpanan store, jadi kartu baru tidak pernah
+           memakai resep yang sama dengan tetangganya tanpa alasan */
+        cardIndex={allWallets.length}
         initialBrand={addBrand}
       />
 
-      {/* ── SHEET PINDAH SALDO ────────────────────────────────────────────────
-          Menerima seluruh daftar dompet (calon tujuan) dan dompet sumber yang
-          sedang dipilih; yang mengubah dua saldo + menulis catatannya adalah
-          parent, supaya tidak ada dua tempat yang sama-sama "tahu" saldo. */}
-      <TransferSheet
-        wallets={wallets}
-        source={transferSource}
+      {/* ── ALUR PINDAH DANA (paket 55) ────────────────────────────────────────
+          Halaman ini cuma menyediakan PINTUNYA (popover kartu dompet); alurnya
+          sendiri hidup di `TransferFlow` — satu host yang sama dengan tombol di
+          halaman dompet detail, menu “Lainnya”, dan sidebar desktop. Di sana
+          daftar dompet dibaca langsung dari store, jadi tujuan lintas konteks
+          (paket 47) tetap bisa dipilih tanpa halaman ini mengoper daftarnya. */}
+      <TransferFlow
         open={transferSource !== null}
-        onClose={() => setTransferSource(null)}
-        onTransfer={handleTransferConfirm}
+        onOpenChange={(next) => {
+          if (!next) setTransferSource(null)
+        }}
+        source={transferSource}
       />
     </ScreenShell>
   )
-}
-
-/**
- * Jam lokal `HH:MM` untuk catatan pindah dana.
- *
- * Dipanggil dari EVENT HANDLER (bukan saat render), jadi tidak pernah membuat
- * HTML server & client berbeda; tanggalnya sendiri tetap memakai konstanta mock
- * `WALLET_TODAY_ISO` supaya sejalan dengan data dompet lainnya.
- */
-function clockLabel(date: Date = new Date()): string {
-  const hours = `${date.getHours()}`.padStart(2, '0')
-  const minutes = `${date.getMinutes()}`.padStart(2, '0')
-  return `${hours}:${minutes}`
 }
 
 /**
@@ -907,6 +981,9 @@ function clockLabel(date: Date = new Date()): string {
  * Chip likuiditas di hero gelap.
  * `liquid` = uang cair yang bisa langsung dipakai (aksen leaf),
  * `held` = aset ditahan/dikunci (aksen kaca netral + ikon gembok).
+ *
+ * Nominalnya tersensor lewat `MASKED_AMOUNT` — SATU definisi sensor app
+ * (keputusan 27 Sep 2026; dulu chip ini menulis '••••' sendiri).
  */
 function LiquidityPill({
   icon: Icon,
@@ -949,7 +1026,7 @@ function LiquidityPill({
           {label}
         </span>
         <span className="mt-0.5 block truncate text-[13.5px] font-bold tabular-nums text-cream">
-          {masked ? '••••' : value}
+          {masked ? MASKED_AMOUNT : value}
         </span>
       </span>
     </span>

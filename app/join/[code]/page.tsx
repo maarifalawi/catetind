@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { JoinInviteScreen } from '@/components/catetind/join-invite-screen'
 import { PhoneStage } from '@/components/catetind/phone-stage'
-import { resolveInvite } from '@/lib/data/joint-invite'
+import { resolveInvite } from '@/lib/invite-store'
 
 /**
  * Joint Wallet Invite Landing (/join/[code]) — inventaris #7, halaman PUBLIK.
@@ -14,9 +14,14 @@ import { resolveInvite } from '@/lib/data/joint-invite'
  *
  * Arah produksi: status invite (single-use + kedaluwarsa 24 jam, PRD AC1) dibaca
  * dari server (`GET /api/joint/invite/:code`) karena ia otorisasi, bukan dekorasi;
- * setelah login, server yang melakukan auto-join. Di repo demo ini `resolveInvite()`
- * menentukan status lokal supaya semua tampilan (valid/kedaluwarsa/terpakai/asing)
- * bisa direview tanpa backend.
+ * setelah login, server yang melakukan auto-join.
+ *
+ * Di repo demo ini statusnya dihitung `lib/invite-store.ts` dari record yang ADA
+ * (kode yang dibuat user hidup di perangkatnya, sisanya seed demo) dan dikirim
+ * sebagai prop awal ke komponen klien. Prop itu penting: render pertama di
+ * browser memakai hasil server, baru setelah mount layarnya membaca store
+ * perangkat — jadi tidak ada hydration mismatch, dan kalau kodenya memang milik
+ * browser ini (baru dibuat di /joint), statusnya naik sendiri jadi `valid`.
  *
  * `PhoneStage plain` seperti /login & /checkout: layar fokus tanpa sidebar, dan
  * `MobileBottomNav` + AI chat widget menyembunyikan diri di prefix `/join`.
@@ -49,10 +54,12 @@ export default async function JoinInvitePage({
   params: Promise<{ code: string }>
 }) {
   const { code } = await params
+  /* dihitung SEKALI di server: dipakai metadata + render pertama komponen klien */
+  const invite = resolveInvite(code)
 
   return (
     <PhoneStage plain>
-      <JoinInviteScreen code={code} />
+      <JoinInviteScreen code={code} initialInvite={invite} />
     </PhoneStage>
   )
 }

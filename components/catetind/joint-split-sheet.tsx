@@ -13,6 +13,7 @@ import {
   type JointPerson,
   type JointSplitType,
 } from '@/lib/data/joint'
+import type { SplitSpec } from '@/lib/data/joint-ledger'
 import { cn } from '@/lib/utils'
 
 /* ── Split Bill Bottom Sheet (Section 6) ─────────────────────────────────────
@@ -21,14 +22,20 @@ import { cn } from '@/lib/utils'
    bersama) · 3. Nominal Custom (isi satu sisi, sisi lain dihitung otomatis) ·
    4. "Yang ini gue yang bayar" (100% satu orang).
 
-   Semua mode menghasilkan DRAFT dengan bentuk yang sama, jadi halaman Joint
-   cukup menyimpan satu objek kecil per transaksi (splitType + splits/payerId).
+   Semua mode menghasilkan DRAFT dengan bentuk yang sama — satu `SplitSpec`
+   (`lib/data/joint-ledger.ts`) — jadi halaman Joint cukup menyimpan satu objek
+   kecil per transaksi dan tidak ada bentuk kedua yang bisa dibaca salah.
    ────────────────────────────────────────────────────────────────────────── */
 
+/**
+ * Draft pembagian yang dikembalikan sheet ini.
+ *
+ * Stage 2: bentuknya `SplitSpec`, BUKAN `{ splitType, splits }`. Di bentuk lama
+ * persen (60) dan rupiah (60.000) menempati field yang SAMA, jadi satu salah
+ * baca = tagihan hancur; sekarang bentuk datanya sendiri yang memaksa benar.
+ */
 export type JointSplitDraft = {
-  splitType: JointSplitType
-  splits?: Record<string, number>
-  payerId?: string
+  split: SplitSpec
 }
 
 /** batasi nilai ke rentang [min, max] */
@@ -56,16 +63,17 @@ export function JointSplitSheet({
 }) {
   /* Nilai awal diambil dari transaksi yang dipilih; pemanggil memakai
      `key={targetId}` sehingga ganti target = instance baru (tanpa effect reset). */
-  const [mode, setMode] = useState<JointSplitType>(initial?.splitType ?? 'equal')
+  const start = initial?.split
+  const [mode, setMode] = useState<JointSplitType>(start?.type ?? 'equal')
   const [myPercent, setMyPercent] = useState(
-    initial?.splitType === 'percentage' ? (initial.splits?.[me.id] ?? 50) : 50,
+    start?.type === 'percentage' ? (start.percents[me.id] ?? 50) : 50,
   )
   const [mineDigits, setMineDigits] = useState(
-    initial?.splitType === 'nominal'
-      ? String(initial.splits?.[me.id] ?? Math.round(total / 2))
-      : '',
+    start?.type === 'nominal' ? String(start.amounts[me.id] ?? Math.round(total / 2)) : '',
   )
-  const [payerId, setPayerId] = useState<string>(initial?.payerId ?? me.id)
+  const [payerId, setPayerId] = useState<string>(
+    start?.type === 'single_payer' ? start.payerId : me.id,
+  )
 
   const nominalMine = Number(mineDigits || '0')
   /** sisi pasangan = sisa dari total (auto-kalkulasi real-time) */
@@ -85,18 +93,22 @@ export function JointSplitSheet({
 
   function handleSave() {
     if (!nominalReady) return
-    if (mode === 'equal') return onSave({ splitType: 'equal' })
+    if (mode === 'equal') return onSave({ split: { type: 'equal' } })
     if (mode === 'percentage')
       return onSave({
-        splitType: 'percentage',
-        splits: { [me.id]: myPercent, [partner.id]: 100 - myPercent },
+        split: {
+          type: 'percentage',
+          percents: { [me.id]: myPercent, [partner.id]: 100 - myPercent },
+        },
       })
     if (mode === 'nominal')
       return onSave({
-        splitType: 'nominal',
-        splits: { [me.id]: nominalMine, [partner.id]: nominalPartner },
+        split: {
+          type: 'nominal',
+          amounts: { [me.id]: nominalMine, [partner.id]: nominalPartner },
+        },
       })
-    return onSave({ splitType: 'single_payer', payerId })
+    return onSave({ split: { type: 'single_payer', payerId } })
   }
 
   return (

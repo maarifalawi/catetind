@@ -1,6 +1,8 @@
 'use client'
 
+import Link from 'next/link'
 import { BarChart3, DollarSign, LineChart, Users } from 'lucide-react'
+import { BALANCE_RING_COPY } from '@/lib/data/home'
 import { usePrivacy } from './privacy-provider'
 
 const SIZE = 240
@@ -155,37 +157,54 @@ export function BalanceRing({
         </div>
       </div>
 
-      {/* orbiting quick buttons */}
-      <OrbitButton className="left-0 top-1/2" icon={<Users className="size-4" />} />
+      {/* orbiting quick buttons — tiga pintasan yang benar-benar ada halamannya.
+          Sebelumnya ketiganya MATI (button tanpa onClick, aria-label generik
+          "Quick action"), padahal donat ini tampil di Home lewat overview-panel. */}
       <OrbitButton
+        href="/joint"
+        label={BALANCE_RING_COPY.jointLabel}
+        className="left-0 top-1/2"
+        icon={<Users className="size-4" aria-hidden />}
+      />
+      <OrbitButton
+        href="/history"
+        label={BALANCE_RING_COPY.chartLabel}
         className="right-0 top-1/2"
-        icon={<BarChart3 className="size-4" />}
+        icon={<BarChart3 className="size-4" aria-hidden />}
       />
       <div className="absolute -bottom-1 left-1/2 -translate-x-1/2">
-        <button
+        <Link
+          href="/history"
+          aria-label={BALANCE_RING_COPY.insightsLabel}
           className="flex size-14 items-center justify-center rounded-full bg-mint text-forest shadow-[0_12px_28px_-8px_rgba(145,187,158,0.9)] ring-4 ring-cream transition-transform active:translate-y-px"
-          aria-label="Insights"
         >
-          <LineChart className="size-5" strokeWidth={2.4} />
-        </button>
+          <LineChart className="size-5" strokeWidth={2.4} aria-hidden />
+        </Link>
       </div>
     </div>
   )
 }
 
 function OrbitButton({
+  href,
+  label,
   className,
   icon,
 }: {
+  /** halaman tujuan — orbit selalu jadi tautan, bukan tombol mati */
+  href: string
+  /** nama aksinya untuk pembaca layar (bukan "Quick action" yang kabur) */
+  label: string
   className: string
   icon: React.ReactNode
 }) {
   return (
-    <button
+    <Link
+      href={href}
+      aria-label={label}
       className={`absolute flex size-11 -translate-y-1/2 items-center justify-center rounded-full bg-cream text-forest ring-1 ring-soil/12 transition-transform active:translate-y-[calc(-50%+1px)] ${className}`}
-      aria-label="Quick action"
     >
       {icon}
-    </button>
+    </Link>
   )
 }

@@ -31,7 +31,6 @@ import {
   SNOWBALL_EMPTY,
   SNOWBALL_HELP,
   SNOWBALL_TITLE,
-  WALLET_SOURCE_OPTIONS,
   WEALTH_TODAY_ISO,
   activeDebtRemaining,
   activeReceivableTotal,
@@ -59,6 +58,15 @@ import {
   type DebtView,
   type SnowballRow,
 } from '@/lib/data/wealth'
+import { CONTEXT_EMPTY_COPY, CONTEXT_LABEL } from '@/lib/data/money-context'
+import {
+  DEBT_CASH_COPY,
+  cashDirectionOf,
+  defaultCashAmount,
+  planDebtSettlement,
+  settlementCounterparty,
+  type CashDirection,
+} from '@/lib/data/wealth-cash'
 
 /* ── TAB 3 — HUTANG / DEBT MANAGER (Section 7) ──────────────────────────────
    Halaman ini TIDAK menampilkan daftar hutang biasa. Dua ide besarnya:
@@ -84,6 +92,12 @@ import {
    tempatnya hanya paragraf janji "akan tampil di sini" — sekarang setiap baris
    adalah pembayaran nyata, termasuk yang baru dicatat lewat "Catat Bayar".
 
+   Sejak paket 41, "Catat Bayar" dan "Diterima" BENAR-BENAR menggerakkan kas:
+   dompet yang dipilih didebit/dikredit lewat `lib/money/store.ts`
+   (`postDebtSettlement`), jadi pelunasan tidak lagi menaikkan Net Worth tanpa
+   uang keluar (temuan audit #1). Pilihan dompetnya datang dari ledger yang asli
+   (`walletOptions`), bukan daftar mock — dulu daftar itu memuat "OVO" yang tidak
+   ada di ledger, sehingga memilihnya berarti hutang "lunas" tanpa uang pindah.
    ────────────────────────────────────────────────────────────────────────── */
 
 /** lebar area aksi "Catat Bayar" yang tersingkap (px) saat kartu digeser kanan */
@@ -99,9 +113,10 @@ export function WealthHutang({
   masked,
   monthlyIncome,
   celebrateId,
+  walletOptions,
   onAddDebt,
-  onSettleDebt,
   onPayDebt,
+  emptyContextLine,
 }: {
   debts: Debt[]
   /** ledger pembayaran hutang (`debt_payments`) — riwayat per hutang diturunkan dari sini */
@@ -113,14 +128,29 @@ export function WealthHutang({
   monthlyIncome: number
   /** id hutang yang barnya baru saja lunas — memicu confetti + kolaps */
   celebrateId: string | null
+  /** dompet dari ledger (BCA, GoPay, Tunai, dompet buatan user) + saldonya */
+  walletOptions: { id: string; label: string; balance: number }[]
   onAddDebt: () => void
-  onSettleDebt: (debt: Debt) => void
-  /** amount + tanggal + dompet sumber ikut dikirim: ketiganya tersimpan di riwayat */
-  onPayDebt: (debt: Debt, amount: number, date: string, walletId: string) => void
+  /**
+   * Aksi uang: `amount` = nominal yang diserahkan/diterima, `walletId` = dompet
+   * yang benar-benar tersentuh. Mengembalikan `true` kalau baris ledger berhasil
+   * ditulis — kalau `false` (saldo kurang / nominal tidak sah) sheet TETAP terbuka
+   * supaya user bisa membetulkan, bukan ditutup seolah berhasil.
+   */
+  onPayDebt: (debt: Debt, amount: number, date: string, walletId: string) => boolean
+  /**
+   * Judul empty state khusus konteks uang (paket 47) — diteruskan halaman
+   * Kekayaan HANYA kalau daftar kosong karena penyaring konteks, bukan karena
+   * user memang belum punya catatan hutang/piutang.
+   */
+  emptyContextLine?: string
 }) {
   const [payTarget, setPayTarget] = useState<Debt | null>(null)
 
-  const rows = snowballRows(debts)
+  /* Hutang yang BARU lunas tetap digambar selama perayaannya berjalan (paket 50):
+     pelunasan langsung tersimpan di store, jadi tanpa `keepId` bar-nya hilang
+     sebelum animasi "mencair" + confetti terlihat (lihat `snowballRows`). */
+  const rows = snowballRows(debts, celebrateId)
   const progress = snowballProgress(debts)
   const installments = totalMonthInstallments(debts)
   const ratio = dtiRatio(installments, monthlyIncome)
@@ -130,11 +160,22 @@ export function WealthHutang({
   const mine = personalDebts(debts, 'owed_by_me')
   const theirs = personalDebts(debts, 'owed_to_me')
   const myPlatform = platformDebts(debts)
+  /**
+   * true = ada bar snowball yang sedang mencair untuk hutang yang sudah lunas.
+   * Keadaan itu SENGAJA dihitung sebagai "belum kosong": kartu perayaan
+   * "Semua hutangmu LUNAS!" baru muncul setelah animasinya selesai (halaman
+   * melepas `celebrateId` setelah SETTLE_DELAY) — persis ritme lama, waktu
+   * statusnya masih ditahan di halaman.
+   */
+  const melting =
+    celebrateId !== null &&
+    rows.some((row) => row.debt.id === celebrateId && row.debt.status === 'settled')
   const isEmpty =
-    view === 'hutangku'
+    (view === 'hutangku'
       ? myPlatform.length === 0 && mine.active.length === 0
-      : theirs.active.length === 0
+      : theirs.active.length === 0) && !melting
   const settled = allDebtsSettled(debts)
+
 
   return (
     <div>
@@ -170,6 +211,7 @@ export function WealthHutang({
               view={view}
               allSettled={settled && view === 'hutangku'}
               onAdd={onAddDebt}
+              contextLine={emptyContextLine}
             />
           ) : (
             <div className="mt-5 grid gap-5 lg:gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] xl:items-start">
@@ -212,7 +254,8 @@ export function WealthHutang({
                   active={view === 'hutangku' ? mine.active : theirs.active}
                   settled={view === 'hutangku' ? mine.settled : theirs.settled}
                   masked={masked}
-                  onSettle={onSettleDebt}
+                  celebrateId={celebrateId}
+                  onCash={setPayTarget}
                 />
 
                 {/* ── 7F: tombol tambah (dual form) ───────────────────── */}
@@ -230,16 +273,20 @@ export function WealthHutang({
         </motion.div>
       </AnimatePresence>
 
-      <PayDebtSheet
+      <DebtCashSheet
         debt={payTarget}
         masked={masked}
+        walletOptions={walletOptions}
         onClose={() => setPayTarget(null)}
         onConfirm={(amount, date, wallet) => {
-          /* tanggal & dompet sumbernya ikut dikirim — itulah dua kolom yang
-             membuat riwayat pembayaran bisa diaudit (arah produksi:
-             INSERT ke `debt_payments` (debt_id, amount, payment_date, wallet_id)) */
-          if (payTarget) onPayDebt(payTarget, amount, date, wallet)
-          setPayTarget(null)
+          /* uang benar-benar bergerak di sini: store menulis baris ledger
+             (`debt_payment`/`receivable_payment` + `change` bila lebih bayar).
+             Kalau ditolak (saldo kurang / nominal tidak sah) sheet tetap terbuka
+             — user harus melihat kenapa, bukan dibiarkan mengira sudah tercatat. */
+          if (!payTarget) return false
+          const ok = onPayDebt(payTarget, amount, date, wallet)
+          if (ok) setPayTarget(null)
+          return ok
         }}
       />
     </div>
@@ -405,10 +452,17 @@ function EmptyDebtState({
   view,
   allSettled,
   onAdd,
+  contextLine,
 }: {
   view: DebtView
   allSettled: boolean
   onAdd: () => void
+  /**
+   * Judul khusus konteks (paket 47) — diisi HANYA kalau user punya hutang/piutang
+   * tapi tidak satu pun di konteks aktif, supaya tab kosong tetap punya
+   * penjelasan ("Belum ada hutang di konteks Bersama").
+   */
+  contextLine?: string
 }) {
   /* semua hutang lunas — perayaan khusus, bukan empty state biasa */
   if (allSettled) {
@@ -439,10 +493,14 @@ function EmptyDebtState({
         {piutang ? '📮' : '🕊️'}
       </span>
       <h2 className="mt-3 font-display text-[16px] font-bold tracking-tight text-ink">
-        {piutang ? EMPTY_PIUTANG_TITLE : EMPTY_HUTANG_TITLE}
+        {contextLine ?? (piutang ? EMPTY_PIUTANG_TITLE : EMPTY_HUTANG_TITLE)}
       </h2>
       <p className="mt-1.5 max-w-sm text-[13px] leading-relaxed text-ink/55">
-        {piutang ? EMPTY_PIUTANG_COPY : EMPTY_HUTANG_COPY}
+        {contextLine
+          ? CONTEXT_EMPTY_COPY.debts.body
+          : piutang
+            ? EMPTY_PIUTANG_COPY
+            : EMPTY_HUTANG_COPY}
       </p>
       <button
         type="button"
@@ -450,7 +508,11 @@ function EmptyDebtState({
         className="mt-5 inline-flex h-11 items-center gap-2 rounded-2xl bg-forest px-5 text-[13.5px] font-semibold text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
       >
         <Plus className="size-4" strokeWidth={2.6} />
-        {piutang ? EMPTY_PIUTANG_CTA : EMPTY_HUTANG_CTA}
+        {contextLine
+          ? CONTEXT_EMPTY_COPY.debts.cta
+          : piutang
+            ? EMPTY_PIUTANG_CTA
+            : EMPTY_HUTANG_CTA}
       </button>
     </div>
   )
@@ -754,7 +816,7 @@ function PlatformDebtCard({
           className="flex w-[116px] flex-col items-center justify-center gap-1 bg-hud-sage text-[10.5px] font-bold text-[#000000] transition-colors hover:brightness-105"
         >
           <Wallet className="size-4" strokeWidth={2.4} />
-          Catat Bayar
+          {DEBT_CASH_COPY.actionLabel.pay}
         </button>
       </div>
 
@@ -782,6 +844,10 @@ function PlatformDebtCard({
           <span className="min-w-0 flex-1">
             <span className="flex items-center gap-1.5">
               <span className="truncate text-[13.5px] font-bold text-ink">{debt.provider}</span>
+              {/* badge konteks uang hutang ini (paket 47) */}
+              <span className="shrink-0 rounded-full bg-sage/70 px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-forest ring-1 ring-inset ring-forest/10">
+                {CONTEXT_LABEL[debt.scope]}
+              </span>
               {done && (
                 <span className="shrink-0 rounded-full bg-hud-sage/30 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-[#000000]">
                   Lunas
@@ -900,7 +966,17 @@ function PlatformDebtCard({
                           {formatShortDate(payment.paidAtISO)}
                         </span>
                         <span className="min-w-0 flex-1 truncate text-ink/40">
-                          · {payment.walletName}
+                          {/* arah uang ikut ditulis: pelunasan piutang tidak boleh
+                              terbaca seperti pembayaran hutang */}
+                          · {payment.kind === 'receivable' ? `${DEBT_CASH_COPY.receivableTag} · ` : ''}
+                          {payment.walletName}
+                          {/* kembalian punya jejaknya sendiri di sini supaya
+                              nominal di kartu & baris kas bisa ditelusuri */}
+                          {payment.changeAmount ? (
+                            <span className="ml-1 text-[#b89191]">
+                              {DEBT_CASH_COPY.changeRecorded(maskMoney(payment.changeAmount, masked))}
+                            </span>
+                          ) : null}
                         </span>
                         <span className="shrink-0 font-semibold text-ink/75 tabular-nums">
                           {maskMoney(payment.amount, masked)}
@@ -917,7 +993,7 @@ function PlatformDebtCard({
                 className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-forest py-3 text-[12.5px] font-semibold text-mint transition-colors hover:bg-forest-soft active:scale-[0.99]"
               >
                 <Wallet className="size-3.5" strokeWidth={2.6} />
-                Catat Bayar
+                {DEBT_CASH_COPY.actionLabel.pay}
               </button>
             </div>
           </motion.div>
@@ -931,75 +1007,158 @@ function PlatformDebtCard({
    Nominal sudah terisi otomatis sebesar cicilan bulanan (user tinggal
    menyesuaikan kalau bayar lebih), plus tanggal & sumber dompet. Submit
    memicu bar snowball menyusut — jadi pembayaran bukan cuma catatan mati. */
-function PayDebtSheet({
+/* ── 7D: sheet "Catat Bayar" / "Terima" (satu sheet, dua arah) ───────────────
+   Nominal sudah terisi otomatis (cicilan bulanan untuk platform, seluruh sisa
+   untuk personal/piutang), plus tanggal & dompet. Yang membedakan dari versi
+   lama (paket 17): submit di sini BENAR-BENAR menggerakkan kas lewat store, dan
+   pratinjaunya memakai perencana yang SAMA dengan yang akan ditulis
+   (`planDebtSettlement`) sehingga angka di layar tidak mungkin beda dari baris
+   ledger yang lahir. Kembalian lebih-bayar pun terlihat SEBELUM disimpan. */
+function DebtCashSheet({
   debt,
   masked,
+  walletOptions,
   onClose,
   onConfirm,
 }: {
   debt: Debt | null
   masked: boolean
+  /** dompet dari ledger + saldonya — supaya user tahu uangnya cukup atau tidak */
+  walletOptions: { id: string; label: string; balance: number }[]
   onClose: () => void
-  onConfirm: (amount: number, date: string, wallet: string) => void
+  /** `true` = baris kas berhasil ditulis dan sheet boleh ditutup */
+  onConfirm: (amount: number, date: string, wallet: string) => boolean
 }) {
   const [digits, setDigits] = useState('')
   const [date, setDate] = useState('')
-  const [wallet, setWallet] = useState(WALLET_SOURCE_OPTIONS[0].id)
+  const [wallet, setWallet] = useState('')
+  const [error, setError] = useState('')
+
+  const direction: CashDirection = debt ? cashDirectionOf(debt) : 'out'
+  const copy = direction === 'out' ? DEBT_CASH_COPY.pay : DEBT_CASH_COPY.receive
+  const name = debt ? settlementCounterparty(debt) : ''
+  const firstWallet = walletOptions[0]?.id ?? ''
 
   useEffect(() => {
     if (!debt) return
-    setDigits(String(debt.monthlyInstallment ?? debt.remaining))
+    setDigits(String(defaultCashAmount(debt)))
     setDate(WEALTH_TODAY_ISO)
-    setWallet(WALLET_SOURCE_OPTIONS[0].id)
-  }, [debt])
+    setWallet(firstWallet)
+    setError('')
+  }, [debt, firstWallet])
 
-  const amount = Number(digits || '0')
-  const remaining = debt?.remaining ?? 0
+  const amount = debt ? Number(digits || '0') : 0
+  const plan = debt
+    ? planDebtSettlement({
+        direction,
+        owedAmount: debt.remaining,
+        paidAmount: amount,
+        counterparty: name,
+      })
+    : null
+  const selected = walletOptions.find((option) => option.id === wallet)
+  /* membayar tidak boleh melebihi uang yang benar-benar ada di dompet terpilih */
+  const notEnough =
+    direction === 'out' && plan !== null && selected !== undefined
+      ? plan.cashMoved > selected.balance
+      : false
+  const submitDisabled = plan === null || walletOptions.length === 0 || notEnough
+
+  const submit = () => {
+    if (walletOptions.length === 0) {
+      setError(DEBT_CASH_COPY.noWallet)
+      return
+    }
+    if (!plan) {
+      setError(DEBT_CASH_COPY.invalid)
+      return
+    }
+    if (!onConfirm(amount, date, wallet)) {
+      setError(DEBT_CASH_COPY.insufficient(selected?.label ?? ''))
+      return
+    }
+    setError('')
+  }
 
   return (
     <BudgetSheet
       open={debt !== null}
       onClose={onClose}
-      title={debt ? `Catat Bayar ${debt.provider}` : 'Catat Bayar'}
-      description="Pembayaran langsung mengurangi sisa hutang di snowball tracker."
+      title={debt ? copy.title(name) : DEBT_CASH_COPY.pay.title('')}
+      description={copy.description}
       footer={
-        <SheetSubmit onClick={() => onConfirm(amount, date, wallet)} disabled={amount <= 0} gate>
-          Simpan Pembayaran ✓
+        <SheetSubmit onClick={submit} disabled={submitDisabled} gate>
+          {copy.submit}
         </SheetSubmit>
       }
     >
       <RupiahField
-        label="Nominal dibayar"
+        label={copy.amountLabel}
         digits={digits}
         onDigitsChange={setDigits}
         placeholder="Rp 550.000"
         size="lg"
       />
 
-      {amount > 0 && (
-        <p className="mt-3 rounded-2xl bg-sage/60 px-4 py-3 text-[12px] leading-relaxed text-ink/70">
-          Sisa setelah pembayaran ini:{' '}
-          <b className="font-bold text-forest tabular-nums">
-            {maskMoney(Math.max(0, remaining - amount), masked)}
-          </b>
-          {amount >= remaining && ' — hutang ini langsung LUNAS! 🎉'}
-        </p>
+      {plan && (
+        <div className="mt-3 space-y-2">
+          <p className="rounded-2xl bg-sage/60 px-4 py-3 text-[12px] leading-relaxed text-ink/70">
+            {DEBT_CASH_COPY.remainingLine(
+              maskMoney(Math.max(0, plan.remaining), masked),
+              plan.settled,
+            )}
+          </p>
+          {/* kas-nya benar-benar bergerak — sebutkan nominal & dompetnya */}
+          <p className="text-[11.5px] leading-relaxed text-ink/50">
+            {direction === 'out'
+              ? DEBT_CASH_COPY.cashOutLine(maskMoney(plan.cashMoved, masked), selected?.label ?? '')
+              : DEBT_CASH_COPY.cashInLine(maskMoney(plan.cashMoved, masked), selected?.label ?? '')}
+          </p>
+          {/* lebih bayar: JELASKAN sebelum disimpan, jangan biarkan user kaget */}
+          {plan.changeAmount > 0 && (
+            <p className="rounded-2xl bg-hud-amber/15 px-4 py-3 text-[11.5px] leading-relaxed text-[#b89191] ring-1 ring-inset ring-hud-amber/30">
+              {direction === 'in'
+                ? DEBT_CASH_COPY.changeReturned(maskMoney(plan.changeAmount, masked), name)
+                : DEBT_CASH_COPY.changePending(maskMoney(plan.changeAmount, masked), name)}
+            </p>
+          )}
+        </div>
       )}
 
-      <DateField value={date} onChange={setDate} label="Tanggal pembayaran" />
+      <DateField value={date} onChange={setDate} label={DEBT_CASH_COPY.dateLabel} />
 
       <div className="mt-4">
-        <span className="text-[13px] font-semibold leading-snug text-ink">Dompet sumber</span>
-        <ChoicePills
-          className="mt-2"
-          ariaLabel="Dompet sumber pembayaran"
-          options={WALLET_SOURCE_OPTIONS.map((option) => ({
-            id: option.id,
-            label: option.label,
-          }))}
-          value={wallet}
-          onChange={setWallet}
-        />
+        <span className="text-[13px] font-semibold leading-snug text-ink">{copy.walletLabel}</span>
+        {walletOptions.length === 0 ? (
+          <p className="mt-2 rounded-2xl bg-hud-amber/15 px-4 py-3 text-[11.5px] leading-relaxed text-[#b89191]">
+            {DEBT_CASH_COPY.noWallet}
+          </p>
+        ) : (
+          <>
+            <ChoicePills
+              className="mt-2"
+              ariaLabel={copy.walletLabel}
+              options={walletOptions.map((option) => ({ id: option.id, label: option.label }))}
+              value={wallet}
+              onChange={setWallet}
+            />
+            {selected && (
+              <p className="mt-2 text-[11px] text-ink/45 tabular-nums">
+                {DEBT_CASH_COPY.walletBalance(maskMoney(selected.balance, masked))}
+              </p>
+            )}
+          </>
+        )}
+        {/* saldo tidak cukup / nominal tidak sah: tampil DI SINI, bukan sebagai
+            toast yang hilang — user harus bisa membetulkan tanpa menebak.
+            Dua sumber: pesan dari percobaan simpan yang ditolak store (`error`)
+            dan pemeriksaan lokal atas saldo dompet terpilih (`notEnough`), yang
+            sudah menghalangi tombol simpan sejak awal. */}
+        {(error || (notEnough && walletOptions.length > 0)) && (
+          <p className="mt-2 rounded-2xl bg-hud-terracotta/12 px-4 py-3 text-[11.5px] leading-relaxed text-[#b89191] ring-1 ring-inset ring-hud-terracotta/25">
+            {error || DEBT_CASH_COPY.insufficient(selected?.label ?? '')}
+          </p>
+        )}
       </div>
     </BudgetSheet>
   )
@@ -1015,16 +1174,20 @@ function PersonalSection({
   active,
   settled,
   masked,
-  onSettle,
+  celebrateId,
+  onCash,
 }: {
   title: string
   active: Debt[]
   settled: Debt[]
   masked: boolean
-  onSettle: (debt: Debt) => void
+  /** id catatan yang baru saja lunas lewat aksi uang (memicu confetti section) */
+  celebrateId: string | null
+  onCash: (debt: Debt) => void
 }) {
   const [burst, setBurst] = useState(false)
   const timer = useRef<number | null>(null)
+  const shown = useRef<string | null>(null)
 
   useEffect(
     () => () => {
@@ -1033,14 +1196,21 @@ function PersonalSection({
     [],
   )
 
-  /** confetti kecil 1.5 detik — dirayakan di level section supaya tetap
-   *  terlihat walau kartunya langsung pindah ke grup "sudah lunas" */
-  const celebrate = (debt: Debt) => {
+  /**
+   * Confetti kecil 1.5 detik — dirayakan di level SECTION supaya tetap terlihat
+   * walau kartunya langsung pindah ke grup "Sudah Lunas".
+   *
+   * Sejak paket 41 perayaan dipicu dari `celebrateId` (bukan langsung dari klik):
+   * "Tandai Lunas" yang dulu hanya mengubah status tanpa menyentuh kas sudah
+   * tidak ada — sekarang statusnya berubah SETELAH baris kas benar-benar ditulis.
+   */
+  useEffect(() => {
+    if (!celebrateId || shown.current === celebrateId) return
+    shown.current = celebrateId
     setBurst(true)
     if (timer.current) window.clearTimeout(timer.current)
     timer.current = window.setTimeout(() => setBurst(false), 1500)
-    onSettle(debt)
-  }
+  }, [celebrateId])
 
   return (
     <section className="relative">
@@ -1062,7 +1232,7 @@ function PersonalSection({
               masked={masked}
               settled={false}
               delay={0.03 * index}
-              onSettle={() => celebrate(debt)}
+              onCash={() => onCash(debt)}
             />
           ))}
         </ul>
@@ -1082,7 +1252,7 @@ function PersonalSection({
                 masked={masked}
                 settled
                 delay={0.03 * index}
-                onSettle={() => undefined}
+                onCash={() => undefined}
               />
             ))}
           </ul>
@@ -1102,13 +1272,14 @@ function PersonalDebtCard({
   masked,
   settled,
   delay,
-  onSettle,
+  onCash,
 }: {
   debt: Debt
   masked: boolean
   settled: boolean
   delay: number
-  onSettle: () => void
+  /** buka sheet uang (bayar hutang / terima piutang) — debit/kredit kas asli */
+  onCash: () => void
 }) {
   const incoming = debtPointsToMe(debt)
 
@@ -1141,13 +1312,19 @@ function PersonalDebtCard({
       </span>
 
       <span className="min-w-0 flex-1">
-        <span
-          className={cn(
-            'block truncate text-[13px] font-semibold',
-            settled ? 'text-ink/50 line-through' : 'text-ink',
-          )}
-        >
-          {counterpartyLabel(debt)}
+        <span className="flex items-center gap-1.5">
+          <span
+            className={cn(
+              'truncate text-[13px] font-semibold',
+              settled ? 'text-ink/50 line-through' : 'text-ink',
+            )}
+          >
+            {counterpartyLabel(debt)}
+          </span>
+          {/* badge konteks uang hutang/piutang personal (paket 47) */}
+          <span className="shrink-0 rounded-full bg-sage/70 px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-forest ring-1 ring-inset ring-forest/10">
+            {CONTEXT_LABEL[debt.scope]}
+          </span>
         </span>
         {debt.notes && (
           <span className={cn('mt-0.5 block truncate text-[11px]', settled ? 'text-ink/30' : 'text-ink/45')}>
@@ -1172,11 +1349,15 @@ function PersonalDebtCard({
         ) : (
           <button
             type="button"
-            onClick={onSettle}
+            onClick={onCash}
             className="inline-flex items-center gap-1 rounded-full bg-hud-sage px-2.5 py-1 text-[10.5px] font-bold text-[#000000] transition-colors hover:brightness-105 active:scale-95"
           >
             <Check className="size-3" strokeWidth={3} />
-            Tandai Lunas
+            {/* piutang = uang MASUK ke dompet; hutang personal = uang KELUAR.
+                Labelnya ikut arahnya supaya user tahu kasnya bakal bergerak. */}
+            {debt.direction === 'owed_to_me'
+              ? DEBT_CASH_COPY.actionLabel.receive
+              : DEBT_CASH_COPY.actionLabel.pay}
           </button>
         )}
       </span>

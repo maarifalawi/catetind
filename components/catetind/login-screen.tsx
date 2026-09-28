@@ -1,18 +1,19 @@
 'use client'
 
-import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { useState, type FormEvent, type KeyboardEvent } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ArrowRight, CircleHelp, LoaderCircle, Lock, Mail, ShieldCheck } from 'lucide-react'
+import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import {
   EMAIL_MAX_LENGTH,
   LOGIN_COPY,
   REGISTRATION_COPY,
-  SEND_SIMULATION_MS,
   buildVerifyHref,
   isValidEmail,
 } from '@/lib/data/auth'
+import { sendLoginLink } from '@/lib/session-client'
 import { LogoWordmark } from './logo-wordmark'
 
 /* ── Masuk (/login) — inventaris #8 · PRD 5931–5933 ──────────────────────────
@@ -43,21 +44,12 @@ export function LoginScreen() {
   const [email, setEmail] = useState('')
   /** error format cuma muncul setelah user mencoba kirim — bahasa repo: menemani, bukan menuduh */
   const [showError, setShowError] = useState(false)
-  /** state loading tombol — di produksi berakhir setelah response Supabase */
+  /** state loading tombol — berakhir setelah Supabase menjawab */
   const [sending, setSending] = useState(false)
-  /** pegangan timer simulasi, supaya tidak ada setState setelah unmount */
-  const timerRef = useRef<number | null>(null)
 
   const emailValid = isValidEmail(email)
 
-  useEffect(
-    () => () => {
-      if (timerRef.current !== null) window.clearTimeout(timerRef.current)
-    },
-    [],
-  )
-
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (sending) return
 
@@ -70,13 +62,16 @@ export function LoginScreen() {
     setShowError(false)
     setSending(true)
 
-    /* MOCK — bukan jaringan sungguhan, cuma timer. Arah produksi:
-       await supabase.auth.signInWithOtp({ email: trimmed,
-         options: { emailRedirectTo: `${location.origin}/login/verify` } })
-       Navigasi baru dilakukan setelah request itu selesai (sukses maupun gagal). */
-    timerRef.current = window.setTimeout(() => {
-      router.push(buildVerifyHref(trimmed))
-    }, SEND_SIMULATION_MS)
+    /* NYATA sejak paket 45: Supabase mengirim tautan/kode ke email ini. Navigasi
+       baru dilakukan setelah server menjawab — dulu ada timer simulasi 700 ms yang
+       membuat halaman terasa "mengirim" padahal tidak ada request apa pun. */
+    const result = await sendLoginLink(trimmed)
+    if (!result.ok) {
+      setSending(false)
+      toast.error(result.error)
+      return
+    }
+    router.push(buildVerifyHref(trimmed))
   }
 
   /**

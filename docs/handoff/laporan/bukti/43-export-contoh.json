@@ -1,0 +1,300 @@
+{
+  "schema": "catetind.money-export",
+  "schemaVersion": 1,
+  "exportedAt": "2026-09-27T10:15:00.000Z",
+  "app": {
+    "name": "CatetInd",
+    "buildStage": "demo"
+  },
+  "user": {
+    "id": "user_jon",
+    "name": "Jon Snow",
+    "email": "jon@snow.com"
+  },
+  "counts": {
+    "wallets": 3,
+    "ledgerRows": 3,
+    "removedRows": 1,
+    "debts": 3,
+    "receivables": 2,
+    "debtPayments": 3,
+    "investments": 4,
+    "funds": 3
+  },
+  "totals": {
+    "cash": 4277500,
+    "investments": 16149330,
+    "receivables": 150000,
+    "debts": 3450000,
+    "netWorth": 17126830
+  },
+  "wallets": [
+    {
+      "id": "bca",
+      "name": "BCA",
+      "type": "Bank",
+      "number": "•••• 0849",
+      "network": "VISA",
+      "context": "pribadi",
+      "opening": 1450000,
+      "balance": 3950000
+    },
+    {
+      "id": "gopay",
+      "name": "GoPay",
+      "type": "E-Wallet",
+      "number": "•••• 2210",
+      "network": "E-WALLET",
+      "context": "pribadi",
+      "opening": 350000,
+      "balance": 302500
+    },
+    {
+      "id": "tunai",
+      "name": "Tunai",
+      "type": "Cash",
+      "number": "Uang cash",
+      "network": "TUNAI",
+      "context": "keluarga",
+      "opening": 50000,
+      "balance": 25000
+    }
+  ],
+  "ledgerRows": [
+    {
+      "id": "session-9003",
+      "walletId": "gopay",
+      "type": "expense",
+      "amount": 47500,
+      "dateISO": "2026-09-27",
+      "note": "Kopi & roti",
+      "clientTxId": "fedd4e40-3562-400d-a427-1e5bb03ea70f",
+      "seq": 9003,
+      "time": "19:20",
+      "aiGenerated": false,
+      "walletName": "GoPay",
+      "removed": false
+    },
+    {
+      "id": "session-9002",
+      "walletId": "tunai",
+      "type": "expense",
+      "amount": 25000,
+      "dateISO": "2026-09-27",
+      "note": "Parkir",
+      "clientTxId": "0db41647-cd71-4376-bdad-72b482fb4fda",
+      "seq": 9002,
+      "time": "19:20",
+      "aiGenerated": false,
+      "walletName": "Tunai",
+      "removed": true
+    },
+    {
+      "id": "session-9001",
+      "walletId": "bca",
+      "type": "income",
+      "amount": 2500000,
+      "dateISO": "2026-09-27",
+      "note": "Gaji September",
+      "clientTxId": "28734399-28c9-423a-8381-6161ce1ce842",
+      "seq": 9001,
+      "time": "19:20",
+      "aiGenerated": false,
+      "walletName": "BCA",
+      "removed": false
+    }
+  ],
+  "removedRowIds": [
+    "session-9002"
+  ],
+  "debts": {
+    "payable": [
+      {
+        "id": "1",
+        "type": "platform",
+        "provider": "Kredivo",
+        "principal": 3000000,
+        "remaining": 2500000,
+        "tenor": 6,
+        "currentMonth": 2,
+        "monthlyInstallment": 550000,
+        "interestRate": 2.95,
+        "dueDate": 10,
+        "status": "active"
+      },
+      {
+        "id": "2",
+        "type": "platform",
+        "provider": "SPayLater",
+        "principal": 1500000,
+        "remaining": 750000,
+        "tenor": 3,
+        "currentMonth": 2,
+        "monthlyInstallment": 520000,
+        "interestRate": 2.5,
+        "dueDate": 25,
+        "status": "active"
+      },
+      {
+        "id": "3",
+        "type": "personal",
+        "direction": "owed_by_me",
+        "counterparty": "Andi",
+        "principal": 200000,
+        "remaining": 200000,
+        "notes": "Makan siang kemarin",
+        "status": "active"
+      }
+    ],
+    "receivable": [
+      {
+        "id": "4",
+        "type": "personal",
+        "direction": "owed_to_me",
+        "counterparty": "Rina",
+        "principal": 150000,
+        "remaining": 150000,
+        "notes": "Nonton bioskop",
+        "status": "active"
+      },
+      {
+        "id": "5",
+        "type": "personal",
+        "direction": "owed_to_me",
+        "counterparty": "Budi",
+        "principal": 500000,
+        "remaining": 0,
+        "notes": "Dana darurat",
+        "status": "settled"
+      }
+    ]
+  },
+  "debtPayments": [
+    {
+      "id": "pay-1",
+      "debtId": "2",
+      "amount": 520000,
+      "paidAtISO": "2026-09-25T01:05:00Z",
+      "walletName": "GoPay",
+      "walletId": "gopay",
+      "kind": "debt"
+    },
+    {
+      "id": "pay-2",
+      "debtId": "1",
+      "amount": 500000,
+      "paidAtISO": "2026-08-10T02:15:00Z",
+      "walletName": "BCA",
+      "walletId": "bca",
+      "kind": "debt"
+    },
+    {
+      "id": "pay-3",
+      "debtId": "2",
+      "amount": 230000,
+      "paidAtISO": "2026-08-25T13:20:00Z",
+      "walletName": "Tunai",
+      "walletId": "tunai",
+      "kind": "debt"
+    }
+  ],
+  "investments": [
+    {
+      "id": "1",
+      "type": "mutual_fund",
+      "name": "Bibit Reksadana Pasar Uang",
+      "symbol": "RDPU",
+      "quantity": 150.5432,
+      "avgBuyPrice": 42000,
+      "currentPrice": 43500,
+      "totalInvested": 6322814,
+      "currentValue": 6548630,
+      "lastUpdate": "2026-09-25T15:00:00Z"
+    },
+    {
+      "id": "2",
+      "type": "stock",
+      "name": "Bank BCA",
+      "symbol": "BBCA",
+      "quantity": 5,
+      "avgBuyPrice": 9250,
+      "currentPrice": 9875,
+      "totalInvested": 4625000,
+      "currentValue": 4937500,
+      "lastUpdate": "2026-09-25T15:30:00Z"
+    },
+    {
+      "id": "3",
+      "type": "crypto",
+      "name": "Bitcoin",
+      "symbol": "BTC",
+      "quantity": 0.00234,
+      "avgBuyPrice": 950000000,
+      "currentPrice": 980000000,
+      "totalInvested": 2223000,
+      "currentValue": 2293200,
+      "lastUpdate": "2026-09-25T20:25:00Z"
+    },
+    {
+      "id": "4",
+      "type": "gold",
+      "name": "Emas Antam",
+      "symbol": "GOLD",
+      "quantity": 2,
+      "avgBuyPrice": 1100000,
+      "currentPrice": 1185000,
+      "totalInvested": 2200000,
+      "currentValue": 2370000,
+      "lastUpdate": "2026-09-25T09:00:00Z"
+    }
+  ],
+  "goals": {
+    "funds": [
+      {
+        "id": 1,
+        "name": "Tiket Konser Coldplay",
+        "target": 3000000,
+        "current": 1800000,
+        "deadline": "2026-12-15",
+        "priority": "tinggi",
+        "stage": "plant",
+        "scope": "pribadi",
+        "contributedThisMonth": false
+      },
+      {
+        "id": 2,
+        "name": "Dana Darurat",
+        "target": 15000000,
+        "current": 4200000,
+        "deadline": "2027-06-01",
+        "priority": "kritis",
+        "stage": "sprout",
+        "scope": "keluarga",
+        "contributedThisMonth": false
+      },
+      {
+        "id": 3,
+        "name": "iPhone 16",
+        "target": 18000000,
+        "current": 10000000,
+        "deadline": "2027-01-15",
+        "priority": "sedang",
+        "stage": "plant",
+        "scope": "pribadi",
+        "contributedThisMonth": false
+      }
+    ]
+  },
+  "monthlyTarget": null,
+  "settings": {
+    "privacy": {
+      "amountsMasked": false
+    }
+  },
+  "limits": [
+    "Data di file ini dibaca dari perangkat ini (store uang + IndexedDB + data contoh repo).",
+    "Tidak ada salinan di server: repo demo ini belum punya backend, jadi tidak ada data yang dikirim ke mana pun saat penghapusan akun.",
+    "Baris ledger berisi catatan yang kamu buat/diubah di app ini; transaksi contoh dari masa lalu hidup di konstanta lib/data/* dan ikut apa adanya.",
+    "Saldo dompet dihitung dari opening + baris ledger (tidak pernah disimpan sebagai angka terpisah)."
+  ]
+}

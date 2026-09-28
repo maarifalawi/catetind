@@ -1,0 +1,62 @@
+{
+  "_catatan": "Bukti paket 50: bentuk record yang benar-benar ditulis store kekayaan ke perangkat. Diambil dengan menjalankan `lib/money/zz-probe.test.ts` (file sementara) di lingkungan test, yaitu jalur memory yang SAMA dengan yang dipakai app saat IndexedDB diblokir (`lib/money/idb.ts`). Skenario: tambah hutang Dita Rp 1.000.000, lalu lunasi Kredivo Rp 500.000 dari BCA.",
+  "key": "wealth",
+  "db": "catetind-money",
+  "store": "state",
+  "record": {
+    "version": 1,
+    "purged": false,
+    "counts": {
+      "investments": 4,
+      "debts": 6,
+      "payments": 4
+    },
+    "debtBaru": {
+      "id": "debt-1000000",
+      "type": "personal",
+      "direction": "owed_by_me",
+      "counterparty": "Dita",
+      "principal": 1000000,
+      "remaining": 1000000,
+      "status": "active",
+      "scope": "pribadi"
+    },
+    "debtDilunasi": {
+      "id": "1",
+      "type": "platform",
+      "provider": "Kredivo",
+      "principal": 3000000,
+      "remaining": 2000000,
+      "tenor": 6,
+      "currentMonth": 3,
+      "monthlyInstallment": 550000,
+      "interestRate": 2.95,
+      "dueDate": 10,
+      "status": "active",
+      "scope": "pribadi"
+    },
+    "paymentBaru": {
+      "id": "pay-1000001",
+      "debtId": "1",
+      "amount": 500000,
+      "paidAtISO": "2026-09-27",
+      "walletName": "BCA",
+      "walletId": "bca",
+      "kind": "debt",
+      "cashMoved": 500000
+    },
+    "investasiContoh": {
+      "id": "1",
+      "type": "mutual_fund",
+      "name": "Bibit Reksadana Pasar Uang",
+      "symbol": "RDPU",
+      "quantity": 150.5432,
+      "avgBuyPrice": 42000,
+      "currentPrice": 43500,
+      "totalInvested": 6322814,
+      "currentValue": 6548630,
+      "lastUpdate": "2026-09-25T15:00:00Z",
+      "scope": "pribadi"
+    }
+  }
+}

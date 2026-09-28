@@ -17,8 +17,11 @@
 
    Framing selalu SISA ("tanki bensin"), bukan hitungan batas: tidak ada kata
    habis/limit dan tidak ada warna merah — kanon Domain 2B.2 & 5C.
-   Di produksi cukup ganti `AI_USAGE_CALLS` + `AI_ADDON_TOKENS_REMAINING` dengan
-   hasil endpoint usage; seluruh komponen cuma membaca turunan dari file ini. */
+   Di produksi cukup ganti isi `lib/ai-usage-store.ts` dengan hasil endpoint usage
+   (`ai_usage` di PRD 4806–4886); seluruh komponen cuma membaca turunan dari file
+   ini. Satu pengecualian yang DISENGAJA ada kata "habis": keadaan kuota benar-
+   benar habis (`AI_QUOTA_EXHAUSTED_COPY`) — menutupi fakta itu dengan bahasa
+   tanki bensin justru bikin user menekan tombol yang tidak akan bekerja. */
 
 /* ── 1. HELPER SUDUT PANDANG (dipakai lintas halaman) ─────────────────────── */
 
@@ -100,11 +103,21 @@ export const AI_BASE_TOKENS_TOTAL = AI_BASE_QUOTA.reduce(
   0,
 )
 
-/* ── 3. PEMAKAIAN BULAN INI (MOCK — satu-satunya tempat angka "terpakai") ────
-   Panggilan terpakai mengikuti contoh di PRD 4925–4928 supaya halaman Billing
-   dan kartu sidebar bercerita sama. Token terpakai TIDAK ditulis manual: ia
-   diturunkan dari `callsUsed × tokensPerCall` tabel kanon di atas. */
-const AI_USAGE_CALLS: Record<AiQuotaActivityId, number> = {
+/* ── 3. PEMAKAIAN — DARI STORE, BUKAN KONSTANTA MATI (paket 42) ──────────────
+   Temuan audit Stage 5 #5: pemakaian dulu konstanta MATI sementara setiap
+   panggilan AI/voice/OCR user tidak pernah menambahinya. Akibatnya meter di
+   sidebar, Billing, banner Home, dan header AI Coach tidak pernah turun walau
+   kuota benar-benar terpakai — angka pajangan, bukan alat.
+
+   Sekarang pemakaian hidup di `lib/ai-usage-store.ts` (satu store untuk seluruh
+   app, satu langganan). File INI tetap MURNI: ia cuma MENERJEMAHKAN pemakaian
+   jadi baris & angka siap render. Jadi tidak ada komponen yang menghitung kuota
+   sendiri, dan tidak ada dua tempat yang bisa beda cerita.
+
+   Angka di bawah adalah TITIK BERANGKAT demo (mock PRD 4925–4928), bukan angka
+   yang dikunci: begitu user memakai AI, store menambahinya dan seluruh gauge
+   ikut turun. */
+export const AI_SEED_USAGE_CALLS: Record<AiQuotaActivityId, number> = {
   categorize: 624,
   chat: 156,
   ocr: 78,
@@ -120,90 +133,146 @@ export interface AiUsageRow extends AiQuotaActivity {
   tokensRemaining: number
 }
 
-/** tabel kanon + pemakaian, siap dirender — komponen tidak hitung apa pun sendiri */
-export const AI_USAGE: AiUsageRow[] = AI_BASE_QUOTA.map((activity) => {
-  const callsUsed = AI_USAGE_CALLS[activity.id]
-  const callsRemaining = Math.max(0, activity.calls - callsUsed)
-  return {
-    ...activity,
-    callsUsed,
-    callsRemaining,
-    tokensUsed: callsUsed * activity.tokensPerCall,
-    tokensRemaining: callsRemaining * activity.tokensPerCall,
-  }
-})
+/** tabel kanon + pemakaian hidup, siap dirender — komponen tidak hitung apa pun sendiri */
+export function aiUsageRows(callsUsed: Record<AiQuotaActivityId, number>): AiUsageRow[] {
+  return AI_BASE_QUOTA.map((activity) => {
+    /* pemakaian sengaja TIDAK dipotong di batas aktivitas: kelebihannya adalah
+       token yang diambil dari tangki add-on (PRD 4859–4876: dasar dulu, baru
+       add-on), jadi baris ini harus jujur menunjukkan berapa yang terpakai */
+    const used = Math.max(0, callsUsed[activity.id] ?? 0)
+    const callsRemaining = Math.max(0, activity.calls - used)
+    return {
+      ...activity,
+      callsUsed: used,
+      callsRemaining,
+      tokensUsed: used * activity.tokensPerCall,
+      tokensRemaining: callsRemaining * activity.tokensPerCall,
+    }
+  })
+}
 
 /** versi peta: komponen bisa langsung ambil satu aktivitas (mis. `voice`) */
-export const AI_USAGE_BY_ID = Object.fromEntries(AI_USAGE.map((row) => [row.id, row])) as Record<
-  AiQuotaActivityId,
-  AiUsageRow
->
+export function aiUsageById(rows: AiUsageRow[]): Record<AiQuotaActivityId, AiUsageRow> {
+  return Object.fromEntries(rows.map((row) => [row.id, row])) as Record<
+    AiQuotaActivityId,
+    AiUsageRow
+  >
+}
 
-/** token add-on yang belum kepakai (mock) — tidak hangus saat reset (PRD 4802) */
-export const AI_ADDON_TOKENS_REMAINING = 150_000
+/** jatah token add-on bawaan (mock) — tidak hangus saat reset (PRD 4802) */
+export const AI_ADDON_TOKENS_ALLOTMENT = 150_000
 
-/* ── 4. TURUNAN YANG DIPAKAI UI (semua angka di layar datang dari sini) ──────
-   Dua kolam sengaja TIDAK digabung jadi satu persen:
-     • kuota dasar  → 601.500 token/bulan, di-reset tanggal 1  ← angka utama
-     • token add-on → beli tambahan, tidak hangus sampai terpakai
-   Angka utama ("X% sisa") memakai KUOTA DASAR — persis seperti contoh PRD
-   4919–4930 (bar + baris "Token tambahan: 150.000") dan ambang soft-nudge Home
-   (>70% pemakaian). Dengan begitu sidebar, Billing, Home, dan /terms sejalan. */
+/* ── 4. TANGKI ADD-ON (jatah bawaan + pembelian sesi − limpahan pemakaian) ────
+   Prompt 24: tombol "Beli Add-On →" di Home harus benar-benar MENAMBAH kuota.
+   Paket 42 menambahkan paruh kedua yang dulu hilang: kuota itu juga harus
+   benar-benar BERKURANG saat terpakai.
 
-/** 464.020 = 174.720+156.000+78.000+44.800+3.600+6.900 (turunan, bukan konstanta) */
-export const AI_BASE_TOKENS_USED = AI_USAGE.reduce((total, row) => total + row.tokensUsed, 0)
-/** sisa kuota dasar bulan ini — 601.500 − 464.020 = 137.480 */
-export const AI_BASE_TOKENS_REMAINING = AI_BASE_TOKENS_TOTAL - AI_BASE_TOKENS_USED
-/** persen kuota dasar TERPAKAI (bulat) — 77; pemicu soft-nudge di Home (>70%) */
-export const AI_USED_PCT = Math.round(usedPercent(AI_BASE_TOKENS_USED, AI_BASE_TOKENS_TOTAL))
-/** persen SISA kuota dasar (bulat) — 23; angka yang selalu ditonjolkan */
-export const AI_REMAINING_PCT = Math.round(
-  remainingPercent(AI_BASE_TOKENS_USED, AI_BASE_TOKENS_TOTAL),
-)
-/** sisa kuota dasar diterjemahkan ke jumlah catatan AI yang masih bisa dibuat */
-export const AI_RECORDS_LEFT = estimateRecords(AI_BASE_TOKENS_REMAINING)
-/** token add-on diterjemahkan dengan ukuran yang sama biar bisa dibandingkan */
-export const AI_ADDON_RECORDS_LEFT = estimateRecords(AI_ADDON_TOKENS_REMAINING)
+   Urutannya mengikuti PRD 4859–4876: kuota dasar dulu, baru add-on. Karena itu
+   pemakaian di atas kapasitas dasar disebut `overflowTokens` dan menggerus
+   tangki add-on — bukan hilang tanpa jejak.
 
-/* ── 4b. TANGKI ADD-ON YANG BERJALAN (pembelian SESI INI) ─────────────────────
-   Prompt 24: tombol "Beli Add-On →" di Home harus benar-benar MENAMBAH kuota,
-   bukan menutup modal lalu diam. Tanpa backend, satu-satunya tempat yang bisa
-   "bertambah" adalah sesi yang sedang jalan (lihat `lib/ai-quota-bus.ts`) — dan
-   turunannya ditulis DI SINI, bukan di komponen, supaya angka add-on di banner
-   Home, Fuel Gauge Billing, dan toast sesudah bayar tidak mungkin berbeda
-   (aturan yang sama dengan §4 di atas).
-
-   Kuota dasar sengaja TIDAK ikut berubah: token add-on masuk ke tangki
-   tambahan yang tidak hangus saat reset (PRD 4790–4802), jadi persen utama
-   ("X% sisa" dari kuota dasar) tetap jadi angka utama — persis contoh PRD
-   4919–4930. Yang bertambah adalah baris "Token tambahan". */
+   Kuota dasar sengaja TIDAK ikut berubah oleh pembelian: persen utama ("X%
+   sisa") tetap dihitung dari kuota dasar (PRD 4919–4930), dan token tambahan
+   punya barisnya sendiri. */
 export interface AiAddonTank {
   /** token add-on yang dibeli di sesi demo ini (0 = belum pernah beli) */
   purchasedTokens: number
-  /** sisa token add-on = jatah mock bawaan + pembelian sesi ini */
+  /** sisa token add-on = jatah bawaan + pembelian − limpahan pemakaian */
   tokensRemaining: number
+  /** token yang sudah dipakai MELEBIHI kuota dasar (dibayar dari tangki ini) */
+  overflowTokens: number
   /** terjemahan ke jumlah catatan AI — satuan yang user rasakan */
   recordsLeft: number
 }
 
-/** jatah add-on bawaan (mock) + pembelian sesi ini → satu angka siap render */
-export function aiAddonTank(purchasedTokens: number): AiAddonTank {
+/** jatah bawaan (mock) + pembelian sesi − limpahan → satu angka siap render */
+export function aiAddonTank(purchasedTokens: number, overflowTokens = 0): AiAddonTank {
   const purchased = Math.max(0, Math.round(purchasedTokens))
-  const tokensRemaining = AI_ADDON_TOKENS_REMAINING + purchased
+  const overflow = Math.max(0, Math.round(overflowTokens))
+  const tokensRemaining = Math.max(0, AI_ADDON_TOKENS_ALLOTMENT + purchased - overflow)
   return {
     purchasedTokens: purchased,
     tokensRemaining,
+    overflowTokens: overflow,
     recordsLeft: estimateRecords(tokensRemaining),
+  }
+}
+
+/* ── 4b. SNAPSHOT KUOTA — satu bentuk yang dibaca SEMUA gauge (paket 42) ─────
+   Sebelumnya tiap gauge membaca konstanta berbeda (`AI_REMAINING_PCT`,
+   `AI_RECORDS_LEFT`, `AI_VOICE_*`, `aiAddonTank`) sehingga "kuota habis" tidak
+   punya satu definisi pun. Sekarang semuanya lahir dari fungsi ini, dan
+   `exhausted` dihitung dari dua kolam sekaligus — itulah yang dipakai engine
+   input & widget AI untuk mematikan voice/OCR sambil menjelaskan alasannya.
+
+   Pemakaian TIDAK di-clamp di batas kuota dasar: kelebihannya masuk tangki
+   add-on, jadi keadaan "habis" benar-benar habis di KEDUA kolam. */
+export interface AiQuotaSnapshot {
+  /** rincian per aktivitas (tabel kanon + pemakaian hidup) */
+  rows: AiUsageRow[]
+  byId: Record<AiQuotaActivityId, AiUsageRow>
+  /** token kuota dasar terpakai bulan ini */
+  baseTokensUsed: number
+  /** sisa kuota dasar (0 = kolam dasar habis) */
+  baseTokensRemaining: number
+  /** persen kuota dasar terpakai (bulat) — pemicu soft-nudge Home (>70%) */
+  usedPct: number
+  /** persen sisa kuota dasar (bulat) — angka yang selalu ditonjolkan */
+  remainingPct: number
+  /** sisa kuota dasar diterjemahkan ke jumlah catatan AI */
+  recordsLeft: number
+  /** sisa PANGGILAN suara (kanon PRD: panggilan, bukan jam) */
+  voiceCallsRemaining: number
+  /** terjemahan panggilan suara ke durasi (asumsi 30 dtk/panggilan) */
+  voiceRemainingSeconds: number
+  addon: AiAddonTank
+  /** true = kuota dasar DAN tangki add-on dua-duanya habis */
+  exhausted: boolean
+}
+
+/** pemakaian + pembelian → seluruh angka kuota yang ditampilkan app */
+export function aiQuotaSnapshot(
+  callsUsed: Record<AiQuotaActivityId, number>,
+  purchasedTokens = 0,
+): AiQuotaSnapshot {
+  const rows = aiUsageRows(callsUsed)
+  const byId = aiUsageById(rows)
+
+  const baseTokensUsed = rows.reduce((total, row) => total + row.tokensUsed, 0)
+  const baseTokensRemaining = Math.max(0, AI_BASE_TOKENS_TOTAL - baseTokensUsed)
+  /* limpahan = pemakaian yang melewati kapasitas dasar → dibayar dari add-on */
+  const overflowTokens = Math.max(0, baseTokensUsed - AI_BASE_TOKENS_TOTAL)
+  const addon = aiAddonTank(purchasedTokens, overflowTokens)
+  const voiceCallsRemaining = byId.voice.callsRemaining
+
+  return {
+    rows,
+    byId,
+    baseTokensUsed,
+    baseTokensRemaining,
+    /* dua persen ini di-clamp ke 0–100 walau pemakaian sudah melewati kuota
+       dasar: angka yang tampil ke user tidak boleh negatif (bar "0% sisa" yang
+       ditulis −100% adalah angka rusak). Kelebihannya tetap jujur terlihat
+       lewat `addon.overflowTokens`. */
+    usedPct: Math.min(100, Math.round(usedPercent(baseTokensUsed, AI_BASE_TOKENS_TOTAL))),
+    remainingPct: Math.max(
+      0,
+      Math.round(remainingPercent(baseTokensUsed, AI_BASE_TOKENS_TOTAL)),
+    ),
+    recordsLeft: estimateRecords(baseTokensRemaining),
+    voiceCallsRemaining,
+    voiceRemainingSeconds: voiceCallsRemaining * AI_VOICE_SECONDS_PER_CALL,
+    addon,
+    exhausted: baseTokensRemaining <= 0 && addon.tokensRemaining <= 0,
   }
 }
 
 /* Voice: PRD menghitung PANGGILAN (150/bulan), bukan jam. Kalau UI masih ingin
    menampilkan satuan waktu, waktunya DITURUNKAN dari sisa panggilan dengan asumsi
-   rata-rata satu catatan suara ≈ 30 detik — angka panggilan kanon tetap utuh. */
+   rata-rata satu catatan suara ≈ 30 detik — angka panggilan kanon tetap utuh.
+   Sisa panggilannya sendiri hidup di `AiQuotaSnapshot.voiceCallsRemaining`
+   (paket 42), bukan konstanta. */
 export const AI_VOICE_SECONDS_PER_CALL = 30
-export const AI_VOICE_CALLS_PER_MONTH = AI_USAGE_BY_ID.voice.calls
-export const AI_VOICE_CALLS_REMAINING = AI_USAGE_BY_ID.voice.callsRemaining
-export const AI_VOICE_REMAINING_SECONDS = AI_VOICE_CALLS_REMAINING * AI_VOICE_SECONDS_PER_CALL
 
 /* ── 5. ADD-ON PAKET (kanon PRD 4790–4798) ──────────────────────────────────
    Nama sengaja kasual ("Receh/Sedang/Gede") — bukan "Basic/Pro/Enterprise" —
@@ -254,12 +323,51 @@ export const AI_ADDON_PACKAGES: AiAddonPackage[] = [
 export const AI_RESET_RULE_COPY =
   'Kuota dasar di-reset tanggal 1 tiap bulan. Token add-on tidak hangus.'
 
-/** tanggal reset berikutnya (mock) — sudah berupa string terformat supaya bebas
-    masalah hydration mismatch (pola tanggal mock di repo ini) */
-export const AI_QUOTA_RESET_DATE = '1 Oktober 2026'
-/** sisa hari menuju reset — pasangan dari tanggal di atas; keduanya mock dan
-    harus diubah bersamaan */
-export const AI_QUOTA_RESET_DAYS = 4
+/* Satu tanggal kanon (audit fintech Stage 2 #6): label tanggal & sisa hari
+   DITURUNKAN dari sini, jadi tidak ada dua konstanta mock yang bisa lupa
+   disinkronkan. Tanggal ditulis sebagai `YYYY-MM-DD` + hari "hari ini" mock —
+   dua string tetap, gaya tanggal mock halaman lain (bukan `new Date()`),
+   supaya HTML server & client identik. */
+export const AI_QUOTA_RESET_ISO = '2026-10-01'
+/** hari "hari ini" mock — pembanding tanggal reset di atas */
+export const AI_QUOTA_TODAY_ISO = '2026-09-27'
+
+const RESET_MONTHS_LONG = [
+  'Januari',
+  'Februari',
+  'Maret',
+  'April',
+  'Mei',
+  'Juni',
+  'Juli',
+  'Agustus',
+  'September',
+  'Oktober',
+  'November',
+  'Desember',
+]
+
+/** `'2026-10-01'` → `'1 Oktober 2026'` (ditulis manual, bebas locale mesin) */
+export function indonesianDateLabel(iso: string): string {
+  const [year, month, day] = iso.split('-').map(Number)
+  const label = RESET_MONTHS_LONG[month - 1] ?? iso
+  return `${day} ${label} ${year}`
+}
+
+/** jarak hari bulat antara dua tanggal lokal — bebas timezone */
+export function daysUntil(fromIso: string, toIso: string): number {
+  const [fromYear, fromMonth, fromDay] = fromIso.split('-').map(Number)
+  const [toYear, toMonth, toDay] = toIso.split('-').map(Number)
+  const from = Date.UTC(fromYear, fromMonth - 1, fromDay)
+  const to = Date.UTC(toYear, toMonth - 1, toDay)
+  return Math.max(0, Math.round((to - from) / 86_400_000))
+}
+
+/** tanggal reset berikutnya (mock) — TURUNAN dari tanggal kanon di atas */
+export const AI_QUOTA_RESET_DATE = indonesianDateLabel(AI_QUOTA_RESET_ISO)
+/** sisa hari menuju reset — TURUNAN dari tanggal kanon & hari mock di atas,
+ *  jadi dua angka ini tidak mungkin lagi berbeda cerita */
+export const AI_QUOTA_RESET_DAYS = daysUntil(AI_QUOTA_TODAY_ISO, AI_QUOTA_RESET_ISO)
 
 /* ── 7. COPY HALAMAN BILLING & KARTU SIDEBAR ────────────────────────────────
    Judul kartu + kalimat aturan reset dipakai di lebih dari satu komponen, jadi
@@ -314,4 +422,35 @@ export const AI_GAUGE_BANNER_COPY = {
   /** dua angka dalam satu baris — disusun di data, bukan di komponen */
   usage: (usedPct: number, remainingPct: number) =>
     `${usedPct}% terpakai · ${remainingPct}% sisa`,
+} as const
+
+/* ── 9. STATE KUOTA HABIS + DEGRADASI (paket 42 · temuan audit #5) ──────────
+   Dulu kuota bisa habis di atas kertas TAPI app tidak punya keadaan itu: tombol
+   voice/scan tetap hijau dan user cuma melihat "0% sisa" tanpa tahu apa yang
+   masih bisa ia lakukan.
+
+   Aturan degrade-nya sengaja dipilih supaya pencatatan TIDAK pernah berhenti —
+   mencatat adalah alasan app ini ada:
+     · kategorisasi MANUAL tetap jalan penuh (engine input tidak dikunci);
+     · voice & OCR dimatikan, dan dikatakan kenapa + apa penggantinya;
+     · user dikasih satu jalan keluar: reset tanggal 1 atau top up token.
+
+   Copy-nya di sini (bukan di komponen) karena tiga permukaan berbeda memakainya:
+   engine input (`transaction-input-engine.tsx`), widget AI Coach, dan banner Home. */
+export const AI_QUOTA_EXHAUSTED_COPY = {
+  /** judul banner Home saat kolam dasar & add-on dua-duanya habis */
+  bannerTitle: 'Kuota AI bulan ini habis',
+  badge: 'Kuota habis',
+  /** penjelasan panjang (banner Home / kartu Billing) */
+  body:
+    'Catat manual tetap jalan penuh — nominal, catatan, kategori, semuanya bisa kamu isi sendiri. Voice & scan struk nyala lagi setelah reset tanggal 1 atau setelah top up token.',
+  /** alasan tombol voice dimatikan (engine input & widget AI Coach) */
+  voiceOff: 'Input suara sedang mati karena kuota AI habis. Catat manual tetap bisa, kok 🌿',
+  /** alasan tombol scan struk dimatikan */
+  ocrOff: 'Scan struk sedang mati karena kuota AI habis. Isi nominalnya manual dulu ya 🌿',
+  /** satu baris di gauge: menyebut sisa + jalan keluarnya, tanpa nada menuduh */
+  gaugeNote: (resetDate: string) =>
+    `Kuota AI habis — reset ${resetDate}, atau tambah token kalau mau lanjut sekarang.`,
+  /** label pembaca layar untuk bar yang benar-benar kosong */
+  progressLabel: 'Kuota AI habis',
 } as const

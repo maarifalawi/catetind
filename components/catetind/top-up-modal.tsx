@@ -13,7 +13,7 @@ import {
   formatTokens,
   type AiAddonPackageId,
 } from '@/lib/ai-quota'
-import { purchaseAiAddon } from '@/lib/ai-quota-bus'
+import { purchaseAiAddon } from '@/lib/ai-usage-store'
 
 /* ── Add-on AI Token (Domain 5C) ───────────────────────────────────────────────
    Paket, harga, token, dan seluruh copy-nya tinggal di `lib/ai-quota.ts`:
@@ -83,7 +83,7 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
 
     /* MOCK alur pembayaran: timer ini yang nanti digantikan Midtrans Snap.
        Yang PENTING dan bukan mock: begitu "pembayaran" selesai, token add-on
-       benar-benar masuk ke tangki sesi ini (`lib/ai-quota-bus.ts`) supaya banner
+       benar-benar masuk ke store kuota (`lib/ai-usage-store.ts`) supaya banner
        kuota di Home berhenti mengajak beli dan baris "Token tambahan" di Billing
        ikut bertambah — tombol yang cuma menutup modal = janji yang tidak ditepati. */
     payTimer.current = setTimeout(() => {

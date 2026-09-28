@@ -24,6 +24,7 @@ import { InstallQrHandoff } from './install-qr-handoff'
 import { InstallRewardBanner } from './install-reward-banner'
 import { IosInstallArrow } from './ios-install-arrow'
 import { ManualTutorial } from './manual-tutorial'
+import { ScreenShell } from './screen-shell'
 
 const TAB_ORDER: DeviceType[] = ['ios', 'android', 'desktop']
 const TAB_ICON: Record<DeviceType, LucideIcon> = {
@@ -83,10 +84,31 @@ export function InstallGuideScreen() {
     !allGuidesOpen
 
   return (
-    <>
-      <div className="mx-auto w-full max-w-2xl px-5 pt-6 pb-32 sm:px-8 lg:px-10 lg:pt-8">
+    <ScreenShell>
+      {/* ── `/install` DI DALAM SHELL APP (paket 44) ────────────────────────────
+          Dulu halaman ini cuma `PhoneStage` + kolom sendiri, jadi saat dibuka dari
+          sidebar/menu "Lainnya" navigasinya HILANG: user kehilangan sidebar di
+          desktop dan tidak bisa pindah halaman dari panduan install. Sekarang ia
+          memakai `ScreenShell` seperti semua halaman app lain — sidebar desktop
+          tetap ada, dan bottom nav + FAB sudah aktif di route ini
+          (`components/MobileBottomNav.tsx` tidak memasukkan `/install` ke
+          FOCUS_ROUTES).
+
+          LAYOUT (audit 46): dulu isinya dibungkus `mx-auto max-w-2xl`, jadi di
+          layar lebar halaman ini tampak seperti halaman ponsel — kolom tipis di
+          tengah dengan sisa lebar menganggur di kiri-kanan. Sekarang polanya sama
+          dengan halaman app lain (kanon CONTEXT §6: desktop = grid 12 kolom):
+
+            · mobile  → SATU kolom, urutan tetap: kenapa install → panduan → kaki;
+            · desktop → kolom kiri 5 (hero + 3 alasan + serah-terima link ke HP),
+                        kolom kanan 7 (CTA install, langkah, batasan, perangkat
+                        lain, kaki halaman).
+
+          Tidak ada lebar maksimum buatan: padding & lebar konten datang dari
+          shell, jadi tepi kiri/kanan `/install` sejajar dengan Dashboard. */}
+      <div className="w-full lg:grid lg:grid-cols-12 lg:items-start lg:gap-x-8">
         {/* ── HERO: jual alasannya dulu ── */}
-        <header>
+        <header className="lg:col-span-5">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-cream/70 px-3 py-1 text-[11px] font-semibold tracking-[0.16em] text-forest uppercase ring-1 ring-soil/12">
             <Zap className="size-3" strokeWidth={2.6} aria-hidden />
             {INSTALL_HERO.badge}
@@ -99,11 +121,11 @@ export function InstallGuideScreen() {
             {INSTALL_HERO.subtitle}
           </p>
 
-          <ul className="mt-6 grid gap-2.5 sm:grid-cols-3">
+          <ul className="mt-6 grid gap-2.5 sm:grid-cols-3 lg:grid-cols-1">
             {INSTALL_BENEFITS.map((benefit) => (
               <li
                 key={benefit.title}
-                className="flex items-center gap-3 rounded-2xl bg-cream/85 px-3.5 py-3 ring-1 ring-soil/12 backdrop-blur-xl sm:flex-col sm:items-start sm:gap-2 sm:py-4"
+                className="flex items-center gap-3 rounded-2xl bg-cream/85 px-3.5 py-3 ring-1 ring-soil/12 backdrop-blur-xl sm:flex-col sm:items-start sm:gap-2 sm:py-4 lg:flex-row lg:items-center lg:gap-3 lg:py-3"
               >
                 <span aria-hidden className="text-xl">
                   {benefit.emoji}
@@ -116,132 +138,144 @@ export function InstallGuideScreen() {
             ))}
           </ul>
         </header>
-        {!isReady ? (
-          /* deteksi perangkat jalan setelah mount — jangan sempat menampilkan
-             panduan perangkat yang salah */
-          <div className="mt-6 space-y-3" aria-live="polite">
-            <div className="h-16 animate-pulse rounded-3xl bg-cream/60 ring-1 ring-soil/12" />
-            <div className="h-64 animate-pulse rounded-3xl bg-cream/60 ring-1 ring-soil/12" />
-            <p className="text-center text-xs text-ink/40">{INSTALL_DETECTING_LABEL}</p>
-          </div>
-        ) : (
-          <>
-            {/* ── CTA 1-KLIK (Android & desktop) / arahan manual (iOS) ── */}
-            {device === 'ios' ? (
-              <div className="mt-6 flex items-start gap-3 rounded-3xl bg-sage/70 px-5 py-4 ring-1 ring-forest/10">
-                <Share className="size-5 shrink-0 text-forest" strokeWidth={2.2} />
-                <p className="text-sm leading-relaxed text-forest">
-                  {INSTALL_IOS_CTA(TUTORIALS.ios.steps.length)}
-                </p>
-              </div>
-            ) : (
-              <InstallCta
-                className="mt-6"
-                isInstalled={isInstalled}
-                canInstall={canInstall}
-                isPrompting={isPrompting}
-                onInstall={install}
-              />
-            )}
-            {/* ── PANDUAN perangkat yang terdeteksi ── */}
-            <ManualTutorial device={device} className="mt-4" />
-            {/* sentinel: begitu masuk viewport, user sudah lewat langkah tutorial */}
-            {device === 'ios' && <div ref={stepsEndRef} aria-hidden className="h-px w-full" />}
-            {device === 'desktop' && <InstallQrHandoff className="mt-4" />}
-            {/* ── BATASAN: pasangan jujur dari kartu benefit di hero (PRD 4A) ── */}
-            <InstallLimitsCard className="mt-4" />
-            {/* ── PERANGKAT LAIN: panduan lain disembunyikan sampai diminta ── */}
-            <div className="mt-6 text-center">
-              <button
-                type="button"
-                onClick={() => setAllGuidesOpen((open) => !open)}
-                aria-expanded={allGuidesOpen}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-forest/70 underline-offset-4 transition-colors duration-200 hover:text-forest hover:underline"
-              >
-                {allGuidesOpen ? INSTALL_OTHER_GUIDES_LABEL.close : INSTALL_OTHER_GUIDES_LABEL.open}
-                {allGuidesOpen ? (
-                  <ChevronUp className="size-3.5" strokeWidth={2.4} />
-                ) : (
-                  <ChevronDown className="size-3.5" strokeWidth={2.4} />
-                )}
-              </button>
+
+        {/* desktop: serah-terima link ke HP — ditaruh di kolom kiri (bukan di
+            dalam blok panduan) supaya kolom kiri tidak menganggur di layar lebar.
+            `isReady` WAJIB ikut: sebelum deteksi selesai `device` bernilai
+            'desktop' (state awal hook), jadi tanpa gerbang ini HTML server akan
+            berbeda dari render pertama client (hydration mismatch). */}
+        {isReady && device === 'desktop' && <InstallQrHandoff className="mt-6" />}
+
+        {/* ── KOLOM KANAN: panduan langkah demi langkah (7/12 di desktop) ── */}
+        <div className="lg:col-span-7">
+          {!isReady ? (
+            /* deteksi perangkat jalan setelah mount — jangan sempat menampilkan
+               panduan perangkat yang salah */
+            <div className="mt-6 space-y-3" aria-live="polite">
+              <div className="h-16 animate-pulse rounded-3xl bg-cream/60 ring-1 ring-soil/12" />
+              <div className="h-64 animate-pulse rounded-3xl bg-cream/60 ring-1 ring-soil/12" />
+              <p className="text-center text-xs text-ink/40">{INSTALL_DETECTING_LABEL}</p>
             </div>
-            {allGuidesOpen && (
-              <div className="mt-4">
-                <div
-                  role="tablist"
-                  aria-label={INSTALL_TABLIST_LABEL}
-                  className="flex w-full items-center gap-1 rounded-full bg-cream p-1 shadow-[0_10px_24px_-18px_rgba(69,89,78,0.55)] ring-1 ring-soil/12"
-                >
-                  {TAB_ORDER.map((target) => {
-                    const active = activeTab === target
-                    const Icon = TAB_ICON[target]
-                    return (
-                      <button
-                        key={target}
-                        type="button"
-                        role="tab"
-                        id={`install-tab-${target}`}
-                        aria-selected={active}
-                        aria-controls={`install-panel-${target}`}
-                        onClick={() => setPickedTab(target)}
-                        className={cn(
-                          'flex flex-1 items-center justify-center gap-1.5 rounded-full px-2 py-2 text-xs font-medium transition-colors duration-200 active:scale-95',
-                          active
-                            ? 'bg-sage font-semibold text-forest'
-                            : 'text-ink/50 hover:text-ink',
-                        )}
-                      >
-                        <Icon className="size-4 shrink-0" strokeWidth={2.2} />
-                        {TUTORIALS[target].label}
-                      </button>
-                    )
-                  })}
+          ) : (
+            <>
+              {/* ── CTA 1-KLIK (Android & desktop) / arahan manual (iOS) ── */}
+              {device === 'ios' ? (
+                <div className="mt-6 flex items-start gap-3 rounded-3xl bg-sage/70 px-5 py-4 ring-1 ring-forest/10">
+                  <Share className="size-5 shrink-0 text-forest" strokeWidth={2.2} />
+                  <p className="text-sm leading-relaxed text-forest">
+                    {INSTALL_IOS_CTA(TUTORIALS.ios.steps.length)}
+                  </p>
                 </div>
-
-                <div
-                  role="tabpanel"
-                  id={`install-panel-${activeTab}`}
-                  aria-labelledby={`install-tab-${activeTab}`}
+              ) : (
+                <InstallCta
+                  className="mt-6"
+                  isInstalled={isInstalled}
+                  canInstall={canInstall}
+                  isPrompting={isPrompting}
+                  onInstall={install}
+                />
+              )}
+              {/* ── PANDUAN perangkat yang terdeteksi ── */}
+              <ManualTutorial device={device} className="mt-4" />
+              {/* sentinel: begitu masuk viewport, user sudah lewat langkah tutorial */}
+              {device === 'ios' && <div ref={stepsEndRef} aria-hidden className="h-px w-full" />}
+              {/* kartu "Lanjutkan di HP" untuk desktop sudah pindah ke KOLOM KIRI
+                  (di atas) supaya tidak menumpuk di kolom panduan */}
+              {/* ── BATASAN: pasangan jujur dari kartu benefit di hero (PRD 4A) ── */}
+              <InstallLimitsCard className="mt-4" />
+              {/* ── PERANGKAT LAIN: panduan lain disembunyikan sampai diminta ── */}
+              <div className="mt-6 text-center">
+                <button
+                  type="button"
+                  onClick={() => setAllGuidesOpen((open) => !open)}
+                  aria-expanded={allGuidesOpen}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-forest/70 underline-offset-4 transition-colors duration-200 hover:text-forest hover:underline"
                 >
-                  <ManualTutorial device={activeTab} className="mt-3" />
-                  {activeTab === 'desktop' && <InstallQrHandoff className="mt-3" />}
-                  {activeTab === 'ios' && activeTab !== device && (
-                    <p className="mt-3 text-center text-xs text-ink/40">
-                      {INSTALL_IOS_PANEL_NOTE}
-                    </p>
+                  {allGuidesOpen ? INSTALL_OTHER_GUIDES_LABEL.close : INSTALL_OTHER_GUIDES_LABEL.open}
+                  {allGuidesOpen ? (
+                    <ChevronUp className="size-3.5" strokeWidth={2.4} />
+                  ) : (
+                    <ChevronDown className="size-3.5" strokeWidth={2.4} />
                   )}
-                </div>
+                </button>
               </div>
-            )}
+              {allGuidesOpen && (
+                <div className="mt-4">
+                  <div
+                    role="tablist"
+                    aria-label={INSTALL_TABLIST_LABEL}
+                    className="flex w-full items-center gap-1 rounded-full bg-cream p-1 shadow-[0_10px_24px_-18px_rgba(69,89,78,0.55)] ring-1 ring-soil/12"
+                  >
+                    {TAB_ORDER.map((target) => {
+                      const active = activeTab === target
+                      const Icon = TAB_ICON[target]
+                      return (
+                        <button
+                          key={target}
+                          type="button"
+                          role="tab"
+                          id={`install-tab-${target}`}
+                          aria-selected={active}
+                          aria-controls={`install-panel-${target}`}
+                          onClick={() => setPickedTab(target)}
+                          className={cn(
+                            'flex flex-1 items-center justify-center gap-1.5 rounded-full px-2 py-2 text-xs font-medium transition-colors duration-200 active:scale-95',
+                            active
+                              ? 'bg-sage font-semibold text-forest'
+                              : 'text-ink/50 hover:text-ink',
+                          )}
+                        >
+                          <Icon className="size-4 shrink-0" strokeWidth={2.2} />
+                          {TUTORIALS[target].label}
+                        </button>
+                      )
+                    })}
+                  </div>
 
-            <p className="mt-6 text-center text-[11px] leading-relaxed text-ink/35">
-              {INSTALL_HELP_FOOTER.prefix}
-              <a href="/help" className="font-semibold text-forest/70 underline underline-offset-2">
-                {INSTALL_HELP_FOOTER.linkLabel}
-              </a>
-              {INSTALL_HELP_FOOTER.suffix}
-            </p>
+                  <div
+                    role="tabpanel"
+                    id={`install-panel-${activeTab}`}
+                    aria-labelledby={`install-tab-${activeTab}`}
+                  >
+                    <ManualTutorial device={activeTab} className="mt-3" />
+                    {activeTab === 'desktop' && <InstallQrHandoff className="mt-3" />}
+                    {activeTab === 'ios' && activeTab !== device && (
+                      <p className="mt-3 text-center text-xs text-ink/40">
+                        {INSTALL_IOS_PANEL_NOTE}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
 
-            {/* jalan keluar untuk pengunjung yang belum punya akun — menuju /checkout */}
-            <p className="mt-3 text-center text-[11px] leading-relaxed text-ink/35">
-              {INSTALL_CHECKOUT_CTA.prefix}{' '}
-              <Link
-                href={INSTALL_CHECKOUT_CTA.href}
-                className="font-semibold text-forest/70 underline underline-offset-2"
-              >
-                {INSTALL_CHECKOUT_CTA.linkLabel}
-              </Link>{' '}
-              {INSTALL_CHECKOUT_CTA.suffix}
-            </p>
+              <p className="mt-6 text-center text-[11px] leading-relaxed text-ink/35">
+                {INSTALL_HELP_FOOTER.prefix}
+                <a href="/help" className="font-semibold text-forest/70 underline underline-offset-2">
+                  {INSTALL_HELP_FOOTER.linkLabel}
+                </a>
+                {INSTALL_HELP_FOOTER.suffix}
+              </p>
 
-            {/* ── REWARD: penutup halaman, alasan terakhir buat install ── */}
-            <InstallRewardBanner />
-          </>
-        )}
+              {/* jalan keluar untuk pengunjung yang belum punya akun — menuju /checkout */}
+              <p className="mt-3 text-center text-[11px] leading-relaxed text-ink/35">
+                {INSTALL_CHECKOUT_CTA.prefix}{' '}
+                <Link
+                  href={INSTALL_CHECKOUT_CTA.href}
+                  className="font-semibold text-forest/70 underline underline-offset-2"
+                >
+                  {INSTALL_CHECKOUT_CTA.linkLabel}
+                </Link>{' '}
+                {INSTALL_CHECKOUT_CTA.suffix}
+              </p>
+
+              {/* ── REWARD: penutup halaman, alasan terakhir buat install ── */}
+              <InstallRewardBanner />
+            </>
+          )}
+        </div>
       </div>
 
       <IosInstallArrow show={showIosArrow} />
-    </>
+    </ScreenShell>
   )
 }

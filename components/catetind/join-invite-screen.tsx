@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ArrowRight, Check, Copy, Lock, ShieldCheck, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
@@ -16,11 +16,13 @@ import {
   askAgainLead,
   buildAskAgainMessage,
   buildJoinHref,
-  resolveInvite,
   type InvalidInvite,
   type InviteStatus,
+  type ResolvedInvite,
   type ValidInvite,
 } from '@/lib/data/joint-invite'
+import { consumeInvite, markInviteFromServer, resolveInvite } from '@/lib/invite-store'
+import { acceptInviteRemote, resolveInviteRemote } from '@/lib/supabase/invite-remote'
 import { LogoWordmark } from './logo-wordmark'
 
 /* ── Joint Wallet Invite Landing (/join/[code]) — inventaris #7 · PRD 900–932 ──
@@ -45,10 +47,59 @@ import { LogoWordmark } from './logo-wordmark'
    Semua copy di `lib/data/joint-invite.ts`.
    ────────────────────────────────────────────────────────────────────────── */
 
-export function JoinInviteScreen({ code }: { code: string }) {
-  const invite = resolveInvite(code)
+export function JoinInviteScreen({
+  code,
+  initialInvite,
+}: {
+  code: string
+  /**
+   * Status dari SERVER (dihitung `app/join/[code]/page.tsx`). Dipakai sebagai
+   * nilai awal supaya render pertama di browser identik dengan HTML server —
+   * setelah mount, layar ini membaca store perangkat dan memperbaruinya.
+   */
+  initialInvite: ResolvedInvite
+}) {
+  const [invite, setInvite] = useState<ResolvedInvite>(initialInvite)
   /** state sukses setelah "gabung" disimulasikan (produksi: auto-join via server) */
   const [joined, setJoined] = useState(false)
+
+  /* Setelah mount: baca status dari SERVER dulu (paket 45) — kalau kodenya sudah
+     dipakai/dikedaluwarsakan di perangkat lain, fakta itu dicatat lokal supaya
+     `resolveInvite()` (satu-satunya penyusun copy /join) mengembalikan state yang
+     benar. Setelah itu baca store perangkat seperti semula, jadi kode demo repo
+     tetap bisa direview. */
+  useEffect(() => {
+    let alive = true
+    void (async () => {
+      const remote = await resolveInviteRemote(code)
+      if (alive && remote && (remote.status === 'used' || remote.status === 'expired')) {
+        markInviteFromServer(code, remote.status)
+      }
+      if (alive) setInvite(resolveInvite(code))
+    })()
+    return () => {
+      alive = false
+    }
+  }, [code])
+
+  /**
+   * "Gabung Dompet Ini". Dua jalur, satu hasil:
+   *
+   *   1. SERVER (paket 45) — kalau ada sesi & kode ini hidup di database:
+   *      `catetind_accept_invite` memasukkan user ke `joint_members` dan menandai
+   *      kode TERPAKAI dalam satu transaksi. Kode yang sama ditolak untuk akun
+   *      berikutnya (sekali pakai ditegakkan server, bukan di perangkat ini).
+   *   2. LOKAL — kode contoh repo (`lib/invite-store.ts`) ditandai terpakai di
+   *      perangkat, jadi sekali-pakai-nya tetap bisa dibuktikan dengan membuka
+   *      ulang tautan ini.
+   */
+  async function handleSimulateJoined() {
+    const remote = await acceptInviteRemote(code)
+    if (!remote.ok) consumeInvite(code, JOINT_PARTNER.id)
+    setInvite(resolveInvite(code))
+    setJoined(true)
+  }
+
 
   if (joined) {
     return (
@@ -62,7 +113,7 @@ export function JoinInviteScreen({ code }: { code: string }) {
   if (invite.status !== 'valid') return <InvalidInviteView invite={invite} />
 
   /** produksi: server menandai invite terpakai + auto-join, baru layar ini tampil */
-  return <ValidInviteView invite={invite} onSimulateJoined={() => setJoined(true)} />
+  return <ValidInviteView invite={invite} onSimulateJoined={handleSimulateJoined} />
 }
 
 /* ── STATE VALID: undangan yang masih bisa dipakai ────────────────────────────

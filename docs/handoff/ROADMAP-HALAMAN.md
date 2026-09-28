@@ -155,6 +155,93 @@ navigasi publik + komponen harga yang sama dengan `/settings/billing`.
 | 27 | Prorata kewajiban celengan | `/budget` | `27-sinking-obligation-prorata.md` | `sinkingObligation` penuh di semua tab → jatah mingguan Rp 742.100/hari (dilaporkan task 26) |
 | 28 | Satu kategori = satu budget | `/history` → `/budget` | `28-budget-kategori-ganda.md` | insight bisa membuat baris kategori ganda (Kopi dua kali) — dilaporkan task 24 |
 
+### FASE 10 — Sisa dari audit hasil 29/27/28 (audit 27 Sep 2026) — **30 · 31 · 32 ✅ TUNTAS & terverifikasi**
+| # | Paket | Di mana | Prompt | Menutup apa |
+|---|---|---|---|---|
+| 30 ✅ | Celengan Home satu sumber | Home | `30-celengan-home-satu-sumber.md` | kartu "Tabungan Impian" masih memakai mock kedua → 3 tautan berhenti di `/budget` generik, bukan `/budget/<id>` (butir 5 paket 29 baru separuh) |
+| 31 ✅ | Privasi: nominal di toast | `/budget`, `/wallet`, AI chat, target | `31-privasi-nominal-toast.md` | toast ber-nominal tetap tampil saat Mata Privasi ON — kandidat yang `CONTEXT-WAJIB.md:228-230` catat belum dikerjakan |
+| 32 ✅ | Target nabung lintas halaman | `/history` → target | `32-target-bulanan-lintas-halaman.md` | CTA recap "Atur target nabung" di `/history` berhenti di `/budget` yang tidak punya alur target |
+
+> **✅ Ketiganya TUNTAS & diverifikasi audit 27 Sep 2026** (bukan sekadar diklaim):
+> **30** — `my-goals-card.tsx` membaca `INITIAL_SINKING_FUNDS` (`heroFundOf()`/`sortFundsByUrgency()`),
+> panah hero `:218` & baris mini `:278` menuju `/budget/<id>` yang ada; `plant-widget.tsx` memakai
+> `stageFromPercent()`/`stageBandProgress()` dari kartu yang sama; tiga nama fiktif lama **0 hasil**
+> di `components/ lib/ app/ hooks/` (tinggal di dokumen).
+> **31** — semua toast ber-nominal menyensor lewat `hide()`/`money()` **di titik toast dibuat**;
+> format sensor **satu definisi** (`MASKED_AMOUNT` di `lib/data/history.ts:267`); sheet yang sedang
+> disunting (`transfer-sheet`, `add-wallet-sheet`, `budget-sheet`, `contribute-sheet`,
+> `edit-transaction-sheet`) **tidak tersentuh** (§5.7 utuh).
+> **32** — `/history` memasang `useMonthlyReview({ auto: false })` (`history-screen.tsx:131`) +
+> `MonthlyTargetCard` (`:421-430`) + `onSetTarget` (`:658`); `onSetTarget` jadi prop **wajib** dan
+> cabang fallback `<Link href="/budget">` berlabel "Atur target nabung" **dihapus**; dua pemanggil
+> (`home-screen.tsx:301`, `history-screen.tsx:655`) keduanya mengisi.
+>
+> **Sisa dari audit ini** (dibawa ke FASE 12): modal Rekap Mingguan masih **kebal** tombol mata, dan
+> komentar `weekly-recap-modal.tsx:514-516` masih menyebut jalur `/budget` yang sudah dihapus.
+
+
+
+### FASE 11 — Sisa dari uji pakai langsung — **33 ✅ TUNTAS & terverifikasi**
+| # | Paket | Di mana | Prompt | Menutup apa |
+|---|---|---|---|---|
+| 33 ✅ | Transaksi baru benar-benar tercatat | FAB, semua CTA input, Home, `/wallet/[id]` | `33-transaksi-baru-tercatat.md` | input manual = **no-op**: payload dibuang shell (`transaction-bottom-sheet.tsx:71`, `transaction-web-modal.tsx:162`) padahal toast "kecatat" tetap berbunyi (`transaction-input-engine.tsx:386`); `recordTransaction()` hanya dipakai jalur AI capture |
+
+> **✅ TUNTAS & diverifikasi audit 27 Sep 2026.** Kedua shell sekarang menulis lewat
+> `hooks/use-transaction-submit.ts` → `recordDraftTransaction()` → bus; toast sukses **dicabut dari
+> engine** (`handleSubmit` hanya menyisakan 2 toast non-sukses: masa aktif habis & nominal kosong) dan
+> ditembak setelah penulisan; `recent-transactions-card.tsx` & `wallet-detail-screen.tsx` berlangganan
+> bus; guard mode edit menolak draft yang membawa `wallet`+`date`.
+> **Batas yang tetap terbuka** → FASE 12 #36 & #37: hapus catatan sesi masih page-local dan catatan
+> `/calendar` belum masuk Riwayat (ringkasan chart Home #35 **sudah ditutup 27 Sep 2026**).
+
+### FASE 12 — Temuan BARU dari audit verifikasi 30/31/32/33 (27 Sep 2026) — **34 · 35 ✅ TUNTAS & terverifikasi**
+| # | Paket | Di mana | Prompt | Menutup apa |
+|---|---|---|---|---|
+| 34 ✅ | Privasi: ringkasan mingguan | modal Rekap Mingguan (Home & `/history`) | `34-privasi-ringkasan-mingguan.md` | `weekly-recap-modal.tsx` memakai `formatIDR` di 16 situs (slide 1–5) dan **tidak pernah** mengimpor `usePrivacy` ⇒ modal kebal tombol mata (§5.7); plus komentar basi `:514-516` |
+| 35 ✅ | Ringkasan uang Home satu sumber | Home (chart Cash Flow vs "Transaksi Terakhir") | `35-ringkasan-uang-home-satu-sumber.md` | `cash-flow-card.tsx:7-24` masih konstanta keras (`INCOME 8.500.000`/`EXPENSE 752.000`/`SERIES`) sementara `recent-transactions-card.tsx:371-381` sudah turunan data ⇒ setelah 1 catatan, dua kartu satu layar menampilkan surplus berbeda |
+| 36 | Hapus catatan sesi lintas halaman | Home, `/history`, `/wallet/[id]` | `36-hapus-catatan-lintas-halaman.md` | `recent-transactions-card.tsx:393-400` hapus page-local; bus belum punya event "removed" (komentar paket 33 menunjuk solusinya sendiri) ⇒ baris "sudah dihapus" muncul lagi di halaman lain |
+| 37 | Catatan `/calendar` masuk jalur tulis yang sama | `/calendar` (+ keputusan `/joint`) | `37-catatan-kalender-jalur-tulis-sama.md` | `cashflow-calendar-screen.tsx:184-210` menyimpan ke `noteEntries` halaman + toast "tersimpan", padahal komentarnya sendiri menyebutnya "uang yang benar-benar tercatat" ⇒ tidak muncul di `/history` |
+
+> **✅ Paket 34 TUNTAS & diverifikasi audit 27 Sep 2026** (bukan sekadar diklaim): `formatIDR` tinggal
+> **1** situs di `weekly-recap-modal.tsx` yaitu `:180` — dan itu **di dalam `hide()`** (tanda `+`
+> terjaga); 15 situs lain + caption slide 2 (`:73` `maskMoney`) + render (`:1018` `current.caption(masked)`)
+> sudah tersensor; `usePrivacy()` ada di keempat komponen slide (`:150`/`:272`/`:539`/`:798`).
+> `dots=` **0 hasil** — dua dialek titik disatukan ke `MASKED_AMOUNT`
+> (`wallet-card-face.tsx:275`, `wallet-screen.tsx:959`). `onSetTarget` di `SlidePlan` kini **wajib**
+> (`:534`) & komentar basi `:514-516` sudah diganti. Share card (`ShareProgressPanel` +
+> `share-achievement-card.tsx` + `lib/data/share.ts`) **nol** `formatIDR` ⇒ tidak ada permukaan nominal
+> yang terlewat. Sheet yang disunting (§5.7) **tidak tersentuh** (tidak ada di `git status`).
+> **✅ Paket 35 TUNTAS & diverifikasi 27 Sep 2026:** `cash-flow-card.tsx` tidak lagi memuat satu pun
+> nominal keras — baris seed + turunannya pindah ke `lib/data/home-money.ts`
+> (`HOME_MONEY_GROUPS`/`HOME_MONEY_ROWS`, `homeCashFlowSeries`, `niceAxisMax`, `axisLabel`); kartu chart
+> berlangganan `lib/transaction-bus.ts` yang SAMA dengan kartu "Transaksi Terakhir", dan kedua kartu
+> menyebut `HOME_MONEY_COPY.period` ("Bulan ini") — dulu satu "bulan ini", satu "Minggu ini".
+> Probe angka (dijalankan): sebelum catatan dua kartu sama-sama 8.500.000 / 752.000 / net 7.748.000 ·
+> setelah 1 catatan sesi Rp 25.000 dua-duanya 8.500.000 / 777.000 / net 7.723.000, dan Σ pengeluaran
+> seri = total strip (777.000). Sumbu-Y ikut tersensor `MASKED_AMOUNT` saat Mata Privasi ON.
+> `DAILY_HUD` tidak bergeser (`Rp 800.000`×2 · `Rp 200.000`×1 · `4 hari`×1 di HTML Home).
+> **Urutan sisa: 36 → 37** (semua independen; alasan lengkap di `PROMPT-PENDEK.md` §3).
+>
+> **Catatan kecil dari verifikasi #34 (bukan bug, dicatat supaya tidak hilang):**
+> 1. `MaskedAmount` mengunci lebar dengan nilai asli (`opacity-0`), tapi lapisan titiknya
+>    `absolute inset-0` **tanpa penjaga overflow** — kalau nominalnya sangat pendek (mis. `Rp 0` di
+>    pratinjau `add-wallet-sheet`), `Rp •••••••` bisa melebihi kotaknya. **Belum bisa diuji** (tanpa
+>    browser). S, kosmetik.
+> 2. Saat tombol mata ON, **nilai asli tetap ada di DOM** (blur + `opacity-0` + `aria-hidden`) — bukan
+>    regresi (perilaku `MaskedAmount` sejak awal), dan sesuai model ancaman repo (screenshot/pundak),
+>    tapi "view-source" masih bisa membacanya. Kalau kamu mau ini ditutup, itu **keputusan pemilik
+>    produk** (render bersyarat), bukan kerja agent.
+> 3. `top-up-modal.tsx` mengimpor `formatIDR` **kedua** dari `@/lib/weekly-recap` (repo punya juga
+>    `lib/wallets`). Duplikasi formatter yang sudah ada sebelum paket ini; S, kosmetik.
+> 4. Laporan #34 menyebut `snap-payment-sheet.tsx:125/167` sebagai "nominal yang sedang disusun user";
+>    sebenarnya itu **harga paket** (`formatIDR` dari `lib/data/pricing`) — kesimpulannya tetap benar
+>    (bukan data user), hanya labelnya kurang tepat.
+
+
+
+
+
+
 ---
 
 ## 3. SENGAJA tidak dikerjakan (jangan dianggap utang)
@@ -197,16 +284,58 @@ Catatan lengkap keputusannya ada di komentar `components/catetind/desktop-sideba
 `/settings` + 8 sub-halaman · `/checkout` · `/login` + `/login/verify` · `/join/[code]` ·
 `/share/[id]` · `/privacy` · `/terms` · `not-found` · `/insight` (redirect).
 
-**Sisa yang masih kurang (FASE 7 di atas)** — semuanya terverifikasi lewat audit ulang:
-`/wealth` (edit aset + riwayat bayar hutang) · `/budget` (tab periode non-bulanan +
-panel Review AI Coach) · AI Chat (voice & scan struk) · kuota AI belum satu sumber ·
-Grace/Post-Grace global belum ada.
+**Sisa PALING DEPAN (FASE 11) — ✅ TUNTAS & terverifikasi 27 Sep 2026:** mencatat transaksi dari FAB `+`
+tidak tersimpan ke mana pun → sekarang panel input MENULIS ke `lib/transaction-bus.ts`
+(`transaction-bottom-sheet.tsx` + `transaction-web-modal.tsx` via `hooks/use-transaction-submit.ts`),
+toast sukses **dicabut dari engine** dan ditembak SETELAH penulisan (copy di `lib/data/history.ts`), dan
+Home (`recent-transactions-card.tsx`) + `/wallet/[id]` ikut menampilkan catatan baru. Guard mode edit
+menolak draft ber-`wallet`+`date`, jadi catatan lama tidak lahir ulang.
+Masih terbuka dari temuan ini (jadi **FASE 12 #36 & #37**): **hapus catatan sesi lintas halaman** (bus
+belum punya event "removed") dan **catatan `/calendar`** yang belum masuk Riwayat.
 
-**Menunggu keputusan kamu (bukan tugas agent):** angka harga langganan (lihat §3).
+**Sisa dari FASE 10 — ✅ TUNTAS & terverifikasi 27 Sep 2026** (bukan lagi terbuka): kartu "Tabungan
+Impian" Home kini membaca satu sumber (`INITIAL_SINKING_FUNDS`) dan setiap panah menuju `/budget/<id>`
+yang ada · target nabung bisa dijangkau dari Home **dan** `/history` · nominal di toast ikut disensor
+saat Mata Privasi ON.
 
-**Perlu di-commit:** seluruh hasil 16 task pertama masih belum di-commit (±50 berkas,
-termasuk `docs/handoff/` yang masih untracked) — jalankan `git status` sebelum mulai
-task berikutnya, supaya `git diff` tetap berguna untuk review.
+**FASE 12 — sisa yang BENAR-BENAR terbuka hari ini (temuan baru audit verifikasi 30/31/32/33):**
+**#34 (privasi Rekap Mingguan) ✅ TUNTAS & terverifikasi 27 Sep 2026** — modalnya kini tersensor,
+sensor titik disatukan ke `MASKED_AMOUNT`. **#35 (dua ringkasan uang Home) ✅ TUNTAS & terverifikasi
+27 Sep 2026** — kartu chart & kartu "Transaksi Terakhir" kini membaca satu himpunan baris
+(`lib/data/home-money.ts` + bus sesi) dan menyebut periode yang sama, jadi dua angka berbeda untuk uang
+yang sama mustahil tampil berdampingan. Sisa: hapus catatan sesi belum lintas halaman (#36) · catatan
+`/calendar` belum masuk jalur catatan yang sama (#37).
+
+
+
+
+
+**Sudah TUNTAS dari FASE 7** (semua diverifikasi di kode saat audit 27 Sep 2026): `/wealth` edit
+aset (`wealth-screen.tsx:183` + `:364`) · `/budget` tab periode non-bulanan (`periodTab` +
+`periodWindowForTab`) · panel Review AI Coach (`spending-review-sheet.tsx`) · AI Chat voice &
+scan struk (`ai-chat-widget.tsx`) · kuota AI satu sumber (`billing-panel.tsx:27-41` mengimpor
+`lib/ai-quota.ts`, angka `/terms` cocok: 601.500 token & 1.265 panggilan) · Grace/Post-Grace
+(`subscription-gate-provider.tsx` + `subscription-banner.tsx`).
+
+**Menunggu keputusan kamu (bukan tugas agent):** angka harga langganan (lihat §3) **dan** kanon
+cicilan — `TOTAL_INSTALLMENTS` Rp 800.000 (kanon HUD/bulanan) vs `lib/data/wealth.ts`
+Rp 1.070.000 vs `lib/data/calendar.ts` Rp 1.870.000 vs `lib/data/bills.ts` Rp 800.000.
+Menyatukan ke satu turunan akan mengubah angka layar Home/wealth/calendar, jadi butuh keputusanmu
+(dokumentasi & arah produksi ada di blok "KANON CICILAN", `lib/data/budget.ts:98-126`).
+
+
+**Perlu di-commit (audit verifikasi 27 Sep 2026, setelah paket 34):** hasil paket
+**29/27/28/30/31/32/33/34 SEMUANYA masih di working tree** — `git status --short` = **34 file `M` +
+10 file baru (`??`)**: 8 prompt (`prompts/30..37*.md`) + `hooks/use-transaction-submit.ts` +
+`lib/data/home.ts` (+ `next-env.d.ts`, ditulis ulang `pnpm build`: `.next/dev/types` → `.next/types`;
+bukan editan tangan). File `M` baru dari paket 34: `components/catetind/wallet-card-face.tsx`
+(+ `weekly-recap-modal.tsx` & `wallet-screen.tsx` yang sudah `M` sejak paket 31). Tiga file **dipakai
+dua paket** sehingga tidak bisa dipisah bersih tanpa per-hunk: `lib/data/history.ts`,
+`components/catetind/recent-transactions-card.tsx`, `components/catetind/history-screen.tsx`
+(29 **dan** 33). Blok perintah commit ada di laporan paket 33 (Opsi A satu commit vs Opsi B per-hunk).
+
+
+
 
 **Route yatim & dead code sudah dibersihkan (task 22):** `app/overview/` + `overview-screen.tsx` (0 tautan masuk, tidak ada di inventaris) dan `transaction-list.tsx` (0 pemakai) dihapus; `tsconfig.tsbuildinfo` berhenti dilacak git. Alasan tiap keputusan "jangan hapus" ada di §3.
 
@@ -215,9 +344,30 @@ task berikutnya, supaya `git diff` tetap berguna untuk review.
 `temp-write-sidebar.js` + `fix_slides2.py` (0 byte) + `scripts/tmp-probe-sidebar.mjs`
 (probe CDP sekali-pakai) dihapus dari repo.
 
-**Perlu di-commit dulu:** perubahan terakhir (`help`, `referral`, `settings/*`,
-`settings-shell`, `help-center-screen`, `lib/data/help`, `lib/data/referral`)
-masih belum masuk commit — cek `git status` sebelum mulai task baru.
+**Kebersihan yang diverifikasi ulang (audit verifikasi 27 Sep 2026):** scan kontrol mati prompt 29 §11 →
+**6 hasil, semuanya false positive** (4 `<button>` di dalam `trigger={<…>}` `TransactionBottomSheet`
+— `daily-hud-card.tsx:101`, `daily-hud-summary.tsx:80`, `recent-transactions-card.tsx:454`,
+`wallet-detail-screen.tsx:639`; 1 **teks komentar** yang menyebut `<button>` — `not-found-screen.tsx:49`;
+1 `ButtonPrimitive` primitif Base UI yang kena `-match` case-insensitive — `ui/button.tsx:50`) ·
+0 komponen/`lib`/hook tanpa pemakai · 0 route tanpa tautan masuk (`/insight` sengaja redirect) ·
+0 berkas `*.log` & 0 artefak build ter-track (`*.log` + `tsconfig.tsbuildinfo` + `.env*.local`
+sudah di-ignore) · `/wallet/9999` & `/budget/9999` → HTTP **404** + `app/not-found.tsx` → `not-found-screen.tsx`
+(cek HTTP langsung di server produksi) · `pnpm build` menampilkan **`Running TypeScript`**
+(bukan "Skipping validation of types") · 0 penanda sisipan sambung (komentar HTML berisi kata
+"LANJUT") di `docs/handoff/` ·
+semua nama file prompt yang dirujuk index **ada** (33 file pra-FASE-12; sekarang 37).
+**Catatan keterbatasan scan:** skrip PowerShell §11 memakai `Get-Content $_.FullName` pada path
+ber-kurung siku, jadi 4 route dinamis (`app/{budget,wallet,join,share}/[id]/page.tsx`) **terlewat** —
+ketiganya hanya route tipis (`metadata` + `notFound()`), diperiksa manual: tidak ada kontrol.
+
+**TODO yang SENGAJA dibiarkan (bukan placeholder user-facing):** 4 TODO ilustrasi
+(`budget-zone-b.tsx:64`, `history-screen.tsx:682`, `joint-invite-flow.tsx:53`,
+`onboarding-plant-ceremony.tsx:73` — nomor baris diperbarui audit ini; dulu tertulis 623) —
+semuanya sudah punya ikon/emoji + copy + CTA hidup; yang diminta hanya aset ilustrasi khusus, jadi
+tidak menahan V1. Sisa TODO lain (`Midtrans`, `Supabase`, `DeepSeek`, `SUM(balance)`) semuanya
+**komentar arah produksi**, tidak ada yang terlihat user.
+
+
 
 ---
 

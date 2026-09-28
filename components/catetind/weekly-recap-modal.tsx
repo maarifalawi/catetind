@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import Link from 'next/link'
 import {
   ArrowDownLeft,
   BarChart3,
@@ -23,8 +24,10 @@ import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock'
 import { useIsBottomSheet, useSheetDrag } from '@/hooks/use-sheet-drag'
 import { PlantIllustration, STAGE_NAMES, type PlantStage } from './plant-illustration'
 import { ShareProgressPanel } from './share-progress-panel'
-import { WEEK_DATA, WEEK_PLANT, WEEK_PERIOD, WEEK_SEGMENTS, formatIDR } from '@/lib/weekly-recap'
+import { usePrivacy } from './privacy-provider'
+import { WEEKLY_RECAP_CTA_COPY, WEEK_DATA, WEEK_PLANT, WEEK_PERIOD, WEEK_SEGMENTS, formatIDR } from '@/lib/weekly-recap'
 import { ACTIVE_SHARE_CARD_ID, getShareCard } from '@/lib/data/share'
+import { maskMoney } from '@/lib/data/history'
 
 /* tahap tanaman di slide 3 — level 8/8 = "Berbunga" (selaras WEEK_PLANT) */
 const PLANT_STAGE: PlantStage = 4
@@ -42,7 +45,16 @@ type SlideDef = {
   label: string
   /** judul panjang slide (heading di body, bukan di chip) */
   title: string
-  caption: string
+  /**
+   * caption = FUNGSI, bukan string beku.
+   *
+   * `SLIDES` hidup di tingkat modul, jadi ia tidak bisa membaca tombol mata
+   * global kalau isinya dibekukan sebagai string — caption slide "Pengeluaran"
+   * memuat nominal, dan dulu justru itu yang bocor di modal ini. Dengan bentuk
+   * fungsi, caption dihitung saat render (`current.caption(masked)`) sehingga
+   * ikut tersensor tanpa memindahkan angka recap ke JSX.
+   */
+  caption: (masked: boolean) => string
   icon: ReactNode
 }
 
@@ -51,28 +63,28 @@ const SLIDES: SlideDef[] = [
     id: 'overview',
     label: 'Sekilas',
     title: 'Minggu Kamu Sekilas',
-    caption: 'Angka utama 7 hari terakhir',
+    caption: () => 'Angka utama 7 hari terakhir',
     icon: <Calendar className="size-3.5" />,
   },
   {
     id: 'expenses',
     label: 'Pengeluaran',
     title: 'Ke Mana Uangmu Pergi',
-    caption: `Total ${formatIDR(WEEK_DATA.expense)} dari ${WEEK_SEGMENTS.length} kategori`,
+    caption: (masked) => `Total ${maskMoney(WEEK_DATA.expense, masked)} dari ${WEEK_SEGMENTS.length} kategori`,
     icon: <BarChart3 className="size-3.5" />,
   },
   {
     id: 'plant',
     label: 'Tanaman',
     title: 'Tanaman Kamu',
-    caption: 'Tumbuh karena kamu konsisten mencatat',
+    caption: () => 'Tumbuh karena kamu konsisten mencatat',
     icon: <Sprout className="size-3.5" />,
   },
   {
     id: 'plan',
     label: 'Rencana',
     title: 'Rencana Minggu Depan',
-    caption: 'Satu langkah kecil buat minggu depan',
+    caption: () => 'Satu langkah kecil buat minggu depan',
     icon: <TrendingUp className="size-3.5" />,
   },
 ]
@@ -133,6 +145,9 @@ function PctBadge({
 
 /* ─────────────────────────── Slide 1 — Minggu Kamu Sekilas ─────────────────────────── */
 function SlideOverview() {
+  /* nominal ikut tombol mata global: `money()` = formatIDR + sensor satu langkah,
+     `hide()` untuk label yang sudah berbentuk string (tanda + / − dipertahankan) */
+  const { money, hide } = usePrivacy()
   const savingPct = Math.round((WEEK_DATA.net / WEEK_DATA.income) * 100)
   const spentPct = Math.round((WEEK_DATA.expense / WEEK_DATA.income) * 100)
   const keptPct = Math.max(100 - spentPct, 0)
@@ -162,7 +177,7 @@ function SlideOverview() {
           </MicroLabel>
           <div className="mt-1.5 flex flex-wrap items-baseline gap-x-3 gap-y-1.5">
             <p className="animate-[fade-pop_500ms_ease-out_both] text-[2.1rem] font-semibold leading-none tracking-tight tabular-nums text-mint">
-              +{formatIDR(WEEK_DATA.net)}
+              {hide(`+${formatIDR(WEEK_DATA.net)}`)}
             </p>
             <PctBadge className="bg-mint/20 text-mint">
               <TrendingUp className="size-3.5" strokeWidth={2.8} />
@@ -177,7 +192,7 @@ function SlideOverview() {
                 Pemasukan
               </dt>
               <dd className="mt-1 text-[15px] font-semibold tabular-nums">
-                {formatIDR(WEEK_DATA.income)}
+                {money(WEEK_DATA.income)}
               </dd>
             </div>
             <div className="rounded-2xl bg-cream/[0.07] px-3.5 py-3 ring-1 ring-inset ring-cream/10">
@@ -186,7 +201,7 @@ function SlideOverview() {
                 Pengeluaran
               </dt>
               <dd className="mt-1 text-[15px] font-semibold tabular-nums">
-                {formatIDR(WEEK_DATA.expense)}
+                {money(WEEK_DATA.expense)}
               </dd>
             </div>
           </dl>
@@ -216,7 +231,7 @@ function SlideOverview() {
         <section className="rounded-[1.75rem] bg-mint/20 p-4 ring-1 ring-mint/30">
           <MicroLabel>Rata-rata/hari</MicroLabel>
           <p className="mt-1.5 text-lg font-semibold leading-tight tracking-tight tabular-nums text-forest">
-            {formatIDR(avgPerDay)}
+            {money(avgPerDay)}
           </p>
           <p className="mt-1.5 text-[11px] text-forest/55">pengeluaran harian</p>
         </section>
@@ -243,7 +258,7 @@ function SlideOverview() {
           />
         </div>
         <p className="mt-2.5 text-[11px] leading-relaxed text-ink/50">
-          Dari {formatIDR(WEEK_DATA.income)} pemasukan, {formatIDR(WEEK_DATA.net)} nggak
+          Dari {money(WEEK_DATA.income)} pemasukan, {money(WEEK_DATA.net)} nggak
           kepakai minggu ini. Pertahankan ritmenya ya 🌿
         </p>
       </section>
@@ -253,6 +268,8 @@ function SlideOverview() {
 
 /* ──────────────────────── Slide 2 — Ke Mana Uangmu Pergi (donut) ──────────────────────── */
 function SlideExpenses() {
+  /* semua nominal slide ini (donut, rata-rata, per kategori, highlight) lewat `money()` */
+  const { money } = usePrivacy()
   const R = 35
   const STROKE = 10
   const C = 2 * Math.PI * R
@@ -315,7 +332,7 @@ function SlideExpenses() {
                   Total
                 </span>
                 <span className="mt-1 text-[15px] font-semibold leading-none tabular-nums">
-                  {formatIDR(WEEK_DATA.expense)}
+                  {money(WEEK_DATA.expense)}
                 </span>
               </div>
             </div>
@@ -336,7 +353,7 @@ function SlideExpenses() {
               <div>
                 <dt className="text-[11px] text-cream/50">Rata-rata per hari</dt>
                 <dd className="mt-1 text-[13px] font-semibold tabular-nums">
-                  {formatIDR(avgPerDay)}
+                  {money(avgPerDay)}
                 </dd>
               </div>
             </dl>
@@ -361,7 +378,7 @@ function SlideExpenses() {
                 </span>
                 <span className="flex shrink-0 items-center gap-2">
                   <span className="font-semibold tabular-nums text-ink">
-                    {formatIDR(seg.amount)}
+                    {money(seg.amount)}
                   </span>
                   <span className="w-8 text-right tabular-nums text-ink/40">{seg.pct}%</span>
                 </span>
@@ -391,7 +408,7 @@ function SlideExpenses() {
         </span>
         <p className="text-[13px] leading-relaxed text-ink/65">
           <b className="font-semibold text-ink">{TOP_SEGMENT.label}</b> jadi pos terbesar minggu
-          ini — {TOP_SEGMENT.pct}% dari total pengeluaran ({formatIDR(TOP_SEGMENT.amount)}).
+          ini — {TOP_SEGMENT.pct}% dari total pengeluaran ({money(TOP_SEGMENT.amount)}).
           Kategori ini yang paling worth dirapikan minggu depan.
         </p>
       </section>
@@ -506,7 +523,20 @@ function SlidePlant() {
 }
 
 /* ──────────────────────── Slide 4 — Rencana Minggu Depan (action) ──────────────────────── */
-function SlidePlan() {
+function SlidePlan({
+  onSetTarget,
+  onClose,
+}: {
+  /** Aksi CTA "Atur target nabung" — WAJIB, sejalan dengan prop luar di
+   *  `WeeklyRecapModal`. Dua halaman yang membuka rekap ini (Home & `/history`)
+   *  sama-sama memasang hook targetnya sendiri, jadi tidak ada lagi jalur
+   *  "prop tidak dikirim" seperti dulu (yang jatuh ke tautan /budget). */
+  onSetTarget: () => void
+  /** dipakai tautan /budget supaya recap tertutup dulu, bukan menutupi halaman */
+  onClose: () => void
+}) {
+  /* nominal rencana (target tabungan, potongan harian, label bar) ikut tombol mata */
+  const { money } = usePrivacy()
   const savingPerWeek = Math.round(WEEK_DATA.expense * 0.1) // 10% dari pengeluaran
   const dailyCut = Math.round(savingPerWeek / 7 / 100) * 100 // dibulatkan ke ratusan rupiah
   const nextWeekExpense = WEEK_DATA.expense - savingPerWeek
@@ -538,7 +568,7 @@ function SlidePlan() {
     {
       icon: PiggyBank,
       text: 'Setor ke tabungan di awal minggu',
-      badge: formatIDR(savingPerWeek),
+      badge: money(savingPerWeek),
     },
     {
       icon: Sprout,
@@ -575,7 +605,7 @@ function SlidePlan() {
           {bars.map((b, i) => (
             <div key={b.id} className="flex w-24 flex-col items-center gap-2">
               <span className="whitespace-nowrap text-[11px] font-semibold tabular-nums text-ink/70">
-                {formatIDR(b.value)}
+                {money(b.value)}
               </span>
               <span
                 className={cn(
@@ -608,10 +638,10 @@ function SlidePlan() {
             </PctBadge>
           </div>
           <p className="mt-2 text-[1.75rem] font-semibold leading-none tracking-tight tabular-nums text-forest">
-            {formatIDR(savingPerWeek)}
+            {money(savingPerWeek)}
           </p>
           <p className="mt-2 text-[11px] leading-relaxed text-forest/60">
-            Setara {formatIDR(dailyCut)}/hari — kamu masih punya ruang buat ini.
+            Setara {money(dailyCut)}/hari — kamu masih punya ruang buat ini.
           </p>
         </div>
       </section>
@@ -634,28 +664,36 @@ function SlidePlan() {
         </ul>
       </section>
 
-      {/* aksi */}
+      {/* aksi — dua-duanya punya tujuan nyata (sebelumnya dua tombol mati,
+          padahal PRD 2141–2145 meminta CTA recap duduk di zona ibu jari).
+          `onSetTarget` kini WAJIB karena labelnya "Atur target nabung": yang
+          terbuka harus benar-benar alur target. Dulu prop ini opsional dan
+          ketiadaannya (kasus /history) jatuh ke tautan /budget — label
+          menjanjikan modal, yang datang halaman lain (paket 32). Sekarang tidak
+          ada lagi jalan itu: /history memasang hook targetnya sendiri. */}
       <div className="space-y-3 pt-1">
         <button
           type="button"
+          onClick={onSetTarget}
           className="flex w-full items-center justify-center gap-2 rounded-full bg-forest py-3 text-sm font-semibold text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
         >
           <PiggyBank className="size-4" strokeWidth={2.2} />
-          Set target minggu depan
+          {WEEKLY_RECAP_CTA_COPY.setTarget}
         </button>
 
-        <button
-          type="button"
+        <Link
+          href="/budget"
+          onClick={onClose}
           className="flex w-full items-center justify-center gap-2 rounded-full bg-cream py-3 text-sm font-medium text-ink/60 ring-1 ring-soil/12 transition-colors hover:bg-sage/40 hover:text-ink active:scale-[0.98]"
         >
           <TrendingUp className="size-4" strokeWidth={2.2} />
-          Lihat rencana tabungan cerdas
-        </button>
+          {WEEKLY_RECAP_CTA_COPY.planLink}
+        </Link>
       </div>
 
       <p className="text-center text-[11px] leading-relaxed text-ink/40">
-        💡 Kurangi pengeluaran harian sekecil {formatIDR(dailyCut)}, tabung{' '}
-        {formatIDR(savingPerWeek)}/minggu
+        💡 Kurangi pengeluaran harian sekecil {money(dailyCut)}, tabung{' '}
+        {money(savingPerWeek)}/minggu
       </p>
     </div>
   )
@@ -669,7 +707,24 @@ function SlidePlan() {
  * mobile = bottom sheet menempel bawah (+ swipe-down untuk menutup),
  * desktop = panel kanan 440px.
  */
-export function WeeklyRecapModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function WeeklyRecapModal({
+  open,
+  onClose,
+  onSetTarget,
+}: {
+  open: boolean
+  onClose: () => void
+  /**
+   * Aksi CTA "Atur target nabung" di slide Rencana Minggu Depan. WAJIB.
+   *
+   * Modal ini hidup di dua halaman (Home & /history), dan dua-duanya kini punya
+   * alur target yang sama (`useMonthlyReview` + `MonthlyReviewModal`): pemanggil
+   * yang menutup recap lalu membuka modal targetnya, sehingga (a) labelnya tidak
+   * pernah menjanjikan modal yang tidak muncul, dan (b) tidak ada dua overlay
+   * bertumpuk di layar yang sama.
+   */
+  onSetTarget: () => void
+}) {
   const [slide, setSlide] = useState(0)
   /** panel "Bagikan kartu pencapaian" — dibuka dari tombol Share di kepala sheet */
   const [shareOpen, setShareOpen] = useState(false)
@@ -705,7 +760,7 @@ export function WeeklyRecapModal({ open, onClose }: { open: boolean; onClose: ()
     overview: <SlideOverview />,
     expenses: <SlideExpenses />,
     plant: <SlidePlant />,
-    plan: <SlidePlan />,
+    plan: <SlidePlan onSetTarget={onSetTarget} onClose={onClose} />,
   }
 
   return (
@@ -738,6 +793,9 @@ function WeekRecapSheet({
   shareOpen: boolean
   onToggleShare: () => void
 }) {
+  /* caption slide memuat nominal (mis. "Total Rp 1.240.000 dari 5 kategori"),
+     jadi ia harus dihitung dengan status tombol mata yang sebenarnya */
+  const { masked } = usePrivacy()
   const closeRef = useRef<HTMLButtonElement>(null)
   const bodyRef = useRef<HTMLDivElement>(null)
   const tabsRef = useRef<(HTMLButtonElement | null)[]>([])
@@ -957,7 +1015,7 @@ function WeekRecapSheet({
             {/* judul slide — menggantikan label panjang di chip tab */}
             <header className="mb-4">
               <h3 className="text-lg font-semibold tracking-tight text-ink">{current.title}</h3>
-              <p className="mt-0.5 text-[11px] text-ink/45">{current.caption}</p>
+              <p className="mt-0.5 text-[11px] text-ink/45">{current.caption(masked)}</p>
             </header>
 
             {slides[current.id]}

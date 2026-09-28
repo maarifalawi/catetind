@@ -1,28 +1,119 @@
-/* ── Join Invite Landing (/join/[code]) — sisi B dari Domain 2D.2 ─────────────
-   Halaman ini dibuka bukan oleh user kita, tapi oleh pasangan/teman yang
-   diminta mengelola uang bersama. Tekanan sosialnya paling tinggi di seluruh
-   produk (menolak undangan terasa seperti menolak orangnya), jadi file ini
-   menahan dua aturan sekaligus:
+/* ── Kode undangan dompet bersama (paket 39) ──────────────────────────────────
+   Sebelumnya kode undangan adalah SATU konstanta global `INVITE_CODE = 'A7K2M9'`
+   di `lib/data/joint.ts` yang ikut ter-bundle ke seluruh halaman, sementara
+   copy-nya menjanjikan "berlaku 24 jam, cuma bisa dipakai 1x" — janji yang tidak
+   pernah diverifikasi siapa pun. Sekarang:
 
-     1. SATU SUMBER KODE. `resolveInvite()` membaca `INVITE_CODE` dari
-        `lib/data/joint.ts` — kode yang tampil di modal Section 8B (/joint)
-        BUKAN daftar kedua di sini. Kode yang dibuat di dalam app pasti bisa
-        dibuka di halaman ini, dan kode lain jatuh ke status `unknown`.
-     2. COPY YANG TIDAK MEMAKSA. Bahasa serba "kalau mau" — tanpa hitungan
-        mundur, tanpa "jangan sampai kamu mengecewakan". Warna urgensi palsu
-        dilarang PRD 4507 & CONTEXT-WAJIB §5.3.
+     • kode dibuat PER WALLET (dua dompet → dua kode berbeda), 6 karakter,
+       digenerate `crypto.getRandomValues` (tanpa dependency baru);
+     • tiap kode punya state `{ code, walletId, createdAt, expiresAt, usedBy }`;
+     • `resolveInviteFrom()` memvalidasi single-use + kedaluwarsa 24 jam dari
+       state itu — fungsi murni, jadi bisa diuji tanpa browser;
+     • penyimpanannya di `lib/invite-store.ts` (memory + localStorage). Di
+       produksi status invite HARUS dibaca server (`GET /api/joint/invite/:code`)
+       karena ia otorisasi, bukan dekorasi.
 
-   Yang SENGAJA tidak ada di layar ini: angka/transaksi milik pengundang
+   Karena validasinya nyata, copy "Kode berlaku 24 jam. Cuma bisa dipakai 1x."
+   baru boleh tampil di layar yang kodenya memang divalidasi dengan cara itu.
+
+   Yang SENGAJA tidak ada di halaman /join: angka/transaksi milik pengundang
    (PRD 921 — data historis masing-masing user tidak boleh terganggu, dan
    2D.1 melarang kebocoran lintas-user).
-
-   Arah produksi: validasi single-use + kedaluwarsa 24 jam (PRD AC1) HARUS
-   dicek di server (`GET /api/joint/invite/:code`) karena status invite adalah
-   otorisasi, bukan dekorasi. Di demo ini statusnya ditentukan lokal supaya
-   semua state bisa direview tanpa backend.
    ────────────────────────────────────────────────────────────────────────── */
 
-import { INITIAL_JOINT_WALLET, INVITE_CODE, INVITE_VALIDITY_COPY, JOINT_ME } from './joint'
+import { INITIAL_JOINT_WALLET, INVITE_VALIDITY_COPY, JOINT_ME, JOINT_PARTNER } from './joint'
+
+/** masa berlaku kode undangan — angka kanon PRD AC1 (24 jam) */
+export const INVITE_TTL_MS = 24 * 60 * 60 * 1000
+
+export const INVITE_CODE_LENGTH = 6
+
+/**
+ * Alfabet kode: tanpa `O/0`, `I/1/L` yang sering tertukar saat kode dibacakan
+ * lewat telepon atau diketik ulang dari screenshot. 31 karakter × 6 posisi ≈
+ * 8,8 × 10⁸ kombinasi — cukup untuk kode berumur 24 jam yang sekali pakai.
+ */
+const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
+
+/** state satu kode undangan — bentuknya sama dengan tabel `joint_wallet_invites` di PRD */
+export interface InviteRecord {
+  code: string
+  /** dompet yang ditawarkan (satu kode = satu dompet) */
+  walletId: string
+  /** epoch ms */
+  createdAt: number
+  expiresAt: number
+  /** id user yang sudah memakai kode ini — `null` = masih bisa dipakai */
+  usedBy: string | null
+}
+
+/* ── PEMBUATAN KODE ──────────────────────────────────────────────────────── */
+
+export type RandomBytes = (length: number) => Uint8Array
+
+/**
+ * Sumber acak kanon: Web Crypto. Dipisah jadi parameter supaya test bisa
+ * menyuntik sumber deterministik dan supaya fungsi di atasnya tetap murni.
+ */
+export const cryptoRandomBytes: RandomBytes = (length) =>
+  crypto.getRandomValues(new Uint8Array(length))
+
+/**
+ * 6 karakter dari alfabet aman-baca. Modulo dipakai apa adanya (bukan rejection
+ * sampling): biasnya sepersekian persen dan tidak mengubah kekuatan kode 24 jam
+ * sekali pakai, jadi loop tambahan cuma menambah kode tanpa manfaat.
+ */
+export function generateInviteCode(random: RandomBytes = cryptoRandomBytes): string {
+  const bytes = random(INVITE_CODE_LENGTH)
+  let code = ''
+  for (let i = 0; i < INVITE_CODE_LENGTH; i++) {
+    code += CODE_ALPHABET[bytes[i] % CODE_ALPHABET.length]
+  }
+  return code
+}
+
+/** kode unik di antara record yang sudah ada (tabrakan → generate ulang) */
+export function generateUniqueInviteCode(
+  existing: readonly InviteRecord[],
+  random: RandomBytes = cryptoRandomBytes,
+): string {
+  for (let attempt = 0; attempt < 12; attempt++) {
+    const code = generateInviteCode(random)
+    if (!existing.some((record) => record.code === code)) return code
+  }
+  /* praktis tidak pernah terjadi; kalau terjadi, lebih baik gagal terang-terangan
+     daripada menyimpan kode duplikat yang membuka dompet orang lain */
+  throw new Error('Gagal membuat kode undangan unik — coba lagi.')
+}
+
+export function createInviteRecord({
+  walletId,
+  existing = [],
+  now = Date.now(),
+  random,
+}: {
+  walletId: string
+  existing?: readonly InviteRecord[]
+  now?: number
+  random?: RandomBytes
+}): InviteRecord {
+  return {
+    code: generateUniqueInviteCode(existing, random),
+    walletId,
+    createdAt: now,
+    expiresAt: now + INVITE_TTL_MS,
+    usedBy: null,
+  }
+}
+
+export function isInviteExpired(record: InviteRecord, now = Date.now()): boolean {
+  return now >= record.expiresAt
+}
+
+/** kode masih bisa dipakai: belum lewat 24 jam DAN belum pernah dipakai */
+export function isInviteUsable(record: InviteRecord, now = Date.now()): boolean {
+  return !isInviteExpired(record, now) && record.usedBy === null
+}
 
 export type InviteStatus = 'valid' | 'expired' | 'used' | 'unknown'
 
@@ -51,18 +142,68 @@ export interface InvalidInvite {
 /** union bertanda: komponen bisa narrow `status` tanpa pengecekan null berlapis */
 export type ResolvedInvite = ValidInvite | InvalidInvite
 
-/* ── SAKLAR DEMO ─────────────────────────────────────────────────────────────
-   Pola yang sama dengan `DEMO_PARTNER_JOINED` di lib/data/joint.ts: state yang
-   conditional tetap harus bisa direview desainernya. Kode di bawah cuma berlaku
-   di repo demo — di produksi daftar ini tidak ada, status dibaca dari server. */
+/**
+ * nama dompet dari id-nya. Di produksi ini `SELECT name FROM wallets WHERE id = …`
+ * (dengan RLS yang memastikan pengundang memang berhak menawarkannya); di demo
+ * hanya dompet bersama yang punya kode undangan, jadi tabelnya cukup satu baris
+ * kanon dari `lib/data/joint.ts`.
+ */
+export function inviteWalletName(walletId: string): string | null {
+  return walletId === INITIAL_JOINT_WALLET.id ? INITIAL_JOINT_WALLET.name : null
+}
+
+/* ── STATE DEMO UNTUK REVIEW (kaki halaman /join) ────────────────────────────
+   Empat state halaman /join harus bisa diperiksa desainer tanpa menebak URL, dan
+   tiga di antaranya adalah keadaan yang MEMANG ada di store — bukan kode ajaib
+   yang cuma "kelihatan" invalid:
+
+     • valid    → record baru, kedaluwarsa 24 jam dari sekarang;
+     • expired  → record yang `expiresAt`-nya 2 jam lalu;
+     • used     → record yang `usedBy`-nya sudah terisi;
+     • unknown  → kode yang tidak ada di store sama sekali.
+
+   Waktunya relatif terhadap `now`, jadi ketiga state itu tetap benar kapan pun
+   demo dibuka (bukan kode yang "kedaluwarsa selamanya"). Satu pengecualian yang
+   disengaja: begitu kode `valid` di sini DIPAKAI lewat tombol "gabung (demo)",
+   `lib/invite-store.ts` mempromosikannya jadi record tersimpan → statusnya
+   menjadi `used` dan bertahan setelah reload. Itu memang janji "sekali pakai"
+   yang bekerja; untuk kembali memeriksa state `valid`, buat kode baru di /joint.
+   ────────────────────────────────────────────────────────────────────────── */
+export const DEMO_VALID_CODE = 'K4M2P9'
 export const DEMO_EXPIRED_CODE = 'B3X9Q1'
 export const DEMO_USED_CODE = 'C8P4T7'
 /** kode yang pasti tidak dikenal — dipakai tautan review `unknown` */
 export const DEMO_UNKNOWN_CODE = 'ZZZZZZ'
 
+export function demoInviteRecords(now = Date.now()): InviteRecord[] {
+  return [
+    {
+      code: DEMO_VALID_CODE,
+      walletId: INITIAL_JOINT_WALLET.id,
+      createdAt: now - 60_000,
+      expiresAt: now + INVITE_TTL_MS - 60_000,
+      usedBy: null,
+    },
+    {
+      code: DEMO_EXPIRED_CODE,
+      walletId: INITIAL_JOINT_WALLET.id,
+      createdAt: now - INVITE_TTL_MS - 2 * 60 * 60 * 1000,
+      expiresAt: now - 2 * 60 * 60 * 1000,
+      usedBy: null,
+    },
+    {
+      code: DEMO_USED_CODE,
+      walletId: INITIAL_JOINT_WALLET.id,
+      createdAt: now - 3 * 60 * 60 * 1000,
+      expiresAt: now + 21 * 60 * 60 * 1000,
+      usedBy: JOINT_PARTNER.id,
+    },
+  ]
+}
+
 /** daftar state untuk blok review di kaki halaman (label + kode) */
 export const DEMO_INVITE_STATES: { status: InviteStatus; label: string; code: string }[] = [
-  { status: 'valid', label: 'Valid', code: INVITE_CODE },
+  { status: 'valid', label: 'Valid', code: DEMO_VALID_CODE },
   { status: 'expired', label: 'Kedaluwarsa', code: DEMO_EXPIRED_CODE },
   { status: 'used', label: 'Sudah dipakai', code: DEMO_USED_CODE },
   { status: 'unknown', label: 'Kode asing', code: DEMO_UNKNOWN_CODE },
@@ -74,33 +215,124 @@ export function buildJoinHref(code: string): string {
 }
 
 /**
- * Kode → status undangan. Mengembalikan `unknown` (bukan error) untuk kode yang
- * tidak dikenal supaya halaman bisa menjawab dengan ramah, bukan 404 kaku.
+ * Kode → status undangan (fungsi MURNI atas daftar record).
+ *
+ * Mengembalikan `unknown` (bukan error) untuk kode yang tidak dikenal supaya
+ * halaman bisa menjawab dengan ramah, bukan 404 kaku. Urutan pemeriksaan
+ * disengaja: `unknown` → `used` → `expired`, karena "sudah dipakai" adalah
+ * informasi yang lebih berguna ("minta link baru") daripada "kedaluwarsa".
  */
-export function resolveInvite(code: string): ResolvedInvite {
+export function resolveInviteFrom(
+  records: readonly InviteRecord[],
+  code: string,
+  now = Date.now(),
+): ResolvedInvite {
   const normalized = code.trim().toUpperCase()
+  const record = records.find((item) => item.code === normalized)
 
-  if (normalized === INVITE_CODE) {
-    return {
-      status: 'valid',
-      inviterName: JOINT_ME.name,
-      walletName: INITIAL_JOINT_WALLET.name,
-      validUntilLabel: INVITE_VALIDITY_COPY,
-    }
+  if (!record) {
+    return { status: 'unknown', inviterName: null, walletName: null, validUntilLabel: null }
   }
 
-  /* dua state non-valid yang masih tahu siapa pengundangnya: masanya sudah
-     habis (24 jam) atau undangannya sudah sekali terpakai (PRD AC1) */
-  if (normalized === DEMO_EXPIRED_CODE || normalized === DEMO_USED_CODE) {
-    return {
-      status: normalized === DEMO_EXPIRED_CODE ? 'expired' : 'used',
-      inviterName: JOINT_ME.name,
-      walletName: INITIAL_JOINT_WALLET.name,
-      validUntilLabel: null,
-    }
+  const walletName = inviteWalletName(record.walletId)
+
+  if (record.usedBy !== null) {
+    return { status: 'used', inviterName: JOINT_ME.name, walletName, validUntilLabel: null }
   }
 
-  return { status: 'unknown', inviterName: null, walletName: null, validUntilLabel: null }
+  if (isInviteExpired(record, now)) {
+    return { status: 'expired', inviterName: JOINT_ME.name, walletName, validUntilLabel: null }
+  }
+
+  return {
+    status: 'valid',
+    inviterName: JOINT_ME.name,
+    /* dompet yang sudah dihapus/di-rename tetap harus menyebut sesuatu yang jelas */
+    walletName: walletName ?? INITIAL_JOINT_WALLET.name,
+    validUntilLabel: INVITE_VALIDITY_COPY,
+  }
+}
+
+/**
+ * Pakai kode (single-use) — menandai `usedBy`.
+ *
+ * Dipanggil saat orang yang diundang BENAR-BENAR bergabung: di produksi setelah
+ * login berhasil (server), di demo saat tombol "gabung (demo)" ditekan supaya
+ * sekali-pakai-nya bisa dibuktikan di layar.
+ *
+ * Mengembalikan record yang sudah ditandai, atau `null` kalau kodenya tidak
+ * bisa dipakai (tidak ada / sudah dipakai / kedaluwarsa) — jadi pemanggil tidak
+ * pernah salah menganggap undangan berhasil.
+ */
+export function consumeInviteIn(
+  records: readonly InviteRecord[],
+  code: string,
+  userId: string,
+  now = Date.now(),
+): InviteRecord | null {
+  const normalized = code.trim().toUpperCase()
+  const record = records.find((item) => item.code === normalized)
+  if (!record || !isInviteUsable(record, now)) return null
+
+  record.usedBy = userId
+  return record
+}
+
+/* ── COPY UNTUK MODAL KODE DI /joint (Section 8B) ───────────────────────────
+   Semua kalimat yang dilihat user tinggal di sini — komponennya nol string.
+   Satu aturan yang mengikat: jangan pernah menyebut masa berlaku untuk kode yang
+   statusnya sudah bukan `valid`; pemanggil membaca `resolveInvite()` dulu. */
+
+export const INVITE_CODE_COPY = {
+  title: 'Bagikan kode ini 💌',
+  /** pengantar personal — nama dompetnya ikut supaya jelas kode ini untuk dompet apa */
+  lead: (partnerName: string, walletName: string) =>
+    `${partnerName} tinggal masukin kodenya buat gabung ke ${walletName}.`,
+  /** label masa berlaku — angka nyata dari record (bukan klaim kosong) */
+  expiresAt: (label: string) => `Berlaku sampai ${label}.`,
+  /** satu kode aktif per dompet: membuat kode baru = mencabut yang lama */
+  refresh: 'Buat kode baru',
+  refreshHint: 'Kode lama langsung tidak berlaku — satu dompet, satu kode aktif.',
+  /** status kode yang sudah tidak bisa dipakai (dipakai / lewat 24 jam) */
+  invalidNote: 'Kode ini sudah nggak bisa dipakai. Buat kode baru di bawah ya 👇',
+  /** umpan balik setelah menekan "Buat kode baru" */
+  refreshedToast: 'Kode baru siap 🌿',
+} as const
+
+/** `https://catetind.app/join/<kode>` — bentuk absolute untuk dibagikan lewat chat */
+export function buildInviteUrl(code: string): string {
+  return `https://catetind.app${buildJoinHref(code)}`
+}
+
+/**
+ * Teks share (Web Share API / clipboard). Kodenya parameternya — dulu fungsi ini
+ * membaca konstanta global, sehingga dua dompet yang berbeda selalu membagikan
+ * kode yang sama.
+ */
+export function buildInviteShareText(name: string, code: string, walletName: string): string {
+  return `Halo! Aku (${name}) mengajakmu kelola uang bareng di CatetInd 💚 Dompet: ${walletName} — Kode: ${code} — klik link ini: ${buildInviteUrl(code)}`
+}
+
+/** label sisa masa berlaku. Dihitung HANYA di handler/pasca-mount (jam lokal user). */
+export function inviteExpiryLabel(record: InviteRecord): string {
+  const date = new Date(record.expiresAt)
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'Mei',
+    'Jun',
+    'Jul',
+    'Agu',
+    'Sep',
+    'Okt',
+    'Nov',
+    'Des',
+  ]
+  const hour = String(date.getHours()).padStart(2, '0')
+  const minute = String(date.getMinutes()).padStart(2, '0')
+  return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}, ${hour}.${minute}`
 }
 
 
@@ -194,9 +426,10 @@ export function buildAskAgainMessage(inviterName: string | null): string {
 /** tautan review state (kaki halaman) — jujur berlabel demo */
 export const JOIN_DEMO_COPY = {
   title: 'Di build demo',
-  body: 'Demo ini belum punya sesi, jadi tombol "Gabung Dompet Ini" mengarah ke halaman masuk dan belum benar-benar menggabungkan dompet.',
+  body: 'Demo ini belum tersambung ke backend, jadi tombol "Gabung Dompet Ini" mengarah ke halaman masuk dan penggabungan dompetnya masih simulasi.',
   joinLabel: 'Lihat hasil setelah gabung (demo)',
-  joinHint: 'Lompati langkah masuk supaya alurnya bisa ditelusuri sampai ujung.',
+  joinHint:
+    'Lompati langkah masuk supaya alurnya bisa ditelusuri sampai ujung. Kode undangannya langsung ditandai TERPAKAI — buka ulang tautan ini untuk melihat state "sudah dipakai".',
   statesLabel: 'Coba state lain',
 } as const
 
@@ -218,4 +451,9 @@ export const JOIN_SUCCESS_COPY = {
 export const JOIN_PREVIEW_COPY = {
   linkLabel: 'Pratinjau halaman undangan',
   hint: 'Tampilan yang dilihat pasanganmu saat membuka link undangan ini.',
+  /** belum ada kode aktif untuk dompet ini — jangan tampilkan tautan palsu */
+  emptyLead: 'Belum ada kode undangan aktif untuk dompet ini.',
+  emptyCta: 'Buat kode di halaman Dompet Bersama',
+  emptyHint:
+    'Kode undangannya cuma berlaku 24 jam sejak dibuat, jadi halaman pratinjaunya muncul setelah kodenya ada.',
 } as const

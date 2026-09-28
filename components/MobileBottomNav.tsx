@@ -20,12 +20,15 @@ import {
   CircleHelp,
   Settings,
   Download,
+  ArrowLeftRight,
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { SUBSCRIPTION_LOCK_COPY } from '@/lib/data/renewal'
+import { TRANSFER_DOOR_COPY } from '@/lib/data/add-wallet'
 import { useSubscriptionGate } from '@/components/catetind/subscription-gate-provider'
 import { TransactionBottomSheet } from '@/components/dashboard/transaction-bottom-sheet'
+import { TransferFlow } from '@/components/catetind/transfer-flow'
 
 type NavItem = { href: string; icon: LucideIcon; label: string }
 
@@ -120,6 +123,16 @@ function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
 export function MobileBottomNav() {
   const pathname = usePathname()
   const [menuOpen, setMenuOpen] = useState(false)
+  /**
+   * Alur “Pindah Dana” (paket 55). Sebelum paket ini bottom nav tidak punya
+   * pintu pindah dana sama sekali: satu-satunya jalan adalah popover di kartu
+   * dompet /wallet — dan aksi yang hanya hidup di menu tersembunyi adalah aksi
+   * yang tidak terlihat sebagai fitur (temuan uji pemakaian 28 Sep 2026).
+   * Sheet-nya SATU komponen dengan pintu lain (`TransferFlow`), jadi tidak ada
+   * alur transfer kedua; `source` sengaja `null` karena dari menu ini user belum
+   * memilih dompet asalnya — langkah pertamanya memilih, bukan menebak.
+   */
+  const [transferOpen, setTransferOpen] = useState(false)
   /* masa aktif habis → FAB ini satu-satunya pintu input dari bottom nav, jadi
      ia yang dikunci. Membaca data, pindah halaman, & menu "Lainnya" tetap jalan. */
   const { inputLocked } = useSubscriptionGate()
@@ -216,6 +229,36 @@ export function MobileBottomNav() {
                 Menu sekunder CatetInd
               </Drawer.Description>
 
+              {/* ── AKSI CEPAT: PINDAH DANA (paket 55) ──────────────────────
+                  Bukan Link, karena ia membuka alur (sheet), bukan pindah
+                  halaman — dan menutup laci ini lebih dulu supaya dua lapisan
+                  sheet tidak bertumpuk di layar kecil. */}
+              <section className="mt-6">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-ink/35">
+                  {TRANSFER_DOOR_COPY.menuGroupLabel}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuOpen(false)
+                    setTransferOpen(true)
+                  }}
+                  className="mt-3 flex w-full items-center gap-3 rounded-2xl bg-soil/[0.03] px-3.5 py-3.5 text-left transition-all duration-150 hover:bg-soil/[0.11] active:scale-[0.99]"
+                >
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-sage text-forest">
+                    <ArrowLeftRight className="size-[18px]" strokeWidth={2.2} aria-hidden />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-[13px] font-semibold text-ink">
+                      {TRANSFER_DOOR_COPY.menuLabel}
+                    </span>
+                    <span className="mt-0.5 block text-[11px] text-ink/45">
+                      {TRANSFER_DOOR_COPY.menuHint}
+                    </span>
+                  </span>
+                </button>
+              </section>
+
               {menuGroups.map((group) => (
                 <section key={group.label} className="mt-6">
                   <p className="text-[11px] font-semibold uppercase tracking-wider text-ink/35">
@@ -251,6 +294,10 @@ export function MobileBottomNav() {
           </Drawer.Content>
         </Drawer.Portal>
       </Drawer.Root>
+
+      {/* alur pindah dana dari menu “Lainnya” — asal BELUM dipilih, jadi sheet
+          membuka langkah 1 (pemilih dompet asal) lebih dulu (paket 55) */}
+      <TransferFlow open={transferOpen} onOpenChange={setTransferOpen} />
     </>
   )
 }

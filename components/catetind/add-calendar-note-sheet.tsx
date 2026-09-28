@@ -5,9 +5,9 @@ import { CalendarDays, Lock } from 'lucide-react'
 import { BudgetSheet } from './budget-sheet'
 import {
   TransactionInputEngine,
-  type TransactionTypeId,
+  type TransactionDraft,
 } from '@/components/dashboard/transaction-input-engine'
-import { longDateLabel, shortDateLabel } from '@/lib/data/calendar'
+import { CALENDAR_NOTE_TYPES, longDateLabel, shortDateLabel } from '@/lib/data/calendar'
 
 /* ── Modal "Tambah Catatan di Tgl X" (2B Zero-Friction Backdating) ────────────
    Masalah yang diselesaikan: user men-tap tanggal 15 di kalender, lalu ditanya
@@ -21,13 +21,33 @@ import { longDateLabel, shortDateLabel } from '@/lib/data/calendar'
    Shell-nya memakai `BudgetSheet` (bottom sheet di mobile, dialog di desktop)
    dan isi formnya `TransactionInputEngine` — SATU sumber kebenaran form
    transaksi di seluruh app, bukan form baru yang perilakunya bisa menyimpang.
+
+   PAKET 49 — sheet ini juga menetapkan DUA hal yang bukan urusan tampilan:
+
+     • TIPE yang ditawarkan cuma pemasukan & pengeluaran (`CALENDAR_NOTE_TYPES`).
+       "Pindah dana" tidak ada di sini selama alur pindah dana (dua sisi ledger)
+       belum dibangun: catatan sepihak yang mengaku pindah dana akan membuat
+       saldo dompet berbeda dari cerita yang dibaca user.
+     • TOAST & TUTUP PANEL bukan milik sheet ini. Yang menulis catatannya adalah
+       `useTransactionSubmit()` di halaman Kalender (satu pintu yang sama dengan
+       FAB & modal web), dan hook itulah yang menutup panel lalu mengucapkan
+       toast SETELAH tulisannya berhasil. Dulu sheet ini menutup dirinya sendiri
+       dan halaman menembak "Catatan … tersimpan" untuk daftar yang cuma hidup di
+       layar kalender.
    ────────────────────────────────────────────────────────────────────────── */
 
-export interface CalendarNoteInput {
-  amount: number
-  note: string
-  type: TransactionTypeId
-  /** tanggal catatan — default: tanggal terpilih di kalender */
+/**
+ * Draft yang dikirim sheet: draft engine + tanggal yang dibawa kalender.
+ *
+ * `date` di sini WAJIB (di `TransactionDraft` ia opsional) karena panel ini
+ * memang selalu mencatat di tanggal tertentu — itulah gunanya backdating.
+ * `clientTxId` dari engine diteruskan apa adanya supaya double-tap tetap ditolak
+ * store, dan `wallet` dibiarkan kosong: dompet diisi pemanggil lewat
+ * `useTransactionSubmit(fallbackWallet)`, pola yang sama dengan dua shell input
+ * lain (FAB & modal web) — jadi tidak ada dompet yang di-hardcode di halaman.
+ */
+export type CalendarNoteInput = TransactionDraft & {
+  /** tanggal catatan `YYYY-MM-DD` */
   date: string
 }
 
@@ -35,13 +55,21 @@ export function AddCalendarNoteSheet({
   open,
   onClose,
   date,
-  onSave,
+  walletName,
+  onSubmit,
 }: {
   open: boolean
   onClose: () => void
   /** tanggal terpilih di Macro Heatmap (`YYYY-MM-DD`) */
   date: string
-  onSave: (input: CalendarNoteInput) => void
+  /** dompet tujuan catatan (dari konteks uang aktif) — ditampilkan apa adanya */
+  walletName: string
+  /**
+   * Diteruskan ke `useTransactionSubmit()` pemanggil: TULIS → TUTUP → toast.
+   * Sheet ini sengaja tidak menutup dirinya sendiri dan tidak menembak toast:
+   * hanya penulisnya yang tahu tulisannya benar-benar terjadi (paket 49).
+   */
+  onSubmit: (input: CalendarNoteInput) => void
 }) {
   const [unlocked, setUnlocked] = useState(false)
   const [dateValue, setDateValue] = useState(date)
@@ -106,14 +134,17 @@ export function AddCalendarNoteSheet({
         <TransactionInputEngine
           active={open}
           layout="dialog"
+          /* dompet tujuan DITAMPILKAN, bukan disimpan diam-diam: sheet ini tidak
+             punya pemilih dompet (form tambah engine memang tanpa dompet), jadi
+             user berhak tahu catatannya masuk ke dompet mana. Chip-nya memakai
+             `sourceLabel` engine yang sama dengan halaman Joint Wallet. */
+          sourceLabel={walletName}
+          /* hanya pemasukan & pengeluaran — lihat CALENDAR_NOTE_TYPES */
+          types={CALENDAR_NOTE_TYPES}
           onSubmitted={(payload) => {
-            onSave({
-              amount: payload.amount,
-              note: payload.note,
-              type: payload.type,
-              date: dateValue,
-            })
-            onClose()
+            /* tanggal dari sheet (terkunci atau hasil "Ubah tanggal") digabung
+               ke draft; engine sendiri tidak punya field tanggal di mode tambah */
+            onSubmit({ ...payload, date: dateValue })
           }}
         />
       </div>

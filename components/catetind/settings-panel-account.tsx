@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, type ChangeEvent } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { BadgeCheck, Camera, ExternalLink, HeartHandshake, LogOut, Save, Unlink, UserPlus, XCircle } from 'lucide-react'
@@ -14,9 +14,12 @@ import {
   TonePill,
 } from './settings-ui'
 import { clampPayday, type DashboardPeriod } from '@/lib/onboarding'
-import { LOGIN_PATH, RELOGIN_COPY } from '@/lib/data/auth'
+import { LOGIN_PATH, RELOGIN_COPY, SESSION_COPY } from '@/lib/data/auth'
 import { JOIN_PREVIEW_COPY, buildJoinHref } from '@/lib/data/joint-invite'
-import { DEMO_PARTNER_JOINED, INITIAL_JOINT_WALLET, INVITE_CODE, JOINT_PARTNER } from '@/lib/data/joint'
+import { DEMO_PARTNER_JOINED, INITIAL_JOINT_WALLET, JOINT_PARTNER } from '@/lib/data/joint'
+import { activeInviteFor } from '@/lib/invite-store'
+import { endSession } from '@/lib/session-client'
+import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 
 /* ── Panel: Profil & Akun + Keluar (inventaris #15, #23) ──────────────────────
@@ -46,6 +49,20 @@ export function ProfileSettingsPanel() {
   const [period, setPeriod] = useState<DashboardPeriod>('calendar')
   const [payday, setPayday] = useState(25)
   const [dirty, setDirty] = useState(false)
+
+  /**
+   * Kode undangan yang benar-benar AKTIF untuk dompet bersama (paket 39).
+   *
+   * Dibaca setelah mount karena hidupnya di localStorage (`lib/invite-store.ts`).
+   * Kalau belum ada kode, panel ini TIDAK menampilkan tautan pratinjau palsu —
+   * kode undangan umurnya 24 jam, jadi tautan ke kode yang sudah mati justru
+   * menyesatkan. Nilainya diisi jalur nyata ke /joint tempat kodenya dibuat.
+   */
+  const [inviteCode, setInviteCode] = useState<string | null>(null)
+
+  useEffect(() => {
+    setInviteCode(activeInviteFor(INITIAL_JOINT_WALLET.id)?.code ?? null)
+  }, [])
 
   /* partner bisa "diputus" di demo ini — state lokal, sumber awal dari mock
      lib/data/joint.ts (DEMO_PARTNER_JOINED) supaya kedua kondisi bisa direview */
@@ -244,21 +261,41 @@ export function ProfileSettingsPanel() {
             Putus Koneksi Dompet
           </button>
 
-          {/* tautan NYATA ke /join/[code] — sisi yang dibuka pasangan saat
-              menerima undangan. Pintu masuk kedua (selain modal kode di /joint)
-              supaya route undangan nggak pernah jadi halaman yatim. */}
-          <p className="mt-4 border-t border-soil/12 pt-3.5">
-            <Link
-              href={buildJoinHref(INVITE_CODE)}
-              className="inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-ink/55 underline underline-offset-2 transition-colors hover:text-ink"
-            >
-              <ExternalLink className="size-3.5" strokeWidth={2.4} aria-hidden />
-              {JOIN_PREVIEW_COPY.linkLabel}
-            </Link>
-            <span className="mt-1 block text-[11px] leading-relaxed text-ink/40">
-              {JOIN_PREVIEW_COPY.hint}
-            </span>
-          </p>
+          {/* Pratinjau halaman undangan — memakai kode yang SEDANG AKTIF
+              (paket 39). Kalau belum ada kode hidup, yang tampil bukan tautan
+              mati melainkan jalan ke halaman tempat kodenya dibuat. */}
+          <div className="mt-4 border-t border-soil/12 pt-3.5">
+            {inviteCode ? (
+              <>
+                <Link
+                  href={buildJoinHref(inviteCode)}
+                  className="inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-ink/55 underline underline-offset-2 transition-colors hover:text-ink"
+                >
+                  <ExternalLink className="size-3.5" strokeWidth={2.4} aria-hidden />
+                  {JOIN_PREVIEW_COPY.linkLabel}
+                </Link>
+                <span className="mt-1 block text-[11px] leading-relaxed text-ink/40">
+                  {JOIN_PREVIEW_COPY.hint}
+                </span>
+              </>
+            ) : (
+              <>
+                <p className="text-[11.5px] font-semibold text-ink/55">
+                  {JOIN_PREVIEW_COPY.emptyLead}
+                </p>
+                <Link
+                  href="/joint"
+                  className="mt-1.5 inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-forest underline underline-offset-2 transition-colors hover:text-ink"
+                >
+                  <ExternalLink className="size-3.5" strokeWidth={2.4} aria-hidden />
+                  {JOIN_PREVIEW_COPY.emptyCta}
+                </Link>
+                <span className="mt-1 block text-[11px] leading-relaxed text-ink/40">
+                  {JOIN_PREVIEW_COPY.emptyHint}
+                </span>
+              </>
+            )}
+          </div>
         </SettingsCard>
       ) : (
         <SettingsCard
@@ -333,14 +370,32 @@ export function ProfileSettingsPanel() {
    satu keluarga dengan panel lain: klik → konfirmasi → selesai. */
 export function LogoutSettingsPanel() {
   const [open, setOpen] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const router = useRouter()
 
-  function handleLogout() {
+  /**
+   * Keluar SUNGGUHAN (paket 39): cookie sesi dihapus server lewat
+   * `DELETE /api/session`, lalu user dikembalikan ke /login. Sebelumnya handler
+   * ini cuma menampilkan toast "Demo: sesi belum benar-benar diakhiri" — dan
+   * memang tidak ada sesi apa pun yang bisa diakhiri. Sekarang kalimatnya sesuai
+   * kenyataan: yang berakhir adalah sesi di perangkat ini, bukan datanya.
+   */
+  async function handleLogout() {
+    if (busy) return
+    setBusy(true)
+    const ok = await endSession()
+    setBusy(false)
     setOpen(false)
-    /* TODO: supabase.auth.signOut() → redirect ke /login.
-       Demo ini belum punya sesi, jadi cukup diumumkan lewat toast. */
-    toast('Sampai jumpa lagi! 👋', {
-      description: 'Demo: sesi belum benar-benar diakhiri.',
+    if (!ok) {
+      toast.error(SESSION_COPY.signOutFailed, {
+        description: SESSION_COPY.signOutFailedDescription,
+      })
+      return
+    }
+    toast.success(SESSION_COPY.signedOutToast, {
+      description: SESSION_COPY.signedOutToastDescription,
     })
+    router.push(LOGIN_PATH)
   }
 
   return (
@@ -389,8 +444,8 @@ export function LogoutSettingsPanel() {
         body="Sesi di perangkat ini akan diakhiri. Data tetap tersimpan dan bisa kamu buka lagi dengan email yang sama."
         actions={
           <>
-            <DialogButton tone="danger" onClick={handleLogout}>
-              Ya, Keluar
+            <DialogButton tone="danger" disabled={busy} onClick={handleLogout}>
+              {busy ? 'Mengakhiri sesi…' : 'Ya, Keluar'}
             </DialogButton>
             <DialogButton tone="neutral" onClick={() => setOpen(false)}>
               Batal

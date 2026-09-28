@@ -1,44 +1,40 @@
-import { memo } from 'react'
+import { memo, useMemo } from 'react'
 import { CircleDashed, HandCoins, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { TransactionBottomSheet } from '@/components/dashboard/transaction-bottom-sheet'
 import { usePrivacy } from './privacy-provider'
 import {
-  DAILY_HUD,
   HOME_HUD_COPY,
   HUD_COPY,
   MONTHLY_WINDOW,
   SPENDING_REVIEW_COPY,
   SPENT_TODAY,
+  computeDailyHud,
   hasIncomeInWindow,
   type HudStatus,
 } from '@/lib/data/budget'
+import { useFundsStore } from '@/lib/money/funds-store'
 import { openAICoachWithSeed } from '@/lib/ai-chat-bus'
 
 /* ── Kartu Jatah Hari Ini (Home) ─────────────────────────────────────────────
-   Angkanya TIDAK dihitung lagi di sini: satu-satunya sumber adalah `DAILY_HUD`
-   di `lib/data/budget.ts` — konstanta kanon yang juga dipakai tab Bulanan
-   halaman /budget. Dulu kartu ini punya mock sendiri (8,5jt / 15 hari), jadi
-   Home dan /budget bisa menampilkan jatah harian yang berbeda untuk bulan yang
-   SAMA. Sekarang ketidaksamaan itu mustahil: keduanya membaca angka yang sama,
-   dan `MONTHLY_WINDOW` memastikan pembaginya 27/30 seperti `CURRENT_DAY`/
-   `DAYS_IN_MONTH`.
+   Angkanya TIDAK ditulis di kartu ini: semuanya datang dari `computeDailyHud()`
+   di `lib/data/budget.ts`, rumus yang SAMA dengan kartu di tab Bulanan /budget.
+   Dulu Home membaca konstanta jadi `DAILY_HUD`; sejak paket 46 ia menghitung HUD
+   dari STORE CELENGAN (`useFundsStore()`) dengan `window: MONTHLY_WINDOW` dan
+   sisa argumen default — persis kombinasi yang melahirkan `DAILY_HUD`.
 
-   `SPENT_TODAY` (pengeluaran hari berjalan) TIDAK lagi konstanta lokal di sini:
-   sejak prompt 19 ia diambil dari `lib/data/budget.ts`, yang menghitungnya dari
-   catatan bertanggal `TODAY_ISO`. Alasannya satu sumber: kalau angka di kartu
-   ini dan panel "Review Pengeluaran Hari Ini" dihitung terpisah, Home bisa bilang
-   43% terpakai sementara panel bilang jatahnya sudah lewat — untuk hari yang
-   sama. Ia tetap bukan bagian dari formula jatah harian. */
+   Kenapa diubah: kewajiban celengan ikut memotong jatah harian. Kalau user
+   menanam celengan baru (atau menyetor) di /budget, halaman itu langsung
+   menghitung ulang — sementara Home tetap memakai `SINKING_OBLIGATION_ALL` yang
+   dibekukan saat modul dimuat. Satu bulan, dua angka "Jatah Hari Ini". Sekarang
+   keduanya membaca daftar celengan yang sama, jadi mustahil berbeda; angka demo
+   awalnya tetap identik karena seed-nya sama (`INITIAL_SINKING_FUNDS`).
+
+   `SPENT_TODAY` (pengeluaran hari berjalan) bukan bagian dari formula jatah
+   harian; ia hanya bahan bar progres di kartu ini. */
 
 /** Dry Spell (Domain 2B.3): tidak ada pemasukan di bulan berjalan → ganti card */
 const DRY_SPELL = !hasIncomeInWindow(MONTHLY_WINDOW)
-
-const usedPct =
-  DAILY_HUD.dailyBudget > 0 ? Math.min(SPENT_TODAY / DAILY_HUD.dailyBudget, 1) : 0
-/* status & warna kanon PRD 2B.2 diambil dari satu sumber copy di lib/data */
-const status: HudStatus =
-  usedPct < 0.75 ? 'onTrack' : usedPct < 1 ? 'approaching' : 'over'
-const STATUS = HOME_HUD_COPY.status[status]
 
 const fmt = (n: number) => `Rp ${Math.round(n).toLocaleString('id-ID')}`
 
@@ -53,6 +49,14 @@ const R = (SIZE - STROKE) / 2 - 2
  *  cash-flow-card.tsx). Membaca context privasi global untuk menyensor nominal. */
 export const DailyHudCard = memo(function DailyHudCard() {
   const { hide } = usePrivacy()
+  /* HUD bulan kalender dari daftar celengan yang HIDUP — sama dengan /budget */
+  const { funds } = useFundsStore()
+  const hud = useMemo(() => computeDailyHud({ sinkingFunds: funds }), [funds])
+
+  const usedPct = hud.dailyBudget > 0 ? Math.min(SPENT_TODAY / hud.dailyBudget, 1) : 0
+  /* status & warna kanon PRD 2B.2 diambil dari satu sumber copy di lib/data */
+  const status: HudStatus = usedPct < 0.75 ? 'onTrack' : usedPct < 1 ? 'approaching' : 'over'
+  const STATUS = HOME_HUD_COPY.status[status]
 
   return (
     <section
@@ -90,14 +94,23 @@ export const DailyHudCard = memo(function DailyHudCard() {
           </span>
           <p className="mt-4 text-base font-semibold text-ink">{HUD_COPY.drySpellTitle}</p>
           <p className="mt-1.5 text-sm leading-relaxed text-ink/50">{HUD_COPY.drySpellBody}</p>
-          <button
-            type="button"
-            className="mt-5 flex items-center gap-2 rounded-full bg-forest px-5 py-2.5 text-[13px] font-semibold text-cream transition-colors hover:bg-forest-soft active:scale-[0.97]"
-          >
-            {HUD_COPY.drySpellCta}
-          </button>
+          {/* CTA Dry Spell: dulu tombol MATI. Sekarang membuka Transaction Input
+              Engine bertipe Pemasukan — pola `trigger=` yang SAMA dengan kartu
+              Dry Spell di /budget (daily-hud-summary.tsx), jadi dua tempat yang
+              menceritakan kondisi yang sama juga punya jalan keluar yang sama. */}
+          <TransactionBottomSheet
+            defaultType="income"
+            trigger={
+              <button
+                type="button"
+                className="mt-5 flex items-center gap-2 rounded-full bg-forest px-5 py-2.5 text-[13px] font-semibold text-cream transition-colors hover:bg-forest-soft active:scale-[0.97]"
+              >
+                {HUD_COPY.drySpellCta}
+              </button>
+            }
+          />
         </div>
-      ) : DAILY_HUD.shortfall ? (
+      ) : hud.shortfall ? (
         /* ── Jatah ditahan (audit UX #2) — jangan pernah tampilkan "Rp 0"
               tanpa penjelasan. Jarang muncul karena mock HUD disetel sehat;
               naikkan SPENT_THIS_MONTH di lib/data/budget.ts untuk mengujinya. */
@@ -150,7 +163,7 @@ export const DailyHudCard = memo(function DailyHudCard() {
 
             <div className="min-w-0 flex-1">
               <p className="text-3xl font-semibold leading-none tracking-tight text-ink tabular-nums">
-                {hide(fmt(DAILY_HUD.dailyBudget))}
+                {hide(fmt(hud.dailyBudget))}
               </p>
               <p className="mt-0.5 text-[10px] text-ink/45">{HOME_HUD_COPY.dailyCaption}</p>
               <p className="mt-1.5 text-[12px] font-medium leading-snug text-ink/70">
@@ -178,17 +191,17 @@ export const DailyHudCard = memo(function DailyHudCard() {
             <span>
               {HOME_HUD_COPY.remainingLead}{' '}
               <b className="font-semibold text-ink tabular-nums">
-                {hide(fmt(DAILY_HUD.remaining))}
+                {hide(fmt(hud.remaining))}
               </b>
             </span>
             <span aria-hidden className="size-1 rounded-full bg-ink/20" />
             <span className="tabular-nums">
-              {DAILY_HUD.daysLeft} {HOME_HUD_COPY.daysLeftSuffix}
+              {hud.daysLeft} {HOME_HUD_COPY.daysLeftSuffix}
             </span>
             <span aria-hidden className="size-1 rounded-full bg-ink/20" />
             <span>
               {HOME_HUD_COPY.installmentsLead}{' '}
-              <span className="tabular-nums">{hide(fmt(DAILY_HUD.installments))}</span>
+              <span className="tabular-nums">{hide(fmt(hud.installments))}</span>
             </span>
           </div>
         </>

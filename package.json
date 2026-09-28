@@ -7,12 +7,18 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "icons": "node scripts/generate-icons.mjs",
     "theme:apply": "node scripts/theme/apply-palette.mjs",
-    "theme:audit": "node scripts/theme/audit-palette.mjs"
+    "theme:audit": "node scripts/theme/audit-palette.mjs",
+    "supabase:migrate": "node scripts/supabase/apply-migrations.mjs",
+    "supabase:verify": "node scripts/supabase/verify-rls.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.117.2",
     "@types/web-push": "^3.6.4",
     "@vercel/analytics": "1.6.1",
     "class-variance-authority": "^0.7.1",
@@ -40,6 +46,7 @@
     "@types/react-dom": "^19",
     "postcss": "^8.5",
     "tailwindcss": "^4.3.3",
-    "typescript": "5.7.3"
+    "typescript": "5.7.3",
+    "vitest": "^5.0.2"
   }
 }

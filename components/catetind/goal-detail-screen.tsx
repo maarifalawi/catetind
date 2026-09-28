@@ -27,23 +27,20 @@ import {
   FUND_PROJECTION_COPY,
   PLANT_STAGES,
   PLANT_STAGE_INDEX,
-  TODAY_ISO,
   formatDeadline,
-  fundContributions,
   fundLateInfo,
   fundPercent,
   fundRemaining,
   maskNominal,
   monthlyNeeded,
   monthsUntil,
-  plantStageFrom,
   priorityStyle,
   projectedCompletion,
   walletSourceById,
   walletSourceName,
   type FundContribution,
-  type SinkingFundItem,
 } from '@/lib/data/budget'
+import { contributeToFund, contributionsOf, fundById, useFundsStore } from '@/lib/money/funds-store'
 
 /* ── Celengan Detail (/budget/[id]) — inventaris #25 ──────────────────────────
    Halaman ini SENGAJA bukan halaman administrasi: PRD 2C.3 menulisnya sebagai
@@ -98,7 +95,7 @@ const CONFETTI_PIECES: {
   { tone: 'size-2 bg-brand', fall: 185, drift: -18, rotate: 320, delay: 0.82 },
 ]
 
-export function GoalDetailScreen({ fund: initialFund }: { fund: SinkingFundItem }) {
+export function GoalDetailScreen({ fundId }: { fundId: number }) {
   /* privasi = state GLOBAL app; satu klik menyensor SEMUA nominal halaman ini
      (hero, rencana bulanan, proyeksi, sampai riwayat) */
   const { masked } = usePrivacy()
@@ -110,14 +107,26 @@ export function GoalDetailScreen({ fund: initialFund }: { fund: SinkingFundItem 
     setReduceMotion(window.matchMedia('(prefers-reduced-motion: reduce)').matches)
   }, [])
 
-  /* ── STATE ────────────────────────────────────────────────────────────────
-     Demo tanpa backend: setoran mengubah progres, riwayat, tahap tanaman, dan
-     nudge SEKALIGUS — perilakunya sama dengan `handleContribute` di
-     budget-screen.tsx. Di produksi ini satu `insert` ke
-     `sinking_fund_contributions` + satu `update` `sinking_funds.current`, lalu
-     `stage` direcompute server (PRD 3B: HP/pertumbuhan dihitung server-side). */
-  const [fund, setFund] = useState(initialFund)
-  const [history, setHistory] = useState<FundContribution[]>(() => fundContributions(initialFund.id))
+  /* ── DATA: SATU STORE CELENGAN (paket 46) ─────────────────────────────────
+     Halaman ini TIDAK lagi menyimpan `fund` & `history` di `useState` sendiri.
+     Dulu cara itu membuat setoran di sini tidak terlihat di /budget & Home —
+     padahal ketiganya sedang membicarakan celengan yang sama. Sekarang sumbernya
+     `useFundsStore()` (`lib/money/funds-store.ts`): progres, riwayat setoran, dan
+     tahap tanaman semuanya turunan dari state yang sama dengan halaman lain.
+
+     `hydrated` dipakai untuk membedakan dua hal yang gampang tertukar:
+
+       · belum selesai membaca IndexedDB → tampil "Menyiapkan celenganmu…";
+       · sudah selesai tapi id-nya tetap tidak ada → keadaan "belum ada" + CTA
+         kembali (bukan 404), karena celengan buatan user hanya ada di perangkat
+         ini dan server tidak bisa mengetahui keberadaannya.
+
+     Di produksi ini satu `insert` ke `sinking_fund_contributions` + satu
+     `update` `sinking_funds.current`, lalu `stage` direcompute server (PRD 3B:
+     HP/pertumbuhan dihitung server-side). */
+  const snapshot = useFundsStore()
+  const fund = fundById(snapshot, fundId)
+  const history = useMemo(() => contributionsOf(snapshot, fundId), [snapshot, fundId])
   const [contributeOpen, setContributeOpen] = useState(false)
   /** nudge telat boleh ditutup, dan TIDAK muncul lagi di sesi ini
    *  (prompt: "sekali saja, tidak mengulang") */
@@ -125,8 +134,14 @@ export function GoalDetailScreen({ fund: initialFund }: { fund: SinkingFundItem 
 
   /* Perayaan "target tercapai" (inventaris #k): `auto: false` artinya TIDAK
      diperiksa saat halaman dibuka — momennya milik setoran yang barusan
-     melunasi target, bukan kedatangan user ke halaman ini. */
+     melunasi target, bukan kedatangan user ke halaman ini.
+     Hook dipanggil SEBELUM cabang render di bawah: jumlah hook tidak boleh
+     berubah antar render (aturan React), jadi ia tidak boleh ada di dalam `if`. */
   const celebration = useMilestoneCelebration(MILESTONE_TARGET_STATE, { auto: false })
+
+  if (!fund) {
+    return <FundUnavailable ready={snapshot.hydrated} />
+  }
 
   /* ── DATA TURUNAN ──────────────────────────────────────────────────────── */
   const percent = fundPercent(fund)
@@ -167,40 +182,20 @@ export function GoalDetailScreen({ fund: initialFund }: { fund: SinkingFundItem 
 
   /* ── AKSI ──────────────────────────────────────────────────────────────── */
 
-  /** setoran: saldo celengan naik, tanaman tumbuh, riwayat & nudge ikut berubah */
+  /** setoran: satu tulisan ke STORE — progres, tahap tanaman, riwayat, dan
+   *  kewajiban bulan ini berubah SEKALIGUS, dan halaman lain (Home, /budget)
+   *  membaca perubahan yang sama tanpa refresh. `reachedNow` dari store = target
+   *  benar-benar dilunasi setoran INI, jadi perayaannya berdasar perhitungan,
+   *  bukan tebakan. */
   function handleContribute(fundId: number, amount: number, walletId: string) {
-    const nextCurrent = fund.current + amount
-    /** target sudah penuh SEBELUM setoran ini? (dihitung sebelum state berubah) */
-    const wasReached = fund.current >= fund.target
-
-    setFund((prev) => ({
-      ...prev,
-      current: nextCurrent,
-      stage: plantStageFrom(nextCurrent, prev.target),
-      /* sudah setor bulan ini → kewajiban celengan bulan ini lunas */
-      contributedThisMonth: true,
-    }))
-
-    setHistory((prev) => [
-      {
-        id: prev.reduce((max, item) => Math.max(max, item.id), 0) + 1,
-        fundId,
-        /* tanggal setoran = TODAY_ISO (konstanta mock) supaya teks turunan
-           tidak pernah beda antara render server & client */
-        date: TODAY_ISO,
-        amount,
-        walletId,
-      },
-      ...prev,
-    ])
+    const result = contributeToFund(fundId, amount, walletId)
+    if (!result) return
 
     setContributeOpen(false) // tutup seketika; animasi keluar jalan di background
     setLateDismissed(true) // nudge lama tidak relevan lagi setelah setor
 
-    /* Perayaan hanya kalau setoran INILAH yang melunasi target — pertanda nyata
-       yang bisa dihitung dari data, bukan pencapaian karangan (pagar #k). */
-    if (!wasReached && nextCurrent >= fund.target) celebration.replay()
-    toast.success(FUND_DETAIL_COPY.setToastTitle(maskNominal(amount, masked), fund.name), {
+    if (result.reachedNow) celebration.replay()
+    toast.success(FUND_DETAIL_COPY.setToastTitle(maskNominal(amount, masked), result.fund.name), {
       description: FUND_DETAIL_COPY.setToastHint(walletSourceName(walletId)),
     })
   }
@@ -557,8 +552,9 @@ export function GoalDetailScreen({ fund: initialFund }: { fund: SinkingFundItem 
       </div>
 
       {/* ── SHEET SETOR — komponen yang SAMA dengan halaman induk ─────────────
-          `fund` yang dikirim adalah state lokal halaman ini, jadi sheet-nya
-          selalu menampilkan progres terbaru (bukan snapshot saat navigasi). */}
+          `fund` yang dikirim dibaca dari STORE (`useFundsStore`), bukan salinan
+          state lokal: begitu ada setoran (dari halaman ini atau halaman lain),
+          sheet-nya selalu menampilkan progres terbaru. */}
       <ContributeSheet
         fund={fund}
         open={contributeOpen}
@@ -703,6 +699,52 @@ function EmptyContributions({
         {FUND_DETAIL_COPY.setCta}
       </button>
     </div>
+  )
+}
+
+/**
+ * Keadaan "id ini belum ada di perangkat ini" untuk /budget/<id> (paket 46).
+ *
+ * Kenapa bukan halaman 404: celengan user hidup di STORE perangkat
+ * (`lib/money/funds-store.ts`), dan server tidak punya cara mengetahuinya. Kalau
+ * route-nya 404, celengan yang baru ditanam user akan jadi jalan buntu persis di
+ * tautan yang app-nya sendiri buat.
+ *
+ * Dua wajah, dan bedanya penting:
+ *   · `ready: false` → store perangkat belum selesai dibaca (IndexedDB). Ini
+ *     keadaan SEMENTARA; menampilkan "tidak ditemukan" di sini akan berbohong.
+ *   · `ready: true`  → sudah dibaca dan id-nya memang tidak ada. Kopinya jujur
+ *     (celengan mungkin ada di perangkat lain) + CTA kembali ke daftar.
+ */
+function FundUnavailable({ ready }: { ready: boolean }) {
+  return (
+    <ScreenShell>
+      <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 text-center">
+        <span
+          aria-hidden
+          className="flex size-14 items-center justify-center rounded-2xl border-2 border-dashed border-forest/20 bg-cream/60"
+        >
+          <PiggyBank className="size-6 text-forest/45" strokeWidth={1.8} />
+        </span>
+
+        <h1 className="mt-4 font-display text-[19px] font-black tracking-tight text-ink">
+          {ready ? FUND_DETAIL_COPY.notFoundTitle : FUND_DETAIL_COPY.loadingLabel}
+        </h1>
+        {ready && (
+          <p className="mt-2 max-w-sm text-[12.5px] leading-relaxed text-ink/55">
+            {FUND_DETAIL_COPY.notFoundBody}
+          </p>
+        )}
+
+        <Link
+          href="/budget"
+          className="mt-5 inline-flex h-11 items-center gap-2 rounded-2xl bg-forest px-5 text-[13.5px] font-semibold text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
+        >
+          <ArrowLeft className="size-4" strokeWidth={2.6} aria-hidden />
+          {FUND_DETAIL_COPY.notFoundCta}
+        </Link>
+      </div>
+    </ScreenShell>
   )
 }
 

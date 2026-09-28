@@ -6,6 +6,8 @@ import { LineChart, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { ScreenShell } from './screen-shell'
 import { GlobalPrivacyToggle } from './global-privacy-toggle'
+import { ContextSwitcher } from './context-switcher'
+import { useMoneyContext } from './money-context-provider'
 import { usePrivacy } from './privacy-provider'
 import { WealthNetWorthBar } from './wealth-net-worth-bar'
 import { WealthInvestasi } from './wealth-investasi'
@@ -13,6 +15,16 @@ import { WealthHutang } from './wealth-hutang'
 import { AddInvestmentSheet, type InvestmentEditDraft, type NewInvestmentTx } from './add-investment-sheet'
 import { AddDebtSheet, type NewDebtInput } from './add-debt-sheet'
 import { UpdatePriceModal } from './update-price-modal'
+import { cashTotal, useMoneyStore, walletOptionsFor } from '@/lib/money/store'
+import {
+  addDebt,
+  addInvestment,
+  deleteInvestment,
+  editInvestment,
+  settleDebt,
+  updateInvestmentPrice,
+  useWealthStore,
+} from '@/lib/money/wealth-store'
 import { cn } from '@/lib/utils'
 import {
   ASSET_EDIT_TOAST,
@@ -20,22 +32,25 @@ import {
   EMPTY_INVESTASI_CTA,
   EMPTY_INVESTASI_TITLE,
   INITIAL_ASSET_TRANSACTIONS,
-  INITIAL_DEBTS,
-  INITIAL_DEBT_PAYMENTS,
-  INITIAL_INVESTMENTS,
   MONTHLY_INCOME,
   PRICE_UPDATE_COPY,
-  WEALTH_NOW_ISO,
   activeDebtRemaining,
-  liquidCashTotal,
+  activeReceivableTotal,
+  maskMoney,
   totalPortfolioValue,
-  walletSourceLabel,
   type Debt,
-  type DebtPayment,
   type DebtView,
   type Investment,
   type WealthTab,
 } from '@/lib/data/wealth'
+import { DEBT_CASH_COPY, cashDirectionOf, settlementCounterparty } from '@/lib/data/wealth-cash'
+import {
+  CONTEXT_EMPTY_COPY,
+  CONTEXT_LABEL,
+  SCOPE_NOTE,
+  contextCaption,
+  scopedItems,
+} from '@/lib/data/money-context'
 
 /* ── Kekayaan & Hutang (/app/wealth) — PRD Domain 2E ────────────────────────
    Halaman SIGNATURE CatetInd: satu layar yang menunjukkan gambaran finansial
@@ -57,32 +72,63 @@ import {
    nilainya ditulis terang-terangan di kartu ringkasan Tab 3.
 
    Koreksi (paket 17): aset & hutang WAJIB bisa dibetulkan user, karena nilainya
-   diisi manual — tidak ada bank-sync (PRD 2E.1). Tiga jalur koreksinya:
+   diisi manual — tidak ada bank-sync (PRD 2E.1). Dua jalur koreksinya:
      - "Edit" di kartu aset → sheet yang sama dengan Tambah Investasi, mode edit.
      - "Update Manual" di kartu aset basi → modal harga sekarang (update-price-modal).
-     - "Catat Bayar" → sisa hutang berkurang DAN barisnya masuk riwayat pembayaran
-       (tanggal + dompet sumber), jadi angkanya bisa diaudit.
 
-   Waktu: "sekarang" memakai WEALTH_NOW_ISO (konstan) — sama seperti halaman
-   Tagihan & Riwayat — supaya render server & client identik.
+   Koreksi (paket 41 — audit Stage 4): pelunasan hutang & penerimaan piutang
+   MENGGERAKKAN KAS. Dulu "Catat Bayar" hanya mengurangi `debt.remaining`, jadi
+   Net Worth naik Rp 500.000 setiap user melunasi Rp 500.000 tanpa ada uang
+   keluar. Sekarang debet/kreditnya lewat `postDebtSettlement()`
+   (`lib/money/store.ts`), piutang ikut sisi ASET, dan kembalian (lebih bayar)
+   dicatat sebagai baris `change` + catatan hutang/piutang barunya.
+
+   Koreksi (paket 50 — temuan D laporan 46): halaman ini BERHENTI memegang
+   salinan datanya sendiri. Dulu tiga `useState(INITIAL_*)` di dalam komponen
+   membuat hutang yang ditambahkan / pelunasan / harga aset yang dikoreksi
+   hilang begitu halaman di-refresh **dan** tidak pernah ikut file ekspor.
+   Sekarang semua bacaan & tulisan lewat `lib/money/wealth-store.ts` — sumber
+   yang sama dengan ekspor `/settings/data`, Pusat Bantuan, dan bar Net Worth.
+
+   Waktu: "sekarang" memakai WEALTH_NOW_ISO (konstan, dipakai store kekayaan
+   saat menstempel harga) — sama seperti halaman Tagihan & Riwayat — supaya
+   render server & client identik.
    ────────────────────────────────────────────────────────────────────────── */
 
-/** jeda sebelum hutang yang lunas resmi pindah status (barnya sempat mencair) */
+/**
+ * Jeda sebelum perayaan pelunasan ditutup (ms).
+ *
+ * Sejak paket 50 catatan hutangnya SUDAH lunas begitu `settleDebt()` menulis —
+ * yang ditahan di sini hanya ANIMASI-nya: `WealthHutang` menahan bar yang
+ * mencair (`celebrateId`) selama jeda ini, lalu halaman melepasnya sehingga
+ * bar-nya hilang dari daftar dan kartu perayaan muncul (pola paket 17).
+ */
 const SETTLE_DELAY = 2200
 
 export function WealthScreen() {
   /* ── STATE ──────────────────────────────────────────────────────────────── */
   /* privasi nominal: state GLOBAL (PrivacyProvider) */
   const { masked: isMasked } = usePrivacy()
+  /* konteks uang (Pribadi/Keluarga/Bersama) — state GLOBAL (paket 47). Dipakai
+     untuk menyaring DAFTAR aset & hutang; Net Worth di atas tetap seluruhnya. */
+  const { context, setContext } = useMoneyContext()
   const [activeTab, setActiveTab] = useState<WealthTab>('investasi')
   const [debtView, setDebtView] = useState<DebtView>('hutangku')
   const [showAddInvestment, setShowAddInvestment] = useState(false)
   const [showAddDebt, setShowAddDebt] = useState(false)
   const [expandedAssetId, setExpandedAssetId] = useState<string | null>(null)
-  const [investments, setInvestments] = useState<Investment[]>(INITIAL_INVESTMENTS)
-  const [debts, setDebts] = useState<Debt[]>(INITIAL_DEBTS)
-  /** ledger pembayaran hutang (produksi: `debt_payments`) */
-  const [payments, setPayments] = useState<DebtPayment[]>(INITIAL_DEBT_PAYMENTS)
+  /**
+   * KEKAYAAN — SATU store (paket 50). Halaman ini TIDAK lagi menyimpan salinan
+   * aset/hutang/pembayaran: dulu tiga `useState(INITIAL_*)` di sini membuat
+   * catatan user hilang setelah refresh dan tidak pernah ikut file ekspor
+   * (temuan D laporan 46). Sekarang: baca dari snapshot, tulis lewat API tulis
+   * (`addInvestment`, `updateInvestmentPrice`, `editInvestment`,
+   * `deleteInvestment`, `addDebt`, `settleDebt`).
+   */
+  const wealth = useWealthStore()
+  const investments = wealth.investments
+  const debts = wealth.debts
+  const payments = wealth.payments
   /** aset yang sedang dibuka di sheet Edit Aset; null = sheet tertutup */
   const [editingAsset, setEditingAsset] = useState<Investment | null>(null)
   /** aset yang harganya sedang dikoreksi lewat modal "Update Manual" */
@@ -106,43 +152,78 @@ export function WealthScreen() {
   /** aset investasi saja (saham/reksadana/emas/crypto) — untuk kartu Tab 1 */
   const totalInvestments = useMemo(() => totalPortfolioValue(investments), [investments])
   /**
-   * KAS LIKUID — saldo seluruh dompet (BCA, GoPay, Tunai) dari SATU sumber:
-   * `INITIAL_WALLET_ACCOUNTS` di lib/wallets.ts, yang sama dengan halaman
-   * Dompet & Akun. Audit fintech #1: kas WAJIB ikut jadi sisi ASET pada
-   * Net Worth — kalau tidak, uang Rp 1 M di rekening tanpa saham akan
-   * ditampilkan sebagai Net Worth nol.
+   * DAFTAR aset & hutang konteks aktif (paket 47) — yang disaring hanya daftar
+   * tab-nya. Angka Net Worth di bawah tetap memakai himpunan PENUH (`investments`,
+   * `debts`), persis aturan kanon: konteks menyaring daftar & arus, bukan total.
    */
-  const cash = useMemo(() => liquidCashTotal(), [])
+  const visibleInvestments = useMemo(
+    () => scopedItems(investments, context),
+    [investments, context],
+  )
+  const visibleDebts = useMemo(() => scopedItems(debts, context), [debts, context])
+  /**
+   * KAS LIKUID — saldo seluruh dompet (BCA, GoPay, Tunai) dari SATU store uang
+   * (`lib/money/store.ts`), sumber yang sama dengan Home dan halaman Dompet.
+   * Audit fintech #1: kas WAJIB ikut jadi sisi ASET pada Net Worth — kalau
+   * tidak, uang Rp 1 M di rekening tanpa saham akan ditampilkan sebagai Net
+   * Worth nol. Karena `cashTotal()` membaca store, koreksi saldo yang ditulis
+   * user di `/wallet` LANGSUNG terlihat di sini (audit #3).
+   */
+  const snapshot = useMoneyStore()
+  const cash = useMemo(() => cashTotal(snapshot), [snapshot])
   const totalDebt = useMemo(() => activeDebtRemaining(debts), [debts])
+  /**
+   * PIUTANG aktif — uang kita yang masih dipegang orang lain. Sejak paket 41
+   * angkanya ikut sisi ASET Net Worth (audit fintech #2); sebelum itu ia cuma
+   * pajangan di tab "Piutangku".
+   */
+  const totalReceivable = useMemo(() => activeReceivableTotal(debts), [debts])
+  /**
+   * Dompet untuk sheet uang (Catat Bayar / Terima) — dari LEDGER, bukan daftar
+   * mock, supaya dompet yang dipilih benar-benar bisa didebit/dikredit.
+   */
+  const walletOptions = useMemo(() => walletOptionsFor(snapshot), [snapshot])
+  /**
+   * Riwayat pembayaran yang ikut ditampilkan = milik hutang di DAFTAR tersaring
+   * (paket 47). Tanpa ini, "Riwayat Pembayaran" di tab Hutang bisa menyebut
+   * pembayaran hutang yang tidak ada di daftar mana pun di layar itu.
+   */
+  const visiblePayments = useMemo(() => {
+    const ids = new Set(visibleDebts.map((debt) => debt.id))
+    return payments.filter((payment) => ids.has(payment.debtId))
+  }, [payments, visibleDebts])
 
   /* ── AKSI ───────────────────────────────────────────────────────────────── */
 
-  /** transaksi investasi baru dicatat sebagai posisi baru (mock).
+  /** transaksi investasi baru dicatat sebagai posisi baru — SATU tulisan ke
+   *  store (`addInvestment`), jadi kartu aset, total portofolio, bar Net Worth,
+   *  dan file ekspor membaca aset yang sama.
    *  Arah produksi: `investment_transactions` yang menampung barisnya, lalu
    *  `avg_buy_price` & quantity per aset DIHITUNG dari ledger itu (weighted
-   *  average, PRD 2E.1 AC2). Karena itu `transactions` tetap state terpisah:
-   *  riwayat yang tampil di kartu aset adalah turunan ledger, bukan pita
-   *  penghapus — aset yang belum punya baris ledger tampil sebagai empty state. */
-  const handleSaveInvestment = useCallback((tx: NewInvestmentTx) => {
-    const cost = tx.quantity * tx.price + tx.fees
-    const entry: Investment = {
-      id: `inv-${Date.now()}`,
-      type: tx.assetType,
-      name: tx.name,
-      symbol: tx.name.slice(0, 6).toUpperCase(),
-      quantity: tx.quantity,
-      avgBuyPrice: tx.price,
-      currentPrice: tx.price,
-      totalInvested: cost,
-      currentValue: tx.quantity * tx.price,
-      lastUpdate: WEALTH_NOW_ISO,
-    }
-    setInvestments((prev) => [entry, ...prev])
-    setShowAddInvestment(false)
-    toast.success('Investasi dicatat! 📈', {
-      description: `${tx.side === 'buy' ? 'Beli' : 'Jual'} ${tx.name} tersimpan.`,
-    })
-  }, [])
+   *  average, PRD 2E.1 AC2) — dan aset yang belum punya baris ledger tampil
+   *  sebagai empty state riwayat di kartu asetnya. */
+  const handleSaveInvestment = useCallback(
+    (tx: NewInvestmentTx) => {
+      const entry = addInvestment({
+        type: tx.assetType,
+        name: tx.name,
+        quantity: tx.quantity,
+        price: tx.price,
+        fees: tx.fees,
+        /* aset baru masuk ke KONTEKS YANG SEDANG AKTIF (paket 47) — kalau tidak,
+           aset yang dicatat saat konteks "Keluarga" tidak akan muncul di tab yang
+           user lihat sendiri setelah menyimpan. */
+        scope: context,
+      })
+      /* `null` = input tidak sah → sheet dibiarkan terbuka, tidak ada yang ditulis */
+      if (!entry) return
+      setShowAddInvestment(false)
+      toast.success('Investasi dicatat! 📈', {
+        description: `${tx.side === 'buy' ? 'Beli' : 'Jual'} ${entry.name} tersimpan.`,
+      })
+    },
+    [context],
+  )
 
   /** fallback protocol 2E.1 poin 4: tombol "Update Manual" di kartu aset basi
    *  MEMBUKA modal koreksi harga — bukan langsung menulis angka. User harus
@@ -151,28 +232,19 @@ export function WealthScreen() {
     setPriceTarget(asset)
   }, [])
 
-  /** simpan harga hasil input user: harga pasar, nilai aset, dan stempel waktu
-   *  ikut berubah — warning amber di kartu itu langsung hilang (isStale: false) */
+  /** Simpan harga hasil input user: harga pasar, nilai aset, dan stempel waktu
+   *  ikut berubah — warning amber di kartu itu langsung hilang (`isStale: false`).
+   *  Hitungannya di store (`updateInvestmentPrice`) supaya satu tindakan hanya
+   *  punya satu tempat hitung. */
   const handleSavePrice = useCallback(
     (price: number) => {
       const target = priceTarget
       if (!target) return
-      setInvestments((prev) =>
-        prev.map((item) =>
-          item.id === target.id
-            ? {
-                ...item,
-                isStale: false,
-                lastUpdate: WEALTH_NOW_ISO,
-                currentPrice: price,
-                currentValue: item.quantity * price,
-              }
-            : item,
-        ),
-      )
+      const updated = updateInvestmentPrice(target.id, price)
+      if (!updated) return
       setPriceTarget(null)
       toast.success(PRICE_UPDATE_COPY.toastTitle, {
-        description: PRICE_UPDATE_COPY.toastDescription(target.name),
+        description: PRICE_UPDATE_COPY.toastDescription(updated.name),
       })
     },
     [priceTarget],
@@ -191,113 +263,80 @@ export function WealthScreen() {
     (draft: InvestmentEditDraft) => {
       const target = editingAsset
       if (!target) return
-      const totalInvested = draft.quantity * draft.avgBuyPrice
-      setInvestments((prev) =>
-        prev.map((item) =>
-          item.id === target.id
-            ? {
-                ...item,
-                type: draft.type,
-                name: draft.name,
-                symbol: draft.symbol,
-                quantity: draft.quantity,
-                avgBuyPrice: draft.avgBuyPrice,
-                totalInvested,
-                currentValue: draft.quantity * item.currentPrice,
-              }
-            : item,
-        ),
-      )
+      const updated = editInvestment(target.id, draft)
+      if (!updated) return
       setEditingAsset(null)
       toast.success(ASSET_EDIT_TOAST.title, {
-        description: ASSET_EDIT_TOAST.description(draft.name),
+        description: ASSET_EDIT_TOAST.description(updated.name),
       })
     },
     [editingAsset],
   )
 
   const handleDeleteAsset = useCallback((asset: Investment) => {
-    setInvestments((prev) => prev.filter((item) => item.id !== asset.id))
+    if (!deleteInvestment(asset.id)) return
     setExpandedAssetId((prev) => (prev === asset.id ? null : prev))
     toast.success(`${asset.name} dihapus`, { description: 'Aset dikeluarkan dari portofolio.' })
   }, [])
 
-  /** personal: tandai lunas → confetti + pindah ke grup "Sudah Lunas" */
-  const handleSettleDebt = useCallback((debt: Debt) => {
-    setDebts((prev) =>
-      prev.map((item) =>
-        item.id === debt.id ? { ...item, remaining: 0, status: 'settled' as const } : item,
-      ),
-    )
-    const name = debt.counterparty ?? 'teman'
-    toast.success(
-      debt.direction === 'owed_to_me'
-        ? `Piutang dari ${name} lunas! 🎉`
-        : `Hutang ke ${name} lunas! 🎉`,
-    )
-  }, [])
-
-  /** platform: catat pembayaran → sisa berkurang, bar snowball menyusut.
-   *  Kalau habis, status baru dipindah SETELAH animasi mencair selesai supaya
-   *  barnya sempat terlihat berubah olive penuh + confetti dulu.
+  /**
+   * AKSI UANG UTANG/PIUTANG (paket 41 & 50) — satu handler untuk dua arah:
+   *   · `Catat Bayar` (platform & personal hutang) → DEBIT dompet (`debt_payment`)
+   *   · `Diterima` (piutang)                        → KREDIT dompet (`receivable_payment`)
    *
-   *  Tanggal & dompet sumber ikut dibawa ke ledger pembayaran (`debt_payments`),
-   *  bukan dibuang setelah sisa hutangnya dikurangi — itu yang membuat riwayat
-   *  di kartu hutang bisa diaudit (dan sisa hutang jelas asal-usulnya). */
+   * Sejak paket 50 seluruh rangkaiannya SATU tulisan di store (`settleDebt`):
+   * rencana pelunasan → baris kas (`postDebtSettlement` → `appendRow` → penjaga
+   * invariant) → sisa & status catatan → riwayat `debt_payments` → catatan
+   * kembalian. Kalau store menolak (nominal tidak sah / saldo dompet kurang /
+   * aksi ini sudah pernah tercatat), fungsi ini mengembalikan `false` dan TIDAK
+   * ada state yang berubah — jadi mustahil ada catatan hutang yang "lunas" tanpa
+   * uang yang benar-benar keluar (temuan audit #1).
+   */
   const handlePayDebt = useCallback(
-    (debt: Debt, amount: number, date: string, walletId: string) => {
-      const remaining = Math.max(0, debt.remaining - amount)
-      setDebts((prev) =>
-        prev.map((item) =>
-          item.id === debt.id
-            ? {
-                ...item,
-                remaining,
-                currentMonth: Math.min((item.currentMonth ?? 1) + 1, item.tenor ?? 99),
-              }
-            : item,
-        ),
-      )
-      setPayments((prev) => [
-        {
-          id: `pay-${Date.now()}`,
-          debtId: debt.id,
-          amount,
-          paidAtISO: date,
-          walletName: walletSourceLabel(walletId),
-        },
-        ...prev,
-      ])
-      toast.success(`Pembayaran ${debt.provider} dicatat! 💪`, {
-        description: remaining > 0 ? 'Bar snowball-mu langsung menyusut.' : 'Hutang ini lunas! 🎉',
-      })
+    (debt: Debt, amount: number, date: string, walletId: string): boolean => {
+      const direction = cashDirectionOf(debt)
+      const counterparty = settlementCounterparty(debt)
+      const result = settleDebt({ debtId: debt.id, walletId, paidAmount: amount, dateISO: date })
+      if (!result) return false
 
-      if (remaining === 0) {
-        setCelebrateId(debt.id)
-        later(() => {
-          setDebts((prev) =>
-            prev.map((item) =>
-              item.id === debt.id ? { ...item, status: 'settled' as const } : item,
-            ),
-          )
-          setCelebrateId(null)
-        }, SETTLE_DELAY)
+      const plan = result.settlement.plan
+      const toastCopy = direction === 'in' ? DEBT_CASH_COPY.receive : DEBT_CASH_COPY.pay
+      toast.success(toastCopy.toastTitle(counterparty), {
+        description: plan.settled ? toastCopy.toastSettled : toastCopy.toastShrinking,
+      })
+      if (plan.changeAmount > 0) {
+        toast.message(DEBT_CASH_COPY.changeRecorded(maskMoney(plan.changeAmount, isMasked)))
       }
+
+      /* Perayaan: catatannya SUDAH lunas (itu fakta yang tersimpan) — yang
+         ditahan di sini animasinya saja. `celebrateId` membuat bar khusus itu
+         tetap tampil & mencair selama SETTLE_DELAY, lalu halaman melepasnya. */
+      if (plan.settled) {
+        setCelebrateId(debt.id)
+        later(() => setCelebrateId(null), SETTLE_DELAY)
+      }
+      return true
     },
-    [],
+    [isMasked],
   )
 
-  const handleSaveDebt = useCallback((input: NewDebtInput) => {
-    setDebts((prev) => [{ id: `debt-${Date.now()}`, status: 'active', ...input }, ...prev])
-    setShowAddDebt(false)
-    setDebtView(input.direction === 'owed_to_me' ? 'piutangku' : 'hutangku')
-    toast.success('Dicatat! 📝', {
-      description:
-        input.type === 'platform'
-          ? `Cicilan ${input.provider} ikut dipotong dari Jatah Harian.`
-          : 'Catatan utang/piutang tersimpan.',
-    })
-  }, [])
+  const handleSaveDebt = useCallback(
+    (input: NewDebtInput) => {
+      /* hutang/piutang baru masuk ke KONTEKS YANG SEDANG AKTIF (paket 47), supaya
+         catatan yang baru dibuat langsung terlihat di tab yang sedang dibuka */
+      const created = addDebt({ ...input, scope: context })
+      if (!created) return
+      setShowAddDebt(false)
+      setDebtView(created.direction === 'owed_to_me' ? 'piutangku' : 'hutangku')
+      toast.success('Dicatat! 📝', {
+        description:
+          created.type === 'platform'
+            ? `Cicilan ${created.provider} ikut dipotong dari Jatah Harian.`
+            : 'Catatan utang/piutang tersimpan.',
+      })
+    },
+    [context],
+  )
 
 
   /* ── RENDER ─────────────────────────────────────────────────────────────── */
@@ -307,31 +346,54 @@ export function WealthScreen() {
           donut & daftar aset bisa berdampingan (bukan ponsel yang direntangkan) */}
       <div className="mx-auto w-full max-w-[760px] xl:max-w-[1060px]">
         {/* ── SECTION 2: header halaman (sticky) + toggle privasi ────────── */}
-        <header className="sticky top-2 z-30 mb-5 flex items-center justify-between gap-3 rounded-[1.5rem] bg-[#ffffff]/90 px-4 py-3 shadow-[0_18px_40px_-32px_rgba(69,89,78,0.65)] ring-1 ring-soil/10 backdrop-blur-md">
-          <div className="flex min-w-0 items-center gap-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sage via-cream to-mint-soft text-forest shadow-[0_12px_26px_-16px_rgba(69,89,78,0.7)] ring-1 ring-forest/10">
-              <LineChart className="size-[18px]" strokeWidth={2.1} />
-            </span>
-            <div className="min-w-0">
-              <h1 className="truncate font-display text-[19px] font-black tracking-tight text-ink lg:text-[22px]">
-                Kekayaan &amp; Hutang
-              </h1>
-              <p className="truncate text-[11px] text-ink/45">
-                Aset, investasi, dan hutang — satu layar, apa adanya
-              </p>
+        <header className="sticky top-2 z-30 mb-5 rounded-[1.5rem] bg-[#ffffff]/90 px-4 py-3 shadow-[0_18px_40px_-32px_rgba(69,89,78,0.65)] ring-1 ring-soil/10 backdrop-blur-md">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sage via-cream to-mint-soft text-forest shadow-[0_12px_26px_-16px_rgba(69,89,78,0.7)] ring-1 ring-forest/10">
+                <LineChart className="size-[18px]" strokeWidth={2.1} />
+              </span>
+              <div className="min-w-0">
+                <h1 className="truncate font-display text-[19px] font-black tracking-tight text-ink lg:text-[22px]">
+                  Kekayaan &amp; Hutang
+                </h1>
+                <p className="truncate text-[11px] text-ink/45">
+                  Aset, investasi, dan hutang — satu layar, apa adanya
+                </p>
+              </div>
+            </div>
+            {/* cluster aksi desktop: switcher konteks + tombol mata (paket 47) */}
+            <div className="hidden shrink-0 items-center gap-3 lg:flex">
+              <ContextSwitcher value={context} onChange={setContext} className="w-[280px]" />
+              <GlobalPrivacyToggle />
+            </div>
+            <div className="lg:hidden">
+              <GlobalPrivacyToggle />
             </div>
           </div>
-          <GlobalPrivacyToggle />
+
+          {/* switcher konteks (mobile): barisnya sendiri di dalam header sticky —
+              pola penempatan yang sama dengan Home & Budget (paket 47) */}
+          <div className="mt-3 flex justify-center lg:hidden">
+            <ContextSwitcher value={context} onChange={setContext} />
+          </div>
         </header>
 
         {/* ── SECTION 3: Tug-of-War Net Worth Bar (hero visual) ───────────
-            `assets` = kas likuid + investasi (dijumlahkan DI DALAM komponen) */}
+            `assets` = kas likuid + investasi (dijumlahkan DI DALAM komponen).
+            Angkanya GLOBAL: seluruh aset, piutang, dan hutang — bukan hanya
+            konteks aktif (kanon paket 47 #1), dan kalimat cakupannya menyusul di
+            bawah bar supaya tidak ada keraguan soal angkanya. */}
         <WealthNetWorthBar
           cash={cash}
           investments={totalInvestments}
+          receivables={totalReceivable}
           debts={totalDebt}
           masked={isMasked}
         />
+
+        <p className="mt-2 text-[11.5px] font-medium text-ink/50">
+          {contextCaption(context)} · <span className="text-ink/40">{SCOPE_NOTE.netWorth}</span>
+        </p>
 
         {/* ── SECTION 4: tab Investasi / Properti / Hutang ──────────────── */}
         <WealthTabs active={activeTab} onChange={setActiveTab} />
@@ -346,11 +408,21 @@ export function WealthScreen() {
               transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
               className="mt-5"
             >
-              {investments.length === 0 ? (
-                <EmptyInvestasi onAdd={() => setShowAddInvestment(true)} />
+              {visibleInvestments.length === 0 ? (
+                <EmptyInvestasi
+                  onAdd={() => setShowAddInvestment(true)}
+                  /* aset ada, tapi tidak satu pun milik konteks aktif (paket 47) →
+                     sebutkan alasannya, jangan biarkan tab tampak kosong tanpa
+                     penjelasan (padahal daftar konteks lain penuh) */
+                  contextLine={
+                    investments.length > 0
+                      ? CONTEXT_EMPTY_COPY.investments.title(CONTEXT_LABEL[context])
+                      : undefined
+                  }
+                />
               ) : (
                 <WealthInvestasi
-                  investments={investments}
+                  investments={visibleInvestments}
                   /* ledger transaksi masih mock (produksi: `investment_transactions`);
                      riwayat tiap aset diturunkan dari daftar ini di dalam komponen */
                   transactions={INITIAL_ASSET_TRANSACTIONS}
@@ -405,16 +477,22 @@ export function WealthScreen() {
               className="mt-5"
             >
               <WealthHutang
-                debts={debts}
-                payments={payments}
+                debts={visibleDebts}
+                payments={visiblePayments}
                 view={debtView}
                 onChangeView={setDebtView}
                 masked={isMasked}
                 monthlyIncome={monthlyIncome}
                 celebrateId={celebrateId}
+                walletOptions={walletOptions}
                 onAddDebt={() => setShowAddDebt(true)}
-                onSettleDebt={handleSettleDebt}
                 onPayDebt={handlePayDebt}
+                /* dokumen hutang ada, tapi tidak satu pun di konteks aktif (paket 47) */
+                emptyContextLine={
+                  debts.length > 0
+                    ? CONTEXT_EMPTY_COPY.debts.title(CONTEXT_LABEL[context])
+                    : undefined
+                }
               />
             </motion.div>
           )}
@@ -519,17 +597,29 @@ function WealthTabs({
 }
 
 /** 8A — empty state investasi: nurturing, langsung kasih jalan keluar */
-function EmptyInvestasi({ onAdd }: { onAdd: () => void }) {
+function EmptyInvestasi({
+  onAdd,
+  contextLine,
+}: {
+  onAdd: () => void
+  /**
+   * Judul khusus konteks (paket 47) — diisi HANYA kalau user punya aset, tapi
+   * tidak satu pun di konteks yang sedang dibaca. Kalau daftarnya memang kosong
+   * total, copy umum tetap dipakai ("belum ada aset") supaya pesannya tidak
+   * menyalahkan konteks.
+   */
+  contextLine?: string
+}) {
   return (
     <div className="flex flex-col items-center rounded-[1.75rem] border-2 border-dashed border-forest/15 bg-cream/50 px-6 py-12 text-center">
       <span aria-hidden className="text-[30px]">
         🌱
       </span>
       <h2 className="mt-3 font-display text-[16px] font-bold tracking-tight text-ink">
-        {EMPTY_INVESTASI_TITLE}
+        {contextLine ?? EMPTY_INVESTASI_TITLE}
       </h2>
       <p className="mt-1.5 max-w-sm text-[13px] leading-relaxed text-ink/55">
-        {EMPTY_INVESTASI_COPY}
+        {contextLine ? CONTEXT_EMPTY_COPY.investments.body : EMPTY_INVESTASI_COPY}
       </p>
       <button
         type="button"
@@ -537,7 +627,7 @@ function EmptyInvestasi({ onAdd }: { onAdd: () => void }) {
         className="mt-5 inline-flex h-11 items-center gap-2 rounded-2xl bg-forest px-5 text-[13.5px] font-semibold text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
       >
         <Plus className="size-4" strokeWidth={2.6} />
-        {EMPTY_INVESTASI_CTA}
+        {contextLine ? CONTEXT_EMPTY_COPY.investments.cta : EMPTY_INVESTASI_CTA}
       </button>
     </div>
   )

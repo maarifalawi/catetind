@@ -17,10 +17,12 @@ import { SUBSCRIPTION_LOCK_COPY } from '@/lib/data/renewal'
 import {
   AI_CAPTURE_COPY,
   AI_CHAT_COPY,
+  AI_CONNECT_HREF,
   QUICK_REPLIES,
   type ChatMessage,
 } from '@/lib/ai-chat'
-import { AI_REMAINING_PCT } from '@/lib/ai-quota'
+import { AI_QUOTA_EXHAUSTED_COPY } from '@/lib/ai-quota'
+import { useAiQuota } from '@/hooks/use-ai-quota'
 import { AI_CHAT_SEED_EVENT, type AIChatSeedDetail } from '@/lib/ai-chat-bus'
 
 /** E. satu bubble chat — user di kanan, AI di kiri dengan avatar */
@@ -54,6 +56,15 @@ function ChatBubble({ message, onAction }: { message: ChatMessage; onAction: () 
           <span className="mb-1 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-forest-soft">
             <Sparkles className="size-3" />
             {AI_CHAT_COPY.appreciationBadge}
+          </span>
+        )}
+        {/* PAKET 44 — label kejujuran: balasan ini datang dari aturan lokal, bukan
+            model. Selama provider LLM belum tersambung, bubble-nya wajib mengaku;
+            kalau labelnya tidak ada, user membaca kalimat ini sebagai jawaban AI
+            sungguhan (temuan uji pemakaian #5). */}
+        {message.ruleBased && (
+          <span className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-ink/35">
+            {AI_CHAT_COPY.ruleBasedBadge}
           </span>
         )}
         <p>{message.content}</p>
@@ -142,6 +153,13 @@ export function AIChatWidget() {
      baca struk (mock OCR), dengar suara (Web Speech API), dan kartu konfirmasi
      yang wajib dilewati sebelum apa pun tersimpan. */
   const capture = useTransactionCapture({ onUserEcho: echoToConversation })
+
+  /* Kuota AI hidup (paket 42): gauge di header membaca angka ini, dan dua pintu
+     yang butuh AI (voice & scan struk) dimatikan saat kuota benar-benar habis —
+     dengan penjelasan, bukan tombol mati tanpa alasan. Percakapan & pencatatan
+     manual tidak dikunci: itu alasan app ini ada. */
+  const quota = useAiQuota()
+  const quotaExhausted = quota.exhausted
 
   /* sementara draft menunggu keputusan user, dua pintu masuk ditutup: tidak ada
      gunanya membuka alur kedua di atas draft yang belum dijawab */
@@ -327,22 +345,33 @@ export function AIChatWidget() {
                     {AI_CHAT_COPY.title}
                   </p>
                   <p className="shrink-0 text-[11px] font-medium text-ink/45">
-                    {AI_CHAT_COPY.quota(AI_REMAINING_PCT)}
+                    {AI_CHAT_COPY.quota(quota.remainingPct)}
                   </p>
                 </div>
                 {/* AI Token Fuel Gauge (Domain 5C) — mint → amber → prem.
-                    Ambangnya dibaca dari SISA kuota, sejalan dengan sidebar. */}
-                <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-soil/[0.09]">
+                    Ambangnya dibaca dari SISA kuota, sejalan dengan sidebar.
+                    Angkanya HIDUP sejak paket 42: setiap pesan, scan struk, dan
+                    input suara benar-benar mengurangi kuota yang tampil di sini. */}
+                <div
+                  role="progressbar"
+                  aria-label={
+                    quotaExhausted ? AI_QUOTA_EXHAUSTED_COPY.progressLabel : 'Sisa kuota AI'
+                  }
+                  aria-valuenow={quota.remainingPct}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  className="mt-1 h-1.5 overflow-hidden rounded-full bg-soil/[0.09]"
+                >
                   <div
                     className={cn(
                       'h-full rounded-full transition-all',
-                      AI_REMAINING_PCT <= 10
+                      quota.remainingPct <= 10
                         ? 'bg-plum'
-                        : AI_REMAINING_PCT <= 30
+                        : quota.remainingPct <= 30
                           ? 'bg-cantelope'
                           : 'bg-mint',
                     )}
-                    style={{ width: `${AI_REMAINING_PCT}%` }}
+                    style={{ width: `${quota.remainingPct}%` }}
                   />
                 </div>
               </div>
@@ -355,6 +384,24 @@ export function AIChatWidget() {
                 <X className="size-4" />
               </button>
             </header>
+
+            {/* ── STATUS AI (paket 44) ─────────────────────────────────────────
+                Satu kalimat jujur, sekali, di tempat yang selalu terlihat — bukan
+                diulang di setiap balasan (itu justru jadi noise). Isinya menyebut
+                keadaan hari ini (aturan lokal, belum pakai model) dan mengantar ke
+                tempat AI benar-benar disambungkan; panelnya ditutup saat tombolnya
+                ditekan supaya halaman tujuannya tidak ketutupan dialog. */}
+            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 border-b border-soil/12 bg-sage/25 px-4 py-2 text-[11px] leading-relaxed text-forest">
+              <span>{AI_CHAT_COPY.notConnectedNote}</span>
+              <Link
+                href={AI_CONNECT_HREF}
+                onClick={() => setOpen(false)}
+                title={AI_CHAT_COPY.connectHint}
+                className="font-semibold underline underline-offset-2 hover:text-forest-soft"
+              >
+                {AI_CHAT_COPY.connectLabel}
+              </Link>
+            </div>
 
             {/* area pesan */}
             <div
@@ -440,13 +487,19 @@ export function AIChatWidget() {
                 <button
                   type="button"
                   onClick={handleVoiceClick}
-                  disabled={isTyping || captureLocked || capture.phase === 'reading'}
+                  disabled={isTyping || captureLocked || quotaExhausted || capture.phase === 'reading'}
                   aria-label={
                     capture.phase === 'listening'
                       ? AI_CAPTURE_COPY.voiceStopLabel
                       : AI_CAPTURE_COPY.voiceLabel
                   }
-                  aria-describedby={voiceUnavailable ? 'ai-voice-fallback' : undefined}
+                  aria-describedby={
+                    quotaExhausted
+                      ? 'ai-quota-off'
+                      : voiceUnavailable
+                        ? 'ai-voice-fallback'
+                        : undefined
+                  }
                   className={cn(
                     'flex size-10 shrink-0 items-center justify-center rounded-full ring-1 transition-colors active:scale-95 disabled:opacity-35',
                     capture.phase === 'listening'
@@ -467,10 +520,11 @@ export function AIChatWidget() {
                 <button
                   type="button"
                   onClick={handleScanClick}
-                  disabled={isTyping || captureLocked}
+                  disabled={isTyping || captureLocked || quotaExhausted}
                   aria-label={
                     capture.phase === 'reading' ? AI_CAPTURE_COPY.cancel : AI_CAPTURE_COPY.scanLabel
                   }
+                  aria-describedby={quotaExhausted ? 'ai-quota-off' : undefined}
                   className={cn(
                     'flex size-10 shrink-0 items-center justify-center rounded-full ring-1 transition-colors active:scale-95 disabled:opacity-35',
                     capture.phase === 'reading'
@@ -512,6 +566,14 @@ export function AIChatWidget() {
               {voiceUnavailable && (
                 <p id="ai-voice-fallback" className="mt-2 text-[11px] leading-relaxed text-ink/45">
                   {AI_CAPTURE_COPY.voiceUnsupported}
+                </p>
+              )}
+
+              {/* KUOTA HABIS (paket 42): dua ikon di atas mati, dan alasannya
+                  ditulis di sini — plus penegasan bahwa catat manual tetap jalan. */}
+              {quotaExhausted && (
+                <p id="ai-quota-off" className="mt-2 text-[11px] leading-relaxed text-ink/55">
+                  {AI_QUOTA_EXHAUSTED_COPY.body}
                 </p>
               )}
             </form>

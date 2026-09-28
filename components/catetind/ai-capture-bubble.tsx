@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { Check, Info, Mic, ScanLine, Sparkles, X } from 'lucide-react'
 import { RupiahField } from './budget-sheet'
 import { AIAvatar } from './ai-avatar'
@@ -7,6 +8,7 @@ import { cn } from '@/lib/utils'
 import { AI_CAPTURE_COPY } from '@/lib/ai-chat'
 import {
   TRANSACTION_CATEGORY_OPTIONS,
+  TRANSACTION_INPUT_COPY,
   TRANSACTION_TYPE_LABEL,
   TRANSACTION_WALLET_OPTIONS,
 } from '@/lib/data/history'
@@ -39,8 +41,18 @@ const VOICE_WAVE = [8, 16, 24, 14, 20, 12]
 const CAPTURE_CONTROL =
   'w-full rounded-xl bg-soil/[0.09] px-3 py-2.5 text-[12.5px] font-semibold text-ink outline-none ring-1 ring-transparent transition-all focus:bg-cream focus:ring-forest/15'
 
-/** urutan pil tipe — sama dengan mesin input manual (pengeluaran default) */
-const TYPE_ORDER: TransactionType[] = ['expense', 'income', 'saving', 'transfer']
+/**
+ * Urutan pil tipe — sama dengan mesin input manual (Pengeluaran default).
+ *
+ * PAKET 55: `transfer` DIHAPUS dari daftar. Parser suara memang bisa MENDENGAR
+ * kata "transfer" (`lib/transaction-ai.ts`) — tapi yang bisa dilakukan kartu ini
+ * cuma mencatat satu sisi uang, karena tidak ada tempat menanyakan dompet tujuan.
+ * Baris `transfer` satu sisi = uang keluar dari dompet dan tidak mendarat di
+ * mana pun (temuan uji pemakaian 28 Sep 2026). Karena itu tipe itu tidak
+ * ditawarkan di sini; kalau parser mendengarnya, kartu konfirmasi MENGATAKAN
+ * kenapa dan mengarahkan user ke alur Pindah Dana (lihat `transferHint`).
+ */
+const TYPE_ORDER: TransactionType[] = ['expense', 'income', 'saving']
 
 /** kerangka bubble: avatar AI + kartu selebar area pesan (form butuh ruang) */
 function CaptureShell({
@@ -99,7 +111,7 @@ function CaptureField({
   )
 }
 
-/** pil pilih-satu tipe transaksi — 4 pilihan, hemat ruang */
+/** pil pilih-satu tipe transaksi — hemat ruang (paket 55: tiga tipe uang) */
 function TypePills({
   value,
   onChange,
@@ -108,7 +120,7 @@ function TypePills({
   onChange: (type: TransactionType) => void
 }) {
   return (
-    <div className="grid grid-cols-4 gap-1">
+    <div className="grid grid-cols-3 gap-1">
       {TYPE_ORDER.map((type) => {
         const active = type === value
         return (
@@ -264,6 +276,28 @@ function ConfirmBubble({
           <TypePills value={draft.type} onChange={(type) => onDraftChange({ type })} />
         </CaptureField>
 
+        {/* ── AI MENDENGAR “PINDAH DANA” (paket 55) ──────────────────────────
+            Parser suara memang mengenali kata transfer, tapi jalur ini tidak
+            bisa mencatatnya dengan benar: pindah dana butuh dompet TUJUAN, dan
+            kartu konfirmasi ini tidak punya tempat menanyakannya. Catatan
+            sepihak seperti itu membuat saldo dompet berbeda dari cerita — jadi
+            yang ditampilkan bukan form palsu, tapi arahan ke alur yang benar
+            (PRD 2A.6: satu aksi, satu pintu). Tombol "Catat" pun ditahan oleh
+            `confirmCapture()` dengan pesan yang sama. */}
+        {draft.type === 'transfer' && (
+          <div className="rounded-xl bg-hud-amber/[0.14] px-2.5 py-2 ring-1 ring-hud-amber/40">
+            <p className="text-[11.5px] font-medium leading-relaxed text-ink">
+              {AI_CAPTURE_COPY.needTransferFlow}
+            </p>
+            <Link
+              href="/wallet"
+              className="mt-1.5 inline-flex items-center gap-1 text-[11.5px] font-semibold text-forest underline decoration-dotted underline-offset-4"
+            >
+              {AI_CAPTURE_COPY.transferFlowCta}
+            </Link>
+          </div>
+        )}
+
         <CaptureField label={AI_CAPTURE_COPY.fieldLabels.name} flagged={flagged('name')}>
           <input
             value={draft.name}
@@ -300,6 +334,14 @@ function ConfirmBubble({
               aria-label={AI_CAPTURE_COPY.fieldLabels.category}
               className={CAPTURE_CONTROL}
             >
+              {/* PAKET 54: field ini bisa KOSONG dengan sengaja — saat user
+                  mematikan "Kategorisasi Otomatis oleh AI". Tanpa opsi kosong
+                  ini, `<select>` akan MENAMPILKAN "Makanan" sementara nilainya
+                  '', dan user diberi tahu kategori yang tidak akan tersimpan.
+                  Kategori tetap harus dipilih user sebelum "Catat ✓". */}
+              <option value="" disabled>
+                {TRANSACTION_INPUT_COPY.categoryPlaceholder}
+              </option>
               {TRANSACTION_CATEGORY_OPTIONS.map((option) => (
                 <option key={option} value={option}>
                   {option}

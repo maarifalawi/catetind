@@ -3,18 +3,19 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowRight, Check, Copy, ExternalLink, HeartHandshake, Share2 } from 'lucide-react'
+import { ArrowRight, Check, Copy, ExternalLink, HeartHandshake, RefreshCw, Share2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock'
+import { INVITE_VALIDITY_COPY, JOINT_ME, JOINT_PARTNER, type JointPerson } from '@/lib/data/joint'
 import {
-  INVITE_CODE,
-  INVITE_VALIDITY_COPY,
-  JOINT_ME,
-  JOINT_PARTNER,
+  INVITE_CODE_COPY,
+  JOIN_PREVIEW_COPY,
   buildInviteShareText,
-  type JointPerson,
-} from '@/lib/data/joint'
-import { JOIN_PREVIEW_COPY, buildJoinHref } from '@/lib/data/joint-invite'
+  buildJoinHref,
+  inviteExpiryLabel,
+  type InviteRecord,
+} from '@/lib/data/joint-invite'
+import { activeInviteFor, createInvite, resolveInvite } from '@/lib/invite-store'
 
 /* ── Invite Partner Flow (Section 8) ─────────────────────────────────────────
    Tampil saat `partnerJoined === false`: seluruh halaman berubah jadi ajakan
@@ -127,6 +128,7 @@ export function JointInviteFlow({
 export function JointInviteCodeModal({
   open,
   onClose,
+  walletId,
   walletName,
   onSimulateJoin,
   me = JOINT_ME,
@@ -134,6 +136,8 @@ export function JointInviteCodeModal({
 }: {
   open: boolean
   onClose: () => void
+  /** dompet yang diundangkan — kode undangan selalu milik SATU dompet */
+  walletId: string
   walletName: string
   /** mock: pasangan bergabung (pemicu selebrasi 8C) */
   onSimulateJoin: () => void
@@ -141,7 +145,38 @@ export function JointInviteCodeModal({
   partner?: JointPerson
 }) {
   const [waiting, setWaiting] = useState(false)
+  /**
+   * Kode undangan NYATA untuk dompet ini (paket 39).
+   *
+   * `null` sampai effect pertama selesai — sengaja: nilai awalnya tidak dibaca
+   * saat render (localStorage hanya ada di browser), jadi HTML server & client
+   * identik dulu. Begitu modal dibuka, kode yang masih berlaku dipakai ulang;
+   * kalau tidak ada, satu kode baru dibuat. Kode ini benar-benar hidup 24 jam dan
+   * benar-benar sekali pakai — bukan konstanta yang cuma dipajang.
+   */
+  const [invite, setInvite] = useState<InviteRecord | null>(null)
   useBodyScrollLock(open, true)
+
+  useEffect(() => {
+    if (!open) return
+    setInvite((current) =>
+      current && current.walletId === walletId
+        ? current
+        : (activeInviteFor(walletId) ?? createInvite(walletId)),
+    )
+  }, [open, walletId])
+
+  /* status dibaca ulang dari store: kode bisa sudah dipakai/kedaluwarsa setelah
+     modal terbuka (mis. pasangan menekan "gabung" di tab lain) */
+  const status = invite ? resolveInvite(invite.code).status : 'unknown'
+  const usable = status === 'valid'
+
+  function refreshCode() {
+    setInvite(createInvite(walletId))
+    toast.success(INVITE_CODE_COPY.refreshedToast, {
+      description: INVITE_CODE_COPY.refreshHint,
+    })
+  }
 
   useEffect(() => {
     if (!open) return
@@ -156,7 +191,8 @@ export function JointInviteCodeModal({
    *  Pengecekan pakai `typeof` (bukan `'share' in navigator`) supaya TypeScript
    *  tidak mempersempit tipe `navigator` menjadi `never` di cabang fallback. */
   async function handleShare() {
-    const text = buildInviteShareText(me.name)
+    if (!invite || !usable) return
+    const text = buildInviteShareText(me.name, invite.code, walletName)
     const canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function'
     try {
       if (canShare) {
@@ -173,8 +209,9 @@ export function JointInviteCodeModal({
   }
 
   async function handleCopyCode() {
+    if (!invite) return
     try {
-      await navigator.clipboard.writeText(INVITE_CODE)
+      await navigator.clipboard.writeText(invite.code)
       toast.success('Kode tersalin!')
     } catch {
       toast.error('Gagal menyalin — catat kodenya manual ya')
@@ -211,24 +248,42 @@ export function JointInviteCodeModal({
               data-lenis-prevent
             >
               <h2 className="font-display text-xl font-black tracking-tight text-ink">
-                Bagikan kode ini 💌
+                {INVITE_CODE_COPY.title}
               </h2>
               <p className="mt-1 text-[12.5px] leading-relaxed text-ink/55">
-                {partner.name} tinggal masukin kodenya buat gabung ke{' '}
-                <b className="font-semibold text-ink/75">{walletName}</b>.
+                {INVITE_CODE_COPY.lead(partner.name, walletName)}
               </p>
-              {/* kode undangan — monospace, spasi antar huruf lebar */}
+              {/* Kode undangan SUNGGUHAN milik dompet ini (paket 39) — bukan
+                  konstanta global. Masa berlaku & sekali pakainya nyata, dan
+                  baris di bawah hanya muncul saat statusnya memang `valid`. */}
               <div className="mt-4 rounded-[1.5rem] border-2 border-dashed border-hud-sage/50 bg-cream px-4 py-5 text-center">
-                <p className="font-mono text-[34px] font-black leading-none tracking-[0.3em] text-ink">
-                  {INVITE_CODE}
+                <p
+                  className="font-mono text-[34px] font-black leading-none tracking-[0.3em] text-ink"
+                  aria-label={invite ? `Kode undangan ${invite.code.split('').join(' ')}` : undefined}
+                >
+                  {invite?.code ?? '••••••'}
                 </p>
-                <p className="mt-2.5 text-[11.5px] text-ink/45">{INVITE_VALIDITY_COPY}</p>
+                {invite && usable ? (
+                  <>
+                    <p className="mt-2.5 text-[11.5px] text-ink/45">{INVITE_VALIDITY_COPY}</p>
+                    <p className="mt-1 text-[11px] text-ink/40">
+                      {INVITE_CODE_COPY.expiresAt(inviteExpiryLabel(invite))}
+                    </p>
+                  </>
+                ) : (
+                  <p className="mt-2.5 text-[11.5px] text-ink/45">{INVITE_CODE_COPY.invalidNote}</p>
+                )}
               </div>
 
               <button
                 type="button"
                 onClick={handleShare}
-                className="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-forest text-[14px] font-bold text-mint shadow-[0_16px_32px_-20px_rgba(69,89,78,0.95)] transition-colors hover:bg-forest-soft active:scale-[0.99]"
+                disabled={!invite || !usable}
+                className={
+                  invite && usable
+                    ? 'mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-forest text-[14px] font-bold text-mint shadow-[0_16px_32px_-20px_rgba(69,89,78,0.95)] transition-colors hover:bg-forest-soft active:scale-[0.99]'
+                    : 'mt-4 inline-flex h-12 w-full cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-ink/[0.07] text-[14px] font-bold text-ink/35'
+                }
               >
                 <Share2 className="size-4" strokeWidth={2.4} />
                 Bagikan Link 📤
@@ -236,11 +291,29 @@ export function JointInviteCodeModal({
               <button
                 type="button"
                 onClick={handleCopyCode}
-                className="mt-2 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-cream text-[13.5px] font-semibold text-ink ring-1 ring-soil/16 transition-colors hover:bg-cream active:scale-[0.99]"
+                disabled={!invite}
+                className="mt-2 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-cream text-[13.5px] font-semibold text-ink ring-1 ring-soil/16 transition-colors hover:bg-cream active:scale-[0.99] disabled:opacity-55"
               >
                 <Copy className="size-4" strokeWidth={2.4} />
                 Salin Kode
               </button>
+
+              {/* satu kode aktif per dompet — jalur pemulihan kalau kodenya sudah
+                  dipakai atau lewat 24 jam (jangan ada layar buntu) */}
+              <div className="mt-3 rounded-2xl bg-sage/40 px-4 py-3">
+                <button
+                  type="button"
+                  onClick={refreshCode}
+                  className="inline-flex items-center gap-2 text-[12.5px] font-semibold text-forest underline decoration-dotted underline-offset-4 transition-colors hover:text-ink"
+                >
+                  <RefreshCw className="size-3.5" strokeWidth={2.4} aria-hidden />
+                  {INVITE_CODE_COPY.refresh}
+                </button>
+                <p className="mt-1 text-[10.5px] leading-relaxed text-ink/50">
+                  {INVITE_CODE_COPY.refreshHint}
+                </p>
+              </div>
+
 
               {/* indikator menunggu — muncul setelah link dibagikan */}
               <AnimatePresence initial={false}>
@@ -287,18 +360,23 @@ export function JointInviteCodeModal({
 
               {/* tautan NYATA ke halaman yang dibuka pasangan (/join/[code]) —
                   supaya user A bisa memeriksa tampilannya sebelum membagikan link */}
-              <p className="mt-4 border-t border-soil/12 pt-3.5 text-center">
-                <Link
-                  href={buildJoinHref(INVITE_CODE)}
-                  className="inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-ink/55 underline underline-offset-4 transition-colors hover:text-ink"
-                >
-                  <ExternalLink className="size-3.5" strokeWidth={2.4} aria-hidden />
-                  {JOIN_PREVIEW_COPY.linkLabel}
-                </Link>
-                <span className="mt-1 block text-[10.5px] leading-relaxed text-ink/35">
-                  {JOIN_PREVIEW_COPY.hint}
-                </span>
-              </p>
+              {/* tautan NYATA ke halaman yang dibuka pasangan (/join/[code]) —
+                  memakai KODE YANG BARU DIBUAT di atas, supaya user A melihat
+                  halaman yang benar-benar akan diterima pasangannya */}
+              {invite && (
+                <p className="mt-4 border-t border-soil/12 pt-3.5 text-center">
+                  <Link
+                    href={buildJoinHref(invite.code)}
+                    className="inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-ink/55 underline underline-offset-4 transition-colors hover:text-ink"
+                  >
+                    <ExternalLink className="size-3.5" strokeWidth={2.4} aria-hidden />
+                    {JOIN_PREVIEW_COPY.linkLabel}
+                  </Link>
+                  <span className="mt-1 block text-[10.5px] leading-relaxed text-ink/35">
+                    {JOIN_PREVIEW_COPY.hint}
+                  </span>
+                </p>
+              )}
             </motion.div>
           </div>
         </motion.div>

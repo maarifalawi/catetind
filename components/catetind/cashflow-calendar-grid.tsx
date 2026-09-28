@@ -4,6 +4,7 @@ import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { maskMoney } from '@/lib/data/history'
 import {
+  CALENDAR_DAY_COPY,
   CALENDAR_LEGEND,
   CALENDAR_LOOK_CELL,
   CALENDAR_LOOK_WORD,
@@ -30,8 +31,8 @@ import {
          forest       → surplus (uang masuk menutup pengeluaran hari itu)
          mint         → nol jajan (tidak ada belanja variabel sama sekali)
          forest tipis → ada belanja variabel di bawah ambang
-         ink          → netral: tagihan terjadwal atau belum ada catatan
-         krem         → belum ada aktivitas (hari mendatang tanpa agenda)
+         ink          → netral: tagihan tetap tercatat / belum ada catatan
+         krem         → belum ada catatan apa pun (termasuk hari mendatang)
 
      • Tap satu tanggal → BUBBLE kecil melayang tepat di atas sel (persis
        pola komponen heatmap): tanggal + nominal harinya. Jadi tap selalu
@@ -40,6 +41,10 @@ import {
    ATURAN YANG TETAP DIPEGANG: warna terracotta hanya lahir dari
    `cell.variableSpend` (lihat `calendarTone`), jadi tanggal yang isinya kos
    1,5 juta tidak pernah dihukum merah hanya karena nominalnya besar.
+
+   PAKET 56: grid hanya menggambar uang yang sudah terjadi. Bubble tidak lagi
+   bisa berbunyi "· ramalan", dan legenda kehilangan penanda rencana masa depan —
+   hari mendatang yang kosong tampil netral apa adanya.
    ────────────────────────────────────────────────────────────────────────── */
 
 /** bubble di tepi kiri/kanan digeser masuk supaya tidak terpotong tepi kartu */
@@ -49,7 +54,13 @@ function bubblePlacement(col: number) {
   return { bubble: 'left-1/2 -translate-x-1/2', caret: 'left-1/2 -translate-x-1/2' }
 }
 
-/** satu baris nominal untuk bubble: pemasukan > pengeluaran > ramalan > kosong */
+/**
+ * Satu baris nominal untuk bubble: pemasukan > pengeluaran > kosong.
+ *
+ * PAKET 56: tidak ada cabang "ramalan" lagi. Bubble hanya boleh mengucapkan
+ * angka yang benar-benar tercatat di hari itu; kalau tidak ada, ia bilang apa
+ * adanya — bukan menaksir tagihan yang belum dibayar.
+ */
 function cellSummary(cell: CalendarCell, masked: boolean) {
   if (cell.income > 0) {
     return { text: `+${maskMoney(cell.income, masked)}`, className: 'text-mint' }
@@ -57,13 +68,7 @@ function cellSummary(cell: CalendarCell, masked: boolean) {
   if (cell.totalSpend > 0) {
     return { text: `−${maskMoney(cell.totalSpend, masked)}`, className: 'text-cream/75' }
   }
-  const forecast = cell.forecast
-    .filter((entry) => entry.type !== 'income')
-    .reduce((sum, entry) => sum + entry.amount, 0)
-  if (forecast > 0) {
-    return { text: `${maskMoney(forecast, masked)} · ramalan`, className: 'text-cream/60' }
-  }
-  return { text: 'Belum ada catatan', className: 'text-cream/60' }
+  return { text: CALENDAR_DAY_COPY.bubbleEmpty, className: 'text-cream/60' }
 }
 
 

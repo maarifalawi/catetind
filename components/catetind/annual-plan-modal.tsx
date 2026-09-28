@@ -12,6 +12,7 @@ import {
   type AnnualPlanId,
 } from '@/lib/data/pricing'
 import { PaymentLogoRow } from './payment-method-logos'
+import { DEMO_MODE } from '@/lib/demo'
 
 /* ── modal paket tahunan (Annual Subscription) ─────────────────────────────────
    Conversion booster yang dipakai di sini:
@@ -32,9 +33,10 @@ const FOMO_RULES = Object.fromEntries(
 const HERO_PLAN = ANNUAL_PLANS.find((plan) => plan.hero) ?? ANNUAL_PLANS[0]
 const CATET_AJA_PLAN = ANNUAL_PLANS.find((plan) => plan.id === 'catet-aja')
 
-/* paksa tampil buat review desain — set false untuk produksi: baris selisih
-   HANYA muncul kalau paket aktif user memang 'Paket Catet Aja' */
-const DEMO_SHOW_UPGRADE_DIFF = true
+/* paksa tampil buat review desain — perilaku produksi: baris selisih HANYA
+   muncul kalau paket aktif user memang 'Paket Catet Aja'. Saklarnya sekarang
+   ikut `NEXT_PUBLIC_DEMO` (paket 42), bukan `true` keras yang ikut ter-ship. */
+const DEMO_SHOW_UPGRADE_DIFF = DEMO_MODE
 
 /** kuota early bird: sisa slot mulai 124 dari total 5.000 */
 const EARLY_BIRD_TOTAL = 5_000

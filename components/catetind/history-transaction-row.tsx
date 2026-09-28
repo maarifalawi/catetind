@@ -10,6 +10,7 @@ import {
   resolveCategoryLabel,
   type HistoryTransaction,
 } from '@/lib/data/history'
+import { UNKNOWN_CONTEXT_COPY } from '@/lib/data/money-context'
 import { cn } from '@/lib/utils'
 
 /* ── Baris transaksi dengan aksi geser (tabel gesture PRD Domain 3D) ─────────
@@ -60,6 +61,7 @@ export function HistoryTransactionRow({
   masked,
   delay = 0,
   showWallet = true,
+  unknownContext = false,
   onOpen,
   onEdit,
   onDelete,
@@ -75,6 +77,13 @@ export function HistoryTransactionRow({
    * isinya dompet yang sama, nama itu cuma jadi kebisingan berulang.
    */
   showWallet?: boolean
+  /**
+   * true = dompet baris ini belum ada di daftar dompet, jadi konteks uangnya
+   * tidak bisa dipastikan (paket 47). Baris seperti ini sengaja TETAP tampil di
+   * semua konteks (kanon #2) — penandanya yang membuatnya jujur, bukan
+   * disembunyikan.
+   */
+  unknownContext?: boolean
   onOpen: (tx: HistoryTransaction) => void
   onEdit: (tx: HistoryTransaction) => void
   onDelete: (tx: HistoryTransaction) => void
@@ -180,7 +189,9 @@ export function HistoryTransactionRow({
           onPointerUp={settle}
           onPointerCancel={settle}
           onClick={onClick}
-          aria-label={`${tx.name}, ${category}, ${label}${moves ? ' (pindah dana)' : ''}. Geser kanan untuk edit, kiri untuk hapus, atau buka menu aksi.`}
+          aria-label={`${tx.name}, ${category}, ${label}${moves ? ' (pindah dana)' : ''}${
+            unknownContext ? ' (belum berkonteks)' : ''
+          }. Geser kanan untuk edit, kiri untuk hapus, atau buka menu aksi.`}
           className="flex min-w-0 flex-1 items-center gap-3 py-3 pl-1 pr-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-forest/20"
         >
           {/* lingkaran emoji kategori — tanpa ring, cukup tona sage lembut */}
@@ -200,6 +211,16 @@ export function HistoryTransactionRow({
                   strokeWidth={2.4}
                   aria-label="Nama dibuat AI"
                 />
+              )}
+              {/* penanda konteks tak dikenal (paket 47) — barisnya tetap tampil,
+                  labelnya yang membuat user tahu kenapa ia ada di konteks ini */}
+              {unknownContext && (
+                <span
+                  title={UNKNOWN_CONTEXT_COPY.hint}
+                  className="shrink-0 rounded-full bg-cream px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-ink/50 ring-1 ring-soil/12"
+                >
+                  {UNKNOWN_CONTEXT_COPY.badge}
+                </span>
               )}
             </span>
             {/* meta: dompet · jam · kategori, lalu penanda "pindah dana" dalam

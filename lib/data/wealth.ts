@@ -1,4 +1,5 @@
-import { formatIDR, walletAccountsTotal } from '../wallets'
+import { formatIDR } from '../wallets'
+import type { BudgetScope } from './budget'
 
 /** satu pintu impor untuk halaman Kekayaan & Hutang: komponennya cukup ambil dari sini */
 export { formatIDR }
@@ -104,6 +105,16 @@ export interface Investment {
   lastUpdate: string
   /** dari backend `asset_price_cache.is_stale` (fallback protocol 2E.1) */
   isStale?: boolean
+  /**
+   * Konteks uang aset ini (paket 47) — Pribadi / Keluarga / Bersama.
+   *
+   * Model ini sebelumnya tidak punya konteks sama sekali, sehingga memilih
+   * "Keluarga" di header halaman Kekayaan tidak mengubah daftarnya. Halaman
+   * Kekayaan menyaring daftar tab dengan kolom ini, sementara Net Worth
+   * (Tug-of-War bar) tetap menghitung SEMUA aset & hutang — konteks menyaring
+   * daftar, bukan total (kanon paket 47).
+   */
+  scope: BudgetScope
 }
 
 /**
@@ -133,6 +144,12 @@ export interface Debt {
   interestRate?: number
   /** jatuh tempo tiap bulan, tanggal 1–31 */
   dueDate?: number
+  /**
+   * Konteks uang hutang/piutang ini (paket 47) — Pribadi / Keluarga / Bersama.
+   * Dipakai halaman Kekayaan untuk menyaring tab Hutang; Net Worth tetap
+   * menghitung seluruh hutang & piutang (kanon paket 47).
+   */
+  scope: BudgetScope
 }
 
 /** satu baris riwayat beli/jual sebuah aset (mock; nanti investment_transactions) */
@@ -156,13 +173,15 @@ export interface AssetTransaction {
  * Satu baris pembayaran hutang (mock; di produksi = tabel `debt_payments`
  * dengan kolom debt_id, amount, payment_date, wallet_id).
  *
- * `walletName` menyimpan NAMA dompet, bukan id — itulah yang ditampilkan di
- * riwayat, dan baris lama tetap jujur menyebut dompet yang dipakai saat itu
- * meskipun daftar dompetnya berubah.
+ * `walletName` menyimpan NAMA dompet (pajangan riwayat), dan sejak paket 41
+ * barisnya juga menyimpan `walletId` — id dompet KANON yang benar-benar
+ * didebit/dikredit di ledger. Sebelumnya hanya nama yang ada, sehingga tidak
+ * ada cara memastikan uangnya keluar dari dompet mana (temuan audit #1).
  */
 export interface DebtPayment {
   id: string
   debtId: string
+  /** nominal yang benar-benar MENGHAPUS kewajiban/hak (pokok yang terlunasi) */
   amount: number
   /**
    * ISO. Pembayaran dari mock punya jam (jejak sistem), sedangkan pembayaran
@@ -173,6 +192,14 @@ export interface DebtPayment {
    */
   paidAtISO: string
   walletName: string
+  /** id dompet kanon (`bca`, `gopay`, …) — kunci baris ledger yang ditulis */
+  walletId: string
+  /** arah uang: `debt` = aku bayar hutangku, `receivable` = aku terima pelunasan piutang */
+  kind: 'debt' | 'receivable'
+  /** uang yang benar-benar berpindah tangan (bisa > `amount` kalau ada kembalian) */
+  cashMoved?: number
+  /** kembalian > 0 = user menyerahkan/menerima lebih dari sisa catatannya */
+  changeAmount?: number
 }
 
 /** potongan donut alokasi aset */
@@ -284,6 +311,7 @@ export const INITIAL_INVESTMENTS: Investment[] = [
     totalInvested: 6_322_814,
     currentValue: 6_548_630,
     lastUpdate: '2026-09-25T15:00:00Z',
+    scope: 'pribadi',
   },
   {
     id: '2',
@@ -296,6 +324,7 @@ export const INITIAL_INVESTMENTS: Investment[] = [
     totalInvested: 4_625_000,
     currentValue: 4_937_500,
     lastUpdate: '2026-09-25T15:30:00Z',
+    scope: 'pribadi',
   },
   {
     id: '3',
@@ -310,6 +339,7 @@ export const INITIAL_INVESTMENTS: Investment[] = [
     /* 3 jam 15 menit sebelum WEALTH_NOW_ISO → sengaja BASI (> 10 menit) supaya
        banner amber + tombol "Update Manual" (Section 5D) kelihatan hidup */
     lastUpdate: '2026-09-25T20:25:00Z',
+    scope: 'pribadi',
   },
   {
     id: '4',
@@ -322,6 +352,9 @@ export const INITIAL_INVESTMENTS: Investment[] = [
     totalInvested: 2_200_000,
     currentValue: 2_370_000,
     lastUpdate: '2026-09-25T09:00:00Z',
+    /* emas simpanan keluarga → konteks Keluarga. Sengaja BUKAN semua 'pribadi':
+       konteks yang tidak punya isi akan menyembunyikan bug penyaring (paket 47). */
+    scope: 'keluarga',
   },
 ]
 
@@ -342,6 +375,7 @@ export const INITIAL_DEBTS: Debt[] = [
     interestRate: 2.95,
     dueDate: 10,
     status: 'active',
+    scope: 'pribadi',
   },
   {
     id: '2',
@@ -355,6 +389,7 @@ export const INITIAL_DEBTS: Debt[] = [
     interestRate: 2.5,
     dueDate: 25,
     status: 'active',
+    scope: 'pribadi',
   },
   {
     id: '3',
@@ -365,6 +400,9 @@ export const INITIAL_DEBTS: Debt[] = [
     remaining: 200_000,
     notes: 'Makan siang kemarin',
     status: 'active',
+    /* patungan makan bareng → konteks Bersama. Halaman Joint juga memakai
+       konteks 'bersama', jadi keduanya bercerita sama (paket 47). */
+    scope: 'bersama',
   },
   {
     id: '4',
@@ -375,6 +413,7 @@ export const INITIAL_DEBTS: Debt[] = [
     remaining: 150_000,
     notes: 'Nonton bioskop',
     status: 'active',
+    scope: 'keluarga',
   },
   {
     id: '5',
@@ -385,6 +424,7 @@ export const INITIAL_DEBTS: Debt[] = [
     remaining: 0,
     notes: 'Dana darurat',
     status: 'settled',
+    scope: 'pribadi',
   },
 ]
 
@@ -397,6 +437,12 @@ export const INITIAL_DEBTS: Debt[] = [
      Kredivo   : 3.000.000 − 2.500.000 =   500.000 → 1 baris
      SPayLater : 1.500.000 −   750.000 =   750.000 → 2 baris (520.000 + 230.000)
 
+   Setiap baris menyebut `walletId` dompet kanon yang benar-benar dipakai
+   (`bca`, `gopay`, `tunai` — ketiganya ada di WALLET_SEED). Sebelum paket 41,
+   baris ketiga menyebut "OVO": dompet yang TIDAK ada di ledger, sehingga pilihan
+   itu mustahil mendebit saldo mana pun. Sekarang mock-nya jujur: yang dipakai
+   memang dompet yang ada.
+
    Di produksi tabel ini (`debt_payments`) yang jadi sumber kebenaran, dan
    `remaining` dihitung `pokok − SUM(payments)` (PRD 2E.2 auto-calculate). */
 export const INITIAL_DEBT_PAYMENTS: DebtPayment[] = [
@@ -406,6 +452,8 @@ export const INITIAL_DEBT_PAYMENTS: DebtPayment[] = [
     amount: 520_000,
     paidAtISO: '2026-09-25T01:05:00Z',
     walletName: 'GoPay',
+    walletId: 'gopay',
+    kind: 'debt',
   },
   {
     id: 'pay-2',
@@ -413,13 +461,17 @@ export const INITIAL_DEBT_PAYMENTS: DebtPayment[] = [
     amount: 500_000,
     paidAtISO: '2026-08-10T02:15:00Z',
     walletName: 'BCA',
+    walletId: 'bca',
+    kind: 'debt',
   },
   {
     id: 'pay-3',
     debtId: '2',
     amount: 230_000,
     paidAtISO: '2026-08-25T13:20:00Z',
-    walletName: 'OVO',
+    walletName: 'Tunai',
+    walletId: 'tunai',
+    kind: 'debt',
   },
 ]
 
@@ -675,11 +727,22 @@ export function estimatedInterest(debt: Debt): number {
  * Urutan inilah "permainannya" — user diajak menghabisi hutang terkecil dulu
  * supaya cepat dapat kemenangan pertama, lalu momentumnya dipakai ke hutang
  * berikutnya (metode bola salju Dave Ramsey).
+ *
+ * `keepId` (paket 50) menahan SATU hutang yang BARU SAJA lunas tetap digambar
+ * sebentar. Sejak pelunasan ditulis ke store, status `settled` berlaku seketika
+ * — tanpa penahan ini, bar yang mencair + confetti (signature halaman ini)
+ * hilang sebelum sempat terlihat. Halaman Kekayaan mengirim `celebrateId`
+ * selama animasinya berjalan; daftar hutangnya sendiri tetap dibaca dari store,
+ * jadi tidak ada salinan data di komponen.
  */
-export function snowballRows(debts: Debt[]): SnowballRow[] {
+export function snowballRows(debts: Debt[], keepId?: string | null): SnowballRow[] {
   const active = platformDebts(debts)
-  const maxPrincipal = active.reduce((max, debt) => Math.max(max, debt.principal), 0)
-  return [...active]
+  const kept = keepId ? debts.find((debt) => debt.id === keepId && debt.type === 'platform') : undefined
+  const rows = kept && !active.some((debt) => debt.id === kept.id) ? [...active, kept] : active
+  /* lebar relatif dihitung dari SELURUH bar yang digambar (termasuk bar yang
+     mencair) supaya lebar bar tidak melompat saat pelunasan dicatat */
+  const maxPrincipal = rows.reduce((max, debt) => Math.max(max, debt.principal), 0)
+  return [...rows]
     .sort((a, b) => a.remaining - b.remaining)
     .map((debt) => {
       const paidPct = debtPaidPct(debt)
@@ -708,27 +771,38 @@ export function allDebtsSettled(debts: Debt[]): boolean {
   return mine.length > 0 && mine.every((debt) => debt.status === 'settled')
 }
 
-/* ── KAS LIKUID + NILAI ASET TOTAL (audit fintech #1) ──────────────────────── */
-
-/**
- * Kas likuid user = jumlah saldo SELURUH dompet (BCA, GoPay, Tunai) di halaman
- * Dompet & Akun. Membaca `INITIAL_WALLET_ACCOUNTS` (lib/wallets.ts) — sumber
- * yang sama dengan halaman Dompet, jadi dua halaman itu mustahil menampilkan
- * angka kas yang berbeda.
- */
-export function liquidCashTotal(): number {
-  return walletAccountsTotal()
-}
+/* ── NILAI ASET TOTAL (audit fintech #1) ──────────────────────────────────── */
 
 /**
  * Sisi ASET pada Net Worth: KAS LIKUID + TOTAL NILAI PORTOFOLIO INVESTASI.
  *
- * Inilah nilai yang wajib masuk bar Tug-of-War. Sebelum audit fintech #1, bar
- * ini hanya memakai `totalPortfolioValue()` sehingga uang di rekening/e-wallet
- * (yang notabene aset paling likuid) tidak pernah dihitung.
+ * KAS LIKUID datang sebagai ARGUMEN (paket 40), bukan dibaca dari konstanta di
+ * sini: satu-satunya sumber saldo dompet adalah store (`lib/money/store.ts`),
+ * dan halaman Kekayaan membacanya lewat `cashTotal(snapshot)`. Sebelumnya
+ * fungsi `liquidCashTotal()` di file ini membaca konstanta, sehingga Net Worth
+ * tidak pernah ikut berubah saat user mengoreksi saldo di halaman Dompet —
+ * dan angkanya bisa berbeda dari "Total Saldo" di Home (audit #1 & #3).
+ *
+ * Sebelum audit fintech #1, sisi aset hanya memakai `totalPortfolioValue()`
+ * sehingga uang di rekening/e-wallet (yang notabene aset paling likuid) tidak
+ * pernah dihitung.
+ *
+ * Paket 41 menambah potongan KETIGA: PIUTANG (`receivables`) — uang kita yang
+ * masih dipegang orang lain. Nilainya datang dari catatan hutang/piutang
+ * (`activeReceivableTotal`), bukan dari ledger kas, karena uangnya memang belum
+ * ada di dompet mana pun.
  */
-export function totalAssetValue(list: Investment[]): number {
-  return liquidCashTotal() + totalPortfolioValue(list)
+export function totalAssetValue(
+  list: Investment[],
+  liquidCash: number,
+  receivables = 0,
+): number {
+  return netWorthParts({
+    cash: liquidCash,
+    investments: totalPortfolioValue(list),
+    receivables,
+    debts: 0,
+  }).assets
 }
 
 /* ── TUG-OF-WAR (Section 3) ───────────────────────────────────────────────── */
@@ -874,20 +948,45 @@ export const RDN_ACCOUNTS = [
   'Lainnya',
 ] as const
 
-export const WALLET_SOURCE_OPTIONS: { id: string; label: string }[] = [
-  { id: 'bca', label: 'BCA' },
-  { id: 'gopay', label: 'GoPay' },
-  { id: 'ovo', label: 'OVO' },
-  { id: 'tunai', label: 'Tunai' },
-]
+/* ── NET WORTH: SATU DEFINISI UNTUK SELURUH HALAMAN (paket 41) ───────────────
+   Rumus ini dulu hidup di dalam komponen bar (`assets = cash + investments`),
+   jadi piutang tidak pernah bisa masuk tanpa mengubah komponennya juga. Sekarang
+   definisinya satu tempat dan diuji:
 
-/**
- * Nama dompet dari id pill di sheet "Catat Bayar" — dipakai saat menyimpan
- * pembayaran (`debt_payments.wallet_id` → `walletName` di riwayat), jadi riwayat
- * menyebut nama yang sama dengan yang dipilih user, bukan id mentah.
- */
-export function walletSourceLabel(id: string): string {
-  return WALLET_SOURCE_OPTIONS.find((option) => option.id === id)?.label ?? id
+     Aset      = kas likuid + investasi + PIUTANG (uang kita yang ada di orang lain)
+     Net Worth = Aset − hutang aktif
+
+   Piutang masuk sisi ASET (audit fintech #2): sebelumnya `activeReceivableTotal()`
+   ada tapi cuma dipajang di tab "Piutangku", sehingga orang yang meminjamkan
+   Rp 500.000 terlihat lebih miskin Rp 500.000 di Net Worth.
+
+   Komponennya TIDAK menerima satu angka jadi dari luar: ia menerima potongannya
+   (`cash`, `investments`, `receivables`, `debts`) lalu menjumlahkan SENDIRI lewat
+   fungsi ini, supaya mustahil ada halaman yang memakai definisi berbeda. */
+export interface NetWorthParts {
+  cash: number
+  investments: number
+  receivables: number
+  debts: number
+  assets: number
+  netWorth: number
+}
+
+export function netWorthParts(input: {
+  cash: number
+  investments: number
+  receivables: number
+  debts: number
+}): NetWorthParts {
+  const assets = input.cash + input.investments + input.receivables
+  return {
+    cash: input.cash,
+    investments: input.investments,
+    receivables: input.receivables,
+    debts: input.debts,
+    assets,
+    netWorth: assets - input.debts,
+  }
 }
 
 /* ── COPY TETAP (Section 7E & 8) ───────────────────────────────────────────── */
