@@ -189,6 +189,13 @@ Ikuti format `docs/handoff/laporan/47..56-*-laporan.md`. Minimal berisi:
 - ❌ Mengubah `CONTEXT-WAJIB` §10.1 tanpa menulis alasan + dasar hitungan.
 - ❌ Membuat test lama hijau dengan cara dihapus/di-`.skip`.
 - ❌ Menghapus penyensoran privasi demi merapikan tata letak.
+- ❌ **Menjalankan perintah git yang mengubah working tree**: `stash`, `checkout`, `restore`,
+  `reset`, `clean`, `commit`, `switch`. Alasannya bukan soal gaya: saat audit (28 Sep 2026)
+  `git log` menunjukkan HEAD baru di **10 commit** sementara `git status --short` menunjukkan
+  **220 perubahan belum di-commit** — kerja paket 43–56 hidup di working tree
+  (`CONTEXT-WAJIB` §10.4). Satu `git checkout .` menghapus semuanya tanpa jejak, dan bukti
+  "sebelum → sesudah" paket ini ikut hilang. Commit snapshot adalah keputusan pemilik repo,
+  bukan tugas agen.
 
 ## 8. Indeks temuan tambahan (belum masuk keluhan asli — WAJIB ditangani di paket yang disebut)
 

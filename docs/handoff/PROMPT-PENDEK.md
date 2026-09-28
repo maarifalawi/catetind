@@ -404,3 +404,65 @@ Kalau ada ambiguitas: ambil keputusan paling konservatif, tulis asumsimu di lapo
 ```
 
 
+
+---
+
+## 10. FASE 14 — audit uang & kejujuran tampilan (28 Sep 2026)
+
+Sumber temuan: `docs/handoff/AUDIT-UANG-2026-09.md` (kontrak paket 57–62 — baca dulu; di situ ada
+4 akar masalah lengkap dengan `file:line`, aturan uang & hapus, larangan, dan format bukti yang
+wajib). Pemicunya keluhan langsung pemilik produk: kartu masih menampilkan angka contoh setelah
+data dikosongkan, "Jatah Hari Ini" tidak bergerak saat ada pengeluaran, tanggal tidak realtime,
+dan sebagian data sah untuk dihapus tapi belum punya pintunya.
+
+**Urutan wajib: 57 → (58, 59) → 60 → 61 → 62.** 57 adalah PAGAR: selama belum ada satu
+`todayISO()` dan satu konfigurasi uang user, paket lain hanya akan menambal tampilan tanpa
+membereskan akarnya. 58 & 59 tidak saling bergantung (laporan tetap dipisah); 60 memakai hasil 57
+(periode & pemasukan yang nyata); 61 & 62 menutup jalur hapus yang belum punya pintunya.
+
+| # | Paket | File prompt | Menutup apa |
+|---|---|---|---|
+| 57 | Fondasi: satu "hari ini" + konfigurasi uang user + Jatah Harian turunan | `57-fondasi-waktu-konfigurasi-uang.md` | AKAR B/C/D — 5 jangkar tanggal berbeda; `monthlyIncome` onboarding nol pemakai; `SPENT_TODAY`/`SPENT_THIS_MONTH` konstanta |
+| 58 | Home: satu sumber + empty state jujur + layout padat | `58-home-satu-sumber-layout-padat.md` | AKAR A di Home — Distribusi Pengeluaran hardcode Rp 3.150.000, `MOCK {hp:82, activeDays:21}`, `HOME_MONEY_*`, riwayat tanpa batas 7 hari, Jatah Harian boros ruang |
+| 59 | Riwayat & Dompet: kalibrasi nyata, hapus semua, scoping, sensor rapi | `59-riwayat-dompet-jujur-privasi.md` | `TOTAL_TRANSACTIONS=24` / `HEALTH_SCORE=72`; tak ada tombol hapus semua; `wallet-detail` match by NAME; bug konteks "Bersama"→"Tunai"; sensor menggeser tata letak |
+| 60 | Budget & Target Nabung, Tagihan, Kalender | `60-budget-tagihan-kalender.md` | Budget tak bisa dihapus (`applyBudgetSave` cuma create/edit); celengan tak bisa dihapus; "Pin ke Dashboard" palsu; strip 7 hari mulai 25 Sep; aksi bayar hanya lewat swipe; kalender tak realtime |
+| 61 | Kekayaan & Hutang + Joint | `61-kekayaan-hutang-joint.md` | `deleteDebt`/`editDebt` ada & teruji tapi UI nol; "Catat Bayar" tersembunyi di kartu; `/joint` tak punya fungsi hapus & kantong baru berisi seed |
+| 62 | Hapus data di semua jalur | `62-hapus-data-semua-jalur.md` | Dompet (API hapus ada, UI nol pemanggil); matriks kelola data; hapus akun & ekspor ikut membersihkan state baru |
+
+Salin-tempel satu per satu (sesuaikan nomornya) — **satu paket per task**:
+
+```text
+57. Baca docs/handoff/CONTEXT-WAJIB.md dan docs/handoff/AUDIT-UANG-2026-09.md, lalu kerjakan docs/handoff/prompts/57-fondasi-waktu-konfigurasi-uang.md sampai tuntas — implementasi penuh, bukan rencana. Jalankan validasi di bagian akhir prompt itu (pnpm test, pnpm exec tsc --noEmit, pnpm build, pnpm theme:audit) dan laporkan hasilnya apa adanya.
+```
+```text
+58. Baca docs/handoff/CONTEXT-WAJIB.md dan docs/handoff/AUDIT-UANG-2026-09.md, lalu kerjakan docs/handoff/prompts/58-home-satu-sumber-layout-padat.md sampai tuntas — implementasi penuh, bukan rencana. Jalankan validasi di bagian akhir prompt itu dan laporkan hasilnya apa adanya.
+```
+```text
+59. Baca docs/handoff/CONTEXT-WAJIB.md dan docs/handoff/AUDIT-UANG-2026-09.md, lalu kerjakan docs/handoff/prompts/59-riwayat-dompet-jujur-privasi.md sampai tuntas — implementasi penuh, bukan rencana. Jalankan validasi di bagian akhir prompt itu dan laporkan hasilnya apa adanya.
+```
+```text
+60. Baca docs/handoff/CONTEXT-WAJIB.md dan docs/handoff/AUDIT-UANG-2026-09.md, lalu kerjakan docs/handoff/prompts/60-budget-tagihan-kalender.md sampai tuntas — implementasi penuh, bukan rencana. Jalankan validasi di bagian akhir prompt itu dan laporkan hasilnya apa adanya.
+```
+```text
+61. Baca docs/handoff/CONTEXT-WAJIB.md dan docs/handoff/AUDIT-UANG-2026-09.md, lalu kerjakan docs/handoff/prompts/61-kekayaan-hutang-joint.md sampai tuntas — implementasi penuh, bukan rencana. Jalankan validasi di bagian akhir prompt itu dan laporkan hasilnya apa adanya.
+```
+```text
+62. Baca docs/handoff/CONTEXT-WAJIB.md dan docs/handoff/AUDIT-UANG-2026-09.md, lalu kerjakan docs/handoff/prompts/62-hapus-data-semua-jalur.md sampai tuntas — implementasi penuh, bukan rencana. Jalankan validasi di bagian akhir prompt itu dan laporkan hasilnya apa adanya.
+```
+
+**Baris tambahan "mode ketat"** (tempel sebagai baris kedua untuk SEMUA paket 57–62 — semuanya
+menyentuh data uang dan working tree ini belum di-commit):
+
+```text
+Kalau ada ambiguitas: ambil keputusan paling konservatif, tulis asumsimu di laporan, lanjutkan — JANGAN berhenti untuk minta izin. JANGAN menjalankan perintah git apa pun (stash/checkout/reset/clean/commit) — working tree ini berisi perubahan yang belum di-commit dan tidak boleh hilang. Bukti yang wajib kau tunjukkan: (a) daftar file yang dibuat/diubah, (b) angka sebelum & sesudah untuk setiap angka yang berubah, (c) output 4 perintah validasi.
+```
+
+**Dua angka basi yang wajib dikoreksi di dokumen repo (ditemukan saat audit 28 Sep 2026):**
+
+- `CONTEXT-WAJIB.md` §10.3 masih menulis "319 test / 24 file" → hasil ukur nyata `pnpm test` =
+  **511 test / 34 file**. Perbarui di paket 57 (lihat 57.5).
+- `CONTEXT-WAJIB.md` §10.1 masih mengikat `DAILY_HUD` "tidak bergeser". Paket 57 mengubah cara
+  angkanya dihitung (konstanta → turunan data user), jadi §10.1 **wajib** diperbarui dengan dasar
+  hitungannya. Saldo kanon Rp 1.850.000 tetap tidak boleh berubah.
+
+
