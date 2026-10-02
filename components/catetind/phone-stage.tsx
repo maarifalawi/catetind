@@ -20,8 +20,15 @@ export function PhoneStage({
   /** true = tanpa watermark wordmark (dipakai onboarding) */
   plain?: boolean
 }) {
+  /* `min-h-[100dvh]` SENGAJA dilepas: dulu panggung ini selalu setinggi layar,
+     sehingga halaman pendek ditarik penuh dan menyisakan ruang kosong panjang
+     di bawah (terlihat di semua halaman). Kini panggung mengikuti tinggi
+     isinya — latar tetap putih (`bg-canvas`, sama dengan `--background` body),
+     jadi tidak ada perubahan warna, hanya ruang kosong ekstra yang hilang.
+     Halaman yang memang butuh tinggi penuh (welcome, login) mengaturnya
+     sendiri. */
   return (
-    <main className="relative min-h-[100dvh] w-full bg-canvas">
+    <main className="relative w-full bg-canvas">
       {/* giant background wordmark — versi gambar: lebar relatif (vw) + opasitas
           sangat rendah supaya tetap terasa seperti watermark, bukan logo */}
       {!plain && (
