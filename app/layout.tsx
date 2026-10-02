@@ -62,14 +62,16 @@ export const viewport: Viewport = {
   themeColor: '#ffffff',
   userScalable: false,
   /* ── KEYBOARD VIRTUAL DI MOBILE (paket 64) ────────────────────────────────
-     `interactive-widget=resizes-content` = saat keyboard HP terbuka, VIEWPORT
-     LAYOUT benar-benar menyusut (bukan cuma area visual). Efeknya `100dvh`/`dvh`
-     ikut mengecil sehingga bottom sheet form (registrasi di /checkout, sheet
-     tambah lain) tetap muat & isinya bisa digulir DI ATAS keyboard — bukan
-     tertutup separuh seperti perilaku bawaan `resizes-visual`.
+     `interactive-widget=resizes-content` membuat CHROME ANDROID benar-benar
+     menyusutkan viewport saat keyboard terbuka.
 
-     Catat: ini bekerja BERDUAAN dengan `min-h-[100dvh]`/`max-h-[92dvh]` di
-     komponen. Unit `dvh` mengikuti viewport dinamis; `100vh` statis tidak. */
+     Penting: iOS Safari MENGABAIKAN atribut ini — di sana keyboard hanya
+     mengubah *visual viewport*, dan justru itu yang dulu membuat bottom sheet
+     "melayang". Karena itu fix sesungguhnya TIDAK bergantung pada baris ini:
+     `useSheetViewportCage` + `[data-catetind-sheet-cage]` (lihat
+     hooks/use-sheet-viewport-cage.ts & app/globals.css) menyematkan sheet ke
+     visual viewport mana pun. Baris ini dipertahankan karena di Android ia
+     membuat latar ikut menyusut, sehingga tidak perlu dua mekanisme berbeda. */
   interactiveWidget: 'resizes-content',
 }
 
@@ -111,21 +113,34 @@ export default function RootLayout({
                   layar kunci. Dulu toggle PIN di Pengaturan cuma `useState`
                   yang tidak dibaca siapa pun. */}
               <AppLockProvider>
-                <SubscriptionBanner />
-                {/* Banner Offline & Antrean Lokal (paket 42) — di bawah banner
-                    langganan supaya saat keduanya tampil user melihat dua-duanya.
-                    Menyembunyikan diri sendiri kalau online & antrean kosong. */}
-                <OfflineBanner />
-                {children}
-                <MobileBottomNav />
-                {/* Toast non-blocking (sonner, gaya unstyled khas CatetInd) — dipicu
-                    setelah bottom sheet ditutup, tanpa modal sukses yang blocking */}
+                {/* ── WRAPPER LATAR APLIKASI (`data-catetind-page-root`) ──────
+                    Selagi bottom sheet terbuka, wrapper ini diberi `inert` +
+                    `pointer-events: none` oleh `useSheetBackgroundIsolation`
+                    (hooks/use-sheet-viewport-cage.ts) supaya seluruh halaman,
+                    navigasi, banner, dan tombol mengapung di belakangnya
+                    benar-benar mati — tidak ada elemen sticky/fixed latar (mis.
+                    CTA "Daftar & mulai" di /checkout) yang ikut bergeser dan
+                    bocor saat keyboard HP terbuka. Vaul merender sheet-nya lewat
+                    PORTAL ke <body>, jadi sheet ada DI LUAR wrapper ini dan
+                    tetap interaktif. */}
+                <div data-catetind-page-root>
+                  <SubscriptionBanner />
+                  {/* Banner Offline & Antrean Lokal (paket 42) — di bawah banner
+                      langganan supaya saat keduanya tampil user melihat dua-duanya.
+                      Menyembunyikan diri sendiri kalau online & antrean kosong. */}
+                  <OfflineBanner />
+                  {children}
+                  <MobileBottomNav />
+                  {/* Floating AI Chat — AI Coach CatetInd (Domain 4B); state percakapan
+                      persisten lintas halaman karena layout tidak unmount saat navigasi */}
+                  <AIChatWidget />
+                </div>
+
+                {/* Toast SENGAJA di luar wrapper inert: notifikasi (mis. "tersalin")
+                    harus tetap bisa diklik walau ada sheet terbuka. */}
                 <Toaster />
                 {/* Toast "Setup selesai!" — sekali jalan tepat setelah onboarding */}
                 <OnboardingWelcomeToast />
-                {/* Floating AI Chat — AI Coach CatetInd (Domain 4B); state percakapan
-                    persisten lintas halaman karena layout tidak unmount saat navigasi */}
-                <AIChatWidget />
               </AppLockProvider>
             </SubscriptionGateProvider>
           </PrivacyProvider>

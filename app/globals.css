@@ -535,6 +535,64 @@
   animation-timing-function: ease-out;
 }
 
+/* ── INPUT FOCUS LIFECYCLE: keyboard virtual × bottom sheet ──────────────────
+   KENAPA INI ADA. Layout sheet `bottom-0` + `max-h-[92dvh]` terlihat benar
+   sampai keyboard HP terbuka. Di iOS Safari, membuka keyboard TIDAK menyusutkan
+   layout viewport (`100vh`/`dvh` tetap) — yang berubah cuma *visual viewport*:
+   tingginya menyusut setinggi keyboard, dan `visualViewport.offsetTop` bergeser
+   karena Safari menggeser visual viewport untuk mengejar input. Akibatnya:
+     • elemen `fixed bottom-0` di latar (CTA "Daftar & mulai" di /checkout)
+       tetap menempel ke layout viewport yang tinggi penuh → bocor menembus sheet;
+     • footer sheet yang diposisikan dari dasar layout viewport ikut terangkat
+       dan mengambang di tengah layar.
+
+   OBATNYA: sebuah KANDANG setinggi visual viewport yang sebenarnya. Kandang ini
+   `position: fixed` + punya `transform` (jadi containing block untuk sheet
+   `fixed` milik Vaul), dan sheet-nya menempel di dasar kandang (`bottom-0`).
+   Tinggi & posisinya ditulis oleh `useSheetViewportCage`
+   (hooks/use-sheet-viewport-cage.ts) dari event `resize` + `scroll`
+   `window.visualViewport`.
+
+   Hasilnya: sheet tidak pernah melewati ruang yang benar-benar terlihat, jadi
+   saat keyboard naik footer otomatis menempel tepat di atas keyboard, dan hanya
+   area isi (`[data-catetind-sheet-body]`, `overflow-y-auto`) yang menyusut. */
+[data-catetind-sheet-cage] {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: var(--catetind-vv-top, 0px);
+  height: var(--catetind-vv-height, 100dvh);
+  z-index: 71;
+  /* hanya sheet di dalamnya yang menerima sentuh/klik */
+  pointer-events: none;
+  /* jadikan containing block supaya sheet `fixed` berhenti di dasar KANDANG,
+     bukan di dasar layout viewport yang tidak ikut menyusut di iOS */
+  transform: translateZ(0);
+}
+
+/* Safe-area bawah tidak relevan saat keyboard terbuka (home indicator tertutup
+   keyboard). Padding footer dikecilkan supaya ia benar-benar menempel di atas
+   keyboard, bukan menyisakan celah ~34px. */
+[data-catetind-sheet-cage][data-keyboard-open='true'] [data-catetind-sheet-footer] {
+  padding-bottom: 0.75rem;
+}
+
+/* Latar aplikasi dibekukan selagi sheet terbuka. `overflow: hidden` menahan
+   gulir latar (lapis jaring pengaman di samping kunci milik Vaul), sedangkan
+   blok kedua melumpuhkan SENTUHAN ke latar — lapis kedua setelah atribut `inert`
+   yang dipasang `useSheetBackgroundIsolation`. Hasilnya tidak ada elemen
+   sticky/fixed latar yang bisa ikut dihitung ulang saat keyboard muncul, dan
+   tidak ada sentuhan yang menembus ke belakang sheet. Sheet sendiri ada DI LUAR
+   wrapper ini: Vaul merendernya lewat portal ke <body>, jadi tetap interaktif. */
+body[data-catetind-sheet-open='true'] {
+  overflow: hidden;
+}
+
+body[data-catetind-sheet-open='true'] [data-catetind-page-root] {
+  pointer-events: none;
+  user-select: none;
+}
+
 /* gelombang suara hangat untuk mode Voice Input (TransactionBottomSheet):
    tiap bar di-scale naik-turun berurutan lewat animation-delay inline */
 @keyframes sound-wave {
