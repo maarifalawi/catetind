@@ -7,10 +7,12 @@ import {
   ArrowUpRight,
   Check,
   ChevronDown,
+  Pencil,
   Plus,
   Receipt,
   ShieldCheck,
   Snowflake,
+  Trash2,
   Wallet,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -31,11 +33,15 @@ import {
   SNOWBALL_EMPTY,
   SNOWBALL_HELP,
   SNOWBALL_TITLE,
+  DTI_UNKNOWN_COPY,
+  DEBT_STATUS_COPY,
+  WEALTH_ROW_ACTION,
   WEALTH_TODAY_ISO,
   activeDebtRemaining,
   activeReceivableTotal,
   allDebtsSettled,
   counterpartyLabel,
+  debtName,
   debtPaid,
   debtPaidPct,
   debtPointsToMe,
@@ -59,6 +65,7 @@ import {
   type SnowballRow,
 } from '@/lib/data/wealth'
 import { CONTEXT_EMPTY_COPY, CONTEXT_LABEL } from '@/lib/data/money-context'
+import { useTodayISO } from '@/lib/use-today-iso'
 import {
   DEBT_CASH_COPY,
   cashDirectionOf,
@@ -98,6 +105,11 @@ import {
    uang keluar (temuan audit #1). Pilihan dompetnya datang dari ledger yang asli
    (`walletOptions`), bukan daftar mock — dulu daftar itu memuat "OVO" yang tidak
    ada di ledger, sehingga memilihnya berarti hutang "lunas" tanpa uang pindah.
+
+   Sejak paket 61 setiap kartu punya BARIS AKSI yang selalu terlihat
+   (`DebtActionRow`): aksi uang, Edit, dan Hapus — bukan lagi aksi yang harus
+   ditebak lewat gestur atau dibuka dengan expand. Yang menulis ke store tetap
+   halaman (`wealth-screen.tsx`), termasuk dialog konfirmasi & jendela Undo.
    ────────────────────────────────────────────────────────────────────────── */
 
 /** lebar area aksi "Catat Bayar" yang tersingkap (px) saat kartu digeser kanan */
@@ -116,6 +128,8 @@ export function WealthHutang({
   walletOptions,
   onAddDebt,
   onPayDebt,
+  onEditDebt,
+  onDeleteDebt,
   emptyContextLine,
 }: {
   debts: Debt[]
@@ -139,6 +153,16 @@ export function WealthHutang({
    */
   onPayDebt: (debt: Debt, amount: number, date: string, walletId: string) => boolean
   /**
+   * Buka sheet EDIT untuk catatan ini (paket 61). Dulu `editDebt()` ada di store
+   * tanpa satu pun tombol, jadi salah ketik = angka salah selamanya.
+   */
+  onEditDebt: (debt: Debt) => void
+  /**
+   * Minta konfirmasi hapus catatan ini (paket 61). Halaman yang memegang dialog
+   * & jendela Undo — komponen ini tidak menghapus apa pun sendiri.
+   */
+  onDeleteDebt: (debt: Debt) => void
+  /**
    * Judul empty state khusus konteks uang (paket 47) — diteruskan halaman
    * Kekayaan HANYA kalau daftar kosong karena penyaring konteks, bukan karena
    * user memang belum punya catatan hutang/piutang.
@@ -154,7 +178,18 @@ export function WealthHutang({
   const progress = snowballProgress(debts)
   const installments = totalMonthInstallments(debts)
   const ratio = dtiRatio(installments, monthlyIncome)
+  /**
+   * true = pemasukan bulanan user sudah diatur (paket 57).
+   *
+   * Kalau belum, `dtiRatio()` bernilai 0 — dan menampilkan "DTI 0% — Sehat"
+   * adalah klaim aman tanpa dasar. Kartunya berpindah ke label "Belum bisa
+   * dihitung" + satu kalimat jalan keluar (`DTI_UNKNOWN_COPY`).
+   */
+  const dtiKnown = monthlyIncome > 0
   const badge = dtiBadge(ratio)
+  const badgeLabel = dtiKnown ? badge.label : DTI_UNKNOWN_COPY.label
+  const badgeCopy = dtiKnown ? badge.copy : DTI_UNKNOWN_COPY.copy
+  const badgePillClass = dtiKnown ? badge.pillClassName : 'bg-sage/40 text-ink/60 ring-soil/12'
   const owed = activeDebtRemaining(debts)
   const receivable = activeReceivableTotal(debts)
   const mine = personalDebts(debts, 'owed_by_me')
@@ -197,9 +232,10 @@ export function WealthHutang({
             receivable={receivable}
             installments={installments}
             ratio={ratio}
-            badgeLabel={badge.label}
-            badgeCopy={badge.copy}
-            badgePillClass={badge.pillClassName}
+            dtiKnown={dtiKnown}
+            badgeLabel={badgeLabel}
+            badgeCopy={badgeCopy}
+            badgePillClass={badgePillClass}
             activeCount={
               view === 'hutangku' ? myPlatform.length + mine.active.length : theirs.active.length
             }
@@ -242,6 +278,8 @@ export function WealthHutang({
                           masked={masked}
                           delay={0.03 * index}
                           onPay={() => setPayTarget(debt)}
+                          onEdit={() => onEditDebt(debt)}
+                          onDelete={() => onDeleteDebt(debt)}
                         />
                       ))}
                     </ul>
@@ -256,6 +294,8 @@ export function WealthHutang({
                   masked={masked}
                   celebrateId={celebrateId}
                   onCash={setPayTarget}
+                  onEdit={onEditDebt}
+                  onDelete={onDeleteDebt}
                 />
 
                 {/* ── 7F: tombol tambah (dual form) ───────────────────── */}
@@ -356,6 +396,7 @@ function SummaryCard({
   receivable,
   installments,
   ratio,
+  dtiKnown,
   badgeLabel,
   badgeCopy,
   badgePillClass,
@@ -367,6 +408,8 @@ function SummaryCard({
   receivable: number
   installments: number
   ratio: number
+  /** false = pemasukan bulanan belum diatur → jangan tampilkan "DTI 0% — Sehat" */
+  dtiKnown: boolean
   badgeLabel: string
   badgeCopy: string
   badgePillClass: string
@@ -416,8 +459,10 @@ function SummaryCard({
                   badgePillClass,
                 )}
               >
-                DTI {ratio}% — {badgeLabel}
-                {ratio <= 30 ? ' 💚' : ratio <= 40 ? ' 🌤️' : ' 🫂'}
+                {/* saat pemasukan belum diatur: TANPA angka DTI — 0% terbaca
+                    "sehat" padahal pembaginya memang belum ada (paket 57) */}
+                {dtiKnown ? `DTI ${ratio}% — ${badgeLabel}` : badgeLabel}
+                {dtiKnown && (ratio <= 30 ? ' 💚' : ratio <= 40 ? ' 🌤️' : ' 🫂')}
               </span>
             </div>
 
@@ -741,12 +786,94 @@ function ConfettiBurst() {
    Geser KANAN → tombol sage "Catat Bayar" (aksi utama, seperti geser-kanan
    menandai lunas di halaman Tagihan). Tap → detail perhitungan otomatis:
    sisa pokok, sudah dibayar, estimasi total bunga, dan riwayat pembayaran. */
+/* ── BARIS AKSI KARTU HUTANG — SELALU TERLIHAT (paket 61.1) ─────────────────
+   Sebelum paket 61 aksi di halaman ini hidup di tempat yang tidak terlihat
+   sebelum dicoba: "Catat Bayar" tersembunyi di dalam panel yang harus
+   di-expand, plus versi geseran kanan yang cuma muncul kalau user menebak ada
+   gestur — padahal aksi inilah alasan halaman ini ada. Sekarang satu baris
+   tombol selalu tampil di SETIAP kartu (platform & personal), tinggi 40 px
+   supaya masuk zona jempol di 375 px:
+
+     [ Catat Bayar / Diterima ]   [ Edit ]   [ Hapus ]
+
+   Catatan yang sudah lunas tidak menawarkan aksi uang (tidak ada yang perlu
+   dibayar) — gantinya stempel LUNAS — tapi Edit & Hapus tetap ada, karena
+   dua-duanya masih berguna untuk catatan yang sudah lunas (salah ketik, dan
+   catatan yang sudah tidak dipakai).
+
+   Komponen ini MURNI tampilan: tidak ada state, tidak ada tulisan ke store.
+   Halaman (`wealth-screen.tsx`) yang memutuskan apa yang terjadi — begitu juga
+   dialog konfirmasi & jendela Undo-nya. */
+function DebtActionRow({
+  name,
+  payLabel,
+  settled = false,
+  onPay,
+  onEdit,
+  onDelete,
+}: {
+  /** nama catatan — dipakai di `aria-label` supaya tombol ikonnya tidak ambigu */
+  name: string
+  /** label aksi uang; kosong = kartu ini tidak punya aksi uang */
+  payLabel?: string
+  /** true = catatan sudah lunas → stempel, bukan tombol bayar */
+  settled?: boolean
+  onPay?: () => void
+  onEdit: () => void
+  onDelete: () => void
+}) {
+  const pay = payLabel !== undefined && onPay !== undefined
+
+  return (
+    <div className="mt-3 flex w-full items-stretch gap-2">
+      {pay ? (
+        <button
+          type="button"
+          onClick={onPay}
+          className="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-2xl bg-hud-sage px-3 text-[12px] font-bold text-[#000000] transition-colors hover:brightness-105 active:scale-[0.98]"
+        >
+          <Wallet className="size-3.5 shrink-0" strokeWidth={2.6} />
+          <span className="truncate">{payLabel}</span>
+        </button>
+      ) : (
+        settled && (
+          <span className="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-2xl bg-hud-sage/30 text-[11px] font-bold uppercase tracking-wide text-[#000000]">
+            <Check className="size-3.5 shrink-0" strokeWidth={3} />
+            {DEBT_STATUS_COPY.settled}
+          </span>
+        )
+      )}
+
+      {/* Edit & Hapus: ikon saja supaya barisnya tetap satu baris di 375 px,
+          tapi `aria-label`-nya menyebut nama catatannya (a11y dasar §8). */}
+      <button
+        type="button"
+        onClick={onEdit}
+        aria-label={WEALTH_ROW_ACTION.editAria(name)}
+        className="inline-flex size-10 shrink-0 items-center justify-center rounded-2xl bg-hud-amber/25 text-[#000000] ring-1 ring-inset ring-hud-amber/40 transition-colors hover:brightness-105 active:scale-95"
+      >
+        <Pencil className="size-4" strokeWidth={2.4} />
+      </button>
+      <button
+        type="button"
+        onClick={onDelete}
+        aria-label={WEALTH_ROW_ACTION.removeAria(name)}
+        className="inline-flex size-10 shrink-0 items-center justify-center rounded-2xl bg-hud-terracotta/15 text-[#b89191] ring-1 ring-inset ring-hud-terracotta/25 transition-colors hover:brightness-105 active:scale-95"
+      >
+        <Trash2 className="size-4" strokeWidth={2.4} />
+      </button>
+    </div>
+  )
+}
+
 function PlatformDebtCard({
   debt,
   payments,
   masked,
   delay,
   onPay,
+  onEdit,
+  onDelete,
 }: {
   debt: Debt
   /** riwayat pembayaran hutang ini, terbaru di atas (turunan `debt_payments`) */
@@ -754,6 +881,10 @@ function PlatformDebtCard({
   masked: boolean
   delay: number
   onPay: () => void
+  /** buka sheet edit (paket 61) */
+  onEdit: () => void
+  /** minta konfirmasi hapus (paket 61) */
+  onDelete: () => void
 }) {
   const [expanded, setExpanded] = useState(false)
   const [dx, setDx] = useState(0)
@@ -891,6 +1022,19 @@ function PlatformDebtCard({
         </span>
       </motion.button>
 
+      {/* AKSI UTAMA LANGSUNG TERLIHAT (paket 61.1). Dulu "Catat Bayar" hanya
+          muncul setelah kartu di-expand — atau lewat geseran kanan yang tidak
+          terlihat sama sekali sebelum user mencobanya — jadi aksi terpenting
+          halaman ini tersembunyi di balik gestur. Sekarang barisnya selalu ada
+          di kartu, di zona jempol, dengan ukuran ≥ 40 px. */}
+      <DebtActionRow
+        name={debtName(debt)}
+        payLabel={done ? undefined : DEBT_CASH_COPY.actionLabel.pay}
+        settled={done}
+        onPay={done ? undefined : onPay}
+        onEdit={onEdit}
+        onDelete={onDelete}
+      />
 
       {/* detail perhitungan otomatis (tap kartu) */}
       <AnimatePresence initial={false}>
@@ -987,14 +1131,11 @@ function PlatformDebtCard({
                 )}
               </div>
 
-              <button
-                type="button"
-                onClick={onPay}
-                className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-forest py-3 text-[12.5px] font-semibold text-mint transition-colors hover:bg-forest-soft active:scale-[0.99]"
-              >
-                <Wallet className="size-3.5" strokeWidth={2.6} />
-                {DEBT_CASH_COPY.actionLabel.pay}
-              </button>
+              {/* Tombol "Catat Bayar" DIHAPUS dari panel ini (paket 61.1): satu
+                  kartu tidak boleh punya dua tombol untuk aksi yang sama.
+                  Aksinya sekarang tinggal di baris aksi kartu yang selalu
+                  terlihat, jadi panel ini murni informatif (perhitungan +
+                  riwayat pembayaran). */}
             </div>
           </motion.div>
         )}
@@ -1038,14 +1179,21 @@ function DebtCashSheet({
   const copy = direction === 'out' ? DEBT_CASH_COPY.pay : DEBT_CASH_COPY.receive
   const name = debt ? settlementCounterparty(debt) : ''
   const firstWallet = walletOptions[0]?.id ?? ''
+  /* tanggal perangkat: field tanggal di sheet ini dibuka di HARI INI milik user
+     (paket 57). Diisi setelah mount supaya render server & client identik. */
+  const todayValue = useTodayISO()
+  const today = todayValue || WEALTH_TODAY_ISO
 
   useEffect(() => {
     if (!debt) return
     setDigits(String(defaultCashAmount(debt)))
-    setDate(WEALTH_TODAY_ISO)
+    /* default tanggal = HARI INI milik user (paket 57); jangkar seed
+       `WEALTH_TODAY_ISO` tinggal sebagai fallback sebelum tanggal perangkat
+       terbaca setelah mount */
+    setDate(today || WEALTH_TODAY_ISO)
     setWallet(firstWallet)
     setError('')
-  }, [debt, firstWallet])
+  }, [debt, firstWallet, today])
 
   const amount = debt ? Number(digits || '0') : 0
   const plan = debt
@@ -1176,6 +1324,8 @@ function PersonalSection({
   masked,
   celebrateId,
   onCash,
+  onEdit,
+  onDelete,
 }: {
   title: string
   active: Debt[]
@@ -1184,6 +1334,9 @@ function PersonalSection({
   /** id catatan yang baru saja lunas lewat aksi uang (memicu confetti section) */
   celebrateId: string | null
   onCash: (debt: Debt) => void
+  /** pintu edit & hapus (paket 61) — diteruskan apa adanya ke tiap kartu */
+  onEdit: (debt: Debt) => void
+  onDelete: (debt: Debt) => void
 }) {
   const [burst, setBurst] = useState(false)
   const timer = useRef<number | null>(null)
@@ -1233,6 +1386,8 @@ function PersonalSection({
               settled={false}
               delay={0.03 * index}
               onCash={() => onCash(debt)}
+              onEdit={() => onEdit(debt)}
+              onDelete={() => onDelete(debt)}
             />
           ))}
         </ul>
@@ -1253,6 +1408,8 @@ function PersonalSection({
                 settled
                 delay={0.03 * index}
                 onCash={() => undefined}
+                onEdit={() => onEdit(debt)}
+                onDelete={() => onDelete(debt)}
               />
             ))}
           </ul>
@@ -1273,6 +1430,8 @@ function PersonalDebtCard({
   settled,
   delay,
   onCash,
+  onEdit,
+  onDelete,
 }: {
   debt: Debt
   masked: boolean
@@ -1280,6 +1439,10 @@ function PersonalDebtCard({
   delay: number
   /** buka sheet uang (bayar hutang / terima piutang) — debit/kredit kas asli */
   onCash: () => void
+  /** buka sheet edit (paket 61) */
+  onEdit: () => void
+  /** minta konfirmasi hapus (paket 61) */
+  onDelete: () => void
 }) {
   const incoming = debtPointsToMe(debt)
 
@@ -1289,7 +1452,7 @@ function PersonalDebtCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.34, delay, ease: [0.22, 1, 0.36, 1] }}
       className={cn(
-        'relative flex items-center gap-3 overflow-hidden rounded-[1.35rem] bg-cream px-3.5 py-3.5 ring-1',
+        'relative flex flex-wrap items-center gap-3 overflow-hidden rounded-[1.35rem] bg-cream px-3.5 py-3.5 ring-1',
         settled ? 'ring-soil/8' : 'shadow-[0_10px_28px_-24px_rgba(69,89,78,0.6)] ring-soil/10',
       )}
     >
@@ -1333,7 +1496,7 @@ function PersonalDebtCard({
         )}
       </span>
 
-      <span className="flex shrink-0 flex-col items-end gap-1.5">
+      <span className="flex shrink-0 flex-col items-end">
         <span
           className={cn(
             'text-[13.5px] font-bold tabular-nums',
@@ -1342,25 +1505,27 @@ function PersonalDebtCard({
         >
           {maskMoney(settled ? debt.principal : debt.remaining, masked)}
         </span>
-        {settled ? (
-          <span className="rounded-full bg-hud-sage/30 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-[#000000]">
-            Lunas
-          </span>
-        ) : (
-          <button
-            type="button"
-            onClick={onCash}
-            className="inline-flex items-center gap-1 rounded-full bg-hud-sage px-2.5 py-1 text-[10.5px] font-bold text-[#000000] transition-colors hover:brightness-105 active:scale-95"
-          >
-            <Check className="size-3" strokeWidth={3} />
-            {/* piutang = uang MASUK ke dompet; hutang personal = uang KELUAR.
-                Labelnya ikut arahnya supaya user tahu kasnya bakal bergerak. */}
-            {debt.direction === 'owed_to_me'
-              ? DEBT_CASH_COPY.actionLabel.receive
-              : DEBT_CASH_COPY.actionLabel.pay}
-          </button>
-        )}
       </span>
+
+      {/* AKSI LANGSUNG TERLIHAT (paket 61.1) — baris yang SAMA dengan kartu
+          hutang platform: aksi uang + edit + hapus. Label uangnya ikut arah
+          (piutang = uang MASUK ke dompet, hutang personal = uang KELUAR).
+          Catatan yang sudah lunas tidak menawarkan aksi uang sama sekali —
+          cuma stempel LUNAS — tapi Edit/Hapus tetap terjangkau di sini. */}
+      <DebtActionRow
+        name={debtName(debt)}
+        payLabel={
+          settled
+            ? undefined
+            : debt.direction === 'owed_to_me'
+              ? DEBT_CASH_COPY.actionLabel.receive
+              : DEBT_CASH_COPY.actionLabel.pay
+        }
+        settled={settled}
+        onPay={settled ? undefined : onCash}
+        onEdit={onEdit}
+        onDelete={onDelete}
+      />
     </motion.li>
   )
 }

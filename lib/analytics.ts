@@ -38,6 +38,7 @@ export type MoneyEventName =
   | 'balance_adjusted'
   | 'settlement_recorded'
   | 'joint_split_changed'
+  | 'wallet_deleted'
   | 'ai_quota_low'
 
 /** nilai yang boleh dikirim: primitif saja (objek bersarang ditolak library) */
@@ -50,6 +51,7 @@ export const MONEY_EVENT_NAMES: readonly MoneyEventName[] = [
   'balance_adjusted',
   'settlement_recorded',
   'joint_split_changed',
+  'wallet_deleted',
   'ai_quota_low',
 ] as const
 
@@ -114,6 +116,12 @@ export const MONEY_EVENT_CATALOG: readonly {
     when: 'pembagian transaksi bareng disimpan dari Split Bill sheet',
     payload: ['mode', 'me_percent', 'partner_percent'],
     never: ['nominal total', 'nominal per orang', 'nama transaksi'],
+  },
+  {
+    name: 'wallet_deleted',
+    when: 'dompet dihapus user dari /wallet atau /wallet/[id] (store uang menembaknya, bukan komponen halaman)',
+    payload: ['scope', 'had_rows'],
+    never: ['nama dompet', 'nomor akun', 'nominal saldo', 'jumlah catatan', 'id dompet'],
   },
   {
     name: 'ai_quota_low',

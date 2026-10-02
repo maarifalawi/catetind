@@ -48,7 +48,7 @@ import {
   type SavedMonthlyTarget,
   type FundSuggestion,
 } from '@/lib/data/monthly-review'
-import { useFundsStore } from '@/lib/money/funds-store'
+import { useLiveFunds } from '@/lib/money/funds-store'
 
 /* ── Monthly Review & Target Setup (inventaris #i · PRD 1878–1918) ───────────
    Modal penuh dua panel — "ritual" bulanan: user berhenti sejenak, melihat recap
@@ -64,9 +64,12 @@ import { useFundsStore } from '@/lib/money/funds-store'
    3. CEPAT. Panel 2 selesai < 20 detik: angka sudah terisi, tombol ± untuk
       menggeser, chip celengan untuk quick-pick. CTA-nya di zona ibu jari.
 
-   Shell-nya (backdrop, drag-down mobile, panel kanan 440px di desktop) SENGAJA
-   sama dengan Rekap Mingguan — satu bahasa visual untuk "modal penuh", dan
-   gesturnya dipakai bersama supaya perilakunya mustahil berbeda. */
+   Shell-nya (backdrop, drag-down mobile) memakai gestur bersama dengan Rekap
+   Mingguan supaya perilakunya mustahil berbeda. Catatan: sejak audit "Weekly
+   Recap Layout", Rekap Mingguan tampil sebagai MODAL TENGAH di desktop,
+   sementara modal ini tetap panel kanan — gesturnya tetap satu, tata letaknya
+   yang sengaja berbeda karena konteksnya berbeda (ritual bulanan vs ringkasan
+   pekan). */
 
 type PanelId = 'recap' | 'target'
 
@@ -104,8 +107,9 @@ export function MonthlyReviewModal({
   const { money } = usePrivacy()
   const router = useRouter()
   /* daftar celengan untuk quick-pick — dibaca dari store yang sama dengan kartu
-     "Tabungan Impian" di Home & halaman /budget (paket 46) */
-  const { funds } = useFundsStore()
+     "Tabungan Impian" di Home & halaman /budget (paket 46), minus celengan yang
+     sudah dihapus user (`useLiveFunds`, paket 60.2) */
+  const funds = useLiveFunds()
   const FUNDS = fundSuggestions(funds)
   /* menyimpan "target bulan ini" = menulis rencana keuangan baru → ikut terkunci
      saat masa aktif habis (task 23). Recap-nya tetap bisa dibaca. */

@@ -63,11 +63,13 @@ describe('sanitizeEventPayload', () => {
 })
 
 describe('MONEY_EVENT_CATALOG', () => {
-  it('mendaftarkan tepat enam event kritikal yang diminta audit', () => {
+  it('mendaftarkan tepat tujuh event kritikal (enam audit + hapus dompet paket 62)', () => {
     expect(MONEY_EVENT_CATALOG.map((entry) => entry.name).sort()).toEqual(
       [...MONEY_EVENT_NAMES].sort(),
     )
-    expect(MONEY_EVENT_NAMES).toHaveLength(6)
+    expect(MONEY_EVENT_NAMES).toHaveLength(7)
+    /* hapus dompet masuk katalog supaya payload-nya ikut dijaga test di bawah */
+    expect(MONEY_EVENT_NAMES).toContain('wallet_deleted')
   })
 
   it('tidak pernah mendeklarasikan kunci terlarang di daftar payload', () => {

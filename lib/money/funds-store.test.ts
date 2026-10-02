@@ -5,6 +5,7 @@ import {
   computeDailyHud,
   fundPercent,
   heroFundOf,
+  sinkingObligationOf,
   sortFundsByUrgency,
   type SinkingFundItem,
 } from '@/lib/data/budget'
@@ -13,11 +14,14 @@ import {
   addFund,
   contributeToFund,
   contributionsOf,
+  deleteFund,
   fundById,
   getFundsSnapshot,
+  liveFunds,
   mergeFundsState,
   purgeFundsStore,
   resetFundsStore,
+  restoreFund,
   subscribeFundsStore,
   sweepIntoFund,
   useFundsStore,
@@ -316,5 +320,128 @@ describe('kontrak store untuk komponen (pembaca yang sama)', () => {
     contributeToFund(created.id, 1_000_000, 'bca')
     const afterContribute = computeDailyHud({ sinkingFunds: getFundsSnapshot().funds })
     expect(afterContribute.remaining).toBeGreaterThan(afterAdd.remaining)
+  })
+})
+
+/* ── HAPUS CELENGAN = JATAH HARIAN NAIK, DAN ITU DIKATAKAN (paket 60 · 60.2) ──
+   Temuan audit #4: celengan punya efek uang yang tidak diberitahukan —
+   `sinkingObligationOf()` memotong kewajiban bulanannya dari kolam SEBELUM jatah
+   harian dibagi. Test di bawah mengunci empat janji yang diucapkan dialog
+   `FUND_DELETE_COPY`:
+
+     · celengan hilang dari SEMUA pembaca tampilan (`liveFunds`, `fundById`) dan
+       kartu Home (`heroFundOf`) ikut berganti wajah;
+     · Jatah Harian NAIK — dengan angka sebelum/sesudahnya;
+     · kalau kewajiban bulan ini SUDAH disetor, Jatah Harian TIDAK berubah
+       (kalimat `noObligationNote` di dialog);
+     · riwayat setoran tetap utuh: uangnya memang sudah keluar dari dompet. */
+
+describe('deleteFund / restoreFund — hapus celengan (60.2)', () => {
+  /** iPhone 16: kewajiban bulanan Rp 2.000.000 (target 18jt − 10jt / 4 bulan) */
+  const kewajibanTerbesar = INITIAL_SINKING_FUNDS[2]
+
+  it('menghapus celengan dengan kewajiban Rp 2jt: Jatah Harian NAIK 200rb → 700rb', () => {
+    const sebelum = computeDailyHud({ sinkingFunds: liveFunds(getFundsSnapshot()) })
+    expect(sinkingObligationOf([kewajibanTerbesar])).toBe(2_000_000)
+    /* jatah harian kanon: 7,5jt − 800rb cicilan − 3,6jt celengan = 3,1jt;
+       3,1jt − 2,3jt terpakai = 800rb dibagi 4 hari = 200rb */
+    expect(sebelum.remaining).toBe(800_000)
+    expect(sebelum.dailyBudget).toBe(200_000)
+
+    const removed = deleteFund(kewajibanTerbesar.id)
+    expect(removed?.name).toBe('iPhone 16')
+
+    const sesudah = computeDailyHud({ sinkingFunds: liveFunds(getFundsSnapshot()) })
+    /* kewajiban yang dilepas Rp 2jt → kolam 5,1jt; sisa 2,8jt dibagi 4 hari */
+    expect(sesudah.sinkingObligation).toBe(sebelum.sinkingObligation - 2_000_000)
+    expect(sesudah.remaining).toBe(2_800_000)
+    expect(sesudah.dailyBudget).toBe(700_000)
+  })
+
+  it('kartu Home (heroFundOf) ikut berganti begitu celengan yang dihapus hilang dari daftar', () => {
+    const hidup = () => liveFunds(getFundsSnapshot())
+    const wajahAwal = heroFundOf(hidup())
+    /* aturan kartu Home: prioritas 'kritis' lebih dulu → Dana Darurat */
+    expect(wajahAwal?.name).toBe('Dana Darurat')
+
+    deleteFund(wajahAwal!.id)
+    expect(hidup().map((fund) => fund.id)).toEqual([1, 3])
+    /* tanpa yang kritis, wajah kartunya jatuh ke progres tertinggi (Coldplay 60%) */
+    expect(heroFundOf(hidup())?.name).toBe('Tiket Konser Coldplay')
+  })
+
+  it('kewajiban bulan ini SUDAH disetor → Jatah Harian tidak berubah', () => {
+    contributeToFund(kewajibanTerbesar.id, 2_000_000, 'bca')
+    const sebelum = computeDailyHud({ sinkingFunds: liveFunds(getFundsSnapshot()) })
+    expect(sinkingObligationOf(liveFunds(getFundsSnapshot()))).toBe(1_600_000)
+
+    deleteFund(kewajibanTerbesar.id)
+
+    const sesudah = computeDailyHud({ sinkingFunds: liveFunds(getFundsSnapshot()) })
+    /* kewajibannya sudah lunas, jadi tidak ada yang dilepas — dialog hapus
+       memakai `noObligationNote` untuk keadaan ini, bukan menjanjikan kenaikan */
+    expect(sesudah.dailyBudget).toBe(sebelum.dailyBudget)
+    expect(sesudah.remaining).toBe(sebelum.remaining)
+  })
+
+  it('id tidak ada / sudah dihapus: tidak menulis apa pun, dan Undo hanya sekali jalan', () => {
+    const before = getFundsSnapshot()
+    expect(deleteFund(999)).toBeNull()
+
+    const removed = deleteFund(2)
+    expect(removed).not.toBeNull()
+    /* hapus dua kali ditolak — bukan menghapus baris lain atau menulis tombstone ganda */
+    expect(deleteFund(2)).toBeNull()
+    expect(getFundsSnapshot().removedIds).toEqual([2])
+
+    expect(restoreFund(2)?.name).toBe('Dana Darurat')
+    expect(liveFunds(getFundsSnapshot())).toEqual(before.funds)
+    /* Undo kedua ditolak dengan jujur (tombstone-nya sudah dicabut) */
+    expect(restoreFund(2)).toBeNull()
+  })
+
+  it('riwayat setoran TIDAK dibuang meski celengannya dihapus (uangnya sudah keluar)', () => {
+    const fundId = 2
+    const historyBefore = contributionsOf(getFundsSnapshot(), fundId)
+    expect(historyBefore).toHaveLength(3)
+
+    deleteFund(fundId)
+
+    const snapshot = getFundsSnapshot()
+    /* baris celengan tetap tersimpan (bahan Undo) + riwayatnya utuh */
+    expect(snapshot.funds.some((fund) => fund.id === fundId)).toBe(true)
+    expect(contributionsOf(snapshot, fundId)).toEqual(historyBefore)
+    /* yang berubah: dia tidak lagi dibaca layar mana pun */
+    expect(fundById(snapshot, fundId)).toBeNull()
+  })
+
+  it('setoran ke celengan yang sudah dihapus ditolak (sheet basi tidak menulis uang)', () => {
+    deleteFund(1)
+    expect(contributeToFund(1, 100_000, 'bca')).toBeNull()
+    expect(sweepIntoFund(1, 50_000)).toBeNull()
+    expect(contributionsOf(getFundsSnapshot(), 1)).toHaveLength(4)
+  })
+
+  it('tombstone ikut tersimpan & dibaca ulang (refresh tidak menghidupkan celengan)', () => {
+    const before = getFundsSnapshot()
+    deleteFund(3)
+    expect(getFundsSnapshot().removedIds).toEqual([3])
+
+    /* hidrasi: state tersimpan memuat tombstone, memory punya daftarnya sendiri →
+       penggabungan memakai gabungan keduanya, dan celengan itu tetap tidak hidup */
+    const merged = mergeFundsState(
+      { version: 1, funds: before.funds, contributions: before.contributions, removedIds: [3] },
+      { ...getFundsSnapshot(), removedIds: [], hydrated: true },
+    )
+    expect(merged.removedIds).toEqual([3])
+    expect(liveFunds(merged).map((fund) => fund.id)).toEqual([1, 2])
+  })
+
+  it('purgeFundsStore membuang tombstone sekaligus (purge saat Hapus Akun)', () => {
+    deleteFund(1)
+    const purged = purgeFundsStore()
+    expect(purged.removedIds).toEqual([])
+    expect(purged.funds).toEqual([])
+    expect(liveFunds(getFundsSnapshot())).toEqual([])
   })
 })

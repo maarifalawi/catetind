@@ -1,5 +1,9 @@
 import { formatIDR } from '../wallets'
-import type { BudgetScope } from './budget'
+import { MONTHLY_INCOME, type BudgetScope } from './budget'
+/* jendela Undo dibaca dari SATU definisi (`lib/data/history.ts`) — dipakai
+   dialog hapus hutang & aset di sini supaya angka "5 detik" yang ditulis di
+   layar benar-benar sama dengan yang berlaku di Riwayat & Tagihan */
+import { UNDO_WINDOW_MS } from './history'
 
 /** satu pintu impor untuk halaman Kekayaan & Hutang: komponennya cukup ambil dari sini */
 export { formatIDR }
@@ -239,8 +243,17 @@ export interface DtiBadge {
 
 /** "sekarang" dipatok konstan — sumber tunggal untuk badge harga basi */
 export const WEALTH_NOW_ISO = '2026-09-25T23:40:00Z'
-/** pemasukan bulanan — pembagi rasio DTI (sinkron Daily HUD / Domain 2B) */
-export const MONTHLY_INCOME = 7_500_000
+/**
+ * Angka gaji DEMO — SATU sumber (`MONTHLY_INCOME` di `lib/data/budget.ts`),
+ * diteruskan di sini supaya pemanggil lama tidak putus.
+ *
+ * Sebelum paket 57 angka 7.500.000 hidup sebagai tiga salinan (`budget`, `bills`,
+ * `wealth`) dan dipakai sebagai PEMBAGI rasio DTI seolah-olah itu pemasukan user.
+ * Sekarang layar mengirim pemasukan dari konfigurasi user
+ * (`lib/user-money-settings.ts`); konstanta ini tinggal default untuk test &
+ * kanon demo.
+ */
+export { MONTHLY_INCOME }
 /** tanggal "hari ini" yang dipatok — default field tanggal di sheet */
 export const WEALTH_TODAY_ISO = '2026-09-25'
 /** crypto boleh basi setelah 10 menit; saham/reksadana/emas 1x sehari (EOD) */
@@ -658,6 +671,19 @@ export function dtiRatio(installments: number, income: number = MONTHLY_INCOME):
   return Math.round((installments / income) * 100)
 }
 
+/**
+ * Copy DTI saat pemasukan bulanan BELUM diatur (paket 57).
+ *
+ * `dtiRatio()` mengembalikan 0 kalau pembaginya <= 0 — kalau itu ditampilkan
+ * apa adanya, kartunya berbunyi "DTI 0% — Sehat" untuk user yang pemasukannya
+ * bahkan belum pernah diisi. Itu klaim aman yang tidak punya dasar, jadi
+ * keadaannya dibedakan: label + satu kalimat yang menyebut jalan keluarnya.
+ */
+export const DTI_UNKNOWN_COPY = {
+  label: 'Belum bisa dihitung',
+  copy: 'Atur pemasukan bulananmu dulu — DTI membandingkan cicilan dengan pemasukanmu, bukan dengan angka contoh.',
+} as const
+
 /** Badge DTI — tiga nada kanon PRD 2E.2, copy empatik (bukan menakut-nakuti) */
 export function dtiBadge(ratio: number): DtiBadge {
   if (ratio <= DTI_WATCH) {
@@ -876,6 +902,18 @@ export function counterpartyLabel(debt: Debt): string {
   const name = debt.counterparty ?? 'Tanpa nama'
   const toMe = debt.direction === 'owed_to_me'
   return toMe ? `${name} hutang ke aku` : `Aku hutang ke ${name}`
+}
+
+/**
+ * Nama PENDEK satu catatan hutang/piutang (paket 61): provider untuk platform,
+ * nama lawan untuk personal.
+ *
+ * Dipakai `aria-label` tombol aksi, dialog konfirmasi hapus, dan judul sheet
+ * edit — semuanya butuh NAMA saja, bukan kalimat `counterpartyLabel()` yang
+ * sudah menyebut arah ("Hapus Aku hutang ke Andi" terbaca aneh di dialog).
+ */
+export function debtName(debt: Debt): string {
+  return debt.provider?.trim() || debt.counterparty?.trim() || 'Tanpa nama'
 }
 
 /** true kalau aliran uangnya menuju ke user (ikon panah masuk) */
@@ -1116,4 +1154,176 @@ export const ASSET_EDIT_TOAST = {
   title: 'Aset diperbarui ✅',
   description: (name: string) => `Kartu & total portofolio ${name} sudah disesuaikan.`,
 }
+
+/* ── COPY: EDIT & HAPUS HUTANG/ASET (paket 61) ───────────────────────────────
+   Sebelum paket 61 halaman Kekayaan cuma punya jalur TAMBAH untuk hutang:
+   `editDebt()` & `deleteDebt()` sudah ada & teruji di store sejak paket 50,
+   tapi tidak punya tombol sama sekali — jadi user yang salah mengetik sisa
+   hutangnya tidak punya cara membetulkan, dan catatan yang tidak dipakai lagi
+   tidak punya pintu keluar (diakui sendiri di laporan 50 §8 poin 4).
+
+   Semua kalimatnya tinggal di sini (kanon repo: copy user-facing bukan literal
+   di JSX), dan sengaja dipakai BERSAMA oleh hutang & aset supaya keduanya jadi
+   SATU pengalaman — bukan dua dialek dialog (paket 61.2). */
+
+/** sheet Tambah/Edit utang-piutang: satu sheet, dua mode (pola `INVESTMENT_SHEET_COPY`) */
+export const DEBT_SHEET_COPY: Record<
+  'add' | 'edit',
+  { title: string; description: string; submit: string }
+> = {
+  add: {
+    title: 'Tambah Utang / Piutang',
+    description: 'Catat aja dulu — nanti bisa ditandai lunas kapan pun.',
+    submit: 'Simpan ✓',
+  },
+  edit: {
+    title: 'Edit Utang / Piutang',
+    description:
+      'Betulkan datanya — kartu, DTI, dan Net Worth langsung ikut berubah. Pelunasan tetap lewat "Catat Bayar" supaya selalu ada baris kasnya.',
+    submit: 'Simpan Perubahan',
+  },
+}
+
+/** label aksi per baris kartu (hutang & aset memakai label yang sama) */
+export const WEALTH_ROW_ACTION = {
+  edit: 'Edit',
+  remove: 'Hapus',
+  /**
+   * `aria-label` tombol ikon — menyebut nama catatannya, karena "Edit" telanjang
+   * tidak memberi tahu tombol mana yang sedang dibaca pembaca layar.
+   */
+  editAria: (name: string) => `Edit ${name}`,
+  removeAria: (name: string) => `Hapus ${name}`,
+} as const
+
+/** label status lunas (satu ejaan untuk seluruh halaman Kekayaan) */
+export const DEBT_STATUS_COPY = {
+  settled: 'Lunas',
+} as const
+
+/**
+ * Kolom & pesan validasi yang HANYA muncul di mode EDIT utang/piutang (paket 61).
+ *
+ * Kenapa kolom "sisa" perlu ada: `Debt` menyimpan DUA angka — `principal`
+ * (pokok saat pertama dicatat) dan `remaining` (sisa yang belum dibayar, yaitu
+ * angka yang dihitung di Net Worth & DTI). Store sengaja mengizinkan keduanya
+ * dibetulkan karena catatan ini diisi MANUAL; tanpa kolom ini, salah ketik sisa
+ * = Net Worth salah sampai catatannya dihapus.
+ */
+export const DEBT_SHEET_FIELD_COPY = {
+  /** label pokok di mode edit — pasangan dari kolom sisa di bawahnya */
+  principalLabel: 'Jumlah pokok (Rp)',
+  remainingLabel: 'Sisa belum dibayar (Rp)',
+  remainingHint: 'Yang dihitung di Net Worth & DTI adalah sisa ini, bukan pokoknya.',
+  /**
+   * Sisa > pokok bukan "hutang yang membesar", itu salah ketik — dan kalau
+   * dibiarkan, uang yang sudah keluar tidak akan punya jejak kas sama sekali.
+   */
+  overPrincipal:
+    'Sisa tidak boleh lebih besar dari pokoknya. Kalau uangnya memang sudah keluar, catat lewat "Catat Bayar" supaya ada baris kasnya.',
+}
+
+/** toast setelah satu catatan hutang/piutang dibetulkan */
+export const DEBT_EDIT_TOAST = {
+  title: 'Catatan diperbarui ✅',
+  description: (name: string) =>
+    `${name} sudah dibetulkan — kartu, DTI, dan Net Worth ikut menyesuaikan.`,
+}
+
+/* ── COPY: DIALOG HAPUS (WAJIB JUJUR — keputusan paket 50) ──────────────────
+   Yang tidak boleh disembunyikan dialog ini:
+
+     · menghapus catatan hutang TIDAK menghapus baris kas. Uang yang sudah
+       dibayar itu fakta, dan barisnya tetap ada di Riwayat;
+     · yang benar-benar berubah adalah DAFTAR + Net Worth — jadi akibatnya
+       disebut dengan arah yang benar (hutang hilang → Net Worth NAIK,
+       piutang/aset hilang → Net Worth TURUN), bukan "berkurang" yang samar;
+     · saldo dompet tidak tersentuh sama sekali oleh dua-duanya.
+
+   `bodyLead`/`bodyTail` dipotong dua supaya nominalnya bisa ditebalkan di
+   tengah kalimat (bentuk yang sama dengan `CONFIRM_DELETE_COPY` di Riwayat). */
+
+/** jenis catatan dari sudut pandang user */
+type DebtKindCopy = 'hutang' | 'piutang'
+
+const DELETE_SAFETY_COPY = `Tenang — masih bisa kamu balikin lewat tombol Undo selama ${
+  UNDO_WINDOW_MS / 1000
+} detik.`
+
+export const DELETE_DEBT_COPY = {
+  /** overlay = tombol "batal" tak terlihat di belakang dialog */
+  overlay: 'Batal hapus catatan hutang',
+  title: (kind: DebtKindCopy) =>
+    kind === 'piutang' ? 'Hapus catatan piutang ini?' : 'Hapus catatan hutang ini?',
+  bodyLead: (name: string) => `Catatan ${name} sebesar `,
+  bodyTail: (kind: DebtKindCopy) =>
+    kind === 'piutang'
+      ? 'keluar dari daftar. Piutang itu tidak lagi dihitung sebagai aset, jadi Net Worth turun sebesar itu.'
+      : 'keluar dari daftar. Hutang itu tidak lagi dihitung, jadi Net Worth naik sebesar itu.',
+  /** fakta uang: yang dihapus cuma catatannya */
+  cashNote:
+    'Pembayaran yang sudah kamu catat TIDAK ikut terhapus: uang yang sudah berpindah tangan itu fakta, dan barisnya tetap ada di Riwayat. Saldo dompetmu tidak berubah sama sekali.',
+  safety: DELETE_SAFETY_COPY,
+  cancel: 'Batal',
+  confirm: 'Hapus',
+} as const
+
+export const DELETE_ASSET_COPY = {
+  overlay: 'Batal hapus aset',
+  title: 'Hapus aset ini?',
+  bodyLead: (name: string) => `Aset ${name} senilai `,
+  bodyTail:
+    'keluar dari portofolio, dan nilai pasar yang dihitung di Net Worth ikut hilang sebesar itu.',
+  /** aset memang tidak pernah menyentuh kas — supaya user tidak menebak */
+  cashNote:
+    'Halaman Kekayaan tidak menyentuh saldo dompet: menghapus aset tidak menambah maupun mengurangi uang di BCA/GoPay/Tunai.',
+  safety: DELETE_SAFETY_COPY,
+  cancel: 'Batal',
+  confirm: 'Hapus',
+} as const
+
+export const DELETE_DEBT_TOAST = {
+  title: 'Catatan hutang dihapus',
+  description: (name: string) => `${name} keluar dari daftar hutangmu.`,
+  undo: 'Undo',
+  undoneTitle: 'Catatan dikembalikan 🌿',
+  undoneDescription: 'Catatannya balik ke daftar — riwayat pembayarannya ikut utuh.',
+  expired:
+    'Jendela Undo-nya sudah lewat — catatannya bisa kamu tambahkan lagi kalau memang masih perlu 🌿',
+} as const
+
+export const DELETE_ASSET_TOAST = {
+  title: 'Aset dihapus',
+  description: (name: string) => `${name} keluar dari portofolio.`,
+  undo: 'Undo',
+  undoneTitle: 'Aset dikembalikan 🌿',
+  undoneDescription: 'Nilainya balik ke portofolio & Net Worth seperti semula.',
+  expired: 'Jendela Undo-nya sudah lewat — asetnya bisa kamu tambahkan lagi kapan aja 🌿',
+} as const
+
+/* ── PROPERTI & ASET FISIK (V1 · paket 62) ───────────────────────────────────
+   Tab-nya SUDAH ada di halaman Kekayaan (PRD Decision A12: dikerjakan setelah
+   V1), dan isinya memang baru teaser. Yang diperbaiki paket ini bukan fiturnya,
+   tapi KEJUJURAN kalimatnya. Sebelumnya tertulis:
+
+     "Rumah, kendaraan, perhiasan — coming soon di update berikutnya 🌿"
+
+   Dua masalah: (1) itu janji tanggal yang tidak dipegang siapa pun, dan (2) user
+   yang punya rumah bisa membaca "Total Kekayaan" di halaman yang sama sebagai
+   angka yang SUDAH memuat rumahnya — padahal rumusnya kas + investasi + piutang −
+   hutang, tanpa satu pun aset fisik. Kalimat di bawah ini menggantikannya apa
+   adanya: apa yang belum bisa, apa yang belum dihitung, dan yang BISA dipakai
+   sekarang. (SENGAJA tidak dijanjikan "segera hadir": teaser yang tidak punya
+   tanggal adalah sumber kekecewaan yang paling gampang dihindari.) */
+export const PROPERTY_V1_COPY = {
+  title: 'Properti & Aset Fisik',
+  badge: 'Belum bisa dikelola',
+  body: 'Rumah, kendaraan, dan barang berharga belum bisa dicatat di versi ini — jadi nilai aset fisik belum ikut kehitung di Total Kekayaan.',
+  netWorthNote:
+    'Total Kekayaan di halaman ini = kas likuid + investasi + piutang − hutang. Tidak ada angka kira-kira untuk aset fisik.',
+  /** jalan yang BISA ditempuh sekarang (tab-nya tepat di atas kartu ini) */
+  switchHint:
+    'Aset yang sudah bisa dikelola: tab Investasi (saham, reksadana, emas) dan tab Hutang (hutang & piutang).',
+} as const
+
 

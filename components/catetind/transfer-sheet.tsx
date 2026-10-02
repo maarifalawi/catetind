@@ -15,6 +15,7 @@ import { WALLET_TYPE_LABEL } from './wallet-card-face'
 import { cn } from '@/lib/utils'
 import { formatDayLabel, maskMoney } from '@/lib/data/history'
 import { TRANSFER_SHEET_COPY, WALLET_TODAY_ISO } from '@/lib/data/add-wallet'
+import { useTodayISO } from '@/lib/use-today-iso'
 import { CONTEXT_LABEL } from '@/lib/data/money-context'
 import type { WalletAccount } from '@/lib/wallets'
 
@@ -78,6 +79,16 @@ export function TransferSheet({
   onTransfer: (fromWalletId: string, toWalletId: string, amount: number, note: string) => void
 }) {
   const { masked } = usePrivacy()
+  /**
+   * Tanggal "hari ini" untuk baris tanggal di sheet (paket 57).
+   *
+   * Sheet ini tidak punya pemilih tanggal — barisnya hanya memberi tahu bahwa
+   * baris ledger akan bertanggal hari ini. Dulu nilainya konstanta
+   * `WALLET_TODAY_ISO` (27 Sep) sehingga sheet bisa menyebut tanggal yang bukan
+   * hari ini; sekarang dari jam perangkat, diisi setelah mount (hidrasi aman).
+   */
+  const todayValue = useTodayISO()
+  const todayIso = todayValue || WALLET_TODAY_ISO
   const [fromId, setFromId] = useState<string | null>(null)
   const [toId, setToId] = useState<string | null>(null)
   const [digits, setDigits] = useState('')
@@ -386,7 +397,7 @@ export function TransferSheet({
                 {TRANSFER_SHEET_COPY.dateLabel}
               </span>
               <span className="ml-auto text-[12.5px] font-bold tabular-nums text-ink">
-                {TRANSFER_SHEET_COPY.today} · {formatDayLabel(WALLET_TODAY_ISO)}
+                {TRANSFER_SHEET_COPY.today} · {formatDayLabel(todayIso)}
               </span>
             </div>
 

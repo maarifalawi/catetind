@@ -1,8 +1,10 @@
 'use client'
 
 import { useState } from 'react'
+import { Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
+  BUDGET_CARD_ACTION_COPY,
   PACING_HEX,
   PACING_HINT_COPY,
   pacingOf,
@@ -21,6 +23,13 @@ import {
    bukan selalu bulan kalender. Kalau bar berwarna sudah melewati garis itu,
    artinya belanja lebih cepat dari pacing — ditampilkan sebagai informasi,
    bukan teguran (nada PRD: nurturing, bukan menghakimi).
+
+   PAKET 60.1 — tombol HAPUS ditambahkan di baris atas kartu. Sebelumnya kartu
+   ini hanya punya "ghost pacing line" (hint) dan CTA `Review Pengeluaran →`
+   saat over budget: tidak ada satu pun jalan untuk mencabut target yang user
+   pasang sendiri. Tombolnya ikon kecil dengan `aria-label` yang menyebut nama
+   kategorinya (`BUDGET_CARD_ACTION_COPY.delete`) — keputusan & konfirmasinya
+   milik halaman (`budget-screen`), karena di sanalah jendela Undo hidup.
    ────────────────────────────────────────────────────────────────────────── */
 
 export function BudgetCategoryCard({
@@ -28,6 +37,7 @@ export function BudgetCategoryCard({
   masked,
   window,
   onReview,
+  onDelete,
 }: {
   budget: BudgetItem
   masked: boolean
@@ -35,6 +45,8 @@ export function BudgetCategoryCard({
   window: PeriodWindow
   /** CTA sekunder `Review Pengeluaran →` — aktif saat kategori over budget */
   onReview?: () => void
+  /** hapus kategori ini (buka konfirmasi di halaman pemilik state) */
+  onDelete?: (budget: BudgetItem) => void
 }) {
   /* tooltip garis pacing: muncul saat hover (CSS) & saat di-tap (state) */
   const [hintOpen, setHintOpen] = useState(false)
@@ -65,8 +77,23 @@ export function BudgetCategoryCard({
           </span>
         </div>
 
-        <span className="shrink-0 text-right text-[12px] font-semibold tabular-nums text-ink">
-          {ratioLabel(budget.spent, budget.limit, masked)}
+        <span className="flex shrink-0 items-center gap-1.5">
+          <span className="text-right text-[12px] font-semibold tabular-nums text-ink">
+            {ratioLabel(budget.spent, budget.limit, masked)}
+          </span>
+          {/* hapus (paket 60.1) — ikon saja, tapi SELALU punya nama yang bisa
+              dibaca pembaca layar & tooltip; keputusan ada di halaman */}
+          {onDelete && (
+            <button
+              type="button"
+              onClick={() => onDelete(budget)}
+              aria-label={BUDGET_CARD_ACTION_COPY.delete(budget.category)}
+              title={BUDGET_CARD_ACTION_COPY.delete(budget.category)}
+              className="flex size-7 shrink-0 items-center justify-center rounded-xl text-ink/30 transition-colors hover:bg-plum/12 hover:text-plum focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25 active:scale-95"
+            >
+              <Trash2 className="size-3.5" strokeWidth={2.4} aria-hidden />
+            </button>
+          )}
         </span>
       </div>
 

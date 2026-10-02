@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   ArrowLeft,
@@ -11,12 +12,14 @@ import {
   SlidersHorizontal,
   Sparkles,
   Sprout,
+  Trash2,
   TrendingUp,
   Wallet as WalletIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { ScreenShell } from './screen-shell'
 import { GlobalPrivacyToggle } from './global-privacy-toggle'
+import { ConfirmDialog } from './confirm-dialog'
 import { usePrivacy } from './privacy-provider'
 import { SyncBalanceModal } from './sync-balance-modal'
 import { TransferFlow } from './transfer-flow'
@@ -41,13 +44,18 @@ import {
   incomingTransfersFor,
   isRowRemoved,
   postBalanceAdjustment,
-  recordedTransactions,
   removeRow,
+  removeWalletAccount,
   restoreRow,
+  restoreWalletAccount,
   undoTransferCancellation,
   useMoneyStore,
   walletAccountOf,
+  walletBalance,
+  walletRecordCount,
+  walletTransactionsOf,
   type TransferCancellation,
+  type WalletRemoval,
 } from '@/lib/money/store'
 import { useCountUp } from '@/hooks/use-count-up'
 import { cn } from '@/lib/utils'
@@ -67,13 +75,17 @@ import {
 } from '@/lib/data/history'
 import {
   INSIGHT_MIN_TRANSACTIONS,
+  WALLET_DELETE_COPY,
+  WALLET_DELETE_TOAST,
   WALLET_DETAIL_COPY,
+  WALLET_DETAIL_WINDOW_DAYS,
   WALLET_EMPTY_COPY,
   WALLET_LIST_COPY,
   WALLET_PATIENT_COPY,
   WALLET_PERIOD_COPY,
   WALLET_QUICK_ACTION_COPY,
   WALLET_SYNC_ADJUSTMENT_COPY,
+  walletDeleteBalanceLabel,
   walletSparkline,
   walletSummary30d,
   walletTransactions,
@@ -118,12 +130,16 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
      terbaca di sini (dan sebaliknya). */
   const snapshot = useMoneyStore()
   const wallet = walletAccountOf(snapshot, walletId)
-  /** catatan sesi dari store — tombstone sudah disaring di dalamnya */
-  const recordedTxs = useMemo(() => recordedTransactions(snapshot), [snapshot])
 
+  const router = useRouter()
   const [syncOpen, setSyncOpen] = useState(false)
   /** alur pindah dana dari dompet halaman ini (paket 55) */
   const [transferOpen, setTransferOpen] = useState(false)
+  /** dialog konfirmasi hapus DOMPET ini (paket 62) */
+  const [deleteWalletOpen, setDeleteWalletOpen] = useState(false)
+  /** bukti hapus dompet yang hak Undo-nya masih hidup (bukan bahan render) */
+  const undoWalletRef = useRef<WalletRemoval | null>(null)
+  const undoWalletTimer = useRef<number | null>(null)
   const [selected, setSelected] = useState<HistoryTransaction | null>(null)
   /** baris yang sheet aksi titik-tiganya sedang terbuka */
   const [menuTx, setMenuTx] = useState<HistoryTransaction | null>(null)
@@ -151,44 +167,46 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
   useEffect(
     () => () => {
       if (undoTimer.current !== null) window.clearTimeout(undoTimer.current)
+      if (undoWalletTimer.current !== null) window.clearTimeout(undoWalletTimer.current)
     },
     [],
   )
 
   /* ── data turunan ──────────────────────────────────────────────────────── */
-  /* catatan yang dihapus keluar dari daftar; yang diedit tampil versi barunya —
-     ringkasan 30 hari & grafiknya ikut menyesuaikan karena keduanya membaca
-     daftar yang sama, bukan angka yang disalin ulang.
-     Baris MOCK dompet ini (`WALLET_DETAIL_TRANSACTIONS`) memakai
-     `applyRowOverride()` yang SAMA dengan Riwayat & Home (paket 48): dulu hasil
-     editnya hidup di `useState(editedTxs)` halaman ini saja.
-     Catatan BARU dari panel input ikut di depan — hanya yang dompetnya memang
-     dompet halaman ini, jadi user yang mencatat dari FAB melihat barisnya
-     muncul di sini tanpa reload. */
+  /* Catatan yang tampil di halaman ini HANYA milik dompet ini, dan identitasnya
+     DOMPET-ID — bukan nama (`paket 59 · 59.3`):
+       · `walletTransactionsOf()`  → baris ledger ber-`walletId` dompet ini;
+       · `incomingTransfersFor()`  → sisi MASUK pindah dana (baris `transfer`
+         menyimpan dompet ASAL di kolom `wallet`, jadi tanpa ini halaman dompet
+         tujuan tidak menampilkan apa pun padahal saldonya baru saja bertambah);
+       · `walletTransactions()`    → baris CONTOH dompet ini dari konstanta
+         `lib/data/wallet-detail.ts`; kuncinya juga id dompet, jadi tidak pernah
+         bocor ke dompet lain.
+     Dulu baris sesi dicocokkan `tx.wallet === wallet.name`: dua dompet yang
+     namanya sama (kasus nyata — user menambah "BCA" kedua) saling menampilkan
+     catatan satu sama lain. Baris lama tanpa `walletId` (dompetnya belum ada di
+     ledger) SENGAJA tidak dipaksa masuk ke dompet mana pun; ia tetap tampil di
+     Riwayat dengan penanda "Belum berkonteks". */
   const txs = useMemo(
     () =>
       wallet
         ? [
-            ...recordedTxs
-              .filter((tx) => tx.wallet === wallet.name && !isRowRemoved(snapshot, tx.id))
-              .map((tx) => applyRowOverride(snapshot, tx)),
-            /* sisi MASUK dari pindah dana (paket 55): baris `transfer` menyimpan
-               dompet ASAL di kolom `wallet`, jadi tanpa ini halaman dompet tujuan
-               tidak menampilkan apa pun padahal saldonya baru saja bertambah */
+            ...walletTransactionsOf(snapshot, wallet.id),
             ...incomingTransfersFor(snapshot, wallet.id),
             ...walletTransactions(wallet.id)
               .filter((tx) => !isRowRemoved(snapshot, tx.id))
               .map((tx) => applyRowOverride(snapshot, tx)),
           ]
         : [],
-    [wallet, recordedTxs, snapshot],
+    [wallet, snapshot],
   )
-  const summary = useMemo(() => walletSummary30d(txs), [txs])
+  const summary = useMemo(() => walletSummary30d(txs, today), [txs, today])
   const groups = useMemo(() => groupTransactionsByDate(txs, today), [txs, today])
   const balance = wallet?.balance ?? 0
   const trend = useMemo(
-    () => (wallet && txs.length >= INSIGHT_MIN_TRANSACTIONS ? walletSparkline(wallet, txs) : []),
-    [wallet, txs],
+    () =>
+      wallet && txs.length >= INSIGHT_MIN_TRANSACTIONS ? walletSparkline(wallet, txs, today) : [],
+    [wallet, txs, today],
   )
   const counted = useCountUp(balance)
 
@@ -323,7 +341,6 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
     setSelected(menuTx)
     setMenuTx(null)
   }
-
   function menuEdit() {
     if (menuTx) handleEdit(menuTx)
     setMenuTx(null)
@@ -332,6 +349,53 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
   function menuDelete() {
     setPendingDelete(menuTx)
     setMenuTx(null)
+  }
+
+  /* ── HAPUS DOMPET (paket 62) ──────────────────────────────────────────────
+     Aksi yang sama dengan popover kartu di `/wallet` — hanya pintunya yang
+     berbeda, jadi dialog, satu pintu tulis (`removeWalletAccount`), dan jendela
+     Undo-nya juga sama persis. Bedanya satu: setelah dompetnya benar-benar
+     hilang, halaman ini tidak punya bahan render lagi (store mengembalikan
+     `null`), jadi user diantar ke `/wallet` — dan tombol Undo di toast tetap
+     bekerja dari halaman itu. */
+  function confirmWalletDelete() {
+    if (!wallet) return
+    const removal = removeWalletAccount(wallet.id)
+    setDeleteWalletOpen(false)
+    if (!removal) {
+      toast(WALLET_DELETE_TOAST.expired)
+      return
+    }
+
+    undoWalletRef.current = removal
+    if (undoWalletTimer.current !== null) window.clearTimeout(undoWalletTimer.current)
+    undoWalletTimer.current = window.setTimeout(() => {
+      if (undoWalletRef.current?.walletId === removal.walletId) undoWalletRef.current = null
+    }, UNDO_WINDOW_MS)
+
+    toast.success(WALLET_DELETE_TOAST.title(removal.name), {
+      description: WALLET_DELETE_TOAST.description,
+      action: { label: WALLET_DELETE_TOAST.undo, onClick: () => undoWalletDelete(removal) },
+      duration: UNDO_WINDOW_MS,
+    })
+
+    router.push('/wallet')
+  }
+
+  /** Undo: dompetnya balik ke daftar — user tetap boleh balik ke halaman ini. */
+  function undoWalletDelete(removal: WalletRemoval) {
+    if (undoWalletRef.current?.walletId !== removal.walletId) {
+      toast(WALLET_DELETE_TOAST.expired)
+      return
+    }
+    undoWalletRef.current = null
+    if (!restoreWalletAccount(removal)) {
+      toast(WALLET_DELETE_TOAST.expired)
+      return
+    }
+    toast.success(WALLET_DELETE_TOAST.undoneTitle, {
+      description: WALLET_DELETE_TOAST.undoneDescription,
+    })
   }
 
   /** nomor baris global supaya animasi masuk tetap berurutan antar grup */
@@ -454,8 +518,20 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
 
           {/* ── SISI KANAN (5/12): ringkas 30 hari + (kartu sabar) ─────────── */}
           <div className="flex flex-col gap-4 xl:col-span-5">
-            {summary && <PeriodSummaryCard summary={summary} trend={trend} masked={masked} />}
-            {txs.length < INSIGHT_MIN_TRANSACTIONS && (
+            {summary ? (
+              <PeriodSummaryCard summary={summary} trend={trend} masked={masked} />
+            ) : txs.length > 0 ? (
+              /* ada catatan, tapi tidak satu pun di 30 hari terakhir → dikatakan,
+                 bukan dihilangkan diam-diam dari layar */
+              <section className="rounded-[1.75rem] bg-cream p-5 text-[12.5px] leading-relaxed text-ink/60 shadow-[0_18px_40px_-34px_rgba(69,89,78,0.55)] ring-1 ring-soil/10">
+                {WALLET_PERIOD_COPY.emptyWindow(WALLET_DETAIL_WINDOW_DAYS)}
+              </section>
+            ) : null}
+            {/* kartu sabar hanya saat ADA catatan tapi belum cukup (0 < n < 7):
+                dompet yang benar-benar kosong sudah punya empty state + CTA di
+                bawah — dua blok yang menjelaskan hal yang sama cuma menambah
+                bising (dan `0/7` bukan informasi, itu kebisingan). */}
+            {txs.length > 0 && txs.length < INSIGHT_MIN_TRANSACTIONS && (
               <PatientInsightCard count={txs.length} />
             )}
           </div>
@@ -476,7 +552,7 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
           </div>
 
           {groups.length === 0 ? (
-            <EmptyTransactions />
+            <EmptyTransactions walletName={wallet.name} />
           ) : (
             <div className="mt-4 space-y-5">
               {groups.map((group) => (
@@ -543,6 +619,7 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
           <div className="flex flex-col-reverse gap-2 rounded-[1.5rem] bg-cream/95 p-2.5 shadow-[0_24px_50px_-20px_rgba(0,0,0,0.28)] ring-1 ring-soil/12 backdrop-blur-md sm:flex-row sm:items-center lg:max-w-lg">
             <TransactionBottomSheet
               defaultType="expense"
+              walletName={wallet.name}
               trigger={
                 <button
                   type="button"
@@ -572,6 +649,20 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
             >
               <ArrowLeftRight className="size-4 text-forest" strokeWidth={2.4} aria-hidden />
               {WALLET_QUICK_ACTION_COPY.transferLabel}
+            </button>
+            {/* Aksi merusak: TERLIHAT di bar aksi (bukan hanya di popover), tapi
+                sengaja BUKAN tombol penuh — ia tidak boleh tampil sebesar tiga
+                aksi di sebelahnya. `aria-label` menyebut dompetnya supaya pembaca
+                layar tahu apa yang akan dihapus (paket 62). */}
+            <button
+              type="button"
+              onClick={() => setDeleteWalletOpen(true)}
+              aria-label={WALLET_DELETE_COPY.actionA11y(wallet.name)}
+              title={WALLET_DELETE_COPY.actionHint}
+              className="inline-flex h-12 w-full flex-1 items-center justify-center gap-2 rounded-[1.1rem] bg-cream text-[14px] font-semibold text-plum ring-1 ring-plum/25 transition-colors hover:bg-plum/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-plum/40 active:scale-[0.99] sm:w-auto sm:px-4"
+            >
+              <Trash2 className="size-4" strokeWidth={2.4} aria-hidden />
+              {WALLET_DELETE_COPY.action}
             </button>
           </div>
         </div>
@@ -627,6 +718,36 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
             masked={masked}
             onCancel={() => setPendingDelete(null)}
             onConfirm={confirmDelete}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ── KONFIRMASI HAPUS DOMPET (paket 62) ─────────────────────────────────
+          Dialog yang SAMA dengan hapus catatan; angkanya dibaca dari snapshot
+          hidup (jumlah catatan yang menyentuh dompet ini + saldonya, disensor
+          kalau tombol mata sedang ON). */}
+      <AnimatePresence>
+        {deleteWalletOpen && (
+          <ConfirmDialog
+            titleId="hapus-dompet-detail-judul"
+            overlayLabel={WALLET_DELETE_COPY.overlay}
+            title={WALLET_DELETE_COPY.title(wallet.name)}
+            body={
+              <>
+                {WALLET_DELETE_COPY.bodyLead(wallet.name)}
+                <b className="font-semibold text-ink">
+                  {walletDeleteBalanceLabel(walletBalance(snapshot, wallet.id), masked)}
+                </b>
+                {WALLET_DELETE_COPY.bodyTail(walletRecordCount(snapshot, wallet.id))}
+                <span className="mt-2 block">{WALLET_DELETE_COPY.keepNote}</span>
+                <span className="mt-2 block">{WALLET_DELETE_COPY.moveFirstHint}</span>
+              </>
+            }
+            safety={WALLET_DELETE_COPY.safety(UNDO_WINDOW_MS / 1000)}
+            cancelLabel={WALLET_DELETE_COPY.cancel}
+            confirmLabel={WALLET_DELETE_COPY.confirm}
+            onCancel={() => setDeleteWalletOpen(false)}
+            onConfirm={confirmWalletDelete}
           />
         )}
       </AnimatePresence>
@@ -762,7 +883,7 @@ function PatientInsightCard({ count }: { count: number }) {
 }
 
 /** empty state nurturing: dompet ini belum punya satu catatan pun */
-function EmptyTransactions() {
+function EmptyTransactions({ walletName }: { walletName: string }) {
   return (
     <div className="mt-4 flex flex-col items-center rounded-[1.75rem] border-2 border-dashed border-forest/15 bg-cream/50 px-6 py-10 text-center">
       {/* ilustrasi sederhana dari ikon yang sudah dipakai empty state app
@@ -780,7 +901,11 @@ function EmptyTransactions() {
         {WALLET_EMPTY_COPY.hint}
       </p>
       <div className="mt-5">
+        {/* `walletName` = dompet halaman ini, jadi CTA-nya benar-benar menulis ke
+            dompet ini (dulu catatan dari sini jatuh ke dompet default konteks —
+            paket 59 · 59.3/59.4) dan sheet-nya menampilkan tujuannya */}
         <TransactionBottomSheet
+          walletName={walletName}
           trigger={
             <button
               type="button"

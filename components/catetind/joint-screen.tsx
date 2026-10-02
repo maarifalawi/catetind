@@ -1,9 +1,12 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { Heart, HeartHandshake, Pencil, Plus, ReceiptText, Scale } from 'lucide-react'
 import { ScreenShell } from './screen-shell'
+import { ConfirmDialog } from './confirm-dialog'
+import { JointStateCard } from './joint-state-card'
 import { GlobalPrivacyToggle } from './global-privacy-toggle'
 import { ContextSwitcher } from './context-switcher'
 import { useMoneyContext } from './money-context-provider'
@@ -25,6 +28,7 @@ import {
   DEMO_FORCE_WEEKLY_RECAP,
   DEMO_JOINED_CELEBRATION,
   DEMO_REALTIME_MOCK,
+  JOINT_DELETE_COPY,
   JOINT_ME,
   JOINT_ADDED_TOAST,
   JOINT_MONTH_KEY,
@@ -50,11 +54,15 @@ import {
   applyJointRow,
   carryOverRecordFor,
   clearJointArrivalBadge,
+  createJointPocket,
+  deleteJointTransaction,
+  jointDeleteState,
   jointLedgerFeed,
   jointNotes,
   jointPartnerJoined,
   recordSettlement,
   renameJointWallet,
+  restoreJointTransaction,
   /* alias: halaman ini punya state pajangan `paidBy` untuk form tambah, jadi
      setter store-nya diberi nama sendiri supaya tidak tertukar */
   setPaidBy as setJointPaidBy,
@@ -62,6 +70,7 @@ import {
   updateSplit,
   useJointStore,
 } from '@/lib/money/joint-store'
+import { UNDO_WINDOW_MS } from '@/lib/data/history'
 import { trackMoneyEvent } from '@/lib/analytics'
 import { JOINT_CONTEXT_COPY, CONTEXT_LABEL, contextCaption } from '@/lib/data/money-context'
 import { cn } from '@/lib/utils'
@@ -128,6 +137,22 @@ export function JointScreen() {
   const joint = useJointStore()
   const wallet = joint.wallet
   const partnerJoined = jointPartnerJoined(joint)
+  /**
+   * KEADAAN KANTONG yang sedang dilihat (paket 61.3) — dibaca dari store, bukan
+   * dari state pajangan halaman:
+   *   1. `empty`   → belum ada kantong (belum pernah dibuat);
+   *   2. `waiting` → kantong sudah dibuat, pasangan belum bergabung;
+   *   3. `active`  → pasangan sudah bergabung → buku besar terbuka.
+   *
+   * Dua keadaan pertama dulu tampak SAMA (nama seed "Dompet Kita 💚" sudah
+   * terisi), jadi user tidak pernah tahu langkahnya sudah sampai mana. Penanda
+   * `wallet.created` dipasang `createJointPocket()` — bukan ditebak dari nama.
+   */
+  const jointState: 'empty' | 'waiting' | 'active' = partnerJoined
+    ? 'active'
+    : wallet.created
+      ? 'waiting'
+      : 'empty'
   const [nameDraft, setNameDraft] = useState(wallet.name)
   const [editingName, setEditingName] = useState(false)
   const [showInviteModal, setShowInviteModal] = useState(false)
@@ -152,6 +177,10 @@ export function JointScreen() {
   /* mock Supabase Realtime (5C) */
   const [partnerTyping, setPartnerTyping] = useState(false)
   const [pushTx, setPushTx] = useState<JointTransaction | null>(null)
+  /** catatan bareng yang menunggu konfirmasi hapus (paket 61.3) — tidak pernah langsung hilang */
+  const [pendingDeleteTx, setPendingDeleteTx] = useState<JointTransaction | null>(null)
+  /** hak Undo hapus: id baris yang masih bisa dikembalikan selama jendelanya hidup */
+  const undoJointRef = useRef<string | null>(null)
   /**
    * Banner rekap mana yang boleh tampil (Section 10 + audit #8).
    * Gate tanggal dihitung SETELAH MOUNT (null = belum siap → tidak render apa
@@ -477,6 +506,52 @@ export function JointScreen() {
     toast.success(`Dicatat dari kantong ${userId === JOINT_ME.id ? me.name : partner.name} ✓`)
   }, [me.name, partner.name])
 
+  /**
+   * HAPUS SATU BARIS catatan bareng (paket 61.3) — tolak dulu, jangan langsung
+   * hilang. Syarat boleh-tidaknya ada di store (`deleteJointTransaction()`):
+   * hanya catatan di bulan yang BELUM disettle, karena bulan yang sudah
+   * disepakati tidak boleh berubah angka di belakang pasangan.
+   */
+  const undoDeleteJointTx = useCallback((txId: string) => {
+    if (undoJointRef.current !== txId) {
+      toast(JOINT_DELETE_COPY.toastExpired)
+      return
+    }
+    undoJointRef.current = null
+    if (!restoreJointTransaction(txId)) {
+      toast(JOINT_DELETE_COPY.toastExpired)
+      return
+    }
+    toast.success(JOINT_DELETE_COPY.toastUndoneTitle, {
+      description: JOINT_DELETE_COPY.toastUndoneDescription,
+    })
+  }, [])
+
+  const confirmDeleteJointTx = useCallback(() => {
+    const tx = pendingDeleteTx
+    if (!tx) return
+    setPendingDeleteTx(null)
+    /* store bisa MENOLAK (bulan sudah disettle): kalau ditolak, tidak ada yang
+       berubah — dan alasannya dikatakan, bukan diam-diam tidak terjadi apa-apa */
+    if (!deleteJointTransaction(tx.id)) {
+      toast(JOINT_DELETE_COPY.lockedNote)
+      return
+    }
+    undoJointRef.current = tx.id
+
+    toast(JOINT_DELETE_COPY.toastTitle, {
+      description: JOINT_DELETE_COPY.toastDescription(tx.description),
+      action: {
+        label: JOINT_DELETE_COPY.toastUndo,
+        onClick: () => undoDeleteJointTx(tx.id),
+      },
+      duration: UNDO_WINDOW_MS,
+    })
+    later(() => {
+      if (undoJointRef.current === tx.id) undoJointRef.current = null
+    }, UNDO_WINDOW_MS)
+  }, [pendingDeleteTx, undoDeleteJointTx, later])
+
   /* nilai awal Split Bill Sheet: pembagian transaksi terpilih / draft transaksi baru */
   const splitTargetTx =
     splitTarget && splitTarget !== 'new' ? feed.find((tx) => tx.id === splitTarget) : undefined
@@ -544,14 +619,26 @@ export function JointScreen() {
           </div>
         )}
 
+        {/* ── 61.3: KONDISI KANTONG (tiga keadaan) + relasi dengan kas pribadi ──
+            Diletakkan di ATAS percabangan supaya ketiga wujud halaman membaca
+            langkah yang sama: 1) belum ada kantong, 2) menunggu pasangan,
+            3) kantong aktif. Sebelumnya perpindahan antar keadaan tidak pernah
+            dikatakan, dan "belum ada kantong" tidak bisa dibedakan dari
+            "menunggu pasangan" karena nama kantong seed sudah terisi. */}
+        <JointStateCard state={jointState} />
+
         {!partnerJoined ? (
           /* ── SECTION 8: invite flow (halaman berubah total) ────────────── */
           <JointInviteFlow
             defaultWalletName={wallet.name}
             partner={partner}
             onCreated={(name) => {
-              /* nama kantong ditulis ke store (persist), bukan ke state halaman */
-              renameJointWallet(name)
+              /* KANTONG BARU = nama baru + BUKU BESAR KOSONG (paket 61.3).
+                 `createJointPocket()` menandai seluruh catatan contoh terhapus,
+                 jadi kantong yang baru dibuat tidak tampil berisi "Groceries
+                 Superindo" — satu-satunya cara klaim "baru dibuat" bisa
+                 dipercaya. Ditulis ke store (persist), bukan ke state halaman. */
+              if (!createJointPocket(name)) return
               setShowInviteModal(true)
             }}
             onSimulatePartnerJoined={handlePartnerJoined}
@@ -776,6 +863,11 @@ export function JointScreen() {
                     partnerTyping={partnerTyping}
                     onOpenSplit={openSplitFor}
                     onChangePaidBy={handleChangePaidBy}
+                    /* boleh-hapus dihitung dari SATU aturan di store, jadi
+                       tombol tidak pernah muncul untuk baris yang akan ditolak
+                       (bulan yang sudah disettle) */
+                    deleteState={(tx) => jointDeleteState(joint, tx)}
+                    onDelete={setPendingDeleteTx}
                   />
                 )}
               </section>
@@ -862,6 +954,34 @@ export function JointScreen() {
         me={me}
         partner={partner}
       />
+
+      {/* 61.3 — konfirmasi hapus SATU baris catatan bareng. Bentuknya dialog
+          kanon yang sama dengan hapus catatan lain (`ConfirmDialog`), dan
+          nominalnya ikut tersensor saat mode privasi menyala. */}
+      <AnimatePresence>
+        {pendingDeleteTx && (
+          <ConfirmDialog
+            titleId="hapus-catatan-bareng-judul"
+            overlayLabel={JOINT_DELETE_COPY.overlay}
+            title={JOINT_DELETE_COPY.title}
+            body={
+              <>
+                {JOINT_DELETE_COPY.bodyLead(pendingDeleteTx.description)}
+                <b className="font-semibold text-ink tabular-nums">
+                  {moneyLabel(pendingDeleteTx.amount, isMasked)}
+                </b>{' '}
+                {JOINT_DELETE_COPY.bodyTail}
+              </>
+            }
+            note={JOINT_DELETE_COPY.cashNote}
+            safety={JOINT_DELETE_COPY.safety}
+            cancelLabel={JOINT_DELETE_COPY.cancel}
+            confirmLabel={JOINT_DELETE_COPY.confirm}
+            onCancel={() => setPendingDeleteTx(null)}
+            onConfirm={confirmDeleteJointTx}
+          />
+        )}
+      </AnimatePresence>
     </ScreenShell>
   )
 }

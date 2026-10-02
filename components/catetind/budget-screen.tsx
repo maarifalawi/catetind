@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -17,33 +17,58 @@ import { AddGoalSheet } from './add-goal-sheet'
 import { ContributeSheet } from './contribute-sheet'
 import { SweepSheet } from './sweep-sheet'
 import { SpendingReviewSheet } from './spending-review-sheet'
+import { ConfirmDialog } from './confirm-dialog'
 import { ContextSwitcher } from './context-switcher'
 import { GlobalPrivacyToggle } from './global-privacy-toggle'
 import { useMoneyContext } from './money-context-provider'
 import { usePrivacy } from './privacy-provider'
 import { cn } from '@/lib/utils'
 import { openAICoachWithSeed } from '@/lib/ai-chat-bus'
+import { UNDO_WINDOW_MS } from '@/lib/data/history'
 import {
+  BUDGET_DELETE_COPY,
+  BUDGET_DELETE_TOAST,
   BUDGET_SAVE_TOAST,
   CURRENT_DAY,
   FUND_CREATE_TOAST,
+  FUND_DELETE_COPY,
+  FUND_DELETE_TOAST,
   FUND_DETAIL_COPY,
   FUND_SWEEP_TOAST,
+  TODAY_ISO,
   INITIAL_BUDGETS,
   SPENDING_REVIEW_COPY,
   applyBudgetSave,
   budgetsForPeriod,
   computeDailyHud,
+  earnedInWindow,
+  maskNominal,
   periodFromTab,
   periodIncome,
+  periodLimitWord,
   periodWindowForTab,
+  removeBudget,
+  restoreBudget,
+  sinkingObligationOf,
+  spentInWindow,
   totalSurplus,
   walletSourceName,
   type BudgetItem,
   type PeriodTab,
   type SinkingFundItem,
 } from '@/lib/data/budget'
-import { addFund, contributeToFund, sweepIntoFund, useFundsStore } from '@/lib/money/funds-store'
+import {
+  addFund,
+  contributeToFund,
+  deleteFund,
+  restoreFund,
+  sweepIntoFund,
+  useLiveFunds,
+} from '@/lib/money/funds-store'
+import { recordedTransactions, useMoneyStore } from '@/lib/money/store'
+import { useUserMoneySettings } from '@/lib/user-money-settings'
+import { dayOfMonth } from '@/lib/time'
+import { useTodayISO } from '@/lib/use-today-iso'
 
 /* ── Budget & Target (/app/budget) ───────────────────────────────────────────
    Satu halaman, dua zona:
@@ -90,8 +115,9 @@ export function BudgetScreen({
   const { context, setContext } = useMoneyContext()
   const [activeTab, setActiveTab] = useState<ZoneTab>(initialPlantGoal ? 'goals' : 'budget')
   const [periodTab, setPeriodTab] = useState<PeriodTab>('monthly')
-  /** audit #5 — Jatah Hari Ini disematkan ke Dashboard (menggantikan "Sinkron") */
-  const [hudPinned, setHudPinned] = useState(false)
+  /* audit #5 — tombol "Pin ke Dashboard" DIHAPUS di paket 60.3: ia hanya
+     membalik state halaman ini sementara `DailyHudCard` di Home tidak menerima
+     prop apa pun. Tidak ada lagi `hudPinned`/`handlePinHud` di sini. */
   const [showAddBudget, setShowAddBudget] = useState(initialAddCategory !== undefined)
   /* Jalur pintas dari insight /history (`/budget?add=Kopi`): sheet tambah budget
      TERBUKA SEJAK RENDER PERTAMA dengan kategori itu terpilih, jadi user cuma
@@ -107,18 +133,62 @@ export function BudgetScreen({
   const [showReview, setShowReview] = useState(false)
   /** celengan yang sedang menerima setoran (null = sheet tertutup) */
   const [contributeTarget, setContributeTarget] = useState<SinkingFundItem | null>(null)
+  /* ── HAPUS = KONFIRMASI + UNDO (paket 60) ────────────────────────────────
+     Dua aksi merusak yang baru punya pintu di paket ini: mencabut budget
+     kategori (60.1) dan mencabut celengan (60.2). Keduanya tidak langsung
+     jalan — `pending*` menahan niatnya sampai user menekan Hapus di dialog,
+     dan sesudahnya masih ada jendela Undo (`UNDO_WINDOW_MS`) seperti hapus
+     tagihan (pola `bills-screen.tsx`).
+
+     Jejak Undo disimpan di `useRef` (bukan state): yang menentukan "Undo masih
+     berlaku?" adalah umurnya, bukan apa yang tampil di layar. */
+  const [pendingBudgetDelete, setPendingBudgetDelete] = useState<BudgetItem | null>(null)
+  const [pendingFundDelete, setPendingFundDelete] = useState<SinkingFundItem | null>(null)
+  const budgetUndoRef = useRef<{ item: BudgetItem; index: number } | null>(null)
+  const fundUndoRef = useRef<number | null>(null)
+  /** id budget yang sudah "dipensiunkan" — supaya `applyBudgetSave()` tidak
+   *  memakai ulang id baris yang baru dicabut (paket 60.1) */
+  const retiredBudgetIds = useRef<number[]>([])
+  /** semua timer halaman — dibersihkan saat unmount supaya tidak ada set state
+   *  pada komponen yang sudah hilang (pola `bills-screen.tsx`) */
+  const timers = useRef<number[]>([])
+  useEffect(() => {
+    const pending = timers.current
+    return () => pending.forEach((id) => window.clearTimeout(id))
+  }, [])
+  const later = (fn: () => void, ms: number) => {
+    timers.current.push(window.setTimeout(fn, ms))
+  }
   /** navigasi proaktif: kartu celengan membuka halaman detail /budget/[id] */
   const router = useRouter()
 
 
   /* data halaman (mock lokal — nanti dari Supabase) */
   const [budgets, setBudgets] = useState<BudgetItem[]>(INITIAL_BUDGETS)
-  /* celengan = SATU STORE untuk seluruh app (paket 46). Dulu halaman ini punya
-     `useState(INITIAL_SINKING_FUNDS)` sendiri, sehingga celengan yang ditanam di
-     sini tidak pernah muncul di kartu "Tabungan Impian" Home dan setoran di
-     /budget/<id> tidak terlihat di sini. Sekarang tiga tempat itu membaca state
-     yang sama (`lib/money/funds-store.ts`). */
-  const { funds } = useFundsStore()
+  /* celengan = SATU STORE untuk seluruh app (paket 46), disaring TOMBSTONE
+     (paket 60.2). Dulu halaman ini punya `useState(INITIAL_SINKING_FUNDS)`
+     sendiri, sehingga celengan yang ditanam di sini tidak pernah muncul di
+     kartu "Tabungan Impian" Home dan setoran di /budget/<id> tidak terlihat di
+     sini. Sekarang tiga tempat itu membaca state yang sama
+     (`lib/money/funds-store.ts`), dan celengan yang DIHAPUS user tidak lagi ikut
+     kehitung sebagai kewajiban di Jatah Hari Ini. */
+  const funds = useLiveFunds()
+
+  /* ── JANGKAR TANGGAL + KONFIGURASI UANG USER (paket 57) ───────────────────
+     `today` = tanggal perangkat, diisi setelah mount (`''` pada render pertama
+     → hidrasi aman). Sebelumnya halaman ini memakai jangkar yang dipatok
+     (`TODAY_ISO`/`CURRENT_DAY`), jadi "Sisa 4 hari" dan label periode bisa
+     bercerita soal tanggal yang bukan hari ini. */
+  const today = useTodayISO()
+  const todayIso = today || TODAY_ISO
+  /* pemasukan bulanan + total cicilan = milik USER (diisi di onboarding atau
+     Pengaturan → Profil & Akun), bukan konstanta demo. */
+  const settings = useUserMoneySettings()
+  /* baris ledger NYATA — satu-satunya sumber uang keluar periode ini */
+  const snapshot = useMoneyStore()
+  const ledger = useMemo(() => recordedTransactions(snapshot), [snapshot])
+  /** hari ke berapa hari ini (status "telat" celengan & sapu bersih) */
+  const currentDay = today ? dayOfMonth(today, CURRENT_DAY) : CURRENT_DAY
 
   /** caption di bawah judul — posisinya sama dengan baris tanggal Dashboard,
    *  jadi user membaca "konteks + isi halaman" dari titik yang sama. */
@@ -133,7 +203,7 @@ export function BudgetScreen({
      Satu `window` dipakai bareng oleh kartu Jatah Hari Ini, daftar kategori,
      dan garis pacing — jadi tidak mungkin ada dua angka periode berbeda di
      layar yang sama. `payday` cuma nama tampil untuk model 'custom'. */
-  const period = useMemo(() => periodWindowForTab(periodTab), [periodTab])
+  const period = useMemo(() => periodWindowForTab(periodTab, todayIso), [periodTab, todayIso])
 
   /* ── DATA TURUNAN — semua ikut konteks (Pribadi / Keluarga) ───────────── */
   const visibleBudgets = useMemo(
@@ -171,26 +241,132 @@ export function BudgetScreen({
 
      Angka panel Review & kartu kategori membaca `hud` dan `window` yang sama
      (lihat `spendingReview()`), jadi satu layar tidak mungkin punya dua cerita. */
+  const spent = useMemo(() => spentInWindow(ledger, period), [ledger, period])
+  const earned = useMemo(() => earnedInWindow(ledger, period), [ledger, period])
   const hud = useMemo(
-    () => computeDailyHud({ sinkingFunds: funds, window: period }),
-    [funds, period],
+    () =>
+      computeDailyHud({
+        monthlyIncome: settings.monthlyIncome,
+        totalInstallments: settings.totalInstallments,
+        sinkingFunds: funds,
+        spent,
+        earned,
+        window: period,
+      }),
+    [settings.monthlyIncome, settings.totalInstallments, funds, spent, earned, period],
   )
 
   /* ── PEMASUKAN DI PERIODE AKTIF (PRD 2B.3) ─────────────────────────────
      Tidak ada pemasukan di jendela → kartu Dry Spell (tanpa Rp 0/hari).
      Pemasukan masuk di tengah periode → catatan kecil di bawah jatah harian. */
-  const income = useMemo(() => periodIncome(period), [period])
+  /* PAKET 57 - dua keadaan yang dibedakan kartu:
+       - `!income.configured` -> CTA "atur pemasukan" (angka belum bisa dihitung);
+       - `!income.hasIncome`  -> Dry Spell (sudah diatur, belum ada catatan masuk).
+     Sumbernya konfigurasi user + baris ledger NYATA, bukan `HISTORY_TRANSACTIONS`. */
+  const income = useMemo(
+    () => periodIncome(period, ledger, settings.monthlyIncome),
+    [period, ledger, settings.monthlyIncome],
+  )
 
   /* ── AKSI ────────────────────────────────────────────────────────────── */
 
-  /** audit #5 — sematkan kartu Jatah Hari Ini ke Dashboard (bukan "sinkron") */
-  function handlePinHud() {
-    setHudPinned((prev) => !prev)
-    if (!hudPinned) {
-      toast.success('Kartu Jatah Hari Ini dipin ke Dashboard 📌', {
-        description: 'Selalu kelihatan di halaman depan.',
-      })
+  /**
+   * Hapus budget kategori (paket 60.1) — tiga langkah, urutannya disengaja:
+   *   1. `handleDeleteBudget` hanya MENAHAN niatnya (dialog konfirmasi);
+   *   2. `confirmBudgetDelete` mencabut barisnya lewat `removeBudget()` dan
+   *      mencatat posisi aslinya untuk Undo, lalu memberi tahu dengan jujur bahwa
+   *      saldo & Jatah Harian TIDAK berubah;
+   *   3. `undoBudgetDelete` mengembalikannya ke posisi semula — kalau jendelanya
+   *      sudah lewat, user diberi tahu apa adanya (bukan diam-diam gagal).
+   */
+  function handleDeleteBudget(budget: BudgetItem) {
+    setPendingBudgetDelete(budget)
+  }
+
+  function confirmBudgetDelete() {
+    if (!pendingBudgetDelete) return
+    const target = pendingBudgetDelete
+    const result = removeBudget(budgets, target.id)
+    setPendingBudgetDelete(null)
+    /* tidak ada baris yang cocok (mis. state berubah di tab lain) → tidak ada
+       yang berubah, jadi tidak ada toast "berhasil" */
+    if (!result.removed) return
+
+    setBudgets(result.budgets)
+    budgetUndoRef.current = result.removed
+    /* id-nya dipensiunkan: budget berikutnya tidak boleh mewarisi id baris ini
+       selama jendela Undo masih hidup */
+    retiredBudgetIds.current = [...retiredBudgetIds.current, target.id]
+
+    toast(BUDGET_DELETE_TOAST.title(target.category), {
+      description: BUDGET_DELETE_TOAST.description,
+      action: { label: BUDGET_DELETE_TOAST.undo, onClick: () => undoBudgetDelete(target.id) },
+      /* lama toast = lama hak undo; keduanya dibaca dari satu konstanta */
+      duration: UNDO_WINDOW_MS,
+    })
+    later(() => {
+      if (budgetUndoRef.current?.item.id === target.id) budgetUndoRef.current = null
+    }, UNDO_WINDOW_MS)
+  }
+
+  function undoBudgetDelete(budgetId: number) {
+    const removal = budgetUndoRef.current
+    if (!removal || removal.item.id !== budgetId) {
+      toast(BUDGET_DELETE_TOAST.expired)
+      return
     }
+    budgetUndoRef.current = null
+    setBudgets((prev) => restoreBudget(prev, removal))
+    /* id-nya dipakai lagi oleh baris ini → dilepas dari daftar pensiun supaya
+       tidak ada id yang "hangus" tanpa alasan */
+    retiredBudgetIds.current = retiredBudgetIds.current.filter((id) => id !== budgetId)
+    toast.success(BUDGET_DELETE_TOAST.undoneTitle, {
+      description: BUDGET_DELETE_TOAST.undoneDescription,
+    })
+  }
+
+  /**
+   * Hapus celengan (paket 60.2) — pola yang sama dengan hapus budget, tapi
+   * konsekuensinya menyentuh UANG: kewajiban bulanannya berhenti dipotong dari
+   * kolam, jadi Jatah Harian naik. Karena itu dialognya memakai kalimat dari
+   * `FUND_DELETE_COPY` (yang menyebut nominal kewajiban yang dilepas) dan
+   * toast-nya menegaskan bahwa uang yang sudah disetor tetap tercatat.
+   */
+  function handleDeleteFund(fund: SinkingFundItem) {
+    setPendingFundDelete(fund)
+  }
+
+  function confirmFundDelete() {
+    if (!pendingFundDelete) return
+    const target = pendingFundDelete
+    const removed = deleteFund(target.id)
+    setPendingFundDelete(null)
+    if (!removed) return
+
+    fundUndoRef.current = target.id
+    toast(FUND_DELETE_TOAST.title(target.name), {
+      description: FUND_DELETE_TOAST.description,
+      action: { label: FUND_DELETE_TOAST.undo, onClick: () => undoFundDelete(target.id) },
+      duration: UNDO_WINDOW_MS,
+    })
+    later(() => {
+      if (fundUndoRef.current === target.id) fundUndoRef.current = null
+    }, UNDO_WINDOW_MS)
+  }
+
+  function undoFundDelete(fundId: number) {
+    if (fundUndoRef.current !== fundId) {
+      toast(FUND_DELETE_TOAST.expired)
+      return
+    }
+    fundUndoRef.current = null
+    if (!restoreFund(fundId)) {
+      toast(FUND_DELETE_TOAST.expired)
+      return
+    }
+    toast.success(FUND_DELETE_TOAST.undoneTitle, {
+      description: FUND_DELETE_TOAST.undoneDescription,
+    })
   }
 
   /** 3F — simpan budget. Satu jalur untuk tambah & atur ulang limit: keputusan
@@ -199,7 +375,9 @@ export function BudgetScreen({
    *  baris untuk satu kategori, dari jalan mana pun — dan toast-nya mengikuti
    *  mode yang BENAR-BENAR terjadi, bukan yang ditebak komponen. */
   function handleSaveBudget(data: Omit<BudgetItem, 'id' | 'spent'>) {
-    const result = applyBudgetSave(budgets, data)
+    /* id baris yang sudah dipensiunkan ikut dikirim: tanpa itu, budget baru bisa
+       memakai ulang id baris yang baru dicabut (paket 60.1) */
+    const result = applyBudgetSave(budgets, data, retiredBudgetIds.current)
     setBudgets(result.budgets)
     handleCloseAddBudget()
 
@@ -242,7 +420,13 @@ export function BudgetScreen({
    *  membaca setoran yang sama tidak mungkin bercerita beda) */
   function handleContribute(fundId: number, amount: number, walletId: string) {
     const result = contributeToFund(fundId, amount, walletId)
-    if (!result) return
+    /* store menolak (celengan sudah dihapus / nominal tidak sah) → tutup sheet &
+       katakan apa adanya; jangan tinggalkan user menebak kenapa tidak terjadi apa-apa */
+    if (!result) {
+      setContributeTarget(null)
+      toast(FUND_DELETE_COPY.goneNote)
+      return
+    }
     setContributeTarget(null)
     toast.success(FUND_DETAIL_COPY.setToastTitle(money(amount), result.fund.name), {
       description: FUND_DETAIL_COPY.setToastHint(walletSourceName(walletId)),
@@ -261,7 +445,15 @@ export function BudgetScreen({
 
     /* satu tulisan ke store: progres + baris riwayat "Sisa budget" (Sapu Bersih
        bukan dompet, jadi sumbernya punya nama sendiri — lihat CONTRIBUTION_SOURCES) */
-    sweepIntoFund(fundId, swept)
+    const sweptRow = sweepIntoFund(fundId, swept)
+    /* celengan tujuannya keburu dihapus → TIDAK ada yang berpindah, jadi limit
+       kategori juga tidak boleh dianggap terpakai (dulu baris di bawah tetap
+       jalan dan toast "berhasil" muncul padahal store menolak) */
+    if (!sweptRow) {
+      setShowSweepModal(false)
+      toast(FUND_DELETE_COPY.goneNote)
+      return
+    }
     /* sisa dianggap terpakai → limit mulai dari nol lagi bulan depan */
     setBudgets((prev) =>
       prev.map((budget) =>
@@ -394,8 +586,6 @@ export function BudgetScreen({
           masked={masked}
           window={period}
           income={income}
-          pinned={hudPinned}
-          onPin={handlePinHud}
         />
       </div>
 
@@ -438,6 +628,7 @@ export function BudgetScreen({
               onAddBudget={() => setShowAddBudget(true)}
               onSweep={() => setShowSweepModal(true)}
               onReviewCoach={handleReviewCoach}
+              onDeleteBudget={handleDeleteBudget}
             />
           </section>
 
@@ -461,10 +652,11 @@ export function BudgetScreen({
             <BudgetZoneB
               funds={visibleFunds}
               masked={masked}
-              currentDay={CURRENT_DAY}
+              currentDay={currentDay}
               onAddGoal={() => setShowAddGoal(true)}
               onContribute={setContributeTarget}
               onOpenFund={handleOpenFund}
+              onDeleteGoal={handleDeleteFund}
             />
           </section>
         </motion.div>
@@ -514,10 +706,77 @@ export function BudgetScreen({
         window={period}
         income={income}
         masked={masked}
+        txs={ledger}
+        todayISO={todayIso}
         onContinueChat={handleContinueToCoach}
       />
+
+      {/* ── KONFIRMASI HAPUS (paket 60) ──────────────────────────────────────
+          Dua dialog, dua kalimat jujur yang berbeda — dan keduanya memakai
+          `<ConfirmDialog/>` yang sama dengan hapus tagihan/transaksi (satu
+          wujud dialog untuk semua aksi merusak, `CONTEXT-WAJIB` §2). */}
+
+      {/* hapus BUDGET: limit bukan uang → `note` menegaskan saldo & Jatah
+          Harian TIDAK berubah (60.1) */}
+      <AnimatePresence>
+        {pendingBudgetDelete && (
+          <ConfirmDialog
+            titleId="hapus-budget-judul"
+            overlayLabel={BUDGET_DELETE_COPY.overlay}
+            title={BUDGET_DELETE_COPY.title}
+            body={BUDGET_DELETE_COPY.body(
+              pendingBudgetDelete.category,
+              periodLimitWord(pendingBudgetDelete.period),
+            )}
+            note={BUDGET_DELETE_COPY.note}
+            safety={BUDGET_DELETE_COPY.safety(UNDO_WINDOW_MS / 1000)}
+            cancelLabel={BUDGET_DELETE_COPY.cancel}
+            confirmLabel={BUDGET_DELETE_COPY.confirm}
+            onCancel={() => setPendingBudgetDelete(null)}
+            onConfirm={confirmBudgetDelete}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* hapus CELENGAN: efeknya menyentuh uang → nominal kewajiban yang dilepas
+          disebut lebih dulu (60.2 · temuan audit #4) */}
+      <AnimatePresence>
+        {pendingFundDelete && (
+          <ConfirmDialog
+            titleId="hapus-celengan-judul"
+            overlayLabel={FUND_DELETE_COPY.overlay}
+            title={FUND_DELETE_COPY.title}
+            body={FUND_DELETE_COPY.body(pendingFundDelete.name)}
+            note={fundDeleteNote(pendingFundDelete, masked)}
+            safety={FUND_DELETE_COPY.safety(UNDO_WINDOW_MS / 1000)}
+            cancelLabel={FUND_DELETE_COPY.cancel}
+            confirmLabel={FUND_DELETE_COPY.confirm}
+            onCancel={() => setPendingFundDelete(null)}
+            onConfirm={confirmFundDelete}
+          />
+        )}
+      </AnimatePresence>
     </ScreenShell>
   )
+}
+
+/**
+ * Kalimat efek uang untuk dialog hapus celengan.
+ *
+ * Nominalnya dihitung dengan `sinkingObligationOf([fund])` — rumus yang SAMA
+ * dengan yang memotong kolam Jatah Hari Ini — jadi angka yang dijanjikan dialog
+ * tidak mungkin berbeda dari yang benar-benar terjadi. Kalau kewajibannya nol
+ * (sudah disetor bulan ini / target penuh), dialog TIDAK menjanjikan kenaikan;
+ * ia memakai `noObligationNote` yang mengatakan jatah hariannya tetap.
+ */
+function fundDeleteNote(fund: SinkingFundItem, masked: boolean): string {
+  const obligation = sinkingObligationOf([fund])
+  if (obligation <= 0) {
+    return `${FUND_DELETE_COPY.cashNote} ${FUND_DELETE_COPY.noObligationNote}`
+  }
+  return `${FUND_DELETE_COPY.cashNote} ${FUND_DELETE_COPY.obligationNote(
+    maskNominal(obligation, masked),
+  )}`
 }
 
 /* ── Catatan design system ───────────────────────────────────────────────────

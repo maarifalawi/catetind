@@ -116,6 +116,21 @@ export const HOME_PLANT_COPY = {
   /** pertahanan kalau daftar celengan kosong — jangan sampai tanaman Home
    *  menggantung tanpa penjelasan kenapa ia tumbuh */
   noNutrition: 'Belum ada celengan yang dikejar — mulai satu yuk 🌱',
+  /* ── MODAL DETAIL TANAMAN (paket 58) ──────────────────────────────────────
+     Dua label + kalimat ini dulu ditulis langsung di `plant-detail-modal.tsx`;
+     dipindah ke sini supaya copy user-facing tetap satu pintu (§8). Saat belum
+     ada aktivitas, modal tidak menulis "0 hari" — ia menyebut apa adanya
+     "Belum ada aktivitas", karena tanamannya belum pernah disiram. */
+  detailTitle: 'Tanamanmu 🌿',
+  hpLabel: 'Kesehatan tanaman',
+  hpTitle: (pct: number) => `Kesehatan tanaman ${pct}%`,
+  activeDaysLabel: 'Hari aktif bulan ini',
+  activeDaysValue: (days: number) => `${days} hari`,
+  activeEmptyValue: 'Belum ada aktivitas',
+  activeBody: (days: number) =>
+    `Kamu udah catat ${days} hari bulan ini — tanamanmu tumbuh karena konsistensimu. Lanjutin ya! 💚`,
+  activeEmptyBody:
+    'Belum ada aktivitas bulan ini — catat transaksi pertamamu, tanamanmu langsung ikut tumbuh 🌱',
 } as const
 
 /** Donat saldo (panel "Your Balance Overview") — tiga pintasan ke halaman nyata. */
@@ -158,4 +173,24 @@ export const HOME_TOTAL_COPY = {
   contextLine: (contextLabel: string, amount: string) => `Dompet ${contextLabel}: ${amount}`,
   /** penegas cakupan — dibaca berdampingan dengan baris konteks di atas */
   scopeNote: 'Total Saldo = semua dompet',
+} as const
+
+/** Copy tombol & baris keadaan kosong kartu dompet Home (paket 58 — 58.7).
+ *  Dipindah dari JSX `wallet-card-stack.tsx` supaya literal copy tidak menumpuk
+ *  di komponen; keadaan 0 dompet = satu-satunya kartu di deck. */
+export const HOME_WALLET_STACK_COPY = {
+  addTitle: 'Tambah Dompet',
+  addSubtitle: 'Bank, e-wallet, atau tunai',
+  emptyLine: 'Belum ada dompet — tambah satu dulu biar saldomu kebaca 🌱',
+} as const
+
+/** Copy slot nudge AI Coach di Home (paket 58 — 58.4). Dipindah dari JSX
+ *  `daily-nudge.tsx`; pemicunya kini data nyata: "belum ada catatan hari ini"
+ *  dibaca dari ledger, bukan konstanta. */
+export const HOME_NUDGE_COPY = {
+  coachLabel: 'AI Coach',
+  title: 'Hari ini belum ada catatan nih 🌿',
+  body: 'Kopi atau ongkos tadi udah dicatat belum? Sekali catat, tanamanmu tetap segar dan Jatah Harian tetap akurat.',
+  cta: 'Catat sekarang',
+  dismissLabel: 'Tutup pengingat hari ini',
 } as const

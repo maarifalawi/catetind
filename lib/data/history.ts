@@ -1,3 +1,4 @@
+import { localISODate } from '../time'
 import type { MoneyContext, TransactionType } from '../types'
 import { formatIDR } from '../wallets'
 
@@ -118,27 +119,146 @@ export function isMoneyMovement(tx: HistoryTransaction): boolean {
 
 /** Ambang unlock widget Skor Kewarasan Finansial — kanon PRD Domain 2A.5 */
 export const HEALTH_SCORE_THRESHOLD = 30
-/** Skor mock 0–100 (nanti dari backend) */
-export const HEALTH_SCORE = 72
+
+/* ── SKOR KEWARASAN: DIHITUNG, BUKAN DIPATOK (paket 59 · temuan audit #9) ──────
+   Sampai paket 58 kartu hero Riwayat membawa `HEALTH_SCORE = 72` dan
+   `TOTAL_TRANSACTIONS = 24`: dua konstanta yang tidak berasal dari satu pun
+   catatan user. Setelah seluruh data dikosongkan, "skor 72" dan "24 transaksi"
+   itu TETAP tampil — klaim paling telanjang yang bisa dibuat app keuangan.
+
+   Yang dipakai sekarang HANYA catatan user:
+       rate = (pemasukan − pengeluaran) / pemasukan
+   Definisi masuk/keluar-nya sama dengan `summarizeTransactions()` di file ini
+   (pindah dana antar dompet tidak dihitung — net worth tidak berubah), jadi
+   kartu ini mustahil bercerita beda dengan angka di kepala daftar.
+
+   `null` BUKAN kegagalan; itu jawaban sah untuk dua keadaan:
+     1. catatan belum mencapai `HEALTH_SCORE_THRESHOLD` (gerbang PRD 2A.5), atau
+     2. belum ada satu pun pemasukan — tanpa pembagi, rasio itu tidak punya arti.
+   Di keadaan itu kartu menampilkan kalibrasi/penjelasan (`HEALTH_CARD_COPY`),
+   bukan angka karangan. */
+
+/** rasio sisih (persen) yang membuat skor menyentuh 100 — menyisihkan separuh */
+export const HEALTH_RATE_FOR_FULL_SCORE = 50
+
+export interface HistoryDataCount {
+  /** catatan dari sesi ini (panel input manual / AI Coach) yang belum dihapus */
+  session: number
+  /** catatan seed/demo yang belum dihapus tombstone */
+  seedAlive: number
+}
 
 /**
- * Jumlah transaksi user sejauh ini (mock).
- * Ubah ke >= HEALTH_SCORE_THRESHOLD (30) untuk melihat varian GAUGE.
+ * Jumlah transaksi NYATA milik user = baris sesi + baris seed yang masih hidup.
+ * Dua sumbernya disebut terpisah supaya tidak ada halaman yang lupa salah
+ * satunya — dulu angka 24 di sini cuma konstanta yang tidak membaca apa pun.
  */
-export const TOTAL_TRANSACTIONS = 24
+export function countHistoryTransactions(count: HistoryDataCount): number {
+  const safe = (value: number) => (Number.isFinite(value) && value > 0 ? Math.floor(value) : 0)
+  return safe(count.session) + safe(count.seedAlive)
+}
+
+/** rasio sisih dalam persen; `null` = belum ada pemasukan (tidak ada pembagi) */
+export function savingsRatePct(txs: readonly HistoryTransaction[]): number | null {
+  const { income, expense } = summarizeTransactions([...txs])
+  if (income <= 0) return null
+  return Math.round(((income - expense) / income) * 100)
+}
+
+/** skor 0–100 dari catatan user; `null` = belum bisa dihitung (lihat di atas) */
+export function financialHealthScore(txs: readonly HistoryTransaction[]): number | null {
+  if (txs.length < HEALTH_SCORE_THRESHOLD) return null
+  const rate = savingsRatePct(txs)
+  if (rate === null) return null
+  const ratio = rate / HEALTH_RATE_FOR_FULL_SCORE
+  return Math.max(0, Math.min(100, Math.round(ratio * 100)))
+}
+/** empat keadaan kartu hero — SATU definisi supaya kartu & halaman tidak beda */
+export type HealthCardState = 'empty' | 'calibrating' | 'no-income' | 'ready'
+
+export function healthCardState(input: {
+  /** jumlah transaksi nyata user (`countHistoryTransactions`) */
+  totalTransactions: number
+  /** hasil `financialHealthScore()`; `null` = belum bisa dihitung */
+  score: number | null
+}): HealthCardState {
+  if (input.totalTransactions <= 0) return 'empty'
+  if (input.score !== null) return 'ready'
+  return input.totalTransactions >= HEALTH_SCORE_THRESHOLD ? 'no-income' : 'calibrating'
+}
 
 /**
- * "Hari ini" untuk DATA MOCK transaksi — DIPATOK sebagai konstanta (bukan
+ * Band status skor. Labelnya tinggal di sini (bukan di JSX) dan warnanya memakai
+ * token palet status Daily HUD — bukan merah (kanon PRD 2B.2).
+ */
+export const HEALTH_SCORE_BANDS: { min: number; label: string; chip: string }[] = [
+  { min: 80, label: 'Sangat Sehat', chip: 'bg-mint text-forest' },
+  { min: 60, label: 'Cukup Sehat', chip: 'bg-hud-sage/35 text-forest' },
+  { min: 40, label: 'Perlu Perhatian', chip: 'bg-hud-amber/25 text-hud-terracotta' },
+  { min: 0, label: 'Hati-hati', chip: 'bg-hud-terracotta/20 text-hud-terracotta' },
+]
+
+export function healthScoreBand(score: number): { min: number; label: string; chip: string } {
+  return (
+    HEALTH_SCORE_BANDS.find((band) => score >= band.min) ??
+    HEALTH_SCORE_BANDS[HEALTH_SCORE_BANDS.length - 1]
+  )
+}
+
+/** copy kartu hero (kalibrasi & skor). Angka & persen selalu diisi pemanggil. */
+export const HEALTH_CARD_COPY = {
+  readyTitle: 'Skor Kewarasan Finansial',
+  readySubtitle: 'Dihitung dari catatanmu sendiri',
+  calibratingTitle: 'Kalibrasi Profil AI',
+  calibratingSubtitle: 'AI Coach sedang menyelaraskan polamu',
+  /** badge kanan atas kartu */
+  badgeAi: 'AI',
+  badgeCoach: 'AI Coach',
+  learning: 'AI sedang mempelajari polamu...',
+  progressLabel: (done: number, goal: number) => `${done}/${goal} transaksi`,
+  progressPercent: (pct: number) => `Kalibrasi ${pct}%`,
+  remaining: (remaining: number) => `${remaining} transaksi lagi buat kalibrasi profilmu`,
+  progressA11y: (done: number, goal: number) =>
+    `Kalibrasi profil AI: ${done} dari ${goal} transaksi terkumpul`,
+  /** cukup catatan TAPI belum ada pemasukan — jelaskan kenapa skornya belum ada */
+  noIncomeTitle: 'Skor belum bisa dihitung',
+  noIncomeBody:
+    'Belum ada satu pun pemasukan di catatanmu, jadi rasio pemasukan vs pengeluaran belum punya pembagi. Catat pemasukan pertamamu, skornya langsung muncul di sini.',
+  /** CTA di kartu "belum ada pemasukan" — satu-satunya hal yang membuka skornya */
+  noIncomeCta: 'Catat pemasukan',
+  /** label di bawah angka skor */
+  outOf: 'dari 100',
+  /** kalimat hasil: angkanya dari data user, bukan contoh */
+  verdict: (rate: number) =>
+    rate >= 0
+      ? `Kamu menyisihkan ${rate}% dari seluruh pemasukan yang kamu catat. Sisanya kepakai buat hidup — selama di atas nol, kamu masih jalan ke depan 💪`
+      : `Pengeluaranmu ${Math.abs(rate)}% lebih besar dari pemasukan yang kamu catat. Nggak perlu panik — pelan-pelan cek kategori paling gemuk di daftar.`,
+  /** satu kalimat yang menjelaskan APA yang diukur skor ini (anti metrik misterius) */
+  measured: (rate: number) =>
+    `Skor ini cuma satu angka: rasio pemasukan vs pengeluaran dari catatanmu (kamu menyisihkan ${rate}%).`,
+} as const
+
+/** copy blok pengganti saat BELUM ADA satu catatan pun (kartu hero & insight) */
+export const HISTORY_NO_DATA_COPY = {
+  title: 'Belum ada satu catatan pun di sini',
+  body: 'Skor kewarasan, insight AI, dan pola pengeluaran baru bisa dihitung setelah ada catatan pertama. Skor contoh tidak kami tampilkan — angka di halaman ini selalu dari catatanmu.',
+  cta: 'Catat Sekarang',
+} as const
+
+/**
+ * Jangkar tanggal DATA SEED Riwayat — DIPATOK sebagai konstanta (bukan
  * `new Date()`), seperti seluruh tanggal mock lain di repo. Dua hal memakainya:
  *
- *   1. empat catatan paling baru di `HISTORY_TRANSACTIONS` (hari berjalan), dan
- *   2. jangkar tanggal halaman /budget (`lib/data/budget.ts` → `TODAY_ISO`).
+ *   1. empat catatan paling baru di `HISTORY_TRANSACTIONS` (data demo), dan
+ *   2. jangkar DEFAULT halaman /budget (`lib/data/budget.ts` → `TODAY_ISO`) saat
+ *      modul itu dipakai di server/test.
  *
- * Dua hal itu HARUS satu tanggal: panel "Review Pengeluaran Hari Ini" (prompt
- * 19) membandingkan catatan hari ini dengan jatah harian periode aktif, jadi
- * kalau jangkarnya beda, panel dan Riwayat bisa bercerita soal hari yang
- * berbeda. Belum menggantikan `localISODate()` — itu membaca jam PERANGKAT dan
- * tetap dipakai untuk label "Hari Ini"/"Kemarin" di halaman Riwayat.
+ * Sejak paket 57 konstanta ini BUKAN lagi "hari ini" milik user: seluruh jangkar
+ * UI ("hari ini", "kemarin", strip 7 hari, jendela periode) datang dari
+ * `todayISO()`/`useTodayISO()` di `lib/time.ts` — satu definisi, dan layar
+ * mengisinya setelah mount supaya render server & client tetap identik. Data
+ * seed-nya sendiri sengaja TIDAK digeser (demo harus stabil dan bebas hydration
+ * mismatch).
  */
 export const HISTORY_TODAY_ISO = '2026-09-27'
 
@@ -237,12 +357,15 @@ const NAMED_CATEGORIES = ['makanan', 'transportasi', 'tagihan', 'hiburan']
 
 /* ── TANGGAL & MASKING ───────────────────────────────────────────────────── */
 
-/** tanggal lokal (bukan UTC) dalam format `YYYY-MM-DD` */
-export function localISODate(d: Date = new Date()): string {
-  const m = `${d.getMonth() + 1}`.padStart(2, '0')
-  const day = `${d.getDate()}`.padStart(2, '0')
-  return `${d.getFullYear()}-${m}-${day}`
-}
+/**
+ * Tanggal lokal (bukan UTC) dalam format `YYYY-MM-DD`.
+ *
+ * PAKET 57: definisinya PINDAH ke `lib/time.ts` (satu "hari ini" untuk seluruh
+ * app) dan di sini hanya diteruskan apa adanya — puluhan modul & komponen sudah
+ * mengimpor `localISODate` dari file ini, dan memutus nama lama itu berarti
+ * memaksa setiap pemanggil ikut berubah tanpa satu pun perubahan perilaku.
+ */
+export { localISODate } from '../time'
 
 /** disingkat & diekspor supaya label rentang periode (lib/data/budget.ts) memakai
  *  satu sumber yang sama — tanpa Intl, jadi bebas pergeseran timezone */
@@ -409,6 +532,170 @@ export function topExpenseCategory(txs: HistoryTransaction[]): CategorySlice | n
   const [entry] = [...totals.entries()].sort((a, b) => b[1] - a[1])
   return { category: entry[0], total: entry[1], pct: Math.round((entry[1] / grand) * 100) }
 }
+
+/* ── INSIGHT AI DARI CATATAN USER (paket 59 · temuan audit #7) ────────────────
+   Tiga kartu insight dulu membawa angka KERAS di dalam kalimatnya ("naik 40%",
+   "22% dari pemasukan", "Makanan (45% …)") sementara komentarnya sendiri mengakui
+   "menyusul dari backend". Itu tepat jenis klaim yang dilarang PRD 2A.5
+   ("jangan pernah kasih false insight"): user membaca angka finansial yang tidak
+   berasal dari catatannya.
+
+   Sekarang setiap kartu LAHIR dari hitungan atas catatan user. Kalau angkanya
+   belum bisa dihitung — data terlalu tipis, atau belum ada pembanding minggu
+   sebelumnya — kartunya TIDAK muncul sama sekali (bukan muncul dengan angka
+   contoh). Ambangnya tetap seperti semula (5 / 10 / 7 transaksi), tapi kini
+   dihitung dari catatan NYATA lewat `countHistoryTransactions` di halaman. */
+
+export const INSIGHT_MIN_SPIKE_TX = 5
+export const INSIGHT_MIN_SAVINGS_TX = 10
+export const INSIGHT_MIN_CATEGORY_TX = 7
+
+/**
+ * Tujuan aksi tiap insight. Href-nya tinggal di sini supaya komponen kartu tidak
+ * menulis rute apa pun; keduanya halaman yang MEMILIKI data yang dirujuk —
+ * `/budget` (limit & celengan) dan `/wealth` (aset).
+ */
+export const HISTORY_INSIGHT_HREF = {
+  budget: '/budget',
+  wealth: '/wealth',
+} as const
+
+export interface HistoryInsight {
+  id: 'spending-spike' | 'savings-rate' | 'category-trend'
+  eyebrow: string
+  copy: string
+  tone: 'alert' | 'good' | 'neutral'
+  /** aksi keluar — SELALU ada: insight tanpa jalan keluar = dead-end (PRD 2A.5) */
+  actions: { label: string; href: string }[]
+}
+
+export interface SpendingSpike {
+  category: string
+  /** persen kenaikan dibanding jendela 7 hari sebelumnya */
+  pct: number
+}
+
+/** pengeluaran per kategori dalam rentang tanggal inklusif (pindah dana dikecualikan) */
+function expenseByCategory(
+  txs: readonly HistoryTransaction[],
+  from: string,
+  to: string,
+): Map<string, number> {
+  const totals = new Map<string, number>()
+  for (const tx of txs) {
+    if (tx.type === 'transfer' || tx.type === 'income') continue
+    if (tx.date < from || tx.date > to) continue
+    totals.set(tx.category, (totals.get(tx.category) ?? 0) + tx.amount)
+  }
+  return totals
+}
+
+/**
+ * Kategori yang pengeluarannya paling naik pada 7 hari terakhir dibanding 7 hari
+ * sebelumnya. `null` = tidak ada yang naik, atau jendela sebelumnya belum punya
+ * data — tanpa pembanding tidak ada persen yang jujur untuk diucapkan.
+ */
+export function spendingSpike7d(
+  txs: readonly HistoryTransaction[],
+  todayIso: string,
+): SpendingSpike | null {
+  if (!todayIso) return null
+  const thisWeek = expenseByCategory(txs, shiftISODate(todayIso, -6), todayIso)
+  const lastWeek = expenseByCategory(txs, shiftISODate(todayIso, -13), shiftISODate(todayIso, -7))
+
+  let best: SpendingSpike | null = null
+  for (const [category, total] of thisWeek) {
+    const before = lastWeek.get(category) ?? 0
+    if (before <= 0 || total <= before) continue
+    const pct = Math.round(((total - before) / before) * 100)
+    if (!best || pct > best.pct) best = { category, pct }
+  }
+  return best
+}
+
+/** catatan bulan `todayIso` (dipakai dua insight yang bicara "bulan ini") */
+function monthTransactions(
+  txs: readonly HistoryTransaction[],
+  todayIso: string,
+): HistoryTransaction[] {
+  if (!todayIso) return []
+  const month = todayIso.slice(0, 7)
+  return txs.filter((tx) => tx.date.slice(0, 7) === month)
+}
+
+/**
+ * Deret insight untuk halaman Riwayat. `txs` yang dikirim halaman adalah catatan
+ * KONTEKS AKTIF (paket 47) tanpa tombstone, jadi tiap kalimat di kartu ini selalu
+ * soal konteks yang sedang dibaca — bukan soal seluruh data di belakang layar.
+ */
+export function buildHistoryInsights(
+  txs: readonly HistoryTransaction[],
+  todayIso: string,
+): HistoryInsight[] {
+  const insights: HistoryInsight[] = []
+  const month = monthTransactions(txs, todayIso)
+
+  /* 1. SPENDING SPIKE — butuh dua jendela seminggu (ambang 5 catatan) */
+  if (txs.length >= INSIGHT_MIN_SPIKE_TX) {
+    const spike = spendingSpike7d(txs, todayIso)
+    if (spike) {
+      insights.push({
+        id: 'spending-spike',
+        eyebrow: 'Spending Spike',
+        copy: `Pengeluaran ${spike.category} naik ${spike.pct}% dibanding 7 hari sebelumnya ☕`,
+        tone: 'alert',
+        actions: [{ label: 'Atur limit bulanan', href: HISTORY_INSIGHT_HREF.budget }],
+      })
+    }
+  }
+
+  /* 2. SAVINGS RATE — 10 catatan bulan ini + minimal satu pemasukan. Angkanya
+     rasio nyata; kalau pengeluaran lebih besar, kalimatnya berbalik jadi
+     peringatan — bukan pujian yang tidak berdasar. */
+  if (month.length >= INSIGHT_MIN_SAVINGS_TX) {
+    const rate = savingsRatePct(month)
+    if (rate !== null) {
+      insights.push({
+        id: 'savings-rate',
+        eyebrow: 'Savings Rate',
+        copy:
+          rate >= 0
+            ? `Kamu berhasil sisihkan ${rate}% dari pemasukan bulan ini! 🌿`
+            : `Pengeluaran bulan ini ${Math.abs(rate)}% lebih besar dari pemasukanmu — belum ada yang tersisih.`,
+        tone: rate >= 0 ? 'good' : 'alert',
+        actions: [
+          { label: 'Alokasikan ke Sinking Fund', href: HISTORY_INSIGHT_HREF.budget },
+          { label: 'Simpan di Reksadana', href: HISTORY_INSIGHT_HREF.wealth },
+        ],
+      })
+    }
+  }
+
+  /* 3. CATEGORY TREND — kategori pengeluaran terbesar bulan ini + pangsa nyata */
+  if (month.length >= INSIGHT_MIN_CATEGORY_TX) {
+    const top = topExpenseCategory(month)
+    if (top) {
+      insights.push({
+        id: 'category-trend',
+        eyebrow: 'Category Trend',
+        copy: `Kategori terbesar bulan ini: ${top.category} (${top.pct}% dari pengeluaranmu).`,
+        tone: 'neutral',
+        actions: [{ label: 'Atur limit kategori', href: HISTORY_INSIGHT_HREF.budget }],
+      })
+    }
+  }
+
+  return insights
+}
+
+/** copy deret insight (judul panel & keadaan "belum ada temuan") */
+export const INSIGHT_CARD_COPY = {
+  title: 'Insight AI',
+  found: (count: number) => `${count} temuan`,
+  waiting: 'Menunggu data',
+  /** belum ada satu pun insight yang lolos ambang — kalimat nurturing, bukan klaim */
+  learning: 'Aku masih belajar polamu. Terus catat ya 📊',
+} as const
 
 /** nominal rupiah dengan privasi: `Rp 25.000` atau `Rp •••••••` */
 export function maskMoney(value: number, masked: boolean): string {
@@ -583,6 +870,44 @@ export const DELETE_TRANSACTION_TOAST = {
   undoneDescription: 'Catatan itu balik ke tempatnya semula.',
   /** jaring pengaman tetap jujur kalau tombol Undo ditekan setelah jendelanya tutup */
   expired: 'Jendela Undo-nya sudah lewat — catatannya bisa dicatat ulang kapan aja 🌿',
+} as const
+
+/* ── HAPUS SEMUA RIWAYAT (paket 59 · item 59.2) ───────────────────────────────
+   Section "Catatan" dulu hanya bisa menghapus satu catatan (swipe / menu titik
+   tiga). Membersihkan riwayat berarti mengulanginya puluhan kali — dan itu jadi
+   alasan orang menyerah pada catatan lama yang tidak relevan lagi.
+
+   Aturan copy-nya satu dan tidak bisa ditawar: MENGHAPUS CATATAN TIDAK
+   MENGEMBALIKAN SALDO. Uang yang sudah keluar tetap keluar (kanon paket 46/49,
+   terkunci test di `lib/money/store.test.ts`) — kalau kalimat konfirmasinya
+   menyiratkan "saldo kembali", user akan menyesal setelah menekannya. Karena itu
+   `balanceNote` ada di dialog SEBELUM tombol Hapus ditekan, bukan cuma di toast
+   setelahnya. */
+export const HISTORY_CLEAR_ALL_COPY = {
+  /** label aksi di kepala section "Catatan" */
+  action: 'Hapus semua',
+  /** aria-label tombol — menyebut jumlahnya supaya pembaca layar tahu dampaknya */
+  actionA11y: (count: number) => `Hapus semua riwayat: ${count} catatan`,
+  title: 'Hapus semua riwayat?',
+  /** kalimat yang MENYEBUT jumlah catatan yang akan hilang + cakupannya */
+  body: (count: number) =>
+    `${count} catatan akan keluar dari Riwayat — seluruh catatanmu, termasuk yang ada di konteks uang lain. Ringkasan bulanan, insight AI, dan riwayat di setiap dompet ikut kosong.`,
+  /** fakta paling penting, ditebalkan di dialog */
+  balanceNote:
+    'Saldo dompet TIDAK ikut berubah: uang yang sudah keluar tetap tercatat sebagai sudah keluar.',
+  /** jaring pengaman: hak Undo 5 detik yang sama dengan hapus satu catatan */
+  safety: (seconds: number) =>
+    `Masih bisa dibatalkan lewat tombol Undo selama ${seconds} detik setelah kamu menekannya.`,
+  cancel: 'Batal',
+  confirm: 'Hapus semua',
+} as const
+
+export const HISTORY_CLEAR_ALL_TOAST = {
+  title: (count: number) => `${count} catatan dihapus`,
+  description: 'Riwayat, laporan, dan insight ikut kosong. Saldo dompet tidak berubah.',
+  undo: 'Undo',
+  undoneTitle: 'Semua catatan dikembalikan 🌿',
+  undoneDescription: 'Catatan yang tadi dihapus balik ke tempatnya semula.',
 } as const
 
 /* ── COPY INPUT & EDIT TRANSAKSI (engine + sheet edit) ─────────────────────── */
@@ -779,7 +1104,15 @@ export const UPDATE_TRANSACTION_TOAST = {
  *  (bukan default form: form tambah tertahan sampai user memilih — paket 54) */
 export const TRANSACTION_FALLBACK_CATEGORY = 'Lainnya'
 
-/** dompet terakhir kalau konteks aktif tidak punya dompet di daftar kanon */
+/**
+ * Dompet jaring pengaman untuk PAJANGAN baris yang dompetnya tak dikenal (mis.
+ * baris lama ber-`walletId` kosong): namanya ditulis "Tunai" apa adanya, bukan
+ * dikosongkan.
+ *
+ * Sejak paket 59 konstanta ini BUKAN lagi "dompet terakhir" untuk catatan baru:
+ * konteks uang yang belum punya dompet tidak boleh menempel ke dompet lain
+ * (temuan audit #1) — lihat `defaultWalletNameFor()` di `lib/money/store.ts`.
+ */
 export const TRANSACTION_FALLBACK_WALLET = 'Tunai'
 
 /** nama catatan kalau user tidak mengisi catatan (netral — bukan nama merchant karangan) */
@@ -791,17 +1124,32 @@ export const TRANSACTION_DEFAULT_NAME: Record<TransactionType, string> = {
 }
 
 /**
- * Dompet default untuk catatan baru: dompet PERTAMA di konteks uang aktif yang
- * memang ada di daftar dompet kanon (`TRANSACTION_WALLET_OPTIONS`) — jadi
- * catatan barunya bisa muncul di halaman dompet itu (`/wallet/[id]`), bukan di
- * dompet yang tidak pernah ditampilkan app.
+ * ATURAN DOMPET CATATAN BARU (paket 59 · temuan audit #1) — pengganti catatan
+ * lama yang berbunyi "konteks `bersama` jatuh ke Tunai".
  *
- * Konteks `bersama` belum punya dompet di daftar kanon (dompet bersama hidup di
- * halaman Joint Wallet), jadi jatuh ke `Tunai`: pilihan paling netral — dan
- * tetap ditulis apa adanya di Riwayat, tidak disembunyikan.
+ * Dompet catatan baru = dompet PERTAMA di konteks uang aktif yang namanya memang
+ * bisa dipilih user (`TRANSACTION_WALLET_OPTIONS`). Kalau konteks itu BELUM punya
+ * dompet sendiri, jawabannya `''` — BUKAN "Tunai".
  *
- * Pindah ke `defaultWalletNameFor()` di `lib/money/store.ts` (paket 40).
+ * Alasannya bisa dibuktikan: dompet `Tunai` itu milik konteks **Keluarga**,
+ * sehingga catatan yang dibuat sambil switcher di posisi "Bersama" memotong
+ * saldo Tunai — dompet yang tidak dipilih siapa pun dan tidak terlihat di konteks
+ * yang sedang dibuka. Konteks tanpa dompet sekarang ditolak dengan pesan jujur +
+ * arahan (`TRANSACTION_NO_WALLET_COPY`), lihat `defaultWalletNameFor()` di
+ * `lib/money/store.ts` dan pagarnya di `postTransaction()`.
  */
+
+/**
+ * Copy penolakan "belum ada dompetnya" — dipakai jalur tulis (`postTransaction`)
+ * DAN toast di `hooks/use-transaction-submit.ts`. Satu kalimat untuk satu
+ * kebenaran, supaya form kalender, FAB, dan modal web tidak bercerita beda.
+ */
+export const TRANSACTION_NO_WALLET_COPY = {
+  title: 'Catatan ini belum punya dompet',
+  body: 'Konteks uangmu sekarang belum punya dompet sendiri, jadi catatannya tidak ditulis — biar tidak ada saldo dompet lain yang terpotong tanpa kamu pilih. Pindah ke konteks yang punya dompet (Pribadi/Keluarga), atau tambah dompetnya dulu di Dompet & Akun.',
+  /** label dompet di sheet yang memang tidak punya pemilih dompet (mis. catatan kalender) */
+  sourceFallback: 'Belum ada dompet di konteks ini',
+} as const
 
 /* ── TOAST SUKSES INPUT TRANSAKSI ────────────────────────────────────────────
    Toast ini dulu ditembak dari DALAM engine — pihak yang tidak tahu apakah

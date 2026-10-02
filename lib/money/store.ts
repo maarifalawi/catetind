@@ -44,6 +44,7 @@ import { readOnline } from '@/lib/connection'
 import { loadMoneyState, saveMoneyState } from './idb'
 import {
   deleteRemoteRow,
+  deleteRemoteWallet,
   flushRemoteQueue,
   pushRowToServer,
   pushWalletToServer,
@@ -127,6 +128,27 @@ export interface MoneySnapshot {
   /** tombstone: id baris (string) yang dihapus user */
   removedIds: readonly string[]
   /**
+   * TOMBSTONE DOMPET (paket 62) — id dompet yang dihapus user dari app.
+   *
+   * Kenapa tombstone dan bukan hapus fisik: `commit()` memanggil penjaga
+   * invariant (`assertSnapshot` → `assertLedgerInvariant`) yang membandingkan
+   * `Σ efek baris` dengan `Σ saldo − Σ opening`. Membuang dompet dari daftar
+   * `wallets` tanpa membuang baris-barisnya membuat invariant GAGAL, dan
+   * penulisannya DITOLAK — jadi "hard delete dompet" tidak mungkin tanpa
+   * memutus janji `saldo = opening + Σ baris` (AUDIT-UANG §4.3).
+   *
+   * Yang di-tombstone hanya TAMPILANNYA: dompet hilang dari daftar kartu,
+   * picker dompet, Total Saldo, dan Net Worth. Barisnya TIDAK ikut dibuang —
+   * saldo dompet lain tidak bergerak, dan riwayat uang tetap bisa ditelusuri
+   * (kanon §4.5: yang dihapus dompetnya, bukan uangnya). Undo = mencabut id dari
+   * daftar ini (`restoreWalletAccount`).
+   *
+   * Konsekuensi yang dihitung & disengaja: Total Saldo turun sebesar saldo
+   * dompet itu, dan `opening` + `Σ baris` dompet itu tetap ada di state supaya
+   * penjaga invariant tetap seimbang.
+   */
+  removedWalletIds: readonly string[]
+  /**
    * OVERRIDE EDIT baris MOCK (paket 48), kunci = `tombstoneKey(id)`.
    *
    * Baris yang lahir dari store (`session-9001`) diedit DI BARISNYA sendiri —
@@ -190,6 +212,7 @@ const SERVER_SNAPSHOT: MoneySnapshot = Object.freeze({
   wallets: WALLET_SEED,
   rows: [],
   removedIds: [],
+  removedWalletIds: [],
   rowOverrides: {},
   syncedIds: [],
   hydrated: false,
@@ -213,6 +236,7 @@ const EMPTY_SNAPSHOT: MoneySnapshot = Object.freeze({
   wallets: [],
   rows: [],
   removedIds: [],
+  removedWalletIds: [],
   rowOverrides: {},
   syncedIds: [],
   hydrated: true,
@@ -266,6 +290,9 @@ function commit(next: MoneySnapshot): void {
     wallets: next.wallets,
     rows: next.rows,
     removedIds: next.removedIds,
+    /* tombstone dompet ikut ditulis (paket 62): tanpa ini, dompet yang baru
+       dihapus muncul lagi setelah refresh */
+    removedWalletIds: next.removedWalletIds,
     /* hasil edit baris mock ikut ditulis: tanpa ini, edit di Riwayat hilang
        begitu halaman di-refresh (temuan B laporan 46) */
     rowOverrides: next.rowOverrides,
@@ -303,6 +330,14 @@ export interface PersistedMoney {
   wallets?: WalletSeed[]
   rows?: MoneyRow[]
   removedIds?: string[]
+  /**
+   * tombstone DOMPET (paket 62) — id dompet yang dihapus user. Disimpan
+   * bersamaan dengan snapshot supaya dompet yang sudah dihapus TIDAK muncul
+   * kembali setelah refresh (pola yang sama dengan `removedIds`, dan alasan yang
+   * sama: `mergeMoneySnapshot()` akan menghidupkan dompet dari daftar tersimpan
+   * kalau tombstone-nya tidak ikut ditulis).
+   */
+  removedWalletIds?: string[]
   /**
    * hasil edit baris MOCK (paket 48) — bentuknya JSON polos, jadi siap dikirim
    * HTTP kalau nanti server menyimpan border override ini:
@@ -373,6 +408,11 @@ export function mergeMoneySnapshot(
   )
 
   const removedIds = Array.from(new Set([...current.removedIds, ...(persisted?.removedIds ?? [])]))
+  /* tombstone DOMPET di-union dengan cara yang sama (paket 62): sekali dihapus,
+     tetap terhapus — termasuk kalau tombstone-nya datang dari sesi sebelumnya */
+  const removedWalletIds = Array.from(
+    new Set([...current.removedWalletIds, ...(persisted?.removedWalletIds ?? [])]),
+  )
   /* hasil edit baris mock juga di-union, dan yang MENANG kalau kuncinya sama
      adalah state di memory (`current`): itu tulisan paling baru di sesi ini —
      perangkat ini satu-satunya penulisnya. Tanpa baris ini, edit di Riwayat
@@ -389,7 +429,7 @@ export function mergeMoneySnapshot(
     if (match) nextWalletSeq = Math.max(nextWalletSeq, Number(match[1]) + 1)
   }
 
-  return { wallets, rows, removedIds, rowOverrides, syncedIds, hydrated: true }
+  return { wallets, rows, removedIds, removedWalletIds, rowOverrides, syncedIds, hydrated: true }
 }
 
 /**
@@ -448,6 +488,14 @@ export function mergeWithRemote(
     wallets: [...remote.wallets],
     rows,
     removedIds: Array.from(new Set([...current.removedIds, ...(persisted?.removedIds ?? [])])),
+    /* tombstone DOMPET juga di-union (paket 62). Server tidak menyimpannya
+       (di produksi barisnya memang sudah dihapus di database, jadi daftar
+       dompet dari server sudah tidak memuatnya); yang disimpan di perangkat ini
+       tetap yang sah supaya dompet yang baru dihapus tidak "lahir lagi" saat
+       hidrasi berikutnya. */
+    removedWalletIds: Array.from(
+      new Set([...current.removedWalletIds, ...(persisted?.removedWalletIds ?? [])]),
+    ),
     /* override baris mock tidak punya kolom di server: yang sah adalah gabungan
        lokal (memory menang — tulisan terbaru di sesi ini) */
     rowOverrides: { ...(persisted?.rowOverrides ?? {}), ...current.rowOverrides },
@@ -557,6 +605,9 @@ export function purgeMoneyStore(): MoneySnapshot {
     wallets: [],
     rows: [],
     removedIds: [],
+    /* tombstone dompet juga dibuang: akun yang dihapus tidak menyisakan satu
+       pun jejak dompet (paket 62) */
+    removedWalletIds: [],
     /* hasil edit baris mock ikut dibuang: setelah akunnya dihapus, tidak boleh
        ada satu pun jejak "data contoh" yang hidup kembali di perangkat ini */
     rowOverrides: {},
@@ -568,12 +619,27 @@ export function purgeMoneyStore(): MoneySnapshot {
 }
 
 /**
- * true = akun ini tidak punya data uang sama sekali (baru dihapus user).
+ * true = akun ini tidak punya data uang yang TAMPIL sama sekali.
+ *
+ * Dua pemicunya dihitung dari keadaan yang benar-benar dilihat user:
+ *
+ *   1. akun baru saja dihapus (`purgeDeviceData()` → `purgeMoneyStore()`), DAN
+ *   2. user mengosongkan datanya sendiri — menghapus semua dompet dan/atau semua
+ *      catatannya.
+ *
+ * Sebelum paket 62 syaratnya `wallets.length === 0 && rows.length === 0`, dan
+ * itu terlalu ketat: tombstone (hapus catatan paket 59, hapus dompet paket 62)
+ * TIDAK membuang barisnya dari state — jadi setelah user menghapus seluruh
+ * isinya, kedua angka itu tetap > 0 dan notice kosong-akun tidak pernah muncul
+ * (temuan audit #3). Yang dipakai sekarang: dompet HIDUP (`liveWalletSeeds`) dan
+ * catatan yang masih tampil (`removedIds` sudah disaring) — persis yang dilihat
+ * user, bukan yang tersimpan di belakang layar.
+ *
  * Dipakai Home untuk menampilkan keadaan kosong yang jujur + jalan ke onboarding,
  * bukan kartu-kartu berisi angka contoh seolah-olah itu milik user.
  */
 export function isAccountEmpty(snapshot: MoneySnapshot = live): boolean {
-  return snapshot.wallets.length === 0 && snapshot.rows.length === 0
+  return liveWalletSeeds(snapshot).length === 0 && recordedTransactions(snapshot).length === 0
 }
 
 /* ── HOOK ──────────────────────────────────────────────────────────────────── */
@@ -660,9 +726,61 @@ export function walletBalance(snapshot: MoneySnapshot, walletId: string): number
   return balanceOf(snapshot.rows, walletId, wallet.opening)
 }
 
-/** dompet dalam bentuk kartu halaman Dompet & Akun */
+/* ── TOMBSTONE DOMPET (paket 62) ─────────────────────────────────────────────
+   Dompet yang dihapus user TIDAK dibuang dari `snapshot.wallets`: penjaga
+   invariant di `commit()` menghitung `Σ saldo − Σ opening` dari daftar itu, dan
+   membuangnya membuat penjumlahan tidak seimbang (lihat catatan di
+   `MoneySnapshot.removedWalletIds`). Yang dibuang hanya VISIBILITASNYA.
+
+   Aturan satu arah yang berlaku di seluruh file ini:
+     · yang MENULIS uang / MEMILIH dompet → hanya dompet HIDUP
+       (`liveWalletSeeds`): mustahil mencatat atau memindahkan uang ke dompet yang
+       sudah dihapus user;
+     · yang MENGHITUNG saldo & invariant → SEMUA dompet (`balancesOf`,
+       `openingsOf`, `walletBalance`), supaya `Σ baris = Σ saldo − Σ opening` tetap
+       benar dan saldo dompet LAIN tidak bergerak;
+     · yang MENAMPILKAN riwayat lama → nama dompet terhapus tetap diselesaikan
+       (`walletNameAnyOf`), supaya rujukan di Riwayat & log pindah dana tidak jadi
+       yatim. */
+
+/** true = dompet ini sudah dihapus user (tombstone) */
+export function isWalletRemoved(snapshot: MoneySnapshot, walletId: string): boolean {
+  return snapshot.removedWalletIds.includes(walletId)
+}
+
+/** dompet yang masih hidup — SATU-SATUNYA daftar untuk tampilan & pilihan dompet */
+export function liveWalletSeeds(snapshot: MoneySnapshot): WalletSeed[] {
+  return snapshot.wallets.filter((wallet) => !snapshot.removedWalletIds.includes(wallet.id))
+}
+
+/** dompet yang sudah dihapus — dipakai file ekspor & laporan, bukan layar */
+export function removedWalletSeeds(snapshot: MoneySnapshot): WalletSeed[] {
+  return snapshot.wallets.filter((wallet) => snapshot.removedWalletIds.includes(wallet.id))
+}
+
+/**
+ * Jumlah catatan yang MENYENTUH satu dompet — dompet sebagai pemilik baris
+ * (`walletId`) MAUPUN sebagai dompet lawan pindah dana (`counterWalletId`).
+ *
+ * Satu definisi, dipakai dialog konfirmasi hapus dompet ("N catatan menyentuh
+ * dompet ini") supaya angka yang dibaca user di dialog tidak mungkin berbeda
+ * dengan jumlah baris yang benar-benar ada. Baris yang sudah dihapus user
+ * (tombstone) tidak dihitung — ia memang sudah tidak tampil di daftar mana pun.
+ */
+export function walletRecordCount(snapshot: MoneySnapshot, walletId: string): number {
+  if (!walletId) return 0
+  return snapshot.rows.filter(
+    (row) =>
+      !isRowRemoved(snapshot, row.id) &&
+      (row.walletId === walletId || row.counterWalletId === walletId),
+  ).length
+}
+
+/** dompet dalam bentuk kartu halaman Dompet & Akun (dompet terhapus tidak ikut) */
 export function walletAccounts(snapshot: MoneySnapshot): WalletAccount[] {
-  return snapshot.wallets.map((wallet) => toWalletAccount(wallet, walletBalance(snapshot, wallet.id)))
+  return liveWalletSeeds(snapshot).map((wallet) =>
+    toWalletAccount(wallet, walletBalance(snapshot, wallet.id)),
+  )
 }
 
 /**
@@ -676,19 +794,33 @@ export type WalletContextFilter = MoneyContext | 'all'
 
 /** dompet dalam bentuk kartu deck Home (disaring per konteks uang) */
 export function homeWallets(snapshot: MoneySnapshot, ctx: WalletContextFilter): Wallet[] {
-  return filterWalletsByContext(snapshot.wallets, ctx).map((wallet) =>
+  return filterWalletsByContext(liveWalletSeeds(snapshot), ctx).map((wallet) =>
     toHomeWallet(wallet, walletBalance(snapshot, wallet.id)),
   )
 }
 
+/**
+ * Kartu halaman `/wallet/[id]`. `null` = dompet tidak ada ATAU sudah dihapus
+ * user (paket 62) — dua keadaan itu sengaja dijawab sama supaya halaman detail
+ * tidak pernah merender dompet yang sudah tidak ada di daftar mana pun.
+ */
 export function walletAccountOf(snapshot: MoneySnapshot, walletId: string): WalletAccount | null {
-  const wallet = snapshot.wallets.find((item) => item.id === walletId)
+  const wallet = liveWalletSeeds(snapshot).find((item) => item.id === walletId)
   if (!wallet) return null
   return toWalletAccount(wallet, walletBalance(snapshot, wallet.id))
 }
 
+/**
+ * Dompet HIDUP dari id-nya. `null` untuk dompet yang sudah dihapus, dan itu
+ * penting: semua pintu tulis uang memakai fungsi ini sebagai penjaga, jadi
+ * mustahil ada catatan atau koreksi saldo yang mendarat di dompet yang sudah
+ * dibuang user dari daftarnya.
+ *
+ * Butuh dompet apa adanya — termasuk yang sudah dihapus (mis. untuk file
+ * ekspor)? Pakai `removedWalletSeeds()` + `snapshot.wallets`.
+ */
 export function walletSeedOf(snapshot: MoneySnapshot, walletId: string): WalletSeed | null {
-  return snapshot.wallets.find((item) => item.id === walletId) ?? null
+  return liveWalletSeeds(snapshot).find((wallet) => wallet.id === walletId) ?? null
 }
 
 /**
@@ -735,7 +867,10 @@ export function cashTotalByContext(
 export function walletOptionsFor(
   snapshot: MoneySnapshot,
 ): { id: string; label: string; balance: number }[] {
-  return snapshot.wallets.map((wallet) => ({
+  /* hanya dompet HIDUP (paket 62): dompet yang sudah dihapus user tidak boleh
+     muncul lagi sebagai pilihan di sheet mana pun — memilihnya berarti menulis
+     uang ke dompet yang tidak ada di daftarnya */
+  return liveWalletSeeds(snapshot).map((wallet) => ({
     id: wallet.id,
     label: wallet.name,
     balance: walletBalance(snapshot, wallet.id),
@@ -750,7 +885,9 @@ export function walletNameOfId(snapshot: MoneySnapshot, walletId: string): strin
 /** id dompet dari namanya (nama dipakai form & mock; id dipakai ledger) */
 export function walletIdOfName(snapshot: MoneySnapshot, name: string): string {
   const key = name.trim().toLowerCase()
-  return snapshot.wallets.find((wallet) => wallet.name.toLowerCase() === key)?.id ?? ''
+  /* dompet terhapus tidak dicari: nama dompet yang sudah dibuang user tidak boleh
+     "hidup lagi" hanya karena form masih memuat namanya */
+  return liveWalletSeeds(snapshot).find((wallet) => wallet.name.toLowerCase() === key)?.id ?? ''
 }
 
 /* ── API TULIS — SATU-SATUNYA JALUR MENULIS UANG ─────────────────────────────
@@ -758,8 +895,21 @@ export function walletIdOfName(snapshot: MoneySnapshot, name: string): string {
    `/wallet` & `/wallet/[id]`, pindah dana, tambah dompet) lewat fungsi-fungsi
    ini. Tidak ada halaman yang boleh menyentuh `wallets`/`rows` langsung. */
 
-/** nama dompet dari id — untuk menampilkan baris ledger di daftar transaksi */
+/** nama dompet dari id — untuk menulis/menyimpan nama dompet HIDUP */
 function walletNameOf(snapshot: MoneySnapshot, walletId: string): string {
+  return liveWalletSeeds(snapshot).find((wallet) => wallet.id === walletId)?.name ?? ''
+}
+
+/**
+ * Nama dompet dari id — TERMASUK dompet yang sudah dihapus user.
+ *
+ * Dipakai HANYA untuk memajang rujukan lama (log pindah dana: "Pindah ke GoPay").
+ * Baris pindah dana menyimpan `counterWalletId`, dan kalau dompet lawannya sudah
+ * dihapus, lookup "dompet hidup" akan mengembalikan string kosong — lognya jadi
+ * berbunyi "Pindah ke " (rujukan yatim). Riwayat uang yang sudah terjadi tidak
+ * boleh kehilangan namanya hanya karena dompetnya dibuang dari daftar.
+ */
+function walletNameAnyOf(snapshot: MoneySnapshot, walletId: string): string {
   return snapshot.wallets.find((wallet) => wallet.id === walletId)?.name ?? ''
 }
 
@@ -962,10 +1112,15 @@ export interface ExpenseInput {
 export function postExpense(input: ExpenseInput): MoneyRow | null {
   const amount = normalizeAmount(input.amount)
   if (!amount || amount < 0) return null
+  /* dompet harus BENAR-BENAR ada & belum dihapus user (paket 62). Sebelumnya
+     fungsi ini tidak memeriksa apa pun, jadi baris bisa ditulis ke dompet yang
+     sudah dibuang dari daftar — uang yang tidak terlihat di halaman mana pun. */
+  const wallet = walletSeedOf(live, input.walletId)
+  if (!wallet) return null
   const before = live.rows
   const row = appendRow({
     walletId: input.walletId,
-    walletName: walletNameOf(live, input.walletId) || TRANSACTION_FALLBACK_WALLET,
+    walletName: wallet.name,
     type: 'expense',
     amount,
     note: input.note,
@@ -981,10 +1136,12 @@ export function postExpense(input: ExpenseInput): MoneyRow | null {
 export function postIncome(input: ExpenseInput): MoneyRow | null {
   const amount = normalizeAmount(input.amount)
   if (!amount || amount < 0) return null
+  const wallet = walletSeedOf(live, input.walletId)
+  if (!wallet) return null
   const before = live.rows
   const row = appendRow({
     walletId: input.walletId,
-    walletName: walletNameOf(live, input.walletId) || TRANSACTION_FALLBACK_WALLET,
+    walletName: wallet.name,
     type: 'income',
     amount,
     note: input.note,
@@ -1013,8 +1170,12 @@ export interface TransferInput {
 export function postTransfer(input: TransferInput): MoneyRow | null {
   const amount = normalizeAmount(input.amount)
   if (!amount || amount < 0) return null
-  if (!live.wallets.some((wallet) => wallet.id === input.fromWalletId)) return null
-  if (input.toWalletId && !live.wallets.some((wallet) => wallet.id === input.toWalletId)) return null
+  /* kedua dompet harus HIDUP (paket 62): dompet yang sudah dihapus user tidak
+     boleh jadi sumber atau tujuan pindah dana — uangnya akan mendarat di dompet
+     yang tidak muncul di halaman mana pun */
+  const liveIds = new Set(liveWalletSeeds(live).map((wallet) => wallet.id))
+  if (!liveIds.has(input.fromWalletId)) return null
+  if (input.toWalletId && !liveIds.has(input.toWalletId)) return null
   if (input.toWalletId === input.fromWalletId) return null
   if (amount > walletBalance(live, input.fromWalletId)) return null
 
@@ -1147,18 +1308,34 @@ function ledgerTypeOf(type: TransactionType): LedgerRowType {
  * sekaligus. Karena itu pagar ini hidup di sini (bukan di komponen): apa pun
  * jalur yang mencoba mencatat transfer lewat fungsi umum ini akan ditolak, jadi
  * lubang "transfer ngambang" tidak bisa kembali lewat shell baru mana pun.
+ *
+ * ── PAGAR "BELUM ADA DOMPET" (paket 59 · temuan audit #1) ─────────────────────
+ * `wallet` KOSONG DITOLAK di sini: `null`, tanpa satu baris pun ditulis.
+ *
+ * Dulu keadaan itu tidak pernah sampai ke sini karena `defaultWalletNameFor()`
+ * menambalkan dompet 'Tunai' (konteks Keluarga) pada konteks yang tidak punya
+ * dompet — catatan dari konteks "Bersama" memotong saldo Tunai tanpa user
+ * sadari. Pagar ini hidup di store, bukan cuma di komponen, supaya lubang yang
+ * sama tidak bisa kembali lewat jalur tulis mana pun (FAB, modal web, kalender,
+ * AI capture). Yang dikatakan ke user saat ditolak ada di
+ * `TRANSACTION_NO_WALLET_COPY` (`lib/data/history.ts`).
+ *
+ * Nama dompet yang TIDAK dikenal ledger tetap dicatat apa adanya dengan
+ * `walletId: ''` (lihat paragraf di atas) — penolakan ini KHUSUS dompet kosong.
  */
 export function postTransaction(input: RecordTransactionInput): MoneyRow | null {
   /* transfer TIDAK bisa ditulis dari sini — lihat penjelasan di atas */
   if (input.type === 'transfer') return null
   const amount = normalizeAmount(input.amount)
   if (!amount || amount < 0) return null
-  const walletId = walletIdOfName(live, input.wallet)
+  const walletName = input.wallet.trim()
+  if (!walletName) return null
+  const walletId = walletIdOfName(live, walletName)
 
   const before = live.rows
   const row = appendRow({
     walletId,
-    walletName: input.wallet.trim() || TRANSACTION_FALLBACK_WALLET,
+    walletName,
     type: ledgerTypeOf(input.type),
     amount,
     note: input.name,
@@ -1315,6 +1492,166 @@ export function restoreRow(id: string | number): void {
   const key = tombstoneKey(id)
   if (!live.removedIds.includes(key)) return
   commit({ ...live, removedIds: live.removedIds.filter((item) => item !== key) })
+}
+
+/* ── HAPUS & PULIHKAN MASSAL (paket 59 · item 59.2) ───────────────────────────
+   Tombol "Hapus semua riwayat" butuh satu pintu tulis, bukan perulangan
+   `removeRow()` dari komponen:
+
+     • Loop = N `commit()` (N tulis IndexedDB + N siaran ke seluruh halaman) dan
+       N kesempatan state setengah jadi terbaca render di tengah proses;
+     • tombstonesnya juga harus ditulis SEKALI supaya angka "N catatan dihapus"
+       di dialog = jumlah baris yang benar-benar berubah.
+
+   Yang dikembalikan adalah jumlah baris yang BARU ditombstone (id yang sudah
+   terhapus tidak dihitung dua kali) — idempoten: memanggilnya dua kali dengan
+   daftar yang sama tidak menambah tombstone kedua.
+
+   Aturan uangnya tidak berubah sedikit pun: tombstone hanya menyembunyikan
+   baris, saldo tetap `opening + Σ baris` (kanon §4.5). Pindah dana yang dihapus
+   lewat jalur ini juga TIDAK mengembalikan uangnya — pembatalan pindah dana
+   tetap cuma lewat `cancelTransferRow()` satu per satu (paket 55), dan itu
+   disebutkan apa adanya di copy konfirmasinya. */
+export function removeRows(ids: readonly (string | number)[]): number {
+  const keys = [...new Set(ids.map((id) => tombstoneKey(id)))].filter(
+    (key) => !live.removedIds.includes(key),
+  )
+  if (keys.length === 0) return 0
+
+  commit({ ...live, removedIds: [...live.removedIds, ...keys] })
+
+  /* baris yang memang ada di server ikut dihapus di sana — baris MOCK (yang
+     hidup di konstanta `lib/data/*`) tidak punya baris di server, jadi
+     tombstone lokal sudah cukup, persis pola `removeRow()` */
+  for (const key of keys) {
+    const row = live.rows.find((candidate) => candidate.id === key)
+    if (row) void deleteRemoteRow(row.id)
+  }
+
+  /* JEJAK: satu event untuk satu aksi user. `kind: 'batch'` menandai hapus
+     massal — jenis per barisnya sengaja tidak dikirim supaya satu aksi tidak
+     jadi N event; nominal & nama catatan tetap tidak pernah ikut. */
+  trackMoneyEvent('transaction_deleted', { kind: 'batch' })
+  return keys.length
+}
+
+/** kebalikan `removeRows` — satu commit juga, dipakai tombol Undo hapus-semua */
+export function restoreRows(ids: readonly (string | number)[]): number {
+  const keys = new Set(ids.map((id) => tombstoneKey(id)))
+  const next = live.removedIds.filter((key) => !keys.has(key))
+  const restored = live.removedIds.length - next.length
+  if (restored === 0) return 0
+  commit({ ...live, removedIds: next })
+  return restored
+}
+
+/* ── HAPUS DOMPET (paket 62) ──────────────────────────────────────────────────
+   Sebelum paket ini, `DELETE /api/wallets/:id` SUDAH ada di server
+   (`app/api/wallets/[id]/route.ts`) tapi tidak punya satu pun pemanggil di UI:
+   user bisa menambah dompet, mengoreksi saldonya, memindahkan dananya — tapi
+   tidak bisa membuangnya. Dompet contoh yang tidak relevan menumpuk selamanya.
+
+   Bentuk "hapus"-nya TOMBSTONE, bukan hapus fisik, dan itu bukan pilihan gaya:
+   `commit()` memanggil penjaga invariant yang menghitung `Σ saldo − Σ opening`
+   dari `snapshot.wallets`. Membuang dompet (beserta `opening`-nya) sementara
+   barisnya tetap ada membuat penjumlahan itu tidak seimbang, dan penulisannya
+   DITOLAK. Jadi dompet tetap ada di state; yang hilang adalah visibilitasnya di
+   daftar kartu, picker dompet, Total Saldo, dan Net Worth — sementara barisnya
+   TIDAK ikut dibuang supaya saldo dompet lain tidak bergerak dan riwayat uang
+   tetap bisa ditelusuri (kanon §4.5: yang dihapus dompetnya, bukan uangnya).
+
+   `rowCount` adalah bagian dari janji ke user (dialog menyebut berapa catatan
+   yang menyentuh dompet ini) — angka itu datang dari `walletRecordCount()`, satu
+   definisi, bukan hitungan kedua di komponen. */
+
+/**
+ * Bukti satu aksi hapus dompet — dipakai copy dialog, toast, dan Undo.
+ *
+ * Sengaja menyimpan `balance` (saldo saat dihapus) dan `rowCount` (jumlah catatan
+ * yang menyentuh dompet itu) supaya laporan & toast bisa menyebut ANGKA, bukan
+ * kalimat umum.
+ */
+export interface WalletRemoval {
+  walletId: string
+  name: string
+  /** konteks uang dompet — dipakai jejak analitik (bukan nama/nominalnya) */
+  context: WalletSeed['context']
+  /** saldo dompet saat dihapus (`opening + Σ baris`) */
+  balance: number
+  /** jumlah catatan yang menyentuh dompet ini saat dihapus */
+  rowCount: number
+}
+
+/**
+ * Hapus dompet dari daftar user — SATU-SATUNYA pintu hapus dompet di app.
+ *
+ * `null` = tidak ada yang dihapus (id kosong, dompet tidak dikenal, atau sudah
+ * dihapus sebelumnya). Urutan kerjanya:
+ *
+ *   1. TOMBSTONE lokal (`removedWalletIds`) → dompet hilang dari semua daftar,
+ *      picker, Total Saldo, dan Net Worth dalam satu commit;
+ *   2. panggil endpoint yang SUDAH ADA di server (`DELETE /api/wallets/:id`,
+ *      lewat `deleteRemoteWallet`) supaya store perangkat & database bercerita
+ *      sama — `void` (tidak ditunggu) karena hapus lokal sudah sah, dan tanpa
+ *      sesi/backend panggilan itu mengembalikan `false` tanpa efek apa pun;
+ *   3. JEJAK analitik (`wallet_deleted`) — hanya konteks & ada-tidaknya catatan,
+ *      tanpa nama dompet maupun nominal.
+ *
+ * Yang TIDAK dilakukan: menghapus baris ledger dompet ini. Barisnya tetap
+ * dihitung di saldo & tetap tampil di Riwayat (uang yang sudah keluar tidak
+ * kembali — kanon §4.5), dan justru itulah yang menjaga invariant ledger tetap
+ * seimbang.
+ */
+export function removeWalletAccount(id: string): WalletRemoval | null {
+  const key = id.trim()
+  if (!key) return null
+  const wallet = live.wallets.find((item) => item.id === key)
+  if (!wallet || live.removedWalletIds.includes(key)) return null
+
+  const removal: WalletRemoval = {
+    walletId: wallet.id,
+    name: wallet.name,
+    context: wallet.context,
+    balance: walletBalance(live, wallet.id),
+    rowCount: walletRecordCount(live, wallet.id),
+  }
+
+  commit({ ...live, removedWalletIds: [...live.removedWalletIds, key] })
+
+  /* hapus di server lewat endpoint yang sudah ada (paket 62 · temuan audit #2) */
+  void deleteRemoteWallet(wallet.id)
+
+  /* JEJAK: konteks + ada/tidaknya catatan. Nama dompet & nominal TIDAK ikut
+     (penyaring `lib/analytics.ts` membuangnya lagi sebagai penjaga kedua). */
+  trackMoneyEvent('wallet_deleted', {
+    scope: removal.context,
+    had_rows: removal.rowCount > 0,
+  })
+
+  return removal
+}
+
+/**
+ * Undo hapus dompet: cabut tombstone-nya. `false` = tidak ada yang dipulihkan
+ * (dompetnya memang tidak sedang dihapus) — pemanggil memakai itu untuk berkata
+ * jujur kalau jendela Undo sudah lewat.
+ *
+ * Dompet yang dihidupkan kembali dikirim ulang ke server (`pushWalletToServer`)
+ * supaya perangkat kedua melihatnya lagi. BATAS JUJUR yang ditulis apa adanya di
+ * laporan: baris ledger yang sudah ter-cascade di sisi database TIDAK bisa
+ * dihidupkan kembali lewat jalur ini (`ledger_rows` punya FK `on delete cascade`
+ * ke `wallets`) — di perangkat ini barisnya tidak pernah dibuang, jadi angka yang
+ * dilihat user tetap konsisten.
+ */
+export function restoreWalletAccount(removal: WalletRemoval): boolean {
+  if (!live.removedWalletIds.includes(removal.walletId)) return false
+  commit({
+    ...live,
+    removedWalletIds: live.removedWalletIds.filter((id) => id !== removal.walletId),
+  })
+  const wallet = live.wallets.find((item) => item.id === removal.walletId)
+  if (wallet) void pushWalletToServer(wallet, live.wallets.indexOf(wallet))
+  return true
 }
 
 /* ── BATALKAN PINDAH DANA (paket 55) ──────────────────────────────────────────
@@ -1844,7 +2181,10 @@ export function transferLogOf(snapshot: MoneySnapshot): WalletTransferRecord[] {
       return {
         transaction,
         fromName: row.walletName,
-        toName: walletNameOf(snapshot, row.counterWalletId ?? ''),
+        /* nama dompet lawan dibaca TERMASUK dompet yang sudah dihapus (paket 62):
+           kalau lookup "dompet hidup" yang dipakai, log pindah dana ke dompet yang
+           sudah dibuang user akan berbunyi "Pindah ke " — rujukan yatim */
+        toName: walletNameAnyOf(snapshot, row.counterWalletId ?? ''),
         ...(note ? { note } : {}),
       }
     })
@@ -1875,15 +2215,48 @@ export function incomingTransfersFor(
 }
 
 /**
+ * Catatan yang MENEMPEL di satu dompet — SATU-SATUNYA cara halaman dompet
+ * mengumpulkan barisnya (paket 59 · item 59.3).
+ *
+ * Identitasnya `row.walletId === walletId`, BUKAN nama dompet. Sebelumnya
+ * `/wallet/[id]` mencocokkan baris sesi lewat `tx.wallet === wallet.name`;
+ * karena nama boleh sama (dan user memang bisa menambah "BCA" kedua), catatan
+ * satu dompet bisa muncul di dompet lain — dan `applyRowOverride` di halaman itu
+ * membuat hasilnya terlihat seperti data yang sah.
+ *
+ * Baris lama yang `walletId`-nya kosong (dompetnya belum ada di ledger) SENGAJA
+ * tidak masuk ke dompet mana pun: menebak dompet terdekat sama dengan
+ * memindahkan uang user ke tempat yang tidak ia pilih — lebih jujur tampil di
+ * Riwayat dengan penanda "Belum berkonteks".
+ */
+export function walletTransactionsOf(
+  snapshot: MoneySnapshot,
+  walletId: string,
+): HistoryTransaction[] {
+  if (!walletId) return []
+  return snapshot.rows
+    .filter((row) => row.walletId === walletId)
+    .filter((row) => !isRowRemoved(snapshot, row.id))
+    .map((row) => applyRowOverride(snapshot, toHistoryTransaction(row)))
+}
+
+/**
  * Dompet default untuk catatan baru: dompet PERTAMA di konteks uang aktif yang
- * namanya memang bisa dipilih user. Konteks `bersama` belum punya dompet di
- * daftar kanon (dompet bersama hidup di halaman Joint), jadi jatuh ke `Tunai`.
+ * namanya memang bisa dipilih user (`TRANSACTION_WALLET_OPTIONS`).
+ *
+ * `''` = konteks ini BELUM punya dompetnya sendiri, dan itu jawaban yang sah.
+ * Sampai paket 58 fungsi ini jatuh ke `TRANSACTION_FALLBACK_WALLET` ('Tunai')
+ * — dompet yang konteksnya **Keluarga**. Akibatnya catatan yang dibuat sambil
+ * switcher di posisi "Bersama" memotong saldo Tunai tanpa user sadari: dompet
+ * yang tidak ia pilih dan tidak ia lihat di konteks itu (temuan audit #1 paket
+ * 59). Konteks tanpa dompet TIDAK boleh diam-diam menempel ke dompet lain, jadi
+ * pemanggil yang menerima `''` menolak menulis + memberi arahan
+ * (`TRANSACTION_NO_WALLET_COPY`), bukan menebak.
  */
 export function defaultWalletNameFor(ctx: MoneyContext): string {
-  const names = filterWalletsByContext(live.wallets, ctx).map((wallet) => wallet.name)
+  const names = filterWalletsByContext(liveWalletSeeds(live), ctx).map((wallet) => wallet.name)
   return (
-    names.find((name) => (TRANSACTION_WALLET_OPTIONS as readonly string[]).includes(name)) ??
-    TRANSACTION_FALLBACK_WALLET
+    names.find((name) => (TRANSACTION_WALLET_OPTIONS as readonly string[]).includes(name)) ?? ''
   )
 }
 

@@ -41,6 +41,7 @@ export function BudgetZoneA({
   onAddBudget,
   onSweep,
   onReviewCoach,
+  onDeleteBudget,
 }: {
   /** daftar yang SUDAH disaring untuk periode aktif (lihat `budgetsForPeriod`) */
   budgets: BudgetItem[]
@@ -52,6 +53,8 @@ export function BudgetZoneA({
   onAddBudget: () => void
   onSweep: () => void
   onReviewCoach: () => void
+  /** hapus satu kategori (paket 60.1) — halaman yang memasang konfirmasi & Undo */
+  onDeleteBudget: (budget: BudgetItem) => void
 }) {
   const surplus = surplusBudgets(budgets)
   const sweepTotal = totalSurplus(budgets)
@@ -168,6 +171,7 @@ export function BudgetZoneA({
                 masked={masked}
                 window={window}
                 onReview={onReviewCoach}
+                onDelete={onDeleteBudget}
               />
             </motion.div>
           ))}

@@ -37,6 +37,7 @@ const EMPTY: MoneySnapshot = {
   wallets: [...WALLET_SEED],
   rows: [],
   removedIds: [],
+  removedWalletIds: [],
   rowOverrides: {},
   syncedIds: [],
   hydrated: true,

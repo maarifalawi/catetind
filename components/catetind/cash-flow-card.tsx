@@ -2,24 +2,21 @@
 
 import { memo, useMemo } from 'react'
 import { ArrowDownLeft, ArrowUpRight, PiggyBank, Waves } from 'lucide-react'
+import Link from 'next/link'
+import { TransactionBottomSheet } from '@/components/dashboard/transaction-bottom-sheet'
 import {
   HOME_MONEY_COPY,
-  HOME_MONEY_MONTH_SHORT,
-  HOME_MONEY_ROWS,
   axisLabel,
   axisTicks,
   homeCashFlowSeries,
   homeMoneyRowFrom,
+  monthShortFromISO,
   niceAxisMax,
   summarizeCashFlowSeries,
   type HomeCashFlowPoint,
 } from '@/lib/data/home-money'
-import {
-  applyRowOverride,
-  isRowRemoved,
-  recordedTransactions,
-  useMoneyStore,
-} from '@/lib/money/store'
+import { recordedTransactions, useMoneyStore } from '@/lib/money/store'
+import { useTodayISO } from '@/lib/use-today-iso'
 import { usePrivacy } from './privacy-provider'
 
 /* ── ATURAN FINAL (paket 35): angka kartu ini TURUNAN, bukan konstanta ───────
@@ -86,11 +83,12 @@ interface CashFlowGeometry {
  * koordinat keras di sini. Dipanggil sekali per perubahan seri (`useMemo` di
  * komponen), jadi chart ikut bergerak begitu user mencatat transaksi.
  *
- * SUMBU KEMBAR tetap dipertahankan: skala pemasukan & pengeluaran beda jauh
- * (juta vs ratus ribu), jadi tiap seri punya sumbu-Y sendiri — kiri
- * (pemasukan), kanan (pengeluaran). Tanpa itu garis pengeluaran cuma jadi garis
- * rata di dasar chart sehingga perbandingannya tidak terbaca. Batas atasnya kini
- * `niceAxisMax()` (dibulatkan ke atas), bukan angka 8,5 jt / 250 rb yang ditulis
+ * SUMBU TUNGGAL (audit "Chart Scale Paradox"): dulu tiap seri punya sumbu-Y
+ * sendiri (kiri pemasukan, kanan pengeluaran), sehingga pengeluaran Rp 40.000
+ * tergambar SETINGGI pemasukan Rp 7.500.000 — dua angka beda 187× tampil sama.
+ * Sekarang kedua seri berbagi satu batas (`niceAxisMax` dari nilai terbesar),
+ * jadi tinggi garis benar-benar proporsional: nominal kecil tampak kecil.
+ * Batas atasnya dibulatkan ke atas, bukan angka 8,5 jt / 250 rb yang ditulis
  * tangan.
  */
 function buildGeometry(series: HomeCashFlowPoint[]): CashFlowGeometry {
@@ -98,11 +96,15 @@ function buildGeometry(series: HomeCashFlowPoint[]): CashFlowGeometry {
   const lastIndex = Math.max(series.length - 1, 1)
   const x = series.map((_, i) => PAD_L + (i * (W - PAD_L - PAD_R)) / lastIndex)
 
-  const incomeMax = niceAxisMax(Math.max(...series.map((point) => point.income)))
-  const expenseMax = niceAxisMax(Math.max(...series.map((point) => point.expense)))
+  /* ── SATU SKALA UNTUK DUA SERI (audit "Chart Scale Paradox") ───────────────
+     `incomeMax`/`expenseMax` terpisah dulu membuat tiap seri "penuh" sendiri;
+     sekarang keduanya dibagi batas yang SAMA. */
+  const scaleMax = niceAxisMax(
+    Math.max(...series.map((point) => point.income), ...series.map((point) => point.expense)),
+  )
   /* seri yang masih nol (belum ada data) → garis rata di dasar, bukan NaN/Infinity */
-  const incomeY = (v: number) => (incomeMax > 0 ? BASE - (v / incomeMax) * (BASE - TOP) : BASE)
-  const expenseY = (v: number) => (expenseMax > 0 ? BASE - (v / expenseMax) * (BASE - TOP) : BASE)
+  const incomeY = (v: number) => (scaleMax > 0 ? BASE - (v / scaleMax) * (BASE - TOP) : BASE)
+  const expenseY = (v: number) => (scaleMax > 0 ? BASE - (v / scaleMax) * (BASE - TOP) : BASE)
 
   const incomePts = series.map((point, i) => ({ x: x[i], y: incomeY(point.income) }))
   const expensePts = series.map((point, i) => ({ x: x[i], y: expenseY(point.expense) }))
@@ -118,8 +120,9 @@ function buildGeometry(series: HomeCashFlowPoint[]): CashFlowGeometry {
     /* titik puncak pemasukan (gajian) & pengeluaran tertinggi — penanda baca */
     incomePeak: incomePts.reduce((a, b) => (b.y < a.y ? b : a)),
     expensePeak: expensePts.reduce((a, b) => (b.y < a.y ? b : a)),
-    incomeTicks: axisTicks(incomeMax),
-    expenseTicks: axisTicks(expenseMax),
+    /* SATU sumbu: kedua seri berbagi skala, jadi tick-nya sama */
+    incomeTicks: axisTicks(scaleMax),
+    expenseTicks: axisTicks(scaleMax),
   }
 }
 
@@ -129,33 +132,26 @@ function buildGeometry(series: HomeCashFlowPoint[]): CashFlowGeometry {
 export const CashFlowCard = memo(function CashFlowCard() {
   const { money, masked } = usePrivacy()
   /* Catatan sesi dari SATU store uang (`lib/money/store.ts`) — dibaca lewat
-     `useSyncExternalStore`, jadi HTML server tetap sama dengan render pertama
-     client (pola yang sama dengan kartu "Transaksi Terakhir"). Baris yang
-     dihapus user (tombstone) ikut hilang di sini juga: dulu kartu ini sengaja
-     menghitung total dari seluruh baris seed supaya tidak bertentangan dengan
-     chart, tapi sekarang keduanya membaca himpunan yang sama. */
+  /* Baris NYATA dari SATU store uang (`lib/money/store.ts`) — paket 58: kartu
+     ini berhenti membaca `HOME_MONEY_ROWS` (seed demo) sebagai sumber angka.
+     `recordedTransactions()` sudah membuang tombstone; baris hasil edit memakai
+     nilai barunya. Karena `useSyncExternalStore`, HTML server tetap sama dengan
+     render pertama client. */
   const snapshot = useMoneyStore()
-  const recorded = useMemo(() => recordedTransactions(snapshot), [snapshot])
-
-  /* himpunan baris yang SAMA dengan kartu "Transaksi Terakhir": seed + catatan
-     sesi. Catatan sesi bertanggal `localISODate()` (hari ini), jadi ia jatuh ke
-     pekan bulan berjalan. Baris seed yang dihapus user tidak ikut dihitung, dan
-     baris yang DIEDIT memakai nilai barunya (`applyRowOverride`, paket 48) —
-     kalau tidak, grafik ini yang paling gampang tertinggal angka lama. */
-  const rows = useMemo(
-    () => [
-      ...recorded.map(homeMoneyRowFrom),
-      ...HOME_MONEY_ROWS.filter((row) => !isRowRemoved(snapshot, row.id)).map((row) =>
-        applyRowOverride(snapshot, row),
-      ),
-    ],
-    [recorded, snapshot],
-  )
-  const series = useMemo(() => homeCashFlowSeries(rows), [rows])
+  const today = useTodayISO()
+  const rows = useMemo(() => recordedTransactions(snapshot).map(homeMoneyRowFrom), [snapshot])
+  /* bulan NYATA dari jam perangkat; sebelum mount label jatuh ke kanon demo
+     (hidrasi aman), lalu berganti begitu `useTodayISO()` terisi */
+  const monthISO = today ? today.slice(0, 7) : undefined
+  const monthShort = monthShortFromISO(monthISO)
+  const series = useMemo(() => homeCashFlowSeries(rows, monthISO), [rows, monthISO])
   /* total dibaca dari SERI, bukan dari daftar baris — supaya jumlah pengeluaran
      di strip mustahil berbeda dari jumlah titik di grafik ini sendiri */
   const totals = useMemo(() => summarizeCashFlowSeries(series), [series])
   const geo = useMemo(() => buildGeometry(series), [series])
+  /* belum ada uang yang bergerak di bulan ini ⇒ empty state jujur (58.1):
+     grafik datar bisa disalahartikan "nol pengeluaran" — kalimat lebih baik */
+  const empty = totals.income === 0 && totals.expense === 0
 
   const net = totals.net
   const saveRate = totals.income > 0 ? Math.round((net / totals.income) * 100) : 0
@@ -171,17 +167,51 @@ export const CashFlowCard = memo(function CashFlowCard() {
             <Waves className="size-4" strokeWidth={2.4} />
           </span>
           <div>
-            <p className="text-sm font-semibold text-ink">Arus Uang</p>
-            <p className="text-xs text-ink/45">Pemasukan vs pengeluaran, per pekan</p>
+            <p className="text-sm font-semibold text-ink">{HOME_MONEY_COPY.chartTitle}</p>
+            <p className="text-xs text-ink/45">{HOME_MONEY_COPY.chartSubtitle}</p>
           </div>
         </div>
-        <span className="rounded-full bg-forest px-2.5 py-1 text-[11px] font-semibold text-mint tabular-nums">
-          {net < 0
-            ? HOME_MONEY_COPY.chartBadgeDeficit(Math.abs(saveRate))
-            : HOME_MONEY_COPY.chartBadgeSurplus(saveRate)}
-        </span>
+        {/* badge surplus/defisit tidak masuk akal saat belum ada apa pun —
+            disembunyikan di keadaan kosong (58.1) */}
+        {!empty && (
+          <span className="rounded-full bg-forest px-2.5 py-1 text-[11px] font-semibold text-mint tabular-nums">
+            {net < 0
+              ? HOME_MONEY_COPY.chartBadgeDeficit(Math.abs(saveRate))
+              : HOME_MONEY_COPY.chartBadgeSurplus(saveRate)}
+          </span>
+        )}
       </div>
 
+      {empty ? (
+        /* ── EMPTY STATE (58.1) — belum ada uang yang bergerak di bulan ini.
+           Grafik datar gampang dibaca sebagai "nol pengeluaran", padahal artinya
+           "belum ada catatan" — jadi kalimatnya yang dipakai, plus dua pintu
+           nyata: panel input & halaman Riwayat. */
+        <div className="mt-4 flex flex-1 flex-col items-center justify-center rounded-2xl border-2 border-dashed border-forest/15 bg-cream/50 px-6 py-8 text-center">
+          <span className="flex size-12 items-center justify-center rounded-full bg-sage text-forest">
+            <Waves className="size-5" strokeWidth={1.8} />
+          </span>
+          <p className="mt-3 text-sm font-semibold text-ink">{HOME_MONEY_COPY.chartEmptyTitle}</p>
+          <p className="mt-1 text-xs leading-relaxed text-ink/50">{HOME_MONEY_COPY.chartEmptyBody}</p>
+          <TransactionBottomSheet
+            trigger={
+              <button
+                type="button"
+                className="mt-4 rounded-full bg-forest px-5 py-2.5 text-[13px] font-semibold text-cream transition-colors hover:bg-forest-soft active:scale-[0.97]"
+              >
+                {HOME_MONEY_COPY.chartEmptyCta}
+              </button>
+            }
+          />
+          <Link
+            href="/history"
+            className="mt-2.5 text-[11.5px] font-semibold text-forest transition-colors hover:text-forest-soft"
+          >
+            {HOME_MONEY_COPY.historyLink}
+          </Link>
+        </div>
+      ) : (
+        <>
       {/* dua jumlah saling berhadapan — masuk ↙ kiri, keluar ↗ kanan */}
       <div className="mt-5 flex items-end justify-between gap-3">
         <div className="animate-[fade-pop_0.4s_ease_0.15s_backwards]">
@@ -225,7 +255,7 @@ export const CashFlowCard = memo(function CashFlowCard() {
             kartu "Transaksi Terakhir" (`HOME_MONEY_COPY.period`) + nama bulannya,
             jadi tidak ada lagi "bulan ini" vs "Minggu ini" untuk total yang sama */}
         <span className="ml-auto text-ink/35">
-          {HOME_MONEY_COPY.period} · {HOME_MONEY_MONTH_SHORT}
+          {HOME_MONEY_COPY.period} — {monthShort}
         </span>
       </div>
 
@@ -323,24 +353,16 @@ export const CashFlowCard = memo(function CashFlowCard() {
           />
         </svg>
 
-        {/* label sumbu-Y KIRI (skala pemasukan). Skala seperti "8,5 jt"/"10 jt"
-            menyiratkan nominal, jadi saat mata privasi aktif ia disensor lewat
-            `axisLabel()` — satu definisi `MASKED_AMOUNT` bersama `hide()`/`money()`. */}
+        {/* satu sumbu-Y untuk DUA seri (audit "Chart Scale Paradox"): karena
+            keduanya berbagi skala, labelnya cukup satu di kiri — sumbu kanan
+            yang dulu kembar tidak lagi diperlukan (warna tiap garis sudah
+            dibedakan legenda di atas). Angka seperti "8,5 jt" menyiratkan
+            nominal, jadi saat mata privasi aktif ia disensor lewat `axisLabel()`
+            — satu definisi `MASKED_AMOUNT` bersama `hide()`/`money()`. */}
         {geo.incomeTicks.map((tick, i) => (
           <span
             key={`axis-income-${GRID_Y[i]}`}
             className="pointer-events-none absolute left-0 -translate-y-1/2 text-[9px] font-medium tabular-nums text-[#45594e]"
-            style={{ top: `${(GRID_Y[i] / H) * 100}%` }}
-          >
-            {axisLabel(tick, masked)}
-          </span>
-        ))}
-
-        {/* label sumbu-Y KANAN (skala pengeluaran) — aturan sensor sama */}
-        {geo.expenseTicks.map((tick, i) => (
-          <span
-            key={`axis-expense-${GRID_Y[i]}`}
-            className="pointer-events-none absolute right-0 -translate-y-1/2 text-[9px] font-medium tabular-nums text-hud-terracotta/80"
             style={{ top: `${(GRID_Y[i] / H) * 100}%` }}
           >
             {axisLabel(tick, masked)}
@@ -389,6 +411,8 @@ export const CashFlowCard = memo(function CashFlowCard() {
           )}
         </span>
       </div>
+        </>
+      )}
     </div>
   )
 })

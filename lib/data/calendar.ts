@@ -13,7 +13,7 @@ import {
   subMonths,
 } from 'date-fns'
 import { id as localeId } from 'date-fns/locale'
-import type { BudgetScope } from './budget'
+import { MONTHLY_INCOME, type BudgetScope } from './budget'
 import type { MoneyContext, TransactionType } from '../types'
 import { matchesContext, tagTransactionsForContext, type ContextTransaction, type RowContext } from '../money/context-filter'
 import { recordedTransactions, type MoneySnapshot } from '../money/store'
@@ -167,7 +167,14 @@ export interface CalendarCell {
 
 /* ── KONSTANTA ────────────────────────────────────────────────────────────── */
 
-/** "hari ini" dipatok — sumber kebenaran tunggal untuk masa lalu vs masa depan */
+/** "Hari ini" versi DATA SEED — jangkar DEFAULT untuk render server & test.
+ *
+ *  PAKET 57: layar TIDAK lagi memakai konstanta ini. `cashflow-calendar-screen`
+ *  mengirim `todayIso` hasil `useTodayISO()` ke `buildCalendarGrid()` &
+ *  `buildCalendarEntries()`, dan menyusun `CALENDAR_TODAY` dari tanggal itu —
+ *  supaya sel "hari ini", tombol "Hari Ini", dan `defaultAnchorFor()` memakai
+ *  tanggal perangkat, bukan 25 Sep yang dipatok. Data seed-nya tetap
+ *  bertanggal tetap (demo stabil, bebas hydration mismatch). */
 export const CALENDAR_TODAY_ISO = '2026-09-25'
 export const CALENDAR_TODAY = parseISO(CALENDAR_TODAY_ISO)
 
@@ -548,7 +555,13 @@ const FIXED_BILL_SERIES: {
   { name: 'Kredivo', emoji: '💳', amount: 420_000, day: 28, category: 'Cicilan', wallet: 'OVO', scope: 'pribadi' },
 ]
 
-/** uang masuk tetap: gaji tiap tgl 25 + freelance tiap tgl 12 */
+/** uang masuk tetap: gaji tiap tgl 25 + freelance tiap tgl 12.
+ *
+ *  PAKET 57: nominal GAJI membaca kanon demo yang sama dengan Daily HUD
+ *  (`MONTHLY_INCOME` di `lib/data/budget.ts`) — dulu di sini tertulis 8.500.000
+ *  sementara HUD memakai 7.500.000, sehingga halaman Kalender & kartu Jatah
+ *  Harian menyebut dua gaji berbeda untuk user yang sama (temuan AKAR C audit
+ *  2026-09). Turunkan/naikkan `MONTHLY_INCOME`, dan keduanya bergerak bersama. */
 const INCOME_SERIES: {
   name: string
   emoji: string
@@ -558,7 +571,7 @@ const INCOME_SERIES: {
   wallet: string
   scope: BudgetScope
 }[] = [
-  { name: 'Gaji Bulanan', emoji: '💰', amount: 8_500_000, day: 25, category: 'Gaji', wallet: 'BCA', scope: 'pribadi' },
+  { name: 'Gaji Bulanan', emoji: '💰', amount: MONTHLY_INCOME, day: 25, category: 'Gaji', wallet: 'BCA', scope: 'pribadi' },
   { name: 'Proyek Freelance', emoji: '💻', amount: 1_250_000, day: 12, category: 'Sampingan', wallet: 'BCA', scope: 'pribadi' },
 ]
 
@@ -1095,6 +1108,20 @@ export const CALENDAR_LEGEND: { id: CalendarLook; label: string }[] = [
   { id: 'spend', label: 'Ada belanja' },
   { id: 'planned', label: FIXED_BILL_BADGE_LABEL },
 ]
+
+/* ── CATATAN SIKLUS GAJIAN (paket 60 · 60.5) ─────────────────────────────────
+   `paydayDate` dibaca dari konfigurasi uang user (`lib/user-money-settings.ts`,
+   paket 57). Kalau user BELUM pernah mengaturnya, siklusnya tetap bisa dibuka —
+   memakai `DEFAULT_PAYDAY_DATE` (tgl 25) — dan itu HARUS dikatakan di layar,
+   bukan disimpan diam-diam di kode: kalau tidak, user membaca siklus "26 Sep →
+   25 Okt" lalu menyimpulkan app-nya tahu tanggal gajiannya. `calendar.ts` cuma
+   menyediakan kalimatnya; halaman yang tahu apakah nilainya datang dari user
+   atau dari default. */
+export const CALENDAR_PAYDAY_COPY = {
+  defaultNote: (day: number) =>
+    `Siklus ini memakai tanggal gajian default (tgl ${day}) karena kamu belum pernah mengaturnya.`,
+  cta: 'Atur tanggal gajian',
+} as const
 
 /** kalimat pembaca layar untuk tiap muka sel (dipakai aria-label tombol tanggal) */
 export const CALENDAR_LOOK_WORD: Record<CalendarLook, string> = {

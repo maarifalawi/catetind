@@ -329,8 +329,10 @@ describe('ekspor & kontrak store untuk komponen', () => {
 
     const file = moneyExportJson(null, '2026-09-27T10:15:00.000Z').file
 
-    /* bentuk file berubah karena ada bagian baru → versi skemanya naik (v2) */
-    expect(file.schemaVersion).toBe(2)
+    /* bentuk file berubah karena ada bagian baru → versi skemanya naik.
+       v2 = bagian `bills` (paket 51); v3 = `settings.money` — konfigurasi uang
+       user yang menentukan Jatah Harian (paket 57). */
+    expect(file.schemaVersion).toBe(4)
     expect(file.counts.bills).toBe(liveBills(getBillsSnapshot()).length)
     expect(file.bills.some((bill) => bill.id === created.id)).toBe(true)
     expect(file.bills.find((bill) => bill.id === '5')?.isPaidThisMonth).toBe(true)

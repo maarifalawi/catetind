@@ -1,0 +1,146 @@
+﻿=== 58 — OUTPUT 4 PERINTAH VALIDASI (28 Sep 2026) ===
+
+--- pnpm test ---
+
+> my-project@0.1.0 test C:\Users\maari\Downloads\catet-ind-dashboard-design
+> vitest run
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv5.0.2 [39m[90mC:/Users/maari/Downloads/catet-ind-dashboard-design[39m
+
+ [32mΓ£ô[39m lib/data/joint-ledger.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32mΓ£ô[39m lib/money/amount-input.test.ts [2m([22m[2m34 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+node.exe : (node:40364) Warning: `--localstorage-file` was provided without a 
+valid path
+At C:\Users\maari\AppData\Roaming\npm\pnpm.ps1:24 char:5
++     & "node$exe"  "$basedir/node_modules/pnpm/bin/pnpm.cjs" $args
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ((node:40364) Wa...ut a valid path:S 
+   tring) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+(Use `node --trace-warnings ...` to show where the warning was created)
+ [32mΓ£ô[39m lib/user-money-settings.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32mΓ£ô[39m lib/invite-store.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32mΓ£ô[39m lib/session.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 28[2mms[22m[39m
+ [32mΓ£ô[39m lib/data/joint.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 206[2mms[22m[39m
+ [32mΓ£ô[39m lib/data/wealth-cash.test.ts [2m([22m[2m23 tests[22m[2m)[22m[32m 229[2mms[22m[39m
+ [32mΓ£ô[39m lib/data/joint-settlement.test.ts [2m([22m[2m22 tests[22m[2m)[22m[32m 236[2mms[22m[39m
+ [32mΓ£ô[39m lib/money/funds-store.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32mΓ£ô[39m app/api/wallets/route.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 34[2mms[22m[39m
+ [32mΓ£ô[39m app/api/push/push.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 23[2mms[22m[39m
+ [32mΓ£ô[39m lib/supabase/mappers.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32mΓ£ô[39m lib/data/month-rollover.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32mΓ£ô[39m lib/analytics.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32mΓ£ô[39m lib/ai-usage-store.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 24[2mms[22m[39m
+ [32mΓ£ô[39m lib/data/joint-invite.test.ts [2m([22m[2m18 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32mΓ£ô[39m lib/money/ledger.test.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32mΓ£ô[39m lib/data/budget.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32mΓ£ô[39m lib/money/context-filter.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32mΓ£ô[39m lib/data/history.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32mΓ£ô[39m lib/money/smoke-money-flow.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32mΓ£ô[39m lib/ai-prefs.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32mΓ£ô[39m lib/time.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32mΓ£ô[39m lib/money/export.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32mΓ£ô[39m lib/money/bills-store.test.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 25[2mms[22m[39m
+ [32mΓ£ô[39m lib/money/joint-store.test.ts [2m([22m[2m25 tests[22m[2m)[22m[32m 26[2mms[22m[39m
+ [32mΓ£ô[39m lib/money/wealth-store.test.ts [2m([22m[2m21 tests[22m[2m)[22m[32m 29[2mms[22m[39m
+ [32mΓ£ô[39m lib/data/home-money.test.ts [2m([22m[2m21 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32mΓ£ô[39m lib/money/store.test.ts [2m([22m[2m67 tests[22m[2m)[22m[32m 67[2mms[22m[39m
+ [32mΓ£ô[39m lib/data/app-lock.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32mΓ£ô[39m lib/ai-quota.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32mΓ£ô[39m lib/account.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 45[2mms[22m[39m
+ [32mΓ£ô[39m lib/privacy-settings.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32mΓ£ô[39m lib/demo.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32mΓ£ô[39m lib/money/store-remote-merge.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32mΓ£ô[39m hooks/use-transaction-submit.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32mΓ£ô[39m lib/data/money-context.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32mΓ£ô[39m lib/data/calendar.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 35[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m38 passed[39m[22m[90m (38)[39m
+[2m      Tests [22m [1m[32m564 passed[39m[22m[90m (564)[39m
+[2m   Start at [22m 21:32:43
+[2m   Duration [22m 3.30s[2m (import 51%, transform 41%, tests 6%, worker 1%)[22m
+
+[2m  Transform [22m [33mtransforming modules took 8.63s[39m[2m ┬╖ 41% of tracked time, re-done on every run[22m
+[2m            [22m [2mpersist transforms across runs with [22m[33mfsModuleCache: true[39m
+[2m            [22m [2mlearn more: https://vitest.dev/guide/improving-performance#caching-between-reruns[22m
+
+
+--- pnpm exec tsc --noEmit ---
+tsc exit code = 0
+
+--- pnpm build ---
+
+> my-project@0.1.0 build C:\Users\maari\Downloads\catet-ind-dashboard-design
+> next build
+
+Γû▓ Next.js 16.3.3 (Turbopack)
+- Environments: .env.local
+Γ£ô Running next.config.mjs took 17ms
+
+  Creating an optimized production build ...
+Γ£ô Compiled successfully in 1773ms
+  Running TypeScript ...
+  Finished TypeScript in 2.3s ...
+  Collecting page data using 19 workers ...
+  Generating static pages using 19 workers (0/34) ...
+  Generating static pages using 19 workers (8/34) 
+  Generating static pages using 19 workers (16/34) 
+  Generating static pages using 19 workers (25/34) 
+Γ£ô Generating static pages using 19 workers (34/34) in 767ms
+  Finalizing page optimization ...
+
+Route (app)
+Γöî Γùï /
+Γö£ Γùï /_not-found
+Γö£ ╞Æ /api/push/send
+Γö£ ╞Æ /api/push/subscribe
+Γö£ ╞Æ /api/session
+Γö£ ╞Æ /api/wallets
+Γö£ ╞Æ /api/wallets/[id]
+Γö£ Γùï /app/onboarding
+Γö£ Γùï /bills
+Γö£ ╞Æ /budget
+Γö£ ╞Æ /budget/[id]
+Γö£ Γùï /calendar
+Γö£ Γùï /checkout
+Γö£ Γùï /help
+Γö£ ╞Æ /history
+Γö£ Γùï /insight
+Γö£ Γùï /install
+Γö£ ╞Æ /join/[code]
+Γö£ Γùï /joint
+Γö£ Γùï /login
+Γö£ ╞Æ /login/verify
+Γö£ Γùï /manifest.webmanifest
+Γö£ Γùï /privacy
+Γö£ Γùï /referral
+Γö£ Γùï /settings
+Γö£ Γùï /settings/ai
+Γö£ Γùï /settings/appearance
+Γö£ Γùï /settings/billing
+Γö£ Γùï /settings/categories
+Γö£ Γùï /settings/data
+Γö£ Γùï /settings/logout
+Γö£ Γùï /settings/notifications
+Γö£ Γùï /settings/security
+Γö£ ╞Æ /share/[id]
+Γö£ Γùï /terms
+Γö£ Γùï /wallet
+Γö£ ╞Æ /wallet/[id]
+Γöö Γùï /wealth
+
+
+Γùï  (Static)   prerendered as static content
+╞Æ  (Dynamic)  server-rendered on demand
+
+build exit code = 0
+
+--- pnpm theme:audit ---
+
+> my-project@0.1.0 theme:audit C:\Users\maari\Downloads\catet-ind-dashboard-design
+> node scripts/theme/audit-palette.mjs
+
+Γ£ô palet bersih ΓÇö 343 file diperiksa, tidak ada warna di luar palet.
+theme:audit exit code = 0

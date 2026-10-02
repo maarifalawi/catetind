@@ -3,6 +3,7 @@
 import { cn } from '@/lib/utils'
 import {
   TIMELINE_DAYS,
+  TODAY_ISO,
   billsOnDay,
   getBillStatus,
   upcomingDays,
@@ -23,24 +24,30 @@ import { formatDayLabel } from '@/lib/data/history'
    dihapus (redundan dengan emoji brand di atasnya + lingkaran tanggal). Status
    urgent dipindah ke warna cincin tanggal: terracotta = telat, amber = hari ini.
 
-   Tanggalnya dihitung dari konstanta TODAY_ISO, bukan jam mesin user — strip
-   ini bisa melewati akhir bulan (… 29 30 1) tanpa hydration mismatch, dan sel
-   bulan depan ditandai singkatan bulannya karena siklusnya sudah yang baru.
+   Tanggalnya dihitung dari tanggal PERANGKAT (`useTodayISO()` yang dikirim
+   halaman sebagai `todayIso`, paket 57), bukan konstanta TODAY_ISO: dulu strip
+   ini mulai dari 25 Sep walau hari ini 28 Sep, jadi "7 hari ke depan" bukan
+   rentang yang benar. Sel yang melewati akhir bulan tetap ditandai singkatan
+   bulannya, dan karena nilainya baru diisi setelah mount, HTML server & render
+   pertama client tetap identik (tidak ada hydration mismatch).
    ────────────────────────────────────────────────────────────────────────── */
 
 export function BillTimeline({
   bills,
   currentDay,
+  todayIso = TODAY_ISO,
   onPick,
   className,
 }: {
   bills: Bill[]
   currentDay: number
+  /** tanggal "hari ini" milik user (`useTodayISO()` di halaman) */
+  todayIso?: string
   onPick: (bill: Bill) => void
   /** override margin luar (dipakai saat kartu disusun dalam grid 2 kolom) */
   className?: string
 }) {
-  const days = upcomingDays(TIMELINE_DAYS)
+  const days = upcomingDays(TIMELINE_DAYS, todayIso)
   /* sabuk pengaman: apa pun yang dioper pemanggil, tagihan lunas tetap disaring
      di sini supaya kalender TIDAK PERNAH menampilkan tagihan di luar list Aktif */
   const activeBills = bills.filter((bill) => !bill.isPaidThisMonth)

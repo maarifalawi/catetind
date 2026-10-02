@@ -4,29 +4,12 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import {
-  Home,
-  PieChart,
-  Wallet,
-  Target,
-  Receipt,
-  CalendarDays,
-  Briefcase,
-  Users,
-  Gift,
-  CircleHelp,
-  Settings,
-  LogOut,
-  Plus,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Download,
-  ArrowLeftRight,
-} from 'lucide-react'
+import { LogOut, Plus, PanelLeftClose, PanelLeftOpen, ArrowLeftRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { SUBSCRIPTION_LOCK_COPY } from '@/lib/data/renewal'
 import { TRANSFER_DOOR_COPY } from '@/lib/data/add-wallet'
+import { NAV_GROUPS } from '@/lib/navigation'
 import { TransactionWebModal } from '@/components/dashboard/transaction-web-modal'
 import { TransferFlow } from './transfer-flow'
 import { useSubscriptionGate } from './subscription-gate-provider'
@@ -46,43 +29,7 @@ import { NavTooltip } from './nav-tooltip'
    modul keluarga yang nyata butuh inventaris baru dulu (PRD 758–807, 3303–3352).
    Alasan yang sama berlaku untuk route /more: menu "Lainnya" = Vaul bottom sheet
    di `MobileBottomNav`, jadi route-nya juga sudah dihapus. */
-const sections = [
-  {
-    label: 'Menu Utama',
-    items: [
-      { href: '/', icon: Home, label: 'Dashboard' },
-      { href: '/history', icon: PieChart, label: 'Riwayat & Insight' },
-    ],
-  },
-  {
-    label: 'Kelola Uang',
-    items: [
-      { href: '/wallet', icon: Wallet, label: 'Dompet & Akun' },
-      { href: '/budget', icon: Target, label: 'Budget & Target Nabung' },
-      { href: '/bills', icon: Receipt, label: 'Tagihan Rutin' },
-      { href: '/calendar', icon: CalendarDays, label: 'Kalender Cashflow' },
-    ],
-  },
-  {
-    label: 'Aset & Bersama',
-    items: [
-      { href: '/wealth', icon: Briefcase, label: 'Kekayaan & Hutang' },
-      { href: '/joint', icon: Users, label: 'Joint Wallet' },
-    ],
-  },
-  {
-    label: 'Ekstra & Dukungan',
-    items: [
-      { href: '/referral', icon: Gift, label: 'Ajak Teman' },
-      { href: '/help', icon: CircleHelp, label: 'Pusat Bantuan' },
-      { href: '/install', icon: Download, label: 'Panduan Install' },
-    ],
-  },
-  {
-    label: 'Sistem',
-    items: [{ href: '/settings', icon: Settings, label: 'Pengaturan' }],
-  },
-]
+const sections = NAV_GROUPS
 
 const COLLAPSED_KEY = 'catet-sidebar-collapsed'
 

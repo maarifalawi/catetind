@@ -6,7 +6,7 @@ import { ChevronRight, PiggyBank, Target } from 'lucide-react'
 import { usePrivacy } from './privacy-provider'
 import { monthlyNeeded } from '@/lib/data/budget'
 import { MONTHLY_TARGET_CARD_COPY as COPY } from '@/lib/data/monthly-review'
-import { useFundsStore } from '@/lib/money/funds-store'
+import { useLiveFunds } from '@/lib/money/funds-store'
 
 /**
  * Kartu kecil "Target bulan ini" di Home — efek NYATA dari ritual bulanan.
@@ -41,7 +41,7 @@ export const MonthlyTargetCard = memo(function MonthlyTargetCard({
   onOpen: () => void
 }) {
   const { money } = usePrivacy()
-  const { funds } = useFundsStore()
+  const funds = useLiveFunds()
   const fund = fundId === null ? null : (funds.find((item) => item.id === fundId) ?? null)
   const fundName = fund?.name ?? null
   const fundMonthly = fund

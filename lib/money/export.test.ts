@@ -8,7 +8,7 @@ import {
   moneyExportFileName,
   moneyExportJson,
 } from './export'
-import { cashTotal, getMoneySnapshot, postExpense, removeRow, resetMoneyStore } from './store'
+import { cashTotal, getMoneySnapshot, postExpense, removeRow, removeWalletAccount, resetMoneyStore, restoreWalletAccount } from './store'
 import { addDebt, getWealthSnapshot, resetWealthStore } from './wealth-store'
 import { addBill, getBillsSnapshot, liveBills, resetBillsStore } from './bills-store'
 import { INITIAL_BILLS, type Bill } from '@/lib/data/bills'
@@ -131,6 +131,41 @@ describe('buildMoneyExport', () => {
     expect(file.limits.length).toBeGreaterThan(2)
     expect(file.limits.join(' ')).toMatch(/tidak ada salinan di server/i)
     expect(file.app.buildStage).toBe('demo')
+  })
+
+  it('memuat dompet yang sudah dihapus, ditandai, tanpa mengubah totals.cash (paket 62)', () => {
+    const removal = removeWalletAccount('tunai')!
+    const sources = collectExportSources()
+    const file = buildMoneyExport(sources, EXPORTED_AT)
+
+    /* schema naik ke v4 karena bentuk filenya bertambah bagian */
+    expect(file.schemaVersion).toBe(4)
+    expect(file.removedWalletIds).toEqual(['tunai'])
+
+    const tunai = file.wallets.find((wallet) => wallet.id === 'tunai')
+    expect(tunai?.removed).toBe(true)
+    expect(tunai?.opening).toBe(removal.balance)
+    expect(file.wallets.find((wallet) => wallet.id === 'bca')?.removed).toBe(false)
+
+    /* `totals.cash` = angka yang dibaca halaman (dompet hidup saja) */
+    expect(file.totals.cash).toBe(cashTotal(getMoneySnapshot()))
+    expect(file.totals.cash).toBe(1_800_000)
+    /* daftar dompet tetap memuat yang dihapus → selisihnya bisa dijelaskan */
+    expect(file.counts.wallets).toBeGreaterThan(
+      file.wallets.filter((wallet) => !wallet.removed).length,
+    )
+    expect(file.limits.join(' ')).toMatch(/dompet yang kamu hapus/i)
+  })
+
+  it('Undo membalikkan ekspor: dompet hidup lagi & totals.cash kembali (paket 62)', () => {
+    const removal = removeWalletAccount('tunai')!
+    expect(restoreWalletAccount(removal)).toBe(true)
+
+    const file = buildMoneyExport(collectExportSources(), EXPORTED_AT)
+
+    expect(file.removedWalletIds).toEqual([])
+    expect(file.wallets.every((wallet) => !wallet.removed)).toBe(true)
+    expect(file.totals.cash).toBe(1_850_000)
   })
 
   it('meneruskan identitas pemilik dengan benar (null kalau belum ada sesi)', () => {

@@ -5,12 +5,14 @@ import {
   CALENDAR_NOTE_TYPES,
   CALENDAR_TODAY,
   CALENDAR_TODAY_ISO,
+  DEFAULT_PAYDAY_DATE,
   buildCalendarEntries,
   buildCalendarGrid,
   calendarCellLook,
   calendarEntriesFromLedger,
   calendarEntryVisible,
   calendarLedgerType,
+  defaultAnchorFor,
   periodBounds,
   selectCell,
   summarizePeriod,
@@ -18,6 +20,7 @@ import {
   type CalendarEntry,
   type CalendarEntryType,
 } from './calendar'
+import { localISODate } from './history'
 import { recordDraftTransaction } from '@/lib/transaction-bus'
 import {
   editRow,
@@ -417,4 +420,132 @@ describe('kalender cashflow tanpa ramalan (paket 56)', () => {
 
 beforeEach(() => {
   resetMoneyStore()
+})
+
+/* ── TANGGAL BERJALAN & SIKLUS GAJIAN USER (paket 60 · 60.5 · AKAR B) ────────
+   Temuan audit: `CALENDAR_TODAY_ISO` ('2026-09-25') dipakai sebagai jangkar di
+   tiga tempat, jadi sel "hari ini", tombol "Hari Ini", dan label periode bisa
+   menunjuk tanggal yang bukan hari ini. Sejak paket 57 halaman mengirim
+   `todayIso` hasil `useTodayISO()` ke `buildCalendarGrid()`; test di bawah
+   mengunci janjinya beserta dua hal yang gampang lolos:
+
+     · siklus gajian memakai `paydayDate` MILIK USER (bukan selalu 25);
+     · seri demo yang bertanggal tetap TIDAK bocor ke luar jendela periode yang
+       sedang dibaca (kalau bocor, hari di luar siklus ikut dihitung statistik).
+
+   Semuanya fungsi murni yang dipakai halaman — tidak ada rumus salinan. */
+
+describe('jangkar "hari ini" & siklus gajian user (paket 60.5)', () => {
+  const HARI_INI = '2026-09-28'
+  /** grid kosong dengan jangkar & jam yang bisa ditentukan (bukan konstanta seed) */
+  const gridAt = (todayIso: string, anchor = CALENDAR_TODAY, paydayDate = DEFAULT_PAYDAY_DATE) =>
+    buildCalendarGrid({ entries: [], anchor, mode: 'standard', paydayDate, todayIso })
+
+  it('sel "hari ini" mengikuti tanggal perangkat, bukan 25 Sep milik data seed', () => {
+    const grid = buildCalendarGrid({ entries: [], anchor: parseISO(HARI_INI), mode: 'standard', todayIso: HARI_INI })
+    const hari = selectCell(grid, HARI_INI) as CalendarCell
+    const besok = selectCell(grid, '2026-09-29') as CalendarCell
+
+    expect(hari.isToday).toBe(true)
+    expect(hari.daysFromToday).toBe(0)
+    expect(hari.isFuture).toBe(false)
+    expect(besok.isFuture).toBe(true)
+    /* hanya SATU sel yang boleh mengaku hari ini */
+    expect(grid.cells.filter((cell) => cell.isToday)).toHaveLength(1)
+    /* jangkar seed tetap 25 Sep: tanpa `todayIso`, jawabannya berbeda — inilah
+       yang dulu tampil di layar (temuan AKAR B) */
+    expect((selectCell(gridAt(CALENDAR_TODAY_ISO), '2026-09-25') as CalendarCell).isToday).toBe(true)
+  })
+
+  it('siklus gajian memakai paydayDate user (tgl 26), bukan default tgl 25', () => {
+    const PAYDAY = 26
+    const anchor = defaultAnchorFor(parseISO(HARI_INI), 'payday', PAYDAY)
+    const grid = buildCalendarGrid({ entries: [], anchor, mode: 'payday', paydayDate: PAYDAY, todayIso: HARI_INI })
+
+    /* 28 Sep ≥ gajian tgl 26 → tanggal itu ada di siklus BERIKUTNYA: 26 Sep–25 Okt */
+    expect(localISODate(grid.bounds.start)).toBe('2026-09-26')
+    expect(localISODate(grid.bounds.end)).toBe('2026-10-25')
+    expect(grid.periodLength).toBe(30)
+    /* hari ini ikut di dalam siklusnya, dan ditandai sebagai hari ini */
+    expect((selectCell(grid, HARI_INI) as CalendarCell).isToday).toBe(true)
+    expect((selectCell(grid, HARI_INI) as CalendarCell).inPeriod).toBe(true)
+    /* tanggal gajian lama (25 Sep) jatuh di LUAR siklus ini */
+    expect((selectCell(grid, '2026-09-25') as CalendarCell).inPeriod).toBe(false)
+  })
+
+  it('pergantian bulan: satu grid memuat dua bulan, dan sel di luar periode ditandai', () => {
+    const grid = buildCalendarGrid({
+      entries: [],
+      anchor: parseISO('2026-10-28'),
+      mode: 'payday',
+      paydayDate: 26,
+      todayIso: HARI_INI,
+    })
+
+    /* satu grid membentang dari minggu yang memuat 26 Sep sampai minggu yang
+       memuat 25 Okt → September & Oktober ada di layar yang sama */
+    const oktober = selectCell(grid, '2026-10-01') as CalendarCell
+    expect(oktober.inPeriod).toBe(true)
+    expect(oktober.monthShort).toBe('Okt')
+    expect((selectCell(grid, '2026-09-26') as CalendarCell).monthShort).toBe('Sep')
+
+    /* sel di minggu pertama tetap digambar (biar barisnya utuh) tapi BUKAN
+       bagian periode — statistik & ringkasan tidak ikut menghitungnya */
+    const sebelumPeriode = selectCell(grid, '2026-09-21') as CalendarCell
+    expect(sebelumPeriode.inPeriod).toBe(false)
+    expect(summarizePeriod(grid.cells).cleanDays).toBeLessThanOrEqual(grid.periodLength)
+
+    /* tanggal setelah akhir periode tidak ikut digambar sama sekali */
+    expect(selectCell(grid, '2026-10-26')).toBeNull()
+  })
+
+  it('batas siklus tetap sah untuk gajian tgl 31 (bulan 30 hari ikut dikunci)', () => {
+    /* Januari: gajian 31 Des → 30 Jan = 31 hari. November: gajian 31 Okt → 29 Nov,
+       karena gajian bulan berikutnya dikunci ke hari terakhir bulan (30 Nov). */
+    const januari = periodBounds(parseISO('2026-01-10'), 'payday', 31)
+    const november = periodBounds(parseISO('2026-11-10'), 'payday', 31)
+
+    expect(localISODate(januari.start)).toBe('2025-12-31')
+    expect(localISODate(januari.end)).toBe('2026-01-30')
+    expect(localISODate(november.start)).toBe('2026-10-31')
+    expect(localISODate(november.end)).toBe('2026-11-29')
+
+    const grid = buildCalendarGrid({
+      entries: [],
+      anchor: parseISO('2026-11-10'),
+      mode: 'payday',
+      paydayDate: 31,
+      todayIso: '2026-11-10',
+    })
+    expect(grid.periodLength).toBe(30)
+    /* tidak ada sel di luar periode yang ikut dihitung statistik */
+    expect(grid.cells.filter((cell) => cell.inPeriod).length).toBe(grid.periodLength)
+  })
+
+  it('entri demo bertanggal tetap tidak bocor ke ringkasan periode', () => {
+    /* Seri demo dibangun dengan jangkar seed (25 Sep): gaji bulanan tgl 25 ada di
+       sana. Di siklus 26 Sep–25 Okt, entri itu di LUAR jendela — grid boleh
+       menggambarnya sebagai sel di luar periode, tapi TIDAK boleh menjumlahkannya
+       ke ringkasan periode (kalau bocor, angka pemasukan siklus jadi palsu). */
+    expect(CALENDAR_ENTRIES.some((entry) => entry.date === CALENDAR_TODAY_ISO)).toBe(true)
+
+    const grid = buildCalendarGrid({
+      entries: CALENDAR_ENTRIES,
+      anchor: parseISO('2026-10-28'),
+      mode: 'payday',
+      paydayDate: 26,
+      todayIso: HARI_INI,
+    })
+    const luar = selectCell(grid, CALENDAR_TODAY_ISO) as CalendarCell
+
+    expect(luar.inPeriod).toBe(false)
+    expect(luar.isPast).toBe(true)
+    /* ringkasan: tidak ada satu pun pemasukan demo yang masuk siklus ini */
+    expect(summarizePeriod(grid.cells).income).toBe(0)
+    expect(
+      grid.cells
+        .filter((cell) => cell.inPeriod)
+        .every((cell) => cell.date >= '2026-09-26' && cell.date <= '2026-10-25'),
+    ).toBe(true)
+  })
 })

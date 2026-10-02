@@ -2,7 +2,8 @@
 
 import { memo, useEffect, useState } from 'react'
 import { CalendarRange, ChevronRight } from 'lucide-react'
-import { WEEK_DATA } from '@/lib/weekly-recap'
+import { WEEKLY_RECAP_COPY } from '@/lib/weekly-recap'
+import { useWeeklyRecap } from '@/lib/use-weekly-recap'
 import { DEMO_MODE } from '@/lib/demo'
 import { usePrivacy } from './privacy-provider'
 
@@ -23,6 +24,9 @@ export const WeeklyRecapBanner = memo(function WeeklyRecapBanner({
   /* hari dihitung di client - gate hydrasi supaya server render identik */
   const [ready, setReady] = useState(false)
   const { money } = usePrivacy()
+  /* angka minggu ini = TURUNAN dari ledger nyata (satu sumber dengan modal
+     recap: `useWeeklyRecap()`), bukan lagi konstanta demo `WEEK_DATA`. */
+  const recap = useWeeklyRecap()
   useEffect(() => setReady(true), [])
   if (!ready) return null
 
@@ -44,8 +48,17 @@ export const WeeklyRecapBanner = memo(function WeeklyRecapBanner({
           Recap Mingguan Siap! 🌿
         </span>
                 <span className="mt-0.5 block text-[13px] text-cream/60 break-words">
-          Minggu ini: {WEEK_DATA.transactions} transaksi tercatat, net{' '}
-          <b className="font-semibold text-mint">+{money(WEEK_DATA.net)}</b>
+          {recap.empty ? (
+            WEEKLY_RECAP_COPY.bannerEmpty
+          ) : (
+            <>
+              Minggu ini: {recap.transactions} transaksi tercatat, net{' '}
+              <b className="font-semibold text-mint">
+                {recap.net < 0 ? '-' : '+'}
+                {money(Math.abs(recap.net))}
+              </b>
+            </>
+          )}
         </span>
       </span>
       <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-mint py-2 pl-4 pr-2.5 text-[13px] font-semibold text-forest transition-colors group-hover:bg-cream">

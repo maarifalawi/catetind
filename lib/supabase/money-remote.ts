@@ -194,6 +194,40 @@ export async function pushWalletToServer(wallet: WalletSeed, sortIndex = 0): Pro
   }
 }
 
+/**
+ * Hapus dompet di server lewat ENDPOINT YANG SUDAH ADA (paket 62).
+ *
+ * Sampai paket 61 route `DELETE /api/wallets/:id` (`app/api/wallets/[id]/route.ts`
+ * → `removeWallet()`) tidak punya satu pun pemanggil: user bisa menambah dompet
+ * tapi tidak bisa membuangnya. Fungsi ini menutup lubang itu TANPA jalur server
+ * kedua — ia memanggil route yang sama dengan yang diuji `app/api/wallets/route.test.ts`
+ * (401 tanpa sesi, 404 untuk dompet bukan miliknya), jadi "store perangkat" dan
+ * "database" bercerita sama.
+ *
+ * Kenapa `fetch` ke route sendiri, bukan langsung ke PostgREST seperti fungsi
+ * lain di file ini: yang diminta paket 62 adalah memanggil endpoint yang sudah
+ * ditulis & diuji itu, dan endpoint-nya sudah melakukan dua hal yang tidak perlu
+ * diulang di klien — `requireUser()` (identitas dari cookie, bukan body) dan RLS
+ * `user_id = auth.uid()` di database.
+ *
+ * `false` = di luar browser, tidak ada sesi, atau gagal. Hapus LOKAL sudah sah
+ * dan tidak dibatalkan oleh kegagalan ini (bentuk lokalnya tombstone, jadi tidak
+ * ada data user yang bergantung pada jawaban jaringan).
+ */
+export async function deleteRemoteWallet(walletId: string): Promise<boolean> {
+  if (!walletId || typeof window === 'undefined') return false
+  try {
+    const response = await fetch(`/api/wallets/${encodeURIComponent(walletId)}`, {
+      method: 'DELETE',
+      headers: { accept: 'application/json' },
+      credentials: 'same-origin',
+    })
+    return response.ok
+  } catch {
+    return false
+  }
+}
+
 /** Net worth dari view server (kas + aset + piutang − utang), `null` kalau tidak ada sesi */
 export async function remoteNetWorth(): Promise<{
   cash: number

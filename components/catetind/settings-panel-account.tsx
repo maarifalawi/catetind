@@ -13,7 +13,12 @@ import {
   SettingsPanel,
   TonePill,
 } from './settings-ui'
-import { clampPayday, type DashboardPeriod } from '@/lib/onboarding'
+import { clampPayday, digitsToDisplay, onlyDigits, type DashboardPeriod } from '@/lib/onboarding'
+import {
+  MONEY_SETTINGS_COPY,
+  saveUserMoneySettings,
+  useUserMoneySettings,
+} from '@/lib/user-money-settings'
 import { LOGIN_PATH, RELOGIN_COPY, SESSION_COPY } from '@/lib/data/auth'
 import { JOIN_PREVIEW_COPY, buildJoinHref } from '@/lib/data/joint-invite'
 import { DEMO_PARTNER_JOINED, INITIAL_JOINT_WALLET, JOINT_PARTNER } from '@/lib/data/joint'
@@ -50,6 +55,22 @@ export function ProfileSettingsPanel() {
   const [payday, setPayday] = useState(25)
   const [dirty, setDirty] = useState(false)
 
+  /* ── KONFIGURASI UANG USER (paket 57) ────────────────────────────────────
+     Pemasukan bulanan & total cicilan adalah PEMBAGI jatah harian, jadi
+     nilainya wajib bisa diubah user — bukan cuma disimpan diam-diam. Sebelum
+     paket ini panel ini cuma punya "Tanggal Gajian", sementara kartu Jatah Hari
+     Ini dihitung dari konstanta contoh.
+
+     Ditulis LANGSUNG (write-through) saat field berubah, bukan menunggu tombol
+     "Simpan Perubahan": angka ini dipakai halaman lain (Home & /budget) untuk
+     menghitung jatah, dan simpan tertunda membuat halaman itu menampilkan angka
+     lama sampai user menekan tombol di halaman yang berbeda. Yang tersimpan
+     adalah bentuk JSON polos (`lib/user-money-settings.ts`), jadi perubahan ini
+     tidak pernah menyentuh profil/identitas. */
+  const moneySettings = useUserMoneySettings()
+  const [incomeDigits, setIncomeDigits] = useState('')
+  const [installmentDigits, setInstallmentDigits] = useState('')
+
   /**
    * Kode undangan yang benar-benar AKTIF untuk dompet bersama (paket 39).
    *
@@ -63,6 +84,21 @@ export function ProfileSettingsPanel() {
   useEffect(() => {
     setInviteCode(activeInviteFor(INITIAL_JOINT_WALLET.id)?.code ?? null)
   }, [])
+
+  /* Nilai konfigurasi uang dibaca setelah mount (hidrasi aman): `moneySettings`
+     datang dari store yang mengembalikan default pada render pertama, lalu
+     berpindah ke nilai sebenarnya. Di sini ia disalin ke state field supaya user
+     bisa mengetik tanpa nilai ketimpa. */
+  useEffect(() => {
+    setIncomeDigits(
+      moneySettings.monthlyIncome > 0 ? String(Math.round(moneySettings.monthlyIncome)) : '',
+    )
+    setInstallmentDigits(
+      moneySettings.totalInstallments > 0 ? String(Math.round(moneySettings.totalInstallments)) : '',
+    )
+    setPeriod(moneySettings.dashboardPeriod)
+    if (moneySettings.paydayDate) setPayday(moneySettings.paydayDate)
+  }, [moneySettings])
 
   /* partner bisa "diputus" di demo ini — state lokal, sumber awal dari mock
      lib/data/joint.ts (DEMO_PARTNER_JOINED) supaya kedua kondisi bisa direview */
@@ -81,11 +117,37 @@ export function ProfileSettingsPanel() {
   function handlePeriod(next: DashboardPeriod) {
     setPeriod(next)
     setDirty(true)
+    /* write-through: /calendar & label periode lain membaca konfigurasi ini */
+    saveUserMoneySettings({ dashboardPeriod: next })
   }
 
   function handlePayday(event: ChangeEvent<HTMLInputElement>) {
-    setPayday(clampPayday(event.target.value))
+    const next = clampPayday(event.target.value)
+    setPayday(next)
     setDirty(true)
+    saveUserMoneySettings({ paydayDate: next })
+  }
+
+  /**
+   * Pemasukan bulanan — field terpenting paket 57.
+   *
+   * Angka ini yang membuat kartu "Jatah Hari Ini" di Home & /budget bisa
+   * dihitung. Karena itu ia ditulis seketika (bukan menunggu "Simpan"), dan
+   * field kosong berarti "belum diatur" (0) — bukan 0 rupiah sebagai pemasukan.
+   */
+  function handleIncome(event: ChangeEvent<HTMLInputElement>) {
+    const digits = onlyDigits(event.target.value, 12)
+    setIncomeDigits(digits)
+    setDirty(true)
+    saveUserMoneySettings({ monthlyIncome: digits ? Number(digits) : 0 })
+  }
+
+  /** Total cicilan platform per bulan — dipotong dari pemasukan sebelum jatah harian */
+  function handleInstallments(event: ChangeEvent<HTMLInputElement>) {
+    const digits = onlyDigits(event.target.value, 12)
+    setInstallmentDigits(digits)
+    setDirty(true)
+    saveUserMoneySettings({ totalInstallments: digits ? Number(digits) : 0 })
   }
 
   function handleAvatar(event: ChangeEvent<HTMLInputElement>) {
@@ -199,6 +261,45 @@ export function ProfileSettingsPanel() {
         title="Mulai Periode Keuangan"
         desc="Ini menentukan kapan dashboard dan kalender kamu di-reset setiap bulannya."
       >
+        {/* ── UANG BULANAN (paket 57) ─────────────────────────────────────────
+            Dua angka yang MENENTUKAN Jatah Hari Ini di Dashboard & Budget. Dulu
+            panel ini cuma punya "Tanggal Gajian", sehingga jatah harian mustahil
+            dibetulkan dari mana pun. Ditulis seketika (write-through) supaya
+            halaman lain tidak menampilkan angka lama. */}
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <SettingsField
+            label={MONEY_SETTINGS_COPY.incomeLabel}
+            htmlFor="settings-income"
+            note={MONEY_SETTINGS_COPY.incomeNote}
+          >
+            <SettingsInput
+              id="settings-income"
+              inputMode="numeric"
+              value={digitsToDisplay(incomeDigits)}
+              onChange={handleIncome}
+              placeholder={MONEY_SETTINGS_COPY.incomePlaceholder}
+              className="tabular-nums"
+            />
+          </SettingsField>
+          <SettingsField
+            label={MONEY_SETTINGS_COPY.installmentsLabel}
+            htmlFor="settings-installments"
+            note={MONEY_SETTINGS_COPY.installmentsNote}
+          >
+            <SettingsInput
+              id="settings-installments"
+              inputMode="numeric"
+              value={digitsToDisplay(installmentDigits)}
+              onChange={handleInstallments}
+              placeholder={MONEY_SETTINGS_COPY.installmentsPlaceholder}
+              className="tabular-nums"
+            />
+          </SettingsField>
+        </div>
+        <p className="mt-2 text-[11.5px] leading-relaxed text-ink/45">
+          {MONEY_SETTINGS_COPY.effectNote}
+        </p>
+
         <div className="mt-4">
           <Segmented
             label="Mulai periode keuangan"

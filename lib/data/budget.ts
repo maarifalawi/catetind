@@ -71,13 +71,22 @@ export interface SinkingFundItem {
    CURRENT_DAY >= SWEEP_TRIGGER_DAY (28) — ubah CURRENT_DAY jadi 28..30 kalau
    mau melihat kartu sweep.
 
-   Dua konstanta di bawah adalah jangkar BULAN KALENDER. Kartu Home memakainya
-   (lewat `DAILY_HUD` + `MONTHLY_WINDOW`), sedangkan halaman Budget memakai
-   `periodWindow()` supaya jatah hariannya bisa dihitung untuk minggu / siklus
-   gajian juga. Untuk tab Bulanan dua-duanya menghasilkan angka yang sama. */
+   Dua konstanta di bawah adalah jangkar BULAN KALENDER versi DATA SEED. Kartu
+   Home & halaman Budget TIDAK lagi membacanya: keduanya menghitung jendela dari
+   tanggal perangkat (`todayISO()`) dan angkanya dari konfigurasi uang user
+   (`lib/user-money-settings.ts`) + baris ledger sungguhan. Konstanta ini
+   tersisa untuk `DAILY_HUD` (angka kanon demo di CONTEXT-WAJIB §10.1) dan untuk
+   default test. */
 /* Tanggalnya SATU dengan data transaksi hari ini (`HISTORY_TODAY_ISO` di
    lib/data/history.ts) — supaya "hari ini" di halaman Budget dan di Riwayat
    tidak pernah jatuh di hari yang berbeda. Literal tanggalnya tinggal di sana. */
+/* ── KONSTANTA WAKTU (jangkar DEFAULT, bukan lagi jangkar UI) ────────────────
+   PAKET 57: sejak `lib/time.ts` ada, "hari ini" milik user = `todayISO()` dan
+   layar mengisinya SETELAH mount lewat `useTodayISO()`. Konstanta di bawah
+   tinggal di file ini sebagai jangkar DEFAULT untuk render server, test, dan
+   data seed (demo harus stabil & bebas hydration mismatch) — BUKAN lagi sumber
+   tanggal yang dibaca user. Layar yang memakai fungsi-fungsi di file ini wajib
+   mengirim `todayIso` hasil `useTodayISO()`. */
 export const TODAY_ISO = HISTORY_TODAY_ISO
 export const CURRENT_DAY = 27
 export const DAYS_IN_MONTH = 30
@@ -91,8 +100,20 @@ export const SWEEP_TRIGGER_DAY = 28
      available = 7.500.000 − 800.000 (cicilan) − 3.600.000 (celengan) = 3.100.000
      sisa      = 3.100.000 − 2.300.000 (pengeluaran)                =   800.000
      jatah     = 800.000 / 4 hari (27..30 Sep)                      =   200.000
+   PAKET 57 - PERUBAHAN PENTING: angka ini tetap ada sebagai KANON DEMO (dipakai
+   `DAILY_HUD` + test + dokumentasi CONTEXT-WAJIB §10.1), tetapi KOMPONEN tidak
+   boleh lagi membacanya. Sejak paket ini layar memakai:
+
+     - pemasukan & cicilan -> konfigurasi user (`lib/user-money-settings.ts`)
+     - uang keluar         -> baris ledger NYATA (`useMoneyStore()` ->
+                              `recordedTransactions()` -> `spentInWindow()`)
+
+   dan saat pemasukan belum diatur, kartu Jatah Hari Ini menampilkan CTA ("Atur
+   pemasukanmu dulu") - bukan angka contoh dari konstanta ini. Itulah temuan
+   AKAR D audit 2026-09 yang ditutup paket 57.
+
    Turunkan angka `SPENT_THIS_MONTH` (atau naikkan kewajiban celengan) kalau mau
-   menguji state "jatah ditahan" (audit UX #2) di kartu Jatah Hari Ini. */
+   menguji state "jatah ditahan" (audit UX #2) di kanon demo & test. */
 export const MONTHLY_INCOME = 7_500_000
 
 /* ── KANON CICILAN (paket 27) ────────────────────────────────────────────────
@@ -306,6 +327,15 @@ export function budgetsForPeriod(budgets: BudgetItem[], window: PeriodWindow): B
 export interface PeriodIncome {
   /** true = ada pemasukan masuk di dalam jendela periode ini */
   hasIncome: boolean
+  /**
+   * true = user SUDAH mengatur pemasukan bulanannya (paket 57).
+   *
+   * Dibedakan dari `hasIncome` karena dua keadaan ini butuh jawaban yang
+   * berbeda: "belum diatur" → CTA mengatur pemasukan di Pengaturan; "sudah
+   * diatur tapi belum ada catatan masuk di jendela ini" → Dry Spell (catat
+   * pemasukan). Menyamakan keduanya berarti mengirim user ke form yang salah.
+   */
+  configured: boolean
   /** true = pemasukan terakhir masuk SETELAH hari pertama periode → jatah
    *  harian dihitung ulang dari sisa hari & user diberi tahu (PRD 2B.3) */
   midPeriod: boolean
@@ -319,26 +349,43 @@ export interface PeriodIncome {
  * Pemasukan di dalam jendela periode — sumber state Dry Spell (PRD 2B.3) dan
  * catatan "pemasukan masuk di tengah periode".
  *
- * Dibaca dari transaksi nyata (mock `HISTORY_TRANSACTIONS`), bukan flag manual:
- * begitu gajian dicatat, dry spell hilang sendiri. Kartu Home memakai
- * `hasIncomeInWindow(MONTHLY_WINDOW)` untuk pertanyaan yang sama.
+ * PAKET 57 — dua sumber, satu jawaban:
+ *
+ *   1. baris LEDGER sungguhan di dalam jendela (`txs`; layar mengirim
+ *      `recordedTransactions()` dari store uang, bukan konstanta seed), dan
+ *   2. pemasukan bulanan yang DIKONFIGURASI user (`lib/user-money-settings.ts`)
+ *      — dihitung sebagai pemasukan periode bulan kalender. Sebelum paket 57
+ *      angka ini tidak pernah terbaca: pemasukan yang diisi user saat onboarding
+ *      dibuang, dan jatah harian dihitung dari konstanta demo.
+ *
+ * Pemasukan yang dikonfigurasi SENGAJA tidak "disebar" ke jendela mingguan: yang
+ * user isi adalah angka BULANAN, jadi jendela mingguan tetap menuntut catatan
+ * nyata (kalau tidak, satu gaji akan dihitung empat kali dalam sebulan).
  */
 export function periodIncome(
   window: PeriodWindow,
   txs: HistoryTransaction[] = HISTORY_TRANSACTIONS,
+  configuredMonthlyIncome = 0,
 ): PeriodIncome {
+  const configured = configuredMonthlyIncome > 0
   const inWindow = txs
     .filter(
       (tx) => tx.type === 'income' && tx.date >= window.startISO && tx.date <= window.endISO,
     )
     .sort((a, b) => (a.date < b.date ? 1 : -1))
   const latest = inWindow[0] ?? null
+  const logged = inWindow.reduce((sum, tx) => sum + tx.amount, 0)
+
+  /* bulan kalender: konfigurasi user sudah cukup untuk menyatakan "ada
+     pemasukan" — dan ia dihitung sejak hari pertama periode (midPeriod false) */
+  const fromConfig = configured && window.period === 'monthly'
   return {
-    hasIncome: latest !== null,
+    hasIncome: latest !== null || fromConfig,
+    configured,
     midPeriod: latest !== null && latest.date > window.startISO,
-    latestDateISO: latest?.date ?? null,
-    latestDateLabel: latest ? dayMonth(latest.date) : null,
-    amount: inWindow.reduce((sum, tx) => sum + tx.amount, 0),
+    latestDateISO: latest?.date ?? (fromConfig ? window.startISO : null),
+    latestDateLabel: latest ? dayMonth(latest.date) : fromConfig ? dayMonth(window.startISO) : null,
+    amount: fromConfig ? Math.max(logged, configuredMonthlyIncome) : logged,
   }
 }
 
@@ -346,8 +393,39 @@ export function periodIncome(
 export function hasIncomeInWindow(
   window: PeriodWindow,
   txs: HistoryTransaction[] = HISTORY_TRANSACTIONS,
+  configuredMonthlyIncome = 0,
 ): boolean {
-  return periodIncome(window, txs).hasIncome
+  return periodIncome(window, txs, configuredMonthlyIncome).hasIncome
+}
+
+/* ── UANG NYATA DI DALAM SATU JENDELA (paket 57) ─────────────────────────────
+   Sumber tunggal untuk "uang keluar periode ini": baris ledger yang jatuh di
+   dalam jendela, memakai definisi app-wide `summarizeTransactions()`
+   (pengeluaran + setoran tabungan; transfer netral) supaya angkanya sama dengan
+   panel Review Pengeluaran Hari Ini dan halaman Riwayat. Tidak ada rumus kedua
+   yang bisa menyimpang. */
+
+/** baris yang jatuh di dalam jendela periode (inklusif kedua ujungnya) */
+export function windowTransactions<T extends HistoryTransaction>(
+  txs: T[],
+  window: PeriodWindow,
+): T[] {
+  return txs.filter((tx) => tx.date >= window.startISO && tx.date <= window.endISO)
+}
+
+/** uang keluar NYATA di dalam jendela (dipakai sebagai `spent` HUD) */
+export function spentInWindow(txs: HistoryTransaction[], window: PeriodWindow): number {
+  return summarizeTransactions(windowTransactions(txs, window)).expense
+}
+
+/** uang masuk NYATA di dalam jendela (dipakai sebagai pemasukan non-bulanan) */
+export function earnedInWindow(txs: HistoryTransaction[], window: PeriodWindow): number {
+  return summarizeTransactions(windowTransactions(txs, window)).income
+}
+
+/** uang keluar pada SATU tanggal (ring "terpakai" di kartu Jatah Hari Ini) */
+export function spentOn(txs: HistoryTransaction[], iso: string): number {
+  return summarizeTransactions(txs.filter((tx) => tx.date === iso)).expense
 }
 
 /* ── KOLAM UANG PER PERIODE (prompt 26) ─────────────────────────────────────
@@ -476,6 +554,11 @@ export function periodPool(
   txs: HistoryTransaction[] = HISTORY_TRANSACTIONS,
 ): PeriodPool {
   if (window.period === 'monthly') {
+    /* PAKET 57: cabang ini KANON DEMO (angka contoh repo), bukan lagi jalur yang
+       dipakai layar — `computeDailyHud()` hanya memakainya sebagai cadangan
+       untuk jendela NON-bulanan yang tidak dikirim `earned`. Bulan kalender
+       sekarang memakai pemasukan/cicilan dari konfigurasi user + uang keluar
+       dari ledger, jadi pertahankan blok ini sebagai patokan angka demo & test. */
     return {
       income: MONTHLY_INCOME,
       spent: SPENT_THIS_MONTH,
@@ -551,6 +634,7 @@ export function computeDailyHud({
   sinkingObligation = 0,
   sinkingFunds,
   spent = SPENT_THIS_MONTH,
+  earned,
   currentDay,
   daysInMonth,
   window: period,
@@ -566,20 +650,40 @@ export function computeDailyHud({
    *  celengan (`sinkingObligationOf()`). Dipakai /budget supaya celengan yang
    *  baru ditambahkan user langsung ikut terhitung. */
   sinkingFunds?: SinkingFundItem[]
+  /**
+   * Uang keluar periode ini — SELALU dipakai apa adanya, termasuk untuk window
+   * bulan kalender (paket 57).
+   *
+   * Sebelum paket 57 argumen ini DIABAIKAN saat `window` diisi: cabang bulan
+   * kalender mengambil `SPENT_THIS_MONTH` dari konstanta, jadi pengeluaran yang
+   * baru dicatat user tidak pernah menurunkan jatah harian. Sekarang layar
+   * mengirim `spentInWindow(recordedTransactions(snapshot), window)` — angka
+   * NYATA dari ledger.
+   */
   spent?: number
+  /**
+   * Pemasukan NYATA di dalam window (paket 57) — dipakai HANYA untuk window
+   * non-bulanan. Window bulan kalender memakai `monthlyIncome` (konfigurasi
+   * user, angka bulanan). Kalau kosong, jendela non-bulanan jatuh ke kolam mock
+   * `periodPool()` supaya pemakaian lama & test tetap jalan.
+   */
+  earned?: number
   currentDay?: number
   daysInMonth?: number
   /** periode aktif — menimpa `currentDay`/`daysInMonth` DAN KOLAM UANG-nya
    *  (prompt 26: pemasukan & pengeluaran dihitung untuk window ini, bukan selalu
-   *  sebulan). Saat diisi, argumen konstanta di atas tidak dipakai. */
+   *  sebulan). */
   window?: PeriodWindow
 }): BudgetHud {
-  /* Kolam window aktif (kalau ada). Untuk bulan kalender `periodPool()` memakai
-     konstanta kanon — jadi angka Home = tab Bulanan tetap identik. */
-  const pool = period ? periodPool(period) : null
-  const income = pool ? pool.income : monthlyIncome
-  const installments = pool ? pool.installments : totalInstallments
-  const spentInPeriod = pool ? pool.spent : spent
+  /* Kolam uang window aktif. Cicilan & pemasukan mengikuti ATURAN window
+     (bulanan = angka konfigurasi user; non-bulanan = prorata cicilan + uang yang
+     benar-benar masuk di jendela itu), sementara uang keluar SELALU nilai yang
+     dikirim pemanggil — itu yang membuat "catat Rp 50.000 → jatah harian turun"
+     berlaku di semua tab, termasuk tab Bulanan. */
+  const useMonthlyPool = !period || period.period === 'monthly'
+  const income = useMonthlyPool ? monthlyIncome : (earned ?? periodPool(period).income)
+  const installments = useMonthlyPool ? totalInstallments : periodInstallments(period)
+  const spentInPeriod = spent
 
   /* Kewajiban celengan untuk periode aktif. Ada DUA bentuk sumber yang setara —
      daftar celengan (`sinkingFunds`, mis. state `funds` di /budget) atau angka
@@ -600,10 +704,9 @@ export function computeDailyHud({
     : monthlyObligation
 
   /* PRD 2B.1/1154 — cicilan dipotong dari pool income SEBELUM dibagi hari;
-     `available` sudah dijaga >= 0 di `periodPool()` supaya pemasukan window yang
-     lebih kecil dari cicilannya tidak berubah jadi jatah minus. */
-  const availablePool =
-    (pool ? pool.available : Math.max(0, income - installments)) - periodSinking
+     dijaga >= 0 supaya pemasukan periode yang lebih kecil dari cicilannya tidak
+     berubah jadi jatah minus (dulu penjagaan ini ada di `periodPool()`) */
+  const availablePool = Math.max(0, income - installments) - periodSinking
   const remaining = availablePool - spentInPeriod
   /* periode aktif menentukan pembaginya; guard eksplisit supaya tidak pernah
      ada pembagian nol walau periode berakhir hari ini */
@@ -626,6 +729,27 @@ export function computeDailyHud({
     spent: spentInPeriod,
     shortfall,
   }
+}
+
+/**
+ * Persentase kolam periode yang SUDAH terpakai (0..1) — dasar bar "terpakai" di
+ * kartu Jatah Hari Ini.
+ *
+ * Bug yang ditutup (audit "Daily Budget Catastrophe"): kartu dulu menghitung
+ * `spentToday / hud.dailyBudget`. Masalahnya `hud.dailyBudget` = `remaining /
+ * daysLeft`, dan `remaining` SUDAH dikurangi `spent` (termasuk pengeluaran hari
+ * ini). Pembilang ikut mengurangi penyebutnya sendiri, jadi persentasenya
+ * melompat tak wajar — mis. "88% terpakai" di awal siklus padahal ruang periode
+ * masih penuh.
+ *
+ * Yang benar-benar dibaca user adalah: "berapa bagian kolam uang periode ini
+ * yang sudah terpakai". Sisanya (`availablePool − spent`) tetap tampil sebagai
+ * nominal *jatah harian* (`dailyBudget`) + jumlah hari tersisa, jadi hubungan
+ * "sisa uang ÷ hari tersisa" tetap terbaca di kartu.
+ */
+export function periodUsagePct(availablePool: number, spent: number): number {
+  if (!(availablePool > 0)) return 0
+  return Math.min(Math.max(spent / availablePool, 0), 1)
 }
 
 /** total kewajiban celengan bulan ini = jumlah "nabung Rp X/bulan" untuk
@@ -720,6 +844,22 @@ export function sinkingObligationFor(
   return prorateMonthly(sinkingObligationOf(funds), window, SINKING_FUND_DUE_DAYS)
 }
 
+/**
+ * KANON DEMO bulan kalender (`CONTEXT-WAJIB` §10.1) — HITUNGAN CONTOH, bukan
+ * angka yang dibaca layar (paket 57).
+ *
+ * Isinya = `computeDailyHud()` dengan seluruh argumen kanon demo:
+ *
+ *     available = 7.500.000 − 800.000 − 3.600.000 = 3.100.000
+ *     sisa      = 3.100.000 − 2.300.000           =   800.000
+ *     jatah     = 800.000 / 4 hari (27..30 Sep)   =   200.000
+ *
+ * Sejak paket 57 kartu Jatah Hari Ini di Home & /budget TIDAK memakai konstanta
+ * ini lagi: keduanya menghitung dari konfigurasi uang user
+ * (`lib/user-money-settings.ts`) + baris ledger sungguhan, dan menampilkan CTA
+ * saat pemasukan belum diatur. Konstanta ini dipertahankan sebagai patokan demo
+ * yang diikat §10.1, dasar test, dan bukti bahwa rumusnya tidak bergeser.
+ */
 export const DAILY_HUD = computeDailyHud({
   monthlyIncome: MONTHLY_INCOME,
   totalInstallments: TOTAL_INSTALLMENTS,
@@ -832,6 +972,17 @@ export function budgetPlantHref(): string {
   return `/budget?${BUDGET_PLANT_PARAM}=1`
 }
 
+/**
+ * Jalan keluar dari kartu Jatah Hari Ini menuju konfigurasi uang user (paket 57).
+ *
+ * Rutenya `/settings` — panel "Profil & Akun" adalah section DEFAULT halaman itu
+ * (`app/settings/page.tsx` → `ProfileSettingsPanel`), dan di situlah field
+ * PEMASUKAN BULANAN + TOTAL CICILAN BULANAN hidup. Sengaja konstanta, bukan
+ * string di JSX: satu tautan yang salah ketik = CTA yang tidak menuju ke mana
+ * pun, dan repo ini tidak punya halaman pengaturan kedua yang bisa menampung.
+ */
+export const MONEY_SETTINGS_HREF = '/settings'
+
 /** baca parameter URL apa pun menjadi boolean — `?tanam=1` / `?tanam=true` */
 export function flagParamOf(value: string | string[] | undefined): boolean {
   const raw = Array.isArray(value) ? value[0] : value
@@ -897,10 +1048,19 @@ export function budgetSheetMode(
  *
  * `mode` yang dikembalikan adalah mode yang BENAR-BENAR terjadi. Komponen
  * memakainya untuk memilih toast (dibuat vs diperbarui), bukan untuk menebak.
+ *
+ * `takenIds` (paket 60): id yang PERNAH dipakai di sesi ini walau barisnya sudah
+ * dicabut user (`removeBudget()`). Tanpa daftar itu, id baris yang baru saja
+ * dihapus akan dipakai ulang oleh budget berikutnya — dan tombol Undo yang
+ * masih hidup bisa memulihkan baris lama ke id yang sekarang milik kategori
+ * lain. Daftarnya dikirim halaman sebagai argumen supaya aturannya tetap murni
+ * dan bisa diuji tanpa browser; pemanggil lama tidak berubah (`[]` = perilaku
+ * lama apa adanya).
  */
 export function applyBudgetSave(
   budgets: BudgetItem[],
   data: Omit<BudgetItem, 'id' | 'spent'>,
+  takenIds: readonly number[] = [],
 ): { budgets: BudgetItem[]; mode: 'create' | 'edit'; id: number } {
   const existing = findBudgetByCategory(
     budgets.filter((item) => item.scope === data.scope),
@@ -915,8 +1075,64 @@ export function applyBudgetSave(
     }
   }
 
-  const id = budgets.reduce((max, item) => Math.max(max, item.id), 0) + 1
+  /* id tertinggi dihitung dari baris yang MASIH tampil DITAMBAH id yang sudah
+     dipensiunkan — inilah yang membuat id tidak pernah dipakai dua kali. */
+  const id =
+    Math.max(0, ...budgets.map((item) => item.id), ...takenIds) + 1
   return { budgets: [...budgets, { ...data, id, spent: 0 }], mode: 'create', id }
+}
+
+/* ── HAPUS BUDGET KATEGORI (paket 60 · 60.1 · AUDIT §4 aturan hapus) ─────────
+   Temuan audit: `applyBudgetSave()` cuma punya mode `create`/`edit`, dan di
+   seluruh repo tidak ada satu pun fungsi hapus budget. Artinya user bisa
+   MEMBUAT target tapi tidak bisa mencabutnya — padahal kategori budget adalah
+   janji yang dia pasang sendiri, dan janji yang tidak bisa dibatalkan bukan
+   janji.
+
+   Dua hal yang HARUS jujur dan karenanya ditulis di sini, bukan di komponen:
+
+     1. Hapus budget TIDAK mengembalikan uang dan TIDAK mengubah Jatah Harian.
+        `limit`/`spent` adalah batas tampilan + angka pacing; yang dihitung dari
+        uang sungguhan adalah `lib/money/ledger.ts` (saldo) dan `computeDailyHud()`
+        (jatah, dari pemasukan − cicilan − celengan − pengeluaran ledger). Jadi
+        mencabut budget hanya mencabut target user — kalimat itu wajib terbaca di
+        dialog (`BUDGET_DELETE_COPY.note`) supaya user tidak mengharapkan saldo
+        naik.
+     2. Undo memulihkan URUTAN aslinya. Karena itu `removed` menyimpan baris dan
+        POSISINYA, bukan cuma barisnya: baris yang "dibalikin ke paling bawah"
+        akan terlihat seperti budget baru, bukan budget yang sama. */
+
+export interface BudgetRemoval {
+  /** daftar tanpa baris yang dicabut (sama persis kalau tidak ada yang cocok) */
+  budgets: BudgetItem[]
+  /** baris + posisi aslinya; `null` = id tidak ditemukan → TIDAK ada yang berubah */
+  removed: { item: BudgetItem; index: number } | null
+}
+
+/** cabut satu baris budget dari daftar berdasarkan id (logika murni, teruji). */
+export function removeBudget(budgets: BudgetItem[], id: number): BudgetRemoval {
+  const index = budgets.findIndex((budget) => budget.id === id)
+  /* id asing (mis. baris yang sudah dicabut dari perangkat lain) TIDAK menebak:
+     daftarnya dikembalikan apa adanya dan `removed: null` yang mengatakan bahwa
+     tidak ada yang berubah. */
+  if (index < 0) return { budgets, removed: null }
+  return {
+    budgets: budgets.filter((budget) => budget.id !== id),
+    removed: { item: budgets[index], index },
+  }
+}
+
+/** Undo hapus: kembalikan baris ke POSISI aslinya. Baris yang id-nya sudah ada
+ *  lagi (mis. tombol Undo ditekan dua kali) diabaikan — tidak ada duplikat. */
+export function restoreBudget(
+  budgets: BudgetItem[],
+  removal: { item: BudgetItem; index: number },
+): BudgetItem[] {
+  if (budgets.some((budget) => budget.id === removal.item.id)) return budgets
+  const next = [...budgets]
+  const at = Math.min(Math.max(removal.index, 0), next.length)
+  next.splice(at, 0, removal.item)
+  return next
 }
 
 /** kategori dari URL → opsi sheet. Label asing/typo diabaikan (null) supaya
@@ -1081,8 +1297,20 @@ export const NUDGE_COPY =
    berubah — tanpa menghakimi. */
 export const HUD_COPY = {
   title: 'Jatah Hari Ini',
-  pin: 'Pin ke Dashboard',
-  pinned: 'Terpin ke Dashboard',
+  /**
+   * PAKET 60.3 — `pin`/`pinned` DIHAPUS dari sini beserta tombolnya.
+   *
+   * Tombol "Pin ke Dashboard" dulu hanya membalik `useState` di halaman
+   * /budget: `DailyHudCard` di Home tidak menerima prop `pinned` dan tidak
+   * membaca penyimpanan apa pun, jadi menekannya TIDAK mengubah satu piksel pun
+   * di Dashboard — pelanggaran kanon "jujur di setiap klaim" (PRD 244).
+   *
+   * Dua jalan keluarnya: (a) menyimpan pin ke konfigurasi uang user dan membuat
+   * Home benar-benar menaikkan kartunya, atau (b) menghapus tombolnya. Yang
+   * dipilih adalah (b) — lihat laporan 60 §3 untuk alasannya (paket 58 sudah
+   * memutuskan urutan kartu Home dan kartu ini memang TURUN ke baris kedua
+   * dengan sengaja; pin yang bisa melawan keputusan itu = dua sumber kebenaran
+   * untuk satu tata letak). */
   /** netral periode: benar untuk tab mingguan / bulanan / siklus gajian */
   remainingLead: 'Sisa periode:',
   daysLeftSuffix: 'hari lagi',
@@ -1096,6 +1324,21 @@ export const HUD_COPY = {
   drySpellBody: 'Yuk catat begitu masuk! 💪',
   drySpellCta: '+ Catat Pemasukan',
   drySpellA11y: 'Belum ada pemasukan di periode ini',
+  /**
+   * "BELUM DIATUR" — keadaan yang paling sering terjadi sekarang (paket 57).
+   *
+   * Dibedakan dari Dry Spell: kalau pemasukan bulanan belum pernah diisi, jatah
+   * harian memang TIDAK BISA dihitung dari apa pun — dan menampilkan angka
+   * contoh dari konstanta demo adalah klaim palsu yang jadi temuan audit AKAR D.
+   * Jadi kartunya jujur menyebut kenapa kosong + satu jalan keluar (Pengaturan).
+   */
+  notConfiguredTitle: 'Jatah harianmu belum bisa dihitung',
+  notConfiguredBody:
+    'Atur pemasukanmu dulu biar jatah hariannya benar — angkanya kami hitung dari pemasukan & cicilanmu, bukan dari contoh.',
+  notConfiguredCta: 'Atur Pemasukan & Cicilan',
+  notConfiguredA11y: 'Pemasukan bulanan belum diatur',
+  /** CTA kecil di kartu Jatah Hari Ini /budget (paket 57.4) */
+  moneySettingsCta: 'Atur pemasukan & cicilan',
   /** state "jatah ditahan" (saldo tidak cukup memenuhi celengan bulan ini) */
   shortfallBadge: 'Jatah ditahan',
   shortfallCaption: 'jatah harian ditahan',
@@ -1117,19 +1360,24 @@ export const HOME_HUD_COPY = {
   title: 'Jatah Hari Ini',
   subtitle: 'Budget harian dinamis',
   dailyCaption: 'sisa jatah hari ini',
-  usedCaption: 'terpakai',
+  /* bar mengukur PEMAKAIAN KOLAM PERIODE (audit Daily Budget), bukan rasio
+     harian yang pembilangnya sudah ikut mengurangi penyebutnya sendiri */
+  usedCaption: 'terpakai periode ini',
   remainingLead: 'Sisa bulan',
   daysLeftSuffix: 'hari lagi',
   installmentsLead: 'Cicilan terpotong',
+  /** pintu mengubah pembagi jatah (pemasukan & cicilan) — selalu tersedia,
+   *  bukan cuma saat angka belum diatur (audit "Daily Budget Symptom B") */
+  settingsCta: 'Atur pemasukan & cicilan',
   reviewCta: 'Review Pengeluaran Hari Ini',
   status: {
-    onTrack: { label: 'On track', ring: '#b5b987', copy: 'Masih banyak ruang hari ini! 🌿' },
+    onTrack: { label: 'On track', ring: '#b5b987', copy: 'Masih banyak ruang periode ini! 🌿' },
     approaching: {
       /* dulu "Hampir habis" — diganti supaya tidak ada kata "habis" (kanon 2B.2:
          nada nurturing, bukan mengancam) */
       label: 'Pelan-pelan',
       ring: '#ffb885',
-      copy: 'Pelan-pelan ya, sisa jatah harianmu tinggal dikit 🌤️',
+      copy: 'Pelan-pelan ya, pengeluaranmu jalan lebih cepat dari harinya 🌤️',
     },
     over: { label: 'Lewat jatah', ring: '#b89191', copy: 'Gapapa, besok kita atur ulang bareng! 🌱' },
   },
@@ -1264,6 +1512,44 @@ export const BUDGET_SAVE_TOAST = {
   updatedBody: (limitLabel: string) => `Baris yang sama — sekarang limitnya ${limitLabel}.`,
 } as const
 
+/* ── COPY HAPUS BUDGET KATEGORI (paket 60 · 60.1) ────────────────────────────
+   Pola yang sama dengan hapus tagihan (`CONFIRM_DELETE_BILL_COPY`): tolak dulu,
+   baru boleh jalan, dan sesudahnya masih ada Undo.
+
+   BAGIAN TERPENTINGNYA adalah `note` — satu kalimat yang menjawab "apa yang
+   TIDAK hilang". Membaca "Hapus budget Kopi?" saja bisa membuat user menduga
+   saldo/jatah hariannya berubah, padahal limit budget bukan uang. Kalimat itu
+   tinggal di sini (bukan dikarang di JSX) supaya halaman mana pun yang kelak
+   menambah pintu hapus budget memakai penjelasan yang sama. */
+export const BUDGET_DELETE_COPY = {
+  overlay: 'Batal hapus budget',
+  title: 'Hapus budget ini?',
+  body: (category: string, periodWord: string) =>
+    `Limit ${periodWord} untuk ${category} bakal dicabut dari daftar.`,
+  /** apa yang TIDAK ikut hilang — catatan asli, saldo, dan Jatah Harian */
+  note:
+    'Ini cuma mencabut target yang kamu pasang sendiri. Saldo dompet dan Jatah Harian TIDAK berubah — keduanya dihitung dari catatan pengeluaranmu, bukan dari limit ini.',
+  safety: (seconds: number) => `Masih bisa kamu balikin lewat tombol Undo selama ${seconds} detik.`,
+  cancel: 'Batal',
+  confirm: 'Hapus',
+} as const
+
+export const BUDGET_DELETE_TOAST = {
+  title: (category: string) => `Budget ${category} dicabut`,
+  description: 'Saldo & Jatah Harian tidak berubah — limitnya saja yang dilepas.',
+  undo: 'Undo',
+  undoneTitle: 'Budget dikembalikan 🌱',
+  undoneDescription: 'Limitnya balik ke posisi semula di daftar.',
+  /** jaring pengaman kalau Undo ditekan setelah jendelanya tutup */
+  expired: 'Jendela Undo-nya sudah lewat — budget ini bisa kamu buat lagi kapan aja 🌱',
+} as const
+
+/** tombol hapus di kartu kategori (dipakai `aria-label` + tooltip, jadi tidak
+ *  ada tombol ikon tanpa nama) */
+export const BUDGET_CARD_ACTION_COPY = {
+  delete: (category: string) => `Hapus budget ${category}`,
+} as const
+
 
 /* ── COPY HALAMAN DETAIL CELENGAN (/budget/[id]) ─────────────────────────────
    Semua teks halaman detail tinggal di sini — tidak ada satu kalimat pun yang
@@ -1312,6 +1598,73 @@ export const FUND_CREATE_TOAST = {
 export const FUND_SWEEP_TOAST = {
   title: (amountLabel: string, name: string) => `${amountLabel} disapu ke ${name}! 🧹🎉`,
   body: 'Sisa limit kategori periode ini dianggap terpakai, jadi bulan depan mulai dari nol lagi.',
+} as const
+
+/* ── COPY HAPUS CELENGAN (paket 60 · 60.2 · temuan audit #4) ─────────────────
+   Celengan punya EFEK UANG yang tidak kelihatan: `sinkingObligationOf()` memotong
+   "nabung Rp X/bulan" dari kolam SEBELUM jatah harian dibagi
+   (`lib/data/budget.ts`: `computeDailyHud()`), jadi mencabut satu celengan
+   MENAIKKAN Jatah Harian. Menghapus tanpa mengatakan itu = user melihat jatah
+   hariannya berubah tanpa sebab yang bisa ia baca — persis jenis "angka bohong"
+   yang diaudit paket 57–62.
+
+   Tiga fakta yang harus terbaca SEBELUM user menekan Hapus:
+     1. targetnya hilang dari daftar (badan dialog);
+     2. uang yang sudah disetor TIDAK kembali ke dompet (`cashNote`) — riwayat
+        setorannya tetap tersimpan karena uangnya memang sudah keluar;
+     3. dampaknya ke Jatah Harian, dengan nominalnya (`obligationNote`), atau
+        alasannya kenapa TIDAK berubah (`noObligationNote` — kewajiban bulan ini
+        sudah disetor / targetnya sudah penuh). */
+export const FUND_DELETE_COPY = {
+  overlay: 'Batal hapus celengan',
+  title: 'Hapus celengan ini?',
+  body: (name: string) => `${name} bakal keluar dari daftar Celengan Impian.`,
+  /** uang yang sudah keluar dari dompet tidak kembali karena catatannya dihapus */
+  cashNote:
+    'Uang yang sudah kamu setor TIDAK kembali ke dompet — catatan setorannya tetap tersimpan, karena uangnya memang sudah keluar.',
+  /** dampak NYATA ke Jatah Hari Ini, lengkap nominalnya */
+  obligationNote: (releasedLabel: string) =>
+    `Kewajiban ${releasedLabel}/bulan yang tadi dipotong dari Jatah Hari Ini akan dilepas — jadi jatah harianmu naik setelah ini.`,
+  /** kenapa jatah harian TIDAK berubah (kewajiban bulan ini sudah lunas / target penuh) */
+  noObligationNote:
+    'Celengan ini tidak punya kewajiban bulanan yang masih ditagih (sudah kamu setor bulan ini atau targetnya sudah penuh), jadi Jatah Hari Ini tidak berubah.',
+  /**
+   * Wajah ketiga halaman /budget/<id>: celengannya SUDAH dihapus user sementara
+   * halaman ini masih terbuka (jendela Undo belum tutup). Tanpa kalimat ini,
+   * halaman detail akan jatuh ke "Celengan tidak ditemukan" — padahal user baru
+   * saja menghapusnya sendiri, dan jalan kembalinya masih ada di toast Undo.
+   */
+  removedTitle: 'Celengan ini sudah dihapus',
+  removedBody:
+    'Targetnya sudah dilepas dari daftar. Kalau ini salah tekan, pakai tombol Undo di notifikasi bawah untuk mengembalikannya.',
+  /**
+   * Setoran ditolak karena celengannya sudah tidak ada (dihapus di tempat lain
+   * selagi sheet-nya terbuka). Store menolak menulis — dan penolakan itu HARUS
+   * terdengar, bukan diam-diam tidak terjadi apa-apa.
+   */
+  goneNote: 'Celengan ini sudah tidak ada di daftarmu, jadi setorannya tidak ditulis. Muat ulang halamannya ya 🌱',
+  safety: (seconds: number) => `Masih bisa kamu balikin lewat tombol Undo selama ${seconds} detik.`,
+  cancel: 'Batal',
+  confirm: 'Hapus',
+} as const
+
+export const FUND_DELETE_TOAST = {
+  title: (name: string) => `Celengan ${name} dicabut`,
+  description: 'Uang yang sudah disetor tetap tercatat — yang dilepas cuma targetnya.',
+  undo: 'Undo',
+  undoneTitle: 'Celengan dikembalikan 🌱',
+  undoneDescription: 'Target & progresnya balik seperti semula, begitu juga jatah harianmu.',
+  /** jaring pengaman kalau Undo ditekan setelah jendelanya tutup */
+  expired: 'Jendela Undo-nya sudah lewat — celengan ini bisa kamu tanam lagi kapan aja 🌱',
+} as const
+
+/** aria-label tombol hapus di kartu celengan & di halaman detail (tidak ada
+ *  tombol ikon tanpa nama) */
+export const FUND_CARD_ACTION_COPY = {
+  delete: (name: string) => `Hapus celengan ${name}`,
+  /** label tombol yang terlihat di halaman detail */
+  deleteLabel: 'Hapus celengan',
+  deleteHint: 'Target & progresnya dilepas — uang yang sudah disetor tetap tercatat.',
 } as const
 
 
@@ -1478,9 +1831,14 @@ export function transactionsOn(
   return txs.filter((tx) => tx.date === iso)
 }
 
-/** uang keluar HARI INI (mock) — satu sumber untuk ring "terpakai" di kartu
- *  Jatah Hari Ini (Home) dan panel review di /budget. Diambil dari catatan
- *  bertanggal TODAY_ISO supaya dua layar itu mustahil bercerita beda. */
+/** uang keluar HARI INI versi KANON DEMO — satu sumber untuk ring "terpakai" di
+ *  kartu Jatah Hari Ini (Home) dan panel review di /budget SEBELUM paket 57.
+ *
+ *  Sejak paket 57 kartu Home memakai uang keluar NYATA dari ledger
+ *  (`spentOn(recordedTransactions(snapshot), todayIso)`) dan panel review menerima
+ *  `txs` + `todayISO` dari halaman, jadi konstanta ini TIDAK lagi menjadi sumber
+ *  angka di komponen — ia tinggal sebagai patokan angka demo (85.000/hari) dan
+ *  default test. */
 export const SPENT_TODAY = summarizeTransactions(transactionsOn()).expense
 
 /** kondisi yang menentukan kalimat balasan panel */

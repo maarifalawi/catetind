@@ -11,6 +11,7 @@ import {
   Search,
   SlidersHorizontal,
   Sprout,
+  Trash2,
   X,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -25,6 +26,7 @@ import { SpendingHeatmap } from './spending-heatmap'
 import { HistoryTransactionRow } from './history-transaction-row'
 import { TransactionDetailSheet } from './transaction-detail-sheet'
 import { ConfirmDeleteDialog, TransactionActionsSheet } from './transaction-actions'
+import { ConfirmDialog } from './confirm-dialog'
 import { EditTransactionSheet } from './edit-transaction-sheet'
 import { WeeklyRecapModal } from './weekly-recap-modal'
 import { MonthlyReviewModal } from './monthly-review-modal'
@@ -39,7 +41,9 @@ import {
   isRowRemoved,
   recordedTransactions,
   removeRow,
+  removeRows,
   restoreRow,
+  restoreRows,
   undoTransferCancellation,
   useMoneyStore,
   type TransferCancellation,
@@ -54,22 +58,27 @@ import {
 } from '@/lib/data/money-context'
 import {
   CATEGORY_FILTERS,
-  HEALTH_SCORE,
+  DELETE_TRANSACTION_TOAST,
+  HISTORY_CLEAR_ALL_COPY,
+  HISTORY_CLEAR_ALL_TOAST,
+  HISTORY_NO_DATA_COPY,
   HISTORY_TRANSACTIONS,
   INITIAL_FILTERS,
   MONEY_LEGEND,
   TIME_FILTERS,
-  TOTAL_TRANSACTIONS,
   TYPE_FILTERS,
   UNDO_WINDOW_MS,
-  WALLET_FILTERS,
-  DELETE_TRANSACTION_TOAST,
   UPDATE_TRANSACTION_TOAST,
+  WALLET_FILTERS,
+  buildHistoryInsights,
+  countHistoryTransactions,
   filterHistoryTransactions,
+  financialHealthScore,
   groupTransactionsByDate,
   localISODate,
   maskMoney,
   netLabel,
+  savingsRatePct,
   summarizeTransactions,
   type FilterOption,
   type HistoryFilters,
@@ -120,7 +129,6 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
   /** filter yang sheet opsinya sedang terbuka (null = tertutup) */
   const [openFilter, setOpenFilter] = useState<FilterKey | null>(null)
   const [selectedTransaction, setSelectedTransaction] = useState<HistoryTransaction | null>(null)
-  const totalTransactions = TOTAL_TRANSACTIONS
 
   /**
    * Catatan yang dihapus user + catatan sesi — keduanya dari SATU store uang
@@ -222,10 +230,6 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
   )
   const groups = useMemo(() => groupTransactionsByDate(filtered, today), [filtered, today])
   const summary = useMemo(() => summarizeTransactions(filtered), [filtered])
-  const hasIncome = useMemo(
-    () => visibleTransactions.some((tx) => tx.type === 'income'),
-    [visibleTransactions],
-  )
   /**
    * Jumlah catatan yang DIKONTEKS ini punya (sebelum filter/pencarian user) —
    * dipakai pill "x dari y", empty state, dan ambang insight: kalau konteksnya
@@ -233,6 +237,35 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
    * harus ikut hilang (kanon "jangan pernah kasih false insight").
    */
   const contextCount = visibleTransactions.length
+
+  /* ── ANGKA KARTU HERO: DIHITUNG DARI CATATAN, BUKAN DIPATOK (paket 59 · 59.1) ─
+     Sampai paket 58 dua angka di blok ini datang dari konstanta: jumlah transaksi
+     `TOTAL_TRANSACTIONS` (24) dan skor `HEALTH_SCORE` (72). Keduanya tetap tampil
+     walaupun user sudah menghapus seluruh catatannya.
+
+     Sekarang:
+       · `totalTransactions` = baris sesi + baris seed yang belum dihapus tombstone;
+       · `healthScore`       = rasio pemasukan vs pengeluaran dari catatan NYATA,
+                               dan `null` kalau belum bisa dihitung (data < 30
+                               atau belum ada pemasukan) — kartu yang menjelaskan,
+                               bukan angka contoh;
+       · `insights`          = kartu AI yang angkanya lahir dari catatan KONTEKS
+                               AKTIF (ambangnya di dalam `buildHistoryInsights`),
+                               jadi konteks yang datanya tipis tidak diberi klaim. */
+  const aliveSeedCount = useMemo(
+    () => HISTORY_TRANSACTIONS.filter((tx) => !isRowRemoved(snapshot, tx.id)).length,
+    [snapshot],
+  )
+  const totalTransactions = countHistoryTransactions({
+    session: recordedTxs.length,
+    seedAlive: aliveSeedCount,
+  })
+  const healthScore = useMemo(() => financialHealthScore(transactions), [transactions])
+  const savingsRate = useMemo(() => savingsRatePct(transactions), [transactions])
+  const insights = useMemo(
+    () => buildHistoryInsights(visibleTransactions, today),
+    [visibleTransactions, today],
+  )
 
   const activeFilterCount =
     (activeFilters.time !== 'all' ? 1 : 0) +
@@ -370,6 +403,54 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
       undoCancelRef.current = null
     }, UNDO_WINDOW_MS)
   }, [pendingDelete, restoreTransaction])
+
+  /* ── HAPUS SEMUA RIWAYAT (paket 59 · item 59.2) ──────────────────────────────
+     Satu pintu tulis: `removeRows()` (store) menulis SEMUA tombstone dalam satu
+     commit — bukan perulangan `removeRow()` yang berarti N tulisan & N siaran.
+
+     Hak Undo-nya memakai jendela yang SAMA (`UNDO_WINDOW_MS`) dan mekanisme yang
+     SAMA dengan hapus satu catatan: selama jendelanya hidup, `restoreRows()`
+     mengembalikan seluruh daftar; sesudahnya tombol yang datang terlambat
+     ditolak dengan kalimat jujur (`DELETE_TRANSACTION_TOAST.expired`).
+
+     Catatan yang dihapus di sini TIDAK mengembalikan uang (kanon §4.5) — kalau
+     user ingin uangnya balik, jalurnya `cancelTransferRow` satu per satu
+     (paket 55). Karena itu dialognya menyebut dampaknya SEBELUM ditekan. */
+  const [clearAllOpen, setClearAllOpen] = useState(false)
+  const undoClearRef = useRef<number[] | null>(null)
+
+  const restoreCleared = useCallback((ids: number[]) => {
+    if (undoClearRef.current !== ids) {
+      toast(DELETE_TRANSACTION_TOAST.expired)
+      return
+    }
+    undoClearRef.current = null
+    restoreRows(ids)
+    toast.success(HISTORY_CLEAR_ALL_TOAST.undoneTitle, {
+      description: HISTORY_CLEAR_ALL_TOAST.undoneDescription,
+    })
+  }, [])
+
+  const confirmClearAll = useCallback(() => {
+    setClearAllOpen(false)
+    /* yang dihapus = SELURUH catatan user (semua konteks), bukan cuma yang lolos
+       filter — tombolnya bernama "Hapus Semua Riwayat" dan dialognya menyebut
+       cakupan itu apa adanya. `transactions` sudah bebas tombstone. */
+    const ids = transactions.map((tx) => tx.id)
+    const removed = removeRows(ids)
+    if (removed === 0) return /* tidak ada yang berubah: jangan mengaku menghapus */
+    undoClearRef.current = ids
+    toast.success(HISTORY_CLEAR_ALL_TOAST.title(removed), {
+      description: HISTORY_CLEAR_ALL_TOAST.description,
+      action: { label: HISTORY_CLEAR_ALL_TOAST.undo, onClick: () => restoreCleared(ids) },
+      duration: UNDO_WINDOW_MS,
+    })
+    if (undoTimer.current !== null) window.clearTimeout(undoTimer.current)
+    undoTimer.current = window.setTimeout(() => {
+      undoClearRef.current = null
+      if (undoRef.current !== null) undoRef.current = null
+    }, UNDO_WINDOW_MS)
+  }, [transactions, restoreCleared])
 
 
   /* ── aksi dari sheet titik tiga (alternatif non-gesture) ──────────────── */
@@ -552,26 +633,69 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
       )}
 
       {/* hero: kalibrasi profil AI / skor kewarasan + insight AI */}
-      <div className="mt-5 grid grid-cols-1 gap-5 lg:mt-6 lg:grid-cols-12 lg:gap-6">
-        <div className="lg:col-span-5">
-          {/* skor kewarasan = metrik GLOBAL user (ambangnya dihitung dari seluruh
-              catatan), jadi tidak ikut mengecil saat konteks disaring — pola yang
-              sama dengan "Total Saldo" (kanon paket 47 #1). */}
-          <FinancialHealthCard totalTransactions={totalTransactions} score={HEALTH_SCORE} />
-        </div>
-        <div className="lg:col-span-7">
-          {/* CTA tiap insight punya tujuan nyata: "Atur Limit Kopi" membuka sheet
-              budget dengan kategori Kopi sudah terpilih di /budget (prompt 24).
-              Ambangnya dihitung dari catatan KONTEKS AKTIF (paket 47): konteks
-              yang belum punya cukup data tidak boleh diberi klaim. */}
-          <InsightCards totalTransactions={contextCount} hasIncome={hasIncome} />
-        </div>
-      </div>
+      {totalTransactions === 0 ? (
+        /* ── 0 CATATAN = TIDAK ADA YANG DIKLAIM (paket 59 · 59.1) ────────────
+           Dulu di keadaan ini kartu kalibrasi menuliskan "0/30 transaksi" dan
+           insight menyebut angka mock — dua permukaan yang bicara tentang data
+           yang tidak ada. Sekarang keduanya digantikan SATU kartu jujur berisi
+           apa yang bisa dihitung (belum apa-apa) + CTA mencatat.
 
-      {/* heatmap keborosan 30 hari — pola mengikuti konteks aktif (paket 47) */}
-      <div className="mt-5 lg:mt-6">
-        <SpendingHeatmap masked={isMasked} context={context} />
-      </div>
+           Heatmap ikut tidak dirender di sini: grafik pola pengeluaran yang
+           digambar dari data tanpa catatan akan terbaca sebagai klaim. */
+        <section className="mt-5 flex flex-col items-center rounded-[2rem] bg-cream px-6 py-10 text-center shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] ring-1 ring-soil/12 lg:mt-6">
+          <span
+            className="flex size-14 items-center justify-center rounded-2xl border-2 border-dashed border-forest/20 bg-cream/60"
+            aria-hidden
+          >
+            <Sprout className="size-6 text-forest/45" strokeWidth={1.8} />
+          </span>
+          <h2 className="mt-4 font-display text-[16px] font-bold tracking-tight text-ink">
+            {HISTORY_NO_DATA_COPY.title}
+          </h2>
+          <p className="mt-2 max-w-md text-[13px] leading-relaxed text-ink/60">
+            {HISTORY_NO_DATA_COPY.body}
+          </p>
+          <div className="mt-5">
+            <TransactionBottomSheet
+              trigger={
+                <button
+                  type="button"
+                  className="inline-flex h-11 items-center gap-2 rounded-2xl bg-forest px-5 text-[13.5px] font-semibold text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
+                >
+                  <ReceiptText className="size-4" strokeWidth={2.6} aria-hidden />
+                  {HISTORY_NO_DATA_COPY.cta}
+                </button>
+              }
+            />
+          </div>
+        </section>
+      ) : (
+        <>
+          <div className="mt-5 grid grid-cols-1 gap-5 lg:mt-6 lg:grid-cols-12 lg:gap-6">
+            <div className="lg:col-span-5">
+              {/* skor kewarasan = metrik GLOBAL user (dihitung dari seluruh
+                  catatan), jadi tidak ikut mengecil saat konteks disaring — pola
+                  yang sama dengan "Total Saldo" (kanon paket 47 #1). */}
+              <FinancialHealthCard
+                totalTransactions={totalTransactions}
+                score={healthScore}
+                savingsRate={savingsRate}
+              />
+            </div>
+            <div className="lg:col-span-7">
+              {/* CTA tiap insight punya tujuan nyata (ke halaman yang memiliki
+                  datanya) dan angkanya lahir dari catatan KONTEKS AKTIF —
+                  konteks yang datanya tipis tidak diberi klaim sama sekali. */}
+              <InsightCards insights={insights} />
+            </div>
+          </div>
+
+          {/* heatmap keborosan 30 hari — pola mengikuti konteks aktif (paket 47) */}
+          <div className="mt-5 lg:mt-6">
+            <SpendingHeatmap masked={isMasked} context={context} />
+          </div>
+        </>
+      )}
 
       {/* ── CATATAN: daftar transaksi dikelompokkan per tanggal ─────────────────
           REDESIGN. Versi lama bertumpuk tiga lapis: kartu putih → kartu krem per
@@ -595,13 +719,30 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
               </p>
             </div>
           </div>
-          {/* pill jumlah hanya muncul saat ada filter — di keadaan normal
-              subjudul di kiri sudah cukup, jadi tidak ada angka kembar */}
-          {(activeFilterCount > 0 || searchQuery) && (
-            <span className="rounded-full bg-cream px-3 py-1.5 text-[11.5px] font-semibold tabular-nums text-ink/60 ring-1 ring-soil/12">
-              {summary.count} dari {contextCount}
-            </span>
-          )}
+          {/* ── AKSI HAPUS SEMUA (paket 59 · 59.2) ──────────────────────────
+              Tombolnya hanya ada kalau memang ada yang bisa dihapus: aksi
+              merusak yang tidak punya sasaran cuma bikin ragu. Ditaruh di
+              kepala section "Catatan" (bukan di menu tersembunyi) karena
+              scope-nya memang section ini — dan dialognya yang menjelaskan
+              dampaknya, bukan labelnya. */}
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {(activeFilterCount > 0 || searchQuery) && (
+              <span className="rounded-full bg-cream px-3 py-1.5 text-[11.5px] font-semibold tabular-nums text-ink/60 ring-1 ring-soil/12">
+                {summary.count} dari {contextCount}
+              </span>
+            )}
+            {totalTransactions > 0 && (
+              <button
+                type="button"
+                onClick={() => setClearAllOpen(true)}
+                aria-label={HISTORY_CLEAR_ALL_COPY.actionA11y(totalTransactions)}
+                className="inline-flex items-center gap-1.5 rounded-full bg-cream px-3 py-1.5 text-[11.5px] font-semibold text-plum ring-1 ring-plum/25 transition-colors hover:bg-plum/10 active:scale-[0.97]"
+              >
+                <Trash2 className="size-3.5" strokeWidth={2.4} aria-hidden />
+                {HISTORY_CLEAR_ALL_COPY.action}
+              </button>
+            )}
+          </div>
         </div>
 
         {/* legenda makna warna — swatch & label dibaca dari `MONEY_TONE`,
@@ -784,6 +925,32 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
             masked={isMasked}
             onCancel={() => setPendingDelete(null)}
             onConfirm={confirmDelete}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* konfirmasi HAPUS SEMUA RIWAYAT (paket 59 · 59.2) — memakai bentuk
+          dialog yang sama dengan hapus tagihan/transaksi (`ConfirmDialog`),
+          dengan isi yang menyebut jumlah catatan DAN fakta bahwa saldo tidak
+          ikut kembali. Mesin Undo-nya dijelaskan sebagai `safety`, bukan
+          disembunyikan sampai setelah ditekan. */}
+      <AnimatePresence>
+        {clearAllOpen && (
+          <ConfirmDialog
+            titleId="hapus-semua-riwayat-judul"
+            overlayLabel={HISTORY_CLEAR_ALL_COPY.cancel}
+            title={HISTORY_CLEAR_ALL_COPY.title}
+            body={
+              <>
+                {HISTORY_CLEAR_ALL_COPY.body(totalTransactions)}{' '}
+                <b className="font-semibold text-ink">{HISTORY_CLEAR_ALL_COPY.balanceNote}</b>
+              </>
+            }
+            safety={HISTORY_CLEAR_ALL_COPY.safety(UNDO_WINDOW_MS / 1000)}
+            cancelLabel={HISTORY_CLEAR_ALL_COPY.cancel}
+            confirmLabel={HISTORY_CLEAR_ALL_COPY.confirm}
+            onCancel={() => setClearAllOpen(false)}
+            onConfirm={confirmClearAll}
           />
         )}
       </AnimatePresence>

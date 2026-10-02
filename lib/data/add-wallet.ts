@@ -9,10 +9,13 @@ import type { HistoryTransaction } from './history'
    ────────────────────────────────────────────────────────────────────────── */
 
 /**
- * Tanggal "hari ini" versi mock — SENGAJA konstanta, bukan `new Date()`.
- * Pola repo (TODAY_ISO di lib/data/budget.ts): tanggal dipatok supaya HTML
- * hasil render server & client identik, dan demo tidak berubah-ubah mengikuti
- * jam mesin. Tanggalnya disamakan dengan data dompet di lib/data/wallet-detail.ts.
+ * Tanggal "hari ini" versi DATA SEED — jangkar DEFAULT & fallback.
+ *
+ * PAKET 57: `transfer-sheet.tsx` memakai tanggal perangkat (`useTodayISO()`) dan
+ * konstanta ini hanya dipakai sebelum nilainya terisi (render server / test) dan
+ * sebagai tanggal data dompet di `lib/data/wallet-detail.ts`. Tanggal dipatok
+ * tetap supaya demo stabil & bebas hydration mismatch — tapi jangkar UI-nya
+ * sekarang dari jam asli.
  */
 export const WALLET_TODAY_ISO = '2026-09-27'
 

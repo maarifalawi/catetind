@@ -1,4 +1,4 @@
-import { MASKED_AMOUNT } from './history'
+import { MASKED_AMOUNT, UNDO_WINDOW_MS, shiftISODate } from './history'
 import {
   PRIVATE_EXPENSE_POLICY,
   RUPIAH_EPSILON,
@@ -89,9 +89,14 @@ export const DEMO_REALTIME_MOCK = DEMO_MODE
  *  ia tetap mati di kedua mode dan dinyalakan manual kalau sedang ditinjau. */
 export const DEMO_JOINED_CELEBRATION = false
 
-/** "hari ini" versi mock — konstan supaya label tanggal tidak bergeser (SSR-safe) */
+/** "hari ini" versi DATA SEED — jangkar DEFAULT untuk render server & test.
+ *
+ *  PAKET 57: layar /joint mengirim tanggal perangkat (`useTodayISO()` di
+ *  `joint-timeline.tsx`) untuk label "Hari ini"/"Kemarin". Konstanta ini tetap
+ *  dipakai untuk data seed & kunci bulan settlement (`JOINT_MONTH_KEY`), yang
+ *  memang harus stabil: catatan bersama contoh hidup di September 2026. */
 export const JOINT_TODAY_ISO = '2026-09-25'
-/** "besok"-nya JOINT_TODAY_ISO — dipakai label "Kemarin" */
+/** sehari sebelum `JOINT_TODAY_ISO` — dipakai label "Kemarin" versi seed */
 const JOINT_YESTERDAY_ISO = '2026-09-24'
 
 export type JointSplitType = 'equal' | 'percentage' | 'nominal' | 'single_payer'
@@ -188,6 +193,16 @@ export type JointWallet = {
   name: string
   /** tanggal dompet bersama dibuat (`YYYY-MM-DD`) */
   createdAt: string
+  /**
+   * true = kantong ini benar-benar DIBUAT user (paket 61.3).
+   *
+   * Tanpa bendera ini, dua keadaan yang sangat berbeda tampak sama: karena
+   * `INITIAL_JOINT_WALLET` sudah punya nama ("Dompet Kita 💚"), halaman tidak
+   * bisa membedakan "belum ada kantong" dari "kantong ada, pasangan belum
+   * gabung" — padahal langkah yang harus dilakukan user berbeda. Kantong seed
+   * tidak punya bendera ini; `createJointPocket()` yang memasangnya.
+   */
+  created?: boolean
 }
 
 /** label + hint tiap mode pembagian di Split Bill Sheet (Section 6A) */
@@ -696,13 +711,18 @@ function parseIso(iso: string): { year: number; month: number; day: number } {
   return { year, month, day }
 }
 
-/** "Hari ini" · "Kemarin" · "22 Sep" (＋ tahun kalau beda tahun) */
-export function jointDateLabel(iso: string): string {
-  if (iso === JOINT_TODAY_ISO) return 'Hari ini'
-  if (iso === JOINT_YESTERDAY_ISO) return 'Kemarin'
+/** "Hari ini" · "Kemarin" · "22 Sep" (＋ tahun kalau beda tahun)
+ *
+ *  `todayIso` = tanggal perangkat yang dikirim layar (paket 57). Kalau kosong,
+ *  jatuh ke jangkar seed supaya pemanggil lama & test tetap deterministik —
+ *  "Kemarin" dihitung dari jangkar yang dipakai, bukan dari konstanta kedua. */
+export function jointDateLabel(iso: string, todayIso: string = JOINT_TODAY_ISO): string {
+  const yesterday = shiftISODate(todayIso, -1)
+  if (iso === todayIso) return 'Hari ini'
+  if (iso === yesterday) return 'Kemarin'
   const { year, month, day } = parseIso(iso)
   const base = `${day} ${MONTHS_SHORT[month - 1]}`
-  return year === parseIso(JOINT_TODAY_ISO).year ? base : `${base} ${year}`
+  return year === parseIso(todayIso).year ? base : `${base} ${year}`
 }
 
 /** "2026-07-15" → "15 Juli 2026" (dipakai "Bersama sejak ...") */
@@ -718,8 +738,14 @@ export type JointDayGroup = {
   items: JointTransaction[]
 }
 
-/** urut terbaru dulu (tanggal lalu jam), dikelompokkan per hari */
-export function groupJointTransactions(transactions: JointTransaction[]): JointDayGroup[] {
+/** urut terbaru dulu (tanggal lalu jam), dikelompokkan per hari.
+ *
+ *  `todayIso` diteruskan ke `jointDateLabel()` supaya label "Hari ini"/"Kemarin"
+ *  memakai tanggal perangkat (paket 57), bukan jangkar seed. */
+export function groupJointTransactions(
+  transactions: JointTransaction[],
+  todayIso: string = JOINT_TODAY_ISO,
+): JointDayGroup[] {
   const sorted = [...transactions].sort((a, b) =>
     a.date === b.date ? b.time.localeCompare(a.time) : b.date.localeCompare(a.date),
   )
@@ -731,7 +757,7 @@ export function groupJointTransactions(transactions: JointTransaction[]): JointD
       last.items.push(tx)
       continue
     }
-    groups.push({ date: tx.date, label: jointDateLabel(tx.date), items: [tx] })
+    groups.push({ date: tx.date, label: jointDateLabel(tx.date, todayIso), items: [tx] })
   }
   return groups
 }
@@ -1220,4 +1246,81 @@ export function readJointSettlementRecords(): Record<string, JointSettlementReco
  *  menyediakan jalur tulis KEDUA — sumber "state bersama hidup di dua tempat"
  *  yang justru ditutup paket ini. Pembacanya (`readJointSettlementRecords()`)
  *  tetap ada untuk migrasi satu kali. */
+
+/* ── COPY: TIGA KEADAAN /joint (paket 61.3) ──────────────────────────────────
+   Halaman ini punya tiga wujud yang sangat berbeda, dan sebelum paket 61
+   perpindahannya tidak pernah dijelaskan: user menekan "Buat Dompet & Ajak
+   Pasangan", lalu layar berubah, dan ia harus menebak apa yang barusan terjadi
+   dan apa yang belum. Blok ini untuk MENGATAKAN keadaan itu — apa yang sudah
+   ada, apa yang sedang menunggu, dan apa langkah berikutnya: ekspektasi yang
+   jelas, bukan kalimat penyemangat. */
+export const JOINT_STATE_COPY: Record<
+  'empty' | 'waiting' | 'active',
+  { badge: string; title: string; body: string; note: string }
+> = {
+  empty: {
+    badge: 'Langkah 1 dari 3',
+    title: 'Belum ada kantong bersama',
+    body: 'Kasih nama kantong kalian, lalu bagikan kode undangannya ke pasangan. Buku besar bersama baru dibuka setelah dia bergabung.',
+    note: 'Kantong yang baru dibuat selalu KOSONG — catatan contoh tidak ikut terbawa.',
+  },
+  waiting: {
+    badge: 'Langkah 2 dari 3',
+    title: 'Menunggu pasanganmu bergabung',
+    body: 'Kantongnya sudah ada (masih kosong) dan kode undangannya sudah bisa dibagikan. Di halaman pasangan, kode itu membuka kantong yang sama.',
+    note: 'Kamu tetap bisa mencatat sekarang; angka timbangannya baru berarti setelah kalian berdua ada di kantong ini.',
+  },
+  active: {
+    badge: 'Langkah 3 dari 3',
+    title: 'Kantong kalian sudah aktif',
+    body: 'Buku besar bersama terbuka: catat bareng, atur pembagian tiap catatan, lalu tandai settle kalau sudah waktunya impas.',
+    note: 'Timbangan menampilkan posisi bersih (patungan saja); kartu statistik di bawahnya menghitung SEMUA catatan, termasuk traktiran.',
+  },
+}
+
+/**
+ * RELASI KANTONG BERSAMA DENGAN KAS PRIBADI (paket 61.3) — dinyatakan di layar,
+ * bukan disimpulkan user sendiri.
+ *
+ * Kanon teknisnya ada di `lib/money/joint-store.ts` (§"KANTONG BERSAMA BUKAN
+ * BAGIAN TOTAL SALDO"): buku besar ini SENGAJA tidak menyentuh
+ * `lib/money/store.ts`, jadi saldo BCA/GoPay/Tunai tidak pernah berubah karena
+ * catatan bareng. Kalau ini tidak dikatakan, user akan menduga uangnya berpindah
+ * — atau sebaliknya, menduga catatannya tidak berpengaruh sama sekali.
+ */
+export const JOINT_PERSONAL_CASH_COPY =
+  'Buku besar ini terpisah dari dompet pribadimu: mencatat bareng TIDAK mengubah saldo BCA/GoPay/Tunai dan tidak muncul di Riwayat pribadi. Yang dicatat di sini cuma siapa menalangi berapa.'
+
+/* ── COPY: HAPUS SATU BARIS CATATAN BERSAMA (paket 61.3) ────────────────────
+   Yang berubah saat satu baris dihapus bukan cuma daftarnya: angka PATUNGAN
+   pasangan ikut terhitung ulang. Itu sebabnya copy-nya menyebut akibat itu
+   lebih dulu, dan menyebut apa yang TIDAK berubah (uangnya tidak berpindah). */
+export const JOINT_DELETE_COPY = {
+  /** label tombol aksi di kartu timeline */
+  action: 'Hapus',
+  /** aria-label tombol ikon — sebut catatannya supaya tidak ambigu */
+  actionAria: (description: string) => `Hapus catatan ${description}`,
+  overlay: 'Batal hapus catatan bareng',
+  title: 'Hapus catatan ini?',
+  /** dipotong dua supaya nominalnya bisa ditebalkan di tengah kalimat */
+  bodyLead: (description: string) => `Catatan ${description} sebesar `,
+  bodyTail:
+    'keluar dari buku besar bersama — saldo patungan kalian berdua ikut terhitung ulang.',
+  /** fakta yang wajib terbaca: yang berubah angka, bukan uang */
+  cashNote:
+    'Ini membatalkan catatannya, bukan memindahkan uang. Kalau transfernya memang sudah terjadi, catat ulang atau tandai settle ya 😊',
+  safety: `Masih bisa kamu balikin lewat tombol Undo selama ${UNDO_WINDOW_MS / 1000} detik.`,
+  cancel: 'Batal',
+  confirm: 'Hapus',
+  /** alasan baris di bulan yang sudah disettle TIDAK punya tombol hapus */
+  lockedNote:
+    'Bulan ini sudah ditandai settle, jadi catatannya dikunci — angka yang sudah kalian sepakati tidak boleh berubah diam-diam.',
+  toastTitle: 'Catatan bareng dihapus',
+  toastDescription: (description: string) => `${description} keluar dari buku besar bersama.`,
+  toastUndo: 'Undo',
+  toastUndoneTitle: 'Catatan dikembalikan 🌿',
+  toastUndoneDescription: 'Timbangan & posisi bersihnya kembali ke angka sebelum dihapus.',
+  toastExpired:
+    'Jendela Undo-nya sudah lewat — catatannya bisa kamu tambahkan lagi kalau memang masih perlu 🌿',
+} as const
 

@@ -12,11 +12,15 @@ import {
 } from './budget-sheet'
 import { cn } from '@/lib/utils'
 import {
+  DEBT_SHEET_COPY,
+  DEBT_SHEET_FIELD_COPY,
   PLATFORM_PROVIDERS,
   WEALTH_TODAY_ISO,
+  type Debt,
   type DebtDirection,
   type DebtType,
 } from '@/lib/data/wealth'
+import { useTodayISO } from '@/lib/use-today-iso'
 
 /* ── TAMBAH UTANG / PIUTANG — DUAL FORM (Section 7F, inventaris #v) ─────────
    Satu sheet, DUA bentuk:
@@ -58,17 +62,36 @@ export function AddDebtSheet({
   open,
   onClose,
   onSave,
+  onEdit,
+  initial = null,
   defaultView = 'hutangku',
 }: {
   open: boolean
   onClose: () => void
   onSave: (debt: NewDebtInput) => void
+  /**
+   * Mode EDIT (paket 61): dipanggil dengan id catatan yang sedang dibuka.
+   *
+   * Sebelum paket 61 `editDebt()` sudah ada & teruji di store tapi tidak punya
+   * UI sama sekali, jadi user yang salah mengetik sisa hutangnya tidak punya
+   * cara membetulkan. Satu komponen melayani dua mode (pola sheet Investasi)
+   * supaya tidak ada dua form yang harus dijaga tetap sama.
+   */
+  onEdit?: (id: string, patch: NewDebtInput) => void
+  /** catatan yang sedang dibetulkan; `null` = sheet dalam mode TAMBAH */
+  initial?: Debt | null
   /** sheet ikut view Tab 3 yang sedang dibuka (Hutangku / Piutangku) */
   defaultView?: 'hutangku' | 'piutangku'
 }) {
+  const editing = initial !== null
+  /** judul/deskripsi/tombol berganti antar mode — teksnya di `lib/data/wealth.ts` */
+  const copy = DEBT_SHEET_COPY[editing ? 'edit' : 'add']
   const [direction, setDirection] = useState<DebtDirection>('owed_by_me')
   const [name, setName] = useState('')
   const [digits, setDigits] = useState('')
+  /* sisa hanya dipakai di mode EDIT — di mode TAMBAH, catatan baru belum
+     pernah dibayar sehingga sisanya selalu sama dengan pokoknya */
+  const [remainingDigits, setRemainingDigits] = useState('')
   const [date, setDate] = useState('')
   const [note, setNote] = useState('')
   const [isPlatform, setIsPlatform] = useState(false)
@@ -80,12 +103,42 @@ export function AddDebtSheet({
   const [dueDate, setDueDate] = useState('')
   const nameRef = useRef<HTMLInputElement>(null)
 
-  /* form selalu mulai bersih tiap sheet dibuka; arah ikut view yang aktif */
+  /**
+   * Form selalu mulai dari keadaan yang benar-benar sedang dibicarakan:
+   *   · mode TAMBAH → bersih, arah ikut view yang aktif;
+   *   · mode EDIT → terisi data catatannya, karena user membuka sheet ini untuk
+   *     MEMBETULKAN angka, bukan mengetik ulang dari nol.
+   */
   useEffect(() => {
     if (!open) return
+    if (initial) {
+      const platform = initial.type === 'platform'
+      const providerName = initial.provider ?? ''
+      setIsPlatform(platform)
+      setDirection(initial.direction ?? 'owed_by_me')
+      setName(platform ? '' : (initial.counterparty ?? ''))
+      /* provider di luar quick-pick dibuka sebagai 'Lainnya' supaya namanya
+         tidak menggantung di kolom bebas yang tersembunyi */
+      const quickPick = (PLATFORM_PROVIDERS as readonly string[]).includes(providerName)
+      setProvider(platform ? (quickPick ? providerName : 'Lainnya') : '')
+      setCustomProvider(platform && !quickPick ? providerName : '')
+      setDigits(String(initial.principal))
+      setRemainingDigits(String(initial.remaining))
+      setDate('')
+      setNote(initial.notes ?? '')
+      setTenor(platform && initial.tenor ? String(initial.tenor) : '')
+      setInstallmentDigits(
+        platform && initial.monthlyInstallment ? String(initial.monthlyInstallment) : '',
+      )
+      /* desimal ditulis dengan koma seperti placeholder di form ini ("2,95") */
+      setInterest(platform && initial.interestRate ? String(initial.interestRate).replace('.', ',') : '')
+      setDueDate(platform && initial.dueDate ? String(initial.dueDate) : '')
+      return
+    }
     setDirection(defaultView === 'piutangku' ? 'owed_to_me' : 'owed_by_me')
     setName('')
     setDigits('')
+    setRemainingDigits('')
     setDate('')
     setNote('')
     setIsPlatform(false)
@@ -95,7 +148,7 @@ export function AddDebtSheet({
     setInstallmentDigits('')
     setInterest('')
     setDueDate('')
-  }, [open, defaultView])
+  }, [open, defaultView, initial])
 
   useFocusOnOpen(open, nameRef)
 
@@ -113,53 +166,81 @@ export function AddDebtSheet({
     Number(installmentDigits) > 0 &&
     dueDate !== '' &&
     !dueDateInvalid
-  const ready = personalReady || platformReady
+  /**
+   * Sisa: di mode TAMBAH selalu = pokok (catatan baru belum pernah dibayar).
+   * Di mode EDIT nilainya boleh dibetulkan — catatan ini diisi MANUAL, jadi
+   * user yang salah mengetik sisanya memang harus bisa memperbaikinya. Dibatasi
+   * <= pokok supaya form ini tidak bisa menulis hutang yang sisanya lebih besar
+   * dari pokoknya (kalau lebih besar dari itu, uangnya sudah berpindah dan
+   * jalurnya "Catat Bayar" — supaya ada baris kasnya).
+   */
+  const remaining = editing ? Number(remainingDigits || '0') : principal
+  const remainingInvalid = editing && remaining > principal
+  const ready = (personalReady || platformReady) && !remainingInvalid
 
   function submit() {
     if (!ready) return
-    if (isPlatform) {
-      onSave({
-        type: 'platform',
-        direction: 'owed_by_me',
-        provider: resolvedProvider,
-        principal,
-        remaining: principal,
-        tenor: Number(tenor),
-        currentMonth: 1,
-        monthlyInstallment: Number(installmentDigits),
-        interestRate: interest ? Number(interest) : undefined,
-        dueDate: dueDateNumber,
-        notes: note.trim() || undefined,
-      })
+    const payload: NewDebtInput = isPlatform
+      ? {
+          type: 'platform',
+          direction: 'owed_by_me',
+          provider: resolvedProvider,
+          principal,
+          remaining,
+          tenor: Number(tenor),
+          /* progres tenor TIDAK direset oleh edit: itu jejak pelunasan yang
+             sudah berjalan, dan pelunasan menaikkannya lewat "Catat Bayar" */
+          currentMonth: initial?.currentMonth ?? 1,
+          monthlyInstallment: Number(installmentDigits),
+          interestRate: interest ? Number(interest) : undefined,
+          dueDate: dueDateNumber,
+          notes: note.trim() || undefined,
+        }
+      : {
+          type: 'personal',
+          direction,
+          counterparty: name.trim(),
+          principal,
+          remaining,
+          notes: note.trim() || undefined,
+        }
+
+    /* Satu jalur tulis per mode: EDIT lewat `onEdit` (→ `editDebt()` di store),
+       TAMBAH lewat `onSave` (→ `addDebt()`). Kalau sheet dibuka sebagai edit
+       tapi `onEdit` tidak dioper, TIDAK ada yang ditulis — lebih baik tidak
+       terjadi apa-apa daripada diam-diam membuat catatan baru. */
+    if (initial) {
+      if (onEdit) onEdit(initial.id, payload)
       return
     }
-    onSave({
-      type: 'personal',
-      direction,
-      counterparty: name.trim(),
-      principal,
-      remaining: principal,
-      notes: note.trim() || undefined,
-    })
+    onSave(payload)
   }
 
   return (
     <BudgetSheet
       open={open}
       onClose={onClose}
-      title="Tambah Utang / Piutang"
-      description="Catat aja dulu — nanti bisa ditandai lunas kapan pun."
-      footer={<SheetSubmit onClick={submit} disabled={!ready} gate>Simpan ✓</SheetSubmit>}
+      title={copy.title}
+      description={copy.description}
+      footer={<SheetSubmit onClick={submit} disabled={!ready} gate>{copy.submit}</SheetSubmit>}
     >
       {/* ── arah ─────────────────────────────────────────────────────────── */}
-      <span className="text-[13px] font-semibold leading-snug text-ink">Arah</span>
-      <ChoicePills
-        className="mt-2"
-        ariaLabel="Arah utang piutang"
-        options={DIRECTION_OPTIONS}
-        value={direction}
-        onChange={setDirection}
-      />
+      {/* Arah hanya punya arti untuk catatan PERSONAL: pinjaman platform arahnya
+          selalu "aku hutang" (payload-nya pun selalu `owed_by_me`). Sebelumnya
+          pilihan ini tetap dipajang untuk platform lalu diabaikan diam-diam —
+          input yang tidak berpengaruh lebih baik tidak ditawarkan. */}
+      {!isPlatform && (
+        <>
+          <span className="text-[13px] font-semibold leading-snug text-ink">Arah</span>
+          <ChoicePills
+            className="mt-2"
+            ariaLabel="Arah utang piutang"
+            options={DIRECTION_OPTIONS}
+            value={direction}
+            onChange={setDirection}
+          />
+        </>
+      )}
 
       {/* ── bentuk PERSONAL (default) ───────────────────────────────────── */}
       <RevealStep show={!isPlatform}>
@@ -175,18 +256,49 @@ export function AddDebtSheet({
         </label>
       </RevealStep>
 
-      {/* jumlah dipakai bersama: 'Jumlah' (personal) / 'Jumlah pokok' (platform) */}
+      {/* jumlah dipakai bersama: 'Jumlah' (personal) / 'Jumlah pokok' (platform).
+          Di mode EDIT labelnya jadi "Jumlah pokok" untuk kedua bentuk, karena
+          di bawahnya ada kolom SISA — dua angka berbeda tidak boleh punya nama
+          yang bisa tertukar. */}
       <RupiahField
         className="mt-4"
-        label={isPlatform ? 'Jumlah pokok (Rp)' : 'Jumlah'}
+        label={isPlatform || editing ? DEBT_SHEET_FIELD_COPY.principalLabel : 'Jumlah'}
         digits={digits}
         onDigitsChange={setDigits}
         placeholder="Rp 200.000"
       />
 
+      {/* Sisa yang belum dibayar — HANYA mode edit (paket 61). Di mode tambah,
+          catatan baru belum pernah dibayar sehingga sisanya = pokok. */}
+      {editing && (
+        <RupiahField
+          className="mt-4"
+          label={DEBT_SHEET_FIELD_COPY.remainingLabel}
+          digits={remainingDigits}
+          onDigitsChange={setRemainingDigits}
+          placeholder="Rp 200.000"
+          hint={
+            remainingInvalid ? (
+              <span className="font-semibold text-[#b89191]">
+                {DEBT_SHEET_FIELD_COPY.overPrincipal}
+              </span>
+            ) : (
+              DEBT_SHEET_FIELD_COPY.remainingHint
+            )
+          }
+        />
+      )}
+
       <RevealStep show={!isPlatform}>
         <div className="mt-4 space-y-4">
-          <DateField value={date} onChange={setDate} label="Tanggal (opsional)" allowFuture={false} />
+          {/* Tanggal hanya dipajang di mode TAMBAH. Di mode EDIT field ini tidak
+              menyimpan apa pun (catatan hutang tidak punya kolom tanggal sama
+              sekali — `Debt` cuma punya `dueDate` untuk jatuh tempo platform),
+              dan field yang tidak menyimpan apa-apa lebih baik tidak dipajang
+              daripada membuat user mengira tanggalnya ikut berubah. */}
+          {!editing && (
+            <DateField value={date} onChange={setDate} label="Tanggal (opsional)" allowFuture={false} />
+          )}
           <label className="block">
             <span className="text-[12.5px] font-semibold text-ink/70">Catatan (opsional)</span>
             <textarea
@@ -351,6 +463,13 @@ function DateField({
   label: string
   allowFuture?: boolean
 }) {
+  /* batas atas tanggal = HARI INI milik user (paket 57). Dulu `WEALTH_TODAY_ISO`
+     yang dipatok 25 Sep: pada 28 Sep user masih bisa memilih tanggal yang sudah
+     lewat 3 hari tanpa tersadar — dan sebaliknya, hari ini sendiri bisa TIDAK
+     bisa dipilih kalau tanggalnya digeser. Nilainya diisi setelah mount, jadi
+     HTML server & client tetap identik. */
+  const todayValue = useTodayISO()
+  const todayIso = todayValue || WEALTH_TODAY_ISO
   return (
     <div>
       <span className="text-[13px] font-semibold leading-snug text-ink">{label}</span>
@@ -368,7 +487,7 @@ function DateField({
         <input
           type="date"
           value={value}
-          max={allowFuture ? undefined : WEALTH_TODAY_ISO}
+          max={allowFuture ? undefined : todayIso}
           onChange={(event) => onChange(event.target.value)}
           aria-label={label}
           className="absolute inset-0 size-full cursor-pointer rounded-2xl opacity-0"

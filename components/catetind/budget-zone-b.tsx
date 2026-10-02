@@ -17,6 +17,7 @@ export function BudgetZoneB({
   onAddGoal,
   onContribute,
   onOpenFund,
+  onDeleteGoal,
 }: {
   funds: SinkingFundItem[]
   masked: boolean
@@ -24,6 +25,8 @@ export function BudgetZoneB({
   onAddGoal: () => void
   onContribute: (fund: SinkingFundItem) => void
   onOpenFund: (fund: SinkingFundItem) => void
+  /** hapus celengan (paket 60.2) — halaman yang memasang konfirmasi + Undo */
+  onDeleteGoal: (fund: SinkingFundItem) => void
 }) {
   /* 6. SOCIAL PROOF & NUDGE — nudge hanya bila belum ada setoran bulan ini
         dan bulan sudah berjalan (bukan di hari-hari pertama, biar tidak nagih) */
@@ -90,6 +93,7 @@ export function BudgetZoneB({
                 masked={masked}
                 onOpen={onOpenFund}
                 onContribute={onContribute}
+                onDelete={onDeleteGoal}
               />
             </motion.div>
           ))}

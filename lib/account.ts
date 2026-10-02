@@ -38,6 +38,7 @@ import { getJointSnapshot, jointNotes, purgeJointStore } from './money/joint-sto
 import { getFundsSnapshot, purgeFundsStore } from './money/funds-store'
 import { getWealthSnapshot, purgeWealthStore } from './money/wealth-store'
 import { getMoneySnapshot, purgeMoneyStore } from './money/store'
+import { purgeUserMoneySettings } from './user-money-settings'
 import { endSession } from './session-client'
 import { browserSupabase } from './supabase/client'
 
@@ -128,6 +129,16 @@ export interface PurgeReport {
    * kantong contoh (Dompet Kita, catatan WiFi) muncul kembali setelah refresh.
    */
   jointRowsCleared: number
+  /**
+   * true = konfigurasi uang user (pemasukan bulanan, total cicilan, tanggal
+   * gajian, periode dashboard) sudah dibuang & ditandai `purged` (paket 57).
+   *
+   * Dilaporkan sebagai boolean, bukan jumlah baris: yang dibuang cuma satu
+   * catatan kecil, tapi efeknya besar — tanpa langkah ini "Hapus Akun" bisa
+   * meninggalkan pemasukan user hidup di perangkat, dan Jatah Harian berikutnya
+   * dihitung dari angka yang seharusnya sudah dihapus.
+   */
+  moneySettingsPurged: boolean
 }
 
 function storageOf(kind: 'local' | 'session'): StorageLike | null {
@@ -192,6 +203,13 @@ export async function purgeDeviceData(): Promise<PurgeReport> {
   resetInviteStore()
   resetAiUsageStore()
 
+  /* Konfigurasi UANG user (paket 57): pemasukan bulanan, total cicilan, tanggal
+     gajian, periode dashboard. Dipanggil SETELAH penyapuan kunci `catet*` di
+     atas — `purgeUserMoneySettings()` justru MENULIS penanda `purged` supaya
+     nilainya tidak "lahir kembali" dari hasil onboarding yang mungkin masih ada
+     di perangkat lain (pola yang sama dengan store uang). */
+  purgeUserMoneySettings()
+
   return {
     localStorageKeys,
     sessionStorageKeys,
@@ -204,6 +222,7 @@ export async function purgeDeviceData(): Promise<PurgeReport> {
     debtPaymentsCleared: debtPaymentsBefore,
     billsCleared: billsBefore,
     jointRowsCleared: jointRowsBefore,
+    moneySettingsPurged: true,
   }
 }
 

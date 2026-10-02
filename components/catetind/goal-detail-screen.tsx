@@ -1,22 +1,28 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowLeft, CalendarClock, PiggyBank, Plus, Sprout, Target } from 'lucide-react'
+import { ArrowLeft, CalendarClock, PiggyBank, Plus, Sprout, Target, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { ScreenShell } from './screen-shell'
 import { GlobalPrivacyToggle } from './global-privacy-toggle'
 import { usePrivacy } from './privacy-provider'
 import { ContributeSheet } from './contribute-sheet'
+import { ConfirmDialog } from './confirm-dialog'
 import { MilestoneCelebration } from './milestone-celebration'
 import { PlantIllustration, type PlantStage as IllustrationStage } from './plant-illustration'
 import { cn } from '@/lib/utils'
 import { MILESTONE_TARGET_STATE } from '@/lib/data/milestones'
+import { UNDO_WINDOW_MS } from '@/lib/data/history'
 import { useMilestoneCelebration } from '@/hooks/use-milestone-celebration'
 import {
   FALLBACK_WALLET_NAME,
   FUND_ACHIEVED_COPY,
+  FUND_CARD_ACTION_COPY,
+  FUND_DELETE_COPY,
+  FUND_DELETE_TOAST,
   FUND_DETAIL_COPY,
   FUND_EXAMPLE_AMOUNT,
   FUND_HISTORY_COPY,
@@ -36,11 +42,20 @@ import {
   monthsUntil,
   priorityStyle,
   projectedCompletion,
+  sinkingObligationOf,
   walletSourceById,
   walletSourceName,
   type FundContribution,
+  type SinkingFundItem,
 } from '@/lib/data/budget'
-import { contributeToFund, contributionsOf, fundById, useFundsStore } from '@/lib/money/funds-store'
+import {
+  contributeToFund,
+  contributionsOf,
+  deleteFund,
+  fundById,
+  restoreFund,
+  useFundsStore,
+} from '@/lib/money/funds-store'
 
 /* ── Celengan Detail (/budget/[id]) — inventaris #25 ──────────────────────────
    Halaman ini SENGAJA bukan halaman administrasi: PRD 2C.3 menulisnya sebagai
@@ -132,6 +147,25 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
    *  (prompt: "sekali saja, tidak mengulang") */
   const [lateDismissed, setLateDismissed] = useState(false)
 
+  /* ── HAPUS CELENGAN DARI HALAMAN DETAIL (paket 60.2) ─────────────────────
+     Sebelum paket ini halaman detail hanya bisa Setor + menampilkan riwayat:
+     tidak ada satu pun jalan mencabut target. Tombolnya sekarang ada di bar aksi
+     bawah (zona ibu jari), dan konsekuensinya menyentuh uang — kewajiban
+     bulanannya berhenti dipotong dari kolam, jadi Jatah Harian NAIK.
+
+     Karena itu urutannya: konfirmasi dulu (dengan nominal kewajiban yang
+     dilepas), lalu `deleteFund()` (tombstone di store), lalu toast yang membawa
+     Undo, baru navigasi kembali ke /budget. Toast-nya hidup di luar halaman
+     (sonner), jadi Undo tetap bisa ditekan setelah kita meninggalkan halaman ini. */
+  const router = useRouter()
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const undoRef = useRef<number | null>(null)
+  const timers = useRef<number[]>([])
+  useEffect(() => {
+    const pending = timers.current
+    return () => pending.forEach((id) => window.clearTimeout(id))
+  }, [])
+
   /* Perayaan "target tercapai" (inventaris #k): `auto: false` artinya TIDAK
      diperiksa saat halaman dibuka — momennya milik setoran yang barusan
      melunasi target, bukan kedatangan user ke halaman ini.
@@ -140,7 +174,54 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
   const celebration = useMilestoneCelebration(MILESTONE_TARGET_STATE, { auto: false })
 
   if (!fund) {
-    return <FundUnavailable ready={snapshot.hydrated} />
+    /* id ini masih ada di URL, tapi celengannya sudah dicabut user (tombstone).
+       Dibedakan dari "belum pernah ada" supaya halaman tidak berbohong dengan
+       "Celengan tidak ditemukan" sesaat setelah user menghapusnya sendiri. */
+    const removed = snapshot.removedIds.includes(fundId)
+    return <FundUnavailable ready={snapshot.hydrated} removed={removed} />
+  }
+
+  /** hapus sesungguhnya: satu tulisan ke store, lalu toast + navigasi.
+   *  Celengannya dibaca ULANG dari store di sini (bukan dari variabel render)
+   *  supaya yang dihapus pasti celengan yang masih ada saat tombolnya ditekan. */
+  function handleConfirmDelete() {
+    const target = fundById(snapshot, fundId)
+    setDeleteOpen(false)
+    if (!target) return
+
+    const removed = deleteFund(target.id)
+    if (!removed) return
+
+    undoRef.current = removed.id
+    toast(FUND_DELETE_TOAST.title(removed.name), {
+      description: FUND_DELETE_TOAST.description,
+      action: { label: FUND_DELETE_TOAST.undo, onClick: () => undoDelete(removed.id) },
+      /* lama toast = lama hak undo; keduanya dari satu konstanta */
+      duration: UNDO_WINDOW_MS,
+    })
+    timers.current.push(
+      window.setTimeout(() => {
+        if (undoRef.current === removed.id) undoRef.current = null
+      }, UNDO_WINDOW_MS),
+    )
+    /* kembali ke daftar: halaman ini sudah tidak punya celengan untuk ditampilkan */
+    router.push('/budget')
+  }
+
+  /** Undo: cabut tombstone-nya — target, progres, dan posisinya balik apa adanya */
+  function undoDelete(fundIdToRestore: number) {
+    if (undoRef.current !== fundIdToRestore) {
+      toast(FUND_DELETE_TOAST.expired)
+      return
+    }
+    undoRef.current = null
+    if (!restoreFund(fundIdToRestore)) {
+      toast(FUND_DELETE_TOAST.expired)
+      return
+    }
+    toast.success(FUND_DELETE_TOAST.undoneTitle, {
+      description: FUND_DELETE_TOAST.undoneDescription,
+    })
   }
 
   /* ── DATA TURUNAN ──────────────────────────────────────────────────────── */
@@ -189,7 +270,13 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
    *  bukan tebakan. */
   function handleContribute(fundId: number, amount: number, walletId: string) {
     const result = contributeToFund(fundId, amount, walletId)
-    if (!result) return
+    /* celengannya keburu dihapus (store menolak) → katakan apa adanya, jangan
+       biarkan user merasa setorannya masuk padahal tidak ada yang ditulis */
+    if (!result) {
+      setContributeOpen(false)
+      toast(FUND_DELETE_COPY.goneNote)
+      return
+    }
 
     setContributeOpen(false) // tutup seketika; animasi keluar jalan di background
     setLateDismissed(true) // nudge lama tidak relevan lagi setelah setor
@@ -547,6 +634,18 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
             <p className="mt-2 px-1 pb-0.5 text-[10.5px] leading-snug text-ink/45">
               {reached ? FUND_ACHIEVED_COPY.hint : FUND_DETAIL_COPY.setHint}
             </p>
+            {/* hapus celengan (paket 60.2) — ikut di bar bawah (zona ibu jari),
+                bukan disembunyikan di header. Warna plum = kanon aksi merusak
+                repo ini (`ConfirmDialog` memakai nada yang sama). */}
+            <button
+              type="button"
+              onClick={() => setDeleteOpen(true)}
+              title={FUND_CARD_ACTION_COPY.deleteHint}
+              className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-[1.1rem] px-3 py-2 text-[11.5px] font-semibold text-plum/75 transition-colors hover:bg-plum/12 hover:text-plum focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-plum/30 active:scale-[0.99]"
+            >
+              <Trash2 className="size-3.5" strokeWidth={2.4} aria-hidden />
+              {FUND_CARD_ACTION_COPY.deleteLabel}
+            </button>
           </div>
         </div>
       </div>
@@ -571,8 +670,52 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
         milestone={celebration.milestone}
         onClose={celebration.dismiss}
       />
+
+      {/* ── KONFIRMASI HAPUS CELENGAN (paket 60.2) ────────────────────────────
+          Sebelum user menekan Hapus, tiga fakta terbaca: targetnya dilepas,
+          uang yang sudah disetor TIDAK kembali, dan dampaknya ke Jatah Hari Ini
+          (nominal kewajiban yang dilepas — dihitung dengan rumus yang sama
+          dengan pemotongan kolam, `sinkingObligationOf()`). */}
+      <AnimatePresence>
+        {deleteOpen && (
+          <ConfirmDialog
+            titleId="hapus-celengan-judul"
+            overlayLabel={FUND_DELETE_COPY.overlay}
+            title={FUND_DELETE_COPY.title}
+            body={FUND_DELETE_COPY.body(fund.name)}
+            note={fundDeleteNote(fund, masked)}
+            safety={FUND_DELETE_COPY.safety(UNDO_WINDOW_MS / 1000)}
+            cancelLabel={FUND_DELETE_COPY.cancel}
+            confirmLabel={FUND_DELETE_COPY.confirm}
+            onCancel={() => setDeleteOpen(false)}
+            onConfirm={handleConfirmDelete}
+          />
+        )}
+      </AnimatePresence>
     </ScreenShell>
   )
+}
+
+/**
+ * Kalimat efek uang untuk dialog hapus celengan.
+ *
+ * Nominal kewajiban yang dilepas dihitung dengan `sinkingObligationOf([fund])`
+ * — rumus yang SAMA dengan yang memotong kolam Jatah Hari Ini — jadi angka di
+ * dialog tidak mungkin berbeda dari yang benar-benar terjadi. Kalau
+ * kewajibannya nol (sudah disetor bulan ini / target sudah penuh), dialog TIDAK
+ * menjanjikan kenaikan; ia memakai `noObligationNote`.
+ *
+ * Salinan kecil ini hidup juga di `budget-screen.tsx` (dialog hapus dari kartu);
+ * dua-duanya menerima `masked` supaya nominalnya ikut tersensor seperti seluruh
+ * teks lain di repo ini. */
+function fundDeleteNote(fund: SinkingFundItem, masked: boolean): string {
+  const obligation = sinkingObligationOf([fund])
+  if (obligation <= 0) {
+    return `${FUND_DELETE_COPY.cashNote} ${FUND_DELETE_COPY.noObligationNote}`
+  }
+  return `${FUND_DELETE_COPY.cashNote} ${FUND_DELETE_COPY.obligationNote(
+    maskNominal(obligation, masked),
+  )}`
 }
 
 /* ── komponen kecil halaman ini ───────────────────────────────────────────── */
@@ -715,8 +858,14 @@ function EmptyContributions({
  *     keadaan SEMENTARA; menampilkan "tidak ditemukan" di sini akan berbohong.
  *   · `ready: true`  → sudah dibaca dan id-nya memang tidak ada. Kopinya jujur
  *     (celengan mungkin ada di perangkat lain) + CTA kembali ke daftar.
+ *
+ * PAKET 60.2 menambah wajah KETIGA (`removed`): celengannya ada di data tapi
+ * sudah dicabut user (tombstone). Halaman ini bisa saja masih terbuka sesaat
+ * setelah penghapusan — dan kalau itu ditampilkan sebagai "tidak ditemukan",
+ * user yang baru menghapusnya sendiri akan mengira tombolnya rusak. Kalimatnya
+ * justru menunjuk jalan kembali: Undo di notifikasi bawah.
  */
-function FundUnavailable({ ready }: { ready: boolean }) {
+function FundUnavailable({ ready, removed = false }: { ready: boolean; removed?: boolean }) {
   return (
     <ScreenShell>
       <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 text-center">
@@ -728,11 +877,15 @@ function FundUnavailable({ ready }: { ready: boolean }) {
         </span>
 
         <h1 className="mt-4 font-display text-[19px] font-black tracking-tight text-ink">
-          {ready ? FUND_DETAIL_COPY.notFoundTitle : FUND_DETAIL_COPY.loadingLabel}
+          {!ready
+            ? FUND_DETAIL_COPY.loadingLabel
+            : removed
+              ? FUND_DELETE_COPY.removedTitle
+              : FUND_DETAIL_COPY.notFoundTitle}
         </h1>
         {ready && (
           <p className="mt-2 max-w-sm text-[12.5px] leading-relaxed text-ink/55">
-            {FUND_DETAIL_COPY.notFoundBody}
+            {removed ? FUND_DELETE_COPY.removedBody : FUND_DETAIL_COPY.notFoundBody}
           </p>
         )}
 

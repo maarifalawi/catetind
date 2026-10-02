@@ -62,8 +62,8 @@ import {
   type SystemIndicator,
 } from '@/lib/data/help'
 import { getBillsSnapshot, liveBills } from '@/lib/money/bills-store'
-import { getFundsSnapshot } from '@/lib/money/funds-store'
-import { getWealthSnapshot } from '@/lib/money/wealth-store'
+import { getFundsSnapshot, liveFunds } from '@/lib/money/funds-store'
+import { getWealthSnapshot, liveDebts, liveInvestments } from '@/lib/money/wealth-store'
 import { MetaChip } from './meta-chip'
 import { ScreenShell } from './screen-shell'
 
@@ -127,10 +127,12 @@ function handleExportData() {
           buildHelpExportPayload(
             new Date(),
             liveBills(getBillsSnapshot()),
-            getFundsSnapshot().funds,
+            /* celengan yang hidup saja (paket 60): tombstone Undo tidak ikut
+               masuk berkas bantuan, sama seperti `liveBills()` di atas */
+            liveFunds(getFundsSnapshot()),
             {
-              debts: wealth.debts,
-              investments: wealth.investments,
+              debts: liveDebts(wealth),
+              investments: liveInvestments(wealth),
             },
           ),
           null,

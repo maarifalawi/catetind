@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
+import { CalendarDays } from 'lucide-react'
 import { ScreenShell } from './screen-shell'
 import { LogoWordmark } from './logo-wordmark'
 import { GlobalPrivacyToggle } from './global-privacy-toggle'
@@ -13,6 +15,7 @@ import { AddCalendarNoteSheet, type CalendarNoteInput } from './add-calendar-not
 import { localISODate } from '@/lib/data/history'
 import {
   CALENDAR_ENTRIES,
+  CALENDAR_PAYDAY_COPY,
   CALENDAR_TODAY,
   CALENDAR_TODAY_ISO,
   DEFAULT_PAYDAY_DATE,
@@ -30,9 +33,12 @@ import {
   type PeriodBounds,
   type PeriodMode,
 } from '@/lib/data/calendar'
+import { MONEY_SETTINGS_HREF } from '@/lib/data/budget'
 import { defaultWalletNameFor, useMoneyStore } from '@/lib/money/store'
+import { TRANSACTION_NO_WALLET_COPY } from '@/lib/data/history'
 import { useTransactionSubmit } from '@/hooks/use-transaction-submit'
-import { readOnboardingResult } from '@/lib/onboarding'
+import { useUserMoneySettings } from '@/lib/user-money-settings'
+import { useTodayISO } from '@/lib/use-today-iso'
 import {
   CONTEXT_EMPTY_COPY,
   CONTEXT_LABEL,
@@ -120,6 +126,17 @@ export function CashflowCalendarScreen() {
   const defaultWallet = defaultWalletNameFor(context)
   const submit = useTransactionSubmit(defaultWallet, masked, { backdated: true })
 
+  /* ── JANGKAR TANGGAL (paket 57) ─────────────────────────────────────────────
+     `today` baru terisi setelah mount, jadi HTML server & render pertama client
+     tetap memakai `CALENDAR_TODAY_ISO` (jangkar seed) lalu berpindah ke tanggal
+     perangkat TANPA hydration mismatch. Sebelumnya halaman ini memakai
+     `CALENDAR_TODAY`/`CALENDAR_TODAY_ISO` selamanya: sel "hari ini", tombol
+     "Hari Ini", dan label periode bisa menunjuk 25 Sep padahal hari ini 28 Sep. */
+  const today = useTodayISO()
+  const todayIso = today || CALENDAR_TODAY_ISO
+  /** pemasukan & gajian user (paket 57) — pengganti `readOnboardingResult()` */
+  const settings = useUserMoneySettings()
+
   /* ── STATE (kontrak dari PRD) ───────────────────────────────────────────── */
   const [selectedDate, setSelectedDate] = useState<string>(CALENDAR_TODAY_ISO)
   const [periodMode, setPeriodMode] = useState<PeriodMode>('standard')
@@ -129,11 +146,21 @@ export function CashflowCalendarScreen() {
   const [paydayDate, setPaydayDate] = useState<number>(DEFAULT_PAYDAY_DATE)
   const [noteSheetOpen, setNoteSheetOpen] = useState(false)
 
-  /* pengaturan gajian dibaca setelah mount (hidrasi aman) */
+  /* tanggal gajian dibaca SETELAH mount (hidrasi aman): sumbernya konfigurasi
+     uang user (`lib/user-money-settings.ts`, yang mengambil nilai awal dari hasil
+     onboarding) — bukan lagi hanya `readOnboardingResult()`, supaya perubahan di
+     Pengaturan ikut terbaca di sini. */
   useEffect(() => {
-    const stored = readOnboardingResult()?.paydayDate
-    if (stored && stored >= 1 && stored <= 31) setPaydayDate(stored)
-  }, [])
+    if (settings.paydayDate) setPaydayDate(settings.paydayDate)
+  }, [settings.paydayDate])
+
+  /* begitu tanggal perangkat diketahui: pindah ke periode yang memuat HARI INI
+     dan pilih tanggal itu — bukan tanggal seed */
+  useEffect(() => {
+    if (!today) return
+    setAnchor(parseISO(today))
+    setSelectedDate(today)
+  }, [today])
 
   /* ── DATA TURUNAN ───────────────────────────────────────────────────────── */
   /** batas periode yang sedang dibaca — dipakai grid & jendela entri ledger */
@@ -177,8 +204,10 @@ export function CashflowCalendarScreen() {
         anchor,
         mode: periodMode,
         paydayDate,
+        /* jangkar "hari ini" dari tanggal perangkat (paket 57) */
+        todayIso,
       }),
-    [visibleEntries, anchor, periodMode, paydayDate],
+    [visibleEntries, anchor, periodMode, paydayDate, todayIso],
   )
   /**
    * Ringkasan periode DARI SEMUA ENTRI — bukan dari daftar tersaring.
@@ -192,9 +221,9 @@ export function CashflowCalendarScreen() {
   const summary = useMemo(
     () =>
       summarizePeriod(
-        buildCalendarGrid({ entries, anchor, mode: periodMode, paydayDate }).cells,
+        buildCalendarGrid({ entries, anchor, mode: periodMode, paydayDate, todayIso }).cells,
       ),
-    [entries, anchor, periodMode, paydayDate],
+    [entries, anchor, periodMode, paydayDate, todayIso],
   )
   const cell = useMemo(() => selectCell(grid, selectedDate), [grid, selectedDate])
 
@@ -234,11 +263,11 @@ export function CashflowCalendarScreen() {
     setSelectedDate(snapSelection(selectedDate, nextAnchor, bounds))
   }
 
-  /** tombol "Hari Ini" — kembali ke periode yang memuat hari ini */
+  /** tombol "Hari Ini" — kembali ke periode yang memuat hari ini (tanggal perangkat) */
   function handleToday() {
-    const nextAnchor = defaultAnchorFor(CALENDAR_TODAY, periodMode, paydayDate)
+    const nextAnchor = defaultAnchorFor(parseISO(todayIso), periodMode, paydayDate)
     setAnchor(nextAnchor)
-    setSelectedDate(CALENDAR_TODAY_ISO)
+    setSelectedDate(todayIso)
   }
 
   /**
@@ -373,6 +402,25 @@ export function CashflowCalendarScreen() {
             onToday={handleToday}
             onSelectDate={handleSelectDate}
           />
+
+          {/* ── TANGGAL GAJIAN MASIH DEFAULT? DIKATAKAN (paket 60.5) ────────
+              Siklus gajian di atas tetap benar walau `paydayDate` belum diatur —
+              ia jatuh ke `DEFAULT_PAYDAY_DATE`. Yang TIDAK boleh: user mengira
+              angka tanggal itu berasal dari datanya. Karena itu catatan ini
+              muncul persis saat keadaan itu terjadi, lengkap dengan satu tautan
+              ke tempat mengaturnya (Pengaturan → Profil & Akun). */}
+          {periodMode === 'payday' && settings.paydayDate === null && (
+            <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-[1.5rem] bg-cream px-4 py-3 text-[11.5px] font-medium leading-relaxed text-ink/55 ring-1 ring-soil/12">
+              <CalendarDays className="size-3.5 shrink-0 text-forest/60" strokeWidth={2.4} aria-hidden />
+              {CALENDAR_PAYDAY_COPY.defaultNote(DEFAULT_PAYDAY_DATE)}
+              <Link
+                href={MONEY_SETTINGS_HREF}
+                className="font-semibold text-forest underline underline-offset-2 transition-colors hover:text-ink"
+              >
+                {CALENDAR_PAYDAY_COPY.cta}
+              </Link>
+            </p>
+          )}
         </div>
 
         <div className="lg:col-span-5">
@@ -386,12 +434,15 @@ export function CashflowCalendarScreen() {
       </div>
 
       {/* modal catatan: tanggal terpilih dibawa masuk dalam keadaan terkunci,
-          dan dompet tujuan ditampilkan (sheet-nya tanpa pemilih dompet) */}
+          dan dompet tujuan ditampilkan (sheet-nya tanpa pemilih dompet).
+          `''` = konteks aktif belum punya dompet (paket 59 · 59.4): yang tampil
+          kalimat jujur dari data, bukan nama dompet kosong — dan penulisannya
+          ditolak oleh hook submit dengan arahan yang sama. */}
       <AddCalendarNoteSheet
         open={noteSheetOpen}
         onClose={() => setNoteSheetOpen(false)}
         date={selectedDate}
-        walletName={defaultWallet}
+        walletName={defaultWallet || TRANSACTION_NO_WALLET_COPY.sourceFallback}
         onSubmit={handleSaveNote}
       />
     </ScreenShell>

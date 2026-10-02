@@ -22,6 +22,7 @@ export function ConfirmDialog({
   title,
   body,
   safety,
+  note,
   cancelLabel,
   confirmLabel,
   onCancel,
@@ -40,6 +41,14 @@ export function ConfirmDialog({
    * rasa aman harus datang lebih dulu.
    */
   safety?: string
+  /**
+   * Kalimat FAKTA yang harus terbaca SEBELUM user menekan Hapus. Dipisah dari
+   * `body` karena artinya beda: `body` menjawab "apa yang hilang", `note`
+   * menjawab "apa yang TIDAK ikut hilang" (mis. baris kas yang sudah benar-benar
+   * keluar di halaman Kekayaan, paket 61). Opsional — pemanggil lama tidak
+   * berubah sama sekali.
+   */
+  note?: string
   cancelLabel: string
   confirmLabel: string
   onCancel: () => void
@@ -88,6 +97,12 @@ export function ConfirmDialog({
           {title}
         </h2>
         <p className="mt-1.5 text-[12.5px] leading-relaxed text-ink/55">{body}</p>
+
+        {note && (
+          <p className="mt-3 rounded-2xl bg-soil/[0.1] px-3.5 py-2.5 text-[11.5px] leading-relaxed text-ink/60">
+            {note}
+          </p>
+        )}
 
         {safety && (
           <p className="mt-3 flex items-start gap-2 rounded-2xl bg-sage/50 px-3.5 py-2.5 text-[11.5px] leading-relaxed text-forest">

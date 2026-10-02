@@ -15,6 +15,7 @@ import {
   type PeriodWindow,
   type SpendingReviewCondition,
 } from '@/lib/data/budget'
+import type { HistoryTransaction } from '@/lib/data/history'
 
 /* ── Panel "Review Pengeluaran Hari Ini" (prompt 19) ─────────────────────────
    Satu-satunya jalur pemulihan yang dirancang PRD untuk momen over budget:
@@ -62,6 +63,8 @@ export function SpendingReviewSheet({
   window: period,
   income,
   masked,
+  txs,
+  todayISO,
   onContinueChat,
 }: {
   open: boolean
@@ -74,10 +77,18 @@ export function SpendingReviewSheet({
   income: PeriodIncome
   /** sensor layar global (PrivacyProvider) — nominal ikut mode privasi */
   masked: boolean
+  /**
+   * Catatan yang dihitung panel (paket 57): baris LEDGER NYATA dari halaman
+   * (`recordedTransactions()`), bukan `HISTORY_TRANSACTIONS` mock. Tanpa ini
+   * panel bisa menyebut uang keluar hari ini yang tidak pernah user catat.
+   */
+  txs: HistoryTransaction[]
+  /** tanggal "hari ini" dari jam perangkat (`useTodayISO()` di halaman) */
+  todayISO: string
   /** lanjut ke AI Coach dengan pertanyaan sudah terisi */
   onContinueChat: () => void
 }) {
-  const review = spendingReview({ hud, income, masked })
+  const review = spendingReview({ hud, income, masked, txs, todayISO })
   const { notes, pace, topCategory } = review
   const shownNotes = notes.slice(0, NOTES_SHOWN)
   const hiddenNotes = notes.length - shownNotes.length

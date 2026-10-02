@@ -19,8 +19,14 @@ import { cashTotal, useMoneyStore, walletOptionsFor } from '@/lib/money/store'
 import {
   addDebt,
   addInvestment,
+  deleteDebt,
   deleteInvestment,
+  editDebt,
   editInvestment,
+  liveDebts,
+  liveInvestments,
+  restoreDebt,
+  restoreInvestment,
   settleDebt,
   updateInvestmentPrice,
   useWealthStore,
@@ -28,14 +34,18 @@ import {
 import { cn } from '@/lib/utils'
 import {
   ASSET_EDIT_TOAST,
+  DEBT_EDIT_TOAST,
+  DELETE_ASSET_TOAST,
+  DELETE_DEBT_TOAST,
   EMPTY_INVESTASI_COPY,
   EMPTY_INVESTASI_CTA,
   EMPTY_INVESTASI_TITLE,
   INITIAL_ASSET_TRANSACTIONS,
-  MONTHLY_INCOME,
   PRICE_UPDATE_COPY,
+  PROPERTY_V1_COPY,
   activeDebtRemaining,
   activeReceivableTotal,
+  debtName,
   maskMoney,
   totalPortfolioValue,
   type Debt,
@@ -44,6 +54,11 @@ import {
   type WealthTab,
 } from '@/lib/data/wealth'
 import { DEBT_CASH_COPY, cashDirectionOf, settlementCounterparty } from '@/lib/data/wealth-cash'
+/* jendela Undo (5 detik, PRD 2251) — SATU konstanta untuk Riwayat, Tagihan, dan
+   hapus di halaman ini, supaya janji durasinya tidak berbeda antar halaman */
+import { UNDO_WINDOW_MS } from '@/lib/data/history'
+import { WealthDeleteDialog } from './wealth-delete-dialog'
+import { useUserMoneySettings } from '@/lib/user-money-settings'
 import {
   CONTEXT_EMPTY_COPY,
   CONTEXT_LABEL,
@@ -126,16 +141,42 @@ export function WealthScreen() {
    * `deleteInvestment`, `addDebt`, `settleDebt`).
    */
   const wealth = useWealthStore()
-  const investments = wealth.investments
-  const debts = wealth.debts
+  /* `live*()` menyaring tombstone (paket 61): catatan yang baru dihapus tidak
+     ikut ke daftar, Net Worth, tab, maupun riwayat pembayaran di layar ini —
+     dan tidak pula ke file ekspor, yang membaca dua selector yang sama. */
+  const investments = liveInvestments(wealth)
+  const debts = liveDebts(wealth)
   const payments = wealth.payments
   /** aset yang sedang dibuka di sheet Edit Aset; null = sheet tertutup */
   const [editingAsset, setEditingAsset] = useState<Investment | null>(null)
+  /** hutang/piutang yang sedang dibuka di sheet Edit Utang; null = tertutup */
+  const [editingDebt, setEditingDebt] = useState<Debt | null>(null)
+  /** catatan yang menunggu konfirmasi hapus — hapus TIDAK pernah langsung jalan */
+  const [pendingDeleteDebt, setPendingDeleteDebt] = useState<Debt | null>(null)
+  const [pendingDeleteAsset, setPendingDeleteAsset] = useState<Investment | null>(null)
+  /**
+   * Hak Undo per baris: id yang hapusnya MASIH bisa dibatalkan. Selama jendela
+   * `UNDO_WINDOW_MS` hidup, tombol Undo di toast mengembalikannya; sesudahnya
+   * jejaknya dibuang sehingga Undo yang datang terlambat ditolak dengan kalimat
+   * jujur — pola yang sama dengan halaman Tagihan & Riwayat (paket 03).
+   */
+  const undoDebtRef = useRef<string | null>(null)
+  const undoAssetRef = useRef<string | null>(null)
   /** aset yang harganya sedang dikoreksi lewat modal "Update Manual" */
   const [priceTarget, setPriceTarget] = useState<Investment | null>(null)
   /** hutang platform yang barnya baru lunas — memicu confetti + kolaps */
   const [celebrateId, setCelebrateId] = useState<string | null>(null)
-  const monthlyIncome = MONTHLY_INCOME
+  /**
+   * Pemasukan bulanan untuk pembagi rasio DTI (paket 57).
+   *
+   * Dulu konstanta demo `MONTHLY_INCOME` (7.500.000) — angka contoh yang dipakai
+   * seolah-olah pemasukan user. Sekarang dari konfigurasi uang user
+   * (`lib/user-money-settings.ts`, sumber awal = hasil onboarding). Kalau belum
+   * diatur, nilainya 0 dan kartu DTI menampilkan "belum bisa dihitung" — bukan
+   * "Sehat 0%" yang membaca seperti klaim aman.
+   */
+  const settings = useUserMoneySettings()
+  const monthlyIncome = settings.monthlyIncome
 
   /** semua timer halaman — dibersihkan saat unmount (pola yang sama dengan
    *  halaman Tagihan) supaya tidak ada set-state pada komponen yang hilang */
@@ -273,11 +314,58 @@ export function WealthScreen() {
     [editingAsset],
   )
 
+  /**
+   * Hapus aset: DUA LANGKAH sejak paket 61 (dulu sekali tekan langsung hilang).
+   *
+   * Menghapus aset mengubah Net Worth, jadi tidak boleh terjadi tanpa
+   * konfirmasi — dan sesudahnya masih ada jendela Undo. Ini juga yang membuat
+   * aset & hutang punya SATU pengalaman (paket 61.2), bukan dua.
+   */
   const handleDeleteAsset = useCallback((asset: Investment) => {
-    if (!deleteInvestment(asset.id)) return
-    setExpandedAssetId((prev) => (prev === asset.id ? null : prev))
-    toast.success(`${asset.name} dihapus`, { description: 'Aset dikeluarkan dari portofolio.' })
+    setPendingDeleteAsset(asset)
   }, [])
+
+  /**
+   * Undo hapus aset: cabut tombstone-nya (`restoreInvestment`) sehingga asetnya
+   * balik BESERTA nilainya. Undo yang datang setelah jendelanya tutup ditolak
+   * dengan kalimat jujur — bukan diam-diam tidak terjadi apa-apa.
+   */
+  const undoDeleteAsset = useCallback((assetId: string) => {
+    if (undoAssetRef.current !== assetId) {
+      toast(DELETE_ASSET_TOAST.expired)
+      return
+    }
+    undoAssetRef.current = null
+    if (!restoreInvestment(assetId)) {
+      toast(DELETE_ASSET_TOAST.expired)
+      return
+    }
+    toast.success(DELETE_ASSET_TOAST.undoneTitle, {
+      description: DELETE_ASSET_TOAST.undoneDescription,
+    })
+  }, [])
+
+  /** hapus aset sesungguhnya — HANYA dipanggil dari dialog konfirmasi */
+  const confirmDeleteAsset = useCallback(() => {
+    const asset = pendingDeleteAsset
+    if (!asset) return
+    setPendingDeleteAsset(null)
+    /* id tidak ada / sudah terhapus → tidak ada yang berubah, jadi tidak ada
+       toast "berhasil" (pola yang sama dengan halaman Tagihan) */
+    if (!deleteInvestment(asset.id)) return
+    undoAssetRef.current = asset.id
+    setExpandedAssetId((prev) => (prev === asset.id ? null : prev))
+
+    toast(DELETE_ASSET_TOAST.title, {
+      description: DELETE_ASSET_TOAST.description(asset.name),
+      action: { label: DELETE_ASSET_TOAST.undo, onClick: () => undoDeleteAsset(asset.id) },
+      /* lama toast = lama hak Undo; keduanya dibaca dari satu konstanta */
+      duration: UNDO_WINDOW_MS,
+    })
+    later(() => {
+      if (undoAssetRef.current === asset.id) undoAssetRef.current = null
+    }, UNDO_WINDOW_MS)
+  }, [pendingDeleteAsset, undoDeleteAsset])
 
   /**
    * AKSI UANG UTANG/PIUTANG (paket 41 & 50) — satu handler untuk dua arah:
@@ -337,6 +425,89 @@ export function WealthScreen() {
     },
     [context],
   )
+
+  /**
+   * Buka sheet EDIT untuk satu catatan hutang/piutang (paket 61).
+   *
+   * Sebelum paket 61 `editDebt()` sudah ada & teruji di store, tapi tidak ada
+   * satu pun tombol yang memanggilnya — jadi user yang salah mengetik pokok/sisa
+   * hutangnya hanya punya dua pilihan: membiarkan angkanya salah, atau menghapus
+   * catatannya. Yang dibuka sekarang adalah sheet yang SAMA dengan Tambah
+   * (mode edit), bukan form kedua yang harus dijaga terpisah.
+   */
+  const handleEditDebt = useCallback((debt: Debt) => {
+    setEditingDebt(debt)
+  }, [])
+
+  /**
+   * Simpan hasil edit: SATU pintu tulis `editDebt()` — tidak ada salinan hasil
+   * edit di state halaman (larangan paket 48). Konteks uang catatannya
+   * DIPERTAHANKAN dari catatan aslinya: membetulkan angka bukan alasan
+   * memindahkan catatan itu ke konteks lain.
+   */
+  const handleSaveDebtEdit = useCallback(
+    (id: string, patch: NewDebtInput) => {
+      const target = editingDebt
+      if (!target) return
+      const updated = editDebt(id, { ...patch, scope: target.scope })
+      if (!updated) return
+      setEditingDebt(null)
+      toast.success(DEBT_EDIT_TOAST.title, {
+        description: DEBT_EDIT_TOAST.description(debtName(updated)),
+      })
+    },
+    [editingDebt],
+  )
+
+  /** minta konfirmasi hapus catatan hutang/piutang (paket 61) */
+  const handleDeleteDebt = useCallback((debt: Debt) => {
+    setPendingDeleteDebt(debt)
+  }, [])
+
+  /**
+   * Undo hapus hutang/piutang: cabut tombstone-nya. Riwayat pembayarannya ikut
+   * kembali UTUH karena barisnya tidak pernah dibuang — hanya disembunyikan
+   * (`paymentsOf()` yang menyaring saat catatannya bertombstone).
+   */
+  const undoDeleteDebt = useCallback((debtId: string) => {
+    if (undoDebtRef.current !== debtId) {
+      toast(DELETE_DEBT_TOAST.expired)
+      return
+    }
+    undoDebtRef.current = null
+    if (!restoreDebt(debtId)) {
+      toast(DELETE_DEBT_TOAST.expired)
+      return
+    }
+    toast.success(DELETE_DEBT_TOAST.undoneTitle, {
+      description: DELETE_DEBT_TOAST.undoneDescription,
+    })
+  }, [])
+
+  /**
+   * Hapus catatan hutang sesungguhnya — HANYA dipanggil dari dialog konfirmasi.
+   *
+   * Yang ditulis: tombstone di store kekayaan. Yang TIDAK disentuh: baris kas
+   * pelunasan yang sudah terjadi (`lib/money/store.ts`) — uang yang sudah
+   * berpindah tangan itu fakta, dan menghapus catatannya tidak mengembalikannya
+   * (kanon AUDIT §4). Akibatnya ke Net Worth sudah disebut di dialognya.
+   */
+  const confirmDeleteDebt = useCallback(() => {
+    const debt = pendingDeleteDebt
+    if (!debt) return
+    setPendingDeleteDebt(null)
+    if (!deleteDebt(debt.id)) return
+    undoDebtRef.current = debt.id
+
+    toast(DELETE_DEBT_TOAST.title, {
+      description: DELETE_DEBT_TOAST.description(debtName(debt)),
+      action: { label: DELETE_DEBT_TOAST.undo, onClick: () => undoDeleteDebt(debt.id) },
+      duration: UNDO_WINDOW_MS,
+    })
+    later(() => {
+      if (undoDebtRef.current === debt.id) undoDebtRef.current = null
+    }, UNDO_WINDOW_MS)
+  }, [pendingDeleteDebt, undoDeleteDebt])
 
 
   /* ── RENDER ─────────────────────────────────────────────────────────────── */
@@ -449,19 +620,29 @@ export function WealthScreen() {
               transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
               className="mt-5"
             >
-              {/* ── SECTION 6: properti = V1 placeholder (PRD Decision A12) ── */}
+              {/* ── SECTION 6: properti = V1 placeholder (PRD Decision A12) ──
+                  Kalimatnya dari `PROPERTY_V1_COPY` (paket 62): tidak lagi
+                  menjanjikan "segera hadir", dan menyebut apa yang BELUM
+                  dihitung di Total Kekayaan — supaya angka di halaman ini tidak
+                  disalahpahami sebagai sudah termasuk rumah. */}
               <div className="flex flex-col items-center rounded-[1.75rem] border-2 border-dashed border-hud-amber/35 bg-[#ffffff] px-6 py-14 text-center">
                 <span aria-hidden className="text-[34px]">
                   🏠
                 </span>
                 <h2 className="mt-3 font-display text-[17px] font-black tracking-tight text-ink">
-                  Properti &amp; Aset Fisik
+                  {PROPERTY_V1_COPY.title}
                 </h2>
                 <span className="mt-2.5 rounded-full bg-hud-amber/25 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-[#b89191] ring-1 ring-inset ring-hud-amber/40">
-                  Segera Hadir
+                  {PROPERTY_V1_COPY.badge}
                 </span>
                 <p className="mt-3 max-w-sm text-[13px] leading-relaxed text-ink/55">
-                  Rumah, kendaraan, perhiasan — coming soon di update berikutnya 🌿
+                  {PROPERTY_V1_COPY.body}
+                </p>
+                <p className="mt-2 max-w-sm text-[12px] leading-relaxed text-ink/45">
+                  {PROPERTY_V1_COPY.netWorthNote}
+                </p>
+                <p className="mt-3 max-w-sm text-[12px] font-medium leading-relaxed text-forest">
+                  {PROPERTY_V1_COPY.switchHint}
                 </p>
               </div>
             </motion.div>
@@ -487,6 +668,8 @@ export function WealthScreen() {
                 walletOptions={walletOptions}
                 onAddDebt={() => setShowAddDebt(true)}
                 onPayDebt={handlePayDebt}
+                onEditDebt={handleEditDebt}
+                onDeleteDebt={handleDeleteDebt}
                 /* dokumen hutang ada, tapi tidak satu pun di konteks aktif (paket 47) */
                 emptyContextLine={
                   debts.length > 0
@@ -519,12 +702,45 @@ export function WealthScreen() {
         onClose={() => setPriceTarget(null)}
         onConfirm={handleSavePrice}
       />
+      {/* Sheet utang/piutang — satu sheet dua mode (paket 61), sama seperti
+          sheet investasi di atas: `showAddDebt` = tambah, `editingDebt` = edit. */}
       <AddDebtSheet
-        open={showAddDebt}
-        onClose={() => setShowAddDebt(false)}
+        open={showAddDebt || editingDebt !== null}
+        initial={editingDebt}
+        onClose={() => {
+          setShowAddDebt(false)
+          setEditingDebt(null)
+        }}
         onSave={handleSaveDebt}
+        onEdit={handleSaveDebtEdit}
         defaultView={debtView}
       />
+
+      {/* Dialog konfirmasi hapus (paket 61) — SATU bentuk untuk hutang & aset,
+          dibungkus <AnimatePresence> supaya animasi keluarnya tetap jalan.
+          Nominalnya lewat `maskMoney`, jadi ikut tersensor saat mode privasi
+          menyala (kanon privasi: yang dibaca disensor). */}
+      <AnimatePresence>
+        {pendingDeleteDebt && (
+          <WealthDeleteDialog
+            variant="debt"
+            kind={pendingDeleteDebt.direction === 'owed_to_me' ? 'piutang' : 'hutang'}
+            name={debtName(pendingDeleteDebt)}
+            amountLabel={maskMoney(pendingDeleteDebt.remaining, isMasked)}
+            onCancel={() => setPendingDeleteDebt(null)}
+            onConfirm={confirmDeleteDebt}
+          />
+        )}
+        {pendingDeleteAsset && (
+          <WealthDeleteDialog
+            variant="asset"
+            name={pendingDeleteAsset.name}
+            amountLabel={maskMoney(pendingDeleteAsset.currentValue, isMasked)}
+            onCancel={() => setPendingDeleteAsset(null)}
+            onConfirm={confirmDeleteAsset}
+          />
+        )}
+      </AnimatePresence>
     </ScreenShell>
   )
 }

@@ -5,67 +5,23 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Drawer } from 'vaul'
 import { toast } from 'sonner'
-import {
-  Home,
-  Wallet,
-  Plus,
-  PieChart,
-  LayoutGrid,
-  Target,
-  Receipt,
-  CalendarDays,
-  Briefcase,
-  Users,
-  Gift,
-  CircleHelp,
-  Settings,
-  Download,
-  ArrowLeftRight,
-  type LucideIcon,
-} from 'lucide-react'
+import { Plus, LayoutGrid, ArrowLeftRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { SUBSCRIPTION_LOCK_COPY } from '@/lib/data/renewal'
 import { TRANSFER_DOOR_COPY } from '@/lib/data/add-wallet'
+import {
+  MOBILE_MENU_GROUPS,
+  MOBILE_PRIMARY_ITEMS,
+  NAV_HREFS,
+  type NavItem,
+} from '@/lib/navigation'
 import { useSubscriptionGate } from '@/components/catetind/subscription-gate-provider'
 import { TransactionBottomSheet } from '@/components/dashboard/transaction-bottom-sheet'
 import { TransferFlow } from '@/components/catetind/transfer-flow'
 
-type NavItem = { href: string; icon: LucideIcon; label: string }
-
-const mainItems: NavItem[] = [
-  { href: '/', icon: Home, label: 'Home' },
-  { href: '/wallet', icon: Wallet, label: 'Wallet' },
-  { href: '/history', icon: PieChart, label: 'Insight' },
-]
-
-const menuGroups: { label: string; items: NavItem[] }[] = [
-  {
-    label: 'Kelola Uang',
-    items: [
-      { href: '/budget', icon: Target, label: 'Budget' },
-      { href: '/bills', icon: Receipt, label: 'Tagihan' },
-      { href: '/calendar', icon: CalendarDays, label: 'Kalender' },
-    ],
-  },
-  {
-    label: 'Aset & Bersama',
-    items: [
-      { href: '/wealth', icon: Briefcase, label: 'Kekayaan & Hutang' },
-      { href: '/joint', icon: Users, label: 'Joint Wallet' },
-    ],
-  },
-  {
-    label: 'Ekstra & Sistem',
-    items: [
-      { href: '/referral', icon: Gift, label: 'Ajak Teman' },
-      { href: '/help', icon: CircleHelp, label: 'Bantuan' },
-      { href: '/install', icon: Download, label: 'Panduan Install' },
-      { href: '/settings', icon: Settings, label: 'Pengaturan' },
-    ],
-  },
-]
-
-const menuHrefs = menuGroups.flatMap((g) => g.items.map((i) => i.href))
+/* Navigasi (tab bawah + laci "Lainnya") = SATU sumber di `lib/navigation.ts`,
+   dibagi dengan sidebar desktop — dulu daftar ini ditulis dua kali dan label
+   grupnya sudah melenceng antar platform (audit "Navigation Clunkiness"). */
 
 /**
  * Halaman yang tampil TANPA navigasi app sama sekali (bottom nav + FAB):
@@ -137,7 +93,7 @@ export function MobileBottomNav() {
      ia yang dikunci. Membaca data, pindah halaman, & menu "Lainnya" tetap jalan. */
   const { inputLocked } = useSubscriptionGate()
 
-  const menuActive = menuHrefs.some((href) => pathname.startsWith(href))
+  const menuActive = NAV_HREFS.some((href) => pathname.startsWith(href))
   /* Halaman Joint Wallet punya FAB-nya sendiri (form transaksi + split +
      privasi), jadi FAB bottom-nav disembunyikan di sana supaya tetap hanya ada
      SATU tombol tambah di layar. */
@@ -154,8 +110,8 @@ export function MobileBottomNav() {
         className="fixed inset-x-8 bottom-5 z-40 mx-auto flex h-16 max-w-sm items-center rounded-full bg-cream/95 px-4 shadow-[0_24px_50px_-16px_rgba(0,0,0,0.18)] ring-1 ring-soil/12 backdrop-blur-xl lg:hidden"
         style={{ marginBottom: 'max(0rem, env(safe-area-inset-bottom))' }}
       >
-        <NavLink item={mainItems[0]} pathname={pathname} />
-        <NavLink item={mainItems[1]} pathname={pathname} />
+        <NavLink item={MOBILE_PRIMARY_ITEMS[0]} pathname={pathname} />
+        <NavLink item={MOBILE_PRIMARY_ITEMS[1]} pathname={pathname} />
 
         {/* FAB (+) Catat — langsung membuka Transaction Input Engine.
             Di /joint slot ini dikosongkan: halaman Joint punya FAB sendiri. */}
@@ -191,7 +147,7 @@ export function MobileBottomNav() {
           )}
         </div>
 
-        <NavLink item={mainItems[2]} pathname={pathname} />
+        <NavLink item={MOBILE_PRIMARY_ITEMS[2]} pathname={pathname} />
 
         {/* Lainnya — buka vaul bottom sheet menu sekunder */}
         <button
@@ -259,22 +215,23 @@ export function MobileBottomNav() {
                 </button>
               </section>
 
-              {menuGroups.map((group) => (
+              {MOBILE_MENU_GROUPS.map((group) => (
                 <section key={group.label} className="mt-6">
                   <p className="text-[11px] font-semibold uppercase tracking-wider text-ink/35">
                     {group.label}
                   </p>
                   <div className="mt-3 grid grid-cols-3 gap-2.5">
-                    {group.items.map(({ href, icon: Icon, label }) => {
+                    {group.items.map(({ href, icon: Icon, label, hint }) => {
                       const isActive = pathname.startsWith(href)
                       return (
                         <Link
                           key={href}
                           href={href}
                           onClick={() => setMenuOpen(false)}
+                          title={hint}
                           aria-current={isActive ? 'page' : undefined}
                           className={cn(
-                            'flex flex-col items-center gap-2 rounded-2xl px-2 py-4 text-center transition-all duration-150 active:scale-95',
+                            'flex flex-col items-center gap-1.5 rounded-2xl px-2 py-3.5 text-center transition-all duration-150 active:scale-95',
                             isActive
                               ? 'bg-[#ecd768]/25 font-semibold text-ink'
                               : 'bg-soil/[0.03] font-medium text-ink/55 hover:bg-soil/[0.11]',
@@ -283,6 +240,12 @@ export function MobileBottomNav() {
                           <Icon className="size-6 text-ink" />
                           <span className="text-xs font-medium leading-tight">
                             {label}
+                          </span>
+                          {/* keterangan singkat (audit "Navigation Clunkiness"):
+                              satu baris konteks supaya tiap tujuan jelas tanpa
+                              perlu membukanya dulu */}
+                          <span className="text-[10px] font-normal leading-snug text-ink/40">
+                            {hint}
                           </span>
                         </Link>
                       )

@@ -11,6 +11,7 @@ import {
   type CSSProperties,
   type ReactNode,
 } from 'react'
+import { HOME_WALLET_STACK_COPY } from '@/lib/data/home'
 import {
   ChevronLeft,
   ChevronRight,
@@ -18,12 +19,16 @@ import {
   Wallet as WalletIcon,
   Wifi,
 } from 'lucide-react'
+import { toast } from 'sonner'
 import { LogoWordmark } from './logo-wordmark'
 import { usePrivacy } from './privacy-provider'
+import { useMoneyContext } from './money-context-provider'
+import { AddWalletSheet } from './add-wallet-sheet'
 import { cn } from '@/lib/utils'
 import { AMOUNT_LABEL, AMOUNT_XL } from '@/lib/typography'
-import { homeWallets, addPoolWallet, cashTotal, useMoneyStore } from '@/lib/money/store'
-import { type DeckSelection, type Wallet, type WalletArt } from '@/lib/wallets'
+import { addWalletAccount, cashTotal, homeWallets, useMoneyStore } from '@/lib/money/store'
+import { ADD_WALLET_SHEET_COPY } from '@/lib/data/add-wallet'
+import { type DeckSelection, type Wallet, type WalletArt, type WalletDraft } from '@/lib/wallets'
 
 const TAP_THRESHOLD = 10 // px — gerakan di bawah ini dianggap tap, bukan drag
 const DRAG_START = 14 // px — gerakan horizontal yang mengubah tekanan jadi swipe
@@ -166,16 +171,34 @@ export const WalletCardStack = memo(function WalletCardStack({
      membaca `opening + Σ baris ledger` yang sama, dan dompet yang ditambahkan
      dari deck ini pun ikut muncul di `/wallet`. */
   const snapshot = useMoneyStore()
-  const wallets = useMemo(() => homeWallets(snapshot, 'all'), [snapshot])
+  /* ── SATU PENYARING DENGAN /wallet (audit "8 vs 3 Wallet Paradox") ──────────
+     Dulu deck ini MEMAKSA 'all' sementara halaman Dompet & Akun menyaring
+     konteks uang yang sedang aktif (`useMoneyContext`). Dua halaman membaca
+     store yang SAMA tapi menampilkan jumlah dompet berbeda — persis keluhan
+     "Dashboard 8, /wallet 3". Sekarang keduanya memakai konteks global yang
+     sama, jadi jumlah kartunya mustahil berbeda. Total saldo tetap `cashTotal`
+     (seluruh dompet) — konteks menyaring DAFTAR, bukan total (paket 44). */
+  const { context } = useMoneyContext()
+  const wallets = useMemo(() => homeWallets(snapshot, context), [snapshot, context])
+  /* jumlah SEMUA dompet hidup — index resep warna kartu preview modal Tambah
+     Dompet (bukan jumlah yang tersaring, supaya warnanya tetap unik) */
+  const allWalletCount = useMemo(() => homeWallets(snapshot, 'all').length, [snapshot])
   /* sensor nominal global — saldo di muka kartu ikut tombol mata di header */
   const { money } = usePrivacy()
   // rotasi deck — urutan melingkar tanpa akhir; swipe kartu depan = pindah ke belakang
   const [rot, setRot] = useState(0)
+  /* modal Tambah Dompet (audit "Add Wallet Bypass"): kartu "+" membuka FORM,
+     bukan menambah dompet diam-diam */
+  const [addOpen, setAddOpen] = useState(false)
 
-  // deck: kartu agregat dulu, lalu tiap dompet, terakhir kartu "tambah dompet"
+  // deck: kartu agregat dulu, lalu tiap dompet, terakhir kartu "tambah dompet".
+  // PAKET 58 (58.7): keadaan 0 dompet = kartu "Tambah Dompet" sebagai
+  // SATU-SATUNYA kartu. Kartu agregat "Semua Dompet" sengaja tidak dirender saat
+  // kosong — "Rp 0" bukan ringkasan apa pun (dan Home tidak boleh memajang angka
+  // contoh). Kalimat pengantar keadaan kosong menempel di muka kartu itu.
   const deck = useMemo<DeckEntry[]>(
     () => [
-      { type: 'all' },
+      ...(wallets.length === 0 ? [] : [{ type: 'all' } as const]),
       ...wallets.map((wallet) => ({ type: 'wallet', wallet }) as const),
       { type: 'add' },
     ],
@@ -317,20 +340,40 @@ export const WalletCardStack = memo(function WalletCardStack({
     [startNext, startPrev],
   )
 
-  // demo "user bisa nambahin dompet": store memilih kandidat pool berikutnya.
-  // Kartu Semua Dompet otomatis menghitung ulang total karena nilainya di-derive
-  // dari daftar wallets store — dan dompet barunya ikut muncul di `/wallet`.
+  /* ── Tambah Dompet = FORM, bukan mutasi diam-diam (audit "Add Wallet Bypass")
+     Dulu kartu "+" memanggil `addPoolWallet()`: SATU tap langsung membuat dompet
+     contoh dari pool demo (nama, jenis, & saldo dipilih kode) tanpa user pernah
+     melihat atau menyetujuinya — itu yang membuat jumlah dompet membengkak dan
+     tidak sinkron dengan /wallet. Sekarang kartu "+" membuka `AddWalletSheet`
+     (form yang SAMA dengan halaman Dompet & Akun), dan store baru menulis setelah
+     user mengisi Nama, Jenis Akun, dan Saldo Awal. */
   const goAfterAdd = useRef<string | null>(null)
   const addWallet = useCallback(() => {
     if (swipe.current === 'exiting') return
-    /* store yang menambah dompetnya (id dibuat di sana) — deck cuma menunggu
-       kartunya muncul lalu memutarnya ke depan */
-    const newId = addPoolWallet()
-    if (!newId) return
-    goAfterAdd.current = newId
-    // kartu baru di-"deal" masuk dari bawah deck — engine harus hidup untuk itu
-    startEngine()
-  }, [startEngine])
+    setAddOpen(true)
+  }, [])
+
+  /** simpan dompet baru — SATU jalur tulis (`addWalletAccount`), sama dengan /wallet */
+  const handleAddWalletSave = useCallback(
+    (draft: WalletDraft) => {
+      const account = addWalletAccount({
+        name: draft.name,
+        type: draft.type,
+        number: draft.number,
+        opening: draft.balance,
+        /* konteks yang sedang aktif — dompet baru langsung muncul di daftar ini */
+        context,
+      })
+      setAddOpen(false) // tutup seketika; animasi keluar jalan di background
+      goAfterAdd.current = account.id
+      // kartu baru di-"deal" masuk dari bawah deck — engine harus hidup untuk itu
+      startEngine()
+      toast.success(ADD_WALLET_SHEET_COPY.toastTitle, {
+        description: ADD_WALLET_SHEET_COPY.toastDescription(account.name),
+      })
+    },
+    [context, startEngine],
+  )
 
   // setelah dompet baru masuk deck, putar deck supaya kartunya tampil di depan
   useEffect(() => {
@@ -797,13 +840,21 @@ export const WalletCardStack = memo(function WalletCardStack({
       <span className="relative flex size-12 items-center justify-center rounded-full bg-gradient-to-br from-mint to-mint-soft text-forest shadow-[0_10px_20px_-8px_rgba(145,187,158,0.7)] ring-4 ring-mint/15">
         <Plus className="size-5" strokeWidth={2.5} />
       </span>
-      <p className="relative mt-3 text-sm font-semibold text-ink">Tambah Dompet</p>
-      <p className="relative mt-1 text-xs text-ink/45">Bank, e-wallet, atau tunai</p>
+      <p className="relative mt-3 text-sm font-semibold text-ink">{HOME_WALLET_STACK_COPY.addTitle}</p>
+      <p className="relative mt-1 text-xs text-ink/45">{HOME_WALLET_STACK_COPY.addSubtitle}</p>
+      {/* keadaan 0 dompet (58.7): kartu ini satu-satunya + kalimat jujur —
+          dulu deck tetap menampilkan kartu agregat "Rp 0" di sebelahnya */}
+      {wallets.length === 0 && (
+        <p className="relative mt-2 max-w-[15rem] text-[11px] leading-relaxed text-ink/45">
+          {HOME_WALLET_STACK_COPY.emptyLine}
+        </p>
+      )}
     </div>
   )
   return (
-    // inset horizontal = ruang napas di layar kecil; di lg inset-nya persis SLEEVE_X (14px)
-    // supaya tepi luar sleeve dompet lurus sejajar dengan tepi kolom (mis. kartu Transaksi Terakhir)
+    <>
+    {/* inset horizontal = ruang napas di layar kecil; di lg inset-nya persis SLEEVE_X (14px)
+        supaya tepi luar sleeve dompet lurus sejajar dengan tepi kolom (mis. kartu Transaksi Terakhir) */}
     <div className="px-4 sm:px-2 lg:px-3.5">
       <p className="sr-only" aria-live="polite">
         {srLabel}
@@ -1063,5 +1114,15 @@ export const WalletCardStack = memo(function WalletCardStack({
         </button>
       </div>
     </div>
+
+    {/* modal Tambah Dompet (audit "Add Wallet Bypass") — form kanon yang SAMA
+        dengan /wallet; `cardIndex` = posisi dompet baru untuk resep warnanya */}
+    <AddWalletSheet
+      open={addOpen}
+      onClose={() => setAddOpen(false)}
+      onSave={handleAddWalletSave}
+      cardIndex={allWalletCount}
+    />
+    </>
   )
 })

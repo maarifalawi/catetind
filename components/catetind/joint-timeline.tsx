@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ChevronDown, Lock, SlidersHorizontal, Wallet } from 'lucide-react'
+import { ChevronDown, Lock, SlidersHorizontal, Trash2, Wallet } from 'lucide-react'
 import {
+  JOINT_DELETE_COPY,
   JOINT_ME,
   JOINT_PARTNER,
   PAID_BY_HINT,
@@ -18,7 +19,9 @@ import {
   type JointPerson,
   type JointTransaction,
 } from '@/lib/data/joint'
+import type { JointDeleteState } from '@/lib/money/joint-store'
 import { ChoicePills } from './budget-sheet'
+import { useTodayISO } from '@/lib/use-today-iso'
 import { cn } from '@/lib/utils'
 
 /* ── Together Timeline (Section 5) ───────────────────────────────────────────
@@ -45,6 +48,8 @@ export function JointTimeline({
   partnerTyping = false,
   onOpenSplit,
   onChangePaidBy,
+  deleteState,
+  onDelete,
 }: {
   transactions: JointTransaction[]
   masked: boolean
@@ -59,8 +64,18 @@ export function JointTimeline({
    * Opsional supaya timeline tetap bisa dipakai tanpa jalur tulis.
    */
   onChangePaidBy?: (tx: JointTransaction, userId: string) => void
+  /**
+   * Status boleh-hapus satu baris (paket 61.3). Aturannya hidup di store
+   * (`jointDeleteState()`) supaya layar tidak pernah menawarkan hapus pada baris
+   * yang akan ditolak store — dan supaya alasan "kenapa tidak ada tombol" bisa
+   * dibedakan: bulan yang sudah disettle menjelaskannya, bukan menyembunyikannya.
+   */
+  deleteState?: (tx: JointTransaction) => JointDeleteState
+  /** hapus satu baris catatan bareng — hanya dipanggil saat statusnya `allowed` */
+  onDelete?: (tx: JointTransaction) => void
 }) {
-  const groups = groupJointTransactions(transactions)
+  const today = useTodayISO()
+  const groups = groupJointTransactions(transactions, today || undefined)
 
   return (
     <div className="relative mt-5">
@@ -122,6 +137,8 @@ export function JointTimeline({
                   partner={partner}
                   onOpenSplit={onOpenSplit}
                   onChangePaidBy={onChangePaidBy}
+                  deleteState={deleteState}
+                  onDelete={onDelete}
                 />
               ))}
             </div>
@@ -167,6 +184,8 @@ function TimelineCard({
   partner,
   onOpenSplit,
   onChangePaidBy,
+  deleteState,
+  onDelete,
 }: {
   tx: JointTransaction
   masked: boolean
@@ -174,6 +193,8 @@ function TimelineCard({
   partner: JointPerson
   onOpenSplit: (tx: JointTransaction) => void
   onChangePaidBy?: (tx: JointTransaction, userId: string) => void
+  deleteState?: (tx: JointTransaction) => JointDeleteState
+  onDelete?: (tx: JointTransaction) => void
 }) {
   const view = presentTransaction(tx, me)
   const person = view.isMine ? me : partner
@@ -186,6 +207,13 @@ function TimelineCard({
    *  Stage 2: baris settlement juga tidak bisa dibuka — pembagiannya bukan
    *  urusan user, ia jejak transfer yang sudah disepakati. */
   const expandable = !view.hiddenFromMe && !tx.isSettlement
+  /**
+   * Status boleh-hapus (paket 61.3) — dihitung dari SATU aturan di store
+   * (`jointDeleteState()`), bukan disalin ulang di sini. Baris settle/pembuka
+   * tidak pernah bisa dihapus, dan bulan yang sudah disettle menjelaskan
+   * alasannya lewat `lockedNote` — bukan menyembunyikan tombolnya.
+   */
+  const deleteAction = deleteState?.(tx) ?? 'none'
 
   return (
     <motion.div
@@ -373,6 +401,34 @@ function TimelineCard({
                         {PAID_BY_HINT}
                       </p>
                     </div>
+                  )}
+
+                  {/* ── HAPUS SATU BARIS (paket 61.3) ────────────────────────
+                      Tombol yang sebelumnya tidak ada sama sekali: catatan bareng
+                      yang salah hanya bisa "dilawan" dengan mencatat ulang.
+                      Yang berubah bukan cuma daftarnya — angka patungan pasangan
+                      ikut terhitung ulang, dan itu disebut di dialognya.
+                      Baris di bulan yang SUDAH disettle tidak diberi tombol:
+                      alasannya dituliskan supaya tidak terbaca sebagai fitur yang
+                      lupa dibuat. */}
+                  {deleteAction === 'allowed' && onDelete && (
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        onDelete(tx)
+                      }}
+                      aria-label={JOINT_DELETE_COPY.actionAria(view.description)}
+                      className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-plum/12 px-3 py-1.5 text-[11.5px] font-semibold text-plum ring-1 ring-plum/25 transition-colors hover:bg-plum/20"
+                    >
+                      <Trash2 className="size-3.5" strokeWidth={2.4} />
+                      {JOINT_DELETE_COPY.action}
+                    </button>
+                  )}
+                  {deleteAction === 'locked' && (
+                    <p className="mt-3 rounded-2xl bg-soil/[0.1] px-3.5 py-2.5 text-[11px] leading-relaxed text-ink/55">
+                      {JOINT_DELETE_COPY.lockedNote}
+                    </p>
                   )}
                 </div>
               </motion.div>

@@ -2,6 +2,7 @@ import type { WalletAccount } from '../wallets'
 import { TRANSFER_DOOR_COPY } from './add-wallet'
 import {
   formatDayLabel,
+  maskMoney,
   shiftISODate,
   summarizeTransactions,
   type HistoryTransaction,
@@ -88,19 +89,28 @@ export function walletTransactions(walletId: string): HistoryTransaction[] {
 
 
 /**
- * Irisan 30 hari terakhir milik dompet ini.
+ * Irisan 30 hari terakhir milik dompet ini — jendelanya dihitung MUNDUR DARI
+ * HARI INI (`todayIso`, sumber yang sama dengan seluruh halaman lain sejak paket
+ * 57), BUKAN dari catatan terbaru.
  *
- * Jendelanya dihitung MUNDUR DARI CATATAN TERBARU, bukan dari `new Date()`:
- * mock-nya bertanggal tetap, jadi kalau demo dibuka jauh setelah tanggal itu,
- * perhitungan dari "hari ini" akan menghasilkan ringkasan berisi nol semua
- * padahal daftarnya kelihatan penuh — angka nol palsu seperti itu lebih buruk
- * daripada jendela yang jujur mengikuti data.
+ * Sebelum paket 59 jendelanya dihitung dari catatan terbaru, sehingga judul
+ * kartunya berbohong: rentang "27 Sep – 28 Sep" tetap ditulis "Ringkas 30 Hari"
+ * hanya karena catatan terbaru kebetulan 28 Sep (temuan audit 59.3). Sekarang
+ * yang benar-benar dibaca = 30 hari terakhir dari hari ini, jadi judul & isinya
+ * satu cerita: catatan yang lebih tua dari jendela itu memang tidak ikut —
+ * sebagaimana arti "30 hari terakhir" bagi siapa pun.
+ *
+ * `todayIso` kosong (belum diketahui, mis. render pertama) ⇒ jendelanya belum
+ * bisa ditentukan, dan itu dikatakan dengan daftar kosong — bukan dengan asumsi
+ * "hari ini = tanggal catatan terbaru" yang cuma menutupi ketidaktahuan.
  */
-export function walletWindow(txs: HistoryTransaction[]): HistoryTransaction[] {
-  if (txs.length === 0) return []
-  const newest = txs.reduce((latest, tx) => (tx.date > latest ? tx.date : latest), txs[0].date)
-  const from = shiftISODate(newest, -(WALLET_DETAIL_WINDOW_DAYS - 1))
-  return txs.filter((tx) => tx.date >= from && tx.date <= newest)
+export function walletWindow(
+  txs: HistoryTransaction[],
+  todayIso: string,
+): HistoryTransaction[] {
+  if (txs.length === 0 || !todayIso) return []
+  const from = shiftISODate(todayIso, -(WALLET_DETAIL_WINDOW_DAYS - 1))
+  return txs.filter((tx) => tx.date >= from && tx.date <= todayIso)
 }
 
 export interface WalletPeriodSummary {
@@ -126,8 +136,11 @@ export interface WalletPeriodSummary {
  * setoran tabungan ikut terhitung keluar), jadi halaman ini tidak mungkin
  * berbeda angka dengan Riwayat & Insight.
  */
-export function walletSummary30d(txs: HistoryTransaction[]): WalletPeriodSummary | null {
-  const windowTxs = walletWindow(txs)
+export function walletSummary30d(
+  txs: HistoryTransaction[],
+  todayIso: string,
+): WalletPeriodSummary | null {
+  const windowTxs = walletWindow(txs, todayIso)
   if (windowTxs.length === 0) return null
 
   const { count, income, expense, net } = summarizeTransactions(windowTxs)
@@ -177,8 +190,9 @@ function walletDelta(tx: HistoryTransaction): number {
 export function walletSparkline(
   wallet: WalletAccount,
   txs: HistoryTransaction[],
+  todayIso: string,
 ): WalletTrendPoint[] {
-  const windowTxs = walletWindow(txs)
+  const windowTxs = walletWindow(txs, todayIso)
   if (windowTxs.length === 0) return []
 
   const dates = windowTxs.map((tx) => tx.date).sort()
@@ -229,6 +243,13 @@ export const WALLET_PERIOD_COPY = {
   expense: 'Keluar',
   net: 'Net',
   windowHint: (from: string, to: string, count: number) => `${from} – ${to} · ${count} catatan`,
+  /**
+   * Jendela 30 hari terakhir tidak punya catatan (mis. dompet yang isinya cuma
+   * catatan lama). Dikatakan apa adanya — kartu ringkasan tidak boleh hilang
+   * diam-diam sementara judul "30 hari" masih menggantung di layar.
+   */
+  emptyWindow: (days: number) =>
+    `Dalam ${days} hari terakhir belum ada catatan di dompet ini. Catatan yang lebih lama tetap ada di daftar bawah.`,
   netHint: 'Net = masuk − keluar, termasuk setoran tabungan.',
   trendTitle: 'Arah Saldo',
   trendHint: 'Saldo harian dari catatanmu, bukan proyeksi.',
@@ -346,6 +367,76 @@ export const WALLET_TREND_COLORS = {
 } as const
 
 
+/* ── HAPUS DOMPET (paket 62) ─────────────────────────────────────────────────
+   Sampai paket 61 user bisa MENAMBAH dompet, mengoreksi saldonya, dan
+   memindahkan dananya — tapi tidak bisa membuangnya: `DELETE /api/wallets/:id`
+   sudah ada di server, hanya saja tidak punya satu pun pemanggil di UI (temuan
+   audit #2). Copy di bawah ini yang dipakai dua pintunya (`/wallet` lewat popover
+   kartu, `/wallet/[id]` lewat tombol di bar aksi) supaya kalimat konfirmasinya
+   tidak pernah beda antar halaman.
+
+   Aturan copy-nya tiga, dan ketiganya wajib:
+
+     1. sebut JUMLAH: berapa catatan yang menyentuh dompet ini;
+     2. sebut DAMPAK UANGNYA: nominal saldo yang berhenti dihitung di Total Saldo,
+        Net Worth, dan Jatah Harian;
+     3. sebut APA YANG TIDAK DIKEMBALIKAN: uang yang sudah keluar tidak kembali,
+        dan catatannya tetap ada di Riwayat (kanon §4.5 — yang dihapus dompetnya,
+        bukan pengeluarannya). */
+
+export const WALLET_DELETE_COPY = {
+  /** label aksi di popover kartu `/wallet` dan tombol di `/wallet/[id]` */
+  action: 'Hapus dompet',
+  actionHint: 'Keluar dari daftar & Total Saldo',
+  /** aria-label tombol — menyebut dompetnya supaya pembaca layar tahu konteksnya */
+  actionA11y: (name: string) => `Hapus dompet ${name}`,
+  /** overlay = tombol "batal" tak terlihat di belakang dialog */
+  overlay: 'Batal hapus dompet',
+  title: (name: string) => `Hapus dompet ${name}?`,
+  /** awal kalimat — nominalnya ditebalkan di tengah (pola CONFIRM_DELETE_COPY) */
+  bodyLead: (name: string) => `Dompet ${name} keluar dari daftar dompetmu, dan saldo `,
+  /** sisa kalimat: dampak + jumlah catatan yang menyentuh dompet ini */
+  bodyTail: (records: number) =>
+    records > 0
+      ? ` tidak lagi ikut dihitung di Total Saldo, Net Worth, dan Jatah Harian. Dompet ini menyentuh ${records} catatan.`
+      : ' tidak lagi ikut dihitung di Total Saldo, Net Worth, dan Jatah Harian. Belum ada catatan di dompet ini.',
+  /** fakta yang TIDAK boleh disembunyikan sebelum user menekan Hapus */
+  keepNote:
+    'Uang yang sudah keluar TIDAK kembali, dan catatannya tetap ada di Riwayat — yang kamu hapus dompetnya, bukan pengeluarannya.',
+  /** jalan yang lebih aman, ditawarkan SEBELUM user menekan Hapus */
+  moveFirstHint:
+    'Masih ada isinya? Tutup dialog ini dan pakai “Pindah Dana” dulu — saldonya pindah utuh ke dompet lain.',
+  /** jaring pengaman: hak Undo 5 detik yang sama dengan hapus catatan */
+  safety: (seconds: number) =>
+    `Masih bisa dibatalkan lewat tombol Undo selama ${seconds} detik setelah kamu menekannya.`,
+  cancel: 'Batal',
+  confirm: 'Hapus dompet',
+} as const
+
+export const WALLET_DELETE_TOAST = {
+  title: (name: string) => `Dompet ${name} dihapus`,
+  description:
+    'Saldo dompet ini tidak lagi ikut dihitung. Catatan lamanya tetap ada di Riwayat.',
+  /** label aksi di toast (Sonner) — jaring pengaman 5 detik (PRD 2251) */
+  undo: 'Undo',
+  undoneTitle: 'Dompet dikembalikan 🌿',
+  undoneDescription: 'Dompetnya balik ke daftar beserta saldonya.',
+  /** jaring pengaman tetap jujur kalau Undo ditekan setelah jendelanya tutup */
+  expired: 'Jendela Undo-nya sudah lewat — dompetnya bisa ditambahkan lagi kapan aja 🌿',
+} as const
+
+/**
+ * Nominal untuk kalimat konfirmasi hapus dompet.
+ *
+ * Lewat `maskMoney()` (definisi sensor kanon `MASKED_AMOUNT`), bukan formatter
+ * kedua: kalau tombol mata app sedang ON, dialog konfirmasi TIDAK boleh menjadi
+ * satu-satunya tempat yang membocorkan nominal (§5.7 — yang dibaca disensor,
+ * yang disunting tidak; dialog ini bukan form).
+ */
+export function walletDeleteBalanceLabel(balance: number, masked: boolean): string {
+  return maskMoney(balance, masked)
+}
+
 /**
  * Popover aksi di kartu dompet halaman Dompet & Akun (/wallet).
  *
@@ -369,5 +460,13 @@ export const WALLET_CARD_MENU_COPY = {
   transfer: TRANSFER_DOOR_COPY.menuLabel,
   transferHint: TRANSFER_DOOR_COPY.menuHint,
   syncHint: 'Smart Sync',
+  /**
+   * Aksi hapus dipasang di popover yang SAMA dengan "Pindah Dana" (paket 62):
+   * jalan yang lebih aman duduk tepat di sebelah aksi merusaknya, dan labelnya
+   * dibaca dari `WALLET_DELETE_COPY` supaya popover ini tidak menumbuhkan nama
+   * kedua untuk satu aksi.
+   */
+  delete: WALLET_DELETE_COPY.action,
+  deleteHint: WALLET_DELETE_COPY.actionHint,
 } as const
 

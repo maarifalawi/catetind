@@ -1,6 +1,6 @@
 'use client'
 
-import { useSyncExternalStore } from 'react'
+import { useMemo, useSyncExternalStore } from 'react'
 import {
   FUND_CONTRIBUTIONS,
   INITIAL_SINKING_FUNDS,
@@ -40,6 +40,12 @@ import { FUNDS_STATE_KEY, loadDeviceState, saveDeviceState } from './idb'
                          server & render pertama client identik (tidak ada
                          hydration mismatch).
 
+   PAKET 60 menambah satu bagian state: `removedIds` — TOMBSTONE celengan yang
+   dihapus user. Barisnya SENGAJA tidak dibuang (pola `deleteBill()`), karena
+   Undo harus memulihkan target & progresnya apa adanya dan riwayat setoran yang
+   menunjuk `fundId`-nya tidak boleh jadi yatim. Semua pembaca tampilan karena itu
+   memakai `liveFunds()`/`useLiveFunds()`, bukan `snapshot.funds` mentah.
+
    BATAS JUJUR (sama dengan store uang): state-nya hidup di memory modul dan
    ditulis ke IndexedDB (`lib/money/idb.ts`, key `funds`) supaya bertahan saat
    refresh. TIDAK ada sinkronisasi antar-perangkat. Di produksi tiap penulisan
@@ -53,6 +59,19 @@ export interface PersistedFunds {
   version?: number
   funds?: SinkingFundItem[]
   contributions?: FundContribution[]
+  /**
+   * TOMBSTONE celengan yang dihapus user (paket 60) — pola yang persis sama
+   * dengan `removedIds` di `lib/money/bills-store.ts` & `wealth-store.ts`.
+   *
+   * Barisnya TIDAK dibuang dari `funds` karena tiga hal bergantung padanya:
+   *   · Undo hapus (jendela 5 detik) harus memulihkan target, progres, dan
+   *     posisinya seperti semula;
+   *   · riwayat setoran (`contributions`) menunjuk `fundId` yang sama — kalau
+   *     barisnya dibuang, riwayat uang yang sudah keluar jadi yatim;
+   *   · halaman /budget/<id> yang masih terbuka harus tahu bedanya "dihapus"
+   *     dan "belum pernah ada", bukan menampilkan celengan hantu.
+   */
+  removedIds?: number[]
   /** true = akun ini sudah dihapus user → jangan isi ulang celengan contoh */
   purged?: boolean
 }
@@ -60,6 +79,8 @@ export interface PersistedFunds {
 export interface FundsState {
   funds: SinkingFundItem[]
   contributions: FundContribution[]
+  /** id celengan yang dihapus user (tombstone) — lihat `PersistedFunds.removedIds` */
+  removedIds: number[]
 }
 
 export interface FundsSnapshot extends FundsState {
@@ -74,6 +95,7 @@ const FUNDS_STATE_VERSION = 1
 const SERVER_SNAPSHOT: FundsSnapshot = Object.freeze({
   funds: INITIAL_SINKING_FUNDS,
   contributions: FUND_CONTRIBUTIONS,
+  removedIds: [],
   hydrated: false,
 })
 
@@ -81,6 +103,10 @@ const SERVER_SNAPSHOT: FundsSnapshot = Object.freeze({
 const EMPTY_SNAPSHOT: FundsSnapshot = Object.freeze({
   funds: [],
   contributions: [],
+  /* tombstone ikut dikosongkan: inilah "purge dari IndexedDB" milik alur Hapus
+     Akun — baris celengan yang sudah dihapus user baru-benar-benar dibuang dari
+     perangkat saat itu, bersama seluruh state lain (`lib/account.ts`) */
+  removedIds: [],
   hydrated: true,
 })
 
@@ -120,13 +146,20 @@ function persist(snapshot: FundsState): void {
     version: FUNDS_STATE_VERSION,
     funds: snapshot.funds,
     contributions: snapshot.contributions,
+    /* tombstone ikut disimpan: tanpa itu, celengan yang dihapus user hidup lagi
+       setelah refresh (`mergeFundsState` membaca daftar tersimpan apa adanya) */
+    removedIds: snapshot.removedIds,
     purged: accountPurged,
   })
 }
 
 function commit(next: FundsSnapshot): void {
-  live = next
-  persist(next)
+  /* penjaga bentuk: `removedIds` SELALU ada di state hidup. Sebelum paket 60
+     satu jalur tulis (`contributeToFund`) membangun snapshot-nya sendiri tanpa
+     menyebar `live` — dengan penjaga ini, jalur seperti itu tidak bisa lagi
+     membuat `removedIds` menghilang jadi `undefined`. */
+  live = { ...next, removedIds: next.removedIds ?? [] }
+  persist(live)
   emit()
 }
 
@@ -203,7 +236,14 @@ export function mergeFundsState(
   )
   const contributions = [...baseContributions, ...extraContributions]
 
-  return { funds, contributions, hydrated: true }
+  /* TOMBSTONE digabung, bukan dipilih salah satu: hapus di satu sesi dan hapus
+     di sesi/perangkat lain sama-sama harus tetap terhapus (persis aturan
+     `mergeBillsState`). Daftar kosong juga artinya "tidak ada yang dihapus". */
+  const removedIds = Array.from(
+    new Set([...current.removedIds, ...(known ? (persisted?.removedIds ?? []).filter((id) => id) : [])]),
+  )
+
+  return { funds, contributions, removedIds, hydrated: true }
 }
 
 async function hydrateFundsStore(): Promise<void> {
@@ -270,7 +310,11 @@ export function contributeToFund(
 ): ContributionResult | null {
   const target = live.funds.find((fund) => fund.id === fundId)
   const rounded = Math.round(Number(amount))
-  if (!target || !Number.isFinite(rounded) || rounded <= 0) return null
+  /* celengan yang sudah dihapus user (tombstone) TIDAK boleh menerima setoran:
+     sheet yang masih terbuka setelah penghapusan akan menulis uang ke celengan
+     yang sudah tidak ada di layar mana pun. */
+  if (!target || live.removedIds.includes(fundId) || !Number.isFinite(rounded) || rounded <= 0)
+    return null
 
   const fund: SinkingFundItem = {
     ...target,
@@ -287,6 +331,7 @@ export function contributeToFund(
   }
 
   commit({
+    ...live,
     funds: live.funds.map((item) => (item.id === fundId ? fund : item)),
     contributions: [contribution, ...live.contributions],
     hydrated: true,
@@ -315,6 +360,43 @@ export function sweepIntoFund(
   return contributeToFund(fundId, amount, SWEEP_SOURCE_ID, dateISO)
 }
 
+/* ── HAPUS CELENGAN = TOMBSTONE + EFEK UANG YANG DIKATAKAN (paket 60 · 60.2) ─
+   Pola `deleteBill()` (`lib/money/bills-store.ts`): barisnya TIDAK dibuang, cuma
+   ditandai. Alasannya di sini lebih kuat daripada di tagihan:
+
+     1. UNDO harus memulihkan target, progres, tahap tanaman, dan POSISI barisnya
+        — kalau barisnya dibuang, Undo cuma bisa menanam celengan kosong baru;
+     2. riwayat setoran (`contributions`) menunjuk `fundId` ini. Uangnya memang
+        sudah keluar dari dompet, jadi catatannya TIDAK boleh ikut terhapus
+        (aturan hapus repo: yang hilang barisnya, bukan uangnya);
+     3. menyimpan barisnya membuat /budget/<id> bisa bilang "celengan ini sudah
+        dihapus" alih-alih menampilkan layar "tidak ditemukan".
+
+   EFEK UANG yang wajib diketahui user: `sinkingObligationOf()` memotong
+   kewajiban bulanan celengan dari kolam SEBELUM jatah harian dibagi, jadi
+   menghapus celengan MENAIKKAN Jatah Harian. Store ini tidak menulis kalimatnya
+   (copy ada di `FUND_DELETE_COPY`), tapi ia yang membuat efek itu terjadi: daftar
+   yang dibaca `computeDailyHud()` sudah tidak memuat celengan ini. */
+
+/** hapus satu celengan (tombstone). `null` = celengan tidak ada / sudah dihapus,
+ *  dan itu berarti TIDAK ada yang ditulis (bukan tulisan separuh). */
+export function deleteFund(fundId: number): SinkingFundItem | null {
+  const fund = live.funds.find((row) => row.id === fundId)
+  if (!fund || live.removedIds.includes(fundId)) return null
+  commit({ ...live, removedIds: [...live.removedIds, fundId], hydrated: true })
+  return fund
+}
+
+/** Undo hapus: cabut tombstone-nya — target, progres, dan posisi barisnya balik
+ *  apa adanya karena barisnya tidak pernah dibuang. `null` = tidak ada tombstone
+ *  untuk id itu (mis. Undo ditekan dua kali / jendelanya sudah lewat). */
+export function restoreFund(fundId: number): SinkingFundItem | null {
+  if (!live.removedIds.includes(fundId)) return null
+  const fund = live.funds.find((row) => row.id === fundId) ?? null
+  commit({ ...live, removedIds: live.removedIds.filter((id) => id !== fundId), hydrated: true })
+  return fund
+}
+
 /* ── HAPUS AKUN: KOSONGKAN STORE ─────────────────────────────────────────────
    Dipanggil `lib/account.ts` SETELAH IndexedDB dihapus. Tugasnya sama dengan
    `purgeMoneyStore()`: membuat state di memory benar-benar kosong dan
@@ -335,8 +417,30 @@ export function useFundsStore(): FundsSnapshot {
   return useSyncExternalStore(subscribeFundsStore, getFundsSnapshot, getServerFundsSnapshot)
 }
 
-/** satu celengan dari id — `null` = belum ada (mis. id URL yang asing) */
+/**
+ * Celengan yang masih HIDUP: daftar penuh dikurangi tombstone (paket 60).
+ *
+ * Semua pembaca tampilan & angka uang memakai ini — bukan `snapshot.funds`
+ * langsung. Kalau satu komponen saja masih membaca daftar mentah, celengan yang
+ * dihapus user akan tetap ikut dihitung di `sinkingObligationOf()` (jatah harian
+ * tetap terpotong) padahal kartunya sudah hilang: dua cerita di satu layar.
+ */
+export function liveFunds(snapshot: FundsSnapshot): SinkingFundItem[] {
+  if (snapshot.removedIds.length === 0) return snapshot.funds
+  return snapshot.funds.filter((fund) => !snapshot.removedIds.includes(fund.id))
+}
+
+/** daftar celengan hidup untuk komponen — satu hook supaya pemanggilnya tidak
+ *  lupa menyaring tombstone (identitasnya stabil per snapshot) */
+export function useLiveFunds(): SinkingFundItem[] {
+  const snapshot = useFundsStore()
+  return useMemo(() => liveFunds(snapshot), [snapshot])
+}
+
+/** satu celengan dari id — `null` = belum ada ATAU sudah dihapus user (tombstone),
+ *  sehingga halaman detail tidak pernah menampilkan celengan hantu */
 export function fundById(snapshot: FundsSnapshot, fundId: number): SinkingFundItem | null {
+  if (snapshot.removedIds.includes(fundId)) return null
   return snapshot.funds.find((fund) => fund.id === fundId) ?? null
 }
 

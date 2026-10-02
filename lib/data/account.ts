@@ -108,6 +108,7 @@ export const EXPORT_DATA_COPY = {
   cardTitle: 'Isi filenya apa saja?',
   includes: [
     'Dompet & saldo hasil hitung ulang dari baris ledger',
+    'Dompet yang sudah kamu hapus, ditandai sebagai terhapus (paket 62)',
     'Seluruh baris ledger, termasuk yang sudah kamu hapus (ditandai)',
     'Hutang & piutang beserta riwayat pembayarannya',
     'Celengan/target tabungan dan target bulanan',

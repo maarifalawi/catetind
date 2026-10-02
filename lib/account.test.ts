@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { APP_STORAGE_PREFIX, deleteAccount, purgeDeviceData, purgeStorageKeys, type StorageLike } from './account'
 import { DELETE_ACCOUNT_KEYWORD, matchesDeleteKeyword } from './data/account'
-import { getMoneySnapshot, mergeMoneySnapshot, postExpense, resetMoneyStore, type PersistedMoney } from './money/store'
+import { getMoneySnapshot, isAccountEmpty, mergeMoneySnapshot, postExpense, removeWalletAccount, resetMoneyStore, type PersistedMoney } from './money/store'
 import { loadMoneyState } from './money/idb'
 import { getWealthSnapshot, mergeWealthState, resetWealthStore } from './money/wealth-store'
 import { getBillsSnapshot, liveBills, mergeBillsState, resetBillsStore } from './money/bills-store'
@@ -128,12 +128,41 @@ describe('purgeDeviceData', () => {
       wallets: [],
       rows: [],
       removedIds: [],
+      removedWalletIds: [],
       syncedIds: [],
       purged: true,
     })
 
     expect(afterPurge.wallets).toHaveLength(0)
     expect(afterPurge.rows).toHaveLength(0)
+    expect(afterPurge.removedWalletIds).toHaveLength(0)
+  })
+
+  it('Hapus Akun juga membuang tombstone DOMPET yang dihapus user (paket 62)', async () => {
+    /* user menghapus satu dompet lebih dulu — tombstone-nya hidup di state & IndexedDB */
+    const removal = removeWalletAccount('tunai')
+    expect(removal).not.toBeNull()
+    expect(getMoneySnapshot().removedWalletIds).toEqual(['tunai'])
+
+    const report = await purgeDeviceData()
+
+    /* dompet terhapus bukan "data yang harus dipertahankan": setelah akunnya
+       dihapus, tidak boleh ada satu pun jejak dompet di perangkat ini */
+    expect(getMoneySnapshot().removedWalletIds).toEqual([])
+    expect(getMoneySnapshot().wallets).toHaveLength(0)
+    /* dompet yang di-tombstone tetap ikut terhitung sebagai dompet yang dibersihkan
+       (ia memang ada di state perangkat sampai Hapus Akun dijalankan) */
+    expect(report.walletsCleared).toBe(WALLET_SEED.length)
+  })
+
+  it('state setelah Hapus Akun dianggap KOSONG oleh `isAccountEmpty` (paket 62)', async () => {
+    postExpense({ walletId: 'bca', amount: 5_000, note: 'Air' })
+
+    await purgeDeviceData()
+
+    /* temuan audit #3: syarat lama (`wallets == 0 && rows == 0`) tidak lagi cocok
+       sejak tombstone tidak membuang barisnya dari state */
+    expect(isAccountEmpty(getMoneySnapshot())).toBe(true)
   })
 
   it('REGRESI PRIVASI (paket 50): hutang & aset contoh tidak hidup lagi setelah Hapus Akun', () => {
@@ -202,6 +231,9 @@ describe('purgeDeviceData', () => {
       wallets: [],
       rows: [],
       removedIds: [],
+      /* tombstone dompet juga kosong (paket 62): hapus akun berarti tidak ada satu
+         pun jejak dompet di perangkat ini — termasuk dompet yang dihapus user */
+      removedWalletIds: [],
       /* hasil edit baris mock ikut kosong (paket 48) — hapus akun berarti tidak
          ada satu pun jejak data di perangkat ini */
       rowOverrides: {},

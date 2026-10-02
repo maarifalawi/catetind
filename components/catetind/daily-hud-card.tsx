@@ -1,67 +1,116 @@
 import { memo, useMemo } from 'react'
-import { CircleDashed, HandCoins, Sparkles } from 'lucide-react'
+import Link from 'next/link'
+import { CircleDashed, HandCoins, Settings2, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { TransactionBottomSheet } from '@/components/dashboard/transaction-bottom-sheet'
 import { usePrivacy } from './privacy-provider'
 import {
   HOME_HUD_COPY,
   HUD_COPY,
-  MONTHLY_WINDOW,
+  MONEY_SETTINGS_HREF,
+  TODAY_ISO,
   SPENDING_REVIEW_COPY,
-  SPENT_TODAY,
   computeDailyHud,
-  hasIncomeInWindow,
+  periodIncome,
+  periodUsagePct,
+  periodWindowForTab,
+  spentInWindow,
   type HudStatus,
 } from '@/lib/data/budget'
-import { useFundsStore } from '@/lib/money/funds-store'
+import { useLiveFunds } from '@/lib/money/funds-store'
+import { recordedTransactions, useMoneyStore } from '@/lib/money/store'
+import { hasConfiguredIncome, useUserMoneySettings } from '@/lib/user-money-settings'
+import { useTodayISO } from '@/lib/use-today-iso'
 import { openAICoachWithSeed } from '@/lib/ai-chat-bus'
+import { formatIDR } from '@/lib/wallets'
+import { LockedAmount } from './locked-amount'
 
 /* ── Kartu Jatah Hari Ini (Home) ─────────────────────────────────────────────
    Angkanya TIDAK ditulis di kartu ini: semuanya datang dari `computeDailyHud()`
    di `lib/data/budget.ts`, rumus yang SAMA dengan kartu di tab Bulanan /budget.
-   Dulu Home membaca konstanta jadi `DAILY_HUD`; sejak paket 46 ia menghitung HUD
-   dari STORE CELENGAN (`useFundsStore()`) dengan `window: MONTHLY_WINDOW` dan
-   sisa argumen default — persis kombinasi yang melahirkan `DAILY_HUD`.
 
-   Kenapa diubah: kewajiban celengan ikut memotong jatah harian. Kalau user
-   menanam celengan baru (atau menyetor) di /budget, halaman itu langsung
-   menghitung ulang — sementara Home tetap memakai `SINKING_OBLIGATION_ALL` yang
-   dibekukan saat modul dimuat. Satu bulan, dua angka "Jatah Hari Ini". Sekarang
-   keduanya membaca daftar celengan yang sama, jadi mustahil berbeda; angka demo
-   awalnya tetap identik karena seed-nya sama (`INITIAL_SINKING_FUNDS`).
+   PAKET 57 — sumber angkanya berubah, dan itu inti audit AKAR D:
 
-   `SPENT_TODAY` (pengeluaran hari berjalan) bukan bagian dari formula jatah
-   harian; ia hanya bahan bar progres di kartu ini. */
+     · pemasukan & cicilan → KONFIGURASI USER (`lib/user-money-settings.ts`,
+       diisi di onboarding atau Pengaturan), bukan `MONTHLY_INCOME` 7.500.000;
+     · uang keluar         → baris ledger NYATA (`recordedTransactions()`), bukan
+       `SPENT_THIS_MONTH` 2.300.000 — jadi mencatat pengeluaran Rp 50.000
+       benar-benar menurunkan jatah harian;
+     · kewajiban celengan  → daftar celengan yang HIDUP (`useLiveFunds()`;
+       tombstone celengan yang dihapus user tidak ikut dipotong — paket 60.2);
+     · jendela periode     → `periodWindowForTab("monthly", todayISO())`.
 
-/** Dry Spell (Domain 2B.3): tidak ada pemasukan di bulan berjalan → ganti card */
-const DRY_SPELL = !hasIncomeInWindow(MONTHLY_WINDOW)
+   PAKET 58 — bentuknya DIPADATKAN (58.5 · permintaan user). Kartu ini dulu
+   memakai ring 104px + saldo `text-3xl` + tiga baris footer, sehingga tingginya
+   mendikte tinggi baris pertama Home. Sekarang bentuknya: ANGKA UTAMA (28px)
+   + satu bar progres + SATU baris konteks (sisa · hari tersisa · cicilan).
+   Yang TIDAK hilang: judul, subjudul, chip status, caption angka, persen
+   terpakai, sisa periode, hari tersisa, cicilan, dan CTA Review saat lewat
+   jatah. Bar-nya memakai `role="progressbar"` + `aria-valuenow` (lebih baik
+   daripada ring yang dulu `aria-hidden`), animasinya dihormati
+   `prefers-reduced-motion` lewat `motion-reduce:transition-none`.
 
-const fmt = (n: number) => `Rp ${Math.round(n).toLocaleString('id-ID')}`
-
-/* geometri ring */
-const SIZE = 120
-const STROKE = 11
-const R = (SIZE - STROKE) / 2 - 2
-
+   Baris copy status (`STATUS.copy`) dirender saat status ≠ `onTrack` — chip
+   statusnya sendiri selalu ada; saat on-track kalimat itu hanya pengulangan
+   yang menambah tinggi, dan kanon 58.5 meminta "angka utama + 1 baris konteks
+   + bar progres". */
 
 /** Dibungkus `memo` — kartu ini tidak menerima props, jadi tidak perlu ikut
  *  re-render saat HomeScreen mengubah state popup (lihat catatan di
  *  cash-flow-card.tsx). Membaca context privasi global untuk menyensor nominal. */
+/* Nominal di kartu ini DISENSOR di tempat (paket 59 · 59.5): dulu `hide(fmt(...))`
+   mengganti stringnya, sehingga "Rp 85.000" → "Rp •••••••" mengubah lebar teks
+   dan baris di sekitarnya ikut bergeser tiap kali tombol mata ditekan. Sekarang
+   pemformatnya `formatIDR()` (formatter kanon repo — bukan `toLocaleString`
+   lokal) dan penyensornya `<LockedAmount/>`, yang mengunci lebar ke teks
+   terpanjang di antara angka & titiknya. */
 export const DailyHudCard = memo(function DailyHudCard() {
-  const { hide } = usePrivacy()
-  /* HUD bulan kalender dari daftar celengan yang HIDUP — sama dengan /budget */
-  const { funds } = useFundsStore()
-  const hud = useMemo(() => computeDailyHud({ sinkingFunds: funds }), [funds])
+  const { masked } = usePrivacy()
+  /* "hari ini" dari jam perangkat — `''` pada render pertama (hidrasi aman) */
+  const today = useTodayISO()
+  /* konfigurasi uang user + celengan hidup + baris ledger NYATA */
+  const settings = useUserMoneySettings()
+  const funds = useLiveFunds()
+  const snapshot = useMoneyStore()
+  const ledger = useMemo(() => recordedTransactions(snapshot), [snapshot])
 
-  const usedPct = hud.dailyBudget > 0 ? Math.min(SPENT_TODAY / hud.dailyBudget, 1) : 0
+  /* jendela bulan berjalan: panjang pembagi & posisi hari ini ikut tanggal asli */
+  const window = useMemo(() => periodWindowForTab('monthly', today || TODAY_ISO), [today])
+  const spent = useMemo(() => spentInWindow(ledger, window), [ledger, window])
+
+  const configured = hasConfiguredIncome(settings)
+  const hud = useMemo(
+    () =>
+      computeDailyHud({
+        monthlyIncome: settings.monthlyIncome,
+        totalInstallments: settings.totalInstallments,
+        sinkingFunds: funds,
+        spent,
+        window,
+      }),
+    [settings.monthlyIncome, settings.totalInstallments, funds, spent, window],
+  )
+  /* pemasukan periode = konfigurasi user ATAU catatan nyata di jendela ini */
+  const income = useMemo(
+    () => periodIncome(window, ledger, settings.monthlyIncome),
+    [window, ledger, settings.monthlyIncome],
+  )
+
+  /* ── "TERPAKAI" = PEMAKAIAN KOLAM PERIODE (audit Daily Budget) ─────────────
+     Dulu `spentToday / hud.dailyBudget`. Karena `hud.dailyBudget = remaining /
+     daysLeft` dan `remaining` SUDAH dikurangi pengeluaran hari ini, pembilangnya
+     ikut mengurangi penyebutnya sendiri — persentasenya melompat (mis. 88% di
+     awal siklus). Sekarang memakai `periodUsagePct(availablePool, spent)`:
+     bagian kolam periode yang benar-benar sudah terpakai. */
+  const usedPct = periodUsagePct(hud.availablePool, hud.spent)
   /* status & warna kanon PRD 2B.2 diambil dari satu sumber copy di lib/data */
   const status: HudStatus = usedPct < 0.75 ? 'onTrack' : usedPct < 1 ? 'approaching' : 'over'
   const STATUS = HOME_HUD_COPY.status[status]
 
   return (
     <section
-      aria-label="Jatah hari ini"
-      className="flex h-full flex-col rounded-[2rem] bg-cream p-4 ring-1 ring-soil/12"
+      aria-label={HOME_HUD_COPY.title}
+      className="flex flex-col rounded-[2rem] bg-cream p-4 ring-1 ring-soil/12"
     >
       {/* header — konsisten dengan kartu lain */}
       <div className="flex items-center justify-between">
@@ -86,18 +135,31 @@ export const DailyHudCard = memo(function DailyHudCard() {
         </span>
       </div>
 
-      {DRY_SPELL ? (
-        /* ── Dry Spell — PACING LIMITS DISEMBUNYIKAN (PRD 2B.3) ── */
+      {!configured ? (
+        /* ── BELUM DIATUR — paling jujur: jangan tampilkan angka contoh ──── */
+        <div className="mt-5 flex flex-col items-center rounded-2xl bg-cream px-6 py-8 text-center ring-1 ring-soil/8">
+          <span className="flex size-12 items-center justify-center rounded-full bg-cream text-forest ring-1 ring-soil/12">
+            <CircleDashed className="size-6" strokeWidth={1.8} />
+          </span>
+          <p className="mt-4 text-base font-semibold text-ink">{HUD_COPY.notConfiguredTitle}</p>
+          <p className="mt-1.5 text-sm leading-relaxed text-ink/50">{HUD_COPY.notConfiguredBody}</p>
+          <Link
+            href={MONEY_SETTINGS_HREF}
+            aria-label={HUD_COPY.notConfiguredA11y}
+            className="mt-5 flex items-center gap-2 rounded-full bg-forest px-5 py-2.5 text-[13px] font-semibold text-cream transition-colors hover:bg-forest-soft active:scale-[0.97]"
+          >
+            <Settings2 className="size-4" strokeWidth={2.4} aria-hidden />
+            {HUD_COPY.notConfiguredCta}
+          </Link>
+        </div>
+      ) : !income.hasIncome ? (
+        /* ── Dry Spell (PRD 2B.3) — pemasukan belum masuk di periode ini ── */
         <div className="mt-5 flex flex-col items-center rounded-2xl bg-cream px-6 py-8 text-center ring-1 ring-soil/8">
           <span className="flex size-12 items-center justify-center rounded-full bg-cream text-forest ring-1 ring-soil/12">
             <CircleDashed className="size-6" strokeWidth={1.8} />
           </span>
           <p className="mt-4 text-base font-semibold text-ink">{HUD_COPY.drySpellTitle}</p>
           <p className="mt-1.5 text-sm leading-relaxed text-ink/50">{HUD_COPY.drySpellBody}</p>
-          {/* CTA Dry Spell: dulu tombol MATI. Sekarang membuka Transaction Input
-              Engine bertipe Pemasukan — pola `trigger=` yang SAMA dengan kartu
-              Dry Spell di /budget (daily-hud-summary.tsx), jadi dua tempat yang
-              menceritakan kondisi yang sama juga punya jalan keluar yang sama. */}
           <TransactionBottomSheet
             defaultType="income"
             trigger={
@@ -111,87 +173,52 @@ export const DailyHudCard = memo(function DailyHudCard() {
           />
         </div>
       ) : hud.shortfall ? (
-        /* ── Jatah ditahan (audit UX #2) — jangan pernah tampilkan "Rp 0"
-              tanpa penjelasan. Jarang muncul karena mock HUD disetel sehat;
-              naikkan SPENT_THIS_MONTH di lib/data/budget.ts untuk mengujinya. */
+        /* ── Jatah ditahan (audit UX #2) — jangan pernah "Rp 0" tanpa sebab */
         <div className="mt-5 rounded-2xl bg-hud-terracotta/[0.08] px-4 py-6 text-center ring-1 ring-hud-terracotta/20">
-          <p className="text-base font-semibold text-hud-terracotta">
-            {HUD_COPY.shortfallBadge}
-          </p>
-          <p className="mt-1.5 text-[12px] leading-relaxed text-ink/60">
-            {HUD_COPY.shortfallBody}
-          </p>
+          <p className="text-base font-semibold text-hud-terracotta">{HUD_COPY.shortfallBadge}</p>
+          <p className="mt-1.5 text-[12px] leading-relaxed text-ink/60">{HUD_COPY.shortfallBody}</p>
         </div>
       ) : (
-        /* ── HUD normal — ring kompak + nominal di LUAR ring (anti overlap center) ── */
+        /* ── HUD PADAT (58.5): angka utama + bar progres + SATU baris konteks ── */
         <>
-          <div className="mt-3 flex flex-1 items-center gap-4">
-            <div className="relative shrink-0">
-              <svg
-                viewBox={`0 0 ${SIZE} ${SIZE}`}
-                className="size-[104px] -rotate-90"
-                aria-hidden
-              >
-                <circle
-                  cx={SIZE / 2}
-                  cy={SIZE / 2}
-                  r={R}
-                  fill="none"
-                  stroke="#ebe4de"
-                  strokeWidth={STROKE}
-                />
-                <circle
-                  cx={SIZE / 2}
-                  cy={SIZE / 2}
-                  r={R}
-                  fill="none"
-                  stroke={STATUS.ring}
-                  strokeWidth={STROKE}
-                  strokeLinecap="round"
-                  pathLength={1}
-                  strokeDasharray={`${usedPct} 1`}
-                  className="animate-[donut-grow_1.1s_ease-out_both]"
-                />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-sm font-semibold tracking-tight text-ink tabular-nums">
-                  {Math.round(usedPct * 100)}%
-                </span>
-                <span className="text-[10px] text-ink/45">{HOME_HUD_COPY.usedCaption}</span>
-              </div>
-            </div>
-
-            <div className="min-w-0 flex-1">
-              <p className="text-3xl font-semibold leading-none tracking-tight text-ink tabular-nums">
-                {hide(fmt(hud.dailyBudget))}
-              </p>
-              <p className="mt-0.5 text-[10px] text-ink/45">{HOME_HUD_COPY.dailyCaption}</p>
-              <p className="mt-1.5 text-[12px] font-medium leading-snug text-ink/70">
-                {STATUS.copy}
-              </p>
-              {/* kompromi DIAN: CTA ke AI Coach saat over — tanpa intimidasi.
-                  Tombolnya dulu MATI (tanpa onClick); sejak prompt 19 ia benar-
-                  benar membuka AI Coach dengan pertanyaan sudah terisi, sama
-                  seperti CTA berlabel sama di /budget. */}
-              {status === 'over' && (
-                <button
-                  type="button"
-                  onClick={() => openAICoachWithSeed(SPENDING_REVIEW_COPY.coachSeed)}
-                  className="mt-2 flex items-center gap-1.5 rounded-full bg-hud-terracotta/10 px-3 py-1.5 text-[12px] font-semibold text-hud-terracotta transition-colors hover:bg-hud-terracotta/20"
-                >
-                  <Sparkles className="size-3.5" strokeWidth={2.2} aria-hidden />
-                  {HOME_HUD_COPY.reviewCta}
-                </button>
-              )}
-            </div>
+          <div className="mt-3 flex items-baseline gap-2">
+            <p className="text-[28px] font-semibold leading-none tracking-tight text-ink tabular-nums">
+              <LockedAmount value={formatIDR(hud.dailyBudget)} masked={masked} />
+            </p>
+            <p className="text-[10px] text-ink/45">{HOME_HUD_COPY.dailyCaption}</p>
           </div>
 
-          {/* footer meta — mengisi bawah kartu, jadi tidak ada ruang kosong */}
+          <div className="mt-2.5 flex items-center gap-2.5">
+            <div
+              role="progressbar"
+              aria-label={HOME_HUD_COPY.title}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(usedPct * 100)}
+              className="h-2 flex-1 overflow-hidden rounded-full bg-soil/[0.09]"
+            >
+              <div
+                className="h-full rounded-full transition-[width] duration-700 ease-out motion-reduce:transition-none"
+                style={{ width: `${usedPct * 100}%`, backgroundColor: STATUS.ring }}
+              />
+            </div>
+            <span className="shrink-0 text-[11px] font-semibold text-ink/55 tabular-nums">
+              {Math.round(usedPct * 100)}% {HOME_HUD_COPY.usedCaption}
+            </span>
+          </div>
+
+          {/* kalimat status: hanya saat statusnya perlu dibicarakan (chip status
+              selalu tampil di header) — menjaga "satu baris konteks" di 58.5 */}
+          {status !== 'onTrack' && (
+            <p className="mt-2 text-[12px] font-medium leading-snug text-ink/70">{STATUS.copy}</p>
+          )}
+
+          {/* satu baris konteks: sisa periode · hari tersisa · cicilan */}
           <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-soil/12 pt-2.5 text-[11px] text-ink/55">
             <span>
               {HOME_HUD_COPY.remainingLead}{' '}
               <b className="font-semibold text-ink tabular-nums">
-                {hide(fmt(hud.remaining))}
+                <LockedAmount value={formatIDR(hud.remaining)} masked={masked} />
               </b>
             </span>
             <span aria-hidden className="size-1 rounded-full bg-ink/20" />
@@ -201,12 +228,39 @@ export const DailyHudCard = memo(function DailyHudCard() {
             <span aria-hidden className="size-1 rounded-full bg-ink/20" />
             <span>
               {HOME_HUD_COPY.installmentsLead}{' '}
-              <span className="tabular-nums">{hide(fmt(hud.installments))}</span>
+              <span className="tabular-nums">
+                <LockedAmount value={formatIDR(hud.installments)} masked={masked} />
+              </span>
             </span>
           </div>
+
+          {/* ── PINTU ATUR PEMBAGI JATAH (audit "Daily Budget Symptom B") ──────
+              Dulu tautan ke konfigurasi uang HANYA muncul di cabang "belum
+              diatur". Akibatnya user yang sudah punya angka tapi mau
+              MENYESUAIKAN target/pemasukan tidak tahu di mana mengaturnya.
+              Sekarang pintunya selalu ada di kartu (sumber sama dengan
+              /budget: `MONEY_SETTINGS_HREF` + `HOME_HUD_COPY.settingsCta`). */}
+          <Link
+            href={MONEY_SETTINGS_HREF}
+            className="mt-2.5 inline-flex w-fit items-center gap-1.5 text-[11px] font-semibold text-forest underline underline-offset-2 transition-colors hover:text-ink"
+          >
+            <Settings2 className="size-3.5" strokeWidth={2.4} aria-hidden />
+            {HOME_HUD_COPY.settingsCta}
+          </Link>
+
+          {/* kompromi DIAN: CTA ke AI Coach saat over — tanpa intimidasi */}
+          {status === 'over' && (
+            <button
+              type="button"
+              onClick={() => openAICoachWithSeed(SPENDING_REVIEW_COPY.coachSeed)}
+              className="mt-2 flex w-fit items-center gap-1.5 rounded-full bg-hud-terracotta/10 px-3 py-1.5 text-[12px] font-semibold text-hud-terracotta transition-colors hover:bg-hud-terracotta/20"
+            >
+              <Sparkles className="size-3.5" strokeWidth={2.2} aria-hidden />
+              {HOME_HUD_COPY.reviewCta}
+            </button>
+          )}
         </>
       )}
     </section>
   )
 })
-

@@ -271,16 +271,25 @@ struktur yang **TIDAK BOLEH "diperbaiki balik"** oleh task berikutnya. Rincian:
 | Settlement joint (data seed) | **Jon transfer Rp 25.000 ke Dany** | dikunci di `lib/data/joint.test.ts`; dihitung dari `net = bayar − kewajiban`, jadi split 60/40 benar-benar dipakai |
 | Settlement joint + `REALTIME_ARRIVAL` | **Rp 250.000** | idem |
 | `PRIVATE_EXPENSE_POLICY` | `'shared'` + pengungkapan nominal | `lib/data/joint-ledger.ts`; nilai `'excluded'` sudah diuji, jadi keputusan produk tinggal ganti satu baris |
-| `DAILY_HUD` | tidak bergeser (`Rp 800.000`×2 · `Rp 200.000`×1 · `4 hari`×1) | kalau berubah karena paket lain, sebut alasannya |
+| `DAILY_HUD` (konstanta kanon demo) | **tetap** `Rp 800.000`×2 · `Rp 200.000`×1 · `4 hari`×1 | dihitung dari konstanta kanon (`MONTHLY_INCOME` 7.500.000 − `TOTAL_INSTALLMENTS` 800.000 − celengan 3.600.000 − `SPENT_THIS_MONTH` 2.300.000 = 800.000 / 4 hari). **Paket 57 TIDAK menyentuh angkanya** (dibuktikan manual di `docs/handoff/laporan/57-…-laporan.md`, plus test `lib/data/budget.test.ts`) |
+| Jatah Hari Ini yang **dilihat user** (paket 57) | turunan: `(pemasukan user − total cicilan user − kewajiban celengan − pengeluaran LEDGER periode ini) / sisa hari` | sumbernya konfigurasi uang user (`lib/user-money-settings.ts`) + `spentInWindow(recordedTransactions())`. Sebelum paket 57 nilainya default konstanta (7.500.000 / 800.000 / 2.300.000) — angka contoh yang dipakai seolah milik user. Contoh sah: pemasukan 7.500.000 · cicilan 800.000 · celengan 3.600.000 · pengeluaran ledger 0 · 28 Sep 2026 → `3.100.000 / 3 hari = Rp 1.033.333`; catat Rp 50.000 → `Rp 1.016.666`. Pemasukan **belum diatur (0)** → kartu menampilkan CTA “Atur pemasukanmu dulu”, **bukan** angka |
+| Angka gaji demo | **7.500.000** di semua tempat | paket 57 menyatukan `home-money.ts` & `calendar.ts` (dulu 8.500.000) ke kanon `MONTHLY_INCOME`. Akibatnya: Home “Arus Uang” masuk 7.500.000 · keluar 752.000 · net **6.748.000** (dulu net 7.748.000), dan ringkasan pemasukan periode /calendar turun 1.000.000. Saldo kanon Rp 1.850.000 TIDAK berubah |
 
 ### 10.2 Struktur yang sudah benar (jangan bikin jalur kedua)
 
 - **Satu ledger kas:** `lib/money/{ledger,store,idb}.ts`. `balance = opening + Σ baris`; `walletAccountsTotal()` wajib argumen; `liquidCashTotal()` sudah dihapus. Dilarang menyimpan saldo di state komponen/halaman.
+- **Hapus DOMPET = tombstone (paket 62):** `MoneySnapshot.removedWalletIds` + `removeWalletAccount()`/`restoreWalletAccount()`. Dompet tetap ada di `snapshot.wallets` (penjaga invariant `commit()` menghitung `Σ saldo − Σ opening` dari daftar itu — membuangnya = penulisan DITOLAK), yang hilang hanya visibilitasnya lewat `liveWalletSeeds()`. Dilarang menambah jalur hapus dompet kedua, dan dilarang membuat selector baru yang membaca `snapshot.wallets` mentah untuk tampilan/pilihan (pakai `liveWalletSeeds()`); `walletBalance`/`balancesOf`/`openingsOf` tetap memakai daftar mentah supaya invariant seimbang. Baris ledger dompet terhapus TIDAK dibuang (kanon §4.5), dan rujukan riwayat dibaca lewat `walletNameAnyOf()` supaya tidak jadi yatim.
+- **Satu "hari ini" (paket 57):** `lib/time.ts` (`localISODate`, `todayISO`, `dayOfMonth`) + hook klien `lib/use-today-iso.ts` (`useTodayISO()`, `'use client'`). Jangkar tanggal di `lib/data/*` (`TODAY_ISO`, `CURRENT_DAY`, `CALENDAR_TODAY_ISO`, `JOINT_TODAY_ISO`, `WEALTH_TODAY_ISO`, `WALLET_TODAY_ISO`, `HISTORY_TODAY_ISO`) sekarang **default render server/test & data seed** — dilarang lagi jadi sumber tanggal yang dibaca user. Hook-nya TERPISAH karena `lib/time.ts` juga diimpor Server Component & route handler (`app/history/page.tsx`, `app/api/wallets/**`); menaruh `useState` di sana membuat build gagal.
+- **Satu konfigurasi uang user (paket 57):** `lib/user-money-settings.ts` (`monthlyIncome`, `totalInstallments`, `paydayDate`, `dashboardPeriod`) — sumber awal = hasil onboarding, dijaga penanda `purged`, ikut `purgeDeviceData()` & file ekspor. Angka uang yang MENJADI KLAIM tentang user (jatah harian, pembagi DTI, waterfall gaji, rasio beban tetap) WAJIB dibaca dari sini + baris ledger (`recordedTransactions`/`spentInWindow`), bukan dari konstanta `lib/data/*`. Konstanta 7.500.000/800.000/2.300.000 tinggal sebagai kanon demo & default test.
 - **Joint:** `lib/data/joint-ledger.ts` (`SplitSpec`, `sharesOf`, `ledgerTotals`) = satu-satunya rumus uang bersama. Komponen tidak boleh menghitung utang sendiri.
 - **API:** setiap handler `app/api/**` diawali `requireUser()` (`lib/session.ts`); identitas SELALU dari sesi, tidak pernah dari body request.
 - **Sesi & kunci:** `lib/session.ts` (+ `/api/session`) — sejak paket 45 sesinya Supabase Auth (`lib/supabase/session-cookie.ts`), `requireUser()` tetap API yang sama; `lib/app-lock-store.ts` (PBKDF2) + `components/catetind/app-lock-provider.tsx` di `app/layout.tsx`; route publik di `lib/public-routes.ts`.
 - **Backend (paket 45):** `supabase/migrations/*.sql` = satu-satunya tempat skema & policy RLS diubah (jangan mengubah tabel lewat dashboard tanpa menulis migrasinya). Jalur data app: `lib/supabase/{client,server,rest,mappers,money-remote,local-migration,user-settings-remote,ai-usage-remote,invite-remote,realtime}.ts`. **Dilarang** menaruh kunci rahasia peran server di klien/repo/`NEXT_PUBLIC_*`.
 - **Persistensi:** `lib/money/idb.ts` (IndexedDB = cache + antrean offline) + penanda `purged` supaya data yang dihapus user tidak "lahir lagi"; server = sumber utama saat login (`mergeWithRemote`).
+
+- **Hapus CELENGAN = tombstone (paket 60):** `FundsSnapshot.removedIds` + `deleteFund()`/`restoreFund()`; barisnya tetap ada di `snapshot.funds` (bahan Undo & agar riwayat setoran yang menunjuk `fundId`-nya tidak jadi yatim), yang hilang hanya visibilitasnya lewat `liveFunds()`/`useLiveFunds()`. **Dilarang** membaca `snapshot.funds` mentah untuk tampilan atau angka uang (`sinkingObligationOf()` ikut membaca daftar ini — kalau satu komponen lupa menyaring, Jatah Harian tetap terpotong padahal kartunya sudah hilang), dan dilarang membuang baris `contributions`. Pola yang sama untuk budget kategori: `removeBudget()`/`restoreBudget()` di `lib/data/budget.ts` (Undo memulihkan POSISI baris, `applyBudgetSave(..., takenIds)` melarang id dipakai ulang).
+- **Aksi bayar tagihan wajib punya jalur TANPA gesture (paket 60):** tombol "Tandai Lunas" (belum lunas) & "Batal lunas" (lunas **yang punya `paidRowId`**) duduk di kartu; geser kanan tetap jalur cepat. Tagihan contoh yang stempelnya tidak punya baris kas **tidak** diberi tombol batal — membatalkannya tidak mengembalikan uang apa pun, dan itu ditulis di baris meta.
+- **Tidak ada tombol tanpa akibat (paket 60.3):** "Pin ke Dashboard" dihapus beserta copy-nya (`HUD_COPY.pin/pinned`) karena `DailyHudCard` di Home tidak pernah membacanya. Kalau kelak pin diinginkan, simpan di konfigurasi uang user + Home wajib berubah.
 
 - **Edit satu pintu (paket 48):** mengubah catatan lewat `editRow()` di `lib/money/store.ts` (baris store diperbarui di barisnya; baris mock lewat `rowOverrides`, diterapkan `applyRowOverride()`). **Dilarang** menyimpan hasil edit di state halaman (`editedTxs` sudah dihapus dari `/history` & `/wallet/[id]`).
 
@@ -289,13 +298,15 @@ struktur yang **TIDAK BOLEH "diperbaiki balik"** oleh task berikutnya. Rincian:
 ### 10.3 Validasi wajib (DIPERBARUI — `pnpm test` masuk checklist)
 
 ```bash
-pnpm test          # 319 test / 24 file — wajib hijau, tidak boleh ada .skip
+pnpm test          # 663 test / 41 file — wajib hijau, tidak boleh ada .skip
 pnpm exec tsc --noEmit
 pnpm build
 pnpm theme:audit
 ```
 
 Catatan mesin: pnpm lokal 9.12.0 sedangkan `package.json` menulis `packageManager: pnpm@12.3.4` (versi itu tidak ada) → tambahkan `--config.manage-package-manager-versions=false`; perbaiki field itu sebelum membuat CI.
+
+**Riwayat jumlah test:** 319/24 (basi, s/d paket 42) → **511/34** (terukur saat audit uang 28 Sep 2026) → **543/37** setelah paket 57 (tiga file baru: `lib/time.test.ts`, `lib/user-money-settings.test.ts`, `lib/data/budget.test.ts`) → **618/39** setelah paket 61 → **644/41** setelah paket 62 (dua file baru: `lib/money/wallet-delete.test.ts` 12 kasus + `lib/data/category-prefs.test.ts` 10 kasus, plus 4 kasus yang ditambahkan ke `export.test.ts`/`account.test.ts`) → **663/41** setelah paket 60 (+19 kasus di file yang sudah ada: `lib/data/budget.test.ts` 11→17 hapus budget 60.1, `lib/money/funds-store.test.ts` 16→24 hapus celengan 60.2, `lib/data/calendar.test.ts` 15→20 jangkar tanggal & siklus gajian 60.5). Angka 319 di §10.3 sebelumnya adalah sisa sebelum paket 43–56 dan sudah dikoreksi di sini.
 
 ### 10.4 Yang BELUM ada (jangan diklaim sudah selesai)
 

@@ -1,4 +1,5 @@
 import { HISTORY_TODAY_ISO, MASKED_AMOUNT, MONTHS_SHORT, type HistoryTransaction } from './history'
+import { MONTHLY_INCOME } from './budget'
 import type { TransactionType } from '../types'
 
 /* ── RINGKASAN UANG HOME — SATU SUMBER (paket 35) ────────────────────────────
@@ -22,16 +23,22 @@ import type { TransactionType } from '../types'
      4. `HOME_MONEY_COPY.period` = label periode TUNGGAL: dua kartu di satu layar
         menyebut string yang sama, bukan satu "Minggu ini" vs satu "bulan ini".
 
-   Batas yang jujur (diperbarui paket 40): baris ini membaca catatan dari SATU
-   store uang (`lib/money/store.ts`), bukan bus transaksi lama — dan baris yang
-   dihapus user (tombstone) ikut hilang di sini juga, sama seperti di kartu
-   "Transaksi Terakhir" dan halaman Riwayat. Dulu kartu ini sengaja tidak
-   mengurangi total saat baris disembunyikan karena bus belum punya API hapus;
-   sekarang tidak ada lagi dua himpunan baris yang bisa berbeda.
-
-   Nominal seed SENGAJA tidak digeser: 8.500.000 masuk · 752.000 keluar · net
-   7.748.000 tetap angka patokan audit. `lib/data/budget.ts` (`DAILY_HUD`) nol
-   sentuhan dari paket ini. */
+   PAKET 58 — Home berhenti membaca konstanta demo sebagai SUMBER ANGKA:
+   `HOME_MONEY_GROUPS`/`HOME_MONEY_ROWS` di file ini turun pangkat jadi kanon
+   data DEMO & bahan test (aturan audit §1.11: "seed lama boleh tetap ada sebagai
+   data DEMO, tapi tidak boleh lagi menjadi sumber angka di komponen"). Kartu
+   "Arus Uang" dan "Transaksi Terakhir" — plus "Distribusi Pengeluaran" yang dulu
+   menulis segmennya sendiri (Rp 3.150.000, temuan #11) — sekarang membaca baris
+   LEDGER NYATA dari `recordedTransactions()` (store yang sama dengan Jatah Hari
+   Ini). Akibat yang disengaja dan diumumkan: pada akun tanpa catatan, kartu-kartu
+   itu menampilkan EMPTY STATE yang jujur, bukan angka contoh. Baris yang dihapus
+   user (tombstone) ikut hilang; baris yang DIEDIT memakai nilai barunya. Nominal
+   seed di file ini TIDAK digeser (85.000 + 42.000 + 350.000 + 275.000 keluar ·
+   7.500.000 masuk) — ia tetap jadi bukti hitung di test, tapi tidak lagi tampil
+   di layar. Turunan murni kartu Home tinggal di sini: `homeRowsInLastDays()`
+   (58.6), `groupHomeMoneyRows()` (label "Hari ini"/"Kemarin"),
+   `distributionSegments()` (58.2), `activeLedgerDays()` (58.3), dan
+   `homeCashFlowSeries()` + `monthShortFromISO()` (bulan label NYATA). */
 
 export interface HomeMoneyRow {
   /** id stabil: baris seed `seed-N`, baris sesi `session-<id>` */
@@ -62,8 +69,18 @@ export interface HomeMoneyGroup {
  * Tanggalnya ISO supaya chart bisa menyusun pekan tanpa menebak dari label.
  * Jangkar "hari ini" = `HISTORY_TODAY_ISO` (2026-09-27), tanggal yang sama
  * dengan catatan mock Riwayat & `TODAY_ISO` halaman Budget; "Kemarin" = sehari
- * sebelum jangkar. Nominal & jamnya TIDAK berubah dari seed lama — 8.500.000
- * masuk (Gaji Bulanan) dan 752.000 keluar (85.000 + 42.000 + 350.000 + 275.000).
+ * sebelum jangkar. Uang keluar TIDAK berubah dari seed lama — 752.000 keluar
+ * (85.000 + 42.000 + 350.000 + 275.000).
+ *
+ * PAKET 57 — satu perbaikan angka yang SENGAJA dan diumumkan: baris "Gaji
+ * Bulanan" dulu 8.500.000 sementara seluruh sisa app memakai kanon 7.500.000
+ * (`MONTHLY_INCOME`, `CONTEXT-WAJIB` §10.1), jadi satu Home bisa bercerita dua
+ * angka gaji (temuan AKAR C audit 2026-09). Sekarang nominalnya membaca kanon
+ * yang SAMA (`MONTHLY_INCOME`), jadi angka gaji demo tinggal satu: 7.500.000
+ * masuk · 752.000 keluar · net 6.748.000.
+ * PAKET 58 — baris seed di bawah BERHENTI menjadi sumber angka kartu Home
+ * (temuan AKAR A: setelah akun dikosongkan, angka-angka ini tetap muncul). Ia
+ * sekarang murni KANON DEMO + bahan test; kartu Home membaca ledger NYATA user.
  */
 export const HOME_MONEY_GROUPS: HomeMoneyGroup[] = [
   {
@@ -76,7 +93,7 @@ export const HOME_MONEY_GROUPS: HomeMoneyGroup[] = [
   {
     label: 'Kemarin',
     rows: [
-      { id: 'seed-2', name: 'Gaji Bulanan', category: 'Pemasukan', time: '09:00', date: '2026-09-26', amount: 8_500_000, type: 'income' },
+      { id: 'seed-2', name: 'Gaji Bulanan', category: 'Pemasukan', time: '09:00', date: '2026-09-26', amount: MONTHLY_INCOME, type: 'income' },
       { id: 'seed-3', name: 'Grab', category: 'Transport', time: '08:15', date: '2026-09-26', amount: 42_000, type: 'expense' },
     ],
   },
@@ -105,13 +122,19 @@ export const HOME_MONEY_WEEK_COUNT = 5
  * Copy ringkasan uang Home. Semua kalimat yang dipakai KEDUA kartu tinggal di
  * sini supaya label periode & insight bisa diaudit sekali jalan — persis alasan
  * `HOME_MONEY_COPY.period` ada: satu string, dua kartu.
+ *
+ * Paket 58 menambah kalimat EMPTY STATE di sini (Arus Uang, Distribusi
+ * Pengeluaran, Transaksi Terakhir) supaya tidak ada satu pun string baru yang
+ * ditulis di JSX — aturan §8 CONTEXT-WAJIB.
  */
 export const HOME_MONEY_COPY = {
   /** PERIODE TUNGGAL kartu chart & kartu transaksi di layar yang sama */
   period: 'Bulan ini',
-  /** subjudul kartu transaksi — dulu "Aktivitas 3 hari terakhir", padahal yang
-   *  diringkas di bawahnya periode bulan; sekarang sejalan dengan `period` */
-  txnSubtitle: 'Catatan terbaru bulan ini',
+  /** subjudul kartu transaksi — daftar di kartu itu SEJAK PAKET 58 dibatasi
+   *  7 hari kalender (58.6), jadi subjudulnya menyebut itu apa adanya */
+  txnSubtitle: 'Catatan 7 hari terakhir',
+  /** tombol kepala kartu menuju halaman Riwayat (filter lengkap ada di sana) */
+  seeAll: 'Lihat semua',
   /** potongan strip kartu transaksi: "<period> +X masuk, -Y keluar — net Z" */
   txnInflow: 'masuk,',
   txnOutflow: 'keluar — net',
@@ -125,7 +148,183 @@ export const HOME_MONEY_COPY = {
   chartSpentLabel: 'pemasukan terpakai',
   chartOverspendTail: 'pengeluaran lebih besar dari pemasukan — minus',
   chartNoIncome: 'Belum ada pemasukan di periode ini — catat pemasukan dulu biar arus uangnya kebaca 🌱',
+  /** judul + EMPTY STATE Arus Uang (58.1) */
+  chartTitle: 'Arus Uang',
+  chartSubtitle: 'Pemasukan vs pengeluaran, per pekan',
+  chartEmptyTitle: 'Arus uangmu belum tergambar',
+  chartEmptyBody:
+    'Grafik ini menggambar dari catatanmu sendiri — catat pemasukan & pengeluaran pertama, dan dua garisnya langsung hidup.',
+  chartEmptyCta: '+ Catat Transaksi',
+  /** judul + EMPTY STATE Distribusi Pengeluaran (58.2 · temuan #11) */
+  distributionTitle: 'Distribusi Pengeluaran',
+  distributionEmptyTitle: 'Belum ada pengeluaran bulan ini',
+  distributionEmptyBody:
+    'Mulai catat pengeluaranmu — di sini kelihatan kategori mana yang paling menelan. Nggak ada yang perlu dihakimi.',
+  distributionEmptyCta: '+ Catat Pengeluaran',
+  distributionTopLead: 'jadi pos terbesar',
+  distributionTopTail: 'dari total pengeluaran',
+  distributionDetailTail: 'dari total',
+  /** EMPTY STATE Transaksi Terakhir (58.1) */
+  txnTitle: 'Transaksi Terakhir',
+  txnEmptyTitle: 'Belum ada catatan',
+  txnEmptyBody: 'Catat yang pertama yuk! 🌱',
+  txnEmptyCta: '+ Catat Transaksi',
+  /** tautan "Lihat Riwayat" di dalam empty state (route nyata: /history) */
+  historyLink: 'Lihat Riwayat',
 } as const
+
+/** label grup hari di kartu Transaksi Terakhir — satu definisi, bukan literal */
+export const HOME_MONEY_DAY_LABEL = {
+  today: 'Hari ini',
+  yesterday: 'Kemarin',
+} as const
+
+/** geser tanggal ISO sejumlah hari (murni, UTC — bebas pergeseran timezone) */
+function isoDaysBack(iso: string, days: number): string {
+  const date = new Date(`${iso}T00:00:00Z`)
+  date.setUTCDate(date.getUTCDate() - days)
+  return date.toISOString().slice(0, 10)
+}
+
+/** bulan pendek dari ISO `YYYY-MM-DD`; kosong = jatuh ke kanon demo */
+export function monthShortFromISO(iso?: string): string {
+  if (!iso || iso.length < 7) return HOME_MONEY_MONTH_SHORT
+  const month = Number(iso.slice(5, 7))
+  return MONTHS_SHORT[month - 1] ?? HOME_MONEY_MONTH_SHORT
+}
+
+/**
+ * Baris 7 hari kalender terakhir (inklusif hari ini) — batas daftar "Transaksi
+ * Terakhir" di Home (58.6). Yang lebih tua tetap bisa dibaca lengkap di
+ * `/history`; Home cukup menampilkan yang masih segar.
+ *
+ * `todayIso` kosong (render server & render pertama client) ⇒ TIDAK menyaring:
+ * snapshot server memang kosong, dan menyaring dengan tanggal karangan justru
+ * bikin HTML server ≠ render pertama client.
+ */
+export function homeRowsInLastDays(
+  rows: HomeMoneyRow[],
+  todayIso: string,
+  days = 7,
+): HomeMoneyRow[] {
+  if (!todayIso) return rows
+  const startIso = isoDaysBack(todayIso, days - 1)
+  return rows.filter((row) => row.date >= startIso && row.date <= todayIso)
+}
+
+/** label satu hari: "Hari ini" / "Kemarin" / "21 Sep" (dari tanggal NYATA) */
+export function homeMoneyGroupLabel(dateIso: string, todayIso: string): string {
+  if (todayIso) {
+    if (dateIso === todayIso) return HOME_MONEY_DAY_LABEL.today
+    if (dateIso === isoDaysBack(todayIso, 1)) return HOME_MONEY_DAY_LABEL.yesterday
+  }
+  const day = Number(dateIso.slice(8, 10))
+  const month = MONTHS_SHORT[Number(dateIso.slice(5, 7)) - 1] ?? ''
+  return `${day} ${month}`.trim()
+}
+
+/**
+ * Kelompokkan baris per tanggal untuk kartu "Transaksi Terakhir" — labelnya
+ * diturunkan dari tanggal barisnya, bukan teks seed ("Hari ini"/"Kemarin" di
+ * `HOME_MONEY_GROUPS` dulu hanya benar saat tanggal seed-nya bertepatan).
+ */
+export function groupHomeMoneyRows(
+  rows: HomeMoneyRow[],
+  todayIso: string,
+): HomeMoneyGroup[] {
+  const byDate = new Map<string, HomeMoneyRow[]>()
+  for (const row of rows) {
+    const list = byDate.get(row.date)
+    if (list) list.push(row)
+    else byDate.set(row.date, [row])
+  }
+
+  return [...byDate.entries()]
+    .sort((a, b) => (a[0] < b[0] ? 1 : -1))
+    .map(([date, list]) => ({
+      label: homeMoneyGroupLabel(date, todayIso),
+      live: todayIso !== '' && date === todayIso,
+      rows: list,
+    }))
+}
+
+/**
+ * Palet kanon segmen kategori — dirotasi menurut URUTAN segmen (BUKAN nama
+ * kategori, karena kategori datang dari catatan user sendiri).
+ *
+ * Dipakai DUA permukaan yang menggambar kategori: kartu "Distribusi
+ * Pengeluaran" di Home dan donut Rekap Mingguan. Satu konstanta supaya warna
+ * kategori tidak pernah berbeda antar-kartu (sebelumnya tiap komponen punya
+ * salinannya sendiri).
+ */
+export const HOME_DISTRIBUTION_PALETTE = ['#b5b987', '#91a0b8', '#ffb885', '#b89191'] as const
+
+export interface HomeDistributionSegment {
+  label: string
+  amount: number
+  pct: number
+}
+
+/** label gabungan kategori ke-5+ — jujur "Lainnya", bukan dipotong diam-diam */
+export const HOME_DISTRIBUTION_REST_LABEL = 'Lainnya'
+
+/**
+ * Turunan SEGMEN "Distribusi Pengeluaran" dari baris NYATA user (58.2).
+ *
+ * Aturan yang dikunci:
+ *   · hanya `type === 'expense'` — pemasukan/tabungan/pindah dana netral, sama
+ *     seperti kanon `summarizeTransactions()` (net worth tidak berubah);
+ *   · hanya nominal > 0 (baris 0 tidak menggambar segmen);
+ *   · urut menurun — pos terbesar selalu segmen pertama;
+ *   · kategori ke-5+ digabung ke `Lainnya`, persennya dihitung dari total itu.
+ */
+export function distributionSegments(
+  rows: HomeMoneyRow[],
+  maxSegments = 4,
+): HomeDistributionSegment[] {
+  const totals = new Map<string, number>()
+  for (const row of rows) {
+    if (row.type !== 'expense' || row.amount <= 0) continue
+    totals.set(row.category, (totals.get(row.category) ?? 0) + row.amount)
+  }
+
+  const sorted = [...totals.entries()]
+    .map(([label, amount]) => ({ label, amount }))
+    .sort((a, b) => b.amount - a.amount)
+  const total = sorted.reduce((sum, seg) => sum + seg.amount, 0)
+  if (total <= 0) return []
+
+  const head = sorted.slice(0, Math.max(1, maxSegments))
+  const tail = sorted.slice(head.length)
+  if (tail.length > 0) {
+    head.push({
+      label: HOME_DISTRIBUTION_REST_LABEL,
+      amount: tail.reduce((sum, seg) => sum + seg.amount, 0),
+    })
+  }
+
+  return head.map((seg) => ({
+    label: seg.label,
+    amount: seg.amount,
+    pct: Math.round((seg.amount / total) * 100),
+  }))
+}
+
+/**
+ * Jumlah TANGGAL unik di ledger (58.3) — sumber "hari aktif" tanaman, mengganti
+ * `activeDays: 21` yang dulu konstanta. `todayIso` menentukan bulan berjalan;
+ * kosong ⇒ semua tanggal dihitung (render server: ledgernya memang kosong, jadi
+ * HTML server tetap sama dengan render pertama client).
+ */
+export function activeLedgerDays(rows: HistoryTransaction[], todayIso: string): number {
+  const month = todayIso ? todayIso.slice(0, 7) : ''
+  const dates = new Set<string>()
+  for (const row of rows) {
+    if (month && row.date.slice(0, 7) !== month) continue
+    dates.add(row.date)
+  }
+  return dates.size
+}
 
 /**
  * Terjemahkan catatan sesi dari store uang (`lib/money/store.ts`) jadi baris
@@ -186,18 +385,25 @@ export interface HomeCashFlowPoint {
  *      jadi Σ(pengeluaran seri) ≡ total pengeluaran strip — bukan kebetulan,
  *      tapi konsekuensi;
  *   2. pindah dana netral, sama seperti strip;
- *   3. baris di luar bulan periode tetap DIHITUNG (dibucket menurut tanggalnya,
- *      plafon pekan ke-5), tidak dibuang — kalau dibuang, jumlah seri akan beda
- *      dari strip dan bug lama itu kembali.
+ *   3. `monthISO` (paket 58): label "Bulan ini" hanya boleh memuat baris bulan
+ *      itu. Dulu semua baris dibucket apa pun bulannya, padahal sumbu-X-nya
+ *      bilang "1 Sep"/"8 Sep". Sekarang baris di luar bulan dibuang dari seri —
+ *      dan karena strip membaca TOTAL SERI, keduanya tetap mustahil berbeda.
+ *      Tanpa `monthISO` (pemakaian lama/test), semua baris dibucket seperti dulu.
  */
-export function homeCashFlowSeries(rows: HomeMoneyRow[]): HomeCashFlowPoint[] {
+export function homeCashFlowSeries(
+  rows: HomeMoneyRow[],
+  monthISO?: string,
+): HomeCashFlowPoint[] {
+  const monthShort = monthShortFromISO(monthISO)
   const points: HomeCashFlowPoint[] = Array.from({ length: HOME_MONEY_WEEK_COUNT }, (_, i) => ({
-    label: `${1 + i * 7} ${HOME_MONEY_MONTH_SHORT}`,
+    label: `${1 + i * 7} ${monthShort}`,
     income: 0,
     expense: 0,
   }))
 
   for (const row of rows) {
+    if (monthISO && row.date.slice(0, 7) !== monthISO) continue
     const day = Number(row.date.slice(8, 10))
     /* tanggal rusak (defensif) diperlakukan sebagai tanggal 1, bukan NaN yang
        bisa membuat `points[NaN]` undefined */
@@ -279,4 +485,27 @@ export function shortRupiah(value: number): string {
  */
 export function axisLabel(value: number, masked: boolean): string {
   return masked ? MASKED_AMOUNT : shortRupiah(value)
+}
+
+/** ambang jam nudge harian: sebelum sore, "belum catat" masih wajar */
+export const NUDGE_HOUR_THRESHOLD = 15
+
+/**
+ * Pemicu slot Nudge AI Coach di Home (58.4) — fungsi murni supaya perilakunya
+ * bisa diuji tanpa DOM (repo ini tidak punya test komponen).
+ *
+ * Aturannya: nudge HANYA muncul kalau memang (a) jam perangkat sudah lewat
+ * sore, (b) hari ini benar-benar belum ada catatan di ledger, dan (c) akunnya
+ * tidak kosong. `forceShow` (mode demo) melewati (a) & (b) — TAPI tidak (c):
+ * tidak ada gunanya menyuruh mencatat di akun yang isinya sudah dihapus.
+ */
+export function shouldShowDailyNudge(input: {
+  hour: number | null
+  hasRecordToday: boolean
+  accountEmpty: boolean
+  forceShow?: boolean
+}): boolean {
+  if (input.accountEmpty) return false
+  if (input.forceShow) return true
+  return (input.hour ?? 0) >= NUDGE_HOUR_THRESHOLD && !input.hasRecordToday
 }

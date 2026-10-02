@@ -24,6 +24,7 @@ import {
   type AssetType,
   type Investment,
 } from '@/lib/data/wealth'
+import { useTodayISO } from '@/lib/use-today-iso'
 
 /* ── TAMBAH INVESTASI (Section 5E, inventaris #t) ───────────────────────────
    Bottom sheet (Vaul di mobile, dialog di desktop) memakai kit bersama
@@ -125,6 +126,11 @@ export function AddInvestmentSheet({
   const [side, setSide] = useState<'buy' | 'sell'>('buy')
   const [quantityDigits, setQuantityDigits] = useState('')
   const [priceDigits, setPriceDigits] = useState('')
+  /* tanggal perangkat (paket 57): field tanggal dibuka di HARI INI milik user,
+     bukan 25 Sep yang dipatok. `WEALTH_TODAY_ISO` tinggal fallback sebelum
+     nilainya terisi setelah mount (pola hidrasi yang sama dengan halaman lain). */
+  const today = useTodayISO()
+  const todayIso = today || WEALTH_TODAY_ISO
   const [date, setDate] = useState(WEALTH_TODAY_ISO)
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const [feesDigits, setFeesDigits] = useState('')
@@ -150,7 +156,7 @@ export function AddInvestmentSheet({
          tidak ada dua tempat berbeda yang mengaku "sumber harga". */
       setQuantityDigits(String(initial.quantity))
       setPriceDigits(String(initial.avgBuyPrice))
-      setDate(WEALTH_TODAY_ISO)
+      setDate(todayIso)
       setAdvancedOpen(false)
       setFeesDigits('')
       setHasRdn(false)
@@ -165,7 +171,7 @@ export function AddInvestmentSheet({
     setSide('buy')
     setQuantityDigits('')
     setPriceDigits('')
-    setDate(WEALTH_TODAY_ISO)
+    setDate(todayIso)
     setAdvancedOpen(false)
     setFeesDigits('')
     setHasRdn(false)

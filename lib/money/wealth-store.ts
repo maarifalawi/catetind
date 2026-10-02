@@ -73,6 +73,14 @@ export interface PersistedWealth {
   investments?: Investment[]
   debts?: Debt[]
   payments?: DebtPayment[]
+  /**
+   * TOMBSTONE baris yang dihapus user (paket 61) — bentuknya SAMA dengan
+   * `removedIds` di `lib/money/store.ts` & `lib/money/bills-store.ts`, dengan
+   * satu tambahan penting: kuncinya WAJIB ber-prefix jenis (`debt:1` / `inv:1`)
+   * karena id di dua daftar kekayaan bisa berimpit — lihat `keyOf()` di
+   * `wealth-store.ts`.
+   */
+  removedIds?: string[]
   /** true = akun ini sudah dihapus user → jangan isi ulang data contoh */
   purged?: boolean
 }
@@ -81,6 +89,8 @@ export interface WealthState {
   investments: Investment[]
   debts: Debt[]
   payments: DebtPayment[]
+  /** id yang dihapus user (tombstone) — lihat `PersistedWealth.removedIds` */
+  removedIds: string[]
 }
 
 export interface WealthSnapshot extends WealthState {
@@ -96,6 +106,7 @@ const SERVER_SNAPSHOT: WealthSnapshot = Object.freeze({
   investments: INITIAL_INVESTMENTS,
   debts: INITIAL_DEBTS,
   payments: INITIAL_DEBT_PAYMENTS,
+  removedIds: [] as string[],
   hydrated: false,
 })
 
@@ -104,6 +115,7 @@ const EMPTY_SNAPSHOT: WealthSnapshot = Object.freeze({
   investments: [],
   debts: [],
   payments: [],
+  removedIds: [] as string[],
   hydrated: true,
 })
 
@@ -146,6 +158,7 @@ function persist(snapshot: WealthState): void {
     investments: snapshot.investments,
     debts: snapshot.debts,
     payments: snapshot.payments,
+    removedIds: [...snapshot.removedIds],
     purged: accountPurged,
   })
 }
@@ -154,6 +167,46 @@ function commit(next: WealthSnapshot): void {
   live = next
   persist(next)
   emit()
+}
+
+/* ── TOMBSTONE (paket 61) ────────────────────────────────────────────────────
+   Satu tempat yang tahu arti "baris ini dihapus user", dipakai dua sisi:
+   pintu tulis (menolak mengedit/melunasi baris yang sudah dihapus) dan
+   selector (menyembunyikannya dari layar). Tanpa ini, "terhapus" akan punya
+   dua definisi — dan yang kedua selalu lebih longgar dari yang pertama. */
+
+/**
+ * Kunci tombstone satu baris — WAJIB ber-prefix jenis.
+ *
+ * Alasannya bukan kerapian: id di dua daftar kekayaan BISA BERIMPIT. Data seed
+ * memakai id '1'…'5' untuk investasi DAN hutang sekaligus, jadi tombstone
+ * ber-id telanjang menyembunyikan baris yang salah: menghapus hutang '1' ikut
+ * menghilangkan saham '1' dari portofolio — dan angka Net Worth langsung
+ * berbeda dari kenyataan (tertangkap test paket 61 sebelum dirilis).
+ */
+function keyOf(kind: 'debt' | 'inv', id: string): string {
+  return `${kind}:${id}`
+}
+
+function isRemoved(kind: 'debt' | 'inv', id: string): boolean {
+  return live.removedIds.includes(keyOf(kind, id))
+}
+
+/** tandai satu baris terhapus (barisnya TETAP disimpan supaya Undo mungkin) */
+function tombstone(key: string): void {
+  if (live.removedIds.includes(key)) return
+  commit({ ...live, removedIds: [...live.removedIds, key], hydrated: true })
+}
+
+/** cabut tombstone; `false` = kunci itu memang tidak sedang terhapus */
+function untombstone(key: string): boolean {
+  if (!live.removedIds.includes(key)) return false
+  commit({
+    ...live,
+    removedIds: live.removedIds.filter((rowKey) => rowKey !== key),
+    hydrated: true,
+  })
+  return true
 }
 
 /* ── ID SEBELUM HIDRASI (anti tabrakan) ──────────────────────────────────────
@@ -243,7 +296,14 @@ export function mergeWealthState(
     ...extrasOf(current.payments, INITIAL_DEBT_PAYMENTS, basePayments),
   ]
 
-  return { investments, debts, payments, hydrated: true }
+  /* TOMBSTONE digabung (union), bukan diambil dari satu sisi: hapus yang
+     terjadi di PERANGKAT INI harus bertahan, dan hapus yang sudah tersimpan
+     tidak boleh "hidup lagi" saat state dibaca ulang. Di-`Set` supaya satu id
+     tidak pernah punya dua tombstone. */
+  const storedRemoved = known ? (persisted?.removedIds ?? []).filter((id) => id) : []
+  const removedIds = [...new Set([...storedRemoved, ...current.removedIds])]
+
+  return { investments, debts, payments, removedIds, hydrated: true }
 }
 
 async function hydrateWealthStore(): Promise<void> {
@@ -316,7 +376,7 @@ export function addInvestment(input: NewInvestmentInput): Investment | null {
 export function updateInvestmentPrice(id: string, price: number): Investment | null {
   const target = live.investments.find((asset) => asset.id === id)
   const next = Number(price)
-  if (!target || !Number.isFinite(next) || next <= 0) return null
+  if (!target || isRemoved('inv', id) || !Number.isFinite(next) || next <= 0) return null
 
   const updated: Investment = {
     ...target,
@@ -351,7 +411,10 @@ export interface InvestmentEdit {
  */
 export function editInvestment(id: string, patch: InvestmentEdit): Investment | null {
   const target = live.investments.find((asset) => asset.id === id)
-  if (!target) return null
+  /* baris yang sudah dihapus TIDAK bisa diedit: kalau boleh, user bisa
+     membetulkan catatan yang tidak lagi ada di layar, dan angka Net Worth
+     berubah dari balik tombstone. */
+  if (!target || isRemoved('inv', id)) return null
   const name = patch.name.trim()
   const quantity = Number(patch.quantity)
   const avgBuyPrice = Number(patch.avgBuyPrice)
@@ -376,15 +439,33 @@ export function editInvestment(id: string, patch: InvestmentEdit): Investment | 
   return updated
 }
 
-/** keluarkan satu aset dari portofolio; `false` = id-nya tidak ada (tidak ditulis) */
+/**
+ * Keluarkan satu aset dari portofolio user (paket 61).
+ *
+ * Sejak paket 61 ini TOMBSTONE, bukan `filter()`: barisnya tetap disimpan di
+ * state perangkat (dan di IndexedDB) selama jendela Undo hidup, sehingga
+ * "Hapus" di halaman Kekayaan bisa benar-benar dibatalkan — bukan cuma
+ * dijanjikan. Efek yang sama seperti `deleteBill()` di
+ * `lib/money/bills-store.ts`.
+ *
+ * `false` = id-nya tidak ada ATAU sudah terhapus → tidak ada yang ditulis.
+ */
 export function deleteInvestment(id: string): boolean {
-  if (!live.investments.some((asset) => asset.id === id)) return false
-  commit({
-    ...live,
-    investments: live.investments.filter((asset) => asset.id !== id),
-    hydrated: true,
-  })
+  if (!live.investments.some((asset) => asset.id === id) || isRemoved('inv', id)) return false
+  tombstone(keyOf('inv', id))
   return true
+}
+
+/**
+ * Cabut tombstone satu aset (jalur Undo). `null` = tidak ada yang dikembalikan:
+ * asetnya memang tidak ada, atau tidak sedang dalam keadaan terhapus (mis. Undo
+ * yang datang setelah jendelanya tutup) — dua-duanya harus gagal dengan jujur,
+ * bukan diam-diam "berhasil".
+ */
+export function restoreInvestment(id: string): Investment | null {
+  if (!live.investments.some((asset) => asset.id === id)) return null
+  if (!untombstone(keyOf('inv', id))) return null
+  return live.investments.find((asset) => asset.id === id) ?? null
 }
 
 /* ── HUTANG & PIUTANG ────────────────────────────────────────────────────────
@@ -454,7 +535,9 @@ export type DebtPatch = Partial<Omit<Debt, 'id'>>
  */
 export function editDebt(id: string, patch: DebtPatch): Debt | null {
   const target = live.debts.find((debt) => debt.id === id)
-  if (!target) return null
+  /* sama seperti `editInvestment`: catatan yang sudah dihapus tidak bisa
+     dibetulkan dari balik tombstone */
+  if (!target || isRemoved('debt', id)) return null
   const principal = patch.principal ?? target.principal
   const remaining = patch.remaining ?? target.remaining
   if (!Number.isFinite(principal) || principal <= 0) return null
@@ -479,22 +562,28 @@ export function editDebt(id: string, patch: DebtPatch): Debt | null {
 }
 
 /**
- * Hapus satu catatan hutang/piutang BESERTA riwayat pembayarannya.
+ * Hapus satu catatan hutang/piutang (paket 61: TOMBSTONE + Undo).
  *
- * Baris kasnya (`/history`) SENGAJA tidak dihapus: uang yang sudah berpindah
- * tangan itu fakta, dan menghapus catatan hutang tidak mengembalikannya. Yang
- * hilang hanya catatan hutang + riwayat pembayaran yang menempel padanya.
- * `false` = id tidak ada (tidak ada yang ditulis).
+ * Baris kasnya (`/history`) SENGAJA tidak dihapus — dan sejak paket 61 itu
+ * berlaku dua kali lipat: uang yang sudah berpindah tangan itu fakta, jadi
+ * baris `debt_payment`/`receivable_payment`-nya tidak ikut hilang walau
+ * catatannya dihapus. Yang disembunyikan hanyalah catatannya sendiri (dan
+ * riwayat pembayaran yang menempel padanya, lewat `paymentsOf()`) — supaya
+ * Undo bisa mengembalikan keduanya utuh.
+ *
+ * `false` = id tidak ada atau sudah terhapus (tidak ada yang ditulis).
  */
 export function deleteDebt(id: string): boolean {
-  if (!live.debts.some((debt) => debt.id === id)) return false
-  commit({
-    ...live,
-    debts: live.debts.filter((debt) => debt.id !== id),
-    payments: live.payments.filter((payment) => payment.debtId !== id),
-    hydrated: true,
-  })
+  if (!live.debts.some((debt) => debt.id === id) || isRemoved('debt', id)) return false
+  tombstone(keyOf('debt', id))
   return true
+}
+
+/** cabut tombstone satu catatan hutang/piutang (jalur Undo); `null` = gagal jujur */
+export function restoreDebt(id: string): Debt | null {
+  if (!live.debts.some((debt) => debt.id === id)) return null
+  if (!untombstone(keyOf('debt', id))) return null
+  return live.debts.find((debt) => debt.id === id) ?? null
 }
 
 /* ── PELUNASAN HUTANG/PIUTANG: KAS + CATATAN DALAM SATU TULISAN ──────────────
@@ -546,7 +635,7 @@ export interface SettleDebtResult {
  */
 export function settleDebt(input: SettleDebtInput): SettleDebtResult | null {
   const debt = live.debts.find((row) => row.id === input.debtId)
-  if (!debt) return null
+  if (!debt || isRemoved('debt', input.debtId)) return null
 
   const direction = cashDirectionOf(debt)
   const counterparty = settlementCounterparty(debt)
@@ -653,18 +742,43 @@ export function useWealthStore(): WealthSnapshot {
   return useSyncExternalStore(subscribeWealthStore, getWealthSnapshot, getServerWealthSnapshot)
 }
 
-/** satu aset dari id — `null` = belum ada (mis. id dari state lama) */
+/* ── SELECTOR — SEMUA PEMBACA LEWAT SINI (paket 61) ──────────────────────────
+   Empat pembaca daftar kekayaan (`/wealth`, ekspor `/settings/data`, Pusat
+   Bantuan, dan Net Worth) tidak boleh menyaring tombstone sendiri-sendiri: satu
+   tempat lupa menyaring = satu angka yang berbeda dari tempat lain. Karena itu
+   daftar "yang benar-benar dimiliki user" disediakan di sini, dengan nama yang
+   sama seperti `liveBills()` di `lib/money/bills-store.ts`. */
+
+/** aset yang benar-benar dimiliki user (yang dihapus disaring tombstone) */
+export function liveInvestments(snapshot: WealthSnapshot): Investment[] {
+  return snapshot.investments.filter(
+    (asset) => !snapshot.removedIds.includes(keyOf('inv', asset.id)),
+  )
+}
+
+/** hutang/piutang yang benar-benar dimiliki user (yang dihapus disaring tombstone) */
+export function liveDebts(snapshot: WealthSnapshot): Debt[] {
+  return snapshot.debts.filter((debt) => !snapshot.removedIds.includes(keyOf('debt', debt.id)))
+}
+
+/** satu aset dari id — `null` = belum ada ATAU sudah dihapus user */
 export function investmentById(snapshot: WealthSnapshot, id: string): Investment | null {
+  if (snapshot.removedIds.includes(keyOf('inv', id))) return null
   return snapshot.investments.find((asset) => asset.id === id) ?? null
 }
 
-/** satu catatan hutang/piutang dari id — `null` = belum ada */
+/** satu catatan hutang/piutang dari id — `null` = belum ada ATAU sudah dihapus user */
 export function debtById(snapshot: WealthSnapshot, id: string): Debt | null {
+  if (snapshot.removedIds.includes(keyOf('debt', id))) return null
   return snapshot.debts.find((debt) => debt.id === id) ?? null
 }
 
 /** riwayat pembayaran satu hutang, terbaru dulu (aturan urut di `lib/data/wealth.ts`) */
 export function paymentsOf(snapshot: WealthSnapshot, debtId: string): DebtPayment[] {
+  /* catatan yang dihapus tidak punya riwayat di layar (kontrak lama paket 50:
+     riwayat ikut hilang bersama catatannya) — tapi barisnya tetap DISIMPAN,
+     jadi Undo mengembalikan catatan + riwayatnya utuh. */
+  if (snapshot.removedIds.includes(keyOf('debt', debtId))) return []
   return paymentsOfDebt([...snapshot.payments], debtId)
 }
 

@@ -21,10 +21,14 @@ import {
   editInvestment,
   getWealthSnapshot,
   investmentById,
+  liveDebts,
+  liveInvestments,
   mergeWealthState,
   paymentsOf,
   purgeWealthStore,
   resetWealthStore,
+  restoreDebt,
+  restoreInvestment,
   settleDebt,
   subscribeWealthStore,
   updateInvestmentPrice,
@@ -53,14 +57,18 @@ import {
 const CANON_CASH = 1_850_000
 
 /** Net Worth yang dihitung dari KEDUA store (uang + kekayaan) — rumusnya tetap
- *  milik `netWorthParts()`, jadi test ini tidak mendefinisikan ulang apa pun */
+ *  milik `netWorthParts()`, jadi test ini tidak mendefinisikan ulang apa pun.
+ *
+ *  Paket 61: daftarnya dibaca lewat `liveDebts()`/`liveInvestments()` — persis
+ *  yang dipakai halaman & file ekspor — supaya Net Worth di sini tidak pernah
+ *  menghitung catatan yang sudah dihapus user. */
 function netWorthOfStores(): number {
   const wealth = getWealthSnapshot()
   return netWorthParts({
     cash: cashTotal(getMoneySnapshot()),
-    investments: totalPortfolioValue(wealth.investments),
-    receivables: activeReceivableTotal(wealth.debts),
-    debts: activeDebtRemaining(wealth.debts),
+    investments: totalPortfolioValue(liveInvestments(wealth)),
+    receivables: activeReceivableTotal(liveDebts(wealth)),
+    debts: activeDebtRemaining(liveDebts(wealth)),
   }).netWorth
 }
 
@@ -422,5 +430,149 @@ describe('hidrasi IndexedDB & Hapus Akun', () => {
     expect(persisted?.investments).toHaveLength(INITIAL_INVESTMENTS.length)
     expect(persisted?.debts?.some((debt) => debt.id === created.id)).toBe(true)
     expect(persisted?.payments?.some((row) => row.id === paid.payment.id)).toBe(true)
+  })
+})
+
+/* ── HAPUS = TOMBSTONE + UNDO, & EDIT YANG PUNYA PINTU (paket 61) ────────────
+   Sebelum paket 61 `deleteDebt()`/`deleteInvestment()` membuang barisnya
+   (`filter()`), jadi dua hal tidak mungkin: (a) Undo yang benar-benar
+   mengembalikan catatan beserta riwayatnya, dan (b) hapus yang BERTAHAN saat
+   SELURUH daftar kosong — karena `baseOf()` lalu memakai `INITIAL_DEBTS`
+   sebagai dasar, sehingga hutang contoh yang sudah dihapus user bisa "lahir
+   lagi" setelah refresh. Test di bawah mengunci janji barunya: yang dihapus
+   DISEMBUNYIKAN (bukan dibuang), angka Net Worth-nya benar, dan uang yang sudah
+   keluar TIDAK kembali. */
+
+describe('hapus = tombstone + undo (paket 61)', () => {
+  it('editDebt membetulkan pokok & sisa TANPA menyentuh kas maupun riwayatnya', () => {
+    /* bayar dulu supaya ada riwayat pembayaran + kas yang benar-benar bergerak */
+    const paid = settleDebt({
+      debtId: '2',
+      walletId: 'bca',
+      paidAmount: 250_000,
+      dateISO: '2026-09-27',
+    })!
+    const cashAfterPay = cashTotal(getMoneySnapshot())
+    const paymentsAfterPay = paymentsOf(getWealthSnapshot(), '2').length
+    expect(paymentsAfterPay).toBeGreaterThan(0)
+
+    /* user salah mengetik pokoknya → dibetulkan dari pintu edit */
+    const edited = editDebt('2', {
+      principal: 1_800_000,
+      remaining: 1_800_000 - paid.payment.amount,
+    })
+
+    expect(edited).toMatchObject({ id: '2', principal: 1_800_000, status: 'active' })
+    expect(edited?.remaining).toBe(1_800_000 - 250_000)
+    /* yang berubah cuma ANGKANYA: kas & riwayat pembayaran tidak ikut bergerak */
+    expect(cashTotal(getMoneySnapshot())).toBe(cashAfterPay)
+    expect(paymentsOf(getWealthSnapshot(), '2')).toHaveLength(paymentsAfterPay)
+  })
+
+  it('editDebt menurunkan status dari sisa & menolak nilai yang tidak sah', () => {
+    expect(editDebt('3', { remaining: 0 })?.status).toBe('settled')
+    expect(editDebt('3', { remaining: 120_000 })?.status).toBe('active')
+    expect(editDebt('3', { remaining: -1 })).toBeNull()
+    expect(editDebt('3', { principal: 0 })).toBeNull()
+    expect(editDebt('tidak-ada', { remaining: 1_000 })).toBeNull()
+  })
+
+  it('deleteDebt menyembunyikan catatannya, TAPI baris kas & saldo dompet tetap', () => {
+    const paid = settleDebt({
+      debtId: '1',
+      walletId: 'bca',
+      paidAmount: 500_000,
+      dateISO: '2026-09-27',
+    })!
+    const cashAfterPay = cashTotal(getMoneySnapshot())
+    const netWorthAfterPay = netWorthOfStores()
+    const remaining = paid.debt.remaining
+
+    expect(deleteDebt('1')).toBe(true)
+
+    /* daftar: hilang dari yang dibaca layar (dan file ekspor) */
+    expect(liveDebts(getWealthSnapshot()).some((debt) => debt.id === '1')).toBe(false)
+    expect(debtById(getWealthSnapshot(), '1')).toBeNull()
+    /* uang: saldo dompet TIDAK kembali dan baris pelunasannya masih di Riwayat */
+    expect(cashTotal(getMoneySnapshot())).toBe(cashAfterPay)
+    expect(recordedTransactions(getMoneySnapshot())).toHaveLength(1)
+    /* angka: hutang yang hilang membuat Net Worth NAIK sebesar sisanya */
+    expect(netWorthOfStores()).toBe(netWorthAfterPay + remaining)
+    /* riwayatnya tidak lagi tampil, tapi barisnya TETAP disimpan untuk Undo */
+    expect(paymentsOf(getWealthSnapshot(), '1')).toHaveLength(0)
+    expect(getWealthSnapshot().payments.some((row) => row.debtId === '1')).toBe(true)
+  })
+
+  it('restoreDebt mengembalikan catatan + riwayat + Net Worth seperti semula', () => {
+    settleDebt({ debtId: '2', walletId: 'bca', paidAmount: 250_000, dateISO: '2026-09-27' })
+    const paymentsBefore = paymentsOf(getWealthSnapshot(), '2').length
+    const netWorthBefore = netWorthOfStores()
+
+    expect(deleteDebt('2')).toBe(true)
+    const restored = restoreDebt('2')
+
+    expect(restored?.id).toBe('2')
+    expect(debtById(getWealthSnapshot(), '2')).not.toBeNull()
+    expect(paymentsOf(getWealthSnapshot(), '2')).toHaveLength(paymentsBefore)
+    expect(netWorthOfStores()).toBe(netWorthBefore)
+  })
+
+  it('Undo yang tidak sah gagal dengan jujur — bukan diam-diam "berhasil"', () => {
+    expect(restoreDebt('tidak-ada')).toBeNull()
+    /* belum dihapus → tidak ada tombstone yang bisa dicabut */
+    expect(restoreDebt('1')).toBeNull()
+    expect(deleteDebt('1')).toBe(true)
+    /* hapus dua kali: yang kedua TIDAK menulis apa pun */
+    expect(deleteDebt('1')).toBe(false)
+    expect(restoreDebt('1')).not.toBeNull()
+    expect(restoreInvestment('1')).toBeNull()
+  })
+
+  it('tombstone bertahan setelah state dibaca ulang & hapus SEMUA hutang tidak menghidupkan seed', () => {
+    for (const debt of getWealthSnapshot().debts) expect(deleteDebt(debt.id)).toBe(true)
+    expect(liveDebts(getWealthSnapshot())).toHaveLength(0)
+
+    const merged = mergeWealthState({
+      version: 1,
+      debts: [],
+      investments: [],
+      payments: [],
+      removedIds: getWealthSnapshot().removedIds,
+    })
+
+    /* barisnya masih tersimpan (tombstone, bukan hapus fisik)… */
+    expect(merged.debts.length).toBeGreaterThan(0)
+    /* …tapi TIDAK ada yang kembali ke daftar yang dibaca user */
+    expect(liveDebts(merged)).toHaveLength(0)
+  })
+
+  it('deleteInvestment + restoreInvestment: nilai portofolio & Net Worth kembali utuh', () => {
+    const portfolioBefore = totalPortfolioValue(liveInvestments(getWealthSnapshot()))
+    const netWorthBefore = netWorthOfStores()
+
+    expect(deleteInvestment('2')).toBe(true)
+    expect(liveInvestments(getWealthSnapshot()).some((asset) => asset.id === '2')).toBe(false)
+    expect(netWorthOfStores()).toBe(netWorthBefore - INITIAL_INVESTMENTS[1].currentValue)
+
+    /* aset yang sudah dihapus tidak bisa dibetulkan dari balik tombstone */
+    expect(
+      editInvestment('2', { type: 'stock', name: 'X', symbol: 'X', quantity: 1, avgBuyPrice: 1 }),
+    ).toBeNull()
+    expect(updateInvestmentPrice('2', 1_000_000)).toBeNull()
+
+    expect(restoreInvestment('2')).not.toBeNull()
+    expect(totalPortfolioValue(liveInvestments(getWealthSnapshot()))).toBe(portfolioBefore)
+    expect(netWorthOfStores()).toBe(netWorthBefore)
+  })
+
+  it('catatan yang sudah dihapus tidak bisa dilunasi (tidak ada baris kas baru)', () => {
+    const rowsBefore = getMoneySnapshot().rows.length
+    expect(deleteDebt('4')).toBe(true)
+
+    expect(
+      settleDebt({ debtId: '4', walletId: 'bca', paidAmount: 150_000, dateISO: '2026-09-27' }),
+    ).toBeNull()
+    expect(getMoneySnapshot().rows).toHaveLength(rowsBefore)
+    expect(cashTotal(getMoneySnapshot())).toBe(CANON_CASH)
   })
 })

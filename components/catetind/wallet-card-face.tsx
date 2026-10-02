@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
-import { MASKED_AMOUNT } from '@/lib/data/history'
+import { LockedAmount } from './locked-amount'
 import type { WalletAccount } from '@/lib/wallets'
 
 /* ── Muka kartu dompet — SATU sumber visual untuk /wallet DAN detailnya ──────
@@ -229,21 +229,22 @@ export function WalletTypeMark({
 /**
  * Angka saldo dengan transisi privasi.
  *
- * Saat `masked` true, nominal mem-blur lalu memudar dan digantikan titik sensor.
- * Lebar layout tetap dikunci oleh nominal aslinya (opacity-0 tapi masih memakai
- * ruang) supaya tidak ada "lompatan" tata letak saat di-toggle.
+ * PAKET 59 · 59.5 — bentuknya sekarang delegasi ke `<LockedAmount/>`: lebar
+ * dikunci oleh DUA lapis teks yang ditumpuk di satu sel grid, dan titik sensornya
+ * rata kiri tanpa `tracking` tambahan sehingga jatuh persis di posisi angka tadi.
+ * Versi lama mengunci lebar dengan angka aslinya, tapi titiknya ditaruh
+ * `absolute inset-0 justify-center tracking-[0.18em]` — hasilnya titik tidak
+ * pernah berada di tempat angka tadi (angka rapat kiri, titik melebar ke tengah).
  *
  * SENSORNYA SATU — `MASKED_AMOUNT` (`lib/data/history.ts`), bukan titik lepas
  * yang ditulis per pemanggil. Keputusan 27 Sep 2026: dua dialek titik yang dulu
  * hidup di muka kartu ('••••••' sebagai default & '••••' yang dioper /wallet,
  * keduanya TANPA "Rp") dihapus supaya nominal tersensor selalu berbentuk
  * `Rp •••••••` di permukaan mana pun — sama seperti kartu, daftar transaksi, dan
- * toast. Yang hilang hanya dialeknya: angka rahasianya tetap tak terbaca, dan
- * karena lebar dikunci nilai asli, panjang titik tidak menggeser tata letak.
+ * toast.
  *
- * Catatan: `className` HANYA untuk tipografi/warna — jangan taruh margin di
- * sini, karena kelas yang sama dipakai juga oleh lapisan titik yang
- * ber-posisi absolut.
+ * Nama & tanda tangannya dipertahankan supaya pemanggil lama (`/wallet`,
+ * `/wallet/[id]`) tidak perlu tahu bahwa mesinnya pindah.
  */
 export function MaskedAmount({
   value,
@@ -254,28 +255,7 @@ export function MaskedAmount({
   masked: boolean
   className?: string
 }) {
-  const fade = 'transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]'
-  return (
-    <span className="relative inline-flex items-center">
-      <span
-        aria-hidden={masked}
-        className={cn(fade, masked ? 'blur-[7px] opacity-0' : 'blur-0 opacity-100', className)}
-      >
-        {value}
-      </span>
-      <span
-        aria-hidden
-        className={cn(
-          'pointer-events-none absolute inset-0 flex items-center justify-center tracking-[0.18em]',
-          fade,
-          masked ? 'blur-0 opacity-100' : 'blur-[7px] opacity-0',
-          className,
-        )}
-      >
-        {MASKED_AMOUNT}
-      </span>
-    </span>
-  )
+  return <LockedAmount value={value} masked={masked} className={className} />
 }
 
 /**

@@ -1,10 +1,11 @@
 'use client'
 
-import { ChevronRight, Plus } from 'lucide-react'
+import { ChevronRight, Plus, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { CONTEXT_LABEL } from '@/lib/data/money-context'
 import { PlantIllustration, type PlantStage as IllustrationStage } from './plant-illustration'
 import {
+  FUND_CARD_ACTION_COPY,
   PLANT_STAGES,
   PLANT_STAGE_INDEX,
   formatDeadline,
@@ -27,6 +28,12 @@ import {
 
    Area kartu dibagi dua tombol supaya jelas: badan kartu = buka detail,
    tombol `Setor` = langsung menyetor tanpa meninggalkan halaman.
+
+   PAKET 60.2: footer kartu menambah tombol hapus (`onDelete`). Sebelum paket ini
+   celengan hanya bisa ditanam & disetor — tidak ada jalan mencabutnya dari
+   daftar, padahal menghapusnya punya efek uang (Jatah Harian naik). Konfirmasi,
+   kalimat efek uang itu, dan jendela Undo-nya dipasang halaman pemilik state
+   (`budget-screen`), bukan di kartu ini — kartu ini murni presentasional.
    ────────────────────────────────────────────────────────────────────────── */
 
 export function SinkingFundCard({
@@ -34,11 +41,14 @@ export function SinkingFundCard({
   masked,
   onOpen,
   onContribute,
+  onDelete,
 }: {
   fund: SinkingFundItem
   masked: boolean
   onOpen: (fund: SinkingFundItem) => void
   onContribute: (fund: SinkingFundItem) => void
+  /** hapus celengan ini (opsional — kartu tetap utuh tanpa prop ini) */
+  onDelete?: (fund: SinkingFundItem) => void
 }) {
   const stage = PLANT_STAGES[fund.stage]
   const priority = priorityStyle(fund.priority)
@@ -131,14 +141,28 @@ export function SinkingFundCard({
           Lihat detail
           <ChevronRight className="size-3" strokeWidth={2.4} />
         </span>
-        <button
-          type="button"
-          onClick={() => onContribute(fund)}
-          className="inline-flex items-center gap-1.5 rounded-full bg-forest px-3.5 py-2 text-[12px] font-semibold text-mint transition-colors hover:bg-forest-soft active:scale-95"
-        >
-          <Plus className="size-3.5" strokeWidth={3} />
-          Setor
-        </button>
+        <span className="flex items-center gap-1.5">
+          {/* hapus (paket 60.2) — ikon dengan nama yang menyebut celengannya */}
+          {onDelete && (
+            <button
+              type="button"
+              onClick={() => onDelete(fund)}
+              aria-label={FUND_CARD_ACTION_COPY.delete(fund.name)}
+              title={FUND_CARD_ACTION_COPY.deleteLabel}
+              className="flex size-8 items-center justify-center rounded-full text-ink/30 transition-colors hover:bg-plum/12 hover:text-plum focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25 active:scale-95"
+            >
+              <Trash2 className="size-3.5" strokeWidth={2.4} aria-hidden />
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => onContribute(fund)}
+            className="inline-flex items-center gap-1.5 rounded-full bg-forest px-3.5 py-2 text-[12px] font-semibold text-mint transition-colors hover:bg-forest-soft active:scale-95"
+          >
+            <Plus className="size-3.5" strokeWidth={3} />
+            Setor
+          </button>
+        </span>
       </div>
     </article>
   )

@@ -218,7 +218,16 @@ export interface OnboardingResult {
   completedAt: string
 }
 
-/** Simpan hasil onboarding + tanda "tampilkan toast sambutan di dashboard". */
+/** Simpan hasil onboarding + tanda "tampilkan toast sambutan di dashboard".
+ *
+ *  PAKET 57: hasil ini juga jadi SUMBER AWAL konfigurasi uang user
+ *  (`lib/user-money-settings.ts` → `monthlyIncome`, `paydayDate`,
+ *  `dashboardPeriod`). Sebelum paket ini `monthlyIncome` yang diisi user di
+ *  langkah 2 dibuang begitu saja — tidak ada satu pun pembacanya, sehingga kartu
+ *  "Jatah Hari Ini" dihitung dari konstanta contoh (temuan AKAR C/D audit
+ *  2026-09-09). Nilainya dibaca LAZY (saat store konfigurasi pertama kali
+ *  diakses), bukan ditulis paksa dari sini, supaya file ini tetap bebas React &
+ *  tetap bisa diimpor halaman server. */
 export function saveOnboardingResult(result: OnboardingResult) {
   try {
     localStorage.setItem(ONBOARDING_STORE_KEY, JSON.stringify(result))

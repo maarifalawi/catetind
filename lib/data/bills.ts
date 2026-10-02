@@ -1,5 +1,5 @@
 import { formatIDR } from '../wallets'
-import type { BudgetScope } from './budget'
+import { MONTHLY_INCOME, type BudgetScope } from './budget'
 import { UNDO_WINDOW_MS, shiftISODate } from './history'
 
 /** satu pintu impor untuk halaman Tagihan: komponennya cukup ambil dari sini */
@@ -73,13 +73,41 @@ export interface Bill {
   note?: string
 }
 
-/* ── KONSTANTA WAKTU & UANG (MOCK) ─────────────────────────────────────────── */
+/* ── KONSTANTA WAKTU & UANG (jangkar DEFAULT + kanon demo) ───────────────────
+   PAKET 57: "hari ini" milik user datang dari `lib/time.ts`. Konstanta tanggal di
+   bawah tinggal sebagai jangkar DEFAULT (render server, test, data seed) dan
+   TIDAK lagi dibaca layar — halaman Tagihan mengirim `todayIso` dari
+   `useTodayISO()` supaya strip 7 hari, status telat, dan tameng memakai hari yang
+   benar-benar berjalan. */
 export const TODAY_ISO = '2026-09-25'
 export const CURRENT_DAY = 25
 export const DAYS_IN_MONTH = 30
-export const MONTHLY_INCOME = 7_500_000
+/**
+ * Angka gaji DEMO — sekarang SATU sumber: `MONTHLY_INCOME` di `lib/data/budget.ts`
+ * (kanon yang sama dengan Daily HUD). Sebelum paket 57 angka 7.500.000 ditulis
+ * ulang di tiga file (`budget`, `bills`, `wealth`) plus 8.500.000 di dua tempat
+ * lain (`history` & `calendar`) — lima angka gaji untuk satu user. Diteruskan di
+ * sini supaya pemanggil lama (`salary-waterfall`, `bills-screen`) tidak putus,
+ * tapi nilainya tidak lagi punya salinan.
+ */
+export { MONTHLY_INCOME } from './budget'
 /** panjang strip pratinjau di timeline (section 5) */
 export const TIMELINE_DAYS = 7
+
+/**
+ * Copy pengganti Waterfall Gaji saat pemasukan bulanan BELUM diatur (paket 57).
+ *
+ * Waterfall = "gaji dimakan tagihan demi tagihan", jadi ia butuh PEMBAGI. Dulu
+ * pembaginya konstanta 7.500.000 — angka contoh yang membuat kartunya terlihat
+ * benar padahal bukan pemasukan user. Begitu konfigurasi user dipakai, pembagi
+ * bisa 0; membagi dengan 0 (atau menyalin konstanta demo) dua-duanya salah, jadi
+ * kartunya diganti kalimat jujur + satu tautan ke tempat mengaturnya.
+ */
+export const WATERFALL_NO_INCOME_COPY = {
+  title: 'Waterfall Gaji belum bisa dihitung',
+  body: 'Isi pemasukan bulananmu dulu — Waterfall membagi tagihan dengan angka itu, bukan dengan contoh.',
+  cta: 'Atur Pemasukan Bulanan',
+} as const
 
 /* ── MOCK TAGIHAN BULAN INI ─────────────────────────────────────────────────
    Sengaja campur: 4 sudah lunas, 1 jatuh tempo HARI INI (Cicilan HP), 1 masih
@@ -428,7 +456,12 @@ export interface TimelineDay {
   nextMonth: boolean
 }
 
-/** 7 hari ke depan dimulai hari ini (offset 0..count-1) */
+/**
+ * 7 hari ke depan dimulai hari ini (offset 0..count-1).
+ *
+ * `fromIso` = tanggal "hari ini" milik user (paket 57): halaman Tagihan
+ * mengirim `useTodayISO()`, jadi strip-nya benar-benar 7 hari ke depan.
+ */
 export function upcomingDays(count: number = TIMELINE_DAYS, fromIso: string = TODAY_ISO): TimelineDay[] {
   const [, baseMonth] = fromIso.split('-').map(Number)
   return Array.from({ length: count }, (_, i) => {
@@ -680,3 +713,64 @@ export const MARK_PAID_TOAST_EXTRA = {
  *     tercatat"), user membaca seolah mendapat uang entah dari mana.
  */
 export const BILL_UNPAID_REVERSAL_NOTE = (name: string) => `Batal bayar ${name}`
+
+/* ── AKSI BAYAR YANG TERLIHAT DI KARTU (paket 60 · 60.4 · AKAR B) ────────────
+   Temuan audit: satu-satunya jalan menandai lunas adalah GESER KANAN pada kartu.
+   Di desktop gesture itu nyaris tidak ditemukan — tidak ada tombol, tidak ada
+   menu, hanya garis sage tipis di tepi kartu sebagai petunjuk. Aksi terpenting
+   halaman Tagihan tidak boleh cuma bisa dijangkau oleh user yang tahu rahasianya.
+
+   Sekarang kartu punya tombolnya sendiri, dan geser tetap hidup sebagai jalur
+   cepat (bukan lagi satu-satunya jalur). Tiga keadaan, tiga perlakuan — dan
+   bedanya penting supaya tidak ada tombol tanpa akibat:
+
+     · BELUM LUNAS          → tombol `markPaid` (buka sheet pemilih dompet,
+                              paket 51: uangnya benar-benar keluar);
+     · LUNAS + ada catatan  → tombol `unmarkPaid` (dengan konfirmasi, karena
+       pembayaran di app     baris kasnya dibalikkan & saldonya pulih);
+     · LUNAS tanpa catatan  → TIDAK ada tombol batal; keadaannya dijelaskan
+       (tagihan contoh seed)  lewat `paidSeedNote`. Membatalkannya tidak akan
+                              mengembalikan uang apa pun, jadi tombol yang
+                              "kelihatan bisa" justru klaim palsu (PRD 244). */
+export const BILL_CARD_ACTION_COPY = {
+  markPaid: 'Tandai Lunas',
+  markPaidA11y: (name: string) => `Tandai ${name} lunas`,
+  markPaidHint: 'Pilih dompet sumbernya — saldonya langsung berkurang.',
+  /** label di area aksi yang tersingkap saat geser kanan (jalur cepat) */
+  markPaidSwipe: 'Tandai Lunas ✓',
+  unmarkPaid: 'Batal lunas',
+  unmarkPaidA11y: (name: string) => `Batalkan status lunas ${name}`,
+  unmarkPaidHint: 'Mengembalikan uangnya ke dompet yang kamu pakai membayar.',
+  /** aksi di balik geser KIRI — label & nama untuk pembaca layar */
+  edit: 'Edit',
+  editA11y: (name: string) => `Edit ${name}`,
+  delete: 'Hapus',
+  deleteA11y: (name: string) => `Hapus ${name}`,
+  /** penanda di baris meta untuk tagihan contoh yang stempelnya tidak punya baris kas */
+  paidSeedNote: 'Lunas contoh (tanpa catatan dompet)',
+} as const
+
+/** konfirmasi "Batal lunas" — uangnya benar-benar kembali ke dompet, jadi aksi
+ *  ini tidak boleh jalan tanpa persetujuan (kanon: aksi merusak selalu ditolak
+ *  dulu; pola `ConfirmDialog` yang sama dengan hapus) */
+export const CONFIRM_UNPAID_COPY = {
+  overlay: 'Batal batalkan lunas',
+  title: 'Batalkan tanda lunas?',
+  body: (name: string, amountLabel: string) =>
+    `“${name}” balik jadi belum dibayar, dan ${amountLabel} dikembalikan ke dompet yang kamu pakai membayar.`,
+  note:
+    'Catatan pembayarannya tetap tersimpan di Riwayat sebagai baris yang dibatalkan — jejak uangnya tidak dihapus, supaya saldo dompetmu tetap bisa dijelaskan.',
+  cancel: 'Nanti saja',
+  confirm: 'Batalkan lunas',
+} as const
+
+/** toast setelah "Batal lunas" berhasil (uangnya benar-benar kembali) */
+export const UNPAID_TOAST = {
+  title: (name: string) => `Tanda lunas ${name} dibatalkan`,
+  description: (amountLabel: string, walletName: string) =>
+    `${amountLabel} kembali ke ${walletName}, dan tagihannya masuk lagi ke daftar aktif.`,
+  /** percobaan yang tidak mengubah apa pun (statusnya keburu berubah di tab lain) */
+  rejected: 'Status tagihan ini sudah berubah — tidak ada yang dibatalkan.',
+  /** tagihan contoh: tidak ada baris kas yang bisa dibalikkan */
+  noRow: 'Tagihan contoh ini tidak punya catatan pembayaran di app, jadi tidak ada uang yang bisa dikembalikan.',
+} as const

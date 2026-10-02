@@ -98,6 +98,13 @@ export interface PersistedJoint {
   settlements?: Record<string, JointSettlementRecord>
   /** id anggota kantong ini */
   members?: string[]
+  /**
+   * TOMBSTONE id baris yang dihapus user (paket 61) — bentuk yang sama dengan
+   * `removedIds` di `lib/money/store.ts`/`bills-store.ts`/`wealth-store.ts`.
+   * Barisnya TIDAK dibuang supaya Undo mungkin, dan supaya catatan contoh tidak
+   * "lahir lagi" saat seluruh daftar kosong dibaca ulang.
+   */
+  removedIds?: string[]
   /** true = akun ini sudah dihapus user → jangan isi ulang data contoh */
   purged?: boolean
 }
@@ -107,6 +114,8 @@ export interface JointState {
   transactions: JointTransaction[]
   settlements: Record<string, JointSettlementRecord>
   members: string[]
+  /** id baris yang dihapus user (tombstone) */
+  removedIds: string[]
 }
 
 export interface JointSnapshot extends JointState {
@@ -136,6 +145,7 @@ const SERVER_SNAPSHOT: JointSnapshot = Object.freeze({
   transactions: INITIAL_JOINT_TRANSACTIONS,
   settlements: {},
   members: JOINT_MEMBER_SEED,
+  removedIds: [] as string[],
   hydrated: false,
 })
 
@@ -151,6 +161,7 @@ const EMPTY_SNAPSHOT: JointSnapshot = Object.freeze({
   transactions: [],
   settlements: {},
   members: [],
+  removedIds: [] as string[],
   hydrated: true,
 })
 
@@ -214,6 +225,7 @@ function persist(snapshot: JointState): void {
     transactions: snapshot.transactions.map(withoutArrivalBadge),
     settlements: snapshot.settlements,
     members: [...snapshot.members],
+    removedIds: [...snapshot.removedIds],
     purged: accountPurged,
   })
 }
@@ -243,6 +255,28 @@ function clockLabelOf(date: Date): string {
   const hours = String(date.getHours()).padStart(2, '0')
   const minutes = String(date.getMinutes()).padStart(2, '0')
   return `${hours}:${minutes}`
+}
+
+/* ── ATURAN HAPUS BARIS (paket 61.3) ─────────────────────────────────────────
+   Tiga fungsi kecil di bawah adalah SATU-SATUNYA tempat yang tahu kapan sebuah
+   baris kantong bersama boleh dihapus. Halaman memakai `jointDeleteState()`
+   untuk memutuskan tombol & kalimatnya; pintu tulis memakai syarat yang sama —
+   jadi mustahil UI menawarkan hapus pada baris yang akan ditolak store. */
+function isRemovedJointRow(id: string): boolean {
+  return live.removedIds.includes(id)
+}
+
+/** true = bulan yang memuat tanggal ini sudah ditandai settle */
+function isMonthSettled(dateISO: string): boolean {
+  return Boolean(live.settlements[monthOf(dateISO)])
+}
+
+/** tanggal perangkat `YYYY-MM-DD` — hanya dipakai di jalur TULIS (tidak dirender) */
+function deviceDateISO(date: Date = new Date()): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 
@@ -295,11 +329,20 @@ export function mergeJointState(
         ? EMPTY_SNAPSHOT.wallet
         : INITIAL_JOINT_WALLET
 
+  /* TOMBSTONE digabung (union): hapus di perangkat ini bertahan, dan hapus yang
+     sudah tersimpan tidak "hidup lagi" saat state dibaca ulang. Inilah yang
+     menutup lubang "kantong baru kosong": setelah `createJointPocket()` menandai
+     semua baris seed terhapus, daftar tersimpannya kosong — tanpa tombstone,
+     hidrasi berikutnya akan menghidupkan kembali catatan contoh itu. */
+  const storedRemoved = known ? (persisted?.removedIds ?? []).filter((id) => id) : []
+  const removedIds = [...new Set([...storedRemoved, ...current.removedIds])]
+
   return {
     wallet,
     transactions,
     settlements: { ...(known ? (persisted?.settlements ?? {}) : {}), ...current.settlements },
     members,
+    removedIds,
     hydrated: true,
   }
 }
@@ -499,7 +542,7 @@ export function addJointTransaction(input: NewJointTransactionInput): JointTrans
  */
 export function updateSplit(id: string, split: SplitSpec): JointTransaction | null {
   const target = live.transactions.find((tx) => tx.id === id)
-  if (!target || target.isSettlement) return null
+  if (!target || target.isSettlement || isRemovedJointRow(id)) return null
 
   const updated: JointTransaction = {
     ...target,
@@ -526,7 +569,7 @@ export function updateSplit(id: string, split: SplitSpec): JointTransaction | nu
  */
 export function setPaidBy(id: string, userId: string): JointTransaction | null {
   const target = live.transactions.find((tx) => tx.id === id)
-  if (!target || target.isSettlement) return null
+  if (!target || target.isSettlement || isRemovedJointRow(id)) return null
   if (!isAllowedPocket(live, userId)) return null
   if (pocketOf(target) === userId) return target
 
@@ -546,6 +589,92 @@ export function renameJointWallet(name: string): JointWallet | null {
   if (next === live.wallet.name) return live.wallet
   const wallet: JointWallet = { ...live.wallet, name: next }
   commit({ ...live, wallet, hydrated: true })
+  return wallet
+}
+
+/**
+ * HAPUS PER BARIS (paket 61.3) — pintu yang sebelumnya TIDAK ADA sama sekali
+ * (store ini nol fungsi hapus, jadi catatan bareng yang salah hanya bisa
+ * "dilawan" dengan mencatat ulang dan menutupi angka yang salah).
+ *
+ * Tiga syarat, dan alasannya masing-masing:
+ *
+ *   1. Barisnya harus CATATAN. Baris settle & baris pembuka bulan BUKAN catatan
+ *      user — keduanya turunan penanda bulan (`settlementEntriesFor()`), jadi
+ *      tidak punya id di daftar ini dan memang tidak bisa dihapus dari sini;
+ *   2. Bulannya BELUM di-settle. Setelah "Tandai Sudah Settle", angka bulan itu
+ *      sudah disepakati dua orang dan transfernya (mungkin) sudah terjadi;
+ *      menghapus catatannya akan mengubah SALDO PATUNGAN PASANGAN secara
+ *      retroaktif tanpa sepengetahuannya. Karena itu ditolak — dan UI menjelaskan
+ *      alasannya (`JOINT_DELETE_COPY.lockedNote`), bukan menyembunyikan tombolnya;
+ *   3. TOMBSTONE, bukan `filter()`: barisnya tetap disimpan supaya Undo benar-benar
+ *      bisa mengembalikannya BESERTA angka timbangannya selama jendelanya hidup.
+ *
+ * `null` = tidak ada yang ditulis (id tidak ada / baris turunan / sudah terhapus
+ * / bulannya sudah di-settle).
+ */
+export function deleteJointTransaction(id: string): JointTransaction | null {
+  const target = live.transactions.find((tx) => tx.id === id)
+  if (!target || target.isSettlement || target.isOpening) return null
+  if (isRemovedJointRow(id)) return null
+  if (isMonthSettled(target.date)) return null
+
+  commit({ ...live, removedIds: [...live.removedIds, id], hydrated: true })
+  return target
+}
+
+/**
+ * Cabut tombstone satu baris (jalur Undo). `null` = gagal jujur: barisnya tidak
+ * ada, atau memang tidak sedang terhapus (mis. Undo yang datang setelah jendela
+ * 5 detiknya tutup).
+ */
+export function restoreJointTransaction(id: string): JointTransaction | null {
+  if (!live.removedIds.includes(id)) return null
+  commit({
+    ...live,
+    removedIds: live.removedIds.filter((rowId) => rowId !== id),
+    hydrated: true,
+  })
+  return live.transactions.find((tx) => tx.id === id) ?? null
+}
+
+/**
+ * BUAT KANTONG BARU: nama baru + BUKU BESAR YANG KOSONG (paket 61.3).
+ *
+ * Kenapa ini fungsi tersendiri, bukan `renameJointWallet()`: kantong yang baru
+ * dibuat TIDAK BOLEH tampil berisi catatan contoh. Sebelum paket 61, alur "Buat
+ * Dompet & Ajak Pasangan" hanya mengganti nama kantong seed (`INITIAL_JOINT_WALLET`),
+ * sementara buku besarnya masih `INITIAL_JOINT_TRANSACTIONS` — jadi kantong yang
+ * baru saja dibuat langsung berisi "Groceries Superindo" dan "Listrik PLN", dan
+ * klaim "baru dibuat" tidak bisa dipercaya. Yang menandai barisnya terhapus
+ * (bukan membuangnya) juga `settlements` dikosongkan: bulan yang sudah disettle
+ * tidak berlaku lagi di kantong baru.
+ *
+ * `todayISO` bisa dioper supaya perilakunya bisa diuji tanpa jam mesin; di UI,
+ * tanggalnya diisi hari ini — kantong yang baru dibuat tidak boleh menulis
+ * "Bersama sejak 15 Juli 2026" (tanggal seed).
+ */
+export function createJointPocket(name: string, todayISO?: string): JointWallet | null {
+  const next = name.trim()
+  if (!next) return null
+
+  const wallet: JointWallet = {
+    ...live.wallet,
+    name: next,
+    createdAt: todayISO ?? deviceDateISO(),
+    /* bendera "kantong ini benar-benar dibuat user" — halaman memakainya untuk
+       membedakan keadaan 1 (belum ada kantong) dari keadaan 2 (menunggu
+       pasangan), yang tanpa ini tampak sama karena nama seed sudah terisi */
+    created: true,
+  }
+  /* seluruh baris yang ada sekarang ditandai terhapus: bukan dibuang, supaya
+     (a) hidrasi berikutnya tidak menghidupkan catatan contoh, dan (b) datanya
+     masih bisa dipulihkan kalau ternyata keputusan itu salah. */
+  const removedIds = [
+    ...new Set([...live.removedIds, ...live.transactions.map((tx) => tx.id)]),
+  ]
+
+  commit({ ...live, wallet, removedIds, settlements: {}, hydrated: true })
   return wallet
 }
 
@@ -738,7 +867,11 @@ export function jointRowKey(tx: JointTransaction): string {
 export function jointLedgerFeed(snapshot: JointSnapshot, month: string): JointTransaction[] {
   const out: JointTransaction[] = []
   const seen = new Set<string>()
-  for (const tx of [...settlementEntriesOf(snapshot, month), ...snapshot.transactions]) {
+  /* baris yang dihapus user tidak pernah masuk feed — timbangan, statistik, dan
+     timeline membaca daftar yang SAMA, jadi satu penyaring cukup untuk
+     ketiganya (paket 61.3) */
+  const notes = snapshot.transactions.filter((tx) => !snapshot.removedIds.includes(tx.id))
+  for (const tx of [...settlementEntriesOf(snapshot, month), ...notes]) {
     const key = jointRowKey(tx)
     if (seen.has(key)) continue
     seen.add(key)
@@ -747,9 +880,36 @@ export function jointLedgerFeed(snapshot: JointSnapshot, month: string): JointTr
   return out
 }
 
-/** catatan yang benar-benar "catatan" (bukan baris settle/pembuka) */
+/** catatan yang benar-benar "catatan" (bukan baris settle/pembuka & bukan tombstone) */
 export function jointNotes(snapshot: JointSnapshot): JointTransaction[] {
-  return snapshot.transactions.filter((tx) => !tx.isSettlement)
+  return snapshot.transactions.filter(
+    (tx) => !tx.isSettlement && !snapshot.removedIds.includes(tx.id),
+  )
+}
+
+/**
+ * Boleh dihapus atau tidak (paket 61.3) — SATU tempat yang tahu aturannya.
+ *
+ * Dipakai UI untuk memutuskan tombol & kalimatnya, dan syaratnya identik dengan
+ * yang diperiksa `deleteJointTransaction()`, jadi tombol tidak pernah menawarkan
+ * sesuatu yang akan ditolak store. Tiga nilai, karena UI perlu membedakan
+ * "kenapa tidak ada tombol":
+ *
+ *   · `allowed` — catatan di bulan yang belum disettle → tombol Hapus;
+ *   · `locked`  — bulannya sudah disettle → tombolnya TIDAK dipajang, tapi
+ *                 alasannya dituliskan (`JOINT_DELETE_COPY.lockedNote`), jadi
+ *                 user tidak mengira fiturnya lupa dibuat;
+ *   · `none`    — baris turunan (settle/pembuka) atau baris yang sudah terhapus.
+ */
+export type JointDeleteState = 'allowed' | 'locked' | 'none'
+
+export function jointDeleteState(
+  snapshot: JointSnapshot,
+  tx: JointTransaction,
+): JointDeleteState {
+  if (tx.isSettlement || tx.isOpening) return 'none'
+  if (snapshot.removedIds.includes(tx.id)) return 'none'
+  return snapshot.settlements[monthOf(tx.date)] ? 'locked' : 'allowed'
 }
 
 /** true = kantong ini sudah punya pasangan (bukan lagi wujud undangan) */

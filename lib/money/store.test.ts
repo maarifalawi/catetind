@@ -25,8 +25,10 @@ import {
   purgeMoneyStore,
   recordedTransactions,
   removeRow,
+  removeRows,
   resetMoneyStore,
   restoreRow,
+  restoreRows,
   rowForClientTxId,
   rowOverrideOf,
   transferLogOf,
@@ -37,6 +39,7 @@ import {
   walletBalance,
   walletNameOfId,
   walletOptionsFor,
+  walletTransactionsOf,
   type MoneyRow,
   type MoneySnapshot,
 } from './store'
@@ -511,8 +514,12 @@ describe('jalur tulis dari panel input & AI capture', () => {
   it('dompet default ikut konteks uang yang aktif', () => {
     expect(defaultWalletNameFor('pribadi')).toBe('BCA')
     expect(defaultWalletNameFor('keluarga')).toBe('Tunai')
-    /* konteks `bersama` belum punya dompet kanon → jatuh ke Tunai, bukan tebakan */
-    expect(defaultWalletNameFor('bersama')).toBe('Tunai')
+    /* PAKET 59 · 59.4 — `''`, BUKAN 'Tunai'. Sebelumnya konteks `bersama` yang
+       belum punya dompet kanon jatuh ke 'Tunai' (dompet konteks KELUARGA), jadi
+       catatan yang dibuat sambil switcher di posisi "Bersama" memotong saldo
+       Tunai tanpa user sadari (temuan audit #1). Konteks tanpa dompet sekarang
+       menjawab jujur: tidak ada dompet, dan penulisannya ditolak dengan arahan. */
+    expect(defaultWalletNameFor('bersama')).toBe('')
   })
 })
 
@@ -1032,7 +1039,7 @@ describe('antrean offline (paket 42)', () => {
         removedIds: [],
         syncedIds: [...snapshot.syncedIds],
       },
-      { wallets: WALLET_SEED, rows: [], removedIds: [], rowOverrides: {}, syncedIds: [], hydrated: false },
+      { wallets: WALLET_SEED, rows: [], removedIds: [], removedWalletIds: [], rowOverrides: {}, syncedIds: [], hydrated: false },
     )
 
     expect(pendingSyncCount(merged)).toBe(1)
@@ -1111,9 +1118,12 @@ describe('edit catatan = satu pintu tulis lintas halaman (paket 48)', () => {
     /* tidak ada baris ledger baru & tidak ada rupiah yang bergerak */
     expect(snapshot.rows).toHaveLength(0)
     expect(cashTotal(snapshot)).toBe(CANON_CASH)
-    /* konstanta demo TIDAK disunting — yang berubah cuma pajangannya */
+    /* konstanta demo TIDAK disunting — yang berubah cuma pajangannya.
+       Nominal barisnya sendiri 7.500.000 sejak paket 57: dulu 8.500.000,
+       disatukan ke kanon demo `MONTHLY_INCOME` supaya tidak ada dua angka gaji
+       (temuan AKAR C audit 2026-09) — lihat `HOME_MONEY_GROUPS`. */
     expect(HISTORY_TRANSACTIONS[1]?.amount).toBe(32_000)
-    expect(homeRow.amount).toBe(8_500_000)
+    expect(homeRow.amount).toBe(7_500_000)
     /* yang dibaca Riwayat / Home / grafik arus uang: override yang sama */
     expect(applyRowOverride(snapshot, historyRow).amount).toBe(45_000)
     expect(applyRowOverride(snapshot, homeRow).amount).toBe(9_000_000)
@@ -1140,6 +1150,7 @@ describe('edit catatan = satu pintu tulis lintas halaman (paket 48)', () => {
         wallets: WALLET_SEED,
         rows: [],
         removedIds: [],
+        removedWalletIds: [],
         rowOverrides: {},
         syncedIds: [],
         hydrated: false,
@@ -1262,14 +1273,13 @@ describe('edit catatan = satu pintu tulis lintas halaman (paket 48)', () => {
   })
 
   it('satu edit terbaca sama di Riwayat, Home, dan /wallet/[id] (arus uang ikut bergerak)', () => {
-    /* baris Home & strip "Bulan ini" dibangun persis seperti di
-       `recent-transactions-card.tsx`; kartu "Arus Uang" membaca himpunan yang SAMA */
-    const homeRowsOf = (snapshot: MoneySnapshot) => [
-      ...recordedTransactions(snapshot).map(homeMoneyRowFrom),
-      ...HOME_MONEY_ROWS.filter((row) => !isRowRemoved(snapshot, row.id)).map((row) =>
-        applyRowOverride(snapshot, row),
-      ),
-    ]
+    /* Baris Home & strip "Bulan ini" dibangun persis seperti di
+       `recent-transactions-card.tsx`/`cash-flow-card.tsx` SEJAK PAKET 58: satu
+       sumber, baris LEDGER NYATA (`recordedTransactions()`) — konstanta seed
+       `HOME_MONEY_ROWS` sudah berhenti menjadi sumber angka kartu Home (temuan
+       AKAR A audit 2026-09), jadi ia tidak lagi ikut menyusun angka "before". */
+    const homeRowsOf = (snapshot: MoneySnapshot) =>
+      recordedTransactions(snapshot).map(homeMoneyRowFrom)
     const before = summarizeHomeMoney(homeRowsOf(getMoneySnapshot()))
 
     const row = postExpense({ walletId: 'bca', amount: 50_000, note: 'Kopi' }) as MoneyRow
@@ -1357,6 +1367,140 @@ describe('kekayaan & kas membaca keadaan yang sama', () => {
     expect(paymentsOf(getWealthSnapshot(), '1').some((row) => row.id === result!.payment.id)).toBe(true)
     /* Net Worth TIDAK naik hanya karena melunasi (aturan laporan 41) */
     expect(netWorthOfStores()).toBe(netWorthBefore)
+  })
+})
+
+/* ── Test HAPUS SEMUA RIWAYAT (paket 59 · item 59.2) ──────────────────────────
+   Tombol "Hapus semua" di Riwayat memakai SATU pintu tulis (`removeRows`) — bukan
+   perulangan `removeRow()` dari komponen. Yang dikunci di sini: tombstone untuk
+   baris sesi DAN baris mock dalam satu panggilan, idempoten, SALDO TIDAK
+   BERUBAH (kanon §4.5 — uang yang sudah keluar tidak kembali), Undo massal
+   memulihkan semuanya, dan "hapus semua" benar-benar menyisakan nol catatan.
+
+   Catatan: setiap `commit()` di store menjalankan `assertLedgerInvariant()`, jadi
+   kasus-kasus di bawah sekaligus membuktikan ledger tetap seimbang setelah hapus
+   massal (kalau tidak, penulisannya akan ditolak dan test ini gagal). */
+
+describe('hapus massal riwayat (59.2)', () => {
+  it('menulis tombstone baris sesi + baris mock dalam SATU panggilan', () => {
+    const row = postExpense({ walletId: 'bca', amount: 25_000, note: 'Kopi' }) as MoneyRow
+    const ids = [1, 2, row.seq]
+
+    expect(removeRows(ids)).toBe(3)
+    const snapshot = getMoneySnapshot()
+    for (const id of ids) expect(isRowRemoved(snapshot, id)).toBe(true)
+    /* daftar pajangan (Riwayat & Home) kosong, tapi barisnya TIDAK dibuang dari
+       state — tombstone-nya yang menyembunyikan (aturan hapus repo) */
+    expect(recordedTransactions(snapshot)).toHaveLength(0)
+    expect(snapshot.rows).toHaveLength(1)
+  })
+
+  it('idempoten: daftar yang sama dua kali tidak menambah tombstone', () => {
+    expect(removeRows([1, 2, 3])).toBe(3)
+    expect(removeRows([1, 2, 3])).toBe(0)
+    expect(removeRows([])).toBe(0)
+    expect(getMoneySnapshot().removedIds).toHaveLength(3)
+  })
+
+  it('SALDO TIDAK BERUBAH setelah seluruh riwayat dihapus', () => {
+    const balanceBefore = walletBalance(getMoneySnapshot(), 'bca')
+    postExpense({ walletId: 'bca', amount: 85_000, note: 'Kopi' })
+    const afterSpend = walletBalance(getMoneySnapshot(), 'bca')
+    expect(afterSpend).toBe(balanceBefore - 85_000)
+
+    const ids = [1, 2, ...getMoneySnapshot().rows.map((row) => row.seq)]
+    expect(removeRows(ids)).toBe(ids.length)
+
+    /* uang yang sudah keluar tetap keluar: saldo TIDAK naik kembali walau
+       catatannya hilang dari Riwayat */
+    expect(walletBalance(getMoneySnapshot(), 'bca')).toBe(afterSpend)
+    expect(cashTotal(getMoneySnapshot())).toBe(CANON_CASH - 85_000)
+  })
+
+  it('Undo massal (`restoreRows`) memulihkan semua baris yang tadi hilang', () => {
+    const row = postExpense({ walletId: 'bca', amount: 25_000, note: 'Kopi' }) as MoneyRow
+    const ids = [1, 2, row.seq]
+    removeRows(ids)
+    expect(recordedTransactions(getMoneySnapshot())).toHaveLength(0)
+
+    expect(restoreRows(ids)).toBe(3)
+    const snapshot = getMoneySnapshot()
+    expect(snapshot.removedIds).toHaveLength(0)
+    expect(recordedTransactions(snapshot)).toHaveLength(1)
+    expect(walletBalance(snapshot, 'bca')).toBe(1_450_000 - 25_000)
+    /* memulihkan daftar yang sudah pulih = tidak ada yang berubah */
+    expect(restoreRows(ids)).toBe(0)
+  })
+
+  it('baris MOCK dan baris SESI sama-sama hilang → hitungan transaksi nyata = 0', () => {
+    const row = postExpense({ walletId: 'bca', amount: 25_000, note: 'Kopi' }) as MoneyRow
+    const ids = [...HISTORY_TRANSACTIONS.map((tx) => tx.id), row.seq]
+    const removed = removeRows(ids)
+
+    const snapshot = getMoneySnapshot()
+    expect(removed).toBe(ids.length)
+    expect(HISTORY_TRANSACTIONS.filter((tx) => !isRowRemoved(snapshot, tx.id))).toHaveLength(0)
+    expect(recordedTransactions(snapshot)).toHaveLength(0)
+    /* baris mock yang sudah dihapus tidak bisa dihidupkan lagi oleh edit */
+    expect(editRow(1, { amount: 99_000 })).toBeNull()
+  })
+})
+
+/* ── Test KONTEKS TANPA DOMPET = TOLAK, JANGAN MENEMPEL (paket 59 · 59.4) ─────
+   Bug yang ditutup (temuan audit #1): catatan yang dibuat sambil switcher di
+   posisi "Bersama" — konteks yang belum punya dompet — menempel ke dompet
+   'Tunai' milik konteks Keluarga, sehingga saldo Tunai berkurang tanpa user
+   memilihnya. Sekarang `wallet` kosong ditolak di pintu tulis (satu baris pun
+   tidak lahir), sementara nama dompet yang belum ada di ledger tetap dicatat apa
+   adanya TANPA menggerakkan saldo siapa pun (jalur "belum terhubung"). */
+
+describe('konteks tanpa dompet tidak memotong dompet lain (59.4)', () => {
+  const draft = {
+    name: 'Kopi',
+    amount: 25_000,
+    type: 'expense' as const,
+    category: 'Makanan',
+    dateISO: '2026-09-27',
+  }
+
+  it('dompet kosong DITOLAK: nol baris, nol tombstone, nol perubahan saldo', () => {
+    const before = getMoneySnapshot()
+    expect(defaultWalletNameFor('bersama')).toBe('')
+    expect(postTransaction({ ...draft, wallet: '' })).toBeNull()
+    expect(postTransaction({ ...draft, wallet: '   ' })).toBeNull()
+
+    const after = getMoneySnapshot()
+    expect(after.rows).toHaveLength(0)
+    expect(after.removedIds).toHaveLength(0)
+    expect(cashTotal(after)).toBe(cashTotal(before))
+  })
+
+  it('saldo Tunai tetap utuh setelah percobaan mencatat tanpa dompet', () => {
+    /* inilah angka yang dulu bocor: satu catatan Rp 25.000 dari konteks
+       "Bersama" memotong Tunai (Rp 50.000 → Rp 25.000) tanpa user melihatnya */
+    postTransaction({ ...draft, wallet: '' })
+    expect(walletBalance(getMoneySnapshot(), 'tunai')).toBe(50_000)
+  })
+
+  it('dompet yang belum ada di ledger tetap DICATAT apa adanya, saldo tidak bergerak', () => {
+    const row = postTransaction({ ...draft, wallet: 'OVO' })
+    expect(row).not.toBeNull()
+
+    const snapshot = getMoneySnapshot()
+    expect(recordedTransactions(snapshot)[0]).toMatchObject({ wallet: 'OVO', amount: 25_000 })
+    expect(walletBalance(snapshot, 'bca')).toBe(1_450_000)
+    expect(walletBalance(snapshot, 'gopay')).toBe(350_000)
+    expect(walletBalance(snapshot, 'tunai')).toBe(50_000)
+  })
+
+  it('dompet yang benar-benar dipilih user bergerak — dan HANYA dompet itu', () => {
+    const chosen = addWalletAccount({ name: 'Kas Bersama', type: 'Cash', opening: 100_000 })
+    expect(postTransaction({ ...draft, wallet: chosen.name })).not.toBeNull()
+
+    const snapshot = getMoneySnapshot()
+    expect(walletBalance(snapshot, chosen.id)).toBe(100_000 - 25_000)
+    expect(walletBalance(snapshot, 'tunai')).toBe(50_000)
+    expect(walletBalance(snapshot, 'bca')).toBe(1_450_000)
   })
 })
 

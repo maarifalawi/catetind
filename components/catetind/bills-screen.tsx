@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import Link from 'next/link'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Flame, Plus, Receipt, Wallet as WalletIcon } from 'lucide-react'
 import { toast } from 'sonner'
@@ -24,15 +25,19 @@ import {
   ADD_BILL_TOAST,
   BILL_FILTERS,
   CONFIRM_DELETE_BILL_COPY,
+  CONFIRM_UNPAID_COPY,
   CURRENT_DAY,
   DELETE_BILL_TOAST,
   MARK_PAID_SHEET_COPY,
   MARK_PAID_TOAST,
   MARK_PAID_TOAST_EXTRA,
-  MONTHLY_INCOME,
+  TODAY_ISO,
   UNDO_WINDOW_MS,
+  UNPAID_TOAST,
   UPDATE_BILL_TOAST,
+  WATERFALL_NO_INCOME_COPY,
   billFilterCounts,
+  billWalletName,
   burnPercentage,
   filterBills,
   groupBills,
@@ -41,6 +46,7 @@ import {
   type Bill,
   type BillFilter,
 } from '@/lib/data/bills'
+import { MONEY_SETTINGS_HREF } from '@/lib/data/budget'
 import {
   CONTEXT_EMPTY_COPY,
   CONTEXT_LABEL,
@@ -59,6 +65,9 @@ import {
   useBillsStore,
 } from '@/lib/money/bills-store'
 import { defaultWalletNameFor, useMoneyStore, walletIdOfName, walletOptionsFor } from '@/lib/money/store'
+import { useUserMoneySettings } from '@/lib/user-money-settings'
+import { dayOfMonth } from '@/lib/time'
+import { useTodayISO } from '@/lib/use-today-iso'
 
 /* ── Tagihan Rutin (/app/bills) ──────────────────────────────────────────────
    Halaman ini SENGAJA bukan tabel daftar tagihan. Alurnya dibikin seperti
@@ -67,14 +76,18 @@ import { defaultWalletNameFor, useMoneyStore, walletIdOfName, walletOptionsFor }
    1. Tameng Proteksi  — tiap tagihan yang lunas menutup satu lajur perisai.
    2. Waterfall Gaji   — gaji "dimakan" potongan demi potongan, terbesar dulu.
    3. Timeline 7 hari  — tagihan terdekat; tap untuk lompat ke kartunya.
-   4. Kartu tagihan    — geser kanan untuk cap LUNAS (haptic + stempel karet),
-                         geser kiri untuk Edit / Hapus.
+   4. Kartu tagihan    — TOMBOL yang selalu terlihat untuk "Tandai Lunas" /
+                         "Batal lunas" (paket 60.4, supaya bisa dipakai di
+                         desktop tanpa gesture), sementara geser kanan tetap
+                         jadi jalur cepat untuk cap LUNAS (haptic + stempel
+                         karet) dan geser kiri untuk Edit / Hapus.
 
    Privasi memakai state GLOBAL (<GlobalPrivacyToggle /> + usePrivacy) supaya
    tombol mata di halaman ini menyensor nominal yang sama dengan halaman lain.
    (Sebelumnya halaman ini punya `isMasked` lokal yang tidak pernah berubah —
-   toggle-nya nyata-nyata tidak menyensor apa pun.) "Hari ini" dipatok konstanta
-   CURRENT_DAY supaya hasil render server & client identik.
+   toggle-nya nyata-nyata tidak menyensor apa pun.) "Hari ini" dibaca dari
+   `useTodayISO()` (paket 57): status "telat" memakai tanggal yang berjalan,
+   bukan konstanta `CURRENT_DAY` — konstanta itu tinggal sebagai jangkar seed.
    ────────────────────────────────────────────────────────────────────────── */
 
 /** jeda sampai stempel "fresh" menyusut jadi stempel samar milik kartu lunas.
@@ -101,6 +114,14 @@ export function BillsScreen() {
   const [pendingDelete, setPendingDelete] = useState<Bill | null>(null)
   /** tagihan yang sedang dibayar (null = sheet "Tandai Lunas" tertutup) */
   const [payTarget, setPayTarget] = useState<Bill | null>(null)
+  /**
+   * Tagihan yang minta DIBATALKAN lunasnya (paket 60.4). Pintu ini lahir karena
+   * "Batal lunas" dulu cuma bisa lewat tombol Undo di toast — 5 detik setelah
+   * membayar, tidak ada lagi jalan membatalkannya. Sekarang tombolnya selalu
+   * terlihat untuk tagihan yang punya catatan pembayaran, dan karena uangnya
+   * benar-benar kembali ke dompet, ia selalu lewat konfirmasi dulu.
+   */
+  const [unpaidTarget, setUnpaidTarget] = useState<Bill | null>(null)
   /** jejak Undo HAPUS yang MASIH berlaku (dikosongkan begitu jendelanya lewat) */
   const undoRef = useRef<string | null>(null)
   /** jejak Undo "LUNAS" yang masih berlaku — untuk mencabut stempel + barisnya */
@@ -125,8 +146,16 @@ export function BillsScreen() {
   /** kartu yang sedang disorot karena tanggalnya dipilih di timeline */
   const [highlightId, setHighlightId] = useState<string | null>(null)
 
-  const currentDay = CURRENT_DAY
-  const monthlyIncome = MONTHLY_INCOME
+  /* ── JANGKAR TANGGAL + PEMASUKAN USER (paket 57) ─────────────────────────
+     `today` diisi setelah mount, jadi render server tidak menyebut tanggal
+     perangkat. Sebelumnya `currentDay` dipatok 25 dan gaji memakai konstanta
+     7.500.000: status telat bisa salah ("telat 3 hari" padahal hari ini 28) dan
+     Waterfall Gaji membagi tagihan dengan pemasukan yang bukan milik user. */
+  const today = useTodayISO()
+  const todayIso = today || TODAY_ISO
+  const settings = useUserMoneySettings()
+  const currentDay = today ? dayOfMonth(today, CURRENT_DAY) : CURRENT_DAY
+  const monthlyIncome = settings.monthlyIncome
 
   /** semua timer halaman — dibersihkan saat unmount supaya tidak ada set state
    *  pada komponen yang sudah hilang */
@@ -171,6 +200,17 @@ export function BillsScreen() {
     if (walletChoices.some((option) => option.id === payTarget.walletId)) return payTarget.walletId
     return walletIdOfName(money, defaultWalletNameFor(context))
   }, [payTarget, walletChoices, money, context])
+  /**
+   * Nominal yang BENAR-BENAR dibayar (dibaca dari baris kasnya), dipakai dialog
+   * "Batal lunas" — bukan `bill.amount`, karena tagihan dengan nominal fleksibel
+   * bisa dibayar berapa saja (paket 51). Kalau barisnya tidak ketemu, jatuh ke
+   * nominal tagihannya supaya dialog tidak menyebut Rp 0 yang menyesatkan.
+   */
+  const unpaidAmountLabel = useMemo(() => {
+    if (!unpaidTarget) return ''
+    const row = money.rows.find((item) => item.id === unpaidTarget.paidRowId)
+    return maskMoney(row?.amount ?? unpaidTarget.amount, masked)
+  }, [unpaidTarget, money, masked])
 
   /* ── AKSI ───────────────────────────────────────────────────────────────── */
 
@@ -244,6 +284,52 @@ export function BillsScreen() {
     setStampId((current) => (current === billId ? null : current))
     toast.success(MARK_PAID_TOAST_EXTRA.undoneTitle, {
       description: MARK_PAID_TOAST_EXTRA.undoneDescription,
+    })
+  }
+
+  /**
+   * Batal "Lunas" lewat TOMBOL (paket 60.4) — dua langkah jujur:
+   *   1. `handleUnmarkPaid` menahan niatnya (dialog konfirmasi), karena uangnya
+   *      benar-benar berpindah balik ke dompet;
+   *   2. `confirmUnpaid` memanggil `unmarkBillPaid()` — baris kasnya dibalikkan
+   *      (`removeRow` + koreksi saldo), jadi saldo dompetnya pulih — lalu
+   *      menyebut NOMINAL & DOMPET yang menerima uang itu kembali.
+   *
+   * Beda dari tombol Undo di toast: jalur ini TIDAK dibatasi jendela 5 detik.
+   * Alasannya: Undo di toast adalah jaring pengaman untuk salah tekan pada
+   * detik-detik setelah aksi; tombol "Batal lunas" di kartu adalah keputusan
+   * sadar, dan tagihan yang salah ditandai lunas kemarin pun harus bisa
+   * dibetulkan hari ini.
+   */
+  function handleUnmarkPaid(bill: Bill) {
+    setUnpaidTarget(bill)
+  }
+
+  function confirmUnpaid() {
+    if (!unpaidTarget) return
+    const bill = unpaidTarget
+    setUnpaidTarget(null)
+
+    const result = unmarkBillPaid(bill.id)
+    if (!result) {
+      /* statusnya keburu berubah (mis. di tab lain) → tidak ada yang dibatalkan */
+      toast(UNPAID_TOAST.rejected)
+      return
+    }
+    setStampId((current) => (current === bill.id ? null : current))
+
+    if (!result.row) {
+      /* tagihan contoh yang stempelnya tidak punya baris kas: stempelnya dicabut,
+         tapi TIDAK ada uang yang kembali — dan itu dikatakan apa adanya */
+      toast(UNPAID_TOAST.noRow)
+      return
+    }
+
+    const walletLabel =
+      walletChoices.find((option) => option.id === result.row?.walletId)?.label ??
+      billWalletName(bill.walletId)
+    toast.success(UNPAID_TOAST.title(bill.name), {
+      description: UNPAID_TOAST.description(maskMoney(result.row.amount, masked), walletLabel),
     })
   }
 
@@ -416,7 +502,7 @@ export function BillsScreen() {
 
         {bills.length === 0 ? (
           /* 10. EMPTY STATE — tameng kelabu 0/0 + ajakan mencatat tagihan pertama */
-          <EmptyState masked={masked} onAdd={() => setShowAddBill(true)} />
+          <EmptyState masked={masked} currentDay={currentDay} onAdd={() => setShowAddBill(true)} />
         ) : scopedBills.length === 0 ? (
           /* EMPTY STATE PER KONTEKS (paket 47): tagihan ada, tapi tidak satu pun
              milik konteks aktif. Daftar kosong tanpa penjelasan = user mengira
@@ -453,18 +539,42 @@ export function BillsScreen() {
               {/* 8. NUDGE NOTIFIKASI — hanya saat izin belum pernah diminta */}
               <BillNotifNudge className="mt-0" />
 
-              {/* 4. WATERFALL GAJI */}
-              <SalaryWaterfall
-                bills={bills}
-                masked={masked}
-                monthlyIncome={monthlyIncome}
-                className="mt-0"
-              />
+              {/* 4. WATERFALL GAJI — pembaginya pemasukan user (paket 57).
+                  Kalau belum diatur, kartu diganti kalimat jujur + tautan ke
+                  Pengaturan: membagi dengan konstanta demo (atau nol) dua-duanya
+                  klaim palsu. */}
+              {monthlyIncome > 0 ? (
+                <SalaryWaterfall
+                  bills={bills}
+                  masked={masked}
+                  monthlyIncome={monthlyIncome}
+                  className="mt-0"
+                />
+              ) : (
+                <section
+                  aria-label={WATERFALL_NO_INCOME_COPY.title}
+                  className="rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12"
+                >
+                  <h2 className="font-display text-[15px] font-bold tracking-tight text-ink">
+                    {WATERFALL_NO_INCOME_COPY.title}
+                  </h2>
+                  <p className="mt-1.5 text-[12.5px] leading-relaxed text-ink/55">
+                    {WATERFALL_NO_INCOME_COPY.body}
+                  </p>
+                  <Link
+                    href={MONEY_SETTINGS_HREF}
+                    className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-forest px-4 py-2 text-[12px] font-semibold text-cream transition-colors hover:bg-forest-soft"
+                  >
+                    {WATERFALL_NO_INCOME_COPY.cta}
+                  </Link>
+                </section>
+              )}
 
               {/* 5. TIMELINE 7 HARI — hanya tagihan yang ada di list Aktif */}
               <BillTimeline
                 bills={activeBills}
                 currentDay={currentDay}
+                todayIso={todayIso}
                 onPick={handlePickBill}
                 className="mt-0"
               />
@@ -595,6 +705,7 @@ export function BillsScreen() {
                               highlighted={highlightId === bill.id}
                               delay={delay}
                               onMarkPaid={handleMarkPaid}
+                              onUnmarkPaid={handleUnmarkPaid}
                               onEdit={handleEdit}
                               onDelete={handleDelete}
                             />
@@ -653,6 +764,25 @@ export function BillsScreen() {
           />
         )}
       </AnimatePresence>
+
+      {/* konfirmasi "Batal lunas" (paket 60.4): uangnya kembali ke dompet, jadi
+          nominal & akibatnya disebut lebih dulu — termasuk bahwa catatan
+          pembayarannya tetap tersimpan di Riwayat. */}
+      <AnimatePresence>
+        {unpaidTarget && (
+          <ConfirmDialog
+            titleId="batal-lunas-judul"
+            overlayLabel={CONFIRM_UNPAID_COPY.overlay}
+            title={CONFIRM_UNPAID_COPY.title}
+            body={CONFIRM_UNPAID_COPY.body(unpaidTarget.name, unpaidAmountLabel)}
+            note={CONFIRM_UNPAID_COPY.note}
+            cancelLabel={CONFIRM_UNPAID_COPY.cancel}
+            confirmLabel={CONFIRM_UNPAID_COPY.confirm}
+            onCancel={() => setUnpaidTarget(null)}
+            onConfirm={confirmUnpaid}
+          />
+        )}
+      </AnimatePresence>
     </ScreenShell>
   )
 }
@@ -660,11 +790,20 @@ export function BillsScreen() {
 /* ── komponen kecil halaman ini ───────────────────────────────────────────── */
 
 /** 10. Empty state nurturing: belum ada tagihan rutin sama sekali */
-function EmptyState({ masked, onAdd }: { masked: boolean; onAdd: () => void }) {
+function EmptyState({
+  masked,
+  currentDay,
+  onAdd,
+}: {
+  masked: boolean
+  /** hari ke berapa hari ini — dari tanggal perangkat (paket 57), bukan CURRENT_DAY */
+  currentDay: number
+  onAdd: () => void
+}) {
   return (
     <div className="mt-5">
       {/* tameng 0/0 — kelabu penuh, tanpa ringkasan uang */}
-      <ShieldMeter bills={[]} masked={masked} currentDay={CURRENT_DAY} variant="compact" />
+      <ShieldMeter bills={[]} masked={masked} currentDay={currentDay} variant="compact" />
 
       <div className="mt-5 flex flex-col items-center rounded-[1.75rem] border-2 border-dashed border-forest/15 bg-cream/50 px-6 py-10 text-center">
         <h2 className="font-display text-[16px] font-bold tracking-tight text-ink">

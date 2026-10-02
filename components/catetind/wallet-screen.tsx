@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -13,17 +13,20 @@ import {
   MoreHorizontal,
   Plus,
   Settings2,
+  Trash2,
   Wallet as WalletIcon,
   type LucideIcon,
 } from 'lucide-react'
 import { ScreenShell } from './screen-shell'
 import { GlobalPrivacyToggle } from './global-privacy-toggle'
 import { ContextSwitcher } from './context-switcher'
+import { ConfirmDialog } from './confirm-dialog'
 import { useMoneyContext } from './money-context-provider'
 import { SyncBalanceModal } from './sync-balance-modal'
 import { AddWalletSheet } from './add-wallet-sheet'
 import { TransferFlow } from './transfer-flow'
-import { MASKED_AMOUNT, usePrivacy } from './privacy-provider'
+import { usePrivacy } from './privacy-provider'
+import { LockedAmount } from './locked-amount'
 import {
   ContactlessIcon,
   MaskedAmount,
@@ -42,9 +45,14 @@ import {
   cashTotalByContext,
   homeWallets,
   postBalanceAdjustment,
+  removeWalletAccount,
+  restoreWalletAccount,
   transferLogOf,
   useMoneyStore,
   walletAccounts,
+  walletBalance,
+  walletRecordCount,
+  type WalletRemoval,
 } from '@/lib/money/store'
 import { contextOfTransaction, matchesContext } from '@/lib/money/context-filter'
 import { HOME_TOTAL_COPY } from '@/lib/data/home'
@@ -54,8 +62,16 @@ import {
   SCOPE_NOTE,
   contextCaption,
 } from '@/lib/data/money-context'
-import { WALLET_CARD_MENU_COPY, WALLET_QUICK_ACTION_COPY, WALLET_SYNC_ADJUSTMENT_COPY, WALLET_TOTAL_COPY } from '@/lib/data/wallet-detail'
-import { MONEY_TONE, amountSign, isMoneyMovement, maskMoney } from '@/lib/data/history'
+import {
+  WALLET_CARD_MENU_COPY,
+  WALLET_DELETE_COPY,
+  WALLET_DELETE_TOAST,
+  WALLET_QUICK_ACTION_COPY,
+  WALLET_SYNC_ADJUSTMENT_COPY,
+  WALLET_TOTAL_COPY,
+  walletDeleteBalanceLabel,
+} from '@/lib/data/wallet-detail'
+import { MONEY_TONE, UNDO_WINDOW_MS, amountSign, isMoneyMovement, maskMoney } from '@/lib/data/history'
 import {
   ADD_WALLET_SHEET_COPY,
   WALLET_TRANSFER_LOG_COPY,
@@ -157,6 +173,30 @@ export function WalletScreen() {
   const [addBrand, setAddBrand] = useState<string | null>(null)
   /** dompet sumber yang saldonya sedang dipindah (null = sheet tertutup) */
   const [transferSource, setTransferSource] = useState<WalletAccount | null>(null)
+  /**
+   * Dompet yang dialog konfirmasi hapusnya sedang terbuka (paket 62).
+   *
+   * Dialog baru benar-benar menghapus setelah user menekan tombolnya — dan angka
+   * di kalimatnya (jumlah catatan + saldo) dihitung dari snapshot yang SAMA
+   * dengan yang dilihat user, bukan dari salinan yang bisa basi.
+   */
+  const [pendingWalletDelete, setPendingWalletDelete] = useState<WalletAccount | null>(null)
+  /**
+   * Bukti hapus dompet yang hak Undo-nya MASIH hidup. Disimpan di ref karena ia
+   * bukan bahan render: hanya tombol Undo yang membacanya, dan bentuknya hilang
+   * begitu jendela 5 detiknya tutup.
+   */
+  const undoWalletRef = useRef<WalletRemoval | null>(null)
+  const undoWalletTimer = useRef<number | null>(null)
+
+  /* timer jendela Undo dompet dibersihkan saat halaman ditinggalkan */
+  useEffect(
+    () => () => {
+      if (undoWalletTimer.current !== null) window.clearTimeout(undoWalletTimer.current)
+    },
+    [],
+  )
+
   /** catatan pindah dana sesi ini — bentuknya HistoryTransaction (type 'transfer').
    *  Disaring konteks (paket 47): arus juga ikut konteks, jadi log ini hanya
    *  memuat perpindahan yang dompet sumbernya di konteks aktif. Catatan yang
@@ -328,6 +368,61 @@ export function WalletScreen() {
   function handleOpenDetail(wallet: WalletAccount) {
     setOpenMenuId(null)
     router.push(`/wallet/${wallet.id}`)
+  }
+
+  /* ── 8. HAPUS DOMPET (paket 62) ────────────────────────────────────────────
+     Tiga langkah, sama seperti hapus catatan & hapus tagihan:
+       (a) minta konfirmasi dulu (dialog menyebut jumlah catatan + nominal saldo
+           yang berhenti dihitung, dan apa yang TIDAK dikembalikan);
+       (b) hapus lewat SATU pintu tulis (`removeWalletAccount` di store uang, ia
+           juga memanggil `DELETE /api/wallets/:id` yang sudah ada di server);
+       (c) sediakan Undo selama UNDO_WINDOW_MS lewat toast.
+     Tombol Undo yang ditekan setelah jendelanya tutup ditolak dengan jujur —
+     bukan diam-diam tidak terjadi apa-apa. */
+  function handleDeleteWallet(wallet: WalletAccount) {
+    setOpenMenuId(null)
+    setPendingWalletDelete(wallet)
+  }
+
+  function confirmWalletDelete() {
+    if (!pendingWalletDelete) return
+    const removal = removeWalletAccount(pendingWalletDelete.id)
+    setPendingWalletDelete(null)
+    if (!removal) {
+      /* sudah dihapus sebelumnya (mis. dari perangkat lain) — tidak ada yang
+         berubah, jadi tidak ada toast "berhasil" */
+      toast(WALLET_DELETE_TOAST.expired)
+      return
+    }
+
+    undoWalletRef.current = removal
+    if (undoWalletTimer.current !== null) window.clearTimeout(undoWalletTimer.current)
+    undoWalletTimer.current = window.setTimeout(() => {
+      if (undoWalletRef.current?.walletId === removal.walletId) undoWalletRef.current = null
+    }, UNDO_WINDOW_MS)
+
+    toast.success(WALLET_DELETE_TOAST.title(removal.name), {
+      description: WALLET_DELETE_TOAST.description,
+      action: { label: WALLET_DELETE_TOAST.undo, onClick: () => undoWalletDelete(removal) },
+      /* lama toast = lama hak undo; keduanya dibaca dari satu konstanta */
+      duration: UNDO_WINDOW_MS,
+    })
+  }
+
+  /** Undo: cabut tombstone-nya — dompetnya balik ke daftar beserta saldonya. */
+  function undoWalletDelete(removal: WalletRemoval) {
+    if (undoWalletRef.current?.walletId !== removal.walletId) {
+      toast(WALLET_DELETE_TOAST.expired)
+      return
+    }
+    undoWalletRef.current = null
+    if (!restoreWalletAccount(removal)) {
+      toast(WALLET_DELETE_TOAST.expired)
+      return
+    }
+    toast.success(WALLET_DELETE_TOAST.undoneTitle, {
+      description: WALLET_DELETE_TOAST.undoneDescription,
+    })
   }
 
   return (
@@ -920,6 +1015,17 @@ export function WalletScreen() {
                           setSyncTarget(wallet)
                         }}
                       />
+                      {/* Aksi merusak duduk di baris terakhir popover, terpisah
+                          dari tiga aksi lain (paket 62). Labelnya dari lapis data
+                          supaya halaman detail memakai kalimat yang sama. */}
+                      <span aria-hidden className="mx-2 my-1 block h-px bg-soil/10" />
+                      <MenuItem
+                        icon={Trash2}
+                        label={WALLET_CARD_MENU_COPY.delete}
+                        hint={WALLET_CARD_MENU_COPY.deleteHint}
+                        tone="danger"
+                        onClick={() => handleDeleteWallet(wallet)}
+                      />
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -966,6 +1072,46 @@ export function WalletScreen() {
         }}
         source={transferSource}
       />
+
+      {/* ── KONFIRMASI HAPUS DOMPET (paket 62) ─────────────────────────────────
+          Dialog yang SAMA dengan hapus catatan & hapus tagihan (`ConfirmDialog`),
+          jadi tidak ada dialek dialog kedua. Angka di kalimatnya dibaca dari
+          snapshot hidup: jumlah catatan yang menyentuh dompet ini
+          (`walletRecordCount`) dan nominal saldonya (disensor kalau tombol mata
+          sedang ON, §5.7). */}
+      <AnimatePresence>
+        {pendingWalletDelete && (
+          <ConfirmDialog
+            titleId="hapus-dompet-judul"
+            overlayLabel={WALLET_DELETE_COPY.overlay}
+            title={WALLET_DELETE_COPY.title(pendingWalletDelete.name)}
+            body={
+              <>
+                {WALLET_DELETE_COPY.bodyLead(pendingWalletDelete.name)}
+                <b className="font-semibold text-ink">
+                  {/* saldo dibaca LIVE dari snapshot, bukan dari kartu yang
+                      diklik beberapa detik lalu — kalau saldonya berubah,
+                      angka di dialog ikut berubah */}
+                  {walletDeleteBalanceLabel(
+                    walletBalance(snapshot, pendingWalletDelete.id),
+                    masked,
+                  )}
+                </b>
+                {WALLET_DELETE_COPY.bodyTail(
+                  walletRecordCount(snapshot, pendingWalletDelete.id),
+                )}
+                <span className="mt-2 block">{WALLET_DELETE_COPY.keepNote}</span>
+                <span className="mt-2 block">{WALLET_DELETE_COPY.moveFirstHint}</span>
+              </>
+            }
+            safety={WALLET_DELETE_COPY.safety(UNDO_WINDOW_MS / 1000)}
+            cancelLabel={WALLET_DELETE_COPY.cancel}
+            confirmLabel={WALLET_DELETE_COPY.confirm}
+            onCancel={() => setPendingWalletDelete(null)}
+            onConfirm={confirmWalletDelete}
+          />
+        )}
+      </AnimatePresence>
     </ScreenShell>
   )
 }
@@ -982,8 +1128,9 @@ export function WalletScreen() {
  * `liquid` = uang cair yang bisa langsung dipakai (aksen leaf),
  * `held` = aset ditahan/dikunci (aksen kaca netral + ikon gembok).
  *
- * Nominalnya tersensor lewat `MASKED_AMOUNT` — SATU definisi sensor app
- * (keputusan 27 Sep 2026; dulu chip ini menulis '••••' sendiri).
+ * Nominalnya disensor lewat `<LockedAmount/>` (paket 59 · 59.5): titiknya jatuh
+ * tepat di posisi angka dan lebarnya dikunci, jadi chip ini tidak melebar-menyusut
+ * saat tombol mata ditekan. SENSORNYA tetap satu: `MASKED_AMOUNT`.
  */
 function LiquidityPill({
   icon: Icon,
@@ -1026,7 +1173,7 @@ function LiquidityPill({
           {label}
         </span>
         <span className="mt-0.5 block truncate text-[13.5px] font-bold tabular-nums text-cream">
-          {masked ? MASKED_AMOUNT : value}
+          <LockedAmount value={value} masked={masked} />
         </span>
       </span>
     </span>
@@ -1038,25 +1185,48 @@ function MenuItem({
   icon: Icon,
   label,
   hint,
+  tone = 'default',
   onClick,
 }: {
   icon: LucideIcon
   label: string
   hint: string
+  /**
+   * `danger` = aksi merusak (hapus). Warnanya plum — tinta yang sama dengan
+   * dialog konfirmasi & tombol hapus di halaman lain, jadi "merah" di app ini
+   * selalu berarti satu hal: aksi yang mengubah/menghapus data.
+   */
+  tone?: 'default' | 'danger'
   onClick: () => void
 }) {
+  const danger = tone === 'danger'
   return (
     <button
       type="button"
       role="menuitem"
       onClick={onClick}
-      className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2.5 text-left transition-colors hover:bg-sage/70"
+      className={cn(
+        'flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/30',
+        danger ? 'hover:bg-plum/15' : 'hover:bg-sage/70',
+      )}
     >
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-sage text-forest">
+      <span
+        className={cn(
+          'flex size-8 shrink-0 items-center justify-center rounded-full',
+          danger ? 'bg-plum/15 text-plum' : 'bg-sage text-forest',
+        )}
+      >
         <Icon className="size-4" strokeWidth={2.2} />
       </span>
       <span className="min-w-0">
-        <span className="block text-[13px] font-semibold leading-tight text-ink">{label}</span>
+        <span
+          className={cn(
+            'block text-[13px] font-semibold leading-tight',
+            danger ? 'text-plum' : 'text-ink',
+          )}
+        >
+          {label}
+        </span>
         <span className="mt-0.5 block text-[11px] text-ink/45">{hint}</span>
       </span>
     </button>

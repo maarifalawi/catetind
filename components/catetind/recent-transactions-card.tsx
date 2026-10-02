@@ -21,24 +21,17 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatIDR } from '@/lib/wallets'
-import { amountSign, type HistoryTransaction } from '@/lib/data/history'
+import { amountSign } from '@/lib/data/history'
 import {
   HOME_MONEY_COPY,
-  HOME_MONEY_GROUPS,
-  HOME_MONEY_ROWS,
+  groupHomeMoneyRows,
   homeMoneyRowFrom,
+  homeRowsInLastDays,
   summarizeHomeMoney,
   type HomeMoneyRow,
 } from '@/lib/data/home-money'
-import {
-  applyRowOverride,
-  cancelTransferRow,
-  isRowRemoved,
-  recordedTransactions,
-  removeRow,
-  useMoneyStore,
-  type MoneySnapshot,
-} from '@/lib/money/store'
+import { cancelTransferRow, recordedTransactions, removeRow, useMoneyStore } from '@/lib/money/store'
+import { useTodayISO } from '@/lib/use-today-iso'
 import type { TransactionType } from '@/lib/types'
 import { TransactionBottomSheet } from '@/components/dashboard/transaction-bottom-sheet'
 import { usePrivacy } from './privacy-provider'
@@ -162,29 +155,24 @@ function cardRow(row: HomeMoneyRow): Transaction {
 }
 
 /**
- * Seed kartu ini — nominal, jam, & tanggalnya dari SATU SUMBER
- * (`HOME_MONEY_GROUPS` di `lib/data/home-money.ts`), himpunan yang SAMA dengan
- * yang dihitung kartu "Arus Uang" di layar ini. Nominalnya TIDAK bergeser dari
- * seed lama: 8.500.000 masuk (Gaji Bulanan) & 752.000 keluar — angka patokan
- * audit paket 35. Komponen ini tinggal menempelkan visual (ikon + kelas tile).
+ * Kelompokkan catatan NYATA dari store jadi grup harian kartu ini (paket 58).
  *
- * Sejak paket 48 daftarnya DITURUNKAN DI KOMPONEN (bukan konstanta tingkat modul):
- * tiap baris melewati `applyRowOverride()`, jadi hasil edit dari Riwayat /
- * `/wallet/[id]` tidak bisa tertinggal di kartu Home ini.
+ * Sumbernya baris LEDGER (`recordedTransactions()` → `homeMoneyRowFrom()`),
+ * bukan lagi `HOME_MONEY_GROUPS` — konstanta seed demo berhenti menjadi sumber
+ * angka Home (temuan AKAR A: setelah akun dikosongkan, kartu ini tetap terisi
+ * angka contoh). Label grup & urutannya TURUNAN dari tanggal baris
+ * (`groupHomeMoneyRows()`), jadi catatan yang tanggalnya diedit pun pindah
+ * kelompok dengan jujur ("Hari ini" / "Kemarin" / "21 Sep").
+ *
+ * Visual tiap baris tetap dari `cardRow()` — satu jalur konversi, jadi catatan
+ * baru & baris lama tidak mungkin beda tampilan.
  */
-function seedGroups(snapshot: MoneySnapshot): TransactionGroup[] {
-  return HOME_MONEY_GROUPS.map((group) => ({
+function listGroups(rows: HomeMoneyRow[], todayIso: string): TransactionGroup[] {
+  return groupHomeMoneyRows(rows, todayIso).map((group) => ({
     label: group.label,
     live: group.live,
-    items: group.rows
-      .filter((row) => !isRowRemoved(snapshot, row.id))
-      .map((row) => cardRow(applyRowOverride(snapshot, row))),
+    items: group.rows.map(cardRow),
   }))
-}
-
-/** terjemahkan catatan sesi (bus transaksi) jadi baris kartu ini */
-function sessionRow(record: HistoryTransaction): Transaction {
-  return cardRow(homeMoneyRowFrom(record))
 }
 
 
@@ -350,13 +338,14 @@ function SwipeRow({
           {hide(moneyLabel(tx.value, tx.type))}
         </span>
 
-        {/* Affordance geser (pengganti teks manual "💡 Geser baris..."):
-            chevron kecil SELALU tampak di ujung kanan + tray tipis sebagai
-            isyarat bahwa baris ini punya lapisan aksi di belakangnya.
-            UI yang baik tidak perlu menjelaskan dirinya sendiri. */}
-        <span className="relative flex shrink-0 flex-col items-center justify-center gap-0.5 text-ink/25 transition-colors duration-300 group-hover:text-forest">
-          <ChevronRight className="size-3.5 transition-transform duration-300 group-hover:translate-x-0.5" strokeWidth={2.4} />
-          <ChevronRight className="-mt-2 size-3.5 -translate-x-1 opacity-60 transition-transform duration-300 group-hover:translate-x-0" strokeWidth={2.4} />
+        {/* Affordance geser yang RAPI (audit "Micro-Interaction"): dulu ada DUA
+            chevron bertumpuk yang saling menggeser dan terlihat berantakan.
+            Sekarang SATU chevron di dalam lingkaran tipis — pola "arrow in a
+            chip" yang sudah dipakai tombol "Lihat semua" di header kartu ini —
+            dengan hover halus (lingkaran terisi forest + panah bergeser) memakai
+            token warna & transisi design system yang sudah ada. */}
+        <span className="ml-1 flex size-6 shrink-0 items-center justify-center rounded-full bg-cream text-ink/30 ring-1 ring-soil/12 transition-all duration-300 group-hover:bg-forest group-hover:text-mint group-hover:ring-forest/20">
+          <ChevronRight className="size-3.5 transition-transform duration-300 group-hover:translate-x-0.5" strokeWidth={2.6} />
         </span>
       </button>
     </li>
@@ -368,56 +357,34 @@ function SwipeRow({
  *  cash-flow-card.tsx). Baris-baris swipe tetap punya state sendiri. */
 export const RecentTransactionsCard = memo(function RecentTransactionsCard() {
   const { hide } = usePrivacy()
-  /* Catatan sesi dibaca dari SATU store uang (`lib/money/store.ts`), bukan lagi
-     dari bus + state lokal: dulu kartu ini punya `groups` + `recordedTxs` sendiri,
-     jadi hapus di Home tidak pernah terdengar halaman lain (audit #7). Sekarang
-     baris seed & baris sesi disaring dengan TOMBSTONE yang sama
-     (`isRowRemoved`), dan hapusnya lewat `removeRow()` — satu jalur tulis. */
+  /* "hari ini" dari jam perangkat — `''` pada render pertama (hidrasi aman) */
+  const today = useTodayISO()
+  /* Catatan NYATA dari SATU store uang (`lib/money/store.ts`). Sejak paket 58
+     kartu ini TIDAK lagi menggabung `HOME_MONEY_GROUPS` (seed demo): campuran
+     itu yang membuat kartu tetap berisi lima baris contoh setelah akun
+     dikosongkan (temuan AKAR A). Satu sumber: baris ledger — tombstone sudah
+     dibuang `recordedTransactions()`, hapusnya lewat `removeRow()` (satu jalur
+     tulis, sama seperti Riwayat & /wallet/[id]). */
   const snapshot = useMoneyStore()
-  const recordedTxs = useMemo(() => recordedTransactions(snapshot), [snapshot])
-  /* Baris seed: dihapus → hilang (`isRowRemoved`), diedit → tampil nilai baru
-     (`applyRowOverride`) — dua-duanya dari store yang sama, jadi kartu ini tidak
-     pernah bercerita beda dengan Riwayat. */
-  const groups = useMemo(() => seedGroups(snapshot), [snapshot])
+  const rows = useMemo(() => recordedTransactions(snapshot).map(homeMoneyRowFrom), [snapshot])
 
-  /* Catatan sesi disisipkan ke grup "Hari ini" (paling atas). Panel tambah memang
-     selalu bertanggal hari ini — form tambah tidak punya pemilih tanggal, dan
-     `recordTransaction()` memakai `localISODate()` — jadi kartu ringkas ini tidak
-     perlu membuat grup baru per tanggal. Kalau nanti ada catatan bertanggal lain,
-     ia tetap TAMPIL (tidak dibuang) sampai ada aturan pengelompokan sendiri untuk
-     kartu ini. */
-  const mergedGroups = useMemo(
-    () =>
-      recordedTxs.length === 0
-        ? groups
-        : groups.map((group) =>
-            group.live
-              ? { ...group, items: [...recordedTxs.map(sessionRow), ...group.items] }
-              : group,
-          ),
-    [groups, recordedTxs],
-  )
+  /* 58.6 — daftar dibatasi 7 hari kalender terakhir; yang lebih tua tetap utuh
+     di /history (tombol "Lihat semua" di kepala kartu). Sebelum "hari ini"
+     diketahui, penyaringan dilewati supaya HTML server = render pertama client. */
+  const recentRows = useMemo(() => homeRowsInLastDays(rows, today), [rows, today])
+  const visibleGroups = useMemo(() => listGroups(recentRows, today), [recentRows, today])
+  const totalItems = recentRows.length
 
-  const visibleGroups = mergedGroups.filter((g) => g.items.length > 0)
-  const totalItems = mergedGroups.reduce((acc, g) => acc + g.items.length, 0)
-
-  /* Ringkasan periode TURUNAN dari himpunan baris yang SAMA dengan kartu "Arus
-     Uang": seed + catatan sesi, lewat `summarizeHomeMoney` (satu definisi uang
-     masuk/keluar, pindah dana netral). Labelnya `HOME_MONEY_COPY.period`
-     ("Bulan ini") — string yang sama dengan yang dipakai chart.
-     Baris yang dihapus user (tombstone di store) tidak ikut dihitung di sini
-     MAUPUN di chart, karena keduanya membaca `isRowRemoved` yang sama — dan baris
-     yang DIEDIT memakai nilai barunya (`applyRowOverride`) di kedua tempat. */
-  const period = useMemo(
-    () =>
-      summarizeHomeMoney([
-        ...recordedTxs.map(homeMoneyRowFrom),
-        ...HOME_MONEY_ROWS.filter((row) => !isRowRemoved(snapshot, row.id)).map((row) =>
-          applyRowOverride(snapshot, row),
-        ),
-      ]),
-    [recordedTxs, snapshot],
-  )
+  /* Ringkasan periode TURUNAN dari baris yang sama (uang masuk/keluar; pindah
+     dana netral, sama seperti kanon `summarizeTransactions`). Labelnya
+     `HOME_MONEY_COPY.period` ("Bulan ini") — string yang sama dengan kartu
+     "Arus Uang" di layar ini. */
+  const period = useMemo(() => {
+    const inMonth = today
+      ? rows.filter((row) => row.date.slice(0, 7) === today.slice(0, 7))
+      : rows
+    return summarizeHomeMoney(inMonth)
+  }, [rows, today])
 
   /**
    * Hapus baris lewat SATU pintu: `removeRow()` menulis tombstone di store, jadi
@@ -457,7 +424,7 @@ export const RecentTransactionsCard = memo(function RecentTransactionsCard() {
             <ReceiptText className="size-4" strokeWidth={2.4} />
           </span>
           <div>
-            <p className="text-sm font-semibold text-ink">Transaksi Terakhir</p>
+            <p className="text-sm font-semibold text-ink">{HOME_MONEY_COPY.txnTitle}</p>
             <p className="text-xs text-ink/45">{HOME_MONEY_COPY.txnSubtitle}</p>
           </div>
         </div>
@@ -465,7 +432,7 @@ export const RecentTransactionsCard = memo(function RecentTransactionsCard() {
           href="/history"
           className="group/link flex items-center gap-1.5 rounded-full bg-sage py-1.5 pl-3 pr-1.5 text-[11px] font-semibold text-forest transition-colors duration-300 hover:bg-forest hover:text-mint"
         >
-          Lihat semua
+          {HOME_MONEY_COPY.seeAll}
           <span className="flex size-4 items-center justify-center rounded-full bg-forest text-mint transition-colors duration-300 group-hover/link:bg-mint group-hover/link:text-forest">
             <ArrowUpRight className="size-2.5" strokeWidth={2.6} />
           </span>
@@ -479,10 +446,10 @@ export const RecentTransactionsCard = memo(function RecentTransactionsCard() {
             <Sprout className="size-6" strokeWidth={1.8} />
           </span>
           <p className="mt-4 text-sm font-semibold text-ink">
-            Belum ada catatan hari ini...
+            {HOME_MONEY_COPY.txnEmptyTitle}
           </p>
           <p className="mt-1 text-xs text-ink/50">
-            Catat yang pertama yuk! 🌱
+            {HOME_MONEY_COPY.txnEmptyBody}
           </p>
           {/* CTA empty state: dulu tombol MATI (bisa dipencet, tidak terjadi apa
               pun). Sekarang membuka Transaction Input Engine — pola `trigger=`
@@ -494,7 +461,7 @@ export const RecentTransactionsCard = memo(function RecentTransactionsCard() {
                 type="button"
                 className="mt-4 rounded-full bg-forest px-5 py-2.5 text-[13px] font-semibold text-cream transition-colors hover:bg-forest-soft active:scale-[0.97]"
               >
-                + Catat Transaksi
+                {HOME_MONEY_COPY.txnEmptyCta}
               </button>
             }
           />

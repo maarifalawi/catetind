@@ -13,7 +13,7 @@ import {
   type SinkingFundItem,
 } from '@/lib/data/budget'
 import { HOME_GOALS_COPY } from '@/lib/data/home'
-import { useFundsStore } from '@/lib/money/funds-store'
+import { useLiveFunds } from '@/lib/money/funds-store'
 import { PlantIllustration, STAGE_NAMES, type PlantStage } from './plant-illustration'
 import { usePrivacy } from './privacy-provider'
 
@@ -318,14 +318,16 @@ function MiniGoalRow({ fund, tintIndex }: { fund: SinkingFundItem; tintIndex: nu
 }
 
 /** Kartu Tabungan Impian — daftarnya sekarang datang dari STORE celengan
- *  (`useFundsStore()`), bukan konstanta `INITIAL_SINKING_FUNDS`:
+ *  (`useLiveFunds()`), bukan konstanta `INITIAL_SINKING_FUNDS`:
  *  celengan yang ditanam di /budget dan setoran dari /budget/<id> langsung
  *  terlihat di sini, dan sebaliknya. Sebelum paket 46 kartu ini membaca
  *  konstanta statis, jadi Home & /budget bisa menyebut progres yang berbeda.
+ *  Sejak paket 60.2 daftarnya juga sudah disaring TOMBSTONE: celengan yang
+ *  dihapus user tidak lagi tampil (dan tidak ikut dipotong di Jatah Hari Ini).
  *  Daftar awalnya tetap `INITIAL_SINKING_FUNDS` (lihat `SERVER_SNAPSHOT` di
  *  `lib/money/funds-store.ts`) — render server & render pertama client identik. */
 export const MyGoalsCard = memo(function MyGoalsCard() {
-  const { funds } = useFundsStore()
+  const funds = useLiveFunds()
   const hero = heroFundOf(funds)
   /* baris mini = SEMUA celengan selain hero; urutannya prioritas → progres
      (`sortFundsByUrgency`). Kurang dari 3 celengan ⇒ tampil apa adanya. */

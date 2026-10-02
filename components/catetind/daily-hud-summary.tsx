@@ -1,9 +1,10 @@
 'use client'
 
-import { AlertTriangle, CalendarDays, HandCoins, Pin, Sparkles } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import Link from 'next/link'
+import { AlertTriangle, CalendarDays, HandCoins, Settings2, Sparkles } from 'lucide-react'
 import {
   HUD_COPY,
+  MONEY_SETTINGS_HREF,
   maskNominal,
   type BudgetHud,
   type PeriodIncome,
@@ -21,7 +22,9 @@ import { TransactionBottomSheet } from '@/components/dashboard/transaction-botto
    jatah harian DITAHAN (bukan ditampilkan seolah aman dibelanjakan).
 
    Audit UX #5: tombol "Sinkron Dashboard" dihapus — app punya satu sumber
-   kebenaran. Penggantinya tombol "Pin ke Dashboard".
+   kebenaran. Penggantinya dulu tombol "Pin ke Dashboard"; PAKET 60.3 menghapus
+   juga tombol itu, karena ia hanya membalik state halaman /budget sementara
+   `DailyHudCard` di Home tidak menerima prop apa pun (lihat `HUD_COPY`).
 
    Sejak periode non-bulanan hidup (2B untuk freelancer), kartu ini juga
    menampilkan PERIODE AKTIF + rentang tanggalnya (`window.label`), memakai
@@ -43,8 +46,6 @@ export function DailyHudSummary({
   masked,
   window: period,
   income,
-  pinned,
-  onPin,
 }: {
   hud: BudgetHud
   masked: boolean
@@ -52,13 +53,41 @@ export function DailyHudSummary({
   window: PeriodWindow
   /** pemasukan di jendela periode (dry spell & catatan pemasukan tengah periode) */
   income: PeriodIncome
-  /** true = kartu ini sudah disematkan ke Dashboard */
-  pinned: boolean
-  onPin: () => void
 }) {
   return (
     <section aria-label={HUD_COPY.title} className="w-full">
-      {!income.hasIncome ? (
+      {!income.configured ? (
+        /* ── BELUM DIATUR (paket 57) — bukan Dry Spell ───────────────────────
+            Pemasukan bulanan belum pernah diisi → jatah harian memang tidak bisa
+            dihitung dari apa pun. Kartu ini jujur menyebut kenapa kosong dan
+            menunjuk satu pintu masuk: field PEMASUKAN BULANAN + TOTAL CICILAN
+            BULANAN di Pengaturan → Profil & Akun (paket 57.4). Angka contoh TIDAK
+            ditampilkan, karena itulah temuan AKAR D audit 2026-09. */
+        <div className="rounded-[1.6rem] bg-cream p-4 ring-1 ring-soil/12 shadow-[0_12px_28px_-24px_rgba(69,89,78,0.5)]">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <p className="text-[12.5px] font-semibold text-ink/55">{HUD_COPY.title}</p>
+            <PeriodChip window={period} />
+          </div>
+          <div className="flex flex-col items-center rounded-[1.3rem] bg-cream px-6 py-7 text-center ring-1 ring-soil/8">
+            <span className="flex size-12 items-center justify-center rounded-full bg-sage/60 text-forest ring-1 ring-soil/8">
+              <Settings2 className="size-5" strokeWidth={2.2} aria-hidden />
+            </span>
+            <p className="mt-3 text-[14.5px] font-bold leading-snug text-ink">
+              {HUD_COPY.notConfiguredTitle}
+            </p>
+            <p className="mt-1 text-[13px] leading-relaxed text-ink/55">
+              {HUD_COPY.notConfiguredBody}
+            </p>
+            <Link
+              href={MONEY_SETTINGS_HREF}
+              aria-label={HUD_COPY.notConfiguredA11y}
+              className="mt-4 rounded-full bg-forest px-4 py-2.5 text-[12.5px] font-semibold text-cream transition-colors hover:bg-forest-soft active:scale-95"
+            >
+              {HUD_COPY.notConfiguredCta}
+            </Link>
+          </div>
+        </div>
+      ) : !income.hasIncome ? (
         /* ── 3B. DRY SPELL — menggantikan SELURUH HUD (tanpa Rp 0/hari) ──── */
         <div className="rounded-[1.6rem] bg-cream p-4 ring-1 ring-soil/12 shadow-[0_12px_28px_-24px_rgba(69,89,78,0.5)]">
           <div className="mb-3 flex items-center justify-between gap-2">
@@ -153,21 +182,12 @@ export function DailyHudSummary({
                 <PeriodChip window={period} />
               </span>
             </span>
-            {/* Audit UX #5 — tombol "Sinkron Dashboard" diganti "Pin" */}
-            <button
-              type="button"
-              onClick={onPin}
-              aria-pressed={pinned}
-              className={cn(
-                'inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold ring-1 transition-colors active:scale-95',
-                pinned
-                  ? 'bg-forest text-mint ring-forest/20 hover:bg-forest-soft'
-                  : 'bg-cream text-ink/45 ring-soil/8 hover:bg-sage hover:text-forest',
-              )}
-            >
-              <Pin className="size-3" strokeWidth={2.4} aria-hidden />
-              {pinned ? HUD_COPY.pinned : HUD_COPY.pin}
-            </button>
+            {/* Audit UX #5 mengganti tombol "Sinkron Dashboard" jadi "Pin ke
+                Dashboard"; PAKET 60.3 MENGHAPUS tombol itu seluruhnya. Alasannya
+                jujur: ia cuma membalik state halaman ini sementara `DailyHudCard`
+                di Home tidak menerima prop apa pun — tidak ada satu piksel di
+                Dashboard yang berubah. Kalimat "Atur pemasukan & cicilan" di kaki
+                kartu sudah jadi satu-satunya pintu aksi yang benar-benar bekerja. */}
           </div>
 
           <p className="mt-2 text-[32px] font-black leading-none tracking-tight text-ink tabular-nums">
@@ -198,6 +218,17 @@ export function DailyHudSummary({
               maskNominal(hud.sinkingObligation, masked),
             )}
           </p>
+
+          {/* pintu MENGUBAH angka yang barusan dipakai (paket 57.4): pemasukan &
+              cicilan hidup di Pengaturan → Profil & Akun. Tanpa tautan ini,
+              "Jatah Hari Ini" hanya bisa dilihat, tidak bisa dibetulkan. */}
+          <Link
+            href={MONEY_SETTINGS_HREF}
+            className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-semibold text-forest underline underline-offset-2 transition-colors hover:text-ink"
+          >
+            <Settings2 className="size-3.5" strokeWidth={2.4} aria-hidden />
+            {HUD_COPY.moneySettingsCta}
+          </Link>
         </div>
       )}
     </section>

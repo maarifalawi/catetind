@@ -30,10 +30,22 @@ import { useTransactionSubmit } from '@/hooks/use-transaction-submit'
 export function TransactionBottomSheet({
   trigger,
   defaultType = 'expense',
+  walletName,
 }: {
   trigger: ReactNode
   /** tipe terpilih saat sheet dibuka — dipakai tombol cepat di kartu dompet */
   defaultType?: TransactionTypeId
+  /**
+   * Dompet yang SUDAH jelas dari halaman pemanggil (mis. tombol "Catat" di
+   * `/wallet/[id]`) — paket 59 · 59.3.
+   *
+   * Tanpa prop ini, catatan yang dibuat dari halaman dompet jatuh ke dompet
+   * DEFAULT KONTEKS (biasanya BCA), padahal user sedang menatap dompet lain —
+   * CTA "Catat Sekarang" di empty state dompet baru pun janji yang tidak
+   * ditepati. Dompetnya kini dipakai sebagai sumber tulis DAN ditampilkan di
+   * dalam sheet (`sourceLabel`) supaya tidak ada penempelan diam-diam.
+   */
+  walletName?: string
 }) {
   const [open, setOpen] = useState(false)
   /* dompet default ikut konteks uang aktif (Pribadi/Keluarga/Bersama) — sumber
@@ -43,7 +55,7 @@ export function TransactionBottomSheet({
      mata (paket 31). `hooks/` sengaja tidak mengimpor provider dari `components/`,
      jadi statusnya dioper dari sini. */
   const { masked } = usePrivacy()
-  const submit = useTransactionSubmit(defaultWalletNameFor(context), masked)
+  const submit = useTransactionSubmit(walletName ?? defaultWalletNameFor(context), masked)
 
   return (
     <Drawer.Root open={open} onOpenChange={setOpen} autoFocus={false}>
@@ -86,6 +98,9 @@ export function TransactionBottomSheet({
               active={open}
               layout="sheet"
               defaultType={defaultType}
+              /* dompet yang sudah jelas dari halaman ditampilkan di sheet —
+                 user melihat ke mana catatannya akan masuk (paket 59) */
+              sourceLabel={walletName}
               onSubmitted={(draft) => submit(draft, () => setOpen(false))}
             />
           </div>

@@ -74,13 +74,18 @@ export function HomeScreen() {
      PAKET 44 — konteks uang TIDAK LAGI menyentuh angka total:
        · `total`        = `cashTotal(snapshot)` = SELURUH dompet, sama dengan
                           hero `/wallet` & kas likuid Kekayaan;
-       · `allWallets`   = daftar semua dompet, dipakai chip jumlah dompet;
+       · `contextWallets` = daftar dompet KONTEKS AKTIF (chip jumlah dompet) —
+                             angka yang SAMA dengan deck & badge /wallet;
        · `contextTotal` = saldo SATU konteks, ditampilkan sebagai baris kecil
                           "Dompet Pribadi: Rp X" saat konteks aktif — penjelasan
                           kenapa daftarnya lebih pendek.
      Sebelumnya chip ini memakai daftar tersaring sehingga satu layar memuat dua
      angka dompet yang berbeda ("2 dompet" vs "3 dompet aktif" di kartu). */
-  const allWallets = useMemo(() => homeWallets(snapshot, 'all'), [snapshot])
+  /* daftar dompet KONTEKS AKTIF — angka yang SAMA dengan kartu deck di bawah &
+     badge halaman Dompet & Akun. Dulu chip/`deck` menghitung SELURUH dompet
+     sementara /wallet menyaring konteks, jadi jumlahnya berbeda antar halaman
+     (audit "8 vs 3 Wallet Paradox"). */
+  const contextWallets = useMemo(() => homeWallets(snapshot, moneyCtx), [snapshot, moneyCtx])
   const total = useMemo(() => cashTotal(snapshot), [snapshot])
   const contextTotal = useMemo(
     () => cashTotalByContext(snapshot, moneyCtx),
@@ -199,7 +204,7 @@ export function HomeScreen() {
             {/* meta ringkas sebagai chip — menggantikan baris teks "Konteks: …"
                 yang dulu bertumpuk jadi banyak tingkat, terutama di mobile */}
             <div className="flex flex-wrap items-center gap-2 lg:mt-3">
-              <MetaChip icon={WalletIcon}>{HOME_TOTAL_COPY.walletsChip(allWallets.length)}</MetaChip>
+              <MetaChip icon={WalletIcon}>{HOME_TOTAL_COPY.walletsChip(contextWallets.length)}</MetaChip>
               <MetaChip icon={Receipt}>{transactions.length} transaksi</MetaChip>
               {/* ── KONTEKS UANG (audit 46) ────────────────────────────────────
                   Dulu di sini cuma ada chip BACAAN "Pribadi", karena switcher
@@ -300,33 +305,38 @@ export function HomeScreen() {
           )}
         </div>
 
-        {/* ── baris 1 ────────────────────────────────────────────────────────
-            Hierarki visual baru: kartu dompet DIPERKECIL (7 → 5 kolom) karena
-            saldo dompet sifatnya pasif, sementara kolom Jatah Hari Ini dapat
-            7 kolom (dulu 5) — plus slot Nudge AI di bawahnya. Jatah Harian
-            adalah alasan user membuka app 3x sehari, jadi ia yang dominan. */}
+        {/* ── baris 1: arus uang + deck dompet (paket 58 · permintaan user) ────
+            "Arus Uang" NAIK ke baris pertama (posisi yang dulu ditempati Jatah
+            Hari Ini): ia bukti bahwa uang user benar-benar bergerak, jadi pantas
+            dibaca lebih dulu. Deck dompet tetap di kiri. Pembungkus
+            `h-full flex-col justify-center` DIBUANG: pola itu memaksa kartu
+            dompet memanjang mengikuti tinggi kolom kanan, sehingga muncul ruang
+            kosong setinggi kartu sebelahnya. Sekarang tiap kartu setinggi
+            isinya sendiri. */}
         <div className="mt-6 grid grid-cols-1 gap-5 lg:mt-8 lg:grid-cols-12 lg:gap-6">
           <div className="lg:col-span-5">
-            <div className="flex h-full flex-col justify-center rounded-[2rem] bg-cream p-4 ring-1 ring-soil/12 sm:p-5">
+            <div className="rounded-[2rem] bg-cream p-4 ring-1 ring-soil/12 sm:p-5">
               <WalletCardStack onOpen={handleDeckOpen} />
             </div>
+          </div>
+          <div className="lg:col-span-7">
+            <CashFlowCard />
+          </div>
+        </div>
+
+        {/* ── baris 2: tanaman + Jatah Hari Ini yang dipadatkan (58.5) ─────────
+            Jatah Hari Ini TURUN ke baris kedua dan dipadatkan: angka utama, satu
+            baris konteks, bar progres — tanpa ring 104px yang mendikte tinggi
+            baris. Slot Nudge AI tetap menempel di bawahnya. */}
+        <div className="mt-5 grid grid-cols-1 gap-5 lg:mt-6 lg:grid-cols-12 lg:gap-6">
+          <div className="h-full lg:col-span-5">
+            <PlantWidget onReplayCelebration={celebration.replay} />
           </div>
           <div className="flex flex-col gap-5 lg:col-span-7">
             <DailyHudCard />
             <DailyNudge />
           </div>
         </div>
-
-        {/* ── baris 2: tanaman (metafora pertumbuhan) + arus uang dua seri ──── */}
-        <div className="mt-5 grid grid-cols-1 gap-5 lg:mt-6 lg:grid-cols-12 lg:gap-6">
-          <div className="h-full lg:col-span-5">
-            <PlantWidget onReplayCelebration={celebration.replay} />
-          </div>
-          <div className="h-full lg:col-span-7">
-            <CashFlowCard />
-          </div>
-        </div>
-
         {/* ── baris 3: transaksi terakhir + distribusi & tabungan impian ────── */}
         <div className="mt-5 grid grid-cols-1 gap-5 lg:mt-6 lg:grid-cols-12 lg:gap-6">
           <div className="h-full lg:col-span-7">

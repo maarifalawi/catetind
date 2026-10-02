@@ -1,33 +1,32 @@
-'use client'
-
-import { memo, useState } from 'react'
+import { memo, useMemo, useState } from 'react'
 import { Droplet, Moon, Sprout } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { fundPercentRounded, heroFundOf } from '@/lib/data/budget'
-import { useFundsStore } from '@/lib/money/funds-store'
+import { activeLedgerDays } from '@/lib/data/home-money'
+import { recordedTransactions, useMoneyStore } from '@/lib/money/store'
+import { useLiveFunds } from '@/lib/money/funds-store'
+import { useTodayISO } from '@/lib/use-today-iso'
 import { HOME_PLANT_COPY } from '@/lib/data/home'
 import { PLANT_SLEEP_COPY } from '@/lib/data/renewal'
 import { useSubscriptionGate } from './subscription-gate-provider'
 import { PlantIllustration, STAGE_NAMES, type PlantStage } from './plant-illustration'
 import { PlantDetailModal } from './plant-detail-modal'
-/* SATU tabel tahap untuk Home: `stageFromPercent()` & `stageBandProgress()`
-   tinggal di kartu Tabungan Impian (my-goals-card.tsx). Widget ini memakainya
-   juga supaya pada layar yang SAMA tidak ada dua tahap berbeda untuk satu
-   celengan — persis itu yang terjadi sebelum paket 30: baris "nutrisi" di sini
-   memakai mock tampilan kedua yang persennya ditulis tetap, sementara kartu di
-   sebelahnya kini membaca celengan yang benar-benar ada. */
 import { stageBandProgress, stageFromPercent } from './my-goals-card'
-
-/* mock state tanaman - nanti dihitung dari habit loop (Domain 3B).
-   `stage` SENGAJA tidak lagi di sini: tahap tanaman = progres celengan
-   (`stageFromPercent()` di bawah), bukan state kedua yang bisa berbeda dari
-   kartu Tabungan Impian di layar yang sama. Yang tinggal di sini memang milik
-   habit loop: HP dan hari aktif. */
-const MOCK = {
-  hp: 82, // Health Points tanaman (streak tersembunyi di balik ini)
-  activeDays: 21, // "kamu udah catat 21 hari bulan ini" - framing positif
-  wilted: false, // state Layu saat HP <=20
-}
+/* `stage` SENGAJA tidak lagi ditentukan widget ini: tahap tanaman = progres
+   celengan (`stageFromPercent()` di bawah), bukan state kedua yang bisa berbeda
+   dari kartu Tabungan Impian di layar yang sama. */
+/* ── STATE TANAMAN = TURUNAN, BUKAN MOCK (paket 58 · temuan AKAR A) ──────────
+   Dulu di sini hidup `MOCK { hp: 82, activeDays: 21, wilted: false }` — dua
+   angka yang tidak berasal dari data user mana pun (audit 2026-09: "82% / 21
+   hari"). Sekarang keduanya turunan:
+     · `hp`         = progres celengan hero (`fundPercentRounded()`) — tanaman
+                      tumbuh karena celengan yang benar-benar dikejar;
+     · `activeDays` = jumlah TANGGAL UNIK di ledger bulan berjalan
+                      (`activeLedgerDays()`, tombstone sudah disaring store);
+     · `wilted`     = hp ≤ 20, dan hanya muncul kalau memang ada celengan yang
+                      tertinggal — akun tanpa celengan tidak dihukum.
+   `stage` tetap dari celengan yang sama (paket 30). Tanpa data, widget tidak
+   menampilkan angka contoh: barisnya jatuh ke copy jujur ("Belum ada…"). */
 
 /** widget tanaman di homescreen - "teman visual", tap -> Plant Detail (modal j) */
 /** Dibungkus `memo` — kartu ini cuma menerima SATU prop opsional berupa callback
@@ -58,11 +57,21 @@ export const PlantWidget = memo(function PlantWidget({
      Sejak paket 46 sumbernya `useFundsStore()` — sama dengan kartu di
      sebelahnya, jadi setoran dari halaman detail langsung menumbuhkan tanaman
      ini tanpa perlu refresh. */
-  const { funds } = useFundsStore()
+  const funds = useLiveFunds()
   const nutrition = heroFundOf(funds)
   const nutritionPct = nutrition ? fundPercentRounded(nutrition) : 0
   const stage = stageFromPercent(nutritionPct)
   const bandPct = stageBandProgress(nutritionPct)
+  /* PAKET 58 — hp & hari aktif kini TURUNAN, lihat blok di atas komponen */
+  const snapshot = useMoneyStore()
+  const today = useTodayISO()
+  /* hari aktif = tanggal unik di LEDGER (bukan mock 21): catatan yang dihapus
+     ikut hilang karena `recordedTransactions()` membuang tombstone */
+  const ledger = useMemo(() => recordedTransactions(snapshot), [snapshot])
+  const activeDays = useMemo(() => activeLedgerDays(ledger, today), [ledger, today])
+  /* HP = progres celengan hero — satu-satunya sumber "kesehatan" sekarang */
+  const hp = nutritionPct
+  const wilted = hp > 0 && hp <= 20
   const nextStage = Math.min(stage + 1, 4) as PlantStage
   const footerLabel =
     stage === 4
@@ -110,14 +119,14 @@ export const PlantWidget = memo(function PlantWidget({
           {!sleeping && (
             <span
               className="flex items-center gap-0.5"
-              title={`Kesehatan tanaman ${MOCK.hp}%`}
+              title={HOME_PLANT_COPY.hpTitle(hp)}
             >
               {Array.from({ length: 5 }).map((_, i) => (
                 <Droplet
                   key={i}
                   className={cn(
                     'size-3',
-                    i < Math.round((MOCK.hp / 100) * 5)
+                    i < Math.round((hp / 100) * 5)
                       ? 'fill-mint text-mint-soft'
                       : 'text-soil/10',
                   )}
@@ -150,7 +159,7 @@ export const PlantWidget = memo(function PlantWidget({
           )}
           <PlantIllustration
             stage={stage}
-            wilted={MOCK.wilted}
+            wilted={wilted}
             sleeping={sleeping}
             className={cn(
               'relative w-40 sm:w-44',
@@ -225,7 +234,7 @@ export const PlantWidget = memo(function PlantWidget({
       <PlantDetailModal
         open={detailOpen}
         onClose={() => setDetailOpen(false)}
-        plant={{ ...MOCK, stage }}
+        plant={{ stage, hp, activeDays, wilted }}
         onReplay={onReplayCelebration}
       />
     </>

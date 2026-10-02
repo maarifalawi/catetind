@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { AnimatePresence } from 'framer-motion'
 import { Check, Info, Pencil, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { AI_STATUS_COPY } from '@/lib/ai-chat'
@@ -13,6 +14,20 @@ import {
   type MincaMode,
 } from '@/lib/ai-prefs'
 import { NotificationSettings } from './notification-settings'
+import { ConfirmDialog } from './confirm-dialog'
+import {
+  CATEGORY_PREFS_COPY,
+  CATEGORY_PREFS_STORAGE_KEY,
+  DEFAULT_CATEGORIES,
+  EMOJI_PRESETS,
+  INITIAL_CUSTOM,
+  removeCategory,
+  restoreCategory,
+  type CategoryItem,
+  type CategoryPrefs,
+  type RemovedCategory,
+} from '@/lib/data/category-prefs'
+import { UNDO_WINDOW_MS } from '@/lib/data/history'
 import {
   Segmented,
   SettingsCard,
@@ -113,57 +128,25 @@ export function NotificationsSettingsPanel() {
   )
 }
 
-/* ── Panel: Kustomisasi Kategori (Domain 2A.3) ─────────────────────────────────
+/* ── Panel: Kustomisasi Kategori (Domain 2A.3 · paket 62) ─────────────────────
    Dua bagian, sesuai aturan kategorisasi CatetInd:
 
-     1. BAWAAN — tidak bisa dihapus, hanya BISA DISEMBUNYIKAN dari category
-        picker. Alasannya: laporan & insight lintas bulan dibandingkan per
-        kategori, jadi kategori bawaannya harus tetap ada di data.
-     2. CUSTOM  — bebas dibuat, diedit (emoji + nama), dan dihapus.
+     1. BAWAAN — tidak bisa dihapus, hanya BISA DISEMBUNYIKAN dari daftar
+        pilihan. Alasannya sekarang DIJELASKAN di layar
+        (`CATEGORY_PREFS_COPY.defaultExplain`): laporan & insight lintas bulan
+        dibandingkan per kategori, jadi kategori bawaannya harus tetap ada di
+        data. Sebelum paket 62 alasannya cuma hidup di komentar kode ini — user
+        melihat toggle tanpa pernah tahu kenapa tombol hapusnya tidak ada.
+     2. CUSTOM — bebas dibuat, diedit (emoji + nama), dan dihapus. Sejak paket 62
+        hapusnya lewat konfirmasi + Undo, sama seperti aksi merusak lain di app.
+
+   Daftar & fungsi murni hapus/pulihkannya tinggal di lapis data
+   (`lib/data/category-prefs.ts`) supaya bisa diuji tanpa React, dan seluruh
+   kalimatnya TIDAK ditulis di JSX (kontrak §4).
 
    Preferensi (daftar yang disembunyikan + daftar custom) disimpan di
    localStorage `catet-category-prefs`; begitu endpoint kategori asli siap,
    cukup ganti dua blok persist/hidrasi di bawah. */
-
-type CategoryItem = { id: string; emoji: string; name: string }
-
-const DEFAULT_CATEGORIES: CategoryItem[] = [
-  { id: 'makanan', emoji: '🍜', name: 'Makanan' },
-  { id: 'transportasi', emoji: '🛵', name: 'Transportasi' },
-  { id: 'hiburan', emoji: '🎬', name: 'Hiburan' },
-  { id: 'belanja', emoji: '🧺', name: 'Belanja' },
-  { id: 'tagihan', emoji: '🧾', name: 'Tagihan' },
-  { id: 'kesehatan', emoji: '💊', name: 'Kesehatan' },
-  { id: 'pendidikan', emoji: '📚', name: 'Pendidikan' },
-  { id: 'lainnya', emoji: '🏷️', name: 'Lainnya' },
-]
-
-const INITIAL_CUSTOM: CategoryItem[] = [
-  { id: 'custom-1', emoji: '🎮', name: 'Top Up Game' },
-  { id: 'custom-2', emoji: '☕', name: 'Kopi Harian' },
-]
-
-/** preset emoji picker inline — sengaja pendek supaya formnya tetap ringkas */
-const EMOJI_PRESETS = [
-  '🍜',
-  '🛵',
-  '🧺',
-  '🎬',
-  '🧾',
-  '💊',
-  '📚',
-  '🎮',
-  '☕',
-  '🎁',
-  '🏠',
-  '🐾',
-  '✈️',
-  '💅',
-]
-
-const CATEGORY_KEY = 'catet-category-prefs'
-
-type CategoryPrefs = { hidden: string[]; custom: CategoryItem[] }
 
 export function CategoriesSettingsPanel() {
   const [hidden, setHidden] = useState<string[]>([])
@@ -173,10 +156,28 @@ export function CategoriesSettingsPanel() {
   const [adding, setAdding] = useState(false)
   const [draftEmoji, setDraftEmoji] = useState(EMOJI_PRESETS[0])
   const [draftName, setDraftName] = useState('')
+  /** kategori yang dialog konfirmasi hapusnya sedang terbuka (paket 62) */
+  const [pendingDelete, setPendingDelete] = useState<CategoryItem | null>(null)
+  /**
+   * Bukti hapus yang hak Undo-nya masih hidup: itemnya + posisinya di daftar,
+   * supaya tombol Undo bisa mengembalikannya TEPAT di urutan semula. Disimpan di
+   * ref karena ia bukan bahan render — hanya tombol Undo di toast yang membacanya.
+   */
+  const undoRef = useRef<RemovedCategory | null>(null)
+  const undoTimer = useRef<number | null>(null)
+
+  useEffect(
+    () => () => {
+      if (undoTimer.current !== null) window.clearTimeout(undoTimer.current)
+    },
+    [],
+  )
 
   useEffect(() => {
     try {
-      const parsed = JSON.parse(localStorage.getItem(CATEGORY_KEY) ?? 'null') as CategoryPrefs | null
+      const parsed = JSON.parse(
+        localStorage.getItem(CATEGORY_PREFS_STORAGE_KEY) ?? 'null',
+      ) as CategoryPrefs | null
       if (parsed?.hidden) setHidden(parsed.hidden)
       if (parsed?.custom) setCustom(parsed.custom)
     } catch {
@@ -187,7 +188,7 @@ export function CategoriesSettingsPanel() {
   function persist(nextHidden: string[], nextCustom: CategoryItem[]) {
     try {
       localStorage.setItem(
-        CATEGORY_KEY,
+        CATEGORY_PREFS_STORAGE_KEY,
         JSON.stringify({ hidden: nextHidden, custom: nextCustom } satisfies CategoryPrefs),
       )
     } catch {
@@ -200,7 +201,7 @@ export function CategoriesSettingsPanel() {
     const next = willHide ? [...hidden, item.id] : hidden.filter((id) => id !== item.id)
     setHidden(next)
     persist(next, custom)
-    toast(willHide ? 'Disembunyikan dari picker' : 'Muncul lagi di picker', {
+    toast(willHide ? CATEGORY_PREFS_COPY.hideToast : CATEGORY_PREFS_COPY.showToast, {
       description: `${item.emoji} ${item.name}`,
     })
   }
@@ -228,7 +229,7 @@ export function CategoriesSettingsPanel() {
   function saveCustom() {
     const name = draftName.trim()
     if (!name) {
-      toast('Nama kategorinya diisi dulu ya 🌿')
+      toast(CATEGORY_PREFS_COPY.nameRequired)
       return
     }
 
@@ -238,37 +239,78 @@ export function CategoriesSettingsPanel() {
       )
       setCustom(next)
       persist(hidden, next)
-      toast.success('Kategori diperbarui ✅', { description: `${draftEmoji} ${name}` })
+      toast.success(CATEGORY_PREFS_COPY.updatedToast, { description: `${draftEmoji} ${name}` })
     } else {
       const next = [...custom, { id: `custom-${Date.now()}`, emoji: draftEmoji, name }]
       setCustom(next)
       persist(hidden, next)
-      toast.success(`${draftEmoji} ${name} ditambahkan!`)
+      toast.success(CATEGORY_PREFS_COPY.addedToast(draftEmoji, name))
     }
 
     closeForm()
   }
 
-  function removeCustom(item: CategoryItem) {
-    const next = custom.filter((entry) => entry.id !== item.id)
-    setCustom(next)
-    persist(hidden, next)
-    toast(`${item.emoji} ${item.name} dihapus`, {
-      description: 'Kategori kustom bisa dibikin lagi kapan aja.',
+  /* ── HAPUS KATEGORI KUSTOM (paket 62) ────────────────────────────────────────
+     Tiga langkah, sama seperti aksi merusak lain di app: konfirmasi dulu → hapus
+     lewat fungsi murni di lapis data → Undo 5 detik lewat toast. Sebelum paket ini
+     tombol Hapus langsung membuangnya tanpa satu pun kesempatan membatalkan. */
+  function confirmDeleteCategory() {
+    if (!pendingDelete) return
+    const result = removeCategory({ hidden, custom }, pendingDelete.id)
+    setPendingDelete(null)
+    if (!result.removed) {
+      /* kategori bawaan / sudah tidak ada — tidak ada yang berubah */
+      toast(CATEGORY_PREFS_COPY.undoExpired)
+      return
+    }
+
+    setCustom(result.prefs.custom)
+    persist(result.prefs.hidden, result.prefs.custom)
+    undoRef.current = result.removed
+    if (undoTimer.current !== null) window.clearTimeout(undoTimer.current)
+    undoTimer.current = window.setTimeout(() => {
+      if (undoRef.current?.item.id === result.removed?.item.id) undoRef.current = null
+    }, UNDO_WINDOW_MS)
+
+    toast(CATEGORY_PREFS_COPY.deleteToast(result.removed.item.emoji, result.removed.item.name), {
+      description: CATEGORY_PREFS_COPY.deleteToastDescription,
+      action: { label: CATEGORY_PREFS_COPY.undo, onClick: () => undoDeleteCategory(result.removed!) },
+      duration: UNDO_WINDOW_MS,
+    })
+  }
+
+  /** Undo: kembalikan kategori TEPAT di posisi semula (fungsi murni di lib/data). */
+  function undoDeleteCategory(removed: RemovedCategory) {
+    if (undoRef.current?.item.id !== removed.item.id) {
+      toast(CATEGORY_PREFS_COPY.undoExpired)
+      return
+    }
+    undoRef.current = null
+    const next = restoreCategory({ hidden, custom }, removed)
+    setCustom(next.custom)
+    persist(next.hidden, next.custom)
+    toast.success(CATEGORY_PREFS_COPY.undoneToast, {
+      description: CATEGORY_PREFS_COPY.undoneDescription,
     })
   }
 
   return (
     <SettingsPanel
-      eyebrow="Kategori"
-      title="Kustomisasi Kategori"
-      desc="Atur kategori apa saja yang muncul saat kamu mencatat transaksi."
+      eyebrow={CATEGORY_PREFS_COPY.eyebrow}
+      title={CATEGORY_PREFS_COPY.title}
+      desc={CATEGORY_PREFS_COPY.desc}
     >
       {/* ── 1. KATEGORI BAWAAN ───────────────────────────────────────────── */}
       <SettingsCard
-        title="Kategori Bawaan"
-        desc="Cuma bisa disembunyikan — nggak bisa dihapus, biar laporan lintas bulan tetap konsisten."
+        title={CATEGORY_PREFS_COPY.defaultTitle}
+        desc={CATEGORY_PREFS_COPY.defaultDesc}
       >
+        {/* Alasan lengkapnya (temuan audit #10) — dulu hanya hidup di komentar
+            kode, jadi user melihat toggle tanpa tahu kenapa tidak ada Hapus. */}
+        <p className="mt-3 flex items-start gap-2 rounded-2xl bg-sage/50 px-3.5 py-2.5 text-[11.5px] leading-relaxed text-forest">
+          <Info className="mt-0.5 size-3.5 shrink-0" strokeWidth={2.4} aria-hidden />
+          {CATEGORY_PREFS_COPY.defaultExplain(DEFAULT_CATEGORIES.length)}
+        </p>
         <div className="mt-3 divide-y divide-soil/10">
           {DEFAULT_CATEGORIES.map((item) => {
             const visible = !hidden.includes(item.id)
@@ -289,12 +331,12 @@ export function CategoriesSettingsPanel() {
                     visible ? 'text-forest' : 'text-ink/35',
                   )}
                 >
-                  {visible ? 'Tampil' : 'Disembunyikan'}
+                  {visible ? CATEGORY_PREFS_COPY.visibleLabel : CATEGORY_PREFS_COPY.hiddenLabel}
                 </span>
                 <Toggle
                   checked={visible}
                   onToggle={() => toggleDefault(item)}
-                  label={`Tampilkan kategori ${item.name}`}
+                  label={CATEGORY_PREFS_COPY.toggleA11y(item.name)}
                 />
               </div>
             )
@@ -303,13 +345,16 @@ export function CategoriesSettingsPanel() {
       </SettingsCard>
 
       {/* ── 2. KATEGORI CUSTOM ───────────────────────────────────────────── */}
-      <SettingsCard title="Kategori Custom" desc="Bikin kategori sendiri — lengkap dengan emojinya.">
+      <SettingsCard
+        title={CATEGORY_PREFS_COPY.customTitle}
+        desc={CATEGORY_PREFS_COPY.customDesc}
+      >
         <ul className="mt-3 divide-y divide-soil/10">
           {custom.map((item) => (
             <li key={item.id} className="py-3">
               {editingId === item.id ? (
                 <CategoryForm
-                  title={`Edit ${item.name}`}
+                  title={`${CATEGORY_PREFS_COPY.editFormTitle}: ${item.name}`}
                   emoji={draftEmoji}
                   name={draftName}
                   onEmoji={setDraftEmoji}
@@ -340,8 +385,8 @@ export function CategoriesSettingsPanel() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => removeCustom(item)}
-                      aria-label={`Hapus kategori ${item.name}`}
+                      onClick={() => setPendingDelete(item)}
+                      aria-label={CATEGORY_PREFS_COPY.deleteA11y(item.name)}
                       className="inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 text-[12px] font-semibold text-plum ring-1 ring-plum/25 transition-colors hover:bg-plum/15"
                     >
                       <Trash2 className="size-3.5" strokeWidth={2.4} aria-hidden />
@@ -355,7 +400,8 @@ export function CategoriesSettingsPanel() {
 
           {custom.length === 0 && !adding && (
             <li className="py-3 text-[12.5px] text-ink/45">
-              Belum ada kategori custom. Bikin satu di bawah 👇
+              {CATEGORY_PREFS_COPY.customEmpty}
+              <span className="mt-1 block text-ink/35">{CATEGORY_PREFS_COPY.customEmptyHint}</span>
             </li>
           )}
         </ul>
@@ -363,7 +409,7 @@ export function CategoriesSettingsPanel() {
         {adding ? (
           <div className="mt-3">
             <CategoryForm
-              title="Kategori Baru"
+              title={CATEGORY_PREFS_COPY.addFormTitle}
               emoji={draftEmoji}
               name={draftName}
               onEmoji={setDraftEmoji}
@@ -379,10 +425,34 @@ export function CategoriesSettingsPanel() {
             className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-oat px-4 py-3.5 text-sm font-semibold text-forest transition-colors hover:bg-sage/50 sm:w-auto sm:px-5"
           >
             <Plus className="size-4" strokeWidth={2.6} aria-hidden />
-            Tambah Kategori Baru
+            {CATEGORY_PREFS_COPY.addCta}
           </button>
         )}
+
+        {/* batas yang ditulis apa adanya (paket 62): daftar ini belum tersambung
+            ke pemilih kategori di form catat transaksi */}
+        <p className="mt-4 text-[11px] leading-relaxed text-ink/45">
+          {CATEGORY_PREFS_COPY.storageNote}
+        </p>
       </SettingsCard>
+
+      {/* konfirmasi hapus kategori kustom — dialog yang SAMA dengan aksi merusak
+          lain di app (paket 62) */}
+      <AnimatePresence>
+        {pendingDelete && (
+          <ConfirmDialog
+            titleId="hapus-kategori-judul"
+            overlayLabel={CATEGORY_PREFS_COPY.deleteOverlay}
+            title={CATEGORY_PREFS_COPY.deleteTitle(pendingDelete.name)}
+            body={CATEGORY_PREFS_COPY.deleteBody(pendingDelete.name)}
+            safety={CATEGORY_PREFS_COPY.deleteSafety(UNDO_WINDOW_MS / 1000)}
+            cancelLabel={CATEGORY_PREFS_COPY.cancel}
+            confirmLabel={CATEGORY_PREFS_COPY.deleteConfirm}
+            onCancel={() => setPendingDelete(null)}
+            onConfirm={confirmDeleteCategory}
+          />
+        )}
+      </AnimatePresence>
     </SettingsPanel>
   )
 }
@@ -410,7 +480,11 @@ function CategoryForm({
       <p className="text-[12.5px] font-semibold text-ink">{title}</p>
 
       {/* emoji picker ringkas — cukup satu baris yang bisa di-wrap */}
-      <div role="radiogroup" aria-label="Pilih emoji kategori" className="mt-3 flex flex-wrap gap-1.5">
+      <div
+        role="radiogroup"
+        aria-label={CATEGORY_PREFS_COPY.emojiLabel}
+        className="mt-3 flex flex-wrap gap-1.5"
+      >
         {EMOJI_PRESETS.map((preset) => {
           const active = preset === emoji
           return (
@@ -434,13 +508,13 @@ function CategoryForm({
 
       <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
         <div className="min-w-0 flex-1">
-          <SettingsField label="Nama Kategori" htmlFor="settings-category-name">
+          <SettingsField label={CATEGORY_PREFS_COPY.nameLabel} htmlFor="settings-category-name">
             <SettingsInput
               id="settings-category-name"
               value={name}
               maxLength={24}
               onChange={(event) => onName(event.target.value)}
-              placeholder="mis. Top Up Game"
+              placeholder={CATEGORY_PREFS_COPY.namePlaceholder}
             />
           </SettingsField>
         </div>
@@ -451,14 +525,14 @@ function CategoryForm({
             className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-forest px-4 py-3 text-sm font-semibold text-mint transition-colors hover:bg-forest-soft sm:flex-none"
           >
             <Check className="size-4" strokeWidth={2.6} aria-hidden />
-            Simpan
+            {CATEGORY_PREFS_COPY.save}
           </button>
           <button
             type="button"
             onClick={onCancel}
             className="inline-flex flex-1 items-center justify-center rounded-2xl bg-cream px-4 py-3 text-sm font-semibold text-ink/60 ring-1 ring-soil/12 transition-colors hover:bg-sage sm:flex-none"
           >
-            Batal
+            {CATEGORY_PREFS_COPY.cancel}
           </button>
         </div>
       </div>

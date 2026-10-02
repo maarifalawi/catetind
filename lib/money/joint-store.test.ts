@@ -22,8 +22,11 @@ import {
   carryOverEntryFor,
   carryOverRecordFor,
   clearJointArrivalBadge,
+  createJointPocket,
+  deleteJointTransaction,
   getJointRemoteWalletId,
   getJointSnapshot,
+  jointDeleteState,
   jointLedgerFeed,
   jointNotes,
   jointPartnerJoined,
@@ -35,6 +38,7 @@ import {
   recordSettlement,
   renameJointWallet,
   resetJointStore,
+  restoreJointTransaction,
   setPaidBy,
   settlementRecordFor,
   updateSplit,
@@ -574,6 +578,161 @@ describe('Hapus Akun & invariant kas pribadi', () => {
     /* snapshot hidup berisi data seed pada kunjungan pertama — sama dengan yang
        dirender server, jadi render pertama client tidak berbeda */
     expect(getJointSnapshot().transactions).toHaveLength(INITIAL_JOINT_TRANSACTIONS.length)
+  })
+})
+
+/* ── HAPUS PER BARIS + KANTONG BARU YANG BENAR-BENAR KOSONG (paket 61.3) ─────
+   Store ini sebelumnya NOL fungsi hapus: catatan bareng yang salah hanya bisa
+   "dilawan" dengan mencatat ulang dan menutupi angka yang salah. Test di bawah
+   mengunci aturan yang dipilih — hanya CATATAN, hanya bulan yang BELUM disettle
+   — plus janji bahwa kantong yang baru dibuat benar-benar kosong (kalau tidak,
+   klaim "baru dibuat" tidak bisa dipercaya). */
+
+describe('hapus satu baris & kantong baru kosong (paket 61.3)', () => {
+  it('deleteJointTransaction mengubah TIMBANGAN & posisi bersih, bukan cuma daftarnya', () => {
+    withPartner()
+    const tx = addJointTransaction({
+      description: 'Nonton bareng',
+      amount: 400_000,
+      paidByUserId: JOINT_ME.id,
+    })!
+    const before = computeSettlement(jointLedgerFeed(getJointSnapshot(), JOINT_MONTH_KEY))
+    const notesBefore = jointNotes(getJointSnapshot()).length
+
+    expect(deleteJointTransaction(tx.id)?.id).toBe(tx.id)
+
+    const after = computeSettlement(jointLedgerFeed(getJointSnapshot(), JOINT_MONTH_KEY))
+    expect(jointNotes(getJointSnapshot())).toHaveLength(notesBefore - 1)
+    /* pengeluaran bersama turun tepat sebesar nominalnya… */
+    expect(after.totalSpent).toBe(before.totalSpent - 400_000)
+    /* …dan porsi patungan Jon (50%) hilang dari posisi bersihnya */
+    expect(Math.round(after.myNet)).toBe(Math.round(before.myNet) - 200_000)
+    /* uang tidak pernah hilang/muncul: Σ net selalu 0 */
+    expect(Math.round(after.myNet + after.partnerNet)).toBe(0)
+  })
+
+  it('bulan yang sudah ditandai settle DIKUNCI — hapus ditolak & tidak ada yang ditulis', () => {
+    withPartner()
+    const tx = addJointTransaction({
+      description: 'Nonton bareng',
+      amount: 300_000,
+      paidByUserId: JOINT_PARTNER.id,
+    })!
+    expect(recordSettlement(newRecord())).not.toBeNull()
+
+    const notesBefore = jointNotes(getJointSnapshot()).length
+    expect(deleteJointTransaction(tx.id)).toBeNull()
+
+    expect(jointNotes(getJointSnapshot())).toHaveLength(notesBefore)
+    expect(jointDeleteState(getJointSnapshot(), tx)).toBe('locked')
+    /* sebelum disettle, baris yang sama memang boleh dihapus */
+    expect(jointNotes(getJointSnapshot()).every((row) => row.id !== tx.id)).toBe(false)
+  })
+
+  it('baris turunan (settle/pembuka bulan) tidak bisa dihapus dari pintu ini', () => {
+    withPartner()
+    expect(recordSettlement(newRecord())).not.toBeNull()
+
+    const entries = jointLedgerFeed(getJointSnapshot(), JOINT_MONTH_KEY).filter(
+      (tx) => tx.isSettlement,
+    )
+    expect(entries.length).toBeGreaterThan(0)
+
+    expect(deleteJointTransaction(entries[0]!.id)).toBeNull()
+    expect(jointDeleteState(getJointSnapshot(), entries[0]!)).toBe('none')
+    expect(
+      jointLedgerFeed(getJointSnapshot(), JOINT_MONTH_KEY).some(
+        (tx) => tx.id === entries[0]!.id,
+      ),
+    ).toBe(true)
+  })
+
+  it('Undo mengembalikan baris BESERTA angka timbangannya (bukan cuma tampilannya)', () => {
+    withPartner()
+    const tx = addJointTransaction({
+      description: 'Tiket kereta',
+      amount: 600_000,
+      paidByUserId: JOINT_ME.id,
+    })!
+    const before = computeSettlement(jointLedgerFeed(getJointSnapshot(), JOINT_MONTH_KEY))
+
+    expect(deleteJointTransaction(tx.id)).not.toBeNull()
+    expect(restoreJointTransaction(tx.id)?.id).toBe(tx.id)
+
+    const after = computeSettlement(jointLedgerFeed(getJointSnapshot(), JOINT_MONTH_KEY))
+    expect(after.totalSpent).toBe(before.totalSpent)
+    expect(Math.round(after.myNet)).toBe(Math.round(before.myNet))
+
+    /* Undo yang tidak sah gagal jujur, dan hapus dua kali tidak menulis dua kali */
+    expect(restoreJointTransaction(tx.id)).toBeNull()
+    expect(deleteJointTransaction(tx.id)).not.toBeNull()
+    expect(deleteJointTransaction(tx.id)).toBeNull()
+  })
+
+  it('tombstone bertahan setelah state dibaca ulang & tidak menghidupkan catatan contoh', () => {
+    const removed = INITIAL_JOINT_TRANSACTIONS[0]!
+    expect(deleteJointTransaction(removed.id)).not.toBeNull()
+
+    const merged = mergeJointState({
+      version: 1,
+      wallet: { ...getJointSnapshot().wallet },
+      transactions: [],
+      settlements: {},
+      members: [JOINT_ME.id, JOINT_PARTNER.id],
+      removedIds: getJointSnapshot().removedIds,
+    })
+
+    /* barisnya tetap TERSIMPAN (tombstone, bukan hapus fisik)… */
+    expect(merged.transactions.some((tx) => tx.id === removed.id)).toBe(true)
+    /* …tapi tidak pernah kembali ke daftar yang dibaca user */
+    expect(jointNotes(merged).some((tx) => tx.id === removed.id)).toBe(false)
+  })
+
+  it('createJointPocket: kantong baru KOSONG, bertahan setelah refresh, tanggalnya hari ini', () => {
+    const wallet = createJointPocket('Dompet Kita Berdua', '2026-09-29')
+
+    expect(wallet).toMatchObject({
+      name: 'Dompet Kita Berdua',
+      createdAt: '2026-09-29',
+      created: true,
+    })
+    expect(jointNotes(getJointSnapshot())).toHaveLength(0)
+    expect(jointLedgerFeed(getJointSnapshot(), JOINT_MONTH_KEY)).toHaveLength(0)
+    expect(createJointPocket('   ')).toBeNull()
+
+    /* setelah refresh: nama bertahan DAN buku besarnya tetap kosong — catatan
+       contoh tidak boleh lahir lagi (inilah yang dulu terjadi) */
+    const merged = mergeJointState({
+      version: 1,
+      wallet: { ...wallet! },
+      transactions: [],
+      settlements: {},
+      members: [JOINT_ME.id],
+      removedIds: getJointSnapshot().removedIds,
+    })
+    expect(merged.wallet.name).toBe('Dompet Kita Berdua')
+    expect(jointNotes(merged)).toHaveLength(0)
+  })
+
+  it('kantong baru tidak membawa penanda settle lama & tetap TIDAK menyentuh kas pribadi', () => {
+    withPartner()
+    const cashBefore = cashTotal(getMoneySnapshot())
+    const rowsBefore = getMoneySnapshot().rows.length
+
+    /* tiga tulisan khas kantong bersama, lalu kantongnya diganti */
+    addJointTransaction({
+      description: 'Nonton',
+      amount: 300_000,
+      paidByUserId: JOINT_PARTNER.id,
+    })
+    expect(recordSettlement(newRecord())).not.toBeNull()
+    expect(createJointPocket('Kantong Baru')).not.toBeNull()
+
+    /* penanda bulan yang disepakati di kantong LAMA tidak berlaku di kantong baru */
+    expect(settlementRecordFor(getJointSnapshot(), JOINT_MONTH_KEY)).toBeNull()
+    /* dan INVARIANT paket 61.3: kas pribadi tidak pernah tersentuh */
+    expect(cashTotal(getMoneySnapshot())).toBe(cashBefore)
+    expect(getMoneySnapshot().rows).toHaveLength(rowsBefore)
   })
 })
 

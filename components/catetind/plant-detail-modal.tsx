@@ -3,6 +3,7 @@
 import { Sparkles, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { CELEBRATION_COPY } from '@/lib/data/milestones'
+import { HOME_PLANT_COPY } from '@/lib/data/home'
 import { PlantIllustration, STAGE_NAMES, type PlantStage } from './plant-illustration'
 
 type PlantState = {
@@ -53,7 +54,7 @@ export function PlantDetailModal({
       >
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold tracking-tight text-ink">
-            Tanamanmu 🌿
+            {HOME_PLANT_COPY.detailTitle}
           </h2>
           <button
             type="button"
@@ -104,9 +105,11 @@ export function PlantDetailModal({
           </div>
         </div>
 
-        {/* stats - framing positif semua */}
+        {/* stats - framing positif semua. Angkanya TURUNAN (paket 58): `hp` dari
+            progres celengan, `activeDays` dari tanggal unik di ledger — tanpa
+            aktivitas, barisnya jujur bilang "Belum ada aktivitas", bukan "0 hari". */}
         <div className="mt-5 space-y-2.5">
-          <StatRow label="Kesehatan tanaman">
+          <StatRow label={HOME_PLANT_COPY.hpLabel}>
             <span className="flex items-center gap-2">
               <span className="h-1.5 w-16 overflow-hidden rounded-full bg-soil/[0.11]">
                 <span
@@ -120,16 +123,17 @@ export function PlantDetailModal({
               <b className="font-semibold text-ink tabular-nums">{plant.hp}%</b>
             </span>
           </StatRow>
-          <StatRow label="Hari aktif bulan ini">
+          <StatRow label={HOME_PLANT_COPY.activeDaysLabel}>
             <b className="font-semibold text-ink tabular-nums">
-              {plant.activeDays} hari
+              {plant.activeDays > 0
+                ? HOME_PLANT_COPY.activeDaysValue(plant.activeDays)
+                : HOME_PLANT_COPY.activeEmptyValue}
             </b>
           </StatRow>
         </div>
 
         <p className="mt-5 rounded-2xl bg-cream/70 px-4 py-3 text-center text-[13px] leading-relaxed text-ink/60 ring-1 ring-soil/8">
-          Kamu udah catat <b className="text-forest">{plant.activeDays} hari</b>{' '}
-          bulan ini - tanamanmu tumbuh karena konsistensimu. Lanjutin ya! 💚
+          {plant.activeDays > 0 ? HOME_PLANT_COPY.activeBody(plant.activeDays) : HOME_PLANT_COPY.activeEmptyBody}
         </p>
 
         {/* pintu meninjau ulang perayaan (inventaris #k) — bukan aksi utama,

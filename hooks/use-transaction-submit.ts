@@ -3,7 +3,7 @@
 import { useCallback } from 'react'
 import { toast } from 'sonner'
 import { readOnline } from '@/lib/connection'
-import { maskMoney, successCheerFor } from '@/lib/data/history'
+import { maskMoney, successCheerFor, TRANSACTION_NO_WALLET_COPY } from '@/lib/data/history'
 import { OFFLINE_COPY } from '@/lib/data/offline'
 import { recordDraftTransaction, type DraftTransactionInput } from '@/lib/transaction-bus'
 import type { HistoryTransaction } from '@/lib/data/history'
@@ -42,7 +42,12 @@ import type { HistoryTransaction } from '@/lib/data/history'
    yang tahu konteks uang aktif (`useMoneyContext()` + `defaultWalletNameFor()`
    dari store uang) dan status tombol mata (`usePrivacy().masked`) yang mengoper
    keduanya. Penulisannya sendiri lewat `lib/transaction-bus.ts`, yang kini cuma
-   adapter tipis ke store (paket 40). */
+   adapter tipis ke store (paket 40).
+
+   Argumen pertama itu boleh `''` — artinya konteks/halaman ini belum punya
+   dompet untuk catatan baru (paket 59). Dalam keadaan itu fungsi yang
+   dikembalikan MENOLAK menulis dan memberi arahan, bukan menambal ke dompet
+   lain; lihat pagar di dalam `submit` di bawah. */
 export interface TransactionSubmitOptions {
   /**
    * Draft ini SAH membawa tanggalnya sendiri — backdating dari form tambah
@@ -89,10 +94,25 @@ export function useTransactionSubmit(
         return null
       }
 
+      /* ── BELUM ADA DOMPET = TIDAK DITULIS (paket 59 · temuan audit #1) ────
+         Konteks uang yang belum punya dompet sendiri dulu menempel ke 'Tunai'
+         (dompet konteks Keluarga) sehingga catatan dari konteks "Bersama"
+         memotong saldo Tunai tanpa user sadari. Sekarang penulisannya
+         DITOLAK — dan panelnya SENGAJA tidak ditutup supaya nominal &
+         catatan yang sudah diketik user tidak hilang; yang perlu ia lakukan
+         (pindah konteks / tambah dompet) disebutkan di toast. */
+      const walletName = (draft.wallet || fallbackWallet).trim()
+      if (!walletName) {
+        toast.error(TRANSACTION_NO_WALLET_COPY.title, {
+          description: TRANSACTION_NO_WALLET_COPY.body,
+        })
+        return null
+      }
+
       /* dibaca SEBELUM menulis: statusnya yang menentukan kalimat toast, dan
          menyimpan tidak mengubah status jaringan (paket 42) */
       const offline = !readOnline()
-      const transaction = recordDraftTransaction(draft, fallbackWallet)
+      const transaction = recordDraftTransaction(draft, walletName)
       closePanel()
 
       /* OFFLINE: jangan menembak pujian sukses yang sama seperti saat online.
