@@ -93,6 +93,9 @@ function ChatBubble({ message, onAction }: { message: ChatMessage; onAction: () 
   )
 }
 
+/** route yang menampilkan bubble AI Coach — HANYA Dashboard (paket 64) */
+const AI_CHAT_ROUTES: string[] = ['/']
+
 /** indikator "AI lagi ngetik" — tiga titik berdenyut berurutan */
 function TypingIndicator() {
   return (
@@ -266,36 +269,15 @@ export function AIChatWidget() {
     }
   }
 
-  /* Halaman yang TIDAK menampilkan bubble AI:
-       1. `/app/onboarding` — alurnya full-screen; bubble (bottom-24) bakal
-          ketutupan CTA sticky onboarding.
-       2. `/checkout` — halaman publik pembelian (inventaris #3): tanpa chat
-          widget, karena halaman ini harus tetap ringan & lurus ke pembayaran.
-       3. `/login` (+ `/login/verify`) — pintu masuk publik (inventaris #8/#9):
-          widget AI di sini cuma navigasi palsu (user belum punya data apa pun
-          untuk dibahas) dan mengganggu tombol "Buka email"/"Kirim ulang".
-       4. `/join/[code]` — undangan dompet bersama (inventaris #7): bubble-nya
-          menutupi CTA sticky "Gabung Dompet Ini", dan yang membuka halaman ini
-          belum tentu punya akun untuk diajak ngobrol.
-       5. `/share/[id]` — kartu pencapaian publik (inventaris #16): pengunjungnya
-          belum tentu punya akun, dan bubble AI di atas kartu orang lain bikin
-          halaman yang seharusnya jadi pintu masuk hangat terasa seperti app
-          orang lain. CTA "Gabung CatetInd" di halaman itu sudah jadi jalannya.
-       6. `/privacy` & `/terms` — dokumen legal publik (inventaris #4/#5):
-          bubble yang mengambang menutupi paragraf dokumen yang sedang dibaca,
-          dan menawarkan ngobrol dengan AI ke orang yang belum punya data apa
-          pun justru bikin klaim privasinya terasa kurang serius.
-     Guard ditaruh setelah semua hook supaya urutan hook tetap stabil. */
-  if (
-    pathname.startsWith('/app/onboarding') ||
-    pathname.startsWith('/checkout') ||
-    pathname.startsWith('/login') ||
-    pathname.startsWith('/join') ||
-    pathname.startsWith('/share') ||
-    pathname.startsWith('/privacy') ||
-    pathname.startsWith('/terms')
-  )
-    return null
+  /* ── CAKUPAN TOMBOL AI (paket 64): KHUSUS DASHBOARD ─────────────────────────
+     Permintaan produk: bubble AI Coach hanya boleh muncul di route Dashboard
+     (`/`), tidak lagi mengambang di setiap halaman. Alasannya: tombol yang selalu
+     ada di semua layar berhenti terasa seperti ajakan dan mulai terasa seperti
+     gangguan — terutama di halaman publik (/login, /checkout, dokumen legal) dan
+     di alur fokus (onboarding, /join, /share) yang memang harus lurus.
+     Daftar ini SATU sumber kebenaran cakupannya; jangan menambah route di tempat
+     lain. Guard ditaruh setelah semua hook supaya urutan hook tetap stabil. */
+  if (!AI_CHAT_ROUTES.includes(pathname)) return null
 
   return (
     <>

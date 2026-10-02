@@ -1,28 +1,26 @@
 /* ── COPY BANNER OFFLINE & ANTREAN LOKAL (paket 42) ──────────────────────────
-   Sebelum paket ini repo NOL memakai `navigator.onLine`: user yang kehilangan
-   sinyal tidak diberi tahu apa pun, tidak tahu catatannya masih aman, dan tidak
-   tahu ada yang menunggu diproses. Semua kalimatnya tinggal di sini (aturan repo:
-   copy user-facing bukan string di JSX).
-
    Dua nada yang dipakai banner:
      · `offline*`         → perangkat sedang tanpa jaringan (hud-amber, tenang)
      · `pendingTitle` dkk → jaringan sudah ada tapi antrean belum selesai (sage)
 
-   KALIMAT KEJUJURAN (`honestyNote`) selalu tampil. Ini bukan detail teknis yang
-   disembunyikan: tanpa server, "tersinkron" HANYA berarti "sudah tersimpan di
-   perangkat ini", dan itu harus dikatakan apa adanya. */
+   AUDIT "CLEAN UI" (paket 63): `honestyNote` dulu satu kalimat panjang soal
+   IndexedDB/server yang TAMPIL SELALU di setiap layar selama offline — pengingat
+   teknis yang menetes ke seluruh app. Sekarang dipecah: `honestySummary` (satu
+   baris, selalu tampak) + `honestyBody` (detail, hanya muncul kalau user buka
+   disclosurenya). Kewajiban jujurnya tetap: user selalu bisa tahu arti
+   "tersinkron" tanpa membuka apa pun. */
 export const OFFLINE_COPY = {
-  offlineTitle: 'Offline — catatanmu aman di perangkat',
+  offlineTitle: 'Offline — catatanmu aman',
   /** kalimat keadaan; angka antreannya disusun di data, bukan di komponen */
   offlineBody: (pending: number) =>
     pending > 0
-      ? `${pending.toLocaleString('id-ID')} catatan tersimpan di perangkat ini dan masuk antrean. Begitu internet balik, semua diproses sekaligus.`
-      : 'Semua catatan tersimpan di perangkat ini. Begitu internet balik, semuanya diproses sekaligus.',
+      ? `${pending.toLocaleString('id-ID')} catatan nunggu di perangkat. Balik online, langsung diproses.`
+      : 'Catatan tersimpan di perangkat. Balik online, langsung diproses.',
   /** badge angka antrean — satu-satunya angka yang ditampilkan banner */
-  pendingBadge: (pending: number) => `${pending.toLocaleString('id-ID')} belum tersinkron`,
+  pendingBadge: (pending: number) => `${pending.toLocaleString('id-ID')} nunggu`,
   pendingTitle: 'Ada catatan yang belum diproses',
   pendingBody: (pending: number) =>
-    `${pending.toLocaleString('id-ID')} catatan masih menunggu diproses di perangkat ini.`,
+    `${pending.toLocaleString('id-ID')} catatan masih nunggu di perangkat ini.`,
   /** tombol proses ulang — benar-benar jalan (`flushPendingSync`), bukan pajangan */
   pendingCta: 'Proses sekarang',
   /** nada saat antrean berhasil diproses */
@@ -30,10 +28,13 @@ export const OFFLINE_COPY = {
   syncedBody: (processed: number) =>
     `${processed.toLocaleString('id-ID')} catatan selesai diproses.`,
   dismissLabel: 'Tutup info offline',
-  /** batas jujur yang selalu ikut tampil (bukan disembunyikan di komentar kode) */
-  honestyNote:
-    'Catatan: tanpa server, "tersinkron" berarti sudah tersimpan di perangkat ini (IndexedDB) — belum ada data yang dikirim ke mana pun.',
+  /** BARIS SINGKAT yang selalu tampak — penjaga janji "tersinkron" */
+  honestySummary: 'Tanpa server, "tersinkron" = tersimpan di perangkat ini.',
+  /** detail teknis, dibuka hanya kalau user minta */
+  honestyBody:
+    'Selama app ini belum punya backend, semua catatan tinggal di perangkatmu (IndexedDB). Nggak ada satu pun yang dikirim ke mana pun — kirimannya baru jalan begitu online.',
+  honestyLabel: 'Maksudnya?',
   /** toast setelah menyimpan saat perangkat OFFLINE — jangan mengaku "kecatat & terkirim" */
   savedOfflineTitle: 'Tersimpan di perangkat 📴',
-  savedOfflineBody: 'Catatanmu masuk antrean — diproses begitu internet balik.',
+  savedOfflineBody: 'Masuk antrean — diproses begitu online.',
 } as const

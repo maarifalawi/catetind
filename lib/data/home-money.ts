@@ -212,6 +212,22 @@ export function homeRowsInLastDays(
   return rows.filter((row) => row.date >= startIso && row.date <= todayIso)
 }
 
+/**
+ * Batas JUMLAH baris kartu "Transaksi Terakhir" di Home (paket 64): maksimal 10
+ * baris. Kartu ini ringkasan, bukan arsip — kalau seminggu penuh berisi puluhan
+ * catatan, daftar yang panjang justru menenggelamkan kartu di bawahnya.
+ * Daftar lengkap (tanpa batas) tetap hidup di `/history`.
+ */
+export const HOME_RECENT_MAX_ROWS = 10
+
+/** potong daftar ke batas baris kartu Home; input dianggap sudah urut terbaru dulu */
+export function capHomeRecentRows(
+  rows: HomeMoneyRow[],
+  max = HOME_RECENT_MAX_ROWS,
+): HomeMoneyRow[] {
+  return rows.length > max ? rows.slice(0, max) : rows
+}
+
 /** label satu hari: "Hari ini" / "Kemarin" / "21 Sep" (dari tanggal NYATA) */
 export function homeMoneyGroupLabel(dateIso: string, todayIso: string): string {
   if (todayIso) {

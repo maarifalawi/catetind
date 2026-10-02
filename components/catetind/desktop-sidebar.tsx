@@ -49,7 +49,15 @@ const SIDEBAR_WIDTH_VAR = '--catet-sidebar-w'
    `MoneyContextProvider` (root layout), jadi switcher yang muncul di header
    mobile halaman Dashboard & Budget tetap berfungsi normal. */
 
-export function DesktopSidebar() {
+export function DesktopSidebar({
+  variant = 'fixed',
+}: {
+  /** 'fixed' = sidebar desktop seperti biasa; 'drawer' = konten yang sama dipakai
+   *  di dalam drawer navigasi mobile (paket 64). Di mode drawer, state collapse
+   *  tidak berlaku (selalu expanded), tidak menulis localStorage, dan tidak
+   *  memublikasikan lebar sidebar ke CSS var. */
+  variant?: 'fixed' | 'drawer'
+} = {}) {
   const pathname = usePathname()
   const [addOpen, setAddOpen] = useState(false)
   /**
@@ -59,7 +67,9 @@ export function DesktopSidebar() {
    * sheet membuka langkah 1 (pemilih dompet) — bukan menebak dompet konteks.
    */
   const [transferOpen, setTransferOpen] = useState(false)
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsedState, setCollapsed] = useState(false)
+  /** di drawer mobile selalu expanded — tombol collapse memang khusus desktop */
+  const collapsed = variant === 'drawer' ? false : collapsedState
   /* pintu masuk input utama di desktop (pasangan FAB mobile) — dikunci saat masa
      aktif habis. Navigasi & pembacaan data tidak tersentuh. */
   const { inputLocked } = useSubscriptionGate()
@@ -67,10 +77,12 @@ export function DesktopSidebar() {
   // hidrasi preferensi collapse dari localStorage (setelah mount,
   // supaya server & client render identik dan tidak ada hydration mismatch)
   useEffect(() => {
+    if (variant === 'drawer') return
     setCollapsed(localStorage.getItem(COLLAPSED_KEY) === '1')
-  }, [])
+  }, [variant])
 
   useEffect(() => {
+    if (variant === 'drawer') return
     localStorage.setItem(COLLAPSED_KEY, collapsed ? '1' : '0')
     /* Publikasikan lebar sidebar ke CSS var: sidebar-nya `fixed` (keluar dari
        alur), jadi kolom konten yang menggeser dirinya sendiri (lihat
@@ -85,10 +97,11 @@ export function DesktopSidebar() {
     return () => {
       root.style.removeProperty(SIDEBAR_WIDTH_VAR)
     }
-  }, [collapsed])
+  }, [collapsed, variant])
 
-  // shortcut modern ala Linear: "[" untuk toggle sidebar
+  // shortcut modern ala Linear: "[" untuk toggle sidebar (desktop saja)
   useEffect(() => {
+    if (variant === 'drawer') return
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== '[') return
       const target = e.target as HTMLElement | null
@@ -97,7 +110,7 @@ export function DesktopSidebar() {
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [])
+  }, [variant])
 
   return (
     <aside
@@ -110,8 +123,11 @@ export function DesktopSidebar() {
            halaman. Elemen `fixed` selalu mengikat ke viewport, jadi kebal.
            Konsekuensinya kolom konten digeser lewat var --catet-sidebar-w
            (dipublikasikan di effect atas, dibaca screen-shell.tsx). */
-        'fixed inset-y-0 left-0 z-30 hidden flex-col border-r border-ink/[0.06] bg-cream px-4 py-5 transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] lg:flex',
-        collapsed ? 'w-[76px]' : 'w-[280px]',
+        /* mode drawer: mengisi panel drawer (bukan `fixed`, bukan `hidden lg:flex`) */
+        variant === 'drawer'
+          ? 'relative flex h-full w-full flex-col bg-cream px-4 py-5'
+          : 'fixed inset-y-0 left-0 z-30 hidden flex-col border-r border-ink/[0.06] bg-cream px-4 py-5 transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] lg:flex',
+        variant === 'fixed' && (collapsed ? 'w-[76px]' : 'w-[280px]'),
       )}
     >
       {/* ── header: wordmark + toggle collapse ─────────────────────── */}
@@ -135,7 +151,12 @@ export function DesktopSidebar() {
           aria-expanded={!collapsed}
           aria-label={collapsed ? 'Buka sidebar' : 'Tutup sidebar'}
           title={collapsed ? 'Buka sidebar  [  ]' : 'Tutup sidebar  [  ]'}
-          className="flex size-8 shrink-0 items-center justify-center rounded-full text-ink/40 ring-1 ring-ink/[0.08] transition-all duration-200 hover:bg-cream hover:text-ink active:scale-95"
+          className={cn(
+            'flex size-8 shrink-0 items-center justify-center rounded-full text-ink/40 ring-1 ring-ink/[0.08] transition-all duration-200 hover:bg-cream hover:text-ink active:scale-95',
+            /* tombol collapse/rangkai adalah afordans desktop — di drawer mobile
+               tidak relevan (drawer selalu expanded) */
+            variant === 'drawer' && 'hidden',
+          )}
         >
           {collapsed ? (
             <PanelLeftOpen className="size-4" strokeWidth={2} />

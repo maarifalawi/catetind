@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState, useSyncExternalStore } from 'react'
 import { Sparkles, Sprout, X } from 'lucide-react'
 import { TransactionWebModal } from '@/components/dashboard/transaction-web-modal'
 import { DEMO_MODE } from '@/lib/demo'
@@ -8,7 +8,8 @@ import { cn } from '@/lib/utils'
 import { HOME_NUDGE_COPY } from '@/lib/data/home'
 import { shouldShowDailyNudge } from '@/lib/data/home-money'
 import { isAccountEmpty, recordedTransactions, useMoneyStore } from '@/lib/money/store'
-import { useTodayISO } from '@/lib/use-today-iso'
+import { dismissNudge, isNudgeDismissedToday } from '@/lib/nudge-store'
+import { useNudgeState } from '@/hooks/use-nudge-state'
 
 /* ── Slot Nudge Kontekstual (Habit Loop, PRD Domain 3A) ───────────────────────
    Satu slot KECIL yang sifatnya conditional: tempat AI ngobrol singkat dengan
@@ -25,10 +26,13 @@ import { useTodayISO } from '@/lib/use-today-iso'
    PAKET 58 — PICUNYA KINI NYATA (temuan AKAR A): dulu baris `HAS_RECORD_TODAY =
    false` adalah konstanta, jadi "hari ini belum ada catatan" diucapkan bahkan
    ketika user baru saja mencatat. Sekarang fakta itu dibaca dari SATU store
-   uang (`recordedTransactions()`), tanggalnya dari `useTodayISO()` (bukan
-   `new Date().toISOString()` yang UTC), dan nada nudge ini benar-benar berhenti
-   begitu ada catatan hari ini. Akun yang sudah dikosongkan ("Hapus Akun") tidak
-   dinudge: tidak ada apa pun untuk dicatat di akun kosong. */
+   uang (`recordedTransactions()`), dan tanggalnya dari store nudge
+   (`lib/nudge-store.ts`, yang memakai `todayISO()` lokal perangkat — bukan UTC).
+   PAKET 64 — gerbang tanggal & penanda "sudah ditutup hari ini" ikut store itu,
+   sehingga tidak ada lagi `useEffect` "hydrate dulu baru render" yang membuat
+   nudge sempat berkedip muncul-hilang saat halaman dimuat. Nada nudge ini tetap
+   benar-benar berhenti begitu ada catatan hari ini. Akun yang sudah dikosongkan
+   ("Hapus Akun") tidak dinudge: tidak ada apa pun untuk dicatat di akun kosong. */
 
 /** paksa tampil untuk kebutuhan review desain — perilaku produksi (default):
  *  nudge hanya muncul sore hari & hanya kalau hari ini belum dicatat.
@@ -36,26 +40,21 @@ import { useTodayISO } from '@/lib/use-today-iso'
 const DEMO_FORCE_SHOW = DEMO_MODE
 
 
-const STORAGE_KEY = 'catet-ind-nudge-dismissed'
+/** jam perangkat dibaca lewat `useSyncExternalStore`: server memakai `null`,
+ *  client mengisi angka SAAT hidrasi (bukan sesudah cat pertama) — jadi nudge
+ *  sore hari tidak "pop-in". Subscribe-nya no-op karena satu render = satu jam. */
+const subscribeHour = () => () => {}
+const readHour = (): number | null => (typeof window === 'undefined' ? null : new Date().getHours())
+const seedHour = (): number | null => null
 
 export function DailyNudge() {
-  const [ready, setReady] = useState(false)
-  const [hour, setHour] = useState<number | null>(null)
-  const [dismissedOn, setDismissedOn] = useState<string | null>(null)
   const [addOpen, setAddOpen] = useState(false)
-  const today = useTodayISO()
+  const hour = useSyncExternalStore(subscribeHour, readHour, seedHour)
+  /* tanggal + penanda "sudah ditutup hari ini" dari SATU store nudge — persisten
+     lintas reload tanpa hydration mismatch (lihat `lib/nudge-store.ts`). */
+  const nudges = useNudgeState()
+  const today = nudges.today
   const snapshot = useMoneyStore()
-
-  /* semua gate dihitung di client setelah mount → server & client render identik */
-  useEffect(() => {
-    try {
-      setDismissedOn(localStorage.getItem(STORAGE_KEY))
-    } catch {
-      /* localStorage diblokir — nudge tetap boleh tampil */
-    }
-    setHour(new Date().getHours())
-    setReady(true)
-  }, [])
 
   /* apakah sudah ada catatan bertanggal HARI INI di ledger? — fakta dari store,
      bukan konstanta. `recordedTransactions()` sudah membuang tombstone. */
@@ -64,10 +63,10 @@ export function DailyNudge() {
     [snapshot, today],
   )
 
-  /* urutan gate: hidrasi → tanggal perangkat belum diketahui → sudah ditutup
-     hari ini → akun kosong → jam & catatan nyata */
-  if (!ready || !today) return null
-  if (dismissedOn === today) return null
+  /* urutan gate: tanggal perangkat belum diketahui → sudah ditutup hari ini →
+     akun kosong → jam & catatan nyata */
+  if (!today || hour === null) return null
+  if (isNudgeDismissedToday(nudges, 'daily-nudge')) return null
 
   /* pemicunya fungsi MURNI (shouldShowDailyNudge) supaya perilaku ini teruji: */
   const show = shouldShowDailyNudge({
@@ -78,14 +77,8 @@ export function DailyNudge() {
   })
   if (!show) return null
 
-  const dismiss = () => {
-    setDismissedOn(today)
-    try {
-      localStorage.setItem(STORAGE_KEY, today)
-    } catch {
-      /* diabaikan */
-    }
-  }
+  /* ditutup untuk HARI INI saja (per hari kalender) — penandanya di store nudge */
+  const dismiss = () => dismissNudge('daily-nudge', today)
 
   return (
     <>

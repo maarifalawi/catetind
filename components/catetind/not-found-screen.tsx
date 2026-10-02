@@ -13,7 +13,6 @@ import {
   NOT_FOUND_ART_LABEL,
   NOT_FOUND_BODY,
   NOT_FOUND_EYEBROW,
-  NOT_FOUND_FOOTNOTE,
   NOT_FOUND_HELP_BODY,
   NOT_FOUND_HELP_CTA,
   NOT_FOUND_HOME_CTA,
@@ -146,10 +145,6 @@ export function NotFoundScreen() {
               {NOT_FOUND_HELP_CTA}
             </Link>
           </div>
-
-          <p className="mt-4 text-center text-[11px] leading-relaxed text-ink/40 italic">
-            {NOT_FOUND_FOOTNOTE}
-          </p>
         </div>
       </div>
     </ScreenShell>

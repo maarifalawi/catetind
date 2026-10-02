@@ -654,17 +654,17 @@ export function searchHelp(query: string, topics: HelpTopic[] = HELP_TOPICS): He
 export const HELP_EYEBROW = 'Bantuan & Panduan'
 export const HELP_TITLE = 'Pusat Bantuan'
 export const HELP_GREETING =
-  'Hai, gue Minca 🌱 Nggak perlu baca manual 200 halaman. Cari, klik, kelar. Kalau masih mentok, ada jalan buat ngobrol langsung sama founder.'
+  'Hai, gue Minca 🌱 Cari, klik, kelar. Masih mentok? Bisa ngobrol langsung sama founder.'
 export const HELP_SIDEBAR_TITLE = 'Mau bahas apa hari ini?'
 export const HELP_DEFAULT_TITLE = 'Sering Bikin Bingung'
 export const HELP_DEFAULT_BLURB =
-  'Pertanyaan yang paling sering mampir ke kepala pengguna CatetInd 👇 Klik kartunya, jawabannya langsung kebuka di sini.'
+  'Pertanyaan yang paling sering mampir 👇 Klik kartunya, jawabannya kebuka di sini.'
 export const HELP_SEARCH_PLACEHOLDER = 'Cari bantuan... contoh: "cara sembunyiin transaksi"'
 export const HELP_SEARCH_LABEL = 'Cari di pusat bantuan'
 export const HELP_RESULT_TITLE = 'Hasil pencarian'
 export const HELP_EMPTY_TITLE = 'Gue nggak nemu yang pas 😅'
 export const HELP_EMPTY_BLURB =
-  'Coba kata kunci lain (mis. "privasi", "langganan", "nabung", "offline") atau pilih topik di samping. Kalau memang artikelnya belum ada, kasih tahu gue lewat tombol 👎 di artikel mana pun.'
+  'Coba kata kunci lain (mis. "privasi", "nabung", "offline") atau pilih topik di samping. Masih nggak ada? Klik 👎 di artikel mana pun.'
 export const HELP_BACK_TO_QUICK = 'Balik ke pertanyaan populer'
 export const HELP_OPEN_TOPIC = 'Buka topik'
 export const HELP_FEEDBACK_QUESTION = 'Apakah artikel ini membantu?'
@@ -672,9 +672,9 @@ export const HELP_FEEDBACK_THANKS = 'Senang bisa membantu! 💚'
 export const HELP_PRO_TIP_LABEL = '💡 Perlu Tahu'
 /** catatan kecil di sidebar: kasih tahu jalan ke support TANPA membuka gerbangnya */
 export const HELP_SIDEBAR_NOTE =
-  'Nggak nemu jawabannya? Buka artikel mana pun, klik 👎 di bawahnya, dan tombol buat ngobrol langsung sama founder bakal muncul di situ.'
+  'Nggak nemu jawabannya? Klik 👎 di artikel mana pun, tombol ngobrol sama founder bakal muncul.'
 export const HELP_PRIVACY_SHIELD =
-  'Tim CatetInd tidak bisa mengakses data transaksi kamu — ini adalah jaminan privasi kami. Jika kamu mengalami masalah teknis, mohon sertakan screenshot layar yang bermasalah saat menghubungi support. Ini membantu kami mendebug masalah tanpa melihat data personal kamu.'
+  'Kami nggak bisa mengakses data transaksimu — itu jaminan privasi kami. Kalau ada masalah teknis, sertakan screenshot biar kami bisa bantu tanpa melihat datamu.'
 export const HELP_SUPPORT_FOOTNOTE =
   'Balasan datang langsung dari founder — bukan bot, bukan tiket yang nyangkut antre.'
 export const HELP_EXPORT_LABEL = 'Export Data Saya (JSON)'
@@ -682,7 +682,7 @@ export const HELP_CONTACT_LABEL = 'Hubungi Founder'
 export const HELP_CONTACT_SUBJECT = 'Butuh Bantuan - CatetInd'
 export const HELP_CONTACT_TO = 'support@catetind.com'
 export const HELP_EXPORT_TOAST =
-  'File JSON-nya udah ke-download ke perangkatmu 📦 Nggak ada satu pun orang di CatetInd yang punya salinannya.'
+  'File JSON-nya udah masuk perangkatmu 📦 Cuma kamu yang punya salinannya.'
 
 /* ── 7. KAKI HALAMAN: jalan ke dokumen legal ────────────────────────────────
    Pusat Bantuan menjawab pertanyaan "data gue aman nggak?" (topik "Keamanan &
@@ -694,8 +694,7 @@ export const HELP_EXPORT_TOAST =
    (`lib/legal/privacy.ts` & `lib/legal/terms.ts`) supaya satu dokumen tidak
    pernah disebut dengan dua nama berbeda. `/terms` baru ditautkan di sini
    SETELAH route-nya benar-benar ada (prompt 13) — bukan lebih dulu. */
-export const HELP_LEGAL_NOTE =
-  'Jaminan privasi dan aturan layanan di halaman ini punya versi tertulis, lengkap dengan tanggal versinya:'
+export const HELP_LEGAL_NOTE = 'Versi tertulisnya ada di sini, lengkap dengan tanggalnya:'
 export const HELP_LEGAL_LINKS: { href: string; label: string }[] = [
   { href: '/privacy', label: PRIVACY_LINK_COPY.label },
   { href: '/terms', label: TERMS_LINK_COPY.label },

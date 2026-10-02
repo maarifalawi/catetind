@@ -24,6 +24,7 @@ import { formatIDR } from '@/lib/wallets'
 import { amountSign } from '@/lib/data/history'
 import {
   HOME_MONEY_COPY,
+  capHomeRecentRows,
   groupHomeMoneyRows,
   homeMoneyRowFrom,
   homeRowsInLastDays,
@@ -370,8 +371,13 @@ export const RecentTransactionsCard = memo(function RecentTransactionsCard() {
 
   /* 58.6 — daftar dibatasi 7 hari kalender terakhir; yang lebih tua tetap utuh
      di /history (tombol "Lihat semua" di kepala kartu). Sebelum "hari ini"
-     diketahui, penyaringan dilewati supaya HTML server = render pertama client. */
-  const recentRows = useMemo(() => homeRowsInLastDays(rows, today), [rows, today])
+     diketahui, penyaringan dilewati supaya HTML server = render pertama client.
+     Paket 64 menambah batas JUMLAH (maks 10 baris): kartu ini ringkasan, bukan
+     arsip — `/history` yang menyimpan daftar penuh. */
+  const recentRows = useMemo(
+    () => capHomeRecentRows(homeRowsInLastDays(rows, today)),
+    [rows, today],
+  )
   const visibleGroups = useMemo(() => listGroups(recentRows, today), [recentRows, today])
   const totalItems = recentRows.length
 

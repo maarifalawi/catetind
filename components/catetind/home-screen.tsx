@@ -2,9 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowRight, Bell, Receipt, Search, Wallet as WalletIcon } from 'lucide-react'
+import { ArrowRight, Receipt, Search, Wallet as WalletIcon } from 'lucide-react'
 import { ScreenShell } from './screen-shell'
 import { LogoWordmark } from './logo-wordmark'
 import { MetaChip } from './meta-chip'
@@ -13,6 +12,8 @@ import { CashFlowCard } from './cash-flow-card'
 import { DailyHudCard } from './daily-hud-card'
 import { DailyNudge } from './daily-nudge'
 import { GlobalPrivacyToggle } from './global-privacy-toggle'
+import { MobileNavButton } from './mobile-nav-drawer'
+import { NotificationBell } from './notification-bell'
 import { PlantWidget } from './plant-widget'
 import { ContextSwitcher } from './context-switcher'
 import { useMoneyContext } from './money-context-provider'
@@ -31,12 +32,11 @@ import { ExpenseDistributionCard } from './expense-distribution-card'
 import { MyGoalsCard } from './my-goals-card'
 import { RecentTransactionsCard } from './recent-transactions-card'
 import { OverviewPanel } from './overview-panel'
-import { homeWallets, cashTotal, cashTotalByContext, useMoneyStore } from '@/lib/money/store'
+import { homeWallets, cashTotal, useMoneyStore } from '@/lib/money/store'
 import type { DeckSelection } from '@/lib/wallets'
 import { getTransactionsByContext } from '@/lib/data/transactions'
 import { HISTORY_SEARCH_PARAM, historySearchHref } from '@/lib/data/history'
 import { HOME_HEADER_COPY, HOME_TOTAL_COPY } from '@/lib/data/home'
-import { usePrivacy } from './privacy-provider'
 import type { Transaction } from '@/lib/types'
 
 export function HomeScreen() {
@@ -63,9 +63,6 @@ export function HomeScreen() {
   }, [])
 
   const snapshot = useMoneyStore()
-  /* nominal yang tampil di baris konteks ikut tombol mata global (paket 31/44) —
-     sensor layar harus berlaku juga untuk angka baru yang kita tambahkan di sini */
-  const { money } = usePrivacy()
   /* Deck dompet & total saldonya dari SATU store uang. Dulu Home menjumlahkan
      daftar dompet versi Home (Rp 4.309.573) sementara Dompet & Kekayaan memakai
      daftar versi halaman Dompet (Rp 1.850.000) — dua angka untuk satu user
@@ -75,22 +72,13 @@ export function HomeScreen() {
        · `total`        = `cashTotal(snapshot)` = SELURUH dompet, sama dengan
                           hero `/wallet` & kas likuid Kekayaan;
        · `contextWallets` = daftar dompet KONTEKS AKTIF (chip jumlah dompet) —
-                             angka yang SAMA dengan deck & badge /wallet;
-       · `contextTotal` = saldo SATU konteks, ditampilkan sebagai baris kecil
-                          "Dompet Pribadi: Rp X" saat konteks aktif — penjelasan
-                          kenapa daftarnya lebih pendek.
-     Sebelumnya chip ini memakai daftar tersaring sehingga satu layar memuat dua
-     angka dompet yang berbeda ("2 dompet" vs "3 dompet aktif" di kartu). */
-  /* daftar dompet KONTEKS AKTIF — angka yang SAMA dengan kartu deck di bawah &
-     badge halaman Dompet & Akun. Dulu chip/`deck` menghitung SELURUH dompet
-     sementara /wallet menyaring konteks, jadi jumlahnya berbeda antar halaman
-     (audit "8 vs 3 Wallet Paradox"). */
+                             angka yang SAMA dengan deck & badge /wallet.
+     PAKET 64 menghapus baris kecil "Dompet Pribadi: Rp X · Total Saldo = semua
+     dompet" dari header: chip di bawah Context Switcher cukup memuat dua fakta
+     ringan (jumlah dompet & jumlah transaksi), dan angka total sudah punya
+     tempatnya sendiri di kartu dompet + panel Overview. */
   const contextWallets = useMemo(() => homeWallets(snapshot, moneyCtx), [snapshot, moneyCtx])
   const total = useMemo(() => cashTotal(snapshot), [snapshot])
-  const contextTotal = useMemo(
-    () => cashTotalByContext(snapshot, moneyCtx),
-    [snapshot, moneyCtx],
-  )
   const transactions = useMemo(
     () => getTransactionsByContext(moneyCtx) as Transaction[],
     [moneyCtx],
@@ -99,8 +87,6 @@ export function HomeScreen() {
   const hour = now?.getHours() ?? 12
   const sapaan = !now ? 'Selamat datang' : hour < 11 ? 'Selamat pagi' : hour < 15 ? 'Selamat siang' : hour < 19 ? 'Selamat sore' : 'Selamat malam'
   const tanggal = now ? new Intl.DateTimeFormat('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(now) : ' '
-  /* label konteks dengan huruf kapital di awal: "pribadi" → "Pribadi" */
-  const contextLabel = moneyCtx.charAt(0).toUpperCase() + moneyCtx.slice(1)
 
   /* CATATAN PERFORMA — efek "background zoom-out" (scale + opacity ke seluruh
      dashboard) SENGAJA DIHAPUS. Alasannya: begitu seluruh halaman di-scale atau
@@ -171,11 +157,15 @@ export function HomeScreen() {
           <div className="flex items-center gap-2">
             {/* sensor layar global — versi kompak untuk header mobile */}
             <GlobalPrivacyToggle className="size-9" />
-            {/* Tombol "Menu" DIHAPUS (paket 29). Alasannya kanon 2A.6: navigasi
-                sekunder cuma boleh punya SATU sumber kebenaran, dan itu sudah
-                dipegang bottom-nav "Lainnya" (components/MobileBottomNav.tsx —
-                daftar lengkap 3 grup, sama dengan sidebar desktop). Tombol ini
-                dulu tidak membuka apa pun: duplikat yang mati, bukan jalan pintas. */}
+            {/* Lonceng notifikasi → panel keadaan kosong (paket 64). Dulu di
+                mobile tidak ada lonceng sama sekali; sekarang ia berdampingan
+                dengan tombol mata. */}
+            <NotificationBell className="size-9" />
+            {/* Hamburger → drawer konten sidebar (paket 64). Tombol "Menu" lama
+                DIHAPUS karena tidak membuka apa pun; yang ini benar-benar
+                membuka `MobileNavDrawer`, jadi navigasi sekunder tetap satu
+                sumber bersama sidebar desktop. */}
+            <MobileNavButton className="size-9" />
             <span className="relative size-9 overflow-hidden rounded-full ring-1 ring-soil/12">
               <Image src="/avatar-maarif.png" alt="Jon Snow" fill sizes="36px" className="object-cover" />
             </span>
@@ -190,6 +180,14 @@ export function HomeScreen() {
         <div className="mt-4 flex justify-center lg:hidden">
           <ContextSwitcher value={moneyCtx} onChange={setContext} />
         </div>
+        {/* Metadata ringkas — DI-TENGAHKAN tepat di bawah Context Switcher
+            (paket 64). Dulu chip-nya rata kiri bercampur switcher desktop dan
+            ditemani baris panjang "Dompet Pribadi: Rp X · Total Saldo = semua
+            dompet" yang sekarang DIHAPUS: header cukup dua fakta ringan. */}
+        <div className="mt-3 flex items-center justify-center gap-2 lg:hidden">
+          <MetaChip icon={WalletIcon}>{HOME_TOTAL_COPY.walletsChip(contextWallets.length)}</MetaChip>
+          <MetaChip icon={Receipt}>{HOME_TOTAL_COPY.transactionsChip(transactions.length)}</MetaChip>
+        </div>
         {/* keadaan kosong (paket 43): hanya muncul setelah akun dihapus — lihat
             komponennya untuk alasan mengapa satu kalimat ini wajib ada */}
         <EmptyAccountNotice />
@@ -201,11 +199,11 @@ export function HomeScreen() {
             <h1 className="mt-1 hidden font-display text-3xl font-semibold tracking-tight text-ink lg:block lg:text-4xl">
               {sapaan}, Jon 🌿
             </h1>
-            {/* meta ringkas sebagai chip — menggantikan baris teks "Konteks: …"
-                yang dulu bertumpuk jadi banyak tingkat, terutama di mobile */}
-            <div className="flex flex-wrap items-center gap-2 lg:mt-3">
+            {/* meta ringkas sebagai chip — di DESKTOP saja (mobile punya baris
+                sendiri yang di-TENGAHKAN di bawah Context Switcher) */}
+            <div className="hidden flex-wrap items-center gap-2 lg:mt-3 lg:flex">
               <MetaChip icon={WalletIcon}>{HOME_TOTAL_COPY.walletsChip(contextWallets.length)}</MetaChip>
-              <MetaChip icon={Receipt}>{transactions.length} transaksi</MetaChip>
+              <MetaChip icon={Receipt}>{HOME_TOTAL_COPY.transactionsChip(transactions.length)}</MetaChip>
               {/* ── KONTEKS UANG (audit 46) ────────────────────────────────────
                   Dulu di sini cuma ada chip BACAAN "Pribadi", karena switcher
                   aslinya hidup di Sidebar — dan blok itu sudah dihapus dari
@@ -216,22 +214,15 @@ export function HomeScreen() {
               <ContextSwitcher
                 value={moneyCtx}
                 onChange={setContext}
-                className="hidden w-[262px] lg:flex"
+                className="w-[262px]"
               />
             </div>
             {/* ── KONTEKS AKTIF (paket 44) ─────────────────────────────────────
-                Konteks uang SELALU punya nilai (Pribadi/Keluarga/Bersama — tidak
-                ada keadaan "semua"), jadi baris ini selalu tampil dan selalu
-                relevan: ia memisahkan dua angka yang dulu tercampur di layar ini:
-                  1. "Total Saldo" (kartu dompet + panel Overview) = SELURUH dompet;
-                  2. saldo konteks yang sedang dipilih — itulah kenapa daftar di
-                     halaman lain lebih pendek.
-                Baris ini menjelaskan (2), jadi user tidak menyimpulkan totalnya
-                salah. Sama-sama lewat `money()` supaya tombol mata tetap berlaku. */}
-            <p className="mt-2 text-[11.5px] font-medium text-ink/55">
-              {HOME_TOTAL_COPY.contextLine(contextLabel, money(contextTotal))}
-              <span className="text-ink/35"> · {HOME_TOTAL_COPY.scopeNote}</span>
-            </p>
+                DIHAPUS di paket 64. Baris sementara "Dompet Pribadi: Rp X · Total
+                Saldo = semua dompet" terlalu bertele-tele untuk header: chip di
+                bawah Context Switcher (mobile) & di cluster ini (desktop) sudah
+                memuat dua fakta yang benar-benar dibutuhkan, dan angka totalnya
+                sudah punya tempat sendiri di kartu dompet + panel Overview. */}
           </div>
           <div className="hidden items-center gap-3 lg:flex">
             {/* Pencarian transaksi (desktop). Dulu kolom mati: bisa diketik, tapi
@@ -264,87 +255,92 @@ export function HomeScreen() {
             </form>
             {/* Global Eye — sensor SEMUA nominal di layar (KRL/kafe friendly) */}
             <GlobalPrivacyToggle />
-            {/* Notifikasi: dot tetap jadi penanda "ada yang baru", tapi tombolnya
-                kini benar-benar menuju halaman pengaturannya. Route-nya sudah ada
-                sejak dulu (`/settings/notifications` → `NotificationSettings` yang
-                tersambung Web Push) — yang kurang cuma tautannya. */}
-            <Link
-              href="/settings/notifications"
-              aria-label={HOME_HEADER_COPY.notificationsLabel}
-              className="relative flex size-11 shrink-0 items-center justify-center rounded-full bg-cream text-ink ring-1 ring-soil/12 transition-colors hover:bg-sage"
-            >
-              <Bell className="size-4" aria-hidden />
-              <span className="absolute right-3 top-3 size-2 rounded-full bg-mint ring-2 ring-cream" />
-            </Link>
+            {/* Lonceng notifikasi → panel keadaan kosong (paket 64). Halaman
+                pengaturannya tetap terjangkau lewat CTA di dalam panel. */}
+            <NotificationBell />
             <span className="relative size-11 shrink-0 overflow-hidden rounded-full ring-1 ring-soil/12">
               <Image src="/avatar-maarif.png" alt="Jon Snow" fill sizes="44px" className="object-cover" />
             </span>
           </div>
         </div>
-        {/* banner conditional: masa aktif / kuota AI / sinking fund (HomeBanners)
-            + rekap mingguan akhir pekan (WeeklyRecapBanner). Dua-duanya hanya
-            muncul saat kondisinya terpenuhi, jadi tinggi halaman ikut menyesuaikan. */}
-        <div className="mt-4 space-y-2.5 lg:mt-5">
-          <HomeBanners
-            renewalState={renewal.state}
-            renewalHandled={renewal.renewed}
-            onOpenRenewal={renewal.openModal}
-          />
-          <WeeklyRecapBanner onOpen={openRecap} />
-          {/* kartu target bulan ini — efek NYATA dari ritual Monthly Review dan
-              satu-satunya jalan membukanya lagi setelah auto-popup 1–3 lewat.
+        {/* ── URUTAN KARTU (paket 64) ──────────────────────────────────────────
+            Permintaan produk untuk MOBILE: Primary wallet/kartu → Secondary arus
+            uang → Tertiary transaksi terakhir (maks 10 baris / 7 hari) →
+            Quaternary (paling bawah) rekap mingguan & target bulan ini.
+            Urutannya dikerjakan lewat `order-*` di MOBILE saja; di DESKTOP
+            (`lg:order-none`) susunan aslinya dipertahankan apa adanya, termasuk
+            pasangan kolom baris 1–3. Urutan di DOM = urutan DESKTOP, jadi tidak
+            perlu dua versi markup. */}
+        <div className="flex flex-col">
+          {/* order-1 — banner conditional: masa aktif / kuota AI / sinking fund */}
+          <div className="order-1 mt-4 space-y-2.5 lg:order-none lg:mt-5">
+            <HomeBanners
+              renewalState={renewal.state}
+              renewalHandled={renewal.renewed}
+              onOpenRenewal={renewal.openModal}
+            />
+          </div>
+
+          {/* order-5 — rekap mingguan & target bulan ini. Di MOBILE blok ini
+              sengaja turun ke PALING BAWAH (kuartener); di desktop tetap di atas
+              seperti sebelumnya. kartu target = efek NYATA ritual Monthly Review
+              dan satu-satunya jalan membukanya lagi setelah auto-popup 1–3 lewat.
               `monthly.ready` menahan render sampai penanda localStorage dibaca,
               supaya kartunya tidak berkedip dari "belum ada" ke nominalnya. */}
-          {monthly.ready && (
-            <MonthlyTargetCard
-              savedThisMonth={monthly.savedThisMonth}
-              amount={monthly.saved?.amount ?? 0}
-              fundId={monthly.saved?.fundId ?? null}
-              onOpen={monthly.openModal}
-            />
-          )}
-        </div>
+          <div className="order-5 mt-2.5 space-y-2.5 lg:order-none lg:mt-2.5">
+            <WeeklyRecapBanner onOpen={openRecap} />
+            {monthly.ready && (
+              <MonthlyTargetCard
+                savedThisMonth={monthly.savedThisMonth}
+                amount={monthly.saved?.amount ?? 0}
+                fundId={monthly.saved?.fundId ?? null}
+                onOpen={monthly.openModal}
+              />
+            )}
+          </div>
 
-        {/* ── baris 1: arus uang + deck dompet (paket 58 · permintaan user) ────
-            "Arus Uang" NAIK ke baris pertama (posisi yang dulu ditempati Jatah
-            Hari Ini): ia bukti bahwa uang user benar-benar bergerak, jadi pantas
-            dibaca lebih dulu. Deck dompet tetap di kiri. Pembungkus
-            `h-full flex-col justify-center` DIBUANG: pola itu memaksa kartu
-            dompet memanjang mengikuti tinggi kolom kanan, sehingga muncul ruang
-            kosong setinggi kartu sebelahnya. Sekarang tiap kartu setinggi
-            isinya sendiri. */}
-        <div className="mt-6 grid grid-cols-1 gap-5 lg:mt-8 lg:grid-cols-12 lg:gap-6">
-          <div className="lg:col-span-5">
-            <div className="rounded-[2rem] bg-cream p-4 ring-1 ring-soil/12 sm:p-5">
-              <WalletCardStack onOpen={handleDeckOpen} />
+          {/* order-2 — PRIMARY (dompet) + SECONDARY (arus uang).
+              "Arus Uang" naik ke baris pertama (posisi yang dulu ditempati Jatah
+              Hari Ini): ia bukti bahwa uang user benar-benar bergerak, jadi
+              pantas dibaca lebih dulu. Deck dompet tetap di kiri. Pembungkus
+              `h-full flex-col justify-center` DIBUANG: pola itu memaksa kartu
+              dompet memanjang mengikuti tinggi kolom kanan, sehingga muncul
+              ruang kosong setinggi kartu sebelahnya. Sekarang tiap kartu
+              setinggi isinya sendiri. */}
+          <div className="order-2 mt-6 grid grid-cols-1 gap-5 lg:order-none lg:mt-8 lg:grid-cols-12 lg:gap-6">
+            <div className="lg:col-span-5">
+              <div className="rounded-[2rem] bg-cream p-4 ring-1 ring-soil/12 sm:p-5">
+                <WalletCardStack onOpen={handleDeckOpen} />
+              </div>
+            </div>
+            <div className="lg:col-span-7">
+              <CashFlowCard />
             </div>
           </div>
-          <div className="lg:col-span-7">
-            <CashFlowCard />
-          </div>
-        </div>
 
-        {/* ── baris 2: tanaman + Jatah Hari Ini yang dipadatkan (58.5) ─────────
-            Jatah Hari Ini TURUN ke baris kedua dan dipadatkan: angka utama, satu
-            baris konteks, bar progres — tanpa ring 104px yang mendikte tinggi
-            baris. Slot Nudge AI tetap menempel di bawahnya. */}
-        <div className="mt-5 grid grid-cols-1 gap-5 lg:mt-6 lg:grid-cols-12 lg:gap-6">
-          <div className="h-full lg:col-span-5">
-            <PlantWidget onReplayCelebration={celebration.replay} />
+          {/* order-4 — supporting: tanaman + Jatah Hari Ini yang dipadatkan
+              (58.5) + slot Nudge AI. Di MOBILE kartu-kartu ini duduk SETELAH
+              transaksi terakhir, bukan menggeser hierarki utama. */}
+          <div className="order-4 mt-5 grid grid-cols-1 gap-5 lg:order-none lg:mt-6 lg:grid-cols-12 lg:gap-6">
+            <div className="h-full lg:col-span-5">
+              <PlantWidget onReplayCelebration={celebration.replay} />
+            </div>
+            <div className="flex flex-col gap-5 lg:col-span-7">
+              <DailyHudCard />
+              <DailyNudge />
+            </div>
           </div>
-          <div className="flex flex-col gap-5 lg:col-span-7">
-            <DailyHudCard />
-            <DailyNudge />
-          </div>
-        </div>
-        {/* ── baris 3: transaksi terakhir + distribusi & tabungan impian ────── */}
-        <div className="mt-5 grid grid-cols-1 gap-5 lg:mt-6 lg:grid-cols-12 lg:gap-6">
-          <div className="h-full lg:col-span-7">
-            <RecentTransactionsCard />
-          </div>
-          <div className="flex flex-col gap-5 lg:col-span-5">
-            <ExpenseDistributionCard />
-            <MyGoalsCard />
+
+          {/* order-3 — TERTIARY: transaksi terakhir (maks 10 baris / 7 hari di
+              dalam kartunya) + distribusi pengeluaran & tabungan impian. */}
+          <div className="order-3 mt-5 grid grid-cols-1 gap-5 lg:order-none lg:mt-6 lg:grid-cols-12 lg:gap-6">
+            <div className="h-full lg:col-span-7">
+              <RecentTransactionsCard />
+            </div>
+            <div className="flex flex-col gap-5 lg:col-span-5">
+              <ExpenseDistributionCard />
+              <MyGoalsCard />
+            </div>
           </div>
         </div>
       </div>

@@ -65,6 +65,18 @@ export const SUBSCRIPTION_LABEL: Record<SubscriptionType, string> = {
 /** yang didapat TEMAN saat checkout — sisi lain dari program dua arah */
 export const REFERRED_FRIEND_BENEFIT = 'Temanmu dapat diskon 10% saat checkout'
 
+/**
+ * Pesan validasi kode teman (paket 64) — dipakai endpoint `/api/referral/validate`
+ * SEBELUM registrasi difinalkan. Kalimatnya sengaja tidak menyalahkan: kode yang
+ * salah ketik itu biasa, dan jalan keluarnya selalu disebut ("lanjut tanpa kode").
+ */
+export const REFERRAL_VALIDATE_COPY = {
+  /** kode tidak ada di database (atau bentuknya tidak wajar) */
+  invalid: 'Kode temannya nggak ketemu. Cek lagi ya, atau lanjut tanpa kode.',
+  /** backend tidak bisa dihubungi saat memeriksa — beda dari "kode salah" */
+  unavailable: 'Lagi nggak bisa memeriksa kode teman. Coba lagi sebentar ya.',
+} as const
+
 /** janji privasi (3E) — kalimat ini yang membunuh keberatan "data keuanganku aman?" */
 export const REFERRAL_PRIVACY_PLEDGE =
   '100% Privat. Teman yang kamu undang tidak akan pernah bisa melihat data keuanganmu, dan sebaliknya.'

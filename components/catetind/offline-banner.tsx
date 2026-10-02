@@ -1,9 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { CloudOff, RefreshCw, X } from 'lucide-react'
+import { CloudOff, Info, RefreshCw, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { InfoNote } from './info-note'
 import { OFFLINE_COPY } from '@/lib/data/offline'
 import { readOnline, subscribeConnection, syncConnection } from '@/lib/connection'
 import { flushPendingSync, pendingSyncCount, useMoneyStore } from '@/lib/money/store'
@@ -123,10 +124,20 @@ export function OfflineBanner() {
           <p className="mt-0.5 text-[11.5px] leading-relaxed text-ink/55">
             {online ? OFFLINE_COPY.pendingBody(pending) : OFFLINE_COPY.offlineBody(pending)}
           </p>
-          {/* batas jujur — selalu ikut, supaya tidak ada klaim "terkirim ke server" */}
-          <p className="mt-0.5 text-[10.5px] leading-relaxed text-ink/40">
-            {OFFLINE_COPY.honestyNote}
-          </p>
+          {/* AUDIT "CLEAN UI" (paket 63): batas jujurnya tetap ada, tapi tidak
+              lagi menetes sebagai paragraf teknis di setiap layar. Sekarang satu
+              baris ringkas; detail IndexedDB-nya dibuka kalau user minta. */}
+          <InfoNote
+            bare
+            compact
+            tone="default"
+            className="mt-0.5"
+            icon={Info}
+            summary={OFFLINE_COPY.honestySummary}
+            label={OFFLINE_COPY.honestyLabel}
+          >
+            {OFFLINE_COPY.honestyBody}
+          </InfoNote>
         </div>
 
         {/* tombol ini benar-benar bekerja (`flushPendingSync`) — bukan pajangan */}

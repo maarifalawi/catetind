@@ -2,7 +2,7 @@
 
 import { useRef, useState, type KeyboardEvent } from 'react'
 import Link from 'next/link'
-import { Lock, Mail, Sparkles, UserRound } from 'lucide-react'
+import { Info, Lock, Mail, UserRound } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   EMAIL_MAX_LENGTH,
@@ -33,6 +33,9 @@ export interface RegistrationResult {
   nickname: string
 }
 
+/** hasil satu percobaan registrasi: `ok:false` membawa pesan untuk error state */
+export type RegistrationOutcome = { ok: true } | { ok: false; error: string }
+
 export function RegistrationSheet({
   open,
   onClose,
@@ -40,13 +43,22 @@ export function RegistrationSheet({
 }: {
   open: boolean
   onClose: () => void
-  /** dipanggil setelah kedua field valid — orkestrator lalu membuka sheet pembayaran */
-  onContinue: (result: RegistrationResult) => void
+  /**
+   * Dipanggil setelah kedua field valid. ASYNC sejak paket 64: validasi kode
+   * teman menyentuh backend, lalu Supabase mendaftarkan akunnya. Sheet menahan
+   * tombol selama menunggu supaya tidak ada dua pendaftaran beruntun, dan
+   * menampilkan error state apa adanya kalau backend menolak.
+   */
+  onContinue: (result: RegistrationResult) => Promise<RegistrationOutcome>
 }) {
   const [email, setEmail] = useState('')
   const [nickname, setNickname] = useState('')
-  /** error cuma muncul setelah user mencoba lanjut — bukan menghakimi dari ketikan pertama */
+  /** error validasi lokal cuma muncul setelah user mencoba lanjut */
   const [showErrors, setShowErrors] = useState(false)
+  /** permintaan registrasi sedang berjalan (tombol dikunci) */
+  const [submitting, setSubmitting] = useState(false)
+  /** error dari backend (kode teman tidak ada, jaringan, dsb.) */
+  const [formError, setFormError] = useState<string | null>(null)
   const emailRef = useRef<HTMLInputElement>(null)
 
   useFocusOnOpen(open, emailRef)
@@ -55,17 +67,24 @@ export function RegistrationSheet({
   const nicknameValid = isValidNickname(nickname)
   const canContinue = emailValid && nicknameValid
 
-  function handleSubmit() {
+  async function handleSubmit() {
+    if (submitting) return
     setShowErrors(true)
+    setFormError(null)
     if (!canContinue) return
-    onContinue({ email: email.trim(), nickname: nickname.trim() })
+    setSubmitting(true)
+    const outcome = await onContinue({ email: email.trim(), nickname: nickname.trim() })
+    setSubmitting(false)
+    /* sukses → orkestrator menavigasi (sheet ikut unmount). Gagal → tampilkan
+       sebabnya DI SINI dan jangan menutup sheet: isian user tidak boleh hilang. */
+    if (!outcome.ok) setFormError(outcome.error)
   }
 
   /** Enter = lanjut, biar form ini bisa diselesaikan tanpa angkat jempol ke tombol */
   function handleEnter(event: KeyboardEvent<HTMLInputElement>) {
     if (event.key === 'Enter') {
       event.preventDefault()
-      handleSubmit()
+      void handleSubmit()
     }
   }
 
@@ -77,7 +96,17 @@ export function RegistrationSheet({
       description={REGISTRATION_COPY.description}
       footer={
         <>
-          <SheetSubmit onClick={handleSubmit}>{REGISTRATION_COPY.submitLabel}</SheetSubmit>
+          <SheetSubmit onClick={() => void handleSubmit()} disabled={submitting}>
+            {submitting ? REGISTRATION_COPY.submittingLabel : REGISTRATION_COPY.submitLabel}
+          </SheetSubmit>
+          {/* error backend tampil DI SINI (bukan toast) supaya tetap terlihat
+              sambil user membetulkan kode temannya */}
+          {formError ? (
+            <p className="mt-2.5 flex items-start justify-center gap-1.5 text-center text-[11.5px] leading-relaxed text-plum">
+              <Info className="mt-0.5 size-3.5 shrink-0" strokeWidth={2.4} aria-hidden />
+              <span>{formError}</span>
+            </p>
+          ) : null}
           {/* tautan dua arah: dari daftar bisa langsung ke /login (prompt 09) —
               drawer-nya ditutup dulu supaya tidak tersisa terbuka saat kembali */}
           <p className="mt-3 text-center text-[11.5px] leading-relaxed text-ink/55">
@@ -171,10 +200,10 @@ export function RegistrationSheet({
           </span>
         </label>
 
-        {/* ── catatan jujur: ini demo ───────────────────────────────────── */}
+        {/* ── catatan jujur: paragraf demo DIHAPUS (paket 64) ───────────────────────────────────── */}
         <p className="mt-5 flex items-start gap-2 rounded-2xl bg-sage/70 px-3.5 py-3 text-[11.5px] leading-relaxed text-ink/60 ring-1 ring-soil/8">
-          <Sparkles className="mt-0.5 size-3.5 shrink-0 text-forest" strokeWidth={2.4} aria-hidden />
-          <span>{REGISTRATION_COPY.mockNote}</span>
+          <Mail className="mt-0.5 size-3.5 shrink-0 text-forest" strokeWidth={2.4} aria-hidden />
+          <span>{REGISTRATION_COPY.emailNextNote}</span>
         </p>
       </form>
     </BudgetSheet>

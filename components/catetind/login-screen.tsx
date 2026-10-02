@@ -3,7 +3,7 @@
 import { useState, type FormEvent, type KeyboardEvent } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowRight, CircleHelp, LoaderCircle, Lock, Mail, ShieldCheck } from 'lucide-react'
+import { ArrowRight, CircleHelp, LoaderCircle, Mail, ShieldCheck } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import {
@@ -86,7 +86,7 @@ export function LoginScreen() {
   }
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-[480px] flex-col px-6 pt-10 pb-14 lg:max-w-[560px] lg:pt-16">
+    <div className="mx-auto flex min-h-[100dvh] w-full max-w-[480px] flex-col px-6 pt-10 pb-14 lg:max-w-[560px] lg:pt-16">
       {/* ── 1. header: undangan, bukan gerbang ─────────────────────────────── */}
       <header>
         <LogoWordmark className="h-6" />
@@ -194,7 +194,8 @@ export function LoginScreen() {
         </Link>
       </p>
 
-      {/* ── 4. kaki halaman: jalan keluar kecil + jujur soal demo ──────────── */}
+      {/* ── 4. kaki halaman: satu jalan keluar kecil (paket 64 — paragraf
+             "demo" yang panjang dihapus: footer auth bukan tempat disclaimer) ── */}
       <footer className="mt-auto pt-10">
         <p className="flex items-start justify-center gap-1.5 text-center text-[11.5px] leading-relaxed text-ink/50">
           <CircleHelp className="mt-0.5 size-3.5 shrink-0" strokeWidth={2.4} aria-hidden />
@@ -207,10 +208,6 @@ export function LoginScreen() {
               {LOGIN_COPY.helpLink}
             </Link>
           </span>
-        </p>
-        <p className="mt-3 flex items-start justify-center gap-1.5 text-center text-[11px] leading-relaxed text-ink/40">
-          <Lock className="mt-0.5 size-3 shrink-0" strokeWidth={2.4} aria-hidden />
-          <span>{LOGIN_COPY.mockNote}</span>
         </p>
       </footer>
     </div>

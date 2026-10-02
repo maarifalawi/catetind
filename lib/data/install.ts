@@ -55,7 +55,7 @@ export const INSTALL_IOS_PANEL_NOTE =
 
 /** arahan khusus iPhone — jumlah langkah dihitung dari data, jangan di-hardcode */
 export function INSTALL_IOS_CTA(stepCount: number): string {
-  return `Di iPhone install-nya lewat tombol Share Safari — ikuti ${stepCount} langkah di bawah ya 👇`
+  return `Di iPhone: tap Share di Safari, ikuti ${stepCount} langkah 👇`
 }
 
 /** penutup halaman — jalan terakhir kalau panduan tetap tidak cukup */
@@ -174,19 +174,28 @@ export type InstallLimit = {
   desc: string
 }
 
-export const INSTALL_LIMITS: { title: string; blurb: string; points: InstallLimit[] } = {
+export const INSTALL_LIMITS: {
+  title: string
+  blurb: string
+  /** label tombol disclosure tiap batas — detailnya disembunyikan sampai diminta */
+  detailLabel: string
+  points: InstallLimit[]
+} = {
   title: 'Yang perlu kamu tahu',
-  blurb: 'Biar gak ada kejutan: PWA itu ringan, tapi ada dua batas yang kami jujurkan.',
+  /* AUDIT "CLEAN UI" (paket 63): blurb-nya dulu satu paragraf pembuka; cukup satu
+     baris. Detail tiap batas juga pindah ke balik disclosure di komponen. */
+  blurb: 'PWA itu ringan — ini dua batas yang kami jujurkan.',
+  detailLabel: 'Detail',
   points: [
     {
       icon: 'bell',
       title: 'Notifikasi tergantung browser',
-      desc: 'Chrome, Edge, dan Safari terbaru sudah mendukung notifikasi. Di browser HP lain kadang belum muncul — pengingatmu tetap ada waktu app dibuka.',
+      desc: 'Chrome, Edge, dan Safari terbaru oke. Di browser HP lain kadang belum muncul — pengingatmu tetap ada saat app dibuka.',
     },
     {
       icon: 'offline',
       title: 'Offline = tampilan tersimpan',
-      desc: 'App-nya tetap bisa dibuka tanpa sinyal, tapi angka yang tampil bisa ketinggalan. Data baru masuk begitu internet balik.',
+      desc: 'App tetap terbuka tanpa sinyal, tapi angkanya bisa ketinggalan. Data baru masuk begitu internet balik.',
     },
   ],
 }
@@ -202,8 +211,7 @@ export const INSTALL_URL = 'https://catetind.com/install'
 export const INSTALL_HANDOFF = {
   a11yLabel: 'Lanjutkan panduan install di HP kamu',
   title: 'Lanjutkan di HP',
-  blurb:
-    'Gak perlu ketik alamat panjang di HP. Bagikan atau salin link ini, lalu buka dari HP kamu.',
+  blurb: 'Bagikan atau salin link ini, lalu buka di HP.',
   linkLabel: 'Link install',
   shareLabel: 'Bagikan link',
   copyLabel: 'Salin link',
@@ -213,8 +221,7 @@ export const INSTALL_HANDOFF = {
     shared: 'Link terkirim ✓',
     failed: 'Gagal menyalin — salin link-nya manual ya',
   },
-  instruction:
-    "Buka link itu di HP kamu, lalu pilih 'Add to Home Screen' biar ikon CatetInd nongol di layar utama.",
+  instruction: "Buka di HP, lalu pilih 'Add to Home Screen'.",
 } as const
 
 /** payload Web Share API — satu paket judul + kalimat + link */

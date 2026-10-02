@@ -30,6 +30,25 @@ export const HOME_HEADER_COPY = {
   searchSubmit: 'Cari di Riwayat',
   /** nama tombol lonceng; dot kecil tetap jadi penanda ada hal baru */
   notificationsLabel: 'Notifikasi',
+  /** tombol hamburger di header mobile → membuka drawer navigasi (paket 64).
+   *  Labelnya menyebut "navigasi", bukan cuma "menu", supaya jelas isinya. */
+  menuAria: 'Buka menu navigasi',
+} as const
+
+/**
+ * Panel notifikasi (paket 64) — lonceng di header membuka panel ini, bukan
+ * langsung berpindah halaman. Keadaan kosong HARUS tetap terasa selesai: ia
+ * menjelaskan kenapa belum ada apa-apa dan menawarkan tempat mengaturnya,
+ * bukan sekadar menulis "tidak ada data".
+ */
+export const HOME_NOTIFICATION_COPY = {
+  title: 'Notifikasi',
+  emptyTitle: 'Belum ada notifikasi',
+  emptyBody:
+    'Pengingat tagihan, rekap mingguan, dan info masa aktif bakal muncul di sini. Kamu bisa atur jenisnya kapan aja.',
+  settingsLink: 'Atur notifikasi',
+  settingsHref: '/settings/notifications',
+  closeLabel: 'Tutup panel notifikasi',
 } as const
 
 /**
@@ -152,24 +171,32 @@ export const HOME_INCOME_COPY = {
 } as const
 
 /**
- * Label "Total Saldo" di Home (paket 44) — satu definisi + kalimat yang jujur.
+ * Chip ringkas di header Home (paket 44 / 64) — menggantikan baris teks
+ * "Dompet Pribadi: Rp X · Total Saldo = semua dompet" yang terlalu bertele-tele
+ * dan dipindahkan/dipangkas di paket 64: yang penting di header cuma DUA fakta
+ * ringan (jumlah dompet & jumlah transaksi), dan keduanya kini duduk rapi di
+ * TENGAH, tepat di bawah Context Switcher.
  *
- * Temuan uji pemakaian: chip di header Home menghitung dompet YANG TERSARING
- * konteks ("2 dompet") sementara kartu "Total Saldo" menjumlahkan semua dompet
- * ("3 dompet aktif") — dua angka berbeda untuk satu user di satu layar, dan
- * labelnya sama-sama "Total Saldo".
- *
- * Aturan yang sekarang dikunci:
+ * Aturan yang tetap berlaku:
  *   · **Total Saldo = SELURUH dompet** (`cashTotal()` di `lib/money/store.ts`),
  *     tidak pernah ikut mengecil saat konteks uang aktif;
  *   · chip dompet di header juga menghitung semua dompet — bukan yang tersaring;
- *   · saat konteks aktif, `contextLine` yang menjelaskan saldo konteks itu, jadi
- *     user paham kenapa daftarnya lebih pendek tanpa mengira totalnya salah.
+ *   · penegas cakupan ("Total Saldo = semua dompet") tidak lagi ditulis di layar
+ *     karena label "Total Saldo" sudah muncul di kartu dompet & panel Overview —
+ *     mengulangnya di header cuma menambah teks tanpa menambah pengertian.
  */
 export const HOME_TOTAL_COPY = {
   /** chip di header: SELALU jumlah seluruh dompet (konteks tidak menyaringnya) */
   walletsChip: (count: number) => `${count} dompet`,
-  /** baris kecil saat konteks uang aktif: "Dompet Pribadi: Rp 1.800.000" */
+  /** chip kedua: jumlah catatan transaksi yang tampil di ringkasan */
+  transactionsChip: (count: number) => `${count} transaksi`,
+  /**
+   * Baris kecil "Dompet Pribadi: Rp 1.800.000" — sejak paket 64 TIDAK LAGI
+   * dipakai di header Dashboard (terlalu bertele-tele untuk header). Definisi
+   * tetap dipertahankan karena halaman Dompet & Akun memakainya di hero-nya
+   * untuk keperluan yang sama: menjelaskan SUBTOTAL konteks, supaya user tidak
+   * menyimpulkan totalnya salah. Satu definisi ⇒ kalimatnya tidak bercabang.
+   */
   contextLine: (contextLabel: string, amount: string) => `Dompet ${contextLabel}: ${amount}`,
   /** penegas cakupan — dibaca berdampingan dengan baris konteks di atas */
   scopeNote: 'Total Saldo = semua dompet',
@@ -190,7 +217,9 @@ export const HOME_WALLET_STACK_COPY = {
 export const HOME_NUDGE_COPY = {
   coachLabel: 'AI Coach',
   title: 'Hari ini belum ada catatan nih 🌿',
-  body: 'Kopi atau ongkos tadi udah dicatat belum? Sekali catat, tanamanmu tetap segar dan Jatah Harian tetap akurat.',
+  /* AUDIT "CLEAN UI" (paket 63): badan dua klausa di kartu Home dipangkas jadi
+     satu ajakan — nudge bukan paragraf pengantar. */
+  body: 'Kopi atau ongkos tadi udah dicatat belum?',
   cta: 'Catat sekarang',
   dismissLabel: 'Tutup pengingat hari ini',
 } as const

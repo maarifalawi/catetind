@@ -28,28 +28,30 @@ export function matchesDeleteKeyword(value: string): boolean {
 
 export const RETENTION_POLICY = {
   title: 'Apa yang terjadi saat dihapus',
-  summary:
-    'Penghapusan ini mengosongkan data di PERANGKAT ini dan tidak ada salinan di tempat lain — bukan karena kami memilih begitu, tapi karena aplikasi demo ini belum punya server penyimpanan.',
+  /* AUDIT "CLEAN UI" (paket 63): summary dulu dua kalimat; cukup satu baris.
+     Detail tiap poin pindah ke balik disclosure di panel (InfoNote). */
+  summary: 'Semua data di perangkat ini dihapus, dan nggak ada salinan di tempat lain.',
+  detailLabel: 'Detail',
   points: [
     {
       icon: 'device' as const,
       title: 'Dihapus sekarang juga',
-      body: 'Semua catatan, dompet, saldo, hutang/piutang, target, preferensi AI, kode undangan, PIN kunci app, dan antrean catatan offline di perangkat ini.',
+      body: 'Catatan, dompet, saldo, hutang/piutang, target, preferensi AI, kode undangan, PIN, sampai antrean catatan offline.',
     },
     {
       icon: 'database' as const,
-      title: 'IndexedDB dikosongkan',
-      body: 'Basis data lokal tempat baris ledger disimpan dihapus seluruhnya, bukan cuma dikosongkan isinya.',
+      title: 'Basis lokal dikosongkan',
+      body: 'Penyimpanan lokal tempat ledger disimpan dihapus seluruhnya — bukan cuma dikosongkan isinya.',
     },
     {
       icon: 'server' as const,
-      title: 'Tidak ada retensi di server',
-      body: 'Tidak ada salinan di server untuk dihapus maupun disimpan: repo demo ini belum punya backend, jadi tidak ada satu pun data yang pernah dikirim keluar dari perangkatmu.',
+      title: 'Nggak ada retensi di server',
+      body: 'Demo ini belum punya backend, jadi nggak pernah ada datamu yang dikirim keluar dari perangkat ini.',
     },
     {
       icon: 'lock' as const,
       title: 'Yang tetap tertinggal',
-      body: 'Satu penanda kecil "akun sudah dihapus" di perangkat ini. Isinya hanya kata itu — tanpa nominal, tanpa catatan — dan fungsinya supaya dompet contoh tidak muncul kembali setelah refresh.',
+      body: 'Satu penanda kecil "akun sudah dihapus" — tanpa nominal, tanpa catatan — supaya dompet contoh nggak muncul lagi.',
     },
   ],
 } as const
@@ -57,16 +59,15 @@ export const RETENTION_POLICY = {
 export const DELETE_ACCOUNT_COPY = {
   /* kartu di panel Keamanan & Privasi */
   cardTitle: 'Hapus Akun',
-  cardBody:
-    'Menghapus akun berarti menghapus SEMUA datamu di perangkat ini: catatan, dompet, hutang, celengan, sampai catatan yang belum tersinkron. Ini tidak bisa dibatalkan.',
+  cardBody: 'Menghapus SEMUA datamu di perangkat ini. Nggak bisa dibatalkan.',
   cardCta: 'Hapus Akun Saya',
   /* lapis 1 — penjelasan + tulis kata kunci */
   dialogOneTitle: 'Hapus semua data di perangkat ini?',
   dialogOneLead: 'Ketiga langkah ini terjadi bersamaan dan tidak bisa dibatalkan:',
   dialogOneSteps: [
     'Semua catatan & dompet di perangkat ini dihapus.',
-    'Basis data lokal (IndexedDB) dikosongkan seluruhnya.',
-    'Sesi di perangkat ini diakhiri, lalu kamu kembali ke halaman masuk.',
+    'Penyimpanan lokal di perangkat ini dikosongkan.',
+    'Sesi berakhir, lalu kamu kembali ke halaman masuk.',
   ],
   keywordLabel: `Ketik ${DELETE_ACCOUNT_KEYWORD} untuk lanjut`,
   keywordPlaceholder: DELETE_ACCOUNT_KEYWORD,
@@ -78,21 +79,19 @@ export const DELETE_ACCOUNT_COPY = {
   cancelCta: 'Batal',
   /* lapis 2 — konfirmasi terakhir, setelah kata kuncinya benar */
   dialogTwoTitle: 'Konfirmasi terakhir',
-  dialogTwoBody:
-    'Ini kesempatan terakhir untuk membatalkan. Setelah kamu menekan tombol di bawah, tidak ada cara mengembalikan datanya — dan tidak ada salinan di server yang bisa diminta kembali.',
+  dialogTwoBody: 'Kesempatan terakhir. Setelah ini datanya nggak bisa dikembalikan.',
   dialogTwoCta: 'Ya, Hapus Permanen',
   cancelTwoCta: 'Simpan Dataku',
   busyLabel: 'Menghapus…',
   /* hasil */
   doneTitle: 'Semua data di perangkat ini sudah dihapus',
-  doneDescription:
-    'Kamu diarahkan ke halaman masuk dengan keadaan kosong. Belum ada server yang menyimpan salinan, jadi ini benar-benar bersih.',
+  doneDescription: 'Kamu diarahkan ke halaman masuk dengan keadaan kosong.',
   idbBlockedTitle: 'Sebagian penghapusan tertutup tab lain',
   idbBlockedDescription:
-    'Catatan di layar sudah kosong, tapi basis data lokal masih dipakai tab lain. Tutup tab CatetInd yang lain lalu ulangi penghapusan supaya perangkat benar-benar bersih.',
+    'Penyimpanan lokal masih dipakai tab CatetInd lain. Tutup tab lainnya, lalu ulangi penghapusan.',
   sessionFailedTitle: 'Sesi tidak bisa diakhiri',
   sessionFailedDescription:
-    'Data di perangkat ini sudah dihapus, tapi cookie sesi gagal dihapus server. Coba muat ulang halaman lalu keluar sekali lagi.',
+    'Datanya sudah dihapus, tapi sesi gagal ditutup. Muat ulang halaman, lalu keluar sekali lagi.',
 } as const
 
 /* ── 2. PANEL EXPORT DATA SAYA (/settings/data) ─────────────────────────────
@@ -104,34 +103,31 @@ export const DELETE_ACCOUNT_COPY = {
 export const EXPORT_DATA_COPY = {
   eyebrow: 'Export Data',
   title: 'Export Data Saya',
-  desc: 'Unduh seluruh catatanmu sebagai satu file JSON — utuh, tanpa dipotong, dan tanpa dikirim ke siapa pun.',
+  desc: 'Unduh seluruh catatanmu sebagai satu file JSON.',
   cardTitle: 'Isi filenya apa saja?',
   includes: [
-    'Dompet & saldo hasil hitung ulang dari baris ledger',
-    'Dompet yang sudah kamu hapus, ditandai sebagai terhapus (paket 62)',
-    'Seluruh baris ledger, termasuk yang sudah kamu hapus (ditandai)',
-    'Hutang & piutang beserta riwayat pembayarannya',
-    'Celengan/target tabungan dan target bulanan',
-    'Pengaturan privasi yang tersimpan di perangkat ini',
+    'Dompet & saldo',
+    'Dompet yang sudah kamu hapus (ditandai)',
+    'Semua baris ledger, termasuk yang dihapus (ditandai)',
+    'Hutang & piutang + riwayat bayarnya',
+    'Celengan & target bulanan',
+    'Pengaturan privasi di perangkat ini',
   ],
-  metadataNote:
-    'Di dalam file ada `exportedAt`, versi skema, dan jumlah baris tiap bagian — supaya file ini bisa diaudit tanpa harus dibaca habis.',
+  metadataNote: 'Plus metadata: waktu ekspor, versi skema, dan jumlah baris.',
   downloadCta: 'Unduh File JSON',
   preparingCta: 'Menyiapkan file…',
-  downloadedTitle: (fileName: string) => `File tersimpan: ${fileName}`,
+  downloadedTitle: (fileName: string) => `Tersimpan: ${fileName}`,
   downloadedDescription: (wallets: number, rows: number) =>
-    `${wallets} dompet & ${rows} baris ledger ikut di dalamnya. Cek folder unduhan di perangkatmu.`,
-  failedTitle: 'File tidak bisa disiapkan di sini',
-  failedDescription:
-    'Browser ini menolak membuat berkas unduhan. Coba buka halaman ini di tab biasa (bukan mode privasi ketat).',
+    `${wallets} dompet & ${rows} baris ledger ikut di dalamnya.`,
+  failedTitle: 'File nggak bisa disiapkan di sini',
+  failedDescription: 'Browser ini menolak unduhan. Coba buka di tab biasa (bukan mode privasi ketat).',
   emailTitle: 'Kirim ke email saya',
   emailDemoBadge: 'Demo',
   emailBody:
-    'Jalur ini disiapkan untuk produksi: server yang mengompilasi JSON lalu mengirim lewat email transaksional. Di repo demo ini belum ada server pengirim, jadi tombolnya TIDAK mengirim apa pun — file-nya kamu unduh sendiri di atas.',
+    'Jalur ini disiapkan untuk produksi. Demo ini belum punya server pengirim, jadi tombolnya nggak mengirim email — unduh filenya di atas.',
   emailCta: 'Kirim ke Email Saya (demo)',
   emailToastTitle: 'Belum ada server pengirim email',
-  emailToastDescription:
-    'Jadi tidak ada email yang dikirim — silakan unduh file JSON-nya, itu yang benar-benar berisi datamu.',
+  emailToastDescription: 'Nggak ada email yang dikirim — pakai tombol unduh di atas ya.',
   emailTargetLabel: 'Alamat tujuan',
 } as const
 
@@ -142,7 +138,7 @@ export const EXPORT_DATA_COPY = {
 
 export const EMPTY_ACCOUNT_COPY = {
   title: 'Akun ini kosong — datanya sudah dihapus',
-  body: 'Semua catatan, dompet, dan saldo di perangkat ini sudah tidak ada. Kartu-kartu di halaman ini masih memuat angka contoh aplikasi sampai kamu mulai mencatat lagi.',
+  body: 'Kartu-kartu di halaman ini masih pakai angka contoh sampai kamu mulai mencatat lagi.',
   cta: 'Mulai Lagi dari Onboarding',
-  hint: 'Butuh salinannya? Tidak ada salinan yang bisa dipulihkan dari server — repo demo ini memang belum punya server.',
+  hint: 'Nggak ada salinan yang bisa dipulihkan — demo ini belum punya server.',
 } as const

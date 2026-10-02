@@ -266,7 +266,6 @@ export const CHECKOUT_COPY = {
   featuresTitle: 'Yang kamu dapat',
   stepsTitle: 'Sisa prosesmu',
   stepsBadge: '3 langkah',
-  stepsNote: 'Cuma segini. Nggak ada langkah verifikasi yang menghadang.',
   referralTitle: REFERRED_FRIEND_BENEFIT,
   referralLabel: 'Kode dari teman (opsional)',
   referralPlaceholder: 'Contoh: RINA-X7K',
@@ -280,8 +279,11 @@ export const CHECKOUT_COPY = {
   summaryPeriod: 'Periode',
   summaryDiscount: 'Diskon teman',
   summaryTotal: 'Total bayar',
-  cta: 'Lanjut ke Pembayaran',
-  ctaHint: 'Bayar sekali. Tidak ada tagihan otomatis setelah ini.',
+  cta: 'Daftar & mulai',
+  /** PAKET 64: Midtrans di-bypass sprint ini, jadi tidak ada klaim "bayar sekali
+   *  di sini" — yang benar-benar terjadi adalah pendaftaran akun tanpa password,
+   *  lalu tautan konfirmasi ke email. */
+  ctaHint: 'Kami kirim tautan konfirmasi ke emailmu. Tanpa password, tanpa tagihan otomatis.',
   escapeLabel: 'Nanti aja dulu',
   escapeHint: 'Kamu bisa balik kapan aja — nggak ada yang dikunci.',
   livePriceNote:
@@ -289,7 +291,7 @@ export const CHECKOUT_COPY = {
 } as const
 
 export interface CheckoutStep {
-  id: 'data' | 'bayar' | 'app'
+  id: 'data' | 'email' | 'app'
   label: string
   hint: string
 }
@@ -297,13 +299,18 @@ export interface CheckoutStep {
 /** ringkasan 3 langkah (PRD 5887) — penurun kecemasan, bukan hiasan */
 export const CHECKOUT_STEPS: CheckoutStep[] = [
   { id: 'data', label: 'Data kamu', hint: 'Email & nama panggilan' },
-  { id: 'bayar', label: 'Bayar', hint: 'QRIS, e-wallet, atau VA' },
+  /* PAKET 64: pembayaran Midtrans di-bypass sprint ini, jadi langkahnya adalah
+     konfirmasi email (produksi `mailer_autoconfirm: false`) — bukan "Bayar".
+     Mengganti langkahnya, bukan membiarkan klaim lama, adalah bagian dari
+     Larangan menampilkan proses yang tidak benar-benar terjadi. */
+  { id: 'email', label: 'Konfirmasi email', hint: 'Buka tautan di inboxmu' },
   { id: 'app', label: 'Langsung pakai', hint: 'Onboarding 60 detik' },
 ]
 
 /* ── KODE REFERRAL DI CHECKOUT (Domain 7D) ──────────────────────────────────
-   MOCK: validasi & diskon dihitung di klien. Di produksi kode diverifikasi ke
-   server (`POST /api/referral/validate`) supaya diskon tidak bisa dikarang. */
+   Bentuk kode diperiksa di klien supaya salah ketik ketahuan cepat; KEBERADAAN
+   kodenya diperiksa server ke DATABASE (`POST /api/referral/validate`, paket 64)
+   sebelum registrasi difinalkan — jadi diskon tidak bisa dikarang di klien. */
 
 export const REFERRAL_DISCOUNT_PCT = 10
 

@@ -61,6 +61,16 @@ export const viewport: Viewport = {
   colorScheme: 'light',
   themeColor: '#ffffff',
   userScalable: false,
+  /* ── KEYBOARD VIRTUAL DI MOBILE (paket 64) ────────────────────────────────
+     `interactive-widget=resizes-content` = saat keyboard HP terbuka, VIEWPORT
+     LAYOUT benar-benar menyusut (bukan cuma area visual). Efeknya `100dvh`/`dvh`
+     ikut mengecil sehingga bottom sheet form (registrasi di /checkout, sheet
+     tambah lain) tetap muat & isinya bisa digulir DI ATAS keyboard — bukan
+     tertutup separuh seperti perilaku bawaan `resizes-visual`.
+
+     Catat: ini bekerja BERDUAAN dengan `min-h-[100dvh]`/`max-h-[92dvh]` di
+     komponen. Unit `dvh` mengikuti viewport dinamis; `100vh` statis tidak. */
+  interactiveWidget: 'resizes-content',
 }
 
 export default function RootLayout({

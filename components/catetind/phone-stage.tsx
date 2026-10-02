@@ -21,7 +21,7 @@ export function PhoneStage({
   plain?: boolean
 }) {
   return (
-    <main className="relative min-h-screen w-full bg-canvas">
+    <main className="relative min-h-[100dvh] w-full bg-canvas">
       {/* giant background wordmark — versi gambar: lebar relatif (vw) + opasitas
           sangat rendah supaya tetap terasa seperti watermark, bukan logo */}
       {!plain && (

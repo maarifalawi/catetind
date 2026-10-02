@@ -134,8 +134,16 @@ export function shouldShowRenewalModal(
  * walau modalnya sudah ditutup: ia pintu masuk manual supaya user tidak
  * kehilangan satu-satunya jalan perpanjang dari dalam app.
  */
+/**
+ * Ambang banner pengingat perpanjangan (paket 64): banner hanya muncul saat masa
+ * aktif TERSISA ≤ 5 hari — hitungan mundur dinamis 5·4·3·2·1. Di atas 5 hari
+ * belum ada yang mendesak, jadi memberi tahu lebih awal cuma jadi kebisingan
+ * (dan menyembunyikan hal yang benar-benar butuh perhatian).
+ */
+export const RENEWAL_BANNER_MAX_DAYS = 5
+
 export function shouldShowRenewalBanner(state: RenewalState): boolean {
-  return state.daysLeft >= 1 && state.daysLeft <= 7
+  return state.daysLeft >= 1 && state.daysLeft <= RENEWAL_BANNER_MAX_DAYS
 }
 
 /**

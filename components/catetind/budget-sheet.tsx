@@ -51,6 +51,13 @@ export function BudgetSheet({
         if (!next) onClose()
       }}
       autoFocus={false}
+      /* Keyboard virtual (paket 64): Vaul menggeser field yang sedang fokus ke
+         atas keyboard saat sheet-nya bergeser. Dipasang EKSPLISIT — bukan
+         mengandalkan default — supaya perilakunya tidak berubah diam-diam saat
+         library-nya di-upgrade. Berpasangan dengan `interactive-widget=
+         resizes-content` + `max-h-[92dvh]` di `app/layout.tsx`, form registrasi
+         di /checkout bisa digulir penuh di atas keyboard HP. */
+      repositionInputs
     >
       <Drawer.Portal>
         <Drawer.Overlay

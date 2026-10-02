@@ -25,7 +25,6 @@ import {
   RESENT_NOTE_MS,
   SESSION_COPY,
   VERIFY_COPY,
-  buildExpiredPreviewHref,
   resendCountdownLabel,
 } from '@/lib/data/auth'
 import { LogoWordmark } from './logo-wordmark'
@@ -162,7 +161,7 @@ export function VerifyEmailScreen({
   )
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-[480px] flex-col px-6 pt-10 pb-14 lg:max-w-[560px] lg:pt-16">
+    <div className="mx-auto flex min-h-[100dvh] w-full max-w-[480px] flex-col px-6 pt-10 pb-14 lg:max-w-[560px] lg:pt-16">
       {/* ── 1. header ─────────────────────────────────────────────────────── */}
       <header>
         <LogoWordmark className="h-6" />
@@ -293,22 +292,6 @@ export function VerifyEmailScreen({
           </button>
         </form>
 
-        <p className="mt-3 text-[11px] leading-relaxed text-ink/45">{VERIFY_COPY.otpNote}</p>
-
-        {/* pratinjau state kedaluwarsa supaya review tidak perlu menebak tampilannya */}
-        {!linkExpired && trimmedEmail && (
-          <div className="mt-3.5 border-t border-soil/12 pt-3">
-            <Link
-              href={buildExpiredPreviewHref(trimmedEmail)}
-              className="text-[11.5px] font-semibold text-ink/60 underline underline-offset-2 hover:text-ink"
-            >
-              {VERIFY_COPY.expiredPreviewLabel}
-            </Link>
-            <p className="mt-1 text-[11px] leading-relaxed text-ink/45">
-              {VERIFY_COPY.expiredPreviewHint}
-            </p>
-          </div>
-        )}
       </section>
 
       {/* ── 5. kaki halaman: jalan keluar kecil ────────────────────────────── */}
@@ -432,9 +415,6 @@ function SentCard({
           <Mail className="size-4" strokeWidth={2.4} aria-hidden />
           {VERIFY_COPY.openMailLabel}
         </a>
-        <p className="text-center text-[11px] leading-relaxed text-ink/45">
-          {VERIFY_COPY.openMailHint}
-        </p>
 
         <ResendButton secondsLeft={secondsLeft} canResend={canResend} onClick={onResend} />
 

@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { ConfirmDialog, DialogButton } from './settings-dialog'
+import { InfoNote } from './info-note'
 import { useAppLock } from './app-lock-provider'
 import { LOCK_SETTINGS_COPY, PIN_LENGTH } from '@/lib/data/app-lock'
 import {
@@ -333,20 +334,24 @@ export function SecuritySettingsPanel() {
         {/* KEBIJAKAN RETENSI — ditulis di UI, bukan disembunyikan di komentar kode.
             User yang mau menghapus akun berhak tahu apa yang hilang, apa yang
             tersisa, dan apakah ada salinan di tempat lain (di demo ini: tidak ada). */}
-        <ul className="mt-4 flex flex-col gap-3">
+        {/* AUDIT "CLEAN UI" (paket 63): empat poin retensi dulu membuka masing-masing
+            dua baris penjelasan — Zona Berbahaya jadi terasa seperti dokumen
+            hukum. Sekarang yang tampil cuma judulnya; detailnya di balik tap. */}
+        <ul className="mt-3 flex flex-col gap-1.5">
           {RETENTION_POLICY.points.map((point) => {
             const Icon = RETENTION_ICONS[point.icon]
             return (
-              <li key={point.title} className="flex items-start gap-3">
-                <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-plum/15 text-plum">
-                  <Icon className="size-4" strokeWidth={2.2} aria-hidden />
-                </span>
-                <span className="min-w-0">
-                  <span className="block text-[13px] font-semibold text-ink">{point.title}</span>
-                  <span className="mt-0.5 block text-[12px] leading-relaxed text-ink/55">
-                    {point.body}
-                  </span>
-                </span>
+              <li key={point.title}>
+                <InfoNote
+                  bare
+                  compact
+                  tone="warn"
+                  icon={Icon}
+                  title={point.title}
+                  label={RETENTION_POLICY.detailLabel}
+                >
+                  {point.body}
+                </InfoNote>
               </li>
             )
           })}

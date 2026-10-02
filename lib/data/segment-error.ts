@@ -1,66 +1,80 @@
 /* ── COPY: ERROR BOUNDARY PER SEGMEN (paket 43 · audit Stage 6 #3) ────────────
-   Sebelum paket ini repo hanya punya `app/not-found.tsx`. Artinya SATU error
-   render di halaman uang (mis. satu baris ledger yang bentuknya tidak terduga)
-   menghasilkan layar mati total: user tidak bisa pindah halaman, tidak bisa
-   mengunduh catatannya, dan tidak tahu apakah datanya hilang.
+   Satu komponen, dipakai lima `error.tsx` (`app/`, `/wallet`, `/wealth`,
+   `/history`, `/joint`).
 
-   Nada copy di sini sengaja TENANG dan selalu menyebut tiga hal: (1) apa yang
-   gagal, (2) datanya TIDAK hilang, (3) apa langkah berikutnya. Tidak ada
-   kalimat menyalahkan user, tidak ada kode error mentah di layar — kode teknis
-   hanya masuk laporan konsol, bukan wajah aplikasi. */
+   AUDIT "CLEAN UI" (paket 63): layar ini dulu menumpuk TIGA paragraf sekaligus
+   (body + hint + kotak "batas jujur" yang menyebut store ledger/IndexedDB).
+   Itu bahasa manual di momen paling panik. Sekarang defaultnya CUMA dua hal:
+   apa yang gagal (satu baris) + apa yang bisa dilakukan (tombol). Semua
+   penjelasan teknis pindah ke balik satu disclosure `<InfoNote>` yang tertutup:
+   `safeSummary` selalu tampak sebagai penenang singkat, `safeBody` dibuka kalau
+   user benar-benar mau tahu. Tidak ada kalimat menyalahkan user. */
 
 export type SegmentErrorArea = 'app' | 'wallet' | 'wealth' | 'history' | 'joint'
 
 export interface SegmentErrorCopy {
   eyebrow: string
   title: string
+  /** satu baris: apa yang gagal — bukan paragraf */
   body: string
-  /** apa yang bisa dicoba user — satu langkah, bukan daftar panjang */
-  hint: string
+  /** penenang singkat yang selalu tampak di baris disclosure */
+  safeSummary: string
+  /** detail teknis, hanya tampil setelah disclosure dibuka */
+  safeBody: string
 }
 
 export const SEGMENT_ERROR_COPY: Record<SegmentErrorArea, SegmentErrorCopy> = {
   app: {
-    eyebrow: 'Ada yang gagal dimuat',
+    eyebrow: 'Gagal dimuat',
     title: 'Halaman ini berhenti di tengah jalan',
-    body: 'Bagian ini gagal ditampilkan. Catatanmu tetap tersimpan di perangkat ini — tidak ada yang hilang karena error ini.',
-    hint: 'Coba muat ulang dulu. Kalau masih gagal, unduh datamu supaya tetap aman di tanganmu.',
+    body: 'Bagian ini nggak bisa digambar sekarang.',
+    safeSummary: 'Catatanmu aman — nggak ada yang hilang.',
+    safeBody:
+      'Data uangmu hidup di store ledger perangkat ini, bukan di layar yang gagal tadi — jadi tetap utuh.',
   },
   wallet: {
     eyebrow: 'Dompet & Akun',
     title: 'Daftar dompet gagal dimuat',
-    body: 'Kami tidak bisa menggambar kartu dompetmu kali ini. Saldo & baris ledger-nya tetap utuh di perangkat ini.',
-    hint: 'Muat ulang biasanya cukup. Kalau tidak, unduh datamu lewat tombol di bawah — sidebar tetap bisa dipakai untuk pindah halaman.',
+    body: 'Kartu dompetmu nggak bisa digambar sekarang.',
+    safeSummary: 'Saldo & ledger tetap utuh.',
+    safeBody:
+      'Saldo dan baris ledger disimpan di perangkat ini — kegagalan menggambar kartunya nggak menyentuh angkanya.',
   },
   wealth: {
     eyebrow: 'Kekayaan & Hutang',
     title: 'Perhitungan kekayaan gagal ditampilkan',
-    body: 'Net Worth dihitung dari beberapa bagian sekaligus, dan salah satunya gagal dibaca. Angka saldomu tidak ikut berubah karena ini.',
-    hint: 'Muat ulang untuk menghitung ulang, atau unduh datamu supaya kamu punya salinan angkanya.',
+    body: 'Salah satu bagian Net Worth nggak terbaca.',
+    safeSummary: 'Angka saldomu nggak berubah.',
+    safeBody:
+      'Net Worth dihitung ulang tiap halaman dibuka. Satu bagian gagal dibaca bukan berarti saldomu ikut berubah.',
   },
   history: {
     eyebrow: 'Riwayat',
     title: 'Riwayat catatan gagal dimuat',
-    body: 'Daftar catatanmu tidak bisa ditampilkan saat ini. Tidak ada catatan yang terhapus karena kegagalan ini.',
-    hint: 'Muat ulang dulu. Kalau tetap gagal, unduh datamu — poin pentingnya tidak hilang di perangkat ini.',
+    body: 'Daftar catatanmu nggak bisa ditampilkan sekarang.',
+    safeSummary: 'Nggak ada catatan yang terhapus.',
+    safeBody:
+      'Riwayat dibaca dari ledger perangkat ini. Gagal menggambar daftarnya nggak menghapus satu baris pun.',
   },
   joint: {
     eyebrow: 'Dompet Bersama',
     title: 'Dompet bersama gagal dimuat',
-    body: 'Buku besar bersama kalian tidak bisa digambar sekarang. Catatanmu sendiri tetap aman di perangkat ini.',
-    hint: 'Muat ulang halaman ini, atau lanjut mengurus catatan pribadimu dulu — sidebar tetap jalan.',
+    body: 'Buku besar bersama kalian nggak bisa digambar sekarang.',
+    safeSummary: 'Catatanmu sendiri tetap aman.',
+    safeBody:
+      'Buku besar bersama dan catatan pribadimu disimpan terpisah — yang gagal satu, bukan dua-duanya.',
   },
 }
 
 export const SEGMENT_ERROR_ACTIONS = {
-  reloadLabel: 'Muat ulang halaman',
-  exportLabel: 'Unduh Data Saya (JSON)',
-  exportHint: 'Menghasilkan file JSON berisi dompet, seluruh baris ledger, hutang/piutang, dan target.',
-  exportDoneTitle: (fileName: string) => `File tersimpan: ${fileName}`,
-  exportDoneBody: 'Catatanmu sekarang ada di perangkatmu sendiri sebagai berkas JSON.',
-  exportFailedTitle: 'Export tidak bisa disiapkan dari halaman ini',
-  exportFailedBody: 'Coba muat ulang halaman lalu unduh dari Pengaturan → Export Data Saya.',
-  homeLabel: 'Kembali ke Beranda',
-  safeNote:
-    'Data uangmu hidup di store ledger + IndexedDB perangkat ini, bukan di komponen yang gagal tadi — jadi tidak ada catatan yang hilang.',
+  reloadLabel: 'Muat ulang',
+  exportLabel: 'Unduh data saya',
+  exportHint: 'File JSON: dompet, seluruh ledger, hutang, dan target.',
+  exportDoneTitle: (fileName: string) => `Tersimpan: ${fileName}`,
+  exportDoneBody: 'Datamu sekarang ada di perangkatmu sendiri.',
+  exportFailedTitle: 'Nggak bisa ekspor dari halaman ini',
+  exportFailedBody: 'Muat ulang halaman, lalu coba lagi.',
+  homeLabel: 'Ke beranda',
+  safeTitle: 'Kenapa aman?',
+  safeLabel: 'Baca alasannya',
 } as const

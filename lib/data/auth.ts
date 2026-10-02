@@ -25,17 +25,19 @@ export const REGISTRATION_COPY = {
   nameHint: 'Dipakai buat nyapa kamu di app. Bisa diubah kapan aja.',
   /** copy kanon PRD 5933 — kekuatan halaman ini ada di kalimat ini */
   noPasswordNote: 'Nggak perlu bikin password — kita kirim tautan masuk ke emailmu.',
-  submitLabel: 'Lanjut ke Pembayaran',
+  submitLabel: 'Buat akun',
+  /** label tombol saat permintaan registrasi sedang berjalan (paket 64) —
+   *  mencegah dua ketukan membuat dua pendaftaran */
+  submittingLabel: 'Mendaftarkan…',
   invalidEmail: 'Hmm, format emailnya belum benar. Contoh: rina@email.com',
   invalidNickname: 'Nama panggilan minimal 2 huruf ya.',
   /** tautan dua arah ke /login — dilunasi di prompt 09 setelah route-nya ada */
   hasAccountLead: 'Sudah punya akun?',
   hasAccountLink: 'Masuk',
-  /** status pendaftaran: email konfirmasi memang wajib di project ini
-   *  (`mailer_autoconfirm: false`) — jadi kalimatnya menyiapkan langkah itu,
-   *  bukan mengaku "tidak ada email yang dikirim" (sejak paket 45 emailnya NYATA). */
-  mockNote:
-    'Setelah ini cek inbox: Supabase mengirim tautan konfirmasi ke emailmu, dan tautan itu sekaligus jadi jalan masukmu.',
+  /** catatan langkah berikutnya di sheet (paket 64). Sheet registrasi BENAR-BENAR
+   *  mendaftarkan akun Supabase, jadi user wajib tahu langkah berikutnya ada di
+   *  inbox. Paragraf "demo" yang panjang dihapus — footer sheet bukan disclaimer. */
+  emailNextNote: 'Langkah terakhir: buka tautan konfirmasi yang kami kirim ke emailmu.',
 } as const
 
 /**
@@ -119,9 +121,6 @@ export const LOGIN_COPY = {
   helpLead: 'Emailmu nggak ketemu?',
   helpLink: 'Kabarin kami di Pusat Bantuan.',
   helpHref: '/help',
-  /** jujur soal status demo — halaman publik nggak boleh terasa seperti jaringan sungguhan */
-  mockNote:
-    'Demo: pengiriman cuma disimulasikan di perangkat ini, jadi belum ada email yang benar-benar terkirim.',
 } as const
 
 
@@ -149,8 +148,6 @@ export const VERIFY_COPY = {
   ],
   /** `mailto:` tanpa alamat = buka app email default, bukan mengirim ke siapa pun */
   openMailLabel: 'Buka email',
-  openMailHint:
-    'Di HP, tombol ini membuka app emailmu. Di komputer, buka tab email lewat browser ya.',
   resendLabel: 'Kirim ulang',
   /** umpan balik kecil setelah kirim ulang — menenangkan, bukan heboh */
   resendSentNote: 'Tautan baru sudah dikirim. Cek inbox lagi ya 📩',
@@ -164,15 +161,10 @@ export const VERIFY_COPY = {
   otpLabel: 'Kode 6 angka dari email',
   otpHint: 'Tulis 6 angka yang ada di emailnya — atau klik tautannya langsung dari inbox.',
   otpSubmitLabel: 'Masuk sekarang',
-  otpNote:
-    'Kode ini sekali pakai dan berlaku sebentar. Kalau kamu membuka email di perangkat ini, klik tautannya saja — halaman ini yang menyelesaikannya.',
   otpFailedTitle: 'Kodenya belum bisa dipakai',
   /** tautan email gagal ditukar jadi sesi (sudah dipakai / kedaluwarsa) */
   linkFailedTitle: 'Tautan masuknya tidak berlaku lagi',
   resendFailed: 'Gagal mengirim ulang tautan',
-  expiredPreviewLabel: 'Lihat state tautan kedaluwarsa',
-  expiredPreviewHint:
-    'Contoh tampilan kalau user membuka tautan lama — buat review state, bukan error sungguhan.',
 } as const
 
 /**

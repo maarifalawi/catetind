@@ -1,6 +1,7 @@
 import { Bell, ShieldCheck, WifiOff, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { INSTALL_LIMITS, type InstallLimitIconKey } from '@/lib/data/install'
+import { InfoNote } from './info-note'
 
 /* ── Batasan PWA di halaman /install ─────────────────────────────────────────
    Kartu ini adalah pasangan jujur dari tiga kartu benefit di hero: bukan
@@ -34,23 +35,24 @@ export function InstallLimitsCard({ className }: { className?: string }) {
         </div>
       </header>
 
-      <ul className="mt-4 space-y-2.5">
+      {/* AUDIT "CLEAN UI" (paket 63): dulu setiap batas langsung membuka dua baris
+          penjelasan, jadi kartu ini terbaca seperti disclaimer. Sekarang yang
+          tampil cuma judulnya; penjelasannya di balik satu tap (InfoNote). */}
+      <ul className="mt-3 space-y-2">
         {INSTALL_LIMITS.points.map((point) => {
           const Icon = LIMIT_ICON[point.icon]
           return (
-            <li
-              key={point.title}
-              className="rounded-2xl bg-sage/50 px-3.5 py-3 ring-1 ring-forest/10"
-            >
-              <div className="flex items-start gap-3">
-                <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-cream text-forest">
-                  <Icon className="size-3.5" strokeWidth={2.4} aria-hidden />
-                </span>
-                <div className="min-w-0">
-                  <p className="text-xs font-semibold text-ink">{point.title}</p>
-                  <p className="mt-0.5 text-xs leading-relaxed text-ink/60">{point.desc}</p>
-                </div>
-              </div>
+            <li key={point.title} className="rounded-2xl bg-sage/50 px-3.5 py-3 ring-1 ring-forest/10">
+              <InfoNote
+                bare
+                compact
+                tone="calm"
+                icon={Icon}
+                title={point.title}
+                label={INSTALL_LIMITS.detailLabel}
+              >
+                {point.desc}
+              </InfoNote>
             </li>
           )
         })}

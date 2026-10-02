@@ -12,6 +12,14 @@ import {
 import { SINKING_NUDGE_COPY } from '@/lib/data/budget'
 import { AI_GAUGE_BANNER_COPY, AI_QUOTA_EXHAUSTED_COPY } from '@/lib/ai-quota'
 import { useAiQuota } from '@/hooks/use-ai-quota'
+import { useNudgeState } from '@/hooks/use-nudge-state'
+import {
+  dismissNudge,
+  isNudgeDismissedToday,
+  markNudgeShown,
+  wasNudgeShownTodayAtLoad,
+  type NudgeId,
+} from '@/lib/nudge-store'
 import { DEMO_MODE } from '@/lib/demo'
 import { TopUpModal } from './top-up-modal'
 
@@ -31,10 +39,6 @@ const DEMO = {
 
 /** ambang soft-nudge ala PRD 4770/4894: muncul hanya saat pemakaian >70% */
 const SOFT_NUDGE_USAGE_PCT = 70
-
-const KEY = 'catet-home-banners-dismissed'
-
-type DismissedMap = Record<string, string> // bannerId → tanggal dismiss
 
 /** shell banner kompak — ikon, copy, CTA opsional, tombol dismiss */
 function BannerShell({
@@ -112,9 +116,6 @@ export const HomeBanners = memo(function HomeBanners({
   /** buka modal Renewal (One-Tap Renew) */
   onOpenRenewal: () => void
 }) {
-  /* hydrate dismiss dari localStorage (setelah mount — anti hydration mismatch) */
-  const [mounted, setMounted] = useState(false)
-  const [dismissed, setDismissed] = useState<DismissedMap>({})
   /** modal Top Up AI — dibuka CTA banner kuota (reuse komponen yang sama
    *  dengan /settings/billing; harga & token tetap dari `lib/ai-quota.ts`) */
   const [topUpOpen, setTopUpOpen] = useState(false)
@@ -122,36 +123,49 @@ export const HomeBanners = memo(function HomeBanners({
    *  Fuel Gauge Billing, dan header AI Coach — dan angka itu TURUN saat dipakai */
   const quota = useAiQuota()
 
-  useEffect(() => {
-    try {
-      setDismissed(JSON.parse(localStorage.getItem(KEY) ?? '{}'))
-    } catch {
-      setDismissed({})
-    }
-    setMounted(true)
-  }, [])
+  /* Persistensi nudge (paket 64): LINTAS RELOAD tanpa hydration mismatch & tanpa
+     flicker — nilai tersimpan sudah dipakai sejak render pertama client (lihat
+     `lib/nudge-store.ts`). Gerbang `mounted` yang dulu bikin banner "pop-in"
+     sesudah cat pertama sudah tidak ada. */
+  const nudges = useNudgeState()
 
-  if (!mounted) return null
+  /** true = user menutup banner INI hari ini (per hari kalender, reaktif) */
+  const isDismissed = (id: NudgeId) => isNudgeDismissedToday(nudges, id)
+  const dismiss = (id: NudgeId) => dismissNudge(id, nudges.today)
 
-  const today = new Date()
-  const todayISO = today.toISOString().slice(0, 10)
+  /* Semua gerbang tanggal menunggu `nudges.today` terisi (client). Sebelum itu
+     tidak ada yang dirender — dan pengisiannya terjadi SAAT hidrasi, bukan
+     sesudah paint, jadi tidak ada banner yang "melompat" masuk. */
+  const ready = Boolean(nudges.today)
+  /** tanggal (1–31) bulan ini — ambang sinking fund `> 5` (mock) */
+  const dayOfMonth = nudges.today ? Number(nudges.today.slice(8, 10)) : 0
 
-  const isDismissed = (id: string) => dismissed[id] === todayISO
-  const dismiss = (id: string) => {
-    const next = { ...dismissed, [id]: todayISO }
-    setDismissed(next)
-    localStorage.setItem(KEY, JSON.stringify(next))
-  }
-
-  const showRenewal = !renewalHandled && shouldShowRenewalBanner(renewalState)
+  const showRenewal =
+    ready && !renewalHandled && shouldShowRenewalBanner(renewalState)
   const renewalCopy = renewalBannerCopy(renewalState)
   /* soft-nudge kuota: pemakaian kuota dasar >70% DAN user belum menambah token
      di sesi ini — begitu sudah beli, ajakannya selesai (lihat catatan komponen).
      Saat kuota benar-benar habis, banner tetap muncul (persen sisa 0) tapi
-     kalimatnya berganti jadi penjelasan + jalan keluar, bukan ajakan halus. */
-  const showAiGauge =
+     kalimatnya berganti jadi penjelasan + jalan keluar, bukan ajakan halus.
+     PAKET 64: dibatasi SATU kali per hari kalender — `wasNudgeShownTodayAtLoad`
+     membekukan keputusan itu saat halaman dimuat, jadi menandai "sudah tampil"
+     tidak menyembunyikan banner di sesi yang sama. */
+  const aiEligible =
     quota.usedPct > SOFT_NUDGE_USAGE_PCT && quota.addon.purchasedTokens === 0
-  const showFundNudge = DEMO.sinkingFundPending && today.getDate() > 5
+  const showAiGauge =
+    ready && aiEligible && !wasNudgeShownTodayAtLoad(nudges, 'ai-gauge')
+  const showFundNudge = DEMO.sinkingFundPending && dayOfMonth > 5
+
+  /* Catat "kuota AI sudah tampil hari ini" begitu banner-nya benar-benar tampil &
+     belum ditutup user. Ditulis di effect (render tetap murni) dan tidak memicu
+     re-render — lihat catatan `shownAtLoad` di `lib/nudge-store.ts`. */
+  useEffect(() => {
+    if (!ready || !aiEligible) return
+    if (isDismissed('ai-gauge')) return
+    if (wasNudgeShownTodayAtLoad(nudges, 'ai-gauge')) return
+    markNudgeShown('ai-gauge', nudges.today)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, aiEligible, nudges])
 
   return (
     <>

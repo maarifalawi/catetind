@@ -5,6 +5,7 @@ import { useEffect } from 'react'
 import { Download, Home, RefreshCw, ShieldCheck, TriangleAlert } from 'lucide-react'
 import { toast } from 'sonner'
 import { ScreenShell } from './screen-shell'
+import { InfoNote } from './info-note'
 import { cn } from '@/lib/utils'
 import { fetchSessionUser } from '@/lib/session-client'
 import { downloadMoneyExport } from '@/lib/money/export'
@@ -84,7 +85,6 @@ export function SegmentErrorScreen({
           {copy.title}
         </h1>
         <p className="mt-2 text-[13.5px] leading-relaxed text-ink/60">{copy.body}</p>
-        <p className="mt-2 text-[12px] leading-relaxed text-ink/45">{copy.hint}</p>
 
         <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:items-center">
           <button
@@ -117,13 +117,20 @@ export function SegmentErrorScreen({
         <p className="mt-3 text-[11.5px] leading-relaxed text-ink/40">
           {SEGMENT_ERROR_ACTIONS.exportHint}
         </p>
-      </div>
 
-      {/* batas jujur: kenapa catatannya tidak hilang walau layarnya rusak */}
-      <p className="mt-3 inline-flex items-start gap-2 rounded-2xl bg-sage/60 px-4 py-3 text-[12px] leading-relaxed text-ink/60 ring-1 ring-soil/12">
-        <ShieldCheck className="mt-0.5 size-4 shrink-0 text-forest" strokeWidth={2.2} aria-hidden />
-        {SEGMENT_ERROR_ACTIONS.safeNote}
-      </p>
+        {/* AUDIT "CLEAN UI" (paket 63): penjelasan "kenapa aman" dulu paragraf
+            ketiga di depan mata (bahasa teknis di momen panik). Sekarang cuma
+            satu baris penenang; detailnya di balik satu tap. */}
+        <InfoNote
+          className="mt-4"
+          icon={ShieldCheck}
+          title={SEGMENT_ERROR_ACTIONS.safeTitle}
+          summary={copy.safeSummary}
+          label={SEGMENT_ERROR_ACTIONS.safeLabel}
+        >
+          {copy.safeBody}
+        </InfoNote>
+      </div>
     </div>
   )
 

@@ -110,3 +110,96 @@ export async function fetchSessionUser(): Promise<SessionUserView | null> {
     return null
   }
 }
+
+/* ── REGISTRASI (paket 64: SUPABASE AUTH NYATA, BUKAN MOCK) ───────────────────
+   Langkah 1 checkout dulu cuma mengumpulkan email + nama lalu lanjut ke
+   "pembayaran" mock. Sekarang ia benar-benar MENDAFTARKAN akun:
+
+     1. validasi kode teman di BACKEND (kalau ada) — integritas referral; kode
+        yang tidak ada di database MENOLAK proses sebelum akun difinalkan;
+     2. `signInWithOtp` + `shouldCreateUser` = pendaftaran tanpa password,
+        persis kanon PRD 5933 (satu email, nol password). Nama panggilan ikut
+        sebagai metadata user supaya trigger profil memakainya;
+     3. LIFECYCLE HANDOFF — kalau Supabase mengembalikan `session` (auto-confirm
+        ON) → `dashboard`; kalau verifikasi email wajib (produksi:
+        `mailer_autoconfirm: false`) → `verify`, dan UI merender langkah "buka
+        emailmu" yang jelas.
+
+   Panggilan yang sama dipakai halaman masuk, jadi tidak ada dua cara berbeda
+   membuat akun di app ini. */
+
+const NETWORK_ERROR = 'Jaringan tidak bisa dihubungi. Coba lagi ya.'
+
+export type RegisterNext = 'verify' | 'dashboard'
+
+export type RegisterOutcome =
+  | { ok: true; next: RegisterNext }
+  | { ok: false; error: string }
+
+/**
+ * Validasi kode teman ke backend (yang memeriksanya ke DATABASE). Dipakai dua
+ * arah: sebagai langkah pertama registrasi, dan (lewat endpoint yang sama) oleh
+ * apa pun yang butuh memastikan kode benar-benar ada.
+ */
+export async function validateReferralCode(code: string, email: string): Promise<AuthResult> {
+  try {
+    const res = await fetch('/api/referral/validate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: code.trim(), email: email.trim() }),
+    })
+    const data = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null
+    if (!res.ok || !data || data.ok === false) {
+      return {
+        ok: false,
+        error: data?.error ?? 'Kode temannya nggak ketemu. Cek lagi ya, atau lanjut tanpa kode.',
+      }
+    }
+    return { ok: true }
+  } catch {
+    return { ok: false, error: NETWORK_ERROR }
+  }
+}
+
+/** Daftar akun baru (email + nama panggilan, tanpa password) + integritas referral. */
+export async function registerAccount({
+  email,
+  nickname,
+  referralCode,
+}: {
+  email: string
+  nickname: string
+  /** kode teman yang sudah "dipakai" di checkout (opsional) */
+  referralCode?: string | null
+}): Promise<RegisterOutcome> {
+  const client = browserSupabase()
+  if (!client) return { ok: false, error: 'Backend Supabase belum dikonfigurasi di build ini.' }
+
+  const trimmedEmail = email.trim()
+  const trimmedNickname = nickname.trim()
+
+  /* 1 — integritas referral DULU: menolak lebih awal berarti tidak ada akun
+     setengah jadi yang menunggu dibersihkan. */
+  const code = referralCode?.trim()
+  if (code) {
+    const check = await validateReferralCode(code, trimmedEmail)
+    if (!check.ok) return { ok: false, error: check.error }
+  }
+
+  /* 2 — buat akun (passwordless) + simpan nama panggilan di metadata user */
+  try {
+    const { data, error } = await client.auth.signInWithOtp({
+      email: trimmedEmail,
+      options: {
+        shouldCreateUser: true,
+        emailRedirectTo: loginRedirectUrl(trimmedEmail),
+        data: { nickname: trimmedNickname },
+      },
+    })
+    if (error) return { ok: false, error: error.message }
+    /* 3 — handoff: sesi ada = auto-login; tidak ada = wajib cek email dulu */
+    return { ok: true, next: data.session ? 'dashboard' : 'verify' }
+  } catch {
+    return { ok: false, error: NETWORK_ERROR }
+  }
+}

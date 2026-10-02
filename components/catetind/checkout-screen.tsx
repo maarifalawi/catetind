@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { ArrowRight, Check, Info, ShieldCheck, Tag } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
@@ -26,16 +27,23 @@ import {
   type TrustBadge,
 } from '@/lib/data/pricing'
 import { LogoWordmark } from './logo-wordmark'
-import { RegistrationSheet, type RegistrationResult } from './registration-sheet'
-import { SnapPaymentSheet } from './snap-payment-sheet'
+import { RegistrationSheet, type RegistrationOutcome, type RegistrationResult } from './registration-sheet'
+import { registerAccount } from '@/lib/session-client'
+import { buildVerifyHref } from '@/lib/data/auth'
 
 /* ── Checkout (/checkout) — inventaris #3 · PRD 5887–5935 ─────────────────────
-   Satu-satunya halaman tempat user menyerahkan uang. Dua hal harus terasa
-   sepanjang halaman: RINGAN (maksimal 3 langkah, 2 field, tanpa password) dan
-   JUJUR (harga konsisten, tanpa auto-renew, tanpa countdown/social proof palsu).
+   Halaman pilih paket + daftar akun. Dua hal harus terasa sepanjang halaman:
+   RINGAN (maksimal 3 langkah, 2 field, tanpa password) dan JUJUR (harga
+   konsisten, tanpa auto-renew, tanpa countdown/social proof palsu).
 
-   Alur: CTA "Lanjut ke Pembayaran" → sheet registrasi (email + nama) → sheet
-   pembayaran (simulasi Midtrans Snap) → sukses → `/app/onboarding`.
+   PAKET 64 — ALUR AKTUAL (Midtrans di-bypass sprint ini):
+     CTA "Daftar & mulai" → sheet registrasi (email + nama + kode teman
+     divalidasi ke DATABASE) → akun Supabase dibuat tanpa password →
+       · verifikasi email wajib  → `/login/verify` (langkah "buka emailmu")
+       · auto-login (autoconfirm) → Dashboard
+   `SnapPaymentSheet` sengaja TIDAK lagi dibuka dari sini: pembayaran Midtrans
+   ditunda, dan halaman tidak boleh berpura-pura menagih. Komponennya masih ada
+   untuk sprint berikutnya.
 
    Yang TIDAK ada di sini, dan memang sengaja:
    • field password/telepon/alamat/gender/tanggal lahir (PRD 5904–5905)
@@ -61,11 +69,10 @@ export function CheckoutScreen() {
   const [codeInput, setCodeInput] = useState('')
   const [appliedCode, setAppliedCode] = useState<string | null>(null)
   const [codeError, setCodeError] = useState(false)
-  /** dua sheet checkout: registrasi dulu, baru pembayaran */
+  /** sheet registrasi (paket 64: pembayaran Midtrans di-bypass, jadi tidak ada
+   *  sheet pembayaran yang dibuka dari sini) */
   const [registrationOpen, setRegistrationOpen] = useState(false)
-  const [paymentOpen, setPaymentOpen] = useState(false)
-  /** identitas hasil registrasi — dipakai sheet pembayaran sebagai konteks */
-  const [buyer, setBuyer] = useState<RegistrationResult | null>(null)
+  const router = useRouter()
 
   const isLifetime = offerId === 'founding-member'
   const plan = PLANS.find((item) => item.id === offerId)
@@ -121,11 +128,27 @@ export function CheckoutScreen() {
     setCodeError(false)
   }
 
-  /** registrasi valid → tutup sheet registrasi, lanjut buka sheet pembayaran */
-  function handleRegistered(result: RegistrationResult) {
-    setBuyer(result)
-    setRegistrationOpen(false)
-    setPaymentOpen(true)
+  /**
+   * Registrasi SUNGGUHAN (paket 64). Urutannya penting dan itulah inti
+   * "integritas referral":
+   *   1. `registerAccount` memvalidasi kode teman ke DATABASE lebih dulu; kalau
+   *      kodenya tidak ada, akun TIDAK pernah dibuat dan error dikembalikan ke
+   *      sheet (user masih bisa membetulkan kodenya);
+   *   2. akun Supabase dibuat tanpa password (`signInWithOtp`);
+   *   3. handoff: verifikasi email wajib → `/login/verify`; auto-login → Dashboard.
+   * Sheet tetap terbuka saat gagal, jadi isian email/nama tidak hilang.
+   */
+  async function handleRegistered(result: RegistrationResult): Promise<RegistrationOutcome> {
+    const outcome = await registerAccount({
+      email: result.email,
+      nickname: result.nickname,
+      referralCode: appliedCode,
+    })
+    if (!outcome.ok) return { ok: false, error: outcome.error }
+
+    /* navigasi di sini, bukan di sheet: satu tempat tahu ke mana user pergi */
+    router.push(outcome.next === 'verify' ? buildVerifyHref(result.email) : '/')
+    return { ok: true }
   }
 
   return (
@@ -187,9 +210,8 @@ export function CheckoutScreen() {
             })}
           </ol>
 
-          <p className="mt-3.5 text-[11.5px] leading-relaxed text-ink/45">
-            {CHECKOUT_COPY.stepsNote}
-          </p>
+        {/* paket 64: paragraf "tiga langkah tanpa verifikasi" DIHAPUS — langkah
+            konfirmasi email sudah tertulis di daftar di atas, jadi tidak diulang */}
         </section>
 
         {/* ── 3. paket + periode + harga ─────────────────────────────────── */}
@@ -441,21 +463,13 @@ export function CheckoutScreen() {
         </div>
       </div>
 
-      {/* ── Sheet langkah 1: registrasi (email + nama, tanpa password) ────── */}
+      {/* ── Sheet registrasi (email + nama, tanpa password). Midtrans di-bypass
+             sprint ini, jadi tidak ada sheet pembayaran setelah ini — lihat
+             catatan alur di atas file. ────────────────────────────────────── */}
       <RegistrationSheet
         open={registrationOpen}
         onClose={() => setRegistrationOpen(false)}
         onContinue={handleRegistered}
-      />
-
-      {/* ── Sheet langkah 2: pembayaran (simulasi Midtrans Snap) ──────────── */}
-      <SnapPaymentSheet
-        open={paymentOpen}
-        onClose={() => setPaymentOpen(false)}
-        planName={offerName}
-        periodLabel={periodLabel}
-        amount={total}
-        customerEmail={buyer?.email ?? null}
       />
     </>
   )
