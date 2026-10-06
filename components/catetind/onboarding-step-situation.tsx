@@ -81,10 +81,10 @@ export function OnboardingStepSituation({
                   {item.emoji}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[15px] font-medium leading-snug tracking-[-0.01em] text-ink">
+                  <span className="block text-[15px] font-medium leading-snug tracking-[-0.01em] text-forest">
                     {item.label}
                   </span>
-                  <span className="mt-0.5 block text-[12.5px] leading-snug text-ink/45">
+                  <span className="mt-0.5 block text-[12.5px] leading-snug text-forest/45">
                     {item.subtitle}
                   </span>
                 </span>
@@ -138,8 +138,8 @@ export function OnboardingStepSituation({
                 className={cn(
                   'flex-1 rounded-full py-2.5 text-[13px] font-medium tracking-[-0.01em] transition-all duration-200',
                   active
-                    ? 'bg-cream text-ink shadow-[0_1px_3px_rgba(0,0,0,0.12)]'
-                    : 'text-ink/45 hover:text-ink/70',
+                    ? 'bg-cream text-forest shadow-[0_1px_3px_rgba(0,0,0,0.12)]'
+                    : 'text-forest/45 hover:text-forest/70',
                 )}
               >
                 {option.label}
@@ -147,7 +147,7 @@ export function OnboardingStepSituation({
             )
           })}
         </div>
-        <p className="mt-3 pl-1 text-[12.5px] leading-relaxed text-ink/45">
+        <p className="mt-3 pl-1 text-[12.5px] leading-relaxed text-forest/45">
           {activePeriod?.helper}
         </p>
 
@@ -168,7 +168,7 @@ export function OnboardingStepSituation({
                   ONBOARD_CARD,
                 )}
               >
-                <span className="text-[14px] font-medium tracking-[-0.01em] text-ink">
+                <span className="text-[14px] font-medium tracking-[-0.01em] text-forest">
                   Tanggal gajian
                 </span>
                 <input
@@ -179,7 +179,7 @@ export function OnboardingStepSituation({
                   value={paydayDate}
                   onChange={(event) => onPaydayChange(clampPayday(event.target.value))}
                   aria-label="Tanggal gajian (1 sampai 31)"
-                  className="w-16 rounded-xl bg-ink/[0.04] py-1.5 text-center text-[15px] font-semibold tabular-nums text-ink outline-none ring-1 ring-transparent transition-all focus:bg-cream focus:ring-forest/25"
+                  className="w-16 rounded-xl bg-ink/[0.04] py-1.5 text-center text-[15px] font-medium tabular-nums text-forest outline-none ring-1 ring-transparent transition-all focus:bg-cream focus:ring-forest/25"
                 />
               </label>
             </motion.div>

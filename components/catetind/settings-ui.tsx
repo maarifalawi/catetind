@@ -29,14 +29,14 @@ export function SettingsPanel({
   return (
     <section className="flex w-full min-w-0 flex-col gap-4">
       <header className="min-w-0">
-        <p className="text-[10.5px] font-semibold tracking-[0.16em] text-ink/40 uppercase">
+        <p className="text-[10.5px] font-medium tracking-[0.16em] text-forest/40 uppercase">
           {eyebrow}
         </p>
-        <h2 className="mt-1.5 font-display text-xl font-semibold tracking-tight text-ink sm:text-2xl">
+        <h2 className="mt-1.5 font-display text-xl font-medium tracking-tight text-forest sm:text-2xl">
           {title}
         </h2>
         {desc && (
-          <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-ink/55">{desc}</p>
+          <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-forest/55">{desc}</p>
         )}
       </header>
       {children}
@@ -75,14 +75,14 @@ export function SettingsCard({
             {title && (
               <h3
                 className={cn(
-                  'text-[15px] font-semibold',
-                  tone === 'danger' ? 'text-plum' : 'text-ink',
+                  'text-[15px] font-medium',
+                  tone === 'danger' ? 'text-plum' : 'text-forest',
                 )}
               >
                 {title}
               </h3>
             )}
-            {desc && <p className="mt-1 text-[12.5px] leading-relaxed text-ink/55">{desc}</p>}
+            {desc && <p className="mt-1 text-[12.5px] leading-relaxed text-forest/55">{desc}</p>}
           </div>
           {action}
         </div>
@@ -107,8 +107,8 @@ export function SettingsRow({
   return (
     <div className={cn('flex items-center gap-4 py-3.5 first:pt-0 last:pb-0', className)}>
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-ink">{label}</p>
-        {helper && <p className="mt-0.5 text-xs leading-relaxed text-ink/50">{helper}</p>}
+        <p className="text-sm font-medium text-forest">{label}</p>
+        {helper && <p className="mt-0.5 text-xs leading-relaxed text-forest/50">{helper}</p>}
       </div>
       {children}
     </div>
@@ -129,15 +129,15 @@ export function TonePill({
 }) {
   const TONES = {
     positive: 'bg-mint/30 text-forest',
-    warning: 'bg-hud-amber/30 text-ink/70',
+    warning: 'bg-hud-amber/30 text-forest/70',
     danger: 'bg-plum/20 text-plum',
-    neutral: 'bg-sage text-ink/60',
+    neutral: 'bg-sage text-forest/60',
   } as const
 
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold',
+        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium',
         TONES[tone],
         className,
       )}
@@ -200,8 +200,8 @@ export function ToggleRow({
   return (
     <div className="flex items-center gap-4 py-3.5 first:pt-0 last:pb-0">
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-ink">{label}</p>
-        {helper && <p className="mt-0.5 text-xs leading-relaxed text-ink/50">{helper}</p>}
+        <p className="text-sm font-medium text-forest">{label}</p>
+        {helper && <p className="mt-0.5 text-xs leading-relaxed text-forest/50">{helper}</p>}
       </div>
       <Toggle checked={checked} onToggle={onToggle} label={label} disabled={disabled} />
     </div>
@@ -236,8 +236,8 @@ export function Segmented<T extends string>({
             aria-checked={active}
             onClick={() => onChange(option.id)}
             className={cn(
-              'inline-flex flex-1 items-center justify-center gap-1.5 rounded-[0.9rem] px-3.5 py-2 text-[12.5px] font-semibold transition-colors sm:flex-none sm:rounded-full',
-              active ? 'bg-cream text-ink shadow-sm' : 'text-ink/55 hover:text-ink',
+              'inline-flex flex-1 items-center justify-center gap-1.5 rounded-[0.9rem] px-3.5 py-2 text-[12.5px] font-medium transition-colors sm:flex-none sm:rounded-full',
+              active ? 'bg-cream text-forest shadow-sm' : 'text-forest/55 hover:text-forest',
             )}
           >
             {option.emoji && <span aria-hidden>{option.emoji}</span>}
@@ -255,7 +255,7 @@ export function SettingsInput({ className, ...props }: ComponentProps<'input'>) 
     <input
       {...props}
       className={cn(
-        'w-full rounded-2xl bg-cream px-4 py-3 text-sm text-ink ring-1 ring-soil/12 outline-none transition-shadow placeholder:text-ink/30 focus:ring-2 focus:ring-forest/30 disabled:cursor-not-allowed disabled:bg-sage/40 disabled:text-ink/45',
+        'w-full rounded-2xl bg-cream px-4 py-3 text-sm text-forest ring-1 ring-soil/12 outline-none transition-shadow placeholder:text-forest/30 focus:ring-2 focus:ring-forest/30 disabled:cursor-not-allowed disabled:bg-sage/40 disabled:text-forest/45',
         className,
       )}
     />
@@ -278,12 +278,12 @@ export function SettingsField({
     <div className="flex flex-col gap-1.5">
       <label
         htmlFor={htmlFor}
-        className="text-[11px] font-semibold tracking-[0.08em] text-ink/45 uppercase"
+        className="text-[11px] font-medium tracking-[0.08em] text-forest/45 uppercase"
       >
         {label}
       </label>
       {children}
-      {note && <p className="text-[11.5px] leading-relaxed text-ink/45">{note}</p>}
+      {note && <p className="text-[11.5px] leading-relaxed text-forest/45">{note}</p>}
     </div>
   )
 }

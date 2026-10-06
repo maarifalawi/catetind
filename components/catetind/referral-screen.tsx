@@ -147,8 +147,8 @@ export function ReferralScreen() {
       {/* ── HEADER — resep kanonik H1 yang sama dengan Dashboard & halaman lain ── */}
       <header className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-[13px] font-medium text-ink/45">Program Ajak Teman</p>
-          <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-ink lg:text-4xl">
+          <p className="text-[13px] font-medium text-forest/45">Program Ajak Teman</p>
+          <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-forest lg:text-4xl">
             Ajak Teman
           </h1>
           <div className="mt-2 flex flex-wrap items-center gap-2 lg:mt-3">
@@ -246,10 +246,10 @@ function FuelGaugeCard({ remainingPct, daysLeft }: { remainingPct: number; daysL
             />
           </svg>
           <span className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="font-display text-[22px] font-black leading-none tracking-tight tabular-nums text-ink sm:text-[24px]">
+            <span className="font-display text-[22px] font-semibold leading-none tracking-tight tabular-nums text-forest sm:text-[24px]">
               {remainingPct}%
             </span>
-            <span className="mt-1 text-[9.5px] font-semibold uppercase tracking-[0.14em] text-ink/40">
+            <span className="mt-1 text-[9.5px] font-medium uppercase tracking-[0.14em] text-forest/40">
               sisa
             </span>
           </span>
@@ -257,28 +257,28 @@ function FuelGaugeCard({ remainingPct, daysLeft }: { remainingPct: number; daysL
 
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ink/40">
+            <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-forest/40">
               Bahan Bakar AI
             </p>
             {low && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-hud-amber/25 px-2 py-0.5 text-[10px] font-bold text-ink ring-1 ring-hud-amber/40">
+              <span className="inline-flex items-center gap-1 rounded-full bg-hud-amber/25 px-2 py-0.5 text-[10px] font-medium text-forest ring-1 ring-hud-amber/40">
                 <AlertTriangle className="size-3" strokeWidth={2.6} aria-hidden />
                 Menipis
               </span>
             )}
           </div>
           {/* kalimat besar yang diminta mandat — angka SISA, bukan angka terpakai */}
-          <p className="mt-1.5 font-display text-[17px] font-black leading-snug tracking-tight text-ink">
+          <p className="mt-1.5 font-display text-[17px] font-medium leading-snug tracking-tight text-forest">
             Sisa Token AI-mu: {remainingPct}%
           </p>
-          <p className="mt-1.5 text-[12.5px] leading-relaxed text-ink/55">
-            Tersisa <b className="font-semibold text-ink/75">{daysLeft} hari</b> lagi. Ajak 1
+          <p className="mt-1.5 text-[12.5px] leading-relaxed text-forest/55">
+            Tersisa <b className="font-medium text-forest/75">{daysLeft} hari</b> lagi. Ajak 1
             teman untuk langsung isi ulang!
           </p>
         </div>
       </div>
 
-      <p className="mt-4 text-[11px] leading-relaxed text-ink/40">
+      <p className="mt-4 text-[11px] leading-relaxed text-forest/40">
         Kuota ini yang dipakai Catat AI, Scan Struk, dan AI Coach. Begitu temanmu berlangganan,
         token kamu langsung nambah.
       </p>
@@ -298,27 +298,27 @@ function RewardCard({ reward, planLabel }: { reward: RewardCopy; planLabel: stri
     <section className="rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12 sm:p-6">
       <div className="flex items-start gap-3.5">
         {/* Daisy = pop brand; ikon di atas aksen terang memakai tinta hitam */}
-        <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-brand text-ink">
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-brand text-forest">
           <Sparkles className="size-5" strokeWidth={2.2} />
         </span>
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ink/40">
+            <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-forest/40">
               Reward kamu
             </p>
-            <span className="rounded-full bg-sage/70 px-2.5 py-0.5 text-[10.5px] font-semibold text-forest ring-1 ring-forest/10">
+            <span className="rounded-full bg-sage/70 px-2.5 py-0.5 text-[10.5px] font-medium text-forest ring-1 ring-forest/10">
               {planLabel}
             </span>
           </div>
-          <p className="mt-1.5 text-[14.5px] font-semibold leading-snug text-ink">
+          <p className="mt-1.5 text-[14.5px] font-medium leading-snug text-forest">
             {reward.lead}{' '}
-            <span className="font-display font-black tracking-tight">{reward.highlight}</span>
+            <span className="font-display font-medium tracking-tight">{reward.highlight}</span>
           </p>
         </div>
       </div>
 
       {/* sisi lain dari program dua arah: apa yang didapat TEMAN saat checkout */}
-      <p className="mt-4 flex items-start gap-2 border-t border-soil/12 pt-3.5 text-[12.5px] leading-relaxed text-ink/65">
+      <p className="mt-4 flex items-start gap-2 border-t border-soil/12 pt-3.5 text-[12.5px] leading-relaxed text-forest/65">
         <HeartHandshake
           className="mt-0.5 size-4 shrink-0 text-forest/70"
           strokeWidth={2.2}
@@ -351,22 +351,22 @@ function ShareCard({
 }) {
   return (
     <section className="rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12 sm:p-6">
-      <h2 className="font-display text-[17px] font-bold tracking-tight text-ink">Link unikmu</h2>
-      <p className="mt-0.5 text-[11.5px] leading-relaxed text-ink/45">
+      <h2 className="font-display text-[17px] font-semibold tracking-tight text-forest">Link unikmu</h2>
+      <p className="mt-0.5 text-[11.5px] leading-relaxed text-forest/45">
         Semua teman yang mendaftar lewat link ini otomatis tercatat atas namamu.
       </p>
 
       {/* 3C — kotak mono + tombol salin. Isian tipis `bg-soil/[0.06]` adalah
           minimum yang masih terbaca di atas kartu putih. */}
       <div className="mt-3.5 flex items-center gap-2 rounded-2xl bg-cream p-1.5 ring-1 ring-soil/12">
-        <span className="min-w-0 flex-1 truncate rounded-xl bg-soil/[0.06] px-3.5 py-2.5 font-mono text-[12.5px] text-ink/70">
+        <span className="min-w-0 flex-1 truncate rounded-xl bg-soil/[0.06] px-3.5 py-2.5 font-mono text-[12.5px] text-forest/70">
           {referralLink}
         </span>
         <button
           type="button"
           onClick={onCopy}
           aria-label={copied ? 'Link sudah tersalin' : 'Salin link referral'}
-          className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-xl bg-sage px-3.5 text-[12.5px] font-semibold text-forest transition-colors hover:bg-sage/70 active:scale-[0.97]"
+          className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-xl bg-sage px-3.5 text-[12.5px] font-medium text-forest transition-colors hover:bg-sage/70 active:scale-[0.97]"
         >
           {copied ? (
             <Check className="size-4" strokeWidth={2.6} aria-hidden />
@@ -381,7 +381,7 @@ function ShareCard({
       <button
         type="button"
         onClick={onShare}
-        className="mt-3 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-forest text-[14px] font-bold text-cream shadow-[0_18px_36px_-20px_rgba(69,89,78,0.95)] transition-colors hover:bg-forest-soft active:scale-[0.99]"
+        className="mt-3 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-forest text-[14px] font-medium text-cream shadow-[0_18px_36px_-20px_rgba(69,89,78,0.95)] transition-colors hover:bg-forest-soft active:scale-[0.99]"
       >
         <Share2 className="size-4" strokeWidth={2.4} aria-hidden />
         Bagikan ke Teman
@@ -389,7 +389,7 @@ function ShareCard({
 
       {/* 3E — segel privasi. Satu baris, ikon kunci, nada tenang: ini yang
           membunuh keberatan nomor satu ("nanti data keuanganku kelihatan"). */}
-      <p className="mt-3 flex items-start gap-1.5 text-[11.5px] leading-relaxed text-ink/45">
+      <p className="mt-3 flex items-start gap-1.5 text-[11.5px] leading-relaxed text-forest/45">
         <Lock className="mt-[1px] size-3.5 shrink-0" strokeWidth={2.2} aria-hidden />
         {REFERRAL_PRIVACY_PLEDGE}
       </p>
@@ -398,7 +398,7 @@ function ShareCard({
 }
 
 /** label kepala kolom riwayat — satu kelas untuk tiga kolom pertama */
-const HISTORY_HEAD = 'text-[10.5px] font-semibold uppercase tracking-[0.14em] text-ink/40'
+const HISTORY_HEAD = 'text-[10.5px] font-medium uppercase tracking-[0.14em] text-forest/40'
 
 /**
  * 4A — KPI ringkas: TIGA kartu dalam satu baris. Di mobile tetap 3 kolom
@@ -434,10 +434,10 @@ function KpiRow({
           >
             <Icon className="size-4" strokeWidth={2.4} aria-hidden />
           </span>
-          <p className="mt-2.5 font-display text-[22px] font-black leading-none tracking-tight tabular-nums text-ink sm:text-[26px]">
+          <p className="mt-2.5 font-display text-[22px] font-semibold leading-none tracking-tight tabular-nums text-forest sm:text-[26px]">
             {value}
           </p>
-          <p className="mt-1 text-[10.5px] font-medium leading-tight text-ink/45 sm:text-[11.5px]">
+          <p className="mt-1 text-[10.5px] font-medium leading-tight text-forest/45 sm:text-[11.5px]">
             {label}
           </p>
         </div>
@@ -457,14 +457,14 @@ function TotalRewardCard({ total }: { total: string }) {
       aria-label={`Total Reward yang Kamu Dapat: ${total}`}
       className="flex items-center gap-4 rounded-[1.75rem] bg-forest p-5 text-cream shadow-[0_24px_50px_-30px_rgba(69,89,78,0.95)] sm:p-6"
     >
-      <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-brand text-ink">
+      <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-brand text-forest">
         <Gift className="size-5" strokeWidth={2.2} aria-hidden />
       </span>
       <div className="min-w-0">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-cream/55">
+        <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-cream/55">
           Total Reward yang Kamu Dapat
         </p>
-        <p className="mt-1 font-display text-[26px] font-black leading-none tracking-tight text-cream sm:text-[30px]">
+        <p className="mt-1 font-display text-[26px] font-medium leading-none tracking-tight text-cream sm:text-[30px]">
           {total}
         </p>
       </div>
@@ -502,10 +502,10 @@ function HistoryCard({
     <section className="rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12 sm:p-6">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="font-display text-xl font-semibold tracking-tight text-ink">
+          <h2 className="font-display text-xl font-medium tracking-tight text-forest">
             Riwayat Teman yang Kamu Ajak
           </h2>
-          <p className="mt-1 text-[13px] leading-relaxed text-ink/55">
+          <p className="mt-1 text-[13px] leading-relaxed text-forest/55">
             {converted} sudah berlangganan · {pending} masih menunggu pembayaran
           </p>
         </div>
@@ -530,25 +530,25 @@ function HistoryCard({
       <ul className="divide-y divide-soil/12 border-t border-soil/12 sm:border-t-0">
         {friends.map((friend) => (
           <li key={friend.id} className={cn(HISTORY_ROW, !friend.converted && 'opacity-55')}>
-            <span className="min-w-0 truncate text-[13px] font-semibold text-ink">
+            <span className="min-w-0 truncate text-[13px] font-medium text-forest">
               {friend.name}
             </span>
 
             <span
               className={cn(
-                'inline-flex shrink-0 items-center justify-self-end rounded-full px-2.5 py-0.5 text-[10.5px] font-semibold sm:justify-self-start',
-                friend.converted ? 'bg-mint/30 text-forest' : 'bg-sage text-ink/55',
+                'inline-flex shrink-0 items-center justify-self-end rounded-full px-2.5 py-0.5 text-[10.5px] font-medium sm:justify-self-start',
+                friend.converted ? 'bg-mint/30 text-forest' : 'bg-sage text-forest/55',
               )}
             >
               {friendStatusLabel(friend.converted)}
             </span>
 
-            <span className="text-[11.5px] tabular-nums text-ink/50">{friend.joinedAt}</span>
+            <span className="text-[11.5px] tabular-nums text-forest/50">{friend.joinedAt}</span>
 
             <span
               className={cn(
                 'justify-self-end text-right text-[12.5px] tabular-nums',
-                friend.converted ? 'font-semibold text-forest' : 'text-ink/40',
+                friend.converted ? 'font-medium text-forest' : 'text-forest/40',
               )}
             >
               {friend.reward}
@@ -580,17 +580,17 @@ function HowItWorksCard({ open, onToggle }: { open: boolean; onToggle: () => voi
             <CircleHelp className="size-4" strokeWidth={2.2} aria-hidden />
           </span>
           <span className="min-w-0">
-            <span className="block font-display text-[15px] font-bold tracking-tight text-ink">
+            <span className="block font-display text-[15px] font-medium tracking-tight text-forest">
               Bagaimana cara kerjanya?
             </span>
-            <span className="mt-0.5 block text-[11.5px] text-ink/45">
+            <span className="mt-0.5 block text-[11.5px] text-forest/45">
               3 langkah · tanpa proses klaim
             </span>
           </span>
         </span>
         <ChevronDown
           className={cn(
-            'size-4 shrink-0 text-ink/35 transition-transform duration-300',
+            'size-4 shrink-0 text-forest/35 transition-transform duration-300',
             open && 'rotate-180',
           )}
           strokeWidth={2.4}
@@ -611,10 +611,10 @@ function HowItWorksCard({ open, onToggle }: { open: boolean; onToggle: () => voi
             <ol className="flex flex-col gap-3 border-t border-soil/12 px-5 pb-5 pt-4 sm:px-6">
               {REFERRAL_STEPS.map((step, index) => (
                 <li key={step} className="flex items-start gap-3">
-                  <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-sage text-[11px] font-bold tabular-nums text-forest">
+                  <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-sage text-[11px] font-semibold tabular-nums text-forest">
                     {index + 1}
                   </span>
-                  <p className="text-[12.5px] leading-relaxed text-ink/65">{step}</p>
+                  <p className="text-[12.5px] leading-relaxed text-forest/65">{step}</p>
                 </li>
               ))}
             </ol>

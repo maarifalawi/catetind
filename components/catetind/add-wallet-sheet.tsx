@@ -170,7 +170,7 @@ export function AddWalletSheet({
     >
       {/* ── KARTU PREVIEW — warna & motifnya sudah final sebelum disimpan ── */}
       <div>
-        <p className="flex items-center gap-1.5 text-[11.5px] font-semibold text-ink/55">
+        <p className="flex items-center gap-1.5 text-[11.5px] font-medium text-forest/55">
           <Sparkles className="size-3.5 shrink-0 text-forest/60" strokeWidth={2.4} />
           {ADD_WALLET_SHEET_COPY.previewLabel}
         </p>
@@ -178,15 +178,15 @@ export function AddWalletSheet({
           <WalletFace wallet={preview} className="rounded-[1.5rem] p-4">
             <div className="relative flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="truncate font-display text-[14.5px] font-bold tracking-tight">
+                <p className="truncate font-display text-[14.5px] font-medium tracking-tight">
                   {preview.name}
                 </p>
                 {preview.number && (
-                  <p className="mt-1 truncate text-[10px] font-semibold tracking-[0.2em] text-cream/60 tabular-nums">
+                  <p className="mt-1 truncate text-[10px] font-medium tracking-[0.2em] text-cream/60 tabular-nums">
                     {preview.number}
                   </p>
                 )}
-                <span className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-cream/20 px-2.5 py-0.5 text-[9.5px] font-semibold uppercase tracking-[0.1em] text-cream/90 ring-1 ring-inset ring-cream/30">
+                <span className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-cream/20 px-2.5 py-0.5 text-[9.5px] font-medium uppercase tracking-[0.1em] text-cream/90 ring-1 ring-inset ring-cream/30">
                   <span aria-hidden className="size-1.5 rounded-full bg-cream/70" />
                   {WALLET_TYPE_LABEL[preview.type]}
                 </span>
@@ -212,7 +212,7 @@ export function AddWalletSheet({
 
       {/* ── STEP 1 — jenis akun ─────────────────────────────────────────── */}
       <div className="mt-5">
-        <p className="text-[13px] font-semibold leading-snug text-ink">
+        <p className="text-[13px] font-medium leading-snug text-forest">
           {ADD_WALLET_SHEET_COPY.kindLabel}
         </p>
         <ChoicePills
@@ -227,10 +227,10 @@ export function AddWalletSheet({
       {/* ── STEP 2 — pilih brand dari daftar (tidak berlaku untuk Tunai) ── */}
       <RevealStep show={type !== 'Cash'}>
         <div className="mt-5">
-          <p className="text-[13px] font-semibold leading-snug text-ink">
+          <p className="text-[13px] font-medium leading-snug text-forest">
             {ADD_WALLET_SHEET_COPY.brandLabel}
           </p>
-          <p className="mt-1 text-[11.5px] leading-relaxed text-ink/45">
+          <p className="mt-1 text-[11.5px] leading-relaxed text-forest/45">
             {ADD_WALLET_SHEET_COPY.brandHint}
           </p>
           <div
@@ -256,7 +256,7 @@ export function AddWalletSheet({
                 >
                   <span
                     className={cn(
-                      'relative flex size-8 items-center justify-center rounded-xl text-[12px] font-black ring-1 ring-inset',
+                      'relative flex size-8 items-center justify-center rounded-xl text-[12px] font-medium ring-1 ring-inset',
                       option.tile,
                     )}
                   >
@@ -267,7 +267,7 @@ export function AddWalletSheet({
                       </span>
                     )}
                   </span>
-                  <span className="text-[11.5px] font-bold leading-tight text-ink">
+                  <span className="text-[11.5px] font-medium leading-tight text-forest">
                     {option.name}
                   </span>
                 </button>
@@ -285,10 +285,10 @@ export function AddWalletSheet({
               }}
               className="flex flex-col items-center justify-center gap-1.5 rounded-2xl border-2 border-dashed border-ink/[0.1] bg-cream/50 px-2 py-3 transition-all duration-200 hover:border-forest/25 hover:bg-cream active:scale-95"
             >
-              <span className="flex size-8 items-center justify-center rounded-xl bg-cream text-ink/40">
+              <span className="flex size-8 items-center justify-center rounded-xl bg-cream text-forest/40">
                 <Plus className="size-4" strokeWidth={2.6} />
               </span>
-              <span className="text-[11.5px] font-semibold leading-tight text-ink/45">
+              <span className="text-[11.5px] font-medium leading-tight text-forest/45">
                 {ADD_WALLET_SHEET_COPY.brandNone}
               </span>
             </button>
@@ -298,7 +298,7 @@ export function AddWalletSheet({
 
       {/* ── STEP 3 — nama akun (satu-satunya field wajib) ────────────────── */}
       <label className="mt-5 block">
-        <span className="text-[13px] font-semibold leading-snug text-ink">
+        <span className="text-[13px] font-medium leading-snug text-forest">
           {ADD_WALLET_SHEET_COPY.nameLabel}
         </span>
         <input
@@ -310,10 +310,10 @@ export function AddWalletSheet({
             setBrand(null)
           }}
           placeholder={ADD_WALLET_SHEET_COPY.namePlaceholder}
-          className="mt-2 w-full rounded-2xl bg-cream px-4 py-3 text-[15px] font-semibold text-ink outline-none ring-1 ring-soil/16 transition-shadow placeholder:font-medium placeholder:text-ink/25 focus:ring-2 focus:ring-forest/35"
+          className="mt-2 w-full rounded-2xl bg-cream px-4 py-3 text-[15px] font-medium text-forest outline-none ring-1 ring-soil/16 transition-shadow placeholder:font-medium placeholder:text-forest/25 focus:ring-2 focus:ring-forest/35"
         />
         {/* bantuan kontekstual DI DALAM form (PRD 194–200) */}
-        <span className="mt-1.5 block text-[11.5px] leading-relaxed text-ink/45">
+        <span className="mt-1.5 block text-[11.5px] leading-relaxed text-forest/45">
           {ADD_WALLET_SHEET_COPY.duplicateHint}
         </span>
       </label>
@@ -321,13 +321,13 @@ export function AddWalletSheet({
       {/* ── STEP 4 — nomor tersamarkan (opsional, muka kartu bank saja) ──── */}
       <RevealStep show={type === 'Bank' && trimmedName.length > 0}>
         <label className="mt-4 block">
-          <span className="text-[13px] font-semibold leading-snug text-ink">
+          <span className="text-[13px] font-medium leading-snug text-forest">
             {ADD_WALLET_SHEET_COPY.numberLabel}
           </span>
           <span className="mt-2 flex items-center gap-2 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/16 focus-within:ring-2 focus-within:ring-forest/35">
             <span
               aria-hidden
-              className="shrink-0 text-[15px] font-bold tracking-[0.18em] text-ink/30"
+              className="shrink-0 text-[15px] font-medium tracking-[0.18em] text-forest/30"
             >
               {WALLET_NUMBER_MASK}
             </span>
@@ -338,10 +338,10 @@ export function AddWalletSheet({
               autoComplete="off"
               placeholder={ADD_WALLET_SHEET_COPY.numberPlaceholder}
               aria-label={ADD_WALLET_SHEET_COPY.numberLabel}
-              className="min-w-0 flex-1 bg-transparent text-[15px] font-semibold tracking-[0.18em] text-ink tabular-nums outline-none placeholder:font-medium placeholder:tracking-normal placeholder:text-ink/25"
+              className="min-w-0 flex-1 bg-transparent text-[15px] font-medium tracking-[0.18em] text-forest tabular-nums outline-none placeholder:font-medium placeholder:tracking-normal placeholder:text-forest/25"
             />
           </span>
-          <span className="mt-1.5 block text-[11.5px] leading-relaxed text-ink/45">
+          <span className="mt-1.5 block text-[11.5px] leading-relaxed text-forest/45">
             {ADD_WALLET_SHEET_COPY.numberHint}
           </span>
         </label>

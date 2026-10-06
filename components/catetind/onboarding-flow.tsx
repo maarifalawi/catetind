@@ -23,6 +23,14 @@ import { OnboardingStepSituation } from './onboarding-step-situation'
 import { OnboardingStepIncome } from './onboarding-step-income'
 import { OnboardingStepFirstTransaction } from './onboarding-step-first-transaction'
 import type { TransactionTypeId } from '@/components/dashboard/transaction-input-engine'
+import { addWalletAccount, getMoneySnapshot, walletIdOfName } from '@/lib/money/store'
+import { recordTransaction } from '@/lib/transaction-bus'
+import {
+  TRANSACTION_DEFAULT_NAME,
+  TRANSACTION_FALLBACK_CATEGORY,
+  localISODate,
+} from '@/lib/data/history'
+import { AI_CAPTURE_COPY } from '@/lib/ai-chat'
 
 /**
  * Onboarding Flow (/app/onboarding) — inventaris #10, PRD Domain 6 Section 5.
@@ -143,10 +151,44 @@ export function OnboardingFlow() {
     setWalletBalance(null)
   }
 
-  /** 4B — simpan transaksi pertama: haptic + toast, lalu upacara tanaman. */
+  /** 4B — simpan transaksi pertama: tulis LEDGER, lalu haptic + toast + upacara. */
   function handleFirstTransaction() {
     if (!canSubmitTransaction) {
       toast('Isi nominalnya dulu ya 🌿')
+      return
+    }
+    if (firstTransactionDone) return
+    /* ── CATAT KE LEDGER (paket 65 · Tugas B) ────────────────────────────────
+       Dulu langkah ini cuma menampilkan toast "berhasil" TANPA menulis satu baris
+       pun — klaim tanpa jejak. Sekarang ia menulis lewat pintu yang sama dengan
+       app (`recordTransaction` → `postTransaction`), dan dompet dari langkah 2
+       dibuat lewat `addWalletAccount()` supaya saldo awalnya benar-benar ada.
+       Kalau penulisan gagal, user diberi tahu apa adanya (bukan toast sukses). */
+    let recorded = false
+    try {
+      const snapshot = getMoneySnapshot()
+      if (!walletIdOfName(snapshot, walletName)) {
+        addWalletAccount({
+          name: walletName,
+          type: 'Cash',
+          opening: walletBalance ?? 0,
+          context: 'pribadi',
+        })
+      }
+      recordTransaction({
+        name: txNote.trim() || TRANSACTION_DEFAULT_NAME[txType],
+        amount: txAmount,
+        type: txType,
+        category: TRANSACTION_FALLBACK_CATEGORY,
+        wallet: walletName,
+        date: localISODate(),
+      })
+      recorded = true
+    } catch {
+      recorded = false
+    }
+    if (!recorded) {
+      toast.error(AI_CAPTURE_COPY.saveFailed)
       return
     }
     setFirstTransactionDone(true)
@@ -274,7 +316,7 @@ export function OnboardingFlow() {
             <button
               type="button"
               onClick={() => goToStep(currentStep - 1)}
-              className="-mr-2 rounded-full px-3 py-1.5 text-[13px] font-medium tracking-[-0.01em] text-ink/40 transition-colors hover:bg-ink/[0.04] hover:text-ink"
+              className="-mr-2 rounded-full px-3 py-1.5 text-[13px] font-medium tracking-[-0.01em] text-forest/40 transition-colors hover:bg-ink/[0.04] hover:text-forest"
             >
               Kembali
             </button>
@@ -341,7 +383,7 @@ export function OnboardingFlow() {
             className={cn(
               'group flex h-14 w-full items-center justify-between gap-3 rounded-full pl-6 pr-2 transition-all duration-200',
               cta.disabled
-                ? 'cursor-not-allowed bg-ink/[0.06] text-ink/35'
+                ? 'cursor-not-allowed bg-ink/[0.06] text-forest/35'
                 : 'bg-forest text-cream shadow-[0_16px_34px_-18px_rgba(69,89,78,0.85)] hover:bg-forest-soft active:scale-[0.98]',
             )}
           >
@@ -352,7 +394,7 @@ export function OnboardingFlow() {
               className={cn(
                 'flex size-10 shrink-0 items-center justify-center rounded-full transition-colors duration-200',
                 cta.disabled
-                  ? 'bg-cream text-ink/25'
+                  ? 'bg-cream text-forest/25'
                   : 'bg-cream text-forest group-hover:bg-mint',
               )}
             >

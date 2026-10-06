@@ -72,7 +72,7 @@ import {
 } from '@/lib/money/joint-store'
 import { UNDO_WINDOW_MS } from '@/lib/data/history'
 import { trackMoneyEvent } from '@/lib/analytics'
-import { JOINT_CONTEXT_COPY, CONTEXT_LABEL, contextCaption } from '@/lib/data/money-context'
+import { JOINT_CONTEXT_COPY, CONTEXT_LABEL } from '@/lib/data/money-context'
 import { cn } from '@/lib/utils'
 
 /* ── Joint Wallet (/app/joint) — PRD Domain 2D ───────────────────────────────
@@ -581,10 +581,7 @@ export function JointScreen() {
             ini diletakkan di ATAS percabangan itu supaya kedua wujud sama-sama
             punya switcher (mobile + desktop) dan sama-sama jujur saat konteks
             aktif bukan `bersama`. */}
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
-          <p className="text-center text-[11.5px] font-medium text-ink/45 lg:text-left">
-            {contextCaption(context)}
-          </p>
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-end lg:gap-4">
           {/* dua penempatan seperti Home/Budget: satu untuk mobile, satu untuk
               desktop (paket 47) — bukan satu kontrol yang direntangkan */}
           <div className="flex justify-center lg:hidden">
@@ -601,17 +598,17 @@ export function JointScreen() {
         {context !== 'bersama' && (
           <div className="mt-3 flex flex-col gap-3 rounded-[1.75rem] border-2 border-dashed border-hud-amber/40 bg-cream/70 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
-              <p className="font-display text-[14.5px] font-bold tracking-tight text-ink">
+              <p className="font-display text-[14.5px] font-medium tracking-tight text-forest">
                 {JOINT_CONTEXT_COPY.title}
               </p>
-              <p className="mt-1 text-[12.5px] leading-relaxed text-ink/55">
+              <p className="mt-1 text-[12.5px] leading-relaxed text-forest/55">
                 {JOINT_CONTEXT_COPY.body(CONTEXT_LABEL[context])}
               </p>
             </div>
             <button
               type="button"
               onClick={() => setContext('bersama')}
-              className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-2xl bg-forest px-5 text-[13px] font-semibold text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
+              className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-2xl bg-forest px-5 text-[13px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
             >
               <HeartHandshake className="size-4" strokeWidth={2.4} />
               {JOINT_CONTEXT_COPY.cta}
@@ -667,7 +664,7 @@ export function JointScreen() {
                           }
                         }}
                         aria-label="Nama dompet bersama"
-                        className="w-full rounded-xl bg-cream px-2.5 py-1 font-display text-[19px] font-black tracking-tight text-ink outline-none ring-2 ring-forest/35 lg:text-[22px]"
+                        className="w-full rounded-xl bg-cream px-2.5 py-1 font-display text-[19px] font-medium tracking-tight text-forest outline-none ring-2 ring-forest/35 lg:text-[22px]"
                       />
                     ) : (
                       <button
@@ -679,12 +676,12 @@ export function JointScreen() {
                         aria-label="Ubah nama dompet bersama"
                         className="group flex max-w-full items-center gap-1.5 text-left"
                       >
-                        <h1 className="truncate font-display text-[19px] font-black tracking-tight text-ink lg:text-[22px]">
+                        <h1 className="truncate font-display text-[19px] font-semibold tracking-tight text-forest lg:text-[22px]">
                           {wallet.name}
                         </h1>
                         <Pencil
                           aria-hidden
-                          className="size-3.5 shrink-0 text-ink/25 transition-colors group-hover:text-ink/50"
+                          className="size-3.5 shrink-0 text-forest/25 transition-colors group-hover:text-forest/50"
                           strokeWidth={2.4}
                         />
                       </button>
@@ -697,10 +694,10 @@ export function JointScreen() {
                         💚
                       </span>
                       <span aria-hidden>{partner.avatar}</span>
-                      <span className="font-semibold text-ink/60">
+                      <span className="font-medium text-forest/60">
                         {me.name} &amp; {partner.name}
                       </span>
-                      <span className="text-ink/40">
+                      <span className="text-forest/40">
                         · Bersama sejak {jointDateLong(wallet.createdAt)}
                       </span>
                     </p>
@@ -715,17 +712,17 @@ export function JointScreen() {
                   fiktif dan dihapus. Yang benar-benar bisa dipertanggungjawabkan
                   adalah TOTAL PENGELUARAN BERSAMA bulan ini. */}
               <div className="mt-3 border-t border-soil/10 pt-3">
-                <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10.5px] font-bold uppercase tracking-[0.14em] text-ink/40">
+                <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10.5px] font-medium uppercase tracking-[0.14em] text-forest/40">
                   <ReceiptText className="size-3.5 shrink-0" strokeWidth={2.4} />
                   Total Pengeluaran Bersama
-                  <span className="rounded-full bg-hud-sage/20 px-2 py-0.5 text-[9.5px] font-bold tracking-wide text-[#000000] ring-1 ring-hud-sage/30">
+                  <span className="rounded-full bg-hud-sage/20 px-2 py-0.5 text-[9.5px] font-medium tracking-wide text-forest ring-1 ring-hud-sage/30">
                     {JOINT_MONTH_LABEL}
                   </span>
                 </p>
-                <p className="mt-1 font-display text-[28px] font-black leading-none tabular-nums tracking-tight text-ink">
+                <p className="mt-1 font-display text-[28px] font-semibold leading-none tabular-nums tracking-tight text-forest">
                   {moneyLabel(settlement.totalSpent, isMasked)}
                 </p>
-                <p className="mt-1.5 text-[10.5px] leading-snug text-ink/45">
+                <p className="mt-1.5 text-[10.5px] leading-snug text-forest/45">
                   Catatan gabungan {me.name} &amp; {partner.name} — bukan saldo rekening bersama. Uang
                   tetap di dompet masing-masing, dihitung impas pas settle.
                 </p>
@@ -752,15 +749,15 @@ export function JointScreen() {
                 <section className="mt-4 rounded-[1.75rem] bg-[#ffffff] px-4 pb-4 pt-5 ring-1 ring-soil/10 sm:px-6 lg:mt-6">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <h2 className="flex items-center gap-2 font-display text-[15px] font-black tracking-tight text-ink">
+                      <h2 className="flex items-center gap-2 font-display text-[15px] font-semibold tracking-tight text-forest">
                         <Scale className="size-4 text-hud-terracotta" strokeWidth={2.3} />
                         Timbangan Kita
                       </h2>
-                      <p className="mt-0.5 text-[11.5px] text-ink/45">
+                      <p className="mt-0.5 text-[11.5px] text-forest/45">
                         Sisi yang turun = yang nalangin lebih banyak (patungan saja)
                       </p>
                     </div>
-                    <span className="shrink-0 rounded-full bg-hud-sage/15 px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-wide text-[#000000] ring-1 ring-hud-sage/30">
+                    <span className="shrink-0 rounded-full bg-hud-sage/15 px-2.5 py-1 text-[10.5px] font-medium uppercase tracking-wide text-forest ring-1 ring-hud-sage/30">
                       {JOINT_MONTH_LABEL.split(' ')[0]}
                     </span>
                   </div>
@@ -787,7 +784,7 @@ export function JointScreen() {
                   />
                   {/* pembeda dua lapisan angka (audit #2 & #3): kartu = seluruh
                       catatan, panci timbangan = patungan saja */}
-                  <p className="mt-2.5 text-[10.5px] leading-relaxed text-ink/40">
+                  <p className="mt-2.5 text-[10.5px] leading-relaxed text-forest/40">
                     Kartu di atas = seluruh uang yang keluar dari kantong {me.name} &amp;{' '}
                     {partner.name} bulan ini (traktiran &amp; 🔒 privat ikut). Panci timbangan di
                     atasnya cuma menimbang yang patungan.
@@ -811,15 +808,15 @@ export function JointScreen() {
               <section className="mt-6 lg:col-span-7 lg:mt-6">
                 <div className="flex items-end justify-between gap-3">
                   <div>
-                    <h2 className="flex items-center gap-2 font-display text-[15px] font-black tracking-tight text-ink">
+                    <h2 className="flex items-center gap-2 font-display text-[15px] font-semibold tracking-tight text-forest">
                       <Heart className="size-4 text-hud-terracotta" strokeWidth={2.3} />
                       Cerita Kita
                     </h2>
-                    <p className="mt-0.5 text-[11.5px] text-ink/45">
+                    <p className="mt-0.5 text-[11.5px] text-forest/45">
                       Jejak catatan kalian, terjalin dalam satu garis waktu
                     </p>
                   </div>
-                  <span className="shrink-0 text-[10.5px] font-semibold text-ink/35">
+                  <span className="shrink-0 text-[10.5px] font-medium text-forest/35">
                     {feed.length} catatan
                   </span>
                 </div>
@@ -830,24 +827,24 @@ export function JointScreen() {
                     <span aria-hidden className="text-[30px]">
                       🌱
                     </span>
-                    <h3 className="mt-3 font-display text-[17px] font-black tracking-tight text-ink">
+                    <h3 className="mt-3 font-display text-[17px] font-semibold tracking-tight text-forest">
                       Dompet bersama kalian masih kosong
                     </h3>
-                    <p className="mt-1.5 text-[13px] leading-relaxed text-ink/55">
+                    <p className="mt-1.5 text-[13px] leading-relaxed text-forest/55">
                       Siapa yang catat duluan? Ayo mulai! 💚
                     </p>
                     <div className="mt-5 flex flex-col gap-2.5 sm:flex-row sm:justify-center">
                       <button
                         type="button"
                         onClick={() => setShowAddSheet(true)}
-                        className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-forest px-5 text-[13.5px] font-semibold text-mint transition-colors hover:bg-forest-soft active:scale-[0.99]"
+                        className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-forest px-5 text-[13.5px] font-medium text-mint transition-colors hover:bg-forest-soft active:scale-[0.99]"
                       >
                         Aku duluan! ✋
                       </button>
                       <button
                         type="button"
                         onClick={() => toast.info(`Notifikasi dikirim ke ${partner.name}! 📩`)}
-                        className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-cream px-5 text-[13.5px] font-semibold text-ink ring-1 ring-soil/16 transition-colors hover:bg-cream active:scale-[0.99]"
+                        className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-cream px-5 text-[13.5px] font-medium text-forest ring-1 ring-soil/16 transition-colors hover:bg-cream active:scale-[0.99]"
                       >
                         <HeartHandshake className="size-4" strokeWidth={2.3} />
                         Tantang {partner.name}! 💬
@@ -888,7 +885,7 @@ export function JointScreen() {
             'fixed bottom-8 left-1/2 z-50 flex size-14 -translate-x-1/2 items-center justify-center rounded-full',
             'bg-forest text-mint shadow-[0_18px_36px_-14px_rgba(69,89,78,0.65)] ring-1 ring-forest/25',
             'transition-transform duration-150 hover:scale-105 active:scale-95',
-            'lg:bottom-8 lg:left-auto lg:right-24 lg:h-12 lg:w-auto lg:translate-x-0 lg:gap-2 lg:px-5 lg:text-[13px] lg:font-bold',
+            'lg:bottom-8 lg:left-auto lg:right-24 lg:h-12 lg:w-auto lg:translate-x-0 lg:gap-2 lg:px-5 lg:text-[13px] lg:font-medium',
           )}
         >
           <Plus className="size-6 lg:size-4" strokeWidth={2.4} />
@@ -967,7 +964,7 @@ export function JointScreen() {
             body={
               <>
                 {JOINT_DELETE_COPY.bodyLead(pendingDeleteTx.description)}
-                <b className="font-semibold text-ink tabular-nums">
+                <b className="font-medium text-forest tabular-nums">
                   {moneyLabel(pendingDeleteTx.amount, isMasked)}
                 </b>{' '}
                 {JOINT_DELETE_COPY.bodyTail}

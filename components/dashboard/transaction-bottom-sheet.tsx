@@ -1,15 +1,26 @@
 'use client'
 
-import { useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Drawer } from 'vaul'
 import {
   TransactionInputEngine,
   type TransactionTypeId,
 } from './transaction-input-engine'
+import { TransferFlow } from '@/components/catetind/transfer-flow'
 import { useMoneyContext } from '@/components/catetind/money-context-provider'
 import { usePrivacy } from '@/components/catetind/privacy-provider'
 import { defaultWalletNameFor } from '@/lib/money/store'
 import { useTransactionSubmit } from '@/hooks/use-transaction-submit'
+
+/**
+ * Jeda serah-terima engine → alur Pindah Dana (paket 70).
+ *
+ * Sheet transaksi HARUS menutup dulu (animasi tutup Vaul ±280ms) sebelum drawer
+ * Pindah Dana dibuka. Membuka dua drawer Vaul bertumpuk langsung membuat dua
+ * scroll-lock & dua perangkap fokus saling menimpa, dan sheet barunya tampak
+ * "melompat" masuk. 320ms = animasi tutup + sedikit kelonggaran.
+ */
+const TRANSFER_HANDOFF_MS = 320
 
 /**
  * Shell MOBILE dari Transaction Input Engine (inventaris 97a/b/c).
@@ -57,11 +68,27 @@ export function TransactionBottomSheet({
   const { masked } = usePrivacy()
   const submit = useTransactionSubmit(walletName ?? defaultWalletNameFor(context), masked)
 
-  return (
-    <Drawer.Root open={open} onOpenChange={setOpen} autoFocus={false}>
-      <Drawer.Trigger asChild>{trigger}</Drawer.Trigger>
+  /* Pintu "Pindah Dana" dari engine (paket 70): tutup sheet ini DULU, baru buka
+     alur pindah dana yang sebenarnya — lihat `TRANSFER_HANDOFF_MS` di atas. */
+  const [transferOpen, setTransferOpen] = useState(false)
+  const transferTimer = useRef<number | null>(null)
+  useEffect(
+    () => () => {
+      if (transferTimer.current !== null) window.clearTimeout(transferTimer.current)
+    },
+    [],
+  )
+  function openTransferFlow() {
+    setOpen(false)
+    transferTimer.current = window.setTimeout(() => setTransferOpen(true), TRANSFER_HANDOFF_MS)
+  }
 
-      <Drawer.Portal>
+  return (
+    <>
+      <Drawer.Root open={open} onOpenChange={setOpen} autoFocus={false}>
+        <Drawer.Trigger asChild>{trigger}</Drawer.Trigger>
+
+        <Drawer.Portal>
         {/* overlay disamakan dengan shell WEB (transaction-web-modal.tsx):
             digelapkan TANPA `backdrop-blur`. Blur layar penuh memaksa browser
             menghitung ulang blur tiap frame selama animasi buka/tutup, padahal
@@ -102,11 +129,20 @@ export function TransactionBottomSheet({
                  user melihat ke mana catatannya akan masuk (paket 59) */
               sourceLabel={walletName}
               onSubmitted={(draft) => submit(draft, () => setOpen(false))}
+              /* pintu Pindah Dana (paket 70) */
+              onTransferRequest={openTransferFlow}
             />
           </div>
         </Drawer.Content>
-      </Drawer.Portal>
-    </Drawer.Root>
+        </Drawer.Portal>
+      </Drawer.Root>
+
+      {/* alur Pindah Dana yang SEBENARNYA — sheet yang sama dengan pintu lain
+          (menu "Lainnya", sidebar desktop, kartu dompet), jadi tidak ada jalur
+          tulis transfer kedua. `source` sengaja null: engine tidak menebak
+          dompet asalnya, user memilihnya di langkah pertama sheet itu. */}
+      <TransferFlow open={transferOpen} onOpenChange={setTransferOpen} />
+    </>
   )
 }
 

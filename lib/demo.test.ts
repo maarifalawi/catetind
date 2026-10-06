@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { DEMO_MODE } from './demo'
+import { describe, expect, it, vi } from 'vitest'
+import { DEMO_MODE, SHOWS_SAMPLE_DATA } from './demo'
 import {
   DEMO_FORCE_MONTHLY_RECAP,
   DEMO_FORCE_WEEKLY_RECAP,
@@ -41,5 +41,29 @@ describe('saklar demo · satu gerbang NEXT_PUBLIC_DEMO', () => {
     /* dua saklar yang MEMANG selalu mati (dinyalakan manual saat ditinjau) */
     expect(DEMO_JOINED_CELEBRATION).toBe(false)
     expect(DEMO_THIN_DATA).toBe(false)
+  })
+
+  /* ── paket 64 · Paket D: gerbang seed data contoh ─────────────────────────
+     `SHOWS_SAMPLE_DATA` adalah SATU pintu yang memutuskan apakah data contoh
+     (dompet/kekayaan/celengan/tagihan/joint) boleh tampil sebagai isi awal.
+     Sejak "data real, tanpa seed": gerbangnya HANYA menyala di TEST (banyak
+     test mengunci angka seed) atau saat `NEXT_PUBLIC_DEMO=1` (versi demo yang
+     ditinjau). `pnpm dev` & produksi tanpa env = KOSONG. Kalau gerbangnya
+     salah, user pertama melihat data orang lain sebagai miliknya. */
+  it('SHOWS_SAMPLE_DATA: produksi tanpa env = tanpa data contoh', async () => {
+    vi.resetModules()
+    vi.stubEnv('NODE_ENV', 'production')
+    const prod = await import('./demo')
+    expect(prod.SHOWS_SAMPLE_DATA).toBe(false)
+
+    vi.resetModules()
+    vi.stubEnv('NODE_ENV', 'test')
+    const dev = await import('./demo')
+    expect(dev.SHOWS_SAMPLE_DATA).toBe(true)
+
+    /* kembalikan env supaya test lain tidak terpengaruh */
+    vi.unstubAllEnvs()
+    vi.resetModules()
+    expect(SHOWS_SAMPLE_DATA).toBe(process.env.NODE_ENV !== 'production')
   })
 })

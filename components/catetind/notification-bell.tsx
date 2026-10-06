@@ -51,7 +51,12 @@ export function NotificationBell({ className }: { className?: string }) {
         aria-label={HOME_HEADER_COPY.notificationsLabel}
         aria-expanded={open}
         aria-haspopup="dialog"
-        className="relative flex size-11 shrink-0 items-center justify-center rounded-full bg-cream text-ink ring-1 ring-soil/12 transition-colors hover:bg-sage active:scale-95"
+        /* UKURAN = TOMBOL TETANGGA (rapi-ukuran paket 70). Dulu loncengnya MATI
+           di `size-11` (44px) sementara tombol mata & menu `size-9` (36px) — di
+           header mobile lonceng tampak "besar sendiri" dan barisnya jadi tidak
+           simetris. Sekarang ia 36px di mobile (sama persis dengan tetangganya)
+           dan tetap 44px mulai `lg:` supaya sejajar dengan avatar desktop. */
+        className="relative flex size-9 shrink-0 items-center justify-center rounded-full bg-cream text-forest ring-1 ring-soil/12 transition-colors hover:bg-sage active:scale-95 lg:size-11"
       >
         <Bell className="size-4" aria-hidden />
         {/* dot kecil = penanda "ada yang baru" (mock: belum ada, jadi statis) */}
@@ -73,7 +78,7 @@ export function NotificationBell({ className }: { className?: string }) {
                DESKTOP: kembali menjadi dropdown yang menempel di lonceng. */
             className="fixed inset-x-4 top-16 z-50 rounded-3xl bg-cream p-4 ring-1 ring-soil/12 shadow-[0_24px_60px_-28px_rgba(69,89,78,0.55)] lg:absolute lg:inset-x-auto lg:right-0 lg:top-[calc(100%+0.5rem)] lg:w-[20rem]"
           >
-            <p className="font-display text-[14px] font-semibold tracking-tight text-ink">
+            <p className="font-display text-[14px] font-medium tracking-tight text-forest">
               {HOME_NOTIFICATION_COPY.title}
             </p>
 
@@ -81,10 +86,10 @@ export function NotificationBell({ className }: { className?: string }) {
               <span className="flex size-11 items-center justify-center rounded-full bg-cream text-forest/70 ring-1 ring-soil/12">
                 <BellOff className="size-5" strokeWidth={2} aria-hidden />
               </span>
-              <p className="mt-3 text-[13px] font-semibold text-ink">
+              <p className="mt-3 text-[13px] font-medium text-forest">
                 {HOME_NOTIFICATION_COPY.emptyTitle}
               </p>
-              <p className="mt-1 text-[11.5px] leading-relaxed text-ink/55">
+              <p className="mt-1 text-[11.5px] leading-relaxed text-forest/55">
                 {HOME_NOTIFICATION_COPY.emptyBody}
               </p>
             </div>
@@ -92,7 +97,7 @@ export function NotificationBell({ className }: { className?: string }) {
             <Link
               href={HOME_NOTIFICATION_COPY.settingsHref}
               onClick={() => setOpen(false)}
-              className="mt-3 flex items-center justify-between rounded-2xl bg-forest px-4 py-2.5 text-[12.5px] font-semibold text-cream transition-colors hover:bg-forest-soft active:scale-[0.99]"
+              className="mt-3 flex items-center justify-between rounded-2xl bg-forest px-4 py-2.5 text-[12.5px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.99]"
             >
               {HOME_NOTIFICATION_COPY.settingsLink}
               <ChevronRight className="size-4" strokeWidth={2.6} aria-hidden />

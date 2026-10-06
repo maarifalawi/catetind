@@ -192,11 +192,11 @@ export function AnnualPlanModal({
                 <TriangleAlert className="size-4" strokeWidth={2.4} />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-[12px] leading-snug font-semibold text-ink">
+                <p className="text-[12px] leading-snug font-medium text-forest">
                   Harga Early Bird ditutup setelah 5.000 user pertama.{' '}
                   <span
                     key={slots}
-                    className="inline-block animate-[count-pop_0.5s_ease-out] font-semibold whitespace-nowrap text-hud-terracotta tabular-nums"
+                    className="inline-block animate-[count-pop_0.5s_ease-out] font-medium whitespace-nowrap text-hud-terracotta tabular-nums"
                   >
                     Sisa slot: {slots}
                   </span>
@@ -207,7 +207,7 @@ export function AnnualPlanModal({
                     style={{ width: `${claimedPct}%` }}
                   />
                 </div>
-                <p className="mt-1 text-[10px] text-ink/45">
+                <p className="mt-1 text-[10px] text-forest/45">
                   {formatCount(claimedSlots)} dari {formatCount(EARLY_BIRD_TOTAL)} slot sudah terisi
                 </p>
               </div>
@@ -220,12 +220,12 @@ export function AnnualPlanModal({
               <Trophy className="size-5" strokeWidth={2.2} />
             </span>
             <div className="min-w-0 flex-1">
-              <h2 id="annual-title" className="text-xl font-semibold tracking-tight text-ink">
+              <h2 id="annual-title" className="text-xl font-medium tracking-tight text-forest">
                 Paket Tahunan
               </h2>
               <p
                 id="annual-desc"
-                className="mt-0.5 text-[13px] leading-relaxed break-words text-ink/55"
+                className="mt-0.5 text-[13px] leading-relaxed break-words text-forest/55"
               >
                 Aktif 365 hari sekali bayar — pilih yang paling pas buat kamu.
               </p>
@@ -234,7 +234,7 @@ export function AnnualPlanModal({
               type="button"
               onClick={onClose}
               aria-label="Tutup"
-              className="flex size-9 shrink-0 items-center justify-center rounded-full bg-cream text-ink ring-1 ring-soil/12 transition-colors hover:bg-sage"
+              className="flex size-9 shrink-0 items-center justify-center rounded-full bg-cream text-forest ring-1 ring-soil/12 transition-colors hover:bg-sage"
             >
               <X className="size-4" strokeWidth={2.2} />
             </button>
@@ -268,20 +268,20 @@ export function AnnualPlanModal({
           {/* E. payment trust + CTA */}
           <div className="shrink-0 border-t border-soil/12 px-5 pt-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:px-6 lg:pb-5">
             <div className="flex items-center justify-between gap-3 text-[13px]">
-              <span className="min-w-0 truncate text-ink/55">
+              <span className="min-w-0 truncate text-forest/55">
                 {selected ? selected.name : 'Belum ada paket dipilih'}
               </span>
               <span
                 className={cn(
-                  'shrink-0 font-semibold tabular-nums',
-                  selected ? 'text-ink' : 'text-ink/35',
+                  'shrink-0 font-medium tabular-nums',
+                  selected ? 'text-forest' : 'text-forest/35',
                 )}
               >
                 {selected ? `${formatIDR(selected.price)}/tahun` : '—'}
               </span>
             </div>
 
-            <p className="mt-3 text-[10px] font-semibold tracking-[0.16em] text-ink/40 uppercase">
+            <p className="mt-3 text-[10px] font-medium tracking-[0.16em] text-forest/40 uppercase">
               Metode pembayaran
             </p>
             <PaymentLogoRow className="mt-1.5" />
@@ -291,10 +291,10 @@ export function AnnualPlanModal({
               onClick={handlePay}
               disabled={!selectedPlan || paying}
               className={cn(
-                'mt-3.5 flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-semibold transition-colors',
+                'mt-3.5 flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-medium transition-colors',
                 selectedPlan && !paying
                   ? 'bg-forest text-mint hover:bg-forest-soft active:scale-[0.99]'
-                  : 'cursor-not-allowed bg-ink/[0.07] text-ink/35',
+                  : 'cursor-not-allowed bg-ink/[0.07] text-forest/35',
               )}
             >
               {paying ? (
@@ -307,7 +307,7 @@ export function AnnualPlanModal({
               )}
             </button>
 
-            <p className="mt-3 flex items-start justify-center gap-1.5 text-[11px] leading-relaxed text-ink/45">
+            <p className="mt-3 flex items-start justify-center gap-1.5 text-[11px] leading-relaxed text-forest/45">
               <Lock className="mt-0.5 size-3 shrink-0" strokeWidth={2.4} />
               <span>
                 Bayar sekali. Tanpa perpanjangan otomatis. Bisa upgrade kapan aja dengan bayar
@@ -341,8 +341,8 @@ function PlanCard({
 }) {
   const onAccent = Boolean(plan.hero)
   const borderTone = onAccent ? 'border-forest/15' : 'border-soil/12'
-  const mutedTone = onAccent ? 'text-forest/65' : 'text-ink/50'
-  const bodyTone = onAccent ? 'text-forest' : 'text-ink'
+  const mutedTone = onAccent ? 'text-forest/65' : 'text-forest/50'
+  const bodyTone = onAccent ? 'text-forest' : 'text-forest'
 
   return (
     <button
@@ -361,14 +361,14 @@ function PlanCard({
     >
       {/* badge hero — mengapung di atas kartu */}
       {plan.badge && (
-        <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-forest px-3 py-1 text-[10px] font-semibold whitespace-nowrap text-mint">
+        <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-forest px-3 py-1 text-[10px] font-medium whitespace-nowrap text-mint">
           {plan.badge}
         </span>
       )}
 
       <span className="flex items-start justify-between gap-2">
         <span className="min-w-0">
-          <span className={cn('block text-[15px] font-semibold tracking-tight', bodyTone)}>
+          <span className={cn('block text-[15px] font-medium tracking-tight', bodyTone)}>
             {plan.name}
           </span>
           <span className={cn('mt-0.5 block text-[11px] leading-relaxed break-words', mutedTone)}>
@@ -391,7 +391,7 @@ function PlanCard({
       </span>
 
       <span className="mt-3 flex items-baseline gap-1">
-        <span className={cn('text-2xl font-semibold tracking-tight tabular-nums', bodyTone)}>
+        <span className={cn('text-2xl font-medium tracking-tight tabular-nums', bodyTone)}>
           {formatIDR(plan.price)}
         </span>
         <span className={cn('text-[11px] font-medium', mutedTone)}>/tahun</span>
@@ -414,7 +414,7 @@ function PlanCard({
                 'flex items-start gap-2 border-t py-2 text-[11px] leading-relaxed',
                 borderTone,
                 bodyTone,
-                isGift && 'mt-1 rounded-xl bg-forest/10 px-2 font-semibold',
+                isGift && 'mt-1 rounded-xl bg-forest/10 px-2 font-medium',
               )}
             >
               {!isGift && (
@@ -434,7 +434,7 @@ function PlanCard({
 
       {/* D. mock selisih upgrade — relevan kalau user lagi di Paket Catet Aja */}
       {plan.hero && showUpgradeDiff && upgradeDiff > 0 && (
-        <span className="mt-2.5 block rounded-xl bg-forest px-2.5 py-2 text-[10px] leading-relaxed font-semibold text-mint">
+        <span className="mt-2.5 block rounded-xl bg-forest px-2.5 py-2 text-[10px] leading-relaxed font-medium text-mint">
           (Upgrade sekarang cukup bayar selisih: {formatIDR(upgradeDiff)})
         </span>
       )}
@@ -451,7 +451,7 @@ function PlanCard({
         <span
           key={count}
           className={cn(
-            'font-semibold tabular-nums',
+            'font-medium tabular-nums',
             bodyTone,
             flashing && 'animate-[count-pop_0.5s_ease-out]',
           )}

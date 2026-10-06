@@ -152,7 +152,7 @@ export function DesktopSidebar({
           aria-label={collapsed ? 'Buka sidebar' : 'Tutup sidebar'}
           title={collapsed ? 'Buka sidebar  [  ]' : 'Tutup sidebar  [  ]'}
           className={cn(
-            'flex size-8 shrink-0 items-center justify-center rounded-full text-ink/40 ring-1 ring-ink/[0.08] transition-all duration-200 hover:bg-cream hover:text-ink active:scale-95',
+            'flex size-8 shrink-0 items-center justify-center rounded-full text-forest/40 ring-1 ring-ink/[0.08] transition-all duration-200 hover:bg-cream hover:text-forest active:scale-95',
             /* tombol collapse/rangkai adalah afordans desktop — di drawer mobile
                tidak relevan (drawer selalu expanded) */
             variant === 'drawer' && 'hidden',
@@ -180,9 +180,9 @@ export function DesktopSidebar({
         className={cn(
           'group/item relative mt-6 flex items-center justify-center gap-2 rounded-full transition-all duration-300',
           inputLocked
-            ? 'cursor-not-allowed bg-ink/[0.07] text-ink/35'
+            ? 'cursor-not-allowed bg-ink/[0.07] text-forest/35'
             : 'bg-forest text-cream hover:bg-forest-soft active:scale-[0.97]',
-          collapsed ? 'mx-auto size-11' : 'w-full py-2.5 text-[13px] font-semibold',
+          collapsed ? 'mx-auto size-11' : 'w-full py-2.5 text-[13px] font-medium',
         )}
       >
         <Plus
@@ -217,7 +217,7 @@ export function DesktopSidebar({
             {collapsed ? (
               <div className="mx-3 mb-2 h-px bg-ink/[0.07]" aria-hidden />
             ) : (
-              <p className="px-3.5 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-ink/30">
+              <p className="px-3.5 pb-1.5 text-[10px] font-medium uppercase tracking-[0.18em] text-forest/30">
                 {section.label}
               </p>
             )}
@@ -235,8 +235,8 @@ export function DesktopSidebar({
                         ? 'justify-center rounded-2xl px-0 py-2.5'
                         : 'gap-3 rounded-full px-3.5 py-2',
                       isActive
-                        ? 'bg-forest/[0.07] font-semibold text-forest'
-                        : 'font-medium text-ink/55 hover:bg-ink/[0.03] hover:text-ink',
+                        ? 'bg-forest/[0.07] font-medium text-forest'
+                        : 'font-medium text-forest/55 hover:bg-ink/[0.03] hover:text-forest',
                     )}
                   >
                     <Icon
@@ -271,7 +271,7 @@ export function DesktopSidebar({
                   onClick={() => setTransferOpen(true)}
                   title={TRANSFER_DOOR_COPY.menuHint}
                   className={cn(
-                    'group/item relative flex w-full items-center text-[13px] font-medium text-ink/55 transition-all duration-200 hover:bg-ink/[0.03] hover:text-ink',
+                    'group/item relative flex w-full items-center text-[13px] font-medium text-forest/55 transition-all duration-200 hover:bg-ink/[0.03] hover:text-forest',
                     collapsed
                       ? 'justify-center rounded-2xl px-0 py-2.5'
                       : 'gap-3 rounded-full px-3.5 py-2',
@@ -305,7 +305,7 @@ export function DesktopSidebar({
           <Link
             href="/settings/logout"
             className={cn(
-              'group/item relative flex w-full items-center text-[13px] font-medium text-ink/55 transition-all duration-200 hover:bg-plum/15 hover:text-plum',
+              'group/item relative flex w-full items-center text-[13px] font-medium text-forest/55 transition-all duration-200 hover:bg-plum/15 hover:text-plum',
               collapsed
                 ? 'justify-center rounded-2xl px-0 py-2.5'
                 : 'gap-3 rounded-full px-3.5 py-2',
@@ -359,8 +359,8 @@ export function DesktopSidebar({
               : 'max-w-[180px] flex-1 opacity-100',
           )}
         >
-          <p className="truncate text-sm font-semibold text-ink">Jon Snow</p>
-          <p className="truncate text-xs text-ink/45">jon@snow.com</p>
+          <p className="truncate text-sm font-medium text-forest">Jon Snow</p>
+          <p className="truncate text-xs text-forest/45">jon@snow.com</p>
         </div>
       </div>
 

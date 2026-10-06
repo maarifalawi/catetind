@@ -309,7 +309,7 @@ export function SecuritySettingsPanel() {
             <button
               type="button"
               onClick={() => openPinDialog('change')}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-sage px-3.5 py-2 text-[12.5px] font-semibold text-forest transition-colors hover:bg-mint/40 focus-visible:ring-2 focus-visible:ring-forest/40 focus-visible:outline-none"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-sage px-3.5 py-2 text-[12.5px] font-medium text-forest transition-colors hover:bg-mint/40 focus-visible:ring-2 focus-visible:ring-forest/40 focus-visible:outline-none"
             >
               <KeyRound className="size-3.5" strokeWidth={2.4} aria-hidden />
               Ubah PIN
@@ -318,8 +318,8 @@ export function SecuritySettingsPanel() {
         )}
 
         {!biometricAvailable && (
-          <p className="mt-3 flex items-start gap-2 rounded-2xl bg-sage/50 px-4 py-3 text-[11.5px] leading-relaxed text-ink/55">
-            <Fingerprint className="mt-0.5 size-3.5 shrink-0 text-ink/40" aria-hidden />
+          <p className="mt-3 flex items-start gap-2 rounded-2xl bg-sage/50 px-4 py-3 text-[11.5px] leading-relaxed text-forest/55">
+            <Fingerprint className="mt-0.5 size-3.5 shrink-0 text-forest/40" aria-hidden />
             {LOCK_SETTINGS_COPY.biometricUnsupported}
           </p>
         )}
@@ -358,13 +358,13 @@ export function SecuritySettingsPanel() {
         </ul>
 
         <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
-          <p className="min-w-0 text-[12.5px] leading-relaxed text-ink/55">
+          <p className="min-w-0 text-[12.5px] leading-relaxed text-forest/55">
             {DELETE_ACCOUNT_COPY.cardBody}
           </p>
           <button
             type="button"
             onClick={openDeleteDialog}
-            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-plum/20 px-4 py-3 text-sm font-semibold text-plum ring-1 ring-plum/30 transition-colors hover:bg-plum/30"
+            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-plum/20 px-4 py-3 text-sm font-medium text-plum ring-1 ring-plum/30 transition-colors hover:bg-plum/30"
           >
             <Trash2 className="size-4" strokeWidth={2.4} aria-hidden />
             {DELETE_ACCOUNT_COPY.cardCta}
@@ -386,7 +386,7 @@ export function SecuritySettingsPanel() {
         <div className="mt-4 flex flex-wrap gap-2">
           <Link
             href="/privacy"
-            className="inline-flex items-center gap-2 rounded-2xl bg-sage px-4 py-3 text-sm font-semibold text-forest transition-colors duration-200 hover:bg-mint/40 focus-visible:ring-2 focus-visible:ring-forest/40 focus-visible:outline-none motion-reduce:transition-none"
+            className="inline-flex items-center gap-2 rounded-2xl bg-sage px-4 py-3 text-sm font-medium text-forest transition-colors duration-200 hover:bg-mint/40 focus-visible:ring-2 focus-visible:ring-forest/40 focus-visible:outline-none motion-reduce:transition-none"
           >
             <FileText className="size-4" strokeWidth={2.4} aria-hidden />
             {PRIVACY_LINK_COPY.label}
@@ -394,14 +394,14 @@ export function SecuritySettingsPanel() {
           </Link>
           <Link
             href="/terms"
-            className="inline-flex items-center gap-2 rounded-2xl bg-sage px-4 py-3 text-sm font-semibold text-forest transition-colors duration-200 hover:bg-mint/40 focus-visible:ring-2 focus-visible:ring-forest/40 focus-visible:outline-none motion-reduce:transition-none"
+            className="inline-flex items-center gap-2 rounded-2xl bg-sage px-4 py-3 text-sm font-medium text-forest transition-colors duration-200 hover:bg-mint/40 focus-visible:ring-2 focus-visible:ring-forest/40 focus-visible:outline-none motion-reduce:transition-none"
           >
             <FileText className="size-4" strokeWidth={2.4} aria-hidden />
             {TERMS_LINK_COPY.label}
             <ArrowUpRight className="size-4" strokeWidth={2.4} aria-hidden />
           </Link>
         </div>
-        <p className="mt-3 text-[11.5px] leading-relaxed text-ink/55">
+        <p className="mt-3 text-[11.5px] leading-relaxed text-forest/55">
           {PRIVACY_LINK_COPY.pairNote}
         </p>
       </SettingsCard>
@@ -527,18 +527,18 @@ export function SecuritySettingsPanel() {
             {/* Unduh dulu — jalan keluar yang jujur: keputusan destruktif tidak
                 boleh memaksa user kehilangan salinan datanya. */}
             <div className="rounded-2xl bg-sage/60 px-4 py-3">
-              <p className="text-[12.5px] font-semibold text-ink">
+              <p className="text-[12.5px] font-medium text-forest">
                 {DELETE_ACCOUNT_COPY.downloadFirstLead}
               </p>
               <button
                 type="button"
                 onClick={handleDownloadFromDialog}
-                className="mt-2 inline-flex items-center gap-2 rounded-full bg-cream px-3.5 py-2 text-[12.5px] font-semibold text-ink ring-1 ring-soil/12 transition-colors hover:bg-sage"
+                className="mt-2 inline-flex items-center gap-2 rounded-full bg-cream px-3.5 py-2 text-[12.5px] font-medium text-forest ring-1 ring-soil/12 transition-colors hover:bg-sage"
               >
                 <Download className="size-3.5" strokeWidth={2.4} aria-hidden />
                 {DELETE_ACCOUNT_COPY.downloadFirstCta}
               </button>
-              <p className="mt-2 text-[11.5px] leading-relaxed text-ink/50">
+              <p className="mt-2 text-[11.5px] leading-relaxed text-forest/50">
                 {DELETE_ACCOUNT_COPY.downloadFirstHint}
               </p>
             </div>
@@ -661,7 +661,7 @@ export function DataExportSettingsPanel() {
           </span>
           <ul className="min-w-0 flex flex-col gap-1.5">
             {EXPORT_DATA_COPY.includes.map((item) => (
-              <li key={item} className="flex items-start gap-2 text-[13px] leading-relaxed text-ink/60">
+              <li key={item} className="flex items-start gap-2 text-[13px] leading-relaxed text-forest/60">
                 <span aria-hidden className="mt-[7px] size-1.5 shrink-0 rounded-full bg-forest/40" />
                 <span>{item}</span>
               </li>
@@ -669,7 +669,7 @@ export function DataExportSettingsPanel() {
           </ul>
         </div>
 
-        <p className="mt-3 flex items-start gap-2 text-[11.5px] leading-relaxed text-ink/45">
+        <p className="mt-3 flex items-start gap-2 text-[11.5px] leading-relaxed text-forest/45">
           <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-forest" strokeWidth={2.2} aria-hidden />
           {EXPORT_DATA_COPY.metadataNote}
         </p>
@@ -678,7 +678,7 @@ export function DataExportSettingsPanel() {
           type="button"
           onClick={handleDownload}
           disabled={busy}
-          className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-forest py-3.5 text-sm font-semibold text-mint transition-colors hover:bg-forest-soft active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto sm:px-6"
+          className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-forest py-3.5 text-sm font-medium text-mint transition-colors hover:bg-forest-soft active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto sm:px-6"
         >
           {busy ? (
             <LoaderCircle className="size-4 animate-spin" strokeWidth={2.4} aria-hidden />
@@ -693,13 +693,13 @@ export function DataExportSettingsPanel() {
           diberi badge DEMO dan penjelasan mengapa tombolnya belum mengirim apa pun. */}
       <SettingsCard title={EXPORT_DATA_COPY.emailTitle}>
         <p className="mt-2 inline-flex flex-wrap items-center gap-2">
-          <span className="rounded-full bg-hud-amber/30 px-2 py-0.5 text-[10.5px] font-semibold tracking-wide text-hud-terracotta uppercase">
+          <span className="rounded-full bg-hud-amber/30 px-2 py-0.5 text-[10.5px] font-medium tracking-wide text-hud-terracotta uppercase">
             {EXPORT_DATA_COPY.emailDemoBadge}
           </span>
         </p>
-        <p className="mt-2 text-[13px] leading-relaxed text-ink/60">{EXPORT_DATA_COPY.emailBody}</p>
+        <p className="mt-2 text-[13px] leading-relaxed text-forest/60">{EXPORT_DATA_COPY.emailBody}</p>
 
-        <p className="mt-3 inline-flex items-center gap-1.5 text-[11.5px] text-ink/45">
+        <p className="mt-3 inline-flex items-center gap-1.5 text-[11.5px] text-forest/45">
           <Mail className="size-3.5 shrink-0" strokeWidth={2.2} aria-hidden />
           {EXPORT_DATA_COPY.emailTargetLabel}: {EMAIL}
         </p>
@@ -707,7 +707,7 @@ export function DataExportSettingsPanel() {
         <button
           type="button"
           onClick={handleEmailPath}
-          className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-cream py-3.5 text-sm font-semibold text-ink ring-1 ring-soil/12 transition-colors hover:bg-sage sm:w-auto sm:px-6"
+          className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-cream py-3.5 text-sm font-medium text-forest ring-1 ring-soil/12 transition-colors hover:bg-sage sm:w-auto sm:px-6"
         >
           <Mail className="size-4" strokeWidth={2.4} aria-hidden />
           {EXPORT_DATA_COPY.emailCta}

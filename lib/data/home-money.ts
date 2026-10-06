@@ -115,8 +115,25 @@ const HOME_MONEY_ANCHOR_MONTH = Number(HISTORY_TODAY_ISO.slice(5, 7))
 /** bulan periode dalam bentuk pendek — "Sep" */
 export const HOME_MONEY_MONTH_SHORT = MONTHS_SHORT[HOME_MONEY_ANCHOR_MONTH - 1]
 
-/** 5 titik seri = 5 pekan dalam sebulan (tgl 1–7, 8–14, 15–21, 22–28, 29–31) */
-export const HOME_MONEY_WEEK_COUNT = 5
+/**
+ * Jumlah hari dalam bulan ISO `YYYY-MM` (paket 70) — sumber PANJANG seri
+ * "Arus Uang".
+ *
+ * Kenapa ini ada: serinya dulu dipaku 5 pekan (tgl 1–7, 8–14, 15–21, 22–28,
+ * 29–31), jadi label sumbu-X terakhir SELALU "29 <bulan>" — walau bulannya
+ * punya 31 hari. Pemilik produk menandai itu sebagai bug ("kok cuma sampai
+ * tanggal 29?"). Sekarang panjang serinya = jumlah hari bulan itu apa adanya.
+ *
+ * Fungsi murni (tanpa state/jam) supaya bisa diuji langsung: `Date.UTC` dipakai,
+ * bukan waktu lokal, jadi hasilnya tidak bergeser mengikuti timezone mesin.
+ */
+export function daysInMonth(monthISO: string): number {
+  const year = Number(monthISO.slice(0, 4))
+  const month = Number(monthISO.slice(5, 7))
+  if (!Number.isFinite(year) || !Number.isFinite(month) || month < 1 || month > 12) return 31
+  /* "hari ke-0 bulan berikutnya" = hari terakhir bulan ini */
+  return new Date(Date.UTC(year, month, 0)).getUTCDate()
+}
 
 /**
  * Copy ringkasan uang Home. Semua kalimat yang dipakai KEDUA kartu tinggal di
@@ -141,16 +158,60 @@ export const HOME_MONEY_COPY = {
   /** badge kepala kartu chart — surplus/defisit, bukan selalu "Surplus" */
   chartBadgeSurplus: (pct: number) => `Surplus ${pct}%`,
   chartBadgeDeficit: (pct: number) => `Defisit ${pct}%`,
-  /** strip insight kartu chart — tiga varian jujur, tidak ada klaim "hemat"
-   *  saat pengeluaran justru melebihi pemasukan */
-  chartSavedLabel: 'pemasukan',
-  chartSavedTail: 'berhasil disimpan — surplus',
-  chartSpentLabel: 'pemasukan terpakai',
-  chartOverspendTail: 'pengeluaran lebih besar dari pemasukan — minus',
-  chartNoIncome: 'Belum ada pemasukan di periode ini — catat pemasukan dulu biar arus uangnya kebaca 🌱',
+  /* ── KARTU "ARUS UANG" (paket 66 — visualisasinya digambar ULANG) ──────────
+     Bentuk lama: dua spline + dua area + grid penuh + strip insight panjang
+     ("93% pemasukan berhasil disimpan — surplus Rp …"). Permintaan pemilik
+     produk: visualisasinya dimaksimalkan, lebih ramah dibaca, dan bukan grafik
+     garis "pasaran". Bentuk baru: kolom PASANG-SURUT per pekan (uang masuk naik,
+     uang keluar turun dari SATU garis nol), tiga angka kunci, dan pekan yang
+     bisa diketuk untuk melihat rincinya. Karena itu:
+       · subjudul "Pemasukan vs pengeluaran, per pekan" → DIHAPUS (kolomnya
+         sudah bicara sendiri, dan judul kartu sudah menyebut "Arus Uang");
+       · strip insight kalimat panjang → DIHAPUS (badge kepala sudah menyebut
+         surplus/defisit %, tiga angka kunci sudah menyebut masuk/keluar/sisa). */
+  /** tiga angka kunci di atas grafik */
+  chartIncomeLabel: 'Pemasukan',
+  chartExpenseLabel: 'Pengeluaran',
+  /** netto periode ini — "Sisa" lebih ramah daripada "Net" */
+  chartNetLabel: 'Sisa',
+  /** aria grafik (tidak tampil): menyebut bahwa tiap titik = satu tanggal */
+  chartAria: 'Grafik arus uang harian bulan ini — tiap titik satu tanggal',
+  /** judul kecil pekan aktif di strip rincian */
+  chartWeekLabel: (label: string) => `Pekan ${label}`,
+  /** satu kolom pekan untuk pembaca layar (nominal sudah tersensor di pemanggil) */
+  chartColumnAria: (label: string, income: string, expense: string) =>
+    `Pekan ${label}: pemasukan ${income}, pengeluaran ${expense}`,
+  /* ── KARTU "ARUS UANG" (paket 68 — digambar ulang jadi garis minimalis) ────
+     Bentuk paket 67 (peta aliran alluvial + "irama pekan") terasa berat bagi
+     pemilik produk. Bentuk paket 68: SATU grafik garis spline halus tanpa grid
+     & tanpa sumbu tebal — hanya dua kurva (masuk & keluar) dengan area gradient
+     yang memudar, plus tooltip minimalis (tanggal + nominal). Dua label arah di
+     tooltip hidup di sini; legenda inline memakai label angka kunci yang SUDAH
+     ada (`chartIncomeLabel`/`chartExpenseLabel`) supaya tidak lahir sinonim
+     baru. `buildFlowMap()` + copy paket 66/67 TIDAK dihapus: geometri alluvial
+     tetap teruji di `home-money.test.ts`, jadi ia masih punya rumahnya bila
+     bentuk itu dibutuhkan lagi. */
+  chartTooltipIncome: 'Masuk',
+  chartTooltipExpense: 'Keluar',
+  /* ── KARTU "ARUS UANG" (paket 67 — visualisasi digambar ULANG lagi) ─────────
+     Bentuk paket 66 (kolom pasang-surut per pekan) masih terasa "grafik
+     pasaran" bagi pemilik produk. Bentuk paket 67: PETA ALIRAN (alluvial) —
+     uang masuk digambar sebagai satu simpul, lalu PECAH jadi dua pita: yang
+     benar-benar keluar ("Pengeluaran") dan yang benar-benar disimpan ("Sisa").
+     Pita yang mengalir = visualnya, tebal pita = besarnya. Ditambah "Irama
+     pekan" (deret gelembung) supaya cerita per-pekan tetap hidup tanpa
+     kembali ke batang/garis. Copy di bawah menemani bentuk baru itu. */
+  /** label kecil di atas peta aliran */
+  chartFlowLabel: 'Ke mana uangmu mengalir',
+  /** label simpul saat uang keluar melebihi uang masuk (pita masuk tambahan) */
+  chartDeficitLabel: 'Defisit',
+  /** judul strip irama pekan (deret gelembung di bawah peta aliran) */
+  chartRhythmLabel: 'Irama pekan',
+  /** satu-satunya kalimat di kartu saat belum ada pemasukan (pengeluaran saja) */
+  chartNoIncome:
+    'Belum ada pemasukan di periode ini — catat pemasukan dulu biar arus uangnya kebaca 🌱',
   /** judul + EMPTY STATE Arus Uang (58.1) */
   chartTitle: 'Arus Uang',
-  chartSubtitle: 'Pemasukan vs pengeluaran, per pekan',
   chartEmptyTitle: 'Arus uangmu belum tergambar',
   chartEmptyBody:
     'Grafik ini menggambar dari catatanmu sendiri — catat pemasukan & pengeluaran pertama, dan dua garisnya langsung hidup.',
@@ -161,6 +222,11 @@ export const HOME_MONEY_COPY = {
   distributionEmptyBody:
     'Mulai catat pengeluaranmu — di sini kelihatan kategori mana yang paling menelan. Nggak ada yang perlu dihakimi.',
   distributionEmptyCta: '+ Catat Pengeluaran',
+  /** caption TENGAH donat Distribusi Pengeluaran (paket 68 — bentuk "pie
+   *  modern"). Sengaja pendek ("Total") supaya muat di lubang donat; nominalnya
+   *  menyusul di bawah label, dan porsi per kategori hidup di legend di
+   *  sampingnya. */
+  distributionCenterLabel: 'Total',
   distributionTopLead: 'jadi pos terbesar',
   distributionTopTail: 'dari total pengeluaran',
   distributionDetailTail: 'dari total',
@@ -213,12 +279,13 @@ export function homeRowsInLastDays(
 }
 
 /**
- * Batas JUMLAH baris kartu "Transaksi Terakhir" di Home (paket 64): maksimal 10
- * baris. Kartu ini ringkasan, bukan arsip — kalau seminggu penuh berisi puluhan
- * catatan, daftar yang panjang justru menenggelamkan kartu di bawahnya.
- * Daftar lengkap (tanpa batas) tetap hidup di `/history`.
+ * Batas JUMLAH baris kartu "Transaksi Terakhir" di Home (paket 64, diturunkan di
+ * paket 66): maksimal 5 baris. Kartu ini ringkasan, bukan arsip — di bento grid
+ * kolom kanan (2/3) ia berbagi baris dengan dua daftar ringkas di kolom kiri,
+ * jadi daftar yang panjang bikin dashboard menggantung & tidak simetris.
+ * Daftar lengkap (tanpa batas) tetap hidup di `/history` lewat "Lihat semua".
  */
-export const HOME_RECENT_MAX_ROWS = 10
+export const HOME_RECENT_MAX_ROWS = 5
 
 /** potong daftar ke batas baris kartu Home; input dianggap sudah urut terbaru dulu */
 export function capHomeRecentRows(
@@ -274,6 +341,26 @@ export function groupHomeMoneyRows(
  * salinannya sendiri).
  */
 export const HOME_DISTRIBUTION_PALETTE = ['#b5b987', '#91a0b8', '#ffb885', '#b89191'] as const
+
+/* ── WARNA GRAFIK "ARUS UANG" (paket 68 · visualisasi digambar ulang) ────────
+   Recharts butuh warna sebagai NILAI atribut (`stroke`, `stopColor`, `fill`),
+   bukan kelas Tailwind — jadi warnanya tinggal di lapis data, sama seperti
+   `HOME_DISTRIBUTION_PALETTE` & `WALLET_TREND_COLORS` (lib/data/wallet-detail).
+   Isinya tetap palet kanon: mint (#91bb9e) untuk uang masuk, plum / hud-
+   terracotta (#b89191) untuk uang keluar; sisanya forest dengan opasitas, jadi
+   penjaga palet (`scripts/theme/audit-palette.mjs`) tetap hijau. */
+export const HOME_CASHFLOW_COLORS = {
+  /** uang masuk — mint (leaf) */
+  income: '#91bb9e',
+  /** uang keluar — plum (hud-terracotta) */
+  expense: '#b89191',
+  /** label sumbu-X — tanpa garis/sumbu tebal, cuma teks tanggal pudar */
+  axis: 'rgba(69,89,78,0.45)',
+  /** garis kursor tooltip */
+  cursor: 'rgba(69,89,78,0.16)',
+  /** halo titik aktif — putih kanvas */
+  dot: '#ffffff',
+} as const
 
 export interface HomeDistributionSegment {
   label: string
@@ -386,34 +473,41 @@ export function summarizeHomeMoney(rows: HomeMoneyRow[]): HomeMoneySummary {
 }
 
 export interface HomeCashFlowPoint {
-  /** label pekan untuk sumbu-X grafik, mis. "22 Sep" */
+  /** label tanggal untuk sumbu-X grafik, mis. "22 Okt" */
   label: string
   income: number
   expense: number
 }
 
 /**
- * Seri arus uang 5 pekan — TURUNAN dari baris yang sama dengan kartu "Transaksi
- * Terakhir", bukan angka kedua.
+ * Seri "Arus Uang" — SATU TITIK PER HARI, sepanjang bulan yang diminta (paket 70).
  *
- * Tiga aturan yang membuat dua kartu mustahil bercerita beda:
- *   1. setiap baris jatuh ke TEPAT satu pekan (`Math.floor((tgl - 1) / 7)`),
- *      jadi Σ(pengeluaran seri) ≡ total pengeluaran strip — bukan kebetulan,
+ * Tiga aturan yang membuat kartu chart & kartu "Transaksi Terakhir" mustahil
+ * bercerita beda:
+ *   1. setiap baris jatuh ke TEPAT satu tanggal (`points[tgl - 1]`), jadi
+ *      Σ(pengeluaran seri) ≡ total yang dibaca kartu mana pun — bukan kebetulan,
  *      tapi konsekuensi;
- *   2. pindah dana netral, sama seperti strip;
- *   3. `monthISO` (paket 58): label "Bulan ini" hanya boleh memuat baris bulan
- *      itu. Dulu semua baris dibucket apa pun bulannya, padahal sumbu-X-nya
- *      bilang "1 Sep"/"8 Sep". Sekarang baris di luar bulan dibuang dari seri —
- *      dan karena strip membaca TOTAL SERI, keduanya tetap mustahil berbeda.
- *      Tanpa `monthISO` (pemakaian lama/test), semua baris dibucket seperti dulu.
+ *   2. pindah dana netral, sama seperti strip (uang pindah dompet ≠ keluar);
+ *   3. `monthISO` menyaring bulannya: label "Bulan ini · Okt" hanya boleh memuat
+ *      baris bulan itu.
+ *
+ * PANJANGNYA = jumlah hari bulan itu (`daysInMonth`), bukan 5 pekan seperti dulu.
+ * Itu yang membuat label terakhir sekarang benar-benar "31 Okt" di bulan 31 hari,
+ * dan grafiknya ikut bergerak begitu ada catatan baru (data dibaca dari ledger
+ * yang sama setiap render — real-time, bukan teks yang ditempel).
+ *
+ * Tanpa `monthISO` (render server & render pertama client) serinya 31 titik
+ * berlabel bulan kanon demo — jumlah titiknya SAMA dengan bulan asli, jadi
+ * hidrasi tidak menggeser tata letak grafik.
  */
 export function homeCashFlowSeries(
   rows: HomeMoneyRow[],
   monthISO?: string,
 ): HomeCashFlowPoint[] {
   const monthShort = monthShortFromISO(monthISO)
-  const points: HomeCashFlowPoint[] = Array.from({ length: HOME_MONEY_WEEK_COUNT }, (_, i) => ({
-    label: `${1 + i * 7} ${monthShort}`,
+  const dayCount = monthISO ? daysInMonth(monthISO) : 31
+  const points: HomeCashFlowPoint[] = Array.from({ length: dayCount }, (_, i) => ({
+    label: `${i + 1} ${monthShort}`,
     income: 0,
     expense: 0,
   }))
@@ -424,8 +518,8 @@ export function homeCashFlowSeries(
     /* tanggal rusak (defensif) diperlakukan sebagai tanggal 1, bukan NaN yang
        bisa membuat `points[NaN]` undefined */
     const safeDay = Number.isFinite(day) && day > 0 ? day : 1
-    const index = Math.min(Math.floor((safeDay - 1) / 7), points.length - 1)
-    const point = points[index]
+    const point = points[Math.min(safeDay, dayCount) - 1]
+    if (!point) continue
     if (row.type === 'income') point.income += row.amount
     else if (row.type === 'expense') point.expense += row.amount
   }
@@ -447,6 +541,112 @@ export function summarizeCashFlowSeries(
     expense += point.expense
   }
   return { income, expense, net: income - expense }
+}
+
+/* ── PEMASUKAN BULANAN (panel Ringkasan Saldo) ────────────────────────────────
+   Kartu "Pemasukan" di panel Ringkasan Saldo dulu menulis angka contoh
+   (`Rp 8.900.000`, `+27%`, `Februari`, 12 bar statis). Sekarang angkanya MURNI
+   dari baris ledger dompet yang sedang dibuka, dan label bulannya dibaca dari
+   tanggal perangkat — jadi tidak pernah "nyangkut" di satu bulan. */
+
+const MONTHS_FULL_ID = [
+  'Januari',
+  'Februari',
+  'Maret',
+  'April',
+  'Mei',
+  'Juni',
+  'Juli',
+  'Agustus',
+  'September',
+  'Oktober',
+  'November',
+  'Desember',
+]
+
+/** `2026-10` + (−1) → `2026-09` (aritmetika bulan murni, tanpa `Date`) */
+export function shiftMonthKey(monthKey: string, delta: number): string {
+  const [year, month] = monthKey.split('-').map(Number)
+  const total = year * 12 + (month - 1) + delta
+  const nextYear = Math.floor(total / 12)
+  const nextMonth = (((total % 12) + 12) % 12) + 1
+  return `${nextYear}-${String(nextMonth).padStart(2, '0')}`
+}
+
+/** bulan berjalan dari tanggal perangkat; jatuh ke bulan kanon saat SSR */
+export function monthKeyOf(todayISO: string): string {
+  return /^\d{4}-\d{2}/.test(todayISO) ? todayISO.slice(0, 7) : HISTORY_TODAY_ISO.slice(0, 7)
+}
+
+export interface HomeIncomeStats {
+  /** nama bulan penuh (mis. "Oktober") */
+  monthLabel: string
+  /** total pemasukan bulan berjalan */
+  thisMonth: number
+  /** pemasukan bulan sebelumnya (pembagi persen) */
+  lastMonth: number
+  /** perubahan % vs bulan lalu; `null` = belum bisa dihitung (bulan lalu Rp 0) */
+  changePct: number | null
+  /** seri `months` bulan terakhir (paling lama → terbaru) untuk bar chart */
+  series: { key: string; label: string; value: number; active: boolean }[]
+}
+
+/**
+ * Ringkasan pemasukan bulanan dari baris yang SUDAH tersaring (dompet/konteks).
+ * Murni: tanpa React, tanpa `Date` — angka & labelnya deterministik.
+ */
+export function incomeStatsFor(
+  rows: HomeMoneyRow[],
+  todayISO: string,
+  months = 6,
+): HomeIncomeStats {
+  const monthKey = monthKeyOf(todayISO)
+  const byMonth = new Map<string, number>()
+  for (const row of rows) {
+    if (row.type !== 'income') continue
+    const key = row.date.slice(0, 7)
+    byMonth.set(key, (byMonth.get(key) ?? 0) + row.amount)
+  }
+  const thisMonth = byMonth.get(monthKey) ?? 0
+  const lastMonth = byMonth.get(shiftMonthKey(monthKey, -1)) ?? 0
+  const changePct = lastMonth > 0 ? Math.round(((thisMonth - lastMonth) / lastMonth) * 100) : null
+  const series = Array.from({ length: months }, (_, i) => {
+    const key = shiftMonthKey(monthKey, -(months - 1 - i))
+    return {
+      key,
+      label: (MONTHS_FULL_ID[Number(key.slice(5, 7)) - 1] ?? '').slice(0, 3),
+      value: byMonth.get(key) ?? 0,
+      active: key === monthKey,
+    }
+  })
+  return {
+    monthLabel: MONTHS_FULL_ID[Number(monthKey.slice(5, 7)) - 1] ?? '',
+    thisMonth,
+    lastMonth,
+    changePct,
+    series,
+  }
+}
+
+/**
+ * Perubahan ARUS BERSIH (masuk − keluar) bulan ini vs bulan lalu — dipakai
+ * badge tren di donat saldo. `null` = bulan lalu belum ada arus (tidak bisa
+ * dihitung); badge-nya disembunyikan, bukan menampilkan persen karangan.
+ */
+export function netFlowChangePct(rows: HomeMoneyRow[], todayISO: string): number | null {
+  const monthKey = monthKeyOf(todayISO)
+  const lastKey = shiftMonthKey(monthKey, -1)
+  let netThis = 0
+  let netLast = 0
+  for (const row of rows) {
+    const signed = row.type === 'income' ? row.amount : row.type === 'expense' ? -row.amount : 0
+    if (signed === 0) continue
+    const key = row.date.slice(0, 7)
+    if (key === monthKey) netThis += signed
+    else if (key === lastKey) netLast += signed
+  }
+  if (netLast === 0) return null
+  return Math.round(((netThis - netLast) / Math.abs(netLast)) * 100)
 }
 
 /**
@@ -524,4 +724,111 @@ export function shouldShowDailyNudge(input: {
   if (input.accountEmpty) return false
   if (input.forceShow) return true
   return (input.hour ?? 0) >= NUDGE_HOUR_THRESHOLD && !input.hasRecordToday
+}
+
+/* ── PETA ALIRAN "ARUS UANG" (paket 67) ──────────────────────────────────────
+   Visual kartu Arus Uang sekarang sebuah ALUVIUM (peta aliran), bukan batang
+   maupun garis: uang masuk memecah jadi pita "keluar" dan pita "disimpan".
+
+   Geometrinya hidup di sini — murni, tanpa React, tanpa DOM — supaya "kenapa
+   pita ini setinggi itu" bisa dibuktikan oleh test, bukan hanya oleh mata
+   (repo ini tidak punya test komponen).
+
+   Satuan: PERSEN kanvas (0..100) di KEDUA sumbu. Komponen membacanya langsung:
+   simpul = <span> DOM (`top`/`height` dalam %), pita = SVG `viewBox="0 0 100
+   100"` + `preserveAspectRatio="none"`. Jadi tidak ada satu pun koordinat
+   piksel yang bergantung breakpoint. */
+
+/** satu simpul (palang vertikal): `top` & `size` dalam persen kanvas */
+export interface FlowNode {
+  top: number
+  size: number
+}
+
+/** satu pita: dua port (kiri → kanan) dengan arah uang sebagai `tone` */
+export interface FlowRibbon {
+  from: FlowNode
+  to: FlowNode
+  /** 'out' = uang keluar (rose) · 'in' = uang disimpan (mint) */
+  tone: 'out' | 'in'
+}
+
+export interface FlowMap {
+  /** simpul "Pemasukan" (kolom kiri) */
+  income: FlowNode
+  /** simpul "Pengeluaran" (kolom kanan) */
+  expense: FlowNode
+  /** simpul "Sisa" — uang yang benar-benar disimpan (null kalau tidak ada) */
+  saved: FlowNode | null
+  /** simpul "Defisit" — uang keluar > uang masuk (null kalau tidak defisit) */
+  deficit: FlowNode | null
+  ribbons: FlowRibbon[]
+}
+
+/** tinggi (%) sepasang simpul + jarak antar dua simpul sekolom */
+export const FLOW_SPAN = 74
+export const FLOW_GAP = 8
+
+/**
+ * Peta aliran uang bulan ini — MURNI.
+ *
+ * Masukan = dua total (pemasukan & pengeluaran); keluaran = geometri simpul &
+ * pita dalam persen kanvas. Kunci keseimbangannya: `total = max(masuk, keluar)`
+ * dan kolom kiri (masuk + defisit) maupun kolom kanan (keluar + sisa) dua-duanya
+ * berjumlah `total` — jadi kedua kolom selalu bisa dibandingkan dengan SATU
+ * skala, dan pita tidak pernah meluber keluar simpulnya.
+ */
+export function buildFlowMap(income: number, expense: number): FlowMap {
+  const saved = Math.max(income - expense, 0)
+  const deficit = Math.max(expense - income, 0)
+  const total = Math.max(income, expense)
+  /* -FLOW_GAP supaya "konten + jarak" = FLOW_SPAN saat simpulnya memang dua */
+  const unit = total > 0 ? (FLOW_SPAN - FLOW_GAP) / total : 0
+
+  /* kolom kiri: Pemasukan (+ Defisit kalau uang keluar melebihi uang masuk) */
+  const leftGap = deficit > 0 ? FLOW_GAP : 0
+  const leftTop = 50 - (income * unit + deficit * unit + leftGap) / 2
+  const incomeNode: FlowNode = { top: leftTop, size: income * unit }
+  const deficitNode: FlowNode | null =
+    deficit > 0 ? { top: leftTop + income * unit + leftGap, size: deficit * unit } : null
+
+  /* kolom kanan: Pengeluaran (+ Sisa yang benar-benar disimpan) */
+  const rightGap = saved > 0 ? FLOW_GAP : 0
+  const rightTop = 50 - (expense * unit + saved * unit + rightGap) / 2
+  const expenseNode: FlowNode = { top: rightTop, size: expense * unit }
+  const savedNode: FlowNode | null =
+    saved > 0 ? { top: rightTop + expense * unit + rightGap, size: saved * unit } : null
+
+  /* pita yang benar-benar ada — yang bernilai nol tidak digambar */
+  const toExpense = Math.min(income, expense)
+  const ribbons: FlowRibbon[] = []
+  if (toExpense > 0) {
+    ribbons.push({
+      from: { top: incomeNode.top, size: toExpense * unit },
+      to: { top: expenseNode.top, size: toExpense * unit },
+      tone: 'out',
+    })
+  }
+  if (saved > 0 && savedNode) {
+    ribbons.push({
+      from: { top: incomeNode.top + toExpense * unit, size: saved * unit },
+      to: { top: savedNode.top, size: saved * unit },
+      tone: 'in',
+    })
+  }
+  if (deficit > 0 && deficitNode) {
+    ribbons.push({
+      from: { top: deficitNode.top, size: deficit * unit },
+      to: { top: expenseNode.top + toExpense * unit, size: deficit * unit },
+      tone: 'out',
+    })
+  }
+
+  return {
+    income: incomeNode,
+    expense: expenseNode,
+    saved: savedNode,
+    deficit: deficitNode,
+    ribbons,
+  }
 }

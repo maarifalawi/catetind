@@ -37,8 +37,8 @@ export function ManualTutorial({
           <Icon className="size-4" strokeWidth={2.2} aria-hidden />
         </span>
         <div className="min-w-0">
-          <h2 className="text-sm font-semibold text-ink">{tutorialCardTitle(tutorial.label)}</h2>
-          <p className="mt-0.5 text-xs leading-relaxed text-ink/50">{tutorial.note}</p>
+          <h2 className="text-sm font-medium text-forest">{tutorialCardTitle(tutorial.label)}</h2>
+          <p className="mt-0.5 text-xs leading-relaxed text-forest/50">{tutorial.note}</p>
         </div>
       </header>
 
@@ -49,10 +49,10 @@ export function ManualTutorial({
             className="rounded-2xl bg-cream/70 px-3.5 py-3.5 ring-1 ring-forest/[0.07]"
           >
             <div className="flex items-start gap-3">
-              <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-forest text-xs font-semibold text-mint">
+              <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-forest text-xs font-medium text-mint">
                 {index + 1}
               </span>
-              <p className="pt-1 text-sm leading-relaxed text-ink/75">{step.text}</p>
+              <p className="pt-1 text-sm leading-relaxed text-forest/75">{step.text}</p>
             </div>
 
             {/* diagram hanya muncul kalau langkahnya memang punya visual jelas */}

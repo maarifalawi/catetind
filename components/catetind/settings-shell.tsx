@@ -143,11 +143,11 @@ export function SettingsShell({ children }: { children: ReactNode }) {
       {/* ── HEADER — resep kanonik H1 yang sama dengan Dashboard & halaman lain */}
       <header className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-[13px] font-medium text-ink/45">Akun & Preferensi</p>
-          <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-ink lg:text-4xl">
+          <p className="text-[13px] font-medium text-forest/45">Akun & Preferensi</p>
+          <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-forest lg:text-4xl">
             Pengaturan
           </h1>
-          <p className="mt-2 max-w-2xl text-[13.5px] leading-relaxed text-ink/55 lg:mt-3 lg:text-sm">
+          <p className="mt-2 max-w-2xl text-[13.5px] leading-relaxed text-forest/55 lg:mt-3 lg:text-sm">
             Atur akun, langganan, dan preferensi kamu — sidebar tetap di tempatnya, jadi kamu
             nggak pernah keluar dari aplikasi.
           </p>
@@ -160,7 +160,7 @@ export function SettingsShell({ children }: { children: ReactNode }) {
             kembali). Desktop: selalu tampil menemani panel yang panjang. */}
         <aside className={cn('min-w-0 lg:col-span-3', !isIndex && 'hidden lg:block')}>
           <div className="lg:sticky lg:top-6">
-            <p className="px-3 text-[10.5px] font-semibold tracking-[0.14em] text-ink/40 uppercase">
+            <p className="px-3 text-[10.5px] font-medium tracking-[0.14em] text-forest/40 uppercase">
               Menu Pengaturan
             </p>
             <nav aria-label="Menu pengaturan" className="mt-2">
@@ -201,13 +201,13 @@ export function SettingsShell({ children }: { children: ReactNode }) {
                               danger
                                 ? 'font-medium text-plum'
                                 : active
-                                  ? 'font-semibold text-ink'
-                                  : 'font-medium text-ink/60',
+                                  ? 'font-medium text-forest'
+                                  : 'font-medium text-forest/60',
                             )}
                           >
                             {item.title}
                           </span>
-                          <span className="mt-0.5 block text-[11px] leading-snug text-ink/45">
+                          <span className="mt-0.5 block text-[11px] leading-snug text-forest/45">
                             {item.desc}
                           </span>
                         </span>
@@ -226,7 +226,7 @@ export function SettingsShell({ children }: { children: ReactNode }) {
           {!isIndex && (
             <Link
               href="/settings"
-              className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-ink/50 transition-colors hover:text-ink lg:hidden"
+              className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-forest/50 transition-colors hover:text-forest lg:hidden"
             >
               <ChevronLeft className="size-4" strokeWidth={2.4} aria-hidden />
               Pengaturan

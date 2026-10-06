@@ -75,11 +75,11 @@ export function SweepSheet({
           >
             <span className="flex min-w-0 items-center gap-2.5">
               <span className="text-[16px] leading-none">{budget.icon}</span>
-              <span className="truncate text-[13px] font-semibold text-ink">
+              <span className="truncate text-[13px] font-medium text-forest">
                 {budget.category}
               </span>
             </span>
-            <span className="shrink-0 text-[13px] font-bold text-forest tabular-nums">
+            <span className="shrink-0 text-[13px] font-semibold text-forest tabular-nums">
               + {maskNominal(budget.limit - budget.spent, masked)}
             </span>
           </div>
@@ -88,21 +88,21 @@ export function SweepSheet({
 
       {/* total yang akan disapu */}
       <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl bg-sage/60 px-4 py-3">
-        <span className="text-[12.5px] font-semibold text-ink/60">Total keseluruhan</span>
-        <span className="text-[15px] font-black text-forest tabular-nums">
+        <span className="text-[12.5px] font-medium text-forest/60">Total keseluruhan</span>
+        <span className="text-[15px] font-semibold text-forest tabular-nums">
           {maskNominal(total, masked)}
         </span>
       </div>
 
       {/* tujuan celengan — dropdown, hemat ruang */}
       <div className="mt-5 pb-1">
-        <p className="text-[13px] font-semibold text-ink">Sapu ke celengan mana?</p>
+        <p className="text-[13px] font-medium text-forest">Sapu ke celengan mana?</p>
         <span className="relative mt-2 flex items-center gap-2 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/16 focus-within:ring-2 focus-within:ring-forest/35">
           <select
             value={fundId ?? ''}
             onChange={(event) => setFundId(Number(event.target.value))}
             aria-label="Pilih celengan tujuan"
-            className="flex-1 appearance-none bg-transparent text-[13.5px] font-semibold text-ink outline-none"
+            className="flex-1 appearance-none bg-transparent text-[13.5px] font-medium text-forest outline-none"
           >
             {funds.map((fund) => (
               <option key={fund.id} value={fund.id}>
@@ -110,9 +110,9 @@ export function SweepSheet({
               </option>
             ))}
           </select>
-          <ChevronDown className="size-4 shrink-0 text-ink/30" strokeWidth={2.4} />
+          <ChevronDown className="size-4 shrink-0 text-forest/30" strokeWidth={2.4} />
         </span>
-        <p className="mt-2 text-[11px] leading-relaxed text-ink/40">
+        <p className="mt-2 text-[11px] leading-relaxed text-forest/40">
           Sisa tiap kategori dianggap terpakai, jadi limitnya mulai dari nol lagi bulan depan.
         </p>
       </div>

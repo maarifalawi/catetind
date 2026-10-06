@@ -1,5 +1,8 @@
-/* ── Generator ikon app (favicon tetap /favicon.png; ini untuk HOME SCREEN) ───
-   Membuat ikon kotak penuh (full-bleed) dari wordmark resmi `LOGO CATETIND.png`:
+/* ── Generator ikon app (favicon TIDAK digenerate — sekarang langsung
+   `/LOGO.png`, lihat app/layout.tsx; yang ini untuk HOME SCREEN) ─────────────
+   Membuat ikon kotak penuh (full-bleed) dari wordmark resmi `Dashboard.png`
+   (PAKET 70 — dulu `LOGO CATETIND.png`; dua-duanya artwork gelap di kanvas
+   transparan dengan rasio ±3.63:1, jadi tata letaknya sama):
    latar gradien forest + aurora mint, wordmark cream di tengah. Karena latarnya
    penuh (bukan transparan), ikon tampil rapi baik sebagai apple-touch-icon iOS
    maupun ikon maskable Android — tidak ada lagi ikon "polos".
@@ -33,7 +36,7 @@ function loadSharp() {
 
 const sharp = loadSharp()
 
-const LOGO = path.join(root, 'public', 'LOGO CATETIND.png')
+const LOGO = path.join(root, 'public', 'Dashboard.png')
 const OUT_DIR = path.join(root, 'public', 'icons')
 
 /** rasio lebar wordmark terhadap sisi ikon — aman di dalam safe zone maskable */

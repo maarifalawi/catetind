@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { LineChart, Plus } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { ScreenShell } from './screen-shell'
 import { GlobalPrivacyToggle } from './global-privacy-toggle'
@@ -12,6 +12,16 @@ import { usePrivacy } from './privacy-provider'
 import { WealthNetWorthBar } from './wealth-net-worth-bar'
 import { WealthInvestasi } from './wealth-investasi'
 import { WealthHutang } from './wealth-hutang'
+import { WealthProperti } from './wealth-properti'
+import { AddPhysicalAssetSheet, type PhysicalSaveInput } from './add-physical-asset-sheet'
+import {
+  addPhysicalAsset,
+  deletePhysicalAsset,
+  editPhysicalAsset,
+  livePhysicalAssets,
+  restorePhysicalAsset,
+  usePhysicalStore,
+} from '@/lib/money/physical-store'
 import { AddInvestmentSheet, type InvestmentEditDraft, type NewInvestmentTx } from './add-investment-sheet'
 import { AddDebtSheet, type NewDebtInput } from './add-debt-sheet'
 import { UpdatePriceModal } from './update-price-modal'
@@ -42,15 +52,17 @@ import {
   EMPTY_INVESTASI_TITLE,
   INITIAL_ASSET_TRANSACTIONS,
   PRICE_UPDATE_COPY,
-  PROPERTY_V1_COPY,
+  PHYSICAL_TAB_COPY,
   activeDebtRemaining,
   activeReceivableTotal,
   debtName,
   maskMoney,
+  totalPhysicalValue,
   totalPortfolioValue,
   type Debt,
   type DebtView,
   type Investment,
+  type PhysicalAsset,
   type WealthTab,
 } from '@/lib/data/wealth'
 import { DEBT_CASH_COPY, cashDirectionOf, settlementCounterparty } from '@/lib/data/wealth-cash'
@@ -59,13 +71,7 @@ import { DEBT_CASH_COPY, cashDirectionOf, settlementCounterparty } from '@/lib/d
 import { UNDO_WINDOW_MS } from '@/lib/data/history'
 import { WealthDeleteDialog } from './wealth-delete-dialog'
 import { useUserMoneySettings } from '@/lib/user-money-settings'
-import {
-  CONTEXT_EMPTY_COPY,
-  CONTEXT_LABEL,
-  SCOPE_NOTE,
-  contextCaption,
-  scopedItems,
-} from '@/lib/data/money-context'
+import { CONTEXT_EMPTY_COPY, CONTEXT_LABEL, scopedItems } from '@/lib/data/money-context'
 
 /* ── Kekayaan & Hutang (/app/wealth) — PRD Domain 2E ────────────────────────
    Halaman SIGNATURE CatetInd: satu layar yang menunjukkan gambaran finansial
@@ -146,6 +152,10 @@ export function WealthScreen() {
      dan tidak pula ke file ekspor, yang membaca dua selector yang sama. */
   const investments = liveInvestments(wealth)
   const debts = liveDebts(wealth)
+  /* aset fisik / properti (paket 63) — store terpisah, pola sama dengan funds/bills */
+  const physicalSnapshot = usePhysicalStore()
+  const physicalAssets = livePhysicalAssets(physicalSnapshot)
+  const physicalTotal = totalPhysicalValue(physicalAssets)
   const payments = wealth.payments
   /** aset yang sedang dibuka di sheet Edit Aset; null = sheet tertutup */
   const [editingAsset, setEditingAsset] = useState<Investment | null>(null)
@@ -154,6 +164,9 @@ export function WealthScreen() {
   /** catatan yang menunggu konfirmasi hapus — hapus TIDAK pernah langsung jalan */
   const [pendingDeleteDebt, setPendingDeleteDebt] = useState<Debt | null>(null)
   const [pendingDeleteAsset, setPendingDeleteAsset] = useState<Investment | null>(null)
+  /** aset fisik (properti): sheet tambah/edit + target edit (paket 63) */
+  const [showAddPhysical, setShowAddPhysical] = useState(false)
+  const [editingPhysical, setEditingPhysical] = useState<PhysicalAsset | null>(null)
   /**
    * Hak Undo per baris: id yang hapusnya MASIH bisa dibatalkan. Selama jendela
    * `UNDO_WINDOW_MS` hidup, tombol Undo di toast mengembalikannya; sesudahnya
@@ -162,6 +175,8 @@ export function WealthScreen() {
    */
   const undoDebtRef = useRef<string | null>(null)
   const undoAssetRef = useRef<string | null>(null)
+  /** tombstone Undo khusus aset fisik (properti) — pola sama dengan aset/hutang */
+  const undoPhysicalRef = useRef<string | null>(null)
   /** aset yang harganya sedang dikoreksi lewat modal "Update Manual" */
   const [priceTarget, setPriceTarget] = useState<Investment | null>(null)
   /** hutang platform yang barnya baru lunas — memicu confetti + kolaps */
@@ -187,6 +202,41 @@ export function WealthScreen() {
   }, [])
   const later = (fn: () => void, ms: number) => {
     timers.current.push(window.setTimeout(fn, ms))
+  }
+
+  /* ── ASET FISIK / PROPERTI (paket 63) ──────────────────────────────────────
+     Tulis ke store aset fisik; Undo memakai jendela 5 detik yang sama dengan
+     hapus aset/hutang supaya janji durasinya tidak berbeda antar kartu. */
+  function handleSavePhysical(input: PhysicalSaveInput) {
+    if (editingPhysical) {
+      const updated = editPhysicalAsset(editingPhysical.id, input)
+      setEditingPhysical(null)
+      if (updated) toast.success(PHYSICAL_TAB_COPY.toast.edited)
+      return
+    }
+    const created = addPhysicalAsset(input)
+    if (created) toast.success(PHYSICAL_TAB_COPY.toast.added)
+  }
+
+  function handleDeletePhysical(asset: PhysicalAsset) {
+    if (!deletePhysicalAsset(asset.id)) return
+    undoPhysicalRef.current = asset.id
+    toast(PHYSICAL_TAB_COPY.toast.deleted(asset.name), {
+      action: {
+        label: PHYSICAL_TAB_COPY.toast.undo,
+        onClick: () => {
+          if (undoPhysicalRef.current !== asset.id) return
+          undoPhysicalRef.current = null
+          restorePhysicalAsset(asset.id)
+          toast.success(PHYSICAL_TAB_COPY.toast.restoredTitle, {
+            description: PHYSICAL_TAB_COPY.toast.restoredBody,
+          })
+        },
+      },
+    })
+    later(() => {
+      if (undoPhysicalRef.current === asset.id) undoPhysicalRef.current = null
+    }, UNDO_WINDOW_MS)
   }
 
   /* ── DATA TURUNAN ───────────────────────────────────────────────────────── */
@@ -516,38 +566,28 @@ export function WealthScreen() {
       {/* kolom konten: ~760px di layar biasa, melebar di desktop lebar supaya
           donut & daftar aset bisa berdampingan (bukan ponsel yang direntangkan) */}
       <div className="mx-auto w-full max-w-[760px] xl:max-w-[1060px]">
-        {/* ── SECTION 2: header halaman (sticky) + toggle privasi ────────── */}
-        <header className="sticky top-2 z-30 mb-5 rounded-[1.5rem] bg-[#ffffff]/90 px-4 py-3 shadow-[0_18px_40px_-32px_rgba(69,89,78,0.65)] ring-1 ring-soil/10 backdrop-blur-md">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-3">
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sage via-cream to-mint-soft text-forest shadow-[0_12px_26px_-16px_rgba(69,89,78,0.7)] ring-1 ring-forest/10">
-                <LineChart className="size-[18px]" strokeWidth={2.1} />
-              </span>
-              <div className="min-w-0">
-                <h1 className="truncate font-display text-[19px] font-black tracking-tight text-ink lg:text-[22px]">
-                  Kekayaan &amp; Hutang
-                </h1>
-                <p className="truncate text-[11px] text-ink/45">
-                  Aset, investasi, dan hutang — satu layar, apa adanya
-                </p>
-              </div>
-            </div>
-            {/* cluster aksi desktop: switcher konteks + tombol mata (paket 47) */}
-            <div className="hidden shrink-0 items-center gap-3 lg:flex">
-              <ContextSwitcher value={context} onChange={setContext} className="w-[280px]" />
-              <GlobalPrivacyToggle />
-            </div>
-            <div className="lg:hidden">
-              <GlobalPrivacyToggle />
-            </div>
+        {/* ── SECTION 2: header halaman + toggle privasi ───────────────────
+            Judul memakai gaya yang SAMA dengan halaman lain (polos, tanpa kotak
+            latar) supaya konsisten di seluruh app. */}
+        <header className="flex items-start justify-between gap-4">
+          <h1 className="truncate font-display text-3xl font-semibold tracking-tight text-forest lg:text-4xl">
+            Kekayaan &amp; Hutang
+          </h1>
+          {/* cluster aksi desktop: switcher konteks + tombol mata (paket 47) */}
+          <div className="hidden shrink-0 items-center gap-3 lg:flex">
+            <ContextSwitcher value={context} onChange={setContext} className="w-[280px]" />
+            <GlobalPrivacyToggle />
           </div>
-
-          {/* switcher konteks (mobile): barisnya sendiri di dalam header sticky —
-              pola penempatan yang sama dengan Home & Budget (paket 47) */}
-          <div className="mt-3 flex justify-center lg:hidden">
-            <ContextSwitcher value={context} onChange={setContext} />
+          <div className="lg:hidden">
+            <GlobalPrivacyToggle />
           </div>
         </header>
+
+        {/* switcher konteks (mobile): barisnya sendiri di bawah header —
+            pola penempatan yang sama dengan Home & Budget (paket 47) */}
+        <div className="mt-4 flex justify-center lg:hidden">
+          <ContextSwitcher value={context} onChange={setContext} />
+        </div>
 
         {/* ── SECTION 3: Tug-of-War Net Worth Bar (hero visual) ───────────
             `assets` = kas likuid + investasi (dijumlahkan DI DALAM komponen).
@@ -557,14 +597,11 @@ export function WealthScreen() {
         <WealthNetWorthBar
           cash={cash}
           investments={totalInvestments}
+          physical={physicalTotal}
           receivables={totalReceivable}
           debts={totalDebt}
           masked={isMasked}
         />
-
-        <p className="mt-2 text-[11.5px] font-medium text-ink/50">
-          {contextCaption(context)} · <span className="text-ink/40">{SCOPE_NOTE.netWorth}</span>
-        </p>
 
         {/* ── SECTION 4: tab Investasi / Properti / Hutang ──────────────── */}
         <WealthTabs active={activeTab} onChange={setActiveTab} />
@@ -620,31 +657,17 @@ export function WealthScreen() {
               transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
               className="mt-5"
             >
-              {/* ── SECTION 6: properti = V1 placeholder (PRD Decision A12) ──
-                  Kalimatnya dari `PROPERTY_V1_COPY` (paket 62): tidak lagi
-                  menjanjikan "segera hadir", dan menyebut apa yang BELUM
-                  dihitung di Total Kekayaan — supaya angka di halaman ini tidak
-                  disalahpahami sebagai sudah termasuk rumah. */}
-              <div className="flex flex-col items-center rounded-[1.75rem] border-2 border-dashed border-hud-amber/35 bg-[#ffffff] px-6 py-14 text-center">
-                <span aria-hidden className="text-[34px]">
-                  🏠
-                </span>
-                <h2 className="mt-3 font-display text-[17px] font-black tracking-tight text-ink">
-                  {PROPERTY_V1_COPY.title}
-                </h2>
-                <span className="mt-2.5 rounded-full bg-hud-amber/25 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-[#b89191] ring-1 ring-inset ring-hud-amber/40">
-                  {PROPERTY_V1_COPY.badge}
-                </span>
-                <p className="mt-3 max-w-sm text-[13px] leading-relaxed text-ink/55">
-                  {PROPERTY_V1_COPY.body}
-                </p>
-                <p className="mt-2 max-w-sm text-[12px] leading-relaxed text-ink/45">
-                  {PROPERTY_V1_COPY.netWorthNote}
-                </p>
-                <p className="mt-3 max-w-sm text-[12px] font-medium leading-relaxed text-forest">
-                  {PROPERTY_V1_COPY.switchHint}
-                </p>
-              </div>
+              {/* ── SECTION 6: PROPERTI & ASET FISIK (paket 63) ────────────────
+                  Dulu teaser (PRD A12); sekarang tab NYATA: daftar aset fisik +
+                  Tambah/Edit/Hapus, dan nilainya ikut ke Total Kekayaan (`physical`
+                  di atas). Salinan bayangan tidak ada — semua dari store aset fisik. */}
+              <WealthProperti
+                assets={physicalAssets}
+                masked={isMasked}
+                onAdd={() => setShowAddPhysical(true)}
+                onEdit={(asset) => setEditingPhysical(asset)}
+                onDelete={handleDeletePhysical}
+              />
             </motion.div>
           )}
 
@@ -716,6 +739,19 @@ export function WealthScreen() {
         defaultView={debtView}
       />
 
+      {/* Sheet aset fisik / properti (paket 63) — satu sheet dua mode, pola
+          sama dengan sheet investasi & hutang di atas. */}
+      <AddPhysicalAssetSheet
+        open={showAddPhysical || editingPhysical !== null}
+        editing={editingPhysical}
+        scope={context}
+        onClose={() => {
+          setShowAddPhysical(false)
+          setEditingPhysical(null)
+        }}
+        onSave={handleSavePhysical}
+      />
+
       {/* Dialog konfirmasi hapus (paket 61) — SATU bentuk untuk hutang & aset,
           dibungkus <AnimatePresence> supaya animasi keluarnya tetap jalan.
           Nominalnya lewat `maskMoney`, jadi ikut tersensor saat mode privasi
@@ -750,7 +786,7 @@ export function WealthScreen() {
 
 const TAB_OPTIONS: { id: WealthTab; label: string; emoji: string; badge?: string }[] = [
   { id: 'investasi', label: 'Investasi', emoji: '📈' },
-  { id: 'properti', label: 'Properti', emoji: '🏠', badge: 'Segera' },
+  { id: 'properti', label: 'Properti', emoji: '🏠' },
   { id: 'hutang', label: 'Hutang', emoji: '💳' },
 ]
 
@@ -778,8 +814,8 @@ function WealthTabs({
             aria-selected={isActive}
             onClick={() => onChange(tab.id)}
             className={cn(
-              'relative flex shrink-0 items-center gap-2 rounded-full px-4 py-2.5 text-[13px] font-bold transition-colors duration-200',
-              isActive ? 'text-mint' : 'bg-cream text-ink/55 ring-1 ring-soil/12 hover:text-ink',
+              'relative flex shrink-0 items-center gap-2 rounded-full px-4 py-2.5 text-[13px] font-medium transition-colors duration-200',
+              isActive ? 'text-mint' : 'bg-cream text-forest/55 ring-1 ring-soil/12 hover:text-forest',
             )}
           >
             {isActive && (
@@ -795,7 +831,7 @@ function WealthTabs({
               {tab.badge && (
                 <span
                   className={cn(
-                    'rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide',
+                    'rounded-full px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide',
                     isActive
                       ? 'bg-mint/25 text-mint'
                       : 'bg-hud-amber/25 text-[#b89191]',
@@ -831,16 +867,16 @@ function EmptyInvestasi({
       <span aria-hidden className="text-[30px]">
         🌱
       </span>
-      <h2 className="mt-3 font-display text-[16px] font-bold tracking-tight text-ink">
+      <h2 className="mt-3 font-display text-[16px] font-semibold tracking-tight text-forest">
         {contextLine ?? EMPTY_INVESTASI_TITLE}
       </h2>
-      <p className="mt-1.5 max-w-sm text-[13px] leading-relaxed text-ink/55">
+      <p className="mt-1.5 max-w-sm text-[13px] leading-relaxed text-forest/55">
         {contextLine ? CONTEXT_EMPTY_COPY.investments.body : EMPTY_INVESTASI_COPY}
       </p>
       <button
         type="button"
         onClick={onAdd}
-        className="mt-5 inline-flex h-11 items-center gap-2 rounded-2xl bg-forest px-5 text-[13.5px] font-semibold text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
+        className="mt-5 inline-flex h-11 items-center gap-2 rounded-2xl bg-forest px-5 text-[13.5px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
       >
         <Plus className="size-4" strokeWidth={2.6} />
         {contextLine ? CONTEXT_EMPTY_COPY.investments.cta : EMPTY_INVESTASI_CTA}

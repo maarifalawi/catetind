@@ -144,7 +144,7 @@ export const QUICK_WALLET_PICKS: {
   {
     name: 'Mandiri',
     type: 'Bank',
-    tile: 'bg-gradient-to-br from-thistle/25 via-thistle/35 to-thistle/45 text-soil ring-thistle/40',
+    tile: 'bg-gradient-to-br from-thistle/25 via-thistle/35 to-thistle/45 text-forest ring-thistle/40',
   },
   {
     name: 'GoPay',
@@ -164,7 +164,7 @@ export const QUICK_WALLET_PICKS: {
   {
     name: 'Tunai',
     type: 'Cash',
-    tile: 'bg-gradient-to-br from-oat via-oat to-oat text-ink/55 ring-ink/15',
+    tile: 'bg-gradient-to-br from-oat via-oat to-oat text-forest/55 ring-ink/15',
   },
 ]
 /* ── Kunci penyimpanan ──────────────────────────────────────────────────────
@@ -187,12 +187,12 @@ export const ONBOARDING_ROUTE = '/app/onboarding'
 /**
  * Tujuan setelah onboarding selesai.
  *
- * PRD Domain 6 menulis `/app` untuk dashboard utama, tapi di repo mockup ini
- * seluruh halaman ada di root (`/` = Home/Daily HUD, lihat app/page.tsx). Rute
- * tujuan dipusatkan di satu konstanta ini: begitu struktur `app/app/**` dipakai,
- * cukup ubah baris ini jadi '/app'.
+ * PRD Domain 6 menulis `/app` untuk dashboard utama. Sejak landing page pindah
+ * ke root `/`, dashboard tinggal di `/app` (lihat `app/app/page.tsx`) — jadi
+ * tujuan keluar onboarding kini `/app`, bukan lagi root. Rute tujuan tetap
+ * dipusatkan di satu konstanta ini supaya tidak bercabang.
  */
-export const POST_ONBOARDING_ROUTE = '/'
+export const POST_ONBOARDING_ROUTE = '/app'
 
 /** Copy guard keluar (5D) — dipakai beforeunload & popstate. */
 export const EXIT_WARNING =

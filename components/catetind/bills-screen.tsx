@@ -50,8 +50,6 @@ import { MONEY_SETTINGS_HREF } from '@/lib/data/budget'
 import {
   CONTEXT_EMPTY_COPY,
   CONTEXT_LABEL,
-  SCOPE_NOTE,
-  contextCaption,
 } from '@/lib/data/money-context'
 import {
   addBill,
@@ -477,10 +475,7 @@ export function BillsScreen() {
 
       <div className="mt-4 lg:mt-0 lg:flex lg:items-end lg:justify-between lg:gap-8">
         <div className="min-w-0">
-          <p className="text-[13px] font-medium text-ink/45">
-            {contextCaption(context)} · pengeluaran tetap bulan ini
-          </p>
-          <h1 className="font-display text-3xl font-semibold tracking-tight text-ink lg:text-4xl">
+          <h1 className="font-display text-3xl font-semibold tracking-tight text-forest lg:text-4xl">
             Tagihan Rutin
           </h1>
           <div className="mt-2 flex flex-wrap items-center gap-2 lg:mt-3">
@@ -490,9 +485,6 @@ export function BillsScreen() {
             <MetaChip icon={WalletIcon}>{maskMoney(totalAmount, masked)}/bulan</MetaChip>
             <MetaChip icon={Flame}>{burn}% dari gaji</MetaChip>
           </div>
-          {/* catatan cakupan: tameng, waterfall, dan chip di atas = SELURUH
-              tagihan, sementara daftar di kanan mengikuti konteks aktif */}
-          <p className="mt-1.5 text-[11.5px] font-medium text-ink/45">{SCOPE_NOTE.bills}</p>
         </div>
         <div className="hidden shrink-0 items-center gap-3 lg:flex">
           <ContextSwitcher value={context} onChange={setContext} className="w-[280px]" />
@@ -510,16 +502,16 @@ export function BillsScreen() {
           <div className="mt-5 lg:mt-6">
             <ShieldMeter bills={[]} masked={masked} currentDay={currentDay} variant="compact" />
             <div className="mt-5 flex flex-col items-center rounded-[1.75rem] border-2 border-dashed border-forest/15 bg-cream/50 px-6 py-10 text-center">
-              <h2 className="font-display text-[16px] font-bold tracking-tight text-ink">
+              <h2 className="font-display text-[16px] font-semibold tracking-tight text-forest">
                 {CONTEXT_EMPTY_COPY.bills.title(CONTEXT_LABEL[context])}
               </h2>
-              <p className="mt-1.5 max-w-sm text-[13px] leading-relaxed text-ink/55">
+              <p className="mt-1.5 max-w-sm text-[13px] leading-relaxed text-forest/55">
                 {CONTEXT_EMPTY_COPY.bills.body}
               </p>
               <button
                 type="button"
                 onClick={() => setShowAddBill(true)}
-                className="mt-5 inline-flex h-11 items-center gap-2 rounded-2xl bg-forest px-5 text-[13.5px] font-semibold text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
+                className="mt-5 inline-flex h-11 items-center gap-2 rounded-2xl bg-forest px-5 text-[13.5px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
               >
                 <Plus className="size-4" strokeWidth={2.6} />
                 {CONTEXT_EMPTY_COPY.bills.cta}
@@ -555,15 +547,15 @@ export function BillsScreen() {
                   aria-label={WATERFALL_NO_INCOME_COPY.title}
                   className="rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12"
                 >
-                  <h2 className="font-display text-[15px] font-bold tracking-tight text-ink">
+                  <h2 className="font-display text-[15px] font-semibold tracking-tight text-forest">
                     {WATERFALL_NO_INCOME_COPY.title}
                   </h2>
-                  <p className="mt-1.5 text-[12.5px] leading-relaxed text-ink/55">
+                  <p className="mt-1.5 text-[12.5px] leading-relaxed text-forest/55">
                     {WATERFALL_NO_INCOME_COPY.body}
                   </p>
                   <Link
                     href={MONEY_SETTINGS_HREF}
-                    className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-forest px-4 py-2 text-[12px] font-semibold text-cream transition-colors hover:bg-forest-soft"
+                    className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-forest px-4 py-2 text-[12px] font-medium text-cream transition-colors hover:bg-forest-soft"
                   >
                     {WATERFALL_NO_INCOME_COPY.cta}
                   </Link>
@@ -585,19 +577,19 @@ export function BillsScreen() {
                   tidak lagi membentang penuh seperti footer di dasar layar) */}
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <h2 className="font-display text-[17px] font-bold tracking-tight text-ink">
+                  <h2 className="font-display text-[17px] font-semibold tracking-tight text-forest">
                     Daftar Tagihan
                   </h2>
                   {/* jumlah tagihan di KONTEKS AKTIF (paket 47) — pill filter di
                       bawah memakai angka yang sama, jadi tidak ada dua hitungan */}
-                  <span className="rounded-full bg-sage px-2 py-0.5 text-[10.5px] font-bold tabular-nums text-forest ring-1 ring-forest/10">
+                  <span className="rounded-full bg-sage px-2 py-0.5 text-[10.5px] font-semibold tabular-nums text-forest ring-1 ring-forest/10">
                     {scopedBills.length}
                   </span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowAddBill(true)}
-                  className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-forest px-3.5 text-[12px] font-semibold text-cream transition-colors hover:bg-forest-soft active:scale-[0.97]"
+                  className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-forest px-3.5 text-[12px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.97]"
                 >
                   <Plus className="size-4" strokeWidth={2.6} />
                   Tagihan
@@ -622,14 +614,14 @@ export function BillsScreen() {
                       aria-pressed={active}
                       onClick={() => setActiveFilter(pill.id)}
                       className={cn(
-                        'inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-[12px] font-semibold transition-all duration-200 active:scale-95',
+                        'inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-[12px] font-medium transition-all duration-200 active:scale-95',
                         active
                           ? 'bg-forest text-mint shadow-[0_10px_22px_-14px_rgba(69,89,78,0.75)]'
                           : isLate && count > 0
                             ? 'bg-hud-terracotta/15 text-hud-terracotta ring-1 ring-inset ring-hud-terracotta/30'
                             : isPaidPill
-                              ? 'bg-hud-sage/15 text-[#000000] ring-1 ring-inset ring-hud-sage/25'
-                              : 'bg-cream text-ink/60 ring-1 ring-soil/14 hover:bg-cream hover:text-ink',
+                              ? 'bg-hud-sage/15 text-forest ring-1 ring-inset ring-hud-sage/25'
+                              : 'bg-cream text-forest/60 ring-1 ring-soil/14 hover:bg-cream hover:text-forest',
                       )}
                     >
                       {/* titik berdenyut kalau memang ada yang telat */}
@@ -641,7 +633,7 @@ export function BillsScreen() {
                       )}
                       {isPaidPill ? 'Lunas ✓' : pill.label}
                       <span
-                        className={cn('tabular-nums', active ? 'text-mint/70' : 'text-ink/40')}
+                        className={cn('tabular-nums', active ? 'text-mint/70' : 'text-forest/40')}
                       >
                         ({count})
                       </span>
@@ -653,7 +645,7 @@ export function BillsScreen() {
               {/* 7. DAFTAR TAGIHAN — dikelompokkan per status */}
               <div className="mt-3 flex flex-col gap-6 pb-1">
                 {groups.length === 0 ? (
-                  <p className="rounded-2xl bg-cream/70 px-4 py-6 text-center text-[12.5px] font-medium text-ink/45 ring-1 ring-soil/8">
+                  <p className="rounded-2xl bg-cream/70 px-4 py-6 text-center text-[12.5px] font-medium text-forest/45 ring-1 ring-soil/8">
                     Gak ada tagihan di filter ini. Coba “Semua” ya 🌿
                   </p>
                 ) : (
@@ -670,7 +662,7 @@ export function BillsScreen() {
                       <div className="flex items-center gap-2">
                         <span
                           className={cn(
-                            'inline-flex items-center gap-1.5 rounded-full bg-cream/95 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] ring-1 ring-soil/10',
+                            'inline-flex items-center gap-1.5 rounded-full bg-cream/95 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.14em] ring-1 ring-soil/10',
                             group.meta.labelClass,
                           )}
                         >
@@ -681,7 +673,7 @@ export function BillsScreen() {
                           aria-hidden
                           className={cn('h-px flex-1 rounded-full opacity-40', group.meta.barClass)}
                         />
-                        <span className="shrink-0 text-[10.5px] font-bold tabular-nums text-ink/35">
+                        <span className="shrink-0 text-[10.5px] font-semibold tabular-nums text-forest/35">
                           {group.items.length}
                         </span>
                       </div>
@@ -806,16 +798,16 @@ function EmptyState({
       <ShieldMeter bills={[]} masked={masked} currentDay={currentDay} variant="compact" />
 
       <div className="mt-5 flex flex-col items-center rounded-[1.75rem] border-2 border-dashed border-forest/15 bg-cream/50 px-6 py-10 text-center">
-        <h2 className="font-display text-[16px] font-bold tracking-tight text-ink">
+        <h2 className="font-display text-[16px] font-semibold tracking-tight text-forest">
           Belum ada tagihan rutin
         </h2>
-        <p className="mt-1.5 max-w-sm text-[13px] leading-relaxed text-ink/55">
+        <p className="mt-1.5 max-w-sm text-[13px] leading-relaxed text-forest/55">
           Kos, Netflix, cicilan HP — catat biar jatah harian kamu lebih akurat 📋🌿
         </p>
         <button
           type="button"
           onClick={onAdd}
-          className="mt-5 inline-flex h-11 items-center gap-2 rounded-2xl bg-forest px-5 text-[13.5px] font-semibold text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
+          className="mt-5 inline-flex h-11 items-center gap-2 rounded-2xl bg-forest px-5 text-[13.5px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
         >
           <Plus className="size-4" strokeWidth={2.6} />
           Tambah Tagihan Pertama

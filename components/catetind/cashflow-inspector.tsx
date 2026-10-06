@@ -45,12 +45,12 @@ function relativeLabel(cell: CalendarCell) {
   if (cell.daysFromToday > 0) {
     return {
       text: cell.daysFromToday === 1 ? 'Besok' : `${cell.daysFromToday} hari lagi`,
-      className: 'bg-cream text-ink/55 ring-1 ring-inset ring-soil/10',
+      className: 'bg-cream text-forest/55 ring-1 ring-inset ring-soil/10',
     }
   }
   return {
     text: cell.daysFromToday === -1 ? 'Kemarin' : `${Math.abs(cell.daysFromToday)} hari lalu`,
-    className: 'bg-cream text-ink/45 ring-1 ring-inset ring-soil/10',
+    className: 'bg-cream text-forest/45 ring-1 ring-inset ring-soil/10',
   }
 }
 
@@ -70,10 +70,10 @@ export function CashflowInspector({
   if (!cell) {
     return (
       <aside className="rounded-[2rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] ring-1 ring-soil/12 lg:sticky lg:top-8">
-        <h2 className="font-display text-[18px] font-semibold tracking-tight text-ink">
+        <h2 className="font-display text-[18px] font-medium tracking-tight text-forest">
           {CALENDAR_DAY_COPY.pickTitle}
         </h2>
-        <p className="mt-1 text-[12.5px] text-ink/50">{CALENDAR_DAY_COPY.pickBody}</p>
+        <p className="mt-1 text-[12.5px] text-forest/50">{CALENDAR_DAY_COPY.pickBody}</p>
       </aside>
     )
   }
@@ -98,7 +98,7 @@ export function CashflowInspector({
       <div className="flex items-center justify-between gap-2">
         <span
           className={cn(
-            'rounded-full px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-[0.1em]',
+            'rounded-full px-2.5 py-1 text-[10.5px] font-medium uppercase tracking-[0.1em]',
             relative.className,
           )}
         >
@@ -106,22 +106,22 @@ export function CashflowInspector({
         </span>
       </div>
 
-      <h2 className="mt-2 font-display text-[20px] font-semibold leading-tight tracking-tight text-ink">
+      <h2 className="mt-2 font-display text-[20px] font-medium leading-tight tracking-tight text-forest">
         {longDateLabel(cell.date)}
       </h2>
 
       {/* ringkasan nominal: hanya menulis bagian yang memang ada isinya */}
-      <p className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[12.5px] font-semibold tabular-nums">
+      <p className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[12.5px] font-medium tabular-nums">
         {cell.income > 0 && <span className="text-forest">+{maskMoney(cell.income, masked)} masuk</span>}
         {cell.totalSpend > 0 && (
-          <span className="text-ink/70">−{maskMoney(cell.totalSpend, masked)} keluar</span>
+          <span className="text-forest/70">−{maskMoney(cell.totalSpend, masked)} keluar</span>
         )}
         {cell.income === 0 && cell.totalSpend === 0 && (
-          <span className="font-medium text-ink/40">{CALENDAR_DAY_COPY.neutralSummary}</span>
+          <span className="font-medium text-forest/40">{CALENDAR_DAY_COPY.neutralSummary}</span>
         )}
       </p>
       {breakdown.length > 1 && (
-        <p className="mt-1 text-[11.5px] text-ink/40">{breakdown.join(' · ')}</p>
+        <p className="mt-1 text-[11.5px] text-forest/40">{breakdown.join(' · ')}</p>
       )}
 
       {/* ── pesan kontekstual hari itu: maksimal satu yang menonjol ──────── */}
@@ -135,13 +135,13 @@ export function CashflowInspector({
         </p>
       )}
       {plannedOnly && cell.tone !== 'deficit' && (
-        <p className="mt-3 flex items-start gap-2 text-[11.5px] leading-relaxed text-ink/45">
-          <CalendarCheck className="mt-0.5 size-3.5 shrink-0 text-ink/30" strokeWidth={2.4} />
+        <p className="mt-3 flex items-start gap-2 text-[11.5px] leading-relaxed text-forest/45">
+          <CalendarCheck className="mt-0.5 size-3.5 shrink-0 text-forest/30" strokeWidth={2.4} />
           <span>{FIXED_BILL_SAFE_NOTE}</span>
         </p>
       )}
       {streakMilestone && (
-        <p className="mt-3 flex items-start gap-2 text-[11.5px] leading-relaxed text-ink/45">
+        <p className="mt-3 flex items-start gap-2 text-[11.5px] leading-relaxed text-forest/45">
           <Sparkles className="mt-0.5 size-3.5 shrink-0 text-hud-amber" strokeWidth={2.4} />
           <span>{cell.streak} hari beruntun tanpa belanja variabel 🌱</span>
         </p>
@@ -151,7 +151,7 @@ export function CashflowInspector({
       <button
         type="button"
         onClick={onAddNote}
-        className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-forest px-4 text-[13px] font-semibold text-mint shadow-[0_16px_34px_-20px_rgba(69,89,78,0.9)] transition-colors hover:bg-forest-soft active:scale-[0.99]"
+        className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-forest px-4 text-[13px] font-medium text-mint shadow-[0_16px_34px_-20px_rgba(69,89,78,0.9)] transition-colors hover:bg-forest-soft active:scale-[0.99]"
       >
         <Plus className="size-4" strokeWidth={2.8} />
         {CALENDAR_DAY_COPY.addNote(cell.day)}
@@ -161,10 +161,10 @@ export function CashflowInspector({
       {/* ── 3C. DAFTAR CATATAN HARI ITU (hanya yang benar-benar tercatat) ──── */}
       <section className="mt-5 border-t border-soil/12 pt-4">
         <div className="flex items-center justify-between gap-2">
-          <h3 className="text-[11px] font-bold uppercase tracking-[0.12em] text-ink/45">
+          <h3 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-forest/45">
             {CALENDAR_DAY_COPY.listTitle(cell.isFuture)}
           </h3>
-          <span className="text-[11px] font-semibold tabular-nums text-ink/40">
+          <span className="text-[11px] font-medium tabular-nums text-forest/40">
             {CALENDAR_DAY_COPY.countLabel(cell.entries.length)}
           </span>
         </div>
@@ -179,12 +179,12 @@ export function CashflowInspector({
                 ? CALENDAR_DAY_COPY.emptyFuture.emoji
                 : CALENDAR_DAY_COPY.emptyPast.emoji}
             </span>
-            <p className="mt-2 font-display text-[13px] font-bold tracking-tight text-ink">
+            <p className="mt-2 font-display text-[13px] font-medium tracking-tight text-forest">
               {cell.isFuture
                 ? CALENDAR_DAY_COPY.emptyFuture.title
                 : CALENDAR_DAY_COPY.emptyPast.title}
             </p>
-            <p className="mt-1 max-w-[16rem] text-[11.5px] leading-relaxed text-ink/45">
+            <p className="mt-1 max-w-[16rem] text-[11.5px] leading-relaxed text-forest/45">
               {cell.isFuture
                 ? CALENDAR_DAY_COPY.emptyFuture.body
                 : CALENDAR_DAY_COPY.emptyPast.body}
@@ -244,10 +244,10 @@ function CashflowEntryRow({
       </span>
 
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[13px] font-semibold text-ink">{entry.name}</span>
-        <span className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] text-ink/40">
-          <span className={cn('font-semibold', chip.className)}>{chip.label}</span>
-          <span aria-hidden className="text-ink/20">
+        <span className="block truncate text-[13px] font-medium text-forest">{entry.name}</span>
+        <span className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] text-forest/40">
+          <span className={cn('font-medium', chip.className)}>{chip.label}</span>
+          <span aria-hidden className="text-forest/20">
             ·
           </span>
           <span className="truncate">
@@ -259,14 +259,14 @@ function CashflowEntryRow({
 
       <span
         className={cn(
-          'shrink-0 text-right font-display text-[13px] font-semibold tabular-nums',
+          'shrink-0 text-right font-display text-[13px] font-medium tabular-nums',
           isIncome
             ? 'text-forest'
             : isMovement
               ? 'text-thistle'
               : deficitDay
                 ? 'text-hud-terracotta'
-                : 'text-ink/75',
+                : 'text-forest/75',
         )}
       >
         {isIncome ? '+' : isMovement ? '⇄ ' : '−'}

@@ -95,6 +95,8 @@ export type Tone = 'sage' | 'amber' | 'terracotta'
 
 export interface Investment {
   id: string
+  /** id baris `investments` di Supabase (uuid) — `undefined` = belum dikirim (paket 64) */
+  remoteId?: string
   type: AssetType
   name: string
   /** kode pasar / ticker: BBCA, BTC, RDPU, GOLD */
@@ -121,6 +123,55 @@ export interface Investment {
   scope: BudgetScope
 }
 
+/* ── PROPERTI / ASET FISIK (paket 63) ────────────────────────────────────────
+   Rumah, tanah, kendaraan, logam mulia, perhiasan — aset yang nilainya diisi
+   MANUAL user (tidak ada harga pasar seperti saham). Karena itu hanya ada dua
+   angka: `purchasePrice` (harga beli) dan `currentValue` (nilai sekarang);
+   selisihnya DITURUNKAN di UI, tidak disimpan. Nama kategori mengikuti enum
+   database `physical_asset_category` supaya nilai kanon sama di mana pun. */
+export type PhysicalAssetCategory =
+  | 'rumah'
+  | 'tanah'
+  | 'kendaraan'
+  | 'logam_mulia'
+  | 'perhiasan'
+  | 'lainnya'
+
+export interface PhysicalAsset {
+  id: string
+  name: string
+  category: PhysicalAssetCategory
+  purchasePrice: number
+  currentValue: number
+  /** tanggal perolehan `YYYY-MM-DD` (opsional) */
+  acquiredAt?: string
+  note?: string
+  /** konteks uang (paket 47) — sama seperti Investment/Debt */
+  scope: BudgetScope
+}
+
+/** pilihan kategori Tab Properti (label sudah Bahasa Indonesia) */
+export const PHYSICAL_ASSET_CATEGORY_OPTIONS: { id: PhysicalAssetCategory; label: string }[] = [
+  { id: 'rumah', label: 'Rumah' },
+  { id: 'tanah', label: 'Tanah' },
+  { id: 'kendaraan', label: 'Kendaraan' },
+  { id: 'logam_mulia', label: 'Logam mulia' },
+  { id: 'perhiasan', label: 'Perhiasan' },
+  { id: 'lainnya', label: 'Lainnya' },
+]
+
+/** label tampil satu kategori (fallback "Lainnya" — jangan menebak) */
+export function physicalCategoryLabel(id: PhysicalAssetCategory): string {
+  return PHYSICAL_ASSET_CATEGORY_OPTIONS.find((option) => option.id === id)?.label ?? 'Lainnya'
+}
+
+/** total nilai aset fisik (dipakai Net Worth & kartu ringkasan tab) */
+export function totalPhysicalValue(list: PhysicalAsset[]): number {
+  return list.reduce((sum, asset) => sum + (Number.isFinite(asset.currentValue) ? asset.currentValue : 0), 0)
+}
+
+/* ── HUTANG/PIUTANG ────────────────────────────────────────────────────────── */
+
 /**
  * Hutang/piutang. Field platform (`tenor`, `currentMonth`, `monthlyInstallment`,
  * `interestRate`, `dueDate`) opsional karena hutang personal memang TIDAK punya
@@ -128,6 +179,8 @@ export interface Investment {
  */
 export interface Debt {
   id: string
+  /** id baris `debts` di Supabase (uuid) — `undefined` = belum dikirim (paket 64) */
+  remoteId?: string
   type: DebtType
   /** nama paylater / KTA untuk hutang platform */
   provider?: string
@@ -184,6 +237,8 @@ export interface AssetTransaction {
  */
 export interface DebtPayment {
   id: string
+  /** id baris `debt_payments` di Supabase (uuid) — `undefined` = belum dikirim (paket 64) */
+  remoteId?: string
   debtId: string
   /** nominal yang benar-benar MENGHAPUS kewajiban/hak (pokok yang terlunasi) */
   amount: number
@@ -280,7 +335,7 @@ export const ASSET_TYPE_META: Record<
     unit: 'unit',
     color: '#b5b987' /* sage paling tua */,
     dotClass: 'bg-[#b5b987]',
-    chipClass: 'bg-[#b5b987]/12 text-[#000000]',
+    chipClass: 'bg-[#b5b987]/12 text-forest',
   },
   stock: {
     label: 'Saham',
@@ -288,7 +343,7 @@ export const ASSET_TYPE_META: Record<
     unit: 'lot',
     color: '#b5b987' /* sage kanon */,
     dotClass: 'bg-hud-sage',
-    chipClass: 'bg-hud-sage/25 text-[#000000]',
+    chipClass: 'bg-hud-sage/25 text-forest',
   },
   gold: {
     label: 'Emas',
@@ -304,7 +359,7 @@ export const ASSET_TYPE_META: Record<
     unit: '' /* crypto memakai satuan raw koin */,
     color: '#e6e4c0' /* sage paling muda */,
     dotClass: 'bg-[#e6e4c0]',
-    chipClass: 'bg-[#e6e4c0]/35 text-[#000000]',
+    chipClass: 'bg-[#e6e4c0]/35 text-forest',
   },
 }
 
@@ -692,7 +747,7 @@ export function dtiBadge(ratio: number): DtiBadge {
       tone: 'sage',
       label: 'Sehat',
       copy: 'Beban cicilanmu ringan, mantap!',
-      pillClassName: 'bg-hud-sage/25 text-[#000000] ring-hud-sage/45',
+      pillClassName: 'bg-hud-sage/25 text-forest ring-hud-sage/45',
     }
   }
   if (ratio <= DTI_CAREFUL) {
@@ -1004,6 +1059,8 @@ export const RDN_ACCOUNTS = [
 export interface NetWorthParts {
   cash: number
   investments: number
+  /** nilai ASET FISIK / properti (paket 63) — ikut sisi aset Net Worth */
+  physical: number
   receivables: number
   debts: number
   assets: number
@@ -1015,11 +1072,15 @@ export function netWorthParts(input: {
   investments: number
   receivables: number
   debts: number
+  /** opsional supaya pemanggil lama tetap sah; default 0 */
+  physical?: number
 }): NetWorthParts {
-  const assets = input.cash + input.investments + input.receivables
+  const physical = Number.isFinite(input.physical) ? (input.physical as number) : 0
+  const assets = input.cash + input.investments + input.receivables + physical
   return {
     cash: input.cash,
     investments: input.investments,
+    physical,
     receivables: input.receivables,
     debts: input.debts,
     assets,
@@ -1301,29 +1362,92 @@ export const DELETE_ASSET_TOAST = {
   expired: 'Jendela Undo-nya sudah lewat — asetnya bisa kamu tambahkan lagi kapan aja 🌿',
 } as const
 
-/* ── PROPERTI & ASET FISIK (V1 · paket 62) ───────────────────────────────────
-   Tab-nya SUDAH ada di halaman Kekayaan (PRD Decision A12: dikerjakan setelah
-   V1), dan isinya memang baru teaser. Yang diperbaiki paket ini bukan fiturnya,
-   tapi KEJUJURAN kalimatnya. Sebelumnya tertulis:
+/* ── TAB PROPERTI / ASET FISIK (paket 63) ────────────────────────────────────
+   Tab ini DULU cuma teaser ("belum bisa dikelola", PRD A12). Atas permintaan
+   pemilik produk, ia sekarang NYATA: user bisa mencatat rumah, tanah, kendaraan,
+   logam mulia, perhiasan — dan nilainya IKUT dihitung ke Total Kekayaan
+   (`netWorthParts()` di atas). Semua teksnya di sini supaya nol string di JSX. */
 
-     "Rumah, kendaraan, perhiasan — coming soon di update berikutnya 🌿"
-
-   Dua masalah: (1) itu janji tanggal yang tidak dipegang siapa pun, dan (2) user
-   yang punya rumah bisa membaca "Total Kekayaan" di halaman yang sama sebagai
-   angka yang SUDAH memuat rumahnya — padahal rumusnya kas + investasi + piutang −
-   hutang, tanpa satu pun aset fisik. Kalimat di bawah ini menggantikannya apa
-   adanya: apa yang belum bisa, apa yang belum dihitung, dan yang BISA dipakai
-   sekarang. (SENGAJA tidak dijanjikan "segera hadir": teaser yang tidak punya
-   tanggal adalah sumber kekecewaan yang paling gampang dihindari.) */
-export const PROPERTY_V1_COPY = {
+export const PHYSICAL_TAB_COPY = {
   title: 'Properti & Aset Fisik',
-  badge: 'Belum bisa dikelola',
-  body: 'Rumah, kendaraan, dan barang berharga belum bisa dicatat di versi ini — jadi nilai aset fisik belum ikut kehitung di Total Kekayaan.',
-  netWorthNote:
-    'Total Kekayaan di halaman ini = kas likuid + investasi + piutang − hutang. Tidak ada angka kira-kira untuk aset fisik.',
-  /** jalan yang BISA ditempuh sekarang (tab-nya tepat di atas kartu ini) */
-  switchHint:
-    'Aset yang sudah bisa dikelola: tab Investasi (saham, reksadana, emas) dan tab Hutang (hutang & piutang).',
+  blurb: 'Rumah, tanah, kendaraan, logam mulia, perhiasan — nilainya kamu isi sendiri.',
+  totalLabel: 'Total nilai aset fisik',
+  addLabel: 'Tambah Aset',
+  emptyTitle: 'Belum ada aset fisik tercatat',
+  emptyBody:
+    'Rumah, kendaraan, atau barang berharga? Catat di sini biar Total Kekayaan kamu menggambarkan kondisi sebenarnya 🏠',
+  emptyCta: 'Tambah Aset Pertama',
+  gainLabel: 'Naik',
+  lossLabel: 'Turun',
+  flatLabel: 'Stabil',
+  purchaseLabel: 'Harga beli',
+  currentLabel: 'Nilai sekarang',
+  diffLabel: 'Selisih',
+  form: {
+    addTitle: 'Tambah Aset Fisik',
+    editTitle: 'Edit Aset Fisik',
+    name: 'Nama aset',
+    namePlaceholder: 'Contoh: Rumah Depok',
+    category: 'Kategori',
+    purchasePrice: 'Harga beli',
+    currentValue: 'Nilai sekarang',
+    acquiredAt: 'Tanggal perolehan (opsional)',
+    note: 'Catatan (opsional)',
+    save: 'Simpan',
+    cancel: 'Batal',
+    needName: 'Isi nama asetnya dulu ya 🌿',
+    needValue: 'Isi nilai sekarangnya dulu ya 🌿',
+  },
+  delete: {
+    title: 'Hapus aset ini?',
+    body: (name: string) =>
+      `“${name}” akan keluar dari daftar & dari Total Kekayaan. Bisa kamu balikin lewat Undo sesaat setelah ini.`,
+    confirm: 'Hapus',
+    cancel: 'Batal',
+  },
+  toast: {
+    added: 'Aset dicatat! 🏠',
+    edited: 'Aset diperbarui',
+    deleted: (name: string) => `${name} dihapus dari daftar.`,
+    undo: 'Undo',
+    restoredTitle: 'Aset dikembalikan 🌿',
+    restoredBody: 'Nilainya balik ke Total Kekayaan seperti semula.',
+    undoExpired: 'Jendela Undo-nya sudah lewat — asetnya bisa kamu tambahkan lagi kapan aja 🌿',
+  },
 } as const
+
+/* ── ASET CONTOH — hanya untuk MODE DEMO/review desain, BUKAN data user ──────
+   Store (`lib/money/physical-store.ts`) hanya memakainya saat
+   `showsSampleData()` true (mode demo/desain); di build produksi daftar ini
+   TIDAK tampil sebagai milik user — empty state yang benar. */
+export const INITIAL_PHYSICAL_ASSETS: PhysicalAsset[] = [
+  {
+    id: 'pa-1',
+    name: 'Rumah Depok',
+    category: 'rumah',
+    purchasePrice: 650_000_000,
+    currentValue: 720_000_000,
+    acquiredAt: '2021-06-12',
+    scope: 'keluarga',
+  },
+  {
+    id: 'pa-2',
+    name: 'Emas Antam 50g',
+    category: 'logam_mulia',
+    purchasePrice: 62_000_000,
+    currentValue: 78_500_000,
+    acquiredAt: '2023-02-01',
+    scope: 'pribadi',
+  },
+  {
+    id: 'pa-3',
+    name: 'Motor Vario',
+    category: 'kendaraan',
+    purchasePrice: 24_000_000,
+    currentValue: 15_000_000,
+    acquiredAt: '2020-11-20',
+    scope: 'pribadi',
+  },
+]
 
 

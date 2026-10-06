@@ -40,6 +40,9 @@ export const BILLS_STATE_KEY = 'bills'
 /** key state kantong bersama `/joint` (dompet + buku besar bersama) — store
  *  kelima, database yang SAMA (paket 52) */
 export const JOINT_STATE_KEY = 'joint'
+/** key state aset fisik / properti (tab `/wealth`) — store keenam, database yang
+ *  SAMA (paket 63). Satu database supaya "Hapus Akun" tetap membersihkan semua. */
+export const PHYSICAL_STATE_KEY = 'physical'
 
 /** `null` = IndexedDB tidak bisa dipakai (mode privat / browser tua) → memory */
 let dbPromise: Promise<IDBDatabase | null> | null = null

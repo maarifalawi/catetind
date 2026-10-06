@@ -63,7 +63,7 @@ export function MobileNavButton({ className }: { className?: string }) {
       onClick={() => setOpen(true)}
       aria-label={HOME_HEADER_COPY.menuAria}
       className={cn(
-        'flex size-9 shrink-0 items-center justify-center rounded-full bg-cream text-ink ring-1 ring-soil/12 transition-colors hover:bg-sage active:scale-95',
+        'flex size-9 shrink-0 items-center justify-center rounded-full bg-cream text-forest ring-1 ring-soil/12 transition-colors hover:bg-sage active:scale-95',
         className,
       )}
     >

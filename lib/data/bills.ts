@@ -31,6 +31,8 @@ export type BillTone = 'sage' | 'amber' | 'terracotta' | 'neutral'
 
 export interface Bill {
   id: string
+  /** id baris `bills` di Supabase (uuid) — `undefined` = belum dikirim (paket 64) */
+  remoteId?: string
   /** emoji identitas tagihan (pengganti logo brand) */
   emoji: string
   name: string
@@ -239,7 +241,7 @@ export function dueContext(
   if (status === 'due_today') return { text: 'Jatuh tempo HARI INI', className: 'text-hud-amber' }
   return {
     text: `Tgl ${bill.dueDate} · ${daysUntil(bill, currentDay)} hari lagi`,
-    className: 'text-ink/45',
+    className: 'text-forest/45',
   }
 }
 
@@ -339,7 +341,7 @@ export const BILL_GROUPS: BillGroupMeta[] = [
     status: 'upcoming',
     label: 'Akan Datang',
     icon: '🔵',
-    labelClass: 'text-ink/45',
+    labelClass: 'text-forest/45',
     barClass: 'bg-ink/20',
   },
   {
@@ -418,7 +420,7 @@ export function burnTone(
     return {
       tone: 'sage',
       copy: 'Beban tetapmu ringan. Banyak ruang buat nabung! 🌿',
-      textClass: 'text-[#000000]',
+      textClass: 'text-forest',
       panelClass: 'bg-hud-sage/15 ring-hud-sage/25',
     }
   }

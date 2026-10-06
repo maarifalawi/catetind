@@ -61,7 +61,10 @@ function memoryStore(): Map<string, Wallet[]> {
 }
 
 function seedWallets(): Wallet[] {
-  /* saldo seed = `opening` dompet kanon — angka yang sama dengan halaman Dompet */
+  /* JALUR DEMO/TEST SAHAJA: fallback memory ini cuma dipakai kalau backend
+     Supabase TIDAK dipasang (build tanpa env / test). Di produksi ber-backend,
+     `walletsOf()` membaca database dan fungsi ini tidak pernah jalan — jadi
+     dompet contoh tidak bocor sebagai "milik user" (paket 65 · Tugas A). */
   return WALLET_SEED.map((record) => toHomeWallet(record, record.opening))
 }
 

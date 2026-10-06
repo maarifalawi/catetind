@@ -30,21 +30,21 @@ export function EmptyAccountNotice() {
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <p className="inline-flex items-center gap-2 text-[15px] font-semibold text-ink">
+          <p className="inline-flex items-center gap-2 text-[15px] font-medium text-forest">
             <Sprout className="size-4 shrink-0 text-forest" strokeWidth={2.2} aria-hidden />
             {EMPTY_ACCOUNT_COPY.title}
           </p>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-ink/60">
+          <p className="mt-1.5 text-[13px] leading-relaxed text-forest/60">
             {EMPTY_ACCOUNT_COPY.body}
           </p>
-          <p className="mt-1.5 text-[11.5px] leading-relaxed text-ink/45">
+          <p className="mt-1.5 text-[11.5px] leading-relaxed text-forest/45">
             {EMPTY_ACCOUNT_COPY.hint}
           </p>
         </div>
 
         <Link
           href={ONBOARDING_ROUTE}
-          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-forest px-5 py-3 text-sm font-semibold text-mint transition-colors hover:bg-forest-soft"
+          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-forest px-5 py-3 text-sm font-medium text-mint transition-colors hover:bg-forest-soft"
         >
           {EMPTY_ACCOUNT_COPY.cta}
         </Link>

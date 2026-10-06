@@ -43,16 +43,19 @@ function hudWith({
   monthlyIncome,
   totalInstallments,
   spent = 0,
+  spentToday = 0,
 }: {
   monthlyIncome: number
   totalInstallments: number
   spent?: number
+  spentToday?: number
 }) {
   return computeDailyHud({
     monthlyIncome,
     totalInstallments,
     sinkingFunds: INITIAL_SINKING_FUNDS,
     spent,
+    spentToday,
     window: windowSeptember,
   })
 }
@@ -126,6 +129,92 @@ describe('computeDailyHud · turunan dari pemasukan, cicilan, dan uang keluar', 
       hudWith({ monthlyIncome: 7_500_000, totalInstallments: 800_000, spent: 50_000 }).dailyBudget,
     )
     expect(home.daysLeft).toBe(3)
+  })
+})
+
+/* ── "SISA JATAH HARI INI" (paket 66) ────────────────────────────────────────
+   Kartu Home dulu menampilkan `dailyBudget` = rata-rata sisa periode ÷ hari
+   tersisa. Akibatnya mencatat Rp 600.000 dengan sisa 3 hari cuma menurunkan
+   angkanya Rp 200.000 (didilusi jumlah hari) — pemilik produk melaporkannya
+   sebagai "jatah hari ini nggak sync / masih seed data".
+
+   Turunan baru menjawab pertanyaan yang benar-benar dibaca di kartu ("hari ini
+   aku masih boleh pakai berapa?") TANPA menghapus rumus lama: `dailyBudget`
+   tetap ada (dipakai /budget + test sebelumnya), sedangkan `remainingToday`
+   turun PENUH sebesar pengeluaran hari ini. */
+describe('computeDailyHud · turunan "sisa jatah hari ini" (paket 66)', () => {
+  it('tanpa `spentToday`, turunan hari-ini = `dailyBudget` (pemanggil lama utuh)', () => {
+    const hud = hudWith({ monthlyIncome: 7_500_000, totalInstallments: 800_000, spent: 50_000 })
+    expect(hud.remainingToday).toBe(hud.dailyBudget)
+    expect(hud.todayAllowance).toBe(hud.dailyBudget)
+    expect(hud.todayUsedPct).toBe(0)
+  })
+
+  it('Rp 600.000 hari ini menurunkan angka utama PENUH (bukan didilusi 3 hari)', () => {
+    const before = hudWith({ monthlyIncome: 7_500_000, totalInstallments: 800_000 })
+    /* 3.1jt / 3 hari */
+    expect(before.todayAllowance).toBe(1_033_333)
+    expect(before.remainingToday).toBe(1_033_333)
+
+    const after = hudWith({
+      monthlyIncome: 7_500_000,
+      totalInstallments: 800_000,
+      spent: 600_000,
+      spentToday: 600_000,
+    })
+    /* rumus LAMA (rata-rata periode) cuma turun 200rb — itu keluhan aslinya */
+    expect(after.dailyBudget).toBe(833_333)
+    /* turunan baru turun penuh 600rb */
+    expect(after.remainingToday).toBe(433_333)
+    expect(after.todayAllowance).toBe(1_033_333)
+  })
+
+  it('bar "terpakai" mengukur JATAH HARI INI, bukan kolam periode', () => {
+    const half = hudWith({
+      monthlyIncome: 7_500_000,
+      totalInstallments: 800_000,
+      spent: 516_666,
+      spentToday: 516_666,
+    })
+    /* 516.666 / 1.033.333 ≈ 0,5 — di rumus kolam periode angkanya cuma ~17%
+       (516rb dari kolam 3,1jt), jadi pengeluarannya terasa "tidak bergerak" */
+    expect(half.todayUsedPct).toBeGreaterThan(0.49)
+    expect(half.todayUsedPct).toBeLessThan(0.51)
+  })
+
+  it('pengeluaran hari ini MELEBIHI jatah hari ini → 0 (bukan angka minus) & bar penuh', () => {
+    const over = hudWith({
+      monthlyIncome: 7_500_000,
+      totalInstallments: 800_000,
+      spent: 2_000_000,
+      spentToday: 2_000_000,
+    })
+    expect(over.remainingToday).toBe(0)
+    expect(over.todayUsedPct).toBe(1)
+  })
+
+  it('`spentToday` dijaga tidak melebihi `spent` (pengirim boleh kirim salah satu)', () => {
+    const clamped = hudWith({
+      monthlyIncome: 7_500_000,
+      totalInstallments: 800_000,
+      spent: 100_000,
+      spentToday: 999_000,
+    })
+    expect(clamped.spentToday).toBe(100_000)
+  })
+
+  it('tanpa uang sama sekali: 0 & 0 (tanpa NaN), bukan pembagian nol', () => {
+    const zero = computeDailyHud({
+      monthlyIncome: 0,
+      totalInstallments: 0,
+      sinkingFunds: [],
+      spent: 0,
+      spentToday: 0,
+      window: windowSeptember,
+    })
+    expect(zero.todayAllowance).toBe(0)
+    expect(zero.remainingToday).toBe(0)
+    expect(zero.todayUsedPct).toBe(0)
   })
 })
 

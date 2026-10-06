@@ -68,17 +68,17 @@ export function BudgetCategoryCard({
             {budget.icon}
           </span>
           <span className="min-w-0">
-            <span className="block truncate text-[14.5px] font-bold tracking-tight text-ink">
+            <span className="block truncate text-[14.5px] font-medium tracking-tight text-forest">
               {budget.category}
             </span>
-            <span className="block text-[10.5px] font-medium text-ink/40">
+            <span className="block text-[10.5px] font-medium text-forest/40">
               Budget {periodLimitWord(budget.period)}
             </span>
           </span>
         </div>
 
         <span className="flex shrink-0 items-center gap-1.5">
-          <span className="text-right text-[12px] font-semibold tabular-nums text-ink">
+          <span className="text-right text-[12px] font-medium tabular-nums text-forest">
             {ratioLabel(budget.spent, budget.limit, masked)}
           </span>
           {/* hapus (paket 60.1) — ikon saja, tapi SELALU punya nama yang bisa
@@ -89,7 +89,7 @@ export function BudgetCategoryCard({
               onClick={() => onDelete(budget)}
               aria-label={BUDGET_CARD_ACTION_COPY.delete(budget.category)}
               title={BUDGET_CARD_ACTION_COPY.delete(budget.category)}
-              className="flex size-7 shrink-0 items-center justify-center rounded-xl text-ink/30 transition-colors hover:bg-plum/12 hover:text-plum focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25 active:scale-95"
+              className="flex size-7 shrink-0 items-center justify-center rounded-xl text-forest/30 transition-colors hover:bg-plum/12 hover:text-plum focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25 active:scale-95"
             >
               <Trash2 className="size-3.5" strokeWidth={2.4} aria-hidden />
             </button>
@@ -149,7 +149,7 @@ export function BudgetCategoryCard({
           <button
             type="button"
             onClick={onReview}
-            className="text-[11.5px] font-bold text-hud-terracotta underline decoration-hud-terracotta/40 decoration-dotted underline-offset-4 transition-colors hover:decoration-hud-terracotta"
+            className="text-[11.5px] font-medium text-hud-terracotta underline decoration-hud-terracotta/40 decoration-dotted underline-offset-4 transition-colors hover:decoration-hud-terracotta"
           >
             Review Pengeluaran →
           </button>

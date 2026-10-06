@@ -93,7 +93,7 @@ export function OnboardingStepIncome({
       <div className="mt-9 flex w-full items-baseline justify-center gap-1.5">
         <span
           aria-hidden
-          className="w-7 shrink-0 text-right text-lg font-medium text-ink/25"
+          className="w-7 shrink-0 text-right text-lg font-medium text-forest/25"
         >
           Rp
         </span>
@@ -112,13 +112,13 @@ export function OnboardingStepIncome({
           placeholder="5.000.000"
           aria-label="Pemasukan bulanan (opsional)"
           className={cn(
-            'min-w-0 flex-1 bg-transparent text-center font-medium leading-none tracking-[-0.04em] text-ink tabular-nums outline-none placeholder:text-ink/[0.14]',
+            'min-w-0 flex-1 bg-transparent text-center font-medium leading-none tracking-[-0.04em] text-forest tabular-nums outline-none placeholder:text-forest/[0.14]',
             incomeDisplay.length <= 7 ? 'text-[2.7rem]' : 'text-[2.15rem]',
           )}
         />
         <span aria-hidden className="w-7 shrink-0" />
       </div>
-      <p className="mt-3 text-center text-[12.5px] leading-relaxed text-ink/40">
+      <p className="mt-3 text-center text-[12.5px] leading-relaxed text-forest/40">
         Kosongkan aja kalau belum ada — nanti bisa diisi di Pengaturan.
       </p>
 
@@ -142,13 +142,13 @@ export function OnboardingStepIncome({
                 {BUDGET_SPLITS.map((split) => (
                   <div key={split.id}>
                     <div className="flex items-baseline justify-between gap-3">
-                      <span className="text-[13.5px] font-medium tracking-[-0.01em] text-ink">
+                      <span className="text-[13.5px] font-medium tracking-[-0.01em] text-forest">
                         {split.label}{' '}
-                        <span className="text-ink/35">
+                        <span className="text-forest/35">
                           {Math.round(split.percent * 100)}%
                         </span>
                       </span>
-                      <span className="shrink-0 text-[13.5px] font-semibold tabular-nums text-forest">
+                      <span className="shrink-0 text-[13.5px] font-medium tabular-nums text-forest">
                         {formatIDR(Math.round(income * split.percent))}
                       </span>
                     </div>
@@ -164,7 +164,7 @@ export function OnboardingStepIncome({
                 ))}
               </div>
 
-              <p className="mt-4 text-[11.5px] leading-relaxed text-ink/40">
+              <p className="mt-4 text-[11.5px] leading-relaxed text-forest/40">
                 Saran awal aja — bisa diubah kapan aja di halaman Budget.
               </p>
             </div>
@@ -175,7 +175,7 @@ export function OnboardingStepIncome({
       {/* ── dompet pertama (WAJIB — ini yang membuka Step 3) ───────────── */}
       <section className="mt-10">
         <OnboardLabel>Dompet pertama</OnboardLabel>
-        <p className="mt-2 text-[13px] leading-relaxed text-ink/45">
+        <p className="mt-2 text-[13px] leading-relaxed text-forest/45">
           Pilih satu dulu biar transaksi pertamamu punya tempat menempel.
         </p>
 
@@ -203,7 +203,7 @@ export function OnboardingStepIncome({
               >
                 <span
                   className={cn(
-                    'flex size-10 items-center justify-center rounded-[0.9rem] text-[15px] font-semibold ring-1 ring-inset',
+                    'flex size-10 items-center justify-center rounded-[0.9rem] text-[15px] font-medium ring-1 ring-inset',
                     pick.tile,
                   )}
                 >
@@ -212,7 +212,7 @@ export function OnboardingStepIncome({
                 <span
                   className={cn(
                     'text-[12px] font-medium tracking-[-0.01em]',
-                    active ? 'text-ink' : 'text-ink/50',
+                    active ? 'text-forest' : 'text-forest/50',
                   )}
                 >
                   {pick.name}
@@ -242,7 +242,7 @@ export function OnboardingStepIncome({
               <div className={cn('mt-3 px-4 py-4 ring-1 ring-ink/[0.06]', ONBOARD_CARD)}>
                 <label
                   htmlFor="onboarding-wallet-balance"
-                  className="block text-[12.5px] font-medium tracking-[-0.01em] text-ink/45"
+                  className="block text-[12.5px] font-medium tracking-[-0.01em] text-forest/45"
                 >
                   Saldo {walletName} sekarang
                 </label>
@@ -250,7 +250,7 @@ export function OnboardingStepIncome({
                 <div className="mt-2.5 flex w-full items-baseline gap-1.5">
                   <span
                     aria-hidden
-                    className="w-7 shrink-0 text-right text-base font-medium text-ink/25"
+                    className="w-7 shrink-0 text-right text-base font-medium text-forest/25"
                   >
                     Rp
                   </span>
@@ -269,7 +269,7 @@ export function OnboardingStepIncome({
                     enterKeyHint="next"
                     placeholder="1.000.000"
                     aria-label={'Saldo ' + walletName + ' kamu sekarang berapa?'}
-                    className="min-w-0 flex-1 bg-transparent text-center text-[1.7rem] font-medium leading-none tracking-[-0.03em] text-ink tabular-nums outline-none placeholder:text-ink/[0.14]"
+                    className="min-w-0 flex-1 bg-transparent text-center text-[1.7rem] font-medium leading-none tracking-[-0.03em] text-forest tabular-nums outline-none placeholder:text-forest/[0.14]"
                   />
                   <span aria-hidden className="w-7 shrink-0" />
                 </div>
@@ -278,7 +278,7 @@ export function OnboardingStepIncome({
           )}
         </AnimatePresence>
 
-        <p className="mt-3 text-[12px] leading-relaxed text-ink/35">
+        <p className="mt-3 text-[12px] leading-relaxed text-forest/35">
           Saldo boleh 0 kalau dompetnya baru dibuat.
         </p>
       </section>

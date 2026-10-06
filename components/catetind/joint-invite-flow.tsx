@@ -80,20 +80,20 @@ export function JointInviteFlow({
         />
       </div>
 
-      <h2 className="mt-5 font-display text-[22px] font-black leading-tight tracking-tight text-ink">
+      <h2 className="mt-5 font-display text-[22px] font-semibold leading-tight tracking-tight text-forest">
         Mulai Bangun Masa Depan Bareng 💚
       </h2>
-      <p className="mt-2 max-w-[380px] text-[13px] leading-relaxed text-ink/55">
+      <p className="mt-2 max-w-[380px] text-[13px] leading-relaxed text-forest/55">
         Ajak pasanganmu gabung ke dompet bersama. Kelola pengeluaran bareng tanpa drama.
       </p>
 
       <label className="mt-6 block w-full max-w-[380px] text-left">
-        <span className="text-[12.5px] font-semibold text-ink/70">Kasih nama dompet kalian</span>
+        <span className="text-[12.5px] font-medium text-forest/70">Kasih nama dompet kalian</span>
         <input
           value={walletName}
           onChange={(event) => setWalletName(event.target.value)}
           placeholder="Dompet Kita 💚"
-          className="mt-2 w-full rounded-2xl bg-cream px-4 py-3.5 text-[15px] font-semibold text-ink outline-none ring-1 ring-soil/16 transition-shadow placeholder:font-medium placeholder:text-ink/25 focus:ring-2 focus:ring-forest/35"
+          className="mt-2 w-full rounded-2xl bg-cream px-4 py-3.5 text-[15px] font-medium text-forest outline-none ring-1 ring-soil/16 transition-shadow placeholder:font-medium placeholder:text-forest/25 focus:ring-2 focus:ring-forest/35"
         />
       </label>
 
@@ -103,8 +103,8 @@ export function JointInviteFlow({
         disabled={!ready}
         className={
           ready
-            ? 'mt-4 inline-flex h-12 w-full max-w-[380px] items-center justify-center gap-2 rounded-2xl bg-forest text-[14px] font-bold text-mint shadow-[0_16px_32px_-20px_rgba(69,89,78,0.95)] transition-colors hover:bg-forest-soft active:scale-[0.99]'
-            : 'mt-4 inline-flex h-12 w-full max-w-[380px] cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-ink/[0.07] text-[14px] font-bold text-ink/35'
+            ? 'mt-4 inline-flex h-12 w-full max-w-[380px] items-center justify-center gap-2 rounded-2xl bg-forest text-[14px] font-medium text-mint shadow-[0_16px_32px_-20px_rgba(69,89,78,0.95)] transition-colors hover:bg-forest-soft active:scale-[0.99]'
+            : 'mt-4 inline-flex h-12 w-full max-w-[380px] cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-ink/[0.07] text-[14px] font-medium text-forest/35'
         }
       >
         Buat Dompet &amp; Ajak Pasangan
@@ -115,7 +115,7 @@ export function JointInviteFlow({
       <button
         type="button"
         onClick={onSimulatePartnerJoined}
-        className="mt-4 inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-ink/35 underline decoration-dotted underline-offset-4 transition-colors hover:text-ink/60"
+        className="mt-4 inline-flex items-center gap-1.5 text-[11.5px] font-medium text-forest/35 underline decoration-dotted underline-offset-4 transition-colors hover:text-forest/60"
       >
         <HeartHandshake className="size-3.5" strokeWidth={2.3} />
         Simulasi: {partner.name} sudah bergabung
@@ -247,10 +247,10 @@ export function JointInviteCodeModal({
               className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-t-[2rem] bg-[#ffffff] px-5 pb-7 pt-5 shadow-[0_-24px_60px_-24px_rgba(69,89,78,0.55)] sm:rounded-[2rem] sm:px-6 sm:shadow-[0_28px_70px_-24px_rgba(69,89,78,0.5)]"
               data-lenis-prevent
             >
-              <h2 className="font-display text-xl font-black tracking-tight text-ink">
+              <h2 className="font-display text-xl font-semibold tracking-tight text-forest">
                 {INVITE_CODE_COPY.title}
               </h2>
-              <p className="mt-1 text-[12.5px] leading-relaxed text-ink/55">
+              <p className="mt-1 text-[12.5px] leading-relaxed text-forest/55">
                 {INVITE_CODE_COPY.lead(partner.name, walletName)}
               </p>
               {/* Kode undangan SUNGGUHAN milik dompet ini (paket 39) — bukan
@@ -258,20 +258,20 @@ export function JointInviteCodeModal({
                   baris di bawah hanya muncul saat statusnya memang `valid`. */}
               <div className="mt-4 rounded-[1.5rem] border-2 border-dashed border-hud-sage/50 bg-cream px-4 py-5 text-center">
                 <p
-                  className="font-mono text-[34px] font-black leading-none tracking-[0.3em] text-ink"
+                  className="font-mono text-[34px] font-medium leading-none tracking-[0.3em] text-forest"
                   aria-label={invite ? `Kode undangan ${invite.code.split('').join(' ')}` : undefined}
                 >
                   {invite?.code ?? '••••••'}
                 </p>
                 {invite && usable ? (
                   <>
-                    <p className="mt-2.5 text-[11.5px] text-ink/45">{INVITE_VALIDITY_COPY}</p>
-                    <p className="mt-1 text-[11px] text-ink/40">
+                    <p className="mt-2.5 text-[11.5px] text-forest/45">{INVITE_VALIDITY_COPY}</p>
+                    <p className="mt-1 text-[11px] text-forest/40">
                       {INVITE_CODE_COPY.expiresAt(inviteExpiryLabel(invite))}
                     </p>
                   </>
                 ) : (
-                  <p className="mt-2.5 text-[11.5px] text-ink/45">{INVITE_CODE_COPY.invalidNote}</p>
+                  <p className="mt-2.5 text-[11.5px] text-forest/45">{INVITE_CODE_COPY.invalidNote}</p>
                 )}
               </div>
 
@@ -281,8 +281,8 @@ export function JointInviteCodeModal({
                 disabled={!invite || !usable}
                 className={
                   invite && usable
-                    ? 'mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-forest text-[14px] font-bold text-mint shadow-[0_16px_32px_-20px_rgba(69,89,78,0.95)] transition-colors hover:bg-forest-soft active:scale-[0.99]'
-                    : 'mt-4 inline-flex h-12 w-full cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-ink/[0.07] text-[14px] font-bold text-ink/35'
+                    ? 'mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-forest text-[14px] font-medium text-mint shadow-[0_16px_32px_-20px_rgba(69,89,78,0.95)] transition-colors hover:bg-forest-soft active:scale-[0.99]'
+                    : 'mt-4 inline-flex h-12 w-full cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-ink/[0.07] text-[14px] font-medium text-forest/35'
                 }
               >
                 <Share2 className="size-4" strokeWidth={2.4} />
@@ -292,7 +292,7 @@ export function JointInviteCodeModal({
                 type="button"
                 onClick={handleCopyCode}
                 disabled={!invite}
-                className="mt-2 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-cream text-[13.5px] font-semibold text-ink ring-1 ring-soil/16 transition-colors hover:bg-cream active:scale-[0.99] disabled:opacity-55"
+                className="mt-2 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-cream text-[13.5px] font-medium text-forest ring-1 ring-soil/16 transition-colors hover:bg-cream active:scale-[0.99] disabled:opacity-55"
               >
                 <Copy className="size-4" strokeWidth={2.4} />
                 Salin Kode
@@ -304,12 +304,12 @@ export function JointInviteCodeModal({
                 <button
                   type="button"
                   onClick={refreshCode}
-                  className="inline-flex items-center gap-2 text-[12.5px] font-semibold text-forest underline decoration-dotted underline-offset-4 transition-colors hover:text-ink"
+                  className="inline-flex items-center gap-2 text-[12.5px] font-medium text-forest underline decoration-dotted underline-offset-4 transition-colors hover:text-forest"
                 >
                   <RefreshCw className="size-3.5" strokeWidth={2.4} aria-hidden />
                   {INVITE_CODE_COPY.refresh}
                 </button>
-                <p className="mt-1 text-[10.5px] leading-relaxed text-ink/50">
+                <p className="mt-1 text-[10.5px] leading-relaxed text-forest/50">
                   {INVITE_CODE_COPY.refreshHint}
                 </p>
               </div>
@@ -335,7 +335,7 @@ export function JointInviteCodeModal({
                       >
                         💚
                       </motion.span>
-                      <p className="mt-2 text-[12.5px] font-semibold text-[#000000]">
+                      <p className="mt-2 text-[12.5px] font-medium text-forest">
                         Menunggu pasanganmu bergabung...
                       </p>
                     </div>
@@ -343,7 +343,7 @@ export function JointInviteCodeModal({
                 )}
               </AnimatePresence>
 
-              <p className="mt-4 text-center text-[11px] leading-relaxed text-ink/40">
+              <p className="mt-4 text-center text-[11px] leading-relaxed text-forest/40">
                 Pasanganmu harus punya akun CatetInd. Kalau belum, mereka bisa daftar lewat link ini
                 dan dapat diskon referral! 🎁
               </p>
@@ -352,7 +352,7 @@ export function JointInviteCodeModal({
               <button
                 type="button"
                 onClick={onSimulateJoin}
-                className="mx-auto mt-3 flex items-center gap-1.5 text-[11px] font-semibold text-ink/30 underline decoration-dotted underline-offset-4 transition-colors hover:text-ink/55"
+                className="mx-auto mt-3 flex items-center gap-1.5 text-[11px] font-medium text-forest/30 underline decoration-dotted underline-offset-4 transition-colors hover:text-forest/55"
               >
                 <Check className="size-3.5" strokeWidth={2.4} />
                 Simulasi: {partner.name} sudah bergabung
@@ -367,12 +367,12 @@ export function JointInviteCodeModal({
                 <p className="mt-4 border-t border-soil/12 pt-3.5 text-center">
                   <Link
                     href={buildJoinHref(invite.code)}
-                    className="inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-ink/55 underline underline-offset-4 transition-colors hover:text-ink"
+                    className="inline-flex items-center gap-1.5 text-[11.5px] font-medium text-forest/55 underline underline-offset-4 transition-colors hover:text-forest"
                   >
                     <ExternalLink className="size-3.5" strokeWidth={2.4} aria-hidden />
                     {JOIN_PREVIEW_COPY.linkLabel}
                   </Link>
-                  <span className="mt-1 block text-[10.5px] leading-relaxed text-ink/35">
+                  <span className="mt-1 block text-[10.5px] leading-relaxed text-forest/35">
                     {JOIN_PREVIEW_COPY.hint}
                   </span>
                 </p>
@@ -453,7 +453,7 @@ export function JointJoinedCelebration({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.75, duration: 0.35 }}
-            className="mt-6 font-display text-[22px] font-black leading-tight tracking-tight text-ink"
+            className="mt-6 font-display text-[22px] font-medium leading-tight tracking-tight text-forest"
           >
             {partner.name} sudah bergabung! 🎉💚
           </motion.h2>
@@ -461,7 +461,7 @@ export function JointJoinedCelebration({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.85, duration: 0.35 }}
-            className="mt-2 text-[13px] leading-relaxed text-ink/55"
+            className="mt-2 text-[13px] leading-relaxed text-forest/55"
           >
             Dompet bersama kalian aktif. Saldo dimulai dari Rp 0.
           </motion.p>
@@ -472,7 +472,7 @@ export function JointJoinedCelebration({
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 1, duration: 0.35 }}
             onClick={onStart}
-            className="mt-6 inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-forest px-6 text-[14px] font-bold text-mint shadow-[0_16px_32px_-20px_rgba(69,89,78,0.95)] transition-colors hover:bg-forest-soft active:scale-[0.99]"
+            className="mt-6 inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-forest px-6 text-[14px] font-medium text-mint shadow-[0_16px_32px_-20px_rgba(69,89,78,0.95)] transition-colors hover:bg-forest-soft active:scale-[0.99]"
           >
             Mulai Catat Bareng
             <ArrowRight className="size-4" strokeWidth={2.6} />

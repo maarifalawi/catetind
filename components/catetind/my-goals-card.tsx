@@ -8,7 +8,6 @@ import {
   budgetPlantHref,
   fundPercentRounded,
   heroFundOf,
-  priorityStyle,
   sortFundsByUrgency,
   type SinkingFundItem,
 } from '@/lib/data/budget'
@@ -111,10 +110,10 @@ function GrowthTrack({ pct, stage }: { pct: number; stage: PlantStage }) {
             className={cn(
               'text-[9.5px] font-medium tabular-nums transition-colors',
               s === stage
-                ? 'font-semibold text-forest'
+                ? 'font-medium text-forest'
                 : s < stage
                   ? 'text-forest/45'
-                  : 'text-ink/30',
+                  : 'text-forest/30',
             )}
           >
             {SHORT_STAGE[s]}
@@ -137,14 +136,13 @@ function CardHeader() {
           <Goal className="size-4" strokeWidth={2.4} />
         </span>
         <div>
-          <p className="text-sm font-semibold text-ink">{HOME_GOALS_COPY.title}</p>
-          <p className="text-xs text-ink/45">{HOME_GOALS_COPY.subtitle}</p>
+          <p className="text-sm font-medium text-forest">{HOME_GOALS_COPY.title}</p>
         </div>
       </div>
       <Link
         href={budgetPlantHref()}
         aria-label={HOME_GOALS_COPY.addLabel}
-        className="flex size-8 items-center justify-center rounded-full bg-cream text-ink ring-1 ring-soil/16 transition-colors hover:bg-sage focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25 active:scale-95"
+        className="flex size-8 items-center justify-center rounded-full bg-cream text-forest ring-1 ring-soil/16 transition-colors hover:bg-sage focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25 active:scale-95"
       >
         <Plus className="size-4" strokeWidth={2.4} aria-hidden />
       </Link>
@@ -168,13 +166,13 @@ function EmptyGoals() {
       >
         <Sprout className="size-5" strokeWidth={2.2} />
       </span>
-      <p className="mt-2 text-sm font-semibold text-ink">{HOME_GOALS_COPY.emptyTitle}</p>
-      <p className="mx-auto mt-1.5 max-w-[19rem] text-[12.5px] leading-relaxed text-ink/55">
+      <p className="mt-2 text-sm font-medium text-forest">{HOME_GOALS_COPY.emptyTitle}</p>
+      <p className="mx-auto mt-1.5 max-w-[19rem] text-[12.5px] leading-relaxed text-forest/55">
         {HOME_GOALS_COPY.emptyBody}
       </p>
       <Link
         href={budgetPlantHref()}
-        className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-forest px-4 py-2.5 text-[12.5px] font-semibold text-cream transition-colors hover:bg-forest-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/30 active:scale-95"
+        className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-forest px-4 py-2.5 text-[12.5px] font-medium text-cream transition-colors hover:bg-forest-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/30 active:scale-95"
       >
         <Plus className="size-3.5" strokeWidth={3} aria-hidden />
         {HOME_GOALS_COPY.emptyCta}
@@ -191,13 +189,6 @@ function HeroFund({ fund }: { fund: SinkingFundItem }) {
   const { money } = usePrivacy()
   const pct = fundPercentRounded(fund)
   const stage = stageFromPercent(pct)
-  /* kicker = KENAPA celengan ini jadi hero + konteks uangnya. Dua-duanya dibaca
-     dari aturan di `heroFundOf()`, jadi kalimatnya tidak bisa berbohong: yang
-     kritis disebut prioritasnya, yang menang lewat progres disebut progresnya. */
-  const reason =
-    fund.priority === 'kritis'
-      ? HOME_GOALS_COPY.heroReasonPriority(priorityStyle(fund.priority).label)
-      : HOME_GOALS_COPY.heroReasonProgress
 
   return (
     <div className="relative mt-4 overflow-hidden rounded-2xl bg-gradient-to-b from-sage/70 via-cream to-cream p-4 ring-1 ring-soil/8 sm:p-5">
@@ -209,16 +200,13 @@ function HeroFund({ fund }: { fund: SinkingFundItem }) {
 
       <div className="relative flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-ink">{fund.name}</p>
-          <p className="mt-0.5 text-[11px] text-ink/45">
-            {HOME_GOALS_COPY.heroKicker(reason, fund.scope)}
-          </p>
+          <p className="truncate text-sm font-medium text-forest">{fund.name}</p>
         </div>
         {/* panah = halaman detail celengan INI, jadi id yang dibuka pasti ada */}
         <Link
           href={`/budget/${fund.id}`}
           aria-label={HOME_GOALS_COPY.openDetail(fund.name)}
-          className="flex size-7 shrink-0 items-center justify-center rounded-full bg-cream text-ink ring-1 ring-soil/12 transition-colors hover:bg-sage focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25"
+          className="flex size-7 shrink-0 items-center justify-center rounded-full bg-cream text-forest ring-1 ring-soil/12 transition-colors hover:bg-sage focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25"
         >
           <ArrowUpRight className="size-3.5" strokeWidth={2.4} aria-hidden />
         </Link>
@@ -228,13 +216,19 @@ function HeroFund({ fund }: { fund: SinkingFundItem }) {
       <div className="relative mt-2 flex items-center gap-4">
         <PlantIllustration stage={stage} className="w-24 shrink-0 sm:w-28" />
         <div className="min-w-0 flex-1">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-cream/85 px-2.5 py-1 text-[11px] font-semibold text-forest ring-1 ring-forest/10">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-cream/85 px-2.5 py-1 text-[11px] font-medium text-forest ring-1 ring-forest/10">
             <Sprout className="size-3" strokeWidth={2.4} aria-hidden />
             {HOME_GOALS_COPY.stageBadge(stage, STAGE_NAMES[stage])}
           </span>
-          <p className="mt-2 text-[11.5px] leading-snug text-ink/55">
-            {stage === 4 ? HOME_GOALS_COPY.heroBlurbBloom : HOME_GOALS_COPY.heroBlurbGrowing}
-          </p>
+          {/* kalimat penyemangat HANYA saat celengannya sudah penuh (tahap 4):
+              teks berulang "Tiap setoran bikin tanaman ini naik tahap…" DIHAPUS
+              (permintaan pemilik produk) — badge tahap + batang tumbuh di bawah
+              sudah mengatakan hal yang sama tanpa mengulanginya tiap kali. */}
+          {stage === 4 && (
+            <p className="mt-2 text-[11.5px] leading-snug text-forest/55">
+              {HOME_GOALS_COPY.heroBlurbBloom}
+            </p>
+          )}
           <div className="mt-2.5">
             <GrowthTrack pct={pct} stage={stage} />
           </div>
@@ -246,18 +240,18 @@ function HeroFund({ fund }: { fund: SinkingFundItem }) {
           tombol mata & halaman detail selalu bercerita hal yang sama. */}
       <div className="relative mt-4 border-t border-soil/12 pt-3.5">
         <div className="flex items-center justify-between gap-3">
-          <p className="shrink-0 text-[11px] font-medium uppercase tracking-[0.12em] text-ink/40">
+          <p className="shrink-0 text-[11px] font-medium uppercase tracking-[0.12em] text-forest/40">
             {HOME_GOALS_COPY.savedLabel}
           </p>
-          <p className="truncate text-base font-semibold text-ink tabular-nums">
+          <p className="truncate text-base font-medium text-forest tabular-nums">
             {money(fund.current)}
           </p>
         </div>
         <div className="mt-1.5 flex items-center justify-between gap-3">
-          <p className="shrink-0 text-[11px] font-medium uppercase tracking-[0.12em] text-ink/45">
+          <p className="shrink-0 text-[11px] font-medium uppercase tracking-[0.12em] text-forest/45">
             {HOME_GOALS_COPY.targetLabel}
           </p>
-          <p className="truncate text-sm font-medium text-ink/55 tabular-nums">
+          <p className="truncate text-sm font-medium text-forest/55 tabular-nums">
             {money(fund.target)}
           </p>
         </div>
@@ -290,15 +284,15 @@ function MiniGoalRow({ fund, tintIndex }: { fund: SinkingFundItem; tintIndex: nu
           >
             <Sprout className="size-3" strokeWidth={2.4} aria-hidden />
           </span>
-          <p className="truncate text-[13px] font-medium text-ink">{fund.name}</p>
+          <p className="truncate text-[13px] font-medium text-forest">{fund.name}</p>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
-          <span className="text-[10.5px] font-semibold text-forest">{SHORT_STAGE[stage]}</span>
-          <span className="text-xs font-semibold text-ink/55 tabular-nums">{pct}%</span>
+          <span className="text-[10.5px] font-medium text-forest">{SHORT_STAGE[stage]}</span>
+          <span className="text-xs font-medium text-forest/55 tabular-nums">{pct}%</span>
           {/* ArrowUpRight (bukan ChevronDown): ikon ini MENUJU halaman, bukan
               membuka baris — chevron ke bawah dulu menjanjikan expand yang
               tidak pernah ada */}
-          <ArrowUpRight className="size-3.5 text-ink/35" strokeWidth={2.2} aria-hidden />
+          <ArrowUpRight className="size-3.5 text-forest/35" strokeWidth={2.2} aria-hidden />
         </div>
       </div>
       {/* batang tumbuh mini: 4 segmen = 4 tahap */}
@@ -341,7 +335,7 @@ export const MyGoalsCard = memo(function MyGoalsCard() {
           <HeroFund fund={hero} />
           {rest.length > 0 && (
             <div className="mt-3">
-              <p className="px-1 text-[11px] font-medium uppercase tracking-[0.12em] text-ink/40">
+              <p className="px-1 text-[11px] font-medium uppercase tracking-[0.12em] text-forest/40">
                 {HOME_GOALS_COPY.restTitle(rest.length)}
               </p>
               {/* tiap celengan punya batang tumbuhnya sendiri (4 segmen), jadi

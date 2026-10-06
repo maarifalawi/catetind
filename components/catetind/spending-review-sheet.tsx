@@ -105,7 +105,7 @@ export function SpendingReviewSheet({
             <Sparkles className="size-4" strokeWidth={2.2} aria-hidden />
             {SPENDING_REVIEW_COPY.coachCta}
           </SheetSubmit>
-          <p className="mt-2 text-center text-[10.5px] leading-relaxed text-ink/40">
+          <p className="mt-2 text-center text-[10.5px] leading-relaxed text-forest/40">
             {SPENDING_REVIEW_COPY.coachHint}
           </p>
         </div>
@@ -114,7 +114,7 @@ export function SpendingReviewSheet({
       {/* 1. Kalimat kondisi — apa adanya dari tabel PRD (2B.4 / 2B.3) */}
       <p
         className={cn(
-          'rounded-2xl px-4 py-3.5 text-[13px] leading-relaxed text-ink ring-1',
+          'rounded-2xl px-4 py-3.5 text-[13px] leading-relaxed text-forest ring-1',
           CONDITION_SKIN[review.condition],
         )}
       >
@@ -128,21 +128,21 @@ export function SpendingReviewSheet({
       >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-[11.5px] font-semibold text-ink/50">
+            <p className="text-[11.5px] font-medium text-forest/50">
               {SPENDING_REVIEW_COPY.spentLabel}
             </p>
-            <p className="mt-1 text-[26px] font-black leading-none tracking-tight text-ink tabular-nums">
+            <p className="mt-1 text-[26px] font-semibold leading-none tracking-tight text-forest tabular-nums">
               {maskNominal(review.spentToday, masked)}
             </p>
-            <p className="mt-1.5 text-[11.5px] font-medium text-ink/50">
+            <p className="mt-1.5 text-[11.5px] font-medium text-forest/50">
               {SPENDING_REVIEW_COPY.budgetLead}{' '}
-              <b className="font-semibold text-ink tabular-nums">
+              <b className="font-medium text-forest tabular-nums">
                 {maskNominal(review.dailyBudget, masked)}
               </b>
             </p>
           </div>
           {/* chip periode: menegaskan jatah MANA yang dipakai membandingkan */}
-          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-sage/70 px-2.5 py-1 text-[10.5px] font-bold text-forest ring-1 ring-soil/8">
+          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-sage/70 px-2.5 py-1 text-[10.5px] font-medium text-forest ring-1 ring-soil/8">
             <CalendarDays className="size-3" strokeWidth={2.6} aria-hidden />
             {period.label}
           </span>
@@ -174,16 +174,16 @@ export function SpendingReviewSheet({
           </>
         ) : (
           /* jatah ditahan: jangan gambar bar 0% yang terbaca "aman" */
-          <p className="mt-3 rounded-xl bg-hud-amber/12 px-3 py-2 text-[11.5px] leading-relaxed text-ink/60">
+          <p className="mt-3 rounded-xl bg-hud-amber/12 px-3 py-2 text-[11.5px] leading-relaxed text-forest/60">
             {SPENDING_REVIEW_COPY.heldPace}
           </p>
         )}
 
         {/* meta — sisa jatah hari ini, sisa hari periode, jumlah catatan */}
-        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-soil/12 pt-2.5 text-[11px] text-ink/55">
+        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-soil/12 pt-2.5 text-[11px] text-forest/55">
           <span>
             {SPENDING_REVIEW_COPY.remainingLead}{' '}
-            <b className="font-semibold text-ink tabular-nums">
+            <b className="font-medium text-forest tabular-nums">
               {maskNominal(review.remainingToday, masked)}
             </b>
           </span>
@@ -207,17 +207,17 @@ export function SpendingReviewSheet({
             <TrendingUp className="size-4" strokeWidth={2.4} aria-hidden />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-[10.5px] font-semibold text-ink/45">
+            <p className="text-[10.5px] font-medium text-forest/45">
               {SPENDING_REVIEW_COPY.topTitle}
             </p>
-            <p className="mt-0.5 truncate text-[13.5px] font-bold tracking-tight text-ink">
+            <p className="mt-0.5 truncate text-[13.5px] font-medium tracking-tight text-forest">
               {topCategory.category}
             </p>
-            <p className="text-[10.5px] text-ink/45">
+            <p className="text-[10.5px] text-forest/45">
               {SPENDING_REVIEW_COPY.topShare(topCategory.pct)}
             </p>
           </div>
-          <span className="shrink-0 text-[13px] font-bold text-hud-terracotta tabular-nums">
+          <span className="shrink-0 text-[13px] font-semibold text-hud-terracotta tabular-nums">
             {maskNominal(topCategory.total, masked)}
           </span>
         </section>
@@ -226,10 +226,10 @@ export function SpendingReviewSheet({
           aria-label={SPENDING_REVIEW_COPY.thinTitle}
           className="mt-3 rounded-2xl border border-dashed border-oat bg-cream/60 px-4 py-4"
         >
-          <p className="text-[13px] font-bold leading-snug text-ink">
+          <p className="text-[13px] font-medium leading-snug text-forest">
             {SPENDING_REVIEW_COPY.thinTitle}
           </p>
-          <p className="mt-1 text-[12px] leading-relaxed text-ink/55">
+          <p className="mt-1 text-[12px] leading-relaxed text-forest/55">
             {SPENDING_REVIEW_COPY.thinBody}
           </p>
           {/* progres menuju ambang — engagement tanpa klaim palsu (PRD 2A.5) */}
@@ -240,11 +240,11 @@ export function SpendingReviewSheet({
                 style={{ width: `${(review.noteCount / SPENDING_REVIEW_MIN_NOTES) * 100}%` }}
               />
             </div>
-            <span className="shrink-0 text-[10.5px] font-semibold text-ink/45 tabular-nums">
+            <span className="shrink-0 text-[10.5px] font-medium text-forest/45 tabular-nums">
               {SPENDING_REVIEW_COPY.thinProgress(review.noteCount)}
             </span>
           </div>
-          <p className="mt-2 text-[10.5px] leading-relaxed text-ink/40">
+          <p className="mt-2 text-[10.5px] leading-relaxed text-forest/40">
             {SPENDING_REVIEW_COPY.thinHint}
           </p>
         </section>
@@ -253,7 +253,7 @@ export function SpendingReviewSheet({
       {/* 4. Catatan hari ini — bukti angka di atas, bukan opini */}
       {shownNotes.length > 0 && (
         <section aria-label={SPENDING_REVIEW_COPY.notesTitle} className="mt-4">
-          <p className="text-[10.5px] font-semibold uppercase tracking-wider text-ink/40">
+          <p className="text-[10.5px] font-medium uppercase tracking-wider text-forest/40">
             {SPENDING_REVIEW_COPY.notesTitle}
           </p>
           <ul className="mt-2 space-y-1.5 pb-1">
@@ -263,20 +263,20 @@ export function SpendingReviewSheet({
                 className="flex items-center justify-between gap-3 rounded-xl bg-cream/70 px-3.5 py-2 ring-1 ring-soil/8"
               >
                 <span className="min-w-0">
-                  <span className="block truncate text-[12.5px] font-semibold text-ink">
+                  <span className="block truncate text-[12.5px] font-medium text-forest">
                     {note.name}
                   </span>
-                  <span className="block text-[10px] text-ink/40">
+                  <span className="block text-[10px] text-forest/40">
                     {note.category} · {note.time} · {note.wallet}
                   </span>
                 </span>
-                <span className="shrink-0 text-[12px] font-semibold text-ink/70 tabular-nums">
+                <span className="shrink-0 text-[12px] font-medium text-forest/70 tabular-nums">
                   {maskNominal(note.amount, masked)}
                 </span>
               </li>
             ))}
             {hiddenNotes > 0 && (
-              <li className="px-1 text-[10.5px] text-ink/40">
+              <li className="px-1 text-[10.5px] text-forest/40">
                 {SPENDING_REVIEW_COPY.notesMore(hiddenNotes)}
               </li>
             )}

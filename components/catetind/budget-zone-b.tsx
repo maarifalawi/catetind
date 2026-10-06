@@ -48,11 +48,11 @@ export function BudgetZoneB({
               🌿
             </span>
             <div className="min-w-0">
-              <p className="text-[12.5px] leading-relaxed text-ink/60">{NUDGE_COPY}</p>
+              <p className="text-[12.5px] leading-relaxed text-forest/60">{NUDGE_COPY}</p>
               <button
                 type="button"
                 onClick={() => onContribute(funds[0])}
-                className="mt-2.5 rounded-full bg-forest px-3.5 py-2 text-[12px] font-semibold text-mint transition-colors hover:bg-forest-soft active:scale-95"
+                className="mt-2.5 rounded-full bg-forest px-3.5 py-2 text-[12px] font-medium text-mint transition-colors hover:bg-forest-soft active:scale-95"
               >
                 Setor Sekarang
               </button>
@@ -66,14 +66,14 @@ export function BudgetZoneB({
         <div className="rounded-[1.6rem] border border-dashed border-oat bg-cream/60 px-6 py-9 text-center">
           {/* TODO: add cute empty state illustration */}
           <span className="text-[28px]">🎬🌱</span>
-          <p className="mx-auto mt-3 max-w-[19rem] text-[13px] leading-relaxed text-ink/60">
+          <p className="mx-auto mt-3 max-w-[19rem] text-[13px] leading-relaxed text-forest/60">
             Belum punya impian yang ditabung? Yuk mulai dari yang simpel — nabung buat nonton
             bioskop juga boleh!
           </p>
           <button
             type="button"
             onClick={onAddGoal}
-            className="mt-4 rounded-full bg-forest px-4 py-2.5 text-[12.5px] font-semibold text-cream transition-colors hover:bg-forest-soft active:scale-95"
+            className="mt-4 rounded-full bg-forest px-4 py-2.5 text-[12.5px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-95"
           >
             Tanam Celengan Pertama
           </button>
@@ -104,14 +104,14 @@ export function BudgetZoneB({
       <button
         type="button"
         onClick={onAddGoal}
-        className="flex w-full items-center justify-center gap-2 rounded-[1.4rem] border-2 border-dashed border-oat bg-cream/45 px-4 py-4 text-[12.5px] font-semibold text-ink/45 transition-all hover:border-forest/25 hover:bg-cream hover:text-ink active:scale-[0.99]"
+        className="flex w-full items-center justify-center gap-2 rounded-[1.4rem] border-2 border-dashed border-oat bg-cream/45 px-4 py-4 text-[12.5px] font-medium text-forest/45 transition-all hover:border-forest/25 hover:bg-cream hover:text-forest active:scale-[0.99]"
       >
         <span className="text-[15px] leading-none">+</span>
         Tambah Celengan Baru
       </button>
 
       {/* ── social proof (muted, di paling bawah) ─────────────────────────── */}
-      <p className="px-1 text-center text-[11px] leading-relaxed text-ink/35">{SOCIAL_PROOF_COPY}</p>
+      <p className="px-1 text-center text-[11px] leading-relaxed text-forest/35">{SOCIAL_PROOF_COPY}</p>
     </div>
   )
 }

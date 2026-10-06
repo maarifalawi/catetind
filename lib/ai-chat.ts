@@ -67,14 +67,20 @@ export const AI_CONNECT_HREF = '/settings/ai'
    tidak beda cerita dengan kartu sidebar / halaman Billing, dan angkanya BENAR-
    BENAR turun setiap kali user memakai AI (paket 42). */
 
-/** C. Sapaan proaktif saat panel pertama dibuka — refer ke kondisi finansial user, bukan "Hello!" generik */
+/**
+ * C. Sapaan pembuka CADANGAN — dipakai HANYA kalau ringkasan data nyata tidak
+ * tersedia. Sejak paket 65 sapaan utama DIHITUNG dari data user nyata
+ * (`buildWelcomeText(collectCoachSummary())` di `hooks/use-ai-chat.ts`), jadi
+ * kalimat di bawah TIDAK boleh menyebut nominal apa pun — angka template
+ * ("Sisa jatah kamu hari ini Rp 150.000", "Kopi naik 35%") adalah halusinasi
+ * yang dilarang kanon "jujur di setiap klaim" (PRD 244).
+ */
 export const PROACTIVE_WELCOME: Omit<ChatMessage, 'id'> = {
   role: 'ai',
   kind: 'coaching',
-  /** catatan finansial di kalimat ini dibaca dari DATA LOKAL app, bukan model */
   ruleBased: true,
   content:
-    "Halo Jon! Sisa jatah kamu hari ini Rp 150.000 — masih aman nih. Btw, pengeluaran 'Kopi' minggu ini naik 35% dari minggu lalu. Mau aku bantu atur ulang limit jajan? ☕",
+    'Halo! 👋 Aku AI Coach kamu. Aku bisa bantu catat pengeluaran/pemasukan dan bantu baca kondisi keuanganmu dari data di app ini. Mau mulai dari mana?',
 }
 
 /** C. Quick-suggestion chips di bawah sapaan — tap = kirim sebagai pesan user */
@@ -112,12 +118,12 @@ export const AI_NOT_CONNECTED_REPLY: Omit<ChatMessage, 'id'> = {
 export const MOCK_LIMIT_REPLY: Omit<ChatMessage, 'id'> = {
   role: 'ai',
   kind: 'coaching',
-  /** angkanya dibaca dari data lokal (Ringkasan/limit kategori mock) — bukan model */
+  /** aturan lokal (bukan model) — TIDAK menyebut angka yang tidak dihitung */
   ruleBased: true,
   content:
-    'Pengeluaran kopi kamu Rp 350.000 bulan ini. Mau aku buatin limit khusus buat kategori Kopi?',
+    'Oke, limit kategori bisa kita atur di halaman Budget. Di sana kamu bisa tentukan batas per kategori, dan sisa jatah harianmu ikut menyesuaikan otomatis. Mau buka sekarang?',
   action: {
-    label: 'Buat Limit Kopi Rp 200.000/bulan',
+    label: 'Atur limit di Budget',
     href: '/budget',
     kind: 'create',
   },
@@ -259,6 +265,13 @@ export const AI_CAPTURE_COPY = {
   voiceNoMic: 'Mikrofonnya belum kebaca di perangkat ini. Coba lagi, atau ketik aja ya 🌿',
   voiceNetwork: 'Sambungannya lagi goyang, jadi suaramu keputus. Ketik aja ya 🌿',
   voiceFailed: 'Aku keputus di tengah jalan. Coba lagi, atau ketik aja ya 🌿',
+  /**
+   * PAKET 63: OCR nyata bisa gagal (provider mati, kuota penyedia penuh, atau foto
+   * tak terbaca). Saat itu terjadi, hasilnya TIDAK dikarang — halaman bilang apa
+   * adanya dan menawarkan foto ulang atau isi manual.
+   */
+  scanFailed:
+    'Aku belum bisa baca struk ini — fotonya mungkin kurang jelas, atau sambungannya lagi goyang. Coba foto ulang ya, atau isi manual dulu 🌿',
   problemRetry: 'Coba lagi',
   problemFallback: 'Oke, ketik aja',
 
@@ -276,18 +289,31 @@ export const MOCK_APPRECIATION_REPLY: Omit<ChatMessage, 'id'> = {
     'Makasih udah mau cerita, Jon! Ngomongin duit itu nggak gampang — dan kamu udah ambil langkah paling penting 💚',
 }
 
-/* ── STATUS AI DI HALAMAN PENGATURAN → AI (paket 44) ─────────────────────────
-   Tombol "Hubungkan AI" di AI Coach menuju `/settings/ai`. Supaya tujuannya
-   bukan jalan buntu, halaman itu menyebut keadaannya apa adanya: hari ini app
-   menjawab dari aturan lokal, dan semua saklar di halaman ini baru berlaku penuh
-   saat model AI disambungkan (butuh API key LLM yang disimpan SERVER-side —
-   `§AI` opsi (a) prompt 44; belum ada di build ini, jadi keputusannya opsi (b)).
+/**
+ * F. Copy pencatatan LEWAT CHAT (paket 65 · Tugas D).
+ *
+ * Saat user mengetik ucapan transaksi ("gua habis makan 50k, catet ya"), widget
+ * menampilkan KARTU KONFIRMASI yang sama dengan jalur suara/struk. AI baru boleh
+ * bilang "sudah aku catat" SETELAH barisnya benar-benar tertulis — karena itu
+ * balasannya dibentuk dari `buildRecordedReply()` dengan angka SESUDAH mencatat.
+ */
+export const AI_CAPTURE_REPLY = {
+  /** pengantar sebelum kartu konfirmasi muncul di chat */
+  intro: 'Oke, aku rapikan dulu ya — cek sebentar, udah pas belum?',
+  /** hasil konfirmasi kartu di chat (dipakai saat `recordTransaction` benar-benar mengembalikan baris) */
+  viewHistory: 'Lihat riwayat',
+} as const
 
-   Kalimatnya sengaja tidak menyebut "segera hadir" maupun tanggal: yang bisa
-   dijanjikan tanpa backend hanya keadaan hari ini + apa yang tetap berguna. */
+
+/* ── STATUS AI DI HALAMAN PENGATURAN → AI (paket 44 · diperbarui paket 63) ────
+   Tombol "Hubungkan AI" di AI Coach menuju `/settings/ai`. Sejak paket 63 model
+   AI benar-benar tersambung (Gemini, kunci HANYA di server), jadi halaman itu
+   menyebut keadaan hari ini apa adanya — termasuk apa yang terjadi kalau provider
+   sedang tak bisa dihubungi (jatuh ke aturan lokal, dengan label jujur). */
+
 export const AI_STATUS_COPY = {
-  badge: 'Belum tersambung ke model',
+  badge: 'Tersambung ke model',
   title: 'Status AI hari ini',
-  body: 'AI Coach CatetInd masih menjawab dari aturan lokal + data di perangkat ini, jadi preferensi di bawah belum dijalankan oleh model AI. Begitu provider AI disambungkan (butuh API key LLM yang disimpan di server — belum ada di build ini), semua saklar ini langsung berlaku apa adanya tanpa kamu atur ulang.',
-  worksNow: 'Yang tetap jalan sekarang: catat transaksi manual (kategorinya kamu pilih sendiri — bukan tebakan app), scan struk, input suara, dan AI Coach menjawab dari data lokalmu.',
+  body: 'AI Coach CatetInd tersambung ke model AI (Gemini) lewat server kami — kuncinya disimpan di server dan tidak pernah ikut ke browser. Scan struk & input suara dibaca model yang sama. Kalau sambungannya sedang penuh atau mati, AI Coach otomatis kembali menjawab dari aturan lokal + data di perangkatmu (jawabannya diberi label "belum pakai model"), dan pencatatan manual tetap jalan penuh.',
+  worksNow: 'Yang selalu jalan: catat transaksi manual (kategorinya kamu pilih sendiri — bukan tebakan app), scan struk, input suara, dan AI Coach. Dua saklar di bawah mengatur apakah AI boleh mengisi kategori & menamai catatanmu secara otomatis.',
 } as const

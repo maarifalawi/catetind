@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { PhoneStage } from '@/components/catetind/phone-stage'
+import { PublicNavbar } from '@/components/catetind/public-navbar'
 import { VerifyEmailScreen } from '@/components/catetind/verify-email-screen'
 
 /**
@@ -17,7 +18,8 @@ import { VerifyEmailScreen } from '@/components/catetind/verify-email-screen'
  * halaman tetap bisa dirender tanpa hydration mismatch.
  *
  * `PhoneStage plain` sama seperti /login & /checkout: layar fokus, tanpa
- * sidebar/nav/chat widget.
+ * sidebar/bottom-nav app. Satu-satunya navigasi di sini adalah `PublicNavbar` —
+ * navbar SITUS (di luar sistem app), dipakai supaya konsisten dengan /login.
  */
 export const metadata: Metadata = {
   title: 'Cek Email — CatetInd',
@@ -48,6 +50,8 @@ export default async function VerifyEmailPage({
 
   return (
     <PhoneStage plain>
+      {/* navbar SITUS (di luar sistem app) — konsisten dengan /login */}
+      <PublicNavbar />
       <VerifyEmailScreen
         email={firstValue(params.email)}
         expired={status === 'expired' || errorParam.length > 0}

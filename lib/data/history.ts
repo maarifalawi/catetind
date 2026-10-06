@@ -1,6 +1,7 @@
 import { localISODate } from '../time'
 import type { MoneyContext, TransactionType } from '../types'
 import { formatIDR } from '../wallets'
+import { categoryGroupIdOf, isKnownCategoryName } from './categories'
 
 /* ── Riwayat & Insight (/app/history) ────────────────────────────────────────
    Satu sumber data untuk halaman Riwayat & Insight:
@@ -68,8 +69,8 @@ export const MONEY_TONE: Record<
 > = {
   income: { text: 'text-forest', dot: 'bg-forest', label: 'Pemasukan' },
   expense: { text: 'text-hud-terracotta', dot: 'bg-hud-terracotta', label: 'Pengeluaran' },
-  saving: { text: 'text-ink/55', dot: 'bg-ink/30', label: 'Pindah dana' },
-  transfer: { text: 'text-ink/55', dot: 'bg-ink/30', label: 'Pindah dana' },
+  saving: { text: 'text-forest/55', dot: 'bg-ink/30', label: 'Pindah dana' },
+  transfer: { text: 'text-forest/55', dot: 'bg-ink/30', label: 'Pindah dana' },
 }
 
 /** urutan legenda: masuk → keluar → netral */
@@ -355,6 +356,33 @@ export const CATEGORY_FILTERS: FilterOption<CategoryFilter>[] = [
  *  bucket "Lainnya" supaya tidak ada transaksi yang mustahil difilter */
 const NAMED_CATEGORIES = ['makanan', 'transportasi', 'tagihan', 'hiburan']
 
+/**
+ * Bucket filter kategori dari nama kategori APA ADANYA (paket 69).
+ *
+ * Empat pill bernama tetap yang lama; subkategori taksonomi baru
+ * (`lib/data/categories.ts`) dipetakan ke pill GRUP-nya — mis. 'Kopi & Minuman'
+ * dan 'Belanja Dapur' dua-duanya masuk pill 'Makanan'. Tanpa ini, menambah 40+
+ * kategori hanya akan membuat pill "Lainnya" membengkak, dan itu bukan filter.
+ * Kategori yang memang tidak berkelompok (Tabungan, Transfer, Gaji Utama, atau
+ * nilai lama macam 'Kopi') tetap jujur jatuh ke "Lainnya".
+ */
+function categoryFilterBucketOf(category: string): CategoryFilter {
+  const key = category.trim().toLowerCase()
+  if (NAMED_CATEGORIES.includes(key)) return key as CategoryFilter
+  switch (categoryGroupIdOf(category)) {
+    case 'makan':
+      return 'makanan'
+    case 'transportasi':
+      return 'transportasi'
+    case 'tagihan':
+      return 'tagihan'
+    case 'hiburan':
+      return 'hiburan'
+    default:
+      return 'lainnya'
+  }
+}
+
 /* ── TANGGAL & MASKING ───────────────────────────────────────────────────── */
 
 /**
@@ -429,10 +457,8 @@ export function filterHistoryTransactions<T extends HistoryTransaction>(
     if (!matchesTime(tx, filters.time, todayIso)) return false
     if (filters.wallet !== 'all' && tx.wallet.toLowerCase() !== filters.wallet) return false
     if (filters.type !== 'all' && tx.type !== filters.type) return false
-    if (filters.category !== 'all') {
-      const key = tx.category.toLowerCase()
-      const isNamed = NAMED_CATEGORIES.includes(key)
-      if (filters.category === 'lainnya' ? isNamed : key !== filters.category) return false
+    if (filters.category !== 'all' && categoryFilterBucketOf(tx.category) !== filters.category) {
+      return false
     }
     return true
   })
@@ -961,6 +987,41 @@ export const TRANSACTION_INPUT_COPY = {
   categoryHint: 'Kategori ini yang dipakai filter Riwayat & rincian pengeluaranmu.',
   /** petunjuk + toast saat form selebihnya sudah siap, kecuali kategorinya */
   categoryNeeded: 'Pilih kategori dulu ya 🌿 Cuma kategori yang kamu pilih yang disimpan.',
+
+  /* ── SUMBER DOMPET (paket 69) ────────────────────────────────────────────────
+     Sebelum paket 69 form TAMBAH tidak menanyakan dompet sama sekali: catatannya
+     menempel ke dompet default konteks aktif, jadi user tidak pernah bisa
+     memastikan uangnya keluar dari dompet yang mana. Sekarang pemilihnya ada di
+     form, dan saldo tiap dompet ditampilkan apa adanya di dalamnya. */
+  /** label field dompet di form TAMBAH (mode edit pakai `EDIT_TRANSACTION_COPY`) */
+  walletLabel: 'Sumber Dompet',
+  /** opsi kosong di pemilih — bukan dompet, jadi tidak boleh jadi nilai tersimpan */
+  walletPlaceholder: 'Pilih dompet…',
+  /** petunjuk tetap di bawah pemilih dompet */
+  walletHint: 'Saldo dompet inilah yang bergerak saat catatannya disimpan.',
+  /** petunjuk + toast saat user belum memilih dompet */
+  walletNeeded: 'Pilih dompetnya dulu ya 🌿 Biar jelas uangnya keluar dari mana.',
+  /** judul sheet pemilih dompet */
+  walletSheetTitle: 'Pilih Dompet',
+  /** a11y trigger & tombol tutup pemilih dompet */
+  walletOpenLabel: 'Pilih dompet transaksi',
+  walletCloseLabel: 'Tutup pemilih dompet',
+  /** subjudul satu baris dompet, mis. "Saldo Rp 1.450.000" */
+  walletBalance: (amount: string) => `Saldo ${amount}`,
+  /** keadaan kosong pemilih — jujur: tanpa dompet, catatan tak punya tempat uang */
+  walletEmptyTitle: 'Belum ada dompet di konteks ini',
+  walletEmptyBody:
+    'Tambahkan dompet dulu di halaman Dompet & Akun, biar catatanmu punya tempat uang.',
+
+  /* ── PINTU PINDAH DANA (paket 70) ────────────────────────────────────────────
+     Pindah dana bukan tipe catatan keempat di form ini: catatan biasa cuma punya
+     SATU dompet, sedangkan pindah dana wajib punya dompet TUJUAN (paket 55).
+     Jadi label di sini bukan nama tipe transaksi, melainkan nama PINTU menuju
+     alur `TransferFlow` — dan hint-nya menyebut kenapa ia perlu satu alur sendiri,
+     supaya user tidak merasa dilempar dari form. */
+  transferDoorLabel: 'Pindah Dana',
+  transferDoorHint:
+    'Pindah uang antar dompet — dompet asal & tujuannya ditanyakan sekaligus di alurnya sendiri.',
 } as const
 
 /* ── OPSI FIELD DI MODE EDIT ─────────────────────────────────────────────────
@@ -1008,7 +1069,13 @@ export const TRANSACTION_FIXED_CATEGORY: Partial<
 
 /** kategori kanon = satu-satunya nilai yang sah disimpan dari jalur manual */
 function isCanonicalCategory(value: string): boolean {
-  return (TRANSACTION_CATEGORY_OPTIONS as readonly string[]).includes(value)
+  return (
+    (TRANSACTION_CATEGORY_OPTIONS as readonly string[]).includes(value) ||
+    /* PAKET 69: subkategori taksonomi 9-grup (`lib/data/categories.ts`) ikut sah.
+       Yang TIDAK berubah: nilai karangan (mis. 'Proyek') tetap ditolak, jadi
+       tidak ada baris yang mustahil dijaring filter kategori di Riwayat. */
+    isKnownCategoryName(value)
+  )
 }
 
 export interface ManualCategoryChoice {

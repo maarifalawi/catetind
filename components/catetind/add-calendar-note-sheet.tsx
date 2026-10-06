@@ -91,7 +91,7 @@ export function AddCalendarNoteSheet({
       {/* ── field tanggal: terisi otomatis & terkunci ────────────────────── */}
       <div className="rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/12">
         <div className="flex items-center justify-between gap-3">
-          <span className="flex items-center gap-2 text-[12.5px] font-semibold text-ink">
+          <span className="flex items-center gap-2 text-[12.5px] font-medium text-forest">
             <CalendarDays className="size-4 shrink-0 text-forest" strokeWidth={2.3} />
             Tanggal catatan
           </span>
@@ -102,17 +102,17 @@ export function AddCalendarNoteSheet({
               value={dateValue}
               onChange={(event) => setDateValue(event.target.value)}
               aria-label="Tanggal catatan"
-              className="rounded-xl bg-ink/[0.04] px-2.5 py-1.5 text-[12.5px] font-semibold tabular-nums text-ink outline-none ring-1 ring-transparent transition-all focus:bg-cream focus:ring-forest/25"
+              className="rounded-xl bg-ink/[0.04] px-2.5 py-1.5 text-[12.5px] font-medium tabular-nums text-forest outline-none ring-1 ring-transparent transition-all focus:bg-cream focus:ring-forest/25"
             />
           ) : (
-            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-sage px-2.5 py-1 text-[11.5px] font-semibold text-forest">
+            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-sage px-2.5 py-1 text-[11.5px] font-medium text-forest">
               <Lock className="size-3 shrink-0" strokeWidth={2.8} />
               {shortDateLabel(dateValue)}
             </span>
           )}
         </div>
 
-        <p className="mt-1.5 text-[11px] leading-relaxed text-ink/45">
+        <p className="mt-1.5 text-[11px] leading-relaxed text-forest/45">
           {unlocked
             ? 'Tanggal dibuka — pastikan sudah benar sebelum mencatat.'
             : 'Tanggal terkunci dari kalender, jadi kamu bisa langsung mencatat tanpa memilih tanggal lagi.'}
@@ -122,7 +122,7 @@ export function AddCalendarNoteSheet({
           <button
             type="button"
             onClick={() => setUnlocked(true)}
-            className="mt-1.5 text-[11.5px] font-semibold text-forest underline decoration-dotted underline-offset-4 transition-colors hover:text-forest-soft"
+            className="mt-1.5 text-[11.5px] font-medium text-forest underline decoration-dotted underline-offset-4 transition-colors hover:text-forest-soft"
           >
             Ubah tanggal
           </button>

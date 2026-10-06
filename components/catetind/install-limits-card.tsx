@@ -30,8 +30,8 @@ export function InstallLimitsCard({ className }: { className?: string }) {
           <ShieldCheck className="size-4" strokeWidth={2.2} aria-hidden />
         </span>
         <div className="min-w-0">
-          <h2 className="text-sm font-semibold text-ink">{INSTALL_LIMITS.title}</h2>
-          <p className="mt-0.5 text-xs leading-relaxed text-ink/50">{INSTALL_LIMITS.blurb}</p>
+          <h2 className="text-sm font-medium text-forest">{INSTALL_LIMITS.title}</h2>
+          <p className="mt-0.5 text-xs leading-relaxed text-forest/50">{INSTALL_LIMITS.blurb}</p>
         </div>
       </header>
 

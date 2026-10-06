@@ -128,8 +128,8 @@ export function OnboardingStepFirstTransaction({
               className={cn(
                 'flex flex-1 flex-col items-center gap-1 rounded-[0.9rem] py-2 transition-all duration-200',
                 active
-                  ? 'bg-cream text-ink shadow-[0_1px_3px_rgba(0,0,0,0.12)]'
-                  : 'text-ink/45 hover:text-ink/70',
+                  ? 'bg-cream text-forest shadow-[0_1px_3px_rgba(0,0,0,0.12)]'
+                  : 'text-forest/45 hover:text-forest/70',
               )}
             >
               <Icon className="size-[17px]" strokeWidth={2} />
@@ -145,7 +145,7 @@ export function OnboardingStepFirstTransaction({
       <div className="mt-7 flex w-full items-baseline justify-center gap-1.5">
         <span
           aria-hidden
-          className="w-7 shrink-0 text-right text-lg font-medium text-ink/25"
+          className="w-7 shrink-0 text-right text-lg font-medium text-forest/25"
         >
           Rp
         </span>
@@ -161,7 +161,7 @@ export function OnboardingStepFirstTransaction({
           placeholder="0"
           aria-label="Nominal transaksi pertama"
           className={cn(
-            'min-w-0 flex-1 bg-transparent text-center font-medium leading-none tracking-[-0.04em] text-ink tabular-nums outline-none placeholder:text-ink/[0.14]',
+            'min-w-0 flex-1 bg-transparent text-center font-medium leading-none tracking-[-0.04em] text-forest tabular-nums outline-none placeholder:text-forest/[0.14]',
             display.length <= 7 ? 'text-[2.7rem]' : 'text-[2.15rem]',
           )}
         />
@@ -180,7 +180,7 @@ export function OnboardingStepFirstTransaction({
         }}
         placeholder="Contoh: Kopi Kenangan pagi tadi"
         aria-label="Catatan transaksi (opsional)"
-        className="mt-8 h-14 w-full rounded-[1.35rem] bg-cream px-4 text-[14px] font-medium tracking-[-0.01em] text-ink outline-none ring-1 ring-ink/[0.06] transition-all placeholder:text-ink/30 focus:ring-forest/25"
+        className="mt-8 h-14 w-full rounded-[1.35rem] bg-cream px-4 text-[14px] font-medium tracking-[-0.01em] text-forest outline-none ring-1 ring-ink/[0.06] transition-all placeholder:text-forest/30 focus:ring-forest/25"
       />
     </div>
   )

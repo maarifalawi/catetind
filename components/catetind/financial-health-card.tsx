@@ -73,11 +73,11 @@ export function FinancialHealthCard({
             <Activity className="size-[18px]" strokeWidth={2.2} />
           </span>
           <div>
-            <h2 className="font-display text-[15px] font-bold tracking-tight text-ink">{title}</h2>
-            <p className="text-[11.5px] text-ink/45">{subtitle}</p>
+            <h2 className="font-display text-[15px] font-semibold tracking-tight text-forest">{title}</h2>
+            <p className="text-[11.5px] text-forest/45">{subtitle}</p>
           </div>
         </div>
-        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-cream px-2.5 py-1 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-ink/45 ring-1 ring-soil/12">
+        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-cream px-2.5 py-1 text-[10.5px] font-medium uppercase tracking-[0.1em] text-forest/45 ring-1 ring-soil/12">
           <Sparkles className="size-3 text-forest" strokeWidth={2.4} />
           {ready ? HEALTH_CARD_COPY.badgeAi : HEALTH_CARD_COPY.badgeCoach}
         </span>
@@ -149,7 +149,7 @@ function ScoreGauge({ score, rate }: { score: number; rate: number }) {
                 x2={CENTER + Math.cos(angle) * outer}
                 y2={CENTER - Math.sin(angle) * outer}
                 stroke="currentColor"
-                className="text-ink/15"
+                className="text-forest/15"
                 strokeWidth={2}
                 strokeLinecap="round"
               />
@@ -159,10 +159,10 @@ function ScoreGauge({ score, rate }: { score: number; rate: number }) {
 
         {/* angka skor raksasa di tengah busur */}
         <div className="absolute inset-x-0 bottom-1 flex flex-col items-center">
-          <span className="font-display text-[3.25rem] font-black leading-none tracking-tight text-forest tabular-nums">
+          <span className="font-display text-[3.25rem] font-semibold leading-none tracking-tight text-forest tabular-nums">
             {score}
           </span>
-          <span className="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-ink/35">
+          <span className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.18em] text-forest/35">
             {HEALTH_CARD_COPY.outOf}
           </span>
         </div>
@@ -170,7 +170,7 @@ function ScoreGauge({ score, rate }: { score: number; rate: number }) {
 
       <span
         className={cn(
-          'mt-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-semibold',
+          'mt-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium',
           band.chip,
         )}
       >
@@ -180,10 +180,10 @@ function ScoreGauge({ score, rate }: { score: number; rate: number }) {
 
       {/* kalimat hasil + dasar hitungannya: angkanya dari catatan user, bukan
           contoh — dan "apa yang diukur" ditulis supaya skornya tidak misterius */}
-      <p className="mt-3 max-w-[26rem] text-center text-[13px] leading-relaxed text-ink/60">
+      <p className="mt-3 max-w-[26rem] text-center text-[13px] leading-relaxed text-forest/60">
         {HEALTH_CARD_COPY.verdict(rate)}
       </p>
-      <p className="mt-1.5 max-w-[26rem] text-center text-[11px] leading-relaxed text-ink/40">
+      <p className="mt-1.5 max-w-[26rem] text-center text-[11px] leading-relaxed text-forest/40">
         {HEALTH_CARD_COPY.measured(rate)}
       </p>
     </div>
@@ -201,7 +201,7 @@ function UnlockProgress({ total }: { total: number }) {
 
   return (
     <div className="mt-4 flex flex-1 flex-col justify-center">
-      <p className="text-[13.5px] leading-relaxed text-ink/60">{HEALTH_CARD_COPY.learning}</p>
+      <p className="text-[13.5px] leading-relaxed text-forest/60">{HEALTH_CARD_COPY.learning}</p>
 
       {/* bar progres: gradien brand + kilau berjalan */}
       <div
@@ -224,15 +224,15 @@ function UnlockProgress({ total }: { total: number }) {
       </div>
 
       <div className="mt-3 flex items-center justify-between gap-3">
-        <span className="text-[11.5px] font-semibold tabular-nums text-ink/45">
+        <span className="text-[11.5px] font-medium tabular-nums text-forest/45">
           {HEALTH_CARD_COPY.progressLabel(done, goal)}
         </span>
-        <span className="font-display text-[15px] font-black tabular-nums text-forest">
+        <span className="font-display text-[15px] font-semibold tabular-nums text-forest">
           {HEALTH_CARD_COPY.progressPercent(pct)}
         </span>
       </div>
 
-      <p className="mt-2 text-[13px] font-medium leading-relaxed text-ink/70">
+      <p className="mt-2 text-[13px] font-medium leading-relaxed text-forest/70">
         {HEALTH_CARD_COPY.remaining(remaining)}
       </p>
     </div>
@@ -250,17 +250,17 @@ function UnlockProgress({ total }: { total: number }) {
 function NoIncomeBlock() {
   return (
     <div className="mt-4 flex flex-1 flex-col justify-center gap-2 rounded-2xl bg-sage/35 px-4 py-5 ring-1 ring-forest/10">
-      <p className="font-display text-[14px] font-bold tracking-tight text-ink">
+      <p className="font-display text-[14px] font-medium tracking-tight text-forest">
         {HEALTH_CARD_COPY.noIncomeTitle}
       </p>
-      <p className="text-[12.5px] leading-relaxed text-ink/65">{HEALTH_CARD_COPY.noIncomeBody}</p>
+      <p className="text-[12.5px] leading-relaxed text-forest/65">{HEALTH_CARD_COPY.noIncomeBody}</p>
       <div className="mt-1 flex items-center gap-2">
         <TransactionBottomSheet
           defaultType="income"
           trigger={
             <button
               type="button"
-              className="inline-flex h-10 items-center gap-1.5 rounded-full bg-forest px-4 text-[12.5px] font-semibold text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
+              className="inline-flex h-10 items-center gap-1.5 rounded-full bg-forest px-4 text-[12.5px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
             >
               <Sparkles className="size-3.5" strokeWidth={2.4} aria-hidden />
               {HEALTH_CARD_COPY.noIncomeCta}

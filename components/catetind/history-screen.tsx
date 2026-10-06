@@ -53,8 +53,6 @@ import { tagTransactionsForContext, matchesContext, type ContextTransaction } fr
 import {
   CONTEXT_EMPTY_COPY,
   CONTEXT_LABEL,
-  SCOPE_NOTE,
-  contextCaption,
 } from '@/lib/data/money-context'
 import {
   CATEGORY_FILTERS,
@@ -478,11 +476,9 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
       {/* header halaman + toggle privasi */}
       <header className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-[13px] font-medium text-ink/45">{contextCaption(context)}</p>
-          <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-ink lg:text-4xl">
+          <h1 className="font-display text-3xl font-semibold tracking-tight text-forest lg:text-4xl">
             Riwayat &amp; Insight
           </h1>
-          <p className="mt-1.5 text-[11.5px] font-medium text-ink/45">{SCOPE_NOTE.history}</p>
         </div>
         {/* cluster aksi desktop: switcher konteks + tombol mata global (paket 47) */}
         <div className="hidden shrink-0 items-center gap-3 lg:flex">
@@ -506,7 +502,7 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
           "Filter Global" supaya jelas dia menyaring seluruh layar. */}
       <section className="mt-5 rounded-[1.75rem] bg-cream p-3 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] ring-1 ring-soil/12 sm:p-3.5 lg:mt-6">
         <div className="flex items-center justify-between gap-2 px-1 pb-2">
-          <span className="inline-flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-ink/40">
+          <span className="inline-flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-[0.14em] text-forest/40">
             <SlidersHorizontal className="size-3.5" strokeWidth={2.4} aria-hidden />
             Filter Global
           </span>
@@ -515,7 +511,7 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
             <button
               type="button"
               onClick={resetFilters}
-              className="inline-flex items-center gap-1 rounded-full bg-cream px-2.5 py-1 text-[11px] font-semibold text-ink/55 ring-1 ring-soil/8 transition-colors hover:bg-sage/60 hover:text-ink active:scale-95"
+              className="inline-flex items-center gap-1 rounded-full bg-cream px-2.5 py-1 text-[11px] font-medium text-forest/55 ring-1 ring-soil/8 transition-colors hover:bg-sage/60 hover:text-forest active:scale-95"
             >
               <RotateCcw className="size-3" strokeWidth={2.4} aria-hidden />
               Reset
@@ -526,21 +522,21 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
         {/* pencarian: placeholder adalah CONTOH PROMPT, bukan "Cari catatan",
             supaya user tahu search-nya bisa bahasa sehari-hari */}
         <label className="flex h-11 min-w-0 items-center gap-2.5 rounded-full bg-cream/80 px-4 ring-1 ring-inset ring-soil/8 transition-shadow focus-within:bg-cream focus-within:ring-2 focus-within:ring-forest/20">
-          <Search className="size-4 shrink-0 text-ink/35" aria-hidden />
+          <Search className="size-4 shrink-0 text-forest/35" aria-hidden />
           <input
             type="search"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder='Cari "pengeluaran kopi bulan lalu"…'
             aria-label="Cari catatan dengan bahasa sehari-hari"
-            className="w-full bg-transparent text-[13.5px] text-ink outline-none placeholder:text-ink/35"
+            className="w-full bg-transparent text-[13.5px] text-forest outline-none placeholder:text-forest/35"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery('')}
               aria-label="Hapus pencarian"
-              className="flex size-6 shrink-0 items-center justify-center rounded-full text-ink/40 transition-colors hover:bg-sage/60 hover:text-ink"
+              className="flex size-6 shrink-0 items-center justify-center rounded-full text-forest/40 transition-colors hover:bg-sage/60 hover:text-forest"
             >
               <X className="size-3.5" strokeWidth={2.4} />
             </button>
@@ -561,15 +557,15 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
                 aria-label={`Filter ${row.label}`}
                 aria-expanded={openFilter === row.key}
                 className={cn(
-                  'inline-flex shrink-0 items-center gap-1.5 rounded-full py-2 pl-3.5 pr-3 text-[12.5px] font-semibold transition-all duration-200 active:scale-95',
+                  'inline-flex shrink-0 items-center gap-1.5 rounded-full py-2 pl-3.5 pr-3 text-[12.5px] font-medium transition-all duration-200 active:scale-95',
                   active
                     ? 'bg-forest text-cream shadow-[0_10px_22px_-16px_rgba(69,89,78,0.9)]'
-                    : 'bg-cream text-ink/55 ring-1 ring-soil/10 hover:bg-sage/60 hover:text-ink',
+                    : 'bg-cream text-forest/55 ring-1 ring-soil/10 hover:bg-sage/60 hover:text-forest',
                 )}
               >
                 {active ? selected?.label : row.label}
                 <ChevronDown
-                  className={cn('size-3.5', active ? 'text-cream/70' : 'text-ink/35')}
+                  className={cn('size-3.5', active ? 'text-cream/70' : 'text-forest/35')}
                   strokeWidth={2.6}
                 />
               </button>
@@ -577,6 +573,15 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
           })}
         </div>
       </section>
+
+      {/* ── KAPAN KAMU SERING BOROS? (heatmap) — tepat di bawah Filter Global,
+          sesuai urutan yang diminta: filter → keborosan → ritual → catatan →
+          skor → insight. Pola mengikuti konteks aktif (paket 47). */}
+      {totalTransactions > 0 && (
+        <div className="mt-5 lg:mt-6">
+          <SpendingHeatmap masked={isMasked} context={context} />
+        </div>
+      )}
 
       {/* banner rekap mingguan — HANYA Jumat–Sabtu–Minggu, dan bisa di-dismiss */}
       {recapWindow && !recapDismissed && (
@@ -597,7 +602,7 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
             <span aria-hidden className="text-[16px]">
               📈
             </span>
-            <span className="min-w-0 flex-1 text-[13.5px] font-semibold">
+            <span className="min-w-0 flex-1 text-[13.5px] font-medium">
               Recap mingguan siap
             </span>
             <span aria-hidden className="pr-1 text-cream/60">
@@ -632,16 +637,16 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
         </div>
       )}
 
-      {/* hero: kalibrasi profil AI / skor kewarasan + insight AI */}
-      {totalTransactions === 0 ? (
-        /* ── 0 CATATAN = TIDAK ADA YANG DIKLAIM (paket 59 · 59.1) ────────────
-           Dulu di keadaan ini kartu kalibrasi menuliskan "0/30 transaksi" dan
-           insight menyebut angka mock — dua permukaan yang bicara tentang data
-           yang tidak ada. Sekarang keduanya digantikan SATU kartu jujur berisi
-           apa yang bisa dihitung (belum apa-apa) + CTA mencatat.
+      {/* ── 0 CATATAN = TIDAK ADA YANG DIKLAIM (paket 59 · 59.1) ────────────
+         Dulu di keadaan ini kartu kalibrasi menuliskan "0/30 transaksi" dan
+         insight menyebut angka mock — dua permukaan yang bicara tentang data
+         yang tidak ada. Sekarang keduanya digantikan SATU kartu jujur berisi
+         apa yang bisa dihitung (belum apa-apa) + CTA mencatat.
 
-           Heatmap ikut tidak dirender di sini: grafik pola pengeluaran yang
-           digambar dari data tanpa catatan akan terbaca sebagai klaim. */
+         Heatmap, skor, & insight ikut tidak dirender di sini: grafik pola
+         pengeluaran yang digambar dari data tanpa catatan akan terbaca sebagai
+         klaim. */}
+      {totalTransactions === 0 && (
         <section className="mt-5 flex flex-col items-center rounded-[2rem] bg-cream px-6 py-10 text-center shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] ring-1 ring-soil/12 lg:mt-6">
           <span
             className="flex size-14 items-center justify-center rounded-2xl border-2 border-dashed border-forest/20 bg-cream/60"
@@ -649,10 +654,10 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
           >
             <Sprout className="size-6 text-forest/45" strokeWidth={1.8} />
           </span>
-          <h2 className="mt-4 font-display text-[16px] font-bold tracking-tight text-ink">
+          <h2 className="mt-4 font-display text-[16px] font-semibold tracking-tight text-forest">
             {HISTORY_NO_DATA_COPY.title}
           </h2>
-          <p className="mt-2 max-w-md text-[13px] leading-relaxed text-ink/60">
+          <p className="mt-2 max-w-md text-[13px] leading-relaxed text-forest/60">
             {HISTORY_NO_DATA_COPY.body}
           </p>
           <div className="mt-5">
@@ -660,7 +665,7 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
               trigger={
                 <button
                   type="button"
-                  className="inline-flex h-11 items-center gap-2 rounded-2xl bg-forest px-5 text-[13.5px] font-semibold text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
+                  className="inline-flex h-11 items-center gap-2 rounded-2xl bg-forest px-5 text-[13.5px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
                 >
                   <ReceiptText className="size-4" strokeWidth={2.6} aria-hidden />
                   {HISTORY_NO_DATA_COPY.cta}
@@ -669,32 +674,6 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
             />
           </div>
         </section>
-      ) : (
-        <>
-          <div className="mt-5 grid grid-cols-1 gap-5 lg:mt-6 lg:grid-cols-12 lg:gap-6">
-            <div className="lg:col-span-5">
-              {/* skor kewarasan = metrik GLOBAL user (dihitung dari seluruh
-                  catatan), jadi tidak ikut mengecil saat konteks disaring — pola
-                  yang sama dengan "Total Saldo" (kanon paket 47 #1). */}
-              <FinancialHealthCard
-                totalTransactions={totalTransactions}
-                score={healthScore}
-                savingsRate={savingsRate}
-              />
-            </div>
-            <div className="lg:col-span-7">
-              {/* CTA tiap insight punya tujuan nyata (ke halaman yang memiliki
-                  datanya) dan angkanya lahir dari catatan KONTEKS AKTIF —
-                  konteks yang datanya tipis tidak diberi klaim sama sekali. */}
-              <InsightCards insights={insights} />
-            </div>
-          </div>
-
-          {/* heatmap keborosan 30 hari — pola mengikuti konteks aktif (paket 47) */}
-          <div className="mt-5 lg:mt-6">
-            <SpendingHeatmap masked={isMasked} context={context} />
-          </div>
-        </>
       )}
 
       {/* ── CATATAN: daftar transaksi dikelompokkan per tanggal ─────────────────
@@ -712,8 +691,8 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
               <ReceiptText className="size-[18px]" strokeWidth={2.2} />
             </span>
             <div>
-              <h2 className="font-display text-[15px] font-bold tracking-tight text-ink">Catatan</h2>
-              <p className="text-[11.5px] text-ink/45">
+              <h2 className="font-display text-[15px] font-semibold tracking-tight text-forest">Catatan</h2>
+              <p className="text-[11.5px] text-forest/45">
                 {summary.count} transaksi
                 {groups.length > 0 ? ` · ${groups.length} hari` : ''}
               </p>
@@ -727,7 +706,7 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
               dampaknya, bukan labelnya. */}
           <div className="flex flex-wrap items-center justify-end gap-2">
             {(activeFilterCount > 0 || searchQuery) && (
-              <span className="rounded-full bg-cream px-3 py-1.5 text-[11.5px] font-semibold tabular-nums text-ink/60 ring-1 ring-soil/12">
+              <span className="rounded-full bg-cream px-3 py-1.5 text-[11.5px] font-medium tabular-nums text-forest/60 ring-1 ring-soil/12">
                 {summary.count} dari {contextCount}
               </span>
             )}
@@ -736,7 +715,7 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
                 type="button"
                 onClick={() => setClearAllOpen(true)}
                 aria-label={HISTORY_CLEAR_ALL_COPY.actionA11y(totalTransactions)}
-                className="inline-flex items-center gap-1.5 rounded-full bg-cream px-3 py-1.5 text-[11.5px] font-semibold text-plum ring-1 ring-plum/25 transition-colors hover:bg-plum/10 active:scale-[0.97]"
+                className="inline-flex items-center gap-1.5 rounded-full bg-cream px-3 py-1.5 text-[11.5px] font-medium text-plum ring-1 ring-plum/25 transition-colors hover:bg-plum/10 active:scale-[0.97]"
               >
                 <Trash2 className="size-3.5" strokeWidth={2.4} aria-hidden />
                 {HISTORY_CLEAR_ALL_COPY.action}
@@ -747,7 +726,7 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
 
         {/* legenda makna warna — swatch & label dibaca dari `MONEY_TONE`,
             sumber yang sama dengan baris transaksinya, jadi mustahil beda */}
-        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-[11px] text-ink/45">
+        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-[11px] text-forest/45">
           <span className="font-medium">Keterangan</span>
           {MONEY_LEGEND.map((tone) => (
             <span key={tone.label} className="inline-flex items-center gap-1.5">
@@ -778,23 +757,23 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
                     Semua angka polos berwarna, tanpa pill — jadi mata membaca
                     kolom angka yang lurus, bukan deretan chip. */}
                 <div className="flex items-center gap-2.5">
-                  <p className="shrink-0 text-[11px] font-bold uppercase tracking-[0.12em] text-ink/45">
+                  <p className="shrink-0 text-[11px] font-medium uppercase tracking-[0.12em] text-forest/45">
                     {group.label}
                   </p>
                   <span className="h-px min-w-4 flex-1 bg-soil/[0.09]" aria-hidden />
                   {group.moved > 0 && (
-                    <span className="shrink-0 text-[11px] font-semibold tabular-nums text-ink/40">
+                    <span className="shrink-0 text-[11px] font-medium tabular-nums text-forest/40">
                       ⇄ {maskMoney(group.moved, isMasked)}
                     </span>
                   )}
                   <span
                     className={cn(
-                      'shrink-0 text-[11.5px] font-bold tabular-nums',
+                      'shrink-0 text-[11.5px] font-semibold tabular-nums',
                       group.net < 0
                         ? 'text-hud-terracotta'
                         : group.net > 0
                           ? 'text-forest'
-                          : 'text-ink/35',
+                          : 'text-forest/35',
                     )}
                   >
                     {netLabel(group.net, isMasked)}
@@ -828,6 +807,26 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
         )}
       </section>
 
+      {/* ── SKOR KEWARASAN + INSIGHT AI — paling bawah, sesuai urutan yang
+          diminta: filter → keborosan → ritual → catatan → skor → insight.
+          Skor dihitung dari SELURUH catatan (metrik global user), sedangkan
+          insight lahir dari catatan KONTEKS AKTIF — konteks yang datanya tipis
+          tidak diberi klaim sama sekali. */}
+      {totalTransactions > 0 && (
+        <div className="mt-5 grid grid-cols-1 gap-5 lg:mt-6 lg:grid-cols-12 lg:gap-6">
+          <div className="lg:col-span-5">
+            <FinancialHealthCard
+              totalTransactions={totalTransactions}
+              score={healthScore}
+              savingsRate={savingsRate}
+            />
+          </div>
+          <div className="lg:col-span-7">
+            <InsightCards insights={insights} />
+          </div>
+        </div>
+      )}
+
       {/* ── SHEET OPSI FILTER ───────────────────────────────────────────────────
           Satu sheet dipakai ulang untuk keempat filter: judul = nama filternya,
           barisnya = opsi + centang. Memilih opsi langsung menutup sheet supaya
@@ -842,7 +841,7 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
             <div className="mx-auto mt-3 h-1.5 w-10 shrink-0 rounded-full bg-ink/10" />
 
             <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-8 pt-4" data-lenis-prevent>
-              <Drawer.Title className="px-1 font-display text-[15px] font-bold tracking-tight text-ink">
+              <Drawer.Title className="px-1 font-display text-[15px] font-medium tracking-tight text-forest">
                 {openFilterRow?.label}
               </Drawer.Title>
               <Drawer.Description className="sr-only">
@@ -864,8 +863,8 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
                       className={cn(
                         'flex w-full items-center justify-between gap-3 rounded-2xl px-3.5 py-3 text-left text-[14px] transition-colors',
                         isActive
-                          ? 'bg-forest/[0.06] font-semibold text-forest'
-                          : 'font-medium text-ink/65 hover:bg-cream',
+                          ? 'bg-forest/[0.06] font-medium text-forest'
+                          : 'font-medium text-forest/65 hover:bg-cream',
                       )}
                     >
                       {opt.label}
@@ -943,7 +942,7 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
             body={
               <>
                 {HISTORY_CLEAR_ALL_COPY.body(totalTransactions)}{' '}
-                <b className="font-semibold text-ink">{HISTORY_CLEAR_ALL_COPY.balanceNote}</b>
+                <b className="font-medium text-forest">{HISTORY_CLEAR_ALL_COPY.balanceNote}</b>
               </>
             }
             safety={HISTORY_CLEAR_ALL_COPY.safety(UNDO_WINDOW_MS / 1000)}
@@ -1005,13 +1004,13 @@ function EmptyState({
       >
         <Sprout className="size-7 text-forest/45" strokeWidth={1.8} />
       </div>
-      <p className="mt-4 max-w-xs text-[13.5px] font-medium leading-relaxed text-ink">
+      <p className="mt-4 max-w-xs text-[13.5px] font-medium leading-relaxed text-forest">
         {emptyContext && contextLabel
           ? CONTEXT_EMPTY_COPY.history.title(contextLabel)
           : 'Belum ada catatan di sini 🌱'}
       </p>
       {emptyContext && (
-        <p className="mt-1.5 max-w-sm text-[12.5px] leading-relaxed text-ink/55">
+        <p className="mt-1.5 max-w-sm text-[12.5px] leading-relaxed text-forest/55">
           {CONTEXT_EMPTY_COPY.history.body}
         </p>
       )}
@@ -1020,7 +1019,7 @@ function EmptyState({
           trigger={
             <button
               type="button"
-              className="inline-flex h-11 items-center gap-2 rounded-2xl bg-forest px-5 text-[13.5px] font-semibold text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
+              className="inline-flex h-11 items-center gap-2 rounded-2xl bg-forest px-5 text-[13.5px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
             >
               {emptyContext ? CONTEXT_EMPTY_COPY.history.cta : 'Catat Sekarang'}
             </button>
@@ -1030,7 +1029,7 @@ function EmptyState({
           <button
             type="button"
             onClick={onReset}
-            className="inline-flex h-11 items-center rounded-2xl bg-cream px-4 text-[13.5px] font-semibold text-ink/70 ring-1 ring-soil/12 transition-colors hover:bg-sage/50"
+            className="inline-flex h-11 items-center rounded-2xl bg-cream px-4 text-[13.5px] font-medium text-forest/70 ring-1 ring-soil/12 transition-colors hover:bg-sage/50"
           >
             Reset
           </button>

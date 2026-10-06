@@ -52,6 +52,7 @@ export function AddGoalSheet({
   const [reminderOn, setReminderOn] = useState(false)
   const [reminder, setReminder] = useState<'weekly' | 'monthly'>('monthly')
   const targetRef = useRef<HTMLInputElement>(null)
+  const dateRef = useRef<HTMLInputElement>(null)
 
   /* form selalu mulai bersih tiap kali dibuka */
   useEffect(() => {
@@ -79,6 +80,28 @@ export function AddGoalSheet({
     onSave({ name: name.trim(), target, deadline, priority, scope })
   }
 
+  /* ── buka pemilih tanggal native ─────────────────────────────────────────────
+     Dulu field ini `<span>` dengan `<input type="date" opacity-0>` ditumpuk di
+     atasnya. Di sebagian browser klik tidak membuka apa pun (input transparan
+     bukan sasaran klik yang andal). Sekarang seluruh area adalah kontrol yang
+     memanggil `showPicker()`; kalau API itu tidak ada, jatuh ke fokus + klik
+     bawaan input-nya. */
+  function openPicker() {
+    const el = dateRef.current
+    if (!el) return
+    const withPicker = el as HTMLInputElement & { showPicker?: () => void }
+    if (typeof withPicker.showPicker === 'function') {
+      try {
+        withPicker.showPicker()
+        return
+      } catch {
+        /* jatuh ke fokus + klik bawaan */
+      }
+    }
+    el.focus()
+    el.click()
+  }
+
   return (
     <BudgetSheet
       open={open}
@@ -89,12 +112,12 @@ export function AddGoalSheet({
     >
       {/* ── STEP 1 — nama + target ─────────────────────────────────────── */}
       <label className="block">
-        <span className="text-[13px] font-semibold leading-snug text-ink">Mau nabung buat apa?</span>
+        <span className="text-[13px] font-medium leading-snug text-forest">Mau nabung buat apa?</span>
         <input
           value={name}
           onChange={(event) => setName(event.target.value)}
           placeholder="Biaya Operasi Mama"
-          className="mt-2 w-full rounded-2xl bg-cream px-4 py-3 text-[15px] font-semibold text-ink outline-none ring-1 ring-soil/16 transition-shadow placeholder:font-medium placeholder:text-ink/25 focus:ring-2 focus:ring-forest/35"
+          className="mt-2 w-full rounded-2xl bg-cream px-4 py-3 text-[15px] font-medium text-forest outline-none ring-1 ring-soil/16 transition-shadow placeholder:font-medium placeholder:text-forest/25 focus:ring-2 focus:ring-forest/35"
         />
       </label>
 
@@ -115,33 +138,47 @@ export function AddGoalSheet({
       {/* ── STEP 2 — deadline + prioritas + auto-kalkulasi ─────────────── */}
       <RevealStep show={stepOneDone}>
         <div className="mt-5">
-          <span className="text-[13px] font-semibold leading-snug text-ink">
+          <span className="text-[13px] font-medium leading-snug text-forest">
             Mau tercapai kapan?
           </span>
-          {/* field tanggal: placeholder custom + input date native transparan di atasnya */}
-          <span className="relative mt-2 flex items-center gap-2 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/16 focus-within:ring-2 focus-within:ring-forest/35">
-            <CalendarDays className="size-4 shrink-0 text-ink/35" strokeWidth={2.2} />
+          {/* field tanggal: seluruh area dapat diklik → membuka pemilih native */}
+          <div
+            role="button"
+            tabIndex={0}
+            aria-label="Pilih target tanggal"
+            onClick={openPicker}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                openPicker()
+              }
+            }}
+            className="relative mt-2 flex w-full cursor-pointer items-center gap-2 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/16 transition-shadow hover:ring-soil/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/35"
+          >
+            <CalendarDays className="size-4 shrink-0 text-forest/35" strokeWidth={2.2} />
             <span
               className={cn(
-                'flex-1 text-[14px] font-semibold tabular-nums',
-                deadline ? 'text-ink' : 'font-medium text-ink/25',
+                'flex-1 text-[14px] font-medium tabular-nums',
+                deadline ? 'text-forest' : 'text-forest/25',
               )}
             >
               {deadline ? formatDeadline(deadline) : 'Pilih target tanggal'}
             </span>
             {deadline && <Check className="size-4 shrink-0 text-hud-sage" strokeWidth={3} />}
             <input
+              ref={dateRef}
               type="date"
               value={deadline}
               min={TODAY_ISO}
               onChange={(event) => setDeadline(event.target.value)}
-              aria-label="Pilih target tanggal"
-              className="absolute inset-0 size-full cursor-pointer rounded-2xl opacity-0"
+              aria-hidden
+              tabIndex={-1}
+              className="pointer-events-none absolute inset-0 size-full opacity-0"
             />
-          </span>
+          </div>
 
           <div className="mt-4">
-            <p className="text-[13px] font-semibold text-ink">Seberapa penting?</p>
+            <p className="text-[13px] font-medium text-forest">Seberapa penting?</p>
             <ChoicePills
               className="mt-2.5"
               options={[
@@ -158,9 +195,9 @@ export function AddGoalSheet({
 
           {/* auto-kalkulasi real-time — inti Step 2 */}
           {perMonth > 0 && (
-            <p className="mt-4 rounded-2xl bg-sage/60 px-4 py-3 text-[12.5px] leading-relaxed text-ink/70">
+            <p className="mt-4 rounded-2xl bg-sage/60 px-4 py-3 text-[12.5px] leading-relaxed text-forest/70">
               Kamu perlu nabung{' '}
-              <b className="font-bold text-forest tabular-nums">{formatIDR(perMonth)}</b>/bulan biar
+              <b className="font-semibold text-forest tabular-nums">{formatIDR(perMonth)}</b>/bulan biar
               tercapai tepat waktu 🌿
             </p>
           )}
@@ -176,12 +213,12 @@ export function AddGoalSheet({
             onClick={() => setAdvancedOpen((prev) => !prev)}
             className="flex w-full items-center justify-between gap-2 rounded-2xl bg-cream/70 px-4 py-3 text-left ring-1 ring-soil/12 transition-colors hover:bg-cream"
           >
-            <span className="text-[12.5px] font-semibold text-ink/60">
+            <span className="text-[12.5px] font-medium text-forest/60">
               Pengaturan Lanjutan (Opsional)
             </span>
             <ChevronDown
               className={cn(
-                'size-4 shrink-0 text-ink/35 transition-transform duration-300',
+                'size-4 shrink-0 text-forest/35 transition-transform duration-300',
                 advancedOpen && 'rotate-180',
               )}
               strokeWidth={2.4}
@@ -192,27 +229,27 @@ export function AddGoalSheet({
             <div className="mt-4 space-y-4">
                   {/* catatan */}
                   <label className="block">
-                    <span className="text-[12.5px] font-semibold text-ink/70">Catatan</span>
+                    <span className="text-[12.5px] font-medium text-forest/70">Catatan</span>
                     <textarea
                       value={note}
                       onChange={(event) => setNote(event.target.value)}
                       rows={3}
                       placeholder="Kenapa ini penting buat kamu?"
-                      className="mt-2 w-full resize-none rounded-2xl bg-cream px-4 py-3 text-[13px] leading-relaxed text-ink outline-none ring-1 ring-soil/16 transition-shadow placeholder:text-ink/25 focus:ring-2 focus:ring-forest/35"
+                      className="mt-2 w-full resize-none rounded-2xl bg-cream px-4 py-3 text-[13px] leading-relaxed text-forest outline-none ring-1 ring-soil/16 transition-shadow placeholder:text-forest/25 focus:ring-2 focus:ring-forest/35"
                     />
                   </label>
 
                   {/* dompet tertaut */}
                   <label className="block">
-                    <span className="text-[12.5px] font-semibold text-ink/70">
+                    <span className="text-[12.5px] font-medium text-forest/70">
                       Dompet buat setor
                     </span>
                     <span className="relative mt-2 flex items-center gap-2 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/16 focus-within:ring-2 focus-within:ring-forest/35">
-                      <WalletIcon className="size-4 shrink-0 text-ink/35" strokeWidth={2.2} />
+                      <WalletIcon className="size-4 shrink-0 text-forest/35" strokeWidth={2.2} />
                       <select
                         value={wallet}
                         onChange={(event) => setWallet(event.target.value)}
-                        className="flex-1 appearance-none bg-transparent text-[13.5px] font-semibold text-ink outline-none"
+                        className="flex-1 appearance-none bg-transparent text-[13.5px] font-medium text-forest outline-none"
                       >
                         {WALLET_SOURCES.map((source) => (
                           <option key={source.id} value={source.id}>
@@ -220,14 +257,14 @@ export function AddGoalSheet({
                           </option>
                         ))}
                       </select>
-                      <ChevronDown className="size-4 shrink-0 text-ink/30" strokeWidth={2.4} />
+                      <ChevronDown className="size-4 shrink-0 text-forest/30" strokeWidth={2.4} />
                     </span>
                   </label>
 
                   {/* pengingat nabung */}
                   <div className="rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/12">
                     <div className="flex items-center justify-between gap-3">
-                      <span className="text-[12.5px] font-semibold text-ink/70">
+                      <span className="text-[12.5px] font-medium text-forest/70">
                         Pengingat nabung
                       </span>
                       <button

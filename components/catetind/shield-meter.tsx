@@ -65,10 +65,10 @@ export function ShieldMeter({
       ? `${overdueCount} tagihan telat — tamengmu retak! 🛡️⚠️`
       : `${total - paidCount} tagihan lagi buat tameng penuh 🌿`
   const headlineClass = allPaid
-    ? 'text-[#000000]'
+    ? 'text-forest'
     : overdueCount > 0
       ? 'text-hud-terracotta'
-      : 'text-ink/55'
+      : 'text-forest/55'
 
   const clipId = 'shield-band-clip'
 
@@ -82,7 +82,7 @@ export function ShieldMeter({
         className,
       )}
     >
-      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-ink/35">
+      <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-forest/35">
         Tameng Proteksi
       </p>
 
@@ -164,23 +164,23 @@ export function ShieldMeter({
           />
         </svg>
       </motion.div>
-      <p className="mt-3 text-[15px] font-bold tabular-nums text-ink">
+      <p className="mt-3 text-[15px] font-semibold tabular-nums text-forest">
         {paidCount}/{total} terlindungi
       </p>
 
       {variant === 'full' && (
         <>
-          <p className={cn('mt-1 text-[12.5px] font-semibold leading-snug', headlineClass)}>
+          <p className={cn('mt-1 text-[12.5px] font-medium leading-snug', headlineClass)}>
             {headline}
           </p>
 
           <div className="mt-4 h-px w-full bg-soil/[0.09]" aria-hidden />
 
-          <p className="mt-3 text-[12.5px] font-semibold tabular-nums text-ink/70">
+          <p className="mt-3 text-[12.5px] font-medium tabular-nums text-forest/70">
             Sudah: {maskMoney(paidAmount, masked)} · Belum:{' '}
             {maskMoney(totalAmount - paidAmount, masked)}
           </p>
-          <p className="mt-2 text-[11px] leading-relaxed text-ink/40">{HUD_DEDUCTION_HELPER}</p>
+          <p className="mt-2 text-[11px] leading-relaxed text-forest/40">{HUD_DEDUCTION_HELPER}</p>
         </>
       )}
     </section>

@@ -770,7 +770,7 @@ export const WalletCardStack = memo(function WalletCardStack({
                 <WalletIcon className="size-4" strokeWidth={2.25} />
               </span>
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold">{name}</p>
+                <p className="truncate text-sm font-medium">{name}</p>
                 <p className="truncate text-xs text-cream/60">{sub}</p>
               </div>
             </div>
@@ -803,13 +803,13 @@ export const WalletCardStack = memo(function WalletCardStack({
               Fungsinya display, bukan CTA, jadi tidak menambah cognitive load. */}
           <div className="mt-auto flex items-end justify-between gap-3 pt-4">
             <div className="min-w-0">
-              <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-cream/45">
+              <p className="text-[9px] font-medium uppercase tracking-[0.16em] text-cream/45">
                 Pemegang
               </p>
               <p className="truncate text-[13px] font-medium text-cream/90">{holder}</p>
             </div>
             <div className="min-w-0 text-right">
-              <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-cream/45">
+              <p className="text-[9px] font-medium uppercase tracking-[0.16em] text-cream/45">
                 Akun
               </p>
               <p className="truncate text-[13px] font-medium tracking-[0.1em] text-cream/90 tabular-nums">
@@ -822,7 +822,7 @@ export const WalletCardStack = memo(function WalletCardStack({
     )
   }
   const networkBadge = (network: string) => (
-    <span className="shrink-0 rounded-full border border-cream/20 bg-cream/[0.1] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-cream/75 backdrop-blur">
+    <span className="shrink-0 rounded-full border border-cream/20 bg-cream/[0.1] px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.14em] text-cream/75 backdrop-blur">
       {network}
     </span>
   )
@@ -840,12 +840,12 @@ export const WalletCardStack = memo(function WalletCardStack({
       <span className="relative flex size-12 items-center justify-center rounded-full bg-gradient-to-br from-mint to-mint-soft text-forest shadow-[0_10px_20px_-8px_rgba(145,187,158,0.7)] ring-4 ring-mint/15">
         <Plus className="size-5" strokeWidth={2.5} />
       </span>
-      <p className="relative mt-3 text-sm font-semibold text-ink">{HOME_WALLET_STACK_COPY.addTitle}</p>
-      <p className="relative mt-1 text-xs text-ink/45">{HOME_WALLET_STACK_COPY.addSubtitle}</p>
+      <p className="relative mt-3 text-sm font-medium text-forest">{HOME_WALLET_STACK_COPY.addTitle}</p>
+      <p className="relative mt-1 text-xs text-forest/45">{HOME_WALLET_STACK_COPY.addSubtitle}</p>
       {/* keadaan 0 dompet (58.7): kartu ini satu-satunya + kalimat jujur —
           dulu deck tetap menampilkan kartu agregat "Rp 0" di sebelahnya */}
       {wallets.length === 0 && (
-        <p className="relative mt-2 max-w-[15rem] text-[11px] leading-relaxed text-ink/45">
+        <p className="relative mt-2 max-w-[15rem] text-[11px] leading-relaxed text-forest/45">
           {HOME_WALLET_STACK_COPY.emptyLine}
         </p>
       )}
@@ -867,7 +867,7 @@ export const WalletCardStack = memo(function WalletCardStack({
           (50–70) tidak bocor ke root & tidak menembus overlay global (AI Chat, dll.) */}
       <div
         ref={sceneRef}
-        className="relative isolate select-none [touch-action:pan-y] [--card-h:248px] sm:[--card-h:272px]"
+        className="relative isolate select-none [touch-action:pan-y] [--card-h:248px] sm:[--card-h:272px] xl:[--card-h:312px]"
         style={{ height: `calc(${SCENE_PAD}px + var(--card-h, ${CARD_H}px))` }}
         onPointerMove={handleMove}
         onPointerDown={handleDown}
@@ -1063,7 +1063,7 @@ export const WalletCardStack = memo(function WalletCardStack({
           type="button"
           aria-label="Kartu sebelumnya"
           onClick={() => step(-1)}
-          className="flex size-8 items-center justify-center rounded-full border border-soil/12 bg-cream text-ink transition-colors hover:bg-sage"
+          className="flex size-8 items-center justify-center rounded-full border border-soil/12 bg-cream text-forest transition-colors hover:bg-sage"
         >
           <ChevronLeft className="size-4" />
         </button>
@@ -1083,7 +1083,7 @@ export const WalletCardStack = memo(function WalletCardStack({
                   'flex size-4 items-center justify-center rounded-full border border-dashed transition-colors',
                   isActive
                     ? 'border-forest text-forest'
-                    : 'border-ink/20 text-ink/40 hover:border-forest/50 hover:text-forest/60',
+                    : 'border-ink/20 text-forest/40 hover:border-forest/50 hover:text-forest/60',
                 )}
               >
                 <Plus className="size-2.5" strokeWidth={2.5} />
@@ -1108,7 +1108,7 @@ export const WalletCardStack = memo(function WalletCardStack({
           type="button"
           aria-label="Kartu berikutnya"
           onClick={() => step(1)}
-          className="flex size-8 items-center justify-center rounded-full border border-soil/12 bg-cream text-ink transition-colors hover:bg-sage"
+          className="flex size-8 items-center justify-center rounded-full border border-soil/12 bg-cream text-forest transition-colors hover:bg-sage"
         >
           <ChevronRight className="size-4" />
         </button>

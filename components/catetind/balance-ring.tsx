@@ -22,15 +22,15 @@ const GROWTH_PATH =
  * Dompet" mengirim total gabungan. Angka akan pop tiap kali nilainya berubah.
  */
 export function BalanceRing({
-  amount = 4309573,
+  amount = 0,
   caption = 'Total saldo',
-  trend = '-27%',
+  trend,
 }: {
   /** saldo yang ditampilkan di tengah donat (Rp) */
   amount?: number
   /** label kecil di bawah nominal — nama dompet atau "Total saldo" */
   caption?: string
-  /** badge persentase (mock) di bawah caption */
+  /** badge persentase NYATA (arus bersih bulan ini vs bulan lalu); `undefined` = disembunyikan */
   trend?: string
 } = {}) {
   const { money } = usePrivacy()
@@ -145,15 +145,17 @@ export function BalanceRing({
                 tertuju ke saldo dompet yang baru dipilih */}
             <span
               key={amount}
-              className="animate-[fade-pop_0.4s_ease-out] text-2xl font-semibold tracking-tight text-ink tabular-nums"
+              className="animate-[fade-pop_0.4s_ease-out] text-2xl font-medium tracking-tight text-forest tabular-nums"
             >
               {money(amount)}
             </span>
           </div>
-          <span className="mt-0.5 max-w-[9.5rem] truncate text-xs text-ink/45">{caption}</span>
-          <span className="mt-2 rounded-full bg-forest px-2 py-0.5 text-[10px] font-semibold text-mint">
-            {trend}
-          </span>
+          <span className="mt-0.5 max-w-[9.5rem] truncate text-xs text-forest/45">{caption}</span>
+          {trend && (
+            <span className="mt-2 rounded-full bg-forest px-2 py-0.5 text-[10px] font-medium text-mint">
+              {trend}
+            </span>
+          )}
         </div>
       </div>
 

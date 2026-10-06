@@ -192,7 +192,7 @@ export function RenewalModal({
               type="button"
               onClick={onDismiss}
               aria-label={RENEWAL_COPY.closeLabel}
-              className="absolute top-3 right-4 flex size-8 items-center justify-center rounded-full text-ink/45 transition-colors hover:bg-soil/8 hover:text-ink"
+              className="absolute top-3 right-4 flex size-8 items-center justify-center rounded-full text-forest/45 transition-colors hover:bg-soil/8 hover:text-forest"
             >
               <X className="size-4" strokeWidth={2.4} aria-hidden />
             </button>
@@ -209,16 +209,16 @@ export function RenewalModal({
               />
             ) : (
               <>
-                <p className="text-[10px] font-semibold tracking-[0.16em] text-ink/55 uppercase">
+                <p className="text-[10px] font-medium tracking-[0.16em] text-forest/55 uppercase">
                   {headline.eyebrow}
                 </p>
                 <h2
                   id="renewal-title"
-                  className="mt-1.5 font-display text-2xl font-semibold tracking-tight text-ink"
+                  className="mt-1.5 font-display text-2xl font-medium tracking-tight text-forest"
                 >
                   {headline.title}
                 </h2>
-                <p id="renewal-desc" className="mt-1.5 text-[13px] leading-relaxed text-ink/60">
+                <p id="renewal-desc" className="mt-1.5 text-[13px] leading-relaxed text-forest/60">
                   {headline.body}
                 </p>
 
@@ -228,15 +228,15 @@ export function RenewalModal({
                     <Sprout className="size-4" strokeWidth={2.2} aria-hidden />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-[10px] font-semibold tracking-[0.14em] text-ink/55 uppercase">
+                    <p className="text-[10px] font-medium tracking-[0.14em] text-forest/55 uppercase">
                       {RENEWAL_COPY.planLabel}
                     </p>
-                    <p className="mt-0.5 truncate text-[13px] font-semibold text-ink">
+                    <p className="mt-0.5 truncate text-[13px] font-medium text-forest">
                       {plan.planName}
                     </p>
-                    <p className="mt-0.5 text-[11px] text-ink/55">{plan.planExpiry}</p>
+                    <p className="mt-0.5 text-[11px] text-forest/55">{plan.planExpiry}</p>
                   </div>
-                  <span className="shrink-0 rounded-full bg-hud-amber/25 px-2.5 py-1 text-[11px] font-semibold text-ink/70 tabular-nums">
+                  <span className="shrink-0 rounded-full bg-hud-amber/25 px-2.5 py-1 text-[11px] font-medium text-forest/70 tabular-nums">
                     {plan.daysChip}
                   </span>
                 </div>
@@ -257,20 +257,20 @@ export function RenewalModal({
                             /* primer = sage green (inventaris #m). Teksnya `ink` karena
                                aturan kanon palet: teks di atas aksen terang = ink. */
                             primary
-                              ? 'bg-mint text-ink hover:bg-mint/85 active:scale-[0.99]'
+                              ? 'bg-mint text-forest hover:bg-mint/85 active:scale-[0.99]'
                               : 'bg-cream text-forest ring-1 ring-forest/25 hover:bg-sage active:scale-[0.99]',
                             phase === 'processing' && 'cursor-not-allowed opacity-70',
                           )}
                         >
-                          <span className="min-w-0 flex-1 text-[13.5px] leading-snug font-semibold break-words">
+                          <span className="min-w-0 flex-1 text-[13.5px] leading-snug font-medium break-words">
                             {busy ? RENEWAL_COPY.processing : option.label}
                           </span>
                           {option.amount && (
                             <span className="shrink-0 text-right">
-                              <span className="block text-[15px] font-semibold tabular-nums">
+                              <span className="block text-[15px] font-medium tabular-nums">
                                 {option.amount.value}
                               </span>
-                              <span className="block text-[10.5px] font-medium text-ink/60">
+                              <span className="block text-[10.5px] font-medium text-forest/60">
                                 {option.amount.label}
                               </span>
                             </span>
@@ -283,7 +283,7 @@ export function RenewalModal({
                             />
                           )}
                         </button>
-                        <p className="mt-1.5 px-1 text-[11px] leading-relaxed text-ink/55">
+                        <p className="mt-1.5 px-1 text-[11px] leading-relaxed text-forest/55">
                           {option.note}
                         </p>
                       </div>
@@ -293,7 +293,7 @@ export function RenewalModal({
 
                 {/* trust badge = selling point, bukan disclaimer (PRD 4509/4585) */}
                 <div className="mt-4 rounded-2xl bg-sage/60 px-3.5 py-3 ring-1 ring-soil/8">
-                  <p className="flex items-start gap-2 text-[11.5px] leading-relaxed font-semibold text-forest">
+                  <p className="flex items-start gap-2 text-[11.5px] leading-relaxed font-medium text-forest">
                     <ShieldCheck
                       className="mt-0.5 size-3.5 shrink-0"
                       strokeWidth={2.4}
@@ -301,7 +301,7 @@ export function RenewalModal({
                     />
                     <span>{RENEWAL_COPY.trustNote}</span>
                   </p>
-                  <p className="mt-1 pl-5.5 text-[11px] leading-relaxed text-ink/55">
+                  <p className="mt-1 pl-5.5 text-[11px] leading-relaxed text-forest/55">
                     {RENEWAL_DATA_NOTE}
                   </p>
                 </div>
@@ -315,14 +315,14 @@ export function RenewalModal({
               <button
                 type="button"
                 onClick={onDismiss}
-                className="rounded-full px-4 py-1.5 text-[12.5px] font-semibold text-ink/60 underline decoration-soil/25 underline-offset-4 transition-colors hover:text-ink"
+                className="rounded-full px-4 py-1.5 text-[12.5px] font-medium text-forest/60 underline decoration-soil/25 underline-offset-4 transition-colors hover:text-forest"
               >
                 {RENEWAL_COPY.laterCta}
               </button>
-              <p className="mt-2 text-[11px] leading-relaxed text-ink/55">
+              <p className="mt-2 text-[11px] leading-relaxed text-forest/55">
                 {RENEWAL_COPY.laterHint}
               </p>
-              <p className="mt-3 text-[10.5px] leading-relaxed text-ink/55">
+              <p className="mt-3 text-[10.5px] leading-relaxed text-forest/55">
                 {RENEWAL_COPY.mockNote}
               </p>
             </div>
@@ -356,22 +356,22 @@ function SuccessPanel({
 
       <h2
         id="renewal-title"
-        className="mt-4 font-display text-xl font-semibold tracking-tight text-ink"
+        className="mt-4 font-display text-xl font-medium tracking-tight text-forest"
       >
         {RENEWAL_COPY.successTitle}
       </h2>
-      <p id="renewal-desc" className="mt-1.5 text-[13px] leading-relaxed text-ink/60">
+      <p id="renewal-desc" className="mt-1.5 text-[13px] leading-relaxed text-forest/60">
         {renewalSuccessBody(period)}
       </p>
 
       {/* masa aktif yang baru — angka ini yang di produksi datang dari webhook */}
       <div className="mt-4 w-full rounded-2xl bg-sage/60 px-3.5 py-3 text-left ring-1 ring-soil/8">
-        <p className="text-[10px] font-semibold tracking-[0.14em] text-ink/55 uppercase">
+        <p className="text-[10px] font-medium tracking-[0.14em] text-forest/55 uppercase">
           {RENEWAL_COPY.planLabel}
         </p>
-        <p className="mt-0.5 truncate text-[13px] font-semibold text-ink">{state.planName}</p>
+        <p className="mt-0.5 truncate text-[13px] font-medium text-forest">{state.planName}</p>
         {newExpiry && (
-          <p className="mt-0.5 text-[11px] text-ink/55">{renewalExpiryLabel(newExpiry)}</p>
+          <p className="mt-0.5 text-[11px] text-forest/55">{renewalExpiryLabel(newExpiry)}</p>
         )}
       </div>
 
@@ -387,11 +387,11 @@ function SuccessPanel({
       <button
         type="button"
         onClick={onClose}
-        className="mt-4 w-full rounded-2xl bg-forest py-3.5 text-sm font-semibold text-cream transition-colors hover:bg-forest-soft active:scale-[0.99]"
+        className="mt-4 w-full rounded-2xl bg-forest py-3.5 text-sm font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.99]"
       >
         {RENEWAL_COPY.successCta}
       </button>
-      <p className="mt-3 mb-[calc(0.5rem+env(safe-area-inset-bottom))] text-[10.5px] leading-relaxed text-ink/55">
+      <p className="mt-3 mb-[calc(0.5rem+env(safe-area-inset-bottom))] text-[10.5px] leading-relaxed text-forest/55">
         {RENEWAL_COPY.trustNote}
       </p>
     </div>

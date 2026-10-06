@@ -120,8 +120,8 @@ export function SnapPaymentSheet({
         ) : (
           <>
             <div className="flex items-center justify-between gap-3 text-sm">
-              <span className="text-ink/55">{PAYMENT_SHEET_COPY.totalLabel}</span>
-              <span className="font-display text-lg font-semibold tabular-nums text-ink">
+              <span className="text-forest/55">{PAYMENT_SHEET_COPY.totalLabel}</span>
+              <span className="font-display text-lg font-medium tabular-nums text-forest">
                 {formatIDR(amount)}
               </span>
             </div>
@@ -137,7 +137,7 @@ export function SnapPaymentSheet({
               )}
             </SheetSubmit>
 
-            <p className="mt-3 flex items-start justify-center gap-1.5 text-center text-[11px] leading-relaxed text-ink/45">
+            <p className="mt-3 flex items-start justify-center gap-1.5 text-center text-[11px] leading-relaxed text-forest/45">
               <Lock className="mt-0.5 size-3 shrink-0" strokeWidth={2.4} aria-hidden />
               <span>{PAYMENT_SHEET_COPY.mockNote}</span>
             </p>
@@ -151,7 +151,7 @@ export function SnapPaymentSheet({
           <span className="flex size-14 items-center justify-center rounded-full bg-mint/40 text-forest">
             <CheckCircle2 className="size-7" strokeWidth={2.2} aria-hidden />
           </span>
-          <p className="mt-4 text-[12.5px] leading-relaxed text-ink/55">
+          <p className="mt-4 text-[12.5px] leading-relaxed text-forest/55">
             {PAYMENT_SHEET_COPY.successRedirecting}
           </p>
         </div>
@@ -159,22 +159,22 @@ export function SnapPaymentSheet({
         <>
           {/* ── ringkasan yang dibayar ─────────────────────────────────────── */}
           <div className="rounded-2xl bg-sage/70 px-3.5 py-3 ring-1 ring-soil/8">
-            <p className="text-[11px] font-semibold tracking-[0.14em] text-ink/40 uppercase">
+            <p className="text-[11px] font-medium tracking-[0.14em] text-forest/40 uppercase">
               {planName}
             </p>
             <p className="mt-1 flex items-baseline gap-1.5">
-              <span className="font-display text-xl font-semibold tabular-nums text-ink">
+              <span className="font-display text-xl font-medium tabular-nums text-forest">
                 {formatIDR(amount)}
               </span>
-              <span className="text-[11px] font-medium text-ink/50">{periodLabel}</span>
+              <span className="text-[11px] font-medium text-forest/50">{periodLabel}</span>
             </p>
             {customerEmail && (
-              <p className="mt-1 truncate text-[11px] text-ink/50">{customerEmail}</p>
+              <p className="mt-1 truncate text-[11px] text-forest/50">{customerEmail}</p>
             )}
           </div>
 
           {/* ── pilih metode: satu daftar, mark monokrom, tanpa logo berlisensi ── */}
-          <p className="mt-5 text-[13px] font-semibold leading-snug text-ink">
+          <p className="mt-5 text-[13px] font-medium leading-snug text-forest">
             {PAYMENT_SHEET_COPY.methodLegend}
           </p>
           <ul role="radiogroup" aria-label={PAYMENT_SHEET_COPY.methodLegend} className="mt-2.5 space-y-2">
@@ -195,7 +195,7 @@ export function SnapPaymentSheet({
                     )}
                   >
                     <PaymentLogo id={item.id} className="shrink-0" />
-                    <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-ink">
+                    <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-forest">
                       {item.label}
                     </span>
                     <span
@@ -216,12 +216,12 @@ export function SnapPaymentSheet({
           </ul>
 
           {method === 'va' && (
-            <p className="mt-2.5 text-[11px] leading-relaxed text-ink/50">
+            <p className="mt-2.5 text-[11px] leading-relaxed text-forest/50">
               {PAYMENT_SHEET_COPY.vaHint}
             </p>
           )}
 
-          <p className="mt-5 rounded-2xl bg-mint/25 px-3.5 py-3 text-[11.5px] leading-relaxed font-semibold text-forest ring-1 ring-forest/10">
+          <p className="mt-5 rounded-2xl bg-mint/25 px-3.5 py-3 text-[11.5px] leading-relaxed font-medium text-forest ring-1 ring-forest/10">
             {PAYMENT_SHEET_COPY.trustNote}
           </p>
         </>

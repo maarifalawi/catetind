@@ -152,7 +152,7 @@ export function HistoryTransactionRow({
         style={{ opacity: dx > 0 ? exposed : 0, pointerEvents: dx > 24 ? 'auto' : 'none' }}
       >
         <Pencil className="size-4" strokeWidth={2.3} />
-        <span className="text-[10px] font-semibold">Edit</span>
+        <span className="text-[10px] font-medium">Edit</span>
       </button>
 
       {/* aksi KANAN — tersingkap saat swipe kiri (Hapus, rose = aksi merusak) */}
@@ -167,7 +167,7 @@ export function HistoryTransactionRow({
         style={{ opacity: dx < 0 ? exposed : 0, pointerEvents: dx < -24 ? 'auto' : 'none' }}
       >
         <Trash2 className="size-4" strokeWidth={2.3} />
-        <span className="text-[10px] font-semibold">Hapus</span>
+        <span className="text-[10px] font-medium">Hapus</span>
       </button>
 
       {/* konten baris — dibungkus bersama tombol menu supaya keduanya ikut
@@ -204,7 +204,7 @@ export function HistoryTransactionRow({
 
           <span className="min-w-0 flex-1">
             <span className="flex items-center gap-1.5">
-              <span className="truncate text-[13.5px] font-semibold text-ink">{tx.name}</span>
+              <span className="truncate text-[13.5px] font-medium text-forest">{tx.name}</span>
               {tx.aiGenerated && (
                 <Sparkles
                   className="size-3 shrink-0 text-forest/50"
@@ -217,7 +217,7 @@ export function HistoryTransactionRow({
               {unknownContext && (
                 <span
                   title={UNKNOWN_CONTEXT_COPY.hint}
-                  className="shrink-0 rounded-full bg-cream px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-ink/50 ring-1 ring-soil/12"
+                  className="shrink-0 rounded-full bg-cream px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.08em] text-forest/50 ring-1 ring-soil/12"
                 >
                   {UNKNOWN_CONTEXT_COPY.badge}
                 </span>
@@ -226,18 +226,18 @@ export function HistoryTransactionRow({
             {/* meta: dompet · jam · kategori, lalu penanda "pindah dana" dalam
                 teks redup — bukan pill biru lagi (audit warna: makna uang tidak
                 perlu biru, cukup dikatakan) */}
-            <span className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-ink/40">
+            <span className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-forest/40">
               <span className="truncate">
                 {showWallet ? `${tx.wallet} · ` : ''}
                 {tx.time} · {category}
               </span>
-              {moves && <span className="shrink-0 font-medium text-ink/40">· pindah dana</span>}
+              {moves && <span className="shrink-0 font-medium text-forest/40">· pindah dana</span>}
             </span>
           </span>
 
           <span
             className={cn(
-              'shrink-0 text-[13.5px] font-semibold tabular-nums',
+              'shrink-0 text-[13.5px] font-medium tabular-nums',
               MONEY_TONE[tx.type].text,
             )}
           >
@@ -251,7 +251,7 @@ export function HistoryTransactionRow({
           type="button"
           onClick={() => onMenu(tx)}
           aria-label={`Buka menu aksi ${tx.name}`}
-          className="mr-1 flex size-9 shrink-0 items-center justify-center rounded-full text-ink/30 transition-colors hover:bg-sage/70 hover:text-ink/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25"
+          className="mr-1 flex size-9 shrink-0 items-center justify-center rounded-full text-forest/30 transition-colors hover:bg-sage/70 hover:text-forest/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25"
         >
           <MoreVertical className="size-4" strokeWidth={2.4} />
         </button>

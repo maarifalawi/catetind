@@ -40,9 +40,9 @@ const LEVEL_CLASS: Record<HeatmapDay['level'], string> = {
 
 /** warna angka hari agar tetap kontras di tiap tingkat warna sel */
 const LEVEL_TEXT_CLASS: Record<HeatmapDay['level'], string> = {
-  0: 'text-ink/30',
-  1: 'text-ink/45',
-  2: 'text-ink/75',
+  0: 'text-forest/30',
+  1: 'text-forest/45',
+  2: 'text-forest/75',
   3: 'text-cream/90',
 }
 
@@ -99,16 +99,16 @@ export function SpendingHeatmap({
             <Flame className="size-[18px]" strokeWidth={2.2} />
           </span>
           <div>
-            <h2 className="font-display text-[15px] font-bold tracking-tight text-ink">
+            <h2 className="font-display text-[15px] font-semibold tracking-tight text-forest">
               Kapan Kamu Sering Boros?
             </h2>
             {/* label konteks (paket 47) — pola ini milik konteks yang aktif */}
-            <p className="text-[11.5px] text-ink/45">
+            <p className="text-[11.5px] text-forest/45">
               {activeDays} hari aktif · {CONTEXT_LABEL[context]}
             </p>
           </div>
         </div>
-        <span className="rounded-full bg-cream px-3 py-1.5 text-[11.5px] font-semibold text-ink/60 tabular-nums ring-1 ring-soil/12">
+        <span className="rounded-full bg-cream px-3 py-1.5 text-[11.5px] font-medium text-forest/60 tabular-nums ring-1 ring-soil/12">
           {maskMoney(totalSpend, masked)} / {DAYS} hari
         </span>
       </div>
@@ -125,7 +125,7 @@ export function SpendingHeatmap({
           {HEATMAP_WEEKDAYS.map((label) => (
             <span
               key={label}
-              className="pb-1 text-center text-[10px] font-semibold uppercase tracking-[0.08em] text-ink/35"
+              className="pb-1 text-center text-[10px] font-medium uppercase tracking-[0.08em] text-forest/35"
             >
               {label}
             </span>
@@ -151,7 +151,7 @@ export function SpendingHeatmap({
                       aria-label={`${formatDayLabel(day.date)}: ${maskMoney(day.total, masked)}`}
                       aria-pressed={isActive}
                       className={cn(
-                        'flex aspect-square w-full items-center justify-center rounded-[7px] text-[10px] font-bold tabular-nums ring-1 ring-inset ring-soil/8 transition-[transform,box-shadow,opacity] duration-200 animate-[fade-pop_0.4s_ease_backwards] hover:-translate-y-0.5 hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40',
+                        'flex aspect-square w-full items-center justify-center rounded-[7px] text-[10px] font-semibold tabular-nums ring-1 ring-inset ring-soil/8 transition-[transform,box-shadow,opacity] duration-200 animate-[fade-pop_0.4s_ease_backwards] hover:-translate-y-0.5 hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40',
                         LEVEL_CLASS[day.level],
                         LEVEL_TEXT_CLASS[day.level],
                         isActive && 'ring-2 ring-inset ring-forest/70',
@@ -165,7 +165,7 @@ export function SpendingHeatmap({
                     <span
                       role="tooltip"
                       className={cn(
-                        'pointer-events-none absolute bottom-full z-20 mb-2 w-max max-w-[12rem] rounded-xl bg-ink px-2.5 py-1.5 text-center text-[10.5px] font-semibold leading-tight text-cream shadow-[0_12px_28px_-12px_rgba(69,89,78,0.7)] transition-opacity duration-150 motion-reduce:transition-none',
+                        'pointer-events-none absolute bottom-full z-20 mb-2 w-max max-w-[12rem] rounded-xl bg-ink px-2.5 py-1.5 text-center text-[10.5px] font-medium leading-tight text-cream shadow-[0_12px_28px_-12px_rgba(69,89,78,0.7)] transition-opacity duration-150 motion-reduce:transition-none',
                         placement.bubble,
                         isActive ? 'opacity-100' : 'opacity-0',
                       )}
@@ -193,7 +193,7 @@ export function SpendingHeatmap({
       </div>
 
       {/* legenda skala warna */}
-      <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-[11px] text-ink/45">
+      <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-[11px] text-forest/45">
         <span className="font-medium">Skala</span>
         {LEGEND.map(({ level, label }) => (
           <span key={label} className="inline-flex items-center gap-1.5">

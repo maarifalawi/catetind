@@ -71,13 +71,13 @@ export function SinkingFundCard({
       >
         <div className="flex items-start justify-between gap-3">
           <span className="min-w-0">
-            <span className="block truncate text-[15px] font-bold leading-tight tracking-tight text-ink">
+            <span className="block truncate text-[15px] font-medium leading-tight tracking-tight text-forest">
               {fund.name}
             </span>
-            <span className="mt-0.5 flex items-center gap-1.5 text-[10.5px] font-semibold text-[#b5b987]">
+            <span className="mt-0.5 flex items-center gap-1.5 text-[10.5px] font-medium text-[#b5b987]">
               {/* badge konteks uang celengan (paket 47) — supaya jelas celengan
                   ini milik Pribadi, Keluarga, atau Bersama di halaman mana pun */}
-              <span className="rounded-full bg-sage/70 px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-forest ring-1 ring-inset ring-forest/10">
+              <span className="rounded-full bg-sage/70 px-1.5 py-0.5 text-[9.5px] font-medium uppercase tracking-wide text-forest ring-1 ring-inset ring-forest/10">
                 {CONTEXT_LABEL[fund.scope]}
               </span>
               {stage.label}
@@ -86,7 +86,7 @@ export function SinkingFundCard({
 
           <span
             className={cn(
-              'shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide',
+              'shrink-0 rounded-full px-2.5 py-1 text-[10px] font-medium uppercase tracking-wide',
               priority.badge,
             )}
           >
@@ -96,10 +96,10 @@ export function SinkingFundCard({
 
         {/* nominal terkumpul / target */}
         <div className="mt-3.5 flex items-end justify-between gap-3">
-          <p className="text-[19px] font-bold leading-none tracking-tight text-ink tabular-nums">
+          <p className="text-[19px] font-semibold leading-none tracking-tight text-forest tabular-nums">
             {maskNominal(fund.current, masked)}
           </p>
-          <p className="shrink-0 text-[11.5px] font-medium text-ink/45 tabular-nums">
+          <p className="shrink-0 text-[11.5px] font-medium text-forest/45 tabular-nums">
             / {maskNominal(fund.target, masked)}
           </p>
         </div>
@@ -117,27 +117,27 @@ export function SinkingFundCard({
           </span>
           <div className="min-w-0 flex-1">
             <div className="flex items-baseline justify-between gap-2">
-              <span className="text-[11.5px] font-semibold text-[#b5b987]">{stage.label}</span>
-              <span className="shrink-0 text-[13px] font-bold text-ink tabular-nums">
+              <span className="text-[11.5px] font-medium text-[#b5b987]">{stage.label}</span>
+              <span className="shrink-0 text-[13px] font-semibold text-forest tabular-nums">
                 {Math.round(percent)}%
               </span>
             </div>
-            <p className="mt-1 text-[11px] font-medium leading-snug text-ink/55">
+            <p className="mt-1 text-[11px] font-medium leading-snug text-forest/55">
               Nabung{' '}
-              <b className="font-bold text-ink tabular-nums">{maskNominal(perMonth, masked)}</b>
+              <b className="font-semibold text-forest tabular-nums">{maskNominal(perMonth, masked)}</b>
               /bulan biar tercapai tepat waktu
             </p>
           </div>
         </div>
 
-        <p className="mt-1.5 text-[10.5px] text-ink/35">
+        <p className="mt-1.5 text-[10.5px] text-forest/35">
           Target: {formatDeadline(fund.deadline)}
         </p>
       </button>
 
       {/* footer — pintasan setor tanpa harus masuk detail */}
       <div className="mt-3.5 flex items-center justify-between gap-2 border-t border-soil/12 pt-3">
-        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-ink/35 transition-colors group-hover/card:text-ink/55">
+        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-forest/35 transition-colors group-hover/card:text-forest/55">
           Lihat detail
           <ChevronRight className="size-3" strokeWidth={2.4} />
         </span>
@@ -149,7 +149,7 @@ export function SinkingFundCard({
               onClick={() => onDelete(fund)}
               aria-label={FUND_CARD_ACTION_COPY.delete(fund.name)}
               title={FUND_CARD_ACTION_COPY.deleteLabel}
-              className="flex size-8 items-center justify-center rounded-full text-ink/30 transition-colors hover:bg-plum/12 hover:text-plum focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25 active:scale-95"
+              className="flex size-8 items-center justify-center rounded-full text-forest/30 transition-colors hover:bg-plum/12 hover:text-plum focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25 active:scale-95"
             >
               <Trash2 className="size-3.5" strokeWidth={2.4} aria-hidden />
             </button>
@@ -157,7 +157,7 @@ export function SinkingFundCard({
           <button
             type="button"
             onClick={() => onContribute(fund)}
-            className="inline-flex items-center gap-1.5 rounded-full bg-forest px-3.5 py-2 text-[12px] font-semibold text-mint transition-colors hover:bg-forest-soft active:scale-95"
+            className="inline-flex items-center gap-1.5 rounded-full bg-forest px-3.5 py-2 text-[12px] font-medium text-mint transition-colors hover:bg-forest-soft active:scale-95"
           >
             <Plus className="size-3.5" strokeWidth={3} />
             Setor

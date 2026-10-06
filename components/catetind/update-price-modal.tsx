@@ -110,8 +110,8 @@ export function UpdatePriceModal({
               {meta.emoji}
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-[13.5px] font-bold text-ink">{data.name}</span>
-              <span className="mt-0.5 block truncate text-[11px] text-ink/45 tabular-nums">
+              <span className="block truncate text-[13.5px] font-medium text-forest">{data.name}</span>
+              <span className="mt-0.5 block truncate text-[11px] text-forest/45 tabular-nums">
                 {formatAssetQuantity(data)} · {maskMoney(data.currentPrice, masked)} per unit sekarang
               </span>
             </span>
@@ -141,16 +141,16 @@ export function UpdatePriceModal({
           {price > 0 && (
             <div className="mt-3.5 space-y-2 rounded-2xl bg-sage/60 px-4 py-3 text-[12px]">
               <div className="flex items-center justify-between gap-3">
-                <span className="text-ink/60">{PRICE_UPDATE_COPY.valueLabel}</span>
-                <span className="font-bold text-forest tabular-nums">
+                <span className="text-forest/60">{PRICE_UPDATE_COPY.valueLabel}</span>
+                <span className="font-semibold text-forest tabular-nums">
                   {maskMoney(newValue, masked)}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-3">
-                <span className="text-ink/60">{PRICE_UPDATE_COPY.returnLabel}</span>
+                <span className="text-forest/60">{PRICE_UPDATE_COPY.returnLabel}</span>
                 <span
                   className={cn(
-                    'font-bold tabular-nums',
+                    'font-semibold tabular-nums',
                     returnValue >= 0 ? 'text-[#b5b987]' : 'text-hud-terracotta',
                   )}
                 >
@@ -161,7 +161,7 @@ export function UpdatePriceModal({
             </div>
           )}
 
-          <p className="mt-3 text-[10.5px] leading-relaxed text-ink/40">
+          <p className="mt-3 text-[10.5px] leading-relaxed text-forest/40">
             {PRICE_UPDATE_COPY.stampNote(stamp)}
           </p>
         </>

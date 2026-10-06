@@ -5,6 +5,8 @@ import type { BudgetScope } from '@/lib/data/budget'
 import { BILL_PAYMENT_CATEGORY, BILL_UNPAID_REVERSAL_NOTE, INITIAL_BILLS, TODAY_ISO, type Bill } from '@/lib/data/bills'
 import { scopedItems } from '@/lib/data/money-context'
 import { BILLS_STATE_KEY, loadDeviceState, saveDeviceState } from './idb'
+import { deleteRemoteBill, pushBillToServer, readRemoteBills } from '@/lib/supabase/bills-remote'
+import { randomUuid } from '@/lib/supabase/uuid'
 import {
   getMoneySnapshot,
   postBalanceAdjustment,
@@ -91,10 +93,23 @@ export interface BillsSnapshot extends BillsState {
 /** versi bentuk state di perangkat — naikkan kalau bentuknya berubah */
 const BILLS_STATE_VERSION = 1
 
-/** snapshot untuk render server & hidrasi — selalu data seed, tanpa IDB */
+/* ── STATE AWAL SELALU KOSONG (paket 65 · Tugas A) ────────────────────────────
+   Tagihan CONTOH (Kos, Netflix, cicilan HP, …) TIDAK LAGI di-inject sebagai
+   state awal. Akun demo diisi lewat `seedDemoDataOnce()` yang menulis baris
+   sungguhan. `SEED_BILLS` di bawah tinggal jadi BAHAN test & bahan bootstrap. */
+const SEED_BILLS: Bill[] = INITIAL_BILLS
+
+/** snapshot untuk render server & hidrasi — SELALU KOSONG sampai user mengisi */
 const SERVER_SNAPSHOT: BillsSnapshot = Object.freeze({
-  bills: INITIAL_BILLS,
-  removedIds: [],
+  bills: [] as Bill[],
+  removedIds: [] as string[],
+  hydrated: false,
+})
+
+/** snapshot seed — BAHAN test (`resetBillsStore()`), bukan state awal runtime */
+const SEED_SNAPSHOT: BillsSnapshot = Object.freeze({
+  bills: SEED_BILLS,
+  removedIds: [] as string[],
   hydrated: false,
 })
 
@@ -193,17 +208,17 @@ export function mergeBillsState(
   const purged = persisted?.purged === true
   const known = persisted?.version === BILLS_STATE_VERSION
   const storedBills = known ? (persisted?.bills ?? []).filter((bill) => bill?.id) : []
-  /* daftar dasar = yang tersimpan, tagihan kanon untuk kunjungan pertama, atau
-     KOSONG kalau akun ini sudah dihapus user */
-  const base = storedBills.length > 0 ? storedBills : purged ? [] : INITIAL_BILLS
-  /* Yang ikut dari MEMORY hanyalah tagihan yang lahir di sesi ini — yaitu yang
-     BUKAN tagihan seed (saat hidrasi, memory masih berisi `SERVER_SNAPSHOT`) dan
-     belum ada di daftar dasar. Tanpa penyaring "bukan seed", tagihan contoh akan
+  /* daftar dasar = HANYA yang tersimpan (kunjungan pertama = KOSONG, paket 65) */
+  const base = storedBills
+  /* Yang ikut dari MEMORY hanyalah tagihan yang lahir di sesi ini — atau, untuk
+     KUNJUNGAN PERTAMA, tagihan seed yang sedang hidup di state test. Tanpa
+     penyaring "bukan seed" (saat bukan kunjungan pertama), tagihan contoh akan
      muncul kembali di akun yang sudah dihapus, dan daftar tersimpan user bisa
      tercampur data contoh. */
+  const firstVisit = !purged && storedBills.length === 0
   const extras = current.bills.filter(
     (bill) =>
-      !INITIAL_BILLS.some((seed) => seed.id === bill.id) &&
+      (firstVisit || !SEED_BILLS.some((seed) => seed.id === bill.id)) &&
       !base.some((knownBill) => knownBill.id === bill.id),
   )
   const bills = [...base, ...extras]
@@ -212,6 +227,85 @@ export function mergeBillsState(
   const removedIds = [...new Set([...storedRemoved, ...current.removedIds])]
 
   return { bills, removedIds, hydrated: true }
+}
+
+/* ── GABUNG SERVER + PERANGKAT (paket 64 · Paket D) ──────────────────────────
+   Saat ada sesi Supabase, SERVER yang jadi sumber daftar tagihan. Fungsi murni
+   ini (bisa diuji tanpa jaringan) menggabungkannya dengan antrean lokal:
+     · baris server jadi DASAR; kalau ada versi lokalnya (dicocokkan lewat
+       `remoteId`), id domain lokal & kolom yang TIDAK ada di server (emoji,
+       scope, status bayar) dipertahankan;
+     · baris perangkat yang BELUM terkirim (tanpa `remoteId`, atau `remoteId`-nya
+       belum ada di server) tetap ikut — itu antrean offline;
+     · baris seed contoh tidak pernah dihidupkan kembali. */
+export function mergeWithRemoteBills(
+  remote: readonly Bill[],
+  current: BillsSnapshot = live,
+  persisted: PersistedBills | null = null,
+): BillsSnapshot {
+  const localById = new Map<string, Bill>()
+  const localByRemote = new Map<string, Bill>()
+  for (const row of [...(persisted?.bills ?? []), ...current.bills]) {
+    if (!row?.id) continue
+    if (!localById.has(row.id)) localById.set(row.id, row)
+    if (row.remoteId && !localByRemote.has(row.remoteId)) localByRemote.set(row.remoteId, row)
+  }
+
+  const base = remote.map((row) => {
+    const local = localByRemote.get(row.id) ?? localById.get(row.id)
+    if (!local) return { ...row, remoteId: row.id }
+    return {
+      ...row,
+      id: local.id,
+      emoji: local.emoji || row.emoji,
+      scope: local.scope,
+      isRecurring: local.isRecurring,
+      isPaidThisMonth: local.isPaidThisMonth,
+      remoteId: row.id,
+      ...(local.paidRowId ? { paidRowId: local.paidRowId } : {}),
+    }
+  })
+
+  const remoteIds = new Set(remote.map((row) => row.id))
+  const baseIds = new Set(base.map((row) => row.id))
+  const extras = [...localById.values()].filter(
+    (row) =>
+      !SEED_BILLS.some((seed) => seed.id === row.id) &&
+      !baseIds.has(row.id) &&
+      !(row.remoteId && remoteIds.has(row.remoteId)),
+  )
+
+  const seen = new Set<string>()
+  const bills: Bill[] = []
+  for (const row of [...base, ...extras]) {
+    if (seen.has(row.id)) continue
+    seen.add(row.id)
+    bills.push(row)
+  }
+
+  const removedIds = Array.from(new Set([...current.removedIds, ...(persisted?.removedIds ?? [])]))
+  return { bills, removedIds, hydrated: true }
+}
+
+/**
+ * Pastikan satu tagihan ada di server: pakai `remoteId` kalau sudah ada, kalau
+ * belum buat uuid lalu SIMPAN kembali ke baris lokal supaya pembacaan berikutnya
+ * mengenali baris yang sama (tidak menggandakan).
+ */
+async function ensureBillOnServer(billId: string): Promise<boolean> {
+  const bill = live.bills.find((row) => row.id === billId)
+  if (!bill) return false
+  const remoteId = bill.remoteId ?? randomUuid()
+  if (!(await pushBillToServer(bill, remoteId))) return false
+  if (bill.remoteId !== remoteId) {
+    live = {
+      ...live,
+      bills: live.bills.map((row) => (row.id === billId ? { ...row, remoteId } : row)),
+    }
+    persist(live)
+    emit()
+  }
+  return true
 }
 
 async function hydrateBillsStore(): Promise<void> {
@@ -223,6 +317,18 @@ async function hydrateBillsStore(): Promise<void> {
   live = mergeBillsState(persisted)
   hydratedOnce = true
   emit()
+
+  if (accountPurged) return
+  /* SERVER jadi sumber saat ada sesi; `null` = tanpa sesi → tetap jalur lokal */
+  const remote = await readRemoteBills()
+  if (!remote) return
+  live = mergeWithRemoteBills(remote, live, persisted)
+  persist(live)
+  emit()
+  /* baris perangkat yang belum pernah terkirim dinaikkan sekali di sini */
+  for (const bill of live.bills) {
+    if (!bill.remoteId) await ensureBillOnServer(bill.id)
+  }
 }
 
 /* ── API TULIS — satu-satunya jalur menulis tagihan ──────────────────────────
@@ -241,6 +347,7 @@ export function addBill(input: NewBillInput): Bill {
   const { paidRowId: _paidRowId, ...fields } = input
   const bill: Bill = { ...fields, id: nextBillId() }
   commit({ ...live, bills: [...live.bills, bill], hydrated: true })
+  void ensureBillOnServer(bill.id)
   return bill
 }
 
@@ -275,6 +382,7 @@ export function editBill(
     bills: live.bills.map((item) => (item.id === id ? bill : item)),
     hydrated: true,
   })
+  void ensureBillOnServer(id)
   return bill
 }
 
@@ -291,6 +399,7 @@ export function deleteBill(id: string): Bill | null {
   const bill = live.bills.find((row) => row.id === id)
   if (!bill || live.removedIds.includes(id)) return null
   commit({ ...live, removedIds: [...live.removedIds, id], hydrated: true })
+  if (bill.remoteId) void deleteRemoteBill(bill.remoteId)
   return bill
 }
 
@@ -300,6 +409,7 @@ export function restoreBill(id: string): Bill | null {
   if (!live.removedIds.includes(id)) return null
   const bill = live.bills.find((row) => row.id === id) ?? null
   commit({ ...live, removedIds: live.removedIds.filter((rowId) => rowId !== id), hydrated: true })
+  if (bill) void ensureBillOnServer(id)
   return bill
 }
 
@@ -368,6 +478,7 @@ export function markBillPaid(
     bills: live.bills.map((item) => (item.id === id ? updated : item)),
     hydrated: true,
   })
+  void ensureBillOnServer(updated.id)
 
   return {
     bill: updated,
@@ -437,6 +548,7 @@ export function unmarkBillPaid(id: string): BillUnpaidResult | null {
     bills: live.bills.map((item) => (item.id === id ? updated : item)),
     hydrated: true,
   })
+  void ensureBillOnServer(updated.id)
 
   return { bill: updated, row, reversal }
 }
@@ -497,7 +609,7 @@ export function billsForContext(snapshot: BillsSnapshot, scope: BudgetScope): Bi
  * cuma `purgeBillsStore()` saat user menghapus akunnya.
  */
 export function resetBillsStore(): void {
-  live = SERVER_SNAPSHOT
+  live = SEED_SNAPSHOT
   accountPurged = false
   hydrateStarted = false
   hydratedOnce = false

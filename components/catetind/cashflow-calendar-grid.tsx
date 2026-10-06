@@ -121,8 +121,8 @@ export function CashflowCalendarGrid({
             <CalendarDays className="size-[18px]" strokeWidth={2.2} />
           </span>
           <div className="min-w-0">
-            <h2 className="font-display text-[15px] font-bold tracking-tight text-ink">{label}</h2>
-            <p className="mt-0.5 text-[11.5px] leading-snug text-ink/45">
+            <h2 className="font-display text-[15px] font-semibold tracking-tight text-forest">{label}</h2>
+            <p className="mt-0.5 text-[11.5px] leading-snug text-forest/45">
               {rangeLabel}
               {summary.net !== 0 && (
                 <>
@@ -142,7 +142,7 @@ export function CashflowCalendarGrid({
             type="button"
             onClick={() => onShift(-1)}
             aria-label="Periode sebelumnya"
-            className="flex size-8 items-center justify-center rounded-full text-ink/45 transition-colors hover:bg-cream hover:text-ink active:scale-95"
+            className="flex size-8 items-center justify-center rounded-full text-forest/45 transition-colors hover:bg-cream hover:text-forest active:scale-95"
           >
             <ChevronLeft className="size-4" strokeWidth={2.6} />
           </button>
@@ -150,7 +150,7 @@ export function CashflowCalendarGrid({
             type="button"
             onClick={() => onShift(1)}
             aria-label="Periode berikutnya"
-            className="flex size-8 items-center justify-center rounded-full text-ink/45 transition-colors hover:bg-cream hover:text-ink active:scale-95"
+            className="flex size-8 items-center justify-center rounded-full text-forest/45 transition-colors hover:bg-cream hover:text-forest active:scale-95"
           >
             <ChevronRight className="size-4" strokeWidth={2.6} />
           </button>
@@ -172,8 +172,8 @@ export function CashflowCalendarGrid({
                 aria-pressed={active}
                 onClick={() => onModeChange(option.id)}
                 className={cn(
-                  'rounded-full px-3 py-1 text-[11.5px] font-semibold transition-colors duration-200 active:scale-95',
-                  active ? 'bg-forest text-mint' : 'text-ink/50 hover:text-ink',
+                  'rounded-full px-3 py-1 text-[11.5px] font-medium transition-colors duration-200 active:scale-95',
+                  active ? 'bg-forest text-mint' : 'text-forest/50 hover:text-forest',
                 )}
               >
                 <span className="sm:hidden">{option.short}</span>
@@ -186,7 +186,7 @@ export function CashflowCalendarGrid({
         <button
           type="button"
           onClick={onToday}
-          className="h-7 shrink-0 rounded-full px-2.5 text-[11.5px] font-semibold text-forest transition-colors hover:bg-cream active:scale-95"
+          className="h-7 shrink-0 rounded-full px-2.5 text-[11.5px] font-medium text-forest transition-colors hover:bg-cream active:scale-95"
         >
           Hari Ini
         </button>
@@ -205,8 +205,8 @@ export function CashflowCalendarGrid({
             <span
               key={day}
               className={cn(
-                'pb-1 text-center text-[10px] font-semibold uppercase tracking-[0.08em]',
-                index >= 5 ? 'text-ink/25' : 'text-ink/35',
+                'pb-1 text-center text-[10px] font-medium uppercase tracking-[0.08em]',
+                index >= 5 ? 'text-forest/25' : 'text-forest/35',
               )}
             >
               {day}
@@ -234,7 +234,7 @@ export function CashflowCalendarGrid({
       </div>
 
       {/* ── legenda makna warna: lima muka sel, label sependek mungkin ─────── */}
-      <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-[11px] text-ink/45">
+      <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-[11px] text-forest/45">
         <span className="font-medium">Keterangan</span>
         {CALENDAR_LEGEND.map((item) => (
           <span key={item.id} className="inline-flex items-center gap-1.5">
@@ -299,7 +299,7 @@ function CalendarDayCell({
         aria-label={ariaLabel}
         title={ariaLabel}
         className={cn(
-          'relative flex aspect-square w-full items-center justify-center rounded-[10px] text-[11.5px] font-semibold tabular-nums ring-1 ring-inset ring-soil/8 transition-[transform,background-color,box-shadow] duration-200 animate-[fade-pop_0.4s_ease_backwards] hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40 sm:aspect-auto sm:min-h-[56px] sm:text-[12.5px] lg:min-h-[68px]',
+          'relative flex aspect-square w-full items-center justify-center rounded-[10px] text-[11.5px] font-medium tabular-nums ring-1 ring-inset ring-soil/8 transition-[transform,background-color,box-shadow] duration-200 animate-[fade-pop_0.4s_ease_backwards] hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40 sm:aspect-auto sm:min-h-[56px] sm:text-[12.5px] lg:min-h-[68px]',
           CALENDAR_LOOK_CELL[look],
           selected
             ? darkFill
@@ -323,7 +323,7 @@ function CalendarDayCell({
       <span
         role="tooltip"
         className={cn(
-          'pointer-events-none absolute bottom-full z-20 mb-2 w-max max-w-[11rem] rounded-xl bg-ink px-2.5 py-1.5 text-center text-[10.5px] font-semibold leading-tight text-cream shadow-[0_12px_28px_-12px_rgba(69,89,78,0.7)] transition-opacity duration-150 motion-reduce:transition-none',
+          'pointer-events-none absolute bottom-full z-20 mb-2 w-max max-w-[11rem] rounded-xl bg-ink px-2.5 py-1.5 text-center text-[10.5px] font-medium leading-tight text-cream shadow-[0_12px_28px_-12px_rgba(69,89,78,0.7)] transition-opacity duration-150 motion-reduce:transition-none',
           placement.bubble,
           selected ? 'opacity-100' : 'opacity-0',
         )}

@@ -102,7 +102,7 @@ export function JointTimeline({
                 partner.dot,
               )}
             />
-            <div className="inline-flex items-center gap-2 rounded-full bg-[#ffffff] px-3 py-1.5 text-[11.5px] font-semibold text-ink/60 ring-1 ring-soil/10">
+            <div className="inline-flex items-center gap-2 rounded-full bg-[#ffffff] px-3 py-1.5 text-[11.5px] font-medium text-forest/60 ring-1 ring-soil/10">
               <span aria-hidden>{partner.avatar}</span>
               {partner.name} sedang mencatat
               <span className="flex items-end gap-0.5" aria-hidden>
@@ -123,7 +123,7 @@ export function JointTimeline({
         {groups.map((group) => (
           <section key={group.date} className="relative pt-3">
             {/* separator tanggal yang menyeberangi garis */}
-            <h3 className="relative z-10 mb-3 ml-6 w-fit rounded-full bg-[#ffffff] px-3 py-1 text-[10.5px] font-bold uppercase tracking-[0.14em] text-ink/40 ring-1 ring-soil/10 sm:mx-auto sm:ml-auto">
+            <h3 className="relative z-10 mb-3 ml-6 w-fit rounded-full bg-[#ffffff] px-3 py-1 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-forest/40 ring-1 ring-soil/10 sm:mx-auto sm:ml-auto">
               {group.label}
             </h3>
 
@@ -275,14 +275,14 @@ function TimelineCard({
               >
                 {person.avatar}
               </span>
-              <span className="truncate text-[11.5px] font-semibold text-ink/50">
+              <span className="truncate text-[11.5px] font-medium text-forest/50">
                 {person.name} · {tx.time}
               </span>
             </span>
 
             <span className="flex shrink-0 items-center gap-1.5">
               {tx.justArrived && (
-                <span className="rounded-full bg-hud-amber/25 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-[#b89191]">
+                <span className="rounded-full bg-hud-amber/25 px-2 py-0.5 text-[9.5px] font-medium uppercase tracking-wide text-[#b89191]">
                   Baru
                 </span>
               )}
@@ -290,7 +290,7 @@ function TimelineCard({
                 <ChevronDown
                   aria-hidden
                   className={cn(
-                    'size-3.5 text-ink/30 transition-transform duration-200',
+                    'size-3.5 text-forest/30 transition-transform duration-200',
                     open && 'rotate-180',
                   )}
                   strokeWidth={2.6}
@@ -302,8 +302,8 @@ function TimelineCard({
           {/* baris 2: deskripsi */}
           <p
             className={cn(
-              'mt-1.5 text-[14.5px] font-bold leading-snug',
-              view.hiddenFromMe ? 'text-ink/70' : 'text-ink',
+              'mt-1.5 text-[14.5px] font-medium leading-snug',
+              view.hiddenFromMe ? 'text-forest/70' : 'text-forest',
             )}
           >
             {view.description}
@@ -311,7 +311,7 @@ function TimelineCard({
           {/* baris 3: nominal + kategori + info pembagian */}
           <div className="mt-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5">
             <span className="flex items-center gap-1.5">
-              <span className="text-[15.5px] font-black tabular-nums tracking-tight text-ink">
+              <span className="text-[15.5px] font-semibold tabular-nums tracking-tight text-forest">
                 {moneyLabel(tx.amount, masked)}
               </span>
               {isPrivateMine && (
@@ -322,7 +322,7 @@ function TimelineCard({
                     setLockHint((prev) => !prev)
                   }}
                   aria-label={PRIVATE_OWNER_HINT}
-                  className="flex size-5 items-center justify-center rounded-full bg-ink/10 text-ink/60 transition-colors hover:bg-ink/15"
+                  className="flex size-5 items-center justify-center rounded-full bg-ink/10 text-forest/60 transition-colors hover:bg-ink/15"
                 >
                   <Lock className="size-3" strokeWidth={2.4} />
                 </button>
@@ -330,13 +330,13 @@ function TimelineCard({
             </span>
 
             <span className="flex items-center gap-1.5">
-              <span className="rounded-full bg-hud-sage/15 px-2 py-0.5 text-[10.5px] font-semibold text-[#000000] ring-1 ring-hud-sage/25">
+              <span className="rounded-full bg-hud-sage/15 px-2 py-0.5 text-[10.5px] font-medium text-forest ring-1 ring-hud-sage/25">
                 {view.category === '🔒'
                   ? '🔒 Privat'
                   : `${categoryEmoji(view.category)} ${view.category}`}
               </span>
               {!view.hiddenFromMe && (
-                <span className="rounded-full bg-soil/[0.1] px-2 py-0.5 text-[10.5px] font-medium text-ink/50">
+                <span className="rounded-full bg-soil/[0.1] px-2 py-0.5 text-[10.5px] font-medium text-forest/50">
                   {splitLabel(tx, masked)}
                 </span>
               )}
@@ -355,8 +355,8 @@ function TimelineCard({
                 className="overflow-hidden"
               >
                 <div className="mt-3 border-t border-soil/12 pt-3">
-                  <p className="text-[11.5px] text-ink/45">
-                    Split: <b className="font-semibold text-ink/70">{splitLabel(tx, masked)}</b>
+                  <p className="text-[11.5px] text-forest/45">
+                    Split: <b className="font-medium text-forest/70">{splitLabel(tx, masked)}</b>
                   </p>
                   <button
                     type="button"
@@ -364,7 +364,7 @@ function TimelineCard({
                       event.stopPropagation()
                       onOpenSplit(tx)
                     }}
-                    className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-forest/5 px-3 py-1.5 text-[11.5px] font-semibold text-forest ring-1 ring-forest/15 transition-colors hover:bg-forest/10"
+                    className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-forest/5 px-3 py-1.5 text-[11.5px] font-medium text-forest ring-1 ring-forest/15 transition-colors hover:bg-forest/10"
                   >
                     <SlidersHorizontal className="size-3.5" strokeWidth={2.4} />
                     Atur pembagian →
@@ -383,7 +383,7 @@ function TimelineCard({
                       onClick={(event) => event.stopPropagation()}
                       onKeyDown={(event) => event.stopPropagation()}
                     >
-                      <p className="flex items-center gap-1.5 text-[11px] font-semibold text-ink/50">
+                      <p className="flex items-center gap-1.5 text-[11px] font-medium text-forest/50">
                         <Wallet className="size-3.5 shrink-0 text-forest" strokeWidth={2.4} />
                         {PAID_BY_LABEL}
                       </p>
@@ -397,7 +397,7 @@ function TimelineCard({
                         onChange={(userId) => onChangePaidBy(tx, userId)}
                         ariaLabel={PAID_BY_LABEL}
                       />
-                      <p className="mt-1.5 text-[10.5px] leading-relaxed text-ink/40">
+                      <p className="mt-1.5 text-[10.5px] leading-relaxed text-forest/40">
                         {PAID_BY_HINT}
                       </p>
                     </div>
@@ -419,14 +419,14 @@ function TimelineCard({
                         onDelete(tx)
                       }}
                       aria-label={JOINT_DELETE_COPY.actionAria(view.description)}
-                      className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-plum/12 px-3 py-1.5 text-[11.5px] font-semibold text-plum ring-1 ring-plum/25 transition-colors hover:bg-plum/20"
+                      className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-plum/12 px-3 py-1.5 text-[11.5px] font-medium text-plum ring-1 ring-plum/25 transition-colors hover:bg-plum/20"
                     >
                       <Trash2 className="size-3.5" strokeWidth={2.4} />
                       {JOINT_DELETE_COPY.action}
                     </button>
                   )}
                   {deleteAction === 'locked' && (
-                    <p className="mt-3 rounded-2xl bg-soil/[0.1] px-3.5 py-2.5 text-[11px] leading-relaxed text-ink/55">
+                    <p className="mt-3 rounded-2xl bg-soil/[0.1] px-3.5 py-2.5 text-[11px] leading-relaxed text-forest/55">
                       {JOINT_DELETE_COPY.lockedNote}
                     </p>
                   )}

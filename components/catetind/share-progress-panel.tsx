@@ -2,12 +2,15 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { ArrowUpRight, Check, Copy, Share2 } from 'lucide-react'
+import { ArrowUpRight, Check, Copy, Download, Share2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import {
+  SHARE_ACTION_TITLE,
   SHARE_PANEL_COPY,
+  buildShareActionText,
   buildShareHref,
+  buildShareImagePath,
   buildSharePayload,
   buildShareUrl,
   type ShareCard,
@@ -31,7 +34,7 @@ import {
    berbeda isi. Semua copy dari `lib/data/share.ts`.
    ────────────────────────────────────────────────────────────────────────── */
 
-type PanelStatus = 'idle' | 'copied' | 'shared' | 'failed'
+type PanelStatus = 'idle' | 'copied' | 'shared' | 'downloaded' | 'failed'
 
 export function ShareProgressPanel({
   card,
@@ -85,6 +88,50 @@ export function ShareProgressPanel({
     }
   }
 
+  /**
+   * "Share Report" (paket 63): ekspor kartu sebagai GAMBAR (Story 1080×1920) dari
+   * `GET /api/share/<id>/image`, lalu bagikan lewat Web Share API (files) bila
+   * browsernya mendukung; kalau tidak, unduh. Isi gambarnya SAMA dengan yang
+   * dilihat penerima — nol angka rupiah (PRD 6572–6576).
+   */
+  async function shareImage() {
+    try {
+      const res = await fetch(buildShareImagePath(card.id), { cache: 'no-store' })
+      if (!res.ok) throw new Error('image')
+      const blob = await res.blob()
+      const file = new File([blob], `catetind-${card.id}.png`, { type: 'image/png' })
+
+      const canShareFiles =
+        typeof navigator !== 'undefined' &&
+        typeof navigator.canShare === 'function' &&
+        navigator.canShare({ files: [file] })
+
+      if (canShareFiles) {
+        await navigator.share({
+          files: [file],
+          title: SHARE_ACTION_TITLE,
+          text: buildShareActionText(card.id),
+        })
+        flash('shared')
+        toast.success(SHARE_PANEL_COPY.status.shared)
+        return
+      }
+
+      /* fallback universal: unduh berkasnya */
+      const url = URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.download = `catetind-${card.id}.png`
+      anchor.click()
+      URL.revokeObjectURL(url)
+      flash('downloaded')
+      toast.success(SHARE_PANEL_COPY.status.downloaded)
+    } catch {
+      flash('failed')
+      toast.error(SHARE_PANEL_COPY.status.failed)
+    }
+  }
+
   const statusText = status === 'idle' ? null : SHARE_PANEL_COPY.status[status]
 
   return (
@@ -97,10 +144,10 @@ export function ShareProgressPanel({
           <Share2 className="size-4" strokeWidth={2.2} aria-hidden />
         </span>
         <div className="min-w-0">
-          <h3 className="font-display text-[13.5px] font-semibold tracking-tight text-ink">
+          <h3 className="font-display text-[13.5px] font-medium tracking-tight text-forest">
             {SHARE_PANEL_COPY.title}
           </h3>
-          <p className="mt-0.5 text-[11px] leading-relaxed text-ink/55">
+          <p className="mt-0.5 text-[11px] leading-relaxed text-forest/55">
             {SHARE_PANEL_COPY.blurb}
           </p>
         </div>
@@ -110,7 +157,7 @@ export function ShareProgressPanel({
         <button
           type="button"
           onClick={shareLink}
-          className="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full bg-forest px-4 text-[12.5px] font-semibold text-cream transition-colors duration-200 hover:bg-forest-soft active:scale-[0.98] motion-reduce:transition-none"
+          className="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full bg-forest px-4 text-[12.5px] font-medium text-cream transition-colors duration-200 hover:bg-forest-soft active:scale-[0.98] motion-reduce:transition-none"
         >
           <Share2 className="size-3.5" strokeWidth={2.4} aria-hidden />
           {SHARE_PANEL_COPY.shareLabel}
@@ -118,7 +165,7 @@ export function ShareProgressPanel({
         <button
           type="button"
           onClick={copyLink}
-          className="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full bg-cream px-4 text-[12.5px] font-semibold text-forest ring-1 ring-soil/14 transition-colors duration-200 hover:bg-sage/70 active:scale-[0.98] motion-reduce:transition-none"
+          className="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full bg-cream px-4 text-[12.5px] font-medium text-forest ring-1 ring-soil/14 transition-colors duration-200 hover:bg-sage/70 active:scale-[0.98] motion-reduce:transition-none"
         >
           {status === 'copied' ? (
             <Check className="size-3.5" strokeWidth={2.6} aria-hidden />
@@ -129,6 +176,16 @@ export function ShareProgressPanel({
         </button>
       </div>
 
+      {/* "Share Report" — kartu sebagai GAMBAR (paket 63), bukan cuma tautan */}
+      <button
+        type="button"
+        onClick={shareImage}
+        className="mt-2 inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-full bg-cream px-4 text-[12.5px] font-medium text-forest ring-1 ring-soil/14 transition-colors duration-200 hover:bg-sage/70 active:scale-[0.98] motion-reduce:transition-none"
+      >
+        <Download className="size-3.5" strokeWidth={2.4} aria-hidden />
+        {SHARE_PANEL_COPY.shareImageLabel}
+      </button>
+
       {/* status aksi — aria-live supaya screen reader ikut tahu, bukan cuma mata */}
       <p aria-live="polite" className="mt-1.5 min-h-4 text-center text-[11px] font-medium text-forest/80">
         {statusText}
@@ -137,12 +194,12 @@ export function ShareProgressPanel({
       <div className="mt-1.5 border-t border-soil/12 pt-3">
         <Link
           href={buildShareHref(card.id)}
-          className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-forest underline underline-offset-2 transition-colors duration-200 hover:text-forest-soft motion-reduce:transition-none"
+          className="inline-flex items-center gap-1 text-[11.5px] font-medium text-forest underline underline-offset-2 transition-colors duration-200 hover:text-forest-soft motion-reduce:transition-none"
         >
           {SHARE_PANEL_COPY.previewLabel}
           <ArrowUpRight className="size-3.5" strokeWidth={2.4} aria-hidden />
         </Link>
-        <p className="mt-1 text-[10.5px] leading-relaxed text-ink/45">
+        <p className="mt-1 text-[10.5px] leading-relaxed text-forest/45">
           {SHARE_PANEL_COPY.previewHint}
         </p>
       </div>

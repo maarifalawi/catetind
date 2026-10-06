@@ -12,13 +12,15 @@ import {
   SPENDING_REVIEW_COPY,
   computeDailyHud,
   periodIncome,
-  periodUsagePct,
   periodWindowForTab,
   spentInWindow,
+  spentOn,
   type HudStatus,
 } from '@/lib/data/budget'
 import { useLiveFunds } from '@/lib/money/funds-store'
-import { recordedTransactions, useMoneyStore } from '@/lib/money/store'
+import { useMoneyStore } from '@/lib/money/store'
+import { recordedTransactionsForContext } from '@/lib/money/context-filter'
+import { useMoneyContext } from './money-context-provider'
 import { hasConfiguredIncome, useUserMoneySettings } from '@/lib/user-money-settings'
 import { useTodayISO } from '@/lib/use-today-iso'
 import { openAICoachWithSeed } from '@/lib/ai-chat-bus'
@@ -72,11 +74,18 @@ export const DailyHudCard = memo(function DailyHudCard() {
   const settings = useUserMoneySettings()
   const funds = useLiveFunds()
   const snapshot = useMoneyStore()
-  const ledger = useMemo(() => recordedTransactions(snapshot), [snapshot])
+  const { context } = useMoneyContext()
+  const ledger = useMemo(
+    () => recordedTransactionsForContext(snapshot, context),
+    [snapshot, context],
+  )
 
   /* jendela bulan berjalan: panjang pembagi & posisi hari ini ikut tanggal asli */
   const window = useMemo(() => periodWindowForTab('monthly', today || TODAY_ISO), [today])
   const spent = useMemo(() => spentInWindow(ledger, window), [ledger, window])
+  /* uang keluar HARI INI saja — dipakai turunan "sisa jatah hari ini" & bar
+     (paket 66), supaya mencatat pengeluaran hari ini LANGSUNG terlihat. */
+  const spentToday = useMemo(() => spentOn(ledger, today || window.startISO), [ledger, today, window])
 
   const configured = hasConfiguredIncome(settings)
   const hud = useMemo(
@@ -86,9 +95,10 @@ export const DailyHudCard = memo(function DailyHudCard() {
         totalInstallments: settings.totalInstallments,
         sinkingFunds: funds,
         spent,
+        spentToday,
         window,
       }),
-    [settings.monthlyIncome, settings.totalInstallments, funds, spent, window],
+    [settings.monthlyIncome, settings.totalInstallments, funds, spent, spentToday, window],
   )
   /* pemasukan periode = konfigurasi user ATAU catatan nyata di jendela ini */
   const income = useMemo(
@@ -96,13 +106,13 @@ export const DailyHudCard = memo(function DailyHudCard() {
     [window, ledger, settings.monthlyIncome],
   )
 
-  /* ── "TERPAKAI" = PEMAKAIAN KOLAM PERIODE (audit Daily Budget) ─────────────
-     Dulu `spentToday / hud.dailyBudget`. Karena `hud.dailyBudget = remaining /
-     daysLeft` dan `remaining` SUDAH dikurangi pengeluaran hari ini, pembilangnya
-     ikut mengurangi penyebutnya sendiri — persentasenya melompat (mis. 88% di
-     awal siklus). Sekarang memakai `periodUsagePct(availablePool, spent)`:
-     bagian kolam periode yang benar-benar sudah terpakai. */
-  const usedPct = periodUsagePct(hud.availablePool, hud.spent)
+  /* ── "TERPAKAI" = PEMAKAIAN JATAH HARI INI (paket 66) ──────────────────────
+     Dulu bar ini mengukur kolam PERIODE (`periodUsagePct`): pengeluaran
+     Rp 600.000 di kolam puluhan juta cuma 2%, dan angka utama (rata-rata sisa
+     periode ÷ hari) juga nyaris tak bergerak — dua-duanya jadi terasa "tidak
+     nyambung" dengan catatan user. Sekarang bar & angka utama bicara soal HARI
+     INI (`hud.todayUsedPct`), jadi satu catatan langsung menggerakkan kartu. */
+  const usedPct = hud.todayUsedPct
   /* status & warna kanon PRD 2B.2 diambil dari satu sumber copy di lib/data */
   const status: HudStatus = usedPct < 0.75 ? 'onTrack' : usedPct < 1 ? 'approaching' : 'over'
   const STATUS = HOME_HUD_COPY.status[status]
@@ -110,7 +120,11 @@ export const DailyHudCard = memo(function DailyHudCard() {
   return (
     <section
       aria-label={HOME_HUD_COPY.title}
-      className="flex flex-col rounded-[2rem] bg-cream p-4 ring-1 ring-soil/12"
+      /* `flex-1` (bukan `h-full`): kartu ini hidup di dalam sel grid yang
+         `flex flex-col` bersama `DailyNudge`, jadi ia harus TUMBUH mengisi sisa
+         tinggi sel — pasangan ROW 3 (bento 50/50) jadi sama tinggi dengan
+         "Distribusi Pengeluaran" tanpa satu piksel ruang mati. */
+      className="flex flex-1 flex-col rounded-[2rem] bg-cream p-4 ring-1 ring-soil/12 sm:p-5"
     >
       {/* header — konsisten dengan kartu lain */}
       <div className="flex items-center justify-between">
@@ -119,13 +133,12 @@ export const DailyHudCard = memo(function DailyHudCard() {
             <HandCoins className="size-3.5" strokeWidth={2.4} />
           </span>
           <div>
-            <p className="text-sm font-semibold text-ink">{HOME_HUD_COPY.title}</p>
-            <p className="text-[10px] text-ink/45">{HOME_HUD_COPY.subtitle}</p>
+            <p className="text-sm font-medium text-forest">{HOME_HUD_COPY.title}</p>
           </div>
         </div>
         <span
           className={cn(
-            'rounded-full px-2 py-0.5 text-[10px] font-semibold',
+            'rounded-full px-2 py-0.5 text-[10px] font-medium',
             status === 'onTrack' && 'bg-hud-sage/15 text-[#b5b987]',
             status === 'approaching' && 'bg-hud-amber/15 text-[#b89191]',
             status === 'over' && 'bg-hud-terracotta/15 text-hud-terracotta',
@@ -141,12 +154,12 @@ export const DailyHudCard = memo(function DailyHudCard() {
           <span className="flex size-12 items-center justify-center rounded-full bg-cream text-forest ring-1 ring-soil/12">
             <CircleDashed className="size-6" strokeWidth={1.8} />
           </span>
-          <p className="mt-4 text-base font-semibold text-ink">{HUD_COPY.notConfiguredTitle}</p>
-          <p className="mt-1.5 text-sm leading-relaxed text-ink/50">{HUD_COPY.notConfiguredBody}</p>
+          <p className="mt-4 text-base font-medium text-forest">{HUD_COPY.notConfiguredTitle}</p>
+          <p className="mt-1.5 text-sm leading-relaxed text-forest/50">{HUD_COPY.notConfiguredBody}</p>
           <Link
             href={MONEY_SETTINGS_HREF}
             aria-label={HUD_COPY.notConfiguredA11y}
-            className="mt-5 flex items-center gap-2 rounded-full bg-forest px-5 py-2.5 text-[13px] font-semibold text-cream transition-colors hover:bg-forest-soft active:scale-[0.97]"
+            className="mt-5 flex items-center gap-2 rounded-full bg-forest px-5 py-2.5 text-[13px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.97]"
           >
             <Settings2 className="size-4" strokeWidth={2.4} aria-hidden />
             {HUD_COPY.notConfiguredCta}
@@ -158,14 +171,14 @@ export const DailyHudCard = memo(function DailyHudCard() {
           <span className="flex size-12 items-center justify-center rounded-full bg-cream text-forest ring-1 ring-soil/12">
             <CircleDashed className="size-6" strokeWidth={1.8} />
           </span>
-          <p className="mt-4 text-base font-semibold text-ink">{HUD_COPY.drySpellTitle}</p>
-          <p className="mt-1.5 text-sm leading-relaxed text-ink/50">{HUD_COPY.drySpellBody}</p>
+          <p className="mt-4 text-base font-medium text-forest">{HUD_COPY.drySpellTitle}</p>
+          <p className="mt-1.5 text-sm leading-relaxed text-forest/50">{HUD_COPY.drySpellBody}</p>
           <TransactionBottomSheet
             defaultType="income"
             trigger={
               <button
                 type="button"
-                className="mt-5 flex items-center gap-2 rounded-full bg-forest px-5 py-2.5 text-[13px] font-semibold text-cream transition-colors hover:bg-forest-soft active:scale-[0.97]"
+                className="mt-5 flex items-center gap-2 rounded-full bg-forest px-5 py-2.5 text-[13px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.97]"
               >
                 {HUD_COPY.drySpellCta}
               </button>
@@ -175,85 +188,63 @@ export const DailyHudCard = memo(function DailyHudCard() {
       ) : hud.shortfall ? (
         /* ── Jatah ditahan (audit UX #2) — jangan pernah "Rp 0" tanpa sebab */
         <div className="mt-5 rounded-2xl bg-hud-terracotta/[0.08] px-4 py-6 text-center ring-1 ring-hud-terracotta/20">
-          <p className="text-base font-semibold text-hud-terracotta">{HUD_COPY.shortfallBadge}</p>
-          <p className="mt-1.5 text-[12px] leading-relaxed text-ink/60">{HUD_COPY.shortfallBody}</p>
+          <p className="text-base font-medium text-hud-terracotta">{HUD_COPY.shortfallBadge}</p>
+          <p className="mt-1.5 text-[12px] leading-relaxed text-forest/60">{HUD_COPY.shortfallBody}</p>
         </div>
       ) : (
-        /* ── HUD PADAT (58.5): angka utama + bar progres + SATU baris konteks ── */
+        /* ── HUD PADAT (58.5 · 66): angka utama + bar progres ────────────────
+           Angkanya `remainingToday` (sisa jatah HARI INI) dan bar-nya
+           `todayUsedPct` — dua-duanya turunan `computeDailyHud` yang SAMA dengan
+           /budget. Caption "sisa jatah hari ini", subjudul "Budget harian
+           dinamis", baris "Sisa bulan · n hari lagi · Cicilan terpotong", dan
+           tautan "Atur pemasukan & cicilan" DIHAPUS (permintaan pemilik produk):
+           judul kartu sudah jelas, dan pembagi jatah diatur dari Pengaturan. */
         <>
-          <div className="mt-3 flex items-baseline gap-2">
-            <p className="text-[28px] font-semibold leading-none tracking-tight text-ink tabular-nums">
-              <LockedAmount value={formatIDR(hud.dailyBudget)} masked={masked} />
+          {/* ── ANGKA UTAMA = FOKUS TIPOGRAFI KARTU (mandat bento 68) ─────────
+              Sisa jatah HARI INI dibesarkan (40px, semibold, tracking rapat) dan
+              ditempatkan di ruang yang tumbuh (`flex-1 justify-center`), jadi ia
+              jadi satu-satunya pusat pandang kartu — bukan bar atau ring. */}
+          <div className="mt-4 flex flex-1 flex-col justify-center">
+            <p className="text-[40px] font-semibold leading-none tracking-tight text-forest tabular-nums">
+              <LockedAmount value={formatIDR(hud.remainingToday)} masked={masked} />
             </p>
-            <p className="text-[10px] text-ink/45">{HOME_HUD_COPY.dailyCaption}</p>
           </div>
 
-          <div className="mt-2.5 flex items-center gap-2.5">
+          {/* ── BAR PROGRES MODERN (h-3, bulat penuh) ─────────────────────────
+              Membentang LEBAR penuh kartu (bukan `flex-1` di samping label) —
+              pola bar "Spending Limit" di referensi. Persen terpakai turun ke
+              baris tipis di bawah, jadi bar-nya sendiri tetap bersih. */}
+          <div className="mt-5">
             <div
               role="progressbar"
               aria-label={HOME_HUD_COPY.title}
               aria-valuemin={0}
               aria-valuemax={100}
               aria-valuenow={Math.round(usedPct * 100)}
-              className="h-2 flex-1 overflow-hidden rounded-full bg-soil/[0.09]"
+              className="h-3 w-full overflow-hidden rounded-full bg-soil/[0.09]"
             >
               <div
                 className="h-full rounded-full transition-[width] duration-700 ease-out motion-reduce:transition-none"
                 style={{ width: `${usedPct * 100}%`, backgroundColor: STATUS.ring }}
               />
             </div>
-            <span className="shrink-0 text-[11px] font-semibold text-ink/55 tabular-nums">
+            <p className="mt-2 text-[11px] font-medium text-forest/45 tabular-nums">
               {Math.round(usedPct * 100)}% {HOME_HUD_COPY.usedCaption}
-            </span>
+            </p>
           </div>
 
           {/* kalimat status: hanya saat statusnya perlu dibicarakan (chip status
-              selalu tampil di header) — menjaga "satu baris konteks" di 58.5 */}
+              selalu tampil di header) */}
           {status !== 'onTrack' && (
-            <p className="mt-2 text-[12px] font-medium leading-snug text-ink/70">{STATUS.copy}</p>
+            <p className="mt-2 text-[12px] font-medium leading-snug text-forest/70">{STATUS.copy}</p>
           )}
-
-          {/* satu baris konteks: sisa periode · hari tersisa · cicilan */}
-          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-soil/12 pt-2.5 text-[11px] text-ink/55">
-            <span>
-              {HOME_HUD_COPY.remainingLead}{' '}
-              <b className="font-semibold text-ink tabular-nums">
-                <LockedAmount value={formatIDR(hud.remaining)} masked={masked} />
-              </b>
-            </span>
-            <span aria-hidden className="size-1 rounded-full bg-ink/20" />
-            <span className="tabular-nums">
-              {hud.daysLeft} {HOME_HUD_COPY.daysLeftSuffix}
-            </span>
-            <span aria-hidden className="size-1 rounded-full bg-ink/20" />
-            <span>
-              {HOME_HUD_COPY.installmentsLead}{' '}
-              <span className="tabular-nums">
-                <LockedAmount value={formatIDR(hud.installments)} masked={masked} />
-              </span>
-            </span>
-          </div>
-
-          {/* ── PINTU ATUR PEMBAGI JATAH (audit "Daily Budget Symptom B") ──────
-              Dulu tautan ke konfigurasi uang HANYA muncul di cabang "belum
-              diatur". Akibatnya user yang sudah punya angka tapi mau
-              MENYESUAIKAN target/pemasukan tidak tahu di mana mengaturnya.
-              Sekarang pintunya selalu ada di kartu (sumber sama dengan
-              /budget: `MONEY_SETTINGS_HREF` + `HOME_HUD_COPY.settingsCta`). */}
-          <Link
-            href={MONEY_SETTINGS_HREF}
-            className="mt-2.5 inline-flex w-fit items-center gap-1.5 text-[11px] font-semibold text-forest underline underline-offset-2 transition-colors hover:text-ink"
-          >
-            <Settings2 className="size-3.5" strokeWidth={2.4} aria-hidden />
-            {HOME_HUD_COPY.settingsCta}
-          </Link>
 
           {/* kompromi DIAN: CTA ke AI Coach saat over — tanpa intimidasi */}
           {status === 'over' && (
             <button
               type="button"
               onClick={() => openAICoachWithSeed(SPENDING_REVIEW_COPY.coachSeed)}
-              className="mt-2 flex w-fit items-center gap-1.5 rounded-full bg-hud-terracotta/10 px-3 py-1.5 text-[12px] font-semibold text-hud-terracotta transition-colors hover:bg-hud-terracotta/20"
+              className="mt-2 flex w-fit items-center gap-1.5 rounded-full bg-hud-terracotta/10 px-3 py-1.5 text-[12px] font-medium text-hud-terracotta transition-colors hover:bg-hud-terracotta/20"
             >
               <Sparkles className="size-3.5" strokeWidth={2.2} aria-hidden />
               {HOME_HUD_COPY.reviewCta}

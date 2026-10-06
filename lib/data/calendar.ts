@@ -1074,9 +1074,9 @@ export const CALENDAR_LOOK_CELL: Record<CalendarLook, string> = {
   deficit: 'bg-hud-terracotta/75 text-cream',
   surplus: 'bg-forest/80 text-cream',
   clean: 'bg-mint/40 text-forest',
-  spend: 'bg-forest/15 text-ink/70',
-  planned: 'bg-ink/[0.06] text-ink/55',
-  empty: 'bg-cream text-ink/40',
+  spend: 'bg-forest/15 text-forest/70',
+  planned: 'bg-ink/[0.06] text-forest/55',
+  empty: 'bg-cream text-forest/40',
 }
 
 /**

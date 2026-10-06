@@ -7,18 +7,18 @@ import { usePrivacy } from './privacy-provider'
 /* ── Tombol Global Eye / Privacy Toggle (MASTER COMPONENT — audit UX #4) ───────
    Satu-satunya kontrol privasi di SELURUH halaman. Sebelumnya tiap halaman
    menggambar tombolnya sendiri sehingga muncul beberapa wujud berbeda (ikon
-   polos di lingkaran tipis, pill hijau, dst). Sekarang cuma ada SATU komponen
-   dengan dua ukuran responsif, jadi bentuknya konsisten di mana pun:
+   polos di lingkaran tipis, pill hijau, dst). Sekarang cuma ada SATU komponen,
+   jadi bentuknya konsisten di mana pun.
 
-     • < lg  → tombol ikon bulat 36px (header mobile, hemat ruang)
-     • ≥ lg  → pill berlabel "Sembunyikan"/"Tampilkan" (header desktop, jelas)
-
-   Sekali klik menyensor SEMUA nominal di layar lewat PrivacyProvider, dan
-   status sensor selalu terbaca dari warna + ikon + label. */
+   PAKET 66 — IKON SAJA, TANPA TEKS. Dulu di desktop pill-nya melebar memuat
+   label "Sembunyikan"/"Tampilkan". Permintaan pemilik produk: cukup simbol
+   mata. Statusnya tetap terbaca dari ikon (mata vs mata-tercoret) + warna +
+   `aria-pressed`, dan alasan tindakannya tetap diumumkan pembaca layar lewat
+   `aria-label`/`title` — jadi yang hilang cuma teks yang memakan lebar header,
+   bukan maknanya. */
 export function GlobalPrivacyToggle({ className }: { className?: string }) {
   const { masked, toggle } = usePrivacy()
 
-  const label = masked ? 'Tampilkan' : 'Sembunyikan'
   const actionLabel = masked ? 'Tampilkan semua nominal' : 'Sembunyikan semua nominal'
 
   return (
@@ -29,12 +29,10 @@ export function GlobalPrivacyToggle({ className }: { className?: string }) {
       aria-label={actionLabel}
       title={masked ? 'Tampilkan semua nominal' : 'Sensor semua nominal (privasi layar)'}
       className={cn(
-        'flex size-9 shrink-0 items-center justify-center rounded-full ring-1 transition-colors active:scale-95',
-        /* desktop: melebar jadi pill berlabel (ikon + teks) */
-        'lg:h-11 lg:w-auto lg:gap-2 lg:px-4 lg:text-[12.5px] lg:font-semibold',
+        'flex size-9 shrink-0 items-center justify-center rounded-full ring-1 transition-colors active:scale-95 lg:size-10',
         masked
           ? 'bg-forest text-mint ring-forest/20 hover:bg-forest-soft'
-          : 'bg-cream text-ink ring-soil/12 hover:bg-sage',
+          : 'bg-cream text-forest ring-soil/12 hover:bg-sage',
         className,
       )}
     >
@@ -43,8 +41,6 @@ export function GlobalPrivacyToggle({ className }: { className?: string }) {
       ) : (
         <Eye className="size-4 shrink-0" strokeWidth={2.2} aria-hidden />
       )}
-      {/* label hanya di desktop — di mobile tombol tetap ikon bulat ringkas */}
-      <span className="hidden lg:inline">{label}</span>
     </button>
   )
 }

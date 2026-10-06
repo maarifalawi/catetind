@@ -39,7 +39,7 @@ const VOICE_WAVE = [8, 16, 24, 14, 20, 12]
 
 /** kontrol kecil di dalam bubble — senada dengan field mode edit engine */
 const CAPTURE_CONTROL =
-  'w-full rounded-xl bg-soil/[0.09] px-3 py-2.5 text-[12.5px] font-semibold text-ink outline-none ring-1 ring-transparent transition-all focus:bg-cream focus:ring-forest/15'
+  'w-full rounded-xl bg-soil/[0.09] px-3 py-2.5 text-[12.5px] font-medium text-forest outline-none ring-1 ring-transparent transition-all focus:bg-cream focus:ring-forest/15'
 
 /**
  * Urutan pil tipe — sama dengan mesin input manual (Pengeluaran default).
@@ -66,7 +66,7 @@ function CaptureShell({
   return (
     <div className="flex items-start gap-2" role="status" aria-live="polite" aria-label={label}>
       <AIAvatar className="mt-0.5 size-7" />
-      <div className="min-w-0 flex-1 rounded-2xl rounded-bl-md bg-cream px-3.5 py-3 text-sm leading-relaxed text-ink shadow-sm ring-1 ring-soil/12">
+      <div className="min-w-0 flex-1 rounded-2xl rounded-bl-md bg-cream px-3.5 py-3 text-sm leading-relaxed text-forest shadow-sm ring-1 ring-soil/12">
         {children}
       </div>
     </div>
@@ -97,12 +97,12 @@ function CaptureField({
         className,
       )}
     >
-      <span className="mb-1 block text-[10.5px] font-semibold uppercase tracking-wide text-ink/45">
+      <span className="mb-1 block text-[10.5px] font-medium uppercase tracking-wide text-forest/45">
         {label}
       </span>
       {children}
       {flagged && (
-        <p className="mt-1.5 flex items-start gap-1.5 text-[11px] leading-snug text-ink/60">
+        <p className="mt-1.5 flex items-start gap-1.5 text-[11px] leading-snug text-forest/60">
           <Info className="mt-px size-3 shrink-0" strokeWidth={2.4} aria-hidden />
           {AI_CAPTURE_COPY.lowFieldHint}
         </p>
@@ -130,10 +130,10 @@ function TypePills({
             onClick={() => onChange(type)}
             aria-pressed={active}
             className={cn(
-              'rounded-xl px-1 py-2 text-[10.5px] font-semibold leading-tight transition-all active:scale-[0.97]',
+              'rounded-xl px-1 py-2 text-[10.5px] font-medium leading-tight transition-all active:scale-[0.97]',
               active
                 ? 'bg-forest text-cream ring-1 ring-forest'
-                : 'bg-soil/[0.09] text-ink/50 hover:bg-soil/[0.12]',
+                : 'bg-soil/[0.09] text-forest/50 hover:bg-soil/[0.12]',
             )}
           >
             {TRANSACTION_TYPE_LABEL[type]}
@@ -155,11 +155,11 @@ function ReadingBubble() {
           <span aria-hidden className="ai-scan-pulse absolute inset-0 rounded-full bg-mint/40" />
         </span>
         <span className="min-w-0">
-          <span className="flex items-center gap-1.5 text-[13px] font-bold text-ink">
+          <span className="flex items-center gap-1.5 text-[13px] font-medium text-forest">
             <Sparkles className="size-3.5 text-forest" strokeWidth={2.4} aria-hidden />
             {AI_CAPTURE_COPY.readingTitle}
           </span>
-          <span className="mt-0.5 block text-[11.5px] text-ink/50">
+          <span className="mt-0.5 block text-[11.5px] text-forest/50">
             {AI_CAPTURE_COPY.readingHint}
           </span>
         </span>
@@ -192,7 +192,7 @@ function ListeningBubble({
             />
           ))}
         </span>
-        <span className="text-[12.5px] font-bold text-ink">{AI_CAPTURE_COPY.listeningTitle}</span>
+        <span className="text-[12.5px] font-medium text-forest">{AI_CAPTURE_COPY.listeningTitle}</span>
       </div>
 
       {/* transkrip hidup: apa yang benar-benar didengar mesin STT, tampil
@@ -200,7 +200,7 @@ function ListeningBubble({
       <p
         className={cn(
           'mt-2.5 rounded-xl bg-soil/[0.07] px-3 py-2 text-[12.5px] leading-relaxed',
-          liveTranscript ? 'text-ink' : 'text-ink/40',
+          liveTranscript ? 'text-forest' : 'text-forest/40',
         )}
       >
         {liveTranscript || AI_CAPTURE_COPY.listeningPlaceholder}
@@ -210,13 +210,13 @@ function ListeningBubble({
         <button
           type="button"
           onClick={onFinish}
-          className="flex h-10 flex-1 items-center justify-center gap-1.5 rounded-xl bg-forest text-[12.5px] font-bold text-cream transition-all hover:bg-forest-soft active:scale-[0.98]"
+          className="flex h-10 flex-1 items-center justify-center gap-1.5 rounded-xl bg-forest text-[12.5px] font-medium text-cream transition-all hover:bg-forest-soft active:scale-[0.98]"
         >
           <Check className="size-4" strokeWidth={2.6} aria-hidden />
           {AI_CAPTURE_COPY.finish}
         </button>
       </div>
-      <p className="mt-1.5 text-[11px] text-ink/45">{AI_CAPTURE_COPY.listeningHint}</p>
+      <p className="mt-1.5 text-[11px] text-forest/45">{AI_CAPTURE_COPY.listeningHint}</p>
     </CaptureShell>
   )
 }
@@ -246,17 +246,17 @@ function ConfirmBubble({
 
   return (
     <CaptureShell>
-      <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-forest-soft">
+      <p className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-forest-soft">
         <Sparkles className="size-3.5" strokeWidth={2.4} aria-hidden />
         {title}
       </p>
-      <p className="mt-1 text-[12.5px] leading-relaxed text-ink/70">
+      <p className="mt-1 text-[12.5px] leading-relaxed text-forest/70">
         {AI_CAPTURE_COPY.confirmIntro}
       </p>
 
       {/* PRD A11: confidence < 0.5 → AI mengaku belum yakin, user tetap bisa simpan */}
       {draft.confidence < LOW_CONFIDENCE_THRESHOLD && (
-        <p className="mt-2 rounded-xl bg-hud-amber/[0.14] px-2.5 py-2 text-[11.5px] font-medium leading-relaxed text-ink ring-1 ring-hud-amber/40">
+        <p className="mt-2 rounded-xl bg-hud-amber/[0.14] px-2.5 py-2 text-[11.5px] font-medium leading-relaxed text-forest ring-1 ring-hud-amber/40">
           {AI_CAPTURE_COPY.lowConfidenceAlarm}
         </p>
       )}
@@ -264,10 +264,10 @@ function ConfirmBubble({
       {/* jejak jujur untuk voice: persis apa yang didengar mesin STT */}
       {draft.transcript && (
         <div className="mt-2 rounded-xl bg-soil/[0.07] px-3 py-2">
-          <span className="block text-[10px] font-semibold uppercase tracking-wide text-ink/40">
+          <span className="block text-[10px] font-medium uppercase tracking-wide text-forest/40">
             {AI_CAPTURE_COPY.transcriptLabel}
           </span>
-          <p className="mt-0.5 text-[12px] leading-relaxed text-ink/70">“{draft.transcript}”</p>
+          <p className="mt-0.5 text-[12px] leading-relaxed text-forest/70">“{draft.transcript}”</p>
         </div>
       )}
 
@@ -286,12 +286,12 @@ function ConfirmBubble({
             `confirmCapture()` dengan pesan yang sama. */}
         {draft.type === 'transfer' && (
           <div className="rounded-xl bg-hud-amber/[0.14] px-2.5 py-2 ring-1 ring-hud-amber/40">
-            <p className="text-[11.5px] font-medium leading-relaxed text-ink">
+            <p className="text-[11.5px] font-medium leading-relaxed text-forest">
               {AI_CAPTURE_COPY.needTransferFlow}
             </p>
             <Link
               href="/wallet"
-              className="mt-1.5 inline-flex items-center gap-1 text-[11.5px] font-semibold text-forest underline decoration-dotted underline-offset-4"
+              className="mt-1.5 inline-flex items-center gap-1 text-[11.5px] font-medium text-forest underline decoration-dotted underline-offset-4"
             >
               {AI_CAPTURE_COPY.transferFlowCta}
             </Link>
@@ -369,7 +369,7 @@ function ConfirmBubble({
 
       {/* guard lembut: nominal wajib — catatan nol rupiah tidak berarti apa-apa */}
       {formError && (
-        <p role="alert" className="mt-2 text-[11.5px] font-semibold text-hud-terracotta">
+        <p role="alert" className="mt-2 text-[11.5px] font-medium text-hud-terracotta">
           {formError}
         </p>
       )}
@@ -379,7 +379,7 @@ function ConfirmBubble({
         <button
           type="button"
           onClick={onCancel}
-          className="flex h-11 items-center justify-center gap-1.5 rounded-2xl bg-soil/[0.09] px-3.5 text-[12.5px] font-semibold text-ink/70 transition-colors hover:bg-soil/[0.13] active:scale-[0.98]"
+          className="flex h-11 items-center justify-center gap-1.5 rounded-2xl bg-soil/[0.09] px-3.5 text-[12.5px] font-medium text-forest/70 transition-colors hover:bg-soil/[0.13] active:scale-[0.98]"
         >
           <X className="size-3.5" strokeWidth={2.4} aria-hidden />
           {AI_CAPTURE_COPY.cancel}
@@ -387,7 +387,7 @@ function ConfirmBubble({
         <button
           type="button"
           onClick={onConfirm}
-          className="flex h-11 flex-1 items-center justify-center gap-1.5 rounded-2xl bg-forest text-[13px] font-bold text-cream shadow-[0_14px_28px_-16px_rgba(69,89,78,0.7)] transition-all hover:bg-forest-soft active:scale-[0.98]"
+          className="flex h-11 flex-1 items-center justify-center gap-1.5 rounded-2xl bg-forest text-[13px] font-medium text-cream shadow-[0_14px_28px_-16px_rgba(69,89,78,0.7)] transition-all hover:bg-forest-soft active:scale-[0.98]"
         >
           {AI_CAPTURE_COPY.save}
         </button>
@@ -419,7 +419,7 @@ function ProblemBubble({
         <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-sage text-forest">
           <Info className="size-4" strokeWidth={2.2} aria-hidden />
         </span>
-        <p className="min-w-0 text-[12.5px] leading-relaxed text-ink/75">{problem}</p>
+        <p className="min-w-0 text-[12.5px] leading-relaxed text-forest/75">{problem}</p>
       </div>
 
       <div className="mt-3 flex items-center gap-2">
@@ -427,7 +427,7 @@ function ProblemBubble({
           <button
             type="button"
             onClick={onRetry}
-            className="flex h-10 items-center justify-center rounded-xl bg-soil/[0.09] px-3.5 text-[12px] font-semibold text-ink/70 transition-colors hover:bg-soil/[0.13] active:scale-[0.98]"
+            className="flex h-10 items-center justify-center rounded-xl bg-soil/[0.09] px-3.5 text-[12px] font-medium text-forest/70 transition-colors hover:bg-soil/[0.13] active:scale-[0.98]"
           >
             {AI_CAPTURE_COPY.problemRetry}
           </button>
@@ -435,7 +435,7 @@ function ProblemBubble({
         <button
           type="button"
           onClick={onFallback}
-          className="flex h-10 flex-1 items-center justify-center rounded-xl bg-forest text-[12px] font-bold text-cream transition-all hover:bg-forest-soft active:scale-[0.98]"
+          className="flex h-10 flex-1 items-center justify-center rounded-xl bg-forest text-[12px] font-medium text-cream transition-all hover:bg-forest-soft active:scale-[0.98]"
         >
           {AI_CAPTURE_COPY.problemFallback}
         </button>

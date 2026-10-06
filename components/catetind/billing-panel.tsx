@@ -82,7 +82,7 @@ const STATUS_META: Record<
   aktif: { label: 'Aktif', pill: 'bg-mint/30 text-forest', icon: ShieldCheck },
   grace: {
     label: 'Grace Period (7 hari tersisa)',
-    pill: 'bg-hud-amber/30 text-ink/70',
+    pill: 'bg-hud-amber/30 text-forest/70',
     icon: Hourglass,
   },
   expired: { label: 'Expired', pill: 'bg-plum/20 text-plum', icon: TriangleAlert },
@@ -187,13 +187,13 @@ export function BillingPanel() {
 
         <div className="mt-4 lg:flex lg:items-center lg:justify-between lg:gap-6">
           <p className="text-[13px] leading-relaxed break-words text-cream/65 lg:max-w-md">
-            <b className="font-semibold text-cream">{AI_FUEL_COPY.addonBandTitle}</b>
+            <b className="font-medium text-cream">{AI_FUEL_COPY.addonBandTitle}</b>
           </p>
 
           <button
             type="button"
             onClick={() => setTopUpOpen(true)}
-            className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-mint px-6 py-3.5 text-sm font-semibold text-forest transition-colors hover:bg-cream active:scale-[0.99] lg:mt-0 lg:w-auto lg:shrink-0"
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-mint px-6 py-3.5 text-sm font-medium text-forest transition-colors hover:bg-cream active:scale-[0.99] lg:mt-0 lg:w-auto lg:shrink-0"
           >
             <Zap className="size-4" strokeWidth={2.4} />
             {AI_FUEL_COPY.addonBandCta}
@@ -226,10 +226,10 @@ function CurrentPlanCard({ onUpgrade }: { onUpgrade: () => void }) {
         </span>
         <div className="min-w-0 flex-1">
           <StatusPill status={SUBSCRIPTION_STATUS} />
-          <h2 className="mt-2 text-xl font-semibold tracking-tight text-ink">
+          <h2 className="mt-2 text-xl font-medium tracking-tight text-forest">
             {CURRENT_PLAN.name}
           </h2>
-          <p className="mt-1 text-[13px] leading-relaxed break-words text-ink/55">
+          <p className="mt-1 text-[13px] leading-relaxed break-words text-forest/55">
             Paket aktif. Terima kasih udah support CatetInd! 🌿
           </p>
         </div>
@@ -237,20 +237,20 @@ function CurrentPlanCard({ onUpgrade }: { onUpgrade: () => void }) {
 
       <dl className="mt-5 grid grid-cols-2 gap-2.5">
         <div className="rounded-2xl bg-cream px-3.5 py-3 ring-1 ring-soil/8">
-          <dt className="flex items-center gap-1.5 text-[11px] text-ink/45">
+          <dt className="flex items-center gap-1.5 text-[11px] text-forest/45">
             <CalendarClock className="size-3.5" strokeWidth={2.2} />
             Aktif sampai
           </dt>
-          <dd className="mt-1 text-[13px] font-semibold leading-snug text-ink">
+          <dd className="mt-1 text-[13px] font-medium leading-snug text-forest">
             {CURRENT_PLAN.activeUntil}
           </dd>
         </div>
         <div className="rounded-2xl bg-cream px-3.5 py-3 ring-1 ring-soil/8">
-          <dt className="flex items-center gap-1.5 text-[11px] text-ink/45">
+          <dt className="flex items-center gap-1.5 text-[11px] text-forest/45">
             <CreditCard className="size-3.5" strokeWidth={2.2} />
             Metode tersimpan
           </dt>
-          <dd className="mt-1 text-[13px] font-semibold leading-snug text-ink">
+          <dd className="mt-1 text-[13px] font-medium leading-snug text-forest">
             {CURRENT_PLAN.paymentMethod}
           </dd>
         </div>
@@ -263,12 +263,12 @@ function CurrentPlanCard({ onUpgrade }: { onUpgrade: () => void }) {
         <button
           type="button"
           onClick={onUpgrade}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-forest py-3.5 text-sm font-semibold text-mint transition-colors hover:bg-forest-soft active:scale-[0.99]"
+          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-forest py-3.5 text-sm font-medium text-mint transition-colors hover:bg-forest-soft active:scale-[0.99]"
         >
           <RefreshCw className="size-4" strokeWidth={2.4} />
           Perpanjang
         </button>
-        <p className="mt-3 text-center text-[11px] leading-relaxed text-ink/45">
+        <p className="mt-3 text-center text-[11px] leading-relaxed text-forest/45">
           {CURRENT_PLAN.price} {CURRENT_PLAN.period} · CatetInd nggak pernah nagih otomatis, kamu
           yang pegang kendali.
         </p>
@@ -285,7 +285,7 @@ function StatusPill({ status }: { status: SubscriptionStatusId }) {
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold',
+        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium',
         meta.pill,
       )}
     >
@@ -317,12 +317,12 @@ function CancelSubscriptionCard() {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-ink/55 underline decoration-soil/25 underline-offset-4 transition-colors hover:text-plum hover:decoration-plum/40"
+          className="inline-flex items-center gap-1.5 text-[13px] font-medium text-forest/55 underline decoration-soil/25 underline-offset-4 transition-colors hover:text-plum hover:decoration-plum/40"
         >
           <XCircle className="size-4" strokeWidth={2.2} aria-hidden />
           Berhenti Berlangganan
         </button>
-        <p className="mt-2 text-[11.5px] leading-relaxed text-ink/45">
+        <p className="mt-2 text-[11.5px] leading-relaxed text-forest/45">
           Tanpa jebakan, tanpa telepon ke retention agent. Satu klik, kelar.
         </p>
       </section>
@@ -374,10 +374,10 @@ function FuelGaugeCard() {
   return (
     <section className="flex flex-col rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12 sm:p-6">
       <div className="flex items-baseline justify-between gap-2">
-        <h2 className="text-xl font-semibold tracking-tight text-ink">
+        <h2 className="text-xl font-medium tracking-tight text-forest">
           {AI_FUEL_COPY.cardTitle}
         </h2>
-        <span className="text-sm font-semibold text-ink/45 tabular-nums">
+        <span className="text-sm font-medium text-forest/45 tabular-nums">
           {quota.remainingPct}% {AI_FUEL_COPY.remainingLabel}
         </span>
       </div>
@@ -405,33 +405,33 @@ function FuelGaugeCard() {
       {/* pemisahan kolam — "base quota vs add-on" yang diminta inventaris #18 */}
       <dl className="mt-3 grid grid-cols-2 gap-2.5">
         <div className="rounded-2xl bg-cream px-3.5 py-3 ring-1 ring-soil/8">
-          <dt className="flex items-center gap-1.5 text-[11px] text-ink/45">
+          <dt className="flex items-center gap-1.5 text-[11px] text-forest/45">
             <span className="size-2 shrink-0 rounded-full bg-forest" aria-hidden />
             {AI_FUEL_COPY.baseLabel}
           </dt>
-          <dd className="mt-1 text-[13px] font-semibold tabular-nums text-ink">
+          <dd className="mt-1 text-[13px] font-medium tabular-nums text-forest">
             {formatTokens(quota.baseTokensRemaining)} sisa
           </dd>
-          <p className="mt-0.5 text-[11px] text-ink/45 tabular-nums">
+          <p className="mt-0.5 text-[11px] text-forest/45 tabular-nums">
             {AI_FUEL_COPY.recordsLeft(quota.recordsLeft)}
           </p>
         </div>
         <div className="rounded-2xl bg-cream px-3.5 py-3 ring-1 ring-soil/8">
-          <dt className="flex items-center gap-1.5 text-[11px] text-ink/45">
+          <dt className="flex items-center gap-1.5 text-[11px] text-forest/45">
             <span className="size-2 shrink-0 rounded-full bg-hud-sage" aria-hidden />
             {AI_FUEL_COPY.addonLabel}
           </dt>
-          <dd className="mt-1 text-[13px] font-semibold tabular-nums text-ink">
+          <dd className="mt-1 text-[13px] font-medium tabular-nums text-forest">
             {formatTokens(addon.tokensRemaining)} sisa
           </dd>
-          <p className="mt-0.5 text-[11px] text-ink/45 tabular-nums">
+          <p className="mt-0.5 text-[11px] text-forest/45 tabular-nums">
             {AI_FUEL_COPY.recordsLeft(addon.recordsLeft)}
           </p>
         </div>
       </dl>
 
       {/* rincian per aktivitas — angka turunan tabel kanon PRD 4778–4786 */}
-      <p className="mt-4 text-[10px] font-semibold tracking-[0.16em] text-ink/40 uppercase">
+      <p className="mt-4 text-[10px] font-medium tracking-[0.16em] text-forest/40 uppercase">
         {AI_FUEL_COPY.detailLabel}
       </p>
       <ul className="mt-3 space-y-3.5">
@@ -449,7 +449,7 @@ function FuelGaugeCard() {
                   <Icon className="size-3.5" strokeWidth={2.2} />
                 </span>
                 <span className="min-w-0 flex-1 text-[13px]">{row.label}</span>
-                <span className="shrink-0 text-[12px] font-medium text-ink/35 tabular-nums">
+                <span className="shrink-0 text-[12px] font-medium text-forest/35 tabular-nums">
                   {AI_FUEL_COPY.callsRemaining(row.callsRemaining, row.calls)}
                 </span>
               </div>
@@ -479,18 +479,18 @@ function FuelGaugeCard() {
           (voice & scan struk) dan apa yang TETAP jalan (catat manual), plus dua
           jalan keluarnya. Tombol yang mati tanpa penjelasan = teka-teki. */}
       {quota.exhausted && (
-        <p className="mt-4 rounded-2xl bg-hud-amber/15 px-3.5 py-3 text-[12px] leading-relaxed text-ink/70 ring-1 ring-hud-amber/30">
+        <p className="mt-4 rounded-2xl bg-hud-amber/15 px-3.5 py-3 text-[12px] leading-relaxed text-forest/70 ring-1 ring-hud-amber/30">
           {AI_QUOTA_EXHAUSTED_COPY.body}
         </p>
       )}
 
       {/* tanggal reset + aturannya (kanon PRD 4800–4802) */}
-      <p className="mt-4 flex flex-wrap items-center gap-1.5 text-[12px] font-medium text-ink/55">
+      <p className="mt-4 flex flex-wrap items-center gap-1.5 text-[12px] font-medium text-forest/55">
         <CalendarClock className="size-3.5 shrink-0" strokeWidth={2.2} aria-hidden />
         {AI_FUEL_COPY.resetLabel}:
         <span className="tabular-nums">{AI_QUOTA_RESET_DATE}</span>
       </p>
-      <p className="mt-1.5 text-[11px] leading-relaxed text-ink/40">{AI_RESET_RULE_COPY}</p>
+      <p className="mt-1.5 text-[11px] leading-relaxed text-forest/40">{AI_RESET_RULE_COPY}</p>
     </section>
   )
 }
@@ -508,11 +508,11 @@ function PaymentMethodCard() {
         <SavedIcon className="size-5" strokeWidth={2.2} />
       </span>
       <div className="min-w-0 flex-1">
-        <h2 className="text-[10px] font-semibold tracking-[0.16em] text-ink/40 uppercase">
+        <h2 className="text-[10px] font-medium tracking-[0.16em] text-forest/40 uppercase">
           Metode Pembayaran
         </h2>
-        <p className="mt-1 truncate text-sm font-semibold text-ink">{SAVED_PAYMENT.label}</p>
-        <p className="mt-0.5 text-[11px] text-ink/45">Dipakai buat perpanjang satu tap</p>
+        <p className="mt-1 truncate text-sm font-medium text-forest">{SAVED_PAYMENT.label}</p>
+        <p className="mt-0.5 text-[11px] text-forest/45">Dipakai buat perpanjang satu tap</p>
       </div>
       {/* Tombol "Ubah" DIHAPUS (paket 29). Alasannya apa adanya: mengganti metode
           pembayaran tersimpan butuh manajemen token di sisi Midtrans
@@ -531,8 +531,8 @@ function BillingHistorySection() {
     <section className="mt-4 rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12 sm:p-6">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="text-xl font-semibold tracking-tight text-ink">Riwayat Pembayaran</h2>
-          <p className="mt-1 text-[13px] leading-relaxed text-ink/55">
+          <h2 className="text-xl font-medium tracking-tight text-forest">Riwayat Pembayaran</h2>
+          <p className="mt-1 text-[13px] leading-relaxed text-forest/55">
             Semua transaksi kamu tercatat rapi di sini.
           </p>
         </div>
@@ -545,14 +545,14 @@ function BillingHistorySection() {
         {BILLING_HISTORY.map((item) => (
           <li key={item.id} className="flex items-center gap-3 py-3.5">
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-[13px] font-semibold text-ink">{item.label}</span>
-              <span className="mt-0.5 block text-[11px] text-ink/45">{item.date}</span>
+              <span className="block truncate text-[13px] font-medium text-forest">{item.label}</span>
+              <span className="mt-0.5 block text-[11px] text-forest/45">{item.date}</span>
             </span>
             <span className="shrink-0 text-right">
-              <span className="block text-[13px] font-semibold text-ink tabular-nums">
+              <span className="block text-[13px] font-medium text-forest tabular-nums">
                 {formatIDR(item.amount)}
               </span>
-              <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-mint/30 px-2 py-0.5 text-[10px] font-semibold text-forest">
+              <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-mint/30 px-2 py-0.5 text-[10px] font-medium text-forest">
                 <Check className="size-2.5" strokeWidth={3.6} />
                 Lunas
               </span>

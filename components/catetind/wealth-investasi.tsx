@@ -142,19 +142,19 @@ export function WealthInvestasi({
             type="button"
             onClick={() => setDetailOpen((prev) => !prev)}
             aria-expanded={detailOpen}
-            className="flex min-w-0 flex-1 items-center justify-between gap-3 rounded-2xl text-left outline-none transition-colors hover:text-ink focus-visible:ring-2 focus-visible:ring-forest/30"
+            className="flex min-w-0 flex-1 items-center justify-between gap-3 rounded-2xl text-left outline-none transition-colors hover:text-forest focus-visible:ring-2 focus-visible:ring-forest/30"
           >
             <span className="min-w-0">
-              <span className="block font-display text-[14px] font-bold tracking-tight text-ink">
+              <span className="block font-display text-[14px] font-medium tracking-tight text-forest">
                 Detail per Aset
               </span>
-              <span className="mt-0.5 block text-[11.5px] text-ink/45">
+              <span className="mt-0.5 block text-[11.5px] text-forest/45">
                 {investments.length} aset
               </span>
             </span>
             <ChevronDown
               className={cn(
-                'size-4 shrink-0 text-ink/35 transition-transform duration-300',
+                'size-4 shrink-0 text-forest/35 transition-transform duration-300',
                 detailOpen && 'rotate-180',
               )}
               strokeWidth={2.4}
@@ -168,7 +168,7 @@ export function WealthInvestasi({
                supaya judul "Detail per Aset" tidak terpotong */
             aria-label="Tambah investasi"
             title="Tambah investasi"
-            className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-2xl bg-forest px-3 text-[12.5px] font-semibold text-cream shadow-[0_12px_26px_-16px_rgba(69,89,78,0.8)] transition-colors hover:bg-forest-soft active:scale-[0.98] sm:px-4"
+            className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-2xl bg-forest px-3 text-[12.5px] font-medium text-cream shadow-[0_12px_26px_-16px_rgba(69,89,78,0.8)] transition-colors hover:bg-forest-soft active:scale-[0.98] sm:px-4"
           >
             <Plus className="size-4" strokeWidth={2.6} />
             <span className="hidden sm:inline">Tambah Investasi</span>
@@ -250,21 +250,21 @@ function PortfolioSummaryCard({
       />
       <div className="relative">
         <div className="flex items-center justify-between gap-3">
-          <span className="text-[10.5px] font-bold uppercase tracking-[0.2em] text-ink/40">
+          <span className="text-[10.5px] font-medium uppercase tracking-[0.2em] text-forest/40">
             Total Aset Investasi
           </span>
-          <span className="rounded-full bg-hud-sage/25 px-2.5 py-1 text-[10.5px] font-bold text-[#000000]">
+          <span className="rounded-full bg-hud-sage/25 px-2.5 py-1 text-[10.5px] font-medium text-forest">
             {assetCount} aset
           </span>
         </div>
 
-        <p className="mt-2 font-display text-[2rem] font-black leading-none tracking-tight text-ink tabular-nums sm:text-[2.4rem]">
+        <p className="mt-2 font-display text-[2rem] font-semibold leading-none tracking-tight text-forest tabular-nums sm:text-[2.4rem]">
           {maskMoney(totalValue, masked)}
         </p>
 
         <p
           className={cn(
-            'mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13.5px] font-bold tabular-nums',
+            'mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13.5px] font-semibold tabular-nums',
             positive ? 'text-[#b5b987]' : 'text-hud-terracotta',
           )}
         >
@@ -281,10 +281,10 @@ function PortfolioSummaryCard({
             {positive ? '+' : '−'}
             {Math.abs(returnPct).toFixed(2)}%
           </span>
-          {!masked && <span className="text-[11px] font-medium text-ink/40">belum terealisasi</span>}
+          {!masked && <span className="text-[11px] font-medium text-forest/40">belum terealisasi</span>}
         </p>
 
-        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-ink/40">
+        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-forest/40">
           <span className="tabular-nums">Modal {maskMoney(invested, masked)}</span>
           <span aria-hidden>·</span>
           {/* #4 — TIDAK ADA stempel waktu global di kartu master. Harga tiap
@@ -389,7 +389,7 @@ function AssetCard({
             setDx(0)
             onEdit()
           }}
-          className="flex w-[84px] flex-col items-center justify-center gap-1 bg-hud-amber text-[10.5px] font-bold text-[#000000] transition-colors hover:brightness-105"
+          className="flex w-[84px] flex-col items-center justify-center gap-1 bg-hud-amber text-[10.5px] font-medium text-forest transition-colors hover:brightness-105"
         >
           <Pencil className="size-4" strokeWidth={2.4} />
           Edit
@@ -400,7 +400,7 @@ function AssetCard({
             setDx(0)
             onDelete()
           }}
-          className="flex w-[84px] flex-col items-center justify-center gap-1 bg-hud-terracotta text-[10.5px] font-bold text-cream transition-colors hover:brightness-105"
+          className="flex w-[84px] flex-col items-center justify-center gap-1 bg-hud-terracotta text-[10.5px] font-medium text-cream transition-colors hover:brightness-105"
         >
           <Trash2 className="size-4" strokeWidth={2.4} />
           Hapus
@@ -443,7 +443,7 @@ function AssetCard({
                 event.stopPropagation()
                 onUpdatePrice()
               }}
-              className="inline-flex shrink-0 items-center gap-1 rounded-full bg-cream px-2.5 py-1 text-[10.5px] font-bold text-[#b89191] ring-1 ring-hud-amber/40 transition-colors hover:bg-hud-amber/15"
+              className="inline-flex shrink-0 items-center gap-1 rounded-full bg-cream px-2.5 py-1 text-[10.5px] font-medium text-[#b89191] ring-1 ring-hud-amber/40 transition-colors hover:bg-hud-amber/15"
             >
               <RefreshCw className="size-3" strokeWidth={2.6} />
               Update Manual
@@ -466,32 +466,32 @@ function AssetCard({
           {/* tengah: nama + simbol + satuan + harga rata-rata */}
           <span className="min-w-0 flex-1">
             <span className="flex items-center gap-1.5">
-              <span className="truncate text-[13.5px] font-bold text-ink">{asset.name}</span>
-              <span className="shrink-0 rounded-full bg-ink/[0.05] px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-ink/50">
+              <span className="truncate text-[13.5px] font-medium text-forest">{asset.name}</span>
+              <span className="shrink-0 rounded-full bg-ink/[0.05] px-1.5 py-0.5 text-[9.5px] font-medium uppercase tracking-wide text-forest/50">
                 {asset.symbol}
               </span>
               {/* badge konteks uang aset ini (paket 47) — aset yang muncul di
                   beberapa halaman harus menyebut milik siapa */}
-              <span className="shrink-0 rounded-full bg-sage/70 px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-forest ring-1 ring-inset ring-forest/10">
+              <span className="shrink-0 rounded-full bg-sage/70 px-1.5 py-0.5 text-[9.5px] font-medium uppercase tracking-wide text-forest ring-1 ring-inset ring-forest/10">
                 {CONTEXT_LABEL[asset.scope]}
               </span>
             </span>
-            <span className="mt-1 block truncate text-[11.5px] text-ink/50 tabular-nums">
+            <span className="mt-1 block truncate text-[11.5px] text-forest/50 tabular-nums">
               {formatAssetQuantity(asset)}
             </span>
-            <span className="mt-0.5 block truncate text-[10.5px] text-ink/40 tabular-nums">
+            <span className="mt-0.5 block truncate text-[10.5px] text-forest/40 tabular-nums">
               Avg {maskMoney(asset.avgBuyPrice, masked)}
             </span>
           </span>
 
           {/* kanan: nilai sekarang + return + timestamp harga */}
           <span className="flex shrink-0 flex-col items-end">
-            <span className="text-[13.5px] font-bold text-ink tabular-nums">
+            <span className="text-[13.5px] font-semibold text-forest tabular-nums">
               {maskMoney(asset.currentValue, masked)}
             </span>
             <span
               className={cn(
-                'mt-0.5 text-[11px] font-bold tabular-nums',
+                'mt-0.5 text-[11px] font-semibold tabular-nums',
                 profit ? 'text-[#b5b987]' : 'text-hud-terracotta',
               )}
             >
@@ -500,7 +500,7 @@ function AssetCard({
             </span>
             {/* "Terakhir diperbarui" per aset — satu-satunya tempat stempel harga
                 yang sah, karena jadwal update tiap aset berbeda (audit #4) */}
-            <span className="mt-0.5 text-right text-[10px] text-ink/35 tabular-nums">
+            <span className="mt-0.5 text-right text-[10px] text-forest/35 tabular-nums">
               {priceUpdatedLabel(formatPriceStamp(asset.lastUpdate))}
             </span>
           </span>
@@ -511,7 +511,7 @@ function AssetCard({
           <ChevronRight
             aria-hidden
             className={cn(
-              'mt-0.5 size-4 shrink-0 text-ink/25 transition-all duration-300 group-hover:translate-x-0.5 group-hover:text-forest/60',
+              'mt-0.5 size-4 shrink-0 text-forest/25 transition-all duration-300 group-hover:translate-x-0.5 group-hover:text-forest/60',
               expanded && 'rotate-90 text-forest/70',
             )}
             strokeWidth={2.4}
@@ -531,7 +531,7 @@ function AssetCard({
             className="overflow-hidden"
           >
             <div className="mt-2 rounded-[1.35rem] bg-cream/70 px-3.5 py-3.5 ring-1 ring-inset ring-soil/8">
-              <p className="flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-[0.14em] text-ink/40">
+              <p className="flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-[0.14em] text-forest/40">
                 <History className="size-3.5" strokeWidth={2.6} />
                 {ASSET_HISTORY_TITLE}
               </p>
@@ -542,10 +542,10 @@ function AssetCard({
                   user diberi tahu apa adanya + jalan keluarnya. */}
               {history.length === 0 ? (
                 <div className="mt-2.5 rounded-2xl bg-cream px-3.5 py-3 ring-1 ring-inset ring-soil/8">
-                  <p className="text-[11.5px] font-semibold leading-relaxed text-ink/60">
+                  <p className="text-[11.5px] font-medium leading-relaxed text-forest/60">
                     {ASSET_HISTORY_EMPTY}
                   </p>
-                  <p className="mt-1 text-[10.5px] leading-relaxed text-ink/40">
+                  <p className="mt-1 text-[10.5px] leading-relaxed text-forest/40">
                     {ASSET_HISTORY_EMPTY_HINT}
                   </p>
                 </div>
@@ -556,25 +556,25 @@ function AssetCard({
                       <li key={tx.id} className="flex items-center gap-2.5 text-[11.5px]">
                         <span
                           className={cn(
-                            'shrink-0 rounded-full px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wide',
+                            'shrink-0 rounded-full px-2 py-0.5 text-[9.5px] font-medium uppercase tracking-wide',
                             tx.side === 'buy'
-                              ? 'bg-hud-sage/25 text-[#000000]'
+                              ? 'bg-hud-sage/25 text-forest'
                               : 'bg-hud-terracotta/15 text-[#b89191]',
                           )}
                         >
                           {tx.side === 'buy' ? 'Beli' : 'Jual'}
                         </span>
-                        <span className="min-w-0 flex-1 truncate text-ink/60 tabular-nums">
+                        <span className="min-w-0 flex-1 truncate text-forest/60 tabular-nums">
                           {formatShortDate(tx.date)} · {formatNumber(tx.quantity, 6)}{' '}
                           {meta.unit || asset.symbol}
                         </span>
-                        <span className="shrink-0 font-semibold text-ink/70 tabular-nums">
+                        <span className="shrink-0 font-medium text-forest/70 tabular-nums">
                           {maskMoney(tx.price, masked)}
                         </span>
                       </li>
                     ))}
                   </ul>
-                  <p className="mt-2.5 text-[10px] text-ink/35">{ASSET_HISTORY_FOOTNOTE}</p>
+                  <p className="mt-2.5 text-[10px] text-forest/35">{ASSET_HISTORY_FOOTNOTE}</p>
                 </>
               )}
             </div>

@@ -66,7 +66,7 @@ export function AiFuelCard({ collapsed }: { collapsed: boolean }) {
       <Link
         href="/settings/billing"
         aria-label={summary}
-        className="group/item relative mt-4 flex size-11 shrink-0 items-center justify-center rounded-2xl bg-cream text-[10px] font-semibold tabular-nums text-forest ring-1 ring-ink/[0.06] transition-colors duration-200 hover:bg-sage active:scale-95 motion-reduce:transition-none"
+        className="group/item relative mt-4 flex size-11 shrink-0 items-center justify-center rounded-2xl bg-cream text-[10px] font-medium tabular-nums text-forest ring-1 ring-ink/[0.06] transition-colors duration-200 hover:bg-sage active:scale-95 motion-reduce:transition-none"
       >
         <span className="relative">{quota.remainingPct}%</span>
         <NavTooltip
@@ -88,20 +88,20 @@ export function AiFuelCard({ collapsed }: { collapsed: boolean }) {
     >
       {/* label + nama paket — wrap, bukan truncate, supaya tidak pernah "...' */}
       <span className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
-        <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ink/40">
+        <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-forest/40">
           {AI_FUEL_COPY.cardTitle}
         </span>
-        <span className="text-[11px] font-medium text-ink/45">{HERO_PLAN.name}</span>
+        <span className="text-[11px] font-medium text-forest/45">{HERO_PLAN.name}</span>
       </span>
 
       {/* satu angka besar yang langsung terbaca */}
       <span className="mt-2.5 flex items-baseline gap-1.5 text-forest">
-        <span className="text-[26px] font-semibold leading-none tracking-[-0.04em] tabular-nums">
+        <span className="text-[26px] font-medium leading-none tracking-[-0.04em] tabular-nums">
           {quota.remainingPct}%
         </span>
-        <span className="text-[11.5px] font-medium text-ink/45">{AI_FUEL_COPY.remainingLabel}</span>
+        <span className="text-[11.5px] font-medium text-forest/45">{AI_FUEL_COPY.remainingLabel}</span>
       </span>
-      <span className="mt-1.5 block break-words text-[11.5px] leading-snug tabular-nums text-ink/50">
+      <span className="mt-1.5 block break-words text-[11.5px] leading-snug tabular-nums text-forest/50">
         {compactNumber(quota.baseTokensRemaining)} token {AI_FUEL_COPY.recordsLeft(recordsLeft)}
       </span>
 
@@ -124,7 +124,7 @@ export function AiFuelCard({ collapsed }: { collapsed: boolean }) {
           menyebut jalan keluarnya alih-alih menampilkan "0%" tanpa penjelasan —
           user tetap tahu bahwa mencatat MANUAL belum ikut berhenti. */}
       {quota.exhausted && (
-        <span className="mt-2.5 block text-[11px] leading-snug text-ink/55">
+        <span className="mt-2.5 block text-[11px] leading-snug text-forest/55">
           {AI_QUOTA_EXHAUSTED_COPY.gaugeNote(AI_QUOTA_RESET_DATE)}
         </span>
       )}
@@ -135,16 +135,16 @@ export function AiFuelCard({ collapsed }: { collapsed: boolean }) {
           punya barisnya sendiri. */}
       <span className="mt-3 block text-[11px]">
         <span className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
-          <span className="inline-flex items-center gap-1.5 font-medium tabular-nums text-ink/45">
+          <span className="inline-flex items-center gap-1.5 font-medium tabular-nums text-forest/45">
             <Mic className="size-3 shrink-0" strokeWidth={2.2} aria-hidden />
             Voice {quota.voiceCallsRemaining} panggilan sisa
           </span>
-          <span className="inline-flex shrink-0 items-center gap-0.5 font-semibold text-forest">
+          <span className="inline-flex shrink-0 items-center gap-0.5 font-medium text-forest">
             Top up
             <ArrowUpRight className="size-3" strokeWidth={2.4} aria-hidden />
           </span>
         </span>
-        <span className="mt-1 flex items-center gap-1.5 font-medium tabular-nums text-ink/40">
+        <span className="mt-1 flex items-center gap-1.5 font-medium tabular-nums text-forest/40">
           <RotateCcw className="size-3 shrink-0" strokeWidth={2.2} aria-hidden />
           Reset {AI_QUOTA_RESET_DAYS} hari lagi
         </span>

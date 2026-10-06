@@ -61,7 +61,7 @@ export function BillTimeline({
         className,
       )}
     >
-      <h2 className="font-display text-[15px] font-bold tracking-tight text-ink">
+      <h2 className="font-display text-[15px] font-semibold tracking-tight text-forest">
         📅 7 Hari ke Depan
       </h2>
 
@@ -99,7 +99,7 @@ export function BillTimeline({
                     </span>
                   ))}
                   {dayBills.length > 2 && (
-                    <span className="text-[9px] font-bold text-ink/40" aria-hidden>
+                    <span className="text-[9px] font-medium text-forest/40" aria-hidden>
                       +{dayBills.length - 2}
                     </span>
                   )}
@@ -110,23 +110,23 @@ export function BillTimeline({
                 <span
                   aria-hidden
                   className={cn(
-                    'flex size-9 items-center justify-center rounded-full text-[13px] font-bold tabular-nums transition-colors',
+                    'flex size-9 items-center justify-center rounded-full text-[13px] font-semibold tabular-nums transition-colors',
                     day.isToday
-                      ? 'bg-cream font-black text-ink ring-2 ring-forest'
+                      ? 'bg-cream font-medium text-forest ring-2 ring-forest'
                       : hasOverdue
                         ? 'bg-hud-terracotta/12 text-hud-terracotta ring-2 ring-hud-terracotta/55'
                         : hasDueToday
                           ? 'bg-hud-amber/15 text-[#b89191] ring-2 ring-hud-amber/55'
                           : clickable
-                            ? 'bg-sage/60 text-ink'
-                            : 'bg-cream text-ink/55',
+                            ? 'bg-sage/60 text-forest'
+                            : 'bg-cream text-forest/55',
                   )}
                 >
                   {day.day}
                 </span>
 
                 {/* penanda siklus bulan depan — tinggi baris dikunci biar rapi */}
-                <span className="h-3 text-[9px] font-semibold leading-3 text-ink/35">
+                <span className="h-3 text-[9px] font-medium leading-3 text-forest/35">
                   {day.nextMonth ? day.monthShort : ''}
                 </span>
               </button>
@@ -136,7 +136,7 @@ export function BillTimeline({
       </ul>
 
       {!hasBills && (
-        <p className="mt-2 text-[11.5px] font-medium text-ink/45">
+        <p className="mt-2 text-[11.5px] font-medium text-forest/45">
           Gak ada tagihan minggu ini. Santai! 🌿
         </p>
       )}

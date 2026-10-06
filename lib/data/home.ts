@@ -12,14 +12,6 @@
  * gampang dilacak lewat pencarian biasa.
  */
 
-import type { BudgetScope } from './budget'
-import { CONTEXT_LABEL } from './money-context'
-
-/** nama konteks uang (Pribadi / Keluarga / Bersama) — dipakai kicker hero supaya
- *  jelas celengan itu milik siapa. Labelnya TIDAK ditulis ulang di sini: sumber
- *  tunggalnya `CONTEXT_LABEL` di `lib/data/money-context.ts` (paket 47), file yang
- *  juga dipakai switcher, badge kartu, dan empty state per konteks. */
-
 /** Header Home — kolom cari transaksi & tombol notifikasi (keduanya desktop). */
 export const HOME_HEADER_COPY = {
   /** placeholder kolom cari. Isinya "Cari transaksi..." — persis kata yang
@@ -80,25 +72,18 @@ export const HOME_NOTIFICATION_COPY = {
  */
 export const HOME_GOALS_COPY = {
   title: 'Tabungan Impian',
-  subtitle: 'Tiap setoran = nyiram tanaman',
   /** tombol `+` di kepala kartu → membuka sheet "Tanam Celengan Baru" di /budget */
   addLabel: 'Tanam celengan baru',
-  /** alasan hero dipilih — dua-duanya dari aturan di `heroFundOf()`, bukan
-   *  hiasan: yang kritis disebut prioritasnya, yang menang lewat progres
-   *  disebut progresnya */
-  heroReasonPriority: (priorityLabel: string) => `Prioritas ${priorityLabel.toLowerCase()}`,
-  heroReasonProgress: 'Progres paling cepat',
-  /** kicker di bawah nama hero = alasan + konteks uang celengan itu */
-  heroKicker: (reason: string, scope: BudgetScope) =>
-    `${reason} · celengan ${CONTEXT_LABEL[scope].toLowerCase()}`,
   /** label baris nominal di dalam hero */
   savedLabel: 'Terkumpul',
   targetLabel: 'Target',
   /** badge tahap tanaman di dalam hero — "Tahap 2 · Tunas" */
   stageBadge: (stage: number, stageName: string) => `Tahap ${stage} · ${stageName}`,
-  /** kalimat penyemangat hero (tanpa angka, jadi tidak ikut disensor) */
+  /** kalimat penyemangat hero saat celengannya sudah PENUH (tanpa angka, jadi
+   *  tidak ikut disensor). Tahap 1–3 tidak lagi punya kalimat penyemangat —
+   *  permintaan pemilik produk (dashboard 66): teks berulang di setiap kartu
+   *  dikurangi, dan batang tumbuh 4 tahap sudah bercerita sendiri. */
   heroBlurbBloom: 'Sudah berbunga! Tanaman ini tumbuh dari konsistensi setoranmu 🌸',
-  heroBlurbGrowing: 'Tiap setoran bikin tanaman ini naik tahap. Rawat terus ya 🌿',
   /** judul kecil di atas baris mini — sekaligus menyebut jumlahnya apa adanya */
   restTitle: (count: number) => `${count} celengan lain`,
   /** aria-label panah hero & baris mini; dua-duanya membuka `/budget/<id>`
@@ -113,28 +98,23 @@ export const HOME_GOALS_COPY = {
 } as const
 
 /**
- * Widget "Tanamanmu" di Home — baris nutrisi & kaki "menuju tahap berikutnya".
+ * Widget "Tanamanmu" di Home — kaki "menuju tahap berikutnya".
  *
  * Sejak paket 30 baris ini menyebut CELENGAN YANG SAMA dengan kartu Tabungan
  * Impian (`heroFundOf()`), bukan mock tampilan kedua yang persennya ditulis
- * tetap dan tidak ada di data mana pun. Kalimatnya tinggal di sini karena ia
- * bagian dari cerita celengan di Home, sementara HP / hari aktif tetap state
- * tanaman itu sendiri.
+ * tetap dan tidak ada di data mana pun.
+ *
+ * PAKET 66: baris "Tumbuh dari <celengan> (n%) — setor lagi…" DIHAPUS dari
+ * kartu (permintaan pemilik produk). Tahap tanaman + batang tumbuh sudah
+ * menyatakan hal yang sama tanpa satu kalimat pengulang di setiap kunjungan.
  */
 export const HOME_PLANT_COPY = {
-  /** rangkaian: "<nutritionBefore> <nama celengan> (<pct>%) <nutritionAfter>" */
-  nutritionBefore: 'Tumbuh dari',
-  nutritionAfter: '— setor lagi biar naik tahap 🌿',
-  nutritionPercent: (pct: number) => `(${pct}%)`,
   /** kaki kartu: jarak ke tahap tanaman berikutnya (tahap 1–3) */
   nextStage: (stage: number, stageName: string) => `Menuju tahap ${stage} - ${stageName}`,
   /** tahap 4 tidak punya "tahap berikutnya" — jangan tulis "menuju tahap 4" */
   lastStage: 'Tahap terakhir · menuju target tercapai',
   /** pct sudah 100: tidak ada lagi yang dikejar, dan itu boleh dirayakan */
   targetReached: 'Target celengan ini tercapai 🎉',
-  /** pertahanan kalau daftar celengan kosong — jangan sampai tanaman Home
-   *  menggantung tanpa penjelasan kenapa ia tumbuh */
-  noNutrition: 'Belum ada celengan yang dikejar — mulai satu yuk 🌱',
   /* ── MODAL DETAIL TANAMAN (paket 58) ──────────────────────────────────────
      Dua label + kalimat ini dulu ditulis langsung di `plant-detail-modal.tsx`;
      dipindah ke sini supaya copy user-facing tetap satu pintu (§8). Saat belum
@@ -163,11 +143,33 @@ export const BALANCE_RING_COPY = {
   jointLabel: 'Buka Joint Wallet',
 } as const
 
-/** Kartu Income di panel overview. */
+/** Kartu Pemasukan di panel Ringkasan Saldo. */
 export const HOME_INCOME_COPY = {
-  /** label bulan — STATIS, bukan pemilih: mock hanya punya satu bulan berisi
-   *  angka nyata (lihat komentar di `income-card.tsx`) */
-  monthLabel: 'Februari',
+  /** nama kartu */
+  label: 'Pemasukan',
+  /** keterangan di bawah nominal */
+  totalThisMonth: 'Total pemasukan bulan ini',
+  /** keterangan pembanding */
+  vsLastMonth: 'vs bulan lalu',
+  /** keadaan kosong jujur — bukan angka contoh */
+  emptyTitle: 'Belum ada pemasukan bulan ini',
+  emptyHint: 'Catat pemasukan biar grafiknya kebaca 🌱',
+} as const
+
+/**
+ * Panel "Ringkasan Saldo" yang dibuka dari kartu dompet (dulu "Your Balance
+ * Overview"). Isi panel MENGIKUTI dompet yang dipencet, jadi copy-nya Bahasa
+ * Indonesia dan menyebut dompetnya, bukan lagi kalimat pemasaran Inggris.
+ */
+export const OVERVIEW_PANEL_COPY = {
+  title: 'Ringkasan Saldo',
+  subtitle: 'Pantau pemasukan, pengeluaran, & wawasan keuanganmu',
+  /** penanda saat belum ada kartu terpilih (deck belum siap) */
+  badgeAll: 'Semua Dompet',
+  /** penanda dompet yang sedang dibuka */
+  badgeWallet: (name: string) => `Dompet ${name}`,
+  /** label tombol tutup (dibaca pembaca layar) */
+  closeLabel: 'Tutup ringkasan saldo',
 } as const
 
 /**

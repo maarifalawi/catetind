@@ -11,6 +11,7 @@ import {
 import { cashTotal, getMoneySnapshot, postExpense, removeRow, removeWalletAccount, resetMoneyStore, restoreWalletAccount } from './store'
 import { addDebt, getWealthSnapshot, resetWealthStore } from './wealth-store'
 import { addBill, getBillsSnapshot, liveBills, resetBillsStore } from './bills-store'
+import { resetFundsStore } from './funds-store'
 import { INITIAL_BILLS, type Bill } from '@/lib/data/bills'
 import { INITIAL_DEBTS } from '@/lib/data/wealth'
 import { cashDirectionOf } from '@/lib/data/wealth-cash'
@@ -32,6 +33,9 @@ beforeEach(() => {
   resetWealthStore()
   /* tagihan juga (paket 51): ekspor kini memuat daftar tagihan dari store */
   resetBillsStore()
+  /* celengan juga (paket 65): state awal kini SELALU kosong, jadi test yang
+     butuh data contoh harus menyemainya sendiri lewat `resetFundsStore()`. */
+  resetFundsStore()
 })
 
 describe('buildMoneyExport', () => {

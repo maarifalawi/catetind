@@ -102,7 +102,7 @@ export function ConfirmDialog({
               </span>
               <h2
                 id={`${id}-title`}
-                className="min-w-0 flex-1 pt-1.5 text-lg font-semibold tracking-tight text-ink"
+                className="min-w-0 flex-1 pt-1.5 text-lg font-medium tracking-tight text-forest"
               >
                 {title}
               </h2>
@@ -110,13 +110,13 @@ export function ConfirmDialog({
                 type="button"
                 onClick={onClose}
                 aria-label="Tutup"
-                className="flex size-9 shrink-0 items-center justify-center rounded-full bg-cream text-ink ring-1 ring-soil/12 transition-colors hover:bg-sage"
+                className="flex size-9 shrink-0 items-center justify-center rounded-full bg-cream text-forest ring-1 ring-soil/12 transition-colors hover:bg-sage"
               >
                 <X className="size-4" strokeWidth={2.2} />
               </button>
             </div>
 
-            <div className="mt-3 text-[13.5px] leading-relaxed text-ink/60">{body}</div>
+            <div className="mt-3 text-[13.5px] leading-relaxed text-forest/60">{body}</div>
           </div>
 
           {/* aksi ditumpuk vertikal: tiap keputusan dapat barisnya sendiri, jadi
@@ -142,7 +142,7 @@ export function DialogButton({
 }) {
   const TONES = {
     primary: 'bg-forest text-mint hover:bg-forest-soft',
-    neutral: 'bg-cream text-ink ring-1 ring-soil/12 hover:bg-sage',
+    neutral: 'bg-cream text-forest ring-1 ring-soil/12 hover:bg-sage',
     danger: 'bg-plum/20 text-plum ring-1 ring-plum/30 hover:bg-plum/30',
   } as const
 
@@ -152,7 +152,7 @@ export function DialogButton({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        'flex w-full items-center justify-center gap-2 rounded-2xl py-3 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-45',
+        'flex w-full items-center justify-center gap-2 rounded-2xl py-3 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-45',
         TONES[tone],
       )}
     >

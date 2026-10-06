@@ -12,6 +12,8 @@
 /** batas panjang field — angka teknis, bukan gaya bahasa */
 export const EMAIL_MAX_LENGTH = 254
 export const NICKNAME_MAX_LENGTH = 24
+/** panjang kode OTP email — Supabase mengirim tepat 6 angka */
+export const OTP_LENGTH = 6
 
 export const REGISTRATION_COPY = {
   /** judul sheet registrasi (inventaris: "Registration / Identifikasi") */
@@ -54,6 +56,15 @@ export function isValidEmail(value: string): boolean {
 export function isValidNickname(value: string): boolean {
   const trimmed = value.trim()
   return trimmed.length >= 2 && trimmed.length <= NICKNAME_MAX_LENGTH
+}
+
+/**
+ * Kode OTP email: tepat `OTP_LENGTH` angka. Dipakai HANYA untuk mengaktifkan
+ * tombol "Masuk sekarang" — supaya user tidak menekan tombol dengan kode
+ * setengah jadi. Verifikasi sungguhan tetap milik Supabase (`verifyOtp`).
+ */
+export function isValidOtpCode(value: string): boolean {
+  return new RegExp(`^\\d{${OTP_LENGTH}}$`).test(value.trim())
 }
 
 /* ── MASUK DENGAN MAGIC LINK (inventaris #8 & #9 · PRD 5931–5933) ────────────
@@ -102,18 +113,49 @@ export const RESENT_NOTE_MS = 6000
 export const LOGIN_PATH = '/login'
 export const VERIFY_PATH = '/login/verify'
 
+/**
+ * TAGLINE panel brand — SATU kalimat, SATU tempat, dipakai DUA halaman:
+ * `/login` dan `/checkout`. Panelnya sendiri komponen bersama
+ * (`components/catetind/brand-panel.tsx`), jadi mustahil dua halaman menulis
+ * tagline yang berbeda.
+ */
+export const AUTH_BRAND_TAGLINE = 'App keuangan buat orang yang males buka app keuangan.'
+
 export const LOGIN_COPY = {
-  eyebrow: 'Masuk',
+  /* Catatan revisi desain (permintaan desain): panel brand kiri kini HANYA
+     memuat tagline (`AUTH_BRAND_TAGLINE`) — `brandEyebrow`, catatan pendukung,
+     dan tiga chip jaminan DIHAPUS, supaya batik-nya yang bicara bukan teksnya.
+     Di form, `subtitle`, `emailHint`, `trustNote`, `codeSubtitle`, dan
+     `codeHint` juga dihapus: cukup judul + label + tombol. Pesan ERROR tetap
+     tampil saat input salah — itu informasi, bukan hiasan. */
+
+  /* ── langkah 1: email ──────────────────────────────────────────────────── */
   title: 'Masuk ke CatetInd',
-  subtitle: 'Cukup satu email. Kami kirim tautan masuk — nggak ada password yang perlu diingat.',
   emailLabel: 'Email',
   emailPlaceholder: 'namakamu@email.com',
-  emailHint: 'Tautan masuk dikirim ke alamat ini. Tautannya sekali pakai, aman dibuka dari HP mana pun.',
-  /** copy kanon yang diminta prompt halaman ini — janji kepercayaan produk */
-  trustNote:
-    'Nggak perlu bikin password. Kami kirim tautan masuk ke emailmu — kamu yang pegang kendali, kami nggak simpan password apa pun.',
-  submitLabel: 'Kirim Magic Link',
-  sendingLabel: 'Mengirim tautan…',
+  submitLabel: 'Kirim kode masuk',
+  sendingLabel: 'Mengirim kode…',
+
+  /* ── langkah 2: kode 6 angka (JALUR UTAMA sejak revisi OTP) ──────────────
+     Kenapa OTP jadi jalur utama, bukan magic link: magic link gampang diminta
+     tapi paling repot diselesaikan (keluar app → cari email → klik → balik).
+     OTP diketik DI halaman ini — nol perpindahan app, pas dengan tagline. */
+  codeTitle: 'Masukkan kodenya',
+  codeSentLead: 'Kode masuk dikirim ke',
+  codeLabel: 'Kode 6 angka',
+  codePlaceholder: '123456',
+  codeSubmitLabel: 'Masuk sekarang',
+  verifyingLabel: 'Memeriksa kode…',
+  changeEmailLabel: 'Ganti email',
+  /** tombol kirim ulang saat cooldown habis; versi hitung mundurnya memakai
+   *  `resendCountdownLabel()` supaya tidak ada dua kalimat yang berbeda */
+  resendLabel: 'Kirim ulang kode',
+  codeSentToast: 'Kode masuk sudah dikirim 📩',
+  codeSentToastDescription: 'Cek inbox (dan folder spam) ya — kodenya 6 angka.',
+  resendSentNote: 'Kode baru sudah dikirim. Cek inbox lagi ya 📩',
+  invalidCode: 'Kodenya 6 angka ya. Cek lagi emailnya.',
+
+  /* ── tautan sekunder ───────────────────────────────────────────────────── */
   /** aksi sekunder: belum punya akun → daftar (route /checkout sudah ada) */
   registerLead: 'Belum punya akun?',
   registerLink: 'Daftar',
@@ -125,27 +167,21 @@ export const LOGIN_COPY = {
 
 
 /* ── CEK EMAIL / CALLBACK (inventaris #9) ────────────────────────────────────
-   Halaman ini punya satu pekerjaan: membuat menunggu terasa punya langkah.
-   Karena itu isinya bukan cuma "cek email", tapi urutan berikutnya + tombol
-   kirim ulang ber-cooldown + jalan keluar (ganti email / lanjut demo). */
+   Halaman ini punya satu pekerjaan: bikin menunggu terasa punya langkah, tanpa
+   menenggelamkan user di dinding teks. Versi sebelumnya memuat eyebrow, satu
+   paragraf panjang soal netralitas pesan, daftar "urutan berikutnya" 3 baris,
+   dan catatan umur tautan. Itu semua DIPANGKAS (revisi desain): yang tersisa
+   cuma yang benar-benar dipakai user — alamat tujuan, tombol buka email, kirim
+   ulang ber-cooldown, dan jalan masuk lewat kode 6 angka. */
 
 export const VERIFY_COPY = {
-  eyebrow: 'Cek email',
-  title: 'Cek emailmu, ya 📩',
+  title: 'Cek emailmu',
+  /** satu baris pengantar; detail alamatnya ada di kartu status di bawahnya */
+  subtitle: 'Kami kirim tautan masuk & kode 6 angka ke email ini:',
   /** diikuti alamat email di baris berikutnya — lihat `VerifyEmailScreen` */
   sentLead: 'Tautan masuk sudah dikirim ke',
   /** kalau user sampai ke sini tanpa `?email=` (mis. bookmark lama) */
   emailFallback: 'email yang kamu masukkan tadi',
-  /** PESAN NETRAL — sengaja sama untuk email terdaftar maupun tidak terdaftar */
-  neutralNote:
-    'Kalau emailnya terdaftar, tautan sudah dikirim — pesannya sengaja sama buat semua email, jadi nggak ada yang bisa menebak siapa punya akun.',
-  expireNote: 'Tautan sekali pakai dan umurnya pendek, jadi jangan diteruskan ke orang lain ya.',
-  stepsTitle: 'Urutan berikutnya',
-  steps: [
-    'Buka inbox email itu — cek folder spam/promosi kalau belum kelihatan',
-    'Klik tombol "Masuk ke CatetInd" di dalam email',
-    'Kamu balik ke app dengan sesi aktif, tanpa isi apa pun lagi',
-  ],
   /** `mailto:` tanpa alamat = buka app email default, bukan mengirim ke siapa pun */
   openMailLabel: 'Buka email',
   resendLabel: 'Kirim ulang',
@@ -153,13 +189,12 @@ export const VERIFY_COPY = {
   resendSentNote: 'Tautan baru sudah dikirim. Cek inbox lagi ya 📩',
   /** state #9b: tautan kedaluwarsa / sudah dipakai (jangan pernah layar buntu) */
   expiredTitle: 'Tautan ini sudah dipakai atau kedaluwarsa.',
-
   expiredBody: 'Kirim ulang ya — nggak ada yang hilang.',
   changeEmailLabel: 'Ganti email',
   /** kartu masuk dengan KODE dari email (paket 45: Supabase Auth, bukan demo) */
-  otpTitle: 'Masuk pakai kode dari email',
+  otpTitle: 'Atau masukkan kode dari email',
   otpLabel: 'Kode 6 angka dari email',
-  otpHint: 'Tulis 6 angka yang ada di emailnya — atau klik tautannya langsung dari inbox.',
+  otpHint: 'Ketik 6 angka yang ada di emailnya.',
   otpSubmitLabel: 'Masuk sekarang',
   otpFailedTitle: 'Kodenya belum bisa dipakai',
   /** tautan email gagal ditukar jadi sesi (sudah dipakai / kedaluwarsa) */

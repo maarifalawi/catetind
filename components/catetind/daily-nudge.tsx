@@ -98,19 +98,19 @@ export function DailyNudge() {
         </span>
 
         <div className="min-w-0 flex-1">
-          <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-forest/60">
+          <p className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.14em] text-forest/60">
             {HOME_NUDGE_COPY.coachLabel}
           </p>
-          <p className="mt-1 text-[13.5px] font-semibold leading-snug text-ink">
+          <p className="mt-1 text-[13.5px] font-medium leading-snug text-forest">
             {HOME_NUDGE_COPY.title}
           </p>
-          <p className="mt-1 text-[12.5px] leading-snug text-ink/55">
+          <p className="mt-1 text-[12.5px] leading-snug text-forest/55">
             {HOME_NUDGE_COPY.body}
           </p>
           <button
             type="button"
             onClick={() => setAddOpen(true)}
-            className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-forest px-3.5 py-1.5 text-[12px] font-semibold text-cream transition-colors hover:bg-forest-soft active:scale-[0.97]"
+            className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-forest px-3.5 py-1.5 text-[12px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.97]"
           >
             {HOME_NUDGE_COPY.cta}
           </button>
@@ -120,7 +120,7 @@ export function DailyNudge() {
           type="button"
           onClick={dismiss}
           aria-label={HOME_NUDGE_COPY.dismissLabel}
-          className="flex size-7 shrink-0 items-center justify-center rounded-full text-ink/35 transition-colors hover:bg-soil/8 hover:text-ink"
+          className="flex size-7 shrink-0 items-center justify-center rounded-full text-forest/35 transition-colors hover:bg-soil/8 hover:text-forest"
         >
           <X className="size-3.5" strokeWidth={2.4} aria-hidden />
         </button>

@@ -24,6 +24,17 @@ import {
   settlementCounterparty,
 } from '@/lib/data/wealth-cash'
 import { WEALTH_STATE_KEY, loadDeviceState, saveDeviceState } from './idb'
+import {
+  deleteRemoteDebt,
+  deleteRemoteInvestment,
+  pushDebtToServer,
+  pushInvestmentToServer,
+  pushPaymentToServer,
+  pushPriceToServer,
+  readRemoteWealth,
+  type RemoteWealth,
+} from '@/lib/supabase/wealth-remote'
+import { randomUuid } from '@/lib/supabase/uuid'
 import { getMoneySnapshot, postDebtSettlement, rowForClientTxId, type DebtSettlementResult } from './store'
 
 /* ── SATU STORE KEKAYAAN (paket 50 · temuan D laporan 46) ────────────────────
@@ -101,11 +112,30 @@ export interface WealthSnapshot extends WealthState {
 /** versi bentuk state di perangkat — naikkan kalau bentuknya berubah */
 const WEALTH_STATE_VERSION = 1
 
-/** snapshot untuk render server & hidrasi — selalu data seed, tanpa IDB */
+/* ── STATE AWAL SELALU KOSONG (paket 65 · Tugas A) ────────────────────────────
+   Data CONTOH (INITIAL_INVESTMENTS / INITIAL_DEBTS / INITIAL_DEBT_PAYMENTS)
+   TIDAK LAGI di-inject sebagai state awal — di produksi MAUPUN saat demo. Akun
+   demo diisi lewat `seedDemoDataOnce()` yang menulis baris sungguhan (persisten,
+   bisa diedit/dihapus). Konstanta `SEED_*` di bawah tinggal jadi BAHAN test
+   (`resetWealthStore()`) & bahan bootstrap demo, bukan "milik user". */
+const SEED_INVESTMENTS: Investment[] = INITIAL_INVESTMENTS
+const SEED_DEBTS: Debt[] = INITIAL_DEBTS
+const SEED_PAYMENTS: DebtPayment[] = INITIAL_DEBT_PAYMENTS
+
+/** snapshot untuk render server & hidrasi — SELALU KOSONG sampai user mengisi */
 const SERVER_SNAPSHOT: WealthSnapshot = Object.freeze({
-  investments: INITIAL_INVESTMENTS,
-  debts: INITIAL_DEBTS,
-  payments: INITIAL_DEBT_PAYMENTS,
+  investments: [] as Investment[],
+  debts: [] as Debt[],
+  payments: [] as DebtPayment[],
+  removedIds: [] as string[],
+  hydrated: false,
+})
+
+/** snapshot seed — BAHAN test (`resetWealthStore()`), bukan state awal runtime */
+const SEED_SNAPSHOT: WealthSnapshot = Object.freeze({
+  investments: SEED_INVESTMENTS,
+  debts: SEED_DEBTS,
+  payments: SEED_PAYMENTS,
   removedIds: [] as string[],
   hydrated: false,
 })
@@ -263,37 +293,54 @@ export function mergeWealthState(
   const purged = persisted?.purged === true
   const known = persisted?.version === WEALTH_STATE_VERSION
 
-  /** daftar dasar = tersimpan, data seed untuk kunjungan pertama, atau KOSONG
-   *  kalau akun ini sudah dihapus user */
-  const baseOf = <T extends { id: string }>(stored: T[] | undefined, seed: T[]): T[] =>
-    stored !== undefined && stored.length > 0 ? stored : purged ? [] : seed
+  /** daftar dasar = HANYA yang tersimpan (kunjungan pertama = KOSONG, paket 65) */
+  const baseOf = <T extends { id: string }>(stored: T[] | undefined): T[] => stored ?? []
 
   /** Yang ikut dari MEMORY hanyalah catatan yang lahir di sesi ini — yaitu yang
-   *  BUKAN data seed (saat hidrasi, memory masih berisi `SERVER_SNAPSHOT`) dan
-   *  belum ada di daftar dasar. Tanpa penyaring "bukan seed", data contoh akan
+   *  BUKAN data seed (kecuali kunjungan pertama: state hidup test berisi seed)
+   *  dan belum ada di daftar dasar. Tanpa penyaring "bukan seed", data contoh akan
    *  muncul kembali di akun yang sudah dihapus. */
-  const extrasOf = <T extends { id: string }>(currentRows: T[], seed: T[], base: T[]): T[] =>
+  const extrasOf = <T extends { id: string }>(
+    currentRows: T[],
+    seed: T[],
+    base: T[],
+    firstVisit: boolean,
+  ): T[] =>
     currentRows.filter(
       (row) =>
-        !seed.some((seedRow) => seedRow.id === row.id) && !base.some((baseRow) => baseRow.id === row.id),
+        (firstVisit || !seed.some((seedRow) => seedRow.id === row.id)) &&
+        !base.some((baseRow) => baseRow.id === row.id),
     )
 
   const storedInvestments = known ? (persisted?.investments ?? []).filter((row) => row?.id) : []
-  const baseInvestments = baseOf(storedInvestments, INITIAL_INVESTMENTS)
+  const baseInvestments = baseOf(storedInvestments)
   const investments = [
     ...baseInvestments,
-    ...extrasOf(current.investments, INITIAL_INVESTMENTS, baseInvestments),
+    ...extrasOf(
+      current.investments,
+      SEED_INVESTMENTS,
+      baseInvestments,
+      !purged && storedInvestments.length === 0,
+    ),
   ]
 
   const storedDebts = known ? (persisted?.debts ?? []).filter((row) => row?.id) : []
-  const baseDebts = baseOf(storedDebts, INITIAL_DEBTS)
-  const debts = [...baseDebts, ...extrasOf(current.debts, INITIAL_DEBTS, baseDebts)]
+  const baseDebts = baseOf(storedDebts)
+  const debts = [
+    ...baseDebts,
+    ...extrasOf(current.debts, SEED_DEBTS, baseDebts, !purged && storedDebts.length === 0),
+  ]
 
   const storedPayments = known ? (persisted?.payments ?? []).filter((row) => row?.id) : []
-  const basePayments = baseOf(storedPayments, INITIAL_DEBT_PAYMENTS)
+  const basePayments = baseOf(storedPayments)
   const payments = [
     ...basePayments,
-    ...extrasOf(current.payments, INITIAL_DEBT_PAYMENTS, basePayments),
+    ...extrasOf(
+      current.payments,
+      SEED_PAYMENTS,
+      basePayments,
+      !purged && storedPayments.length === 0,
+    ),
   ]
 
   /* TOMBSTONE digabung (union), bukan diambil dari satu sisi: hapus yang
@@ -306,6 +353,144 @@ export function mergeWealthState(
   return { investments, debts, payments, removedIds, hydrated: true }
 }
 
+/** gabung SATU daftar: baris server jadi dasar, baris lokal yang belum terkirim ikut */
+function combineRemote<T extends { id: string; remoteId?: string }>(
+  remote: readonly T[],
+  local: Map<string, T>,
+  seed: readonly { id: string }[],
+  adapt: (row: T) => T,
+): T[] {
+  const remoteIds = new Set(remote.map((row) => row.id))
+  const mapped = remote.map(adapt)
+  const baseIds = new Set(mapped.map((row) => row.id))
+  const extras = [...local.values()].filter(
+    (row) =>
+      !seed.some((s) => s.id === row.id) &&
+      !baseIds.has(row.id) &&
+      !(row.remoteId && remoteIds.has(row.remoteId)),
+  )
+  const seen = new Set<string>()
+  const out: T[] = []
+  for (const row of [...mapped, ...extras]) {
+    if (seen.has(row.id)) continue
+    seen.add(row.id)
+    out.push(row)
+  }
+  return out
+}
+
+/**
+ * Gabungkan kekayaan SERVER dengan antrean perangkat (paket 64 · Paket D).
+ * Fungsi murni (bisa diuji tanpa jaringan):
+ *   · baris server jadi DASAR; id domain lokal & `scope` (yang TIDAK ada di
+ *     skema) dipertahankan dari versi lokal yang cocok lewat `remoteId`;
+ *   · baris perangkat yang belum terkirim tetap ikut (antrean offline);
+ *   · baris seed contoh tidak pernah dihidupkan kembali.
+ */
+export function mergeWithRemoteWealth(
+  remote: RemoteWealth,
+  current: WealthSnapshot = live,
+  persisted: PersistedWealth | null = null,
+): WealthSnapshot {
+  const invById = new Map<string, Investment>()
+  const invByRemote = new Map<string, Investment>()
+  const debtById = new Map<string, Debt>()
+  const debtByRemote = new Map<string, Debt>()
+  const payById = new Map<string, DebtPayment>()
+  const payByRemote = new Map<string, DebtPayment>()
+
+  for (const row of [...(persisted?.investments ?? []), ...current.investments]) {
+    if (!row?.id) continue
+    if (!invById.has(row.id)) invById.set(row.id, row)
+    if (row.remoteId && !invByRemote.has(row.remoteId)) invByRemote.set(row.remoteId, row)
+  }
+  for (const row of [...(persisted?.debts ?? []), ...current.debts]) {
+    if (!row?.id) continue
+    if (!debtById.has(row.id)) debtById.set(row.id, row)
+    if (row.remoteId && !debtByRemote.has(row.remoteId)) debtByRemote.set(row.remoteId, row)
+  }
+  for (const row of [...(persisted?.payments ?? []), ...current.payments]) {
+    if (!row?.id) continue
+    if (!payById.has(row.id)) payById.set(row.id, row)
+    if (row.remoteId && !payByRemote.has(row.remoteId)) payByRemote.set(row.remoteId, row)
+  }
+
+  const investments = combineRemote(remote.investments, invById, SEED_INVESTMENTS, (row) => {
+    const local = invByRemote.get(row.id) ?? invById.get(row.id)
+    return local ? { ...row, id: local.id, scope: local.scope, remoteId: row.id } : { ...row, remoteId: row.id }
+  })
+  const debts = combineRemote(remote.debts, debtById, SEED_DEBTS, (row) => {
+    const local = debtByRemote.get(row.id) ?? debtById.get(row.id)
+    return local
+      ? {
+          ...row,
+          id: local.id,
+          scope: local.scope,
+          notes: local.notes ?? row.notes,
+          currentMonth: local.currentMonth ?? row.currentMonth,
+          remoteId: row.id,
+        }
+      : { ...row, remoteId: row.id }
+  })
+  const payments = combineRemote(remote.payments, payById, SEED_PAYMENTS, (row) => {
+    const local = payByRemote.get(row.id) ?? payById.get(row.id)
+    return local
+      ? { ...row, id: local.id, walletName: local.walletName || row.walletName, remoteId: row.id }
+      : { ...row, remoteId: row.id }
+  })
+
+  const removedIds = Array.from(new Set([...current.removedIds, ...(persisted?.removedIds ?? [])]))
+  return { investments, debts, payments, removedIds, hydrated: true }
+}
+
+async function ensureInvestmentOnServer(invId: string): Promise<boolean> {
+  const inv = live.investments.find((row) => row.id === invId)
+  if (!inv) return false
+  const remoteId = inv.remoteId ?? randomUuid()
+  if (!(await pushInvestmentToServer(inv, remoteId))) return false
+  if (inv.remoteId !== remoteId) {
+    live = {
+      ...live,
+      investments: live.investments.map((row) => (row.id === invId ? { ...row, remoteId } : row)),
+    }
+    persist(live)
+    emit()
+  }
+  return true
+}
+
+async function ensureDebtOnServer(debtId: string): Promise<boolean> {
+  const debt = live.debts.find((row) => row.id === debtId)
+  if (!debt) return false
+  const remoteId = debt.remoteId ?? randomUuid()
+  if (!(await pushDebtToServer(debt, remoteId))) return false
+  if (debt.remoteId !== remoteId) {
+    live = {
+      ...live,
+      debts: live.debts.map((row) => (row.id === debtId ? { ...row, remoteId } : row)),
+    }
+    persist(live)
+    emit()
+  }
+  return true
+}
+
+async function ensurePaymentOnServer(paymentId: string): Promise<boolean> {
+  const payment = live.payments.find((row) => row.id === paymentId)
+  if (!payment) return false
+  const remoteId = payment.remoteId ?? randomUuid()
+  if (!(await pushPaymentToServer(payment, remoteId))) return false
+  if (payment.remoteId !== remoteId) {
+    live = {
+      ...live,
+      payments: live.payments.map((row) => (row.id === paymentId ? { ...row, remoteId } : row)),
+    }
+    persist(live)
+    emit()
+  }
+  return true
+}
+
 async function hydrateWealthStore(): Promise<void> {
   if (hydrateStarted) return
   hydrateStarted = true
@@ -315,6 +500,17 @@ async function hydrateWealthStore(): Promise<void> {
   live = mergeWealthState(persisted)
   hydratedOnce = true
   emit()
+
+  if (accountPurged) return
+  /* SERVER jadi sumber saat ada sesi; `null` = tanpa sesi → tetap jalur lokal */
+  const remote = await readRemoteWealth()
+  if (!remote) return
+  live = mergeWithRemoteWealth(remote, live, persisted)
+  persist(live)
+  emit()
+  for (const inv of live.investments) if (!inv.remoteId) await ensureInvestmentOnServer(inv.id)
+  for (const debt of live.debts) if (!debt.remoteId) await ensureDebtOnServer(debt.id)
+  for (const pay of live.payments) if (!pay.remoteId) await ensurePaymentOnServer(pay.id)
 }
 
 /* ── API TULIS — SATU-SATUNYA JALUR MENULIS KEKAYAAN ─────────────────────────
@@ -362,6 +558,7 @@ export function addInvestment(input: NewInvestmentInput): Investment | null {
     scope: input.scope,
   }
   commit({ ...live, investments: [asset, ...live.investments], hydrated: true })
+  void ensureInvestmentOnServer(asset.id)
   return asset
 }
 
@@ -389,6 +586,11 @@ export function updateInvestmentPrice(id: string, price: number): Investment | n
     ...live,
     investments: live.investments.map((asset) => (asset.id === id ? updated : asset)),
     hydrated: true,
+  })
+  /* aset dulu (butuh uuid baris `investments`), baru baris harga menempel padanya */
+  void ensureInvestmentOnServer(id).then(async () => {
+    const row = live.investments.find((asset) => asset.id === id)
+    if (row?.remoteId) await pushPriceToServer(row, row.remoteId, randomUuid(), WEALTH_TODAY_ISO)
   })
   return updated
 }
@@ -436,6 +638,7 @@ export function editInvestment(id: string, patch: InvestmentEdit): Investment | 
     investments: live.investments.map((asset) => (asset.id === id ? updated : asset)),
     hydrated: true,
   })
+  void ensureInvestmentOnServer(id)
   return updated
 }
 
@@ -453,6 +656,8 @@ export function editInvestment(id: string, patch: InvestmentEdit): Investment | 
 export function deleteInvestment(id: string): boolean {
   if (!live.investments.some((asset) => asset.id === id) || isRemoved('inv', id)) return false
   tombstone(keyOf('inv', id))
+  const asset = live.investments.find((row) => row.id === id)
+  if (asset?.remoteId) void deleteRemoteInvestment(asset.remoteId)
   return true
 }
 
@@ -465,7 +670,9 @@ export function deleteInvestment(id: string): boolean {
 export function restoreInvestment(id: string): Investment | null {
   if (!live.investments.some((asset) => asset.id === id)) return null
   if (!untombstone(keyOf('inv', id))) return null
-  return live.investments.find((asset) => asset.id === id) ?? null
+  const asset = live.investments.find((row) => row.id === id) ?? null
+  if (asset) void ensureInvestmentOnServer(id)
+  return asset
 }
 
 /* ── HUTANG & PIUTANG ────────────────────────────────────────────────────────
@@ -519,6 +726,7 @@ export function addDebt(input: NewDebtRecord): Debt | null {
     scope: input.scope,
   }
   commit({ ...live, debts: [debt, ...live.debts], hydrated: true })
+  void ensureDebtOnServer(debt.id)
   return debt
 }
 
@@ -558,6 +766,7 @@ export function editDebt(id: string, patch: DebtPatch): Debt | null {
     debts: live.debts.map((debt) => (debt.id === id ? updated : debt)),
     hydrated: true,
   })
+  void ensureDebtOnServer(id)
   return updated
 }
 
@@ -576,6 +785,8 @@ export function editDebt(id: string, patch: DebtPatch): Debt | null {
 export function deleteDebt(id: string): boolean {
   if (!live.debts.some((debt) => debt.id === id) || isRemoved('debt', id)) return false
   tombstone(keyOf('debt', id))
+  const debt = live.debts.find((row) => row.id === id)
+  if (debt?.remoteId) void deleteRemoteDebt(debt.remoteId)
   return true
 }
 
@@ -583,7 +794,9 @@ export function deleteDebt(id: string): boolean {
 export function restoreDebt(id: string): Debt | null {
   if (!live.debts.some((debt) => debt.id === id)) return null
   if (!untombstone(keyOf('debt', id))) return null
-  return live.debts.find((debt) => debt.id === id) ?? null
+  const debt = live.debts.find((row) => row.id === id) ?? null
+  if (debt) void ensureDebtOnServer(id)
+  return debt
 }
 
 /* ── PELUNASAN HUTANG/PIUTANG: KAS + CATATAN DALAM SATU TULISAN ──────────────
@@ -720,6 +933,9 @@ export function settleDebt(input: SettleDebtInput): SettleDebtResult | null {
     payments: [payment, ...live.payments],
     hydrated: true,
   })
+  void ensureDebtOnServer(updated.id)
+  void ensurePaymentOnServer(payment.id)
+  if (changeDebt) void ensureDebtOnServer(changeDebt.id)
 
   return { debt: updated, payment, settlement, changeDebt }
 }
@@ -788,7 +1004,7 @@ export function paymentsOf(snapshot: WealthSnapshot, debtId: string): DebtPaymen
  * cuma `purgeWealthStore()` saat user menghapus akunnya.
  */
 export function resetWealthStore(): void {
-  live = SERVER_SNAPSHOT
+  live = SEED_SNAPSHOT
   accountPurged = false
   hydrateStarted = false
   hydratedOnce = false

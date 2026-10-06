@@ -19,6 +19,10 @@ node_modules
 # dan log yang ikut ter-commit pernah bikin `git status` penuh noise (task 25).
 *.log
 
+# Artefak screenshot sekali-pakai (verifikasi visual headless).
+# Sama alasannya dengan log di atas: sekali pakai, tidak pernah perlu di-track.
+.tmp-shot*.png
+
 # TypeScript incremental build artifact.
 # Dihasilkan ulang setiap `tsc` dijalankan, jadi selalu muncul sebagai diff
 # tanpa perubahan kode apa pun. File lokalnya TIDAK dihapus - hanya berhenti

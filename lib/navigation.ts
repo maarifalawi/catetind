@@ -55,7 +55,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Menu Utama',
     items: [
-      { href: '/', icon: Home, label: 'Dashboard', hint: 'Ringkasan hari ini' },
+      { href: '/app', icon: Home, label: 'Dashboard', hint: 'Ringkasan hari ini' },
       { href: '/history', icon: PieChart, label: 'Riwayat & Insight', hint: 'Semua catatan & pola' },
     ],
   },
@@ -91,7 +91,7 @@ export const NAV_GROUPS: NavGroup[] = [
 
 /** tab tetap di bottom bar mobile (sisanya masuk laci "Lainnya") */
 export const MOBILE_PRIMARY_ITEMS: NavItem[] = [
-  { href: '/', icon: Home, label: 'Home', hint: 'Ringkasan hari ini' },
+  { href: '/app', icon: Home, label: 'Home', hint: 'Ringkasan hari ini' },
   { href: '/wallet', icon: Wallet, label: 'Wallet', hint: 'Saldo semua dompet' },
   { href: '/history', icon: PieChart, label: 'Insight', hint: 'Semua catatan & pola' },
 ]

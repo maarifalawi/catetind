@@ -147,12 +147,12 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
               <Sparkles className="size-5" strokeWidth={2.2} />
             </span>
             <div className="min-w-0 flex-1">
-              <h2 id="topup-title" className="text-xl font-semibold tracking-tight text-ink">
+              <h2 id="topup-title" className="text-xl font-medium tracking-tight text-forest">
                 {AI_TOPUP_COPY.title}
               </h2>
               <p
                 id="topup-desc"
-                className="mt-0.5 text-[13px] leading-relaxed break-words text-ink/55"
+                className="mt-0.5 text-[13px] leading-relaxed break-words text-forest/55"
               >
                 {AI_TOPUP_COPY.description}
               </p>
@@ -161,7 +161,7 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
               type="button"
               onClick={onClose}
               aria-label={AI_TOPUP_COPY.closeLabel}
-              className="flex size-9 shrink-0 items-center justify-center rounded-full bg-cream text-ink ring-1 ring-soil/12 transition-colors hover:bg-sage"
+              className="flex size-9 shrink-0 items-center justify-center rounded-full bg-cream text-forest ring-1 ring-soil/12 transition-colors hover:bg-sage"
             >
               <X className="size-4" strokeWidth={2.2} />
             </button>
@@ -199,7 +199,7 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
                     )}
                   >
                     {onAccent && (
-                      <span className="absolute -top-2 right-3 rounded-full bg-forest px-2.5 py-[3px] text-[10px] font-semibold tracking-wide text-mint">
+                      <span className="absolute -top-2 right-3 rounded-full bg-forest px-2.5 py-[3px] text-[10px] font-medium tracking-wide text-mint">
                         {AI_TOPUP_COPY.bestBadge}
                       </span>
                     )}
@@ -207,8 +207,8 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
                     <span className="flex items-start justify-between gap-2">
                       <span
                         className={cn(
-                          'text-[13px] font-semibold leading-snug',
-                          onAccent ? 'text-forest' : 'text-ink',
+                          'text-[13px] font-medium leading-snug',
+                          onAccent ? 'text-forest' : 'text-forest',
                         )}
                       >
                         {pkg.name}
@@ -230,8 +230,8 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
 
                     <span
                       className={cn(
-                        'mt-2 text-lg font-semibold tracking-tight tabular-nums',
-                        onAccent ? 'text-forest' : 'text-ink',
+                        'mt-2 text-lg font-medium tracking-tight tabular-nums',
+                        onAccent ? 'text-forest' : 'text-forest',
                       )}
                     >
                       {formatIDR(pkg.price)}
@@ -239,7 +239,7 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
                     <span
                       className={cn(
                         'text-[10px] font-medium',
-                        onAccent ? 'text-forest/60' : 'text-ink/40',
+                        onAccent ? 'text-forest/60' : 'text-forest/40',
                       )}
                     >
                       {AI_TOPUP_COPY.onceLabel}
@@ -247,7 +247,7 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
 
                     <span
                       className={cn(
-                        'mt-2.5 block text-[11px] font-semibold',
+                        'mt-2.5 block text-[11px] font-medium',
                         onAccent ? 'text-forest' : 'text-forest/80',
                       )}
                     >
@@ -256,7 +256,7 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
                     <span
                       className={cn(
                         'mt-0.5 block text-[10px] leading-relaxed',
-                        onAccent ? 'text-forest/60' : 'text-ink/45',
+                        onAccent ? 'text-forest/60' : 'text-forest/45',
                       )}
                     >
                       {pkg.note}
@@ -266,7 +266,7 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
               })}
             </div>
 
-            <p className="mt-3 mb-1 text-[11px] leading-relaxed text-ink/40">
+            <p className="mt-3 mb-1 text-[11px] leading-relaxed text-forest/40">
               {AI_RESET_RULE_COPY}
             </p>
           </div>
@@ -274,13 +274,13 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
           {/* footer — total, CTA, trust badge */}
           <div className="shrink-0 border-t border-soil/12 px-5 pt-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:px-6 lg:pb-5">
             <div className="flex items-center justify-between gap-3 text-sm">
-              <span className="min-w-0 truncate text-ink/55">
+              <span className="min-w-0 truncate text-forest/55">
                 {selected ? selected.name : AI_TOPUP_COPY.emptySelection}
               </span>
               <span
                 className={cn(
-                  'shrink-0 font-semibold tabular-nums',
-                  selected ? 'text-ink' : 'text-ink/35',
+                  'shrink-0 font-medium tabular-nums',
+                  selected ? 'text-forest' : 'text-forest/35',
                 )}
               >
                 {selected ? formatIDR(selected.price) : '—'}
@@ -292,10 +292,10 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
               onClick={handlePay}
               disabled={!selectedPackage || paying}
               className={cn(
-                'mt-3 flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-semibold transition-colors',
+                'mt-3 flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-medium transition-colors',
                 selectedPackage && !paying
                   ? 'bg-forest text-mint hover:bg-forest-soft active:scale-[0.99]'
-                  : 'cursor-not-allowed bg-ink/[0.07] text-ink/35',
+                  : 'cursor-not-allowed bg-ink/[0.07] text-forest/35',
               )}
             >
               {paying ? (
@@ -308,7 +308,7 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
               )}
             </button>
 
-            <p className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-ink/45">
+            <p className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-forest/45">
               <Lock className="size-3 shrink-0" strokeWidth={2.4} />
               {AI_TOPUP_COPY.trustNote}
             </p>

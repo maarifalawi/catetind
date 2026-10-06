@@ -25,3 +25,18 @@
    semuanya; itulah alasan file ini ada. */
 
 export const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO === '1'
+
+/**
+ * `true` = data CONTOH boleh tampil sebagai isi awal layar (mode demo/desain,
+ * ATAU saat dev/test). Di build PRODUKSI tanpa `NEXT_PUBLIC_DEMO=1` nilainya
+ * `false`, sehingga seed (`WALLET_SEED`, `INITIAL_*`, `HISTORY_TRANSACTIONS`, …)
+ * TIDAK PERNAH tampil sebagai milik user — empty state yang benar (paket 63,
+ * sasaran produk "data real, tanpa seed/dummy").
+ *
+ * Kenapa `NODE_ENV === 'test'` ikut: supaya TEST tetap melihat data contoh
+ * (banyak test mengunci angka seed), sementara `pnpm dev` DAN `pnpm build`/
+ * `pnpm start` bersih. Untuk MENJALANKAN versi berisi data (mis. akun demo yang
+ * ditinjau untuk audit sistem), nyalakan gerbangnya secara eksplisit lewat
+ * `NEXT_PUBLIC_DEMO=1` — satu pintu yang sama dengan saklar demo lain.
+ */
+export const SHOWS_SAMPLE_DATA = DEMO_MODE || process.env.NODE_ENV === 'test'

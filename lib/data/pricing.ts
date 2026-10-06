@@ -184,6 +184,50 @@ export const FOUNDING_MEMBER: LifetimePlan = {
   ],
 }
 
+/* ── STATE HARGA REAL-TIME (inventaris #3 · PRD 4413–4494) ───────────────────
+   Bentuk yang dilayani `GET /api/price` dan dibaca `/checkout`. SUMBER
+   KEBENARAN harganya tetap `FOUNDING_MEMBER` di file ini — endpoint cuma
+   membungkusnya, dan kalau nanti tabel `pricing_state` hidup, endpoint yang
+   membaca tabel itu (checkout tidak pernah menghitung harga sendiri).
+
+   `slotSold`/`slotsLeft`: tanpa pembayaran (Midtrans belum aktif) BELUM ada
+   satu pun slot yang benar-benar terjual, jadi angkanya jujur 0 dari kuota.
+   Mengarang "sisa slot" palsu adalah persis yang dilarang PRD A10. */
+
+/** kuota slot Founding Member (PRD A2: slot 1–300) */
+export const FOUNDING_MEMBER_SLOTS = 300
+
+export interface PriceState {
+  /** tier harga aktif; `founding_member` selama belum ada pembayaran */
+  tier: string
+  /** harga siap tampil (sudah diformat) */
+  priceLabel: string
+  /** harga sebagai angka — satu-satunya yang dipakai hitung total */
+  priceNumber: number
+  /** slot yang benar-benar sudah terjual */
+  slotSold: number
+  /** sisa kuota slot */
+  slotsLeft: number
+  /** true = dibaca dari tabel `pricing_state` (harga bergerak); false = snapshot statis */
+  isDynamic: boolean
+}
+
+/**
+ * Harga Founding Member apa adanya dari satu sumber statis. Dipakai SSR
+ * (first paint tidak kosong) **dan** sebagai fallback `/api/price` saat tabel
+ * `pricing_state` belum ada / Supabase belum dikonfigurasi.
+ */
+export function staticPriceState(): PriceState {
+  return {
+    tier: 'founding_member',
+    priceLabel: formatIDR(FOUNDING_MEMBER.price),
+    priceNumber: FOUNDING_MEMBER.price,
+    slotSold: 0,
+    slotsLeft: FOUNDING_MEMBER_SLOTS,
+    isDynamic: false,
+  }
+}
+
 /* ── LABEL PERIODE ────────────────────────────────────────────────────────── */
 
 export const BILLING_PERIOD_LABEL: Record<BillingPeriod, string> = {
@@ -286,8 +330,18 @@ export const CHECKOUT_COPY = {
   ctaHint: 'Kami kirim tautan konfirmasi ke emailmu. Tanpa password, tanpa tagihan otomatis.',
   escapeLabel: 'Nanti aja dulu',
   escapeHint: 'Kamu bisa balik kapan aja — nggak ada yang dikunci.',
-  livePriceNote:
-    'Demo: harga Founding Member masih statis. Di produksi dibaca real-time dari /api/price.',
+} as const
+
+/* ── CATATAN HARGA (BUKAN klaim palsu) ──────────────────────────────────────
+   Dipilih dari `isDynamic` yang dikembalikan `GET /api/price`. Selama
+   pembayaran (Midtrans) belum aktif, tidak ada satu pun pembelian yang
+   menggerakkan harga — jadi yang jujur adalah mengatakannya apa adanya
+   (PRD A10), bukan menampilkan "harga naik" yang tidak pernah terjadi. */
+export const LIVE_PRICE_NOTE = {
+  dynamic:
+    'Harga Founding Member dibaca real-time — angka terbaru dari pembelian yang sudah masuk.',
+  static:
+    'Pembayaran (Midtrans) belum aktif, jadi harga Founding Member masih statis. Begitu aktif, angka ini naik sendiri mengikuti pembelian terakhir.',
 } as const
 
 export interface CheckoutStep {

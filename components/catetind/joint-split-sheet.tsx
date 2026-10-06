@@ -125,11 +125,11 @@ export function JointSplitSheet({
     >
       {/* nominal transaksi yang sedang dibagi */}
       <div className="flex items-center justify-between gap-3 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/12">
-        <span className="flex items-center gap-2 text-[12.5px] font-semibold text-ink/60">
+        <span className="flex items-center gap-2 text-[12.5px] font-medium text-forest/60">
           <Scale className="size-4 text-forest" strokeWidth={2.3} />
           Nominal transaksi
         </span>
-        <span className="text-[15px] font-black tabular-nums text-ink">
+        <span className="text-[15px] font-semibold tabular-nums text-forest">
           {moneyLabel(total, false)}
         </span>
       </div>
@@ -142,7 +142,7 @@ export function JointSplitSheet({
         onChange={setMode}
         ariaLabel="Mode pembagian"
       />
-      <p className="mt-2 text-[11.5px] leading-relaxed text-ink/45">
+      <p className="mt-2 text-[11.5px] leading-relaxed text-forest/45">
         {SPLIT_MODES.find((item) => item.id === mode)?.hint}
       </p>
 
@@ -150,10 +150,10 @@ export function JointSplitSheet({
       <div className="mt-4 space-y-3">
         <RevealStep show={mode === 'equal'}>
           <div className="rounded-2xl bg-cream px-4 py-3.5 ring-1 ring-soil/12">
-            <p className="text-[12.5px] font-semibold text-ink/70">
+            <p className="text-[12.5px] font-medium text-forest/70">
               {me.name} 50% · {partner.name} 50%
             </p>
-            <p className="mt-1 text-[11.5px] text-ink/45">
+            <p className="mt-1 text-[11.5px] text-forest/45">
               Bagi rata = {moneyLabel(Math.round(total / 2), false)} per orang.
             </p>
           </div>
@@ -190,7 +190,7 @@ export function JointSplitSheet({
                 Isi nominal transaksinya dulu ya, biar sisi satunya bisa dihitung otomatis.
               </p>
             ) : (
-              <p className="text-[11.5px] leading-relaxed text-ink/45">
+              <p className="text-[11.5px] leading-relaxed text-forest/45">
                 Ketik di salah satu sisi — sisi satunya menyesuaikan sendiri supaya tetap pas{' '}
                 {moneyLabel(total, false)}.
               </p>
@@ -213,16 +213,16 @@ export function JointSplitSheet({
 
       {/* ringkasan hasil pembagian — selalu terlihat sebelum simpan */}
       <div className="mt-4 rounded-2xl bg-hud-sage/15 px-4 py-3 ring-1 ring-hud-sage/30">
-        <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#000000]/70">
+        <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-forest/70">
           Hasil pembagian
         </p>
-        <p className="mt-2 flex items-center justify-between gap-3 text-[12.5px] font-semibold text-[#000000]">
+        <p className="mt-2 flex items-center justify-between gap-3 text-[12.5px] font-medium text-forest">
           <span>
             {me.avatar} {me.name}
           </span>
           <span className="tabular-nums">{moneyLabel(mineShare, false)}</span>
         </p>
-        <p className="mt-1 flex items-center justify-between gap-3 text-[12.5px] font-semibold text-[#000000]">
+        <p className="mt-1 flex items-center justify-between gap-3 text-[12.5px] font-medium text-forest">
           <span>
             {partner.avatar} {partner.name}
           </span>
@@ -267,8 +267,8 @@ function PercentSlider({
 
   return (
     <div className="rounded-2xl bg-cream px-4 py-4 ring-1 ring-soil/12">
-      <div className="flex items-center justify-between gap-2 text-[12.5px] font-semibold">
-        <span className="flex items-center gap-1.5 text-[#000000]">
+      <div className="flex items-center justify-between gap-2 text-[12.5px] font-medium">
+        <span className="flex items-center gap-1.5 text-forest">
           <span aria-hidden>{me.avatar}</span>
           {me.name} {percent}%
         </span>
@@ -326,14 +326,14 @@ function PercentSlider({
         </motion.span>
       </div>
 
-      <div className="mt-1.5 flex items-center justify-between text-[11.5px] font-semibold tabular-nums text-ink/50">
+      <div className="mt-1.5 flex items-center justify-between text-[11.5px] font-medium tabular-nums text-forest/50">
         <span>{moneyLabel(mineShare, false)}</span>
         <span>{moneyLabel(total - mineShare, false)}</span>
       </div>
 
       {/* quick-pick 60/40 · 70/30 · 80/20 */}
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <span className="text-[11px] font-semibold text-ink/40">Cepat:</span>
+        <span className="text-[11px] font-medium text-forest/40">Cepat:</span>
         {PERCENT_PRESETS.map((preset) => {
           const active = percent === preset.me
           return (
@@ -343,10 +343,10 @@ function PercentSlider({
               onClick={() => onPercentChange(preset.me)}
               aria-pressed={active}
               className={cn(
-                'rounded-full px-3 py-1.5 text-[11.5px] font-semibold transition-colors active:scale-95',
+                'rounded-full px-3 py-1.5 text-[11.5px] font-medium transition-colors active:scale-95',
                 active
                   ? 'bg-forest text-mint'
-                  : 'bg-soil/[0.1] text-ink/60 hover:bg-soil/[0.1]',
+                  : 'bg-soil/[0.1] text-forest/60 hover:bg-soil/[0.1]',
               )}
             >
               {preset.me}/{preset.partner}

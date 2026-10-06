@@ -7,11 +7,10 @@ import { recordAiUsage } from '@/lib/ai-usage-store'
 import type { HistoryTransaction } from '@/lib/data/history'
 import { recordTransaction } from '@/lib/transaction-bus'
 import {
-  MOCK_RECEIPT_READ_MS,
   draftFormFrom,
-  mockReceiptScan,
   parseSpokenTransaction,
   type ExtractedField,
+  type ExtractedTransaction,
   type TransactionDraftForm,
 } from '@/lib/transaction-ai'
 
@@ -105,6 +104,38 @@ function voiceProblemCopy(error: string): string {
   }
 }
 
+/* ── JEMBATAN KE ROUTE AI (paket 63) ─────────────────────────────────────────
+   Dua pintu masuk (struk & ucapan) sekarang memanggil route NYATA
+   (`POST /api/ai/ocr`, `POST /api/parse-voice`) yang memakai model di server.
+   Kalau provider tak bisa dihubungi, perilakunya DIBEDAKAN dengan sengaja:
+
+     · STRUK — mock "OCR" (menebak merchant dari NAMA FILE) TIDAK dipakai lagi:
+       menampilkan tebakan sebagai hasil baca struk adalah klaim palsu. Gagal =
+       state problem jujur + ajakan foto ulang / isi manual.
+     · UCAPAN — transkripnya NYATA (dari Web Speech API), jadi parser aturan lokal
+       tetap jujur dipakai sebagai jaring aman saat provider mati. */
+
+/** File gambar → base64 tanpa prefix data URL (mimeType dikirim terpisah) */
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onerror = () => reject(new Error('Gagal membaca berkas gambar.'))
+    reader.onload = () => {
+      const result = typeof reader.result === 'string' ? reader.result : ''
+      const comma = result.indexOf(',')
+      resolve(comma >= 0 ? result.slice(comma + 1) : result)
+    }
+    reader.readAsDataURL(file)
+  })
+}
+
+/** payload route AI → `ExtractedTransaction`, atau `null` kalau bentuknya asing */
+function readTransaction(payload: unknown): ExtractedTransaction | null {
+  const transaction = (payload as { transaction?: unknown } | null)?.transaction
+  if (!transaction || typeof transaction !== 'object') return null
+  return transaction as ExtractedTransaction
+}
+
 export function useTransactionCapture({
   onUserEcho,
 }: {
@@ -127,6 +158,8 @@ export function useTransactionCapture({
   const recognition = useRef<SpeechRecognitionLike | null>(null)
   /** transkrip final yang sudah terkumpul (handler `onend` membacanya) */
   const transcriptRef = useRef('')
+  /** aksi terakhir (struk/ucapan) — tombol "Coba lagi" di state problem mengulanginya */
+  const retryRef = useRef<(() => void) | null>(null)
 
   /* dukungan Speech API baru dicek setelah mount: HTML server & render pertama
      client harus identik dulu (pola yang sama dengan pembacaan
@@ -168,10 +201,10 @@ export function useTransactionCapture({
 
   /* ── 📸 SCAN STRUK ────────────────────────────────────────────────────────
      File dipilih lewat `<input type="file" accept="image/*"
-     capture="environment">` (kamera belakang di HP, file picker di web) — alur
-     native yang sama dengan engine input manual. Yang dibaca dari file hanya
-     NAMANYA: mock "OCR" menurunkan merchant & keyakinan dari situ, lalu hasilnya
-     masuk kartu konfirmasi. Produksi: filenya dikirim ke /api/ocr (GPT-4o-mini). */
+     capture="environment">` (kamera belakang di HP, file picker di web). Berkasnya
+     dikirim sebagai base64 ke `POST /api/ai/ocr` (model vision di server, PRD
+     385–412), lalu hasilnya masuk kartu konfirmasi. Gagal = state problem jujur;
+     TIDAK ada tebakan yang dipajang seolah hasil baca struk. */
   const startReceiptScan = useCallback(
     (file: File) => {
       releaseVoice()
@@ -181,22 +214,65 @@ export function useTransactionCapture({
       setFormError(null)
       setLiveTranscript('')
       setPhase('reading')
-      /* METERING AI (paket 42): struk yang dibaca = satu panggilan OCR. Dulu
-         kuota tidak pernah bergerak walau fitur ini dipakai berapa kali pun. */
+      /* METERING AI (paket 42): struk yang dibaca = satu panggilan OCR. */
       recordAiUsage('ocr')
       onUserEcho(AI_CAPTURE_COPY.photoEcho(file.name))
+      /* "Coba lagi" di state problem mengulang pemindaian FILE yang sama */
+      retryRef.current = () => startReceiptScan(file)
 
-      readTimer.current = window.setTimeout(() => {
-        readTimer.current = null
-        /* preferensi user diterapkan SEBELUM draft masuk kartu konfirmasi
-           (paket 54): kalau "Kategorisasi/Penamaan Otomatis" dimatikan, field
-           itu kosong dan user yang mengisinya. */
-        setDraft(withCapturePrefs(draftFormFrom(mockReceiptScan(file.name))))
-        setPhase('confirm')
-      }, MOCK_RECEIPT_READ_MS)
+      void (async () => {
+        try {
+          const base64 = await fileToBase64(file)
+          const res = await fetch('/api/ai/ocr', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ image: base64, mimeType: file.type || undefined }),
+          })
+          const payload = res.ok ? await res.json() : null
+          const transaction = readTransaction(payload)
+          if (transaction) {
+            /* preferensi user diterapkan SEBELUM draft masuk kartu konfirmasi
+               (paket 54): kalau "Kategorisasi/Penamaan Otomatis" dimatikan, field
+               itu kosong dan user yang mengisinya. */
+            setDraft(withCapturePrefs(draftFormFrom(transaction)))
+            setPhase('confirm')
+            return
+          }
+        } catch {
+          /* jaringan/berkas gagal → problem di bawah */
+        }
+        setProblem(AI_CAPTURE_COPY.scanFailed)
+        setPhase('problem')
+      })()
     },
     [clearReadTimer, onUserEcho, releaseVoice],
   )
+
+  /* ── MERAPIKAN TRANSKRIP → DRAFT ─────────────────────────────────────────────
+     Transkripnya NYATA (Web Speech API). Di sini ia dikirim ke
+     `POST /api/parse-voice` (model di server) untuk diubah jadi draft; kalau
+     provider tak bisa dihubungi, parser aturan lokal merapikan transkrip yang
+     sama — hasilnya tetap jujur karena tidak ada yang dikarang. */
+  const resolveVoiceDraft = useCallback(async (transcript: string) => {
+    try {
+      const res = await fetch('/api/parse-voice', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ transcript }),
+      })
+      const payload = res.ok ? await res.json() : null
+      const transaction = readTransaction(payload)
+      if (transaction) {
+        setDraft(withCapturePrefs(draftFormFrom(transaction, transcript)))
+        setPhase('confirm')
+        return
+      }
+    } catch {
+      /* jatuh ke parser aturan lokal di bawah */
+    }
+    setDraft(withCapturePrefs(draftFormFrom(parseSpokenTransaction(transcript), transcript)))
+    setPhase('confirm')
+  }, [])
 
   /* ── 🎤 VOICE ─────────────────────────────────────────────────────────────
      STT terjadi di browser (PRD A3). Transkrip interim langsung ditampilkan,
@@ -218,6 +294,8 @@ export function useTransactionCapture({
     setFormError(null)
     setLiveTranscript('')
     setPhase('listening')
+    /* "Coba lagi" di state problem mengulang mendengarkan */
+    retryRef.current = () => startVoice()
 
     const rec = new Ctor()
     rec.lang = 'id-ID'
@@ -279,10 +357,10 @@ export function useTransactionCapture({
          dihitung — percobaan tanpa suara tidak mengambil kuota user */
       recordAiUsage('voice')
       onUserEcho(transcript)
-      setDraft(
-        withCapturePrefs(draftFormFrom(parseSpokenTransaction(transcript), transcript)),
-      )
-      setPhase('confirm')
+      /* draft dibentuk ASINKRON: transkrip → model di server (atau parser aturan
+         lokal saat provider tak bisa dihubungi). Selama menunggu, bubble tetap
+         menampilkan state "mendengar" — tidak ada state palsu yang dikarang. */
+      void resolveVoiceDraft(transcript)
     }
 
     recognition.current = rec
@@ -294,7 +372,7 @@ export function useTransactionCapture({
       setProblem(AI_CAPTURE_COPY.voiceFailed)
       setPhase('problem')
     }
-  }, [clearReadTimer, onUserEcho, releaseVoice])
+  }, [clearReadTimer, onUserEcho, releaseVoice, resolveVoiceDraft])
 
   /** tombol "Selesai" — hentikan mendengar, hasilnya diproses oleh `onend` */
   const finishVoice = useCallback(() => {
@@ -336,6 +414,30 @@ export function useTransactionCapture({
     setFormError(null)
     setLiveTranscript('')
   }, [clearReadTimer, releaseVoice])
+
+  /**
+   * Buka kartu konfirmasi dari PESAN CHAT (paket 65 · Tugas D).
+   *
+   * Ucapan transaksi yang diketik user ("gua habis makan 50k, catet ya") dirapikan
+   * dengan SUDUT YANG SAMA dengan input suara — `parseSpokenTransaction()` (aturan
+   * lokal di klien, bukan tebakan) + preferensi AI (`withCapturePrefs`) — lalu
+   * ditampilkan sebagai kartu konfirmasi yang bisa diedit. Tidak ada uang yang
+   * ditulis di sini; user tetap harus menekan "Catat ✓" (`confirmCapture`).
+   * @returns `true` kalau draft terbentuk (kartu konfirmasi tampil)
+   */
+  const startChatDraft = useCallback((transcript: string): boolean => {
+    const text = transcript.trim()
+    if (!text) return false
+    const extracted = parseSpokenTransaction(text)
+    const draft = withCapturePrefs(draftFormFrom(extracted, text))
+    transcriptRef.current = text
+    setDraft(draft)
+    setLiveTranscript('')
+    setProblem(null)
+    setFormError(null)
+    setPhase('confirm')
+    return true
+  }, [])
 
   /**
    * Simpan hasil konfirmasi. HANYA di sini transaksi benar-benar ditulis —
@@ -401,6 +503,11 @@ export function useTransactionCapture({
     return transaction
   }, [draft])
 
+  /** ulangi aksi AI terakhir (foto struk atau mendengarkan) — tombol "Coba lagi" */
+  const retryCapture = useCallback(() => {
+    retryRef.current?.()
+  }, [])
+
   /** alur sedang berjalan (membaca / mendengar / menunggu keputusan user) */
   const busy = phase !== 'idle'
 
@@ -415,8 +522,11 @@ export function useTransactionCapture({
     startReceiptScan,
     startVoice,
     finishVoice,
+    retryCapture,
     cancelCapture,
     updateDraft,
     confirmCapture,
+    /** dari pesan chat: buka kartu konfirmasi (paket 65 · Tugas D) */
+    startChatDraft,
   }
 }

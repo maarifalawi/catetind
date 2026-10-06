@@ -14,6 +14,16 @@
    ────────────────────────────────────────────────────────────────────────── */
 
 export const PUBLIC_ROUTES = [
+  /* Landing page publik di ROOT — pengunjungnya belum tentu punya akun, jadi
+     kedua gerbang global (langganan & kunci PIN) harus dilewati di sini.
+     Pencocokan `/` sengaja EXACT: matcher di `isPublicRoute` memakai
+     `=== route || startsWith(route + '/')`, jadi `/` tidak ikut menyerap `/app`,
+     `/wallet`, dst. */
+  '/',
+  /* Halaman "Terima kasih" setelah registrasi dari landing — user baru saja
+     mendaftar, ia belum bisa login/berlangganan, jadi gerbang pun dilewati. */
+  '/registered',
+  '/welcome',
   '/login',
   '/checkout',
   '/privacy',

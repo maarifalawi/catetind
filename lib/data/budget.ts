@@ -64,6 +64,13 @@ export interface SinkingFundItem {
   scope: BudgetScope
   /** false = belum setor bulan ini → memicu nudge (Domain 2C.4) */
   contributedThisMonth: boolean
+  /**
+   * id baris `goals` di Supabase (uuid) — `undefined` = baris lokal yang belum
+   * pernah dikirim (paket 64 · Paket D). Id domain celengan numerik, sedangkan
+   * primary key tabelnya uuid; `remoteId` menjembatani keduanya TANPA mengubah
+   * type `id` (yang dipakai puluhan test & komponen). Dibaca `funds-remote.ts`.
+   */
+  remoteId?: string
 }
 
 /* ── KONSTANTA WAKTU (MOCK) ──────────────────────────────────────────────────
@@ -626,6 +633,20 @@ export interface BudgetHud {
   spent: number
   /** true = `remaining` < 0: saldo tidak cukup memenuhi celengan bulan ini */
   shortfall: boolean
+  /* ── TURUNAN "HARI INI" (paket 66) ────────────────────────────────────────
+     `dailyBudget` di atas = rata-rata sisa periode ÷ hari tersisa, jadi satu
+     pengeluaran Rp 600.000 hanya menggerakkannya ~600rb/daysLeft — di mata user
+     angkanya "tidak bergerak" (keluhan nyata: mencatat 600rb, jatah tampak
+     sama). Tiga angka di bawah menjawab pertanyaan yang benar-benar dibaca di
+     kartu Home: "hari ini aku masih boleh pakai berapa?" */
+  /** porsi hari ini SEBELUM pengeluaran hari ini (sisa sebelum hari ini ÷ hari) */
+  todayAllowance: number
+  /** `todayAllowance − spentToday`, dijaga ≥ 0 — angka utama kartu Jatah Hari Ini */
+  remainingToday: number
+  /** porsi JATAH HARI INI yang sudah terpakai (0..1) — dasar bar kartu Home */
+  todayUsedPct: number
+  /** uang keluar HARI INI (yang benar-benar dikirim pemanggil) */
+  spentToday: number
 }
 
 export function computeDailyHud({
@@ -634,6 +655,7 @@ export function computeDailyHud({
   sinkingObligation = 0,
   sinkingFunds,
   spent = SPENT_THIS_MONTH,
+  spentToday = 0,
   earned,
   currentDay,
   daysInMonth,
@@ -661,6 +683,14 @@ export function computeDailyHud({
    * NYATA dari ledger.
    */
   spent?: number
+  /**
+   * Uang keluar HARI INI saja (paket 66) — bagian dari `spent` di atas yang
+   * bertanggal hari ini. Dipakai kartu Home untuk menghitung "sisa jatah hari
+   * ini" & bar "terpakai" yang benar-benar bergerak saat user mencatat
+   * pengeluaran hari itu. Kosong (atau 0) = turunan hari-ini jatuh ke perilaku
+   * lama (`todayAllowance = dailyBudget`), jadi pemanggil lama tidak berubah.
+   */
+  spentToday?: number
   /**
    * Pemasukan NYATA di dalam window (paket 57) — dipakai HANYA untuk window
    * non-bulanan. Window bulan kalender memakai `monthlyIncome` (konfigurasi
@@ -716,6 +746,26 @@ export function computeDailyHud({
   const shortfall = remaining < 0
   // saat shortfall jatah DITAHAN (0) — jangan pernah tawarkan uang yang belum ada
   const dailyBudget = shortfall ? 0 : Math.max(0, Math.floor(remaining / daysLeft))
+
+  /* ── TURUNAN "HARI INI" (paket 66) ────────────────────────────────────────
+     Porsi hari ini dihitung dari sisa SEBELUM pengeluaran hari ini, lalu
+     dikurangi yang sudah keluar hari ini:
+
+       todayAllowance = ⌊(availablePool − (spent − spentToday)) ÷ daysLeft⌋
+       remainingToday = max(0, todayAllowance − spentToday)
+
+     Kenapa begini: jatah yang tidak habis hari ini OTOMATIS menambah porsi
+     besok (besok `spent − spentToday` bertambah & `daysLeft` berkurang), jadi
+     tetap "dinamis" — tapi pengeluarannya tidak lagi didilusi daysLeft, sehingga
+     mencatat Rp 600.000 langsung terlihat di angka utama. `spentToday` dijaga
+     agar tidak pernah melebihi `spentInPeriod` (pengirim boleh saja hanya
+     mengirim salah satunya). */
+  const spentTodaySafe = Math.min(Math.max(spentToday, 0), Math.max(spentInPeriod, 0))
+  const spentBeforeToday = Math.max(0, spentInPeriod - spentTodaySafe)
+  const todayAllowance = Math.max(0, Math.floor((availablePool - spentBeforeToday) / daysLeft))
+  const remainingToday = Math.max(0, todayAllowance - spentTodaySafe)
+  const todayUsedPct = todayAllowance > 0 ? Math.min(spentTodaySafe / todayAllowance, 1) : 0
+
   return {
     availablePool,
     remaining,
@@ -728,6 +778,10 @@ export function computeDailyHud({
     sinkingObligation: periodSinking,
     spent: spentInPeriod,
     shortfall,
+    todayAllowance,
+    remainingToday,
+    todayUsedPct,
+    spentToday: spentTodaySafe,
   }
 }
 
@@ -898,6 +952,8 @@ export interface FundContribution {
   amount: number
   /** id dompet sumber — cocok dengan `WALLET_SOURCES` */
   walletId: string
+  /** id baris `goal_contributions` di Supabase (uuid) — lihat `SinkingFundItem.remoteId` */
+  remoteId?: string
 }
 
 export const FUND_CONTRIBUTIONS: FundContribution[] = [
@@ -1150,7 +1206,7 @@ export const PRIORITY_OPTIONS: {
   badge: string
   dot: string
 }[] = [
-  { id: 'rendah', label: 'Rendah', badge: 'bg-oat text-ink/55 ring-1 ring-ink/20', dot: 'bg-ink/20' },
+  { id: 'rendah', label: 'Rendah', badge: 'bg-oat text-forest/55 ring-1 ring-ink/20', dot: 'bg-ink/20' },
   { id: 'sedang', label: 'Sedang', badge: 'bg-hud-sage/20 text-[#b5b987] ring-1 ring-hud-sage/30', dot: 'bg-hud-sage' },
   { id: 'tinggi', label: 'Tinggi', badge: 'bg-hud-amber/20 text-[#b89191] ring-1 ring-hud-amber/30', dot: 'bg-hud-amber' },
   { id: 'kritis', label: 'Kritis', badge: 'bg-hud-terracotta/15 text-hud-terracotta ring-1 ring-hud-terracotta/25', dot: 'bg-hud-terracotta' },
@@ -1351,27 +1407,30 @@ export const HUD_COPY = {
 } as const
 
 /* ── COPY KARTU JATAH HARI INI DI HOME ────────────────────────────────────
-   Kartu Home memakai angka kanon yang SAMA (`DAILY_HUD`), tapi bentuknya
-   ringkas: ring persen + nominal besar. Label status ring mengikuti kanon PRD
-   2B.2 — sage / amber / terracotta, tidak pernah merah. */
+   Kartu Home memakai angka kanon yang SAMA (`DAILY_HUD` lewat `computeDailyHud`),
+   tapi bentuknya ringkas: satu angka + satu bar.
+
+   PAKET 66 — kartu ini dipangkas sesuai permintaan pemilik produk:
+     · subjudul "Budget harian dinamis"          → DIHAPUS (judul sudah jelas);
+     · baris "Sisa bulan … · n hari lagi · Cicilan terpotong …" → DIHAPUS;
+     · tautan "Atur pemasukan & cicilan"          → DIHAPUS (sudah bisa diatur di
+       Pengaturan; tautan berulang di kartu cuma menambah teks);
+     · angka utama = `remainingToday` ("sisa jatah HARI INI"), bar = `todayUsedPct`
+       — dua-duanya bergerak begitu user mencatat pengeluaran HARI INI;
+     · caption "sisa jatah hari ini" di samping angka → DIHAPUS (judul kartu
+       sudah menyebut hal yang sama). */
 export type HudStatus = 'onTrack' | 'approaching' | 'over'
 
 export const HOME_HUD_COPY = {
   title: 'Jatah Hari Ini',
-  subtitle: 'Budget harian dinamis',
-  dailyCaption: 'sisa jatah hari ini',
-  /* bar mengukur PEMAKAIAN KOLAM PERIODE (audit Daily Budget), bukan rasio
-     harian yang pembilangnya sudah ikut mengurangi penyebutnya sendiri */
-  usedCaption: 'terpakai periode ini',
-  remainingLead: 'Sisa bulan',
-  daysLeftSuffix: 'hari lagi',
-  installmentsLead: 'Cicilan terpotong',
-  /** pintu mengubah pembagi jatah (pemasukan & cicilan) — selalu tersedia,
-   *  bukan cuma saat angka belum diatur (audit "Daily Budget Symptom B") */
-  settingsCta: 'Atur pemasukan & cicilan',
+  /* bar mengukur PEMAKAIAN JATAH HARI INI (paket 66), bukan pemakaian kolam
+     periode: pembilang & penyebutnya dari hari yang sama, jadi satu catatan
+     langsung terlihat menggerakkan bar — tanpa mengubah rumus periode yang
+     dipakai /budget (`periodUsagePct` tetap ada & tetap diuji di sana). */
+  usedCaption: 'terpakai',
   reviewCta: 'Review Pengeluaran Hari Ini',
   status: {
-    onTrack: { label: 'On track', ring: '#b5b987', copy: 'Masih banyak ruang periode ini! 🌿' },
+    onTrack: { label: 'On track', ring: '#b5b987', copy: 'Masih banyak ruang hari ini! 🌿' },
     approaching: {
       /* dulu "Hampir habis" — diganti supaya tidak ada kata "habis" (kanon 2B.2:
          nada nurturing, bukan mengancam) */

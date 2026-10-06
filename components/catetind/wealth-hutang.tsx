@@ -189,7 +189,7 @@ export function WealthHutang({
   const badge = dtiBadge(ratio)
   const badgeLabel = dtiKnown ? badge.label : DTI_UNKNOWN_COPY.label
   const badgeCopy = dtiKnown ? badge.copy : DTI_UNKNOWN_COPY.copy
-  const badgePillClass = dtiKnown ? badge.pillClassName : 'bg-sage/40 text-ink/60 ring-soil/12'
+  const badgePillClass = dtiKnown ? badge.pillClassName : 'bg-sage/40 text-forest/60 ring-soil/12'
   const owed = activeDebtRemaining(debts)
   const receivable = activeReceivableTotal(debts)
   const mine = personalDebts(debts, 'owed_by_me')
@@ -302,7 +302,7 @@ export function WealthHutang({
                 <button
                   type="button"
                   onClick={onAddDebt}
-                  className="flex w-full items-center justify-center gap-2 rounded-[1.5rem] border-2 border-dashed border-forest/20 bg-cream/60 px-5 py-4 text-[13.5px] font-semibold text-ink/60 transition-colors hover:border-forest/35 hover:bg-cream hover:text-ink active:scale-[0.99]"
+                  className="flex w-full items-center justify-center gap-2 rounded-[1.5rem] border-2 border-dashed border-forest/20 bg-cream/60 px-5 py-4 text-[13.5px] font-medium text-forest/60 transition-colors hover:border-forest/35 hover:bg-cream hover:text-forest active:scale-[0.99]"
                 >
                   <Plus className="size-4" strokeWidth={2.6} />
                   Tambah Utang/Piutang
@@ -376,8 +376,8 @@ function SegmentedControl({
             aria-selected={active}
             onClick={() => onChange(option.id)}
             className={cn(
-              'relative z-10 flex-1 rounded-full px-4 py-2.5 text-[13px] font-bold transition-colors duration-200',
-              active ? 'text-ink' : 'text-ink/45 hover:text-ink/70',
+              'relative z-10 flex-1 rounded-full px-4 py-2.5 text-[13px] font-medium transition-colors duration-200',
+              active ? 'text-forest' : 'text-forest/45 hover:text-forest/70',
             )}
           >
             {option.label}
@@ -428,13 +428,13 @@ function SummaryCard({
         )}
       />
       <div className="relative">
-        <span className="text-[10.5px] font-bold uppercase tracking-[0.2em] text-ink/40">
+        <span className="text-[10.5px] font-medium uppercase tracking-[0.2em] text-forest/40">
           {piutang ? 'Total Piutang Aktif' : 'Total Hutang Aktif'}
         </span>
-        <p className="mt-2 font-display text-[1.9rem] font-black leading-none tracking-tight text-ink tabular-nums sm:text-[2.2rem]">
+        <p className="mt-2 font-display text-[1.9rem] font-semibold leading-none tracking-tight text-forest tabular-nums sm:text-[2.2rem]">
           {maskMoney(piutang ? receivable : owed, masked)}
         </p>
-        <p className="mt-2 text-[11.5px] text-ink/45">
+        <p className="mt-2 text-[11.5px] text-forest/45">
           {activeCount} catatan aktif
           {piutang ? ' · duit kamu yang masih di orang lain' : ''}
         </p>
@@ -446,16 +446,16 @@ function SummaryCard({
         ) : (
           <>
             <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
-              <span className="text-[12px] text-ink/55">
+              <span className="text-[12px] text-forest/55">
                 Cicilan Bulan Ini
-                <b className="ml-1.5 font-bold text-ink tabular-nums">
+                <b className="ml-1.5 font-semibold text-forest tabular-nums">
                   {maskMoney(installments, masked)}
                 </b>
               </span>
               {/* badge DTI — 3 nada kanon, TANPA merah */}
               <span
                 className={cn(
-                  'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11.5px] font-bold ring-1 ring-inset',
+                  'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11.5px] font-medium ring-1 ring-inset',
                   badgePillClass,
                 )}
               >
@@ -466,10 +466,10 @@ function SummaryCard({
               </span>
             </div>
 
-            <p className="mt-2 text-[11.5px] leading-relaxed text-ink/50">{badgeCopy}</p>
+            <p className="mt-2 text-[11.5px] leading-relaxed text-forest/50">{badgeCopy}</p>
 
             {/* jembatan ke Daily HUD (Domain 2B) */}
-            <p className="mt-3 rounded-2xl bg-sage/50 px-3.5 py-3 text-[11.5px] leading-relaxed text-ink/65">
+            <p className="mt-3 rounded-2xl bg-sage/50 px-3.5 py-3 text-[11.5px] leading-relaxed text-forest/65">
               {hudDeductionCopy(maskMoney(installments, masked))}
             </p>
           </>
@@ -483,10 +483,10 @@ function SummaryCard({
 function SectionHeader({ title, helper }: { title: string; helper?: string }) {
   return (
     <div className="mb-2.5 flex items-baseline justify-between gap-3">
-      <h3 className="text-[11px] font-black uppercase tracking-[0.22em] text-ink/35">
+      <h3 className="text-[11px] font-semibold uppercase tracking-[0.22em] text-forest/35">
         {title}
       </h3>
-      {helper && <span className="text-[10.5px] text-ink/30">{helper}</span>}
+      {helper && <span className="text-[10.5px] text-forest/30">{helper}</span>}
     </div>
   )
 }
@@ -521,10 +521,10 @@ function EmptyDebtState({
         >
           <ShieldCheck className="size-8" strokeWidth={2.2} />
         </motion.span>
-        <h2 className="mt-4 font-display text-[17px] font-black tracking-tight text-ink">
+        <h2 className="mt-4 font-display text-[17px] font-semibold tracking-tight text-forest">
           🎉 {ALL_SETTLED_TITLE}
         </h2>
-        <p className="mt-1.5 max-w-sm text-[13px] leading-relaxed text-ink/60">
+        <p className="mt-1.5 max-w-sm text-[13px] leading-relaxed text-forest/60">
           {ALL_SETTLED_COPY}
         </p>
       </div>
@@ -537,10 +537,10 @@ function EmptyDebtState({
       <span aria-hidden className="text-[28px]">
         {piutang ? '📮' : '🕊️'}
       </span>
-      <h2 className="mt-3 font-display text-[16px] font-bold tracking-tight text-ink">
+      <h2 className="mt-3 font-display text-[16px] font-semibold tracking-tight text-forest">
         {contextLine ?? (piutang ? EMPTY_PIUTANG_TITLE : EMPTY_HUTANG_TITLE)}
       </h2>
-      <p className="mt-1.5 max-w-sm text-[13px] leading-relaxed text-ink/55">
+      <p className="mt-1.5 max-w-sm text-[13px] leading-relaxed text-forest/55">
         {contextLine
           ? CONTEXT_EMPTY_COPY.debts.body
           : piutang
@@ -550,7 +550,7 @@ function EmptyDebtState({
       <button
         type="button"
         onClick={onAdd}
-        className="mt-5 inline-flex h-11 items-center gap-2 rounded-2xl bg-forest px-5 text-[13.5px] font-semibold text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
+        className="mt-5 inline-flex h-11 items-center gap-2 rounded-2xl bg-forest px-5 text-[13.5px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
       >
         <Plus className="size-4" strokeWidth={2.6} />
         {contextLine
@@ -596,19 +596,19 @@ function SnowballTracker({
       <div className="relative">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h3 className="flex items-center gap-1.5 font-display text-[14px] font-bold tracking-tight text-ink">
+            <h3 className="flex items-center gap-1.5 font-display text-[14px] font-semibold tracking-tight text-forest">
               <Snowflake className="size-4 text-hud-sage" strokeWidth={2.4} />
               {SNOWBALL_TITLE}
             </h3>
-            <p className="mt-1 text-[11px] leading-relaxed text-ink/45">{SNOWBALL_HELP}</p>
+            <p className="mt-1 text-[11px] leading-relaxed text-forest/45">{SNOWBALL_HELP}</p>
           </div>
-          <span className="shrink-0 rounded-full bg-hud-sage/25 px-2.5 py-1 text-[10.5px] font-bold text-[#000000] tabular-nums">
+          <span className="shrink-0 rounded-full bg-hud-sage/25 px-2.5 py-1 text-[10.5px] font-semibold text-forest tabular-nums">
             {progress.pct}% lunas
           </span>
         </div>
 
         {/* progres keseluruhan */}
-        <p className="mt-3 text-[12px] font-semibold text-ink/70 tabular-nums">
+        <p className="mt-3 text-[12px] font-medium text-forest/70 tabular-nums">
           Snowball Progress: {maskMoney(progress.paid, masked)}/{maskMoney(progress.principal, masked)}{' '}
           lunas
         </p>
@@ -625,7 +625,7 @@ function SnowballTracker({
 
         {/* bar per hutang (urut sisa terkecil) */}
         {rows.length === 0 ? (
-          <p className="mt-4 rounded-2xl bg-cream/70 px-3.5 py-3 text-[12px] leading-relaxed text-ink/55">
+          <p className="mt-4 rounded-2xl bg-cream/70 px-3.5 py-3 text-[12px] leading-relaxed text-forest/55">
             {SNOWBALL_EMPTY}
           </p>
         ) : (
@@ -692,22 +692,22 @@ function SnowballBar({
             {emoji}
           </span>
           <span className="min-w-0">
-            <span className="block truncate text-[12.5px] font-bold text-ink">{provider}</span>
-            <span className="block truncate text-[10.5px] text-ink/45 tabular-nums">
+            <span className="block truncate text-[12.5px] font-medium text-forest">{provider}</span>
+            <span className="block truncate text-[10.5px] text-forest/45 tabular-nums">
               {done ? 'Lunas! 🎉' : `${maskMoney(debt.remaining, masked)} sisa`}
             </span>
           </span>
         </span>
         <span className="flex shrink-0 items-center gap-2">
           {first && !done && (
-            <span className="rounded-full bg-hud-amber/25 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-[#b89191]">
+            <span className="rounded-full bg-hud-amber/25 px-2 py-0.5 text-[9.5px] font-medium uppercase tracking-wide text-[#b89191]">
               Mulai dari sini
             </span>
           )}
           <span
             className={cn(
-              'text-[11.5px] font-bold tabular-nums',
-              done ? 'text-[#b5b987]' : 'text-ink/55',
+              'text-[11.5px] font-semibold tabular-nums',
+              done ? 'text-[#b5b987]' : 'text-forest/55',
             )}
           >
             {paidPct}% lunas
@@ -830,14 +830,14 @@ function DebtActionRow({
         <button
           type="button"
           onClick={onPay}
-          className="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-2xl bg-hud-sage px-3 text-[12px] font-bold text-[#000000] transition-colors hover:brightness-105 active:scale-[0.98]"
+          className="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-2xl bg-hud-sage px-3 text-[12px] font-medium text-forest transition-colors hover:brightness-105 active:scale-[0.98]"
         >
           <Wallet className="size-3.5 shrink-0" strokeWidth={2.6} />
           <span className="truncate">{payLabel}</span>
         </button>
       ) : (
         settled && (
-          <span className="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-2xl bg-hud-sage/30 text-[11px] font-bold uppercase tracking-wide text-[#000000]">
+          <span className="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-2xl bg-hud-sage/30 text-[11px] font-medium uppercase tracking-wide text-forest">
             <Check className="size-3.5 shrink-0" strokeWidth={3} />
             {DEBT_STATUS_COPY.settled}
           </span>
@@ -850,7 +850,7 @@ function DebtActionRow({
         type="button"
         onClick={onEdit}
         aria-label={WEALTH_ROW_ACTION.editAria(name)}
-        className="inline-flex size-10 shrink-0 items-center justify-center rounded-2xl bg-hud-amber/25 text-[#000000] ring-1 ring-inset ring-hud-amber/40 transition-colors hover:brightness-105 active:scale-95"
+        className="inline-flex size-10 shrink-0 items-center justify-center rounded-2xl bg-hud-amber/25 text-forest ring-1 ring-inset ring-hud-amber/40 transition-colors hover:brightness-105 active:scale-95"
       >
         <Pencil className="size-4" strokeWidth={2.4} />
       </button>
@@ -944,7 +944,7 @@ function PlatformDebtCard({
             setDx(0)
             onPay()
           }}
-          className="flex w-[116px] flex-col items-center justify-center gap-1 bg-hud-sage text-[10.5px] font-bold text-[#000000] transition-colors hover:brightness-105"
+          className="flex w-[116px] flex-col items-center justify-center gap-1 bg-hud-sage text-[10.5px] font-medium text-forest transition-colors hover:brightness-105"
         >
           <Wallet className="size-4" strokeWidth={2.4} />
           {DEBT_CASH_COPY.actionLabel.pay}
@@ -974,36 +974,36 @@ function PlatformDebtCard({
           </span>
           <span className="min-w-0 flex-1">
             <span className="flex items-center gap-1.5">
-              <span className="truncate text-[13.5px] font-bold text-ink">{debt.provider}</span>
+              <span className="truncate text-[13.5px] font-medium text-forest">{debt.provider}</span>
               {/* badge konteks uang hutang ini (paket 47) */}
-              <span className="shrink-0 rounded-full bg-sage/70 px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-forest ring-1 ring-inset ring-forest/10">
+              <span className="shrink-0 rounded-full bg-sage/70 px-1.5 py-0.5 text-[9.5px] font-medium uppercase tracking-wide text-forest ring-1 ring-inset ring-forest/10">
                 {CONTEXT_LABEL[debt.scope]}
               </span>
               {done && (
-                <span className="shrink-0 rounded-full bg-hud-sage/30 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-[#000000]">
+                <span className="shrink-0 rounded-full bg-hud-sage/30 px-2 py-0.5 text-[9.5px] font-medium uppercase tracking-wide text-forest">
                   Lunas
                 </span>
               )}
             </span>
-            <span className="mt-1 block truncate text-[10.5px] text-ink/45 tabular-nums">
+            <span className="mt-1 block truncate text-[10.5px] text-forest/45 tabular-nums">
               Bulan {debt.currentMonth}/{debt.tenor} · Cicilan{' '}
               {maskMoney(debt.monthlyInstallment ?? 0, masked)}/bln · Bunga{' '}
               {debt.interestRate ?? 0}%
             </span>
-            <span className="mt-0.5 block truncate text-[10.5px] text-ink/40">
+            <span className="mt-0.5 block truncate text-[10.5px] text-forest/40">
               Jatuh tempo tanggal {debt.dueDate}
             </span>
           </span>
           <span className="flex shrink-0 flex-col items-end">
-            <span className="text-[13.5px] font-bold text-ink tabular-nums">
+            <span className="text-[13.5px] font-semibold text-forest tabular-nums">
               {maskMoney(debt.remaining, masked)}
             </span>
-            <span className="mt-0.5 text-[10.5px] text-ink/40 tabular-nums">
+            <span className="mt-0.5 text-[10.5px] text-forest/40 tabular-nums">
               dari {maskMoney(debt.principal, masked)}
             </span>
             <ChevronDown
               className={cn(
-                'mt-1 size-3.5 text-ink/30 transition-transform duration-300',
+                'mt-1 size-3.5 text-forest/30 transition-transform duration-300',
                 expanded && 'rotate-180',
               )}
               strokeWidth={2.4}
@@ -1050,27 +1050,27 @@ function PlatformDebtCard({
             <div className="mt-2 rounded-[1.35rem] bg-cream/70 px-3.5 py-3.5 ring-1 ring-inset ring-soil/8">
               <dl className="space-y-2 text-[11.5px]">
                 <div className="flex items-center justify-between gap-3">
-                  <dt className="text-ink/50">Sisa pokok</dt>
-                  <dd className="font-bold text-ink tabular-nums">
+                  <dt className="text-forest/50">Sisa pokok</dt>
+                  <dd className="font-semibold text-forest tabular-nums">
                     {maskMoney(debt.remaining, masked)}
                   </dd>
                 </div>
                 <div className="flex items-center justify-between gap-3">
-                  <dt className="text-ink/50">Sudah dibayar</dt>
-                  <dd className="font-bold text-[#b5b987] tabular-nums">
+                  <dt className="text-forest/50">Sudah dibayar</dt>
+                  <dd className="font-semibold text-[#b5b987] tabular-nums">
                     {maskMoney(paid, masked)}
                   </dd>
                 </div>
                 <div className="flex items-center justify-between gap-3">
-                  <dt className="text-ink/50">Estimasi total bunga</dt>
-                  <dd className="font-bold text-hud-terracotta tabular-nums">
+                  <dt className="text-forest/50">Estimasi total bunga</dt>
+                  <dd className="font-semibold text-hud-terracotta tabular-nums">
                     {maskMoney(interest, masked)}
                   </dd>
                 </div>
                 {debt.notes && (
                   <div className="flex items-start justify-between gap-3">
-                    <dt className="shrink-0 text-ink/50">Catatan</dt>
-                    <dd className="text-right text-ink/70">{debt.notes}</dd>
+                    <dt className="shrink-0 text-forest/50">Catatan</dt>
+                    <dd className="text-right text-forest/70">{debt.notes}</dd>
                   </div>
                 )}
               </dl>
@@ -1081,13 +1081,13 @@ function PlatformDebtCard({
                   dompet sumbernya ikut tersimpan supaya angka "Sudah dibayar" di
                   atas bisa diaudit baris per baris. */}
               <div className="mt-3 rounded-2xl bg-cream px-3.5 py-3 ring-1 ring-inset ring-soil/8">
-                <p className="flex items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-ink/40">
+                <p className="flex items-center justify-between gap-2 text-[10px] font-medium uppercase tracking-[0.14em] text-forest/40">
                   <span className="flex items-center gap-1.5">
                     <Receipt className="size-3.5" strokeWidth={2.6} />
                     {PAYMENT_HISTORY_TITLE}
                   </span>
                   {payments.length > 0 && (
-                    <span className="font-semibold normal-case tracking-normal text-ink/35">
+                    <span className="font-medium normal-case tracking-normal text-forest/35">
                       {paymentCountLabel(payments.length)}
                     </span>
                   )}
@@ -1095,10 +1095,10 @@ function PlatformDebtCard({
 
                 {payments.length === 0 ? (
                   <div className="mt-2">
-                    <p className="text-[11px] font-semibold leading-relaxed text-ink/55">
+                    <p className="text-[11px] font-medium leading-relaxed text-forest/55">
                       {PAYMENT_HISTORY_EMPTY}
                     </p>
-                    <p className="mt-1 text-[10.5px] leading-relaxed text-ink/40">
+                    <p className="mt-1 text-[10.5px] leading-relaxed text-forest/40">
                       {PAYMENT_HISTORY_EMPTY_HINT}
                     </p>
                   </div>
@@ -1106,10 +1106,10 @@ function PlatformDebtCard({
                   <ul className="mt-2 space-y-1.5">
                     {payments.map((payment) => (
                       <li key={payment.id} className="flex items-center gap-2 text-[11px]">
-                        <span className="shrink-0 text-ink/55 tabular-nums">
+                        <span className="shrink-0 text-forest/55 tabular-nums">
                           {formatShortDate(payment.paidAtISO)}
                         </span>
-                        <span className="min-w-0 flex-1 truncate text-ink/40">
+                        <span className="min-w-0 flex-1 truncate text-forest/40">
                           {/* arah uang ikut ditulis: pelunasan piutang tidak boleh
                               terbaca seperti pembayaran hutang */}
                           · {payment.kind === 'receivable' ? `${DEBT_CASH_COPY.receivableTag} · ` : ''}
@@ -1122,7 +1122,7 @@ function PlatformDebtCard({
                             </span>
                           ) : null}
                         </span>
-                        <span className="shrink-0 font-semibold text-ink/75 tabular-nums">
+                        <span className="shrink-0 font-medium text-forest/75 tabular-nums">
                           {maskMoney(payment.amount, masked)}
                         </span>
                       </li>
@@ -1250,14 +1250,14 @@ function DebtCashSheet({
 
       {plan && (
         <div className="mt-3 space-y-2">
-          <p className="rounded-2xl bg-sage/60 px-4 py-3 text-[12px] leading-relaxed text-ink/70">
+          <p className="rounded-2xl bg-sage/60 px-4 py-3 text-[12px] leading-relaxed text-forest/70">
             {DEBT_CASH_COPY.remainingLine(
               maskMoney(Math.max(0, plan.remaining), masked),
               plan.settled,
             )}
           </p>
           {/* kas-nya benar-benar bergerak — sebutkan nominal & dompetnya */}
-          <p className="text-[11.5px] leading-relaxed text-ink/50">
+          <p className="text-[11.5px] leading-relaxed text-forest/50">
             {direction === 'out'
               ? DEBT_CASH_COPY.cashOutLine(maskMoney(plan.cashMoved, masked), selected?.label ?? '')
               : DEBT_CASH_COPY.cashInLine(maskMoney(plan.cashMoved, masked), selected?.label ?? '')}
@@ -1276,7 +1276,7 @@ function DebtCashSheet({
       <DateField value={date} onChange={setDate} label={DEBT_CASH_COPY.dateLabel} />
 
       <div className="mt-4">
-        <span className="text-[13px] font-semibold leading-snug text-ink">{copy.walletLabel}</span>
+        <span className="text-[13px] font-medium leading-snug text-forest">{copy.walletLabel}</span>
         {walletOptions.length === 0 ? (
           <p className="mt-2 rounded-2xl bg-hud-amber/15 px-4 py-3 text-[11.5px] leading-relaxed text-[#b89191]">
             {DEBT_CASH_COPY.noWallet}
@@ -1291,7 +1291,7 @@ function DebtCashSheet({
               onChange={setWallet}
             />
             {selected && (
-              <p className="mt-2 text-[11px] text-ink/45 tabular-nums">
+              <p className="mt-2 text-[11px] text-forest/45 tabular-nums">
                 {DEBT_CASH_COPY.walletBalance(maskMoney(selected.balance, masked))}
               </p>
             )}
@@ -1368,12 +1368,12 @@ function PersonalSection({
   return (
     <section className="relative">
       <SectionHeader title={title} />
-      <p className="mb-2.5 text-[11px] leading-relaxed text-ink/40">{PERSONAL_SECTION_COPY}</p>
+      <p className="mb-2.5 text-[11px] leading-relaxed text-forest/40">{PERSONAL_SECTION_COPY}</p>
 
       {burst && <ConfettiBurst />}
 
       {active.length === 0 ? (
-        <p className="rounded-2xl bg-cream/70 px-3.5 py-3 text-[11.5px] leading-relaxed text-ink/45">
+        <p className="rounded-2xl bg-cream/70 px-3.5 py-3 text-[11.5px] leading-relaxed text-forest/45">
           {title === 'PIUTANG' ? 'Belum ada piutang aktif 🌿' : 'Belum ada hutang personal aktif 🌿'}
         </p>
       ) : (
@@ -1396,7 +1396,7 @@ function PersonalSection({
       {/* yang sudah lunas diletakkan paling bawah, dibiarkan samar */}
       {settled.length > 0 && (
         <>
-          <p className="mb-2 mt-4 text-[10.5px] font-bold uppercase tracking-[0.18em] text-ink/25">
+          <p className="mb-2 mt-4 text-[10.5px] font-medium uppercase tracking-[0.18em] text-forest/25">
             Sudah Lunas
           </p>
           <ul className="space-y-2 opacity-60">
@@ -1463,7 +1463,7 @@ function PersonalDebtCard({
         className={cn(
           'flex size-10 shrink-0 items-center justify-center rounded-2xl ring-1 ring-inset',
           incoming
-            ? 'bg-hud-sage/25 text-[#000000] ring-hud-sage/30'
+            ? 'bg-hud-sage/25 text-forest ring-hud-sage/30'
             : 'bg-hud-terracotta/12 text-[#b89191] ring-hud-terracotta/20',
         )}
       >
@@ -1478,19 +1478,19 @@ function PersonalDebtCard({
         <span className="flex items-center gap-1.5">
           <span
             className={cn(
-              'truncate text-[13px] font-semibold',
-              settled ? 'text-ink/50 line-through' : 'text-ink',
+              'truncate text-[13px] font-medium',
+              settled ? 'text-forest/50 line-through' : 'text-forest',
             )}
           >
             {counterpartyLabel(debt)}
           </span>
           {/* badge konteks uang hutang/piutang personal (paket 47) */}
-          <span className="shrink-0 rounded-full bg-sage/70 px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-forest ring-1 ring-inset ring-forest/10">
+          <span className="shrink-0 rounded-full bg-sage/70 px-1.5 py-0.5 text-[9.5px] font-medium uppercase tracking-wide text-forest ring-1 ring-inset ring-forest/10">
             {CONTEXT_LABEL[debt.scope]}
           </span>
         </span>
         {debt.notes && (
-          <span className={cn('mt-0.5 block truncate text-[11px]', settled ? 'text-ink/30' : 'text-ink/45')}>
+          <span className={cn('mt-0.5 block truncate text-[11px]', settled ? 'text-forest/30' : 'text-forest/45')}>
             {debt.notes}
           </span>
         )}
@@ -1499,8 +1499,8 @@ function PersonalDebtCard({
       <span className="flex shrink-0 flex-col items-end">
         <span
           className={cn(
-            'text-[13.5px] font-bold tabular-nums',
-            settled ? 'text-ink/40 line-through' : 'text-ink',
+            'text-[13.5px] font-semibold tabular-nums',
+            settled ? 'text-forest/40 line-through' : 'text-forest',
           )}
         >
           {maskMoney(settled ? debt.principal : debt.remaining, masked)}
@@ -1538,7 +1538,7 @@ function LunasStamp() {
   return (
     <span
       aria-hidden
-      className="pointer-events-none absolute right-3 top-1/2 z-10 -translate-y-1/2 -rotate-12 select-none rounded-md border-2 border-hud-sage px-2 py-0.5 font-display text-[11px] font-black uppercase leading-tight tracking-[0.22em] text-hud-sage opacity-25 after:absolute after:inset-[2.5px] after:rounded-[3px] after:border after:border-dashed after:border-hud-sage/45"
+      className="pointer-events-none absolute right-3 top-1/2 z-10 -translate-y-1/2 -rotate-12 select-none rounded-md border-2 border-hud-sage px-2 py-0.5 font-display text-[11px] font-medium uppercase leading-tight tracking-[0.22em] text-hud-sage opacity-25 after:absolute after:inset-[2.5px] after:rounded-[3px] after:border after:border-dashed after:border-hud-sage/45"
     >
       LUNAS
     </span>
@@ -1557,10 +1557,10 @@ function DateField({
 }) {
   return (
     <div className="mt-4">
-      <span className="text-[13px] font-semibold leading-snug text-ink">{label}</span>
+      <span className="text-[13px] font-medium leading-snug text-forest">{label}</span>
       <span className="relative mt-2 flex items-center gap-2 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/16 focus-within:ring-2 focus-within:ring-forest/35">
-        <Wallet className="size-4 shrink-0 text-ink/30" strokeWidth={2.2} />
-        <span className="flex-1 text-[14px] font-semibold tabular-nums text-ink">
+        <Wallet className="size-4 shrink-0 text-forest/30" strokeWidth={2.2} />
+        <span className="flex-1 text-[14px] font-medium tabular-nums text-forest">
           {formatSheetDate(value)}
         </span>
         <Check className="size-4 shrink-0 text-hud-sage" strokeWidth={3} />

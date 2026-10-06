@@ -312,37 +312,37 @@ export const WALLET_BRAND_OPTIONS: WalletBrandOption[] = [
   {
     name: 'GoPay',
     type: 'E-Wallet',
-    tile: 'bg-gradient-to-br from-[#dbe4c7] via-[#91bb9e] to-[#91bb9e] text-[#000000] ring-[#91bb9e]/50',
+    tile: 'bg-gradient-to-br from-[#dbe4c7] via-[#91bb9e] to-[#91bb9e] text-forest ring-[#91bb9e]/50',
     frame: 'hover:shadow-[0_22px_40px_-26px_rgba(145,187,158,0.75)]',
   },
   {
     name: 'Mandiri',
     type: 'Bank',
-    tile: 'bg-gradient-to-br from-[#f6edb7] via-[#ecd768] to-[#ecd768] text-[#000000] ring-[#ecd768]/60',
+    tile: 'bg-gradient-to-br from-[#f6edb7] via-[#ecd768] to-[#ecd768] text-forest ring-[#ecd768]/60',
     frame: 'hover:shadow-[0_22px_40px_-26px_rgba(236,215,104,0.85)]',
   },
   {
     name: 'BNI',
     type: 'Bank',
-    tile: 'bg-gradient-to-br from-[#fbe3c0] via-[#ffb885] to-[#ffb885] text-[#000000] ring-[#ffb885]/60',
+    tile: 'bg-gradient-to-br from-[#fbe3c0] via-[#ffb885] to-[#ffb885] text-forest ring-[#ffb885]/60',
     frame: 'hover:shadow-[0_22px_40px_-26px_rgba(255,184,133,0.8)]',
   },
   {
     name: 'OVO',
     type: 'E-Wallet',
-    tile: 'bg-gradient-to-br from-[#e7d8c3] via-[#b89191] to-[#b89191] text-[#000000] ring-[#b89191]/50',
+    tile: 'bg-gradient-to-br from-[#e7d8c3] via-[#b89191] to-[#b89191] text-forest ring-[#b89191]/50',
     frame: 'hover:shadow-[0_22px_40px_-26px_rgba(184,145,145,0.8)]',
   },
   {
     name: 'Dana',
     type: 'E-Wallet',
-    tile: 'bg-gradient-to-br from-[#e6e4c0] via-[#b5b987] to-[#b5b987] text-[#000000] ring-[#b5b987]/50',
+    tile: 'bg-gradient-to-br from-[#e6e4c0] via-[#b5b987] to-[#b5b987] text-forest ring-[#b5b987]/50',
     frame: 'hover:shadow-[0_22px_40px_-26px_rgba(181,185,135,0.9)]',
   },
   {
     name: 'Jago',
     type: 'Bank',
-    tile: 'bg-gradient-to-br from-sage via-[#c4c7af] to-[#c4c7af] text-[#000000] ring-[#c4c7af]/60',
+    tile: 'bg-gradient-to-br from-sage via-[#c4c7af] to-[#c4c7af] text-forest ring-[#c4c7af]/60',
     frame: 'hover:shadow-[0_22px_40px_-26px_rgba(196,199,175,0.9)]',
   },
 ]

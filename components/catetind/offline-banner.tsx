@@ -113,15 +113,15 @@ export function OfflineBanner() {
         </span>
 
         <div className="min-w-0 flex-1">
-          <p className="text-[13px] font-semibold text-ink">
+          <p className="text-[13px] font-medium text-forest">
             {online ? OFFLINE_COPY.pendingTitle : OFFLINE_COPY.offlineTitle}
             {pending > 0 && (
-              <span className="ml-2 rounded-full bg-cream/80 px-2 py-0.5 text-[10.5px] font-semibold tabular-nums text-ink/60">
+              <span className="ml-2 rounded-full bg-cream/80 px-2 py-0.5 text-[10.5px] font-medium tabular-nums text-forest/60">
                 {OFFLINE_COPY.pendingBadge(pending)}
               </span>
             )}
           </p>
-          <p className="mt-0.5 text-[11.5px] leading-relaxed text-ink/55">
+          <p className="mt-0.5 text-[11.5px] leading-relaxed text-forest/55">
             {online ? OFFLINE_COPY.pendingBody(pending) : OFFLINE_COPY.offlineBody(pending)}
           </p>
           {/* AUDIT "CLEAN UI" (paket 63): batas jujurnya tetap ada, tapi tidak
@@ -154,7 +154,7 @@ export function OfflineBanner() {
                 }
               })()
             }}
-            className="shrink-0 rounded-full bg-forest px-4 py-2 text-xs font-semibold text-cream transition-colors hover:bg-forest-soft active:scale-95"
+            className="shrink-0 rounded-full bg-forest px-4 py-2 text-xs font-medium text-cream transition-colors hover:bg-forest-soft active:scale-95"
           >
             {OFFLINE_COPY.pendingCta}
           </button>
@@ -164,7 +164,7 @@ export function OfflineBanner() {
           type="button"
           aria-label={OFFLINE_COPY.dismissLabel}
           onClick={() => setDismissed(true)}
-          className="flex size-8 shrink-0 items-center justify-center rounded-full text-ink/40 transition-colors hover:bg-soil/10 hover:text-ink"
+          className="flex size-8 shrink-0 items-center justify-center rounded-full text-forest/40 transition-colors hover:bg-soil/10 hover:text-forest"
         >
           <X className="size-3.5" strokeWidth={2.4} />
         </button>

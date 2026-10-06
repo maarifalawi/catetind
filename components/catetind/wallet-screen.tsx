@@ -56,12 +56,7 @@ import {
 } from '@/lib/money/store'
 import { contextOfTransaction, matchesContext } from '@/lib/money/context-filter'
 import { HOME_TOTAL_COPY } from '@/lib/data/home'
-import {
-  CONTEXT_EMPTY_COPY,
-  CONTEXT_LABEL,
-  SCOPE_NOTE,
-  contextCaption,
-} from '@/lib/data/money-context'
+import { CONTEXT_EMPTY_COPY, CONTEXT_LABEL, SCOPE_NOTE } from '@/lib/data/money-context'
 import {
   WALLET_CARD_MENU_COPY,
   WALLET_DELETE_COPY,
@@ -437,43 +432,28 @@ export function WalletScreen() {
           4 kolom, lalu grid kartu dompet selebar layar. */}
       <div className="w-full">
         {/* ── HEADER: judul halaman + toggle privasi GLOBAL ─────────────────
-            Ikon "tambah dompet" kecil di pojok kanan DIHAPUS (redundan dengan
-            section raksasa "Tambah Dompet Cepat" di bawah) dan posisinya diisi
-            tombol mata ini. Karena tombolnya membaca state privasi global, satu
-            klik menyensor SELURUH halaman — hero, tile likuiditas, dan saldo
-            tiap kartu dompet. */}
-        <header className="sticky top-2 z-30 rounded-[1.5rem] bg-cream/90 px-4 py-3 shadow-[0_18px_40px_-32px_rgba(69,89,78,0.65)] ring-1 ring-soil/10 backdrop-blur-md">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-3">
-              {/* penanda halaman — tile sage→mint (palet brand), bukan kotak putih polos */}
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sage via-cream to-mint-soft text-forest shadow-[0_12px_26px_-16px_rgba(69,89,78,0.75)] ring-1 ring-forest/10">
-                <WalletIcon className="size-[18px]" strokeWidth={2.1} />
-              </span>
-              <div className="min-w-0">
-                <h1 className="truncate font-display text-[19px] font-black tracking-tight text-ink lg:text-[22px]">
-                  Dompet &amp; Akun
-                </h1>
-                <p className="truncate text-[11px] text-ink/45">
-                  {contextCaption(context)} · semua saldo di satu tempat
-                </p>
-              </div>
-            </div>
-            {/* cluster aksi: switcher konteks (desktop) + tombol mata global */}
-            <div className="hidden shrink-0 items-center gap-3 lg:flex">
-              <ContextSwitcher value={context} onChange={setContext} className="w-[280px]" />
-              <GlobalPrivacyToggle />
-            </div>
-            <div className="lg:hidden">
-              <GlobalPrivacyToggle />
-            </div>
+            Judul memakai gaya yang SAMA dengan halaman lain (polos, tanpa kotak
+            latar) supaya konsisten. Tombol mata tetap di cluster aksi dan
+            menyensor SELURUH halaman — hero, tile likuiditas, dan saldo kartu. */}
+        <header className="flex items-start justify-between gap-4">
+          <h1 className="truncate font-display text-3xl font-semibold tracking-tight text-forest lg:text-4xl">
+            Dompet &amp; Akun
+          </h1>
+          {/* cluster aksi: switcher konteks (desktop) + tombol mata global */}
+          <div className="hidden shrink-0 items-center gap-3 lg:flex">
+            <ContextSwitcher value={context} onChange={setContext} className="w-[280px]" />
+            <GlobalPrivacyToggle />
           </div>
-
-          {/* switcher konteks (mobile): barisnya sendiri di dalam header sticky —
-              pola penempatan yang sama dengan Home & Budget (paket 47) */}
-          <div className="mt-3 flex justify-center lg:hidden">
-            <ContextSwitcher value={context} onChange={setContext} />
+          <div className="lg:hidden">
+            <GlobalPrivacyToggle />
           </div>
         </header>
+
+        {/* switcher konteks (mobile): barisnya sendiri di bawah header —
+            pola penempatan yang sama dengan Home & Budget (paket 47) */}
+        <div className="mt-4 flex justify-center lg:hidden">
+          <ContextSwitcher value={context} onChange={setContext} />
+        </div>
 
         <div className="mt-5 grid grid-cols-1 gap-5 xl:mt-6 xl:grid-cols-12 xl:gap-6">
           {/* ── HERO (8/12): TOTAL SALDO + KOMPOSISI + LIKUIDITAS ─────────── */}
@@ -592,12 +572,12 @@ export function WalletScreen() {
               {/* KANAN: komposisi saldo per dompet — panel kaca, bar, lalu legenda pill */}
               <div className="rounded-[1.4rem] bg-cream/[0.07] p-3.5 ring-1 ring-inset ring-cream/10">
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-cream/45">
+                  <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-cream/45">
                     Komposisi
                   </span>
                   {/* komposisi ini memecah TOTAL di atas — jadi ia memuat seluruh
                       dompet, bukan hanya konteks aktif (kanon paket 47 #1) */}
-                  <span className="text-[10.5px] font-semibold text-cream/40 tabular-nums">
+                  <span className="text-[10.5px] font-medium text-cream/40 tabular-nums">
                     {WALLET_TOTAL_COPY.compositionAccounts(allWallets.length)}
                   </span>
                 </div>
@@ -627,7 +607,7 @@ export function WalletScreen() {
                         className={cn('size-2 rounded-full ring-1 ring-cream/25', wallet.color)}
                       />
                       <span className="font-medium text-cream/80">{wallet.name}</span>
-                      <span className="font-semibold tabular-nums text-cream/50">
+                      <span className="font-medium tabular-nums text-cream/50">
                         {shares[i]}%
                       </span>
                     </span>
@@ -647,19 +627,19 @@ export function WalletScreen() {
               <span className="flex size-7 items-center justify-center rounded-xl bg-gradient-to-br from-sage via-cream to-mint-soft text-forest ring-1 ring-forest/10">
                 <Plus className="size-3.5" strokeWidth={2.8} />
               </span>
-              <h2 className="font-display text-[17px] font-bold tracking-tight text-ink">
+              <h2 className="font-display text-[17px] font-semibold tracking-tight text-forest">
                 Tambah Dompet Cepat
               </h2>
             </div>
-            <span className="rounded-full bg-sage px-2.5 py-0.5 text-[10.5px] font-bold text-forest ring-1 ring-forest/10">
+            <span className="rounded-full bg-sage px-2.5 py-0.5 text-[10.5px] font-medium text-forest ring-1 ring-forest/10">
               1 ketukan
             </span>
           </div>
-          <p className="mt-2 text-[11.5px] text-ink/45">
+          <p className="mt-2 text-[11.5px] text-forest/45">
             Hanya brand yang belum ada di daftar dompetmu.
           </p>
           {suggestedBrands.length === 0 && (
-            <p className="mt-3 rounded-2xl bg-cream px-3 py-2 text-[11.5px] text-ink/55">
+            <p className="mt-3 rounded-2xl bg-cream px-3 py-2 text-[11.5px] text-forest/55">
               Semua brand populer sudah kamu pakai — tambah dompet lain lewat “Lainnya”.
             </p>
           )}
@@ -690,7 +670,7 @@ export function WalletScreen() {
                 <span className="relative">
                   <span
                     className={cn(
-                      'flex size-11 items-center justify-center rounded-[1rem] text-[15px] font-black ring-1 ring-inset transition-transform duration-300 group-hover:scale-105',
+                      'flex size-11 items-center justify-center rounded-[1rem] text-[15px] font-medium ring-1 ring-inset transition-transform duration-300 group-hover:scale-105',
                       brand.tile,
                     )}
                   >
@@ -700,7 +680,7 @@ export function WalletScreen() {
                     <Plus className="size-3" strokeWidth={3.2} />
                   </span>
                 </span>
-                <span className="text-[12.5px] font-bold tracking-tight text-ink">
+                <span className="text-[12.5px] font-medium tracking-tight text-forest">
                   {brand.name}
                 </span>
               </motion.button>
@@ -712,10 +692,10 @@ export function WalletScreen() {
               onClick={() => openAddWallet(null)}
               className="group flex w-[104px] shrink-0 snap-start flex-col items-center gap-2.5 rounded-[1.4rem] border-2 border-dashed border-ink/[0.1] bg-cream/50 p-3.5 transition-all duration-300 hover:-translate-y-1 hover:border-forest/25 hover:bg-cream active:scale-95 motion-reduce:transition-none xl:w-auto"
             >
-              <span className="flex size-11 items-center justify-center rounded-[1rem] bg-cream text-ink/40 transition-colors group-hover:bg-sage/70 group-hover:text-forest">
+              <span className="flex size-11 items-center justify-center rounded-[1rem] bg-cream text-forest/40 transition-colors group-hover:bg-sage/70 group-hover:text-forest">
                 <Plus className="size-5" strokeWidth={2.6} />
               </span>
-              <span className="text-[12.5px] font-semibold tracking-tight text-ink/45 transition-colors group-hover:text-ink">
+              <span className="text-[12.5px] font-medium tracking-tight text-forest/45 transition-colors group-hover:text-forest">
                 Lainnya
               </span>
             </button>
@@ -737,15 +717,15 @@ export function WalletScreen() {
                 <span className="flex size-7 items-center justify-center rounded-xl bg-gradient-to-br from-sage via-cream to-mint-soft text-forest ring-1 ring-forest/10">
                   <ArrowLeftRight className="size-3.5" strokeWidth={2.6} />
                 </span>
-                <h2 className="font-display text-[17px] font-bold tracking-tight text-ink">
+                <h2 className="font-display text-[17px] font-semibold tracking-tight text-forest">
                   {WALLET_TRANSFER_LOG_COPY.title}
                 </h2>
               </div>
-              <span className="rounded-full bg-sage px-2.5 py-0.5 text-[10.5px] font-bold text-forest tabular-nums ring-1 ring-forest/10">
+              <span className="rounded-full bg-sage px-2.5 py-0.5 text-[10.5px] font-semibold text-forest tabular-nums ring-1 ring-forest/10">
                 {WALLET_TRANSFER_LOG_COPY.count(transfers.length)}
               </span>
             </div>
-            <p className="mt-2 text-[11.5px] leading-relaxed text-ink/45">
+            <p className="mt-2 text-[11.5px] leading-relaxed text-forest/45">
               {WALLET_TRANSFER_LOG_COPY.hint}
             </p>
             <ul className="mt-2 divide-y divide-soil/10">
@@ -766,21 +746,21 @@ export function WalletScreen() {
                   <li key={tx.id} className="flex items-center gap-3 py-3">
                     <span
                       aria-hidden
-                      className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sage/70 text-[15px] font-semibold text-ink/50"
+                      className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sage/70 text-[15px] font-medium text-forest/50"
                     >
                       {amountSign(tx.type)}
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[13.5px] font-semibold text-ink">
+                      <span className="block truncate text-[13.5px] font-medium text-forest">
                         {record.fromName} → {record.toName}
                       </span>
-                      <span className="mt-0.5 block truncate text-[11.5px] text-ink/40">
+                      <span className="mt-0.5 block truncate text-[11.5px] text-forest/40">
                         {meta}
                       </span>
                     </span>
                     <span
                       className={cn(
-                        'shrink-0 text-[13.5px] font-semibold tabular-nums',
+                        'shrink-0 text-[13.5px] font-medium tabular-nums',
                         MONEY_TONE[tx.type].text,
                       )}
                     >
@@ -801,15 +781,15 @@ export function WalletScreen() {
               <span className="flex size-7 items-center justify-center rounded-xl bg-gradient-to-br from-sage via-cream to-mint-soft text-forest ring-1 ring-forest/10">
                 <WalletIcon className="size-3.5" strokeWidth={2.5} />
               </span>
-              <h2 className="font-display text-[17px] font-bold tracking-tight text-ink">
+              <h2 className="font-display text-[17px] font-semibold tracking-tight text-forest">
                 Dompet &amp; Akun
               </h2>
-              <span className="rounded-full bg-sage px-2 py-0.5 text-[10.5px] font-bold text-forest tabular-nums ring-1 ring-forest/10">
+              <span className="rounded-full bg-sage px-2 py-0.5 text-[10.5px] font-semibold text-forest tabular-nums ring-1 ring-forest/10">
                 {wallets.length}
               </span>
               {/* label konteks di kepala daftar (paket 47): daftar kartu INI yang
                   disaring konteks, sementara hero & komposisi di atas tetap total */}
-              <span className="hidden rounded-full bg-cream px-2 py-0.5 text-[10.5px] font-semibold text-ink/50 ring-1 ring-soil/12 sm:inline-flex">
+              <span className="hidden rounded-full bg-cream px-2 py-0.5 text-[10.5px] font-medium text-forest/50 ring-1 ring-soil/12 sm:inline-flex">
                 {CONTEXT_LABEL[context]}
               </span>
             </div>
@@ -821,19 +801,19 @@ export function WalletScreen() {
                (`context` diteruskan ke store), jadi tombolnya benar-benar
                menutup keadaan ini — bukan jalan buntu. */
             <div className="mt-4 flex flex-col items-center rounded-[1.75rem] border-2 border-dashed border-forest/15 bg-cream/50 px-6 py-10 text-center">
-              <h3 className="font-display text-[16px] font-bold tracking-tight text-ink">
+              <h3 className="font-display text-[16px] font-semibold tracking-tight text-forest">
                 {CONTEXT_EMPTY_COPY.wallet.title(CONTEXT_LABEL[context])}
               </h3>
-              <p className="mt-1.5 max-w-md text-[13px] leading-relaxed text-ink/55">
+              <p className="mt-1.5 max-w-md text-[13px] leading-relaxed text-forest/55">
                 {CONTEXT_EMPTY_COPY.wallet.body}
               </p>
-              <p className="mt-2 max-w-md text-[11.5px] leading-relaxed text-ink/40">
+              <p className="mt-2 max-w-md text-[11.5px] leading-relaxed text-forest/40">
                 {SCOPE_NOTE.walletComposition}
               </p>
               <button
                 type="button"
                 onClick={() => openAddWallet(null)}
-                className="mt-5 inline-flex h-11 items-center gap-2 rounded-2xl bg-forest px-5 text-[13.5px] font-semibold text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
+                className="mt-5 inline-flex h-11 items-center gap-2 rounded-2xl bg-forest px-5 text-[13.5px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
               >
                 <Plus className="size-4" strokeWidth={2.6} />
                 {CONTEXT_EMPTY_COPY.wallet.cta(CONTEXT_LABEL[context])}
@@ -867,7 +847,7 @@ export function WalletScreen() {
                   <div className="relative flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="truncate font-display text-[15.5px] font-bold tracking-tight">
+                        <p className="truncate font-display text-[15.5px] font-medium tracking-tight">
                           {wallet.name}
                         </p>
                         {/* ikon contactless HANYA untuk kartu bank — benda aslinya
@@ -879,12 +859,12 @@ export function WalletScreen() {
                       {/* nomor akun tersamarkan — HANYA kartu bank yang punya nomor.
                           e-wallet & tunai tidak dipaksa memakai nomor seri. */}
                       {wallet.type === 'Bank' && wallet.number && (
-                        <p className="mt-1.5 truncate text-[10.5px] font-semibold tracking-[0.2em] text-cream/60 tabular-nums">
+                        <p className="mt-1.5 truncate text-[10.5px] font-medium tracking-[0.2em] text-cream/60 tabular-nums">
                           {wallet.number}
                         </p>
                       )}
                       {/* jenis akun sebagai pil kaca, bukan teks polos */}
-                      <span className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-cream/20 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-cream/90 ring-1 ring-inset ring-cream/30 backdrop-blur-[2px]">
+                      <span className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-cream/20 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.1em] text-cream/90 ring-1 ring-inset ring-cream/30 backdrop-blur-[2px]">
                         <span aria-hidden className="size-1.5 rounded-full bg-cream/70" />
                         {WALLET_TYPE_LABEL[wallet.type]}
                       </span>
@@ -951,7 +931,7 @@ export function WalletScreen() {
                         transition={{ duration: 0.7, delay: 0.25 + i * 0.07, ease: EASE }}
                       />
                     </span>
-                    <span className="shrink-0 text-[10px] font-semibold tabular-nums text-cream/70">
+                    <span className="shrink-0 text-[10px] font-medium tabular-nums text-cream/70">
                       {shares[i]}% dari total
                     </span>
                   </div>
@@ -1088,7 +1068,7 @@ export function WalletScreen() {
             body={
               <>
                 {WALLET_DELETE_COPY.bodyLead(pendingWalletDelete.name)}
-                <b className="font-semibold text-ink">
+                <b className="font-medium text-forest">
                   {/* saldo dibaca LIVE dari snapshot, bukan dari kartu yang
                       diklik beberapa detik lalu — kalau saldonya berubah,
                       angka di dialog ikut berubah */}
@@ -1166,13 +1146,13 @@ function LiquidityPill({
       <span className="min-w-0">
         <span
           className={cn(
-            'block truncate text-[10px] font-semibold uppercase tracking-[0.12em]',
+            'block truncate text-[10px] font-medium uppercase tracking-[0.12em]',
             isLiquid ? 'text-mint/70' : 'text-cream/45',
           )}
         >
           {label}
         </span>
-        <span className="mt-0.5 block truncate text-[13.5px] font-bold tabular-nums text-cream">
+        <span className="mt-0.5 block truncate text-[13.5px] font-semibold tabular-nums text-cream">
           <LockedAmount value={value} masked={masked} />
         </span>
       </span>
@@ -1221,13 +1201,13 @@ function MenuItem({
       <span className="min-w-0">
         <span
           className={cn(
-            'block text-[13px] font-semibold leading-tight',
-            danger ? 'text-plum' : 'text-ink',
+            'block text-[13px] font-medium leading-tight',
+            danger ? 'text-plum' : 'text-forest',
           )}
         >
           {label}
         </span>
-        <span className="mt-0.5 block text-[11px] text-ink/45">{hint}</span>
+        <span className="mt-0.5 block text-[11px] text-forest/45">{hint}</span>
       </span>
     </button>
   )

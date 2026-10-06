@@ -133,8 +133,8 @@ export function NotificationSettings() {
             )}
           </span>
           <div className="min-w-0 flex-1">
-            <h2 className="text-base font-semibold text-ink">Notifikasi Push HP</h2>
-            <p className="mt-0.5 text-sm leading-relaxed text-ink/55">
+            <h2 className="text-base font-medium text-forest">Notifikasi Push HP</h2>
+            <p className="mt-0.5 text-sm leading-relaxed text-forest/55">
               {subscribed
                 ? 'Aktif! Kamu bakal terima push walau app lagi ditutup.'
                 : 'Aktifkan biar dapat reminder tanpa harus buka app dulu.'}
@@ -146,7 +146,7 @@ export function NotificationSettings() {
         {support === 'needs-install' && (
           <div className="mt-4 flex items-start gap-3 rounded-2xl bg-hud-amber/10 px-4 py-3 ring-1 ring-hud-amber/25">
             <Download className="mt-0.5 size-4 shrink-0 text-hud-terracotta" />
-            <p className="text-[13px] leading-relaxed text-ink/70">
+            <p className="text-[13px] leading-relaxed text-forest/70">
               Di iOS, pasang dulu CatetInd ke layar utama:{' '}
               <b>Safari → Share → Add to Home Screen</b>. Setelah itu push
               notif bisa aktif.
@@ -154,7 +154,7 @@ export function NotificationSettings() {
           </div>
         )}
         {support === 'unsupported' && (
-          <p className="mt-4 rounded-2xl bg-soil/[0.1] px-4 py-3 text-[13px] text-ink/55">
+          <p className="mt-4 rounded-2xl bg-soil/[0.1] px-4 py-3 text-[13px] text-forest/55">
             Browser ini belum mendukung Web Push — coba Chrome/Edge atau
             Safari iOS 16.4+ yang sudah di-install ke Home Screen.
           </p>
@@ -174,7 +174,7 @@ export function NotificationSettings() {
                   type="button"
                   onClick={handleTestRemote}
                   disabled={busy}
-                  className="flex items-center gap-2 rounded-full bg-forest px-5 py-2.5 text-[13px] font-semibold text-cream transition-colors hover:bg-forest-soft active:scale-[0.97] disabled:opacity-50"
+                  className="flex items-center gap-2 rounded-full bg-forest px-5 py-2.5 text-[13px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.97] disabled:opacity-50"
                 >
                   {busy ? (
                     <Loader2 className="size-4 animate-spin" />
@@ -186,14 +186,14 @@ export function NotificationSettings() {
                 <button
                   type="button"
                   onClick={testLocal}
-                  className="rounded-full bg-sage px-5 py-2.5 text-[13px] font-semibold text-forest transition-colors hover:bg-mint/40 active:scale-[0.97]"
+                  className="rounded-full bg-sage px-5 py-2.5 text-[13px] font-medium text-forest transition-colors hover:bg-mint/40 active:scale-[0.97]"
                 >
                   Tes Notif Lokal
                 </button>
                 <button
                   type="button"
                   onClick={deactivate}
-                  className="rounded-full px-4 py-2.5 text-[13px] font-semibold text-ink/45 transition-colors hover:text-ink"
+                  className="rounded-full px-4 py-2.5 text-[13px] font-medium text-forest/45 transition-colors hover:text-forest"
                 >
                   Nonaktifkan
                 </button>
@@ -203,7 +203,7 @@ export function NotificationSettings() {
                 type="button"
                 onClick={handleActivate}
                 disabled={busy}
-                className="flex items-center gap-2 rounded-full bg-forest px-5 py-2.5 text-[13px] font-semibold text-cream transition-colors hover:bg-forest-soft active:scale-[0.97] disabled:opacity-50"
+                className="flex items-center gap-2 rounded-full bg-forest px-5 py-2.5 text-[13px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.97] disabled:opacity-50"
               >
                 {busy ? (
                   <Loader2 className="size-4 animate-spin" />
@@ -227,24 +227,24 @@ export function NotificationSettings() {
             pemilik — jadi bukan "berhasil", dan user diberi jalan keluarnya. */}
         {sessionMissing && (
           <div className="mt-3 rounded-2xl bg-hud-amber/20 px-4 py-3 ring-1 ring-hud-amber/50">
-            <p className="flex items-center gap-2 text-[12.5px] font-semibold text-ink">
-              <UserRoundCheck className="size-4 shrink-0 text-ink/60" strokeWidth={2.2} aria-hidden />
+            <p className="flex items-center gap-2 text-[12.5px] font-medium text-forest">
+              <UserRoundCheck className="size-4 shrink-0 text-forest/60" strokeWidth={2.2} aria-hidden />
               {SESSION_COPY.noSessionTitle}
             </p>
-            <p className="mt-1 text-[11.5px] leading-relaxed text-ink/60">
+            <p className="mt-1 text-[11.5px] leading-relaxed text-forest/60">
               {SESSION_COPY.noSessionBody}
             </p>
             <Link
               href={LOGIN_PATH}
-              className="mt-2 inline-flex text-[11.5px] font-semibold text-forest underline underline-offset-2 hover:text-ink"
+              className="mt-2 inline-flex text-[11.5px] font-medium text-forest underline underline-offset-2 hover:text-forest"
             >
               {SESSION_COPY.noSessionCta}
             </Link>
           </div>
         )}
 
-        <p className="mt-4 flex items-start gap-2 rounded-2xl bg-cream px-4 py-3 text-xs leading-relaxed text-ink/50">
-          <Smartphone className="mt-0.5 size-3.5 shrink-0 text-ink/40" />
+        <p className="mt-4 flex items-start gap-2 rounded-2xl bg-cream px-4 py-3 text-xs leading-relaxed text-forest/50">
+          <Smartphone className="mt-0.5 size-3.5 shrink-0 text-forest/40" />
           CatetInd kirim MAKSIMAL 3 push per minggu — bantu kamu balik catat,
           bukan nge-spam.
         </p>
@@ -252,8 +252,8 @@ export function NotificationSettings() {
 
       {/* ── kartu toggle per jenis (inventaris #22) ── */}
       <section className="rounded-[2rem] bg-cream p-5 ring-1 ring-soil/12 sm:p-6">
-        <h2 className="text-base font-semibold text-ink">Jenis Notifikasi</h2>
-        <p className="mt-0.5 text-sm text-ink/50">
+        <h2 className="text-base font-medium text-forest">Jenis Notifikasi</h2>
+        <p className="mt-0.5 text-sm text-forest/50">
           Pilih yang penting buat kamu — sisanya kita gak ganggu.
         </p>
 
@@ -264,8 +264,8 @@ export function NotificationSettings() {
               className="flex items-center gap-4 py-3.5 first:pt-0 last:pb-0"
             >
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-ink">{pref.label}</p>
-                <p className="mt-0.5 text-xs leading-relaxed text-ink/50">
+                <p className="text-sm font-medium text-forest">{pref.label}</p>
+                <p className="mt-0.5 text-xs leading-relaxed text-forest/50">
                   {pref.desc}
                 </p>
               </div>

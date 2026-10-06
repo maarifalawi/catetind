@@ -54,7 +54,7 @@ export function WealthDeleteDialog({
       body={
         <>
           {copy.bodyLead(name)}
-          <b className="font-semibold text-ink tabular-nums">{amountLabel}</b> {tail}
+          <b className="font-medium text-forest tabular-nums">{amountLabel}</b> {tail}
         </>
       }
       note={copy.cashNote}

@@ -162,11 +162,11 @@ export function BillCard({
             setDx(0)
             onMarkPaid(bill)
           }}
-          className="absolute inset-y-1 left-0 flex w-[116px] flex-col items-center justify-center gap-1 rounded-2xl bg-hud-sage text-[#000000] transition-opacity focus-visible:z-20 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-forest/40"
+          className="absolute inset-y-1 left-0 flex w-[116px] flex-col items-center justify-center gap-1 rounded-2xl bg-hud-sage text-forest transition-opacity focus-visible:z-20 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-forest/40"
           style={{ opacity: dx > 0 ? exposed : 0, pointerEvents: dx > 24 ? 'auto' : 'none' }}
         >
           <Check className="size-4" strokeWidth={2.8} />
-          <span className="text-[10px] font-bold">{BILL_CARD_ACTION_COPY.markPaidSwipe}</span>
+          <span className="text-[10px] font-medium">{BILL_CARD_ACTION_COPY.markPaidSwipe}</span>
         </button>
 
         {/* aksi KANAN — amber Edit + terracotta Hapus, tersingkap saat geser KIRI */}
@@ -182,10 +182,10 @@ export function BillCard({
               setDx(0)
               onEdit(bill)
             }}
-            className="flex w-[82px] flex-col items-center justify-center gap-1 rounded-2xl bg-hud-amber text-[#000000] focus-visible:z-20 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-forest/40"
+            className="flex w-[82px] flex-col items-center justify-center gap-1 rounded-2xl bg-hud-amber text-forest focus-visible:z-20 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-forest/40"
           >
             <Pencil className="size-4" strokeWidth={2.4} />
-            <span className="text-[10px] font-bold">{BILL_CARD_ACTION_COPY.edit}</span>
+            <span className="text-[10px] font-medium">{BILL_CARD_ACTION_COPY.edit}</span>
           </button>
           <button
             type="button"
@@ -198,7 +198,7 @@ export function BillCard({
             className="flex w-[82px] flex-col items-center justify-center gap-1 rounded-2xl bg-hud-terracotta text-cream focus-visible:z-20 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-forest/40"
           >
             <Trash2 className="size-4" strokeWidth={2.4} />
-            <span className="text-[10px] font-bold">{BILL_CARD_ACTION_COPY.delete}</span>
+            <span className="text-[10px] font-medium">{BILL_CARD_ACTION_COPY.delete}</span>
           </button>
         </div>
 
@@ -246,8 +246,8 @@ export function BillCard({
           <span className="min-w-0 flex-1">
             <span
               className={cn(
-                'block truncate text-[13.5px] font-semibold text-ink',
-                paid && 'text-ink/75',
+                'block truncate text-[13.5px] font-medium text-forest',
+                paid && 'text-forest/75',
               )}
             >
               {bill.name}
@@ -256,7 +256,7 @@ export function BillCard({
               {due.text}
             </span>
             {meta && (
-              <span className="mt-0.5 block truncate text-[10.5px] text-ink/35">{meta}</span>
+              <span className="mt-0.5 block truncate text-[10.5px] text-forest/35">{meta}</span>
             )}
           </span>
 
@@ -265,18 +265,18 @@ export function BillCard({
             <span
               className={cn(
                 'text-[13.5px] tabular-nums',
-                paid ? 'font-semibold text-ink/45 line-through' : 'font-bold text-ink',
+                paid ? 'font-medium text-forest/45 line-through' : 'font-medium text-forest',
               )}
             >
               {bill.amount > 0 ? maskMoney(bill.amount, masked) : 'Fleksibel'}
             </span>
             {status === 'overdue' && (
-              <span className="rounded-full bg-hud-terracotta/15 px-2 py-0.5 text-[10px] font-bold text-hud-terracotta ring-1 ring-inset ring-hud-terracotta/25">
+              <span className="rounded-full bg-hud-terracotta/15 px-2 py-0.5 text-[10px] font-medium text-hud-terracotta ring-1 ring-inset ring-hud-terracotta/25">
                 Telat
               </span>
             )}
             {status === 'due_today' && (
-              <span className="rounded-full bg-hud-amber/20 px-2 py-0.5 text-[10px] font-bold text-[#b89191] ring-1 ring-inset ring-hud-amber/30">
+              <span className="rounded-full bg-hud-amber/20 px-2 py-0.5 text-[10px] font-medium text-[#b89191] ring-1 ring-inset ring-hud-amber/30">
                 Hari Ini
               </span>
             )}
@@ -300,7 +300,7 @@ export function BillCard({
             type="button"
             onClick={() => onMarkPaid(bill)}
             aria-label={BILL_CARD_ACTION_COPY.markPaidA11y(bill.name)}
-            className="inline-flex items-center gap-1.5 rounded-full bg-sage/70 px-3 py-1.5 text-[11.5px] font-semibold text-forest transition-colors hover:bg-sage focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/30 active:scale-95"
+            className="inline-flex items-center gap-1.5 rounded-full bg-sage/70 px-3 py-1.5 text-[11.5px] font-medium text-forest transition-colors hover:bg-sage focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/30 active:scale-95"
           >
             <Check className="size-3.5" strokeWidth={2.8} aria-hidden />
             {BILL_CARD_ACTION_COPY.markPaid}
@@ -311,7 +311,7 @@ export function BillCard({
             type="button"
             onClick={() => onUnmarkPaid(bill)}
             aria-label={BILL_CARD_ACTION_COPY.unmarkPaidA11y(bill.name)}
-            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11.5px] font-semibold text-ink/45 transition-colors hover:bg-soil/[0.12] hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/30 active:scale-95"
+            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11.5px] font-medium text-forest/45 transition-colors hover:bg-soil/[0.12] hover:text-forest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/30 active:scale-95"
           >
             <RotateCcw className="size-3.5" strokeWidth={2.4} aria-hidden />
             {BILL_CARD_ACTION_COPY.unmarkPaid}
@@ -355,7 +355,7 @@ function LunasStamp({ variant }: { variant: 'fresh' | 'settled' }) {
         }
         transition={{ duration: 0.2, ease: 'easeOut' }}
         className={cn(
-          'relative block select-none rounded-md border-2 border-hud-sage px-2 py-0.5 font-display text-[13px] font-black uppercase leading-tight tracking-[0.22em] text-hud-sage',
+          'relative block select-none rounded-md border-2 border-hud-sage px-2 py-0.5 font-display text-[13px] font-medium uppercase leading-tight tracking-[0.22em] text-hud-sage',
           /* tepi kasar ala stempel karet: garis dalam putus-putus + tekstur tinta */
           'after:absolute after:inset-[2.5px] after:rounded-[3px] after:border after:border-dashed after:border-hud-sage/45',
           '[background-image:radial-gradient(rgba(181,185,135,0.28)_0.6px,transparent_0.9px)] [background-size:4px_4px]',

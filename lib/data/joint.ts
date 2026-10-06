@@ -117,6 +117,8 @@ export type JointPerson = {
 
 export type JointTransaction = {
   id: string
+  /** id baris `joint_transactions` di Supabase (uuid) — `undefined` = belum dikirim (paket 64) */
+  remoteId?: string
   /** PEMBUAT catatan (dipakai untuk privasi & "siapa yang mengetik") */
   userId: string
   /**
@@ -227,7 +229,7 @@ export const JOINT_ME: JointPerson = {
   id: 'user_a',
   name: 'Jon',
   avatar: '🧑',
-  tint: 'bg-hud-sage/25 text-[#000000] ring-hud-sage/50',
+  tint: 'bg-hud-sage/25 text-forest ring-hud-sage/50',
   dot: 'bg-hud-sage ring-[#ffffff]',
   rail: 'border-hud-sage',
 }

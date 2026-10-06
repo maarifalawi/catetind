@@ -97,13 +97,13 @@ export function MarkBillPaidSheet({
 
       {/* kalimat yang membuat klaimnya jujur: uangnya keluar dari dompet mana */}
       {selected && amount > 0 && (
-        <p className="mt-3 rounded-2xl bg-sage/60 px-4 py-3 text-[12px] leading-relaxed text-ink/70">
+        <p className="mt-3 rounded-2xl bg-sage/60 px-4 py-3 text-[12px] leading-relaxed text-forest/70">
           {MARK_PAID_SHEET_COPY.cashLine(maskMoney(amount, masked), selected.label)}
         </p>
       )}
 
       <div className="mt-4">
-        <span className="text-[13px] font-semibold leading-snug text-ink">
+        <span className="text-[13px] font-medium leading-snug text-forest">
           {MARK_PAID_SHEET_COPY.walletLabel}
         </span>
         {walletOptions.length === 0 ? (
@@ -120,7 +120,7 @@ export function MarkBillPaidSheet({
               onChange={setWallet}
             />
             {selected && (
-              <p className="mt-2 text-[11px] text-ink/45 tabular-nums">
+              <p className="mt-2 text-[11px] text-forest/45 tabular-nums">
                 {MARK_PAID_SHEET_COPY.walletBalance(maskMoney(selected.balance, masked))}
               </p>
             )}

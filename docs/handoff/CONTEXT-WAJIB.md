@@ -76,9 +76,11 @@ Aturan shell (jangan dilanggar):
   (semua halaman dalam app: `/`, `/wallet`, `/history`, `/settings/*`, …).
   Artinya screen-nya berisi `<ScreenShell>…</ScreenShell>`, dan route-nya
   tetap dibungkus `PhoneStage`. Pola benar ada di `components/catetind/wallet-screen.tsx`.
-- Halaman **publik/pre-app** (`/login`, `/checkout`, `/privacy`, `/terms`,
+- Halaman **publik/pre-app** (`/welcome`, `/login`, `/checkout`, `/privacy`, `/terms`,
   `/join/[code]`, `/share/[id]`, `/install`, `/app/onboarding`) → **TANPA**
-  sidebar global; pakai `PhoneStage` (+ `plain` untuk flow fokus).
+  sidebar global; pakai `PhoneStage` (+ `plain` untuk flow fokus). Pengecualian:
+  `/welcome` mengurus bingkainya sendiri (kanvas hitam) — lihat
+  `components/catetind/welcome-screen.tsx`.
 - Judul halaman (H1) **satu resep**: `font-display text-3xl font-semibold tracking-tight text-ink lg:text-4xl`
   (jangan `font-black`, jangan lupa `font-display`).
 - Layout lebar: desktop = grid 12 kolom (lihat `wallet-screen.tsx` / `home-screen.tsx`),
@@ -119,10 +121,14 @@ netral lembut, mis. `shadow-[0_18px_40px_-34px_rgba(0,0,0,0.55)]`.
 | `thistle` | info, kategori netral |
 | `brand` (Daisy) | pop terang: highlight, badge |
 
-Teks di atas aksen terang = `text-ink`; di atas Evergreen/hitam = `text-cream`.
-Teks sekunder = **opasitas** (`text-ink/45`–`/65`), bukan abu-abu baru.
-Font hanya dua: Inter (body, default) + Plus Jakarta Sans (`font-display` untuk
-judul, angka besar, metrik).
+Teks di atas aksen terang = `text-forest` (Evergreen `#45594E`, **bukan** hitam);
+di atas Evergreen/hitam = `text-cream`. Teks sekunder = **opasitas**
+(`text-forest/45`–`/65`), bukan abu-abu baru.
+Font hanya satu: Inter — mengisi body (default) sekaligus `font-display` untuk
+judul, angka besar, dan metrik. Dimuat dengan axis `opsz` (optical size), jadi
+teks besar otomatis memakai potongan optik "Display" Inter.
+Skala bobot: judul (h1–h3) & angka besar = `font-semibold` (600); semua teks lain
+`font-medium` (500). Tidak ada `font-black` (900) maupun `font-bold` (700).
 
 ---
 

@@ -428,6 +428,12 @@ export function BudgetScreen({
       return
     }
     setContributeTarget(null)
+    /* ── REKAM KE LEDGER DIPINDAH KE STORE (paket 65 · Tugas B) ─────────────
+       Dulu baris `saving` ditulis DI SINI, jadi setoran dari pintu lain
+       (`goal-detail-screen.tsx`, modal review, sapu bersih) tidak pernah
+       tercatat. Sekarang `contributeToFund()` (di store) yang menulis baris
+       ledger, sehingga SEMUA pemanggilnya otomatis tercatat di Riwayat &
+       menggerakkan saldo dompet. UI tinggal memberi tahu user. */
     toast.success(FUND_DETAIL_COPY.setToastTitle(money(amount), result.fund.name), {
       description: FUND_DETAIL_COPY.setToastHint(walletSourceName(walletId)),
     })
@@ -558,8 +564,8 @@ export function BudgetScreen({
       {/* ── baris judul — struktur & spasi identik dengan header Dashboard ─── */}
       <div className="mt-4 lg:mt-0 lg:flex lg:items-center lg:justify-between lg:gap-8">
         <div className="min-w-0">
-          <p className="text-[13px] font-medium text-ink/45">{scopeCaption}</p>
-          <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-ink lg:text-4xl">
+          <p className="text-[13px] font-medium text-forest/45">{scopeCaption}</p>
+          <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-forest lg:text-4xl">
             Budget &amp; Target
           </h1>
           <div className="mt-2 flex flex-wrap items-center gap-2 lg:mt-3">
@@ -609,11 +615,11 @@ export function BudgetScreen({
             )}
           >
             <div className="mb-3 hidden items-center justify-between gap-3 lg:flex">
-              <h2 className="font-display text-[17px] font-bold tracking-tight text-ink">
+              <h2 className="font-display text-[17px] font-semibold tracking-tight text-forest">
                 Budget Kategori
               </h2>
               <span
-                className="rounded-full bg-cream px-2 py-0.5 text-[10.5px] font-bold text-ink/45 tabular-nums ring-1 ring-soil/12"
+                className="rounded-full bg-cream px-2 py-0.5 text-[10.5px] font-semibold text-forest/45 tabular-nums ring-1 ring-soil/12"
                 aria-label={`Budget pada periode ${period.label}`}
               >
                 {periodBudgets.length}
@@ -642,10 +648,10 @@ export function BudgetScreen({
             )}
           >
             <div className="mb-3 hidden items-center justify-between gap-3 lg:flex">
-              <h2 className="font-display text-[17px] font-bold tracking-tight text-ink">
+              <h2 className="font-display text-[17px] font-semibold tracking-tight text-forest">
                 Celengan Impian
               </h2>
-              <span className="rounded-full bg-cream px-2 py-0.5 text-[10.5px] font-bold text-ink/45 tabular-nums ring-1 ring-soil/12">
+              <span className="rounded-full bg-cream px-2 py-0.5 text-[10.5px] font-semibold text-forest/45 tabular-nums ring-1 ring-soil/12">
                 {visibleFunds.length}
               </span>
             </div>
@@ -812,7 +818,7 @@ function ZoneTabs({ value, onChange }: { value: ZoneTab; onChange: (value: ZoneT
             role="tab"
             aria-selected={active}
             onClick={() => onChange(tab.id)}
-            className="relative rounded-full px-3 py-1.5 text-[11.5px] font-semibold transition-colors duration-200 active:scale-95"
+            className="relative rounded-full px-3 py-1.5 text-[11.5px] font-medium transition-colors duration-200 active:scale-95"
           >
             {active && (
               <motion.span
@@ -822,7 +828,7 @@ function ZoneTabs({ value, onChange }: { value: ZoneTab; onChange: (value: ZoneT
                 transition={{ type: 'spring', stiffness: 520, damping: 38 }}
               />
             )}
-            <span className={cn('relative z-10', active ? 'text-mint' : 'text-ink/45 hover:text-ink')}>
+            <span className={cn('relative z-10', active ? 'text-mint' : 'text-forest/45 hover:text-forest')}>
               {tab.label}
             </span>
           </button>

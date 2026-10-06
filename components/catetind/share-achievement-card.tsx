@@ -50,7 +50,7 @@ export function ShareAchievementCard({
       {/* kepala — wordmark di kiri (pemiliknya jelas), bulan di kanan */}
       <header className="flex items-center justify-between gap-3">
         <LogoWordmark tone="light" className="h-4" />
-        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-cream/15 px-2.5 py-1 text-[10.5px] font-semibold text-cream/85">
+        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-cream/15 px-2.5 py-1 text-[10.5px] font-medium text-cream/85">
           <CalendarDays className="size-3" strokeWidth={2.4} aria-hidden />
           {card.monthLabel}
         </span>
@@ -58,7 +58,7 @@ export function ShareAchievementCard({
 
       {/* tiga baris pencapaian — jumlah catatan, hari konsisten, milestone */}
       <div className="mt-5">
-        <p className="font-display text-[19px] font-semibold leading-snug tracking-tight text-cream">
+        <p className="font-display text-[19px] font-medium leading-snug tracking-tight text-cream">
           {shareCardLead(card.ownerName)}
         </p>
         <ul className="mt-3 flex flex-col gap-2.5">
@@ -113,7 +113,7 @@ export function ShareAchievementCard({
       </div>
 
       <footer className="mt-4 flex items-center justify-between gap-3 border-t border-cream/15 pt-3">
-        <p className="font-display text-[15px] font-bold tracking-tight text-mint">
+        <p className="font-display text-[15px] font-medium tracking-tight text-mint">
           {SHARE_HASHTAG}
         </p>
         <p className="font-mono text-[10.5px] text-cream/50">{SHARE_CARD_DOMAIN}</p>

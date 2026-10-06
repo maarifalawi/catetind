@@ -197,7 +197,7 @@ export function JointBalanceScale({
         <>
           {/* audit #2 & #3: jelaskan APA yang ditimbang — supaya panci tidak
               terlihat "salah hitung" di mata user */}
-          <p className="mt-3.5 w-full max-w-[430px] text-center text-[10.5px] leading-relaxed text-ink/40">
+          <p className="mt-3.5 w-full max-w-[430px] text-center text-[10.5px] leading-relaxed text-forest/40">
             {SETTLEMENT_SCOPE_COPY}
           </p>
           <SettlementCopy settlement={settlement} masked={masked} onSettle={onSettle} />
@@ -286,11 +286,11 @@ function ScalePan({
             {person.avatar}
           </span>
           {!compact && (
-            <span className="mt-1 text-[11px] font-semibold leading-none text-ink/50">
+            <span className="mt-1 text-[11px] font-medium leading-none text-forest/50">
               {person.name}
             </span>
           )}
-          <span className={cn('mt-1 font-black tabular-nums leading-none text-ink', dim.chipText)}>
+          <span className={cn('mt-1 font-semibold tabular-nums leading-none text-forest', dim.chipText)}>
             {signedMoneyLabel(net, masked)}
           </span>
           {/* label arah net — WAJIB ada di SEMUA varian supaya nominal negatif
@@ -298,7 +298,7 @@ function ScalePan({
               huruf lebih kecil, bukan menghilangkan labelnya. */}
           <span
             className={cn(
-              'mt-0.5 font-semibold leading-none text-ink/45',
+              'mt-0.5 font-medium leading-none text-forest/45',
               compact ? 'text-[8px]' : 'text-[9.5px]',
             )}
           >
@@ -354,17 +354,17 @@ export function SettlementCopy({
 
   return (
     <div className="mt-4 w-full max-w-[430px] rounded-[1.5rem] bg-[#ffffff] px-4 py-4 text-center ring-1 ring-hud-terracotta/25 shadow-[0_20px_44px_-34px_rgba(184,145,145,0.9)]">
-      <p className="text-[13.5px] leading-relaxed text-ink">
-        <b className="font-bold">{whoOwes.name}</b> perlu transfer{' '}
-        <b className="font-bold tabular-nums text-hud-terracotta">
+      <p className="text-[13.5px] leading-relaxed text-forest">
+        <b className="font-medium">{whoOwes.name}</b> perlu transfer{' '}
+        <b className="font-semibold tabular-nums text-hud-terracotta">
           {moneyLabel(settlementAmount, masked)}
         </b>{' '}
-        ke <b className="font-bold">{whoIsOwed.name}</b> — satu transfer aja langsung impas ⚖️
+        ke <b className="font-medium">{whoIsOwed.name}</b> — satu transfer aja langsung impas ⚖️
       </p>
       <button
         type="button"
         onClick={onSettle}
-        className="mt-3.5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-forest text-[13.5px] font-semibold text-mint transition-colors hover:bg-forest-soft active:scale-[0.99]"
+        className="mt-3.5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-forest text-[13.5px] font-medium text-mint transition-colors hover:bg-forest-soft active:scale-[0.99]"
       >
         Settle Sekarang
         <ArrowRight className="size-4" strokeWidth={2.6} />
@@ -382,7 +382,7 @@ function CopyCard({ copy, glow = false }: { copy: string; glow?: boolean }) {
         glow && 'shadow-[0_0_0_7px_rgba(181,185,135,0.13)]',
       )}
     >
-      <p className="text-[13px] font-semibold leading-relaxed text-[#000000]">{copy}</p>
+      <p className="text-[13px] font-medium leading-relaxed text-forest">{copy}</p>
     </div>
   )
 }

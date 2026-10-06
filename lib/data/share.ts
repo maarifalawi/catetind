@@ -318,16 +318,45 @@ export const SHARE_PANEL_COPY = {
     'Yang ikut terkirim cuma jumlah catatan, hari konsisten, dan milestone. Nggak ada satu pun angka rupiah di dalamnya.',
   shareLabel: 'Bagikan',
   copyLabel: 'Salin link',
+  /** paket 63 — ekspor kartu sebagai GAMBAR (Web Share API, fallback unduh) */
+  shareImageLabel: 'Share Report',
   /** toast + status inline — pola sama dengan serah-terima /install */
   status: {
     copied: 'Link kartu tersalin!',
     shared: 'Kartu terkirim! 🌿',
+    downloaded: 'Gambar kartu tersimpan di perangkatmu 🌿',
     failed: 'Gagal menyalin — salin link-nya manual ya',
   },
   /** pola JOIN_PREVIEW_COPY: pratinjau halaman yang dilihat orang lain */
   previewLabel: 'Lihat kartu seperti yang dilihat temanmu',
   previewHint: 'Tampilan ini yang muncul saat tautannya dibuka orang lain.',
 } as const
+
+/* ── GAMBAR KARTU (paket 63) ─────────────────────────────────────────────────
+   Kartu yang sama dengan `share-achievement-card.tsx`, dibangkitkan server-side
+   (`next/og` `ImageResponse`) untuk pratinjau tautan (OG/Twitter) dan untuk
+   tombol "Share Report". Isinya HANYA yang boleh publik: nama panggilan, bulan,
+   jumlah catatan, hari konsisten, milestone, tahap tanaman — nol angka rupiah
+   (PRD 6572–6576). Semua teks di gambar tinggal di sini, bukan di komponen. */
+
+export const SHARE_IMAGE_COPY = {
+  brand: 'CatetInd',
+  eyebrow: 'Kartu pencapaian',
+  /** pengingat singkat di kaki gambar (bukan ajakan jualan) */
+  footer: 'Catat 4 tap, tumbuh tiap hari',
+  /** dipakai versi Story di bawah tanaman */
+  storyFooter: 'Tanaman kamu mulai dari benih 🌱',
+} as const
+
+/** route gambar Story 1080×1920 (dipakai tombol "Share Report") */
+export function buildShareImagePath(id: string): string {
+  return `/api/share/${id.trim().toLowerCase()}/image`
+}
+
+/** teks alternatif gambar kartu (a11y di halaman publik) */
+export function shareImageAlt(card: ShareCard): string {
+  return `Kartu pencapaian ${card.ownerName} di CatetInd — ${card.monthLabel}`
+}
 
 /* ── KAKI DEMO ────────────────────────────────────────────────────────────────
    Sama seperti `/join/[code]`: tiga state halaman ini hanya bisa direview kalau

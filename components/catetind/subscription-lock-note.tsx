@@ -25,7 +25,7 @@ export function SubscriptionLockNote({
     <p
       data-subscription-lock-note="true"
       className={cn(
-        'mt-2 flex items-start justify-center gap-1.5 text-center text-[11px] leading-relaxed font-medium text-ink/55',
+        'mt-2 flex items-start justify-center gap-1.5 text-center text-[11px] leading-relaxed font-medium text-forest/55',
         className,
       )}
     >

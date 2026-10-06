@@ -12,7 +12,6 @@ import {
   Mail,
   MailCheck,
   RefreshCw,
-  Sparkles,
   TriangleAlert,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -27,24 +26,28 @@ import {
   VERIFY_COPY,
   resendCountdownLabel,
 } from '@/lib/data/auth'
-import { LogoWordmark } from './logo-wordmark'
+import { BrandPanel } from './brand-panel'
 import { completeMagicLink, sendLoginLink, verifyEmailOtp } from '@/lib/session-client'
 
 /* ── Cek Email / Callback (/login/verify) — inventaris #9 · PRD 5931–5933 ─────
    Halaman ini adalah tempat user MENUNGGU, dan menunggu yang hampa adalah
-   tempat orang menutup app. Karena itu isinya bukan sekadar "cek email":
+   tempat orang menutup app. Tapi "jangan hampa" TIDAK berarti "tulis sebanyak
+   mungkin" — revisi desain memangkas dinding teksnya (eyebrow, paragraf netra-
+   litas, daftar 3 langkah, catatan umur tautan) sampai yang tersisa cuma yang
+   benar-benar dipakai:
 
+     • TATA LETAK DESKTOP: kartu dua kolom (panel brand batik + konten),
+       pola yang SAMA dengan /login & /checkout. Sebelumnya halaman ini satu
+       kolom sempit ±480px, sehingga di browser desktop terlihat seperti ponsel
+       yang melar.
      • alamat emailnya DITAMPILKAN (dari `?email=`) → user yakin tautannya ke
-       alamat yang benar sebelum pindah tab;
-     • langkah berikutnya ditulis sebagai urutan, bukan paragraf;
-     • "Kirim ulang" ber-cooldown 60 detik dengan teks hitung mundur — rate-limit
-       dijelaskan, bukan disamarkan sebagai tombol mati;
-     • STATE KEDALUWARSA punya kartu sendiri + jalan keluar (jangan ada layar buntu);
-     • tombol demo berlabel "demo" supaya alur bisa diklik sampai ujung tanpa
-       berpura-pura ada sesi nyata.
+       alamat yang benar;
+     • "Kirim ulang" ber-cooldown 60 detik dengan teks hitung mundur;
+     • STATE KEDALUWARSA punya kartu sendiri + jalan keluar (jangan layar buntu);
+     • jalan masuk lewat KODE 6 angka dari email (jalur Supabase `verifyOtp`).
 
-   Halaman PUBLIK: `PhoneStage plain` di route, tanpa sidebar/nav/chat widget.
-   Semua copy di `lib/data/auth.ts`.
+   Halaman PUBLIK: navbar-nya dari `PublicNavbar` (dipasang di route), tanpa
+   sidebar/bottom-nav app. Semua copy di `lib/data/auth.ts`.
    ────────────────────────────────────────────────────────────────────────── */
 
 /** easing khas app: masuk cepat lalu settle lembut */
@@ -114,7 +117,7 @@ export function VerifyEmailScreen({
         return
       }
       toast.success(SESSION_COPY.signInToast, { description: SESSION_COPY.signInToastDescription })
-      router.push('/')
+      router.push('/app')
     })()
     return () => {
       alive = false
@@ -132,9 +135,8 @@ export function VerifyEmailScreen({
       return
     }
     toast.success(SESSION_COPY.signInToast, { description: SESSION_COPY.signInToastDescription })
-    router.push('/')
+    router.push('/app')
   }
-
 
   function handleResend() {
     if (!canResend) return
@@ -161,154 +163,133 @@ export function VerifyEmailScreen({
   )
 
   return (
-    <div className="mx-auto flex min-h-[100dvh] w-full max-w-[480px] flex-col px-6 pt-10 pb-14 lg:max-w-[560px] lg:pt-16">
-      {/* ── 1. header ─────────────────────────────────────────────────────── */}
-      <header>
-        <LogoWordmark className="h-6" />
-        <p className="mt-6 text-[11px] font-semibold tracking-[0.16em] text-ink/40 uppercase">
-          {VERIFY_COPY.eyebrow}
-        </p>
-        <h1 className="mt-1.5 font-display text-3xl font-semibold tracking-tight text-ink lg:text-4xl">
-          {VERIFY_COPY.title}
-        </h1>
-      </header>
+    /* tinggi dikurangi tinggi navbar (`h-16` = 4rem) supaya kartunya benar-benar
+       di tengah layar tanpa memaksa scroll — bukan ponsel melar di desktop. */
+    <div className="flex min-h-[calc(100dvh-4rem)] w-full items-center justify-center px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
+      <div className="grid w-full max-w-[1040px] overflow-hidden rounded-[1.5rem] bg-cream ring-1 ring-soil/10 shadow-[0_40px_90px_-55px_rgba(0,0,0,0.5)] lg:grid-cols-2 lg:rounded-[2rem]">
+        {/* panel brand batik — komponen BERSAMA (/login & /checkout). Tagline
+            di sini bukan judul halaman (judulnya di kolom kanan), jadi `p`. */}
+        <BrandPanel as="p" />
 
-      {/* ── 2. kartu status: terkirim ATAU kedaluwarsa (dua-duanya punya jalan keluar) ── */}
-      <AnimatePresence mode="wait" initial={false}>
-        {linkExpired ? (
-          <ExpiredCard
-            key="expired"
-            secondsLeft={secondsLeft}
-            canResend={canResend}
-            onResend={handleResend}
-            reduceMotion={reduceMotion}
-          />
-        ) : (
-          <SentCard
-            key="sent"
-            displayEmail={displayEmail}
-            secondsLeft={secondsLeft}
-            canResend={canResend}
-            onResend={handleResend}
-            reduceMotion={reduceMotion}
-          />
-        )}
-      </AnimatePresence>
+        {/* ── kolom konten ─────────────────────────────────────────────────── */}
+        <div className="flex flex-col px-7 py-9 sm:px-10 lg:px-12 lg:py-12">
+          <div className="mx-auto flex w-full max-w-[400px] flex-1 flex-col justify-center">
+            <header>
+              <h1 className="font-display text-[1.9rem] leading-tight font-semibold tracking-[-0.02em] text-forest lg:text-[2.1rem]">
+                {VERIFY_COPY.title}
+              </h1>
+              <p className="mt-2.5 text-[13.5px] leading-relaxed text-forest/55">{VERIFY_COPY.subtitle}</p>
+            </header>
 
-      {/* konfirmasi kirim ulang: teks di halaman, bukan toast saja — user yang
-          menatap layar & screen reader sama-sama tahu apa yang baru terjadi */}
-      <AnimatePresence initial={false}>
-        {resent && (
-          <motion.p
-            key="resent"
-            initial={reduceMotion ? false : { opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: reduceMotion ? 0 : 0.24, ease: EASE }}
-            aria-live="polite"
-            className="overflow-hidden text-center text-[11.5px] leading-relaxed text-forest"
-          >
-            {VERIFY_COPY.resendSentNote}
-          </motion.p>
-        )}
-      </AnimatePresence>
-
-      {/* ── 3. langkah berikutnya: user tahu harus ngapain setelah ini ─────── */}
-      {!linkExpired && (
-        <section className="mt-4 rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12">
-          <h2 className="font-display text-[15px] font-semibold tracking-tight text-ink">
-            {VERIFY_COPY.stepsTitle}
-          </h2>
-          <ol className="mt-3.5 space-y-3">
-            {VERIFY_COPY.steps.map((step, index) => (
-              <li key={step} className="flex items-start gap-3">
-                <span
-                  aria-hidden
-                  className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-sage text-[11px] font-bold tabular-nums text-forest"
-                >
-                  {index + 1}
-                </span>
-                <p className="min-w-0 text-[12.5px] leading-relaxed text-ink/65">{step}</p>
-              </li>
-            ))}
-          </ol>
-        </section>
-      )}
-
-      {/* ── 4. masuk dengan KODE dari email (bukan tombol demo lagi) ────────── */}
-      <section className="mt-4 rounded-[1.75rem] bg-sage/60 p-5 ring-1 ring-soil/12">
-        <div className="flex items-start gap-3">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-cream text-forest">
-            <Sparkles className="size-4" strokeWidth={2.2} aria-hidden />
-          </span>
-          <div className="min-w-0">
-            <h2 className="font-display text-[15px] font-semibold tracking-tight text-ink">
-              {VERIFY_COPY.otpTitle}
-            </h2>
-            <p className="mt-1 text-[12px] leading-relaxed text-ink/60">{VERIFY_COPY.otpHint}</p>
-          </div>
-        </div>
-
-        <form
-          className="mt-4"
-          onSubmit={(event) => {
-            event.preventDefault()
-            void handleVerifyOtp()
-          }}
-        >
-          <label htmlFor="otp" className="sr-only">
-            {VERIFY_COPY.otpLabel}
-          </label>
-          <input
-            id="otp"
-            name="otp"
-            value={otp}
-            onChange={(event) => setOtp(event.target.value.replace(/\D/g, '').slice(0, 6))}
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            placeholder="000000"
-            aria-label={VERIFY_COPY.otpLabel}
-            className={cn(
-              'h-12 w-full rounded-2xl bg-cream text-center font-mono text-[20px] tracking-[0.4em] text-ink ring-1 ring-soil/12',
-              'placeholder:text-ink/25 focus-visible:ring-2 focus-visible:ring-forest focus-visible:outline-none',
-            )}
-          />
-
-          <button
-            type="submit"
-            disabled={signingIn || otp.length < 6}
-            className="group mt-3 flex h-12 w-full items-center justify-between gap-3 rounded-full bg-forest pr-1.5 pl-5 text-cream transition-colors duration-200 hover:bg-forest-soft active:scale-[0.98] motion-reduce:transition-none disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <span className="text-[14px] font-semibold">
-              {signingIn ? SESSION_COPY.signingIn : VERIFY_COPY.otpSubmitLabel}
-            </span>
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-cream text-forest transition-colors duration-200 group-hover:bg-mint">
-              {signingIn ? (
-                <LoaderCircle className="size-4 animate-spin" strokeWidth={2.4} aria-hidden />
+            {/* kartu status: terkirim ATAU kedaluwarsa (dua-duanya ada jalan keluar) */}
+            <AnimatePresence mode="wait" initial={false}>
+              {linkExpired ? (
+                <ExpiredCard
+                  key="expired"
+                  secondsLeft={secondsLeft}
+                  canResend={canResend}
+                  onResend={handleResend}
+                  reduceMotion={reduceMotion}
+                />
               ) : (
-                <ArrowRight className="size-4" strokeWidth={2.4} aria-hidden />
+                <SentCard
+                  key="sent"
+                  displayEmail={displayEmail}
+                  secondsLeft={secondsLeft}
+                  canResend={canResend}
+                  onResend={handleResend}
+                  reduceMotion={reduceMotion}
+                />
               )}
-            </span>
-          </button>
-        </form>
+            </AnimatePresence>
 
-      </section>
+            {/* konfirmasi kirim ulang: teks di halaman, bukan toast saja — user yang
+                menatap layar & screen reader sama-sama tahu apa yang baru terjadi */}
+            <AnimatePresence initial={false}>
+              {resent && (
+                <motion.p
+                  key="resent"
+                  initial={reduceMotion ? false : { opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: reduceMotion ? 0 : 0.24, ease: EASE }}
+                  aria-live="polite"
+                  className="overflow-hidden text-center text-[11.5px] leading-relaxed text-forest"
+                >
+                  {VERIFY_COPY.resendSentNote}
+                </motion.p>
+              )}
+            </AnimatePresence>
 
-      {/* ── 5. kaki halaman: jalan keluar kecil ────────────────────────────── */}
-      <footer className="mt-auto pt-8">
-        <p className="flex items-start justify-center gap-1.5 text-center text-[11.5px] leading-relaxed text-ink/50">
-          <CircleHelp className="mt-0.5 size-3.5 shrink-0" strokeWidth={2.4} aria-hidden />
-          <span>
-            {LOGIN_COPY.helpLead}{' '}
-            <Link
-              href={LOGIN_COPY.helpHref}
-              className="font-semibold text-ink/70 underline underline-offset-2 hover:text-forest"
-            >
-              {LOGIN_COPY.helpLink}
-            </Link>
-          </span>
-        </p>
-      </footer>
+            {/* jalan masuk lewat KODE 6 angka (jalur Supabase `verifyOtp`) */}
+            <section className="mt-6 rounded-[1.5rem] bg-sage/50 p-5 ring-1 ring-soil/10">
+              <h2 className="font-display text-[15px] font-medium tracking-tight text-forest">
+                {VERIFY_COPY.otpTitle}
+              </h2>
+              <p className="mt-1 text-[12px] leading-relaxed text-forest/55">{VERIFY_COPY.otpHint}</p>
+
+              <form
+                className="mt-3.5"
+                onSubmit={(event) => {
+                  event.preventDefault()
+                  void handleVerifyOtp()
+                }}
+              >
+                <label htmlFor="otp" className="sr-only">
+                  {VERIFY_COPY.otpLabel}
+                </label>
+                <input
+                  id="otp"
+                  name="otp"
+                  value={otp}
+                  onChange={(event) => setOtp(event.target.value.replace(/\D/g, '').slice(0, 6))}
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  placeholder="000000"
+                  aria-label={VERIFY_COPY.otpLabel}
+                  className={cn(
+                    'h-12 w-full rounded-2xl bg-cream text-center font-mono text-[20px] tracking-[0.4em] text-forest ring-1 ring-soil/12',
+                    'placeholder:text-forest/25 focus-visible:ring-2 focus-visible:ring-forest focus-visible:outline-none',
+                  )}
+                />
+
+                <button
+                  type="submit"
+                  disabled={signingIn || otp.length < 6}
+                  className="group mt-3 flex h-12 w-full items-center justify-between gap-3 rounded-full bg-forest pr-1.5 pl-5 text-cream transition-colors duration-200 hover:bg-forest-soft active:scale-[0.98] motion-reduce:transition-none disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <span className="text-[14px] font-medium">
+                    {signingIn ? SESSION_COPY.signingIn : VERIFY_COPY.otpSubmitLabel}
+                  </span>
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-cream text-forest transition-colors duration-200 group-hover:bg-mint">
+                    {signingIn ? (
+                      <LoaderCircle className="size-4 animate-spin" strokeWidth={2.4} aria-hidden />
+                    ) : (
+                      <ArrowRight className="size-4" strokeWidth={2.4} aria-hidden />
+                    )}
+                  </span>
+                </button>
+              </form>
+            </section>
+          </div>
+
+          {/* jalan keluar kecil di kaki kolom */}
+          <footer className="mx-auto mt-8 w-full max-w-[400px]">
+            <p className="flex items-start justify-center gap-1.5 text-center text-[11.5px] leading-relaxed text-forest/50">
+              <CircleHelp className="mt-0.5 size-3.5 shrink-0" strokeWidth={2.4} aria-hidden />
+              <span>
+                {LOGIN_COPY.helpLead}{' '}
+                <Link
+                  href={LOGIN_COPY.helpHref}
+                  className="font-medium text-forest/70 underline underline-offset-2 hover:text-forest"
+                >
+                  {LOGIN_COPY.helpLink}
+                </Link>
+              </span>
+            </p>
+          </footer>
+        </div>
+      </div>
     </div>
   )
 }
@@ -338,12 +319,12 @@ function ResendButton({
       onClick={onClick}
       disabled={!canResend}
       className={cn(
-        'flex h-12 items-center justify-center gap-2 rounded-full text-[14px] font-semibold ring-1 transition-colors duration-200 motion-reduce:transition-none',
+        'flex h-12 items-center justify-center gap-2 rounded-full text-[14px] font-medium ring-1 transition-colors duration-200 motion-reduce:transition-none',
         canResend
           ? expiredTone
             ? 'bg-ink text-cream ring-transparent hover:bg-forest-soft'
-            : 'bg-cream text-ink ring-soil/16 hover:bg-sage/60'
-          : 'cursor-not-allowed bg-cream/70 text-ink/40 ring-soil/12',
+            : 'bg-cream text-forest ring-soil/16 hover:bg-sage/60'
+          : 'cursor-not-allowed bg-cream/70 text-forest/40 ring-soil/12',
       )}
     >
       {canResend ? (
@@ -356,12 +337,11 @@ function ResendButton({
   )
 }
 
-
-
 /**
- * Varian "tautan terkirim". Tujuan utamanya bukan memberi tahu ada email,
- * tapi memberi KEYAKINAN: alamatnya benar, pengirimnya jelas, tautannya sekali
- * pakai — lalu menyediakan dua aksi nyata (buka email / kirim ulang).
+ * Varian "tautan terkirim". Tujuan utamanya bukan memberi tahu ada email, tapi
+ * memberi KEYAKINAN: alamatnya benar, pengirimnya jelas — lalu menyediakan dua
+ * aksi nyata (buka email / kirim ulang). Catatan panjang soal "tautan sekali
+ * pakai" sudah dipangkas (revisi desain): ia tidak dipakai untuk apa pun.
  */
 function SentCard({
   displayEmail,
@@ -382,35 +362,28 @@ function SentCard({
       animate={{ opacity: 1, y: 0 }}
       exit={reduceMotion ? { opacity: 1 } : { opacity: 0, y: -6 }}
       transition={{ duration: reduceMotion ? 0 : 0.28, ease: EASE }}
-      className="mt-6 rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12"
+      className="mt-6 rounded-[1.5rem] bg-sage/50 p-5 ring-1 ring-soil/10"
     >
       <div className="flex items-start gap-3">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-sage text-forest">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-cream text-forest">
           <MailCheck className="size-4" strokeWidth={2.2} aria-hidden />
         </span>
-        <div className="min-w-0">
-          <p className="text-[12.5px] leading-relaxed text-ink/55">{VERIFY_COPY.sentLead}</p>
-          <p className="mt-0.5 font-display text-[15px] font-semibold break-all text-ink">
+        <div className="min-w-0 flex-1">
+          <p className="text-[12.5px] leading-relaxed text-forest/55">{VERIFY_COPY.sentLead}</p>
+          <p className="mt-0.5 font-display text-[15px] font-medium break-all text-forest">
             {displayEmail}
           </p>
-          <p className="mt-1 text-[11px] leading-relaxed text-ink/45">
-            dari <span className="font-semibold text-ink/60">{MAGIC_LINK_SENDER}</span> ·{' '}
-            {VERIFY_COPY.expireNote}
+          <p className="mt-1 text-[11px] leading-relaxed text-forest/45">
+            dari <span className="font-medium text-forest/60">{MAGIC_LINK_SENDER}</span>
           </p>
         </div>
       </div>
-
-      {/* pesan NETRAL — sengaja sama untuk email terdaftar maupun tidak, supaya
-          halaman ini tidak bisa dipakai menebak keberadaan akun seseorang */}
-      <p className="mt-3.5 rounded-2xl bg-sage/70 px-3.5 py-3 text-[11.5px] leading-relaxed text-ink/60 ring-1 ring-soil/8">
-        {VERIFY_COPY.neutralNote}
-      </p>
 
       <div className="mt-4 flex flex-col gap-2.5">
         {/* `mailto:` tanpa alamat = buka app email default di perangkat ini */}
         <a
           href="mailto:"
-          className="flex h-12 items-center justify-center gap-2 rounded-full bg-forest text-[14px] font-semibold text-cream shadow-[0_14px_30px_-18px_rgba(69,89,78,0.85)] transition-colors duration-200 hover:bg-forest-soft active:scale-[0.98] motion-reduce:transition-none"
+          className="flex h-12 items-center justify-center gap-2 rounded-full bg-forest text-[14px] font-medium text-cream shadow-[0_14px_30px_-18px_rgba(69,89,78,0.85)] transition-colors duration-200 hover:bg-forest-soft active:scale-[0.98] motion-reduce:transition-none"
         >
           <Mail className="size-4" strokeWidth={2.4} aria-hidden />
           {VERIFY_COPY.openMailLabel}
@@ -420,7 +393,7 @@ function SentCard({
 
         <Link
           href={LOGIN_PATH}
-          className="text-center text-[12px] font-semibold text-ink/55 underline underline-offset-2 hover:text-ink"
+          className="text-center text-[12px] font-medium text-forest/55 underline underline-offset-2 hover:text-forest"
         >
           {VERIFY_COPY.changeEmailLabel}
         </Link>
@@ -451,17 +424,17 @@ function ExpiredCard({
       animate={{ opacity: 1, y: 0 }}
       exit={reduceMotion ? { opacity: 1 } : { opacity: 0, y: -6 }}
       transition={{ duration: reduceMotion ? 0 : 0.28, ease: EASE }}
-      className="mt-6 rounded-[1.75rem] bg-hud-amber/25 p-5 ring-1 ring-hud-amber/60"
+      className="mt-6 rounded-[1.5rem] bg-hud-amber/25 p-5 ring-1 ring-hud-amber/60"
     >
       <div className="flex items-start gap-3">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-cream text-ink/70">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-cream text-forest/70">
           <TriangleAlert className="size-4" strokeWidth={2.2} aria-hidden />
         </span>
         <div className="min-w-0">
-          <h2 className="font-display text-[15px] leading-snug font-semibold tracking-tight text-ink">
+          <h2 className="font-display text-[15px] leading-snug font-medium tracking-tight text-forest">
             {VERIFY_COPY.expiredTitle}
           </h2>
-          <p className="mt-1 text-[12.5px] leading-relaxed text-ink/60">
+          <p className="mt-1 text-[12.5px] leading-relaxed text-forest/60">
             {VERIFY_COPY.expiredBody}
           </p>
         </div>
@@ -476,7 +449,7 @@ function ExpiredCard({
         />
         <Link
           href={LOGIN_PATH}
-          className="text-center text-[12px] font-semibold text-ink/55 underline underline-offset-2 hover:text-ink"
+          className="text-center text-[12px] font-medium text-forest/55 underline underline-offset-2 hover:text-forest"
         >
           {VERIFY_COPY.changeEmailLabel}
         </Link>
@@ -484,4 +457,3 @@ function ExpiredCard({
     </motion.section>
   )
 }
-

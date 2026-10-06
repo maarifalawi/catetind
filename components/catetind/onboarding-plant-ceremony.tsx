@@ -77,10 +77,10 @@ export function OnboardingPlantCeremony({
         </div>
       </div>
 
-      <h2 className="mt-7 font-sans text-[1.55rem] font-semibold leading-[1.15] tracking-[-0.035em] text-ink">
+      <h2 className="mt-7 font-sans text-[1.55rem] font-medium leading-[1.15] tracking-[-0.035em] text-forest">
         Tanamanmu baru saja ditanam
       </h2>
-      <p className="mt-3 max-w-[32ch] text-[14.5px] leading-relaxed tracking-[-0.01em] text-ink/50">
+      <p className="mt-3 max-w-[32ch] text-[14.5px] leading-relaxed tracking-[-0.01em] text-forest/50">
         Setiap kali kamu catat, tanamanmu akan tumbuh. Rawat dia baik-baik ya.
       </p>
 
@@ -105,10 +105,10 @@ export function OnboardingPlantCeremony({
               )}
             </span>
             <div className="min-w-0 flex-1">
-              <p className="text-[14px] font-medium leading-snug tracking-[-0.01em] text-ink">
+              <p className="text-[14px] font-medium leading-snug tracking-[-0.01em] text-forest">
                 {granted ? 'Pengingat aktif' : 'Aktifkan pengingat?'}
               </p>
-              <p className="mt-1 text-[12.5px] leading-relaxed text-ink/45">
+              <p className="mt-1 text-[12.5px] leading-relaxed text-forest/45">
                 {granted
                   ? 'Kami cuma muncul 2x sehari — jam 12:30 & 19:00. Tidak akan spam.'
                   : 'Cuma 2x sehari, jam 12:30 (setelah makan siang) dan 19:00 (setelah makan malam). Gak akan spam.'}
@@ -134,7 +134,7 @@ export function OnboardingPlantCeremony({
               <button
                 type="button"
                 onClick={() => onReminderChange(false)}
-                className="h-11 rounded-full px-4 text-[13px] font-medium text-ink/40 transition-colors hover:bg-ink/[0.04] hover:text-ink/70"
+                className="h-11 rounded-full px-4 text-[13px] font-medium text-forest/40 transition-colors hover:bg-ink/[0.04] hover:text-forest/70"
               >
                 Nanti aja
               </button>

@@ -44,7 +44,7 @@ export const WeeklyRecapBanner = memo(function WeeklyRecapBanner({
         <CalendarRange className="size-5" strokeWidth={2.2} />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-[15px] font-semibold text-cream">
+        <span className="block text-[15px] font-medium text-cream">
           Recap Mingguan Siap! 🌿
         </span>
                 <span className="mt-0.5 block text-[13px] text-cream/60 break-words">
@@ -53,7 +53,7 @@ export const WeeklyRecapBanner = memo(function WeeklyRecapBanner({
           ) : (
             <>
               Minggu ini: {recap.transactions} transaksi tercatat, net{' '}
-              <b className="font-semibold text-mint">
+              <b className="font-medium text-mint">
                 {recap.net < 0 ? '-' : '+'}
                 {money(Math.abs(recap.net))}
               </b>
@@ -61,7 +61,7 @@ export const WeeklyRecapBanner = memo(function WeeklyRecapBanner({
           )}
         </span>
       </span>
-      <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-mint py-2 pl-4 pr-2.5 text-[13px] font-semibold text-forest transition-colors group-hover:bg-cream">
+      <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-mint py-2 pl-4 pr-2.5 text-[13px] font-medium text-forest transition-colors group-hover:bg-cream">
         Lihat
         <ChevronRight className="size-4 transition-transform group-hover:translate-x-0.5" strokeWidth={2.6} />
       </span>

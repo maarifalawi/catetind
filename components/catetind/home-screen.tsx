@@ -3,10 +3,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { ArrowRight, Receipt, Search, Wallet as WalletIcon } from 'lucide-react'
+import { ArrowRight, Search } from 'lucide-react'
 import { ScreenShell } from './screen-shell'
 import { LogoWordmark } from './logo-wordmark'
-import { MetaChip } from './meta-chip'
+import { MobileStickyHeader } from './mobile-sticky-header'
 import { WalletCardStack } from './wallet-card-stack'
 import { CashFlowCard } from './cash-flow-card'
 import { DailyHudCard } from './daily-hud-card'
@@ -15,7 +15,7 @@ import { GlobalPrivacyToggle } from './global-privacy-toggle'
 import { MobileNavButton } from './mobile-nav-drawer'
 import { NotificationBell } from './notification-bell'
 import { PlantWidget } from './plant-widget'
-import { ContextSwitcher } from './context-switcher'
+import { ContextMenu } from './context-menu'
 import { useMoneyContext } from './money-context-provider'
 import { WeeklyRecapBanner } from './weekly-recap-banner'
 import { WeeklyRecapModal } from './weekly-recap-modal'
@@ -32,12 +32,10 @@ import { ExpenseDistributionCard } from './expense-distribution-card'
 import { MyGoalsCard } from './my-goals-card'
 import { RecentTransactionsCard } from './recent-transactions-card'
 import { OverviewPanel } from './overview-panel'
-import { homeWallets, cashTotal, useMoneyStore } from '@/lib/money/store'
+import { cashTotal, useMoneyStore } from '@/lib/money/store'
 import type { DeckSelection } from '@/lib/wallets'
-import { getTransactionsByContext } from '@/lib/data/transactions'
 import { HISTORY_SEARCH_PARAM, historySearchHref } from '@/lib/data/history'
-import { HOME_HEADER_COPY, HOME_TOTAL_COPY } from '@/lib/data/home'
-import type { Transaction } from '@/lib/types'
+import { HOME_HEADER_COPY } from '@/lib/data/home'
 
 export function HomeScreen() {
   const [overviewOpen, setOverviewOpen] = useState(false)
@@ -59,7 +57,15 @@ export function HomeScreen() {
   const router = useRouter()
 
   useEffect(() => {
-    setNow(new Date())
+    /* Jam perangkat dibaca SETELAH mount (hidrasi aman) DAN diperbarui tiap
+       menit. Dulu nilainya dipasang sekali saja, jadi sapaan menempel di
+       "Selamat pagi" sepanjang tab dibiarkan terbuka — keluhan nyata pemilik
+       produk: "udah sore, tulisannya masih selamat pagi". Satu interval kecil
+       di komponen ini cukup: ia satu-satunya pemakai `now`. */
+    const tick = () => setNow(new Date())
+    tick()
+    const timer = window.setInterval(tick, 60_000)
+    return () => window.clearInterval(timer)
   }, [])
 
   const snapshot = useMoneyStore()
@@ -77,16 +83,13 @@ export function HomeScreen() {
      dompet" dari header: chip di bawah Context Switcher cukup memuat dua fakta
      ringan (jumlah dompet & jumlah transaksi), dan angka total sudah punya
      tempatnya sendiri di kartu dompet + panel Overview. */
-  const contextWallets = useMemo(() => homeWallets(snapshot, moneyCtx), [snapshot, moneyCtx])
+  /* PAKET 70 — `contextWallets` & `transactions` DIHAPUS bersama chip
+     "N dompet · N transaksi". `total` tetap: ia dipakai panel Overview sebagai
+     angka SELURUH dompet (konteks uang tidak pernah menyentuhnya). */
   const total = useMemo(() => cashTotal(snapshot), [snapshot])
-  const transactions = useMemo(
-    () => getTransactionsByContext(moneyCtx) as Transaction[],
-    [moneyCtx],
-  )
 
   const hour = now?.getHours() ?? 12
   const sapaan = !now ? 'Selamat datang' : hour < 11 ? 'Selamat pagi' : hour < 15 ? 'Selamat siang' : hour < 19 ? 'Selamat sore' : 'Selamat malam'
-  const tanggal = now ? new Intl.DateTimeFormat('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(now) : ' '
 
   /* CATATAN PERFORMA — efek "background zoom-out" (scale + opacity ke seluruh
      dashboard) SENGAJA DIHAPUS. Alasannya: begitu seluruh halaman di-scale atau
@@ -152,7 +155,7 @@ export function HomeScreen() {
   return (
     <ScreenShell>
       <div>
-        <header className="flex items-start justify-between lg:hidden">
+        <MobileStickyHeader>
           <LogoWordmark className="h-5" />
           <div className="flex items-center gap-2">
             {/* sensor layar global — versi kompak untuk header mobile */}
@@ -170,52 +173,47 @@ export function HomeScreen() {
               <Image src="/avatar-maarif.png" alt="Jon Snow" fill sizes="36px" className="object-cover" />
             </span>
           </div>
-        </header>
+        </MobileStickyHeader>
         {/* switcher konteks — state GLOBAL (audit UX #6). Di MOBILE ia duduk di
-            barisnya sendiri; di DESKTOP ia ikut ke cluster aksi (baris judul) di
-            bawah. Dulu versi desktopnya ada di Sidebar, tapi blok "Konteks Uang"
-            dihapus dari Sidebar → di desktop switcher-nya hilang sama sekali dan
-            konteks terkunci di "Pribadi" (audit 46). Sengaja TIDAK sticky: saat
-            halaman di-scroll ia ikut naik (tidak menutupi konten). */}
+            barisnya sendiri (menu dropdown label-penuh, paket 65 — tidak ada lagi
+            label terpotong "Kelua…"); di DESKTOP ia pindah ke cluster aksi,
+            tepat DI SAMPING kolom search. Dulu versi desktopnya ada di Sidebar,
+            tapi blok "Konteks Uang" dihapus dari Sidebar → di desktop switcher-nya
+            hilang sama sekali dan konteks terkunci di "Pribadi" (audit 46).
+            Sengaja TIDAK sticky: saat halaman di-scroll ia ikut naik. */}
         <div className="mt-4 flex justify-center lg:hidden">
-          <ContextSwitcher value={moneyCtx} onChange={setContext} />
+          <ContextMenu value={moneyCtx} onChange={setContext} className="w-56" />
         </div>
-        {/* Metadata ringkas — DI-TENGAHKAN tepat di bawah Context Switcher
-            (paket 64). Dulu chip-nya rata kiri bercampur switcher desktop dan
-            ditemani baris panjang "Dompet Pribadi: Rp X · Total Saldo = semua
-            dompet" yang sekarang DIHAPUS: header cukup dua fakta ringan. */}
-        <div className="mt-3 flex items-center justify-center gap-2 lg:hidden">
-          <MetaChip icon={WalletIcon}>{HOME_TOTAL_COPY.walletsChip(contextWallets.length)}</MetaChip>
-          <MetaChip icon={Receipt}>{HOME_TOTAL_COPY.transactionsChip(transactions.length)}</MetaChip>
-        </div>
+        {/* Metadata ringkas — PAKET 70: chip "N dompet · N transaksi" DIHAPUS
+            dari Dashboard (mobile maupun desktop) atas permintaan pemilik produk:
+            dua angka itu bukan keputusan yang diambil user di layar ini, dan jumlah
+            transaksinya menyesatkan karena daftar di layar ini cuma 7 hari terakhir.
+            Definisi HOME_TOTAL_COPY.walletsChip/transactionsChip tetap ada di
+            lib/data/home.ts — dipakai halaman Dompet & Akun. */}
         {/* keadaan kosong (paket 43): hanya muncul setelah akun dihapus — lihat
             komponennya untuk alasan mengapa satu kalimat ini wajib ada */}
         <EmptyAccountNotice />
         <div className="mt-4 lg:mt-0 lg:flex lg:items-center lg:justify-between lg:gap-8">
           <div className="min-w-0">
-            {/* tanggal & sapaan khusus desktop — di mobile blok ini dihilangkan
-                supaya user langsung sampai ke kartu dompet */}
-            <p className="hidden text-[13px] font-medium text-ink/45 lg:block">{tanggal}</p>
-            <h1 className="mt-1 hidden font-display text-3xl font-semibold tracking-tight text-ink lg:block lg:text-4xl">
+            {/* sapaan khusus desktop — di mobile blok ini dihilangkan supaya user
+                langsung sampai ke kartu dompet. Baris tanggal panjang
+                ("Senin, 5 Oktober 2026") DIHAPUS (permintaan pemilik produk):
+                di layar ini ia tidak menambah keputusan apa pun. */}
+            <h1 className="hidden font-display text-3xl font-semibold tracking-tight text-forest lg:block lg:text-4xl">
               {sapaan}, Jon 🌿
             </h1>
             {/* meta ringkas sebagai chip — di DESKTOP saja (mobile punya baris
                 sendiri yang di-TENGAHKAN di bawah Context Switcher) */}
             <div className="hidden flex-wrap items-center gap-2 lg:mt-3 lg:flex">
-              <MetaChip icon={WalletIcon}>{HOME_TOTAL_COPY.walletsChip(contextWallets.length)}</MetaChip>
-              <MetaChip icon={Receipt}>{HOME_TOTAL_COPY.transactionsChip(transactions.length)}</MetaChip>
+              {/* chip "N dompet · N transaksi" dihapus di paket 70 (lihat catatan
+                  di header mobile di atas) — yang tersisa di cluster ini cuma
+                  kontrol yang benar-benar dipakai user desktop: konteks uang. */}
               {/* ── KONTEKS UANG (audit 46) ────────────────────────────────────
-                  Dulu di sini cuma ada chip BACAAN "Pribadi", karena switcher
-                  aslinya hidup di Sidebar — dan blok itu sudah dihapus dari
-                  Sidebar. Hasilnya user DESKTOP tidak punya cara berpindah ke
-                  Keluarga/Bersama sama sekali. Sekarang chip itu diganti kontrol
-                  yang benar-benar bisa ditekan: tiga pilihan Pribadi / Keluarga /
-                  Bersama, sumber state yang sama dengan versi mobile di atas. */}
-              <ContextSwitcher
-                value={moneyCtx}
-                onChange={setContext}
-                className="w-[262px]"
-              />
+                  Dulu di sini chip BACAAN "Pribadi", lalu segmented control yang
+                  MEMOTONG label panjang. Sejak paket 65 kontrol konteks pindah ke
+                  cluster aksi — DI SAMPING kolom search — dalam bentuk menu
+                  dropdown label-penuh (`ContextMenu`). State-nya tetap
+                  `useMoneyContext()` yang sama. */}
             </div>
             {/* ── KONTEKS AKTIF (paket 44) ─────────────────────────────────────
                 DIHAPUS di paket 64. Baris sementara "Dompet Pribadi: Rp X · Total
@@ -230,12 +228,15 @@ export function HomeScreen() {
                 sungguhan menuju /history membawa `?q=` — halaman yang memang
                 memiliki pencariannya (app/history/page.tsx). Enter dan tombol
                 panah dua-duanya mengirim. */}
+            {/* kontrol konteks uang (paket 65) — DI SAMPING kolom search, menu
+                dropdown label-penuh supaya "Keluarga"/"Bersama" tidak terpotong */}
+            <ContextMenu value={moneyCtx} onChange={setContext} className="w-44" />
             <form
               onSubmit={handleSearchSubmit}
               role="search"
               className="flex h-11 w-48 items-center gap-2.5 rounded-full bg-cream px-3.5 ring-1 ring-soil/12 transition-shadow focus-within:ring-2 focus-within:ring-forest/30 xl:w-64"
             >
-              <Search className="size-4 shrink-0 text-ink/40" aria-hidden />
+              <Search className="size-4 shrink-0 text-forest/40" aria-hidden />
               <input
                 type="search"
                 name={HISTORY_SEARCH_PARAM}
@@ -243,7 +244,7 @@ export function HomeScreen() {
                 onChange={(event) => setSearchQuery(event.target.value)}
                 placeholder={HOME_HEADER_COPY.searchPlaceholder}
                 aria-label={HOME_HEADER_COPY.searchAria}
-                className="w-full min-w-0 bg-transparent text-sm text-ink outline-none placeholder:text-ink/35"
+                className="w-full min-w-0 bg-transparent text-sm text-forest outline-none placeholder:text-forest/35"
               />
               <button
                 type="submit"
@@ -263,31 +264,35 @@ export function HomeScreen() {
             </span>
           </div>
         </div>
-        {/* ── URUTAN KARTU (paket 64) ──────────────────────────────────────────
-            Permintaan produk untuk MOBILE: Primary wallet/kartu → Secondary arus
-            uang → Tertiary transaksi terakhir (maks 10 baris / 7 hari) →
-            Quaternary (paling bawah) rekap mingguan & target bulan ini.
-            Urutannya dikerjakan lewat `order-*` di MOBILE saja; di DESKTOP
-            (`lg:order-none`) susunan aslinya dipertahankan apa adanya, termasuk
-            pasangan kolom baris 1–3. Urutan di DOM = urutan DESKTOP, jadi tidak
-            perlu dua versi markup. */}
+        {/* ── SUSUNAN BENTO GRID 12 KOLOM, DI-TENGAHKAN (paket 68) ────────────
+            Desktop memakai bento grid 12 kolom YANG DI-TENGAHKAN (`max-w-1400px`
+            + `mx-auto`) dengan EMPAT baris terurut atas→bawah dan NOL ruang mati:
+              ROW 1 · Dompet (6/12) + Arus Uang (6/12) — 50/50;
+              ROW 2 · Transaksi Terakhir (12/12) — daftarnya multi-kolom;
+              ROW 3 · Jatah Hari Ini (6/12) + Distribusi Pengeluaran (6/12);
+              ROW 4 · Tabungan Impian (6/12) + Tanamanmu (6/12).
+            Tiap sel `h-full`/`flex-1` supaya kartunya benar-benar MENGISI sel
+            (bukan sekadar duduk di atasnya). Posisi desktop dipatok lewat
+            `lg:col-start-*` + `lg:row-start-*`, jadi TIDAK bergantung urutan DOM;
+            di MOBILE urutan dijaga `order-*` yang direset `lg:order-none` — satu
+            versi markup untuk dua breakpoint. */}
         <div className="flex flex-col">
-          {/* order-1 — banner conditional: masa aktif / kuota AI / sinking fund */}
-          <div className="order-1 mt-4 space-y-2.5 lg:order-none lg:mt-5">
+          {/* banner conditional: masa aktif / kuota AI / sinking fund — sengaja
+              di LUAR bento grid supaya terbaca sebagai strip notifikasi teratas */}
+          <div className="mt-4 space-y-2.5 lg:mt-5">
             <HomeBanners
               renewalState={renewal.state}
               renewalHandled={renewal.renewed}
               onOpenRenewal={renewal.openModal}
             />
-          </div>
-
-          {/* order-5 — rekap mingguan & target bulan ini. Di MOBILE blok ini
-              sengaja turun ke PALING BAWAH (kuartener); di desktop tetap di atas
-              seperti sebelumnya. kartu target = efek NYATA ritual Monthly Review
-              dan satu-satunya jalan membukanya lagi setelah auto-popup 1–3 lewat.
-              `monthly.ready` menahan render sampai penanda localStorage dibaca,
-              supaya kartunya tidak berkedip dari "belum ada" ke nominalnya. */}
-          <div className="order-5 mt-2.5 space-y-2.5 lg:order-none lg:mt-2.5">
+            {/* Rekap mingguan & target bulan ini DIPINDAH ke strip ini (paket
+                68). Keduanya memang berbentuk strip notifikasi/CTA — bukan kartu
+                data — dan memindahkannya membebaskan bento grid supaya persis
+                EMPAT baris sesuai mandat: ROW 1 dompet + arus uang, ROW 2
+                transaksi, ROW 3 jatah + distribusi, ROW 4 tabungan + tanaman.
+                Perilaku & kondisinya TIDAK berubah: `monthly.ready` tetap
+                menahan render sampai penanda localStorage dibaca supaya kartu
+                target tidak berkedip dari "belum ada" ke nominalnya. */}
             <WeeklyRecapBanner onOpen={openRecap} />
             {monthly.ready && (
               <MonthlyTargetCard
@@ -299,47 +304,60 @@ export function HomeScreen() {
             )}
           </div>
 
-          {/* order-2 — PRIMARY (dompet) + SECONDARY (arus uang).
-              "Arus Uang" naik ke baris pertama (posisi yang dulu ditempati Jatah
-              Hari Ini): ia bukti bahwa uang user benar-benar bergerak, jadi
-              pantas dibaca lebih dulu. Deck dompet tetap di kiri. Pembungkus
-              `h-full flex-col justify-center` DIBUANG: pola itu memaksa kartu
-              dompet memanjang mengikuti tinggi kolom kanan, sehingga muncul
-              ruang kosong setinggi kartu sebelahnya. Sekarang tiap kartu
-              setinggi isinya sendiri. */}
-          <div className="order-2 mt-6 grid grid-cols-1 gap-5 lg:order-none lg:mt-8 lg:grid-cols-12 lg:gap-6">
-            <div className="lg:col-span-5">
-              <div className="rounded-[2rem] bg-cream p-4 ring-1 ring-soil/12 sm:p-5">
+          {/* ── BENTO GRID 12 KOLOM (paket 68 · mandat bento) ────────────────── */}
+          <div className="mx-auto mt-5 grid w-full max-w-[1400px] grid-cols-1 gap-5 lg:mt-6 lg:grid-cols-12 lg:gap-6">
+            {/* ── ROW 1 · DOMPET (6/12, kolom 1) ───────────────────────────────
+                SETENGAH lebar: 4/12 terbukti terlalu sempit untuk tumpukan kartu
+                3D dompet, jadi ia dipulihkan ke 6/12 (ukuran yang dulu memang
+                diminta pemilik produk — "dompet setengah layar"). `h-full` di
+                sel + di pembungkus `p-4` supaya tepinya sejajar sel tetangga.
+                Di MOBILE ia kartu PERTAMA (order-1). */}
+            <div className="order-1 h-full lg:order-none lg:col-span-6 lg:col-start-1 lg:row-start-1">
+              <div className="h-full rounded-[2rem] bg-cream p-4 ring-1 ring-soil/12">
                 <WalletCardStack onOpen={handleDeckOpen} />
               </div>
             </div>
-            <div className="lg:col-span-7">
+            {/* ── ROW 1 · ARUS UANG (6/12, kolom 7–12) ──────────────────────────
+                Sepasang 50/50 dengan Dompet (yang dilebarkan atas permintaan
+                pemilik produk). Grafik garis minimalis tetap dapat ~660px di
+                layar lebar — lebih dari cukup. `h-full` membuatnya sama tinggi
+                dengan Dompet (kartu `flex-1` + grafik `flex-1` ⇒ tanpa ruang
+                mati). Di MOBILE baris kedua (order-2). */}
+            <div className="order-2 h-full lg:order-none lg:col-span-6 lg:col-start-7 lg:row-start-1">
               <CashFlowCard />
             </div>
-          </div>
-
-          {/* order-4 — supporting: tanaman + Jatah Hari Ini yang dipadatkan
-              (58.5) + slot Nudge AI. Di MOBILE kartu-kartu ini duduk SETELAH
-              transaksi terakhir, bukan menggeser hierarki utama. */}
-          <div className="order-4 mt-5 grid grid-cols-1 gap-5 lg:order-none lg:mt-6 lg:grid-cols-12 lg:gap-6">
-            <div className="h-full lg:col-span-5">
-              <PlantWidget onReplayCelebration={celebration.replay} />
+            {/* ── ROW 2 · TRANSAKSI TERAKHIR — membentang PENUH 12 kolom ───────
+                Isinya dibatasi di dalam kartunya (maks baris + 7 hari terakhir)
+                DAN disebar multi-kolom, jadi tidak ada satu baris pun yang
+                terasa melar di lebar penuh. Di MOBILE (order-3). */}
+            <div className="order-3 lg:order-none lg:col-span-12 lg:col-start-1 lg:row-start-2">
+              <RecentTransactionsCard />
             </div>
-            <div className="flex flex-col gap-5 lg:col-span-7">
+            {/* ── ROW 3 · JATAH HARI INI (+ Nudge AI) — kiri 6/12 ──────────────
+                `h-full` + `flex flex-col`: DailyHudCard (`flex-1`) tumbuh mengisi
+                sel, jadi tingginya PERSIS sama dengan Distribusi Pengeluaran di
+                sebelahnya (bento 50/50). Di MOBILE (order-4). */}
+            <div className="order-4 flex h-full flex-col gap-5 lg:order-none lg:col-span-6 lg:col-start-1 lg:row-start-3 lg:gap-6">
               <DailyHudCard />
               <DailyNudge />
             </div>
-          </div>
-
-          {/* order-3 — TERTIARY: transaksi terakhir (maks 10 baris / 7 hari di
-              dalam kartunya) + distribusi pengeluaran & tabungan impian. */}
-          <div className="order-3 mt-5 grid grid-cols-1 gap-5 lg:order-none lg:mt-6 lg:grid-cols-12 lg:gap-6">
-            <div className="h-full lg:col-span-7">
-              <RecentTransactionsCard />
-            </div>
-            <div className="flex flex-col gap-5 lg:col-span-5">
+            {/* ── ROW 3 · DISTRIBUSI PENGELUARAN — kanan 6/12 ──────────────────
+                Daftar bar horizontal bulat (bukan pie/donut). Di MOBILE (order-5). */}
+            <div className="order-5 h-full lg:order-none lg:col-span-6 lg:col-start-7 lg:row-start-3">
               <ExpenseDistributionCard />
+            </div>
+            {/* ── ROW 4 · TABUNGAN IMPIAN — kiri 6/12 ──────────────────────────
+                Kartunya sudah `h-full` ⇒ daftar celengan mengisi sel. Di MOBILE
+                (order-6). */}
+            <div className="order-6 h-full lg:order-none lg:col-span-6 lg:col-start-1 lg:row-start-4">
               <MyGoalsCard />
+            </div>
+            {/* ── ROW 4 · TANAMANMU — kanan 6/12 ───────────────────────────────
+                Padding `p-6` di kartunya sengaja disamakan dengan Tabungan Impian
+                supaya pasangan baris ini terasa kohesif (ilustrasi + daftar tidak
+                tenggelam/kebesaran). Di MOBILE (order-7). */}
+            <div className="order-7 h-full lg:order-none lg:col-span-6 lg:col-start-7 lg:row-start-4">
+              <PlantWidget onReplayCelebration={celebration.replay} />
             </div>
           </div>
         </div>

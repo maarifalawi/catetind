@@ -412,15 +412,15 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
           <span className="flex size-14 items-center justify-center rounded-full bg-sage text-forest">
             <WalletIcon className="size-6" strokeWidth={2} />
           </span>
-          <p className="mt-5 font-display text-xl font-bold tracking-tight text-ink">
+          <p className="mt-5 font-display text-xl font-medium tracking-tight text-forest">
             {WALLET_DETAIL_COPY.notFoundTitle}
           </p>
-          <p className="mt-2 text-[13px] leading-relaxed text-ink/55">
+          <p className="mt-2 text-[13px] leading-relaxed text-forest/55">
             {WALLET_DETAIL_COPY.notFoundHint}
           </p>
           <Link
             href="/wallet"
-            className="mt-6 inline-flex items-center gap-2 rounded-full bg-forest px-5 py-3 text-[13px] font-semibold text-cream transition-colors hover:bg-forest-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40"
+            className="mt-6 inline-flex items-center gap-2 rounded-full bg-forest px-5 py-3 text-[13px] font-medium text-cream transition-colors hover:bg-forest-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40"
           >
             <ArrowLeft className="size-4" strokeWidth={2.4} aria-hidden />
             {WALLET_DETAIL_COPY.notFoundAction}
@@ -442,18 +442,18 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
             <Link
               href="/wallet"
               aria-label={WALLET_DETAIL_COPY.back}
-              className="flex size-10 shrink-0 items-center justify-center gap-2 rounded-2xl bg-cream text-ink ring-1 ring-soil/12 transition-colors hover:bg-sage/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25 lg:h-11 lg:w-auto lg:px-3.5"
+              className="flex size-10 shrink-0 items-center justify-center gap-2 rounded-2xl bg-cream text-forest ring-1 ring-soil/12 transition-colors hover:bg-sage/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25 lg:h-11 lg:w-auto lg:px-3.5"
             >
               <ArrowLeft className="size-[18px] shrink-0" strokeWidth={2.4} aria-hidden />
-              <span className="hidden text-[12.5px] font-semibold lg:inline">
+              <span className="hidden text-[12.5px] font-medium lg:inline">
                 {WALLET_DETAIL_COPY.backLabel}
               </span>
             </Link>
             <div className="min-w-0">
-              <h1 className="truncate font-display text-[19px] font-black tracking-tight text-ink lg:text-[22px]">
+              <h1 className="truncate font-display text-[19px] font-semibold tracking-tight text-forest lg:text-[22px]">
                 {wallet.name}
               </h1>
-              <p className="truncate text-[11px] text-ink/45">
+              <p className="truncate text-[11px] text-forest/45">
                 {WALLET_TYPE_LABEL[wallet.type]}
                 {wallet.number ? ` · ${wallet.number}` : ''}
               </p>
@@ -476,7 +476,7 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
               <div className="relative flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className="truncate font-display text-[17px] font-bold tracking-tight sm:text-[19px]">
+                    <p className="truncate font-display text-[17px] font-medium tracking-tight sm:text-[19px]">
                       {wallet.name}
                     </p>
                     {/* ikon contactless hanya untuk kartu bank — benda aslinya
@@ -485,12 +485,12 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
                       <ContactlessIcon className="size-4 shrink-0 text-cream/55" />
                     )}
                   </div>
-                  <span className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-cream/20 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-cream/90 ring-1 ring-inset ring-cream/30 backdrop-blur-[2px]">
+                  <span className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-cream/20 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.1em] text-cream/90 ring-1 ring-inset ring-cream/30 backdrop-blur-[2px]">
                     <span aria-hidden className="size-1.5 rounded-full bg-cream/70" />
                     {WALLET_TYPE_LABEL[wallet.type]}
                   </span>
                   {wallet.number && wallet.type === 'Bank' && (
-                    <p className="mt-2 truncate text-[10.5px] font-semibold tracking-[0.2em] text-cream/60 tabular-nums">
+                    <p className="mt-2 truncate text-[10.5px] font-medium tracking-[0.2em] text-cream/60 tabular-nums">
                       {wallet.number}
                     </p>
                   )}
@@ -523,7 +523,7 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
             ) : txs.length > 0 ? (
               /* ada catatan, tapi tidak satu pun di 30 hari terakhir → dikatakan,
                  bukan dihilangkan diam-diam dari layar */
-              <section className="rounded-[1.75rem] bg-cream p-5 text-[12.5px] leading-relaxed text-ink/60 shadow-[0_18px_40px_-34px_rgba(69,89,78,0.55)] ring-1 ring-soil/10">
+              <section className="rounded-[1.75rem] bg-cream p-5 text-[12.5px] leading-relaxed text-forest/60 shadow-[0_18px_40px_-34px_rgba(69,89,78,0.55)] ring-1 ring-soil/10">
                 {WALLET_PERIOD_COPY.emptyWindow(WALLET_DETAIL_WINDOW_DAYS)}
               </section>
             ) : null}
@@ -543,10 +543,10 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
             <span className="flex size-7 items-center justify-center rounded-xl bg-gradient-to-br from-sage via-cream to-mint-soft text-forest ring-1 ring-forest/10">
               <ReceiptText className="size-3.5" strokeWidth={2.5} />
             </span>
-            <h2 className="font-display text-[17px] font-bold tracking-tight text-ink">
+            <h2 className="font-display text-[17px] font-semibold tracking-tight text-forest">
               {WALLET_LIST_COPY.title}
             </h2>
-            <span className="rounded-full bg-sage px-2 py-0.5 text-[10.5px] font-bold text-forest tabular-nums ring-1 ring-forest/10">
+            <span className="rounded-full bg-sage px-2 py-0.5 text-[10.5px] font-semibold text-forest tabular-nums ring-1 ring-forest/10">
               {WALLET_LIST_COPY.count(txs.length)}
             </span>
           </div>
@@ -561,16 +561,16 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
                       dalam pill netral (tinta + tanda −/+), bukan merah untuk
                       net minus — saldo turun bukan pelanggaran. */}
                   <div className="flex items-center gap-2.5">
-                    <p className="shrink-0 text-[11px] font-bold uppercase tracking-[0.12em] text-ink/45">
+                    <p className="shrink-0 text-[11px] font-medium uppercase tracking-[0.12em] text-forest/45">
                       {group.label}
                     </p>
                     <span className="h-px min-w-4 flex-1 bg-soil/[0.09]" aria-hidden />
                     {group.moved > 0 && (
-                      <span className="shrink-0 text-[11px] font-semibold tabular-nums text-ink/40">
+                      <span className="shrink-0 text-[11px] font-medium tabular-nums text-forest/40">
                         ⇄ {maskMoney(group.moved, masked)}
                       </span>
                     )}
-                    <span className="shrink-0 rounded-full bg-sage/60 px-2.5 py-0.5 text-[11.5px] font-bold tabular-nums text-ink/75">
+                    <span className="shrink-0 rounded-full bg-sage/60 px-2.5 py-0.5 text-[11.5px] font-semibold tabular-nums text-forest/75">
                       {netLabel(group.net, masked)}
                     </span>
                   </div>
@@ -623,7 +623,7 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
               trigger={
                 <button
                   type="button"
-                  className="inline-flex h-12 w-full flex-1 items-center justify-center gap-2 rounded-[1.1rem] bg-gradient-to-b from-forest-soft to-forest text-[14px] font-semibold text-cream shadow-[0_14px_28px_-14px_rgba(69,89,78,0.85)] transition-all hover:brightness-[1.08] active:scale-[0.99] sm:w-auto"
+                  className="inline-flex h-12 w-full flex-1 items-center justify-center gap-2 rounded-[1.1rem] bg-gradient-to-b from-forest-soft to-forest text-[14px] font-medium text-cream shadow-[0_14px_28px_-14px_rgba(69,89,78,0.85)] transition-all hover:brightness-[1.08] active:scale-[0.99] sm:w-auto"
                 >
                   <Plus className="size-4" strokeWidth={2.6} aria-hidden />
                   {WALLET_QUICK_ACTION_COPY.add}
@@ -634,7 +634,7 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
               type="button"
               onClick={() => setSyncOpen(true)}
               title={WALLET_QUICK_ACTION_COPY.syncHint}
-              className="inline-flex h-12 w-full flex-1 items-center justify-center gap-2 rounded-[1.1rem] bg-cream text-[14px] font-semibold text-ink ring-1 ring-soil/12 transition-colors hover:bg-sage/60 active:scale-[0.99] sm:w-auto"
+              className="inline-flex h-12 w-full flex-1 items-center justify-center gap-2 rounded-[1.1rem] bg-cream text-[14px] font-medium text-forest ring-1 ring-soil/12 transition-colors hover:bg-sage/60 active:scale-[0.99] sm:w-auto"
             >
               <SlidersHorizontal className="size-4 text-forest" strokeWidth={2.4} aria-hidden />
               {WALLET_QUICK_ACTION_COPY.sync}
@@ -645,7 +645,7 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
               type="button"
               onClick={() => setTransferOpen(true)}
               title={WALLET_QUICK_ACTION_COPY.transferHint}
-              className="inline-flex h-12 w-full flex-1 items-center justify-center gap-2 rounded-[1.1rem] bg-cream text-[14px] font-semibold text-ink ring-1 ring-soil/12 transition-colors hover:bg-sage/60 active:scale-[0.99] sm:w-auto"
+              className="inline-flex h-12 w-full flex-1 items-center justify-center gap-2 rounded-[1.1rem] bg-cream text-[14px] font-medium text-forest ring-1 ring-soil/12 transition-colors hover:bg-sage/60 active:scale-[0.99] sm:w-auto"
             >
               <ArrowLeftRight className="size-4 text-forest" strokeWidth={2.4} aria-hidden />
               {WALLET_QUICK_ACTION_COPY.transferLabel}
@@ -659,7 +659,7 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
               onClick={() => setDeleteWalletOpen(true)}
               aria-label={WALLET_DELETE_COPY.actionA11y(wallet.name)}
               title={WALLET_DELETE_COPY.actionHint}
-              className="inline-flex h-12 w-full flex-1 items-center justify-center gap-2 rounded-[1.1rem] bg-cream text-[14px] font-semibold text-plum ring-1 ring-plum/25 transition-colors hover:bg-plum/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-plum/40 active:scale-[0.99] sm:w-auto sm:px-4"
+              className="inline-flex h-12 w-full flex-1 items-center justify-center gap-2 rounded-[1.1rem] bg-cream text-[14px] font-medium text-plum ring-1 ring-plum/25 transition-colors hover:bg-plum/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-plum/40 active:scale-[0.99] sm:w-auto sm:px-4"
             >
               <Trash2 className="size-4" strokeWidth={2.4} aria-hidden />
               {WALLET_DELETE_COPY.action}
@@ -735,7 +735,7 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
             body={
               <>
                 {WALLET_DELETE_COPY.bodyLead(wallet.name)}
-                <b className="font-semibold text-ink">
+                <b className="font-medium text-forest">
                   {walletDeleteBalanceLabel(walletBalance(snapshot, wallet.id), masked)}
                 </b>
                 {WALLET_DELETE_COPY.bodyTail(walletRecordCount(snapshot, wallet.id))}
@@ -779,13 +779,13 @@ function PeriodSummaryCard({
         <span className="flex size-7 items-center justify-center rounded-xl bg-gradient-to-br from-sage via-cream to-mint-soft text-forest ring-1 ring-forest/10">
           <TrendingUp className="size-3.5" strokeWidth={2.6} />
         </span>
-        <h2 className="font-display text-[16px] font-bold tracking-tight text-ink">
+        <h2 className="font-display text-[16px] font-semibold tracking-tight text-forest">
           {WALLET_PERIOD_COPY.title}
         </h2>
       </div>
 
       {/* jendela yang BENAR-BENAR dipakai, bukan "30 hari" tanpa bukti */}
-      <p className="mt-2 text-[11px] tabular-nums text-ink/40">
+      <p className="mt-2 text-[11px] tabular-nums text-forest/40">
         {WALLET_PERIOD_COPY.windowHint(summary.fromLabel, summary.toLabel, summary.count)}
       </p>
 
@@ -803,11 +803,11 @@ function PeriodSummaryCard({
         <PeriodStat
           label={WALLET_PERIOD_COPY.net}
           value={netLabel(summary.net, masked)}
-          tone="text-ink"
+          tone="text-forest"
         />
       </dl>
 
-      <p className="mt-2 text-[10.5px] text-ink/35">{WALLET_PERIOD_COPY.netHint}</p>
+      <p className="mt-2 text-[10.5px] text-forest/35">{WALLET_PERIOD_COPY.netHint}</p>
 
       {/* grafik hanya kalau datanya memang cukup (>= 7 catatan) */}
       {trend.length >= 2 && <WalletDetailTrend points={trend} masked={masked} />}
@@ -819,10 +819,10 @@ function PeriodSummaryCard({
 function PeriodStat({ label, value, tone }: { label: string; value: string; tone: string }) {
   return (
     <div className="rounded-2xl bg-sage/45 px-3 py-2.5">
-      <dt className="text-[10px] font-semibold uppercase tracking-[0.12em] text-ink/45">
+      <dt className="text-[10px] font-medium uppercase tracking-[0.12em] text-forest/45">
         {label}
       </dt>
-      <dd className={cn('mt-1 truncate text-[13px] font-bold tabular-nums', tone)}>{value}</dd>
+      <dd className={cn('mt-1 truncate text-[13px] font-semibold tabular-nums', tone)}>{value}</dd>
     </div>
   )
 }
@@ -845,10 +845,10 @@ function PatientInsightCard({ count }: { count: number }) {
           <Sparkles className="size-[18px]" strokeWidth={2.2} />
         </span>
         <div className="min-w-0">
-          <h2 className="font-display text-[14.5px] font-bold tracking-tight text-ink">
+          <h2 className="font-display text-[14.5px] font-semibold tracking-tight text-forest">
             {WALLET_PATIENT_COPY.title}
           </h2>
-          <p className="mt-1 text-[12.5px] leading-relaxed text-ink/60">
+          <p className="mt-1 text-[12.5px] leading-relaxed text-forest/60">
             {WALLET_PATIENT_COPY.body}
           </p>
         </div>
@@ -871,11 +871,11 @@ function PatientInsightCard({ count }: { count: number }) {
             transition={{ duration: 0.7, ease: EASE }}
           />
         </span>
-        <span className="shrink-0 text-[11px] font-bold tabular-nums text-forest">
+        <span className="shrink-0 text-[11px] font-semibold tabular-nums text-forest">
           {WALLET_PATIENT_COPY.progress(count)}
         </span>
       </div>
-      <p className="mt-2 text-[11px] text-ink/40">
+      <p className="mt-2 text-[11px] text-forest/40">
         {WALLET_PATIENT_COPY.progressHint(INSIGHT_MIN_TRANSACTIONS - progress)}
       </p>
     </section>
@@ -894,10 +894,10 @@ function EmptyTransactions({ walletName }: { walletName: string }) {
       >
         <Sprout className="size-7 text-forest/45" strokeWidth={1.8} />
       </div>
-      <p className="mt-4 max-w-xs text-[13.5px] font-medium leading-relaxed text-ink">
+      <p className="mt-4 max-w-xs text-[13.5px] font-medium leading-relaxed text-forest">
         {WALLET_EMPTY_COPY.body}
       </p>
-      <p className="mt-1.5 max-w-xs text-[11.5px] leading-relaxed text-ink/45">
+      <p className="mt-1.5 max-w-xs text-[11.5px] leading-relaxed text-forest/45">
         {WALLET_EMPTY_COPY.hint}
       </p>
       <div className="mt-5">
@@ -909,7 +909,7 @@ function EmptyTransactions({ walletName }: { walletName: string }) {
           trigger={
             <button
               type="button"
-              className="inline-flex h-11 items-center gap-2 rounded-2xl bg-forest px-5 text-[13.5px] font-semibold text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
+              className="inline-flex h-11 items-center gap-2 rounded-2xl bg-forest px-5 text-[13.5px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
             >
               <Plus className="size-4" strokeWidth={2.6} aria-hidden />
               {WALLET_QUICK_ACTION_COPY.add}

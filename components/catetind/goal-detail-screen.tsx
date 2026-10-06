@@ -297,19 +297,19 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
             <Link
               href="/budget"
               aria-label={FUND_DETAIL_COPY.back}
-              className="flex size-10 shrink-0 items-center justify-center gap-2 rounded-2xl bg-cream text-ink ring-1 ring-soil/12 transition-colors hover:bg-sage/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25 lg:h-11 lg:w-auto lg:px-3.5"
+              className="flex size-10 shrink-0 items-center justify-center gap-2 rounded-2xl bg-cream text-forest ring-1 ring-soil/12 transition-colors hover:bg-sage/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25 lg:h-11 lg:w-auto lg:px-3.5"
             >
               <ArrowLeft className="size-[18px] shrink-0" strokeWidth={2.4} aria-hidden />
-              <span className="hidden text-[12.5px] font-semibold lg:inline">
+              <span className="hidden text-[12.5px] font-medium lg:inline">
                 {FUND_DETAIL_COPY.backLabel}
               </span>
             </Link>
             <div className="min-w-0">
-              <h1 className="truncate font-display text-[19px] font-black tracking-tight text-ink lg:text-[22px]">
+              <h1 className="truncate font-display text-[19px] font-semibold tracking-tight text-forest lg:text-[22px]">
                 {fund.name}
               </h1>
               {/* di header ukuran kompak: tanggal setoran terakhir saja */}
-              <p className="truncate text-[11px] text-ink/45">
+              <p className="truncate text-[11px] text-forest/45">
                 {late.lastDateISO
                   ? FUND_HISTORY_COPY.latest(formatDeadline(late.lastDateISO))
                   : FUND_HISTORY_COPY.never}
@@ -342,7 +342,7 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
             <div className="w-full min-w-0 flex-1">
               <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
                 {/* badge tahap — copy kanon PRD 2C.3 (baris 838–844) */}
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-forest px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-wide text-mint">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-forest px-2.5 py-1 text-[10.5px] font-medium uppercase tracking-wide text-mint">
                   <span aria-hidden className="text-[12px] leading-none">
                     {stage.icon}
                   </span>
@@ -351,7 +351,7 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
                 <span
                   aria-label={FUND_DETAIL_COPY.priorityA11y(priority.label)}
                   className={cn(
-                    'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-wide',
+                    'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10.5px] font-medium uppercase tracking-wide',
                     priority.badge,
                   )}
                 >
@@ -362,10 +362,10 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
 
               {/* persentase besar — metrik utama halaman ini */}
               <div className="mt-3 flex items-baseline justify-center gap-2 sm:justify-start">
-                <span className="font-display text-5xl font-black leading-none tabular-nums text-ink">
+                <span className="font-display text-5xl font-semibold leading-none tabular-nums text-forest">
                   {Math.round(percent)}
                 </span>
-                <span className="font-display text-xl font-bold text-ink/40">%</span>
+                <span className="font-display text-xl font-medium text-forest/40">%</span>
               </div>
 
               {/* bar progres — indikator kedua, melengkapi tanaman (bukan pengganti) */}
@@ -388,26 +388,26 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
               {/* nominal terkumpul / target / deadline */}
               <dl className="mt-3.5 flex flex-wrap items-end gap-x-4 gap-y-2">
                 <div>
-                  <dt className="text-[10px] font-semibold uppercase tracking-[0.12em] text-ink/45">
+                  <dt className="text-[10px] font-medium uppercase tracking-[0.12em] text-forest/45">
                     {FUND_DETAIL_COPY.heroLabel}
                   </dt>
-                  <dd className="font-display text-[19px] font-black tabular-nums text-ink">
+                  <dd className="font-display text-[19px] font-semibold tabular-nums text-forest">
                     {money(fund.current)}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-[10px] font-semibold uppercase tracking-[0.12em] text-ink/45">
+                  <dt className="text-[10px] font-medium uppercase tracking-[0.12em] text-forest/45">
                     {FUND_DETAIL_COPY.targetLabel}
                   </dt>
-                  <dd className="text-[13.5px] font-bold tabular-nums text-ink/70">
+                  <dd className="text-[13.5px] font-semibold tabular-nums text-forest/70">
                     {money(fund.target)}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-[10px] font-semibold uppercase tracking-[0.12em] text-ink/45">
+                  <dt className="text-[10px] font-medium uppercase tracking-[0.12em] text-forest/45">
                     {FUND_DETAIL_COPY.deadlineLabel}
                   </dt>
-                  <dd className="flex items-center gap-1.5 text-[13.5px] font-bold text-ink/70">
+                  <dd className="flex items-center gap-1.5 text-[13.5px] font-medium text-forest/70">
                     <CalendarClock className="size-3.5 text-forest" strokeWidth={2.4} aria-hidden />
                     {formatDeadline(fund.deadline)}
                   </dd>
@@ -424,7 +424,7 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
                   {FUND_ACHIEVED_COPY.body(fund.name)}
                 </p>
               ) : (
-                <p className="mt-3 text-[11px] leading-relaxed text-ink/40">
+                <p className="mt-3 text-[11px] leading-relaxed text-forest/40">
                   {FUND_DETAIL_COPY.heroHint}
                 </p>
               )}
@@ -463,24 +463,24 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
                   🌿
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="font-display text-[13.5px] font-bold tracking-tight text-ink">
+                  <p className="font-display text-[13.5px] font-medium tracking-tight text-forest">
                     {FUND_LATE_COPY.title}
                   </p>
-                  <p className="mt-1 text-[12.5px] leading-relaxed text-ink/60">
+                  <p className="mt-1 text-[12.5px] leading-relaxed text-forest/60">
                     {FUND_LATE_COPY.body(fund.name, late.weeks)}
                   </p>
                   <div className="mt-2.5 flex flex-wrap items-center gap-2">
                     <button
                       type="button"
                       onClick={() => setContributeOpen(true)}
-                      className="rounded-full bg-forest px-3.5 py-2 text-[12px] font-semibold text-mint transition-colors hover:bg-forest-soft active:scale-95"
+                      className="rounded-full bg-forest px-3.5 py-2 text-[12px] font-medium text-mint transition-colors hover:bg-forest-soft active:scale-95"
                     >
                       {FUND_LATE_COPY.cta}
                     </button>
                     <button
                       type="button"
                       onClick={() => setLateDismissed(true)}
-                      className="rounded-full px-3 py-2 text-[12px] font-semibold text-ink/45 transition-colors hover:bg-sage/60 hover:text-ink"
+                      className="rounded-full px-3 py-2 text-[12px] font-medium text-forest/45 transition-colors hover:bg-sage/60 hover:text-forest"
                     >
                       {FUND_LATE_COPY.dismiss}
                     </button>
@@ -502,7 +502,7 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
               <span className="flex size-7 items-center justify-center rounded-xl bg-gradient-to-br from-sage via-cream to-mint-soft text-forest ring-1 ring-forest/10">
                 <Target className="size-3.5" strokeWidth={2.6} aria-hidden />
               </span>
-              <h2 className="font-display text-[16px] font-bold tracking-tight text-ink">
+              <h2 className="font-display text-[16px] font-semibold tracking-tight text-forest">
                 {FUND_DETAIL_COPY.planTitle}
               </h2>
             </div>
@@ -511,19 +511,19 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
                 layar tetap mendengar satu kalimat utuh (inline berurutan) */}
             {reached ? (
               /* `monthlyNeeded()` = 0 saat sudah penuh → jangan tampil "Rp 0/bulan" */
-              <p className="mt-3 text-[13px] leading-relaxed text-ink/60">
+              <p className="mt-3 text-[13px] leading-relaxed text-forest/60">
                 {FUND_PLAN_COPY.done}
               </p>
             ) : (
               <>
-                <p className="mt-3 text-[13px] leading-relaxed text-ink/60">
+                <p className="mt-3 text-[13px] leading-relaxed text-forest/60">
                   {FUND_PLAN_COPY.lead}{' '}
-                  <b className="font-display text-[17px] font-black tabular-nums text-ink">
+                  <b className="font-display text-[17px] font-semibold tabular-nums text-forest">
                     {money(perMonth)}
                   </b>
                   <span>{FUND_PLAN_COPY.tail}</span>
                 </p>
-                <p className="mt-2 text-[11px] text-ink/40">
+                <p className="mt-2 text-[11px] text-forest/40">
                   {FUND_PLAN_COPY.monthsLeft(monthsLeft)}
                 </p>
               </>
@@ -539,7 +539,7 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
               <span className="flex size-7 items-center justify-center rounded-xl bg-gradient-to-br from-sage via-cream to-mint-soft text-forest ring-1 ring-forest/10">
                 <CalendarClock className="size-3.5" strokeWidth={2.6} aria-hidden />
               </span>
-              <h2 className="font-display text-[16px] font-bold tracking-tight text-ink">
+              <h2 className="font-display text-[16px] font-semibold tracking-tight text-forest">
                 {FUND_DETAIL_COPY.projectionTitle}
               </h2>
             </div>
@@ -547,11 +547,11 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
             {projection ? (
               <>
                 {/* tanggal besar = jawaban, kalimat di bawah = alasannya */}
-                <p className="mt-3 font-display text-[22px] font-black tracking-tight tabular-nums text-ink">
+                <p className="mt-3 font-display text-[22px] font-semibold tracking-tight tabular-nums text-forest">
                   {formatDeadline(projection.dateISO)}
                 </p>
-                <p className="mt-1.5 text-[12.5px] leading-relaxed text-ink/60">{projectionLine}</p>
-                <p className="mt-2 text-[11px] leading-relaxed text-ink/40">
+                <p className="mt-1.5 text-[12.5px] leading-relaxed text-forest/60">{projectionLine}</p>
+                <p className="mt-2 text-[11px] leading-relaxed text-forest/40">
                   {FUND_PROJECTION_COPY.assumption(
                     projection.sampleCount,
                     money(projection.avgMonthly),
@@ -559,7 +559,7 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
                 </p>
               </>
             ) : (
-              <p className="mt-3 text-[12.5px] leading-relaxed text-ink/60">
+              <p className="mt-3 text-[12.5px] leading-relaxed text-forest/60">
                 {projectionLine}
               </p>
             )}
@@ -572,10 +572,10 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
             <span className="flex size-7 items-center justify-center rounded-xl bg-gradient-to-br from-sage via-cream to-mint-soft text-forest ring-1 ring-forest/10">
               <PiggyBank className="size-3.5" strokeWidth={2.5} aria-hidden />
             </span>
-            <h2 className="font-display text-[17px] font-bold tracking-tight text-ink">
+            <h2 className="font-display text-[17px] font-semibold tracking-tight text-forest">
               {FUND_HISTORY_COPY.title}
             </h2>
-            <span className="rounded-full bg-sage px-2 py-0.5 text-[10.5px] font-bold tabular-nums text-forest ring-1 ring-forest/10">
+            <span className="rounded-full bg-sage px-2 py-0.5 text-[10.5px] font-semibold tabular-nums text-forest ring-1 ring-forest/10">
               {FUND_HISTORY_COPY.count(history.length)}
             </span>
           </div>
@@ -605,7 +605,7 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
                   {/* target sudah penuh → aksi primer berpindah ke target baru */}
                   <Link
                     href="/budget"
-                    className="inline-flex h-12 w-full flex-1 items-center justify-center gap-2 rounded-[1.1rem] bg-gradient-to-b from-forest-soft to-forest text-[14px] font-semibold text-cream shadow-[0_14px_28px_-14px_rgba(69,89,78,0.85)] transition-all hover:brightness-[1.08] active:scale-[0.99] sm:w-auto"
+                    className="inline-flex h-12 w-full flex-1 items-center justify-center gap-2 rounded-[1.1rem] bg-gradient-to-b from-forest-soft to-forest text-[14px] font-medium text-cream shadow-[0_14px_28px_-14px_rgba(69,89,78,0.85)] transition-all hover:brightness-[1.08] active:scale-[0.99] sm:w-auto"
                   >
                     <Plus className="size-4" strokeWidth={2.6} aria-hidden />
                     {FUND_ACHIEVED_COPY.cta}
@@ -613,7 +613,7 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
                   <button
                     type="button"
                     onClick={() => setContributeOpen(true)}
-                    className="inline-flex h-12 w-full flex-1 items-center justify-center gap-2 rounded-[1.1rem] bg-cream text-[14px] font-semibold text-ink ring-1 ring-soil/12 transition-colors hover:bg-sage/60 active:scale-[0.99] sm:w-auto"
+                    className="inline-flex h-12 w-full flex-1 items-center justify-center gap-2 rounded-[1.1rem] bg-cream text-[14px] font-medium text-forest ring-1 ring-soil/12 transition-colors hover:bg-sage/60 active:scale-[0.99] sm:w-auto"
                   >
                     <PiggyBank className="size-4 text-forest" strokeWidth={2.4} aria-hidden />
                     {FUND_DETAIL_COPY.setCta}
@@ -624,14 +624,14 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
                   type="button"
                   onClick={() => setContributeOpen(true)}
                   title={FUND_DETAIL_COPY.setHint}
-                  className="inline-flex h-12 w-full flex-1 items-center justify-center gap-2 rounded-[1.1rem] bg-gradient-to-b from-forest-soft to-forest text-[14px] font-semibold text-cream shadow-[0_14px_28px_-14px_rgba(69,89,78,0.85)] transition-all hover:brightness-[1.08] active:scale-[0.99] sm:w-auto"
+                  className="inline-flex h-12 w-full flex-1 items-center justify-center gap-2 rounded-[1.1rem] bg-gradient-to-b from-forest-soft to-forest text-[14px] font-medium text-cream shadow-[0_14px_28px_-14px_rgba(69,89,78,0.85)] transition-all hover:brightness-[1.08] active:scale-[0.99] sm:w-auto"
                 >
                   <PiggyBank className="size-4" strokeWidth={2.4} aria-hidden />
                   {FUND_DETAIL_COPY.setCta}
                 </button>
               )}
             </div>
-            <p className="mt-2 px-1 pb-0.5 text-[10.5px] leading-snug text-ink/45">
+            <p className="mt-2 px-1 pb-0.5 text-[10.5px] leading-snug text-forest/45">
               {reached ? FUND_ACHIEVED_COPY.hint : FUND_DETAIL_COPY.setHint}
             </p>
             {/* hapus celengan (paket 60.2) — ikut di bar bawah (zona ibu jari),
@@ -641,7 +641,7 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
               type="button"
               onClick={() => setDeleteOpen(true)}
               title={FUND_CARD_ACTION_COPY.deleteHint}
-              className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-[1.1rem] px-3 py-2 text-[11.5px] font-semibold text-plum/75 transition-colors hover:bg-plum/12 hover:text-plum focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-plum/30 active:scale-[0.99]"
+              className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-[1.1rem] px-3 py-2 text-[11.5px] font-medium text-plum/75 transition-colors hover:bg-plum/12 hover:text-plum focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-plum/30 active:scale-[0.99]"
             >
               <Trash2 className="size-3.5" strokeWidth={2.4} aria-hidden />
               {FUND_CARD_ACTION_COPY.deleteLabel}
@@ -782,22 +782,22 @@ function ContributionRow({
       <span
         aria-hidden
         className={cn(
-          'flex size-9 shrink-0 items-center justify-center rounded-2xl text-[12px] font-black ring-1 ring-inset',
-          source?.tile ?? 'bg-sage text-ink/60 ring-soil/10',
+          'flex size-9 shrink-0 items-center justify-center rounded-2xl text-[12px] font-medium ring-1 ring-inset',
+          source?.tile ?? 'bg-sage text-forest/60 ring-soil/10',
         )}
       >
         {source?.name.charAt(0) ?? '·'}
       </span>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[13px] font-semibold tabular-nums text-ink">
+        <p className="truncate text-[13px] font-medium tabular-nums text-forest">
           {formatDeadline(item.date)}
         </p>
-        <p className="flex items-center gap-1.5 text-[11px] text-ink/45">
+        <p className="flex items-center gap-1.5 text-[11px] text-forest/45">
           <span aria-hidden className={cn('size-1.5 rounded-full', source?.dot ?? 'bg-ink/20')} />
           {FUND_HISTORY_COPY.walletLead} {source?.name ?? FALLBACK_WALLET_NAME}
         </p>
       </div>
-      <p className="shrink-0 font-display text-[13.5px] font-bold tabular-nums text-forest">
+      <p className="shrink-0 font-display text-[13.5px] font-semibold tabular-nums text-forest">
         + {maskNominal(item.amount, masked)}
       </p>
     </motion.li>
@@ -824,19 +824,19 @@ function EmptyContributions({
       >
         <PiggyBank className="size-7 text-forest/45" strokeWidth={1.8} />
       </div>
-      <p className="mt-4 max-w-xs text-[13.5px] font-medium leading-relaxed text-ink">
+      <p className="mt-4 max-w-xs text-[13.5px] font-medium leading-relaxed text-forest">
         {FUND_HISTORY_COPY.emptyTitle}
       </p>
-      <p className="mt-1.5 max-w-xs text-[11.5px] leading-relaxed text-ink/45">
+      <p className="mt-1.5 max-w-xs text-[11.5px] leading-relaxed text-forest/45">
         {FUND_HISTORY_COPY.emptyBody}
       </p>
-      <p className="mt-1 max-w-xs text-[11px] leading-relaxed text-ink/35">
+      <p className="mt-1 max-w-xs text-[11px] leading-relaxed text-forest/35">
         {FUND_HISTORY_COPY.emptyHint(maskNominal(FUND_EXAMPLE_AMOUNT, masked))}
       </p>
       <button
         type="button"
         onClick={onContribute}
-        className="mt-5 inline-flex h-11 items-center gap-2 rounded-2xl bg-forest px-5 text-[13.5px] font-semibold text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
+        className="mt-5 inline-flex h-11 items-center gap-2 rounded-2xl bg-forest px-5 text-[13.5px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
       >
         <Plus className="size-4" strokeWidth={2.6} aria-hidden />
         {FUND_DETAIL_COPY.setCta}
@@ -876,7 +876,7 @@ function FundUnavailable({ ready, removed = false }: { ready: boolean; removed?:
           <PiggyBank className="size-6 text-forest/45" strokeWidth={1.8} />
         </span>
 
-        <h1 className="mt-4 font-display text-[19px] font-black tracking-tight text-ink">
+        <h1 className="mt-4 font-display text-[19px] font-semibold tracking-tight text-forest">
           {!ready
             ? FUND_DETAIL_COPY.loadingLabel
             : removed
@@ -884,14 +884,14 @@ function FundUnavailable({ ready, removed = false }: { ready: boolean; removed?:
               : FUND_DETAIL_COPY.notFoundTitle}
         </h1>
         {ready && (
-          <p className="mt-2 max-w-sm text-[12.5px] leading-relaxed text-ink/55">
+          <p className="mt-2 max-w-sm text-[12.5px] leading-relaxed text-forest/55">
             {removed ? FUND_DELETE_COPY.removedBody : FUND_DETAIL_COPY.notFoundBody}
           </p>
         )}
 
         <Link
           href="/budget"
-          className="mt-5 inline-flex h-11 items-center gap-2 rounded-2xl bg-forest px-5 text-[13.5px] font-semibold text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
+          className="mt-5 inline-flex h-11 items-center gap-2 rounded-2xl bg-forest px-5 text-[13.5px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
         >
           <ArrowLeft className="size-4" strokeWidth={2.6} aria-hidden />
           {FUND_DETAIL_COPY.notFoundCta}

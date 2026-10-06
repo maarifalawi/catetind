@@ -218,8 +218,8 @@ export function ProfileSettingsPanel() {
           />
 
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-ink">{name}</p>
-            <p className="mt-0.5 truncate text-xs text-ink/50">{EMAIL}</p>
+            <p className="text-sm font-medium text-forest">{name}</p>
+            <p className="mt-0.5 truncate text-xs text-forest/50">{EMAIL}</p>
             <TonePill tone="warning" icon={BadgeCheck} className="mt-2">
               {MEMBER_BADGE}
             </TonePill>
@@ -249,7 +249,7 @@ export function ProfileSettingsPanel() {
           type="button"
           onClick={handleSave}
           disabled={!dirty}
-          className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-forest py-3.5 text-sm font-semibold text-mint transition-colors hover:bg-forest-soft active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-ink/[0.07] disabled:text-ink/35 sm:w-auto sm:px-6"
+          className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-forest py-3.5 text-sm font-medium text-mint transition-colors hover:bg-forest-soft active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-ink/[0.07] disabled:text-forest/35 sm:w-auto sm:px-6"
         >
           <Save className="size-4" strokeWidth={2.4} aria-hidden />
           Simpan Perubahan
@@ -296,7 +296,7 @@ export function ProfileSettingsPanel() {
             />
           </SettingsField>
         </div>
-        <p className="mt-2 text-[11.5px] leading-relaxed text-ink/45">
+        <p className="mt-2 text-[11.5px] leading-relaxed text-forest/45">
           {MONEY_SETTINGS_COPY.effectNote}
         </p>
 
@@ -348,15 +348,15 @@ export function ProfileSettingsPanel() {
               {partner.avatar}
             </span>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-ink">{partner.name}</p>
-              <p className="mt-0.5 text-xs text-ink/50">Terhubung sejak {PARTNER_SINCE}</p>
+              <p className="text-sm font-medium text-forest">{partner.name}</p>
+              <p className="mt-0.5 text-xs text-forest/50">Terhubung sejak {PARTNER_SINCE}</p>
             </div>
           </div>
 
           <button
             type="button"
             onClick={() => setDisconnectOpen(true)}
-            className="mt-4 inline-flex items-center gap-2 rounded-2xl bg-cream px-4 py-3 text-sm font-semibold text-ink/60 ring-1 ring-soil/12 transition-colors hover:bg-sage hover:text-ink"
+            className="mt-4 inline-flex items-center gap-2 rounded-2xl bg-cream px-4 py-3 text-sm font-medium text-forest/60 ring-1 ring-soil/12 transition-colors hover:bg-sage hover:text-forest"
           >
             <Unlink className="size-4" strokeWidth={2.2} aria-hidden />
             Putus Koneksi Dompet
@@ -370,28 +370,28 @@ export function ProfileSettingsPanel() {
               <>
                 <Link
                   href={buildJoinHref(inviteCode)}
-                  className="inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-ink/55 underline underline-offset-2 transition-colors hover:text-ink"
+                  className="inline-flex items-center gap-1.5 text-[11.5px] font-medium text-forest/55 underline underline-offset-2 transition-colors hover:text-forest"
                 >
                   <ExternalLink className="size-3.5" strokeWidth={2.4} aria-hidden />
                   {JOIN_PREVIEW_COPY.linkLabel}
                 </Link>
-                <span className="mt-1 block text-[11px] leading-relaxed text-ink/40">
+                <span className="mt-1 block text-[11px] leading-relaxed text-forest/40">
                   {JOIN_PREVIEW_COPY.hint}
                 </span>
               </>
             ) : (
               <>
-                <p className="text-[11.5px] font-semibold text-ink/55">
+                <p className="text-[11.5px] font-medium text-forest/55">
                   {JOIN_PREVIEW_COPY.emptyLead}
                 </p>
                 <Link
                   href="/joint"
-                  className="mt-1.5 inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-forest underline underline-offset-2 transition-colors hover:text-ink"
+                  className="mt-1.5 inline-flex items-center gap-1.5 text-[11.5px] font-medium text-forest underline underline-offset-2 transition-colors hover:text-forest"
                 >
                   <ExternalLink className="size-3.5" strokeWidth={2.4} aria-hidden />
                   {JOIN_PREVIEW_COPY.emptyCta}
                 </Link>
-                <span className="mt-1 block text-[11px] leading-relaxed text-ink/40">
+                <span className="mt-1 block text-[11px] leading-relaxed text-forest/40">
                   {JOIN_PREVIEW_COPY.emptyHint}
                 </span>
               </>
@@ -405,7 +405,7 @@ export function ProfileSettingsPanel() {
         >
           <Link
             href="/joint"
-            className="mt-4 inline-flex items-center gap-2 rounded-2xl bg-forest px-5 py-3.5 text-sm font-semibold text-mint transition-colors hover:bg-forest-soft active:scale-[0.99]"
+            className="mt-4 inline-flex items-center gap-2 rounded-2xl bg-forest px-5 py-3.5 text-sm font-medium text-mint transition-colors hover:bg-forest-soft active:scale-[0.99]"
           >
             <UserPlus className="size-4" strokeWidth={2.4} aria-hidden />
             Ajak Pasangan ke Dompet Kita
@@ -506,15 +506,15 @@ export function LogoutSettingsPanel() {
       desc="Akhiri sesi di perangkat ini tanpa menghapus data apa pun."
     >
       <SettingsCard>
-        <p className="text-[13.5px] leading-relaxed text-ink/60">
+        <p className="text-[13.5px] leading-relaxed text-forest/60">
           Data keuanganmu tetap aman di akun. Masuk lagi kapan aja pakai{' '}
-          <b className="font-semibold text-ink">{EMAIL}</b>.
+          <b className="font-medium text-forest">{EMAIL}</b>.
         </p>
 
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="mt-4 inline-flex items-center gap-2 rounded-2xl bg-plum/20 px-5 py-3.5 text-sm font-semibold text-plum ring-1 ring-plum/30 transition-colors hover:bg-plum/30"
+          className="mt-4 inline-flex items-center gap-2 rounded-2xl bg-plum/20 px-5 py-3.5 text-sm font-medium text-plum ring-1 ring-plum/30 transition-colors hover:bg-plum/30"
         >
           <LogOut className="size-4" strokeWidth={2.4} aria-hidden />
           Keluar dari Akun
@@ -523,11 +523,11 @@ export function LogoutSettingsPanel() {
         {/* Jembatan dua arah: panel ini tempat paling wajar untuk menawarkan
             jalan masuk lagi — sebelumnya kalimat "masuk lagi" ada tanpa tautan
             apa pun. Prompt 09 melunasi itu setelah /login benar-benar ada. */}
-        <p className="mt-4 text-[11.5px] leading-relaxed text-ink/50">
+        <p className="mt-4 text-[11.5px] leading-relaxed text-forest/50">
           {RELOGIN_COPY.lead}{' '}
           <Link
             href={LOGIN_PATH}
-            className="font-semibold text-ink underline underline-offset-2 hover:text-forest"
+            className="font-medium text-forest underline underline-offset-2 hover:text-forest"
           >
             {RELOGIN_COPY.link}
           </Link>{' '}

@@ -13,6 +13,15 @@ import {
   type SinkingFundItem,
 } from '@/lib/data/budget'
 import { FUNDS_STATE_KEY, loadDeviceState, saveDeviceState } from './idb'
+import { getMoneySnapshot, postTransaction, walletNameOfId } from './store'
+import {
+  deleteRemoteFund,
+  pushContributionToServer,
+  pushFundToServer,
+  readRemoteFunds,
+  type RemoteFunds,
+} from '@/lib/supabase/funds-remote'
+import { randomUuid } from '@/lib/supabase/uuid'
 
 /* ── SATU STORE CELENGAN (paket 46) ─────────────────────────────────────────
    Temuan uji pemakaian: "Tabungan Impian" di Dashboard tidak sinkron dengan
@@ -91,11 +100,26 @@ export interface FundsSnapshot extends FundsState {
 /** versi bentuk state di perangkat — naikkan kalau bentuknya berubah */
 const FUNDS_STATE_VERSION = 1
 
-/** snapshot untuk render server & hidrasi — selalu data seed, tanpa IDB */
+/* ── STATE AWAL SELALU KOSONG (paket 65 · Tugas A) ────────────────────────────
+   Celengan & riwayat setoran CONTOH TIDAK LAGI di-inject sebagai state awal.
+   Akun demo diisi lewat `seedDemoDataOnce()` yang menulis baris sungguhan.
+   `SEED_*` di bawah tinggal jadi BAHAN test & bahan bootstrap demo. */
+const SEED_FUNDS: SinkingFundItem[] = INITIAL_SINKING_FUNDS
+const SEED_CONTRIBUTIONS: FundContribution[] = FUND_CONTRIBUTIONS
+
+/** snapshot untuk render server & hidrasi — SELALU KOSONG sampai user mengisi */
 const SERVER_SNAPSHOT: FundsSnapshot = Object.freeze({
-  funds: INITIAL_SINKING_FUNDS,
-  contributions: FUND_CONTRIBUTIONS,
-  removedIds: [],
+  funds: [] as SinkingFundItem[],
+  contributions: [] as FundContribution[],
+  removedIds: [] as number[],
+  hydrated: false,
+})
+
+/** snapshot seed — BAHAN test (`resetFundsStore()`), bukan state awal runtime */
+const SEED_SNAPSHOT: FundsSnapshot = Object.freeze({
+  funds: SEED_FUNDS,
+  contributions: SEED_CONTRIBUTIONS,
+  removedIds: [] as number[],
   hydrated: false,
 })
 
@@ -209,29 +233,29 @@ export function mergeFundsState(
   const purged = persisted?.purged === true
   const known = persisted?.version === FUNDS_STATE_VERSION
   const storedFunds = known ? (persisted?.funds ?? []).filter((fund) => fund?.id) : []
-  /* daftar dasar = yang tersimpan, celengan kanon untuk kunjungan pertama, atau
-     KOSONG kalau akun ini sudah dihapus user */
-  const base = storedFunds.length > 0 ? storedFunds : purged ? [] : INITIAL_SINKING_FUNDS
-  /* Yang ikut dari MEMORY hanyalah celengan yang lahir di sesi ini — yaitu yang
-     BUKAN celengan seed (saat hidrasi, memory masih berisi `SERVER_SNAPSHOT`) dan
-     belum ada di daftar dasar. Tanpa penyaring "bukan seed", celengan contoh akan
+  /* daftar dasar = HANYA yang tersimpan (kunjungan pertama = KOSONG, paket 65) */
+  const base = storedFunds
+  /* Yang ikut dari MEMORY hanyalah celengan yang lahir di sesi ini — atau, untuk
+     KUNJUNGAN PERTAMA, celengan seed yang sedang hidup di state test. Tanpa
+     penyaring "bukan seed" (saat bukan kunjungan pertama), celengan contoh akan
      muncul kembali di akun yang sudah dihapus, dan daftar tersimpan user bisa
      tercampur data contoh. */
+  const firstVisit = !purged && storedFunds.length === 0
   const extras = current.funds.filter(
     (fund) =>
-      !INITIAL_SINKING_FUNDS.some((seed) => seed.id === fund.id) &&
+      (firstVisit || !SEED_FUNDS.some((seed) => seed.id === fund.id)) &&
       !base.some((knownFund) => knownFund.id === fund.id),
   )
   const funds = [...base, ...extras]
 
   const storedContributions = known ? (persisted?.contributions ?? []).filter((row) => row?.id) : []
   /* kunjungan pertama → riwayat setoran seed, sama seperti daftar celengan di atas */
-  const baseContributions =
-    storedContributions.length > 0 ? storedContributions : purged ? [] : FUND_CONTRIBUTIONS
+  const baseContributions = storedContributions
+  const firstVisitContrib = !purged && storedContributions.length === 0
   /* aturan yang sama untuk riwayat setoran: sekali tercatat, tetap tercatat */
   const extraContributions = current.contributions.filter(
     (row) =>
-      !FUND_CONTRIBUTIONS.some((seed) => seed.id === row.id) &&
+      (firstVisitContrib || !SEED_CONTRIBUTIONS.some((seed) => seed.id === row.id)) &&
       !baseContributions.some((knownRow) => knownRow.id === row.id),
   )
   const contributions = [...baseContributions, ...extraContributions]
@@ -246,6 +270,109 @@ export function mergeFundsState(
   return { funds, contributions, removedIds, hydrated: true }
 }
 
+/* ── GABUNG SERVER + PERANGKAT (paket 64 · Paket D) ──────────────────────────
+   Saat ada sesi Supabase, SERVER yang jadi sumber celengan & riwayat setoran.
+   Fungsi murni ini (bisa diuji tanpa jaringan) menggabungkannya dengan antrean
+   lokal: baris server jadi DASAR, baris lokal yang belum terkirim tetap ikut
+   (antrean offline), dan `priority`/`scope` (tak ada di server) dipertahankan
+   dari versi lokal. */
+export function mergeWithRemoteFunds(
+  remote: RemoteFunds,
+  current: FundsSnapshot = live,
+  persisted: PersistedFunds | null = null,
+): FundsSnapshot {
+  const localById = new Map<number, SinkingFundItem>()
+  const localByRemote = new Map<string, SinkingFundItem>()
+  for (const row of [...(persisted?.funds ?? []), ...current.funds]) {
+    if (row?.id === undefined) continue
+    if (!localById.has(row.id)) localById.set(row.id, row)
+    if (row.remoteId && !localByRemote.has(row.remoteId)) localByRemote.set(row.remoteId, row)
+  }
+
+  const base = remote.funds.map((row) => {
+    const local =
+      (row.remoteId ? localByRemote.get(row.remoteId) : undefined) ?? localById.get(row.id)
+    if (!local) return row
+    return {
+      ...row,
+      id: local.id,
+      priority: local.priority,
+      scope: local.scope,
+      deadline: local.deadline || row.deadline,
+      remoteId: row.remoteId,
+    }
+  })
+
+  const remoteIds = new Set(remote.funds.map((row) => row.remoteId ?? ''))
+  const baseIds = new Set(base.map((row) => row.id))
+  const extras = [...localById.values()].filter(
+    (row) =>
+      !SEED_FUNDS.some((seed) => seed.id === row.id) &&
+      !baseIds.has(row.id) &&
+      !(row.remoteId && remoteIds.has(row.remoteId)),
+  )
+  const seenFund = new Set<number>()
+  const funds: SinkingFundItem[] = []
+  for (const row of [...base, ...extras]) {
+    if (seenFund.has(row.id)) continue
+    seenFund.add(row.id)
+    funds.push(row)
+  }
+
+  const remoteContribIds = new Set(remote.contributions.map((row) => row.id))
+  const extraContribs = current.contributions.filter(
+    (row) => !remoteContribIds.has(row.id) && !SEED_CONTRIBUTIONS.some((seed) => seed.id === row.id),
+  )
+  const seenContrib = new Set<number>()
+  const contributions: FundContribution[] = []
+  for (const row of [...remote.contributions, ...extraContribs]) {
+    if (seenContrib.has(row.id)) continue
+    seenContrib.add(row.id)
+    contributions.push(row)
+  }
+
+  const removedIds = Array.from(new Set([...current.removedIds, ...(persisted?.removedIds ?? [])]))
+  return { funds, contributions, removedIds, hydrated: true }
+}
+
+/** pastikan satu celengan ada di server (buat uuid kalau belum punya `remoteId`) */
+async function ensureFundOnServer(fundId: number): Promise<boolean> {
+  const fund = live.funds.find((row) => row.id === fundId)
+  if (!fund) return false
+  const remoteId = fund.remoteId ?? randomUuid()
+  if (!(await pushFundToServer(fund, remoteId))) return false
+  if (fund.remoteId !== remoteId) {
+    live = {
+      ...live,
+      funds: live.funds.map((row) => (row.id === fundId ? { ...row, remoteId } : row)),
+    }
+    persist(live)
+    emit()
+  }
+  return true
+}
+
+/** pastikan satu setoran ada di server (butuh uuid celengan induknya lebih dulu) */
+async function ensureContributionOnServer(contributionId: number): Promise<boolean> {
+  const contribution = live.contributions.find((row) => row.id === contributionId)
+  if (!contribution) return false
+  const goal = live.funds.find((row) => row.id === contribution.fundId)
+  if (!goal?.remoteId) return false
+  const remoteId = contribution.remoteId ?? randomUuid()
+  if (!(await pushContributionToServer(contribution, goal.remoteId, remoteId))) return false
+  if (contribution.remoteId !== remoteId) {
+    live = {
+      ...live,
+      contributions: live.contributions.map((row) =>
+        row.id === contributionId ? { ...row, remoteId } : row,
+      ),
+    }
+    persist(live)
+    emit()
+  }
+  return true
+}
+
 async function hydrateFundsStore(): Promise<void> {
   if (hydrateStarted) return
   hydrateStarted = true
@@ -255,6 +382,16 @@ async function hydrateFundsStore(): Promise<void> {
   live = mergeFundsState(persisted)
   hydratedOnce = true
   emit()
+
+  if (accountPurged) return
+  /* SERVER jadi sumber saat ada sesi; `null` = tanpa sesi → tetap jalur lokal */
+  const remote = await readRemoteFunds()
+  if (!remote) return
+  live = mergeWithRemoteFunds(remote, live, persisted)
+  persist(live)
+  emit()
+  for (const fund of live.funds) if (!fund.remoteId) await ensureFundOnServer(fund.id)
+  for (const row of live.contributions) if (!row.remoteId) await ensureContributionOnServer(row.id)
 }
 
 /* ── API TULIS — satu-satunya jalur menulis celengan ─────────────────────────
@@ -285,6 +422,7 @@ export function addFund(input: NewFundInput): SinkingFundItem {
     contributedThisMonth: false,
   }
   commit({ ...live, funds: [...live.funds, fund], hydrated: true })
+  void ensureFundOnServer(fund.id)
   return fund
 }
 
@@ -336,6 +474,32 @@ export function contributeToFund(
     contributions: [contribution, ...live.contributions],
     hydrated: true,
   })
+  /* ── REKAM KE LEDGER (paket 65 · Tugas B) ────────────────────────────────
+     Setoran celengan MENGGERAKKAN uang (keluar dari dompet). Karena itu ia WAJIB
+     menulis baris ledger lewat pintu yang sama dengan catatan manual. Dulu ini
+     ditulis di UI (`budget-screen.tsx`), jadi setoran dari pintu LAIN
+     (`goal-detail-screen.tsx`, modal review, sapu bersih) TIDAK pernah tercatat.
+     Sekarang ditulis DI SINI supaya SETIAP pemanggil `contributeToFund()` ikut
+     tercatat — satu pintu, tidak ada yang terlupa.
+
+     `clientTxId` = id setoran ⇒ idempoten: pemanggilan ganda tidak menulis dua
+     baris. Kalau `walletId` BUKAN dompet nyata (mis. sumber "Sisa budget" pada
+     Sapu Bersih — uang yang tidak pernah ada di dompet), name-nya kosong dan
+     TIDAK ada baris kas yang dikarang: sapu bersih memang tidak menyentuh kas. */
+  const walletName = walletNameOfId(getMoneySnapshot(), walletId)
+  if (walletName) {
+    postTransaction({
+      name: `Setor ${fund.name}`,
+      amount: rounded,
+      type: 'saving',
+      category: 'Tabungan',
+      wallet: walletName,
+      dateISO,
+      clientTxId: `fund-contribution-${contribution.id}`,
+    })
+  }
+  /* celengan dulu (butuh uuid), baru setoran yang menunjuk uuid itu */
+  void ensureFundOnServer(fund.id).then(() => ensureContributionOnServer(contribution.id))
 
   return {
     fund,
@@ -384,6 +548,7 @@ export function deleteFund(fundId: number): SinkingFundItem | null {
   const fund = live.funds.find((row) => row.id === fundId)
   if (!fund || live.removedIds.includes(fundId)) return null
   commit({ ...live, removedIds: [...live.removedIds, fundId], hydrated: true })
+  if (fund.remoteId) void deleteRemoteFund(fund.remoteId)
   return fund
 }
 
@@ -394,6 +559,7 @@ export function restoreFund(fundId: number): SinkingFundItem | null {
   if (!live.removedIds.includes(fundId)) return null
   const fund = live.funds.find((row) => row.id === fundId) ?? null
   commit({ ...live, removedIds: live.removedIds.filter((id) => id !== fundId), hydrated: true })
+  if (fund) void ensureFundOnServer(fundId)
   return fund
 }
 
@@ -455,7 +621,7 @@ export function contributionsOf(snapshot: FundsSnapshot, fundId: number): FundCo
  * cuma `purgeFundsStore()` saat user menghapus akunnya.
  */
 export function resetFundsStore(): void {
-  live = SERVER_SNAPSHOT
+  live = SEED_SNAPSHOT
   accountPurged = false
   hydrateStarted = false
   hydratedOnce = false

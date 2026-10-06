@@ -38,6 +38,7 @@ const BAR_HEIGHT = 'h-6' /* ~24px sesuai spesifikasi */
 export function WealthNetWorthBar({
   cash,
   investments,
+  physical,
   receivables,
   debts,
   masked,
@@ -46,6 +47,8 @@ export function WealthNetWorthBar({
   cash: number
   /** total nilai portofolio investasi (saham, reksadana, emas, crypto) */
   investments: number
+  /** nilai aset fisik / properti (paket 63) — ikut sisi aset */
+  physical?: number
   /** total piutang aktif — uang kita yang masih dipegang orang lain (paket 41) */
   receivables: number
   debts: number
@@ -53,7 +56,7 @@ export function WealthNetWorthBar({
 }) {
   /* #1 — sisi ASET = KAS LIKUID + ASET INVESTASI + PIUTANG (definisi tunggal di
      `netWorthParts()`; piutang dulu cuma pajangan di tab "Piutangku") */
-  const parts = netWorthParts({ cash, investments, receivables, debts })
+  const parts = netWorthParts({ cash, investments, physical, receivables, debts })
   const tug = tugOfWar(parts.assets, parts.debts)
   const assetLabel = maskMoney(tug.assets, masked)
   const debtLabel = maskMoney(tug.debts, masked)
@@ -91,25 +94,25 @@ export function WealthNetWorthBar({
         {/* 1. label + nominal di dua sisi bar (kiri Aset, kanan Hutang) */}
         <div className="flex items-end justify-between gap-3">
           <div className="min-w-0">
-            <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.16em] text-[#000000]">
+            <span className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.16em] text-forest">
               <TrendingUp className="size-3.5" strokeWidth={2.6} />
               Aset
             </span>
-            <span className="mt-1 block truncate font-display text-[19px] font-black leading-none tracking-tight text-[#b5b987] tabular-nums sm:text-[22px]">
+            <span className="mt-1 block truncate font-display text-[19px] font-semibold leading-none tracking-tight text-[#b5b987] tabular-nums sm:text-[22px]">
               {assetLabel}
             </span>
             {/* #1 — komposisi aset dibuka terang-terangan: user langsung lihat
                 bahwa uang di rekening/e-wallet IKUT dihitung sebagai aset */}
-            <span className="mt-1 block truncate text-[10px] font-medium text-ink/40 tabular-nums">
+            <span className="mt-1 block truncate text-[10px] font-medium text-forest/40 tabular-nums">
               kas {maskMoney(cash, masked)} · investasi {maskMoney(investments, masked)}
             </span>
           </div>
           <div className="min-w-0 text-right">
-            <span className="flex items-center justify-end gap-1.5 text-[11px] font-bold uppercase tracking-[0.16em] text-hud-terracotta">
+            <span className="flex items-center justify-end gap-1.5 text-[11px] font-medium uppercase tracking-[0.16em] text-hud-terracotta">
               Hutang
               <TrendingDown className="size-3.5" strokeWidth={2.6} />
             </span>
-            <span className="mt-1 block truncate font-display text-[19px] font-black leading-none tracking-tight text-hud-terracotta tabular-nums sm:text-[22px]">
+            <span className="mt-1 block truncate font-display text-[19px] font-semibold leading-none tracking-tight text-hud-terracotta tabular-nums sm:text-[22px]">
               {debtLabel}
             </span>
           </div>
@@ -168,19 +171,19 @@ export function WealthNetWorthBar({
         {/* 3. porsi masing-masing sisi — mikro, biar tidak perlu hitung sendiri.
             Dua label dibulatkan BERSAMA (Largest Remainder) sehingga selalu
             berjumlah tepat 100% — tidak ada 83% + 17% atau 99% yang bikin ragu. */}
-        <div className="mt-2 flex items-center justify-between text-[10.5px] font-semibold text-ink/40 tabular-nums">
+        <div className="mt-2 flex items-center justify-between text-[10.5px] font-medium text-forest/40 tabular-nums">
           <span>{tug.assetPctLabel}% dari total</span>
           <span>{tug.debtPctLabel}% dari total</span>
         </div>
 
         {/* 4. Net Worth — hasil akhir tarik tambang, di tengah */}
         <div className="mt-5 border-t border-dashed border-forest/10 pt-4 text-center">
-          <span className="text-[10.5px] font-bold uppercase tracking-[0.2em] text-ink/40">
+          <span className="text-[10.5px] font-medium uppercase tracking-[0.2em] text-forest/40">
             Net Worth
           </span>
           <p
             className={cn(
-              'mt-1.5 flex items-center justify-center gap-2 font-display text-[1.9rem] font-black leading-none tracking-tight tabular-nums sm:text-[2.3rem]',
+              'mt-1.5 flex items-center justify-center gap-2 font-display text-[1.9rem] font-semibold leading-none tracking-tight tabular-nums sm:text-[2.3rem]',
               tug.positive ? 'text-[#b5b987]' : 'text-hud-terracotta',
             )}
           >
@@ -189,7 +192,7 @@ export function WealthNetWorthBar({
               {tug.positive ? '📈' : '📉'}
             </span>
           </p>
-          <p className="mx-auto mt-2 max-w-[24rem] text-[12.5px] leading-relaxed text-ink/55">
+          <p className="mx-auto mt-2 max-w-[24rem] text-[12.5px] leading-relaxed text-forest/55">
             {netWorthCopy(tug.positive, ratioText)}
           </p>
           {/* hitungan terbuka hanya saat tidak dimask. Paket 41 membukanya lebih
@@ -197,24 +200,28 @@ export function WealthNetWorthBar({
               konversi piutang → kas kelihatan sebagai perpindahan potongan, bukan
               angka aset yang berubah-ubah tanpa sebab. */}
           {!masked && (
-            <div className="mt-1.5 space-y-1 text-[10.5px] text-ink/35 tabular-nums">
+            <div className="mt-1.5 space-y-1 text-[10.5px] text-forest/35 tabular-nums">
               <p className="flex flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5">
                 <span>kas {formatIDR(parts.cash)}</span>
                 <span aria-hidden>+</span>
                 <span>investasi {formatIDR(parts.investments)}</span>
                 <span aria-hidden>+</span>
-                <span className={cn(parts.receivables > 0 && 'text-ink/55')}>
+                <span className={cn(parts.physical > 0 && 'text-forest/55')}>
+                  fisik {formatIDR(parts.physical)}
+                </span>
+                <span aria-hidden>+</span>
+                <span className={cn(parts.receivables > 0 && 'text-forest/55')}>
                   piutang {formatIDR(parts.receivables)}
                 </span>
                 <span aria-hidden>=</span>
-                <span className="font-semibold text-ink/50">aset {formatIDR(parts.assets)}</span>
+                <span className="font-medium text-forest/50">aset {formatIDR(parts.assets)}</span>
               </p>
               <p className="flex flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5">
                 <span>aset {formatIDR(parts.assets)}</span>
                 <span aria-hidden>−</span>
                 <span>hutang {formatIDR(parts.debts)}</span>
                 <span aria-hidden>=</span>
-                <span className="font-semibold text-ink/50">net worth</span>
+                <span className="font-medium text-forest/50">net worth</span>
               </p>
             </div>
           )}

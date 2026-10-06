@@ -91,12 +91,12 @@ export function JointPushBanner({
           </span>
           <div className="min-w-0 flex-1">
             <p className="flex items-center gap-1.5">
-              <span className="rounded-full bg-hud-amber/25 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#b89191]">
+              <span className="rounded-full bg-hud-amber/25 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-[#b89191]">
                 Push
               </span>
-              <span className="text-[10.5px] font-semibold text-ink/40">Pengeluaran besar</span>
+              <span className="text-[10.5px] font-medium text-forest/40">Pengeluaran besar</span>
             </p>
-            <p className="mt-1 text-[13px] font-semibold leading-snug text-ink">
+            <p className="mt-1 text-[13px] font-medium leading-snug text-forest">
               {who.avatar} {who.name} barusan catat {tx.description}{' '}
               <span className="tabular-nums">{moneyLabel(tx.amount, masked)}</span> — split-nya udah
               pas belum?
@@ -104,7 +104,7 @@ export function JointPushBanner({
             <button
               type="button"
               onClick={() => onOpenSplit(tx)}
-              className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-forest/5 px-3 py-1.5 text-[11.5px] font-semibold text-forest ring-1 ring-forest/15 transition-colors hover:bg-forest/10"
+              className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-forest/5 px-3 py-1.5 text-[11.5px] font-medium text-forest ring-1 ring-forest/15 transition-colors hover:bg-forest/10"
             >
               Atur pembagian
               <ArrowRight className="size-3.5" strokeWidth={2.6} />
@@ -114,7 +114,7 @@ export function JointPushBanner({
             type="button"
             onClick={onDismiss}
             aria-label="Tutup notifikasi"
-            className="flex size-7 shrink-0 items-center justify-center rounded-full text-ink/35 transition-colors hover:bg-soil/[0.11] hover:text-ink/60"
+            className="flex size-7 shrink-0 items-center justify-center rounded-full text-forest/35 transition-colors hover:bg-soil/[0.11] hover:text-forest/60"
           >
             <X className="size-3.5" strokeWidth={2.4} />
           </button>
@@ -152,7 +152,7 @@ export function JointWeeklyRecapBanner({ show }: { show: boolean }) {
           <CalendarRange className="size-4" strokeWidth={2.3} />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block text-[13.5px] font-semibold leading-snug">
+          <span className="block text-[13.5px] font-medium leading-snug">
             📊 Minggu ini kalian kompak! Total bersama Rp{' '}
             {JOINT_WEEKLY.total.toLocaleString('id-ID')}
           </span>
@@ -189,7 +189,7 @@ export function JointWeeklyRecapBanner({ show }: { show: boolean }) {
                   <span className="text-[12px] text-cream/70">
                     {categoryEmoji(slice.category)} {slice.category}
                   </span>
-                  <span className="text-[12px] font-bold tabular-nums text-cream">
+                  <span className="text-[12px] font-semibold tabular-nums text-cream">
                     Rp {slice.amount.toLocaleString('id-ID')}
                   </span>
                 </li>
@@ -247,9 +247,9 @@ export function JointMonthlyRecapBanner({
           : 'ring-hud-sage/35 shadow-[0_26px_52px_-44px_rgba(69,89,78,0.6)]',
       )}
     >
-      <p className="flex items-center justify-center gap-2 text-[13.5px] font-bold text-ink">
+      <p className="flex items-center justify-center gap-2 text-[13.5px] font-medium text-forest">
         <CalendarDays
-          className={cn('size-4', promptSettle ? 'text-hud-terracotta' : 'text-[#000000]')}
+          className={cn('size-4', promptSettle ? 'text-hud-terracotta' : 'text-forest')}
           strokeWidth={2.3}
         />
         📅 Rekap {monthName} hampir selesai!
@@ -267,28 +267,28 @@ export function JointMonthlyRecapBanner({
       </div>
 
       {settlement.settled ? (
-        <p className="text-center text-[12.5px] leading-relaxed text-[#000000]">
+        <p className="text-center text-[12.5px] leading-relaxed text-forest">
           Bulan ini sudah kamu tandai settle ✅ Scale-nya rata, mulai dari nol lagi bulan depan 💚
         </p>
       ) : settlement.level === 'equal' ? (
-        <p className="text-center text-[12.5px] leading-relaxed text-[#000000]">
+        <p className="text-center text-[12.5px] leading-relaxed text-forest">
           Total patungan {moneyLabel(settlement.weighedTotal, masked)} — kalian impas, kompak banget
           ⚖️✨
         </p>
       ) : settlement.level === 'close' ? (
         /* audit #6: selisih di bawah ambang A7 → nada hijau, TANPA tombol settle */
-        <p className="text-center text-[12.5px] leading-relaxed text-[#000000]">
+        <p className="text-center text-[12.5px] leading-relaxed text-forest">
           Hampir impas! Selisih yang ditimbang cuma{' '}
-          <b className="font-bold">{moneyLabel(settlement.difference, masked)}</b> — di bawah Rp
+          <b className="font-medium">{moneyLabel(settlement.difference, masked)}</b> — di bawah Rp
           {SETTLEMENT_THRESHOLD.toLocaleString('id-ID')}, gak perlu settle 💚
         </p>
       ) : (
-        <p className="text-center text-[12.5px] leading-relaxed text-ink/60">
+        <p className="text-center text-[12.5px] leading-relaxed text-forest/60">
           {/* Stage 2: banner ikut bicara NET — angka & arahnya sama dengan panci
               timbangan dan modal, jadi tidak ada lagi "yang ditimbang" vs
               "nalangin lebih banyak" yang terbaca sebagai dua tagihan berbeda */}
           {settlement.whoIsOwed.name}{' '}
-          <b className="font-bold text-ink">
+          <b className="font-medium text-forest">
             {netPhrase(netOf(settlement, settlement.whoIsOwed.id), masked)}
           </b>{' '}
           · {settlement.whoOwes.name} yang transfer.
@@ -299,7 +299,7 @@ export function JointMonthlyRecapBanner({
         <button
           type="button"
           onClick={onOpenSettlement}
-          className="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-hud-terracotta text-[13.5px] font-semibold text-[#ffffff] shadow-[0_16px_32px_-22px_rgba(184,145,145,0.95)] transition-colors hover:bg-hud-terracotta/90 active:scale-[0.99]"
+          className="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-hud-terracotta text-[13.5px] font-medium text-[#ffffff] shadow-[0_16px_32px_-22px_rgba(184,145,145,0.95)] transition-colors hover:bg-hud-terracotta/90 active:scale-[0.99]"
         >
           Lihat Detail &amp; Settle
           <ArrowRight className="size-4" strokeWidth={2.6} />

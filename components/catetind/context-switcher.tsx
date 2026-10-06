@@ -39,14 +39,14 @@ export function ContextSwitcher({
       role="tablist"
       aria-label="Konteks keuangan"
       className={cn(
-        'relative flex w-full max-w-[300px] items-center rounded-full bg-cream p-1 ring-1 ring-soil/12 shadow-[0_10px_24px_-18px_rgba(69,89,78,0.55)]',
+        'relative grid w-full max-w-[320px] grid-cols-3 items-stretch rounded-full bg-cream p-1 ring-1 ring-soil/12 shadow-[0_10px_24px_-18px_rgba(69,89,78,0.55)]',
         className,
       )}
     >
-      {/* active-pill sliding background — Framer Motion 200ms (AC4) */}
-      {/* pill digambar lebih dulu, tanpa z-index negatif; tombol duduk di atasnya
-          lewat `z-10` — dengan begitu pill tidak tenggelam di belakang background
-          kontainer maupun stacking context baru dari ancestor ber-backdrop-blur */}
+      {/* active-pill sliding background — Framer Motion 200ms (AC4).
+          Lebarnya = 1/3 kolom grid yang SAMA RATA, jadi tiap tab (ikon + label)
+          benar-benar simetris walau panjang teksnya beda-beda; pill digambar di
+          belakang tombol (tombol `z-10`) supaya tidak tenggelam. */}
       <motion.div
         aria-hidden
         className="pointer-events-none absolute bottom-1 left-1 top-1 rounded-full bg-sage ring-1 ring-forest/10"
@@ -59,7 +59,7 @@ export function ContextSwitcher({
           ease: 'easeOut',
           duration: 0.25,
         }}
-        style={{ width: `calc((100% - 0.5rem) / ${OPTIONS.length})`, height: 'auto' }}
+        style={{ width: `calc((100% - 0.5rem) / ${OPTIONS.length})` }}
       />
 
       {OPTIONS.map(({ id, label, icon: Icon }) => {
@@ -72,12 +72,12 @@ export function ContextSwitcher({
             aria-selected={active}
             onClick={() => onChange(id)}
             className={cn(
-              'relative z-10 flex flex-1 items-center justify-center gap-1.5 rounded-full px-2 py-2 text-xs font-medium text-ink/50 transition-colors duration-250 active:scale-95',
-              active ? 'font-semibold text-forest' : 'hover:text-ink',
+              'relative z-10 flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-2 py-2 text-xs font-medium text-forest/50 transition-colors duration-250 active:scale-95',
+              active ? 'text-forest' : 'hover:text-forest',
             )}
           >
             <Icon className="size-4 shrink-0" strokeWidth={2.2} />
-            {label}
+            <span className="whitespace-nowrap">{label}</span>
           </button>
         )
       })}

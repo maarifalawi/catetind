@@ -39,6 +39,21 @@ export function contextName(ctx: MoneyContext): string {
 }
 
 /**
+ * Copy menu konteks uang (paket 65 · Tugas E).
+ *
+ * Dashboard dulu memakai segmented control 3 kolom yang MEMOTONG label panjang
+ * ("Kelua…", "Bersam…") di lebar sempit. Penggantinya adalah menu dropdown yang
+ * menampilkan label PENUH; teks tombolnya (bukan ikon) tinggal di sini supaya
+ * tidak ada copy di JSX.
+ */
+export const CONTEXT_MENU_COPY = {
+  /** aria-label tombol pembuka (ikon + label konteks aktif + chevron) */
+  triggerAria: 'Ganti konteks keuangan',
+  /** aria-label daftar pilihan */
+  menuAria: 'Pilih konteks keuangan',
+} as const
+
+/**
  * Penanda baris yang konteksnya TIDAK bisa dipastikan.
  *
  * Ada supaya baris itu tidak "hilang" diam-diam saat konteks aktif (aturan

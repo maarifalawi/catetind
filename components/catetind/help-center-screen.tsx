@@ -96,9 +96,9 @@ const TOTAL_ARTICLES = totalHelpArticles()
 
 /** nada teks tiap tingkat kesehatan; hanya "down" yang boleh sedikit menonjol */
 const HEALTH_TONE: Record<SystemHealth, string> = {
-  operational: 'text-ink/65',
-  degraded: 'text-ink/70',
-  down: 'font-semibold text-plum',
+  operational: 'text-forest/65',
+  degraded: 'text-forest/70',
+  down: 'font-medium text-plum',
 }
 
 /** pilihan user di kaki artikel — 👍 puas, 👎 butuh manusia */
@@ -237,11 +237,11 @@ export function HelpCenterScreen() {
       {/* ── HEADER — resep kanonik H1 yang sama dengan Dashboard & halaman lain ── */}
       <header className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-[13px] font-medium text-ink/45">{HELP_EYEBROW}</p>
-          <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-ink lg:text-4xl">
+          <p className="text-[13px] font-medium text-forest/45">{HELP_EYEBROW}</p>
+          <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-forest lg:text-4xl">
             {HELP_TITLE}
           </h1>
-          <p className="mt-2 max-w-2xl text-[13.5px] leading-relaxed text-ink/55 lg:mt-3 lg:text-sm">
+          <p className="mt-2 max-w-2xl text-[13.5px] leading-relaxed text-forest/55 lg:mt-3 lg:text-sm">
             {HELP_GREETING}
           </p>
           <div className="mt-2 flex flex-wrap items-center gap-2 lg:mt-3">
@@ -276,7 +276,7 @@ export function HelpCenterScreen() {
                       'inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[12.5px] font-medium ring-1 transition-colors',
                       active
                         ? 'bg-forest text-cream ring-forest'
-                        : 'bg-cream text-ink/60 ring-soil/12 hover:bg-sage/60 hover:text-ink',
+                        : 'bg-cream text-forest/60 ring-soil/12 hover:bg-sage/60 hover:text-forest',
                     )}
                   >
                     <span aria-hidden>{topic.emoji}</span>
@@ -287,7 +287,7 @@ export function HelpCenterScreen() {
             </div>
 
             <nav aria-label="Topik bantuan" className="hidden lg:block">
-              <p className="px-3 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-ink/40">
+              <p className="px-3 text-[10.5px] font-medium uppercase tracking-[0.14em] text-forest/40">
                 {HELP_SIDEBAR_TITLE}
               </p>
               <ul className="mt-3 space-y-0.5">
@@ -302,15 +302,15 @@ export function HelpCenterScreen() {
                         className={cn(
                           'flex w-full items-center gap-2.5 border-l-[3px] py-2.5 pr-2 pl-3 text-left text-[13.5px] transition-colors',
                           active
-                            ? 'border-forest bg-sage/60 font-semibold text-ink'
-                            : 'border-transparent text-ink/55 hover:border-soil/15 hover:bg-sage/40 hover:text-ink',
+                            ? 'border-forest bg-sage/60 font-medium text-forest'
+                            : 'border-transparent text-forest/55 hover:border-soil/15 hover:bg-sage/40 hover:text-forest',
                         )}
                       >
                         <span aria-hidden className="text-[15px] leading-none">
                           {topic.emoji}
                         </span>
                         <span className="min-w-0 flex-1">{topic.label}</span>
-                        <span className="shrink-0 text-[10.5px] tabular-nums text-ink/35">
+                        <span className="shrink-0 text-[10.5px] tabular-nums text-forest/35">
                           {topic.articles.length}
                         </span>
                       </button>
@@ -318,7 +318,7 @@ export function HelpCenterScreen() {
                   )
                 })}
               </ul>
-              <p className="mt-4 rounded-2xl bg-sage/50 px-3.5 py-3 text-[11.5px] leading-relaxed text-ink/60 ring-1 ring-forest/10">
+              <p className="mt-4 rounded-2xl bg-sage/50 px-3.5 py-3 text-[11.5px] leading-relaxed text-forest/60 ring-1 ring-forest/10">
                 💡 {HELP_SIDEBAR_NOTE}
               </p>
             </nav>
@@ -366,7 +366,7 @@ export function HelpCenterScreen() {
           )}
 
           {/* jalur support versi mobile — di desktop catatan ini nangkring di sidebar */}
-          <p className="rounded-2xl bg-sage/50 px-4 py-3 text-[11.5px] leading-relaxed text-ink/60 ring-1 ring-forest/10 lg:hidden">
+          <p className="rounded-2xl bg-sage/50 px-4 py-3 text-[11.5px] leading-relaxed text-forest/60 ring-1 ring-forest/10 lg:hidden">
             💡 {HELP_SIDEBAR_NOTE}
           </p>
         </div>
@@ -377,13 +377,13 @@ export function HelpCenterScreen() {
           adalah versi tertulis dari klaim itu — dan satu-satunya tautan ke sana
           yang bisa ditempuh orang TANPA masuk ke Pengaturan lebih dulu. */}
       <footer className="mt-6 border-t border-soil/12 pt-5 lg:mt-8">
-        <p className="text-[12.5px] leading-relaxed text-ink/60">{HELP_LEGAL_NOTE}</p>
+        <p className="text-[12.5px] leading-relaxed text-forest/60">{HELP_LEGAL_NOTE}</p>
         <ul className="mt-3 flex flex-wrap gap-2">
           {HELP_LEGAL_LINKS.map((link) => (
             <li key={link.href}>
               <Link
                 href={link.href}
-                className="inline-flex items-center gap-1.5 rounded-full bg-sage/70 px-3.5 py-2 text-[12.5px] font-semibold text-forest ring-1 ring-forest/10 transition-colors duration-200 hover:bg-mint/40 focus-visible:ring-2 focus-visible:ring-forest/40 focus-visible:outline-none motion-reduce:transition-none"
+                className="inline-flex items-center gap-1.5 rounded-full bg-sage/70 px-3.5 py-2 text-[12.5px] font-medium text-forest ring-1 ring-forest/10 transition-colors duration-200 hover:bg-mint/40 focus-visible:ring-2 focus-visible:ring-forest/40 focus-visible:outline-none motion-reduce:transition-none"
               >
                 <ShieldCheck className="size-3.5 shrink-0" strokeWidth={2.2} aria-hidden />
                 {link.label}
@@ -421,7 +421,7 @@ function SystemStatusBar({ indicators }: { indicators: SystemIndicator[] }) {
           )}
         >
           <span aria-hidden>{item.emoji}</span>
-          <span className="font-semibold text-ink">{item.name}:</span>
+          <span className="font-medium text-forest">{item.name}:</span>
           <span className={HEALTH_TONE[item.health]}>{item.label}</span>
         </span>
       ))}
@@ -437,21 +437,21 @@ function SystemStatusBar({ indicators }: { indicators: SystemIndicator[] }) {
 function SearchBar({ query, onChange }: { query: string; onChange: (value: string) => void }) {
   return (
     <label className="flex h-14 items-center gap-3 rounded-2xl bg-cream px-4 ring-1 ring-soil/12 transition-shadow focus-within:ring-2 focus-within:ring-forest/30 lg:h-16 lg:px-5">
-      <Search className="size-5 shrink-0 text-ink/35" strokeWidth={2.2} aria-hidden />
+      <Search className="size-5 shrink-0 text-forest/35" strokeWidth={2.2} aria-hidden />
       <input
         type="search"
         value={query}
         onChange={(event) => onChange(event.target.value)}
         placeholder={HELP_SEARCH_PLACEHOLDER}
         aria-label={HELP_SEARCH_LABEL}
-        className="w-full bg-transparent text-[15px] text-ink outline-none placeholder:text-ink/35 lg:text-base"
+        className="w-full bg-transparent text-[15px] text-forest outline-none placeholder:text-forest/35 lg:text-base"
       />
       {query && (
         <button
           type="button"
           onClick={() => onChange('')}
           aria-label="Hapus pencarian"
-          className="flex size-7 shrink-0 items-center justify-center rounded-full text-ink/40 transition-colors hover:bg-sage/60 hover:text-ink"
+          className="flex size-7 shrink-0 items-center justify-center rounded-full text-forest/40 transition-colors hover:bg-sage/60 hover:text-forest"
         >
           <X className="size-4" strokeWidth={2.4} />
         </button>
@@ -507,10 +507,10 @@ function QuickAnswerSection({
 }) {
   return (
     <section>
-      <h2 className="font-display text-2xl font-semibold tracking-tight text-ink lg:text-[28px]">
+      <h2 className="font-display text-2xl font-medium tracking-tight text-forest lg:text-[28px]">
         {title}
       </h2>
-      <p className="mt-1.5 max-w-2xl text-[13.5px] leading-relaxed text-ink/55">{blurb}</p>
+      <p className="mt-1.5 max-w-2xl text-[13.5px] leading-relaxed text-forest/55">{blurb}</p>
       <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:gap-5 xl:grid-cols-3">
         {items.map((item) => (
           <QuickAnswerCard
@@ -560,10 +560,10 @@ function QuickAnswerCard({
         className="flex w-full items-start gap-3 p-5 text-left sm:p-6"
       >
         <span className="min-w-0 flex-1">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-sage/70 px-2.5 py-0.5 text-[10.5px] font-semibold text-forest ring-1 ring-forest/10">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-sage/70 px-2.5 py-0.5 text-[10.5px] font-medium text-forest ring-1 ring-forest/10">
             {item.topic}
           </span>
-          <span className="mt-2 block font-display text-[15.5px] leading-snug font-bold tracking-tight text-ink sm:text-base">
+          <span className="mt-2 block font-display text-[15.5px] leading-snug font-medium tracking-tight text-forest sm:text-base">
             {item.question}
           </span>
         </span>
@@ -571,7 +571,7 @@ function QuickAnswerCard({
           aria-hidden
           strokeWidth={2.4}
           className={cn(
-            'mt-1 size-4 shrink-0 text-ink/35 transition-transform duration-300',
+            'mt-1 size-4 shrink-0 text-forest/35 transition-transform duration-300',
             open && 'rotate-180',
           )}
         />
@@ -579,12 +579,12 @@ function QuickAnswerCard({
 
       <Reveal show={open}>
         <div className="px-5 pb-5 sm:px-6 sm:pb-6">
-          <p className="text-[13.5px] leading-relaxed text-ink/70">{item.answer}</p>
+          <p className="text-[13.5px] leading-relaxed text-forest/70">{item.answer}</p>
           {topic && (
             <button
               type="button"
               onClick={() => onOpenTopic(item)}
-              className="mt-3 inline-flex items-center gap-1.5 text-[12px] font-semibold text-forest/75 underline-offset-4 transition-colors hover:text-forest hover:underline"
+              className="mt-3 inline-flex items-center gap-1.5 text-[12px] font-medium text-forest/75 underline-offset-4 transition-colors hover:text-forest hover:underline"
             >
               {HELP_OPEN_TOPIC}: {topic.label}
               <ArrowLeft className="size-3.5 rotate-180" strokeWidth={2.4} aria-hidden />
@@ -623,10 +623,10 @@ function TopicArticles({
             {topic.emoji}
           </span>
           <div className="min-w-0">
-            <h2 className="font-display text-2xl font-semibold tracking-tight text-ink">
+            <h2 className="font-display text-2xl font-medium tracking-tight text-forest">
               {topic.label}
             </h2>
-            <p className="mt-1 max-w-2xl text-[13.5px] leading-relaxed text-ink/55">
+            <p className="mt-1 max-w-2xl text-[13.5px] leading-relaxed text-forest/55">
               {topic.blurb}
             </p>
           </div>
@@ -635,7 +635,7 @@ function TopicArticles({
         <button
           type="button"
           onClick={onBack}
-          className="inline-flex shrink-0 items-center gap-1.5 text-[11.5px] font-semibold text-forest/70 underline-offset-4 transition-colors hover:text-forest hover:underline"
+          className="inline-flex shrink-0 items-center gap-1.5 text-[11.5px] font-medium text-forest/70 underline-offset-4 transition-colors hover:text-forest hover:underline"
         >
           <ArrowLeft className="size-3.5" strokeWidth={2.4} aria-hidden />
           {HELP_BACK_TO_QUICK}
@@ -676,11 +676,11 @@ function ArticleCard({
   return (
     <article className="rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12 sm:p-6">
       {topicLabel && (
-        <span className="mb-2 inline-flex items-center rounded-full bg-sage/70 px-2.5 py-0.5 text-[10.5px] font-semibold text-forest ring-1 ring-forest/10">
+        <span className="mb-2 inline-flex items-center rounded-full bg-sage/70 px-2.5 py-0.5 text-[10.5px] font-medium text-forest ring-1 ring-forest/10">
           {topicLabel}
         </span>
       )}
-      <h3 className="font-display text-[17px] font-bold tracking-tight text-ink sm:text-lg">
+      <h3 className="font-display text-[17px] font-semibold tracking-tight text-forest sm:text-lg">
         {article.title}
       </h3>
 
@@ -691,11 +691,11 @@ function ArticleCard({
           <li key={step} className="flex items-start gap-3">
             <span
               aria-hidden
-              className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-sage text-[11.5px] font-bold tabular-nums text-forest"
+              className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-sage text-[11.5px] font-semibold tabular-nums text-forest"
             >
               {index + 1}
             </span>
-            <span className="text-[14px] leading-relaxed text-ink/75">{step}</span>
+            <span className="text-[14px] leading-relaxed text-forest/75">{step}</span>
           </li>
         ))}
       </ol>
@@ -715,9 +715,9 @@ function ArticleCard({
 function ProTipCallout({ children }: { children: ReactNode }) {
   return (
     <div className="mt-4 flex items-start gap-3 rounded-2xl bg-sage/70 px-4 py-3.5 ring-1 ring-forest/10">
-      <p className="text-[12.5px] leading-relaxed text-ink/75">
-        <span className="font-semibold text-ink">{HELP_PRO_TIP_LABEL}</span>
-        <span aria-hidden className="mx-1.5 text-ink/30">
+      <p className="text-[12.5px] leading-relaxed text-forest/75">
+        <span className="font-medium text-forest">{HELP_PRO_TIP_LABEL}</span>
+        <span aria-hidden className="mx-1.5 text-forest/30">
           ·
         </span>
         {children}
@@ -753,22 +753,22 @@ function FeedbackStrip({
     <div className="mt-5 border-t border-soil/12 pt-3.5">
       {upvoted ? (
         /* 👍 → cukup terima kasih, tidak ada panel apa pun yang muncul */
-        <p role="status" className="text-[13px] font-semibold text-forest">
+        <p role="status" className="text-[13px] font-medium text-forest">
           {HELP_FEEDBACK_THANKS}
         </p>
       ) : (
         <div className="flex flex-wrap items-center justify-between gap-2.5">
-          <p className="text-[13px] font-medium text-ink/60">{HELP_FEEDBACK_QUESTION}</p>
+          <p className="text-[13px] font-medium text-forest/60">{HELP_FEEDBACK_QUESTION}</p>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => onVote(articleId, 'up')}
               aria-pressed={upvoted}
               className={cn(
-                'inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-[12.5px] font-semibold ring-1 transition-colors active:scale-95',
+                'inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-[12.5px] font-medium ring-1 transition-colors active:scale-95',
                 upvoted
                   ? 'bg-mint/40 text-forest ring-forest/20'
-                  : 'bg-cream text-ink/60 ring-soil/12 hover:bg-sage/60 hover:text-ink',
+                  : 'bg-cream text-forest/60 ring-soil/12 hover:bg-sage/60 hover:text-forest',
               )}
             >
               <ThumbsUp className="size-3.5" strokeWidth={2.2} aria-hidden />
@@ -779,10 +779,10 @@ function FeedbackStrip({
               onClick={() => onVote(articleId, 'down')}
               aria-pressed={downvoted}
               className={cn(
-                'inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-[12.5px] font-semibold ring-1 transition-colors active:scale-95',
+                'inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-[12.5px] font-medium ring-1 transition-colors active:scale-95',
                 downvoted
                   ? 'bg-plum/15 text-plum ring-plum/25'
-                  : 'bg-cream text-ink/60 ring-soil/12 hover:bg-sage/60 hover:text-ink',
+                  : 'bg-cream text-forest/60 ring-soil/12 hover:bg-sage/60 hover:text-forest',
               )}
             >
               <ThumbsDown className="size-3.5" strokeWidth={2.2} aria-hidden />
@@ -825,7 +825,7 @@ function SupportPanel() {
     <div className="flex flex-col gap-3 pt-4">
       <div className="flex items-start gap-3 rounded-2xl bg-sage/70 px-4 py-3.5 ring-1 ring-forest/10">
         <Lock className="mt-0.5 size-4 shrink-0 text-forest" strokeWidth={2.2} aria-hidden />
-        <p className="text-[12.5px] leading-relaxed text-ink/75">{HELP_PRIVACY_SHIELD}</p>
+        <p className="text-[12.5px] leading-relaxed text-forest/75">{HELP_PRIVACY_SHIELD}</p>
       </div>
 
       {/* `sm:grid-cols-2` — di HP dua label panjang lebih enak bertumpuk;
@@ -834,20 +834,20 @@ function SupportPanel() {
         <Button
           variant="outline"
           onClick={handleExportData}
-          className="h-12 w-full rounded-2xl border-transparent bg-cream px-4 text-[13px] font-semibold text-ink ring-1 ring-soil/12 hover:bg-sage/60 hover:text-ink"
+          className="h-12 w-full rounded-2xl border-transparent bg-cream px-4 text-[13px] font-medium text-forest ring-1 ring-soil/12 hover:bg-sage/60 hover:text-forest"
         >
           📦 {HELP_EXPORT_LABEL}
         </Button>
         <Button
           variant="default"
           onClick={handleContactFounder}
-          className="h-12 w-full rounded-2xl bg-forest px-4 text-[13px] font-semibold text-cream hover:bg-forest-soft"
+          className="h-12 w-full rounded-2xl bg-forest px-4 text-[13px] font-medium text-cream hover:bg-forest-soft"
         >
           ✉️ {HELP_CONTACT_LABEL}
         </Button>
       </div>
 
-      <p className="text-[11.5px] leading-relaxed text-ink/50">{HELP_SUPPORT_FOOTNOTE}</p>
+      <p className="text-[11.5px] leading-relaxed text-forest/50">{HELP_SUPPORT_FOOTNOTE}</p>
     </div>
   )
 }
@@ -855,7 +855,7 @@ function SupportPanel() {
 
 /** label kecil pemisah antar kelompok hasil di halaman hasil pencarian */
 const RESULT_GROUP_LABEL =
-  'text-[10.5px] font-semibold uppercase tracking-[0.14em] text-ink/40'
+  'text-[10.5px] font-medium uppercase tracking-[0.14em] text-forest/40'
 
 /**
  * Hasil pencarian: pertanyaan populer yang cocok, lalu artikelnya. Semua hasil
@@ -886,17 +886,17 @@ function SearchResults({
   return (
     <section>
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <h2 className="font-display text-2xl font-semibold tracking-tight text-ink lg:text-[28px]">
+        <h2 className="font-display text-2xl font-medium tracking-tight text-forest lg:text-[28px]">
           {HELP_RESULT_TITLE}
         </h2>
-        <p aria-live="polite" className="text-[12px] text-ink/45">
+        <p aria-live="polite" className="text-[12px] text-forest/45">
           {empty
             ? '0 hasil'
             : `${articles.length} artikel · ${quickAnswers.length} pertanyaan populer`}
         </p>
       </div>
-      <p className="mt-1 text-[13px] text-ink/55">
-        Hasil buat <span className="font-semibold text-ink/75">“{query}”</span>
+      <p className="mt-1 text-[13px] text-forest/55">
+        Hasil buat <span className="font-medium text-forest/75">“{query}”</span>
       </p>
 
       {empty ? (
@@ -956,10 +956,10 @@ function EmptyResults() {
       >
         🤔
       </span>
-      <h3 className="mt-3 font-display text-[17px] font-bold tracking-tight text-ink sm:text-lg">
+      <h3 className="mt-3 font-display text-[17px] font-semibold tracking-tight text-forest sm:text-lg">
         {HELP_EMPTY_TITLE}
       </h3>
-      <p className="mt-2 max-w-2xl text-[13.5px] leading-relaxed text-ink/60">
+      <p className="mt-2 max-w-2xl text-[13.5px] leading-relaxed text-forest/60">
         {HELP_EMPTY_BLURB}
       </p>
     </div>

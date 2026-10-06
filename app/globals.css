@@ -12,53 +12,61 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* ── TIPOGRAFI — HANYA DUA FONT DI SELURUH SISTEM ────────────────────────────
-   1. Inter             → teks/body  → utility `font-sans` (+ default <body>)
-   2. Plus Jakarta Sans → judul, angka besar & metrik → utility `font-display`
+/* ── TIPOGRAFI — HANYA SATU FONT DI SELURUH SISTEM: INTER ────────────────────
+   Inter → teks/body  → utility `font-sans` (+ default <body>)
+   Inter → judul, angka besar & metrik → utility `font-display`
 
-   Keduanya dimuat `next/font/google` di app/layout.tsx dan ikut di-self-host
-   saat build, jadi TIDAK ada `@font-face` manual di file ini, tidak ada
-   request ke CDN font saat runtime, dan tidak ada layout shift.
+   Satu typeface untuk semua peran: `--font-sans` dan `--font-display`
+   sama-sama menunjuk `var(--font-inter)`, jadi kelas `font-display` yang sudah
+   tersebar di seluruh komponen merender font yang PERSIS sama — tidak ada lagi
+   font kedua untuk judul/metrik.
 
-   Kenapa Plus Jakarta Sans menggantikan 'SF Pro Display' yang dulu ada di
-   slot `--font-display` lewat `@font-face` + `src: local(...)`:
+   Inter dimuat `next/font/google` di app/layout.tsx dan ikut di-self-host saat
+   build, jadi TIDAK ada `@font-face` manual di file ini, tidak ada request ke
+   CDN font saat runtime, dan tidak ada layout shift.
+
+   Kenapa Inter untuk slot display (dulu 'SF Pro Display' lewat `@font-face` +
+   `src: local(...)`, lalu Plus Jakarta Sans):
      • `local(...)` hanya menyala di perangkat Apple, jadi mayoritas pengguna
        CatetInd (Android) tidak pernah melihat SF Pro dan otomatis jatuh ke
        Inter — slot display praktis kosong.
      • File resmi SF Pro TIDAK boleh di-self-host: lisensi Apple membatasi
        penggunaannya untuk aplikasi yang berjalan di platform Apple.
-     • Plus Jakarta Sans = typeface buatan Tokotype untuk identitas visual
-       kota Jakarta, jadi merek ini punya akar tipografi Indonesia, dan
-       filenya legal untuk kami hosting sendiri.
+     • Inter dimuat dengan axis `opsz` (optical size 14–32), jadi browser
+       memakai potongan optik "Display" untuk teks besar dan potongan "text"
+       untuk body — satu font, dua optimasi ukuran.
 
-   Catatan bobot: Plus Jakarta Sans mentok di 800 (ExtraBold), sementara
-   judul/metrik di app ini banyak menulis `font-black` (900). Browser
-   menge-clamp permintaan 900 ke bobot 800 yang tersedia — ini sengaja
-   dibiarkan supaya tidak perlu menyunting puluhan kelas, dan secara visual
-   tetap terbaca sebagai bobot paling tebal.
+   ── SKALA BOBOT — JUDUL SEDIKIT TEBAL, SISANYA RINGAN ───────────────────────
+   Satu aturan bobot untuk seluruh app (tidak ada `font-black`/900 maupun
+   `font-bold`/700):
+     • Judul (h1–h3) & angka besar/metrik  → `font-semibold` (600).
+     • Semua teks lain (label, chip, eyebrow, tombol, catatan, input) →
+       `font-medium` (500) atau lebih ringan.
+   Hierarki dibawa selisih tipis (600 vs 500) + ukuran/opasitas, bukan tebal.
 
    ── RESEP JUDUL HALAMAN (H1) — SATU RESEP UNTUK SEMUA HALAMAN ──────────────
-   Sebelumnya tiap halaman menulis resepnya sendiri: ada yang `font-black`
-   26px, ada yang lupa `font-display` sama sekali sehingga H1-nya jatuh ke
-   Inter sementara halaman lain memakai Plus Jakarta Sans — judul antar
-   halaman jadi terasa beda font. Resep kanonik (dipakai Dashboard, Riwayat &
-   Insight, Tagihan Rutin, Budget & Target, Pengaturan + sub-halaman,
-   Kalender, Bantuan, Lainnya, Ajak Teman, Panduan Install, Overview):
+   Resep kanonik (dipakai Dashboard, Riwayat & Insight, Tagihan Rutin, Budget &
+   Target, Pengaturan + sub-halaman, Kalender, Bantuan, Lainnya, Ajak Teman,
+   Panduan Install, Overview):
 
-     font-display text-3xl font-semibold tracking-tight text-ink lg:text-4xl
+     font-display text-3xl font-semibold tracking-tight text-forest lg:text-4xl
 
-   Semibold — BUKAN font-black — supaya konsisten dengan arah visual
-   "headline iOS" di components/catetind/onboarding-ui.tsx.
+   Semibold (bukan 700/900) supaya judul tegas tapi tidak berat.
    Header kompak 19–22px (Dompet & Akun, Kekayaan & Hutang, Joint) adalah
    tier terpisah yang memang lebih kecil karena berdampingan dengan tombol
    back, jadi resep di atas tidak berlaku untuknya. */
 
 @theme inline {
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-jakarta), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   /* animasi panah panduan install iOS — token @theme supaya utility-nya tetap
      bisa dimatikan lewat varian motion-reduce:animate-none */
   --animate-install-arrow-bounce: install-arrow-bounce 1.5s ease-in-out infinite;
+  /* halaman depan (welcome) — kartu-kartu mini mengapung pelan di atas kanvas
+     hitam. Durasi & delay di-set inline per kartu supaya tidak bergerak
+     serempak; token @theme supaya tetap bisa dimatikan lewat
+     `motion-reduce:animate-none`. */
+  --animate-welcome-float: welcome-float 6s ease-in-out infinite;
   /* ═══════════════════════════════════════════════════════════════════════════
      PALET WARNA KANON — "EARTH PASTEL"  ·  SATU SUMBER KEBENARAN WARNA
      Dokumen lengkap + cara kembali ke palet lama: docs/theme/PALETTE.md
@@ -71,10 +79,11 @@
 
   /* ── LAPIS 1 · PALET KANON (10 warna) ──────────────────────────────────── */
   /* REVISI: Soil awalnya coklat tanah `503A3A`. Atas permintaan desain diganti
-     HITAM murni — porsi & perannya tetap (teks, garis, scrim). Karena hitam
-     sudah paling gelap, turunan "soil-deep/deepest" ikut jadi hitam dan
-     bayangan memakai rgba(0, 0, 0, …) yang netral. */
-  --color-soil: #000000; /* 15% · hitam — teks, garis, scrim gelap */
+     HITAM murni. Sejak revisi tipografi terakhir, HITAM dipakai untuk GARIS,
+     scrim, dan permukaan (`bg-ink`), TIDAK lagi untuk teks di latar terang —
+     teks kini memakai Evergreen (`forest` `#45594e`). Turunan "soil-deep/
+     deepest" ikut hitam dan bayangan memakai rgba(0, 0, 0, …) yang netral. */
+  --color-soil: #000000; /* 15% · hitam — garis, scrim, permukaan (bukan teks) */
   --color-evergreen: #45594e; /* 15% · hijau tua — permukaan brand */
   /* Ivory tetap tersimpan di palet, tapi BUKAN permukaan dasar lagi: latar &
      kartu memakai PUTIH (token `canvas`, alias `cream`) sesuai arah desain.
@@ -98,7 +107,7 @@
   --color-canvas: #ffffff;
 
   /* ── LAPIS 2 · ALIAS SEMANTIK (nama yang dipakai komponen) ─────────────── */
-  --color-ink: #000000; /* = soil (hitam) */
+  --color-ink: #000000; /* = soil (hitam) — `bg-ink`/ring/scrim, BUKAN teks */
   --color-forest: #45594e; /* = evergreen */
   --color-forest-soft: #52685c; /* turunan evergreen (dicerahkan) */
   --color-brand: #ecd768; /* = daisy */
@@ -154,19 +163,19 @@
   color-scheme: light;
   /* token shadcn/ui — dipetakan ke palet kanon "Earth Pastel" (docs/theme/PALETTE.md) */
   --background: #ffffff; /* canvas — latar halaman putih rata */
-  --foreground: #000000; /* hitam */
+  --foreground: #45594e; /* evergreen — teks di latar terang (bukan hitam) */
   --card: #ffffff; /* putih */
-  --card-foreground: #000000; /* hitam */
+  --card-foreground: #45594e; /* evergreen */
   --popover: #ffffff; /* putih */
-  --popover-foreground: #000000; /* hitam */
+  --popover-foreground: #45594e; /* evergreen */
   --primary: #45594e; /* evergreen */
   --primary-foreground: #ffffff; /* putih */
   --secondary: #ebe4de; /* oat */
-  --secondary-foreground: #000000; /* hitam */
+  --secondary-foreground: #45594e; /* evergreen */
   --muted: #ebe4de; /* oat */
   --muted-foreground: #767676; /* netral: hitam dicampur putih */
   --accent: #ebe4de; /* oat */
-  --accent-foreground: #000000; /* hitam */
+  --accent-foreground: #45594e; /* evergreen */
   --destructive: #b89191; /* plum */
   --border: #ebe4de; /* oat */
   --input: #ebe4de; /* oat */
@@ -636,6 +645,19 @@ body[data-catetind-sheet-open='true'] [data-catetind-page-root] {
   }
 }
 
+/* kartu mini di halaman depan (welcome) mengapung naik-turun pelan — gerakan
+   yang tenang, bukan memantul; rotasi kartu ada di pembungkus luarnya supaya
+   tidak bertabrakan dengan transform animasi ini. */
+@keyframes welcome-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
 
 /* ── Upacara Tanaman onboarding (inventaris #10, section 4C) ────────────────
    Tetes air jatuh bergantian menyiram benih pertama user. Elemennya di-
@@ -698,3 +720,19 @@ body[data-catetind-sheet-open='true'] [data-catetind-page-root] {
     transform: scale(1.06);
   }
 }
+
+/* ── Landing page · glow berdenyut angka investasi (Pain Calculator) ─────────
+   Angka "kalau kamu invest" diberi halo hijau yang mengembang-mengempis pelan
+   supaya terasa hidup & positif. Dipasang lewat utility arbitrer
+   `motion-safe:animate-[landing-glow_…]`, jadi saat user minta gerak minimal
+   animasinya memang tidak pernah menyala. */
+@keyframes landing-glow {
+  0%,
+  100% {
+    text-shadow: 0 0 0 rgba(69, 89, 78, 0);
+  }
+  50% {
+    text-shadow: 0 0 20px rgba(145, 187, 158, 0.85);
+  }
+}
+

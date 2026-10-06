@@ -177,7 +177,7 @@ export function AddBillSheet({
     >
       {/* ── STEP 1 — identitas: emoji + nama + nominal (opsional) ────────── */}
       <div>
-        <p className="text-[13px] font-semibold leading-snug text-ink">Pilih ikonnya</p>
+        <p className="text-[13px] font-medium leading-snug text-forest">Pilih ikonnya</p>
         <div
           role="radiogroup"
           aria-label="Pilih emoji tagihan"
@@ -211,7 +211,7 @@ export function AddBillSheet({
           type="button"
           aria-expanded={moreEmojiOpen}
           onClick={() => setMoreEmojiOpen((prev) => !prev)}
-          className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-cream px-3 py-1.5 text-[11.5px] font-semibold text-ink/60 ring-1 ring-soil/14 transition-colors hover:bg-cream hover:text-ink"
+          className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-cream px-3 py-1.5 text-[11.5px] font-medium text-forest/60 ring-1 ring-soil/14 transition-colors hover:bg-cream hover:text-forest"
         >
           Lainnya
           <ChevronDown
@@ -254,7 +254,7 @@ export function AddBillSheet({
         </RevealStep>
 
         <label className="mt-4 block">
-          <span className="text-[13px] font-semibold leading-snug text-ink">
+          <span className="text-[13px] font-medium leading-snug text-forest">
             Tagihannya apa?
           </span>
           <input
@@ -262,7 +262,7 @@ export function AddBillSheet({
             value={name}
             onChange={(event) => setName(event.target.value)}
             placeholder="Contoh: Kos Bulanan, Netflix"
-            className="mt-2 w-full rounded-2xl bg-cream px-4 py-3 text-[15px] font-semibold text-ink outline-none ring-1 ring-soil/16 transition-shadow placeholder:font-medium placeholder:text-ink/25 focus:ring-2 focus:ring-forest/35"
+            className="mt-2 w-full rounded-2xl bg-cream px-4 py-3 text-[15px] font-medium text-forest outline-none ring-1 ring-soil/16 transition-shadow placeholder:font-medium placeholder:text-forest/25 focus:ring-2 focus:ring-forest/35"
           />
         </label>
 
@@ -280,7 +280,7 @@ export function AddBillSheet({
       <RevealStep show={stepOneDone}>
         <div className="mt-5">
           <label className="block">
-            <span className="text-[13px] font-semibold leading-snug text-ink">
+            <span className="text-[13px] font-medium leading-snug text-forest">
               Jatuh Tempo Setiap Tanggal
             </span>
             <span className="relative mt-2 flex items-center gap-2 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/16 transition-shadow focus-within:ring-2 focus-within:ring-forest/35">
@@ -294,15 +294,15 @@ export function AddBillSheet({
                 placeholder="25"
                 aria-invalid={dueDateInvalid}
                 aria-label="Tanggal jatuh tempo"
-                className="min-w-0 flex-1 bg-transparent text-[15px] font-semibold tabular-nums text-ink outline-none placeholder:font-medium placeholder:text-ink/25"
+                className="min-w-0 flex-1 bg-transparent text-[15px] font-medium tabular-nums text-forest outline-none placeholder:font-medium placeholder:text-forest/25"
               />
-              <span className="shrink-0 text-[12px] font-medium text-ink/35">/ bulan</span>
+              <span className="shrink-0 text-[12px] font-medium text-forest/35">/ bulan</span>
               {dueDate !== '' && !dueDateInvalid && (
                 <Check className="size-4 shrink-0 text-hud-sage" strokeWidth={3} />
               )}
             </span>
             {dueDateInvalid && (
-              <span className="mt-1.5 flex items-center gap-1.5 text-[11.5px] font-semibold text-hud-terracotta">
+              <span className="mt-1.5 flex items-center gap-1.5 text-[11.5px] font-medium text-hud-terracotta">
                 <AlertCircle className="size-3.5" strokeWidth={2.4} />
                 Tanggal harus 1-31
               </span>
@@ -312,7 +312,7 @@ export function AddBillSheet({
           {/* berulang setiap bulan + batas tenor */}
           <div className="mt-4 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/12">
             <div className="flex items-center justify-between gap-3">
-              <span className="text-[12.5px] font-semibold text-ink/70">
+              <span className="text-[12.5px] font-medium text-forest/70">
                 Berulang setiap bulan
               </span>
               <Switch
@@ -324,7 +324,7 @@ export function AddBillSheet({
 
             <RevealStep show={recurring}>
               <div className="mt-3">
-                <p className="text-[12.5px] font-semibold text-ink/70">
+                <p className="text-[12.5px] font-medium text-forest/70">
                   Tagihan berakhir setelah
                 </p>
                 <ChoicePills
@@ -348,16 +348,16 @@ export function AddBillSheet({
                       onChange={(event) => setEndMonths(event.target.value)}
                       placeholder="12"
                       aria-label="Berapa bulan"
-                      className="w-16 bg-transparent text-[14px] font-bold tabular-nums text-ink outline-none placeholder:font-medium placeholder:text-ink/25"
+                      className="w-16 bg-transparent text-[14px] font-semibold tabular-nums text-forest outline-none placeholder:font-medium placeholder:text-forest/25"
                     />
-                    <span className="text-[12.5px] font-semibold text-ink/60">
+                    <span className="text-[12.5px] font-medium text-forest/60">
                       berapa bulan?
                     </span>
                   </label>
                 )}
 
                 {limitedInvalid && (
-                  <span className="mt-1.5 flex items-center gap-1.5 text-[11.5px] font-semibold text-hud-terracotta">
+                  <span className="mt-1.5 flex items-center gap-1.5 text-[11.5px] font-medium text-hud-terracotta">
                     <AlertCircle className="size-3.5" strokeWidth={2.4} />
                     Isi jumlah bulannya (minimal 1)
                   </span>
@@ -368,7 +368,7 @@ export function AddBillSheet({
 
           {/* pengingat sebelum jatuh tempo */}
           <label className="mt-4 block">
-            <span className="text-[12.5px] font-semibold text-ink/70">
+            <span className="text-[12.5px] font-medium text-forest/70">
               Ingatkan sebelum jatuh tempo
             </span>
             <span className="relative mt-2 flex items-center gap-2 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/16 focus-within:ring-2 focus-within:ring-forest/35">
@@ -376,7 +376,7 @@ export function AddBillSheet({
                 value={reminderDays}
                 onChange={(event) => setReminderDays(Number(event.target.value))}
                 aria-label="Ingatkan sebelum jatuh tempo"
-                className="flex-1 appearance-none bg-transparent text-[13.5px] font-semibold text-ink outline-none"
+                className="flex-1 appearance-none bg-transparent text-[13.5px] font-medium text-forest outline-none"
               >
                 {BILL_REMINDER_OPTIONS.map((option) => (
                   <option key={option.days} value={option.days}>
@@ -384,7 +384,7 @@ export function AddBillSheet({
                   </option>
                 ))}
               </select>
-              <ChevronDown className="size-4 shrink-0 text-ink/30" strokeWidth={2.4} />
+              <ChevronDown className="size-4 shrink-0 text-forest/30" strokeWidth={2.4} />
             </span>
           </label>
         </div>
@@ -399,12 +399,12 @@ export function AddBillSheet({
             onClick={() => setAdvancedOpen((prev) => !prev)}
             className="flex w-full items-center justify-between gap-2 rounded-2xl bg-cream/70 px-4 py-3 text-left ring-1 ring-soil/12 transition-colors hover:bg-cream"
           >
-            <span className="text-[12.5px] font-semibold text-ink/60">
+            <span className="text-[12.5px] font-medium text-forest/60">
               Detail Tambahan (Opsional)
             </span>
             <ChevronDown
               className={cn(
-                'size-4 shrink-0 text-ink/35 transition-transform duration-300',
+                'size-4 shrink-0 text-forest/35 transition-transform duration-300',
                 advancedOpen && 'rotate-180',
               )}
               strokeWidth={2.4}
@@ -414,13 +414,13 @@ export function AddBillSheet({
           <RevealStep show={advancedOpen}>
             <div className="mt-4 space-y-4">
               <label className="block">
-                <span className="text-[12.5px] font-semibold text-ink/70">Kategori</span>
+                <span className="text-[12.5px] font-medium text-forest/70">Kategori</span>
                 <span className="relative mt-2 flex items-center gap-2 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/16 focus-within:ring-2 focus-within:ring-forest/35">
                   <select
                     value={category}
                     onChange={(event) => setCategory(event.target.value)}
                     aria-label="Kategori tagihan"
-                    className="flex-1 appearance-none bg-transparent text-[13.5px] font-semibold text-ink outline-none"
+                    className="flex-1 appearance-none bg-transparent text-[13.5px] font-medium text-forest outline-none"
                   >
                     {categories.map((option) => (
                       <option key={option} value={option}>
@@ -428,12 +428,12 @@ export function AddBillSheet({
                       </option>
                     ))}
                   </select>
-                  <ChevronDown className="size-4 shrink-0 text-ink/30" strokeWidth={2.4} />
+                  <ChevronDown className="size-4 shrink-0 text-forest/30" strokeWidth={2.4} />
                 </span>
               </label>
 
               <label className="block">
-                <span className="text-[12.5px] font-semibold text-ink/70">
+                <span className="text-[12.5px] font-medium text-forest/70">
                   Dompet pembayaran
                 </span>
                 <span className="relative mt-2 flex items-center gap-2 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/16 focus-within:ring-2 focus-within:ring-forest/35">
@@ -441,7 +441,7 @@ export function AddBillSheet({
                     value={walletId}
                     onChange={(event) => setWalletId(event.target.value)}
                     aria-label="Dompet pembayaran"
-                    className="flex-1 appearance-none bg-transparent text-[13.5px] font-semibold text-ink outline-none"
+                    className="flex-1 appearance-none bg-transparent text-[13.5px] font-medium text-forest outline-none"
                   >
                     {wallets.map((wallet) => (
                       <option key={wallet.id} value={wallet.id}>
@@ -449,18 +449,18 @@ export function AddBillSheet({
                       </option>
                     ))}
                   </select>
-                  <ChevronDown className="size-4 shrink-0 text-ink/30" strokeWidth={2.4} />
+                  <ChevronDown className="size-4 shrink-0 text-forest/30" strokeWidth={2.4} />
                 </span>
               </label>
 
               <label className="block">
-                <span className="text-[12.5px] font-semibold text-ink/70">Catatan</span>
+                <span className="text-[12.5px] font-medium text-forest/70">Catatan</span>
                 <textarea
                   value={note}
                   onChange={(event) => setNote(event.target.value)}
                   rows={3}
                   placeholder="Nomor pelanggan, kode langganan, dll."
-                  className="mt-2 w-full resize-none rounded-2xl bg-cream px-4 py-3 text-[13px] leading-relaxed text-ink outline-none ring-1 ring-soil/16 transition-shadow placeholder:text-ink/25 focus:ring-2 focus:ring-forest/35"
+                  className="mt-2 w-full resize-none rounded-2xl bg-cream px-4 py-3 text-[13px] leading-relaxed text-forest outline-none ring-1 ring-soil/16 transition-shadow placeholder:text-forest/25 focus:ring-2 focus:ring-forest/35"
                 />
               </label>
             </div>

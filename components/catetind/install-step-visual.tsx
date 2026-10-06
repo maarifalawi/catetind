@@ -107,7 +107,7 @@ export function InstallStepVisual({
           <Diagram />
         </svg>
       </div>
-      <figcaption className="mt-2 text-center text-[11px] leading-snug text-ink/50">
+      <figcaption className="mt-2 text-center text-[11px] leading-snug text-forest/50">
         {VISUAL_CAPTION[visual]}
       </figcaption>
     </figure>

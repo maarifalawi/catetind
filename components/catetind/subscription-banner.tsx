@@ -66,20 +66,20 @@ export function SubscriptionBanner() {
             </span>
 
             <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-semibold tracking-[0.16em] text-ink/45 uppercase">
+              <p className="text-[10px] font-medium tracking-[0.16em] text-forest/45 uppercase">
                 {copy.eyebrow}
               </p>
-              <p className="text-[13px] leading-snug font-semibold text-ink">
+              <p className="text-[13px] leading-snug font-medium text-forest">
                 {copy.title}{' '}
-                <span className="font-normal text-ink/70">{copy.body}</span>
+                <span className="font-normal text-forest/70">{copy.body}</span>
               </p>
-              <p className="mt-0.5 text-[10.5px] leading-relaxed text-ink/50">{copy.status}</p>
+              <p className="mt-0.5 text-[10.5px] leading-relaxed text-forest/50">{copy.status}</p>
             </div>
 
             <button
               type="button"
               onClick={() => setRenewOpen(true)}
-              className="shrink-0 rounded-full bg-forest px-4 py-2 text-xs font-semibold text-cream shadow-[0_12px_24px_-16px_rgba(69,89,78,0.9)] transition-colors hover:bg-forest-soft active:scale-95"
+              className="shrink-0 rounded-full bg-forest px-4 py-2 text-xs font-medium text-cream shadow-[0_12px_24px_-16px_rgba(69,89,78,0.9)] transition-colors hover:bg-forest-soft active:scale-95"
             >
               {copy.cta}
             </button>

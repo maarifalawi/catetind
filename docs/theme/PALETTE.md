@@ -13,8 +13,8 @@ Satu sumber kebenaran warna untuk seluruh sistem. Semua warna di `app/`,
 
 | Nama | Hex | Porsi | Peran di sistem |
 | --- | --- | --- | --- |
-| **Soil** | `#000000` | 15% | **Hitam** — teks utama, garis, scrim overlay (token `ink`). *Revisi: awalnya `#503A3A`.* |
-| **Evergreen** | `#45594E` | 15% | Permukaan brand gelap: hero, muka kartu, sidebar (token `forest`) |
+| **Soil** | `#000000` | 15% | **Hitam** — garis, scrim overlay, permukaan (`bg-ink`). *BUKAN teks di latar terang (itu Evergreen). Revisi: awalnya `#503A3A`.* |
+| **Evergreen** | `#45594E` | 15% | Permukaan brand gelap + **warna teks di latar terang**: hero, muka kartu, sidebar (token `forest`) |
 | **Ivory** | `#FBF6D9` | 15% | Aksen hangat opsional — **bukan** permukaan (dasar = putih) |
 | **Oat** | `#EBE4DE` | 15% | Elemen kecil: chip/pill, lingkaran ikon, hover, kotak info (token `sage`) |
 | **Plum** | `#B89191` | 7.5% | Aksen rose: alert / lewat batas (token `hud-terracotta`) |
@@ -114,9 +114,10 @@ menerima `color-mix`).
   (abu-abu netral, karena Soil = hitam) plus shadow lembut. Kartu gelap =
   Evergreen (`forest`).
 - **Ivory tidak dipakai** sebagai permukaan; **Oat** hanya untuk chip/pill kecil.
-- **Teks:** hitam (Soil/`ink`) di atas latar terang; putih di atas
-  Evergreen/hitam. Teks sekunder pakai opasitas `text-ink/45`–`/65` atau
-  `text-ink/…`, jangan bikin abu-abu baru.
+- **Teks di latar terang:** Evergreen (`forest` `#45594E`) — **bukan** hitam.
+  Hitam (Soil/`ink`) hanya untuk garis, scrim, dan permukaan (`bg-ink`). Teks di
+  atas Evergreen/hitam = putih (`text-cream`). Teks sekunder pakai opasitas
+  `text-forest/45`–`/65`, jangan bikin abu-abu baru.
 - **Status/uang:** hijau (Sage) = uang masuk & positif · Olive = aman/on-track ·
   Cantelope = hati-hati/pengeluaran · Plum = lewat batas/alert · Thistle = info.
 - **Border & bayangan netral:** hairline `ring-soil/8`–`/16`, bayangan

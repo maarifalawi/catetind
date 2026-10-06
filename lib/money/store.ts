@@ -207,8 +207,41 @@ const EDITABLE_TYPES: readonly TransactionType[] = ['expense', 'income', 'transf
 
 /* ── STATE & LANGGANAN ─────────────────────────────────────────────────────── */
 
-/** snapshot beku untuk render server & hidrasi — HTML server WAJIB = render pertama client */
+/*
+ * STATE AWAL SELALU KOSONG (paket 65 · Tugas A).
+ *
+ * Dulu daftar dompet contoh (`WALLET_SEED`) di-`inject` LANGSUNG sebagai state
+ * awal ke setiap store saat mode demo/test — akibatnya data contoh bukan "data
+ * user": tidak persisten, tidak bisa diedit/dihapus, dan tidak konsisten antar
+ * halaman. Sekarang state awal SELALU kosong (di produksi MAUPUN saat demo).
+ *
+ * Data contoh untuk AKUN DEMO ditulis lewat API tulis yang sama dengan data user
+ * oleh `seedDemoDataOnce()` (`lib/money/demo-bootstrap.ts`) — jadi ia benar-benar
+ * baris sungguhan: persisten di IndexedDB, bisa diedit/dihapus, dan muncul di
+ * semua halaman. `SEED_*` di bawah tinggal jadi BAHAN test (reset) & bahan
+ * bootstrap demo, BUKAN lagi "state awal milik user".
+ *
+ * `SERVER_SNAPSHOT` (dipakai render server & hidrasi) ikut kosong supaya HTML
+ * server = render pertama client DAN akun baru benar-benar tidak melihat dompet
+ * contoh yang bukan miliknya (temuan "8 dompet / Rp 3.600.000").
+ */
 const SERVER_SNAPSHOT: MoneySnapshot = Object.freeze({
+  wallets: [] as readonly WalletSeed[],
+  rows: [],
+  removedIds: [],
+  removedWalletIds: [],
+  rowOverrides: {},
+  syncedIds: [],
+  hydrated: false,
+})
+
+/**
+ * Snapshot seed — BAHAN test (`resetMoneyStore()`) & bahan bootstrap demo.
+ * Bukan state awal runtime: hanya test yang menuliskan ini ke state hidup, supaya
+ * ratusan test yang mengunci angka seed tetap hijau tanpa data contoh bocor ke
+ * produksi.
+ */
+const SEED_SNAPSHOT: MoneySnapshot = Object.freeze({
   wallets: WALLET_SEED,
   rows: [],
   removedIds: [],
@@ -389,14 +422,14 @@ export function mergeMoneySnapshot(
   current: MoneySnapshot = live,
 ): MoneySnapshot {
   const storedWallets = (persisted?.wallets ?? []).filter((wallet) => wallet?.id)
-  /* daftar dasar = yang tersimpan, dompet kanon untuk kunjungan pertama, atau
-     KOSONG kalau akun ini sudah dihapus user (paket 43) */
+  /* daftar dasar = HANYA yang tersimpan. Kunjungan pertama = KOSONG (paket 65):
+     dompet contoh tidak lagi "lahir" di sini — akun baru benar-benar mulai dari
+     nol, dan akun demo diisi lewat `seedDemoDataOnce()` yang menulis baris sungguhan. */
   const purged = persisted?.purged === true
-  const base = purged ? [] : storedWallets.length > 0 ? storedWallets : WALLET_SEED
+  const base = storedWallets
   /* dompet yang ditambahkan user SEBELUM hidrasi selesai tetap ikut (dedupe by id).
      KHUSUS akun yang sudah dihapus: dompet KANON tidak boleh ikut masuk kembali —
-     saat hidrasi, state di memory masih berisi seed (`SERVER_SNAPSHOT`), dan tanpa
-     penyaring ini dompet contoh itu "lahir lagi" persis di kasus yang mau dicegah. */
+     kalau tidak, dompet contoh itu "lahir lagi" persis di kasus yang mau dicegah. */
   const extras = purged
     ? current.wallets.filter((wallet) => !WALLET_SEED.some((seed) => seed.id === wallet.id))
     : current.wallets.filter((wallet) => !base.some((w) => w.id === wallet.id))
@@ -2265,7 +2298,7 @@ export function defaultWalletNameFor(ctx: MoneyContext): string {
  * Tidak pernah dipanggil UI: di produksi "reset" tidak punya arti.
  */
 export function resetMoneyStore(): void {
-  live = SERVER_SNAPSHOT
+  live = SEED_SNAPSHOT
   hydrated = false
   hydrateStarted = false
   accountPurged = false

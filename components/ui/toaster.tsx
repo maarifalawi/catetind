@@ -28,7 +28,7 @@ export function Toaster() {
           /* kartu toast — kaca putih hangat, sudut 2xl, shadow forest lembut */
           toast: [
             'pointer-events-auto flex w-[min(22rem,calc(100vw-2rem))] items-center gap-3',
-            'rounded-2xl bg-cream/95 px-4 py-3.5 font-sans text-ink backdrop-blur-xl',
+            'rounded-2xl bg-cream/95 px-4 py-3.5 font-sans text-forest backdrop-blur-xl',
             'shadow-[0_20px_44px_-18px_rgba(69,89,78,0.45)] ring-1 ring-forest/10',
             /* ikon sonner dibungkus badge leaf bulat biar senada dengan AI badge */
             '[&_[data-icon]]:flex [&_[data-icon]]:size-9 [&_[data-icon]]:shrink-0',
@@ -36,8 +36,8 @@ export function Toaster() {
             '[&_[data-icon]]:rounded-full [&_[data-icon]]:bg-mint/25 [&_[data-icon]]:text-forest',
             '[&_[data-icon]_svg]:size-[18px]',
           ].join(' '),
-          title: 'text-[13.5px] font-semibold leading-snug text-ink',
-          description: 'mt-0.5 text-xs leading-relaxed text-ink/55',
+          title: 'text-[13.5px] font-medium leading-snug text-forest',
+          description: 'mt-0.5 text-xs leading-relaxed text-forest/55',
           content: 'flex min-w-0 flex-1 flex-col',
           loading: 'text-forest',
           /* Tombol aksi di dalam toast (mis. "Undo" setelah menghapus) WAJIB
@@ -46,12 +46,12 @@ export function Toaster() {
              Hijau brand = ajakan memulihkan, bukan aksi merusak. */
           actionButton: [
             'ml-auto shrink-0 rounded-xl bg-forest px-3 py-2',
-            'text-[12px] font-semibold text-cream transition-colors hover:bg-forest-soft',
+            'text-[12px] font-medium text-cream transition-colors hover:bg-forest-soft',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25',
           ].join(' '),
           cancelButton: [
             'ml-auto shrink-0 rounded-xl bg-cream px-3 py-2',
-            'text-[12px] font-semibold text-ink/70 ring-1 ring-soil/12 transition-colors hover:bg-sage/60',
+            'text-[12px] font-medium text-forest/70 ring-1 ring-soil/12 transition-colors hover:bg-sage/60',
           ].join(' '),
         },
       }}

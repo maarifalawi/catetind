@@ -1,8 +1,10 @@
 'use client'
 
 import type { JointTransaction, JointWallet } from '@/lib/data/joint'
+import { JOINT_DEFAULT_CATEGORY, splitSpecOf } from '@/lib/data/joint'
 import { browserSupabase } from './client'
-import { toJointTransaction, type JointTransactionDbRow } from './mappers'
+import { toJointTransaction, toSplitColumns, type JointTransactionDbRow } from './mappers'
+import { isUuid } from './uuid'
 
 /* ── BACA DOMPET BERSAMA DARI SERVER (paket 52) ──────────────────────────────
    Ini menutup temuan yang ditulis apa adanya di laporan 45:
@@ -112,3 +114,64 @@ export async function readRemoteJointWallet(): Promise<RemoteJointWallet | null>
     return null
   }
 }
+
+/* ── JALUR TULIS KANTONG BERSAMA KE SERVER (paket 64 · Paket D) ──────────────
+   Sebelumnya `/joint` hanya MEMBACA dari server; catatan baru tetap di perangkat.
+   Fungsi di bawah mengirim satu baris ke `joint_transactions` dengan
+   `client_tx_id` (uuid baris itu) sebagai kunci idempotensi — constraint
+   `unique (joint_wallet_id, client_tx_id)` sudah ada, jadi double-tap / retry
+   tidak menggandakan catatan.
+
+   CATATAN JUJUR: domain kantong bersama memakai identitas demo (`JOINT_ME.id`),
+   sedangkan kolom `user_id`/`paid_by_user_id` bertipe uuid. Yang bisa dipetakan
+   adalah pemanggil sesi sendiri (`viewerId`); karena itu baris yang ditulis dari
+   perangkat ini dikirim atas nama `viewerId`. `bearer_id` hanya dikirim kalau
+   nilainya sudah uuid (mode single_payer dari baris server). Batas ini ditulis
+   apa adanya di laporan paket 64. */
+
+export async function pushJointTransactionToServer(
+  row: JointTransaction,
+  input: { walletId: string; viewerId: string; pocketId: string; remoteId: string },
+): Promise<boolean> {
+  const client = browserSupabase()
+  if (!client) return false
+  try {
+    const cols = toSplitColumns(splitSpecOf(row))
+    const { error } = await client.from('joint_transactions').insert({
+      id: input.remoteId,
+      joint_wallet_id: input.walletId,
+      user_id: input.viewerId,
+      paid_by_user_id: input.pocketId,
+      description: row.description,
+      amount: Math.max(0, Math.round(row.amount)),
+      category: row.category || JOINT_DEFAULT_CATEGORY,
+      date: row.date || null,
+      time_label: row.time || '00:00',
+      split_type: cols.split_type,
+      split_percents: cols.split_percents,
+      split_amounts: cols.split_amounts,
+      bearer_id: row.payerId && isUuid(row.payerId) ? row.payerId : null,
+      is_private: row.isPrivate === true,
+      private_for_user: row.isPrivate ? (row.privateForUser ?? input.viewerId) : null,
+      is_settlement: row.isSettlement === true,
+      month_key: (row.date || '').slice(0, 7) || '1970-01',
+      client_tx_id: input.remoteId,
+    })
+    return !error || error.code === '23505'
+  } catch {
+    return false
+  }
+}
+
+/** hapus satu catatan di server (hapus lokal sudah ditangani tombstone store) */
+export async function deleteRemoteJointTransaction(remoteId: string): Promise<boolean> {
+  const client = browserSupabase()
+  if (!client) return false
+  try {
+    const { error } = await client.from('joint_transactions').delete().eq('id', remoteId)
+    return !error
+  } catch {
+    return false
+  }
+}
+

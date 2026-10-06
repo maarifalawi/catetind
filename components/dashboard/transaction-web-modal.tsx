@@ -8,11 +8,20 @@ import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock'
 import { useTransactionSubmit } from '@/hooks/use-transaction-submit'
 import { useMoneyContext } from '@/components/catetind/money-context-provider'
 import { usePrivacy } from '@/components/catetind/privacy-provider'
+import { TransferFlow } from '@/components/catetind/transfer-flow'
 import { defaultWalletNameFor } from '@/lib/money/store'
 import {
   TransactionInputEngine,
   type TransactionTypeId,
 } from './transaction-input-engine'
+
+/**
+ * Jeda serah-terima engine → alur Pindah Dana (paket 70). Nilainya sama dengan
+ * versi bottom sheet (`transaction-bottom-sheet.tsx`): modal ini harus menutup
+ * (animasi ±300ms) sebelum drawer Pindah Dana dibuka, supaya dua scroll-lock &
+ * dua perangkap fokus tidak saling menimpa.
+ */
+const TRANSACTION_HANDOFF_MS = 320
 
 /**
  * Shell WEB dari Transaction Input Engine (inventaris 97a/b/c).
@@ -45,6 +54,17 @@ export function TransactionWebModal({
      jadi statusnya dioper dari sini. */
   const { masked } = usePrivacy()
   const submit = useTransactionSubmit(defaultWalletNameFor(context), masked)
+
+  /* Pintu "Pindah Dana" (paket 70): tutup modal ini DULU, baru buka alur pindah
+     dananya — dua overlay sekaligus akan saling menimpa scroll-lock & fokus. */
+  const [transferOpen, setTransferOpen] = useState(false)
+  const transferTimer = useRef<number | null>(null)
+  useEffect(
+    () => () => {
+      if (transferTimer.current !== null) window.clearTimeout(transferTimer.current)
+    },
+    [],
+  )
 
   /**
    * Overlay HARUS hidup di `document.body`, bukan di dalam `<aside>` sidebar.
@@ -84,6 +104,16 @@ export function TransactionWebModal({
   }, [open, onOpenChange])
 
   const close = () => onOpenChange(false)
+
+  /* Pintu Pindah Dana dari engine: tutup modal ini dulu (animasi ±300ms), baru
+     buka alur transfernya. Sama seperti versi bottom sheet. */
+  function openTransferFlow() {
+    close()
+    transferTimer.current = window.setTimeout(
+      () => setTransferOpen(true),
+      TRANSACTION_HANDOFF_MS,
+    )
+  }
 
   /* isi overlay dipisah jadi variabel supaya markup-nya tidak perlu di-indent
      ulang saat dipindahkan ke portal */
@@ -148,13 +178,13 @@ export function TransactionWebModal({
             <div className="min-w-0 flex-1">
               <h2
                 id="transaction-web-title"
-                className="text-xl font-semibold tracking-tight text-ink"
+                className="text-xl font-medium tracking-tight text-forest"
               >
                 Tambah Transaksi
               </h2>
               <p
                 id="transaction-web-desc"
-                className="mt-0.5 text-[13px] leading-relaxed text-ink/55"
+                className="mt-0.5 text-[13px] leading-relaxed text-forest/55"
               >
                 4 tap aja, kurang dari 10 detik ⚡
               </p>
@@ -163,7 +193,7 @@ export function TransactionWebModal({
               type="button"
               aria-label="Tutup"
               onClick={close}
-              className="flex size-9 shrink-0 items-center justify-center rounded-full bg-cream text-ink ring-1 ring-soil/12 transition-colors hover:bg-sage"
+              className="flex size-9 shrink-0 items-center justify-center rounded-full bg-cream text-forest ring-1 ring-soil/12 transition-colors hover:bg-sage"
             >
               <X className="size-4" />
             </button>
@@ -176,6 +206,8 @@ export function TransactionWebModal({
               layout="dialog"
               defaultType={defaultType}
               onSubmitted={(draft) => submit(draft, close)}
+              /* pintu Pindah Dana (paket 70) */
+              onTransferRequest={openTransferFlow}
             />
           </div>
         </div>
@@ -187,5 +219,12 @@ export function TransactionWebModal({
      server & client identik; setelah mount overlay hidup langsung di <body> */
   if (!portalReady) return null
 
-  return createPortal(overlay, document.body)
+  return (
+    <>
+      {createPortal(overlay, document.body)}
+      {/* alur Pindah Dana yang sebenarnya — sheet yang sama dengan pintu lain,
+          jadi tidak ada jalur tulis transfer kedua */}
+      <TransferFlow open={transferOpen} onOpenChange={setTransferOpen} />
+    </>
+  )
 }

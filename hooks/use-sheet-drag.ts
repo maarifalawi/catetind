@@ -9,7 +9,7 @@ import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPoi
    sumber untuk ambang drag, resistensi tarikan ke atas, dan fling keluar.
 
    Sengaja tidak menyentuh `vaul`: kedua modal ini bukan bottom sheet biasa,
-   melainkan panel penuh setinggi layar (mobile) / panel kanan 440px (desktop),
+   melainkan panel penuh setinggi layar di mobile / MODAL TENGAH di desktop,
    jadi gestur ditulis sendiri. */
 
 /** true kalau viewport < lg → panel tampil sebagai bottom sheet (swipe-down aktif) */
@@ -31,7 +31,7 @@ export function useIsBottomSheet() {
  * Swipe-down-untuk-menutup — khusus bottom sheet mobile.
  * - ditarik ke ATAS di-resist (dragY × 0.18) supaya panel tidak terasa "lepas"
  * - dilepas > 96px ATAU velocity > 0.5px/ms → fling keluar dulu, baru onClose()
- * - hanya aktif di < lg (di desktop panelnya panel kanan, bukan bottom sheet)
+ * - hanya aktif di < lg (di desktop panelnya modal tengah, bukan bottom sheet)
  */
 export function useSheetDrag({
   enabled,

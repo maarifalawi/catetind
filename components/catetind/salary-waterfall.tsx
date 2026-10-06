@@ -79,10 +79,10 @@ export function SalaryWaterfall({
         className,
       )}
     >
-      <h2 className="font-display text-[15px] font-bold tracking-tight text-ink">
+      <h2 className="font-display text-[15px] font-semibold tracking-tight text-forest">
         💸 Ke mana gaji kamu pergi?
       </h2>
-      <p className="mt-1 text-[11.5px] leading-relaxed text-ink/45">
+      <p className="mt-1 text-[11.5px] leading-relaxed text-forest/45">
         Bar penuh = {maskMoney(monthlyIncome, masked)} gaji bulan ini — ditarik dari tagihan
         paling gede dulu (proyeksi awal bulan), biar penyedot terbesarnya langsung kelihatan.
       </p>
@@ -97,11 +97,11 @@ export function SalaryWaterfall({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
               transition={{ duration: 0.16, ease: 'easeOut' }}
-              className="inline-flex items-center gap-1.5 rounded-full bg-forest px-2.5 py-1 text-[11px] font-semibold text-cream shadow-[0_10px_22px_-14px_rgba(69,89,78,0.85)]"
+              className="inline-flex items-center gap-1.5 rounded-full bg-forest px-2.5 py-1 text-[11px] font-medium text-cream shadow-[0_10px_22px_-14px_rgba(69,89,78,0.85)]"
             >
               <span aria-hidden>{active.emoji}</span>
               <span>{active.name}</span>
-              <span className="font-bold tabular-nums">{maskMoney(active.amount, masked)}</span>
+              <span className="font-semibold tabular-nums">{maskMoney(active.amount, masked)}</span>
               <span className="font-medium tabular-nums text-cream/60">
                 {percentLabel(active.percent)}
               </span>
@@ -113,7 +113,7 @@ export function SalaryWaterfall({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.16, ease: 'easeOut' }}
-              className="text-[11px] font-medium text-ink/35"
+              className="text-[11px] font-medium text-forest/35"
             >
               Arahkan / tap potongan warna buat lihat detail
             </motion.span>
@@ -153,11 +153,11 @@ export function SalaryWaterfall({
       </div>
 
       {/* ringkasan kiri–kanan */}
-      <div className="mt-3.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 text-[11.5px] font-semibold">
-        <span className="tabular-nums text-ink/60">
+      <div className="mt-3.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 text-[11.5px] font-medium">
+        <span className="tabular-nums text-forest/60">
           🔒 Sudah dijanjikan: {maskMoney(waterfall.total, masked)} ({waterfall.burnPercentage}%)
         </span>
-        <span className="tabular-nums text-ink/70">
+        <span className="tabular-nums text-forest/70">
           📊 Proyeksi sisa gaji: {maskMoney(waterfall.remaining, masked)}
         </span>
       </div>
@@ -165,7 +165,7 @@ export function SalaryWaterfall({
       {/* nada beban tetap: ringan / lumayan padat / tinggi (Section 4) */}
       <p
         className={cn(
-          'mt-3.5 rounded-2xl px-3.5 py-2.5 text-[12px] font-semibold leading-snug ring-1',
+          'mt-3.5 rounded-2xl px-3.5 py-2.5 text-[12px] font-medium leading-snug ring-1',
           tone.panelClass,
           tone.textClass,
         )}
@@ -176,12 +176,12 @@ export function SalaryWaterfall({
       {/* Audit UX #2 — cegah angka "proyeksi" dibaca sebagai sisa uang hari ini.
           Metrik sisa uang RIIL ada di Jatah Harian halaman Budget (satu angka
           dengan Daily HUD), jadi user tidak melihat dua "sisa" yang berbeda. */}
-      <p className="mt-2 text-[10.5px] leading-relaxed text-ink/40">
+      <p className="mt-2 text-[10.5px] leading-relaxed text-forest/40">
         “Proyeksi sisa gaji” = gaji − seluruh tagihan rutin bulan ini, belum termasuk pengeluaran
         harian. Sisa uang riil kamu hari ini ada di{' '}
         <Link
           href="/budget"
-          className="font-semibold text-forest underline decoration-forest/30 underline-offset-2 hover:decoration-forest"
+          className="font-medium text-forest underline decoration-forest/30 underline-offset-2 hover:decoration-forest"
         >
           Jatah Harian (Budget &amp; Target)
         </Link>

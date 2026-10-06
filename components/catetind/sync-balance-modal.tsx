@@ -65,7 +65,7 @@ export function SyncBalanceModal({
   /** 1000000 → "1.000.000" (auto-format Indonesia seketika saat diketik) */
   const display = digits ? entered.toLocaleString('id-ID') : ''
   const diffText = `${diff < 0 ? '-' : diff > 0 ? '+' : ''}${formatIDR(Math.abs(diff))}`
-  const diffTone = diff === 0 ? 'text-ink/45' : diff < 0 ? 'text-plum' : 'text-leaf'
+  const diffTone = diff === 0 ? 'text-forest/45' : diff < 0 ? 'text-plum' : 'text-leaf'
 
   function handleChange(event: ChangeEvent<HTMLInputElement>) {
     // buang semua non-digit, batasi 12 digit (maks Rp 999.999.999.999)
@@ -112,10 +112,10 @@ export function SyncBalanceModal({
           <div className="relative px-5 pt-4">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <Drawer.Title className="font-display text-xl font-bold leading-tight tracking-tight text-ink">
+                <Drawer.Title className="font-display text-xl font-medium leading-tight tracking-tight text-forest">
                   Sesuaikan Saldo {shown?.name ?? ''}
                 </Drawer.Title>
-                <Drawer.Description className="mt-1 text-[13px] leading-relaxed text-ink/55">
+                <Drawer.Description className="mt-1 text-[13px] leading-relaxed text-forest/55">
                   Berapa saldo aslinya sekarang? Buka aplikasi bank/e-wallet kamu, lalu
                   tulis angkanya di sini.
                 </Drawer.Description>
@@ -133,18 +133,18 @@ export function SyncBalanceModal({
 
             {/* saldo sistem — pembanding koreksi */}
             <div className="mt-5 flex items-center justify-between gap-3 rounded-2xl bg-sage/40 px-4 py-3 ring-1 ring-inset ring-forest/[0.06]">
-              <span className="flex items-center gap-2 text-[11.5px] font-medium text-ink/55">
+              <span className="flex items-center gap-2 text-[11.5px] font-medium text-forest/55">
                 <span className={cn('size-2 rounded-full', shown?.color ?? 'bg-forest')} />
                 Saldo sistem
               </span>
-              <span className="text-[13.5px] font-bold text-ink tabular-nums">
+              <span className="text-[13.5px] font-semibold text-forest tabular-nums">
                 {formatIDR(systemBalance)}
               </span>
             </div>
 
             {/* input saldo asli — nominal raksasa, keyboard numerik */}
             <label className="mt-3 flex cursor-text items-baseline gap-2 rounded-2xl border-2 border-dashed border-oat px-4 py-4 transition-colors focus-within:border-mint focus-within:bg-mint/[0.07]">
-              <span aria-hidden className="shrink-0 text-xl font-bold text-ink/25">
+              <span aria-hidden className="shrink-0 text-xl font-medium text-forest/25">
                 Rp
               </span>
               <input
@@ -163,7 +163,7 @@ export function SyncBalanceModal({
                 enterKeyHint="done"
                 placeholder="0"
                 aria-label={`Saldo asli di ${shown?.name ?? 'dompet'}`}
-                className="min-w-0 flex-1 bg-transparent text-[2rem] font-black leading-none tracking-tight text-ink tabular-nums outline-none placeholder:text-ink/15"
+                className="min-w-0 flex-1 bg-transparent text-[2rem] font-semibold leading-none tracking-tight text-forest tabular-nums outline-none placeholder:text-forest/15"
               />
             </label>
 
@@ -173,7 +173,7 @@ export function SyncBalanceModal({
                 className={cn(
                   'mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full',
                   diff === 0
-                    ? 'bg-ink/[0.06] text-ink/45'
+                    ? 'bg-ink/[0.06] text-forest/45'
                     : diff < 0
                       ? 'bg-plum/[0.13] text-plum'
                       : 'bg-leaf/[0.13] text-leaf',
@@ -182,10 +182,10 @@ export function SyncBalanceModal({
                 <Sparkles className="size-3.5" strokeWidth={2.4} />
               </span>
               <div className="min-w-0">
-                <p className={cn('text-[15px] font-bold leading-tight tabular-nums', diffTone)}>
+                <p className={cn('text-[15px] font-semibold leading-tight tabular-nums', diffTone)}>
                   Selisih: {diffText}
                 </p>
-                <p className="mt-1 text-[11.5px] leading-relaxed text-ink/40">
+                <p className="mt-1 text-[11.5px] leading-relaxed text-forest/40">
                   {diff < 0
                     ? 'Pengeluaran Tak Tercatat akan ditambahkan otomatis ke catatanmu.'
                     : diff > 0
@@ -202,7 +202,7 @@ export function SyncBalanceModal({
               aria-disabled={inputLocked || undefined}
               className={cn(
                 'mt-6 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-b from-forest-soft to-forest',
-                'text-[15px] font-semibold text-cream shadow-[0_18px_36px_-16px_rgba(69,89,78,0.85)]',
+                'text-[15px] font-medium text-cream shadow-[0_18px_36px_-16px_rgba(69,89,78,0.85)]',
                 'transition-all hover:brightness-[1.08] active:scale-[0.99]',
                 'disabled:cursor-not-allowed disabled:from-forest/20 disabled:to-forest/20 disabled:text-cream/70 disabled:shadow-none',
               )}

@@ -34,33 +34,33 @@ export function LegalShell({ document }: { document: LegalDocument }) {
       {/* ── KEPALA DOKUMEN: identitas → judul → status versi → pembuka ─────── */}
       <header>
         <LogoWordmark className="h-6" />
-        <p className="mt-5 text-[11px] font-semibold tracking-[0.16em] text-ink/55 uppercase">
+        <p className="mt-5 text-[11px] font-medium tracking-[0.16em] text-forest/55 uppercase">
           {document.eyebrow}
         </p>
-        <h1 className="mt-1.5 font-display text-3xl font-semibold tracking-tight text-ink lg:text-4xl">
+        <h1 className="mt-1.5 font-display text-3xl font-semibold tracking-tight text-forest lg:text-4xl">
           {document.title}
         </h1>
 
         {/* baris meta: inilah "Terakhir diperbarui" yang diminta prompt halaman.
             `dateTime` memakai ISO yang dipatok di file data, bukan tanggal hidup. */}
-        <p className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11.5px] text-ink/60">
+        <p className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11.5px] text-forest/60">
           <span>
             {document.updatedLabel}:{' '}
-            <time dateTime={document.updatedIso} className="font-semibold text-ink/80">
+            <time dateTime={document.updatedIso} className="font-medium text-forest/80">
               {document.updatedHuman}
             </time>
           </span>
-          <span aria-hidden className="text-ink/30">
+          <span aria-hidden className="text-forest/30">
             ·
           </span>
-          <span className="font-semibold text-ink/80">{document.versionLabel}</span>
-          <span aria-hidden className="text-ink/30">
+          <span className="font-medium text-forest/80">{document.versionLabel}</span>
+          <span aria-hidden className="text-forest/30">
             ·
           </span>
           <span>{document.sections.length} bagian</span>
         </p>
 
-        <div className="mt-3.5 max-w-2xl space-y-2.5 text-[13.5px] leading-relaxed text-ink/65">
+        <div className="mt-3.5 max-w-2xl space-y-2.5 text-[13.5px] leading-relaxed text-forest/65">
           {document.intro.map((paragraph) => (
             <p key={paragraph}>{paragraph}</p>
           ))}
@@ -81,7 +81,7 @@ export function LegalShell({ document }: { document: LegalDocument }) {
         >
           <p
             id="legal-toc-title"
-            className="px-1 text-[10.5px] font-semibold tracking-[0.14em] text-ink/55 uppercase"
+            className="px-1 text-[10.5px] font-medium tracking-[0.14em] text-forest/55 uppercase"
           >
             {document.tocLabel}
           </p>
@@ -90,11 +90,11 @@ export function LegalShell({ document }: { document: LegalDocument }) {
               <li key={section.id}>
                 <a
                   href={`#${section.id}`}
-                  className="flex items-baseline gap-2 rounded-xl px-1.5 py-1.5 text-[12.5px] leading-snug text-ink/60 transition-colors duration-200 hover:bg-cream hover:text-ink focus-visible:ring-2 focus-visible:ring-forest/40 focus-visible:outline-none motion-reduce:transition-none lg:rounded-none lg:border-l-[3px] lg:border-transparent lg:px-3 lg:py-2 lg:hover:border-soil/15 lg:hover:bg-sage/60"
+                  className="flex items-baseline gap-2 rounded-xl px-1.5 py-1.5 text-[12.5px] leading-snug text-forest/60 transition-colors duration-200 hover:bg-cream hover:text-forest focus-visible:ring-2 focus-visible:ring-forest/40 focus-visible:outline-none motion-reduce:transition-none lg:rounded-none lg:border-l-[3px] lg:border-transparent lg:px-3 lg:py-2 lg:hover:border-soil/15 lg:hover:bg-sage/60"
                 >
                   <span
                     aria-hidden
-                    className="text-[10.5px] font-semibold tabular-nums text-ink/45 lg:text-ink/35"
+                    className="text-[10.5px] font-medium tabular-nums text-forest/45 lg:text-forest/35"
                   >
                     {index + 1}
                   </span>
@@ -115,14 +115,14 @@ export function LegalShell({ document }: { document: LegalDocument }) {
       {/* ── KAKI DOKUMEN ──────────────────────────────────────────────────── */}
       <footer className="mt-10 border-t border-soil/12 pt-6 lg:mt-14">
         {/* kejujuran soal status build — pola yang sama dengan /login & /checkout */}
-        <p className="flex items-start gap-2.5 rounded-2xl bg-sage/60 px-4 py-3.5 text-[12.5px] leading-relaxed text-ink/65 ring-1 ring-forest/10">
+        <p className="flex items-start gap-2.5 rounded-2xl bg-sage/60 px-4 py-3.5 text-[12.5px] leading-relaxed text-forest/65 ring-1 ring-forest/10">
           <Sprout className="mt-0.5 size-4 shrink-0 text-forest" strokeWidth={2.2} aria-hidden />
           <span>{document.demoNote}</span>
         </p>
 
         <LegalNoteBox note={document.reviewNote} className="mt-3.5" />
 
-        <h2 className="mt-7 font-display text-[17px] font-semibold tracking-tight text-ink">
+        <h2 className="mt-7 font-display text-[17px] font-medium tracking-tight text-forest">
           {document.related.title}
         </h2>
         {/* 2 kolom di tablet, 4 di desktop: kedua dokumen legal membawa 4 tautan,
@@ -135,15 +135,15 @@ export function LegalShell({ document }: { document: LegalDocument }) {
                 href={link.href}
                 className="flex h-full flex-col rounded-2xl bg-cream p-4 ring-1 ring-soil/12 transition-colors duration-200 hover:bg-sage/50 focus-visible:ring-2 focus-visible:ring-forest/40 focus-visible:outline-none motion-reduce:transition-none"
               >
-                <span className="flex items-center gap-1.5 text-[13.5px] font-semibold text-ink">
+                <span className="flex items-center gap-1.5 text-[13.5px] font-medium text-forest">
                   {link.label}
                   <ArrowUpRight
-                    className="size-3.5 shrink-0 text-ink/40"
+                    className="size-3.5 shrink-0 text-forest/40"
                     strokeWidth={2.4}
                     aria-hidden
                   />
                 </span>
-                <span className="mt-1 text-[11.5px] leading-relaxed text-ink/60">{link.desc}</span>
+                <span className="mt-1 text-[11.5px] leading-relaxed text-forest/60">{link.desc}</span>
               </Link>
             </li>
           ))}
@@ -151,12 +151,12 @@ export function LegalShell({ document }: { document: LegalDocument }) {
 
         {/* catatan sepasang dokumen (privasi ⇄ syarat): dua halaman yang saling
             menyebut, selalu diterbitkan bersamaan */}
-        <p className="mt-3 flex items-start gap-1.5 text-[11.5px] leading-relaxed text-ink/60">
+        <p className="mt-3 flex items-start gap-1.5 text-[11.5px] leading-relaxed text-forest/60">
           <CircleHelp className="mt-[1px] size-3.5 shrink-0" strokeWidth={2.2} aria-hidden />
           <span>{document.related.crossNote}</span>
         </p>
 
-        <p className="mt-5 flex items-start gap-1.5 text-[11px] leading-relaxed text-ink/55">
+        <p className="mt-5 flex items-start gap-1.5 text-[11px] leading-relaxed text-forest/55">
           <Lock className="mt-[1px] size-3 shrink-0" strokeWidth={2.2} aria-hidden />
           <span>{document.disclaimer}</span>
         </p>
@@ -176,13 +176,13 @@ export function LegalShell({ document }: { document: LegalDocument }) {
 function LegalSectionBlock({ section }: { section: LegalSection }) {
   return (
     <section id={section.id} className="scroll-mt-24">
-      <h2 className="font-display text-[19px] font-bold tracking-tight text-ink lg:text-[21px]">
+      <h2 className="font-display text-[19px] font-semibold tracking-tight text-forest lg:text-[21px]">
         {section.title}
       </h2>
 
       <div className="mt-2.5 max-w-[68ch] space-y-3">
         {section.paragraphs.map((paragraph) => (
-          <p key={paragraph} className="text-[14px] leading-relaxed text-ink/70">
+          <p key={paragraph} className="text-[14px] leading-relaxed text-forest/70">
             {paragraph}
           </p>
         ))}
@@ -196,7 +196,7 @@ function LegalSectionBlock({ section }: { section: LegalSection }) {
                   aria-hidden
                   className="mt-[9px] size-1.5 shrink-0 rounded-full bg-forest/50"
                 />
-                <span className="min-w-0 text-[14px] leading-relaxed text-ink/70">{item}</span>
+                <span className="min-w-0 text-[14px] leading-relaxed text-forest/70">{item}</span>
               </li>
             ))}
           </ul>
@@ -231,9 +231,9 @@ function LegalNoteBox({ note, className }: { note: LegalNote; className?: string
         className,
       )}
     >
-      <p className="max-w-[68ch] text-[12.5px] leading-relaxed text-ink/75">
-        <span className="font-semibold text-ink">{note.label}</span>
-        <span aria-hidden className="mx-1.5 text-ink/30">
+      <p className="max-w-[68ch] text-[12.5px] leading-relaxed text-forest/75">
+        <span className="font-medium text-forest">{note.label}</span>
+        <span aria-hidden className="mx-1.5 text-forest/30">
           ·
         </span>
         {note.body}

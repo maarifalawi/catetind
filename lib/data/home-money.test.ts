@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
   activeLedgerDays,
+  buildFlowMap,
   distributionSegments,
   groupHomeMoneyRows,
   homeCashFlowSeries,
   homeMoneyGroupLabel,
   homeRowsInLastDays,
   shouldShowDailyNudge,
+  FLOW_SPAN,
   type HomeMoneyRow,
 } from './home-money'
 import type { HistoryTransaction } from './history'
@@ -179,17 +181,23 @@ describe('homeCashFlowSeries — seri pekan mengikuti bulan NYATA (58.1)', () =>
     row({ id: 'w3', date: '2026-08-30', amount: 900_000, type: 'expense' }),
   ]
 
-  it('membagi baris ke pekan 1-5 & memberi label bulan yang diminta', () => {
+  it('satu titik PER HARI sampai tanggal terakhir bulan (Sep = 30 titik)', () => {
     const series = homeCashFlowSeries(rows, '2026-09')
-    expect(series.map((p) => p.label)).toEqual([
-      '1 Sep',
-      '8 Sep',
-      '15 Sep',
-      '22 Sep',
-      '29 Sep',
-    ])
-    expect(series[0]?.income).toBe(100_000)
-    expect(series[2]?.expense).toBe(40_000)
+    expect(series).toHaveLength(30)
+    expect(series[0]?.label).toBe('1 Sep')
+    expect(series[29]?.label).toBe('30 Sep')
+  })
+
+  it('31 hari di Oktober → label terakhir "31 Okt" (bukan berhenti di "29")', () => {
+    const series = homeCashFlowSeries([], '2026-10')
+    expect(series).toHaveLength(31)
+    expect(series[30]?.label).toBe('31 Okt')
+  })
+
+  it('tiap baris jatuh ke TANGGALNYA sendiri, bukan ke pekan', () => {
+    const series = homeCashFlowSeries(rows, '2026-09')
+    expect(series[1]?.income).toBe(100_000) // 2 Sep
+    expect(series[20]?.expense).toBe(40_000) // 21 Sep
   })
 
   it('baris di luar bulan itu tidak masuk seri "Bulan ini"', () => {
@@ -198,8 +206,9 @@ describe('homeCashFlowSeries — seri pekan mengikuti bulan NYATA (58.1)', () =>
     expect(total).toBe(40_000)
   })
 
-  it('tanpa bulan (pemakaian lama) semua baris tetap dibucket seperti sebelumnya', () => {
+  it('tanpa bulan (render server) tetap 31 titik, dan semua baris ikut dihitung', () => {
     const series = homeCashFlowSeries(rows)
+    expect(series).toHaveLength(31)
     const total = series.reduce((sum, p) => sum + p.expense, 0)
     expect(total).toBe(940_000)
   })
@@ -227,5 +236,75 @@ describe('shouldShowDailyNudge — pemicu nudge dari data NYATA (58.4)', () => {
     expect(
       shouldShowDailyNudge({ hour: 9, hasRecordToday: false, accountEmpty: true, forceShow: true }),
     ).toBe(false)
+  })
+})
+
+/* ── PETA ALIRAN ARUS UANG (paket 67) ────────────────────────────────────────
+   Visual kartu Arus Uang kini ALUVIUM: satu simpul masuk memecah jadi pita
+   "keluar" dan pita "disimpan". Test ini mengunci INVARIAN geometrinya —
+   bukan sekadar bentuknya — karena repo ini tidak punya test komponen dan
+   tata letak persennya tak bisa dilihat di lingkungan ini:
+
+     1. SATU skala: tinggi simpul ∝ nominal, jadi `income.size / expense.size`
+        = `income / expense` (mustahil "masuk 8,5 jt" setinggi "keluar 750 rb");
+     2. kolom kiri & kanan berjumlah SAMA (= nominal terbesar), sehingga
+        keduanya adil dibandingkan;
+     3. total PORT di tiap simpul = tinggi simpulnya (pita tidak meluber). */
+
+describe('buildFlowMap — geometri peta aliran Arus Uang (paket 67)', () => {
+  const INCOME = 8_500_000
+  const EXPENSE = 750_000
+
+  it('surplus: ada simpul "Sisa", tidak ada "Defisit"', () => {
+    const map = buildFlowMap(INCOME, EXPENSE)
+    expect(map.deficit).toBeNull()
+    expect(map.saved).not.toBeNull()
+  })
+
+  it('satu skala untuk dua kolom: rasio tinggi = rasio nominal', () => {
+    const map = buildFlowMap(INCOME, EXPENSE)
+    expect(map.income.size / map.expense.size).toBeCloseTo(INCOME / EXPENSE, 6)
+    expect(map.income.size).toBeLessThanOrEqual(FLOW_SPAN + 1e-9)
+  })
+
+  it('defisit: uang keluar melebihi uang masuk → muncul simpul "Defisit", tanpa "Sisa"', () => {
+    const map = buildFlowMap(1_000_000, 1_600_000)
+    expect(map.saved).toBeNull()
+    expect(map.deficit).not.toBeNull()
+    /* kolom kiri (masuk + defisit) tetap sama tinggi dengan kolom kanan (keluar) */
+    expect(map.income.size + (map.deficit?.size ?? 0)).toBeCloseTo(map.expense.size, 6)
+  })
+
+  it('total PORT tiap simpul = tinggi simpulnya (pita tidak pernah meluber)', () => {
+    const map = buildFlowMap(INCOME, EXPENSE)
+    const inNode = (node: { top: number; size: number }, point: number) =>
+      point >= node.top - 1e-9 && point < node.top + node.size
+
+    const outOfIncome = map.ribbons
+      .filter((r) => inNode(map.income, r.from.top))
+      .reduce((sum, r) => sum + r.from.size, 0)
+    expect(outOfIncome).toBeCloseTo(map.income.size, 6)
+
+    const intoExpense = map.ribbons
+      .filter((r) => inNode(map.expense, r.to.top))
+      .reduce((sum, r) => sum + r.to.size, 0)
+    expect(intoExpense).toBeCloseTo(map.expense.size, 6)
+  })
+
+  it('tanpa uang bergerak: tidak ada pita & semua simpul berukuran 0', () => {
+    const map = buildFlowMap(0, 0)
+    expect(map.ribbons).toEqual([])
+    expect(map.income.size).toBe(0)
+    expect(map.expense.size).toBe(0)
+    expect(map.saved).toBeNull()
+    expect(map.deficit).toBeNull()
+  })
+
+  it('hanya pemasukan: satu pita "disimpan", tanpa simpul Pengeluaran', () => {
+    const map = buildFlowMap(1_000_000, 0)
+    expect(map.expense.size).toBe(0)
+    expect(map.ribbons).toHaveLength(1)
+    expect(map.ribbons[0]?.tone).toBe('in')
+    expect(map.saved?.size).toBeCloseTo(map.income.size, 6)
   })
 })

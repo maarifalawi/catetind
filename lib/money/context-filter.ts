@@ -1,6 +1,14 @@
 import type { HistoryTransaction } from '@/lib/data/history'
+import type { HomeMoneyRow } from '@/lib/data/home-money'
+import { homeMoneyRowFrom } from '@/lib/data/home-money'
 import type { MoneyContext } from '@/lib/types'
-import { isRowRemoved, toHistoryTransaction, type MoneyRow, type MoneySnapshot } from './store'
+import {
+  applyRowOverride,
+  isRowRemoved,
+  toHistoryTransaction,
+  type MoneyRow,
+  type MoneySnapshot,
+} from './store'
 
 /* ── PENYARING KONTEKS UANG — SATU IMPLEMENTASI (paket 47) ───────────────────
    Konteks uang (Pribadi/Keluarga/Bersama — PRD Domain 2C.2) sudah jadi SATU
@@ -149,4 +157,36 @@ export function transactionsForContext(
     const tx = toHistoryTransaction(row)
     return { ...tx, context: row.context, unknownContext: row.unknownContext }
   })
+}
+
+/**
+ * Catatan ledger yang lolos konteks aktif, dalam bentuk `HistoryTransaction` dan
+ * dengan urutan tombstone→edit yang SAMA seperti `recordedTransactions()`
+ * (tombstone menang atas edit, edit menang atas baris asli).
+ *
+ * Dipakai kartu "Jatah Hari Ini" supaya jatah bisa ikut berubah saat user
+ * berpindah Pribadi/Keluarga/Bersama — bukan angka global yang tak bergerak.
+ */
+export function recordedTransactionsForContext(
+  snapshot: MoneySnapshot,
+  ctx: MoneyContext,
+): HistoryTransaction[] {
+  return rowsForContext(snapshot, ctx).map((row) =>
+    applyRowOverride(snapshot, toHistoryTransaction(row)),
+  )
+}
+
+/**
+ * Baris Home (`HomeMoneyRow`) yang lolos konteks aktif — turunan dari
+ * `recordedTransactionsForContext()`.
+ *
+ * Dipakai kartu uang Dashboard (Arus Uang, Distribusi Pengeluaran, Transaksi
+ * Terakhir) supaya memilih konteks benar-benar menyaring ketiganya, bukan hanya
+ * daftar di halaman terpisah.
+ */
+export function homeMoneyRowsForContext(
+  snapshot: MoneySnapshot,
+  ctx: MoneyContext,
+): HomeMoneyRow[] {
+  return recordedTransactionsForContext(snapshot, ctx).map(homeMoneyRowFrom)
 }

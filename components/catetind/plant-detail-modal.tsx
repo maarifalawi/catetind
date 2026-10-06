@@ -53,14 +53,14 @@ export function PlantDetailModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold tracking-tight text-ink">
+          <h2 className="text-lg font-medium tracking-tight text-forest">
             {HOME_PLANT_COPY.detailTitle}
           </h2>
           <button
             type="button"
             aria-label="Tutup"
             onClick={onClose}
-            className="flex size-9 items-center justify-center rounded-full bg-cream text-ink ring-1 ring-soil/12 transition-colors hover:bg-sage"
+            className="flex size-9 items-center justify-center rounded-full bg-cream text-forest ring-1 ring-soil/12 transition-colors hover:bg-sage"
           >
             <X className="size-4" />
           </button>
@@ -95,7 +95,7 @@ export function PlantDetailModal({
                 <span
                   className={cn(
                     'text-[10px] font-medium',
-                    s === plant.stage ? 'text-forest' : 'text-ink/40',
+                    s === plant.stage ? 'text-forest' : 'text-forest/40',
                   )}
                 >
                   {STAGE_NAMES[s]}
@@ -120,11 +120,11 @@ export function PlantDetailModal({
                   style={{ width: `${plant.hp}%` }}
                 />
               </span>
-              <b className="font-semibold text-ink tabular-nums">{plant.hp}%</b>
+              <b className="font-medium text-forest tabular-nums">{plant.hp}%</b>
             </span>
           </StatRow>
           <StatRow label={HOME_PLANT_COPY.activeDaysLabel}>
-            <b className="font-semibold text-ink tabular-nums">
+            <b className="font-medium text-forest tabular-nums">
               {plant.activeDays > 0
                 ? HOME_PLANT_COPY.activeDaysValue(plant.activeDays)
                 : HOME_PLANT_COPY.activeEmptyValue}
@@ -132,7 +132,7 @@ export function PlantDetailModal({
           </StatRow>
         </div>
 
-        <p className="mt-5 rounded-2xl bg-cream/70 px-4 py-3 text-center text-[13px] leading-relaxed text-ink/60 ring-1 ring-soil/8">
+        <p className="mt-5 rounded-2xl bg-cream/70 px-4 py-3 text-center text-[13px] leading-relaxed text-forest/60 ring-1 ring-soil/8">
           {plant.activeDays > 0 ? HOME_PLANT_COPY.activeBody(plant.activeDays) : HOME_PLANT_COPY.activeEmptyBody}
         </p>
 
@@ -143,7 +143,7 @@ export function PlantDetailModal({
             type="button"
             onClick={onReplay}
             title={CELEBRATION_COPY.replayHint}
-            className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-cream text-[13.5px] font-semibold text-ink ring-1 ring-soil/12 transition-colors hover:bg-sage/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25 active:scale-[0.99] motion-reduce:transition-none"
+            className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-cream text-[13.5px] font-medium text-forest ring-1 ring-soil/12 transition-colors hover:bg-sage/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25 active:scale-[0.99] motion-reduce:transition-none"
           >
             <Sparkles className="size-4 text-forest" strokeWidth={2.4} aria-hidden />
             {CELEBRATION_COPY.replayLabel}
@@ -163,7 +163,7 @@ function StatRow({
 }) {
   return (
     <div className="flex items-center justify-between gap-3 text-sm">
-      <span className="text-ink/55">{label}</span>
+      <span className="text-forest/55">{label}</span>
       {children}
     </div>
   )

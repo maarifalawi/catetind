@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { recordAiUsage } from '@/lib/ai-usage-store'
+import { buildCoachContext, buildWelcomeText, collectCoachSummary } from '@/lib/ai/coach-context'
 import {
   AI_CONTEXT_WINDOW,
   AI_NOT_CONNECTED_REPLY,
@@ -19,18 +20,15 @@ const makeId = () => `msg-${++nextId}`
  * Routing berbasis ATURAN LOKAL — meniru intent detection keyword sederhana dari
  * Domain 4B (zero API cost), TANPA memanggil model.
  *
- * KEPUTUSAN PAKET 44 (§AI, opsi b): model LLM belum disambungkan karena app ini
- * belum punya API key provider, dan kunci itu tidak boleh dikarang di repo demo
- * (`§AI` opsi a menuntut key disimpan server-side di `.env.local` oleh pemilik
- * produk). Karena itu fungsi ini SENGAJA hanya menjawab pertanyaan yang
- * jawabannya ada di data lokal, dan setiap jawabannya membawa penanda
- * `ruleBased: true` — widget mencetak label "belum pakai model" dari penanda itu.
+ * PAKET 63: balasan utama sekarang datang dari MODEL (`POST /api/ai/text`,
+ * Gemini, server-side). Fungsi ini jadi JARING AMAN: dipakai saat provider tak
+ * bisa dihubungi (tanpa kunci / kuota penyedia penuh / jaringan mati). Karena itu
+ * ia hanya menjawab pertanyaan yang jawabannya ada di data lokal, dan setiap
+ * jawabannya membawa penanda `ruleBased: true` — widget mencetak label
+ * "belum pakai model" dari penanda itu, jadi user tahu ini bukan balasan model.
  *
  * Pertanyaan yang TIDAK bisa dijawab dari data lokal jatuh ke
  * `AI_NOT_CONNECTED_REPLY`: jujur soal keadaan hari ini + tombol "Hubungkan AI".
- *
- * Kalau nanti provider disambungkan, ganti isi `aiReply()` dengan
- * `fetch('/api/ai/text')` — bentuk pesannya sudah sama.
  */
 function aiReply(userText: string): Omit<ChatMessage, 'id'> {
   const t = userText.toLowerCase()
@@ -46,13 +44,9 @@ function aiReply(userText: string): Omit<ChatMessage, 'id'> {
 /**
  * useAIChat — state & logic percakapan AI Coach.
  *
- * Sengaja dipisah dari UI supaya provider asli tinggal "dicolok" di sini:
- * ganti isi `aiReply()` (dan timer 1–1.5 detiknya) dengan `fetch('/api/ai/text')`,
- * tanpa mengubah ai-chat-widget sama sekali.
- *
- * PAKET 44: balasan yang keluar dari sini masih berbasis ATURAN LOKAL (belum ada
- * model — lihat catatan di `aiReply`), dan penandanya (`ruleBased`) ikut sampai
- * ke UI supaya label "belum pakai model" tidak bisa lupa dipasang.
+ * PAKET 63: balasan datang dari MODEL nyata lewat `POST /api/ai/text` (kunci
+ * provider HANYA di server). Kalau provider tak bisa dihubungi, otomatis jatuh ke
+ * `aiReply()` berbasis aturan lokal dengan label `ruleBased: true`.
  *
  * Memory: widget-nya di-mount di root layout (tidak unmount saat navigasi),
  * jadi history bertahan selama sesi dan reset saat full page refresh.
@@ -62,6 +56,12 @@ export function useAIChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isTyping, setIsTyping] = useState(false)
   const [input, setInput] = useState('')
+  /**
+   * `null` = belum tahu · `true` = model menjawab · `false` = server tak punya
+   * kunci AI. Dipakai widget untuk menampilkan banner "belum tersambung" HANYA
+   * saat memang belum tersambung (bukan selalu, seperti sebelum paket 63).
+   */
+  const [modelConnected, setModelConnected] = useState<boolean | null>(null)
   const replyTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // bersihkan timer kalau komponen unmount di tengah "thinking"
@@ -80,36 +80,110 @@ export function useAIChat() {
 
   /** Dipanggil saat panel dibuka — seed sapaan proaktif hanya kalau history masih kosong */
   const startConversation = useCallback(() => {
-    setMessages((prev) =>
-      prev.length > 0 ? prev : [{ ...PROACTIVE_WELCOME, id: makeId() }],
-    )
+    setMessages((prev) => {
+      if (prev.length > 0) return prev
+      /* sapaan memakai angka NYATA dari data store (sisa jatah harian, saldo,
+         kategori terbesar) — bukan template "Rp 150.000" (paket 65). Kalau
+         ringkasan tidak bisa dibaca, jatuh ke sapaan netral tanpa angka. */
+      let welcome: Omit<ChatMessage, 'id'> = PROACTIVE_WELCOME
+      try {
+        welcome = {
+          role: 'ai',
+          kind: 'coaching',
+          ruleBased: true,
+          content: buildWelcomeText(collectCoachSummary()),
+        }
+      } catch {
+        welcome = PROACTIVE_WELCOME
+      }
+      return [{ ...welcome, id: makeId() }]
+    })
   }, [])
+
+  /**
+   * Minta balasan MODEL (`POST /api/ai/text`). Kalau provider tak bisa
+   * dihubungi / kuota penyedia penuh / kunci belum ada, JATUH ke balasan berbasis
+   * aturan lokal — yang tetap membawa label `ruleBased` supaya user tahu ini bukan
+   * model. Tidak pernah mengarang balasan yang seolah datang dari model.
+   */
+  const requestModelReply = useCallback(
+    async (history: ChatMessage[], userText: string) => {
+      try {
+        /* Grounding data nyata (paket 65): kirim ringkasan angka user supaya model
+           tidak mengarang jatah/saldo. Kalau ringkasan gagal dibaca, kirim string
+           kosong — server tetap melarang model menyebut angka apa pun. */
+        let context = ''
+        try {
+          context = buildCoachContext(collectCoachSummary())
+        } catch {
+          context = ''
+        }
+        const res = await fetch('/api/ai/text', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            messages: history.map((m) => ({
+              role: m.role === 'user' ? 'user' : 'ai',
+              content: m.content,
+            })),
+            context,
+          }),
+        })
+        if (res.ok) {
+          const data = (await res.json()) as { reply?: unknown }
+          const reply = typeof data.reply === 'string' ? data.reply.trim() : ''
+          if (reply) {
+            setModelConnected(true)
+            append({ role: 'ai', kind: 'coaching', content: reply, ruleBased: false })
+            return
+          }
+        } else {
+          const data = (await res.json().catch(() => null)) as { reason?: unknown } | null
+          if (data?.reason === 'no-key') setModelConnected(false)
+        }
+      } catch {
+        /* jaringan mati → diputuskan di bawah: balasan aturan lokal */
+      }
+      append(aiReply(userText))
+    },
+    [append],
+  )
 
   const sendMessage = useCallback(
     (raw?: string) => {
       const text = (raw ?? input).trim()
       if (!text || isTyping) return
 
-      append({ role: 'user', kind: 'coaching', content: text })
+      const history = [
+        ...messages,
+        { id: makeId(), role: 'user' as const, kind: 'coaching' as const, content: text },
+      ].slice(-AI_CONTEXT_WINDOW)
+      setMessages(history)
       setInput('')
       setIsTyping(true)
       /* METERING AI (paket 42): satu pesan = satu panggilan chat. Dihitung di
-         sini (titik user benar-benar mengirim), bukan di mock reply — kalau
-         nanti diganti `POST /api/ai/text`, tempatnya tetap sama. */
+         sini — titik user benar-benar mengirim — jadi lokasinya sama walau
+         balasannya sekarang datang dari model, bukan mock. */
       recordAiUsage('chat')
 
-      // Simulasi "thinking" 1–1.5 detik sebelum balasan aturan lokal keluar.
-      // Saat provider LLM disambungkan (paket lanjutan, butuh API key di server):
-      // ganti `append(aiReply(text))` dengan `POST /api/ai/text`, dan pakai
-      // `AI_CAPTURE_COPY.saveFailed` sebagai state gagal yang sudah ada.
-      const delay = 1000 + Math.random() * 500
+      /* jeda pendek supaya indikator "mengetik" terasa alami (bukan memalsukan
+         kerja): panggilan model yang sesungguhnya dikirim setelahnya. */
+      const delay = 350 + Math.random() * 250
       replyTimer.current = setTimeout(() => {
-        append(aiReply(text))
-        setIsTyping(false)
+        void requestModelReply(history, text).finally(() => setIsTyping(false))
       }, delay)
     },
-    [append, input, isTyping],
+    [input, isTyping, messages, requestModelReply],
   )
 
-  return { messages, isTyping, input, setInput, sendMessage, startConversation, appendMessage: append }
+  return {
+    messages,
+    isTyping,
+    input,
+    setInput,
+    sendMessage,
+    startConversation,
+    appendMessage: append,
+    modelConnected,
+  }
 }

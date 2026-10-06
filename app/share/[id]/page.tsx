@@ -47,10 +47,11 @@ export async function generateMetadata({
   return {
     title,
     description,
-    /* Pratinjau share = judul + deskripsi. `images` sengaja belum diisi:
-       thumbnail 1080×1920 baru ada kalau server yang membangkitkan kartunya
-       (PRD 6580–6611). Di repo demo belum ada gambar nyata — memasang aset lain
-       di sini sama dengan memalsukan pratinjau, dan itu dilarang PRD 5174–5177. */
+    /* Pratinjau share = judul + deskripsi + GAMBAR. Sejak paket 63 gambarnya
+       NYATA: `opengraph-image.tsx` / `twitter-image.tsx` di folder rute ini
+       membangkitkan kartu 1200×630 dari data yang sama (`next/og`), dan Next
+       memasangnya otomatis ke metadata — jadi tidak ada URL gambar yang dikarang
+       di sini. Isinya tetap bebas angka rupiah (PRD 6572–6576). */
     openGraph: {
       type: 'website',
       siteName: 'CatetInd',

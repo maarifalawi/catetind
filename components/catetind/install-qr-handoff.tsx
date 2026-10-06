@@ -93,17 +93,17 @@ export function InstallQrHandoff({ className }: { className?: string }) {
           <Smartphone className="size-4" strokeWidth={2.2} aria-hidden />
         </span>
         <div className="min-w-0">
-          <h2 className="text-sm font-semibold text-ink">{INSTALL_HANDOFF.title}</h2>
-          <p className="mt-0.5 text-xs leading-relaxed text-ink/50">{INSTALL_HANDOFF.blurb}</p>
+          <h2 className="text-sm font-medium text-forest">{INSTALL_HANDOFF.title}</h2>
+          <p className="mt-0.5 text-xs leading-relaxed text-forest/50">{INSTALL_HANDOFF.blurb}</p>
         </div>
       </header>
 
       {/* link ditulis apa adanya (mono) supaya bisa dibaca & diketik manual */}
       <div className="mt-4 rounded-2xl bg-sage/50 px-3.5 py-3 ring-1 ring-forest/10">
-        <p className="text-[10.5px] font-semibold tracking-[0.16em] text-ink/45 uppercase">
+        <p className="text-[10.5px] font-medium tracking-[0.16em] text-forest/45 uppercase">
           {INSTALL_HANDOFF.linkLabel}
         </p>
-        <p className="mt-1 font-mono text-sm font-semibold break-all text-forest">
+        <p className="mt-1 font-mono text-sm font-medium break-all text-forest">
           {INSTALL_URL_TEXT}
         </p>
       </div>
@@ -112,7 +112,7 @@ export function InstallQrHandoff({ className }: { className?: string }) {
         <button
           type="button"
           onClick={shareLink}
-          className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-forest px-4 py-3 text-sm font-semibold text-cream transition-colors duration-200 hover:bg-forest-soft active:scale-[0.98]"
+          className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-forest px-4 py-3 text-sm font-medium text-cream transition-colors duration-200 hover:bg-forest-soft active:scale-[0.98]"
         >
           <Share2 className="size-4" strokeWidth={2.4} aria-hidden />
           {INSTALL_HANDOFF.shareLabel}
@@ -120,7 +120,7 @@ export function InstallQrHandoff({ className }: { className?: string }) {
         <button
           type="button"
           onClick={copyLink}
-          className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-sage px-4 py-3 text-sm font-semibold text-forest transition-colors duration-200 hover:bg-forest hover:text-mint active:scale-[0.98]"
+          className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-sage px-4 py-3 text-sm font-medium text-forest transition-colors duration-200 hover:bg-forest hover:text-mint active:scale-[0.98]"
         >
           {status === 'copied' ? (
             <Check className="size-4" strokeWidth={2.6} aria-hidden />
@@ -139,7 +139,7 @@ export function InstallQrHandoff({ className }: { className?: string }) {
         {statusText}
       </p>
 
-      <p className="text-center text-[11px] leading-relaxed text-ink/50">
+      <p className="text-center text-[11px] leading-relaxed text-forest/50">
         {INSTALL_HANDOFF.instruction}
       </p>
     </section>

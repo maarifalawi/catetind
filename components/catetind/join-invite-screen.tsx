@@ -136,7 +136,7 @@ function ValidInviteView({
         {/* ── 1. header personal: pengundang dulu, baru aplikasinya ────────── */}
         <header>
           <LogoWordmark className="h-6" />
-          <p className="mt-6 text-[11px] font-semibold tracking-[0.16em] text-ink/40 uppercase">
+          <p className="mt-6 text-[11px] font-medium tracking-[0.16em] text-forest/40 uppercase">
             {JOIN_COPY.eyebrow}
           </p>
 
@@ -148,23 +148,23 @@ function ValidInviteView({
               {JOINT_ME.avatar}
             </span>
             <div className="min-w-0">
-              <p className="font-display text-xl font-semibold tracking-tight text-ink">{inviter}</p>
-              <p className="mt-0.5 text-[11.5px] leading-relaxed text-ink/50">
+              <p className="font-display text-xl font-medium tracking-tight text-forest">{inviter}</p>
+              <p className="mt-0.5 text-[11.5px] leading-relaxed text-forest/50">
                 {JOIN_COPY.walletLabel}:{' '}
-                <b className="font-semibold text-ink/70">{invite.walletName}</b>
+                <b className="font-medium text-forest/70">{invite.walletName}</b>
               </p>
             </div>
           </div>
 
-          <h1 className="mt-4 font-display text-3xl font-semibold tracking-tight text-ink lg:text-4xl">
+          <h1 className="mt-4 font-display text-3xl font-semibold tracking-tight text-forest lg:text-4xl">
             {JOIN_COPY.headline(inviter)}
           </h1>
-          <p className="mt-2.5 text-[13px] leading-relaxed text-ink/55">{JOIN_COPY.subtitle}</p>
+          <p className="mt-2.5 text-[13px] leading-relaxed text-forest/55">{JOIN_COPY.subtitle}</p>
         </header>
 
         {/* ── 2. tiga manfaat, bukan daftar fitur ──────────────────────────── */}
         <section className="mt-6 rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12">
-          <h2 className="font-display text-[15px] font-semibold tracking-tight text-ink">
+          <h2 className="font-display text-[15px] font-medium tracking-tight text-forest">
             {JOIN_COPY.benefitsTitle}
           </h2>
           <ul className="mt-3.5 space-y-3.5">
@@ -177,8 +177,8 @@ function ValidInviteView({
                   {benefit.emoji}
                 </span>
                 <span className="min-w-0">
-                  <span className="block text-[13px] font-semibold text-ink">{benefit.title}</span>
-                  <span className="mt-0.5 block text-[12px] leading-relaxed text-ink/55">
+                  <span className="block text-[13px] font-medium text-forest">{benefit.title}</span>
+                  <span className="mt-0.5 block text-[12px] leading-relaxed text-forest/55">
                     {benefit.desc}
                   </span>
                 </span>
@@ -194,17 +194,17 @@ function ValidInviteView({
               <ShieldCheck className="size-4" strokeWidth={2.2} aria-hidden />
             </span>
             <div className="min-w-0">
-              <h2 className="font-display text-[15px] font-semibold tracking-tight text-ink">
+              <h2 className="font-display text-[15px] font-medium tracking-tight text-forest">
                 {JOIN_COPY.privacyTitle}
               </h2>
-              <p className="mt-1 text-[12.5px] leading-relaxed text-ink/65">
+              <p className="mt-1 text-[12.5px] leading-relaxed text-forest/65">
                 {JOIN_COPY.privacyBody}
               </p>
             </div>
           </div>
 
           <div className="mt-3.5 space-y-1.5 border-t border-forest/10 pt-3">
-            <p className="flex items-start gap-2 text-[11.5px] leading-relaxed text-ink/60">
+            <p className="flex items-start gap-2 text-[11.5px] leading-relaxed text-forest/60">
               <Sparkles
                 className="mt-0.5 size-3.5 shrink-0 text-forest"
                 strokeWidth={2.4}
@@ -213,7 +213,7 @@ function ValidInviteView({
               <span>{JOIN_COPY.referralNote(inviter)}</span>
             </p>
             {/* masa berlaku = informasi, bukan hitungan mundur: nol urgensi buatan */}
-            <p className="flex items-start gap-2 text-[11px] leading-relaxed text-ink/45">
+            <p className="flex items-start gap-2 text-[11px] leading-relaxed text-forest/45">
               <Lock className="mt-0.5 size-3 shrink-0" strokeWidth={2.4} aria-hidden />
               <span>{invite.validUntilLabel}</span>
             </p>
@@ -238,16 +238,16 @@ function ValidInviteView({
               <ArrowRight className="size-[18px]" strokeWidth={2.4} aria-hidden />
             </span>
           </Link>
-          <p className="mt-2.5 text-center text-[11px] leading-relaxed text-ink/50">
+          <p className="mt-2.5 text-center text-[11px] leading-relaxed text-forest/50">
             {JOIN_COPY.ctaJoinHint}
           </p>
           <Link
-            href="/"
-            className="mt-1.5 block text-center text-[12px] font-semibold text-ink/60 underline underline-offset-2 hover:text-ink"
+            href="/app"
+            className="mt-1.5 block text-center text-[12px] font-medium text-forest/60 underline underline-offset-2 hover:text-forest"
           >
             {JOIN_COPY.ctaLater}
           </Link>
-          <p className="mt-1 text-center text-[10.5px] leading-relaxed text-ink/35">
+          <p className="mt-1 text-center text-[10.5px] leading-relaxed text-forest/35">
             {JOIN_COPY.ctaLaterHint}
           </p>
         </div>
@@ -281,7 +281,7 @@ function InvalidInviteView({ invite }: { invite: InvalidInvite }) {
     <div className="mx-auto flex min-h-screen w-full max-w-[480px] flex-col px-6 pt-10 pb-16 lg:max-w-[560px] lg:pt-16">
       <header>
         <LogoWordmark className="h-6" />
-        <p className="mt-6 text-[11px] font-semibold tracking-[0.16em] text-ink/40 uppercase">
+        <p className="mt-6 text-[11px] font-medium tracking-[0.16em] text-forest/40 uppercase">
           {JOIN_COPY.eyebrow}
         </p>
       </header>
@@ -291,20 +291,20 @@ function InvalidInviteView({ invite }: { invite: InvalidInvite }) {
         <span aria-hidden className="text-3xl">
           {copy.emoji}
         </span>
-        <h1 className="mt-3 font-display text-2xl font-semibold tracking-tight text-ink lg:text-3xl">
+        <h1 className="mt-3 font-display text-2xl font-semibold tracking-tight text-forest lg:text-3xl">
           {copy.title}
         </h1>
-        <p className="mt-2 text-[13px] leading-relaxed text-ink/60">{copy.body}</p>
+        <p className="mt-2 text-[13px] leading-relaxed text-forest/60">{copy.body}</p>
       </section>
 
       {/* ── jalan keluar utama: pesan siap-tempel (aksi nyata, bukan tombol mati) ── */}
       <section className="mt-4 rounded-[1.75rem] bg-hud-amber/20 p-5 ring-1 ring-hud-amber/50">
-        <h2 className="font-display text-[15px] font-semibold tracking-tight text-ink">
+        <h2 className="font-display text-[15px] font-medium tracking-tight text-forest">
           {askAgainLead(invite.inviterName)}
         </h2>
-        <p className="mt-1 text-[12px] leading-relaxed text-ink/60">{ASK_AGAIN_COPY.hint}</p>
+        <p className="mt-1 text-[12px] leading-relaxed text-forest/60">{ASK_AGAIN_COPY.hint}</p>
 
-        <p className="mt-3 rounded-2xl bg-cream px-3.5 py-3 text-[12px] leading-relaxed text-ink/70 italic ring-1 ring-soil/8">
+        <p className="mt-3 rounded-2xl bg-cream px-3.5 py-3 text-[12px] leading-relaxed text-forest/70 italic ring-1 ring-soil/8">
           “{buildAskAgainMessage(invite.inviterName)}”
         </p>
 
@@ -312,7 +312,7 @@ function InvalidInviteView({ invite }: { invite: InvalidInvite }) {
           type="button"
           onClick={handleCopyMessage}
           className={cn(
-            'mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-full text-[14px] font-semibold transition-colors duration-200 motion-reduce:transition-none active:scale-[0.98]',
+            'mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-full text-[14px] font-medium transition-colors duration-200 motion-reduce:transition-none active:scale-[0.98]',
             copied
               ? 'bg-mint/40 text-forest ring-1 ring-forest/20'
               : 'bg-forest text-cream hover:bg-forest-soft',
@@ -332,12 +332,12 @@ function InvalidInviteView({ invite }: { invite: InvalidInvite }) {
       {/* ── jalan keluar sopan ──────────────────────────────────────────────── */}
       <div className="mt-4">
         <Link
-          href="/"
-          className="flex h-12 items-center justify-center rounded-full bg-cream text-[14px] font-semibold text-ink ring-1 ring-soil/16 transition-colors duration-200 hover:bg-sage/60 motion-reduce:transition-none"
+          href="/app"
+          className="flex h-12 items-center justify-center rounded-full bg-cream text-[14px] font-medium text-forest ring-1 ring-soil/16 transition-colors duration-200 hover:bg-sage/60 motion-reduce:transition-none"
         >
           {JOIN_COPY.ctaLater}
         </Link>
-        <p className="mt-2 text-center text-[10.5px] leading-relaxed text-ink/35">
+        <p className="mt-2 text-center text-[10.5px] leading-relaxed text-forest/35">
           {JOIN_COPY.ctaLaterHint}
         </p>
       </div>
@@ -375,10 +375,10 @@ function JoinedView({ walletName, onRestart }: { walletName: string; onRestart: 
           </span>
         </div>
 
-        <h1 className="mt-4 font-display text-3xl font-semibold tracking-tight text-ink lg:text-4xl">
+        <h1 className="mt-4 font-display text-3xl font-semibold tracking-tight text-forest lg:text-4xl">
           {JOIN_SUCCESS_COPY.title(walletName)}
         </h1>
-        <p className="mt-2.5 text-[13px] leading-relaxed text-ink/60">{JOIN_SUCCESS_COPY.body}</p>
+        <p className="mt-2.5 text-[13px] leading-relaxed text-forest/60">{JOIN_SUCCESS_COPY.body}</p>
       </section>
 
       <Link
@@ -394,14 +394,14 @@ function JoinedView({ walletName, onRestart }: { walletName: string; onRestart: 
       </Link>
 
       {/* jujur soal demo: di produksi langkah ini hasil auto-join dari server */}
-      <p className="mt-3 rounded-2xl bg-sage/60 px-3.5 py-3 text-[11.5px] leading-relaxed text-ink/60 ring-1 ring-soil/8">
+      <p className="mt-3 rounded-2xl bg-sage/60 px-3.5 py-3 text-[11.5px] leading-relaxed text-forest/60 ring-1 ring-soil/8">
         {JOIN_DEMO_COPY.body}
       </p>
 
       <button
         type="button"
         onClick={onRestart}
-        className="mt-4 text-center text-[11.5px] font-semibold text-ink/45 underline underline-offset-2 transition-colors hover:text-ink"
+        className="mt-4 text-center text-[11.5px] font-medium text-forest/45 underline underline-offset-2 transition-colors hover:text-forest"
       >
         {JOIN_SUCCESS_COPY.restart}
       </button>
@@ -427,14 +427,14 @@ function DemoFooter({
   return (
     <section className="mt-6 rounded-[1.75rem] bg-sage/50 p-5 ring-1 ring-soil/10">
       <div className="flex items-start gap-3">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-cream text-ink/60">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-cream text-forest/60">
           <Sparkles className="size-4" strokeWidth={2.2} aria-hidden />
         </span>
         <div className="min-w-0">
-          <h2 className="font-display text-[14px] font-semibold tracking-tight text-ink">
+          <h2 className="font-display text-[14px] font-medium tracking-tight text-forest">
             {JOIN_DEMO_COPY.title}
           </h2>
-          <p className="mt-1 text-[11.5px] leading-relaxed text-ink/55">{JOIN_DEMO_COPY.body}</p>
+          <p className="mt-1 text-[11.5px] leading-relaxed text-forest/55">{JOIN_DEMO_COPY.body}</p>
         </div>
       </div>
 
@@ -443,19 +443,19 @@ function DemoFooter({
           <button
             type="button"
             onClick={onSimulateJoined}
-            className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-cream text-[13px] font-semibold text-ink ring-1 ring-soil/16 transition-colors duration-200 hover:bg-sage/70 motion-reduce:transition-none"
+            className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-cream text-[13px] font-medium text-forest ring-1 ring-soil/16 transition-colors duration-200 hover:bg-sage/70 motion-reduce:transition-none"
           >
             <Check className="size-4" strokeWidth={2.6} aria-hidden />
             {JOIN_DEMO_COPY.joinLabel}
           </button>
-          <p className="mt-1.5 text-center text-[10.5px] leading-relaxed text-ink/40">
+          <p className="mt-1.5 text-center text-[10.5px] leading-relaxed text-forest/40">
             {JOIN_DEMO_COPY.joinHint}
           </p>
         </div>
       )}
 
       <div className="mt-3.5 border-t border-soil/12 pt-3.5">
-        <p className="text-[10.5px] font-semibold tracking-[0.14em] text-ink/40 uppercase">
+        <p className="text-[10.5px] font-medium tracking-[0.14em] text-forest/40 uppercase">
           {JOIN_DEMO_COPY.statesLabel}
         </p>
         <ul className="mt-2 flex flex-wrap gap-2">
@@ -467,10 +467,10 @@ function DemoFooter({
                   href={buildJoinHref(state.code)}
                   aria-current={active ? 'page' : undefined}
                   className={cn(
-                    'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11.5px] font-semibold transition-colors duration-200 motion-reduce:transition-none',
+                    'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11.5px] font-medium transition-colors duration-200 motion-reduce:transition-none',
                     active
                       ? 'bg-forest text-mint'
-                      : 'bg-cream text-ink/60 ring-1 ring-soil/14 hover:text-ink',
+                      : 'bg-cream text-forest/60 ring-1 ring-soil/14 hover:text-forest',
                   )}
                 >
                   {state.label}

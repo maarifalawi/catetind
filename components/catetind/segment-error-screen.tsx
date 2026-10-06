@@ -78,19 +78,19 @@ export function SegmentErrorScreen({
           <TriangleAlert className="size-5" strokeWidth={2.2} aria-hidden />
         </span>
 
-        <p className="mt-4 text-[10.5px] font-semibold tracking-[0.16em] text-ink/40 uppercase">
+        <p className="mt-4 text-[10.5px] font-medium tracking-[0.16em] text-forest/40 uppercase">
           {copy.eyebrow}
         </p>
-        <h1 className="mt-1.5 font-display text-xl font-semibold tracking-tight text-ink sm:text-2xl">
+        <h1 className="mt-1.5 font-display text-xl font-semibold tracking-tight text-forest sm:text-2xl">
           {copy.title}
         </h1>
-        <p className="mt-2 text-[13.5px] leading-relaxed text-ink/60">{copy.body}</p>
+        <p className="mt-2 text-[13.5px] leading-relaxed text-forest/60">{copy.body}</p>
 
         <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:items-center">
           <button
             type="button"
             onClick={reset}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-forest px-5 py-3 text-sm font-semibold text-mint transition-colors hover:bg-forest-soft active:scale-[0.99]"
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-forest px-5 py-3 text-sm font-medium text-mint transition-colors hover:bg-forest-soft active:scale-[0.99]"
           >
             <RefreshCw className="size-4" strokeWidth={2.4} aria-hidden />
             {SEGMENT_ERROR_ACTIONS.reloadLabel}
@@ -98,15 +98,15 @@ export function SegmentErrorScreen({
           <button
             type="button"
             onClick={handleExport}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-cream px-5 py-3 text-sm font-semibold text-ink ring-1 ring-soil/12 transition-colors hover:bg-sage"
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-cream px-5 py-3 text-sm font-medium text-forest ring-1 ring-soil/12 transition-colors hover:bg-sage"
           >
             <Download className="size-4" strokeWidth={2.4} aria-hidden />
             {SEGMENT_ERROR_ACTIONS.exportLabel}
           </button>
           {!withShell && (
             <Link
-              href="/"
-              className="inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold text-ink/60 transition-colors hover:text-ink"
+              href="/app"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-medium text-forest/60 transition-colors hover:text-forest"
             >
               <Home className="size-4" strokeWidth={2.4} aria-hidden />
               {SEGMENT_ERROR_ACTIONS.homeLabel}
@@ -114,7 +114,7 @@ export function SegmentErrorScreen({
           )}
         </div>
 
-        <p className="mt-3 text-[11.5px] leading-relaxed text-ink/40">
+        <p className="mt-3 text-[11.5px] leading-relaxed text-forest/40">
           {SEGMENT_ERROR_ACTIONS.exportHint}
         </p>
 

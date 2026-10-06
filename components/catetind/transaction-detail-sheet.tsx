@@ -150,7 +150,7 @@ function DetailBody({
           type="button"
           onClick={onClose}
           aria-label="Tutup"
-          className="flex size-8 shrink-0 items-center justify-center rounded-full text-ink/45 transition-colors hover:bg-cream hover:text-ink"
+          className="flex size-8 shrink-0 items-center justify-center rounded-full text-forest/45 transition-colors hover:bg-cream hover:text-forest"
         >
           <X className="size-4" strokeWidth={2.4} />
         </button>
@@ -166,7 +166,7 @@ function DetailBody({
         </span>
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
-            <h2 className="truncate font-display text-[17px] font-bold tracking-tight text-ink">
+            <h2 className="truncate font-display text-[17px] font-semibold tracking-tight text-forest">
               {tx.name}
             </h2>
             {tx.aiGenerated && (
@@ -177,7 +177,7 @@ function DetailBody({
               />
             )}
           </div>
-          <p className="mt-0.5 text-[11.5px] text-ink/45">{tx.category}</p>
+          <p className="mt-0.5 text-[11.5px] text-forest/45">{tx.category}</p>
         </div>
       </div>
 
@@ -185,7 +185,7 @@ function DetailBody({
           (hijau masuk · terracotta keluar · tinta netral untuk pindah dana) */}
       <p
         className={cn(
-          'mt-5 font-display text-[2.15rem] font-black leading-none tracking-tight tabular-nums',
+          'mt-5 font-display text-[2.15rem] font-semibold leading-none tracking-tight tabular-nums',
           MONEY_TONE[tx.type].text,
         )}
       >
@@ -194,10 +194,10 @@ function DetailBody({
 
       {/* pill kategori & dompet */}
       <div className="mt-4 flex flex-wrap items-center gap-2">
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-sage/60 px-3 py-1.5 text-[11.5px] font-semibold text-forest">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-sage/60 px-3 py-1.5 text-[11.5px] font-medium text-forest">
           {categoryEmoji(tx.category)} {tx.category}
         </span>
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-cream px-3 py-1.5 text-[11.5px] font-semibold text-ink/70 ring-1 ring-soil/12">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-cream px-3 py-1.5 text-[11.5px] font-medium text-forest/70 ring-1 ring-soil/12">
           <WalletIcon className="size-3.5 text-forest/70" strokeWidth={2.2} />
           {tx.wallet}
         </span>
@@ -206,21 +206,21 @@ function DetailBody({
       {/* meta: tanggal & waktu, dompet, tipe */}
       <dl className="mt-5 space-y-2.5 rounded-2xl bg-cream/70 p-3.5">
         <div className="flex items-center justify-between gap-3">
-          <dt className="inline-flex items-center gap-2 text-[12px] text-ink/50">
+          <dt className="inline-flex items-center gap-2 text-[12px] text-forest/50">
             <CalendarClock className="size-3.5 text-forest/60" strokeWidth={2.2} />
             Tanggal &amp; waktu
           </dt>
-          <dd className="text-right text-[12.5px] font-semibold text-ink">
+          <dd className="text-right text-[12.5px] font-medium text-forest">
             {formatDayLong(tx.date)} · {tx.time}
           </dd>
         </div>
         <div className="flex items-center justify-between gap-3">
-          <dt className="text-[12px] text-ink/50">Dompet</dt>
-          <dd className="text-right text-[12.5px] font-semibold text-ink">{tx.wallet}</dd>
+          <dt className="text-[12px] text-forest/50">Dompet</dt>
+          <dd className="text-right text-[12.5px] font-medium text-forest">{tx.wallet}</dd>
         </div>
         <div className="flex items-center justify-between gap-3">
-          <dt className="text-[12px] text-ink/50">Tipe</dt>
-          <dd className="text-right text-[12.5px] font-semibold text-ink">{TYPE_LABEL[tx.type]}</dd>
+          <dt className="text-[12px] text-forest/50">Tipe</dt>
+          <dd className="text-right text-[12.5px] font-medium text-forest">{TYPE_LABEL[tx.type]}</dd>
         </div>
       </dl>
 
@@ -237,7 +237,7 @@ function DetailBody({
         <button
           type="button"
           onClick={() => onEdit(tx)}
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-forest text-[13.5px] font-semibold text-mint transition-colors hover:bg-forest-soft active:scale-[0.98]"
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-forest text-[13.5px] font-medium text-mint transition-colors hover:bg-forest-soft active:scale-[0.98]"
         >
           <Pencil className="size-4" strokeWidth={2.3} />
           Edit
@@ -245,7 +245,7 @@ function DetailBody({
         <button
           type="button"
           onClick={() => onDelete(tx)}
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-plum text-[13.5px] font-semibold text-cream transition-colors hover:bg-plum active:scale-[0.98]"
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-plum text-[13.5px] font-medium text-cream transition-colors hover:bg-plum active:scale-[0.98]"
         >
           <Trash2 className="size-4" strokeWidth={2.3} />
           Hapus

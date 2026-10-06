@@ -79,11 +79,11 @@ export function NotFoundScreen() {
               />
             </span>
 
-            <p className="mt-5 text-[13px] font-medium text-ink/45">{NOT_FOUND_EYEBROW}</p>
-            <h1 className="mt-1.5 font-display text-3xl font-semibold tracking-tight text-ink lg:text-4xl">
+            <p className="mt-5 text-[13px] font-medium text-forest/45">{NOT_FOUND_EYEBROW}</p>
+            <h1 className="mt-1.5 font-display text-3xl font-semibold tracking-tight text-forest lg:text-4xl">
               {NOT_FOUND_TITLE}
             </h1>
-            <p className="mt-3 max-w-md text-[13.5px] leading-relaxed text-ink/60 lg:text-sm">
+            <p className="mt-3 max-w-md text-[13.5px] leading-relaxed text-forest/60 lg:text-sm">
               {NOT_FOUND_BODY}
             </p>
           </header>
@@ -92,8 +92,8 @@ export function NotFoundScreen() {
                  jatuh di zona ibu jari: satu tekanan, langsung pulang ─────── */}
           <div className="mt-7 flex flex-col items-center lg:mt-8">
             <Link
-              href="/"
-              className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-forest px-6 text-sm font-semibold text-cream shadow-[0_18px_40px_-30px_rgba(0,0,0,0.55)] transition-colors duration-200 hover:bg-forest-soft active:scale-[0.99] motion-reduce:transition-none sm:w-auto"
+              href="/app"
+              className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-forest px-6 text-sm font-medium text-cream shadow-[0_18px_40px_-30px_rgba(0,0,0,0.55)] transition-colors duration-200 hover:bg-forest-soft active:scale-[0.99] motion-reduce:transition-none sm:w-auto"
             >
               <Home className="size-4" strokeWidth={2.4} aria-hidden />
               {NOT_FOUND_HOME_CTA}
@@ -104,7 +104,7 @@ export function NotFoundScreen() {
           <section className="mt-10 lg:mt-12" aria-labelledby="not-found-shortcuts">
             <h2
               id="not-found-shortcuts"
-              className="text-center text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/40"
+              className="text-center text-[11px] font-medium uppercase tracking-[0.14em] text-forest/40"
             >
               {NOT_FOUND_SHORTCUTS_TITLE}
             </h2>
@@ -120,10 +120,10 @@ export function NotFoundScreen() {
                       <span className="flex size-9 items-center justify-center rounded-xl bg-sage/60 text-forest ring-1 ring-soil/8">
                         <Icon className="size-4" strokeWidth={2.2} aria-hidden />
                       </span>
-                      <span className="text-[13px] font-semibold leading-snug text-ink">
+                      <span className="text-[13px] font-medium leading-snug text-forest">
                         {shortcut.label}
                       </span>
-                      <span className="text-[11.5px] leading-relaxed text-ink/50">
+                      <span className="text-[11.5px] leading-relaxed text-forest/50">
                         {shortcut.blurb}
                       </span>
                     </Link>
@@ -135,12 +135,12 @@ export function NotFoundScreen() {
 
           {/* ── 4. KOTAK BANTUAN — pintu kedua, tanpa nada mendesak ───────── */}
           <div className="mt-8 flex flex-col items-center gap-3 rounded-2xl bg-sage/40 px-4 py-4 ring-1 ring-forest/10 sm:flex-row sm:justify-between sm:gap-4">
-            <p className="text-center text-[12.5px] leading-relaxed text-ink/70 sm:text-left">
+            <p className="text-center text-[12.5px] leading-relaxed text-forest/70 sm:text-left">
               🌿 {NOT_FOUND_HELP_BODY}
             </p>
             <Link
               href="/help"
-              className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-forest px-4 text-[12.5px] font-semibold text-cream transition-colors duration-200 hover:bg-forest-soft active:scale-[0.98] motion-reduce:transition-none"
+              className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-forest px-4 text-[12.5px] font-medium text-cream transition-colors duration-200 hover:bg-forest-soft active:scale-[0.98] motion-reduce:transition-none"
             >
               {NOT_FOUND_HELP_CTA}
             </Link>

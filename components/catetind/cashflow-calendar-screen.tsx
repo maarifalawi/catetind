@@ -39,12 +39,7 @@ import { TRANSACTION_NO_WALLET_COPY } from '@/lib/data/history'
 import { useTransactionSubmit } from '@/hooks/use-transaction-submit'
 import { useUserMoneySettings } from '@/lib/user-money-settings'
 import { useTodayISO } from '@/lib/use-today-iso'
-import {
-  CONTEXT_EMPTY_COPY,
-  CONTEXT_LABEL,
-  SCOPE_NOTE,
-  contextCaption,
-} from '@/lib/data/money-context'
+import { CONTEXT_EMPTY_COPY, CONTEXT_LABEL } from '@/lib/data/money-context'
 import { parseISO } from 'date-fns'
 
 /* ── Kalender Cashflow (/app/calendar) ───────────────────────────────────────
@@ -337,22 +332,9 @@ export function CashflowCalendarScreen() {
 
       <div className="mt-4 lg:mt-0 lg:flex lg:items-end lg:justify-between lg:gap-8">
         <div className="min-w-0">
-          <p className="text-[13px] font-medium text-ink/45">{contextCaption(context)}</p>
-          <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-ink lg:text-4xl">
+          <h1 className="font-display text-3xl font-semibold tracking-tight text-forest lg:text-4xl">
             Kalender Cashflow
           </h1>
-          {/* Satu baris ini menggantikan tiga chip meta versi pertama: barang
-              pertama yang dibaca user haruslah TUJUAN halaman + satu perintah
-              yang jelas, bukan deretan angka. */}
-          <p className="mt-1.5 max-w-md text-[12.5px] leading-relaxed text-ink/50 lg:mt-2 lg:text-[13px]">
-            Satu warna per tanggal, satu makna. Tap tanggalnya untuk melihat
-            rincian harimu.
-          </p>
-          {/* catatan cakupan: strip angka periode = total SEMUA entri, sedangkan
-              sel & daftar harinya mengikuti konteks aktif (kanon paket 47 #1) */}
-          <p className="mt-1.5 max-w-md text-[11.5px] font-medium text-ink/45">
-            {SCOPE_NOTE.calendar}
-          </p>
         </div>
 
         {/* cluster aksi desktop: switcher konteks + tombol mata global */}
@@ -367,16 +349,16 @@ export function CashflowCalendarScreen() {
           kosong tanpa penjelasan). */}
       {periodEmpty && (
         <div className="mt-5 flex flex-col items-center rounded-[1.75rem] border-2 border-dashed border-forest/15 bg-cream/60 px-6 py-8 text-center lg:mt-6">
-          <h2 className="font-display text-[15.5px] font-bold tracking-tight text-ink">
+          <h2 className="font-display text-[15.5px] font-semibold tracking-tight text-forest">
             {CONTEXT_EMPTY_COPY.calendar.title(CONTEXT_LABEL[context])}
           </h2>
-          <p className="mt-1.5 max-w-md text-[12.5px] leading-relaxed text-ink/55">
+          <p className="mt-1.5 max-w-md text-[12.5px] leading-relaxed text-forest/55">
             {CONTEXT_EMPTY_COPY.calendar.body}
           </p>
           <button
             type="button"
             onClick={() => setNoteSheetOpen(true)}
-            className="mt-4 inline-flex h-11 items-center gap-2 rounded-2xl bg-forest px-5 text-[13px] font-semibold text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
+            className="mt-4 inline-flex h-11 items-center gap-2 rounded-2xl bg-forest px-5 text-[13px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
           >
             {CONTEXT_EMPTY_COPY.calendar.cta}
           </button>
@@ -410,12 +392,12 @@ export function CashflowCalendarScreen() {
               muncul persis saat keadaan itu terjadi, lengkap dengan satu tautan
               ke tempat mengaturnya (Pengaturan → Profil & Akun). */}
           {periodMode === 'payday' && settings.paydayDate === null && (
-            <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-[1.5rem] bg-cream px-4 py-3 text-[11.5px] font-medium leading-relaxed text-ink/55 ring-1 ring-soil/12">
+            <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-[1.5rem] bg-cream px-4 py-3 text-[11.5px] font-medium leading-relaxed text-forest/55 ring-1 ring-soil/12">
               <CalendarDays className="size-3.5 shrink-0 text-forest/60" strokeWidth={2.4} aria-hidden />
               {CALENDAR_PAYDAY_COPY.defaultNote(DEFAULT_PAYDAY_DATE)}
               <Link
                 href={MONEY_SETTINGS_HREF}
-                className="font-semibold text-forest underline underline-offset-2 transition-colors hover:text-ink"
+                className="font-medium text-forest underline underline-offset-2 transition-colors hover:text-forest"
               >
                 {CALENDAR_PAYDAY_COPY.cta}
               </Link>

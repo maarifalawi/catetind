@@ -119,16 +119,16 @@ export function MilestoneCelebration({
         </div>
 
         {/* tahap tanaman sebagai baris teks kecil — bukan badge generik */}
-        <p className="mt-4 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-ink/40">
+        <p className="mt-4 text-[10.5px] font-medium uppercase tracking-[0.14em] text-forest/40">
           {CELEBRATION_COPY.stageCaption(STAGE_NAMES[stage])}
         </p>
 
-        <h2 className="mt-1.5 font-display text-2xl font-semibold leading-tight tracking-tight text-ink">
+        <h2 className="mt-1.5 font-display text-2xl font-medium leading-tight tracking-tight text-forest">
           {milestone.title}
         </h2>
 
         {/* SATU pesan personal — template dari lib/data/milestones.ts, nol API */}
-        <p className="mx-auto mt-2.5 max-w-[34ch] text-[14px] leading-relaxed text-ink/65">
+        <p className="mx-auto mt-2.5 max-w-[34ch] text-[14px] leading-relaxed text-forest/65">
           {milestone.message}
         </p>
 
@@ -136,13 +136,13 @@ export function MilestoneCelebration({
           ref={continueRef}
           type="button"
           onClick={onClose}
-          className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-b from-forest-soft to-forest text-[14px] font-semibold text-cream shadow-[0_14px_28px_-14px_rgba(69,89,78,0.85)] transition-all hover:brightness-[1.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40 active:scale-[0.99] motion-reduce:transition-none"
+          className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-b from-forest-soft to-forest text-[14px] font-medium text-cream shadow-[0_14px_28px_-14px_rgba(69,89,78,0.85)] transition-all hover:brightness-[1.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40 active:scale-[0.99] motion-reduce:transition-none"
         >
           {CELEBRATION_COPY.continueLabel}
           <Sparkles className="size-4" strokeWidth={2.4} aria-hidden />
         </button>
 
-        <p className="mt-3 text-[10.5px] leading-relaxed text-ink/40">{CELEBRATION_COPY.footnote}</p>
+        <p className="mt-3 text-[10.5px] leading-relaxed text-forest/40">{CELEBRATION_COPY.footnote}</p>
       </motion.div>
     </div>
   )

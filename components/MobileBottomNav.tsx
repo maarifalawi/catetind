@@ -24,6 +24,20 @@ import { TransferFlow } from '@/components/catetind/transfer-flow'
    grupnya sudah melenceng antar platform (audit "Navigation Clunkiness"). */
 
 /**
+ * NAVIGASI BAWAH SELALU TAMPIL (PAKET 70).
+ *
+ * PRD 2A.5 menulis nav bawah "FIXED, STICKY, selalu visible". Sempat menyimpang
+ * satu langkah (nav menyingkir saat menggulir ke bawah) atas permintaan pemilik
+ * produk, tetapi permintaan TERBARU membalikkannya: "navigasi utama di-fix aja,
+ * jangan di-hide, selalu stay". Jadi nav ini sekarang benar-benar FIXED dan
+ * selalu terlihat — tidak ada lagi transform/inert yang menyembunyikannya.
+ *
+ * Perulangan auto-hide-nya TIDAK dibuang: hook murninya (`useNavAutoHide`)
+ * sekarang dipakai HEADER Dashboard mobile (lihat `MobileStickyHeader`), karena
+ * pemilik produk justru meminta perlakuan itu untuk header.
+ */
+
+/**
  * Halaman yang tampil TANPA navigasi app sama sekali (bottom nav + FAB):
  *   1. `/app/onboarding` — flow full-screen 3 langkah: user fokus menyelesaikan
  *      setup dan tidak bisa "kabur" sebelum data wajib terisi (inventaris #10).
@@ -43,9 +57,21 @@ import { TransferFlow } from '@/components/catetind/transfer-flow'
  *      orang yang ingin tahu datanya aman sebelum daftar. Bottom nav + FAB di
  *      sini bukan cuma mengganggu bacaan panjang, tapi juga menyiratkan user
  *      sudah punya data di dalam app.
+ *   7. `/welcome` — halaman depan PUBLIK (inventaris #2): layar pertama sebelum
+ *      punya akun. Navigasi app di sini akan menawarkan halaman yang datanya
+ *      belum ada — CTA-nya sendiri sudah menuju daftar/masuk.
+ *   8. `/` — LANDING PAGE publik (inventaris #1–#2): sejak dashboard pindah ke
+ *      `/app`, root adalah halaman pemasaran. Pengunjung di sini belum punya
+ *      akun, jadi navigasi app di sini salah tempat. Pencocokannya EXACT `/`
+ *      (lihat `isFocusRoute` di bawah) supaya tidak menyerap `/app`, `/wallet`.
+ *   9. `/registered` — halaman "Terima kasih" setelah registrasi dari landing:
+ *      satu layar penutup alur, tanpa navigasi app.
  */
 const FOCUS_ROUTES = [
+  '/',
+  '/registered',
   '/app/onboarding',
+  '/welcome',
   '/checkout',
   '/login',
   '/join',
@@ -56,7 +82,9 @@ const FOCUS_ROUTES = [
 
 function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
   const isActive =
-    item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)
+    item.href === '/' || item.href === '/app'
+      ? pathname === item.href
+      : pathname.startsWith(item.href)
   const Icon = item.icon
   return (
     <Link
@@ -68,7 +96,7 @@ function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
       <Icon
         className={cn(
           'size-[22px] transition-all duration-200',
-          isActive ? 'text-forest' : 'text-ink/25 hover:text-ink/45',
+          isActive ? 'text-forest' : 'text-forest/25 hover:text-forest/45',
         )}
         strokeWidth={1.8}
       />
@@ -99,9 +127,19 @@ export function MobileBottomNav() {
      SATU tombol tambah di layar. */
   const isJointPage = pathname.startsWith('/joint')
 
-  /* Flow fokus (onboarding & checkout) = tanpa navigasi bawah sama sekali:
-     lihat catatan FOCUS_ROUTES di atas. */
-  if (FOCUS_ROUTES.some((route) => pathname.startsWith(route))) return null
+  /* Flow fokus (landing, onboarding & checkout) = tanpa navigasi bawah sama
+     sekali: lihat catatan FOCUS_ROUTES di atas. `/` dicocokkan EXACT — kalau
+     memakai `startsWith('/')`, SEMUA route akan ikut cocok dan nav tak pernah
+     tampil. */
+  const isFocusRoute = FOCUS_ROUTES.some((route) =>
+    route === '/' ? pathname === '/' : pathname.startsWith(route),
+  )
+
+  /* Nav SELALU tampil (paket 70) — tidak ada lagi `useNavAutoHide` di sini.
+     Aturan auto-hide-nya pindah ke header Dashboard mobile (`MobileStickyHeader`),
+     sesuai permintaan terbaru pemilik produk. */
+
+  if (isFocusRoute) return null
 
   return (
     <>
@@ -128,7 +166,7 @@ export function MobileBottomNav() {
               aria-disabled="true"
               aria-label={SUBSCRIPTION_LOCK_COPY.fabAria}
               onClick={() => toast(SUBSCRIPTION_LOCK_COPY.inputHint)}
-              className="-mt-8 flex size-14 items-center justify-center rounded-full bg-soil/[0.09] text-ink/30 ring-1 ring-soil/12 transition-transform duration-150 active:scale-95"
+              className="-mt-8 flex size-14 items-center justify-center rounded-full bg-soil/[0.09] text-forest/30 ring-1 ring-soil/12 transition-transform duration-150 active:scale-95"
             >
               <Plus className="size-6" strokeWidth={2.4} />
             </button>
@@ -138,7 +176,7 @@ export function MobileBottomNav() {
                 <button
                   type="button"
                   aria-label="Catat transaksi"
-                  className="-mt-8 flex size-14 items-center justify-center rounded-full bg-[radial-gradient(circle_at_30%_25%,#ffffff,#ecd768_35%,#ffb885_60%,#b89191_85%)] text-ink shadow-[0_0_28px_rgba(236,215,104,0.55),0_10px_24px_-8px_rgba(0,0,0,0.6)] ring-1 ring-cream/60 transition-transform duration-150 hover:scale-105 active:scale-95"
+                  className="-mt-8 flex size-14 items-center justify-center rounded-full bg-[radial-gradient(circle_at_30%_25%,#ffffff,#ecd768_35%,#ffb885_60%,#b89191_85%)] text-forest shadow-[0_0_28px_rgba(236,215,104,0.55),0_10px_24px_-8px_rgba(0,0,0,0.6)] ring-1 ring-cream/60 transition-transform duration-150 hover:scale-105 active:scale-95"
                 >
                   <Plus className="size-6" strokeWidth={2.4} />
                 </button>
@@ -159,7 +197,7 @@ export function MobileBottomNav() {
           <LayoutGrid
             className={cn(
               'size-[22px] transition-all duration-200',
-              menuActive ? 'text-forest' : 'text-ink/25 hover:text-ink/45',
+              menuActive ? 'text-forest' : 'text-forest/25 hover:text-forest/45',
             )}
             strokeWidth={1.8}
           />
@@ -178,7 +216,7 @@ export function MobileBottomNav() {
             <div className="mx-auto mt-3 h-1.5 w-10 shrink-0 rounded-full bg-oat" />
 
             <div className="overflow-y-auto px-6 pb-10 pt-4" data-lenis-prevent>
-              <Drawer.Title className="text-center text-base font-bold tracking-tight text-ink">
+              <Drawer.Title className="text-center text-base font-medium tracking-tight text-forest">
                 Lainnya
               </Drawer.Title>
               <Drawer.Description className="sr-only">
@@ -190,7 +228,7 @@ export function MobileBottomNav() {
                   halaman — dan menutup laci ini lebih dulu supaya dua lapisan
                   sheet tidak bertumpuk di layar kecil. */}
               <section className="mt-6">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-ink/35">
+                <p className="text-[11px] font-medium uppercase tracking-wider text-forest/35">
                   {TRANSFER_DOOR_COPY.menuGroupLabel}
                 </p>
                 <button
@@ -205,10 +243,10 @@ export function MobileBottomNav() {
                     <ArrowLeftRight className="size-[18px]" strokeWidth={2.2} aria-hidden />
                   </span>
                   <span className="min-w-0">
-                    <span className="block text-[13px] font-semibold text-ink">
+                    <span className="block text-[13px] font-medium text-forest">
                       {TRANSFER_DOOR_COPY.menuLabel}
                     </span>
-                    <span className="mt-0.5 block text-[11px] text-ink/45">
+                    <span className="mt-0.5 block text-[11px] text-forest/45">
                       {TRANSFER_DOOR_COPY.menuHint}
                     </span>
                   </span>
@@ -217,7 +255,7 @@ export function MobileBottomNav() {
 
               {MOBILE_MENU_GROUPS.map((group) => (
                 <section key={group.label} className="mt-6">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-ink/35">
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-forest/35">
                     {group.label}
                   </p>
                   <div className="mt-3 grid grid-cols-3 gap-2.5">
@@ -233,18 +271,18 @@ export function MobileBottomNav() {
                           className={cn(
                             'flex flex-col items-center gap-1.5 rounded-2xl px-2 py-3.5 text-center transition-all duration-150 active:scale-95',
                             isActive
-                              ? 'bg-[#ecd768]/25 font-semibold text-ink'
-                              : 'bg-soil/[0.03] font-medium text-ink/55 hover:bg-soil/[0.11]',
+                              ? 'bg-[#ecd768]/25 font-medium text-forest'
+                              : 'bg-soil/[0.03] font-medium text-forest/55 hover:bg-soil/[0.11]',
                           )}
                         >
-                          <Icon className="size-6 text-ink" />
+                          <Icon className="size-6 text-forest" />
                           <span className="text-xs font-medium leading-tight">
                             {label}
                           </span>
                           {/* keterangan singkat (audit "Navigation Clunkiness"):
                               satu baris konteks supaya tiap tujuan jelas tanpa
                               perlu membukanya dulu */}
-                          <span className="text-[10px] font-normal leading-snug text-ink/40">
+                          <span className="text-[10px] font-normal leading-snug text-forest/40">
                             {hint}
                           </span>
                         </Link>

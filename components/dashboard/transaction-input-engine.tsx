@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import {
   useEffect,
@@ -50,6 +50,11 @@ import {
   manualCategoryChoice,
   type HistoryTransaction,
 } from '@/lib/data/history'
+import { CategoryPicker } from '@/components/catetind/category-picker'
+import { WalletPicker } from '@/components/catetind/wallet-picker'
+import { useMoneyContext } from '@/components/catetind/money-context-provider'
+import { usePrivacy } from '@/components/catetind/privacy-provider'
+import { defaultWalletNameFor, useMoneyStore, walletOptionsFor } from '@/lib/money/store'
 /* ── Transaction Input Engine (inventaris 97a/b/c) ────────────────────────────
    Falsafah "Zero Cognitive Load & 4-Tap Strict Rule": tidak ada menu "mau input
    bagaimana?". Panel langsung membuka form manual — OCR & Voice cuma
@@ -204,7 +209,7 @@ const RETIRED_TYPES: TransactionType[] = [
     id: 'transfer',
     label: 'Transfer',
     icon: ArrowLeftRight,
-    active: 'bg-hud-sage/[0.3] text-[#000000] ring-hud-sage/50',
+    active: 'bg-hud-sage/[0.3] text-forest ring-hud-sage/50',
   },
 ]
 
@@ -268,7 +273,7 @@ function haptic(pattern: number[]) {
 
 /** gaya kontrol kecil mode edit — senada dengan field catatan di atasnya */
 const EDIT_CONTROL_CLASS =
-  'w-full rounded-xl bg-soil/[0.09] px-3 py-2.5 text-[12.5px] font-semibold text-ink outline-none ring-1 ring-transparent transition-all focus:bg-cream focus:ring-forest/15'
+  'w-full rounded-xl bg-soil/[0.09] px-3 py-2.5 text-[12.5px] font-medium text-forest outline-none ring-1 ring-transparent transition-all focus:bg-cream focus:ring-forest/15'
 
 export function TransactionInputEngine({
   active,
@@ -279,6 +284,7 @@ export function TransactionInputEngine({
   sourceLabel,
   extraFields,
   onAmountChange,
+  onTransferRequest,
   types = ALL_TYPE_IDS,
 }: {
   /** panel sedang terbuka — pemicu reset form + auto-focus (bekerja baik saat
@@ -306,6 +312,22 @@ export function TransactionInputEngine({
   /** opsional: laporan nominal yang sedang diketik (dipakai Split Bill Sheet
       supaya tahu total yang dibagi) */
   onAmountChange?: (amount: number) => void
+  /**
+   * Pintu "Pindah Dana" (paket 70). Dikirim = pill Pindah Dana ikut tampil di
+   * baris tipe, dan menekannya HANYA memanggil callback ini — shell yang menutup
+   * panelnya lalu membuka alur pindah dana yang sebenarnya (`TransferFlow` →
+   * `postTransfer`, satu baris dua sisi).
+   *
+   * Kenapa bukan "tipe keempat" di engine: form ini cuma punya SATU dompet
+   * (sumber), sedangkan pindah dana wajib punya dompet TUJUAN. Kalau engine
+   * menulis tipe `transfer` sendiri, uangnya keluar tanpa mendarat di mana pun —
+   * persis bug "transfer ngambang" yang ditutup paket 55. Jadi pintunya
+   * diarahkan, bukan diduplikasi: satu aksi, satu alur tulis.
+   *
+   * Shell yang tidak mengirim prop ini (kalender, joint, edit) berperilaku persis
+   * seperti sebelumnya — tidak ada pill baru.
+   */
+  onTransferRequest?: () => void
   /**
    * Tipe yang DITAWARKAN shell ini (paket 49). Default = ketiga tipe uang yang
    * memang bisa dicatat dari form ini (Pengeluaran/Pemasukan/Tabungan), jadi
@@ -335,6 +357,15 @@ export function TransactionInputEngine({
      habis — dengan penjelasan, dan TANPA mengunci pencatatan manual. */
   const quota = useAiQuota()
   const quotaExhausted = quota.exhausted
+  /* PAKET 69 - SUMBER DOMPET: daftar dompet datang dari LEDGER nyata
+     (`walletOptionsFor`) + konteks uang aktif, bukan konstanta mock: dompet yang
+     baru ditambahkan user langsung muncul, yang sudah dihapus tidak pernah
+     ditawarkan lagi. Saldonya ikut tombol mata privasi global. */
+  const walletSnapshot = useMoneyStore()
+  const { context } = useMoneyContext()
+  const { masked } = usePrivacy()
+  const pickerWalletOptions = useMemo(() => walletOptionsFor(walletSnapshot), [walletSnapshot])
+  const contextDefaultWallet = useMemo(() => defaultWalletNameFor(context), [context])
 
   const [typeId, setTypeId] = useState<TransactionTypeId>(defaultType)
   /**
@@ -409,6 +440,12 @@ export function TransactionInputEngine({
     return [...offeredTypes, current]
   }, [initial, offeredTypes])
 
+  /* Pintu Pindah Dana ikut SATU BARIS dengan tipe (paket 70): shell yang
+     mengirim `onTransferRequest` mendapat pill tambahan. Di MODE EDIT pill ini
+     sengaja tidak tampil — yang diurus di situ justru koreksi baris lama. */
+  const showTransferDoor = !isEdit && Boolean(onTransferRequest)
+  const typeColumnCount = visibleTypes.length + (showTransferDoor ? 1 : 0)
+
   /* `type` (objek tipe terpilih) TIDAK LAGI dihitung di sini (paket 54): satu-
      satunya yang pernah dibacanya adalah `type.suggested` (kategori tebakan),
      dan itu sudah dihapus. Yang dibutuhkan sekarang `typeId` — kategori tetapnya
@@ -456,6 +493,17 @@ export function TransactionInputEngine({
    * kebijakan pesan nominal di paket 44).
    */
   const showCategoryNeeded = categoryChoice.needsChoice && (amountSettled || amount > 0)
+
+  /* PAKET 69 - DOMPET. Tiga keadaan, dan bedanya penting: (1) shell yang SUDAH
+     menetapkan dompetnya (tombol Catat di halaman dompet / Joint) mengirim
+     `sourceLabel` - dompetnya tetap, tidak ditanyakan lagi; (2) form TAMBAH
+     biasa - user memilih sendiri, belum memilih = form tertahan; (3) mode EDIT -
+     dompet data lama, selalu ada. `decidedWallet` yang dikirim ke store, jadi
+     yang tampil di form mustahil berbeda dari yang bergerak saldonya. */
+  const walletIsFixed = !isEdit && Boolean(sourceLabel)
+  const decidedWallet = walletIsFixed ? (sourceLabel ?? '') : wallet
+  const walletNeeded = !isEdit && decidedWallet.trim().length === 0
+  const showWalletNeeded = walletNeeded && (amountSettled || amount > 0)
   /* daftar pilihan kategori & dompet: nilai lama yang tidak ada di daftar kanon
      (mis. kategori 'Proyek' dari halaman Dompet Detail) DITAMBAHKAN sebagai
      opsi — tanpa itu, sekadar membuka sheet edit akan diam-diam mengubah data
@@ -515,7 +563,11 @@ export function TransactionInputEngine({
     setAmountSettled(false)
     setNote(initial?.name ?? '')
     setCategory(initial?.category ?? '')
-    setWallet(initial?.wallet ?? '')
+    /* mode TAMBAH: dompet mulai dari dompet DEFAULT konteks uang aktif (dulu
+       nilai ini tidak pernah tampil di form - paket 69). Konteks yang belum
+       punya dompet menjawab '', dan pemilihnya yang meminta user memilih; mode
+       EDIT tetap memakai dompet data lamanya apa adanya. */
+    setWallet(initial?.wallet ?? contextDefaultWallet)
     setDate(initial?.date ?? '')
     setMode('manual')
     releaseSubmitLock()
@@ -707,6 +759,15 @@ export function TransactionInputEngine({
       return
     }
 
+    /* Sumber dompet juga wajib jelas (paket 69): kalau konteks uang belum punya
+       dompet & user belum memilih, formnya DITAHAN dengan arahan - bukan
+       menempel ke dompet lain diam-diam (pagar paket 59 yang sekarang terlihat
+       di form, bukan cuma di toast shell). */
+    if (walletNeeded) {
+      toast(TRANSACTION_INPUT_COPY.walletNeeded)
+      return
+    }
+
     /* Bentuk kanon juga saat submit (paket 53): panel biasanya langsung ditutup,
        tapi jalur yang membiarkannya terbuka (submit gagal di store, mode edit,
        Enter di keyboard) tetap menampilkan satu bentuk angka saja. */
@@ -744,6 +805,9 @@ export function TransactionInputEngine({
       note: note.trim(),
       type: typeId,
       category: chosenCategory,
+      /* dompet PILIHAN USER (paket 69): dikirim eksplisit supaya dompet yang
+         terlihat di form = dompet yang saldonya bergerak */
+      wallet: decidedWallet,
       clientTxId: clientTxId.current,
     })
     haptic([30, 50, 30]) // getar fisik sukses — bonus, bukan syarat (lihat `haptic`)
@@ -760,7 +824,7 @@ export function TransactionInputEngine({
       {/* sumber dana terpilih (opsional) — halaman Joint Wallet memakai ini untuk
           menegaskan dompet bersama sudah otomatis jadi sumber transaksi */}
       {sourceLabel && (
-        <div className="mb-3 flex items-center justify-center gap-2 rounded-2xl bg-hud-sage/15 px-3.5 py-2.5 text-[12px] font-semibold text-[#000000] ring-1 ring-hud-sage/30">
+        <div className="mb-3 flex items-center justify-center gap-2 rounded-2xl bg-hud-sage/15 px-3.5 py-2.5 text-[12px] font-medium text-forest ring-1 ring-hud-sage/30">
           <Wallet className="size-3.5" strokeWidth={2.4} />
           Dompet: {sourceLabel}
         </div>
@@ -773,7 +837,7 @@ export function TransactionInputEngine({
       <div
         className={cn(
           'grid',
-          TYPE_COLUMNS[visibleTypes.length] ?? 'grid-cols-4',
+          TYPE_COLUMNS[typeColumnCount] ?? 'grid-cols-4',
           isDialog ? 'gap-2.5' : 'gap-2',
         )}
       >
@@ -797,8 +861,8 @@ export function TransactionInputEngine({
                   ? 'gap-1.5 rounded-2xl px-2 py-3.5'
                   : 'gap-1 rounded-2xl px-1 py-2.5',
                 active
-                  ? cn('font-bold ring-1', item.active)
-                  : 'bg-soil/[0.09] font-medium text-ink/45 hover:bg-soil/[0.09]',
+                  ? cn('font-medium ring-1', item.active)
+                  : 'bg-soil/[0.09] font-medium text-forest/45 hover:bg-soil/[0.09]',
               )}
             >
               <Icon
@@ -816,6 +880,37 @@ export function TransactionInputEngine({
             </button>
           )
         })}
+
+        {/* ── PINTU PINDAH DANA (paket 70) ───────────────────────────────────
+            Pill ini BUKAN tipe transaksi: ia tidak mengubah form, ia memindahkan
+            user ke alur yang memang punya DUA ujung (dompet asal → dompet tujuan).
+            Jadi tidak ada satu pun jalur tulis transfer yang lahir di sini — dan
+            karena alur itu menulis lewat `postTransfer()`, saldo dua dompet +
+            Riwayat + kartu Home bergerak bersamaan. */}
+        {showTransferDoor && (
+          <button
+            type="button"
+            onClick={() => onTransferRequest?.()}
+            aria-label={TRANSACTION_INPUT_COPY.transferDoorHint}
+            title={TRANSACTION_INPUT_COPY.transferDoorHint}
+            className={cn(
+              'flex flex-col items-center justify-center',
+              'transition-all duration-150 active:scale-[0.96]',
+              isDialog ? 'gap-1.5 rounded-2xl px-2 py-3.5' : 'gap-1 rounded-2xl px-1 py-2.5',
+              'bg-soil/[0.09] font-medium text-forest/45 hover:bg-soil/[0.09]',
+            )}
+          >
+            <ArrowLeftRight className={isDialog ? 'size-5' : 'size-[18px]'} strokeWidth={2.1} />
+            <span
+              className={cn(
+                'leading-none whitespace-nowrap',
+                isDialog ? 'text-[11.5px]' : 'text-[10.5px]',
+              )}
+            >
+              {TRANSACTION_INPUT_COPY.transferDoorLabel}
+            </span>
+          </button>
+        )}
       </div>
 
       {/* ── 2. STAGE — manual ⇄ OCR loading ⇄ voice listening ─────────── */}
@@ -860,7 +955,7 @@ export function TransactionInputEngine({
                     /* bobot prefix sengaja setara nominal (semibold, bukan bold):
                        angka di sampingnya kini semibold, dan prefix yang lebih
                        tebal dari nominalnya justru bikin mata tertarik ke "Rp" */
-                    'w-9 shrink-0 text-right font-semibold text-ink/25',
+                    'w-9 shrink-0 text-right font-medium text-forest/25',
                     isDialog ? 'text-2xl' : 'text-xl',
                   )}
                 >
@@ -894,8 +989,8 @@ export function TransactionInputEngine({
                        — bukan `font-black tracking-tighter` seperti dulu, karena
                        input yang sedang diketik harus terasa ringan sementara
                        identitas angka app ini semibold. */
-                    'min-w-0 flex-1 bg-transparent text-center text-ink outline-none',
-                    'placeholder:text-ink/15',
+                    'min-w-0 flex-1 bg-transparent text-center text-forest outline-none',
+                    'placeholder:text-forest/15',
                     amountFont,
                   )}
                 />
@@ -926,7 +1021,7 @@ export function TransactionInputEngine({
                 <p
                   id="tx-amount-help"
                   className={cn(
-                    'mt-2.5 inline-flex flex-wrap items-center justify-center gap-1.5 rounded-full bg-sage/40 px-3 py-1.5 font-semibold text-forest ring-1 ring-mint/40',
+                    'mt-2.5 inline-flex flex-wrap items-center justify-center gap-1.5 rounded-full bg-sage/40 px-3 py-1.5 font-medium text-forest ring-1 ring-mint/40',
                     isDialog ? 'text-xs' : 'text-[11.5px]',
                   )}
                 >
@@ -939,7 +1034,7 @@ export function TransactionInputEngine({
                 <p
                   id="tx-amount-help"
                   className={cn(
-                    'mt-2.5 text-center leading-relaxed text-ink/40',
+                    'mt-2.5 text-center leading-relaxed text-forest/40',
                     isDialog ? 'text-[12px]' : 'text-[11px]',
                   )}
                 >
@@ -961,55 +1056,92 @@ export function TransactionInputEngine({
                 <div className="mt-4 w-full text-left">
                   {fixedCategory ? (
                     <div className="rounded-2xl bg-cream px-3.5 py-2.5 ring-1 ring-soil/12">
-                      <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] font-semibold text-ink">
+                      <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] font-medium text-forest">
                         <Tag className="size-3.5 shrink-0 text-forest" strokeWidth={2.3} aria-hidden />
                         {TRANSACTION_INPUT_COPY.categoryLabel}
-                        <span className="inline-flex items-center rounded-full bg-sage px-2.5 py-0.5 text-[11.5px] font-semibold text-forest">
+                        <span className="inline-flex items-center rounded-full bg-sage px-2.5 py-0.5 text-[11.5px] font-medium text-forest">
                           {fixedCategory.category}
                         </span>
                       </p>
-                      <p className="mt-1.5 text-[11px] leading-relaxed text-ink/45">
+                      <p className="mt-1.5 text-[11px] leading-relaxed text-forest/45">
                         {fixedCategory.reason}
                       </p>
                     </div>
                   ) : (
                     <>
+                      {/* PAKET 69: kategori dipilih lewat CategoryPicker 3
+                          layer (Quick Pick -> 9 grup -> fuzzy search). Nilainya
+                          TETAP kategori kanon yang sama (paket 54); yang berubah
+                          cuma cara memilihnya. Varian mengikuti tipe:
+                          Pengeluaran pakai 9 grup, Pemasukan pakai 7 chips. */}
                       <EditField label={TRANSACTION_INPUT_COPY.categoryLabel}>
-                        <select
-                          ref={categoryRef}
+                        <CategoryPicker
                           value={category}
-                          onChange={(event) => setCategory(event.target.value)}
-                          aria-label={TRANSACTION_INPUT_COPY.categoryLabel}
-                          aria-describedby="tx-category-help"
-                          aria-invalid={showCategoryNeeded || undefined}
-                          className={cn(
-                            EDIT_CONTROL_CLASS,
-                            showCategoryNeeded && 'bg-cream ring-hud-amber/45',
-                          )}
-                        >
-                          {/* opsi kosong = BELUM memilih, bukan kategori yang
-                              disembunyikan: `category` tetap '' sampai user
-                              menekan satu pilihan, dan '' tidak pernah dikirim */}
-                          <option value="" disabled>
-                            {TRANSACTION_INPUT_COPY.categoryPlaceholder}
-                          </option>
-                          {TRANSACTION_CATEGORY_OPTIONS.map((option) => (
-                            <option key={option} value={option}>
-                              {option}
-                            </option>
-                          ))}
-                        </select>
+                          onChange={setCategory}
+                          variant={typeId === 'income' ? 'income' : 'expense'}
+                          invalid={showCategoryNeeded}
+                          describedBy="tx-category-help"
+                          ariaLabel={TRANSACTION_INPUT_COPY.categoryLabel}
+                        />
                       </EditField>
                       <p
                         id="tx-category-help"
                         className={cn(
                           'mt-1.5 text-[11px] leading-relaxed',
-                          showCategoryNeeded ? 'font-semibold text-ink/70' : 'text-ink/45',
+                          showCategoryNeeded ? 'font-medium text-forest/70' : 'text-forest/45',
                         )}
                       >
                         {showCategoryNeeded
                           ? TRANSACTION_INPUT_COPY.categoryNeeded
                           : TRANSACTION_INPUT_COPY.categoryHint}
+                      </p>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* PAKET 69 - SUMBER DOMPET: form TAMBAH sekarang menanyakan
+                  dompetnya (dulu tidak ada, jadi user tidak pernah tahu uangnya
+                  keluar dari mana). Kalau shell sudah menetapkannya
+                  (`sourceLabel`), yang tampil baris TETAP + alasannya - bukan
+                  pemilih mati tanpa penjelasan. */}
+              {!isEdit && (
+                <div className="mt-4 w-full text-left">
+                  {walletIsFixed ? (
+                    <div className="rounded-2xl bg-cream px-3.5 py-2.5 ring-1 ring-soil/12">
+                      <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] font-medium text-forest">
+                        <Wallet className="size-3.5 shrink-0 text-forest" strokeWidth={2.3} aria-hidden />
+                        {TRANSACTION_INPUT_COPY.walletLabel}
+                        <span className="inline-flex items-center rounded-full bg-sage px-2.5 py-0.5 text-[11.5px] font-medium text-forest">
+                          {sourceLabel}
+                        </span>
+                      </p>
+                      <p className="mt-1.5 text-[11px] leading-relaxed text-forest/45">
+                        {TRANSACTION_INPUT_COPY.walletHint}
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <EditField label={TRANSACTION_INPUT_COPY.walletLabel}>
+                        <WalletPicker
+                          value={wallet}
+                          options={pickerWalletOptions}
+                          onChange={setWallet}
+                          masked={masked}
+                          invalid={showWalletNeeded}
+                          describedBy="tx-wallet-help"
+                        />
+                      </EditField>
+                      <p
+                        id="tx-wallet-help"
+                        className={cn(
+                          'mt-1.5 text-[11px] leading-relaxed',
+                          showWalletNeeded ? 'font-medium text-forest/70' : 'text-forest/45',
+                        )}
+                      >
+                        {showWalletNeeded
+                          ? TRANSACTION_INPUT_COPY.walletNeeded
+                          : TRANSACTION_INPUT_COPY.walletHint}
                       </p>
                     </>
                   )}
@@ -1022,7 +1154,7 @@ export function TransactionInputEngine({
                 onChange={(event) => setNote(event.target.value)}
                 placeholder="Catatan (Opsional)"
                 aria-label="Catatan transaksi (opsional)"
-                className="mt-4 h-12 w-full rounded-2xl bg-soil/[0.09] px-4 text-[13.5px] font-medium text-ink outline-none ring-1 ring-transparent transition-all placeholder:text-ink/30 focus:bg-cream focus:ring-forest/15"
+                className="mt-4 h-12 w-full rounded-2xl bg-soil/[0.09] px-4 text-[13.5px] font-medium text-forest outline-none ring-1 ring-transparent transition-all placeholder:text-forest/30 focus:bg-cream focus:ring-forest/15"
               />
 
               {/* ── MODE EDIT: tiga field detail yang nilainya SUDAH ADA ────────
@@ -1076,7 +1208,7 @@ export function TransactionInputEngine({
                       />
                     </EditField>
                   </div>
-                  <p className="mt-2 text-[11px] leading-relaxed text-ink/45">
+                  <p className="mt-2 text-[11px] leading-relaxed text-forest/45">
                     {EDIT_TRANSACTION_COPY.hint}
                   </p>
                 </div>
@@ -1096,11 +1228,11 @@ export function TransactionInputEngine({
                 <ScanLine className="size-6" strokeWidth={2} />
                 <span className="absolute inset-0 animate-ping rounded-full bg-mint/40" />
               </span>
-              <p className="mt-4 flex items-center gap-1.5 text-sm font-bold text-ink">
+              <p className="mt-4 flex items-center gap-1.5 text-sm font-medium text-forest">
                 <Sparkles className="size-4 text-forest" strokeWidth={2.4} />
                 Lagi baca struknya...
               </p>
-              <p className="mt-1 text-xs text-ink/45">
+              <p className="mt-1 text-xs text-forest/45">
                 AI CatetInd lagi cocokin nominal &amp; tanggalnya
               </p>
             </motion.div>
@@ -1135,10 +1267,10 @@ export function TransactionInputEngine({
                 ))}
               </div>
 
-              <p className="mt-4 text-sm font-bold text-ink">
+              <p className="mt-4 text-sm font-medium text-forest">
                 Ngobrol aja, misal: beli kopi 25 ribu
               </p>
-              <p className="mt-1 text-xs text-ink/45">
+              <p className="mt-1 text-xs text-forest/45">
                 Lagi dengerin... ketuk mic buat batal
               </p>
             </motion.div>
@@ -1181,13 +1313,13 @@ export function TransactionInputEngine({
             'flex shrink-0 items-center justify-center',
             'transition-all duration-150 active:scale-95 disabled:active:scale-100',
             isDialog
-              ? 'h-14 gap-2 rounded-2xl px-5 text-[13px] font-semibold max-lg:px-3.5'
+              ? 'h-14 gap-2 rounded-2xl px-5 text-[13px] font-medium max-lg:px-3.5'
               : 'size-14 rounded-full',
             quotaExhausted
-              ? 'cursor-not-allowed bg-soil/[0.07] text-ink/30 ring-1 ring-soil/12'
+              ? 'cursor-not-allowed bg-soil/[0.07] text-forest/30 ring-1 ring-soil/12'
               : mode === 'ocr'
                 ? 'bg-forest text-cream'
-                : 'bg-soil/[0.1] text-ink/70 ring-1 ring-soil/12 hover:bg-soil/[0.1]',
+                : 'bg-soil/[0.1] text-forest/70 ring-1 ring-soil/12 hover:bg-soil/[0.1]',
           )}
         >
           {mode === 'ocr' ? (
@@ -1223,15 +1355,21 @@ export function TransactionInputEngine({
                · `submitting`   → satu simpanan sedang jalan ("Menyimpan…")
                · belum ada kategori (paket 54) → petunjuk "Pilih kategori dulu"
                  tepat di bawah pemilihnya (`tx-category-help`) */
-          disabled={inputLocked || submitting || categoryChoice.needsChoice}
+          disabled={inputLocked || submitting || categoryChoice.needsChoice || walletNeeded}
           aria-disabled={
-            inputLocked || submitting || categoryChoice.needsChoice || undefined
+            inputLocked || submitting || categoryChoice.needsChoice || walletNeeded || undefined
           }
-          aria-describedby={categoryChoice.needsChoice ? 'tx-category-help' : undefined}
+          aria-describedby={
+            categoryChoice.needsChoice
+              ? 'tx-category-help'
+              : walletNeeded
+                ? 'tx-wallet-help'
+                : undefined
+          }
           className={cn(
-            'flex h-14 flex-1 items-center justify-center gap-2 rounded-2xl text-base font-bold transition-all duration-150',
-            inputLocked || submitting || categoryChoice.needsChoice
-              ? 'cursor-not-allowed bg-ink/[0.07] text-ink/35'
+            'flex h-14 flex-1 items-center justify-center gap-2 rounded-2xl text-base font-medium transition-all duration-150',
+            inputLocked || submitting || categoryChoice.needsChoice || walletNeeded
+              ? 'cursor-not-allowed bg-ink/[0.07] text-forest/35'
               : 'bg-forest text-cream shadow-[0_14px_28px_-14px_rgba(69,89,78,0.7)] hover:bg-forest-soft active:scale-[0.98]',
           )}
         >
@@ -1258,13 +1396,13 @@ export function TransactionInputEngine({
             'flex shrink-0 items-center justify-center',
             'transition-all duration-150 active:scale-95 disabled:active:scale-100',
             isDialog
-              ? 'h-14 gap-2 rounded-2xl px-5 text-[13px] font-semibold max-lg:px-3.5'
+              ? 'h-14 gap-2 rounded-2xl px-5 text-[13px] font-medium max-lg:px-3.5'
               : 'size-14 rounded-full',
             quotaExhausted
-              ? 'cursor-not-allowed bg-soil/[0.07] text-ink/30 ring-1 ring-soil/12'
+              ? 'cursor-not-allowed bg-soil/[0.07] text-forest/30 ring-1 ring-soil/12'
               : mode === 'voice'
                 ? 'bg-forest text-cream'
-                : 'bg-soil/[0.1] text-ink/70 ring-1 ring-soil/12 hover:bg-soil/[0.1]',
+                : 'bg-soil/[0.1] text-forest/70 ring-1 ring-soil/12 hover:bg-soil/[0.1]',
           )}
         >
           {mode === 'voice' ? (
@@ -1293,11 +1431,11 @@ export function TransactionInputEngine({
           id="tx-ai-off"
           role="status"
           className={cn(
-            'rounded-2xl bg-hud-amber/15 px-3.5 py-2.5 leading-relaxed text-ink/65 ring-1 ring-hud-amber/25',
+            'rounded-2xl bg-hud-amber/15 px-3.5 py-2.5 leading-relaxed text-forest/65 ring-1 ring-hud-amber/25',
             isDialog ? 'mt-3 text-[12.5px]' : 'mt-2.5 text-[11.5px]',
           )}
         >
-          <span className="mr-1.5 inline-flex items-center rounded-full bg-hud-amber/40 px-2 py-0.5 text-[10px] font-bold tracking-[0.08em] text-ink/70 uppercase">
+          <span className="mr-1.5 inline-flex items-center rounded-full bg-hud-amber/40 px-2 py-0.5 text-[10px] font-medium tracking-[0.08em] text-forest/70 uppercase">
             {AI_QUOTA_EXHAUSTED_COPY.badge}
           </span>
           {AI_QUOTA_EXHAUSTED_COPY.body}
@@ -1306,13 +1444,13 @@ export function TransactionInputEngine({
 
       {/* petunjuk pintasan keyboard — cuma relevan di web */}
       {isDialog && (
-        <p className="mt-4 text-center text-[11.5px] text-ink/35">
+        <p className="mt-4 text-center text-[11.5px] text-forest/35">
           Tekan{' '}
-          <kbd className="rounded-md bg-soil/[0.11] px-1.5 py-0.5 font-sans text-[10.5px] font-semibold text-ink/50">
+          <kbd className="rounded-md bg-soil/[0.11] px-1.5 py-0.5 font-sans text-[10.5px] font-medium text-forest/50">
             Enter
           </kbd>{' '}
           buat simpan ·{' '}
-          <kbd className="rounded-md bg-soil/[0.11] px-1.5 py-0.5 font-sans text-[10.5px] font-semibold text-ink/50">
+          <kbd className="rounded-md bg-soil/[0.11] px-1.5 py-0.5 font-sans text-[10.5px] font-medium text-forest/50">
             Esc
           </kbd>{' '}
           buat tutup
@@ -1328,7 +1466,7 @@ export function TransactionInputEngine({
 function EditField({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label className="block text-left">
-      <span className="mb-1 block text-[11px] font-semibold text-ink/50">{label}</span>
+      <span className="mb-1 block text-[11px] font-medium text-forest/50">{label}</span>
       {children}
     </label>
   )

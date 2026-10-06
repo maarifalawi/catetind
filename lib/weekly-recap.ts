@@ -158,6 +158,12 @@ export const WEEKLY_RECAP_COPY = {
   emptyBody:
     'Rekap ini menggambar dari catatanmu sendiri — catat transaksi pertama, dan angka serta grafiknya langsung hidup.',
   emptyCta: '+ Catat Transaksi',
+  /** Cakupan slide Pengeluaran — SENGAJA "pekan ini", BUKAN "7 hari terakhir".
+      Jendela rekap = pekan kalender Senin–Minggu dari tanggal perangkat, jadi
+      "7 hari terakhir" berbohong saat pekan belum selesai (rentangnya masih
+      memuat hari besok). Rentang tepatnya ditempel dari `recap.periodLabel`,
+      sumber yang sama dengan chip kepala modal — jadi tidak bisa berbeda. */
+  expensesScope: 'dalam pekan ini',
   /** Slide 2 saat pemasukan ada tapi pengeluaran belum ada */
   expensesEmpty: 'Belum ada pengeluaran minggu ini — yang kamu catat otomatis muncul di sini.',
   /** Slide 4 saat belum ada pos pengeluaran (langkah kategori disembunyikan) */

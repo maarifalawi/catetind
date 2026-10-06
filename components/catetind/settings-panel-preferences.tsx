@@ -104,7 +104,7 @@ export function AppearanceSettingsPanel() {
           options={THEME_OPTIONS}
           onChange={handleChange}
         />
-        <p className="mt-3 text-[11.5px] leading-relaxed text-ink/45">
+        <p className="mt-3 text-[11.5px] leading-relaxed text-forest/45">
           Pilihanmu disimpan di perangkat ini dan langsung aktif — nggak perlu reload.
         </p>
       </SettingsCard>
@@ -322,13 +322,13 @@ export function CategoriesSettingsPanel() {
                 >
                   {item.emoji}
                 </span>
-                <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">
+                <span className="min-w-0 flex-1 truncate text-sm font-medium text-forest">
                   {item.name}
                 </span>
                 <span
                   className={cn(
                     'shrink-0 text-[11px] font-medium',
-                    visible ? 'text-forest' : 'text-ink/35',
+                    visible ? 'text-forest' : 'text-forest/35',
                   )}
                 >
                   {visible ? CATEGORY_PREFS_COPY.visibleLabel : CATEGORY_PREFS_COPY.hiddenLabel}
@@ -370,7 +370,7 @@ export function CategoriesSettingsPanel() {
                   >
                     {item.emoji}
                   </span>
-                  <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium text-forest">
                     {item.name}
                   </span>
                   <div className="flex shrink-0 items-center gap-1.5">
@@ -378,7 +378,7 @@ export function CategoriesSettingsPanel() {
                       type="button"
                       onClick={() => openEdit(item)}
                       aria-label={`Edit kategori ${item.name}`}
-                      className="inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 text-[12px] font-semibold text-forest ring-1 ring-forest/20 transition-colors hover:bg-sage"
+                      className="inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 text-[12px] font-medium text-forest ring-1 ring-forest/20 transition-colors hover:bg-sage"
                     >
                       <Pencil className="size-3.5" strokeWidth={2.4} aria-hidden />
                       Edit
@@ -387,7 +387,7 @@ export function CategoriesSettingsPanel() {
                       type="button"
                       onClick={() => setPendingDelete(item)}
                       aria-label={CATEGORY_PREFS_COPY.deleteA11y(item.name)}
-                      className="inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 text-[12px] font-semibold text-plum ring-1 ring-plum/25 transition-colors hover:bg-plum/15"
+                      className="inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 text-[12px] font-medium text-plum ring-1 ring-plum/25 transition-colors hover:bg-plum/15"
                     >
                       <Trash2 className="size-3.5" strokeWidth={2.4} aria-hidden />
                       Hapus
@@ -399,9 +399,9 @@ export function CategoriesSettingsPanel() {
           ))}
 
           {custom.length === 0 && !adding && (
-            <li className="py-3 text-[12.5px] text-ink/45">
+            <li className="py-3 text-[12.5px] text-forest/45">
               {CATEGORY_PREFS_COPY.customEmpty}
-              <span className="mt-1 block text-ink/35">{CATEGORY_PREFS_COPY.customEmptyHint}</span>
+              <span className="mt-1 block text-forest/35">{CATEGORY_PREFS_COPY.customEmptyHint}</span>
             </li>
           )}
         </ul>
@@ -422,7 +422,7 @@ export function CategoriesSettingsPanel() {
           <button
             type="button"
             onClick={openAdd}
-            className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-oat px-4 py-3.5 text-sm font-semibold text-forest transition-colors hover:bg-sage/50 sm:w-auto sm:px-5"
+            className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-oat px-4 py-3.5 text-sm font-medium text-forest transition-colors hover:bg-sage/50 sm:w-auto sm:px-5"
           >
             <Plus className="size-4" strokeWidth={2.6} aria-hidden />
             {CATEGORY_PREFS_COPY.addCta}
@@ -431,7 +431,7 @@ export function CategoriesSettingsPanel() {
 
         {/* batas yang ditulis apa adanya (paket 62): daftar ini belum tersambung
             ke pemilih kategori di form catat transaksi */}
-        <p className="mt-4 text-[11px] leading-relaxed text-ink/45">
+        <p className="mt-4 text-[11px] leading-relaxed text-forest/45">
           {CATEGORY_PREFS_COPY.storageNote}
         </p>
       </SettingsCard>
@@ -477,7 +477,7 @@ function CategoryForm({
 }) {
   return (
     <div className="rounded-2xl bg-sage/50 p-4 ring-1 ring-forest/10">
-      <p className="text-[12.5px] font-semibold text-ink">{title}</p>
+      <p className="text-[12.5px] font-medium text-forest">{title}</p>
 
       {/* emoji picker ringkas — cukup satu baris yang bisa di-wrap */}
       <div
@@ -522,7 +522,7 @@ function CategoryForm({
           <button
             type="button"
             onClick={onSave}
-            className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-forest px-4 py-3 text-sm font-semibold text-mint transition-colors hover:bg-forest-soft sm:flex-none"
+            className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-forest px-4 py-3 text-sm font-medium text-mint transition-colors hover:bg-forest-soft sm:flex-none"
           >
             <Check className="size-4" strokeWidth={2.6} aria-hidden />
             {CATEGORY_PREFS_COPY.save}
@@ -530,7 +530,7 @@ function CategoryForm({
           <button
             type="button"
             onClick={onCancel}
-            className="inline-flex flex-1 items-center justify-center rounded-2xl bg-cream px-4 py-3 text-sm font-semibold text-ink/60 ring-1 ring-soil/12 transition-colors hover:bg-sage sm:flex-none"
+            className="inline-flex flex-1 items-center justify-center rounded-2xl bg-cream px-4 py-3 text-sm font-medium text-forest/60 ring-1 ring-soil/12 transition-colors hover:bg-sage sm:flex-none"
           >
             {CATEGORY_PREFS_COPY.cancel}
           </button>
@@ -601,12 +601,12 @@ export function AiSettingsPanel() {
           tersambung, dan pencatatan manual tetap jalan. Copy-nya di
           `lib/ai-chat.ts` (`AI_STATUS_COPY`) — satu sumber dengan widget chat. */}
       <SettingsCard title={AI_STATUS_COPY.title}>
-        <span className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-hud-amber/20 px-2.5 py-1 text-[11px] font-semibold text-ink ring-1 ring-hud-amber/30">
+        <span className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-hud-amber/20 px-2.5 py-1 text-[11px] font-medium text-forest ring-1 ring-hud-amber/30">
           <Info className="size-3.5" strokeWidth={2.4} aria-hidden />
           {AI_STATUS_COPY.badge}
         </span>
-        <p className="mt-2.5 text-[12.5px] leading-relaxed text-ink/60">{AI_STATUS_COPY.body}</p>
-        <p className="mt-2 text-[12.5px] leading-relaxed text-ink/45">{AI_STATUS_COPY.worksNow}</p>
+        <p className="mt-2.5 text-[12.5px] leading-relaxed text-forest/60">{AI_STATUS_COPY.body}</p>
+        <p className="mt-2 text-[12.5px] leading-relaxed text-forest/45">{AI_STATUS_COPY.worksNow}</p>
       </SettingsCard>
 
       {/* ── 1. BANTUAN SAAT MENCATAT ───────────────────────────────────────
@@ -629,7 +629,7 @@ export function AiSettingsPanel() {
             onToggle={() => update({ autoNaming: !prefs.autoNaming })}
           />
         </div>
-        <p className="mt-3 text-[11.5px] leading-relaxed text-ink/50">
+        <p className="mt-3 text-[11.5px] leading-relaxed text-forest/50">
           {AI_PREFS_COPY.manualScopeNote}
         </p>
       </SettingsCard>
@@ -661,10 +661,10 @@ export function AiSettingsPanel() {
                 <span aria-hidden className="text-2xl">
                   {mode.emoji}
                 </span>
-                <span className="mt-2 text-sm font-semibold text-ink">{mode.label}</span>
-                <span className="mt-1 text-xs leading-relaxed text-ink/50">{mode.desc}</span>
+                <span className="mt-2 text-sm font-medium text-forest">{mode.label}</span>
+                <span className="mt-1 text-xs leading-relaxed text-forest/50">{mode.desc}</span>
                 {active && (
-                  <span className="mt-2.5 inline-flex items-center gap-1 text-[11px] font-semibold text-forest">
+                  <span className="mt-2.5 inline-flex items-center gap-1 text-[11px] font-medium text-forest">
                     <Check className="size-3.5" strokeWidth={3} aria-hidden />
                     Dipilih
                   </span>

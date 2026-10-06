@@ -87,8 +87,8 @@ export function JointStatsRow({
           trend={
             <span
               className={cn(
-                'inline-flex shrink-0 items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold',
-                spendingDown ? 'bg-hud-sage/25 text-[#000000]' : 'bg-hud-amber/25 text-[#b89191]',
+                'inline-flex shrink-0 items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-medium',
+                spendingDown ? 'bg-hud-sage/25 text-forest' : 'bg-hud-amber/25 text-[#b89191]',
               )}
             >
               {spendingDown ? (
@@ -131,7 +131,7 @@ export function JointStatsRow({
             className="overflow-hidden"
           >
             <div className="mt-2.5 rounded-[1.5rem] bg-[#ffffff] px-4 py-3.5 ring-1 ring-soil/10">
-              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink/40">
+              <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-forest/40">
                 Rincian{' '}
                 {openCard === 'total'
                   ? 'bersama'
@@ -141,7 +141,7 @@ export function JointStatsRow({
               </p>
 
               {breakdown.length === 0 ? (
-                <p className="mt-2 text-[12.5px] text-ink/45">Belum ada pengeluaran 🌱</p>
+                <p className="mt-2 text-[12.5px] text-forest/45">Belum ada pengeluaran 🌱</p>
               ) : (
                 <ul className="mt-2.5 space-y-2.5">
                   {breakdown.map((slice) => (
@@ -151,12 +151,12 @@ export function JointStatsRow({
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="flex items-baseline justify-between gap-2">
-                          <span className="truncate text-[12.5px] font-semibold text-ink">
+                          <span className="truncate text-[12.5px] font-medium text-forest">
                             {categoryLabel(slice.category)}
                           </span>
-                          <span className="shrink-0 text-[12px] font-bold tabular-nums text-ink/70">
+                          <span className="shrink-0 text-[12px] font-semibold tabular-nums text-forest/70">
                             {moneyLabel(slice.amount, masked)}
-                            <span className="ml-1 font-medium text-ink/40">{slice.pct}%</span>
+                            <span className="ml-1 font-medium text-forest/40">{slice.pct}%</span>
                           </span>
                         </span>
                         <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-soil/[0.11]">
@@ -180,7 +180,7 @@ export function JointStatsRow({
                   sudah dihapus (`categoryBreakdown`), dan sebagai gantinya
                   kewajiban yang benar-benar ditanggung user diucapkan terang. */}
               {burden.count > 0 && (
-                <p className="mt-3 rounded-2xl bg-cream/70 px-3.5 py-3 text-[11.5px] leading-relaxed text-ink/60">
+                <p className="mt-3 rounded-2xl bg-cream/70 px-3.5 py-3 text-[11.5px] leading-relaxed text-forest/60">
                   <span aria-hidden className="mr-1">
                     🔒
                   </span>
@@ -242,8 +242,8 @@ function StatCard({
         )}
         <span
           className={cn(
-            'truncate text-[11px] font-semibold',
-            active ? 'text-cream/70' : 'text-ink/50',
+            'truncate text-[11px] font-medium',
+            active ? 'text-cream/70' : 'text-forest/50',
           )}
         >
           {label}
@@ -253,13 +253,13 @@ function StatCard({
 
       <span
         className={cn(
-          'mt-1.5 block truncate text-[15px] font-black tabular-nums tracking-tight',
-          active ? 'text-cream' : 'text-ink',
+          'mt-1.5 block truncate text-[15px] font-semibold tabular-nums tracking-tight',
+          active ? 'text-cream' : 'text-forest',
         )}
       >
         {value}
       </span>
-      <span className={cn('mt-0.5 block text-[10.5px]', active ? 'text-cream/60' : 'text-ink/40')}>
+      <span className={cn('mt-0.5 block text-[10.5px]', active ? 'text-cream/60' : 'text-forest/40')}>
         {hint}
       </span>
     </button>

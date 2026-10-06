@@ -175,10 +175,10 @@ export function AddBudgetSheet({
               aria-checked={active}
               onClick={() => pickCategory(option)}
               className={cn(
-                'flex items-center gap-2 rounded-2xl px-3 py-2.5 text-left text-[12.5px] font-semibold transition-all duration-200 active:scale-95',
+                'flex items-center gap-2 rounded-2xl px-3 py-2.5 text-left text-[12.5px] font-medium transition-all duration-200 active:scale-95',
                 active
                   ? 'bg-forest text-mint ring-2 ring-forest'
-                  : 'bg-cream text-ink/70 ring-1 ring-soil/14 hover:bg-cream hover:text-ink',
+                  : 'bg-cream text-forest/70 ring-1 ring-soil/14 hover:bg-cream hover:text-forest',
               )}
             >
               <span className="text-[16px] leading-none">{option.icon}</span>
@@ -205,7 +205,7 @@ export function AddBudgetSheet({
       {/* ── STEP 3 — periode (auto-reveal) ─────────────────────────────── */}
       <RevealStep show={amount > 0}>
         <div className="mt-5 pb-1">
-          <p className="text-[13px] font-semibold text-ink">{BUDGET_ADD_COPY.periodTitle}</p>
+          <p className="text-[13px] font-medium text-forest">{BUDGET_ADD_COPY.periodTitle}</p>
           <ChoicePills
             className="mt-2.5"
             options={BUDGET_PERIOD_OPTIONS}
@@ -213,7 +213,7 @@ export function AddBudgetSheet({
             onChange={setPeriod}
             ariaLabel={BUDGET_ADD_COPY.periodAria}
           />
-          <p className="mt-3 text-[11px] leading-relaxed text-ink/40">
+          <p className="mt-3 text-[11px] leading-relaxed text-forest/40">
             {BUDGET_ADD_COPY.footer(formatIDR(amount), periodUnitWord(period))}
           </p>
         </div>

@@ -69,15 +69,15 @@ function BannerShell({
     >
       {icon}
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[13px] font-semibold text-ink">{title}</p>
-        {body && <p className="mt-0.5 text-xs leading-relaxed text-ink/55">{body}</p>}
+        <p className="truncate text-[13px] font-medium text-forest">{title}</p>
+        {body && <p className="mt-0.5 text-xs leading-relaxed text-forest/55">{body}</p>}
       </div>
       {cta}
       <button
         type="button"
         aria-label={dismissLabel}
         onClick={onDismiss}
-        className="flex size-7 shrink-0 items-center justify-center rounded-full text-ink/35 transition-colors hover:bg-soil/8 hover:text-ink"
+        className="flex size-7 shrink-0 items-center justify-center rounded-full text-forest/35 transition-colors hover:bg-soil/8 hover:text-forest"
       >
         <X className="size-3.5" strokeWidth={2.4} />
       </button>
@@ -186,7 +186,7 @@ export const HomeBanners = memo(function HomeBanners({
             <button
               type="button"
               onClick={onOpenRenewal}
-              className="shrink-0 rounded-full bg-forest px-4 py-2 text-xs font-semibold text-cream transition-colors hover:bg-forest-soft active:scale-95"
+              className="shrink-0 rounded-full bg-forest px-4 py-2 text-xs font-medium text-cream transition-colors hover:bg-forest-soft active:scale-95"
             >
               {renewalCopy.cta}
             </button>
@@ -227,7 +227,7 @@ export const HomeBanners = memo(function HomeBanners({
             <button
               type="button"
               onClick={() => setTopUpOpen(true)}
-              className="shrink-0 rounded-full px-2 py-1 text-xs font-semibold text-forest transition-colors hover:bg-sage/60"
+              className="shrink-0 rounded-full px-2 py-1 text-xs font-medium text-forest transition-colors hover:bg-sage/60"
             >
               {AI_GAUGE_BANNER_COPY.cta}
             </button>
@@ -254,7 +254,7 @@ export const HomeBanners = memo(function HomeBanners({
           cta={
             <Link
               href={SINKING_NUDGE_COPY.ctaHref}
-              className="shrink-0 rounded-full bg-sage px-4 py-2 text-xs font-semibold text-forest transition-colors hover:bg-mint/40 active:scale-95"
+              className="shrink-0 rounded-full bg-sage px-4 py-2 text-xs font-medium text-forest transition-colors hover:bg-mint/40 active:scale-95"
             >
               {SINKING_NUDGE_COPY.cta}
             </Link>

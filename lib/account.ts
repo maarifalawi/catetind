@@ -37,6 +37,7 @@ import { getBillsSnapshot, liveBills, purgeBillsStore } from './money/bills-stor
 import { getJointSnapshot, jointNotes, purgeJointStore } from './money/joint-store'
 import { getFundsSnapshot, purgeFundsStore } from './money/funds-store'
 import { getWealthSnapshot, purgeWealthStore } from './money/wealth-store'
+import { purgePhysicalStore } from './money/physical-store'
 import { getMoneySnapshot, purgeMoneyStore } from './money/store'
 import { purgeUserMoneySettings } from './user-money-settings'
 import { endSession } from './session-client'
@@ -190,6 +191,7 @@ export async function purgeDeviceData(): Promise<PurgeReport> {
      memory modul. Tanpa langkah ini, hutang Kredivo & saham BBCA muncul kembali
      di `/wealth` sampai user refresh. */
   purgeWealthStore()
+  purgePhysicalStore()
   /* Tagihan juga hidup di database yang sama (key `bills`) — dikosongkan di
      memory JUGA, supaya daftar contoh tidak muncul kembali di `/bills` sampai
      user refresh (temuan E laporan 46, paket 51). */

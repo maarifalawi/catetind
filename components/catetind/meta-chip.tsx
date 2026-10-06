@@ -30,7 +30,7 @@ export function MetaChip({
         'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ring-1',
         isScope
           ? 'bg-sage/70 text-forest ring-forest/10'
-          : 'bg-cream text-ink/60 ring-soil/12',
+          : 'bg-cream text-forest/60 ring-soil/12',
         className,
       )}
     >

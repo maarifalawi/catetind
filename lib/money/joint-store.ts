@@ -26,9 +26,10 @@ import {
 } from '@/lib/data/joint'
 import { monthOf, type SplitSpec } from '@/lib/data/joint-ledger'
 import { toJointTransaction, type JointTransactionDbRow } from '@/lib/supabase/mappers'
-import { readRemoteJointWallet, type RemoteJointWallet } from '@/lib/supabase/joint-remote'
+import { readRemoteJointWallet, pushJointTransactionToServer, deleteRemoteJointTransaction, type RemoteJointWallet } from '@/lib/supabase/joint-remote'
 import { subscribeJointTransactions, type JointRealtimeHandle } from '@/lib/supabase/realtime'
 import { JOINT_STATE_KEY, loadDeviceState, saveDeviceState } from './idb'
+import { isUuid, randomUuid } from '@/lib/supabase/uuid'
 
 /* ── SATU STORE KANTONG BERSAMA (paket 52 · temuan F laporan 46) ─────────────
    Temuan audit 28 Sep 2026: `/joint` memegang SALINAN datanya sendiri.
@@ -135,19 +136,45 @@ const JOINT_STATE_VERSION = 1
  * anggota, dan halaman menampilkan alur "Ajak Pasangan" sampai pasangan benar
  * benar bergabung (`addJointMember`) atau anggotanya terbaca dari server.
  */
-const JOINT_MEMBER_SEED: string[] = DEMO_PARTNER_JOINED
+/**
+ * Dompet bersama KOSONG (tanpa nama) — state awal di produksi & wujud setelah
+ * Hapus Akun. Alur "Ajak Pasangan" punya tempat menulis nama baru di atasnya.
+ */
+const EMPTY_JOINT_WALLET: JointWallet = { ...INITIAL_JOINT_WALLET, name: '' }
+
+/*
+ * STATE AWAL SELALU KOSONG (paket 65 · Tugas A).
+ *
+ * `SEED_JOINT_*` tinggal jadi BAHAN test (`resetJointStore()`) & bahan bootstrap
+ * demo — BUKAN lagi isi awal store. Akun nyata (produksi) mulai dari kantong
+ * kosong; akun demo diisi lewat `seedDemoDataOnce()`.
+ */
+const SEED_JOINT_WALLET: JointWallet = INITIAL_JOINT_WALLET
+const SEED_JOINT_TRANSACTIONS: JointTransaction[] = INITIAL_JOINT_TRANSACTIONS
+const SEED_JOINT_MEMBERS: string[] = DEMO_PARTNER_JOINED
   ? [JOINT_ME.id, JOINT_PARTNER.id]
   : [JOINT_ME.id]
 
-/** snapshot untuk render server & hidrasi — selalu data seed, tanpa IDB */
+/** snapshot untuk render server & hidrasi — SELALU KOSONG sampai user mengisi */
 const SERVER_SNAPSHOT: JointSnapshot = Object.freeze({
-  wallet: INITIAL_JOINT_WALLET,
-  transactions: INITIAL_JOINT_TRANSACTIONS,
+  wallet: EMPTY_JOINT_WALLET,
+  transactions: [] as JointTransaction[],
   settlements: {},
-  members: JOINT_MEMBER_SEED,
+  members: [] as string[],
   removedIds: [] as string[],
   hydrated: false,
 })
+
+/** snapshot seed — BAHAN test (`resetJointStore()`), bukan state awal runtime */
+const SEED_SNAPSHOT: JointSnapshot = Object.freeze({
+  wallet: SEED_JOINT_WALLET,
+  transactions: SEED_JOINT_TRANSACTIONS,
+  settlements: {},
+  members: SEED_JOINT_MEMBERS,
+  removedIds: [] as string[],
+  hydrated: false,
+})
+
 
 /**
  * Snapshot kosong — keadaan setelah user MENGHAPUS AKUN-nya.
@@ -157,7 +184,7 @@ const SERVER_SNAPSHOT: JointSnapshot = Object.freeze({
  * halaman kembali ke wujud undangan, bukan kantong "aktif" tanpa anggota.
  */
 const EMPTY_SNAPSHOT: JointSnapshot = Object.freeze({
-  wallet: { ...INITIAL_JOINT_WALLET, name: '' },
+  wallet: EMPTY_JOINT_WALLET,
   transactions: [],
   settlements: {},
   members: [],
@@ -305,20 +332,26 @@ export function mergeJointState(
   const known = persisted?.version === JOINT_STATE_VERSION
 
   const storedRows = known ? (persisted?.transactions ?? []).filter((tx) => Boolean(tx?.id)) : []
-  const base = storedRows.length > 0 ? storedRows : purged ? [] : INITIAL_JOINT_TRANSACTIONS
+  /* daftar dasar = HANYA yang tersimpan (kunjungan pertama = KOSONG, paket 65) */
+  const base = storedRows
+  const firstVisit = !purged && storedRows.length === 0
   const extras = current.transactions.filter(
     (tx) =>
-      !INITIAL_JOINT_TRANSACTIONS.some((seed) => seed.id === tx.id) &&
+      (firstVisit || !SEED_JOINT_TRANSACTIONS.some((seed) => seed.id === tx.id)) &&
       !base.some((row) => row.id === tx.id),
   )
   const transactions = [...base, ...extras].map(withoutArrivalBadge)
 
   const storedMembers = known ? (persisted?.members ?? []).filter((id) => Boolean(id)) : []
-  const memberBase = storedMembers.length > 0 ? storedMembers : purged ? [] : JOINT_MEMBER_SEED
+  const memberBase = storedMembers
   /* anggota yang bergabung di SESI INI (mis. pasangan menerima undangan) tidak
      boleh hilang saat state tersimpan dibaca — yang ikut hanya yang BUKAN
-     anggota seed, supaya kantong yang sudah dihapus tidak "lahir lagi" */
-  const memberExtras = current.members.filter((id) => !JOINT_MEMBER_SEED.includes(id))
+     anggota seed (kecuali kunjungan pertama: state hidup test berisi seed),
+     supaya kantong yang sudah dihapus tidak "lahir lagi" */
+  const memberFirstVisit = !purged && storedMembers.length === 0
+  const memberExtras = current.members.filter(
+    (id) => memberFirstVisit || !SEED_JOINT_MEMBERS.includes(id),
+  )
   const members = [...new Set([...memberBase, ...memberExtras])]
 
   const storedWallet = known ? persisted?.wallet : undefined
@@ -326,8 +359,8 @@ export function mergeJointState(
     storedWallet && storedWallet.name.trim().length > 0
       ? storedWallet
       : purged
-        ? EMPTY_SNAPSHOT.wallet
-        : INITIAL_JOINT_WALLET
+        ? EMPTY_JOINT_WALLET
+        : current.wallet
 
   /* TOMBSTONE digabung (union): hapus di perangkat ini bertahan, dan hapus yang
      sudah tersimpan tidak "hidup lagi" saat state dibaca ulang. Inilah yang
@@ -507,6 +540,33 @@ export interface NewJointTransactionInput {
  * mengetik) dan `split` (porsi tiap orang). Keduanya divalidasi di sini, jadi
  * tidak mungkin ada baris yang "kantongnya" bukan anggota kantong ini.
  */
+/**
+ * Kirim SATU catatan kantong bersama ke server (paket 64 · Paket D). `false`
+ * kalau tidak ada sesi/dompet server (perilaku lama: lokal saja). Baris yang
+ * berhasil disimpan mencatat `remoteId`-nya supaya tidak terkirim dua kali.
+ */
+async function syncJointRow(row: JointTransaction): Promise<boolean> {
+  if (!remoteWalletId || !remoteViewerId) return false
+  const remoteId = row.remoteId ?? randomUuid()
+  const pocketId = row.paidByUserId && isUuid(row.paidByUserId) ? row.paidByUserId : remoteViewerId
+  const ok = await pushJointTransactionToServer(row, {
+    walletId: remoteWalletId,
+    viewerId: remoteViewerId,
+    pocketId,
+    remoteId,
+  })
+  if (!ok) return false
+  if (row.remoteId !== remoteId) {
+    live = {
+      ...live,
+      transactions: live.transactions.map((tx) => (tx.id === row.id ? { ...tx, remoteId } : tx)),
+    }
+    persist(live)
+    emit()
+  }
+  return true
+}
+
 export function addJointTransaction(input: NewJointTransactionInput): JointTransaction | null {
   const amount = Math.round(Number(input.amount))
   if (!Number.isFinite(amount) || amount <= 0) return null
@@ -529,6 +589,7 @@ export function addJointTransaction(input: NewJointTransactionInput): JointTrans
   }
 
   commit({ ...live, transactions: [tx, ...live.transactions], hydrated: true })
+  void syncJointRow(tx)
   return tx
 }
 
@@ -556,6 +617,7 @@ export function updateSplit(id: string, split: SplitSpec): JointTransaction | nu
     transactions: live.transactions.map((tx) => (tx.id === id ? updated : tx)),
     hydrated: true,
   })
+  void syncJointRow(updated)
   return updated
 }
 
@@ -579,6 +641,7 @@ export function setPaidBy(id: string, userId: string): JointTransaction | null {
     transactions: live.transactions.map((tx) => (tx.id === id ? updated : tx)),
     hydrated: true,
   })
+  void syncJointRow(updated)
   return updated
 }
 
@@ -620,6 +683,7 @@ export function deleteJointTransaction(id: string): JointTransaction | null {
   if (isMonthSettled(target.date)) return null
 
   commit({ ...live, removedIds: [...live.removedIds, id], hydrated: true })
+  if (target.remoteId) void deleteRemoteJointTransaction(target.remoteId)
   return target
 }
 
@@ -635,7 +699,9 @@ export function restoreJointTransaction(id: string): JointTransaction | null {
     removedIds: live.removedIds.filter((rowId) => rowId !== id),
     hydrated: true,
   })
-  return live.transactions.find((tx) => tx.id === id) ?? null
+  const tx = live.transactions.find((row) => row.id === id) ?? null
+  if (tx) void syncJointRow(tx)
+  return tx
 }
 
 /**
@@ -926,7 +992,7 @@ export function resetJointStore(): void {
   stopJointRealtime()
   remoteWalletId = null
   remoteViewerId = null
-  live = SERVER_SNAPSHOT
+  live = SEED_SNAPSHOT
   accountPurged = false
   hydrateStarted = false
   hydratedOnce = false

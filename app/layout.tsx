@@ -1,8 +1,9 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
-import { Inter, Plus_Jakarta_Sans } from 'next/font/google'
+import { Inter } from 'next/font/google'
 import { AIChatWidget } from '@/components/catetind/ai-chat-widget'
 import { AppLockProvider } from '@/components/catetind/app-lock-provider'
+import { DemoSeedGate } from '@/components/catetind/demo-seed-gate'
 import { OnboardingWelcomeToast } from '@/components/catetind/onboarding-welcome-toast'
 import { MobileBottomNav } from '@/components/MobileBottomNav'
 import { MoneyContextProvider } from '@/components/catetind/money-context-provider'
@@ -15,27 +16,22 @@ import { SubscriptionGateProvider } from '@/components/catetind/subscription-gat
 import { Toaster } from '@/components/ui/toaster'
 import './globals.css'
 
+/* ── TIPOGRAFI — HANYA SATU FONT DI SELURUH SISTEM: INTER ────────────────────
+   Inter dimuat `next/font/google` dan ikut di-self-host saat build, jadi TIDAK
+   ada request ke CDN font saat runtime dan TIDAK ada layout shift.
+
+   Inter mengisi KEDUA slot: `--font-sans` (teks/body) DAN `--font-display`
+   (judul, angka besar & metrik) — lihat app/globals.css. Jadi seluruh app
+   hanya memakai SATU typeface.
+
+   Axis `opsz` (optical size 14–32) ikut dimuat supaya Inter berperan sebagai
+   "Display": browser otomatis memakai potongan optik yang dirancang untuk teks
+   besar (judul & nominal) dan memakai potongan "text" untuk body — satu font,
+   dua optimasi ukuran, tanpa menambah font kedua. */
 const inter = Inter({
   subsets: ['latin'],
   variable: '--font-inter',
-})
-
-/* Plus Jakarta Sans mengisi slot `--font-display` (judul, angka besar, metrik).
-   Ia typeface buatan Tokotype untuk identitas visual kota Jakarta, jadi merek
-   ini punya akar tipografi Indonesia. Di-self-host lewat next/font: legal,
-   tanpa request CDN saat runtime, dan tanpa layout shift.
-
-   Slot ini SEBELUMNYA diisi 'SF Pro Display' lewat `@font-face` + `src:
-   local(...)` di app/globals.css. Dua alasan diganti:
-     1. `local(...)` hanya menyala di perangkat Apple, jadi mayoritas pengguna
-        (Android) tidak pernah melihatnya dan otomatis jatuh ke Inter.
-     2. File resmi SF Pro tidak boleh di-self-host — lisensi Apple membatasi
-        penggunaannya untuk aplikasi yang berjalan di platform Apple.
-   Sistem ini tetap hanya memakai DUA font: Inter (body) + Plus Jakarta Sans
-   (judul/metrik). */
-const jakarta = Plus_Jakarta_Sans({
-  subsets: ['latin'],
-  variable: '--font-jakarta',
+  axes: ['opsz'],
 })
 
 export const metadata: Metadata = {
@@ -43,16 +39,16 @@ export const metadata: Metadata = {
   description:
     'CatetInd is a modern, minimalist personal finance app to track spending, earnings, and insights.',
   generator: 'v0.app',
-  /* Favicon = public/favicon.png (wordmark di kanvas putih).
-     Ikon Home Screen / PWA = public/icons/*.png yang digenerate
-     scripts/generate-icons.mjs (kotak penuh forest + wordmark cream) supaya
-     saat di-Add to Home Screen logonya kelihatan, bukan ikon polos. */
+  /* Favicon = public/LOGO.png (aset resmi, 1080×1080) — PAKET 70: titiknya
+     dipindah dari `favicon.png` ke `LOGO.png` atas permintaan pemilik produk.
+     File itu dipakai APA ADANYA: TIDAK digenerate ulang, TIDAK diwarnai ulang,
+     TIDAK di-crop — jadi warna favicon persis seperti aset aslinya.
+     Ikon Home Screen / PWA tetap public/icons/*.png (digenerate
+     scripts/generate-icons.mjs) supaya saat di-Add to Home Screen logonya
+     kotak penuh, bukan ikon polos. */
   icons: {
-    icon: [
-      { url: '/favicon.png', type: 'image/png', sizes: 'any' },
-      { url: '/icons/icon-192.png', type: 'image/png', sizes: '192x192' },
-    ],
-    shortcut: '/favicon.png',
+    icon: [{ url: '/LOGO.png', type: 'image/png', sizes: '1080x1080' }],
+    shortcut: '/LOGO.png',
     apple: [{ url: '/icons/apple-icon.png', sizes: '180x180', type: 'image/png' }],
   },
 }
@@ -86,7 +82,7 @@ export default function RootLayout({
        Kanvas halaman sudah eksplisit putih (`bg-canvas`), jadi tanpa kelas ini
        perangkat bermode gelap akan mendapat kanvas putih + permukaan shadcn
        gelap — tidak konsisten. Sesuai `viewport.colorScheme: 'light'`. */
-    <html lang="en" className={`light ${inter.variable} ${jakarta.variable}`}>
+    <html lang="en" className={`light ${inter.variable}`}>
       <body className="font-sans antialiased">
         <ServiceWorkerRegistration />
         {/* Smooth scroll global (Lenis) — dipasang di root layout supaya
@@ -124,6 +120,9 @@ export default function RootLayout({
                     PORTAL ke <body>, jadi sheet ada DI LUAR wrapper ini dan
                     tetap interaktif. */}
                 <div data-catetind-page-root>
+                  {/* Gerbang seed demo (paket 65): menulis data contoh lewat store
+                      HANYA saat NEXT_PUBLIC_DEMO=1 — di produksi ia no-op. */}
+                  <DemoSeedGate />
                   <SubscriptionBanner />
                   {/* Banner Offline & Antrean Lokal (paket 42) — di bawah banner
                       langganan supaya saat keduanya tampil user melihat dua-duanya.

@@ -16,11 +16,18 @@ import { useSubscriptionGate } from './subscription-gate-provider'
 import { SUBSCRIPTION_LOCK_COPY } from '@/lib/data/renewal'
 import {
   AI_CAPTURE_COPY,
+  AI_CAPTURE_REPLY,
   AI_CHAT_COPY,
   AI_CONNECT_HREF,
   QUICK_REPLIES,
   type ChatMessage,
 } from '@/lib/ai-chat'
+import {
+  buildRecordedReply,
+  collectCoachSummary,
+  formatRupiah,
+  looksLikeTransactionIntent,
+} from '@/lib/ai/coach-context'
 import { AI_QUOTA_EXHAUSTED_COPY } from '@/lib/ai-quota'
 import { useAiQuota } from '@/hooks/use-ai-quota'
 import { AI_CHAT_SEED_EVENT, type AIChatSeedDetail } from '@/lib/ai-chat-bus'
@@ -48,12 +55,12 @@ function ChatBubble({ message, onAction }: { message: ChatMessage; onAction: () 
           // Domain 3C — pesan apresiasi dapat treatment visual beda (highlight olive
           // + prefix sparkle) supaya kebaca sebagai "pujian", bukan coaching biasa
           appreciation
-            ? 'bg-sage text-ink ring-mint/50'
-            : 'bg-cream text-ink ring-soil/12',
+            ? 'bg-sage text-forest ring-mint/50'
+            : 'bg-cream text-forest ring-soil/12',
         )}
       >
         {appreciation && (
-          <span className="mb-1 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-forest-soft">
+          <span className="mb-1 flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider text-forest-soft">
             <Sparkles className="size-3" />
             {AI_CHAT_COPY.appreciationBadge}
           </span>
@@ -63,7 +70,7 @@ function ChatBubble({ message, onAction }: { message: ChatMessage; onAction: () 
             kalau labelnya tidak ada, user membaca kalimat ini sebagai jawaban AI
             sungguhan (temuan uji pemakaian #5). */}
         {message.ruleBased && (
-          <span className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-ink/35">
+          <span className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-forest/35">
             {AI_CHAT_COPY.ruleBasedBadge}
           </span>
         )}
@@ -78,7 +85,7 @@ function ChatBubble({ message, onAction }: { message: ChatMessage; onAction: () 
           <Link
             href={message.action.href}
             onClick={onAction}
-            className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl bg-forest px-3 py-2 text-xs font-semibold text-cream transition hover:bg-forest-soft active:scale-[0.98]"
+            className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl bg-forest px-3 py-2 text-xs font-medium text-cream transition hover:bg-forest-soft active:scale-[0.98]"
           >
             {message.action.kind === 'create' ? (
               <Plus className="size-3.5" strokeWidth={2.5} aria-hidden />
@@ -93,8 +100,9 @@ function ChatBubble({ message, onAction }: { message: ChatMessage; onAction: () 
   )
 }
 
-/** route yang menampilkan bubble AI Coach — HANYA Dashboard (paket 64) */
-const AI_CHAT_ROUTES: string[] = ['/']
+/** route yang menampilkan bubble AI Coach — HANYA Dashboard.
+ *  Sejak landing pindah ke root `/`, dashboard tinggal di `/app`. */
+const AI_CHAT_ROUTES: string[] = ['/app']
 
 /** indikator "AI lagi ngetik" — tiga titik berdenyut berurutan */
 function TypingIndicator() {
@@ -136,7 +144,7 @@ export function AIChatWidget() {
   /** input file native untuk scan struk (kamera belakang di HP, galeri di web) */
   const fileRef = useRef<HTMLInputElement>(null)
 
-  const { messages, isTyping, input, setInput, sendMessage, startConversation, appendMessage } =
+  const { messages, isTyping, input, setInput, sendMessage, startConversation, appendMessage, modelConnected } =
     useAIChat()
 
   /**
@@ -253,11 +261,23 @@ export function AIChatWidget() {
       const transaction = capture.confirmCapture()
       if (!transaction) return // masih ada yang kurang; kartunya sudah menjelaskan
       const amountLabel = money(transaction.amount) // hormati sensor layar
+      /* ── BALASAN MENYEBUT ANGKA NYATA SESUDAHNYA (paket 65 · Tugas D) ────────
+         Baris benar-benar sudah tertulis di sini, jadi AI boleh mengaku mencatat —
+         DAN menyebut sisa jatah harian BARU dari `computeDailyHud()` (dibaca dari
+         store), bukan angka lama. Kalau ringkasan gagal dibaca, jatuh ke kalimat
+         tanpa angka supaya tidak mengarang. */
+      let replyContent = AI_CAPTURE_COPY.saved(transaction.name, amountLabel)
+      try {
+        const remaining = formatRupiah(collectCoachSummary().remainingToday)
+        replyContent = buildRecordedReply(transaction.name, amountLabel, remaining)
+      } catch {
+        /* biarkan kalimat tanpa angka */
+      }
       appendMessage({
         role: 'ai',
         kind: 'coaching',
-        content: AI_CAPTURE_COPY.saved(transaction.name, amountLabel),
-        action: { label: AI_CAPTURE_COPY.viewHistory, href: '/history' },
+        content: replyContent,
+        action: { label: AI_CAPTURE_REPLY.viewHistory, href: '/history' },
       })
       toast.success(AI_CAPTURE_COPY.savedToast.title, {
         description: AI_CAPTURE_COPY.savedToast.description(amountLabel),
@@ -267,6 +287,23 @@ export function AIChatWidget() {
          dibuang — user tidak boleh kehilangan isian hanya karena jaringan. */
       appendMessage({ role: 'ai', kind: 'coaching', content: AI_CAPTURE_COPY.saveFailed })
     }
+  }
+
+  /* ── KIRIM PESAN (paket 65 · Tugas D) ──────────────────────────────────────
+     Kalau pesan user terdengar seperti UCAPAN TRANSAKSI ("gua habis makan 50k,
+     catet ya"), kita TIDAK memanggil model: kita tampilkan KARTU KONFIRMASI —
+     jalur yang sama dengan input suara/struk — karena AI tidak boleh mengaku
+     mencatar sebelum barisnya benar-benar ditulis. Pesan biasa tetap ke model. */
+  function handleSend() {
+    const text = input.trim()
+    if (!text || captureLocked) return
+    if (looksLikeTransactionIntent(text)) {
+      appendMessage({ role: 'user', kind: 'coaching', content: text })
+      setInput('')
+      capture.startChatDraft(text)
+      return
+    }
+    sendMessage()
   }
 
   /* ── CAKUPAN TOMBOL AI (paket 64): KHUSUS DASHBOARD ─────────────────────────
@@ -323,10 +360,10 @@ export function AIChatWidget() {
               <AIAvatar className="size-9" />
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline justify-between gap-2">
-                  <p className="text-sm font-semibold tracking-tight text-ink">
+                  <p className="text-sm font-medium tracking-tight text-forest">
                     {AI_CHAT_COPY.title}
                   </p>
-                  <p className="shrink-0 text-[11px] font-medium text-ink/45">
+                  <p className="shrink-0 text-[11px] font-medium text-forest/45">
                     {AI_CHAT_COPY.quota(quota.remainingPct)}
                   </p>
                 </div>
@@ -361,29 +398,31 @@ export function AIChatWidget() {
                 type="button"
                 onClick={() => setOpen(false)}
                 aria-label={AI_CHAT_COPY.closeLabel}
-                className="flex size-8 shrink-0 items-center justify-center rounded-full bg-soil/[0.1] text-ink/60 transition-colors hover:bg-sage hover:text-ink"
+                className="flex size-8 shrink-0 items-center justify-center rounded-full bg-soil/[0.1] text-forest/60 transition-colors hover:bg-sage hover:text-forest"
               >
                 <X className="size-4" />
               </button>
             </header>
 
-            {/* ── STATUS AI (paket 44) ─────────────────────────────────────────
-                Satu kalimat jujur, sekali, di tempat yang selalu terlihat — bukan
-                diulang di setiap balasan (itu justru jadi noise). Isinya menyebut
-                keadaan hari ini (aturan lokal, belum pakai model) dan mengantar ke
-                tempat AI benar-benar disambungkan; panelnya ditutup saat tombolnya
-                ditekan supaya halaman tujuannya tidak ketutupan dialog. */}
-            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 border-b border-soil/12 bg-sage/25 px-4 py-2 text-[11px] leading-relaxed text-forest">
-              <span>{AI_CHAT_COPY.notConnectedNote}</span>
-              <Link
-                href={AI_CONNECT_HREF}
-                onClick={() => setOpen(false)}
-                title={AI_CHAT_COPY.connectHint}
-                className="font-semibold underline underline-offset-2 hover:text-forest-soft"
-              >
-                {AI_CHAT_COPY.connectLabel}
-              </Link>
-            </div>
+            {/* ── STATUS AI (paket 44 · disesuaikan paket 63) ──────────────────
+                Satu kalimat jujur, SEKALI, dan hanya saat memang benar: banner
+                ini muncul HANYA saat server tak punya kunci AI (`modelConnected
+                === false`). Begitu model menjawab, bannernya hilang — dulu ia
+                selalu tampil, dan setelah AI tersambung kalimat "belum pakai
+                model" jadi tidak benar. */}
+            {modelConnected === false && (
+              <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 border-b border-soil/12 bg-sage/25 px-4 py-2 text-[11px] leading-relaxed text-forest">
+                <span>{AI_CHAT_COPY.notConnectedNote}</span>
+                <Link
+                  href={AI_CONNECT_HREF}
+                  onClick={() => setOpen(false)}
+                  title={AI_CHAT_COPY.connectHint}
+                  className="font-medium underline underline-offset-2 hover:text-forest-soft"
+                >
+                  {AI_CHAT_COPY.connectLabel}
+                </Link>
+              </div>
+            )}
 
             {/* area pesan */}
             <div
@@ -409,7 +448,7 @@ export function AIChatWidget() {
                 onConfirm={handleConfirmCapture}
                 onCancel={capture.cancelCapture}
                 onFinishVoice={capture.finishVoice}
-                onRetryVoice={capture.startVoice}
+                onRetryVoice={capture.retryCapture}
               />
 
               {isTyping && <TypingIndicator />}
@@ -444,7 +483,7 @@ export function AIChatWidget() {
                    urutan percakapan tidak membingungkan — alasannya tertulis di
                    atas composer, bukan diam-diam diabaikan */
                 if (captureLocked) return
-                sendMessage()
+                handleSend()
               }}
               className="relative border-t border-soil/12 bg-cream/85 p-3 backdrop-blur"
               style={{
@@ -453,7 +492,7 @@ export function AIChatWidget() {
             >
               {/* pengingat lembut saat kartu konfirmasi masih menunggu jawaban */}
               {captureLocked && (
-                <p role="status" className="mb-2 text-[11px] leading-relaxed text-ink/45">
+                <p role="status" className="mb-2 text-[11px] leading-relaxed text-forest/45">
                   {AI_CAPTURE_COPY.finishDraftFirst}
                 </p>
               )}
@@ -464,7 +503,7 @@ export function AIChatWidget() {
                   onChange={(e) => setInput(e.target.value)}
                   placeholder={AI_CHAT_COPY.inputPlaceholder}
                   aria-label={AI_CHAT_COPY.inputLabel}
-                  className="h-10 min-w-0 flex-1 rounded-full bg-soil/[0.1] px-4 text-sm text-ink outline-none placeholder:text-ink/35 focus:ring-2 focus:ring-forest/20"
+                  className="h-10 min-w-0 flex-1 rounded-full bg-soil/[0.1] px-4 text-sm text-forest outline-none placeholder:text-forest/35 focus:ring-2 focus:ring-forest/20"
                 />
                 <button
                   type="button"
@@ -486,8 +525,8 @@ export function AIChatWidget() {
                     'flex size-10 shrink-0 items-center justify-center rounded-full ring-1 transition-colors active:scale-95 disabled:opacity-35',
                     capture.phase === 'listening'
                       ? 'bg-forest text-cream ring-forest hover:bg-forest-soft'
-                      : 'bg-cream text-ink/60 ring-soil/12 hover:bg-sage hover:text-ink',
-                    voiceUnavailable && 'text-ink/35',
+                      : 'bg-cream text-forest/60 ring-soil/12 hover:bg-sage hover:text-forest',
+                    voiceUnavailable && 'text-forest/35',
                   )}
                 >
                   {capture.phase === 'listening' ? (
@@ -511,7 +550,7 @@ export function AIChatWidget() {
                     'flex size-10 shrink-0 items-center justify-center rounded-full ring-1 transition-colors active:scale-95 disabled:opacity-35',
                     capture.phase === 'reading'
                       ? 'bg-forest text-cream ring-forest hover:bg-forest-soft'
-                      : 'bg-cream text-ink/60 ring-soil/12 hover:bg-sage hover:text-ink',
+                      : 'bg-cream text-forest/60 ring-soil/12 hover:bg-sage hover:text-forest',
                   )}
                 >
                   {capture.phase === 'reading' ? (
@@ -546,7 +585,7 @@ export function AIChatWidget() {
               {/* jalan keluar di perangkat tanpa Speech API — selalu terlihat,
                   bukan cuma sesaat setelah tombolnya ditekan */}
               {voiceUnavailable && (
-                <p id="ai-voice-fallback" className="mt-2 text-[11px] leading-relaxed text-ink/45">
+                <p id="ai-voice-fallback" className="mt-2 text-[11px] leading-relaxed text-forest/45">
                   {AI_CAPTURE_COPY.voiceUnsupported}
                 </p>
               )}
@@ -554,7 +593,7 @@ export function AIChatWidget() {
               {/* KUOTA HABIS (paket 42): dua ikon di atas mati, dan alasannya
                   ditulis di sini — plus penegasan bahwa catat manual tetap jalan. */}
               {quotaExhausted && (
-                <p id="ai-quota-off" className="mt-2 text-[11px] leading-relaxed text-ink/55">
+                <p id="ai-quota-off" className="mt-2 text-[11px] leading-relaxed text-forest/55">
                   {AI_QUOTA_EXHAUSTED_COPY.body}
                 </p>
               )}

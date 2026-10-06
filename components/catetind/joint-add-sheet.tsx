@@ -92,10 +92,10 @@ export function JointAddSheet({
           <span className="flex min-w-0 items-center gap-2">
             <SlidersHorizontal className="size-4 shrink-0 text-forest" strokeWidth={2.3} />
             <span className="min-w-0">
-              <span className="block truncate text-[12.5px] font-semibold text-ink">
+              <span className="block truncate text-[12.5px] font-medium text-forest">
                 Split: {draftLabel(splitDraft, me, partner)}
               </span>
-              <span className="mt-0.5 block text-[11px] text-ink/45">
+              <span className="mt-0.5 block text-[11px] text-forest/45">
                 Bisa diubah kapan aja sebelum dicatat
               </span>
             </span>
@@ -103,7 +103,7 @@ export function JointAddSheet({
           <button
             type="button"
             onClick={onOpenSplit}
-            className="shrink-0 text-[11.5px] font-semibold text-forest underline decoration-dotted underline-offset-4 transition-colors hover:text-forest-soft"
+            className="shrink-0 text-[11.5px] font-medium text-forest underline decoration-dotted underline-offset-4 transition-colors hover:text-forest-soft"
           >
             Atur pembagian →
           </button>
@@ -112,11 +112,11 @@ export function JointAddSheet({
 
       {/* 2. pemilih "Siapa yang nalangin?" — 2 chip, default Aku (Stage 2 #3) */}
       <div className="rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/12">
-        <p className="flex items-center gap-2 text-[12.5px] font-semibold text-ink">
+        <p className="flex items-center gap-2 text-[12.5px] font-medium text-forest">
           <Wallet className="size-4 shrink-0 text-forest" strokeWidth={2.3} />
           {PAID_BY_LABEL}
         </p>
-        <p className="mt-0.5 text-[11px] leading-relaxed text-ink/45">{PAID_BY_HINT}</p>
+        <p className="mt-0.5 text-[11px] leading-relaxed text-forest/45">{PAID_BY_HINT}</p>
         <ChoicePills
           className="mt-2.5"
           options={[
@@ -132,8 +132,8 @@ export function JointAddSheet({
       {/* 3. toggle privasi */}
       <div className="rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/12">
         <div className="flex items-center justify-between gap-3">
-          <span className="flex items-center gap-2 text-[12.5px] font-semibold text-ink/80">
-            <EyeOff className="size-4 text-ink/40" strokeWidth={2.3} />
+          <span className="flex items-center gap-2 text-[12.5px] font-medium text-forest/80">
+            <EyeOff className="size-4 text-forest/40" strokeWidth={2.3} />
             Sembunyikan dari pasangan 🔒
           </span>
           <button
@@ -162,7 +162,7 @@ export function JointAddSheet({
             </p>
             {/* pemilih kategori ada di form engine di atas — sebut lebih dulu
                 bahwa untuk catatan privat pilihannya tidak ikut tersimpan */}
-            <p className="mt-1.5 text-[11px] leading-relaxed text-ink/50">
+            <p className="mt-1.5 text-[11px] leading-relaxed text-forest/50">
               {PRIVATE_CATEGORY_NOTE}
             </p>
           </>

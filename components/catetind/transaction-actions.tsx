@@ -48,10 +48,10 @@ export function TransactionActionsSheet({
         >
           <div className="mx-auto mt-3 h-1.5 w-10 shrink-0 rounded-full bg-ink/10" />
           <div className="px-4 pb-8 pt-4" data-lenis-prevent>
-            <Drawer.Title className="truncate px-1 font-display text-[15px] font-bold tracking-tight text-ink">
+            <Drawer.Title className="truncate px-1 font-display text-[15px] font-medium tracking-tight text-forest">
               {tx?.name ?? TRANSACTION_ACTIONS_COPY.sheetTitleFallback}
             </Drawer.Title>
-            <Drawer.Description className="mt-0.5 px-1 text-[12px] text-ink/50">
+            <Drawer.Description className="mt-0.5 px-1 text-[12px] text-forest/50">
               {tx
                 ? `${TRANSACTION_TYPE_LABEL[tx.type]} · ${resolveCategoryLabel(tx)} · ${maskMoney(
                     tx.amount,
@@ -64,15 +64,15 @@ export function TransactionActionsSheet({
               <button
                 type="button"
                 onClick={onOpenDetail}
-                className="flex w-full items-center gap-3 rounded-2xl px-3.5 py-3 text-left text-[14px] font-medium text-ink/75 transition-colors hover:bg-cream"
+                className="flex w-full items-center gap-3 rounded-2xl px-3.5 py-3 text-left text-[14px] font-medium text-forest/75 transition-colors hover:bg-cream"
               >
-                <ReceiptText className="size-4 shrink-0 text-ink/45" strokeWidth={2.2} />
+                <ReceiptText className="size-4 shrink-0 text-forest/45" strokeWidth={2.2} />
                 {TRANSACTION_ACTIONS_COPY.detail}
               </button>
               <button
                 type="button"
                 onClick={onEdit}
-                className="flex w-full items-center gap-3 rounded-2xl px-3.5 py-3 text-left text-[14px] font-medium text-ink/75 transition-colors hover:bg-cream"
+                className="flex w-full items-center gap-3 rounded-2xl px-3.5 py-3 text-left text-[14px] font-medium text-forest/75 transition-colors hover:bg-cream"
               >
                 <Pencil className="size-4 shrink-0 text-forest" strokeWidth={2.2} />
                 {TRANSACTION_ACTIONS_COPY.edit}
@@ -125,7 +125,7 @@ export function ConfirmDeleteDialog({
       body={
         <>
           {CONFIRM_DELETE_COPY.bodyLead(tx.name)}
-          <b className="font-semibold text-ink">{maskMoney(tx.amount, masked)}</b>{' '}
+          <b className="font-medium text-forest">{maskMoney(tx.amount, masked)}</b>{' '}
           {CONFIRM_DELETE_COPY.bodyTail}
         </>
       }

@@ -115,11 +115,11 @@ export function BudgetSheet({
                 mengecil maupun menggulir saat keyboard muncul */}
             <div className="relative flex shrink-0 items-start justify-between gap-3 px-5 pt-4 lg:px-6">
               <div className="min-w-0">
-                <Drawer.Title className="font-display text-xl font-bold leading-tight tracking-tight text-ink">
+                <Drawer.Title className="font-display text-xl font-medium leading-tight tracking-tight text-forest">
                   {title}
                 </Drawer.Title>
                 {description ? (
-                  <Drawer.Description className="mt-1 text-[13px] leading-relaxed text-ink/55">
+                  <Drawer.Description className="mt-1 text-[13px] leading-relaxed text-forest/55">
                     {description}
                   </Drawer.Description>
                 ) : (
@@ -130,7 +130,7 @@ export function BudgetSheet({
                 type="button"
                 onClick={onClose}
                 aria-label="Tutup"
-                className="flex size-9 shrink-0 items-center justify-center rounded-full bg-cream text-ink ring-1 ring-soil/12 transition-colors hover:bg-sage active:scale-95"
+                className="flex size-9 shrink-0 items-center justify-center rounded-full bg-cream text-forest ring-1 ring-soil/12 transition-colors hover:bg-sage active:scale-95"
               >
                 <X className="size-4" strokeWidth={2.2} />
               </button>
@@ -263,7 +263,7 @@ export function RupiahField({
 
   return (
     <label className={cn('block', className)}>
-      {label && <span className="text-[13px] font-semibold leading-snug text-ink">{label}</span>}
+      {label && <span className="text-[13px] font-medium leading-snug text-forest">{label}</span>}
       <span
         className={cn(
           'mt-2 flex items-center gap-2 rounded-2xl bg-cream px-4 ring-1 ring-soil/16 transition-shadow focus-within:ring-2 focus-within:ring-forest/35',
@@ -271,7 +271,7 @@ export function RupiahField({
         )}
       >
         <span
-          className={cn('shrink-0 font-semibold text-ink/35', size === 'lg' ? 'text-lg' : 'text-sm')}
+          className={cn('shrink-0 font-medium text-forest/35', size === 'lg' ? 'text-lg' : 'text-sm')}
         >
           Rp
         </span>
@@ -283,14 +283,14 @@ export function RupiahField({
           autoComplete="off"
           placeholder={placeholder.replace(/^Rp\s*/, '')}
           className={cn(
-            'min-w-0 flex-1 bg-transparent text-ink outline-none placeholder:font-medium placeholder:text-ink/25',
+            'min-w-0 flex-1 bg-transparent text-forest outline-none placeholder:font-medium placeholder:text-forest/25',
             AMOUNT_INPUT_FIELD,
             size === 'lg' ? 'text-xl' : 'text-[15px]',
           )}
         />
       </span>
       {hint && (
-        <span className="mt-1.5 block text-[11px] leading-relaxed text-ink/45">{hint}</span>
+        <span className="mt-1.5 block text-[11px] leading-relaxed text-forest/45">{hint}</span>
       )}
     </label>
   )
@@ -326,10 +326,10 @@ export function ChoicePills<T extends string>({
             aria-checked={active}
             onClick={() => onChange(option.id)}
             className={cn(
-              'rounded-full px-3.5 py-2 text-[12.5px] font-semibold transition-all duration-200 active:scale-95',
+              'rounded-full px-3.5 py-2 text-[12.5px] font-medium transition-all duration-200 active:scale-95',
               active
                 ? 'bg-forest text-mint shadow-[0_10px_22px_-14px_rgba(69,89,78,0.75)]'
-                : 'bg-cream text-ink/60 ring-1 ring-soil/14 hover:bg-cream hover:text-ink',
+                : 'bg-cream text-forest/60 ring-1 ring-soil/14 hover:bg-cream hover:text-forest',
             )}
           >
             {option.label}
@@ -390,9 +390,9 @@ export function SheetSubmit({
         disabled={inert}
         aria-disabled={locked || undefined}
         className={cn(
-          'flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-semibold transition-all',
+          'flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-medium transition-all',
           inert
-            ? 'cursor-not-allowed bg-ink/[0.07] text-ink/35'
+            ? 'cursor-not-allowed bg-ink/[0.07] text-forest/35'
             : 'bg-forest text-mint hover:bg-forest-soft active:scale-[0.99]',
           className,
         )}

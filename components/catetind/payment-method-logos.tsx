@@ -41,8 +41,8 @@ export function PaymentLogo({ id, className }: { id: PaymentMethodId; className?
         className,
       )}
     >
-      <Icon className="size-3.5 text-ink/45" strokeWidth={2.4} />
-      <span className="text-[10px] font-semibold tracking-wide text-ink/45">{method.label}</span>
+      <Icon className="size-3.5 text-forest/45" strokeWidth={2.4} />
+      <span className="text-[10px] font-medium tracking-wide text-forest/45">{method.label}</span>
     </span>
   )
 }

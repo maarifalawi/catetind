@@ -231,7 +231,7 @@ export function AddDebtSheet({
           input yang tidak berpengaruh lebih baik tidak ditawarkan. */}
       {!isPlatform && (
         <>
-          <span className="text-[13px] font-semibold leading-snug text-ink">Arah</span>
+          <span className="text-[13px] font-medium leading-snug text-forest">Arah</span>
           <ChoicePills
             className="mt-2"
             ariaLabel="Arah utang piutang"
@@ -245,13 +245,13 @@ export function AddDebtSheet({
       {/* ── bentuk PERSONAL (default) ───────────────────────────────────── */}
       <RevealStep show={!isPlatform}>
         <label className="mt-4 block">
-          <span className="text-[13px] font-semibold leading-snug text-ink">Nama</span>
+          <span className="text-[13px] font-medium leading-snug text-forest">Nama</span>
           <input
             ref={nameRef}
             value={name}
             onChange={(event) => setName(event.target.value)}
             placeholder="Nama teman/keluarga"
-            className="mt-2 w-full rounded-2xl bg-cream px-4 py-3 text-[15px] font-semibold text-ink outline-none ring-1 ring-soil/16 transition-shadow placeholder:font-medium placeholder:text-ink/25 focus:ring-2 focus:ring-forest/35"
+            className="mt-2 w-full rounded-2xl bg-cream px-4 py-3 text-[15px] font-medium text-forest outline-none ring-1 ring-soil/16 transition-shadow placeholder:font-medium placeholder:text-forest/25 focus:ring-2 focus:ring-forest/35"
           />
         </label>
       </RevealStep>
@@ -279,7 +279,7 @@ export function AddDebtSheet({
           placeholder="Rp 200.000"
           hint={
             remainingInvalid ? (
-              <span className="font-semibold text-[#b89191]">
+              <span className="font-medium text-[#b89191]">
                 {DEBT_SHEET_FIELD_COPY.overPrincipal}
               </span>
             ) : (
@@ -300,13 +300,13 @@ export function AddDebtSheet({
             <DateField value={date} onChange={setDate} label="Tanggal (opsional)" allowFuture={false} />
           )}
           <label className="block">
-            <span className="text-[12.5px] font-semibold text-ink/70">Catatan (opsional)</span>
+            <span className="text-[12.5px] font-medium text-forest/70">Catatan (opsional)</span>
             <textarea
               value={note}
               onChange={(event) => setNote(event.target.value)}
               rows={3}
               placeholder="Misal: makan siang kemarin"
-              className="mt-2 w-full resize-none rounded-2xl bg-cream px-4 py-3 text-[13px] leading-relaxed text-ink outline-none ring-1 ring-soil/16 transition-shadow placeholder:text-ink/25 focus:ring-2 focus:ring-forest/35"
+              className="mt-2 w-full resize-none rounded-2xl bg-cream px-4 py-3 text-[13px] leading-relaxed text-forest outline-none ring-1 ring-soil/16 transition-shadow placeholder:text-forest/25 focus:ring-2 focus:ring-forest/35"
             />
           </label>
         </div>
@@ -314,9 +314,9 @@ export function AddDebtSheet({
 
       {/* ── toggle pembuka bentuk PLATFORM ──────────────────────────────── */}
       <div className="mt-5 flex items-center justify-between gap-3 rounded-2xl bg-cream/70 px-4 py-3.5 ring-1 ring-soil/12">
-        <span className="pr-2 text-[13px] font-semibold leading-snug text-ink">
+        <span className="pr-2 text-[13px] font-medium leading-snug text-forest">
           Ini pinjaman platform/berbunga
-          <span className="mt-0.5 block text-[11px] font-medium text-ink/45">
+          <span className="mt-0.5 block text-[11px] font-medium text-forest/45">
             Kredivo, SPayLater, KTA — pakai tenor & cicilan
           </span>
         </span>
@@ -328,7 +328,7 @@ export function AddDebtSheet({
       <RevealStep show={isPlatform}>
         <div className="mt-4 space-y-4">
           <div>
-            <span className="text-[13px] font-semibold leading-snug text-ink">Provider</span>
+            <span className="text-[13px] font-medium leading-snug text-forest">Provider</span>
             {/* quick-pick 6 provider — deret pill bisa digulir horizontal */}
             <div className="hide-scrollbar -mx-1 mt-2 flex gap-2 overflow-x-auto px-1 py-0.5">
               {[...PLATFORM_PROVIDERS, 'Lainnya'].map((option) => {
@@ -340,10 +340,10 @@ export function AddDebtSheet({
                     onClick={() => setProvider(option)}
                     aria-pressed={active}
                     className={cn(
-                      'shrink-0 rounded-full px-3.5 py-2 text-[12.5px] font-semibold transition-all duration-200 active:scale-95',
+                      'shrink-0 rounded-full px-3.5 py-2 text-[12.5px] font-medium transition-all duration-200 active:scale-95',
                       active
                         ? 'bg-forest text-mint shadow-[0_10px_22px_-14px_rgba(69,89,78,0.75)]'
-                        : 'bg-cream text-ink/60 ring-1 ring-soil/14 hover:bg-cream hover:text-ink',
+                        : 'bg-cream text-forest/60 ring-1 ring-soil/14 hover:bg-cream hover:text-forest',
                     )}
                   >
                     {option}
@@ -359,25 +359,25 @@ export function AddDebtSheet({
                 onChange={(event) => setCustomProvider(event.target.value)}
                 placeholder="Tulis nama provider…"
                 aria-label="Nama provider lainnya"
-                className="mt-2 w-full rounded-2xl bg-cream px-4 py-3 text-[14px] font-semibold text-ink outline-none ring-1 ring-soil/16 transition-shadow placeholder:font-medium placeholder:text-ink/25 focus:ring-2 focus:ring-forest/35"
+                className="mt-2 w-full rounded-2xl bg-cream px-4 py-3 text-[14px] font-medium text-forest outline-none ring-1 ring-soil/16 transition-shadow placeholder:font-medium placeholder:text-forest/25 focus:ring-2 focus:ring-forest/35"
               />
             </RevealStep>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
-              <span className="text-[12.5px] font-semibold text-ink/70">Tenor (bulan)</span>
+              <span className="text-[12.5px] font-medium text-forest/70">Tenor (bulan)</span>
               <input
                 value={tenor}
                 onChange={(event) => setTenor(event.target.value.replace(/\D/g, '').slice(0, 3))}
                 inputMode="numeric"
                 placeholder="6"
                 aria-label="Tenor dalam bulan"
-                className="mt-2 w-full rounded-2xl bg-cream px-4 py-3 text-[15px] font-semibold tabular-nums text-ink outline-none ring-1 ring-soil/16 transition-shadow placeholder:font-medium placeholder:text-ink/25 focus:ring-2 focus:ring-forest/35"
+                className="mt-2 w-full rounded-2xl bg-cream px-4 py-3 text-[15px] font-medium tabular-nums text-forest outline-none ring-1 ring-soil/16 transition-shadow placeholder:font-medium placeholder:text-forest/25 focus:ring-2 focus:ring-forest/35"
               />
             </label>
             <label className="block">
-              <span className="text-[12.5px] font-semibold text-ink/70">Jatuh tempo (1–31)</span>
+              <span className="text-[12.5px] font-medium text-forest/70">Jatuh tempo (1–31)</span>
               <input
                 value={dueDate}
                 onChange={(event) => setDueDate(event.target.value.replace(/\D/g, '').slice(0, 2))}
@@ -385,7 +385,7 @@ export function AddDebtSheet({
                 placeholder="10"
                 aria-label="Tanggal jatuh tempo"
                 className={cn(
-                  'mt-2 w-full rounded-2xl bg-cream px-4 py-3 text-[15px] font-semibold tabular-nums text-ink outline-none ring-1 transition-shadow placeholder:font-medium placeholder:text-ink/25 focus:ring-2',
+                  'mt-2 w-full rounded-2xl bg-cream px-4 py-3 text-[15px] font-medium tabular-nums text-forest outline-none ring-1 transition-shadow placeholder:font-medium placeholder:text-forest/25 focus:ring-2',
                   dueDateInvalid
                     ? 'ring-hud-terracotta/50 focus:ring-hud-terracotta/60'
                     : 'ring-soil/16 focus:ring-forest/35',
@@ -402,25 +402,25 @@ export function AddDebtSheet({
           />
 
           <label className="block">
-            <span className="text-[12.5px] font-semibold text-ink/70">Bunga (% — opsional)</span>
+            <span className="text-[12.5px] font-medium text-forest/70">Bunga (% — opsional)</span>
             <input
               value={interest}
               onChange={(event) => setInterest(sanitizeDecimal(event.target.value, 2))}
               inputMode="decimal"
               placeholder="2,95"
               aria-label="Bunga per bulan"
-              className="mt-2 w-full rounded-2xl bg-cream px-4 py-3 text-[15px] font-semibold tabular-nums text-ink outline-none ring-1 ring-soil/16 transition-shadow placeholder:font-medium placeholder:text-ink/25 focus:ring-2 focus:ring-forest/35"
+              className="mt-2 w-full rounded-2xl bg-cream px-4 py-3 text-[15px] font-medium tabular-nums text-forest outline-none ring-1 ring-soil/16 transition-shadow placeholder:font-medium placeholder:text-forest/25 focus:ring-2 focus:ring-forest/35"
             />
           </label>
 
           <label className="block">
-            <span className="text-[12.5px] font-semibold text-ink/70">Catatan (opsional)</span>
+            <span className="text-[12.5px] font-medium text-forest/70">Catatan (opsional)</span>
             <textarea
               value={note}
               onChange={(event) => setNote(event.target.value)}
               rows={3}
               placeholder="Misal: buat beli HP baru"
-              className="mt-2 w-full resize-none rounded-2xl bg-cream px-4 py-3 text-[13px] leading-relaxed text-ink outline-none ring-1 ring-soil/16 transition-shadow placeholder:text-ink/25 focus:ring-2 focus:ring-forest/35"
+              className="mt-2 w-full resize-none rounded-2xl bg-cream px-4 py-3 text-[13px] leading-relaxed text-forest outline-none ring-1 ring-soil/16 transition-shadow placeholder:text-forest/25 focus:ring-2 focus:ring-forest/35"
             />
           </label>
         </div>
@@ -472,13 +472,13 @@ function DateField({
   const todayIso = todayValue || WEALTH_TODAY_ISO
   return (
     <div>
-      <span className="text-[13px] font-semibold leading-snug text-ink">{label}</span>
+      <span className="text-[13px] font-medium leading-snug text-forest">{label}</span>
       <span className="relative mt-2 flex items-center gap-2 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/16 focus-within:ring-2 focus-within:ring-forest/35">
-        <CalendarDays className="size-4 shrink-0 text-ink/35" strokeWidth={2.2} />
+        <CalendarDays className="size-4 shrink-0 text-forest/35" strokeWidth={2.2} />
         <span
           className={cn(
-            'flex-1 text-[14px] font-semibold tabular-nums',
-            value ? 'text-ink' : 'font-medium text-ink/25',
+            'flex-1 text-[14px] font-medium tabular-nums',
+            value ? 'text-forest' : 'font-medium text-forest/25',
           )}
         >
           {value ? formatSheetDate(value) : 'Pilih tanggal'}

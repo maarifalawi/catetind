@@ -105,10 +105,10 @@ export function BillNotifNudge({ className }: { className?: string }) {
             </span>
 
             <div className="min-w-0 flex-1">
-              <p className="text-[13px] font-semibold leading-snug text-ink">
+              <p className="text-[13px] font-medium leading-snug text-forest">
                 {NOTIF_NUDGE_COPY}
               </p>
-              <p className="mt-0.5 text-[11px] leading-relaxed text-ink/50">
+              <p className="mt-0.5 text-[11px] leading-relaxed text-forest/50">
                 {NOTIF_NUDGE_HELPER}
               </p>
 
@@ -117,7 +117,7 @@ export function BillNotifNudge({ className }: { className?: string }) {
                   <button
                     type="button"
                     onClick={activate}
-                    className="inline-flex items-center gap-1.5 rounded-2xl bg-forest px-3.5 py-2 text-[12.5px] font-semibold text-mint transition-colors hover:bg-forest-soft active:scale-[0.97]"
+                    className="inline-flex items-center gap-1.5 rounded-2xl bg-forest px-3.5 py-2 text-[12.5px] font-medium text-mint transition-colors hover:bg-forest-soft active:scale-[0.97]"
                   >
                     <Bell className="size-3.5" strokeWidth={2.4} />
                     Aktifkan 🔔
@@ -125,13 +125,13 @@ export function BillNotifNudge({ className }: { className?: string }) {
                   <button
                     type="button"
                     onClick={dismiss}
-                    className="text-[12px] font-semibold text-ink/50 underline decoration-ink/20 underline-offset-4 transition-colors hover:text-ink/75"
+                    className="text-[12px] font-medium text-forest/50 underline decoration-ink/20 underline-offset-4 transition-colors hover:text-forest/75"
                   >
                     Nanti aja
                   </button>
                 </div>
               ) : (
-                <p className="mt-2 text-[11.5px] leading-relaxed text-ink/50">
+                <p className="mt-2 text-[11.5px] leading-relaxed text-forest/50">
                   Notifikasi diblokir di browser. Buka pengaturan browser untuk mengaktifkan.
                 </p>
               )}

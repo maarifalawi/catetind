@@ -73,7 +73,7 @@ export function ContributeSheet({
     >
       {/* progres sekarang → proyeksi setelah setor */}
       <div className="rounded-2xl bg-cream p-3.5 ring-1 ring-soil/12">
-        <div className="flex items-center justify-between gap-3 text-[11.5px] font-medium text-ink/50">
+        <div className="flex items-center justify-between gap-3 text-[11.5px] font-medium text-forest/50">
           <span className="tabular-nums">
             {maskNominal(shown?.current ?? 0, masked)} dari{' '}
             {maskNominal(shown?.target ?? 0, masked)}
@@ -89,7 +89,7 @@ export function ContributeSheet({
           />
         </div>
         {amount > 0 && (
-          <p className="mt-2 text-[11.5px] font-semibold text-forest">
+          <p className="mt-2 text-[11.5px] font-medium text-forest">
             Setelah setor ini: {afterPercent}% tercapai 🌿
           </p>
         )}
@@ -112,10 +112,10 @@ export function ContributeSheet({
             type="button"
             onClick={() => setDigits(String(value))}
             className={cn(
-              'rounded-full px-3 py-1.5 text-[11.5px] font-semibold tabular-nums transition-all active:scale-95',
+              'rounded-full px-3 py-1.5 text-[11.5px] font-medium tabular-nums transition-all active:scale-95',
               Number(digits) === value
                 ? 'bg-forest text-mint'
-                : 'bg-cream text-ink/55 ring-1 ring-soil/14 hover:bg-cream hover:text-ink',
+                : 'bg-cream text-forest/55 ring-1 ring-soil/14 hover:bg-cream hover:text-forest',
             )}
           >
             {maskNominal(value, masked)}
@@ -125,7 +125,7 @@ export function ContributeSheet({
 
       {/* ── dari dompet mana — tile berwarna brand, bukan dropdown abu-abu ── */}
       <div className="mt-5 pb-1">
-        <p className="text-[13px] font-semibold text-ink">Setor dari dompet</p>
+        <p className="text-[13px] font-medium text-forest">Setor dari dompet</p>
         <div
           role="radiogroup"
           aria-label="Pilih dompet sumber"
@@ -149,16 +149,16 @@ export function ContributeSheet({
               >
                 <span
                   className={cn(
-                    'flex size-8 items-center justify-center rounded-xl text-[12px] font-black ring-1 ring-inset',
+                    'flex size-8 items-center justify-center rounded-xl text-[12px] font-medium ring-1 ring-inset',
                     source.tile,
                   )}
                 >
                   {source.name.charAt(0)}
                 </span>
-                <span className="text-[11.5px] font-bold leading-tight text-ink">
+                <span className="text-[11.5px] font-medium leading-tight text-forest">
                   {source.name}
                 </span>
-                <span className="flex items-center gap-1 text-[9.5px] font-medium text-ink/40">
+                <span className="flex items-center gap-1 text-[9.5px] font-medium text-forest/40">
                   <span aria-hidden className={cn('size-1.5 rounded-full', source.dot)} />
                   {source.kind}
                 </span>

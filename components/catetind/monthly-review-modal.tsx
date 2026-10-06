@@ -64,12 +64,10 @@ import { useLiveFunds } from '@/lib/money/funds-store'
    3. CEPAT. Panel 2 selesai < 20 detik: angka sudah terisi, tombol ± untuk
       menggeser, chip celengan untuk quick-pick. CTA-nya di zona ibu jari.
 
-   Shell-nya (backdrop, drag-down mobile) memakai gestur bersama dengan Rekap
-   Mingguan supaya perilakunya mustahil berbeda. Catatan: sejak audit "Weekly
-   Recap Layout", Rekap Mingguan tampil sebagai MODAL TENGAH di desktop,
-   sementara modal ini tetap panel kanan — gesturnya tetap satu, tata letaknya
-   yang sengaja berbeda karena konteksnya berbeda (ritual bulanan vs ringkasan
-   pekan). */
+   Shell-nya (backdrop, drag-down mobile, MODAL TENGAH di desktop) memakai
+   geometri & gestur yang SAMA dengan Rekap Mingguan — sejak audit "Weekly Recap
+   Layout" kedua popup ini sengaja satu keluarga: dua momen berbeda (ritual
+   bulanan vs ringkasan pekan) tetapi dengan bahasa visual yang identik. */
 
 type PanelId = 'recap' | 'target'
 
@@ -227,6 +225,7 @@ export function MonthlyReviewModal({
       : {}
 
   const current = PANELS.find((item) => item.id === panel) ?? PANELS[0]
+  const panelIndex = PANELS.findIndex((item) => item.id === panel)
   const isLastPanel = panel === 'target'
 
   return (
@@ -248,17 +247,20 @@ export function MonthlyReviewModal({
         style={{ opacity: open ? Math.max(1 - dragY / 300, 0.35) : 0 }}
       />
 
-      {/* panel: bottom sheet di mobile, panel kanan 440px di desktop */}
+      {/* panel: bottom sheet di mobile, MODAL TENGAH di desktop ────────────────
+          Gaya disamakan dengan Rekap Mingguan (audit "Weekly Recap Layout"): dua
+          popup ini satu keluarga, jadi geometrinya identik — bukan panel kanan
+          440px lagi yang terasa sesak/timpang dari grid Dashboard. */}
       <div
         role="dialog"
         aria-modal="true"
         aria-label={COPY.dialogLabel}
         style={sheetStyle}
         className={cn(
-          'absolute inset-x-0 bottom-0 top-8 flex flex-col rounded-t-[2.25rem] bg-cream px-5 pb-6 shadow-[0_-24px_60px_-24px_rgba(69,89,78,0.55)] ring-1 ring-soil/12 transition-[transform,opacity] duration-[650ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform motion-reduce:transition-none lg:inset-x-auto lg:inset-y-3 lg:right-3 lg:w-[440px] lg:rounded-[2rem] lg:shadow-[-24px_0_60px_-24px_rgba(69,89,78,0.55)]',
+          'absolute inset-x-0 bottom-0 top-8 flex flex-col rounded-t-[2.25rem] bg-cream px-5 pb-6 shadow-[0_-24px_60px_-24px_rgba(69,89,78,0.55)] ring-1 ring-soil/12 transition-[transform,opacity] duration-[650ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform motion-reduce:transition-none lg:inset-y-6 lg:left-1/2 lg:right-auto lg:w-[min(640px,calc(100vw_-_6rem))] lg:-translate-x-1/2 lg:rounded-[2rem] lg:shadow-[0_40px_90px_-40px_rgba(69,89,78,0.6)]',
           open
-            ? 'translate-y-0 opacity-100 lg:translate-x-0'
-            : 'translate-y-full opacity-0 lg:translate-y-0 lg:translate-x-[calc(100%+12px)]',
+            ? 'translate-y-0 opacity-100'
+            : 'translate-y-full opacity-0 lg:translate-y-3 lg:scale-[0.98]',
         )}
       >
         {/* zona drag (mobile): handle + hint swipe-down */}
@@ -268,11 +270,11 @@ export function MonthlyReviewModal({
           className="shrink-0 select-none pb-1 pt-3 lg:hidden"
         >
           <div className="mx-auto h-1.5 w-10 rounded-full bg-ink/15" aria-hidden />
-          <p className="mt-1.5 text-center text-[10px] font-medium text-ink/30">
+          <p className="mt-1.5 text-center text-[10px] font-medium text-forest/30">
             {COPY.swipeHint}
           </p>
         </div>
-        {/* handle statis di desktop (panel kanan — tanpa swipe) */}
+        {/* handle statis di desktop (modal tengah — tanpa swipe) */}
         <div
           className="mx-auto mt-3 hidden h-1.5 w-10 shrink-0 rounded-full bg-ink/15 lg:block"
           aria-hidden
@@ -281,27 +283,33 @@ export function MonthlyReviewModal({
         {/* kepala modal — sapaan hangat, bukan instruksi */}
         <div className="mt-3 flex shrink-0 items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-ink/40">
+            <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-forest/40">
               {COPY.eyebrow}
             </p>
-            <h2 className="mt-1 text-2xl font-semibold leading-tight tracking-tight text-ink">
+            <h2 className="mt-1 text-2xl font-medium leading-tight tracking-tight text-forest">
               {COPY.title}
             </h2>
-            <p className="mt-1.5 text-[12px] leading-relaxed text-ink/50">{COPY.subtitle}</p>
+            <p className="mt-1.5 text-[12px] leading-relaxed text-forest/50">{COPY.subtitle}</p>
           </div>
           <button
             ref={closeRef}
             type="button"
             onClick={onClose}
             aria-label={COPY.close}
-            className="flex size-9 shrink-0 items-center justify-center rounded-full bg-cream text-ink ring-1 ring-soil/12 transition-colors hover:bg-sage"
+            className="flex size-9 shrink-0 items-center justify-center rounded-full bg-cream text-forest ring-1 ring-soil/12 transition-colors hover:bg-sage"
           >
             <X className="size-4" strokeWidth={2.2} />
           </button>
         </div>
 
-        {/* tab dua panel — jalan pintas ke bagian yang user butuhkan */}
-        <div role="tablist" aria-label={COPY.dialogLabel} className="mt-4 flex shrink-0 gap-1.5">
+        {/* tab dua panel — segmented control di dalam track sage, GAYA SAMA
+            dengan Rekap Mingguan (satu bahasa visual untuk kedua popup, bukan
+            lagi dua pill bertaut ring) */}
+        <div
+          role="tablist"
+          aria-label={COPY.dialogLabel}
+          className="mt-4 grid shrink-0 grid-cols-2 gap-1 rounded-full bg-sage/60 p-1 ring-1 ring-soil/10"
+        >
           {PANELS.map((item) => {
             const active = item.id === panel
             return (
@@ -314,10 +322,10 @@ export function MonthlyReviewModal({
                 aria-controls={`monthly-review-panel-${item.id}`}
                 onClick={() => setPanel(item.id)}
                 className={cn(
-                  'flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-2 text-[11.5px] font-medium transition-colors duration-200',
+                  'flex min-w-0 items-center justify-center gap-1.5 rounded-full px-2 py-2 text-[11.5px] font-medium whitespace-nowrap transition-colors duration-200',
                   active
-                    ? 'bg-forest font-semibold text-mint'
-                    : 'bg-cream text-ink/45 ring-1 ring-soil/12 hover:text-ink',
+                    ? 'bg-forest font-medium text-mint'
+                    : 'text-forest/55 hover:bg-cream/70 hover:text-forest',
                 )}
               >
                 {item.icon}
@@ -327,14 +335,17 @@ export function MonthlyReviewModal({
           })}
         </div>
 
-        {/* progress dua panel — segmen aktif lebih panjang sebagai penanda posisi */}
+        {/* progress dua panel — di alur normal (bukan absolute) supaya tidak
+            menimpa tab; segmen aktif lebih panjang sebagai penanda posisi,
+            bahasa yang SAMA dengan penanda slide Rekap Mingguan */}
         <div className="mt-2.5 flex shrink-0 gap-1" aria-hidden>
-          {PANELS.map((item) => (
+          {PANELS.map((item, i) => (
             <span
               key={item.id}
               className={cn(
                 'h-1 rounded-full transition-all duration-300',
-                item.id === panel ? 'flex-[1.6] bg-mint' : 'flex-1 bg-ink/10',
+                i === panelIndex ? 'flex-[1.6]' : 'flex-1',
+                i <= panelIndex ? 'bg-mint' : 'bg-ink/10',
               )}
             />
           ))}
@@ -383,7 +394,7 @@ export function MonthlyReviewModal({
             type="button"
             onClick={onClose}
             aria-label={COPY.skipA11y}
-            className="shrink-0 rounded-full px-3 py-3 text-[12px] font-semibold text-ink/45 transition-colors hover:text-ink/70"
+            className="shrink-0 rounded-full px-3 py-3 text-[12px] font-medium text-forest/45 transition-colors hover:text-forest/70"
           >
             {COPY.skip}
           </button>
@@ -392,7 +403,7 @@ export function MonthlyReviewModal({
               type="button"
               aria-label={COPY.back}
               onClick={() => setPanel('recap')}
-              className="flex size-10 shrink-0 items-center justify-center rounded-full bg-cream text-ink ring-1 ring-soil/12 transition-colors hover:bg-sage"
+              className="flex size-10 shrink-0 items-center justify-center rounded-full bg-cream text-forest ring-1 ring-soil/12 transition-colors hover:bg-sage"
             >
               <ChevronLeft className="size-5" strokeWidth={2.4} />
             </button>
@@ -403,9 +414,9 @@ export function MonthlyReviewModal({
             disabled={isLastPanel && inputLocked}
             aria-disabled={isLastPanel && inputLocked ? true : undefined}
             className={cn(
-              'flex-1 rounded-full py-3.5 text-sm font-semibold transition-colors',
+              'flex-1 rounded-full py-3.5 text-sm font-medium transition-colors',
               isLastPanel && inputLocked
-                ? 'cursor-not-allowed bg-ink/[0.07] text-ink/35'
+                ? 'cursor-not-allowed bg-ink/[0.07] text-forest/35'
                 : 'bg-forest text-mint hover:bg-forest-soft active:scale-[0.98]',
             )}
           >
@@ -427,14 +438,14 @@ export function MonthlyReviewModal({
 /** label mikro bergaya dashboard (mis. "PEMASUKAN") */
 function MicroLabel({ children }: { children: ReactNode }) {
   return (
-    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-ink/40">{children}</p>
+    <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-forest/40">{children}</p>
   )
 }
 
 /** chip meta kecil (bulan, jumlah transaksi) */
 function MetaTag({ icon, children }: { icon: ReactNode; children: ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-cream px-2.5 py-1 text-[11px] font-medium text-ink/60 ring-1 ring-soil/12">
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-cream px-2.5 py-1 text-[11px] font-medium text-forest/60 ring-1 ring-soil/12">
       {icon}
       {children}
     </span>
@@ -472,10 +483,10 @@ function StatTile({
         >
           {icon}
         </span>
-        <span className="text-[11px] font-medium text-ink/50">{label}</span>
+        <span className="text-[11px] font-medium text-forest/50">{label}</span>
       </div>
-      <p className="mt-2 text-[17px] font-semibold tabular-nums text-ink">{value}</p>
-      {hint && <p className="mt-1 text-[11px] leading-relaxed text-ink/45">{hint}</p>}
+      <p className="mt-2 text-[17px] font-medium tabular-nums text-forest">{value}</p>
+      {hint && <p className="mt-1 text-[11px] leading-relaxed text-forest/45">{hint}</p>}
     </div>
   )
 }
@@ -501,7 +512,7 @@ function RecapPanel({ recap }: { recap: MonthlyRecap }) {
   return (
     <div className="space-y-3.5">
       <header className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-lg font-semibold tracking-tight text-ink">
+        <h3 className="text-lg font-medium tracking-tight text-forest">
           {COPY.recapTitle(recap.monthLabel)}
         </h3>
         <div className="flex flex-wrap items-center gap-1.5">
@@ -536,7 +547,7 @@ function RecapPanel({ recap }: { recap: MonthlyRecap }) {
               label={COPY.savedLabel}
               value={money(recap.savedLastMonth)}
               hint={
-                <span className="inline-flex items-center gap-1 rounded-full bg-mint/25 px-2 py-0.5 text-[10.5px] font-semibold text-forest">
+                <span className="inline-flex items-center gap-1 rounded-full bg-mint/25 px-2 py-0.5 text-[10.5px] font-medium text-forest">
                   <Check className="size-3" strokeWidth={3} />
                   {COPY.savingsRateLabel(recap.savingsRate ?? 0)}
                 </span>
@@ -546,7 +557,7 @@ function RecapPanel({ recap }: { recap: MonthlyRecap }) {
           </div>
 
           {/* arti angkanya dijelaskan, tidak dibiarkan misterius */}
-          <p className="px-1 text-[11px] leading-relaxed text-ink/45">
+          <p className="px-1 text-[11px] leading-relaxed text-forest/45">
             {COPY.savingsRateCaption}
             {recap.setAside > 0 && ` ${COPY.setAsideNote(money(recap.setAside))}`}
           </p>
@@ -568,12 +579,12 @@ function RecapPanel({ recap }: { recap: MonthlyRecap }) {
                 )}
               </span>
               <div className="min-w-0">
-                <p className="text-[13px] font-semibold leading-snug text-ink">
+                <p className="text-[13px] font-medium leading-snug text-forest">
                   {recap.targetAchieved
                     ? COPY.targetAchieved(money(recap.target))
                     : COPY.targetMissed(money(recap.target), targetPct)}
                 </p>
-                <p className="mt-1 text-[11px] leading-relaxed text-ink/45">
+                <p className="mt-1 text-[11px] leading-relaxed text-forest/45">
                   {recap.targetAchieved ? COPY.targetAchievedCaption : COPY.targetMissedCaption}
                 </p>
               </div>
@@ -587,7 +598,7 @@ function RecapPanel({ recap }: { recap: MonthlyRecap }) {
             </div>
             <div className="min-w-0">
               <MicroLabel>{COPY.plantTitle}</MicroLabel>
-              <p className="mt-1 text-[12.5px] leading-relaxed text-ink/60">
+              <p className="mt-1 text-[12.5px] leading-relaxed text-forest/60">
                 {COPY.plantCaption(STAGE_NAMES[recap.plantStage])}
               </p>
             </div>
@@ -601,14 +612,14 @@ function RecapPanel({ recap }: { recap: MonthlyRecap }) {
               <BarChart3 className="size-4" strokeWidth={2.2} />
             </span>
             <div className="min-w-0">
-              <p className="text-[13px] font-semibold text-ink">{COPY.patientTitle}</p>
-              <p className="mt-1 text-[12px] leading-relaxed text-ink/60">{COPY.patientBody}</p>
+              <p className="text-[13px] font-medium text-forest">{COPY.patientTitle}</p>
+              <p className="mt-1 text-[12px] leading-relaxed text-forest/60">{COPY.patientBody}</p>
             </div>
           </div>
 
           {/* progress unlock — engagement yang jujur: menambah catatan, bukan menebak */}
           <div className="mt-3.5">
-            <div className="flex items-center justify-between gap-2 text-[11px] font-medium text-ink/55">
+            <div className="flex items-center justify-between gap-2 text-[11px] font-medium text-forest/55">
               <span className="tabular-nums">{readiness.progressLabel}</span>
               <span className="tabular-nums">{progressPct}%</span>
             </div>
@@ -626,13 +637,13 @@ function RecapPanel({ recap }: { recap: MonthlyRecap }) {
               />
             </div>
             {readiness.reasonLabel && (
-              <p className="mt-2 text-[11px] leading-relaxed text-ink/50">
+              <p className="mt-2 text-[11px] leading-relaxed text-forest/50">
                 {readiness.reasonLabel}
               </p>
             )}
           </div>
 
-          <p className="mt-3 text-[11.5px] font-semibold text-forest">{COPY.patientSkipHint}</p>
+          <p className="mt-3 text-[11.5px] font-medium text-forest">{COPY.patientSkipHint}</p>
         </div>
       )}
     </div>
@@ -690,7 +701,7 @@ function TargetPanel({
           size="lg"
           hint={provenanceHint}
         />
-        <p className="mt-1.5 text-[11px] leading-relaxed text-ink/45">{COPY.targetQuestionHint}</p>
+        <p className="mt-1.5 text-[11px] leading-relaxed text-forest/45">{COPY.targetQuestionHint}</p>
         {/* pembaca layar menerima nominalnya sebagai kalimat utuh (angka di input
             terbaca satu-satu digit, jadi tidak berguna) */}
         <p className="sr-only" aria-live="polite">
@@ -706,7 +717,7 @@ function TargetPanel({
             type="button"
             onClick={() => onStep(delta)}
             aria-label={delta < 0 ? COPY.stepDown : COPY.stepUp}
-            className="flex items-center gap-1 rounded-full bg-cream px-3 py-2 text-[11.5px] font-semibold text-ink ring-1 ring-soil/14 transition-all hover:bg-sage/50 active:scale-95"
+            className="flex items-center gap-1 rounded-full bg-cream px-3 py-2 text-[11.5px] font-medium text-forest ring-1 ring-soil/14 transition-all hover:bg-sage/50 active:scale-95"
           >
             {delta < 0 ? (
               <Minus className="size-3.5" strokeWidth={2.6} />
@@ -719,7 +730,7 @@ function TargetPanel({
         <button
           type="button"
           onClick={onReset}
-          className="flex items-center gap-1 rounded-full px-3 py-2 text-[11.5px] font-semibold text-ink/50 transition-colors hover:text-ink"
+          className="flex items-center gap-1 rounded-full px-3 py-2 text-[11.5px] font-medium text-forest/50 transition-colors hover:text-forest"
         >
           <RotateCcw className="size-3.5" strokeWidth={2.4} />
           {COPY.stepReset}
@@ -738,8 +749,8 @@ function TargetPanel({
           yang masih bisa ditambah (jangan menyisakan bagian kosong). */}
       {funds.length > 0 && (
         <section className="rounded-2xl bg-cream p-4 ring-1 ring-soil/12">
-          <p className="text-[13px] font-semibold text-ink">{COPY.fundTitle}</p>
-          <p className="mt-0.5 text-[11px] leading-relaxed text-ink/45">{COPY.fundCaption}</p>
+          <p className="text-[13px] font-medium text-forest">{COPY.fundTitle}</p>
+          <p className="mt-0.5 text-[11px] leading-relaxed text-forest/45">{COPY.fundCaption}</p>
 
           <div role="radiogroup" aria-label={COPY.fundTitle} className="mt-3 space-y-2">
             {funds.map(({ fund, monthly, percent }) => {
@@ -761,8 +772,8 @@ function TargetPanel({
                   <span className="min-w-0">
                     <span
                       className={cn(
-                        'block truncate text-[13px] font-semibold',
-                        active ? 'text-mint' : 'text-ink',
+                        'block truncate text-[13px] font-medium',
+                        active ? 'text-mint' : 'text-forest',
                       )}
                     >
                       {fund.name}
@@ -770,7 +781,7 @@ function TargetPanel({
                     <span
                       className={cn(
                         'mt-0.5 block text-[11px] tabular-nums',
-                        active ? 'text-mint/70' : 'text-ink/45',
+                        active ? 'text-mint/70' : 'text-forest/45',
                       )}
                     >
                       {COPY.fundProgress(percent)}
@@ -778,7 +789,7 @@ function TargetPanel({
                   </span>
                   <span
                     className={cn(
-                      'shrink-0 rounded-full px-3 py-1.5 text-[11.5px] font-semibold tabular-nums',
+                      'shrink-0 rounded-full px-3 py-1.5 text-[11.5px] font-medium tabular-nums',
                       active ? 'bg-mint text-forest' : 'bg-sage text-forest',
                     )}
                   >
@@ -798,7 +809,7 @@ function TargetPanel({
                 'flex w-full items-center gap-2.5 rounded-2xl px-3.5 py-2.5 text-left text-[12.5px] font-medium transition-colors',
                 fundId === null
                   ? 'bg-sage/70 text-forest'
-                  : 'bg-cream text-ink/50 ring-1 ring-soil/14 hover:text-ink',
+                  : 'bg-cream text-forest/50 ring-1 ring-soil/14 hover:text-forest',
               )}
             >
               <Sprout className="size-4 shrink-0" strokeWidth={2.2} />
@@ -807,7 +818,7 @@ function TargetPanel({
           </div>
 
           {/* jujur soal batas: modal ini memutuskan, setorannya di /budget */}
-          <p className="mt-3 text-[11px] leading-relaxed text-ink/45">{COPY.fundSetorHint}</p>
+          <p className="mt-3 text-[11px] leading-relaxed text-forest/45">{COPY.fundSetorHint}</p>
         </section>
       )}
     </div>

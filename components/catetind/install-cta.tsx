@@ -47,7 +47,7 @@ export function InstallCta({
       >
         <CheckCircle2 className="size-6 shrink-0 text-forest" strokeWidth={2.2} />
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-forest">
+          <p className="text-sm font-medium text-forest">
             ✅ CatetInd sudah terpasang di perangkat ini!
           </p>
           <p className="mt-1 text-xs leading-relaxed text-forest/70">
@@ -67,7 +67,7 @@ export function InstallCta({
         )}
       >
         <Smartphone className="size-5 shrink-0 text-forest" strokeWidth={2.2} />
-        <p className="text-sm leading-relaxed text-ink/60">
+        <p className="text-sm leading-relaxed text-forest/60">
           {outcome === 'dismissed'
             ? 'Oke, install-nya di-nanti dulu. Kamu bisa install kapan saja lewat langkah manual di bawah 👇'
             : 'Tombol install otomatis belum tersedia di browser ini. Tenang, ada cara manual di bawah 👇'}
@@ -82,7 +82,7 @@ export function InstallCta({
         type="button"
         onClick={handleInstall}
         disabled={isPrompting}
-        className="flex w-full items-center justify-center gap-2.5 rounded-2xl bg-mint px-6 py-4 text-base font-semibold text-forest shadow-[0_20px_44px_-18px_rgba(69,89,78,0.6)] ring-1 ring-forest/10 transition-all duration-200 hover:bg-mint-soft hover:shadow-[0_24px_48px_-18px_rgba(69,89,78,0.65)] active:scale-[0.98] disabled:opacity-70 sm:text-lg"
+        className="flex w-full items-center justify-center gap-2.5 rounded-2xl bg-mint px-6 py-4 text-base font-medium text-forest shadow-[0_20px_44px_-18px_rgba(69,89,78,0.6)] ring-1 ring-forest/10 transition-all duration-200 hover:bg-mint-soft hover:shadow-[0_24px_48px_-18px_rgba(69,89,78,0.65)] active:scale-[0.98] disabled:opacity-70 sm:text-lg"
       >
         {isPrompting ? (
           <Loader2 className="size-5 animate-spin" strokeWidth={2.4} />
@@ -91,7 +91,7 @@ export function InstallCta({
         )}
         {isPrompting ? 'Membuka dialog install…' : 'Install CatetInd Sekarang'}
       </button>
-      <p className="mt-2.5 text-center text-xs text-ink/45">
+      <p className="mt-2.5 text-center text-xs text-forest/45">
         Gratis · Tanpa App Store · Ikonnya langsung nongol di Homescreen
       </p>
     </div>

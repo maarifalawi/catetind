@@ -92,7 +92,7 @@ export const PlantWidget = memo(function PlantWidget({
             <span
               className={cn(
                 'flex size-8 items-center justify-center rounded-full',
-                sleeping ? 'bg-soil/[0.09] text-ink/45' : 'bg-sage text-forest',
+                sleeping ? 'bg-soil/[0.09] text-forest/45' : 'bg-sage text-forest',
               )}
             >
               {sleeping ? (
@@ -102,13 +102,13 @@ export const PlantWidget = memo(function PlantWidget({
               )}
             </span>
             <div>
-              <p className="text-sm font-semibold text-ink">Tanamanmu</p>
+              <p className="text-sm font-medium text-forest">Tanamanmu</p>
               {sleeping ? (
                 /* saat tidur, label tahap diganti status — bukan angka HP/streak
                    yang bisa terasa seperti hukuman (PRD 1989–1994) */
-                <p className="text-xs text-ink/45">{PLANT_SLEEP_COPY.badge}</p>
+                <p className="text-xs text-forest/45">{PLANT_SLEEP_COPY.badge}</p>
               ) : (
-                <p className="text-xs text-ink/45">
+                <p className="text-xs text-forest/45">
                   Tahap {stage} - {STAGE_NAMES[stage]}
                 </p>
               )}
@@ -128,7 +128,7 @@ export const PlantWidget = memo(function PlantWidget({
                     'size-3',
                     i < Math.round((hp / 100) * 5)
                       ? 'fill-mint text-mint-soft'
-                      : 'text-soil/10',
+                      : 'text-forest/10',
                   )}
                   strokeWidth={1.6}
                 />
@@ -162,11 +162,13 @@ export const PlantWidget = memo(function PlantWidget({
             wilted={wilted}
             sleeping={sleeping}
             className={cn(
-              'relative w-40 sm:w-44',
+              /* kartu tanaman kini SETENGAH lebar (paket 67) — ilustrasinya ikut
+                 dibesarkan supaya tidak tenggelam di ruang yang lebih lega */
+              'relative w-40 sm:w-48 lg:w-56',
               !sleeping && 'transition-transform duration-300 group-hover:scale-[1.03]',
             )}
           />
-                    <span className="mt-4 text-[11px] font-medium text-ink/40 transition-colors group-hover:text-forest">
+                    <span className="mt-4 text-[11px] font-medium text-forest/40 transition-colors group-hover:text-forest">
             {sleeping ? PLANT_SLEEP_COPY.detailHint : 'Tap untuk lihat detail'}
           </span>
           {/** sparkle kecil di samping teks untuk sentuhan modern (tidak saat tidur) */}
@@ -177,39 +179,18 @@ export const PlantWidget = memo(function PlantWidget({
           )}
         </button>
 
-        {/* konteks: apa yang membuat tanaman ini tumbuh — jahitan antara widget
-            tanaman dan Tabungan Impian (PRD Domain 2C & 3B). Namanya diambil dari
-            celengan yang sama dengan kartu Tabungan Impian di sebelahnya, jadi
-            dua kartu itu tidak mungkin menyebut celengan yang berbeda. Saat tidur,
-            baris "setor lagi biar naik tahap" diganti kalimat menunggu: tidak ada
-            ajakan mencatat yang sedang tidak mungkin dilakukan. */}
-        <div className="mt-3 flex items-center gap-2 rounded-xl bg-sage/60 px-3 py-2 ring-1 ring-forest/[0.06]">
-          {sleeping ? (
-            <>
-              <Moon className="size-3.5 shrink-0 text-forest" strokeWidth={2.4} aria-hidden />
-              <p className="text-[11.5px] leading-snug text-ink/65">{PLANT_SLEEP_COPY.caption}</p>
-            </>
-          ) : nutrition ? (
-            <>
-              <Sprout className="size-3.5 shrink-0 text-forest" strokeWidth={2.4} aria-hidden />
-              <p className="text-[11.5px] leading-snug text-ink/65">
-                {HOME_PLANT_COPY.nutritionBefore}{' '}
-                <b className="font-semibold text-forest">{nutrition.name}</b>{' '}
-                <span className="tabular-nums">
-                  {HOME_PLANT_COPY.nutritionPercent(nutritionPct)}
-                </span>{' '}
-                {HOME_PLANT_COPY.nutritionAfter}
-              </p>
-            </>
-          ) : (
-            <>
-              <Sprout className="size-3.5 shrink-0 text-forest" strokeWidth={2.4} aria-hidden />
-              <p className="text-[11.5px] leading-snug text-ink/65">
-                {HOME_PLANT_COPY.noNutrition}
-              </p>
-            </>
-          )}
-        </div>
+        {/* baris konteks: HANYA saat tanaman sedang "tidur" (masa aktif habis) —
+            satu-satunya keadaan yang memang perlu dijelaskan. Baris nutrisi
+            "Tumbuh dari <celengan> (n%) — setor lagi biar naik tahap" DIHAPUS
+            (permintaan pemilik produk, paket 66): badge tahap di header + bar
+            "menuju tahap berikutnya" di kaki kartu sudah menceritakan hal yang
+            sama, dan kalimat itu terpampang di setiap kunjungan. */}
+        {sleeping && (
+          <div className="mt-3 flex items-center gap-2 rounded-xl bg-sage/60 px-3 py-2 ring-1 ring-forest/[0.06]">
+            <Moon className="size-3.5 shrink-0 text-forest" strokeWidth={2.4} aria-hidden />
+            <p className="text-[11.5px] leading-snug text-forest/65">{PLANT_SLEEP_COPY.caption}</p>
+          </div>
+        )}
 
         {/* footer - progress menuju tahap berikutnya, mengisi bawah kartu.
             Angkanya jarak ke tahap berikutnya, diturunkan dari persen celengan
@@ -219,8 +200,8 @@ export const PlantWidget = memo(function PlantWidget({
             diganti kalimat target, bukan "menuju tahap 4 - Berbunga". */}
         <div className="mt-3 border-t border-soil/12 pt-3.5">
           <div className="flex items-center justify-between text-[11px]">
-            <span className="font-medium text-ink/45">{footerLabel}</span>
-            <span className="font-semibold text-forest tabular-nums">{bandPct}%</span>
+            <span className="font-medium text-forest/45">{footerLabel}</span>
+            <span className="font-medium text-forest tabular-nums">{bandPct}%</span>
           </div>
           <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-soil/[0.09]">
             <div

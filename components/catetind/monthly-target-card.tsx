@@ -63,10 +63,10 @@ export const MonthlyTargetCard = memo(function MonthlyTargetCard({
           <Target className="size-4.5" strokeWidth={2.2} />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-[13px] font-semibold text-ink">
+          <span className="block truncate text-[13px] font-medium text-forest">
             {savedThisMonth ? COPY.savingsLabel(money(amount)) : COPY.emptyTitle}
           </span>
-          <span className="mt-0.5 block text-xs leading-relaxed text-ink/55">
+          <span className="mt-0.5 block text-xs leading-relaxed text-forest/55">
             {savedThisMonth
               ? showFundLink && fundName
                 ? COPY.fundLabel(fundName, money(fundMonthly))
@@ -74,7 +74,7 @@ export const MonthlyTargetCard = memo(function MonthlyTargetCard({
               : COPY.emptyBody}
           </span>
         </span>
-        <span className="flex shrink-0 items-center gap-1 rounded-full bg-forest px-3.5 py-2 text-[11.5px] font-semibold text-cream">
+        <span className="flex shrink-0 items-center gap-1 rounded-full bg-forest px-3.5 py-2 text-[11.5px] font-medium text-cream">
           {savedThisMonth ? COPY.ctaEdit : COPY.ctaSet}
           <ChevronRight className="size-3.5" strokeWidth={2.6} />
         </span>
@@ -86,7 +86,7 @@ export const MonthlyTargetCard = memo(function MonthlyTargetCard({
         <div className="border-t border-soil/8 px-4 py-2">
           <Link
             href="/budget"
-            className="inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-forest transition-colors hover:text-forest-soft"
+            className="inline-flex items-center gap-1.5 text-[11.5px] font-medium text-forest transition-colors hover:text-forest-soft"
           >
             <PiggyBank className="size-3.5" strokeWidth={2.4} />
             {COPY.fundLink}

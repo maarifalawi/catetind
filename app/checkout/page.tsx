@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { CheckoutScreen } from '@/components/catetind/checkout-screen'
 import { PhoneStage } from '@/components/catetind/phone-stage'
+import { staticPriceState } from '@/lib/data/pricing'
 
 /**
  * Checkout (/checkout) — inventaris #3, halaman PUBLIK.
@@ -15,17 +16,20 @@ import { PhoneStage } from '@/components/catetind/phone-stage'
  * menyembunyikan dirinya sendiri di prefix `/checkout` (lihat komentar di kedua
  * komponen itu) supaya tidak ada navigasi app yang mengganggu alur membayar.
  *
- * HARGA REAL-TIME (inventaris #3: "harga real-time, no-cache") — arah produksi:
- * halaman ini jadi dynamic lalu membaca `GET /api/price` dengan `cache: 'no-store'`
- * supaya angka Founding Member yang naik mengikuti pembelian terakhir:
+ * HARGA REAL-TIME (inventaris #3: "harga real-time, no-cache") — halaman ini
+ * DINAMIS (`force-dynamic`) dan memuat harga Founding Member dari satu sumber:
  *
- *   export const dynamic = 'force-dynamic'
+ *   • SSR memakai `staticPriceState()` supaya first paint TIDAK kosong (tidak ada
+ *     halaman yang berkedip "Rp 0" sambil menunggu jaringan);
+ *   • setelah mount, `CheckoutScreen` memanggil `GET /api/price` dengan
+ *     `cache: 'no-store'` dan menggantinya dengan angka terbaru bila tersedia.
  *
- * Di repo demo baris itu sengaja BELUM dinyalakan: harganya masih mock & statis
- * (founding member = snapshot di `lib/data/pricing.ts`), jadi halaman bisa
- * diprerender tanpa risiko menampilkan harga basi. Yang penting kontraknya sudah
- * jelas: TIDAK ada harga yang ditulis di JSX halaman ini.
+ * Selama tabel `pricing_state` belum ada (pembayaran/Midtrans belum aktif),
+ * `/api/price` menjawab `isDynamic: false` — dan UI mengatakannya apa adanya.
+ * Yang penting: TIDAK ada harga yang ditulis di JSX halaman ini.
  */
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
   title: 'Pembayaran — CatetInd',
   description:
@@ -35,7 +39,7 @@ export const metadata: Metadata = {
 export default function CheckoutPage() {
   return (
     <PhoneStage plain>
-      <CheckoutScreen />
+      <CheckoutScreen initialPrice={staticPriceState()} />
     </PhoneStage>
   )
 }

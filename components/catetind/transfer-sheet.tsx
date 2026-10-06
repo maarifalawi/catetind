@@ -170,10 +170,10 @@ export function TransferSheet({
           >
             <ArrowLeftRight className="size-6 text-forest/45" strokeWidth={2.2} />
           </span>
-          <p className="mt-3.5 text-[13.5px] font-semibold text-ink">
+          <p className="mt-3.5 text-[13.5px] font-medium text-forest">
             {TRANSFER_SHEET_COPY.needSecondTitle}
           </p>
-          <p className="mt-1.5 max-w-xs text-[12.5px] leading-relaxed text-ink/55">
+          <p className="mt-1.5 max-w-xs text-[12.5px] leading-relaxed text-forest/55">
             {TRANSFER_SHEET_COPY.needSecond}
           </p>
           {/* CTA-nya menuju halaman yang benar-benar bisa menambah dompet
@@ -181,12 +181,12 @@ export function TransferSheet({
           <Link
             href="/wallet"
             onClick={onClose}
-            className="mt-4 inline-flex h-11 items-center gap-2 rounded-2xl bg-forest px-5 text-[13px] font-semibold text-mint transition-colors hover:bg-forest-soft active:scale-[0.98]"
+            className="mt-4 inline-flex h-11 items-center gap-2 rounded-2xl bg-forest px-5 text-[13px] font-medium text-mint transition-colors hover:bg-forest-soft active:scale-[0.98]"
           >
             <Plus className="size-4" strokeWidth={2.6} aria-hidden />
             {TRANSFER_SHEET_COPY.needSecondCta}
           </Link>
-          <p className="mt-2 text-[11px] leading-relaxed text-ink/40">
+          <p className="mt-2 text-[11px] leading-relaxed text-forest/40">
             {TRANSFER_SHEET_COPY.needSecondCtaHint}
           </p>
         </div>
@@ -200,7 +200,7 @@ export function TransferSheet({
               kali. Pintu “Lainnya” menampilkan pemilihnya langsung. */}
           {showFromPicker ? (
             <div>
-              <p className="text-[13px] font-semibold leading-snug text-ink">
+              <p className="text-[13px] font-medium leading-snug text-forest">
                 {TRANSFER_SHEET_COPY.fromPickLabel}
               </p>
               <div
@@ -235,7 +235,7 @@ export function TransferSheet({
                   )
                 })}
               </div>
-              <p className="mt-2 text-[11px] leading-relaxed text-ink/45">
+              <p className="mt-2 text-[11px] leading-relaxed text-forest/45">
                 {TRANSFER_SHEET_COPY.fromPickHint}
               </p>
             </div>
@@ -248,18 +248,18 @@ export function TransferSheet({
               <span
                 aria-hidden
                 className={cn(
-                  'flex size-10 shrink-0 items-center justify-center rounded-2xl text-[14px] font-black text-ink ring-1 ring-inset ring-soil/10',
+                  'flex size-10 shrink-0 items-center justify-center rounded-2xl text-[14px] font-medium text-forest ring-1 ring-inset ring-soil/10',
                   origin?.color,
                 )}
               >
                 {origin?.name.charAt(0)}
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink/40">
+                <p className="text-[10.5px] font-medium uppercase tracking-[0.12em] text-forest/40">
                   {TRANSFER_SHEET_COPY.fromLabel}
                 </p>
-                <p className="mt-0.5 truncate text-[14px] font-bold text-ink">{origin?.name}</p>
-                <p className="text-[11px] text-ink/45">
+                <p className="mt-0.5 truncate text-[14px] font-medium text-forest">{origin?.name}</p>
+                <p className="text-[11px] text-forest/45">
                   {origin ? WALLET_TYPE_LABEL[origin.type] : ''} · {maskMoney(balance, masked)} ·{' '}
                   {origin ? CONTEXT_LABEL[origin.context] : ''}
                 </p>
@@ -267,7 +267,7 @@ export function TransferSheet({
               <button
                 type="button"
                 onClick={() => setPickingFrom(true)}
-                className="shrink-0 rounded-full bg-cream px-3 py-1.5 text-[11px] font-semibold text-forest ring-1 ring-soil/14 transition-colors hover:bg-sage/60"
+                className="shrink-0 rounded-full bg-cream px-3 py-1.5 text-[11px] font-medium text-forest ring-1 ring-soil/14 transition-colors hover:bg-sage/60"
               >
                 {TRANSFER_SHEET_COPY.changeFrom}
               </button>
@@ -279,7 +279,7 @@ export function TransferSheet({
               lain DIBERI TAHU (paket 47) — pindah antar konteks itu sah, yang
               tidak boleh adalah terjadi tanpa user sadar. */}
           <RevealStep show={origin !== null && !showFromPicker} className="mt-5">
-            <p className="text-[13px] font-semibold leading-snug text-ink">
+            <p className="text-[13px] font-medium leading-snug text-forest">
               {TRANSFER_SHEET_COPY.toLabel}
             </p>
             <div
@@ -317,7 +317,7 @@ export function TransferSheet({
                 >
                   <Info className="size-3.5" strokeWidth={2.4} />
                 </span>
-                <p className="text-[12.5px] font-medium leading-relaxed text-ink/70">
+                <p className="text-[12.5px] font-medium leading-relaxed text-forest/70">
                   {TRANSFER_SHEET_COPY.crossContextNote(
                     CONTEXT_LABEL[destination.context],
                     CONTEXT_LABEL[origin.context],
@@ -346,11 +346,11 @@ export function TransferSheet({
                 onClick={() => setDigits(String(balance))}
                 disabled={balance <= 0}
                 className={cn(
-                  'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11.5px] font-semibold tabular-nums transition-all active:scale-95',
+                  'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11.5px] font-medium tabular-nums transition-all active:scale-95',
                   'disabled:cursor-not-allowed disabled:opacity-40',
                   amount === balance && balance > 0
                     ? 'bg-forest text-mint'
-                    : 'bg-cream text-ink/55 ring-1 ring-soil/14 hover:text-ink',
+                    : 'bg-cream text-forest/55 ring-1 ring-soil/14 hover:text-forest',
                 )}
               >
                 <WalletIcon className="size-3.5" strokeWidth={2.4} />
@@ -366,11 +366,11 @@ export function TransferSheet({
               <div className="mt-3.5 flex items-start gap-2.5 rounded-2xl bg-hud-amber/[0.14] p-3.5 ring-1 ring-hud-amber/25">
                 <span
                   aria-hidden
-                  className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-hud-amber/25 text-ink/60"
+                  className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-hud-amber/25 text-forest/60"
                 >
                   <Info className="size-3.5" strokeWidth={2.4} />
                 </span>
-                <p className="text-[12.5px] font-medium leading-relaxed text-ink/70">
+                <p className="text-[12.5px] font-medium leading-relaxed text-forest/70">
                   {TRANSFER_SHEET_COPY.emptyBalance(origin.name)}
                 </p>
               </div>
@@ -380,11 +380,11 @@ export function TransferSheet({
               <div className="mt-3.5 flex items-start gap-2.5 rounded-2xl bg-hud-amber/[0.14] p-3.5 ring-1 ring-hud-amber/25">
                 <span
                   aria-hidden
-                  className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-hud-amber/25 text-ink/60"
+                  className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-hud-amber/25 text-forest/60"
                 >
                   <Info className="size-3.5" strokeWidth={2.4} />
                 </span>
-                <p className="text-[12.5px] font-medium leading-relaxed text-ink/70">
+                <p className="text-[12.5px] font-medium leading-relaxed text-forest/70">
                   {TRANSFER_SHEET_COPY.overBalance(origin.name, balance)}
                 </p>
               </div>
@@ -392,18 +392,18 @@ export function TransferSheet({
 
             {/* ── tanggal (otomatis hari ini — tidak ada yang perlu dipilih) ── */}
             <div className="mt-4 flex items-center gap-2.5 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/12">
-              <CalendarDays className="size-4 shrink-0 text-ink/35" strokeWidth={2.2} />
-              <span className="text-[11.5px] font-semibold text-ink/55">
+              <CalendarDays className="size-4 shrink-0 text-forest/35" strokeWidth={2.2} />
+              <span className="text-[11.5px] font-medium text-forest/55">
                 {TRANSFER_SHEET_COPY.dateLabel}
               </span>
-              <span className="ml-auto text-[12.5px] font-bold tabular-nums text-ink">
+              <span className="ml-auto text-[12.5px] font-semibold tabular-nums text-forest">
                 {TRANSFER_SHEET_COPY.today} · {formatDayLabel(todayIso)}
               </span>
             </div>
 
             {/* ── catatan (opsional) ───────────────────────────────────────── */}
             <label className="mt-4 block">
-              <span className="text-[13px] font-semibold leading-snug text-ink">
+              <span className="text-[13px] font-medium leading-snug text-forest">
                 {TRANSFER_SHEET_COPY.noteLabel}
               </span>
               <textarea
@@ -411,19 +411,19 @@ export function TransferSheet({
                 onChange={(event) => setNote(event.target.value)}
                 rows={2}
                 placeholder={TRANSFER_SHEET_COPY.notePlaceholder}
-                className="mt-2 w-full resize-none rounded-2xl bg-cream px-4 py-3 text-[13px] leading-relaxed text-ink outline-none ring-1 ring-soil/16 transition-shadow placeholder:text-ink/25 focus:ring-2 focus:ring-forest/35"
+                className="mt-2 w-full resize-none rounded-2xl bg-cream px-4 py-3 text-[13px] leading-relaxed text-forest outline-none ring-1 ring-soil/16 transition-shadow placeholder:text-forest/25 focus:ring-2 focus:ring-forest/35"
               />
             </label>
 
             {/* ── ringkasan sebelum simpan: “Rp 250.000 · BCA → GoPay” ─────── */}
             <div className="mb-1 mt-5 rounded-2xl bg-sage/70 p-3.5 ring-1 ring-soil/10">
-              <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink/40">
+              <p className="text-[10.5px] font-medium uppercase tracking-[0.12em] text-forest/40">
                 {TRANSFER_SHEET_COPY.summaryLabel}
               </p>
               <p
                 className={cn(
-                  'mt-1 text-[14.5px] font-bold leading-snug',
-                  ready || (amount > 0 && !exceeded) ? 'text-ink' : 'text-ink/40',
+                  'mt-1 text-[14.5px] font-medium leading-snug',
+                  ready || (amount > 0 && !exceeded) ? 'text-forest' : 'text-forest/40',
                 )}
               >
                 {origin && destination
@@ -459,7 +459,7 @@ function WalletTile({ wallet, active }: { wallet: WalletAccount; active: boolean
       <span
         aria-hidden
         className={cn(
-          'relative flex size-8 shrink-0 items-center justify-center rounded-xl text-[12px] font-black text-ink ring-1 ring-inset ring-soil/10',
+          'relative flex size-8 shrink-0 items-center justify-center rounded-xl text-[12px] font-medium text-forest ring-1 ring-inset ring-soil/10',
           wallet.color,
         )}
       >
@@ -471,10 +471,10 @@ function WalletTile({ wallet, active }: { wallet: WalletAccount; active: boolean
         )}
       </span>
       <span className="min-w-0">
-        <span className="block truncate text-[12.5px] font-bold leading-tight text-ink">
+        <span className="block truncate text-[12.5px] font-medium leading-tight text-forest">
           {wallet.name}
         </span>
-        <span className="mt-0.5 block truncate text-[10.5px] tabular-nums text-ink/45">
+        <span className="mt-0.5 block truncate text-[10.5px] tabular-nums text-forest/45">
           {maskMoney(wallet.balance, false)} · {CONTEXT_LABEL[wallet.context]}
         </span>
       </span>

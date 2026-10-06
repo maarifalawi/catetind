@@ -109,17 +109,17 @@ export function RegistrationSheet({
           ) : null}
           {/* tautan dua arah: dari daftar bisa langsung ke /login (prompt 09) —
               drawer-nya ditutup dulu supaya tidak tersisa terbuka saat kembali */}
-          <p className="mt-3 text-center text-[11.5px] leading-relaxed text-ink/55">
+          <p className="mt-3 text-center text-[11.5px] leading-relaxed text-forest/55">
             {REGISTRATION_COPY.hasAccountLead}{' '}
             <Link
               href="/login"
               onClick={onClose}
-              className="font-semibold text-ink underline underline-offset-2 hover:text-forest"
+              className="font-medium text-forest underline underline-offset-2 hover:text-forest"
             >
               {REGISTRATION_COPY.hasAccountLink}
             </Link>
           </p>
-          <p className="mt-2.5 flex items-start justify-center gap-1.5 text-center text-[11px] leading-relaxed text-ink/45">
+          <p className="mt-2.5 flex items-start justify-center gap-1.5 text-center text-[11px] leading-relaxed text-forest/45">
             <Lock className="mt-0.5 size-3 shrink-0" strokeWidth={2.4} aria-hidden />
             <span>{REGISTRATION_COPY.noPasswordNote}</span>
           </p>
@@ -135,8 +135,8 @@ export function RegistrationSheet({
       >
         {/* ── email ─────────────────────────────────────────────────────── */}
         <label className="block" htmlFor="checkout-email">
-          <span className="flex items-center gap-1.5 text-[13px] font-semibold leading-snug text-ink">
-            <Mail className="size-3.5 text-ink/40" strokeWidth={2.4} aria-hidden />
+          <span className="flex items-center gap-1.5 text-[13px] font-medium leading-snug text-forest">
+            <Mail className="size-3.5 text-forest/40" strokeWidth={2.4} aria-hidden />
             {REGISTRATION_COPY.emailLabel}
           </span>
           <input
@@ -154,13 +154,13 @@ export function RegistrationSheet({
             aria-invalid={showErrors && !emailValid}
             aria-describedby="checkout-email-hint"
             className={cn(
-              'mt-2 w-full rounded-2xl bg-cream px-4 py-3 text-[15px] font-semibold text-ink outline-none ring-1 transition-shadow placeholder:font-medium placeholder:text-ink/25 focus:ring-2 focus:ring-forest/35',
-              showErrors && !emailValid ? 'ring-plum/50' : 'ring-soil/16',
+              'mt-2.5 w-full rounded-2xl bg-sage/45 px-4 py-3.5 text-[15px] font-medium text-forest outline-none ring-1 transition-all placeholder:font-medium placeholder:text-forest/30 focus:bg-cream focus:ring-2 focus:ring-forest/30',
+              showErrors && !emailValid ? 'ring-plum/50' : 'ring-transparent',
             )}
           />
           <span
             id="checkout-email-hint"
-            className="mt-1.5 block text-[11px] leading-relaxed text-ink/45"
+            className="mt-1.5 block text-[11px] leading-relaxed text-forest/45"
           >
             {showErrors && !emailValid
               ? REGISTRATION_COPY.invalidEmail
@@ -169,8 +169,8 @@ export function RegistrationSheet({
         </label>
         {/* ── nama panggilan ────────────────────────────────────────────── */}
         <label className="mt-4 block" htmlFor="checkout-nickname">
-          <span className="flex items-center gap-1.5 text-[13px] font-semibold leading-snug text-ink">
-            <UserRound className="size-3.5 text-ink/40" strokeWidth={2.4} aria-hidden />
+          <span className="flex items-center gap-1.5 text-[13px] font-medium leading-snug text-forest">
+            <UserRound className="size-3.5 text-forest/40" strokeWidth={2.4} aria-hidden />
             {REGISTRATION_COPY.nameLabel}
           </span>
           <input
@@ -186,13 +186,13 @@ export function RegistrationSheet({
             aria-invalid={showErrors && !nicknameValid}
             aria-describedby="checkout-nickname-hint"
             className={cn(
-              'mt-2 w-full rounded-2xl bg-cream px-4 py-3 text-[15px] font-semibold text-ink outline-none ring-1 transition-shadow placeholder:font-medium placeholder:text-ink/25 focus:ring-2 focus:ring-forest/35',
-              showErrors && !nicknameValid ? 'ring-plum/50' : 'ring-soil/16',
+              'mt-2.5 w-full rounded-2xl bg-sage/45 px-4 py-3.5 text-[15px] font-medium text-forest outline-none ring-1 transition-all placeholder:font-medium placeholder:text-forest/30 focus:bg-cream focus:ring-2 focus:ring-forest/30',
+              showErrors && !nicknameValid ? 'ring-plum/50' : 'ring-transparent',
             )}
           />
           <span
             id="checkout-nickname-hint"
-            className="mt-1.5 block text-[11px] leading-relaxed text-ink/45"
+            className="mt-1.5 block text-[11px] leading-relaxed text-forest/45"
           >
             {showErrors && !nicknameValid
               ? REGISTRATION_COPY.invalidNickname
@@ -201,7 +201,7 @@ export function RegistrationSheet({
         </label>
 
         {/* ── catatan jujur: paragraf demo DIHAPUS (paket 64) ───────────────────────────────────── */}
-        <p className="mt-5 flex items-start gap-2 rounded-2xl bg-sage/70 px-3.5 py-3 text-[11.5px] leading-relaxed text-ink/60 ring-1 ring-soil/8">
+        <p className="mt-5 flex items-start gap-2 rounded-2xl bg-sage/70 px-3.5 py-3 text-[11.5px] leading-relaxed text-forest/60 ring-1 ring-soil/8">
           <Mail className="mt-0.5 size-3.5 shrink-0 text-forest" strokeWidth={2.4} aria-hidden />
           <span>{REGISTRATION_COPY.emailNextNote}</span>
         </p>

@@ -109,15 +109,15 @@ export function InstallGuideScreen() {
       <div className="w-full lg:grid lg:grid-cols-12 lg:items-start lg:gap-x-8">
         {/* ── HERO: jual alasannya dulu ── */}
         <header className="lg:col-span-5">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-cream/70 px-3 py-1 text-[11px] font-semibold tracking-[0.16em] text-forest uppercase ring-1 ring-soil/12">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-cream/70 px-3 py-1 text-[11px] font-medium tracking-[0.16em] text-forest uppercase ring-1 ring-soil/12">
             <Zap className="size-3" strokeWidth={2.6} aria-hidden />
             {INSTALL_HERO.badge}
           </span>
 
-          <h1 className="mt-4 font-display text-3xl font-semibold tracking-tight text-ink lg:text-4xl">
+          <h1 className="mt-4 font-display text-3xl font-semibold tracking-tight text-forest lg:text-4xl">
             {INSTALL_HERO.title}
           </h1>
-          <p className="mt-2 text-sm leading-relaxed text-ink/55 sm:text-base">
+          <p className="mt-2 text-sm leading-relaxed text-forest/55 sm:text-base">
             {INSTALL_HERO.subtitle}
           </p>
 
@@ -131,8 +131,8 @@ export function InstallGuideScreen() {
                   {benefit.emoji}
                 </span>
                 <div>
-                  <p className="text-sm font-semibold text-ink">{benefit.title}</p>
-                  <p className="mt-0.5 text-xs leading-relaxed text-ink/50">{benefit.desc}</p>
+                  <p className="text-sm font-medium text-forest">{benefit.title}</p>
+                  <p className="mt-0.5 text-xs leading-relaxed text-forest/50">{benefit.desc}</p>
                 </div>
               </li>
             ))}
@@ -154,7 +154,7 @@ export function InstallGuideScreen() {
             <div className="mt-6 space-y-3" aria-live="polite">
               <div className="h-16 animate-pulse rounded-3xl bg-cream/60 ring-1 ring-soil/12" />
               <div className="h-64 animate-pulse rounded-3xl bg-cream/60 ring-1 ring-soil/12" />
-              <p className="text-center text-xs text-ink/40">{INSTALL_DETECTING_LABEL}</p>
+              <p className="text-center text-xs text-forest/40">{INSTALL_DETECTING_LABEL}</p>
             </div>
           ) : (
             <>
@@ -189,7 +189,7 @@ export function InstallGuideScreen() {
                   type="button"
                   onClick={() => setAllGuidesOpen((open) => !open)}
                   aria-expanded={allGuidesOpen}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-forest/70 underline-offset-4 transition-colors duration-200 hover:text-forest hover:underline"
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-forest/70 underline-offset-4 transition-colors duration-200 hover:text-forest hover:underline"
                 >
                   {allGuidesOpen ? INSTALL_OTHER_GUIDES_LABEL.close : INSTALL_OTHER_GUIDES_LABEL.open}
                   {allGuidesOpen ? (
@@ -221,8 +221,8 @@ export function InstallGuideScreen() {
                           className={cn(
                             'flex flex-1 items-center justify-center gap-1.5 rounded-full px-2 py-2 text-xs font-medium transition-colors duration-200 active:scale-95',
                             active
-                              ? 'bg-sage font-semibold text-forest'
-                              : 'text-ink/50 hover:text-ink',
+                              ? 'bg-sage font-medium text-forest'
+                              : 'text-forest/50 hover:text-forest',
                           )}
                         >
                           <Icon className="size-4 shrink-0" strokeWidth={2.2} />
@@ -240,7 +240,7 @@ export function InstallGuideScreen() {
                     <ManualTutorial device={activeTab} className="mt-3" />
                     {activeTab === 'desktop' && <InstallQrHandoff className="mt-3" />}
                     {activeTab === 'ios' && activeTab !== device && (
-                      <p className="mt-3 text-center text-xs text-ink/40">
+                      <p className="mt-3 text-center text-xs text-forest/40">
                         {INSTALL_IOS_PANEL_NOTE}
                       </p>
                     )}
@@ -248,20 +248,20 @@ export function InstallGuideScreen() {
                 </div>
               )}
 
-              <p className="mt-6 text-center text-[11px] leading-relaxed text-ink/35">
+              <p className="mt-6 text-center text-[11px] leading-relaxed text-forest/35">
                 {INSTALL_HELP_FOOTER.prefix}
-                <a href="/help" className="font-semibold text-forest/70 underline underline-offset-2">
+                <a href="/help" className="font-medium text-forest/70 underline underline-offset-2">
                   {INSTALL_HELP_FOOTER.linkLabel}
                 </a>
                 {INSTALL_HELP_FOOTER.suffix}
               </p>
 
               {/* jalan keluar untuk pengunjung yang belum punya akun — menuju /checkout */}
-              <p className="mt-3 text-center text-[11px] leading-relaxed text-ink/35">
+              <p className="mt-3 text-center text-[11px] leading-relaxed text-forest/35">
                 {INSTALL_CHECKOUT_CTA.prefix}{' '}
                 <Link
                   href={INSTALL_CHECKOUT_CTA.href}
-                  className="font-semibold text-forest/70 underline underline-offset-2"
+                  className="font-medium text-forest/70 underline underline-offset-2"
                 >
                   {INSTALL_CHECKOUT_CTA.linkLabel}
                 </Link>{' '}

@@ -86,17 +86,17 @@ export function BudgetZoneA({
               🧹
             </span>
             <div className="min-w-0">
-              <p className="text-[14.5px] font-bold tracking-tight text-forest">
+              <p className="text-[14.5px] font-medium tracking-tight text-forest">
                 {BUDGET_ZONE_A_COPY.sweepTitle}
               </p>
-              <p className="mt-1 text-[12px] leading-relaxed text-ink/60">
+              <p className="mt-1 text-[12px] leading-relaxed text-forest/60">
                 {BUDGET_ZONE_A_COPY.sweepLead}{' '}
-                <b className="font-bold text-ink tabular-nums">
+                <b className="font-semibold text-forest tabular-nums">
                   {maskNominal(sweepTotal, masked)}
                 </b>{' '}
                 {BUDGET_ZONE_A_COPY.sweepTail}
               </p>
-              <span className="mt-2 inline-flex items-center gap-1 text-[12px] font-bold text-forest">
+              <span className="mt-2 inline-flex items-center gap-1 text-[12px] font-medium text-forest">
                 {BUDGET_ZONE_A_COPY.sweepCta}
                 <span aria-hidden className="transition-transform group-hover:translate-x-0.5">
                   →
@@ -124,10 +124,10 @@ export function BudgetZoneA({
               aria-selected={active}
               onClick={() => onPeriodChange(tab.id)}
               className={cn(
-                'rounded-full px-3 py-1.5 text-[11.5px] font-semibold transition-all duration-200 active:scale-95',
+                'rounded-full px-3 py-1.5 text-[11.5px] font-medium transition-all duration-200 active:scale-95',
                 active
                   ? 'bg-cream text-forest ring-1 ring-forest/20 shadow-[0_8px_18px_-14px_rgba(69,89,78,0.7)]'
-                  : 'text-ink/40 hover:text-ink/70',
+                  : 'text-forest/40 hover:text-forest/70',
               )}
             >
               {tab.label}
@@ -145,13 +145,13 @@ export function BudgetZoneA({
         <div className="rounded-[1.6rem] border border-dashed border-oat bg-cream/60 px-6 py-9 text-center">
           {/* emoji jadi ilustrasi ringan — versi gambar menyusul bareng design pass */}
           <span className="text-[28px]">☕🌱</span>
-          <p className="mx-auto mt-3 max-w-[19rem] text-[13px] leading-relaxed text-ink/60">
+          <p className="mx-auto mt-3 max-w-[19rem] text-[13px] leading-relaxed text-forest/60">
             {BUDGET_ZONE_A_COPY.emptyBody}
           </p>
           <button
             type="button"
             onClick={onAddBudget}
-            className="mt-4 rounded-full bg-forest px-4 py-2.5 text-[12.5px] font-semibold text-cream transition-colors hover:bg-forest-soft active:scale-95"
+            className="mt-4 rounded-full bg-forest px-4 py-2.5 text-[12.5px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-95"
           >
             {BUDGET_ZONE_A_COPY.emptyCta}
           </button>
@@ -181,7 +181,7 @@ export function BudgetZoneA({
       {/* ── 3E. OVER-BUDGET AI COACH CTA (hanya kalau ada yang lewat limit) ─ */}
       {overBudget.length > 0 && (
         <div className="flex flex-col gap-3 rounded-[1.5rem] bg-hud-terracotta/[0.07] p-4 ring-1 ring-hud-terracotta/15 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-[12.5px] leading-relaxed text-ink/65">
+          <p className="text-[12.5px] leading-relaxed text-forest/65">
             {BUDGET_ZONE_A_COPY.overLead(overBudget.length, overBudget[0].category)}{' '}
             {BUDGET_ZONE_A_COPY.overQuestion}
           </p>
@@ -191,7 +191,7 @@ export function BudgetZoneA({
           <button
             type="button"
             onClick={onReviewCoach}
-            className="shrink-0 rounded-full bg-hud-terracotta/12 px-4 py-2 text-[12px] font-bold text-hud-terracotta transition-colors hover:bg-hud-terracotta/20 active:scale-95"
+            className="shrink-0 rounded-full bg-hud-terracotta/12 px-4 py-2 text-[12px] font-medium text-hud-terracotta transition-colors hover:bg-hud-terracotta/20 active:scale-95"
           >
             {BUDGET_ZONE_A_COPY.overCta}
           </button>
@@ -202,7 +202,7 @@ export function BudgetZoneA({
       <button
         type="button"
         onClick={onAddBudget}
-        className="flex w-full items-center justify-center gap-2 rounded-[1.4rem] border-2 border-dashed border-oat bg-cream/45 px-4 py-4 text-[12.5px] font-semibold text-ink/45 transition-all hover:border-forest/25 hover:bg-cream hover:text-ink active:scale-[0.99]"
+        className="flex w-full items-center justify-center gap-2 rounded-[1.4rem] border-2 border-dashed border-oat bg-cream/45 px-4 py-4 text-[12.5px] font-medium text-forest/45 transition-all hover:border-forest/25 hover:bg-cream hover:text-forest active:scale-[0.99]"
       >
         <span className="text-[15px] leading-none">+</span>
         {BUDGET_ZONE_A_COPY.addCta}

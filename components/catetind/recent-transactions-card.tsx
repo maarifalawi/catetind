@@ -26,15 +26,16 @@ import {
   HOME_MONEY_COPY,
   capHomeRecentRows,
   groupHomeMoneyRows,
-  homeMoneyRowFrom,
   homeRowsInLastDays,
   summarizeHomeMoney,
   type HomeMoneyRow,
 } from '@/lib/data/home-money'
-import { cancelTransferRow, recordedTransactions, removeRow, useMoneyStore } from '@/lib/money/store'
+import { cancelTransferRow, removeRow, useMoneyStore } from '@/lib/money/store'
+import { homeMoneyRowsForContext } from '@/lib/money/context-filter'
 import { useTodayISO } from '@/lib/use-today-iso'
 import type { TransactionType } from '@/lib/types'
 import { TransactionBottomSheet } from '@/components/dashboard/transaction-bottom-sheet'
+import { useMoneyContext } from './money-context-provider'
 import { usePrivacy } from './privacy-provider'
 
 /**
@@ -61,6 +62,10 @@ type Transaction = {
   type: TransactionType
   /* tile ikon: gradient + drop shadow warna per kategori (makin kuat saat hover) */
   tile: string
+  /* latar baris SOFT per kategori (paket 68) — keluarga warna yang SAMA dengan
+     `tile`, opasitas rendah supaya teks tetap kontras; inilah yang membuat daftar
+     mudah dipindai alih-alih jadi dinding putih. */
+  rowBg: string
 }
 
 type TransactionGroup = {
@@ -79,9 +84,9 @@ function moneyLabel(value: number, type: TransactionType): string {
  *  pindah dana (tabungan/transfer) NETRAL, bukan merah — net worth tidak berubah. */
 const ROW_TONE: Record<TransactionType, { text: string; badge: string }> = {
   income: { text: 'text-forest', badge: 'bg-mint text-forest' },
-  expense: { text: 'text-ink/80', badge: 'bg-plum text-cream' },
-  saving: { text: 'text-ink/55', badge: 'bg-ink/30 text-cream' },
-  transfer: { text: 'text-ink/55', badge: 'bg-ink/30 text-cream' },
+  expense: { text: 'text-forest/80', badge: 'bg-plum text-cream' },
+  saving: { text: 'text-forest/55', badge: 'bg-ink/30 text-cream' },
+  transfer: { text: 'text-forest/55', badge: 'bg-ink/30 text-cream' },
 }
 
 /**
@@ -91,33 +96,46 @@ const ROW_TONE: Record<TransactionType, { text: string; badge: string }> = {
  * — supaya `lib/data/*` tetap murni tanpa komponen. Kelas tile-nya MEMINJAM
  * string yang sudah ada di seed (nol warna baru); yang tidak terpetakan jatuh ke
  * `bg-sage` + `ReceiptText` alias "catatan lain-lain".
+ *
+ * `row` (paket 68 · permintaan pemilik produk: "daftar transaksinya dikasih
+ * warna biar gampang dibaca") = LATAR BARIS yang soft. Warnanya diambil dari
+ * KELUARGA YANG SAMA dengan ikonnya, cuma pada opasitas rendah (9–14%) supaya
+ * teks `text-forest` tetap kontras; hover menaikkan opasitasnya sedikit, bukan
+ * menggantinya. Palet kanon saja — tidak ada warna baru, dan penjaga palet
+ * (`scripts/theme/audit-palette.mjs`) tetap hijau.
  */
-const CATEGORY_VISUAL: Record<string, { icon: LucideIcon; tile: string }> = {
+const CATEGORY_VISUAL: Record<string, { icon: LucideIcon; tile: string; row: string }> = {
   Makanan: {
     icon: Coffee,
     tile: 'bg-gradient-to-br from-cantelope/25 to-cantelope/10 text-cantelope shadow-[0_8px_16px_-8px_rgba(255,184,133,0.45)] group-hover:shadow-[0_14px_24px_-8px_rgba(255,184,133,0.6)]',
+    row: 'bg-cantelope/[0.10] hover:bg-cantelope/[0.16]',
   },
   Transportasi: {
     icon: Car,
     tile: 'bg-gradient-to-br from-thistle/20 to-thistle/10 text-thistle shadow-[0_8px_16px_-8px_rgba(145,160,184,0.4)] group-hover:shadow-[0_14px_24px_-8px_rgba(145,160,184,0.55)]',
+    row: 'bg-thistle/[0.10] hover:bg-thistle/[0.16]',
   },
   Belanja: {
     icon: ShoppingBag,
     tile: 'bg-gradient-to-br from-plum/20 to-plum/10 text-plum shadow-[0_8px_16px_-8px_rgba(184,145,145,0.4)] group-hover:shadow-[0_14px_24px_-8px_rgba(184,145,145,0.55)]',
+    row: 'bg-plum/[0.09] hover:bg-plum/[0.15]',
   },
   Tagihan: {
     icon: Zap,
-    tile: 'bg-gradient-to-br from-daisy/25 to-daisy/10 text-soil shadow-[0_8px_16px_-8px_rgba(255,184,133,0.45)] group-hover:shadow-[0_14px_24px_-8px_rgba(255,184,133,0.6)]',
+    tile: 'bg-gradient-to-br from-daisy/25 to-daisy/10 text-forest shadow-[0_8px_16px_-8px_rgba(255,184,133,0.45)] group-hover:shadow-[0_14px_24px_-8px_rgba(255,184,133,0.6)]',
+    row: 'bg-daisy/[0.13] hover:bg-daisy/[0.20]',
   },
   'Gaji Utama': {
     icon: Banknote,
     tile: 'bg-gradient-to-br from-mint/80 to-mint/25 text-forest shadow-[0_8px_16px_-8px_rgba(145,187,158,0.55)] group-hover:shadow-[0_14px_24px_-8px_rgba(145,187,158,0.7)]',
+    row: 'bg-mint/[0.14] hover:bg-mint/[0.20]',
   },
 }
 
-const FALLBACK_VISUAL: { icon: LucideIcon; tile: string } = {
+const FALLBACK_VISUAL: { icon: LucideIcon; tile: string; row: string } = {
   icon: ReceiptText,
   tile: 'bg-sage text-forest',
+  row: 'bg-sage/60 hover:bg-sage/80',
 }
 
 /**
@@ -126,13 +144,13 @@ const FALLBACK_VISUAL: { icon: LucideIcon; tile: string } = {
  * di atas: nol warna baru, dan kalau kelasnya diubah di satu tempat, dua-duanya
  * ikut berubah.
  */
-const SEED_VISUAL: Record<string, { icon: LucideIcon; tile: string }> = {
+const SEED_VISUAL: Record<string, { icon: LucideIcon; tile: string; row: string }> = {
   'Makanan & Minuman': CATEGORY_VISUAL.Makanan,
   Transport: CATEGORY_VISUAL.Transportasi,
   Pemasukan: CATEGORY_VISUAL['Gaji Utama'],
 }
 
-function visualFor(category: string): { icon: LucideIcon; tile: string } {
+function visualFor(category: string): { icon: LucideIcon; tile: string; row: string } {
   return SEED_VISUAL[category] ?? CATEGORY_VISUAL[category] ?? FALLBACK_VISUAL
 }
 
@@ -152,6 +170,7 @@ function cardRow(row: HomeMoneyRow): Transaction {
     value: row.amount,
     type: row.type,
     tile: visual.tile,
+    rowBg: visual.row,
   }
 }
 
@@ -247,7 +266,7 @@ function SwipeRow({
         style={{ opacity: dx < 0 ? exposed : 0, pointerEvents: dx < -20 ? 'auto' : 'none' }}
       >
         <Trash2 className="size-4" strokeWidth={2.2} />
-        <span className="text-[10px] font-semibold">Hapus</span>
+        <span className="text-[10px] font-medium">Hapus</span>
       </button>
 
       {/* aksi kiri — swipe KANAN (edit) */}
@@ -259,7 +278,7 @@ function SwipeRow({
         style={{ opacity: dx > 0 ? exposed : 0, pointerEvents: dx > 20 ? 'auto' : 'none' }}
       >
         <Pencil className="size-4" strokeWidth={2.2} />
-        <span className="text-[10px] font-semibold">Edit</span>
+        <span className="text-[10px] font-medium">Edit</span>
       </button>
 
       {/* konten baris */}
@@ -271,7 +290,16 @@ function SwipeRow({
         onPointerUp={settle}
         onPointerCancel={settle}
         onClick={onClick}
-        className="group relative flex w-full cursor-pointer touch-pan-y items-center gap-3 rounded-2xl bg-cream px-2 py-2.5 text-left outline-none transition-[background,box-shadow,transform] duration-200 animate-[row-in_0.5s_ease_backwards] hover:bg-cream hover:shadow-[0_10px_24px_-14px_rgba(0,0,0,0.35)] focus-visible:bg-cream focus-visible:ring-2 focus-visible:ring-forest/20"
+        className={cn(
+          /* latar baris = warna SOFT kategori (`tx.rowBg`, paket 68) — ini yang
+             bikin daftar gampang dipindai. `bg-cream`/`hover:bg-cream`/
+             `focus-visible:bg-cream` lama DIHAPUS di sini: kalau tidak, ia
+             menutupi warna kategorinya. Arah hover sekarang cuma menaikkan
+             opasitas tint (kelas `hover:bg-*` sudah ikut di dalam `rowBg`) plus
+             bayangan naik. */
+          'group relative flex w-full cursor-pointer touch-pan-y items-center gap-3 rounded-2xl px-2.5 py-2.5 text-left outline-none transition-[background,box-shadow,transform] duration-200 animate-[row-in_0.5s_ease_backwards] hover:shadow-[0_10px_24px_-14px_rgba(0,0,0,0.35)] focus-visible:ring-2 focus-visible:ring-forest/20',
+          tx.rowBg,
+        )}
         style={{
           transform: `translateX(${dx}px)`,
           transitionDuration: dragging ? '0ms' : undefined,
@@ -322,17 +350,17 @@ function SwipeRow({
         </span>
 
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-medium text-ink">
+          <span className="block truncate text-sm font-medium text-forest">
             {tx.title}
           </span>
-          <span className="mt-0.5 block truncate text-[11px] text-ink/45">
+          <span className="mt-0.5 block truncate text-[11px] text-forest/45">
             {tx.category} · {tx.time}
           </span>
         </span>
 
         <span
           className={cn(
-            'shrink-0 text-sm font-semibold tabular-nums',
+            'shrink-0 text-sm font-medium tabular-nums',
             ROW_TONE[tx.type].text,
           )}
         >
@@ -345,7 +373,7 @@ function SwipeRow({
             chip" yang sudah dipakai tombol "Lihat semua" di header kartu ini —
             dengan hover halus (lingkaran terisi forest + panah bergeser) memakai
             token warna & transisi design system yang sudah ada. */}
-        <span className="ml-1 flex size-6 shrink-0 items-center justify-center rounded-full bg-cream text-ink/30 ring-1 ring-soil/12 transition-all duration-300 group-hover:bg-forest group-hover:text-mint group-hover:ring-forest/20">
+        <span className="ml-1 flex size-6 shrink-0 items-center justify-center rounded-full bg-cream text-forest/30 ring-1 ring-soil/12 transition-all duration-300 group-hover:bg-forest group-hover:text-mint group-hover:ring-forest/20">
           <ChevronRight className="size-3.5 transition-transform duration-300 group-hover:translate-x-0.5" strokeWidth={2.6} />
         </span>
       </button>
@@ -367,13 +395,15 @@ export const RecentTransactionsCard = memo(function RecentTransactionsCard() {
      dibuang `recordedTransactions()`, hapusnya lewat `removeRow()` (satu jalur
      tulis, sama seperti Riwayat & /wallet/[id]). */
   const snapshot = useMoneyStore()
-  const rows = useMemo(() => recordedTransactions(snapshot).map(homeMoneyRowFrom), [snapshot])
+  const { context } = useMoneyContext()
+  const rows = useMemo(() => homeMoneyRowsForContext(snapshot, context), [snapshot, context])
 
   /* 58.6 — daftar dibatasi 7 hari kalender terakhir; yang lebih tua tetap utuh
      di /history (tombol "Lihat semua" di kepala kartu). Sebelum "hari ini"
      diketahui, penyaringan dilewati supaya HTML server = render pertama client.
-     Paket 64 menambah batas JUMLAH (maks 10 baris): kartu ini ringkasan, bukan
-     arsip — `/history` yang menyimpan daftar penuh. */
+     Paket 64 menambah batas JUMLAH; paket 66 menurunkannya ke 5 baris supaya
+     kartu ini tetap ringkasan & dashboard berakhir simetris — `/history` yang
+     menyimpan daftar penuh. */
   const recentRows = useMemo(
     () => capHomeRecentRows(homeRowsInLastDays(rows, today)),
     [rows, today],
@@ -422,7 +452,7 @@ export const RecentTransactionsCard = memo(function RecentTransactionsCard() {
   })()
 
   return (
-    <div className="flex flex-col rounded-[2rem] bg-cream p-6 ring-1 ring-soil/12">
+    <div className="flex h-full flex-col rounded-[2rem] bg-cream p-6 ring-1 ring-soil/12">
       {/* header — konsisten dengan kartu lain */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2.5">
@@ -430,13 +460,13 @@ export const RecentTransactionsCard = memo(function RecentTransactionsCard() {
             <ReceiptText className="size-4" strokeWidth={2.4} />
           </span>
           <div>
-            <p className="text-sm font-semibold text-ink">{HOME_MONEY_COPY.txnTitle}</p>
-            <p className="text-xs text-ink/45">{HOME_MONEY_COPY.txnSubtitle}</p>
+            <p className="text-sm font-medium text-forest">{HOME_MONEY_COPY.txnTitle}</p>
+            <p className="text-xs text-forest/45">{HOME_MONEY_COPY.txnSubtitle}</p>
           </div>
         </div>
         <Link
           href="/history"
-          className="group/link flex items-center gap-1.5 rounded-full bg-sage py-1.5 pl-3 pr-1.5 text-[11px] font-semibold text-forest transition-colors duration-300 hover:bg-forest hover:text-mint"
+          className="group/link flex items-center gap-1.5 rounded-full bg-sage py-1.5 pl-3 pr-1.5 text-[11px] font-medium text-forest transition-colors duration-300 hover:bg-forest hover:text-mint"
         >
           {HOME_MONEY_COPY.seeAll}
           <span className="flex size-4 items-center justify-center rounded-full bg-forest text-mint transition-colors duration-300 group-hover/link:bg-mint group-hover/link:text-forest">
@@ -451,10 +481,10 @@ export const RecentTransactionsCard = memo(function RecentTransactionsCard() {
           <span className="flex size-12 items-center justify-center rounded-full bg-sage text-forest">
             <Sprout className="size-6" strokeWidth={1.8} />
           </span>
-          <p className="mt-4 text-sm font-semibold text-ink">
+          <p className="mt-4 text-sm font-medium text-forest">
             {HOME_MONEY_COPY.txnEmptyTitle}
           </p>
-          <p className="mt-1 text-xs text-ink/50">
+          <p className="mt-1 text-xs text-forest/50">
             {HOME_MONEY_COPY.txnEmptyBody}
           </p>
           {/* CTA empty state: dulu tombol MATI (bisa dipencet, tidak terjadi apa
@@ -465,7 +495,7 @@ export const RecentTransactionsCard = memo(function RecentTransactionsCard() {
             trigger={
               <button
                 type="button"
-                className="mt-4 rounded-full bg-forest px-5 py-2.5 text-[13px] font-semibold text-cream transition-colors hover:bg-forest-soft active:scale-[0.97]"
+                className="mt-4 rounded-full bg-forest px-5 py-2.5 text-[13px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.97]"
               >
                 {HOME_MONEY_COPY.txnEmptyCta}
               </button>
@@ -473,12 +503,17 @@ export const RecentTransactionsCard = memo(function RecentTransactionsCard() {
           />
         </div>
       ) : (
-        /* ── daftar transaksi — dikelompokkan per hari ── */
+        /* ── daftar transaksi — dikelompokkan per hari, SATU kolom.
+           Kartu ini FULL-WIDTH (ROW 2 bento), jadi tiap transaksi tetap
+           dirender sebagai baris HORIZONTAL (ikon · nama/kategori · nominal ·
+           chevron) yang memakai lebar kartu dengan wajar — bukan grid
+           multi-kolom (permintaan pemilik produk). Teksnya `truncate`, jadi
+           baris tidak pernah melar walau lebar kartu berubah. */
         <div className="-mx-2 mt-4 flex flex-col gap-4">
           {visibleGroups.map((group, gi) => (
             <section key={group.label}>
               <div className="mx-2 flex items-center gap-2">
-                <p className="text-[10px] font-semibold tracking-[0.14em] text-ink/40 uppercase">
+                <p className="text-[10px] font-medium tracking-[0.14em] text-forest/40 uppercase">
                   {group.label}
                 </p>
                 {group.live && (
@@ -490,7 +525,7 @@ export const RecentTransactionsCard = memo(function RecentTransactionsCard() {
                 <span className="h-px flex-1 bg-soil/8" />
               </div>
 
-              <ul className="mt-1.5 flex flex-col gap-0.5">
+              <ul className="mx-2 mt-1.5 flex flex-col gap-1">
                 {group.items.map((tx, i) => (
                   <SwipeRow
                     key={tx.id}
@@ -508,17 +543,17 @@ export const RecentTransactionsCard = memo(function RecentTransactionsCard() {
       {/* insight periode — pola strip yang sama dengan kartu distribusi. Label
           periode & kata sambungnya dari `HOME_MONEY_COPY` (string yang SAMA
           dengan legend kartu "Arus Uang"), angkanya dari `period` (turunan). */}
-      <div className="mt-4 flex items-center justify-center gap-2 rounded-2xl bg-cream px-4 py-2.5 text-center text-xs leading-relaxed text-ink/55">
+      <div className="mx-auto mt-4 flex max-w-3xl items-center justify-center gap-2 rounded-2xl bg-cream px-4 py-2.5 text-center text-xs leading-relaxed text-forest/55">
         <Sparkles className="size-3.5 shrink-0 text-forest" strokeWidth={2.2} />
         <span>
           {HOME_MONEY_COPY.period}{' '}
-          <b className="font-semibold text-forest">{hide(`+${formatIDR(period.income)}`)}</b>{' '}
+          <b className="font-medium text-forest">{hide(`+${formatIDR(period.income)}`)}</b>{' '}
           {HOME_MONEY_COPY.txnInflow}{' '}
-          <b className="font-semibold text-ink">{hide(`-${formatIDR(period.expense)}`)}</b>{' '}
+          <b className="font-medium text-forest">{hide(`-${formatIDR(period.expense)}`)}</b>{' '}
           {HOME_MONEY_COPY.txnOutflow}{' '}
           <b
             className={cn(
-              'font-semibold',
+              'font-medium',
               /* negatif = pengeluaran lebih besar; tetap terracotta lembut, bukan merah
                  (kanon warna status: "lewat batas" tidak diteriakkan) */
               period.net < 0 ? 'text-hud-terracotta' : 'text-forest',
