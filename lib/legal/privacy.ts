@@ -172,8 +172,8 @@ export const PRIVACY_DOC: LegalDocument = {
       },
     },
 
-    /* ── 6a. AI: DATA YANG DIPROSES — PRD Domain 4B (routing DeepSeek V3 /
-       GPT-4o-mini + konteks yang dikirim tiap request) ───────────────────── */
+    /* ── 6a. AI: DATA YANG DIPROSES — PRD Domain 4B (satu provider DeepSeek
+       untuk teks & gambar + konteks yang dikirim tiap request) ──────────── */
     {
       id: 'ai-data',
       title: 'Fitur AI: data apa yang diproses',
@@ -210,8 +210,8 @@ export const PRIVACY_DOC: LegalDocument = {
       },
     },
     /* ── 7. PIHAK KETIGA — nama vendor HANYA yang ada di PRD: Supabase & Vercel
-       (PRD 4693–4694), DeepSeek V3 & GPT-4o-mini (PRD 2785), Midtrans
-       (PRD 5974), Resend (PRD 3471) ──────────────────────────────────────── */
+       (PRD 4693–4694), DeepSeek (PRD 2785), Midtrans (PRD 5974), Resend
+       (PRD 3471) ─────────────────────────────────────────────────────────── */
     {
       id: 'pihak-ketiga',
       title: 'Pihak ketiga yang ikut bekerja',
@@ -220,7 +220,7 @@ export const PRIVACY_DOC: LegalDocument = {
       ],
       bullets: [
         'Basis data & autentikasi (Supabase) — menyimpan akun dan catatanmu, sekaligus menegakkan aturan akses per akun di sisi basis data. Tautan masuk ke email juga lewat layanan ini.',
-        'Penyedia model bahasa (DeepSeek V3 untuk tugas teks; GPT-4o-mini untuk membaca gambar struk) — memproses teks atau foto hanya untuk tugas yang kamu picu, lalu mengembalikan hasilnya ke CatetInd.',
+        'Penyedia model bahasa (DeepSeek — teks & gambar, termasuk membaca foto struk) — memproses teks atau foto hanya untuk tugas yang kamu picu, lalu mengembalikan hasilnya ke CatetInd.',
         'Pembayaran (Midtrans) — memproses pembayaran langganan dan paket token. Data kartu/e-wallet-mu diproses langsung di Midtrans, bukan di CatetInd: kami tidak pernah menyimpan detail pembayaranmu.',
         'Email transaksional (Resend) — mengirim tautan masuk, struk pembayaran, dan file export data ke alamatmu sendiri.',
         'Hosting & analitik dasar (Vercel) — menjalankan aplikasinya dan menghitung jumlah kunjungan tanpa cookie iklan dan tanpa identitasmu.',
