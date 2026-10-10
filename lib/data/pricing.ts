@@ -18,6 +18,7 @@
    ────────────────────────────────────────────────────────────────────────── */
 
 import type { FomoRule } from '@/hooks/use-fomo-counter'
+import type { PaymentChannel, PaymentMethodId } from '../payments/methods'
 import { formatIDR } from '../weekly-recap'
 import { REFERRED_FRIEND_BENEFIT } from './referral'
 
@@ -442,21 +443,54 @@ export const PAYMENT_SHEET_COPY = {
   trustNote: NO_AUTO_RENEW_BADGE,
 } as const
 
-/* ── MULAI PEMBAYARAN (ALUR REDIRECT) ─────────────────────────────────────────
-   Halaman `/checkout/bayar` menagih SATU produk (Founding Member) lalu
-   mengarahkan user ke halaman Snap Midtrans. Teksnya dikumpulkan di sini supaya
-   tidak ada kalimat di JSX, sama seperti `PAYMENT_SHEET_COPY`. */
+/* ── MULAI PEMBAYARAN (DI DALAM APP — CORE API, paket 83) ────────────────────
+   Halaman `/checkout/bayar` menagih penawaran yang dipilih di `/checkout`
+   (3 tier × bulanan/tahunan) dan menampilkan INSTRUKSI BAYARNYA di sini juga:
+   QRIS, nomor Virtual Account, tautan e-wallet, atau kode Mandiri Bill. User
+   tidak pindah ke domain Midtrans, jadi tidak ada "halaman baru yang beda".
+   Teksnya dikumpulkan di file ini supaya tidak ada kalimat di JSX. */
+
+/** label + hint tiap metode; kuncinya SAMA dengan katalog `lib/payments/methods.ts` */
+export const PAY_METHOD_COPY: Record<PaymentMethodId, { label: string; hint: string }> = {
+  qris: {
+    label: 'QRIS',
+    hint: 'Scan pakai aplikasi apa pun yang punya QRIS (GoPay, OVO, DANA, m-banking).',
+  },
+  'bca-va': { label: 'BCA Virtual Account', hint: 'Bayar dari m-BCA atau ATM BCA.' },
+  'bri-va': { label: 'BRI Virtual Account', hint: 'Bayar dari BRImo atau ATM BRI.' },
+  'bni-va': { label: 'BNI Virtual Account', hint: 'Bayar dari BNI Mobile atau ATM BNI.' },
+  'permata-va': {
+    label: 'Permata Virtual Account',
+    hint: 'Bayar dari PermataMobile X atau ATM Permata.',
+  },
+  gopay: { label: 'GoPay', hint: 'Bayar dari aplikasi GoPay di HP kamu.' },
+  shopeepay: { label: 'ShopeePay', hint: 'Bayar dari aplikasi Shopee / ShopeePay.' },
+  'mandiri-bill': {
+    label: 'Mandiri Bill Payment',
+    hint: 'Bayar dari Livin by Mandiri atau ATM Mandiri.',
+  },
+}
+
+/** pengelompokan kartu pilihan (urutan tampil) */
+export const PAY_METHOD_GROUPS: { id: PaymentChannel; label: string }[] = [
+  { id: 'qris', label: 'QRIS — satu QR untuk semua aplikasi' },
+  { id: 'va', label: 'Transfer bank (Virtual Account)' },
+  { id: 'ewallet', label: 'E-wallet' },
+  { id: 'bill', label: 'Mandiri Bill Payment' },
+]
 
 export const PAY_START_COPY = {
   eyebrow: 'Langkah terakhir',
   title: 'Bayar paketmu',
   subtitle:
-    'Kamu diarahkan ke halaman pembayaran Midtrans (QRIS, e-wallet, atau Virtual Account). Setelah selesai, kamu dibawa balik ke sini otomatis.',
+    'Pilih cara bayar di bawah, lalu ikuti instruksinya di halaman ini. Kamu nggak perlu pindah ke situs lain — begitu pembayaranmu masuk, langganannya aktif sendiri.',
   planLabel: 'Yang kamu beli',
   totalLabel: 'Total bayar',
   discountLabel: 'Diskon kode teman',
+  methodLegend: 'Pilih cara bayar',
+  methodNote: 'Paket & nominal ditentukan server dari daftar harga resmi di app ini.',
   payLabel: 'Bayar sekarang',
-  payingLabel: 'Menyiapkan pembayaran…',
+  payingLabel: 'Menyiapkan tagihan…',
   loginTitle: 'Masuk dulu ya',
   loginBody:
     'Pembayaran butuh akun supaya langganannya tercatat atas namamu. Masuk pakai kode 6 angka dari email.',
@@ -464,7 +498,53 @@ export const PAY_START_COPY = {
   notConfigured: 'Pembayaran belum bisa dimulai. Coba lagi sebentar ya.',
   failedTitle: 'Pembayaran tidak bisa dimulai',
   retryLabel: 'Coba lagi',
+  changeMethodHint: 'Belum jadi bayar? Kamu bisa ganti cara bayar kapan saja.',
 } as const
+
+/* ── KARTU PEMBAYARAN (instruksi yang tampil setelah "Bayar sekarang") ───────
+   Semua kalimat kartu: QRIS, VA, e-wallet, Mandiri Bill, hitungan mundur, dan
+   jalan keluar saat tagihan kedaluwarsa/gagal (bukan layar buntu). */
+
+export const PAY_CARD_COPY = {
+  title: 'Selesaikan pembayaran',
+  methodLabel: 'Cara bayar',
+  totalLabel: 'Total bayar',
+  orderLabel: 'Order',
+  countdownLabel: 'Sisa waktu',
+  timeUpLabel: 'Waktu habis',
+  copyLabel: 'Salin',
+  copiedLabel: 'Tersalin!',
+  qrisScanTitle: 'Scan QR ini',
+  qrAlt: 'Kode QRIS untuk pembayaranmu',
+  qrStringLabel: 'Atau tempel kode ini di aplikasi bank/e-walletmu:',
+  vaLabel: 'Nomor Virtual Account',
+  vaHint: 'Transfer TEPAT sejumlah total di atas — nominalnya yang bikin pembayaran terbaca otomatis.',
+  billerLabel: 'Kode perusahaan',
+  billKeyLabel: 'Kode pembayaran',
+  billHint: 'Masukkan dua kode ini di Livin by Mandiri → Bayar → Multipayment.',
+  ewalletCta: 'Buka aplikasi e-wallet',
+  ewalletHint: 'Tombol di atas membuka aplikasinya langsung. Selesaikan pembayaran di sana.',
+  noInstructions:
+    'Provider belum memberi instruksi yang bisa ditampilkan untuk tagihan ini. Pilih metode lain ya — nggak ada yang terpotong.',
+  waitingTitle: 'Menunggu pembayaranmu…',
+  waitingBody: 'Status di halaman ini berubah sendiri begitu pembayaranmu masuk. Nggak perlu refresh.',
+  checkingLabel: 'Lagi cek status pembayaran…',
+  settledTitle: 'Pembayaran diterima ✓',
+  settledBody: 'Langgananmu sedang diaktifkan. Sebentar lagi kamu dibawa ke halaman konfirmasi.',
+  expiredTitle: 'Tagihan ini sudah kedaluwarsa',
+  expiredBody: 'Tenang, tidak ada yang terpotong. Bikin tagihan baru untuk lanjut bayar.',
+  failedTitle: 'Tagihan ini tidak bisa dipakai lagi',
+  failedBody: 'Bikin tagihan baru atau pilih metode lain — catatanmu tetap aman.',
+  newInvoiceLabel: 'Bikin tagihan baru',
+  switchMethodLabel: 'Ganti metode',
+  statusLabel: 'Status',
+  statusPending: 'Menunggu dibayar',
+  statusSettled: 'Sudah dibayar',
+  statusExpired: 'Kedaluwarsa',
+  statusFailed: 'Gagal',
+  statusUnknown: 'Belum tercatat di provider',
+} as const
+
 
 /* ── SELESAI BAYAR (halaman kembali dari Snap) ───────────────────────────────
    Statusnya DIBACA dari database (`GET /api/subscription`), bukan disimpulkan
@@ -479,7 +559,7 @@ export const PAY_DONE_COPY = {
   activeBody: 'Semua fitur sudah terbuka. Terima kasih sudah jadi Founding Member.',
   pendingTitle: 'Pembayaran belum tercatat',
   pendingBody:
-    'Kalau kamu memilih QRIS/VA, selesaikan dulu pembayarannya. Halaman ini bisa dibuka lagi kapan saja — statusnya masuk otomatis setelah Midtrans mengonfirmasi.',
+    'Kalau kamu sudah bayar, langgananmu sedang diaktifkan — halaman ini mengeceknya sendiri tiap beberapa detik. Kalau belum, buka lagi halaman bayar untuk melihat QRIS/nomor VA-nya.',
   failedTitle: 'Pembayarannya belum berhasil',
   failedBody: 'Kamu bisa mencoba lagi — tidak ada yang berkurang, dan catatanmu tetap aman.',
   retryLabel: 'Cek lagi',

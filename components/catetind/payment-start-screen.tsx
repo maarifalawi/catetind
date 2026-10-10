@@ -2,10 +2,14 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { ArrowRight, BadgeCheck, Info, ShieldCheck, Tag } from 'lucide-react'
 import { LogoWordmark } from './logo-wordmark'
+import { PaymentInstructionCard, type ActiveInvoice } from './payment-instruction-card'
 import {
   NO_AUTO_RENEW_BADGE,
+  PAY_METHOD_COPY,
+  PAY_METHOD_GROUPS,
   PAY_START_COPY,
   PERIOD_CHOICE_LABEL,
   applyReferralDiscount,
@@ -14,22 +18,34 @@ import {
   type BillingPeriod,
   type PlanDefinition,
 } from '@/lib/data/pricing'
+import { PAY_METHODS, type PaymentMethodId } from '@/lib/payments/methods'
 import { LOGIN_PATH } from '@/lib/data/auth'
 import { fetchSessionUser } from '@/lib/session-client'
 
-/* ── MULAI PEMBAYARAN (/checkout/bayar) — ALUR REDIRECT ──────────────────────
-   Satu penawaran: paket + periode yang sudah dipilih di `/checkout` (3 tier ×
-   bulanan/tahunan). Tombol "Bayar sekarang" meminta Snap token ke
-   `/api/payment/create`, lalu mengganti halaman ke `redirectUrl` milik Midtrans.
-   TIDAK ada `window.snap.pay` dan TIDAK ada client key di browser: halaman Snap
-   yang mengurus metode bayar, dan webhook Midtrans yang mengaktifkan langganan.
+/* ── MULAI PEMBAYARAN (/checkout/bayar, paket 83) — DI DALAM APP ─────────────
+   Pilih metode → tekan "Bayar sekarang" → `/api/payment/charge` membuat tagihan
+   Core API, dan halaman INI menampilkan QRIS / nomor VA / tautan e-wallet /
+   kode Mandiri Bill. Tidak ada redirect ke domain Midtrans.
 
    Dua hal yang sengaja TIDAK dilakukan halaman ini:
-     · menagih tanpa sesi — `/api/payment/create` butuh sesi (identitas dari
-       cookie), jadi tamu diarahkan masuk dulu;
-     · mempercayai kode teman dari query string. Kode DIPERIKSA ke database
-       (`/api/referral/validate`) sebelum diskonnya dipakai; kode karangan tidak
-       memberi potongan apa pun. */
+     · menagih tanpa sesi — `/api/payment/charge` memakai identitas dari cookie,
+       jadi tamu diarahkan masuk dulu;
+     · mempercayai nominal atau kode teman dari query string. Kode diperiksa ke
+       database (`/api/referral/validate`), dan nominalnya dicocokkan server
+       dengan harga kanon `lib/data/pricing.ts` (salah → 422). */
+
+/** bentuk balasan `/api/payment/charge` yang dipakai halaman ini */
+interface ChargeResponse {
+  ok?: boolean
+  orderId?: string
+  method?: PaymentMethodId
+  amount?: number
+  state?: 'pending' | 'settled' | 'expired' | 'failed' | 'unknown'
+  expiresAt?: string | null
+  instructions?: ActiveInvoice['instructions']
+  note?: string
+  error?: string
+}
 
 export function PaymentStartScreen({
   plan,
@@ -40,11 +56,17 @@ export function PaymentStartScreen({
   period: BillingPeriod
   referralCode: string | null
 }) {
+  const router = useRouter()
   const [session, setSession] = useState<'checking' | 'guest' | 'ready'>('checking')
   /** kode yang BENAR-BENAR ada di database — bukan sekadar bentuknya wajar */
   const [verifiedCode, setVerifiedCode] = useState<string | null>(null)
+  /** metode yang sedang dipilih user (dari katalog `lib/payments/methods.ts`) */
+  const [method, setMethod] = useState<PaymentMethodId>('qris')
   const [paying, setPaying] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
+  /** tagihan aktif yang instruksinya sedang ditampilkan */
+  const [invoice, setInvoice] = useState<ActiveInvoice | null>(null)
 
   const basePrice = offerPrice(plan, period)
   const total = verifiedCode ? applyReferralDiscount(basePrice) : basePrice
@@ -88,8 +110,9 @@ export function PaymentStartScreen({
     if (paying) return
     setPaying(true)
     setError(null)
+    setNotice(null)
     try {
-      const res = await fetch('/api/payment/create', {
+      const res = await fetch('/api/payment/charge', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
@@ -97,28 +120,39 @@ export function PaymentStartScreen({
           amount: total,
           planId: plan.id,
           period,
+          method,
           itemName: `${plan.name} (${PERIOD_CHOICE_LABEL[period]})`,
         }),
       })
       if (res.status === 401) {
         setSession('guest')
-        setPaying(false)
         return
       }
-      const data = (await res.json().catch(() => null)) as
-        | { ok?: boolean; redirectUrl?: string; error?: string }
-        | null
-      if (!res.ok || !data?.ok || !data.redirectUrl) {
+      const data = (await res.json().catch(() => null)) as ChargeResponse | null
+      if (!res.ok || !data?.ok || !data.orderId) {
         setError(data?.error ?? PAY_START_COPY.notConfigured)
-        setPaying(false)
         return
       }
-      window.location.assign(data.redirectUrl)
+      /* sudah dibayar tapi webhook belum mencatat → TIDAK bikin tagihan kedua;
+         halaman konfirmasi yang menyelesaikan sisanya (mem-poll langganan). */
+      if (data.state === 'settled') {
+        setNotice(data.note ?? null)
+        router.push(`/checkout/selesai?order_id=${encodeURIComponent(data.orderId)}`)
+        return
+      }
+      setInvoice({
+        orderId: data.orderId,
+        method: data.method ?? method,
+        amount: data.amount ?? total,
+        expiresAt: data.expiresAt ?? null,
+        instructions: data.instructions ?? null,
+      })
     } catch {
       setError(PAY_START_COPY.notConfigured)
+    } finally {
       setPaying(false)
     }
-  }, [paying, total, plan, period])
+  }, [paying, total, plan, period, method, router])
 
   return (
     <main className="relative flex min-h-[100dvh] w-full items-center justify-center bg-canvas px-5 py-12 text-forest">
@@ -137,7 +171,9 @@ export function PaymentStartScreen({
             <h2 className="font-display text-[15px] font-medium tracking-tight text-forest">
               {PAY_START_COPY.loginTitle}
             </h2>
-            <p className="mt-2 text-[12.5px] leading-relaxed text-forest/60">{PAY_START_COPY.loginBody}</p>
+            <p className="mt-2 text-[12.5px] leading-relaxed text-forest/60">
+              {PAY_START_COPY.loginBody}
+            </p>
             <Link
               href={LOGIN_PATH}
               className="mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-forest px-5 text-[13.5px] font-medium text-cream"
@@ -146,6 +182,20 @@ export function PaymentStartScreen({
               <ArrowRight className="size-4" strokeWidth={2.4} aria-hidden />
             </Link>
           </section>
+        ) : invoice ? (
+          /* Tagihan sudah dibuat → instruksinya tampil di dalam app */
+          <PaymentInstructionCard
+            invoice={invoice}
+            onSwitchMethod={() => {
+              setInvoice(null)
+              setError(null)
+              setNotice(null)
+            }}
+            onNewInvoice={() => {
+              setInvoice(null)
+              void handlePay()
+            }}
+          />
         ) : (
           <>
             <section className="mt-6 rounded-[1.5rem] bg-cream p-5 ring-1 ring-soil/12">
@@ -188,12 +238,80 @@ export function PaymentStartScreen({
               {NO_AUTO_RENEW_BADGE}
             </p>
 
+            <section className="mt-4 rounded-[1.5rem] bg-cream p-5 ring-1 ring-soil/12">
+              <h2 className="text-[11px] font-medium tracking-[0.16em] text-forest/40 uppercase">
+                {PAY_START_COPY.methodLegend}
+              </h2>
+
+              {PAY_METHOD_GROUPS.map((group) => {
+                const items = PAY_METHODS.filter((item) => item.channel === group.id)
+                if (items.length === 0) return null
+                return (
+                  <div key={group.id} className="mt-4">
+                    <p className="text-[11.5px] font-medium text-forest/50">{group.label}</p>
+                    <ul role="radiogroup" aria-label={group.label} className="mt-2 space-y-2">
+                      {items.map((item) => {
+                        const copy = PAY_METHOD_COPY[item.id]
+                        const active = item.id === method
+                        return (
+                          <li key={item.id}>
+                            <button
+                              type="button"
+                              role="radio"
+                              aria-checked={active}
+                              onClick={() => setMethod(item.id)}
+                              className={`flex w-full items-start gap-3 rounded-2xl px-3.5 py-3 text-left transition-colors duration-200 motion-reduce:transition-none ${
+                                active
+                                  ? 'bg-sage/70 ring-1 ring-forest/25'
+                                  : 'bg-canvas/60 ring-1 ring-soil/12 hover:bg-canvas'
+                              }`}
+                            >
+                              <span
+                                className={`mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full ring-1 ${
+                                  active ? 'bg-forest ring-forest' : 'ring-soil/30'
+                                }`}
+                                aria-hidden
+                              >
+                                {active && <span className="size-1.5 rounded-full bg-cream" />}
+                              </span>
+                              <span className="min-w-0">
+                                <span className="block text-[13.5px] font-medium text-forest">
+                                  {copy.label}
+                                </span>
+                                <span className="mt-0.5 block text-[11.5px] leading-relaxed text-forest/50">
+                                  {copy.hint}
+                                </span>
+                              </span>
+                            </button>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  </div>
+                )
+              })}
+
+              <p className="mt-4 flex items-start gap-2 rounded-2xl bg-canvas/60 px-3.5 py-2.5 text-[11.5px] leading-relaxed text-forest/60 ring-1 ring-soil/12">
+                <Info className="mt-0.5 size-3.5 shrink-0" strokeWidth={2.4} aria-hidden />
+                {PAY_START_COPY.methodNote}
+              </p>
+            </section>
+
             {error && (
-              <p className="mt-3 flex items-start gap-1.5 text-[12px] leading-relaxed text-plum" role="alert">
+              <p
+                className="mt-3 flex items-start gap-1.5 text-[12px] leading-relaxed text-plum"
+                role="alert"
+              >
                 <Info className="mt-0.5 size-3.5 shrink-0" strokeWidth={2.4} aria-hidden />
                 <span>
                   <strong className="font-medium">{PAY_START_COPY.failedTitle}.</strong> {error}
                 </span>
+              </p>
+            )}
+
+            {notice && (
+              <p className="mt-3 text-[12px] leading-relaxed text-forest/70" role="status">
+                {notice}
               </p>
             )}
 
@@ -206,6 +324,10 @@ export function PaymentStartScreen({
               {paying ? PAY_START_COPY.payingLabel : PAY_START_COPY.payLabel}
               {!paying && <ArrowRight className="size-4" strokeWidth={2.4} aria-hidden />}
             </button>
+
+            <p className="mt-3 text-center text-[11.5px] text-forest/45">
+              {PAY_START_COPY.changeMethodHint}
+            </p>
           </>
         )}
       </div>
