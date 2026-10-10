@@ -12,7 +12,7 @@ function jsonResponse(body: unknown, status = 200): Response {
 
 describe('lib/ai/provider', () => {
   beforeEach(() => {
-    process.env.GEMINI_API_KEY = 'test-key'
+    process.env.DEEPSEEK_API_KEY = 'test-key'
   })
   afterEach(() => {
     vi.restoreAllMocks()
@@ -20,13 +20,13 @@ describe('lib/ai/provider', () => {
   })
 
   it('aiConfigured() false tanpa kunci', () => {
-    delete process.env.GEMINI_API_KEY
+    delete process.env.DEEPSEEK_API_KEY
     expect(aiConfigured()).toBe(false)
   })
 
-  it('generateText mengembalikan teks dari candidates[0]', async () => {
+  it('generateText mengembalikan teks dari choices[0].message.content', async () => {
     global.fetch = vi.fn(async () =>
-      jsonResponse({ candidates: [{ content: { parts: [{ text: 'Halo' }] } }] }),
+      jsonResponse({ choices: [{ message: { content: 'Halo' } }] }),
     )
     const res = await generateText({ system: 's', turns: [{ role: 'user', text: 'hi' }] })
     expect(res.ok).toBe(true)
@@ -34,7 +34,7 @@ describe('lib/ai/provider', () => {
   })
 
   it('tanpa kunci → error no-key, TANPA memanggil jaringan', async () => {
-    delete process.env.GEMINI_API_KEY
+    delete process.env.DEEPSEEK_API_KEY
     global.fetch = vi.fn()
     const res = await generateText({ system: 's', turns: [{ role: 'user', text: 'hi' }] })
     expect(res.ok).toBe(false)
@@ -82,7 +82,7 @@ describe('lib/ai/provider', () => {
 
   it('generateJSON mem-parse balasan JSON', async () => {
     global.fetch = vi.fn(async () =>
-      jsonResponse({ candidates: [{ content: { parts: [{ text: '{"category":"Makanan"}' }] } }] }),
+      jsonResponse({ choices: [{ message: { content: '{"category":"Makanan"}' } }] }),
     )
     const res = await generateJSON<{ category: string }>({
       system: 's',
@@ -94,11 +94,46 @@ describe('lib/ai/provider', () => {
 
   it('generateJSON: balasan bukan JSON → error parse', async () => {
     global.fetch = vi.fn(async () =>
-      jsonResponse({ candidates: [{ content: { parts: [{ text: 'maaf saya tidak bisa' }] } }] }),
+      jsonResponse({ choices: [{ message: { content: 'maaf saya tidak bisa' } }] }),
     )
     const res = await generateJSON({ system: 's', turns: [{ role: 'user', text: 'kopi' }] })
     expect(res.ok).toBe(false)
     if (!res.ok) expect(res.error.kind).toBe('parse')
+  })
+
+  it('permintaan ke DeepSeek: endpoint, Bearer, dan pesan bergaya OpenAI', async () => {
+    const fetchMock = vi.fn(async () => jsonResponse({ choices: [{ message: { content: 'ok' } }] }))
+    global.fetch = fetchMock
+    await generateText({
+      system: 's',
+      turns: [
+        { role: 'model', text: 'sebelumnya' },
+        { role: 'user', text: 'hi' },
+      ],
+    })
+    const call = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
+    expect(call[0]).toBe('https://api.deepseek.com/chat/completions')
+    expect((call[1].headers as Record<string, string>).Authorization).toBe('Bearer test-key')
+    const body = JSON.parse(String(call[1].body)) as {
+      model: string
+      messages: { role: string; content: string }[]
+    }
+    expect(body.model).toBe('deepseek-flash')
+    expect(body.messages[0]).toEqual({ role: 'system', content: 's' })
+    /* peran `model` milik app diterjemahkan jadi `assistant` */
+    expect(body.messages[1]).toEqual({ role: 'assistant', content: 'sebelumnya' })
+    expect(body.messages[2]).toEqual({ role: 'user', content: 'hi' })
+  })
+
+  it('modelDeepseek bisa ditimpa lewat env', async () => {
+    process.env.DEEPSEEK_MODEL_TEXT = 'deepseek-v4-pro'
+    process.env.DEEPSEEK_BASE_URL = 'https://proxy.example/v1/'
+    const fetchMock = vi.fn(async () => jsonResponse({ choices: [{ message: { content: 'ok' } }] }))
+    global.fetch = fetchMock
+    await generateText({ system: 's', turns: [{ role: 'user', text: 'hi' }] })
+    const call = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
+    expect(call[0]).toBe('https://proxy.example/v1/chat/completions')
+    expect((JSON.parse(String(call[1].body)) as { model: string }).model).toBe('deepseek-v4-pro')
   })
 })
 

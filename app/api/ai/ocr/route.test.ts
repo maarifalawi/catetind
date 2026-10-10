@@ -9,7 +9,7 @@ vi.mock('@/lib/ai/caller', () => ({ aiCallerId: vi.fn(() => 'anon:local') }))
 vi.mock('@/lib/ai/provider', () => ({
   aiConfigured: vi.fn(),
   generateFromImage: vi.fn(),
-  visionModel: () => 'gemini-2.5-flash',
+  visionModel: () => 'deepseek-flash',
   /* parser asli cukup diwakili JSON.parse untuk pengujian jalur route */
   parseJsonLoose: (text: string) => JSON.parse(text),
 }))

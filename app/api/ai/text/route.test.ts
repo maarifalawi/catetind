@@ -12,7 +12,7 @@ vi.mock('@/lib/ai/provider', () => ({
   aiConfigured: vi.fn(),
   generateText: vi.fn(),
   generateJSON: vi.fn(),
-  textModel: () => 'gemini-2.5-flash',
+  textModel: () => 'deepseek-flash',
 }))
 vi.mock('@/lib/ai/rate-limit', () => ({ allowAiCall: vi.fn() }))
 

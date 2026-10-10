@@ -402,16 +402,16 @@ export const AI_CAPTURE_REPLY = {
 } as const
 
 
-/* ── STATUS AI DI HALAMAN PENGATURAN → AI (paket 44 · diperbarui paket 63) ────
+/* ── STATUS AI DI HALAMAN PENGATURAN → AI (paket 44 · diperbarui paket 82) ────
    Tombol "Hubungkan AI" di AI Coach menuju `/settings/ai`. Sejak paket 63 model
-   AI benar-benar tersambung (Gemini, kunci HANYA di server), jadi halaman itu
-   menyebut keadaan hari ini apa adanya — termasuk apa yang terjadi kalau provider
-   sedang tak bisa dihubungi (jatuh ke aturan lokal, dengan label jujur). */
+   AI benar-benar tersambung (kini DeepSeek, kunci HANYA di server), jadi halaman
+   itu menyebut keadaan hari ini apa adanya — termasuk apa yang terjadi kalau
+   provider sedang tak bisa dihubungi (jatuh ke aturan lokal, dengan label jujur). */
 
 export const AI_STATUS_COPY = {
   badge: 'Tersambung ke model',
   title: 'Status AI hari ini',
-  body: 'AI Coach CatetInd tersambung ke model AI (Gemini) lewat server kami — kuncinya disimpan di server dan tidak pernah ikut ke browser. Scan struk, input suara, dan transaksi yang kamu ketik di chat dibaca model yang sama. Kalau sambungannya sedang penuh atau mati, AI Coach otomatis kembali menjawab dari aturan lokal + data di perangkatmu (jawabannya diberi label "belum pakai model"), dan pencatatan manual tetap jalan penuh.',
+  body: 'AI Coach CatetInd tersambung ke model AI (DeepSeek) lewat server kami — kuncinya disimpan di server dan tidak pernah ikut ke browser. Scan struk, input suara, dan transaksi yang kamu ketik di chat dibaca model yang sama. Kalau sambungannya sedang penuh atau mati, AI Coach otomatis kembali menjawab dari aturan lokal + data di perangkatmu (jawabannya diberi label "belum pakai model"), dan pencatatan manual tetap jalan penuh.',
   worksNow:
     'Yang selalu jalan: catat transaksi manual (kategorinya kamu pilih sendiri — bukan tebakan app), ketik transaksimu di AI Coach ("kopi 25rb"), scan struk, dan input suara. Dua saklar di bawah mengatur apakah AI boleh mengisi kategori & menamai catatanmu secara otomatis.',
 } as const
