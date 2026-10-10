@@ -43,10 +43,8 @@ import { SubscriptionLockNote } from '@/components/catetind/subscription-lock-no
 import { MOCK_RECEIPT_AMOUNT, MOCK_RECEIPT_READ_MS, receiptNoteFromFileName } from '@/lib/transaction-ai'
 import {
   EDIT_TRANSACTION_COPY,
-  TRANSACTION_CATEGORY_OPTIONS,
   TRANSACTION_FIXED_CATEGORY,
   TRANSACTION_INPUT_COPY,
-  TRANSACTION_WALLET_OPTIONS,
   manualCategoryChoice,
   type HistoryTransaction,
 } from '@/lib/data/history'
@@ -96,8 +94,9 @@ import { defaultWalletNameFor, useMoneyStore, walletOptionsFor } from '@/lib/mon
    PAKET 54 (uji pemakaian 28 Sep 2026) mencabut TEBAKAN KATEGORI dari jalur
    manual, karena kategori disimpan sebagai fakta tanpa pernah dipilih user dan
    Riwayat jadi penuh kategori karangan:
-     1. form TAMBAH punya PEMILIH KATEGORI sendiri — sumbernya hanya
-        `TRANSACTION_CATEGORY_OPTIONS` (daftar kanon, satu-satunya yang sah);
+     1. form TAMBAH punya PEMILIH KATEGORI sendiri — sejak paket 69 katalog
+        9-grup (`lib/data/categories.ts`) lewat `CategoryPicker`; yang dianggap
+        sah tetap satu daftar (`isCanonicalCategory` di `lib/data/history.ts`);
      2. badge "AI Suggested" + field `suggested` per tipe DIHAPUS: tidak ada lagi
         kategori yang tampil mengaku hasil AI lalu tersimpan tanpa persetujuan;
      3. form TERTAHAN tanpa pilihan user (tombol Catat nonaktif + petunjuk dari
@@ -253,13 +252,6 @@ function amountProblemCopy(problem: AmountInputProblem): string {
     default:
       return TRANSACTION_INPUT_COPY.amountUnsupported
   }
-}
-
-/** daftar opsi + nilai lama yang belum ada di daftar (supaya tidak hilang diam-diam) */
-function withCurrentValue(options: readonly string[], current?: string): string[] {
-  const list = [...options]
-  if (current && !list.includes(current)) list.push(current)
-  return list
 }
 
 /** getar fisik sukses — browser tanpa Vibration API (iOS Safari) cukup diabaikan */
@@ -504,12 +496,35 @@ export function TransactionInputEngine({
   const decidedWallet = walletIsFixed ? (sourceLabel ?? '') : wallet
   const walletNeeded = !isEdit && decidedWallet.trim().length === 0
   const showWalletNeeded = walletNeeded && (amountSettled || amount > 0)
-  /* daftar pilihan kategori & dompet: nilai lama yang tidak ada di daftar kanon
-     (mis. kategori 'Proyek' dari halaman Dompet Detail) DITAMBAHKAN sebagai
-     opsi — tanpa itu, sekadar membuka sheet edit akan diam-diam mengubah data
-     user jadi kategori lain. */
-  const categoryOptions = withCurrentValue(TRANSACTION_CATEGORY_OPTIONS, initial?.category)
-  const walletOptions = withCurrentValue(TRANSACTION_WALLET_OPTIONS, initial?.wallet)
+  /*
+   * PAKET 81 — daftar pilihan DOMPET mode EDIT dalam bentuk yang dimakan
+   * `WalletPicker` (`{ id, label, balance, hint? }`), sumbernya dompet hidup yang
+   * sama dengan mode TAMBAH (`pickerWalletOptions`).
+   *
+   * Nama dompet data lama yang tidak ada di daftar hidup tetap DITAMBAHKAN:
+   * tanpa itu, sekadar membuka sheet edit akan diam-diam memindahkan catatan
+   * user ke dompet lain. Baris itu tidak mengaku punya saldo — yang diketahui
+   * cuma "belum ada di daftarmu" (`walletNotOwned`), bukan "Saldo Rp 0".
+   *
+   * Kenapa dulu pemilihnya `<select>` nama-nama: kuncinya NAMA, jadi dua dompet
+   * bernama sama melahirkan galat React dan satu baris tak bisa dibedakan. `id`
+   * dari ledger menutup keduanya.
+   */
+  const editWalletPickerOptions = useMemo(() => {
+    const current = initial?.wallet?.trim() ?? ''
+    if (!current || pickerWalletOptions.some((option) => option.label === current)) {
+      return pickerWalletOptions
+    }
+    return [
+      {
+        id: `edit-current:${current}`,
+        label: current,
+        balance: 0,
+        hint: TRANSACTION_INPUT_COPY.walletNotOwned,
+      },
+      ...pickerWalletOptions,
+    ]
+  }, [pickerWalletOptions, initial?.wallet])
   /* font menyesuaikan panjang angka — memakai banyak DIGIT (bukan panjang string:
      titik ribuan ikut terhitung di `display`) dan token dari `lib/typography.ts`,
      jadi tidak ada lagi ukuran/bobot karangan di file ini (paket 53). */
@@ -1162,40 +1177,36 @@ export function TransactionInputEngine({
                   kategori dipilih user (blok di atas), dompet & tanggal dari
                   konteks. Di mode edit ketiganya sudah punya nilai dan justru
                   bagian yang paling sering salah (kasus paling umum: Minca salah
-                  nebak kategori) — karena itu bisa dikoreksi di sini, dan nilai
-                  lama yang tidak ada di daftar kanon tetap disertakan
-                  (`withCurrentValue`). */}
+                  nebak kategori) — karena itu bisa dikoreksi di sini.
+
+                  PAKET 81 — kategori & dompet bukan lagi `<select>` bawaan. Di HP
+                  roda pilihan sistem operasi tidak bisa menampilkan emoji
+                  kategori, pencarian, atau saldo dompet; dan kuncinya NAMA,
+                  sehingga dua dompet bernama sama melahirkan galat React. Sekarang
+                  keduanya memakai pemilih kustom yang SAMA dengan form TAMBAH —
+                  satu bahasa di seluruh app. Nilai lama yang tidak ada di katalog
+                  tetap aman: pemilih kategori menampilkan namanya apa adanya, dan
+                  pemilih dompet menambahkan dompet itu sebagai baris ber-keterangan
+                  `walletNotOwned` (bukan "Saldo Rp 0" yang tidak diketahui). */}
               {isEdit && initial && (
                 <div className="mt-3 w-full">
                   <div className="grid gap-2.5 sm:grid-cols-3">
                     <EditField label={EDIT_TRANSACTION_COPY.categoryLabel}>
-                      <select
+                      <CategoryPicker
                         value={category}
-                        onChange={(event) => setCategory(event.target.value)}
-                        aria-label={EDIT_TRANSACTION_COPY.categoryLabel}
-                        className={EDIT_CONTROL_CLASS}
-                      >
-                        {categoryOptions.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={setCategory}
+                        variant={typeId === 'income' ? 'income' : 'expense'}
+                        ariaLabel={EDIT_TRANSACTION_COPY.categoryLabel}
+                      />
                     </EditField>
 
                     <EditField label={EDIT_TRANSACTION_COPY.walletLabel}>
-                      <select
+                      <WalletPicker
                         value={wallet}
-                        onChange={(event) => setWallet(event.target.value)}
-                        aria-label={EDIT_TRANSACTION_COPY.walletLabel}
-                        className={EDIT_CONTROL_CLASS}
-                      >
-                        {walletOptions.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
+                        options={editWalletPickerOptions}
+                        onChange={setWallet}
+                        masked={masked}
+                      />
                     </EditField>
 
                     <EditField label={EDIT_TRANSACTION_COPY.dateLabel}>

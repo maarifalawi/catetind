@@ -1,8 +1,10 @@
 'use client'
 
-import type { Debt, DebtPayment, Investment } from '@/lib/data/wealth'
+import type { AssetTransaction, Debt, DebtPayment, Investment } from '@/lib/data/wealth'
 import { browserSupabase } from './client'
 import {
+  toAssetTransaction,
+  toAssetTransactionDbRow,
   toDebt,
   toDebtDbRow,
   toDebtPayment,
@@ -30,6 +32,8 @@ export interface RemoteWealth {
   investments: Investment[]
   debts: Debt[]
   payments: DebtPayment[]
+  /** ledger beli/jual aset (riwayat per aset) — sumber NYATA, bukan konstanta mock */
+  assetTransactions: AssetTransaction[]
 }
 
 /** harga pasar terakhir per aset (baris `kind='price'` terbaru menang) */
@@ -50,12 +54,19 @@ export async function readRemoteWealth(): Promise<RemoteWealth | null> {
     const { data: session } = await client.auth.getSession()
     if (!session.session?.access_token) return null
 
-    const [invRes, priceRes, debtRes, balRes, payRes] = await Promise.all([
+    const [invRes, priceRes, txRes, debtRes, balRes, payRes] = await Promise.all([
       client.from('investments').select('*').order('created_at', { ascending: true }).limit(200),
       client
         .from('asset_transactions')
         .select('*')
         .eq('kind', 'price')
+        .order('date', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(400),
+      client
+        .from('asset_transactions')
+        .select('*')
+        .in('kind', ['buy', 'sell'])
         .order('date', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(400),
@@ -89,7 +100,11 @@ export async function readRemoteWealth(): Promise<RemoteWealth | null> {
       .filter((row) => Boolean(row?.id))
       .map((row) => toDebtPayment(row))
 
-    return { investments, debts, payments }
+    const assetTransactions = ((txRes.data ?? []) as AssetTransactionDbRow[])
+      .filter((row) => Boolean(row?.investment_id))
+      .map((row) => toAssetTransaction(row))
+
+    return { investments, debts, payments, assetTransactions }
   } catch {
     return null
   }
@@ -125,6 +140,23 @@ export async function pushPriceToServer(
     const { error } = await client
       .from('asset_transactions')
       .insert({ ...toPriceTransactionDbRow({ ...inv, id: remoteId }, clientTxId, dateISO) })
+    return !error || error.code === '23505'
+  } catch {
+    return false
+  }
+}
+
+export async function pushAssetTransactionToServer(
+  tx: AssetTransaction,
+  investmentRemoteId: string,
+  clientTxId: string,
+): Promise<boolean> {
+  const client = browserSupabase()
+  if (!client) return false
+  try {
+    const { error } = await client
+      .from('asset_transactions')
+      .insert({ ...toAssetTransactionDbRow(tx, investmentRemoteId, clientTxId) })
     return !error || error.code === '23505'
   } catch {
     return false

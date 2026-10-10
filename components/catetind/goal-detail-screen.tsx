@@ -319,53 +319,50 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
           <GlobalPrivacyToggle />
         </header>
 
-        {/* ── HERO: tanaman + persentase besar + bar progres + badge tahap ──── */}
+        {/* ── HERO PADAT (redesain round 3): SATU blok horizontal berisi tanaman ·
+            persen · bar · badge tahap, lalu grid tiga angka di bawahnya. Sebelumnya
+            semua elemen ditumpuk vertikal (tanaman 36, badge, persen 5xl, bar, dl
+            berjarak lebar) sehingga tingginya melebihi layar kecil dan menyisakan
+            ruang kosong besar di bawahnya. Informasi yang sama, tinggi ± separuhnya. */}
         <section
           aria-label={`${fund.name} — ${stage.label}`}
           className={cn(
-            'relative mt-5 overflow-hidden rounded-[2rem] bg-gradient-to-b from-sage/60 via-cream to-cream p-5 shadow-[0_18px_40px_-34px_rgba(69,89,78,0.55)] ring-1 ring-soil/12',
+            'relative mt-4 overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-sage/60 via-cream to-cream p-4 shadow-[0_18px_40px_-34px_rgba(69,89,78,0.55)] ring-1 ring-soil/12 sm:p-5',
             reached && 'ring-mint/70',
           )}
         >
           {/* confetti hanya di state tercapai; versi statis saat reduce-motion */}
           {reached && <BloomConfetti still={Boolean(reduceMotion)} />}
 
-          <div className="relative z-10 flex flex-col items-center gap-4 sm:flex-row sm:items-end">
+          <div className="relative z-10 flex items-end gap-3 sm:gap-5">
             {/* tanaman — metafora progres (SVG statis + sway CSS, tanpa Lottie) */}
-            <span className="flex h-32 w-32 shrink-0 items-end justify-center sm:h-36 sm:w-36">
+            <span className="flex h-24 w-24 shrink-0 items-end justify-center sm:h-28 sm:w-28">
               <PlantIllustration
                 stage={PLANT_STAGE_INDEX[fund.stage] as IllustrationStage}
-                className="w-28 sm:w-32"
+                className="w-20 sm:w-24"
               />
             </span>
 
-            <div className="w-full min-w-0 flex-1">
-              <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
-                {/* badge tahap — copy kanon PRD 2C.3 (baris 838–844) */}
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-forest px-2.5 py-1 text-[10.5px] font-medium uppercase tracking-wide text-mint">
-                  <span aria-hidden className="text-[12px] leading-none">
-                    {stage.icon}
+            <div className="min-w-0 flex-1">
+              {/* persen besar + badge prioritas SEBARIS (badge tahap pindah ke
+                  bawah bar supaya tidak menambah satu baris tinggi) */}
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                <span className="flex items-baseline gap-1">
+                  <span className="font-display text-[38px] font-semibold leading-none tracking-tight tabular-nums text-forest">
+                    {Math.round(percent)}
                   </span>
-                  {stage.label}
+                  <span className="font-display text-[18px] font-medium text-forest/40">%</span>
                 </span>
                 <span
                   aria-label={FUND_DETAIL_COPY.priorityA11y(priority.label)}
                   className={cn(
-                    'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10.5px] font-medium uppercase tracking-wide',
+                    'inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide',
                     priority.badge,
                   )}
                 >
                   <span aria-hidden className={cn('size-1.5 rounded-full', priority.dot)} />
                   {priority.label}
                 </span>
-              </div>
-
-              {/* persentase besar — metrik utama halaman ini */}
-              <div className="mt-3 flex items-baseline justify-center gap-2 sm:justify-start">
-                <span className="font-display text-5xl font-semibold leading-none tabular-nums text-forest">
-                  {Math.round(percent)}
-                </span>
-                <span className="font-display text-xl font-medium text-forest/40">%</span>
               </div>
 
               {/* bar progres — indikator kedua, melengkapi tanaman (bukan pengganti) */}
@@ -375,7 +372,7 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
                 aria-valuenow={Math.round(percent)}
                 aria-valuemin={0}
                 aria-valuemax={100}
-                className="mt-3 h-3 w-full overflow-hidden rounded-full bg-sage/70 ring-1 ring-inset ring-soil/8"
+                className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-sage/70 ring-1 ring-inset ring-soil/8"
               >
                 <motion.span
                   className="block h-full rounded-full bg-gradient-to-r from-forest to-leaf"
@@ -385,51 +382,62 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
                 />
               </div>
 
-              {/* nominal terkumpul / target / deadline */}
-              <dl className="mt-3.5 flex flex-wrap items-end gap-x-4 gap-y-2">
-                <div>
-                  <dt className="text-[10px] font-medium uppercase tracking-[0.12em] text-forest/45">
-                    {FUND_DETAIL_COPY.heroLabel}
-                  </dt>
-                  <dd className="font-display text-[19px] font-semibold tabular-nums text-forest">
-                    {money(fund.current)}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-[10px] font-medium uppercase tracking-[0.12em] text-forest/45">
-                    {FUND_DETAIL_COPY.targetLabel}
-                  </dt>
-                  <dd className="text-[13.5px] font-semibold tabular-nums text-forest/70">
-                    {money(fund.target)}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-[10px] font-medium uppercase tracking-[0.12em] text-forest/45">
-                    {FUND_DETAIL_COPY.deadlineLabel}
-                  </dt>
-                  <dd className="flex items-center gap-1.5 text-[13.5px] font-medium text-forest/70">
-                    <CalendarClock className="size-3.5 text-forest" strokeWidth={2.4} aria-hidden />
-                    {formatDeadline(fund.deadline)}
-                  </dd>
-                </div>
-              </dl>
-
-              {reached ? (
-                /* perayaan PRD 2C.4 baris 859 — `role="status"` supaya pembaca
-                   layar ikut mendengar kabar baiknya (partikel confetti dekoratif) */
-                <p
-                  role="status"
-                  className="mt-3 rounded-2xl bg-mint-soft/70 px-3.5 py-3 text-[12.5px] font-medium leading-relaxed text-forest ring-1 ring-forest/10"
-                >
-                  {FUND_ACHIEVED_COPY.body(fund.name)}
-                </p>
-              ) : (
-                <p className="mt-3 text-[11px] leading-relaxed text-forest/40">
-                  {FUND_DETAIL_COPY.heroHint}
-                </p>
-              )}
+              {/* badge tahap — copy kanon PRD 2C.3 (baris 838–844). Dulu ia duduk di
+                  ATAS persen (menambah satu baris); sekarang sebaris di bawah bar,
+                  jadi tingginya nol tambahan. */}
+              <span className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-forest px-2.5 py-1 text-[10px] font-medium uppercase tracking-wide text-mint">
+                <span aria-hidden className="text-[12px] leading-none">
+                  {stage.icon}
+                </span>
+                {stage.label}
+              </span>
             </div>
           </div>
+
+          {/* tiga angka — grid 3 kolom rapat (bukan dl berjarak lebar): terkumpul ·
+              target · deadline, semuanya terbaca tanpa perlu menggulir */}
+          <dl className="relative z-10 mt-4 grid grid-cols-3 gap-2">
+            <div className="min-w-0 rounded-2xl bg-cream/70 px-2.5 py-2 ring-1 ring-soil/8">
+              <dt className="text-[9px] font-medium uppercase tracking-[0.1em] text-forest/45">
+                {FUND_DETAIL_COPY.heroLabel}
+              </dt>
+              <dd className="mt-0.5 truncate font-display text-[15px] font-semibold tabular-nums text-forest">
+                {money(fund.current)}
+              </dd>
+            </div>
+            <div className="min-w-0 rounded-2xl bg-cream/70 px-2.5 py-2 ring-1 ring-soil/8">
+              <dt className="text-[9px] font-medium uppercase tracking-[0.1em] text-forest/45">
+                {FUND_DETAIL_COPY.targetLabel}
+              </dt>
+              <dd className="mt-0.5 truncate text-[13px] font-semibold tabular-nums text-forest/70">
+                {money(fund.target)}
+              </dd>
+            </div>
+            <div className="min-w-0 rounded-2xl bg-cream/70 px-2.5 py-2 ring-1 ring-soil/8">
+              <dt className="text-[9px] font-medium uppercase tracking-[0.1em] text-forest/45">
+                {FUND_DETAIL_COPY.deadlineLabel}
+              </dt>
+              <dd className="mt-0.5 flex items-center gap-1 truncate text-[12px] font-medium tabular-nums text-forest/70">
+                <CalendarClock className="size-3 shrink-0 text-forest" strokeWidth={2.4} aria-hidden />
+                {formatDeadline(fund.deadline)}
+              </dd>
+            </div>
+          </dl>
+
+          {reached ? (
+            /* perayaan PRD 2C.4 baris 859 — `role="status"` supaya pembaca layar
+               ikut mendengar kabar baiknya (partikel confetti dekoratif) */
+            <p
+              role="status"
+              className="relative z-10 mt-3 rounded-2xl bg-mint-soft/70 px-3.5 py-2.5 text-[12px] font-medium leading-relaxed text-forest ring-1 ring-forest/10"
+            >
+              {FUND_ACHIEVED_COPY.body(fund.name)}
+            </p>
+          ) : (
+            <p className="relative z-10 mt-3 text-[10.5px] leading-snug text-forest/40">
+              {FUND_DETAIL_COPY.heroHint}
+            </p>
+          )}
 
           {/* PRD 2C.4 baris 857 — "dikit lagi" saat sisa ≤ Rp 500.000 */}
           <AnimatePresence initial={false}>
@@ -491,39 +499,43 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
           )}
         </AnimatePresence>
 
-        {/* ── KARTU ANGKA: rencana nabung + perkiraan penuh ─────────────────── */}
-        <div className="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-2 xl:gap-5">
+        {/* ── RENCANA & PERKIRAAN (redesain round 3) — DUA kartu kecil berdampingan
+            dengan ANGKA sebagai fokus, bukan dua kartu besar bertumpuk. Padding
+            turun (p-5 → p-4), ikon mengecil, jarak antar-bagian dirapatkan, dan
+            kalimat penjelas dipendekkan — angka + satu baris alasan sudah cukup. */}
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
           {/* ── auto-kalkulasi PRD 2C.3: (target − terkumpul) / bulan tersisa ── */}
           <section
             aria-label={reached ? FUND_PLAN_COPY.done : FUND_PLAN_COPY.full(money(perMonth))}
-            className="rounded-[1.75rem] bg-cream p-5 shadow-[0_18px_40px_-34px_rgba(69,89,78,0.55)] ring-1 ring-soil/10"
+            className="rounded-[1.5rem] bg-cream p-4 shadow-[0_18px_40px_-34px_rgba(69,89,78,0.55)] ring-1 ring-soil/10"
           >
             <div className="flex items-center gap-2">
-              <span className="flex size-7 items-center justify-center rounded-xl bg-gradient-to-br from-sage via-cream to-mint-soft text-forest ring-1 ring-forest/10">
-                <Target className="size-3.5" strokeWidth={2.6} aria-hidden />
+              <span className="flex size-6 items-center justify-center rounded-lg bg-gradient-to-br from-sage via-cream to-mint-soft text-forest ring-1 ring-forest/10">
+                <Target className="size-3" strokeWidth={2.6} aria-hidden />
               </span>
-              <h2 className="font-display text-[16px] font-semibold tracking-tight text-forest">
+              <h2 className="font-display text-[13px] font-semibold tracking-tight text-forest">
                 {FUND_DETAIL_COPY.planTitle}
               </h2>
             </div>
 
-            {/* dua potong kalimat supaya nominalnya bisa ditonjolkan; pembaca
-                layar tetap mendengar satu kalimat utuh (inline berurutan) */}
             {reached ? (
               /* `monthlyNeeded()` = 0 saat sudah penuh → jangan tampil "Rp 0/bulan" */
-              <p className="mt-3 text-[13px] leading-relaxed text-forest/60">
+              <p className="mt-2 text-[11.5px] leading-snug text-forest/55">
                 {FUND_PLAN_COPY.done}
               </p>
             ) : (
               <>
-                <p className="mt-3 text-[13px] leading-relaxed text-forest/60">
+                {/* dua potong kalimat kanon: pembaca layar mendengar satu kalimat
+                    utuh lewat `aria-label` di <section>, yang terlihat di sini
+                    cukup angka besar + konteksnya */}
+                <p className="mt-2 text-[12px] leading-snug text-forest/55">
                   {FUND_PLAN_COPY.lead}{' '}
-                  <b className="font-display text-[17px] font-semibold tabular-nums text-forest">
+                  <b className="font-display text-[16px] font-semibold tabular-nums text-forest">
                     {money(perMonth)}
                   </b>
                   <span>{FUND_PLAN_COPY.tail}</span>
                 </p>
-                <p className="mt-2 text-[11px] text-forest/40">
+                <p className="mt-1.5 text-[10.5px] leading-snug text-forest/40">
                   {FUND_PLAN_COPY.monthsLeft(monthsLeft)}
                 </p>
               </>
@@ -533,13 +545,13 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
           {/* ── proyeksi tanggal penuh (asumsi rata-rata setoran, dikatakan) ── */}
           <section
             aria-label={FUND_DETAIL_COPY.projectionTitle}
-            className="rounded-[1.75rem] bg-cream p-5 shadow-[0_18px_40px_-34px_rgba(69,89,78,0.55)] ring-1 ring-soil/10"
+            className="rounded-[1.5rem] bg-cream p-4 shadow-[0_18px_40px_-34px_rgba(69,89,78,0.55)] ring-1 ring-soil/10"
           >
             <div className="flex items-center gap-2">
-              <span className="flex size-7 items-center justify-center rounded-xl bg-gradient-to-br from-sage via-cream to-mint-soft text-forest ring-1 ring-forest/10">
-                <CalendarClock className="size-3.5" strokeWidth={2.6} aria-hidden />
+              <span className="flex size-6 items-center justify-center rounded-lg bg-gradient-to-br from-sage via-cream to-mint-soft text-forest ring-1 ring-forest/10">
+                <CalendarClock className="size-3" strokeWidth={2.6} aria-hidden />
               </span>
-              <h2 className="font-display text-[16px] font-semibold tracking-tight text-forest">
+              <h2 className="font-display text-[13px] font-semibold tracking-tight text-forest">
                 {FUND_DETAIL_COPY.projectionTitle}
               </h2>
             </div>
@@ -547,11 +559,12 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
             {projection ? (
               <>
                 {/* tanggal besar = jawaban, kalimat di bawah = alasannya */}
-                <p className="mt-3 font-display text-[22px] font-semibold tracking-tight tabular-nums text-forest">
+                <p className="mt-2 font-display text-[18px] font-semibold leading-none tracking-tight tabular-nums text-forest">
                   {formatDeadline(projection.dateISO)}
                 </p>
-                <p className="mt-1.5 text-[12.5px] leading-relaxed text-forest/60">{projectionLine}</p>
-                <p className="mt-2 text-[11px] leading-relaxed text-forest/40">
+                <p className="mt-1.5 text-[11px] leading-snug text-forest/55">{projectionLine}</p>
+                {/* asumsi WAJIB dikatakan (CONTEXT §5.3) — tetap ada, cuma dikecilkan */}
+                <p className="mt-1 text-[10px] leading-snug text-forest/35">
                   {FUND_PROJECTION_COPY.assumption(
                     projection.sampleCount,
                     money(projection.avgMonthly),
@@ -559,15 +572,13 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
                 </p>
               </>
             ) : (
-              <p className="mt-3 text-[12.5px] leading-relaxed text-forest/60">
-                {projectionLine}
-              </p>
+              <p className="mt-2 text-[11px] leading-snug text-forest/55">{projectionLine}</p>
             )}
           </section>
         </div>
 
         {/* ── RIWAYAT SETORAN — tanggal, nominal, dompet sumber ─────────────── */}
-        <section className="mt-5">
+        <section className="mt-4">
           <div className="flex flex-wrap items-center gap-2">
             <span className="flex size-7 items-center justify-center rounded-xl bg-gradient-to-br from-sage via-cream to-mint-soft text-forest ring-1 ring-forest/10">
               <PiggyBank className="size-3.5" strokeWidth={2.5} aria-hidden />
@@ -583,7 +594,7 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
           {history.length === 0 ? (
             <EmptyContributions masked={masked} onContribute={() => setContributeOpen(true)} />
           ) : (
-            <ul className="mt-2 divide-y divide-soil/10 rounded-[1.75rem] bg-cream px-4 py-1.5 shadow-[0_18px_40px_-34px_rgba(69,89,78,0.55)] ring-1 ring-soil/10">
+            <ul className="mt-3 flex flex-col gap-1.5">
               {history.map((item, index) => (
                 <ContributionRow key={item.id} item={item} masked={masked} index={index} />
               ))}
@@ -597,15 +608,21 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
             `bottom-[5.5rem]` = tepat di atas bottom nav (nav = bottom-5 + 16 ≈
             84px); di desktop nav hilang jadi bar turun ke dasar kolom, dan
             `lg:max-w-lg` menjaga tidak menabrak FAB AI Coach di kanan bawah. */}
-        <div className="sticky bottom-[5.5rem] z-30 mt-6 lg:bottom-5">
-          <div className="rounded-[1.5rem] bg-cream/95 p-2.5 shadow-[0_24px_50px_-20px_rgba(0,0,0,0.28)] ring-1 ring-soil/12 backdrop-blur-md lg:max-w-lg">
-            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center">
+        <div className="sticky bottom-[5.5rem] z-30 mt-4 lg:bottom-5">
+          <div className="rounded-[1.4rem] bg-cream/95 p-2 shadow-[0_24px_50px_-20px_rgba(0,0,0,0.28)] ring-1 ring-soil/12 backdrop-blur-md lg:max-w-lg">
+            {/* SATU BARIS: aksi primer (Setor / Buat target baru) + tombol hapus ikon.
+                REDESAIN round 3 — dulu tiga tingkatan bertumpuk (tombol penuh →
+                kalimat hint → tombol "Hapus celengan" penuh) sehingga bar-nya tinggi,
+                penuh teks, dan mendorong konten. Sekarang hint hidup di `title`
+                (tetap terbaca, nol tinggi) dan hapus jadi ikon berkotak di ujung
+                kanan (kanon aksi merusak: plum). */}
+            <div className="flex items-center gap-2">
               {reached ? (
                 <>
                   {/* target sudah penuh → aksi primer berpindah ke target baru */}
                   <Link
                     href="/budget"
-                    className="inline-flex h-12 w-full flex-1 items-center justify-center gap-2 rounded-[1.1rem] bg-gradient-to-b from-forest-soft to-forest text-[14px] font-medium text-cream shadow-[0_14px_28px_-14px_rgba(69,89,78,0.85)] transition-all hover:brightness-[1.08] active:scale-[0.99] sm:w-auto"
+                    className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-[1rem] bg-gradient-to-b from-forest-soft to-forest text-[13.5px] font-medium text-cream shadow-[0_14px_28px_-14px_rgba(69,89,78,0.85)] transition-all hover:brightness-[1.08] active:scale-[0.99]"
                   >
                     <Plus className="size-4" strokeWidth={2.6} aria-hidden />
                     {FUND_ACHIEVED_COPY.cta}
@@ -613,7 +630,9 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
                   <button
                     type="button"
                     onClick={() => setContributeOpen(true)}
-                    className="inline-flex h-12 w-full flex-1 items-center justify-center gap-2 rounded-[1.1rem] bg-cream text-[14px] font-medium text-forest ring-1 ring-soil/12 transition-colors hover:bg-sage/60 active:scale-[0.99] sm:w-auto"
+                    title={FUND_ACHIEVED_COPY.hint}
+                    aria-label={FUND_DETAIL_COPY.setCta}
+                    className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-[1rem] bg-cream px-3.5 text-[13.5px] font-medium text-forest ring-1 ring-soil/12 transition-colors hover:bg-sage/60 active:scale-[0.99]"
                   >
                     <PiggyBank className="size-4 text-forest" strokeWidth={2.4} aria-hidden />
                     {FUND_DETAIL_COPY.setCta}
@@ -624,28 +643,24 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
                   type="button"
                   onClick={() => setContributeOpen(true)}
                   title={FUND_DETAIL_COPY.setHint}
-                  className="inline-flex h-12 w-full flex-1 items-center justify-center gap-2 rounded-[1.1rem] bg-gradient-to-b from-forest-soft to-forest text-[14px] font-medium text-cream shadow-[0_14px_28px_-14px_rgba(69,89,78,0.85)] transition-all hover:brightness-[1.08] active:scale-[0.99] sm:w-auto"
+                  className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-[1rem] bg-gradient-to-b from-forest-soft to-forest text-[13.5px] font-medium text-cream shadow-[0_14px_28px_-14px_rgba(69,89,78,0.85)] transition-all hover:brightness-[1.08] active:scale-[0.99]"
                 >
                   <PiggyBank className="size-4" strokeWidth={2.4} aria-hidden />
                   {FUND_DETAIL_COPY.setCta}
                 </button>
               )}
+              {/* hapus celengan (paket 60.2) — ikon berkotak di zona ibu jari;
+                  plum = kanon aksi merusak (`ConfirmDialog` memakai nada sama) */}
+              <button
+                type="button"
+                onClick={() => setDeleteOpen(true)}
+                title={FUND_CARD_ACTION_COPY.deleteHint}
+                aria-label={FUND_CARD_ACTION_COPY.deleteLabel}
+                className="flex size-11 shrink-0 items-center justify-center rounded-[1rem] text-plum/75 ring-1 ring-plum/20 transition-colors hover:bg-plum/12 hover:text-plum focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-plum/30 active:scale-95"
+              >
+                <Trash2 className="size-4" strokeWidth={2.4} aria-hidden />
+              </button>
             </div>
-            <p className="mt-2 px-1 pb-0.5 text-[10.5px] leading-snug text-forest/45">
-              {reached ? FUND_ACHIEVED_COPY.hint : FUND_DETAIL_COPY.setHint}
-            </p>
-            {/* hapus celengan (paket 60.2) — ikut di bar bawah (zona ibu jari),
-                bukan disembunyikan di header. Warna plum = kanon aksi merusak
-                repo ini (`ConfirmDialog` memakai nada yang sama). */}
-            <button
-              type="button"
-              onClick={() => setDeleteOpen(true)}
-              title={FUND_CARD_ACTION_COPY.deleteHint}
-              className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-[1.1rem] px-3 py-2 text-[11.5px] font-medium text-plum/75 transition-colors hover:bg-plum/12 hover:text-plum focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-plum/30 active:scale-[0.99]"
-            >
-              <Trash2 className="size-3.5" strokeWidth={2.4} aria-hidden />
-              {FUND_CARD_ACTION_COPY.deleteLabel}
-            </button>
           </div>
         </div>
       </div>
@@ -759,6 +774,12 @@ function BloomConfetti({ still }: { still: boolean }) {
  * Satu baris riwayat setoran: tanggal, dompet sumber, dan nominal.
  * Nominal memakai `+` (uang yang MASUK ke celengan) dan warna hijau uang-masuk
  * (`text-forest`) — konsisten dengan bahasa warna transaksi di halaman lain.
+ *
+ * PAKET 82 — barisnya sekarang KARTU TIPIS bertint (`bg-sage/40`) dengan sudut
+ * membulat, dan daftarnya dipisah `gap-1.5` (bukan lagi `divide-y`). Aturan
+ * pemilik produk: "catatan transaksi jangan ada yang mepet" — jarak antar
+ * catatan harus terlihat, sama seperti daftar di Dashboard & Riwayat. Tint-nya
+ * yang membuat jarak itu terbaca; tanpa latar, celah di atas putih tak kasat mata.
  */
 function ContributionRow({
   item,
@@ -777,7 +798,7 @@ function ContributionRow({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, delay: Math.min(index, 6) * 0.04, ease: EASE }}
-      className="flex items-center gap-3 py-3"
+      className="flex items-center gap-3 rounded-xl bg-sage/40 px-3 py-2.5"
     >
       <span
         aria-hidden

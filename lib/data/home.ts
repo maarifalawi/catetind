@@ -151,6 +151,14 @@ export const HOME_INCOME_COPY = {
   totalThisMonth: 'Total pemasukan bulan ini',
   /** keterangan pembanding */
   vsLastMonth: 'vs bulan lalu',
+  /**
+   * Penanda saat pembandingnya BELUM bisa dihitung (bulan lalu Rp 0) — paket 77.
+   *
+   * Sebelum paket ini sel persennya cuma disembunyikan, dan karena kartunya
+   * dipakai sebagai grid dua kolom simetris, sel yang hilang membuat sisinya
+   * timpang. Yang ditulis adalah penanda kosong, BUKAN `0%`/`+100%` karangan.
+   */
+  noBaseline: '—',
   /** keadaan kosong jujur — bukan angka contoh */
   emptyTitle: 'Belum ada pemasukan bulan ini',
   emptyHint: 'Catat pemasukan biar grafiknya kebaca 🌱',

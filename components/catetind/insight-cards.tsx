@@ -48,29 +48,29 @@ const INSIGHT_ICONS: Record<HistoryInsight['id'], LucideIcon> = {
 
 export function InsightCards({ insights }: { insights: HistoryInsight[] }) {
   const header = (
-    <div className="flex items-start justify-between gap-3">
-      <div className="flex items-center gap-2.5">
-        <span className="flex size-9 items-center justify-center rounded-full bg-sage text-forest">
-          <Sparkles className="size-[18px]" strokeWidth={2.2} />
-        </span>
-        <div>
-          <h2 className="font-display text-[15px] font-semibold tracking-tight text-forest">
-            {INSIGHT_CARD_COPY.title}
-          </h2>
-          <p className="text-[11.5px] text-forest/45">
-            {insights.length > 0
-              ? INSIGHT_CARD_COPY.found(insights.length)
-              : INSIGHT_CARD_COPY.waiting}
-          </p>
-        </div>
+    <div className="flex items-center gap-2.5">
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sage text-forest">
+        <Sparkles className="size-[18px]" strokeWidth={2.2} />
+      </span>
+      <div className="min-w-0">
+        <h2 className="font-display text-[15px] font-semibold tracking-tight text-forest">
+          {INSIGHT_CARD_COPY.title}
+        </h2>
+        <p className="text-[11.5px] text-forest/45">
+          {insights.length > 0
+            ? INSIGHT_CARD_COPY.found(insights.length)
+            : INSIGHT_CARD_COPY.waiting}
+        </p>
       </div>
     </div>
   )
 
-  /* belum ada satu pun insight yang lolos ambang → kartu nurturing, bukan klaim */
+  /* belum ada satu pun insight yang lolos ambang → kartu nurturing, bukan klaim.
+     Tanpa `justify-center` (dulu isinya mengambang di tengah kartu tinggi dan
+     menyisakan celah kosong di atas-bawah) — sekarang menempel di atas. */
   if (insights.length === 0) {
     return (
-      <section className="flex h-full flex-col justify-center rounded-[2rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] ring-1 ring-soil/12 sm:p-6">
+      <section className="flex h-full flex-col rounded-[2rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] ring-1 ring-soil/12 sm:p-6">
         {header}
         <p className="mt-3 text-[13px] leading-relaxed text-forest/60">{INSIGHT_CARD_COPY.learning}</p>
       </section>
@@ -81,10 +81,11 @@ export function InsightCards({ insights }: { insights: HistoryInsight[] }) {
     <section className="flex h-full flex-col rounded-[2rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] ring-1 ring-soil/12 sm:p-6">
       {header}
 
-      {/* deret horizontal: snap per kartu, scrollbar disembunyikan */}
-      <div className="hide-scrollbar -mx-5 mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto px-5 pb-1 sm:-mx-6 sm:px-6">
+      {/* daftar VERTIKAL padat — satu insight satu blok. Dulu deret gulir
+          horizontal: dengan 1–3 insight, sisanya jadi ruang kosong di kanan. */}
+      <div className="mt-4 flex flex-1 flex-col gap-2.5">
         {insights.map((card, i) => (
-          <InsightCardItem key={card.id} card={card} delay={0.08 * i} />
+          <InsightCardItem key={card.id} card={card} delay={0.06 * i} />
         ))}
       </div>
     </section>
@@ -103,45 +104,46 @@ function InsightCardItem({
 
   return (
     <motion.article
-      initial={{ opacity: 0, y: 14 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.45, delay, ease: EASE }}
-      className="flex min-w-[260px] max-w-[320px] shrink-0 snap-start flex-col gap-3 rounded-[1.6rem] bg-cream/70 p-4 ring-1 ring-soil/10 sm:min-w-[280px]"
+      transition={{ duration: 0.4, delay, ease: EASE }}
+      className="flex flex-col gap-2 rounded-[1.4rem] bg-cream/70 p-3.5 ring-1 ring-soil/10"
     >
-      <div className="flex items-center gap-2.5">
+      {/* baris kepala: ikon + eyebrow + aksi (kalau ada) dalam satu baris padat */}
+      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
         <span
-          className={cn('flex size-8 shrink-0 items-center justify-center rounded-full', tone.tile)}
+          className={cn('flex size-7 shrink-0 items-center justify-center rounded-full', tone.tile)}
         >
-          <Icon className="size-4" strokeWidth={2.3} />
+          <Icon className="size-[15px]" strokeWidth={2.3} />
         </span>
-        <span className={cn('text-[10.5px] font-medium uppercase tracking-[0.14em]', tone.eyebrow)}>
+        <span
+          className={cn(
+            'min-w-0 flex-1 truncate text-[10.5px] font-medium uppercase tracking-[0.14em]',
+            tone.eyebrow,
+          )}
+        >
           {card.eyebrow}
         </span>
+        {/* tiap aksi WAJIB punya tujuan (Link) — cabang tombol callback yang
+            bisa jatuh ke toast "segera tersedia" sudah dicabut (prompt 24) */}
+        {card.actions.map((action, i) => (
+          <Link
+            key={action.label}
+            href={action.href}
+            className={cn(
+              'inline-flex w-fit shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-[11.5px] font-medium transition-colors active:scale-[0.97]',
+              i === 0
+                ? 'bg-forest text-cream hover:bg-forest-soft'
+                : 'bg-cream text-forest ring-1 ring-inset ring-forest/20 hover:bg-sage/60',
+            )}
+          >
+            {action.label}
+            <ArrowUpRight className="size-3" strokeWidth={2.6} aria-hidden />
+          </Link>
+        ))}
       </div>
 
       <p className="text-[13px] font-medium leading-relaxed text-forest/75">{card.copy}</p>
-
-      {card.actions.length > 0 && (
-        <div className="mt-auto flex flex-wrap items-center gap-2">
-          {/* tiap aksi WAJIB punya tujuan (Link) — cabang tombol callback yang
-              bisa jatuh ke toast "segera tersedia" sudah dicabut (prompt 24) */}
-          {card.actions.map((action, i) => (
-            <Link
-              key={action.label}
-              href={action.href}
-              className={cn(
-                'inline-flex w-fit items-center gap-1 rounded-full px-3 py-1.5 text-[11.5px] font-medium transition-colors active:scale-[0.97]',
-                i === 0
-                  ? 'bg-forest text-cream hover:bg-forest-soft'
-                  : 'bg-cream text-forest ring-1 ring-inset ring-forest/20 hover:bg-sage/60',
-              )}
-            >
-              {action.label}
-              <ArrowUpRight className="size-3" strokeWidth={2.6} aria-hidden />
-            </Link>
-          ))}
-        </div>
-      )}
     </motion.article>
   )
 }

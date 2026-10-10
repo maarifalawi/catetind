@@ -5,14 +5,11 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { ArrowRight, Search } from 'lucide-react'
 import { ScreenShell } from './screen-shell'
-import { LogoWordmark } from './logo-wordmark'
-import { MobileStickyHeader } from './mobile-sticky-header'
 import { WalletCardStack } from './wallet-card-stack'
 import { CashFlowCard } from './cash-flow-card'
 import { DailyHudCard } from './daily-hud-card'
 import { DailyNudge } from './daily-nudge'
 import { GlobalPrivacyToggle } from './global-privacy-toggle'
-import { MobileNavButton } from './mobile-nav-drawer'
 import { NotificationBell } from './notification-bell'
 import { PlantWidget } from './plant-widget'
 import { ContextMenu } from './context-menu'
@@ -155,25 +152,12 @@ export function HomeScreen() {
   return (
     <ScreenShell>
       <div>
-        <MobileStickyHeader>
-          <LogoWordmark className="h-5" />
-          <div className="flex items-center gap-2">
-            {/* sensor layar global — versi kompak untuk header mobile */}
-            <GlobalPrivacyToggle className="size-9" />
-            {/* Lonceng notifikasi → panel keadaan kosong (paket 64). Dulu di
-                mobile tidak ada lonceng sama sekali; sekarang ia berdampingan
-                dengan tombol mata. */}
-            <NotificationBell className="size-9" />
-            {/* Hamburger → drawer konten sidebar (paket 64). Tombol "Menu" lama
-                DIHAPUS karena tidak membuka apa pun; yang ini benar-benar
-                membuka `MobileNavDrawer`, jadi navigasi sekunder tetap satu
-                sumber bersama sidebar desktop. */}
-            <MobileNavButton className="size-9" />
-            <span className="relative size-9 overflow-hidden rounded-full ring-1 ring-soil/12">
-              <Image src="/avatar-maarif.png" alt="Jon Snow" fill sizes="36px" className="object-cover" />
-            </span>
-          </div>
-        </MobileStickyHeader>
+        {/* PAKET 75: header mobile MILIK DASHBOARD DIHAPUS. Dulu di sini ada
+            `MobileStickyHeader` dengan logo + tombol mata + lonceng + hamburger +
+            AVATAR. Sekarang semuanya disediakan SATU header mobile GLOBAL yang
+            dirender `ScreenShell` (`app-mobile-header`) untuk semua halaman —
+            termasuk Dashboard — dan avatar profilnya dicabut (permintaan produk).
+            Isi halaman ini mulai dari baris konteks di bawah. */}
         {/* switcher konteks — state GLOBAL (audit UX #6). Di MOBILE ia duduk di
             barisnya sendiri (menu dropdown label-penuh, paket 65 — tidak ada lagi
             label terpotong "Kelua…"); di DESKTOP ia pindah ke cluster aksi,

@@ -3,11 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Flame, Plus, Receipt, Wallet as WalletIcon } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { ScreenShell } from './screen-shell'
-import { LogoWordmark } from './logo-wordmark'
-import { MetaChip } from './meta-chip'
 import { GlobalPrivacyToggle } from './global-privacy-toggle'
 import { usePrivacy } from './privacy-provider'
 import { ShieldMeter } from './shield-meter'
@@ -18,7 +16,7 @@ import { BillNotifNudge } from './bill-notif-nudge'
 import { AddBillSheet, type NewBill } from './add-bill-sheet'
 import { MarkBillPaidSheet } from './mark-bill-paid-sheet'
 import { ConfirmDialog } from './confirm-dialog'
-import { ContextSwitcher } from './context-switcher'
+import { ContextMenu } from './context-menu'
 import { useMoneyContext } from './money-context-provider'
 import { cn } from '@/lib/utils'
 import {
@@ -184,7 +182,8 @@ export function BillsScreen() {
   )
   const groups = useMemo(() => groupBills(visibleBills, currentDay), [visibleBills, currentDay])
   /** TOTAL & beban tetap = SEMUA tagihan (kanon paket 47 #1: konteks menyaring
-   *  daftar, bukan total). Angkanya dipakai MetaChip, tameng, dan waterfall. */
+   *  daftar, bukan total). Angkanya dipakai baris statistik header, tameng,
+   *  dan waterfall. */
   const totalAmount = useMemo(() => totalMonthlyBills(bills), [bills])
   const burn = useMemo(() => burnPercentage(bills, monthlyIncome), [bills, monthlyIncome])
   /** tagihan yang benar-benar ada di list "Aktif" (belum lunas) — dipakai
@@ -457,38 +456,25 @@ export function BillsScreen() {
   /* ── RENDER ─────────────────────────────────────────────────────────────── */
   return (
     <ScreenShell>
-      {/* ── HEADER — kerangka sama dengan Dashboard/Budget (audit UX #1) ────
-          Container `max-w-[640px]` + header sticky yang "bleed" ke tepi
-          DIHAPUS: itu penyebab seluruh halaman terkurung jadi satu kolom
-          sempit di tengah. Sekarang konten melebar penuh (full-width) dan
-          dipecah 2 kolom di desktop. */}
-      <header className="flex items-start justify-between lg:hidden">
-        <LogoWordmark className="h-5" />
-        <GlobalPrivacyToggle />
-      </header>
-
-      {/* switcher konteks (mobile): baris sendiri di bawah header — persis pola
-          Home & Budget (paket 47). */}
-      <div className="mt-4 flex justify-center lg:hidden">
-        <ContextSwitcher value={context} onChange={setContext} />
-      </div>
-
-      <div className="mt-4 lg:mt-0 lg:flex lg:items-end lg:justify-between lg:gap-8">
+      {/* Pemilih konteks uang + tombol mata kini menyatu di baris judul (di atas),
+          jadi tidak ada lagi baris konteks terpisah di mobile. */}
+      {/* HEADER PADAT: judul + satu baris statistik (tanpa chip-kartu), pemilih
+          konteks & tombol mata di kanan. Menghitung SEMUA tagihan (bukan yang
+          tersaring) supaya tidak ada dua angka untuk satu label di satu layar.
+          Tombol mata disembunyikan di mobile karena header global sudah punya. */}
+      <div className="mt-4 flex items-start justify-between gap-3 lg:mt-0">
         <div className="min-w-0">
           <h1 className="font-display text-3xl font-semibold tracking-tight text-forest lg:text-4xl">
             Tagihan Rutin
           </h1>
-          <div className="mt-2 flex flex-wrap items-center gap-2 lg:mt-3">
-            {/* chip ini menghitung SEMUA tagihan (bukan yang tersaring) supaya
-                tidak ada dua angka untuk satu label di satu layar */}
-            <MetaChip icon={Receipt}>{bills.length} tagihan</MetaChip>
-            <MetaChip icon={WalletIcon}>{maskMoney(totalAmount, masked)}/bulan</MetaChip>
-            <MetaChip icon={Flame}>{burn}% dari gaji</MetaChip>
-          </div>
+          <p className="mt-1 truncate text-[12px] font-medium tabular-nums text-forest/45">
+            {bills.length} tagihan · {maskMoney(totalAmount, masked)}/bln
+            {monthlyIncome > 0 && ` · ${burn}% gaji`}
+          </p>
         </div>
-        <div className="hidden shrink-0 items-center gap-3 lg:flex">
-          <ContextSwitcher value={context} onChange={setContext} className="w-[280px]" />
-          <GlobalPrivacyToggle />
+        <div className="flex shrink-0 items-center gap-2">
+          <ContextMenu value={context} onChange={setContext} className="w-32 sm:w-36" />
+          <GlobalPrivacyToggle className="hidden lg:flex" />
         </div>
       </div>
 
@@ -499,19 +485,19 @@ export function BillsScreen() {
           /* EMPTY STATE PER KONTEKS (paket 47): tagihan ada, tapi tidak satu pun
              milik konteks aktif. Daftar kosong tanpa penjelasan = user mengira
              datanya hilang; di sini alasannya disebut + ada CTA menambah. */
-          <div className="mt-5 lg:mt-6">
+          <div className="mt-4 lg:mt-6">
             <ShieldMeter bills={[]} masked={masked} currentDay={currentDay} variant="compact" />
-            <div className="mt-5 flex flex-col items-center rounded-[1.75rem] border-2 border-dashed border-forest/15 bg-cream/50 px-6 py-10 text-center">
-              <h2 className="font-display text-[16px] font-semibold tracking-tight text-forest">
+            <div className="mt-4 flex flex-col items-center rounded-3xl border-2 border-dashed border-forest/15 bg-cream/50 px-6 py-8 text-center">
+              <h2 className="font-display text-[15px] font-semibold tracking-tight text-forest">
                 {CONTEXT_EMPTY_COPY.bills.title(CONTEXT_LABEL[context])}
               </h2>
-              <p className="mt-1.5 max-w-sm text-[13px] leading-relaxed text-forest/55">
+              <p className="mt-1 max-w-sm text-[12.5px] leading-relaxed text-forest/55">
                 {CONTEXT_EMPTY_COPY.bills.body}
               </p>
               <button
                 type="button"
                 onClick={() => setShowAddBill(true)}
-                className="mt-5 inline-flex h-11 items-center gap-2 rounded-2xl bg-forest px-5 text-[13.5px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
+                className="mt-4 inline-flex h-10 items-center gap-2 rounded-2xl bg-forest px-4 text-[13px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
               >
                 <Plus className="size-4" strokeWidth={2.6} />
                 {CONTEXT_EMPTY_COPY.bills.cta}
@@ -519,134 +505,121 @@ export function BillsScreen() {
             </div>
           </div>
         ) : (
-          /* ── FULL-WIDTH 2 KOLOM (audit UX #1) ─────────────────────────────
-             KIRI  (5/12) — insight & visual : tameng, waterfall gaji, timeline
-             KANAN (7/12) — list actionable : filter, daftar tagihan, + tambah
-             Di mobile tetap satu kolom (insight dulu, lalu list). */
-          <div className="mt-5 grid grid-cols-1 gap-5 lg:mt-6 lg:grid-cols-12 lg:gap-6">
-            <div className="flex flex-col gap-5 lg:col-span-5 lg:gap-6">
+          /* ── RINGKASAN + DAFTAR (padat) ──────────────────────────────────
+             Tameng & waterfall berdampingan di desktop; timeline + nudge
+             membentang penuh di bawahnya; lalu filter & daftar. Satu kolom di
+             mobile supaya tidak ada ruang kosong di antara kartu. */
+          <div className="mt-5 flex flex-col lg:mt-6">
+            <div className="grid gap-3 lg:grid-cols-2 lg:gap-4">
               {/* 3. TAMENG PROTEKSI */}
-              <ShieldMeter bills={bills} masked={masked} currentDay={currentDay} className="mt-0" />
-
-              {/* 8. NUDGE NOTIFIKASI — hanya saat izin belum pernah diminta */}
-              <BillNotifNudge className="mt-0" />
+              <ShieldMeter bills={bills} masked={masked} currentDay={currentDay} />
 
               {/* 4. WATERFALL GAJI — pembaginya pemasukan user (paket 57).
-                  Kalau belum diatur, kartu diganti kalimat jujur + tautan ke
-                  Pengaturan: membagi dengan konstanta demo (atau nol) dua-duanya
-                  klaim palsu. */}
+                  Kalau belum diatur, kartu diganti tautan ke Pengaturan:
+                  membagi dengan konstanta demo (atau nol) dua-duanya klaim palsu. */}
               {monthlyIncome > 0 ? (
-                <SalaryWaterfall
-                  bills={bills}
-                  masked={masked}
-                  monthlyIncome={monthlyIncome}
-                  className="mt-0"
-                />
+                <SalaryWaterfall bills={bills} masked={masked} monthlyIncome={monthlyIncome} />
               ) : (
                 <section
                   aria-label={WATERFALL_NO_INCOME_COPY.title}
-                  className="rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12"
+                  className="flex flex-col justify-center gap-2 rounded-3xl bg-cream p-4 ring-1 ring-soil/10"
                 >
-                  <h2 className="font-display text-[15px] font-semibold tracking-tight text-forest">
+                  <h2 className="text-[12.5px] font-semibold text-forest">
                     {WATERFALL_NO_INCOME_COPY.title}
                   </h2>
-                  <p className="mt-1.5 text-[12.5px] leading-relaxed text-forest/55">
-                    {WATERFALL_NO_INCOME_COPY.body}
-                  </p>
                   <Link
                     href={MONEY_SETTINGS_HREF}
-                    className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-forest px-4 py-2 text-[12px] font-medium text-cream transition-colors hover:bg-forest-soft"
+                    className="inline-flex w-fit items-center gap-1.5 rounded-full bg-forest px-3.5 py-1.5 text-[12px] font-medium text-cream transition-colors hover:bg-forest-soft"
                   >
                     {WATERFALL_NO_INCOME_COPY.cta}
                   </Link>
                 </section>
               )}
-
-              {/* 5. TIMELINE 7 HARI — hanya tagihan yang ada di list Aktif */}
-              <BillTimeline
-                bills={activeBills}
-                currentDay={currentDay}
-                todayIso={todayIso}
-                onPick={handlePickBill}
-                className="mt-0"
-              />
             </div>
 
-            <section aria-label="Daftar tagihan" className="flex flex-col lg:col-span-7">
-              {/* kepala daftar: judul + tombol tambah ringkas (audit #7 —
-                  tidak lagi membentang penuh seperti footer di dasar layar) */}
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <h2 className="font-display text-[17px] font-semibold tracking-tight text-forest">
-                    Daftar Tagihan
-                  </h2>
-                  {/* jumlah tagihan di KONTEKS AKTIF (paket 47) — pill filter di
-                      bawah memakai angka yang sama, jadi tidak ada dua hitungan */}
-                  <span className="rounded-full bg-sage px-2 py-0.5 text-[10.5px] font-semibold tabular-nums text-forest ring-1 ring-forest/10">
-                    {scopedBills.length}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowAddBill(true)}
-                  className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-forest px-3.5 text-[12px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.97]"
+            {/* 5. TIMELINE 7 HARI — hanya tagihan yang ada di list Aktif */}
+            <BillTimeline
+              bills={activeBills}
+              currentDay={currentDay}
+              todayIso={todayIso}
+              onPick={handlePickBill}
+              className="mt-3 lg:mt-4"
+            />
+
+            {/* 8. NUDGE NOTIFIKASI — hanya saat izin belum pernah diminta */}
+            <BillNotifNudge className="mt-3" />
+
+            {/* 6. FILTER + TAMBAH — satu baris: pill menggeser, tombol tetap */}
+            <div className="mt-4 flex items-center gap-2 lg:mt-6">
+              {/* segmented control: satu rel Oat, pil aktif terisi Evergreen.
+                  Angka dihitung dari SEMUA tagihan (bukan yang tersaring). */}
+              <div className="hide-scrollbar -ml-5 flex flex-1 overflow-x-auto pl-5 pr-1 sm:-ml-8 sm:pl-8 lg:ml-0 lg:pl-0">
+                <div
+                  role="group"
+                  aria-label="Filter tagihan"
+                  className="flex shrink-0 items-center gap-0.5 rounded-full bg-sage/70 p-1"
                 >
-                  <Plus className="size-4" strokeWidth={2.6} />
-                  Tagihan
-                </button>
-              </div>
-
-              {/* 6. FILTER PILLS — angkanya selalu dari semua tagihan */}
-              <div
-                role="group"
-                aria-label="Filter tagihan"
-                className="hide-scrollbar -mx-5 mt-3 flex gap-2 overflow-x-auto px-5 pb-1 sm:-mx-8 sm:px-8 lg:mx-0 lg:flex-wrap lg:px-0"
-              >
-                {BILL_FILTERS.map((pill) => {
-                  const count = counts[pill.id]
-                  const active = activeFilter === pill.id
-                  const isLate = pill.id === 'telat'
-                  const isPaidPill = pill.id === 'lunas'
-                  return (
-                    <button
-                      key={pill.id}
-                      type="button"
-                      aria-pressed={active}
-                      onClick={() => setActiveFilter(pill.id)}
-                      className={cn(
-                        'inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-[12px] font-medium transition-all duration-200 active:scale-95',
-                        active
-                          ? 'bg-forest text-mint shadow-[0_10px_22px_-14px_rgba(69,89,78,0.75)]'
-                          : isLate && count > 0
-                            ? 'bg-hud-terracotta/15 text-hud-terracotta ring-1 ring-inset ring-hud-terracotta/30'
-                            : isPaidPill
-                              ? 'bg-hud-sage/15 text-forest ring-1 ring-inset ring-hud-sage/25'
-                              : 'bg-cream text-forest/60 ring-1 ring-soil/14 hover:bg-cream hover:text-forest',
-                      )}
-                    >
-                      {/* titik berdenyut kalau memang ada yang telat */}
-                      {isLate && count > 0 && !active && (
-                        <span className="relative flex size-1.5">
-                          <span className="absolute inline-flex size-full animate-ping rounded-full bg-hud-terracotta/70 motion-reduce:animate-none" />
-                          <span className="relative inline-flex size-1.5 rounded-full bg-hud-terracotta" />
-                        </span>
-                      )}
-                      {isPaidPill ? 'Lunas ✓' : pill.label}
-                      <span
-                        className={cn('tabular-nums', active ? 'text-mint/70' : 'text-forest/40')}
+                  {BILL_FILTERS.map((pill) => {
+                    const count = counts[pill.id]
+                    const active = activeFilter === pill.id
+                    const isLate = pill.id === 'telat'
+                    const isPaidPill = pill.id === 'lunas'
+                    const showLateDot = isLate && count > 0 && !active
+                    return (
+                      <button
+                        key={pill.id}
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() => setActiveFilter(pill.id)}
+                        className={cn(
+                          'inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1.5 text-[11px] font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25',
+                          active
+                            ? 'bg-forest text-cream shadow-[0_8px_18px_-12px_rgba(69,89,78,0.85)]'
+                            : 'text-forest/55 hover:bg-cream/80 hover:text-forest',
+                        )}
                       >
-                        ({count})
-                      </span>
-                    </button>
-                  )
-                })}
+                        {showLateDot && (
+                          <span className="relative flex size-1.5" aria-hidden>
+                            <span className="absolute inline-flex size-full animate-ping rounded-full bg-hud-terracotta/70 motion-reduce:animate-none" />
+                            <span className="relative inline-flex size-1.5 rounded-full bg-hud-terracotta" />
+                          </span>
+                        )}
+                        <span className="whitespace-nowrap">
+                          {isPaidPill ? 'Lunas ✓' : pill.label}
+                        </span>
+                        <span
+                          className={cn(
+                            'tabular-nums',
+                            active
+                              ? 'text-cream/65'
+                              : count > 0
+                                ? 'text-forest/45'
+                                : 'text-forest/30',
+                          )}
+                        >
+                          {count}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
 
-              {/* 7. DAFTAR TAGIHAN — dikelompokkan per status */}
-              <div className="mt-3 flex flex-col gap-6 pb-1">
+              <button
+                type="button"
+                onClick={() => setShowAddBill(true)}
+                className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-forest px-3.5 text-[12px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.97]"
+              >
+                <Plus className="size-4" strokeWidth={2.6} />
+                <span className="hidden sm:inline">Tagihan</span>
+              </button>
+            </div>
+
+            {/* 7. DAFTAR TAGIHAN — dikelompokkan per status, 2 kolom di desktop */}
+            <div className="mt-3 flex flex-col gap-5 pb-1">
                 {groups.length === 0 ? (
                   <p className="rounded-2xl bg-cream/70 px-4 py-6 text-center text-[12.5px] font-medium text-forest/45 ring-1 ring-soil/8">
-                    Gak ada tagihan di filter ini. Coba “Semua” ya 🌿
+                    Gak ada tagihan di filter ini.
                   </p>
                 ) : (
                   groups.map((group) => (
@@ -657,28 +630,26 @@ export function BillsScreen() {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.32, ease: EASE }}
                     >
-                      {/* kepala grup — label inline (header halaman tidak lagi
-                          sticky, jadi chip tidak perlu menempel ke viewport) */}
-                      <div className="flex items-center gap-2">
+                      {/* kepala grup — titik status + label, tanpa garis dekoratif */}
+                      <div className="flex items-center gap-2 px-0.5">
+                        <span
+                          aria-hidden
+                          className={cn('size-1.5 rounded-full', group.meta.barClass)}
+                        />
                         <span
                           className={cn(
-                            'inline-flex items-center gap-1.5 rounded-full bg-cream/95 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.14em] ring-1 ring-soil/10',
+                            'text-[10px] font-semibold uppercase tracking-[0.14em]',
                             group.meta.labelClass,
                           )}
                         >
-                          <span aria-hidden>{group.meta.icon}</span>
                           {group.meta.label}
                         </span>
-                        <span
-                          aria-hidden
-                          className={cn('h-px flex-1 rounded-full opacity-40', group.meta.barClass)}
-                        />
-                        <span className="shrink-0 text-[10.5px] font-semibold tabular-nums text-forest/35">
+                        <span className="text-[10.5px] font-semibold tabular-nums text-forest/35">
                           {group.items.length}
                         </span>
                       </div>
 
-                      <motion.ul layout className="mt-2 flex flex-col gap-2">
+                      <motion.ul layout className="mt-2 grid gap-2 lg:grid-cols-2">
                         {group.items.map((bill) => {
                           const delay = 60 + rowIndex++ * 45
                           const stamp: StampState =
@@ -708,7 +679,6 @@ export function BillsScreen() {
                   ))
                 )}
               </div>
-            </section>
           </div>
         )}
 
@@ -793,24 +763,24 @@ function EmptyState({
   onAdd: () => void
 }) {
   return (
-    <div className="mt-5">
+    <div className="mt-4 lg:mt-6">
       {/* tameng 0/0 — kelabu penuh, tanpa ringkasan uang */}
       <ShieldMeter bills={[]} masked={masked} currentDay={currentDay} variant="compact" />
 
-      <div className="mt-5 flex flex-col items-center rounded-[1.75rem] border-2 border-dashed border-forest/15 bg-cream/50 px-6 py-10 text-center">
-        <h2 className="font-display text-[16px] font-semibold tracking-tight text-forest">
+      <div className="mt-4 flex flex-col items-center rounded-3xl border-2 border-dashed border-forest/15 bg-cream/50 px-6 py-8 text-center">
+        <h2 className="font-display text-[15px] font-semibold tracking-tight text-forest">
           Belum ada tagihan rutin
         </h2>
-        <p className="mt-1.5 max-w-sm text-[13px] leading-relaxed text-forest/55">
-          Kos, Netflix, cicilan HP — catat biar jatah harian kamu lebih akurat 📋🌿
+        <p className="mt-1 max-w-sm text-[12.5px] leading-relaxed text-forest/55">
+          Kos, langganan, cicilan — catat biar jatah harianmu lebih akurat.
         </p>
         <button
           type="button"
           onClick={onAdd}
-          className="mt-5 inline-flex h-11 items-center gap-2 rounded-2xl bg-forest px-5 text-[13.5px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
+          className="mt-4 inline-flex h-10 items-center gap-2 rounded-2xl bg-forest px-4 text-[13px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
         >
           <Plus className="size-4" strokeWidth={2.6} />
-          Tambah Tagihan Pertama
+          Tambah Tagihan
         </button>
       </div>
     </div>
@@ -818,7 +788,7 @@ function EmptyState({
 }
 
 /* Toggle privasi halaman ini memakai komponen baku GLOBAL (audit UX #4):
-   <GlobalPrivacyToggle /> — ikon bulat di mobile, pill berlabel "Sembunyikan" /
-   "Tampilkan" di desktop. State sensor dibaca dari PrivacyProvider (usePrivacy)
-   sehingga benar-benar menyensor seluruh halaman dan sinkron dengan halaman
-   lain. */
+   <GlobalPrivacyToggle /> — state sensor dibaca dari PrivacyProvider (usePrivacy)
+   sehingga benar-benar menyensor seluruh halaman dan sinkron dengan halaman lain.
+   Di halaman ini tombolnya hanya tampil di desktop (`hidden lg:flex`); di mobile
+   header global sudah memuatnya (lib/shows-amounts.ts mencakup '/bills'). */

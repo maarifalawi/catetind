@@ -3,6 +3,13 @@
 import { useSyncExternalStore } from 'react'
 import type { BudgetScope } from '@/lib/data/budget'
 import { INITIAL_PHYSICAL_ASSETS, type PhysicalAsset, type PhysicalAssetCategory } from '@/lib/data/wealth'
+import {
+  deleteRemotePhysicalAsset,
+  pushPhysicalAssetToServer,
+  readRemotePhysicalAssets,
+} from '@/lib/supabase/physical-remote'
+import { randomUuid } from '@/lib/supabase/uuid'
+import { subscribePhysicalChanges, type WealthRealtimeHandle } from '@/lib/supabase/realtime'
 import { PHYSICAL_STATE_KEY, loadDeviceState, saveDeviceState } from './idb'
 
 /* ── SATU STORE ASET FISIK / PROPERTI (paket 63) ─────────────────────────────
@@ -89,6 +96,85 @@ async function hydrate(): Promise<void> {
   const assets = stored && Array.isArray(stored.assets) ? stored.assets : []
   const removedIds = stored && Array.isArray(stored.removedIds) ? stored.removedIds : []
   commit({ assets, removedIds, hydrated: true })
+
+  /* SERVER jadi sumber saat ada sesi; `null` = tanpa sesi → tetap jalur lokal */
+  const remote = await readRemotePhysicalAssets()
+  if (!remote) return
+  commit(mergePhysicalRemote(remote, live))
+  for (const asset of live.assets) {
+    if (live.removedIds.includes(asset.id)) continue
+    if (!asset.remoteId) await ensurePhysicalOnServer(asset.id)
+  }
+  /* perubahan dari tab/perangkat lain masuk sendiri lewat langganan ini */
+  startPhysicalRealtime()
+}
+
+/* ── JALUR SERVER (paket 84) ─────────────────────────────────────────────────
+   Sebelumnya aset fisik hanya hidup di perangkat ini. Sekarang ia ikut ke
+   server lewat tabel `physical_assets` dan ikut realtime, jadi dua perangkat
+   menampilkan aset yang sama tanpa refresh. */
+
+/** gabung daftar server dengan antrean perangkat — fungsi murni (mudah diuji) */
+export function mergePhysicalRemote(
+  remote: PhysicalAsset[],
+  current: PhysicalSnapshot,
+): PhysicalSnapshot {
+  const byRemote = new Map<string, PhysicalAsset>()
+  const byId = new Map<string, PhysicalAsset>()
+  for (const asset of current.assets) {
+    if (!byId.has(asset.id)) byId.set(asset.id, asset)
+    if (asset.remoteId && !byRemote.has(asset.remoteId)) byRemote.set(asset.remoteId, asset)
+  }
+  const merged: PhysicalAsset[] = remote.map((row) => {
+    const local = byRemote.get(row.id) ?? byId.get(row.id)
+    /* `scope` tidak ada di skema → pertahankan milik perangkat */
+    return local ? { ...row, id: local.id, scope: local.scope } : row
+  })
+  const baseIds = new Set(merged.map((row) => row.id))
+  const baseRemotes = new Set(merged.map((row) => row.remoteId).filter(Boolean) as string[])
+  for (const asset of current.assets) {
+    if (SEED_ASSETS.some((seed) => seed.id === asset.id)) continue
+    if (baseIds.has(asset.id)) continue
+    if (asset.remoteId && baseRemotes.has(asset.remoteId)) continue
+    merged.push(asset)
+  }
+  return { assets: merged, removedIds: current.removedIds, hydrated: true }
+}
+
+let realtime: WealthRealtimeHandle | null = null
+
+async function ensurePhysicalOnServer(id: string): Promise<boolean> {
+  const asset = live.assets.find((row) => row.id === id)
+  if (!asset) return false
+  const remoteId = asset.remoteId ?? randomUuid()
+  if (!(await pushPhysicalAssetToServer(asset, remoteId))) return false
+  if (asset.remoteId !== remoteId) {
+    live = {
+      ...live,
+      assets: live.assets.map((row) => (row.id === id ? { ...row, remoteId } : row)),
+    }
+    persist(live)
+    emit()
+  }
+  return true
+}
+
+async function refreshPhysicalFromServer(): Promise<void> {
+  const remote = await readRemotePhysicalAssets()
+  if (!remote) return
+  commit(mergePhysicalRemote(remote, live))
+}
+
+function stopPhysicalRealtime(): void {
+  realtime?.stop()
+  realtime = null
+}
+
+function startPhysicalRealtime(): void {
+  if (realtime) return
+  realtime = subscribePhysicalChanges(() => {
+    void refreshPhysicalFromServer()
+  })
 }
 
 export function subscribePhysicalStore(listener: () => void): () => void {
@@ -141,6 +227,7 @@ export function addPhysicalAsset(input: NewPhysicalInput): PhysicalAsset | null 
     scope: input.scope ?? 'pribadi',
   }
   commit({ ...live, assets: [asset, ...live.assets], hydrated: true })
+  void ensurePhysicalOnServer(asset.id)
   return asset
 }
 
@@ -169,6 +256,7 @@ export function editPhysicalAsset(id: string, patch: PhysicalEdit): PhysicalAsse
     note: patch.note !== undefined ? patch.note.trim() || undefined : existing.note,
   }
   commit({ ...live, assets: live.assets.map((asset) => (asset.id === id ? updated : asset)), hydrated: true })
+  void ensurePhysicalOnServer(id)
   return updated
 }
 
@@ -177,6 +265,8 @@ export function deletePhysicalAsset(id: string): PhysicalAsset | null {
   const asset = live.assets.find((row) => row.id === id)
   if (!asset || live.removedIds.includes(id)) return null
   commit({ ...live, removedIds: [...live.removedIds, id], hydrated: true })
+  /* hapus di server juga (Undo memulihkannya lewat upsert di `restore…`) */
+  if (asset.remoteId) void deleteRemotePhysicalAsset(asset.remoteId)
   return asset
 }
 
@@ -185,12 +275,15 @@ export function restorePhysicalAsset(id: string): PhysicalAsset | null {
   if (!live.removedIds.includes(id)) return null
   const asset = live.assets.find((row) => row.id === id) ?? null
   commit({ ...live, removedIds: live.removedIds.filter((rowId) => rowId !== id), hydrated: true })
+  /* baris yang di-undo perlu dikirim ulang ke server */
+  void ensurePhysicalOnServer(id)
   return asset
 }
 
 /** Hapus akun: kosongkan state + tandai purged (dipanggil `lib/account.ts`) */
 export function purgePhysicalStore(): PhysicalSnapshot {
   accountPurged = true
+  stopPhysicalRealtime()
   live = EMPTY_SNAPSHOT
   persist(live)
   emit()

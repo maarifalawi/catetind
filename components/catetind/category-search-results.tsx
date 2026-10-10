@@ -8,6 +8,7 @@ import {
   type CategorySearchHit,
 } from '@/lib/data/categories'
 import { CATEGORY_TONE } from './category-picker-parts'
+import { PICKER_OPTION_ACTIVE } from './picker-sheet'
 
 /* --- LAYER 3 - hasil pencarian + pemilih pemasukan (paket 69) --------------
    Dua "daftar rata" pemilih kategori:
@@ -99,8 +100,10 @@ export function IncomeGrid({
               aria-label={item.name}
               aria-pressed={item.name === value}
               className={cn(
-                'flex w-full items-center gap-2.5 rounded-2xl bg-sage/50 px-3 py-3 text-left ring-1 ring-soil/10 transition-transform active:scale-[0.97]',
-                item.name === value && 'ring-2 ring-forest',
+                'flex w-full items-center gap-2.5 rounded-2xl px-3 py-3 text-left ring-1 transition-transform active:scale-[0.97]',
+                /* status terpilih = bahasa bersama pemilih (paket 78); cabangnya
+                   saling meniadakan supaya tidak ada bg/ring yang bertabrakan */
+                item.name === value ? PICKER_OPTION_ACTIVE : 'bg-sage/50 ring-soil/10',
               )}
             >
               <span aria-hidden className="text-lg leading-none">

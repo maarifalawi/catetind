@@ -110,12 +110,18 @@ describe('mergeWithRemoteWealth', () => {
       scope: 'pribadi',
       remoteId: 'uuid-i1',
     }
-    const remoteWealth: RemoteWealth = { investments: [remoteInv], debts: [], payments: [] }
+    const remoteWealth: RemoteWealth = {
+      investments: [remoteInv],
+      debts: [],
+      payments: [],
+      assetTransactions: [],
+    }
     const localInv: Investment = { ...remoteInv, id: 'inv-6', scope: 'bersama' }
     const merged = mergeWithRemoteWealth(remoteWealth, {
       investments: [localInv],
       debts: [],
       payments: [],
+      assetTransactions: [],
       removedIds: [],
       hydrated: true,
     })

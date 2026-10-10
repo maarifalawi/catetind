@@ -16,7 +16,12 @@ import type { MoneyContext } from '@/lib/types'
    menandai pilihan aktif (`role="listbox"` + `aria-selected`).
 
    State-nya tetap `useMoneyContext()` yang sama (satu sumber kebenaran) —
-   komponen ini cuma cara memilih, bukan state kedua. */
+   komponen ini cuma cara memilih, bukan state kedua.
+
+   PAKET 75: menu ini jadi SATU-SATUNYA pemilih konteks di SELURUH halaman.
+   Segmented control `ContextSwitcher` (yang MEMOTONG label panjang di lebar
+   sempit) dicabut dari semua halaman dan diganti komponen ini, jadi desainnya
+   seragam — dropdown label-penuh, di Dashboard maupun halaman lain. */
 
 const OPTIONS: { id: MoneyContext; icon: LucideIcon }[] = [
   { id: 'pribadi', icon: User },
@@ -95,7 +100,10 @@ export function ContextMenu({
                       setOpen(false)
                     }}
                     className={cn(
-                      'flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25',
+                      /* `min-h-11` (44px) — paket 75: menu ini kini dipakai di
+                         SEMUA halaman (bukan cuma Dashboard), jadi tiap opsi
+                         wajib jadi target sentuh yang nyaman di mobile. */
+                      'flex min-h-11 w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25',
                       selected
                         ? 'bg-sage text-forest'
                         : 'text-forest/70 hover:bg-sage/50 hover:text-forest',

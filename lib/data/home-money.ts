@@ -362,6 +362,55 @@ export const HOME_CASHFLOW_COLORS = {
   dot: '#ffffff',
 } as const
 
+/* ── SIMETRI TIGA ANGKA KUNCI "ARUS UANG" (paket 76) ─────────────────────────
+   Permintaan pemilik produk: Pemasukan · Pengeluaran · Sisa harus SIMETRIS —
+   setiap nominal duduk di SATU sumbu kanan yang sama dan tidak bergeser saat
+   nilainya berubah (mis. Rp 12.345.678). Jalan keluarnya CSS Grid dengan SATU
+   template kolom bersama (`HOME_CASHFLOW_AXIS.gridClass`): label di kolom kiri
+   yang tumbuh, nominal di kolom kanan yang lebarnya = nominal TERPANJANG. Karena
+   ketiga baris memakai grid yang sama (bukan tiga grid terpisah), kolom nominal
+   selalu sama lebar → angka panjang tak pernah mendorong label.
+
+   Nominalnya wajib `tabular-nums` (lebar tiap digit identik) + `tracking-tight`
+   (rapat) supaya tak ada satu piksel pun yang "melompat" antar-nilai. Kelasnya
+   tinggal di sini sebagai konstanta supaya simetri ini punya SATU definisi yang
+   bisa diuji (`lib/data/home-money.test.ts`) — bukan disalin di JSX. */
+export const HOME_CASHFLOW_AXIS = {
+  /** template kolom bersama: [label+ikon, tumbuh] [nominal, auto, rata kanan] */
+  gridClass: 'grid-cols-[minmax(0,1fr)_auto]',
+  /** kelas tipografi nominal kanon: digit seragam + rapat */
+  valueClass: 'tabular-nums tracking-tight',
+} as const
+
+/** kunci tiga angka kunci kartu Arus Uang, dalam URUTAN kanon */
+export type FlowAxisKey = 'income' | 'expense' | 'net'
+
+export interface FlowAxisRow {
+  key: FlowAxisKey
+  /** label kanon (`HOME_MONEY_COPY`: Pemasukan / Pengeluaran / Sisa) */
+  label: string
+  /** nominal yang tampil; Sisa boleh NEGATIF (defisit) */
+  amount: number
+  /** true = nilai di bawah nol → tanda minus & nada terracotta */
+  negative: boolean
+}
+
+/**
+ * Tiga baris ringkasan Arus Uang — MURNI, tanpa format & tanpa React.
+ *
+ * Urutannya dikunci (Pemasukan → Pengeluaran → Sisa) supaya komponen cukup
+ * memetakan hasilnya ke satu grid; `net` sengaja dihitung di sini (bukan di JSX)
+ * supaya tanda defisit punya SATU sumber yang bisa diuji.
+ */
+export function cashFlowAxisRows(income: number, expense: number): FlowAxisRow[] {
+  const net = income - expense
+  return [
+    { key: 'income', label: HOME_MONEY_COPY.chartIncomeLabel, amount: income, negative: false },
+    { key: 'expense', label: HOME_MONEY_COPY.chartExpenseLabel, amount: expense, negative: false },
+    { key: 'net', label: HOME_MONEY_COPY.chartNetLabel, amount: net, negative: net < 0 },
+  ]
+}
+
 export interface HomeDistributionSegment {
   label: string
   amount: number
@@ -592,6 +641,23 @@ export interface HomeIncomeStats {
 }
 
 /**
+ * Batas tampil persen perubahan (paket 74) — magnitudonya DIPOTONG di 100%.
+ *
+ * Kenapa perlu: rumus `((baru − lama) / |lama|) × 100` bisa MELEDAK saat basisnya
+ * (bulan lalu) sangat kecil — arus bersih bulan lalu +Rp 17.000 dan bulan ini
+ * −Rp 580.000 menghasilkan −3.514%, angka yang mustahil dibaca dan langsung
+ * meruntuhkan kredibilitas kartu keuangan. Nilai dijepit ke rentang [−100, 100];
+ * TANDA dipertahankan karena badge tren memang dua arah (naik/turun). Basis nol
+ * tetap ditangani pemanggil dengan mengembalikan `null` (badge disembunyikan,
+ * bukan persen karangan) — pembagian nol tidak pernah terjadi di sini.
+ */
+const CHANGE_PCT_LIMIT = 100
+export function clampChangePct(pct: number): number {
+  if (!Number.isFinite(pct)) return 0
+  return Math.max(-CHANGE_PCT_LIMIT, Math.min(CHANGE_PCT_LIMIT, Math.round(pct)))
+}
+
+/**
  * Ringkasan pemasukan bulanan dari baris yang SUDAH tersaring (dompet/konteks).
  * Murni: tanpa React, tanpa `Date` — angka & labelnya deterministik.
  */
@@ -609,7 +675,8 @@ export function incomeStatsFor(
   }
   const thisMonth = byMonth.get(monthKey) ?? 0
   const lastMonth = byMonth.get(shiftMonthKey(monthKey, -1)) ?? 0
-  const changePct = lastMonth > 0 ? Math.round(((thisMonth - lastMonth) / lastMonth) * 100) : null
+  const changePct =
+    lastMonth > 0 ? clampChangePct(((thisMonth - lastMonth) / lastMonth) * 100) : null
   const series = Array.from({ length: months }, (_, i) => {
     const key = shiftMonthKey(monthKey, -(months - 1 - i))
     return {
@@ -646,7 +713,7 @@ export function netFlowChangePct(rows: HomeMoneyRow[], todayISO: string): number
     else if (key === lastKey) netLast += signed
   }
   if (netLast === 0) return null
-  return Math.round(((netThis - netLast) / Math.abs(netLast)) * 100)
+  return clampChangePct(((netThis - netLast) / Math.abs(netLast)) * 100)
 }
 
 /**

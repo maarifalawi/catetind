@@ -1,13 +1,11 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
 import { PiggyBank, Target as TargetIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { ScreenShell } from './screen-shell'
-import { LogoWordmark } from './logo-wordmark'
 import { MetaChip } from './meta-chip'
 import { BudgetZoneA } from './budget-zone-a'
 import { BudgetZoneB } from './budget-zone-b'
@@ -18,7 +16,7 @@ import { ContributeSheet } from './contribute-sheet'
 import { SweepSheet } from './sweep-sheet'
 import { SpendingReviewSheet } from './spending-review-sheet'
 import { ConfirmDialog } from './confirm-dialog'
-import { ContextSwitcher } from './context-switcher'
+import { ContextMenu } from './context-menu'
 import { GlobalPrivacyToggle } from './global-privacy-toggle'
 import { useMoneyContext } from './money-context-provider'
 import { usePrivacy } from './privacy-provider'
@@ -28,6 +26,7 @@ import { UNDO_WINDOW_MS } from '@/lib/data/history'
 import {
   BUDGET_DELETE_COPY,
   BUDGET_DELETE_TOAST,
+  BUDGET_PAGE_COPY,
   BUDGET_SAVE_TOAST,
   CURRENT_DAY,
   FUND_CREATE_TOAST,
@@ -49,8 +48,10 @@ import {
   periodWindowForTab,
   removeBudget,
   restoreBudget,
+  scopeCaptionFor,
   sinkingObligationOf,
   spentInWindow,
+  spentOn,
   totalSurplus,
   walletSourceName,
   type BudgetItem,
@@ -191,13 +192,15 @@ export function BudgetScreen({
   const currentDay = today ? dayOfMonth(today, CURRENT_DAY) : CURRENT_DAY
 
   /** caption di bawah judul — posisinya sama dengan baris tanggal Dashboard,
-   *  jadi user membaca "konteks + isi halaman" dari titik yang sama. */
-  const scopeCaption =
-    context === 'pribadi'
-      ? 'Rencana uangmu sendiri'
-      : context === 'keluarga'
-        ? 'Rencana uang keluarga'
-        : 'Rencana uang bersama'
+   *  jadi user membaca "konteks + isi halaman" dari titik yang sama.
+   *
+   *  PAKET 78: konteks `pribadi` TIDAK punya caption sama sekali (permintaan
+   *  pemilik produk: hapus "Rencana uangmu sendiri."). Bukan cuma teksnya yang
+   *  hilang — paragrafnya juga tidak dirender, jadi tidak ada ruang kosong yang
+   *  tersisa di atas judul. Dua konteks lain tetap punya kalimatnya, dan
+   *  kalimatnya tinggal di `lib/data/budget.ts` (`BUDGET_PAGE_COPY`), bukan di
+   *  JSX seperti sebelumnya. */
+  const scopeCaption = scopeCaptionFor(context)
 
   /* ── PERIODE AKTIF ─────────────────────────────────────────────────────
      Satu `window` dipakai bareng oleh kartu Jatah Hari Ini, daftar kategori,
@@ -243,6 +246,11 @@ export function BudgetScreen({
      (lihat `spendingReview()`), jadi satu layar tidak mungkin punya dua cerita. */
   const spent = useMemo(() => spentInWindow(ledger, period), [ledger, period])
   const earned = useMemo(() => earnedInWindow(ledger, period), [ledger, period])
+  /* Uang keluar HARI INI — dipakai METER Jatah Hari Ini (`hud.todayUsedPct`,
+     paket 76). Tanpa ini `spentToday` default 0, jadi meternya selalu kosong
+     padahal kartu Dashboard di halaman lain mengisinya. Sumbernya SAMA dengan
+     kartu Home: baris ledger NYATA pada tanggal ini. */
+  const spentToday = useMemo(() => spentOn(ledger, todayIso), [ledger, todayIso])
   const hud = useMemo(
     () =>
       computeDailyHud({
@@ -250,10 +258,11 @@ export function BudgetScreen({
         totalInstallments: settings.totalInstallments,
         sinkingFunds: funds,
         spent,
+        spentToday,
         earned,
         window: period,
       }),
-    [settings.monthlyIncome, settings.totalInstallments, funds, spent, earned, period],
+    [settings.monthlyIncome, settings.totalInstallments, funds, spent, spentToday, earned, period],
   )
 
   /* ── PEMASUKAN DI PERIODE AKTIF (PRD 2B.3) ─────────────────────────────
@@ -515,62 +524,41 @@ export function BudgetScreen({
   /* ── RENDER ──────────────────────────────────────────────────────────── */
   return (
     <ScreenShell>
-      {/* ── HEADER Halaman — KERANGKA SAMA DENGAN DASHBOARD (HomeScreen) ──────
-          Sebelumnya halaman ini memakai header `sticky` yang "bleed" ke tepi
-          (-mx-5 … xl:-mx-14 + bg-cream/85 backdrop-blur-xl). Akibatnya titik
-          awal konten, gaya judul, dan baris aksinya BEDA dari Dashboard.
+      {/* ── BARIS KONTEKS + ZONA (mobile) ─────────────────────────────────────
+          PAKET 75: header logo+avatar milik halaman ini DIHAPUS. Header mobile
+          sekarang SATU untuk semua halaman, di-render `ScreenShell`
+          (`app-mobile-header`): logo, lonceng, tombol mata (kondisional), menu.
+          Halaman ini cukup menyisakan pemilih konteks + tab zona di barisnya
+          sendiri, mengikuti pola Dashboard.
 
-          Sekarang kerangkanya disamakan 1:1 dengan HomeScreen:
-            • mobile  : baris logo + cluster aksi (privasi/menu/avatar),
-                        lalu baris switcher konteks + tab zona
-            • desktop : caption kecil + judul + chip meta di kiri,
-                        cluster aksi di kanan
-          Jadi begitu pindah Dashboard ⇄ Budget & Target, posisi judul, chip,
-          dan kartu pertama tidak lagi "melompat".
-          Bonus: header tidak lagi menempel (sticky) dan tidak lagi memakai
-          backdrop-blur selebar layar — sama seperti Dashboard. */}
-      <header className="flex items-start justify-between lg:hidden">
-        <LogoWordmark className="h-5" />
-        <div className="flex items-center gap-2">
-          {/* sensor layar global — versi kompak untuk header mobile */}
-          <GlobalPrivacyToggle className="size-9" />
-          {/* Tombol "Menu" DIHAPUS di sini juga (paket 29) — satu keputusan untuk
-              Home & Budget sekaligus, supaya dua header mobile berperilaku sama.
-              Navigasi sekunder cuma punya SATU sumber kebenaran: bottom-nav
-              "Lainnya" (kanon 2A.6). Tombol ini dulu tidak membuka apa pun. */}
-          <span className="relative size-9 overflow-hidden rounded-full ring-1 ring-soil/12">
-            <Image
-              src="/avatar-maarif.png"
-              alt="Jon Snow"
-              fill
-              sizes="36px"
-              className="object-cover"
-            />
-          </span>
-        </div>
-      </header>
-
-      {/* switcher konteks (mobile) + tab zona — Konteks Uang tidak lagi ada di
-          Sidebar, jadi di mobile ia tetap muncul di sini mengikuti pola
-          Dashboard. Di desktop tab zona disembunyikan karena kedua zona sudah
-          tampil berdampingan, sementara switcher konteksnya PINDAH ke baris judul
-          di bawah (audit 46) — di desktop switcher-nya dulu tidak ada sama sekali
-          sehingga konteks terkunci di "Pribadi". */}
+          Pemilih konteksnya kini DROPDOWN label-penuh (`ContextMenu`), sama
+          persis dengan semua halaman lain — segmented control lama dicabut
+          karena label panjang ("Keluarga"/"Bersama") terpotong di lebar sempit.
+          Di desktop tab zona disembunyikan (kedua zona sudah berdampingan) dan
+          pemilih konteksnya PINDAH ke baris judul di bawah. */}
       <div className="mt-4 flex flex-wrap items-center justify-center gap-2.5 lg:hidden">
-        <ContextSwitcher value={context} onChange={setContext} className="max-w-[260px]" />
+        <ContextMenu value={context} onChange={setContext} className="w-56" />
         <ZoneTabs value={activeTab} onChange={handleZoneTab} />
       </div>
 
       {/* ── baris judul — struktur & spasi identik dengan header Dashboard ─── */}
       <div className="mt-4 lg:mt-0 lg:flex lg:items-center lg:justify-between lg:gap-8">
         <div className="min-w-0">
-          <p className="text-[13px] font-medium text-forest/45">{scopeCaption}</p>
+          {/* caption konteks: HANYA keluarga & bersama (paket 78) — konteks pribadi
+              tidak merender paragraf apa pun, jadi judulnya langsung di atas */}
+          {scopeCaption ? (
+            <p className="text-[13px] font-medium text-forest/45">{scopeCaption}</p>
+          ) : null}
           <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-forest lg:text-4xl">
-            Budget &amp; Target
+            {BUDGET_PAGE_COPY.title}
           </h1>
           <div className="mt-2 flex flex-wrap items-center gap-2 lg:mt-3">
-            <MetaChip icon={TargetIcon}>{visibleBudgets.length} kategori</MetaChip>
-            <MetaChip icon={PiggyBank}>{visibleFunds.length} celengan</MetaChip>
+            <MetaChip icon={TargetIcon}>
+              {BUDGET_PAGE_COPY.budgetCount(visibleBudgets.length)}
+            </MetaChip>
+            <MetaChip icon={PiggyBank}>
+              {BUDGET_PAGE_COPY.fundCount(visibleFunds.length)}
+            </MetaChip>
           </div>
         </div>
         <div className="hidden items-center gap-3 lg:flex">
@@ -578,7 +566,7 @@ export function BudgetScreen({
               header mobile, sementara blok "Konteks Uang" sudah dihapus dari
               Sidebar → user desktop tidak punya cara berpindah ke Keluarga /
               Bersama, jadi Budget & Dashboard tampak "cuma Pribadi". */}
-          <ContextSwitcher value={context} onChange={setContext} className="w-[280px]" />
+          <ContextMenu value={context} onChange={setContext} className="w-44" />
           <GlobalPrivacyToggle />
         </div>
       </div>
@@ -608,7 +596,7 @@ export function BudgetScreen({
           {/* ZONA A — Budget Kategori */}
           <section
             id="zone-budget"
-            aria-label="Budget Kategori"
+            aria-label={BUDGET_PAGE_COPY.zoneBudget}
             className={cn(
               'scroll-mt-36 lg:col-span-6 lg:scroll-mt-40',
               activeTab !== 'budget' && 'hidden lg:block',
@@ -616,11 +604,11 @@ export function BudgetScreen({
           >
             <div className="mb-3 hidden items-center justify-between gap-3 lg:flex">
               <h2 className="font-display text-[17px] font-semibold tracking-tight text-forest">
-                Budget Kategori
+                {BUDGET_PAGE_COPY.zoneBudget}
               </h2>
               <span
                 className="rounded-full bg-cream px-2 py-0.5 text-[10.5px] font-semibold text-forest/45 tabular-nums ring-1 ring-soil/12"
-                aria-label={`Budget pada periode ${period.label}`}
+                aria-label={BUDGET_PAGE_COPY.budgetPeriodCount(period.label)}
               >
                 {periodBudgets.length}
               </span>
@@ -641,7 +629,7 @@ export function BudgetScreen({
           {/* ZONA B — Celengan Impian */}
           <section
             id="zone-goals"
-            aria-label="Celengan Impian"
+            aria-label={BUDGET_PAGE_COPY.zoneGoals}
             className={cn(
               'scroll-mt-36 lg:col-span-6 lg:scroll-mt-40',
               activeTab !== 'goals' && 'hidden lg:block',
@@ -649,7 +637,7 @@ export function BudgetScreen({
           >
             <div className="mb-3 hidden items-center justify-between gap-3 lg:flex">
               <h2 className="font-display text-[17px] font-semibold tracking-tight text-forest">
-                Celengan Impian
+                {BUDGET_PAGE_COPY.zoneGoals}
               </h2>
               <span className="rounded-full bg-cream px-2 py-0.5 text-[10.5px] font-semibold text-forest/45 tabular-nums ring-1 ring-soil/12">
                 {visibleFunds.length}
@@ -786,27 +774,29 @@ function fundDeleteNote(fund: SinkingFundItem, masked: boolean): string {
 }
 
 /* ── Catatan design system ───────────────────────────────────────────────────
-   Toggle privasi & pill konteks TIDAK didefinisikan lokal di halaman ini.
+   Toggle privasi & pemilih konteks TIDAK didefinisikan lokal di halaman ini.
    Keduanya kini komponen baku yang dipakai semua halaman:
    • privasi → <GlobalPrivacyToggle /> (audit UX #7)
-   • konteks → <ContextSwitcher />  — dipakai di header MOBILE halaman ini dan
-     <MoneyContextProvider> (root layout). Sejak "Konteks Uang" dihapus dari
-     Sidebar, di desktop switcher-nya tidak lagi tampil; state-nya tetap hidup
-     global sehingga halaman lain yang membutuhkannya tinggal memakainya.
+   • konteks → <ContextMenu />  — dropdown label-penuh (paket 65/75), dipakai di
+     baris konteks MOBILE halaman ini dan cluster aksi DESKTOP (baris judul).
+     State-nya dari <MoneyContextProvider> (root layout), jadi SATU konteks
+     global yang sama untuk seluruh app.
    ────────────────────────────────────────────────────────────────────────── */
 
 const ZONE_TABS: { id: ZoneTab; label: string }[] = [
-  { id: 'budget', label: 'Budget Kategori' },
-  { id: 'goals', label: 'Celengan Impian' },
+  { id: 'budget', label: BUDGET_PAGE_COPY.zoneBudget },
+  { id: 'goals', label: BUDGET_PAGE_COPY.zoneGoals },
 ]
 
 /** Tab zona — HANYA dirender di mobile. Audit UX #4: di desktop tab DIHAPUS
- *  karena kedua zona sudah tampil berdampingan (tab = redundansi UX). */
+ *  karena kedua zona sudah tampil berdampingan (tab = redundansi UX).
+ *  PAKET 78: label & aria-label-nya dari `BUDGET_PAGE_COPY` — judul zona yang
+ *  sama dengan <h2> desktop, jadi tab & judul mustahil berbeda kata. */
 function ZoneTabs({ value, onChange }: { value: ZoneTab; onChange: (value: ZoneTab) => void }) {
   return (
     <div
       role="tablist"
-      aria-label="Zona halaman"
+      aria-label={BUDGET_PAGE_COPY.zonesAria}
       className="flex items-center gap-1 rounded-full bg-cream/70 p-1 ring-1 ring-soil/12"
     >
       {ZONE_TABS.map((tab) => {

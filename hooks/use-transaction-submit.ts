@@ -3,9 +3,15 @@
 import { useCallback } from 'react'
 import { toast } from 'sonner'
 import { readOnline } from '@/lib/connection'
-import { maskMoney, successCheerFor, TRANSACTION_NO_WALLET_COPY } from '@/lib/data/history'
+import {
+  maskMoney,
+  successCheerFor,
+  TRANSACTION_INSUFFICIENT_FUNDS_COPY,
+  TRANSACTION_NO_WALLET_COPY,
+} from '@/lib/data/history'
 import { OFFLINE_COPY } from '@/lib/data/offline'
 import { recordDraftTransaction, type DraftTransactionInput } from '@/lib/transaction-bus'
+import { getMoneySnapshot, walletFundsCheck } from '@/lib/money/store'
 import type { HistoryTransaction } from '@/lib/data/history'
 
 /* ── useTransactionSubmit — satu pintu "catat transaksi baru" (paket 33) ──────
@@ -107,6 +113,22 @@ export function useTransactionSubmit(
           description: TRANSACTION_NO_WALLET_COPY.body,
         })
         return null
+      }
+
+      /* ── SALDO TIDAK BOLEH SUB-NOL (paket 74) ───────────────────────────────
+         Pengeluaran yang melebihi saldo dompet HIDUP ditolak SEBELUM ditulis:
+         tidak ada baris, saldo tidak bergerak, dan panelnya SENGAJA tidak ditutup
+         supaya nominal/catatan yang sudah diketik tidak hilang — user cukup
+         menurunkan nominalnya atau mengganti dompet. Penjaga yang sama juga hidup
+         di store (`postTransaction`) sebagai pagar terakhir untuk jalur lain. */
+      if (draft.type === 'expense') {
+        const funds = walletFundsCheck(getMoneySnapshot(), walletName, draft.amount ?? 0)
+        if (funds.known && !funds.sufficient) {
+          toast.error(TRANSACTION_INSUFFICIENT_FUNDS_COPY.title, {
+            description: TRANSACTION_INSUFFICIENT_FUNDS_COPY.body(walletName),
+          })
+          return null
+        }
       }
 
       /* dibaca SEBELUM menulis: statusnya yang menentukan kalimat toast, dan

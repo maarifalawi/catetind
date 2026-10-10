@@ -5,7 +5,14 @@
    kategori harus salah satu `TRANSACTION_CATEGORY_OPTIONS`, dompet salah satu
    `TRANSACTION_WALLET_OPTIONS`, nominal integer > 0, tanggal `YYYY-MM-DD`.
    Nilai yang tidak bisa dipercaya TIDAK dipakai apa adanya — ditandai
-   `lowFields` supaya kartu konfirmasi meminta user memeriksanya (PRD A11). */
+   `lowFields` supaya kartu konfirmasi meminta user memeriksanya (PRD A11).
+
+   PAKET 79 — dompet di sini adalah TEBAKAN, bukan keputusan akhir: `wallet`
+   yang keluar dari fungsi ini masih nama kanon (bisa saja tidak dimiliki user).
+   Yang mengubahnya jadi dompet MILIK user — dan menyebutkan tebakan aslinya apa
+   adanya — adalah `captureWalletChoice()` (`lib/money/store.ts`) di
+   `hooks/use-transaction-capture.ts`. Pemisahan itu disengaja: fungsi ini murni
+   (tidak tahu ledger user), sedangkan pencocokan dompet butuh snapshot nyata. */
 
 import {
   TRANSACTION_CATEGORY_OPTIONS,
@@ -15,6 +22,7 @@ import {
   localISODate,
 } from '@/lib/data/history'
 import {
+  FALLBACK_CHAT_NAME,
   FALLBACK_RECEIPT_NOTE,
   FALLBACK_VOICE_NAME,
   LOW_CONFIDENCE_THRESHOLD,
@@ -88,7 +96,13 @@ export function normalizeExtraction(
   return {
     source,
     type,
-    name: name || (source === 'receipt' ? FALLBACK_RECEIPT_NOTE : FALLBACK_VOICE_NAME),
+    name:
+      name ||
+      (source === 'receipt'
+        ? FALLBACK_RECEIPT_NOTE
+        : source === 'chat'
+          ? FALLBACK_CHAT_NAME
+          : FALLBACK_VOICE_NAME),
     amount,
     category: category || TRANSACTION_FALLBACK_CATEGORY,
     wallet,

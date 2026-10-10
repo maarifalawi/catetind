@@ -13,22 +13,25 @@ import {
   maskMoney,
   type Bill,
 } from '@/lib/data/bills'
-import { CONTEXT_LABEL } from '@/lib/data/money-context'
 
-/* ── Kartu tagihan: geser untuk aksi + stempel LUNAS (Section 7B–7D) ────────
-   - Geser KANAN → area sage 'Tandai Lunas ✓' — membuka pemilih DOMPET (paket
-     51). Stempel LUNAS baru muncul setelah baris kasnya benar-benar ditulis
+/* ── Kartu tagihan: geser untuk aksi + stempel LUNAS ─────────────────────────
+   - Geser KANAN → area sage 'Tandai Lunas ✓' — membuka pemilih DOMPET (paket 51).
+     Stempel LUNAS baru muncul setelah baris kasnya benar-benar ditulis
      (`markBillPaid`), jadi kartu ini tidak pernah mengaku lunas tanpa uang keluar
    - Geser KIRI  → area amber 'Edit' + terracotta 'Hapus'
    - Tap         → cuma menutup area aksi (tidak ada teks instruksi apa pun)
 
-   Kartu yang belum dibayar menampilkan garis sage 2px yang "ngintip" di tepi
-   kiri sebagai petunjuk halus bahwa ada aksi di baliknya. Kartu lunas justru
-   dapat garis sage 3px penuh + stempel diagonal samar + nominal dicoret.
+   REDESAIN (padat & minimalis): kartu dipadatkan jadi satu baris ±64px.
+     · Baris meta yang dulu memanjang (konteks · dompet · kategori · tenor ·
+       catatan) dipangkas jadi SATU baris yang digabung dengan teks jatuh tempo —
+       konteks tidak perlu diulang karena daftarnya sudah disaring per konteks.
+     · Tombol aksi yang dulu memakan satu baris penuh di bawah kartu kini jadi
+       tombol IKON di samping kartu, sejajar tingginya (tetap bisa dijangkau
+       keyboard lewat `focus-visible`), sementara geser tetap jadi jalur cepat.
 
-   Aksi tersingkap tetap bisa dijangkau keyboard: opacity-nya 0 untuk mata,
-   tetapi saat di-focus (`focus-visible:opacity-100 focus-visible:z-20`) tombol
-   naik ke atas kartu sehingga tidak ada aksi yang cuma bisa diakses via geser.
+   Aksi tersingkap tetap bisa dijangkau keyboard: opacity 0 untuk mata, tetapi
+   saat di-focus (`focus-visible:opacity-100 focus-visible:z-20`) tombolnya naik
+   ke atas kartu sehingga tidak ada aksi yang cuma bisa diakses via geser.
    ────────────────────────────────────────────────────────────────────────── */
 
 /** lebar area aksi yang tersingkap (px) — kanan lebih lebar karena memuat dua
@@ -71,19 +74,10 @@ export function BillCard({
   const status = getBillStatus(bill, currentDay)
   const paid = status === 'paid'
   const due = dueContext(bill, status, currentDay)
-  /* badge konteks (paket 47): tagihan ini milik konteks uang yang mana. Ditulis
-     di baris meta (bukan tooltip) supaya user tahu kepemilikannya tanpa hover —
-     penting karena satu tagihan bisa dibuka dari halaman lain/konteks lain. */
-  const meta = [
-    CONTEXT_LABEL[bill.scope],
-    billWalletName(bill.walletId),
-    bill.category,
-    endAfterLabel(bill),
-    /* tagihan contoh yang stempel LUNAS-nya tidak punya baris kas di app:
-       keadaannya DIKATAKAN di sini supaya tidak ada tombol batal yang
-       menjanjikan uang kembali padahal tidak ada uang yang bergerak (60.4) */
-    paid && !bill.paidRowId ? BILL_CARD_ACTION_COPY.paidSeedNote : null,
-  ]
+
+  /* satu baris keterangan: status jatuh tempo + info yang benar-benar dibaca
+     (dompet sumber & tenor cicilan). Kategori & konteks tidak diulang lagi. */
+  const metaLine = [due.text, billWalletName(bill.walletId), endAfterLabel(bill)]
     .filter(Boolean)
     .join(' · ')
 
@@ -117,13 +111,7 @@ export function BillCard({
     if (startX.current === null) return
     startX.current = null
     setDragging(false)
-    setDx((value) =>
-      Math.abs(value) > SNAP
-        ? value > 0
-          ? REVEAL_PAY
-          : -REVEAL_ACTIONS
-        : 0,
-    )
+    setDx((value) => (Math.abs(value) > SNAP ? (value > 0 ? REVEAL_PAY : -REVEAL_ACTIONS) : 0))
   }
 
   /* tap tidak pernah ikut terhitung saat kartunya sedang digeser */
@@ -143,167 +131,160 @@ export function BillCard({
       layoutId={`bill-${bill.id}`}
       id={`bill-card-${bill.id}`}
       transition={{ type: 'spring', stiffness: 340, damping: 34 }}
-      className="relative scroll-mt-[180px] select-none"
+      className="scroll-mt-[180px] select-none"
     >
-      {/* ── PEMBUNGKUS KARTU (paket 60.4) ────────────────────────────────────
-          Area aksi tersingkap (geser) DIKLIP di pembungkus ini supaya tingginya
-          persis setinggi permukaan kartu — bukan setinggi baris aksi terlihat di
-          bawahnya. Tombol yang selalu terlihat itu duduk DI LUAR pembungkus,
-          jadi geseran tidak pernah menutupinya dan ia tidak pernah menutupi
-          area Edit/Hapus. */}
-      <div className="relative min-h-[76px] overflow-hidden rounded-2xl">
-        {/* aksi KIRI — sage, tersingkap saat geser KANAN */}
-        <button
-          type="button"
-          aria-label={BILL_CARD_ACTION_COPY.markPaidA11y(bill.name)}
-          title={BILL_CARD_ACTION_COPY.markPaidHint}
-          tabIndex={paid ? -1 : 0}
-          onClick={() => {
-            setDx(0)
-            onMarkPaid(bill)
-          }}
-          className="absolute inset-y-1 left-0 flex w-[116px] flex-col items-center justify-center gap-1 rounded-2xl bg-hud-sage text-forest transition-opacity focus-visible:z-20 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-forest/40"
-          style={{ opacity: dx > 0 ? exposed : 0, pointerEvents: dx > 24 ? 'auto' : 'none' }}
-        >
-          <Check className="size-4" strokeWidth={2.8} />
-          <span className="text-[10px] font-medium">{BILL_CARD_ACTION_COPY.markPaidSwipe}</span>
-        </button>
-
-        {/* aksi KANAN — amber Edit + terracotta Hapus, tersingkap saat geser KIRI */}
-        <div
-          className="absolute inset-y-1 right-0 flex gap-1"
-          style={{ opacity: dx < 0 ? exposed : 0, pointerEvents: dx < -24 ? 'auto' : 'none' }}
-        >
+      <div className="flex items-stretch gap-2">
+        {/* pembungkus kartu: area aksi tersingkap DIKLIP di sini supaya tingginya
+            persis setinggi permukaan kartu. Tombol aksi tetap ada DI LUAR. */}
+        <div className="relative min-h-[64px] min-w-0 flex-1 overflow-hidden rounded-2xl">
+          {/* aksi KIRI — sage, tersingkap saat geser KANAN */}
           <button
             type="button"
-            aria-label={BILL_CARD_ACTION_COPY.editA11y(bill.name)}
+            aria-label={BILL_CARD_ACTION_COPY.markPaidA11y(bill.name)}
+            title={BILL_CARD_ACTION_COPY.markPaidHint}
             tabIndex={paid ? -1 : 0}
             onClick={() => {
               setDx(0)
-              onEdit(bill)
+              onMarkPaid(bill)
             }}
-            className="flex w-[82px] flex-col items-center justify-center gap-1 rounded-2xl bg-hud-amber text-forest focus-visible:z-20 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-forest/40"
+            className="absolute inset-y-1 left-0 flex w-[116px] flex-col items-center justify-center gap-1 rounded-2xl bg-hud-sage text-forest transition-opacity focus-visible:z-20 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-forest/40"
+            style={{ opacity: dx > 0 ? exposed : 0, pointerEvents: dx > 24 ? 'auto' : 'none' }}
           >
-            <Pencil className="size-4" strokeWidth={2.4} />
-            <span className="text-[10px] font-medium">{BILL_CARD_ACTION_COPY.edit}</span>
+            <Check className="size-4" strokeWidth={2.8} aria-hidden />
+            <span className="text-[10px] font-medium">
+              {BILL_CARD_ACTION_COPY.markPaidSwipe}
+            </span>
           </button>
+
+          {/* aksi KANAN — amber Edit + terracotta Hapus, tersingkap saat geser KIRI */}
+          <div
+            className="absolute inset-y-1 right-0 flex gap-1"
+            style={{ opacity: dx < 0 ? exposed : 0, pointerEvents: dx < -24 ? 'auto' : 'none' }}
+          >
+            <button
+              type="button"
+              aria-label={BILL_CARD_ACTION_COPY.editA11y(bill.name)}
+              tabIndex={paid ? -1 : 0}
+              onClick={() => {
+                setDx(0)
+                onEdit(bill)
+              }}
+              className="flex w-[82px] flex-col items-center justify-center gap-1 rounded-2xl bg-hud-amber text-forest focus-visible:z-20 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-forest/40"
+            >
+              <Pencil className="size-4" strokeWidth={2.4} aria-hidden />
+              <span className="text-[10px] font-medium">{BILL_CARD_ACTION_COPY.edit}</span>
+            </button>
+            <button
+              type="button"
+              aria-label={BILL_CARD_ACTION_COPY.deleteA11y(bill.name)}
+              tabIndex={paid ? -1 : 0}
+              onClick={() => {
+                setDx(0)
+                onDelete(bill)
+              }}
+              className="flex w-[82px] flex-col items-center justify-center gap-1 rounded-2xl bg-hud-terracotta text-cream focus-visible:z-20 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-forest/40"
+            >
+              <Trash2 className="size-4" strokeWidth={2.4} aria-hidden />
+              <span className="text-[10px] font-medium">{BILL_CARD_ACTION_COPY.delete}</span>
+            </button>
+          </div>
+
+          {/* permukaan kartu — inilah yang digeser & ditempeli stempel LUNAS */}
           <button
             type="button"
-            aria-label={BILL_CARD_ACTION_COPY.deleteA11y(bill.name)}
-            tabIndex={paid ? -1 : 0}
-            onClick={() => {
-              setDx(0)
-              onDelete(bill)
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={settle}
+            onPointerCancel={settle}
+            onClick={onClick}
+            aria-label={`${bill.name}, ${maskMoney(bill.amount, masked)}. ${metaLine}.`}
+            className={cn(
+              'group relative flex w-full cursor-pointer touch-pan-y items-center gap-3 rounded-2xl bg-cream px-3 py-2.5 text-left outline-none',
+              'transition-[background-color,box-shadow,opacity] duration-200 animate-[row-in_0.5s_ease_backwards]',
+              paid
+                ? 'opacity-80 ring-1 ring-inset ring-hud-sage/25'
+                : 'ring-1 ring-inset ring-soil/8 hover:bg-cream',
+              highlighted && 'bg-sage/35 ring-2 ring-forest/45',
+            )}
+            style={{
+              transform: `translateX(${dx}px)`,
+              transitionDuration: dragging ? '0ms' : undefined,
+              animationDelay: `${delay}ms`,
             }}
-            className="flex w-[82px] flex-col items-center justify-center gap-1 rounded-2xl bg-hud-terracotta text-cream focus-visible:z-20 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-forest/40"
           >
-            <Trash2 className="size-4" strokeWidth={2.4} />
-            <span className="text-[10px] font-medium">{BILL_CARD_ACTION_COPY.delete}</span>
+            {/* petunjuk halus ada aksi di balik kartu: garis sage ngintip di tepi kiri */}
+            <span
+              aria-hidden
+              className={cn(
+                'pointer-events-none absolute rounded-full bg-hud-sage',
+                paid ? 'inset-y-0 left-0 w-[3px]' : 'inset-y-2 -left-px w-[2px] rounded-r-full',
+              )}
+            />
+
+            {/* emoji identitas tagihan */}
+            <span
+              aria-hidden
+              className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-sage/45 text-[20px] leading-none ring-1 ring-inset ring-forest/5"
+            >
+              {bill.emoji}
+            </span>
+
+            {/* nama + SATU baris keterangan (jatuh tempo · dompet · tenor) */}
+            <span className="min-w-0 flex-1">
+              <span
+                className={cn(
+                  'block truncate text-[13px] font-medium text-forest',
+                  paid && 'text-forest/75',
+                )}
+              >
+                {bill.name}
+              </span>
+              <span className={cn('mt-0.5 block truncate text-[11px] font-medium', due.className)}>
+                {metaLine}
+              </span>
+            </span>
+
+            {/* nominal + badge status (hanya untuk telat / hari ini) */}
+            <span className="flex shrink-0 flex-col items-end gap-1">
+              <span
+                className={cn(
+                  'text-[13px] tabular-nums',
+                  paid ? 'font-medium text-forest/45 line-through' : 'font-medium text-forest',
+                )}
+              >
+                {bill.amount > 0 ? maskMoney(bill.amount, masked) : 'Fleksibel'}
+              </span>
+              {status === 'overdue' && (
+                <span className="rounded-full bg-hud-terracotta/15 px-2 py-0.5 text-[10px] font-medium text-hud-terracotta ring-1 ring-inset ring-hud-terracotta/25">
+                  Telat
+                </span>
+              )}
+              {status === 'due_today' && (
+                <span className="rounded-full bg-hud-amber/20 px-2 py-0.5 text-[10px] font-medium text-hud-terracotta ring-1 ring-inset ring-hud-amber/30">
+                  Hari Ini
+                </span>
+              )}
+            </span>
+
+            {stamp !== 'none' && <LunasStamp variant={stamp} />}
           </button>
         </div>
 
-        {/* permukaan kartu — inilah yang digeser & ditempeli stempel LUNAS */}
-        <button
-          type="button"
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={settle}
-          onPointerCancel={settle}
-          onClick={onClick}
-          aria-label={`${bill.name}, ${maskMoney(bill.amount, masked)}. ${due.text}.`}
-          className={cn(
-            'group relative flex w-full cursor-pointer touch-pan-y items-center gap-3 rounded-2xl bg-cream px-3.5 py-3 text-left outline-none',
-            'transition-[background-color,box-shadow,opacity] duration-200 animate-[row-in_0.5s_ease_backwards]',
-            paid
-              ? 'opacity-75 ring-1 ring-inset ring-hud-sage/25'
-              : 'ring-1 ring-inset ring-soil/8 hover:bg-cream',
-            highlighted && 'bg-sage/35 ring-2 ring-forest/45',
-          )}
-          style={{
-            transform: `translateX(${dx}px)`,
-            transitionDuration: dragging ? '0ms' : undefined,
-            animationDelay: `${delay}ms`,
-          }}
-        >
-          {/* anjuran halus ada aksi di balik kartu: garis sage ngintip di tepi kiri */}
-          <span
-            aria-hidden
-            className={cn(
-              'pointer-events-none absolute rounded-full bg-hud-sage',
-              paid ? 'inset-y-0 left-0 w-[3px]' : 'inset-y-2 -left-px w-[2px] rounded-r-full',
-            )}
-          />
-
-          {/* emoji besar */}
-          <span
-            aria-hidden
-            className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-sage/45 text-[26px] leading-none ring-1 ring-inset ring-forest/5"
-          >
-            {bill.emoji}
-          </span>
-
-          {/* nama + konteks jatuh tempo + meta */}
-          <span className="min-w-0 flex-1">
-            <span
-              className={cn(
-                'block truncate text-[13.5px] font-medium text-forest',
-                paid && 'text-forest/75',
-              )}
-            >
-              {bill.name}
-            </span>
-            <span className={cn('mt-0.5 block truncate text-[11.5px] font-medium', due.className)}>
-              {due.text}
-            </span>
-            {meta && (
-              <span className="mt-0.5 block truncate text-[10.5px] text-forest/35">{meta}</span>
-            )}
-          </span>
-
-          {/* nominal + badge status */}
-          <span className="flex shrink-0 flex-col items-end gap-1.5">
-            <span
-              className={cn(
-                'text-[13.5px] tabular-nums',
-                paid ? 'font-medium text-forest/45 line-through' : 'font-medium text-forest',
-              )}
-            >
-              {bill.amount > 0 ? maskMoney(bill.amount, masked) : 'Fleksibel'}
-            </span>
-            {status === 'overdue' && (
-              <span className="rounded-full bg-hud-terracotta/15 px-2 py-0.5 text-[10px] font-medium text-hud-terracotta ring-1 ring-inset ring-hud-terracotta/25">
-                Telat
-              </span>
-            )}
-            {status === 'due_today' && (
-              <span className="rounded-full bg-hud-amber/20 px-2 py-0.5 text-[10px] font-medium text-[#b89191] ring-1 ring-inset ring-hud-amber/30">
-                Hari Ini
-              </span>
-            )}
-          </span>
-
-          {stamp !== 'none' && <LunasStamp variant={stamp} />}
-        </button>
-      </div>
-
-      {/* ── AKSI YANG SELALU TERLIHAT (paket 60.4) ──────────────────────────
-          Geser tetap jadi jalur cepat, tapi BUKAN lagi satu-satunya jalur:
-              · belum lunas → "Tandai Lunas ✓" (membuka sheet pemilih dompet);
-              · lunas & ada catatan pembayarannya → "Batal lunas" (konfirmasi
-                dulu, karena baris kasnya dibalikkan & saldo dompet pulih);
-              · lunas tanpa catatan (tagihan contoh seed) → TIDAK ada tombol:
-                membatalkannya tidak mengembalikan uang apa pun, jadi tombolnya
-                akan jadi janji kosong. Keadaannya ditulis di baris `meta`. */}
-      <div className="mt-1.5 flex items-center justify-end gap-2">
+        {/* AKSI YANG SELALU TERLIHAT — ikon saja, di luar area geser. Geser tetap
+            jadi jalur cepat, tapi BUKAN lagi satu-satunya jalur:
+                · belum lunas → tombol centang (buka sheet pemilih dompet);
+                · lunas & ada catatan pembayaran → tombol batal (konfirmasi dulu);
+                · lunas tanpa catatan (tagihan contoh seed) → TIDAK ada tombol,
+                  karena membatalkannya tidak mengembalikan uang apa pun. */}
         {!paid && (
           <button
             type="button"
             onClick={() => onMarkPaid(bill)}
             aria-label={BILL_CARD_ACTION_COPY.markPaidA11y(bill.name)}
-            className="inline-flex items-center gap-1.5 rounded-full bg-sage/70 px-3 py-1.5 text-[11.5px] font-medium text-forest transition-colors hover:bg-sage focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/30 active:scale-95"
+            title={BILL_CARD_ACTION_COPY.markPaid}
+            className="flex w-11 shrink-0 items-center justify-center rounded-2xl bg-sage/70 text-forest transition-colors hover:bg-sage focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/30 active:scale-95"
           >
-            <Check className="size-3.5" strokeWidth={2.8} aria-hidden />
-            {BILL_CARD_ACTION_COPY.markPaid}
+            <Check className="size-4" strokeWidth={2.8} aria-hidden />
           </button>
         )}
         {paid && bill.paidRowId && onUnmarkPaid && (
@@ -311,10 +292,10 @@ export function BillCard({
             type="button"
             onClick={() => onUnmarkPaid(bill)}
             aria-label={BILL_CARD_ACTION_COPY.unmarkPaidA11y(bill.name)}
-            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11.5px] font-medium text-forest/45 transition-colors hover:bg-soil/[0.12] hover:text-forest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/30 active:scale-95"
+            title={BILL_CARD_ACTION_COPY.unmarkPaid}
+            className="flex w-11 shrink-0 items-center justify-center rounded-2xl text-forest/45 ring-1 ring-inset ring-soil/8 transition-colors hover:bg-soil/[0.06] hover:text-forest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/30 active:scale-95"
           >
-            <RotateCcw className="size-3.5" strokeWidth={2.4} aria-hidden />
-            {BILL_CARD_ACTION_COPY.unmarkPaid}
+            <RotateCcw className="size-4" strokeWidth={2.4} aria-hidden />
           </button>
         )}
       </div>
@@ -322,18 +303,19 @@ export function BillCard({
   )
 }
 
-
-/* ── STAMP LUNAS — visual tanda tangan halaman ini (Section 7C) ─────────────
+/* ── STAMP LUNAS — visual tanda tangan halaman ini ──────────────────────────
    Stempel karet diagonal −15°, diletakkan di tengah kartu:
    - 'fresh'   : baru dicap → scale 0 → 1.1 → 1.0 (200ms ease-out) + denyut
                  bayangan sage, opacity penuh
    - 'settled' : sudah menetap di grup "Sudah Dibayar" → opacity 18%,
                  berpadu dengan nominal yang dicoret
 
-   Tepi kasar ditiru dengan garis dalam putus-putus + tekstur titik rapat
-   (bukan SVG filter — tetap murah saat banyak kartu sekaligus). Posisi diatur
+   Tepi kasar ditiru dengan garis dalam putus-putus + tekstur titik rapat (bukan
+   SVG filter — tetap murah saat banyak kartu sekaligus). Posisi diatur
    pembungkus luar, animasinya di elemen dalam, jadi transform framer tidak
-   bertabrakan dengan utility Tailwind. */
+   bertabrakan dengan utility Tailwind.
+   ────────────────────────────────────────────────────────────────────────── */
+
 function LunasStamp({ variant }: { variant: 'fresh' | 'settled' }) {
   const fresh = variant === 'fresh'
   return (

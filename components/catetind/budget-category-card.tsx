@@ -1,15 +1,13 @@
 'use client'
 
-import { useState } from 'react'
 import { Trash2 } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import {
   BUDGET_CARD_ACTION_COPY,
   PACING_HEX,
   PACING_HINT_COPY,
   pacingOf,
   pacingPercent,
-  periodLimitWord,
+  pacingStatusLabel,
   ratioLabel,
   type BudgetItem,
   type PeriodWindow,
@@ -24,6 +22,23 @@ import {
    artinya belanja lebih cepat dari pacing — ditampilkan sebagai informasi,
    bukan teguran (nada PRD: nurturing, bukan menghakimi).
 
+   PAKET 78 — MINIMALISME (permintaan pemilik produk: "rely on progress bars,
+   clean typography, dan whitespace"). Yang DIHAPUS dari kartu ini:
+     · baris mikro "Budget bulanan" — periodenya sudah terbaca dari pil periode
+       tepat di atas daftar, jadi ia cuma mengulang;
+     · tooltip garis pacing — satu paragraf melayang muncul tiap kali mouse
+       lewat. Penjelasannya TIDAK hilang: garis itu tetap punya `aria-label`
+       (`PACING_HINT_COPY`) + `title` bawaan browser, jadi pembaca layar & mouse
+       tetap tahu artinya tanpa ada kotak gelap menutupi kartu tetangga;
+     · `pacingOf().copy` — kalimat "Pelan-pelan ya, sisa tinggal Rp 120.000 🌤️"
+       mengulang angka yang sudah duduk di baris nominal. Kartu sekarang cuma
+       menampilkan status tiga kata (`pacingStatusLabel`) dengan warna yang sama.
+
+   Yang TETAP (kanon, jangan dihapus): nama kategori, angka terpakai/limit, bar
+   progres, GARIS PACING 2px (fungsional — ia yang mengatakan "lebih cepat/lebih
+   lambat dari rencana"), tombol hapus dengan `aria-label` bernama kategori, dan
+   CTA `Review Pengeluaran →` yang hanya muncul saat kategorinya over budget.
+
    PAKET 60.1 — tombol HAPUS ditambahkan di baris atas kartu. Sebelumnya kartu
    ini hanya punya "ghost pacing line" (hint) dan CTA `Review Pengeluaran →`
    saat over budget: tidak ada satu pun jalan untuk mencabut target yang user
@@ -31,6 +46,13 @@ import {
    kategorinya (`BUDGET_CARD_ACTION_COPY.delete`) — keputusan & konfirmasinya
    milik halaman (`budget-screen`), karena di sanalah jendela Undo hidup.
    ────────────────────────────────────────────────────────────────────────── */
+
+/* REDESAIN (paket 82): teks status TIDAK lagi punya tabel warna sendiri.
+   Dulu ada `TONE_TEXT` yang memetakan `amber` ke hex PLUM (#b89191) — berbeda
+   dari warna bar-nya (#ffb885), padahal komentarnya menjanjikan "warna yang
+   SAMA dengan bar-nya". Sekarang teks status mengambil warnanya LANGSUNG dari
+   `PACING_HEX[tone]` (sumber tunggal, sama dengan bar & pil persen), jadi tidak
+   mungkin lagi ada dua warna untuk satu status. */
 
 export function BudgetCategoryCard({
   budget,
@@ -48,108 +70,102 @@ export function BudgetCategoryCard({
   /** hapus kategori ini (buka konfirmasi di halaman pemilik state) */
   onDelete?: (budget: BudgetItem) => void
 }) {
-  /* tooltip garis pacing: muncul saat hover (CSS) & saat di-tap (state) */
-  const [hintOpen, setHintOpen] = useState(false)
-
-  const { tone, percent, copy, fasterThanPacing } = pacingOf(budget, masked, window)
+  /* `copy` dari `pacingOf()` sengaja TIDAK diambil: kartu memakai status tiga
+     kata (paket 78), sedangkan kalimatnya tetap hidup untuk panel review. */
+  const { tone, percent, fasterThanPacing } = pacingOf(budget, masked, window)
   const over = percent >= 100
   const pacing = pacingPercent(window)
   const fill = Math.min(100, percent)
-
-  /* tooltip tidak boleh keluar tepi kartu — merapat ke sisi terdekat */
-  const hintAnchor =
-    pacing >= 70 ? 'right-0' : pacing <= 30 ? 'left-0' : 'left-1/2 -translate-x-1/2'
+  const pacingHint = fasterThanPacing ? PACING_HINT_COPY.faster : PACING_HINT_COPY.base
 
   return (
-    <article className="rounded-[1.5rem] bg-cream p-4 ring-1 ring-soil/12 shadow-[0_12px_28px_-24px_rgba(69,89,78,0.5)] transition-shadow duration-300 hover:shadow-[0_18px_34px_-22px_rgba(69,89,78,0.45)]">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-2xl bg-sage/70 text-[17px] ring-1 ring-soil/8">
-            {budget.icon}
-          </span>
-          <span className="min-w-0">
-            <span className="block truncate text-[14.5px] font-medium tracking-tight text-forest">
+    /* REDESAIN paket 82 (round 2). Kartu dibaca atas→bawah dalam TIGA pita:
+       ① ikon · nama + terpakai/limit · pil persen · hapus
+       ② bar progres + garis pacing ideal
+       ③ status tiga kata (kiri) · CTA Review saat over (kanan)
+       Rasio terpakai/limit dinaikkan ke bawah nama (tidak lagi jadi baris
+       sendiri di kaki kartu) dan CTA Review naik sebaris dengan status — jadi
+       satu pita lebih sedikit dan daftar terasa lebih lega. Nol informasi yang
+       hilang: nama, rasio, persen, bar, garis pacing, status, hapus, & CTA
+       review semuanya tetap ada. */
+    <article className="rounded-[1.4rem] bg-cream p-3.5 ring-1 ring-soil/10 transition-all duration-300 hover:ring-soil/16 hover:shadow-[0_18px_40px_-26px_rgba(0,0,0,0.4)]">
+      {/* ① identitas · angka · aksi */}
+      <div className="flex items-center gap-3">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-sage/60 text-[17px] ring-1 ring-soil/8">
+          {budget.icon}
+        </span>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-2">
+            <span className="min-w-0 truncate text-[14px] font-medium leading-tight tracking-tight text-forest">
               {budget.category}
             </span>
-            <span className="block text-[10.5px] font-medium text-forest/40">
-              Budget {periodLimitWord(budget.period)}
+            {/* persen — angka kedua paling terbaca di kartu, diwarnai status yang
+                SAMA dengan bar-nya (satu makna, satu warna) */}
+            <span
+              className="shrink-0 rounded-full px-2 py-0.5 text-[11.5px] font-semibold tabular-nums"
+              style={{
+                color: PACING_HEX[tone],
+                backgroundColor: `${PACING_HEX[tone]}1f`,
+              }}
+            >
+              {Math.round(percent)}%
             </span>
-          </span>
+          </div>
+          {/* nominal terpakai/limit — sub-baris nama (dulu baris terpisah di kaki) */}
+          <p className="mt-0.5 min-w-0 truncate text-[11px] tabular-nums text-forest/45">
+            {ratioLabel(budget.spent, budget.limit, masked)}
+          </p>
         </div>
 
-        <span className="flex shrink-0 items-center gap-1.5">
-          <span className="text-right text-[12px] font-medium tabular-nums text-forest">
-            {ratioLabel(budget.spent, budget.limit, masked)}
-          </span>
-          {/* hapus (paket 60.1) — ikon saja, tapi SELALU punya nama yang bisa
-              dibaca pembaca layar & tooltip; keputusan ada di halaman */}
-          {onDelete && (
-            <button
-              type="button"
-              onClick={() => onDelete(budget)}
-              aria-label={BUDGET_CARD_ACTION_COPY.delete(budget.category)}
-              title={BUDGET_CARD_ACTION_COPY.delete(budget.category)}
-              className="flex size-7 shrink-0 items-center justify-center rounded-xl text-forest/30 transition-colors hover:bg-plum/12 hover:text-plum focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25 active:scale-95"
-            >
-              <Trash2 className="size-3.5" strokeWidth={2.4} aria-hidden />
-            </button>
-          )}
-        </span>
+        {/* hapus (paket 60.1) — ikon saja, tapi SELALU punya nama yang bisa
+            dibaca pembaca layar & tooltip; keputusan ada di halaman */}
+        {onDelete && (
+          <button
+            type="button"
+            onClick={() => onDelete(budget)}
+            aria-label={BUDGET_CARD_ACTION_COPY.delete(budget.category)}
+            title={BUDGET_CARD_ACTION_COPY.delete(budget.category)}
+            className="flex size-8 shrink-0 items-center justify-center rounded-xl text-forest/30 transition-colors hover:bg-plum/12 hover:text-plum focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25 active:scale-95"
+          >
+            <Trash2 className="size-3.5" strokeWidth={2.4} aria-hidden />
+          </button>
+        )}
       </div>
 
-      {/* ── bar progres + garis pacing ideal ─────────────────────────────── */}
-      <div
-        className="group/bar relative mt-3.5"
-        onMouseLeave={() => setHintOpen(false)}
-      >
-        <div className="h-2 w-full overflow-hidden rounded-full bg-[#ebe4de]">
+      {/* ② bar progres + garis pacing ideal (kanon, jangan dihapus) */}
+      <div className="relative mt-3">
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-soil/[0.07]">
           <div
-            className="h-full rounded-full transition-[width] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]"
+            className="h-full rounded-full transition-[width] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
             style={{ width: `${fill}%`, backgroundColor: PACING_HEX[tone] }}
           />
         </div>
 
-        {/* ghost pacing line — 2px, nol tambahan ruang vertikal */}
-        <button
-          type="button"
-          aria-label={fasterThanPacing ? PACING_HINT_COPY.faster : PACING_HINT_COPY.base}
-          onClick={() => setHintOpen((prev) => !prev)}
-          onFocus={() => setHintOpen(true)}
-          onBlur={() => setHintOpen(false)}
-          className="absolute -bottom-1.5 -top-1.5 w-0.5 -translate-x-1/2 cursor-help rounded-full bg-ink/15 transition-colors hover:bg-ink/20"
+        {/* ghost pacing line — 2px, nol tambahan ruang vertikal. Penjelasannya
+            hidup di `aria-label` (`role="img"`, jadi ikut dibaca pembaca layar
+            di alur bacanya) + `title` bawaan browser untuk pengguna mouse
+            (paket 78) — bukan tooltip melayang yang menutupi kartu tetangga.
+            Tidak dibuat fokusable karena garis ini tidak punya aksi apa pun. */}
+        <span
+          role="img"
+          aria-label={pacingHint}
+          title={pacingHint}
+          className="absolute -bottom-1.5 -top-1.5 w-0.5 -translate-x-1/2 cursor-help rounded-full bg-ink/15 transition-colors hover:bg-ink/25"
           style={{ left: `${pacing}%` }}
         />
-
-        {/* tooltip mikro — hanya muncul saat hover/tap, tidak makan tempat */}
-        <span
-          role="tooltip"
-          className={cn(
-            'pointer-events-none absolute top-full z-10 mt-2 w-max max-w-[13rem] rounded-xl bg-ink px-2.5 py-1.5 text-[10.5px] font-medium leading-snug text-cream shadow-[0_12px_26px_-14px_rgba(69,89,78,0.7)] transition-opacity duration-200',
-            hintAnchor,
-            hintOpen ? 'opacity-100' : 'opacity-0 group-hover/bar:opacity-100',
-          )}
-        >
-          {PACING_HINT_COPY.base}
-        </span>
       </div>
 
-      {/* ── copy status + CTA review saat over ───────────────────────────── */}
-      <div className="mt-2.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-        <p
-          className={cn(
-            'text-[11.5px] font-medium leading-snug',
-            tone === 'sage' && 'text-[#b5b987]',
-            tone === 'amber' && 'text-[#b89191]',
-            tone === 'terracotta' && 'text-hud-terracotta',
-          )}
-        >
-          {copy}
-        </p>
+      {/* ③ status tiga kata (kiri) · CTA Review saat over (kanan) — satu baris */}
+      <div className="mt-2 flex items-center justify-between gap-2 text-[11px]">
+        <span className="shrink-0 font-medium" style={{ color: PACING_HEX[tone] }}>
+          {pacingStatusLabel(tone)}
+        </span>
         {over && (
           <button
             type="button"
             onClick={onReview}
-            className="text-[11.5px] font-medium text-hud-terracotta underline decoration-hud-terracotta/40 decoration-dotted underline-offset-4 transition-colors hover:decoration-hud-terracotta"
+            className="shrink-0 text-[11px] font-medium text-hud-terracotta underline decoration-hud-terracotta/40 decoration-dotted underline-offset-4 transition-colors hover:decoration-hud-terracotta"
           >
             Review Pengeluaran →
           </button>

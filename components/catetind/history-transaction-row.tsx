@@ -3,7 +3,6 @@
 import { useRef, useState } from 'react'
 import { MoreVertical, Pencil, Sparkles, Trash2 } from 'lucide-react'
 import {
-  MONEY_TONE,
   amountSign,
   isMoneyMovement,
   maskMoney,
@@ -12,6 +11,7 @@ import {
 } from '@/lib/data/history'
 import { UNKNOWN_CONTEXT_COPY } from '@/lib/data/money-context'
 import { cn } from '@/lib/utils'
+import { categoryVisualFor, moneyRowVisualFor } from './transaction-category-visual'
 
 /* ── Baris transaksi dengan aksi geser (tabel gesture PRD Domain 3D) ─────────
    - Geser KANAN → buka tombol Edit (hijau brand)
@@ -22,13 +22,36 @@ import { cn } from '@/lib/utils'
    Digerakkan pointer events (mouse & sentuh) sehingga tidak butuh library
    gesture tambahan. 88px = lebar area aksi yang tersingkap.
 
-   REDESIGN: baris ini sekarang TANPA kartu (garis rambut memisah antar baris,
-   lihat history-screen.tsx) supaya daftarnya terasa seperti satu daftar, bukan
-   tumpukan kotak. Nominal memakai `MONEY_TONE` yang sama dengan Dashboard:
-   hijau = masuk, terracotta = keluar, tinta redup + ⇄ = cuma pindah dana. */
+   JARAK, BUKAN GARIS RAMBUT: pemisah antar transaksi dipasang `<ul>` pemanggil
+   sebagai `gap` (lihat history-screen.tsx), sedangkan barisnya sendiri adalah
+   KARTU tipis ber-tint keluarga kategori (`visual.row`, paket 78) dengan sudut
+   membulat — jadi daftarnya terbaca sebagai deretan kartu yang seragam dengan
+   daftar Dashboard, bukan daftar rata yang kartunya saling menempel.
+   Nominal memakai `MONEY_TONE` yang sama dengan Dashboard:
+   hijau = masuk, terracotta = keluar, tinta redup + ⇄ = cuma pindah dana.
+
+   PAKET 78 — KENAPA BARIS INI SEKARANG BERWARNA. Sebelumnya lingkaran kategorinya
+   emoji di atas tona sage seragam, dan baris metanya teks abu polos: daftar
+   Riwayat jadi satu-satunya daftar transaksi yang TIDAK memakai bahasa warna
+   kategori yang sudah dilihat user di Dashboard (paket 68). Sekarang baris ini
+   membaca TABEL YANG SAMA (`components/catetind/transaction-category-visual.tsx`):
+   tile ikon bertint keluarga kategori, latar baris soft, chip kategori di baris
+   meta/notes, dan nada nominal dari `MONEY_TONE` lewat tabel yang sama. Nol
+   warna baru — dan karena tabelnya berisi kelas Tailwind, halaman mana pun yang
+   memakai baris ini (Riwayat, Dompet Detail, Kalender) otomatis ikut seragam.
+
+   PRIVASI tidak berubah sedikit pun: nominal tetap lewat `maskMoney(…)` dan
+   `transactionAmountLabel()`, sedangkan warna kategori TIDAK pernah mengikuti
+   besar-kecilnya angka (ia hanya menyatakan keluarga kategori). */
 
 const REVEAL = 88
 
+/* Emoji kategori (paket 69) — MASIH DIPAKAI, tapi TIDAK LAGI di baris transaksi:
+   halaman Bersama (`joint-stats-row`, `joint-recap-banners`, `joint-timeline`)
+   dan sheet Detail Transaksi menyebut kategori di dalam kalimat/legendanya, jadi
+   emoji tetap dibutuhkan di sana. Baris daftar transaksi sendiri sejak paket 78
+   memakai tile ikon keluarga warna (tabel bersama) supaya seragam dengan
+   Dashboard. Jangan hapus peta ini sebelum tiga pemakai di atas ikut pindah. */
 const CATEGORY_EMOJI: Record<string, string> = {
   makanan: '🍜',
   transportasi: '🛵',
@@ -137,6 +160,11 @@ export function HistoryTransactionRow({
   /* kategori aman (tidak pernah berisi nama TYPE) + penanda pindah dana */
   const category = resolveCategoryLabel(tx)
   const moves = isMoneyMovement(tx)
+  /* visual kategori & nada nominal — SATU tabel bersama dengan Dashboard
+     (`transaction-category-visual`, paket 78), jadi dua daftar itu mustahil
+     memakai warna berbeda untuk transaksi yang sama */
+  const visual = categoryVisualFor(category)
+  const tone = moneyRowVisualFor(tx.type)
 
   return (
     <li className="relative select-none overflow-hidden rounded-xl">
@@ -171,11 +199,21 @@ export function HistoryTransactionRow({
       </button>
 
       {/* konten baris — dibungkus bersama tombol menu supaya keduanya ikut
-          tergeser saat swipe. Barisnya rata (bukan kartu): pemisah antar
-          transaksi adalah garis rambut di <ul>, jadi tidak ada kotak di dalam
-          kotak. Affordance aksinya adalah ikon titik tiga yang bisa ditekan. */}
+          tergeser saat swipe. Barisnya satu kartu tipis ber-tint kategori:
+          pemisah antar transaksi adalah JARAK yang dipasang `<ul>` pemanggil
+          (lihat history-screen.tsx), jadi tidak ada kotak bersarang di dalam
+          kotak. Affordance aksinya adalah ikon titik tiga yang bisa ditekan.
+
+          Latar baris = tint SOFT keluarga kategori (`visual.row`, paket 78) —
+          keluarga warna yang sama dengan Dashboard. `bg-cream` yang lama
+          DILEPAS dari sini karena ia menutupi tint-nya (pelajaran saat tabel ini
+          dipasang di Dashboard, paket 68); arah hover sekarang cuma menaikkan
+          opasitas tint, kelasnya sudah ikut di dalam `visual.row`. */}
       <div
-        className="group relative flex cursor-pointer touch-pan-y items-center rounded-xl bg-cream transition-colors duration-200 animate-[row-in_0.5s_ease_backwards] hover:bg-cream focus-within:bg-cream"
+        className={cn(
+          'group relative flex cursor-pointer touch-pan-y items-center rounded-xl transition-colors duration-200 animate-[row-in_0.5s_ease_backwards]',
+          visual.row,
+        )}
         style={{
           transform: `translateX(${dx}px)`,
           transitionDuration: dragging ? '0ms' : undefined,
@@ -192,14 +230,19 @@ export function HistoryTransactionRow({
           aria-label={`${tx.name}, ${category}, ${label}${moves ? ' (pindah dana)' : ''}${
             unknownContext ? ' (belum berkonteks)' : ''
           }. Geser kanan untuk edit, kiri untuk hapus, atau buka menu aksi.`}
-          className="flex min-w-0 flex-1 items-center gap-3 py-3 pl-1 pr-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-forest/20"
+          className="flex min-w-0 flex-1 items-center gap-3 py-3.5 pl-1 pr-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-forest/20"
         >
-          {/* lingkaran emoji kategori — tanpa ring, cukup tona sage lembut */}
+          {/* tile ikon kategori (paket 78) — ikon lucide + gradient keluarga
+              warna yang SAMA dengan Dashboard & Dompet Detail, jadi mata user
+              mengenali kategorinya sebelum membaca teksnya */}
           <span
-            className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sage/70 text-[15px] transition-transform duration-300 group-hover:scale-105"
+            className={cn(
+              'flex size-9 shrink-0 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-105',
+              visual.tile,
+            )}
             aria-hidden
           >
-            {categoryEmoji(category)}
+            <visual.icon className="size-4" strokeWidth={2.2} />
           </span>
 
           <span className="min-w-0 flex-1">
@@ -223,22 +266,33 @@ export function HistoryTransactionRow({
                 </span>
               )}
             </span>
-            {/* meta: dompet · jam · kategori, lalu penanda "pindah dana" dalam
-                teks redup — bukan pill biru lagi (audit warna: makna uang tidak
-                perlu biru, cukup dikatakan) */}
-            <span className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-forest/40">
-              <span className="truncate">
-                {showWallet ? `${tx.wallet} · ` : ''}
-                {tx.time} · {category}
+            {/* meta/notes: dompet · jam, lalu kategori sebagai CHIP bertint
+                keluarga yang sama (paket 78). Sebelumnya kategori ini teks abu
+                polos yang tenggelam; sekarang ia penanda visual yang bisa
+                dipindai tanpa menambah satu kalimat pun.
+                Penanda "pindah dana" tetap teks redup — makna uang tidak perlu
+                warna kedua (audit warna). */}
+            <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[11.5px] text-forest/40">
+              {showWallet && <span className="min-w-0 truncate">{tx.wallet} ·</span>}
+              <span className="shrink-0">{tx.time}</span>
+              <span
+                className={cn(
+                  'min-w-0 truncate rounded-full px-1.5 py-0.5 text-[10px] font-medium',
+                  visual.chip,
+                )}
+              >
+                {category}
               </span>
-              {moves && <span className="shrink-0 font-medium text-forest/40">· pindah dana</span>}
+              {moves && (
+                <span className="min-w-0 truncate font-medium text-forest/40">· pindah dana</span>
+              )}
             </span>
           </span>
 
           <span
             className={cn(
               'shrink-0 text-[13.5px] font-medium tabular-nums',
-              MONEY_TONE[tx.type].text,
+              tone.text,
             )}
           >
             {label}

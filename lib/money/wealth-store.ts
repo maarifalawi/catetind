@@ -3,12 +3,12 @@
 import { useSyncExternalStore } from 'react'
 import type { BudgetScope } from '@/lib/data/budget'
 import {
+  INITIAL_ASSET_TRANSACTIONS,
   INITIAL_DEBTS,
   INITIAL_DEBT_PAYMENTS,
   INITIAL_INVESTMENTS,
-  WEALTH_NOW_ISO,
-  WEALTH_TODAY_ISO,
   paymentsOfDebt,
+  type AssetTransaction,
   type AssetType,
   type Debt,
   type DebtDirection,
@@ -16,6 +16,7 @@ import {
   type DebtType,
   type Investment,
 } from '@/lib/data/wealth'
+import { localISODate } from '@/lib/time'
 import {
   applySettlement,
   cashDirectionOf,
@@ -27,6 +28,7 @@ import { WEALTH_STATE_KEY, loadDeviceState, saveDeviceState } from './idb'
 import {
   deleteRemoteDebt,
   deleteRemoteInvestment,
+  pushAssetTransactionToServer,
   pushDebtToServer,
   pushInvestmentToServer,
   pushPaymentToServer,
@@ -35,6 +37,7 @@ import {
   type RemoteWealth,
 } from '@/lib/supabase/wealth-remote'
 import { randomUuid } from '@/lib/supabase/uuid'
+import { subscribeWealthChanges, type WealthRealtimeHandle } from '@/lib/supabase/realtime'
 import { getMoneySnapshot, postDebtSettlement, rowForClientTxId, type DebtSettlementResult } from './store'
 
 /* ── SATU STORE KEKAYAAN (paket 50 · temuan D laporan 46) ────────────────────
@@ -85,6 +88,12 @@ export interface PersistedWealth {
   debts?: Debt[]
   payments?: DebtPayment[]
   /**
+   * LEDGER transaksi beli/jual aset (riwayat per aset). Dulu riwayat ini
+   * ditampilkan dari konstanta MOCK `INITIAL_ASSET_TRANSACTIONS`; sejak itu
+   * dihapus dari runtime, baris di sini yang jadi satu-satunya sumber nyata.
+   */
+  assetTransactions?: AssetTransaction[]
+  /**
    * TOMBSTONE baris yang dihapus user (paket 61) — bentuknya SAMA dengan
    * `removedIds` di `lib/money/store.ts` & `lib/money/bills-store.ts`, dengan
    * satu tambahan penting: kuncinya WAJIB ber-prefix jenis (`debt:1` / `inv:1`)
@@ -100,6 +109,8 @@ export interface WealthState {
   investments: Investment[]
   debts: Debt[]
   payments: DebtPayment[]
+  /** ledger beli/jual aset (riwayat per aset) — data nyata, bukan seed */
+  assetTransactions: AssetTransaction[]
   /** id yang dihapus user (tombstone) — lihat `PersistedWealth.removedIds` */
   removedIds: string[]
 }
@@ -121,12 +132,14 @@ const WEALTH_STATE_VERSION = 1
 const SEED_INVESTMENTS: Investment[] = INITIAL_INVESTMENTS
 const SEED_DEBTS: Debt[] = INITIAL_DEBTS
 const SEED_PAYMENTS: DebtPayment[] = INITIAL_DEBT_PAYMENTS
+const SEED_ASSET_TRANSACTIONS: AssetTransaction[] = INITIAL_ASSET_TRANSACTIONS
 
 /** snapshot untuk render server & hidrasi — SELALU KOSONG sampai user mengisi */
 const SERVER_SNAPSHOT: WealthSnapshot = Object.freeze({
   investments: [] as Investment[],
   debts: [] as Debt[],
   payments: [] as DebtPayment[],
+  assetTransactions: [] as AssetTransaction[],
   removedIds: [] as string[],
   hydrated: false,
 })
@@ -136,6 +149,7 @@ const SEED_SNAPSHOT: WealthSnapshot = Object.freeze({
   investments: SEED_INVESTMENTS,
   debts: SEED_DEBTS,
   payments: SEED_PAYMENTS,
+  assetTransactions: SEED_ASSET_TRANSACTIONS,
   removedIds: [] as string[],
   hydrated: false,
 })
@@ -145,6 +159,7 @@ const EMPTY_SNAPSHOT: WealthSnapshot = Object.freeze({
   investments: [],
   debts: [],
   payments: [],
+  assetTransactions: [],
   removedIds: [] as string[],
   hydrated: true,
 })
@@ -188,6 +203,7 @@ function persist(snapshot: WealthState): void {
     investments: snapshot.investments,
     debts: snapshot.debts,
     payments: snapshot.payments,
+    assetTransactions: snapshot.assetTransactions,
     removedIds: [...snapshot.removedIds],
     purged: accountPurged,
   })
@@ -272,8 +288,8 @@ function nextSeq(): number {
   return ids.reduce((max, id) => Math.max(max, idSeqOf(id)), 0) + 1
 }
 
-/** id catatan baru: `inv-12`, `debt-13`, `pay-14` (satu penomoran bersama) */
-function idOf(prefix: 'inv' | 'debt' | 'pay', seq: number): string {
+/** id catatan baru: `inv-12`, `debt-13`, `pay-14`, `tx-15` (satu penomoran bersama) */
+function idOf(prefix: 'inv' | 'debt' | 'pay' | 'tx', seq: number): string {
   return `${prefix}-${seq}`
 }
 
@@ -343,6 +359,18 @@ export function mergeWealthState(
     ),
   ]
 
+  const storedTx = known ? (persisted?.assetTransactions ?? []).filter((row) => row?.id) : []
+  const baseTx = baseOf(storedTx)
+  const assetTransactions = [
+    ...baseTx,
+    ...extrasOf(
+      current.assetTransactions,
+      SEED_ASSET_TRANSACTIONS,
+      baseTx,
+      !purged && storedTx.length === 0,
+    ),
+  ]
+
   /* TOMBSTONE digabung (union), bukan diambil dari satu sisi: hapus yang
      terjadi di PERANGKAT INI harus bertahan, dan hapus yang sudah tersimpan
      tidak boleh "hidup lagi" saat state dibaca ulang. Di-`Set` supaya satu id
@@ -350,7 +378,7 @@ export function mergeWealthState(
   const storedRemoved = known ? (persisted?.removedIds ?? []).filter((id) => id) : []
   const removedIds = [...new Set([...storedRemoved, ...current.removedIds])]
 
-  return { investments, debts, payments, removedIds, hydrated: true }
+  return { investments, debts, payments, assetTransactions, removedIds, hydrated: true }
 }
 
 /** gabung SATU daftar: baris server jadi dasar, baris lokal yang belum terkirim ikut */
@@ -414,6 +442,13 @@ export function mergeWithRemoteWealth(
     if (!payById.has(row.id)) payById.set(row.id, row)
     if (row.remoteId && !payByRemote.has(row.remoteId)) payByRemote.set(row.remoteId, row)
   }
+  const txById = new Map<string, AssetTransaction>()
+  const txByRemote = new Map<string, AssetTransaction>()
+  for (const row of [...(persisted?.assetTransactions ?? []), ...current.assetTransactions]) {
+    if (!row?.id) continue
+    if (!txById.has(row.id)) txById.set(row.id, row)
+    if (row.remoteId && !txByRemote.has(row.remoteId)) txByRemote.set(row.remoteId, row)
+  }
 
   const investments = combineRemote(remote.investments, invById, SEED_INVESTMENTS, (row) => {
     const local = invByRemote.get(row.id) ?? invById.get(row.id)
@@ -438,9 +473,18 @@ export function mergeWithRemoteWealth(
       ? { ...row, id: local.id, walletName: local.walletName || row.walletName, remoteId: row.id }
       : { ...row, remoteId: row.id }
   })
+  const assetTransactions = combineRemote(
+    remote.assetTransactions,
+    txById,
+    SEED_ASSET_TRANSACTIONS,
+    (row) => {
+      const local = txByRemote.get(row.id) ?? txById.get(row.id)
+      return local ? { ...row, id: local.id, remoteId: row.id } : { ...row, remoteId: row.id }
+    },
+  )
 
   const removedIds = Array.from(new Set([...current.removedIds, ...(persisted?.removedIds ?? [])]))
-  return { investments, debts, payments, removedIds, hydrated: true }
+  return { investments, debts, payments, assetTransactions, removedIds, hydrated: true }
 }
 
 async function ensureInvestmentOnServer(invId: string): Promise<boolean> {
@@ -491,6 +535,55 @@ async function ensurePaymentOnServer(paymentId: string): Promise<boolean> {
   return true
 }
 
+async function ensureAssetTxOnServer(txId: string): Promise<boolean> {
+  const tx = live.assetTransactions.find((row) => row.id === txId)
+  if (!tx) return false
+  /* baris `asset_transactions` menempel pada uuid baris `investments` induknya */
+  if (!(await ensureInvestmentOnServer(tx.assetId))) return false
+  const inv = live.investments.find((row) => row.id === tx.assetId)
+  if (!inv?.remoteId) return false
+  const remoteId = tx.remoteId ?? randomUuid()
+  if (!(await pushAssetTransactionToServer(tx, inv.remoteId, remoteId))) return false
+  if (tx.remoteId !== remoteId) {
+    live = {
+      ...live,
+      assetTransactions: live.assetTransactions.map((row) =>
+        row.id === txId ? { ...row, remoteId } : row,
+      ),
+    }
+    persist(live)
+    emit()
+  }
+  return true
+}
+
+/* ── REALTIME (paket 84) — perubahan dari perangkat/tab lain ──────────────────
+   Satu langganan Postgres Changes; tiap sinyal hanya MEMBACA ULANG server lalu
+   digabung lewat `mergeWithRemoteWealth()` (jalur yang sama dengan hidrasi).
+   `readRemoteWealth()` mengembalikan `null` tanpa sesi/backend, jadi di jalur
+   lokal (tanpa Supabase) fungsi ini praktis no-op. */
+let realtime: WealthRealtimeHandle | null = null
+
+async function refreshWealthFromServer(): Promise<void> {
+  const remote = await readRemoteWealth()
+  if (!remote) return
+  live = mergeWithRemoteWealth(remote, live, null)
+  persist(live)
+  emit()
+}
+
+function stopWealthRealtime(): void {
+  realtime?.stop()
+  realtime = null
+}
+
+function startWealthRealtime(): void {
+  if (realtime) return
+  realtime = subscribeWealthChanges(() => {
+    void refreshWealthFromServer()
+  })
+}
+
 async function hydrateWealthStore(): Promise<void> {
   if (hydrateStarted) return
   hydrateStarted = true
@@ -511,6 +604,13 @@ async function hydrateWealthStore(): Promise<void> {
   for (const inv of live.investments) if (!inv.remoteId) await ensureInvestmentOnServer(inv.id)
   for (const debt of live.debts) if (!debt.remoteId) await ensureDebtOnServer(debt.id)
   for (const pay of live.payments) if (!pay.remoteId) await ensurePaymentOnServer(pay.id)
+  for (const tx of live.assetTransactions) {
+    /* riwayat aset yang sudah dihapus TIDAK dikirim balik ke server */
+    if (isRemoved('inv', tx.assetId)) continue
+    if (!tx.remoteId) await ensureAssetTxOnServer(tx.id)
+  }
+  /* perubahan dari tab/perangkat lain masuk sendiri lewat langganan ini */
+  startWealthRealtime()
 }
 
 /* ── API TULIS — SATU-SATUNYA JALUR MENULIS KEKAYAAN ─────────────────────────
@@ -529,8 +629,12 @@ export interface NewInvestmentInput {
   fees?: number
   /** konteks uang yang sedang aktif (paket 47) */
   scope: BudgetScope
-  /** stempel "Terakhir diperbarui"; default `WEALTH_NOW_ISO` (waktu dipatok repo) */
+  /** stempel "Terakhir diperbarui"; default WAKTU PERANGKAT sekarang */
   stampISO?: string
+  /** arah transaksi — ikut tercatat di ledger riwayat aset; default 'buy' */
+  side?: 'buy' | 'sell'
+  /** tanggal transaksi `YYYY-MM-DD`; default HARI INI menurut perangkat */
+  dateISO?: string
 }
 
 /** catat posisi aset baru dari satu transaksi beli/jual */
@@ -554,11 +658,26 @@ export function addInvestment(input: NewInvestmentInput): Investment | null {
     currentPrice: price,
     totalInvested: quantity * price + fees,
     currentValue: quantity * price,
-    lastUpdate: input.stampISO ?? WEALTH_NOW_ISO,
+    lastUpdate: input.stampISO ?? new Date().toISOString(),
     scope: input.scope,
   }
-  commit({ ...live, investments: [asset, ...live.investments], hydrated: true })
-  void ensureInvestmentOnServer(asset.id)
+  /* Riwayat beli/jual adalah data NYATA: baris ledger ini yang mengisi "Riwayat
+     beli/jual" di kartu aset (dulu diisi konstanta mock `INITIAL_ASSET_TRANSACTIONS`). */
+  const tx: AssetTransaction = {
+    id: idOf('tx', nextSeq()),
+    assetId: asset.id,
+    date: input.dateISO || localISODate(),
+    side: input.side ?? 'buy',
+    quantity,
+    price,
+  }
+  commit({
+    ...live,
+    investments: [asset, ...live.investments],
+    assetTransactions: [tx, ...live.assetTransactions],
+    hydrated: true,
+  })
+  void ensureInvestmentOnServer(asset.id).then(() => ensureAssetTxOnServer(tx.id))
   return asset
 }
 
@@ -578,7 +697,7 @@ export function updateInvestmentPrice(id: string, price: number): Investment | n
   const updated: Investment = {
     ...target,
     isStale: false,
-    lastUpdate: WEALTH_NOW_ISO,
+    lastUpdate: new Date().toISOString(),
     currentPrice: next,
     currentValue: target.quantity * next,
   }
@@ -590,7 +709,7 @@ export function updateInvestmentPrice(id: string, price: number): Investment | n
   /* aset dulu (butuh uuid baris `investments`), baru baris harga menempel padanya */
   void ensureInvestmentOnServer(id).then(async () => {
     const row = live.investments.find((asset) => asset.id === id)
-    if (row?.remoteId) await pushPriceToServer(row, row.remoteId, randomUuid(), WEALTH_TODAY_ISO)
+    if (row?.remoteId) await pushPriceToServer(row, row.remoteId, randomUuid(), localISODate())
   })
   return updated
 }
@@ -852,7 +971,7 @@ export function settleDebt(input: SettleDebtInput): SettleDebtResult | null {
 
   const direction = cashDirectionOf(debt)
   const counterparty = settlementCounterparty(debt)
-  const dateISO = input.dateISO || WEALTH_TODAY_ISO
+  const dateISO = input.dateISO || localISODate()
 
   /* Permintaannya sah? Nominal tidak sah / catatan sudah lunas → berhenti di sini,
      sebelum satu pun bagian ditulis. Perencana ini fungsi MURNI, jadi memanggilnya
@@ -947,6 +1066,7 @@ export function settleDebt(input: SettleDebtInput): SettleDebtResult | null {
    lagi data contoh (hutang Kredivo, saham BBCA, …) seolah-olah milik user. */
 export function purgeWealthStore(): WealthSnapshot {
   accountPurged = true
+  stopWealthRealtime()
   live = EMPTY_SNAPSHOT
   persist(live)
   emit()
@@ -975,6 +1095,20 @@ export function liveInvestments(snapshot: WealthSnapshot): Investment[] {
 /** hutang/piutang yang benar-benar dimiliki user (yang dihapus disaring tombstone) */
 export function liveDebts(snapshot: WealthSnapshot): Debt[] {
   return snapshot.debts.filter((debt) => !snapshot.removedIds.includes(keyOf('debt', debt.id)))
+}
+
+/**
+ * Ledger beli/jual yang layak tampil: baris yang asetnya masih hidup.
+ * Riwayat aset yang dihapus tidak ditampilkan (dan tidak dikirim balik ke
+ * server) — cerminan aturan yang sama dengan `liveInvestments()`.
+ */
+export function liveAssetTransactions(snapshot: WealthSnapshot): AssetTransaction[] {
+  const hiddenAssets = new Set(
+    snapshot.removedIds
+      .filter((key) => key.startsWith('inv:'))
+      .map((key) => key.slice('inv:'.length)),
+  )
+  return snapshot.assetTransactions.filter((tx) => !hiddenAssets.has(tx.assetId))
 }
 
 /** satu aset dari id — `null` = belum ada ATAU sudah dihapus user */

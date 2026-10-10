@@ -16,7 +16,7 @@ import {
   Wallet,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { BudgetSheet, ChoicePills, RupiahField, SheetSubmit } from './budget-sheet'
+import { BudgetSheet, ChoicePills, RupiahField, SheetSubmit, DateField as SheetDateField } from './budget-sheet'
 import {
   ALL_SETTLED_COPY,
   ALL_SETTLED_TITLE,
@@ -37,8 +37,6 @@ import {
   DEBT_STATUS_COPY,
   WEALTH_ROW_ACTION,
   WEALTH_TODAY_ISO,
-  activeDebtRemaining,
-  activeReceivableTotal,
   allDebtsSettled,
   counterpartyLabel,
   debtName,
@@ -49,7 +47,6 @@ import {
   dtiRatio,
   estimatedInterest,
   formatShortDate,
-  hudDeductionCopy,
   maskMoney,
   paymentCountLabel,
   paymentsOfDebt,
@@ -190,8 +187,6 @@ export function WealthHutang({
   const badgeLabel = dtiKnown ? badge.label : DTI_UNKNOWN_COPY.label
   const badgeCopy = dtiKnown ? badge.copy : DTI_UNKNOWN_COPY.copy
   const badgePillClass = dtiKnown ? badge.pillClassName : 'bg-sage/40 text-forest/60 ring-soil/12'
-  const owed = activeDebtRemaining(debts)
-  const receivable = activeReceivableTotal(debts)
   const mine = personalDebts(debts, 'owed_by_me')
   const theirs = personalDebts(debts, 'owed_to_me')
   const myPlatform = platformDebts(debts)
@@ -213,34 +208,32 @@ export function WealthHutang({
 
 
   return (
-    <div>
-      {/* ── 7A: segmented control Hutangku / Piutangku ─────────────────── */}
-      <SegmentedControl value={view} onChange={onChangeView} />
-
+    <div className="flex flex-col gap-5">
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
           key={view}
-          initial={{ opacity: 0, x: view === 'hutangku' ? -12 : 12 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: view === 'hutangku' ? 12 : -12 }}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
           transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+          className="flex flex-col gap-5"
         >
-          {/* ── 7B: ringkasan + badge DTI ─────────────────────────────── */}
-          <SummaryCard
-            view={view}
-            owed={owed}
-            receivable={receivable}
-            installments={installments}
-            ratio={ratio}
-            dtiKnown={dtiKnown}
-            badgeLabel={badgeLabel}
-            badgeCopy={badgeCopy}
-            badgePillClass={badgePillClass}
-            activeCount={
-              view === 'hutangku' ? myPlatform.length + mine.active.length : theirs.active.length
-            }
-            masked={masked}
-          />
+          {/* baris mikro: cicilan bulanan + nada DTI. TANPA total — totalnya
+              sudah jadi fokus di kepala kartu panel (wealth-screen). */}
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
+            <p className="text-[11.5px] font-medium text-forest/45 tabular-nums">
+              Cicilan {maskMoney(installments, masked)}/bln
+            </p>
+            <span
+              title={badgeCopy}
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10.5px] font-medium ring-1 ring-inset',
+                badgePillClass,
+              )}
+            >
+              {dtiKnown ? `DTI ${ratio}% · ${badgeLabel}` : badgeLabel}
+            </span>
+          </div>
 
           {isEmpty ? (
             <EmptyDebtState
@@ -250,7 +243,7 @@ export function WealthHutang({
               contextLine={emptyContextLine}
             />
           ) : (
-            <div className="mt-5 grid gap-5 lg:gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] xl:items-start">
+            <div className="flex flex-col gap-5">
               {/* ── 7C: Debt Snowball Tracker (signature visual) ────────── */}
               {view === 'hutangku' && (
                 <SnowballTracker
@@ -261,53 +254,38 @@ export function WealthHutang({
                 />
               )}
 
-              <div className="space-y-5 lg:space-y-6">
-                {/* ── 7D: daftar hutang platform + Catat Bayar ─────────── */}
-                {view === 'hutangku' && myPlatform.length > 0 && (
-                  <section>
-                    <SectionHeader
-                      title="PLATFORM"
-                      helper="Tap kartu untuk detail & estimasi bunga"
-                    />
-                    <ul className="space-y-2.5">
-                      {myPlatform.map((debt, index) => (
-                        <PlatformDebtCard
-                          key={debt.id}
-                          debt={debt}
-                          payments={paymentsOfDebt(payments, debt.id)}
-                          masked={masked}
-                          delay={0.03 * index}
-                          onPay={() => setPayTarget(debt)}
-                          onEdit={() => onEditDebt(debt)}
-                          onDelete={() => onDeleteDebt(debt)}
-                        />
-                      ))}
-                    </ul>
-                  </section>
-                )}
+              {/* ── 7D: daftar hutang platform + Catat Bayar ─────────── */}
+              {view === 'hutangku' && myPlatform.length > 0 && (
+                <section>
+                  <SectionHeader title="PLATFORM" />
+                  <ul className="space-y-3.5">
+                    {myPlatform.map((debt, index) => (
+                      <PlatformDebtCard
+                        key={debt.id}
+                        debt={debt}
+                        payments={paymentsOfDebt(payments, debt.id)}
+                        masked={masked}
+                        delay={0.03 * index}
+                        onPay={() => setPayTarget(debt)}
+                        onEdit={() => onEditDebt(debt)}
+                        onDelete={() => onDeleteDebt(debt)}
+                      />
+                    ))}
+                  </ul>
+                </section>
+              )}
 
-                {/* ── 7E: daftar hutang personal (selalu terpisah) ─────── */}
-                <PersonalSection
-                  title={view === 'hutangku' ? 'PERSONAL' : 'PIUTANG'}
-                  active={view === 'hutangku' ? mine.active : theirs.active}
-                  settled={view === 'hutangku' ? mine.settled : theirs.settled}
-                  masked={masked}
-                  celebrateId={celebrateId}
-                  onCash={setPayTarget}
-                  onEdit={onEditDebt}
-                  onDelete={onDeleteDebt}
-                />
-
-                {/* ── 7F: tombol tambah (dual form) ───────────────────── */}
-                <button
-                  type="button"
-                  onClick={onAddDebt}
-                  className="flex w-full items-center justify-center gap-2 rounded-[1.5rem] border-2 border-dashed border-forest/20 bg-cream/60 px-5 py-4 text-[13.5px] font-medium text-forest/60 transition-colors hover:border-forest/35 hover:bg-cream hover:text-forest active:scale-[0.99]"
-                >
-                  <Plus className="size-4" strokeWidth={2.6} />
-                  Tambah Utang/Piutang
-                </button>
-              </div>
+              {/* ── 7E: daftar hutang personal (selalu terpisah) ─────── */}
+              <PersonalSection
+                title={view === 'hutangku' ? 'PERSONAL' : 'PIUTANG'}
+                active={view === 'hutangku' ? mine.active : theirs.active}
+                settled={view === 'hutangku' ? mine.settled : theirs.settled}
+                masked={masked}
+                celebrateId={celebrateId}
+                onCash={setPayTarget}
+                onEdit={onEditDebt}
+                onDelete={onDeleteDebt}
+              />
             </div>
           )}
         </motion.div>
@@ -333,151 +311,10 @@ export function WealthHutang({
   )
 }
 
-/* ── 7A: segmented control ───────────────────────────────────────────────────
-   Dua segmen, pill aktif meluncur 200ms (sage untuk Hutangku, amber untuk
-   Piutangku) — pola yang sama dengan ScopeSwitcher di halaman Budget. */
-function SegmentedControl({
-  value,
-  onChange,
-}: {
-  value: DebtView
-  onChange: (value: DebtView) => void
-}) {
-  const index = value === 'hutangku' ? 0 : 1
-  const options: { id: DebtView; label: string }[] = [
-    { id: 'hutangku', label: 'Hutangku' },
-    { id: 'piutangku', label: 'Piutangku' },
-  ]
-
-  return (
-    <div
-      role="tablist"
-      aria-label="Jenis catatan hutang"
-      className="relative flex items-center rounded-full bg-cream p-1 shadow-[0_12px_28px_-22px_rgba(69,89,78,0.6)] ring-1 ring-soil/12"
-    >
-      <motion.span
-        aria-hidden
-        initial={false}
-        animate={{ x: `${index * 100}%` }}
-        transition={{ type: 'tween', ease: 'easeOut', duration: 0.2 }}
-        className={cn(
-          'pointer-events-none absolute bottom-1 left-1 top-1 rounded-full ring-1',
-          index === 0 ? 'bg-hud-sage/30 ring-hud-sage/40' : 'bg-hud-amber/25 ring-hud-amber/40',
-        )}
-        style={{ width: 'calc((100% - 0.5rem) / 2)' }}
-      />
-      {options.map((option) => {
-        const active = value === option.id
-        return (
-          <button
-            key={option.id}
-            type="button"
-            role="tab"
-            aria-selected={active}
-            onClick={() => onChange(option.id)}
-            className={cn(
-              'relative z-10 flex-1 rounded-full px-4 py-2.5 text-[13px] font-medium transition-colors duration-200',
-              active ? 'text-forest' : 'text-forest/45 hover:text-forest/70',
-            )}
-          >
-            {option.label}
-          </button>
-        )
-      })}
-    </div>
-  )
-}
-
-
-/* ── 7B: ringkasan hutang + badge DTI + jembatan ke Jatah Harian ──────────── */
-function SummaryCard({
-  view,
-  owed,
-  receivable,
-  installments,
-  ratio,
-  dtiKnown,
-  badgeLabel,
-  badgeCopy,
-  badgePillClass,
-  activeCount,
-  masked,
-}: {
-  view: DebtView
-  owed: number
-  receivable: number
-  installments: number
-  ratio: number
-  /** false = pemasukan bulanan belum diatur → jangan tampilkan "DTI 0% — Sehat" */
-  dtiKnown: boolean
-  badgeLabel: string
-  badgeCopy: string
-  badgePillClass: string
-  activeCount: number
-  masked: boolean
-}) {
-  const piutang = view === 'piutangku'
-
-  return (
-    <section className="relative mt-4 overflow-hidden rounded-[1.75rem] bg-[#ffffff] p-5 shadow-[0_20px_46px_-30px_rgba(69,89,78,0.5)] ring-1 ring-soil/10 sm:p-6">
-      <div
-        aria-hidden
-        className={cn(
-          'pointer-events-none absolute -right-14 -top-16 size-48 rounded-full blur-3xl',
-          piutang ? 'bg-hud-amber/20' : 'bg-hud-terracotta/15',
-        )}
-      />
-      <div className="relative">
-        <span className="text-[10.5px] font-medium uppercase tracking-[0.2em] text-forest/40">
-          {piutang ? 'Total Piutang Aktif' : 'Total Hutang Aktif'}
-        </span>
-        <p className="mt-2 font-display text-[1.9rem] font-semibold leading-none tracking-tight text-forest tabular-nums sm:text-[2.2rem]">
-          {maskMoney(piutang ? receivable : owed, masked)}
-        </p>
-        <p className="mt-2 text-[11.5px] text-forest/45">
-          {activeCount} catatan aktif
-          {piutang ? ' · duit kamu yang masih di orang lain' : ''}
-        </p>
-
-        {piutang ? (
-          <p className="mt-4 rounded-2xl bg-hud-amber/12 px-3.5 py-3 text-[12px] leading-relaxed text-[#b89191] ring-1 ring-inset ring-hud-amber/25">
-            Catat aja biar gak lupa, bukan buat ngejar-ngejar ya 😊
-          </p>
-        ) : (
-          <>
-            <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
-              <span className="text-[12px] text-forest/55">
-                Cicilan Bulan Ini
-                <b className="ml-1.5 font-semibold text-forest tabular-nums">
-                  {maskMoney(installments, masked)}
-                </b>
-              </span>
-              {/* badge DTI — 3 nada kanon, TANPA merah */}
-              <span
-                className={cn(
-                  'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11.5px] font-medium ring-1 ring-inset',
-                  badgePillClass,
-                )}
-              >
-                {/* saat pemasukan belum diatur: TANPA angka DTI — 0% terbaca
-                    "sehat" padahal pembaginya memang belum ada (paket 57) */}
-                {dtiKnown ? `DTI ${ratio}% — ${badgeLabel}` : badgeLabel}
-                {dtiKnown && (ratio <= 30 ? ' 💚' : ratio <= 40 ? ' 🌤️' : ' 🫂')}
-              </span>
-            </div>
-
-            <p className="mt-2 text-[11.5px] leading-relaxed text-forest/50">{badgeCopy}</p>
-
-            {/* jembatan ke Daily HUD (Domain 2B) */}
-            <p className="mt-3 rounded-2xl bg-sage/50 px-3.5 py-3 text-[11.5px] leading-relaxed text-forest/65">
-              {hudDeductionCopy(maskMoney(installments, masked))}
-            </p>
-          </>
-        )}
-      </div>
-    </section>
-  )
-}
+/* SegmentedControl DIHAPUS — toggle Hutang/Piutang kini hidup di kepala kartu
+   panel (`PanelToggle` di wealth-screen) supaya kartu Kekayaan | Hutang simetris. */
+/* SummaryCard DIHAPUS — total & DTI dulu diulang di sini; sekarang totalnya di
+   kepala kartu panel dan DTI jadi baris mikro di `WealthHutang`. */
 
 /** judul kelompok daftar (PLATFORM / PERSONAL / PIUTANG) */
 function SectionHeader({ title, helper }: { title: string; helper?: string }) {
@@ -934,10 +771,20 @@ function PlatformDebtCard({
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.34, delay, ease: [0.22, 1, 0.36, 1] }}
-      className="relative"
+      className="relative grid grid-cols-1"
     >
-      {/* aksi di balik kartu (terungkap saat digeser kanan) */}
-      <div className="absolute inset-y-0 left-0 flex overflow-hidden rounded-[1.35rem]">
+      {/* Aksi di balik kartu (terungkap saat digeser kanan).
+
+          DULU `absolute inset-y-0 left-0`: tingginya mengikuti SELURUH <li>,
+          padahal <li> ini juga memuat baris aksi "Catat Bayar" dan panel
+          riwayat pembayaran yang SELALU terlihat. Karena area aksi `absolute`
+          (positioned) sementara dua bagian itu `static`, blok sage-nya
+          menjulur ke bawah dan MENIMPA keduanya walau kartu tidak digeser.
+
+          Sekarang area aksi jadi ITEM GRID di baris 1 (sebaris dengan kartu):
+          tingginya persis setinggi kartu, sedangkan baris aksi & riwayat
+          pembayaran tetap bersih di baris berikutnya. */}
+      <div className="col-start-1 row-start-1 flex overflow-hidden rounded-[1.35rem]">
         <button
           type="button"
           onClick={() => {
@@ -963,7 +810,7 @@ function PlatformDebtCard({
         animate={{ x: dx }}
         transition={dragging ? { duration: 0 } : { type: 'spring', stiffness: 320, damping: 30 }}
         style={{ touchAction: 'pan-y' }}
-        className="relative w-full cursor-pointer touch-pan-y rounded-[1.35rem] bg-cream px-3.5 py-3.5 text-left shadow-[0_10px_28px_-24px_rgba(69,89,78,0.6)] ring-1 ring-soil/10 outline-none focus-visible:ring-2 focus-visible:ring-forest/30"
+        className="col-start-1 row-start-1 relative w-full cursor-pointer touch-pan-y rounded-[1.35rem] bg-cream px-3.5 py-3.5 text-left shadow-[0_10px_28px_-24px_rgba(69,89,78,0.6)] ring-1 ring-soil/10 outline-none focus-visible:ring-2 focus-visible:ring-forest/30"
       >
         <span className="flex items-center gap-3">
           <span
@@ -1545,7 +1392,7 @@ function LunasStamp() {
   )
 }
 
-/** field tanggal: label custom + input date native transparan di atasnya */
+/** field tanggal: seluruh area bisa dipencet (pemilih native via `showPicker`) */
 function DateField({
   value,
   onChange,
@@ -1556,34 +1403,17 @@ function DateField({
   label: string
 }) {
   return (
-    <div className="mt-4">
-      <span className="text-[13px] font-medium leading-snug text-forest">{label}</span>
-      <span className="relative mt-2 flex items-center gap-2 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/16 focus-within:ring-2 focus-within:ring-forest/35">
-        <Wallet className="size-4 shrink-0 text-forest/30" strokeWidth={2.2} />
-        <span className="flex-1 text-[14px] font-medium tabular-nums text-forest">
-          {formatSheetDate(value)}
-        </span>
-        <Check className="size-4 shrink-0 text-hud-sage" strokeWidth={3} />
-        <input
-          type="date"
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          aria-label={label}
-          className="absolute inset-0 size-full cursor-pointer rounded-2xl opacity-0"
-        />
-      </span>
-    </div>
+    <SheetDateField
+      label={label}
+      value={value}
+      onChange={onChange}
+      ariaLabel={label}
+      icon={<Wallet className="size-4" strokeWidth={2.2} />}
+      className="mt-4"
+    />
   )
 }
 
-/** `25 Sep 2026` — tanggal ringkas untuk field sheet */
-function formatSheetDate(iso: string): string {
-  if (!iso) return 'Pilih tanggal'
-  const [year, month, day] = iso.split('-').map(Number)
-  const months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-    'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des',
-  ]
-  return `${day} ${months[(month ?? 1) - 1]} ${year}`
-}
+/* `formatSheetDate` DIHAPUS — format tanggal kini milik `DateField` bersama
+   (`formatDateLabel` di budget-sheet.tsx), satu bentuk untuk semua sheet. */
 

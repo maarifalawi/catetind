@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { DesktopSidebar } from './desktop-sidebar'
 import { MobileNavDrawer, MobileNavProvider } from './mobile-nav-drawer'
+import { MobileAppHeader } from './app-mobile-header'
 import { cn } from '@/lib/utils'
 
 /**
@@ -47,6 +48,14 @@ export function ScreenShell({
               pojok kanan bawah (bottom-8 + tinggi 56px ≈ 88px). Sebelumnya teks
               terakhir di kolom kanan tertindih FAB. */}
           <div className="relative flex w-full flex-1 flex-col px-5 pb-32 pt-6 sm:px-8 lg:px-10 lg:pb-28 lg:pt-8 xl:px-14 xl:pt-10">
+            {/* HEADER MOBILE GLOBAL (paket 75): satu bar atas untuk semua
+                halaman app di mobile — lihat `app-mobile-header.tsx` untuk
+                isinya (logo, lonceng, tombol mata KONDISIONAL, hamburger).
+                Dulu tiap halaman menggambar header mobile sendiri sehingga
+                posisi & isinya beda-beda; sekarang lewat shell ini seragam.
+                Di desktop header ini `lg:hidden` — sidebar + header halaman
+                sendiri yang berlaku. */}
+            <MobileAppHeader />
             {children}
           </div>
         </div>

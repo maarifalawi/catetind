@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { LockedAmount } from './locked-amount'
+import { useThemedWallet } from '@/hooks/use-wallet-theme'
 import type { WalletAccount } from '@/lib/wallets'
 
 /* ── Muka kartu dompet — SATU sumber visual untuk /wallet DAN detailnya ──────
@@ -82,6 +83,19 @@ export function WalletArtDefs() {
             <circle cx="150" cy="0" r="118" strokeOpacity="0.07" />
           </g>
         </pattern>
+        {/* geometri modern (paket 77): kisi belah-ketupat tipis.
+            Lapisan ini dipasang di SELURUH muka kartu dengan `opacity-5` —
+            bukan motif tema per dompet, melainkan tekstur dasar yang membuat
+            kartu terasa benda fisik (tercetak), bukan gradien datar. Karena
+            sangat tipis ia tidak mengganggu kontras teks di atasnya. */}
+        <pattern id="wallet-art-geo" width="36" height="36" patternUnits="userSpaceOnUse">
+          <g fill="none" stroke="white" strokeWidth="1">
+            <path d="M18 1 35 18 18 35 1 18Z" strokeOpacity="0.9" />
+            <path d="M0 0h36v36H0z" strokeOpacity="0.5" />
+            <circle cx="18" cy="18" r="2.4" strokeOpacity="0.7" />
+          </g>
+        </pattern>
+
       </defs>
     </svg>
   )
@@ -90,10 +104,18 @@ export function WalletArtDefs() {
 
 /**
  * Cangkang muka kartu dompet: gradien `wallet.face` + motif batik + lapisan
- * kaca/scrim/noise + halo di belakangnya.
+ * kaca/scrim/noise/geometris + halo di belakangnya.
  *
  * Mengembalikan FRAGMENT (halo + article) karena halo-nya harus boleh mekar
  * keluar tepi kartu sementara article-nya `overflow-hidden`.
+ *
+ * PAKET 77 — dua hal baru yang penting dibaca sebelum mengubah file ini:
+ *   1. TEMA: warna & motif yang dipakai BUKAN selalu `wallet.face` mentah. Bila
+ *      user memilih tema kustom untuk dompet ini, `useThemedWallet()` menimpanya
+ *      di sini (lihat komentar di dalam fungsi);
+ *   2. TEKSTUR: ada satu lapisan SVG geometris (`wallet-art-geo`, `opacity-5`)
+ *      sebagai dasar muka kartu — bukan motif tema, tapi tekstur cetak.
+ * Pemanggil tetap hanya boleh mengatur radius/padding/shadow/animasi.
  */
 export function WalletFace({
   wallet,
@@ -108,14 +130,21 @@ export function WalletFace({
   haloClassName?: string
   children: ReactNode
 }) {
+  /* TEMA KARTU KUSTOM (paket 77) — dibaca DI SINI, bukan di tiap halaman.
+     Peta `walletId → themeId` hidup di `hooks/use-wallet-theme.ts`; karena muka
+     kartu inilah satu-satunya tempat warna/motif dompet diputuskan, /wallet,
+     /wallet/[id], dan pratinjau Tambah Dompet mustahil menampilkan tema berbeda
+     untuk dompet yang sama. Tema tidak dikenal = dompet dikembalikan apa adanya,
+     jadi kartu tanpa tema tetap memakai resep palet bawaannya. */
+  const themed = useThemedWallet(wallet)
   return (
     <>
-      <div aria-hidden className={cn('pointer-events-none', haloClassName, wallet.color)} />
+      <div aria-hidden className={cn('pointer-events-none', haloClassName, themed.color)} />
       <article
         className={cn(
           'relative overflow-hidden text-cream ring-1 ring-inset ring-cream/30',
           CARD_TEXT_SHADOW,
-          wallet.face,
+          themed.face,
           className,
         )}
       >
@@ -139,6 +168,13 @@ export function WalletFace({
           aria-hidden
           className="absolute inset-0 opacity-[0.16] [background-image:radial-gradient(rgba(255,255,255,0.99)_1px,transparent_1.2px)] [background-size:9px_9px]"
         />
+        {/* TEKSTUR GEOMETRIS (paket 77) — lapisan dasar low-opacity supaya muka
+            kartu terasa benda fisik tercetak, bukan gradien datar. Duduk di
+            PALING BAWAH teks (sebelum motif tema & seluruh skrim/kilau), jadi
+            kontras nama + saldo di atasnya tidak berubah sedikit pun. */}
+        <svg aria-hidden className="absolute inset-0 h-full w-full opacity-5">
+          <rect width="100%" height="100%" fill="url(#wallet-art-geo)" />
+        </svg>
         {/* aksen batik khas kartu (parang/mendung/kawung/rings) — tema per dompet
             seperti kartu bank edisi batik. Duduk di atas warna dasar & di bawah
             teks, memudar dari kanan atas supaya nama + saldo tetap terbaca. */}
@@ -146,7 +182,7 @@ export function WalletFace({
           aria-hidden
           className="absolute inset-0 h-full w-full [mask-image:radial-gradient(150%_135%_at_92%_-18%,black_14%,transparent_74%)]"
         >
-          <rect width="100%" height="100%" fill={`url(#wallet-art-${wallet.art})`} />
+          <rect width="100%" height="100%" fill={`url(#wallet-art-${themed.art})`} />
         </svg>
         <div aria-hidden className="absolute -right-12 -top-16 size-40 rounded-full bg-cream/25 blur-3xl" />
         {/* highlight tipis di bibir atas kartu */}

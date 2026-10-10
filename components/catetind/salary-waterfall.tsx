@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { AnimatePresence, motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import {
   MONTHLY_INCOME,
@@ -13,23 +12,16 @@ import {
   type Bill,
 } from '@/lib/data/bills'
 
-/* ── Waterfall Salary Drain (Section 4) ──────────────────────────────────────
-   Gaji bulanan digambarkan sebagai SATU bar penuh selebar layar, lalu dimakan
-   potongan demi potongan mulai dari tagihan terbesar (paling kiri & paling
-   lebar) sampai sisanya tinggal "sisa untuk hidup".
+/* ── Waterfall Salary Drain ──────────────────────────────────────────────────
+   Gaji bulanan = SATU bar penuh; tiap tagihan "memakan" porsinya (terbesar di
+   kiri & terlebar), sisanya = proyeksi sisa gaji.
 
-   Lebar tiap segmen = nominal / pemasukan (Kos 1,5 juta → 20% bar). Segmen
-   terkecil diberi lantai 8px supaya Spotify/Netflix tetap bisa disentuh; sisa
-   bar memakai flex-grow sisa sehingga proporsinya tetap benar.
-
-   Detail segmen (nama + nominal + %) kini TOOLTIP murni — hanya muncul saat
-   segmen di-hover (desktop) / di-focus / di-tap (HP), jadi bar-nya tampil
-   bersih dan label tidak pernah saling menumpuk (audit UX #6).
-
-   Audit UX #2: angka "sisa" adalah PROYEKSI AWAL BULAN (gaji − seluruh tagihan
-   rutin), BUKAN sisa uang riil hari ini. Labelnya karena itu diperjelas dan
-   diberi tautan ke Jatah Harian di halaman Budget, supaya tidak bentrok dengan
-   metrik Daily HUD.
+   REDESAIN (padat & minimalis): intro dua baris, teks petunjuk, panel "nada
+   beban", dan catatan kaki panjang DICABUT — semuanya teks yang tidak perlu
+   dibaca berulang. Yang tersisa: judul kecil, persentase, bar, lalu satu baris
+   ringkas (tagihan · sisa) yang berganti jadi detail potongan begitu segmennya
+   di-hover / focus / tap. Tautan ke Jatah Harian tetap ada supaya angka "sisa"
+   tidak dibaca sebagai sisa uang hari ini (audit UX #2).
    ────────────────────────────────────────────────────────────────────────── */
 
 /** 20.0% → '20%' — satu desimal hanya kalau memang perlu (0.7%) */
@@ -50,7 +42,7 @@ export function SalaryWaterfall({
   /** override margin luar (dipakai saat kartu disusun dalam grid 2 kolom) */
   className?: string
 }) {
-  /** null = tidak ada chip terbuka → bar tampil bersih (audit UX #6) */
+  /** null = tidak ada segmen aktif → bar tampil bersih (audit UX #6) */
   const [activeId, setActiveId] = useState<string | null>(null)
 
   const waterfall = buildWaterfall(bills, monthlyIncome)
@@ -61,70 +53,24 @@ export function SalaryWaterfall({
     : null
   const tone = burnTone(waterfall.burnPercentage)
 
-  /* chip detail menempel di sisi yang masih punya ruang: segmen paling kiri
-     rata kiri, paling kanan rata kanan, sisanya tengah */
-  const activeIndex = active ? waterfall.segments.indexOf(active) : -1
-  const chipAlign =
-    activeIndex <= 0
-      ? 'justify-start'
-      : activeIndex === waterfall.segments.length - 1
-        ? 'justify-end'
-        : 'justify-center'
-
   return (
     <section
       aria-label="Waterfall gaji"
-      className={cn(
-        'mt-5 rounded-[1.75rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] ring-1 ring-soil/12 sm:p-6',
-        className,
-      )}
+      className={cn('rounded-3xl bg-cream p-4 ring-1 ring-soil/10', className)}
     >
-      <h2 className="font-display text-[15px] font-semibold tracking-tight text-forest">
-        💸 Ke mana gaji kamu pergi?
-      </h2>
-      <p className="mt-1 text-[11.5px] leading-relaxed text-forest/45">
-        Bar penuh = {maskMoney(monthlyIncome, masked)} gaji bulan ini — ditarik dari tagihan
-        paling gede dulu (proyeksi awal bulan), biar penyedot terbesarnya langsung kelihatan.
-      </p>
-
-      {/* chip detail segmen aktif — HANYA saat hover / focus / tap (audit #6) */}
-      <div className={cn('mt-4 flex h-7 items-center', active ? chipAlign : 'justify-start')}>
-        <AnimatePresence mode="wait" initial={false}>
-          {active ? (
-            <motion.span
-              key={active.id}
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.16, ease: 'easeOut' }}
-              className="inline-flex items-center gap-1.5 rounded-full bg-forest px-2.5 py-1 text-[11px] font-medium text-cream shadow-[0_10px_22px_-14px_rgba(69,89,78,0.85)]"
-            >
-              <span aria-hidden>{active.emoji}</span>
-              <span>{active.name}</span>
-              <span className="font-semibold tabular-nums">{maskMoney(active.amount, masked)}</span>
-              <span className="font-medium tabular-nums text-cream/60">
-                {percentLabel(active.percent)}
-              </span>
-            </motion.span>
-          ) : (
-            <motion.span
-              key="hint"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.16, ease: 'easeOut' }}
-              className="text-[11px] font-medium text-forest/35"
-            >
-              Arahkan / tap potongan warna buat lihat detail
-            </motion.span>
-          )}
-        </AnimatePresence>
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 className="text-[11px] font-medium uppercase tracking-[0.16em] text-forest/40">
+          Gaji terpakai
+        </h2>
+        <span className={cn('text-[13px] font-semibold tabular-nums', tone.textClass)}>
+          {waterfall.burnPercentage}%
+        </span>
       </div>
 
       {/* bar gaji: segmen tagihan (terbesar di kiri) + proyeksi sisa gaji.
-          onMouseLeave menutup tooltip supaya bar kembali bersih (audit #6). */}
+          onMouseLeave menutup detail supaya bar kembali bersih. */}
       <div
-        className="mt-2 flex h-5 w-full overflow-hidden rounded-full bg-cream ring-1 ring-inset ring-soil/12"
+        className="mt-3 flex h-3 w-full overflow-hidden rounded-full bg-sage"
         onMouseLeave={() => setActiveId(null)}
       >
         {waterfall.segments.map((segment) => (
@@ -139,12 +85,11 @@ export function SalaryWaterfall({
             className={cn(
               'h-full transition-opacity duration-200 first:rounded-l-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40',
               segment.barClass,
-              activeId !== null && activeId !== segment.id && 'opacity-50',
+              activeId !== null && activeId !== segment.id && 'opacity-40',
             )}
-            style={{ flexGrow: Math.max(segment.amount, 1), flexBasis: 0, minWidth: 8 }}
+            style={{ flexGrow: Math.max(segment.amount, 1), flexBasis: 0, minWidth: 6 }}
           />
         ))}
-        {/* proyeksi sisa gaji — proporsinya mengikuti sisa gaji */}
         <span
           aria-hidden
           className="h-full bg-cream"
@@ -152,41 +97,27 @@ export function SalaryWaterfall({
         />
       </div>
 
-      {/* ringkasan kiri–kanan */}
-      <div className="mt-3.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 text-[11.5px] font-medium">
-        <span className="tabular-nums text-forest/60">
-          🔒 Sudah dijanjikan: {maskMoney(waterfall.total, masked)} ({waterfall.burnPercentage}%)
-        </span>
-        <span className="tabular-nums text-forest/70">
-          📊 Proyeksi sisa gaji: {maskMoney(waterfall.remaining, masked)}
-        </span>
-      </div>
-
-      {/* nada beban tetap: ringan / lumayan padat / tinggi (Section 4) */}
-      <p
-        className={cn(
-          'mt-3.5 rounded-2xl px-3.5 py-2.5 text-[12px] font-medium leading-snug ring-1',
-          tone.panelClass,
-          tone.textClass,
+      {/* satu baris: detail potongan aktif ATAU ringkasan tagihan · sisa */}
+      <div className="mt-2.5 flex items-center justify-between gap-3">
+        {active ? (
+          <span className="truncate text-[11px] font-medium text-forest">
+            {active.emoji} {active.name} · {maskMoney(active.amount, masked)} (
+            {percentLabel(active.percent)})
+          </span>
+        ) : (
+          <span className="flex items-center gap-1.5 text-[11px] font-medium tabular-nums text-forest/45">
+            <span>Tagihan {maskMoney(waterfall.total, masked)}</span>
+            <span aria-hidden>·</span>
+            <span>Sisa {maskMoney(waterfall.remaining, masked)}</span>
+          </span>
         )}
-      >
-        {tone.copy}
-      </p>
-
-      {/* Audit UX #2 — cegah angka "proyeksi" dibaca sebagai sisa uang hari ini.
-          Metrik sisa uang RIIL ada di Jatah Harian halaman Budget (satu angka
-          dengan Daily HUD), jadi user tidak melihat dua "sisa" yang berbeda. */}
-      <p className="mt-2 text-[10.5px] leading-relaxed text-forest/40">
-        “Proyeksi sisa gaji” = gaji − seluruh tagihan rutin bulan ini, belum termasuk pengeluaran
-        harian. Sisa uang riil kamu hari ini ada di{' '}
         <Link
           href="/budget"
-          className="font-medium text-forest underline decoration-forest/30 underline-offset-2 hover:decoration-forest"
+          className="shrink-0 text-[11px] font-medium text-forest/40 underline decoration-forest/20 underline-offset-2 transition-colors hover:text-forest/70"
         >
-          Jatah Harian (Budget &amp; Target)
+          Jatah harian
         </Link>
-        .
-      </p>
+      </div>
     </section>
   )
 }

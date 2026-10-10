@@ -8,7 +8,6 @@ import {
   ChevronRight,
   History,
   Pencil,
-  Plus,
   RefreshCw,
   Trash2,
 } from 'lucide-react'
@@ -31,9 +30,6 @@ import {
   maskMoney,
   priceUpdatedLabel,
   stalePriceWarning,
-  totalPortfolioValue,
-  totalInvestedValue,
-  unrealizedReturn,
   type AssetTransaction,
   type Investment,
 } from '@/lib/data/wealth'
@@ -104,199 +100,69 @@ export function WealthInvestasi({
 }) {
   const [detailOpen, setDetailOpen] = useState(true)
 
-  const totalValue = totalPortfolioValue(investments)
-  const invested = totalInvestedValue(investments)
-  const ret = unrealizedReturn(investments)
-
   return (
-    <div className="grid gap-5 lg:gap-6 xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] xl:items-start">
-      {/* ── KOLOM KIRI: ringkasan + donut ──────────────────────────────── */}
-      <div className="space-y-5 lg:space-y-6">
-        <PortfolioSummaryCard
-          totalValue={totalValue}
-          invested={invested}
-          returnValue={ret.value}
-          returnPct={ret.pct}
-          assetCount={investments.length}
-          masked={masked}
-        />
+    <div className="flex flex-col gap-5">
+      {/* donut alokasi — visual yang menggantikan paragraf penjelasan */}
+      <WealthAssetDonut investments={investments} masked={masked} />
 
-        <WealthAssetDonut investments={investments} masked={masked} />
+      {/* kepala daftar ringan: jumlah aset + lipat/buka. Tombol tambah sudah ada
+          di kepala kartu panel (wealth-screen), jadi tidak diduplikasi di sini. */}
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-forest/40">
+          {investments.length} aset
+        </p>
+        <button
+          type="button"
+          onClick={() => setDetailOpen((prev) => !prev)}
+          aria-expanded={detailOpen}
+          aria-label="Lipat atau buka daftar aset"
+          className="flex size-8 items-center justify-center rounded-full text-forest/40 outline-none transition-colors hover:bg-sage hover:text-forest focus-visible:ring-2 focus-visible:ring-forest/30"
+        >
+          <ChevronDown
+            className={cn(
+              'size-4 transition-transform duration-300',
+              detailOpen && 'rotate-180',
+            )}
+            strokeWidth={2.4}
+          />
+        </button>
       </div>
 
-      {/* ── KOLOM KANAN: detail per aset ───────────────────────────────── */}
-      <div>
-        {/* ── HEADER "Detail per Aset" + 5E: primary action di sini ─────────
-            Audit fintech #5: tombol "+ Tambah Investasi" dulu duduk di DASAR
-            daftar, jadi portofolio panjang mengubur satu-satunya jalan mencatat
-            aset baru. Sekarang ia di kanan atas, sebaris dengan judul.
-
-            Audit fintech #6: teks instruksi "tap kartu untuk riwayat…" dihapus.
-            Affordance-nya dipindah ke siluet kartu (chevron + hover state),
-            bukan ke teks kecil yang harus dibaca dulu.
-
-            Struktur tombol dipisah (bukan <button> di dalam <button>) supaya
-            HTML-nya valid: toggle lipat = satu tombol, aksi tambah = tombol lain. */}
-        <div className="flex items-center gap-2 rounded-[1.5rem] bg-[#ffffff] px-4 py-3.5 shadow-[0_14px_34px_-28px_rgba(69,89,78,0.5)] ring-1 ring-soil/10 sm:px-5 sm:py-4">
-          <button
-            type="button"
-            onClick={() => setDetailOpen((prev) => !prev)}
-            aria-expanded={detailOpen}
-            className="flex min-w-0 flex-1 items-center justify-between gap-3 rounded-2xl text-left outline-none transition-colors hover:text-forest focus-visible:ring-2 focus-visible:ring-forest/30"
+      <AnimatePresence initial={false}>
+        {detailOpen && (
+          <motion.div
+            key="asset-detail"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            className="overflow-hidden"
           >
-            <span className="min-w-0">
-              <span className="block font-display text-[14px] font-medium tracking-tight text-forest">
-                Detail per Aset
-              </span>
-              <span className="mt-0.5 block text-[11.5px] text-forest/45">
-                {investments.length} aset
-              </span>
-            </span>
-            <ChevronDown
-              className={cn(
-                'size-4 shrink-0 text-forest/35 transition-transform duration-300',
-                detailOpen && 'rotate-180',
-              )}
-              strokeWidth={2.4}
-            />
-          </button>
-
-          <button
-            type="button"
-            onClick={onAdd}
-            /* label penuh di layar >=sm; di HP sempit cukup ikon + aria-label
-               supaya judul "Detail per Aset" tidak terpotong */
-            aria-label="Tambah investasi"
-            title="Tambah investasi"
-            className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-2xl bg-forest px-3 text-[12.5px] font-medium text-cream shadow-[0_12px_26px_-16px_rgba(69,89,78,0.8)] transition-colors hover:bg-forest-soft active:scale-[0.98] sm:px-4"
-          >
-            <Plus className="size-4" strokeWidth={2.6} />
-            <span className="hidden sm:inline">Tambah Investasi</span>
-          </button>
-        </div>
-
-        <AnimatePresence initial={false}>
-          {detailOpen && (
-            <motion.div
-              key="asset-detail"
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-              className="overflow-hidden"
-            >
-              {/* 5D — banner harga basi hanya menempel di KARTU aset yang
-                  bersangkutan. Tidak ada lagi banner agregat kedua di kaki
-                  daftar (audit fintech #7): pesan yang sama dua kali membuat
-                  halaman terasa rusak, bukan terasa jujur. */}
-              <ul className="mt-3 space-y-2.5">
-                {investments.map((asset, index) => (
-                  <AssetCard
-                    key={asset.id}
-                    asset={asset}
-                    transactions={transactions}
-                    masked={masked}
-                    stale={isAssetStale(asset)}
-                    expanded={expandedAssetId === asset.id}
-                    delay={0.03 * index}
-                    onToggle={() => onToggleExpand(asset.id)}
-                    onUpdatePrice={() => onUpdatePrice(asset)}
-                    onEdit={() => onEdit(asset)}
-                    onDelete={() => onDelete(asset)}
-                  />
-                ))}
-              </ul>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+            {/* 5D — banner harga basi hanya menempel di KARTU aset yang
+                bersangkutan; tidak ada banner agregat kedua di kaki daftar. */}
+            <ul className="space-y-3.5">
+              {investments.map((asset, index) => (
+                <AssetCard
+                  key={asset.id}
+                  asset={asset}
+                  transactions={transactions}
+                  masked={masked}
+                  stale={isAssetStale(asset)}
+                  expanded={expandedAssetId === asset.id}
+                  delay={0.03 * index}
+                  onToggle={() => onToggleExpand(asset.id)}
+                  onUpdatePrice={() => onUpdatePrice(asset)}
+                  onEdit={() => onEdit(asset)}
+                  onDelete={() => onDelete(asset)}
+                />
+              ))}
+            </ul>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
-
-/* ── 5A: kartu ringkasan portofolio INVESTASI ───────────────────────────────
-   Audit fintech #4: stempel waktu global DIHAPUS dari kartu ini.
-
-   Dulu kartu ini menulis "Harga per 03:25" — yaitu update TERBARU dari seluruh
-   portofolio. Masalahnya: 03:25 itu justru milik Bitcoin yang di kartunya
-   sendiri ditandai "harga belum diperbarui", sementara Emas (update kemarin
-   16:00) sama sekali tidak diberi warning. Satu cap waktu global untuk sumber
-   yang berjalan asinkron (crypto menit-an vs emas EOD) itu menyatakan valid
-   pada data yang belum tervalidasi.
-
-   Sekarang kartu ini murni bicara NILAI & MODAL; "Update terakhir" hidup di
-   tiap kartu aset, tempat ia benar-benar relevan. */
-function PortfolioSummaryCard({
-  totalValue,
-  invested,
-  returnValue,
-  returnPct,
-  assetCount,
-  masked,
-}: {
-  totalValue: number
-  invested: number
-  returnValue: number
-  returnPct: number
-  assetCount: number
-  masked: boolean
-}) {
-  const positive = returnValue >= 0
-  return (
-    <section className="relative overflow-hidden rounded-[1.75rem] bg-[#ffffff] p-5 shadow-[0_20px_46px_-30px_rgba(69,89,78,0.5)] ring-1 ring-soil/10 sm:p-6">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -right-14 -top-16 size-48 rounded-full bg-hud-sage/25 blur-3xl"
-      />
-      <div className="relative">
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-[10.5px] font-medium uppercase tracking-[0.2em] text-forest/40">
-            Total Aset Investasi
-          </span>
-          <span className="rounded-full bg-hud-sage/25 px-2.5 py-1 text-[10.5px] font-medium text-forest">
-            {assetCount} aset
-          </span>
-        </div>
-
-        <p className="mt-2 font-display text-[2rem] font-semibold leading-none tracking-tight text-forest tabular-nums sm:text-[2.4rem]">
-          {maskMoney(totalValue, masked)}
-        </p>
-
-        <p
-          className={cn(
-            'mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13.5px] font-semibold tabular-nums',
-            positive ? 'text-[#b5b987]' : 'text-hud-terracotta',
-          )}
-        >
-          <span>
-            {positive ? '+' : '−'}
-            {maskMoney(Math.abs(returnValue), masked)}
-          </span>
-          <span
-            className={cn(
-              'rounded-full px-2 py-0.5 text-[11.5px]',
-              positive ? 'bg-hud-sage/25' : 'bg-hud-terracotta/15',
-            )}
-          >
-            {positive ? '+' : '−'}
-            {Math.abs(returnPct).toFixed(2)}%
-          </span>
-          {!masked && <span className="text-[11px] font-medium text-forest/40">belum terealisasi</span>}
-        </p>
-
-        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-forest/40">
-          <span className="tabular-nums">Modal {maskMoney(invested, masked)}</span>
-          <span aria-hidden>·</span>
-          {/* #4 — TIDAK ADA stempel waktu global di kartu master. Harga tiap
-              aset diperbarui manual & asinkron, jadi waktu validasinya cuma
-              bermakna di kartu aset itu sendiri. */}
-          <span>update harga manual per aset</span>
-        </div>
-      </div>
-    </section>
-  )
-}
-
 
 /* ── 5C + 5D: kartu aset (geser kiri = Edit/Hapus, tap = riwayat) ──────────── */
 
@@ -379,10 +245,20 @@ function AssetCard({
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.34, delay, ease: [0.22, 1, 0.36, 1] }}
-      className="relative"
+      className="relative grid grid-cols-1"
     >
-      {/* area aksi di belakang kartu (terungkap saat digeser kiri) */}
-      <div className="absolute inset-y-0 right-0 flex overflow-hidden rounded-[1.35rem]">
+      {/* Area aksi di belakang kartu (terungkap saat digeser kiri).
+
+          DULU `absolute inset-y-0 right-0`: tingginya mengikuti SELURUH <li>,
+          sementara <li> juga memuat panel riwayat beli/jual di bawah kartu.
+          Karena area ini `absolute` (positioned) dan panel riwayat `static`,
+          tombol Edit/Hapus justru MENIMPA panel riwayat walau kartu tidak
+          sedang digeser — itu tumpukan yang dilaporkan.
+
+          Sekarang area aksi jadi ITEM GRID di baris 1 (sebaris dengan kartu):
+          tingginya persis setinggi kartu, dan urutan catnya wajar (kartu di
+          atas, riwayat menyusul di baris berikutnya). */}
+      <div className="col-start-1 row-start-1 flex justify-end overflow-hidden rounded-[1.35rem]">
         <button
           type="button"
           onClick={() => {
@@ -419,7 +295,7 @@ function AssetCard({
         animate={{ x: dx }}
         transition={dragging ? { duration: 0 } : { type: 'spring', stiffness: 320, damping: 30 }}
         style={{ touchAction: 'pan-y' }}
-        className="group relative w-full cursor-pointer touch-pan-y overflow-hidden rounded-[1.35rem] bg-cream px-3.5 py-3.5 text-left shadow-[0_10px_28px_-24px_rgba(69,89,78,0.6)] ring-1 ring-soil/10 transition-[box-shadow,background-color,ring-color] duration-200 outline-none hover:bg-[#ffffff] hover:shadow-[0_18px_34px_-24px_rgba(69,89,78,0.75)] hover:ring-forest/20 focus-visible:ring-2 focus-visible:ring-forest/30"
+        className="col-start-1 row-start-1 group relative w-full cursor-pointer touch-pan-y overflow-hidden rounded-[1.35rem] bg-cream px-3.5 py-3.5 text-left shadow-[0_10px_28px_-24px_rgba(69,89,78,0.6)] ring-1 ring-soil/10 transition-[box-shadow,background-color,ring-color] duration-200 outline-none hover:bg-[#ffffff] hover:shadow-[0_18px_34px_-24px_rgba(69,89,78,0.75)] hover:ring-forest/20 focus-visible:ring-2 focus-visible:ring-forest/30"
       >
         {/* 5D — harga basi: banner amber tepat di atas isi kartu aset ini */}
         {stale && (
@@ -486,7 +362,7 @@ function AssetCard({
 
           {/* kanan: nilai sekarang + return + timestamp harga */}
           <span className="flex shrink-0 flex-col items-end">
-            <span className="text-[13.5px] font-semibold text-forest tabular-nums">
+            <span className="text-[15px] font-semibold text-forest tabular-nums">
               {maskMoney(asset.currentValue, masked)}
             </span>
             <span

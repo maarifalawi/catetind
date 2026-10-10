@@ -30,9 +30,22 @@ export const LOW_CONFIDENCE_THRESHOLD = 0.5
 /** field hasil ekstraksi yang bisa ditandai "perlu dicek user" (PRD A11) */
 export type ExtractedField = 'name' | 'amount' | 'date' | 'category' | 'wallet'
 
-/** hasil ekstraksi "AI" — satu bentuk untuk struk maupun ucapan */
+/**
+ * Dari mana teks yang dirapikan AI datang (paket 79).
+ *
+ * `'chat'` dipisah dari `'voice'` bukan demi kerapian tipe: user yang MENGETIK
+ * tidak boleh dibacakan kalimat "Ucapanmu udah aku rapikan" / "Yang aku denger",
+ * dan nama catatannya tidak boleh jatuh jadi "Catatan dari suara" (temuan uji
+ * pakai 8 Okt 2026: user mengetik "airminum 5k", kartunya bicara soal suara).
+ * Sumber yang sama juga menentukan cara nama catatan dirangkai: ucapan butuh
+ * minimal dua kata supaya tidak menamai catatan dari satu kata hasil STT yang
+ * salah dengar, sementara tulisan user sudah bisa dibaca apa adanya.
+ */
+export type CaptureSource = 'receipt' | 'voice' | 'chat'
+
+/** hasil ekstraksi "AI" — satu bentuk untuk struk, ucapan, maupun ketikan */
 export interface ExtractedTransaction {
-  source: 'receipt' | 'voice'
+  source: CaptureSource
   type: TransactionType
   /** `ai_generated_name` — deskripsi manusiawi 3–6 kata (PRD 444/498) */
   name: string
@@ -181,7 +194,7 @@ const CATEGORY_KEYWORDS: { category: string; pattern: RegExp }[] = [
   {
     category: 'Makanan',
     pattern:
-      /\b(kopi|boba|makan|makanan|sarapan|nasi|geprek|warteg|ayam|bakso|mie|kafe|cafe|jajan|cemilan|lunch|dinner)\b/,
+      /\b(kopi|boba|makan|makanan|sarapan|nasi|geprek|warteg|ayam|bakso|mie|kafe|cafe|jajan|cemilan|lunch|dinner|minum|minuman|airminum|air\s?minum|air\s?mineral|aqua|leminerale|teh|jus|susu|roti|kue|gacoan|seblak|sate|soto|bubur|indomie|mixue|hokben|kfc|mcd|richeese|pempek|martabak|dimsum|nasgor|siomay|batagor)\b/,
   },
   {
     category: 'Transportasi',
@@ -248,50 +261,84 @@ function stripAmount(text: string): string {
     .trim()
 }
 
-/** nama catatan dari ucapan: maksimal 6 kata, huruf awal dibesarkan (PRD 498) */
-function spokenName(text: string): string {
-  const words = stripAmount(text).split(' ').filter(Boolean).slice(0, 6)
-  if (words.length < 2) return ''
+/**
+ * Buang kata PERINTAH yang ikut terketik user di ekor kalimat ("... catet ya",
+ * "... catat dong"). Hanya ekor yang dibersihkan: kata yang sama di tengah nama
+ * catatan ("catatan kos") tidak pernah dipotong.
+ */
+const TRAILING_COMMANDS = new Set(['catet', 'catat', 'tolong', 'ya', 'yaa', 'dong', 'deh', 'nih'])
+function stripTrailingCommands(text: string): string {
+  const tokens = text.split(' ').filter(Boolean)
+  while (tokens.length > 1) {
+    const last = tokens[tokens.length - 1]!.toLowerCase().replace(/[^a-z]/g, '')
+    if (!TRAILING_COMMANDS.has(last)) break
+    tokens.pop()
+  }
+  return tokens.join(' ')
+}
+
+/**
+ * Nama catatan dari teks user: maksimal 6 kata, huruf awal dibesarkan (PRD 498).
+ *
+ * `minWords` membedakan dua sumber dengan sengaja:
+ *   · ucapan  → 2 kata. Satu kata hasil STT terlalu mudah salah dengar, jadi
+ *               lebih jujur jatuh ke `FALLBACK_VOICE_NAME` daripada menamai
+ *               catatan dari salah tangkap.
+ *   · ketikan → 1 kata. "airminum 5k" yang user tulis sendiri sudah jelas
+ *               maksudnya; menamainya "Catatan dari suara" adalah klaim palsu.
+ */
+function nameFrom(text: string, minWords: number): string {
+  const words = stripTrailingCommands(stripAmount(text)).split(' ').filter(Boolean).slice(0, 6)
+  if (words.length < minWords) return ''
   const sentence = words.join(' ')
   return sentence.charAt(0).toUpperCase() + sentence.slice(1)
+}
+
+/** nama catatan dari ucapan: butuh minimal dua kata yang benar-benar terbaca */
+function spokenName(text: string): string {
+  return nameFrom(text, 2)
 }
 
 /** dipakai kalau nama catatan dari ucapan tidak bisa dirangkai jadi kalimat */
 export const FALLBACK_VOICE_NAME = 'Catatan dari suara'
 
-/**
- * Hasil "parse" ucapan: nominal, tipe, kategori, dompet, dan nama catatan dibaca
- * dari transkrip Web Speech API. Keyakinan tinggi hanya kalau nominalnya
- * benar-benar kedengeran — tanpa nominal, `lowFields` memuat `amount` supaya
- * user ditunjukkan bagian mana yang wajib diisi (A11).
- */
-export function parseSpokenTransaction(
-  transcript: string,
-  today: string = localISODate(),
-): ExtractedTransaction {
-  const text = transcript.toLowerCase()
+/** dipakai kalau nama catatan dari KETIKAN user tidak menyisakan apa pun */
+export const FALLBACK_CHAT_NAME = 'Catatan dari chat'
 
-  const amount = parseSpokenAmount(text)
-  const matchedType = TYPE_KEYWORDS.find((entry) => entry.pattern.test(text))
+/**
+ * Inti parser teks → transaksi. Dipakai DUA sumber yang berbeda (UCAPAN dan
+ * KETIKAN) lewat pembungkus di bawah, supaya aturan nominal/kategori/dompetnya
+ * mustahil berbeda: yang membedakan cuma cara menamai catatan & kata jatuhnya.
+ */
+function parseTextTransaction(
+  text: string,
+  source: 'voice' | 'chat',
+  today: string,
+): ExtractedTransaction {
+  const lower = text.toLowerCase()
+
+  const amount = parseSpokenAmount(lower)
+  const matchedType = TYPE_KEYWORDS.find((entry) => entry.pattern.test(lower))
   const type: TransactionType = matchedType?.type ?? 'expense'
 
-  const matchedCategory = CATEGORY_KEYWORDS.find((entry) => entry.pattern.test(text))
+  const matchedCategory = CATEGORY_KEYWORDS.find((entry) => entry.pattern.test(lower))
   const category =
     matchedCategory?.category ??
     (type === 'income'
       ? 'Gaji Utama'
       : type === 'saving'
-        ? /\bdana darurat\b/.test(text)
+        ? /\bdana darurat\b/.test(lower)
           ? 'Dana Darurat'
           : 'Tabungan'
         : type === 'transfer'
           ? 'Transfer'
           : 'Lainnya')
 
-  const matchedWallet = WALLET_ALIASES.find((entry) => entry.pattern.test(text))
+  const matchedWallet = WALLET_ALIASES.find((entry) => entry.pattern.test(lower))
   const wallet = matchedWallet?.wallet ?? RECEIPT_DEFAULT_WALLET
 
-  const name = spokenName(transcript)
+  /* nama dari teks ASLI (bukan versi huruf kecil) supaya huruf besar user ikut */
+  const name = source === 'chat' ? nameFrom(text, 1) : spokenName(text)
   const lowFields: ExtractedField[] = []
   if (amount === null) lowFields.push('amount')
   if (!matchedCategory && type === 'expense') lowFields.push('category')
@@ -302,8 +349,8 @@ export function parseSpokenTransaction(
    * keyakinan, tapi tidak pernah sampai 1 — AI yang mengaku 100% yakin dari satu
    * kalimat pendek justru yang bikin user malas memeriksa (A11 minta sebaliknya).
    * Tanpa nominal, keyakinannya DIPAKSA di bawah ambang A11: jumlah uang adalah
-   * inti catatannya, jadi kalau itu tidak kedengeran, AI memang tidak boleh
-   * merasa yakin — apa pun yang terbaca di bagian lain.
+   * inti catatannya, jadi kalau itu tidak terbaca, AI memang tidak boleh merasa
+   * yakin — apa pun yang terbaca di bagian lain.
    */
   const confidence = Number(
     Math.min(
@@ -316,9 +363,9 @@ export function parseSpokenTransaction(
   )
 
   return {
-    source: 'voice',
+    source,
     type,
-    name: name || FALLBACK_VOICE_NAME,
+    name: name || (source === 'chat' ? FALLBACK_CHAT_NAME : FALLBACK_VOICE_NAME),
     amount: amount ?? 0,
     category,
     wallet,
@@ -326,6 +373,36 @@ export function parseSpokenTransaction(
     confidence,
     lowFields,
   }
+}
+
+/**
+ * Hasil "parse" ucapan: nominal, tipe, kategori, dompet, dan nama catatan dibaca
+ * dari transkrip Web Speech API. Keyakinan tinggi hanya kalau nominalnya
+ * benar-benar kedengeran — tanpa nominal, `lowFields` memuat `amount` supaya
+ * user ditunjukkan bagian mana yang wajib diisi (A11).
+ */
+export function parseSpokenTransaction(
+  transcript: string,
+  today: string = localISODate(),
+): ExtractedTransaction {
+  return parseTextTransaction(transcript, 'voice', today)
+}
+
+/**
+ * Hasil "parse" KETIKAN user di chat (paket 79) — mesin yang sama dengan ucapan,
+ * tapi sumbernya ditandai `'chat'` supaya kartu konfirmasi tidak bicara soal
+ * suara, dan namanya boleh dirangkai dari SATU kata yang user tulis sendiri.
+ *
+ * Ini jaring aman LOKAL: jalur utamanya tetap model di server
+ * (`POST /api/parse-voice`), persis seperti input suara. Aturan lokal dipakai
+ * saat provider tak bisa dihubungi — hasilnya tetap jujur karena semua nilainya
+ * dibaca dari teks yang user tulis, bukan dikarang.
+ */
+export function parseTypedTransaction(
+  text: string,
+  today: string = localISODate(),
+): ExtractedTransaction {
+  return parseTextTransaction(text, 'chat', today)
 }
 
 /* ── BENTUK FORM KONFIRMASI ──────────────────────────────────────────────────
@@ -346,8 +423,36 @@ export interface TransactionDraftForm {
   date: string
   confidence: number
   lowFields: ExtractedField[]
-  /** transkrip mentah hasil STT — jejak jujur apa yang benar-benar didengar */
+  /** transkrip mentah hasil STT (atau teks yang user ketik) — jejak jujur apa
+   *  yang benar-benar diterima AI */
   transcript?: string
+  /**
+   * Tebakan dompet dari AI yang BELUM ada di daftar dompet user (paket 79).
+   *
+   * Diisi `useTransactionCapture` saat draft dibentuk: nominal `wallet` di atas
+   * sudah diganti dompet MILIK user, dan nama tebakan aslinya disimpan di sini
+   * supaya kartu konfirmasi bisa mengatakannya apa adanya ("tebakan AI: OVO")
+   * alih-alih menyembunyikan penggantian itu. Kosong = tidak ada yang diganti.
+   */
+  unknownWalletGuess?: string
+  /**
+   * true = dompet draft ini ada di konteks LAIN daripada konteks yang dibuka
+   * (mis. switcher di "Bersama", tapi AI menebak `Tunai` — dompet Keluarga yang
+   * memang milik user). Kartu konfirmasi menyebutkannya supaya user tidak
+   * menemukan sendiri di Riwayat bahwa catatannya masuk konteks lain.
+   */
+  walletOutsideContext?: boolean
+  /**
+   * true = dompet yang dipakai TIDAK disebut user sendiri, melainkan dompet
+   * konteks uang yang sedang aktif (paket 81).
+   *
+   * Kenapa perlu dibedakan: user berhak tahu dari mana app mengambil "dompet
+   * default" — pertanyaan pemilik produk yang dijawab dengan kalimat di kartu,
+   * bukan dengan diam. Dipakai HANYA saat tidak ada keterangan lain yang lebih
+   * spesifik (`unknownWalletGuess` / `walletOutsideContext` sudah menjelaskan
+   * dompetnya dengan alasannya masing-masing, jadi tidak boleh dobel).
+   */
+  walletFromContext?: boolean
 }
 
 /** hasil ekstraksi "AI" → isi awal form konfirmasi yang bisa dikoreksi user */

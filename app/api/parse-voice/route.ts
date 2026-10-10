@@ -5,10 +5,17 @@ import { EXTRACTION_SYSTEM_PROMPT, EXTRACTION_EXAMPLES } from '@/lib/ai/prompts'
 import { normalizeExtraction, type RawExtraction } from '@/lib/ai/extract'
 import { allowAiCall } from '@/lib/ai/rate-limit'
 
-/* ── POST /api/parse-voice — transkrip ucapan → transaksi (Mode 3) ───────────
-   Body: `{ transcript: string, today?: 'YYYY-MM-DD' }`. Teks datang dari Web
-   Speech API di browser (STT tetap di perangkat, PRD A3 — zero server cost untuk
-   transkripsi); yang dipanggil ke provider hanya PARSING teksnya.
+/* ── POST /api/parse-voice — teks → transaksi (Mode 3 + ketikan chat) ────────
+   Body: `{ transcript: string, today?: 'YYYY-MM-DD', source?: 'voice'|'chat' }`.
+   Teks datang dari DUA tempat yang sama-sama teks biasa:
+     · `'voice'` — hasil Web Speech API (STT tetap di perangkat, PRD A3, zero
+       server cost untuk transkripsi); yang dipanggil ke provider hanya PARSING.
+     · `'chat'`  — kalimat transaksi yang user KETIK di AI Coach (paket 79).
+   Keduanya memakai prompt & normalisasi yang sama supaya hasilnya mustahil
+   berbeda; yang membedakan cuma `source` di `ExtractedTransaction` (dipakai
+   kartu konfirmasi untuk memilih kalimat yang benar: "didengar" vs "dibaca")
+   dan kata "Ucapan"/"Tulisan" di prompt. Nama route dipertahankan supaya klien
+   yang sudah ada tidak putus — perannya memang sudah lebih luas dari namanya.
 
    Keluaran `ExtractedTransaction` sama dengan `parseSpokenTransaction()` lama,
    jadi kartu konfirmasi di chat tidak berubah. Balasan:
@@ -16,15 +23,20 @@ import { allowAiCall } from '@/lib/ai/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
-/** batas panjang transkrip yang masuk akal untuk satu ucapan */
+/** batas panjang teks yang masuk akal untuk satu ucapan / satu kalimat ketikan */
 const MAX_TRANSCRIPT = 500
+
+/** sumber yang boleh diminta klien; selain ini jatuh ke `'voice'` (perilaku lama) */
+function readSource(value: unknown): 'voice' | 'chat' {
+  return value === 'chat' ? 'chat' : 'voice'
+}
 
 export async function POST(req: NextRequest) {
   const callerId = aiCallerId(req)
 
   if (!aiConfigured()) {
     return NextResponse.json(
-      { ok: false, reason: 'no-key', error: 'Input suara belum aktif di server ini.' },
+      { ok: false, reason: 'no-key', error: 'Pemrosesan AI belum aktif di server ini.' },
       { status: 503 },
     )
   }
@@ -36,9 +48,9 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  let body: { transcript?: unknown; today?: unknown }
+  let body: { transcript?: unknown; today?: unknown; source?: unknown }
   try {
-    body = (await req.json()) as { transcript?: unknown; today?: unknown }
+    body = (await req.json()) as { transcript?: unknown; today?: unknown; source?: unknown }
   } catch {
     return NextResponse.json(
       { ok: false, reason: 'invalid', error: 'Body permintaan harus JSON.' },
@@ -49,10 +61,12 @@ export async function POST(req: NextRequest) {
   const transcript = typeof body.transcript === 'string' ? body.transcript.trim() : ''
   if (!transcript || transcript.length > MAX_TRANSCRIPT) {
     return NextResponse.json(
-      { ok: false, reason: 'invalid', error: 'Transkrip kosong atau terlalu panjang.' },
+      { ok: false, reason: 'invalid', error: 'Teksnya kosong atau terlalu panjang.' },
       { status: 422 },
     )
   }
+
+  const source = readSource(body.source)
 
   const today =
     typeof body.today === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.today.trim())
@@ -60,10 +74,12 @@ export async function POST(req: NextRequest) {
       : undefined
 
   const prompt = [
-    'Ubah ucapan berikut jadi SATU objek JSON transaksi.',
+    'Ubah kalimat berikut jadi SATU objek JSON transaksi.',
     'Contoh yang benar:',
     ...EXTRACTION_EXAMPLES.map((line) => `- ${line}`),
-    `Ucapan user: "${transcript}"`,
+    /* kata "Ucapan"/"Tulisan" mengikuti sumbernya — model yang diberi tahu dari
+       mana teksnya datang menebak lebih sedikit (dan tidak mengarang "suara") */
+    `${source === 'chat' ? 'Tulisan user' : 'Ucapan user'}: "${transcript}"`,
     'Balas HANYA JSON.',
   ].join('\n')
 
@@ -82,7 +98,7 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({
     ok: true,
-    transaction: normalizeExtraction('voice', result.value, today),
+    transaction: normalizeExtraction(source, result.value, today),
     model: textModel(),
   })
 }

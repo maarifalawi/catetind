@@ -11,6 +11,7 @@ import {
   TODAY_ISO,
   SPENDING_REVIEW_COPY,
   computeDailyHud,
+  hudStatusFor,
   periodIncome,
   periodWindowForTab,
   spentInWindow,
@@ -26,6 +27,7 @@ import { useTodayISO } from '@/lib/use-today-iso'
 import { openAICoachWithSeed } from '@/lib/ai-chat-bus'
 import { formatIDR } from '@/lib/wallets'
 import { LockedAmount } from './locked-amount'
+import { HudMeter } from './hud-meter'
 
 /* ── Kartu Jatah Hari Ini (Home) ─────────────────────────────────────────────
    Angkanya TIDAK ditulis di kartu ini: semuanya datang dari `computeDailyHud()`
@@ -113,8 +115,9 @@ export const DailyHudCard = memo(function DailyHudCard() {
      nyambung" dengan catatan user. Sekarang bar & angka utama bicara soal HARI
      INI (`hud.todayUsedPct`), jadi satu catatan langsung menggerakkan kartu. */
   const usedPct = hud.todayUsedPct
-  /* status & warna kanon PRD 2B.2 diambil dari satu sumber copy di lib/data */
-  const status: HudStatus = usedPct < 0.75 ? 'onTrack' : usedPct < 1 ? 'approaching' : 'over'
+  /* status kanon PRD 2B.2 dari SATU fungsi murni (`hudStatusFor`, paket 76) —
+     chip status & warna meter memakai ambang yang sama, jadi mustahil berbeda */
+  const status: HudStatus = hudStatusFor(usedPct)
   const STATUS = HOME_HUD_COPY.status[status]
 
   return (
@@ -210,24 +213,13 @@ export const DailyHudCard = memo(function DailyHudCard() {
             </p>
           </div>
 
-          {/* ── BAR PROGRES MODERN (h-3, bulat penuh) ─────────────────────────
-              Membentang LEBAR penuh kartu (bukan `flex-1` di samping label) —
-              pola bar "Spending Limit" di referensi. Persen terpakai turun ke
-              baris tipis di bawah, jadi bar-nya sendiri tetap bersih. */}
+          {/* ── METER SEGMEN (h-2 · paket 76) ────────────────────────────────
+              Bar kontinu h-3 diganti bar SEGMEN h-2 — SATU komponen (`HudMeter`)
+              yang JUGA dipakai kartu /budget, jadi dua permukaan menggambar
+              meter yang sama dari angka yang sama (`hudMeter(todayUsedPct)`).
+              Persen tetap turun ke baris tipis di bawah supaya meternya bersih. */}
           <div className="mt-5">
-            <div
-              role="progressbar"
-              aria-label={HOME_HUD_COPY.title}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={Math.round(usedPct * 100)}
-              className="h-3 w-full overflow-hidden rounded-full bg-soil/[0.09]"
-            >
-              <div
-                className="h-full rounded-full transition-[width] duration-700 ease-out motion-reduce:transition-none"
-                style={{ width: `${usedPct * 100}%`, backgroundColor: STATUS.ring }}
-              />
-            </div>
+            <HudMeter usedPct={usedPct} ariaLabel={HOME_HUD_COPY.title} />
             <p className="mt-2 text-[11px] font-medium text-forest/45 tabular-nums">
               {Math.round(usedPct * 100)}% {HOME_HUD_COPY.usedCaption}
             </p>

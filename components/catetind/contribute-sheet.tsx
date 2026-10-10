@@ -72,7 +72,7 @@ export function ContributeSheet({
       footer={<SheetSubmit onClick={submit} disabled={!ready} gate>Setor 💰</SheetSubmit>}
     >
       {/* progres sekarang → proyeksi setelah setor */}
-      <div className="rounded-2xl bg-cream p-3.5 ring-1 ring-soil/12">
+      <div className="rounded-2xl bg-cream p-3 ring-1 ring-soil/12">
         <div className="flex items-center justify-between gap-3 text-[11.5px] font-medium text-forest/50">
           <span className="tabular-nums">
             {maskNominal(shown?.current ?? 0, masked)} dari{' '}
@@ -80,7 +80,7 @@ export function ContributeSheet({
           </span>
           <span className="tabular-nums">{Math.round(percent)}%</span>
         </div>
-        <div className="relative mt-2 h-2.5 w-full overflow-hidden rounded-full bg-cream ring-1 ring-soil/8">
+        <div className="relative mt-2 h-2 w-full overflow-hidden rounded-full bg-sage/50 ring-1 ring-soil/8">
           <div className="h-full rounded-full bg-hud-sage/70" style={{ width: `${percent}%` }} />
           {/* bayangan progres tambahan dari setoran yang sedang diketik */}
           <div
@@ -96,7 +96,7 @@ export function ContributeSheet({
       </div>
 
       <RupiahField
-        className="mt-5"
+        className="mt-4"
         label="Mau setor berapa?"
         digits={digits}
         onDigitsChange={setDigits}
@@ -124,7 +124,7 @@ export function ContributeSheet({
       </div>
 
       {/* ── dari dompet mana — tile berwarna brand, bukan dropdown abu-abu ── */}
-      <div className="mt-5 pb-1">
+      <div className="mt-4 pb-1">
         <p className="text-[13px] font-medium text-forest">Setor dari dompet</p>
         <div
           role="radiogroup"

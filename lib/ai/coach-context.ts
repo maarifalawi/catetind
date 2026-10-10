@@ -1,3 +1,4 @@
+import { mentionsWordLoose } from './coach-guard'
 import { computeDailyHud } from '@/lib/data/budget'
 import { cashTotal, getMoneySnapshot, recordedTransactions, walletAccounts } from '@/lib/money/store'
 import { getFundsSnapshot, liveFunds } from '@/lib/money/funds-store'
@@ -78,23 +79,132 @@ export function buildRecordedReply(
 /**
  * Deteksi niat MENCATAT transaksi dari pesan bebas (Domain 4B).
  *
- * Bukan klasifikasi model — sengaja aturan sederhana & murah: butuh SINYAL
- * NOMINAL (angka) DAN kata aksi (makan/beli/bayar/nabung/…), ATAU perintah
- * eksplisit "catat/catet". Pertanyaan biasa ("kok boros ya?", "apa itu paylater?")
- * tidak lolos, jadi tetap dijawab model.
+ * Bukan klasifikasi model — sengaja aturan sederhana & murah, dan sejak paket 80
+ * TOLERAN SALAH KETIK. Akar temuan 8 Okt 2026: user mengetik "makn gacoan 30k",
+ * aturan lama cocokkan kata persis (`makan`), jadi pesan itu lolos ke model —
+ * dan model (yang memang tidak bisa menulis) menjawab "sudah tercatat", padahal
+ * Riwayat kosong.
+ *
+ * Tiga sinyal, dari yang paling kuat:
+ *   1. perintah mencatat ("catet/catat/input") — kartu konfirmasi akan menanyakan
+ *      nominalnya kalau user belum menyebutkannya;
+ *   2. nominal + kata aksi/nama tempat, dibaca TOLERAN typo ("makn" → "makan",
+ *      "gacoan" adalah nama warung);
+ *   3. nominal + kalimat pendek yang bukan pertanyaan dan bukan pernyataan status
+ *      ("minggu ini aku keluar 200k").
+ *
+ * Sinyal 3 boleh agak longgar karena jalurnya AMAN: yang muncul hanya kartu
+ * konfirmasi yang bisa dibatalkan (`Catat ✓` yang menulis, bukan AI), dan semua
+ * nilainya dibaca dari ketikan user — sementara salah tafsir di jalur model
+ * harganya klaim palsu.
  */
+const RECORD_COMMANDS = ['catet', 'catat', 'catatkan', 'input'] as const
+
+/** kata AKSI belanja/bayar/menabung (toleran salah ketik lewat `mentionsWordLoose`) */
+const ACTION_WORDS = [
+  'makan',
+  'minum',
+  'beli',
+  'bayar',
+  'jajan',
+  'ongkos',
+  'bensin',
+  'parkir',
+  'belanja',
+  'nabung',
+  'menabung',
+  'gaji',
+  'gajian',
+  'transfer',
+  'topup',
+  'top up',
+  'isi',
+  'kopi',
+  'takeaway',
+  'sarapan',
+  'laundry',
+  'servis',
+  'tambal',
+  'sewa',
+  'nyewa',
+  'tiket',
+  'nonton',
+  'langganan',
+  'cicil',
+  'cicilan',
+  'obat',
+  'apotek',
+  'listrik',
+  'wifi',
+  'pulsa',
+  'kuota',
+  'donasi',
+  'sedekah',
+  'zakat',
+] as const
+
+/**
+ * Nama warung/toko yang umum di Indonesia. Dipisah dari `ACTION_WORDS` karena
+ * kalimatnya sering TIDAK punya kata kerja: "gacoan 30k", "indomaret 80rb".
+ */
+const PLACE_WORDS = [
+  'warteg',
+  'warung',
+  'gacoan',
+  'mixue',
+  'starbucks',
+  'kopitiam',
+  'resto',
+  'restoran',
+  'geprek',
+  'bakso',
+  'nasi',
+  'mie',
+  'ayam',
+  'gofood',
+  'grabfood',
+  'shopeefood',
+  'grab',
+  'gojek',
+  'ojol',
+  'indomaret',
+  'alfamart',
+  'alfamidi',
+  'superindo',
+  'tokopedia',
+  'shopee',
+  'lazada',
+] as const
+
+/** kata tanya/perintah analisis — kalimat seperti ini TIDAK dianggap ucapan transaksi */
+const QUESTION_MARKERS =
+  /\?|\b(apa|apakah|kenapa|kok|mengapa|berapa|brp|gimana|bagaimana|kapan|siapa|dimana|mana|boleh|bisakah|bisa|harus|perlu|menurutmu|jelasin|jelaskan|rekomendasi|saran|tips|prediksi|analisa|analisis|hitung|hitungin|ringkas|rangkum|review|baik|lebih)\b/
+
+/** kata status ledger — "saldo bca 30k" itu pernyataan, bukan transaksi */
+const LEDGER_STATUS_WORDS =
+  /\b(saldo|saldoku|saldomu|jatah|jatahku|sisa|sisaku|punya|punyaku|uangku|duitku|dompetku|total|target|limit|budget|anggaran|rencana|tabunganku|celenganku)\b/
+
+/** maksimal kata untuk sinyal 3 — kalimat panjang hampir selalu bukan ucapan transaksi */
+const MAX_BARE_STATEMENT_WORDS = 6
+
 export function looksLikeTransactionIntent(text: string): boolean {
   const t = text.toLowerCase().trim()
   if (!t) return false
+
+  /* 1. perintah eksplisit — tidak butuh nominal (kartu akan menanyakannya) */
+  if (mentionsWordLoose(t, RECORD_COMMANDS)) return true
+
   const hasAmount = /\d/.test(t)
-  const actionWord =
-    /(catet|catat|makan|minum|beli|bayar|jajan|ongkos|bensin|parkir|belanja|nabung|menabung|gaji|transfer|isi|top ?up|kopi|take ?away|sarapan)/.test(
-      t,
-    )
-  const explicitRecord = /(catet|catat)\b/.test(t)
-  /* perintah eksplisit tanpa nominal tetap dianggap niat mencatat — kartu
-     konfirmasi akan meminta nominalnya (jujur: belum bisa disimpan) */
-  return (hasAmount && actionWord) || explicitRecord
+  if (!hasAmount) return false
+
+  /* 2. nominal + kata aksi / nama tempat (typo ditoleransi) */
+  if (mentionsWordLoose(t, ACTION_WORDS) || mentionsWordLoose(t, PLACE_WORDS)) return true
+
+  /* 3. nominal + kalimat pendek yang bukan pertanyaan & bukan status ledger */
+  const wordCount = t.split(/\s+/).filter(Boolean).length
+  if (wordCount > MAX_BARE_STATEMENT_WORDS) return false
+  if (QUESTION_MARKERS.test(t) || LEDGER_STATUS_WORDS.test(t)) return false
+  return true
 }
 
 /** kolektor ringkasan dari store NYATA (dipakai klien: sapaan, grounding, jaring aman) */

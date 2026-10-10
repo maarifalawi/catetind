@@ -1,12 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import {
+  HOME_CASHFLOW_AXIS,
+  HOME_MONEY_COPY,
   activeLedgerDays,
   buildFlowMap,
+  cashFlowAxisRows,
+  clampChangePct,
   distributionSegments,
   groupHomeMoneyRows,
   homeCashFlowSeries,
   homeMoneyGroupLabel,
   homeRowsInLastDays,
+  incomeStatsFor,
+  netFlowChangePct,
   shouldShowDailyNudge,
   FLOW_SPAN,
   type HomeMoneyRow,
@@ -306,5 +312,101 @@ describe('buildFlowMap — geometri peta aliran Arus Uang (paket 67)', () => {
     expect(map.ribbons).toHaveLength(1)
     expect(map.ribbons[0]?.tone).toBe('in')
     expect(map.saved?.size).toBeCloseTo(map.income.size, 6)
+  })
+})
+
+/* ── PERSEN PERUBAHAN DIJINAKKAN (paket 74) ───────────────────────────────────
+   Badge tren di popup "Ringkasan Saldo" & kartu Pemasukan dulu bisa menampilkan
+   persen yang mustahil (mis. −3.514%) saat basis bulan lalunya sangat kecil.
+   Test ini mengunci tiga hal: (1) ledakan dipotong ke ±100%, (2) tanda tetap
+   dipertahankan (tren memang dua arah), (3) basis nol → `null` (badge
+   disembunyikan, bukan persen karangan). */
+
+describe('persen perubahan — dijepit & tahan basis nol (paket 74)', () => {
+  it('arus bersih: ledakan basis kecil dipotong ke −100% (bukan −3.512%)', () => {
+    const rows = [
+      row({ id: 'lalu', date: '2026-08-10', amount: 17_000, type: 'income' }),
+      row({ id: 'kini', date: '2026-09-10', amount: 580_000, type: 'expense' }),
+    ]
+    expect(netFlowChangePct(rows, TODAY)).toBe(-100)
+  })
+
+  it('arus bersih: lonjakan besar juga dipotong ke +100%', () => {
+    const rows = [
+      row({ id: 'lalu', date: '2026-08-10', amount: 10_000, type: 'income' }),
+      row({ id: 'kini', date: '2026-09-10', amount: 10_000_000, type: 'income' }),
+    ]
+    expect(netFlowChangePct(rows, TODAY)).toBe(100)
+  })
+
+  it('arus bersih: bulan lalu tanpa arus → null (badge disembunyikan)', () => {
+    const rows = [row({ id: 'kini', date: '2026-09-10', amount: 50_000, type: 'expense' })]
+    expect(netFlowChangePct(rows, TODAY)).toBeNull()
+  })
+
+  it('incomeStatsFor: pembagi nol → null; pembagi kecil → dijepit', () => {
+    const hanyaBulanIni = [
+      row({ id: 'kini', date: '2026-09-05', amount: 1_000_000, type: 'income' }),
+    ]
+    expect(incomeStatsFor(hanyaBulanIni, TODAY).changePct).toBeNull()
+
+    const duaBulan = [
+      row({ id: 'lalu', date: '2026-08-05', amount: 100, type: 'income' }),
+      row({ id: 'kini', date: '2026-09-05', amount: 1_000_000, type: 'income' }),
+    ]
+    expect(incomeStatsFor(duaBulan, TODAY).changePct).toBe(100)
+  })
+
+  it('clampChangePct: menjaga tanda, membulatkan, & menolak nilai non-finite', () => {
+    expect(clampChangePct(27.4)).toBe(27)
+    expect(clampChangePct(-3512)).toBe(-100)
+    expect(clampChangePct(999)).toBe(100)
+    expect(clampChangePct(Number.NaN)).toBe(0)
+    expect(clampChangePct(Number.POSITIVE_INFINITY)).toBe(0)
+  })
+})
+
+/* ── SIMETRI ARUS UANG (paket 76) ────────────────────────────────────────────
+   Tiga angka kunci "Arus Uang" (Pemasukan · Pengeluaran · Sisa) wajib duduk di
+   satu sumbu kanan yang sama. Yang bisa diuji tanpa DOM adalah KONTRAK-nya:
+   urutan tetap, tanda defisit benar, dan template kolom BERSAMA. Komponen cuma
+   memetakan hasil fungsi murni ini ke satu grid. */
+describe('cashFlowAxisRows · simetri tiga angka kunci (paket 76)', () => {
+  it('urutan kanon: Pemasukan → Pengeluaran → Sisa', () => {
+    const rows = cashFlowAxisRows(7_500_000, 752_000)
+    expect(rows.map((r) => r.key)).toEqual(['income', 'expense', 'net'])
+  })
+
+  it('nominal & label: Sisa = pemasukan − pengeluaran; label dari HOME_MONEY_COPY', () => {
+    const [income, expense, net] = cashFlowAxisRows(7_500_000, 752_000)
+    expect(income.amount).toBe(7_500_000)
+    expect(expense.amount).toBe(752_000)
+    expect(net.amount).toBe(6_748_000)
+    expect(net.negative).toBe(false)
+    expect([income, expense, net].map((r) => r.label)).toEqual([
+      HOME_MONEY_COPY.chartIncomeLabel,
+      HOME_MONEY_COPY.chartExpenseLabel,
+      HOME_MONEY_COPY.chartNetLabel,
+    ])
+  })
+
+  it('defisit: Sisa negatif & ditandai (bukan nilai absolut)', () => {
+    const [, , net] = cashFlowAxisRows(500_000, 1_250_000)
+    expect(net.amount).toBe(-750_000)
+    expect(net.negative).toBe(true)
+  })
+
+  it('Sisa nol tidak dianggap negatif', () => {
+    const [, , net] = cashFlowAxisRows(1_000_000, 1_000_000)
+    expect(net.amount).toBe(0)
+    expect(net.negative).toBe(false)
+  })
+
+  it('kontrak simetri: template grid bersama + kelas nominal tabular-tight', () => {
+    /* template kolom SATU definisi — kalau ini berubah, sumbu kanan wajib
+       ditinjau ulang (itulah kenapa ia dikunci di test) */
+    expect(HOME_CASHFLOW_AXIS.gridClass).toBe('grid-cols-[minmax(0,1fr)_auto]')
+    expect(HOME_CASHFLOW_AXIS.valueClass).toContain('tabular-nums')
+    expect(HOME_CASHFLOW_AXIS.valueClass).toContain('tracking-tight')
   })
 })

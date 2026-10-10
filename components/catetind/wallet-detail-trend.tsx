@@ -55,7 +55,7 @@ export function WalletDetailTrend({
         <span className="text-[10.5px] text-forest/35">{WALLET_PERIOD_COPY.trendHint}</span>
       </div>
 
-      <div className="mt-2 h-[128px] w-full">
+      <div className="mt-1.5 h-[116px] w-full">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={points} margin={{ top: 6, right: 4, bottom: 0, left: 4 }}>
             <defs>

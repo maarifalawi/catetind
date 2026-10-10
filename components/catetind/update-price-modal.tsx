@@ -7,7 +7,6 @@ import { cn } from '@/lib/utils'
 import {
   ASSET_TYPE_META,
   PRICE_UPDATE_COPY,
-  WEALTH_NOW_ISO,
   formatAssetQuantity,
   formatPriceStamp,
   isAssetStale,
@@ -72,7 +71,7 @@ export function UpdatePriceModal({
   const newValue = (data?.quantity ?? 0) * price
   const invested = data?.totalInvested ?? 0
   const returnValue = newValue - invested
-  const stamp = formatPriceStamp(WEALTH_NOW_ISO)
+  const stamp = formatPriceStamp(new Date().toISOString())
   const stale = data ? isAssetStale(data) : false
 
   function submit() {

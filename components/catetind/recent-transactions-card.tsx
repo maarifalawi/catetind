@@ -3,20 +3,13 @@
 import { memo, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import {
-  ArrowDownLeft,
-  ArrowLeftRight,
   ArrowUpRight,
-  Banknote,
-  Car,
   ChevronRight,
-  Coffee,
   Pencil,
   ReceiptText,
-  ShoppingBag,
   Sparkles,
   Sprout,
   Trash2,
-  Zap,
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -35,6 +28,7 @@ import { homeMoneyRowsForContext } from '@/lib/money/context-filter'
 import { useTodayISO } from '@/lib/use-today-iso'
 import type { TransactionType } from '@/lib/types'
 import { TransactionBottomSheet } from '@/components/dashboard/transaction-bottom-sheet'
+import { categoryVisualFor, moneyRowVisualFor } from './transaction-category-visual'
 import { useMoneyContext } from './money-context-provider'
 import { usePrivacy } from './privacy-provider'
 
@@ -66,6 +60,10 @@ type Transaction = {
      `tile`, opasitas rendah supaya teks tetap kontras; inilah yang membuat daftar
      mudah dipindai alih-alih jadi dinding putih. */
   rowBg: string
+  /* chip kategori di baris meta (paket 78) — tint keluarga yang SAMA dengan
+     `tile`/`rowBg`, dipakai agar baris "kategori · jam" tidak jadi teks abu
+     polos. Sumbernya satu tabel dengan Riwayat & Insight. */
+  chip: string
 }
 
 type TransactionGroup = {
@@ -80,79 +78,22 @@ function moneyLabel(value: number, type: TransactionType): string {
   return `${amountSign(type)}${formatIDR(value)}`
 }
 
-/** warna nominal & badge arah per tipe — senada `MONEY_TONE` (lib/data/history):
- *  pindah dana (tabungan/transfer) NETRAL, bukan merah — net worth tidak berubah. */
-const ROW_TONE: Record<TransactionType, { text: string; badge: string }> = {
-  income: { text: 'text-forest', badge: 'bg-mint text-forest' },
-  expense: { text: 'text-forest/80', badge: 'bg-plum text-cream' },
-  saving: { text: 'text-forest/55', badge: 'bg-ink/30 text-cream' },
-  transfer: { text: 'text-forest/55', badge: 'bg-ink/30 text-cream' },
-}
+/** warna nominal & badge arah per tipe — SATU sumber sejak paket 78: tabel
+ *  `MONEY_ROW_VISUAL` (components/catetind/transaction-category-visual.tsx) yang
+ *  `text`-nya sendiri menunjuk `MONEY_TONE` (lib/data/history). Tabel kedua
+ *  `ROW_TONE` yang dulu hidup di file ini DICABUT: nominal pengeluaran di kartu
+ *  ini pernah hijau pudar padahal Riwayat & Insight memakai terracotta. */
 
-/**
- * Ikon + tile untuk catatan yang BARU dicatat dari panel input (tidak ada di
- * seed di bawah, jadi tidak punya visual sendiri). Ikon React sengaja dipetakan
- * di komponen ini — pola yang sama dengan `SHORTCUT_ICON` di `not-found-screen.tsx`
- * — supaya `lib/data/*` tetap murni tanpa komponen. Kelas tile-nya MEMINJAM
- * string yang sudah ada di seed (nol warna baru); yang tidak terpetakan jatuh ke
- * `bg-sage` + `ReceiptText` alias "catatan lain-lain".
- *
- * `row` (paket 68 · permintaan pemilik produk: "daftar transaksinya dikasih
- * warna biar gampang dibaca") = LATAR BARIS yang soft. Warnanya diambil dari
- * KELUARGA YANG SAMA dengan ikonnya, cuma pada opasitas rendah (9–14%) supaya
- * teks `text-forest` tetap kontras; hover menaikkan opasitasnya sedikit, bukan
- * menggantinya. Palet kanon saja — tidak ada warna baru, dan penjaga palet
- * (`scripts/theme/audit-palette.mjs`) tetap hijau.
+/*
+ * ── PAKET 78 — TABEL KATEGORI PINDAH RUMAH ─────────────────────────────────
+ * `CATEGORY_VISUAL`/`FALLBACK_VISUAL`/`SEED_VISUAL`/`visualFor()` yang sejak
+ * paket 68 tinggal DI SINI sekarang ada di
+ * `components/catetind/transaction-category-visual.tsx`, dan bagian murninya
+ * (nama kategori → keluarga warna) di `lib/data/transaction-category.ts`.
+ * Alasannya satu: halaman Riwayat & Insight menampilkan transaksi yang SAMA,
+ * jadi ia harus membaca tabel yang sama — bukan salinannya. Kartu ini sekarang
+ * sekadar PEMAKAI tabel itu, persis seperti baris di Riwayat & Dompet Detail.
  */
-const CATEGORY_VISUAL: Record<string, { icon: LucideIcon; tile: string; row: string }> = {
-  Makanan: {
-    icon: Coffee,
-    tile: 'bg-gradient-to-br from-cantelope/25 to-cantelope/10 text-cantelope shadow-[0_8px_16px_-8px_rgba(255,184,133,0.45)] group-hover:shadow-[0_14px_24px_-8px_rgba(255,184,133,0.6)]',
-    row: 'bg-cantelope/[0.10] hover:bg-cantelope/[0.16]',
-  },
-  Transportasi: {
-    icon: Car,
-    tile: 'bg-gradient-to-br from-thistle/20 to-thistle/10 text-thistle shadow-[0_8px_16px_-8px_rgba(145,160,184,0.4)] group-hover:shadow-[0_14px_24px_-8px_rgba(145,160,184,0.55)]',
-    row: 'bg-thistle/[0.10] hover:bg-thistle/[0.16]',
-  },
-  Belanja: {
-    icon: ShoppingBag,
-    tile: 'bg-gradient-to-br from-plum/20 to-plum/10 text-plum shadow-[0_8px_16px_-8px_rgba(184,145,145,0.4)] group-hover:shadow-[0_14px_24px_-8px_rgba(184,145,145,0.55)]',
-    row: 'bg-plum/[0.09] hover:bg-plum/[0.15]',
-  },
-  Tagihan: {
-    icon: Zap,
-    tile: 'bg-gradient-to-br from-daisy/25 to-daisy/10 text-forest shadow-[0_8px_16px_-8px_rgba(255,184,133,0.45)] group-hover:shadow-[0_14px_24px_-8px_rgba(255,184,133,0.6)]',
-    row: 'bg-daisy/[0.13] hover:bg-daisy/[0.20]',
-  },
-  'Gaji Utama': {
-    icon: Banknote,
-    tile: 'bg-gradient-to-br from-mint/80 to-mint/25 text-forest shadow-[0_8px_16px_-8px_rgba(145,187,158,0.55)] group-hover:shadow-[0_14px_24px_-8px_rgba(145,187,158,0.7)]',
-    row: 'bg-mint/[0.14] hover:bg-mint/[0.20]',
-  },
-}
-
-const FALLBACK_VISUAL: { icon: LucideIcon; tile: string; row: string } = {
-  icon: ReceiptText,
-  tile: 'bg-sage text-forest',
-  row: 'bg-sage/60 hover:bg-sage/80',
-}
-
-/**
- * Visual baris SEED — kategori seed ("Makanan & Minuman", "Transport",
- * "Pemasukan") sengaja dipetakan ke kelas yang SUDAH ada di `CATEGORY_VISUAL`
- * di atas: nol warna baru, dan kalau kelasnya diubah di satu tempat, dua-duanya
- * ikut berubah.
- */
-const SEED_VISUAL: Record<string, { icon: LucideIcon; tile: string; row: string }> = {
-  'Makanan & Minuman': CATEGORY_VISUAL.Makanan,
-  Transport: CATEGORY_VISUAL.Transportasi,
-  Pemasukan: CATEGORY_VISUAL['Gaji Utama'],
-}
-
-function visualFor(category: string): { icon: LucideIcon; tile: string; row: string } {
-  return SEED_VISUAL[category] ?? CATEGORY_VISUAL[category] ?? FALLBACK_VISUAL
-}
 
 /**
  * baris ringkasan Home (seed ATAU catatan sesi) → bentuk yang dipakai kartu ini.
@@ -160,7 +101,7 @@ function visualFor(category: string): { icon: LucideIcon; tile: string; row: str
  * antara catatan lama & catatan yang baru dicatat.
  */
 function cardRow(row: HomeMoneyRow): Transaction {
-  const visual = visualFor(row.category)
+  const visual = categoryVisualFor(row.category)
   return {
     id: row.id,
     icon: visual.icon,
@@ -171,6 +112,7 @@ function cardRow(row: HomeMoneyRow): Transaction {
     type: row.type,
     tile: visual.tile,
     rowBg: visual.row,
+    chip: visual.chip,
   }
 }
 
@@ -221,6 +163,9 @@ function SwipeRow({
   const [dragging, setDragging] = useState(false)
   const startX = useRef<number | null>(null)
   const moved = useRef(false)
+  /* nada + badge arah tipe ini — SATU tabel bersama dengan Riwayat & Insight
+     (`MONEY_ROW_VISUAL`, paket 78); nominalnya juga dari sini, bukan tabel kedua */
+  const tone = moneyRowVisualFor(tx.type)
 
   const clamp = (v: number) => Math.max(-REVEAL, Math.min(REVEAL, v))
 
@@ -297,7 +242,7 @@ function SwipeRow({
              menutupi warna kategorinya. Arah hover sekarang cuma menaikkan
              opasitas tint (kelas `hover:bg-*` sudah ikut di dalam `rowBg`) plus
              bayangan naik. */
-          'group relative flex w-full cursor-pointer touch-pan-y items-center gap-3 rounded-2xl px-2.5 py-2.5 text-left outline-none transition-[background,box-shadow,transform] duration-200 animate-[row-in_0.5s_ease_backwards] hover:shadow-[0_10px_24px_-14px_rgba(0,0,0,0.35)] focus-visible:ring-2 focus-visible:ring-forest/20',
+          'group relative flex w-full cursor-pointer touch-pan-y items-center gap-3 rounded-2xl px-2.5 py-3 text-left outline-none transition-[background,box-shadow,transform] duration-200 animate-[row-in_0.5s_ease_backwards] hover:shadow-[0_10px_24px_-14px_rgba(0,0,0,0.35)] focus-visible:ring-2 focus-visible:ring-forest/20',
           tx.rowBg,
         )}
         style={{
@@ -330,22 +275,16 @@ function SwipeRow({
               strokeWidth={2.2}
             />
           </span>
-          {/* badge arah — masuk ↙ mint solid, keluar ↗ rose solid */}
+          {/* badge arah — masuk ↙ mint solid, keluar ↗ plum solid, pindah dana ⇄
+              tinta netral; glyph & kelasnya dari SATU tabel bersama (`MONEY_ROW_VISUAL`) */}
           <span
             className={cn(
               'absolute -bottom-1 -right-1 flex size-5 items-center justify-center rounded-full shadow-sm ring-2 ring-cream transition-transform duration-300 animate-[fade-pop_0.4s_ease_backwards] group-hover:scale-110',
-              ROW_TONE[tx.type].badge,
+              tone.badge,
             )}
             style={{ animationDelay: `${delay + 280}ms` }}
           >
-            {tx.type === 'income' ? (
-              <ArrowDownLeft className="size-3" strokeWidth={3} />
-            ) : tx.type === 'expense' ? (
-              <ArrowUpRight className="size-3" strokeWidth={3} />
-            ) : (
-              /* tabungan & transfer: badan uang pindah, bukan masuk/keluar */
-              <ArrowLeftRight className="size-3" strokeWidth={3} />
-            )}
+            <tone.icon className="size-3" strokeWidth={3} aria-hidden />
           </span>
         </span>
 
@@ -353,15 +292,27 @@ function SwipeRow({
           <span className="block truncate text-sm font-medium text-forest">
             {tx.title}
           </span>
-          <span className="mt-0.5 block truncate text-[11px] text-forest/45">
-            {tx.category} · {tx.time}
+          {/* baris meta/notes (paket 78): kategori jadi CHIP bertint keluarga yang
+              sama — dulu teks abu polos, jadi baris kategori hilang di antara
+              nominal & jam. Jamnya tetap murni teks. `min-w-0 truncate` di chip
+              menjaga baris ini tetap muat di 375px. */}
+          <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[11px] text-forest/45">
+            <span
+              className={cn(
+                'min-w-0 truncate rounded-full px-1.5 py-0.5 text-[10px] font-medium',
+                tx.chip,
+              )}
+            >
+              {tx.category}
+            </span>
+            <span className="shrink-0">{tx.time}</span>
           </span>
         </span>
 
         <span
           className={cn(
             'shrink-0 text-sm font-medium tabular-nums',
-            ROW_TONE[tx.type].text,
+            tone.text,
           )}
         >
           {hide(moneyLabel(tx.value, tx.type))}
@@ -525,7 +476,7 @@ export const RecentTransactionsCard = memo(function RecentTransactionsCard() {
                 <span className="h-px flex-1 bg-soil/8" />
               </div>
 
-              <ul className="mx-2 mt-1.5 flex flex-col gap-1">
+              <ul className="mx-2 mt-2 flex flex-col gap-1.5">
                 {group.items.map((tx, i) => (
                   <SwipeRow
                     key={tx.id}

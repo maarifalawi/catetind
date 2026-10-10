@@ -59,7 +59,7 @@ import {
 } from '@/lib/money/store'
 import { useCountUp } from '@/hooks/use-count-up'
 import { cn } from '@/lib/utils'
-import { AMOUNT_LABEL, AMOUNT_XL } from '@/lib/typography'
+import { AMOUNT_XL } from '@/lib/typography'
 import { formatIDR, type WalletAccount } from '@/lib/wallets'
 import { TRANSFER_SHEET_COPY } from '@/lib/data/add-wallet'
 import {
@@ -436,8 +436,14 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
       <WalletArtDefs />
 
       <div className="w-full">
-        {/* ── HEADER: kembali + identitas dompet + toggle privasi GLOBAL ──── */}
-        <header className="sticky top-2 z-30 flex items-center justify-between gap-3 rounded-[1.5rem] bg-cream/90 px-3 py-3 shadow-[0_18px_40px_-32px_rgba(69,89,78,0.65)] ring-1 ring-soil/10 backdrop-blur-md sm:px-4">
+        {/* ── HEADER: kembali + identitas dompet + toggle privasi GLOBAL ───────
+            SENGAJA TIDAK STICKY (paket 82). Permintaan pemilik produk: "header
+            gausah ikut kalau di-scroll". Dulu bar ini `sticky top-2 z-30` +
+            backdrop-blur, jadi ia mengambang dan menutupi daftar transaksi saat
+            user menggulir; sekarang ia mengalir bersama konten. Kartu latar +
+            bayangannya juga dicabut supaya tidak ada blok berat di atas hero —
+            identitas dompet sudah dibawa muka kartu di bawahnya. */}
+        <header className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <Link
               href="/wallet"
@@ -462,16 +468,19 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
           <GlobalPrivacyToggle />
         </header>
 
-        <div className="mt-5 grid grid-cols-1 gap-5 xl:mt-6 xl:grid-cols-12 xl:gap-6">
-          {/* ── HERO (7/12): muka kartu dompet + saldo raksasa ───────────────
+        <div className="mt-5 grid grid-cols-1 gap-5 xl:mt-6 xl:grid-cols-2 xl:gap-6">
+          {/* ── HERO (50/50): muka kartu dompet + saldo ─────────────────────
               Muka kartunya SENGAJA memakai <WalletFace/> — resep yang sama
               dengan deck di /wallet. Kalau mau mengubah tampilan kartu dompet,
-              ubah di wallet-card-face.tsx supaya dua halaman ikut berubah. */}
-          <div className="group relative xl:col-span-7">
+              ubah di wallet-card-face.tsx supaya dua halaman ikut berubah.
+              PAKET 82: kolomnya dulu 7/12 sehingga kartu terasa kegedean —
+              sekarang dibelah rata dengan ringkasan 30 hari di sebelahnya, dan
+              kartunya `h-full` supaya tidak menyisakan ruang kosong di kolom. */}
+          <div className="group relative xl:col-span-1">
             <WalletFace
               wallet={wallet}
               haloClassName="absolute -inset-x-4 -bottom-6 top-8 rounded-[3rem] opacity-50 blur-2xl transition-all duration-500 ease-out group-hover:-bottom-8 group-hover:opacity-70 motion-reduce:transition-none"
-              className="rounded-[2.25rem] p-5 shadow-[0_26px_52px_-26px_rgba(0,0,0,0.6)] sm:p-6"
+              className="flex h-full flex-col rounded-[2.25rem] border border-cream/10 p-5 shadow-sm sm:p-6"
             >
               <div className="relative flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -498,26 +507,31 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
                 <WalletTypeMark wallet={wallet} chipId={`wallet-detail-chip-${wallet.id}`} />
               </div>
 
-              <div className="relative mt-9">
-                <p className={cn(AMOUNT_LABEL, 'text-cream/60')}>
-                  {WALLET_DETAIL_COPY.heroLabel}
-                </p>
-                <div className="mt-2">
-                  <MaskedAmount
-                    value={formatIDR(counted)}
-                    masked={masked}
-                    className={cn(AMOUNT_XL, 'text-cream')}
-                  />
-                </div>
-                <p className="mt-3 text-[11.5px] font-medium text-cream/50">
-                  {WALLET_DETAIL_COPY.heroHint}
-                </p>
+              <div className="relative mt-auto pt-7">
+                {/* label mikro "Saldo" DIHAPUS (paket 77) — sama seperti muka
+                    kartu di /wallet: nama dompet di atasnya + angka besar di
+                    bawahnya sudah menjelaskan diri, dan label itu terulang di
+                    setiap muka kartu. Kalimat "Dibaca dari catatanmu sendiri,
+                    bukan sambungan ke m-banking." juga DIHAPUS (permintaan
+                    pemilik produk, paket 82 round 3) — muka kartu hero tinggal
+                    identitas + saldo. */}
+                <MaskedAmount
+                  value={formatIDR(counted)}
+                  masked={masked}
+                  className={cn(AMOUNT_XL, 'text-cream')}
+                />
               </div>
             </WalletFace>
           </div>
 
-          {/* ── SISI KANAN (5/12): ringkas 30 hari + (kartu sabar) ─────────── */}
-          <div className="flex flex-col gap-4 xl:col-span-5">
+          {/* ── SISI KANAN (1/2): ringkas 30 hari + (kartu sabar) ────────────
+              `xl:col-span-1` — BUKAN nomor kolom grid 12. Induknya
+              `xl:grid-cols-2` (dibelah rata dengan hero, paket 82). Sisa
+              `col-span-5` dari tata letak lama (7/12 + 5/12, paket 40) membuat
+              kolom ini melebar ke kolom implisit lalu TERDORONG ke baris
+              berikutnya — separuh kanan baris hero jadi kosong. Satu kolom = satu
+              kolom: kartu ringkasan duduk tepat di samping muka kartu. */}
+          <div className="flex flex-col gap-4 xl:col-span-1">
             {summary ? (
               <PeriodSummaryCard summary={summary} trend={trend} masked={masked} />
             ) : txs.length > 0 ? (
@@ -575,7 +589,11 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
                     </span>
                   </div>
 
-                  <ul className="mt-0.5 divide-y divide-soil/10">
+                  {/* JARAK, BUKAN GARIS RAMBUT (paket 82 · aturan pemilik
+                      produk): setiap catatan dipisah `gap-1.5` seperti daftar
+                      transaksi di Dashboard & Riwayat, jadi tidak ada dua
+                      catatan yang menempel. `divide-y` dicabut. */}
+                  <ul className="mt-2 flex flex-col gap-1.5">
                     {group.items.map((tx) => {
                       const delay = 60 + rowIndex++ * 45
                       return (
@@ -613,57 +631,58 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
 
             `bottom-[5.5rem]` di mobile = duduk TEPAT DI ATAS bottom nav
             (nav = bottom-5 + tinggi 16 ≈ 84px); di desktop nav-nya hilang jadi
-            bar-nya turun ke dasar kolom. `lg:max-w-lg` menjaga bar tidak
+            bar-nya turun ke dasar kolom; `max-w-xl` di tengah menjaga bar supaya tidak
             menabrak FAB AI Coach yang mengambang di kanan bawah. */}
         <div className="sticky bottom-[5.5rem] z-30 mt-6 lg:bottom-5">
-          <div className="flex flex-col-reverse gap-2 rounded-[1.5rem] bg-cream/95 p-2.5 shadow-[0_24px_50px_-20px_rgba(0,0,0,0.28)] ring-1 ring-soil/12 backdrop-blur-md sm:flex-row sm:items-center lg:max-w-lg">
+          {/* Bar aksi mengambang (paket 82): SATU tombol primer berlabel + tiga
+              aksi sekunder IKON-SAJA (masing-masing punya aria-label + tooltip).
+              Dulu keempatnya tombol penuh bergaya sama, jadi tidak ada arah baca
+              dan bar-nya terasa berat. Sekarang hierarkinya jelas dalam sekali
+              lirik, dan bar-nya duduk di tengah kolom (`max-w-xl`) supaya tidak
+              menabrak FAB AI Coach yang mengambang di kanan bawah. */}
+          <div className="mx-auto flex max-w-xl items-center gap-1.5 rounded-2xl bg-cream/95 p-1.5 shadow-[0_20px_44px_-24px_rgba(0,0,0,0.4)] ring-1 ring-soil/12 backdrop-blur-md">
             <TransactionBottomSheet
               defaultType="expense"
               walletName={wallet.name}
               trigger={
                 <button
                   type="button"
-                  className="inline-flex h-12 w-full flex-1 items-center justify-center gap-2 rounded-[1.1rem] bg-gradient-to-b from-forest-soft to-forest text-[14px] font-medium text-cream shadow-[0_14px_28px_-14px_rgba(69,89,78,0.85)] transition-all hover:brightness-[1.08] active:scale-[0.99] sm:w-auto"
+                  className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-forest px-5 text-[13.5px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.99]"
                 >
                   <Plus className="size-4" strokeWidth={2.6} aria-hidden />
                   {WALLET_QUICK_ACTION_COPY.add}
                 </button>
               }
             />
-            <button
-              type="button"
+            <IconAction
               onClick={() => setSyncOpen(true)}
-              title={WALLET_QUICK_ACTION_COPY.syncHint}
-              className="inline-flex h-12 w-full flex-1 items-center justify-center gap-2 rounded-[1.1rem] bg-cream text-[14px] font-medium text-forest ring-1 ring-soil/12 transition-colors hover:bg-sage/60 active:scale-[0.99] sm:w-auto"
+              label={WALLET_QUICK_ACTION_COPY.sync}
+              hint={WALLET_QUICK_ACTION_COPY.syncHint}
             >
-              <SlidersHorizontal className="size-4 text-forest" strokeWidth={2.4} aria-hidden />
-              {WALLET_QUICK_ACTION_COPY.sync}
-            </button>
+              <SlidersHorizontal className="size-[18px]" strokeWidth={2.4} aria-hidden />
+            </IconAction>
             {/* dompet asalnya SUDAH jelas (halaman ini) → user tidak memilih dua
                 kali; alurnya tetap sheet yang sama dengan pintu lain */}
-            <button
-              type="button"
+            <IconAction
               onClick={() => setTransferOpen(true)}
-              title={WALLET_QUICK_ACTION_COPY.transferHint}
-              className="inline-flex h-12 w-full flex-1 items-center justify-center gap-2 rounded-[1.1rem] bg-cream text-[14px] font-medium text-forest ring-1 ring-soil/12 transition-colors hover:bg-sage/60 active:scale-[0.99] sm:w-auto"
+              label={WALLET_QUICK_ACTION_COPY.transferLabel}
+              hint={WALLET_QUICK_ACTION_COPY.transferHint}
             >
-              <ArrowLeftRight className="size-4 text-forest" strokeWidth={2.4} aria-hidden />
-              {WALLET_QUICK_ACTION_COPY.transferLabel}
-            </button>
-            {/* Aksi merusak: TERLIHAT di bar aksi (bukan hanya di popover), tapi
-                sengaja BUKAN tombol penuh — ia tidak boleh tampil sebesar tiga
-                aksi di sebelahnya. `aria-label` menyebut dompetnya supaya pembaca
-                layar tahu apa yang akan dihapus (paket 62). */}
-            <button
-              type="button"
+              <ArrowLeftRight className="size-[18px]" strokeWidth={2.4} aria-hidden />
+            </IconAction>
+            {/* Aksi merusak: tetap TERLIHAT di bar aksi (bukan cuma di popover),
+                tapi ikon-saja bernada plum — ia tidak boleh tampil sebesar aksi
+                primer. `aria-label` menyebut dompetnya supaya pembaca layar tahu
+                apa yang akan dihapus (paket 62). */}
+            <IconAction
               onClick={() => setDeleteWalletOpen(true)}
-              aria-label={WALLET_DELETE_COPY.actionA11y(wallet.name)}
-              title={WALLET_DELETE_COPY.actionHint}
-              className="inline-flex h-12 w-full flex-1 items-center justify-center gap-2 rounded-[1.1rem] bg-cream text-[14px] font-medium text-plum ring-1 ring-plum/25 transition-colors hover:bg-plum/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-plum/40 active:scale-[0.99] sm:w-auto sm:px-4"
+              label={WALLET_DELETE_COPY.action}
+              a11yLabel={WALLET_DELETE_COPY.actionA11y(wallet.name)}
+              hint={WALLET_DELETE_COPY.actionHint}
+              tone="danger"
             >
-              <Trash2 className="size-4" strokeWidth={2.4} aria-hidden />
-              {WALLET_DELETE_COPY.action}
-            </button>
+              <Trash2 className="size-[18px]" strokeWidth={2.4} aria-hidden />
+            </IconAction>
           </div>
         </div>
       </div>
@@ -758,6 +777,52 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
 /* ── komponen kecil halaman ini ───────────────────────────────────────────── */
 
 /**
+ * Tombol aksi SEKUNDER (ikon-saja) di bar aksi bawah halaman detail dompet.
+ *
+ * Bentuknya satu tempat supaya tiga aksi sekunder (Sesuaikan Saldo, Pindah
+ * Dana, Hapus) MUSTAHIL berbeda ukuran/warna. Karena ikonnya tidak berlabel,
+ * tiap tombol WAJIB punya `aria-label` yang menyebut aksinya + `title` sebagai
+ * tooltip untuk pengguna mouse; `a11yLabel` dipakai kalau nama untuk pembaca
+ * layar perlu lebih spesifik daripada label tampil (mis. hapus → "Hapus dompet
+ * BCA"). Nada `danger` (plum) hanya untuk aksi merusak.
+ */
+function IconAction({
+  onClick,
+  label,
+  a11yLabel,
+  hint,
+  tone = 'neutral',
+  children,
+}: {
+  onClick: () => void
+  /** nama aksi (dipakai sebagai aria-label & tooltip bila yang lain kosong) */
+  label: string
+  /** nama yang lebih spesifik untuk pembaca layar; default = `label` */
+  a11yLabel?: string
+  /** tooltip tambahan (mis. konsekuensi aksinya) */
+  hint?: string
+  tone?: 'neutral' | 'danger'
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={a11yLabel ?? label}
+      title={hint ?? label}
+      className={cn(
+        'flex size-11 shrink-0 items-center justify-center rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 active:scale-95',
+        tone === 'danger'
+          ? 'text-plum hover:bg-plum/12 focus-visible:ring-plum/40'
+          : 'text-forest/70 hover:bg-sage/70 hover:text-forest focus-visible:ring-forest/25',
+      )}
+    >
+      {children}
+    </button>
+  )
+}
+
+/**
  * Ringkas 30 hari: tiga angka (Masuk / Keluar / Net) + garis arah saldo.
  *
  * Net ditulis dengan tinta netral apa pun tandanya — turun bukan kesalahan.
@@ -774,22 +839,25 @@ function PeriodSummaryCard({
   masked: boolean
 }) {
   return (
-    <section className="rounded-[1.75rem] bg-cream p-5 shadow-[0_18px_40px_-34px_rgba(69,89,78,0.55)] ring-1 ring-soil/10">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="flex size-7 items-center justify-center rounded-xl bg-gradient-to-br from-sage via-cream to-mint-soft text-forest ring-1 ring-forest/10">
+    <section className="flex flex-1 flex-col rounded-[1.75rem] bg-cream p-4 shadow-[0_18px_40px_-34px_rgba(0,0,0,0.5)] ring-1 ring-soil/10 sm:p-5">
+      {/* kepala SATU baris: judul di kiri, jendela yang BENAR-BENAR dipakai di
+          kanan. Sebelumnya keduanya dua baris terpisah; menyatukannya memangkas
+          satu baris tinggi tanpa menghilangkan bukti rentangnya. */}
+      <div className="flex items-center gap-2">
+        <span className="flex size-7 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sage via-cream to-mint-soft text-forest ring-1 ring-forest/10">
           <TrendingUp className="size-3.5" strokeWidth={2.6} />
         </span>
-        <h2 className="font-display text-[16px] font-semibold tracking-tight text-forest">
+        <h2 className="font-display text-[15.5px] font-semibold tracking-tight text-forest">
           {WALLET_PERIOD_COPY.title}
         </h2>
+        <span className="ml-auto min-w-0 truncate text-[10.5px] tabular-nums text-forest/40">
+          {WALLET_PERIOD_COPY.windowHint(summary.fromLabel, summary.toLabel, summary.count)}
+        </span>
       </div>
 
-      {/* jendela yang BENAR-BENAR dipakai, bukan "30 hari" tanpa bukti */}
-      <p className="mt-2 text-[11px] tabular-nums text-forest/40">
-        {WALLET_PERIOD_COPY.windowHint(summary.fromLabel, summary.toLabel, summary.count)}
-      </p>
-
-      <dl className="mt-4 grid grid-cols-3 gap-2">
+      {/* tiga angka dipisah hairline, BUKAN tiga kotak abu — lebih tenang,
+          lebih padat, dan angkanya jadi satu baris baca yang utuh */}
+      <dl className="mt-4 grid grid-cols-3 divide-x divide-soil/[0.08]">
         <PeriodStat
           label={WALLET_PERIOD_COPY.income}
           value={maskMoney(summary.income, masked)}
@@ -807,22 +875,29 @@ function PeriodSummaryCard({
         />
       </dl>
 
-      <p className="mt-2 text-[10.5px] text-forest/35">{WALLET_PERIOD_COPY.netHint}</p>
-
-      {/* grafik hanya kalau datanya memang cukup (>= 7 catatan) */}
-      {trend.length >= 2 && <WalletDetailTrend points={trend} masked={masked} />}
+      {/* grafik hanya kalau datanya memang cukup (>= 7 catatan). `mt-auto` →
+          grafiknya menempel ke dasar kartu, jadi kolom kanan yang lebih pendek
+          dari hero TIDAK menyisakan ruang kosong (paket 82). `pt-4` menjaga
+          jarak minimum saat isinya justru lebih tinggi dari hero. */}
+      {trend.length >= 2 && (
+        <WalletDetailTrend points={trend} masked={masked} className="mt-auto pt-4" />
+      )}
     </section>
   )
 }
 
-/** satu tile angka periode */
+/**
+ * Satu angka periode — rata kiri tanpa kotak latar, hanya dipisah hairline
+ * antar kolom (`divide-x` di induk). Nominalnya `truncate` supaya angka panjang
+ * (Rp 1.234.567) tidak pernah mendorong kolom tetangga keluar barisnya.
+ */
 function PeriodStat({ label, value, tone }: { label: string; value: string; tone: string }) {
   return (
-    <div className="rounded-2xl bg-sage/45 px-3 py-2.5">
-      <dt className="text-[10px] font-medium uppercase tracking-[0.12em] text-forest/45">
+    <div className="min-w-0 px-3 first:pl-0 last:pr-0">
+      <dt className="text-[10px] font-medium uppercase tracking-[0.1em] text-forest/40">
         {label}
       </dt>
-      <dd className={cn('mt-1 truncate text-[13px] font-semibold tabular-nums', tone)}>{value}</dd>
+      <dd className={cn('mt-1 truncate text-[13.5px] font-semibold tabular-nums', tone)}>{value}</dd>
     </div>
   )
 }

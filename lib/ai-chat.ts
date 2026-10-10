@@ -5,6 +5,8 @@
 // asli dari /api/ai/text tanpa menyentuh UI.
 // ---------------------------------------------------------------------------
 
+import type { CaptureSource } from './transaction-ai'
+
 /** Siapa pengirim pesan */
 export type ChatRole = 'user' | 'ai'
 
@@ -144,6 +146,40 @@ export const MOCK_SPENDING_REVIEW_REPLY: Omit<ChatMessage, 'id'> = {
     'Barusan kita lihat bareng di panel ya — jadi aku nggak ngulang angkanya di sini 🌿 Mau lanjut yang mana dulu: rapikan limit kategori, atau cari celah buat nyisihin ke celengan?',
 }
 
+/* ── H. AI MENOLAK: DI LUAR KONTEKS & KLAIM YANG TIDAK TERJADI (paket 80) ─────
+
+   Dua kalimat kanon untuk dua keadaan yang dulu diserahkan bulat-bulat ke model:
+
+   1. `AI_OUT_OF_SCOPE_REPLY` — user bertanya hal yang bukan urusan app ini
+      (koding, tugas sekolah, politik, resep, atau soal AI-nya sendiri). Dulu
+      model menjawabnya sebagai asisten umum; sejak paket 80 pertanyaan seperti
+      itu DITOLAK dengan kalimat ini — dan TIDAK dikirim ke model, jadi
+      penolakannya tidak bergantung pada suasana model (kuota user pun tidak
+      terbakar untuk pertanyaan yang memang tidak akan dijawab).
+
+   2. `AI_NO_RECORD_REPLY` — balasan model terbaca sebagai klaim "sudah aku
+      catat" padahal tidak ada baris yang tertulis (temuan uji pakai: "makn
+      gacoan 30k" → dijawab "sudah tercatat sebagai pengeluaranmu", Riwayat tetap
+      kosong). Kalimat ini menggantikan klaim itu dan menyebut satu-satunya jalan
+      yang benar: kartu konfirmasi + tombol "Catat ✓". */
+export const AI_OUT_OF_SCOPE_REPLY: Omit<ChatMessage, 'id'> = {
+  role: 'ai',
+  kind: 'coaching',
+  /** tolakan ini datang dari ATURAN app, bukan dari model — labelnya jujur */
+  ruleBased: true,
+  content:
+    'Yang ini di luar kemampuanku ya 🌿 Aku cuma menemani keuanganmu di CatetInd: catat transaksi, jatah harian, budget per kategori, celengan, sampai hutang. Untuk hal lain aku belum bisa bantu. Lanjut ke pengeluaranmu hari ini?',
+  action: { label: 'Lihat jatah & budget', href: '/budget' },
+}
+
+export const AI_NO_RECORD_REPLY: Omit<ChatMessage, 'id'> = {
+  role: 'ai',
+  kind: 'coaching',
+  ruleBased: true,
+  content:
+    'Aku belum mencatat apa pun dari pesan itu ya 🌿 Catatan baru masuk kalau kamu setujui kartu konfirmasi (tombol “Catat ✓”) — aku sendiri tidak bisa menulis ke riwayatmu. Ketik ulang dengan nominalnya, mis. “catet makan gacoan 30k”, nanti aku rapikan di kartunya.',
+}
+
 /* ── BAHASA SHELL PANEL AI COACH ─────────────────────────────────────────────
    Dulu kalimat-kalimat ini menempel di JSX widget (judul panel, placeholder
    composer, aria-label). Dipindahkan ke sini supaya aturan repo "semua copy
@@ -154,7 +190,7 @@ export const AI_CHAT_COPY = {
   title: 'AI Coach',
   /** label Fuel Gauge kuota AI di header panel */
   quota: (percent: number) => `${percent}% sisa`,
-  inputPlaceholder: 'Tanya apa aja soal keuanganmu...',
+  inputPlaceholder: 'Tanya apa aja, atau ketik transaksimu: “kopi 25rb”',
   inputLabel: 'Ketik pesan untuk AI Coach',
   sendLabel: 'Kirim pesan',
   closeLabel: 'Tutup AI Coach',
@@ -207,9 +243,25 @@ export const AI_CAPTURE_COPY = {
 
   /* ── kartu konfirmasi (PRD 550 & A11) ──────────────────────────────────── */
   confirmIntro: 'AI udah bantu catat. Cek dulu ya, udah pas belum datanya?',
-  confirmReceiptTitle: 'Struknya kebaca nih',
-  confirmVoiceTitle: 'Ucapanmu udah aku rapikan',
-  transcriptLabel: 'Yang aku denger',
+  /**
+   * Judul kartu per SUMBER (paket 79). Kalimatnya menyebut apa yang benar-benar
+   * terjadi: struk dibaca, suara didengar, tulisan dibaca. User yang MENGETIK
+   * tidak boleh diberi tahu "Ucapanmu udah aku rapikan" — itu klaim palsu, dan
+   * itu temuan yang memicu paket ini.
+   */
+  confirmTitle: {
+    receipt: 'Struknya kebaca nih',
+    voice: 'Ucapanmu udah aku rapikan',
+    chat: 'Tulisanmu udah aku rapikan',
+  } as Record<CaptureSource, string>,
+  /** label jejak mentah per sumber — yang mendengar ≠ yang membaca ketikan */
+  transcriptLabel: {
+    voice: 'Yang aku denger',
+    chat: 'Yang kamu tulis',
+  } as Record<'voice' | 'chat', string>,
+  /** sedang merapikan KETIKAN user lewat model (sebelum kartu konfirmasi) */
+  parsingTitle: 'Lagi aku rapikan tulisanmu... ✨',
+  parsingHint: 'Sebentar ya — aku cocokin nominal, kategori, dan dompetnya',
   fieldLabels: {
     type: 'Tipe',
     name: 'Nama catatan',
@@ -218,8 +270,14 @@ export const AI_CAPTURE_COPY = {
     category: 'Kategori',
     wallet: 'Dompet',
   },
-  /** PRD A11: confidence < 0.5 → AI wajib mengaku belum yakin */
-  lowConfidenceAlarm: 'AI kurang yakin dengan hasil scan ini. Tolong cek ulang datanya ya ✨',
+  /**
+   * PRD A11: confidence < 0.5 → AI wajib mengaku belum yakin.
+   *
+   * PAKET 79: kalimatnya menyebut "hasil bacanya" (bukan "hasil scan") karena
+   * kartu yang sama juga melayani ucapan & ketikan chat — user yang mengetik tidak
+   * pernah men-scan apa pun.
+   */
+  lowConfidenceAlarm: 'AI kurang yakin dengan hasil bacanya. Tolong cek ulang datanya ya ✨',
   /** penanda per-field di bawah field yang keyakinannya rendah */
   lowFieldHint: 'Yang ini aku belum yakin — boleh dicek dulu?',
   needAmount: 'Isi nominalnya dulu ya 🌿',
@@ -231,6 +289,45 @@ export const AI_CAPTURE_COPY = {
    * tersimpan, dan 'Lainnya' bukan pilihan kalau user belum memutuskan.
    */
   needCategory: 'Pilih kategorinya dulu ya 🌿 Kategori di Riwayat ikut pilihanmu.',
+  /**
+   * PAKET 79 — dompet kartu konfirmasi. Dua kalimat terpisah karena dua keadaan
+   * yang berbeda: (a) tebakan AI tak ada di daftar dompet user, (b) user memang
+   * belum punya dompet sama sekali.
+   *
+   * `walletGuessNote()` membuka penggantian yang terjadi: kartu sudah mengisi
+   * dompet MILIK user supaya barisnya tidak lahir "Belum berkonteks", tapi
+   * tebakan AI-nya tetap disebut supaya user tahu apa yang AI baca.
+   */
+  walletGuessNote: (guessed: string, used: string) =>
+    `AI nebak dompetnya “${guessed}”, tapi dompet itu belum ada di daftarmu — jadi aku isi ${used}. Ganti kalau bukan itu ya 🌿`,
+  /**
+   * Dipakai saat dompetnya MEMANG milik user, tapi ada di konteks lain daripada
+   * yang sedang dibuka (mis. switcher di "Bersama", dompetnya di "Keluarga").
+   * Catatannya sah; yang tidak boleh terjadi adalah user menemukan sendiri di
+   * Riwayat bahwa catatannya masuk konteks lain.
+   */
+  walletOtherContextNote: (wallet: string) =>
+    `Dompet ${wallet} ada di konteks lain, jadi catatan ini ikut ke konteks dompetnya. Pilih dompet lain di kolom Dompet kalau mau tetap di konteks ini.`,
+  /**
+   * PAKET 81 — DOMPET DEFAULT DIKATAKAN APA ADANYA.
+   *
+   * Pertanyaan pemilik produk: "kalau menambah transaksi, defaultnya pakai
+   * dompet yang mana?" Jawabannya aturan yang sudah ada sejak paket 59/79 —
+   * dompet pertama di KONTEKS UANG yang sedang dibuka (Pribadi/Keluarga/Bersama),
+   * dan tebakan user sendiri ("pakai gopay") selalu menang atas default itu.
+   * Yang tadinya tidak kelihatan adalah ALASANNYA: kartu diam-diam mengisi
+   * dompet, dan user baru sadar saat melihat Riwayat. Kalimat ini menutup itu —
+   * dipakai hanya kalau dompetnya memang tidak disebut user sendiri.
+   */
+  walletContextNote: (contextLabel: string, wallet: string) =>
+    `Dompet aku isi ${wallet} — dompet konteks ${contextLabel} yang sedang kamu buka. Ganti di kolom Dompet kalau uangnya keluar dari dompet lain ya 🌿`,
+  needWallet:
+    'Dompetnya belum ada di daftarmu. Pilih salah satu dompetmu di kolom Dompet dulu ya 🌿 Catatan tanpa dompet tidak masuk ke konteks mana pun.',
+  noWalletToPick:
+    'Kamu belum punya dompet di konteks ini, jadi catatannya belum bisa masuk ke konteks mana pun. Tambah dompetnya dulu ya — setelah itu catatannya tinggal kamu pilih dompetnya.',
+  /** CTA kecil di kartu saat belum ada dompet yang bisa dipilih */
+  walletAddCta: 'Tambah dompet di Dompet & Akun',
+
   /**
    * PAKET 55: parser suara bisa MENDENGAR kata "transfer", tapi jalur ini tidak
    * punya tempat menanyakan dompet TUJUAN — dan pindah dana tanpa tujuan bikin
@@ -314,6 +411,7 @@ export const AI_CAPTURE_REPLY = {
 export const AI_STATUS_COPY = {
   badge: 'Tersambung ke model',
   title: 'Status AI hari ini',
-  body: 'AI Coach CatetInd tersambung ke model AI (Gemini) lewat server kami — kuncinya disimpan di server dan tidak pernah ikut ke browser. Scan struk & input suara dibaca model yang sama. Kalau sambungannya sedang penuh atau mati, AI Coach otomatis kembali menjawab dari aturan lokal + data di perangkatmu (jawabannya diberi label "belum pakai model"), dan pencatatan manual tetap jalan penuh.',
-  worksNow: 'Yang selalu jalan: catat transaksi manual (kategorinya kamu pilih sendiri — bukan tebakan app), scan struk, input suara, dan AI Coach. Dua saklar di bawah mengatur apakah AI boleh mengisi kategori & menamai catatanmu secara otomatis.',
+  body: 'AI Coach CatetInd tersambung ke model AI (Gemini) lewat server kami — kuncinya disimpan di server dan tidak pernah ikut ke browser. Scan struk, input suara, dan transaksi yang kamu ketik di chat dibaca model yang sama. Kalau sambungannya sedang penuh atau mati, AI Coach otomatis kembali menjawab dari aturan lokal + data di perangkatmu (jawabannya diberi label "belum pakai model"), dan pencatatan manual tetap jalan penuh.',
+  worksNow:
+    'Yang selalu jalan: catat transaksi manual (kategorinya kamu pilih sendiri — bukan tebakan app), ketik transaksimu di AI Coach ("kopi 25rb"), scan struk, dan input suara. Dua saklar di bawah mengatur apakah AI boleh mengisi kategori & menamai catatanmu secara otomatis.',
 } as const

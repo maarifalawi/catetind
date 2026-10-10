@@ -7,6 +7,7 @@ import {
   looksLikeTransactionIntent,
   type CoachDataSummary,
 } from './coach-context'
+import { detectOutOfScope } from './coach-guard'
 
 /* ── Test GROUNDING DATA AI (paket 65 · Tugas D) ─────────────────────────────
    Yang dibuktikan: (a) ucapan transaksi dikenali sebagai niat MENCATAT, pertanyaan
@@ -34,10 +35,29 @@ describe('looksLikeTransactionIntent', () => {
     expect(looksLikeTransactionIntent('catet ya')).toBe(true)
   })
 
-  it('TIDAK menganggap pertanyaan biasa sebagai transaksi', () => {
+  it('mengenali typo & nama warung — temuan "makn gacoan 30k" (paket 80)', () => {
+    /* dulu pesan ini lolos ke model dan dijawab "sudah tercatat" */
+    expect(looksLikeTransactionIntent('makn gacoan 30k')).toBe(true)
+    expect(looksLikeTransactionIntent('minm 20k')).toBe(true)
+    expect(looksLikeTransactionIntent('sarapn 15rb')).toBe(true)
+    /* nama tempat tanpa kata kerja: "gacoan 30k" */
+    expect(looksLikeTransactionIntent('gacoan 30k')).toBe(true)
+    expect(looksLikeTransactionIntent('indomaret 80rb')).toBe(true)
+  })
+
+  it('mengenali kalimat pendek ber-nominal yang bukan pertanyaan', () => {
+    expect(looksLikeTransactionIntent('minggu ini aku keluar 200k')).toBe(true)
+    expect(looksLikeTransactionIntent('tadi jajan 15k')).toBe(true)
+  })
+
+  it('TIDAK menganggap pertanyaan/status sebagai transaksi', () => {
     expect(looksLikeTransactionIntent('kok boros ya bulan ini?')).toBe(false)
     expect(looksLikeTransactionIntent('apa itu paylater?')).toBe(false)
     expect(looksLikeTransactionIntent('ceritain kondisi keuangan gue')).toBe(false)
+    /* pertanyaan & pernyataan status ledger tetap dijawab model */
+    expect(looksLikeTransactionIntent('berapa sisa jatah 50k?')).toBe(false)
+    expect(looksLikeTransactionIntent('saldo bca 30k')).toBe(false)
+    expect(looksLikeTransactionIntent('kapan gajian?')).toBe(false)
     expect(looksLikeTransactionIntent('')).toBe(false)
   })
 })
@@ -76,5 +96,31 @@ describe('buildRecordedReply', () => {
     const reply = buildRecordedReply('Makan siang', 'Rp 50.000', 'Rp 45.000')
     expect(reply).toContain('Rp 50.000')
     expect(reply).toContain('Rp 45.000')
+  })
+})
+
+/* ── URUTAN DUA PAGAR DI WIDGET (paket 80) ───────────────────────────────────
+   Widget memeriksa gerbang konteks LEBIH DULU daripada gerbang niat transaksi.
+   Yang dikunci di sini: kalimat transaksi tidak pernah ditolak ("aku cuma
+   menemani keuanganmu…" untuk catatan belanja = pengalaman yang membingungkan),
+   sementara pertanyaan yang menyebut topik luar konteks tidak pernah berubah jadi
+   kartu konfirmasi. */
+describe('gerbang konteks vs gerbang niat transaksi', () => {
+  it('kalimat transaksi lolos gerbang konteks', () => {
+    for (const text of [
+      'catet makan gacoan 30k',
+      'makn gacoan 30k',
+      'beli tiket film 100k',
+      'bayar langganan spotify 55k',
+    ]) {
+      expect(looksLikeTransactionIntent(text)).toBe(true)
+      expect(detectOutOfScope(text)).toBe(false)
+    }
+  })
+
+  it('pertanyaan luar konteks ditolak — walaupun menyebut nominal', () => {
+    for (const text of ['resep nasi goreng 30k', 'buatkan script python 100k', 'kamu pakai model apa?']) {
+      expect(detectOutOfScope(text)).toBe(true)
+    }
   })
 })

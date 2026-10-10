@@ -19,7 +19,7 @@ import {
 } from 'lucide-react'
 import { ScreenShell } from './screen-shell'
 import { GlobalPrivacyToggle } from './global-privacy-toggle'
-import { ContextSwitcher } from './context-switcher'
+import { ContextMenu } from './context-menu'
 import { ConfirmDialog } from './confirm-dialog'
 import { useMoneyContext } from './money-context-provider'
 import { SyncBalanceModal } from './sync-balance-modal'
@@ -38,12 +38,16 @@ import {
 import { useCountUp } from '@/hooks/use-count-up'
 import { cn } from '@/lib/utils'
 import { AMOUNT_LABEL, AMOUNT_LG, AMOUNT_XL } from '@/lib/typography'
-import { WALLET_BRAND_OPTIONS, formatIDR, type WalletAccount, type WalletDraft } from '@/lib/wallets'
+import { formatIDR, type WalletAccount, type WalletDraft } from '@/lib/wallets'
+import { WALLET_QUICK_ADD_COPY, brandUsageFromWalletNames, quickAddBrands } from '@/lib/data/wallet-quick-add'
+import { applyWalletTheme } from '@/lib/data/wallet-themes'
+import { setWalletTheme, useWalletThemePrefs } from '@/hooks/use-wallet-theme'
 import {
   addWalletAccount,
   cashTotal,
   cashTotalByContext,
   homeWallets,
+  isRowRemoved,
   postBalanceAdjustment,
   removeWalletAccount,
   restoreWalletAccount,
@@ -108,16 +112,14 @@ import {
       /wallet/[id], menu "Lainnya", dan sidebar desktop (`TransferFlow`). */
 
 
-/**
- * berapa saran yang ditampilkan. 3 brand + 1 slot dashed "Lainnya" = 4 kartu,
- * yang di desktop jatuh rapi sebagai grid 2×2 di rail kanan.
- */
+/* Jumlah saran ("Top 3") TIDAK lagi ditulis di file ini: ia bagian dari aturan
+   pemilihan di `lib/data/wallet-quick-add.ts` (`QUICK_ADD_LIMIT`), supaya rail
+   dan test memakai angka yang sama. */
 /* Pool brand untuk rail "Tambah Dompet Cepat" TIDAK lagi didefinisikan di file
    ini: daftarnya (nama + warna monogram + bayangan hover) tinggal di
    `WALLET_BRAND_OPTIONS` (lib/wallets.ts) — SATU sumber yang juga dipakai
    pemilih brand di modal Tambah Dompet. Dulu file ini menyimpan salinannya
    sendiri, jadi brand di rail bisa berbeda warna dari brand di modal. */
-const SUGGESTION_LIMIT = 3
 
 /** aset yang ditahan/dikunci — mock statis (Rp 0) */
 const HELD_ASSETS = 0
@@ -254,20 +256,48 @@ export function WalletScreen() {
   }, [allWallets, total])
 
   /**
-   * Rekomendasi "Tambah Dompet Cepat" — DINAMIS, bukan daftar hardcoded:
-   * brand yang sudah ada di `allWallets` disaring keluar dulu (case-insensitive),
-   * baru dijatah `SUGGESTION_LIMIT`. Jadi user yang sudah punya dompet BCA
-   * tidak akan ditawari BCA lagi — yang muncul justru bank/e-wallet yang BELUM
-   * ia pakai. Sengaja memakai DAFTAR PENUH (bukan yang tersaring konteks):
-   * menawarkan dompet yang sudah dimiliki user di konteks lain itu keliru.
+   * Rekomendasi "Tambah Dompet Cepat" — sekarang TIGA teratas menurut PAKAI
+   * (paket 77), bukan tiga pertama daftar:
+   *
+   *   1. brand yang sudah dimiliki user disaring keluar (aturan paket 04 — user
+   *      tidak boleh ditawari dompet yang ia sudah punya, walau dompetnya ada di
+   *      konteks uang lain);
+   *   2. sisanya diurutkan menurut SINYAL PAKAI dari buku besar: berapa banyak
+   *      catatan yang menyentuh dompet bernama brand itu. Dompet yang sudah
+   *      DIHAPUS tetap dihitung — "kamu pernah pakai Mandiri" justru sinyal
+   *      paling berguna di sini;
+   *   3. tanpa sinyal pakai, urutannya jatuh ke urutan kanon `WALLET_BRAND_OPTIONS`
+   *      (stabil dari hari ke hari, bukan trio yang ditulis tangan).
+   *
+   * Seluruh aturannya MURNI dan tinggal di `lib/data/wallet-quick-add.ts` supaya
+   * bisa diuji tanpa React; halaman ini hanya menyuapkan datanya.
    */
   const suggestedBrands = useMemo(() => {
-    const owned = new Set(allWallets.map((wallet) => wallet.name.toLowerCase()))
-    return WALLET_BRAND_OPTIONS.filter((brand) => !owned.has(brand.name.toLowerCase())).slice(
-      0,
-      SUGGESTION_LIMIT,
+    const namesById = new Map(snapshot.wallets.map((wallet) => [wallet.id, wallet.name]))
+    const usage = brandUsageFromWalletNames(
+      snapshot.rows
+        .filter((row) => !isRowRemoved(snapshot, row.id))
+        .map((row) => namesById.get(row.walletId) ?? ''),
     )
-  }, [allWallets])
+    return quickAddBrands({
+      ownedNames: allWallets.map((wallet) => wallet.name),
+      usage,
+    })
+  }, [allWallets, snapshot])
+
+  /**
+   * TEMA KARTU (paket 77) — peta `walletId → themeId` dari perangkat.
+   *
+   * Kartu dompet membacanya sendiri di `WalletFace`, tapi panel "Komposisi" di
+   * hero memakai `wallet.color` untuk segmen bar & titik legenda. Tanpa baris ini
+   * legenda bisa tetap menunjuk warna LAMA setelah user mengganti tema kartunya —
+   * dua warna untuk satu dompet di satu layar.
+   */
+  const themePrefs = useWalletThemePrefs()
+  const themedWallets = useMemo(
+    () => allWallets.map((wallet) => applyWalletTheme(wallet, themePrefs[wallet.id])),
+    [allWallets, themePrefs],
+  )
 
   /* ── 2. TAMBAH DOMPET — dari ghost card rail & tombol "Lainnya" ───────────
      Rail "Tambah Dompet Cepat" adalah JALAN MASUK utama menambah dompet, jadi
@@ -293,6 +323,11 @@ export function WalletScreen() {
          daftar yang user lihat, jadi empty state per konteks bukan jalan buntu */
       context,
     })
+    /* TEMA KARTU (paket 77) disimpan SETELAH store memberi id dompet baru —
+       `addWalletAccount()` mengembalikan recordnya, jadi id-nya sudah pasti.
+       Tema hidup di store preferensi tampilan (localStorage), bukan di store
+       uang: ia tidak mengubah saldo, ledger, maupun angka mana pun. */
+    setWalletTheme(account.id, draft.themeId ?? null)
     setAddOpen(false) // tutup seketika; animasi keluar jalan di background
     toast.success(ADD_WALLET_SHEET_COPY.toastTitle, {
       description: ADD_WALLET_SHEET_COPY.toastDescription(account.name),
@@ -439,20 +474,19 @@ export function WalletScreen() {
           <h1 className="truncate font-display text-3xl font-semibold tracking-tight text-forest lg:text-4xl">
             Dompet &amp; Akun
           </h1>
-          {/* cluster aksi: switcher konteks (desktop) + tombol mata global */}
+          {/* cluster aksi desktop: pemilih konteks + tombol mata global.
+              Di MOBILE keduanya sudah disediakan header mobile GLOBAL (paket 75)
+              — /wallet menampilkan nominal, jadi tombol matanya ikut di sana. */}
           <div className="hidden shrink-0 items-center gap-3 lg:flex">
-            <ContextSwitcher value={context} onChange={setContext} className="w-[280px]" />
-            <GlobalPrivacyToggle />
-          </div>
-          <div className="lg:hidden">
+            <ContextMenu value={context} onChange={setContext} className="w-44" />
             <GlobalPrivacyToggle />
           </div>
         </header>
 
-        {/* switcher konteks (mobile): barisnya sendiri di bawah header —
+        {/* pemilih konteks (mobile): barisnya sendiri di bawah header —
             pola penempatan yang sama dengan Home & Budget (paket 47) */}
         <div className="mt-4 flex justify-center lg:hidden">
-          <ContextSwitcher value={context} onChange={setContext} />
+          <ContextMenu value={context} onChange={setContext} className="w-56" />
         </div>
 
         <div className="mt-5 grid grid-cols-1 gap-5 xl:mt-6 xl:grid-cols-12 xl:gap-6">
@@ -529,23 +563,16 @@ export function WalletScreen() {
                   />
                 </div>
 
-                {/* konteks angka (paket 44): halaman ini menampilkan SELURUH dompet,
-                    dan totalnya `cashTotal()` — konteks uang tidak mengubahnya.
-                    SENGAJA bukan "tersinkron m-banking": CatetInd 100% berbasis
-                    input manual/AI + OCR, tanpa open-banking. */}
-                <p className="mt-3 text-[11.5px] font-medium text-cream/50">
-                  {WALLET_TOTAL_COPY.heroSubtitle(allWallets.length)}
-                  <span className="mt-0.5 block text-[11px] text-cream/35">
-                    {WALLET_TOTAL_COPY.contextNote}
-                  </span>
-                </p>
+                {/* Baris "Total Saldo semua dompet · N dompet aktif" DIHAPUS
+                    (permintaan pemilik produk). Cakupan totalnya TETAP
+                    dikatakan di kepala panel "Komposisi" di sebelah kanan
+                    lewat `WALLET_TOTAL_COPY.compositionAccounts()`. */}
                 {/* ── BARIS KONTEKS (paket 47) ────────────────────────────────
                     Persis pola Home: total di atas TIDAK mengecil saat konteks
                     aktif (kanon #1), sementara daftar kartu & log pindah dana
-                    mengikuti konteks. Dua baris ini menjelaskan keduanya:
-                    subtotal konteks + penegas cakupan total.
-                    Nominalnya lewat `money()` supaya tombol mata tetap berlaku. */}
-                <p className="mt-2 text-[11px] font-medium text-cream/55">
+                    mengikuti konteks. Nominalnya lewat `money()` supaya tombol
+                    mata tetap berlaku. */}
+                <p className="mt-3 text-[11px] font-medium text-cream/55">
                   {HOME_TOTAL_COPY.contextLine(CONTEXT_LABEL[context], money(contextTotal))}
                   <span className="text-cream/30"> · {HOME_TOTAL_COPY.scopeNote}</span>
                 </p>
@@ -586,7 +613,9 @@ export function WalletScreen() {
                     tidak boleh punya celah gelap, karena itu terbaca seolah ada
                     dana yang belum teralokasi. Lebarnya dibaca dari `shares`. */}
                 <div className="mt-3 flex h-2.5 w-full overflow-hidden rounded-full">
-                  {allWallets.map((wallet, i) => (
+                  {/* warna segmen dibaca dari `themedWallets` — dompet + tema
+                      yang benar-benar dirender (paket 77), bukan resep mentah */}
+                  {themedWallets.map((wallet, i) => (
                     <motion.span
                       key={wallet.id}
                       className={cn('h-full', wallet.color)}
@@ -598,7 +627,7 @@ export function WalletScreen() {
                 </div>
 
                 <div className="mt-3 flex flex-wrap gap-1.5">
-                  {allWallets.map((wallet, i) => (
+                  {themedWallets.map((wallet, i) => (
                     <span
                       key={wallet.id}
                       className="inline-flex items-center gap-1.5 rounded-full bg-cream/[0.06] py-1 pl-1.5 pr-2.5 text-[11px] ring-1 ring-inset ring-cream/[0.08]"
@@ -618,9 +647,12 @@ export function WalletScreen() {
         </section>
 
         {/* ── RAIL "TAMBAH DOMPET CEPAT" (4/12) ─────────────────────────────
-            Rekomendasinya DINAMIS: brand yang sudah dimiliki user disaring keluar
-            dari pool, jadi sistem tidak mungkin lagi menawarkan BCA ke user yang
-            sudah punya dompet BCA. */}
+            Isinya TIGA saran teratas (paket 77), bukan deret yang bisa digulir:
+            brand yang sudah dimiliki user disaring keluar dari pool
+            (`quickAddBrands`), sisanya diurutkan menurut sinyal pakai lalu urutan
+            kanon — jadi sistem tidak mungkin lagi menawarkan BCA ke user yang
+            sudah punya dompet BCA, dan tidak ada saran yang tersembunyi di luar
+            tepi layar. */}
         <section className="flex flex-col rounded-[1.75rem] bg-cream p-4 shadow-[0_18px_40px_-34px_rgba(69,89,78,0.55)] ring-1 ring-soil/10 sm:p-5 xl:col-span-4">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
@@ -628,40 +660,37 @@ export function WalletScreen() {
                 <Plus className="size-3.5" strokeWidth={2.8} />
               </span>
               <h2 className="font-display text-[17px] font-semibold tracking-tight text-forest">
-                Tambah Dompet Cepat
+                {WALLET_QUICK_ADD_COPY.title}
               </h2>
             </div>
             <span className="rounded-full bg-sage px-2.5 py-0.5 text-[10.5px] font-medium text-forest ring-1 ring-forest/10">
-              1 ketukan
+              {WALLET_QUICK_ADD_COPY.badge}
             </span>
           </div>
-          <p className="mt-2 text-[11.5px] text-forest/45">
-            Hanya brand yang belum ada di daftar dompetmu.
-          </p>
           {suggestedBrands.length === 0 && (
             <p className="mt-3 rounded-2xl bg-cream px-3 py-2 text-[11.5px] text-forest/55">
-              Semua brand populer sudah kamu pakai — tambah dompet lain lewat “Lainnya”.
+              {WALLET_QUICK_ADD_COPY.allOwned}
             </p>
           )}
 
-          {/* deret kartu brand: solid + ring (bukan dashed) supaya terasa seperti
-              tombol yang benar-benar bisa ditekan.
-              · mobile  → deret gulir horizontal (snap), jempol-friendly
-              · desktop → grid 2×2 rapi di dalam rail 4 kolom (tidak ada gulir) */}
-          <div
-            data-lenis-prevent-horizontal
-            className="hide-scrollbar mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto px-0.5 pb-3 pt-1 xl:grid xl:grid-cols-2 xl:overflow-visible xl:px-0 xl:pb-1"
-          >
+          {/* deret kartu brand: TIGA saran, dirender LANGSUNG — bukan deret gulir
+              (paket 77). Sebelumnya kontainer ini `overflow-x-auto snap-x`, jadi
+              saran keempat duduk di luar tepi layar dan user harus menyapu untuk
+              menemukan tombol tambah dompet; di desktop gulir itu bahkan tidak
+              terlihat sebagai gulir. Sekarang: grid 3 kolom tetap + tombol
+              "Lainnya" lebar penuh di bawahnya, jadi TIDAK ADA yang tersembunyi. */}
+          <div className="mt-3 grid grid-cols-3 gap-3">
             {suggestedBrands.map((brand, i) => (
               <motion.button
                 key={brand.name}
                 type="button"
                 onClick={() => openAddWallet(brand.name)}
+                aria-label={WALLET_QUICK_ADD_COPY.brandA11y(brand.name)}
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.04 * i, ease: EASE }}
                 className={cn(
-                  'group flex w-[104px] shrink-0 snap-start flex-col items-center gap-2.5 rounded-[1.4rem] bg-cream p-3.5 ring-1 ring-soil/10 shadow-[0_14px_30px_-24px_rgba(69,89,78,0.5)] transition-all duration-300 hover:-translate-y-1 active:scale-95 motion-reduce:transition-none xl:w-auto',
+                  'group flex flex-col items-center gap-2.5 rounded-[1.4rem] bg-cream p-3.5 ring-1 ring-soil/10 shadow-[0_14px_30px_-24px_rgba(69,89,78,0.5)] transition-all duration-300 hover:-translate-y-1 active:scale-95 motion-reduce:transition-none',
                   brand.frame,
                 )}
               >
@@ -680,26 +709,30 @@ export function WalletScreen() {
                     <Plus className="size-3" strokeWidth={3.2} />
                   </span>
                 </span>
-                <span className="text-[12.5px] font-medium tracking-tight text-forest">
+                <span className="w-full truncate text-center text-[12.5px] font-medium tracking-tight text-forest">
                   {brand.name}
                 </span>
               </motion.button>
             ))}
-
-            {/* jalur aman kalau brand user tidak ada di daftar brand populer */}
-            <button
-              type="button"
-              onClick={() => openAddWallet(null)}
-              className="group flex w-[104px] shrink-0 snap-start flex-col items-center gap-2.5 rounded-[1.4rem] border-2 border-dashed border-ink/[0.1] bg-cream/50 p-3.5 transition-all duration-300 hover:-translate-y-1 hover:border-forest/25 hover:bg-cream active:scale-95 motion-reduce:transition-none xl:w-auto"
-            >
-              <span className="flex size-11 items-center justify-center rounded-[1rem] bg-cream text-forest/40 transition-colors group-hover:bg-sage/70 group-hover:text-forest">
-                <Plus className="size-5" strokeWidth={2.6} />
-              </span>
-              <span className="text-[12.5px] font-medium tracking-tight text-forest/45 transition-colors group-hover:text-forest">
-                Lainnya
-              </span>
-            </button>
           </div>
+
+          {/* jalur aman LEBAR PENUH kalau brand user tidak ada di daftar brand
+              populer — satu tombol, bukan kartu keempat di ujung gulir. Membuka
+              form Tambah Dompet dalam keadaan BERSIH (`null`), karena di sinilah
+              user menulis nama bank/e-wallet yang tidak ada di daftar. */}
+          <button
+            type="button"
+            onClick={() => openAddWallet(null)}
+            aria-label={WALLET_QUICK_ADD_COPY.otherA11y}
+            className="group mt-3 flex w-full items-center gap-3 rounded-[1.4rem] border-2 border-dashed border-ink/[0.1] bg-cream/50 p-3.5 text-left transition-all duration-300 hover:border-forest/25 hover:bg-cream active:scale-[0.99] motion-reduce:transition-none"
+          >
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-[1rem] bg-cream text-forest/40 transition-colors group-hover:bg-sage/70 group-hover:text-forest">
+              <Plus className="size-5" strokeWidth={2.6} />
+            </span>
+            <span className="min-w-0 text-[13px] font-medium tracking-tight text-forest">
+              {WALLET_QUICK_ADD_COPY.other}
+            </span>
+          </button>
         </section>
         </div>
 
@@ -725,10 +758,10 @@ export function WalletScreen() {
                 {WALLET_TRANSFER_LOG_COPY.count(transfers.length)}
               </span>
             </div>
-            <p className="mt-2 text-[11.5px] leading-relaxed text-forest/45">
-              {WALLET_TRANSFER_LOG_COPY.hint}
-            </p>
-            <ul className="mt-2 divide-y divide-soil/10">
+            {/* JARAK, BUKAN GARIS RAMBUT (paket 82 · aturan pemilik produk):
+                tiap catatan pindah dana jadi kartu tipis bertint dengan `gap-1.5`
+                supaya mata tidak menyambung dua catatan jadi satu. */}
+            <ul className="mt-3 flex flex-col gap-1.5">
               {transfers.map((record) => {
                 const tx = record.transaction
                 /* penanda "pindah dana" dibaca dari helper yang SAMA dengan
@@ -743,7 +776,7 @@ export function WalletScreen() {
                   .filter(Boolean)
                   .join(' · ')
                 return (
-                  <li key={tx.id} className="flex items-center gap-3 py-3">
+                  <li key={tx.id} className="flex items-center gap-3.5 rounded-xl bg-sage/40 px-3 py-2.5">
                     <span
                       aria-hidden
                       className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sage/70 text-[15px] font-medium text-forest/50"
@@ -837,9 +870,15 @@ export function WalletScreen() {
                 <WalletFace
                   wallet={wallet}
                   className={cn(
-                    'rounded-[1.85rem] p-5 transition-all duration-300 ease-out',
-                    'shadow-[0_26px_52px_-26px_rgba(0,0,0,0.6)]',
-                    'group-hover:-translate-y-1.5 group-hover:ring-cream/45 group-hover:shadow-[0_36px_66px_-28px_rgba(0,0,0,0.7)]',
+                    /* paket 77 — bayangan berat 3 lapis diganti resep "premium":
+                       `shadow-sm` + garis tepi halus. Kartu fisik yang mahal
+                       terlihat dari gradien & teksturnya, bukan dari bayangan
+                       sepanjang layar; bayangan tebal justru membuat kolomnya
+                       terasa kotor. `border-cream/10` = token kanon untuk
+                       "putih 10%" — sengaja BUKAN kelas putih bawaan Tailwind,
+                       karena guard palet menandainya sebagai warna di luar palet. */
+                    'rounded-[1.85rem] border border-cream/10 p-5 shadow-sm transition-all duration-300 ease-out',
+                    'group-hover:-translate-y-1 group-hover:ring-cream/45 group-hover:shadow-md',
                     'motion-reduce:transition-none',
                   )}
                 >
@@ -875,22 +914,19 @@ export function WalletScreen() {
                     <WalletTypeMark wallet={wallet} chipId={`wallet-chip-${wallet.id}`} />
                   </div>
 
-                  <div className="relative mt-8 flex items-end justify-between gap-3">
+                  <div className="relative mt-7 flex items-end justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className={cn(AMOUNT_LABEL, 'text-cream/60')}>Saldo</p>
-                        {/* badge "Baru" DIHAPUS (paket 40): dulu kartu yang dibuat user
-                            tidak punya halaman detail, jadi ia harus dibedakan. Sekarang
-                            SEMUA dompet hidup di satu store & punya `/wallet/[id]`, jadi
-                            pembeda itu tidak lagi benar. */}
-                      </div>
-                      <div className="mt-2">
-                        <MaskedAmount
-                          value={formatIDR(wallet.balance)}
-                          masked={masked}
-                          className={AMOUNT_LG}
-                        />
-                      </div>
+                      {/* label mikro "Saldo" DIHAPUS (paket 77): nama dompet di
+                          atasnya + angka besar di bawahnya sudah menjelaskan diri
+                          sendiri, dan label itu terulang di SETIAP kartu — persis
+                          jenis teks yang diminta dibuang. Nominalnya tetap lewat
+                          `MaskedAmount`, jadi tombol mata global tetap
+                          menyensornya. */}
+                      <MaskedAmount
+                        value={formatIDR(wallet.balance)}
+                        masked={masked}
+                        className={AMOUNT_LG}
+                      />
                     </div>
 
                     {/* More Options → popover quick action. `relative z-20` WAJIB:

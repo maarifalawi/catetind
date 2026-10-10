@@ -5,14 +5,17 @@ import { AI_CAPTURE_COPY } from '@/lib/ai-chat'
 import { readAiPrefs, withCapturePrefs } from '@/lib/ai-prefs'
 import { recordAiUsage } from '@/lib/ai-usage-store'
 import type { HistoryTransaction } from '@/lib/data/history'
+import { captureWalletChoice, getMoneySnapshot, walletIdOfName } from '@/lib/money/store'
 import { recordTransaction } from '@/lib/transaction-bus'
 import {
   draftFormFrom,
   parseSpokenTransaction,
+  parseTypedTransaction,
   type ExtractedField,
   type ExtractedTransaction,
   type TransactionDraftForm,
 } from '@/lib/transaction-ai'
+import type { MoneyContext } from '@/lib/types'
 
 /* ── useTransactionCapture — mesin dua pintu masuk "AI-conversational-first" ──
    prompt 20: 📸 scan struk & 🎤 voice di dalam widget AI Coach.
@@ -36,9 +39,19 @@ import {
 
    Widget-nya hidup di root layout (tidak unmount saat pindah halaman), jadi
    draft yang belum diputuskan tetap ada saat panel ditutup & dibuka lagi —
-   sama seperti riwayat percakapan. Refresh halaman mengosongkannya. */
+   sama seperti riwayat percakapan. Refresh halaman mengosongkannya.
 
-export type CapturePhase = 'idle' | 'reading' | 'listening' | 'confirm' | 'problem'
+   PAKET 79 — TIGA PINTU, SATU MESIN. Ketikan transaksi di chat
+   (`startChatDraft`) sekarang masuk jalur yang sama dengan struk & suara:
+   mula-mula MODEL di server (`POST /api/parse-voice`), lalu parser aturan lokal
+   sebagai jaring aman. Sumbernya ditandai (`'chat'`) supaya kartu konfirmasi
+   memakai kalimat yang benar — tidak lagi "ucapanmu"/"yang aku denger" untuk
+   teks yang user ketik. Dompet draft juga SELALU dompet milik user
+   (`withCaptureWallet()`): tebakan AI yang tak ada di daftar diganti dompet
+   konteks aktif + disebutkan apa adanya di kartu, sehingga tidak ada lagi baris
+   lahir "Belum berkonteks" dari jalur ini. */
+
+export type CapturePhase = 'idle' | 'reading' | 'parsing' | 'listening' | 'confirm' | 'problem'
 
 /** dukungan STT baru dipastikan SETELAH mount (SSR tidak punya `window`) */
 export type VoiceSupport = 'unknown' | 'yes' | 'no'
@@ -136,13 +149,61 @@ function readTransaction(payload: unknown): ExtractedTransaction | null {
   return transaction as ExtractedTransaction
 }
 
+/**
+ * Dompet draft = DOMPET MILIK USER (paket 79) — bukan nama kanon tebakan AI.
+ *
+ * Temuan yang ditutup di sini: kartu konfirmasi AI dulu menulis nama dompet dari
+ * daftar statis (`BCA/GoPay/OVO/Tunai`). Begitu nama itu tidak ada di ledger
+ * user, barisnya lahir dengan `walletId: ''` — tampil di SEMUA konteks dengan
+ * badge **"Belum berkonteks"** dan tidak memotong saldo dompet mana pun.
+ *
+ * Aturannya sekarang: tebakan AI dipakai KALAU dompetnya memang dimiliki user;
+ * kalau tidak, draft memakai dompet pertama di konteks aktif (pola yang sama
+ * dengan FAB/modal/kalender) DAN tebakan aslinya disimpan di
+ * `unknownWalletGuess` supaya kartu konfirmasi mengatakannya apa adanya.
+ * Tidak ada penggantian dompet yang disembunyikan, dan tidak ada baris tanpa
+ * dompet yang lahir dari jalur AI.
+ */
+function withCaptureWallet(draft: TransactionDraftForm, ctx: MoneyContext): TransactionDraftForm {
+  const choice = captureWalletChoice(getMoneySnapshot(), ctx, draft.wallet)
+  return {
+    ...draft,
+    wallet: choice.value,
+    unknownWalletGuess: choice.unknownGuess,
+    walletOutsideContext: choice.outsideContext,
+    /* dompetnya diisi app dari konteks aktif, bukan disebut user — kartu
+       mengatakannya (paket 81). Dihitung di store (`captureWalletChoice`), bukan
+       di sini: keputusannya murni dan sudah diuji di `lib/money/store.test.ts`. */
+    walletFromContext: choice.fromContext,
+  }
+}
+
+/** preferensi AI + dompet nyata — dua penyesuaian yang SELALU berlaku bersama */
+function prepareDraft(
+  extracted: ExtractedTransaction,
+  transcript: string | undefined,
+  ctx: MoneyContext,
+): TransactionDraftForm {
+  return withCapturePrefs(withCaptureWallet(draftFormFrom(extracted, transcript), ctx))
+}
+
 export function useTransactionCapture({
   onUserEcho,
+  context,
 }: {
   /** dipanggil saat user mengirim sesuatu (foto / suara) supaya jejaknya muncul
    *  sebagai bubble user — percakapan jadi transparan: user bisa melihat persis
    *  apa yang AI terima */
   onUserEcho: (text: string) => void
+  /**
+   * Konteks uang yang sedang aktif (Pribadi/Keluarga/Bersama).
+   *
+   * DIOPER pemanggil, bukan dibaca hook ini: konteks hidup di provider komponen
+   * (`components/catetind/money-context-provider.tsx`) dan arah impor repo ini
+   * selalu komponen → hook/lib. Nilainya menentukan dompet default draft AI saat
+   * tebakan AI tidak ada di daftar dompet user (paket 79).
+   */
+  context: MoneyContext
 }) {
   const [phase, setPhase] = useState<CapturePhase>('idle')
   const [draft, setDraft] = useState<TransactionDraftForm | null>(null)
@@ -231,10 +292,12 @@ export function useTransactionCapture({
           const payload = res.ok ? await res.json() : null
           const transaction = readTransaction(payload)
           if (transaction) {
-            /* preferensi user diterapkan SEBELUM draft masuk kartu konfirmasi
-               (paket 54): kalau "Kategorisasi/Penamaan Otomatis" dimatikan, field
-               itu kosong dan user yang mengisinya. */
-            setDraft(withCapturePrefs(draftFormFrom(transaction)))
+            /* preferensi user + DOMPET NYATA diterapkan SEBELUM draft masuk kartu
+               konfirmasi (paket 54 & 79): kalau "Kategorisasi/Penamaan Otomatis"
+               dimatikan, field itu kosong dan user yang mengisinya; dan dompet
+               tebakan AI diganti dompet milik user supaya barisnya tidak lahir
+               "Belum berkonteks". */
+            setDraft(prepareDraft(transaction, undefined, context))
             setPhase('confirm')
             return
           }
@@ -245,7 +308,7 @@ export function useTransactionCapture({
         setPhase('problem')
       })()
     },
-    [clearReadTimer, onUserEcho, releaseVoice],
+    [clearReadTimer, context, onUserEcho, releaseVoice],
   )
 
   /* ── MERAPIKAN TRANSKRIP → DRAFT ─────────────────────────────────────────────
@@ -253,26 +316,29 @@ export function useTransactionCapture({
      `POST /api/parse-voice` (model di server) untuk diubah jadi draft; kalau
      provider tak bisa dihubungi, parser aturan lokal merapikan transkrip yang
      sama — hasilnya tetap jujur karena tidak ada yang dikarang. */
-  const resolveVoiceDraft = useCallback(async (transcript: string) => {
-    try {
-      const res = await fetch('/api/parse-voice', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ transcript }),
-      })
-      const payload = res.ok ? await res.json() : null
-      const transaction = readTransaction(payload)
-      if (transaction) {
-        setDraft(withCapturePrefs(draftFormFrom(transaction, transcript)))
-        setPhase('confirm')
-        return
+  const resolveVoiceDraft = useCallback(
+    async (transcript: string) => {
+      try {
+        const res = await fetch('/api/parse-voice', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ transcript, source: 'voice' }),
+        })
+        const payload = res.ok ? await res.json() : null
+        const transaction = readTransaction(payload)
+        if (transaction) {
+          setDraft(prepareDraft(transaction, transcript, context))
+          setPhase('confirm')
+          return
+        }
+      } catch {
+        /* jatuh ke parser aturan lokal di bawah */
       }
-    } catch {
-      /* jatuh ke parser aturan lokal di bawah */
-    }
-    setDraft(withCapturePrefs(draftFormFrom(parseSpokenTransaction(transcript), transcript)))
-    setPhase('confirm')
-  }, [])
+      setDraft(prepareDraft(parseSpokenTransaction(transcript), transcript, context))
+      setPhase('confirm')
+    },
+    [context],
+  )
 
   /* ── 🎤 VOICE ─────────────────────────────────────────────────────────────
      STT terjadi di browser (PRD A3). Transkrip interim langsung ditampilkan,
@@ -416,28 +482,68 @@ export function useTransactionCapture({
   }, [clearReadTimer, releaseVoice])
 
   /**
-   * Buka kartu konfirmasi dari PESAN CHAT (paket 65 · Tugas D).
+   * Buka kartu konfirmasi dari PESAN CHAT (paket 65 · Tugas D, diperluas paket 79).
    *
-   * Ucapan transaksi yang diketik user ("gua habis makan 50k, catet ya") dirapikan
-   * dengan SUDUT YANG SAMA dengan input suara — `parseSpokenTransaction()` (aturan
-   * lokal di klien, bukan tebakan) + preferensi AI (`withCapturePrefs`) — lalu
-   * ditampilkan sebagai kartu konfirmasi yang bisa diedit. Tidak ada uang yang
-   * ditulis di sini; user tetap harus menekan "Catat ✓" (`confirmCapture`).
-   * @returns `true` kalau draft terbentuk (kartu konfirmasi tampil)
+   * Kalimat transaksi yang DIKETIK user ("gua habis makan 50k, catet ya") dirapikan
+   * dengan sudut yang sama dengan input suara: mula-mula lewat MODEL di server
+   * (`POST /api/parse-voice`, `source: 'chat'`) — supaya kemampuan AI-nya benar-
+   * benar dipakai, bukan cuma aturan kata kunci. Kalau provider tak bisa
+   * dihubungi, `parseTypedTransaction()` merapikan teks yang sama di klien; tidak
+   * ada nilai yang dikarang di jalur mana pun.
+   *
+   * Sumbernya ditandai `'chat'` sehingga kartu konfirmasi TIDAK bicara soal suara
+   * ("ucapanmu"/"yang aku denger") dan nama catatannya diambil dari ketikan user.
+   * Tidak ada uang yang ditulis di sini; user tetap harus menekan "Catat ✓"
+   * (`confirmCapture`).
+   * @returns `true` kalau alur dimulai (kartu konfirmasi menyusul setelah dibaca)
    */
-  const startChatDraft = useCallback((transcript: string): boolean => {
-    const text = transcript.trim()
-    if (!text) return false
-    const extracted = parseSpokenTransaction(text)
-    const draft = withCapturePrefs(draftFormFrom(extracted, text))
-    transcriptRef.current = text
-    setDraft(draft)
-    setLiveTranscript('')
-    setProblem(null)
-    setFormError(null)
-    setPhase('confirm')
-    return true
-  }, [])
+  const resolveChatDraft = useCallback(
+    async (text: string) => {
+      try {
+        const res = await fetch('/api/parse-voice', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ transcript: text, source: 'chat' }),
+        })
+        const payload = res.ok ? await res.json() : null
+        const transaction = readTransaction(payload)
+        if (transaction) {
+          setDraft(prepareDraft(transaction, text, context))
+          setPhase('confirm')
+          return
+        }
+      } catch {
+        /* jatuh ke parser aturan lokal di bawah */
+      }
+      setDraft(prepareDraft(parseTypedTransaction(text), text, context))
+      setPhase('confirm')
+    },
+    [context],
+  )
+
+  const startChatDraft = useCallback(
+    (transcript: string): boolean => {
+      const text = transcript.trim()
+      if (!text) return false
+      releaseVoice()
+      clearReadTimer()
+      transcriptRef.current = text
+      setDraft(null)
+      setLiveTranscript('')
+      setProblem(null)
+      setFormError(null)
+      /* fase 'parsing' (bukan 'reading'): kartu di layar mengatakan yang benar —
+         tulisan user sedang dirapikan, bukan struk sedang dibaca */
+      setPhase('parsing')
+      retryRef.current = () => {
+        setPhase('parsing')
+        void resolveChatDraft(text)
+      }
+      void resolveChatDraft(text)
+      return true
+    },
+    [clearReadTimer, releaseVoice, resolveChatDraft],
+  )
 
   /**
    * Simpan hasil konfirmasi. HANYA di sini transaksi benar-benar ditulis —
@@ -476,6 +582,25 @@ export function useTransactionCapture({
       return null
     }
 
+    /* ── DOMPET WAJIB DOMPET MILIK USER (paket 79) ───────────────────────────
+       Jaring aman terakhir jalur AI. Kartu konfirmasi sudah menawarkan dompet
+       nyata user dan mengganti tebakan AI yang tidak ada di daftar, tapi pagar ini
+       memastikan TIDAK ADA baris yang lahir tanpa dompet dari jalur ini: baris
+       seperti itu tampil "Belum berkonteks" di semua konteks dan tidak memotong
+       saldo dompet mana pun — persis yang dikeluhkan user. Kalau user belum punya
+       dompet sama sekali, yang dikatakan adalah cara menambahkannya (bukan
+       menuliskan catatan ke dompet karangan). */
+    const snapshot = getMoneySnapshot()
+    const choice = captureWalletChoice(snapshot, context, draft.wallet)
+    if (choice.options.length === 0) {
+      setFormError(AI_CAPTURE_COPY.noWalletToPick)
+      return null
+    }
+    if (!walletIdOfName(snapshot, draft.wallet)) {
+      setFormError(AI_CAPTURE_COPY.needWallet)
+      return null
+    }
+
     const transaction = recordTransaction({
       name: draft.name.trim() || AI_CAPTURE_COPY.untitled,
       amount,
@@ -501,7 +626,7 @@ export function useTransactionCapture({
     setFormError(null)
     setLiveTranscript('')
     return transaction
-  }, [draft])
+  }, [context, draft])
 
   /** ulangi aksi AI terakhir (foto struk atau mendengarkan) — tombol "Coba lagi" */
   const retryCapture = useCallback(() => {

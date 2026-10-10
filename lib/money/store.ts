@@ -903,11 +903,27 @@ export function walletOptionsFor(
   /* hanya dompet HIDUP (paket 62): dompet yang sudah dihapus user tidak boleh
      muncul lagi sebagai pilihan di sheet mana pun — memilihnya berarti menulis
      uang ke dompet yang tidak ada di daftarnya */
-  return liveWalletSeeds(snapshot).map((wallet) => ({
-    id: wallet.id,
-    label: wallet.name,
-    balance: walletBalance(snapshot, wallet.id),
-  }))
+  const options: { id: string; label: string; balance: number }[] = []
+  /* PAKET 81 — SATU NAMA = SATU BARIS. User boleh punya dua dompet bernama sama
+     (`addWalletAccount()` tidak melarangnya), dan pencocokan dompet di app ini
+     memang BY-NAME (`walletIdOfName()` memakai yang pertama). Tanpa dedupe,
+     daftar ini melahirkan DUA baris berlabel identik di setiap pemilih — di
+     kartu konfirmasi AI itu sampai jadi galat React "Encountered two children
+     with the same key, `OVO`", dan di sheet lain jadi dua baris yang tidak bisa
+     dibedakan user padahal barisnya mendarat di dompet yang SAMA. Yang pertama
+     menang, persis dompet yang menerima catatannya. */
+  const seen = new Set<string>()
+  for (const wallet of liveWalletSeeds(snapshot)) {
+    const key = wallet.name.trim().toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    options.push({
+      id: wallet.id,
+      label: wallet.name,
+      balance: walletBalance(snapshot, wallet.id),
+    })
+  }
+  return options
 }
 
 /** nama dompet dari id — dipakai menyimpan riwayat pembayaran (`walletName`) */
@@ -921,6 +937,32 @@ export function walletIdOfName(snapshot: MoneySnapshot, name: string): string {
   /* dompet terhapus tidak dicari: nama dompet yang sudah dibuang user tidak boleh
      "hidup lagi" hanya karena form masih memuat namanya */
   return liveWalletSeeds(snapshot).find((wallet) => wallet.name.toLowerCase() === key)?.id ?? ''
+}
+
+/**
+ * Cek apakah pengeluaran sebesar `amount` masih tertutup saldo dompet bernama
+ * `walletName` — MURNI terhadap snapshot yang diberikan.
+ *
+ * Dipakai DUA tempat sekaligus, dan itu memang tujuannya:
+ *   1. PRE-CHECK UI (`useTransactionSubmit` & jalur AI) supaya user menerima toast
+ *      "Saldo tidak mencukupi" SEBELUM ada yang ditulis, dan panelnya tetap terbuka;
+ *   2. PENJAGA pintu tulis (`postTransaction`/`postExpense`) sebagai pagar terakhir,
+ *      supaya lubang saldo sub-nol tidak bisa kembali lewat jalur baru mana pun.
+ *
+ * `known: false` = dompetnya belum ada di ledger (mis. 'OVO' sebelum ditambahkan):
+ * barisnya tetap tercatat apa adanya dan TIDAK menyentuh saldo mana pun, jadi tidak
+ * ada yang perlu dijaga. Penolakan HANYA berlaku untuk dompet HIDUP yang saldonya
+ * benar-benar akan terpotong.
+ */
+export function walletFundsCheck(
+  snapshot: MoneySnapshot,
+  walletName: string,
+  amount: number,
+): { known: boolean; sufficient: boolean; balance: number } {
+  const walletId = walletIdOfName(snapshot, walletName)
+  if (!walletId) return { known: false, sufficient: true, balance: 0 }
+  const balance = walletBalance(snapshot, walletId)
+  return { known: true, sufficient: Math.round(amount) <= balance, balance }
 }
 
 /* ── API TULIS — SATU-SATUNYA JALUR MENULIS UANG ─────────────────────────────
@@ -1150,6 +1192,11 @@ export function postExpense(input: ExpenseInput): MoneyRow | null {
      sudah dibuang dari daftar — uang yang tidak terlihat di halaman mana pun. */
   const wallet = walletSeedOf(live, input.walletId)
   if (!wallet) return null
+  /* SALDO TIDAK BOLEH SUB-NOL (paket 74): pengeluaran lebih besar dari saldo
+     dompet HIDUP ditolak tanpa menulis satu baris pun — jalur tulis yang sama
+     dengan `postTransfer`/`postDebtSettlement`. Sebelum ini pintu pengeluaran
+     tidak memeriksa saldo sama sekali, jadi saldo dompet bisa jadi minus. */
+  if (amount > walletBalance(live, input.walletId)) return null
   const before = live.rows
   const row = appendRow({
     walletId: input.walletId,
@@ -1353,8 +1400,17 @@ function ledgerTypeOf(type: TransactionType): LedgerRowType {
  * AI capture). Yang dikatakan ke user saat ditolak ada di
  * `TRANSACTION_NO_WALLET_COPY` (`lib/data/history.ts`).
  *
+ * ── PAGAR SALDO SUB-NOL (paket 74) ───────────────────────────────────────────
+ * Pengeluaran yang melebihi saldo dompet HIDUP ditolak di sini: `null`, tanpa
+ * satu baris pun. Ini jalur yang dipakai form manual (FAB/modal web/kalender) dan
+ * AI capture (struk/ucapan/chat), jadi pagarnya berlaku untuk semuanya — termasuk
+ * pelunasan tagihan yang menulis lewat `postExpense`. Pemeriksaannya MURNI lewat
+ * `walletFundsCheck()` supaya UI bisa menampilkan alasannya lebih dulu; penolakan
+ * di sini adalah pagar terakhir.
+ *
  * Nama dompet yang TIDAK dikenal ledger tetap dicatat apa adanya dengan
- * `walletId: ''` (lihat paragraf di atas) — penolakan ini KHUSUS dompet kosong.
+ * `walletId: ''` (tidak menyentuh saldo mana pun, jadi tidak dijepit) —
+ * penolakan "dompet kosong" di atas tetap KHUSUS dompet kosong.
  */
 export function postTransaction(input: RecordTransactionInput): MoneyRow | null {
   /* transfer TIDAK bisa ditulis dari sini — lihat penjelasan di atas */
@@ -1364,6 +1420,12 @@ export function postTransaction(input: RecordTransactionInput): MoneyRow | null 
   const walletName = input.wallet.trim()
   if (!walletName) return null
   const walletId = walletIdOfName(live, walletName)
+  /* SALDO TIDAK BOLEH SUB-NOL — hanya untuk PENGELUARAN dari dompet yang dikenal
+     ledger (dompet tak dikenal menulis `walletId: ''` dan tidak memotong saldo). */
+  if (input.type === 'expense' && walletId) {
+    const funds = walletFundsCheck(live, walletName, amount)
+    if (funds.known && !funds.sufficient) return null
+  }
 
   const before = live.rows
   const row = appendRow({
@@ -2291,6 +2353,142 @@ export function defaultWalletNameFor(ctx: MoneyContext): string {
   return (
     names.find((name) => (TRANSACTION_WALLET_OPTIONS as readonly string[]).includes(name)) ?? ''
   )
+}
+
+/**
+ * Dompet untuk kartu konfirmasi AI (paket 79) — MURNI terhadap snapshot.
+ *
+ * Akar temuan "Belum berkonteks": kartu konfirmasi AI menawarkan daftar dompet
+ * STATIS (`TRANSACTION_WALLET_OPTIONS`: BCA/GoPay/OVO/Tunai) dan menulis nama itu
+ * apa adanya. Begitu nama tebakan AI tidak ada di ledger user (`walletIdOfName`
+ * → `''`), barisnya lahir tanpa dompet: ia tampil di SEMUA konteks dengan badge
+ * **"Belum berkonteks"** dan tidak memotong saldo mana pun. AI yang memilih
+ * dompet yang tidak dimiliki user bukan kesalahan user — jadi kartu harus
+ * menawarkan DOMPET MILIK USER, bukan daftar kanon.
+ *
+ * Tiga nilai yang dikembalikan, dan semuanya dipakai UI supaya tidak ada
+ * keputusan yang disembunyikan:
+ *   · `options`      → nama dompet hidup yang boleh dipilih (konteks aktif dulu)
+ *   · `value`        → yang benar-benar dipakai: tebakan AI KALAU dompetnya
+ *                      memang dimiliki user (walau konteksnya lain — itu dompet
+ *                      MILIKNYA, tampil di kartu, dan memang itu yang ia sebut),
+ *                      kalau tidak dompet kanon pertama di konteks aktif;
+ *                      `''` = konteks ini belum punya dompet sendiri
+ *   · `unknownGuess` → nama tebakan AI yang tidak ada, supaya kartu bisa
+ *                      mengatakannya apa adanya ("tebakan AI: OVO, jadi aku isi
+ *                      Tunai") dan user bisa menggantinya
+ *
+ * `''` SENGAJA tidak diganti dompet konteks lain (paket 59 · temuan audit #1):
+ * catatan yang ditulis sambil switcher di "Bersama" lalu memotong saldo dompet
+ * Keluarga adalah uang user yang bergerak tanpa ia pilih. Dalam keadaan itu kartu
+ * konfirmasi menawarkan SEMUA dompet milik user supaya ia bisa memilih sendiri,
+ * dan jalur tulisnya menahan simpan sampai dompetnya dipilih.
+ *
+ * Nama dompet yang sama dipakai lebih dari satu kali (user boleh punya dua "BCA"):
+ * pilihan di daftar di-dedupe, dan karena pencocokan dompet di app ini memang
+ * by-name, barisnya mengikuti dompet pertama dengan nama itu — persis seperti
+ * perilaku form lain, bukan aturan baru.
+ */
+export interface CaptureWalletChoice {
+  value: string
+  options: string[]
+  unknownGuess: string
+  /**
+   * true = dompet yang dipakai ada di konteks LAIN daripada konteks aktif.
+   *
+   * Contoh nyata: switcher di "Bersama", user mengetik "airminum 5k" — AI menebak
+   * `Tunai`, dan dompet itu memang MILIK user (Keluarga). Catatannya sah, tapi
+   * konteksnya bukan yang sedang dibuka, jadi kartu konfirmasi mengatakannya
+   * (`AI_CAPTURE_COPY.walletOtherContextNote`) alih-alih membiarkan user
+   * menemukannya sendiri di Riwayat.
+   */
+  outsideContext: boolean
+  /**
+   * true = dompet yang dipakai TIDAK disebut user sendiri, melainkan dompet
+   * konteks uang yang sedang aktif (paket 81).
+   *
+   * Ini jawaban untuk pertanyaan "kalau menambah transaksi, defaultnya pakai
+   * dompet yang mana?" — dan jawabannya dinyatakan di kartu, bukan disimpan di
+   * kepala user: urutannya tebakan user sendiri (kalau dompetnya memang miliknya)
+   * → dompet kanon pertama di konteks aktif → dompet pertama di konteks itu.
+   * `false` = user menyebut dompetnya sendiri; `true` = app yang mengisi.
+   */
+  fromContext: boolean
+}
+
+export function captureWalletChoice(
+  snapshot: MoneySnapshot,
+  ctx: MoneyContext,
+  guessed: string,
+): CaptureWalletChoice {
+  const { inContext, options } = captureWalletNames(snapshot, ctx)
+
+  const guess = guessed.trim()
+  const match = options.find((name) => name.toLowerCase() === guess.toLowerCase())
+
+  /* urutan pilihan default mengikuti jalur manual: dompet kanon pertama di
+     konteks aktif (`defaultWalletNameFor`), baru dompet apa pun di konteks itu */
+  const canonical = inContext.find((name) =>
+    (TRANSACTION_WALLET_OPTIONS as readonly string[]).includes(name),
+  )
+
+  const value = match ?? canonical ?? inContext[0] ?? ''
+
+  return {
+    value,
+    options,
+    unknownGuess: guess && !match ? guess : '',
+    outsideContext: value !== '' && !inContext.includes(value),
+    /* dompet diisi APP (bukan user): hanya mungkin kalau tebakannya tidak
+       menemukan dompet milik user — lihat catatan `fromContext` di atas */
+    fromContext: value !== '' && !match,
+  }
+}
+
+/**
+ * Nama dompet kartu konfirmasi AI, dalam URUTAN yang dipakai kartu itu:
+ * konteks uang aktif lebih dulu, baru dompet konteks lain (pindah konteks tetap
+ * sah — sama seperti sheet Pindah Dana). Nama kembar dibuang karena pencocokan
+ * dompet di app ini by-name: dua dompet bernama sama = satu tujuan baris.
+ *
+ * Satu tempat saja, supaya pilihan NAMA (`captureWalletChoice`) dan pilihan
+ * lengkap dengan saldo (`captureWalletOptionsFor`) tidak pernah berbeda urutan.
+ */
+function captureWalletNames(
+  snapshot: MoneySnapshot,
+  ctx: MoneyContext,
+): { inContext: string[]; options: string[] } {
+  const wallets = liveWalletSeeds(snapshot)
+  const inContext = filterWalletsByContext(wallets, ctx).map((wallet) => wallet.name)
+  const otherContexts = wallets
+    .filter((wallet) => wallet.context !== ctx)
+    .map((wallet) => wallet.name)
+  return { inContext, options: [...new Set([...inContext, ...otherContexts])] }
+}
+
+/**
+ * Pilihan dompet kartu konfirmasi AI dalam bentuk yang dimakan PEMILIH DOMPET
+ * (paket 81): `{ id, label, balance }` dengan `id` yang DIJAMIN unik, urut
+ * konteks aktif lebih dulu.
+ *
+ * Kenapa ada, padahal `captureWalletChoice` sudah mengembalikan daftar nama:
+ * kartu konfirmasi memakai `<select>` bawaan dengan `key={nama}` — begitu user
+ * punya dua dompet bernama sama (`addWalletAccount()` mengizinkannya), React
+ * melempar galat "two children with the same key, `OVO`" dan pemilihnya bisa
+ * kehilangan baris. Pemilih kustom repo ini memakai `id` sebagai kunci, jadi
+ * kunci yang unik harus datang dari SATU tempat: di sini — bukan disaring lagi
+ * di dalam JSX.
+ */
+export function captureWalletOptionsFor(
+  snapshot: MoneySnapshot,
+  ctx: MoneyContext,
+): { id: string; label: string; balance: number }[] {
+  const byName = new Map(
+    walletOptionsFor(snapshot).map((option) => [option.label.trim().toLowerCase(), option]),
+  )
+  return captureWalletNames(snapshot, ctx)
+    .options.map((name) => byName.get(name.trim().toLowerCase()))
+    .filter((option): option is { id: string; label: string; balance: number } => Boolean(option))
 }
 
 /**

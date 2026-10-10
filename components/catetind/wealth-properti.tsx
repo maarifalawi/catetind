@@ -8,7 +8,6 @@ import {
   formatIDR,
   maskMoney,
   physicalCategoryLabel,
-  totalPhysicalValue,
   type PhysicalAsset,
 } from '@/lib/data/wealth'
 import { BudgetSheet } from './budget-sheet'
@@ -47,7 +46,6 @@ export function WealthProperti({
   onEdit: (asset: PhysicalAsset) => void
   onDelete: (asset: PhysicalAsset) => void
 }) {
-  const total = totalPhysicalValue(assets)
   /* konfirmasi hapus lokal — dipegang tab ini supaya aksinya dekat dengan datanya */
   const [pendingDelete, setPendingDeleteState] = useState<PhysicalAsset | null>(null)
 
@@ -76,27 +74,9 @@ export function WealthProperti({
   }
 
   return (
-    <section className="space-y-3">
-      {/* kartu total — angka yang ikut ke Total Kekayaan di atas */}
-      <div className="flex items-baseline justify-between rounded-2xl bg-forest p-4 text-cream">
-        <span className="text-[11px] font-medium uppercase tracking-wide text-cream/60">
-          {PHYSICAL_TAB_COPY.totalLabel}
-        </span>
-        <span className="font-display text-[1.35rem] font-semibold tabular-nums">
-          {maskMoney(total, masked)}
-        </span>
-      </div>
-
+    <section className="space-y-3.5">
+      {/* daftar aset — total sudah ada di kepala kartu panel (wealth-screen) */}
       <PhysicalList assets={assets} masked={masked} onEdit={onEdit} onDelete={setPendingDeleteState} />
-
-      <button
-        type="button"
-        onClick={onAdd}
-        className="inline-flex h-11 w-full items-center justify-center gap-1.5 rounded-full border border-forest/30 bg-cream text-[13px] font-medium text-forest transition-colors hover:bg-sage/60 active:scale-[0.98] motion-reduce:transition-none"
-      >
-        <Plus className="size-4" strokeWidth={2.6} aria-hidden />
-        {PHYSICAL_TAB_COPY.addLabel}
-      </button>
 
       <BudgetSheet
         open={pendingDelete !== null}
@@ -144,7 +124,7 @@ function PhysicalList({
   onDelete: (asset: PhysicalAsset) => void
 }) {
   return (
-    <ul className="space-y-3">
+    <ul className="space-y-3.5">
       {assets.map((asset) => {
         const diff = diffOf(asset)
         return (
@@ -157,7 +137,7 @@ function PhysicalList({
                 <p className="truncate font-display text-[15px] font-medium tracking-tight text-forest">
                   {asset.name}
                 </p>
-                <p className="mt-0.5 text-[11.5px] font-medium text-forest/50">
+                <p className="mt-0.5 text-[11.5px] font-medium text-forest/45">
                   {physicalCategoryLabel(asset.category)}
                 </p>
               </div>
@@ -181,22 +161,25 @@ function PhysicalList({
               </div>
             </div>
 
+            {/* nominal jadi fokus utama (rata kanan, tabular), label sekunder redup */}
             <div className="mt-3 flex items-end justify-between gap-3">
-              <div>
-                <p className="text-[11px] font-medium text-forest/45">{PHYSICAL_TAB_COPY.currentLabel}</p>
-                <p className="font-display text-[16px] font-semibold tabular-nums text-forest">
-                  {maskMoney(asset.currentValue, masked)}
+              <div className="min-w-0">
+                <p className="text-[10.5px] font-medium uppercase tracking-[0.14em] text-forest/35">
+                  {PHYSICAL_TAB_COPY.purchaseLabel}
                 </p>
-              </div>
-              <div className="text-right">
-                <p className="text-[11px] font-medium text-forest/45">{PHYSICAL_TAB_COPY.purchaseLabel}</p>
-                <p className="text-[13px] font-medium tabular-nums text-forest/60">
+                <p className="mt-1 truncate text-[12.5px] font-medium tabular-nums text-forest/55">
                   {maskMoney(asset.purchasePrice, masked)}
                 </p>
               </div>
+              <div className="min-w-0 text-right">
+                <p className={cn('text-[10.5px] font-semibold tabular-nums', diff.tone)}>
+                  {diff.text}
+                </p>
+                <p className="mt-1 font-display text-[17px] font-semibold tabular-nums text-forest">
+                  {maskMoney(asset.currentValue, masked)}
+                </p>
+              </div>
             </div>
-
-            <p className={cn('mt-2 text-[12px] font-medium tabular-nums', diff.tone)}>{diff.text}</p>
           </li>
         )
       })}

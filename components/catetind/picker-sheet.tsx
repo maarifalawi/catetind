@@ -43,6 +43,40 @@ import { cn } from '@/lib/utils'
 const PICKER_HOST_SELECTOR =
   '[data-catetind-sheet="true"], [role="dialog"][aria-modal="true"], [role="alertdialog"][aria-modal="true"]'
 
+/* ── PAKET 78 — BAHASA "TERPILIH" YANG LEMBUT + GUTTER DAFTAR ────────────────
+   Dua hal yang lahir dari keluhan pemilik produk atas pemilih "Pilih Dompet":
+
+   1. STROKE OPSI PERTAMA TERPOTONG. Badan gulir pemilih
+      (`overflow-y-auto px-4 …`) tidak punya jarak ATAS, sedangkan Tailwind
+      menggambar `ring`/`ring-2` di LUAR kotak elemen (box-shadow). Akibatnya
+      stroke opsi paling atas — dan opsi terpilih kalau ia yang pertama — terpotong
+      tepi atas area gulir. Karena `overflow-y: auto` membuat `overflow-x` juga
+      `auto`, seluruh isi diklip di tepi padding box. Obatnya bukan menghapus
+      ring-nya (itu justru satu-satunya penanda "terpilih"), tapi memberi GUTTER
+      di dalam area gulir: `pt-1` pada badan gulir di bawah + `-mx-1 px-1` pada
+      daftarnya, sehingga stroke punya ruang 4px dan tidak ada satu piksel pun
+      yang terpotong — tanpa menggeser satu pun elemen (gutter horizontal
+      dikompensasi margin negatif). Ini berlaku untuk SEMUA pemilih yang memakai
+      cangkang ini (dompet & kategori), bukan cuma dompet.
+
+   2. STATUS TERPILIH TERLALU KERAS. Opsi aktif dulu `ring-2 ring-forest` —
+      garis 2px hijau tua mengelilingi kotak. Sekarang satu bahasa terpilih yang
+      lembut dan bisa dipakai pemilih mana pun: isian `bg-mint/30` + garis tipis
+      `ring-leaf/45` + bayangan halus, dengan `text-forest` tetap dipertahankan
+      supaya kontras teks tidak turun. Kelasnya tinggal di SATU tempat ini supaya
+      pemilih berikutnya tidak menemukan bahasa "terpilih" versi keduanya.
+
+   Catatan penting: `IDLE` & `ACTIVE` masing-masing sudah membawa `ring-1`-nya
+   sendiri. Jangan digabung dengan `cn(base, active && ACTIVE)` — kelas
+   background/ring yang bertabrakan diselesaikan oleh URUTAN CSS Tailwind, bukan
+   urutan di atribut `class`, jadi hasilnya bisa tak terduga. Pakai salah satu. */
+export const PICKER_OPTION_IDLE =
+  'bg-cream ring-1 ring-soil/10 hover:bg-sage/40'
+export const PICKER_OPTION_ACTIVE =
+  'bg-mint/30 ring-1 ring-leaf/45 shadow-[0_8px_20px_-14px_rgba(69,89,78,0.65)]'
+/** gutter daftar opsi (lihat catatan 1 di atas): 4px ruang stroke di semua sisi */
+export const PICKER_LIST_GUTTER = '-mx-1 px-1 pt-1'
+
 /**
  * elemen host overlay; `null` = belum siap (SSR / belum mount).
  *
@@ -185,7 +219,14 @@ export function PickerSheet({
               </button>
             </header>
 
-            <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-5">
+            {/* ── badan gulir (PAKET 78) ──────────────────────────────────────
+                `pt-1` = GUTTER ATAS: tanpa ini, stroke (`ring`) opsi paling atas
+                terpotong tepi area gulir karena `ring` digambar di luar kotak
+                elemen, sedangkan `overflow-y-auto` mengklip di tepi padding box.
+                Header & handle tetap `shrink-0` di luar area gulir, jadi ia tidak
+                ikut tergulir (perilaku rounded/overflow-hidden panel TIDAK
+                berubah). */}
+            <div className="min-h-0 flex-1 overflow-y-auto px-4 pt-1 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-5">
               {children}
             </div>
           </motion.div>

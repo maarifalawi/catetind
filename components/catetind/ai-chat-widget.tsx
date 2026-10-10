@@ -11,6 +11,7 @@ import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock'
 import { useTransactionCapture } from '@/hooks/use-transaction-capture'
 import { AICaptureBubble } from './ai-capture-bubble'
 import { AIAvatar } from './ai-avatar'
+import { useMoneyContext } from './money-context-provider'
 import { usePrivacy } from './privacy-provider'
 import { useSubscriptionGate } from './subscription-gate-provider'
 import { SUBSCRIPTION_LOCK_COPY } from '@/lib/data/renewal'
@@ -28,7 +29,10 @@ import {
   formatRupiah,
   looksLikeTransactionIntent,
 } from '@/lib/ai/coach-context'
+import { detectOutOfScope } from '@/lib/ai/coach-guard'
 import { AI_QUOTA_EXHAUSTED_COPY } from '@/lib/ai-quota'
+import { TRANSACTION_INSUFFICIENT_FUNDS_COPY } from '@/lib/data/history'
+import { getMoneySnapshot, walletFundsCheck } from '@/lib/money/store'
 import { useAiQuota } from '@/hooks/use-ai-quota'
 import { AI_CHAT_SEED_EVENT, type AIChatSeedDetail } from '@/lib/ai-chat-bus'
 
@@ -130,8 +134,16 @@ function TypingIndicator() {
 export function AIChatWidget() {
   const pathname = usePathname()
   /* nominal di bubble/panel chat ikut toggle privasi global (tombol mata di
-     header) — biar sensor layar berlaku juga untuk catatan yang baru dicatat */
-  const { money } = usePrivacy()
+     header) — biar sensor layar berlaku juga untuk catatan yang baru dicatat.
+     `money` = teks nominal yang sudah disensor; `masked` = keadaannya, dipakai
+     pemilih dompet di kartu konfirmasi (paket 81) supaya saldo di sana ikut
+     disensor, bukan cuma nominal di balon percakapan. */
+  const { money, masked } = usePrivacy()
+  /* Konteks uang aktif (Pribadi/Keluarga/Bersama) — DIOPER ke mesin capture:
+     dompet draft AI mengikuti konteks yang sedang dibuka kalau tebakan AI tidak
+     ada di daftar dompet user (paket 79). Hook-nya tidak boleh mengimpor provider
+     komponen ini (arah impor repo: komponen → hook/lib), jadi nilainya lewat sini. */
+  const { context } = useMoneyContext()
   /* masa aktif habis → "Catat ✓" di kartu konfirmasi AI tidak boleh menyimpan.
      Percakapan & pemindaian struk tetap jalan (tidak ada yang dikunci diam-diam);
      yang ditahan hanya komitmen terakhirnya. */
@@ -163,7 +175,7 @@ export function AIChatWidget() {
   /* Dua pintu masuk AI-conversational-first (prompt 20) — logikanya di hook:
      baca struk (mock OCR), dengar suara (Web Speech API), dan kartu konfirmasi
      yang wajib dilewati sebelum apa pun tersimpan. */
-  const capture = useTransactionCapture({ onUserEcho: echoToConversation })
+  const capture = useTransactionCapture({ onUserEcho: echoToConversation, context })
 
   /* Kuota AI hidup (paket 42): gauge di header membaca angka ini, dan dua pintu
      yang butuh AI (voice & scan struk) dimatikan saat kuota benar-benar habis —
@@ -175,6 +187,8 @@ export function AIChatWidget() {
   /* sementara draft menunggu keputusan user, dua pintu masuk ditutup: tidak ada
      gunanya membuka alur kedua di atas draft yang belum dijawab */
   const captureLocked = capture.phase === 'confirm' || capture.phase === 'problem'
+  /** fase "AI sedang bekerja" yang bisa dibatalkan: baca struk & rapikan tulisan */
+  const captureParsing = capture.phase === 'reading' || capture.phase === 'parsing'
   const voiceUnavailable = capture.voiceSupport === 'no'
 
   // kunci scroll background selama panel terbuka — mobile saja; di desktop
@@ -225,8 +239,8 @@ export function AIChatWidget() {
 
   /* ── 📸 scan struk: file picker native, bukan kamera palsu di dalam UI ──── */
   function handleScanClick() {
-    if (capture.phase === 'reading') {
-      capture.cancelCapture() // tombol yang sama membatalkan baca struk
+    if (captureParsing) {
+      capture.cancelCapture() // tombol yang sama membatalkan baca struk / rapikan tulisan
       return
     }
     fileRef.current?.click()
@@ -256,6 +270,24 @@ export function AIChatWidget() {
     if (inputLocked) {
       toast(SUBSCRIPTION_LOCK_COPY.inputHint)
       return
+    }
+    /* ── SALDO TIDAK BOLEH SUB-NOL (paket 74) ────────────────────────────────
+       Pre-check yang sama dengan shell manual: pengeluaran dari dompet HIDUP yang
+       melebihi saldonya ditolak SEBELUM ditulis, dengan kalimat yang benar. Kartu
+       konfirmasinya dibiarkan terbuka supaya user bisa memperbaiki nominal/dompet. */
+    const pending = capture.draft
+    if (pending && pending.type === 'expense' && pending.wallet) {
+      const funds = walletFundsCheck(
+        getMoneySnapshot(),
+        pending.wallet,
+        Number(pending.amountDigits || '0'),
+      )
+      if (funds.known && !funds.sufficient) {
+        toast.error(TRANSACTION_INSUFFICIENT_FUNDS_COPY.title, {
+          description: TRANSACTION_INSUFFICIENT_FUNDS_COPY.body(pending.wallet),
+        })
+        return
+      }
     }
     try {
       const transaction = capture.confirmCapture()
@@ -289,14 +321,26 @@ export function AIChatWidget() {
     }
   }
 
-  /* ── KIRIM PESAN (paket 65 · Tugas D) ──────────────────────────────────────
-     Kalau pesan user terdengar seperti UCAPAN TRANSAKSI ("gua habis makan 50k,
-     catet ya"), kita TIDAK memanggil model: kita tampilkan KARTU KONFIRMASI —
-     jalur yang sama dengan input suara/struk — karena AI tidak boleh mengaku
-     mencatar sebelum barisnya benar-benar ditulis. Pesan biasa tetap ke model. */
+  /* ── KIRIM PESAN (paket 65 · Tugas D, gerbangnya diperluas paket 80) ────────
+     Dua gerbang sebelum model dipanggil, urutannya PENTING:
+       1. pesan di luar konteks keuangan → ditolak hook (tanpa model);
+       2. pesan terdengar seperti UCAPAN TRANSAKSI ("gua habis makan 50k, catet
+          ya") → KARTU KONFIRMASI (jalur yang sama dengan input suara/struk),
+          karena AI tidak boleh mengaku mencatat sebelum barisnya benar-benar
+          ditulis — dan yang menulis adalah tombol "Catat ✓", bukan AI.
+     Pesan biasa (pertanyaan keuangan) tetap ke model. */
   function handleSend() {
     const text = input.trim()
     if (!text || captureLocked) return
+    /* ── PESAN DI LUAR KONTEKS: DITOLAK, tidak diubah jadi kartu transaksi ─────
+       Paket 80: pertanyaan yang bukan soal keuangan user tidak boleh berubah jadi
+       kartu konfirmasi (dulu "resep nasi goreng 30k" bisa lolos lewat kata
+       "nasi") maupun diteruskan ke model. Tolakannya dikerjakan `sendMessage()`
+       di hook — satu aturan yang sama dengan pagar di `POST /api/ai/text`. */
+    if (detectOutOfScope(text)) {
+      sendMessage()
+      return
+    }
     if (looksLikeTransactionIntent(text)) {
       appendMessage({ role: 'user', kind: 'coaching', content: text })
       setInput('')
@@ -326,9 +370,13 @@ export function AIChatWidget() {
           type="button"
           onClick={openPanel}
           aria-label={AI_CHAT_COPY.openLabel}
-          className="animate-bubble-in fixed bottom-24 right-5 z-50 flex size-14 items-center justify-center rounded-full bg-forest text-mint shadow-[0_18px_40px_-12px_rgba(69,89,78,0.45)] ring-1 ring-forest/20 transition-transform duration-150 hover:scale-105 active:scale-95 lg:bottom-8 lg:right-8"
+          /* PAKET 75: ukuran diperkecil dari `size-14` (56px) ke `size-12`
+             (48px) atas permintaan pemilik produk — bubble AI Coach tidak lagi
+             "berebut perhatian" dengan FAB "Catat" (yang kini justru dibesarkan
+             lewat warna brand). 48px tetap ≥ 44px, jadi target sentuh aman. */
+          className="animate-bubble-in fixed bottom-24 right-5 z-50 flex size-12 items-center justify-center rounded-full bg-forest text-mint shadow-[0_18px_40px_-12px_rgba(69,89,78,0.45)] ring-1 ring-forest/20 transition-transform duration-150 hover:scale-105 active:scale-95 lg:bottom-8 lg:right-8"
         >
-          <Sparkles className="size-6" strokeWidth={2} />
+          <Sparkles className="size-5" strokeWidth={2} />
           {hasInsight && (
             <span className="absolute -right-0.5 -top-0.5 flex size-3.5">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-mint opacity-80" />
@@ -444,6 +492,8 @@ export function AIChatWidget() {
                 problem={capture.problem}
                 formError={capture.formError}
                 voiceSupport={capture.voiceSupport}
+                /* saldo dompet di pemilih ikut tombol mata global (paket 81) */
+                masked={masked}
                 onDraftChange={capture.updateDraft}
                 onConfirm={handleConfirmCapture}
                 onCancel={capture.cancelCapture}
@@ -508,7 +558,7 @@ export function AIChatWidget() {
                 <button
                   type="button"
                   onClick={handleVoiceClick}
-                  disabled={isTyping || captureLocked || quotaExhausted || capture.phase === 'reading'}
+                  disabled={isTyping || captureLocked || quotaExhausted || captureParsing}
                   aria-label={
                     capture.phase === 'listening'
                       ? AI_CAPTURE_COPY.voiceStopLabel
@@ -543,17 +593,17 @@ export function AIChatWidget() {
                   onClick={handleScanClick}
                   disabled={isTyping || captureLocked || quotaExhausted}
                   aria-label={
-                    capture.phase === 'reading' ? AI_CAPTURE_COPY.cancel : AI_CAPTURE_COPY.scanLabel
+                    captureParsing ? AI_CAPTURE_COPY.cancel : AI_CAPTURE_COPY.scanLabel
                   }
                   aria-describedby={quotaExhausted ? 'ai-quota-off' : undefined}
                   className={cn(
                     'flex size-10 shrink-0 items-center justify-center rounded-full ring-1 transition-colors active:scale-95 disabled:opacity-35',
-                    capture.phase === 'reading'
+                    captureParsing
                       ? 'bg-forest text-cream ring-forest hover:bg-forest-soft'
                       : 'bg-cream text-forest/60 ring-soil/12 hover:bg-sage hover:text-forest',
                   )}
                 >
-                  {capture.phase === 'reading' ? (
+                  {captureParsing ? (
                     <X className="size-[18px]" strokeWidth={2.4} />
                   ) : (
                     <ScanLine className="size-[18px]" />
@@ -574,7 +624,7 @@ export function AIChatWidget() {
 
                 <button
                   type="submit"
-                  disabled={!input.trim() || isTyping || captureLocked}
+                  disabled={!input.trim() || isTyping || captureLocked || captureParsing}
                   aria-label={AI_CHAT_COPY.sendLabel}
                   className="flex size-10 shrink-0 items-center justify-center rounded-full bg-forest text-cream transition-all hover:bg-forest-soft active:scale-95 disabled:opacity-35 disabled:hover:bg-forest"
                 >

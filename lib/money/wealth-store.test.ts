@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
+  INITIAL_ASSET_TRANSACTIONS,
   INITIAL_DEBTS,
   INITIAL_DEBT_PAYMENTS,
   INITIAL_INVESTMENTS,
   activeDebtRemaining,
   activeReceivableTotal,
+  assetHistory,
   netWorthParts,
   totalPortfolioValue,
 } from '@/lib/data/wealth'
@@ -23,6 +25,7 @@ import {
   investmentById,
   liveDebts,
   liveInvestments,
+  liveAssetTransactions,
   mergeWealthState,
   paymentsOf,
   purgeWealthStore,
@@ -574,5 +577,51 @@ describe('hapus = tombstone + undo (paket 61)', () => {
     ).toBeNull()
     expect(getMoneySnapshot().rows).toHaveLength(rowsBefore)
     expect(cashTotal(getMoneySnapshot())).toBe(CANON_CASH)
+  })
+})
+
+/* ── LEDGER RIWAYAT ASET — DATA NYATA, BUKAN SEED (paket 84) ──────────────────
+   Halaman `/wealth` dulu mengisi "Riwayat beli/jual" dari konstanta MOCK
+   `INITIAL_ASSET_TRANSACTIONS`. Sekarang ledger itu hidup di store: barisnya
+   lahir dari transaksi yang benar-benar dicatat user, dan riwayat per aset
+   diturunkan dari daftar yang sama (`assetHistory`). */
+describe('ledger riwayat aset (bukan data seed)', () => {
+  it('addInvestment mencatat baris ledger dengan arah & tanggal yang dipilih user', () => {
+    const created = addInvestment({
+      type: 'stock',
+      name: 'Bukalapak',
+      quantity: 100,
+      price: 250,
+      scope: 'pribadi',
+      side: 'sell',
+      dateISO: '2026-09-01',
+    })
+    expect(created).not.toBeNull()
+
+    const ledger = liveAssetTransactions(getWealthSnapshot())
+    const rows = assetHistory(ledger, created!.id)
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({ side: 'sell', date: '2026-09-01', quantity: 100, price: 250 })
+  })
+
+  it('riwayat ikut hilang saat aset dihapus (tombstone), dan balik saat di-Undo', () => {
+    expect(deleteInvestment('2')).toBe(true)
+    expect(liveAssetTransactions(getWealthSnapshot()).some((tx) => tx.assetId === '2')).toBe(false)
+
+    expect(restoreInvestment('2')).not.toBeNull()
+    expect(liveAssetTransactions(getWealthSnapshot()).some((tx) => tx.assetId === '2')).toBe(true)
+  })
+
+  it('mergeWealthState membawa ledger dari state tersimpan (sekali tercatat, tetap tercatat)', () => {
+    const tx = { id: 'tx-99', assetId: '1', date: '2026-09-20', side: 'buy' as const, quantity: 1, price: 1_000 }
+    const merged = mergeWealthState({
+      version: 1,
+      investments: [INITIAL_INVESTMENTS[0]],
+      debts: [],
+      payments: [],
+      assetTransactions: [...INITIAL_ASSET_TRANSACTIONS, tx],
+      removedIds: [],
+    })
+    expect(merged.assetTransactions.some((row) => row.id === 'tx-99')).toBe(true)
   })
 })

@@ -5,19 +5,18 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { Bell } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
-import {
-  NOTIF_NUDGE_COPY,
-  NOTIF_NUDGE_HELPER,
-  NOTIF_NUDGE_KEY,
-} from '@/lib/data/bills'
+import { NOTIF_NUDGE_COPY, NOTIF_NUDGE_KEY } from '@/lib/data/bills'
 
-/* ── Nudge aktivasi notifikasi (Section 8) ───────────────────────────────────
+/* ── Nudge aktivasi notifikasi ───────────────────────────────────────────────
    Muncul HANYA saat izin notifikasi belum pernah diminta (`default`) — jadi
    banner ini tidak pernah muncul untuk user yang sudah bilang ya, dan tidak
    pernah memaksa yang sudah memblokir (mereka dapat penjelasan singkat saja).
 
    'Nanti aja' disimpan permanen di localStorage: sekali ditolak, banner ini
    tidak balik lagi di sesi/bulan berikutnya.
+
+   REDESAIN: banner dipadatkan jadi SATU baris (ikon + teks + tombol inline);
+   kalimat penjelas kedua dicabut supaya tidak memakan tinggi daftar.
 
    Izin dibaca SETELAH mount (`permission` mulai 'loading') supaya HTML server
    dan client identik — `Notification.permission` tidak ada saat SSR.
@@ -46,7 +45,7 @@ export function BillNotifNudge({ className }: { className?: string }) {
     setPermission(Notification.permission as Permission)
   }, [])
 
-  /** 'Aktifkan 🔔' — minta izin; kalau ditolak, jangan diganggu lagi */
+  /** 'Aktifkan' — minta izin; kalau ditolak, jangan diganggu lagi */
   async function activate() {
     if (typeof window === 'undefined' || !('Notification' in window)) return
     try {
@@ -69,7 +68,7 @@ export function BillNotifNudge({ className }: { className?: string }) {
     }
   }
 
-  /** 'Nanti aja' — ditolak permanen (localStorage) */
+  /** 'Nanti' — ditolak permanen (localStorage) */
   function dismiss() {
     try {
       localStorage.setItem(NOTIF_NUDGE_KEY, '1')
@@ -92,51 +91,40 @@ export function BillNotifNudge({ className }: { className?: string }) {
           exit={{ opacity: 0, y: -6 }}
           transition={{ duration: 0.28, ease: EASE }}
           className={cn(
-            'mt-5 rounded-[1.75rem] bg-hud-amber/12 p-4 ring-1 ring-inset ring-hud-amber/25 sm:p-5',
+            'flex items-center gap-3 rounded-2xl bg-hud-amber/12 px-3.5 py-2.5 ring-1 ring-inset ring-hud-amber/25',
             className,
           )}
         >
-          <div className="flex items-start gap-3">
-            <span
-              aria-hidden
-              className="flex size-9 shrink-0 items-center justify-center rounded-2xl bg-hud-amber/25 text-[16px]"
-            >
-              🔔
+          <span aria-hidden className="shrink-0 text-[15px] leading-none">
+            🔔
+          </span>
+          <p className="min-w-0 flex-1 text-[12px] font-medium leading-snug text-forest">
+            {NOTIF_NUDGE_COPY}
+          </p>
+
+          {permission === 'default' ? (
+            <>
+              <button
+                type="button"
+                onClick={activate}
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-forest px-3 py-1.5 text-[11.5px] font-medium text-mint transition-colors hover:bg-forest-soft active:scale-[0.97]"
+              >
+                <Bell className="size-3.5" strokeWidth={2.4} aria-hidden />
+                Aktifkan
+              </button>
+              <button
+                type="button"
+                onClick={dismiss}
+                className="shrink-0 text-[11.5px] font-medium text-forest/45 transition-colors hover:text-forest/75"
+              >
+                Nanti
+              </button>
+            </>
+          ) : (
+            <span className="shrink-0 text-[11px] font-medium text-forest/50">
+              Diblokir di browser
             </span>
-
-            <div className="min-w-0 flex-1">
-              <p className="text-[13px] font-medium leading-snug text-forest">
-                {NOTIF_NUDGE_COPY}
-              </p>
-              <p className="mt-0.5 text-[11px] leading-relaxed text-forest/50">
-                {NOTIF_NUDGE_HELPER}
-              </p>
-
-              {permission === 'default' ? (
-                <div className="mt-3 flex flex-wrap items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={activate}
-                    className="inline-flex items-center gap-1.5 rounded-2xl bg-forest px-3.5 py-2 text-[12.5px] font-medium text-mint transition-colors hover:bg-forest-soft active:scale-[0.97]"
-                  >
-                    <Bell className="size-3.5" strokeWidth={2.4} />
-                    Aktifkan 🔔
-                  </button>
-                  <button
-                    type="button"
-                    onClick={dismiss}
-                    className="text-[12px] font-medium text-forest/50 underline decoration-ink/20 underline-offset-4 transition-colors hover:text-forest/75"
-                  >
-                    Nanti aja
-                  </button>
-                </div>
-              ) : (
-                <p className="mt-2 text-[11.5px] leading-relaxed text-forest/50">
-                  Notifikasi diblokir di browser. Buka pengaturan browser untuk mengaktifkan.
-                </p>
-              )}
-            </div>
-          </div>
+          )}
         </motion.section>
       )}
     </AnimatePresence>

@@ -50,5 +50,23 @@ describe('normalizeExtraction', () => {
   it('nama kosong → fallback sesuai sumber', () => {
     expect(normalizeExtraction('receipt', { amount: 5000 }).name).toContain('struk')
     expect(normalizeExtraction('voice', { amount: 5000 }).name).toContain('suara')
+    /* PAKET 79: ketikan di chat punya kata jatuhnya sendiri — user yang mengetik
+       tidak boleh diberi catatan bernama "Catatan dari suara" */
+    expect(normalizeExtraction('chat', { amount: 5000 }).name).toContain('chat')
+  })
+
+  it('sumber ketikan dipertahankan apa adanya di hasil normalisasi', () => {
+    const result = normalizeExtraction('chat', {
+      name: 'Air minum',
+      amount: 5000,
+      category: 'Makanan',
+      wallet: 'Tunai',
+      type: 'expense',
+      date: '2026-10-08',
+      confidence: 0.9,
+    })
+    expect(result.source).toBe('chat')
+    expect(result.name).toBe('Air minum')
+    expect(result.lowFields).toEqual([])
   })
 })

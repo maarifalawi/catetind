@@ -302,10 +302,13 @@
   background: rgb(69 89 78 / 0.32);
 }
 
-/* kontainer gulir horizontal (deret ghost card "Tambah Dompet Cepat" di
-   halaman Dompet & Akun) — scrollbar disembunyikan supaya tepi kartu tidak
+/* kontainer gulir horizontal (chip filter, deret kartu insight, tab kekayaan) —
+   scrollbar disembunyikan supaya tepi kartu tidak
    terpotong garis; gulir tetap jalan lewat swipe jari / trackpad. Dipakai
-   bersama `snap-x snap-mandatory` sehingga kartu berhenti rapi di tepi. */
+   bersama `snap-x snap-mandatory` sehingga kartu berhenti rapi di tepi.
+   ⚠️ rail "Tambah Dompet Cepat" di /wallet TIDAK lagi memakainya (paket 77):
+   saran dompet dirender langsung sebagai grid 3 kolom + tombol lebar penuh, jadi
+   tidak ada yang perlu digulir. */
 .hide-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { BudgetSheet, ChoicePills, RupiahField, SheetSubmit, useFocusOnOpen } from './budget-sheet'
+import { BudgetSheet, ChoicePills, DateField, RupiahField, SheetSubmit, useFocusOnOpen } from './budget-sheet'
 import type { BudgetScope } from '@/lib/data/budget'
 import {
   PHYSICAL_ASSET_CATEGORY_OPTIONS,
@@ -144,17 +144,11 @@ export function AddPhysicalAssetSheet({
           placeholder="Rp 0"
         />
 
-        <label className="block">
-          <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-forest/45">
-            {PHYSICAL_TAB_COPY.form.acquiredAt}
-          </span>
-          <input
-            type="date"
-            value={acquiredAt}
-            onChange={(event) => setAcquiredAt(event.target.value)}
-            className="w-full rounded-xl bg-soil/[0.09] px-3.5 py-2.5 text-[14px] text-forest outline-none ring-1 ring-transparent focus:bg-cream focus:ring-forest/15"
-          />
-        </label>
+        <DateField
+          label={PHYSICAL_TAB_COPY.form.acquiredAt}
+          value={acquiredAt}
+          onChange={setAcquiredAt}
+        />
 
         <label className="block">
           <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-forest/45">

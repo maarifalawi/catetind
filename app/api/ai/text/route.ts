@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { aiCallerId } from '@/lib/ai/caller'
-import { aiConfigured, generateText, textModel, type ChatTurn } from '@/lib/ai/provider'
-import { COACH_SYSTEM_PROMPT } from '@/lib/ai/prompts'
+import { claimsRecordedAction, detectOutOfScope } from '@/lib/ai/coach-guard'
+import {
+  aiConfigured,
+  generateJSON,
+  generateText,
+  textModel,
+  type ChatTurn,
+} from '@/lib/ai/provider'
+import { COACH_REPLY_ENVELOPE_PROMPT, COACH_SYSTEM_PROMPT } from '@/lib/ai/prompts'
 import { allowAiCall } from '@/lib/ai/rate-limit'
 
 /* ── POST /api/ai/text — balasan AI Coach (Domain 4B) ────────────────────────
@@ -11,16 +18,38 @@ import { allowAiCall } from '@/lib/ai/rate-limit'
    dipakai widget, jadi UI tidak perlu diubah.
 
    Balasan:
-     { ok:true, reply, model, ruleBased:false }                  → 200
-     { ok:false, reason, error }                                 → 400/422/429/503
+     { ok:true, reply, model, ruleBased:false, blocked:null }       → 200
+     { ok:true, reply:'', model, ruleBased:false, blocked:'scope' } → 200 (tolakan)
+     { ok:true, reply:'', …, blocked:'claim' }                      → 200 (klaim palsu)
+     { ok:false, reason, error }                                    → 400/422/429/503
 
    `reason` dipakai UI untuk memutuskan fallback JUJUR (aturan lokal) saat provider
-   tidak bisa dihubungi — bukan untuk mengarang balasan model. */
+   tidak bisa dihubungi — bukan untuk mengarang balasan model.
+
+   DUA PAGAR SEBELUM BALASAN KELUAR (paket 80) — akar temuan uji pakai: user
+   mengetik "makn gacoan 30k", AI menjawab "sudah tercatat sebagai pengeluaranmu",
+   padahal Riwayat kosong, dan pertanyaan di luar konteks dijawab sebagai asisten
+   umum. Karena itu:
+     · `blocked:'scope'` — pertanyaan di luar keuangan pribadi user (koding,
+       politik, tugas sekolah, …). Dicek DUA kali: deterministik di sini (tanpa
+       panggilan provider) dan oleh model lewat `COACH_REPLY_ENVELOPE_PROMPT`.
+       Yang ditampilkan app adalah copy kanonnya sendiri, bukan kalimat model.
+     · `blocked:'claim'` — balasan model mengklaim sudah menulis data
+       (`claimsRecordedAction`), padahal model tidak punya kemampuan itu.
+   Balasan yang TIDAK diblokir tetap dikirim apa adanya: `blocked:null`. */
 
 export const dynamic = 'force-dynamic'
 
 /** konteks percakapan maksimum yang dikirim ke model (Domain 4B: sliding window 10) */
 const MAX_TURNS = 10
+
+/**
+ * Balasan yang TIDAK diteruskan apa adanya ke user (paket 80):
+ * `'scope'` = pertanyaan di luar konteks keuangan pribadi, `'claim'` = balasan
+ * model mengklaim sudah menulis data. UI menggantinya dengan copy kanon
+ * (`AI_OUT_OF_SCOPE_REPLY` / `AI_NO_RECORD_REPLY` di `lib/ai-chat.ts`).
+ */
+type BlockedKind = 'scope' | 'claim'
 
 interface IncomingMessage {
   role?: unknown
@@ -97,6 +126,45 @@ terkirim dan arahkan ke ringkasan di app. Jangan mengaku sudah mencatat apa pun.
     )
   }
 
+  /* ── PAGAR KONTEKS — DETERMINISTIK (paket 80) ────────────────────────────────
+     Pertanyaan yang jelas bukan soal keuangan pribadi user ditolak SEBELUM model
+     dipanggil: (a) penolakannya tidak bergantung pada suasana model, (b) kuota
+     user tidak terbakar untuk pertanyaan yang memang tidak akan dijawab.
+     Aturan yang sama dipakai widget (`detectOutOfScope` di hook chat), jadi
+     perilakunya tidak bisa berbeda antara pagar klien & pagar server. */
+  const lastUserText = turns[turns.length - 1]?.text ?? ''
+  const blocked = (kind: BlockedKind) =>
+    NextResponse.json({ ok: true, reply: '', model: textModel(), ruleBased: false, blocked: kind })
+
+  if (detectOutOfScope(lastUserText)) return blocked('scope')
+
+  /* ── BALASAN MODEL: minta envelope JSON supaya SKOP ditentukan model, tapi
+     KEPUTUSAN tetap di app (`inScope:false` ⇒ copy tolakan milik app). Kalau
+     envelope-nya tak terbaca, jaring aman di bawah memakai bentuk lama (teks
+     bebas) supaya chat tidak pernah mati karena perubahan format. */
+  const envelope = await generateJSON<{ inScope?: unknown; reply?: unknown }>({
+    system: `${system}\n\n${COACH_REPLY_ENVELOPE_PROMPT}`,
+    turns,
+    maxOutputTokens: 900,
+    temperature: 0.7,
+  })
+
+  if (envelope.ok) {
+    if (envelope.value.inScope === false) return blocked('scope')
+    const reply = typeof envelope.value.reply === 'string' ? envelope.value.reply.trim() : ''
+    if (reply) {
+      if (claimsRecordedAction(reply)) return blocked('claim')
+      return NextResponse.json({
+        ok: true,
+        reply,
+        model: textModel(),
+        ruleBased: false,
+        blocked: null,
+      })
+    }
+    /* reply kosong tanpa alasan skop: bukan keadaan yang sah → jatuh ke jalur teks */
+  }
+
   const result = await generateText({ system, turns, maxOutputTokens: 700 })
   if (!result.ok) {
     return NextResponse.json(
@@ -105,5 +173,15 @@ terkirim dan arahkan ke ringkasan di app. Jangan mengaku sudah mencatat apa pun.
     )
   }
 
-  return NextResponse.json({ ok: true, reply: result.value, model: textModel(), ruleBased: false })
+  /* pagar klaim juga berlaku di jalur jaring aman: model tidak pernah boleh
+     mengaku sudah mencatat, apa pun bentuk balasannya */
+  if (claimsRecordedAction(result.value)) return blocked('claim')
+
+  return NextResponse.json({
+    ok: true,
+    reply: result.value,
+    model: textModel(),
+    ruleBased: false,
+    blocked: null,
+  })
 }

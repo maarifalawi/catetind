@@ -50,6 +50,103 @@ export interface JointRealtimeHandle {
  */
 export type JointTransactionPayload = JointTransactionDbRow
 
+/* ── REALTIME KELUARGA KEKAYAAN & ASET FISIK (paket 84) ──────────────────────
+   Sebelum ini hanya `joint_transactions` yang punya langganan nyata: halaman
+   `/wealth` baru melihat perubahan dari perangkat/tab LAIN saat di-refresh.
+   Sekarang tabel kekayaan (investments, debts, debt_payments,
+   asset_transactions) dan `physical_assets` ikut berlangganan Postgres Changes.
+
+   Yang dikirim ke pemanggil BUKAN barisnya, tapi sinyal "ada yang berubah":
+   tiap sinyal hanya memicu BACA ULANG server (`readRemoteWealth()` /
+   `readRemotePhysicalAssets()`) lalu digabung lewat jalur yang SAMA dengan
+   hidrasi. Jadi tidak ada pemetaan baris per baris yang bisa berbeda dari jalur
+   REST — dan RLS tetap yang menentukan baris mana yang sampai ke klien.
+
+   Dua hal kecil yang sama dengan channel joint: channel dibuang saat tab
+   disembunyikan, dan `stop()` aman dipanggil berkali-kali. */
+
+export interface WealthRealtimeHandle {
+  /** hentikan langganan (idempoten) */
+  stop: () => void
+  /** true = channel benar-benar tersambung ke Supabase */
+  live: boolean
+}
+
+/** tabel kekayaan yang perubahannya menarik `/wealth` untuk membaca ulang */
+const WEALTH_TABLES = ['investments', 'debts', 'debt_payments', 'asset_transactions'] as const
+
+function subscribeTables(
+  name: string,
+  tables: readonly string[],
+  onChange: () => void,
+): WealthRealtimeHandle | null {
+  const client = browserSupabase()
+  if (!client) return null
+
+  let channel: RealtimeChannel | null = null
+  let stopped = false
+  let timer: ReturnType<typeof setTimeout> | null = null
+
+  /* debounce 250 ms — satu tindakan user bisa menulis beberapa baris (mis.
+     pelunasan = 1 debt + 1 payment + 1 baris kas), dan kita tidak perlu
+     membaca ulang server tiga kali */
+  const fire = () => {
+    if (timer) clearTimeout(timer)
+    timer = setTimeout(() => {
+      timer = null
+      onChange()
+    }, 250)
+  }
+
+  const open = () => {
+    if (stopped || channel) return
+    let next = client.channel(name)
+    for (const table of tables) {
+      next = next.on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: table as never },
+        fire,
+      )
+    }
+    channel = next.subscribe()
+  }
+
+  const close = () => {
+    if (!channel) return
+    const current = channel
+    channel = null
+    void client.removeChannel(current)
+  }
+
+  const onVisibility = () => {
+    if (document.visibilityState === 'hidden') close()
+    else open()
+  }
+
+  open()
+  document.addEventListener('visibilitychange', onVisibility)
+
+  return {
+    live: true,
+    stop: () => {
+      stopped = true
+      if (timer) clearTimeout(timer)
+      document.removeEventListener('visibilitychange', onVisibility)
+      close()
+    },
+  }
+}
+
+/** langganan perubahan kekayaan — `onChange` dipanggil (debounced) saat ada baris baru */
+export function subscribeWealthChanges(onChange: () => void): WealthRealtimeHandle | null {
+  return subscribeTables('wealth-changes', WEALTH_TABLES, onChange)
+}
+
+/** langganan perubahan aset fisik/properti */
+export function subscribePhysicalChanges(onChange: () => void): WealthRealtimeHandle | null {
+  return subscribeTables('physical-changes', ['physical_assets'], onChange)
+}
+
 export function subscribeJointTransactions(
   jointWalletId: string,
   onInsert: (row: JointTransactionPayload) => void,

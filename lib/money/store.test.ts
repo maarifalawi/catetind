@@ -3,6 +3,8 @@ import {
   addWalletAccount,
   applyRowOverride,
   cancelTransferRow,
+  captureWalletChoice,
+  captureWalletOptionsFor,
   cashTotal,
   cashTotalByContext,
   defaultWalletNameFor,
@@ -37,6 +39,7 @@ import {
   walletAccounts,
   walletAccountOf,
   walletBalance,
+  walletIdOfName,
   walletNameOfId,
   walletOptionsFor,
   walletTransactionsOf,
@@ -1501,6 +1504,155 @@ describe('konteks tanpa dompet tidak memotong dompet lain (59.4)', () => {
     expect(walletBalance(snapshot, chosen.id)).toBe(100_000 - 25_000)
     expect(walletBalance(snapshot, 'tunai')).toBe(50_000)
     expect(walletBalance(snapshot, 'bca')).toBe(1_450_000)
+  })
+})
+
+/* ── DOMPET KARTU KONFIRMASI AI (paket 79) ────────────────────────────────────
+   Akar temuan "Belum berkonteks": kartu AI menulis nama dompet dari daftar
+   statis (`TRANSACTION_WALLET_OPTIONS`: BCA/GoPay/OVO/Tunai). Nama yang tidak ada
+   di ledger user ⇒ `walletId: ''` ⇒ baris tampil di SEMUA konteks dengan badge
+   "Belum berkonteks" dan tidak memotong saldo mana pun.
+
+   Yang dikunci di sini: kartu SELALU memilih dompet yang benar-benar dimiliki
+   user, dan penggantian tebakan disebutkan (`unknownGuess`) — bukan disembunyikan. */
+describe('captureWalletChoice — dompet kartu konfirmasi AI', () => {
+  it('tebakan AI yang MEMANG dompet user dipakai apa adanya', () => {
+    const choice = captureWalletChoice(getMoneySnapshot(), 'pribadi', 'GoPay')
+
+    expect(choice.value).toBe('GoPay')
+    expect(choice.unknownGuess).toBe('')
+    /* pilihan = dompet hidup, konteks aktif lebih dulu, lalu konteks lain
+       (pindah konteks tetap sah — sama seperti sheet Pindah Dana) */
+    expect(choice.options).toEqual(['BCA', 'GoPay', 'Tunai'])
+    /* dompet DISEBUT user ⇒ bukan default yang diisi app (paket 81) */
+    expect(choice.fromContext).toBe(false)
+  })
+
+  it('tanpa menyebut dompet → dompet konteks aktif, dan itu diakui (`fromContext`)', () => {
+    const pribadi = captureWalletChoice(getMoneySnapshot(), 'pribadi', '')
+    expect(pribadi.value).toBe('BCA')
+    expect(pribadi.fromContext).toBe(true)
+
+    /* konteks Keluarga punya dompet tunggalnya sendiri */
+    expect(captureWalletChoice(getMoneySnapshot(), 'keluarga', '').value).toBe('Tunai')
+
+    /* konteks yang belum punya dompet: tidak ada yang diisi, jadi tidak ada
+       yang diklaim — dan dompet konteks lain SENGAJA tidak ditambalkan (59.4) */
+    const bersama = captureWalletChoice(getMoneySnapshot(), 'bersama', '')
+    expect(bersama.value).toBe('')
+    expect(bersama.fromContext).toBe(false)
+  })
+
+  it('tebakan tidak cocok huruf besar/kecil tetap dikenali', () => {
+    const choice = captureWalletChoice(getMoneySnapshot(), 'pribadi', 'gopay')
+
+    expect(choice.value).toBe('GoPay')
+    expect(choice.unknownGuess).toBe('')
+  })
+
+  it('tebakan "OVO" yang tidak dimiliki user → dompet konteks aktif + disebut apa adanya', () => {
+    const choice = captureWalletChoice(getMoneySnapshot(), 'pribadi', 'OVO')
+
+    expect(choice.value).toBe('BCA')
+    expect(choice.unknownGuess).toBe('OVO')
+    expect(choice.options).not.toContain('OVO')
+    /* tebakan tidak menemukan dompet user ⇒ dompetnya diisi dari konteks aktif,
+       jadi kartu berhak mengatakannya (paket 81) */
+    expect(choice.fromContext).toBe(true)
+
+    /* di konteks Keluarga, jawabannya ikut konteks: dompet tunggalnya = Tunai */
+    const keluarga = captureWalletChoice(getMoneySnapshot(), 'keluarga', 'OVO')
+    expect(keluarga.value).toBe('Tunai')
+    expect(keluarga.unknownGuess).toBe('OVO')
+  })
+
+  it('konteks yang belum punya dompet kanon tetap memakai dompet user yang ADA', () => {
+    const created = addWalletAccount({
+      name: 'Kas Bersama',
+      type: 'Cash',
+      opening: 100_000,
+      context: 'bersama',
+    })
+    const choice = captureWalletChoice(getMoneySnapshot(), 'bersama', 'OVO')
+
+    /* konsekuensinya terbaca di Riwayat: barisnya berkonteks, bukan "Belum berkonteks" */
+    expect(choice.value).toBe(created.name)
+    expect(choice.unknownGuess).toBe('OVO')
+    expect(walletIdOfName(getMoneySnapshot(), choice.value)).toBe(created.id)
+  })
+
+  it('user tanpa dompet sama sekali → tidak ada pilihan yang bisa dikarang', () => {
+    purgeMoneyStore()
+    const choice = captureWalletChoice(getMoneySnapshot(), 'pribadi', 'OVO')
+
+    expect(choice.options).toEqual([])
+    expect(choice.value).toBe('')
+    /* tebakan tetap dilaporkan supaya kartu bisa menjelaskan, bukan diam */
+    expect(choice.unknownGuess).toBe('OVO')
+  })
+})
+
+/* ── PILIHAN DOMPET: SATU NAMA = SATU BARIS, KUNCI UNIK (paket 81) ────────────
+   Galat React "Encountered two children with the same key, `OVO`" di kartu
+   konfirmasi AI bukan soal tampilan: user MEMANG boleh punya dua dompet bernama
+   sama (`addWalletAccount()` tidak melarangnya), sementara daftar pilihannya dulu
+   berisi NAMA dompet — dan nama itu dipakai sebagai React key.
+
+   Yang dikunci di sini:
+     1. daftar pilihan dompet menggabungkan nama kembar jadi SATU baris, yang
+        PERTAMA menang — persis dompet yang menerima catatannya
+        (`walletIdOfName()` juga memilih yang pertama);
+     2. pilihan untuk pemilih kustom (`captureWalletOptionsFor`) punya `id` unik
+        sebagai kunci React, urut konteks aktif lebih dulu, dan urutannya SAMA
+        dengan daftar nama yang dipakai keputusan default `captureWalletChoice()`. */
+describe('pilihan dompet unik & urut konteks (paket 81)', () => {
+  it('dua dompet bernama sama → satu baris, yang pertama menang, id tetap unik', () => {
+    const first = addWalletAccount({ name: 'OVO', type: 'E-Wallet', opening: 25_000 })
+    const second = addWalletAccount({ name: 'ovo', type: 'E-Wallet', opening: 75_000 })
+    expect(second.id).not.toBe(first.id)
+
+    const options = walletOptionsFor(getMoneySnapshot())
+    const labels = options.map((option) => option.label.trim().toLowerCase())
+    expect(new Set(labels).size).toBe(labels.length)
+
+    const ovo = options.find((option) => option.label.trim().toLowerCase() === 'ovo')
+    expect(ovo?.id).toBe(first.id)
+    /* saldo yang dibaca = saldo dompet yang benar-benar akan bergerak, bukan
+       dompet kembar yang barisnya tak akan pernah mendarat di sana */
+    expect(ovo?.balance).toBe(25_000)
+  })
+
+  it('kartu AI: baris dompet konteks aktif lebih dulu, id unik, saldo ikut', () => {
+    const bersama = addWalletAccount({
+      name: 'Kas Bersama',
+      type: 'Cash',
+      opening: 100_000,
+      context: 'bersama',
+    })
+
+    const options = captureWalletOptionsFor(getMoneySnapshot(), 'bersama')
+    expect(options.map((option) => option.label)).toEqual(['Kas Bersama', 'BCA', 'GoPay', 'Tunai'])
+    expect(new Set(options.map((option) => option.id)).size).toBe(options.length)
+    expect(options[0]).toMatchObject({ id: bersama.id, balance: 100_000 })
+
+    /* satu bahasa dengan keputusan default kartu: urutan nama di
+       `captureWalletChoice()` = urutan opsi di sini */
+    expect(captureWalletChoice(getMoneySnapshot(), 'bersama', '').options).toEqual(
+      options.map((option) => option.label),
+    )
+  })
+
+  it('dompet kembar dari konteks lain juga tidak melahirkan baris kedua', () => {
+    const first = addWalletAccount({ name: 'OVO', type: 'E-Wallet', opening: 25_000 })
+    addWalletAccount({ name: 'OVO', type: 'E-Wallet', opening: 75_000, context: 'keluarga' })
+
+    const options = captureWalletOptionsFor(getMoneySnapshot(), 'pribadi')
+    expect(options.map((option) => option.label)).toEqual(['BCA', 'GoPay', 'OVO', 'Tunai'])
+    expect(new Set(options.map((option) => option.id)).size).toBe(options.length)
+    expect(options.find((option) => option.label === 'OVO')).toMatchObject({
+      id: first.id,
+      balance: 25_000,
+    })
   })
 })
 

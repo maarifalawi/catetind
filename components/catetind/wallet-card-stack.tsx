@@ -20,15 +20,16 @@ import {
   Wifi,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { LogoWordmark } from './logo-wordmark'
 import { usePrivacy } from './privacy-provider'
 import { useMoneyContext } from './money-context-provider'
 import { AddWalletSheet } from './add-wallet-sheet'
 import { cn } from '@/lib/utils'
-import { AMOUNT_LABEL, AMOUNT_XL } from '@/lib/typography'
+import { AMOUNT_XL } from '@/lib/typography'
 import { addWalletAccount, cashTotal, homeWallets, useMoneyStore } from '@/lib/money/store'
 import { ADD_WALLET_SHEET_COPY } from '@/lib/data/add-wallet'
 import { type DeckSelection, type Wallet, type WalletArt, type WalletDraft } from '@/lib/wallets'
+import { applyWalletDeckTheme } from '@/lib/data/wallet-themes'
+import { setWalletTheme, useWalletThemePrefs } from '@/hooks/use-wallet-theme'
 
 const TAP_THRESHOLD = 10 // px — gerakan di bawah ini dianggap tap, bukan drag
 const DRAG_START = 14 // px — gerakan horizontal yang mengubah tekanan jadi swipe
@@ -134,14 +135,25 @@ const integrate = (
 /** muka kartu: gradient vivid + aksen seni per dompet; kartu agregat tetap hijau brand */
 const faceOf = (
   entry: DeckEntry,
+  /**
+   * Tema kartu kustom yang dipilih user untuk dompet ini (paket 77). `null` =
+   * kartu memakai resep bawaan (`faceClass`/`bandClass`/`glowClass`) persis
+   * seperti sebelumnya. Dilewatkan sebagai ARGUMEN (bukan dibaca di dalam) karena
+   * fungsi ini hidup di luar komponen sementara deck merender banyak kartu dalam
+   * satu loop — hook tidak boleh dipanggil di sini.
+   */
+  themeId: string | null = null,
 ): { face: string; swatch: string; glow: string; art: WalletArt } =>
   entry.type === 'wallet'
-    ? {
-        face: entry.wallet.faceClass,
-        swatch: entry.wallet.bandClass,
-        glow: entry.wallet.glowClass ?? 'bg-cream/20',
-        art: entry.wallet.art,
-      }
+    ? (() => {
+        const themed = applyWalletDeckTheme(entry.wallet, themeId)
+        return {
+          face: themed.faceClass,
+          swatch: themed.bandClass,
+          glow: themed.glowClass ?? 'bg-cream/20',
+          art: themed.art,
+        }
+      })()
     : {
         face: 'from-[#45594e] via-forest to-[#161c19]',
         swatch: 'from-mint to-mint-soft',
@@ -221,7 +233,11 @@ export const WalletCardStack = memo(function WalletCardStack({
    * semuanya membaca angka ini.
    */
   const totalBalance = useMemo(() => cashTotal(snapshot), [snapshot])
-
+  /* TEMA KARTU (paket 77): peta `walletId → themeId` dari perangkat, dibaca DI
+     SINI (bukan di `faceOf`) karena deck merender banyak kartu dalam satu loop —
+     satu pembacaan untuk seluruh deck, lalu dioper sebagai argumen per kartu.
+     Dompet tanpa tema tidak berubah sedikit pun (kartu bawaan apa adanya). */
+  const themePrefs = useWalletThemePrefs()
   // mirror state ke ref supaya rAF loop & pointer handler selalu baca nilai terbaru
   const orderRef = useRef(order)
   orderRef.current = order
@@ -364,6 +380,10 @@ export const WalletCardStack = memo(function WalletCardStack({
         /* konteks yang sedang aktif — dompet baru langsung muncul di daftar ini */
         context,
       })
+      /* tema kartu yang dipilih di sheet disimpan setelah store memberi id
+         (paket 77) — sama seperti jalur di /wallet, ia preferensi TAMPILAN, bukan
+         bagian dari uang/ledger */
+      setWalletTheme(account.id, draft.themeId ?? null)
       setAddOpen(false) // tutup seketika; animasi keluar jalan di background
       goAfterAdd.current = account.id
       // kartu baru di-"deal" masuk dari bawah deck — engine harus hidup untuk itu
@@ -709,25 +729,18 @@ export const WalletCardStack = memo(function WalletCardStack({
     badge,
     name,
     sub,
-    label,
     amount,
-    holder,
-    account,
   }: {
     entry: DeckEntry
     badge: ReactNode
     name: string
     sub: string
-    label: string
+    /** nominal saldo (Rp) — satu-satunya angka di kartu */
     amount: number
-    /** nama pemegang rekening — baris metadata bawah kartu */
-    holder: string
-    /** nomor rekening / keterangan akun — baris metadata bawah kartu */
-    account: string
   }) => {
-    const face = faceOf(entry)
+    const face = faceOf(entry, entry.type === 'wallet' ? themePrefs[entry.wallet.id] ?? null : null)
     return (
-      <div className="relative h-full overflow-hidden rounded-[1.75rem] bg-forest text-cream shadow-[0_2px_4px_rgba(0,0,0,0.2),0_16px_32px_-12px_rgba(0,0,0,0.45),0_40px_72px_-24px_rgba(0,0,0,0.5)] ring-1 ring-cream/10">
+      <div className="relative h-full overflow-hidden rounded-[1.75rem] border border-cream/10 bg-forest text-cream shadow-sm">
         {/* dasar gradient vivid khas dompet */}
         <div aria-hidden className={cn('absolute inset-0 bg-gradient-to-br', face.face)} />
         {/* aksen seni per dompet: motif batik/geometris terpusat di kanan atas,
@@ -758,7 +771,16 @@ export const WalletCardStack = memo(function WalletCardStack({
           className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-cream/40 to-transparent"
         />
 
-        <div className="relative flex h-full flex-col p-5 pb-6">
+        {/* TIGA blok isi — identitas (kiri atas) → NOMINAL (tengah) → baris bawah
+            (chip EMV di kiri + brand mark di kanan) — DISEBAR rata vertikal
+            dengan `justify-between`.
+            Sebelumnya nominal di-`mt-auto` ke tepi bawah kartu, jadi ia jatuh
+            persis di atas bibir kantong (`LIP_OVERLAP` = 18px) sementara paruh
+            tengah kartu kosong: komposisinya berat ke bawah dan angkanya terlihat
+            "terjatuh" (keluhan: "nominalnya jangan di bawah gitu"). Dengan sebar
+            rata, angka saldo punya barisnya sendiri di tengah kartu dan tidak ada
+            lagi satu paruh yang menganggur. */}
+        <div className="relative flex h-full flex-col justify-between p-5 pb-7">
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
               <span
@@ -777,8 +799,30 @@ export const WalletCardStack = memo(function WalletCardStack({
             {badge}
           </div>
 
-          {/* chip EMV + ikon contactless */}
-          <div className="mt-4 flex items-center gap-3">
+          {/* NOMINAL — baris sendiri di TENGAH kartu (hasil sebar rata induk),
+              bukan lagi ditempel ke tepi bawah. Satu-satunya angka di kartu;
+              `leading-none` + token bersama `AMOUNT_XL` supaya tinggi barisnya
+              sama di semua kartu deck ini.
+
+              Label mikro "SALDO <nama dompet>" / "TOTAL SALDO" TETAP TIDAK
+              dipakai (paket 77): nama dompet sudah tercetak di kepala kartu
+              beberapa piksel di atasnya, jadi label itu cuma mengulang hal yang
+              sama di SETIAP kartu. Angka tetap memakai DESIGN TOKEN bersama
+              (`lib/typography.ts`) supaya tidak "beda rasa" dengan halaman
+              Dompet & Akun. */}
+          <p className={cn(AMOUNT_XL, 'leading-none')}>{money(amount)}</p>
+
+          {/* BARIS BAWAH kartu — kiri: chip EMV + ikon contactless (detil benda
+              fisik kartu); kanan: brand mark CatetInd (wordmark `cətet`, EMAS).
+
+              Mark-nya SENGAJA duduk di baris ini, bukan di pojok kanan-bawah
+              kartu: `pb-7` di induk = 28px sedangkan bibir kantong menutupi
+              LIP_OVERLAP = 18px, jadi apa pun yang dipasang LEBIH RENDAH dari
+              baris ini pasti tertelan bibir (itulah sebabnya mark-nya tidak
+              "terlalu bawah"). `items-center` + `ml-auto` menaruh tingginya
+              sejajar dengan chip: cukup di kuadran kanan bawah untuk terbaca
+              sebagai brand, tapi tidak jatuh ke tepi kartu. */}
+          <div className="flex items-center gap-3">
             <span
               aria-hidden
               className="relative h-7 w-9 shrink-0 overflow-hidden rounded-md bg-gradient-to-br from-[#ecd768] via-[#ecd768] to-[#6a612f] shadow-[inset_0_1px_2px_rgba(255,255,255,0.45),0_2px_6px_rgba(0,0,0,0.3)]"
@@ -788,35 +832,28 @@ export const WalletCardStack = memo(function WalletCardStack({
               <span className="absolute left-1/2 top-1/2 h-3 w-4 -translate-x-1/2 -translate-y-1/2 rounded-[4px] border border-soil/25" />
             </span>
             <Wifi className="size-4 rotate-90 text-cream/50" strokeWidth={2.25} aria-hidden />
+
+            {/* BRAND MARK CatetInd — wordmark `cətet` EMAS di ujung KANAN baris
+                bawah SETIAP muka kartu: kartu agregat "Semua Dompet" maupun
+                tiap dompet (BCA, GoPay, …). Dulu hanya kartu agregat yang
+                punya; yang di kartu dompet masih lambang jaringan bank di
+                kanan ATAS, jadi satu kartu tetap satu logo di kanan bawah
+                (keputusan pemilik produk: "semuanya").
+
+                Warnanya = token `daisy` (`#ecd768`) yang sama dengan chip EMV
+                persis di sebelah kirinya — aset logo tidak punya versi emas
+                (hijau/hitam), jadi bentuknya diambil dari ALPHA
+                `public/Dashboard.png` lewat `mask-image` + `bg-daisy`: warnanya
+                persis token, bukan hasil kira-kira filter. Ukuran tetap sama
+                seperti sebelumnya (`h-2.5` = 10px, rasio aset 890×245 → lebar
+                ±36px), hanya warna & cakupan kartunya yang berubah. */}
+            <span
+              role="img"
+              aria-label="CatetInd"
+              className="ml-auto block h-2.5 aspect-[890/245] bg-daisy opacity-90 [mask-image:url(/Dashboard.png)] [mask-position:center] [mask-repeat:no-repeat] [mask-size:contain]"
+            />
           </div>
 
-          <div className="mt-4">
-            {/* label & nominal memakai DESIGN TOKEN yang sama dengan halaman
-                Dompet & Akun (lib/typography.ts) — bukan kelas lokal per file,
-                supaya angka saldo tidak pernah "beda rasa" antar halaman */}
-            <p className={cn(AMOUNT_LABEL, 'text-cream/55')}>{label}</p>
-            <p className={cn('mt-1', AMOUNT_XL)}>{money(amount)}</p>
-          </div>
-
-          {/* baris metadata kartu (pengganti tombol Pemasukan/Pengeluaran):
-              muka kartu fisik memang begini — pemegang di kiri, nomor di kanan.
-              Fungsinya display, bukan CTA, jadi tidak menambah cognitive load. */}
-          <div className="mt-auto flex items-end justify-between gap-3 pt-4">
-            <div className="min-w-0">
-              <p className="text-[9px] font-medium uppercase tracking-[0.16em] text-cream/45">
-                Pemegang
-              </p>
-              <p className="truncate text-[13px] font-medium text-cream/90">{holder}</p>
-            </div>
-            <div className="min-w-0 text-right">
-              <p className="text-[9px] font-medium uppercase tracking-[0.16em] text-cream/45">
-                Akun
-              </p>
-              <p className="truncate text-[13px] font-medium tracking-[0.1em] text-cream/90 tabular-nums">
-                {account}
-              </p>
-            </div>
-          </div>
         </div>
       </div>
     )
@@ -1007,23 +1044,22 @@ export const WalletCardStack = memo(function WalletCardStack({
                 : entry.type === 'all'
                   ? cardFace({
                       entry,
-                      badge: <LogoWordmark tone="light" className="h-2.5 opacity-70" />,
+                      /* kanan ATAS kartu agregat sengaja KOSONG: ia bukan
+                         rekening bank mana pun, jadi tidak ada badge jaringan di
+                         situ. Brand mark-nya ada di kanan BAWAH — dan itu sudah
+                         dipasang `cardFace` sendiri untuk SEMUA muka kartu,
+                         jadi tidak lagi dikirim dari sini */
+                      badge: null,
                       name: 'Semua Dompet',
                       sub: `Jon Snow · ${wallets.length} dompet aktif`,
-                      label: 'Total Saldo',
                       amount: totalBalance,
-                      holder: 'Jon Snow',
-                      account: `${wallets.length} dompet`,
                     })
                   : cardFace({
                       entry,
                       badge: networkBadge(entry.wallet.network),
                       name: entry.wallet.name,
                       sub: `${entry.wallet.holder} · ${entry.wallet.number}`,
-                      label: `Saldo ${entry.wallet.name}`,
                       amount: entry.wallet.balance,
-                      holder: entry.wallet.holder,
-                      account: entry.wallet.number,
                     })}
             </div>
           )

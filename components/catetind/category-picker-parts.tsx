@@ -8,6 +8,7 @@ import {
   type FlatCategory,
   type SubCategory,
 } from '@/lib/data/categories'
+import { PICKER_OPTION_ACTIVE } from './picker-sheet'
 
 /* --- KULIT pemilih kategori (paket 69) -------------------------------------
    Dipisah dari `category-picker.tsx` supaya file utamanya tetap satu tanggung
@@ -30,7 +31,12 @@ export const CATEGORY_TONE: Record<CategoryTone, { card: string; chip: string; d
   forest: { card: 'bg-forest/12 ring-forest/25', chip: 'bg-forest/12', dot: 'bg-forest' },
 }
 
-/** kartu Quick Pick (Layer 1) - emoji besar + nama, tinggi seragam untuk grid 3x2 */
+/** kartu Quick Pick (Layer 1) - emoji besar + nama, tinggi seragam untuk grid 3x2.
+ *  Status terpilih memakai bahasa bersama `PICKER_OPTION_ACTIVE` (paket 78):
+ *  isian mint lembut + garis tipis leaf, BUKAN `ring-2 ring-forest` yang dulu
+ *  membuat satu kartu terlihat "dibingkai tebal" di tengah grid. Warnanya
+ *  menggantikan tone keluarga kartu itu hanya saat terpilih — supaya "terpilih"
+ *  terbaca sama di SEMUA pemilih (dompet & kategori). */
 export function QuickCard({
   item,
   active,
@@ -48,8 +54,10 @@ export function QuickCard({
       aria-pressed={active}
       className={cn(
         'flex h-[84px] flex-col items-center justify-center gap-1.5 rounded-2xl px-2 text-center ring-1 transition-transform active:scale-[0.97]',
-        CATEGORY_TONE[item.tone].card,
-        active && 'ring-2 ring-forest',
+        /* dua cabang yang SALING MENIADAKAN (masing-masing membawa `ring-1`-nya):
+           kelas bg/ring yang bertabrakan diselesaikan urutan CSS Tailwind, bukan
+           urutan atribut `class` — lihat catatan di picker-sheet.tsx */
+        active ? PICKER_OPTION_ACTIVE : CATEGORY_TONE[item.tone].card,
       )}
     >
       <span aria-hidden className="text-xl leading-none">

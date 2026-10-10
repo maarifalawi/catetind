@@ -21,27 +21,22 @@ export const WALLET_TODAY_ISO = '2026-09-27'
 
 export const ADD_WALLET_SHEET_COPY = {
   title: 'Tambah Dompet',
-  description: 'Dompet baru langsung ikut kehitung di Total Saldo.',
-  previewLabel: 'Kartunya bakal kelihatan seperti ini',
   /** nama kartu saat field nama masih kosong (preview tidak boleh kosong) */
   previewFallbackName: 'Dompet Baru',
   kindLabel: 'Jenis akun',
   /** pemilih brand = "pilih logo bank dari daftar" (inventaris #o) */
   brandLabel: 'Pilih bank atau e-wallet',
-  brandHint: 'Ketuk salah satu — namanya langsung terisi, masih bisa diubah.',
   brandNone: 'Lainnya',
   nameLabel: 'Nama akun',
   namePlaceholder: 'Contoh: BCA Tabungan, GoPay, Dompet Tunai',
-  /** bantuan kontekstual DI DALAM form, bukan link keluar ke Help Center
-   *  (PRD 194–200) — keraguan paling umum saat menambah dompet kedua */
-  duplicateHint: 'Boleh buat lebih dari satu akun dari platform yang sama, kok.',
   numberLabel: '4 angka terakhir',
   numberPlaceholder: '0849',
   numberHint: 'Cuma buat pajangan di kartunya — nomor aslinya nggak perlu diketik.',
   balanceLabel: 'Saldo sekarang',
   balanceHint: 'Boleh dikosongin. Nanti bisa dirapikan lewat “Sesuaikan Saldo”.',
-  /** label saldo di kartu pratinjau (kata yang sama dengan muka kartu /wallet) */
-  previewBalanceLabel: 'Saldo',
+  /* `previewBalanceLabel: 'Saldo'` DIHAPUS di paket 77: label mikro "Saldo" di
+     pratinjau (dan di semua muka kartu) dibuang karena mengulang hal yang sudah
+     jelas — lihat catatan panjangnya di `wallet-card-face.tsx` / `wallet-screen.tsx`. */
   submit: 'Simpan Dompet 🌿',
   toastTitle: 'Dompet baru siap 🌿',
   toastDescription: (name: string) => `${name} langsung ikut kehitung di Total Saldo.`,
@@ -197,8 +192,6 @@ export interface WalletTransferRecord {
 
 export const WALLET_TRANSFER_LOG_COPY = {
   title: 'Pindah Dana Terakhir',
-  /** jujur menyebut bentuk catatannya supaya tidak terasa "hilang" dari Riwayat */
-  hint: 'Tercatat sebagai pindah dana (⇄) — bentuk catatan yang sama dengan baris di Riwayat.',
   count: (total: number) => `${total} catatan`,
   /** penanda teks di baris catatan — sama seperti di halaman Riwayat */
   movementChip: 'pindah dana',

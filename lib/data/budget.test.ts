@@ -1,17 +1,25 @@
 import { describe, expect, it } from 'vitest'
 import {
+  BUDGET_PAGE_COPY,
   DAILY_HUD,
+  HUD_METER_SEGMENTS,
   INITIAL_SINKING_FUNDS,
+  PACING_STATUS_LABEL,
   applyBudgetSave,
   computeDailyHud,
   earnedInWindow,
   hasIncomeInWindow,
+  hudMeter,
+  hudStatusFor,
+  pacingOf,
+  pacingStatusLabel,
   periodIncome,
   periodUsagePct,
   periodWindow,
   periodWindowForTab,
   removeBudget,
   restoreBudget,
+  scopeCaptionFor,
   sinkingObligationOf,
   spentInWindow,
   spentOn,
@@ -421,6 +429,107 @@ describe('periodUsagePct · pemakaian kolam periode (audit Daily Budget)', () =>
   it('kolam 0 / shortfall = 0 (tidak ada yang bisa di-pace)', () => {
     expect(periodUsagePct(0, 500_000)).toBe(0)
     expect(periodUsagePct(-1, 500_000)).toBe(0)
+  })
+})
+
+/* ── METER JATAH HARIAN (paket 76) ───────────────────────────────────────────
+   Bar SEGMEN h-2 kartu "Jatah Hari Ini" (Dashboard `daily-hud-card` & /budget
+   `daily-hud-summary`) digambar dari SATU fungsi murni. Test ini mengunci dua
+   hal: (1) tiga status warna kanon PRD 2B.2 pada ambang yang benar, (2) jumlah
+   segmen selalu jujur — 0 hanya saat benar-benar belum ada pemakaian, dan
+   minimal 1 begitu ada (visual yang bohong = angka yang bohong). */
+describe('hudStatusFor · ambang tiga status kanon (paket 76)', () => {
+  it('di bawah 75% = onTrack, 75–99% = approaching, ≥100% = over', () => {
+    expect(hudStatusFor(0)).toBe('onTrack')
+    expect(hudStatusFor(0.749)).toBe('onTrack')
+    expect(hudStatusFor(0.75)).toBe('approaching')
+    expect(hudStatusFor(0.999)).toBe('approaching')
+    expect(hudStatusFor(1)).toBe('over')
+    expect(hudStatusFor(1.4)).toBe('over')
+  })
+})
+
+describe('hudMeter · jumlah segmen jujur (paket 76)', () => {
+  it('belum ada pemakaian → 0 dari segmen kanon', () => {
+    const model = hudMeter(0)
+    expect(model.filled).toBe(0)
+    expect(model.total).toBe(HUD_METER_SEGMENTS)
+    expect(model.status).toBe('onTrack')
+  })
+
+  it('pemakaian sekecil apa pun tetap 1 segmen (visual tak boleh bohong)', () => {
+    expect(hudMeter(0.01).filled).toBe(1)
+  })
+
+  it('separuh jatah → separuh segmen', () => {
+    expect(hudMeter(0.5).filled).toBe(Math.round(0.5 * HUD_METER_SEGMENTS))
+  })
+
+  it('lewat jatah (pct ≥ 1) → penuh & status over; nilai dijepit 0..1', () => {
+    const over = hudMeter(1.8)
+    expect(over.filled).toBe(HUD_METER_SEGMENTS)
+    expect(over.usedPct).toBe(1)
+    expect(over.status).toBe('over')
+  })
+
+  it('jumlah segmen bisa diatur & nilai non-finite dianggap 0', () => {
+    expect(hudMeter(0.5, 4).filled).toBe(2)
+    expect(hudMeter(Number.NaN).filled).toBe(0)
+  })
+})
+
+/* ── PAKET 78 · COPY HALAMAN BUDGET = DATA, BUKAN JSX ────────────────────────
+   Dua hal yang diperiksa di sini adalah dua hal yang paling gampang rusak
+   diam-diam saat halaman dirapikan ulang:
+
+     1. caption konteks `pribadi` HARUS null. Kalau kelak ada yang mengembalikan
+        stringnya (atau menggantinya dengan string kosong), barisnya muncul lagi
+        di layar — dan itu persis yang diminta dihapus pemilik produk;
+     2. status pacing kartu kategori harus SATU kata-frasa dari peta kanon.
+        `pacingOf().copy` tetap ada untuk panel review, tapi kartu tidak boleh
+        memakai kalimat yang mengulang angka (paket 78: "rely on progress bars,
+        clean typography, and whitespace"). */
+describe('scopeCaptionFor · caption konteks halaman Budget (paket 78)', () => {
+  it('pribadi TIDAK punya caption (barisnya juga tidak dirender)', () => {
+    expect(scopeCaptionFor('pribadi')).toBeNull()
+  })
+
+  it('keluarga & bersama memakai kalimat dari lapis data', () => {
+    expect(scopeCaptionFor('keluarga')).toBe(BUDGET_PAGE_COPY.scopeCaption.keluarga)
+    expect(scopeCaptionFor('bersama')).toBe(BUDGET_PAGE_COPY.scopeCaption.bersama)
+  })
+
+  it('caption bukan string kosong — "tidak ada" harus berarti null', () => {
+    expect(scopeCaptionFor('pribadi')).not.toBe('')
+  })
+})
+
+describe('pacingStatusLabel · status tiga kata pengganti kalimat (paket 78)', () => {
+  it('setiap nada kanon punya satu label pendek', () => {
+    expect(pacingStatusLabel('sage')).toBe(PACING_STATUS_LABEL.sage)
+    expect(pacingStatusLabel('amber')).toBe(PACING_STATUS_LABEL.amber)
+    expect(pacingStatusLabel('terracotta')).toBe(PACING_STATUS_LABEL.terracotta)
+  })
+
+  it('labelnya pendek (≤ 3 kata) — bukan kalimat yang mengulang nominal', () => {
+    for (const tone of ['sage', 'amber', 'terracotta'] as const) {
+      const label = pacingStatusLabel(tone)
+      expect(label.split(' ').length).toBeLessThanOrEqual(3)
+      expect(label).not.toMatch(/Rp\s/)
+    }
+  })
+
+  it('nada mengikuti ambang kanon yang sama dengan warna bar', () => {
+    const budget: BudgetItem = {
+      id: 1,
+      category: 'Kopi',
+      icon: '☕',
+      limit: 100_000,
+      spent: 99_000,
+      period: 'monthly',
+      scope: 'pribadi',
+    }
+    expect(pacingStatusLabel(pacingOf(budget).tone)).toBe('Mendekati limit')
   })
 })
 

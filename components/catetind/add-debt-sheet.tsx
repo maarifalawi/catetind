@@ -1,10 +1,10 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { CalendarDays, Check } from 'lucide-react'
 import {
   BudgetSheet,
   ChoicePills,
+  DateField as SheetDateField,
   RevealStep,
   RupiahField,
   SheetSubmit,
@@ -440,18 +440,7 @@ function sanitizeDecimal(raw: string, maxDecimals = 2): string {
   return rest.length > 0 ? `${whole}.${decimals}` : whole
 }
 
-/** `25 Sep 2026` — tanggal ringkas untuk field sheet */
-function formatSheetDate(iso: string): string {
-  if (!iso) return ''
-  const [year, month, day] = iso.split('-').map(Number)
-  const months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-    'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des',
-  ]
-  return `${day} ${months[(month ?? 1) - 1]} ${year}`
-}
-
-/** field tanggal: label custom + input date native transparan di atasnya */
+/** field tanggal: seluruh area bisa dipencet (pemilih native via `showPicker`) */
 function DateField({
   value,
   onChange,
@@ -471,29 +460,13 @@ function DateField({
   const todayValue = useTodayISO()
   const todayIso = todayValue || WEALTH_TODAY_ISO
   return (
-    <div>
-      <span className="text-[13px] font-medium leading-snug text-forest">{label}</span>
-      <span className="relative mt-2 flex items-center gap-2 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/16 focus-within:ring-2 focus-within:ring-forest/35">
-        <CalendarDays className="size-4 shrink-0 text-forest/35" strokeWidth={2.2} />
-        <span
-          className={cn(
-            'flex-1 text-[14px] font-medium tabular-nums',
-            value ? 'text-forest' : 'font-medium text-forest/25',
-          )}
-        >
-          {value ? formatSheetDate(value) : 'Pilih tanggal'}
-        </span>
-        {value && <Check className="size-4 shrink-0 text-hud-sage" strokeWidth={3} />}
-        <input
-          type="date"
-          value={value}
-          max={allowFuture ? undefined : todayIso}
-          onChange={(event) => onChange(event.target.value)}
-          aria-label={label}
-          className="absolute inset-0 size-full cursor-pointer rounded-2xl opacity-0"
-        />
-      </span>
-    </div>
+    <SheetDateField
+      label={label}
+      value={value}
+      onChange={onChange}
+      max={allowFuture ? undefined : todayIso}
+      ariaLabel={label}
+    />
   )
 }
 

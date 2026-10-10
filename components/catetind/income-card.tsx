@@ -1,107 +1,124 @@
 'use client'
 
-import { DollarSign } from 'lucide-react'
+import { Banknote, TrendingDown, TrendingUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { HOME_INCOME_COPY } from '@/lib/data/home'
 import type { HomeIncomeStats } from '@/lib/data/home-money'
 import { usePrivacy } from './privacy-provider'
+
+/* ── KARTU "PEMASUKAN" DI PANEL RINGKASAN SALDO ──────────────────────────────
+   REDESAIN (paket 82). Keluhan pemilik produk berturut-turut: blok ini kaku,
+   berat, dan "UI-nya sangat amat buruk" — permintaannya: modern & minimalist.
+
+   Sebelumnya kartunya gelap penuh (gradien `forest` → hitam) di dalam panel
+   putih, dengan angka menempel kiri, badge persen menggantung di kanan atas,
+   dan grafik 6 bulan tanpa satu pun pemisah.
+
+   Bentuk barunya SATU KARTU PUTIH (kanon palet: kartu = putih + hairline +
+   shadow, bukan gradien gelap) yang dibaca dari atas ke bawah sebagai satu
+   kalimat:
+
+     · kepala   : ikon mint + nama kartu  |  chip bulan berjalan (Oat)
+     · angka    : nominal bulan ini (hero, semibold)  |  badge tren + pembanding
+     · pemisah  : satu garis rambut
+     · grafik   : 6 bar tipis, bulan aktif mint, sisanya isian soil pudar
+
+   Angka & kalimatnya TIDAK berubah: semuanya tetap dari `incomeStatsFor()`
+   (`lib/data/home-money.ts`) dan `HOME_INCOME_COPY` (`lib/data/home.ts`).
+   Yang dilepas cuma pengulangan: keterangan "Total pemasukan bulan ini" (judul
+   kartu sudah bilang "Pemasukan", chip bulan sudah menyebut bulannya) dan label
+   nilai melayang di atas bar yang menutupi bar tetangga. ───────────────────── */
 
 export function IncomeCard({ stats }: { stats: HomeIncomeStats }) {
   const { money } = usePrivacy()
   /* skala bar dari nilai terbesar yang ADA — bukan konstanta */
   const max = Math.max(1, ...stats.series.map((point) => point.value))
   const hasIncome = stats.series.some((point) => point.value > 0)
+  /* pembanding hanya saat bisa dihitung (bulan lalu ada pemasukan) */
+  const hasBaseline = stats.changePct !== null
+  const up = (stats.changePct ?? 0) >= 0
+  const TrendIcon = up ? TrendingUp : TrendingDown
+
   return (
-    <div className="relative overflow-hidden rounded-[1.9rem] bg-gradient-to-br from-forest-soft via-forest to-[#1f2823] p-5 text-cream shadow-[0_24px_50px_-24px_rgba(69,89,78,0.55)]">
-      <div
-        className="pointer-events-none absolute -left-12 -bottom-12 h-36 w-36 rounded-full bg-mint/10 blur-2xl"
+    <section className="relative overflow-hidden rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12 shadow-[0_20px_44px_-36px_rgba(0,0,0,0.5)]">
+      {/* aksen lembut di sudut — satu-satunya elemen "bersinar", bukan gradien
+          gelap penuh yang menabrak gaya panel */}
+      <span
         aria-hidden
-      />
-      {/* edge light */}
-      <div
-        className="pointer-events-none absolute inset-0 rounded-[1.9rem] ring-1 ring-inset ring-cream/10"
-        style={{ boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.18)' }}
-        aria-hidden
+        className="pointer-events-none absolute -right-14 -top-14 size-36 rounded-full bg-mint/15 blur-3xl"
       />
 
-      {/* header */}
-      <div className="relative flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="flex size-7 items-center justify-center rounded-full bg-mint text-forest shadow-[0_6px_16px_-4px_rgba(145,187,158,0.8)]">
-            <DollarSign className="size-3.5" strokeWidth={2.5} />
+      {/* kepala: ikon + nama kartu, lalu chip bulan berjalan */}
+      <div className="relative flex items-center justify-between gap-3">
+        <span className="flex items-center gap-2">
+          <span className="flex size-7 items-center justify-center rounded-full bg-mint/25 text-forest">
+            <Banknote className="size-3.5" strokeWidth={2.4} aria-hidden />
           </span>
-          <span className="text-sm font-medium text-cream/85">{HOME_INCOME_COPY.label}</span>
-        </div>
-        {/* Label bulan NYATA dari tanggal perangkat — bukan teks statis "Februari". */}
-        <span className="flex items-center gap-1 rounded-full bg-cream/10 px-3 py-1 text-xs font-medium text-cream/85">
+          <span className="text-[13px] font-medium text-forest">{HOME_INCOME_COPY.label}</span>
+        </span>
+        <span className="rounded-full bg-sage px-2.5 py-1 text-[10.5px] font-medium text-forest/55">
           {stats.monthLabel}
         </span>
       </div>
 
-      {/* value */}
-      <div className="relative mt-5 flex items-end justify-between">
-        <div>
-          <span className="text-3xl font-medium tracking-tight tabular-nums">
-            {money(stats.thisMonth)}
-          </span>
-          <span className="mt-1 block text-xs text-cream/50">
-            {HOME_INCOME_COPY.totalThisMonth}
-          </span>
-        </div>
-        {/* persen HANYA saat bisa dihitung (bulan lalu ada pemasukan) */}
-        {stats.changePct !== null && (
-          <div className="flex flex-col items-end gap-1">
+      {/* angka utama + pembanding — satu baris, rata dasar supaya tidak ada
+          ruang kosong lebar di antaranya */}
+      <div className="relative mt-5 flex flex-wrap items-end justify-between gap-x-3 gap-y-2">
+        <p className="text-[30px] font-semibold leading-none tracking-tight text-forest tabular-nums sm:text-[34px]">
+          {money(stats.thisMonth)}
+        </p>
+        {hasBaseline ? (
+          <span className="flex items-center gap-1.5 pb-0.5">
             <span
               className={cn(
-                'rounded-full px-2 py-0.5 text-[11px] font-medium',
-                stats.changePct >= 0 ? 'bg-mint text-forest' : 'bg-hud-terracotta text-cream',
+                'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium tabular-nums',
+                up ? 'bg-mint/25 text-forest' : 'bg-plum/15 text-plum',
               )}
             >
-              {stats.changePct >= 0 ? '+' : ''}
+              <TrendIcon className="size-3" strokeWidth={2.8} aria-hidden />
+              {up ? '+' : ''}
               {stats.changePct}%
             </span>
-            <span className="text-[10px] text-cream/45">{HOME_INCOME_COPY.vsLastMonth}</span>
-          </div>
+            <span className="text-[11px] text-forest/45">{HOME_INCOME_COPY.vsLastMonth}</span>
+          </span>
+        ) : (
+          /* belum ada pembanding (bulan lalu Rp 0): sebut pembandingnya, bukan
+             persen karangan */
+          <span className="pb-0.5 text-[11px] text-forest/45">{HOME_INCOME_COPY.vsLastMonth}</span>
         )}
       </div>
 
-      {/* monthly bar chart — dari seri bulan NYATA; saat belum ada pemasukan,
-          yang muncul penjelasan jujur, bukan 12 bar contoh */}
-      <div className="relative mt-7">
+      {/* pemisah + grafik bulanan — dari seri bulan NYATA */}
+      <div className="relative mt-5 border-t border-soil/10 pt-4">
         {hasIncome ? (
           <>
-            <div className="flex h-24 items-end gap-1.5">
+            <div className="flex h-16 items-end gap-2">
               {stats.series.map((point, i) => (
-                <div key={point.key} className="group relative flex h-full flex-1 items-end">
-                  {point.active && (
-                    <span className="absolute -top-1 left-1/2 -translate-x-1/2 -translate-y-full rounded-full bg-mint px-1.5 py-0.5 text-[9px] font-medium text-forest shadow-[0_6px_14px_-4px_rgba(145,187,158,0.8)]">
-                      {money(point.value)}
-                    </span>
-                  )}
+                <div key={point.key} className="group/bar relative flex h-full flex-1 items-end">
                   <div
-                    className={
+                    className={cn(
+                      'w-full origin-bottom animate-[bar-grow_0.7s_cubic-bezier(0.22,1,0.36,1)_both] rounded-full motion-reduce:animate-none',
                       point.active
-                        ? 'w-full origin-bottom animate-[bar-grow_0.7s_cubic-bezier(0.22,1,0.36,1)_both] rounded-full bg-gradient-to-t from-mint/60 to-mint shadow-[0_0_18px_rgba(145,187,158,0.45)]'
-                        : 'w-full origin-bottom animate-[bar-grow_0.7s_cubic-bezier(0.22,1,0.36,1)_both] rounded-full bg-cream/10 transition-colors duration-300 group-hover:bg-cream/25'
-                    }
+                        ? 'bg-gradient-to-t from-mint/70 to-mint'
+                        : 'bg-soil/[0.07] transition-colors duration-300 group-hover/bar:bg-soil/[0.12]',
+                    )}
                     style={{
-                      height: `${Math.max(4, (point.value / max) * 100)}%`,
+                      height: `${Math.max(6, (point.value / max) * 100)}%`,
                       animationDelay: `${120 + i * 45}ms`,
                     }}
                   />
                 </div>
               ))}
             </div>
-            {/* month labels */}
-            <div className="mt-2 flex gap-1.5">
+            {/* label bulan — bulan aktif ditegaskan, sisanya redup */}
+            <div className="mt-2 flex gap-2">
               {stats.series.map((point) => (
                 <span
                   key={point.key}
-                  className={
-                    point.active
-                      ? 'flex-1 text-center text-[9px] font-medium text-mint'
-                      : 'flex-1 text-center text-[9px] text-cream/35'
-                  }
+                  className={cn(
+                    'flex-1 text-center text-[9.5px] font-medium',
+                    point.active ? 'text-forest' : 'text-forest/35',
+                  )}
                 >
                   {point.label}
                 </span>
@@ -109,12 +126,13 @@ export function IncomeCard({ stats }: { stats: HomeIncomeStats }) {
             </div>
           </>
         ) : (
-          <div className="rounded-2xl bg-cream/10 px-4 py-5 text-center">
-            <p className="text-[13px] font-medium text-cream/85">{HOME_INCOME_COPY.emptyTitle}</p>
-            <p className="mt-1 text-[11.5px] text-cream/50">{HOME_INCOME_COPY.emptyHint}</p>
+          /* saat belum ada pemasukan, yang muncul penjelasan jujur, bukan bar contoh */
+          <div className="rounded-2xl bg-sage/50 px-4 py-5 text-center">
+            <p className="text-[12.5px] font-medium text-forest">{HOME_INCOME_COPY.emptyTitle}</p>
+            <p className="mt-1 text-[11px] text-forest/50">{HOME_INCOME_COPY.emptyHint}</p>
           </div>
         )}
       </div>
-    </div>
+    </section>
   )
 }

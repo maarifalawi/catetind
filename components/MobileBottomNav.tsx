@@ -4,11 +4,14 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Drawer } from 'vaul'
+import { motion, useReducedMotion } from 'framer-motion'
 import { toast } from 'sonner'
 import { Plus, LayoutGrid, ArrowLeftRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useNavCompact } from '@/hooks/use-nav-compact'
 import { SUBSCRIPTION_LOCK_COPY } from '@/lib/data/renewal'
 import { TRANSFER_DOOR_COPY } from '@/lib/data/add-wallet'
+import { MOBILE_NAV_COPY } from '@/lib/data/mobile-nav'
 import {
   MOBILE_MENU_GROUPS,
   MOBILE_PRIMARY_ITEMS,
@@ -80,7 +83,16 @@ const FOCUS_ROUTES = [
   '/terms',
 ]
 
-function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
+function NavLink({
+  item,
+  pathname,
+  compact,
+}: {
+  item: NavItem
+  pathname: string
+  /** nav sedang menyusut (digulir ke bawah) — py & ikon lebih kecil (paket 75) */
+  compact: boolean
+}) {
   const isActive =
     item.href === '/' || item.href === '/app'
       ? pathname === item.href
@@ -91,11 +103,18 @@ function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
       href={item.href}
       aria-label={item.label}
       aria-current={isActive ? 'page' : undefined}
-      className="flex flex-1 items-center justify-center py-3"
+      className={cn(
+        'flex flex-1 items-center justify-center',
+        /* padding & transisi sama dengan kontainer nav supaya menyusut terasa
+           satu gerakan, bukan dua elemen yang bergerak sendiri-sendiri */
+        'transition-[padding] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none',
+        compact ? 'py-2' : 'py-3',
+      )}
     >
       <Icon
         className={cn(
-          'size-[22px] transition-all duration-200',
+          'transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none',
+          compact ? 'size-[18px]' : 'size-[22px]',
           isActive ? 'text-forest' : 'text-forest/25 hover:text-forest/45',
         )}
         strokeWidth={1.8}
@@ -120,6 +139,12 @@ export function MobileBottomNav() {
   /* masa aktif habis → FAB ini satu-satunya pintu input dari bottom nav, jadi
      ia yang dikunci. Membaca data, pindah halaman, & menu "Lainnya" tetap jalan. */
   const { inputLocked } = useSubscriptionGate()
+  /* NAV DINAMIS (paket 75): menggulir ke bawah → nav memadat (py-2, ikon lebih
+     kecil); menggulir ke atas → kembali penuh. Aturannya di
+     `hooks/use-nav-compact.ts` (fungsi murni + test). `useReducedMotion` dipakai
+     untuk mematikan animasi pegas FAB bagi user yang meminta gerak minimal. */
+  const compact = useNavCompact()
+  const reduceMotion = useReducedMotion()
 
   const menuActive = NAV_HREFS.some((href) => pathname.startsWith(href))
   /* Halaman Joint Wallet punya FAB-nya sendiri (form transaksi + split +
@@ -135,21 +160,27 @@ export function MobileBottomNav() {
     route === '/' ? pathname === '/' : pathname.startsWith(route),
   )
 
-  /* Nav SELALU tampil (paket 70) — tidak ada lagi `useNavAutoHide` di sini.
-     Aturan auto-hide-nya pindah ke header Dashboard mobile (`MobileStickyHeader`),
-     sesuai permintaan terbaru pemilik produk. */
+  /* Nav SELALU tampil (paket 70) + MENYUSUT saat digulir ke bawah (paket 75).
+     Tidak ada lagi `useNavAutoHide` di sini — aturan auto-hide-nya dipakai
+     header mobile (`MobileStickyHeader`); yang tersisa di bawah cuma perubahan
+     KERAPATAN (`compact`), bukan menyembunyikan nav. */
 
   if (isFocusRoute) return null
 
   return (
     <>
       <nav
-        aria-label="Navigasi utama"
-        className="fixed inset-x-8 bottom-5 z-40 mx-auto flex h-16 max-w-sm items-center rounded-full bg-cream/95 px-4 shadow-[0_24px_50px_-16px_rgba(0,0,0,0.18)] ring-1 ring-soil/12 backdrop-blur-xl lg:hidden"
+        aria-label={MOBILE_NAV_COPY.navAria}
+        className={cn(
+          'fixed inset-x-8 bottom-5 z-40 mx-auto flex max-w-sm items-center rounded-full bg-cream/95 shadow-[0_24px_50px_-16px_rgba(0,0,0,0.18)] ring-1 ring-soil/12 backdrop-blur-xl lg:hidden',
+          /* tinggi + padding + easing halus, sejalan dengan penyusutan isinya */
+          'transition-[height,padding] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none',
+          compact ? 'h-14 px-3.5' : 'h-16 px-4',
+        )}
         style={{ marginBottom: 'max(0rem, env(safe-area-inset-bottom))' }}
       >
-        <NavLink item={MOBILE_PRIMARY_ITEMS[0]} pathname={pathname} />
-        <NavLink item={MOBILE_PRIMARY_ITEMS[1]} pathname={pathname} />
+        <NavLink item={MOBILE_PRIMARY_ITEMS[0]} pathname={pathname} compact={compact} />
+        <NavLink item={MOBILE_PRIMARY_ITEMS[1]} pathname={pathname} compact={compact} />
 
         {/* FAB (+) Catat — langsung membuka Transaction Input Engine.
             Di /joint slot ini dikosongkan: halaman Joint punya FAB sendiri. */}
@@ -171,32 +202,49 @@ export function MobileBottomNav() {
               <Plus className="size-6" strokeWidth={2.4} />
             </button>
           ) : (
+            /* FAB "Catat" memakai WARNA BRAND (keluarga forest/sage), bukan lagi
+               gradien pelangi — paket 75, permintaan pemilik produk. Aksennya
+               dibuat lewat inset shadow (highlight atas + bayangan dalam bawah =
+               tombol terasa timbul) plus glow luar; tap-nya memakai pegas framer
+               `whileTap` supaya terasa kenyal. Saat `prefers-reduced-motion`,
+               pegas dimatikan dan hanya glownya yang berubah. */
             <TransactionBottomSheet
               trigger={
-                <button
+                <motion.button
                   type="button"
-                  aria-label="Catat transaksi"
-                  className="-mt-8 flex size-14 items-center justify-center rounded-full bg-[radial-gradient(circle_at_30%_25%,#ffffff,#ecd768_35%,#ffb885_60%,#b89191_85%)] text-forest shadow-[0_0_28px_rgba(236,215,104,0.55),0_10px_24px_-8px_rgba(0,0,0,0.6)] ring-1 ring-cream/60 transition-transform duration-150 hover:scale-105 active:scale-95"
+                  aria-label={MOBILE_NAV_COPY.addAria}
+                  whileTap={reduceMotion ? undefined : { scale: 0.9 }}
+                  whileHover={reduceMotion ? undefined : { scale: 1.05 }}
+                  transition={{ type: 'spring', stiffness: 460, damping: 17 }}
+                  className="group -mt-8 flex size-14 items-center justify-center rounded-full bg-gradient-to-br from-forest-soft to-forest text-mint ring-1 ring-forest/30 shadow-[inset_0_1.5px_0_rgba(255,255,255,0.28),inset_0_-3px_8px_rgba(0,0,0,0.35),0_12px_28px_-10px_rgba(69,89,78,0.75)] transition-shadow duration-200 hover:shadow-[inset_0_1.5px_0_rgba(255,255,255,0.35),inset_0_-3px_8px_rgba(0,0,0,0.3),0_16px_34px_-10px_rgba(69,89,78,0.9)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40 focus-visible:ring-offset-2 focus-visible:ring-offset-cream"
                 >
-                  <Plus className="size-6" strokeWidth={2.4} />
-                </button>
+                  <Plus
+                    className="size-6 transition-transform duration-200 group-active:scale-90"
+                    strokeWidth={2.6}
+                  />
+                </motion.button>
               }
             />
           )}
         </div>
 
-        <NavLink item={MOBILE_PRIMARY_ITEMS[2]} pathname={pathname} />
+        <NavLink item={MOBILE_PRIMARY_ITEMS[2]} pathname={pathname} compact={compact} />
 
         {/* Lainnya — buka vaul bottom sheet menu sekunder */}
         <button
           type="button"
           onClick={() => setMenuOpen(true)}
-          aria-label="Menu lainnya"
-          className="flex flex-1 items-center justify-center py-3"
+          aria-label={MOBILE_NAV_COPY.moreAria}
+          className={cn(
+            'flex flex-1 items-center justify-center',
+            'transition-[padding] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none',
+            compact ? 'py-2' : 'py-3',
+          )}
         >
           <LayoutGrid
             className={cn(
-              'size-[22px] transition-all duration-200',
+              'transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none',
+              compact ? 'size-[18px]' : 'size-[22px]',
               menuActive ? 'text-forest' : 'text-forest/25 hover:text-forest/45',
             )}
             strokeWidth={1.8}

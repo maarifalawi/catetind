@@ -23,7 +23,7 @@ import { NavTooltip } from './nav-tooltip'
    (`temp-write-sidebar.js`, sudah dihapus) dan halamannya cuma markup mentah
    yang tidak ada di `inventaris_ui_definitif.md`. PRD 2C.2 menegaskan
    "Keluarga" adalah KONTEKS uang (Pribadi / Keluarga / Bersama), bukan halaman
-   terpisah — hidup di `ContextSwitcher` + `MoneyContextProvider`, dan itu tetap
+   terpisah — hidup di `ContextMenu` + `MoneyContextProvider`, dan itu tetap
    apa adanya. Jangan menghidupkan lagi tautan ini tanpa keputusan produk:
    PRD 2A.6 melarang dua jalur navigasi paralel (pelajaran dari Fundy), dan
    modul keluarga yang nyata butuh inventaris baru dulu (PRD 758–807, 3303–3352).

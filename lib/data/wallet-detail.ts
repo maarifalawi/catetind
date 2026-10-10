@@ -224,8 +224,11 @@ export const WALLET_DETAIL_COPY = {
   back: 'Kembali ke Dompet & Akun',
   backLabel: 'Kembali',
   heroLabel: 'Saldo',
-  /** konteks angka — CatetInd 100% dari catatan user, tanpa open-banking */
-  heroHint: 'Dibaca dari catatanmu sendiri, bukan sambungan ke m-banking.',
+  /* Baris "Dibaca dari catatanmu sendiri, bukan sambungan ke m-banking."
+     DIHAPUS atas permintaan pemilik produk — muka kartu hero jadi lebih bersih.
+     Asal-usul angkanya tetap dikatakan di tempat yang memang membicarakannya
+     (modal "Sesuaikan Saldo" & halaman Dompet & Akun), jadi tidak ada janji
+     open-banking yang menggantung di kartu ini. */
   /** saldo dompet bukan total kekayaan; itu di halaman Kekayaan & Hutang */
   heroScope: 'Saldo dompet ini saja.',
   /** kalau id di URL tidak ada dompetnya */
@@ -300,17 +303,18 @@ export const WALLET_QUICK_ACTION_COPY = {
  *
  * Angka hero-nya adalah `cashTotal()` dari store: jumlah SELURUH dompet, dan
  * halaman ini memang menampilkan semua dompet (tidak disaring konteks uang).
- * Kalimatnya karena itu menyebut cakupannya terang-terangan — dan menegaskan
- * bahwa konteks uang menyaring daftar/arus, bukan total ini. Itu yang menutup
+ *
+ * Baris "Total Saldo semua dompet · N dompet aktif" DIHAPUS atas permintaan
+ * pemilik produk: label "Total Saldo" + nominal besar sudah menjelaskan diri,
+ * dan angka dompet aktif cuma mengulang kepala daftar. Cakupannya TETAP
+ * dikatakan — bukan di bawah hero, tapi di kepala panel "Komposisi" lewat
+ * `compositionAccounts()` ("3 akun · semua dompet"), sehingga total di atas
+ * tidak mungkin terbaca sebagai hanya dompet konteks aktif. Itu yang menutup
  * keluhan "angka saldo beda antar halaman": bedanya dulu bukan cakupan, tapi
  * HOME yang menjumlahkan daftar tersaring sementara halaman ini menjumlahkan
  * semuanya.
  */
 export const WALLET_TOTAL_COPY = {
-  /** baris di bawah nominal hero: "Total Saldo semua dompet · 3 dompet aktif" */
-  heroSubtitle: (count: number) => `Total Saldo semua dompet · ${count} dompet aktif`,
-  /** penegas: konteks uang TIDAK mengubah angka ini */
-  contextNote: 'Konteks uang menyaring daftar & arus — bukan angka total di atas.',
   /** aria-label nominal hero, supaya pembaca layar mendengar cakupannya */
   heroAmountLabel: (amount: string) => `Total Saldo semua dompet: ${amount}`,
   /**

@@ -4,9 +4,8 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { CalendarDays } from 'lucide-react'
 import { ScreenShell } from './screen-shell'
-import { LogoWordmark } from './logo-wordmark'
 import { GlobalPrivacyToggle } from './global-privacy-toggle'
-import { ContextSwitcher } from './context-switcher'
+import { ContextMenu } from './context-menu'
 import { useMoneyContext } from './money-context-provider'
 import { usePrivacy } from './privacy-provider'
 import { CashflowCalendarGrid } from './cashflow-calendar-grid'
@@ -318,16 +317,13 @@ export function CashflowCalendarScreen() {
   /* ── RENDER ─────────────────────────────────────────────────────────────── */
   return (
     <ScreenShell>
-      {/* header mobile: wordmark + tombol mata (kerangka sama dengan Dashboard) */}
-      <header className="flex items-start justify-between lg:hidden">
-        <LogoWordmark className="h-5" />
-        <GlobalPrivacyToggle />
-      </header>
-
-      {/* switcher konteks (mobile): state GLOBAL yang sama dengan switcher
-          desktop di baris judul — pola penempatan persis Home & Budget (paket 47). */}
+      {/* ── BARIS KONTEKS (mobile) ────────────────────────────────────────────
+          PAKET 75: header mobile (wordmark + tombol mata) DIHAPUS dari halaman
+          ini — kini ada SATU header mobile GLOBAL di `ScreenShell`. Yang
+          tersisa di sini cuma pemilih konteks, dan itu memakai dropdown
+          label-penuh (`ContextMenu`) yang sama dengan semua halaman lain. */}
       <div className="mt-4 flex justify-center lg:hidden">
-        <ContextSwitcher value={context} onChange={setContext} />
+        <ContextMenu value={context} onChange={setContext} className="w-56" />
       </div>
 
       <div className="mt-4 lg:mt-0 lg:flex lg:items-end lg:justify-between lg:gap-8">
@@ -339,7 +335,7 @@ export function CashflowCalendarScreen() {
 
         {/* cluster aksi desktop: switcher konteks + tombol mata global */}
         <div className="hidden shrink-0 items-center gap-3 lg:flex">
-          <ContextSwitcher value={context} onChange={setContext} className="w-[280px]" />
+          <ContextMenu value={context} onChange={setContext} className="w-44" />
           <GlobalPrivacyToggle />
         </div>
       </div>

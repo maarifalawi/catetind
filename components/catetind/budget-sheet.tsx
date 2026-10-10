@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type ChangeEvent, type ReactNode, type RefObject } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { Drawer } from 'vaul'
-import { X } from 'lucide-react'
+import { X, CalendarDays, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { cleanDigits, groupDigits } from '@/lib/money/amount-input'
 import { AMOUNT_INPUT_FIELD } from '@/lib/typography'
@@ -336,6 +336,112 @@ export function ChoicePills<T extends string>({
           </button>
         )
       })}
+    </div>
+  )
+}
+
+/** `2026-09-25` → `25 Sep 2026`; `''` → placeholder */
+export function formatDateLabel(iso: string, placeholder = 'Pilih tanggal'): string {
+  if (!iso) return placeholder
+  const [year, month, day] = iso.split('-').map(Number)
+  if (!year || !month || !day) return placeholder
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
+  return `${day} ${months[month - 1]} ${year}`
+}
+
+/**
+ * Field tanggal yang SELURUH AREA-nya bisa dipencet.
+ *
+ * Kenapa bukan `<input type="date" opacity-0>` yang ditumpuk di atas `<span>`:
+ * di sebagian browser (terutama iOS Safari & beberapa WebView Android) input
+ * transparan BUKAN sasaran klik yang andal — tap di badan field tidak membuka
+ * apa pun, jadi user merasa "kolom tanggal tidak bisa dipencet". Sekarang
+ * seluruh area adalah kontrol yang memanggil `showPicker()` (API native), dan
+ * kalau API itu tidak ada, jatuh ke fokus + klik bawaan input-nya.
+ *
+ * Input aslinya tetap ada (nilai & pemilih native), tapi `pointer-events-none`
+ * + `tabIndex={-1}` supaya TIDAK pernah mencuri klik/keyboard dari kontrolnya.
+ */
+export function DateField({
+  value,
+  onChange,
+  label,
+  min,
+  max,
+  placeholder,
+  ariaLabel,
+  icon,
+  className,
+}: {
+  value: string
+  onChange: (value: string) => void
+  label?: string
+  min?: string
+  max?: string
+  placeholder?: string
+  ariaLabel?: string
+  /** ikon pengganti di kiri (mis. Wallet di sheet pelunasan) */
+  icon?: ReactNode
+  className?: string
+}) {
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  function openPicker() {
+    const el = inputRef.current
+    if (!el) return
+    const withPicker = el as HTMLInputElement & { showPicker?: () => void }
+    if (typeof withPicker.showPicker === 'function') {
+      try {
+        withPicker.showPicker()
+        return
+      } catch {
+        /* jatuh ke fokus + klik bawaan */
+      }
+    }
+    el.focus()
+    el.click()
+  }
+
+  return (
+    <div className={cn('block', className)}>
+      {label && <span className="text-[13px] font-medium leading-snug text-forest">{label}</span>}
+      <div
+        role="button"
+        tabIndex={0}
+        aria-label={ariaLabel ?? label ?? 'Pilih tanggal'}
+        onClick={openPicker}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault()
+            openPicker()
+          }
+        }}
+        className="relative mt-2 flex w-full cursor-pointer items-center gap-2 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/16 transition-shadow hover:ring-soil/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/35"
+      >
+        <span className="shrink-0 text-forest/35" aria-hidden>
+          {icon ?? <CalendarDays className="size-4" strokeWidth={2.2} />}
+        </span>
+        <span
+          className={cn(
+            'flex-1 text-[14px] font-medium tabular-nums',
+            value ? 'text-forest' : 'text-forest/25',
+          )}
+        >
+          {formatDateLabel(value, placeholder)}
+        </span>
+        {value && <Check className="size-4 shrink-0 text-hud-sage" strokeWidth={3} aria-hidden />}
+        <input
+          ref={inputRef}
+          type="date"
+          value={value}
+          min={min}
+          max={max}
+          onChange={(event) => onChange(event.target.value)}
+          aria-hidden
+          tabIndex={-1}
+          className="pointer-events-none absolute inset-0 size-full opacity-0"
+        />
+      </div>
     </div>
   )
 }

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Check, Plus, Sparkles } from 'lucide-react'
+import { Check, Plus } from 'lucide-react'
 import {
   BudgetSheet,
   ChoicePills,
@@ -13,8 +13,14 @@ import {
 import { usePrivacy } from './privacy-provider'
 import { MaskedAmount, WALLET_TYPE_LABEL, WalletFace, WalletTypeMark } from './wallet-card-face'
 import { cn } from '@/lib/utils'
-import { AMOUNT_LABEL, AMOUNT_LG } from '@/lib/typography'
+import { AMOUNT_LG } from '@/lib/typography'
 import { ADD_WALLET_SHEET_COPY } from '@/lib/data/add-wallet'
+import {
+  WALLET_CUSTOM_THEMES,
+  WALLET_THEME_COPY,
+  applyWalletTheme,
+  walletThemeById,
+} from '@/lib/data/wallet-themes'
 import {
   WALLET_KIND_OPTIONS,
   WALLET_NUMBER_MASK,
@@ -74,6 +80,12 @@ export function AddWalletSheet({
   const [name, setName] = useState('')
   const [last4, setLast4] = useState('')
   const [digits, setDigits] = useState('')
+  /**
+   * TEMA KARTU yang dipilih user (paket 77) — id dari `WALLET_CUSTOM_THEMES`,
+   * `null` = kartu bawaan. Diteruskan lewat `onSave` supaya pilihan ini benar-
+   * benar tersimpan (bukan cuma mengubah pratinjau).
+   */
+  const [themeId, setThemeId] = useState<string | null>(null)
   const nameRef = useRef<HTMLInputElement>(null)
 
   /* Isi awal ditentukan saat sheet DIBUKA (latch), bukan dibaca langsung dari
@@ -88,6 +100,9 @@ export function AddWalletSheet({
     setName(option?.name ?? '')
     setLast4('')
     setDigits('')
+    /* form dibuka bersih tiap kali: tema lama tidak boleh "menempel" ke dompet
+       berikutnya tanpa user memilihnya lagi (paket 77) */
+    setThemeId(null)
   }, [open, initialBrand])
 
   /* keyboard diangkat HANYA kalau form dibuka kosong. Kalau brand sudah terisi,
@@ -104,8 +119,9 @@ export function AddWalletSheet({
   const previewNumber =
     type === 'Bank' && last4 ? maskedAccountNumber(last4) : undefined
 
-  /** kartu yang dilihat user di atas form — resep warnanya dari siklus palet */
-  const preview = useMemo<WalletAccount>(
+  /** kartu dasar (resep palet BAWAAN) — dipakai sebagai pratinjau & sebagai
+      contoh tema "Bawaan" di pemilih tema */
+  const previewBase = useMemo<WalletAccount>(
     () => ({
       /* id placeholder: yang menentukan id dompet sungguhan adalah store
          (`lib/money/store.ts`, paket 40). Kartu preview cuma perlu kunci stabil
@@ -123,6 +139,34 @@ export function AddWalletSheet({
     }),
     [trimmedName, type, balance, previewNumber, cardIndex],
   )
+
+  /**
+   * Pratinjau = kartu dasar + TEMA yang sedang dipilih (paket 77). Karena tema
+   * dipasang dengan fungsi yang SAMA dengan muka kartu di /wallet
+   * (`applyWalletTheme`), yang dilihat user di sini benar-benar yang akan ia
+   * dapat setelah menyimpan — bukan dua resep berbeda.
+   */
+  const preview = useMemo(() => applyWalletTheme(previewBase, themeId), [previewBase, themeId])
+
+  /** pilihan tema: "Bawaan" (resep palet) + SEPULUH tema kustom dari data */
+  const themeChoices = useMemo(
+    () => [
+      {
+        id: null,
+        name: WALLET_THEME_COPY.defaultName,
+        note: WALLET_THEME_COPY.defaultNote,
+        swatch: previewBase.face,
+      },
+      ...WALLET_CUSTOM_THEMES.map((theme) => ({
+        id: theme.id,
+        name: theme.name,
+        note: theme.note,
+        swatch: theme.swatch,
+      })),
+    ],
+    [previewBase.face],
+  )
+  const activeTheme = themeId ? walletThemeById(themeId) : null
 
   /** menekan brand: jenis + nama ikut terisi, tapi tetap bisa diubah user */
   function pickBrand(brandName: string) {
@@ -153,6 +197,9 @@ export function AddWalletSheet({
       type,
       ...(previewNumber ? { number: previewNumber } : {}),
       balance,
+      /* tema kartu ikut disimpan (paket 77) — halaman pemanggil menuliskannya ke
+         preferensi perangkat setelah store memberi id dompet barunya */
+      ...(themeId ? { themeId } : {}),
     })
   }
 
@@ -161,7 +208,6 @@ export function AddWalletSheet({
       open={open}
       onClose={onClose}
       title={ADD_WALLET_SHEET_COPY.title}
-      description={ADD_WALLET_SHEET_COPY.description}
       footer={
         <SheetSubmit onClick={submit} disabled={!ready} gate>
           {ADD_WALLET_SHEET_COPY.submit}
@@ -169,45 +215,36 @@ export function AddWalletSheet({
       }
     >
       {/* ── KARTU PREVIEW — warna & motifnya sudah final sebelum disimpan ── */}
-      <div>
-        <p className="flex items-center gap-1.5 text-[11.5px] font-medium text-forest/55">
-          <Sparkles className="size-3.5 shrink-0 text-forest/60" strokeWidth={2.4} />
-          {ADD_WALLET_SHEET_COPY.previewLabel}
-        </p>
-        <div className="group relative mt-2">
-          <WalletFace wallet={preview} className="rounded-[1.5rem] p-4">
-            <div className="relative flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="truncate font-display text-[14.5px] font-medium tracking-tight">
-                  {preview.name}
-                </p>
-                {preview.number && (
-                  <p className="mt-1 truncate text-[10px] font-medium tracking-[0.2em] text-cream/60 tabular-nums">
-                    {preview.number}
-                  </p>
-                )}
-                <span className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-cream/20 px-2.5 py-0.5 text-[9.5px] font-medium uppercase tracking-[0.1em] text-cream/90 ring-1 ring-inset ring-cream/30">
-                  <span aria-hidden className="size-1.5 rounded-full bg-cream/70" />
-                  {WALLET_TYPE_LABEL[preview.type]}
-                </span>
-              </div>
-              <WalletTypeMark wallet={preview} chipId="add-wallet-preview-chip" />
-            </div>
-
-            <div className="relative mt-6">
-              <p className={cn(AMOUNT_LABEL, 'text-cream/60')}>
-                {ADD_WALLET_SHEET_COPY.previewBalanceLabel}
+      <div className="group relative">
+        <WalletFace wallet={preview} className="rounded-[1.5rem] p-4">
+          <div className="relative flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="truncate font-display text-[14.5px] font-medium tracking-tight">
+                {preview.name}
               </p>
-              <div className="mt-1.5">
-                <MaskedAmount
-                  value={formatIDR(preview.balance)}
-                  masked={masked}
-                  className={AMOUNT_LG}
-                />
-              </div>
+              {preview.number && (
+                <p className="mt-1 truncate text-[10px] font-medium tracking-[0.2em] text-cream/60 tabular-nums">
+                  {preview.number}
+                </p>
+              )}
+              <span className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-cream/20 px-2.5 py-0.5 text-[9.5px] font-medium uppercase tracking-[0.1em] text-cream/90 ring-1 ring-inset ring-cream/30">
+                <span aria-hidden className="size-1.5 rounded-full bg-cream/70" />
+                {WALLET_TYPE_LABEL[preview.type]}
+              </span>
             </div>
-          </WalletFace>
-        </div>
+            <WalletTypeMark wallet={preview} chipId="add-wallet-preview-chip" />
+          </div>
+
+          {/* label mikro "Saldo" DIHAPUS (paket 77) — pratinjau ini meniru muka
+              kartu asli, dan muka kartu asli tidak lagi memakai label itu. */}
+          <div className="relative mt-5">
+            <MaskedAmount
+              value={formatIDR(preview.balance)}
+              masked={masked}
+              className={AMOUNT_LG}
+            />
+          </div>
+        </WalletFace>
       </div>
 
       {/* ── STEP 1 — jenis akun ─────────────────────────────────────────── */}
@@ -230,13 +267,10 @@ export function AddWalletSheet({
           <p className="text-[13px] font-medium leading-snug text-forest">
             {ADD_WALLET_SHEET_COPY.brandLabel}
           </p>
-          <p className="mt-1 text-[11.5px] leading-relaxed text-forest/45">
-            {ADD_WALLET_SHEET_COPY.brandHint}
-          </p>
           <div
             role="radiogroup"
             aria-label={ADD_WALLET_SHEET_COPY.brandLabel}
-            className="mt-2.5 grid grid-cols-3 gap-2 sm:grid-cols-4"
+            className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4"
           >
             {brandOptions.map((option) => {
               const active = brand === option.name
@@ -312,10 +346,6 @@ export function AddWalletSheet({
           placeholder={ADD_WALLET_SHEET_COPY.namePlaceholder}
           className="mt-2 w-full rounded-2xl bg-cream px-4 py-3 text-[15px] font-medium text-forest outline-none ring-1 ring-soil/16 transition-shadow placeholder:font-medium placeholder:text-forest/25 focus:ring-2 focus:ring-forest/35"
         />
-        {/* bantuan kontekstual DI DALAM form (PRD 194–200) */}
-        <span className="mt-1.5 block text-[11.5px] leading-relaxed text-forest/45">
-          {ADD_WALLET_SHEET_COPY.duplicateHint}
-        </span>
       </label>
 
       {/* ── STEP 4 — nomor tersamarkan (opsional, muka kartu bank saja) ──── */}
@@ -356,6 +386,66 @@ export function AddWalletSheet({
         placeholder="Rp 0"
         hint={ADD_WALLET_SHEET_COPY.balanceHint}
       />
+
+      {/* ── STEP 6 — TEMA KARTU (paket 77) ────────────────────────────────
+          Permukaan KUSTOMISASI DOMPET yang sudah ada (sheet ini) diperluas:
+          dulu warna kartu 100% ditentukan kode, sekarang user boleh memilih satu
+          dari SEMBILAN tema kustom yang dikurasi di `lib/data/wallet-themes.ts`.
+          Dua hal yang membuatnya jujur:
+            · "Bawaan" selalu jadi pilihan pertama & default — form ini tetap
+              bisa disimpan tanpa menyentuh tema sama sekali;
+            · pilihan yang dibuat di sini BENAR-BENAR disimpan (diteruskan lewat
+              `onSave`), bukan cuma mengubah pratinjau. */}
+      <div className="mt-6">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[13px] font-medium leading-snug text-forest">
+            {WALLET_THEME_COPY.label}
+          </p>
+          <span className="shrink-0 rounded-full bg-sage px-2 py-0.5 text-[10.5px] font-medium text-forest ring-1 ring-forest/10">
+            {WALLET_THEME_COPY.count(WALLET_CUSTOM_THEMES.length)}
+          </span>
+        </div>
+        <div
+          role="radiogroup"
+          aria-label={WALLET_THEME_COPY.label}
+          className="mt-3 grid grid-cols-5 gap-2"
+        >
+          {themeChoices.map((option) => {
+            const active = themeId === option.id
+            return (
+              <button
+                key={option.id ?? 'default'}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                aria-label={WALLET_THEME_COPY.chooseA11y(option.name, option.note)}
+                onClick={() => setThemeId(option.id)}
+                className={cn(
+                  'relative aspect-[4/3] overflow-hidden rounded-xl transition-all duration-200 active:scale-95',
+                  active
+                    ? 'ring-2 ring-forest'
+                    : 'ring-1 ring-soil/12 hover:ring-forest/30 focus-visible:ring-2 focus-visible:ring-forest/40',
+                )}
+              >
+                {/* swatch TIDAK diberi label teks di dalam tile (ruangnya sempit):
+                    nama + keterangan tema terpilih dibaca di bawah grid, dan
+                    tiap tombol punya aria-label dari copy.chooseA11y */}
+                <span aria-hidden className={cn('absolute inset-0', option.swatch)} />
+                {active && (
+                  <span className="absolute bottom-0.5 right-0.5 flex size-4 items-center justify-center rounded-full bg-forest text-mint ring-2 ring-cream">
+                    <Check className="size-2.5" strokeWidth={3.4} />
+                  </span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+        <p className="mt-2 text-[11.5px] leading-relaxed text-forest/55">
+          {activeTheme
+            ? `${activeTheme.name} — ${activeTheme.note}`
+            : WALLET_THEME_COPY.defaultNote}
+        </p>
+      </div>
     </BudgetSheet>
   )
 }

@@ -106,32 +106,43 @@ export function OverviewPanel({
       />
 
       {/* panel — bottom sheet di mobile, dialog di TENGAH layar di desktop
-          (sebelumnya menempel di sisi kanan; sekarang konsisten dengan sheet lain) */}
+          (sebelumnya menempel di sisi kanan; sekarang konsisten dengan sheet lain).
+          PAKET 77: lebar desktop dinaikkan 512px → 640px. Isinya dua blok besar
+          (donat saldo + kartu Pemasukan dengan grid 2 kolom & grafik 6 bulan), dan
+          di 512px keduanya terasa berdesakan — angka pemasukan harus turun baris. */}
       <div
         role="dialog"
         aria-modal="true"
         aria-label={OVERVIEW_PANEL_COPY.title}
         className={cn(
-          'relative flex max-h-[92dvh] w-full flex-col rounded-t-[2.25rem] bg-cream px-5 pb-7 pt-3 shadow-[0_-24px_60px_-24px_rgba(69,89,78,0.55)] ring-1 ring-soil/12 transition-[transform,opacity] duration-[650ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform lg:max-h-[88vh] lg:w-[512px] lg:rounded-[2rem] lg:px-7 lg:pb-8 lg:pt-4 lg:shadow-[0_24px_60px_-24px_rgba(69,89,78,0.55)]',
+          'relative flex max-h-[92dvh] w-full flex-col rounded-t-[2.25rem] bg-cream px-5 pb-7 pt-3 shadow-[0_-24px_60px_-24px_rgba(69,89,78,0.55)] ring-1 ring-soil/12 transition-[transform,opacity] duration-[650ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform lg:max-h-[88vh] lg:w-[640px] lg:rounded-[2rem] lg:px-7 lg:pb-8 lg:pt-4 lg:shadow-[0_24px_60px_-24px_rgba(69,89,78,0.55)]',
           open ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0',
         )}
       >
         <div className="mx-auto h-1.5 w-10 rounded-full bg-ink/15" aria-hidden />
 
-        <div className="mt-3 flex items-start justify-between">
-          <div>
-            <h2 className="text-2xl font-medium leading-tight tracking-tight text-forest">
+        <div className="mt-3 flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="text-xl font-semibold leading-tight tracking-tight text-forest lg:text-2xl">
               {OVERVIEW_PANEL_COPY.title}
             </h2>
-            <p className="mt-1 text-sm text-forest/50">{ring.subtitle}</p>
             {/* penanda kartu mana yang sedang ditampilkan — panel ini mengikuti
-                kartu yang dipencet user di deck dompet */}
-            <span className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-sage/70 px-2.5 py-1 text-[11px] font-medium text-forest ring-1 ring-forest/10">
-              <Wallet className="size-3.5" strokeWidth={2.2} />
-              {selection?.type === 'wallet'
-                ? OVERVIEW_PANEL_COPY.badgeWallet(selection.wallet.name)
-                : OVERVIEW_PANEL_COPY.badgeAll}
+                kartu yang dipencet user di deck dompet. Subjudul pemasaran lama
+                ("Pantau pemasukan, pengeluaran, & wawasan keuanganmu") DIHAPUS
+                (paket 82): panel ini sudah menjelaskan dirinya lewat angka, dan
+                baris itu cuma menambah tinggi header tanpa menambah pengertian. */}
+            <span className="mt-2.5 inline-flex max-w-full items-center gap-1.5 rounded-full bg-sage/70 px-2.5 py-1 text-[11px] font-medium text-forest ring-1 ring-forest/10">
+              <Wallet className="size-3.5 shrink-0" strokeWidth={2.2} aria-hidden />
+              <span className="truncate">
+                {selection?.type === 'wallet'
+                  ? OVERVIEW_PANEL_COPY.badgeWallet(selection.wallet.name)
+                  : OVERVIEW_PANEL_COPY.badgeAll}
+              </span>
             </span>
+            {/* konteks dompet (jenis · nomor) — hanya saat kartu dompet yang dipencet */}
+            {selection?.type === 'wallet' && (
+              <p className="mt-1.5 truncate text-[11px] text-forest/45">{ring.subtitle}</p>
+            )}
           </div>
           <button
             ref={closeRef}
@@ -149,7 +160,7 @@ export function OverviewPanel({
         >
           <div
             className={cn(
-              'pt-4 transition-[transform,opacity] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]',
+              'pt-3 transition-[transform,opacity] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]',
               open ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0',
             )}
             style={{ transitionDelay: open ? '160ms' : '0ms' }}
@@ -163,7 +174,7 @@ export function OverviewPanel({
 
           <div
             className={cn(
-              'mt-8 transition-[transform,opacity] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]',
+              'mt-6 transition-[transform,opacity] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]',
               open ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0',
             )}
             style={{ transitionDelay: open ? '280ms' : '0ms' }}

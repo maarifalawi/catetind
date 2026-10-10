@@ -1,10 +1,11 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { CalendarDays, Check, ChevronDown } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
 import {
   BudgetSheet,
   ChoicePills,
+  DateField,
   RevealStep,
   RupiahField,
   SheetSubmit,
@@ -344,23 +345,12 @@ export function AddInvestmentSheet({
           {/* tanggal transaksi hanya relevan untuk transaksi BARU — posisi aset
               tidak punya tanggal pembelian di model `Investment` */}
           {!editing && (
-            <div>
-              <span className="text-[13px] font-medium leading-snug text-forest">Tanggal</span>
-              <span className="relative mt-2 flex items-center gap-2 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/16 focus-within:ring-2 focus-within:ring-forest/35">
-                <CalendarDays className="size-4 shrink-0 text-forest/35" strokeWidth={2.2} />
-                <span className="flex-1 text-[14px] font-medium tabular-nums text-forest">
-                  {formatSheetDate(date)}
-                </span>
-                <Check className="size-4 shrink-0 text-hud-sage" strokeWidth={3} />
-                <input
-                  type="date"
-                  value={date}
-                  onChange={(event) => setDate(event.target.value)}
-                  aria-label="Tanggal transaksi"
-                  className="absolute inset-0 size-full cursor-pointer rounded-2xl opacity-0"
-                />
-              </span>
-            </div>
+            <DateField
+              label="Tanggal"
+              value={date}
+              onChange={setDate}
+              ariaLabel="Tanggal transaksi"
+            />
           )}
 
           {/* auto-kalkulasi real-time: quantity × price */}
@@ -486,17 +476,6 @@ function sanitizeDecimal(raw: string): string {
   const [whole, ...rest] = cleaned.split('.')
   const decimals = rest.join('').slice(0, 8)
   return rest.length > 0 ? `${whole}.${decimals}` : whole
-}
-
-/** `25 Sep 2026` — tanggal ringkas untuk field sheet */
-function formatSheetDate(iso: string): string {
-  if (!iso) return 'Pilih tanggal'
-  const [year, month, day] = iso.split('-').map(Number)
-  const months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-    'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des',
-  ]
-  return `${day} ${months[(month ?? 1) - 1]} ${year}`
 }
 
 /** Switch kecil on/off — pola sama dengan sheet Budget & Tagihan */

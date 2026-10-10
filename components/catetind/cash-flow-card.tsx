@@ -1,17 +1,20 @@
 'use client'
 
-import { memo, useEffect, useMemo, useState } from 'react'
+import { memo, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { ArrowDownLeft, ArrowUpRight, Waves } from 'lucide-react'
 import Link from 'next/link'
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis } from 'recharts'
 import { TransactionBottomSheet } from '@/components/dashboard/transaction-bottom-sheet'
 import { cn } from '@/lib/utils'
 import {
+  HOME_CASHFLOW_AXIS,
   HOME_CASHFLOW_COLORS,
   HOME_MONEY_COPY,
+  cashFlowAxisRows,
   homeCashFlowSeries,
   monthShortFromISO,
   summarizeCashFlowSeries,
+  type FlowAxisKey,
   type HomeCashFlowPoint,
 } from '@/lib/data/home-money'
 import { useMoneyStore } from '@/lib/money/store'
@@ -84,6 +87,24 @@ function CashFlowTooltip({
   )
 }
 
+/* Wajah tiap baris sumbu (paket 76): swatch + ikon arah. Ikon & warna cuma
+   penanda visual — TIDAK ada teks baru di sini, jadi aturan copy tak tersentuh. */
+const AXIS_FACE: Record<FlowAxisKey, { swatch: string; icon: ReactNode }> = {
+  income: {
+    swatch: 'bg-mint/20 text-forest',
+    icon: <ArrowDownLeft className="size-3.5" strokeWidth={2.6} aria-hidden />,
+  },
+  expense: {
+    swatch: 'bg-hud-terracotta/15 text-hud-terracotta',
+    icon: <ArrowUpRight className="size-3.5" strokeWidth={2.6} aria-hidden />,
+  },
+  /* "Sisa" bukan masuk/keluar — jadi tanpa ikon arah, cukup titik netral */
+  net: {
+    swatch: 'bg-forest text-mint',
+    icon: <span className="size-1.5 rounded-full bg-current" />,
+  },
+}
+
 /** Dibungkus `memo` — kartu ini tidak menerima props, jadi tidak perlu ikut
  *  re-render saat HomeScreen mengubah state popup. Nominal di sini ikut Global
  *  Eye lewat context privasi (`money()` sudah menyensor). */
@@ -107,6 +128,12 @@ export const CashFlowCard = memo(function CashFlowCard() {
   /* total dibaca dari SERI, bukan dari daftar baris — supaya angka kunci
      mustahil berbeda dari jumlah titik di grafiknya sendiri */
   const totals = useMemo(() => summarizeCashFlowSeries(series), [series])
+  /* tiga baris sumbu (Pemasukan · Pengeluaran · Sisa) — urutan & tanda dikunci
+     di `cashFlowAxisRows()` supaya komponen ini cuma menggambar (paket 76) */
+  const axisRows = useMemo(
+    () => cashFlowAxisRows(totals.income, totals.expense),
+    [totals.income, totals.expense],
+  )
 
   /* pref-reduced-motion: garisnya langsung muncul utuh, tanpa animasi menggambar */
   const [reduceMotion, setReduceMotion] = useState(false)
@@ -177,51 +204,45 @@ export const CashFlowCard = memo(function CashFlowCard() {
         </div>
       ) : (
         <>
-          {/* ── TIGA ANGKA KUNCI — kesimpulan kartu, terbaca sebelum grafiknya.
-              Mobile: 2 kolom (Pemasukan · Pengeluaran) + "Sisa" membentang
-              penuh di bawahnya; ≥sm: satu baris tiga kolom. */}
-          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
-            <div className="rounded-2xl bg-mint/15 px-3 py-2.5">
-              <p className="flex items-center gap-1 text-[10.5px] font-medium text-forest/55">
-                <ArrowDownLeft className="size-3 shrink-0" strokeWidth={3} aria-hidden />
-                {HOME_MONEY_COPY.chartIncomeLabel}
-              </p>
-              <p className="mt-1 truncate text-[15px] font-medium text-forest tabular-nums">
-                {money(totals.income)}
-              </p>
-            </div>
-            <div className="rounded-2xl bg-hud-terracotta/10 px-3 py-2.5">
-              <p className="flex items-center gap-1 text-[10.5px] font-medium text-forest/55">
-                <ArrowUpRight className="size-3 shrink-0" strokeWidth={3} aria-hidden />
-                {HOME_MONEY_COPY.chartExpenseLabel}
-              </p>
-              <p className="mt-1 truncate text-[15px] font-medium text-forest tabular-nums">
-                {money(totals.expense)}
-              </p>
-            </div>
-            <div
-              className={cn(
-                'col-span-2 rounded-2xl px-3 py-2.5 sm:col-span-1',
-                net < 0 ? 'bg-hud-terracotta/15' : 'bg-forest',
-              )}
-            >
-              <p
-                className={cn(
-                  'text-[10.5px] font-medium',
-                  net < 0 ? 'text-hud-terracotta' : 'text-mint',
-                )}
-              >
-                {HOME_MONEY_COPY.chartNetLabel}
-              </p>
-              <p
-                className={cn(
-                  'mt-1 truncate text-[15px] font-medium tabular-nums',
-                  net < 0 ? 'text-hud-terracotta' : 'text-cream',
-                )}
-              >
-                {net < 0 ? `-${money(Math.abs(net))}` : money(net)}
-              </p>
-            </div>
+          {/* ── TIGA ANGKA KUNCI — SIMETRI KOLOM (paket 76) ────────────────────
+              Kesimpulan kartu, dibaca sebelum grafiknya. Ketiga baris memakai
+              SATU grid dengan template kolom bersama (`HOME_CASHFLOW_AXIS`):
+              label di kiri (tumbuh), nominal di kanan (auto). Karena ketiganya
+              berbagi grid yang SAMA (bukan tiga grid terpisah), kolom nominal
+              lebarnya = nominal terpanjang → "Rp 12.345.678" tak pernah
+              menggeser label, dan ketiga nominal duduk di satu sumbu kanan yang
+              sama. Angkanya `tabular-nums` + `tracking-tight` supaya lebarnya
+              stabil saat nilainya berubah (tidak "melompat"). */}
+          <div className={cn('mt-4 grid gap-y-1.5', HOME_CASHFLOW_AXIS.gridClass)}>
+            {axisRows.map((row) => (
+              /* `contents` = anak-anaknya ikut kolom grid induk, jadi label &
+                 nominal tiap baris berbagi dua kolom bersama di atas */
+              <div key={row.key} className="contents">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span
+                    className={cn(
+                      'flex size-7 shrink-0 items-center justify-center rounded-xl',
+                      AXIS_FACE[row.key].swatch,
+                    )}
+                  >
+                    {AXIS_FACE[row.key].icon}
+                  </span>
+                  <span className="truncate text-[12.5px] font-medium text-forest/60">
+                    {row.label}
+                  </span>
+                </div>
+                <p
+                  className={cn(
+                    'self-center whitespace-nowrap text-right text-[15px] font-semibold',
+                    HOME_CASHFLOW_AXIS.valueClass,
+                    row.negative ? 'text-hud-terracotta' : 'text-forest',
+                  )}
+                >
+                  {row.negative ? '-' : ''}
+                  {money(Math.abs(row.amount))}
+                </p>
+              </div>
+            ))}
           </div>
 
 

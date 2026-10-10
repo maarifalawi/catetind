@@ -380,6 +380,21 @@ export interface WalletDraft {
   number?: string
   /** saldo yang user ketik sendiri — 0 kalau dikosongkan */
   balance: number
+  /**
+   * tema kartu kustom yang dipilih user (paket 77) — id dari
+   * `WALLET_CUSTOM_THEMES` (`lib/data/wallet-themes.ts`).
+   *
+   * `undefined` = kartu memakai resep palet bawaan (`walletCardRecipe`), persis
+   * seperti sebelum paket 77 — jadi form lama tetap sah tanpa menyentuh tema.
+   * Warnanya tetap bukan karangan user: yang dipilih hanya kombinasi yang sudah
+   * dikurasi di lapis data.
+   *
+   * ⚠️ Tema BUKAN bagian dari dompet di store uang: ia preferensi TAMPILAN yang
+   * peta `walletId → themeId`-nya hidup di `hooks/use-wallet-theme.ts`. Karena
+   * itu `createWalletAccount()` di bawah tidak membacanya — pemanggil yang
+   * menerapkannya (pratinjau: langsung; dompet baru: setelah store memberi id).
+   */
+  themeId?: string
 }
 
 /**

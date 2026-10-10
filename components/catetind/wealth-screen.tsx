@@ -1,12 +1,12 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { ScreenShell } from './screen-shell'
 import { GlobalPrivacyToggle } from './global-privacy-toggle'
-import { ContextSwitcher } from './context-switcher'
+import { ContextMenu } from './context-menu'
 import { useMoneyContext } from './money-context-provider'
 import { usePrivacy } from './privacy-provider'
 import { WealthNetWorthBar } from './wealth-net-worth-bar'
@@ -35,6 +35,7 @@ import {
   editInvestment,
   liveDebts,
   liveInvestments,
+  liveAssetTransactions,
   restoreDebt,
   restoreInvestment,
   settleDebt,
@@ -50,7 +51,6 @@ import {
   EMPTY_INVESTASI_COPY,
   EMPTY_INVESTASI_CTA,
   EMPTY_INVESTASI_TITLE,
-  INITIAL_ASSET_TRANSACTIONS,
   PRICE_UPDATE_COPY,
   PHYSICAL_TAB_COPY,
   activeDebtRemaining,
@@ -72,6 +72,13 @@ import { UNDO_WINDOW_MS } from '@/lib/data/history'
 import { WealthDeleteDialog } from './wealth-delete-dialog'
 import { useUserMoneySettings } from '@/lib/user-money-settings'
 import { CONTEXT_EMPTY_COPY, CONTEXT_LABEL, scopedItems } from '@/lib/data/money-context'
+
+/**
+ * Dua panel halaman ini SIMETRIS: Kekayaan (Investasi | Properti) di kiri dan
+ * Hutang (Hutang | Piutang) di kanan. Tipe ini yang membatasi tab sisi aset —
+ * "Hutang" bukan lagi tab di kartu kiri, ia punya panelnya sendiri di kanan.
+ */
+type AssetTab = Extract<WealthTab, 'investasi' | 'properti'>
 
 /* ── Kekayaan & Hutang (/app/wealth) — PRD Domain 2E ────────────────────────
    Halaman SIGNATURE CatetInd: satu layar yang menunjukkan gambaran finansial
@@ -111,9 +118,9 @@ import { CONTEXT_EMPTY_COPY, CONTEXT_LABEL, scopedItems } from '@/lib/data/money
    Sekarang semua bacaan & tulisan lewat `lib/money/wealth-store.ts` — sumber
    yang sama dengan ekspor `/settings/data`, Pusat Bantuan, dan bar Net Worth.
 
-   Waktu: "sekarang" memakai WEALTH_NOW_ISO (konstan, dipakai store kekayaan
-   saat menstempel harga) — sama seperti halaman Tagihan & Riwayat — supaya
-   render server & client identik.
+   Waktu: "sekarang" memakai WAKTU PERANGKAT (store menstempel harga & tanggal
+   transaksi dengan jam asli; badge "harga basi" juga diukur terhadap jam asli),
+   bukan konstanta tanggal demo.
    ────────────────────────────────────────────────────────────────────────── */
 
 /**
@@ -133,7 +140,8 @@ export function WealthScreen() {
   /* konteks uang (Pribadi/Keluarga/Bersama) — state GLOBAL (paket 47). Dipakai
      untuk menyaring DAFTAR aset & hutang; Net Worth di atas tetap seluruhnya. */
   const { context, setContext } = useMoneyContext()
-  const [activeTab, setActiveTab] = useState<WealthTab>('investasi')
+  /* tab sisi ASET — tab "Hutang" lama dihapus; panel hutang ada di kanan */
+  const [assetTab, setAssetTab] = useState<AssetTab>('investasi')
   const [debtView, setDebtView] = useState<DebtView>('hutangku')
   const [showAddInvestment, setShowAddInvestment] = useState(false)
   const [showAddDebt, setShowAddDebt] = useState(false)
@@ -152,6 +160,9 @@ export function WealthScreen() {
      dan tidak pula ke file ekspor, yang membaca dua selector yang sama. */
   const investments = liveInvestments(wealth)
   const debts = liveDebts(wealth)
+  /* ledger beli/jual NYATA dari store (dulu diisi konstanta mock
+     `INITIAL_ASSET_TRANSACTIONS`) — riwayat per aset diturunkan dari sini */
+  const assetTransactions = liveAssetTransactions(wealth)
   /* aset fisik / properti (paket 63) — store terpisah, pola sama dengan funds/bills */
   const physicalSnapshot = usePhysicalStore()
   const physicalAssets = livePhysicalAssets(physicalSnapshot)
@@ -301,6 +312,9 @@ export function WealthScreen() {
         quantity: tx.quantity,
         price: tx.price,
         fees: tx.fees,
+        /* arah & TANGGAL transaksi ikut tercatat ke ledger riwayat aset */
+        side: tx.side,
+        dateISO: tx.date,
         /* aset baru masuk ke KONTEKS YANG SEDANG AKTIF (paket 47) — kalau tidak,
            aset yang dicatat saat konteks "Keluarga" tidak akan muncul di tab yang
            user lihat sendiri setelah menyimpan. */
@@ -563,9 +577,10 @@ export function WealthScreen() {
   /* ── RENDER ─────────────────────────────────────────────────────────────── */
   return (
     <ScreenShell>
-      {/* kolom konten: ~760px di layar biasa, melebar di desktop lebar supaya
-          donut & daftar aset bisa berdampingan (bukan ponsel yang direntangkan) */}
-      <div className="mx-auto w-full max-w-[760px] xl:max-w-[1060px]">
+      {/* kolom konten: SENGAJA tanpa batas lebar & tanpa `mx-auto` — persis
+          Dashboard (sumber kebenaran layout). Konten memakai seluruh lebar kolom
+          dari `ScreenShell`, jadi tepi kiri-kanan kedua halaman lurus. */}
+      <div>
         {/* ── SECTION 2: header halaman + toggle privasi ───────────────────
             Judul memakai gaya yang SAMA dengan halaman lain (polos, tanpa kotak
             latar) supaya konsisten di seluruh app. */}
@@ -573,112 +588,144 @@ export function WealthScreen() {
           <h1 className="truncate font-display text-3xl font-semibold tracking-tight text-forest lg:text-4xl">
             Kekayaan &amp; Hutang
           </h1>
-          {/* cluster aksi desktop: switcher konteks + tombol mata (paket 47) */}
+          {/* cluster aksi desktop: pemilih konteks + tombol mata (paket 47).
+              Di MOBILE keduanya sudah disediakan header mobile GLOBAL (paket 75)
+              — /wealth menampilkan nominal, jadi tombol matanya ikut di sana. */}
           <div className="hidden shrink-0 items-center gap-3 lg:flex">
-            <ContextSwitcher value={context} onChange={setContext} className="w-[280px]" />
-            <GlobalPrivacyToggle />
-          </div>
-          <div className="lg:hidden">
+            <ContextMenu value={context} onChange={setContext} className="w-44" />
             <GlobalPrivacyToggle />
           </div>
         </header>
 
-        {/* switcher konteks (mobile): barisnya sendiri di bawah header —
+        {/* pemilih konteks (mobile): barisnya sendiri di bawah header —
             pola penempatan yang sama dengan Home & Budget (paket 47) */}
         <div className="mt-4 flex justify-center lg:hidden">
-          <ContextSwitcher value={context} onChange={setContext} />
+          <ContextMenu value={context} onChange={setContext} className="w-56" />
         </div>
 
-        {/* ── SECTION 3: Tug-of-War Net Worth Bar (hero visual) ───────────
-            `assets` = kas likuid + investasi (dijumlahkan DI DALAM komponen).
-            Angkanya GLOBAL: seluruh aset, piutang, dan hutang — bukan hanya
-            konteks aktif (kanon paket 47 #1), dan kalimat cakupannya menyusul di
-            bawah bar supaya tidak ada keraguan soal angkanya. */}
-        <WealthNetWorthBar
-          cash={cash}
-          investments={totalInvestments}
-          physical={physicalTotal}
-          receivables={totalReceivable}
-          debts={totalDebt}
-          masked={isMasked}
-        />
+        {/* ── SECTION 3: HERO — Kekayaan Bersih (fokus absolut) ───────────
+            Angkanya GLOBAL: seluruh aset, piutang, dan hutang (kanon paket 47
+            #1). Komponennya sendiri yang menjumlahkan potongannya. */}
+        <div className="mt-5 lg:mt-6">
+          <WealthNetWorthBar
+            cash={cash}
+            investments={totalInvestments}
+            physical={physicalTotal}
+            receivables={totalReceivable}
+            debts={totalDebt}
+            masked={isMasked}
+          />
+        </div>
 
-        {/* ── SECTION 4: tab Investasi / Properti / Hutang ──────────────── */}
-        <WealthTabs active={activeTab} onChange={setActiveTab} />
-
-        <AnimatePresence mode="wait" initial={false}>
-          {activeTab === 'investasi' && (
-            <motion.div
-              key="tab-investasi"
-              initial={{ opacity: 0, x: -16 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 16 }}
-              transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-              className="mt-5"
-            >
-              {visibleInvestments.length === 0 ? (
-                <EmptyInvestasi
-                  onAdd={() => setShowAddInvestment(true)}
-                  /* aset ada, tapi tidak satu pun milik konteks aktif (paket 47) →
-                     sebutkan alasannya, jangan biarkan tab tampak kosong tanpa
-                     penjelasan (padahal daftar konteks lain penuh) */
-                  contextLine={
-                    investments.length > 0
-                      ? CONTEXT_EMPTY_COPY.investments.title(CONTEXT_LABEL[context])
-                      : undefined
-                  }
+        {/* ── SECTION 4: DUA KARTU KEMBAR — KEKAYAAN | HUTANG ───────────────
+            Grid, lebar maksimum, gap, DAN gaya kartu disalin PERSIS dari
+            Dashboard (`home-screen.tsx`) supaya tepi & ritme dua halaman
+            identik — `max-w-[1400px] · grid lg:grid-cols-12 · gap-5 lg:gap-6`
+            + `rounded-[2rem] bg-cream p-4 ring-1 ring-soil/12`. */}
+        <div className="mx-auto mt-5 grid w-full max-w-[1400px] grid-cols-1 gap-5 lg:mt-6 lg:grid-cols-12 lg:gap-6">
+          {/* ── KIRI · KEKAYAAN (aset) ─────────────────────────────────────── */}
+          <section aria-label="Kekayaan" className="lg:col-span-6 lg:col-start-1 lg:row-start-1">
+            <WealthPanel
+              label="Kekayaan"
+              total={assetTab === 'investasi' ? totalInvestments : physicalTotal}
+              masked={isMasked}
+              addLabel={assetTab === 'investasi' ? 'Tambah investasi' : 'Tambah aset'}
+              onAdd={
+                assetTab === 'investasi'
+                  ? () => setShowAddInvestment(true)
+                  : () => setShowAddPhysical(true)
+              }
+              toggle={
+                <PanelToggle
+                  id="asset"
+                  value={assetTab}
+                  onChange={(next) => setAssetTab(next as AssetTab)}
+                  options={[
+                    { id: 'investasi', label: 'Investasi' },
+                    { id: 'properti', label: 'Properti' },
+                  ]}
                 />
-              ) : (
-                <WealthInvestasi
-                  investments={visibleInvestments}
-                  /* ledger transaksi masih mock (produksi: `investment_transactions`);
-                     riwayat tiap aset diturunkan dari daftar ini di dalam komponen */
-                  transactions={INITIAL_ASSET_TRANSACTIONS}
-                  masked={isMasked}
-                  expandedAssetId={expandedAssetId}
-                  onToggleExpand={(id) =>
-                    setExpandedAssetId((prev) => (prev === id ? null : id))
-                  }
-                  onAdd={() => setShowAddInvestment(true)}
-                  onUpdatePrice={handleUpdatePrice}
-                  onEdit={handleEditAsset}
-                  onDelete={handleDeleteAsset}
-                />
-              )}
-            </motion.div>
-          )}
-
-          {activeTab === 'properti' && (
-            <motion.div
-              key="tab-properti"
-              initial={{ opacity: 0, x: -16 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 16 }}
-              transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-              className="mt-5"
+              }
             >
-              {/* ── SECTION 6: PROPERTI & ASET FISIK (paket 63) ────────────────
-                  Dulu teaser (PRD A12); sekarang tab NYATA: daftar aset fisik +
-                  Tambah/Edit/Hapus, dan nilainya ikut ke Total Kekayaan (`physical`
-                  di atas). Salinan bayangan tidak ada — semua dari store aset fisik. */}
-              <WealthProperti
-                assets={physicalAssets}
-                masked={isMasked}
-                onAdd={() => setShowAddPhysical(true)}
-                onEdit={(asset) => setEditingPhysical(asset)}
-                onDelete={handleDeletePhysical}
-              />
-            </motion.div>
-          )}
+              <AnimatePresence mode="wait" initial={false}>
+                {assetTab === 'investasi' ? (
+                  <motion.div
+                    key="asset-investasi"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                  >
+                    {visibleInvestments.length === 0 ? (
+                      <EmptyInvestasi
+                        onAdd={() => setShowAddInvestment(true)}
+                        /* aset ada, tapi tidak satu pun milik konteks aktif (paket 47) */
+                        contextLine={
+                          investments.length > 0
+                            ? CONTEXT_EMPTY_COPY.investments.title(CONTEXT_LABEL[context])
+                            : undefined
+                        }
+                      />
+                    ) : (
+                      <WealthInvestasi
+                        investments={visibleInvestments}
+                        /* ledger beli/jual nyata dari store kekayaan */
+                        transactions={assetTransactions}
+                        masked={isMasked}
+                        expandedAssetId={expandedAssetId}
+                        onToggleExpand={(id) =>
+                          setExpandedAssetId((prev) => (prev === id ? null : id))
+                        }
+                        onAdd={() => setShowAddInvestment(true)}
+                        onUpdatePrice={handleUpdatePrice}
+                        onEdit={handleEditAsset}
+                        onDelete={handleDeleteAsset}
+                      />
+                    )}
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="asset-properti"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                  >
+                    <WealthProperti
+                      assets={physicalAssets}
+                      masked={isMasked}
+                      onAdd={() => setShowAddPhysical(true)}
+                      onEdit={(asset) => setEditingPhysical(asset)}
+                      onDelete={handleDeletePhysical}
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </WealthPanel>
+          </section>
 
-          {activeTab === 'hutang' && (
-            <motion.div
-              key="tab-hutang"
-              initial={{ opacity: 0, x: -16 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 16 }}
-              transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-              className="mt-5"
+          {/* ── KANAN · HUTANG & PIUTANG ───────────────────────────────────── */}
+          <section
+            aria-label="Hutang dan piutang"
+            className="lg:col-span-6 lg:col-start-7 lg:row-start-1"
+          >
+            <WealthPanel
+              label="Hutang"
+              total={debtView === 'hutangku' ? totalDebt : totalReceivable}
+              masked={isMasked}
+              addLabel="Tambah utang atau piutang"
+              onAdd={() => setShowAddDebt(true)}
+              toggle={
+                <PanelToggle
+                  id="debt"
+                  value={debtView}
+                  onChange={(next) => setDebtView(next as DebtView)}
+                  options={[
+                    { id: 'hutangku', label: 'Hutang' },
+                    { id: 'piutangku', label: 'Piutang' },
+                  ]}
+                />
+              }
             >
               <WealthHutang
                 debts={visibleDebts}
@@ -700,9 +747,9 @@ export function WealthScreen() {
                     : undefined
                 }
               />
-            </motion.div>
-          )}
-        </AnimatePresence>
+            </WealthPanel>
+          </section>
+        </div>
       </div>
 
       {/* ── Sheet: tambah/edit investasi (5E) & tambah utang/piutang (7F) ────
@@ -784,63 +831,101 @@ export function WealthScreen() {
 
 /* ── sub-komponen halaman ini ─────────────────────────────────────────────── */
 
-const TAB_OPTIONS: { id: WealthTab; label: string; emoji: string; badge?: string }[] = [
-  { id: 'investasi', label: 'Investasi', emoji: '📈' },
-  { id: 'properti', label: 'Properti', emoji: '🏠' },
-  { id: 'hutang', label: 'Hutang', emoji: '💳' },
-]
+/**
+ * Kartu panel premium — SATU bentuk untuk sisi Kekayaan & sisi Hutang supaya
+ * kedua kartu benar-benar simetris. Kepala kartu = label mikro + nominal
+ * (mengikuti toggle) + satu tombol tambah; isinya bebas.
+ */
+function WealthPanel({
+  label,
+  total,
+  masked,
+  addLabel,
+  onAdd,
+  toggle,
+  children,
+}: {
+  label: string
+  total: number
+  masked: boolean
+  addLabel: string
+  onAdd: () => void
+  toggle: ReactNode
+  children: ReactNode
+}) {
+  return (
+    <div className="flex h-full flex-col rounded-[2rem] bg-cream p-4 ring-1 ring-soil/12 sm:p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[10.5px] font-medium uppercase tracking-[0.2em] text-forest/40">
+            {label}
+          </p>
+          <p className="mt-1.5 truncate font-display text-[1.7rem] font-semibold leading-none tracking-tight text-forest tabular-nums sm:text-[1.95rem]">
+            {maskMoney(total, masked)}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onAdd}
+          aria-label={addLabel}
+          title={addLabel}
+          className="flex size-10 shrink-0 items-center justify-center rounded-full bg-forest text-cream transition-colors hover:bg-forest-soft active:scale-95 motion-reduce:transition-none"
+        >
+          <Plus className="size-4" strokeWidth={2.6} aria-hidden />
+        </button>
+      </div>
 
-/** Tab halaman — pill aktif meluncur (layoutId) & bisa digulir di layar sempit */
-function WealthTabs({
-  active,
+      <div className="mt-4">{toggle}</div>
+
+      <div className="mt-4 flex-1">{children}</div>
+    </div>
+  )
+}
+
+/**
+ * Toggle dua posisi di dalam kepala kartu — bentuk pill yang sama untuk kedua
+ * panel (Kekayaan: Investasi/Properti · Hutang: Hutang/Piutang). Posisi aktif
+ * meluncur dengan `layoutId` per kartu (`id`) supaya kedua kartu tidak saling
+ * menarik pill satu sama lain.
+ */
+function PanelToggle({
+  id,
+  value,
+  options,
   onChange,
 }: {
-  active: WealthTab
-  onChange: (tab: WealthTab) => void
+  id: string
+  value: string
+  options: { id: string; label: string }[]
+  onChange: (next: string) => void
 }) {
   return (
     <div
       role="tablist"
-      aria-label="Bagian kekayaan"
-      className="hide-scrollbar -mx-1 mt-5 flex gap-2 overflow-x-auto px-1 py-1 lg:mt-6"
+      className="relative flex w-full items-center gap-1 rounded-full bg-sage/70 p-1 ring-1 ring-soil/8"
     >
-      {TAB_OPTIONS.map((tab) => {
-        const isActive = tab.id === active
+      {options.map((option) => {
+        const isActive = option.id === value
         return (
           <button
-            key={tab.id}
+            key={option.id}
             type="button"
             role="tab"
             aria-selected={isActive}
-            onClick={() => onChange(tab.id)}
+            onClick={() => onChange(option.id)}
             className={cn(
-              'relative flex shrink-0 items-center gap-2 rounded-full px-4 py-2.5 text-[13px] font-medium transition-colors duration-200',
-              isActive ? 'text-mint' : 'bg-cream text-forest/55 ring-1 ring-soil/12 hover:text-forest',
+              'relative flex flex-1 items-center justify-center rounded-full px-3 py-2 text-[12.5px] font-medium transition-colors duration-200',
+              isActive ? 'text-cream' : 'text-forest/55 hover:text-forest',
             )}
           >
             {isActive && (
               <motion.span
-                layoutId="wealth-tab-pill"
+                layoutId={`panel-toggle-${id}`}
                 transition={{ type: 'spring', stiffness: 340, damping: 32 }}
-                className="absolute inset-0 rounded-full bg-forest shadow-[0_14px_30px_-18px_rgba(69,89,78,0.9)]"
+                className="absolute inset-0 rounded-full bg-forest"
               />
             )}
-            <span className="relative z-10 flex items-center gap-1.5">
-              <span aria-hidden>{tab.emoji}</span>
-              {tab.label}
-              {tab.badge && (
-                <span
-                  className={cn(
-                    'rounded-full px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide',
-                    isActive
-                      ? 'bg-mint/25 text-mint'
-                      : 'bg-hud-amber/25 text-[#b89191]',
-                  )}
-                >
-                  {tab.badge}
-                </span>
-              )}
-            </span>
+            <span className="relative z-10">{option.label}</span>
           </button>
         )
       })}

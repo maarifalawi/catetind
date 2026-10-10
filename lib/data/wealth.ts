@@ -148,6 +148,8 @@ export interface PhysicalAsset {
   note?: string
   /** konteks uang (paket 47) — sama seperti Investment/Debt */
   scope: BudgetScope
+  /** id baris `physical_assets` di Supabase (uuid) — `undefined` = belum terkirim */
+  remoteId?: string
 }
 
 /** pilihan kategori Tab Properti (label sudah Bahasa Indonesia) */
@@ -224,6 +226,8 @@ export interface AssetTransaction {
   side: 'buy' | 'sell'
   quantity: number
   price: number
+  /** id baris `asset_transactions` di Supabase (uuid) — `undefined` = belum terkirim */
+  remoteId?: string
 }
 
 /**
@@ -637,8 +641,15 @@ export function allocationSlices(list: Investment[]): AllocationSlice[] {
 
 /* ── KESEGARAN HARGA (Section 5D) ──────────────────────────────────────────── */
 
-/** umur harga dalam menit terhadap `WEALTH_NOW_ISO` (bukan jam mesin user) */
-export function priceAgeMinutes(asset: Investment, nowIso: string = WEALTH_NOW_ISO): number {
+/**
+ * Umur harga dalam menit terhadap WAKTU PERANGKAT (`nowIso` bisa diisi eksplisit
+ * oleh test).
+ *
+ * Dulu defaultnya `WEALTH_NOW_ISO` — konstanta yang dipatok 25 Sep 2026 — jadi
+ * "harga basi" diukur terhadap jam demo, bukan jam user. Diganti ke waktu asli
+ * supaya badge basi/tombol "Update Manual" benar-benar mencerminkan umur harga.
+ */
+export function priceAgeMinutes(asset: Investment, nowIso: string = new Date().toISOString()): number {
   const age = new Date(nowIso).getTime() - new Date(asset.lastUpdate).getTime()
   return Math.max(0, Math.round(age / 60_000))
 }
@@ -648,7 +659,7 @@ export function priceAgeMinutes(asset: Investment, nowIso: string = WEALTH_NOW_I
  * `is_stale` dari backend selalu menang kalau ada — aset itu yang bermasalah,
  * bukan seluruh halaman (PRD 2E.1 poin 5).
  */
-export function isAssetStale(asset: Investment, nowIso: string = WEALTH_NOW_ISO): boolean {
+export function isAssetStale(asset: Investment, nowIso: string = new Date().toISOString()): boolean {
   if (asset.isStale) return true
   const minutes = priceAgeMinutes(asset, nowIso)
   return asset.type === 'crypto'
@@ -665,7 +676,7 @@ export function isAssetStale(asset: Investment, nowIso: string = WEALTH_NOW_ISO)
  * daftar hanya membuat halaman terasa rusak. Helper ini disimpan untuk pemakaian
  * lain (mis. badge ringkasan/notifikasi) yang butuh daftarnya, bukan pesannya.
  */
-export function staleAssets(list: Investment[], nowIso: string = WEALTH_NOW_ISO): Investment[] {
+export function staleAssets(list: Investment[], nowIso: string = new Date().toISOString()): Investment[] {
   return list.filter((asset) => isAssetStale(asset, nowIso))
 }
 
@@ -1094,12 +1105,12 @@ export const PERSONAL_SECTION_COPY =
   'Catat aja biar gak lupa, bukan buat ngejar-ngejar ya 😊'
 
 export const SNOWBALL_TITLE = 'Debt Snowball Tracker'
-export const SNOWBALL_HELP = 'Lunasi yang paling kecil dulu — biar cepat dapat kemenangan pertama 💪'
+export const SNOWBALL_HELP = 'Lunasi dari yang terkecil dulu.'
 export const SNOWBALL_EMPTY = 'Belum ada hutang platform aktif. Bebas cicilan! 🌿'
 
 export const EMPTY_INVESTASI_TITLE = 'Belum punya catatan investasi'
 export const EMPTY_INVESTASI_COPY =
-  'Saham, reksadana, crypto, emas — catat di sini biar tahu net worth kamu yang sebenarnya 📈🌿'
+  'Saham, reksadana, crypto, emas — catat di sini agar Net Worth akurat.'
 export const EMPTY_INVESTASI_CTA = 'Tambah Investasi Pertama'
 
 export const EMPTY_HUTANG_TITLE = 'Gak ada hutang aktif'
@@ -1116,13 +1127,6 @@ export const ALL_SETTLED_COPY = 'Net worth kamu 100% bersih. Ini kerja keras yan
 /** copy penghubung ke Daily HUD (Domain 2B) — angka diisi di komponen */
 export function hudDeductionCopy(installments: string): string {
   return `💡 Cicilan ${installments} sudah dipotong dari Jatah Harian kamu`
-}
-
-/** micro-copy di bawah Net Worth (Section 3) */
-export function netWorthCopy(positive: boolean, ratio: string): string {
-  return positive
-    ? `Asetmu ${ratio}x lebih besar dari hutang. Keep going! 💚`
-    : 'Hutangmu masih lebih besar, tapi kamu udah mulai gerak. That counts! 🌱'
 }
 
 /* ── COPY: SHEET INVESTASI — DUA MODE (Section 5E) ──────────────────────────
@@ -1370,12 +1374,11 @@ export const DELETE_ASSET_TOAST = {
 
 export const PHYSICAL_TAB_COPY = {
   title: 'Properti & Aset Fisik',
-  blurb: 'Rumah, tanah, kendaraan, logam mulia, perhiasan — nilainya kamu isi sendiri.',
+  blurb: 'Rumah, tanah, kendaraan, logam mulia — nilainya kamu isi sendiri.',
   totalLabel: 'Total nilai aset fisik',
   addLabel: 'Tambah Aset',
   emptyTitle: 'Belum ada aset fisik tercatat',
-  emptyBody:
-    'Rumah, kendaraan, atau barang berharga? Catat di sini biar Total Kekayaan kamu menggambarkan kondisi sebenarnya 🏠',
+  emptyBody: 'Catat rumah, kendaraan, atau barang berharga biar Total Kekayaan akurat.',
   emptyCta: 'Tambah Aset Pertama',
   gainLabel: 'Naik',
   lossLabel: 'Turun',

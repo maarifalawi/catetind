@@ -17,7 +17,7 @@ import {
 import { toast } from 'sonner'
 import { ScreenShell } from './screen-shell'
 import { GlobalPrivacyToggle } from './global-privacy-toggle'
-import { ContextSwitcher } from './context-switcher'
+import { ContextMenu } from './context-menu'
 import { useMoneyContext } from './money-context-provider'
 import { usePrivacy } from './privacy-provider'
 import { FinancialHealthCard } from './financial-health-card'
@@ -480,19 +480,19 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
             Riwayat &amp; Insight
           </h1>
         </div>
-        {/* cluster aksi desktop: switcher konteks + tombol mata global (paket 47) */}
+        {/* cluster aksi desktop: pemilih konteks + tombol mata global (paket 47).
+            Di MOBILE keduanya sudah disediakan header mobile GLOBAL (paket 75) —
+            termasuk tombol mata, karena /history menampilkan nominal — jadi blok
+            mobile-nya sengaja tidak digambar lagi di sini (dulu ada, = dua mata). */}
         <div className="hidden shrink-0 items-center gap-3 lg:flex">
-          <ContextSwitcher value={context} onChange={setContext} className="w-[280px]" />
-          <GlobalPrivacyToggle />
-        </div>
-        <div className="lg:hidden">
+          <ContextMenu value={context} onChange={setContext} className="w-44" />
           <GlobalPrivacyToggle />
         </div>
       </header>
 
-      {/* switcher konteks (mobile) — baris sendiri di bawah header, pola Home/Budget */}
+      {/* pemilih konteks (mobile) — baris sendiri di bawah header, pola Home/Budget */}
       <div className="mt-4 flex justify-center lg:hidden">
-        <ContextSwitcher value={context} onChange={setContext} />
+        <ContextMenu value={context} onChange={setContext} className="w-56" />
       </div>
 
       {/* ── FILTER GLOBAL — tepat di bawah judul, di ATAS semua konten ──────────
@@ -780,7 +780,17 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
                   </span>
                 </div>
 
-                <ul className="mt-0.5 divide-y divide-soil/10">
+                {/* pemisah antar transaksi = JARAK, bukan garis rambut.
+                    Sejak paket 78 tiap baris adalah kartu tipis ber-tint
+                    keluarga kategori (`visual.row` + rounded, lihat
+                    history-transaction-row.tsx), jadi `divide-y divide-soil/10`
+                    yang dulu dipakai untuk daftar rata kini justru menempelkan
+                    kartu satu sama lain (keluhan "mepet"). Pola yang dipakai di
+                    sini SAMA dengan daftar transaksi Dashboard
+                    (`recent-transactions-card.tsx`): kolom flex + `gap-1.5`,
+                    dengan `mt-2` supaya baris pertama tidak menempel ke kepala
+                    hari. Nol warna baru — hanya jarak. */}
+                <ul className="mt-2 flex flex-col gap-1.5">
                   {group.items.map((tx) => {
                     const delay = 60 + rowIndex++ * 45
                     return (

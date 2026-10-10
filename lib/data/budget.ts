@@ -374,7 +374,6 @@ export function periodIncome(
   txs: HistoryTransaction[] = HISTORY_TRANSACTIONS,
   configuredMonthlyIncome = 0,
 ): PeriodIncome {
-  const configured = configuredMonthlyIncome > 0
   const inWindow = txs
     .filter(
       (tx) => tx.type === 'income' && tx.date >= window.startISO && tx.date <= window.endISO,
@@ -382,6 +381,12 @@ export function periodIncome(
     .sort((a, b) => (a.date < b.date ? 1 : -1))
   const latest = inWindow[0] ?? null
   const logged = inWindow.reduce((sum, tx) => sum + tx.amount, 0)
+
+  /* `configured` = "ADA dasar untuk menghitung", bukan cuma "form sudah diisi":
+     kalau user sudah mencatat pemasukan NYATA (walau angka konfigurasi kosong),
+     jatah harian memang bisa dihitung — jadi kartu tidak boleh menyuruhnya "atur
+     pemasukan dulu" padahal uangnya sudah tercatat di ledger. */
+  const configured = configuredMonthlyIncome > 0 || logged > 0
 
   /* bulan kalender: konfigurasi user sudah cukup untuk menyatakan "ada
      pemasukan" — dan ia dihitung sejak hari pertama periode (midPeriod false) */
@@ -392,7 +397,9 @@ export function periodIncome(
     midPeriod: latest !== null && latest.date > window.startISO,
     latestDateISO: latest?.date ?? (fromConfig ? window.startISO : null),
     latestDateLabel: latest ? dayMonth(latest.date) : fromConfig ? dayMonth(window.startISO) : null,
-    amount: fromConfig ? Math.max(logged, configuredMonthlyIncome) : logged,
+    /* pemasukan NYATA menang bila ada; konfigurasi hanya cadangan (sejalan
+       dengan `computeDailyHud` yang memakai baris ledger lebih dulu) */
+    amount: fromConfig ? (logged > 0 ? logged : configuredMonthlyIncome) : logged,
   }
 }
 
@@ -711,7 +718,16 @@ export function computeDailyHud({
      dikirim pemanggil — itu yang membuat "catat Rp 50.000 → jatah harian turun"
      berlaku di semua tab, termasuk tab Bulanan. */
   const useMonthlyPool = !period || period.period === 'monthly'
-  const income = useMonthlyPool ? monthlyIncome : (earned ?? periodPool(period).income)
+  /* PEMASUKAN REAL MENANG (redesain paket 82 · round 3). Sebelum ini jendela
+     bulan kalender SELALU memakai angka konfigurasi user, sehingga catatan
+     pemasukan yang BENAR-BENAR masuk di bulan itu DIABAIKAN — kartunya
+     menampilkan angka statis yang tidak sync dengan ledger (keluhan nyata:
+     "kok ngga real time, jangan ada seed data"). Sekarang baris ledger NYATA
+     (`earned`) dipakai lebih dulu bila ADA; angka konfigurasi hanya jadi
+     cadangan saat belum ada catatan pemasukan sama sekali. Aturannya sama
+     dengan `periodIncome()` yang juga mengutamakan yang tercatat. */
+  const monthlyIncomeValue = earned != null && earned > 0 ? earned : monthlyIncome
+  const income = useMonthlyPool ? monthlyIncomeValue : (earned ?? periodPool(period).income)
   const installments = useMonthlyPool ? totalInstallments : periodInstallments(period)
   const spentInPeriod = spent
 
@@ -1339,12 +1355,16 @@ export const CONTRIBUTION_SOURCES: { id: string; name: string; kind: string; til
 ]
 
 
-/* ── COPY TETAP (social proof & nudge) ───────────────────────────────────── */
+/* ── COPY TETAP (social proof & nudge) ─────────────────────────────────────
+   PAKET 78 — dua kalimat ini DIPENDEKKAN (bukan dihapus) mengikuti permintaan
+   pemilik produk: "strip out unnecessary text". Panjang aslinya dua baris di
+   layar 375px, dan keduanya cuma mengulang hal yang sudah terbaca dari kartu
+   celengan di atasnya. Nadanya tetap sama (PRD 2C.4: tidak menghakimi). */
 export const SOCIAL_PROOF_COPY =
-  '💡 78% member CatetInd yang set target bulanan berhasil hemat lebih banyak.'
+  '💡 78% member yang set target bulanan hemat lebih banyak.'
 
 export const NUDGE_COPY =
-  'Celengan kamu belum nambah bulan ini. Gapapa, mulai lagi kapan aja ya — kecil-kecilan juga gak masalah 🤗'
+  'Celengan kamu belum nambah bulan ini. Gapapa, mulai lagi kapan aja 🤗'
 
 /* ── COPY PERIODE & JATAH HARIAN (Zona A + kartu Home) ───────────────────────
    Tidak boleh ada satu kalimat pun langsung di JSX. Nada PRD 2B.3: saat tidak
@@ -1370,6 +1390,14 @@ export const HUD_COPY = {
   /** netral periode: benar untuk tab mingguan / bulanan / siklus gajian */
   remainingLead: 'Sisa periode:',
   daysLeftSuffix: 'hari lagi',
+  /** label kecil di ATAS angka utama kartu /budget (redesain paket 82) */
+  mainLead: 'Jatah harianmu',
+  /** caption di bawah cincin — menegaskan angka itu PEMAKAIAN HARI INI (redesain 82) */
+  todayCaption: 'hari ini',
+  /** label bar pemakaian PERIODE (bukan hari ini) — menjawab "kepakai berapa %" */
+  periodUsed: (pct: number) => `${pct}% terpakai periode ini`,
+  /** aria-label cincin pemakaian jatah hari ini di kartu /budget (redesain 82) */
+  ringAria: (pct: number) => `Jatah hari ini terpakai ${pct} persen`,
   poolNote: (installmentsLabel: string, obligationLabel: string) =>
     `Setelah dipotong cicilan ${installmentsLabel} & celengan ${obligationLabel}`,
   /** PRD 2B.3: pemasukan masuk di tengah periode → jatah dihitung ulang */
@@ -1442,6 +1470,57 @@ export const HOME_HUD_COPY = {
   },
 } as const
 
+/* ── VISUALISASI JATAH HARIAN — METER SEGMEN (paket 76) ─────────────────────
+   Permintaan pemilik produk: penjelasan teks yang berat diganti SATU visual
+   premium. Dua kartu "Jatah Hari Ini" (Dashboard `daily-hud-card` & /budget
+   `daily-hud-summary`) sekarang menggambar bar SEGMEN `h-2` yang sama, dan
+   keduanya membaca porsi yang SAMA (`todayUsedPct` dari `computeDailyHud`) —
+   jadi tidak ada dua meter yang bisa bercerita beda.
+
+   Aturan visualnya SENGAJA dipisah jadi fungsi MURNI di sini (bukan ditulis di
+   JSX komponen), supaya bisa diuji tanpa DOM — pola yang sama dengan
+   `periodUsagePct` & `nextNavCompact`: satu aturan, satu tempat, satu test. */
+export const HUD_METER_SEGMENTS = 12
+
+/**
+ * Status warna kanon PRD 2B.2 dari porsi terpakai (0..1) — SATU tempat.
+ *
+ * Ambangnya tidak berubah dari yang berlaku sebelumnya (kartu Home memakai
+ * batas yang sama): < 75% aman (sage), < 100% mendekat (amber), ≥ 100% lewat
+ * (terracotta). Dipusatkan di sini supaya chip status & warna meter MUSTAHIL
+ * berbeda (dulu ambangnya hidup langsung di dalam JSX kartu Home).
+ */
+export function hudStatusFor(usedPct: number): HudStatus {
+  return usedPct < 0.75 ? 'onTrack' : usedPct < 1 ? 'approaching' : 'over'
+}
+
+export interface HudMeterModel {
+  /** porsi terpakai yang sudah dijaga 0..1 */
+  usedPct: number
+  /** status warna kanon (PRD 2B.2) */
+  status: HudStatus
+  /** jumlah segmen yang terisi (0..`total`) */
+  filled: number
+  /** jumlah segmen total */
+  total: number
+}
+
+/**
+ * Model meter MURNI: porsi terpakai → berapa segmen terisi + status warna.
+ *
+ * `usedPct > 0` SELALU mengisi MINIMAL satu segmen: pengeluaran sekecil Apa pun
+ * harus terlihat, jangan sampai bar tampak "kosong" padahal hari ini sudah ada
+ * catatan (kanon "jujur di setiap klaim" — visual yang bohong = angka yang
+ * bohong). Nilai di luar 0..1 (mis. over-budget) dijepit supaya meter tidak
+ * pernah melebar keluar kontainernya.
+ */
+export function hudMeter(usedPct: number, total = HUD_METER_SEGMENTS): HudMeterModel {
+  const safeTotal = Math.max(1, Math.floor(total))
+  const pct = Math.min(Math.max(Number.isFinite(usedPct) ? usedPct : 0, 0), 1)
+  const filled = pct <= 0 ? 0 : Math.min(safeTotal, Math.max(1, Math.round(pct * safeTotal)))
+  return { usedPct: pct, status: hudStatusFor(pct), filled, total: safeTotal }
+}
+
 /* ── COPY NUDGE CELENGAN DI BERANDA (banner `home-banner.tsx`) ──────────────
    Dulu judul, badan, dan label tombol banner ini ditulis langsung di JSX —
    satu-satunya banner Home yang copy-nya tidak lewat `lib/data/*`. Sekarang ikut
@@ -1512,6 +1591,46 @@ export const SPENDING_REVIEW_COPY = {
   },
 } as const
 
+/* ── COPY HALAMAN BUDGET & TARGET (paket 78) ─────────────────────────────────
+   Judul halaman, DUA judul zona, caption konteks, dan label chip jumlah. Semua
+   ini dulu ditulis langsung di JSX `budget-screen.tsx` (satu-satunya halaman
+   yang judulnya masih literal), jadi ia tidak bisa diaudit seperti copy lain —
+   padahal justru halaman inilah yang paling banyak diperiksa pemilik produk.
+
+   `scopeCaption` SENGAJA hanya memuat konteks keluarga & bersama: untuk konteks
+   `pribadi` captionnya DIHAPUS (permintaan pemilik produk: "Rencana uangmu
+   sendiri." → hilang), dan itu bukan cuma soal teks — barisnya juga tidak
+   dirender, jadi tidak ada paragraf kosong atau ruang sisa. Karena itu bentuknya
+   fungsi yang boleh mengembalikan `null`, bukan peta yang selalu mengembalikan
+   string. */
+export const BUDGET_PAGE_COPY = {
+  title: 'Budget & Target',
+  /** aria-label baris tab zona (mobile) */
+  zonesAria: 'Zona halaman',
+  /** dua judul zona: dipakai tab mobile (ZONE_TABS) & <h2> desktop */
+  zoneBudget: 'Budget Kategori',
+  zoneGoals: 'Celengan Impian',
+  /** chip jumlah di kepala zona (desktop) */
+  budgetCount: (count: number) => `${count} kategori`,
+  fundCount: (count: number) => `${count} celengan`,
+  /** aria-label chip jumlah budget di periode aktif */
+  budgetPeriodCount: (label: string) => `Budget pada periode ${label}`,
+  /** caption di bawah judul — hanya konteks keluarga & bersama */
+  scopeCaption: {
+    keluarga: 'Rencana uang keluarga',
+    bersama: 'Rencana uang bersama',
+  },
+} as const
+
+/**
+ * Caption konteks halaman Budget: `null` untuk `pribadi` (tidak dirender sama
+ * sekali — permintaan pemilik produk di paket 78), dan kalimat pendek untuk dua
+ * konteks lainnya.
+ */
+export function scopeCaptionFor(context: BudgetScope): string | null {
+  return context === 'pribadi' ? null : BUDGET_PAGE_COPY.scopeCaption[context]
+}
+
 /* ── COPY ZONA A (budget kategori) ───────────────────────────────────────── */
 export const BUDGET_ZONE_A_COPY = {
   /** 3G Sapu Bersih — copy netral periode (dulu "Bulan ini") */
@@ -1519,13 +1638,33 @@ export const BUDGET_ZONE_A_COPY = {
   sweepLead: 'Kamu hemat',
   sweepTail: 'dari budget! Mau disapu masuk ke celengan?',
   sweepCta: 'Sapu ke Celengan',
+  /** aria-label baris tab periode */
+  periodTabsAria: 'Periode budget',
+  /* ── RINGKASAN AGREGAT (redesain paket 82) ────────────────────────────────
+     Strip tipis di atas daftar kategori yang menjawab satu pertanyaan dulu:
+     "periode ini sudah kepakai berapa dari total limit?". Angkanya dari
+     `budgetTotals()` — fungsi murni yang menjumlah daftar yang SAMA dengan
+     kartu-kartu di bawahnya, jadi ringkasan & kartu mustahil berbeda. */
+  summaryLead: 'Terpakai periode ini',
+  /** kata setelah angka persen di kaki ringkasan (mis. `60% terpakai`) */
+  summaryPctSuffix: 'terpakai',
+  summaryOf: (limitLabel: string) => `dari ${limitLabel}`,
+  summaryAria: (spentLabel: string, limitLabel: string, pct: number) =>
+    `Budget periode ini terpakai ${spentLabel} dari ${limitLabel} (${pct} persen).`,
   addCta: 'Tambah Budget Baru',
   overLead: (count: number, category: string) =>
     count > 1 ? `Ada ${count} kategori yang overbudget.` : `Kategori ${category} overbudget.`,
+  /**
+   * PAKET 78 — kalimat tanya "Mau review bareng AI Coach? 🤖" TIDAK LAGI
+   * dirender di banner over-budget. Minimalisme yang diminta pemilik produk:
+   * satu baris fakta + satu tombol lebih jelas daripada fakta + tanya + tombol.
+   * Kalimatnya tetap hidup di sini (model copy tidak dihapus, cuma tidak
+   * ditampilkan) supaya bisa dipakai lagi tanpa mengarang teks baru.
+   */
   overQuestion: 'Mau review bareng AI Coach? 🤖',
   overCta: 'Review Pengeluaran Hari Ini',
-  emptyBody:
-    'Belum ada budget di periode ini? Santai, mulai dari yang kecil aja. Coba atur limit Kopi dulu!',
+  /** empty state dipendekkan (paket 78): satu baris saja, tanpa tiga kalimat */
+  emptyBody: 'Belum ada budget di periode ini — mulai dari yang kecil juga boleh.',
   emptyCta: 'Buat Budget Pertama',
 } as const
 
@@ -1726,6 +1865,50 @@ export const FUND_CARD_ACTION_COPY = {
   deleteHint: 'Target & progresnya dilepas — uang yang sudah disetor tetap tercatat.',
 } as const
 
+/* ── COPY KARTU CELENGAN & ZONA B (paket 78) ─────────────────────────────────
+   Semua kalimat yang tadinya ditulis langsung di JSX kartu celengan & Zona B
+   (kartu nudge, empty state, tombol) pindah ke sini — kontrak repo §4: nol
+   string user-facing di JSX.
+
+   Sekaligus dipendekkan mengikuti permintaan pemilik produk ("budget & target
+   nabung: strip out unnecessary text"): kalimat panjang versi kalimat penuh
+   tetap hidup di `FUND_PLAN_COPY` untuk tempat yang memang butuh kalimat (halaman
+   detail celengan), sedangkan KARTU hanya menampilkan angka + label mikro. */
+export const SINKING_FUND_CARD_COPY = {
+  /** nominal setoran bulanan — bentuk mikro, tanpa kalimat */
+  perMonth: (amountLabel: string) => `${amountLabel}/bulan`,
+  /** keterangan pembaca layar untuk bar progres (persen + nominal, jujur apa adanya) */
+  progressAria: (
+    name: string,
+    percentLabel: string,
+    amountLabel: string,
+    targetLabel: string,
+  ) => `Progres celengan ${name}: ${percentLabel}, ${amountLabel} dari ${targetLabel}.`,
+  /** pintasan pintu masuk ke halaman detail (teks, bukan kalimat) */
+  detail: 'Lihat detail',
+  /** tombol setor cepat di kaki kartu */
+  contribute: 'Setor',
+} as const
+
+/** copy addendum kartu nudge, empty state, & CTA Zona B (paket 78) */
+export const BUDGET_ZONE_B_COPY = {
+  nudgeCta: 'Setor Sekarang',
+  /* ── RINGKASAN AGREGAT (redesain paket 82) ────────────────────────────────
+     Strip tipis di atas daftar celengan: total terkumpul dari total target.
+     Angkanya dari `fundsTotals()` — daftar yang SAMA dengan kartu di
+     bawahnya, jadi ringkasan & bar tiap tanaman tidak bisa bertentangan. */
+  summaryLead: 'Total terkumpul',
+  /** kata setelah angka persen di kaki ringkasan (mis. `30% terkumpul`) */
+  summaryPctSuffix: 'terkumpul',
+  summaryOf: (targetLabel: string) => `dari ${targetLabel} target`,
+  summaryAria: (savedLabel: string, targetLabel: string, pct: number) =>
+    `Celengan impian terkumpul ${savedLabel} dari ${targetLabel} (${pct} persen).`,
+  /** empty state dipendekkan: satu baris, tanpa ajakan dua kalimat */
+  emptyBody: 'Belum punya impian yang ditabung? Mulai dari yang simpel juga boleh.',
+  emptyCta: 'Tanam Celengan Pertama',
+  addCta: 'Tambah Celengan Baru',
+} as const
+
 
 /** auto-kalkulasi PRD 2C.3 dipecah dua potong supaya nominalnya bisa di-tebalkan
  *  di UI, dengan versi satu kalimat untuk pembaca layar. */
@@ -1811,6 +1994,40 @@ export function spentPercent(budget: BudgetItem): number {
   return (budget.spent / budget.limit) * 100
 }
 
+/* ── TOTAL AGREGAT (redesain paket 82) ──────────────────────────────────────
+   Dua fungsi murni untuk strip ringkasan di atas daftar. Keduanya menjumlah
+   daftar yang SAMA dengan kartu di bawahnya, jadi ringkasan agregat tidak
+   mungkin bercerita beda dari kartu-kartu itu. Nilai negatif (data tak sah)
+   dijepit ke 0 supaya lebar bar tidak pernah negatif. */
+
+/** total limit, terpakai, & persen satu daftar budget (persen boleh > 100) */
+export function budgetTotals(budgets: BudgetItem[]): {
+  limit: number
+  spent: number
+  percent: number
+} {
+  const limit = budgets.reduce((sum, budget) => sum + Math.max(0, budget.limit), 0)
+  const spent = budgets.reduce((sum, budget) => sum + Math.max(0, budget.spent), 0)
+  return { limit, spent, percent: limit > 0 ? (spent / limit) * 100 : 0 }
+}
+
+/** total terkumpul, target, & persen satu daftar celengan (persen dijepit ≤100) */
+export function fundsTotals(funds: SinkingFundItem[]): {
+  current: number
+  target: number
+  percent: number
+} {
+  const target = funds.reduce((sum, fund) => sum + Math.max(0, fund.target), 0)
+  const current = funds.reduce((sum, fund) => sum + Math.max(0, fund.current), 0)
+  return {
+    current,
+    target,
+    /* untuk celengan, makin penuh makin baik → tak ada makna "over target",
+       jadi persennya dijepit di 100 (berbeda dari budget yang bisa > 100) */
+    percent: target > 0 ? Math.min(100, (current / target) * 100) : 0,
+  }
+}
+
 /** posisi garis pacing ideal (%) — tempat pengeluaran SEHARUSNYA berada hari ini.
  *  `window` (periode aktif) menentukan pembaginya; tanpa `window` dipakai
  *  jangkar bulan kalender supaya pemakaian lama tidak berubah. */
@@ -1860,6 +2077,27 @@ export const PACING_HINT_COPY = {
   base: 'Garis abu-abu = target pacing ideal',
   faster: 'Garis abu-abu = target pacing ideal. Pengeluaran kategori ini lebih cepat dari ideal.',
 } as const
+
+/**
+ * Label status pacing SUPER PENDEK untuk kartu kategori (paket 78).
+ *
+ * `pacingOf().copy` tetap ada dan tetap dipakai di tempat yang butuh kalimat
+ * (panel Review Pengeluaran), tapi kartu kategori tidak lagi menampilkannya:
+ * kalimat seperti "Pelan-pelan ya, sisa tinggal Rp 120.000 🌤️" mengulang angka
+ * yang sudah duduk di baris nominal, dan justru itu yang membuat halaman terasa
+ * penuh. Yang tersisa di kartu hanya status tiga kata — maknanya sama, nol
+ * pengulangan angka.
+ */
+export const PACING_STATUS_LABEL: Record<PacingTone, string> = {
+  sage: 'Masih lega',
+  amber: 'Mendekati limit',
+  terracotta: 'Lewat limit',
+}
+
+/** status pacing tiga kata (bukan kalimat) untuk kartu budget minimalis */
+export function pacingStatusLabel(tone: PacingTone): string {
+  return PACING_STATUS_LABEL[tone]
+}
 
 /* ── REVIEW PENGELUARAN HARI INI (prompt 19) ─────────────────────────────────
    Satu fungsi murni untuk menjawab satu pertanyaan: "boros nggak nih hari

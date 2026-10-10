@@ -11,26 +11,32 @@ import {
 } from '@/lib/data/bills'
 import { formatDayLabel } from '@/lib/data/history'
 
-/* ── Timeline 7 Hari ke Depan (Section 5) ────────────────────────────────────
-   Strip tanggal yang bisa digeser: emoji tagihan di atas lingkaran tanggal.
-   Tap tanggal → daftar di samping/bawah menggulir ke kartu tagihan itu.
+/* ── Timeline 7 Hari ke Depan ────────────────────────────────────────────────
+   Tujuh hari sebagai GRID 7 kolom selebar kartu (bukan strip yang harus
+   digeser): tiap sel = label hari + tanggal + emoji tagihan. Tap sel → daftar
+   menggulir ke kartu tagihan itu.
 
-   Audit UX #3 — strip ini HANYA menampilkan tagihan yang benar-benar ada di
-   list "Aktif" (belum lunas). Dulu tagihan yang sudah LUNAS tetap muncul di sel
-   siklus bulan depan (Kos tgl 1), padahal ia tidak ada di daftar Aktif — jadi
-   kalender dan daftar saling bertentangan.
+   Tampilan sengaja BERWARNA memakai palet kanon supaya tidak "full putih":
+     · hari ini                         → terisi Evergreen (`bg-forest`, teks cream)
+     · ada tagihan telat                → tint Plum   (`bg-hud-terracotta/15`)
+     · ada tagihan jatuh tempo hari ini → tint Cantelope (`bg-hud-amber/20`)
+     · hari yang ada tagihannya         → tint Oat    (`bg-sage/60`)
+     · hari kosong                      → Oat lebih tipis (`bg-sage/30`)
 
-   Audit UX #5 — cukup SATU penanda status. Titik oranye di bawah tanggal
-   dihapus (redundan dengan emoji brand di atasnya + lingkaran tanggal). Status
-   urgent dipindah ke warna cincin tanggal: terracotta = telat, amber = hari ini.
-
-   Tanggalnya dihitung dari tanggal PERANGKAT (`useTodayISO()` yang dikirim
-   halaman sebagai `todayIso`, paket 57), bukan konstanta TODAY_ISO: dulu strip
-   ini mulai dari 25 Sep walau hari ini 28 Sep, jadi "7 hari ke depan" bukan
-   rentang yang benar. Sel yang melewati akhir bulan tetap ditandai singkatan
-   bulannya, dan karena nilainya baru diisi setelah mount, HTML server & render
+   Hanya menampilkan tagihan yang ada di list "Aktif" (belum lunas) supaya
+   kalender & daftar tidak kontradiksi (audit UX #3). Tanggal dihitung dari
+   tanggal PERANGKAT (`todayIso`, paket 57) sehingga render server & render
    pertama client tetap identik (tidak ada hydration mismatch).
    ────────────────────────────────────────────────────────────────────────── */
+
+/** singkatan hari (indeks 0 = Minggu, mengikuti `Date.getDay()`) */
+const WEEKDAY_SHORT = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab']
+
+/** indeks hari dari ISO 'YYYY-MM-DD' — dihitung lokal, tanpa pergeseran zona waktu */
+function weekdayOf(iso: string): number {
+  const [year, month, day] = iso.split('-').map(Number)
+  return new Date(year, (month ?? 1) - 1, day ?? 1).getDay()
+}
 
 export function BillTimeline({
   bills,
@@ -48,35 +54,39 @@ export function BillTimeline({
   className?: string
 }) {
   const days = upcomingDays(TIMELINE_DAYS, todayIso)
-  /* sabuk pengaman: apa pun yang dioper pemanggil, tagihan lunas tetap disaring
-     di sini supaya kalender TIDAK PERNAH menampilkan tagihan di luar list Aktif */
+  /* sabuk pengaman: apa pun yang dioper pemanggil, tagihan lunas tetap disaring */
   const activeBills = bills.filter((bill) => !bill.isPaidThisMonth)
-  const hasBills = days.some((day) => billsOnDay(activeBills, day.day).length > 0)
+  const dueCount = days.reduce((sum, day) => sum + billsOnDay(activeBills, day.day).length, 0)
+  const hasBills = dueCount > 0
 
   return (
     <section
       aria-label="Tagihan 7 hari ke depan"
-      className={cn(
-        'mt-5 rounded-[1.75rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] ring-1 ring-soil/12 sm:p-6',
-        className,
-      )}
+      className={cn('rounded-3xl bg-cream p-4 ring-1 ring-soil/10', className)}
     >
-      <h2 className="font-display text-[15px] font-semibold tracking-tight text-forest">
-        📅 7 Hari ke Depan
-      </h2>
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 className="text-[11px] font-medium uppercase tracking-[0.16em] text-forest/40">
+          7 hari ke depan
+        </h2>
+        {hasBills && (
+          <span className="text-[11px] font-medium tabular-nums text-forest/40">
+            {dueCount} tagihan
+          </span>
+        )}
+      </div>
 
-      <ul className="hide-scrollbar -mx-5 mt-3 flex snap-x gap-1 overflow-x-auto px-5 pb-1 sm:-mx-6 sm:px-6">
+      <ul className="mt-3 grid grid-cols-7 gap-1.5">
         {days.map((day) => {
           const dayBills = billsOnDay(activeBills, day.day)
-          /* status dikompilasi jadi SATU warna cincin (audit #5) */
+          /* status dikompilasi jadi SATU warna sel (audit #5) */
           const statuses = dayBills.map((bill) => getBillStatus(bill, currentDay))
           const hasOverdue = statuses.includes('overdue')
           const hasDueToday = statuses.includes('due_today')
-          const primary = dayBills[0]
           const clickable = dayBills.length > 0
+          const primary = dayBills[0]
 
           return (
-            <li key={day.iso} className="snap-start">
+            <li key={day.iso}>
               <button
                 type="button"
                 disabled={!clickable}
@@ -87,47 +97,62 @@ export function BillTimeline({
                     : formatDayLabel(day.iso)
                 }
                 className={cn(
-                  'flex w-[52px] flex-col items-center gap-1.5 rounded-2xl px-1 py-2 transition-colors',
-                  clickable ? 'hover:bg-sage/40 active:scale-95' : 'cursor-default',
+                  'flex w-full flex-col items-center gap-1 rounded-2xl px-0.5 py-2 transition-colors',
+                  clickable ? 'active:scale-95' : 'cursor-default',
+                  day.isToday
+                    ? 'bg-forest text-cream shadow-[0_10px_22px_-14px_rgba(69,89,78,0.85)]'
+                    : hasOverdue
+                      ? 'bg-hud-terracotta/15'
+                      : hasDueToday
+                        ? 'bg-hud-amber/20'
+                        : clickable
+                          ? 'bg-sage/60 hover:bg-sage'
+                          : 'bg-sage/30',
                 )}
               >
-                {/* emoji tagihan hari itu (maks 2 + penanda sisanya) */}
-                <span className="flex h-5 items-center gap-0.5 text-[13px] leading-none">
-                  {dayBills.slice(0, 2).map((bill) => (
-                    <span key={bill.id} aria-hidden>
-                      {bill.emoji}
-                    </span>
-                  ))}
-                  {dayBills.length > 2 && (
-                    <span className="text-[9px] font-medium text-forest/40" aria-hidden>
-                      +{dayBills.length - 2}
-                    </span>
+                <span
+                  className={cn(
+                    'text-[9px] font-semibold uppercase tracking-wide',
+                    day.isToday ? 'text-cream/70' : 'text-forest/45',
                   )}
+                >
+                  {WEEKDAY_SHORT[weekdayOf(day.iso)]}
                 </span>
 
-                {/* lingkaran tanggal — sekaligus SATU-SATUNYA penanda status.
-                    Audit #5: titik oranye di bawah tanggal dihapus. */}
                 <span
-                  aria-hidden
                   className={cn(
-                    'flex size-9 items-center justify-center rounded-full text-[13px] font-semibold tabular-nums transition-colors',
-                    day.isToday
-                      ? 'bg-cream font-medium text-forest ring-2 ring-forest'
-                      : hasOverdue
-                        ? 'bg-hud-terracotta/12 text-hud-terracotta ring-2 ring-hud-terracotta/55'
-                        : hasDueToday
-                          ? 'bg-hud-amber/15 text-[#b89191] ring-2 ring-hud-amber/55'
-                          : clickable
-                            ? 'bg-sage/60 text-forest'
-                            : 'bg-cream text-forest/55',
+                    'text-[15px] font-semibold leading-none tabular-nums',
+                    day.isToday ? 'text-cream' : 'text-forest',
                   )}
                 >
                   {day.day}
                 </span>
 
-                {/* penanda siklus bulan depan — tinggi baris dikunci biar rapi */}
-                <span className="h-3 text-[9px] font-medium leading-3 text-forest/35">
-                  {day.nextMonth ? day.monthShort : ''}
+                <span className="flex h-4 items-center gap-0.5 text-[11px] leading-none">
+                  {dayBills.length > 0 ? (
+                    <>
+                      {dayBills.slice(0, 2).map((bill) => (
+                        <span key={bill.id} aria-hidden>
+                          {bill.emoji}
+                        </span>
+                      ))}
+                      {dayBills.length > 2 && (
+                        <span
+                          className={cn(
+                            'text-[8px] font-medium',
+                            day.isToday ? 'text-cream/80' : 'text-forest/50',
+                          )}
+                          aria-hidden
+                        >
+                          +{dayBills.length - 2}
+                        </span>
+                      )}
+                    </>
+                  ) : day.nextMonth ? (
+                    <span className="text-[8px] font-medium text-forest/35" aria-hidden>
+                      {day.monthShort}
+                    </span>
+                  ) : null}
                 </span>
               </button>
             </li>
@@ -137,7 +162,7 @@ export function BillTimeline({
 
       {!hasBills && (
         <p className="mt-2 text-[11.5px] font-medium text-forest/45">
-          Gak ada tagihan minggu ini. Santai! 🌿
+          Nggak ada tagihan minggu ini.
         </p>
       )}
     </section>

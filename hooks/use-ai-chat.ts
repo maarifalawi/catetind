@@ -2,10 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { recordAiUsage } from '@/lib/ai-usage-store'
+import { claimsRecordedAction, detectOutOfScope } from '@/lib/ai/coach-guard'
 import { buildCoachContext, buildWelcomeText, collectCoachSummary } from '@/lib/ai/coach-context'
 import {
   AI_CONTEXT_WINDOW,
   AI_NOT_CONNECTED_REPLY,
+  AI_NO_RECORD_REPLY,
+  AI_OUT_OF_SCOPE_REPLY,
   MOCK_APPRECIATION_REPLY,
   MOCK_LIMIT_REPLY,
   MOCK_SPENDING_REVIEW_REPLY,
@@ -47,6 +50,14 @@ function aiReply(userText: string): Omit<ChatMessage, 'id'> {
  * PAKET 63: balasan datang dari MODEL nyata lewat `POST /api/ai/text` (kunci
  * provider HANYA di server). Kalau provider tak bisa dihubungi, otomatis jatuh ke
  * `aiReply()` berbasis aturan lokal dengan label `ruleBased: true`.
+ *
+ * PAKET 80: dua pagar di depan model, keduanya dari aturan yang sama
+ * (`lib/ai/coach-guard.ts`) supaya perilakunya tidak bisa berbeda dari pagar
+ * server:
+ *   · pesan di luar konteks keuangan → DITOLAK (`AI_OUT_OF_SCOPE_REPLY`), tanpa
+ *     memanggil model;
+ *   · balasan yang mengklaim sudah mencatat/menulis data → diganti
+ *     `AI_NO_RECORD_REPLY`, karena model tidak punya kemampuan menulis.
  *
  * Memory: widget-nya di-mount di root layout (tidak unmount saat navigasi),
  * jadi history bertahan selama sesi dan reset saat full page refresh.
@@ -130,11 +141,32 @@ export function useAIChat() {
           }),
         })
         if (res.ok) {
-          const data = (await res.json()) as { reply?: unknown }
+          const data = (await res.json()) as { reply?: unknown; blocked?: unknown }
+          /* ── PAGAR SERVER (paket 80) ─────────────────────────────────────────
+             `blocked` datang dari `/api/ai/text`: `'scope'` = pertanyaan di luar
+             konteks keuangan, `'claim'` = balasan model mengklaim sudah menulis
+             data (padahal tidak ada baris yang tertulis). Dua-duanya diganti copy
+             kanon app ini — kalimat modelnya TIDAK pernah ditampilkan. */
+          if (data.blocked === 'scope') {
+            setModelConnected(true)
+            append(AI_OUT_OF_SCOPE_REPLY)
+            return
+          }
+          if (data.blocked === 'claim') {
+            setModelConnected(true)
+            append(AI_NO_RECORD_REPLY)
+            return
+          }
           const reply = typeof data.reply === 'string' ? data.reply.trim() : ''
           if (reply) {
             setModelConnected(true)
-            append({ role: 'ai', kind: 'coaching', content: reply, ruleBased: false })
+            /* jaring kedua di sisi klien: kalau pagar server belum menangkapnya
+               (mis. server versi lama), klaim "sudah aku catat" tetap tidak tampil */
+            append(
+              claimsRecordedAction(reply)
+                ? AI_NO_RECORD_REPLY
+                : { role: 'ai', kind: 'coaching', content: reply, ruleBased: false },
+            )
             return
           }
         } else {
@@ -153,6 +185,24 @@ export function useAIChat() {
     (raw?: string) => {
       const text = (raw ?? input).trim()
       if (!text || isTyping) return
+
+      /* ── GERBANG KONTEKS (paket 80) ──────────────────────────────────────────
+         Pesan yang jelas di luar keuangan pribadi user DITOLAK di sini — TANPA
+         memanggil model, jadi penolakannya sama setiap kali dan kuota AI user
+         tidak terbakar untuk pertanyaan yang memang tidak akan dijawab
+         (`recordAiUsage` hanya dipanggil untuk pesan yang benar-benar dikirim ke
+         model). Aturan yang sama dipakai route server sebagai pagar terakhir. */
+      if (detectOutOfScope(text)) {
+        setMessages((prev) =>
+          [
+            ...prev,
+            { id: makeId(), role: 'user' as const, kind: 'coaching' as const, content: text },
+            { ...AI_OUT_OF_SCOPE_REPLY, id: makeId() },
+          ].slice(-AI_CONTEXT_WINDOW),
+        )
+        setInput('')
+        return
+      }
 
       const history = [
         ...messages,

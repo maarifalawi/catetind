@@ -1,7 +1,7 @@
 ﻿'use client'
 
 import { useMemo, useRef, useState } from 'react'
-import { ChevronDown, ChevronRight } from 'lucide-react'
+import { ChevronDown, ChevronRight, Tag } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   CATEGORY_PICKER_COPY,
@@ -34,7 +34,12 @@ import { IncomeGrid, SearchResults } from './category-search-results'
      - nol warna new-hex: aksen dari token palet kanon (CATEGORY_TONE);
      - prefers-reduced-motion dihormati (animasi grup & sheet);
      - search bar SELALU elemen yang sama (tidak di-unmount) supaya fokus user
-       tidak hilang di tengah mengetik. */
+       tidak hilang di tengah mengetik;
+     - PAKET 81: nilai yang sedang terpakai tapi TIDAK ada di katalog ini — tebakan
+       AI (`Makanan`, `Gaji Utama`), kategori tetap tipe (`Tabungan`, `Transfer`),
+       atau kategori lama yang dibuka di sheet Edit — ditampilkan APA ADANYA di
+       trigger. Dulu semuanya terbaca "Pilih kategori…" padahal nilainya ada dan
+       akan tersimpan; field yang sudah terisi tidak boleh terbaca kosong. */
 
 /** gaya trigger - senada dengan kontrol form engine (`EDIT_CONTROL_CLASS`) */
 const TRIGGER_CLASS =
@@ -76,6 +81,18 @@ export function CategoryPicker({
   const selected = isIncome
     ? (INCOME_CATEGORIES.find((item) => item.name === value) ?? null)
     : expenseCategoryByName(value)
+  /**
+   * Nilai yang sedang terpakai tapi TIDAK ada di katalog pemilih (paket 81).
+   *
+   * Katalog 9-grup adalah kosakata pemilih MANUAL, sedangkan nilai yang tersimpan
+   * bisa datang dari tempat lain: tebakan AI (`Makanan`, `Gaji Utama`), kategori
+   * tetap tipe (`Tabungan`, `Transfer`), atau kategori lama yang dibuka di sheet
+   * Edit. Dulu trigger-nya menampilkan "Pilih kategori…" untuk semua kasus itu —
+   * padahal nilainya ADA dan akan tersimpan apa adanya, jadi user membaca field
+   * kosong di tempat yang sebenarnya sudah terisi. Sekarang namanya ditampilkan
+   * apa adanya; menggantinya tetap dua ketukan lewat sheet yang sama.
+   */
+  const custom = selected ? '' : value.trim()
 
   function reset() {
     setView('quick')
@@ -115,6 +132,13 @@ export function CategoryPicker({
                 {selected.emoji}
               </span>
               <span className="truncate">{selected.name}</span>
+            </>
+          ) : custom ? (
+            /* nilai di luar katalog ditampilkan APA ADANYA (paket 81) — lihat
+               catatan `custom` di atas badan komponen */
+            <>
+              <Tag className="size-4 shrink-0 text-forest/45" strokeWidth={2.2} aria-hidden />
+              <span className="truncate">{custom}</span>
             </>
           ) : (
             <span className="truncate text-forest/40">{CATEGORY_PICKER_COPY.placeholder}</span>

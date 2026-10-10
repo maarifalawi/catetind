@@ -1,17 +1,18 @@
 'use client'
 
+import { useMemo } from 'react'
 import Link from 'next/link'
 import { Check, Info, Mic, ScanLine, Sparkles, X } from 'lucide-react'
 import { RupiahField } from './budget-sheet'
 import { AIAvatar } from './ai-avatar'
+import { CategoryPicker } from './category-picker'
+import { WalletPicker } from './wallet-picker'
+import { useMoneyContext } from './money-context-provider'
 import { cn } from '@/lib/utils'
 import { AI_CAPTURE_COPY } from '@/lib/ai-chat'
-import {
-  TRANSACTION_CATEGORY_OPTIONS,
-  TRANSACTION_INPUT_COPY,
-  TRANSACTION_TYPE_LABEL,
-  TRANSACTION_WALLET_OPTIONS,
-} from '@/lib/data/history'
+import { TRANSACTION_INPUT_COPY, TRANSACTION_TYPE_LABEL } from '@/lib/data/history'
+import { CONTEXT_LABEL } from '@/lib/data/money-context'
+import { captureWalletOptionsFor, useMoneyStore } from '@/lib/money/store'
 import {
   LOW_CONFIDENCE_THRESHOLD,
   type ExtractedField,
@@ -144,24 +145,38 @@ function TypePills({
   )
 }
 
-/* ── wujud 1: AI lagi membaca struk ─────────────────────────────────────────── */
-function ReadingBubble() {
+/* ── wujud 1: AI lagi MEMBACA (struk) atau MERAPIKAN tulisan user (chat) ─────
+   Satu wujud, dua kalimat: yang berubah hanya judul & keterangannya. Dulu fase
+   ini selalu berkata "Lagi baca struknya" — padahal sejak paket 79 fase yang sama
+   juga dipakai saat user MENGETIK transaksi di chat (`phase: 'parsing'`). */
+function ReadingBubble({
+  title = AI_CAPTURE_COPY.readingTitle,
+  hint = AI_CAPTURE_COPY.readingHint,
+  icon = 'scan',
+}: {
+  title?: string
+  hint?: string
+  /** ikon: `scan` untuk struk, `sparkles` untuk tulisan user yang dirapikan */
+  icon?: 'scan' | 'sparkles'
+}) {
   return (
-    <CaptureShell label={AI_CAPTURE_COPY.readingTitle}>
+    <CaptureShell label={title}>
       <div className="flex items-center gap-3">
         <span className="relative flex size-10 shrink-0 items-center justify-center rounded-full bg-sage text-forest">
-          <ScanLine className="size-5" strokeWidth={2} aria-hidden />
+          {icon === 'scan' ? (
+            <ScanLine className="size-5" strokeWidth={2} aria-hidden />
+          ) : (
+            <Sparkles className="size-5" strokeWidth={2} aria-hidden />
+          )}
           {/* denyut halus — dimatikan otomatis saat `prefers-reduced-motion` */}
           <span aria-hidden className="ai-scan-pulse absolute inset-0 rounded-full bg-mint/40" />
         </span>
         <span className="min-w-0">
           <span className="flex items-center gap-1.5 text-[13px] font-medium text-forest">
             <Sparkles className="size-3.5 text-forest" strokeWidth={2.4} aria-hidden />
-            {AI_CAPTURE_COPY.readingTitle}
+            {title}
           </span>
-          <span className="mt-0.5 block text-[11.5px] text-forest/50">
-            {AI_CAPTURE_COPY.readingHint}
-          </span>
+          <span className="mt-0.5 block text-[11.5px] text-forest/50">{hint}</span>
         </span>
       </div>
     </CaptureShell>
@@ -228,21 +243,62 @@ function ListeningBubble({
 function ConfirmBubble({
   draft,
   formError,
+  masked,
   onDraftChange,
   onConfirm,
   onCancel,
 }: {
   draft: TransactionDraftForm
   formError: string | null
+  /** tombol mata privasi global — saldo dompet di pemilih ikut disensor */
+  masked: boolean
   onDraftChange: (patch: Partial<TransactionDraftForm>, touched?: ExtractedField) => void
   onConfirm: () => void
   onCancel: () => void
 }) {
   const flagged = (field: ExtractedField) => draft.lowFields.includes(field)
-  const title =
-    draft.source === 'receipt'
-      ? AI_CAPTURE_COPY.confirmReceiptTitle
-      : AI_CAPTURE_COPY.confirmVoiceTitle
+  /* kalimat per SUMBER (paket 79): teks yang user ketik tidak pernah disebut
+     "ucapan", dan struk tidak pernah disebut "tulisan" */
+  const title = AI_CAPTURE_COPY.confirmTitle[draft.source]
+  const transcriptLabel =
+    draft.source === 'chat'
+      ? AI_CAPTURE_COPY.transcriptLabel.chat
+      : AI_CAPTURE_COPY.transcriptLabel.voice
+
+  /* ── pilihan dompet = DOMPET NYATA USER, URUT KONTEKS AKTIF (paket 79/81) ─
+     Dibaca dari store uang (bukan konstanta kanon): daftar ini harus berisi dompet
+     yang benar-benar ada di ledger user, karena nama yang tidak ada di ledger
+     melahirkan baris "Belum berkonteks".
+
+     PAKET 81 — kenapa lewat `captureWalletOptionsFor`, bukan daftar nama lagi:
+     pemilih dompet memakai `id` sebagai React key, sedangkan daftar lama berisi
+     NAMA. Begitu user punya dua dompet bernama sama (`addWalletAccount()`
+     mengizinkannya), `<select key={nama}>` melahirkan galat React "two children
+     with the same key, `OVO`". Sekarang kuncinya unik dari sumbernya, dan urutan
+     pilihannya konteks aktif dulu — sama dengan urutan yang dihitung
+     `captureWalletChoice()` untuk nilai defaultnya.
+
+     Nilai yang sedang terpakai tetap disertakan kalau kebetulan belum ada di
+     daftar (mis. dompetnya baru dihapus user lewat perangkat lain) — supaya tidak
+     pernah ada pilihan yang hilang diam-diam dari pemilihnya. Baris itu jujur
+     tidak menampilkan saldo: yang diketahui hanya "tidak ada di daftarmu". */
+  const snapshot = useMoneyStore()
+  const { context } = useMoneyContext()
+  const walletChoices = useMemo(() => {
+    const own = captureWalletOptionsFor(snapshot, context)
+    const current = draft.wallet.trim()
+    if (!current || own.some((option) => option.label === current)) return own
+    return [
+      {
+        /* id sintetis: dompet ini tidak punya id di ledger hidup */
+        id: `capture-current:${current}`,
+        label: current,
+        balance: 0,
+        hint: TRANSACTION_INPUT_COPY.walletNotOwned,
+      },
+      ...own,
+    ]
+  }, [snapshot, context, draft.wallet])
 
   return (
     <CaptureShell>
@@ -261,11 +317,11 @@ function ConfirmBubble({
         </p>
       )}
 
-      {/* jejak jujur untuk voice: persis apa yang didengar mesin STT */}
+      {/* jejak jujur: persis apa yang didengar STT — atau apa yang user ketik */}
       {draft.transcript && (
         <div className="mt-2 rounded-xl bg-soil/[0.07] px-3 py-2">
           <span className="block text-[10px] font-medium uppercase tracking-wide text-forest/40">
-            {AI_CAPTURE_COPY.transcriptLabel}
+            {transcriptLabel}
           </span>
           <p className="mt-0.5 text-[12px] leading-relaxed text-forest/70">“{draft.transcript}”</p>
         </div>
@@ -326,45 +382,121 @@ function ConfirmBubble({
           />
         </CaptureField>
 
-        <div className="grid grid-cols-2 gap-2">
-          <CaptureField label={AI_CAPTURE_COPY.fieldLabels.category} flagged={flagged('category')}>
-            <select
-              value={draft.category}
-              onChange={(event) => onDraftChange({ category: event.target.value }, 'category')}
-              aria-label={AI_CAPTURE_COPY.fieldLabels.category}
-              className={CAPTURE_CONTROL}
-            >
-              {/* PAKET 54: field ini bisa KOSONG dengan sengaja — saat user
-                  mematikan "Kategorisasi Otomatis oleh AI". Tanpa opsi kosong
-                  ini, `<select>` akan MENAMPILKAN "Makanan" sementara nilainya
-                  '', dan user diberi tahu kategori yang tidak akan tersimpan.
-                  Kategori tetap harus dipilih user sebelum "Catat ✓". */}
-              <option value="" disabled>
-                {TRANSACTION_INPUT_COPY.categoryPlaceholder}
-              </option>
-              {TRANSACTION_CATEGORY_OPTIONS.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </CaptureField>
+        {/* ── KATEGORI & DOMPET: PEMILIH KUSTOM, BUKAN `<select>` BAWAAN ────────
+            PAKET 81 — dua field ini dulu `<select>` bawaan, dan di HP itu berarti
+            roda pilihan sistem operasi: tidak ada emoji kategori, tidak ada
+            pencarian, tidak ada saldo dompet, dan yang paling parah — kuncinya
+            NAMA, sehingga dua dompet bernama sama melahirkan galat React
+            "two children with the same key".
 
-          <CaptureField label={AI_CAPTURE_COPY.fieldLabels.wallet} flagged={flagged('wallet')}>
-            <select
-              value={draft.wallet}
-              onChange={(event) => onDraftChange({ wallet: event.target.value }, 'wallet')}
-              aria-label={AI_CAPTURE_COPY.fieldLabels.wallet}
-              className={CAPTURE_CONTROL}
+            Sekarang keduanya memakai pemilih kustom repo ini dengan satu bahasa
+            yang sama seperti form Catat & sheet Edit:
+              · kategori → `CategoryPicker` 3 lapis (Sering Dipakai → 9 grup →
+                pencarian toleran typo), varian mengikuti tipe catatan;
+              · dompet   → `WalletPicker` bottom sheet, urut konteks aktif, dengan
+                saldo live + ikut tombol mata privasi.
+
+            Keduanya dibuka sebagai bottom sheet DI DALAM panel chat (host-nya
+            ditemukan dari tombol pemicunya sendiri — lihat catatan "PAKET 70" di
+            `picker-sheet.tsx`), jadi mengetuknya tidak menutup kartu konfirmasi
+            dan tidak ada form yang tidak tersimpan karena salah ketuk. */}
+        <CaptureField label={AI_CAPTURE_COPY.fieldLabels.category} flagged={flagged('category')}>
+          {/* PAKET 54: nilai ini bisa KOSONG dengan sengaja — saat user mematikan
+              "Kategorisasi Otomatis oleh AI". Pemilih menampilkan ajakan memilih
+              (bukan kategori karangan), dan "Catat ✓" tetap tertahan sampai
+              user memutuskan. Nilai di luar katalog (mis. tebakan AI `Makanan`,
+              `Gaji Utama`) ditampilkan apa adanya oleh pemilihnya, jadi field
+              yang sudah terisi tidak pernah terbaca kosong. */}
+          <CategoryPicker
+            value={draft.category}
+            onChange={(name) => onDraftChange({ category: name }, 'category')}
+            variant={draft.type === 'income' ? 'income' : 'expense'}
+            ariaLabel={AI_CAPTURE_COPY.fieldLabels.category}
+          />
+        </CaptureField>
+
+        <CaptureField label={AI_CAPTURE_COPY.fieldLabels.wallet} flagged={flagged('wallet')}>
+          {/* ── DOMPET = DOMPET MILIK USER (paket 79) ────────────────────────
+              Dulu pilihan di sini adalah daftar kanon statis
+              (`TRANSACTION_WALLET_OPTIONS`: BCA/GoPay/OVO/Tunai). Memilih nama
+              yang belum ada di ledger membuat barisnya lahir tanpa dompet:
+              tampil "Belum berkonteks" di semua konteks dan tidak memotong
+              saldo mana pun. Sekarang yang ditawarkan hanya dompet nyata user
+              (konteks aktif lebih dulu), dan nilai yang sedang terpakai tetap
+              disertakan supaya tidak pernah ada nilai yang hilang dari daftar. */}
+          <WalletPicker
+            value={draft.wallet}
+            options={walletChoices}
+            onChange={(name) =>
+              /* begitu user memilih sendiri, catatan "AI nebak ..." / "dompet ini
+                 ada di konteks lain" tidak berlaku lagi — dua flag itu memang
+                 keterangan tentang keputusan AWAL draft, bukan status permanen */
+              onDraftChange(
+                {
+                  wallet: name,
+                  unknownWalletGuess: '',
+                  walletOutsideContext: false,
+                  /* user memilihnya sendiri ⇒ ia bukan lagi "dompet konteks" */
+                  walletFromContext: false,
+                },
+                'wallet',
+              )
+            }
+            masked={masked}
+          />
+        </CaptureField>
+
+        {/* penggantian tebakan dompet oleh AI TIDAK disembunyikan: user diberi tahu
+            apa yang AI baca dan dompet mana yang akhirnya dipakai */}
+        {draft.unknownWalletGuess && draft.wallet && (
+          <p className="rounded-xl bg-soil/[0.07] px-2.5 py-2 text-[11.5px] leading-relaxed text-forest/70">
+            {AI_CAPTURE_COPY.walletGuessNote(draft.unknownWalletGuess, draft.wallet)}
+          </p>
+        )}
+
+        {/* dompetnya milik user, tapi konteksnya lain daripada yang sedang dibuka —
+            disebut supaya user tidak menemukan sendiri di Riwayat */}
+        {!draft.unknownWalletGuess && draft.walletOutsideContext && draft.wallet && (
+          <p className="rounded-xl bg-soil/[0.07] px-2.5 py-2 text-[11.5px] leading-relaxed text-forest/70">
+            {AI_CAPTURE_COPY.walletOtherContextNote(draft.wallet)}
+          </p>
+        )}
+
+        {/* ── DOMPET DEFAULT DIKATAKAN APA ADANYA (paket 81) ──────────────────
+            Pertanyaan pemilik produk: "kalau menambah transaksi, defaultnya pakai
+            dompet yang mana?" Aturannya: dompet pertama di KONTEKS UANG yang
+            sedang dibuka (switcher Pribadi/Keluarga/Bersama), dan kalau user
+            sendiri menyebut dompetnya ("pakai gopay") yang disebut user menang.
+
+            Dua kalimat di atas SUDAH menjelaskan penggantiannya saat dompetnya
+            bermasalah (tebakan tak dikenal / konteks lain), jadi kalimat ini
+            hanya muncul di kasus yang belum dijelaskan siapa pun: dompetnya
+            diisi dari konteks aktif, bukan dari ucapan user. Tanpa ini, satu-
+            satunya cara user tahu adalah menemukannya sendiri di Riwayat. */}
+        {!draft.unknownWalletGuess &&
+          !draft.walletOutsideContext &&
+          draft.walletFromContext &&
+          draft.wallet && (
+            <p className="rounded-xl bg-soil/[0.07] px-2.5 py-2 text-[11.5px] leading-relaxed text-forest/70">
+              {AI_CAPTURE_COPY.walletContextNote(CONTEXT_LABEL[context], draft.wallet)}
+            </p>
+          )}
+
+        {/* belum ada dompet yang bisa dipilih → katakan apa adanya + jalan keluarnya
+            (tanpa ini kartunya tombol mati yang tidak menjelaskan apa pun) */}
+        {walletChoices.length === 0 && (
+          <div className="rounded-xl bg-hud-amber/[0.14] px-2.5 py-2 ring-1 ring-hud-amber/40">
+            <p className="text-[11.5px] font-medium leading-relaxed text-forest">
+              {AI_CAPTURE_COPY.noWalletToPick}
+            </p>
+            <Link
+              href="/wallet"
+              className="mt-1.5 inline-flex items-center gap-1 text-[11.5px] font-medium text-forest underline decoration-dotted underline-offset-4"
             >
-              {TRANSACTION_WALLET_OPTIONS.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </CaptureField>
-        </div>
+              {AI_CAPTURE_COPY.walletAddCta}
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* guard lembut: nominal wajib — catatan nol rupiah tidak berarti apa-apa */}
@@ -455,6 +587,7 @@ export function AICaptureBubble({
   problem,
   formError,
   voiceSupport,
+  masked,
   onDraftChange,
   onConfirm,
   onCancel,
@@ -467,6 +600,13 @@ export function AICaptureBubble({
   problem: string | null
   formError: string | null
   voiceSupport: VoiceSupport
+  /**
+   * Tombol mata privasi global (paket 81) — diteruskan ke pemilih dompet supaya
+   * saldo yang tampil di sana ikut disensor. Nominal yang sedang DIKETIK tetap
+   * tampil apa adanya: menyensor field yang sedang diisi membuat catatannya
+   * mustahil diperiksa (pola yang sama dengan form Catat & sheet Edit).
+   */
+  masked: boolean
   onDraftChange: (patch: Partial<TransactionDraftForm>, touched?: ExtractedField) => void
   onConfirm: () => void
   /** batal / tutup alur tanpa menyimpan */
@@ -475,6 +615,17 @@ export function AICaptureBubble({
   onRetryVoice: () => void
 }) {
   if (phase === 'reading') return <ReadingBubble />
+  /* tulisan user sedang dirapikan (paket 79) — kalimatnya soal TULISAN, bukan
+     struk: fase ini dipakai jalur chat yang menunggu jawaban model */
+  if (phase === 'parsing') {
+    return (
+      <ReadingBubble
+        title={AI_CAPTURE_COPY.parsingTitle}
+        hint={AI_CAPTURE_COPY.parsingHint}
+        icon="sparkles"
+      />
+    )
+  }
   if (phase === 'listening') {
     return <ListeningBubble liveTranscript={liveTranscript} onFinish={onFinishVoice} />
   }
@@ -494,6 +645,7 @@ export function AICaptureBubble({
       <ConfirmBubble
         draft={draft}
         formError={formError}
+        masked={masked}
         onDraftChange={onDraftChange}
         onConfirm={onConfirm}
         onCancel={onCancel}

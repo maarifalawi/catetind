@@ -22,6 +22,7 @@ import { plantStageFrom } from '@/lib/data/budget'
 import type { BudgetScope, FundContribution, SinkingFundItem } from '@/lib/data/budget'
 import type { Bill } from '@/lib/data/bills'
 import type {
+  AssetTransaction,
   AssetType,
   Debt,
   DebtDirection,
@@ -29,6 +30,8 @@ import type {
   DebtStatus,
   DebtType,
   Investment,
+  PhysicalAsset,
+  PhysicalAssetCategory,
 } from '@/lib/data/wealth'
 
 /* ── HELPER ───────────────────────────────────────────────────────────────── */
@@ -168,6 +171,37 @@ export function toPriceTransactionDbRow(
     amount: Math.round(inv.quantity * inv.currentPrice),
     date: dateISO,
     note: 'Koreksi harga manual',
+    client_tx_id: clientTxId,
+  }
+}
+
+/** baris `asset_transactions` kind buy/sell → satu baris riwayat aset (nyata, bukan mock) */
+export function toAssetTransaction(row: AssetTransactionDbRow): AssetTransaction {
+  const base: AssetTransaction = {
+    id: row.id ?? row.client_tx_id,
+    assetId: row.investment_id,
+    date: row.date,
+    side: row.kind === 'sell' ? 'sell' : 'buy',
+    quantity: floatOf(row.units),
+    price: intOf(row.price),
+  }
+  return row.id ? { ...base, remoteId: row.id } : base
+}
+
+/** `AssetTransaction` → payload `asset_transactions` (butuh uuid investments induknya) */
+export function toAssetTransactionDbRow(
+  tx: AssetTransaction,
+  investmentRemoteId: string,
+  clientTxId: string,
+): AssetTransactionDbRow {
+  return {
+    investment_id: investmentRemoteId,
+    kind: tx.side,
+    units: tx.quantity,
+    price: Math.round(tx.price),
+    amount: Math.round(tx.quantity * tx.price),
+    date: tx.date,
+    note: '',
     client_tx_id: clientTxId,
   }
 }
@@ -355,6 +389,70 @@ export function toBillDbRow(bill: Bill): BillDbRow {
     wallet_id: nullIfEmpty(bill.walletId),
     active: bill.isRecurring,
     remind_days: Math.max(0, Math.round(bill.reminderDaysBefore)),
+  }
+}
+
+/* ── 5. ASET FISIK / PROPERTI (`physical_assets`) ─────────────────────────── */
+
+export interface PhysicalAssetDbRow {
+  id: string
+  user_id?: string
+  name: string
+  category?: string | null
+  purchase_price: number | string
+  current_value: number | string
+  acquired_at?: string | null
+  note?: string | null
+}
+
+const PHYSICAL_CATEGORIES: PhysicalAssetCategory[] = [
+  'rumah',
+  'tanah',
+  'kendaraan',
+  'logam_mulia',
+  'perhiasan',
+  'lainnya',
+]
+
+function toPhysicalCategory(value: string | null | undefined): PhysicalAssetCategory {
+  return PHYSICAL_CATEGORIES.includes(value as PhysicalAssetCategory)
+    ? (value as PhysicalAssetCategory)
+    : 'lainnya'
+}
+
+/**
+ * Baris `physical_assets` → `PhysicalAsset`. `scope` TIDAK ada di skema (sama
+ * seperti investments/debts) → diambil dari overlay lokal atau default
+ * konservatif 'pribadi'.
+ */
+export function toPhysicalAsset(
+  row: PhysicalAssetDbRow,
+  local?: Partial<PhysicalAsset>,
+): PhysicalAsset {
+  const base: PhysicalAsset = {
+    id: row.id,
+    name: row.name ?? '',
+    category: toPhysicalCategory(row.category),
+    purchasePrice: intOf(row.purchase_price),
+    currentValue: intOf(row.current_value),
+    scope: local?.scope ?? 'pribadi',
+    remoteId: row.id,
+  }
+  if (row.acquired_at) base.acquiredAt = row.acquired_at
+  if (row.note) base.note = row.note
+  return base
+}
+
+/** `PhysicalAsset` → payload `physical_assets` (tanpa `user_id`: RLS default auth.uid()) */
+export function toPhysicalAssetDbRow(asset: PhysicalAsset, id: string): PhysicalAssetDbRow {
+  return {
+    id,
+    name: asset.name,
+    category: asset.category,
+    purchase_price: Math.max(0, Math.round(asset.purchasePrice)),
+    current_value: Math.max(0, Math.round(asset.currentValue)),
+    acquired_at: nullIfEmpty(asset.acquiredAt),
+    note: asset.note ?? '',
   }
 }
 

@@ -12,6 +12,7 @@ import {
   type CalendarCell,
   type CalendarEntry,
 } from '@/lib/data/calendar'
+import { categoryVisualFor } from './transaction-category-visual'
 
 /* ── 3. Panel Detail Tanggal (kolom kanan) ───────────────────────────────────
    Panel yang selalu mengikuti tanggal terpilih di kalender. Ikut dirapikan
@@ -39,18 +40,21 @@ import {
    tanggal tetap terlihat.
    ────────────────────────────────────────────────────────────────────────── */
 
-/** label kecil di samping tanggal: Hari Ini / n hari lagi / sudah lewat */
-function relativeLabel(cell: CalendarCell) {
-  if (cell.isToday) return { text: 'Hari Ini', className: 'bg-forest text-mint' }
+/** micro-badge relatif di kepala panel detail tanggal.
+ *  "Hari Ini" = pil forest dengan titik hidup; hari lain = aksen tipografis
+ *  kecil (titik warna + angka tabular), TANPA kotak — supaya kepala panel
+ *  tetap tenang dan tanggal panjang di bawahnya yang jadi fokus. */
+function relativeBadge(cell: CalendarCell) {
+  if (cell.isToday) return { text: 'Hari Ini', tone: 'today' as const }
   if (cell.daysFromToday > 0) {
     return {
       text: cell.daysFromToday === 1 ? 'Besok' : `${cell.daysFromToday} hari lagi`,
-      className: 'bg-cream text-forest/55 ring-1 ring-inset ring-soil/10',
+      tone: 'ahead' as const,
     }
   }
   return {
     text: cell.daysFromToday === -1 ? 'Kemarin' : `${Math.abs(cell.daysFromToday)} hari lalu`,
-    className: 'bg-cream text-forest/45 ring-1 ring-inset ring-soil/10',
+    tone: 'behind' as const,
   }
 }
 
@@ -78,7 +82,7 @@ export function CashflowInspector({
     )
   }
 
-  const relative = relativeLabel(cell)
+  const relative = relativeBadge(cell)
   const streakMilestone = cell.cleanDay && cell.streak >= CLEAN_STREAK_MILESTONE
   /* PAKET 56: satu-satunya isi hari = entri yang benar-benar tercatat */
   const isEmptyDay = cell.entries.length === 0
@@ -95,15 +99,27 @@ export function CashflowInspector({
   return (
     <aside className="flex flex-col rounded-[2rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] ring-1 ring-soil/12 lg:sticky lg:top-8">
       {/* ── 3A. TANGGAL + RINGKASAN SATU BARIS ───────────────────────────── */}
-      <div className="flex items-center justify-between gap-2">
-        <span
-          className={cn(
-            'rounded-full px-2.5 py-1 text-[10.5px] font-medium uppercase tracking-[0.1em]',
-            relative.className,
-          )}
-        >
-          {relative.text}
-        </span>
+      <div className="flex items-center gap-2">
+        {relative.tone === 'today' ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-forest px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-mint">
+            <span className="relative flex size-1.5" aria-hidden>
+              <span className="absolute inline-flex size-full animate-ping rounded-full bg-mint/70 motion-reduce:animate-none" />
+              <span className="relative inline-flex size-1.5 rounded-full bg-mint" />
+            </span>
+            {relative.text}
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.14em] tabular-nums text-forest/40">
+            <span
+              aria-hidden
+              className={cn(
+                'size-1.5 rounded-full',
+                relative.tone === 'ahead' ? 'bg-forest/30' : 'bg-soil/40',
+              )}
+            />
+            {relative.text}
+          </span>
+        )}
       </div>
 
       <h2 className="mt-2 font-display text-[20px] font-medium leading-tight tracking-tight text-forest">
@@ -238,7 +254,7 @@ function CashflowEntryRow({
   const isMovement = entry.type === 'money_movement'
 
   return (
-    <li className="flex items-start gap-3 py-3 first:pt-2 last:pb-1">
+    <li className="flex items-start gap-3 py-3.5 first:pt-2 last:pb-1">
       <span aria-hidden className="mt-0.5 shrink-0 text-[15px] leading-none">
         {entry.emoji}
       </span>
@@ -250,8 +266,21 @@ function CashflowEntryRow({
           <span aria-hidden className="text-forest/20">
             ·
           </span>
-          <span className="truncate">
-            {entry.category} · {entry.wallet}
+          {/* chip kategori (paket 78) — memakai tabel kategori yang SAMA dengan
+              Dashboard & Riwayat (`transaction-category-visual`), jadi kategori
+              di panel kalender ini berwarna persis seperti di daftar lain. Chip
+              TIPE di sebelahnya tetap milik bahasa kalender
+              (`CALENDAR_ENTRY_CHIP`) — dua hal berbeda, dua label berbeda. */}
+          <span
+            className={cn(
+              'shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium',
+              categoryVisualFor(entry.category).chip,
+            )}
+          >
+            {entry.category}
+          </span>
+          <span className="min-w-0 truncate">
+            {entry.wallet}
             {entry.time ? ` · ${entry.time}` : ''}
           </span>
         </span>

@@ -981,8 +981,14 @@ export const TRANSACTION_INPUT_COPY = {
      ada. Copy di bawah yang menjelaskan kenapa — bukan JSX (aturan repo). */
   /** label pemilih kategori di form TAMBAH (mode edit pakai `EDIT_TRANSACTION_COPY`) */
   categoryLabel: 'Kategori',
-  /** opsi kosong di `<select>` — bukan kategori, jadi tidak boleh jadi nilai tersimpan */
-  categoryPlaceholder: 'Pilih kategori…',
+  /*
+   * PAKET 81 — `categoryPlaceholder` DIHAPUS dari sini (dulu teks opsi kosong
+   * `<select>`: "Pilih kategori…"). Sejak kategori dipilih lewat pemilih kustom
+   * di SEMUA pintu (form Catat, sheet Edit, kartu konfirmasi AI), teks placeholder
+   * hidup di tempat pemilihnya: `CATEGORY_PICKER_COPY.placeholder`
+   * (`lib/data/categories.ts`). Dua salinan kalimat yang sama hanya akan
+   * berbeda diam-diam di kemudian hari.
+   */
   /** petunjuk tetap di bawah pemilih kategori */
   categoryHint: 'Kategori ini yang dipakai filter Riwayat & rincian pengeluaranmu.',
   /** petunjuk + toast saat form selebihnya sudah siap, kecuali kategorinya */
@@ -1008,6 +1014,16 @@ export const TRANSACTION_INPUT_COPY = {
   walletCloseLabel: 'Tutup pemilih dompet',
   /** subjudul satu baris dompet, mis. "Saldo Rp 1.450.000" */
   walletBalance: (amount: string) => `Saldo ${amount}`,
+  /**
+   * Pengganti baris saldo untuk dompet yang TIDAK ada di ledger hidup (paket 81):
+   * nama dompet dari data lama (`initial.wallet` di sheet Edit) atau dompet yang
+   * baru saja dihapus user.
+   *
+   * Tanpa kalimat ini, pemilih akan menulis "Saldo Rp 0" untuk dompet yang
+   * sebenarnya tidak diketahui — dan itu klaim angka yang tidak benar. Yang
+   * dikatakan hanya keadaan yang bisa dipastikan: tidak ada di daftar dompetmu.
+   */
+  walletNotOwned: 'Belum ada di daftarmu',
   /** keadaan kosong pemilih — jujur: tanpa dompet, catatan tak punya tempat uang */
   walletEmptyTitle: 'Belum ada dompet di konteks ini',
   walletEmptyBody:
@@ -1216,6 +1232,22 @@ export const TRANSACTION_NO_WALLET_COPY = {
   body: 'Konteks uangmu sekarang belum punya dompet sendiri, jadi catatannya tidak ditulis — biar tidak ada saldo dompet lain yang terpotong tanpa kamu pilih. Pindah ke konteks yang punya dompet (Pribadi/Keluarga), atau tambah dompetnya dulu di Dompet & Akun.',
   /** label dompet di sheet yang memang tidak punya pemilih dompet (mis. catatan kalender) */
   sourceFallback: 'Belum ada dompet di konteks ini',
+} as const
+
+/**
+ * Copy penolakan "saldo tidak cukup" (paket 74) — dipakai jalur tulis
+ * (`postTransaction`/`postExpense`) DAN toast di shell input (`useTransactionSubmit`,
+ * AI chat). Dompetnya disebut supaya user tahu dompet MANA yang kehabisan saldo.
+ *
+ * Nominal saldo sengaja TIDAK dicantumkan di sini: toast hidup di atas kartu yang
+ * mungkin sudah disensor tombol mata (§5.7 "yang dibaca disensor"), jadi angka apa
+ * pun di sini akan membocorkan nilai yang sedang disembunyikan. Arahan tindakannya
+ * yang lebih penting: kecilkan nominal, atau pilih dompet lain.
+ */
+export const TRANSACTION_INSUFFICIENT_FUNDS_COPY = {
+  title: 'Saldo tidak mencukupi',
+  body: (walletName: string) =>
+    `Saldo ${walletName} tidak cukup untuk pengeluaran ini. Kurangi nominalnya, atau pilih dompet lain.`,
 } as const
 
 /* ── TOAST SUKSES INPUT TRANSAKSI ────────────────────────────────────────────

@@ -8,7 +8,7 @@ import { ScreenShell } from './screen-shell'
 import { ConfirmDialog } from './confirm-dialog'
 import { JointStateCard } from './joint-state-card'
 import { GlobalPrivacyToggle } from './global-privacy-toggle'
-import { ContextSwitcher } from './context-switcher'
+import { ContextMenu } from './context-menu'
 import { useMoneyContext } from './money-context-provider'
 import { usePrivacy } from './privacy-provider'
 import { JointBalanceScale } from './joint-balance-scale'
@@ -585,10 +585,12 @@ export function JointScreen() {
           {/* dua penempatan seperti Home/Budget: satu untuk mobile, satu untuk
               desktop (paket 47) — bukan satu kontrol yang direntangkan */}
           <div className="flex justify-center lg:hidden">
-            <ContextSwitcher value={context} onChange={setContext} className="max-w-[300px]" />
+            {/* PAKET 75: dropdown label-penuh, sama dengan semua halaman lain
+                (menggantikan segmented control lama). */}
+            <ContextMenu value={context} onChange={setContext} className="w-56" />
           </div>
           <div className="hidden shrink-0 items-center gap-3 lg:flex">
-            <ContextSwitcher value={context} onChange={setContext} className="w-[280px]" />
+            <ContextMenu value={context} onChange={setContext} className="w-44" />
             <GlobalPrivacyToggle />
           </div>
         </div>
