@@ -75,6 +75,11 @@ export async function createSnapTransaction(intent: PaymentIntent): Promise<Crea
         customer_details: intent.customerEmail
           ? { first_name: intent.customerName ?? '', email: intent.customerEmail }
           : undefined,
+        /* ALUR REDIRECT: Snap mengembalikan user ke halaman kita sendiri setelah
+           selesai/gagal. Tanpa `callbacks`, user berhenti di halaman Snap. */
+        callbacks: intent.finishUrl
+          ? { finish: intent.finishUrl, error: intent.errorUrl ?? intent.finishUrl }
+          : undefined,
       }),
       cache: 'no-store',
     })

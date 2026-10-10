@@ -188,11 +188,7 @@ export function ProfileSettingsPanel() {
   }
 
   return (
-    <SettingsPanel
-      eyebrow="Profil & Akun"
-      title="Profil & Akun"
-      desc="Identitas kamu, siklus keuangan bulanan, dan pasangan dompet bersama."
-    >
+    <SettingsPanel eyebrow="Profil & Akun" title="Profil & Akun">
       {/* ── 1. IDENTITAS ─────────────────────────────────────────────────── */}
       <SettingsCard>
         <div className="flex items-center gap-4">

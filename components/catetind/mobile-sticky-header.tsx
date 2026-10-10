@@ -1,34 +1,21 @@
 'use client'
 
-import { usePathname } from 'next/navigation'
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
-import { useNavAutoHide } from '@/hooks/use-nav-auto-hide'
 
-/* ── MobileStickyHeader — bar atas Dashboard yang mengikuti gulir (PAKET 70) ──
-   Permintaan pemilik produk: "header muncul kalau di-scroll ke atas, sembunyi
-   kalau di-scroll ke bawah — layaknya navigasi utama". Aturan keputusannya TIDAK
-   ditulis ulang di sini: ia memakai hook yang sama dengan nav bawah dulu
-   (`useNavAutoHide` → `nextNavAutoHide`, fungsi murni + test di
-   `hooks/use-nav-auto-hide.test.ts`). Karena nav bawah sekarang permanen
-   (paket 70), hook itu pindah pemakai — satu aturan, satu tempat.
+/* ── MobileAppHeader bar — ikut dokumen, TIDAK menempel (revisi) ─────────────
+   Permintaan pemilik produk: header JANGAN mengikuti scroll. Kalau user menggulir
+   ke bawah, posisinya tinggal di atas (ikut hilang bersama konten) — jadi untuk
+   melihat header lagi, user menggulir balik ke atas. Sebelumnya bar ini `sticky`
+   sehingga selalu menempel; perilaku itu DICABUT di sini.
 
-   TIGA HAL YANG SENGAJA DIPAKU:
+   SATU HAL YANG SENGAJA DIPAKU:
+   margin negatif. Header ini anak dari kolom konten `ScreenShell` yang punya
+   `px-5 pt-6 sm:px-8`; margin negatif (`-mx-5 -mt-6 sm:-mx-8`) membuatnya rata
+   PENUH ke tepi kolom, tanpa celah padding di kiri/atas. Paddingnya dikembalikan
+   di kelas yang sama supaya isi header tetap rapi.
 
-   1. `sticky top-0` + margin negatif. Header ini anak dari kolom konten
-      `ScreenShell` yang punya `px-5 pt-6 sm:px-8`; margin negatif
-      (`-mx-5 -mt-6 sm:-mx-8`) membuatnya menempel PENUH ke tepi atas viewport
-      waktu halaman digulir, tanpa celah padding di atasnya. Paddingnya
-      dikembalikan di kelas yang sama supaya isi header tetap rapi.
-
-   2. LATAR + `backdrop-blur`. Begitu sticky, konten yang lewat di belakangnya
-      harus tetap terbaca sebagai "bar" — bukan teks yang saling menumpuk.
-
-   3. `prefers-reduced-motion` dihormati: transisinya `none`. Saat reduced
-      motion, header hanya muncul/hilang tanpa gerakan — bukan lompatan.
-
-   Hanya dirender di bawah `lg` (`lg:hidden`): di desktop sudah ada sidebar tetap,
-   jadi tidak ada gunanya bar yang naik-turun. */
+   Hanya dirender di bawah `lg` (`lg:hidden`): di desktop sudah ada sidebar tetap. */
 
 export function MobileStickyHeader({
   children,
@@ -37,21 +24,11 @@ export function MobileStickyHeader({
   children: ReactNode
   className?: string
 }) {
-  const pathname = usePathname()
-  /* `pathname` = kunci reset: tiap pindah halaman header dipaksa tampil lagi,
-     bukan mewarisi kondisi "tersembunyi" dari halaman sebelumnya. */
-  const hidden = useNavAutoHide(pathname)
-
   return (
     <header
-      /* elemen yang digeser ke luar layar tetap bisa dicapai Tab/Screen Reader
-         kalau dibiarkan hidup — `inert` menutup dua-duanya sekaligus */
-      inert={hidden}
       className={cn(
-        'sticky top-0 z-40 -mx-5 -mt-6 flex items-center justify-between gap-3 px-5 py-3 sm:-mx-8 sm:px-8',
-        'bg-canvas/90 backdrop-blur-md lg:hidden',
-        'transition-transform duration-300 ease-out motion-reduce:transition-none',
-        hidden ? '-translate-y-[calc(100%+1.5rem)]' : 'translate-y-0',
+        '-mx-5 -mt-6 flex items-center justify-between gap-3 px-5 py-3 sm:-mx-8 sm:px-8',
+        'bg-canvas/90 lg:hidden',
         className,
       )}
     >

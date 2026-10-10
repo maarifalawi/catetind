@@ -35,7 +35,6 @@ import {
   FUND_DETAIL_COPY,
   FUND_SWEEP_TOAST,
   TODAY_ISO,
-  INITIAL_BUDGETS,
   SPENDING_REVIEW_COPY,
   applyBudgetSave,
   budgetsForPeriod,
@@ -67,6 +66,7 @@ import {
   useLiveFunds,
 } from '@/lib/money/funds-store'
 import { recordedTransactions, useMoneyStore } from '@/lib/money/store'
+import { readBudgets, writeBudgets } from '@/lib/budget-storage'
 import { useUserMoneySettings } from '@/lib/user-money-settings'
 import { dayOfMonth } from '@/lib/time'
 import { useTodayISO } from '@/lib/use-today-iso'
@@ -164,8 +164,21 @@ export function BudgetScreen({
   const router = useRouter()
 
 
-  /* data halaman (mock lokal — nanti dari Supabase) */
-  const [budgets, setBudgets] = useState<BudgetItem[]>(INITIAL_BUDGETS)
+  /* ── BUDGET KATEGORI — DATA USER, BUKAN SEED (revisi "tanpa seed") ───────
+     Limit kategori disimpan di perangkat (`lib/budget-storage.ts`). Keadaan awal
+     KOSONG; dibaca SETELAH mount supaya HTML server & render pertama client
+     identik (tidak ada hydration mismatch). `spent` di kartu TIDAK disimpan —
+     ia dihitung dari baris ledger nyata (lihat `periodBudgets` di bawah). */
+  const [budgets, setBudgets] = useState<BudgetItem[]>([])
+  const [budgetsHydrated, setBudgetsHydrated] = useState(false)
+  useEffect(() => {
+    setBudgets(readBudgets())
+    setBudgetsHydrated(true)
+  }, [])
+  useEffect(() => {
+    if (!budgetsHydrated) return
+    writeBudgets(budgets)
+  }, [budgets, budgetsHydrated])
   /* celengan = SATU STORE untuk seluruh app (paket 46), disaring TOMBSTONE
      (paket 60.2). Dulu halaman ini punya `useState(INITIAL_SINKING_FUNDS)`
      sendiri, sehingga celengan yang ditanam di sini tidak pernah muncul di
@@ -217,10 +230,23 @@ export function BudgetScreen({
     () => funds.filter((fund) => fund.scope === context),
     [funds, context],
   )
-  /** SATU daftar budget, disaring periode aktif (bukan daftar terpisah) */
+  /**
+   * SATU daftar budget, disaring periode aktif (bukan daftar terpisah).
+   *
+   * `spent` DIHITUNG dari baris ledger NYATA kategori ini di periode aktif —
+   * bukan angka simpanan. Jadi kartu kategori selalu mencerminkan catatan user,
+   * dan "sisa yang bisa disapu" pun tidak pernah mengarang.
+   */
   const periodBudgets = useMemo(
-    () => budgetsForPeriod(visibleBudgets, period),
-    [visibleBudgets, period],
+    () =>
+      budgetsForPeriod(visibleBudgets, period).map((budget) => ({
+        ...budget,
+        spent: spentInWindow(
+          ledger.filter((tx) => tx.category === budget.category),
+          period,
+        ),
+      })),
+    [visibleBudgets, period, ledger],
   )
 
   /* ── JATAH HARIAN — dihitung SETELAH cicilan & celengan (audit UX #2) ──

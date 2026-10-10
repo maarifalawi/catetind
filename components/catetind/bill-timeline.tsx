@@ -160,11 +160,6 @@ export function BillTimeline({
         })}
       </ul>
 
-      {!hasBills && (
-        <p className="mt-2 text-[11.5px] font-medium text-forest/45">
-          Nggak ada tagihan minggu ini.
-        </p>
-      )}
     </section>
   )
 }

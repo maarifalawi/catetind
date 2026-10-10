@@ -36,11 +36,9 @@ import {
   WATERFALL_NO_INCOME_COPY,
   billFilterCounts,
   billWalletName,
-  burnPercentage,
   filterBills,
   groupBills,
   maskMoney,
-  totalMonthlyBills,
   type Bill,
   type BillFilter,
 } from '@/lib/data/bills'
@@ -181,11 +179,6 @@ export function BillsScreen() {
     [scopedBills, activeFilter, currentDay],
   )
   const groups = useMemo(() => groupBills(visibleBills, currentDay), [visibleBills, currentDay])
-  /** TOTAL & beban tetap = SEMUA tagihan (kanon paket 47 #1: konteks menyaring
-   *  daftar, bukan total). Angkanya dipakai baris statistik header, tameng,
-   *  dan waterfall. */
-  const totalAmount = useMemo(() => totalMonthlyBills(bills), [bills])
-  const burn = useMemo(() => burnPercentage(bills, monthlyIncome), [bills, monthlyIncome])
   /** tagihan yang benar-benar ada di list "Aktif" (belum lunas) — dipakai
    *  timeline supaya kalender & daftar tidak kontradiksi (audit #3) */
   const activeBills = useMemo(() => bills.filter((bill) => !bill.isPaidThisMonth), [bills])
@@ -467,10 +460,6 @@ export function BillsScreen() {
           <h1 className="font-display text-3xl font-semibold tracking-tight text-forest lg:text-4xl">
             Tagihan Rutin
           </h1>
-          <p className="mt-1 truncate text-[12px] font-medium tabular-nums text-forest/45">
-            {bills.length} tagihan · {maskMoney(totalAmount, masked)}/bln
-            {monthlyIncome > 0 && ` · ${burn}% gaji`}
-          </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <ContextMenu value={context} onChange={setContext} className="w-32 sm:w-36" />

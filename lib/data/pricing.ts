@@ -120,6 +120,42 @@ export const HERO_PLAN: PlanDefinition = PLANS.find((plan) => plan.hero) ?? PLAN
 export const CATET_AJA_PLAN: PlanDefinition =
   PLANS.find((plan) => plan.id === 'catet-aja') ?? PLANS[0]
 
+/* ── KATALOG YANG DIJUAL (3 tier × bulanan/tahunan) ──────────────────────────
+   `Founding Member` (seumur hidup) TIDAK dijual: satu-satunya produk yang bisa
+   ditagih adalah ketiga tier di atas, masing-masing dua periode. Fungsi di bawah
+   adalah SATU-SATUNYA sumber "harga sah", dipakai server saat memverifikasi
+   nominal (`/api/payment/create`) dan klien saat menautkan ke halaman bayar. */
+
+/** periode yang benar-benar dijual — `lifetime` sengaja tidak ada */
+export const SELLABLE_PERIODS: BillingPeriod[] = ['monthly', 'annual']
+
+export function isSellablePeriod(value: unknown): value is BillingPeriod {
+  return value === 'monthly' || value === 'annual'
+}
+
+/** harga kanon satu penawaran (paket + periode) */
+export function offerPrice(plan: PlanDefinition, period: BillingPeriod): number {
+  return period === 'annual' ? plan.annual : monthlyPrice(plan)
+}
+
+/** `true` = nominal ini sah untuk penawaran itu (harga kanon ATAU versi diskon teman) */
+export function isValidOfferAmount(
+  plan: PlanDefinition,
+  period: BillingPeriod,
+  amount: number,
+): boolean {
+  const base = offerPrice(plan, period)
+  return amount === base || amount === applyReferralDiscount(base)
+}
+
+/** tautan ke halaman bayar untuk satu penawaran (`kode` = kode teman, opsional) */
+export function buildPayHref(planId: PlanId, period: BillingPeriod, code?: string | null): string {
+  const query = new URLSearchParams({ plan: planId, period })
+  if (code) query.set('kode', code)
+  return `/checkout/bayar?${query.toString()}`
+}
+
+
 /* ── BENTUK UNTUK MODAL TAHUNAN (bentuk lama dipertahankan apa adanya) ────────
    Modal tahunan cuma butuh periode tahunan, jadi bentuk datanya tak berubah:
    cukup diturunkan dari PLANS supaya tidak ada dua definisi paket. */
@@ -174,7 +210,7 @@ export const FOUNDING_MEMBER: LifetimePlan = {
   id: 'founding-member',
   name: 'Founding Member',
   subtitle: 'Sekali bayar, seumur hidup',
-  price: 149_000,
+  price: 129_000,
   durationLabel: 'Seumur hidup',
   features: [
     'Semua fitur Paket Sultan',
@@ -404,5 +440,50 @@ export const PAYMENT_SHEET_COPY = {
   successRedirecting: 'Sebentar lagi kamu diarahkan otomatis…',
   mockNote: 'Demo: pembayaran disimulasikan, belum ada transaksi nyata.',
   trustNote: NO_AUTO_RENEW_BADGE,
+} as const
+
+/* ── MULAI PEMBAYARAN (ALUR REDIRECT) ─────────────────────────────────────────
+   Halaman `/checkout/bayar` menagih SATU produk (Founding Member) lalu
+   mengarahkan user ke halaman Snap Midtrans. Teksnya dikumpulkan di sini supaya
+   tidak ada kalimat di JSX, sama seperti `PAYMENT_SHEET_COPY`. */
+
+export const PAY_START_COPY = {
+  eyebrow: 'Langkah terakhir',
+  title: 'Bayar paketmu',
+  subtitle:
+    'Kamu diarahkan ke halaman pembayaran Midtrans (QRIS, e-wallet, atau Virtual Account). Setelah selesai, kamu dibawa balik ke sini otomatis.',
+  planLabel: 'Yang kamu beli',
+  totalLabel: 'Total bayar',
+  discountLabel: 'Diskon kode teman',
+  payLabel: 'Bayar sekarang',
+  payingLabel: 'Menyiapkan pembayaran…',
+  loginTitle: 'Masuk dulu ya',
+  loginBody:
+    'Pembayaran butuh akun supaya langganannya tercatat atas namamu. Masuk pakai kode 6 angka dari email.',
+  loginCta: 'Buka halaman masuk',
+  notConfigured: 'Pembayaran belum bisa dimulai. Coba lagi sebentar ya.',
+  failedTitle: 'Pembayaran tidak bisa dimulai',
+  retryLabel: 'Coba lagi',
+} as const
+
+/* ── SELESAI BAYAR (halaman kembali dari Snap) ───────────────────────────────
+   Statusnya DIBACA dari database (`GET /api/subscription`), bukan disimpulkan
+   dari query string — user tidak pernah diberi tahu "aktif" sebelum webhook
+   Midtrans benar-benar mencatatnya. */
+
+export const PAY_DONE_COPY = {
+  eyebrow: 'Pembayaran',
+  checkingTitle: 'Lagi cek pembayaranmu…',
+  checkingBody: 'Kalau kamu baru selesai bayar, statusnya biasanya masuk dalam beberapa detik.',
+  activeTitle: 'Langgananmu aktif 🎉',
+  activeBody: 'Semua fitur sudah terbuka. Terima kasih sudah jadi Founding Member.',
+  pendingTitle: 'Pembayaran belum tercatat',
+  pendingBody:
+    'Kalau kamu memilih QRIS/VA, selesaikan dulu pembayarannya. Halaman ini bisa dibuka lagi kapan saja — statusnya masuk otomatis setelah Midtrans mengonfirmasi.',
+  failedTitle: 'Pembayarannya belum berhasil',
+  failedBody: 'Kamu bisa mencoba lagi — tidak ada yang berkurang, dan catatanmu tetap aman.',
+  retryLabel: 'Cek lagi',
+  appCta: 'Masuk ke dashboard',
+  homeCta: 'Kembali ke checkout',
 } as const
 

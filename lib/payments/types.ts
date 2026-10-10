@@ -19,6 +19,9 @@ export interface PaymentIntent {
   period?: string
   customerName?: string
   customerEmail?: string
+  /** URL kembali setelah user selesai/gagal di halaman Snap (ALUR REDIRECT) */
+  finishUrl?: string
+  errorUrl?: string
 }
 
 /** token Snap + URL halaman pembayaran (dibuka `window.snap.pay` / redirect) */

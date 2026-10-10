@@ -65,63 +65,63 @@ export const SETTINGS_MENU: SettingsMenuItem[] = [
     href: '/settings',
     icon: User,
     title: 'Profil & Akun',
-    desc: 'Nama, email, avatar, badge member',
+    desc: 'Nama, email, gajian',
   },
   {
     id: 'billing',
     href: '/settings/billing',
     icon: CreditCard,
-    title: 'Langganan & Billing',
-    desc: 'Status, renew, kuota AI Token',
+    title: 'Langganan',
+    desc: 'Status & kuota AI',
   },
   {
     id: 'appearance',
     href: '/settings/appearance',
     icon: Palette,
-    title: 'Tampilan & Tema',
-    desc: 'Mode terang / gelap',
+    title: 'Tampilan',
+    desc: 'Terang / gelap',
   },
   {
     id: 'categories',
     href: '/settings/categories',
     icon: Tag,
-    title: 'Kustomisasi Kategori',
-    desc: 'Kategori bawaan & custom',
+    title: 'Kategori',
+    desc: 'Atur kategori',
   },
   {
     id: 'ai',
     href: '/settings/ai',
     icon: Bot,
-    title: 'AI Preferences',
-    desc: 'Auto-categorization, kepribadian Minca',
+    title: 'AI',
+    desc: 'Auto-kategori & gaya Minca',
   },
   {
     id: 'notifications',
     href: '/settings/notifications',
     icon: Bell,
     title: 'Notifikasi',
-    desc: 'Push reminder, laporan, tagihan',
+    desc: 'Pengingat & laporan',
   },
   {
     id: 'security',
     href: '/settings/security',
     icon: Lock,
-    title: 'Keamanan & Privasi',
-    desc: 'Kunci app, biometrik, hapus akun',
+    title: 'Keamanan',
+    desc: 'Kunci app & hapus akun',
   },
   {
     id: 'data',
     href: '/settings/data',
     icon: Download,
-    title: 'Export Data Saya',
-    desc: 'Semua data dikirim via email',
+    title: 'Export Data',
+    desc: 'Unduh semua data kamu',
   },
   {
     id: 'logout',
     href: '/settings/logout',
     icon: LogOut,
     title: 'Keluar',
-    desc: 'Keluar dari akun',
+    desc: 'Akhiri sesi ini',
     tone: 'danger',
   },
 ]
@@ -143,14 +143,9 @@ export function SettingsShell({ children }: { children: ReactNode }) {
       {/* ── HEADER — resep kanonik H1 yang sama dengan Dashboard & halaman lain */}
       <header className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-[13px] font-medium text-forest/45">Akun & Preferensi</p>
           <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-forest lg:text-4xl">
             Pengaturan
           </h1>
-          <p className="mt-2 max-w-2xl text-[13.5px] leading-relaxed text-forest/55 lg:mt-3 lg:text-sm">
-            Atur akun, langganan, dan preferensi kamu — sidebar tetap di tempatnya, jadi kamu
-            nggak pernah keluar dari aplikasi.
-          </p>
         </div>
       </header>
 

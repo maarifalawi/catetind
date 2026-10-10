@@ -813,6 +813,54 @@ export function buildSpendingHeatmap(
   })
 }
 
+/**
+ * Heatmap pengeluaran DARI CATATAN NYATA (revisi "tanpa seed").
+ *
+ * `buildSpendingHeatmap()` di atas membangkitkan angka dengan PRNG — itu data
+ * DEMO (dipakai mode `NEXT_PUBLIC_DEMO` & test). Untuk user sungguhan, pola
+ * "kapan kamu sering boros" WAJIB lahir dari baris yang benar-benar ia catat.
+ * Fungsi ini melakukan itu: menjumlahkan pengeluaran per tanggal lalu menyusun
+ * jendela `days` hari terakhir yang berakhir di `todayIso`.
+ *
+ * `transactions` idealnya sudah disaring ke konteks aktif (halaman Riwayat
+ * mengirim `visibleTransactions`), jadi heatmap mengikuti Pribadi/Keluarga/
+ * Bersama dengan aturan yang sama seperti daftar.
+ *
+ * Tingkat warna (`level`) memakai ambang yang sama dengan `buildSpendingHeatmap`
+ * supaya bahasa visualnya tidak berubah — hanya sumbernya yang kini nyata.
+ */
+export function buildSpendingHeatmapFromTransactions(
+  transactions: readonly Pick<HistoryTransaction, 'amount' | 'type' | 'date'>[],
+  days = 30,
+  todayIso: string = localISODate(),
+): HeatmapDay[] {
+  const totals = new Map<string, number>()
+  for (const tx of transactions) {
+    /* hanya uang KELUAR yang membentuk pola "boros" — pindah dana & pemasukan
+       tidak pernah dihitung (aturan yang sama dengan `summarizeTransactions`) */
+    if (tx.type !== 'expense') continue
+    const amount = Math.abs(tx.amount)
+    if (!Number.isFinite(amount) || amount <= 0) continue
+    totals.set(tx.date, (totals.get(tx.date) ?? 0) + amount)
+  }
+
+  const [y, m, d] = todayIso.split('-').map(Number)
+  const raw: { date: string; total: number }[] = []
+  for (let i = days - 1; i >= 0; i--) {
+    const date = new Date(y, (m ?? 1) - 1, d ?? 1)
+    date.setDate(date.getDate() - i)
+    const iso = localISODate(date)
+    raw.push({ date: iso, total: totals.get(iso) ?? 0 })
+  }
+
+  const peak = Math.max(...raw.map((r) => r.total), 1)
+  return raw.map((r) => {
+    const ratio = r.total / peak
+    const level: HeatmapDay['level'] = r.total === 0 ? 0 : ratio < 0.3 ? 1 : ratio < 0.62 ? 2 : 3
+    return { ...r, level }
+  })
+}
+
 /* ── MATRIKS KALENDER HEATMAP (7 kolom × 4–5 baris) ────────────────────────
    Audit data-viz: deret 30 kotak SATU BARIS tidak punya sumbu X & Y, jadi user
    tidak bisa melihat pola "akhir pekan vs hari kerja". Di sini hari disusun

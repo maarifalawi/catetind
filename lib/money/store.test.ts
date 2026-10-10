@@ -524,6 +524,16 @@ describe('jalur tulis dari panel input & AI capture', () => {
        menjawab jujur: tidak ada dompet, dan penulisannya ditolak dengan arahan. */
     expect(defaultWalletNameFor('bersama')).toBe('')
   })
+
+  it('konteks yang isinya HANYA dompet baru milik user tetap punya dompet default', () => {
+    /* Dulu `defaultWalletNameFor()` mencari HANYA nama kanon (BCA/GoPay/OVO/Tunai).
+       Dompet yang baru dibuat user di konteks itu karena itu DIABAIKAN → form
+       catatan berkata "belum ada dompet" padahal dompetnya jelas ada (temuan:
+       kalender konteks Keluarga). Konteks tanpa nama kanon sekarang memakai
+       dompet PERTAMA yang memang hidup di konteks itu. */
+    addWalletAccount({ name: 'Kas Bersama', type: 'Cash', opening: 10_000, context: 'bersama' })
+    expect(defaultWalletNameFor('bersama')).toBe('Kas Bersama')
+  })
 })
 
 describe('satu angka di empat titik', () => {

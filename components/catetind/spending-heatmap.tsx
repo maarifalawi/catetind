@@ -3,16 +3,15 @@
 import { useMemo, useState } from 'react'
 import { Flame } from 'lucide-react'
 import {
-  CONTEXT_HEATMAP_SEED,
   HEATMAP_WEEKDAYS,
   buildHeatmapMatrix,
-  buildSpendingHeatmap,
+  buildSpendingHeatmapFromTransactions,
   formatDayLabel,
+  localISODate,
   maskMoney,
   type HeatmapDay,
+  type HistoryTransaction,
 } from '@/lib/data/history'
-import { CONTEXT_LABEL } from '@/lib/data/money-context'
-import type { MoneyContext } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 /* ── Heatmap "Kapan Kamu Sering Boros?" (matriks kalender 7 kolom) ───────────
@@ -26,8 +25,11 @@ import { cn } from '@/lib/utils'
    bukan teks statis yang tidak jelas menunjuk ke kotak mana.
 
    Empat tingkat memakai SATU warna brand (forest) dengan opasitas bertingkat.
-   Data dibangkitkan deterministik (seeded) di lib/data/history.ts → HTML server
-   dan client identik. */
+
+   REVISI "TANPA SEED": angkanya kini DIHITUNG dari catatan pengeluaran NYATA
+   (`transactions`, sudah disaring ke konteks aktif oleh halaman Riwayat),
+   bukan lagi dibangkitkan PRNG. Komponen ini hanya dirender saat sudah ada
+   pengeluaran nyata, jadi tidak ada lagi pola yang digambar dari data kosong. */
 
 const DAYS = 30
 
@@ -62,32 +64,34 @@ function tooltipPlacement(col: number) {
 
 export function SpendingHeatmap({
   masked,
-  context,
+  transactions,
+  today,
 }: {
   masked: boolean
   /**
-   * Konteks uang aktif (paket 47). Heatmap ini satu-satunya permukaan Riwayat
-   * yang angkanya DIBANGKITKAN (bukan dibaca dari baris ledger), jadi konteksnya
-   * dipakai sebagai SEED pola + label cakupan: tiap konteks punya polanya sendiri
-   * (deterministik, aman SSR) dan user tahu pola ini milik konteks yang mana.
+   * Catatan pengeluaran NYATA untuk konteks yang sedang dibaca (halaman Riwayat
+   * mengirim `visibleTransactions`). Heatmap menjumlahkannya per tanggal.
    */
-  context: MoneyContext
+  transactions: readonly HistoryTransaction[]
+  /** tanggal perangkat `YYYY-MM-DD` (diisi setelah mount); kosong = pakai jam lokal */
+  today: string
 }) {
   const days = useMemo(
-    () => buildSpendingHeatmap(DAYS, undefined, CONTEXT_HEATMAP_SEED[context]),
-    [context],
+    () => buildSpendingHeatmapFromTransactions(transactions, DAYS, today || localISODate()),
+    [transactions, today],
   )
   const weeks = useMemo(() => buildHeatmapMatrix(days), [days])
-  /* hari terboros dipilih sejak awal — sudah deterministik, jadi aman di SSR */
-  const [activeDate, setActiveDate] = useState(() => {
-    const peak = days.reduce((best, day) => (day.total > best.total ? day : best), days[0])
-    return peak.date
-  })
 
   const peak = useMemo(
     () => days.reduce((best, day) => (day.total > best.total ? day : best), days[0]),
     [days],
   )
+  /* hari "sorot" default = hari terboros; kalau tanggal tersimpan tidak ada lagi
+     di jendela (mis. setelah ganti konteks), jatuh ke hari terboros baru supaya
+     bubble tidak menunjuk sel yang tak dirender. */
+  const [pickedDate, setPickedDate] = useState(() => peak.date)
+  const activeDate = days.some((day) => day.date === pickedDate) ? pickedDate : peak.date
+
   const totalSpend = days.reduce((sum, day) => sum + day.total, 0)
   const activeDays = days.filter((day) => day.total > 0).length
 
@@ -102,10 +106,8 @@ export function SpendingHeatmap({
             <h2 className="font-display text-[15px] font-semibold tracking-tight text-forest">
               Kapan Kamu Sering Boros?
             </h2>
-            {/* label konteks (paket 47) — pola ini milik konteks yang aktif */}
-            <p className="text-[11.5px] text-forest/45">
-              {activeDays} hari aktif · {CONTEXT_LABEL[context]}
-            </p>
+            {/* ringkasan singkat: berapa hari benar-benar ada pengeluaran */}
+            <p className="text-[11.5px] text-forest/45">{activeDays} hari ada pengeluaran</p>
           </div>
         </div>
         <span className="rounded-full bg-cream px-3 py-1.5 text-[11.5px] font-medium text-forest/60 tabular-nums ring-1 ring-soil/12">
@@ -146,8 +148,8 @@ export function SpendingHeatmap({
                   <div key={day.date} className="relative">
                     <button
                       type="button"
-                      onClick={() => setActiveDate(day.date)}
-                      onPointerEnter={() => setActiveDate(day.date)}
+                      onClick={() => setPickedDate(day.date)}
+                      onPointerEnter={() => setPickedDate(day.date)}
                       aria-label={`${formatDayLabel(day.date)}: ${maskMoney(day.total, masked)}`}
                       aria-pressed={isActive}
                       className={cn(

@@ -207,6 +207,14 @@ function AssetCard({
   const clamp = (value: number) => Math.max(-REVEAL_ACTIONS, Math.min(0, value))
 
   const onPointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
+    /* Tombol aksi DI DALAM kartu (banner amber "Update Manual" & tombol
+       "Update Harga") TIDAK boleh memulai gesture tarik. Kalau kartu ini yang
+       memegang pointer (setPointerCapture di bawah), browser me-retarget event
+       `click` ke tombol kartu — akibatnya tombol kecil itu tidak pernah menerima
+       pencetan. Itulah kenapa "Update Harga"/"Update Manual" terasa mati walau
+       store-nya (`updateInvestmentPrice`) sudah benar: pencetannya tidak sampai.
+       Kedua tombol itu ditandai `data-no-drag`, dan di sini gesture-nya dilepas. */
+    if ((event.target as HTMLElement).closest('[data-no-drag]')) return
     startX.current = event.clientX
     moved.current = false
     event.currentTarget.setPointerCapture(event.pointerId)
@@ -309,6 +317,7 @@ function AssetCard({
             <span
               role="button"
               tabIndex={0}
+              data-no-drag
               onClick={(event) => {
                 event.stopPropagation()
                 onUpdatePrice()
@@ -379,6 +388,34 @@ function AssetCard({
             <span className="mt-0.5 text-right text-[10px] text-forest/35 tabular-nums">
               {priceUpdatedLabel(formatPriceStamp(asset.lastUpdate))}
             </span>
+            {/* pintu UPDATE HARGA yang SELALU ada (bukan hanya saat harga basi):
+                harga pasar diisi manual, jadi user harus bisa mengoreksinya kapan
+                saja — termasuk saham yang harganya belum lewat 24 jam. Saat kartu
+                sudah menandai basi, banner amber di atas yang mengambil alih
+                tombol ini supaya tidak ada dua tombol bernama sama. */}
+            {!stale && (
+              <span
+                role="button"
+                tabIndex={0}
+                data-no-drag
+                aria-label={`Update harga ${asset.name}`}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  onUpdatePrice()
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    onUpdatePrice()
+                  }
+                }}
+                className="mt-1.5 inline-flex shrink-0 items-center gap-1 rounded-full bg-sage/70 px-2.5 py-1 text-[10.5px] font-medium text-forest ring-1 ring-forest/10 transition-colors hover:bg-forest hover:text-mint"
+              >
+                <RefreshCw className="size-3" strokeWidth={2.6} aria-hidden />
+                Update Harga
+              </span>
+            )}
           </span>
 
           {/* #6 — AFFORDANCE: chevron ">" adalah tanda universal "bisa dibuka",

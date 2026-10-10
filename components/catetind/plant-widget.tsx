@@ -72,6 +72,12 @@ export const PlantWidget = memo(function PlantWidget({
   /* HP = progres celengan hero — satu-satunya sumber "kesehatan" sekarang */
   const hp = nutritionPct
   const wilted = hp > 0 && hp <= 20
+  /* MEKAR PENUH (tahap 4 / "Berbunga"): BENTUK tanaman di dalam kartu berubah
+     jadi latar penuh yang rimbun. Kartunya TETAP setengah lebar (sepasang dengan
+     Tabungan Impian) — tata letak grid-nya sudah final, jadi yang diperkaya di
+     sini murni tampilan tanamannya. Status mekar dibaca dari DATA yang sama
+     dengan tahap di atas (`stage`), jadi tidak ada perhitungan kedua. */
+  const fullBloom = stage === 4 && !sleeping && !wilted
   const nextStage = Math.min(stage + 1, 4) as PlantStage
   const footerLabel =
     stage === 4
@@ -84,10 +90,48 @@ export const PlantWidget = memo(function PlantWidget({
     <>
               <section
         aria-label="Tanaman kamu"
-        className="flex h-full flex-col rounded-[2rem] bg-cream p-6 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] ring-1 ring-soil/12"
+        className={cn(
+          'relative flex h-full flex-col overflow-hidden rounded-[2rem] bg-cream p-6 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] ring-1 ring-soil/12',
+          fullBloom && 'min-h-[400px] lg:min-h-[460px]',
+        )}
       >
+        {/* MEKAR (tahap 4): tanaman jadi LATAR PENUH kartu — satu bidang rimbun,
+            bukan ikon kecil di tengah. Kartunya sendiri tetap 6/12 (sepasang
+            dengan Tabungan Impian); yang berubah hanya bentuk di dalamnya.
+            Konten di atasnya dipaku `relative z-10` supaya tetap terbaca. */}
+        {fullBloom && (
+          <>
+            {/* langit lembut + dua glow: hangat dari atas, mint dari bawah */}
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-0 bg-gradient-to-b from-mint/25 via-sage/45 to-cream"
+            />
+            <span
+              aria-hidden
+              className="pointer-events-none absolute -top-10 left-1/2 h-56 w-56 -translate-x-1/2 rounded-full bg-hud-amber/25 blur-3xl"
+            />
+            <span
+              aria-hidden
+              className="pointer-events-none absolute -bottom-12 left-1/2 h-56 w-72 -translate-x-1/2 rounded-full bg-mint/30 blur-3xl"
+            />
+            <PlantIllustration
+              stage={4}
+              className="pointer-events-none absolute -bottom-8 left-1/2 h-[120%] w-auto max-w-none -translate-x-1/2 opacity-95 lg:h-[128%]"
+            />
+            {/* scrim atas & bawah supaya teks header + kaki kartu tetap terbaca */}
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-cream via-cream/70 to-transparent"
+            />
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-cream/70 to-transparent"
+            />
+          </>
+        )}
+
         {/* header - konsisten dengan kartu lain */}
-        <div className="flex items-center justify-between">
+        <div className="relative z-10 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <span
               className={cn(
@@ -143,31 +187,40 @@ export const PlantWidget = memo(function PlantWidget({
           onClick={() => setDetailOpen(true)}
           aria-label={sleeping ? PLANT_SLEEP_COPY.detailHint : 'Lihat detail tanaman'}
           className={cn(
-            'group relative mt-3 flex flex-1 flex-col items-center justify-center rounded-2xl px-4 pt-8 pb-6 ring-1 ring-soil/8 transition-all duration-300',
-            sleeping
-              ? 'bg-gradient-to-b from-soil/[0.06] via-cream to-cream'
-              : 'bg-gradient-to-b from-sage/50 via-cream to-cream shadow-[0_4px_20px_-4px_rgba(0,0,0,0.08)] hover:from-sage/70 hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)]',
+            'group relative mt-3 flex flex-1 flex-col items-center rounded-2xl px-4 pt-8 pb-6 ring-1 transition-all duration-300',
+            fullBloom
+              ? /* mekar: tombol jadi lapisan bening di atas latar full-bleed */
+                'z-10 justify-end bg-transparent ring-transparent'
+              : sleeping
+                ? 'justify-center bg-gradient-to-b from-soil/[0.06] via-cream to-cream ring-soil/8'
+                : 'justify-center bg-gradient-to-b from-sage/50 via-cream to-cream ring-soil/8 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.08)] hover:from-sage/70 hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)]',
           )}
         >
-          {/* glow mint lembut di belakang tanaman — dimatikan saat tidur supaya
-              tidak ada kesan "segar" yang menyesatkan */}
-          {!sleeping && (
-            <span
-              aria-hidden
-              className="pointer-events-none absolute bottom-8 h-20 w-36 rounded-full bg-mint/20 blur-2xl"
-            />
+          {/* glow + ilustrasi HANYA saat BELUM mekar: saat mekar ilustrasinya sudah
+              jadi latar kartu, jadi jangan digambar dua kali di dalam tombol */}
+          {!fullBloom && (
+            <>
+              {/* glow mint lembut di belakang tanaman — dimatikan saat tidur supaya
+                  tidak ada kesan "segar" yang menyesatkan */}
+              {!sleeping && (
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute bottom-8 h-20 w-36 rounded-full bg-mint/20 blur-2xl"
+                />
+              )}
+              <PlantIllustration
+                stage={stage}
+                wilted={wilted}
+                sleeping={sleeping}
+                className={cn(
+                  /* kartu tanaman kini SETENGAH lebar (paket 67) — ilustrasinya ikut
+                     dibesarkan supaya tidak tenggelam di ruang yang lebih lega */
+                  'relative w-40 sm:w-48 lg:w-56',
+                  !sleeping && 'transition-transform duration-300 group-hover:scale-[1.03]',
+                )}
+              />
+            </>
           )}
-          <PlantIllustration
-            stage={stage}
-            wilted={wilted}
-            sleeping={sleeping}
-            className={cn(
-              /* kartu tanaman kini SETENGAH lebar (paket 67) — ilustrasinya ikut
-                 dibesarkan supaya tidak tenggelam di ruang yang lebih lega */
-              'relative w-40 sm:w-48 lg:w-56',
-              !sleeping && 'transition-transform duration-300 group-hover:scale-[1.03]',
-            )}
-          />
                     <span className="mt-4 text-[11px] font-medium text-forest/40 transition-colors group-hover:text-forest">
             {sleeping ? PLANT_SLEEP_COPY.detailHint : 'Tap untuk lihat detail'}
           </span>
@@ -198,7 +251,7 @@ export const PlantWidget = memo(function PlantWidget({
             berasal dari data mana pun dan bertabrakan dengan persen di baris
             atasnya. Tahap terakhir tidak punya "tahap berikutnya": labelnya
             diganti kalimat target, bukan "menuju tahap 4 - Berbunga". */}
-        <div className="mt-3 border-t border-soil/12 pt-3.5">
+        <div className="relative z-10 mt-3 border-t border-soil/12 pt-3.5">
           <div className="flex items-center justify-between text-[11px]">
             <span className="font-medium text-forest/45">{footerLabel}</span>
             <span className="font-medium text-forest tabular-nums">{bandPct}%</span>
@@ -221,3 +274,4 @@ export const PlantWidget = memo(function PlantWidget({
     </>
   )
 })
+

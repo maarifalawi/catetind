@@ -337,9 +337,11 @@ export function HomeScreen() {
               <MyGoalsCard />
             </div>
             {/* ── ROW 4 · TANAMANMU — kanan 6/12 ───────────────────────────────
-                Padding `p-6` di kartunya sengaja disamakan dengan Tabungan Impian
-                supaya pasangan baris ini terasa kohesif (ilustrasi + daftar tidak
-                tenggelam/kebesaran). Di MOBILE (order-7). */}
+                SEPASANG 50/50 dengan Tabungan Impian — tata letak ini FINAL
+                (permintaan pemilik produk). Saat tahap 4 "Berbunga", yang berubah
+                adalah BENTUK di dalam kartunya (ilustrasi jadi latar penuh yang
+                rimbun), BUKAN lebar kolomnya: kartu tetap 6/12 supaya barisnya
+                tidak menyisakan lubang. Di MOBILE (order-7). */}
             <div className="order-7 h-full lg:order-none lg:col-span-6 lg:col-start-7 lg:row-start-4">
               <PlantWidget onReplayCelebration={celebration.replay} />
             </div>

@@ -33,6 +33,27 @@ export function supabaseAnonKey(): string {
 }
 
 /**
+ * Kunci PERAN SERVER. Dipakai HANYA oleh route webhook pembayaran, di mana
+ * memang tidak ada sesi user yang bisa dipakai: Midtrans memanggil server, bukan
+ * browser. Nilainya TIDAK PERNAH `NEXT_PUBLIC_` dan tidak ikut ke bundel klien;
+ * karena ia mem-BYPASS RLS, satu-satunya pemakainya adalah
+ * `app/api/payment/webhook/route.ts` — dan baris pertama route itu adalah
+ * verifikasi tanda tangan SHA512 dari Midtrans.
+ *
+ * Kosong = pemenuhan lewat kunci peran server tidak tersedia; webhook tetap
+ * menjawab apa adanya (`handled:false`), tidak mengaku langganan diaktifkan.
+ */
+const SERVICE_VALUE = process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''
+
+export function supabaseServiceKey(): string {
+  return SERVICE_VALUE
+}
+
+export function hasSupabaseServiceRole(): boolean {
+  return SERVICE_VALUE.length > 20
+}
+
+/**
  * Project ref (`wmswtoyikvgzcvbgdceo`) — dipakai sebagai bagian nama cookie sesi
  * Supabase (`sb-<ref>-auth-token`). Diambil dari HOST, bukan dari variabel
  * terpisah, supaya tidak ada dua nilai yang bisa berbeda.

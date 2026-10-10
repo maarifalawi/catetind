@@ -196,10 +196,6 @@ export function DailyHudSummary({
                 {maskNominal(hud.sinkingObligation, masked)}
               </b>
             </span>
-            <span aria-hidden className="size-1 rounded-full bg-ink/20" />
-            <span className="tabular-nums">
-              {hud.daysLeft} {HUD_COPY.daysLeftSuffix}
-            </span>
           </p>
         </div>
       ) : (
@@ -208,9 +204,10 @@ export function DailyHudSummary({
             ia naik jadi focal point dan berkata "ini uangmu untuk hari ini".
             Bentuknya: judul + chip periode · angka jatah harian besar + CINCIN
             pemakaian hari ini (`HudRing`) · satu baris statistik (sisa periode ·
-            hari lagi · persen terpakai) · catatan pemasukan tengah periode ·
-            pintu ke Pengaturan. Angka & warna tetap dari `computeDailyHud()`,
-            jadi tidak ada nilai baru yang dikarang di sini. */
+            persen terpakai) · pintu ke Pengaturan. Angka & warna tetap dari
+            `computeDailyHud()`, jadi tidak ada nilai baru yang dikarang di sini.
+            Label "Jatah harianmu", hitungan "n hari lagi", dan catatan pemasukan
+            tengah periode DIHAPUS atas permintaan pemilik produk. */
         <div className="relative overflow-hidden rounded-[2rem] bg-forest px-5 py-5 text-cream shadow-[0_30px_64px_-34px_rgba(69,89,78,0.85)] sm:px-6 sm:py-6">
           {/* dua glow lembut — mint di kanan atas, sage di kiri bawah. Cuma
               cahaya, bukan informasi: `aria-hidden` + pointer-events-none. */}
@@ -243,8 +240,7 @@ export function DailyHudSummary({
               bar bawah — dua angka itu tidak lagi saling membingungkan. */}
           <div className="relative mt-5 flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-[11.5px] font-medium text-cream/55">{HUD_COPY.mainLead}</p>
-              <p className="mt-1.5 text-[clamp(1.75rem,7vw,2.5rem)] font-semibold leading-none tracking-tight tabular-nums">
+              <p className="text-[clamp(1.75rem,7vw,2.5rem)] font-semibold leading-none tracking-tight tabular-nums">
                 {maskNominal(hud.dailyBudget, masked)}
               </p>
             </div>
@@ -271,10 +267,6 @@ export function DailyHudSummary({
                   {maskNominal(hud.remaining, masked)}
                 </b>
               </span>
-              <span aria-hidden className="size-1 rounded-full bg-cream/30" />
-              <span className="tabular-nums">
-                {hud.daysLeft} {HUD_COPY.daysLeftSuffix}
-              </span>
             </div>
             <div
               role="progressbar"
@@ -294,15 +286,6 @@ export function DailyHudSummary({
               </p>
             </div>
           </div>
-
-          {/* PRD 2B.3 — pemasukan masuk di tengah periode: jatah harian sudah
-              dihitung ulang dari sisa hari, dan user diberi tahu kenapa berubah */}
-          {income.midPeriod && income.latestDateLabel && (
-            <p className="relative mt-3 inline-flex items-start gap-1.5 rounded-xl bg-cream/10 px-2.5 py-1.5 text-[10.5px] font-medium leading-snug text-cream/85">
-              <Sparkles className="mt-0.5 size-3 shrink-0" strokeWidth={2.4} aria-hidden />
-              {HUD_COPY.midIncome(income.latestDateLabel)}
-            </p>
-          )}
 
           {/* pintu MENGUBAH angka yang barusan dipakai (paket 57.4): pemasukan &
               cicilan hidup di Pengaturan → Profil & Akun. Tanpa tautan ini,

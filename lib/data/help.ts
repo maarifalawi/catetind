@@ -1,17 +1,14 @@
 /* ── Pusat Bantuan (/app/help, inventaris #30) · Domain 4C ───────────────────
    Satu sumber data + logika MURNI (tanpa React) untuk halaman bantuan:
 
-    1. STATUS SISTEM — satu strip kecil yang HANYA muncul kalau ada yang tidak
-       normal ("no news is good news"). Kalau semua hijau, halaman tidak punya
-       elemen itu sama sekali — ini yang menjaga bantuan tetap bersih.
-    2. TOPIK + ARTIKEL — 9 grup topik, masing-masing punya `blurb` (sapaan
+    1. TOPIK + ARTIKEL — 9 grup topik, masing-masing punya `blurb` (sapaan
        Minca) dan artikel berisi langkah bernomor + `proTip` ("Perlu Tahu").
        Gaya copy WAJIB suara Minca: santai, hangat, bahasa sehari-hari.
-    3. QUICK ANSWERS — 5 pertanyaan yang paling sering bikin panik. Ini konten
+    2. QUICK ANSWERS — 5 pertanyaan yang paling sering bikin panik. Ini konten
        DEFAULT saat belum ada topik yang dipilih.
-    4. PENCARIAN — `searchHelp()` mencocokkan judul + isi (langkah, proTip,
+    3. PENCARIAN — `searchHelp()` mencocokkan judul + isi (langkah, proTip,
        pertanyaan, jawaban) secara real-time, tanpa index eksternal.
-    5. PAYLOAD EXPORT — `buildHelpExportPayload()` menyusun JSON untuk tombol
+    4. PAYLOAD EXPORT — `buildHelpExportPayload()` menyusun JSON untuk tombol
        "Export Data Saya" di dalam deflection loop (PRD Domain 4C, Mekanisme 1).
        Di produksi data ini di-compile di server lalu dikirim ke email user
        sendiri; di prototipe ini disusun di klien supaya tombolnya bekerja —
@@ -31,77 +28,6 @@ import { ALL_TRANSACTIONS } from './transactions'
 import { PRIVACY_LINK_COPY } from '../legal/privacy'
 import { TERMS_LINK_COPY } from '../legal/terms'
 import { WALLET_SEED } from '../wallets'
-
-/* ── 1. STATUS SISTEM ─────────────────────────────────────────────────────── */
-
-/** tingkat kesehatan satu subsistem */
-export type SystemHealth = 'operational' | 'degraded' | 'down'
-
-export interface SystemStatus {
-  /** sinkronisasi data & backup transaksi */
-  dataSync: SystemHealth
-  /** mesin AI Coach (Minca) */
-  aiEngine: SystemHealth
-}
-
-/** mock state — sengaja `aiEngine: 'degraded'` supaya strip statusnya terlihat */
-export const SYSTEM_STATUS: SystemStatus = {
-  dataSync: 'operational',
-  aiEngine: 'degraded',
-}
-
-/** nama subsistem seperti yang dibaca user (bukan nama teknis) */
-export const SYSTEM_NAME: Record<keyof SystemStatus, string> = {
-  dataSync: 'Data & Backup',
-  aiEngine: 'AI Coach',
-}
-
-/**
- * Emoji + kalimat status. Titik berwarna dipakai sebagai penanda cepat, bukan
- * ikon baru: hijau = jalan normal, kuning = sedang antri, merah = ada gangguan.
- */
-export const HEALTH_COPY: Record<SystemHealth, { emoji: string; label: string }> = {
-  operational: { emoji: '🟢', label: 'Normal' },
-  degraded: { emoji: '🟡', label: 'Sedang antri, mungkin agak lambat' },
-  down: { emoji: '🔴', label: 'Lagi gangguan, tim kami udah meluncur' },
-}
-
-export interface SystemIndicator {
-  key: keyof SystemStatus
-  /** mis. "Data & Backup" */
-  name: string
-  /** mis. "🟢" */
-  emoji: string
-  /** mis. "Normal" */
-  label: string
-  health: SystemHealth
-}
-
-/** urutan subsistem di strip — data sync dulu, lalu AI */
-const SYSTEM_ORDER: (keyof SystemStatus)[] = ['dataSync', 'aiEngine']
-
-/**
- * "No news is good news": strip status hanya layak tampil kalau MINIMAL satu
- * subsistem tidak normal. Semua `operational` → strip disembunyikan total.
- */
-export function hasSystemIssue(status: SystemStatus = SYSTEM_STATUS): boolean {
-  return SYSTEM_ORDER.some((key) => status[key] !== 'operational')
-}
-
-/** baris indikator siap render (emoji + nama + kalimat status) */
-export function systemIndicators(status: SystemStatus = SYSTEM_STATUS): SystemIndicator[] {
-  return SYSTEM_ORDER.map((key) => {
-    const health = status[key]
-    const copy = HEALTH_COPY[health]
-    return {
-      key,
-      name: SYSTEM_NAME[key],
-      emoji: copy.emoji,
-      label: copy.label,
-      health,
-    }
-  })
-}
 
 /* ── 2. TOPIK + ARTIKEL ───────────────────────────────────────────────────── */
 
@@ -651,32 +577,23 @@ export function searchHelp(query: string, topics: HelpTopic[] = HELP_TOPICS): He
 
 /* ── 5. COPY HALAMAN (semua bersuara Minca) ───────────────────────────────── */
 
-export const HELP_EYEBROW = 'Bantuan & Panduan'
 export const HELP_TITLE = 'Pusat Bantuan'
-export const HELP_GREETING =
-  'Hai, gue Minca 🌱 Cari, klik, kelar. Masih mentok? Bisa ngobrol langsung sama founder.'
-export const HELP_SIDEBAR_TITLE = 'Mau bahas apa hari ini?'
+export const HELP_SIDEBAR_TITLE = 'Topik'
 export const HELP_DEFAULT_TITLE = 'Sering Bikin Bingung'
-export const HELP_DEFAULT_BLURB =
-  'Pertanyaan yang paling sering mampir 👇 Klik kartunya, jawabannya kebuka di sini.'
 export const HELP_SEARCH_PLACEHOLDER = 'Cari bantuan... contoh: "cara sembunyiin transaksi"'
 export const HELP_SEARCH_LABEL = 'Cari di pusat bantuan'
 export const HELP_RESULT_TITLE = 'Hasil pencarian'
 export const HELP_EMPTY_TITLE = 'Gue nggak nemu yang pas 😅'
 export const HELP_EMPTY_BLURB =
-  'Coba kata kunci lain (mis. "privasi", "nabung", "offline") atau pilih topik di samping. Masih nggak ada? Klik 👎 di artikel mana pun.'
+  'Coba kata kunci lain atau pilih topik. Masih nggak ada? Klik 👎 di artikel mana pun.'
 export const HELP_BACK_TO_QUICK = 'Balik ke pertanyaan populer'
 export const HELP_OPEN_TOPIC = 'Buka topik'
 export const HELP_FEEDBACK_QUESTION = 'Apakah artikel ini membantu?'
 export const HELP_FEEDBACK_THANKS = 'Senang bisa membantu! 💚'
 export const HELP_PRO_TIP_LABEL = '💡 Perlu Tahu'
-/** catatan kecil di sidebar: kasih tahu jalan ke support TANPA membuka gerbangnya */
-export const HELP_SIDEBAR_NOTE =
-  'Nggak nemu jawabannya? Klik 👎 di artikel mana pun, tombol ngobrol sama founder bakal muncul.'
 export const HELP_PRIVACY_SHIELD =
-  'Kami nggak bisa mengakses data transaksimu — itu jaminan privasi kami. Kalau ada masalah teknis, sertakan screenshot biar kami bisa bantu tanpa melihat datamu.'
-export const HELP_SUPPORT_FOOTNOTE =
-  'Balasan datang langsung dari founder — bukan bot, bukan tiket yang nyangkut antre.'
+  'Kami nggak bisa mengakses data transaksimu. Kalau ada masalah teknis, kirim screenshot — kami bantu tanpa melihat datamu.'
+export const HELP_SUPPORT_FOOTNOTE = 'Balasan langsung dari founder — bukan bot, bukan tiket.'
 export const HELP_EXPORT_LABEL = 'Export Data Saya (JSON)'
 export const HELP_CONTACT_LABEL = 'Hubungi Founder'
 export const HELP_CONTACT_SUBJECT = 'Butuh Bantuan - CatetInd'
@@ -694,7 +611,7 @@ export const HELP_EXPORT_TOAST =
    (`lib/legal/privacy.ts` & `lib/legal/terms.ts`) supaya satu dokumen tidak
    pernah disebut dengan dua nama berbeda. `/terms` baru ditautkan di sini
    SETELAH route-nya benar-benar ada (prompt 13) — bukan lebih dulu. */
-export const HELP_LEGAL_NOTE = 'Versi tertulisnya ada di sini, lengkap dengan tanggalnya:'
+export const HELP_LEGAL_NOTE = 'Dokumen resmi:'
 export const HELP_LEGAL_LINKS: { href: string; label: string }[] = [
   { href: '/privacy', label: PRIVACY_LINK_COPY.label },
   { href: '/terms', label: TERMS_LINK_COPY.label },

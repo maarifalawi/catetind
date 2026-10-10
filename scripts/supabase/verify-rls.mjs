@@ -45,6 +45,8 @@ const PROTECTED = [
   'ai_usage',
   'user_settings',
   'push_subscriptions',
+  'purchases',
+  'user_subscriptions',
   'joint_wallets',
   'joint_members',
   'joint_transactions',
@@ -69,6 +71,7 @@ const PROTECTED_RPC = [
   { fn: 'catetind_accept_invite', args: { p_code: 'TIDAKAKSES' } },
   { fn: 'catetind_push_targets', args: { p_token: 'token-palsu-tanpa-sesi' } },
   { fn: 'catetind_record_ai_usage', args: { p_month_key: '2026-09', p_activity: 'chat', p_calls: 1 } },
+  { fn: 'catetind_fulfill_purchase', args: { p_order_id: 'TIDAKADA', p_status: 'settlement', p_amount: 129000 } },
   { fn: 'catetind_handle_new_user', args: {}, /** harus gagal apa pun yang terjadi */ expectsFailureOnly: true },
 ]
 

@@ -1389,9 +1389,6 @@ export const HUD_COPY = {
    * untuk satu tata letak). */
   /** netral periode: benar untuk tab mingguan / bulanan / siklus gajian */
   remainingLead: 'Sisa periode:',
-  daysLeftSuffix: 'hari lagi',
-  /** label kecil di ATAS angka utama kartu /budget (redesain paket 82) */
-  mainLead: 'Jatah harianmu',
   /** caption di bawah cincin — menegaskan angka itu PEMAKAIAN HARI INI (redesain 82) */
   todayCaption: 'hari ini',
   /** label bar pemakaian PERIODE (bukan hari ini) — menjawab "kepakai berapa %" */
@@ -1400,9 +1397,6 @@ export const HUD_COPY = {
   ringAria: (pct: number) => `Jatah hari ini terpakai ${pct} persen`,
   poolNote: (installmentsLabel: string, obligationLabel: string) =>
     `Setelah dipotong cicilan ${installmentsLabel} & celengan ${obligationLabel}`,
-  /** PRD 2B.3: pemasukan masuk di tengah periode → jatah dihitung ulang */
-  midIncome: (dateLabel: string) =>
-    `Pemasukan masuk ${dateLabel} — jatah harianmu disesuaikan.`,
   /** Dry Spell — menggantikan SELURUH HUD (tanpa Rp 0/hari) */
   drySpellTitle: 'Belum ada pemasukan di periode ini.',
   drySpellBody: 'Yuk catat begitu masuk! 💪',

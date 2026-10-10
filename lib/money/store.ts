@@ -2350,9 +2350,15 @@ export function walletTransactionsOf(
  */
 export function defaultWalletNameFor(ctx: MoneyContext): string {
   const names = filterWalletsByContext(liveWalletSeeds(live), ctx).map((wallet) => wallet.name)
-  return (
-    names.find((name) => (TRANSACTION_WALLET_OPTIONS as readonly string[]).includes(name)) ?? ''
+  /* Nama kanon (BCA/GoPay/OVO/Tunai) didahulukan bila ada, TAPI dompet buatan user
+     sendiri tidak boleh diabaikan: konteks yang isinya cuma dompet baru (mis.
+     "Dompet Keluarga") dulu mengembalikan `''` sehingga form catatan menolak
+     menulis dengan alasan "belum ada dompet" padahal dompetnya jelas ada — itu
+     bug yang membuat catatan kalender konteks Keluarga mustahil dibuat. */
+  const canonical = names.find((name) =>
+    (TRANSACTION_WALLET_OPTIONS as readonly string[]).includes(name),
   )
+  return canonical ?? names[0] ?? ''
 }
 
 /**

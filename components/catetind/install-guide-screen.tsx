@@ -13,7 +13,6 @@ import {
   INSTALL_HELP_FOOTER,
   INSTALL_HERO,
   INSTALL_IOS_CTA,
-  INSTALL_IOS_PANEL_NOTE,
   INSTALL_OTHER_GUIDES_LABEL,
   INSTALL_TABLIST_LABEL,
   TUTORIALS,
@@ -107,8 +106,13 @@ export function InstallGuideScreen() {
           Tidak ada lebar maksimum buatan: padding & lebar konten datang dari
           shell, jadi tepi kiri/kanan `/install` sejajar dengan Dashboard. */}
       <div className="w-full lg:grid lg:grid-cols-12 lg:items-start lg:gap-x-8">
-        {/* ── HERO: jual alasannya dulu ── */}
-        <header className="lg:col-span-5">
+        {/* ── HERO: jual alasannya dulu ──
+            Penempatan grid ditulis EKSPLISIT (`row-start`) supaya kartu kiri
+            (hero + serah-terima) menumpuk rapi di kolom 1–5 dan kolom kanan
+            membentang penuh di sebelahnya. Sebelumnya `InstallQrHandoff` adalah
+            anak grid TANPA `lg:col-span-*` → di grid 12 kolom ia menyempit jadi
+            1 kolom dan kolom kanan terlempar ke baris baru (tata letak 5/7 pecah). */}
+        <header className="lg:col-span-5 lg:row-start-1">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-cream/70 px-3 py-1 text-[11px] font-medium tracking-[0.16em] text-forest uppercase ring-1 ring-soil/12">
             <Zap className="size-3" strokeWidth={2.6} aria-hidden />
             {INSTALL_HERO.badge}
@@ -144,10 +148,12 @@ export function InstallGuideScreen() {
             `isReady` WAJIB ikut: sebelum deteksi selesai `device` bernilai
             'desktop' (state awal hook), jadi tanpa gerbang ini HTML server akan
             berbeda dari render pertama client (hydration mismatch). */}
-        {isReady && device === 'desktop' && <InstallQrHandoff className="mt-6" />}
+        {isReady && device === 'desktop' && (
+          <InstallQrHandoff className="mt-6 lg:col-span-5 lg:col-start-1 lg:row-start-2" />
+        )}
 
         {/* ── KOLOM KANAN: panduan langkah demi langkah (7/12 di desktop) ── */}
-        <div className="lg:col-span-7">
+        <div className="lg:col-span-7 lg:col-start-6 lg:row-span-2 lg:row-start-1">
           {!isReady ? (
             /* deteksi perangkat jalan setelah mount — jangan sempat menampilkan
                panduan perangkat yang salah */
@@ -239,33 +245,25 @@ export function InstallGuideScreen() {
                   >
                     <ManualTutorial device={activeTab} className="mt-3" />
                     {activeTab === 'desktop' && <InstallQrHandoff className="mt-3" />}
-                    {activeTab === 'ios' && activeTab !== device && (
-                      <p className="mt-3 text-center text-xs text-forest/40">
-                        {INSTALL_IOS_PANEL_NOTE}
-                      </p>
-                    )}
                   </div>
                 </div>
               )}
 
+              {/* kaki halaman: satu baris saja — bantuan + jalan masuk kalau belum punya akun */}
               <p className="mt-6 text-center text-[11px] leading-relaxed text-forest/35">
                 {INSTALL_HELP_FOOTER.prefix}
                 <a href="/help" className="font-medium text-forest/70 underline underline-offset-2">
                   {INSTALL_HELP_FOOTER.linkLabel}
                 </a>
                 {INSTALL_HELP_FOOTER.suffix}
-              </p>
-
-              {/* jalan keluar untuk pengunjung yang belum punya akun — menuju /checkout */}
-              <p className="mt-3 text-center text-[11px] leading-relaxed text-forest/35">
+                <span className="mx-1.5 text-forest/20">·</span>
                 {INSTALL_CHECKOUT_CTA.prefix}{' '}
                 <Link
                   href={INSTALL_CHECKOUT_CTA.href}
                   className="font-medium text-forest/70 underline underline-offset-2"
                 >
                   {INSTALL_CHECKOUT_CTA.linkLabel}
-                </Link>{' '}
-                {INSTALL_CHECKOUT_CTA.suffix}
+                </Link>
               </p>
 
               {/* ── REWARD: penutup halaman, alasan terakhir buat install ── */}

@@ -35,10 +35,8 @@ import { TransactionBottomSheet } from '@/components/dashboard/transaction-botto
 import { useMonthlyReview } from '@/hooks/use-monthly-review'
 import { cn } from '@/lib/utils'
 import {
-  applyRowOverride,
   cancelTransferRow,
   editRow,
-  isRowRemoved,
   recordedTransactions,
   removeRow,
   removeRows,
@@ -60,16 +58,13 @@ import {
   HISTORY_CLEAR_ALL_COPY,
   HISTORY_CLEAR_ALL_TOAST,
   HISTORY_NO_DATA_COPY,
-  HISTORY_TRANSACTIONS,
   INITIAL_FILTERS,
-  MONEY_LEGEND,
   TIME_FILTERS,
   TYPE_FILTERS,
   UNDO_WINDOW_MS,
   UPDATE_TRANSACTION_TOAST,
   WALLET_FILTERS,
   buildHistoryInsights,
-  countHistoryTransactions,
   filterHistoryTransactions,
   financialHealthScore,
   groupTransactionsByDate,
@@ -188,26 +183,14 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
   )
 
   /* ── data turunan ──────────────────────────────────────────────────────── */
-  /* catatan yang dihapus keluar dari daftar; catatan yang diedit tampil versi
-     barunya — sehingga total harian (dayNet) & ringkasan di kepala daftar ikut
-     menyesuaikan dengan sendirinya, tanpa perhitungan ulang terpisah.
-     Baris MOCK (`HISTORY_TRANSACTIONS`) memakai `applyRowOverride()` yang SAMA
-     dengan Home & `/wallet/[id]`, jadi tidak ada halaman yang tertinggal angka
-     lama (temuan B laporan 46).
-     Catatan SESI ini (panel input manual + AI Coach) duduk paling atas — barulah
-     baru dicatat, dan `groupTransactionsByDate` yang mengelompokkannya ke
-     tanggalnya. */
+  /* HANYA catatan NYATA dari store (`recordedTransactions`) — tidak ada lagi
+     baris contoh yang disuntikkan (revisi "tanpa seed"). Catatan yang dihapus
+     sudah disaring tombstone di dalam `recordedTransactions()`, dan catatan yang
+     diedit tampil versi barunya, sehingga total harian (dayNet) & ringkasan di
+     kepala daftar ikut menyesuaikan sendiri. Tag konteks dibaca dari DOMPET
+     barisnya (`tagTransactionsForContext`), sama seperti halaman lain. */
   const transactions = useMemo<ContextTransaction[]>(
-    () =>
-      tagTransactionsForContext(
-        [
-          ...recordedTxs,
-          ...HISTORY_TRANSACTIONS.filter((tx) => !isRowRemoved(snapshot, tx.id)).map((tx) =>
-            applyRowOverride(snapshot, tx),
-          ),
-        ],
-        snapshot,
-      ),
+    () => tagTransactionsForContext(recordedTxs, snapshot),
     [recordedTxs, snapshot],
   )
   /**
@@ -236,28 +219,14 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
    */
   const contextCount = visibleTransactions.length
 
-  /* ── ANGKA KARTU HERO: DIHITUNG DARI CATATAN, BUKAN DIPATOK (paket 59 · 59.1) ─
-     Sampai paket 58 dua angka di blok ini datang dari konstanta: jumlah transaksi
-     `TOTAL_TRANSACTIONS` (24) dan skor `HEALTH_SCORE` (72). Keduanya tetap tampil
-     walaupun user sudah menghapus seluruh catatannya.
-
-     Sekarang:
-       · `totalTransactions` = baris sesi + baris seed yang belum dihapus tombstone;
-       · `healthScore`       = rasio pemasukan vs pengeluaran dari catatan NYATA,
-                               dan `null` kalau belum bisa dihitung (data < 30
-                               atau belum ada pemasukan) — kartu yang menjelaskan,
-                               bukan angka contoh;
-       · `insights`          = kartu AI yang angkanya lahir dari catatan KONTEKS
-                               AKTIF (ambangnya di dalam `buildHistoryInsights`),
-                               jadi konteks yang datanya tipis tidak diberi klaim. */
-  const aliveSeedCount = useMemo(
-    () => HISTORY_TRANSACTIONS.filter((tx) => !isRowRemoved(snapshot, tx.id)).length,
-    [snapshot],
-  )
-  const totalTransactions = countHistoryTransactions({
-    session: recordedTxs.length,
-    seedAlive: aliveSeedCount,
-  })
+  /* ── ANGKA KARTU HERO: DIHITUNG DARI CATATAN, BUKAN DIPATOK ─────────────────
+     Semua angka di blok ini lahir dari catatan NYATA user (tanpa seed):
+       · `totalTransactions` = jumlah catatan nyata yang belum dihapus tombstone;
+       · `healthScore`       = rasio pemasukan vs pengeluaran, `null` kalau belum
+                               bisa dihitung (data < 30 atau belum ada pemasukan);
+       · `insights`          = kartu AI yang angkanya dari catatan KONTEKS AKTIF
+                               (ambangnya di `buildHistoryInsights`). */
+  const totalTransactions = recordedTxs.length
   const healthScore = useMemo(() => financialHealthScore(transactions), [transactions])
   const savingsRate = useMemo(() => savingsRatePct(transactions), [transactions])
   const insights = useMemo(
@@ -577,9 +546,11 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
       {/* ── KAPAN KAMU SERING BOROS? (heatmap) — tepat di bawah Filter Global,
           sesuai urutan yang diminta: filter → keborosan → ritual → catatan →
           skor → insight. Pola mengikuti konteks aktif (paket 47). */}
-      {totalTransactions > 0 && (
+      {/* hanya ada pola kalau ada pengeluaran NYATA di konteks ini — kalau tidak,
+          heatmap dibiarkan tidak muncul (jangan gambar pola dari data kosong) */}
+      {visibleTransactions.some((tx) => tx.type === 'expense') && (
         <div className="mt-5 lg:mt-6">
-          <SpendingHeatmap masked={isMasked} context={context} />
+          <SpendingHeatmap masked={isMasked} transactions={visibleTransactions} today={today} />
         </div>
       )}
 
@@ -722,21 +693,6 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
               </button>
             )}
           </div>
-        </div>
-
-        {/* legenda makna warna — swatch & label dibaca dari `MONEY_TONE`,
-            sumber yang sama dengan baris transaksinya, jadi mustahil beda */}
-        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-[11px] text-forest/45">
-          <span className="font-medium">Keterangan</span>
-          {MONEY_LEGEND.map((tone) => (
-            <span key={tone.label} className="inline-flex items-center gap-1.5">
-              <span
-                aria-hidden
-                className={cn('size-3 rounded-[4px] ring-1 ring-inset ring-soil/12', tone.dot)}
-              />
-              {tone.label}
-            </span>
-          ))}
         </div>
 
         {filtered.length === 0 ? (

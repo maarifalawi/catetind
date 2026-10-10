@@ -28,9 +28,9 @@ import { showsBalanceToggle } from '@/lib/shows-amounts'
         tetap terjangkau lewat sidebar/drawer & halaman Pengaturan; di bar atas
         yang sempit, avatar cuma memakan slot tanpa jadi aksi. (Avatar desktop
         tetap, itu di dalam `DesktopSidebar`.)
-     2. Bar ini `sticky` + mengikuti gulir lewat `MobileStickyHeader`
-        (paket 70) — perilaku yang dulu cuma dimiliki Dashboard, kini konsisten
-        di semua halaman.
+     2. Bar ini IKUT DOKUMEN (tidak menempel saat gulir) lewat
+        `MobileStickyHeader` — user melihatnya saat berada di atas halaman dan
+        harus menggulir balik ke atas untuk melihatnya lagi.
 
    Hanya dirender di bawah `lg` (`lg:hidden` di `MobileStickyHeader`): di desktop
    sudah ada sidebar + header halaman sendiri.

@@ -13,7 +13,6 @@ import { CashflowInspector } from './cashflow-inspector'
 import { AddCalendarNoteSheet, type CalendarNoteInput } from './add-calendar-note-sheet'
 import { localISODate } from '@/lib/data/history'
 import {
-  CALENDAR_ENTRIES,
   CALENDAR_PAYDAY_COPY,
   CALENDAR_TODAY,
   CALENDAR_TODAY_ISO,
@@ -165,17 +164,15 @@ export function CashflowCalendarScreen() {
   ])
 
   /**
-   * Isi satu hari = konstanta demo + catatan SUNGGUHAN dari store (paket 49).
+   * Isi satu hari = catatan SUNGGUHAN dari store (revisi "tanpa seed").
    * `recordedTransactions()` sudah menyaring tombstone & menerapkan override
-   * edit (paket 48), jadi baris yang dihapus/diedit di Riwayat ikut berubah di
-   * sini — bukan daftar kedua yang bisa bercerita beda.
-   *
-   * PAKET 56: tidak ada lagi langkah "turunkan status ramalan jadi cleared"
-   * (dulu: `paidForecastIds`). Kedua sumber ini isinya sama-sama uang yang sudah
-   * tercatat, jadi tidak ada yang perlu ditambal di sini.
+   * edit, jadi baris yang dihapus/diedit di Riwayat ikut berubah di sini — bukan
+   * daftar kedua yang bisa bercerita beda. Entri demo `CALENDAR_ENTRIES` TIDAK
+   * lagi disuntikkan: kalau user belum punya catatan, grid kosong dan halaman
+   * menampilkan empty state per konteks (lihat `periodEmpty` di bawah).
    */
   const entries = useMemo(
-    () => [...CALENDAR_ENTRIES, ...calendarEntriesFromLedger(snapshot, bounds)],
+    () => calendarEntriesFromLedger(snapshot, bounds),
     [snapshot, bounds],
   )
 

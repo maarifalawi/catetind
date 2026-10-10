@@ -46,12 +46,15 @@ export async function restFetch<T>(
     body,
     prefer = 'return=representation',
     headers = {},
+    apiKey,
   }: {
     method?: string
     accessToken: string
     body?: unknown
     prefer?: string
     headers?: Record<string, string>
+    /** override `apikey` (mis. kunci peran server di webhook); default anon */
+    apiKey?: string
   } = { accessToken: '' },
 ): Promise<RestResult<T>> {
   if (!restConfigured()) {
@@ -62,7 +65,7 @@ export async function restFetch<T>(
     const res = await fetch(restUrl(path), {
       method,
       headers: {
-        apikey: supabaseAnonKey(),
+        apikey: apiKey ?? supabaseAnonKey(),
         Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
         Prefer: prefer,
@@ -97,8 +100,10 @@ export async function restRpc<T>(
   fn: string,
   args: Record<string, unknown>,
   accessToken: string,
+  /** override `apikey` (mis. kunci peran server di webhook); default anon */
+  apiKey?: string,
 ): Promise<RestResult<T>> {
-  return restFetch<T>(`rpc/${fn}`, { method: 'POST', accessToken, body: args })
+  return restFetch<T>(`rpc/${fn}`, { method: 'POST', accessToken, body: args, apiKey })
 }
 
 /** true = kegagalan karena baris/bentuknya memang sudah ada (idempotensi) */

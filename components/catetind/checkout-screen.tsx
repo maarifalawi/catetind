@@ -9,29 +9,30 @@ import {
   BILLING_PERIOD_LABEL,
   CHECKOUT_COPY,
   CHECKOUT_STEPS,
-  FOUNDING_MEMBER,
   HERO_PLAN,
-  LIVE_PRICE_NOTE,
   NO_AUTO_RENEW_BADGE,
   PERIOD_CHOICE_LABEL,
   PLANS,
   PRICING_TRUST_BADGES,
   REFERRAL_DISCOUNT_PCT,
+  SELLABLE_PERIODS,
   applyReferralDiscount,
+  buildPayHref,
   formatIDR,
+  isSellablePeriod,
   isValidReferralCode,
   monthlyPrice,
+  offerPrice,
   periodNote,
   type BillingPeriod,
   type PlanDefinition,
   type PlanId,
-  type PriceState,
   type TrustBadge,
 } from '@/lib/data/pricing'
 import { LogoWordmark } from './logo-wordmark'
 import { BrandPanel } from './brand-panel'
 import { RegistrationSheet, type RegistrationOutcome, type RegistrationResult } from './registration-sheet'
-import { registerAccount } from '@/lib/session-client'
+import { fetchSessionUser, registerAccount } from '@/lib/session-client'
 import { buildVerifyHref } from '@/lib/data/auth'
 import { WELCOME_PATH } from '@/lib/data/welcome'
 
@@ -65,12 +66,12 @@ import { WELCOME_PATH } from '@/lib/data/welcome'
    yang sama, dan pilihan "Seumur hidup" membawa paket Founding Member.
    ────────────────────────────────────────────────────────────────────────── */
 
-/** paket yang bisa dipilih: 3 tier langganan + 1 paket seumur hidup */
-type OfferId = PlanId | 'founding-member'
+/** paket yang bisa dipilih: 3 tier langganan (paket seumur hidup TIDAK dijual) */
+type OfferId = PlanId
 
-const PERIOD_CHOICES: BillingPeriod[] = ['monthly', 'annual', 'lifetime']
+const PERIOD_CHOICES: BillingPeriod[] = SELLABLE_PERIODS
 
-export function CheckoutScreen({ initialPrice }: { initialPrice: PriceState }) {
+export function CheckoutScreen() {
   /** paket terpilih — default paket hero (Waras), yaitu rekomendasi produk */
   const [offerId, setOfferId] = useState<OfferId>(HERO_PLAN.id)
   const [period, setPeriod] = useState<BillingPeriod>('annual')
@@ -83,61 +84,20 @@ export function CheckoutScreen({ initialPrice }: { initialPrice: PriceState }) {
   const [registrationOpen, setRegistrationOpen] = useState(false)
   const router = useRouter()
 
-  /**
-   * Harga Founding Member dari SATU sumber (`GET /api/price`). Mulai dari angka
-   * SSR (`initialPrice`) supaya first paint tidak pernah kosong, lalu diganti
-   * angka terbaru setelah mount. Kalau endpoint gagal/tabel belum ada, angka SSR
-   * yang jujur tetap dipakai — halaman tidak dikosongkan.
-   */
-  const [livePrice, setLivePrice] = useState<PriceState>(initialPrice)
-  useEffect(() => {
-    let active = true
-    fetch('/api/price', { cache: 'no-store' })
-      .then((res) => (res.ok ? (res.json() as Promise<PriceState>) : null))
-      .then((data) => {
-        if (active && data && Number.isFinite(data.priceNumber)) setLivePrice(data)
-      })
-      .catch(() => {
-        /* diam itu benar di sini: angka SSR sudah benar & tidak menipu */
-      })
-    return () => {
-      active = false
-    }
-  }, [])
+  const plan: PlanDefinition = PLANS.find((item) => item.id === offerId) ?? HERO_PLAN
 
-  const isLifetime = offerId === 'founding-member'
-  const plan = PLANS.find((item) => item.id === offerId)
-  /** periode efektif: paket seumur hidup tidak punya pilihan bulanan/tahunan */
-  const effectivePeriod: BillingPeriod = isLifetime ? 'lifetime' : period
-
-  const listPrice = isLifetime
-    ? livePrice.priceNumber
-    : plan
-      ? effectivePeriod === 'annual'
-        ? plan.annual
-        : monthlyPrice(plan)
-      : 0
-
+  const listPrice = offerPrice(plan, period)
   const discount = appliedCode ? listPrice - applyReferralDiscount(listPrice) : 0
   const total = listPrice - discount
+  const offerName = plan.name
+  const features = plan.features
+  const periodLabel = BILLING_PERIOD_LABEL[period]
 
-  const offerName = isLifetime ? FOUNDING_MEMBER.name : (plan?.name ?? HERO_PLAN.name)
-  const features = isLifetime ? FOUNDING_MEMBER.features : (plan?.features ?? HERO_PLAN.features)
-  const periodLabel = BILLING_PERIOD_LABEL[effectivePeriod]
+  const periodNoteText = useMemo(() => periodNote(period, plan), [period, plan])
 
-  const periodNoteText = useMemo(
-    () => (isLifetime ? periodNote('lifetime') : periodNote(effectivePeriod, plan)),
-    [isLifetime, effectivePeriod, plan],
-  )
-
-  /** ganti periode; "Seumur hidup" sekaligus memindahkan paket ke Founding Member */
+  /** ganti periode — paket tetap, hanya periode yang berpindah */
   function handlePeriod(next: BillingPeriod) {
-    if (next === 'lifetime') {
-      setOfferId('founding-member')
-      setPeriod('lifetime')
-      return
-    }
-    if (isLifetime) setOfferId(HERO_PLAN.id)
+    if (!isSellablePeriod(next)) return
     setPeriod(next)
   }
 
@@ -177,9 +137,31 @@ export function CheckoutScreen({ initialPrice }: { initialPrice: PriceState }) {
     })
     if (!outcome.ok) return { ok: false, error: outcome.error }
 
-    /* navigasi di sini, bukan di sheet: satu tempat tahu ke mana user pergi */
-    router.push(outcome.next === 'verify' ? buildVerifyHref(result.email) : '/app')
+    /* navigasi di sini, bukan di sheet: satu tempat tahu ke mana user pergi.
+       Auto-login langsung ke halaman BAYAR (paket & periode yang sedang dipilih),
+       supaya langganan benar-benar dibeli — bukan dilewati. */
+    router.push(
+      outcome.next === 'verify'
+        ? buildVerifyHref(result.email)
+        : buildPayHref(offerId, period, appliedCode),
+    )
     return { ok: true }
+  }
+
+  /**
+   * CTA utama: kalau user SUDAH masuk, langsung ke halaman bayar (paket, periode,
+   * dan kode teman yang sedang dipilih). Kalau belum, buka sheet registrasi —
+   * `/api/payment/create` memang butuh sesi (identitas dari cookie). */
+  function handleStart() {
+    void fetchSessionUser()
+      .then((user) => {
+        if (user) {
+          router.push(buildPayHref(offerId, period, appliedCode))
+          return
+        }
+        setRegistrationOpen(true)
+      })
+      .catch(() => setRegistrationOpen(true))
   }
 
   return (
@@ -278,7 +260,7 @@ export function CheckoutScreen({ initialPrice }: { initialPrice: PriceState }) {
               className="mt-4 flex flex-wrap gap-2"
             >
               {PERIOD_CHOICES.map((choice) => {
-                const active = choice === effectivePeriod
+                const active = choice === period
                 return (
                   <button
                     key={choice}
@@ -299,30 +281,19 @@ export function CheckoutScreen({ initialPrice }: { initialPrice: PriceState }) {
               })}
             </div>
 
-            {/* tier langganan — diganti catatan singkat saat paket seumur hidup dipilih */}
-            {isLifetime ? (
-              <>
-                <p className="mt-3.5 rounded-2xl bg-sage/70 px-3.5 py-3 text-[11.5px] leading-relaxed text-forest/60 ring-1 ring-soil/8">
-                  {CHECKOUT_COPY.founderNote}
-                </p>
-                <p className="mt-2 text-[11px] leading-relaxed text-forest/45">
-                  {livePrice.isDynamic ? LIVE_PRICE_NOTE.dynamic : LIVE_PRICE_NOTE.static}
-                </p>
-              </>
-            ) : (
-              <ul className="mt-3.5 space-y-2">
-                {PLANS.map((item) => (
-                  <li key={item.id}>
-                    <OfferOption
-                      plan={item}
-                      period={effectivePeriod}
-                      active={item.id === offerId}
-                      onSelect={() => setOfferId(item.id)}
-                    />
-                  </li>
-                ))}
-              </ul>
-            )}
+            {/* tier langganan — satu daftar; paket seumur hidup tidak dijual */}
+            <ul className="mt-3.5 space-y-2">
+              {PLANS.map((item) => (
+                <li key={item.id}>
+                  <OfferOption
+                    plan={item}
+                    period={period}
+                    active={item.id === offerId}
+                    onSelect={() => setOfferId(item.id)}
+                  />
+                </li>
+              ))}
+            </ul>
 
             {/* harga — angka besar di font-display, harga coret kalau ada diskon */}
             <div className="mt-4 flex flex-wrap items-baseline gap-x-2 gap-y-1 rounded-2xl bg-sage/60 px-4 py-3.5 ring-1 ring-soil/8">
@@ -478,14 +449,14 @@ export function CheckoutScreen({ initialPrice }: { initialPrice: PriceState }) {
 
           {/* CTA untuk DESKTOP: mengalir di ujung kolom kanan. Di mobile
               tombolnya tetap bar di bawah viewport (blok setelah ini). */}
-          <CheckoutCta onStart={() => setRegistrationOpen(true)} className="mt-5 hidden lg:block" />
+          <CheckoutCta onStart={handleStart} className="mt-5 hidden lg:block" />
         </div>
       </div>
 
       {/* ── CTA MOBILE: bar tetap di zona ibu jari (tidak ikut scroll) ───── */}
       <div className="fixed inset-x-0 bottom-0 z-40 bg-gradient-to-t from-canvas via-canvas/95 to-transparent pt-10 pb-[max(1rem,env(safe-area-inset-bottom))] lg:hidden">
         <div className="mx-auto w-full max-w-[560px] px-5 sm:px-6">
-          <CheckoutCta onStart={() => setRegistrationOpen(true)} />
+          <CheckoutCta onStart={handleStart} />
         </div>
       </div>
 

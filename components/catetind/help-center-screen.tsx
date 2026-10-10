@@ -23,16 +23,13 @@ import {
   HELP_CONTACT_LABEL,
   HELP_CONTACT_SUBJECT,
   HELP_CONTACT_TO,
-  HELP_DEFAULT_BLURB,
   HELP_DEFAULT_TITLE,
   HELP_EMPTY_BLURB,
   HELP_EMPTY_TITLE,
   HELP_EXPORT_LABEL,
   HELP_EXPORT_TOAST,
-  HELP_EYEBROW,
   HELP_FEEDBACK_QUESTION,
   HELP_FEEDBACK_THANKS,
-  HELP_GREETING,
   HELP_LEGAL_LINKS,
   HELP_LEGAL_NOTE,
   HELP_OPEN_TOPIC,
@@ -42,28 +39,19 @@ import {
   HELP_RESULT_TITLE,
   HELP_SEARCH_LABEL,
   HELP_SEARCH_PLACEHOLDER,
-  HELP_SIDEBAR_NOTE,
   HELP_SIDEBAR_TITLE,
   HELP_SUPPORT_FOOTNOTE,
   HELP_TITLE,
   HELP_TOPICS,
-  buildHelpExportPayload,
-  hasSystemIssue,
-  helpExportFilename,
   searchHelp,
-  systemIndicators,
   topicByLabel,
   totalHelpArticles,
   type HelpArticle,
   type HelpArticleHit,
   type HelpTopic,
   type QuickAnswer,
-  type SystemHealth,
-  type SystemIndicator,
 } from '@/lib/data/help'
-import { getBillsSnapshot, liveBills } from '@/lib/money/bills-store'
-import { getFundsSnapshot, liveFunds } from '@/lib/money/funds-store'
-import { getWealthSnapshot, liveDebts, liveInvestments } from '@/lib/money/wealth-store'
+import { downloadMoneyExport } from '@/lib/money/export'
 import { MetaChip } from './meta-chip'
 import { ScreenShell } from './screen-shell'
 
@@ -89,17 +77,7 @@ import { ScreenShell } from './screen-shell'
 /** cubic-bezier khas app: masuk cepat lalu settle lembut */
 const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1]
 
-/** status sistem dihitung sekali dari mock — datanya statis, tidak perlu state */
-const SYSTEM_INDICATORS = systemIndicators()
-const SHOW_SYSTEM_STATUS = hasSystemIssue()
 const TOTAL_ARTICLES = totalHelpArticles()
-
-/** nada teks tiap tingkat kesehatan; hanya "down" yang boleh sedikit menonjol */
-const HEALTH_TONE: Record<SystemHealth, string> = {
-  operational: 'text-forest/65',
-  degraded: 'text-forest/70',
-  down: 'font-medium text-plum',
-}
 
 /** pilihan user di kaki artikel — 👍 puas, 👎 butuh manusia */
 type FeedbackVote = 'up' | 'down'
@@ -115,41 +93,17 @@ type FeedbackVote = 'up' | 'down'
  * kami pastikan user selalu bisa mengambilnya sendiri, tanpa minta izin.
  */
 function handleExportData() {
+  /* Pakai SATU jalur ekspor yang sama dengan `/settings/data`
+     (`downloadMoneyExport`) — jadi file yang keluar dari sini memuat data NYATA
+     milik user (dompet, ledger, tagihan, celengan, kekayaan), bukan daftar
+     contoh dari konstanta. `null` = lingkungan tanpa DOM (SSR/test) → katakan
+     apa adanya, jangan janjikan file yang tidak ada. */
   try {
-    /* tagihan, celengan, & kekayaan dibaca dari store perangkat (paket 46, 50, &
-       51) — sama seperti ekspor di `/settings/data`, supaya file ini memuat
-       catatan yang benar-benar dimiliki user, bukan hanya daftar contoh dari
-       konstanta */
-    const wealth = getWealthSnapshot()
-    const blob = new Blob(
-      [
-        JSON.stringify(
-          buildHelpExportPayload(
-            new Date(),
-            liveBills(getBillsSnapshot()),
-            /* celengan yang hidup saja (paket 60): tombstone Undo tidak ikut
-               masuk berkas bantuan, sama seperti `liveBills()` di atas */
-            liveFunds(getFundsSnapshot()),
-            {
-              debts: liveDebts(wealth),
-              investments: liveInvestments(wealth),
-            },
-          ),
-          null,
-          2,
-        ),
-      ],
-      { type: 'application/json' },
-    )
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = helpExportFilename()
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-    /* objectURL dilepas setelah browser sempat memulai unduhannya */
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+    const result = downloadMoneyExport()
+    if (!result) {
+      toast.error('Export tidak tersedia di lingkungan ini.')
+      return
+    }
     toast.success(HELP_EXPORT_TOAST)
   } catch {
     toast.error('Gagal menyiapkan file export. Coba lagi sebentar ya.')
@@ -237,13 +191,9 @@ export function HelpCenterScreen() {
       {/* ── HEADER — resep kanonik H1 yang sama dengan Dashboard & halaman lain ── */}
       <header className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-[13px] font-medium text-forest/45">{HELP_EYEBROW}</p>
           <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-forest lg:text-4xl">
             {HELP_TITLE}
           </h1>
-          <p className="mt-2 max-w-2xl text-[13.5px] leading-relaxed text-forest/55 lg:mt-3 lg:text-sm">
-            {HELP_GREETING}
-          </p>
           <div className="mt-2 flex flex-wrap items-center gap-2 lg:mt-3">
             <MetaChip icon={CircleHelp}>{HELP_TOPICS.length} topik</MetaChip>
             <MetaChip icon={BookOpen}>{TOTAL_ARTICLES} artikel</MetaChip>
@@ -318,17 +268,12 @@ export function HelpCenterScreen() {
                   )
                 })}
               </ul>
-              <p className="mt-4 rounded-2xl bg-sage/50 px-3.5 py-3 text-[11.5px] leading-relaxed text-forest/60 ring-1 ring-forest/10">
-                💡 {HELP_SIDEBAR_NOTE}
-              </p>
             </nav>
           </div>
         </aside>
 
-        {/* ── KANAN (9/12) — status, pencarian, isi ──────────────────────────── */}
+        {/* ── KANAN (9/12) — pencarian + isi ─────────────────────────────────── */}
         <div ref={contentRef} className="flex min-w-0 flex-col gap-4 lg:col-span-9 lg:gap-5">
-          {/* 2A — strip status: HANYA muncul kalau ada subsistem yang tidak normal */}
-          {SHOW_SYSTEM_STATUS && <SystemStatusBar indicators={SYSTEM_INDICATORS} />}
           {/* 2B — pencarian besar & menonjol */}
           <SearchBar query={query} onChange={setQuery} />
           {/* ── ISI: hasil pencarian → topik aktif → konten default ───────────── */}
@@ -355,7 +300,6 @@ export function HelpCenterScreen() {
           ) : (
             <QuickAnswerSection
               title={HELP_DEFAULT_TITLE}
-              blurb={HELP_DEFAULT_BLURB}
               items={HELP_QUICK_ANSWERS}
               openAnswers={openAnswers}
               onToggleAnswer={(id) =>
@@ -364,11 +308,6 @@ export function HelpCenterScreen() {
               onOpenTopic={handleOpenQuickTopic}
             />
           )}
-
-          {/* jalur support versi mobile — di desktop catatan ini nangkring di sidebar */}
-          <p className="rounded-2xl bg-sage/50 px-4 py-3 text-[11.5px] leading-relaxed text-forest/60 ring-1 ring-forest/10 lg:hidden">
-            💡 {HELP_SIDEBAR_NOTE}
-          </p>
         </div>
       </div>
 
@@ -397,37 +336,6 @@ export function HelpCenterScreen() {
 }
 
 /* ── komponen kecil halaman ini ───────────────────────────────────────────── */
-
-/**
- * 2A — Strip status sistem. Bentuknya SATU baris ringkas: nama subsistem,
- * emoji penanda, lalu kalimat status. Ia tidak pernah muncul saat semua normal
- * (lihat `SHOW_SYSTEM_STATUS`), jadi halaman tidak punya elemen dekoratif yang
- * diam-diam jadi noise setiap hari.
- */
-function SystemStatusBar({ indicators }: { indicators: SystemIndicator[] }) {
-  return (
-    <div
-      role="status"
-      aria-live="polite"
-      className="flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-2xl bg-sage/60 px-4 py-2.5 text-[12px] ring-1 ring-forest/10"
-    >
-      {indicators.map((item, index) => (
-        <span
-          key={item.key}
-          className={cn(
-            'flex items-center gap-1.5',
-            /* pemisah tipis antar subsistem, hanya saat muat sebaris */
-            index > 0 && 'sm:border-l sm:border-forest/15 sm:pl-4',
-          )}
-        >
-          <span aria-hidden>{item.emoji}</span>
-          <span className="font-medium text-forest">{item.name}:</span>
-          <span className={HEALTH_TONE[item.health]}>{item.label}</span>
-        </span>
-      ))}
-    </div>
-  )
-}
 
 /**
  * 2B — Pencarian besar. Placeholder-nya CONTOH PERTANYAAN (bukan "Cari
@@ -499,7 +407,7 @@ function QuickAnswerSection({
   onOpenTopic,
 }: {
   title: string
-  blurb: string
+  blurb?: string
   items: QuickAnswer[]
   openAnswers: Record<string, boolean>
   onToggleAnswer: (id: string) => void
@@ -510,7 +418,9 @@ function QuickAnswerSection({
       <h2 className="font-display text-2xl font-medium tracking-tight text-forest lg:text-[28px]">
         {title}
       </h2>
-      <p className="mt-1.5 max-w-2xl text-[13.5px] leading-relaxed text-forest/55">{blurb}</p>
+      {blurb && (
+        <p className="mt-1.5 max-w-2xl text-[13.5px] leading-relaxed text-forest/55">{blurb}</p>
+      )}
       <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:gap-5 xl:grid-cols-3">
         {items.map((item) => (
           <QuickAnswerCard

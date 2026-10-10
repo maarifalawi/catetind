@@ -30,9 +30,9 @@ export const INSTALL_HERO = {
 
 /** 3 alasan install — manfaat yang bisa dibuktikan user, bukan jargon teknis */
 export const INSTALL_BENEFITS = [
-  { emoji: '📴', title: 'Bisa Offline', desc: 'Catat walau gak ada sinyal.' },
-  { emoji: '🚀', title: '3x Lebih Cepat', desc: 'Loading instan tanpa nunggu browser.' },
-  { emoji: '💾', title: 'Hemat Storage', desc: 'Gak makan memori berkiga-giga.' },
+  { emoji: '📴', title: 'Bisa Offline', desc: 'Catat walau tanpa sinyal.' },
+  { emoji: '🚀', title: 'Buka Instan', desc: 'Langsung terbuka, tanpa nunggu.' },
+  { emoji: '💾', title: 'Ringan', desc: 'Gak makan banyak memori.' },
 ] as const
 
 /* ── STATE PEMBANTU ───────────────────────────────────────────────────────── */
@@ -182,20 +182,18 @@ export const INSTALL_LIMITS: {
   points: InstallLimit[]
 } = {
   title: 'Yang perlu kamu tahu',
-  /* AUDIT "CLEAN UI" (paket 63): blurb-nya dulu satu paragraf pembuka; cukup satu
-     baris. Detail tiap batas juga pindah ke balik disclosure di komponen. */
-  blurb: 'PWA itu ringan — ini dua batas yang kami jujurkan.',
+  blurb: 'Dua batas PWA yang kami jujurkan.',
   detailLabel: 'Detail',
   points: [
     {
       icon: 'bell',
       title: 'Notifikasi tergantung browser',
-      desc: 'Chrome, Edge, dan Safari terbaru oke. Di browser HP lain kadang belum muncul — pengingatmu tetap ada saat app dibuka.',
+      desc: 'Chrome, Edge, dan Safari terbaru oke. Browser lain kadang belum dukung — pengingat tetap ada saat app dibuka.',
     },
     {
       icon: 'offline',
       title: 'Offline = tampilan tersimpan',
-      desc: 'App tetap terbuka tanpa sinyal, tapi angkanya bisa ketinggalan. Data baru masuk begitu internet balik.',
+      desc: 'App tetap terbuka tanpa sinyal. Data baru masuk begitu internet balik.',
     },
   ],
 }
@@ -236,8 +234,8 @@ export const INSTALL_SHARE_TEXT =
    WAJIB §2 melarang halaman tanpa tautan masuk yang nyata. */
 
 export const INSTALL_CHECKOUT_CTA = {
-  prefix: 'Belum punya akun CatetInd?',
-  linkLabel: 'Lihat paket & mulai di sini',
-  suffix: '— tiga langkah, dua field.',
+  prefix: 'Belum punya akun?',
+  linkLabel: 'Mulai di sini',
+  suffix: '',
   href: '/checkout',
 } as const
