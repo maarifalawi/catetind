@@ -25,6 +25,7 @@ import {
   SESSION_COPY,
   VERIFY_COPY,
   resendCountdownLabel,
+  resolveAuthLanding,
 } from '@/lib/data/auth'
 import { BrandPanel } from './brand-panel'
 import { completeMagicLink, sendLoginLink, verifyEmailOtp } from '@/lib/session-client'
@@ -57,11 +58,14 @@ export function VerifyEmailScreen({
   email,
   expired,
   code,
+  next,
 }: {
   email: string
   expired: boolean
   /** `?code=` dari tautan email (PKCE) — ditukar jadi sesi saat halaman dibuka */
   code?: string
+  /** `?next=` yang sudah disaring server — halaman tujuan setelah sesi jadi */
+  next?: string | null
 }) {
   const reduceMotion = useReducedMotion()
   const router = useRouter()
@@ -87,6 +91,8 @@ export function VerifyEmailScreen({
   /** kalau `?email=` kosong (bookmark lama) jangan tampilkan alamat kosong */
   const displayEmail = trimmedEmail || VERIFY_COPY.emailFallback
   const canResend = secondsLeft === 0
+  /** halaman darat setelah sesi jadi: `?next=` yang aman, atau Dashboard */
+  const landing = resolveAuthLanding(next)
 
   /**
    * Satu timer hidup pada satu waktu (timeout berantai, bukan interval): lebih
@@ -117,12 +123,12 @@ export function VerifyEmailScreen({
         return
       }
       toast.success(SESSION_COPY.signInToast, { description: SESSION_COPY.signInToastDescription })
-      router.push('/app')
+      router.push(landing)
     })()
     return () => {
       alive = false
     }
-  }, [code, router])
+  }, [code, router, landing])
 
   /** masuk dengan kode 6 angka dari email — jalur kedua, untuk kode yang diketik */
   async function handleVerifyOtp() {
@@ -135,7 +141,7 @@ export function VerifyEmailScreen({
       return
     }
     toast.success(SESSION_COPY.signInToast, { description: SESSION_COPY.signInToastDescription })
-    router.push('/app')
+    router.push(landing)
   }
 
   function handleResend() {
@@ -144,7 +150,7 @@ export function VerifyEmailScreen({
     setResent(true)
     /* Kirim ulang NYATA: `signInWithOtp` diulang, dan rate-limit aslinya dijaga
        Supabase (server). Timer hitung mundur di sini kenyamanan UI, bukan pengaman. */
-    void sendLoginLink(trimmedEmail).then((result) => {
+    void sendLoginLink(trimmedEmail, next).then((result) => {
       if (result.ok) toast.success(VERIFY_COPY.resendSentNote)
       else toast.error(VERIFY_COPY.resendFailed, { description: result.error })
     })

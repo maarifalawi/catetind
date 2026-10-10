@@ -1,6 +1,7 @@
 'use client'
 
 import { browserSupabase } from './supabase/client'
+import { buildVerifyHref } from './data/auth'
 
 /* ── SESI DARI SISI CLIENT (paket 45: SUPABASE AUTH, BUKAN MOCK) ─────────────
    Versi paket 39 meminta cookie ke `POST /api/session` — endpoint demo yang
@@ -24,10 +25,14 @@ export interface SessionUserView {
   name: string
 }
 
-/** alamat tujuan tautan masuk — halaman /login/verify yang sudah ada */
-export function loginRedirectUrl(email: string): string {
+/**
+ * Alamat tujuan tautan masuk — halaman /login/verify yang sudah ada. `next`
+ * opsional: diteruskan supaya user yang membuka TAUTAN dari emailnya mendarat
+ * di halaman yang dituju (mis. `/checkout/bayar?…`), bukan Dashboard.
+ */
+export function loginRedirectUrl(email: string, next?: string | null): string {
   const origin = typeof window === 'undefined' ? '' : window.location.origin
-  return `${origin}/login/verify?email=${encodeURIComponent(email.trim())}`
+  return `${origin}${buildVerifyHref(email, next)}`
 }
 
 /**
@@ -37,13 +42,13 @@ export function loginRedirectUrl(email: string): string {
  * Konfirmasi email WAJIB di project ini (`mailer_autoconfirm: false`), jadi user
  * baru harus membuka inbox dulu — layar /login/verify yang menjelaskan langkahnya.
  */
-export async function sendLoginLink(email: string): Promise<AuthResult> {
+export async function sendLoginLink(email: string, next?: string | null): Promise<AuthResult> {
   const client = browserSupabase()
   if (!client) return { ok: false, error: 'Backend Supabase belum dikonfigurasi di build ini.' }
   try {
     const { error } = await client.auth.signInWithOtp({
       email: email.trim(),
-      options: { emailRedirectTo: loginRedirectUrl(email), shouldCreateUser: true },
+      options: { emailRedirectTo: loginRedirectUrl(email, next), shouldCreateUser: true },
     })
     if (error) return { ok: false, error: error.message }
     return { ok: true, message: 'Tautan masuk sudah dikirim ke emailmu.' }
@@ -166,11 +171,14 @@ export async function registerAccount({
   email,
   nickname,
   referralCode,
+  next,
 }: {
   email: string
   nickname: string
   /** kode teman yang sudah "dipakai" di checkout (opsional) */
   referralCode?: string | null
+  /** halaman tujuan setelah verifikasi email (mis. `/checkout/bayar?…`) */
+  next?: string | null
 }): Promise<RegisterOutcome> {
   const client = browserSupabase()
   if (!client) return { ok: false, error: 'Backend Supabase belum dikonfigurasi di build ini.' }
@@ -192,7 +200,7 @@ export async function registerAccount({
       email: trimmedEmail,
       options: {
         shouldCreateUser: true,
-        emailRedirectTo: loginRedirectUrl(trimmedEmail),
+        emailRedirectTo: loginRedirectUrl(trimmedEmail, next),
         data: { nickname: trimmedNickname },
       },
     })

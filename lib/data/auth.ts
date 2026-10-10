@@ -244,9 +244,41 @@ export const SESSION_COPY = {
   noSessionCta: 'Buka halaman masuk',
 } as const
 
-/** halaman masuk in-app (bukan tautan absolute yang ada di email) */
-export function buildVerifyHref(email: string): string {
-  return `${VERIFY_PATH}?email=${encodeURIComponent(email.trim())}`
+/** halaman darat default setelah sesi jadi (bila `?next=` tidak ada / tidak aman) */
+export const DEFAULT_AUTH_LANDING = '/app'
+
+/**
+ * Saring `?next=` jadi jalur INTERNAL yang aman, atau `null` kalau mencurigakan.
+ *
+ * Ini penjaga OPEN-REDIRECT: `next` datang dari query yang bisa ditempel siapa
+ * saja. Yang DITERIMA hanya jalur absolut-situs (`/sesuatu`). Yang DITOLAK:
+ * protokol apa pun (`http://…`, `javascript:`), jalur protocol-relative
+ * (`//host`), backslash (`/\host`), segmen `..`, dan karakter spasi/baris baru.
+ */
+export function safeNextPath(value: string | null | undefined): string | null {
+  if (!value) return null
+  const path = value.trim()
+  if (!path.startsWith('/')) return null
+  if (path.startsWith('//')) return null
+  if (path.includes('\\') || path.includes('..')) return null
+  if (/\s/.test(path)) return null
+  return path
+}
+
+/** halaman yang dituju setelah masuk: `?next=` yang aman, atau Dashboard */
+export function resolveAuthLanding(next: string | null | undefined): string {
+  return safeNextPath(next) ?? DEFAULT_AUTH_LANDING
+}
+
+/**
+ * Halaman masuk in-app (bukan tautan absolute yang ada di email). `next`
+ * opsional: dipakai alur checkout supaya setelah verifikasi email user mendarat
+ * di halaman bayar — bukan Dashboard — dan tautan di email pun mengarah ke sana.
+ */
+export function buildVerifyHref(email: string, next?: string | null): string {
+  const base = `${VERIFY_PATH}?email=${encodeURIComponent(email.trim())}`
+  const target = safeNextPath(next)
+  return target ? `${base}&next=${encodeURIComponent(target)}` : base
 }
 
 /**

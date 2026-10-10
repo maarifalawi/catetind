@@ -130,21 +130,23 @@ export function CheckoutScreen() {
    * Sheet tetap terbuka saat gagal, jadi isian email/nama tidak hilang.
    */
   async function handleRegistered(result: RegistrationResult): Promise<RegistrationOutcome> {
+    /* Halaman bayar tujuan dihitung DULU supaya ia ikut dibawa sebagai `next`:
+       user yang baru memverifikasi email langsung mendarat di pembayaran (paket &
+       periode yang sedang dipilih) — bukan Dashboard — dan tautan di emailnya pun
+       mengarah ke sana. */
+    const payHref = buildPayHref(offerId, period, appliedCode)
     const outcome = await registerAccount({
       email: result.email,
       nickname: result.nickname,
       referralCode: appliedCode,
+      next: payHref,
     })
     if (!outcome.ok) return { ok: false, error: outcome.error }
 
     /* navigasi di sini, bukan di sheet: satu tempat tahu ke mana user pergi.
        Auto-login langsung ke halaman BAYAR (paket & periode yang sedang dipilih),
        supaya langganan benar-benar dibeli — bukan dilewati. */
-    router.push(
-      outcome.next === 'verify'
-        ? buildVerifyHref(result.email)
-        : buildPayHref(offerId, period, appliedCode),
-    )
+    router.push(outcome.next === 'verify' ? buildVerifyHref(result.email, payHref) : payHref)
     return { ok: true }
   }
 

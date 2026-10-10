@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { PhoneStage } from '@/components/catetind/phone-stage'
 import { PublicNavbar } from '@/components/catetind/public-navbar'
 import { VerifyEmailScreen } from '@/components/catetind/verify-email-screen'
+import { safeNextPath } from '@/lib/data/auth'
 
 /**
  * Cek Email (/login/verify) — inventaris #9, halaman PUBLIK/pre-app.
@@ -12,6 +13,8 @@ import { VerifyEmailScreen } from '@/components/catetind/verify-email-screen'
  *
  *   • `?email=`  → alamat yang ditampilkan di kartu konfirmasi
  *   • `?status=expired` → varian state kedaluwarsa (pratinjau review)
+ *   • `?next=`   → halaman tujuan setelah sesi jadi (mis. `/checkout/bayar?…`);
+ *     disaring `safeNextPath` supaya tidak bisa dipakai open-redirect
  *
  * Dibaca via prop server karena di Next 16 `searchParams` adalah Promise; cara ini
  * menghindari `useSearchParams()` + Suspense boundary di komponen klien dan menjaga
@@ -41,6 +44,7 @@ export default async function VerifyEmailPage({
     status?: string | string[]
     code?: string | string[]
     error?: string | string[]
+    next?: string | string[]
   }>
 }) {
   const params = await searchParams
@@ -56,6 +60,7 @@ export default async function VerifyEmailPage({
         email={firstValue(params.email)}
         expired={status === 'expired' || errorParam.length > 0}
         code={firstValue(params.code) || undefined}
+        next={safeNextPath(firstValue(params.next)) ?? undefined}
       />
     </PhoneStage>
   )

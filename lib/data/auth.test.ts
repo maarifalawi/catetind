@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { OTP_LENGTH, isValidEmail, isValidNickname, isValidOtpCode } from './auth'
+import {
+  DEFAULT_AUTH_LANDING,
+  OTP_LENGTH,
+  buildVerifyHref,
+  isValidEmail,
+  isValidNickname,
+  isValidOtpCode,
+  resolveAuthLanding,
+  safeNextPath,
+} from './auth'
 
 /* ── Validator alur akun (murni, tanpa React) ────────────────────────────────
    Menguji batas: yang harus DITERIMA jangan sampai ditolak (user asli jadi
@@ -51,5 +60,65 @@ describe('isValidOtpCode', () => {
     expect(isValidOtpCode('12345a')).toBe(false)
     expect(isValidOtpCode('12 345')).toBe(false)
     expect(isValidOtpCode('abcdef')).toBe(false)
+  })
+})
+
+/* ── `?next=` setelah masuk: penjaga OPEN-REDIRECT (paket 82 / §8D) ──────────
+   Query `next` bisa ditempel siapa saja. Yang diuji di sini: jalur internal
+   lewat, dan apa pun yang bisa membawa user keluar situs ditolak. */
+
+describe('safeNextPath · hanya jalur internal yang lolos', () => {
+  it('menerima jalur absolut-situs (spasi tepi dimaafkan)', () => {
+    expect(safeNextPath('/checkout/bayar?plan=waras&period=annual')).toBe(
+      '/checkout/bayar?plan=waras&period=annual',
+    )
+    expect(safeNextPath('  /app  ')).toBe('/app')
+  })
+
+  it('menolak apa pun yang bisa keluar situs', () => {
+    expect(safeNextPath(null)).toBeNull()
+    expect(safeNextPath(undefined)).toBeNull()
+    expect(safeNextPath('')).toBeNull()
+    expect(safeNextPath('https://jahat.example/masuk')).toBeNull()
+    expect(safeNextPath('//jahat.example')).toBeNull()
+    expect(safeNextPath('javascript:alert(1)')).toBeNull()
+    expect(safeNextPath('/\\jahat.example')).toBeNull()
+    expect(safeNextPath('/../rahasia')).toBeNull()
+    expect(safeNextPath('/app tidak-valid')).toBeNull()
+  })
+})
+
+describe('resolveAuthLanding · halaman darat setelah masuk', () => {
+  it('pakai next yang aman, kalau tidak jatuh ke Dashboard', () => {
+    expect(resolveAuthLanding('/checkout/bayar?plan=waras&period=annual')).toBe(
+      '/checkout/bayar?plan=waras&period=annual',
+    )
+    expect(resolveAuthLanding('https://jahat.example')).toBe(DEFAULT_AUTH_LANDING)
+    expect(resolveAuthLanding(undefined)).toBe('/app')
+  })
+
+  it('halaman darat default memang Dashboard', () => {
+    expect(DEFAULT_AUTH_LANDING).toBe('/app')
+  })
+})
+
+describe('buildVerifyHref · membawa ?next hanya kalau aman', () => {
+  it('tanpa next = cuma email', () => {
+    expect(buildVerifyHref('rina@email.com')).toBe('/login/verify?email=rina%40email.com')
+  })
+
+  it('dengan next aman = ikut di-encode', () => {
+    expect(buildVerifyHref('rina@email.com', '/checkout/bayar?plan=waras&period=annual')).toBe(
+      '/login/verify?email=rina%40email.com&next=%2Fcheckout%2Fbayar%3Fplan%3Dwaras%26period%3Dannual',
+    )
+  })
+
+  it('next tidak aman = diabaikan (bukan dipaksa masuk)', () => {
+    expect(buildVerifyHref('rina@email.com', 'https://jahat.example')).toBe(
+      '/login/verify?email=rina%40email.com',
+    )
+    expect(buildVerifyHref('rina@email.com', '//jahat.example')).toBe(
+      '/login/verify?email=rina%40email.com',
+    )
   })
 })
