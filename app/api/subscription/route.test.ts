@@ -40,7 +40,7 @@ describe('GET /api/subscription', () => {
     expect(fetchRest).not.toHaveBeenCalled()
   })
 
-  it('ada baris langganan aktif → active:true', async () => {
+  it('ada baris paket aktif → active:true + planId', async () => {
     guard.mockReturnValue({ ok: true, user: USER, token: 't' })
     configured.mockReturnValue(true)
     fetchRest.mockResolvedValue({
@@ -48,27 +48,38 @@ describe('GET /api/subscription', () => {
       status: 200,
       data: [
         {
-          tier_name: 'founding_member',
-          is_lifetime: true,
+          tier_name: 'waras',
           is_active: true,
           started_at: '2026-10-10T00:00:00Z',
-          expires_at: null,
         },
       ],
     })
     const body = await (await GET(request())).json()
     expect(body.active).toBe(true)
-    expect(body.subscription.tier).toBe('founding_member')
-    expect(body.subscription.lifetime).toBe(true)
+    expect(body.planId).toBe('waras')
+    expect(body.purchasedAt).toBe('2026-10-10T00:00:00Z')
   })
 
-  it('belum ada baris → active:false, subscription:null', async () => {
+  it('tier LAMA (founding_member) tetap dipetakan ke paket baru', async () => {
+    guard.mockReturnValue({ ok: true, user: USER, token: 't' })
+    configured.mockReturnValue(true)
+    fetchRest.mockResolvedValue({
+      ok: true,
+      status: 200,
+      data: [{ tier_name: 'founding_member', is_active: true, started_at: '2026-01-01T00:00:00Z' }],
+    })
+    const body = await (await GET(request())).json()
+    expect(body.active).toBe(true)
+    expect(body.planId).toBe('sultan')
+  })
+
+  it('belum ada baris → active:false, planId null', async () => {
     guard.mockReturnValue({ ok: true, user: USER, token: 't' })
     configured.mockReturnValue(true)
     fetchRest.mockResolvedValue({ ok: true, status: 200, data: [] })
     const body = await (await GET(request())).json()
     expect(body.active).toBe(false)
-    expect(body.subscription).toBeNull()
+    expect(body.planId).toBeNull()
   })
 
   it('gagal membaca → 502 (tidak mengaku aman)', async () => {

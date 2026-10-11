@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 import { LogoWordmark } from './logo-wordmark'
 import { PlantIllustration } from './plant-illustration'
 import { ShareAchievementCard } from './share-achievement-card'
-import { NO_AUTO_RENEW_BADGE } from '@/lib/data/pricing'
+import { SEKALI_BAYAR_BADGE } from '@/lib/data/pricing'
 import {
   DEMO_SHARE_STATES,
   SHARE_CARD_PRIVACY_LINE,
@@ -157,7 +157,7 @@ function InviteCard({ thin, ownerName }: { thin: boolean; ownerName: string }) {
       </p>
 
       <p className="mt-3.5 border-t border-soil/12 pt-3.5 text-[11.5px] leading-relaxed text-forest/55">
-        {NO_AUTO_RENEW_BADGE}
+        {SEKALI_BAYAR_BADGE}
       </p>
 
       {/* janji privasi pengunjung — CONTEXT-WAJIB §5.3: halaman yang menyentuh

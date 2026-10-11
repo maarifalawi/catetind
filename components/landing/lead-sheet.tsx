@@ -12,7 +12,13 @@ import {
   isValidEmail,
   isValidNickname,
 } from '@/lib/data/auth'
-import { LEAD_SHEET_COPY, LANDING_LOGIN_HREF, REGISTERED_PATH, formatIDR, type LandingTier } from '@/lib/data/landing'
+import {
+  LEAD_SHEET_COPY,
+  LANDING_LOGIN_HREF,
+  buildRegisteredHref,
+  formatIDR,
+  type LandingTier,
+} from '@/lib/data/landing'
 import { registerAccount } from '@/lib/session-client'
 import { BudgetSheet, SheetSubmit, useFocusOnOpen } from '@/components/catetind/budget-sheet'
 
@@ -69,7 +75,10 @@ export function LeadSheet({
       setFormError(outcome.error)
       return
     }
-    router.push(`${REGISTERED_PATH}?email=${encodeURIComponent(email.trim())}`)
+    /* paket yang dipilih DIKIRIM ke halaman terima kasih — sebelum ini
+       pilihan user hilang tepat di sini, dan halaman terima kasih tidak bisa
+       menawarkan lanjut bayar paket yang sama. */
+    router.push(buildRegisteredHref(email, tier?.id))
   }
 
   function handleEnter(event: KeyboardEvent<HTMLInputElement>) {

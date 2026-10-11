@@ -9,7 +9,7 @@ import { toast } from 'sonner'
 import { Plus, LayoutGrid, ArrowLeftRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useNavCompact } from '@/hooks/use-nav-compact'
-import { SUBSCRIPTION_LOCK_COPY } from '@/lib/data/renewal'
+import { FEATURE_LOCK_COPY } from '@/lib/data/upgrade'
 import { TRANSFER_DOOR_COPY } from '@/lib/data/add-wallet'
 import { MOBILE_NAV_COPY } from '@/lib/data/mobile-nav'
 import {
@@ -136,7 +136,7 @@ export function MobileBottomNav() {
    * memilih dompet asalnya — langkah pertamanya memilih, bukan menebak.
    */
   const [transferOpen, setTransferOpen] = useState(false)
-  /* masa aktif habis → FAB ini satu-satunya pintu input dari bottom nav, jadi
+  /* paket belum aktif → FAB ini satu-satunya pintu input dari bottom nav, jadi
      ia yang dikunci. Membaca data, pindah halaman, & menu "Lainnya" tetap jalan. */
   const { inputLocked } = useSubscriptionGate()
   /* NAV DINAMIS (paket 75): menggulir ke bawah → nav memadat (py-2, ikon lebih
@@ -188,15 +188,15 @@ export function MobileBottomNav() {
           {isJointPage ? (
             <span aria-hidden className="size-14" />
           ) : inputLocked ? (
-            /* Masa aktif habis → FAB dikunci (task 23). Sengaja TIDAK memakai
+            /* Paket belum aktif → FAB dikunci. Sengaja TIDAK memakai
                atribut `disabled`: tombol mati yang bisu membuat user mengira
                appnya rusak. Dengan `aria-disabled` + toast, alasannya langsung
-               terbaca ("Perpanjang dulu buat catat yang baru 🌿"). */
+               terbaca ("Pilih paket dulu biar bisa mulai catat 🌿"). */
             <button
               type="button"
               aria-disabled="true"
-              aria-label={SUBSCRIPTION_LOCK_COPY.fabAria}
-              onClick={() => toast(SUBSCRIPTION_LOCK_COPY.inputHint)}
+              aria-label={FEATURE_LOCK_COPY.fabAria}
+              onClick={() => toast(FEATURE_LOCK_COPY.inputHint)}
               className="-mt-8 flex size-14 items-center justify-center rounded-full bg-soil/[0.09] text-forest/30 ring-1 ring-soil/12 transition-transform duration-150 active:scale-95"
             >
               <Plus className="size-6" strokeWidth={2.4} />

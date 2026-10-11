@@ -47,6 +47,7 @@ const PROTECTED = [
   'push_subscriptions',
   'purchases',
   'user_subscriptions',
+  'ai_addons',
   'joint_wallets',
   'joint_members',
   'joint_transactions',

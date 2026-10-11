@@ -242,10 +242,40 @@ export const SESSION_COPY = {
   noSessionBody:
     'Masuk dulu lewat halaman masuk (tautan atau kode dari email) supaya notifikasi ini tersimpan atas namamu — bukan atas nama pemanggil anonim.',
   noSessionCta: 'Buka halaman masuk',
+  /**
+   * Identitas yang belum terbaca (tamu, atau `/api/session` belum menjawab).
+   *
+   * PERBAIKAN AUDIT K4: dulu sidebar & panel Pengaturan memajang identitas
+   * contoh yang di-hardcode ('Jon Snow' / 'jon@snow.com') untuk SEMUA user —
+   * termasuk user yang sudah masuk dengan akunnya sendiri. Yang tampil saat
+   * identitas tidak diketahui sekarang adalah label netral ini.
+   */
+  unknownName: 'Belum masuk',
+  unknownEmail: 'Masuk untuk melihat akunmu',
+  /** dipakai panel Keluar saat tidak ada identitas terbaca di perangkat ini */
+  unknownAccount: 'Belum ada akun yang masuk di perangkat ini.',
 } as const
 
 /** halaman darat default setelah sesi jadi (bila `?next=` tidak ada / tidak aman) */
 export const DEFAULT_AUTH_LANDING = '/app'
+
+/** nama parameter tujuan akhir di halaman masuk — SATU sumber dengan `/login/verify` */
+export const AUTH_NEXT_PARAM = 'next'
+
+/**
+ * Tautan ke halaman MASUK yang membawa tujuan akhir.
+ *
+ * Sebelum ini semua tautan ke `/login` polos (`registration-sheet`, halaman bayar
+ * saat 401, tombol "Masuk" di landing & welcome). Akibatnya user yang sedang di
+ * TENGAH alur — mau bayar, mau daftar — mendarat di Dashboard setelah masuk dan
+ * harus mengulang dari nol. `next` disaring `safeNextPath` supaya tetap bebas
+ * open-redirect; `app/login/page.tsx` meneruskannya ke `LoginScreen`, dan
+ * `resolveAuthLanding()` yang memutuskan hasil akhirnya.
+ */
+export function buildLoginHref(next?: string | null): string {
+  const target = safeNextPath(next)
+  return target ? `${LOGIN_PATH}?${AUTH_NEXT_PARAM}=${encodeURIComponent(target)}` : LOGIN_PATH
+}
 
 /**
  * Saring `?next=` jadi jalur INTERNAL yang aman, atau `null` kalau mencurigakan.

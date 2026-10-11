@@ -423,7 +423,7 @@ export function MonthlyReviewModal({
             {isLastPanel ? COPY.submit : COPY.next}
           </button>
         </div>
-        {/* masa aktif habis → tombol simpan panel target mati, alasannya dijelaskan
+        {/* paket belum aktif → tombol simpan panel target mati, alasannya dijelaskan
             (task 23). Panel rekap & pindah panel tetap bisa dibuka. */}
         {isLastPanel && inputLocked && (
           <SubscriptionLockNote className="mt-2 shrink-0" />

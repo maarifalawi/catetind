@@ -4,12 +4,17 @@ import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import {
   LIVE_FEED_COPY,
+  LIVE_FEED_EMPTY_COPY,
   LIVE_FEED_SEED,
   LIVE_FEED_VISIBLE,
   TESTIMONIALS,
   TESTIMONIALS_COPY,
   formatIDR,
+  liveFeedFromPurchases,
+  type LiveFeedEntry,
+  type RecentPurchaseItem,
 } from '@/lib/data/landing'
+import { SHOWS_SAMPLE_DATA } from '@/lib/demo'
 
 /* ── SECTION 4 · SOCIAL PROOF ────────────────────────────────────────────────
    Part A: feed pembelian SEMENTARA (seeded). Komponen ini sengaja dibentuk
@@ -35,25 +40,58 @@ export function SocialProof() {
   )
 }
 
-/* ── Part A · Live purchase feed ──────────────────────────────────────────── */
+/* ── Part A · Live purchase feed (DATA NYATA sejak paket 85) ────────────────
+   Dibaca dari `/api/pricing/recent-purchases`; seed contoh hanya untuk build
+   demo (`SHOWS_SAMPLE_DATA`), dan keadaan kosong di produksi ditulis apa adanya. */
 function LiveFeed() {
   const reduceMotion = useReducedMotion()
   /* jendela berputar: tampilkan LIVE_FEED_VISIBLE entri, geser satu tiap 3,2s
      supaya terasa "hidup" tanpa menambah data palsu */
   const [start, setStart] = useState(0)
+  /* Nilai AWAL disetel dari seed (kalau demo) supaya HTML server & render
+     pertama client identik; endpoint mengisinya setelah mount. */
+  const [entries, setEntries] = useState<LiveFeedEntry[]>(SHOWS_SAMPLE_DATA ? LIVE_FEED_SEED : [])
+  /** true = jawaban endpoint sudah datang (pembeda "kosong" vs "belum dimuat") */
+  const [ready, setReady] = useState(false)
 
   useEffect(() => {
-    if (reduceMotion) return
+    let active = true
+    fetch('/api/pricing/recent-purchases', { cache: 'no-store' })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { items?: unknown } | null) => {
+        if (!active) return
+        const items = Array.isArray(data?.items)
+          ? liveFeedFromPurchases(data.items as RecentPurchaseItem[], Date.now())
+          : []
+        /* data NYATA menang; kalau kosong, seed hanya boleh tampil di build demo */
+        setEntries(items.length > 0 ? items : SHOWS_SAMPLE_DATA ? LIVE_FEED_SEED : [])
+      })
+      .catch(() => {
+        /* gagal memuat: jangan mengarang — demo tetap seed, produksi tetap kosong */
+      })
+      .finally(() => {
+        if (active) setReady(true)
+      })
+    return () => {
+      active = false
+    }
+  }, [])
+
+  useEffect(() => {
+    if (reduceMotion || entries.length <= 1) return
     const timer = window.setInterval(() => {
-      setStart((current) => (current + 1) % LIVE_FEED_SEED.length)
+      setStart((current) => (current + 1) % entries.length)
     }, 3200)
     return () => window.clearInterval(timer)
-  }, [reduceMotion])
+  }, [reduceMotion, entries.length])
 
   const visible = useMemo(() => {
-    const total = LIVE_FEED_SEED.length
-    return Array.from({ length: LIVE_FEED_VISIBLE }, (_, index) => LIVE_FEED_SEED[(start + index) % total])
-  }, [start])
+    const total = entries.length
+    if (total === 0) return []
+    return Array.from({ length: Math.min(LIVE_FEED_VISIBLE, total) }, (_, index) =>
+      entries[(start + index) % total],
+    )
+  }, [entries, start])
 
   return (
     <div className="rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12">
@@ -77,7 +115,8 @@ function LiveFeed() {
         </span>
       </div>
 
-      <ul aria-label={LIVE_FEED_COPY.ariaLive} className="mt-4 flex flex-col gap-2">
+      {visible.length > 0 && (
+        <ul aria-label={LIVE_FEED_COPY.ariaLive} className="mt-4 flex flex-col gap-2">
         <AnimatePresence mode="popLayout">
           {visible.map((entry, index) => (
             <motion.li
@@ -104,7 +143,19 @@ function LiveFeed() {
             </motion.li>
           ))}
         </AnimatePresence>
-      </ul>
+        </ul>
+      )}
+
+      {/* Keadaan kosong yang JUJUR (produksi): tidak ada pembelian terbaru —
+          BUKAN daftar nama karangan. Seed contoh hanya tampil di build demo. */}
+      {visible.length === 0 && ready && (
+        <div className="mt-4 rounded-2xl bg-sage/40 px-3.5 py-4 text-center">
+          <p className="text-[13px] font-medium text-forest">{LIVE_FEED_EMPTY_COPY.title}</p>
+          <p className="mt-1 text-[12px] leading-relaxed text-forest/60">
+            {LIVE_FEED_EMPTY_COPY.body}
+          </p>
+        </div>
+      )}
     </div>
   )
 }

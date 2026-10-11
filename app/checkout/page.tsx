@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { CheckoutScreen } from '@/components/catetind/checkout-screen'
+import type { PlanId } from '@/lib/data/pricing'
 import { PhoneStage } from '@/components/catetind/phone-stage'
 
 /**
@@ -30,10 +31,27 @@ export const metadata: Metadata = {
     'Pilih paket, isi email & nama panggilan, bayar lewat QRIS/e-wallet/Virtual Account — langsung masuk onboarding tanpa langkah verifikasi yang menghadang.',
 }
 
-export default function CheckoutPage() {
+export default async function CheckoutPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ plan?: string | string[]; kode?: string | string[] }>
+}) {
+  /* Query dibaca di SERVER (pola `app/budget/page.tsx`): dipakai tautan
+     referral `/r/<kode>` dan tombol "Masuk" di sheet registrasi supaya pilihan
+     paket user tidak hilang saat ia keluar-masuk halaman ini.
+     PAKET 84: tidak ada lagi parameter `period` — satu paket, satu harga. */
+  const params = await searchParams
+  const first = (value: string | string[] | undefined) =>
+    (Array.isArray(value) ? value[0] : value)?.trim() ?? ''
+  const plan = first(params.plan)
+  const kode = first(params.kode)
+
   return (
     <PhoneStage plain>
-      <CheckoutScreen />
+      <CheckoutScreen
+        initialPlanId={plan ? (plan as PlanId) : undefined}
+        initialReferralCode={kode || null}
+      />
     </PhoneStage>
   )
 }

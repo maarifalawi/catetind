@@ -22,7 +22,9 @@ import {
 import { LOGIN_PATH, RELOGIN_COPY, SESSION_COPY } from '@/lib/data/auth'
 import { JOIN_PREVIEW_COPY, buildJoinHref } from '@/lib/data/joint-invite'
 import { DEMO_PARTNER_JOINED, INITIAL_JOINT_WALLET, JOINT_PARTNER } from '@/lib/data/joint'
+import { useSubscriptionGate } from './subscription-gate-provider'
 import { activeInviteFor } from '@/lib/invite-store'
+import { useSessionUser } from '@/hooks/use-session-user'
 import { endSession } from '@/lib/session-client'
 import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
@@ -36,8 +38,29 @@ import { cn } from '@/lib/utils'
      3. DOMPET BERSAMA — putus koneksi pasangan dengan dua pilihan yang jujur
         (simpan riwayat sendiri / hapus semua), bukan satu tombol ambigu. */
 
-const EMAIL = 'jon@snow.com'
-const MEMBER_BADGE = '🏆 Founding Member #47'
+/** avatar netral selama user belum mengunggah fotonya sendiri */
+const FALLBACK_AVATAR_URL = '/placeholder-user.jpg'
+
+/**
+ * Badge paket di kartu identitas (paket 84). Dulu ini konstanta demo
+ * `'🏆 Founding Member #47'` yang MENGARANG nomor member — tidak ada satu pun
+ * angka member di sistem. Sekarang badge-nya TURUNAN dari paket yang benar-benar
+ * tersimpan (`/api/subscription` lewat gerbang global):
+ *
+ *   · paket diketahui → "🏆 Akses Selamanya · Paket X" (+ tanggal beli kalau ada)
+ *   · paket belum diketahui → badge TIDAK dirender sama sekali (tidak mengarang)
+ */
+function formatPurchasedAt(value: string | null): string | null {
+  if (!value) return null
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return null
+  return new Intl.DateTimeFormat('id-ID', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(date)
+}
 
 /** "2026-07-15" → "15 Juli 2026" — timeZone UTC supaya tanggalnya tidak
  *  bergeser satu hari antara server & client (SSR-safe). */
@@ -49,11 +72,28 @@ const PARTNER_SINCE = new Intl.DateTimeFormat('id-ID', {
 }).format(new Date(INITIAL_JOINT_WALLET.createdAt))
 
 export function ProfileSettingsPanel() {
-  const [name, setName] = useState('Jon Snow')
-  const [avatarUrl, setAvatarUrl] = useState('/avatar-maarif.png')
+  const [name, setName] = useState('')
+  const [avatarUrl, setAvatarUrl] = useState('')
   const [period, setPeriod] = useState<DashboardPeriod>('calendar')
   const [payday, setPayday] = useState(25)
   const [dirty, setDirty] = useState(false)
+
+  /* ── IDENTITAS DARI SESI (perbaikan audit K4) ─────────────────────────────
+     Nama & email di panel ini dulu konstanta demo yang tampil untuk SEMUA
+     user. Sekarang nilainya dibaca dari sesi; sebelum sesi terbaca (atau saat
+     tamu) yang tampil netral, bukan identitas orang lain. `name` tetap state
+     lokal karena memang bisa diedit user. */
+  const { user } = useSessionUser()
+  const EMAIL = user?.email ?? ''
+
+  /* Paket yang dimiliki (paket 84) — dasar badge identitas. Kalau paketnya belum
+     diketahui, badge-nya tidak dirender sama sekali (lihat komentar di atas). */
+  const { plan, purchasedAt } = useSubscriptionGate()
+  const purchasedAtLabel = formatPurchasedAt(purchasedAt)
+  useEffect(() => {
+    if (!user) return
+    setName((current) => current || user.name)
+  }, [user])
 
   /* ── KONFIGURASI UANG USER (paket 57) ────────────────────────────────────
      Pemasukan bulanan & total cicilan adalah PEMBAGI jatah harian, jadi
@@ -100,8 +140,10 @@ export function ProfileSettingsPanel() {
     if (moneySettings.paydayDate) setPayday(moneySettings.paydayDate)
   }, [moneySettings])
 
-  /* partner bisa "diputus" di demo ini — state lokal, sumber awal dari mock
-     lib/data/joint.ts (DEMO_PARTNER_JOINED) supaya kedua kondisi bisa direview */
+  /* partner bisa "diputus" di demo ini — state lokal, sumber awal dari SEED yang
+     memang bergerbang `SHOWS_SAMPLE_DATA` (lihat `lib/data/joint.ts`): di build
+     produksi `DEMO_PARTNER_JOINED` bernilai false, jadi kartu ini mulai dari
+     keadaan kosong yang jujur + CTA "Undang pasangan". */
   const [partner, setPartner] = useState(DEMO_PARTNER_JOINED ? JOINT_PARTNER : null)
   const [disconnectOpen, setDisconnectOpen] = useState(false)
   /** konfirmasi kedua khusus opsi destruktif ("Hapus Semua") */
@@ -200,7 +242,7 @@ export function ProfileSettingsPanel() {
           >
             {/* <img> biasa — sumbernya bisa blob URL hasil pilih file, dan
                 next/image hanya mengoptimasi URL statis/lokal yang dikenal */}
-            <img src={avatarUrl} alt="Foto profil" className="size-full object-cover" />
+            <img src={avatarUrl || FALLBACK_AVATAR_URL} alt="Foto profil" className="size-full object-cover" />
             <span className="absolute inset-0 flex items-center justify-center bg-ink/45 opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
               <Camera className="size-5 text-cream" strokeWidth={2.2} aria-hidden />
             </span>
@@ -216,9 +258,14 @@ export function ProfileSettingsPanel() {
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium text-forest">{name}</p>
             <p className="mt-0.5 truncate text-xs text-forest/50">{EMAIL}</p>
-            <TonePill tone="warning" icon={BadgeCheck} className="mt-2">
-              {MEMBER_BADGE}
-            </TonePill>
+            {/* Badge paket: hanya dirender kalau paketnya BENAR-BENAR diketahui.
+                Tidak ada lagi nomor member karangan. */}
+            {plan && (
+              <TonePill tone="warning" icon={BadgeCheck} className="mt-2">
+                🏆 Akses Selamanya · {plan.name}
+                {purchasedAtLabel ? ` · sejak ${purchasedAtLabel}` : ''}
+              </TonePill>
+            )}
           </div>
         </div>
 
@@ -469,6 +516,9 @@ export function LogoutSettingsPanel() {
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const router = useRouter()
+  /* identitas dari SESI (perbaikan audit K4): kalimat panel ini dulu memajang
+     alamat contoh seolah-olah itu akun user. */
+  const { user } = useSessionUser()
 
   /**
    * Keluar SUNGGUHAN (paket 39): cookie sesi dihapus server lewat
@@ -503,8 +553,14 @@ export function LogoutSettingsPanel() {
     >
       <SettingsCard>
         <p className="text-[13.5px] leading-relaxed text-forest/60">
-          Data keuanganmu tetap aman di akun. Masuk lagi kapan aja pakai{' '}
-          <b className="font-medium text-forest">{EMAIL}</b>.
+          {user?.email ? (
+            <>
+              Data keuanganmu tetap aman di akun. Masuk lagi kapan aja pakai{' '}
+              <b className="font-medium text-forest">{user.email}</b>.
+            </>
+          ) : (
+            SESSION_COPY.unknownAccount
+          )}
         </p>
 
         <button

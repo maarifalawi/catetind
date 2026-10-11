@@ -19,6 +19,7 @@
 
 /* import tipe saja (tanpa runtime) supaya file data tetap bebas React */
 import type { DeviceType } from '@/hooks/use-device-detect'
+import { SITE_DOMAIN, siteUrl } from '../site'
 
 /* ── HERO ─────────────────────────────────────────────────────────────────── */
 
@@ -201,10 +202,10 @@ export const INSTALL_LIMITS: {
 /* ── SERAH-TERIMA DESKTOP → HP ────────────────────────────────────────────── */
 
 /** link yang DITAMPILKAN — tanpa skema, ringkas dibaca & bisa diketik manual */
-export const INSTALL_URL_TEXT = 'catetind.com/install'
+export const INSTALL_URL_TEXT = `${SITE_DOMAIN}/install`
 
 /** link PENUH — dipakai navigator.share & clipboard (butuh skema https) */
-export const INSTALL_URL = 'https://catetind.com/install'
+export const INSTALL_URL = siteUrl('/install')
 
 export const INSTALL_HANDOFF = {
   a11yLabel: 'Lanjutkan panduan install di HP kamu',

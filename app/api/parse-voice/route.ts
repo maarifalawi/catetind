@@ -4,6 +4,7 @@ import { aiConfigured, generateJSON, textModel } from '@/lib/ai/provider'
 import { EXTRACTION_SYSTEM_PROMPT, EXTRACTION_EXAMPLES } from '@/lib/ai/prompts'
 import { normalizeExtraction, type RawExtraction } from '@/lib/ai/extract'
 import { allowAiCall } from '@/lib/ai/rate-limit'
+import { requireCapability } from '@/lib/subscription/capability'
 
 /* ── POST /api/parse-voice — teks → transaksi (Mode 3 + ketikan chat) ────────
    Body: `{ transcript: string, today?: 'YYYY-MM-DD', source?: 'voice'|'chat' }`.
@@ -32,6 +33,12 @@ function readSource(value: unknown): 'voice' | 'chat' {
 }
 
 export async function POST(req: NextRequest) {
+  /* KUNCI PER TIER (paket 84): input suara hanya di paket Waras ke atas.
+     Transkripsi sendiri tetap di perangkat (Web Speech API) — yang dikunci di
+     sini adalah PARSING kalimatnya, yang memang layanan berbayar. */
+  const gate = await requireCapability(req, 'voice')
+  if (!gate.ok) return gate.response
+
   const callerId = aiCallerId(req)
 
   if (!aiConfigured()) {

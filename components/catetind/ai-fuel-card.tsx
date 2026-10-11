@@ -4,16 +4,18 @@ import Link from 'next/link'
 import { ArrowUpRight, Mic, RotateCcw } from 'lucide-react'
 import {
   AI_FUEL_COPY,
+  AI_PLAN_LOCKED_COPY,
   AI_QUOTA_EXHAUSTED_COPY,
   AI_QUOTA_RESET_DATE,
   AI_QUOTA_RESET_DAYS,
+  AI_UNLIMITED_BADGE,
+  AI_UNLIMITED_NOTE,
   compactNumber,
   formatDuration,
+  planQuota,
 } from '@/lib/ai-quota'
 import { useAiQuota } from '@/hooks/use-ai-quota'
-/* Nama paket aktif dibaca dari sumber harga (bukan disalin ke lib/ai-quota.ts):
-   label di sidebar harus sama dengan label di /settings/billing & /checkout. */
-import { HERO_PLAN } from '@/lib/data/pricing'
+import { useSubscriptionGate } from './subscription-gate-provider'
 import { NavTooltip } from './nav-tooltip'
 
 /* ── Bahan Bakar AI (sidebar desktop) — versi MINIMALIS ──────────────────────
@@ -48,14 +50,42 @@ export function AiFuelCard({ collapsed }: { collapsed: boolean }) {
      dan angkanya BENAR-BENAR turun setiap kali user memakai AI. */
   const quota = useAiQuota()
   const recordsLeft = quota.recordsLeft
+  /* Paket aktif dibaca dari gerbang global — labenya sama dengan /settings/billing
+     & /checkout, dan kuota yang berlaku ditentukan `planQuota()` (paket tanpa AI
+     tidak punya kuota sama sekali; Paket Sultan tanpa batas). */
+  const { plan, planId, planKnown } = useSubscriptionGate()
+  const pq = planQuota(planId)
+  const planName = plan?.name ?? 'Belum ada paket'
 
   /* satu label untuk tooltip (collapsed) & pembaca layar. Durasi voice di sini
      cuma terjemahan turunan dari sisa PANGGILAN, bukan angka tersendiri. */
-  const summary = `${AI_FUEL_COPY.cardTitle} ${HERO_PLAN.name}: ${quota.remainingPct}% sisa · ${compactNumber(
+  const summary = `${AI_FUEL_COPY.cardTitle} ${planName}: ${quota.remainingPct}% sisa · ${compactNumber(
     quota.baseTokensRemaining,
   )} token (≈ ${recordsLeft.toLocaleString('id-ID')} catatan AI) · voice ${quota.voiceCallsRemaining} panggilan sisa (≈ ${formatDuration(
     quota.voiceRemainingSeconds,
   )}) · reset ${AI_QUOTA_RESET_DAYS} hari lagi`
+
+  /* PAKET TANPA AI (paket 84): kartu tidak menampilkan tangki kosong yang
+     membingungkan — ia berkata apa adanya dan mengarahkan ke halaman paket. */
+  if (planKnown && !pq.aiEnabled) {
+    return (
+      <Link
+        href="/checkout"
+        aria-label={`${AI_PLAN_LOCKED_COPY.cardTitle}. ${AI_PLAN_LOCKED_COPY.body}`}
+        className="group/lock mt-4 block shrink-0 rounded-[1.35rem] bg-cream p-4 ring-1 ring-ink/[0.06] transition-colors duration-200 hover:bg-sage/70"
+      >
+        <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-forest/40">
+          {AI_FUEL_COPY.cardTitle}
+        </span>
+        <span className="mt-2 block text-[12.5px] font-medium leading-snug text-forest">
+          {AI_PLAN_LOCKED_COPY.cardTitle}
+        </span>
+        <span className="mt-1.5 block text-[11px] leading-snug text-forest/55">
+          {AI_PLAN_LOCKED_COPY.body}
+        </span>
+      </Link>
+    )
+  }
 
   /* versi collapsed: cukup angkanya, detail lengkap lewat tooltip.
      Tooltip-nya dibikin MULTILINE (max-w + whitespace-normal): versi sebelumnya
@@ -91,18 +121,32 @@ export function AiFuelCard({ collapsed }: { collapsed: boolean }) {
         <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-forest/40">
           {AI_FUEL_COPY.cardTitle}
         </span>
-        <span className="text-[11px] font-medium text-forest/45">{HERO_PLAN.name}</span>
+        <span className="text-[11px] font-medium text-forest/45">{planName}</span>
       </span>
 
-      {/* satu angka besar yang langsung terbaca */}
+      {/* satu angka besar yang langsung terbaca. Untuk paket tanpa batas
+          (Paket Sultan) angkanya diganti pernyataan yang benar — bukan "100%
+          sisa" yang menyiratkan ada tangki yang bisa kosong. */}
       <span className="mt-2.5 flex items-baseline gap-1.5 text-forest">
-        <span className="text-[26px] font-medium leading-none tracking-[-0.04em] tabular-nums">
-          {quota.remainingPct}%
-        </span>
-        <span className="text-[11.5px] font-medium text-forest/45">{AI_FUEL_COPY.remainingLabel}</span>
+        {pq.unlimited ? (
+          <span className="text-[15px] font-medium leading-none tracking-[-0.02em]">
+            {AI_UNLIMITED_BADGE}
+          </span>
+        ) : (
+          <>
+            <span className="text-[26px] font-medium leading-none tracking-[-0.04em] tabular-nums">
+              {quota.remainingPct}%
+            </span>
+            <span className="text-[11.5px] font-medium text-forest/45">
+              {AI_FUEL_COPY.remainingLabel}
+            </span>
+          </>
+        )}
       </span>
       <span className="mt-1.5 block break-words text-[11.5px] leading-snug tabular-nums text-forest/50">
-        {compactNumber(quota.baseTokensRemaining)} token {AI_FUEL_COPY.recordsLeft(recordsLeft)}
+        {pq.unlimited
+          ? AI_UNLIMITED_NOTE
+          : `${compactNumber(quota.baseTokensRemaining)} token ${AI_FUEL_COPY.recordsLeft(recordsLeft)}`}
       </span>
 
       {/* hairline sisa kuota — arah isian = kuota yang MASIH tersisa */}

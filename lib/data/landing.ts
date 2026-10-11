@@ -8,13 +8,16 @@
      1. ANGKA PAIN CALCULATOR & WEALTH GAP dihitung dari fungsi murni di sini
         (`computePain`, `buildWealthGap`) — bukan ditulis tangan di JSX, supaya
         angka yang user lihat tidak pernah "beda cerita" dengan rumusnya.
-     2. HARGA TIER LANDING (`LANDING_TIERS`) adalah SKU sekali-bayar/seumur hidup
-        versi halaman pemasaran — sengaja terpisah dari `PLANS` di pricing.ts
-        (SKU langganan tahunan/bulanan). Nominalnya tetap HANYA hidup di file
-        data ini; tidak ada harga yang ditulis di dalam JSX.
+     2. HARGA TIER LANDING (`LANDING_TIERS`) DITURUNKAN dari `PLANS` di
+        `lib/data/pricing.ts` — paket yang sama, angka yang sama, sekali bayar
+        untuk AKSES SELAMANYA. Sebelum paket 84 halaman ini menjual 99k/119k/299k
+        "seumur hidup" sementara `PLANS` menjual 49k/109k/199k tahunan: dua
+        daftar harga yang berbeda. Sekarang angka paket di sini hanya boleh
+        DIBACA dari satu tempat itu.
    ────────────────────────────────────────────────────────────────────────── */
 
-import { formatIDR } from './pricing'
+import { SITE_ORIGIN } from '../site'
+import { PLANS, LIFETIME_LABEL, formatIDR, type PlanId } from './pricing'
 
 /** satu pintu impor untuk konsumen harga landing */
 export { formatIDR }
@@ -22,18 +25,48 @@ export { formatIDR }
 /* ── RUTE ─────────────────────────────────────────────────────────────────── */
 export const LANDING_PATH = '/'
 export const REGISTERED_PATH = '/registered'
+
+/** nama parameter paket di `/registered` — dibawa LeadSheet dari kartu harga */
+export const REGISTERED_PLAN_PARAM = 'plan'
+
+/*
+ * HARGA LANDING — SELESAI (paket 84).
+ *
+ * `LANDING_TIERS[].id` memakai id yang SAMA dengan `PlanId` di
+ * `lib/data/pricing.ts` ('catet-aja' | 'waras' | 'sultan'), dan `price`-nya
+ * DIBACA dari `PLANS[].lifetime`. Tidak ada lagi dua daftar harga: angka yang
+ * diiklankan di halaman ini adalah angka yang benar-benar ditagih server.
+ *
+ * Tautan lanjut bayar tidak lagi membawa periode — satu paket, satu harga.
+ */
+
+
+/**
+ * Tautan ke halaman "Terima kasih" setelah registrasi dari landing.
+
+ * Paket yang dipilih user IKUT dibawa sebagai query. Sebelumnya pilihan itu
+ * dibuang begitu sheet ditutup: halaman terima kasih tidak tahu paket apa yang
+ * diminati, dan user harus memilih ulang dari nol kalau mau lanjut bayar.
+ */
+export function buildRegisteredHref(email: string, planId?: PlanId | null): string {
+  const query = new URLSearchParams({ email: email.trim() })
+  if (planId) query.set(REGISTERED_PLAN_PARAM, planId)
+  return `${REGISTERED_PATH}?${query.toString()}`
+}
 export const LANDING_LOGIN_HREF = '/login'
 
 /* ── SEO / META ─────────────────────────────────────────────────────────────
    Dipakai `app/page.tsx` (metadata) supaya judul & deskripsi tidak ditulis dua
    kali. `ogUrl` adalah domain kanon produk. */
+
+/** rentang harga kanon dalam teks — dipakai copy landing supaya angkanya tidak ditulis tangan */
+const PRICE_RANGE_LABEL = `${formatIDR(PLANS[0].lifetime)}-${formatIDR(PLANS[PLANS.length - 1].lifetime)}`
 export const LANDING_META = {
   title: 'CatetInd — Temen Catat Keuangan Gen-Z Indonesia',
-  description:
-    'Aplikasi catatan keuangan untuk Gen-Z first-jobber Indonesia. 4 tap catat transaksi, AI Coach yang gak nge-judge, scan struk otomatis. Dari Rp99.000 seumur hidup.',
+  description: `Aplikasi catatan keuangan untuk Gen-Z first-jobber Indonesia. 4 tap catat transaksi, AI Coach yang gak nge-judge, scan struk otomatis. Mulai ${formatIDR(PLANS[0].lifetime)} sekali bayar — akses selamanya.`,
   ogTitle: 'Kamu udah gajian berapa kali, tapi punya apa?',
-  ogDescription: 'CatetInd — temen catat keuangan Gen-Z. Dari Rp99.000 seumur hidup.',
-  ogUrl: 'https://catetind.com',
+  ogDescription: `CatetInd — temen catat keuangan Gen-Z. Mulai ${formatIDR(PLANS[0].lifetime)} untuk akses selamanya.`,
+  ogUrl: SITE_ORIGIN,
 } as const
 
 /* ── NAVBAR ─────────────────────────────────────────────────────────────────
@@ -218,21 +251,26 @@ export interface LiveFeedEntry {
   id: string
   name: string
   city: string
-  /** nominal paket yang dibeli (rupiah) */
+  /** nominal paket yang dibeli (rupiah) — DIBACA dari `PLANS`, bukan angka tulis tangan */
   price: number
   /** waktu relatif yang sudah diformat — statis supaya bebas hydration mismatch */
   time: string
 }
 
+/** harga paket untuk feed & angka lain di file ini — satu sumber dengan penagihan */
+function planPrice(id: PlanId): number {
+  return (PLANS.find((plan) => plan.id === id) ?? PLANS[0]).lifetime
+}
+
 export const LIVE_FEED_SEED: LiveFeedEntry[] = [
-  { id: 'rina', name: 'Rina', city: 'Jakarta', price: 119_000, time: '12 menit lalu' },
-  { id: 'budi', name: 'Budi', city: 'Bandung', price: 99_000, time: '34 menit lalu' },
-  { id: 'sari', name: 'Sari', city: 'Surabaya', price: 119_000, time: '1 jam lalu' },
-  { id: 'dimas', name: 'Dimas', city: 'Jakarta', price: 299_000, time: '2 jam lalu' },
-  { id: 'amel', name: 'Amel', city: 'Yogyakarta', price: 119_000, time: '3 jam lalu' },
-  { id: 'fajar', name: 'Fajar', city: 'Malang', price: 99_000, time: '5 jam lalu' },
-  { id: 'nadia', name: 'Nadia', city: 'Depok', price: 119_000, time: '8 jam lalu' },
-  { id: 'rizky', name: 'Rizky', city: 'Semarang', price: 299_000, time: '1 hari lalu' },
+  { id: 'rina', name: 'Rina', city: 'Jakarta', price: planPrice('waras'), time: '12 menit lalu' },
+  { id: 'budi', name: 'Budi', city: 'Bandung', price: planPrice('catet-aja'), time: '34 menit lalu' },
+  { id: 'sari', name: 'Sari', city: 'Surabaya', price: planPrice('waras'), time: '1 jam lalu' },
+  { id: 'dimas', name: 'Dimas', city: 'Jakarta', price: planPrice('sultan'), time: '2 jam lalu' },
+  { id: 'amel', name: 'Amel', city: 'Yogyakarta', price: planPrice('waras'), time: '3 jam lalu' },
+  { id: 'fajar', name: 'Fajar', city: 'Malang', price: planPrice('catet-aja'), time: '5 jam lalu' },
+  { id: 'nadia', name: 'Nadia', city: 'Depok', price: planPrice('waras'), time: '8 jam lalu' },
+  { id: 'rizky', name: 'Rizky', city: 'Semarang', price: planPrice('sultan'), time: '1 hari lalu' },
 ]
 
 export const LIVE_FEED_COPY = {
@@ -247,6 +285,68 @@ export const LIVE_FEED_COPY = {
 
 /** berapa entri yang terlihat sekaligus di feed */
 export const LIVE_FEED_VISIBLE = 5
+
+/* ── FEED PEMBELIAN NYATA (paket 85) ────────────────────────────────────────
+   Sebelum paket 85 feed ini SELALU seed: nama & kota karangan. Endpoint
+   `GET /api/pricing/recent-purchases` sudah ada, jadi komponen sekarang
+   membacanya; seed hanya boleh tampil di build demo (`SHOWS_SAMPLE_DATA`).
+   Kalau tabel pembelian kosong, keadaan kosongnya JUJUR — bukan daftar palsu
+   (PRD A10 melarang mengarang bukti sosial). */
+
+/** keadaan kosong yang benar saat belum ada pembelian (produksi) */
+export const LIVE_FEED_EMPTY_COPY = {
+  title: 'Belum ada pembelian terbaru',
+  body: 'Jadilah yang pertama hari ini 🌿',
+} as const
+
+/**
+ * Label waktu relatif dari waktu SERVER ISO. Dihitung di klien (feed-nya sendiri
+ * dimuat SETELAH mount), jadi tidak ada hydration mismatch. `nowMs` dioper
+ * supaya fungsi ini murni & bisa diuji.
+ */
+export function relativeFeedTime(atIso: string, nowMs: number): string {
+  const at = Date.parse(atIso)
+  if (!Number.isFinite(at)) return ''
+  const minutes = Math.max(0, Math.round((nowMs - at) / 60_000))
+  if (minutes < 1) return 'baru saja'
+  if (minutes < 60) return `${minutes} menit lalu`
+  const hours = Math.round(minutes / 60)
+  if (hours < 24) return `${hours} jam lalu`
+  return `${Math.round(hours / 24)} hari lalu`
+}
+
+/** item mentah dari `/api/pricing/recent-purchases` */
+export interface RecentPurchaseItem {
+  name?: unknown
+  city?: unknown
+  price?: unknown
+  at?: unknown
+}
+
+/**
+ * Ubah baris endpoint → bentuk `LiveFeedEntry` yang SAMA dengan seed, supaya
+ * komponen tidak perlu tahu asal datanya. Nilai yang tidak jelas diperlakukan
+ * apa adanya (nama kosong → "Seseorang", kota kosong → "Indonesia") — tidak ada
+ * angka atau nama karangan.
+ */
+export function liveFeedFromPurchases(
+  items: RecentPurchaseItem[],
+  nowMs: number,
+): LiveFeedEntry[] {
+  return items.map((item, index) => {
+    const name = typeof item.name === 'string' && item.name.trim() ? item.name.trim() : 'Seseorang'
+    const city = typeof item.city === 'string' && item.city.trim() ? item.city.trim() : 'Indonesia'
+    const price = Number(item.price) || 0
+    const at = typeof item.at === 'string' ? item.at : ''
+    return {
+      id: `purchase-${index}-${name}`,
+      name,
+      city,
+      price,
+      time: at ? relativeFeedTime(at, nowMs) : '',
+    }
+  })
+}
 
 
 /* Part B: 5 testimoni. `quote` sengaja apa adanya (bahasa user), bukan copy
@@ -319,8 +419,9 @@ export const TESTIMONIALS_COPY = {
 
 
 /* ── SECTION 5 · PRICING + CTA PRIMER ───────────────────────────────────────
-   SKU landing = sekali bayar, seumur hidup. Tiap kartu punya CTA yang membuka
-   sheet pendaftaran (`LeadSheet`). Nominal HANYA hidup di sini. */
+   SKU landing = sekali bayar untuk AKSES SELAMANYA, dan harga tiap kartu DIBACA
+   dari `PLANS[].lifetime` (lihat `landingTier()` di atas). Tiap kartu punya CTA
+   yang membuka sheet pendaftaran (`LeadSheet`). */
 export type LandingTierId = 'catet-aja' | 'waras' | 'sultan'
 
 export interface LandingTierFeature {
@@ -331,7 +432,7 @@ export interface LandingTierFeature {
 export interface LandingTier {
   id: LandingTierId
   name: string
-  /** harga sekali bayar (rupiah) */
+  /** harga sekali bayar (rupiah) — DIBACA dari `PLANS[].lifetime`, bukan angka tulis tangan */
   price: number
   periodLabel: string
   tagline: string
@@ -342,57 +443,64 @@ export interface LandingTier {
   features: LandingTierFeature[]
 }
 
+/** harga & nama paket DIBACA dari satu sumber (PLANS) — tidak ada angka tulis tangan di sini */
+function landingTier(
+  id: LandingTierId,
+  extra: Omit<LandingTier, 'id' | 'name' | 'price' | 'periodLabel'>,
+): LandingTier {
+  const plan = PLANS.find((item) => item.id === id) ?? PLANS[0]
+  return { id, name: plan.name, price: plan.lifetime, periodLabel: LIFETIME_LABEL, ...extra }
+}
+
 export const LANDING_TIERS: LandingTier[] = [
-  {
-    id: 'catet-aja',
-    name: 'Paket Catet Aja',
-    price: 99_000,
-    periodLabel: 'Sekali bayar, seumur hidup',
-    tagline: 'Buat yang mau rapi dulu, tanpa AI.',
-    ctaLabel: 'Pilih Paket Catet Aja',
-    features: [
-      { label: 'Catat pemasukan & pengeluaran manual', included: true },
-      { label: 'Kategori bawaan & custom', included: true },
-      { label: 'Dashboard & laporan dasar', included: true },
-      { label: 'Multi dompet', included: true },
-      { label: 'Budget & target nabung', included: true },
-      { label: 'AI Coach (Minca)', included: false },
-      { label: 'Scan struk otomatis (OCR)', included: false },
-      { label: 'Voice input', included: false },
-      { label: 'Laporan AI', included: false },
-    ],
-  },
-  {
-    id: 'waras',
-    name: 'Paket Waras',
-    price: 119_000,
-    periodLabel: 'Sekali bayar, seumur hidup',
-    tagline: 'Paling pas buat first-jobber yang mau dibantu AI.',
-    badge: '⭐ Paling Dipilih',
-    recommended: true,
-    ctaLabel: 'Pilih Paket Waras',
-    features: [
-      { label: 'Semua fitur Paket Catet Aja', included: true },
-      { label: 'AI Coach (Minca) — kuota terbatas per bulan', included: true },
-      { label: 'Scan struk otomatis (OCR)', included: true },
-      { label: 'Voice input', included: true },
-      { label: 'Laporan AI mingguan & bulanan', included: true },
-      { label: 'Joint Wallet (Dompet Bersama)', included: true },
-    ],
-  },
-  {
-    id: 'sultan',
-    name: 'Paket Sultan',
-    price: 299_000,
-    periodLabel: 'Sekali bayar, seumur hidup',
-    tagline: 'AI tanpa batas buat yang mau serius.',
-    ctaLabel: 'Pilih Paket Sultan',
-    features: [
-      { label: 'Semua fitur Paket Waras', included: true },
-      { label: 'AI Coach UNLIMITED (tanpa batas kuota)', included: true },
-      { label: 'Prioritas support', included: true },
-    ],
-  },
+  landingTier(
+    'catet-aja',
+    {
+      tagline: 'Buat yang mau rapi dulu, tanpa AI.',
+      ctaLabel: 'Pilih Paket Catet Aja',
+      features: [
+        { label: 'Catat pemasukan & pengeluaran manual', included: true },
+        { label: 'Kategori bawaan & custom', included: true },
+        { label: 'Dashboard & laporan dasar', included: true },
+        { label: 'Multi dompet', included: true },
+        { label: 'Budget & target nabung', included: true },
+        { label: 'AI Coach (Minca)', included: false },
+        { label: 'Scan struk otomatis (OCR)', included: false },
+        { label: 'Voice input', included: false },
+        { label: 'Laporan AI', included: false },
+        { label: 'Joint Wallet (Dompet Bersama)', included: false },
+      ],
+    },
+  ),
+  landingTier(
+    'waras',
+    {
+      tagline: 'Paling pas buat first-jobber yang mau dibantu AI.',
+      badge: '⭐ Paling Dipilih',
+      recommended: true,
+      ctaLabel: 'Pilih Paket Waras',
+      features: [
+        { label: 'Semua fitur Paket Catet Aja', included: true },
+        { label: 'AI Coach (Minca) — kuota bulanan, reset tanggal 1', included: true },
+        { label: 'Scan struk otomatis (OCR)', included: true },
+        { label: 'Voice input', included: true },
+        { label: 'Laporan AI mingguan & bulanan', included: true },
+        { label: 'Joint Wallet (Dompet Bersama)', included: true },
+      ],
+    },
+  ),
+  landingTier(
+    'sultan',
+    {
+      tagline: 'AI tanpa batas buat yang mau serius.',
+      ctaLabel: 'Pilih Paket Sultan',
+      features: [
+        { label: 'Semua fitur Paket Waras', included: true },
+        { label: 'AI Coach UNLIMITED (tanpa batas kuota)', included: true },
+        { label: 'Prioritas support', included: true },
+      ],
+    },
+  ),
 ]
 
 /** dipakai Sticky CTA bar — SATU sumber dengan kartu (tidak diketik ulang) */
@@ -403,7 +511,7 @@ export const PRICING_COPY = {
   eyebrow: 'Harga jujur',
   title: 'Bayar sekali. Pakai seumur hidup.',
   subtitle:
-    'Nol langganan bulanan, nol auto-renew paksa. Semua paket sekali bayar dan langsung dapat semua fitur di tier-nya.',
+    'Nol langganan bulanan, nol tagihan berulang. Semua paket sekali bayar dan langsung dapat semua fitur di tier-nya.',
 } as const
 
 export interface TrustBadge {
@@ -414,13 +522,13 @@ export interface TrustBadge {
 export const PRICING_TRUST_BADGES: TrustBadge[] = [
   { emoji: '💰', text: 'Gak cocok? Uang kembali 100% dalam 30 hari. Tanpa drama.' },
   { emoji: '🔒', text: 'Pembayaran aman via Midtrans' },
-  { emoji: '✅', text: 'Tanpa auto-renew paksa' },
+  { emoji: '✅', text: 'Sekali bayar, akses selamanya' },
 ]
 
 /** Sticky CTA bar (muncul setelah Section 5 terlewat). */
 export const STICKY_CTA_COPY = {
   ctaLabel: 'Daftar Sekarang',
-  period: 'seumur hidup',
+  period: 'akses selamanya',
   ariaLabel: 'Daftar cepat paket rekomendasi',
 } as const
 
@@ -449,13 +557,13 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'harga',
     question: 'Kok mahal buat app catatan keuangan?',
     answer:
-      "Dari Pain Calculator tadi, rata-rata first-jobber 'kehilangan' Rp1.5 juta per bulan tanpa tracking. Rp99.000-299.000 itu kurang dari 20% uang yang biasa kamu buang dalam 1 bulan. Dan itu SEUMUR HIDUP — bukan langganan bulanan. Kalau CatetInd bantu kamu hemat Rp200.000 saja di bulan pertama, kamu sudah balik modal.",
+      `Dari Pain Calculator tadi, rata-rata first-jobber 'kehilangan' Rp1.5 juta per bulan tanpa tracking. ${PRICE_RANGE_LABEL} itu kurang dari 20% uang yang biasa kamu buang dalam 1 bulan. Dan itu sekali bayar — bukan langganan bulanan. Kalau CatetInd bantu kamu hemat Rp200.000 saja di bulan pertama, kamu sudah balik modal.`,
   },
   {
     id: 'beda-paket',
     question: 'Bedanya Paket Catet Aja, Waras, dan Sultan apa?',
     answer:
-      'Simpel: Paket Catet Aja (Rp99.000) = catat manual tanpa AI. Paket Waras (Rp119.000) = semua fitur termasuk AI Coach, scan struk, dan voice input dengan kuota bulanan. Paket Sultan (Rp299.000) = sama seperti Waras tapi AI-nya unlimited tanpa batas kuota. Semua sekali bayar, seumur hidup.',
+      `Simpel: Paket Catet Aja (${formatIDR(PLANS[0].lifetime)}) = catat manual tanpa AI. Paket Waras (${formatIDR(PLANS[1].lifetime)}) = semua fitur termasuk AI Coach, scan struk, dan voice input dengan kuota bulanan. Paket Sultan (${formatIDR(PLANS[2].lifetime)}) = sama seperti Waras tapi AI-nya unlimited tanpa batas kuota. Semua sekali bayar untuk akses selamanya — dan naik paket cukup bayar selisihnya.`,
   },
   {
     id: 'kuota-ai',
@@ -471,9 +579,9 @@ export const FAQ_ITEMS: FaqItem[] = [
   },
   {
     id: 'data',
-    question: 'Kalau gak perpanjang, data gue gimana?',
+    question: 'Dataku bakal aman terus nggak?',
     answer:
-      'Data kamu TIDAK PERNAH dihapus. Semua catatan keuangan kamu tetap tersimpan aman dan bisa kamu akses kapan aja. Mau balik lagi 6 bulan kemudian? Semua masih ada. Dan ingat: CatetInd TIDAK pernah auto-charge.',
+      'Data kamu TIDAK PERNAH dihapus. Semua catatan keuangan kamu tetap tersimpan aman dan bisa kamu akses kapan aja. Karena paketnya akses selamanya, nggak ada tanggal berakhir yang bikin fitur mendadak mati. Dan ingat: CatetInd TIDAK pernah menagih diam-diam.',
   },
 ]
 
@@ -519,11 +627,26 @@ export const LEAD_SHEET_COPY = {
 export const REGISTERED_COPY = {
   title: 'Akun kamu sudah terdaftar! 🎉',
   eyebrow: 'Sampai jumpa di dalam',
+  /*
+   * Copy lama berbunyi "pembayaran akan dibuka segera" — janji waitlist yang
+   * BERTENTANGAN dengan `/checkout`, yang sejak paket 83 benar-benar menagih
+   * (Midtrans Core API). Yang ditulis sekarang hanya hal yang memang terjadi:
+   * akun dibuat dan kode masuk dikirim ke email (Supabase `signInWithOtp`).
+   */
   body: (email: string) =>
-    `Pembayaran akan dibuka segera. Kami akan kirim email ke ${email} saat sudah siap.`,
+    `Akun dengan ${email} sudah siap. Kode masuk dikirim ke alamat itu — pakai buat masuk kapan aja.`,
   bodyFallback:
-    'Pembayaran akan dibuka segera. Kami akan kirim email ke alamatmu saat sudah siap.',
+    'Akun kamu sudah siap. Kode masuk dikirim ke alamat yang kamu isi — pakai buat masuk kapan aja.',
   cta: 'Kembali ke Beranda',
+  /** CTA utama begitu paket yang dipilih terbawa dari kartu harga landing */
+  ctaPay: 'Lanjut bayar paket ini',
+  ctaPayHint: 'Paket yang kamu pilih sudah tersimpan — tinggal selesaikan pembayarannya.',
+  /**
+   * Body khusus saat paket terbawa: jangan mengulang janji "pembayaran belum
+   * dibuka" (itu copy waitlist) sementara `/checkout` jelas-jelas sudah menagih.
+   */
+  bodyWithPlan: (email: string, planName: string) =>
+    `Pilihanmu — ${planName} — sudah kami simpan. Konfirmasi dikirim ke ${email}, dan kamu bisa langsung lanjut ke pembayaran sekarang.`,
   nextStepsTitle: 'Sambil menunggu, siapkan ini',
   nextSteps: [
     'Unduh aplikasi ke home screen (opsional, biar gampang dibuka)',

@@ -180,7 +180,7 @@ describe('label & tautan undangan', () => {
 
   it('tautan /join selalu huruf besar & tanpa spasi', () => {
     expect(buildJoinHref(' k4m2p9 ')).toBe('/join/K4M2P9')
-    expect(buildInviteUrl('K4M2P9')).toBe('https://catetind.app/join/K4M2P9')
+    expect(buildInviteUrl('K4M2P9')).toBe('https://catetind.com/join/K4M2P9')
   })
 
   it('teks share memuat kode dompet yang benar (dulu selalu kode global)', () => {

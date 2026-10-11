@@ -14,11 +14,14 @@ import { AIAvatar } from './ai-avatar'
 import { useMoneyContext } from './money-context-provider'
 import { usePrivacy } from './privacy-provider'
 import { useSubscriptionGate } from './subscription-gate-provider'
-import { SUBSCRIPTION_LOCK_COPY } from '@/lib/data/renewal'
+import { FEATURE_LOCK_COPY } from '@/lib/data/upgrade'
+import { LOCKED_FEATURE_COPY, lockedBadgeText } from '@/lib/data/pricing'
+import { LockedFeatureNote } from './locked-feature-note'
 import {
   AI_CAPTURE_COPY,
   AI_CAPTURE_REPLY,
   AI_CHAT_COPY,
+  AI_COACH_ROUTES,
   AI_CONNECT_HREF,
   QUICK_REPLIES,
   type ChatMessage,
@@ -106,7 +109,8 @@ function ChatBubble({ message, onAction }: { message: ChatMessage; onAction: () 
 
 /** route yang menampilkan bubble AI Coach — HANYA Dashboard.
  *  Sejak landing pindah ke root `/`, dashboard tinggal di `/app`. */
-const AI_CHAT_ROUTES: string[] = ['/app']
+/** route di mana AI Coach hidup — satu sumber di `lib/ai-chat.ts` */
+const AI_CHAT_ROUTES = AI_COACH_ROUTES
 
 /** indikator "AI lagi ngetik" — tiga titik berdenyut berurutan */
 function TypingIndicator() {
@@ -144,10 +148,16 @@ export function AIChatWidget() {
      ada di daftar dompet user (paket 79). Hook-nya tidak boleh mengimpor provider
      komponen ini (arah impor repo: komponen → hook/lib), jadi nilainya lewat sini. */
   const { context } = useMoneyContext()
-  /* masa aktif habis → "Catat ✓" di kartu konfirmasi AI tidak boleh menyimpan.
-     Percakapan & pemindaian struk tetap jalan (tidak ada yang dikunci diam-diam);
-     yang ditahan hanya komitmen terakhirnya. */
-  const { inputLocked } = useSubscriptionGate()
+  /* Paket user (paket 84): AI Coach hanya terbuka di paket Waras ke atas.
+     Selama paketnya BELUM DIKETAHUI (`planKnown` false, mis. build demo), tidak
+     ada yang dikunci — lihat catatan di `LockedFeatureNote`. Yang dikunci hanya
+     saat paketnya benar-benar dibaca dan memang tidak memuat kemampuan ini.
+
+     Dua kunci yang hidup berdampingan dan TIDAK boleh tertukar:
+       · `inputLocked` = belum ada paket sama sekali → tombol "Catat ✓" ditahan;
+       · `aiLocked`    = paket ada tapi tanpa AI → pintu AI yang ditahan. */
+  const { inputLocked, canUse, planKnown } = useSubscriptionGate()
+  const aiLocked = planKnown && !canUse('ai-chat')
   const [open, setOpen] = useState(false)
   // A. titik notifikasi berdenyut — AI punya insight proaktif (mock: ada saat
   // load, mis. "spending spike terdeteksi"); hilang setelah panel dibuka
@@ -268,7 +278,7 @@ export function AIChatWidget() {
     /* masa aktif habis: jangan simpan, tapi jangan buang draftnya juga — user
        bisa membaca kembali isiannya begitu masa aktifnya lanjut (task 23) */
     if (inputLocked) {
-      toast(SUBSCRIPTION_LOCK_COPY.inputHint)
+      toast(FEATURE_LOCK_COPY.inputHint)
       return
     }
     /* ── SALDO TIDAK BOLEH SUB-NOL (paket 74) ────────────────────────────────
@@ -332,6 +342,15 @@ export function AIChatWidget() {
   function handleSend() {
     const text = input.trim()
     if (!text || captureLocked) return
+    /* KUNCI PAKET: paket tanpa AI tidak boleh menembak model sama sekali —
+       dicek di sini (klien) DAN di route (server, 403). Klien memberi tahu
+       sebabnya; server yang benar-benar menolak. */
+    if (aiLocked) {
+      toast(LOCKED_FEATURE_COPY.unknownPlanNote, {
+        description: lockedBadgeText('ai-chat'),
+      })
+      return
+    }
     /* ── PESAN DI LUAR KONTEKS: DITOLAK, tidak diubah jadi kartu transaksi ─────
        Paket 80: pertanyaan yang bukan soal keuangan user tidak boleh berubah jadi
        kartu konfirmasi (dulu "resep nasi goreng 30k" bisa lolos lewat kata
@@ -558,7 +577,7 @@ export function AIChatWidget() {
                 <button
                   type="button"
                   onClick={handleVoiceClick}
-                  disabled={isTyping || captureLocked || quotaExhausted || captureParsing}
+                  disabled={isTyping || captureLocked || quotaExhausted || captureParsing || aiLocked}
                   aria-label={
                     capture.phase === 'listening'
                       ? AI_CAPTURE_COPY.voiceStopLabel
@@ -591,7 +610,7 @@ export function AIChatWidget() {
                 <button
                   type="button"
                   onClick={handleScanClick}
-                  disabled={isTyping || captureLocked || quotaExhausted}
+                  disabled={isTyping || captureLocked || quotaExhausted || aiLocked}
                   aria-label={
                     captureParsing ? AI_CAPTURE_COPY.cancel : AI_CAPTURE_COPY.scanLabel
                   }
@@ -624,7 +643,7 @@ export function AIChatWidget() {
 
                 <button
                   type="submit"
-                  disabled={!input.trim() || isTyping || captureLocked || captureParsing}
+                  disabled={!input.trim() || isTyping || captureLocked || captureParsing || aiLocked}
                   aria-label={AI_CHAT_COPY.sendLabel}
                   className="flex size-10 shrink-0 items-center justify-center rounded-full bg-forest text-cream transition-all hover:bg-forest-soft active:scale-95 disabled:opacity-35 disabled:hover:bg-forest"
                 >
@@ -646,6 +665,14 @@ export function AIChatWidget() {
                 <p id="ai-quota-off" className="mt-2 text-[11px] leading-relaxed text-forest/55">
                   {AI_QUOTA_EXHAUSTED_COPY.body}
                 </p>
+              )}
+
+              {/* KUNCI PAKET (paket 84): paket yang tidak memuat AI Coach.
+                  Ditulis APA ADANYA + jalan keluarnya (upgrade dengan selisih) —
+                  bukan tombol yang mati tanpa penjelasan, dan bukan "sepertinya
+                  sudah aktif". */}
+              {aiLocked && (
+                <LockedFeatureNote capability="ai-chat" compact className="mt-2.5 px-1" />
               )}
             </form>
           </section>

@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
+  AI_BASE_TOKENS_TOTAL,
   AI_QUOTA_RESET_DATE,
   AI_QUOTA_RESET_DAYS,
   AI_QUOTA_RESET_ISO,
   AI_QUOTA_TODAY_ISO,
   daysUntil,
   indonesianDateLabel,
+  planQuota,
 } from './ai-quota'
 
 /* ── Test satu turunan tanggal reset kuota AI (audit fintech Stage 2 #6) ──────
@@ -33,5 +35,37 @@ describe('tanggal reset kuota AI · satu tanggal kanon', () => {
   it('indonesianDateLabel menulis bulan Indonesia tanpa locale mesin', () => {
     expect(indonesianDateLabel('2026-01-05')).toBe('5 Januari 2026')
     expect(indonesianDateLabel('2026-12-31')).toBe('31 Desember 2026')
+  })
+})
+
+/* ── KUOTA PER PAKET (paket 84/85) ─────────────────────────────────────────────
+   Tiga paket, tiga perilaku: tanpa AI (tanpa tangki), berkuota (tangki dasar),
+   tanpa batas (tidak dibatasi). `null` = belum pernah beli → tidak ada AI. */
+
+describe('planQuota() — kuota mengikuti PAKET', () => {
+  it('Paket Catet Aja: tanpa AI sama sekali', () => {
+    expect(planQuota('catet-aja')).toEqual({ aiEnabled: false, unlimited: false, monthlyTokens: 0 })
+  })
+
+  it('Paket Waras: AI berkuota dasar bulanan (angka kanon)', () => {
+    expect(planQuota('waras')).toEqual({
+      aiEnabled: true,
+      unlimited: false,
+      monthlyTokens: AI_BASE_TOKENS_TOTAL,
+    })
+  })
+
+  it('Paket Sultan: AI tanpa batas', () => {
+    expect(planQuota('sultan')).toEqual({
+      aiEnabled: true,
+      unlimited: true,
+      monthlyTokens: AI_BASE_TOKENS_TOTAL,
+    })
+  })
+
+  it('belum pernah beli / tak dikenal → tidak ada AI', () => {
+    for (const value of [null, undefined]) {
+      expect(planQuota(value)).toEqual({ aiEnabled: false, unlimited: false, monthlyTokens: 0 })
+    }
   })
 })

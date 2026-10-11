@@ -34,6 +34,9 @@ import {
 } from '@/lib/weekly-recap'
 import { useWeeklyRecap } from '@/lib/use-weekly-recap'
 import { ACTIVE_SHARE_CARD_ID, getShareCard } from '@/lib/data/share'
+import { UPGRADE_COPY } from '@/lib/data/pricing'
+import { useSubscriptionGate } from './subscription-gate-provider'
+import { LockedFeatureNote } from './locked-feature-note'
 
 /* Seluruh angka slide (termasuk tahap tanaman) kini datang dari `WeeklyRecap`
    yang diturunkan `useWeeklyRecap()` — tidak ada lagi `WEEK_DATA`, `WEEK_PLANT`,
@@ -794,6 +797,10 @@ export function WeeklyRecapModal({
   /** panel "Bagikan kartu pencapaian" — dibuka dari tombol Share di kepala sheet */
   const [shareOpen, setShareOpen] = useState(false)
 
+  /* paket user (paket 84) — menentukan apakah rekap AI terbuka. Dipanggil di sini
+     supaya urutan hook stabil (lihat early-return kunci di bawah). */
+  const { planKnown, canUse } = useSubscriptionGate()
+
   useBodyScrollLock(open, true)
 
   useEffect(() => {
@@ -823,6 +830,39 @@ export function WeeklyRecapModal({
 
   /* SATU turunan dari ledger nyata untuk seluruh slide + kepala sheet */
   const recap = useWeeklyRecap()
+
+  /* ── KUNCI PAKET (paket 84) ────────────────────────────────────────────────
+     Rekap mingguan AI (`ai-report`) ada di paket Waras ke atas. Kalau paket user
+     tidak memuatnya, modal ini menampilkan ajakan upgrade — bukan ringkasan yang
+     seolah-olah jalan, dan bukan tombol yang gagal diam-diam. Early-return legal:
+     seluruh hook sudah dipanggil di atas (`useBodyScrollLock`, dua `useEffect`,
+     `useWeeklyRecap`). */
+  if (planKnown && !canUse('ai-report')) {
+    if (!open) return null
+    return (
+      <div className="fixed inset-0 z-[70] flex items-end justify-center sm:items-center">
+        <button
+          type="button"
+          aria-label="Tutup rekap mingguan"
+          onClick={onClose}
+          className="absolute inset-0 bg-ink/50"
+        />
+        <div className="relative w-full max-w-[520px] rounded-t-[1.75rem] bg-canvas p-5 ring-1 ring-soil/12 sm:rounded-[1.75rem]">
+          <h2 className="font-display text-lg font-semibold tracking-tight text-forest">
+            {WEEKLY_RECAP_COPY.lockedTitle}
+          </h2>
+          <LockedFeatureNote capability="ai-report" className="mt-4" />
+          <button
+            type="button"
+            onClick={onClose}
+            className="mt-4 w-full rounded-full px-4 py-2.5 text-[13px] font-medium text-forest/55 transition-colors hover:bg-sage/50"
+          >
+            {UPGRADE_COPY.laterLabel}
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   const slides: Record<string, ReactNode> = {
     overview: <SlideOverview recap={recap} />,

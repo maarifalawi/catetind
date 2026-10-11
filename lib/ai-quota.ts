@@ -21,7 +21,14 @@
    (`ai_usage` di PRD 4806–4886); seluruh komponen cuma membaca turunan dari file
    ini. Satu pengecualian yang DISENGAJA ada kata "habis": keadaan kuota benar-
    benar habis (`AI_QUOTA_EXHAUSTED_COPY`) — menutupi fakta itu dengan bahasa
-   tanki bensin justru bikin user menekan tombol yang tidak akan bekerja. */
+   tanki bensin justru bikin user menekan tombol yang tidak akan bekerja.
+
+   PAKET 84: kuota kini juga bergantung PAKET (`planQuota()` di bagian bawah) —
+   paket tanpa AI tidak punya kuota sama sekali, dan paket Sultan tidak dibatasi.
+   Aturan kemampuan itu sendiri hidup di `lib/data/pricing.ts`
+   (`PLAN_CAPABILITIES`), jadi tidak ada dua daftar kunci. */
+
+import { canUse, type PlanId } from './data/pricing'
 
 /* ── 1. HELPER SUDUT PANDANG (dipakai lintas halaman) ─────────────────────── */
 
@@ -403,6 +410,8 @@ export const AI_TOPUP_COPY = {
   trustNote: 'Bayar sekali. Tanpa perpanjangan otomatis.',
   closeLabel: 'Tutup',
   backdropLabel: 'Tutup top up AI token',
+  /** dipakai modal saat /api/payment/charge belum tersedia / menolak */
+  notConfigured: 'Top up belum bisa diproses sekarang. Coba lagi sebentar ya.',
   /* Konfirmasi sesudah bayar (mock). Nominal RUPIAH sengaja tidak diulang di
      sini: yang user butuh tahu cuma "token-ku nambah berapa" — dan angka token
      itu dibaca dari paket yang sama, bukan disalin manual. */
@@ -437,6 +446,8 @@ export const AI_GAUGE_BANNER_COPY = {
 
    Copy-nya di sini (bukan di komponen) karena tiga permukaan berbeda memakainya:
    engine input (`transaction-input-engine.tsx`), widget AI Coach, dan banner Home. */
+/* ── 9b. STATE KUOTA HABIS + DEGRADASI (paket 42 · temuan audit #5) ─────────
+   Dipakai bersama oleh engine input, widget AI Coach, dan banner Home. */
 export const AI_QUOTA_EXHAUSTED_COPY = {
   /** judul banner Home saat kolam dasar & add-on dua-duanya habis */
   bannerTitle: 'Kuota AI bulan ini habis',
@@ -454,3 +465,45 @@ export const AI_QUOTA_EXHAUSTED_COPY = {
   /** label pembaca layar untuk bar yang benar-benar kosong */
   progressLabel: 'Kuota AI habis',
 } as const
+
+/* ── 10. KUOTA PER PAKET (paket 84) ──────────────────────────────────────────
+   Sejak paket 84 paket menentukan AKSES ke AI, bukan cuma kuotanya:
+     · Paket Catet Aja → tidak ada AI sama sekali (kuota 0),
+     · Paket Waras     → AI dengan kuota dasar bulanan (angka kanon di atas),
+     · Paket Sultan    → AI tanpa batas.
+
+   Angka tokennya TIDAK ditulis ulang di sini: yang berbeda per paket hanya
+   "boleh dipakai atau tidak" dan "apakah batasnya berlaku". Dengan begitu tidak
+   lahir tabel token kedua, dan ToS (`AI_BASE_TOKENS_TOTAL`) tetap satu-satunya
+   angka yang berlaku untuk paket yang berkuota. */
+
+export interface PlanQuota {
+  /** kemampuan AI (`ai-chat`) ada di paket ini */
+  aiEnabled: boolean
+  /** batas kuota dasar TIDAK berlaku (Paket Sultan) */
+  unlimited: boolean
+  /** kuota dasar bulanan yang dipakai UI saat batasnya berlaku */
+  monthlyTokens: number
+}
+
+export function planQuota(planId: PlanId | null | undefined): PlanQuota {
+  return {
+    aiEnabled: canUse(planId, 'ai-chat'),
+    unlimited: canUse(planId, 'ai-unlimited'),
+    monthlyTokens: canUse(planId, 'ai-chat') ? AI_BASE_TOKENS_TOTAL : 0,
+  }
+}
+
+/** label pendek untuk paket tanpa batas (dipakai kartu sidebar & Billing) */
+export const AI_UNLIMITED_BADGE = 'Tanpa batas'
+
+/** label batas kuota untuk paket yang TIDAK dibatasi (dipakai kartu & ToS) */
+export const AI_UNLIMITED_NOTE =
+  'Tanpa batas kuota. Fair-use berlaku: dipakai wajar ya — kalau pemakaiannya ekstrem, kami hubungi dulu, bukan memotong diam-diam.'
+
+/** kartu kuota saat paket TIDAK punya AI sama sekali (Paket Catet Aja) */
+export const AI_PLAN_LOCKED_COPY = {
+  cardTitle: 'AI belum aktif di paketmu',
+  body: 'Paket Catet Aja fokus ke pencatatan manual. AI Coach, scan struk, dan voice input aktif mulai Paket Waras.',
+} as const
+

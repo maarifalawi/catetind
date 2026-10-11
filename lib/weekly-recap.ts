@@ -151,6 +151,8 @@ export function weeklyRecapFrom(rows: HomeMoneyRow[], todayISO: string): WeeklyR
    belum punya catatan, slide TIDAK menggambar Rp 0 / donut kosong — ia menyebut
    apa adanya dan menunjuk satu tindakan. */
 export const WEEKLY_RECAP_COPY = {
+  /** judul panel saat rekap AI belum terbuka di paket user (paket 84) */
+  lockedTitle: 'Rekap mingguan AI',
   /** banner Home saat pekan belum punya catatan */
   bannerEmpty: 'Belum ada catatan minggu ini — catat yuk',
   /** panel pengganti seluruh slide saat rekap kosong */

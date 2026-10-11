@@ -3,6 +3,7 @@ import {
   CircleHelp,
   Home,
   PieChart,
+  Sprout,
   Target,
   Wallet,
   type LucideIcon,
@@ -29,7 +30,7 @@ import {
 
      1. penjelasan ringan apa yang terjadi      → kepala halaman (tunas + H1 + body)
      2. satu tombol pulang yang jelas           → CTA utama, tepat di bawah teks
-     3. pintasan ke halaman yang mungkin dicari → 4 kartu (wallet/history/budget/help)
+     3. pintasan ke halaman yang mungkin dicari → 6 kartu (4 app + 2 pintu situs)
 
    Keputusan desain:
    · TANPA state & tanpa `'use client'` — halaman ini statis murni, jadi tidak
@@ -54,6 +55,8 @@ const SHORTCUT_ICON: Record<string, LucideIcon> = {
   '/history': PieChart,
   '/budget': Target,
   '/help': CircleHelp,
+  '/welcome': Sprout,
+  '/': Home,
 }
 
 export function NotFoundScreen() {

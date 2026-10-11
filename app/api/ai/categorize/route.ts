@@ -5,6 +5,7 @@ import { CATEGORIZE_SYSTEM_PROMPT } from '@/lib/ai/prompts'
 import { allowAiCall } from '@/lib/ai/rate-limit'
 import { TRANSACTION_CATEGORY_OPTIONS, TRANSACTION_FALLBACK_CATEGORY } from '@/lib/data/history'
 import { parseSpokenTransaction } from '@/lib/transaction-ai'
+import { requireCapability } from '@/lib/subscription/capability'
 
 /* ── POST /api/ai/categorize — saran kategori (Domain 4B) ────────────────────
    Body: `{ name: string, amount?: number }` → `{ ok:true, category, source }`.
@@ -28,6 +29,13 @@ function ruleCategory(name: string, amount: number): string {
 }
 
 export async function POST(req: NextRequest) {
+  /* KUNCI PER TIER (paket 84): kategorisasi otomatis hanya di Waras ke atas.
+     Fallback aturan lokal (`source:'rule'`) di bawah BUKAN pengganti kunci ini:
+     ia menambal provider yang sedang istirahat untuk user yang memang berhak,
+     bukan membukakan fitur berbayar untuk user yang tidak berhak. */
+  const gate = await requireCapability(req, 'ai-categorize')
+  if (!gate.ok) return gate.response
+
   const callerId = aiCallerId(req)
 
   if (!allowAiCall(callerId)) {

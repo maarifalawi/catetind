@@ -32,7 +32,7 @@ export const WELCOME_COPY = {
     'Catat pemasukan & pengeluaran tanpa drama. Rapi otomatis, jelas dalam sekali lihat, dan nggak perlu bikin password.',
   ctaPrimary: 'Mulai Sekarang',
   /** keterangan kecil di bawah CTA — menenangkan, bukan menagih */
-  ctaNote: 'Tanpa auto-renew paksa · Kamu yang pegang kendali',
+  ctaNote: 'Sekali bayar, akses selamanya · Tanpa tagihan bulanan',
   /** pintu kedua di kanan atas bar brand */
   loginLead: 'Sudah punya akun?',
   loginLink: 'Masuk',

@@ -6,7 +6,6 @@ import {
   Check,
   CreditCard,
   Crown,
-  Hourglass,
   MessageCircle,
   Mic,
   ReceiptText,
@@ -16,88 +15,47 @@ import {
   Sparkles,
   Tags,
   TriangleAlert,
-  Wallet,
-  XCircle,
   Zap,
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { toast } from 'sonner'
-import { CATET_AJA_PLAN, HERO_PLAN, formatIDR } from '@/lib/data/pricing'
+import { LIFETIME_LABEL, PLANS, formatIDR, priceFor } from '@/lib/data/pricing'
+import { useSubscriptionGate } from './subscription-gate-provider'
+import { UpgradeModal } from './upgrade-modal'
 /* Semua angka kuota AI datang dari sini — bagian tampilan tidak menyimpan
    satu pun kuota/harga add-on (aturan yang sama dengan `lib/data/pricing.ts`). */
 import {
   AI_ADDON_PACKAGES,
   AI_FUEL_COPY,
+  AI_PLAN_LOCKED_COPY,
   AI_QUOTA_EXHAUSTED_COPY,
   AI_QUOTA_RESET_DATE,
   AI_RESET_RULE_COPY,
+  AI_UNLIMITED_BADGE,
+  AI_UNLIMITED_NOTE,
   formatTokens,
+  planQuota,
   remainingPercent,
   type AiQuotaActivityId,
 } from '@/lib/ai-quota'
 import { useAiQuota } from '@/hooks/use-ai-quota'
-import { AnnualPlanModal } from './annual-plan-modal'
-import { ConfirmDialog, DialogButton } from './settings-dialog'
-import { PAYMENT_METHODS } from './payment-method-logos'
 import { TopUpModal } from './top-up-modal'
 
 /* ── Mock data halaman Langganan & Billing (inventaris #18) ────────────────────
    Harga paket dibaca dari `lib/data/pricing.ts`, angka kuota AI dari
    `lib/ai-quota.ts` — file ini tidak menyimpan nominal milik orang lain. */
 
-type CurrentPlan = {
-  name: string
-  price: string
-  period: string
-  activeUntil: string
-  paymentMethod: string
-}
+/* ── Data halaman Langganan & Billing (inventaris #18) ────────────────────────
+   Harga paket dibaca dari `lib/data/pricing.ts`, angka kuota AI dari
+   `lib/ai-quota.ts` — file ini tidak menyimpan nominal milik orang lain.
 
-/* Angka & nama paket aktif DIBACA dari `lib/data/pricing.ts` — halaman yang
-   menjual (checkout) dan halaman yang menagih (di sini) tidak boleh punya dua
-   daftar harga (PRD 4594–4606). Langganan mock-nya periode TAHUNAN, sama seperti
-   baris "Paket Waras - Annual" di riwayat pembayaran di bawah.
+   PAKET 84: tidak ada lagi masa aktif, tanggal berakhir, grace period, status
+   "expired", perpanjangan, atau tombol berhenti berlangganan — semuanya mustahil
+   untuk paket akses selamanya (sekali bayar). Yang tersisa: paket yang dimiliki,
+   FITUR apa yang terbuka karenanya, dan ajakan upgrade untuk fitur yang masih
+   terkunci. */
 
-   name sengaja di-type `string` (bukan literal) supaya perbandingan paket aktif
-   di modal tahunan (pro-rated upgrade) tetap valid secara tipe. */
-const CURRENT_PLAN: CurrentPlan = {
-  name: HERO_PLAN.name,
-  price: formatIDR(HERO_PLAN.annual),
-  period: '/ tahun',
-  activeUntil: '21 Oktober 2026',
-  paymentMethod: 'GoPay •••• 4821',
-}
-
-/* STATUS LANGGANAN — satu sumber untuk pill status di kartu paket aktif.
-   Tiga kondisi di inventaris #18: aktif (mint), grace period (amber, masa
-   tenggang 7 hari), dan expired (prem). Warnanya mengikuti kanon Domain 2B.2:
-   tidak ada merah alarm — "lewat batas" = prem, "mendekati batas" = amber. */
-export type SubscriptionStatusId = 'aktif' | 'grace' | 'expired'
-
-const STATUS_META: Record<
-  SubscriptionStatusId,
-  { label: string; pill: string; icon: LucideIcon }
-> = {
-  aktif: { label: 'Aktif', pill: 'bg-mint/30 text-forest', icon: ShieldCheck },
-  grace: {
-    label: 'Grace Period (7 hari tersisa)',
-    pill: 'bg-hud-amber/30 text-forest/70',
-    icon: Hourglass,
-  },
-  expired: { label: 'Expired', pill: 'bg-plum/20 text-plum', icon: TriangleAlert },
-}
-
-/** status aktif sekarang (mock) — ganti ke 'grace'/'expired' saat mereview UI */
-const SUBSCRIPTION_STATUS: SubscriptionStatusId = 'aktif'
-
-/* e-wallet tersimpan (mock) — logo memakai PaymentMethodId yang sama dengan
-   baris logo di modal tahunan biar konsisten */
-const SAVED_PAYMENT = {
-  logo: 'gopay',
-  label: 'GoPay - 0812****899',
-} as const
-
+/** satu baris riwayat pembayaran (mock) */
 type BillingHistoryItem = {
   id: string
   date: string
@@ -107,17 +65,17 @@ type BillingHistoryItem = {
 
 /* paket add-on yang dibeli di riwayat (mock) — dicari dari daftar kanon supaya
    nominal kwitansi selalu sama dengan harga di modal top-up */
-const SEDANG_PACKAGE =
-  AI_ADDON_PACKAGES.find((pkg) => pkg.id === 'sedang') ?? AI_ADDON_PACKAGES[0]
+const SEDANG_PACKAGE = AI_ADDON_PACKAGES.find((pkg) => pkg.id === 'sedang') ?? AI_ADDON_PACKAGES[0]
 
-/* riwayat pembayaran (mock) — semuanya LUNAS. Nominal langganan DITURUNKAN dari
-   tabel harga kanon, jadi kwitansi dan harga jual tidak pernah beda cerita. */
+/* riwayat pembayaran (mock) — semuanya LUNAS. Nominal DITURUNKAN dari tabel harga
+   kanon (`PLANS[].lifetime`), jadi kwitansi dan harga jual tidak pernah beda
+   cerita. Produksi: dibaca dari tabel `purchases` lewat endpoint pembayaran. */
 const BILLING_HISTORY: BillingHistoryItem[] = [
   {
     id: 'inv-2026-08',
     date: '12 Agustus 2026',
-    label: `${HERO_PLAN.name} - Annual`,
-    amount: HERO_PLAN.annual,
+    label: `${PLANS[1].name} - Akses Selamanya`,
+    amount: PLANS[1].lifetime,
   },
   {
     id: 'inv-2026-07',
@@ -128,10 +86,11 @@ const BILLING_HISTORY: BillingHistoryItem[] = [
   {
     id: 'inv-2026-01',
     date: '1 Januari 2026',
-    label: `${CATET_AJA_PLAN.name} - Annual`,
-    amount: CATET_AJA_PLAN.annual,
+    label: `${PLANS[0].name} - Akses Selamanya`,
+    amount: PLANS[0].lifetime,
   },
 ]
+
 
 /* Ikon per aktivitas kuota — label & angkanya datang dari `lib/ai-quota.ts`;
    di sini cuma ikonnya, karena ikon adalah lapis tampilan (React), bukan data. */
@@ -155,31 +114,35 @@ function barTone(remainingPct: number) {
 export function BillingPanel() {
   const [topUpOpen, setTopUpOpen] = useState(false)
   /**
-   * Modal PAKET TAHUNAN — dibuka dari tombol "Perpanjang" di kartu paket aktif.
+   * Modal UPGRADE — dibuka dari tombol "Upgrade paket" di kartu paket aktif.
    *
-   * Peran dibagi dua supaya tidak ada dua alur yang saling menabrakan:
-   *   · modal ini (`annual-plan-modal`)  = memilih paket & periode (termasuk
-   *     UPGRADE dengan bayar selisih) — "saya mau paket yang mana";
-   *   · modal Renewal (`renewal-modal`, task 14) = MEMPERPANJANG masa aktif yang
-   *     mau habis di H-1, muncul sendiri di Home, biasanya satu tap — "saya mau
-   *     lanjut pakai yang sekarang".
-   * Keduanya membaca `lib/data/pricing.ts` yang sama, jadi satu harga di mana pun.
+   * Sejak paket 84 hanya ada SATU alur kenaikan akses: naik tier dengan bayar
+   * selisih. Dulu ada dua modal yang harus dijaga agar tidak saling menabrak
+   * (`annual-plan-modal` untuk memilih paket/periode dan `renewal-modal` untuk
+   * memperpanjang masa aktif); keduanya dihapus dan digantikan `UpgradeModal`,
+   * karena perpanjangan tidak punya arti untuk akses selamanya.
    */
-  const [annualOpen, setAnnualOpen] = useState(false)
+  const [upgradeOpen, setUpgradeOpen] = useState(false)
+
+  /* Band "Top Up AI Token" hanya relevan untuk paket BERKUOTA (paket 85):
+     Paket Sultan tidak dibatasi (tidak ada kuota yang perlu ditambah) dan
+     Paket Catet Aja tidak punya AI sama sekali. Kalau paket belum diketahui,
+     band tetap tampil (jangan menyembunyikan karena ketidaktahuan). */
+  const { planId, planKnown } = useSubscriptionGate()
+  const planLimits = planQuota(planId)
+  const showAddonBand = !planKnown || (planLimits.aiEnabled && !planLimits.unlimited)
 
   return (
     <>
       <div className="grid gap-4 lg:grid-cols-[1.05fr_1fr]">
-        {/* kolom kiri: paket aktif lalu metode pembayaran (urutan sesuai brief) */}
-        <div className="flex flex-col gap-4">
-          <CurrentPlanCard onUpgrade={() => setAnnualOpen(true)} />
-          <PaymentMethodCard />
-        </div>
+        <CurrentPlanCard onUpgrade={() => setUpgradeOpen(true)} />
         <FuelGaugeCard />
       </div>
 
-      {/* band CTA — pola kartu "Enterprise plans" referensi: label + copy + CTA besar */}
-      <section className="mt-4 rounded-[1.75rem] bg-gradient-to-br from-forest to-forest-soft p-5 ring-1 ring-soil/12 sm:p-6">
+      {/* band CTA — pola kartu "Enterprise plans" referensi: label + copy + CTA besar.
+          Disembunyikan untuk paket tanpa kuota AI / tanpa batas (paket 85). */}
+      {showAddonBand && (
+        <section className="mt-4 rounded-[1.75rem] bg-gradient-to-br from-forest to-forest-soft p-5 ring-1 ring-soil/12 sm:p-6">
         <span className="inline-flex items-center gap-1.5 rounded-full bg-cream/10 px-2.5 py-1 text-[11px] font-medium text-cream/80">
           <Zap className="size-3.5 text-mint" strokeWidth={2.4} />
           {AI_FUEL_COPY.addonBandBadge}
@@ -199,25 +162,24 @@ export function BillingPanel() {
             {AI_FUEL_COPY.addonBandCta}
           </button>
         </div>
-      </section>
+        </section>
+      )}
 
       <BillingHistorySection />
 
-      {/* jalur berhenti berlangganan — selalu terlihat, satu klik dari sini */}
-      <CancelSubscriptionCard />
-
       <TopUpModal open={topUpOpen} onClose={() => setTopUpOpen(false)} />
-      <AnnualPlanModal
-        open={annualOpen}
-        onClose={() => setAnnualOpen(false)}
-        currentPlanName={CURRENT_PLAN.name}
-      />
+      <UpgradeModal open={upgradeOpen} onClose={() => setUpgradeOpen(false)} />
     </>
   )
 }
 
 /* ── kartu 1: paket aktif + perpanjang ───────────────────────────────────────── */
 function CurrentPlanCard({ onUpgrade }: { onUpgrade: () => void }) {
+  /* Paket dibaca dari gerbang global (`/api/subscription`) — SATU sumber, sama
+     dengan yang dipakai kunci fitur di seluruh app. Kalau paketnya belum bisa
+     dibaca, kartu ini jujur berkata "belum ada paket"; tidak ada paket karangan. */
+  const { plan, planId } = useSubscriptionGate()
+  const hasHigherTier = PLANS.some((item) => priceFor(item, planId) > 0)
   return (
     <section className="flex flex-col rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12 sm:p-6">
       <div className="flex items-start gap-3">
@@ -225,12 +187,14 @@ function CurrentPlanCard({ onUpgrade }: { onUpgrade: () => void }) {
           <Crown className="size-5" strokeWidth={2.2} />
         </span>
         <div className="min-w-0 flex-1">
-          <StatusPill status={SUBSCRIPTION_STATUS} />
+          <PlanPill />
           <h2 className="mt-2 text-xl font-medium tracking-tight text-forest">
-            {CURRENT_PLAN.name}
+            {plan ? plan.name : 'Belum ada paket'}
           </h2>
           <p className="mt-1 text-[13px] leading-relaxed break-words text-forest/55">
-            Paket aktif. Terima kasih udah support CatetInd! 🌿
+            {plan
+              ? 'Akses selamanya. Sekali bayar, tanpa tagihan bulanan 🌿'
+              : 'Pilih paket buat membuka fitur CatetInd. Sekali bayar, akses selamanya.'}
           </p>
         </div>
       </div>
@@ -239,116 +203,65 @@ function CurrentPlanCard({ onUpgrade }: { onUpgrade: () => void }) {
         <div className="rounded-2xl bg-cream px-3.5 py-3 ring-1 ring-soil/8">
           <dt className="flex items-center gap-1.5 text-[11px] text-forest/45">
             <CalendarClock className="size-3.5" strokeWidth={2.2} />
-            Aktif sampai
+            Durasi
           </dt>
           <dd className="mt-1 text-[13px] font-medium leading-snug text-forest">
-            {CURRENT_PLAN.activeUntil}
+            {LIFETIME_LABEL}
           </dd>
         </div>
         <div className="rounded-2xl bg-cream px-3.5 py-3 ring-1 ring-soil/8">
           <dt className="flex items-center gap-1.5 text-[11px] text-forest/45">
             <CreditCard className="size-3.5" strokeWidth={2.2} />
-            Metode tersimpan
+            Harga paket
           </dt>
-          <dd className="mt-1 text-[13px] font-medium leading-snug text-forest">
-            {CURRENT_PLAN.paymentMethod}
+          <dd className="mt-1 text-[13px] font-medium leading-snug text-forest tabular-nums">
+            {plan ? formatIDR(plan.lifetime) : '—'}
           </dd>
         </div>
       </dl>
 
       <div className="mt-auto pt-5">
-        {/* Tombol ini membuka modal paket tahunan (pilih paket/periode = upgrade),
-            BUKAN modal Renewal yang muncul sendiri di Home saat H-1. Lihat catatan
-            pembagian peran di `BillingPanel`. */}
+        {/* Tombol ini membuka modal UPGRADE: satu-satunya alur kenaikan akses
+            sejak paket 84 (naik tier dengan bayar selisih). */}
         <button
           type="button"
           onClick={onUpgrade}
           className="flex w-full items-center justify-center gap-2 rounded-2xl bg-forest py-3.5 text-sm font-medium text-mint transition-colors hover:bg-forest-soft active:scale-[0.99]"
         >
           <RefreshCw className="size-4" strokeWidth={2.4} />
-          Perpanjang
+          {hasHigherTier ? 'Upgrade paket' : 'Lihat paket'}
         </button>
         <p className="mt-3 text-center text-[11px] leading-relaxed text-forest/45">
-          {CURRENT_PLAN.price} {CURRENT_PLAN.period} · CatetInd nggak pernah nagih otomatis, kamu
-          yang pegang kendali.
+          {plan
+            ? `${formatIDR(plan.lifetime)} sekali bayar · tidak ada tagihan berkala, dan tidak ada yang dipotong diam-diam.`
+            : 'Semua harga dibaca dari satu sumber yang sama dengan halaman checkout.'}
         </p>
       </div>
     </section>
   )
 }
+/** pill paket aktif — sengaja selalu kabar baik: paket = akses selamanya.
+    Kalau paketnya belum terbaca, pill-nya berkata apa adanya (bukan "Aktif"). */
+function PlanPill() {
+  const { plan, planKnown } = useSubscriptionGate()
 
-/** pill status langganan — ikon + nada mengikuti STATUS_META */
-function StatusPill({ status }: { status: SubscriptionStatusId }) {
-  const meta = STATUS_META[status]
-  const Icon = meta.icon
+  if (!plan) {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-hud-amber/30 px-2.5 py-1 text-[11px] font-medium text-forest/70">
+        <TriangleAlert className="size-3.5" strokeWidth={2.4} aria-hidden />
+        {planKnown ? 'Belum ada paket' : 'Status paket belum bisa dibaca'}
+      </span>
+    )
+  }
 
   return (
-    <span
-      className={cn(
-        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium',
-        meta.pill,
-      )}
-    >
-      <Icon className="size-3.5" strokeWidth={2.4} aria-hidden />
-      {meta.label}
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-mint/30 px-2.5 py-1 text-[11px] font-medium text-forest">
+      <ShieldCheck className="size-3.5" strokeWidth={2.4} aria-hidden />
+      Aktif · akses selamanya
     </span>
   )
 }
 
-/* ── kartu: berhenti berlangganan (anti dark pattern, Domain 5A) ───────────────
-   Satu tautan jelas di bawah halaman — bukan tombol abu-abu kecil di halaman
-   tersembunyi, bukan alur "hubungi CS dulu". Copy-nya hangat dan jujur: data
-   tetap aman & bisa di-export kapan aja, tanpa guilt-trip. */
-function CancelSubscriptionCard() {
-  const [open, setOpen] = useState(false)
-
-  function handleCancel() {
-    setOpen(false)
-    /* TODO: POST /api/subscription/cancel → Midtrans stop recurring.
-       Demo ini belum punya billing server, jadi cukup diumumkan lewat toast. */
-    toast('Langganan dihentikan. Terima kasih udah bareng kami 💚', {
-      description: 'Aktif sampai akhir periode berjalan. Bisa lanjut lagi kapan aja.',
-    })
-  }
-
-  return (
-    <>
-      <section className="mt-4 rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12 sm:p-6">
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="inline-flex items-center gap-1.5 text-[13px] font-medium text-forest/55 underline decoration-soil/25 underline-offset-4 transition-colors hover:text-plum hover:decoration-plum/40"
-        >
-          <XCircle className="size-4" strokeWidth={2.2} aria-hidden />
-          Berhenti Berlangganan
-        </button>
-        <p className="mt-2 text-[11.5px] leading-relaxed text-forest/45">
-          Tanpa jebakan, tanpa telepon ke retention agent. Satu klik, kelar.
-        </p>
-      </section>
-
-      <ConfirmDialog
-        id="cancel-subscription"
-        open={open}
-        onClose={() => setOpen(false)}
-        icon={XCircle}
-        tone="danger"
-        title="Berhenti berlangganan?"
-        body="Mau istirahat langganan? Nggak masalah. Data keuanganmu tetap aman dan bisa di-export kapan aja. Kami tunggu kamu balik! 💚"
-        actions={
-          <>
-            <DialogButton tone="danger" onClick={handleCancel}>
-              Ya, Berhenti
-            </DialogButton>
-            <DialogButton tone="neutral" onClick={() => setOpen(false)}>
-              Batal
-            </DialogButton>
-          </>
-        }
-      />
-    </>
-  )
-}
 
 /* ── kartu 2: AI Token fuel gauge (inventaris #18) ─────────────────────────────
    Semua angka datang dari `lib/ai-quota.ts` — kartu ini tidak menyimpan satu pun
@@ -370,6 +283,25 @@ function FuelGaugeCard() {
   const quota = useAiQuota()
   const baseLeftPct = quota.remainingPct
   const addon = quota.addon
+  /* Batas kuota ikut PAKET (paket 84): paket tanpa AI tidak punya tangki sama
+     sekali, dan Paket Sultan tidak dibatasi. */
+  const { planId, planKnown } = useSubscriptionGate()
+  const pq = planQuota(planId)
+
+  /* Kartu jujur untuk paket tanpa AI: tidak ada tangki, tidak ada top up —
+     yang ada penjelasan + jalan ke halaman paket. */
+  if (planKnown && !pq.aiEnabled) {
+    return (
+      <section className="flex flex-col rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12 sm:p-6">
+        <h2 className="text-xl font-medium tracking-tight text-forest">
+          {AI_PLAN_LOCKED_COPY.cardTitle}
+        </h2>
+        <p className="mt-2 text-[13px] leading-relaxed text-forest/55">
+          {AI_PLAN_LOCKED_COPY.body}
+        </p>
+      </section>
+    )
+  }
 
   return (
     <section className="flex flex-col rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12 sm:p-6">
@@ -378,9 +310,14 @@ function FuelGaugeCard() {
           {AI_FUEL_COPY.cardTitle}
         </h2>
         <span className="text-sm font-medium text-forest/45 tabular-nums">
-          {quota.remainingPct}% {AI_FUEL_COPY.remainingLabel}
+          {pq.unlimited
+            ? AI_UNLIMITED_BADGE
+            : `${quota.remainingPct}% ${AI_FUEL_COPY.remainingLabel}`}
         </span>
       </div>
+      {pq.unlimited && (
+        <p className="mt-2 text-[12.5px] leading-relaxed text-forest/55">{AI_UNLIMITED_NOTE}</p>
+      )}
 
       {/* bar sisa KUOTA DASAR — nada hangat (mint → olive → cantelope), bukan alarm */}
       <div
@@ -495,35 +432,6 @@ function FuelGaugeCard() {
   )
 }
 
-/* ── kartu: metode pembayaran tersimpan ──────────────────────────────────────── */
-function PaymentMethodCard() {
-  // TODO: Load saved payment token from Midtrans API
-  // (GET /api/payment/methods → { provider, masked_pan, saved_token_id })
-  const savedMethod = PAYMENT_METHODS.find((method) => method.id === SAVED_PAYMENT.logo)
-  const SavedIcon = savedMethod?.icon ?? Wallet
-
-  return (
-    <section className="flex items-center gap-3.5 rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12 sm:px-6">
-      <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-sage text-forest">
-        <SavedIcon className="size-5" strokeWidth={2.2} />
-      </span>
-      <div className="min-w-0 flex-1">
-        <h2 className="text-[10px] font-medium tracking-[0.16em] text-forest/40 uppercase">
-          Metode Pembayaran
-        </h2>
-        <p className="mt-1 truncate text-sm font-medium text-forest">{SAVED_PAYMENT.label}</p>
-        <p className="mt-0.5 text-[11px] text-forest/45">Dipakai buat perpanjang satu tap</p>
-      </div>
-      {/* Tombol "Ubah" DIHAPUS (paket 29). Alasannya apa adanya: mengganti metode
-          pembayaran tersimpan butuh manajemen token di sisi Midtrans
-          (POST /api/payment/methods → hapus/daftarkan ulang token), dan
-          integrasi Midtrans memang SENGAJA belum dikerjakan di repo demo ini
-          (lihat ROADMAP-HALAMAN §3/§5). Tombol yang tetap dipasang sambil
-          menunggu API = kontrol mati; jadi lebih jujur kontrolnya tidak ada,
-          dan kartunya cukup menjelaskan metode mana yang akan dipakai. */}
-    </section>
-  )
-}
 
 /* ── section: riwayat pembayaran ─────────────────────────────────────────────── */
 function BillingHistorySection() {

@@ -30,9 +30,14 @@ export const PUBLIC_ROUTES = [
   '/terms',
   '/join',
   '/share',
-  '/install',
   '/app/onboarding',
 ] as const
+
+/* `/install` SENGAJA TIDAK ada di daftar ini walau bisa dibuka tanpa akun.
+   Panduan install adalah halaman APP: ia terdaftar di `NAV_GROUPS`
+   (`lib/navigation.ts`) dan tampil di sidebar/bottom-nav — sama seperti
+   `/help` yang juga tidak publik. Sebelumnya ia ada di sini SEMENTARA
+   navigasi app-nya tetap tampil: dua aturan berbeda untuk satu halaman. */
 
 /** true kalau pathname berada di (atau di bawah) halaman publik/pre-app */
 export function isPublicRoute(pathname: string): boolean {

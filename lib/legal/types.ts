@@ -72,6 +72,16 @@ export interface LegalDocument {
   versionLabel: string
   /** judul daftar isi */
   tocLabel: string
+  /**
+   * `aria-label` tautan logo di kepala dokumen.
+   *
+   * Ditambahkan bersama perbaikan "jalan buntu halaman legal": dulu logo di
+   * `LegalShell` cuma GAMBAR, dan halaman legal tidak punya navbar/sidebar sama
+   * sekali — jadi pembaca dokumen tidak punya jalan keluar selain tombol Back.
+   * Label-nya tinggal di dokumen (bukan di komponen) supaya komponen tetap nol
+   * string user-facing (CONTEXT-WAJIB §4).
+   */
+  homeLabel: string
   sections: LegalSection[]
   /** status dokumen: belum lewat tinjauan hukum */
   reviewNote: LegalNote

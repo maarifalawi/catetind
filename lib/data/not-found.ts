@@ -41,6 +41,10 @@ export const NOT_FOUND_SHORTCUTS: NotFoundShortcut[] = [
   { href: '/history', label: 'Riwayat & Insight', blurb: 'Semua catatan' },
   { href: '/budget', label: 'Budget & Nabung', blurb: 'Jatah & celengan' },
   { href: '/help', label: 'Pusat Bantuan', blurb: 'Jawaban cepat' },
+  /* dua pintu SITUS — supaya pengunjung yang belum punya akun (mis. membuka
+     tautan lama `/r/<kode>`) tidak buntu di halaman yang isinya semua app */
+  { href: '/welcome', label: 'Halaman Depan', blurb: 'Belum punya akun?' },
+  { href: '/', label: 'Situs CatetInd', blurb: 'Info produk & harga' },
 ]
 
 /** kotak bantuan kecil — pintu kedua, bukan jalan buntu kedua */

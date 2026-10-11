@@ -10,7 +10,7 @@
    `safeSummary` selalu tampak sebagai penenang singkat, `safeBody` dibuka kalau
    user benar-benar mau tahu. Tidak ada kalimat menyalahkan user. */
 
-export type SegmentErrorArea = 'app' | 'wallet' | 'wealth' | 'history' | 'joint'
+export type SegmentErrorArea = 'app' | 'wallet' | 'wealth' | 'history' | 'joint' | 'budget'
 
 export interface SegmentErrorCopy {
   eyebrow: string
@@ -55,6 +55,14 @@ export const SEGMENT_ERROR_COPY: Record<SegmentErrorArea, SegmentErrorCopy> = {
     safeSummary: 'Nggak ada catatan yang terhapus.',
     safeBody:
       'Riwayat dibaca dari ledger perangkat ini. Gagal menggambar daftarnya nggak menghapus satu baris pun.',
+  },
+  budget: {
+    eyebrow: 'Budget & Nabung',
+    title: 'Budget & celengan gagal dimuat',
+    body: 'Jatah harian dan daftar celenganmu nggak bisa digambar sekarang.',
+    safeSummary: 'Angka catatanmu nggak berubah.',
+    safeBody:
+      'Budget dihitung ulang dari ledger perangkat ini tiap halaman dibuka — gagal menggambar kartunya nggak menyentuh satu baris pun.',
   },
   joint: {
     eyebrow: 'Dompet Bersama',

@@ -4,6 +4,7 @@ import { aiConfigured, generateFromImage, parseJsonLoose, visionModel } from '@/
 import { EXTRACTION_SYSTEM_PROMPT, EXTRACTION_EXAMPLES } from '@/lib/ai/prompts'
 import { normalizeExtraction, type RawExtraction } from '@/lib/ai/extract'
 import { allowAiCall } from '@/lib/ai/rate-limit'
+import { requireCapability } from '@/lib/subscription/capability'
 
 /* ── POST /api/ai/ocr — baca STRUK via vision (Domain 2A.2 Mode 2) ───────────
    Body: `{ image: string, mimeType?: string }` di mana `image` adalah base64
@@ -37,6 +38,10 @@ function splitDataUrl(value: string): { data: string; mimeType: string | null } 
 }
 
 export async function POST(req: NextRequest) {
+  /* KUNCI PER TIER (paket 84): scan struk hanya di paket Waras ke atas. */
+  const gate = await requireCapability(req, 'ocr')
+  if (!gate.ok) return gate.response
+
   const callerId = aiCallerId(req)
 
   if (!aiConfigured()) {

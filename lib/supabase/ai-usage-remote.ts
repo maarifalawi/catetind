@@ -51,6 +51,19 @@ export async function readAiUsage(monthKey = currentMonthKey()): Promise<RemoteA
       addon = Math.max(addon, row.addon_tokens_remaining ?? 0)
       purchased = Math.max(purchased, row.purchased_tokens ?? 0)
     }
+    /* Token add-on yang DIBELI berlaku SELAMANYA, jadi saldonya dibaca dari
+       `ai_addons` (satu baris per order_id) — bukan dari `ai_usage` yang kuncinya
+       per BULAN (token di sana akan "hilang" saat bulan berganti). RLS
+       `ai_addons` menyaring `user_id = auth.uid()`, jadi yang terbaca hanya
+       milik user sendiri. */
+    const addonRes = await client.from('ai_addons').select('tokens')
+    if (!addonRes.error && Array.isArray(addonRes.data)) {
+      const addonTokens = (addonRes.data as { tokens?: number }[]).reduce(
+        (sum, row) => sum + (Number(row.tokens) || 0),
+        0,
+      )
+      purchased = Math.max(purchased, addonTokens)
+    }
     return { callsUsed, addonTokensRemaining: addon, purchasedTokens: purchased }
   } catch {
     return null

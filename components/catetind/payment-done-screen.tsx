@@ -75,7 +75,7 @@ export function PaymentDoneScreen({ orderId, failed }: { orderId: string | null;
         : 'bg-sage text-forest ring-soil/20'
 
   return (
-    <main className="relative flex min-h-[100dvh] w-full items-center justify-center bg-canvas px-5 py-12 text-forest lg:px-8">
+    <div className="relative flex min-h-[100dvh] w-full items-center justify-center px-5 py-12 text-forest lg:px-8">
       <div className="w-full max-w-[520px]">
         <LogoWordmark className="mx-auto h-6" />
 
@@ -131,6 +131,6 @@ export function PaymentDoneScreen({ orderId, failed }: { orderId: string | null;
           </div>
         </section>
       </div>
-    </main>
+    </div>
   )
 }

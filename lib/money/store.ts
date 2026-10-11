@@ -2165,7 +2165,12 @@ export function addWalletAccount(input: NewWalletInput): WalletSeed {
   const record: WalletSeed = {
     id: nextWalletId(live.wallets),
     name: input.name.trim() || 'Dompet Baru',
-    holder: live.wallets[0]?.holder ?? 'Jon Snow',
+    /* Pemegang dompet: nama dompet pertama yang sudah ada (biasanya milik user
+       sendiri). Sebelumnya di sini ada nama karangan `'Jon Snow'` — identitas
+       yang tidak pernah dimiliki siapa pun. Kalau belum ada dompet lain, kolomnya
+       dibiarkan KOSONG dan akan terisi dari sesi saat disimpan ke server
+       (`POST /api/wallets` menulis `holder: auth.user.name`). */
+    holder: live.wallets[0]?.holder ?? '',
     number: input.number?.trim() ?? '',
     network: walletNetworkOf(input.type),
     opening,

@@ -2,15 +2,10 @@
 
 import { memo, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { CalendarClock, Fuel, PiggyBank, X } from 'lucide-react'
+import { Fuel, PiggyBank, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import {
-  renewalBannerCopy,
-  shouldShowRenewalBanner,
-  type RenewalState,
-} from '@/lib/data/renewal'
 import { SINKING_NUDGE_COPY } from '@/lib/data/budget'
-import { AI_GAUGE_BANNER_COPY, AI_QUOTA_EXHAUSTED_COPY } from '@/lib/ai-quota'
+import { AI_GAUGE_BANNER_COPY, AI_QUOTA_EXHAUSTED_COPY, planQuota } from '@/lib/ai-quota'
 import { useAiQuota } from '@/hooks/use-ai-quota'
 import { useNudgeState } from '@/hooks/use-nudge-state'
 import {
@@ -21,6 +16,7 @@ import {
   type NudgeId,
 } from '@/lib/nudge-store'
 import { DEMO_MODE } from '@/lib/demo'
+import { useSubscriptionGate } from './subscription-gate-provider'
 import { TopUpModal } from './top-up-modal'
 
 /* ── mock kondisi — nanti dari backend (Domain 5A, 2C.3, 4B) ──
@@ -86,42 +82,40 @@ function BannerShell({
 }
 
 /**
- * Stack banner conditional di Home — priority: Renewal > AI Fuel Gauge > Sinking Fund.
+ * Stack banner conditional di Home — priority: AI Fuel Gauge > Sinking Fund.
  * Dismiss per-banner tersimpan di localStorage dan muncul lagi keesokan harinya.
  *
- * Banner RENEWAL menerima datanya dari luar (`renewalState`) dan CTA-nya membuka
- * modal Renewal (`onOpenRenewal`) — jadi ia benar-benar berfungsi, bukan pajangan,
- * dan modalnya bisa ditinjau ulang kapan saja tanpa menghapus localStorage.
+ * Banner RENEWAL sudah DIHAPUS di paket 84: pengingat perpanjangan tidak punya
+ * arti lagi karena semua paket adalah akses selamanya. Ajakan upgrade sekarang
+ * hidup di SATU tempat saja — `subscription-banner.tsx` di root layout — supaya
+ * tidak ada dua banner yang berbicara soal paket di satu layar.
  *
- * Banner KUOTA AI (prompt 24) sekarang juga berfungsi penuh: CTA-nya membuka
+ * Banner KUOTA AI (prompt 24) tetap berfungsi penuh: CTA-nya membuka
  * `TopUpModal` yang sudah ada (bukan modal kedua), dan setelah "pembayaran" mock
  * masuk, token add-on bertambah di sesi ini sehingga banner-nya berhenti sendiri.
  * Nudge yang tetap menagih beli SESUDAH user beli = dark pattern, dan repo ini
- * menolaknya (PRD 4507–4509/4594: tanpa auto-renew, transparan, tanpa dorongan
- * berulang).
+ * menolaknya (PRD 4507–4509/4594: transparan, tanpa dorongan berulang).
  */
 /** Dibungkus `memo` — props-nya primitif/stabil (state dari hook, callback
  *  `useCallback`), jadi tidak perlu ikut re-render saat HomeScreen mengubah state
  *  popup lain (lihat catatan di cash-flow-card.tsx).
  *  State dismiss lokalnya tetap jalan normal. */
-export const HomeBanners = memo(function HomeBanners({
-  renewalState,
-  renewalHandled,
-  onOpenRenewal,
-}: {
-  /** kondisi langganan (mock) dari `useRenewalReminder` */
-  renewalState: RenewalState
-  /** true = siklus ini sudah diperpanjang → banner renewal berhenti sendiri */
-  renewalHandled: boolean
-  /** buka modal Renewal (One-Tap Renew) */
-  onOpenRenewal: () => void
-}) {
+export const HomeBanners = memo(function HomeBanners() {
   /** modal Top Up AI — dibuka CTA banner kuota (reuse komponen yang sama
    *  dengan /settings/billing; harga & token tetap dari `lib/ai-quota.ts`) */
   const [topUpOpen, setTopUpOpen] = useState(false)
   /** snapshot kuota AI hidup (paket 42): angka yang sama dengan kartu sidebar,
    *  Fuel Gauge Billing, dan header AI Coach — dan angka itu TURUN saat dipakai */
   const quota = useAiQuota()
+
+  /* Kuota AI hanya berlaku untuk paket BERKUOTA (paket 85): paket tanpa AI
+     tidak punya tangki sama sekali, dan Paket Sultan tidak dibatasi — banner
+     "kuota menyusut" beserta ajakan top up TIDAK berlaku untuk keduanya.
+     Kalau paket belum diketahui (`planKnown` false, mis. build demo / backend
+     mati), perilaku lama DIPERTAHANKAN: jangan mengunci karena ketidaktahuan. */
+  const { planId, planKnown } = useSubscriptionGate()
+  const planLimits = planQuota(planId)
+  const quotaApplies = !planKnown || (planLimits.aiEnabled && !planLimits.unlimited)
 
   /* Persistensi nudge (paket 64): LINTAS RELOAD tanpa hydration mismatch & tanpa
      flicker — nilai tersimpan sudah dipakai sejak render pertama client (lihat
@@ -140,9 +134,6 @@ export const HomeBanners = memo(function HomeBanners({
   /** tanggal (1–31) bulan ini — ambang sinking fund `> 5` (mock) */
   const dayOfMonth = nudges.today ? Number(nudges.today.slice(8, 10)) : 0
 
-  const showRenewal =
-    ready && !renewalHandled && shouldShowRenewalBanner(renewalState)
-  const renewalCopy = renewalBannerCopy(renewalState)
   /* soft-nudge kuota: pemakaian kuota dasar >70% DAN user belum menambah token
      di sesi ini — begitu sudah beli, ajakannya selesai (lihat catatan komponen).
      Saat kuota benar-benar habis, banner tetap muncul (persen sisa 0) tapi
@@ -151,7 +142,7 @@ export const HomeBanners = memo(function HomeBanners({
      membekukan keputusan itu saat halaman dimuat, jadi menandai "sudah tampil"
      tidak menyembunyikan banner di sesi yang sama. */
   const aiEligible =
-    quota.usedPct > SOFT_NUDGE_USAGE_PCT && quota.addon.purchasedTokens === 0
+    quotaApplies && quota.usedPct > SOFT_NUDGE_USAGE_PCT && quota.addon.purchasedTokens === 0
   const showAiGauge =
     ready && aiEligible && !wasNudgeShownTodayAtLoad(nudges, 'ai-gauge')
   const showFundNudge = DEMO.sinkingFundPending && dayOfMonth > 5
@@ -169,32 +160,7 @@ export const HomeBanners = memo(function HomeBanners({
 
   return (
     <>
-      {/* 1 — RENEWAL BANNER (H-7/H-3/H-1 sebelum expired, Domain 5A & task 14) */}
-      {showRenewal && !isDismissed('renewal') && (
-        <BannerShell
-          tone="amber"
-          dismissLabel="Tutup pengingat perpanjangan"
-          onDismiss={() => dismiss('renewal')}
-          icon={
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-hud-amber/20 text-hud-terracotta">
-              <CalendarClock className="size-4.5" strokeWidth={2.2} />
-            </span>
-          }
-          title={renewalCopy.title}
-          body={renewalCopy.body}
-          cta={
-            <button
-              type="button"
-              onClick={onOpenRenewal}
-              className="shrink-0 rounded-full bg-forest px-4 py-2 text-xs font-medium text-cream transition-colors hover:bg-forest-soft active:scale-95"
-            >
-              {renewalCopy.cta}
-            </button>
-          }
-        />
-      )}
-
-      {/* 2 — AI USAGE FUEL GAUGE (muncul saat >70% usage, berhenti setelah top up) */}
+      {/* 1 — AI USAGE FUEL GAUGE (muncul saat >70% usage, berhenti setelah top up) */}
       {showAiGauge && !isDismissed('ai-gauge') && (
         <BannerShell
           tone="white"
@@ -235,7 +201,7 @@ export const HomeBanners = memo(function HomeBanners({
         />
       )}
 
-      {/* 3 — SINKING FUND NUDGE (tanggal >5, belum kontribusi).
+      {/* 2 — SINKING FUND NUDGE (tanggal >5, belum kontribusi).
           CTA-nya TAUTAN, bukan tombol diam: setoran dikerjakan di kartu Celengan
           Impian (/budget) karena di sanalah daftar dana & sheet setornya hidup —
           Home tidak boleh menyimpan salinan state dana yang bisa beda cerita. */}

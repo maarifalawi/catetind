@@ -24,12 +24,14 @@ import { MetaChip } from './meta-chip'
 import { cn } from '@/lib/utils'
 import {
   REFERRAL_HISTORY,
+  REFERRAL_IS_SAMPLE,
   REFERRAL_PRIVACY_PLEDGE,
+  REFERRAL_SAMPLE_NOTICE,
   REFERRAL_STEPS,
   REFERRED_FRIEND_BENEFIT,
   SHARE_TEXT,
   SHARE_TITLE,
-  SUBSCRIPTION_LABEL,
+  planLabel,
   buildReferralShareText,
   buildReferralShareUrl,
   friendStatusLabel,
@@ -87,7 +89,7 @@ export function ReferralScreen() {
   } = referralState
 
   const tokenLeftPct = tokenRemainingPct(aiTokenUsedPct)
-  const reward = getReferrerReward(userSubscription)
+  const reward = getReferrerReward()
 
   /* ── AKSI ───────────────────────────────────────────────────────────────── */
 
@@ -123,7 +125,7 @@ export function ReferralScreen() {
           url: buildReferralShareUrl(referralCode),
         })
         toast.success('Makasih sudah berbagi! 🌿', {
-          description: 'Reward cair otomatis begitu temanmu berlangganan.',
+          description: 'Reward cair otomatis begitu temanmu membeli paket.',
         })
       } catch {
         /* user membatalkan dialog share — bukan error, jangan bikin toast ganggu */
@@ -154,10 +156,21 @@ export function ReferralScreen() {
           <div className="mt-2 flex flex-wrap items-center gap-2 lg:mt-3">
             <MetaChip icon={Gift}>Kode {referralCode}</MetaChip>
             <MetaChip icon={Link2}>{totalClicks} klik link</MetaChip>
-            <MetaChip icon={Users}>{friendsConverted} teman berlangganan</MetaChip>
+            <MetaChip icon={Users}>{friendsConverted} teman sudah beli paket</MetaChip>
           </div>
         </div>
       </header>
+
+      {/* Tanda JUJUR (paket 85): angka & riwayat di halaman ini masih CONTOH —
+          jangan sampai statistik teman karangan terbaca sebagai milik user. */}
+      {REFERRAL_IS_SAMPLE && (
+        <p className="mt-4 flex flex-wrap items-center gap-2 rounded-2xl bg-hud-amber/15 px-3.5 py-2.5 text-[12px] leading-relaxed text-forest/70 ring-1 ring-hud-amber/30">
+          <span className="rounded-full bg-hud-amber/40 px-2 py-0.5 text-[10.5px] font-medium tracking-wide text-forest">
+            {REFERRAL_SAMPLE_NOTICE.badge}
+          </span>
+          {REFERRAL_SAMPLE_NOTICE.body}
+        </p>
+      )}
 
       {/* ── FULL-WIDTH 2 KOLOM ───────────────────────────────────────────────
           KIRI (5/12)  = motivator + satu aksi
@@ -166,7 +179,7 @@ export function ReferralScreen() {
       <div className="mt-5 grid grid-cols-1 gap-5 lg:mt-6 lg:grid-cols-12 lg:gap-6">
         <div className="flex flex-col gap-5 lg:col-span-5 lg:gap-6">
           <FuelGaugeCard remainingPct={tokenLeftPct} daysLeft={aiTokenDaysLeft} />
-          <RewardCard reward={reward} planLabel={SUBSCRIPTION_LABEL[userSubscription]} />
+          <RewardCard reward={reward} planLabel={planLabel(userSubscription)} />
           <ShareCard
             referralLink={referralLink}
             copied={copied}
@@ -279,7 +292,7 @@ function FuelGaugeCard({ remainingPct, daysLeft }: { remainingPct: number; daysL
       </div>
 
       <p className="mt-4 text-[11px] leading-relaxed text-forest/40">
-        Kuota ini yang dipakai Catat AI, Scan Struk, dan AI Coach. Begitu temanmu berlangganan,
+        Kuota ini yang dipakai Catat AI, Scan Struk, dan AI Coach. Begitu temanmu membeli paket,
         token kamu langsung nambah.
       </p>
     </section>
@@ -287,11 +300,11 @@ function FuelGaugeCard({ remainingPct, daysLeft }: { remainingPct: number; daysL
 }
 
 /**
- * 3B — Kartu reward DINAMIS. Kalimat reward-nya TIDAK ditulis di sini: ia
- * datang dari `getReferrerReward(userSubscription)` supaya pengguna bulanan/
- * tahunan melihat "+30 hari masa aktif" dan pengguna lifetime/founding member
- * melihat "1 bulan Token AI". Chip paket di sebelah label membuat alasan
- * kalimatnya berubah itu terlihat oleh user (transparansi, bukan teka-teki).
+ * 3B — Kartu reward. Kalimat reward-nya TIDAK ditulis di sini: ia datang dari
+ * `getReferrerReward()` supaya teksnya tidak mungkin berbeda dari aturan produk.
+ * Sejak paket 84 semua paket akses selamanya, jadi rewardnya SATU bentuk
+ * (Token AI) untuk paket apa pun. Chip paket di sebelah label tetap ditampilkan
+ * sebagai transparansi — user melihat sendiri paket yang ia miliki.
  */
 function RewardCard({ reward, planLabel }: { reward: RewardCopy; planLabel: string }) {
   return (
@@ -418,8 +431,8 @@ function KpiRow({
     [
       { id: 'clicks', label: 'Klik Link', value: clicks, icon: Link2 },
       { id: 'pending', label: 'Teman Mendaftar', value: pending, icon: Clock },
-      /* berlangganan = uang berpindah = satu-satunya kartu bernada positif (Sage) */
-      { id: 'converted', label: 'Teman Berlangganan', value: converted, icon: Check, positive: true },
+      /* sudah beli paket = uang berpindah = satu-satunya kartu bernada positif (Sage) */
+      { id: 'converted', label: 'Teman Sudah Beli', value: converted, icon: Check, positive: true },
     ]
 
   return (
@@ -487,7 +500,7 @@ const HISTORY_COLS_SM =
 /**
  * 4C — Riwayat teman: transparansi "kenapa reward saya belum nambah?".
  * Teman yang BELUM bayar dibuat buram (`opacity-55`) supaya perbedaan
- * "berlangganan" vs "belum bayar" terasa tanpa warna/ikon alarm baru.
+ * "sudah beli paket" vs "belum bayar" terasa tanpa warna/ikon alarm baru.
  */
 function HistoryCard({
   friends,
@@ -506,7 +519,7 @@ function HistoryCard({
             Riwayat Teman yang Kamu Ajak
           </h2>
           <p className="mt-1 text-[13px] leading-relaxed text-forest/55">
-            {converted} sudah berlangganan · {pending} masih menunggu pembayaran
+            {converted} sudah beli paket · {pending} masih menunggu pembayaran
           </p>
         </div>
         <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-sage text-forest">

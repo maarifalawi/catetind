@@ -2,11 +2,12 @@
 
 import { Sprout } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { SUBSCRIPTION_LOCK_COPY } from '@/lib/data/renewal'
+import { FEATURE_LOCK_COPY } from '@/lib/data/upgrade'
 
 /**
- * Catatan kecil yang menemani tombol simpan/tambah ketika masa aktif habis
- * (task 23). Ia menjawab pertanyaan yang pasti muncul — "kenapa tombolnya nggak
+ * Catatan kecil yang menemani tombol simpan/tambah ketika paketnya belum aktif
+ * (dulu: masa aktif habis — keadaan itu tidak ada lagi sejak akses selamanya).
+ * Ia menjawab pertanyaan yang pasti muncul — "kenapa tombolnya nggak
  * bisa ditekan?" — dengan sebab + jalan keluar, tanpa nada menyalahkan dan tanpa
  * sekali pun menyebut data akan hilang.
  *
@@ -15,7 +16,7 @@ import { SUBSCRIPTION_LOCK_COPY } from '@/lib/data/renewal'
  */
 export function SubscriptionLockNote({
   className,
-  text = SUBSCRIPTION_LOCK_COPY.saveHint,
+  text = FEATURE_LOCK_COPY.saveHint,
 }: {
   className?: string
   /** boleh diganti titik pemakai bila konteksnya beda (mis. FAB vs tombol simpan) */

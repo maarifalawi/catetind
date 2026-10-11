@@ -6,6 +6,7 @@ import { Info, Lock, Mail, UserRound } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   EMAIL_MAX_LENGTH,
+  LOGIN_PATH,
   NICKNAME_MAX_LENGTH,
   REGISTRATION_COPY,
   isValidEmail,
@@ -40,6 +41,7 @@ export function RegistrationSheet({
   open,
   onClose,
   onContinue,
+  loginHref = LOGIN_PATH,
 }: {
   open: boolean
   onClose: () => void
@@ -50,6 +52,13 @@ export function RegistrationSheet({
    * menampilkan error state apa adanya kalau backend menolak.
    */
   onContinue: (result: RegistrationResult) => Promise<RegistrationOutcome>
+  /**
+   * Tujuan setelah user MASUK dari tautan di sheet ini. Diberikan halaman
+   * pemanggil `(mis. /checkout?plan=…)` supaya user yang sudah punya
+   * akun tidak kehilangan pilihan paketnya begitu ia masuk. Tanpa nilai ini,
+   * jatuh ke halaman masuk polos.
+   */
+  loginHref?: string
 }) {
   const [email, setEmail] = useState('')
   const [nickname, setNickname] = useState('')
@@ -112,7 +121,7 @@ export function RegistrationSheet({
           <p className="mt-3 text-center text-[11.5px] leading-relaxed text-forest/55">
             {REGISTRATION_COPY.hasAccountLead}{' '}
             <Link
-              href="/login"
+              href={loginHref}
               onClick={onClose}
               className="font-medium text-forest underline underline-offset-2 hover:text-forest"
             >

@@ -7,7 +7,9 @@ import { useEffect, useState } from 'react'
 import { LogOut, Plus, PanelLeftClose, PanelLeftOpen, ArrowLeftRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
-import { SUBSCRIPTION_LOCK_COPY } from '@/lib/data/renewal'
+import { SESSION_COPY } from '@/lib/data/auth'
+import { FEATURE_LOCK_COPY } from '@/lib/data/upgrade'
+import { useSessionUser } from '@/hooks/use-session-user'
 import { TRANSFER_DOOR_COPY } from '@/lib/data/add-wallet'
 import { NAV_GROUPS } from '@/lib/navigation'
 import { TransactionWebModal } from '@/components/dashboard/transaction-web-modal'
@@ -59,6 +61,13 @@ export function DesktopSidebar({
   variant?: 'fixed' | 'drawer'
 } = {}) {
   const pathname = usePathname()
+  /* ── IDENTITAS DARI SESI (perbaikan audit K4) ───────────────────────────
+     Sebelum ini blok profil di kaki sidebar memajang nama & email yang
+     di-hardcode, dan sidebar ini ada di SEMUA halaman app — jadi setiap user
+     melihat identitas orang lain di layarnya sendiri. */
+  const { user } = useSessionUser()
+  const userName = user?.name || SESSION_COPY.unknownName
+  const userEmail = user?.email || SESSION_COPY.unknownEmail
   const [addOpen, setAddOpen] = useState(false)
   /**
    * Alur “Pindah Dana” (paket 55) — entri sidebar ini membuka SHEET, bukan
@@ -172,11 +181,11 @@ export function DesktopSidebar({
       <button
         type="button"
         onClick={() =>
-          inputLocked ? toast(SUBSCRIPTION_LOCK_COPY.inputHint) : setAddOpen(true)
+          inputLocked ? toast(FEATURE_LOCK_COPY.inputHint) : setAddOpen(true)
         }
         aria-disabled={inputLocked || undefined}
-        aria-label={inputLocked ? SUBSCRIPTION_LOCK_COPY.addAria : undefined}
-        title={inputLocked ? SUBSCRIPTION_LOCK_COPY.inputHint : undefined}
+        aria-label={inputLocked ? FEATURE_LOCK_COPY.addAria : undefined}
+        title={inputLocked ? FEATURE_LOCK_COPY.inputHint : undefined}
         className={cn(
           'group/item relative mt-6 flex items-center justify-center gap-2 rounded-full transition-all duration-300',
           inputLocked
@@ -344,8 +353,8 @@ export function DesktopSidebar({
           )}
         >
           <Image
-            src="/avatar-maarif.png"
-            alt="Jon Snow"
+            src="/placeholder-user.jpg"
+            alt={userName}
             fill
             sizes="40px"
             className="object-cover"
@@ -359,8 +368,8 @@ export function DesktopSidebar({
               : 'max-w-[180px] flex-1 opacity-100',
           )}
         >
-          <p className="truncate text-sm font-medium text-forest">Jon Snow</p>
-          <p className="truncate text-xs text-forest/45">jon@snow.com</p>
+          <p className="truncate text-sm font-medium text-forest">{userName}</p>
+          <p className="truncate text-xs text-forest/45">{userEmail}</p>
         </div>
       </div>
 

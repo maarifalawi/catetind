@@ -73,7 +73,20 @@ import { formatIDR } from '../wallets'
    itulah cara dua rilis berbeda cerita tentang perilaku produksi. */
 import { DEMO_MODE } from '../demo'
 
-/** false → seluruh halaman berubah jadi flow "Ajak Pasangan" (Section 8) */
+/**
+ * `false` → seluruh halaman berubah jadi flow "Ajak Pasangan" (Section 8).
+ *
+ * CATATAN KEPUTUSAN (paket 84): saklar ini TETAP memakai `DEMO_MODE`, bukan
+ * `SHOWS_SAMPLE_DATA`. Alasannya: seluruh saklar perilaku di file ini adalah
+ * SAKlar REVIEW yang kontraknya dikunci `lib/demo.test.ts` ("nilai saklar selalu
+ * mengikuti env, di kedua mode") — memindahkannya ke `SHOWS_SAMPLE_DATA` akan
+ * mematahkan kontrak itu dan membuat pasangan contoh muncul di setiap run test.
+ * Yang penting untuk tugas ini sudah terpenuhi: build PRODUKSI (tanpa
+ * `NEXT_PUBLIC_DEMO=1`) bernilai `false`, jadi user pertama melihat keadaan
+ * kosong yang jujur + CTA "Undang pasangan", bukan pasangan yang tidak pernah
+ * ia undang. Seed-nya sendiri (`INITIAL_JOINT_WALLET`) tetap hanya dipakai saat
+ * saklar ini menyala.
+ */
 export const DEMO_PARTNER_JOINED = DEMO_MODE
 /** paksa banner rekap mingguan tampil (produksi: hanya hari Minggu).
  *  Kalau rekap BULANAN juga aktif, banner mingguan disembunyikan —

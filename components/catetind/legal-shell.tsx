@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { ArrowUpRight, CircleHelp, Lock, Sprout } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { WELCOME_PATH } from '@/lib/data/welcome'
 import type { LegalDocument, LegalNote, LegalSection } from '@/lib/legal/types'
 import { LogoWordmark } from './logo-wordmark'
 
@@ -33,7 +34,12 @@ export function LegalShell({ document }: { document: LegalDocument }) {
     <div className="mx-auto w-full max-w-[720px] px-5 pt-9 pb-16 lg:max-w-[1120px] lg:px-10 lg:pt-14 lg:pb-20">
       {/* ── KEPALA DOKUMEN: identitas → judul → status versi → pembuka ─────── */}
       <header>
-        <LogoWordmark className="h-6" />
+        {/* Logo = pintu pulang. Dulu ia hanya GAMBAR: halaman legal publik tidak
+            memasang sidebar/bottom-nav (keduanya ada di `FOCUS_ROUTES`), jadi
+            pembaca dokumen tidak punya jalan keluar selain tombol Back browser. */}
+        <Link href={WELCOME_PATH} className="inline-flex w-fit" aria-label={document.homeLabel}>
+          <LogoWordmark className="h-6" />
+        </Link>
         <p className="mt-5 text-[11px] font-medium tracking-[0.16em] text-forest/55 uppercase">
           {document.eyebrow}
         </p>

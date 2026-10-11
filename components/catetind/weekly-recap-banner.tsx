@@ -6,6 +6,8 @@ import { WEEKLY_RECAP_COPY } from '@/lib/weekly-recap'
 import { useWeeklyRecap } from '@/lib/use-weekly-recap'
 import { DEMO_MODE } from '@/lib/demo'
 import { usePrivacy } from './privacy-provider'
+import { LockedFeatureNote } from './locked-feature-note'
+import { useSubscriptionGate } from './subscription-gate-provider'
 
 /* paksa tampil untuk kebutuhan review desain — perilaku produksi (default):
    banner HANYA muncul Jumat-Sabtu-Minggu, PRD Domain 3A Habit Loop 2.
@@ -27,11 +29,21 @@ export const WeeklyRecapBanner = memo(function WeeklyRecapBanner({
   /* angka minggu ini = TURUNAN dari ledger nyata (satu sumber dengan modal
      recap: `useWeeklyRecap()`), bukan lagi konstanta demo `WEEK_DATA`. */
   const recap = useWeeklyRecap()
+  /* Paket menentukan apakah rekap AI terbuka (paket 84/85). Hook dipanggil
+     SEBELUM return apa pun (aturan hook React). */
+  const { planKnown, canUse } = useSubscriptionGate()
   useEffect(() => setReady(true), [])
   if (!ready) return null
 
   const day = new Date().getDay() // 0=Min ... 5=Jum 6=Sab
   if (!DEMO_FORCE_SHOW && day !== 0 && day !== 5 && day !== 6) return null
+
+  /* Paket tanpa rekap AI (mis. Catet Aja): JANGAN ajak membuka rekap AI —
+     tampilkan ajakan upgrade apa adanya (sumber nominal yang sama dengan titik
+     terkunci lain). Kalau paket belum diketahui, perilaku lama dipertahankan. */
+  if (planKnown && !canUse('ai-report')) {
+    return <LockedFeatureNote capability="ai-report" />
+  }
 
   return (
     <button

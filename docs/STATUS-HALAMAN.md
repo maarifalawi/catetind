@@ -24,8 +24,8 @@
 **Kesimpulan satu paragraf:** **hampir seluruh halaman sudah dibangun** (31 dari 32
 route inventaris ada; 1 halaman waitlist sengaja di luar scope). Yang membuat
 sebuah halaman belum "100% sesuai PRD" **hampir selalu bukan halamannya sendiri**,
-melainkan **lapisan backend yang masih mock**: pembayaran Midtrans, harga
-real-time, mesin AI (DeepSeek), generator gambar share, dan reward referral
+melainkan **lapisan backend yang masih mock**: pembayaran Midtrans,
+mesin AI (DeepSeek), generator gambar share, dan reward referral
 otomatis. Repo ini memang **repo DESIGN/DEMO** (data mock di `lib/data/*`,
 komentar arah produksi di titik integrasi).
 
@@ -53,7 +53,7 @@ komentar arah produksi di titik integrasi).
 |---|---|---|---|---|---|
 | 1 | **Pre-Launch Waitlist** | `/` (pra-launch) | — | ❌ | **DILUAR SCOPE** (`CONTEXT-WAJIB.md:326`). Fitur antrian/referral waitlist tidak ada; `/` sekarang = landing (#2). |
 | 2 | **Full Landing Page** | `/` | `/` (`app/page.tsx`) | ✅ | Hero, Pain Calculator, Wealth Gap, Social Proof + Live Feed, Pricing Counter, FAQ, Sticky CTA — semua ada. Live Feed masih **seeded**. |
-| 3 | **Checkout Page** | `/checkout` | `/checkout` | ✅ | UI lengkap; **harga real-time** (`/api/price`) masih snapshot statis (dikatakan jujur lewat `isDynamic:false`). Pembayaran **nyata sejak paket 83**: Midtrans **Core API** — QRIS/VA/e-wallet/Mandiri Bill tampil di `/checkout/bayar`, bukan redirect ke halaman Snap. `snap-payment-sheet.tsx` tinggal komponen demo yang tidak dibuka dari checkout. |
+| 3 | **Checkout Page** | `/checkout` | `/checkout` | ✅ | UI lengkap; **harga tunggal per paket, sekali bayar untuk akses selamanya** (109k/129k/299k, dari `lib/data/pricing.ts`). Pembayaran **nyata sejak paket 83**: Midtrans **Core API** — QRIS/VA/e-wallet/Mandiri Bill tampil di `/checkout/bayar`. **Paket 84:** pemilih periode dihapus, `GET /api/price` + `snap-payment-sheet.tsx` + `annual-plan-modal.tsx` DIHAPUS, dan nominal upgrade = selisih (`priceFor()`). |
 | 4 | **Privacy Policy** | `/privacy` | `/privacy` | ✅ | Dokumen = data (`lib/legal/privacy.ts`) + `legal-shell`. |
 | 5 | **Terms of Service** | `/terms` | `/terms` | ✅ | `lib/legal/terms.ts`. |
 | 6 | **Cara Install PWA** | `/install` | `/install` | ✅ | `install-guide-screen.tsx` (+ QR & ilustrasi). |
@@ -68,7 +68,7 @@ komentar arah produksi di titik integrasi).
 | 15 | **Settings (Menu Master)** | `/app/settings` | `/settings` 🧩 | ✅ | `settings-shell.tsx` (master–detail, sidebar tetap). |
 | 16 | **Share Preview (Public)** | `/share/[id]` | `/share/[id]` | ⚠️ | Pratinjau kartu ada; **generator gambar** (untuk OG/IG Story) belum (`share/[id]/page.tsx:50`). |
 | 17 | **Profil & Akun** | `/app/settings/profile` | `/settings` 🧩 | ✅ | Digabung sebagai section default `/settings` (`settings-panel-account.tsx`). |
-| 18 | **Langganan & Billing** | `/app/settings/billing` | `/settings/billing` | ⚠️ | `billing-panel.tsx` + Fuel Gauge; **Midtrans** mock (`TODO:307`). |
+| 18 | **Langganan & Billing** | `/app/settings/billing` | `/settings/billing` | ⚠️ | `billing-panel.tsx` + Fuel Gauge; kartu paket & jalur upgrade nyata (paket 84). Kuota AI kini per paket (`planQuota()`): tier 1 tanpa AI, tier 2 berkuota, tier 3 tanpa batas. Top up token AI kini **nyata** (Midtrans Core API + `ai_addons`, paket 85) dan band Top-Up hanya tampil untuk paket berkuota. |
 | 19 | **Tampilan & Tema** | `/app/settings/appearance` | `/settings/appearance` | ✅ | `settings-panel-preferences.tsx`. |
 | 20 | **Kustomisasi Kategori** | `/app/settings/categories` | `/settings/categories` | ✅ | idem. |
 | 21 | **AI Preferences** | `/app/settings/ai` | `/settings/ai` | ✅ | idem (+ `lib/ai-prefs.ts`). |
@@ -81,7 +81,7 @@ komentar arah produksi di titik integrasi).
 | 28 | **Joint Wallet** | `/app/joint` | `/joint` 🧩 | ✅ | `joint-screen.tsx` (timbangan, split, privat, invite). |
 | 29 | **Wealth & Debt Tracking** | `/app/wealth` | `/wealth` 🧩 | ⚠️ | Tab 1 Investasi ✅ & Tab 3 Hutang ✅; **Tab 2 Properti = teaser** (PRD A12, lihat §10). |
 | 30 | **Panduan / Help Center** | `/app/help` | `/help` 🧩 | ✅ | `help-center-screen.tsx` + Screenshot Policy. |
-| 31 | **Referral Dashboard** | `/app/referral` | `/referral` 🧩 | ⚠️ | UI + `POST /api/referral/validate` ada; **grant reward otomatis** setelah bayar belum. |
+| 31 | **Referral Dashboard** | `/app/referral` | `/referral` 🧩 | ⚠️ | UI + `POST /api/referral/validate` ada; **grant reward otomatis** setelah bayar belum. Sejak paket 84 rewardnya SATU bentuk (Token AI). Paket 85: reward **diberikan otomatis dari webhook** (idempoten per `order_id`); data kode/riwayat masih contoh dan kini ditandai "Contoh". |
 | 32 | **404 / Not Found** | catch-all | `app/not-found.tsx` | ✅ | `not-found-screen.tsx`, status HTTP 404. |
 
 **Rekap Tabel A:** ✅ 26 · ⚠️ 5 (#3, #16, #18, #29, #31) · ❌ 1 (#1).
@@ -121,8 +121,8 @@ Route ini **nyata ada di repo** tetapi **tidak** termasuk 32 kanon inventaris
 | i | Monthly Review & Target Setup | `monthly-review-modal.tsx` | ✅ | Auto-popup tgl 1–3 + set target. |
 | j | Plant Detail View | `plant-detail-modal.tsx` | ✅ | HP, streak, stage. |
 | k | Milestone Celebration | `milestone-celebration.tsx` + `confetti-overlay.tsx` | ✅ | Streak 7/14/21/30, stage up. |
-| l | AI Token Purchase | `top-up-modal.tsx` | ⚠️ | Paket ada; **Midtrans** mock. |
-| m | Renewal Modal | `renewal-modal.tsx` | ⚠️ | H-1 reminder; **Midtrans** mock. |
+| l | AI Token Purchase | `top-up-modal.tsx` | ⚠️ | Paket ada; pembayaran **nyata** lewat Midtrans Core API (paket 85) + instruksi bayar di modal. |
+| m | Renewal Modal | — | ❌ | **DIHAPUS** di paket 84: tidak ada perpanjangan untuk akses selamanya. |
 | n | Registration / Identifikasi | `registration-sheet.tsx` | ✅ | Email + nama panggilan (zero password). |
 | o | Tambah Wallet / Akun | `add-wallet-sheet.tsx` | ✅ | |
 | p | Tambah Tagihan | `add-bill-sheet.tsx` | ✅ | Emoji, nominal, due date. |
@@ -144,10 +144,10 @@ Route ini **nyata ada di repo** tetapi **tidak** termasuk 32 kanon inventaris
 |---|---|---|---|---|
 | I | Empty State — Transaksi Hari Ini | Home | ✅ | `recent-transactions-card.tsx`. |
 | II | Empty State — Per Modul | Budget/Bills/Wealth/Joint | ✅ | Empty state + CTA di tiap screen. |
-| III | Grace Period Read-Only | Semua halaman app | ✅ | `subscription-gate-provider.tsx` + `subscription-banner.tsx`. |
-| IV | Post-Grace Period | Semua halaman app | ✅ | idem (`resolvePhase` di `lib/data/renewal.ts`). |
+| III | Kunci belum-ada-paket (read-only) | Semua halaman app | ✅ | `subscription-gate-provider.tsx` + `subscription-banner.tsx`. Paket 84: pemicunya bukan grace period, tapi user yang belum punya paket. |
+| IV | ~~Post-Grace Period~~ | — | ➖ | **Dihapus di paket 84**: tidak ada masa aktif, jadi fase ini mustahil. `lib/data/renewal.ts` diganti `lib/data/upgrade.ts`. |
 | V | Tanaman Layu (HP ≤20) | Home | ✅ | `plant-illustration.tsx` (`wilted`). |
-| VI | Tanaman Sleep Mode | Home (grace) | ✅ | `plant-illustration.tsx` (`sleeping`) + `PLANT_SLEEP_COPY`. |
+| VI | Tanaman Menunggu | Home (belum ada paket) | ✅ | `plant-illustration.tsx` (`sleeping`) + `PLANT_SLEEP_COPY` (kini di `lib/data/upgrade.ts`). |
 | VII | Optimistic Transaction Loading | List transaksi | ✅ | Offline/optimistic (paket 42). |
 | VIII | Failed Transaction (FAILED_PERMANENT) | List transaksi | ✅ | idem + retry manual. |
 | IX | Offline App Shell | Semua halaman | ✅ | `offline-banner.tsx` + `public/sw.js`. |
@@ -173,7 +173,7 @@ Route ini **nyata ada di repo** tetapi **tidak** termasuk 32 kanon inventaris
 | 5 | Share Report (Privacy-Safe) | ⚠️ | Kartu + pratinjau ada; **generate image** (slide 1/2/4) → IG Story belum. |
 | 6 | Two-Sided Referral | ⚠️ | `/referral` + `POST /api/referral/validate` ada; **grant reward otomatis** setelah bayar belum (butuh webhook). |
 | 7 | Waitlist Referral Loop | ❌ | Bergantung halaman waitlist (#1) yang di-skip. |
-| 8 | Renewal Manual | ⚠️ | Banner H-7/H-3 + modal H-1 + One-Tap Renew + Grace ada; **pembayaran** mock. |
+| 8 | Upgrade Paket (dulu Renewal Manual) | ✅ | Paket 84: posisi perpanjang diganti **upgrade**. `UpgradeModal` + `SubscriptionBanner` menampilkan SELISIH dari `priceFor()`, CTA ke `/checkout/bayar?plan=…`. Pembayaran nyata via Core API (paket 83). |
 
 **Rekap Tabel E:** ✅ 4 · ⚠️ 3 · ❌ 1.
 
@@ -196,9 +196,9 @@ Route ini **nyata ada di repo** tetapi **tidak** termasuk 32 kanon inventaris
 
 | Endpoint (arah produksi) | Untuk | Sumber |
 |---|---|---|
-| `GET /api/price` | Harga Founding Member real-time (no-cache) | PRD 4467; `checkout/page.tsx:18`. |
+| ~~`GET /api/price`~~ | **DIHAPUS di paket 84** | harga tunggal per paket; tidak ada harga bergerak |
 | `POST /api/payment/charge` + `GET /api/payment/status` + webhook Midtrans | Checkout pembelian pertama (3 tier × bulanan/tahunan) | PRD 4293. Sejak paket 83 tagihan dibuat di route ini (katalog metode: `lib/payments/methods.ts`); status dibaca route server — server key tidak pernah ke browser — dan pemenuhan tetap lewat webhook + RPC. Top-up/upgrade/renewal masih `TODO` (`top-up-modal`, `annual-plan-modal`, `renewal-modal`). |
-| `POST /api/subscription/cancel` | Berhenti berlangganan | `billing-panel.tsx:307`. |
+| ~~`POST /api/subscription/cancel`~~ | **DIHAPUS di paket 84** | tidak ada langganan berulang untuk dibatalkan |
 | `GET /api/joint/invite/:code` | Status invite server-side (auto-join setelah login) | PRD AC1; `join/[code]/page.tsx`. |
 | `/api/export` (email) | Kirim JSON via email | Jalur email masih berlabel **Demo**. |
 | Endpoint data (Supabase/RLS) | Wealth/Celengan/Tagihan pindah dari konstanta ke tabel | `CONTEXT-WAJIB.md:316`. |
@@ -228,27 +228,30 @@ Diurutkan dari yang paling "belum" ke yang paling "sebagian".
   (beachhead first-jobber 22–27). Teaser "Segera" di `/wealth` **memang sesuai PRD**
   (`PROPERTY_V1_COPY` di `lib/data/wealth.ts:1309+`). **Bukan utang.**
 
-### 9.3 ✅ Checkout nyata (Midtrans Core API) · ⚠️ top-up/upgrade/renewal/cancel
+### 9.3 ✅ Checkout + upgrade + top-up nyata (Midtrans Core API)
 - **Sudah jalan (paket 83):** checkout pembelian pertama ditagih lewat **Midtrans Core API**;
   QRIS, Virtual Account (BCA/BRI/BNI/Permata), GoPay, ShopeePay, dan Mandiri Bill tampil
   **di dalam app** (`/checkout/bayar`) — user tidak pindah ke domain Midtrans.
   Webhook bertanda tangan SHA512 + RPC `catetind_fulfill_purchase` tetap SATU-SATUNYA jalur
-  yang mengaktifkan langganan; polling status di UI hanya untuk tampilan.
+  yang mengaktifkan akses; polling status di UI hanya untuk tampilan.
 - **Bukti:** `app/api/payment/{charge,status}/route.ts`, `lib/payments/{methods,midtrans,types}.ts`
   + `components/catetind/payment-{start-screen,instruction-card}.tsx` (70 test baru: 43 di
   `lib/payments/*`, 27 di dua route baru) dan uji
   sandbox nyata: charge QRIS → tekan bayar lagi = order yang sama → webhook sah →
-  `/api/subscription` menjawab `active:true` (`tier:waras`, `expires_at` +365 hari).
-- **Masih hilang:** top-up token, upgrade tahunan, renewal, dan cancel langganan
-  (`TODO` di `top-up-modal.tsx`, `annual-plan-modal.tsx`, `renewal-modal.tsx`,
-  `billing-panel.tsx:307`).
+  `/api/subscription` menjawab `active:true` + `planId`.
+- **Paket 84:** upgrade SUDAH nyata (bayar selisih lewat `priceFor()`, `purpose: upgrade`),
+  dan jalur perpanjangan/cancel DIHAPUS karena tidak ada langganan berulang.
+- **Paket 85:** top-up token AI SUDAH nyata juga — `purpose: 'topup'`, harga add-on dibaca
+  server dari `lib/ai-quota.ts` (hanya untuk paket berkuota), token dicatat di `ai_addons`
+  lewat webhook (idempoten per `order_id`), dan modal menampilkan instruksi bayar yang SAMA
+  dengan checkout paket. TIDAK ada lagi TODO pembayaran di `top-up-modal.tsx`.
 - **Catatan:** alur lama Snap **sudah dihapus** (`/api/payment/create`,
-  `createSnapTransaction`, `midtransSnapEndpoint`) supaya tidak ada dua jalur setengah jalan.
+  `createSnapTransaction`, `midtransSnapEndpoint`) supaya tidak ada dua jalur setengah jalan. Paket 84 juga menghapus SISA-nya: `snap-payment-sheet.tsx`, `annual-plan-modal.tsx`, `renewal-modal.tsx`, `hooks/use-renewal-reminder.ts`, dan `GET /api/price`.
 
-### 9.4 ⚠️ Harga real-time (`GET /api/price`)
-- **Apa yang hilang:** endpoint + `export const dynamic = 'force-dynamic'` di
-  `/checkout`. Harga Founding Member masih snapshot statis.
-- **Bukti:** `checkout/page.tsx:18-27` (komentar niat), PRD 4467.
+### 9.4 ✅ Ditutup dengan cara yang lebih jujur (paket 84)
+- **Keputusan produk:** harga TIDAK lagi bergerak. Tiga tier, sekali bayar untuk akses selamanya,
+  dan semua angkanya hidup di `lib/data/pricing.ts`.
+- **Konsekuensi:** `GET /api/price`, tabel `pricing_state`, dan tipe `FoundingMember`/`PriceState` DIHAPUS — endpoint yang melayani harga bergerak untuk produk yang tidak ada lagi adalah pintu yang mengaku jalan.
 
 ### 9.5 ⚠️ Mesin AI nyata (DeepSeek) — chat, OCR, kategorisasi, apresiasi
 - **Apa yang ada:** **meter** pemakaian nyata (`ai_usage` + `lib/ai-usage-store.ts`),
@@ -262,21 +265,26 @@ Diurutkan dari yang paling "belum" ke yang paling "sebagian".
   mengekspor **hanya slide 1/2/4** (PRD 6578–6611). `share/[id]/page.tsx:50` menjelaskan
   gambar thumbnail belum ada.
 
-### 9.7 ⚠️ Reward referral otomatis — Key Flow #6
-- **Apa yang ada:** `/referral`, validasi kode via RPC (`/api/referral/validate`),
-  copy & statistik.
-- **Apa yang hilang:** pemberian reward otomatis setelah penerima **membayar**
-  (butuh webhook pembayaran).
+### 9.7 🛠️ Reward referral otomatis — Key Flow #6
+- **Apa yang ada:** `/referral`, validasi kode via RPC (`/api/referral/validate`), copy.
+- **Paket 85:** reward **diberikan otomatis oleh WEBHOOK** pembayaran ke PENGUNDANG
+  (Token AI = kuota dasar bulanan; idempoten per `order_id` lewat `referral_rewards.order_id`).
+  `POST /api/referral/reward` menolak panggilan klien (409, webhook-only).
+- **Apa yang hilang:** kode & riwayat di halaman `/referral` masih MOCK — kini ditandai
+  "Contoh" (`REFERRAL_IS_SAMPLE`) supaya tidak terbaca sebagai data user; pembacaan nyata
+  dari tabel `referrals` belum.
 
 ### 9.8 ⚠️ UI modul baca dari Supabase
 - **Apa yang ada:** skema + RLS + RPC di `supabase/migrations/*`.
 - **Apa yang hilang:** `/wealth`, celengan, `/bills` masih membaca konstanta
   `lib/data/*` (belum pindah ke tabel). `CONTEXT-WAJIB.md:316`.
 
-### 9.9 ⚠️ Live Purchase Feed (landing) masih seeded
-- **Apa yang ada:** komponen + animasi (`social-proof.tsx`, `use-fomo-counter.ts`).
-- **Apa yang hilang:** query data pembelian **real** (PRD A10). Struktur sengaja
-  dibentuk agar tinggal ganti sumber.
+### 9.9 ✅ Live Purchase Feed (landing) = data NYATA (paket 85)
+- **Apa yang ada:** `social-proof.tsx` membaca `GET /api/pricing/recent-purchases`
+  (nama, kota, nominal apa adanya dari tabel `purchases`).
+- **Kejujuran kosong:** di produksi daftar kosong ditulis apa adanya
+  ("Belum ada pembelian terbaru"); seed contoh hanya tampil di build demo
+  (`SHOWS_SAMPLE_DATA`). Saklar lama `use-fomo-counter.ts` sudah dihapus.
 
 ---
 
@@ -289,7 +297,7 @@ Diurutkan dari yang paling "belum" ke yang paling "sebagian".
 | **Tab Properti** `/wealth` = teaser | Tidak dibangun | PRD A12 (di luar V1). |
 | **Bank-sync / open banking** | Tidak ada | Anti-dark-pattern; manual-first. |
 | **Supabase/RLS/Midtrans nyata** | Mock + komentar arah produksi | Repo DEMO. |
-| **Angka harga langganan** (repo vs PRD) | `lib/data/pricing.ts` | **Keputusan bisnis pemilik produk**, bukan kerja agent (`ROADMAP §3`). |
+| **Angka harga paket** | `lib/data/pricing.ts` | **Keputusan bisnis pemilik produk** (paket 84: 109k/129k/299k sekali bayar, akses selamanya). Harga landing DITURUNKAN dari file ini. |
 | Route `/more`, `/family`, `/overview` | Sudah dihapus | Bukan halaman (Vaul sheet / money-context); tanpa tautan masuk (`ROADMAP §3`). |
 
 ---
@@ -298,8 +306,9 @@ Diurutkan dari yang paling "belum" ke yang paling "sebagian".
 
 Diurutkan berdasar dampak ÷ usaha, dan **tanpa** menyentuh keputusan bisnis:
 
-1. **`GET /api/price` + nyalakan harga real-time di `/checkout`** — kecil, jelas,
-   menutup #9.4 (halaman #3).
+1. **Data referral nyata di `/referral`** — halaman masih menampilkan contoh (sudah
+   ditandai "Contoh"); tinggal membaca `referral_codes` + `referrals` dari sesi untuk
+   menutup §9.7 sepenuhnya.
 2. **Generator gambar Share (`/share/[id]` OG image / IG Story)** — menutup #9.6
    dan Key Flow #5.
 3. **Halaman Waitlist + referral loop** — menutup #1 & Key Flow #7 (butuh
@@ -349,9 +358,9 @@ pnpm theme:audit ; pnpm exec tsc --noEmit ; pnpm build
 | Celah | Status | Bukti |
 |---|---|---|
 | **§9.5 AI (chat/OCR/voice)** | ✅ Tutup | Mesin AI nyata (Gemini, server-only `lib/ai/provider.ts`): `/api/ai/text`, `/api/ai/ocr`, `/api/parse-voice`, `/api/ai/categorize`. Capture memakai route asli; gagal provider → jatuh **jujur** ke aturan lokal (label "belum pakai model"). |
-| **§9.4 Harga real-time** | ⚠️ Sebagian (jujur statis) | `GET /api/price` ada; `/checkout` `force-dynamic` + `no-store` + fallback SSR. `pricing_state` belum ada (butuh Midtrans) → `isDynamic:false` dikatakan apa adanya. |
+| **§9.4 Harga real-time** | ➖ Ditutup (paket 84) | Harga tidak lagi bergerak: 3 tier akses selamanya di `lib/data/pricing.ts`; `GET /api/price` + `pricing_state` dihapus supaya tidak ada endpoint harga yang menganggur. |
 | **§9.6 Generator gambar share** | ✅ Tutup | `next/og`: `app/share/[id]/opengraph-image.tsx` + `twitter-image.tsx` (1200×630) + `GET /api/share/[id]/image` (Story 1080×1920). Tombol **"Share Report"** di panel rekap (Web Share files → fallback unduh). Privacy-safe (nol rupiah). |
-| **§9.3/9.7/9.9 Pembayaran/reward/live-feed** | ✅ Checkout nyata (Core API) · 🛠️ sisanya rail | `lib/payments/*` + `/api/payment/charge` + `/api/payment/status` + `/api/payment/webhook` (verifikasi SHA512, 403/503 fail-closed; pemenuhan lewat RPC). Top-up/upgrade/renewal/cancel masih rail. `/api/referral/reward` (503), `/api/pricing/recent-purchases` (`{items:[],firstHere:true}`). |
+| **§9.3/9.7/9.9 Pembayaran/reward/live-feed** | ✅ Checkout + **top-up** + reward NYATA | `lib/payments/*` + `/api/payment/charge` + `/api/payment/status` + `/api/payment/webhook` (verifikasi SHA512, 403/503 fail-closed; pemenuhan lewat RPC). Top-up token masih rail; **upgrade sudah nyata** (bayar selisih); renewal/cancel dihapus. `/api/referral/reward` (503), `/api/pricing/recent-purchases` (`{items:[],firstHere:true}`). |
 | **Tab Properti `/wealth`** (modal `u`) | ✅ Dibangun | `wealth-properti.tsx` + `add-physical-asset-sheet.tsx` + store `lib/money/physical-store.ts` + tabel `physical_assets`. Nilai aset fisik **ikut Net Worth**. |
 | **§9.8 Data real (seed→Supabase)** | ⚠️ Sebagian | Gerbang `SHOWS_SAMPLE_DATA` (`lib/demo.ts`); **dompet** & **aset fisik** sudah bergerbang (produksi = kosong, bukan seed). Kekayaan/tagihan/celengan/joint **sudah disambung penuh** (paket 64): keempat store bergerbang `SHOWS_SAMPLE_DATA` (produksi = kosong) + baca/tulis Supabase lewat mapper `lib/supabase/domain-mappers.ts` + `*-remote.ts`. |
 | **§9.2 Sesi demo** | ✅ Tutup | 405 sejak paket 45; copy AI-status diperbarui + banner widget hanya saat `modelConnected === false`. |

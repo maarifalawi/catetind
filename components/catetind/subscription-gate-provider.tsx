@@ -12,46 +12,47 @@ import {
 import { usePathname } from 'next/navigation'
 import { PUBLIC_ROUTES, isPublicRoute } from '@/lib/public-routes'
 import {
-  RENEWAL_STATE,
-  readRenewalMarker,
-  resolveSubscription,
-  writeRenewalMarker,
-  type SubscriptionPhase,
-  type SubscriptionSnapshot,
-} from '@/lib/data/renewal'
+  capabilitiesOf,
+  canUse as canUseCapability,
+  planById,
+  type Capability,
+  type PlanDefinition,
+  type PlanId,
+} from '@/lib/data/pricing'
 
-/* ── Gerbang Langganan Global — Grace Period & Post-Grace (inventaris state III/IV · PRD 4534–4547) ──
-   Setelah masa aktif habis, app TIDAK boleh dikunci: user masih harus bisa
-   membaca saldo & seluruh histori (PRD 4538). Yang berhenti hanya ALIRAN MASUK
-   data baru. Satu provider di root memegang fakta itu supaya FAB, tombol Tambah
-   sidebar, semua tombol simpan sheet, dan tanaman Home membaca status yang SAMA
-   — mustahil ada dua layar yang berbeda pendapat soal "boleh catat atau tidak".
+/* ── GERBANG PAKET GLOBAL (paket 84 — pengganti gerbang masa aktif) ──────────
+   Satu provider di root (`app/layout.tsx`) memegang SATU fakta: paket apa yang
+   dimiliki user, dan kemampuan apa yang terbuka karenanya. Semua titik yang
+   menampilkan fitur berbayar — widget AI Coach, tombol scan struk, rekap AI,
+   Joint Wallet, kartu Billing — membaca dari sini, jadi mustahil ada dua layar
+   yang berbeda pendapat soal "fitur ini terbuka atau tidak".
 
-   Kenapa Context, bukan props: titik yang harus tahu status ini tersebar di
-   bottom nav, sidebar, engine input, dan belasan sheet. Mengoper satu boolean
-   dari setiap screen berarti setiap layar baru wajib ingat mengoper ulang —
-   kegagalan yang tidak terlihat sampai produksi. Membacanya dari context
-   membuat titik baru otomatis ikut terjaga.
+   Kenapa Context, bukan props: titiknya tersebar di bottom nav, sidebar, engine
+   input, dan belasan sheet. Mengoper satu nilai dari setiap layar berarti setiap
+   layar baru wajib ingat mengoper ulang — kegagalan yang tidak terlihat sampai
+   produksi.
 
-   Hidrasi penanda dilakukan SETELAH mount (effect), jadi HTML server & client
-   identik dulu — pola yang sama dengan `MoneyContextProvider`/`PrivacyProvider`. */
+   SUMBER DATANYA `/api/subscription`. Nilainya dibaca SETELAH mount (efek),
+   sehingga HTML server & client identik lebih dulu (pola yang sama dengan
+   `MoneyContextProvider`/`PrivacyProvider`) — tidak ada hydration mismatch.
 
-/**
- * Route PUBLIK / pre-app yang TIDAK boleh kena gerbang — di sini user mungkin
- * belum bisa login, jadi berhenti di gerbang sama saja memenjarakannya.
- *
- *   • `/login`, `/login/verify` — pintu masuk akun
- *   • `/checkout`               — WAJIB tetap bisa membayar (termasuk memperpanjang!)
- *   • `/privacy`, `/terms`      — dokumen legal, dibaca orang yang belum punya akun
- *   • `/join/*`                 — undangan dompet bersama (penerimanya sering belum punya akun)
- *   • `/share/*`                — kartu pencapaian dari tautan publik
- *   • `/install`                — panduan install PWA
- *   • `/app/onboarding`         — flow setup pertama setelah membayar
- *
- * Daftarnya sekarang tinggal di `lib/public-routes.ts` karena dipakai DUA
- * gerbang (langganan + kunci PIN perangkat). Nama lama tetap di-export supaya
- * pemanggil & komentar yang sudah ada tidak perlu berubah.
- */
+   BENTUK JAWABAN YANG JUJUR (dan kenapa begitu):
+     · `configured:false` (build demo/test, tanpa Supabase) → kita memang TIDAK
+       TAHU paket user. Karena itu tidak ada yang dikunci: mengunci berdasarkan
+       ketidaktahuan akan memenjarakan pemakai build demo & pemilik paket saat
+       backend sedang mati.
+     · `configured:true` + `planId:null` → user memang belum pernah beli →
+       fitur berbayar terkunci dan pencatatan ditahan sampai ada paket.
+     · gagal baca (401/jaringan) → diperlakukan "tidak tahu", bukan "belum
+       beli" — jangan menuduh user belum bayar hanya karena satu request gagal.
+
+   CATATAN TENTANG `inputLocked`: dulu ini berarti "masa aktif habis" (grace
+   period 7 hari). Sejak paket 84 TIDAK ADA masa aktif, jadi pemicunya tinggal
+   satu: belum ada paket sama sekali. Nama variabelnya dipertahankan supaya
+   puluhan titik input yang sudah memakainya tidak perlu berubah — tapi artinya
+   sudah berbeda, dan itu ditulis di komentar ini supaya tidak disalahpahami
+   sebagai sisa sistem lama. */
+
 export const SUBSCRIPTION_PUBLIC_ROUTES = PUBLIC_ROUTES
 
 /** true kalau pathname berada di (atau di bawah) halaman publik/pre-app */
@@ -59,58 +60,105 @@ export function isSubscriptionPublicRoute(pathname: string): boolean {
   return isPublicRoute(pathname)
 }
 
+export interface CallerPlanState {
+  planId: PlanId | null
+  /** backend Supabase terkonfigurasi → jawabannya bisa dipercaya */
+  configured: boolean
+  /** jawaban `/api/subscription` sudah datang */
+  ready: boolean
+  /** kapan pembelian dicatat (ISO) */
+  purchasedAt: string | null
+}
+
+const UNKNOWN_PLAN: CallerPlanState = {
+  planId: null,
+  configured: false,
+  ready: false,
+  purchasedAt: null,
+}
+
 type SubscriptionGateValue = {
-  /** fase langganan efektif (memperhitungkan penanda "sudah diperpanjang") */
-  snapshot: SubscriptionSnapshot
-  phase: SubscriptionPhase
+  /** paket aktif sebagai definisi lengkap (nama, harga, fitur) */
+  plan: PlanDefinition | null
+  planId: PlanId | null
+  purchasedAt: string | null
+  capabilities: Capability[]
+  canUse: (capability: Capability) => boolean
   /**
-   * true = tombol yang MENAMBAH data keuangan harus non-aktif. Pembacaan data,
-   * navigasi, dokumen legal, dan pembayaran TIDAK pernah ikut terkunci.
+   * true = paket user BENAR-BENAR diketahui (backend terkonfigurasi & jawaban
+   * `/api/subscription` sudah datang). Dipakai titik fitur berbayar untuk
+   * memutuskan "terkunci atau tidak": kalau paketnya belum diketahui, JANGAN
+   * dikunci — mengunci berdasarkan ketidaktahuan adalah menuduh.
+   */
+  planKnown: boolean
+  /**
+   * true = tombol yang MENAMBAH data keuangan harus non-aktif.
+   * Sejak paket 84 artinya "user belum punya paket" — bukan "masa aktif habis".
+   * Pembacaan data, navigasi, dokumen legal, dan pembayaran TIDAK pernah ikut
+   * terkunci.
    */
   inputLocked: boolean
   /** true = gerbang sengaja dimatikan karena user ada di halaman publik/pre-app */
   onPublicRoute: boolean
-  /**
-   * Tandai siklus ini sudah diperpanjang — dipanggil banner setelah RenewalModal
-   * sukses. Menulis penanda (agar bertahan lintas reload) SEKALIGUS membebaskan
-   * UI seketika, tanpa menunggu refresh.
-   */
-  markRenewed: () => void
+  /** baca ulang paket dari server (dipakai setelah pembayaran selesai) */
+  refresh: () => void
 }
 
 const SubscriptionGateContext = createContext<SubscriptionGateValue | null>(null)
 
+interface SubscriptionResponse {
+  configured?: unknown
+  planId?: unknown
+  purchasedAt?: unknown
+}
+
 export function SubscriptionGateProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname()
-  /** penanda "sudah diperpanjang" untuk siklus aktif — dibaca setelah mount */
-  const [renewed, setRenewed] = useState(false)
+  const [state, setState] = useState<CallerPlanState>(UNKNOWN_PLAN)
 
-  /* hidrasi penanda: render pertama SELALU dari hitungan alami (server = client),
-     baru setelah mount penanda localStorage dibaca. Tidak ada hydration mismatch
-     karena nilai awal kedua sisi sama. */
-  useEffect(() => {
-    setRenewed(readRenewalMarker(RENEWAL_STATE.expiryLabel).renewed)
+  const load = useCallback(async () => {
+    try {
+      const res = await fetch('/api/subscription', { cache: 'no-store' })
+      if (!res.ok) {
+        /* 401/jaringan = TIDAK TAHU, bukan "belum beli" — lihat catatan di atas */
+        setState({ ...UNKNOWN_PLAN, ready: true })
+        return
+      }
+      const body = (await res.json()) as SubscriptionResponse
+      setState({
+        configured: body.configured === true,
+        planId: typeof body.planId === 'string' ? (body.planId as PlanId) : null,
+        purchasedAt: typeof body.purchasedAt === 'string' ? body.purchasedAt : null,
+        ready: true,
+      })
+    } catch {
+      setState({ ...UNKNOWN_PLAN, ready: true })
+    }
   }, [])
 
-  const snapshot = useMemo(
-    /* `shown: true` tidak dipakai oleh `resolveSubscription` — yang dibaca hanya
-       `renewed`. Dikirim eksplisit supaya berkas ini tidak perlu menyentuh
-       localStorage saat render (penanda `shown` milik hook pengingat Home). */
-    () => resolveSubscription(RENEWAL_STATE, { shown: true, renewed }),
-    [renewed],
-  )
+  useEffect(() => {
+    void load()
+  }, [load])
 
   const onPublicRoute = isSubscriptionPublicRoute(pathname)
-  const inputLocked = snapshot.phase !== 'active' && !onPublicRoute
+  const plan = useMemo(() => planById(state.planId), [state.planId])
+  const capabilities = useMemo(() => capabilitiesOf(state.planId), [state.planId])
 
-  const markRenewed = useCallback(() => {
-    writeRenewalMarker(RENEWAL_STATE.expiryLabel, { shown: true, renewed: true })
-    setRenewed(true)
-  }, [])
+  const inputLocked = state.configured && state.ready && !state.planId && !onPublicRoute
 
   const value = useMemo<SubscriptionGateValue>(
-    () => ({ snapshot, phase: snapshot.phase, inputLocked, onPublicRoute, markRenewed }),
-    [snapshot, inputLocked, onPublicRoute, markRenewed],
+    () => ({
+      plan,
+      planId: state.planId,
+      purchasedAt: state.purchasedAt,
+      capabilities,
+      canUse: (capability: Capability) => canUseCapability(state.planId, capability),
+      planKnown: state.configured && state.ready,
+      inputLocked,
+      onPublicRoute,
+      refresh: () => void load(),
+    }),
+    [plan, state.planId, state.purchasedAt, capabilities, inputLocked, onPublicRoute, load],
   )
 
   return (
@@ -121,8 +169,9 @@ export function SubscriptionGateProvider({ children }: { children: ReactNode }) 
 }
 
 /**
- * Dipakai titik input mana pun yang perlu tahu "sedang boleh catat atau tidak":
- * FAB bottom nav, tombol Tambah sidebar, engine input transaksi, dan
+ * Dipakai titik mana pun yang perlu tahu "paket user apa" atau "fitur ini
+ * terbuka atau tidak": widget AI Coach, tombol scan struk & voice, rekap AI,
+ * Joint Wallet, kartu Billing, FAB bottom nav, tombol Tambah sidebar, dan
  * `SheetSubmit` di sheet-sheet tambah.
  */
 export function useSubscriptionGate() {

@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { ArrowRight, CheckCircle2 } from 'lucide-react'
 import { LogoWordmark } from '@/components/catetind/logo-wordmark'
 import { LANDING_PATH, REGISTERED_COPY } from '@/lib/data/landing'
+import { PLANS, buildPayHref } from '@/lib/data/pricing'
 
 /**
  * /registered — halaman "Terima Kasih" setelah registrasi dari landing.
@@ -15,19 +16,30 @@ import { LANDING_PATH, REGISTERED_COPY } from '@/lib/data/landing'
 export const metadata: Metadata = {
   title: 'Terima kasih — CatetInd',
   description:
-    'Akun CatetInd kamu sudah terdaftar. Kami akan mengirim email saat pembayaran dibuka.',
+    'Akun CatetInd kamu sudah terdaftar. Kode masuk sudah dikirim ke emailmu.',
   robots: { index: false, follow: false },
 }
 
 export default async function RegisteredPage({
   searchParams,
 }: {
-  searchParams: Promise<{ email?: string | string[] }>
+  searchParams: Promise<{ email?: string | string[]; plan?: string | string[] }>
 }) {
   const params = await searchParams
   const raw = params.email
   const email = (Array.isArray(raw) ? raw[0] : raw)?.trim()
-  const body = email ? REGISTERED_COPY.body(email) : REGISTERED_COPY.bodyFallback
+  /* paket yang dipilih di kartu harga landing ikut dibawa sebagai `?plan=`
+     (`buildRegisteredHref`) — divalidasi terhadap katalog kanon supaya query
+     tidak bisa menampilkan paket yang tidak ada. */
+  const rawPlan = params.plan
+  const planId = (Array.isArray(rawPlan) ? rawPlan[0] : rawPlan)?.trim()
+  const plan = PLANS.find((item) => item.id === planId) ?? null
+  const body =
+    plan && email
+      ? REGISTERED_COPY.bodyWithPlan(email, plan.name)
+      : email
+        ? REGISTERED_COPY.body(email)
+        : REGISTERED_COPY.bodyFallback
 
   return (
     <main className="relative flex min-h-[100dvh] w-full items-center justify-center overflow-hidden bg-canvas px-6 py-16 text-forest">
@@ -66,16 +78,22 @@ export default async function RegisteredPage({
         </section>
 
         <Link
-          href={LANDING_PATH}
+          href={plan ? buildPayHref(plan.id) : LANDING_PATH}
           className="group mt-8 inline-flex h-12 items-center justify-center gap-2 rounded-full bg-forest px-6 text-[14px] font-medium text-cream shadow-[0_16px_34px_-18px_rgba(69,89,78,0.85)] transition-colors duration-200 hover:bg-forest-soft motion-reduce:transition-none"
         >
-          {REGISTERED_COPY.cta}
+          {plan ? REGISTERED_COPY.ctaPay : REGISTERED_COPY.cta}
           <ArrowRight
             className="size-4 transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transition-none"
             strokeWidth={2.4}
             aria-hidden
           />
         </Link>
+
+        {plan && (
+          <p className="mt-2.5 text-[12px] leading-relaxed text-forest/50">
+            {REGISTERED_COPY.ctaPayHint}
+          </p>
+        )}
       </div>
     </main>
   )

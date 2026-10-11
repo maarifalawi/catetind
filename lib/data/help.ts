@@ -28,6 +28,7 @@ import { ALL_TRANSACTIONS } from './transactions'
 import { PRIVACY_LINK_COPY } from '../legal/privacy'
 import { TERMS_LINK_COPY } from '../legal/terms'
 import { WALLET_SEED } from '../wallets'
+import { SITE_DOMAIN } from '../site'
 
 /* ── 2. TOPIK + ARTIKEL ───────────────────────────────────────────────────── */
 
@@ -330,7 +331,7 @@ export const HELP_TOPICS: HelpTopic[] = [
         steps: [
           'Buka Pengaturan → AI Token → pilih paket isi ulang.',
           'Atau lebih hemat: buka halaman "Ajak Teman" dan bagikan link referralmu.',
-          '1 teman yang berlangganan = Token AI gratis 1 bulan, masuk otomatis tanpa klaim.',
+          '1 teman yang membeli paket = Token AI gratis 1 bulan, masuk otomatis tanpa klaim.',
           'Token dan Voice dihitung terpisah, jadi kamu bisa lihat mana yang lebih cepat habis.',
         ],
         proTip:
@@ -387,7 +388,7 @@ export const HELP_TOPICS: HelpTopic[] = [
           'Buka Pengaturan → "Export Data Saya".',
           'Datamu di-compile jadi file JSON: transaksi, dompet, hutang, dan target nabung.',
           'Simpan di HP atau laptop kamu sendiri — nggak ada yang perlu kamu minta izin dulu.',
-          'Mau berhenti langganan tahun depan? Datamu tetap bisa kamu export kapan saja.',
+          'Mau berhenti pakai CatetInd kapan pun? Datamu tetap bisa kamu export kapan saja.',
         ],
         proTip:
           'File export dibuat buat kamu, bukan buat kami. Kami nggak punya salinannya.',
@@ -396,29 +397,29 @@ export const HELP_TOPICS: HelpTopic[] = [
   },
   {
     id: 'langganan-pembayaran',
-    label: 'Langganan & Pembayaran',
+    label: 'Paket & Pembayaran',
     emoji: '💳',
-    blurb: 'Bayar, berhenti, isi ulang — tombolnya ada di depan semua, nggak disembunyiin.',
+    blurb: 'Bayar sekali, naik paket, isi ulang token — tombolnya ada di depan semua, nggak disembunyiin.',
     articles: [
       {
-        id: 'langganan-stop',
-        title: 'Cara Stop Langganan (Nggak Ribet)',
+        id: 'langganan-upgrade',
+        title: 'Cara Naik Paket (Bayar Selisih Aja)',
         steps: [
           'Buka Pengaturan → Langganan.',
-          'Tap tombol "Jangan Perpanjang".',
-          'Selesai. Nggak ada telepon CS, nggak ada pertanyaan "yakin mau berhenti?".',
-          'Datamu tetap bisa di-export kapan aja, termasuk setelah berhenti.',
+          'Tap tombol "Upgrade paket", lalu pilih paket tujuan.',
+          'Yang kamu bayar cuma SELISIH harganya — bukan harga penuh dari nol.',
+          'Setelah pembayaran tercatat, fitur paket barunya langsung terbuka dan berlaku selamanya.',
         ],
         proTip:
-          'CatetInd nggak pakai auto-debit diam-diam. Masa aktif habis dan kamu nggak bayar = aplikasi berhenti, tanpa tagihan nyempil.',
+          'Nggak ada perpanjangan dan nggak ada tagihan berkala: paket itu sekali bayar untuk akses selamanya. Turun paket (downgrade) nggak ditawarin karena nggak ada pengembalian uang.',
       },
       {
         id: 'langganan-metode',
         title: 'Bayar Pakai Apa Aja?',
         steps: [
-          'QRIS (paling cepat), transfer bank, atau kartu.',
-          'Setelah bayar, masa aktif langsung nambah — kadang cuma hitungan detik.',
-          'Bayar lagi sebelum masa aktifnya habis? Harinya ditumpuk, bukan direset.',
+          'QRIS (paling cepat), Virtual Account bank, atau kartu.',
+          'Tagihan dan instruksi bayarnya muncul di halaman ini juga — nggak pindah ke situs lain.',
+          'Setelah pembayaran masuk, aksesmu aktif otomatis — kadang cuma hitungan detik.',
           'Metode favoritmu belum ada? Kabarin kami lewat tombol di bawah artikel ini ya.',
         ],
         proTip:
@@ -428,7 +429,7 @@ export const HELP_TOPICS: HelpTopic[] = [
         id: 'langganan-refund',
         title: 'Refund & Salah Bayar',
         steps: [
-          'Kelewat bayar dua kali? Duitnya nggak hilang — bakal ditumpuk jadi masa aktif.',
+          'Kelewat bayar dua kali? Duitnya nggak hilang — ada garansi uang kembali 100% dalam 30 hari.',
           'Kalau mau dikembalikan: klik 👎 di bawah artikel ini, terus pilih "Hubungi Founder".',
           'Sertakan screenshot bukti bayarnya. Nggak ada data transaksi yang perlu kamu bocorin ke kami 🙂',
           'Yang menangani langsung founder, bukan tim CS berlapis.',
@@ -467,10 +468,10 @@ export const HELP_QUICK_ANSWERS: QuickAnswer[] = [
   },
   {
     id: 'stop-langganan',
-    question: 'Gimana cara stop langganan? Ribet nggak?',
+    question: 'Kalau gue mau berhenti pakai, gimana? Ribet nggak?',
     answer:
-      'Nggak ribet sama sekali. Buka Settings → Langganan → Tombol "Jangan Perpanjang". Selesai. Nggak ada dark pattern, nggak ada telepon CS, nggak ada pertanyaan "yakin mau berhenti?". Datamu tetap bisa di-export kapan aja.',
-    topic: 'Langganan & Pembayaran',
+      'Nggak ribet sama sekali — dan yang penting: TIDAK ADA yang perlu dibatalkan. CatetInd nggak punya langganan bulanan, auto-debit, atau perpanjangan otomatis, karena paketnya sekali bayar untuk akses selamanya. Mau berhenti pakai? Tinggal berhenti. Datamu tetap bisa di-export kapan aja, dan akunmu bisa kamu hapus sendiri dari Pengaturan.',
+    topic: 'Paket & Pembayaran',
   },
   {
     id: 'aman-data',
@@ -619,9 +620,12 @@ export const HELP_LEGAL_LINKS: { href: string; label: string }[] = [
 
 /* ── 6. EXPORT DATA (PRD Domain 4C, Mekanisme 1) ──────────────────────────── */
 
+/** asal file export - satu domain dengan `lib/site.ts` (dulu menulis `.app`) */
+export const HELP_EXPORT_SOURCE = `${SITE_DOMAIN}/help`
+
 export interface HelpExportPayload {
   exported_at: string
-  source: 'catetind.app/help'
+  source: typeof HELP_EXPORT_SOURCE
   /** pengingat di dalam file: tidak ada manusia di CatetInd yang membacanya */
   note: string
   data: {
@@ -668,7 +672,7 @@ export function buildHelpExportPayload(
 ): HelpExportPayload {
   return {
     exported_at: now.toISOString(),
-    source: 'catetind.app/help',
+    source: HELP_EXPORT_SOURCE,
     note: 'File ini dibuat atas permintaanmu sendiri. Tim CatetInd tidak memiliki salinan datamu.',
     data: {
       wallets: WALLET_SEED,

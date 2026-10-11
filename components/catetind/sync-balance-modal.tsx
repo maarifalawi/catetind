@@ -36,7 +36,7 @@ export function SyncBalanceModal({
   const [digits, setDigits] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
   /* "Koreksi Otomatis" menulis ulang saldo + menambah pengeluaran tak tercatat —
-     itu input data keuangan, jadi ikut terkunci saat masa aktif habis (task 23).
+     itu input data keuangan, jadi ikut terkunci saat paket belum aktif.
      Saldo & selisihnya tetap terbaca; yang berhenti hanya koreksinya. */
   const { inputLocked } = useSubscriptionGate()
 

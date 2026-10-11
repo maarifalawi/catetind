@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import {
   useEffect,
@@ -37,7 +37,7 @@ import {
 } from '@/lib/money/amount-input'
 import { amountInputFont } from '@/lib/typography'
 import { useAiQuota } from '@/hooks/use-ai-quota'
-import { SUBSCRIPTION_LOCK_COPY } from '@/lib/data/renewal'
+import { FEATURE_LOCK_COPY } from '@/lib/data/upgrade'
 import { useSubscriptionGate } from '@/components/catetind/subscription-gate-provider'
 import { SubscriptionLockNote } from '@/components/catetind/subscription-lock-note'
 import { MOCK_RECEIPT_AMOUNT, MOCK_RECEIPT_READ_MS, receiptNoteFromFileName } from '@/lib/transaction-ai'
@@ -339,7 +339,7 @@ export function TransactionInputEngine({
 }) {
   const isDialog = layout === 'dialog'
   const isEdit = initial !== null
-  /* Masa aktif habis → engine ini pintu input uang, jadi tombol "Catat" mati.
+  /* Paket belum aktif → engine ini pintu input uang, jadi tombol "Catat" mati.
      Ditempel DI ENGINE, bukan di tiap shell (bottom sheet, modal web, joint,
      kalender, edit transaksi), supaya nol titik yang bisa terlewat. Form-nya
      tetap bisa dibuka & dibaca — yang berhenti hanya penyimpanannya. */
@@ -740,7 +740,7 @@ export function TransactionInputEngine({
     if (submitLock.current || submitting) return
 
     if (inputLocked) {
-      toast(SUBSCRIPTION_LOCK_COPY.inputHint)
+      toast(FEATURE_LOCK_COPY.inputHint)
       return
     }
 
@@ -1362,7 +1362,7 @@ export function TransactionInputEngine({
           onClick={handleSubmit}
           /* Tiga alasan tombol ini bisa mati, dan ketiganya dijelaskan di layar
              (tidak ada tombol mati tanpa sebab):
-               · `inputLocked`  → masa aktif langganan habis (SubscriptionLockNote)
+               · `inputLocked`  → belum ada paket aktif (SubscriptionLockNote)
                · `submitting`   → satu simpanan sedang jalan ("Menyimpan…")
                · belum ada kategori (paket 54) → petunjuk "Pilih kategori dulu"
                  tepat di bawah pemilihnya (`tx-category-help`) */
@@ -1429,7 +1429,7 @@ export function TransactionInputEngine({
         </button>
       </div>
 
-      {/* penjelasan kenapa tombol Catat mati — hanya saat masa aktif habis */}
+      {/* penjelasan kenapa tombol Catat mati — hanya saat paket belum aktif */}
       {inputLocked && (
         <SubscriptionLockNote className={isDialog ? 'mt-3' : 'mt-2.5'} />
       )}

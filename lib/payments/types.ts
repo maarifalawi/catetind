@@ -10,7 +10,7 @@
 
 import type { PaymentMethodId } from './methods'
 
-export type PaymentPurpose = 'subscribe' | 'topup' | 'renew' | 'upgrade'
+export type PaymentPurpose = 'subscribe' | 'topup' | 'upgrade'
 
 /** niat pembayaran yang dikirim route ke provider */
 export interface PaymentIntent {
@@ -22,7 +22,12 @@ export interface PaymentIntent {
   /** nama item yang tampil di rincian transaksi provider */
   itemName: string
   planId?: string
-  period?: string
+  /**
+   * paket yang SUDAH dimiliki user saat `purpose: 'upgrade'` — hanya untuk
+   * jejak audit di provider; nominalnya tetap dihitung server dari
+   * `lib/data/pricing.ts`. Sebelum paket 84 kolom ini bernama `period`.
+   */
+  ownedPlanId?: string
   customerName?: string
   customerEmail?: string
   /**

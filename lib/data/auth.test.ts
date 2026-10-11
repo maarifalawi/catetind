@@ -69,8 +69,8 @@ describe('isValidOtpCode', () => {
 
 describe('safeNextPath · hanya jalur internal yang lolos', () => {
   it('menerima jalur absolut-situs (spasi tepi dimaafkan)', () => {
-    expect(safeNextPath('/checkout/bayar?plan=waras&period=annual')).toBe(
-      '/checkout/bayar?plan=waras&period=annual',
+    expect(safeNextPath('/checkout/bayar?plan=waras')).toBe(
+      '/checkout/bayar?plan=waras',
     )
     expect(safeNextPath('  /app  ')).toBe('/app')
   })
@@ -90,8 +90,8 @@ describe('safeNextPath · hanya jalur internal yang lolos', () => {
 
 describe('resolveAuthLanding · halaman darat setelah masuk', () => {
   it('pakai next yang aman, kalau tidak jatuh ke Dashboard', () => {
-    expect(resolveAuthLanding('/checkout/bayar?plan=waras&period=annual')).toBe(
-      '/checkout/bayar?plan=waras&period=annual',
+    expect(resolveAuthLanding('/checkout/bayar?plan=waras')).toBe(
+      '/checkout/bayar?plan=waras',
     )
     expect(resolveAuthLanding('https://jahat.example')).toBe(DEFAULT_AUTH_LANDING)
     expect(resolveAuthLanding(undefined)).toBe('/app')
@@ -108,8 +108,8 @@ describe('buildVerifyHref · membawa ?next hanya kalau aman', () => {
   })
 
   it('dengan next aman = ikut di-encode', () => {
-    expect(buildVerifyHref('rina@email.com', '/checkout/bayar?plan=waras&period=annual')).toBe(
-      '/login/verify?email=rina%40email.com&next=%2Fcheckout%2Fbayar%3Fplan%3Dwaras%26period%3Dannual',
+    expect(buildVerifyHref('rina@email.com', '/checkout/bayar?plan=waras')).toBe(
+      '/login/verify?email=rina%40email.com&next=%2Fcheckout%2Fbayar%3Fplan%3Dwaras',
     )
   })
 

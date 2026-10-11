@@ -6,25 +6,20 @@ import { useRouter } from 'next/navigation'
 import { ArrowRight, Check, Info, ShieldCheck, Tag } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
-  BILLING_PERIOD_LABEL,
   CHECKOUT_COPY,
   CHECKOUT_STEPS,
   HERO_PLAN,
-  NO_AUTO_RENEW_BADGE,
-  PERIOD_CHOICE_LABEL,
+  LIFETIME_LABEL,
   PLANS,
   PRICING_TRUST_BADGES,
   REFERRAL_DISCOUNT_PCT,
-  SELLABLE_PERIODS,
+  SEKALI_BAYAR_BADGE,
   applyReferralDiscount,
+  buildCheckoutHref,
   buildPayHref,
   formatIDR,
-  isSellablePeriod,
   isValidReferralCode,
-  monthlyPrice,
   offerPrice,
-  periodNote,
-  type BillingPeriod,
   type PlanDefinition,
   type PlanId,
   type TrustBadge,
@@ -61,23 +56,41 @@ import { WELCOME_PATH } from '@/lib/data/welcome'
      (PRD 5174–5177) — halaman ini hanya menampilkan yang benar-benar diketahui
    • daftar harga sendiri: semua angka dibaca dari `lib/data/pricing.ts`
 
-   Kenapa satu kontrol periode, bukan dua daftar SKU: PRD 4594–4606 menuntut satu
+   Kenapa satu pembelian, bukan dua daftar SKU: PRD 4594–4606 menuntut satu
    harga per tier di mana pun. Harga bulanan di sini diturunkan dari harga kanon
    yang sama, dan pilihan "Seumur hidup" membawa paket Founding Member.
    ────────────────────────────────────────────────────────────────────────── */
 
-/** paket yang bisa dipilih: 3 tier langganan (paket seumur hidup TIDAK dijual) */
+/** paket yang bisa dipilih: 3 tier akses selamanya */
 type OfferId = PlanId
 
-const PERIOD_CHOICES: BillingPeriod[] = SELLABLE_PERIODS
-
-export function CheckoutScreen() {
+export function CheckoutScreen({
+  initialPlanId,
+  initialReferralCode,
+}: {
+  /**
+   * Pilihan awal dari query `/checkout?plan=…&kode=…`.
+   *
+   * Sebelum ini halaman selalu membuka paket hero, sehingga konteks user hilang
+   * begitu ia keluar dari halaman ini (klik "Masuk", atau datang dari tautan
+   * referral `/r/<kode>`): paket yang tadi dipilih harus dipilih ulang. Nilainya
+   * dipercaya HANYA setelah dicocokkan dengan katalog kanon — query string tidak
+   * boleh menentukan penawaran yang tidak dijual. Sejak paket 84 tidak ada lagi
+   * parameter `period`.
+   */
+  initialPlanId?: PlanId
+  initialReferralCode?: string | null
+} = {}) {
   /** paket terpilih — default paket hero (Waras), yaitu rekomendasi produk */
-  const [offerId, setOfferId] = useState<OfferId>(HERO_PLAN.id)
-  const [period, setPeriod] = useState<BillingPeriod>('annual')
+  const [offerId, setOfferId] = useState<OfferId>(() =>
+    initialPlanId && PLANS.some((item) => item.id === initialPlanId) ? initialPlanId : HERO_PLAN.id,
+  )
   /** kode teman: input mentah, kode yang sudah dipakai, dan status error */
-  const [codeInput, setCodeInput] = useState('')
-  const [appliedCode, setAppliedCode] = useState<string | null>(null)
+  const [codeInput, setCodeInput] = useState(() => initialReferralCode?.toUpperCase() ?? '')
+  const [appliedCode, setAppliedCode] = useState<string | null>(() => {
+    const code = initialReferralCode?.trim().toUpperCase() ?? ''
+    return code && isValidReferralCode(code) ? code : null
+  })
   const [codeError, setCodeError] = useState(false)
   /** sheet registrasi (paket 64: pembayaran Midtrans di-bypass, jadi tidak ada
    *  sheet pembayaran yang dibuka dari sini) */
@@ -86,20 +99,12 @@ export function CheckoutScreen() {
 
   const plan: PlanDefinition = PLANS.find((item) => item.id === offerId) ?? HERO_PLAN
 
-  const listPrice = offerPrice(plan, period)
+  const listPrice = offerPrice(plan)
   const discount = appliedCode ? listPrice - applyReferralDiscount(listPrice) : 0
   const total = listPrice - discount
   const offerName = plan.name
   const features = plan.features
-  const periodLabel = BILLING_PERIOD_LABEL[period]
-
-  const periodNoteText = useMemo(() => periodNote(period, plan), [period, plan])
-
-  /** ganti periode — paket tetap, hanya periode yang berpindah */
-  function handlePeriod(next: BillingPeriod) {
-    if (!isSellablePeriod(next)) return
-    setPeriod(next)
-  }
+  const periodLabel = LIFETIME_LABEL
 
   function handleApplyCode() {
     const trimmed = codeInput.trim()
@@ -131,10 +136,10 @@ export function CheckoutScreen() {
    */
   async function handleRegistered(result: RegistrationResult): Promise<RegistrationOutcome> {
     /* Halaman bayar tujuan dihitung DULU supaya ia ikut dibawa sebagai `next`:
-       user yang baru memverifikasi email langsung mendarat di pembayaran (paket &
-       periode yang sedang dipilih) — bukan Dashboard — dan tautan di emailnya pun
+       user yang baru memverifikasi email langsung mendarat di pembayaran (paket
+       yang sedang dipilih) — bukan Dashboard — dan tautan di emailnya pun
        mengarah ke sana. */
-    const payHref = buildPayHref(offerId, period, appliedCode)
+    const payHref = buildPayHref(offerId, appliedCode)
     const outcome = await registerAccount({
       email: result.email,
       nickname: result.nickname,
@@ -144,21 +149,21 @@ export function CheckoutScreen() {
     if (!outcome.ok) return { ok: false, error: outcome.error }
 
     /* navigasi di sini, bukan di sheet: satu tempat tahu ke mana user pergi.
-       Auto-login langsung ke halaman BAYAR (paket & periode yang sedang dipilih),
-       supaya langganan benar-benar dibeli — bukan dilewati. */
+       Auto-login langsung ke halaman BAYAR (paket yang sedang dipilih), supaya
+       paketnya benar-benar dibeli — bukan dilewati. */
     router.push(outcome.next === 'verify' ? buildVerifyHref(result.email, payHref) : payHref)
     return { ok: true }
   }
 
   /**
-   * CTA utama: kalau user SUDAH masuk, langsung ke halaman bayar (paket, periode,
-   * dan kode teman yang sedang dipilih). Kalau belum, buka sheet registrasi —
-   * `/api/payment/create` memang butuh sesi (identitas dari cookie). */
+   * CTA utama: kalau user SUDAH masuk, langsung ke halaman bayar (paket dan
+   * kode teman yang sedang dipilih). Kalau belum, buka sheet registrasi —
+   * `/api/payment/charge` memang butuh sesi (identitas dari cookie). */
   function handleStart() {
     void fetchSessionUser()
       .then((user) => {
         if (user) {
-          router.push(buildPayHref(offerId, period, appliedCode))
+          router.push(buildPayHref(offerId, appliedCode))
           return
         }
         setRegistrationOpen(true)
@@ -239,7 +244,7 @@ export function CheckoutScreen() {
               konfirmasi email sudah tertulis di daftar di atas, jadi tidak diulang */}
           </section>
 
-          {/* ── 3. paket + periode + harga ─────────────────────────────────── */}
+          {/* ── 3. paket + harga ─────────────────────────────────── */}
           <section className="mt-4 rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
@@ -255,41 +260,17 @@ export function CheckoutScreen() {
               </span>
             </div>
 
-            {/* periode — pilih-satu; angka penghematan dihitung, bukan diklaim */}
-            <div
-              role="radiogroup"
-              aria-label={CHECKOUT_COPY.periodLegend}
-              className="mt-4 flex flex-wrap gap-2"
-            >
-              {PERIOD_CHOICES.map((choice) => {
-                const active = choice === period
-                return (
-                  <button
-                    key={choice}
-                    type="button"
-                    role="radio"
-                    aria-checked={active}
-                    onClick={() => handlePeriod(choice)}
-                    className={cn(
-                      'rounded-full px-3.5 py-2 text-[12.5px] font-medium transition-all duration-200 active:scale-95 motion-reduce:transition-none',
-                      active
-                        ? 'bg-forest text-mint shadow-[0_10px_22px_-14px_rgba(69,89,78,0.75)]'
-                        : 'bg-cream text-forest/60 ring-1 ring-soil/14 hover:text-forest',
-                    )}
-                  >
-                    {PERIOD_CHOICE_LABEL[choice]}
-                  </button>
-                )
-              })}
-            </div>
+            {/* Sejak paket 84 tidak ada pemilih periode: satu paket = satu harga,
+                sekali bayar untuk akses selamanya. Yang ditampilkan justru
+                keterangan durasinya — supaya user tidak menebak-nebak. */}
+            <p className="mt-3.5 text-[12.5px] font-medium text-forest/70">{LIFETIME_LABEL}</p>
 
-            {/* tier langganan — satu daftar; paket seumur hidup tidak dijual */}
+            {/* tier akses selamanya — satu daftar */}
             <ul className="mt-3.5 space-y-2">
               {PLANS.map((item) => (
                 <li key={item.id}>
                   <OfferOption
                     plan={item}
-                    period={period}
                     active={item.id === offerId}
                     onSelect={() => setOfferId(item.id)}
                   />
@@ -309,7 +290,9 @@ export function CheckoutScreen() {
                 </span>
               )}
             </div>
-            <p className="mt-1.5 text-[11.5px] leading-relaxed text-forest/45">{periodNoteText}</p>
+            <p className="mt-1.5 text-[11.5px] leading-relaxed text-forest/45">
+              {CHECKOUT_COPY.lockedNote}
+            </p>
 
             {/* rincian yang didapat */}
             <h3 className="mt-5 text-[11px] font-medium tracking-[0.16em] text-forest/40 uppercase">
@@ -335,13 +318,14 @@ export function CheckoutScreen() {
                 <ShieldCheck className="size-4" strokeWidth={2.2} aria-hidden />
               </span>
               <p className="min-w-0 self-center rounded-2xl bg-mint/25 px-3.5 py-2.5 text-[12.5px] leading-relaxed font-medium text-forest ring-1 ring-forest/10">
-                {NO_AUTO_RENEW_BADGE}
+                {SEKALI_BAYAR_BADGE}
               </p>
             </div>
 
-            {/* dua badge lain dari PRD 4586–4587 (yang pertama sudah jadi banner di atas) */}
+            {/* ketiga badge kepercayaan (PRD 4585–4587) — semuanya ditampilkan,
+                tidak ada lagi yang disaring keluar seperti "tanpa auto-renew" */}
             <ul className="mt-3 space-y-2.5">
-              {PRICING_TRUST_BADGES.filter((badge) => badge.id !== 'no-auto-renew').map((badge) => (
+              {PRICING_TRUST_BADGES.map((badge) => (
                 <TrustBadgeItem key={badge.id} badge={badge} />
               ))}
             </ul>
@@ -429,7 +413,7 @@ export function CheckoutScreen() {
                 <dd className="min-w-0 text-right font-medium text-forest">{offerName}</dd>
               </div>
               <div className="flex items-start justify-between gap-3">
-                <dt className="text-forest/50">{CHECKOUT_COPY.summaryPeriod}</dt>
+                <dt className="text-forest/50">{CHECKOUT_COPY.summaryDuration}</dt>
                 <dd className="font-medium text-forest">{periodLabel}</dd>
               </div>
               {discount > 0 && (
@@ -469,27 +453,30 @@ export function CheckoutScreen() {
         open={registrationOpen}
         onClose={() => setRegistrationOpen(false)}
         onContinue={handleRegistered}
+        /* "Sudah punya akun? Masuk" harus mengembalikan user ke pilihan yang
+           SAMA setelah ia masuk — lihat `buildCheckoutHref()`. */
+        loginHref={buildCheckoutHref(offerId, appliedCode)}
       />
     </>
   )
 }
 
 /* ── baris pilihan paket (pilih-satu) ─────────────────────────────────────────
-   Harga di baris ini mengikuti periode yang sedang aktif, supaya angka yang
-   dibandingkan user memang angka yang akan dia bayar. */
+   Harga di baris ini adalah harga akses selamanya (`PLANS[].lifetime`) — angka
+   yang sama dengan yang ditagih server, jadi yang dibandingkan user memang angka
+   yang akan dia bayar. Sebelum paket 84 baris ini ikut berubah mengikuti periode
+   bulanan/tahunan; pemilih periode itu sudah dihapus. */
 function OfferOption({
   plan,
-  period,
   active,
   onSelect,
 }: {
   plan: PlanDefinition
-  period: BillingPeriod
   active: boolean
   onSelect: () => void
 }) {
-  const price = period === 'annual' ? plan.annual : monthlyPrice(plan)
-  const label = BILLING_PERIOD_LABEL[period === 'annual' ? 'annual' : 'monthly']
+  const price = plan.lifetime
+  const label = LIFETIME_LABEL
 
   return (
     <button

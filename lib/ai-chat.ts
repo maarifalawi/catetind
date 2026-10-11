@@ -63,6 +63,15 @@ export const AI_CONTEXT_WINDOW = 10
 export const AI_CONNECT_LABEL = 'Hubungkan AI'
 export const AI_CONNECT_HREF = '/settings/ai'
 
+/**
+ * Route yang menampilkan AI Coach (bubble + FAB). SATU sumber: widget memakai
+ * ini untuk memutuskan boleh tampil atau tidak, dan `screen-shell` memakai ini
+ * untuk memberi ruang bawah ekstra bagi FAB-nya. Sebelumnya keduanya tahu angka
+ * ini dari dua tempat berbeda, sehingga padding bawah dipasang di semua halaman
+ * app padahal FAB-nya hanya ada di Dashboard.
+ */
+export const AI_COACH_ROUTES: string[] = ['/app']
+
 /* Sisa kuota AI TIDAK didefinisikan di sini — angka itu milik
    `lib/ai-usage-store.ts` + `lib/ai-quota.ts` (satu sumber kebenaran). Widget AI
    Coach membaca `useAiQuota().remainingPct` dari sana supaya gauge di header

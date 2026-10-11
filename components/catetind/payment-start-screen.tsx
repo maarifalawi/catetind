@@ -7,18 +7,19 @@ import { ArrowLeft, ArrowRight, BadgeCheck, Info, ShieldCheck, Tag } from 'lucid
 import { LogoWordmark } from './logo-wordmark'
 import { PaymentInstructionCard, type ActiveInvoice } from './payment-instruction-card'
 import {
-  NO_AUTO_RENEW_BADGE,
+  LIFETIME_LABEL,
   PAY_METHOD_COPY,
   PAY_START_COPY,
-  PERIOD_CHOICE_LABEL,
+  SEKALI_BAYAR_BADGE,
   applyReferralDiscount,
   formatIDR,
-  offerPrice,
-  type BillingPeriod,
+  priceFor,
   type PlanDefinition,
+  type PlanId,
 } from '@/lib/data/pricing'
 import { PAY_METHODS, type PaymentMethodId } from '@/lib/payments/methods'
-import { LOGIN_PATH } from '@/lib/data/auth'
+import { buildLoginHref } from '@/lib/data/auth'
+import { buildPayHref } from '@/lib/data/pricing'
 import { fetchSessionUser } from '@/lib/session-client'
 
 /* MULAI PEMBAYARAN (/checkout/bayar, paket 83) - DI DALAM APP ------------------
@@ -52,11 +53,15 @@ interface ChargeResponse {
 
 export function PaymentStartScreen({
   plan,
-  period,
+  ownedPlanId,
+  isUpgrade,
   referralCode,
 }: {
   plan: PlanDefinition
-  period: BillingPeriod
+  /** paket yang SUDAH dimiliki (dari server) — dasar hitung selisih upgrade */
+  ownedPlanId: PlanId | null
+  /** true = ini upgrade, bukan pembelian pertama (mengubah copy, bukan angkanya) */
+  isUpgrade: boolean
   referralCode: string | null
 }) {
   const router = useRouter()
@@ -71,7 +76,10 @@ export function PaymentStartScreen({
   /** tagihan aktif yang instruksinya sedang ditampilkan */
   const [invoice, setInvoice] = useState<ActiveInvoice | null>(null)
 
-  const basePrice = offerPrice(plan, period)
+  /* Nominal memakai `priceFor()` dari PAKET YANG SUDAH DIMILIKI (dibaca server di
+     `app/checkout/bayar/page.tsx`) — jadi angka yang user lihat di sini persis
+     angka yang diverifikasi `/api/payment/charge`. Bukan angka kiriman klien. */
+  const basePrice = priceFor(plan, isUpgrade ? ownedPlanId : null)
   const total = verifiedCode ? applyReferralDiscount(basePrice) : basePrice
   const discount = basePrice - total
 
@@ -118,12 +126,13 @@ export function PaymentStartScreen({
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          purpose: 'subscribe',
+          purpose: isUpgrade ? 'upgrade' : 'subscribe',
           amount: total,
           planId: plan.id,
-          period,
           method,
-          itemName: `${plan.name} (${PERIOD_CHOICE_LABEL[period]})`,
+          itemName: isUpgrade
+            ? `${plan.name} (upgrade — akses selamanya)`
+            : `${plan.name} (akses selamanya)`,
         }),
       })
       if (res.status === 401) {
@@ -136,7 +145,7 @@ export function PaymentStartScreen({
         return
       }
       /* sudah dibayar tapi webhook belum mencatat -> TIDAK bikin tagihan kedua;
-         halaman konfirmasi yang menyelesaikan sisanya (mem-poll langganan). */
+         halaman konfirmasi yang menyelesaikan sisanya (mem-poll status paket). */
       if (data.state === 'settled') {
         setNotice(data.note ?? null)
         router.push(`/checkout/selesai?order_id=${encodeURIComponent(data.orderId)}`)
@@ -154,7 +163,7 @@ export function PaymentStartScreen({
     } finally {
       setPaying(false)
     }
-  }, [paying, total, plan, period, method, router])
+  }, [paying, total, plan, isUpgrade, method, router])
   /* ringkasan pembelian - kolom KIRI di desktop (sticky), di atas cara bayar di ponsel */
   const summary = (
     <section className="rounded-[1.5rem] bg-cream p-5 ring-1 ring-soil/12 lg:rounded-[1.75rem] lg:p-6">
@@ -165,7 +174,7 @@ export function PaymentStartScreen({
         <div className="min-w-0">
           <p className="text-[14px] font-medium text-forest">{plan.name}</p>
           <p className="text-[12px] text-forest/50">
-            {plan.subtitle} - {PERIOD_CHOICE_LABEL[period]}
+            {plan.subtitle} - {LIFETIME_LABEL}
           </p>
         </div>
       </div>
@@ -190,13 +199,13 @@ export function PaymentStartScreen({
 
       <p className="mt-4 flex items-start gap-2 text-[11.5px] leading-relaxed text-forest/50">
         <ShieldCheck className="mt-0.5 size-3.5 shrink-0" strokeWidth={2.4} aria-hidden />
-        {NO_AUTO_RENEW_BADGE}
+        {SEKALI_BAYAR_BADGE}
       </p>
     </section>
   )
 
   return (
-    <main className="relative w-full bg-canvas px-5 pt-6 pb-24 text-forest sm:px-6 lg:px-8 lg:pt-10 lg:pb-16">
+    <div className="relative w-full px-5 pt-6 pb-24 text-forest sm:px-6 lg:px-8 lg:pt-10 lg:pb-16">
       <div className="mx-auto w-full max-w-[1080px]">
         <div className="flex items-center justify-between gap-4">
           <LogoWordmark className="h-6" />
@@ -217,9 +226,11 @@ export function PaymentStartScreen({
               {PAY_START_COPY.eyebrow}
             </p>
             <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight text-forest lg:text-[1.9rem]">
-              {PAY_START_COPY.title}
+              {isUpgrade ? PAY_START_COPY.upgradeTitle : PAY_START_COPY.title}
             </h1>
-            <p className="mt-1 text-[12.5px] text-forest/50">{PAY_START_COPY.subtitle}</p>
+            <p className="mt-1 text-[12.5px] text-forest/50">
+              {isUpgrade ? PAY_START_COPY.upgradeSubtitle : PAY_START_COPY.subtitle}
+            </p>
 
             {session === 'guest' ? (
               <section className="mt-5 rounded-[1.5rem] bg-cream p-5 ring-1 ring-soil/12 lg:rounded-[1.75rem] lg:p-6">
@@ -230,7 +241,7 @@ export function PaymentStartScreen({
                   {PAY_START_COPY.loginBody}
                 </p>
                 <Link
-                  href={LOGIN_PATH}
+                  href={buildLoginHref(buildPayHref(plan.id, referralCode))}
                   className="mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-forest px-5 text-[13px] font-medium text-cream lg:min-w-[200px]"
                 >
                   {PAY_START_COPY.loginCta}
@@ -330,6 +341,6 @@ export function PaymentStartScreen({
           </div>
         </div>
       </div>
-    </main>
+    </div>
   )
 }

@@ -37,7 +37,7 @@ export const HOME_NOTIFICATION_COPY = {
   title: 'Notifikasi',
   emptyTitle: 'Belum ada notifikasi',
   emptyBody:
-    'Pengingat tagihan, rekap mingguan, dan info masa aktif bakal muncul di sini. Kamu bisa atur jenisnya kapan aja.',
+    'Pengingat tagihan, rekap mingguan, dan info paketmu bakal muncul di sini. Kamu bisa atur jenisnya kapan aja.',
   settingsLink: 'Atur notifikasi',
   settingsHref: '/settings/notifications',
   closeLabel: 'Tutup panel notifikasi',

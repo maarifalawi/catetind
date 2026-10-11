@@ -22,6 +22,8 @@
    jadi tidak ada permintaan jaringan yang bisa gagal di tengah review desain.
    ────────────────────────────────────────────────────────────────────────── */
 
+import { SITE_DOMAIN, SITE_ORIGIN } from '../site'
+
 /**
  * Tahap tanaman yang boleh tampil di kartu publik. Nilainya SENGAJA identik
  * dengan `PlantStage` di `components/catetind/plant-illustration.tsx`
@@ -111,8 +113,8 @@ export function getShareCard(id: string): ShareLookup {
    Sama seperti referral: link yang DIKIRIM harus https absolut, sedangkan yang
    DITAMPILKAN cukup tanpa skema biar ringkas di kotak mono. */
 
-/** basis URL share — selalu https + domain, bukan teks yang ditampilkan */
-export const SHARE_URL_BASE = 'https://catetind.com/share/'
+/** basis URL share — selalu https + domain, satu sumber dengan `lib/site.ts` */
+export const SHARE_URL_BASE = `${SITE_ORIGIN}/share/`
 
 /** route internal (dipakai `<Link>` di dalam app) */
 export function buildShareHref(id: string): string {
@@ -126,7 +128,7 @@ export function buildShareUrl(id: string): string {
 
 /** teks link yang ditampilkan ke user (tanpa skema, pola `referralLink`) */
 export function buildShareLinkText(id: string): string {
-  return `catetind.com/share/${id.trim().toLowerCase()}`
+  return `${SITE_DOMAIN}/share/${id.trim().toLowerCase()}`
 }
 
 /* ── HASHTAG & PAYLOAD SHARE ──────────────────────────────────────────────── */
@@ -254,7 +256,7 @@ export const SHARE_STAGE_CAPTION: Record<SharePlantStage, string> = {
 }
 
 /** footer kecil di dalam kartu — alamat yang bisa diketik manual */
-export const SHARE_CARD_DOMAIN = 'catetind.com'
+export const SHARE_CARD_DOMAIN = SITE_DOMAIN
 
 /* ── PRIVASI (WAJIB, DUA LAPIS) ───────────────────────────────────────────────
    CONTEXT-WAJIB §5.3 poin 5: setiap halaman yang menyentuh data orang lain

@@ -1,4 +1,8 @@
+'use client'
+
+import { usePathname } from 'next/navigation'
 import type { ReactNode } from 'react'
+import { AI_COACH_ROUTES } from '@/lib/ai-chat'
 import { DesktopSidebar } from './desktop-sidebar'
 import { MobileNavDrawer, MobileNavProvider } from './mobile-nav-drawer'
 import { MobileAppHeader } from './app-mobile-header'
@@ -19,6 +23,14 @@ export function ScreenShell({
   children: ReactNode
   className?: string
 }) {
+  /* FAB AI Coach hanya hidup di Dashboard (`AI_COACH_ROUTES`). Padding bawah
+     ekstra di desktop ADA untuk FAB itu — memasangnya di semua halaman app
+     (seperti sebelumnya) hanya menyisakan ~112px ruang kosong tanpa sebab di
+     Dompet, Pengaturan, dst. Padding MOBILE tetap besar karena bottom nav
+     memang fixed di semua halaman app. */
+  const pathname = usePathname()
+  const hasCoachFab = AI_COACH_ROUTES.includes(pathname)
+
   return (
     <MobileNavProvider>
       {/* CATATAN TINGGI: shell SENGAJA tidak memaksa `min-h-[100dvh]`. Dulu
@@ -47,7 +59,12 @@ export function ScreenShell({
               supaya konten bisa digulir lewat FAB AI Coach yang mengambang di
               pojok kanan bawah (bottom-8 + tinggi 56px ≈ 88px). Sebelumnya teks
               terakhir di kolom kanan tertindih FAB. */}
-          <div className="relative flex w-full flex-1 flex-col px-5 pb-32 pt-6 sm:px-8 lg:px-10 lg:pb-28 lg:pt-8 xl:px-14 xl:pt-10">
+          <div
+            className={cn(
+              'relative flex w-full flex-1 flex-col px-5 pb-32 pt-6 sm:px-8 lg:px-10 lg:pt-8 xl:px-14 xl:pt-10',
+              hasCoachFab ? 'lg:pb-28' : 'lg:pb-12',
+            )}
+          >
             {/* HEADER MOBILE GLOBAL (paket 75): satu bar atas untuk semua
                 halaman app di mobile — lihat `app-mobile-header.tsx` untuk
                 isinya (logo, lonceng, tombol mata KONDISIONAL, hamburger).

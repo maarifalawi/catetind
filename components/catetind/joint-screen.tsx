@@ -5,6 +5,8 @@ import { AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { Heart, HeartHandshake, Pencil, Plus, ReceiptText, Scale } from 'lucide-react'
 import { ScreenShell } from './screen-shell'
+import { useSubscriptionGate } from './subscription-gate-provider'
+import { LockedFeatureNote } from './locked-feature-note'
 import { ConfirmDialog } from './confirm-dialog'
 import { JointStateCard } from './joint-state-card'
 import { GlobalPrivacyToggle } from './global-privacy-toggle'
@@ -116,6 +118,11 @@ export function JointScreen() {
   /* ── 1. DATA & STATE (Section 1) ───────────────────────────────────────── */
   const me: JointPerson = JOINT_ME
   const partner: JointPerson = JOINT_PARTNER
+
+  /* paket user (paket 84) — menentukan apakah Joint Wallet terbuka. Dipanggil
+     di sini (bukan di bawah) supaya urutan hook stabil & early-return kunci
+     paket tetap legal. */
+  const { planKnown, canUse } = useSubscriptionGate()
 
   /* konteks uang (Pribadi/Keluarga/Bersama) — state GLOBAL (paket 47).
      Halaman ini MEMANG konteks `bersama` (PRD Domain 2D): kantong ini khusus
@@ -568,6 +575,22 @@ export function JointScreen() {
   /* baris settlement bukan "catatan": kalau yang ada cuma baris settle, empty
      state-nya harus tetap muncul */
   const isEmptyJoint = partnerJoined && jointNotes(joint).length === 0
+
+  /* ── KUNCI PAKET (paket 84) ────────────────────────────────────────────────
+     Joint Wallet hanya ada di paket Waras ke atas. Halaman ini tetap BISA
+     dibuka (bukan 404, bukan layar kosong) dan menjelaskan sebabnya + jalan
+     keluarnya. Early-return ini legal karena SELURUH hook di komponen ini sudah
+     dipanggil di atas (hook terakhir: `confirmDeleteJointTx`). */
+  if (planKnown && !canUse('joint-wallet')) {
+    return (
+      <ScreenShell>
+        <div className="w-full max-w-[560px]">
+          <LockedFeatureNote capability="joint-wallet" />
+        </div>
+      </ScreenShell>
+    )
+  }
+
   return (
     <ScreenShell>
       {/* FULL-WIDTH (audit #4): halaman ini dulu dikurung dalam satu kolom

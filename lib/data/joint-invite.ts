@@ -21,6 +21,7 @@
    2D.1 melarang kebocoran lintas-user).
    ────────────────────────────────────────────────────────────────────────── */
 
+import { SITE_ORIGIN } from '../site'
 import { INITIAL_JOINT_WALLET, INVITE_VALIDITY_COPY, JOINT_ME, JOINT_PARTNER } from './joint'
 
 /** masa berlaku kode undangan — angka kanon PRD AC1 (24 jam) */
@@ -299,9 +300,11 @@ export const INVITE_CODE_COPY = {
   refreshedToast: 'Kode baru siap 🌿',
 } as const
 
-/** `https://catetind.app/join/<kode>` — bentuk absolute untuk dibagikan lewat chat */
+/** `https://catetind.com/join/<kode>` — bentuk absolute untuk dibagikan lewat chat
+ *  (domain diambil dari `lib/site.ts`; dulu file ini menulis `catetind.app`
+ *  sehingga undangan mendarat di domain yang berbeda dari sisa produk) */
 export function buildInviteUrl(code: string): string {
-  return `https://catetind.app${buildJoinHref(code)}`
+  return `${SITE_ORIGIN}${buildJoinHref(code)}`
 }
 
 /**

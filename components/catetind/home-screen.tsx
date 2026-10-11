@@ -18,11 +18,9 @@ import { WeeklyRecapBanner } from './weekly-recap-banner'
 import { WeeklyRecapModal } from './weekly-recap-modal'
 import { HomeBanners } from './home-banner'
 import { EmptyAccountNotice } from './empty-account-notice'
-import { RenewalModal } from './renewal-modal'
 import { MonthlyReviewModal } from './monthly-review-modal'
 import { MonthlyTargetCard } from './monthly-target-card'
 import { MilestoneCelebration } from './milestone-celebration'
-import { useRenewalReminder } from '@/hooks/use-renewal-reminder'
 import { useMonthlyReview } from '@/hooks/use-monthly-review'
 import { useMilestoneCelebration } from '@/hooks/use-milestone-celebration'
 import { ExpenseDistributionCard } from './expense-distribution-card'
@@ -124,9 +122,6 @@ export function HomeScreen() {
     },
     [router, searchQuery],
   )
-  /* pengingat perpanjangan (task 14): modal H-1 + banner-nya satu paket.
-     Logika "kapan muncul" ada di hook — Home cuma memasang & meneruskan. */
-  const renewal = useRenewalReminder()
   /* ritual bulanan (task 15): trigger tanggal 1–3 + target tersimpan.
      Logikanya juga di hook; Home cuma memasang kartu & modalnya. */
   const monthly = useMonthlyReview()
@@ -146,8 +141,8 @@ export function HomeScreen() {
     openMonthlyTarget()
   }, [openMonthlyTarget])
   /* Perayaan MENUNGGU popup lain tutup dulu: jangan dua overlay bertumpuk di
-     layar yang sama (alasan yang sama dengan `monthly.open && !renewal.open`). */
-  const celebrationBlocked = renewal.open || monthly.open || overviewOpen || recapOpen
+     layar yang sama (pola yang sama dengan `monthly.open`). */
+  const celebrationBlocked = monthly.open || overviewOpen || recapOpen
 
   return (
     <ScreenShell>
@@ -244,7 +239,9 @@ export function HomeScreen() {
                 pengaturannya tetap terjangkau lewat CTA di dalam panel. */}
             <NotificationBell />
             <span className="relative size-11 shrink-0 overflow-hidden rounded-full ring-1 ring-soil/12">
-              <Image src="/avatar-maarif.png" alt="Jon Snow" fill sizes="44px" className="object-cover" />
+              /* avatar dekoratif — identitas user datang dari sesi, jadi nama contoh
+                tidak boleh diumumkan ke screen reader (perbaikan audit K4) */
+              <Image src="/placeholder-user.jpg" alt="" aria-hidden fill sizes="44px" className="object-cover" />
             </span>
           </div>
         </div>
@@ -261,14 +258,10 @@ export function HomeScreen() {
             di MOBILE urutan dijaga `order-*` yang direset `lg:order-none` — satu
             versi markup untuk dua breakpoint. */}
         <div className="flex flex-col">
-          {/* banner conditional: masa aktif / kuota AI / sinking fund — sengaja
+          {/* banner conditional: kuota AI / sinking fund — sengaja
               di LUAR bento grid supaya terbaca sebagai strip notifikasi teratas */}
           <div className="mt-4 space-y-2.5 lg:mt-5">
-            <HomeBanners
-              renewalState={renewal.state}
-              renewalHandled={renewal.renewed}
-              onOpenRenewal={renewal.openModal}
-            />
+            <HomeBanners />
             {/* Rekap mingguan & target bulan ini DIPINDAH ke strip ini (paket
                 68). Keduanya memang berbentuk strip notifikasi/CTA — bukan kartu
                 data — dan memindahkannya membebaskan bento grid supaya persis
@@ -361,23 +354,13 @@ export function HomeScreen() {
           terisi di dua tempat dan tidak ada lagi label yang mendarat di
           halaman lain. */}
       <WeeklyRecapModal open={recapOpen} onClose={closeRecap} onSetTarget={handleSetRecapTarget} />
-      {/* ritual bulanan (inventaris #i): auto-popup tanggal 1–3 saja.
-          `!renewal.open` = modal ini MENUNGGU modal Renewal ditutup dulu supaya
-          user tidak dihadapkan dua popup bertumpuk di layar yang sama. */}
+      {/* ritual bulanan (inventaris #i): auto-popup tanggal 1–3 saja. */}
       <MonthlyReviewModal
-        open={monthly.open && !renewal.open}
+        open={monthly.open}
         monthKey={monthly.monthKey}
         saved={monthly.saved}
         onClose={monthly.close}
         onSave={monthly.saveTarget}
-      />
-      {/* modal perpanjangan: muncul sendiri 1x di H-1, bisa dibuka ulang dari
-          banner Renewal di atas — sumber kondisi & harganya lib/data/renewal.ts */}
-      <RenewalModal
-        open={renewal.open}
-        state={renewal.state}
-        onDismiss={renewal.dismiss}
-        onRenewed={renewal.markRenewed}
       />
       {/* perayaan milestone (inventaris #k) — auto-dismiss ~2.5 detik, bisa
           langsung ditutup, dan milestone yang sama tidak muncul dua kali

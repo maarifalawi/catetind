@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { LoginScreen } from '@/components/catetind/login-screen'
 import { PhoneStage } from '@/components/catetind/phone-stage'
 import { PublicNavbar } from '@/components/catetind/public-navbar'
+import { safeNextPath } from '@/lib/data/auth'
 
 /**
  * Masuk (/login) — inventaris #8, halaman PUBLIK/pre-app.
@@ -25,11 +26,23 @@ export const metadata: Metadata = {
     'Masuk ke CatetInd dengan satu email: kami kirim kode 6 angka ke inboxmu, lalu kamu ketik kodenya di halaman ini. Tanpa password.',
 }
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string | string[] }>
+}) {
+  /* `?next=` dibaca di SERVER (pola sama dengan `/login/verify`): halaman masuk
+     yang dibuka dari TENGAH alur — mau bayar, mau daftar — harus mengembalikan
+     user ke tujuan aslinya, bukan menaruhnya di Dashboard. `safeNextPath`
+     menyaring open-redirect sebelum nilainya dipakai. */
+  const params = await searchParams
+  const raw = params.next
+  const next = safeNextPath(Array.isArray(raw) ? raw[0] : raw)
+
   return (
     <PhoneStage plain>
       <PublicNavbar />
-      <LoginScreen />
+      <LoginScreen next={next} />
     </PhoneStage>
   )
 }

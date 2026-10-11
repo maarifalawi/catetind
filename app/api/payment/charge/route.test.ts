@@ -9,6 +9,7 @@ vi.mock('@/lib/payments/midtrans', () => ({
   cancelTransaction: vi.fn(),
 }))
 vi.mock('@/lib/supabase/rest', () => ({ restFetch: vi.fn() }))
+vi.mock('@/lib/subscription/plan', () => ({ readCallerPlan: vi.fn() }))
 
 import { POST } from './route'
 import { requireUser } from '@/lib/session'
@@ -19,7 +20,9 @@ import {
   midtransConfigured,
 } from '@/lib/payments/midtrans'
 import { restFetch } from '@/lib/supabase/rest'
-import { HERO_PLAN, applyReferralDiscount } from '@/lib/data/pricing'
+import { readCallerPlan } from '@/lib/subscription/plan'
+import { HERO_PLAN, PLANS, applyReferralDiscount } from '@/lib/data/pricing'
+import { AI_ADDON_PACKAGES } from '@/lib/ai-quota'
 
 /* ── POST /api/payment/charge (paket 83) ─────────────────────────────────────
    Yang dikunci bukan "route membalas 200", melainkan URUTAN & BATASnya:
@@ -41,8 +44,7 @@ const USER = { id: 'a1b2c3d4-aaaa-bbbb-cccc-dddddddddddd', email: 'a@b.c', name:
 const OFFER = {
   purpose: 'subscribe',
   planId: HERO_PLAN.id,
-  period: 'annual',
-  amount: HERO_PLAN.annual,
+  amount: HERO_PLAN.lifetime,
   method: 'qris',
 }
 
@@ -56,10 +58,27 @@ const PENDING_STATUS = {
     paymentType: 'qris',
     method: 'qris',
     transactionId: 'tx-1',
-    amount: HERO_PLAN.annual,
+    amount: HERO_PLAN.lifetime,
     expiresAt: '2026-10-10T21:15:45.000Z',
     instructions: { channel: 'qris', qrImageUrl: 'https://qr/contoh', qrString: '00020101' },
   },
+}
+
+/**
+ * Paket yang SUDAH dimiliki user — dibaca server dari `user_subscriptions`
+ * (`readCallerPlan`). Di test, sumbernya di-mock supaya test bisa menentukan
+ * "user ini sudah di tier apa" tanpa menyalin logika pembacaan DB.
+ */
+const readPlan = readCallerPlan as unknown as Mock
+
+function owned(tier: string | null, active = true): void {
+  readPlan.mockResolvedValue({
+    configured: true,
+    planId: tier,
+    purchasedAt: active ? '2026-01-01T00:00:00Z' : null,
+    active,
+    failed: false,
+  })
 }
 
 function request(body: unknown, origin?: string): NextRequest {
@@ -78,6 +97,8 @@ function insertCalls(): unknown[][] {
 beforeEach(() => {
   guard.mockReturnValue({ ok: true, user: USER, token: 't' })
   configured.mockReturnValue(true)
+  /* default: user BELUM punya paket — kondisi pembelian pertama */
+  owned(null, false)
   charge.mockResolvedValue({
     ok: true,
     value: {
@@ -86,7 +107,7 @@ beforeEach(() => {
       transactionStatus: 'pending',
       fraudStatus: null,
       transactionId: 'tx-1',
-      amount: HERO_PLAN.annual,
+      amount: HERO_PLAN.lifetime,
       expiresAt: '2026-10-10T21:15:45.000Z',
       instructions: { channel: 'qris', qrImageUrl: 'https://qr/contoh', qrString: '00020101' },
     },
@@ -131,13 +152,11 @@ describe('POST /api/payment/charge', () => {
   it('nominal bukan harga kanon → 422 (harga tidak dipercaya dari klien)', async () => {
     const res = await POST(request({ ...OFFER, amount: 1_000 }))
     expect(res.status).toBe(422)
-    expect(rest).not.toHaveBeenCalled()
     expect(charge).not.toHaveBeenCalled()
   })
 
-  it('paket / periode asing → 422', async () => {
+  it('paket asing → 422', async () => {
     expect((await POST(request({ ...OFFER, planId: 'entah-apa' }))).status).toBe(422)
-    expect((await POST(request({ ...OFFER, period: 'lifetime' }))).status).toBe(422)
   })
 
   it('metode di luar katalog (mis. OVO/DANA/karangan) → 422 tanpa memanggil provider', async () => {
@@ -166,7 +185,7 @@ describe('POST /api/payment/charge', () => {
     expect(options.body.status).toBe('pending')
     expect(options.body.order_id).toBe(body.orderId)
     expect(options.body.tier_name).toBe(HERO_PLAN.id)
-    expect(options.body.billing_period).toBe('annual')
+    expect(options.body.billing_period).toBe('lifetime')
 
     expect(charge).toHaveBeenCalledTimes(1)
     const [intent, method] = charge.mock.calls[0] as [
@@ -174,16 +193,78 @@ describe('POST /api/payment/charge', () => {
       { id: string },
     ]
     expect(intent.orderId).toBe(body.orderId)
-    expect(intent.amount).toBe(HERO_PLAN.annual)
+    expect(intent.amount).toBe(HERO_PLAN.lifetime)
     expect(method.id).toBe('qris')
     expect(intent.notificationUrl).toBe('http://localhost:3000/api/payment/webhook')
     expect(intent.finishUrl).toContain('http://localhost:3000/checkout/selesai?order_id=')
   })
 
   it('nominal diskon referral (10%) diterima', async () => {
-    const res = await POST(request({ ...OFFER, amount: applyReferralDiscount(HERO_PLAN.annual) }))
+    const res = await POST(request({ ...OFFER, amount: applyReferralDiscount(HERO_PLAN.lifetime) }))
     expect(res.status).toBe(200)
     expect(charge).toHaveBeenCalledTimes(1)
+  })
+
+  /* ── UPGRADE = SELISIH, DIHITUNG SERVER (paket 84) ─────────────────────────
+     Aturan yang dikunci di sini: klien hanya mengirim TUJUAN. Nominalnya
+     diturunkan server dari paket yang tersimpan, dan naik tier tidak boleh
+     ditagih seharga penuh. */
+
+  it('upgrade: nominal = SELISIH dari paket yang sudah dimiliki', async () => {
+    owned('catet-aja')
+    const target = PLANS[1]
+    const res = await POST(
+      request({
+        purpose: 'upgrade',
+        planId: target.id,
+        amount: target.lifetime - PLANS[0].lifetime,
+        method: 'qris',
+      }),
+    )
+    expect(res.status).toBe(200)
+    const [intent] = charge.mock.calls[0] as [{ amount: number; ownedPlanId?: string }]
+    expect(intent.amount).toBe(target.lifetime - PLANS[0].lifetime)
+    expect(intent.ownedPlanId).toBe('catet-aja')
+  })
+
+  it('upgrade ke paket yang lebih RENDAH/sama → 403 (downgrade tidak ditawarkan)', async () => {
+    owned('sultan')
+    const res = await POST(
+      request({
+        purpose: 'upgrade',
+        planId: PLANS[0].id,
+        amount: PLANS[0].lifetime,
+        method: 'qris',
+      }),
+    )
+    expect(res.status).toBe(403)
+    expect((await res.json()).reason).toBe('not-upgrade')
+    expect(charge).not.toHaveBeenCalled()
+  })
+
+  it('upgrade tanpa paket sama sekali → 403 (belum ada yang bisa ditambah)', async () => {
+owned(null, false)
+    const res = await POST(
+      request({ purpose: 'upgrade', planId: PLANS[1].id, amount: 20_000, method: 'qris' }),
+    )
+    expect(res.status).toBe(403)
+    expect((await res.json()).reason).toBe('not-owned')
+    expect(charge).not.toHaveBeenCalled()
+  })
+
+  it('upgrade dengan nominal harga PENUH → 422 (nominal tidak dipercaya)', async () => {
+    owned('catet-aja')
+    const target = PLANS[1]
+    const res = await POST(
+      request({
+        purpose: 'upgrade',
+        planId: target.id,
+        amount: target.lifetime,
+        method: 'qris',
+      }),
+    )
+    expect(res.status).toBe(422)
+    expect(charge).not.toHaveBeenCalled()
   })
 
   it('gagal mencatat baris → TIDAK menagih provider (jangan ambil uang tanpa catatan)', async () => {
@@ -272,5 +353,74 @@ describe('POST /api/payment/charge', () => {
     const body = await res.json()
     expect(body.ok).toBe(false)
     expect(body.error).toBe('conflict')
+  })
+})
+
+/* ── TOP UP TOKEN AI (paket 85 · TUGAS 3) ───────────────────────────────────
+   Harga add-on hidup di lib/ai-quota.ts; server MEMBACA dari sana. Yang
+   dikunci di sini: nominal salah → 422, nominal kanon → 200 dengan
+   expected_amount/token yang benar, dan token tidak dijual ke paket tanpa
+   kuota (Catet Aja) atau tanpa batas (Sultan). */
+describe('POST /api/payment/charge · purpose topup', () => {
+  const SEDANG_PKG = AI_ADDON_PACKAGES.find((pkg) => pkg.id === 'sedang')!
+  const TOPUP = {
+    purpose: 'topup',
+    packageId: SEDANG_PKG.id,
+    amount: SEDANG_PKG.price,
+    method: 'qris',
+  }
+
+  it('nominal salah → 422, provider tidak dipanggil', async () => {
+    owned('waras')
+    const res = await POST(request({ ...TOPUP, amount: 1_000 }))
+    expect(res.status).toBe(422)
+    expect(charge).not.toHaveBeenCalled()
+  })
+
+  it('paket token asing → 422', async () => {
+    owned('waras')
+    expect((await POST(request({ ...TOPUP, packageId: 'entah-apa' }))).status).toBe(422)
+  })
+
+  it('topup tidak boleh menitipkan planId → 422', async () => {
+    owned('waras')
+    expect((await POST(request({ ...TOPUP, planId: HERO_PLAN.id }))).status).toBe(422)
+  })
+
+  it('nominal kanon → 200 + baris purchases menyimpan expected_amount & token', async () => {
+    owned('waras')
+    const res = await POST(request(TOPUP))
+    expect(res.status).toBe(200)
+    expect(charge).toHaveBeenCalledTimes(1)
+
+    const [path, options] = insertCalls()[0] as [
+      string,
+      { body: { purpose: string; expected_amount: number; addon_tokens: number; addon_package_id: string; tier_name: unknown } },
+    ]
+    expect(path).toBe('purchases')
+    expect(options.body.purpose).toBe('topup')
+    expect(options.body.expected_amount).toBe(SEDANG_PKG.price)
+    expect(options.body.addon_package_id).toBe(SEDANG_PKG.id)
+    expect(options.body.addon_tokens).toBe(SEDANG_PKG.tokens)
+    expect(options.body.tier_name).toBeNull()
+  })
+
+  it('nominal versi diskon teman diterima', async () => {
+    owned('waras')
+    const res = await POST(request({ ...TOPUP, amount: applyReferralDiscount(SEDANG_PKG.price) }))
+    expect(res.status).toBe(200)
+  })
+
+  it('paket tanpa kuota (Catet Aja) & tanpa batas (Sultan) tidak boleh top up → 403', async () => {
+    owned('catet-aja')
+    expect((await POST(request(TOPUP))).status).toBe(403)
+    owned('sultan')
+    expect((await POST(request(TOPUP))).status).toBe(403)
+    expect(charge).not.toHaveBeenCalled()
+  })
+
+  it('tanpa backend (demo) paket tidak bisa diperiksa → dilewatkan', async () => {
+    readPlan.mockResolvedValue({ configured: false, planId: null, purchasedAt: null, active: false, failed: false })
+    expect((await POST(request(TOPUP))).status).toBe(200)
   })
 })

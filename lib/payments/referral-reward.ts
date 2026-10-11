@@ -18,9 +18,15 @@ import { restConfigured, restFetch } from '@/lib/supabase/rest'
 export interface RewardGrant {
   referralId: string
   referrerUserId: string
-  /** 'days' = tambahan masa aktif · 'tokens' = token AI add-on */
+  /** 'days' = tambahan masa aktif (model LAMA) · 'tokens' = token AI add-on */
   rewardKind: 'days' | 'tokens'
   rewardAmount: number
+  /**
+   * order pembelian yang MEMICU reward. Idempotensi jaring kedua: kolom
+   * `order_id` di `referral_rewards` unik, jadi notifikasi ganda tidak bisa
+   * memberi reward dua kali untuk satu pembelian.
+   */
+  orderId?: string
 }
 
 export interface RewardResult {
@@ -44,6 +50,7 @@ export async function grantReferralReward(input: RewardGrant, accessToken: strin
       referrer_user_id: input.referrerUserId,
       reward_kind: input.rewardKind,
       reward_amount: Math.max(0, Math.round(input.rewardAmount)),
+      ...(input.orderId ? { order_id: input.orderId } : {}),
     },
   })
 

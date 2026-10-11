@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils'
    buka/tutupnya tidak drop frame — lihat catatan performa di app/globals.css.
 
    Dipakai untuk tiga keputusan berisiko: putus koneksi dompet bersama,
-   berhenti langganan, dan hapus akun. Semuanya sengaja SATU klik dari panelnya
+   upgrade paket, dan hapus akun. Semuanya sengaja SATU klik dari panelnya
    masing-masing (tanpa labirin menu — anti dark pattern). */
 
 export function ConfirmDialog({

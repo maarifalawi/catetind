@@ -137,7 +137,7 @@ export function PaymentInstructionCard({
     return () => clearInterval(timer)
   }, [invoice.expiresAt])
 
-  /* pembayaran masuk → halaman konfirmasi yang sudah ada (mem-poll langganan) */
+  /* pembayaran masuk → halaman konfirmasi yang sudah ada (mem-poll status paket) */
   useEffect(() => {
     if (state !== 'settled') return
     const timer = setTimeout(() => {
@@ -204,7 +204,7 @@ export function PaymentInstructionCard({
             alt={PAY_CARD_COPY.qrAlt}
             width={220}
             height={220}
-            className="mx-auto size-[210px] rounded-2xl bg-white object-contain p-3 ring-1 ring-soil/10 lg:mx-0"
+            className="mx-auto size-[210px] rounded-2xl bg-canvas object-contain p-3 ring-1 ring-soil/10 lg:mx-0"
           />
           <div className="mt-4 lg:mt-0">
             <p className="text-[12.5px] font-medium text-forest">{PAY_CARD_COPY.qrisScanTitle}</p>

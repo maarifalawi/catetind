@@ -27,7 +27,7 @@ import { flushPendingSync, pendingSyncCount, useMoneyStore } from '@/lib/money/s
    menjadi kiriman `POST /api/transactions` per baris antrean dengan
    `clientTxId` sebagai Idempotency-Key.
 
-   `sticky top-0` seperti banner langganan, dengan z-index lebih tinggi supaya
+   `sticky top-0` seperti banner paket, dengan z-index lebih tinggi supaya
    saat keduanya muncul user tetap melihat kabar offline-nya. Bisa ditutup (X) —
    tapi begitu kejadian berikutnya datang (offline lagi), ia muncul kembali. */
 

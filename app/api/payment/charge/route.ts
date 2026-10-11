@@ -8,7 +8,18 @@ import {
   midtransConfigured,
 } from '@/lib/payments/midtrans'
 import type { PaymentInstructions, PaymentPurpose, PaymentState } from '@/lib/payments/types'
-import { PLANS, PERIOD_CHOICE_LABEL, isSellablePeriod, isValidOfferAmount } from '@/lib/data/pricing'
+import {
+  PLANS,
+  applyReferralDiscount,
+  isDowngradeOrSame,
+  isValidOfferAmount,
+  priceFor,
+  type PlanId,
+} from '@/lib/data/pricing'
+/* Harga add-on token AI hidup di `lib/ai-quota.ts` (satu sumber, bukan salinan).
+   Route MEMBACA dari sana — harga dari klien hanya dipakai untuk DICEK. */
+import { AI_ADDON_PACKAGES, planQuota } from '@/lib/ai-quota'
+import { readCallerPlan } from '@/lib/subscription/plan'
 import { restFetch } from '@/lib/supabase/rest'
 
 /* ── POST /api/payment/charge (paket 83) — TAGIHAN DI HALAMAN SENDIRI ────────
@@ -36,7 +47,7 @@ import { restFetch } from '@/lib/supabase/rest'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-const PURPOSES: PaymentPurpose[] = ['subscribe', 'topup', 'renew', 'upgrade']
+const PURPOSES: PaymentPurpose[] = ['subscribe', 'topup', 'upgrade']
 
 interface PendingRow {
   order_id?: string
@@ -46,21 +57,29 @@ interface ChargeBody {
   purpose?: unknown
   amount?: unknown
   planId?: unknown
-  period?: unknown
+  /** id paket add-on token AI (hanya untuk `purpose: 'topup'`) */
+  packageId?: unknown
   itemName?: unknown
   method?: unknown
 }
 
-/** order `pending` terakhir milik PEMANGGIL untuk penawaran yang sama (RLS yang menyaring) */
-async function findPendingOrder(token: string, planId: string, period: string): Promise<string | null> {
+/**
+ * order `pending` terakhir milik PEMANGGIL untuk paket yang sama (RLS yang
+ * menyaring). Sejak paket 84 tidak ada periode lagi: `billing_period` selalu
+ * `'lifetime'`, jadi kuncinya cukup paket + status.
+ */
+async function findPendingOrder(
+  token: string,
+  { planId, purpose }: { planId?: string | null; purpose: PaymentPurpose },
+): Promise<string | null> {
   const query = new URLSearchParams({
     select: 'order_id',
     status: 'eq.pending',
-    tier_name: `eq.${planId}`,
-    billing_period: `eq.${period}`,
+    purpose: `eq.${purpose}`,
     order: 'created_at.desc',
     limit: '1',
   })
+  if (planId) query.set('tier_name', `eq.${planId}`)
   const res = await restFetch<PendingRow[]>(`purchases?${query.toString()}`, { accessToken: token })
   if (!res.ok || !Array.isArray(res.data)) return null
   return res.data[0]?.order_id ?? null
@@ -106,18 +125,114 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  /* Nominal TIDAK dipercaya dari klien: untuk `subscribe`, server mencocokkan
-     (paket + periode + nominal) dengan harga kanon `lib/data/pricing.ts` —
-     termasuk versi diskon kode teman. */
+  /* ── Nominal TIDAK dipercaya dari klien ────────────────────────────────────
+     Sejak paket 84 harga ditentukan PAKET dan paket yang sudah dimiliki user
+     (dibaca dari `user_subscriptions`, bukan dari body):
+
+       · 'subscribe' (belum punya paket) → harga penuh paket target
+       · 'upgrade'   (sudah punya paket) → SELISIH dari `priceFor()`
+
+     Target yang lebih rendah/sama ditolak 403 — downgrade tidak ditawarkan dan
+     tidak ada refund, jadi menerimanya berarti menagih user untuk akses yang
+     lebih sedikit. */
+  /* expected_amount = nominal yang SEHARUSNYA ditagih. Ditulis ke baris
+     purchases supaya webhook bisa membandingkannya dengan notifikasi Midtrans
+     (paket 85). Nominal dari klien hanya DIIZINKAN kalau sama dengan ini. */
+  let expectedAmount = 0
+  let addonPackageId: string | null = null
+  let addonTokens = 0
+  let addonName: string | null = null
+
+  /* ── Top up token AI: server MEMBACA harga dari lib/ai-quota.ts ──
+     Token AI hanya dijual untuk paket yang BERKUOTA (Paket Waras): Paket Catet
+     Aja tidak punya AI sama sekali, dan Paket Sultan tidak dibatasi — menjual
+     token ke paket tanpa batas = jebakan (tidak ada kuota yang perlu ditambah). */
+  if (purpose === 'topup') {
+    const pkg = AI_ADDON_PACKAGES.find((item) => item.id === String(body.packageId))
+    if (!pkg) {
+      return NextResponse.json(
+        { ok: false, reason: 'invalid', error: 'Paket token AI tidak dikenal.' },
+        { status: 422 },
+      )
+    }
+    /* top up BUKAN pembelian tier: planId tidak boleh dititipkan */
+    if (body.planId !== undefined && body.planId !== null && String(body.planId) !== '') {
+      return NextResponse.json(
+        { ok: false, reason: 'invalid', error: 'Top up token tidak memakai paket langganan.' },
+        { status: 422 },
+      )
+    }
+    /* hanya paket berkuota yang boleh menambah token (kalau paketnya terbaca) */
+    const topupCaller = await readCallerPlan(auth.token)
+    if (topupCaller.configured) {
+      const quota = planQuota(topupCaller.active ? topupCaller.planId : null)
+      if (!quota.aiEnabled || quota.unlimited) {
+        return NextResponse.json(
+          {
+            ok: false,
+            reason: 'plan-not-eligible',
+            error: 'Top up token AI berlaku untuk paket yang punya kuota AI (Paket Waras).',
+          },
+          { status: 403 },
+        )
+      }
+    }
+    if (amount !== pkg.price && amount !== applyReferralDiscount(pkg.price)) {
+      return NextResponse.json(
+        { ok: false, reason: 'invalid', error: 'Nominal tidak sesuai harga paket token.' },
+        { status: 422 },
+      )
+    }
+    expectedAmount = pkg.price
+    addonPackageId = pkg.id
+    addonTokens = pkg.tokens
+    addonName = pkg.name
+  }
+
   const plan = PLANS.find((item) => item.id === String(body.planId))
-  const period = isSellablePeriod(body.period) ? body.period : undefined
-  if (purpose === 'subscribe') {
-    if (!plan || !period || !isValidOfferAmount(plan, period, amount)) {
+  let ownedPlanId: PlanId | null = null
+
+  if (purpose === 'subscribe' || purpose === 'upgrade') {
+    if (!plan) {
+      return NextResponse.json(
+        { ok: false, reason: 'invalid', error: 'Paket tidak dikenal.' },
+        { status: 422 },
+      )
+    }
+
+    const caller = await readCallerPlan(auth.token)
+    ownedPlanId = caller.active ? caller.planId : null
+
+    if (purpose === 'upgrade' && !ownedPlanId) {
+      return NextResponse.json(
+        {
+          ok: false,
+          reason: 'not-owned',
+          error: 'Upgrade cuma untuk user yang sudah punya paket. Beli paketnya dulu ya.',
+        },
+        { status: 403 },
+      )
+    }
+
+    if (purpose === 'upgrade' && plan && isDowngradeOrSame(plan, ownedPlanId)) {
+      return NextResponse.json(
+        {
+          ok: false,
+          reason: 'not-upgrade',
+          error: 'Tujuan upgrade harus paket yang lebih tinggi. Downgrade tidak ditawarkan.',
+        },
+        { status: 403 },
+      )
+    }
+
+    const expected = priceFor(plan, purpose === 'upgrade' ? ownedPlanId : null)
+    if (expected <= 0 || !isValidOfferAmount(plan, amount, purpose === 'upgrade' ? ownedPlanId : null)) {
       return NextResponse.json(
         { ok: false, reason: 'invalid', error: 'Nominal tidak sesuai harga produk.' },
         { status: 422 },
       )
     }
+    expectedAmount = expected
   }
 
   /* URL webhook + halaman selesai diambil dari `Origin` request: tidak ada domain
@@ -128,12 +243,14 @@ export async function POST(req: NextRequest) {
     typeof body.itemName === 'string' && body.itemName
       ? body.itemName
       : plan
-        ? `${plan.name} (${period ? PERIOD_CHOICE_LABEL[period] : 'Langganan'})`
-        : 'CatetInd'
+        ? `${plan.name} (akses selamanya)`
+        : addonName
+          ? `${addonName} — token AI`
+          : 'CatetInd'
 
   /* ── 1. Pakai ulang order yang masih pending (kalau memang bisa & cocok) ── */
-  if (plan && period) {
-    const existingOrderId = await findPendingOrder(auth.token, plan.id, period)
+  if (plan) {
+    const existingOrderId = await findPendingOrder(auth.token, { planId: plan.id, purpose })
     if (existingOrderId) {
       const status = await fetchTransactionStatus(existingOrderId, method)
       if (status.ok) {
@@ -191,7 +308,13 @@ export async function POST(req: NextRequest) {
       order_id: orderId,
       status: 'pending',
       tier_name: plan?.id ?? null,
-      billing_period: period ?? null,
+      billing_period: 'lifetime',
+      /* dipakai webhook: niat pembayaran (subscribe/upgrade/topup) + nominal
+         yang seharusnya ditagih + jumlah token (top-up) */
+      purpose,
+      expected_amount: expectedAmount,
+      addon_package_id: addonPackageId,
+      addon_tokens: addonTokens,
     },
   })
   if (!inserted.ok) {
@@ -212,7 +335,7 @@ export async function POST(req: NextRequest) {
       amount,
       itemName,
       planId: plan?.id,
-      period,
+      ownedPlanId: ownedPlanId ?? undefined,
       customerEmail: auth.user.email,
       customerName: auth.user.name,
       notificationUrl: origin ? `${origin}/api/payment/webhook` : undefined,

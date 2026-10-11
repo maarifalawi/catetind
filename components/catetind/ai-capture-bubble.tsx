@@ -8,6 +8,8 @@ import { AIAvatar } from './ai-avatar'
 import { CategoryPicker } from './category-picker'
 import { WalletPicker } from './wallet-picker'
 import { useMoneyContext } from './money-context-provider'
+import { useSubscriptionGate } from './subscription-gate-provider'
+import { LockedFeatureNote } from './locked-feature-note'
 import { cn } from '@/lib/utils'
 import { AI_CAPTURE_COPY } from '@/lib/ai-chat'
 import { TRANSACTION_INPUT_COPY, TRANSACTION_TYPE_LABEL } from '@/lib/data/history'
@@ -614,6 +616,15 @@ export function AICaptureBubble({
   onFinishVoice: () => void
   onRetryVoice: () => void
 }) {
+  /* KUNCI PAKET (paket 84): scan struk & voice adalah kemampuan berbayar.
+     Kalau paket user tidak memuatnya, bubble ini MENAMPILKAN ajakan upgrade —
+     bukan alur yang jalan lalu gagal 403 di server. Hook tetap dipanggil
+     sebelum early-return mana pun supaya urutan hook tidak berubah. */
+  const { planKnown, canUse } = useSubscriptionGate()
+  if (planKnown && !canUse('ocr') && !canUse('voice')) {
+    return <LockedFeatureNote capability="ocr" className="m-3" />
+  }
+
   if (phase === 'reading') return <ReadingBubble />
   /* tulisan user sedang dirapikan (paket 79) — kalimatnya soal TULISAN, bukan
      struk: fase ini dipakai jalur chat yang menunggu jawaban model */

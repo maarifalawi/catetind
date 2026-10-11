@@ -7,20 +7,21 @@
    Kenapa halaman ini ada (bukan formalitas): positioning produk kita adalah
    "jujur di setiap klaim" (PRD 244), dan audiensnya orang yang sudah skeptis
    pada produk finansial. ToS ini adalah janji anti-dark-pattern yang ditulis
-   resmi — tanpa auto-renew, tanpa harga yang berubah diam-diam, tanpa data
-   yang hilang karena langganan habis.
+   resmi — tanpa tagihan bulanan, tanpa harga yang berubah diam-diam, tanpa data
+   yang hilang karena paketnya berakhir.
 
    ATURAN ISI:
      1. Yang WAJIB PERSIS dari PRD ditulis persis (lihat penanda "verbatim" di
         tiap bagian) — terutama 4 poin "CatetInd BUKAN" (PRD 5085–5089), karena
         itulah batas legalnya terhadap OJK.
-     2. Angka ditulis dalam bahasa manusia, tidak disembunyikan: grace period,
-        siklus reset kuota, dan aturan token add-on disebut terang-terangan.
+     2. Angka ditulis dalam bahasa manusia, tidak disembunyikan: siklus reset
+        kuota AI dan aturan token add-on disebut terang-terangan.
      3. Nominal harga TIDAK ditulis di sini. Satu-satunya sumber harga app ini
         adalah `lib/data/pricing.ts` (dipakai /checkout & /settings/billing),
         jadi menyalin angkanya ke dokumen ini cuma menciptakan daftar harga
         kedua yang bisa basi. Yang ditulis adalah ATURANNYA (satu harga per
-        paket, tahunan = bayar 8 bulan, tanpa biaya tersembunyi).
+        paket, sekali bayar untuk akses selamanya, upgrade = bayar selisih,
+        tanpa biaya tersembunyi).
      4. Yang tidak ada di PRD TIDAK dikarang — ditandai kotak `tone: 'review'`
         (`REVIEW LEGAL`) yang terbaca user, bukan disembunyikan di komentar.
 
@@ -61,7 +62,7 @@ export const TERMS_VERSION_LABEL = 'Versi 1.0'
  */
 export const TERMS_LINK_COPY = {
   label: 'Syarat & Ketentuan',
-  hint: 'Aturan main layanan ini: batas AI Coach, cara kerja langganan, dan apa yang tetap jadi milikmu.',
+  hint: 'Aturan main layanan ini: batas AI Coach, cara kerja paket akses selamanya, dan apa yang tetap jadi milikmu.',
 } as const
 
 export const TERMS_DOC: LegalDocument = {
@@ -76,6 +77,7 @@ export const TERMS_DOC: LegalDocument = {
   updatedIso: TERMS_UPDATED_ISO,
   versionLabel: TERMS_VERSION_LABEL,
   tocLabel: 'Isi dokumen',
+  homeLabel: 'Balik ke halaman depan CatetInd',
   sections: [
     /* ── 1. RINGKASAN BAHASA MANUSIA (wajib dibaca) ───────────────────────── */
     {
@@ -86,8 +88,8 @@ export const TERMS_DOC: LegalDocument = {
       ],
       bullets: [
         'CatetInd adalah alat pencatatan keuangan pribadi dengan fitur edukasi berbasis AI. Ia membantu kamu belajar mengelola uang — bukan mengelola uangmu, dan bukan memberi keputusan keuangan untukmu.',
-        'Langganan bersifat prabayar (prepaid). Kamu bayar di muka, dan KAMU yang menekan tombol perpanjang. Tidak ada tagihan otomatis di sistem kami, kapan pun.',
-        'Masa aktif habis bukan kiamat: app tetap bisa dibuka, seluruh data & riwayat tetap bisa dibaca (read-only), dan catatanmu TIDAK PERNAH dihapus — bahkan kalau kamu tidak kembali selama berbulan-bulan.',
+        'Langganan bersifat PRABAYAR dan berlaku SELAMANYA: kamu membayar satu kali untuk paketmu, dan tidak ada tagihan berkala di sistem kami, kapan pun.',
+        'Paket Catet Aja tidak memuat fitur AI. Fitur AI (AI Coach, scan struk, input suara, laporan AI) dan Joint Wallet aktif mulai Paket Waras; kuota AI tanpa batas ada di Paket Sultan. Paket yang sudah dibayar TIDAK dibatasi waktu dan tidak pernah ditagih lagi.',
         'Data keuanganmu milikmu. Kamu bisa mengekspornya jadi satu file JSON atau menghapus akunmu sendiri, tanpa perlu menghubungi siapa pun.',
       ],
       note: {
@@ -186,30 +188,30 @@ export const TERMS_DOC: LegalDocument = {
       },
     },
 
-    /* ── 6. LANGGANAN & MASA AKTIF (PRD 4505–4548, A3 5146–5148, A4 5150–5152,
-          A8 5166–5168, bonus referral 6499–6502) ──────────────────────────── */
+    /* ── 6. AKSES SELAMANYA & UPGRADE PAKET (PRD 4505–4548, A3 5146–5148,
+          A4 5150–5152, A8 5166–5168, bonus referral 6499–6502) ─────────────── */
     {
       id: 'langganan',
-      title: 'Cara kerja langganan & masa aktif',
+      title: 'Cara kerja akses selamanya & upgrade paket',
       paragraphs: [
-        'CatetInd memakai model prabayar: kamu membeli masa aktif, memakainya sampai habis, lalu memilih sendiri kapan memperpanjang. Kami tidak menyimpan mandat penagihan, jadi tidak ada satu pun mekanisme di sistem kami yang bisa menarik uangmu tanpa kamu menekan tombol lebih dulu.',
-        'Perpanjangan bisa lewat tombol satu-tap dengan metode pembayaran yang sudah tersimpan, atau lewat halaman pembelian biasa. Satu-tap tetap butuh ketukan dan konfirmasi darimu di jendela Midtrans — token yang tersimpan hanya menghemat pengetikan data pembayaran, bukan memberi izin menagih.',
+        'CatetInd dijual SEKALI BAYAR untuk akses selamanya. Kamu membayar satu kali, memakai fitur paketmu tanpa batas waktu, dan tidak ada tagihan yang datang lagi. Kami tidak menyimpan mandat penagihan — tidak ada satu pun mekanisme di sistem kami yang bisa menarik uangmu sendiri.',
+        'Karena itu TIDAK ADA masa aktif, tanggal berakhir, masa tenggang, atau perpanjangan untuk ketiga paket ini. Kalau kamu mau fitur paket yang lebih tinggi, yang kamu bayar adalah SELISIH harganya — bukan harga penuh dari nol. Selisih itu dihitung dari daftar harga yang sama yang kamu lihat di halaman pembelian, dan selalu ditampilkan sebelum kamu menekan tombol bayar.',
       ],
       bullets: [
-        'Masa aktif bertumpuk, bukan mereset. Kalau kamu memperpanjang sebelum masa aktifmu habis, sisa harinya ditambahkan — tidak ada hari yang hangus.',
-        'Bonus dari mengajak teman ikut ditumpuk ke periode yang sedang berjalan: tambahan +30 hari masa aktif untuk pemilik paket bulanan/tahunan, atau tambahan token AI untuk pemilik paket seumur hidup.',
-        'Berhenti kapan saja lewat "Berhenti Berlangganan" di Pengaturan → Langganan. Yang berhenti hanya perpanjangan berikutnya; masa aktif yang sudah kamu bayar tetap berjalan sampai tanggalnya habis, dan datamu tetap utuh.',
-        'Masa aktif habis — grace period 7 hari pertama: app tetap bisa dibuka dan seluruh data & riwayat tetap bisa dibaca, tapi pencatatan transaksi baru diblokir. Tanamanmu masuk mode tidur: warna redup dan mata tertutup, bukan mati.',
-        'Setelah lewat 7 hari: statusnya tetap read-only, hanya kalimat pengingatnya yang berubah jadi ajakan, bukan peringatan. Tidak ada fitur yang dikunci, tidak ada tanggal yang memaksa.',
-        'Data TIDAK PERNAH dihapus, bahkan kalau kamu tidak pernah memperpanjang lagi. Kembali enam bulan kemudian, perpanjang lagi, dan seluruh catatanmu masih persis seperti saat kamu tinggalkan.',
-        'Paket seumur hidup (Founding Member) tidak punya tanggal berakhir dan tidak butuh perpanjangan — sekali bayar, selesai.',
+        'Daftar paketnya: Paket Catet Aja (pencatatan manual), Paket Waras (AI Coach, scan struk, input suara, laporan AI, Joint Wallet), dan Paket Sultan (semua fitur Waras plus AI tanpa batas kuota dan prioritas dukungan). Nominal rupiahnya tampil dari sumber yang sama di halaman pembelian maupun di Pengaturan → Langganan.',
+        'Upgrade tersedia kapan saja, dan hanya untuk naik ke paket yang LEBIH TINGGI. Downgrade tidak kami tawarkan karena tidak ada pengembalian uang (refund) — dan kami tidak mau menagihmu untuk akses yang lebih sedikit.',
+        'Bonus dari mengajak teman berbentuk tambahan Token AI, bukan tambahan hari: sejak akses berlaku selamanya, tidak ada masa aktif yang bisa ditambahi.',
+        'Fitur berbayar benar-benar TERKUNCI di paket yang tidak memuatnya. Permintaan ke fitur itu ditolak di sisi server — bukan sekadar tombolnya disembunyikan — dan app menunjukkan ajakan upgrade beserta selisihnya.',
+        'Kalau ada penyesuaian harga untuk pembelian baru, paket yang sudah kamu bayar TIDAK terpengaruh: aksesmu tetap seperti saat kamu membelinya.',
+        'Data TIDAK PERNAH dihapus dan tidak pernah disandera. Semua catatanmu bisa diekspor kapan saja, terlepas dari paket yang kamu miliki.',
       ],
       note: {
-        label: 'Tanpa auto-renew paksa — kamu yang pegang kendali',
-        body: 'Ini bukan disclaimer yang dikarang untuk halaman ini, tapi cara produk ini dibangun (PRD 4507–4509). Pengingat perpanjangan datang 7 hari, 3 hari, dan 1 hari sebelum masa aktif habis — lewat banner di app dan email. Pesan terakhirnya pun selalu punya tombol "Nanti aja", dan kalau kamu tidak menekan tombol perpanjang, tidak ada uang yang keluar dari rekeningmu.',
+        label: 'Sekali bayar, akses selamanya',
+        body: 'Tidak ada tagihan bulanan, tidak ada auto-renew, dan tidak ada pengingat perpanjangan — karena tidak ada yang perlu diperpanjang. Kalau suatu saat kami mengubah model ini untuk pelanggan BARU, pembelian yang sudah terjadi tetap berlaku sesuai versi ketentuan saat kamu membeli, dan perubahan seperti itu kami beritahukan lebih dulu lewat notifikasi di app dan email.',
         tone: 'info',
       },
     },
+
 
     /* ── 7. KUOTA & TOKEN AI (PRD 4774–4860 + A5 5154–5156 & A6 5158–5160) ──
        Angka kuota DITULIS (jangan disembunyikan), tapi nominal rupiahnya tidak:
@@ -219,7 +221,7 @@ export const TERMS_DOC: LegalDocument = {
       id: 'token-ai',
       title: 'Kuota & Token AI',
       paragraphs: [
-        'Fitur AI — kategorisasi otomatis, penamaan transaksi, chat dengan Minca, pindai struk, input suara, apresiasi, dan recap mingguan — dihitung dengan token dan sudah termasuk dalam langgananmu. Kuota dasarnya sengaja dipasang di atas pemakaian normal: perkiraan kami, 80% orang tidak akan pernah menyentuh batasnya.',
+        'Fitur AI — kategorisasi otomatis, penamaan transaksi, chat dengan Minca, pindai struk, input suara, apresiasi, dan recap mingguan — dihitung dengan token. Kuota dasarnya termasuk dalam Paket Waras, dan Paket Sultan memberi AI TANPA BATAS KUOTA (dengan kebijakan pemakaian wajar: kalau pemakaiannya ekstrem kami hubungi dulu, bukan memotong diam-diam). Paket Catet Aja tidak memuat fitur AI sama sekali.',
         'Ini rinciannya, tanpa angka yang disembunyikan:',
       ],
       bullets: [
@@ -232,7 +234,7 @@ export const TERMS_DOC: LegalDocument = {
       ],
       note: {
         label: 'REVIEW LEGAL — rincian yang belum diputuskan',
-        body: 'Angka kuota, siklus reset, dan aturan "token isi ulang tidak hangus" sudah final. Yang belum diputuskan: cara menghitung kuota kalau kamu berpindah paket di tengah bulan, dan pemakaian dari dua perangkat sekaligus. Dua hal itu sengaja belum kami tulis di sini — lebih baik kosong dan bisa ditanyakan lewat Pusat Bantuan daripada tegas tapi salah.',
+        body: 'Angka kuota, siklus reset, dan aturan "token isi ulang tidak hangus" sudah final. Yang belum diputuskan: cara menghitung kuota kalau kamu naik paket di tengah bulan, dan pemakaian dari dua perangkat sekaligus. Dua hal itu sengaja belum kami tulis di sini — lebih baik kosong dan bisa ditanyakan lewat Pusat Bantuan daripada tegas tapi salah.',
         tone: 'review',
       },
     },
@@ -244,18 +246,18 @@ export const TERMS_DOC: LegalDocument = {
       title: 'Pembayaran',
       paragraphs: [
         'Semua pembayaran diproses oleh Midtrans — payment gateway yang juga dipakai layanan besar di Indonesia. Data kartu atau e-wallet-mu diproses langsung oleh Midtrans: kami tidak pernah melihatnya dan tidak pernah menyimpannya.',
-        'Harga yang kamu lihat di halaman pembelian adalah harga yang kamu bayar. Satu harga per paket, sama di semua tempat — halaman pembelian, Pengaturan → Langganan, dan pengingat perpanjangan. Tidak ada biaya tersembunyi, tidak ada harga yang berubah setelah kamu menyetujui, dan tidak ada promo yang bikin harga aslinya jadi misterius.',
+        'Harga yang kamu lihat di halaman pembelian adalah harga yang kamu bayar. Satu harga per paket, sama di semua tempat — halaman pembelian dan Pengaturan → Langganan. Tidak ada biaya tersembunyi, tidak ada harga yang berubah setelah kamu menyetujui, dan tidak ada promo yang bikin harga aslinya jadi misterius.',
         'Satu-satunya potongan harga adalah diskon 10% untuk teman yang kamu ajak lewat kode referral — dan potongan itu selalu terlihat di ringkasan sebelum kamu menekan tombol bayar.',
       ],
       bullets: [
-        'Periode tahunan selalu dihitung dengan aturan yang sama: kamu membayar 8 bulan untuk masa aktif 365 hari. Itu sebabnya penghematannya selalu di atas 30%, dan angkanya tidak pernah berubah-ubah.',
-        'Harga paket seumur hidup (Founding Member) memang naik setiap kali ada yang membeli — itu bagian dari aturan mainnya, bukan kenaikan diam-diam. Harga yang berlaku untukmu adalah harga yang tampil di halaman pembelian saat kamu membayar.',
-        'Kalau kamu sudah membayar tetapi slot Founding Member keburu penuh sebelum pembayaranmu tercatat, uangmu kami kembalikan utuh.',
+        'Setiap paket dibayar SEKALI untuk akses selamanya. Tidak ada periode bulanan/tahunan, jadi tidak ada penagihan berulang yang harus dihitung ulang.',
+        'Naik ke paket yang lebih tinggi cukup membayar SELISIH dari harga paket yang sedang kamu miliki. Sistem menghitungnya sendiri dari daftar harga resmi, dan angkanya tampil sebelum kamu membayar.',
+        'Downgrade tidak kami tawarkan: tidak ada pengembalian uang, dan kami tidak mau menagihmu untuk akses yang lebih sedikit.',
         'Garansi uang kembali: kalau dalam 30 hari kamu merasa CatetInd bukan untukmu, kirim email ke support@catetind.com dengan alasan singkat dan kami proses pengembaliannya dalam 3–5 hari kerja. Tanpa pertanyaan yang aneh-aneh.',
       ],
       note: {
         label: 'REVIEW LEGAL — cakupan garansi',
-        body: 'Poin garansi di atas adalah janji publik, jadi kami tulis apa adanya — bukan "syarat & ketentuan berlaku" yang kabur. Yang belum diputuskan: perlakuannya untuk token isi ulang yang sudah terpakai sebagian dan untuk langganan yang berjalan setengah periode. Dua kasus itu masih ditinjau kasus per kasus sampai ada aturan tertulisnya.',
+        body: 'Poin garansi di atas adalah janji publik, jadi kami tulis apa adanya — bukan "syarat & ketentuan berlaku" yang kabur. Yang belum diputuskan: perlakuan untuk pembelian token AI isi ulang yang sudah terpakai sebagian, dan untuk upgrade yang sedang berjalan saat garansi diklaim. Dua kasus itu masih ditinjau kasus per kasus sampai ada aturan tertulisnya.',
         tone: 'review',
       },
     },
@@ -295,7 +297,7 @@ export const TERMS_DOC: LegalDocument = {
         'Tidak ada satu pun orang di CatetInd yang bisa membuka catatan transaksimu — termasuk kami sendiri. Kalau kamu menghubungi support, kami meminta screenshot, bukan akses ke data.',
         'Data yang kamu hapus benar-benar hilang dari sistem kami, bukan disembunyikan atau disimpan diam-diam.',
         'Rincian lengkap soal data — apa yang disimpan, bagian mana yang diproses penyedia model AI, dan sakelar untuk mematikannya — ada di Kebijakan Privasi. Sengaja tidak kami ulang di sini supaya tidak lahir dua versi janji yang sama.',
-        'Data tetap tersimpan meski masa aktifmu habis, dan tetap bisa kamu ekspor. Tidak ada catatan yang disandera di balik langganan.',
+        'Data tetap tersimpan dan tetap bisa kamu ekspor, terlepas dari paket yang kamu miliki. Tidak ada catatan yang disandera di balik paket berbayar.',
       ],
     },
 
@@ -316,7 +318,7 @@ export const TERMS_DOC: LegalDocument = {
       ],
       note: {
         label: 'REVIEW LEGAL — batas ganti rugi',
-        body: 'Apakah ganti rugi dibatasi sebesar biaya langganan yang pernah kamu bayar, dan bagaimana rumusannya, belum diputuskan. Kami tidak mencantumkan batas angka yang belum disetujui — bagian ini menunggu rumusan advokat, dan tanggal versinya akan naik begitu isinya berubah.',
+        body: 'Apakah ganti rugi dibatasi sebesar biaya paket yang pernah kamu bayar, dan bagaimana rumusannya, belum diputuskan. Kami tidak mencantumkan batas angka yang belum disetujui — bagian ini menunggu rumusan advokat, dan tanggal versinya akan naik begitu isinya berubah.',
         tone: 'review',
       },
     },
@@ -329,10 +331,10 @@ export const TERMS_DOC: LegalDocument = {
         'Halaman ini punya nomor versi dan tanggal di bagian atas. Setiap kali isinya berubah, keduanya ikut naik — dan Kebijakan Privasi diperbarui bersamaan, supaya tidak pernah ada dua dokumen legal yang saling bertentangan.',
       ],
       bullets: [
-        'Perubahan yang mengubah hakmu — aturan masa aktif, kuota AI, atau cara pembayaran — kami beri tahu lewat notifikasi di app dan email SEBELUM berlaku, bukan sesudah.',
+        'Perubahan yang mengubah hakmu — aturan paket & akses selamanya, kuota AI, atau cara pembayaran — kami beri tahu lewat notifikasi di app dan email SEBELUM berlaku, bukan sesudah.',
         'Perubahan kecil (perbaikan kalimat, tambahan contoh) tidak perlu notifikasi, tapi nomor versinya tetap naik supaya riwayatnya bisa ditelusuri.',
         'Versi yang berlaku adalah yang tampil di halaman ini; salinan yang tersebar di tempat lain bukan acuan.',
-        'Kalau kamu tidak setuju dengan versi barunya, kamu tidak wajib memperpanjang langgananmu — dan seperti biasa, datamu tetap bisa kamu ekspor dan hapus sendiri.',
+        'Kalau kamu tidak setuju dengan versi barunya, kamu tidak wajib membeli apa pun lagi — dan seperti biasa, datamu tetap bisa kamu ekspor dan hapus sendiri.',
       ],
     },
 
@@ -371,7 +373,7 @@ export const TERMS_DOC: LegalDocument = {
     tone: 'review',
   },
   demoNote:
-    'Catatan build demo: versi CatetInd yang sedang kamu buka adalah prototipe desain. Bagian langganan, kuota token, dan pembayaran di atas menjelaskan cara kerja versi produksinya — di build ini tidak ada pembayaran nyata, tidak ada penagihan, dan tidak ada satu pun permintaan yang benar-benar dikirim ke penyedia model AI.',
+    'Catatan build demo: versi CatetInd yang sedang kamu buka adalah prototipe desain. Bagian paket & harga, kuota token, dan pembayaran di atas menjelaskan cara kerja versi produksinya — di build ini tidak ada pembayaran nyata, tidak ada penagihan, dan tidak ada satu pun permintaan yang benar-benar dikirim ke penyedia model AI.',
   related: {
     title: 'Lihat juga',
     links: [
@@ -388,7 +390,7 @@ export const TERMS_DOC: LegalDocument = {
       {
         href: '/settings/billing',
         label: 'Langganan & Billing',
-        desc: 'Paket yang sedang aktif, tanggal berakhir, dan tombol perpanjang atau berhenti.',
+        desc: 'Paket yang sedang aktif, fitur yang terbuka, dan jalur upgrade.',
       },
       {
         href: '/settings/security',

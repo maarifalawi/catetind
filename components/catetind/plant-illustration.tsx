@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils'
-import { PLANT_SLEEP_COPY } from '@/lib/data/renewal'
+import { PLANT_SLEEP_COPY } from '@/lib/data/upgrade'
 
 /* tahap pertumbuhan tanaman - kanon Domain 3B */
 export type PlantStage = 1 | 2 | 3 | 4
@@ -21,7 +21,7 @@ function Leaf({ d, vein, deep = false }: { d: string; vein: string; deep?: boole
       <path
         d={vein}
         fill="none"
-        stroke="#2f3d35"
+        stroke="#1f2823"
         strokeWidth="0.9"
         strokeOpacity="0.3"
         strokeLinecap="round"
@@ -79,7 +79,7 @@ function Bloom({
           cx={Math.cos((deg * Math.PI) / 180) * 3.2}
           cy={Math.sin((deg * Math.PI) / 180) * 3.2}
           r="1"
-          fill="#fff7ea"
+          fill="#ffffff"
           opacity="0.9"
         />
       ))}
@@ -93,10 +93,12 @@ function Bloom({
  * — home pakai SVG ringan + sway CSS, tanpa Lottie).
  *
  * `wilted`   = state Tanaman Layu (HP ≤ 20): daun desaturated & merunduk.
- * `sleeping` = state VI "Tanaman Sleep Mode" (inventaris 137 · PRD 4542), dipakai
- *              saat masa aktif langganan habis: greyscale + mata tertutup + ayunan
+ * `sleeping` = state VI "Tanaman Menunggu" (inventaris 137 · PRD 4542), dipakai
+ *              saat paket user belum aktif: greyscale + mata tertutup + ayunan
  *              berhenti. Ini SENGAJA berbeda dari `wilted`: layu = butuh dirawat,
- *              tidur = menunggu — tidak ada rasa bersalah yang perlu dipasang.
+ *              menunggu = belum mulai — tidak ada rasa bersalah yang perlu
+ *              dipasang. (Sebelum paket 84 state ini berarti "masa aktif habis";
+ *              keadaan itu sudah tidak ada karena semua paket akses selamanya.)
  *
  * Semua warna diambil dari palet kanon (mint/forest/plum/cantelope/olive), tanpa
  * hex di luar palet. Gradien memakai id TETAP: tiap instance menggambar definisi
@@ -110,7 +112,7 @@ export function PlantIllustration({
 }: {
   stage: PlantStage
   wilted?: boolean
-  /** true = mode "tidur" selama grace/post-grace (tanpa angka HP) */
+  /** true = mode "menunggu paket aktif" (tanpa angka HP) */
   sleeping?: boolean
   className?: string
 }) {
@@ -133,38 +135,38 @@ export function PlantIllustration({
           <stop offset="100%" stopColor="#91bb9e" stopOpacity="0" />
         </radialGradient>
         <linearGradient id="catetindLeaf" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#bcdcc3" />
-          <stop offset="48%" stopColor="#8fbba0" />
-          <stop offset="100%" stopColor="#50695a" />
+          <stop offset="0%" stopColor="#dbe4c7" />
+          <stop offset="48%" stopColor="#91bb9e" />
+          <stop offset="100%" stopColor="#52685c" />
         </linearGradient>
         <linearGradient id="catetindLeafDeep" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#9cc4a9" />
-          <stop offset="100%" stopColor="#3f5147" />
+          <stop offset="0%" stopColor="#91bb9e" />
+          <stop offset="100%" stopColor="#45594e" />
         </linearGradient>
         <linearGradient id="catetindStem" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#7aa98f" />
+          <stop offset="0%" stopColor="#91bb9e" />
           <stop offset="100%" stopColor="#45594e" />
         </linearGradient>
         <linearGradient id="catetindPot" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#5f776a" />
-          <stop offset="100%" stopColor="#3a4b42" />
+          <stop offset="0%" stopColor="#52685c" />
+          <stop offset="100%" stopColor="#1f2823" />
         </linearGradient>
         <linearGradient id="catetindPotRim" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#809a88" />
+          <stop offset="0%" stopColor="#91bb9e" />
           <stop offset="100%" stopColor="#52685c" />
         </linearGradient>
         <linearGradient id="catetindPetalBack" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#f3d3c2" />
-          <stop offset="100%" stopColor="#d3a2a8" />
+          <stop offset="0%" stopColor="#fbe3c0" />
+          <stop offset="100%" stopColor="#b89191" />
         </linearGradient>
         <linearGradient id="catetindPetal" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#f0c2ac" />
+          <stop offset="0%" stopColor="#fbe3c0" />
           <stop offset="100%" stopColor="#b89191" />
         </linearGradient>
         <radialGradient id="catetindCore" cx="35%" cy="30%" r="75%">
-          <stop offset="0%" stopColor="#ffe7b4" />
+          <stop offset="0%" stopColor="#f6edb7" />
           <stop offset="55%" stopColor="#ffb885" />
-          <stop offset="100%" stopColor="#e0996a" />
+          <stop offset="100%" stopColor="#e8b06a" />
         </radialGradient>
         <radialGradient id="catetindSheen" cx="32%" cy="28%" r="72%">
           <stop offset="0%" stopColor="#ffffff" stopOpacity="0.55" />
@@ -189,9 +191,9 @@ export function PlantIllustration({
               gundukan tanah + biji dengan tunas mungil yang baru pecah keluar */}
           {stage === 1 && (
             <g>
-              <path d="M70 168 Q100 145 130 168 Z" fill="#6f5144" />
-              <path d="M77 168 Q100 152 123 168 Z" fill="#7d5c4d" />
-              <ellipse cx="100" cy="159.5" rx="7" ry="5.4" fill="#c98d96" />
+              <path d="M70 168 Q100 145 130 168 Z" fill="#73533c" />
+              <path d="M77 168 Q100 152 123 168 Z" fill="#73533c" />
+              <ellipse cx="100" cy="159.5" rx="7" ry="5.4" fill="#b89191" />
               <ellipse cx="100" cy="159.5" rx="7" ry="5.4" fill="url(#catetindSheen)" />
               <path
                 d="M100 157 c 0 -5.4 -3.6 -8.6 -9 -9.6 c 1 5.4 4.4 8.6 9 9.6 Z"
@@ -265,7 +267,7 @@ export function PlantIllustration({
               <path
                 d="M124 116 C 133 112 136 103 131 96"
                 fill="none"
-                stroke="#7aa98f"
+                stroke="#91bb9e"
                 strokeWidth="1.6"
                 strokeLinecap="round"
                 opacity="0.8"
@@ -282,13 +284,13 @@ export function PlantIllustration({
               />
               <path
                 d="M100 107 v-9.4"
-                stroke="#2f3d35"
+                stroke="#1f2823"
                 strokeWidth="0.9"
                 strokeOpacity="0.35"
                 strokeLinecap="round"
               />
-              <ellipse cx="86" cy="110" rx="2.6" ry="4.4" fill="#8fbba0" transform="rotate(-24 86 110)" />
-              <ellipse cx="114" cy="112" rx="2.4" ry="4" fill="#8fbba0" transform="rotate(22 114 112)" />
+              <ellipse cx="86" cy="110" rx="2.6" ry="4.4" fill="#91bb9e" transform="rotate(-24 86 110)" />
+              <ellipse cx="114" cy="112" rx="2.4" ry="4" fill="#91bb9e" transform="rotate(22 114 112)" />
             </g>
           )}
 

@@ -1051,7 +1051,9 @@ export const WalletCardStack = memo(function WalletCardStack({
                          jadi tidak lagi dikirim dari sini */
                       badge: null,
                       name: 'Semua Dompet',
-                      sub: `Jon Snow · ${wallets.length} dompet aktif`,
+                      /* tanpa nama pemilik: identitas user datang dari sesi,
+                         bukan konstanta demo (perbaikan audit K4) */
+                      sub: `${wallets.length} dompet aktif`,
                       amount: totalBalance,
                     })
                   : cardFace({

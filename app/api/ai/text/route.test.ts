@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi, type Mock } from 'vitest'
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 
 /* Route AI diuji dengan identitas pemanggil, provider, dan pembatas laju
    DI-MOCK: yang diperiksa adalah ATURAN endpoint — kapan menolak, kapan jujur
@@ -15,15 +15,21 @@ vi.mock('@/lib/ai/provider', () => ({
   textModel: () => 'deepseek-flash',
 }))
 vi.mock('@/lib/ai/rate-limit', () => ({ allowAiCall: vi.fn() }))
+/* Kunci fitur per tier DI-MOCK di sini: aturan keputusannya diuji tersendiri
+   (`lib/subscription/capability.test.ts`); yang diperiksa di file ini adalah
+   bahwa route BENAR-BENAR memanggil guard itu sebelum menyentuh provider. */
+vi.mock('@/lib/subscription/capability', () => ({ requireCapability: vi.fn() }))
 
 import { POST } from './route'
 import { aiConfigured, generateJSON, generateText } from '@/lib/ai/provider'
 import { allowAiCall } from '@/lib/ai/rate-limit'
+import { requireCapability } from '@/lib/subscription/capability'
 
 const configured = aiConfigured as unknown as Mock
 const genText = generateText as unknown as Mock
 const genJson = generateJSON as unknown as Mock
 const allow = allowAiCall as unknown as Mock
+const gate = requireCapability as unknown as Mock
 
 function request(body: unknown): NextRequest {
   return new NextRequest('http://localhost/api/ai/text', {
@@ -35,6 +41,7 @@ function request(body: unknown): NextRequest {
 
 /** provider & pembatas laju siap → fokus ke aturan body/balasan */
 function ready(): void {
+  gate.mockResolvedValue({ ok: true, planId: null })
   configured.mockReturnValue(true)
   allow.mockReturnValue(true)
 }
@@ -155,5 +162,20 @@ describe('POST /api/ai/text — pagar di luar konteks & klaim (paket 80)', () =>
     answers('Jatah harianmu masih aman kok.')
     const res = await POST(request({ messages: [{ role: 'user', content: 'harga bitcoin hari ini?' }] }))
     expect((await res.json()).blocked).toBeNull()
+  })
+})
+
+describe('POST /api/ai/text - kunci fitur per tier (paket 84)', () => {
+  it('403 dari guard: provider TIDAK dipanggil sama sekali', async () => {
+    ready()
+    gate.mockResolvedValue({
+      ok: false,
+      response: NextResponse.json({ ok: false, reason: 'plan-locked' }, { status: 403 }),
+    })
+    const res = await POST(request({ messages: [{ role: 'user', content: 'hai' }] }))
+    expect(res.status).toBe(403)
+    expect((await res.json()).reason).toBe('plan-locked')
+    expect(genJson).not.toHaveBeenCalled()
+    expect(genText).not.toHaveBeenCalled()
   })
 })

@@ -7,7 +7,7 @@ import { recordedTransactions, useMoneyStore } from '@/lib/money/store'
 import { useLiveFunds } from '@/lib/money/funds-store'
 import { useTodayISO } from '@/lib/use-today-iso'
 import { HOME_PLANT_COPY } from '@/lib/data/home'
-import { PLANT_SLEEP_COPY } from '@/lib/data/renewal'
+import { PLANT_SLEEP_COPY } from '@/lib/data/upgrade'
 import { useSubscriptionGate } from './subscription-gate-provider'
 import { PlantIllustration, STAGE_NAMES, type PlantStage } from './plant-illustration'
 import { PlantDetailModal } from './plant-detail-modal'
@@ -41,7 +41,7 @@ export const PlantWidget = memo(function PlantWidget({
   onReplayCelebration?: () => void
 }) {
   const [detailOpen, setDetailOpen] = useState(false)
-  /* masa aktif habis → tanaman masuk mode "tidur" (inventaris state VI · PRD 4542).
+  /* paket belum aktif → tanaman masuk mode "menunggu" (inventaris state VI · PRD 4542).
      Detail tanaman tetap bisa dibuka: membaca tidak pernah dikunci. */
   const { inputLocked } = useSubscriptionGate()
   const sleeping = inputLocked
@@ -232,7 +232,7 @@ export const PlantWidget = memo(function PlantWidget({
           )}
         </button>
 
-        {/* baris konteks: HANYA saat tanaman sedang "tidur" (masa aktif habis) —
+        {/* baris konteks: HANYA saat tanaman sedang "menunggu" (paket belum aktif) —
             satu-satunya keadaan yang memang perlu dijelaskan. Baris nutrisi
             "Tumbuh dari <celengan> (n%) — setor lagi biar naik tahap" DIHAPUS
             (permintaan pemilik produk, paket 66): badge tahap di header + bar

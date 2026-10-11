@@ -10,6 +10,7 @@ import {
 } from '@/lib/ai/provider'
 import { COACH_REPLY_ENVELOPE_PROMPT, COACH_SYSTEM_PROMPT } from '@/lib/ai/prompts'
 import { allowAiCall } from '@/lib/ai/rate-limit'
+import { requireCapability } from '@/lib/subscription/capability'
 
 /* ── POST /api/ai/text — balasan AI Coach (Domain 4B) ────────────────────────
    Identitas pemanggil dibaca `aiCallerId()` (lihat `lib/ai/caller.ts`): sesi
@@ -57,6 +58,12 @@ interface IncomingMessage {
 }
 
 export async function POST(req: NextRequest) {
+  /* KUNCI PER TIER (paket 84): AI Coach hanya ada di paket Waras ke atas.
+     Dicek SEBELUM apa pun — termasuk sebelum provider dipanggil, supaya kuota
+     user dan biaya provider tidak terbakar untuk permintaan yang ditolak. */
+  const gate = await requireCapability(req, 'ai-chat')
+  if (!gate.ok) return gate.response
+
   const callerId = aiCallerId(req)
 
   if (!aiConfigured()) {

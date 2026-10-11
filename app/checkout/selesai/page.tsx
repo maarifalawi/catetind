@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { PaymentDoneScreen } from '@/components/catetind/payment-done-screen'
+import { PhoneStage } from '@/components/catetind/phone-stage'
 
 /**
  * /checkout/selesai — halaman kembali dari Snap Midtrans (ALUR REDIRECT).
@@ -26,5 +27,12 @@ export default async function CheckoutDonePage({
   const orderId = (Array.isArray(rawOrder) ? rawOrder[0] : rawOrder)?.trim() || null
   const failed = (Array.isArray(rawStatus) ? rawStatus[0] : rawStatus) === 'error'
 
-  return <PaymentDoneScreen orderId={orderId} failed={failed} />
+  /* `PhoneStage plain` seperti halaman fokus lain (`/login`, `/checkout`):
+     satu <main> per halaman. Sebelumnya ini satu-satunya route yang
+     mengembalikan screen tanpa bingkai itu. */
+  return (
+    <PhoneStage plain>
+      <PaymentDoneScreen orderId={orderId} failed={failed} />
+    </PhoneStage>
+  )
 }

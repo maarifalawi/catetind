@@ -33,6 +33,7 @@ import {
 import { LOGIN_PATH } from '@/lib/data/auth'
 import { deleteAccount } from '@/lib/account'
 import { downloadMoneyExport } from '@/lib/money/export'
+import { useSessionUser } from '@/hooks/use-session-user'
 import { fetchSessionUser } from '@/lib/session-client'
 import { PRIVACY_LINK_COPY } from '@/lib/legal/privacy'
 import { TERMS_LINK_COPY } from '@/lib/legal/terms'
@@ -55,7 +56,13 @@ import {
    • Hapus akun → wajib mengetik email dulu; tombolnya tetap disabled sampai cocok.
    • Export    → satu tombol, data dikirim HANYA ke email user sendiri. */
 
-const EMAIL = 'jon@snow.com'
+/**
+ * Email tujuan export. Dulu konstanta demo dipajang sebagai "Alamat tujuan"
+ * milik user (perbaikan audit K4). Nilainya sekarang dibaca dari sesi di
+ * komponen yang memakainya; sebelum sesi terbaca, yang tampil adalah tanda
+ * hubung — bukan alamat orang lain.
+ */
+const EMAIL_UNKNOWN = '—'
 
 /** ikon kebijakan retensi → ikon lucide (copy-nya di `lib/data/account.ts`) */
 const RETENTION_ICONS = {
@@ -609,6 +616,8 @@ export function SecuritySettingsPanel() {
      · UNDUH  -> benar-benar bekerja (Blob + URL.createObjectURL)
      · EMAIL  -> diberi badge DEMO, karena butuh server pengirim yang belum ada */
 export function DataExportSettingsPanel() {
+  /* identitas dari SESI (perbaikan audit K4) — lihat catatan `EMAIL_UNKNOWN` */
+  const { user } = useSessionUser()
   const [busy, setBusy] = useState(false)
 
   /**
@@ -701,7 +710,7 @@ export function DataExportSettingsPanel() {
 
         <p className="mt-3 inline-flex items-center gap-1.5 text-[11.5px] text-forest/45">
           <Mail className="size-3.5 shrink-0" strokeWidth={2.2} aria-hidden />
-          {EXPORT_DATA_COPY.emailTargetLabel}: {EMAIL}
+          {EXPORT_DATA_COPY.emailTargetLabel}: {user?.email ?? EMAIL_UNKNOWN}
         </p>
 
         <button

@@ -1,8 +1,7 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Check, LoaderCircle, Lock, Sparkles, X } from 'lucide-react'
-import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock'
 import { formatIDR } from '@/lib/weekly-recap'
@@ -11,15 +10,28 @@ import {
   AI_RESET_RULE_COPY,
   AI_TOPUP_COPY,
   formatTokens,
+  planQuota,
   type AiAddonPackageId,
 } from '@/lib/ai-quota'
-import { purchaseAiAddon } from '@/lib/ai-usage-store'
+import { PaymentInstructionCard, type ActiveInvoice } from './payment-instruction-card'
+import { useSubscriptionGate } from './subscription-gate-provider'
 
 /* ── Add-on AI Token (Domain 5C) ───────────────────────────────────────────────
    Paket, harga, token, dan seluruh copy-nya tinggal di `lib/ai-quota.ts`:
    granularitasnya sengaja kecil & bahasanya kasual ("Receh / Sedang / Gede") —
    penamaan kanon PRD 4790–4798, bukan "Basic/Pro/Enterprise". Modal ini tidak
-   menyimpan nominal apa pun, jadi harga di halaman lain tidak bisa berbeda. */
+   menyimpan nominal apa pun, jadi harga di halaman lain tidak bisa berbeda.
+
+   PAKET 85 — PEMBAYARAN NYATA (bukan lagi simulasi). "Bayar Sekarang" memanggil
+   `POST /api/payment/charge` dengan `purpose: 'topup'`; server membaca harga dari
+   `lib/ai-quota.ts`, menulis baris `purchases`, lalu mengembalikan INSTRUKSI BAYAR
+   yang digambar `payment-instruction-card.tsx` (komponen yang sama dengan checkout
+   paket) — tidak ada komponen pembayaran kedua dan tidak ada Snap. Tokennya dicatat
+   SERVER lewat webhook (`ai_addons`), jadi tidak lagi hilang saat ganti perangkat.
+
+   Modal ini juga TIDAK boleh dibuka oleh paket tanpa AI: tidak ada kuota yang perlu
+   ditambah. Kalau paket belum diketahui, perilaku lama dipertahankan (jangan
+   mengunci karena ketidaktahuan). */
 
 /**
  * Modal Top Up AI Token — bottom sheet di mobile, dialog tengah di desktop.
@@ -30,8 +42,12 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
   /** paket yang dipilih user — ini yang bikin tombol Bayar Sekarang aktif */
   const [selectedPackage, setSelectedPackage] = useState<AiAddonPackageId | null>(null)
   const [paying, setPaying] = useState(false)
+  /* tagihan aktif dari `/api/payment/charge` — begitu ada, modal menampilkan
+     INSTRUKSI BAYAR (bukan lagi simulasi timer) */
+  const [invoice, setInvoice] = useState<ActiveInvoice | null>(null)
+  /** pesan jujur saat tagihan tidak bisa dibuat (mis. pembayaran belum aktif) */
+  const [error, setError] = useState<string | null>(null)
   const panelRef = useRef<HTMLDivElement>(null)
-  const payTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useBodyScrollLock(open)
 
@@ -51,55 +67,81 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
     }
   }, [open, onClose])
 
-  /* kalau ditutup di tengah proses, batalkan timer mock & kembalikan tombol normal */
+  /* kalau ditutup di tengah proses, kembalikan tombol ke keadaan normal */
   useEffect(() => {
     if (open) return
-    if (payTimer.current) {
-      clearTimeout(payTimer.current)
-      payTimer.current = null
-    }
     setPaying(false)
+    setError(null)
   }, [open])
 
-  /* bersihin timer saat unmount biar tidak ada setState di komponen mati */
-  useEffect(
-    () => () => {
-      if (payTimer.current) clearTimeout(payTimer.current)
-    },
-    [],
-  )
+  /* saat modal DIBUKA: mulai dari daftar paket, bukan tagihan lama */
+  useEffect(() => {
+    if (!open) return
+    setInvoice(null)
+    setError(null)
+  }, [open])
 
   const selected = AI_ADDON_PACKAGES.find((pkg) => pkg.id === selectedPackage) ?? null
 
-  function handlePay() {
+  /**
+   * Bikin tagihan NYATA lewat `/api/payment/charge` (`purpose: 'topup'`). Server
+   * yang memutuskan nominalnya dari `lib/ai-quota.ts`; klien cuma mengirim pilihan
+   * paket. Balasannya berisi INSTRUKSI BAYAR yang digambar `PaymentInstructionCard`
+   * — jalur yang sama dengan checkout pembelian paket.
+   *
+   * Yang TIDAK dilakukan di sini: menambah token di klien begitu tombol ditekan.
+   * Token dicatat SERVER lewat webhook (`ai_addons`), jadi tidak ada "token masuk"
+   * yang belum benar-benar dibayar.
+   */
+  const handlePay = useCallback(async () => {
     if (!selectedPackage || paying) return
-
-    // TODO: Integrate Midtrans Snap API for payment processing.
-    // Alur produksi: POST /api/payment/topup → server bikin snap token →
-    // window.snap.pay(snapToken) → webhook Midtrans nambah addon_tokens_remaining.
-    const pkg = selected
+    const pkg = AI_ADDON_PACKAGES.find((item) => item.id === selectedPackage)
     if (!pkg) return
     setPaying(true)
-
-    /* MOCK alur pembayaran: timer ini yang nanti digantikan Midtrans Snap.
-       Yang PENTING dan bukan mock: begitu "pembayaran" selesai, token add-on
-       benar-benar masuk ke store kuota (`lib/ai-usage-store.ts`) supaya banner
-       kuota di Home berhenti mengajak beli dan baris "Token tambahan" di Billing
-       ikut bertambah — tombol yang cuma menutup modal = janji yang tidak ditepati. */
-    payTimer.current = setTimeout(() => {
-      payTimer.current = null
-      setPaying(false)
-      purchaseAiAddon(pkg.tokens)
-      /* pilihan dikosongkan lagi supaya membuka modal berikutnya kembali ke
-         keadaan awal (tombol Bayar nonaktif) — bukan satu tap yang tidak sengaja
-         membeli paket yang sama dua kali. */
-      setSelectedPackage(null)
-      onClose()
-      toast.success(AI_TOPUP_COPY.successTitle(pkg.name), {
-        description: AI_TOPUP_COPY.successDescription(pkg.tokens),
+    setError(null)
+    try {
+      const res = await fetch('/api/payment/charge', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          purpose: 'topup',
+          packageId: pkg.id,
+          amount: pkg.price,
+          method: 'qris',
+        }),
       })
-    }, 1600)
-  }
+      const data = (await res.json().catch(() => null)) as {
+        ok?: boolean
+        orderId?: string
+        amount?: number
+        expiresAt?: string | null
+        instructions?: ActiveInvoice['instructions']
+        error?: string
+      } | null
+      if (!res.ok || !data?.ok || !data.orderId) {
+        /* jujur: pembayaran belum tersedia / ditolak — jangan mengaku token masuk */
+        setError(data?.error ?? AI_TOPUP_COPY.notConfigured)
+        return
+      }
+      setInvoice({
+        orderId: data.orderId,
+        method: 'qris',
+        amount: data.amount ?? pkg.price,
+        expiresAt: data.expiresAt ?? null,
+        instructions: data.instructions ?? null,
+      })
+    } catch {
+      setError(AI_TOPUP_COPY.notConfigured)
+    } finally {
+      setPaying(false)
+    }
+  }, [selectedPackage, paying])
+
+  /* Modal ini TIDAK BOLEH dibuka oleh paket tanpa AI (paket 85): tidak ada kuota
+     yang perlu ditambah. Kalau paket belum diketahui (`planKnown` false, mis. build
+     demo), modal tetap tampil — jangan mengunci karena ketidaktahuan. */
+  const { planId, planKnown } = useSubscriptionGate()
+  if (planKnown && !planQuota(planId).aiEnabled) return null
 
   return (
     <div
@@ -167,6 +209,16 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
             </button>
           </div>
 
+          {invoice ? (
+            <div className="flex-1 overflow-y-auto overscroll-contain px-5 pt-4 pb-1 sm:px-6">
+              <PaymentInstructionCard
+                invoice={invoice}
+                onSwitchMethod={() => setInvoice(null)}
+                onNewInvoice={() => void handlePay()}
+              />
+            </div>
+          ) : (
+            <>
           {/* daftar paket — scroll kalau layar pendek */}
           <div
             data-lenis-prevent
@@ -273,6 +325,11 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
 
           {/* footer — total, CTA, trust badge */}
           <div className="shrink-0 border-t border-soil/12 px-5 pt-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:px-6 lg:pb-5">
+            {error && (
+              <p className="mb-3 rounded-2xl bg-plum/10 px-3.5 py-2.5 text-[11.5px] leading-relaxed text-forest ring-1 ring-plum/20">
+                {error}
+              </p>
+            )}
             <div className="flex items-center justify-between gap-3 text-sm">
               <span className="min-w-0 truncate text-forest/55">
                 {selected ? selected.name : AI_TOPUP_COPY.emptySelection}
@@ -313,6 +370,8 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
               {AI_TOPUP_COPY.trustNote}
             </p>
           </div>
+            </>
+          )}
         </div>
       </div>
     </div>

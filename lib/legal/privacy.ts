@@ -71,6 +71,7 @@ export const PRIVACY_DOC: LegalDocument = {
   updatedIso: PRIVACY_UPDATED_ISO,
   versionLabel: PRIVACY_VERSION_LABEL,
   tocLabel: 'Isi dokumen',
+  homeLabel: 'Balik ke halaman depan CatetInd',
   sections: [
     /* ── 1. RINGKASAN — dibaca 30 detik, sebelum orang menyerah membaca ───── */
     {
@@ -120,7 +121,7 @@ export const PRIVACY_DOC: LegalDocument = {
         'Tidak ada akses ke kontak, galeri, lokasi, atau SMS. Mikrofon hanya menyala saat kamu sengaja menekan tombol input suara, dan berhenti begitu rekamannya selesai.',
         'Tidak ada pelacak iklan, dan tidak ada iklan di dalam app. Kami tidak membangun profil perilaku untuk dijual ke pengiklan.',
         'Kami tidak menjual, menyewakan, atau mengirimkan data transaksimu ke lembaga keuangan, agen asuransi, atau pihak ketiga mana pun — termasuk dalam bentuk lead.',
-        'Tidak ada langganan yang menagih otomatis di belakangmu: perpanjangan selalu kamu yang menekan.',
+        'Tidak ada tagihan bulanan dan tidak ada auto-debit: paket dibayar sekali untuk akses selamanya, jadi tidak ada penagihan yang bisa berjalan sendiri di belakangmu.',
       ],
       note: {
         label: 'Kalau nanti ada fitur yang butuh izin baru',
@@ -199,7 +200,7 @@ export const PRIVACY_DOC: LegalDocument = {
       id: 'ai-kontrol',
       title: 'Kuota AI & cara mematikannya',
       paragraphs: [
-        'Pemakaian AI dihitung dengan kuota token bulanan yang di-reset setiap tanggal 1. Paket token tambahan yang kamu beli berlaku sampai habis — tidak hangus saat bulan berganti. Kalau kuotanya habis, fitur AI berhenti sampai kamu isi ulang atau bulan berganti; pencatatan manual tetap jalan normal tanpa batas.',
+        'Pemakaian AI dihitung dengan kuota token bulanan yang di-reset setiap tanggal 1, dan angka kuotanya ditentukan paketmu: Paket Catet Aja tidak memuat fitur AI, Paket Waras memakai kuota dasar bulanan, dan Paket Sultan tanpa batas kuota. Paket token tambahan yang kamu beli berlaku sampai habis — tidak hangus saat bulan berganti. Kalau kuotanya habis, fitur AI berhenti sampai kamu isi ulang atau bulan berganti; pencatatan manual tetap jalan normal tanpa batas.',
         'Semua yang berjalan otomatis bisa dimatikan di Pengaturan → AI Preferences, lewat sakelar "Kategorisasi Otomatis oleh AI" dan "Penamaan Otomatis Transaksi". Kalau keduanya kamu matikan, teks transaksimu tidak dikirim untuk dua tugas itu — kamu yang memilih kategorinya sendiri.',
         'Chat AI tidak pernah berjalan sendiri: ia memproses saat kamu mengirim pesan, dan berhenti kalau kamu berhenti memakainya. Kamu juga bisa mengatur gaya bicara Minca di halaman yang sama, tanpa memengaruhi data apa pun.',
       ],
@@ -221,7 +222,7 @@ export const PRIVACY_DOC: LegalDocument = {
       bullets: [
         'Basis data & autentikasi (Supabase) — menyimpan akun dan catatanmu, sekaligus menegakkan aturan akses per akun di sisi basis data. Tautan masuk ke email juga lewat layanan ini.',
         'Penyedia model bahasa (DeepSeek — teks & gambar, termasuk membaca foto struk) — memproses teks atau foto hanya untuk tugas yang kamu picu, lalu mengembalikan hasilnya ke CatetInd.',
-        'Pembayaran (Midtrans) — memproses pembayaran langganan dan paket token. Data kartu/e-wallet-mu diproses langsung di Midtrans, bukan di CatetInd: kami tidak pernah menyimpan detail pembayaranmu.',
+        'Pembayaran (Midtrans) — memproses pembayaran paket dan paket token. Data kartu/e-wallet-mu diproses langsung di Midtrans, bukan di CatetInd: kami tidak pernah menyimpan detail pembayaranmu.',
         'Email transaksional (Resend) — mengirim tautan masuk, struk pembayaran, dan file export data ke alamatmu sendiri.',
         'Hosting & analitik dasar (Vercel) — menjalankan aplikasinya dan menghitung jumlah kunjungan tanpa cookie iklan dan tanpa identitasmu.',
         'Kalau nanti ada pihak baru, namanya masuk ke daftar ini sebelum dipakai — bukan sesudah.',
@@ -313,7 +314,7 @@ export const PRIVACY_DOC: LegalDocument = {
            ditautkan (sebelumnya hanya disebut sebagai "menyusul") */
         href: '/terms',
         label: 'Syarat & Ketentuan',
-        desc: 'Aturan main layanan ini: batas AI Coach, cara kerja langganan, dan kuota token.',
+        desc: 'Aturan main layanan ini: batas AI Coach, cara kerja paket akses selamanya, dan kuota token.',
       },
       {
         href: '/help',

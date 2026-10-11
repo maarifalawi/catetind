@@ -25,6 +25,7 @@ import {
   isValidEmail,
   isValidOtpCode,
   resendCountdownLabel,
+  resolveAuthLanding,
 } from '@/lib/data/auth'
 import { sendLoginLink, verifyEmailOtp } from '@/lib/session-client'
 import { BrandPanel } from './brand-panel'
@@ -65,7 +66,7 @@ import { BrandPanel } from './brand-panel'
 /** langkah masuk: tulis email → ketik kode 6 angka dari email */
 type LoginStep = 'email' | 'code'
 
-export function LoginScreen() {
+export function LoginScreen({ next }: { next?: string | null }) {
   const router = useRouter()
 
   const [step, setStep] = useState<LoginStep>('email')
@@ -156,7 +157,10 @@ export function LoginScreen() {
       return
     }
     toast.success(SESSION_COPY.signInToast, { description: SESSION_COPY.signInToastDescription })
-    router.push('/app')
+    /* kembali ke TUJUAN user (mis. `/checkout/bayar?plan=…`), bukan selalu
+       Dashboard — `next` dibawa oleh `buildLoginHref()` dari halaman yang
+       mengirim user ke sini. Tanpa `next` yang aman, jatuh ke Dashboard. */
+    router.push(resolveAuthLanding(next))
   }
 
   /** hanya angka, maksimal `OTP_LENGTH` — paste "1 2 3-4 5 6" tetap diterima */
