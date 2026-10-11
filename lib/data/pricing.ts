@@ -18,7 +18,7 @@
    ────────────────────────────────────────────────────────────────────────── */
 
 import type { FomoRule } from '@/hooks/use-fomo-counter'
-import type { PaymentChannel, PaymentMethodId } from '../payments/methods'
+import type { PaymentMethodId } from '../payments/methods'
 import { formatIDR } from '../weekly-recap'
 import { REFERRED_FRIEND_BENEFIT } from './referral'
 
@@ -448,57 +448,41 @@ export const PAYMENT_SHEET_COPY = {
    (3 tier × bulanan/tahunan) dan menampilkan INSTRUKSI BAYARNYA di sini juga:
    QRIS, nomor Virtual Account, tautan e-wallet, atau kode Mandiri Bill. User
    tidak pindah ke domain Midtrans, jadi tidak ada "halaman baru yang beda".
-   Teksnya dikumpulkan di file ini supaya tidak ada kalimat di JSX. */
+
+   Tata letak: satu kolom di ponsel, dan di desktop melebar (`max-w-[1080px]`)
+   dengan ringkasan pembelian yang sticky di kiri + area cara bayar di kanan —
+   sejajar dengan lebar halaman `/checkout`, jadi alurnya terasa satu halaman.
+   Teksnya sengaja sedikit: label + satu baris petunjuk per metode. */
 
 /** label + hint tiap metode; kuncinya SAMA dengan katalog `lib/payments/methods.ts` */
 export const PAY_METHOD_COPY: Record<PaymentMethodId, { label: string; hint: string }> = {
-  qris: {
-    label: 'QRIS',
-    hint: 'Scan pakai aplikasi apa pun yang punya QRIS (GoPay, OVO, DANA, m-banking).',
-  },
-  'bca-va': { label: 'BCA Virtual Account', hint: 'Bayar dari m-BCA atau ATM BCA.' },
-  'bri-va': { label: 'BRI Virtual Account', hint: 'Bayar dari BRImo atau ATM BRI.' },
-  'bni-va': { label: 'BNI Virtual Account', hint: 'Bayar dari BNI Mobile atau ATM BNI.' },
-  'permata-va': {
-    label: 'Permata Virtual Account',
-    hint: 'Bayar dari PermataMobile X atau ATM Permata.',
-  },
-  gopay: { label: 'GoPay', hint: 'Bayar dari aplikasi GoPay di HP kamu.' },
-  shopeepay: { label: 'ShopeePay', hint: 'Bayar dari aplikasi Shopee / ShopeePay.' },
-  'mandiri-bill': {
-    label: 'Mandiri Bill Payment',
-    hint: 'Bayar dari Livin by Mandiri atau ATM Mandiri.',
-  },
+  qris: { label: 'QRIS', hint: 'Scan dari aplikasi apa pun' },
+  'bca-va': { label: 'BCA Virtual Account', hint: 'm-BCA atau ATM' },
+  'bri-va': { label: 'BRI Virtual Account', hint: 'BRImo atau ATM' },
+  'bni-va': { label: 'BNI Virtual Account', hint: 'BNI Mobile atau ATM' },
+  'permata-va': { label: 'Permata Virtual Account', hint: 'PermataMobile atau ATM' },
+  gopay: { label: 'GoPay', hint: 'Aplikasi GoPay' },
+  shopeepay: { label: 'ShopeePay', hint: 'Aplikasi Shopee' },
+  'mandiri-bill': { label: 'Mandiri Bill Payment', hint: 'Livin atau ATM Mandiri' },
 }
-
-/** pengelompokan kartu pilihan (urutan tampil) */
-export const PAY_METHOD_GROUPS: { id: PaymentChannel; label: string }[] = [
-  { id: 'qris', label: 'QRIS — satu QR untuk semua aplikasi' },
-  { id: 'va', label: 'Transfer bank (Virtual Account)' },
-  { id: 'ewallet', label: 'E-wallet' },
-  { id: 'bill', label: 'Mandiri Bill Payment' },
-]
 
 export const PAY_START_COPY = {
   eyebrow: 'Langkah terakhir',
   title: 'Bayar paketmu',
-  subtitle:
-    'Pilih cara bayar di bawah, lalu ikuti instruksinya di halaman ini. Kamu nggak perlu pindah ke situs lain — begitu pembayaranmu masuk, langganannya aktif sendiri.',
+  subtitle: 'Instruksi bayarnya muncul di halaman ini.',
+  backLabel: 'Ganti paket',
   planLabel: 'Yang kamu beli',
-  totalLabel: 'Total bayar',
-  discountLabel: 'Diskon kode teman',
-  methodLegend: 'Pilih cara bayar',
-  methodNote: 'Paket & nominal ditentukan server dari daftar harga resmi di app ini.',
+  totalLabel: 'Total',
+  discountLabel: 'Diskon teman',
+  methodLegend: 'Cara bayar',
   payLabel: 'Bayar sekarang',
   payingLabel: 'Menyiapkan tagihan…',
   loginTitle: 'Masuk dulu ya',
-  loginBody:
-    'Pembayaran butuh akun supaya langganannya tercatat atas namamu. Masuk pakai kode 6 angka dari email.',
+  loginBody: 'Pembayaran tercatat atas namamu. Masuk pakai kode 6 angka dari email.',
   loginCta: 'Buka halaman masuk',
   notConfigured: 'Pembayaran belum bisa dimulai. Coba lagi sebentar ya.',
   failedTitle: 'Pembayaran tidak bisa dimulai',
   retryLabel: 'Coba lagi',
-  changeMethodHint: 'Belum jadi bayar? Kamu bisa ganti cara bayar kapan saja.',
 } as const
 
 /* ── KARTU PEMBAYARAN (instruksi yang tampil setelah "Bayar sekarang") ───────
@@ -508,41 +492,40 @@ export const PAY_START_COPY = {
 export const PAY_CARD_COPY = {
   title: 'Selesaikan pembayaran',
   methodLabel: 'Cara bayar',
-  totalLabel: 'Total bayar',
+  totalLabel: 'Total',
   orderLabel: 'Order',
   countdownLabel: 'Sisa waktu',
-  timeUpLabel: 'Waktu habis',
+  timeUpLabel: 'Habis',
   copyLabel: 'Salin',
-  copiedLabel: 'Tersalin!',
-  qrisScanTitle: 'Scan QR ini',
+  copiedLabel: 'Tersalin',
+  qrisScanTitle: 'Scan QR',
   qrAlt: 'Kode QRIS untuk pembayaranmu',
-  qrStringLabel: 'Atau tempel kode ini di aplikasi bank/e-walletmu:',
+  qrStringLabel: 'Atau tempel kode ini:',
   vaLabel: 'Nomor Virtual Account',
-  vaHint: 'Transfer TEPAT sejumlah total di atas — nominalnya yang bikin pembayaran terbaca otomatis.',
+  vaHint: 'Transfer tepat sesuai nominal.',
   billerLabel: 'Kode perusahaan',
   billKeyLabel: 'Kode pembayaran',
-  billHint: 'Masukkan dua kode ini di Livin by Mandiri → Bayar → Multipayment.',
+  billHint: 'Bayar → Multipayment → masukkan dua kode di atas.',
   ewalletCta: 'Buka aplikasi e-wallet',
-  ewalletHint: 'Tombol di atas membuka aplikasinya langsung. Selesaikan pembayaran di sana.',
-  noInstructions:
-    'Provider belum memberi instruksi yang bisa ditampilkan untuk tagihan ini. Pilih metode lain ya — nggak ada yang terpotong.',
-  waitingTitle: 'Menunggu pembayaranmu…',
-  waitingBody: 'Status di halaman ini berubah sendiri begitu pembayaranmu masuk. Nggak perlu refresh.',
-  checkingLabel: 'Lagi cek status pembayaran…',
-  settledTitle: 'Pembayaran diterima ✓',
-  settledBody: 'Langgananmu sedang diaktifkan. Sebentar lagi kamu dibawa ke halaman konfirmasi.',
-  expiredTitle: 'Tagihan ini sudah kedaluwarsa',
-  expiredBody: 'Tenang, tidak ada yang terpotong. Bikin tagihan baru untuk lanjut bayar.',
-  failedTitle: 'Tagihan ini tidak bisa dipakai lagi',
-  failedBody: 'Bikin tagihan baru atau pilih metode lain — catatanmu tetap aman.',
+  ewalletHint: 'Selesaikan di aplikasi itu, lalu balik ke tab ini.',
+  noInstructions: 'Tagihan ini belum punya instruksi yang bisa ditampilkan. Pilih metode lain ya.',
+  waitingTitle: 'Menunggu pembayaran',
+  waitingBody: 'Statusnya berubah sendiri begitu pembayaran masuk.',
+  checkingLabel: 'Cek status…',
+  settledTitle: 'Pembayaran diterima',
+  settledBody: 'Langgananmu sedang diaktifkan…',
+  expiredTitle: 'Tagihan kedaluwarsa',
+  expiredBody: 'Tidak ada yang terpotong. Bikin tagihan baru untuk lanjut.',
+  failedTitle: 'Tagihan tidak bisa dipakai lagi',
+  failedBody: 'Bikin tagihan baru atau pilih metode lain.',
   newInvoiceLabel: 'Bikin tagihan baru',
   switchMethodLabel: 'Ganti metode',
   statusLabel: 'Status',
   statusPending: 'Menunggu dibayar',
-  statusSettled: 'Sudah dibayar',
+  statusSettled: 'Dibayar',
   statusExpired: 'Kedaluwarsa',
   statusFailed: 'Gagal',
-  statusUnknown: 'Belum tercatat di provider',
+  statusUnknown: 'Belum tercatat',
 } as const
 
 
@@ -554,14 +537,14 @@ export const PAY_CARD_COPY = {
 export const PAY_DONE_COPY = {
   eyebrow: 'Pembayaran',
   checkingTitle: 'Lagi cek pembayaranmu…',
-  checkingBody: 'Kalau kamu baru selesai bayar, statusnya biasanya masuk dalam beberapa detik.',
+  checkingBody: 'Biasanya masuk dalam beberapa detik.',
   activeTitle: 'Langgananmu aktif 🎉',
-  activeBody: 'Semua fitur sudah terbuka. Terima kasih sudah jadi Founding Member.',
+  activeBody: 'Semua fitur sudah terbuka.',
   pendingTitle: 'Pembayaran belum tercatat',
-  pendingBody:
-    'Kalau kamu sudah bayar, langgananmu sedang diaktifkan — halaman ini mengeceknya sendiri tiap beberapa detik. Kalau belum, buka lagi halaman bayar untuk melihat QRIS/nomor VA-nya.',
+  pendingBody: 'Kalau kamu sudah bayar, langgananmu sedang diaktifkan — halaman ini update sendiri.',
   failedTitle: 'Pembayarannya belum berhasil',
-  failedBody: 'Kamu bisa mencoba lagi — tidak ada yang berkurang, dan catatanmu tetap aman.',
+  failedBody: 'Coba lagi ya — catatanmu tetap aman.',
+  orderLabel: 'Order',
   retryLabel: 'Cek lagi',
   appCta: 'Masuk ke dashboard',
   homeCta: 'Kembali ke checkout',

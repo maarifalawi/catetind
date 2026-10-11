@@ -3,13 +3,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowRight, BadgeCheck, Info, ShieldCheck, Tag } from 'lucide-react'
+import { ArrowLeft, ArrowRight, BadgeCheck, Info, ShieldCheck, Tag } from 'lucide-react'
 import { LogoWordmark } from './logo-wordmark'
 import { PaymentInstructionCard, type ActiveInvoice } from './payment-instruction-card'
 import {
   NO_AUTO_RENEW_BADGE,
   PAY_METHOD_COPY,
-  PAY_METHOD_GROUPS,
   PAY_START_COPY,
   PERIOD_CHOICE_LABEL,
   applyReferralDiscount,
@@ -22,17 +21,21 @@ import { PAY_METHODS, type PaymentMethodId } from '@/lib/payments/methods'
 import { LOGIN_PATH } from '@/lib/data/auth'
 import { fetchSessionUser } from '@/lib/session-client'
 
-/* ── MULAI PEMBAYARAN (/checkout/bayar, paket 83) — DI DALAM APP ─────────────
-   Pilih metode → tekan "Bayar sekarang" → `/api/payment/charge` membuat tagihan
-   Core API, dan halaman INI menampilkan QRIS / nomor VA / tautan e-wallet /
-   kode Mandiri Bill. Tidak ada redirect ke domain Midtrans.
+/* MULAI PEMBAYARAN (/checkout/bayar, paket 83) - DI DALAM APP ------------------
+   Pilih metode lalu tekan "Bayar sekarang": `/api/payment/charge` membuat tagihan
+   Core API, dan halaman INI menampilkan QRIS / nomor VA / tautan e-wallet / kode
+   Mandiri Bill. Tidak ada redirect ke domain Midtrans.
+
+   Tata letak: ponsel satu kolom; desktop melebar (`max-w-[1080px]`) dengan
+   ringkasan pembelian sticky di kiri dan area cara bayar di kanan - sejajar
+   dengan lebar halaman `/checkout`, jadi alurnya terasa satu halaman.
 
    Dua hal yang sengaja TIDAK dilakukan halaman ini:
-     · menagih tanpa sesi — `/api/payment/charge` memakai identitas dari cookie,
+     . menagih tanpa sesi - `/api/payment/charge` memakai identitas dari cookie,
        jadi tamu diarahkan masuk dulu;
-     · mempercayai nominal atau kode teman dari query string. Kode diperiksa ke
+     . mempercayai nominal atau kode teman dari query string. Kode diperiksa ke
        database (`/api/referral/validate`), dan nominalnya dicocokkan server
-       dengan harga kanon `lib/data/pricing.ts` (salah → 422). */
+       dengan harga kanon `lib/data/pricing.ts` (salah -> 422). */
 
 /** bentuk balasan `/api/payment/charge` yang dipakai halaman ini */
 interface ChargeResponse {
@@ -58,7 +61,7 @@ export function PaymentStartScreen({
 }) {
   const router = useRouter()
   const [session, setSession] = useState<'checking' | 'guest' | 'ready'>('checking')
-  /** kode yang BENAR-BENAR ada di database — bukan sekadar bentuknya wajar */
+  /** kode yang BENAR-BENAR ada di database - bukan sekadar bentuknya wajar */
   const [verifiedCode, setVerifiedCode] = useState<string | null>(null)
   /** metode yang sedang dipilih user (dari katalog `lib/payments/methods.ts`) */
   const [method, setMethod] = useState<PaymentMethodId>('qris')
@@ -99,13 +102,12 @@ export function PaymentStartScreen({
         if (active && data?.ok && data.verified) setVerifiedCode(referralCode)
       })
       .catch(() => {
-        /* kode tidak terbukti → tanpa diskon; itu jawaban yang jujur */
+        /* kode tidak terbukti - tanpa diskon; itu jawaban yang jujur */
       })
     return () => {
       active = false
     }
   }, [referralCode])
-
   const handlePay = useCallback(async () => {
     if (paying) return
     setPaying(true)
@@ -133,7 +135,7 @@ export function PaymentStartScreen({
         setError(data?.error ?? PAY_START_COPY.notConfigured)
         return
       }
-      /* sudah dibayar tapi webhook belum mencatat → TIDAK bikin tagihan kedua;
+      /* sudah dibayar tapi webhook belum mencatat -> TIDAK bikin tagihan kedua;
          halaman konfirmasi yang menyelesaikan sisanya (mem-poll langganan). */
       if (data.state === 'settled') {
         setNotice(data.note ?? null)
@@ -153,183 +155,180 @@ export function PaymentStartScreen({
       setPaying(false)
     }
   }, [paying, total, plan, period, method, router])
+  /* ringkasan pembelian - kolom KIRI di desktop (sticky), di atas cara bayar di ponsel */
+  const summary = (
+    <section className="rounded-[1.5rem] bg-cream p-5 ring-1 ring-soil/12 lg:rounded-[1.75rem] lg:p-6">
+      <div className="flex items-start gap-3">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-sage text-forest">
+          <BadgeCheck className="size-4" strokeWidth={2.2} aria-hidden />
+        </span>
+        <div className="min-w-0">
+          <p className="text-[14px] font-medium text-forest">{plan.name}</p>
+          <p className="text-[12px] text-forest/50">
+            {plan.subtitle} - {PERIOD_CHOICE_LABEL[period]}
+          </p>
+        </div>
+      </div>
+
+      <dl className="mt-4 space-y-2 border-t border-soil/12 pt-3.5 text-[12.5px]">
+        {discount > 0 && (
+          <div className="flex items-center justify-between gap-3">
+            <dt className="flex items-center gap-1.5 text-forest/50">
+              <Tag className="size-3.5" strokeWidth={2.4} aria-hidden />
+              {PAY_START_COPY.discountLabel}
+            </dt>
+            <dd className="font-medium tabular-nums text-forest">- {formatIDR(discount)}</dd>
+          </div>
+        )}
+        <div className="flex items-baseline justify-between gap-3">
+          <dt className="text-forest/50">{PAY_START_COPY.totalLabel}</dt>
+          <dd className="font-display text-[22px] font-semibold tabular-nums text-forest">
+            {formatIDR(total)}
+          </dd>
+        </div>
+      </dl>
+
+      <p className="mt-4 flex items-start gap-2 text-[11.5px] leading-relaxed text-forest/50">
+        <ShieldCheck className="mt-0.5 size-3.5 shrink-0" strokeWidth={2.4} aria-hidden />
+        {NO_AUTO_RENEW_BADGE}
+      </p>
+    </section>
+  )
 
   return (
-    <main className="relative flex min-h-[100dvh] w-full items-center justify-center bg-canvas px-5 py-12 text-forest">
-      <div className="w-full max-w-[520px]">
-        <LogoWordmark className="h-6" />
-        <p className="mt-6 text-[11px] font-medium tracking-[0.16em] text-forest/40 uppercase">
-          {PAY_START_COPY.eyebrow}
-        </p>
-        <h1 className="mt-1.5 font-display text-3xl font-semibold tracking-tight text-forest">
-          {PAY_START_COPY.title}
-        </h1>
-        <p className="mt-2.5 text-[13px] leading-relaxed text-forest/55">{PAY_START_COPY.subtitle}</p>
+    <main className="relative w-full bg-canvas px-5 pt-6 pb-24 text-forest sm:px-6 lg:px-8 lg:pt-10 lg:pb-16">
+      <div className="mx-auto w-full max-w-[1080px]">
+        <div className="flex items-center justify-between gap-4">
+          <LogoWordmark className="h-6" />
+          <Link
+            href="/checkout"
+            className="inline-flex items-center gap-1.5 text-[12px] font-medium text-forest/50 transition-colors duration-200 hover:text-forest motion-reduce:transition-none"
+          >
+            <ArrowLeft className="size-3.5" strokeWidth={2.4} aria-hidden />
+            {PAY_START_COPY.backLabel}
+          </Link>
+        </div>
 
-        {session === 'guest' ? (
-          <section className="mt-6 rounded-[1.5rem] bg-cream p-5 ring-1 ring-soil/12">
-            <h2 className="font-display text-[15px] font-medium tracking-tight text-forest">
-              {PAY_START_COPY.loginTitle}
-            </h2>
-            <p className="mt-2 text-[12.5px] leading-relaxed text-forest/60">
-              {PAY_START_COPY.loginBody}
+        <div className="mt-6 lg:mt-10 lg:flex lg:items-start lg:gap-10">
+          <div className="lg:sticky lg:top-10 lg:w-[340px] lg:shrink-0">{summary}</div>
+
+          <div className="mt-5 min-w-0 lg:mt-0 lg:flex-1">
+            <p className="text-[11px] font-medium tracking-[0.16em] text-forest/40 uppercase">
+              {PAY_START_COPY.eyebrow}
             </p>
-            <Link
-              href={LOGIN_PATH}
-              className="mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-forest px-5 text-[13.5px] font-medium text-cream"
-            >
-              {PAY_START_COPY.loginCta}
-              <ArrowRight className="size-4" strokeWidth={2.4} aria-hidden />
-            </Link>
-          </section>
-        ) : invoice ? (
-          /* Tagihan sudah dibuat → instruksinya tampil di dalam app */
-          <PaymentInstructionCard
-            invoice={invoice}
-            onSwitchMethod={() => {
-              setInvoice(null)
-              setError(null)
-              setNotice(null)
-            }}
-            onNewInvoice={() => {
-              setInvoice(null)
-              void handlePay()
-            }}
-          />
-        ) : (
-          <>
-            <section className="mt-6 rounded-[1.5rem] bg-cream p-5 ring-1 ring-soil/12">
-              <h2 className="text-[11px] font-medium tracking-[0.16em] text-forest/40 uppercase">
-                {PAY_START_COPY.planLabel}
-              </h2>
-              <div className="mt-2 flex items-start gap-3">
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-sage text-forest">
-                  <BadgeCheck className="size-4" strokeWidth={2.2} aria-hidden />
-                </span>
-                <div className="min-w-0">
-                  <p className="text-[14px] font-medium text-forest">{plan.name}</p>
-                  <p className="text-[12px] text-forest/50">
-                    {plan.subtitle} · {PERIOD_CHOICE_LABEL[period]}
-                  </p>
-                </div>
+            <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight text-forest lg:text-[1.9rem]">
+              {PAY_START_COPY.title}
+            </h1>
+            <p className="mt-1 text-[12.5px] text-forest/50">{PAY_START_COPY.subtitle}</p>
+
+            {session === 'guest' ? (
+              <section className="mt-5 rounded-[1.5rem] bg-cream p-5 ring-1 ring-soil/12 lg:rounded-[1.75rem] lg:p-6">
+                <h2 className="font-display text-[15px] font-medium tracking-tight text-forest">
+                  {PAY_START_COPY.loginTitle}
+                </h2>
+                <p className="mt-1.5 text-[12.5px] leading-relaxed text-forest/55">
+                  {PAY_START_COPY.loginBody}
+                </p>
+                <Link
+                  href={LOGIN_PATH}
+                  className="mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-forest px-5 text-[13px] font-medium text-cream lg:min-w-[200px]"
+                >
+                  {PAY_START_COPY.loginCta}
+                  <ArrowRight className="size-4" strokeWidth={2.4} aria-hidden />
+                </Link>
+              </section>
+            ) : invoice ? (
+              /* Tagihan sudah dibuat -> instruksinya tampil di dalam app */
+              <div className="mt-5">
+                <PaymentInstructionCard
+                  invoice={invoice}
+                  onSwitchMethod={() => {
+                    setInvoice(null)
+                    setError(null)
+                    setNotice(null)
+                  }}
+                  onNewInvoice={() => {
+                    setInvoice(null)
+                    void handlePay()
+                  }}
+                />
               </div>
+            ) : (              <section className="mt-5 rounded-[1.5rem] bg-cream p-5 ring-1 ring-soil/12 lg:rounded-[1.75rem] lg:p-6">
+                <h2 className="text-[11px] font-medium tracking-[0.16em] text-forest/40 uppercase">
+                  {PAY_START_COPY.methodLegend}
+                </h2>
 
-              <dl className="mt-4 space-y-2.5 border-t border-soil/12 pt-3.5 text-[12.5px]">
-                {discount > 0 && (
-                  <div className="flex items-center justify-between gap-3">
-                    <dt className="flex items-center gap-1.5 text-forest/50">
-                      <Tag className="size-3.5" strokeWidth={2.4} aria-hidden />
-                      {PAY_START_COPY.discountLabel}
-                    </dt>
-                    <dd className="font-medium tabular-nums text-forest">− {formatIDR(discount)}</dd>
-                  </div>
-                )}
-                <div className="flex items-baseline justify-between gap-3">
-                  <dt className="font-medium text-forest">{PAY_START_COPY.totalLabel}</dt>
-                  <dd className="font-display text-lg font-medium tabular-nums text-forest">
-                    {formatIDR(total)}
-                  </dd>
+                <div
+                  role="radiogroup"
+                  aria-label={PAY_START_COPY.methodLegend}
+                  className="mt-4 grid gap-1.5 lg:grid-cols-2 lg:gap-2"
+                >
+                  {PAY_METHODS.map((item) => {
+                    const copy = PAY_METHOD_COPY[item.id]
+                    const active = item.id === method
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={active}
+                        onClick={() => setMethod(item.id)}
+                        className={`flex w-full items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-left transition-colors duration-200 motion-reduce:transition-none ${
+                          active
+                            ? 'bg-sage/70 ring-1 ring-forest/25'
+                            : 'bg-canvas/60 ring-1 ring-soil/12 hover:bg-canvas'
+                        }`}
+                      >
+                        <span
+                          className={`flex size-4 shrink-0 items-center justify-center rounded-full ring-1 ${
+                            active ? 'bg-forest ring-forest' : 'ring-soil/30'
+                          }`}
+                          aria-hidden
+                        >
+                          {active && <span className="size-1.5 rounded-full bg-cream" />}
+                        </span>
+                        <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-forest">
+                          {copy.label}
+                        </span>
+                        <span className="hidden shrink-0 text-[11px] text-forest/40 sm:inline">
+                          {copy.hint}
+                        </span>
+                      </button>
+                    )
+                  })}
                 </div>
-              </dl>
-            </section>
 
-            <p className="mt-4 flex items-start gap-2 rounded-2xl bg-mint/25 px-3.5 py-2.5 text-[12px] leading-relaxed font-medium text-forest ring-1 ring-forest/10">
-              <ShieldCheck className="mt-0.5 size-3.5 shrink-0" strokeWidth={2.4} aria-hidden />
-              {NO_AUTO_RENEW_BADGE}
-            </p>
+                {error && (
+                  <p
+                    className="mt-4 flex items-start gap-1.5 text-[12px] leading-relaxed text-plum"
+                    role="alert"
+                  >
+                    <Info className="mt-0.5 size-3.5 shrink-0" strokeWidth={2.4} aria-hidden />
+                    <span>
+                      <strong className="font-medium">{PAY_START_COPY.failedTitle}.</strong> {error}
+                    </span>
+                  </p>
+                )}
 
-            <section className="mt-4 rounded-[1.5rem] bg-cream p-5 ring-1 ring-soil/12">
-              <h2 className="text-[11px] font-medium tracking-[0.16em] text-forest/40 uppercase">
-                {PAY_START_COPY.methodLegend}
-              </h2>
+                {notice && (
+                  <p className="mt-4 text-[12px] leading-relaxed text-forest/70" role="status">
+                    {notice}
+                  </p>
+                )}
 
-              {PAY_METHOD_GROUPS.map((group) => {
-                const items = PAY_METHODS.filter((item) => item.channel === group.id)
-                if (items.length === 0) return null
-                return (
-                  <div key={group.id} className="mt-4">
-                    <p className="text-[11.5px] font-medium text-forest/50">{group.label}</p>
-                    <ul role="radiogroup" aria-label={group.label} className="mt-2 space-y-2">
-                      {items.map((item) => {
-                        const copy = PAY_METHOD_COPY[item.id]
-                        const active = item.id === method
-                        return (
-                          <li key={item.id}>
-                            <button
-                              type="button"
-                              role="radio"
-                              aria-checked={active}
-                              onClick={() => setMethod(item.id)}
-                              className={`flex w-full items-start gap-3 rounded-2xl px-3.5 py-3 text-left transition-colors duration-200 motion-reduce:transition-none ${
-                                active
-                                  ? 'bg-sage/70 ring-1 ring-forest/25'
-                                  : 'bg-canvas/60 ring-1 ring-soil/12 hover:bg-canvas'
-                              }`}
-                            >
-                              <span
-                                className={`mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full ring-1 ${
-                                  active ? 'bg-forest ring-forest' : 'ring-soil/30'
-                                }`}
-                                aria-hidden
-                              >
-                                {active && <span className="size-1.5 rounded-full bg-cream" />}
-                              </span>
-                              <span className="min-w-0">
-                                <span className="block text-[13.5px] font-medium text-forest">
-                                  {copy.label}
-                                </span>
-                                <span className="mt-0.5 block text-[11.5px] leading-relaxed text-forest/50">
-                                  {copy.hint}
-                                </span>
-                              </span>
-                            </button>
-                          </li>
-                        )
-                      })}
-                    </ul>
-                  </div>
-                )
-              })}
-
-              <p className="mt-4 flex items-start gap-2 rounded-2xl bg-canvas/60 px-3.5 py-2.5 text-[11.5px] leading-relaxed text-forest/60 ring-1 ring-soil/12">
-                <Info className="mt-0.5 size-3.5 shrink-0" strokeWidth={2.4} aria-hidden />
-                {PAY_START_COPY.methodNote}
-              </p>
-            </section>
-
-            {error && (
-              <p
-                className="mt-3 flex items-start gap-1.5 text-[12px] leading-relaxed text-plum"
-                role="alert"
-              >
-                <Info className="mt-0.5 size-3.5 shrink-0" strokeWidth={2.4} aria-hidden />
-                <span>
-                  <strong className="font-medium">{PAY_START_COPY.failedTitle}.</strong> {error}
-                </span>
-              </p>
+                <button
+                  type="button"
+                  onClick={() => void handlePay()}
+                  disabled={paying || session === 'checking'}
+                  className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-forest px-6 text-[13.5px] font-medium text-cream transition-colors duration-200 hover:bg-forest-soft disabled:opacity-60 motion-reduce:transition-none lg:w-auto lg:min-w-[220px]"
+                >
+                  {paying ? PAY_START_COPY.payingLabel : PAY_START_COPY.payLabel}
+                  {!paying && <ArrowRight className="size-4" strokeWidth={2.4} aria-hidden />}
+                </button>
+              </section>
             )}
-
-            {notice && (
-              <p className="mt-3 text-[12px] leading-relaxed text-forest/70" role="status">
-                {notice}
-              </p>
-            )}
-
-            <button
-              type="button"
-              onClick={() => void handlePay()}
-              disabled={paying || session === 'checking'}
-              className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-forest px-6 text-[14px] font-medium text-cream transition-colors duration-200 hover:bg-forest-soft disabled:opacity-60 motion-reduce:transition-none"
-            >
-              {paying ? PAY_START_COPY.payingLabel : PAY_START_COPY.payLabel}
-              {!paying && <ArrowRight className="size-4" strokeWidth={2.4} aria-hidden />}
-            </button>
-
-            <p className="mt-3 text-center text-[11.5px] text-forest/45">
-              {PAY_START_COPY.changeMethodHint}
-            </p>
-          </>
-        )}
+          </div>
+        </div>
       </div>
     </main>
   )

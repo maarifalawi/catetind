@@ -9,9 +9,10 @@ import type { PaymentMethodId } from '@/lib/payments/methods'
 import type { PaymentInstructions, PaymentState } from '@/lib/payments/types'
 
 /* ── KARTU PEMBAYARAN (paket 83) — INSTRUKSI BAYAR DI DALAM APP ──────────────
-   Muncul setelah user menekan "Bayar sekarang": QRIS (gambar + isi QR),
-   nomor Virtual Account, tautan e-wallet, atau kode Mandiri Bill — semuanya di
-   dalam tema app, tanpa pindah domain.
+   Muncul setelah user menekan "Bayar sekarang": QRIS (gambar + isi QR), nomor
+   Virtual Account, tautan e-wallet, atau kode Mandiri Bill — semuanya di dalam
+   tema app, tanpa pindah domain. Di desktop isinya melebar dua kolom (QR di
+   kiri, angka/kode di kanan); di mobile tetap satu kolom.
 
    Tiga hal yang sengaja TIDAK dilakukan di sini:
      · menggambar QR/VA sendiri — kalau provider tidak mengirim instruksinya,
@@ -43,8 +44,8 @@ function formatRemaining(ms: number): string {
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
 }
 
-/** kartu nomor/kunci yang bisa disalin — polanya sama dengan referral-screen */
-function CopyRow({ label, value }: { label: string; value: string }) {
+/** nilai yang bisa disalin — polanya sama dengan referral-screen (`navigator.clipboard` + toast) */
+function CopyField({ label, value, large = false }: { label: string; value: string; large?: boolean }) {
   const [copied, setCopied] = useState(false)
 
   async function handleCopy() {
@@ -58,17 +59,21 @@ function CopyRow({ label, value }: { label: string; value: string }) {
   }
 
   return (
-    <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl bg-canvas px-3.5 py-3 ring-1 ring-soil/12">
+    <div className="flex items-center justify-between gap-3 rounded-2xl bg-canvas px-4 py-3 ring-1 ring-soil/12">
       <div className="min-w-0">
-        <p className="text-[11px] font-medium tracking-[0.14em] text-forest/40 uppercase">{label}</p>
-        <p className="mt-1 truncate font-display text-[17px] font-semibold tabular-nums text-forest">
+        <p className="text-[10.5px] font-medium tracking-[0.14em] text-forest/40 uppercase">{label}</p>
+        <p
+          className={`mt-1 truncate font-display font-semibold tabular-nums text-forest ${
+            large ? 'text-[20px] lg:text-[22px]' : 'text-[16px]'
+          }`}
+        >
           {value}
         </p>
       </div>
       <button
         type="button"
         onClick={() => void handleCopy()}
-        className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-forest px-3.5 text-[12.5px] font-medium text-cream transition-colors duration-200 hover:bg-forest-soft motion-reduce:transition-none"
+        className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-forest px-3.5 text-[12px] font-medium text-cream transition-colors duration-200 hover:bg-forest-soft motion-reduce:transition-none"
       >
         <Copy className="size-3.5" strokeWidth={2.4} aria-hidden />
         {copied ? PAY_CARD_COPY.copiedLabel : PAY_CARD_COPY.copyLabel}
@@ -143,35 +148,30 @@ export function PaymentInstructionCard({
 
   const timeUp = remaining !== null && remaining <= 0
   const dead = state === 'expired' || state === 'failed' || (timeUp && state !== 'settled')
+  const settled = state === 'settled'
   const instructions = invoice.instructions
 
-  const statusLabel =
-    state === 'settled'
-      ? PAY_CARD_COPY.statusSettled
-      : dead
-        ? timeUp || state === 'expired'
-          ? PAY_CARD_COPY.statusExpired
-          : PAY_CARD_COPY.statusFailed
-        : state === 'checking'
-          ? PAY_CARD_COPY.checkingLabel
-          : PAY_CARD_COPY.statusPending
-  const StatusIcon = state === 'settled' ? CheckCircle2 : dead ? XCircle : Clock
-  const statusTone =
-    state === 'settled'
-      ? 'bg-mint/25 text-forest ring-mint/50'
-      : dead
-        ? 'bg-plum/15 text-plum ring-plum/30'
-        : 'bg-sage text-forest ring-soil/20'
+  const statusLabel = settled
+    ? PAY_CARD_COPY.statusSettled
+    : dead
+      ? timeUp || state === 'expired'
+        ? PAY_CARD_COPY.statusExpired
+        : PAY_CARD_COPY.statusFailed
+      : state === 'checking'
+        ? PAY_CARD_COPY.checkingLabel
+        : PAY_CARD_COPY.statusPending
+  const StatusIcon = settled ? CheckCircle2 : dead ? XCircle : Clock
+  const statusTone = settled
+    ? 'bg-mint/25 text-forest ring-mint/50'
+    : dead
+      ? 'bg-plum/15 text-plum ring-plum/30'
+      : 'bg-sage text-forest ring-soil/20'
+  const live = !dead && !settled
 
   return (
-    <section className="mt-6 rounded-[1.5rem] bg-cream p-5 ring-1 ring-soil/12">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="text-[11px] font-medium tracking-[0.16em] text-forest/40 uppercase">
-            {PAY_CARD_COPY.title}
-          </h2>
-          <p className="mt-1.5 text-[14px] font-medium text-forest">{methodCopy.label}</p>
-        </div>
+    <section className="rounded-[1.5rem] bg-cream p-5 ring-1 ring-soil/12 lg:rounded-[1.75rem] lg:p-6">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-[13.5px] font-medium text-forest">{methodCopy.label}</p>
         <span
           className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-[11.5px] font-medium ring-1 ${statusTone}`}
         >
@@ -180,123 +180,114 @@ export function PaymentInstructionCard({
         </span>
       </div>
 
-      <dl className="mt-4 space-y-2.5 border-t border-soil/12 pt-3.5 text-[12.5px]">
-        <div className="flex items-baseline justify-between gap-3">
-          <dt className="font-medium text-forest">{PAY_CARD_COPY.totalLabel}</dt>
-          <dd className="font-display text-lg font-medium tabular-nums text-forest">
+      {/* nominal + hitungan mundur dalam satu baris (hemat teks, mata langsung ke angka) */}
+      <div className="mt-3 flex items-baseline justify-between gap-3 border-t border-soil/12 pt-3.5">
+        <span className="text-[12.5px] text-forest/50">{PAY_CARD_COPY.totalLabel}</span>
+        <span className="flex items-baseline gap-3">
+          {live && remaining !== null && (
+            <span className="font-medium tabular-nums text-forest/45">
+              {formatRemaining(remaining)}
+            </span>
+          )}
+          {dead && <span className="font-medium text-plum">{PAY_CARD_COPY.timeUpLabel}</span>}
+          <span className="font-display text-[19px] font-semibold tabular-nums text-forest lg:text-[21px]">
             {formatIDR(invoice.amount)}
-          </dd>
-        </div>
-        {!dead && remaining !== null && (
-          <div className="flex items-center justify-between gap-3">
-            <dt className="flex items-center gap-1.5 text-forest/50">
-              <Clock className="size-3.5" strokeWidth={2.4} aria-hidden />
-              {PAY_CARD_COPY.countdownLabel}
-            </dt>
-            <dd className="font-medium tabular-nums text-forest">{formatRemaining(remaining)}</dd>
-          </div>
-        )}
-        {dead && (
-          <div className="flex items-center justify-between gap-3">
-            <dt className="flex items-center gap-1.5 text-forest/50">
-              <Clock className="size-3.5" strokeWidth={2.4} aria-hidden />
-              {PAY_CARD_COPY.countdownLabel}
-            </dt>
-            <dd className="font-medium text-plum">{PAY_CARD_COPY.timeUpLabel}</dd>
-          </div>
-        )}
-      </dl>
+          </span>
+        </span>
+      </div>
 
-      {!dead && state !== 'settled' && instructions?.channel === 'qris' && (
-        <div className="mt-4 rounded-2xl bg-canvas/60 p-4 ring-1 ring-soil/10">
-          <p className="text-[12.5px] font-medium text-forest">{PAY_CARD_COPY.qrisScanTitle}</p>
+      {live && instructions?.channel === 'qris' && (
+        <div className="mt-4 lg:grid lg:grid-cols-[220px_minmax(0,1fr)] lg:items-center lg:gap-6">
           {/* <img> biasa: sumbernya URL gambar dari provider, bukan aset app */}
           <img
             src={instructions.qrImageUrl}
             alt={PAY_CARD_COPY.qrAlt}
             width={220}
             height={220}
-            className="mx-auto mt-3 size-[220px] rounded-xl bg-white object-contain p-2 ring-1 ring-soil/10"
+            className="mx-auto size-[210px] rounded-2xl bg-white object-contain p-3 ring-1 ring-soil/10 lg:mx-0"
           />
-          {instructions.qrString && (
-            <>
-              <p className="mt-4 text-[11.5px] leading-relaxed text-forest/55">
-                {PAY_CARD_COPY.qrStringLabel}
-              </p>
-              <CopyRow label={PAY_CARD_COPY.qrisScanTitle} value={instructions.qrString} />
-            </>
-          )}
+          <div className="mt-4 lg:mt-0">
+            <p className="text-[12.5px] font-medium text-forest">{PAY_CARD_COPY.qrisScanTitle}</p>
+            {instructions.qrString && (
+              <>
+                <p className="mt-3 text-[11.5px] text-forest/45">{PAY_CARD_COPY.qrStringLabel}</p>
+                <div className="mt-2">
+                  <CopyField label={PAY_CARD_COPY.qrisScanTitle} value={instructions.qrString} />
+                </div>
+              </>
+            )}
+          </div>
         </div>
       )}
 
-      {!dead && state !== 'settled' && instructions?.channel === 'va' && (
-        <div className="mt-4 rounded-2xl bg-canvas/60 p-4 ring-1 ring-soil/10">
-          <CopyRow
+      {live && instructions?.channel === 'va' && (
+        <div className="mt-4">
+          <CopyField
             label={`${PAY_CARD_COPY.vaLabel} · ${instructions.bank.toUpperCase()}`}
             value={instructions.vaNumber}
+            large
           />
-          <p className="mt-3 text-[11.5px] leading-relaxed text-forest/55">{PAY_CARD_COPY.vaHint}</p>
+          <p className="mt-2.5 text-[11.5px] text-forest/45">{PAY_CARD_COPY.vaHint}</p>
         </div>
       )}
 
-      {!dead && state !== 'settled' && instructions?.channel === 'ewallet' && (
-        <div className="mt-4 rounded-2xl bg-canvas/60 p-4 ring-1 ring-soil/10">
+      {live && instructions?.channel === 'ewallet' && (
+        <div className="mt-4">
           <a
             href={instructions.deeplinkUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-forest px-5 text-[13.5px] font-medium text-cream transition-colors duration-200 hover:bg-forest-soft motion-reduce:transition-none"
+            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-forest px-6 text-[13.5px] font-medium text-cream transition-colors duration-200 hover:bg-forest-soft motion-reduce:transition-none lg:w-auto lg:min-w-[260px]"
           >
             {PAY_CARD_COPY.ewalletCta}
             <ExternalLink className="size-4" strokeWidth={2.4} aria-hidden />
           </a>
-          <p className="mt-3 text-[11.5px] leading-relaxed text-forest/55">
-            {PAY_CARD_COPY.ewalletHint}
-          </p>
+          <p className="mt-2.5 text-[11.5px] text-forest/45">{PAY_CARD_COPY.ewalletHint}</p>
         </div>
       )}
 
-      {!dead && state !== 'settled' && instructions?.channel === 'bill' && (
-        <div className="mt-4 rounded-2xl bg-canvas/60 p-4 ring-1 ring-soil/10">
-          <CopyRow label={PAY_CARD_COPY.billerLabel} value={instructions.billerCode} />
-          <CopyRow label={PAY_CARD_COPY.billKeyLabel} value={instructions.billKey} />
-          <p className="mt-3 text-[11.5px] leading-relaxed text-forest/55">{PAY_CARD_COPY.billHint}</p>
+      {live && instructions?.channel === 'bill' && (
+        <div className="mt-4">
+          <div className="grid gap-2.5 lg:grid-cols-2">
+            <CopyField label={PAY_CARD_COPY.billerLabel} value={instructions.billerCode} />
+            <CopyField label={PAY_CARD_COPY.billKeyLabel} value={instructions.billKey} large />
+          </div>
+          <p className="mt-2.5 text-[11.5px] text-forest/45">{PAY_CARD_COPY.billHint}</p>
         </div>
       )}
 
-      {!dead && state !== 'settled' && !instructions && (
+      {live && !instructions && (
         <p className="mt-4 flex items-start gap-2 rounded-2xl bg-plum/10 px-3.5 py-3 text-[12px] leading-relaxed text-forest ring-1 ring-plum/20">
           <Info className="mt-0.5 size-3.5 shrink-0" strokeWidth={2.4} aria-hidden />
           {PAY_CARD_COPY.noInstructions}
         </p>
       )}
 
-      {state === 'settled' && (
-        <div className="mt-4 rounded-2xl bg-mint/25 px-3.5 py-3 ring-1 ring-forest/10">
-          <p className="text-[12.5px] font-medium text-forest">{PAY_CARD_COPY.settledTitle}</p>
-          <p className="mt-1 text-[12px] leading-relaxed text-forest/60">
-            {PAY_CARD_COPY.settledBody}
-          </p>
-        </div>
+      {settled && (
+        <p className="mt-4 rounded-2xl bg-mint/25 px-3.5 py-3 text-[12.5px] font-medium text-forest ring-1 ring-forest/10">
+          {PAY_CARD_COPY.settledTitle} · <span className="font-normal">{PAY_CARD_COPY.settledBody}</span>
+        </p>
       )}
 
       {dead && (
         <>
-          <div className="mt-4 rounded-2xl bg-plum/10 px-3.5 py-3 ring-1 ring-plum/20">
-            <p className="text-[12.5px] font-medium text-forest">
+          <p className="mt-4 rounded-2xl bg-plum/10 px-3.5 py-3 text-[12.5px] leading-relaxed text-forest ring-1 ring-plum/20">
+            <strong className="font-medium">
               {timeUp || state === 'expired'
                 ? PAY_CARD_COPY.expiredTitle
                 : PAY_CARD_COPY.failedTitle}
-            </p>
-            <p className="mt-1 text-[12px] leading-relaxed text-forest/60">
-              {timeUp || state === 'expired' ? PAY_CARD_COPY.expiredBody : PAY_CARD_COPY.failedBody}
-            </p>
-          </div>
-          <div className="mt-3 flex flex-col gap-2">
+            </strong>{' '}
+            <span className="font-normal text-forest/60">
+              {timeUp || state === 'expired'
+                ? PAY_CARD_COPY.expiredBody
+                : PAY_CARD_COPY.failedBody}
+            </span>
+          </p>
+          <div className="mt-3 flex flex-col gap-2 lg:flex-row">
             <button
               type="button"
               onClick={onNewInvoice}
-              className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-forest px-6 text-[14px] font-medium text-cream transition-colors duration-200 hover:bg-forest-soft motion-reduce:transition-none"
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-forest px-6 text-[13.5px] font-medium text-cream transition-colors duration-200 hover:bg-forest-soft motion-reduce:transition-none lg:min-w-[200px]"
             >
               <RefreshCw className="size-4" strokeWidth={2.4} aria-hidden />
               {PAY_CARD_COPY.newInvoiceLabel}
@@ -304,7 +295,7 @@ export function PaymentInstructionCard({
             <button
               type="button"
               onClick={onSwitchMethod}
-              className="inline-flex h-12 w-full items-center justify-center rounded-full px-6 text-[14px] font-medium text-forest/70 ring-1 ring-soil/16 transition-colors duration-200 hover:text-forest motion-reduce:transition-none"
+              className="inline-flex h-12 items-center justify-center rounded-full px-6 text-[13.5px] font-medium text-forest/70 ring-1 ring-soil/16 transition-colors duration-200 hover:text-forest motion-reduce:transition-none"
             >
               {PAY_CARD_COPY.switchMethodLabel}
             </button>
@@ -312,27 +303,24 @@ export function PaymentInstructionCard({
         </>
       )}
 
-      {!dead && state !== 'settled' && (
-        <>
-          <p className="mt-4 flex items-start gap-2 rounded-2xl bg-sage/60 px-3.5 py-3 text-[12px] leading-relaxed text-forest ring-1 ring-soil/12">
-            <Info className="mt-0.5 size-3.5 shrink-0" strokeWidth={2.4} aria-hidden />
-            <span>
-              <strong className="font-medium">{PAY_CARD_COPY.waitingTitle}</strong>{' '}
-              {PAY_CARD_COPY.waitingBody}
-            </span>
-          </p>
+      {live && (
+        <div className="mt-4 flex items-center justify-between gap-3 border-t border-soil/12 pt-3.5">
+          <span className="flex items-center gap-2 text-[11.5px] text-forest/45">
+            <span className="size-1.5 animate-pulse rounded-full bg-forest/40" aria-hidden />
+            {PAY_CARD_COPY.waitingTitle}
+          </span>
           <button
             type="button"
             onClick={onSwitchMethod}
-            className="mt-3 inline-flex h-11 w-full items-center justify-center rounded-full px-6 text-[13.5px] font-medium text-forest/70 ring-1 ring-soil/16 transition-colors duration-200 hover:text-forest motion-reduce:transition-none"
+            className="text-[11.5px] font-medium text-forest/60 underline decoration-soil/40 underline-offset-4 transition-colors duration-200 hover:text-forest"
           >
             {PAY_CARD_COPY.switchMethodLabel}
           </button>
-        </>
+        </div>
       )}
 
-      <p className="mt-4 text-[11px] tabular-nums text-forest/40">
-        {PAY_CARD_COPY.orderLabel}: {invoice.orderId}
+      <p className="mt-3 text-[10.5px] tabular-nums text-forest/35">
+        {PAY_CARD_COPY.orderLabel} {invoice.orderId}
       </p>
     </section>
   )
