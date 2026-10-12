@@ -298,8 +298,60 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
   }
+}
+
+/* ── KANVAS DOKUMEN: SELALU PUTIH — TERMASUK AREA "PULL-DOWN" ─────────────────
+     `html`/`body` DIKUNCI ke putih kanonik (`canvas`), tidak lagi mengikuti
+     `--background` yang jadi HITAM di tema gelap.
+
+     Kenapa ini perlu: SELURUH permukaan app ini putih dengan token STATIS
+     (`bg-canvas` / `bg-cream`, plus `text-forest`) — jadi tema gelap cuma
+     memetakan token shadcn/ui, bukan mewarnai halaman. Selama `--background`
+     masih hitam, semua area yang TIDAK tertutup konten jadi hitam polos di
+     tengah app yang putih:
+       • karet overscroll saat halaman ditarik ke bawah di HP ("pull-down"),
+       • sisa ruang di bawah halaman yang isinya lebih pendek dari layar.
+     Contoh nyata: Dashboard tampak putih seluruhnya, tapi begitu ditarik ke
+     bawah muncul pita hitam — terlihat seperti bug, dan memang bug. Benchmark
+     (Fundy) menampilkan pita putih polos; itu yang kita samakan.
+
+     `html` yang menahan warna ini — bukan hanya `body` — karena latar ELEMEN
+     AKAR itulah yang dipakai browser untuk area di luar dokumen (rubber-band /
+     overscroll) dan untuk menebak warna UI bawaannya. `body` ikut dikunci
+     supaya tidak ada celah warna lain di bawah konten.
+
+     `color-scheme: light` dikunci karena dua sebab:
+       1. palet app ini selalu terang, jadi kontrol bawaan browser (scrollbar,
+          input native, menu bawaan) juga harus terang;
+       2. di perangkat bermode gelap, `color-scheme: dark` membuat browser
+          mengecat area luar dokumen dengan HITAM WALAU latar kita sudah putih.
+
+     ── KENAPA DI LUAR `@layer base` ───────────────────────────────────────────
+     Deklarasi CSS yang TIDAK berada di dalam layer SELALU mengalahkan yang di
+     dalam layer (cascade layer), sedangkan blok `.dark` dan blok
+     `@media (prefers-color-scheme: dark)` di atas sama-sama ditulis di luar
+     layer. Kalau aturan ini ditaruh di dalam `@layer base`, `color-scheme:
+     dark` milik mereka tetap menang — jadi ia sengaja diletakkan di sini,
+     setelah keduanya, dengan selector `:root.light`/`:root.dark` yang
+     spesifikasinya juga lebih tinggi (0,1,1 vs 0,1,0).
+
+     Satu-satunya efek samping yang perlu diingat: karena tanpa layer, latar ini
+     juga mengalahkan utility `bg-*` yang dipasang di `html`/`body`. Tidak ada
+     satu pun tempat di repo ini yang mewarnai `html`/`body` dari sisi JSX —
+     dan memang tidak boleh, karena halaman yang butuh latar gelap (mis.
+     `/welcome`) mewarnai elemennya sendiri (`bg-ink` di `<main>`), bukan
+     dokumennya.
+
+     Kalau nanti app punya mode gelap yang sungguhan (permukaan kartu ikut
+     gelap), aturan inilah yang harus dibuka kembali. */
+:root,
+:root.light,
+:root.dark,
+body {
+  @apply bg-canvas;
+  color-scheme: light;
 }
 
 /* thin, brand-tinted scrollbar for the desktop sidebar nav */
