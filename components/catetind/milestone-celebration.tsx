@@ -136,7 +136,7 @@ export function MilestoneCelebration({
           ref={continueRef}
           type="button"
           onClick={onClose}
-          className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-b from-forest-soft to-forest text-[14px] font-medium text-cream shadow-[0_14px_28px_-14px_rgba(69,89,78,0.85)] transition-all hover:brightness-[1.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40 active:scale-[0.99] motion-reduce:transition-none"
+          className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-b from-forest-soft to-forest text-[14px] font-medium text-cream shadow-[0_14px_28px_-14px_rgba(0,0,0,0.85)] transition-all hover:brightness-[1.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40 active:scale-[0.99] motion-reduce:transition-none"
         >
           {CELEBRATION_COPY.continueLabel}
           <Sparkles className="size-4" strokeWidth={2.4} aria-hidden />

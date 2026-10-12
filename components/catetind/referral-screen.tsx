@@ -394,7 +394,7 @@ function ShareCard({
       <button
         type="button"
         onClick={onShare}
-        className="mt-3 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-forest text-[14px] font-medium text-cream shadow-[0_18px_36px_-20px_rgba(69,89,78,0.95)] transition-colors hover:bg-forest-soft active:scale-[0.99]"
+        className="mt-3 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-forest text-[14px] font-medium text-cream shadow-[0_18px_36px_-20px_rgba(0,0,0,0.95)] transition-colors hover:bg-forest-soft active:scale-[0.99]"
       >
         <Share2 className="size-4" strokeWidth={2.4} aria-hidden />
         Bagikan ke Teman
@@ -468,7 +468,7 @@ function TotalRewardCard({ total }: { total: string }) {
   return (
     <section
       aria-label={`Total Reward yang Kamu Dapat: ${total}`}
-      className="flex items-center gap-4 rounded-[1.75rem] bg-forest p-5 text-cream shadow-[0_24px_50px_-30px_rgba(69,89,78,0.95)] sm:p-6"
+      className="flex items-center gap-4 rounded-[1.75rem] bg-forest p-5 text-cream shadow-[0_24px_50px_-30px_rgba(0,0,0,0.95)] sm:p-6"
     >
       <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-brand text-forest">
         <Gift className="size-5" strokeWidth={2.2} aria-hidden />

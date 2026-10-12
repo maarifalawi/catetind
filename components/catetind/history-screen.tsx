@@ -528,7 +528,7 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
                 className={cn(
                   'inline-flex shrink-0 items-center gap-1.5 rounded-full py-2 pl-3.5 pr-3 text-[12.5px] font-medium transition-all duration-200 active:scale-95',
                   active
-                    ? 'bg-forest text-cream shadow-[0_10px_22px_-16px_rgba(69,89,78,0.9)]'
+                    ? 'bg-forest text-cream shadow-[0_10px_22px_-16px_rgba(0,0,0,0.9)]'
                     : 'bg-cream text-forest/55 ring-1 ring-soil/10 hover:bg-sage/60 hover:text-forest',
                 )}
               >

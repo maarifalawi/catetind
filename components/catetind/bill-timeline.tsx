@@ -100,7 +100,7 @@ export function BillTimeline({
                   'flex w-full flex-col items-center gap-1 rounded-2xl px-0.5 py-2 transition-colors',
                   clickable ? 'active:scale-95' : 'cursor-default',
                   day.isToday
-                    ? 'bg-forest text-cream shadow-[0_10px_22px_-14px_rgba(69,89,78,0.85)]'
+                    ? 'bg-forest text-cream shadow-[0_10px_22px_-14px_rgba(0,0,0,0.85)]'
                     : hasOverdue
                       ? 'bg-hud-terracotta/15'
                       : hasDueToday

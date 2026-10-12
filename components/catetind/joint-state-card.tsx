@@ -27,8 +27,8 @@ const STATE_ICON = {
 } as const
 
 const STATE_TONE = {
-  empty: 'bg-hud-amber/20 text-[#b89191] ring-hud-amber/40',
-  waiting: 'bg-hud-amber/15 text-[#b89191] ring-hud-amber/30',
+  empty: 'bg-hud-amber/20 text-hud-terracotta ring-hud-amber/40',
+  waiting: 'bg-hud-amber/15 text-hud-terracotta ring-hud-amber/30',
   active: 'bg-hud-sage/25 text-forest ring-hud-sage/40',
 } as const
 
@@ -37,7 +37,7 @@ export function JointStateCard({ state }: { state: 'empty' | 'waiting' | 'active
   const Icon = STATE_ICON[state]
 
   return (
-    <section className="mt-3 rounded-[1.75rem] bg-[#ffffff] px-5 py-4 ring-1 ring-soil/10">
+    <section className="mt-3 rounded-[1.75rem] bg-cream px-5 py-4 ring-1 ring-soil/10">
       <div className="flex items-start gap-3">
         <span
           className={cn(

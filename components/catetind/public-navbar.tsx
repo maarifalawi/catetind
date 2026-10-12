@@ -57,7 +57,7 @@ export function PublicNavbar() {
           </Link>
           <Link
             href={PUBLIC_NAV.ctaHref}
-            className="rounded-full bg-forest px-4 py-2 text-[13px] font-medium text-cream shadow-[0_12px_26px_-16px_rgba(69,89,78,0.9)] transition-colors duration-200 hover:bg-forest-soft active:scale-[0.98] motion-reduce:transition-none"
+            className="rounded-full bg-forest px-4 py-2 text-[13px] font-medium text-cream shadow-[0_12px_26px_-16px_rgba(0,0,0,0.9)] transition-colors duration-200 hover:bg-forest-soft active:scale-[0.98] motion-reduce:transition-none"
           >
             {PUBLIC_NAV.ctaLabel}
           </Link>

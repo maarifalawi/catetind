@@ -167,7 +167,7 @@ export function SpendingHeatmap({
                     <span
                       role="tooltip"
                       className={cn(
-                        'pointer-events-none absolute bottom-full z-20 mb-2 w-max max-w-[12rem] rounded-xl bg-ink px-2.5 py-1.5 text-center text-[10.5px] font-medium leading-tight text-cream shadow-[0_12px_28px_-12px_rgba(69,89,78,0.7)] transition-opacity duration-150 motion-reduce:transition-none',
+                        'pointer-events-none absolute bottom-full z-20 mb-2 w-max max-w-[12rem] rounded-xl bg-ink px-2.5 py-1.5 text-center text-[10.5px] font-medium leading-tight text-cream shadow-[0_12px_28px_-12px_rgba(0,0,0,0.7)] transition-opacity duration-150 motion-reduce:transition-none',
                         placement.bubble,
                         isActive ? 'opacity-100' : 'opacity-0',
                       )}

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { getMoneySnapshot, resetMoneyStore, walletBalance } from './store'
+import { getMoneySnapshot, recordedTransactions, resetMoneyStore, walletBalance } from './store'
 import { recordedTransactionsForContext } from './context-filter'
 import { computeDailyHud, periodWindowForTab, spentInWindow, spentOn } from '@/lib/data/budget'
 import { recordDraftTransaction } from '@/lib/transaction-bus'
@@ -80,5 +80,39 @@ describe('catat pengeluaran → Riwayat + Jatah Hari Ini + saldo bergerak bersam
     expect(rowsAfter).toEqual(rowsBefore)
     expect(spentInWindow(rowsAfter, window)).toBe(spentBefore)
     expect(walletBalance(getMoneySnapshot(), 'tunai')).toBe(balance)
+  })
+})
+
+/* ── NAMA CATATAN DARI KATEGORI (paket 86) ───────────────────────────────────
+   Permintaan pemilik produk: Riwayat jangan berbunyi "Pengeluaran cepat" /
+   "Pemasukan cepat" — user harus langsung tahu catatannya buat apa. Form tambah
+   SUDAH mewajibkan kategori ("Makanan", "Gaji", "Bonus"), jadi kategorinyalah
+   yang menjadi nama barisnya saat catatan dibiarkan kosong. */
+describe('nama catatan kosong = KATEGORI pilihan user (paket 86)', () => {
+  it('tanpa catatan: baris memakai kategori, bukan "Pengeluaran cepat"', () => {
+    recordDraftTransaction(
+      { amount: 22_000, note: '', type: 'expense', category: 'Makanan' },
+      'BCA',
+    )
+
+    const rows = recordedTransactions(getMoneySnapshot())
+    expect(rows[0]?.name).toBe('Makanan')
+    expect(rows.map((row) => row.name)).not.toContain('Pengeluaran cepat')
+  })
+
+  it('catatan yang diketik user tetap menang atas kategori', () => {
+    recordDraftTransaction(
+      { amount: 22_000, note: 'Kopi pagi', type: 'expense', category: 'Makanan' },
+      'BCA',
+    )
+    expect(recordedTransactions(getMoneySnapshot())[0]?.name).toBe('Kopi pagi')
+  })
+
+  it('tanpa kategori (jalur onboarding): sebutan netral per tipe, tanpa kata "cepat"', () => {
+    recordDraftTransaction({ amount: 5_000, note: '', type: 'income' }, 'BCA')
+
+    const name = recordedTransactions(getMoneySnapshot())[0]?.name ?? ''
+    expect(name).toBe('Pemasukan')
+    expect(name).not.toMatch(/cepat/i)
   })
 })

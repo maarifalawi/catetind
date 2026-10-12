@@ -108,7 +108,12 @@ export function recordTransaction(input: NewTransactionInput): HistoryTransactio
  * ditulis dua kali.
  *
  * Default yang dipakai cuma untuk field yang memang belum ada di form tambah:
- *   • nama    → catatan user, atau sebutan netral per tipe (`TRANSACTION_DEFAULT_NAME`)
+ *   • nama    → catatan user; kalau kosong, KATEGORI yang sudah dipilih user
+ *               (`draft.category`, mis. "Makanan"/"Gaji"/"Bonus") supaya Riwayat
+ *               langsung terbaca apa catatannya. `TRANSACTION_DEFAULT_NAME`
+ *               (mis. "Pengeluaran") cuma jaring terakhir kalau kategorinya pun
+ *               tidak ada (jalur onboarding) — bukan lagi default yang dipakai
+ *               diam-diam saat user hanya tidak mengetik catatan.
  *   • kategori→ PILIHAN USER yang dibawa engine (paket 54), atau kategori tetap
  *               tipe untuk Tabungan/Transfer (`manualCategoryChoice()` di
  *               `lib/data/history.ts`). `TRANSACTION_FALLBACK_CATEGORY` di bawah
@@ -124,7 +129,14 @@ export function recordDraftTransaction(
   fallbackWallet: string,
 ): HistoryTransaction {
   return recordTransaction({
-    name: draft.note.trim() || TRANSACTION_DEFAULT_NAME[draft.type],
+    /* PAKET 86 — catatan kosong TIDAK lagi jadi "Pengeluaran cepat".
+       Kategori pilihan user sudah menjelaskan catatannya ("Makanan", "Gaji",
+       "Bonus"), jadi Riwayat terbaca tanpa perlu tebakan: pemilik produk
+       memintanya persis begitu — "langsung aja darimana? gaji? bonus?". */
+    name:
+      draft.note.trim() ||
+      draft.category?.trim() ||
+      TRANSACTION_DEFAULT_NAME[draft.type],
     amount: draft.amount,
     type: draft.type,
     category: draft.category || TRANSACTION_FALLBACK_CATEGORY,

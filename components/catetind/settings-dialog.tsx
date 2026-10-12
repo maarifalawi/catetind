@@ -82,7 +82,7 @@ export function ConfirmDialog({
           aria-labelledby={`${id}-title`}
           tabIndex={-1}
           className={cn(
-            'pointer-events-auto flex max-h-[92vh] w-full flex-col overflow-y-auto rounded-t-[2rem] bg-cream shadow-[0_-24px_60px_-24px_rgba(69,89,78,0.55)] ring-1 ring-soil/12 outline-none transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] lg:max-w-md lg:rounded-[2rem] lg:shadow-[0_28px_70px_-24px_rgba(69,89,78,0.5)]',
+            'pointer-events-auto flex max-h-[92vh] w-full flex-col overflow-y-auto rounded-t-[2rem] bg-cream shadow-[0_-24px_60px_-24px_rgba(0,0,0,0.55)] ring-1 ring-soil/12 outline-none transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] lg:max-w-md lg:rounded-[2rem] lg:shadow-[0_28px_70px_-24px_rgba(0,0,0,0.5)]',
             open
               ? 'translate-y-0 opacity-100 lg:scale-100'
               : 'translate-y-full opacity-0 lg:translate-y-4 lg:scale-95',

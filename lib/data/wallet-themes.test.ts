@@ -87,8 +87,8 @@ describe('walletThemeById / isCustomWalletTheme', () => {
 describe('applyWalletTheme', () => {
   const wallet = {
     id: 'bca',
-    face: 'bg-gradient-to-br from-[#52685c] via-[#45594e] to-[#161c19]',
-    color: 'bg-gradient-to-r from-[#c4c7af] to-[#45594e]',
+    face: 'bg-gradient-to-br from-forest-soft via-forest to-evergreen-deeper',
+    color: 'bg-gradient-to-r from-evergreen-light to-forest',
     art: 'parang' as WalletArt,
   }
 
@@ -111,8 +111,8 @@ describe('applyWalletTheme', () => {
 describe('applyWalletDeckTheme (muka kartu deck Dashboard)', () => {
   const deckWallet = {
     id: 'bca',
-    faceClass: 'from-[#52685c] via-[#45594e] to-[#161c19]',
-    bandClass: 'from-[#c4c7af] via-[#ffffff] to-[#c4c7af]',
+    faceClass: 'from-forest-soft via-forest to-evergreen-deeper',
+    bandClass: 'from-evergreen-light via-cream to-evergreen-light',
     glowClass: 'bg-evergreen/25',
     art: 'parang' as WalletArt,
   }
@@ -120,7 +120,7 @@ describe('applyWalletDeckTheme (muka kartu deck Dashboard)', () => {
   it('stop gradien tema dipindah tanpa arahnya (arah dipasang muka deck)', () => {
     const theme = WALLET_CUSTOM_THEMES[0]
     expect(themeGradientStops(theme.face)).toBe(
-      'from-[#91bb9e] via-[#45594e] to-[#161c19]',
+      'from-mint via-forest to-evergreen-deeper',
     )
     expect(themeGradientStops(theme.face)).not.toContain('bg-gradient')
   })

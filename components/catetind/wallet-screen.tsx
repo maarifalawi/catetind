@@ -491,7 +491,7 @@ export function WalletScreen() {
 
         <div className="mt-5 grid grid-cols-1 gap-5 xl:mt-6 xl:grid-cols-12 xl:gap-6">
           {/* ── HERO (8/12): TOTAL SALDO + KOMPOSISI + LIKUIDITAS ─────────── */}
-          <section className="relative overflow-hidden rounded-[2.25rem] bg-gradient-to-br from-forest-soft via-forest to-[#1f2823] p-5 text-cream shadow-[0_30px_70px_-30px_rgba(69,89,78,0.8)] sm:p-6 xl:col-span-8 xl:p-7">
+          <section className="relative overflow-hidden rounded-[2.25rem] bg-gradient-to-br from-forest-soft via-forest to-evergreen-deep p-5 text-cream shadow-[0_30px_70px_-30px_rgba(0,0,0,0.8)] sm:p-6 xl:col-span-8 xl:p-7">
             {/* aurora mint kanan atas (warna brand) + kabut sage/amber hangat —
                 tetap di palet CatetInd supaya hero nyambung dengan kartu dompet */}
             <div
@@ -500,7 +500,7 @@ export function WalletScreen() {
             />
             <div
               aria-hidden
-              className="pointer-events-none absolute -left-24 top-1/3 size-64 rounded-full bg-[#45594e]/45 blur-3xl"
+              className="pointer-events-none absolute -left-24 top-1/3 size-64 rounded-full bg-forest/45 blur-3xl"
             />
             <div
               aria-hidden
@@ -653,7 +653,7 @@ export function WalletScreen() {
             kanon — jadi sistem tidak mungkin lagi menawarkan BCA ke user yang
             sudah punya dompet BCA, dan tidak ada saran yang tersembunyi di luar
             tepi layar. */}
-        <section className="flex flex-col rounded-[1.75rem] bg-cream p-4 shadow-[0_18px_40px_-34px_rgba(69,89,78,0.55)] ring-1 ring-soil/10 sm:p-5 xl:col-span-4">
+        <section className="flex flex-col rounded-[1.75rem] bg-cream p-4 shadow-[0_18px_40px_-34px_rgba(0,0,0,0.55)] ring-1 ring-soil/10 sm:p-5 xl:col-span-4">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <span className="flex size-7 items-center justify-center rounded-xl bg-gradient-to-br from-sage via-cream to-mint-soft text-forest ring-1 ring-forest/10">
@@ -690,7 +690,7 @@ export function WalletScreen() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.04 * i, ease: EASE }}
                 className={cn(
-                  'group flex flex-col items-center gap-2.5 rounded-[1.4rem] bg-cream p-3.5 ring-1 ring-soil/10 shadow-[0_14px_30px_-24px_rgba(69,89,78,0.5)] transition-all duration-300 hover:-translate-y-1 active:scale-95 motion-reduce:transition-none',
+                  'group flex flex-col items-center gap-2.5 rounded-[1.4rem] bg-cream p-3.5 ring-1 ring-soil/10 shadow-[0_14px_30px_-24px_rgba(0,0,0,0.5)] transition-all duration-300 hover:-translate-y-1 active:scale-95 motion-reduce:transition-none',
                   brand.frame,
                 )}
               >
@@ -705,7 +705,7 @@ export function WalletScreen() {
                   >
                     {brand.name.charAt(0)}
                   </span>
-                  <span className="absolute -bottom-1 -right-1 flex size-5 items-center justify-center rounded-full bg-forest text-mint shadow-[0_6px_14px_-6px_rgba(69,89,78,0.95)] ring-2 ring-cream transition-transform duration-300 group-hover:scale-110">
+                  <span className="absolute -bottom-1 -right-1 flex size-5 items-center justify-center rounded-full bg-forest text-mint shadow-[0_6px_14px_-6px_rgba(0,0,0,0.95)] ring-2 ring-cream transition-transform duration-300 group-hover:scale-110">
                     <Plus className="size-3" strokeWidth={3.2} />
                   </span>
                 </span>
@@ -744,7 +744,7 @@ export function WalletScreen() {
             berbeda makna. Panelnya muncul HANYA setelah ada catatan, supaya
             halaman tidak menambah tinggi untuk sesuatu yang belum terjadi. */}
         {transfers.length > 0 && (
-          <section className="mt-5 rounded-[1.75rem] bg-cream p-4 shadow-[0_18px_40px_-34px_rgba(69,89,78,0.55)] ring-1 ring-soil/10 sm:p-5 xl:mt-6">
+          <section className="mt-5 rounded-[1.75rem] bg-cream p-4 shadow-[0_18px_40px_-34px_rgba(0,0,0,0.55)] ring-1 ring-soil/10 sm:p-5 xl:mt-6">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <span className="flex size-7 items-center justify-center rounded-xl bg-gradient-to-br from-sage via-cream to-mint-soft text-forest ring-1 ring-forest/10">
@@ -1003,7 +1003,7 @@ export function WalletScreen() {
                       animate={{ opacity: 1, scale: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.97, y: 6 }}
                       transition={{ duration: 0.16, ease: [0.32, 0.72, 0, 1] }}
-                      className="absolute bottom-16 right-3 z-30 w-56 origin-bottom-right rounded-2xl bg-cream/95 p-1.5 shadow-[0_28px_60px_-22px_rgba(69,89,78,0.55)] ring-1 ring-soil/12 backdrop-blur-xl"
+                      className="absolute bottom-16 right-3 z-30 w-56 origin-bottom-right rounded-2xl bg-cream/95 p-1.5 shadow-[0_28px_60px_-22px_rgba(0,0,0,0.55)] ring-1 ring-soil/12 backdrop-blur-xl"
                     >
                       {/* "Buka detail" berlaku untuk semua dompet sekarang: halaman
                           /wallet/[id] membaca store yang sama dengan halaman ini */}

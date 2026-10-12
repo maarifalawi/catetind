@@ -99,7 +99,7 @@ export function SyncBalanceModal({
         <Drawer.Content
           data-catetind-sheet="true"
           aria-label="Sesuaikan saldo dompet"
-          className="fixed inset-x-0 bottom-0 z-[70] mx-auto flex max-h-[92dvh] w-full max-w-md flex-col overflow-hidden rounded-t-[2rem] bg-[#ffffff] pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-[0_-24px_60px_-24px_rgba(69,89,78,0.55)] outline-none"
+          className="fixed inset-x-0 bottom-0 z-[70] mx-auto flex max-h-[92dvh] w-full max-w-md flex-col overflow-hidden rounded-t-[2rem] bg-cream pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-[0_-24px_60px_-24px_rgba(0,0,0,0.55)] outline-none"
         >
           {/* drag handle khas Vaul */}
           <div className="mx-auto mt-3 h-1.5 w-10 shrink-0 rounded-full bg-ink/10" />
@@ -202,7 +202,7 @@ export function SyncBalanceModal({
               aria-disabled={inputLocked || undefined}
               className={cn(
                 'mt-6 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-b from-forest-soft to-forest',
-                'text-[15px] font-medium text-cream shadow-[0_18px_36px_-16px_rgba(69,89,78,0.85)]',
+                'text-[15px] font-medium text-cream shadow-[0_18px_36px_-16px_rgba(0,0,0,0.85)]',
                 'transition-all hover:brightness-[1.08] active:scale-[0.99]',
                 'disabled:cursor-not-allowed disabled:from-forest/20 disabled:to-forest/20 disabled:text-cream/70 disabled:shadow-none',
               )}

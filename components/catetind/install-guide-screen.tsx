@@ -210,7 +210,7 @@ export function InstallGuideScreen() {
                   <div
                     role="tablist"
                     aria-label={INSTALL_TABLIST_LABEL}
-                    className="flex w-full items-center gap-1 rounded-full bg-cream p-1 shadow-[0_10px_24px_-18px_rgba(69,89,78,0.55)] ring-1 ring-soil/12"
+                    className="flex w-full items-center gap-1 rounded-full bg-cream p-1 shadow-[0_10px_24px_-18px_rgba(0,0,0,0.55)] ring-1 ring-soil/12"
                   >
                     {TAB_ORDER.map((target) => {
                       const active = activeTab === target

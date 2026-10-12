@@ -88,7 +88,7 @@ export function JointStatsRow({
             <span
               className={cn(
                 'inline-flex shrink-0 items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-medium',
-                spendingDown ? 'bg-hud-sage/25 text-forest' : 'bg-hud-amber/25 text-[#b89191]',
+                spendingDown ? 'bg-hud-sage/25 text-forest' : 'bg-hud-amber/25 text-hud-terracotta',
               )}
             >
               {spendingDown ? (
@@ -130,7 +130,7 @@ export function JointStatsRow({
             transition={{ duration: 0.28, ease: EASE }}
             className="overflow-hidden"
           >
-            <div className="mt-2.5 rounded-[1.5rem] bg-[#ffffff] px-4 py-3.5 ring-1 ring-soil/10">
+            <div className="mt-2.5 rounded-[1.5rem] bg-cream px-4 py-3.5 ring-1 ring-soil/10">
               <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-forest/40">
                 Rincian{' '}
                 {openCard === 'total'
@@ -224,8 +224,8 @@ function StatCard({
         'w-[152px] shrink-0 snap-start rounded-[1.25rem] px-3.5 py-3 text-left transition-all duration-200 sm:w-auto',
         'ring-1 active:scale-[0.98]',
         active
-          ? 'bg-forest text-cream ring-forest shadow-[0_18px_36px_-26px_rgba(69,89,78,0.95)]'
-          : 'bg-[#ffffff] ring-soil/10 hover:bg-cream',
+          ? 'bg-forest text-cream ring-forest shadow-[0_18px_36px_-26px_rgba(0,0,0,0.95)]'
+          : 'bg-cream ring-soil/10 hover:bg-cream',
       )}
     >
       <span className="flex items-center gap-1.5">

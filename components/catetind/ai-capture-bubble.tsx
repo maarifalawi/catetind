@@ -521,7 +521,7 @@ function ConfirmBubble({
         <button
           type="button"
           onClick={onConfirm}
-          className="flex h-11 flex-1 items-center justify-center gap-1.5 rounded-2xl bg-forest text-[13px] font-medium text-cream shadow-[0_14px_28px_-16px_rgba(69,89,78,0.7)] transition-all hover:bg-forest-soft active:scale-[0.98]"
+          className="flex h-11 flex-1 items-center justify-center gap-1.5 rounded-2xl bg-forest text-[13px] font-medium text-cream shadow-[0_14px_28px_-16px_rgba(0,0,0,0.7)] transition-all hover:bg-forest-soft active:scale-[0.98]"
         >
           {AI_CAPTURE_COPY.save}
         </button>

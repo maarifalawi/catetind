@@ -76,7 +76,7 @@ export function NotificationBell({ className }: { className?: string }) {
                tidak terpotong di layar sempit — lonceng bukan elemen paling kanan,
                jadi panel yang hanya `absolute right-0` akan meluber keluar tepi.
                DESKTOP: kembali menjadi dropdown yang menempel di lonceng. */
-            className="fixed inset-x-4 top-16 z-50 rounded-3xl bg-cream p-4 ring-1 ring-soil/12 shadow-[0_24px_60px_-28px_rgba(69,89,78,0.55)] lg:absolute lg:inset-x-auto lg:right-0 lg:top-[calc(100%+0.5rem)] lg:w-[20rem]"
+            className="fixed inset-x-4 top-16 z-50 rounded-3xl bg-cream p-4 ring-1 ring-soil/12 shadow-[0_24px_60px_-28px_rgba(0,0,0,0.55)] lg:absolute lg:inset-x-auto lg:right-0 lg:top-[calc(100%+0.5rem)] lg:w-[20rem]"
           >
             <p className="font-display text-[14px] font-medium tracking-tight text-forest">
               {HOME_NOTIFICATION_COPY.title}

@@ -166,6 +166,10 @@ function SwipeRow({
   /* nada + badge arah tipe ini — SATU tabel bersama dengan Riwayat & Insight
      (`MONEY_ROW_VISUAL`, paket 78); nominalnya juga dari sini, bukan tabel kedua */
   const tone = moneyRowVisualFor(tx.type)
+  /* PAKET 86 — nama catatan = kategori kalau catatannya kosong, jadi chip
+     kategori tidak perlu mengulang kata yang sama dengan judul barisnya. */
+  const categoryShownAsTitle =
+    tx.title.trim().toLowerCase() === tx.category.trim().toLowerCase()
 
   const clamp = (v: number) => Math.max(-REVEAL, Math.min(REVEAL, v))
 
@@ -289,7 +293,9 @@ function SwipeRow({
         </span>
 
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-medium text-forest">
+          {/* PAKET 86 — sama seperti baris Riwayat: nama catatan boleh membungkus
+              sampai dua baris supaya tidak terpotong di mobile. */}
+          <span className="block line-clamp-2 text-sm font-medium text-forest">
             {tx.title}
           </span>
           {/* baris meta/notes (paket 78): kategori jadi CHIP bertint keluarga yang
@@ -297,14 +303,16 @@ function SwipeRow({
               nominal & jam. Jamnya tetap murni teks. `min-w-0 truncate` di chip
               menjaga baris ini tetap muat di 375px. */}
           <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[11px] text-forest/45">
-            <span
-              className={cn(
-                'min-w-0 truncate rounded-full px-1.5 py-0.5 text-[10px] font-medium',
-                tx.chip,
-              )}
-            >
-              {tx.category}
-            </span>
+            {!categoryShownAsTitle && (
+              <span
+                className={cn(
+                  'min-w-0 truncate rounded-full px-1.5 py-0.5 text-[10px] font-medium',
+                  tx.chip,
+                )}
+              >
+                {tx.category}
+              </span>
+            )}
             <span className="shrink-0">{tx.time}</span>
           </span>
         </span>

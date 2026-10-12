@@ -40,7 +40,7 @@ export function WealthAssetDonut({
   if (slices.length === 0) return null
 
   return (
-    <div className="rounded-[1.75rem] bg-[#ffffff] p-5 shadow-[0_18px_44px_-30px_rgba(69,89,78,0.45)] ring-1 ring-soil/10 sm:p-6">
+    <div className="rounded-[1.75rem] bg-cream p-5 shadow-[0_18px_44px_-30px_rgba(0,0,0,0.45)] ring-1 ring-soil/10 sm:p-6">
       <div className="flex items-baseline justify-between gap-3">
         <h3 className="font-display text-[13.5px] font-semibold tracking-tight text-forest">
           Alokasi Aset
@@ -52,7 +52,7 @@ export function WealthAssetDonut({
 
       {/* dudukan chart + readout tengah */}
       <div className="relative mx-auto mt-3 w-full max-w-[280px]">
-        <div className="h-[212px] w-full [filter:drop-shadow(0_14px_22px_rgba(69,89,78,0.12))] sm:h-[232px]">
+        <div className="h-[212px] w-full [filter:drop-shadow(0_14px_22px_rgba(0,0,0,0.12))] sm:h-[232px]">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
@@ -175,7 +175,7 @@ function DonutTooltip({
   const slice = payload?.[0]?.payload
   if (!active || !slice) return null
   return (
-    <div className="rounded-2xl bg-ink px-3.5 py-2.5 text-cream shadow-[0_16px_34px_-16px_rgba(69,89,78,0.8)]">
+    <div className="rounded-2xl bg-ink px-3.5 py-2.5 text-cream shadow-[0_16px_34px_-16px_rgba(0,0,0,0.8)]">
       <p className="flex items-center gap-1.5 text-[11.5px] font-medium">
         <span aria-hidden>{slice.emoji}</span>
         {slice.label}

@@ -279,7 +279,7 @@ export function AddDebtSheet({
           placeholder="Rp 200.000"
           hint={
             remainingInvalid ? (
-              <span className="font-medium text-[#b89191]">
+              <span className="font-medium text-hud-terracotta">
                 {DEBT_SHEET_FIELD_COPY.overPrincipal}
               </span>
             ) : (
@@ -342,7 +342,7 @@ export function AddDebtSheet({
                     className={cn(
                       'shrink-0 rounded-full px-3.5 py-2 text-[12.5px] font-medium transition-all duration-200 active:scale-95',
                       active
-                        ? 'bg-forest text-mint shadow-[0_10px_22px_-14px_rgba(69,89,78,0.75)]'
+                        ? 'bg-forest text-mint shadow-[0_10px_22px_-14px_rgba(0,0,0,0.75)]'
                         : 'bg-cream text-forest/60 ring-1 ring-soil/14 hover:bg-cream hover:text-forest',
                     )}
                   >

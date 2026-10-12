@@ -156,9 +156,9 @@ export function TransactionWebModal({
           aria-describedby="transaction-web-desc"
           tabIndex={-1}
           className={cn(
-            'pointer-events-auto flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-[2rem] bg-[#ffffff] shadow-[0_-24px_60px_-24px_rgba(69,89,78,0.55)] ring-1 ring-soil/12 outline-none',
+            'pointer-events-auto flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-[2rem] bg-cream shadow-[0_-24px_60px_-24px_rgba(0,0,0,0.55)] ring-1 ring-soil/12 outline-none',
             'transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] will-change-transform',
-            'lg:max-w-lg lg:rounded-[2rem] lg:shadow-[0_28px_70px_-24px_rgba(69,89,78,0.5)]',
+            'lg:max-w-lg lg:rounded-[2rem] lg:shadow-[0_28px_70px_-24px_rgba(0,0,0,0.5)]',
             open
               ? 'translate-y-0 opacity-100 lg:scale-100'
               : 'translate-y-full opacity-0 lg:translate-y-6 lg:scale-95',

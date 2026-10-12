@@ -160,7 +160,7 @@ export function JointBalanceScale({
           className={cn(
             'absolute left-1/2 -translate-x-1/2 rounded-full',
             'bg-gradient-to-r from-hud-sage to-hud-amber',
-            'shadow-[0_8px_18px_-12px_rgba(69,89,78,0.7)]',
+            'shadow-[0_8px_18px_-12px_rgba(0,0,0,0.7)]',
             dim.beamTop,
             dim.beam,
           )}
@@ -168,7 +168,7 @@ export function JointBalanceScale({
           {/* knob poros di tengah beam */}
           <span
             aria-hidden
-            className="absolute left-1/2 top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-hud-terracotta ring-2 ring-[#ffffff]"
+            className="absolute left-1/2 top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-hud-terracotta ring-2 ring-cream"
           />
           <ScalePan
             person={me}
@@ -269,8 +269,8 @@ function ScalePan({
 
         <div
           className={cn(
-            'relative z-10 flex flex-col items-center rounded-2xl bg-[#ffffff] ring-1',
-            'shadow-[0_12px_24px_-20px_rgba(69,89,78,0.95)]',
+            'relative z-10 flex flex-col items-center rounded-2xl bg-cream ring-1',
+            'shadow-[0_12px_24px_-20px_rgba(0,0,0,0.95)]',
             isMe ? 'ring-hud-sage/50' : 'ring-hud-amber/55',
             dim.chip,
           )}
@@ -310,7 +310,7 @@ function ScalePan({
         <span
           aria-hidden
           className={cn(
-            'rounded-full bg-gradient-to-r shadow-[0_10px_18px_-14px_rgba(69,89,78,0.85)]',
+            'rounded-full bg-gradient-to-r shadow-[0_10px_18px_-14px_rgba(0,0,0,0.85)]',
             plateTone,
             dim.plate,
           )}
@@ -353,7 +353,7 @@ export function SettlementCopy({
   }
 
   return (
-    <div className="mt-4 w-full max-w-[430px] rounded-[1.5rem] bg-[#ffffff] px-4 py-4 text-center ring-1 ring-hud-terracotta/25 shadow-[0_20px_44px_-34px_rgba(184,145,145,0.9)]">
+    <div className="mt-4 w-full max-w-[430px] rounded-[1.5rem] bg-cream px-4 py-4 text-center ring-1 ring-hud-terracotta/25 shadow-[0_20px_44px_-34px_rgba(184,145,145,0.9)]">
       <p className="text-[13.5px] leading-relaxed text-forest">
         <b className="font-medium">{whoOwes.name}</b> perlu transfer{' '}
         <b className="font-semibold tabular-nums text-hud-terracotta">

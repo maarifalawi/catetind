@@ -87,7 +87,7 @@ export function ContextMenu({
             animate={{ opacity: 1, y: 0 }}
             exit={reduce ? { opacity: 1 } : { opacity: 0, y: -4 }}
             transition={{ duration: reduce ? 0 : 0.15, ease: 'easeOut' }}
-            className="absolute right-0 z-[60] mt-2 w-44 overflow-hidden rounded-2xl bg-cream p-1.5 shadow-[0_18px_40px_-20px_rgba(69,89,78,0.55)] ring-1 ring-soil/12"
+            className="absolute right-0 z-[60] mt-2 w-44 overflow-hidden rounded-2xl bg-cream p-1.5 shadow-[0_18px_40px_-20px_rgba(0,0,0,0.55)] ring-1 ring-soil/12"
           >
             {OPTIONS.map(({ id, icon: Icon }) => {
               const selected = id === value

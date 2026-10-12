@@ -393,7 +393,7 @@ export function AIChatWidget() {
              (48px) atas permintaan pemilik produk — bubble AI Coach tidak lagi
              "berebut perhatian" dengan FAB "Catat" (yang kini justru dibesarkan
              lewat warna brand). 48px tetap ≥ 44px, jadi target sentuh aman. */
-          className="animate-bubble-in fixed bottom-24 right-5 z-50 flex size-12 items-center justify-center rounded-full bg-forest text-mint shadow-[0_18px_40px_-12px_rgba(69,89,78,0.45)] ring-1 ring-forest/20 transition-transform duration-150 hover:scale-105 active:scale-95 lg:bottom-8 lg:right-8"
+          className="animate-bubble-in fixed bottom-24 right-5 z-50 flex size-12 items-center justify-center rounded-full bg-forest text-mint shadow-[0_18px_40px_-12px_rgba(0,0,0,0.45)] ring-1 ring-forest/20 transition-transform duration-150 hover:scale-105 active:scale-95 lg:bottom-8 lg:right-8"
         >
           <Sparkles className="size-5" strokeWidth={2} />
           {hasInsight && (

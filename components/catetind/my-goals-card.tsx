@@ -86,9 +86,9 @@ const SHORT_STAGE: Record<PlantStage, string> = {
 /* warna pastel yang benar-benar berbeda per goal (olive · daisy · plum) —
    senada dengan palet distribusi pengeluaran, jadi bahasa warna app konsisten */
 const TINTS = [
-  'bg-[#b5b987]/25 text-forest',
-  'bg-[#ffb885]/25 text-[#b89191]',
-  'bg-[#b89191]/15 text-hud-terracotta',
+  'bg-hud-sage/25 text-forest',
+  'bg-hud-amber/25 text-hud-terracotta',
+  'bg-hud-terracotta/15 text-hud-terracotta',
 ]
 
 /** batang tumbuh: benih → tunas → muda → berbunga. Warnanya menanjak dari
@@ -98,7 +98,7 @@ function GrowthTrack({ pct, stage }: { pct: number; stage: PlantStage }) {
     <div>
       <div className="h-2 w-full overflow-hidden rounded-full bg-soil/[0.09]">
         <div
-          className="h-full rounded-full bg-gradient-to-r from-[#b89191] via-[#b5b987] to-mint"
+          className="h-full rounded-full bg-gradient-to-r from-hud-terracotta via-hud-sage to-mint"
           style={{ width: `${pct}%` }}
           aria-hidden
         />
@@ -302,7 +302,7 @@ function MiniGoalRow({ fund, tintIndex }: { fund: SinkingFundItem; tintIndex: nu
             key={s}
             className={cn(
               'h-1.5 flex-1 rounded-full transition-colors',
-              s <= stage ? 'bg-gradient-to-r from-[#b5b987] to-mint' : 'bg-soil/[0.09]',
+              s <= stage ? 'bg-gradient-to-r from-hud-sage to-mint' : 'bg-soil/[0.09]',
             )}
           />
         ))}

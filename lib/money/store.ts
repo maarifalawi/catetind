@@ -2150,8 +2150,8 @@ function walletRecipeFor(index: number): Pick<
 > {
   const recipe = walletCardRecipe(index)
   return {
-    bandClass: 'from-[#e6e4c0] via-[#ffffff] to-[#e6e4c0]',
-    faceClass: 'from-[#52685c] via-[#45594e] to-[#161c19]',
+    bandClass: 'from-olive-light via-cream to-olive-light',
+    faceClass: 'from-forest-soft via-forest to-evergreen-deeper',
     glowClass: 'bg-forest/25',
     color: recipe.color,
     face: recipe.face,

@@ -154,7 +154,7 @@ function SlideOverview({ recap }: { recap: WeeklyRecap }) {
   return (
     <div className="space-y-4">
       {/* hero — angka utama minggu ini di atas kartu forest */}
-      <section className="relative overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-forest-soft via-forest to-[#1f2823] p-5 text-cream ring-1 ring-inset ring-cream/10 shadow-[0_20px_44px_-26px_rgba(69,89,78,0.8)]">
+      <section className="relative overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-forest-soft via-forest to-evergreen-deep p-5 text-cream ring-1 ring-inset ring-cream/10 shadow-[0_20px_44px_-26px_rgba(0,0,0,0.8)]">
         <span
           aria-hidden
           className="pointer-events-none absolute -right-14 -top-16 size-44 rounded-full bg-mint/25 blur-3xl"
@@ -316,7 +316,7 @@ function SlideExpenses({ recap }: { recap: WeeklyRecap }) {
   return (
     <div className="space-y-4">
       {/* kartu gelap: donut + ringkasan (ala kartu "EXPENSES" di referensi desain) */}
-      <section className="relative overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-forest-soft via-forest to-[#1f2823] p-5 text-cream ring-1 ring-inset ring-cream/10 shadow-[0_20px_44px_-28px_rgba(69,89,78,0.85)]">
+      <section className="relative overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-forest-soft via-forest to-evergreen-deep p-5 text-cream ring-1 ring-inset ring-cream/10 shadow-[0_20px_44px_-28px_rgba(0,0,0,0.85)]">
         <span
           aria-hidden
           className="pointer-events-none absolute -left-16 top-10 size-40 rounded-full bg-mint/15 blur-3xl"
@@ -983,7 +983,7 @@ function WeekRecapSheet({
         aria-label="Rekap mingguan"
         style={sheetStyle}
         className={cn(
-          'absolute inset-x-0 bottom-0 top-8 flex flex-col rounded-t-[2.25rem] bg-cream px-5 pb-6 shadow-[0_-24px_60px_-24px_rgba(69,89,78,0.55)] ring-1 ring-soil/12 transition-[transform,opacity] duration-[650ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform lg:inset-y-6 lg:left-1/2 lg:right-auto lg:w-[min(640px,calc(100vw_-_6rem))] lg:-translate-x-1/2 lg:rounded-[2rem] lg:shadow-[0_40px_90px_-40px_rgba(69,89,78,0.6)]',
+          'absolute inset-x-0 bottom-0 top-8 flex flex-col rounded-t-[2.25rem] bg-cream px-5 pb-6 shadow-[0_-24px_60px_-24px_rgba(0,0,0,0.55)] ring-1 ring-soil/12 transition-[transform,opacity] duration-[650ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform lg:inset-y-6 lg:left-1/2 lg:right-auto lg:w-[min(640px,calc(100vw_-_6rem))] lg:-translate-x-1/2 lg:rounded-[2rem] lg:shadow-[0_40px_90px_-40px_rgba(0,0,0,0.6)]',
           open
             ? 'translate-y-0 opacity-100'
             : 'translate-y-full opacity-0 lg:translate-y-3 lg:scale-[0.98]',

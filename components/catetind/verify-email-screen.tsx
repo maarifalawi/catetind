@@ -389,7 +389,7 @@ function SentCard({
         {/* `mailto:` tanpa alamat = buka app email default di perangkat ini */}
         <a
           href="mailto:"
-          className="flex h-12 items-center justify-center gap-2 rounded-full bg-forest text-[14px] font-medium text-cream shadow-[0_14px_30px_-18px_rgba(69,89,78,0.85)] transition-colors duration-200 hover:bg-forest-soft active:scale-[0.98] motion-reduce:transition-none"
+          className="flex h-12 items-center justify-center gap-2 rounded-full bg-forest text-[14px] font-medium text-cream shadow-[0_14px_30px_-18px_rgba(0,0,0,0.85)] transition-colors duration-200 hover:bg-forest-soft active:scale-[0.98] motion-reduce:transition-none"
         >
           <Mail className="size-4" strokeWidth={2.4} aria-hidden />
           {VERIFY_COPY.openMailLabel}

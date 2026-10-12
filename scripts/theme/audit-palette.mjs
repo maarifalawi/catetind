@@ -50,8 +50,12 @@ const RGB_RE = /rgba?\(\s*(\d+)\s*[,\s]\s*(\d+)\s*[,\s]\s*(\d+)/g
 const ROOTS = ['app', 'components', 'lib', 'hooks', 'scripts']
 const EXTS = new Set(['.tsx', '.ts', '.css', '.mjs', '.js'])
 const SKIP_DIRS = new Set(['node_modules', '.next', 'docs', 'public', '.git'])
-/* file ini + codemod memang memuat warna lama sebagai tabel pemetaan */
-const SKIP_FILES = new Set(['audit-palette.mjs', 'apply-palette.mjs'])
+/* file ini + codemod memang memuat warna lama sebagai tabel pemetaan/komentar */
+const SKIP_FILES = new Set([
+  'audit-palette.mjs',
+  'apply-palette.mjs',
+  'tokenize-literal-colors.mjs',
+])
 
 const files = []
 const walk = (dir) => {

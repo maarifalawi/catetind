@@ -142,8 +142,8 @@ export const DailyHudCard = memo(function DailyHudCard() {
         <span
           className={cn(
             'rounded-full px-2 py-0.5 text-[10px] font-medium',
-            status === 'onTrack' && 'bg-hud-sage/15 text-[#b5b987]',
-            status === 'approaching' && 'bg-hud-amber/15 text-[#b89191]',
+            status === 'onTrack' && 'bg-hud-sage/15 text-hud-sage',
+            status === 'approaching' && 'bg-hud-amber/15 text-hud-terracotta',
             status === 'over' && 'bg-hud-terracotta/15 text-hud-terracotta',
           )}
         >

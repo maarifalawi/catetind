@@ -1246,10 +1246,17 @@ export const TRANSACTION_FALLBACK_CATEGORY = 'Lainnya'
  */
 export const TRANSACTION_FALLBACK_WALLET = 'Tunai'
 
-/** nama catatan kalau user tidak mengisi catatan (netral — bukan nama merchant karangan) */
+/**
+ * Nama catatan JARING TERAKHIR kalau user tidak mengisi catatan DAN kategorinya
+ * pun tidak diketahui (jalur onboarding). Sejak PAKET 86 ini BUKAN lagi nama
+ * default jalur manual: `recordDraftTransaction()` memakai KATEGORI pilihan user
+ * ("Makanan", "Gaji", "Bonus") supaya Riwayat langsung terbaca. Kata "cepat"
+ * dibuang dari sini atas permintaan pemilik produk — baris Riwayat yang berbunyi
+ * "Pengeluaran cepat"/"Pemasukan cepat" tidak memberi tahu apa pun.
+ */
 export const TRANSACTION_DEFAULT_NAME: Record<TransactionType, string> = {
-  expense: 'Pengeluaran cepat',
-  income: 'Pemasukan cepat',
+  expense: 'Pengeluaran',
+  income: 'Pemasukan',
   saving: 'Setoran tabungan',
   transfer: 'Pindah dana',
 }

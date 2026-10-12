@@ -137,7 +137,7 @@ export function JointSettlementModal({
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 64, opacity: 0 }}
               transition={{ duration: 0.34, ease: EASE }}
-              className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-t-[2rem] bg-[#ffffff] px-5 pb-7 pt-4 shadow-[0_-24px_60px_-24px_rgba(69,89,78,0.55)] sm:rounded-[2rem] sm:px-6 sm:shadow-[0_28px_70px_-24px_rgba(69,89,78,0.5)]"
+              className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-t-[2rem] bg-cream px-5 pb-7 pt-4 shadow-[0_-24px_60px_-24px_rgba(0,0,0,0.55)] sm:rounded-[2rem] sm:px-6 sm:shadow-[0_28px_70px_-24px_rgba(0,0,0,0.5)]"
               data-lenis-prevent
             >
               <div className="flex items-start justify-between gap-3">
@@ -208,7 +208,7 @@ export function JointSettlementModal({
                   value={netPhrase(settlement.partnerNet, masked)}
                 />
                 {carryOverRecord && (
-                  <p className="rounded-2xl bg-[#ffffff]/75 px-2.5 py-2 text-[10.5px] leading-relaxed text-forest/85">
+                  <p className="rounded-2xl bg-cream/75 px-2.5 py-2 text-[10.5px] leading-relaxed text-forest/85">
                     {settlementCarryCopy(carryOverRecord, masked)}
                   </p>
                 )}
@@ -293,7 +293,7 @@ export function JointSettlementModal({
                     'mt-3 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl text-[14px] font-medium transition-colors',
                     inputLocked
                       ? 'cursor-not-allowed bg-ink/[0.07] text-forest/35'
-                      : 'bg-forest text-mint shadow-[0_16px_32px_-20px_rgba(69,89,78,0.95)] hover:bg-forest-soft active:scale-[0.99]',
+                      : 'bg-forest text-mint shadow-[0_16px_32px_-20px_rgba(0,0,0,0.95)] hover:bg-forest-soft active:scale-[0.99]',
                   )}
                 >
                   Tandai Sudah Settle

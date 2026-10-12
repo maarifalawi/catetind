@@ -17,10 +17,14 @@ Sebelum menulis UI, WAJIB baca:
 Warna di repo ini sudah 100% terpusat. Tugasmu: JANGAN merusak konsistensinya.
 
 ATURAN KERAS (pelanggaran = pekerjaan ditolak)
-1. TIDAK BOLEH menulis warna literal baru. Dilarang: `#rrggbb`, `rgb()`/`rgba()`,
-   `oklch()`, `hsl()` di komponen — kecuali nilainya sudah ada di daftar
-   "NILAI TURUNAN" di bawah, atau kamu menambahkannya secara sadar (lihat
-   "JIKA BENAR-BENAR BUTUH WARNA BARU").
+1. TIDAK BOLEH menulis warna literal baru — termasuk **kelas arbitrer
+   `-[#rrggbb]`** (`text-[#b89191]`, `from-[#161c19]`, dst.). Dilarang juga
+   `rgb()`/`rgba()`, `oklch()`, `hsl()`. SEMUA warna sudah punya token,
+   termasuk nilai turunan: pakai `text-hud-terracotta` (bukan `text-[#b89191]`),
+   `from-evergreen-deeper` (bukan `from-[#161c19]`), `to-olive-deep`,
+   `via-plum-deep`, `from-cantelope-mid`, `to-daisy-light`, dst. Kalau ragu,
+   cari tokennya di blok `@theme inline` (`app/globals.css`); kalau benar-benar
+   butuh warna baru, lihat "JIKA BENAR-BENAR BUTUH WARNA BARU".
 2. TIDAK BOLEH memakai kelas warna bawaan Tailwind: `text-slate-500`,
    `bg-blue-600`, `from-rose-100`, `text-white`, `bg-black`, dst. Semuanya sudah
    dipetakan ke token palet (`text-ink/45`, `bg-thistle`, `from-plum/20`,

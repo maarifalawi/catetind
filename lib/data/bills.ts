@@ -428,7 +428,7 @@ export function burnTone(
     return {
       tone: 'amber',
       copy: 'Lumayan padat. Ada yang bisa dipangkas? 🌤️',
-      textClass: 'text-[#b89191]',
+      textClass: 'text-hud-terracotta',
       panelClass: 'bg-hud-amber/15 ring-hud-amber/25',
     }
   }

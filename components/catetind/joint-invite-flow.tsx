@@ -103,7 +103,7 @@ export function JointInviteFlow({
         disabled={!ready}
         className={
           ready
-            ? 'mt-4 inline-flex h-12 w-full max-w-[380px] items-center justify-center gap-2 rounded-2xl bg-forest text-[14px] font-medium text-mint shadow-[0_16px_32px_-20px_rgba(69,89,78,0.95)] transition-colors hover:bg-forest-soft active:scale-[0.99]'
+            ? 'mt-4 inline-flex h-12 w-full max-w-[380px] items-center justify-center gap-2 rounded-2xl bg-forest text-[14px] font-medium text-mint shadow-[0_16px_32px_-20px_rgba(0,0,0,0.95)] transition-colors hover:bg-forest-soft active:scale-[0.99]'
             : 'mt-4 inline-flex h-12 w-full max-w-[380px] cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-ink/[0.07] text-[14px] font-medium text-forest/35'
         }
       >
@@ -244,7 +244,7 @@ export function JointInviteCodeModal({
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 64, opacity: 0 }}
               transition={{ duration: 0.34, ease: EASE }}
-              className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-t-[2rem] bg-[#ffffff] px-5 pb-7 pt-5 shadow-[0_-24px_60px_-24px_rgba(69,89,78,0.55)] sm:rounded-[2rem] sm:px-6 sm:shadow-[0_28px_70px_-24px_rgba(69,89,78,0.5)]"
+              className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-t-[2rem] bg-cream px-5 pb-7 pt-5 shadow-[0_-24px_60px_-24px_rgba(0,0,0,0.55)] sm:rounded-[2rem] sm:px-6 sm:shadow-[0_28px_70px_-24px_rgba(0,0,0,0.5)]"
               data-lenis-prevent
             >
               <h2 className="font-display text-xl font-semibold tracking-tight text-forest">
@@ -281,7 +281,7 @@ export function JointInviteCodeModal({
                 disabled={!invite || !usable}
                 className={
                   invite && usable
-                    ? 'mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-forest text-[14px] font-medium text-mint shadow-[0_16px_32px_-20px_rgba(69,89,78,0.95)] transition-colors hover:bg-forest-soft active:scale-[0.99]'
+                    ? 'mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-forest text-[14px] font-medium text-mint shadow-[0_16px_32px_-20px_rgba(0,0,0,0.95)] transition-colors hover:bg-forest-soft active:scale-[0.99]'
                     : 'mt-4 inline-flex h-12 w-full cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-ink/[0.07] text-[14px] font-medium text-forest/35'
                 }
               >
@@ -417,7 +417,7 @@ export function JointJoinedCelebration({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.3 }}
-          className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-[#ffffff] px-6 text-center"
+          className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-cream px-6 text-center"
         >
           <div className="relative flex h-32 w-full max-w-[320px] items-center justify-center">
             <motion.span
@@ -472,7 +472,7 @@ export function JointJoinedCelebration({
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 1, duration: 0.35 }}
             onClick={onStart}
-            className="mt-6 inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-forest px-6 text-[14px] font-medium text-mint shadow-[0_16px_32px_-20px_rgba(69,89,78,0.95)] transition-colors hover:bg-forest-soft active:scale-[0.99]"
+            className="mt-6 inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-forest px-6 text-[14px] font-medium text-mint shadow-[0_16px_32px_-20px_rgba(0,0,0,0.95)] transition-colors hover:bg-forest-soft active:scale-[0.99]"
           >
             Mulai Catat Bareng
             <ArrowRight className="size-4" strokeWidth={2.6} />

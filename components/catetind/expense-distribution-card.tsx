@@ -141,7 +141,7 @@ export const ExpenseDistributionCard = memo(function ExpenseDistributionCard() {
                 modern", bukan pie padat bawaan. Lubang tengahnya bicara: total
                 bulan ini, atau kategori yang sedang disorot. */}
             <div className="relative mx-auto w-full max-w-[184px] shrink-0 sm:mx-0 sm:w-[44%] sm:max-w-[196px]">
-              <div className="h-[168px] w-full [filter:drop-shadow(0_14px_22px_rgba(69,89,78,0.12))] sm:h-[188px]">
+              <div className="h-[168px] w-full [filter:drop-shadow(0_14px_22px_rgba(0,0,0,0.12))] sm:h-[188px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie

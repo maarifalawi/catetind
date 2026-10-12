@@ -164,7 +164,7 @@ export function BudgetZoneA({
                   <motion.span
                     aria-hidden
                     layoutId="budget-period-pill"
-                    className="absolute inset-0 rounded-full bg-forest shadow-[0_10px_20px_-10px_rgba(69,89,78,0.9)]"
+                    className="absolute inset-0 rounded-full bg-forest shadow-[0_10px_20px_-10px_rgba(0,0,0,0.9)]"
                     transition={{ type: 'spring', stiffness: 520, damping: 38 }}
                   />
                 )}

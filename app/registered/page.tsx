@@ -79,7 +79,7 @@ export default async function RegisteredPage({
 
         <Link
           href={plan ? buildPayHref(plan.id) : LANDING_PATH}
-          className="group mt-8 inline-flex h-12 items-center justify-center gap-2 rounded-full bg-forest px-6 text-[14px] font-medium text-cream shadow-[0_16px_34px_-18px_rgba(69,89,78,0.85)] transition-colors duration-200 hover:bg-forest-soft motion-reduce:transition-none"
+          className="group mt-8 inline-flex h-12 items-center justify-center gap-2 rounded-full bg-forest px-6 text-[14px] font-medium text-cream shadow-[0_16px_34px_-18px_rgba(0,0,0,0.85)] transition-colors duration-200 hover:bg-forest-soft motion-reduce:transition-none"
         >
           {plan ? REGISTERED_COPY.ctaPay : REGISTERED_COPY.cta}
           <ArrowRight

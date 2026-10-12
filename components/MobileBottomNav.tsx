@@ -216,7 +216,7 @@ export function MobileBottomNav() {
                   whileTap={reduceMotion ? undefined : { scale: 0.9 }}
                   whileHover={reduceMotion ? undefined : { scale: 1.05 }}
                   transition={{ type: 'spring', stiffness: 460, damping: 17 }}
-                  className="group -mt-8 flex size-14 items-center justify-center rounded-full bg-gradient-to-br from-forest-soft to-forest text-mint ring-1 ring-forest/30 shadow-[inset_0_1.5px_0_rgba(255,255,255,0.28),inset_0_-3px_8px_rgba(0,0,0,0.35),0_12px_28px_-10px_rgba(69,89,78,0.75)] transition-shadow duration-200 hover:shadow-[inset_0_1.5px_0_rgba(255,255,255,0.35),inset_0_-3px_8px_rgba(0,0,0,0.3),0_16px_34px_-10px_rgba(69,89,78,0.9)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40 focus-visible:ring-offset-2 focus-visible:ring-offset-cream"
+                  className="group -mt-8 flex size-14 items-center justify-center rounded-full bg-gradient-to-br from-forest-soft to-forest text-mint ring-1 ring-forest/30 shadow-[inset_0_1.5px_0_rgba(255,255,255,0.28),inset_0_-3px_8px_rgba(0,0,0,0.35),0_12px_28px_-10px_rgba(0,0,0,0.75)] transition-shadow duration-200 hover:shadow-[inset_0_1.5px_0_rgba(255,255,255,0.35),inset_0_-3px_8px_rgba(0,0,0,0.3),0_16px_34px_-10px_rgba(0,0,0,0.9)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40 focus-visible:ring-offset-2 focus-visible:ring-offset-cream"
                 >
                   <Plus
                     className="size-6 transition-transform duration-200 group-active:scale-90"
@@ -319,7 +319,7 @@ export function MobileBottomNav() {
                           className={cn(
                             'flex flex-col items-center gap-1.5 rounded-2xl px-2 py-3.5 text-center transition-all duration-150 active:scale-95',
                             isActive
-                              ? 'bg-[#ecd768]/25 font-medium text-forest'
+                              ? 'bg-brand/25 font-medium text-forest'
                               : 'bg-soil/[0.03] font-medium text-forest/55 hover:bg-soil/[0.11]',
                           )}
                         >

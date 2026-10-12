@@ -51,8 +51,8 @@ const CONDITION_SKIN: Record<SpendingReviewCondition, string> = {
 
 /** warna teks status pace — hex kanon yang sama dengan kartu kategori */
 const TONE_TEXT: Record<PacingTone, string> = {
-  sage: 'text-[#b5b987]',
-  amber: 'text-[#b89191]',
+  sage: 'text-hud-sage',
+  amber: 'text-hud-terracotta',
   terracotta: 'text-hud-terracotta',
 }
 
@@ -156,7 +156,7 @@ export function SpendingReviewSheet({
               aria-valuemin={0}
               aria-valuemax={100}
               aria-valuenow={Math.round(Math.min(100, pace.percent))}
-              className="mt-3 h-2 w-full overflow-hidden rounded-full bg-[#ebe4de]"
+              className="mt-3 h-2 w-full overflow-hidden rounded-full bg-sage"
             >
               <div
                 className="h-full rounded-full transition-[width] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]"
@@ -234,7 +234,7 @@ export function SpendingReviewSheet({
           </p>
           {/* progres menuju ambang — engagement tanpa klaim palsu (PRD 2A.5) */}
           <div className="mt-3 flex items-center gap-2">
-            <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-[#ebe4de]">
+            <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-sage">
               <div
                 className="h-full rounded-full bg-mint"
                 style={{ width: `${(review.noteCount / SPENDING_REVIEW_MIN_NOTES) * 100}%` }}

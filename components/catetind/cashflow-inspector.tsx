@@ -167,7 +167,7 @@ export function CashflowInspector({
       <button
         type="button"
         onClick={onAddNote}
-        className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-forest px-4 text-[13px] font-medium text-mint shadow-[0_16px_34px_-20px_rgba(69,89,78,0.9)] transition-colors hover:bg-forest-soft active:scale-[0.99]"
+        className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-forest px-4 text-[13px] font-medium text-mint shadow-[0_16px_34px_-20px_rgba(0,0,0,0.9)] transition-colors hover:bg-forest-soft active:scale-[0.99]"
       >
         <Plus className="size-4" strokeWidth={2.8} />
         {CALENDAR_DAY_COPY.addNote(cell.day)}

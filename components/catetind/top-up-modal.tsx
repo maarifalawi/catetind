@@ -174,7 +174,7 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
           aria-describedby="topup-desc"
           tabIndex={-1}
           className={cn(
-            'pointer-events-auto flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-[2rem] bg-cream shadow-[0_-24px_60px_-24px_rgba(69,89,78,0.55)] ring-1 ring-soil/12 outline-none transition-[transform,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform lg:max-w-lg lg:rounded-[2rem] lg:shadow-[0_28px_70px_-24px_rgba(69,89,78,0.5)]',
+            'pointer-events-auto flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-[2rem] bg-cream shadow-[0_-24px_60px_-24px_rgba(0,0,0,0.55)] ring-1 ring-soil/12 outline-none transition-[transform,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform lg:max-w-lg lg:rounded-[2rem] lg:shadow-[0_28px_70px_-24px_rgba(0,0,0,0.5)]',
             open
               ? 'translate-y-0 opacity-100 lg:scale-100'
               : 'translate-y-full opacity-0 lg:translate-y-6 lg:scale-95',
@@ -244,7 +244,7 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
                       'relative flex flex-col rounded-2xl p-3.5 text-left transition-all duration-200',
                       /* Paket Paling Laris: fill accent color + border tebal biar paling menonjol */
                       onAccent
-                        ? 'bg-mint ring-2 ring-forest shadow-[0_14px_28px_-16px_rgba(69,89,78,0.55)]'
+                        ? 'bg-mint ring-2 ring-forest shadow-[0_14px_28px_-16px_rgba(0,0,0,0.55)]'
                         : 'bg-cream ring-1 ring-soil/12 hover:ring-forest/25',
                       active && !onAccent && 'ring-2 ring-forest',
                       active && onAccent && 'ring-[3px]',

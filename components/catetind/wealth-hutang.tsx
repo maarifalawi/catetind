@@ -349,12 +349,12 @@ function EmptyDebtState({
   /* semua hutang lunas — perayaan khusus, bukan empty state biasa */
   if (allSettled) {
     return (
-      <div className="mt-5 flex flex-col items-center overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-sage via-[#ffffff] to-mint-soft/60 px-6 py-10 text-center ring-1 ring-hud-sage/40">
+      <div className="mt-5 flex flex-col items-center overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-sage via-cream to-mint-soft/60 px-6 py-10 text-center ring-1 ring-hud-sage/40">
         <motion.span
           initial={{ scale: 0.7, opacity: 0, rotate: -8 }}
           animate={{ scale: 1, opacity: 1, rotate: 0 }}
           transition={{ type: 'spring', stiffness: 160, damping: 14 }}
-          className="flex size-16 items-center justify-center rounded-full bg-cream/80 text-hud-sage shadow-[0_18px_36px_-20px_rgba(69,89,78,0.5)] ring-1 ring-hud-sage/30"
+          className="flex size-16 items-center justify-center rounded-full bg-cream/80 text-hud-sage shadow-[0_18px_36px_-20px_rgba(0,0,0,0.5)] ring-1 ring-hud-sage/30"
         >
           <ShieldCheck className="size-8" strokeWidth={2.2} />
         </motion.span>
@@ -421,7 +421,7 @@ function SnowballTracker({
   celebrateId: string | null
 }) {
   return (
-    <section className="relative overflow-hidden rounded-[1.75rem] bg-[#ffffff] p-5 shadow-[0_20px_46px_-30px_rgba(69,89,78,0.5)] ring-1 ring-soil/10 sm:p-6">
+    <section className="relative overflow-hidden rounded-[1.75rem] bg-cream p-5 shadow-[0_20px_46px_-30px_rgba(0,0,0,0.5)] ring-1 ring-soil/10 sm:p-6">
       <div
         aria-hidden
         className="pointer-events-none absolute -left-16 -top-20 size-52 rounded-full bg-hud-terracotta/12 blur-3xl"
@@ -454,7 +454,7 @@ function SnowballTracker({
             initial={false}
             animate={{ width: `${progress.pct}%` }}
             transition={{ type: 'spring', stiffness: 130, damping: 20 }}
-            className="relative block h-full rounded-full bg-gradient-to-r from-hud-sage to-[#b5b987]"
+            className="relative block h-full rounded-full bg-gradient-to-r from-hud-sage to-hud-sage"
           >
             <span aria-hidden className="progress-shimmer" />
           </motion.span>
@@ -537,14 +537,14 @@ function SnowballBar({
         </span>
         <span className="flex shrink-0 items-center gap-2">
           {first && !done && (
-            <span className="rounded-full bg-hud-amber/25 px-2 py-0.5 text-[9.5px] font-medium uppercase tracking-wide text-[#b89191]">
+            <span className="rounded-full bg-hud-amber/25 px-2 py-0.5 text-[9.5px] font-medium uppercase tracking-wide text-hud-terracotta">
               Mulai dari sini
             </span>
           )}
           <span
             className={cn(
               'text-[11.5px] font-semibold tabular-nums',
-              done ? 'text-[#b5b987]' : 'text-forest/55',
+              done ? 'text-hud-sage' : 'text-forest/55',
             )}
           >
             {paidPct}% lunas
@@ -559,7 +559,7 @@ function SnowballBar({
             initial={false}
             animate={{ width: `${remainingPct}%` }}
             transition={{ type: 'spring', stiffness: 130, damping: 20 }}
-            className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-hud-terracotta via-[#ffb885] to-hud-amber"
+            className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-hud-terracotta via-hud-amber to-hud-amber"
           >
             <span aria-hidden className="absolute inset-x-0 top-0 h-px bg-cream/35" />
           </motion.span>
@@ -567,7 +567,7 @@ function SnowballBar({
             <motion.span
               initial={{ opacity: 0.9 }}
               animate={{ opacity: 1 }}
-              className="absolute inset-0 rounded-full bg-gradient-to-r from-hud-sage to-[#b5b987]"
+              className="absolute inset-0 rounded-full bg-gradient-to-r from-hud-sage to-hud-sage"
             />
           )}
         </div>
@@ -695,7 +695,7 @@ function DebtActionRow({
         type="button"
         onClick={onDelete}
         aria-label={WEALTH_ROW_ACTION.removeAria(name)}
-        className="inline-flex size-10 shrink-0 items-center justify-center rounded-2xl bg-hud-terracotta/15 text-[#b89191] ring-1 ring-inset ring-hud-terracotta/25 transition-colors hover:brightness-105 active:scale-95"
+        className="inline-flex size-10 shrink-0 items-center justify-center rounded-2xl bg-hud-terracotta/15 text-hud-terracotta ring-1 ring-inset ring-hud-terracotta/25 transition-colors hover:brightness-105 active:scale-95"
       >
         <Trash2 className="size-4" strokeWidth={2.4} />
       </button>
@@ -810,7 +810,7 @@ function PlatformDebtCard({
         animate={{ x: dx }}
         transition={dragging ? { duration: 0 } : { type: 'spring', stiffness: 320, damping: 30 }}
         style={{ touchAction: 'pan-y' }}
-        className="col-start-1 row-start-1 relative w-full cursor-pointer touch-pan-y rounded-[1.35rem] bg-cream px-3.5 py-3.5 text-left shadow-[0_10px_28px_-24px_rgba(69,89,78,0.6)] ring-1 ring-soil/10 outline-none focus-visible:ring-2 focus-visible:ring-forest/30"
+        className="col-start-1 row-start-1 relative w-full cursor-pointer touch-pan-y rounded-[1.35rem] bg-cream px-3.5 py-3.5 text-left shadow-[0_10px_28px_-24px_rgba(0,0,0,0.6)] ring-1 ring-soil/10 outline-none focus-visible:ring-2 focus-visible:ring-forest/30"
       >
         <span className="flex items-center gap-3">
           <span
@@ -904,7 +904,7 @@ function PlatformDebtCard({
                 </div>
                 <div className="flex items-center justify-between gap-3">
                   <dt className="text-forest/50">Sudah dibayar</dt>
-                  <dd className="font-semibold text-[#b5b987] tabular-nums">
+                  <dd className="font-semibold text-hud-sage tabular-nums">
                     {maskMoney(paid, masked)}
                   </dd>
                 </div>
@@ -964,7 +964,7 @@ function PlatformDebtCard({
                           {/* kembalian punya jejaknya sendiri di sini supaya
                               nominal di kartu & baris kas bisa ditelusuri */}
                           {payment.changeAmount ? (
-                            <span className="ml-1 text-[#b89191]">
+                            <span className="ml-1 text-hud-terracotta">
                               {DEBT_CASH_COPY.changeRecorded(maskMoney(payment.changeAmount, masked))}
                             </span>
                           ) : null}
@@ -1111,7 +1111,7 @@ function DebtCashSheet({
           </p>
           {/* lebih bayar: JELASKAN sebelum disimpan, jangan biarkan user kaget */}
           {plan.changeAmount > 0 && (
-            <p className="rounded-2xl bg-hud-amber/15 px-4 py-3 text-[11.5px] leading-relaxed text-[#b89191] ring-1 ring-inset ring-hud-amber/30">
+            <p className="rounded-2xl bg-hud-amber/15 px-4 py-3 text-[11.5px] leading-relaxed text-hud-terracotta ring-1 ring-inset ring-hud-amber/30">
               {direction === 'in'
                 ? DEBT_CASH_COPY.changeReturned(maskMoney(plan.changeAmount, masked), name)
                 : DEBT_CASH_COPY.changePending(maskMoney(plan.changeAmount, masked), name)}
@@ -1125,7 +1125,7 @@ function DebtCashSheet({
       <div className="mt-4">
         <span className="text-[13px] font-medium leading-snug text-forest">{copy.walletLabel}</span>
         {walletOptions.length === 0 ? (
-          <p className="mt-2 rounded-2xl bg-hud-amber/15 px-4 py-3 text-[11.5px] leading-relaxed text-[#b89191]">
+          <p className="mt-2 rounded-2xl bg-hud-amber/15 px-4 py-3 text-[11.5px] leading-relaxed text-hud-terracotta">
             {DEBT_CASH_COPY.noWallet}
           </p>
         ) : (
@@ -1150,7 +1150,7 @@ function DebtCashSheet({
             dan pemeriksaan lokal atas saldo dompet terpilih (`notEnough`), yang
             sudah menghalangi tombol simpan sejak awal. */}
         {(error || (notEnough && walletOptions.length > 0)) && (
-          <p className="mt-2 rounded-2xl bg-hud-terracotta/12 px-4 py-3 text-[11.5px] leading-relaxed text-[#b89191] ring-1 ring-inset ring-hud-terracotta/25">
+          <p className="mt-2 rounded-2xl bg-hud-terracotta/12 px-4 py-3 text-[11.5px] leading-relaxed text-hud-terracotta ring-1 ring-inset ring-hud-terracotta/25">
             {error || DEBT_CASH_COPY.insufficient(selected?.label ?? '')}
           </p>
         )}
@@ -1300,7 +1300,7 @@ function PersonalDebtCard({
       transition={{ duration: 0.34, delay, ease: [0.22, 1, 0.36, 1] }}
       className={cn(
         'relative flex flex-wrap items-center gap-3 overflow-hidden rounded-[1.35rem] bg-cream px-3.5 py-3.5 ring-1',
-        settled ? 'ring-soil/8' : 'shadow-[0_10px_28px_-24px_rgba(69,89,78,0.6)] ring-soil/10',
+        settled ? 'ring-soil/8' : 'shadow-[0_10px_28px_-24px_rgba(0,0,0,0.6)] ring-soil/10',
       )}
     >
       {settled && <LunasStamp />}
@@ -1311,7 +1311,7 @@ function PersonalDebtCard({
           'flex size-10 shrink-0 items-center justify-center rounded-2xl ring-1 ring-inset',
           incoming
             ? 'bg-hud-sage/25 text-forest ring-hud-sage/30'
-            : 'bg-hud-terracotta/12 text-[#b89191] ring-hud-terracotta/20',
+            : 'bg-hud-terracotta/12 text-hud-terracotta ring-hud-terracotta/20',
         )}
       >
         {incoming ? (

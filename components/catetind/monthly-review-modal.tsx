@@ -257,7 +257,7 @@ export function MonthlyReviewModal({
         aria-label={COPY.dialogLabel}
         style={sheetStyle}
         className={cn(
-          'absolute inset-x-0 bottom-0 top-8 flex flex-col rounded-t-[2.25rem] bg-cream px-5 pb-6 shadow-[0_-24px_60px_-24px_rgba(69,89,78,0.55)] ring-1 ring-soil/12 transition-[transform,opacity] duration-[650ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform motion-reduce:transition-none lg:inset-y-6 lg:left-1/2 lg:right-auto lg:w-[min(640px,calc(100vw_-_6rem))] lg:-translate-x-1/2 lg:rounded-[2rem] lg:shadow-[0_40px_90px_-40px_rgba(69,89,78,0.6)]',
+          'absolute inset-x-0 bottom-0 top-8 flex flex-col rounded-t-[2.25rem] bg-cream px-5 pb-6 shadow-[0_-24px_60px_-24px_rgba(0,0,0,0.55)] ring-1 ring-soil/12 transition-[transform,opacity] duration-[650ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform motion-reduce:transition-none lg:inset-y-6 lg:left-1/2 lg:right-auto lg:w-[min(640px,calc(100vw_-_6rem))] lg:-translate-x-1/2 lg:rounded-[2rem] lg:shadow-[0_40px_90px_-40px_rgba(0,0,0,0.6)]',
           open
             ? 'translate-y-0 opacity-100'
             : 'translate-y-full opacity-0 lg:translate-y-3 lg:scale-[0.98]',

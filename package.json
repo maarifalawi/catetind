@@ -12,6 +12,7 @@
     "icons": "node scripts/generate-icons.mjs",
     "theme:apply": "node scripts/theme/apply-palette.mjs",
     "theme:audit": "node scripts/theme/audit-palette.mjs",
+    "theme:tokenize": "node scripts/theme/tokenize-literal-colors.mjs",
     "supabase:migrate": "node scripts/supabase/apply-migrations.mjs",
     "supabase:verify": "node scripts/supabase/verify-rls.mjs"
   },

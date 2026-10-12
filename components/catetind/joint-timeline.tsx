@@ -102,7 +102,7 @@ export function JointTimeline({
                 partner.dot,
               )}
             />
-            <div className="inline-flex items-center gap-2 rounded-full bg-[#ffffff] px-3 py-1.5 text-[11.5px] font-medium text-forest/60 ring-1 ring-soil/10">
+            <div className="inline-flex items-center gap-2 rounded-full bg-cream px-3 py-1.5 text-[11.5px] font-medium text-forest/60 ring-1 ring-soil/10">
               <span aria-hidden>{partner.avatar}</span>
               {partner.name} sedang mencatat
               <span className="flex items-end gap-0.5" aria-hidden>
@@ -123,7 +123,7 @@ export function JointTimeline({
         {groups.map((group) => (
           <section key={group.date} className="relative pt-3">
             {/* separator tanggal yang menyeberangi garis */}
-            <h3 className="relative z-10 mb-3 ml-6 w-fit rounded-full bg-[#ffffff] px-3 py-1 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-forest/40 ring-1 ring-soil/10 sm:mx-auto sm:ml-auto">
+            <h3 className="relative z-10 mb-3 ml-6 w-fit rounded-full bg-cream px-3 py-1 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-forest/40 ring-1 ring-soil/10 sm:mx-auto sm:ml-auto">
               {group.label}
             </h3>
 
@@ -254,13 +254,13 @@ function TimelineCard({
             person.rail,
             /* privat milik sendiri: latar warm grey + gembok */
             isPrivateMine
-              ? 'bg-[#ebe4de] ring-soil/14'
+              ? 'bg-sage ring-soil/14'
               : view.hiddenFromMe
                 ? /* privat milik pasangan: border putus-putus, tanpa detail */
-                  'border border-dashed border-hud-amber/50 bg-[#ffffff] ring-transparent'
-                : 'bg-[#ffffff] ring-soil/10',
-            expandable && 'cursor-pointer hover:shadow-[0_18px_38px_-30px_rgba(69,89,78,0.85)]',
-            expandable && open && 'shadow-[0_18px_38px_-30px_rgba(69,89,78,0.85)]',
+                  'border border-dashed border-hud-amber/50 bg-cream ring-transparent'
+                : 'bg-cream ring-soil/10',
+            expandable && 'cursor-pointer hover:shadow-[0_18px_38px_-30px_rgba(0,0,0,0.85)]',
+            expandable && open && 'shadow-[0_18px_38px_-30px_rgba(0,0,0,0.85)]',
           )}
         >
           {/* baris 1: siapa & kapan */}
@@ -282,7 +282,7 @@ function TimelineCard({
 
             <span className="flex shrink-0 items-center gap-1.5">
               {tx.justArrived && (
-                <span className="rounded-full bg-hud-amber/25 px-2 py-0.5 text-[9.5px] font-medium uppercase tracking-wide text-[#b89191]">
+                <span className="rounded-full bg-hud-amber/25 px-2 py-0.5 text-[9.5px] font-medium uppercase tracking-wide text-hud-terracotta">
                   Baru
                 </span>
               )}
@@ -445,7 +445,7 @@ function TimelineCard({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 4 }}
               transition={{ duration: 0.16 }}
-              className="relative z-20 mt-2 w-fit rounded-2xl bg-ink px-3 py-2 text-[11px] font-medium leading-relaxed text-cream shadow-[0_14px_30px_-18px_rgba(69,89,78,0.9)]"
+              className="relative z-20 mt-2 w-fit rounded-2xl bg-ink px-3 py-2 text-[11px] font-medium leading-relaxed text-cream shadow-[0_14px_30px_-18px_rgba(0,0,0,0.9)]"
             >
               {PRIVATE_OWNER_HINT}
             </motion.p>

@@ -284,7 +284,7 @@ export function AddWalletSheet({
                   className={cn(
                     'flex flex-col items-center gap-1.5 rounded-2xl px-2 py-3 transition-all duration-200 active:scale-95',
                     active
-                      ? 'bg-cream ring-2 ring-forest shadow-[0_12px_26px_-18px_rgba(69,89,78,0.65)]'
+                      ? 'bg-cream ring-2 ring-forest shadow-[0_12px_26px_-18px_rgba(0,0,0,0.65)]'
                       : 'bg-cream/60 ring-1 ring-soil/12 hover:bg-cream',
                   )}
                 >

@@ -27,7 +27,7 @@ export function BrandPanel({
   return (
     <aside
       className={cn(
-        'relative isolate flex min-h-[200px] flex-col justify-end overflow-hidden bg-gradient-to-br from-forest-soft via-forest to-[#1f2823] p-7 text-cream shadow-[0_30px_70px_-30px_rgba(69,89,78,0.8)] ring-1 ring-inset ring-cream/10 sm:p-9 lg:p-12',
+        'relative isolate flex min-h-[200px] flex-col justify-end overflow-hidden bg-gradient-to-br from-forest-soft via-forest to-evergreen-deep p-7 text-cream shadow-[0_30px_70px_-30px_rgba(0,0,0,0.8)] ring-1 ring-inset ring-cream/10 sm:p-9 lg:p-12',
         className,
       )}
     >
@@ -64,7 +64,7 @@ export function BrandPanel({
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute -bottom-28 -left-20 size-72 rounded-full bg-[#45594e]/50 blur-[120px]"
+        className="pointer-events-none absolute -bottom-28 -left-20 size-72 rounded-full bg-forest/50 blur-[120px]"
       />
       <div
         aria-hidden

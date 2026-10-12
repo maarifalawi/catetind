@@ -107,7 +107,7 @@ export function MarkBillPaidSheet({
           {MARK_PAID_SHEET_COPY.walletLabel}
         </span>
         {walletOptions.length === 0 ? (
-          <p className="mt-2 rounded-2xl bg-hud-amber/15 px-4 py-3 text-[11.5px] leading-relaxed text-[#b89191]">
+          <p className="mt-2 rounded-2xl bg-hud-amber/15 px-4 py-3 text-[11.5px] leading-relaxed text-hud-terracotta">
             {MARK_PAID_SHEET_COPY.noWallet}
           </p>
         ) : (
@@ -132,7 +132,7 @@ export function MarkBillPaidSheet({
             menebak. Dua sumbernya: pemeriksaan lokal atas saldo (`notEnough`)
             dan pesan dari percobaan simpan yang ditolak store (`error`). */}
         {walletOptions.length > 0 && (error || notEnough) && (
-          <p className="mt-2 rounded-2xl bg-hud-terracotta/12 px-4 py-3 text-[11.5px] leading-relaxed text-[#b89191] ring-1 ring-inset ring-hud-terracotta/25">
+          <p className="mt-2 rounded-2xl bg-hud-terracotta/12 px-4 py-3 text-[11.5px] leading-relaxed text-hud-terracotta ring-1 ring-inset ring-hud-terracotta/25">
             {error || MARK_PAID_SHEET_COPY.insufficient(selected?.label ?? '')}
           </p>
         )}

@@ -248,7 +248,7 @@ export function LoginScreen({ next }: { next?: string | null }) {
                     className={cn(
                       'group mt-5 flex h-14 w-full items-center justify-between gap-3 rounded-full pr-2 pl-6 transition-colors duration-200 motion-reduce:transition-none',
                       emailValid && !sending
-                        ? 'bg-forest text-cream shadow-[0_16px_34px_-18px_rgba(69,89,78,0.85)] hover:bg-forest-soft active:scale-[0.98]'
+                        ? 'bg-forest text-cream shadow-[0_16px_34px_-18px_rgba(0,0,0,0.85)] hover:bg-forest-soft active:scale-[0.98]'
                         : 'cursor-not-allowed bg-sage text-forest/40',
                     )}
                   >
@@ -340,7 +340,7 @@ export function LoginScreen({ next }: { next?: string | null }) {
                     className={cn(
                       'group mt-5 flex h-14 w-full items-center justify-between gap-3 rounded-full pr-2 pl-6 transition-colors duration-200 motion-reduce:transition-none',
                       otpValid && !verifying
-                        ? 'bg-forest text-cream shadow-[0_16px_34px_-18px_rgba(69,89,78,0.85)] hover:bg-forest-soft active:scale-[0.98]'
+                        ? 'bg-forest text-cream shadow-[0_16px_34px_-18px_rgba(0,0,0,0.85)] hover:bg-forest-soft active:scale-[0.98]'
                         : 'cursor-not-allowed bg-sage text-forest/40',
                     )}
                   >

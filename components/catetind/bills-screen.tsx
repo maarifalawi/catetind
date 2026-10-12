@@ -563,7 +563,7 @@ export function BillsScreen() {
                         className={cn(
                           'inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1.5 text-[11px] font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25',
                           active
-                            ? 'bg-forest text-cream shadow-[0_8px_18px_-12px_rgba(69,89,78,0.85)]'
+                            ? 'bg-forest text-cream shadow-[0_8px_18px_-12px_rgba(0,0,0,0.85)]'
                             : 'text-forest/55 hover:bg-cream/80 hover:text-forest',
                         )}
                       >

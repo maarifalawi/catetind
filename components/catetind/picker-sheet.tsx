@@ -73,7 +73,7 @@ const PICKER_HOST_SELECTOR =
 export const PICKER_OPTION_IDLE =
   'bg-cream ring-1 ring-soil/10 hover:bg-sage/40'
 export const PICKER_OPTION_ACTIVE =
-  'bg-mint/30 ring-1 ring-leaf/45 shadow-[0_8px_20px_-14px_rgba(69,89,78,0.65)]'
+  'bg-mint/30 ring-1 ring-leaf/45 shadow-[0_8px_20px_-14px_rgba(0,0,0,0.65)]'
 /** gutter daftar opsi (lihat catatan 1 di atas): 4px ruang stroke di semua sisi */
 export const PICKER_LIST_GUTTER = '-mx-1 px-1 pt-1'
 
@@ -183,8 +183,8 @@ export function PickerSheet({
             }
             className={cn(
               'relative flex max-h-[86dvh] w-full max-w-md flex-col overflow-hidden',
-              'rounded-t-[2rem] bg-cream shadow-[0_-24px_60px_-24px_rgba(69,89,78,0.55)] ring-1 ring-soil/12 outline-none',
-              'lg:max-h-[80vh] lg:rounded-[2rem] lg:shadow-[0_28px_70px_-24px_rgba(69,89,78,0.5)]',
+              'rounded-t-[2rem] bg-cream shadow-[0_-24px_60px_-24px_rgba(0,0,0,0.55)] ring-1 ring-soil/12 outline-none',
+              'lg:max-h-[80vh] lg:rounded-[2rem] lg:shadow-[0_28px_70px_-24px_rgba(0,0,0,0.5)]',
             )}
           >
             <div className="mx-auto mt-3 h-1.5 w-10 shrink-0 rounded-full bg-ink/12" aria-hidden />

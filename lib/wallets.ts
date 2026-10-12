@@ -35,7 +35,7 @@ export interface WalletAccount {
    *  bikin kartunya terasa seperti kartu asli, bukan kotak saldo */
   number?: string
   /**
-   * Kelas GRADIEN aksen Tailwind (mis. `'bg-gradient-to-r from-[#dbe4c7] to-[#91bb9e]'`).
+   * Kelas GRADIEN aksen Tailwind (mis. `'bg-gradient-to-r from-mint-soft to-mint'`).
    *
    * Dipakai untuk halo cahaya di belakang kartu, segmen bar komposisi di hero, dan
    * titik legenda. Sengaja gradien — bukan warna solid — supaya aksennya lembut,
@@ -44,7 +44,7 @@ export interface WalletAccount {
    */
   color: string
   /**
-   * Kelas gradien MUKA kartu (mis. `'bg-gradient-to-br from-[#91bb9e] via-[#52685c] to-[#161c19]'`).
+   * Kelas gradien MUKA kartu (mis. `'bg-gradient-to-br from-mint via-forest-soft to-evergreen-deeper'`).
    *
    * Resep kanon: stop PERTAMA = warna aksen palet, stop TERAKHIR selalu shade
    * gelap dari aksen yang sama (×0.45 → ×0.32) supaya nama & saldo putih tetap
@@ -124,13 +124,13 @@ export const WALLET_SEED: WalletSeed[] = [
     kind: 'bank',
     type: 'Bank',
     context: 'pribadi',
-    bandClass: 'from-[#c4c7af] via-[#ffffff] to-[#c4c7af]',
-    faceClass: 'from-[#52685c] via-[#45594e] to-[#161c19]', // evergreen
+    bandClass: 'from-evergreen-light via-cream to-evergreen-light',
+    faceClass: 'from-forest-soft via-forest to-evergreen-deeper', // evergreen
     glowClass: 'bg-evergreen/25',
     /* aksen & muka kartu diambil dari palet kanon (Evergreen family),
        satu keluarga dengan hero & halaman lain — lihat docs/theme/PALETTE.md */
-    color: 'bg-gradient-to-r from-[#c4c7af] to-[#45594e]',
-    face: 'bg-gradient-to-br from-[#52685c] via-[#45594e] to-[#161c19]', // evergreen → gelap
+    color: 'bg-gradient-to-r from-evergreen-light to-forest',
+    face: 'bg-gradient-to-br from-forest-soft via-forest to-evergreen-deeper', // evergreen → gelap
     art: 'parang',
   },
   {
@@ -143,11 +143,11 @@ export const WALLET_SEED: WalletSeed[] = [
     kind: 'ewallet',
     type: 'E-Wallet',
     context: 'pribadi',
-    bandClass: 'from-[#dbe4c7] via-[#ffffff] to-[#dbe4c7]',
-    faceClass: 'from-[#91bb9e] via-[#52685c] to-[#161c19]', // leaf
+    bandClass: 'from-mint-soft via-cream to-mint-soft',
+    faceClass: 'from-mint via-forest-soft to-evergreen-deeper', // leaf
     glowClass: 'bg-leaf/25',
-    color: 'bg-gradient-to-r from-[#dbe4c7] to-[#91bb9e]',
-    face: 'bg-gradient-to-br from-[#91bb9e] via-[#52685c] to-[#161c19]', // leaf → gelap
+    color: 'bg-gradient-to-r from-mint-soft to-mint',
+    face: 'bg-gradient-to-br from-mint via-forest-soft to-evergreen-deeper', // leaf → gelap
     art: 'mendung',
   },
   {
@@ -163,11 +163,11 @@ export const WALLET_SEED: WalletSeed[] = [
     kind: 'cash',
     type: 'Cash',
     context: 'keluarga',
-    bandClass: 'from-[#e6e4c0] via-[#ffffff] to-[#e6e4c0]',
-    faceClass: 'from-[#b5b987] via-[#51533d] to-[#000000]', // olive
+    bandClass: 'from-olive-light via-cream to-olive-light',
+    faceClass: 'from-hud-sage via-olive-deep to-soil', // olive
     glowClass: 'bg-olive/30',
-    color: 'bg-gradient-to-r from-[#e6e4c0] to-[#b5b987]',
-    face: 'bg-gradient-to-br from-[#b5b987] via-[#51533d] to-[#000000]', // olive → gelap
+    color: 'bg-gradient-to-r from-olive-light to-hud-sage',
+    face: 'bg-gradient-to-br from-hud-sage via-olive-deep to-soil', // olive → gelap
     art: 'kawung',
   },
 ]
@@ -307,42 +307,42 @@ export const WALLET_BRAND_OPTIONS: WalletBrandOption[] = [
     name: 'BCA',
     type: 'Bank',
     tile: 'bg-gradient-to-br from-sage via-mint-soft to-mint text-forest ring-mint/40',
-    frame: 'hover:shadow-[0_22px_40px_-26px_rgba(69,89,78,0.55)]',
+    frame: 'hover:shadow-[0_22px_40px_-26px_rgba(0,0,0,0.55)]',
   },
   {
     name: 'GoPay',
     type: 'E-Wallet',
-    tile: 'bg-gradient-to-br from-[#dbe4c7] via-[#91bb9e] to-[#91bb9e] text-forest ring-[#91bb9e]/50',
+    tile: 'bg-gradient-to-br from-mint-soft via-mint to-mint text-forest ring-mint/50',
     frame: 'hover:shadow-[0_22px_40px_-26px_rgba(145,187,158,0.75)]',
   },
   {
     name: 'Mandiri',
     type: 'Bank',
-    tile: 'bg-gradient-to-br from-[#f6edb7] via-[#ecd768] to-[#ecd768] text-forest ring-[#ecd768]/60',
+    tile: 'bg-gradient-to-br from-daisy-light via-brand to-brand text-forest ring-brand/60',
     frame: 'hover:shadow-[0_22px_40px_-26px_rgba(236,215,104,0.85)]',
   },
   {
     name: 'BNI',
     type: 'Bank',
-    tile: 'bg-gradient-to-br from-[#fbe3c0] via-[#ffb885] to-[#ffb885] text-forest ring-[#ffb885]/60',
+    tile: 'bg-gradient-to-br from-cantelope-light via-hud-amber to-hud-amber text-forest ring-hud-amber/60',
     frame: 'hover:shadow-[0_22px_40px_-26px_rgba(255,184,133,0.8)]',
   },
   {
     name: 'OVO',
     type: 'E-Wallet',
-    tile: 'bg-gradient-to-br from-[#e7d8c3] via-[#b89191] to-[#b89191] text-forest ring-[#b89191]/50',
+    tile: 'bg-gradient-to-br from-plum-light via-hud-terracotta to-hud-terracotta text-forest ring-hud-terracotta/50',
     frame: 'hover:shadow-[0_22px_40px_-26px_rgba(184,145,145,0.8)]',
   },
   {
     name: 'Dana',
     type: 'E-Wallet',
-    tile: 'bg-gradient-to-br from-[#e6e4c0] via-[#b5b987] to-[#b5b987] text-forest ring-[#b5b987]/50',
+    tile: 'bg-gradient-to-br from-olive-light via-hud-sage to-hud-sage text-forest ring-hud-sage/50',
     frame: 'hover:shadow-[0_22px_40px_-26px_rgba(181,185,135,0.9)]',
   },
   {
     name: 'Jago',
     type: 'Bank',
-    tile: 'bg-gradient-to-br from-sage via-[#c4c7af] to-[#c4c7af] text-forest ring-[#c4c7af]/60',
+    tile: 'bg-gradient-to-br from-sage via-evergreen-light to-evergreen-light text-forest ring-evergreen-light/60',
     frame: 'hover:shadow-[0_22px_40px_-26px_rgba(196,199,175,0.9)]',
   },
 ]
@@ -457,8 +457,8 @@ export const WALLET_POOL: Wallet[] = [
     number: '•••• 5566',
     network: 'E-WALLET',
     balance: 750000,
-    bandClass: 'from-[#e7d8c3] via-[#ffffff] to-[#e7d8c3]',
-    faceClass: 'from-[#b89191] via-[#534141] to-[#000000]', // plum
+    bandClass: 'from-plum-light via-cream to-plum-light',
+    faceClass: 'from-hud-terracotta via-plum-deep to-soil', // plum
     glowClass: 'bg-plum/30',
     art: 'rings',
     kind: 'ewallet',
@@ -471,8 +471,8 @@ export const WALLET_POOL: Wallet[] = [
     number: '•••• 8890',
     network: 'E-WALLET',
     balance: 425000,
-    bandClass: 'from-[#dbdccf] via-[#ffffff] to-[#dbdccf]',
-    faceClass: 'from-[#91a0b8] via-[#414853] to-[#161c19]', // thistle
+    bandClass: 'from-thistle-light via-cream to-thistle-light',
+    faceClass: 'from-thistle via-thistle-deep to-evergreen-deeper', // thistle
     glowClass: 'bg-thistle/25',
     art: 'mendung',
     kind: 'ewallet',
@@ -485,8 +485,8 @@ export const WALLET_POOL: Wallet[] = [
     number: '•••• 7712',
     network: 'DEBIT',
     balance: 5250000,
-    bandClass: 'from-[#f6edb7] via-[#ffffff] to-[#f6edb7]',
-    faceClass: 'from-[#ecd768] via-[#6a612f] to-[#000000]', // daisy
+    bandClass: 'from-daisy-light via-cream to-daisy-light',
+    faceClass: 'from-brand via-daisy-deep to-soil', // daisy
     glowClass: 'bg-daisy/30',
     art: 'parang',
     kind: 'bank',
@@ -499,8 +499,8 @@ export const WALLET_POOL: Wallet[] = [
     number: '•••• 3345',
     network: 'VISA',
     balance: 1100000,
-    bandClass: 'from-[#fbe3c0] via-[#ffffff] to-[#fbe3c0]',
-    faceClass: 'from-[#ffb885] via-[#73533c] to-[#000000]', // cantelope
+    bandClass: 'from-cantelope-light via-cream to-cantelope-light',
+    faceClass: 'from-hud-amber via-cantelope-deep to-soil', // cantelope
     glowClass: 'bg-cantelope/25',
     art: 'kawung',
     kind: 'bank',

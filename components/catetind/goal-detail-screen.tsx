@@ -292,7 +292,7 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
     <ScreenShell>
       <div className="w-full">
         {/* ── HEADER: kembali + identitas celengan + toggle privasi GLOBAL ─── */}
-        <header className="sticky top-2 z-30 flex items-center justify-between gap-3 rounded-[1.5rem] bg-cream/90 px-3 py-3 shadow-[0_18px_40px_-32px_rgba(69,89,78,0.65)] ring-1 ring-soil/10 backdrop-blur-md sm:px-4">
+        <header className="sticky top-2 z-30 flex items-center justify-between gap-3 rounded-[1.5rem] bg-cream/90 px-3 py-3 shadow-[0_18px_40px_-32px_rgba(0,0,0,0.65)] ring-1 ring-soil/10 backdrop-blur-md sm:px-4">
           <div className="flex min-w-0 items-center gap-3">
             <Link
               href="/budget"
@@ -327,7 +327,7 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
         <section
           aria-label={`${fund.name} — ${stage.label}`}
           className={cn(
-            'relative mt-4 overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-sage/60 via-cream to-cream p-4 shadow-[0_18px_40px_-34px_rgba(69,89,78,0.55)] ring-1 ring-soil/12 sm:p-5',
+            'relative mt-4 overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-sage/60 via-cream to-cream p-4 shadow-[0_18px_40px_-34px_rgba(0,0,0,0.55)] ring-1 ring-soil/12 sm:p-5',
             reached && 'ring-mint/70',
           )}
         >
@@ -507,7 +507,7 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
           {/* ── auto-kalkulasi PRD 2C.3: (target − terkumpul) / bulan tersisa ── */}
           <section
             aria-label={reached ? FUND_PLAN_COPY.done : FUND_PLAN_COPY.full(money(perMonth))}
-            className="rounded-[1.5rem] bg-cream p-4 shadow-[0_18px_40px_-34px_rgba(69,89,78,0.55)] ring-1 ring-soil/10"
+            className="rounded-[1.5rem] bg-cream p-4 shadow-[0_18px_40px_-34px_rgba(0,0,0,0.55)] ring-1 ring-soil/10"
           >
             <div className="flex items-center gap-2">
               <span className="flex size-6 items-center justify-center rounded-lg bg-gradient-to-br from-sage via-cream to-mint-soft text-forest ring-1 ring-forest/10">
@@ -545,7 +545,7 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
           {/* ── proyeksi tanggal penuh (asumsi rata-rata setoran, dikatakan) ── */}
           <section
             aria-label={FUND_DETAIL_COPY.projectionTitle}
-            className="rounded-[1.5rem] bg-cream p-4 shadow-[0_18px_40px_-34px_rgba(69,89,78,0.55)] ring-1 ring-soil/10"
+            className="rounded-[1.5rem] bg-cream p-4 shadow-[0_18px_40px_-34px_rgba(0,0,0,0.55)] ring-1 ring-soil/10"
           >
             <div className="flex items-center gap-2">
               <span className="flex size-6 items-center justify-center rounded-lg bg-gradient-to-br from-sage via-cream to-mint-soft text-forest ring-1 ring-forest/10">
@@ -622,7 +622,7 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
                   {/* target sudah penuh → aksi primer berpindah ke target baru */}
                   <Link
                     href="/budget"
-                    className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-[1rem] bg-gradient-to-b from-forest-soft to-forest text-[13.5px] font-medium text-cream shadow-[0_14px_28px_-14px_rgba(69,89,78,0.85)] transition-all hover:brightness-[1.08] active:scale-[0.99]"
+                    className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-[1rem] bg-gradient-to-b from-forest-soft to-forest text-[13.5px] font-medium text-cream shadow-[0_14px_28px_-14px_rgba(0,0,0,0.85)] transition-all hover:brightness-[1.08] active:scale-[0.99]"
                   >
                     <Plus className="size-4" strokeWidth={2.6} aria-hidden />
                     {FUND_ACHIEVED_COPY.cta}
@@ -643,7 +643,7 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
                   type="button"
                   onClick={() => setContributeOpen(true)}
                   title={FUND_DETAIL_COPY.setHint}
-                  className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-[1rem] bg-gradient-to-b from-forest-soft to-forest text-[13.5px] font-medium text-cream shadow-[0_14px_28px_-14px_rgba(69,89,78,0.85)] transition-all hover:brightness-[1.08] active:scale-[0.99]"
+                  className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-[1rem] bg-gradient-to-b from-forest-soft to-forest text-[13.5px] font-medium text-cream shadow-[0_14px_28px_-14px_rgba(0,0,0,0.85)] transition-all hover:brightness-[1.08] active:scale-[0.99]"
                 >
                   <PiggyBank className="size-4" strokeWidth={2.4} aria-hidden />
                   {FUND_DETAIL_COPY.setCta}

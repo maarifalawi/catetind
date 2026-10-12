@@ -59,7 +59,9 @@ PENGECUALIAN                ── `bg-canvas` (#ffffff) — dasar halaman & per
 ```
 
 Semua ditulis di satu blok `@theme inline` di `app/globals.css`. Komponen hanya
-boleh memakai **Lapis 1 & 2** — jangan menulis hex baru langsung di komponen.
+boleh memakai **token** (Lapis 1 & 2, plus Lapis 3 yang sudah diangkat jadi
+token `--color-…`) — jangan menulis hex langsung di komponen, termasuk
+`from-[#hex]`/`to-[#hex]` di gradien.
 
 ### Tabel alias semantik → palet
 
@@ -80,8 +82,10 @@ boleh memakai **Lapis 1 & 2** — jangan menulis hex baru langsung di komponen.
 ### Nilai turunan (tint & shade)
 
 Dihitung dari warna palet, dipakai untuk gradien kartu, bayangan, dan stop
-gelap. Ditulis sebagai hex literal (Tailwind arbitrary value `from-[#…]` tidak
-menerima `color-mix`).
+gelap. Sejak pembersihan terakhir, SEMUANYA diangkat jadi token `--color-…` di
+blok `@theme inline` (`app/globals.css`) — jadi komponen menulis
+`from-evergreen-deeper`, `to-olive-deep`, dst., BUKAN `from-[#161c19]` lagi.
+`soil-deep`/`soil-deepest` = hitam, jadi cukup pakai `soil`/`ink`.
 
 | Nama | Hex | Asal |
 | --- | --- | --- |
@@ -165,6 +169,8 @@ git reset --hard theme/legacy-forest-lime
 pnpm theme:audit                                # cek warna di luar palet (exit 1 kalau ada)
 pnpm theme:apply --dry-run                      # lihat rencana migrasi
 pnpm theme:apply                                # terapkan pemetaan
+pnpm theme:tokenize --dry-run                   # rencana: hex-literal kelas → token
+pnpm theme:tokenize                             # terapkan (idempotent)
 node scripts/theme/apply-palette.mjs --dry-run  # (padanan tanpa pnpm)
 ```
 
@@ -174,6 +180,11 @@ node scripts/theme/apply-palette.mjs --dry-run  # (padanan tanpa pnpm)
   supaya warna tidak "nyasar" lagi.
 - **`scripts/theme/apply-palette.mjs`** — tabel pemetaan lengkap lama → baru
   (332 hex · 190 rgb · 738 kelas). Sekaligus dokumentasi resmi migrasi ini.
+- **`scripts/theme/tokenize-literal-colors.mjs`** — pembersih konsistensi.
+  Mengubah kelas warna arbitrer `-\[#hex\]` → token (`text-[#b89191]` →
+  `text-hud-terracotta`), dan bayangan evergreen `rgba(69,89,78,…)` →
+  `rgba(0,0,0,…)` (hanya baris ber-`shadow`; warna sumbu/kursor chart dibiarkan).
+  Idempotent — jalankan kapan pun setelah menambah komponen.
 
 ### Riwayat migrasi
 
@@ -189,6 +200,12 @@ node scripts/theme/apply-palette.mjs --dry-run  # (padanan tanpa pnpm)
    `--foreground`, dan 130 penggantian di 41 file). Turunan soil ikut netral:
    `soil-deep`/`soil-deepest` → hitam, `soil-muted` → `#767676`, dan semua
    `rgba(80,58,58,…)` / `rgba(36,26,26,…)` → `rgba(0,0,0,…)`.
+5. **Literal → token** — semua kelas warna arbitrer `-[#hex]` yang nilainya
+   SUDAH ada di palet diubah jadi token (287 penggantian di 43 file); nilai
+   turunan Lapis 3 diangkat jadi token `--color-…` di `@theme inline`; dan
+   bayangan evergreen `rgba(69,89,78,…)` (111×, terlewat oleh migrasi #4)
+   dinetralkan jadi `rgba(0,0,0,…)`. Sejak ini **nol** `-[#hex]` di komponen.
+   Alatnya: `scripts/theme/tokenize-literal-colors.mjs` (`pnpm theme:tokenize`).
 
 Untuk palet berikutnya: ubah `PALETTE` di `apply-palette.mjs`, lalu jalankan ulang.
 

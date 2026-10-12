@@ -546,7 +546,7 @@ function CheckoutCta({ onStart, className }: { onStart: () => void; className?: 
       <button
         type="button"
         onClick={onStart}
-        className="group flex h-14 w-full items-center justify-between gap-3 rounded-full bg-forest pl-6 pr-2 text-cream shadow-[0_16px_34px_-18px_rgba(69,89,78,0.85)] transition-colors duration-200 hover:bg-forest-soft active:scale-[0.98] motion-reduce:transition-none"
+        className="group flex h-14 w-full items-center justify-between gap-3 rounded-full bg-forest pl-6 pr-2 text-cream shadow-[0_16px_34px_-18px_rgba(0,0,0,0.85)] transition-colors duration-200 hover:bg-forest-soft active:scale-[0.98] motion-reduce:transition-none"
       >
         <span className="text-[15.5px] font-medium tracking-[-0.01em]">{CHECKOUT_COPY.cta}</span>
         <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-cream text-forest transition-colors duration-200 group-hover:bg-mint">

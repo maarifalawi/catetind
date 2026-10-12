@@ -115,7 +115,7 @@ export function OverviewPanel({
         aria-modal="true"
         aria-label={OVERVIEW_PANEL_COPY.title}
         className={cn(
-          'relative flex max-h-[92dvh] w-full flex-col rounded-t-[2.25rem] bg-cream px-5 pb-7 pt-3 shadow-[0_-24px_60px_-24px_rgba(69,89,78,0.55)] ring-1 ring-soil/12 transition-[transform,opacity] duration-[650ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform lg:max-h-[88vh] lg:w-[640px] lg:rounded-[2rem] lg:px-7 lg:pb-8 lg:pt-4 lg:shadow-[0_24px_60px_-24px_rgba(69,89,78,0.55)]',
+          'relative flex max-h-[92dvh] w-full flex-col rounded-t-[2.25rem] bg-cream px-5 pb-7 pt-3 shadow-[0_-24px_60px_-24px_rgba(0,0,0,0.55)] ring-1 ring-soil/12 transition-[transform,opacity] duration-[650ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform lg:max-h-[88vh] lg:w-[640px] lg:rounded-[2rem] lg:px-7 lg:pb-8 lg:pt-4 lg:shadow-[0_24px_60px_-24px_rgba(0,0,0,0.55)]',
           open ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0',
         )}
       >

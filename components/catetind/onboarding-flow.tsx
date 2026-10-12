@@ -384,7 +384,7 @@ export function OnboardingFlow() {
               'group flex h-14 w-full items-center justify-between gap-3 rounded-full pl-6 pr-2 transition-all duration-200',
               cta.disabled
                 ? 'cursor-not-allowed bg-ink/[0.06] text-forest/35'
-                : 'bg-forest text-cream shadow-[0_16px_34px_-18px_rgba(69,89,78,0.85)] hover:bg-forest-soft active:scale-[0.98]',
+                : 'bg-forest text-cream shadow-[0_16px_34px_-18px_rgba(0,0,0,0.85)] hover:bg-forest-soft active:scale-[0.98]',
             )}
           >
             <span className="text-[15.5px] font-medium tracking-[-0.01em]">

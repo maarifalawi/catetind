@@ -88,14 +88,14 @@ export function SubscriptionBanner() {
             <button
               type="button"
               onClick={() => setOpen(true)}
-              className="shrink-0 rounded-full bg-forest px-4 py-2 text-xs font-medium text-cream shadow-[0_12px_24px_-16px_rgba(69,89,78,0.9)] transition-colors hover:bg-forest-soft active:scale-95"
+              className="shrink-0 rounded-full bg-forest px-4 py-2 text-xs font-medium text-cream shadow-[0_12px_24px_-16px_rgba(0,0,0,0.9)] transition-colors hover:bg-forest-soft active:scale-95"
             >
               {copy.cta}
             </button>
           ) : (
             <Link
               href={CHECKOUT_PATH}
-              className="shrink-0 rounded-full bg-forest px-4 py-2 text-xs font-medium text-cream shadow-[0_12px_24px_-16px_rgba(69,89,78,0.9)] transition-colors hover:bg-forest-soft active:scale-95"
+              className="shrink-0 rounded-full bg-forest px-4 py-2 text-xs font-medium text-cream shadow-[0_12px_24px_-16px_rgba(0,0,0,0.9)] transition-colors hover:bg-forest-soft active:scale-95"
             >
               {copy.cta}
             </Link>

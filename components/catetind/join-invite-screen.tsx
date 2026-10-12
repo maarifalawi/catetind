@@ -231,7 +231,7 @@ function ValidInviteView({
         <div className="mx-auto w-full max-w-[480px] px-6 lg:max-w-[560px]">
           <Link
             href="/login"
-            className="group flex h-14 w-full items-center justify-between gap-3 rounded-full bg-forest pr-2 pl-6 text-cream shadow-[0_16px_34px_-18px_rgba(69,89,78,0.85)] transition-colors duration-200 hover:bg-forest-soft active:scale-[0.98] motion-reduce:transition-none"
+            className="group flex h-14 w-full items-center justify-between gap-3 rounded-full bg-forest pr-2 pl-6 text-cream shadow-[0_16px_34px_-18px_rgba(0,0,0,0.85)] transition-colors duration-200 hover:bg-forest-soft active:scale-[0.98] motion-reduce:transition-none"
           >
             <span className="text-[15.5px] font-medium tracking-[-0.01em]">{JOIN_COPY.ctaJoin}</span>
             <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-cream text-forest transition-colors duration-200 group-hover:bg-mint">
@@ -383,7 +383,7 @@ function JoinedView({ walletName, onRestart }: { walletName: string; onRestart: 
 
       <Link
         href="/joint"
-        className="group mt-6 flex h-14 w-full items-center justify-between gap-3 rounded-full bg-forest pr-2 pl-6 text-cream shadow-[0_16px_34px_-18px_rgba(69,89,78,0.85)] transition-colors duration-200 hover:bg-forest-soft active:scale-[0.98] motion-reduce:transition-none"
+        className="group mt-6 flex h-14 w-full items-center justify-between gap-3 rounded-full bg-forest pr-2 pl-6 text-cream shadow-[0_16px_34px_-18px_rgba(0,0,0,0.85)] transition-colors duration-200 hover:bg-forest-soft active:scale-[0.98] motion-reduce:transition-none"
       >
         <span className="text-[15.5px] font-medium tracking-[-0.01em]">
           {JOIN_SUCCESS_COPY.cta}

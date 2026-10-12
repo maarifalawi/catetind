@@ -208,7 +208,7 @@ export function DailyHudSummary({
             `computeDailyHud()`, jadi tidak ada nilai baru yang dikarang di sini.
             Label "Jatah harianmu", hitungan "n hari lagi", dan catatan pemasukan
             tengah periode DIHAPUS atas permintaan pemilik produk. */
-        <div className="relative overflow-hidden rounded-[2rem] bg-forest px-5 py-5 text-cream shadow-[0_30px_64px_-34px_rgba(69,89,78,0.85)] sm:px-6 sm:py-6">
+        <div className="relative overflow-hidden rounded-[2rem] bg-forest px-5 py-5 text-cream shadow-[0_30px_64px_-34px_rgba(0,0,0,0.85)] sm:px-6 sm:py-6">
           {/* dua glow lembut — mint di kanan atas, sage di kiri bawah. Cuma
               cahaya, bukan informasi: `aria-hidden` + pointer-events-none. */}
           <span

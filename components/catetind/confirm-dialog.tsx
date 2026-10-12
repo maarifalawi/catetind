@@ -85,7 +85,7 @@ export function ConfirmDialog({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.97, y: 6 }}
         transition={{ duration: 0.24, ease: EASE }}
-        className="relative w-full max-w-sm rounded-[1.75rem] bg-cream p-5 shadow-[0_28px_70px_-24px_rgba(69,89,78,0.5)] ring-1 ring-soil/12"
+        className="relative w-full max-w-sm rounded-[1.75rem] bg-cream p-5 shadow-[0_28px_70px_-24px_rgba(0,0,0,0.5)] ring-1 ring-soil/12"
       >
         <span className="flex size-11 items-center justify-center rounded-full bg-plum/15 text-plum">
           <AlertTriangle className="size-5" strokeWidth={2.2} />

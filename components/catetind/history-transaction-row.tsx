@@ -160,6 +160,9 @@ export function HistoryTransactionRow({
   /* kategori aman (tidak pernah berisi nama TYPE) + penanda pindah dana */
   const category = resolveCategoryLabel(tx)
   const moves = isMoneyMovement(tx)
+  /* PAKET 86 — kalau user tidak mengetik catatan, NAMA barisnya = kategorinya.
+     Chip kategori di baris meta tidak perlu mengulang kata yang sama. */
+  const categoryShownAsTitle = tx.name.trim().toLowerCase() === category.trim().toLowerCase()
   /* visual kategori & nada nominal — SATU tabel bersama dengan Dashboard
      (`transaction-category-visual`, paket 78), jadi dua daftar itu mustahil
      memakai warna berbeda untuk transaksi yang sama */
@@ -247,7 +250,12 @@ export function HistoryTransactionRow({
 
           <span className="min-w-0 flex-1">
             <span className="flex items-center gap-1.5">
-              <span className="truncate text-[13.5px] font-medium text-forest">{tx.name}</span>
+              {/* PAKET 86 — nama catatan TIDAK lagi dipotong jadi satu baris.
+                  Di mobile, "Pengeluaran Cepat" dulu tampil "Pengeluaran Ce…";
+                  sekarang namanya boleh membungkus sampai DUA baris, jadi yang
+                  dibaca user selalu utuh (nama = kategori pilihannya, atau
+                  catatan yang ia ketik sendiri). */}
+              <span className="line-clamp-2 text-[13.5px] font-medium text-forest">{tx.name}</span>
               {tx.aiGenerated && (
                 <Sparkles
                   className="size-3 shrink-0 text-forest/50"
@@ -275,14 +283,16 @@ export function HistoryTransactionRow({
             <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[11.5px] text-forest/40">
               {showWallet && <span className="min-w-0 truncate">{tx.wallet} ·</span>}
               <span className="shrink-0">{tx.time}</span>
-              <span
-                className={cn(
-                  'min-w-0 truncate rounded-full px-1.5 py-0.5 text-[10px] font-medium',
-                  visual.chip,
-                )}
-              >
-                {category}
-              </span>
+              {!categoryShownAsTitle && (
+                <span
+                  className={cn(
+                    'min-w-0 truncate rounded-full px-1.5 py-0.5 text-[10px] font-medium',
+                    visual.chip,
+                  )}
+                >
+                  {category}
+                </span>
+              )}
               {moves && (
                 <span className="min-w-0 truncate font-medium text-forest/40">· pindah dana</span>
               )}

@@ -118,7 +118,7 @@ function RingShortcut({
       title={label}
       className={
         primary
-          ? 'flex size-11 items-center justify-center rounded-full bg-forest text-cream shadow-[0_12px_26px_-14px_rgba(69,89,78,0.9)] transition-colors hover:bg-forest-soft active:scale-95'
+          ? 'flex size-11 items-center justify-center rounded-full bg-forest text-cream shadow-[0_12px_26px_-14px_rgba(0,0,0,0.9)] transition-colors hover:bg-forest-soft active:scale-95'
           : 'flex size-11 items-center justify-center rounded-full bg-cream text-forest ring-1 ring-soil/12 transition-colors hover:bg-sage/70 active:scale-95'
       }
     >

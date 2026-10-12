@@ -119,7 +119,7 @@ export function UpdatePriceModal({
           {/* kalau kartunya memang sedang ditandai basi, sebutkan sebabnya di sini
               juga — user tahu kenapa ia berada di modal ini */}
           {stale && (
-            <p className="mt-3 flex items-start gap-2 rounded-2xl bg-hud-amber/12 px-3.5 py-3 text-[11.5px] leading-relaxed text-[#b89191] ring-1 ring-inset ring-hud-amber/25">
+            <p className="mt-3 flex items-start gap-2 rounded-2xl bg-hud-amber/12 px-3.5 py-3 text-[11.5px] leading-relaxed text-hud-terracotta ring-1 ring-inset ring-hud-amber/25">
               <AlertTriangle className="mt-px size-3.5 shrink-0" strokeWidth={2.4} />
               <span className="min-w-0">
                 {stalePriceWarning(meta.label, formatPriceStamp(data.lastUpdate))}
@@ -150,7 +150,7 @@ export function UpdatePriceModal({
                 <span
                   className={cn(
                     'font-semibold tabular-nums',
-                    returnValue >= 0 ? 'text-[#b5b987]' : 'text-hud-terracotta',
+                    returnValue >= 0 ? 'text-hud-sage' : 'text-hud-terracotta',
                   )}
                 >
                   {returnValue >= 0 ? '+' : '−'}

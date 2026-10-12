@@ -98,9 +98,9 @@ export function BudgetSheet({
               /* mobile — bottom sheet menempel DASAR KANDANG. `max-h-full`
                  adalah satu-satunya batas tinggi yang benar-benar mengikuti
                  ruang di atas keyboard (100vh/dvh statis di iOS). */
-              'pointer-events-auto fixed inset-x-0 bottom-0 z-[70] mx-auto flex max-h-full w-full max-w-md flex-col overflow-hidden rounded-t-[2rem] bg-[#ffffff] shadow-[0_-24px_60px_-24px_rgba(69,89,78,0.55)] outline-none',
+              'pointer-events-auto fixed inset-x-0 bottom-0 z-[70] mx-auto flex max-h-full w-full max-w-md flex-col overflow-hidden rounded-t-[2rem] bg-cream shadow-[0_-24px_60px_-24px_rgba(0,0,0,0.55)] outline-none',
               /* desktop — dialog tengah (translate = properti terpisah dari transform Vaul) */
-              'lg:inset-x-auto lg:bottom-auto lg:top-1/2 lg:left-1/2 lg:max-h-[86dvh] lg:max-w-lg lg:-translate-x-1/2 lg:-translate-y-1/2 lg:rounded-[2rem] lg:shadow-[0_28px_70px_-24px_rgba(69,89,78,0.5)]',
+              'lg:inset-x-auto lg:bottom-auto lg:top-1/2 lg:left-1/2 lg:max-h-[86dvh] lg:max-w-lg lg:-translate-x-1/2 lg:-translate-y-1/2 lg:rounded-[2rem] lg:shadow-[0_28px_70px_-24px_rgba(0,0,0,0.5)]',
             )}
           >
             {/* drag handle khas Vaul — di desktop panel mengambang, jadi tak perlu */}
@@ -328,7 +328,7 @@ export function ChoicePills<T extends string>({
             className={cn(
               'rounded-full px-3.5 py-2 text-[12.5px] font-medium transition-all duration-200 active:scale-95',
               active
-                ? 'bg-forest text-mint shadow-[0_10px_22px_-14px_rgba(69,89,78,0.75)]'
+                ? 'bg-forest text-mint shadow-[0_10px_22px_-14px_rgba(0,0,0,0.75)]'
                 : 'bg-cream text-forest/60 ring-1 ring-soil/14 hover:bg-cream hover:text-forest',
             )}
           >

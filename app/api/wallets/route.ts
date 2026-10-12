@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
       /* saldo negatif tidak punya arti di dompet kas — dijepit, bukan disimpan apa adanya */
       balance: Number.isFinite(balance) ? Math.max(0, Math.round(balance)) : 0,
       bandClass: body.bandClass ?? 'from-sage via-cream to-sage',
-      faceClass: body.faceClass ?? 'from-[#91bb9e] via-[#45594e] to-[#161c19]',
+      faceClass: body.faceClass ?? 'from-mint via-forest to-evergreen-deeper',
       glowClass: body.glowClass,
       art: body.art ?? 'kawung',
       kind: body.kind ?? 'cash',

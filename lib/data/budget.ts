@@ -1223,8 +1223,8 @@ export const PRIORITY_OPTIONS: {
   dot: string
 }[] = [
   { id: 'rendah', label: 'Rendah', badge: 'bg-oat text-forest/55 ring-1 ring-ink/20', dot: 'bg-ink/20' },
-  { id: 'sedang', label: 'Sedang', badge: 'bg-hud-sage/20 text-[#b5b987] ring-1 ring-hud-sage/30', dot: 'bg-hud-sage' },
-  { id: 'tinggi', label: 'Tinggi', badge: 'bg-hud-amber/20 text-[#b89191] ring-1 ring-hud-amber/30', dot: 'bg-hud-amber' },
+  { id: 'sedang', label: 'Sedang', badge: 'bg-hud-sage/20 text-hud-sage ring-1 ring-hud-sage/30', dot: 'bg-hud-sage' },
+  { id: 'tinggi', label: 'Tinggi', badge: 'bg-hud-amber/20 text-hud-terracotta ring-1 ring-hud-amber/30', dot: 'bg-hud-amber' },
   { id: 'kritis', label: 'Kritis', badge: 'bg-hud-terracotta/15 text-hud-terracotta ring-1 ring-hud-terracotta/25', dot: 'bg-hud-terracotta' },
 ]
 

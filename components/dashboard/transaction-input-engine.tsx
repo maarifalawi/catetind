@@ -44,6 +44,7 @@ import { MOCK_RECEIPT_AMOUNT, MOCK_RECEIPT_READ_MS, receiptNoteFromFileName } fr
 import {
   EDIT_TRANSACTION_COPY,
   TRANSACTION_FIXED_CATEGORY,
+  TRANSACTION_INSUFFICIENT_FUNDS_COPY,
   TRANSACTION_INPUT_COPY,
   manualCategoryChoice,
   type HistoryTransaction,
@@ -52,7 +53,7 @@ import { CategoryPicker } from '@/components/catetind/category-picker'
 import { WalletPicker } from '@/components/catetind/wallet-picker'
 import { useMoneyContext } from '@/components/catetind/money-context-provider'
 import { usePrivacy } from '@/components/catetind/privacy-provider'
-import { defaultWalletNameFor, useMoneyStore, walletOptionsFor } from '@/lib/money/store'
+import { defaultWalletNameFor, useMoneyStore, walletFundsCheck, walletOptionsFor } from '@/lib/money/store'
 /* ── Transaction Input Engine (inventaris 97a/b/c) ────────────────────────────
    Falsafah "Zero Cognitive Load & 4-Tap Strict Rule": tidak ada menu "mau input
    bagaimana?". Panel langsung membuka form manual — OCR & Voice cuma
@@ -187,7 +188,7 @@ const TYPES: TransactionType[] = [
     id: 'saving',
     label: 'Tabungan',
     icon: PiggyBank,
-    active: 'bg-hud-amber/[0.18] text-[#b89191] ring-hud-amber/40',
+    active: 'bg-hud-amber/[0.18] text-hud-terracotta ring-hud-amber/40',
   },
 ]
 
@@ -357,7 +358,16 @@ export function TransactionInputEngine({
   const { context } = useMoneyContext()
   const { masked } = usePrivacy()
   const pickerWalletOptions = useMemo(() => walletOptionsFor(walletSnapshot), [walletSnapshot])
-  const contextDefaultWallet = useMemo(() => defaultWalletNameFor(context), [context])
+  /* PAKET 86 — dompet default ikut SNAPSHOT, bukan cuma `context`.
+     `defaultWalletNameFor()` membaca state modul `live`; sebelum hidrasi selesai
+     isinya masih kosong, sehingga memo ber-dependensi `[context]` bisa "mengunci"
+     nilai '' (form mulai tanpa dompet walau konteks ini punya dompet, dan user
+     terpaksa memilih manual). Dengan ikut `walletSnapshot`, nilainya dihitung
+     ulang begitu dompet benar-benar masuk. */
+  const contextDefaultWallet = useMemo(
+    () => defaultWalletNameFor(context),
+    [context, walletSnapshot],
+  )
 
   const [typeId, setTypeId] = useState<TransactionTypeId>(defaultType)
   /**
@@ -496,6 +506,30 @@ export function TransactionInputEngine({
   const decidedWallet = walletIsFixed ? (sourceLabel ?? '') : wallet
   const walletNeeded = !isEdit && decidedWallet.trim().length === 0
   const showWalletNeeded = walletNeeded && (amountSettled || amount > 0)
+
+  /**
+   * SALDO TIDAK CUKUP — alasannya berdiri DI DALAM FORM (paket 86).
+   *
+   * Pagar "saldo tidak boleh sub-nol" (paket 74) memang MENOLAK pengeluaran yang
+   * melebihi saldo dompet (lihat `useTransactionSubmit` & `postTransaction`).
+   * Masalahnya, penolakan itu cuma berbunyi sebagai toast sesaat: dompet BARU
+   * dibuat dengan saldo Rp 0 (form Tambah Dompet men-default "Rp 0"), jadi user
+   * yang mencatat pengeluaran pertama dari dompet itu melihat panel yang seolah
+   * tidak melakukan apa-apa — catatannya memang tidak pernah lahir, di halaman
+   * mana pun. Sekarang sebabnya terbaca di bawah pemilih dompet begitu
+   * nominalnya terisi, SEBELUM user menekan Catat.
+   */
+  const fundsCheck = useMemo(
+    () => walletFundsCheck(walletSnapshot, decidedWallet, amount || 0),
+    [walletSnapshot, decidedWallet, amount],
+  )
+  const fundsShort =
+    !isEdit &&
+    typeId === 'expense' &&
+    decidedWallet.trim().length > 0 &&
+    fundsCheck.known &&
+    !fundsCheck.sufficient
+  const showFundsShort = fundsShort && (amountSettled || amount > 0)
   /*
    * PAKET 81 — daftar pilihan DOMPET mode EDIT dalam bentuk yang dimakan
    * `WalletPicker` (`{ id, label, balance, hint? }`), sumbernya dompet hidup yang
@@ -1131,8 +1165,15 @@ export function TransactionInputEngine({
                           {sourceLabel}
                         </span>
                       </p>
-                      <p className="mt-1.5 text-[11px] leading-relaxed text-forest/45">
-                        {TRANSACTION_INPUT_COPY.walletHint}
+                      <p
+                        className={cn(
+                          'mt-1.5 text-[11px] leading-relaxed',
+                          showFundsShort ? 'font-medium text-forest/70' : 'text-forest/45',
+                        )}
+                      >
+                        {showFundsShort
+                          ? TRANSACTION_INSUFFICIENT_FUNDS_COPY.body(decidedWallet)
+                          : TRANSACTION_INPUT_COPY.walletHint}
                       </p>
                     </div>
                   ) : (
@@ -1143,7 +1184,7 @@ export function TransactionInputEngine({
                           options={pickerWalletOptions}
                           onChange={setWallet}
                           masked={masked}
-                          invalid={showWalletNeeded}
+                          invalid={showWalletNeeded || showFundsShort}
                           describedBy="tx-wallet-help"
                         />
                       </EditField>
@@ -1151,12 +1192,16 @@ export function TransactionInputEngine({
                         id="tx-wallet-help"
                         className={cn(
                           'mt-1.5 text-[11px] leading-relaxed',
-                          showWalletNeeded ? 'font-medium text-forest/70' : 'text-forest/45',
+                          showWalletNeeded || showFundsShort
+                            ? 'font-medium text-forest/70'
+                            : 'text-forest/45',
                         )}
                       >
                         {showWalletNeeded
                           ? TRANSACTION_INPUT_COPY.walletNeeded
-                          : TRANSACTION_INPUT_COPY.walletHint}
+                          : showFundsShort
+                            ? TRANSACTION_INSUFFICIENT_FUNDS_COPY.body(decidedWallet)
+                            : TRANSACTION_INPUT_COPY.walletHint}
                       </p>
                     </>
                   )}
@@ -1381,7 +1426,7 @@ export function TransactionInputEngine({
             'flex h-14 flex-1 items-center justify-center gap-2 rounded-2xl text-base font-medium transition-all duration-150',
             inputLocked || submitting || categoryChoice.needsChoice || walletNeeded
               ? 'cursor-not-allowed bg-ink/[0.07] text-forest/35'
-              : 'bg-forest text-cream shadow-[0_14px_28px_-14px_rgba(69,89,78,0.7)] hover:bg-forest-soft active:scale-[0.98]',
+              : 'bg-forest text-cream shadow-[0_14px_28px_-14px_rgba(0,0,0,0.7)] hover:bg-forest-soft active:scale-[0.98]',
           )}
         >
           {submitting

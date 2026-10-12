@@ -537,7 +537,7 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
             ) : txs.length > 0 ? (
               /* ada catatan, tapi tidak satu pun di 30 hari terakhir → dikatakan,
                  bukan dihilangkan diam-diam dari layar */
-              <section className="rounded-[1.75rem] bg-cream p-5 text-[12.5px] leading-relaxed text-forest/60 shadow-[0_18px_40px_-34px_rgba(69,89,78,0.55)] ring-1 ring-soil/10">
+              <section className="rounded-[1.75rem] bg-cream p-5 text-[12.5px] leading-relaxed text-forest/60 shadow-[0_18px_40px_-34px_rgba(0,0,0,0.55)] ring-1 ring-soil/10">
                 {WALLET_PERIOD_COPY.emptyWindow(WALLET_DETAIL_WINDOW_DAYS)}
               </section>
             ) : null}
@@ -914,7 +914,7 @@ function PatientInsightCard({ count }: { count: number }) {
   const pct = Math.round((progress / INSIGHT_MIN_TRANSACTIONS) * 100)
 
   return (
-    <section className="rounded-[1.75rem] bg-cream p-5 shadow-[0_18px_40px_-34px_rgba(69,89,78,0.55)] ring-1 ring-soil/10">
+    <section className="rounded-[1.75rem] bg-cream p-5 shadow-[0_18px_40px_-34px_rgba(0,0,0,0.55)] ring-1 ring-soil/10">
       <div className="flex items-start gap-3">
         <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sage via-cream to-mint-soft text-forest ring-1 ring-forest/10">
           <Sparkles className="size-[18px]" strokeWidth={2.2} />

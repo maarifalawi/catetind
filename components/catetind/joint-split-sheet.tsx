@@ -272,7 +272,7 @@ function PercentSlider({
           <span aria-hidden>{me.avatar}</span>
           {me.name} {percent}%
         </span>
-        <span className="flex items-center gap-1.5 text-[#b89191]">
+        <span className="flex items-center gap-1.5 text-hud-terracotta">
           {partner.name} {100 - percent}%
           <span aria-hidden>{partner.avatar}</span>
         </span>
@@ -320,7 +320,7 @@ function PercentSlider({
           animate={{ scale: dragging ? 1.14 : 1 }}
           transition={{ type: 'spring', stiffness: 420, damping: 30 }}
           style={{ left: `${percent}%` }}
-          className="absolute top-1/2 flex size-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-[#ffffff] ring-2 ring-forest shadow-[0_8px_18px_-10px_rgba(69,89,78,0.9)]"
+          className="absolute top-1/2 flex size-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-cream ring-2 ring-forest shadow-[0_8px_18px_-10px_rgba(0,0,0,0.9)]"
         >
           <span className="size-1.5 rounded-full bg-forest" />
         </motion.span>

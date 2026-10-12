@@ -303,12 +303,12 @@ function AssetCard({
         animate={{ x: dx }}
         transition={dragging ? { duration: 0 } : { type: 'spring', stiffness: 320, damping: 30 }}
         style={{ touchAction: 'pan-y' }}
-        className="col-start-1 row-start-1 group relative w-full cursor-pointer touch-pan-y overflow-hidden rounded-[1.35rem] bg-cream px-3.5 py-3.5 text-left shadow-[0_10px_28px_-24px_rgba(69,89,78,0.6)] ring-1 ring-soil/10 transition-[box-shadow,background-color,ring-color] duration-200 outline-none hover:bg-[#ffffff] hover:shadow-[0_18px_34px_-24px_rgba(69,89,78,0.75)] hover:ring-forest/20 focus-visible:ring-2 focus-visible:ring-forest/30"
+        className="col-start-1 row-start-1 group relative w-full cursor-pointer touch-pan-y overflow-hidden rounded-[1.35rem] bg-cream px-3.5 py-3.5 text-left shadow-[0_10px_28px_-24px_rgba(0,0,0,0.6)] ring-1 ring-soil/10 transition-[box-shadow,background-color,ring-color] duration-200 outline-none hover:bg-cream hover:shadow-[0_18px_34px_-24px_rgba(0,0,0,0.75)] hover:ring-forest/20 focus-visible:ring-2 focus-visible:ring-forest/30"
       >
         {/* 5D — harga basi: banner amber tepat di atas isi kartu aset ini */}
         {stale && (
           <span className="mb-3 flex flex-wrap items-center gap-2 rounded-2xl bg-hud-amber/12 px-3 py-2 ring-1 ring-inset ring-hud-amber/25">
-            <span className="flex min-w-0 flex-1 items-start gap-1.5 text-[11px] leading-snug text-[#b89191]">
+            <span className="flex min-w-0 flex-1 items-start gap-1.5 text-[11px] leading-snug text-hud-terracotta">
               <AlertTriangle className="mt-px size-3.5 shrink-0" strokeWidth={2.4} />
               <span>
                 {stalePriceWarning(meta.label, formatPriceStamp(asset.lastUpdate))}
@@ -328,7 +328,7 @@ function AssetCard({
                 event.stopPropagation()
                 onUpdatePrice()
               }}
-              className="inline-flex shrink-0 items-center gap-1 rounded-full bg-cream px-2.5 py-1 text-[10.5px] font-medium text-[#b89191] ring-1 ring-hud-amber/40 transition-colors hover:bg-hud-amber/15"
+              className="inline-flex shrink-0 items-center gap-1 rounded-full bg-cream px-2.5 py-1 text-[10.5px] font-medium text-hud-terracotta ring-1 ring-hud-amber/40 transition-colors hover:bg-hud-amber/15"
             >
               <RefreshCw className="size-3" strokeWidth={2.6} />
               Update Manual
@@ -377,7 +377,7 @@ function AssetCard({
             <span
               className={cn(
                 'mt-0.5 text-[11px] font-semibold tabular-nums',
-                profit ? 'text-[#b5b987]' : 'text-hud-terracotta',
+                profit ? 'text-hud-sage' : 'text-hud-terracotta',
               )}
             >
               {profit ? '+' : '−'}
@@ -472,7 +472,7 @@ function AssetCard({
                             'shrink-0 rounded-full px-2 py-0.5 text-[9.5px] font-medium uppercase tracking-wide',
                             tx.side === 'buy'
                               ? 'bg-hud-sage/25 text-forest'
-                              : 'bg-hud-terracotta/15 text-[#b89191]',
+                              : 'bg-hud-terracotta/15 text-hud-terracotta',
                           )}
                         >
                           {tx.side === 'buy' ? 'Beli' : 'Jual'}

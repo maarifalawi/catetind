@@ -29,7 +29,7 @@ export function Toaster() {
           toast: [
             'pointer-events-auto flex w-[min(22rem,calc(100vw-2rem))] items-center gap-3',
             'rounded-2xl bg-cream/95 px-4 py-3.5 font-sans text-forest backdrop-blur-xl',
-            'shadow-[0_20px_44px_-18px_rgba(69,89,78,0.45)] ring-1 ring-forest/10',
+            'shadow-[0_20px_44px_-18px_rgba(0,0,0,0.45)] ring-1 ring-forest/10',
             /* ikon sonner dibungkus badge leaf bulat biar senada dengan AI badge */
             '[&_[data-icon]]:flex [&_[data-icon]]:size-9 [&_[data-icon]]:shrink-0',
             '[&_[data-icon]]:items-center [&_[data-icon]]:justify-center',

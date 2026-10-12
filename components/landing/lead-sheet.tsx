@@ -131,7 +131,7 @@ export function LeadSheet({
       >
         {/* ── tier terpilih ── */}
         {tier ? (
-          <div className="mb-5 rounded-2xl bg-gradient-to-br from-forest-soft via-forest to-[#1f2823] px-4 py-3.5 text-cream">
+          <div className="mb-5 rounded-2xl bg-gradient-to-br from-forest-soft via-forest to-evergreen-deep px-4 py-3.5 text-cream">
             <p className="text-[10.5px] font-medium tracking-[0.14em] text-cream/60 uppercase">
               {LEAD_SHEET_COPY.selectedLabel}
             </p>

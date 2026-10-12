@@ -251,7 +251,7 @@ export function AddInvestmentSheet({
               className={cn(
                 'flex items-center gap-2 rounded-2xl px-3.5 py-3 text-left text-[13px] font-medium transition-all duration-200 active:scale-[0.98]',
                 active
-                  ? 'bg-forest text-mint shadow-[0_12px_26px_-16px_rgba(69,89,78,0.85)]'
+                  ? 'bg-forest text-mint shadow-[0_12px_26px_-16px_rgba(0,0,0,0.85)]'
                   : 'bg-cream text-forest/65 ring-1 ring-soil/14 hover:bg-cream hover:text-forest',
               )}
             >
@@ -377,7 +377,7 @@ export function AddInvestmentSheet({
                   <span
                     className={cn(
                       'font-medium',
-                      editingReturn >= 0 ? 'text-[#b5b987]' : 'text-hud-terracotta',
+                      editingReturn >= 0 ? 'text-hud-sage' : 'text-hud-terracotta',
                     )}
                   >
                     {editingReturn >= 0 ? '+' : '−'}

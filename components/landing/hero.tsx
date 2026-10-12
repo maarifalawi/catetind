@@ -41,8 +41,8 @@ export function Hero() {
         {/* ── ilustrasi mockup app (HUD jatah harian + tanaman) ── */}
         <div className="relative mx-auto w-full max-w-[380px]">
           <div aria-hidden className="relative">
-            <div className="rounded-[2rem] bg-cream p-4 shadow-[0_40px_80px_-40px_rgba(69,89,78,0.5)] ring-1 ring-soil/12">
-              <div className="rounded-[1.5rem] bg-gradient-to-br from-forest-soft via-forest to-[#1f2823] p-4 text-cream">
+            <div className="rounded-[2rem] bg-cream p-4 shadow-[0_40px_80px_-40px_rgba(0,0,0,0.5)] ring-1 ring-soil/12">
+              <div className="rounded-[1.5rem] bg-gradient-to-br from-forest-soft via-forest to-evergreen-deep p-4 text-cream">
                 <p className="text-[10.5px] font-medium tracking-[0.16em] text-cream/60 uppercase">
                   {HERO_HUD.eyebrow}
                 </p>

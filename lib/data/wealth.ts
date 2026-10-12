@@ -338,8 +338,8 @@ export const ASSET_TYPE_META: Record<
     emoji: '📊',
     unit: 'unit',
     color: '#b5b987' /* sage paling tua */,
-    dotClass: 'bg-[#b5b987]',
-    chipClass: 'bg-[#b5b987]/12 text-forest',
+    dotClass: 'bg-hud-sage',
+    chipClass: 'bg-hud-sage/12 text-forest',
   },
   stock: {
     label: 'Saham',
@@ -355,15 +355,15 @@ export const ASSET_TYPE_META: Record<
     unit: 'gram',
     color: '#ffb885' /* amber hangat kanon */,
     dotClass: 'bg-hud-amber',
-    chipClass: 'bg-hud-amber/25 text-[#b89191]',
+    chipClass: 'bg-hud-amber/25 text-hud-terracotta',
   },
   crypto: {
     label: 'Crypto',
     emoji: '₿',
     unit: '' /* crypto memakai satuan raw koin */,
     color: '#e6e4c0' /* sage paling muda */,
-    dotClass: 'bg-[#e6e4c0]',
-    chipClass: 'bg-[#e6e4c0]/35 text-forest',
+    dotClass: 'bg-olive-light',
+    chipClass: 'bg-olive-light/35 text-forest',
   },
 }
 
@@ -767,7 +767,7 @@ export function dtiBadge(ratio: number): DtiBadge {
       tone: 'amber',
       label: 'Perlu perhatian',
       copy: 'Cicilan mulai lumayan — pantau terus ya',
-      pillClassName: 'bg-hud-amber/25 text-[#b89191] ring-hud-amber/45',
+      pillClassName: 'bg-hud-amber/25 text-hud-terracotta ring-hud-amber/45',
     }
   }
   return {
@@ -775,7 +775,7 @@ export function dtiBadge(ratio: number): DtiBadge {
     tone: 'terracotta',
     label: 'Hati-hati',
     copy: 'Beban cicilanmu agak tinggi. Yuk fokus lunasin dulu ya',
-    pillClassName: 'bg-hud-terracotta/20 text-[#b89191] ring-hud-terracotta/45',
+    pillClassName: 'bg-hud-terracotta/20 text-hud-terracotta ring-hud-terracotta/45',
   }
 }
 

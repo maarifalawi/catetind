@@ -34,7 +34,7 @@ const WALLET_ROW = {
   opening: 1450000,
   art: 'parang',
   color: 'bg-thistle',
-  face: 'from-[#91bb9e]',
+  face: 'from-mint',
   band_class: 'from-sage',
   face_class: 'from-forest',
   glow_class: null,

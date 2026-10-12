@@ -668,7 +668,7 @@ export function JointScreen() {
         ) : (
           <>
             {/* ── SECTION 2: header (nama dompet editable) + saldo ────────── */}
-            <header className="sticky top-2 z-30 rounded-[1.5rem] bg-[#ffffff]/90 px-4 py-3.5 shadow-[0_18px_40px_-32px_rgba(69,89,78,0.65)] ring-1 ring-soil/10 backdrop-blur-md">
+            <header className="sticky top-2 z-30 rounded-[1.5rem] bg-cream/90 px-4 py-3.5 shadow-[0_18px_40px_-32px_rgba(0,0,0,0.65)] ring-1 ring-soil/10 backdrop-blur-md">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex min-w-0 items-start gap-3">
                   <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-hud-sage/60 via-cream to-hud-amber/40 text-forest ring-1 ring-forest/10">
@@ -771,7 +771,7 @@ export function JointScreen() {
               {/* ── KIRI (5/12): ringkasan ─────────────────────────────────── */}
               <div className="lg:col-span-5">
                 {/* ── SECTION 3: Balance Scale Settlement Gauge (hero visual) ── */}
-                <section className="mt-4 rounded-[1.75rem] bg-[#ffffff] px-4 pb-4 pt-5 ring-1 ring-soil/10 sm:px-6 lg:mt-6">
+                <section className="mt-4 rounded-[1.75rem] bg-cream px-4 pb-4 pt-5 ring-1 ring-soil/10 sm:px-6 lg:mt-6">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <h2 className="flex items-center gap-2 font-display text-[15px] font-semibold tracking-tight text-forest">
@@ -848,7 +848,7 @@ export function JointScreen() {
 
                 {isEmptyJoint ? (
                   /* SECTION 12: pasangan sudah gabung tapi belum ada transaksi */
-                  <div className="mt-4 rounded-[1.75rem] border-2 border-dashed border-hud-sage/45 bg-[#ffffff] px-6 py-10 text-center">
+                  <div className="mt-4 rounded-[1.75rem] border-2 border-dashed border-hud-sage/45 bg-cream px-6 py-10 text-center">
                     <span aria-hidden className="text-[30px]">
                       🌱
                     </span>
@@ -908,7 +908,7 @@ export function JointScreen() {
           aria-label="Catat transaksi bareng"
           className={cn(
             'fixed bottom-8 left-1/2 z-50 flex size-14 -translate-x-1/2 items-center justify-center rounded-full',
-            'bg-forest text-mint shadow-[0_18px_36px_-14px_rgba(69,89,78,0.65)] ring-1 ring-forest/25',
+            'bg-forest text-mint shadow-[0_18px_36px_-14px_rgba(0,0,0,0.65)] ring-1 ring-forest/25',
             'transition-transform duration-150 hover:scale-105 active:scale-95',
             'lg:bottom-8 lg:left-auto lg:right-24 lg:h-12 lg:w-auto lg:translate-x-0 lg:gap-2 lg:px-5 lg:text-[13px] lg:font-medium',
           )}

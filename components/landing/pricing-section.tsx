@@ -69,7 +69,7 @@ function PricingCard({ tier, onSelect }: { tier: LandingTier; onSelect: () => vo
       className={cn(
         'relative flex h-full flex-col rounded-[1.75rem] bg-cream p-6 ring-1 transition-shadow',
         tier.recommended
-          ? 'ring-2 ring-forest shadow-[0_34px_70px_-40px_rgba(69,89,78,0.6)] lg:-mt-3'
+          ? 'ring-2 ring-forest shadow-[0_34px_70px_-40px_rgba(0,0,0,0.6)] lg:-mt-3'
           : 'ring-soil/12',
       )}
     >
@@ -109,7 +109,7 @@ function PricingCard({ tier, onSelect }: { tier: LandingTier; onSelect: () => vo
         className={cn(
           'mt-6 flex h-12 w-full items-center justify-center rounded-full text-[14px] font-medium transition-all duration-200 active:scale-[0.99] motion-reduce:transition-none',
           tier.recommended
-            ? 'bg-forest text-cream shadow-[0_16px_34px_-18px_rgba(69,89,78,0.9)] hover:bg-forest-soft'
+            ? 'bg-forest text-cream shadow-[0_16px_34px_-18px_rgba(0,0,0,0.9)] hover:bg-forest-soft'
             : 'border border-forest/30 bg-cream text-forest hover:bg-forest hover:text-cream',
         )}
       >

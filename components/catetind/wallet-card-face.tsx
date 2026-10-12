@@ -161,7 +161,7 @@ export function WalletFace({
         {/* scrim halus di sisi kiri — jaga kontras teks di atas stop terang */}
         <div
           aria-hidden
-          className="absolute inset-0 bg-gradient-to-r from-[#1f2823]/35 via-transparent to-transparent"
+          className="absolute inset-0 bg-gradient-to-r from-evergreen-deep/35 via-transparent to-transparent"
         />
         {/* tekstur noise halus supaya muka kartu tidak terasa flat */}
         <div

@@ -89,7 +89,7 @@ export function MobileNavDrawer() {
         <Drawer.Overlay className="fixed inset-0 z-[80] bg-ink/60 lg:hidden" />
         <Drawer.Content
           aria-label={HOME_HEADER_COPY.menuAria}
-          className="fixed inset-y-0 left-0 z-[80] flex w-[300px] max-w-[85vw] flex-col overflow-hidden rounded-r-[2rem] bg-cream shadow-[24px_0_60px_-30px_rgba(69,89,78,0.55)] outline-none lg:hidden"
+          className="fixed inset-y-0 left-0 z-[80] flex w-[300px] max-w-[85vw] flex-col overflow-hidden rounded-r-[2rem] bg-cream shadow-[24px_0_60px_-30px_rgba(0,0,0,0.55)] outline-none lg:hidden"
         >
           <Drawer.Title className="sr-only">{HOME_HEADER_COPY.menuAria}</Drawer.Title>
           <div data-lenis-prevent className="h-full min-h-0 overflow-y-auto overscroll-contain">

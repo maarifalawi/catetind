@@ -243,7 +243,7 @@ export const JOINT_ME: JointPerson = {
   name: 'Jon',
   avatar: '🧑',
   tint: 'bg-hud-sage/25 text-forest ring-hud-sage/50',
-  dot: 'bg-hud-sage ring-[#ffffff]',
+  dot: 'bg-hud-sage ring-cream',
   rail: 'border-hud-sage',
 }
 
@@ -251,8 +251,8 @@ export const JOINT_PARTNER: JointPerson = {
   id: 'user_b',
   name: 'Dany',
   avatar: '👩',
-  tint: 'bg-hud-amber/25 text-[#b89191] ring-hud-amber/50',
-  dot: 'bg-hud-amber ring-[#ffffff]',
+  tint: 'bg-hud-amber/25 text-hud-terracotta ring-hud-amber/50',
+  dot: 'bg-hud-amber ring-cream',
   rail: 'border-hud-amber',
 }
 
