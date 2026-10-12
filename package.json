@@ -14,7 +14,8 @@
     "theme:audit": "node scripts/theme/audit-palette.mjs",
     "theme:tokenize": "node scripts/theme/tokenize-literal-colors.mjs",
     "supabase:migrate": "node scripts/supabase/apply-migrations.mjs",
-    "supabase:verify": "node scripts/supabase/verify-rls.mjs"
+    "supabase:verify": "node scripts/supabase/verify-rls.mjs",
+    "supabase:grant": "node scripts/supabase/grant-akses.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
