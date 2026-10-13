@@ -69,7 +69,10 @@ function CaptureShell({
   return (
     <div className="flex items-start gap-2" role="status" aria-live="polite" aria-label={label}>
       <AIAvatar className="mt-0.5 size-7" />
-      <div className="min-w-0 flex-1 rounded-2xl rounded-bl-md bg-cream px-3.5 py-3 text-sm leading-relaxed text-forest shadow-sm ring-1 ring-soil/12">
+      {/* PAKET 94 (revisi): stroke bubble = `ring-forest` 1px (ijo tua), sama
+          dengan bubble chat AI yang lain — permintaan pemilik produk ("gausah ada
+          stroke ijo, bikin stroke ijo tua aja dengan ketebalan 1"). */}
+      <div className="min-w-0 flex-1 rounded-2xl rounded-bl-md bg-cream px-3.5 py-3 text-sm leading-relaxed text-forest shadow-sm ring-1 ring-forest">
         {children}
       </div>
     </div>

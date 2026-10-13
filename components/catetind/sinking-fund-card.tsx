@@ -9,6 +9,7 @@ import {
   PLANT_STAGES,
   PLANT_STAGE_INDEX,
   SINKING_FUND_CARD_COPY,
+  SINKING_PER_DAY_DAYS,
   formatDeadline,
   fundPercent,
   maskNominal,
@@ -74,6 +75,8 @@ export function SinkingFundCard({
   const percent = fundPercent(fund)
   const reached = percent >= 100
   const perMonth = monthlyNeeded(fund.target, fund.current, fund.deadline)
+  /* H5-4 — kewajiban yang sama dinyatakan per hari (pembagi kanon 30 hari) */
+  const perDay = Math.round(perMonth / SINKING_PER_DAY_DAYS)
   const percentLabel = `${Math.round(percent)}%`
 
   return (
@@ -168,7 +171,15 @@ export function SinkingFundCard({
                  "Rp 0/bulan"; label tahap kanon (`PLANT_STAGES.bloom`) yang tampil */
               <span className="font-medium text-forest/60">{PLANT_STAGES.bloom.label}</span>
             ) : (
-              SINKING_FUND_CARD_COPY.perMonth(maskNominal(perMonth, masked))
+              <>
+                {SINKING_FUND_CARD_COPY.perMonth(maskNominal(perMonth, masked))}
+                {/* H5-4 — angka yang sama dipecah per hari supaya terasa lebih
+                    terjangkau (mis. "~Rp 102.000/hari"). */}
+                <span className="text-forest/35">
+                  {' · '}
+                  {SINKING_FUND_CARD_COPY.perDay(maskNominal(perDay, masked))}
+                </span>
+              </>
             )}
           </span>
           <span className="inline-flex shrink-0 items-center gap-1 tabular-nums">

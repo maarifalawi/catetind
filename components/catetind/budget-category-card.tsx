@@ -3,6 +3,7 @@
 import { Trash2 } from 'lucide-react'
 import {
   BUDGET_CARD_ACTION_COPY,
+  BUDGET_OVER_NURTURE,
   PACING_HEX,
   PACING_HINT_COPY,
   pacingOf,
@@ -100,10 +101,10 @@ export function BudgetCategoryCard({
             <span className="min-w-0 truncate text-[14px] font-medium leading-tight tracking-tight text-forest">
               {budget.category}
             </span>
-            {/* persen — angka kedua paling terbaca di kartu, diwarnai status yang
-                SAMA dengan bar-nya (satu makna, satu warna) */}
+            {/* persen — H5-1: sekarang SECONDARY (kecil), karena rupiah sudah
+                jadi angka utama; warnanya tetap sama dengan bar-nya */}
             <span
-              className="shrink-0 rounded-full px-2 py-0.5 text-[11.5px] font-semibold tabular-nums"
+              className="shrink-0 rounded-full px-2 py-0.5 text-[10.5px] font-medium tabular-nums"
               style={{
                 color: PACING_HEX[tone],
                 backgroundColor: `${PACING_HEX[tone]}1f`,
@@ -113,7 +114,8 @@ export function BudgetCategoryCard({
             </span>
           </div>
           {/* nominal terpakai/limit — sub-baris nama (dulu baris terpisah di kaki) */}
-          <p className="mt-0.5 min-w-0 truncate text-[11px] tabular-nums text-forest/45">
+          {/* H5-1 — RUPIAH jadi angka utama; persen turun jadi secondary. */}
+          <p className="mt-0.5 min-w-0 truncate text-[12.5px] font-medium tabular-nums text-forest/75">
             {ratioLabel(budget.spent, budget.limit, masked)}
           </p>
         </div>
@@ -171,6 +173,13 @@ export function BudgetCategoryCard({
           </button>
         )}
       </div>
+
+      {/* H5-1 — microcopy nurturing saat lewat limit: menemani, bukan menghakimi.
+          Angka persen sudah turun jadi secondary di atas; kalimat inilah yang
+          menjaga user tetap merasa ditemani saat kategorinya over budget. */}
+      {over && (
+        <p className="mt-1.5 text-[11.5px] leading-relaxed text-forest/55">{BUDGET_OVER_NURTURE}</p>
+      )}
     </article>
   )
 }

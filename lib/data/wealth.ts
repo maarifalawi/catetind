@@ -936,6 +936,29 @@ export function tugOfWar(assets: number, debts: number): TugOfWar {
   }
 }
 
+/* ── COPY: KARTU HERO "KEKAYAAN BERSIH" (Section 3) ──────────────────────────
+   Label & legenda kartu Net Worth. Ditaruh di sini karena kanon repo: kalimat
+   yang dibaca user tidak ditulis sebagai literal di JSX — jadi mengubah satu
+   kata cukup di satu tempat, dan sensor privasi tetap satu jalur.
+
+   Revisi desain (permintaan desain): kartu ini DULU kotak hijau rata dengan dua
+   bulatan blur. Sekarang ia memakai resep muka kartu yang sama dengan hero
+   /wallet & panel brand — gradien Evergreen berlapis + CORAK BATIK (kawung &
+   mega mendung) sebagai lapisan bertopeng di sudut kartu, jadi angkanya bersih
+   tapi kartunya tetap terasa seperti kain, bukan kotak warna. */
+export const NET_WORTH_COPY = {
+  /** aria-label section — dibaca pembaca layar, bukan dilihat */
+  aria: 'Kekayaan bersih: total aset dibanding total hutang',
+  label: 'Kekayaan Bersih',
+  asset: 'Aset',
+  debt: 'Hutang',
+  /**
+   * Dua-duanya masih nol: bar netral tanpa penjelasan terbaca seperti kartu
+   * rusak, jadi satu baris kecil ini yang menjawabnya.
+   */
+  empty: 'Belum ada aset & hutang yang tercatat.',
+} as const
+
 /* ── META PROVIDER PLATFORM (Section 7) ───────────────────────────────────── */
 
 /** 6 provider terhardcode + freeform 'Lainnya' (PRD 2E.2) */
@@ -1259,6 +1282,23 @@ export const WEALTH_ROW_ACTION = {
    */
   editAria: (name: string) => `Edit ${name}`,
   removeAria: (name: string) => `Hapus ${name}`,
+  /* H8-3 (audit UI/UX) — Edit/Hapus disembunyikan di balik menu "...". */
+  menuAria: (name: string) => `Opsi lain untuk ${name}`,
+} as const
+
+/* ── H8-4 (audit UI/UX) — baris ringkas saat hutang/piutang KOSONG ───────────
+   Dulu section kosong menyisakan satu kartu besar yang menghabiskan ruang.
+   Sekarang cukup SATU baris positif + "Tambah" sebagai text link. */
+export const HUTANG_ZERO_LINE = '🎉 Hutang: Rp 0 — Bersih!'
+export const PIUTANG_ZERO_LINE = '🎉 Piutang: Rp 0 — Bersih!'
+
+/* ── H8-1 (audit UI/UX) — kartu onboarding untuk user baru ───────────────────
+   Halaman Kekayaan terasa intimidating buat user baru. Kartu ini menjelaskan
+   dengan bahasa kecil-dulu, sesuai contoh audit. */
+export const WEALTH_ONBOARD_COPY = {
+  title: 'Semua asetmu, dari yang kecil',
+  body: 'Halaman ini buat track semua aset kamu — dari tabungan Rp 500.000 sampai motor. Mulai dari yang kecil dulu!',
+  cta: 'Catat aset pertama',
 } as const
 
 /** label status lunas (satu ejaan untuk seluruh halaman Kekayaan) */

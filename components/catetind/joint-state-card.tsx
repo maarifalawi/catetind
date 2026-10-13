@@ -1,7 +1,7 @@
 'use client'
 
 import { HeartHandshake, Hourglass, ListChecks, Wallet } from 'lucide-react'
-import { JOINT_PERSONAL_CASH_COPY, JOINT_STATE_COPY } from '@/lib/data/joint'
+import { JOINT_PERSONAL_CASH_COPY, JOINT_STATE_COPY, JOINT_STEP_COPY } from '@/lib/data/joint'
 import { cn } from '@/lib/utils'
 
 /* ── KONDISI KANTONG BERSAMA: TIGA KEADAAN (paket 61.3) ─────────────────────
@@ -35,9 +35,48 @@ const STATE_TONE = {
 export function JointStateCard({ state }: { state: 'empty' | 'waiting' | 'active' }) {
   const copy = JOINT_STATE_COPY[state]
   const Icon = STATE_ICON[state]
+  /* H9-2 - indeks langkah yang sedang berjalan (0..2) */
+  const stepIndex = state === 'empty' ? 0 : state === 'waiting' ? 1 : 2
 
   return (
     <section className="mt-3 rounded-[1.75rem] bg-cream px-5 py-4 ring-1 ring-soil/10">
+      {/* H9-2 (audit UI/UX): bar progres 3 langkah supaya user tahu ia sedang
+          di langkah mana. */}
+      <div role="group" aria-label={JOINT_STEP_COPY.aria} className="mb-3.5 flex items-center gap-1.5">
+        {JOINT_STEP_COPY.steps.map((label, i) => {
+          const done = state === 'active' || i < stepIndex
+          const current = !done && i === stepIndex
+          const mark = done
+            ? JOINT_STEP_COPY.marks.done
+            : current
+              ? JOINT_STEP_COPY.marks.current
+              : JOINT_STEP_COPY.marks.todo
+          return (
+            <div key={label} className="flex flex-1 items-center gap-1.5">
+              <span
+                className={cn(
+                  'flex size-5 shrink-0 items-center justify-center rounded-full text-[10px]',
+                  done ? 'bg-mint/40' : current ? 'bg-hud-amber/30' : 'bg-soil/[0.08]',
+                )}
+                aria-hidden
+              >
+                {mark}
+              </span>
+              <span
+                className={cn(
+                  'truncate text-[10.5px] font-medium',
+                  done || current ? 'text-forest/70' : 'text-forest/40',
+                )}
+              >
+                {label}
+              </span>
+              {i < JOINT_STEP_COPY.steps.length - 1 && (
+                <span aria-hidden className="h-px flex-1 bg-soil/12" />
+              )}
+            </div>
+          )
+        })}
+      </div>
       <div className="flex items-start gap-3">
         <span
           className={cn(

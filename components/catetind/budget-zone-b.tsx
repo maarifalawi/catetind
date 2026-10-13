@@ -1,8 +1,10 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import { Sprout } from 'lucide-react'
 import { SinkingFundCard } from './sinking-fund-card'
 import {
+  BUDGET_ADD_PLACEHOLDER,
   BUDGET_ZONE_B_COPY,
   NUDGE_COPY,
   SOCIAL_PROOF_COPY,
@@ -158,14 +160,24 @@ export function BudgetZoneB({
         </div>
       )}
 
-      {/* ── 4C. TANAM CELENGAN BARU ──────────────────────────────────────── */}
+      {/* ── 4C. TANAM CELENGAN BARU — H5-5 (audit UI/UX): card placeholder yang
+          mengajak, bukan text link bergaris putus-putus. ──────────────────── */}
       <button
         type="button"
         onClick={onAddGoal}
-        className="flex w-full items-center justify-center gap-2 rounded-[1.4rem] border-2 border-dashed border-oat bg-cream/45 px-4 py-4 text-[12.5px] font-medium text-forest/45 transition-all hover:border-forest/25 hover:bg-cream hover:text-forest active:scale-[0.99]"
+        className="group flex w-full items-center gap-3 rounded-[1.5rem] border border-dashed border-forest/20 bg-gradient-to-br from-mint/25 to-cream px-4 py-3.5 text-left transition-all hover:border-forest/35 hover:shadow-[0_18px_40px_-30px_rgba(0,0,0,0.5)] active:scale-[0.99]"
       >
-        <span className="text-[15px] leading-none">+</span>
-        {BUDGET_ZONE_B_COPY.addCta}
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-cream text-forest ring-1 ring-soil/12 transition-transform duration-300 group-hover:scale-105">
+          <Sprout className="size-5" strokeWidth={2.4} aria-hidden />
+        </span>
+        <span className="min-w-0">
+          <span className="block text-[13px] font-medium text-forest">
+            {BUDGET_ADD_PLACEHOLDER.goalTitle}
+          </span>
+          <span className="mt-0.5 block text-[11.5px] leading-relaxed text-forest/50">
+            {BUDGET_ADD_PLACEHOLDER.goalBody}
+          </span>
+        </span>
       </button>
 
       {/* ── social proof (muted, di paling bawah) ─────────────────────────── */}

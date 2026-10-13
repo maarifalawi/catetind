@@ -330,14 +330,13 @@ export const AI_ADDON_PACKAGES: AiAddonPackage[] = [
 export const AI_RESET_RULE_COPY =
   'Kuota dasar di-reset tanggal 1 tiap bulan. Token add-on tidak hangus.'
 
-/* Satu tanggal kanon (audit fintech Stage 2 #6): label tanggal & sisa hari
-   DITURUNKAN dari sini, jadi tidak ada dua konstanta mock yang bisa lupa
-   disinkronkan. Tanggal ditulis sebagai `YYYY-MM-DD` + hari "hari ini" mock —
-   dua string tetap, gaya tanggal mock halaman lain (bukan `new Date()`),
-   supaya HTML server & client identik. */
-export const AI_QUOTA_RESET_ISO = '2026-10-01'
-/** hari "hari ini" mock — pembanding tanggal reset di atas */
-export const AI_QUOTA_TODAY_ISO = '2026-09-27'
+/* Tanggal reset TIDAK lagi konstanta mock (paket 86). Dulu label tanggal &
+   sisa hari dipatok ke dua string tetap ('2026-10-01' / '2026-09-27'), jadi di
+   produksi user melihat "reset 1 Oktober 2026" selamanya. Sekarang keduanya
+   DITURUNKAN dari satu fungsi murni ber-argumen `Date` — lihat `aiQuotaResetInfo`
+   di bawah — sehingga tanggalnya NYATA (awal bulan depan) tapi tetap bisa diuji
+   tanpa jam mesin dan tetap bebas hydration mismatch (komponen mengisinya lewat
+   `useAiQuotaReset()` SETELAH mount). */
 
 const RESET_MONTHS_LONG = [
   'Januari',
@@ -370,11 +369,58 @@ export function daysUntil(fromIso: string, toIso: string): number {
   return Math.max(0, Math.round((to - from) / 86_400_000))
 }
 
-/** tanggal reset berikutnya (mock) — TURUNAN dari tanggal kanon di atas */
-export const AI_QUOTA_RESET_DATE = indonesianDateLabel(AI_QUOTA_RESET_ISO)
-/** sisa hari menuju reset — TURUNAN dari tanggal kanon & hari mock di atas,
- *  jadi dua angka ini tidak mungkin lagi berbeda cerita */
-export const AI_QUOTA_RESET_DAYS = daysUntil(AI_QUOTA_TODAY_ISO, AI_QUOTA_RESET_ISO)
+/* ── 6b. TANGGAL RESET NYATA (paket 86) ──────────────────────────────────────
+   Satu sumber, dua turunan: `iso` (tanggal), `label` (ditulis Indonesia), dan
+   `daysUntil` (sisa hari) SEMUANYA lahir dari fungsi murni ini, jadi tidak
+   mungkin lagi label berkata "1 Oktober" sementara hitungan harinya milik bulan
+   lain. Argumennya `Date` NYATA, tapi fungsinya murni — bisa diuji dengan
+   tanggal apa pun tanpa menyentuh jam mesin (pola yang sama dengan `daysUntil`).
+   Komponen membacanya lewat `useAiQuotaReset()` SESUDAH mount supaya HTML server
+   & render pertama client tetap identik (bebas hydration mismatch, §8). */
+
+/** label netral saat tanggal belum terbaca (render pertama, sebelum mount) */
+export const AI_QUOTA_RESET_FALLBACK = 'awal bulan depan'
+
+export interface AiQuotaReset {
+  /** tanggal reset berikutnya `YYYY-MM-DD` (awal bulan depan, waktu lokal) */
+  iso: string
+  /** label panjang, mis. "1 November 2026" */
+  label: string
+  /** sisa hari menuju reset (0 = hari ini) */
+  daysUntil: number
+  /** kunci bulan berjalan `YYYY-MM` — kunci baris yang SAMA dengan `ai_usage` */
+  monthKey: string
+}
+
+/** `Date` → `YYYY-MM-DD` waktu LOKAL (bukan UTC), supaya batas bulan ikut user */
+function localISODateOnly(date: Date): string {
+  const month = `${date.getMonth() + 1}`.padStart(2, '0')
+  const day = `${date.getDate()}`.padStart(2, '0')
+  return `${date.getFullYear()}-${month}-${day}`
+}
+
+/** `Date` → `YYYY-MM` (kunci bulan `ai_usage`). SATU definisi — dipakai juga
+ *  oleh `lib/supabase/ai-usage-remote.ts` supaya kuncinya tidak pernah beda. */
+export function monthKeyOf(date: Date): string {
+  return localISODateOnly(date).slice(0, 7)
+}
+
+/**
+ * Info reset kuota dasar dari waktu NYATA: reset = tanggal 1 BULAN DEPAN
+ * (kanon PRD 4800–4802). Selisih harinya memakai pembanding tanggal-lokal
+ * (`daysUntil`), jadi tidak goyah karena UTC seperti selisih jam.
+ */
+export function aiQuotaResetInfo(now: Date): AiQuotaReset {
+  const todayIso = localISODateOnly(now)
+  const reset = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+  const iso = localISODateOnly(reset)
+  return {
+    iso,
+    label: indonesianDateLabel(iso),
+    daysUntil: daysUntil(todayIso, iso),
+    monthKey: monthKeyOf(now),
+  }
+}
 
 /* ── 7. COPY HALAMAN BILLING & KARTU SIDEBAR ────────────────────────────────
    Judul kartu + kalimat aturan reset dipakai di lebih dari satu komponen, jadi

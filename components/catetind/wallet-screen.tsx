@@ -178,6 +178,9 @@ export function WalletScreen() {
    * dengan yang dilihat user, bukan dari salinan yang bisa basi.
    */
   const [pendingWalletDelete, setPendingWalletDelete] = useState<WalletAccount | null>(null)
+  /* H4-2 (audit UI/UX) — toggle "komposisi tanpa dompet terbesar": kalau satu
+     dompet mendominasi bar (mis. 99%), user bisa melihat komposisi sisanya. */
+  const [hideLargest, setHideLargest] = useState(false)
   /**
    * Bukti hapus dompet yang hak Undo-nya MASIH hidup. Disimpan di ref karena ia
    * bukan bahan render: hanya tombol Undo yang membacanya, dan bentuknya hilang
@@ -298,6 +301,21 @@ export function WalletScreen() {
     () => allWallets.map((wallet) => applyWalletTheme(wallet, themePrefs[wallet.id])),
     [allWallets, themePrefs],
   )
+  /* H4-2 — daftar & porsi untuk bar komposisi; saat toggle aktif, dompet
+     dengan saldo TERBESAR dikeluarkan supaya sisanya terbaca. */
+  const compositionWallets = useMemo(() => {
+    if (!hideLargest || themedWallets.length <= 1) return themedWallets
+    let maxIdx = 0
+    themedWallets.forEach((w, i) => {
+      if (w.balance > themedWallets[maxIdx].balance) maxIdx = i
+    })
+    return themedWallets.filter((_, i) => i !== maxIdx)
+  }, [themedWallets, hideLargest])
+  const compositionShares = useMemo(() => {
+    const sum = compositionWallets.reduce((s, w) => s + w.balance, 0)
+    if (sum <= 0) return compositionWallets.map(() => 0)
+    return compositionWallets.map((w) => Math.round((w.balance / sum) * 100))
+  }, [compositionWallets])
 
   /* ── 2. TAMBAH DOMPET — dari ghost card rail & tombol "Lainnya" ───────────
      Rail "Tambah Dompet Cepat" adalah JALAN MASUK utama menambah dompet, jadi
@@ -604,8 +622,22 @@ export function WalletScreen() {
                   </span>
                   {/* komposisi ini memecah TOTAL di atas — jadi ia memuat seluruh
                       dompet, bukan hanya konteks aktif (kanon paket 47 #1) */}
-                  <span className="text-[10.5px] font-medium text-cream/40 tabular-nums">
-                    {WALLET_TOTAL_COPY.compositionAccounts(allWallets.length)}
+                  <span className="flex shrink-0 items-center gap-2">
+                    {themedWallets.length > 1 && (
+                      <button
+                        type="button"
+                        aria-pressed={hideLargest}
+                        onClick={() => setHideLargest((prev) => !prev)}
+                        className="rounded-full bg-cream/10 px-2.5 py-1 text-[10px] font-medium text-cream/75 ring-1 ring-inset ring-cream/20 transition-colors hover:bg-cream/20 active:scale-95"
+                      >
+                        {hideLargest
+                          ? WALLET_TOTAL_COPY.compositionShowAll
+                          : WALLET_TOTAL_COPY.compositionHideLargest}
+                      </button>
+                    )}
+                    <span className="text-[10.5px] font-medium text-cream/40 tabular-nums">
+                      {WALLET_TOTAL_COPY.compositionAccounts(compositionWallets.length)}
+                    </span>
                   </span>
                 </div>
 
@@ -615,19 +647,19 @@ export function WalletScreen() {
                 <div className="mt-3 flex h-2.5 w-full overflow-hidden rounded-full">
                   {/* warna segmen dibaca dari `themedWallets` — dompet + tema
                       yang benar-benar dirender (paket 77), bukan resep mentah */}
-                  {themedWallets.map((wallet, i) => (
+                  {compositionWallets.map((wallet, i) => (
                     <motion.span
                       key={wallet.id}
                       className={cn('h-full', wallet.color)}
                       initial={{ width: 0 }}
-                      animate={{ width: `${shares[i]}%` }}
+                      animate={{ width: `${compositionShares[i]}%` }}
                       transition={{ duration: 0.8, delay: 0.15 + i * 0.07, ease: EASE }}
                     />
                   ))}
                 </div>
 
                 <div className="mt-3 flex flex-wrap gap-1.5">
-                  {themedWallets.map((wallet, i) => (
+                  {compositionWallets.map((wallet, i) => (
                     <span
                       key={wallet.id}
                       className="inline-flex items-center gap-1.5 rounded-full bg-cream/[0.06] py-1 pl-1.5 pr-2.5 text-[11px] ring-1 ring-inset ring-cream/[0.08]"
@@ -637,7 +669,7 @@ export function WalletScreen() {
                       />
                       <span className="font-medium text-cream/80">{wallet.name}</span>
                       <span className="font-medium tabular-nums text-cream/50">
-                        {shares[i]}%
+                        {compositionShares[i]}%
                       </span>
                     </span>
                   ))}
@@ -942,7 +974,7 @@ export function WalletScreen() {
                       aria-label={`Opsi untuk ${wallet.name}`}
                       aria-haspopup="menu"
                       aria-expanded={openMenuId === wallet.id}
-                      className="relative z-20 flex size-9 shrink-0 items-center justify-center rounded-full bg-cream/20 text-cream ring-1 ring-inset ring-cream/35 backdrop-blur-[2px] transition-all hover:bg-cream/35 active:scale-95"
+                      className="relative z-20 flex size-11 shrink-0 items-center justify-center rounded-full bg-cream/20 text-cream ring-1 ring-inset ring-cream/35 backdrop-blur-[2px] transition-all hover:bg-cream/35 active:scale-95"
                     >
                       <MoreHorizontal className="size-4" strokeWidth={2.4} />
                     </button>

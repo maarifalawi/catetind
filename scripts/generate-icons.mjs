@@ -1,5 +1,5 @@
-/* ── Generator ikon app (favicon TIDAK digenerate — sekarang langsung
-   `/LOGO.png`, lihat app/layout.tsx; yang ini untuk HOME SCREEN) ─────────────
+/* ── Generator ikon aset brand (favicon TIDAK digenerate — sekarang langsung
+   `/LOGO.png`, lihat app/layout.tsx; yang di sini: ikon HOME SCREEN) ────────
    Membuat ikon kotak penuh (full-bleed) dari wordmark resmi `Dashboard.png`
    (PAKET 70 — dulu `LOGO CATETIND.png`; dua-duanya artwork gelap di kanvas
    transparan dengan rasio ±3.63:1, jadi tata letaknya sama):
@@ -9,7 +9,14 @@
 
    Pakai: node scripts/generate-icons.mjs
    Output: public/icons/icon-192.png, public/icons/icon-512.png,
-           public/icons/apple-icon.png (180×180)
+           public/icons/apple-icon.png (180×180) + public/apple-icon.png
+
+   Mark AI Coach (`public/logo-ai.png`) TIDAK digenerate di sini. PAKET 94
+   (revisi 3): pemilik produk menaruh artwork-nya sendiri di `public/logo-ai.png`
+   dan memintanya dipakai APA ADANYA — tanpa crop, tanpa resize, tanpa latar
+   tambahan — jadi skrip ini tidak boleh menyentuh file itu lagi. Kalau isinya
+   diganti, tidak ada yang perlu dijalankan di sini; cukup pastikan `width`/
+   `height` di `components/catetind/ai-avatar.tsx` ikut ukuran file barunya.
 
    Catatan: `sharp` bukan dependency langsung project (dia ikut bawaan Next),
    jadi modulnya dicari dulu di node_modules, lalu di store pnpm (.pnpm). */

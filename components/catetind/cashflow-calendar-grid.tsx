@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { maskMoney } from '@/lib/data/history'
@@ -10,9 +11,11 @@ import {
   CALENDAR_LOOK_WORD,
   CALENDAR_WEEKDAYS,
   calendarCellLook,
+  calendarCellSpendLabel,
   shortDateLabel,
   type CalendarCell,
   type CalendarGrid,
+  type CalendarLook,
   type PeriodMode,
   type PeriodSummary,
 } from '@/lib/data/calendar'
@@ -107,6 +110,12 @@ export function CashflowCalendarGrid({
     { id: 'payday', label: `Siklus Gajian (Tgl ${paydayDate})`, short: 'Siklus Gajian' },
   ]
 
+  /* H7-1 (audit UI/UX) — filter muka sel dari legenda. Legenda pindah ke ATAS
+     kalender sebagai pills yang bisa ditap: menap satu pill menyorot muka itu
+     dan meredupkan sel lain; menap lagi melepas filternya. Ini pengganti
+     legenda kecil yang dulu mengendap di bawah grid. */
+  const [filterLook, setFilterLook] = useState<CalendarLook | null>(null)
+
   return (
     <section className="rounded-[2rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] ring-1 ring-soil/12 sm:p-6">
       {/* ── 2A. HEADER: judul periode + navigator ────────────────────────────
@@ -195,6 +204,45 @@ export function CashflowCalendarGrid({
       {/* ── PANEL GRID: kepala kolom + 7×5–6 sel ─────────────────────────────
           `pt-11` menyediakan ruang vertikal untuk bubble yang melayang di atas
           baris pertama — pola yang sama dengan heatmap Riwayat. */}
+      {/* ── H7-1. LEGENDA DI ATAS GRID (pills bisa ditap = filter) ──────────────
+          Audit UI/UX meminta legenda naik ke atas kalender sebagai pills
+          horizontal yang bisa difilter/ditap, bukan keterangan kecil di bawah.
+          Menap satu pill menyorot muka sel itu (sel lain meredup & jadi
+          `aria-hidden` visual), menap lagi melepas. */}
+      <div
+        role="group"
+        aria-label="Keterangan warna kalender"
+        className="mt-3 flex flex-wrap items-center gap-1.5"
+      >
+        <span className="mr-0.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-forest/35">
+          Warna
+        </span>
+        {CALENDAR_LEGEND.map((item) => {
+          const active = filterLook === item.id
+          return (
+            <button
+              key={item.id}
+              type="button"
+              aria-pressed={active}
+              onClick={() => setFilterLook((prev) => (prev === item.id ? null : item.id))}
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-full py-1 pl-1.5 pr-2.5 text-[11px] font-medium transition-colors duration-200 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/30',
+                active ? 'bg-sage text-forest ring-1 ring-forest/25' : 'text-forest/55 hover:bg-sage/40',
+              )}
+            >
+              <span
+                aria-hidden
+                className={cn(
+                  'size-3.5 rounded-full ring-1 ring-inset ring-soil/16',
+                  CALENDAR_LOOK_CELL[item.id],
+                )}
+              />
+              {item.label}
+            </button>
+          )
+        })}
+      </div>
+
       <div
         role="group"
         aria-label="Kalender cashflow, satu sel per tanggal"
@@ -225,6 +273,7 @@ export function CashflowCalendarGrid({
                   row={rowIdx}
                   selected={cell.date === selectedDate}
                   masked={masked}
+                  filterLook={filterLook}
                   onSelect={onSelectDate}
                 />
               ))}
@@ -234,21 +283,6 @@ export function CashflowCalendarGrid({
       </div>
 
       {/* ── legenda makna warna: lima muka sel, label sependek mungkin ─────── */}
-      <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-[11px] text-forest/45">
-        <span className="font-medium">Keterangan</span>
-        {CALENDAR_LEGEND.map((item) => (
-          <span key={item.id} className="inline-flex items-center gap-1.5">
-            <span
-              aria-hidden
-              className={cn(
-                'size-3 rounded-[4px] ring-1 ring-inset ring-soil/12',
-                CALENDAR_LOOK_CELL[item.id],
-              )}
-            />
-            {item.label}
-          </span>
-        ))}
-      </div>
     </section>
   )
 }
@@ -265,6 +299,7 @@ function CalendarDayCell({
   row,
   selected,
   masked,
+  filterLook,
   onSelect,
 }: {
   cell: CalendarCell
@@ -272,11 +307,19 @@ function CalendarDayCell({
   row: number
   selected: boolean
   masked: boolean
+  /** H7-1 — muka sel yang sedang disorot lewat pills legenda (null = semua) */
+  filterLook: CalendarLook | null
   onSelect: (iso: string) => void
 }) {
   if (!cell.inPeriod) return <span aria-hidden />
 
   const look = calendarCellLook(cell)
+  /* H7-1 — saat satu muka difilter, sel lain diredupkan supaya pola hari itu
+     langsung terbaca. */
+  const dimmed = filterLook !== null && filterLook !== look
+  /* H7-3 — nominal pengeluaran ringkas DI DALAM sel (tanggal merah tidak lagi
+     tanpa penjelasan). */
+  const spendLabel = calendarCellSpendLabel(cell, masked)
   /* latar gelap (boros/surplus) butuh cincin pemilih berwarna terang supaya
      tanggal yang sedang dipilih tetap kelihatan */
   const darkFill = look === 'deficit' || look === 'surplus'
@@ -299,8 +342,9 @@ function CalendarDayCell({
         aria-label={ariaLabel}
         title={ariaLabel}
         className={cn(
-          'relative flex aspect-square w-full items-center justify-center rounded-[10px] text-[11.5px] font-medium tabular-nums ring-1 ring-inset ring-soil/8 transition-[transform,background-color,box-shadow] duration-200 animate-[fade-pop_0.4s_ease_backwards] hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40 sm:aspect-auto sm:min-h-[56px] sm:text-[12.5px] lg:min-h-[68px]',
+          'relative flex aspect-square w-full items-center justify-center rounded-[10px] text-[11.5px] font-medium tabular-nums ring-1 ring-inset ring-soil/8 transition-[transform,background-color,box-shadow,opacity] duration-200 animate-[fade-pop_0.4s_ease_backwards] hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40 sm:aspect-auto sm:min-h-[56px] sm:text-[12.5px] lg:min-h-[68px]',
           CALENDAR_LOOK_CELL[look],
+          dimmed && 'opacity-25',
           selected
             ? darkFill
               ? 'ring-2 ring-inset ring-cream/80'
@@ -310,8 +354,23 @@ function CalendarDayCell({
         style={{ animationDelay: `${(row * 7 + col) * 10}ms` }}
       >
         {cell.day}
+        {/* H7-2 — pemisah visual akhir pekan: muka sel diberi bayangan hijau
+            tipis supaya Sabtu/Minggu tidak menyatu dengan hari kerja. Overlay
+            (bukan latar) supaya tiap muka sel tetap memakai warnanya sendiri. */}
+        {cell.isWeekend && (
+          <span aria-hidden className="pointer-events-none absolute inset-0 rounded-[10px] bg-forest/[0.06]" />
+        )}
+        {/* H7-3 — nominal pengeluaran ringkas di dalam sel */}
+        {spendLabel && (
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 bottom-0.5 truncate px-0.5 text-center text-[8px] font-medium leading-none opacity-80 sm:bottom-1 sm:text-[8.5px]"
+          >
+            {spendLabel}
+          </span>
+        )}
         {/* titik "hari ini" — memakai `bg-current` supaya kontras di semua muka sel */}
-        {cell.isToday && (
+        {cell.isToday && !spendLabel && (
           <span
             aria-hidden
             className="absolute bottom-1.5 left-1/2 size-1 -translate-x-1/2 rounded-full bg-current opacity-60"

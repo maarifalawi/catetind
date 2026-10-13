@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   AlertTriangle,
@@ -30,6 +30,7 @@ import {
   maskMoney,
   priceUpdatedLabel,
   stalePriceWarning,
+  WEALTH_ROW_ACTION,
   type AssetTransaction,
   type Investment,
 } from '@/lib/data/wealth'
@@ -47,15 +48,22 @@ import { CONTEXT_LABEL } from '@/lib/data/money-context'
        (audit fintech #3) supaya selalu berjumlah tepat 100%.
    5C. "Detail per Aset" — accordion. Progressive disclosure-nya: user yang cuma
        mau tahu total bisa melipat daftarnya, yang mau audit membuka satu per
-       satu. Di dalam setiap kartu: geser KIRI → Edit (amber) + Hapus
-       (terracotta), tap → riwayat beli/jual aset itu.
-        Geser kiri → "Edit" kini membuka sheet edit aset yang benar-benar
-        menyimpan (paket 17). Riwayat beli/jual adalah TURUNAN dari ledger
-        transaksi aset (`assetHistory`); aset tanpa baris ledger menampilkan
-        empty state jujur, bukan daftar kosong.
+       satu. Tap pada kartu → riwayat beli/jual aset itu, dan di BAWAH setiap
+       kartu hidup baris aksi yang SELALU terlihat — `[✏️ Edit] [🗑️ Hapus]`
+       (`AssetActionRow`). Aksi itu DULU hanya muncul setelah kartu digeser
+       kiri; gestur yang tidak terbaca sebagai tombol, dan user menyimpulkan
+       asetnya "tidak bisa diedit / dihapus". Kini tidak ada lagi kemampuan
+       yang harus ditebak — dan kartunya sendiri jadi lebih sederhana karena
+       tidak lagi memegang gesture pointer.
+       "Edit" membuka sheet edit aset yang benar-benar menyimpan (paket 17).
+       Riwayat beli/jual adalah TURUNAN dari ledger transaksi aset
+       (`assetHistory`); aset tanpa baris ledger menampilkan empty state jujur,
+       bukan daftar kosong.
 
-       AFFORDANCE (audit fintech #6): setiap kartu punya chevron ">" + hover
-       state jelas — tidak lagi mengandalkan teks instruksi kecil.
+       AFFORDANCE (audit fintech #6 + masukan langsung user): setiap kartu punya
+       chevron ">" + hover state jelas, DAN aksi Edit/Hapus selalu kelihatan
+       sebagai tombol berLABEL — tidak lagi mengandalkan teks instruksi kecil
+       atau gestur tersembunyi.
    5D. Banner amber per aset kalau harganya basi (crypto > 10 menit, lain-lain
        > 24 jam) + tombol "Update Manual" — satu sumber gagal tidak mematikan
        aset lain (fallback protocol PRD 2E.1 poin 5). TIDAK ada banner agregat
@@ -164,12 +172,56 @@ export function WealthInvestasi({
   )
 }
 
-/* ── 5C + 5D: kartu aset (geser kiri = Edit/Hapus, tap = riwayat) ──────────── */
+/* ── BARIS AKSI KARTU ASET — SELALU TERLIHAT ─────────────────────────────────
+   Sebelum ini Edit & Hapus hanya muncul setelah kartu DIGESER KIRI (`dx`) —
+   gestur yang tidak terlihat sebelum user mencobanya sendiri, sehingga banyak
+   user menyimpulkan aset investasinya "tidak bisa diedit / dihapus" (utang
+   desain yang sama sudah dipensiunkan di kartu hutang lewat paket 61.1).
+   Sekarang aksinya duduk di baris tombol yang selalu tampak, tinggi 40 px
+   (zona jempol di 375 px) dan berLABEL teks — bukan ikon telanjang:
 
-/** lebar area aksi yang tersingkap (px) — dua tombol di kanan */
-const REVEAL_ACTIONS = 168
-/** ambang snap: geseran > 44px langsung membuka penuh */
-const SNAP = 44
+     [ ✏️ Edit ]   [ 🗑️ Hapus ]
+
+   Warna & bentuknya disamakan dengan `DebtActionRow` di wealth-hutang.tsx
+   (amber = mengubah, terracotta = membuang) supaya dua kartu di halaman yang
+   sama tidak memakai dua bahasa aksi. Komponen ini MURNI tampilan: halaman
+   (`wealth-screen.tsx`) yang memutuskan apa yang terjadi — sheet edit, dialog
+   konfirmasi, dan jendela Undo-nya. */
+function AssetActionRow({
+  name,
+  onEdit,
+  onDelete,
+}: {
+  /** nama aset — hanya untuk `aria-label`, karena "Edit" telanjang ambigu */
+  name: string
+  onEdit: () => void
+  onDelete: () => void
+}) {
+  return (
+    <div className="mt-2 flex w-full items-stretch gap-2">
+      <button
+        type="button"
+        onClick={onEdit}
+        aria-label={WEALTH_ROW_ACTION.editAria(name)}
+        className="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-2xl bg-hud-amber/25 text-[12px] font-medium text-forest ring-1 ring-inset ring-hud-amber/40 transition-colors hover:brightness-105 active:scale-[0.98]"
+      >
+        <Pencil className="size-3.5 shrink-0" strokeWidth={2.6} aria-hidden />
+        {WEALTH_ROW_ACTION.edit}
+      </button>
+      <button
+        type="button"
+        onClick={onDelete}
+        aria-label={WEALTH_ROW_ACTION.removeAria(name)}
+        className="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-2xl bg-hud-terracotta/15 text-[12px] font-medium text-hud-terracotta ring-1 ring-inset ring-hud-terracotta/25 transition-colors hover:brightness-105 active:scale-[0.98]"
+      >
+        <Trash2 className="size-3.5 shrink-0" strokeWidth={2.6} aria-hidden />
+        {WEALTH_ROW_ACTION.remove}
+      </button>
+    </div>
+  )
+}
+
+/* ── 5C + 5D: kartu aset (tap = riwayat, aksi selalu terlihat di bawah) ────── */
 
 function AssetCard({
   asset,
@@ -199,111 +251,25 @@ function AssetCard({
   const profit = ret.value >= 0
   const history = assetHistory(transactions, asset.id)
 
-  const [dx, setDx] = useState(0)
-  const [dragging, setDragging] = useState(false)
-  const startX = useRef<number | null>(null)
-  const moved = useRef(false)
-
-  const clamp = (value: number) => Math.max(-REVEAL_ACTIONS, Math.min(0, value))
-
-  const onPointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
-    /* Tombol aksi DI DALAM kartu (banner amber "Update Manual" & tombol
-       "Update Harga") TIDAK boleh memulai gesture tarik. Kalau kartu ini yang
-       memegang pointer (setPointerCapture di bawah), browser me-retarget event
-       `click` ke tombol kartu — akibatnya tombol kecil itu tidak pernah menerima
-       pencetan. Itulah kenapa "Update Harga"/"Update Manual" terasa mati walau
-       store-nya (`updateInvestmentPrice`) sudah benar: pencetannya tidak sampai.
-       Kedua tombol itu ditandai `data-no-drag`, dan di sini gesture-nya dilepas. */
-    if ((event.target as HTMLElement).closest('[data-no-drag]')) return
-    startX.current = event.clientX
-    moved.current = false
-    event.currentTarget.setPointerCapture(event.pointerId)
-  }
-
-  const onPointerMove = (event: React.PointerEvent<HTMLButtonElement>) => {
-    if (startX.current === null) return
-    const distance = event.clientX - startX.current
-    if (Math.abs(distance) > 6) {
-      moved.current = true
-      setDragging(true)
-    }
-    setDx(clamp(distance))
-  }
-
-  /** lepas jari: snap ke lebar penuh kalau lewat ambang, kalau tidak tutup */
-  const settle = () => {
-    if (startX.current === null) return
-    startX.current = null
-    setDragging(false)
-    setDx((value) => (Math.abs(value) > SNAP ? -REVEAL_ACTIONS : 0))
-  }
-
-  /** tap: kalau barusan menggeser cukup tutup area aksi, kalau tidak buka detail */
-  const handleClick = () => {
-    if (moved.current) {
-      moved.current = false
-      setDx(0)
-      return
-    }
-    onToggle()
-  }
-
   return (
     <motion.li
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.34, delay, ease: [0.22, 1, 0.36, 1] }}
-      className="relative grid grid-cols-1"
+      className="relative"
     >
-      {/* Area aksi di belakang kartu (terungkap saat digeser kiri).
-
-          DULU `absolute inset-y-0 right-0`: tingginya mengikuti SELURUH <li>,
-          sementara <li> juga memuat panel riwayat beli/jual di bawah kartu.
-          Karena area ini `absolute` (positioned) dan panel riwayat `static`,
-          tombol Edit/Hapus justru MENIMPA panel riwayat walau kartu tidak
-          sedang digeser — itu tumpukan yang dilaporkan.
-
-          Sekarang area aksi jadi ITEM GRID di baris 1 (sebaris dengan kartu):
-          tingginya persis setinggi kartu, dan urutan catnya wajar (kartu di
-          atas, riwayat menyusul di baris berikutnya). */}
-      <div className="col-start-1 row-start-1 flex justify-end overflow-hidden rounded-[1.35rem]">
-        <button
-          type="button"
-          onClick={() => {
-            setDx(0)
-            onEdit()
-          }}
-          className="flex w-[84px] flex-col items-center justify-center gap-1 bg-hud-amber text-[10.5px] font-medium text-forest transition-colors hover:brightness-105"
-        >
-          <Pencil className="size-4" strokeWidth={2.4} />
-          Edit
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setDx(0)
-            onDelete()
-          }}
-          className="flex w-[84px] flex-col items-center justify-center gap-1 bg-hud-terracotta text-[10.5px] font-medium text-cream transition-colors hover:brightness-105"
-        >
-          <Trash2 className="size-4" strokeWidth={2.4} />
-          Hapus
-        </button>
-      </div>
-
+      {/* Kartu aset: TAP → riwayat beli/jual. Aksi Edit/Hapus TIDAK lagi
+          disembunyikan di balik geseran kiri — ia hidup sebagai baris tombol di
+          bawah kartu (`AssetActionRow`). Catatan teknis: karena kartu ini tidak
+          lagi memegang pointer (`setPointerCapture` dihapus), klik pada tombol
+          DI DALAM kartu (banner "Update Manual", pill "Update Harga") sampai
+          utuh tanpa penanda `data-no-drag` seperti dulu. */}
       <motion.button
         type="button"
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={settle}
-        onPointerCancel={settle}
-        onClick={handleClick}
+        onClick={onToggle}
         aria-expanded={expanded}
         aria-label={`${asset.name}, ${formatAssetQuantity(asset)}, nilai ${maskMoney(asset.currentValue, masked)}`}
-        animate={{ x: dx }}
-        transition={dragging ? { duration: 0 } : { type: 'spring', stiffness: 320, damping: 30 }}
-        style={{ touchAction: 'pan-y' }}
-        className="col-start-1 row-start-1 group relative w-full cursor-pointer touch-pan-y overflow-hidden rounded-[1.35rem] bg-cream px-3.5 py-3.5 text-left shadow-[0_10px_28px_-24px_rgba(0,0,0,0.6)] ring-1 ring-soil/10 transition-[box-shadow,background-color,ring-color] duration-200 outline-none hover:bg-cream hover:shadow-[0_18px_34px_-24px_rgba(0,0,0,0.75)] hover:ring-forest/20 focus-visible:ring-2 focus-visible:ring-forest/30"
+        className="group relative w-full cursor-pointer overflow-hidden rounded-[1.35rem] bg-cream px-3.5 py-3.5 text-left shadow-[0_10px_28px_-24px_rgba(0,0,0,0.6)] ring-1 ring-soil/10 transition-[box-shadow,background-color,ring-color] duration-200 outline-none hover:bg-cream hover:shadow-[0_18px_34px_-24px_rgba(0,0,0,0.75)] hover:ring-forest/20 focus-visible:ring-2 focus-visible:ring-forest/30"
       >
         {/* 5D — harga basi: banner amber tepat di atas isi kartu aset ini */}
         {stale && (
@@ -317,7 +283,6 @@ function AssetCard({
             <span
               role="button"
               tabIndex={0}
-              data-no-drag
               onClick={(event) => {
                 event.stopPropagation()
                 onUpdatePrice()
@@ -397,7 +362,6 @@ function AssetCard({
               <span
                 role="button"
                 tabIndex={0}
-                data-no-drag
                 aria-label={`Update harga ${asset.name}`}
                 onClick={(event) => {
                   event.stopPropagation()
@@ -431,6 +395,11 @@ function AssetCard({
           />
         </span>
       </motion.button>
+
+      {/* AKSI SELALU TERLIHAT — baris tombol Edit/Hapus (`AssetActionRow`).
+          Sengaja di LUAR kartu: tombol aksi tidak boleh bersarang di dalam
+          <button> kartu, dan tetap kelihatan walau kartunya sedang dilipat. */}
+      <AssetActionRow name={asset.name} onEdit={onEdit} onDelete={onDelete} />
 
       {/* ── sub-section inline: riwayat beli/jual aset ini ──────────────── */}
       <AnimatePresence initial={false}>

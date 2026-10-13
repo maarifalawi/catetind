@@ -108,11 +108,14 @@ export function InstallQrHandoff({ className }: { className?: string }) {
         </p>
       </div>
 
+      {/* H1-2 (audit UI/UX) — "Bagikan link" & "Salin link" adalah aksi
+          SEKUNDER: yang primer di halaman ini adalah tombol Install. Karena itu
+          keduanya bergaya tenang (outline/sage), bukan filled forest. */}
       <div className="mt-3 flex flex-col gap-2 sm:flex-row">
         <button
           type="button"
           onClick={shareLink}
-          className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-forest px-4 py-3 text-sm font-medium text-cream transition-colors duration-200 hover:bg-forest-soft active:scale-[0.98]"
+          className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-sage px-4 py-2.5 text-[13px] font-medium text-forest ring-1 ring-forest/10 transition-colors duration-200 hover:bg-sage/70 active:scale-[0.98]"
         >
           <Share2 className="size-4" strokeWidth={2.4} aria-hidden />
           {INSTALL_HANDOFF.shareLabel}
@@ -120,7 +123,7 @@ export function InstallQrHandoff({ className }: { className?: string }) {
         <button
           type="button"
           onClick={copyLink}
-          className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-sage px-4 py-3 text-sm font-medium text-forest transition-colors duration-200 hover:bg-forest hover:text-mint active:scale-[0.98]"
+          className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-cream px-4 py-2.5 text-[13px] font-medium text-forest/70 ring-1 ring-soil/12 transition-colors duration-200 hover:bg-sage/40 hover:text-forest active:scale-[0.98]"
         >
           {status === 'copied' ? (
             <Check className="size-4" strokeWidth={2.6} aria-hidden />

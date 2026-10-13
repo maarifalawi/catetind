@@ -449,6 +449,8 @@ export interface QuickAnswer {
   answer: string
   /** label topik tujuan (dicocokkan ke `HELP_TOPICS[].label` lewat `topicByLabel`) */
   topic: string
+  /** H11-3 — kartu keamanan/privasi ditandai "Paling Sering Ditanya" & lebih besar */
+  mostAsked?: boolean
 }
 
 export const HELP_QUICK_ANSWERS: QuickAnswer[] = [
@@ -461,6 +463,7 @@ export const HELP_QUICK_ANSWERS: QuickAnswer[] = [
   },
   {
     id: 'sembunyi-transaksi',
+    mostAsked: true,
     question: 'Cara nyembunyiin pengeluaran dari pasangan?',
     answer:
       'Di Dompet Kita, setiap transaksi punya toggle 🔒 Privat. Kalau kamu nyalain ini, pasanganmu tetap bisa lihat nominalnya masuk ke perhitungan patungan, tapi nama itemnya jadi "Pengeluaran Privat". Jadi nggak ketahuan beli apa, tapi duitnya tetap kejitung fair.',
@@ -581,7 +584,11 @@ export function searchHelp(query: string, topics: HelpTopic[] = HELP_TOPICS): He
 export const HELP_TITLE = 'Pusat Bantuan'
 export const HELP_SIDEBAR_TITLE = 'Topik'
 export const HELP_DEFAULT_TITLE = 'Sering Bikin Bingung'
-export const HELP_SEARCH_PLACEHOLDER = 'Cari bantuan... contoh: "cara sembunyiin transaksi"'
+/* H11-1 (audit UI/UX): placeholder dipendekkan (dulu contoh panjang ikut di
+   dalam placeholder) + saran pencarian ditampilkan saat user mulai mengetik. */
+export const HELP_SEARCH_PLACEHOLDER = 'Cari bantuan...'
+export const HELP_SUGGEST_LABEL = 'Saran:'
+export const HELP_MOST_ASKED_BADGE = '🔒 Paling Sering Ditanya'
 export const HELP_SEARCH_LABEL = 'Cari di pusat bantuan'
 export const HELP_RESULT_TITLE = 'Hasil pencarian'
 export const HELP_EMPTY_TITLE = 'Gue nggak nemu yang pas 😅'

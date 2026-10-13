@@ -1,3 +1,5 @@
+import { tokenizeCardClasses, usableCardColor } from './wallet-card-colors'
+
 export type WalletKind = 'bank' | 'ewallet' | 'cash'
 export type WalletArt = 'parang' | 'mendung' | 'kawung' | 'rings'
 
@@ -184,6 +186,55 @@ export function walletAccountsTotal(accounts: readonly WalletAccount[]): number 
   return accounts.reduce((sum, account) => sum + account.balance, 0)
 }
 
+/* ── WARNA MUKA KARTU DARI DATA (paket 88) ───────────────────────────────────
+   Warna kartu dompet datang dari DATABASE (lihat catatan kepala
+   `lib/wallet-card-colors.ts`), dan ada DUA cara sebuah kolom warnanya berhenti
+   berguna:
+
+     1. kelas hex pra-tokenisasi (`from-[#52685c]`) — ditulis sebelum palet
+        dipindah ke token, dan sejak itu TIDAK PERNAH digenerate Tailwind lagi;
+     2. kolom yang memang kosong (baris yang lahir lewat jalur yang tidak
+        menyimpan warna sama sekali).
+
+   Keduanya berakhir sama: `linear-gradient()` tanpa stop → muka kartu
+   transparan → nominal putih di atas latar terang. Karena itu fungsi warna di
+   bawah (`cardFaceOf`/`cardGlowOf`/`cardStopsOf`/`cardBandOf`) TIDAK PERNAH
+   mengembalikan kelas yang tidak bisa dirender: kelas lama di-tokenkan lebih
+   dulu, dan bila tetap tidak bisa dipakai kartunya jatuh ke resep kanon
+   (`WALLET_SEED` — keluarga Evergreen, sama seperti kartu brand).
+
+   Normalisasi dikerjakan DI SINI, bukan di `toWalletSeed` (mappers), karena
+   inilah satu-satunya pintu yang dilewati SEMUA sumber dompet — baris dari
+   Supabase maupun cache IndexedDB — jadi tidak ada jalur yang lolos.
+   ────────────────────────────────────────────────────────────────────────── */
+
+/** arah gradien muka kartu `/wallet` (muka kartu deck memakai arahnya sendiri) */
+const CARD_FACE_DIRECTION = 'bg-gradient-to-br'
+
+/** resep kanon yang dipakai bila kolom warna satu baris tidak bisa dipakai */
+const CARD_RECIPE_FALLBACK = WALLET_SEED[0]
+
+/**
+ * Muka kartu `/wallet` dari data dompet.
+ *
+ * Urutannya: `face` tersimpan → stop `faceClass` (arahnya ditambahkan di sini,
+ * jadi muka kartu `/wallet` & deck Home tidak mungkin berbeda warna untuk dompet
+ * yang sama) → resep kanon.
+ */
+function cardFaceOf(record: WalletSeed): string {
+  const stored = tokenizeCardClasses(record.face)
+  if (usableCardColor(stored)) return stored
+  const stops = tokenizeCardClasses(record.faceClass)
+  if (usableCardColor(stops)) return `${CARD_FACE_DIRECTION} ${stops}`
+  return CARD_RECIPE_FALLBACK.face
+}
+
+/** Halo aksen di belakang kartu `/wallet` dari data dompet (→ resep kanon) */
+function cardGlowOf(record: WalletSeed): string {
+  const stored = tokenizeCardClasses(record.color)
+  return usableCardColor(stored) ? stored : CARD_RECIPE_FALLBACK.color
+}
+
 /** dompet kanon → bentuk muka kartu halaman Dompet & Akun (`balance` dihitung store) */
 export function toWalletAccount(record: WalletSeed, balance: number): WalletAccount {
   return {
@@ -192,13 +243,25 @@ export function toWalletAccount(record: WalletSeed, balance: number): WalletAcco
     type: record.type,
     balance,
     ...(record.number ? { number: record.number } : {}),
-    color: record.color,
-    face: record.face,
+    color: cardGlowOf(record),
+    face: cardFaceOf(record),
     art: record.art,
     /* konteks ikut dibawa (paket 55): sheet pindah dana perlu tahu dompet tujuan
        ada di konteks uang mana, supaya pindah antar konteks tidak terjadi diam-diam */
     context: record.context,
   }
+}
+
+/** stop gradien muka kartu deck Home dari data dompet (→ resep kanon) */
+function cardStopsOf(record: WalletSeed): string {
+  const stored = tokenizeCardClasses(record.faceClass)
+  return usableCardColor(stored) ? stored : CARD_RECIPE_FALLBACK.faceClass
+}
+
+/** gelombang warna band kartu deck Home dari data dompet (→ resep kanon) */
+function cardBandOf(record: WalletSeed): string {
+  const stored = tokenizeCardClasses(record.bandClass)
+  return usableCardColor(stored) ? stored : CARD_RECIPE_FALLBACK.bandClass
 }
 
 /** dompet kanon → bentuk kartu deck Home (`balance` dihitung store) */
@@ -210,8 +273,10 @@ export function toHomeWallet(record: WalletSeed, balance: number): Wallet {
     number: record.number,
     network: record.network,
     balance,
-    bandClass: record.bandClass,
-    faceClass: record.faceClass,
+    bandClass: cardBandOf(record),
+    faceClass: cardStopsOf(record),
+    /* `glowClass` OPSIONAL: halo yang tidak tampil tidak menghilangkan nominal,
+       jadi kolomnya dibiarkan apa adanya (deck punya bawaannya sendiri) */
     glowClass: record.glowClass,
     art: record.art,
     kind: record.kind,

@@ -103,6 +103,12 @@ Detail prompt penjaga: `docs/theme/AGENT-PROMPT.md`.
 4. Memakai `bg-soil/[0.02]`–`[0.04]` sebagai border/isian (tak terlihat di putih).
 5. Memakai Oat (`bg-sage`) untuk permukaan besar — Oat hanya untuk elemen kecil
    (chip/pill, lingkaran ikon, hover, kotak info).
+6. Menyimpan kelas warna **ke data** dalam bentuk hex arbitrer (`from-[#52685c]`).
+   Tailwind hanya memindai source, jadi kelas yang datang dari database tidak
+   pernah digenerate — kartunya tampil polos/terang tanpa gradien. Kelas yang
+   disimpan wajib berupa token yang literalnya ada di source; penambal baris lama
+   ada di `lib/wallet-card-colors.ts` (dipakai `toWalletAccount`/`toHomeWallet`
+   di `lib/wallets.ts`).
 
 **Dasar & permukaan:** halaman **dan** kartu = **PUTIH** — `bg-canvas` dan
 `bg-cream`. Pemisah datang dari **hairline** `ring-soil/8`–`/16` + shadow
@@ -301,10 +307,16 @@ struktur yang **TIDAK BOLEH "diperbaiki balik"** oleh task berikutnya. Rincian:
 
 - **Idempotensi:** `clientTxId` dari `lib/client-tx.ts`; store menolak kunci kembar.
 
+- **Urutan Home di MOBILE (paket 87 · permintaan pemilik produk):** kartu DOMPET wajib jadi elemen konten PERTAMA — tidak boleh ada apa pun di atasnya. Strip notifikasi (banner AI / rekap mingguan / kartu "Hemat Rp …") TIDAK lagi hidup di luar grid; ia SEL GRID dengan `order-2` (mobile) & `lg:row-start-1` (desktop). Pemilih konteks di mobile = `ChoicePills` (di-**center**) DI DALAM panel dompet, tepat di bawah tumpukan kartu (`WalletCardStack`) — bukan baris tersendiri di atas dompet; desktop tetap `ContextMenu` di cluster header. Jangan mengembalikan strip/switcher ke atas dompet di mobile.
+
+- **Konteks uang = PILIHAN user (paket 87):** `UserMoneySettings.enabledContexts` (`lib/user-money-settings.ts`; `pribadi` selalu ikut; diwarisi dari modul onboarding — `joint_wallet`→Bersama, `sandwich_generation`→Keluarga, jadi user tidak ditanya dua kali). Pemilih konteks membaca `availableContexts()` (`lib/data/money-context.ts`) = `enabledContexts` ∪ konteks yang MASIH berisi dompet ∪ `pribadi`, dan MENYEMBUNYIKAN DIRI saat hasilnya < 2 (aturan "jangan render kontrol yang tidak mengontrol apa pun"). Konteks berisi dompet TIDAK boleh dimatikan — uang jangan tersembunyi. `useUserMoneySettings()` kini **reaktif** (`useSyncExternalStore` + `subscribeUserMoneySettings`); jangan mengembalikannya ke `useState`+`useEffect` sekali-baca, karena saklar di Pengaturan harus menyegarkan pemilih konteks di halaman lain.
+
+- **Nama baris Riwayat (paket 86, masih berlaku):** catatan kosong TIDAK jadi "Pengeluaran cepat"/"Pemasukan cepat". `recordDraftTransaction()` memakai `note` user → kalau kosong KATEGORI pilihannya → `TRANSACTION_DEFAULT_NAME` (kata "cepat" sudah dibuang) cuma jaring terakhir. Baris Riwayat: judul = nama, chip kategori di baris bawah.
+
 ### 10.3 Validasi wajib (DIPERBARUI — `pnpm test` masuk checklist)
 
 ```bash
-pnpm test          # 663 test / 41 file — wajib hijau, tidak boleh ada .skip
+pnpm test          # 1183 test / 88 file — wajib hijau, tidak boleh ada .skip
 pnpm exec tsc --noEmit
 pnpm build
 pnpm theme:audit
@@ -312,7 +324,7 @@ pnpm theme:audit
 
 Catatan mesin: pnpm lokal 9.12.0 sedangkan `package.json` menulis `packageManager: pnpm@12.3.4` (versi itu tidak ada) → tambahkan `--config.manage-package-manager-versions=false`; perbaiki field itu sebelum membuat CI.
 
-**Riwayat jumlah test:** 319/24 (basi, s/d paket 42) → **511/34** (terukur saat audit uang 28 Sep 2026) → **543/37** setelah paket 57 (tiga file baru: `lib/time.test.ts`, `lib/user-money-settings.test.ts`, `lib/data/budget.test.ts`) → **618/39** setelah paket 61 → **644/41** setelah paket 62 (dua file baru: `lib/money/wallet-delete.test.ts` 12 kasus + `lib/data/category-prefs.test.ts` 10 kasus, plus 4 kasus yang ditambahkan ke `export.test.ts`/`account.test.ts`) → **663/41** setelah paket 60 (+19 kasus di file yang sudah ada: `lib/data/budget.test.ts` 11→17 hapus budget 60.1, `lib/money/funds-store.test.ts` 16→24 hapus celengan 60.2, `lib/data/calendar.test.ts` 15→20 jangkar tanggal & siklus gajian 60.5). Angka 319 di §10.3 sebelumnya adalah sisa sebelum paket 43–56 dan sudah dikoreksi di sini.
+**Riwayat jumlah test:** 319/24 (basi, s/d paket 42) → **511/34** (terukur saat audit uang 28 Sep 2026) → **543/37** setelah paket 57 (tiga file baru: `lib/time.test.ts`, `lib/user-money-settings.test.ts`, `lib/data/budget.test.ts`) → **618/39** setelah paket 61 → **644/41** setelah paket 62 (dua file baru: `lib/money/wallet-delete.test.ts` 12 kasus + `lib/data/category-prefs.test.ts` 10 kasus, plus 4 kasus yang ditambahkan ke `export.test.ts`/`account.test.ts`) → **663/41** setelah paket 60 (+19 kasus di file yang sudah ada: `lib/data/budget.test.ts` 11→17 hapus budget 60.1, `lib/money/funds-store.test.ts` 16→24 hapus celengan 60.2, `lib/data/calendar.test.ts` 15→20 jangkar tanggal & siklus gajian 60.5) → **1162/87** terukur saat paket 87 bagian 1 (akumulasi paket 63–85: landing, pembayaran Midtrans, AI DeepSeek, backend Supabase, dsb) → **1172/87** setelah paket 87 bagian 2 (+10 kasus: `availableContexts`/`contextOptionsFor` & `enabledContexts`) → **1183/88** setelah paket 88 (satu file baru `lib/wallet-card-colors.test.ts` 11 kasus: kelas warna kartu dompet yang datang dari data — hex lama → token + jaring terakhir resep kanon). Angka 319 di §10.3 sebelumnya adalah sisa sebelum paket 43–56 dan sudah dikoreksi di sini.
 
 ### 10.4 Yang BELUM ada (jangan diklaim sudah selesai)
 

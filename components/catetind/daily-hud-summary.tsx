@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { AlertTriangle, CalendarDays, HandCoins, Settings2, Sparkles } from 'lucide-react'
 import {
+  BUDGET_REMAINING_HINT,
   HUD_COPY,
   MONEY_SETTINGS_HREF,
   maskNominal,
@@ -261,13 +262,22 @@ export function DailyHudSummary({
               hanya mengukur pemakaian HARI INI. */}
           <div className="relative mt-5 space-y-2.5">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11.5px] font-medium text-cream/60">
-              <span>
+              {/* H5-3 (audit UI/UX) — "Sisa periode" diberi penjelasan asalnya:
+                  tooltip untuk mouse + keterangan kecil di bawah, supaya angka
+                  besar tidak bikin bingung. */}
+              <span
+                title={BUDGET_REMAINING_HINT(maskNominal(income.amount, masked))}
+                className="cursor-help underline decoration-cream/25 decoration-dotted underline-offset-4"
+              >
                 {HUD_COPY.remainingLead}{' '}
                 <b className="font-semibold text-cream tabular-nums">
                   {maskNominal(hud.remaining, masked)}
                 </b>
               </span>
             </div>
+            <p className="text-[10.5px] leading-relaxed text-cream/45">
+              {BUDGET_REMAINING_HINT(maskNominal(income.amount, masked))}
+            </p>
             <div
               role="progressbar"
               aria-label={HUD_COPY.periodUsed(Math.round(periodPct * 100))}

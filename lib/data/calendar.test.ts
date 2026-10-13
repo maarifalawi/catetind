@@ -350,7 +350,11 @@ describe('kalender cashflow tanpa ramalan (paket 56)', () => {
     expect(cell.income).toBe(0)
     expect(cell.totalSpend).toBe(0)
     expect(cell.tone).toBe('none')
-    expect(calendarCellLook(cell)).toBe('empty')
+    /* H7-4 (audit UI/UX): hari mendatang yang kosong TIDAK lagi krem `empty`
+       (dulu terbaca seperti status hijau/"nol jajan") — ia muka `upcoming` yang
+       netral supaya kalender tidak menjanjikan apa pun untuk uang yang belum
+       terjadi. */
+    expect(calendarCellLook(cell)).toBe('upcoming')
     /* field ramalan benar-benar hilang dari kontrak sel, bukan cuma dikosongkan */
     expect('forecast' in cell).toBe(false)
     expect('plannedCount' in cell).toBe(false)

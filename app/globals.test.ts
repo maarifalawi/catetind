@@ -56,3 +56,39 @@ describe('kanvas dokumen — putih di semua keadaan tema', () => {
     expect(RULES).not.toMatch(/@apply[^;\n]*\bbg-background\b/)
   })
 })
+
+/* ── PERFORMA MOBILE (paket 86) ───────────────────────────────────────────────
+   Sisa biaya render yang bikin popup terasa "patah-patah" di HP: animasi HIAS di
+   latar (ayunan tanaman, kilau, denyut) tetap berjalan selama overlay terbuka.
+   Yang dikunci di sini: ketiga jalur kunci-overlay di repo ini benar-benar
+   memicu jeda itu, jedanya dibatasi ke elemen dekoratif (bukan seluruh halaman),
+   dan tidak menumbuk animasi panel/sheet (yang di-render lewat portal di luar
+   `[data-catetind-page-root]`). */
+describe('performa mobile — jeda animasi hias saat overlay terbuka', () => {
+  const PAUSE =
+    RULES.match(/[^{}]*\{[^}]*animation-play-state:\s*paused[^}]*\}/)?.[0] ?? ''
+
+  it('ada aturan yang menjeda animasi (bukan meniadakannya)', () => {
+    expect(PAUSE).not.toBe('')
+  })
+
+  it('dijeda lewat ketiga penanda kunci overlay yang dipakai app', () => {
+    for (const attr of [
+      "body[data-catetind-sheet-open='true']",
+      "body[data-catetind-overlay-open='true']",
+      'body[data-scroll-locked]',
+    ]) {
+      expect(PAUSE).toContain(attr)
+    }
+  })
+
+  it('ruang lingkupnya konten halaman, bukan seluruh dokumen', () => {
+    expect(PAUSE).toContain('[data-catetind-page-root]')
+  })
+
+  it('yang dijeda hanya animasi hias — bukan semua animasi', () => {
+    expect(PAUSE).toContain('animate-ping')
+    expect(PAUSE).toContain('plant-sway')
+    expect(PAUSE).toContain('.progress-shimmer')
+  })
+})

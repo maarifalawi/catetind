@@ -9,6 +9,7 @@ import {
   ChevronDown,
   CircleHelp,
   Lock,
+  MessageCircle,
   Search,
   ShieldCheck,
   ThumbsDown,
@@ -38,7 +39,9 @@ import {
   HELP_QUICK_ANSWERS,
   HELP_RESULT_TITLE,
   HELP_SEARCH_LABEL,
+  HELP_MOST_ASKED_BADGE,
   HELP_SEARCH_PLACEHOLDER,
+  HELP_SUGGEST_LABEL,
   HELP_SIDEBAR_TITLE,
   HELP_SUPPORT_FOOTNOTE,
   HELP_TITLE,
@@ -276,6 +279,23 @@ export function HelpCenterScreen() {
         <div ref={contentRef} className="flex min-w-0 flex-col gap-4 lg:col-span-9 lg:gap-5">
           {/* 2B — pencarian besar & menonjol */}
           <SearchBar query={query} onChange={setQuery} />
+          {/* H11-1 (audit UI/UX): saran pencarian muncul saat user mulai
+              mengetik — diambil dari pertanyaan populer yang NYATA. */}
+          {query.trim().length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[11px] font-medium text-forest/40">{HELP_SUGGEST_LABEL}</span>
+              {HELP_QUICK_ANSWERS.slice(0, 3).map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setQuery(item.question)}
+                  className="rounded-full bg-cream px-2.5 py-1 text-[11.5px] font-medium text-forest/65 ring-1 ring-soil/12 transition-colors hover:bg-sage/60 hover:text-forest"
+                >
+                  {item.question}
+                </button>
+              ))}
+            </div>
+          )}
           {/* ── ISI: hasil pencarian → topik aktif → konten default ───────────── */}
           {!results.idle ? (
             <SearchResults
@@ -331,6 +351,17 @@ export function HelpCenterScreen() {
           ))}
         </ul>
       </footer>
+      {/* H11-4 (audit UI/UX): pintu kontak cepat di pojok kanan bawah. Kanon
+          "jangan ngarang" menahan kami dari menciptakan kanal WhatsApp/IG yang
+          belum ada — yang dipakai jalur kontak NYATA halaman ini (founder). */}
+      <button
+        type="button"
+        onClick={handleContactFounder}
+        className="fixed bottom-24 right-4 z-40 inline-flex items-center gap-2 rounded-full bg-forest px-4 py-3 text-[12.5px] font-medium text-cream shadow-[0_18px_40px_-18px_rgba(0,0,0,0.9)] transition-colors hover:bg-forest-soft active:scale-95 lg:bottom-8 lg:right-8"
+      >
+        <MessageCircle className="size-4" strokeWidth={2.4} aria-hidden />
+        {HELP_CONTACT_LABEL}
+      </button>
     </ScreenShell>
   )
 }
@@ -457,12 +488,19 @@ function QuickAnswerCard({
   return (
     <div
       className={cn(
-        'rounded-[1.75rem] bg-cream transition-shadow',
+        'relative rounded-[1.75rem] bg-cream transition-shadow',
+        item.mostAsked && 'sm:col-span-2 xl:col-span-2',
         open
           ? 'shadow-[0_18px_40px_-34px_rgba(0,0,0,0.55)] ring-2 ring-forest/25'
           : 'ring-1 ring-soil/12',
       )}
     >
+      {/* H11-3 (audit UI/UX): kartu keamanan/privasi ditandai lebih menonjol. */}
+      {item.mostAsked && (
+        <span className="absolute right-4 top-4 rounded-full bg-forest px-2.5 py-1 text-[10px] font-medium text-cream">
+          {HELP_MOST_ASKED_BADGE}
+        </span>
+      )}
       <button
         type="button"
         onClick={onToggle}

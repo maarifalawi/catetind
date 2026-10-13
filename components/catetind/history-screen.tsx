@@ -30,7 +30,7 @@ import { ConfirmDialog } from './confirm-dialog'
 import { EditTransactionSheet } from './edit-transaction-sheet'
 import { WeeklyRecapModal } from './weekly-recap-modal'
 import { MonthlyReviewModal } from './monthly-review-modal'
-import { MonthlyTargetCard } from './monthly-target-card'
+/* H3-5: MonthlyTargetCard dipindah ke Dashboard — impor di sini dihapus. */
 import { TransactionBottomSheet } from '@/components/dashboard/transaction-bottom-sheet'
 import { useMonthlyReview } from '@/hooks/use-monthly-review'
 import { cn } from '@/lib/utils'
@@ -58,6 +58,8 @@ import {
   HISTORY_CLEAR_ALL_COPY,
   HISTORY_CLEAR_ALL_TOAST,
   HISTORY_NO_DATA_COPY,
+  HISTORY_TABS,
+  HISTORY_TABS_ARIA,
   INITIAL_FILTERS,
   TIME_FILTERS,
   TYPE_FILTERS,
@@ -70,6 +72,7 @@ import {
   groupTransactionsByDate,
   localISODate,
   maskMoney,
+  type HistoryTab,
   netLabel,
   savingsRatePct,
   summarizeTransactions,
@@ -436,6 +439,12 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
     setMenuTx(null)
   }, [menuTx])
 
+  /* H3-1 (audit UI/UX) — halaman dipecah jadi dua tab supaya tidak menumpuk
+     semua di satu gulungan panjang: "Riwayat" (heatmap + catatan) dan "Insight"
+     (skor + insight AI). Kedua isi tetap ter-render; yang berpindah hanya mana
+     yang TAMPIL, jadi tidak ada data yang hilang antar tab. */
+  const [tab, setTab] = useState<HistoryTab>('riwayat')
+
   /** nomor baris global supaya animasi masuk tetap berurutan antar grup */
   let rowIndex = 0
 
@@ -464,11 +473,35 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
         <ContextMenu value={context} onChange={setContext} className="w-56" />
       </div>
 
+      {/* H3-1 (audit UI/UX): tab Riwayat | Insight - halaman terlalu panjang, jadi dipecah dua tampilan; keduanya tetap ter-render. */}
+      <div role="tablist" aria-label={HISTORY_TABS_ARIA} className="mt-4 flex w-full items-center gap-1 rounded-full bg-cream p-1 ring-1 ring-soil/12 lg:w-fit">
+        {HISTORY_TABS.map((item) => {
+          const active = tab === item.id
+          return (
+            <button
+              key={item.id}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => setTab(item.id)}
+              className={cn(
+                'flex flex-1 items-center justify-center rounded-full px-4 py-2 text-[12.5px] font-medium transition-colors duration-200 active:scale-95 lg:flex-none',
+                active ? 'bg-forest text-cream' : 'text-forest/55 hover:text-forest',
+              )}
+            >
+              {item.label}
+            </button>
+          )
+        })}
+      </div>
+
       {/* ── FILTER GLOBAL — tepat di bawah judul, di ATAS semua konten ──────────
           Audit hierarki (Gestalt): dulu search + filter nyempil di TENGAH
           halaman (antara insight dan list) sehingga terlihat hanya berlaku
           untuk list di bawahnya. Sekarang dia duduk paling atas & diberi label
           "Filter Global" supaya jelas dia menyaring seluruh layar. */}
+      {/* ---- TAB "RIWAYAT": filter + heatmap + ritual + catatan ---- */}
+      <div className={cn(tab !== 'riwayat' && 'hidden')}>
       <section className="mt-5 rounded-[1.75rem] bg-cream p-3 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] ring-1 ring-soil/12 sm:p-3.5 lg:mt-6">
         <div className="flex items-center justify-between gap-2 px-1 pb-2">
           <span className="inline-flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-[0.14em] text-forest/40">
@@ -597,16 +630,10 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
           bahkan di hari kerja saat banner recap sedang tidak muncul).
           `monthly.ready` menahan render sampai penanda localStorage dibaca,
           supaya kartunya tidak berkedip dari "belum ada" ke nominalnya. */}
-      {monthly.ready && (
-        <div className="mt-2.5">
-          <MonthlyTargetCard
-            savedThisMonth={monthly.savedThisMonth}
-            amount={monthly.saved?.amount ?? 0}
-            fundId={monthly.saved?.fundId ?? null}
-            onOpen={monthly.openModal}
-          />
-        </div>
-      )}
+      {/* H3-5 (audit UI/UX): kartu "Hemat Rp ..." (MonthlyTargetCard) yang dulu
+          terselip di sini DIPINDAH — ia sudah punya rumahnya di Dashboard
+          (kartu target bulan ini di baris strip Home), jadi menampilkannya lagi
+          di /history membuat posisinya terasa acak. */}
 
       {/* ── 0 CATATAN = TIDAK ADA YANG DIKLAIM (paket 59 · 59.1) ────────────
          Dulu di keadaan ini kartu kalibrasi menuliskan "0/30 transaksi" dan
@@ -681,7 +708,11 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
                 {summary.count} dari {contextCount}
               </span>
             )}
-            {totalTransactions > 0 && (
+            </div>
+
+      {/* ---- TAB "INSIGHT": skor kewarasan + insight AI ---- */}
+      <div className={cn(tab !== 'insight' && 'hidden')}>
+      {totalTransactions > 0 && (
               <button
                 type="button"
                 onClick={() => setClearAllOpen(true)}
@@ -792,6 +823,7 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
           </div>
         </div>
       )}
+      </div>
 
       {/* ── SHEET OPSI FILTER ───────────────────────────────────────────────────
           Satu sheet dipakai ulang untuk keempat filter: judul = nama filternya,

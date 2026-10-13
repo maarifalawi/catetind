@@ -33,6 +33,79 @@ export const CONTEXT_LABEL: Record<MoneyContext, string> = {
   bersama: 'Bersama',
 }
 
+/**
+ * Urutan tampil konteks (Pribadi → Keluarga → Bersama).
+ *
+ * SATU tempat: dipakai pemilih pill di Dashboard mobile, menu dropdown desktop,
+ * dan panel Pengaturan "Konteks Uang" — jadi tiga wajah itu tidak pernah punya
+ * urutan yang berbeda.
+ */
+export const CONTEXT_ORDER: readonly MoneyContext[] = ['pribadi', 'keluarga', 'bersama']
+
+/** semua konteks dalam bentuk opsi `ChoicePills` (dipakai panel Pengaturan) */
+export const CONTEXT_OPTIONS: { id: MoneyContext; label: string }[] = CONTEXT_ORDER.map(
+  (id) => ({ id, label: CONTEXT_LABEL[id] }),
+)
+
+/**
+ * Konteks yang BOLEH tampil di pemilih (paket 87).
+ *
+ * = `enabled` (pilihan user) ∪ `walletContexts` (konteks yang MASIH berisi
+ * dompet) ∪ `pribadi`. Dua aturan di belakang sengaja mengikat:
+ *   • `pribadi` selalu ada — ia titik berangkat seluruh app;
+ *   • konteks yang masih punya dompet TIDAK BOLEH disembunyikan, karena
+ *     dompetnya jadi tidak bisa dijangkau (pelajaran audit uang: uang user tidak
+ *     boleh tersembunyi). Panel Pengaturan menolak mematikan konteks berisi
+ *     dompet, dan fungsi ini menjaga hal yang sama sebagai jaring kedua.
+ *
+ * Karena itu hasilnya 1 elemen untuk mayoritas user (cuma Pribadi) → pemanggil
+ * bisa menyembunyikan pemilihnya sama sekali (tidak ada yang bisa dipilih).
+ */
+export function availableContexts(
+  enabled: readonly MoneyContext[],
+  walletContexts: readonly MoneyContext[] = [],
+): MoneyContext[] {
+  const keep = new Set<MoneyContext>(['pribadi', ...enabled, ...walletContexts])
+  return CONTEXT_ORDER.filter((ctx) => keep.has(ctx))
+}
+
+/** opsi pemilih untuk konteks yang tersedia (label tetap dari `CONTEXT_LABEL`) */
+export function contextOptionsFor(
+  available: readonly MoneyContext[],
+): { id: MoneyContext; label: string }[] {
+  return CONTEXT_ORDER.filter((ctx) => available.includes(ctx)).map((ctx) => ({
+    id: ctx,
+    label: CONTEXT_LABEL[ctx],
+  }))
+}
+
+/**
+ * Copy panel Pengaturan "Konteks Uang" (paket 87).
+ *
+ * Konteks uang BUKAN fitur semua orang: user yang cuma mengelola uangnya sendiri
+ * tidak perlu melihat tombol "Keluarga"/"Bersama" sama sekali. Teks di sini
+ * (bukan di JSX — aturan repo) menjelaskan pilihan itu apa adanya, termasuk
+ * kenapa sebuah saklar bisa terkunci.
+ */
+export const CONTEXT_SETTINGS_COPY = {
+  title: 'Konteks Uang',
+  /* H12-3 (audit UI/UX): kalimat lama ("Yang tidak dipakai tidak muncul di
+     pemilih konteks") harus dibaca dua kali; disederhanakan. */
+  desc: 'Matikan konteks yang ngga kamu pakai biar ngga muncul di app — Pribadi selalu aktif.',
+  /** keterangan satu baris per konteks */
+  itemHelper: {
+    pribadi: 'Uangmu sendiri. Selalu aktif, jadi pemilih konteks tidak muncul kalau cuma ini.',
+    keluarga: 'Uang tanggungan & keluarga (mis. biaya ortu/adik).',
+    bersama: 'Uang patungan sama pasangan.',
+  } as Record<MoneyContext, string>,
+  /** aria-label saklar; `on` = status SESUDAH ditekan */
+  toggleAria: (label: string, on: boolean) =>
+    on ? `Tampilkan konteks ${label}` : `Sembunyikan konteks ${label}`,
+  /** alasan saklar terkunci: konteksnya masih berisi dompet (tidak boleh disembunyikan) */
+  lockedByWallets: (count: number) =>
+    `${count} dompet masih di konteks ini — tetap tampil supaya tidak tersembunyi.`,
+} as const
+
 /** nama konteks untuk di tengah kalimat ("dikontek keluarga") */
 export function contextName(ctx: MoneyContext): string {
   return CONTEXT_LABEL[ctx].toLowerCase()

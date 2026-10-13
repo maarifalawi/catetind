@@ -22,6 +22,7 @@ import { cn } from '@/lib/utils'
 import { LIFETIME_LABEL, PLANS, formatIDR, priceFor } from '@/lib/data/pricing'
 import { useSubscriptionGate } from './subscription-gate-provider'
 import { UpgradeModal } from './upgrade-modal'
+import { useAiQuotaReset } from '@/hooks/use-ai-quota-reset'
 /* Semua angka kuota AI datang dari sini — bagian tampilan tidak menyimpan
    satu pun kuota/harga add-on (aturan yang sama dengan `lib/data/pricing.ts`). */
 import {
@@ -29,7 +30,7 @@ import {
   AI_FUEL_COPY,
   AI_PLAN_LOCKED_COPY,
   AI_QUOTA_EXHAUSTED_COPY,
-  AI_QUOTA_RESET_DATE,
+  AI_QUOTA_RESET_FALLBACK,
   AI_RESET_RULE_COPY,
   AI_UNLIMITED_BADGE,
   AI_UNLIMITED_NOTE,
@@ -281,6 +282,9 @@ function FuelGaugeCard() {
      user memakai AI/voice/OCR dan naik saat top up — sama persis dengan kartu
      sidebar, banner Home, dan header AI Coach (`lib/ai-usage-store.ts`). */
   const quota = useAiQuota()
+  /* tanggal reset NYATA (paket 86) — dibaca setelah mount lewat hook; sebelum
+     terbaca kita sebut keadaannya apa adanya, bukan tanggal mock. */
+  const reset = useAiQuotaReset()
   const baseLeftPct = quota.remainingPct
   const addon = quota.addon
   /* Batas kuota ikut PAKET (paket 84): paket tanpa AI tidak punya tangki sama
@@ -425,7 +429,7 @@ function FuelGaugeCard() {
       <p className="mt-4 flex flex-wrap items-center gap-1.5 text-[12px] font-medium text-forest/55">
         <CalendarClock className="size-3.5 shrink-0" strokeWidth={2.2} aria-hidden />
         {AI_FUEL_COPY.resetLabel}:
-        <span className="tabular-nums">{AI_QUOTA_RESET_DATE}</span>
+        <span className="tabular-nums">{reset?.label ?? AI_QUOTA_RESET_FALLBACK}</span>
       </p>
       <p className="mt-1.5 text-[11px] leading-relaxed text-forest/40">{AI_RESET_RULE_COPY}</p>
     </section>

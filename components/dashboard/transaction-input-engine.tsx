@@ -46,6 +46,7 @@ import {
   TRANSACTION_FIXED_CATEGORY,
   TRANSACTION_INSUFFICIENT_FUNDS_COPY,
   TRANSACTION_INPUT_COPY,
+  TRANSACTION_NOTE_HINT,
   manualCategoryChoice,
   type HistoryTransaction,
 } from '@/lib/data/history'
@@ -1216,6 +1217,15 @@ export function TransactionInputEngine({
                 aria-label="Catatan transaksi (opsional)"
                 className="mt-4 h-12 w-full rounded-2xl bg-soil/[0.09] px-4 text-[13.5px] font-medium text-forest outline-none ring-1 ring-transparent transition-all placeholder:text-forest/30 focus:bg-cream focus:ring-forest/15"
               />
+              {/* H3-4 (audit UI/UX): dorongan (bukan kewajiban) menambah minimal
+                  satu kata deskripsi saat catatan masih kosong. Paket 86 sudah
+                  memakai kategori sebagai nama baris, tapi satu kata dari user
+                  tetap jauh lebih informatif saat ia membuka Riwayat nanti. */}
+              {note.trim() === '' && (
+                <p className="mt-1.5 px-1 text-[11.5px] leading-relaxed text-forest/45">
+                  {TRANSACTION_NOTE_HINT}
+                </p>
+              )}
 
               {/* ── MODE EDIT: tiga field detail yang nilainya SUDAH ADA ────────
                   Di mode tambah, kategori/dompet/tanggal tidak ditentukan AI:

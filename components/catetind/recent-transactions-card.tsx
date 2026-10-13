@@ -64,6 +64,10 @@ type Transaction = {
      `tile`/`rowBg`, dipakai agar baris "kategori · jam" tidak jadi teks abu
      polos. Sumbernya satu tabel dengan Riwayat & Insight. */
   chip: string
+  /** H2-2 (audit UI/UX) — berapa catatan bernama sama di hari yang sama; >1 ⇒
+   *  badge halus "N transaksi serupa" menempel di baris, bukan dibiarkan
+   *  terbaca sebagai duplikat yang salah. */
+  duplicateCount?: number
 }
 
 type TransactionGroup = {
@@ -152,10 +156,13 @@ function listGroups(rows: HomeMoneyRow[], todayIso: string): TransactionGroup[] 
 function SwipeRow({
   tx,
   delay,
+  duplicateCount,
   onDelete,
 }: {
   tx: Transaction
   delay: number
+  /** H2-2 — jumlah catatan bernama sama di hari yang sama (untuk badge halus) */
+  duplicateCount?: number
   onDelete: () => void
 }) {
   const { hide } = usePrivacy()
@@ -298,6 +305,14 @@ function SwipeRow({
           <span className="block line-clamp-2 text-sm font-medium text-forest">
             {tx.title}
           </span>
+          {/* H2-2 — badge halus "N transaksi serupa" saat nama catatan berulang
+              di hari yang sama (mis. dua "MCD"), supaya tidak disangka entri
+              ganda yang salah. */}
+          {duplicateCount !== undefined && duplicateCount > 1 && (
+            <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-soil/[0.06] px-2 py-0.5 text-[10px] font-medium text-forest/55">
+              {HOME_MONEY_COPY.txnDuplicateHint(duplicateCount)}
+            </span>
+          )}
           {/* baris meta/notes (paket 78): kategori jadi CHIP bertint keluarga yang
               sama — dulu teks abu polos, jadi baris kategori hilang di antara
               nominal & jam. Jamnya tetap murni teks. `min-w-0 truncate` di chip
@@ -369,6 +384,26 @@ export const RecentTransactionsCard = memo(function RecentTransactionsCard() {
   )
   const visibleGroups = useMemo(() => listGroups(recentRows, today), [recentRows, today])
   const totalItems = recentRows.length
+
+  /* H2-2 (audit UI/UX) — hitung catatan bernama sama per grup (hari) supaya
+     barisnya bisa menampilkan badge "N transaksi serupa". Ini pilihan
+     paling konservatif dari dua opsi audit (auto-grouping berat vs badge
+     halus): daftar tetap satu baris per catatan, cuma diberi keterangan. */
+  const groupViews = useMemo(
+    () =>
+      visibleGroups.map((group) => {
+        const counts = new Map<string, number>()
+        for (const item of group.items) counts.set(item.title, (counts.get(item.title) ?? 0) + 1)
+        return {
+          ...group,
+          items: group.items.map((item) => ({
+            ...item,
+            duplicateCount: counts.get(item.title) ?? 1,
+          })),
+        }
+      }),
+    [visibleGroups],
+  )
 
   /* Ringkasan periode TURUNAN dari baris yang sama (uang masuk/keluar; pindah
      dana netral, sama seperti kanon `summarizeTransactions`). Labelnya
@@ -469,7 +504,7 @@ export const RecentTransactionsCard = memo(function RecentTransactionsCard() {
            multi-kolom (permintaan pemilik produk). Teksnya `truncate`, jadi
            baris tidak pernah melar walau lebar kartu berubah. */
         <div className="-mx-2 mt-4 flex flex-col gap-4">
-          {visibleGroups.map((group, gi) => (
+          {groupViews.map((group, gi) => (
             <section key={group.label}>
               <div className="mx-2 flex items-center gap-2">
                 <p className="text-[10px] font-medium tracking-[0.14em] text-forest/40 uppercase">
@@ -490,6 +525,7 @@ export const RecentTransactionsCard = memo(function RecentTransactionsCard() {
                     key={tx.id}
                     tx={tx}
                     delay={120 + (delays[gi] + i) * 70}
+                    duplicateCount={tx.duplicateCount}
                     onDelete={() => deleteTx(tx)}
                   />
                 ))}

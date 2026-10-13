@@ -116,15 +116,18 @@ export const SETTINGS_MENU: SettingsMenuItem[] = [
     title: 'Export Data',
     desc: 'Unduh semua data kamu',
   },
-  {
-    id: 'logout',
-    href: '/settings/logout',
-    icon: LogOut,
-    title: 'Keluar',
-    desc: 'Akhiri sesi ini',
-    tone: 'danger',
-  },
+  /* H12-5 (audit UI/UX): entri Keluar DIHAPUS dari menu sidebar pengaturan —
+     ia dipindah ke paling bawah HALAMAN (lihat SETTINGS_LOGOUT_ITEM di bawah). */
 ]
+
+/** H12-5 (audit UI/UX): tombol Keluar dipindah ke paling bawah HALAMAN pengaturan,
+ *  bukan lagi entri menu sidebar, dan bergaya merah/destructive. Rutenya tetap
+ *  `/settings/logout` (halaman konfirmasi yang sudah ada). */
+export const SETTINGS_LOGOUT_ITEM = {
+  href: '/settings/logout',
+  title: 'Keluar',
+  desc: 'Akhiri sesi ini',
+} as const
 
 /** Section aktif dari URL: `/settings` → profil, `/settings/<id>` → id itu. */
 export function settingsSectionFromPath(pathname: string): SettingsSectionId {
@@ -230,6 +233,20 @@ export function SettingsShell({ children }: { children: ReactNode }) {
           {children}
         </div>
       </div>
+
+      {/* H12-5 (audit UI/UX): Keluar ada di PALING BAWAH halaman pengaturan,
+          dengan gaya destructive (plum), jauh dari menu biasa. */}
+      {activeId !== 'logout' && (
+        <div className="mt-8 border-t border-plum/20 pt-5">
+          <Link
+            href={SETTINGS_LOGOUT_ITEM.href}
+            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-plum/30 bg-plum/10 px-5 py-3.5 text-[13.5px] font-medium text-plum transition-colors hover:bg-plum/20 active:scale-[0.99]"
+          >
+            <LogOut className="size-4" strokeWidth={2.4} aria-hidden />
+            {SETTINGS_LOGOUT_ITEM.title} — {SETTINGS_LOGOUT_ITEM.desc}
+          </Link>
+        </div>
+      )}
     </ScreenShell>
   )
 }

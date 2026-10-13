@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useSyncExternalStore } from 'react'
 import { readOnboardingResult, type DashboardPeriod } from './onboarding'
+import type { MoneyContext } from './types'
 
 /* ── KONFIGURASI UANG USER — SATU SUMBER (paket 57 · audit AKAR D) ───────────
    Temuan audit uji-pakai: onboarding MENGUMPULKAN pemasukan bulanan user
@@ -58,6 +59,16 @@ export interface UserMoneySettings {
   /** tanggal gajian 1–31; `null` = periode mengikuti bulan kalender */
   paydayDate: number | null
   dashboardPeriod: DashboardPeriod
+  /**
+   * Konteks uang yang dipakai user (paket 87) — `pribadi` SELALU ikut.
+   *
+   * `undefined` = belum pernah dipilih user, jadi nilainya diwarisi dari hasil
+   * onboarding (pasangan → `bersama`, tanggungan → `keluarga`) oleh `resolve()`.
+   * Field ini PREFERENSI, bukan hak menyembunyikan uang: konteks yang masih
+   * berisi dompet tetap dipaksa tampil di lapis UI (`availableContexts()` di
+   * `lib/data/money-context.ts`).
+   */
+  enabledContexts?: MoneyContext[]
   /** true = akun ini sudah dihapus user → jangan ambil nilai dari onboarding */
   purged?: boolean
   /** kapan user terakhir mengubahnya sendiri (epoch ms) — 0 = warisan onboarding */
@@ -70,7 +81,14 @@ export const DEFAULT_USER_MONEY_SETTINGS: UserMoneySettings = {
   totalInstallments: 0,
   paydayDate: null,
   dashboardPeriod: 'calendar',
+  enabledContexts: ['pribadi'],
 }
+
+/** konteks minimal yang selalu ada — titik berangkat seluruh app */
+export const DEFAULT_ENABLED_CONTEXTS: MoneyContext[] = ['pribadi']
+
+/** urutan & nilai sah konteks — satu-satunya daftar di file ini */
+const VALID_CONTEXTS: MoneyContext[] = ['pribadi', 'keluarga', 'bersama']
 
 /**
  * true = pemasukan bulanan sudah diatur user.
@@ -84,6 +102,15 @@ export function hasConfiguredIncome(settings: UserMoneySettings): boolean {
   return settings.monthlyIncome > 0
 }
 
+/**
+ * Konteks yang dipakai user — `pribadi` selalu ada, bahkan untuk file lama yang
+ * belum punya field `enabledContexts`. Karena itu bentuknya fungsi, bukan
+ * property langsung: pemanggil tidak perlu menambal default sendiri-sendiri.
+ */
+export function enabledContextsOf(settings: UserMoneySettings): MoneyContext[] {
+  return settings.enabledContexts ?? DEFAULT_ENABLED_CONTEXTS
+}
+
 /* ── COPY FORM "KONFIGURASI UANG" (dipakai settings-panel-account.tsx) ───────
    Label & catatan field ditulis di sini, bukan di JSX: aturan repo ini
    melarang string copy user-facing yang tersebar di komponen (`CONTEXT-WAJIB`
@@ -91,8 +118,11 @@ export function hasConfiguredIncome(settings: UserMoneySettings): boolean {
    mengikuti §5: menjelaskan, tidak menyalahkan. */
 export const MONEY_SETTINGS_COPY = {
   incomeLabel: 'Pemasukan Bulanan',
-  incomeNote: 'Angka ini yang dipakai menghitung Jatah Hari Ini. Kosongkan kalau belum mau diatur.',
-  incomePlaceholder: '7.500.000',
+  /* H12-2 (audit UI/UX): angka contoh 75 juta tidak relatable buat target
+     Gen-Z (gaji 5-7 juta). Field dibiarkan KOSONG dengan prompt yang menjelaskan
+     kenapa sebaiknya diisi. */
+  incomeNote: 'Isi gaji bulanan kamu supaya Jatah Hari Ini bisa dihitung akurat.',
+  incomePlaceholder: '',
   installmentsLabel: 'Total Cicilan Bulanan',
   installmentsNote: 'Cicilan platform (HP, paylater, motor) — dipotong lebih dulu dari pemasukan.',
   installmentsPlaceholder: '800.000',
@@ -118,6 +148,20 @@ function payday(value: unknown): number | null | undefined {
 
 function period(value: unknown): DashboardPeriod | undefined {
   return value === 'calendar' || value === 'cycle' ? value : undefined
+}
+
+/**
+ * Daftar konteks yang sah: nilai asing dibuang, `pribadi` selalu ikut, urut &
+ * unik. Non-array → `undefined` supaya pemanggil memperlakukannya sebagai
+ * "belum ada pilihan user" (bukan menebak).
+ */
+function contexts(value: unknown): MoneyContext[] | undefined {
+  if (!Array.isArray(value)) return undefined
+  const picked = new Set<MoneyContext>(['pribadi'])
+  for (const item of value) {
+    if (VALID_CONTEXTS.includes(item as MoneyContext)) picked.add(item as MoneyContext)
+  }
+  return VALID_CONTEXTS.filter((ctx) => picked.has(ctx))
 }
 
 /**
@@ -148,12 +192,14 @@ export function parseUserMoneySettings(raw: string | null): UserMoneySettings | 
   const installments = has('totalInstallments') ? money(value.totalInstallments) : null
   const paydayDate = has('paydayDate') ? payday(value.paydayDate) : null
   const dashboardPeriod = period(value.dashboardPeriod)
+  const enabledContexts = contexts(value.enabledContexts)
   /* tidak satu pun field dikenal & sah → bentuk asing, bukan konfigurasi kosong */
   const known =
     income !== null ||
     installments !== null ||
     paydayDate !== null ||
     dashboardPeriod !== undefined ||
+    enabledContexts !== undefined ||
     value.purged === true
   if (!known) return null
 
@@ -163,6 +209,7 @@ export function parseUserMoneySettings(raw: string | null): UserMoneySettings | 
     totalInstallments: money(value.totalInstallments) ?? 0,
     paydayDate: payday(value.paydayDate) ?? null,
     dashboardPeriod: dashboardPeriod ?? 'calendar',
+    enabledContexts,
     purged: value.purged === true ? true : undefined,
     updatedAt:
       typeof value.updatedAt === 'number' && Number.isFinite(value.updatedAt)
@@ -187,6 +234,43 @@ function storage(): Storage | null {
 /** state terakhir yang dibaca/ditulis — jaring pengaman kalau storage diblokir */
 let cache: UserMoneySettings | null = null
 
+/* ── LANGGANAN (paket 87) ────────────────────────────────────────────────────
+   Sebelum paket ini nilai di file ini cuma dibaca SEKALI saat komponen mount,
+   jadi mengubah "Konteks Uang" di Pengaturan tidak pernah menyegarkan pemilih
+   konteks di halaman lain. Sekarang tiap penulisan memberi tahu pelanggannya,
+   dan `useUserMoneySettings()` membacanya lewat `useSyncExternalStore` — satu
+   jalur berlangganan, tanpa event global atau store kedua. */
+const listeners = new Set<() => void>()
+
+function notify(): void {
+  for (const listener of listeners) listener()
+}
+
+/** berlangganan perubahan konfigurasi uang (dipakai `useUserMoneySettings()`) */
+export function subscribeUserMoneySettings(listener: () => void): () => void {
+  listeners.add(listener)
+  return () => {
+    listeners.delete(listener)
+  }
+}
+
+/**
+ * Konteks yang DIWARISI dari onboarding (paket 87).
+ *
+ * Onboarding sudah menanyakan hal ini tanpa menyebut kata "konteks": "Pasangan
+ * Serius / Menikah" menyalakan modul `joint_wallet`, "Ada Tanggungan Keluarga"
+ * menyalakan `sandwich_generation` (lihat `LIFE_SITUATIONS`). Jadi user TIDAK
+ * ditanya dua kali — pilihan di langkah 1 langsung menentukan konteks mana yang
+ * tampil di pemilih.
+ */
+function contextsFromOnboarding(): MoneyContext[] {
+  const onboarded = readOnboardingResult()
+  const picked = new Set<MoneyContext>(['pribadi'])
+  if (onboarded?.modules.includes('sandwich_generation')) picked.add('keluarga')
+  if (onboarded?.modules.includes('joint_wallet')) picked.add('bersama')
+  return VALID_CONTEXTS.filter((ctx) => picked.has(ctx))
+}
+
 /** nilai awal dari hasil onboarding — sumber pertama sebelum user mengubahnya */
 function fromOnboarding(): UserMoneySettings | null {
   const onboarded = readOnboardingResult()
@@ -203,13 +287,16 @@ function fromOnboarding(): UserMoneySettings | null {
     totalInstallments: 0,
     paydayDate,
     dashboardPeriod,
+    enabledContexts: contextsFromOnboarding(),
     updatedAt: 0,
   }
 }
 
 function resolve(): UserMoneySettings {
   const store = storage()
-  if (!store) return { ...DEFAULT_USER_MONEY_SETTINGS }
+  if (!store) {
+    return { ...DEFAULT_USER_MONEY_SETTINGS, enabledContexts: contextsFromOnboarding() }
+  }
   let raw: string | null = null
   try {
     raw = store.getItem(USER_MONEY_SETTINGS_KEY)
@@ -221,8 +308,17 @@ function resolve(): UserMoneySettings {
      onboarding lama (kalau tidak, "Hapus Akun" terlihat berhasil padahal
      pengaturan uangnya hidup lagi) */
   if (stored?.purged) return { ...DEFAULT_USER_MONEY_SETTINGS, purged: true }
-  if (stored) return stored
-  return fromOnboarding() ?? { ...DEFAULT_USER_MONEY_SETTINGS }
+  /* file lama (sebelum paket 87) belum punya `enabledContexts` → warisi dari
+     onboarding supaya user lama tidak kehilangan konteks yang jelas ia pakai */
+  if (stored) {
+    return { ...stored, enabledContexts: stored.enabledContexts ?? contextsFromOnboarding() }
+  }
+  return (
+    fromOnboarding() ?? {
+      ...DEFAULT_USER_MONEY_SETTINGS,
+      enabledContexts: contextsFromOnboarding(),
+    }
+  )
 }
 
 /**
@@ -271,6 +367,10 @@ export function saveUserMoneySettings(patch: Partial<UserMoneySettings>): UserMo
     patch.dashboardPeriod === undefined
       ? current.dashboardPeriod
       : (period(patch.dashboardPeriod) ?? current.dashboardPeriod)
+  const enabledContexts =
+    patch.enabledContexts === undefined
+      ? enabledContextsOf(current)
+      : (contexts(patch.enabledContexts) ?? enabledContextsOf(current))
 
   const next: UserMoneySettings = {
     version: SETTINGS_VERSION,
@@ -278,10 +378,12 @@ export function saveUserMoneySettings(patch: Partial<UserMoneySettings>): UserMo
     totalInstallments: installments,
     paydayDate,
     dashboardPeriod,
+    enabledContexts,
     updatedAt: Date.now(),
   }
   cache = next
   persist(next)
+  notify()
   return next
 }
 
@@ -296,6 +398,7 @@ export function saveUserMoneySettings(patch: Partial<UserMoneySettings>): UserMo
  */
 export function purgeUserMoneySettings(): void {
   cache = { ...DEFAULT_USER_MONEY_SETTINGS, purged: true, updatedAt: Date.now() }
+  notify()
   const store = storage()
   if (!store) return
   try {
@@ -309,6 +412,7 @@ export function purgeUserMoneySettings(): void {
 /** Kosongkan cache & kunci (dipakai test supaya tiap kasus mulai bersih) */
 export function resetUserMoneySettings(): void {
   cache = null
+  notify()
   const store = storage()
   if (!store) return
   try {
@@ -319,18 +423,21 @@ export function resetUserMoneySettings(): void {
 }
 
 /**
- * Konfigurasi uang untuk komponen: `DEFAULT_USER_MONEY_SETTINGS` sampai komponen
- * selesai mount, lalu nilai sebenarnya.
+ * Konfigurasi uang untuk komponen.
  *
- * Pola yang sama dengan pembacaan `paydayDate` di `cashflow-calendar-screen.tsx`
- * dan `localISODate()` di `wallet-detail-screen.tsx`: render server & render
- * pertama client identik, jadi tidak ada hydration mismatch (`CONTEXT-WAJIB` §8).
+ * `getServerSnapshot` = `DEFAULT_USER_MONEY_SETTINGS` (konstanta, stabil) supaya
+ * render server & render pertama client identik — tidak ada hydration mismatch
+ * (`CONTEXT-WAJIB` §8). `getSnapshot`-nya `readUserMoneySettings()` yang
+ * mengembalikan objek TER-CACHE (identitasnya stabil antar render), dan setiap
+ * penulisan memberi tahu pelanggannya lewat `subscribeUserMoneySettings` — jadi
+ * saklar "Konteks Uang" di Pengaturan langsung menyegarkan pemilih konteks di
+ * halaman lain (paket 87).
  */
 export function useUserMoneySettings(): UserMoneySettings {
-  const [settings, setSettings] = useState<UserMoneySettings>(DEFAULT_USER_MONEY_SETTINGS)
-  useEffect(() => {
-    setSettings(readUserMoneySettings())
-  }, [])
-  return settings
+  return useSyncExternalStore(
+    subscribeUserMoneySettings,
+    readUserMoneySettings,
+    () => DEFAULT_USER_MONEY_SETTINGS,
+  )
 }
 

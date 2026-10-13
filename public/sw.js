@@ -24,7 +24,10 @@
    tampil tetap dibaca dari IndexedDB (`lib/money/idb.ts`) — tidak ada API yang
    mengembalikan data keuangan dari cache. */
 
-const CACHE_VERSION = 'catetind-shell-v1'
+/* v2 (paket 91): nama cache dinaikkan setiap deploy yang mengubah shell/bundel —
+   di `activate`, semua cache bernama lain dihapus (aturan 4 di atas), jadi user
+   tidak bisa tersangkut aset lama setelah update. */
+const CACHE_VERSION = 'catetind-shell-v2'
 /** dokumen yang disiapkan supaya app setidaknya bisa DIBUKA saat benar-benar offline */
 const SHELL_DOCUMENT = '/'
 /** aset ber-hash: aman disajikan dari cache lalu diperbarui di belakang */

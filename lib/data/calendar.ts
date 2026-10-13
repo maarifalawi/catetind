@@ -17,7 +17,7 @@ import { MONTHLY_INCOME, type BudgetScope } from './budget'
 import type { MoneyContext, TransactionType } from '../types'
 import { matchesContext, tagTransactionsForContext, type ContextTransaction, type RowContext } from '../money/context-filter'
 import { recordedTransactions, type MoneySnapshot } from '../money/store'
-import { localISODate, mulberry32 } from './history'
+import { MASKED_AMOUNT, localISODate, mulberry32 } from './history'
 
 /* ── Kalender Cashflow (/app/calendar) ───────────────────────────────────────
    Satu sumber data + logika murni (TANPA React) untuk halaman Kalender, persis
@@ -1067,7 +1067,12 @@ export const CALENDAR_DAY_COPY = {
      ink        → netral: tagihan tetap yang tercatat atau belum ada catatan
    ────────────────────────────────────────────────────────────────────────── */
 
-export type CalendarLook = 'deficit' | 'surplus' | 'clean' | 'spend' | 'planned' | 'empty'
+/* H7-4 (audit UI/UX): muka `upcoming` BARU. Revisinya: tanggal masa depan
+   tidak boleh hijau (seolah "nol jajan" padahal belum terjadi) — ia harus abu
+   netral. Dulu hari mendatang yang kosong jatuh ke `empty` (krem) yang di
+   beberapa layar terbaca seperti status; sekarang ia punya muka sendiri yang
+   jelas netral, terpisah dari hari lampau. */
+export type CalendarLook = 'deficit' | 'surplus' | 'clean' | 'spend' | 'planned' | 'upcoming' | 'empty'
 
 /** latar + warna angka tiap muka sel */
 export const CALENDAR_LOOK_CELL: Record<CalendarLook, string> = {
@@ -1076,6 +1081,9 @@ export const CALENDAR_LOOK_CELL: Record<CalendarLook, string> = {
   clean: 'bg-mint/40 text-forest',
   spend: 'bg-forest/15 text-forest/70',
   planned: 'bg-ink/[0.06] text-forest/55',
+  /* H7-4 — abu-abu netral untuk tanggal yang BELUM berjalan: tidak hijau,
+     tidak krem "berisi"; memang belum terjadi. */
+  upcoming: 'bg-soil/[0.07] text-forest/35',
   empty: 'bg-cream text-forest/40',
 }
 
@@ -1094,7 +1102,32 @@ export function calendarCellLook(cell: CalendarCell): CalendarLook {
   if (cell.cleanDay) return 'clean'
   if (cell.tone === 'planned') return 'planned'
   if (cell.totalSpend > 0) return 'spend'
+  /* H7-4 — hari yang BELUM terjadi dan belum punya catatan: abu netral, bukan
+     hijau "nol jajan" (yang menyesatkan) dan bukan krem "ada isi". Catatan
+     bertanggal masa depan (kalau user menambahkannya) tetap tampil warnanya,
+     karena cabang di atas sudah menanganinya lebih dulu. */
+  if (cell.isFuture) return 'upcoming'
   return 'empty'
+}
+
+/**
+ * H7-3 (audit UI/UX): label pengeluaran RINGKAS untuk dibaca DI DALAM sel —
+ * supaya tanggal merah tidak dibiarkan "tanpa penjelasan". Nominal penuh
+ * (Rp 600.000) tidak muat di kotak 7 kolom, jadi dipadatkan (600rb / 1,2jt) dan
+ * ikut tombol mata global (masked ⇒ topeng, bukan angka bohong).
+ */
+export function calendarCellSpendLabel(cell: CalendarCell, masked: boolean): string | null {
+  if (cell.income > 0) return null
+  if (cell.totalSpend <= 0) return null
+  if (masked) return MASKED_AMOUNT
+  const v = cell.totalSpend
+  if (v >= 1_000_000) {
+    const jt = v / 1_000_000
+    const shown = jt >= 10 ? Math.round(jt) : Math.round(jt * 10) / 10
+    return `−${shown.toString().replace('.', ',')}jt`
+  }
+  if (v >= 1_000) return `−${Math.round(v / 1_000)}rb`
+  return `−${v}`
 }
 
 /** keterangan warna untuk pengguna — satu baris, label sependek mungkin.
@@ -1107,6 +1140,9 @@ export const CALENDAR_LEGEND: { id: CalendarLook; label: string }[] = [
   { id: 'clean', label: 'Nol jajan' },
   { id: 'spend', label: 'Ada belanja' },
   { id: 'planned', label: FIXED_BILL_BADGE_LABEL },
+  /* H7-4 — tanggal yang belum berjalan dijelaskan apa adanya supaya user tidak
+     menebak-nebak kenapa kotaknya abu. */
+  { id: 'upcoming', label: 'Belum berjalan' },
 ]
 
 /* ── CATATAN SIKLUS GAJIAN (paket 60 · 60.5) ─────────────────────────────────
@@ -1130,6 +1166,7 @@ export const CALENDAR_LOOK_WORD: Record<CalendarLook, string> = {
   clean: 'nol jajan',
   spend: 'ada belanja',
   planned: 'tagihan tetap',
+  upcoming: 'belum berjalan',
   empty: 'belum ada catatan',
 }
 

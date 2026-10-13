@@ -1,6 +1,8 @@
 import { AI_BASE_QUOTA, AI_SEED_USAGE_CALLS, type AiQuotaActivityId } from './ai-quota'
 import { trackMoneyEvent } from './analytics'
+import { SHOWS_SAMPLE_DATA } from './demo'
 import { readAiUsage, recordAiUsageRemote, type RemoteAiUsage } from './supabase/ai-usage-remote'
+import { subscribeAiUsageChanges } from './supabase/realtime'
 
 /* ── USAGE STORE AI — SATU-SATUNYA TEMPAT ANGKA "TERPAKAI" BERUBAH (paket 42) ─
    Temuan audit Stage 5 #5: pemakaian dulu konstanta mati (`AI_USAGE_CALLS` di
@@ -21,10 +23,11 @@ import { readAiUsage, recordAiUsageRemote, type RemoteAiUsage } from './supabase
      · `voice`       ← setiap input suara yang menghasilkan draft
 
    Yang TIDAK dilakukannya (batas jujur): tidak ada request ke model AI mana pun
-   dan tidak ada penyimpanan server. Pemakaian hidup di memory sesi ini — refresh
-   halaman mengembalikannya ke titik berangkat demo (`AI_SEED_USAGE_CALLS`).
-   Di produksi file ini digantikan endpoint usage (`ai_usage` — PRD 4806–4886),
-   dan yang berubah cuma isi fungsi-fungsi di bawah.
+   (provider AI-nya sendiri masih mock). Yang NYATA sejak paket 45/86 adalah
+   METER-nya: pemakaian disimpan di server (`ai_usage`, satu baris per
+   user+bulan+aktivitas) lalu dibaca ulang saat berlangganan, saat ada sinyal
+   realtime, dan saat tab kembali terlihat — jadi angka yang sama muncul di semua
+   perangkat user dan tidak hilang saat refresh.
 
    Snapshot-nya beku & stabil (`useSyncExternalStore` di `hooks/use-ai-quota.ts`),
    supaya HTML server dan render pertama client identik (anti hydration
@@ -37,11 +40,32 @@ export interface AiUsageState {
   purchasedTokens: number
 }
 
-/** titik berangkat: angka mock kanon — dipakai server, hidrasi, dan test */
-const SEED_STATE: AiUsageState = Object.freeze({
-  callsUsed: { ...AI_SEED_USAGE_CALLS },
+/** semua aktivitas 0 — titik berangkat user NYATA (belum memakai apa pun) */
+function emptyCallsUsed(): Record<AiQuotaActivityId, number> {
+  return Object.fromEntries(
+    AI_BASE_QUOTA.map((activity) => [activity.id, 0]),
+  ) as Record<AiQuotaActivityId, number>
+}
+
+/** titik berangkat TANPA data contoh: tangki masih penuh */
+const ZERO_STATE: AiUsageState = Object.freeze({
+  callsUsed: emptyCallsUsed(),
   purchasedTokens: 0,
 })
+
+/* ── TITIK BERANGKAT (paket 86) ──────────────────────────────────────────────
+   Dulu store SELALU mulai dari angka contoh (`AI_SEED_USAGE_CALLS`), jadi user
+   baru mana pun langsung melihat tangki sudah terpakai separuh — angka milik
+   orang lain (temuan "masih seed data").
+
+   Sekarang data contoh HANYA dipakai saat gerbang demo/test menyala
+   (`SHOWS_SAMPLE_DATA`: `NEXT_PUBLIC_DEMO=1` atau NODE_ENV=test — lihat
+   lib/demo.ts). Di build produksi tanpa env, titik berangkatnya NOL, dan angka
+   yang sebenarnya datang dari server (`ai_usage`) lewat `hydrateAiUsage()` +
+   langganan realtime di bawah. */
+const SEED_STATE: AiUsageState = SHOWS_SAMPLE_DATA
+  ? Object.freeze({ callsUsed: { ...AI_SEED_USAGE_CALLS }, purchasedTokens: 0 })
+  : ZERO_STATE
 
 let live: AiUsageState = SEED_STATE
 const listeners = new Set<() => void>()
@@ -56,13 +80,54 @@ export function seedAiUsageState(): AiUsageState {
   return SEED_STATE
 }
 
+/* ── LANGGANAN HIDUP (paket 86) ──────────────────────────────────────────────
+   Kuota AI berubah di jalur yang tidak selalu lewat tab ini: user memakai AI di
+   HP lalu membuka laptop, atau membeli token add-on di perangkat lain. Karena
+   itu begitu ada komponen yang berlangganan (`useSyncExternalStore`), kita:
+     1. baca server SEKALI (hidrasi awal), dan
+     2. buka SATU channel realtime untuk `ai_usage` + `ai_addons`; setiap sinyal
+        perubahan memicu `refreshAiUsage()` (baca ulang REST, gabung `max`).
+
+   Satu channel untuk SEMUA pelanggan (bukan satu per hook): penghitung
+   `realtimeUsers` memastikan channel ditutup hanya setelah pelanggan TERAKHIR
+   pergi — kalau tidak, kartu sidebar & halaman Billing yang hidup berbarengan
+   akan saling membuka/menutup channel terus-menerus.
+   Saat tab disembunyikan channel ditutup oleh helper realtime; begitu tab
+   kembali terlihat kita baca ulang sekali supaya tidak ada perubahan yang
+   terlewat selagi tab tidur (pola yang sama dengan store kekayaan). */
+let realtimeUsers = 0
+let realtimeHandle: { stop: () => void } | null = null
+
+function onVisibilityRefresh(): void {
+  if (document.visibilityState === 'visible') void refreshAiUsage()
+}
+
+function attachRealtime(): void {
+  if (typeof document === 'undefined') return
+  realtimeUsers += 1
+  if (realtimeUsers > 1) return
+  realtimeHandle = subscribeAiUsageChanges(() => void refreshAiUsage())
+  document.addEventListener('visibilitychange', onVisibilityRefresh)
+}
+
+function detachRealtime(): void {
+  if (typeof document === 'undefined') return
+  realtimeUsers = Math.max(0, realtimeUsers - 1)
+  if (realtimeUsers > 0) return
+  realtimeHandle?.stop()
+  realtimeHandle = null
+  document.removeEventListener('visibilitychange', onVisibilityRefresh)
+}
+
 export function subscribeAiUsage(listener: () => void): () => void {
   listeners.add(listener)
-  /* pemakaian dari perangkat/perangkat lain dibaca sekali saat ada yang
-     berlangganan (pola yang sama dengan hidrasi store uang) */
+  /* pemakaian dari perangkat/perangkat lain dibaca saat ada yang berlangganan
+     (pola yang sama dengan hidrasi store uang), lalu dijaga hidup oleh realtime */
   void hydrateAiUsage()
+  attachRealtime()
   return () => {
     listeners.delete(listener)
+    detachRealtime()
   }
 }
 
@@ -88,18 +153,31 @@ export function mergeAiUsage(local: AiUsageState, remote: RemoteAiUsage): AiUsag
   }
 }
 
-/** baca meter dari server sekali per sesi halaman; `false` = tidak ada yang dibaca */
-export async function hydrateAiUsage(): Promise<boolean> {
-  if (hydrated) return false
-  hydrated = true
+/**
+ * Baca ulang meter dari server dan gabungkan (`max` per aktivitas).
+ * TIDAK digerbangi `hydrated` — justru inilah yang dipanggil realtime dan saat
+ * tab kembali terlihat, jadi ia memang boleh jalan berkali-kali.
+ * `false` = tidak ada yang dibaca (tanpa backend/sesi).
+ */
+export async function refreshAiUsage(): Promise<boolean> {
   const remote = await readAiUsage()
-  if (!remote) {
-    hydrated = false // backend belum siap → coba lagi saat ada pelanggan baru
-    return false
-  }
+  if (!remote) return false
   live = mergeAiUsage(live, remote)
   emit()
   return true
+}
+
+/**
+ * Baca meter dari server SEKALI per sesi halaman (hidrasi awal).
+ * `false` = tidak ada yang dibaca, jadi boleh dicoba lagi saat ada pelanggan baru
+ * (backend belum siap → jangan kunci `hydrated`).
+ */
+export async function hydrateAiUsage(): Promise<boolean> {
+  if (hydrated) return false
+  hydrated = true
+  const ok = await refreshAiUsage()
+  if (!ok) hydrated = false
+  return ok
 }
 
 

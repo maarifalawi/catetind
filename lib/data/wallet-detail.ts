@@ -325,6 +325,9 @@ export const WALLET_TOTAL_COPY = {
    * membuat dua angka di satu layar tidak terasa bertentangan.
    */
   compositionAccounts: (count: number) => `${count} akun · semua dompet`,
+  /* H4-2 (audit UI/UX) — toggle "komposisi tanpa dompet terbesar". */
+  compositionHideLargest: 'Tanpa dompet terbesar',
+  compositionShowAll: 'Semua dompet',
 } as const
 
 /**

@@ -604,6 +604,45 @@ body {
    Blur di panel/kartu kecil (mis. headerAI Coach, kartu kaca) tetap boleh —
    luasnya kecil dan backdrop-nya relatif statis. */
 
+/* ── PERFORMA MOBILE: JEDA ANIMASI HIAS SAAT OVERLAY TERBUKA (paket 86) ──────
+   Aturan di atas melarang `backdrop-blur` seluas viewport di overlay, tapi sisa
+   biayanya masih ada: konten di BELAKANG overlay tetap beranimasi (ayunan
+   tanaman, kilau `.progress-shimmer`, denyut `animate-ping`) selama animasi
+   buka/tutup overlay. Di WebKit (iOS Safari) kombinasi inilah yang terasa
+   sebagai frame drop — terutama di HP kelas menengah.
+
+   Karena itu begitu ada overlay yang mengunci halaman — bottom sheet Vaul
+   (`body[data-catetind-sheet-open]`), panel yang memakai `useBodyScrollLock`
+   (`body[data-catetind-overlay-open]`, hooks/use-body-scroll-lock.ts), atau jalur
+   `react-remove-scroll` milik Vaul (`body[data-scroll-locked]`) — animasi HIAS di
+   dalam konten halaman DIJEDA.
+
+   Sengaja BUKAN "semua animasi": daftarnya cuma elemen dekoratif latar. Penanda
+   `[class*=…]` dipakai karena animasinya ditulis sebagai utility Tailwind
+   (`animate-ping`, `animate-[plant-sway_…]`). Ruang lingkup dibatasi ke
+   `[data-catetind-page-root]` supaya animasi di dalam panel/sheet — slide-in
+   overlay, titik mengetik, denyut scan struk yang di-render lewat PORTAL ke
+   <body> — TIDAK ikut berhenti; justru dialah yang sedang berinteraksi user.
+   (Selector ini tidak berlapis `@layer`, jadi menang atas utility Tailwind
+   tanpa perlu `!important`.) */
+body[data-catetind-sheet-open='true'] [data-catetind-page-root] :is(
+    [class*='animate-ping'],
+    [class*='plant-sway'],
+    .progress-shimmer
+  ),
+body[data-catetind-overlay-open='true'] [data-catetind-page-root] :is(
+    [class*='animate-ping'],
+    [class*='plant-sway'],
+    .progress-shimmer
+  ),
+body[data-scroll-locked] [data-catetind-page-root] :is(
+    [class*='animate-ping'],
+    [class*='plant-sway'],
+    .progress-shimmer
+  ) {
+  animation-play-state: paused;
+}
+
 /* ── Transaction Input Engine (Vaul bottom sheet, inventaris 97a/b/c) ─────────
    Vaul menyuntik animasi slide `.5s cubic-bezier(.32,.72,0,1)` ke semua
    [data-vaul-drawer]. PRD (Domain 2A.2) minta pegas cepat ~300ms, jadi kita

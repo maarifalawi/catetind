@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   DEFAULT_USER_MONEY_SETTINGS,
   USER_MONEY_SETTINGS_KEY,
+  enabledContextsOf,
   hasConfiguredIncome,
   parseUserMoneySettings,
   purgeUserMoneySettings,
@@ -265,6 +266,67 @@ describe('hasConfiguredIncome', () => {
         expect(settings.totalInstallments).toBe(1_070_000)
         expect(settings.paydayDate).toBe(20)
         expect(settings.dashboardPeriod).toBe('calendar')
+      },
+    )
+  })
+})
+
+/* ── KONTEKS UANG USER (paket 87) ─────────────────────────────────────────────
+   Janji yang dikunci: user yang tidak butuh "Keluarga"/"Bersama" tidak dipaksa
+   melihatnya; pilihannya DISIMPAN; nilainya diwarisi dari onboarding (tidak
+   ditanya dua kali); dan "Hapus Akun" tidak menghidupkan warisan itu kembali. */
+describe('enabledContexts (konteks uang user)', () => {
+  it('default: cuma `pribadi` yang aktif', () => {
+    withFakeStorage({}, () => {
+      expect(enabledContextsOf(readUserMoneySettings())).toEqual(['pribadi'])
+    })
+  })
+
+  it('diwarisi dari onboarding: pasangan → Bersama, tanggungan → Keluarga', () => {
+    const onboarded = {
+      ...ONBOARDED,
+      situations: ['couple', 'sandwich'],
+      modules: ['joint_wallet', 'sandwich_generation'],
+    }
+    withFakeStorage({ [ONBOARDING_STORE_KEY]: JSON.stringify(onboarded) }, () => {
+      expect(enabledContextsOf(readUserMoneySettings())).toEqual(['pribadi', 'keluarga', 'bersama'])
+    })
+  })
+
+  it('pilihan user disimpan; `pribadi` selalu ikut & nilai asing dibuang', () => {
+    withFakeStorage({}, () => {
+      saveUserMoneySettings({ enabledContexts: ['pribadi', 'bersama'] })
+      expect(enabledContextsOf(readUserMoneySettings())).toEqual(['pribadi', 'bersama'])
+
+      /* pribadi TIDAK bisa dilepas walau user menulis daftar tanpa pribadi */
+      saveUserMoneySettings({ enabledContexts: ['keluarga'] })
+      expect(enabledContextsOf(readUserMoneySettings())).toEqual(['pribadi', 'keluarga'])
+
+      /* nilai asing dibuang & urutan dinormalkan (Pribadi → Keluarga → Bersama) */
+      saveUserMoneySettings({ enabledContexts: ['bersama', 'hantu', 'pribadi'] as never })
+      expect(enabledContextsOf(readUserMoneySettings())).toEqual(['pribadi', 'bersama'])
+    })
+  })
+
+  it('file lama (tanpa field ini) mewarisi onboarding, bukan default buta', () => {
+    withFakeStorage(
+      {
+        [USER_MONEY_SETTINGS_KEY]: JSON.stringify({ version: 1, monthlyIncome: 5_000_000 }),
+        [ONBOARDING_STORE_KEY]: JSON.stringify({ ...ONBOARDED, modules: ['joint_wallet'] }),
+      },
+      () => {
+        expect(enabledContextsOf(readUserMoneySettings())).toEqual(['pribadi', 'bersama'])
+      },
+    )
+  })
+
+  it('"Hapus Akun" mengembalikan konteks ke default (warisan tidak lahir lagi)', () => {
+    withFakeStorage(
+      { [ONBOARDING_STORE_KEY]: JSON.stringify({ ...ONBOARDED, modules: ['joint_wallet'] }) },
+      () => {
+        expect(enabledContextsOf(readUserMoneySettings())).toEqual(['pribadi', 'bersama'])
+        purgeUserMoneySettings()
+        expect(enabledContextsOf(readUserMoneySettings())).toEqual(['pribadi'])
       },
     )
   })

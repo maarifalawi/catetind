@@ -207,3 +207,32 @@ describe('jejak analitik kuota menipis (paket 43 · audit Stage 6 #4)', () => {
     setAnalyticsSink(null)
   })
 })
+
+/* ── TITIK BERANGKAT PRODUKSI — TANPA DATA CONTOH (paket 86) ─────────────────
+   Temuan produk: user baru melihat tangki AI "sudah terpakai separuh" karena
+   store SELALU mulai dari `AI_SEED_USAGE_CALLS` (angka contoh milik siapa pun).
+   Test ini mengunci dua sisi gerbangnya:
+     · build PRODUKSI tanpa `NEXT_PUBLIC_DEMO=1` → titik berangkat NOL;
+     · test (NODE_ENV=test) → seed tetap tampil supaya angka kanon di atas stabil. */
+describe('titik berangkat produksi — tanpa data contoh (paket 86)', () => {
+  it('build produksi tanpa NEXT_PUBLIC_DEMO mulai dari nol', async () => {
+    vi.resetModules()
+    vi.stubEnv('NODE_ENV', 'production')
+    vi.stubEnv('NEXT_PUBLIC_DEMO', '')
+    try {
+      const mod = await import('./ai-usage-store')
+      const state = mod.seedAiUsageState()
+      expect(state.purchasedTokens).toBe(0)
+      for (const activity of AI_BASE_QUOTA) {
+        expect(state.callsUsed[activity.id]).toBe(0)
+      }
+      /* tidak ada aktivitas asing yang menyelinap lewat seed */
+      expect(Object.keys(state.callsUsed).sort()).toEqual(
+        AI_BASE_QUOTA.map((activity) => activity.id).sort(),
+      )
+    } finally {
+      vi.unstubAllEnvs()
+      vi.resetModules()
+    }
+  })
+})

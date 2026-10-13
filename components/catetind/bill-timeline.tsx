@@ -2,6 +2,7 @@
 
 import { cn } from '@/lib/utils'
 import {
+  BILL_TIMELINE_COPY,
   TIMELINE_DAYS,
   TODAY_ISO,
   billsOnDay,
@@ -97,7 +98,7 @@ export function BillTimeline({
                     : formatDayLabel(day.iso)
                 }
                 className={cn(
-                  'flex w-full flex-col items-center gap-1 rounded-2xl px-0.5 py-2 transition-colors',
+                  'relative flex w-full flex-col items-center gap-1 rounded-2xl px-0.5 py-2 transition-colors',
                   clickable ? 'active:scale-95' : 'cursor-default',
                   day.isToday
                     ? 'bg-forest text-cream shadow-[0_10px_22px_-14px_rgba(0,0,0,0.85)]'
@@ -110,6 +111,11 @@ export function BillTimeline({
                           : 'bg-sage/30',
                 )}
               >
+                {/* H6-2 (audit UI/UX): titik penanda hari yang punya tagihan
+                    jatuh tempo, supaya strip tanggal tidak "flat". */}
+                {dayBills.length > 0 && (
+                  <span aria-hidden className={cn('absolute right-1 top-1 size-1.5 rounded-full', day.isToday ? 'bg-cream' : 'bg-hud-amber')} />
+                )}
                 <span
                   className={cn(
                     'text-[9px] font-semibold uppercase tracking-wide',
@@ -160,6 +166,12 @@ export function BillTimeline({
         })}
       </ul>
 
+      {/* H6-2 — kalau 7 hari ke depan bersih, katakan apa adanya. */}
+      {!hasBills && (
+        <p className="mt-3 rounded-2xl bg-sage/40 px-3.5 py-2.5 text-center text-[12px] font-medium text-forest/70">
+          {BILL_TIMELINE_COPY.safeWeek}
+        </p>
+      )}
     </section>
   )
 }

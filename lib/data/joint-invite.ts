@@ -347,9 +347,20 @@ export const JOIN_COPY = {
   /** pola persis PRD 915 — nama pengundang jadi subjek kalimat, bukan "Anda diundang" */
   headline: (inviter: string) => `Halo! ${inviter} mengajakmu kelola uang bareng di CatetInd 💚`,
   walletLabel: 'Dompet bersama',
-  /** penjelas singkat: apa yang terjadi setelah gabung, tanpa istilah teknis */
+  /** penjelas singkat: apa yang terjadi setelah gabung, tanpa istilah teknis.
+   *  H9-1 (audit UI/UX): dipendekkan jadi SATU kalimat; detailnya pindah ke
+   *  `learnMoreBody` di balik "Pelajari lebih lanjut". */
   subtitle:
-    'Satu buku besar untuk kalian berdua: siapa nalangin apa, berapa yang perlu diimpasin. Mulai dari Rp0 dan tanpa mindahin uang ke mana-mana.',
+    'Satu buku besar untuk kalian berdua: siapa nalangin apa, berapa yang perlu diimpasin.',
+  /** H9-1 — label disclosure detail */
+  learnMore: 'Pelajari lebih lanjut',
+  /** H9-1 + H9-4 — detail + tiga bullet singkat di balik disclosure */
+  learnMoreLead: 'Mulai dari Rp0 dan tanpa mindahin uang ke mana-mana.',
+  learnMoreBullets: [
+    'Catat pengeluaran bersama',
+    'Lihat siapa bayar apa',
+    'Data pribadimu tetap privat',
+  ],
   benefitsTitle: 'Yang kalian dapat',
   benefits: [
     {

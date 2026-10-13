@@ -53,6 +53,10 @@ export function InstallGuideScreen() {
   const [pickedTab, setPickedTab] = useState<DeviceType | null>(null)
   const activeTab = pickedTab ?? device
 
+  /* H1-1 (audit UI/UX) — "Cara Manual" jadi collapsible. Terbuka default supaya
+     kejelasan langkah (yang dipuji audit) tidak hilang, tapi bisa dilipat. */
+  const [manualOpen, setManualOpen] = useState(true)
+
   /* iOS: panah melayang auto-hilang begitu user lewat langkah-langkah tutorial */
   const stepsEndRef = useRef<HTMLDivElement | null>(null)
   const [passedSteps, setPassedSteps] = useState(false)
@@ -105,14 +109,15 @@ export function InstallGuideScreen() {
 
           Tidak ada lebar maksimum buatan: padding & lebar konten datang dari
           shell, jadi tepi kiri/kanan `/install` sejajar dengan Dashboard. */}
-      <div className="w-full lg:grid lg:grid-cols-12 lg:items-start lg:gap-x-8">
+      <div className="mx-auto w-full max-w-2xl">
         {/* ── HERO: jual alasannya dulu ──
-            Penempatan grid ditulis EKSPLISIT (`row-start`) supaya kartu kiri
-            (hero + serah-terima) menumpuk rapi di kolom 1–5 dan kolom kanan
-            membentang penuh di sebelahnya. Sebelumnya `InstallQrHandoff` adalah
-            anak grid TANPA `lg:col-span-*` → di grid 12 kolom ia menyempit jadi
-            1 kolom dan kolom kanan terlempar ke baris baru (tata letak 5/7 pecah). */}
-        <header className="lg:col-span-5 lg:row-start-1">
+            H1-1 (audit UI/UX): halaman ini dulu grid 2 kolom (kiri hero+alasan,
+            kanan panduan) sehingga terasa seperti dua halaman yang ditempel.
+            Sekarang SATU kolom linear atas→bawah: Hero → Bonus → Selling Points →
+            CTA Install → Cara Manual (collapsible) → Yang Perlu Kamu Tahu →
+            Bagikan link (sekunder) → panduan perangkat lain → kaki. Alasan deviasi
+            dari grid 12 kolom desktop: H1-1 memang meminta flow linear. */}
+        <header>
           <span className="inline-flex items-center gap-1.5 rounded-full bg-cream/70 px-3 py-1 text-[11px] font-medium tracking-[0.16em] text-forest uppercase ring-1 ring-soil/12">
             <Zap className="size-3" strokeWidth={2.6} aria-hidden />
             {INSTALL_HERO.badge}
@@ -124,36 +129,33 @@ export function InstallGuideScreen() {
           <p className="mt-2 text-sm leading-relaxed text-forest/55 sm:text-base">
             {INSTALL_HERO.subtitle}
           </p>
-
-          <ul className="mt-6 grid gap-2.5 sm:grid-cols-3 lg:grid-cols-1">
-            {INSTALL_BENEFITS.map((benefit) => (
-              <li
-                key={benefit.title}
-                className="flex items-center gap-3 rounded-2xl bg-cream/85 px-3.5 py-3 ring-1 ring-soil/12 backdrop-blur-xl sm:flex-col sm:items-start sm:gap-2 sm:py-4 lg:flex-row lg:items-center lg:gap-3 lg:py-3"
-              >
-                <span aria-hidden className="text-xl">
-                  {benefit.emoji}
-                </span>
-                <div>
-                  <p className="text-sm font-medium text-forest">{benefit.title}</p>
-                  <p className="mt-0.5 text-xs leading-relaxed text-forest/50">{benefit.desc}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
         </header>
 
-        {/* desktop: serah-terima link ke HP — ditaruh di kolom kiri (bukan di
-            dalam blok panduan) supaya kolom kiri tidak menganggur di layar lebar.
-            `isReady` WAJIB ikut: sebelum deteksi selesai `device` bernilai
-            'desktop' (state awal hook), jadi tanpa gerbang ini HTML server akan
-            berbeda dari render pertama client (hydration mismatch). */}
-        {isReady && device === 'desktop' && (
-          <InstallQrHandoff className="mt-6 lg:col-span-5 lg:col-start-1 lg:row-start-2" />
-        )}
+        {/* ── H1-4. BONUS EKSKLUSIF — dipindah KE ATAS, tepat di bawah headline
+            "Install CatetInd di HP Kamu" sebagai sub-section eye-catching (dulu
+            mengendap di paling bawah, jarang terlihat). ─────────────────────── */}
+        <InstallRewardBanner className="mt-6" />
 
-        {/* ── KOLOM KANAN: panduan langkah demi langkah (7/12 di desktop) ── */}
-        <div className="lg:col-span-7 lg:col-start-6 lg:row-span-2 lg:row-start-1">
+        {/* ── SELLING POINTS (3 alasan install) ── */}
+        <ul className="mt-6 grid gap-2.5 sm:grid-cols-3">
+          {INSTALL_BENEFITS.map((benefit) => (
+            <li
+              key={benefit.title}
+              className="flex items-center gap-3 rounded-2xl bg-cream/85 px-3.5 py-3 ring-1 ring-soil/12 backdrop-blur-xl sm:flex-col sm:items-start sm:gap-2 sm:py-4"
+            >
+              <span aria-hidden className="text-xl">
+                {benefit.emoji}
+              </span>
+              <div>
+                <p className="text-sm font-medium text-forest">{benefit.title}</p>
+                <p className="mt-0.5 text-xs leading-relaxed text-forest/50">{benefit.desc}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+
+        {/* ── KOLOM PANDUAN (linear) ── */}
+        <div>
           {!isReady ? (
             /* deteksi perangkat jalan setelah mount — jangan sempat menampilkan
                panduan perangkat yang salah */
@@ -181,12 +183,31 @@ export function InstallGuideScreen() {
                   onInstall={install}
                 />
               )}
-              {/* ── PANDUAN perangkat yang terdeteksi ── */}
-              <ManualTutorial device={device} className="mt-4" />
+              {/* ── H1-1. CARA MANUAL (collapsible) — panduan perangkat yang
+                  terdeteksi. Bisa dilipat supaya halaman tidak terasa panjang. */}
+              <div className="mt-4">
+                <button
+                  type="button"
+                  onClick={() => setManualOpen((open) => !open)}
+                  aria-expanded={manualOpen}
+                  className="flex w-full items-center justify-between gap-2 rounded-2xl bg-cream/70 px-4 py-3 text-left text-[12.5px] font-medium text-forest ring-1 ring-soil/12 transition-colors hover:bg-cream"
+                >
+                  Cara install manual
+                  {manualOpen ? (
+                    <ChevronUp className="size-3.5 shrink-0" strokeWidth={2.4} aria-hidden />
+                  ) : (
+                    <ChevronDown className="size-3.5 shrink-0" strokeWidth={2.4} aria-hidden />
+                  )}
+                </button>
+                {manualOpen && <ManualTutorial device={device} className="mt-3" />}
+              </div>
               {/* sentinel: begitu masuk viewport, user sudah lewat langkah tutorial */}
               {device === 'ios' && <div ref={stepsEndRef} aria-hidden className="h-px w-full" />}
-              {/* kartu "Lanjutkan di HP" untuk desktop sudah pindah ke KOLOM KIRI
-                  (di atas) supaya tidak menumpuk di kolom panduan */}
+              {/* ── H1-2. "Bagikan link" / "Salin link" — SEKUNDER di bawah CTA
+                  install (audit: dua tombol ini dulu terlalu dominan). Hanya
+                  desktop (serah-terima link ke HP). `isReady` WAJIB ikut supaya
+                  HTML server & render pertama client identik. ── */}
+              {isReady && device === 'desktop' && <InstallQrHandoff className="mt-4" />}
               {/* ── BATASAN: pasangan jujur dari kartu benefit di hero (PRD 4A) ── */}
               <InstallLimitsCard className="mt-4" />
               {/* ── PERANGKAT LAIN: panduan lain disembunyikan sampai diminta ── */}
@@ -244,7 +265,6 @@ export function InstallGuideScreen() {
                     aria-labelledby={`install-tab-${activeTab}`}
                   >
                     <ManualTutorial device={activeTab} className="mt-3" />
-                    {activeTab === 'desktop' && <InstallQrHandoff className="mt-3" />}
                   </div>
                 </div>
               )}
@@ -265,9 +285,6 @@ export function InstallGuideScreen() {
                   {INSTALL_CHECKOUT_CTA.linkLabel}
                 </Link>
               </p>
-
-              {/* ── REWARD: penutup halaman, alasan terakhir buat install ── */}
-              <InstallRewardBanner />
             </>
           )}
         </div>

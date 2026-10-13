@@ -6,8 +6,7 @@ import {
   AI_FUEL_COPY,
   AI_PLAN_LOCKED_COPY,
   AI_QUOTA_EXHAUSTED_COPY,
-  AI_QUOTA_RESET_DATE,
-  AI_QUOTA_RESET_DAYS,
+  AI_QUOTA_RESET_FALLBACK,
   AI_UNLIMITED_BADGE,
   AI_UNLIMITED_NOTE,
   compactNumber,
@@ -15,6 +14,7 @@ import {
   planQuota,
 } from '@/lib/ai-quota'
 import { useAiQuota } from '@/hooks/use-ai-quota'
+import { useAiQuotaReset } from '@/hooks/use-ai-quota-reset'
 import { useSubscriptionGate } from './subscription-gate-provider'
 import { NavTooltip } from './nav-tooltip'
 
@@ -50,6 +50,11 @@ export function AiFuelCard({ collapsed }: { collapsed: boolean }) {
      dan angkanya BENAR-BENAR turun setiap kali user memakai AI. */
   const quota = useAiQuota()
   const recordsLeft = quota.recordsLeft
+  /* tanggal reset NYATA (paket 86): dibaca setelah mount lewat hook. Selama
+     belum terbaca kita menyebut keadaannya apa adanya (`AI_QUOTA_RESET_FALLBACK`)
+     alih-alih memajang tanggal mock yang tidak pernah berubah. */
+  const reset = useAiQuotaReset()
+  const resetDaysLabel = reset ? `${reset.daysUntil} hari lagi` : AI_QUOTA_RESET_FALLBACK
   /* Paket aktif dibaca dari gerbang global — labenya sama dengan /settings/billing
      & /checkout, dan kuota yang berlaku ditentukan `planQuota()` (paket tanpa AI
      tidak punya kuota sama sekali; Paket Sultan tanpa batas). */
@@ -63,7 +68,7 @@ export function AiFuelCard({ collapsed }: { collapsed: boolean }) {
     quota.baseTokensRemaining,
   )} token (≈ ${recordsLeft.toLocaleString('id-ID')} catatan AI) · voice ${quota.voiceCallsRemaining} panggilan sisa (≈ ${formatDuration(
     quota.voiceRemainingSeconds,
-  )}) · reset ${AI_QUOTA_RESET_DAYS} hari lagi`
+  )}) · reset ${resetDaysLabel}`
 
   /* PAKET TANPA AI (paket 84): kartu tidak menampilkan tangki kosong yang
      membingungkan — ia berkata apa adanya dan mengarahkan ke halaman paket. */
@@ -169,7 +174,7 @@ export function AiFuelCard({ collapsed }: { collapsed: boolean }) {
           user tetap tahu bahwa mencatat MANUAL belum ikut berhenti. */}
       {quota.exhausted && (
         <span className="mt-2.5 block text-[11px] leading-snug text-forest/55">
-          {AI_QUOTA_EXHAUSTED_COPY.gaugeNote(AI_QUOTA_RESET_DATE)}
+          {AI_QUOTA_EXHAUSTED_COPY.gaugeNote(reset?.label ?? AI_QUOTA_RESET_FALLBACK)}
         </span>
       )}
 
@@ -190,7 +195,7 @@ export function AiFuelCard({ collapsed }: { collapsed: boolean }) {
         </span>
         <span className="mt-1 flex items-center gap-1.5 font-medium tabular-nums text-forest/40">
           <RotateCcw className="size-3 shrink-0" strokeWidth={2.2} aria-hidden />
-          Reset {AI_QUOTA_RESET_DAYS} hari lagi
+          Reset {resetDaysLabel}
         </span>
       </span>
     </Link>

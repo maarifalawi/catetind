@@ -1,6 +1,6 @@
 'use client'
 
-import type { AiQuotaActivityId } from '@/lib/ai-quota'
+import { monthKeyOf, type AiQuotaActivityId } from '@/lib/ai-quota'
 import { browserSupabase } from './client'
 
 /* ── METER PEMAKAIAN AI DI SERVER (`ai_usage`) (paket 45) ───────────────────
@@ -15,10 +15,11 @@ import { browserSupabase } from './client'
    Batas jujur: yang disimpan adalah PEMAKAIAN, bukan token sungguhan — provider
    AI-nya sendiri masih mock (tidak ada DeepSeek/apa pun yang dipanggil). */
 
-/** bulan berjalan `YYYY-MM` — kunci baris `ai_usage` */
+/** bulan berjalan `YYYY-MM` — kunci baris `ai_usage`. Diturunkan dari
+ *  `monthKeyOf()` (`lib/ai-quota.ts`) supaya kuncinya SATU definisi dengan
+ *  tanggal reset yang ditampilkan UI — tidak ada dua perhitungan bulan. */
 export function currentMonthKey(now = new Date()): string {
-  const month = `${now.getMonth() + 1}`.padStart(2, '0')
-  return `${now.getFullYear()}-${month}`
+  return monthKeyOf(now)
 }
 
 export interface RemoteAiUsage {

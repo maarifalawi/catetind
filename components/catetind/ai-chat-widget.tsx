@@ -58,12 +58,15 @@ function ChatBubble({ message, onAction }: { message: ChatMessage; onAction: () 
       <AIAvatar className="mt-0.5 size-7" />
       <div
         className={cn(
-          'max-w-[82%] rounded-2xl rounded-bl-md px-3.5 py-2.5 text-sm leading-relaxed shadow-sm ring-1',
+          'max-w-[82%] rounded-2xl rounded-bl-md px-3.5 py-2.5 text-sm leading-relaxed shadow-sm ring-1 ring-forest',
           // Domain 3C — pesan apresiasi dapat treatment visual beda (highlight olive
-          // + prefix sparkle) supaya kebaca sebagai "pujian", bukan coaching biasa
-          appreciation
-            ? 'bg-sage text-forest ring-mint/50'
-            : 'bg-cream text-forest ring-soil/12',
+          // + prefix sparkle) supaya kebaca sebagai "pujian", bukan coaching biasa.
+          // PAKET 94 (revisi): pembedanya sekarang HANYA permukaannya (`bg-sage`);
+          // stroke-nya seragam `ring-forest` 1px untuk semua bubble AI — permintaan
+          // pemilik produk: "gausah ada stroke ijo, bikin stroke ijo tua aja dengan
+          // ketebalan 1". Sebelumnya apresiasi memakai hairline hijau muda
+          // (`ring-mint/50`) dan bubble biasa hairline hitam 12% (`ring-soil/12`).
+          appreciation ? 'bg-sage text-forest' : 'bg-cream text-forest',
         )}
       >
         {appreciation && (
@@ -117,7 +120,9 @@ function TypingIndicator() {
   return (
     <div className="flex items-start gap-2">
       <AIAvatar className="mt-0.5 size-7" />
-      <div className="flex items-center gap-1.5 rounded-2xl rounded-bl-md bg-cream px-4 py-3.5 shadow-sm ring-1 ring-soil/12">
+      {/* PAKET 94 (revisi): stroke bubble AI seragam `ring-forest` 1px (ijo tua),
+          bukan hairline hitam 12% — permintaan pemilik produk. */}
+      <div className="flex items-center gap-1.5 rounded-2xl rounded-bl-md bg-cream px-4 py-3.5 shadow-sm ring-1 ring-forest">
         {[0, 1, 2].map((i) => (
           <span
             key={i}
@@ -393,9 +398,19 @@ export function AIChatWidget() {
              (48px) atas permintaan pemilik produk — bubble AI Coach tidak lagi
              "berebut perhatian" dengan FAB "Catat" (yang kini justru dibesarkan
              lewat warna brand). 48px tetap ≥ 44px, jadi target sentuh aman. */
-          className="animate-bubble-in fixed bottom-24 right-5 z-50 flex size-12 items-center justify-center rounded-full bg-forest text-mint shadow-[0_18px_40px_-12px_rgba(0,0,0,0.45)] ring-1 ring-forest/20 transition-transform duration-150 hover:scale-105 active:scale-95 lg:bottom-8 lg:right-8"
+          className="animate-bubble-in fixed bottom-24 right-5 z-50 flex size-12 items-center justify-center rounded-full bg-forest shadow-[0_18px_40px_-12px_rgba(0,0,0,0.45)] ring-1 ring-forest/20 transition-transform duration-150 hover:scale-105 active:scale-95 lg:bottom-8 lg:right-8"
         >
-          <Sparkles className="size-5" strokeWidth={2} />
+          {/* PAKET 94 (revisi 3): penanda tombol ini MARK AI dari artwork
+              `public/logo-ai.png` (brush "A!i") — file yang ditaruh langsung
+              pemilik produk dan dipakai APA ADANYA: tidak diproses/digenerate lagi
+              (langkah `pnpm icons` untuk file itu sudah dicabut), tanpa crop, tanpa
+              ring, tanpa latar tambahan. Yang terlihat di atas lingkaran
+              `bg-forest` ini adalah cakram putih artwork itu sendiri — tepi
+              bulatnya dibawa alpha-nya, bukan `rounded-full`.
+              `size-8` (32px) di dalam tombol 48px menyisakan bibir forest 8px,
+              sepadan dengan ikon lama (`size-5`). Lingkaran `bg-forest` tetap:
+              yang bertukar hanya glifnya. */}
+          <AIAvatar className="size-8" />
           {hasInsight && (
             <span className="absolute -right-0.5 -top-0.5 flex size-3.5">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-mint opacity-80" />
@@ -422,8 +437,15 @@ export function AIChatWidget() {
             aria-label={AI_CHAT_COPY.panelLabel}
             className="animate-in slide-in-from-bottom-6 fade-in fixed inset-x-0 bottom-0 z-[60] flex h-[92dvh] flex-col overflow-hidden rounded-t-[2rem] bg-cream shadow-2xl ring-1 ring-soil/12 duration-300 lg:inset-x-auto lg:bottom-8 lg:right-8 lg:h-[550px] lg:w-[420px] lg:rounded-3xl"
           >
-            {/* header — avatar, judul, fuel gauge kuota AI, tombol tutup */}
-            <header className="flex items-center gap-3 border-b border-soil/12 bg-cream/85 px-4 py-3 backdrop-blur">
+            {/* header — avatar, judul, fuel gauge kuota AI, tombol tutup.
+                PERFORMA (paket 86): di mobile panel ini hampir seluas layar, jadi
+                permukaannya sengaja OPAK tanpa `backdrop-blur` — blur seluas itu
+                dihitung ulang tiap frame saat pesan digulir. Blur baru dipasang
+                di `lg`, saat panel mengecil jadi kartu kecil mengambang. */}
+            <header className="flex items-center gap-3 border-b border-soil/12 bg-cream px-4 py-3 lg:bg-cream/85 lg:backdrop-blur">
+              {/* PAKET 94 (revisi): avatar panel = mark AI dari
+                  `public/logo-ai.png` (lewat `AIAvatar`), bukan lagi teks "AI" —
+                  satu sumber mark untuk FAB, bubble, dan header ini. */}
               <AIAvatar className="size-9" />
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline justify-between gap-2">
@@ -544,7 +566,8 @@ export function AIChatWidget() {
               )}
             </div>
 
-            {/* input bar */}
+            {/* input bar. PERFORMA (paket 86): opak di mobile, blur hanya di `lg`
+                (lihat catatan di header panel). */}
             <form
               onSubmit={(e) => {
                 e.preventDefault()
@@ -554,7 +577,7 @@ export function AIChatWidget() {
                 if (captureLocked) return
                 handleSend()
               }}
-              className="relative border-t border-soil/12 bg-cream/85 p-3 backdrop-blur"
+              className="relative border-t border-soil/12 bg-cream p-3 lg:bg-cream/85 lg:backdrop-blur"
               style={{
                 paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))',
               }}

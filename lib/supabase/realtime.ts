@@ -75,7 +75,7 @@ export interface WealthRealtimeHandle {
 /** tabel kekayaan yang perubahannya menarik `/wealth` untuk membaca ulang */
 const WEALTH_TABLES = ['investments', 'debts', 'debt_payments', 'asset_transactions'] as const
 
-function subscribeTables(
+export function subscribeTables(
   name: string,
   tables: readonly string[],
   onChange: () => void,
@@ -145,6 +145,18 @@ export function subscribeWealthChanges(onChange: () => void): WealthRealtimeHand
 /** langganan perubahan aset fisik/properti */
 export function subscribePhysicalChanges(onChange: () => void): WealthRealtimeHandle | null {
   return subscribeTables('physical-changes', ['physical_assets'], onChange)
+}
+
+/* ── REALTIME METER PEMAKAIAN AI (paket 86) ──────────────────────────────────
+   Sebelum ini kuota AI hanya dibaca sekali per pemuatan halaman, jadi user yang
+   memakai AI di perangkat lain baru melihat angkanya bergerak setelah refresh.
+   Sekarang `ai_usage` (pemakaian) & `ai_addons` (saldo token yang dibeli) ikut
+   berlangganan Postgres Changes — ditambahkan ke publication oleh migrasi
+   20261013120000. Sinyalnya cuma memicu BACA ULANG lewat jalur REST yang sama
+   dengan hidrasi (`lib/ai-usage-store.ts` → `refreshAiUsage()`), jadi tidak ada
+   perhitungan yang berbeda dari jalur normal dan RLS tetap menyaring user. */
+export function subscribeAiUsageChanges(onChange: () => void): WealthRealtimeHandle | null {
+  return subscribeTables('ai-usage-changes', ['ai_usage', 'ai_addons'], onChange)
 }
 
 export function subscribeJointTransactions(

@@ -48,12 +48,11 @@ const LEVEL_TEXT_CLASS: Record<HeatmapDay['level'], string> = {
   3: 'text-cream/90',
 }
 
-const LEGEND: { level: HeatmapDay['level']; label: string }[] = [
-  { level: 0, label: 'Rp 0' },
-  { level: 1, label: 'Sedikit' },
-  { level: 2, label: 'Sedang' },
-  { level: 3, label: 'Paling boros' },
-]
+/* H3-2 (audit UI/UX): legenda dulu terlalu kecil & cuma kata ("Sedikit",
+   "Sedang"). Sekarang labelnya memuat ANGKA nyata. Ambang level di
+   `buildSpendingHeatmapFromTransactions` bersifat RELATIF terhadap hari
+   terboros (30% & 62% dari puncak), jadi angkanya dihitung dari puncak itu —
+   bukan angka karangan. */
 
 /** bubble di tepi kiri/kanan digeser masuk supaya tidak terpotong tepi kartu */
 function tooltipPlacement(col: number) {
@@ -94,6 +93,18 @@ export function SpendingHeatmap({
 
   const totalSpend = days.reduce((sum, day) => sum + day.total, 0)
   const activeDays = days.filter((day) => day.total > 0).length
+
+  /* H3-2 — legenda dengan ambang RUPIAH nyata, diturunkan dari hari terboros. */
+  const legend = useMemo<{ level: HeatmapDay['level']; label: string }[]>(() => {
+    const low = Math.round(peak.total * 0.3)
+    const high = Math.round(peak.total * 0.62)
+    return [
+      { level: 0, label: 'Rp 0' },
+      { level: 1, label: `< ${maskMoney(low, masked)}` },
+      { level: 2, label: `${maskMoney(low, masked)}–${maskMoney(high, masked)}` },
+      { level: 3, label: `> ${maskMoney(high, masked)}` },
+    ]
+  }, [peak.total, masked])
 
   return (
     <section className="rounded-[2rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] ring-1 ring-soil/12 sm:p-6">
@@ -194,15 +205,16 @@ export function SpendingHeatmap({
         </div>
       </div>
 
-      {/* legenda skala warna */}
-      <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-[11px] text-forest/45">
-        <span className="font-medium">Skala</span>
-        {LEGEND.map(({ level, label }) => (
-          <span key={label} className="inline-flex items-center gap-1.5">
+      {/* H3-2 — legenda skala warna DIPERBESAR + angka nyata (dulu cuma kata,
+          kecil). Contoh: "🟩 < Rp 50.000" ala permintaan audit. */}
+      <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-[12.5px] font-medium text-forest/60">
+        <span className="text-forest/45">Skala</span>
+        {legend.map(({ level, label }) => (
+          <span key={level} className="inline-flex items-center gap-2">
             <span
               aria-hidden
               className={cn(
-                'size-3 rounded-[4px] ring-1 ring-inset ring-soil/12',
+                'size-4 rounded-md ring-1 ring-inset ring-soil/16',
                 LEVEL_CLASS[level],
               )}
             />

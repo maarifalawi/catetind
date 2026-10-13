@@ -45,6 +45,7 @@ import {
 import { cn } from '@/lib/utils'
 import {
   ASSET_EDIT_TOAST,
+  WEALTH_ONBOARD_COPY,
   DEBT_EDIT_TOAST,
   DELETE_ASSET_TOAST,
   DELETE_DEBT_TOAST,
@@ -602,6 +603,28 @@ export function WealthScreen() {
         <div className="mt-4 flex justify-center lg:hidden">
           <ContextMenu value={context} onChange={setContext} className="w-56" />
         </div>
+
+        {/* H8-1 (audit UI/UX): halaman ini intimidating buat user baru. Kalau
+            belum ada aset sama sekali, tampilkan kartu onboarding yang
+            menjelaskan dengan bahasa "mulai dari yang kecil". */}
+        {investments.length === 0 && physicalAssets.length === 0 && (
+          <div className="mt-5 flex flex-col gap-3 rounded-[1.5rem] bg-gradient-to-br from-sage/50 to-cream p-4 ring-1 ring-forest/10 sm:flex-row sm:items-center sm:justify-between lg:mt-6">
+            <div className="min-w-0">
+              <p className="text-[13px] font-medium text-forest">{WEALTH_ONBOARD_COPY.title}</p>
+              <p className="mt-1 text-[12px] leading-relaxed text-forest/60">
+                {WEALTH_ONBOARD_COPY.body}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowAddInvestment(true)}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-forest px-4 py-2.5 text-[12.5px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-95"
+            >
+              <Plus className="size-3.5" strokeWidth={2.8} aria-hidden />
+              {WEALTH_ONBOARD_COPY.cta}
+            </button>
+          </div>
+        )}
 
         {/* ── SECTION 3: HERO — Kekayaan Bersih (fokus absolut) ───────────
             Angkanya GLOBAL: seluruh aset, piutang, dan hutang (kanon paket 47

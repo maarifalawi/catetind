@@ -170,6 +170,23 @@ function EmptyGoals() {
       <p className="mx-auto mt-1.5 max-w-[19rem] text-[12.5px] leading-relaxed text-forest/55">
         {HOME_GOALS_COPY.emptyBody}
       </p>
+      {/* H2-3 — contoh celengan populer: placeholder yang BISA DITAP, bukan cuma
+          gambar kosong. Tiap chip membuka sheet "Tanam Celengan Baru". */}
+      <p className="mt-3.5 text-[11px] font-medium uppercase tracking-[0.1em] text-forest/40">
+        {HOME_GOALS_COPY.emptyPopularTitle}
+      </p>
+      <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+        {HOME_GOALS_COPY.emptyPopular.map((example) => (
+          <Link
+            key={example.label}
+            href={budgetPlantHref()}
+            className="inline-flex items-center gap-1.5 rounded-full bg-sage/70 px-3 py-1.5 text-[12px] font-medium text-forest ring-1 ring-forest/10 transition-colors hover:bg-sage focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25 active:scale-95"
+          >
+            <span aria-hidden>{example.emoji}</span>
+            {example.label}
+          </Link>
+        ))}
+      </div>
       <Link
         href={budgetPlantHref()}
         className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-forest px-4 py-2.5 text-[12.5px] font-medium text-cream transition-colors hover:bg-forest-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/30 active:scale-95"

@@ -182,19 +182,24 @@ export const INSTALL_LIMITS: {
   detailLabel: string
   points: InstallLimit[]
 } = {
-  title: 'Yang perlu kamu tahu',
-  blurb: 'Dua batas PWA yang kami jujurkan.',
+  /* H1-3 (audit UI/UX) — semula berjudul "Yang perlu kamu tahu" dengan frasa
+     "Dua batas PWA yang kami jujurkan", yang bisa bikin user yang belum paham
+     PWA justru ragu. Sekarang dibingkai POSITIF: setiap poin memimpin dengan apa
+     yang BISA dilakukan ("Notifikasi bisa aktif di Chrome & Edge ✅"), detail
+     batasnya tetap jujur di dalam disclosure. */
+  title: 'Yang bisa kamu andalkan',
+  blurb: 'CatetInd sudah siap di browser modern — ini yang bisa kamu harapkan.',
   detailLabel: 'Detail',
   points: [
     {
       icon: 'bell',
-      title: 'Notifikasi tergantung browser',
-      desc: 'Chrome, Edge, dan Safari terbaru oke. Browser lain kadang belum dukung — pengingat tetap ada saat app dibuka.',
+      title: 'Notifikasi bisa aktif di Chrome & Edge ✅',
+      desc: 'Browser modern (Chrome, Edge, Safari terbaru) mendukung notifikasi. Di browser lain, pengingat tetap muncul saat app dibuka.',
     },
     {
       icon: 'offline',
-      title: 'Offline = tampilan tersimpan',
-      desc: 'App tetap terbuka tanpa sinyal. Data baru masuk begitu internet balik.',
+      title: 'Tetap terbuka tanpa sinyal ✅',
+      desc: 'App tetap jalan tanpa internet. Data baru masuk begitu koneksi balik.',
     },
   ],
 }

@@ -2,6 +2,11 @@
 
 import { useEffect } from 'react'
 
+/* penghitung lintas-instance: kalau dua overlay mengunci bersamaan (jarang —
+   repo ini selalu menutup overlay sebelum membuka yang lain), penanda baru
+   benar-benar dilepas setelah yang TERAKHIR menutup. */
+let lockDepth = 0
+
 /**
  * Mengunci scroll background (document.body) selama overlay/panel terbuka.
  * Dipakai popup mobile (AI Chat, Balance Overview, dll.) supaya konten
@@ -16,6 +21,13 @@ import { useEffect } from 'react'
  *
  * Aman dipakai bertumpuk (chat + popup terbuka bersamaan): tiap pemanggil
  * merestore nilai yang dia simpan, sehingga unlock terjadi berantai.
+ *
+ * PAKET 86 — penanda `data-catetind-overlay-open`: selama terkunci, atribut ini
+ * dipasang di body supaya app/globals.css bisa MENJEDA animasi hias di latar
+ * (ayunan tanaman, kilau `.progress-shimmer`, denyut `animate-ping`) — biaya
+ * repaint yang tidak perlu justru yang membuat animasi buka/tutup panel terasa
+ * patah-patah di HP. Sengaja atribut (bukan class) supaya tidak bentrok dengan
+ * kunci scroll milik `react-remove-scroll`/Vaul yang menulis inline style.
  */
 export function useBodyScrollLock(locked: boolean, mobileOnly = false) {
   useEffect(() => {
@@ -30,9 +42,14 @@ export function useBodyScrollLock(locked: boolean, mobileOnly = false) {
     body.style.overflow = 'hidden'
     if (scrollbarWidth > 0) body.style.paddingRight = `${scrollbarWidth}px`
 
+    lockDepth += 1
+    if (lockDepth === 1) body.dataset.catetindOverlayOpen = 'true'
+
     return () => {
       body.style.overflow = prevOverflow
       body.style.paddingRight = prevPaddingRight
+      lockDepth = Math.max(0, lockDepth - 1)
+      if (lockDepth === 0) delete body.dataset.catetindOverlayOpen
     }
   }, [locked, mobileOnly])
 }

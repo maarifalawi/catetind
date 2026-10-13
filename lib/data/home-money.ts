@@ -150,6 +150,10 @@ export const HOME_MONEY_COPY = {
   /** subjudul kartu transaksi — daftar di kartu itu SEJAK PAKET 58 dibatasi
    *  7 hari kalender (58.6), jadi subjudulnya menyebut itu apa adanya */
   txnSubtitle: 'Catatan 7 hari terakhir',
+  /** H2-2 — badge halus saat ada beberapa transaksi bernama sama di satu hari,
+   *  supaya dua kartu "MCD" berturut-turut tidak terbaca sebagai catatan ganda
+   *  yang salah. */
+  txnDuplicateHint: (count: number) => `${count} transaksi serupa`,
   /** tombol kepala kartu menuju halaman Riwayat (filter lengkap ada di sana) */
   seeAll: 'Lihat semua',
   /** potongan strip kartu transaksi: "<period> +X masuk, -Y keluar — net Z" */
@@ -174,13 +178,24 @@ export const HOME_MONEY_COPY = {
   chartExpenseLabel: 'Pengeluaran',
   /** netto periode ini — "Sisa" lebih ramah daripada "Net" */
   chartNetLabel: 'Sisa',
-  /** aria grafik (tidak tampil): menyebut bahwa tiap titik = satu tanggal */
+  /** aria grafik (tidak tampil): satuan gambar kartu ini = SATU TITIK PER HARI */
   chartAria: 'Grafik arus uang harian bulan ini — tiap titik satu tanggal',
+  /** penanda "Hari ini" di grafik (paket 90) — garis putus-putus tipis di titik
+   *  tanggal hari ini; tanpa ini ekor rata di ujung kanan terbaca seperti
+   *  "pengeluaran berhenti", padahal itu sisa bulan yang belum jalan */
+  chartTodayLabel: 'Hari ini',
   /** judul kecil pekan aktif di strip rincian */
   chartWeekLabel: (label: string) => `Pekan ${label}`,
   /** satu kolom pekan untuk pembaca layar (nominal sudah tersensor di pemanggil) */
   chartColumnAria: (label: string, income: string, expense: string) =>
     `Pekan ${label}: pemasukan ${income}, pengeluaran ${expense}`,
+  /* ── KETERANGAN BATANG (paket 90 · bentuk cadangan) ────────────────────────
+     Kalimat yang menjelaskan bentuk BATANG (lihat `HOME_CASHFLOW_BAR`): saat itu
+     grafiknya satu seri — uang KELUAR per pekan — jadi legend dua titik tidak
+     berlaku. Kartu saat ini menggambar bentuk GARIS (dua seri: masuk & keluar),
+     jadi kalimat ini hanya dipakai kalau bentuk batang dipakai lagi. Ia tetap
+     tinggal di sini (bukan di JSX) supaya tidak lahir sinonim baru nanti. */
+  chartBarHint: 'Batang = pengeluaran per pekan · angka = porsi dari total bulan ini',
   /* ── KARTU "ARUS UANG" (paket 68 — digambar ulang jadi garis minimalis) ────
      Bentuk paket 67 (peta aliran alluvial + "irama pekan") terasa berat bagi
      pemilik produk. Bentuk paket 68: SATU grafik garis spline halus tanpa grid
@@ -342,24 +357,86 @@ export function groupHomeMoneyRows(
  */
 export const HOME_DISTRIBUTION_PALETTE = ['#b5b987', '#91a0b8', '#ffb885', '#b89191'] as const
 
-/* ── WARNA GRAFIK "ARUS UANG" (paket 68 · visualisasi digambar ulang) ────────
+/* ── WARNA GRAFIK "ARUS UANG" (paket 68 · garis; 91 · +grid; 92 · dua ton) ───
    Recharts butuh warna sebagai NILAI atribut (`stroke`, `stopColor`, `fill`),
    bukan kelas Tailwind — jadi warnanya tinggal di lapis data, sama seperti
    `HOME_DISTRIBUTION_PALETTE` & `WALLET_TREND_COLORS` (lib/data/wallet-detail).
-   Isinya tetap palet kanon: mint (#91bb9e) untuk uang masuk, plum / hud-
-   terracotta (#b89191) untuk uang keluar; sisanya forest dengan opasitas, jadi
-   penjaga palet (`scripts/theme/audit-palette.mjs`) tetap hijau. */
+
+   PAKET 92–93 (permintaan pemilik produk: "maunya warna & style garisnya
+   di-improve", lalu "warnanya ngga konsisten"). Sebelumnya GARIS dan ISIAN
+   sama-sama pastel sehingga kurvanya tenggelam di atas areanya sendiri; versi
+   paket 92 lalu memakai ton dalam untuk garis — tapi ton itu DIPAKAI HANYA di
+   garis, sementara dot legenda/tooltip/swatch tetap ton terang, jadi satu seri
+   muncul sebagai DUA warna berbeda (Pengeluaran: garis emas, dot salmon).
+   Sekarang aturannya satu: SATU HUE PER SERI, dua ton yang jelas perannya.
+     · BASE (ton dalam) → GARIS, titik hari, titik legenda, titik tooltip,
+       ikon/swatch. Ini "warna identitas" serinya — dipakai di semua mark.
+     · SOFT (ton terang) → ISIAN/gradien area & latar chip. Ini "warna
+       permukaan" serinya.
+   Jadi Pemasukan selalu keluarga hijau (evergreen → mint) dan Pengeluaran
+   selalu keluarga melon (cantelope-mid → cantelope); tidak ada lagi mark yang
+   memakai hue seri lain. Semua hex ada di daftar izin
+   `scripts/theme/audit-palette.mjs`, jadi penjaga palet tetap hijau. */
 export const HOME_CASHFLOW_COLORS = {
-  /** uang masuk — mint (leaf) */
-  income: '#91bb9e',
-  /** uang keluar — plum (hud-terracotta) */
-  expense: '#b89191',
-  /** label sumbu-X — tanpa garis/sumbu tebal, cuma teks tanggal pudar */
+  /** BASE · uang masuk — evergreen (forest): garis, titik, ikon */
+  income: '#45594e',
+  /** SOFT · uang masuk — mint (leaf): isian/gradien area & latar chip */
+  incomeSoft: '#91bb9e',
+  /** BASE · uang keluar — cantelope-mid: garis, titik, ikon */
+  expense: '#e8b06a',
+  /** SOFT · uang keluar — cantelope: isian/gradien area & latar chip */
+  expenseSoft: '#ffb885',
+  /** label sumbu-X — tanpa garis/sumbu tebal, cuma tiga tanggal yang pudar */
   axis: 'rgba(69,89,78,0.45)',
-  /** garis kursor tooltip */
+  /** garis dasar rambut di bawah kurva — SATU garis, pengganti grid */
+  baseline: 'rgba(69,89,78,0.12)',
+  /** garis kursor tooltip & penanda "Hari ini" */
   cursor: 'rgba(69,89,78,0.16)',
-  /** halo titik aktif — putih kanvas */
+  /** garis bantu horizontal (grid) — paling pudar dari semua garis; ia cuma
+   *  memberi isyarat skala, bukan membingkai grafik (paket 91) */
+  grid: 'rgba(69,89,78,0.07)',
+  /** halo titik aktif & titik penanda "Hari ini" — putih kanvas */
   dot: '#ffffff',
+} as const
+
+/* ── BATANG "ARUS UANG" (paket 90 · BENTUK CADANGAN) ─────────────────────────
+   Pemilik produk sempat meminta bentuk batang (contoh visual: deret batang
+   membulat di dalam kolom pucat + angka persen di dalam batang), lalu menilai
+   bentuk GARIS yang lama lebih baik — jadi kartunya kembali menggambar kurva.
+   Geometri & kelas batang di bawah TIDAK dihapus, alasannya persis sama dengan
+   geometri alluvial paket 67 yang juga masih tinggal di file ini: ia murni,
+   teruji (`lib/data/home-money.test.ts`), dan siap dipakai lagi tanpa ditulis
+   ulang. Yang menggambar bentuk batang: `cashFlowWeekBars()` di bawah.
+
+   Kelas Tailwind-nya tinggal di SINI (bukan disalin di JSX) supaya bentuknya
+   punya SATU definisi yang bisa diuji — pola yang sama dengan
+   `HOME_CASHFLOW_AXIS` di bawah & bar Rekap Mingguan (`lib/weekly-recap.ts`).
+   Tidak ada satu pun hex: seluruh warnanya token palet yang sudah dipakai
+   kartu-kartu Home (mint · forest · ink · soil), jadi penjaga palet
+   (`scripts/theme/audit-palette.mjs`) tetap hijau dan komponen bebas warna. */
+export const HOME_CASHFLOW_BAR = {
+  /** tinggi batang maksimum (%) — SENGAJA di bawah 100 supaya garis acuan di
+   *  kepala kolom (`tickClass`) tetap terlihat walau pekan terberat penuh;
+   *  proporsi inilah yang membuat siluetnya sama dengan contoh yang dikirim */
+  maxPct: 92,
+  /** satu kolom: kanvas pucat setinggi 100% + tempat batangnya tumbuh */
+  trackClass: 'relative w-full flex-1 rounded-2xl bg-soil/[0.06]',
+  /** garis acuan di kepala kolom — batang yang menyentuhnya menutupinya sendiri */
+  tickClass: 'absolute left-1/2 top-2 z-0 h-[3px] w-1/2 -translate-x-1/2 rounded-full bg-ink/15',
+  /** batang biasa: mint, makin gelap ke atas — keluarga visual bar kartu Pemasukan */
+  fillClass: 'z-10 bg-gradient-to-t from-mint/70 to-mint',
+  /** pekan terberat: paling gelap (ink → forest) — satu-satunya batang menonjol */
+  topFillClass: 'z-10 bg-gradient-to-t from-ink to-forest',
+  /** angka persen DI DALAM batang — gelap di batang mint, terang di batang gelap */
+  insideLabelClass: 'text-forest',
+  topInsideLabelClass: 'text-cream',
+  /** persen untuk batang PENDEK: mengambang tepat di atas batangnya */
+  outsideLabelClass: 'text-forest/55',
+  /** ambang tinggi (%) — di bawah ini angka tidak muat dicetak di dalam batang */
+  insideMinPct: 26,
+  /** animasi tumbuh dari dasar (keyframe `bar-grow`) — dihormati motion-reduce */
+  growClass:
+    'origin-bottom animate-[bar-grow_0.7s_cubic-bezier(0.22,1,0.36,1)_both] motion-reduce:animate-none',
 } as const
 
 /* ── SIMETRI TIGA ANGKA KUNCI "ARUS UANG" (paket 76) ─────────────────────────
@@ -590,6 +667,145 @@ export function summarizeCashFlowSeries(
     expense += point.expense
   }
   return { income, expense, net: income - expense }
+}
+
+/**
+ * Nilai HARIAN tertinggi dalam seri (masuk atau keluar) — batas atas sumbu-Y.
+ *
+ * Sumbu-Y grafik memetakan SATU TITIK PER HARI, jadi skalanya ditentukan puncak
+ * harian, bukan total bulan. Turunannya dari seri yang SAMA yang digambar, jadi
+ * label sumbu mustahil lebih kecil dari puncak kurvanya (kurva tak pernah
+ * melewati kanvas). `0` saat seri kosong/bernilai nol.
+ */
+export function cashFlowSeriesPeak(points: HomeCashFlowPoint[]): number {
+  let peak = 0
+  for (const point of points) peak = Math.max(peak, point.income, point.expense)
+  return peak
+}
+
+/* ── PENANDA "HARI INI" DI GRAFIK ARUS UANG (paket 90) ───────────────────────
+   Seri kartu ini selalu sepanjang BULAN penuh (28–31 titik), jadi tanggal
+   setelah hari ini ikut digambar sebagai nol — ekor rata di ujung kanan yang
+   tanpa penanda mudah terbaca keliru: "pengeluaran gue berhenti". Penanda tipis
+   di titik hari ini membuat ekor itu jujur: itu sisa bulan yang belum jalan.
+
+   Tiga kasus yang harus dijawab fungsi ini tanpa melempar:
+     1. hari ini belum terbaca (render server / hidrasi) → tidak ada penanda;
+     2. tanggal hari ini di luar bulan yang digambar (seri masih bulan kanon
+        demo saat render pertama) → tidak ada penanda, TIDAK menebak;
+     3. hari ini di bulan itu → titiknya dikembalikan (`todayCashFlowPoint`),
+        siap dipakai dua cara: `.label` sebagai posisi `<ReferenceLine x=…>`
+        (Recharts memakai label kategori sebagai posisi) dan nominalnya untuk
+        dua titik padat di nilai hari ini (paket 91).
+*/
+export function todayCashFlowPoint(
+  todayISO: string,
+  series: HomeCashFlowPoint[],
+): HomeCashFlowPoint | null {
+  if (todayISO.length < 10) return null
+  const day = Number(todayISO.slice(8, 10))
+  if (!Number.isInteger(day) || day < 1) return null
+  const point = series[day - 1]
+  /* labelnya wajib menyebut bulan hari ini — itulah cara aman memastikan seri
+     yang digambar memang bulan ini, bukan bulan kanon demo */
+  return point && point.label.endsWith(monthShortFromISO(todayISO)) ? point : null
+}
+
+/**
+ * Label titik "Hari ini" (`"14 Okt"`) untuk `<ReferenceLine x=…>` (Recharts
+ * memakai label kategori sebagai posisi). `null` = seri belum bisa dipastikan
+ * bulan ini (render server / seri kanon demo) — kartu tidak menggambar penanda.
+ *
+ * Sejak paket 91 ia hanyalah pintasan `todayCashFlowPoint()`: titik itu dipakai
+ * KARTU juga untuk menaruh dua titik padat di nilai hari ini, jadi keduanya
+ * mustahil jatuh di tanggal yang berbeda.
+ */
+export function todayMarkerLabel(
+  todayISO: string,
+  series: HomeCashFlowPoint[],
+): string | null {
+  return todayCashFlowPoint(todayISO, series)?.label ?? null
+}
+
+/* ── BATANG PEKAN "ARUS UANG" (paket 90) ─────────────────────────────────────
+   Kartu Arus Uang kini menggambar deret BATANG (contoh visual dari pemilik
+   produk). Satu batang = SATU PEKAN (tanggal 1–7, 8–14, …), bukan satu hari:
+   seri harian 28–31 titik tidak bisa mencetak satu angka di dalam tiap batang,
+   sementara bentuk baru ini justru hidup dari angka itu — dan pekan adalah
+   satuan yang benar-benar dibaca manusia ("pekan mana yang paling menelan"),
+   dengan jumlah batang 4–5 sehingga tiap batang punya ruang untuk membulat. */
+
+/** jumlah hari per batang (pembagian tanggal 1–7, 8–14, …) */
+export const HOME_CASHFLOW_DAYS_PER_WEEK = 7
+
+export interface CashFlowWeekBar {
+  /** kunci stabil React: `week-1`, `week-2`, … */
+  key: string
+  /** nomor pekan (1-based) — label sumbunya lewat `chartWeekLabel` */
+  index: number
+  /** jangkauan tanggal, mis. `1–7 Sep` (dibaca pembaca layar & `title`) */
+  rangeLabel: string
+  income: number
+  expense: number
+  /** tinggi batang 0…`HOME_CASHFLOW_BAR.maxPct`, relatif pekan terberat */
+  heightPct: number
+  /** PORSI pengeluaran pekan ini dari total pengeluaran bulan (0…100) */
+  pct: number
+  /** pekan terberat (pengeluaran terbesar) — batangnya digambar paling gelap */
+  top: boolean
+}
+
+/**
+ * Seri harian → batang per PEKAN. Murni, tanpa React & tanpa format.
+ *
+ * Tiga aturan yang dikunci di sini:
+ *   1. batang tidak menciptakan/menghilangkan uang — Σ(expense batang) selamanya
+ *      sama dengan Σ(expense seri), yang di jumlahnya sama pula dengan strip
+ *      "Bulan ini" di kartu Transaksi Terakhir (satu ledger);
+ *   2. tinggi batang selalu dibandingkan dengan PEKAN TERBERAT bulan itu (bukan
+ *      angka keras), dan yang tertinggi = `HOME_CASHFLOW_BAR.maxPct` → 92%, bukan
+ *      100%, supaya garis acuan di kepala kolom tetap terlihat (proporsi persis
+ *      seperti contoh visual yang dikirim);
+ *   3. `pct` = porsi pekan itu dari TOTAL pengeluaran bulan, jadi angkanya tetap
+ *      punya arti sendiri walau tingginya tidak dibaca.
+ *
+ * Bulan tanpa pengeluaran sama sekali ⇒ semua batang 0 dan tak ada `top`; kartu
+ * yang memanggilnya tetap jujur (batang kosong, angka 0 di tiga baris kunci).
+ */
+export function cashFlowWeekBars(
+  points: HomeCashFlowPoint[],
+  monthShort: string = HOME_MONEY_MONTH_SHORT,
+): CashFlowWeekBar[] {
+  const bars: CashFlowWeekBar[] = []
+  for (let start = 0; start < points.length; start += HOME_CASHFLOW_DAYS_PER_WEEK) {
+    const slice = points.slice(start, start + HOME_CASHFLOW_DAYS_PER_WEEK)
+    const index = bars.length + 1
+    bars.push({
+      key: `week-${index}`,
+      index,
+      /* jangkauan tanggalnya dihitung dari POSISI di bulan (1–7, 8–14, …), bukan
+         dibaca dari label titik — jadi ia tetap benar apa pun bentuk labelnya */
+      rangeLabel: `${start + 1}–${start + slice.length} ${monthShort}`,
+      income: slice.reduce((sum, point) => sum + point.income, 0),
+      expense: slice.reduce((sum, point) => sum + point.expense, 0),
+      heightPct: 0,
+      pct: 0,
+      top: false,
+    })
+  }
+
+  const totalExpense = bars.reduce((sum, bar) => sum + bar.expense, 0)
+  const maxExpense = bars.reduce((max, bar) => Math.max(max, bar.expense), 0)
+  if (maxExpense <= 0) return bars
+
+  return bars.map((bar) => ({
+    ...bar,
+    heightPct: Math.round((bar.expense / maxExpense) * HOME_CASHFLOW_BAR.maxPct),
+    pct: totalExpense > 0 ? Math.round((bar.expense / totalExpense) * 100) : 0,
+    /* seri (dua pekan dengan pengeluaran sama besar) ⇒ dua-duanya menonjol;
+       itu memang jawaban jujur "ada dua pekan terberat" */
+    top: bar.expense === maxExpense,
+  }))
 }
 
 /* ── PEMASUKAN BULANAN (panel Ringkasan Saldo) ────────────────────────────────

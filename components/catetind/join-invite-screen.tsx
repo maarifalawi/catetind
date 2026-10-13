@@ -160,6 +160,24 @@ function ValidInviteView({
             {JOIN_COPY.headline(inviter)}
           </h1>
           <p className="mt-2.5 text-[13px] leading-relaxed text-forest/55">{JOIN_COPY.subtitle}</p>
+          {/* H9-1 (audit UI/UX): detail tidak lagi menumpuk di banner —
+              dipendekkan jadi satu kalimat, sisanya di balik disclosure. */}
+          <details className="mt-2">
+            <summary className="w-fit cursor-pointer text-[12.5px] font-medium text-forest/65 underline decoration-dotted underline-offset-4 marker:content-none hover:text-forest">
+              {JOIN_COPY.learnMore}
+            </summary>
+            <p className="mt-2 text-[12.5px] leading-relaxed text-forest/55">
+              {JOIN_COPY.learnMoreLead}
+            </p>
+            <ul className="mt-2 space-y-1.5">
+              {JOIN_COPY.learnMoreBullets.map((bullet) => (
+                <li key={bullet} className="flex items-start gap-2 text-[12.5px] leading-relaxed text-forest/60">
+                  <span aria-hidden className="mt-0.5 text-forest">✅</span>
+                  <span>{bullet}</span>
+                </li>
+              ))}
+            </ul>
+          </details>
         </header>
 
         {/* ── 2. tiga manfaat, bukan daftar fitur ──────────────────────────── */}

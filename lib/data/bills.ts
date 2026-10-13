@@ -776,3 +776,24 @@ export const UNPAID_TOAST = {
   /** tagihan contoh: tidak ada baris kas yang bisa dibalikkan */
   noRow: 'Tagihan contoh ini tidak punya catatan pembayaran di app, jadi tidak ada uang yang bisa dikembalikan.',
 } as const
+
+/* ── COPY REVISI AUDIT UI/UX (H6) ────────────────────────────────────────────
+   H6-2 — kalimat saat 7 hari ke depan bersih dari tagihan.
+   H6-1 — dorongan positif saat SEMUA tagihan bulan ini sudah lunas.
+   H6-4 — placeholder mengajak menambah tagihan rutin lain. */
+export const BILL_TIMELINE_COPY = {
+  safeWeek: 'Minggu ini aman — tidak ada tagihan 🎉',
+} as const
+
+export const BILLS_ALL_PAID_COPY = {
+  title: 'Semua tagihan bulan ini lunas 🎉',
+  body: 'Kamu bayar semuanya tepat waktu — itu bikin rencana bulan depan jauh lebih tenang.',
+  nextTitle: 'Tagihan bulan depan yang sudah bisa kamu siapkan',
+  nextBody: 'Daftar rutin ini bakal jatuh tempo lagi bulan depan.',
+} as const
+
+export const BILL_ADD_PLACEHOLDER = {
+  title: 'Tambah tagihan rutin lainnya',
+  body: 'Langganan, kos, atau cicilan — biar nggak ada yang kelewat.',
+} as const
+

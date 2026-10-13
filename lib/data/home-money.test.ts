@@ -1,10 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import {
   HOME_CASHFLOW_AXIS,
+  HOME_CASHFLOW_BAR,
+  HOME_CASHFLOW_COLORS,
+  HOME_CASHFLOW_DAYS_PER_WEEK,
   HOME_MONEY_COPY,
   activeLedgerDays,
+  axisLabel,
+  axisTicks,
   buildFlowMap,
   cashFlowAxisRows,
+  cashFlowSeriesPeak,
+  cashFlowWeekBars,
   clampChangePct,
   distributionSegments,
   groupHomeMoneyRows,
@@ -13,11 +20,14 @@ import {
   homeRowsInLastDays,
   incomeStatsFor,
   netFlowChangePct,
+  niceAxisMax,
   shouldShowDailyNudge,
+  todayCashFlowPoint,
+  todayMarkerLabel,
   FLOW_SPAN,
   type HomeMoneyRow,
 } from './home-money'
-import type { HistoryTransaction } from './history'
+import { MASKED_AMOUNT, type HistoryTransaction } from './history'
 
 /* ── TURUNAN KARTU UANG HOME (paket 58) ──────────────────────────────────────
    Paket 58 memindahkan SUMBER angka kartu Home dari konstanta `HOME_MONEY_ROWS`
@@ -408,5 +418,259 @@ describe('cashFlowAxisRows · simetri tiga angka kunci (paket 76)', () => {
     expect(HOME_CASHFLOW_AXIS.gridClass).toBe('grid-cols-[minmax(0,1fr)_auto]')
     expect(HOME_CASHFLOW_AXIS.valueClass).toContain('tabular-nums')
     expect(HOME_CASHFLOW_AXIS.valueClass).toContain('tracking-tight')
+  })
+})
+
+/* ── BATANG PEKAN ARUS UANG (paket 90 · bentuk CADANGAN) ─────────────────────
+   Bentuk batang (satu batang satu pekan) sempat dipakai kartu Arus Uang, lalu
+   pemilik produk menilai bentuk GARIS lebih baik — jadi geometrinya tinggal di
+   `lib/data/home-money.ts` sebagai cadangan dan test-nya tetap dijalankan (pola
+   yang sama dengan geometri alluvial paket 67). Yang diuji: pembagian pekan,
+   invarian "batang tidak menciptakan uang", proporsi tinggi terhadap pekan
+   terberat, dan porsi tiap pekan. */
+describe('cashFlowWeekBars · batang pekan Arus Uang (paket 90)', () => {
+  /** seri harian NYATA dari baris ledger — pipeline yang sama dengan kartunya */
+  const seriesOf = (rows: HomeMoneyRow[], monthISO: string) => homeCashFlowSeries(rows, monthISO)
+
+  it('31 hari → 5 pekan; label & jangkauan tanggalnya benar', () => {
+    const bars = cashFlowWeekBars(seriesOf([], '2026-10'), 'Okt')
+    expect(bars).toHaveLength(5)
+    expect(bars.map((bar) => bar.index)).toEqual([1, 2, 3, 4, 5])
+    expect(bars[0]?.rangeLabel).toBe('1–7 Okt')
+    expect(bars[4]?.rangeLabel).toBe('29–31 Okt')
+    expect(HOME_CASHFLOW_DAYS_PER_WEEK).toBe(7)
+  })
+
+  it('tanpa bulan (render server) label jatuh ke bulan kanon demo — hidrasi aman', () => {
+    /* perilaku yang SAMA dengan `monthShortFromISO()` tanpa argumen: server &
+     render pertama client menyebut bulan kanon, lalu kartu menempelkan bulan
+     NYATA begitu jam perangkat terbaca */
+    expect(cashFlowWeekBars(seriesOf([], '2026-10'))[0]?.rangeLabel).toBe('1–7 Sep')
+  })
+
+  it('28 hari → 4 pekan (bulan pendek tidak menambah batang kosong)', () => {
+    expect(cashFlowWeekBars(seriesOf([], '2026-02'), 'Feb')).toHaveLength(4)
+  })
+
+  it('batang tidak menciptakan/menghilangkan uang: Σ batang = Σ seri', () => {
+    const series = seriesOf(
+      [
+        row({ id: 'a', date: '2026-09-02', amount: 100_000, type: 'expense' }),
+        row({ id: 'b', date: '2026-09-09', amount: 40_000, type: 'expense' }),
+        row({ id: 'c', date: '2026-09-30', amount: 12_500, type: 'expense' }),
+        row({ id: 'd', date: '2026-09-30', amount: 7_500_000, type: 'income' }),
+      ],
+      '2026-09',
+    )
+    const bars = cashFlowWeekBars(series)
+    const sum = (list: { income: number; expense: number }[], key: 'income' | 'expense') =>
+      list.reduce((total, item) => total + item[key], 0)
+    expect(sum(bars, 'expense')).toBe(sum(series, 'expense'))
+    expect(sum(bars, 'income')).toBe(sum(series, 'income'))
+    expect(sum(bars, 'expense')).toBe(152_500)
+  })
+
+  it('tinggi relatif pekan TERBERAT: tertinggi = maxPct, sisanya proporsional', () => {
+    const bars = cashFlowWeekBars(
+      seriesOf(
+        [
+          /* pekan 1 = 200.000 · pekan 2 = 100.000 */
+          row({ id: 'a', date: '2026-09-03', amount: 200_000, type: 'expense' }),
+          row({ id: 'b', date: '2026-09-10', amount: 100_000, type: 'expense' }),
+        ],
+        '2026-09',
+      ),
+    )
+    expect(bars[0]?.heightPct).toBe(HOME_CASHFLOW_BAR.maxPct)
+    expect(bars[1]?.heightPct).toBe(Math.round(HOME_CASHFLOW_BAR.maxPct / 2))
+    expect(bars[0]?.top).toBe(true)
+    expect(bars[1]?.top).toBe(false)
+    /* tertinggi SENGAJA di bawah 100% supaya garis acuan kepala kolom tetap
+       terlihat — proporsi itu yang sama dengan contoh visual yang dikirim */
+    expect(HOME_CASHFLOW_BAR.maxPct).toBeLessThan(100)
+    expect(HOME_CASHFLOW_BAR.maxPct).toBeGreaterThan(HOME_CASHFLOW_BAR.insideMinPct)
+  })
+
+  it('porsi (%) = bagian pekan itu dari total pengeluaran bulan', () => {
+    const bars = cashFlowWeekBars(
+      seriesOf(
+        [
+          row({ id: 'a', date: '2026-09-03', amount: 300_000, type: 'expense' }),
+          row({ id: 'b', date: '2026-09-10', amount: 100_000, type: 'expense' }),
+        ],
+        '2026-09',
+      ),
+    )
+    expect(bars[0]?.pct).toBe(75)
+    expect(bars[1]?.pct).toBe(25)
+    expect(bars.reduce((total, bar) => total + bar.pct, 0)).toBe(100)
+  })
+
+  it('pekan tanpa pengeluaran: batang 0, porsi 0, bukan pekan terberat', () => {
+    const bars = cashFlowWeekBars(
+      seriesOf([row({ id: 'a', date: '2026-09-10', amount: 50_000, type: 'expense' })], '2026-09'),
+    )
+    expect(bars[0]?.heightPct).toBe(0)
+    expect(bars[0]?.pct).toBe(0)
+    expect(bars[0]?.top).toBe(false)
+  })
+
+  it('bulan tanpa pengeluaran sama sekali → semua 0 & tak ada pekan terberat', () => {
+    const bars = cashFlowWeekBars(
+      seriesOf([row({ id: 'a', date: '2026-09-10', amount: 5_000_000, type: 'income' })], '2026-09'),
+    )
+    expect(bars.every((bar) => bar.heightPct === 0 && bar.pct === 0 && !bar.top)).toBe(true)
+  })
+
+  it('seri (dua pekan sama besar) → dua-duanya menonjol, jawaban jujur', () => {
+    const bars = cashFlowWeekBars(
+      seriesOf(
+        [
+          row({ id: 'a', date: '2026-09-03', amount: 80_000, type: 'expense' }),
+          row({ id: 'b', date: '2026-09-10', amount: 80_000, type: 'expense' }),
+        ],
+        '2026-09',
+      ),
+    )
+    expect(bars.filter((bar) => bar.top)).toHaveLength(2)
+    expect(bars[0]?.pct).toBe(50)
+    expect(bars[1]?.pct).toBe(50)
+  })
+
+  it('kontrak visual: kanvas pucat, batang mint, terberat gelap, animasi bisa dimatikan', () => {
+    /* kelasnya dikunci supaya bentuk yang sudah dilihat user tidak berubah
+       tanpa sengaja — sekaligus menjaga tidak ada warna bawaan Tailwind yang
+       menyusup ke bentuk baru ini */
+    expect(HOME_CASHFLOW_BAR.trackClass).toContain('bg-soil/[0.06]')
+    expect(HOME_CASHFLOW_BAR.fillClass).toContain('from-mint/70')
+    expect(HOME_CASHFLOW_BAR.topFillClass).toContain('from-ink')
+    expect(HOME_CASHFLOW_BAR.growClass).toContain('motion-reduce:animate-none')
+    expect(HOME_MONEY_COPY.chartBarHint.length).toBeGreaterThan(0)
+  })
+})
+
+/* ── PENANDA "HARI INI" DI GRAFIK (paket 90) ─────────────────────────────────
+   Seri grafik selalu sepanjang BULAN penuh, jadi tanggal setelah hari ini ikut
+   digambar sebagai nol. Penandanya cuma boleh muncul kalau tanggal itu benar-
+   benar bagian dari seri yang digambar — kalau menebak, garis "Hari ini" bisa
+   jatuh di titik bulan yang salah (mis. render pertama yang masih memakai seri
+   kanon demo sebelum jam perangkat terbaca). */
+describe('todayMarkerLabel · penanda "Hari ini" di grafik (paket 90)', () => {
+  it('hari ini di bulan seri → label titiknya sendiri', () => {
+    const series = homeCashFlowSeries([], '2026-10')
+    expect(todayMarkerLabel('2026-10-14', series)).toBe('14 Okt')
+    expect(todayMarkerLabel('2026-10-31', series)).toBe('31 Okt')
+  })
+
+  it('hari ini di LUAR bulan seri → null (tidak menebak posisi)', () => {
+    expect(todayMarkerLabel('2026-09-14', homeCashFlowSeries([], '2026-10'))).toBeNull()
+  })
+
+  it('hari ini belum terbaca (render server) / tanggal rusak → null', () => {
+    const series = homeCashFlowSeries([], '2026-10')
+    expect(todayMarkerLabel('', series)).toBeNull()
+    expect(todayMarkerLabel('2026-10', series)).toBeNull()
+    expect(todayMarkerLabel('2026-10-00', series)).toBeNull()
+    expect(todayMarkerLabel('2026-10-xx', series)).toBeNull()
+  })
+
+  it('tanggal melebihi panjang seri (31 pada bulan 30 hari) → null', () => {
+    const series = homeCashFlowSeries([], '2026-09')
+    expect(series).toHaveLength(30)
+    expect(todayMarkerLabel('2026-09-31', series)).toBeNull()
+  })
+})
+
+/* ── SKALA & TITIK GRAFIK ARUS UANG (paket 91) ───────────────────────────────
+   Paket 91 menambah sumbu-Y (tiga tick) + dua titik padat di nilai "Hari ini".
+   Yang bisa diuji tanpa DOM adalah TURUNANNYA: puncak seri, batas bulat, tick,
+   label yang ikut sensor privasi, dan titik hari ini yang dipakai menggambar. */
+describe('sumbu & titik grafik Arus Uang (paket 91)', () => {
+  it('cashFlowSeriesPeak → nilai harian tertinggi (masuk ATAU keluar)', () => {
+    const series = homeCashFlowSeries(
+      [
+        row({ id: 'a', date: '2026-10-02', amount: 120_000, type: 'expense' }),
+        row({ id: 'b', date: '2026-10-05', amount: 7_500_000, type: 'income' }),
+        row({ id: 'c', date: '2026-10-09', amount: 350_000, type: 'expense' }),
+      ],
+      '2026-10',
+    )
+    expect(cashFlowSeriesPeak(series)).toBe(7_500_000)
+  })
+
+  it('seri tanpa uang bergerak → puncak 0 (bukan undefined)', () => {
+    expect(cashFlowSeriesPeak(homeCashFlowSeries([], '2026-10'))).toBe(0)
+  })
+
+  it('niceAxisMax membulatkan ke atas ke angka 1/2/2,5/5/10 × 10ⁿ', () => {
+    expect(niceAxisMax(7_500_000)).toBe(10_000_000)
+    expect(niceAxisMax(2_000_000)).toBe(2_000_000)
+    expect(niceAxisMax(2_600_000)).toBe(5_000_000)
+    expect(niceAxisMax(0)).toBe(0)
+  })
+
+  it('axisTicks → [puncak, tengah, nol]', () => {
+    expect(axisTicks(niceAxisMax(7_500_000))).toEqual([10_000_000, 5_000_000, 0])
+  })
+
+  it('axisLabel ikut tombol mata: rumus pendek saat tampil, sensor saat masked', () => {
+    expect(axisLabel(8_500_000, false)).toBe('8,5 jt')
+    expect(axisLabel(500_000, false)).toBe('500 rb')
+    expect(axisLabel(0, false)).toBe('0')
+    /* sumbu = permukaan BACA (§5.7): tiga label di sumbu-Y ikut tersensor */
+    expect(axisLabel(8_500_000, true)).toBe(MASKED_AMOUNT)
+  })
+
+  it('todayCashFlowPoint → titik bulan ini; todayMarkerLabel = labelnya', () => {
+    const series = homeCashFlowSeries(
+      [row({ id: 'a', date: '2026-10-14', amount: 90_000, type: 'expense' })],
+      '2026-10',
+    )
+    const point = todayCashFlowPoint('2026-10-14', series)
+    expect(point?.label).toBe('14 Okt')
+    expect(point?.expense).toBe(90_000)
+    expect(todayMarkerLabel('2026-10-14', series)).toBe(point?.label)
+  })
+
+  it('todayCashFlowPoint → null saat di luar bulan seri / belum terbaca', () => {
+    const series = homeCashFlowSeries([], '2026-10')
+    expect(todayCashFlowPoint('2026-09-14', series)).toBeNull()
+    expect(todayCashFlowPoint('', series)).toBeNull()
+    expect(todayCashFlowPoint('2026-10-31', series)?.label).toBe('31 Okt')
+  })
+})
+
+/* ── KONTRAK WARNA "ARUS UANG" (paket 92–93) ─────────────────────────────────
+   Aturan "satu hue per seri": tiap seri WAJIB punya ton BASE (garis + semua
+   mark: titik hari, dot legenda, dot tooltip, ikon) dan ton SOFT (isian area &
+   latar chip). Komponen memakai KEDUANYA, jadi menghapus salah satu = satu seri
+   kembali muncul sebagai dua warna — persis keluhan yang ditutup paket ini.
+   Nilai hex-nya sendiri dijaga `scripts/theme/audit-palette.mjs`. */
+describe('HOME_CASHFLOW_COLORS · dua ton per seri (paket 93)', () => {
+  it('tiap seri punya BASE & SOFT, dan keduanya berbeda', () => {
+    expect(HOME_CASHFLOW_COLORS.income).not.toBe(HOME_CASHFLOW_COLORS.incomeSoft)
+    expect(HOME_CASHFLOW_COLORS.expense).not.toBe(HOME_CASHFLOW_COLORS.expenseSoft)
+  })
+
+  it('warna seri berupa hex (nilai atribut SVG), bukan kelas Tailwind', () => {
+    for (const value of [
+      HOME_CASHFLOW_COLORS.income,
+      HOME_CASHFLOW_COLORS.incomeSoft,
+      HOME_CASHFLOW_COLORS.expense,
+      HOME_CASHFLOW_COLORS.expenseSoft,
+    ]) {
+      expect(value).toMatch(/^#[0-9a-f]{6}$/)
+    }
+  })
+
+  it('garis bawah & grid tetap rgba nominal (bukan hex)', () => {
+    for (const value of [
+      HOME_CASHFLOW_COLORS.axis,
+      HOME_CASHFLOW_COLORS.baseline,
+      HOME_CASHFLOW_COLORS.cursor,
+      HOME_CASHFLOW_COLORS.grid,
+    ]) {
+      expect(value.startsWith('rgba(')).toBe(true)
+    }
   })
 })

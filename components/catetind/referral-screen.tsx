@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
-  AlertTriangle,
   Check,
   ChevronDown,
   CircleHelp,
@@ -37,7 +36,7 @@ import {
   friendStatusLabel,
   getReferrerReward,
   referralState,
-  tokenRemainingPct,
+  PLAN_TIER_EXPLAIN,
   type ReferralFriend,
   type RewardCopy,
 } from '@/lib/data/referral'
@@ -67,9 +66,6 @@ import {
 /** cubic-bezier khas app: masuk cepat lalu settle lembut (animasi accordion 4D) */
 const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1]
 
-/** ambang "hampir kosong" — di bawah ini gauge memberi sinyal menipis */
-const LOW_FUEL_PCT = 20
-
 export function ReferralScreen() {
   /** accordion 4D — tertutup default, teks langkah baru dibaca kalau diminta */
   const [howItWorksOpen, setHowItWorksOpen] = useState(false)
@@ -80,15 +76,12 @@ export function ReferralScreen() {
     userSubscription,
     referralCode,
     referralLink,
-    aiTokenUsedPct,
-    aiTokenDaysLeft,
     totalClicks,
     friendsPending,
     friendsConverted,
     totalRewardEarned,
   } = referralState
 
-  const tokenLeftPct = tokenRemainingPct(aiTokenUsedPct)
   const reward = getReferrerReward()
 
   /* ── AKSI ───────────────────────────────────────────────────────────────── */
@@ -178,7 +171,11 @@ export function ReferralScreen() {
           Di mobile tetap satu kolom, urutannya sama (motivasi dulu, baru bukti). */}
       <div className="mt-5 grid grid-cols-1 gap-5 lg:mt-6 lg:grid-cols-12 lg:gap-6">
         <div className="flex flex-col gap-5 lg:col-span-5 lg:gap-6">
-          <FuelGaugeCard remainingPct={tokenLeftPct} daysLeft={aiTokenDaysLeft} />
+          {/* H10-1 (audit UI/UX): kartu "Sisa Token AI-mu: 15% — Menipis"
+              DIPINDAH dari halaman ini. Audit menilainya guilt-trip, bukan
+              incentive. Meter "Bahan Bakar AI" sudah hidup di Dashboard/sidebar
+              (ai-fuel-card), jadi halaman referral cukup fokus ke REWARD yang
+              user DAPAT — bukan token yang menipis. */}
           <RewardCard reward={reward} planLabel={planLabel(userSubscription)} />
           <ShareCard
             referralLink={referralLink}
@@ -207,97 +204,9 @@ export function ReferralScreen() {
 }
 
 /* ── komponen kecil halaman ini ───────────────────────────────────────────── */
-
-/**
- * 3A — Bahan Bakar AI: pemicu psikologis utama (kuota menipis → butuh isi ulang).
- * Sengaja diletakkan DI ATAS tombol bagikan supaya "tangki"-nya terbaca dulu.
- *
- * Ring-nya jalur Oat (`stroke-soil/10`) dengan isi Cantelope — kanon warna
- * "mendekati batas". Angka yang sama dibaca dua kali: di tengah ring dan di
- * kalimat besar, jadi tidak ada user yang melewatkannya.
- *
- * Catatan kanon PRD 2B.2 & 5C: framingnya tetap "SISA" — tidak ada kata
- * habis/limit dan tidak ada warna merah, termasuk di label chip (`Menipis`).
- */
-function FuelGaugeCard({ remainingPct, daysLeft }: { remainingPct: number; daysLeft: number }) {
-  const SIZE = 120
-  const STROKE = 11
-  const RADIUS = (SIZE - STROKE) / 2 - 4
-  const CIRCUMFERENCE = 2 * Math.PI * RADIUS
-  const low = remainingPct <= LOW_FUEL_PCT
-
-  return (
-    <section className="rounded-[1.75rem] bg-cream p-5 shadow-[0_18px_40px_-34px_rgba(0,0,0,0.55)] ring-1 ring-soil/12 sm:p-6">
-      <div className="flex items-center gap-4 sm:gap-5">
-        <div
-          className="relative shrink-0"
-          role="img"
-          aria-label={`Sisa token AI ${remainingPct} persen`}
-        >
-          <svg
-            viewBox={`0 0 ${SIZE} ${SIZE}`}
-            className="size-[96px] -rotate-90 sm:size-[104px]"
-            aria-hidden
-          >
-            <circle
-              cx={SIZE / 2}
-              cy={SIZE / 2}
-              r={RADIUS}
-              fill="none"
-              strokeWidth={STROKE}
-              className="stroke-soil/10"
-            />
-            <circle
-              cx={SIZE / 2}
-              cy={SIZE / 2}
-              r={RADIUS}
-              fill="none"
-              strokeWidth={STROKE}
-              strokeLinecap="round"
-              strokeDasharray={`${CIRCUMFERENCE * (remainingPct / 100)} ${CIRCUMFERENCE}`}
-              className="stroke-hud-amber"
-            />
-          </svg>
-          <span className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="font-display text-[22px] font-semibold leading-none tracking-tight tabular-nums text-forest sm:text-[24px]">
-              {remainingPct}%
-            </span>
-            <span className="mt-1 text-[9.5px] font-medium uppercase tracking-[0.14em] text-forest/40">
-              sisa
-            </span>
-          </span>
-        </div>
-
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-forest/40">
-              Bahan Bakar AI
-            </p>
-            {low && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-hud-amber/25 px-2 py-0.5 text-[10px] font-medium text-forest ring-1 ring-hud-amber/40">
-                <AlertTriangle className="size-3" strokeWidth={2.6} aria-hidden />
-                Menipis
-              </span>
-            )}
-          </div>
-          {/* kalimat besar yang diminta mandat — angka SISA, bukan angka terpakai */}
-          <p className="mt-1.5 font-display text-[17px] font-medium leading-snug tracking-tight text-forest">
-            Sisa Token AI-mu: {remainingPct}%
-          </p>
-          <p className="mt-1.5 text-[12.5px] leading-relaxed text-forest/55">
-            Tersisa <b className="font-medium text-forest/75">{daysLeft} hari</b> lagi. Ajak 1
-            teman untuk langsung isi ulang!
-          </p>
-        </div>
-      </div>
-
-      <p className="mt-4 text-[11px] leading-relaxed text-forest/40">
-        Kuota ini yang dipakai Catat AI, Scan Struk, dan AI Coach. Begitu temanmu membeli paket,
-        token kamu langsung nambah.
-      </p>
-    </section>
-  )
-}
+/* H10-1 (audit UI/UX): kartu "Bahan Bakar AI" (FuelGaugeCard) DIPINDAH dari
+   halaman ini ke Dashboard/sidebar (components/catetind/ai-fuel-card.tsx) —
+   meter token sudah hidup di sana. Halaman referral fokus ke REWARD user. */
 
 /**
  * 3B — Kartu reward. Kalimat reward-nya TIDAK ditulis di sini: ia datang dari
@@ -319,7 +228,7 @@ function RewardCard({ reward, planLabel }: { reward: RewardCopy; planLabel: stri
             <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-forest/40">
               Reward kamu
             </p>
-            <span className="rounded-full bg-sage/70 px-2.5 py-0.5 text-[10.5px] font-medium text-forest ring-1 ring-forest/10">
+            <span title={PLAN_TIER_EXPLAIN.body} className="cursor-help rounded-full bg-sage/70 px-2.5 py-0.5 text-[10.5px] font-medium text-forest ring-1 ring-forest/10">
               {planLabel}
             </span>
           </div>
@@ -327,6 +236,14 @@ function RewardCard({ reward, planLabel }: { reward: RewardCopy; planLabel: stri
             {reward.lead}{' '}
             <span className="font-display font-medium tracking-tight">{reward.highlight}</span>
           </p>
+          <details className="mt-2">
+            <summary className="w-fit cursor-pointer text-[11.5px] font-medium text-forest/60 underline decoration-dotted underline-offset-4 marker:content-none hover:text-forest">
+              {PLAN_TIER_EXPLAIN.linkLabel(planLabel)}
+            </summary>
+            <p className="mt-1.5 text-[11.5px] leading-relaxed text-forest/55">
+              {PLAN_TIER_EXPLAIN.body}
+            </p>
+          </details>
         </div>
       </div>
 
@@ -369,36 +286,37 @@ function ShareCard({
         Semua teman yang mendaftar lewat link ini otomatis tercatat atas namamu.
       </p>
 
-      {/* 3C — kotak mono + tombol salin. Isian tipis `bg-soil/[0.06]` adalah
-          minimum yang masih terbaca di atas kartu putih. */}
-      <div className="mt-3.5 flex items-center gap-2 rounded-2xl bg-cream p-1.5 ring-1 ring-soil/12">
+      {/* H10-4 (audit UI/UX): kotak link, Copy, dan Bagikan digabung jadi SATU
+          baris — dulu tombol "Bagikan ke Teman" terpisah jauh di bawah link.
+          Di mobile barisnya membungkus rapi (kolom), di sm+ benar-benar sebaris. */}
+      <div className="mt-3.5 flex flex-col gap-2 rounded-2xl bg-cream p-1.5 ring-1 ring-soil/12 sm:flex-row sm:items-center">
         <span className="min-w-0 flex-1 truncate rounded-xl bg-soil/[0.06] px-3.5 py-2.5 font-mono text-[12.5px] text-forest/70">
           {referralLink}
         </span>
-        <button
-          type="button"
-          onClick={onCopy}
-          aria-label={copied ? 'Link sudah tersalin' : 'Salin link referral'}
-          className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-xl bg-sage px-3.5 text-[12.5px] font-medium text-forest transition-colors hover:bg-sage/70 active:scale-[0.97]"
-        >
-          {copied ? (
-            <Check className="size-4" strokeWidth={2.6} aria-hidden />
-          ) : (
-            <Copy className="size-4" strokeWidth={2.2} aria-hidden />
-          )}
-          {copied ? 'Tersalin' : 'Copy Link'}
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            onClick={onCopy}
+            aria-label={copied ? 'Link sudah tersalin' : 'Salin link referral'}
+            className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-xl bg-sage px-3.5 text-[12.5px] font-medium text-forest transition-colors hover:bg-sage/70 active:scale-[0.97]"
+          >
+            {copied ? (
+              <Check className="size-4" strokeWidth={2.6} aria-hidden />
+            ) : (
+              <Copy className="size-4" strokeWidth={2.2} aria-hidden />
+            )}
+            {copied ? 'Tersalin' : 'Copy Link'}
+          </button>
+          <button
+            type="button"
+            onClick={onShare}
+            className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-forest px-4 text-[13px] font-medium text-cream shadow-[0_18px_36px_-20px_rgba(0,0,0,0.95)] transition-colors hover:bg-forest-soft active:scale-[0.97]"
+          >
+            <Share2 className="size-4" strokeWidth={2.4} aria-hidden />
+            Bagikan ke Teman
+          </button>
+        </div>
       </div>
-
-      {/* 3D — satu tombol utama, selebar kartu. Tidak ada tombol kedua. */}
-      <button
-        type="button"
-        onClick={onShare}
-        className="mt-3 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-forest text-[14px] font-medium text-cream shadow-[0_18px_36px_-20px_rgba(0,0,0,0.95)] transition-colors hover:bg-forest-soft active:scale-[0.99]"
-      >
-        <Share2 className="size-4" strokeWidth={2.4} aria-hidden />
-        Bagikan ke Teman
-      </button>
 
       {/* 3E — segel privasi. Satu baris, ikon kunci, nada tenang: ini yang
           membunuh keberatan nomor satu ("nanti data keuanganku kelihatan"). */}
@@ -550,7 +468,7 @@ function HistoryCard({
             <span
               className={cn(
                 'inline-flex shrink-0 items-center justify-self-end rounded-full px-2.5 py-0.5 text-[10.5px] font-medium sm:justify-self-start',
-                friend.converted ? 'bg-mint/30 text-forest' : 'bg-sage text-forest/55',
+                friend.converted ? 'bg-mint/30 text-forest' : 'bg-soil/[0.06] text-forest/55',
               )}
             >
               {friendStatusLabel(friend.converted)}

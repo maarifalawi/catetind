@@ -1,28 +1,41 @@
 import { describe, expect, it } from 'vitest'
 import {
   AI_BASE_TOKENS_TOTAL,
-  AI_QUOTA_RESET_DATE,
-  AI_QUOTA_RESET_DAYS,
-  AI_QUOTA_RESET_ISO,
-  AI_QUOTA_TODAY_ISO,
+  aiQuotaResetInfo,
   daysUntil,
   indonesianDateLabel,
+  monthKeyOf,
   planQuota,
 } from './ai-quota'
 
-/* ── Test satu turunan tanggal reset kuota AI (audit fintech Stage 2 #6) ──────
+/* ── Test tanggal reset kuota AI (audit fintech Stage 2 #6 → paket 86) ────────
    Sebelumnya label tanggal ('1 Oktober 2026') dan sisa hari (4) adalah DUA
-   konstanta mock terpisah yang harus diubah bersamaan — satu lupa = kartu
-   bahan bakar AI bilang "reset 4 hari lagi" padahal tanggalnya sudah lewat.
-   Test ini mengunci kontraknya: dua nilai itu turunan dari satu tanggal kanon. */
+   konstanta MOCK terpisah yang dipatok ke string tetap — di produksi keduanya
+   tidak pernah bergerak. Sekarang keduanya turunan dari SATU fungsi murni
+   `aiQuotaResetInfo(now)`; test ini mengunci kontraknya dengan tanggal yang
+   disuntik sendiri (tanpa menyentuh jam mesin). */
 
-describe('tanggal reset kuota AI · satu tanggal kanon', () => {
-  it('label tanggal & sisa hari diturunkan dari tanggal yang sama', () => {
-    expect(AI_QUOTA_RESET_ISO).toBe('2026-10-01')
-    expect(AI_QUOTA_RESET_DATE).toBe(indonesianDateLabel(AI_QUOTA_RESET_ISO))
-    expect(AI_QUOTA_RESET_DATE).toBe('1 Oktober 2026')
-    expect(AI_QUOTA_RESET_DAYS).toBe(daysUntil(AI_QUOTA_TODAY_ISO, AI_QUOTA_RESET_ISO))
-    expect(AI_QUOTA_RESET_DAYS).toBe(4)
+describe('tanggal reset kuota AI · tanggal NYATA (paket 86)', () => {
+  it('label tanggal & sisa hari diturunkan dari satu sumber (27 Sep → 1 Okt)', () => {
+    const info = aiQuotaResetInfo(new Date(2026, 8, 27))
+    expect(info.iso).toBe('2026-10-01')
+    expect(info.label).toBe(indonesianDateLabel(info.iso))
+    expect(info.label).toBe('1 Oktober 2026')
+    expect(info.daysUntil).toBe(4)
+    expect(info.monthKey).toBe('2026-09')
+  })
+
+  it('akhir Desember melewati batas tahun dengan benar', () => {
+    const info = aiQuotaResetInfo(new Date(2026, 11, 31))
+    expect(info.iso).toBe('2027-01-01')
+    expect(info.label).toBe('1 Januari 2027')
+    expect(info.daysUntil).toBe(1)
+    expect(info.monthKey).toBe('2026-12')
+  })
+
+  it('monthKeyOf menulis bulan dua digit (kunci baris ai_usage)', () => {
+    expect(monthKeyOf(new Date(2026, 0, 5))).toBe('2026-01')
+    expect(monthKeyOf(new Date(2026, 9, 1))).toBe('2026-10')
   })
 
   it('daysUntil membulatkan hari & menolak nilai negatif', () => {

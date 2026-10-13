@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, type ChangeEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { BadgeCheck, Camera, ExternalLink, HeartHandshake, LogOut, Save, Unlink, UserPlus, XCircle } from 'lucide-react'
@@ -16,9 +16,13 @@ import {
 import { clampPayday, digitsToDisplay, onlyDigits, type DashboardPeriod } from '@/lib/onboarding'
 import {
   MONEY_SETTINGS_COPY,
+  enabledContextsOf,
   saveUserMoneySettings,
   useUserMoneySettings,
 } from '@/lib/user-money-settings'
+import { CONTEXT_OPTIONS, CONTEXT_SETTINGS_COPY } from '@/lib/data/money-context'
+import { homeWallets, useMoneyStore } from '@/lib/money/store'
+import type { MoneyContext } from '@/lib/types'
 import { LOGIN_PATH, RELOGIN_COPY, SESSION_COPY } from '@/lib/data/auth'
 import { JOIN_PREVIEW_COPY, buildJoinHref } from '@/lib/data/joint-invite'
 import { DEMO_PARTNER_JOINED, INITIAL_JOINT_WALLET, JOINT_PARTNER } from '@/lib/data/joint'
@@ -139,6 +143,37 @@ export function ProfileSettingsPanel() {
     setPeriod(moneySettings.dashboardPeriod)
     if (moneySettings.paydayDate) setPayday(moneySettings.paydayDate)
   }, [moneySettings])
+
+  /* ── KONTEKS UANG (paket 87) ─────────────────────────────────────────────
+     Konteks mana yang ditampilkan di pemilih konteks (Dashboard & header
+     halaman). Disimpan lewat store yang sama dengan pemasukan/payday, dan
+     `useUserMoneySettings()` sekarang reaktif — jadi perubahan di sini langsung
+     terlihat di halaman lain tanpa reload. */
+  const moneySnapshot = useMoneyStore()
+  const walletCounts = useMemo(() => {
+    const counts: Record<MoneyContext, number> = { pribadi: 0, keluarga: 0, bersama: 0 }
+    for (const wallet of homeWallets(moneySnapshot, 'all')) counts[wallet.context] += 1
+    return counts
+  }, [moneySnapshot])
+  const [enabledContexts, setEnabledContexts] = useState<MoneyContext[]>(['pribadi'])
+  useEffect(() => {
+    setEnabledContexts(enabledContextsOf(moneySettings))
+  }, [moneySettings])
+
+  /**
+   * Nyalakan/matikan konteks. Konteks yang masih berisi DOMPET tidak bisa
+   * dimatikan — menyembunyikannya membuat uang user tidak bisa dijangkau (aturan
+   * yang sama dijaga `availableContexts()` di `lib/data/money-context.ts`).
+   * `pribadi` selalu menyala karena ia titik berangkat seluruh app.
+   */
+  function toggleContext(ctx: MoneyContext) {
+    if (ctx === 'pribadi' || walletCounts[ctx] > 0) return
+    const next = enabledContexts.includes(ctx)
+      ? enabledContexts.filter((item) => item !== ctx)
+      : [...enabledContexts, ctx]
+    setEnabledContexts(next)
+    saveUserMoneySettings({ enabledContexts: next })
+  }
 
   /* partner bisa "diputus" di demo ini — state lokal, sumber awal dari SEED yang
      memang bergerbang `SHOWS_SAMPLE_DATA` (lihat `lib/data/joint.ts`): di build
@@ -377,6 +412,52 @@ export function ProfileSettingsPanel() {
         )}
       </SettingsCard>
 
+      {/* ── 2b. KONTEKS UANG (paket 87) ────────────────────────────────────
+          Konteks uang bukan fitur semua orang: user yang cuma mengelola uangnya
+          sendiri tidak perlu melihat tombol "Keluarga"/"Bersama" sama sekali.
+          Saklar ini menentukan konteks mana yang tampil di pemilih konteks;
+          konteks yang MASIH berisi dompet dikunci (uang tidak boleh tersembunyi). */}
+      <SettingsCard title={CONTEXT_SETTINGS_COPY.title} desc={CONTEXT_SETTINGS_COPY.desc}>
+        <ul className="mt-4 divide-y divide-soil/10">
+          {CONTEXT_OPTIONS.map((option) => {
+            const locked = option.id === 'pribadi' || walletCounts[option.id] > 0
+            const on = enabledContexts.includes(option.id)
+            return (
+              <li key={option.id} className="flex items-center gap-4 py-3.5 first:pt-0 last:pb-0">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-forest">{option.label}</p>
+                  <p className="mt-0.5 text-xs leading-relaxed text-forest/50">
+                    {walletCounts[option.id] > 0
+                      ? CONTEXT_SETTINGS_COPY.lockedByWallets(walletCounts[option.id])
+                      : CONTEXT_SETTINGS_COPY.itemHelper[option.id]}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={on}
+                  aria-label={CONTEXT_SETTINGS_COPY.toggleAria(option.label, !on)}
+                  disabled={locked}
+                  onClick={() => toggleContext(option.id)}
+                  className={cn(
+                    'relative h-7 w-12 shrink-0 rounded-full transition-colors duration-200',
+                    on ? 'bg-forest' : 'bg-soil/[0.12]',
+                    locked && 'cursor-not-allowed opacity-60',
+                  )}
+                >
+                  <span
+                    className={cn(
+                      'absolute left-0.5 top-0.5 size-6 rounded-full bg-cream shadow-sm transition-transform duration-200',
+                      on && 'translate-x-5',
+                    )}
+                  />
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+      </SettingsCard>
+
       {/* ── 3. DOMPET BERSAMA ────────────────────────────────────────────── */}
       {partner ? (
         <SettingsCard title={INITIAL_JOINT_WALLET.name} desc="Dompet bersama aktif.">
@@ -448,6 +529,12 @@ export function ProfileSettingsPanel() {
         >
           <Link
             href="/joint"
+            /* H12-4 (audit UI/UX): menekan "Ajak Pasangan" LANGSUNG mengaktifkan
+               konteks "Bersama" — user tidak perlu menyalakan toggle-nya manual
+               dulu (dua kontrol yang saling bertentangan sebelumnya). */
+            onClick={() => {
+              if (!enabledContexts.includes('bersama')) toggleContext('bersama')
+            }}
             className="mt-4 inline-flex items-center gap-2 rounded-2xl bg-forest px-5 py-3.5 text-sm font-medium text-mint transition-colors hover:bg-forest-soft active:scale-[0.99]"
           >
             <UserPlus className="size-4" strokeWidth={2.4} aria-hidden />

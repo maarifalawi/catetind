@@ -292,7 +292,7 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
     <ScreenShell>
       <div className="w-full">
         {/* ── HEADER: kembali + identitas celengan + toggle privasi GLOBAL ─── */}
-        <header className="sticky top-2 z-30 flex items-center justify-between gap-3 rounded-[1.5rem] bg-cream/90 px-3 py-3 shadow-[0_18px_40px_-32px_rgba(0,0,0,0.65)] ring-1 ring-soil/10 backdrop-blur-md sm:px-4">
+        <header className="sticky top-2 z-30 flex items-center justify-between gap-3 rounded-[1.5rem] bg-cream px-3 py-3 shadow-[0_18px_40px_-32px_rgba(0,0,0,0.65)] ring-1 ring-soil/10 sm:px-4 lg:bg-cream/90 lg:backdrop-blur-md">
           <div className="flex min-w-0 items-center gap-3">
             <Link
               href="/budget"
@@ -609,7 +609,7 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
             84px); di desktop nav hilang jadi bar turun ke dasar kolom, dan
             `lg:max-w-lg` menjaga tidak menabrak FAB AI Coach di kanan bawah. */}
         <div className="sticky bottom-[5.5rem] z-30 mt-4 lg:bottom-5">
-          <div className="rounded-[1.4rem] bg-cream/95 p-2 shadow-[0_24px_50px_-20px_rgba(0,0,0,0.28)] ring-1 ring-soil/12 backdrop-blur-md lg:max-w-lg">
+          <div className="rounded-[1.4rem] bg-cream p-2 shadow-[0_24px_50px_-20px_rgba(0,0,0,0.28)] ring-1 ring-soil/12 lg:max-w-lg lg:bg-cream/95 lg:backdrop-blur-md">
             {/* SATU BARIS: aksi primer (Setor / Buat target baru) + tombol hapus ikon.
                 REDESAIN round 3 — dulu tiga tingkatan bertumpuk (tombol penuh →
                 kalimat hint → tombol "Hapus celengan" penuh) sehingga bar-nya tinggi,

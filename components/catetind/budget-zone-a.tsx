@@ -1,9 +1,12 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import { Lightbulb, Plus } from 'lucide-react'
 import { BudgetCategoryCard } from './budget-category-card'
 import { cn } from '@/lib/utils'
 import {
+  BUDGET_ADD_PLACEHOLDER,
+  BUDGET_SUGGEST_COPY,
   BUDGET_ZONE_A_COPY,
   PACING_HEX,
   PERIOD_TABS,
@@ -45,6 +48,8 @@ export function BudgetZoneA({
   onSweep,
   onReviewCoach,
   onDeleteBudget,
+  suggestion,
+  onAddSuggested,
 }: {
   /** daftar yang SUDAH disaring untuk periode aktif (lihat `budgetsForPeriod`) */
   budgets: BudgetItem[]
@@ -58,6 +63,9 @@ export function BudgetZoneA({
   onReviewCoach: () => void
   /** hapus satu kategori (paket 60.1) — halaman yang memasang konfirmasi & Undo */
   onDeleteBudget: (budget: BudgetItem) => void
+  /** H5-2 — saran kategori dari riwayat (null/tanpa saran = kartu tidak tampil) */
+  suggestion?: { category: string; count: number } | null
+  onAddSuggested?: (category: string) => void
 }) {
   const surplus = surplusBudgets(budgets)
   const sweepTotal = totalSurplus(budgets)
@@ -301,14 +309,54 @@ export function BudgetZoneA({
         </div>
       )}
 
-      {/* ── 3F. TAMBAH BUDGET (dashed — nol bobot visual sampai dibutuhkan) ─ */}
+      {/* ── H5-2. SARAN KATEGORI DARI RIWAYAT (audit UI/UX) ─────────────────────
+          Halaman ini dulu cuma punya satu kategori budget. Saran ini datang dari
+          baris ledger NYATA (`suggestedBudgetCategory` di lib/data/budget.ts) —
+          kategori pengeluaran tersering yang BELUM punya limit. Klik = buka sheet
+          tambah budget dengan kategori itu sudah terpilih. */}
+      {suggestion && onAddSuggested && (
+        <div className="flex items-start gap-3 rounded-[1.5rem] bg-sage/50 p-4 ring-1 ring-forest/10">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-2xl bg-cream text-forest ring-1 ring-soil/12">
+            <Lightbulb className="size-4" strokeWidth={2.2} aria-hidden />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-forest/45">
+              {BUDGET_SUGGEST_COPY.title}
+            </p>
+            <p className="mt-1 text-[12.5px] leading-relaxed text-forest/70">
+              {BUDGET_SUGGEST_COPY.body(suggestion.category)}
+            </p>
+            <button
+              type="button"
+              onClick={() => onAddSuggested(suggestion.category)}
+              className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-forest px-3.5 py-2 text-[12px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-95"
+            >
+              <Plus className="size-3.5" strokeWidth={2.8} aria-hidden />
+              {BUDGET_SUGGEST_COPY.cta}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── 3F. TAMBAH BUDGET — H5-5 (audit UI/UX): card placeholder yang
+          mengajak (ilustrasi kecil + copy), bukan text link bergaris putus-putus
+          yang terlalu subtle. ──────────────────────────────────────────────── */}
       <button
         type="button"
         onClick={onAddBudget}
-        className="flex w-full items-center justify-center gap-2 rounded-[1.4rem] border-2 border-dashed border-oat bg-cream/45 px-4 py-4 text-[12.5px] font-medium text-forest/45 transition-all hover:border-forest/25 hover:bg-cream hover:text-forest active:scale-[0.99]"
+        className="group flex w-full items-center gap-3 rounded-[1.5rem] border border-dashed border-forest/20 bg-gradient-to-br from-sage/40 to-cream px-4 py-3.5 text-left transition-all hover:border-forest/35 hover:shadow-[0_18px_40px_-30px_rgba(0,0,0,0.5)] active:scale-[0.99]"
       >
-        <span className="text-[15px] leading-none">+</span>
-        {BUDGET_ZONE_A_COPY.addCta}
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-cream text-forest ring-1 ring-soil/12 transition-transform duration-300 group-hover:scale-105">
+          <Plus className="size-5" strokeWidth={2.6} aria-hidden />
+        </span>
+        <span className="min-w-0">
+          <span className="block text-[13px] font-medium text-forest">
+            {BUDGET_ADD_PLACEHOLDER.budgetTitle}
+          </span>
+          <span className="mt-0.5 block text-[11.5px] leading-relaxed text-forest/50">
+            {BUDGET_ADD_PLACEHOLDER.budgetBody}
+          </span>
+        </span>
       </button>
     </div>
   )

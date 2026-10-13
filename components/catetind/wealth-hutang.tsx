@@ -7,6 +7,7 @@ import {
   ArrowUpRight,
   Check,
   ChevronDown,
+  MoreVertical,
   Pencil,
   Plus,
   Receipt,
@@ -19,6 +20,8 @@ import { cn } from '@/lib/utils'
 import { BudgetSheet, ChoicePills, RupiahField, SheetSubmit, DateField as SheetDateField } from './budget-sheet'
 import {
   ALL_SETTLED_COPY,
+  HUTANG_ZERO_LINE,
+  PIUTANG_ZERO_LINE,
   ALL_SETTLED_TITLE,
   EMPTY_HUTANG_COPY,
   EMPTY_HUTANG_CTA,
@@ -369,6 +372,28 @@ function EmptyDebtState({
   }
 
   const piutang = view === 'piutangku'
+
+  /* H8-4 (audit UI/UX): kalau memang belum ada catatan sama sekali, section
+     ini cukup SATU baris positif + "Tambah" sebagai text link — jangan
+     sisakan kotak besar kosong. Kasus "konteks aktif kosong" tetap pakai
+     kartu penjelasan di bawah karena ia butuh menjelaskan sebabnya. */
+  if (!contextLine) {
+    return (
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-mint/15 px-4 py-3 ring-1 ring-forest/10">
+        <p className="text-[13px] font-medium text-forest">
+          {piutang ? PIUTANG_ZERO_LINE : HUTANG_ZERO_LINE}
+        </p>
+        <button
+          type="button"
+          onClick={onAdd}
+          className="text-[12.5px] font-medium text-forest underline decoration-dotted underline-offset-4 transition-colors hover:decoration-forest"
+        >
+          {piutang ? EMPTY_PIUTANG_CTA : EMPTY_HUTANG_CTA}
+        </button>
+      </div>
+    )
+  }
+
   return (
     <div className="mt-5 flex flex-col items-center rounded-[1.75rem] border-2 border-dashed border-forest/15 bg-cream/50 px-6 py-10 text-center">
       <span aria-hidden className="text-[28px]">
@@ -660,6 +685,8 @@ function DebtActionRow({
   onDelete: () => void
 }) {
   const pay = payLabel !== undefined && onPay !== undefined
+  /* H8-3 (audit UI/UX): Edit & Hapus disembunyikan di balik menu "...". */
+  const [actionsOpen, setActionsOpen] = useState(false)
 
   return (
     <div className="mt-3 flex w-full items-stretch gap-2">
@@ -681,24 +708,53 @@ function DebtActionRow({
         )
       )}
 
-      {/* Edit & Hapus: ikon saja supaya barisnya tetap satu baris di 375 px,
-          tapi `aria-label`-nya menyebut nama catatannya (a11y dasar §8). */}
-      <button
-        type="button"
-        onClick={onEdit}
-        aria-label={WEALTH_ROW_ACTION.editAria(name)}
-        className="inline-flex size-10 shrink-0 items-center justify-center rounded-2xl bg-hud-amber/25 text-forest ring-1 ring-inset ring-hud-amber/40 transition-colors hover:brightness-105 active:scale-95"
-      >
-        <Pencil className="size-4" strokeWidth={2.4} />
-      </button>
-      <button
-        type="button"
-        onClick={onDelete}
-        aria-label={WEALTH_ROW_ACTION.removeAria(name)}
-        className="inline-flex size-10 shrink-0 items-center justify-center rounded-2xl bg-hud-terracotta/15 text-hud-terracotta ring-1 ring-inset ring-hud-terracotta/25 transition-colors hover:brightness-105 active:scale-95"
-      >
-        <Trash2 className="size-4" strokeWidth={2.4} />
-      </button>
+      {/* H8-3 (audit UI/UX): Edit & Hapus dulu tombol berwarna yang menonjol;
+          sekarang disembunyikan di balik satu menu "..." supaya aksi merusak
+          tidak mendominasi kartu. */}
+      <div className="relative shrink-0">
+        <button
+          type="button"
+          onClick={() => setActionsOpen((prev) => !prev)}
+          aria-label={WEALTH_ROW_ACTION.menuAria(name)}
+          aria-haspopup="menu"
+          aria-expanded={actionsOpen}
+          title={WEALTH_ROW_ACTION.menuAria(name)}
+          className="inline-flex size-10 items-center justify-center rounded-2xl text-forest/45 ring-1 ring-inset ring-soil/10 transition-colors hover:bg-soil/[0.06] hover:text-forest active:scale-95"
+        >
+          <MoreVertical className="size-4" strokeWidth={2.4} aria-hidden />
+        </button>
+        {actionsOpen && (
+          <div
+            role="menu"
+            className="absolute right-0 top-full z-20 mt-1 flex w-32 flex-col overflow-hidden rounded-2xl bg-cream shadow-[0_18px_40px_-24px_rgba(0,0,0,0.6)] ring-1 ring-soil/12"
+          >
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setActionsOpen(false)
+                onEdit()
+              }}
+              className="flex items-center gap-2 px-3.5 py-2.5 text-left text-[12.5px] font-medium text-forest transition-colors hover:bg-sage/50"
+            >
+              <Pencil className="size-3.5" strokeWidth={2.4} aria-hidden />
+              {WEALTH_ROW_ACTION.edit}
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setActionsOpen(false)
+                onDelete()
+              }}
+              className="flex items-center gap-2 border-t border-soil/10 px-3.5 py-2.5 text-left text-[12.5px] font-medium text-hud-terracotta transition-colors hover:bg-plum/10"
+            >
+              <Trash2 className="size-3.5" strokeWidth={2.4} aria-hidden />
+              {WEALTH_ROW_ACTION.remove}
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

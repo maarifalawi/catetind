@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Check, ChevronDown, User, Users, UsersRound, type LucideIcon } from 'lucide-react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { CONTEXT_LABEL, CONTEXT_MENU_COPY } from '@/lib/data/money-context'
 import type { MoneyContext } from '@/lib/types'
+import { useMoneyContext } from './money-context-provider'
 
 /* ── MENU KONTEKS UANG (paket 65 · Tugas E) ──────────────────────────────────
    Pengganti segmented control `ContextSwitcher` di Dashboard. Trigger-nya
@@ -41,8 +42,13 @@ export function ContextMenu({
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const reduce = useReducedMotion()
-  const active = OPTIONS.find((option) => option.id === value) ?? OPTIONS[0]
-  const ActiveIcon = active.icon
+  const { availableContexts: available } = useMoneyContext()
+  /* PAKET 87 — hanya konteks yang tersedia (pilihan user ∪ konteks berisi dompet).
+     Urutan tetap dari `OPTIONS` (Pribadi → Keluarga → Bersama). */
+  const options = useMemo(
+    () => OPTIONS.filter((option) => available.includes(option.id)),
+    [available],
+  )
 
   useEffect(() => {
     if (!open) return
@@ -59,6 +65,14 @@ export function ContextMenu({
       window.removeEventListener('mousedown', onPointerDown)
     }
   }, [open])
+
+  /* ≤1 konteks tersedia = tidak ada yang bisa dipilih → jangan gambar kontrol yang
+     tidak mengontrol apa pun (aturan paket 60.3). Semua hook di atas sudah jalan,
+     jadi early-return ini aman. */
+  if (options.length < 2) return null
+
+  const active = options.find((option) => option.id === value) ?? options[0]
+  const ActiveIcon = active.icon
 
   return (
     <div ref={rootRef} className={cn('relative', className)}>
@@ -89,7 +103,7 @@ export function ContextMenu({
             transition={{ duration: reduce ? 0 : 0.15, ease: 'easeOut' }}
             className="absolute right-0 z-[60] mt-2 w-44 overflow-hidden rounded-2xl bg-cream p-1.5 shadow-[0_18px_40px_-20px_rgba(0,0,0,0.55)] ring-1 ring-soil/12"
           >
-            {OPTIONS.map(({ id, icon: Icon }) => {
+            {options.map(({ id, icon: Icon }) => {
               const selected = id === value
               return (
                 <li key={id} role="option" aria-selected={selected}>

@@ -1261,6 +1261,14 @@ export const TRANSACTION_DEFAULT_NAME: Record<TransactionType, string> = {
   transfer: 'Pindah dana',
 }
 
+/* ── H3-4 (audit UI/UX) — ajakan mengisi deskripsi singkat ──────────────────
+   Audit menemukan entri "Pengeluaran cepat" yang tak informatif (user lupa itu
+   apa). Paket 86 sudah mengganti nama kosong dengan KATEGORI pilihan user, tapi
+   audit tetap meminta dorongan minimal 1 kata deskripsi saat input. Sifatnya
+   MENDORONG, bukan mewajibkan — menambah gesekan mencatat bukan tujuan app ini. */
+export const TRANSACTION_NOTE_HINT =
+  'Tambah 1 kata aja (mis. "Gacoan") biar gampang diingat nanti.'
+
 /**
  * ATURAN DOMPET CATATAN BARU (paket 59 · temuan audit #1) — pengganti catatan
  * lama yang berbunyi "konteks `bersama` jatuh ke Tunai".
@@ -1363,4 +1371,19 @@ export const HISTORY_SEARCH_PARAM = 'q'
 export function historySearchHref(query: string): string {
   return `/history?${HISTORY_SEARCH_PARAM}=${encodeURIComponent(query.trim())}`
 }
+
+
+/* ── TAB HALAMAN RIWAYAT & INSIGHT (H3-1 · audit UI/UX) ──────────────────────
+   Audit: halaman terlalu panjang/padat. Solusi paling konservatif dari yang
+   ditawarkan audit ("pisah jadi 2 tab") — teks tab tinggal di sini supaya tidak
+   ada string user-facing di JSX. */
+export type HistoryTab = 'riwayat' | 'insight'
+
+export const HISTORY_TABS: { id: HistoryTab; label: string }[] = [
+  { id: 'riwayat', label: 'Riwayat' },
+  { id: 'insight', label: 'Insight' },
+]
+
+/** aria-label grup tab pemilih tampilan */
+export const HISTORY_TABS_ARIA = 'Pilih tampilan: Riwayat atau Insight'
 

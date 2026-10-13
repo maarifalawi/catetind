@@ -95,6 +95,15 @@ export const HOME_GOALS_COPY = {
   emptyBody:
     'Mulai dari satu celengan saja dulu — angka kecil juga sah. Tiap setoran bikin tanamanmu naik tahap 🌱',
   emptyCta: 'Tanam celengan pertama',
+  /** H2-3 (audit UI/UX) — empty state yang MENGGODA, bukan sekadar "belum ada
+   *  data": tiga contoh celengan populer sebagai placeholder yang bisa ditap.
+   *  Setiap chip menautkan ke sheet "Tanam Celengan Baru" (jalur yang sama). */
+  emptyPopularTitle: 'Contoh yang sering ditabung orang:',
+  emptyPopular: [
+    { emoji: '📱', label: 'iPhone baru' },
+    { emoji: '🏝️', label: 'Liburan Bali' },
+    { emoji: '🛟', label: 'Dana Darurat' },
+  ],
 } as const
 
 /**

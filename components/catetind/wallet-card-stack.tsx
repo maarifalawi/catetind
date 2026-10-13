@@ -53,11 +53,12 @@ const MAX_VISIBLE = 4 // slot terdalam yang masih terlihat mengintip di atas kar
 const SLOT_STEP = 30 // px — jarak vertikal antar slot (makin dalam makin naik)
 const SLOT_SCALE = 0.045 // pengurangan scale per slot
 const ENTER_RISE = 170 // px — kartu baru / kartu yang di-swipe naik dari bawah sejauh ini
-// tinggi kartu responsif via CSS var --card-h di scene (mobile 248px, sm+ 272px) —
+// tinggi kartu responsif via CSS var --card-h di scene (mobile 176px, sm+ 192px) —
 // nilai ini dipakai sebagai fallback inline style supaya engine & layout tetap sinkron.
-// Kartu diperkecil dari 336px → 272px: saldo dompet sifatnya pasif, jadi ruang
-// vertikalnya diserahkan ke Jatah Hari Ini & Tanaman (hierarki visual baru).
-const CARD_H = 272 // px — tinggi kartu di layar sm ke atas
+// H2-1 (audit UI/UX): kartu diperkecil lagi ±30% (272 → 192) supaya "Jatah Hari
+// Ini" (fitur killer) kelihatan tanpa harus menggulir. Saldo dompet sifatnya
+// pasif, jadi ruang vertikalnya diserahkan ke Jatah Hari Ini & Tanaman.
+const CARD_H = 192 // px — tinggi kartu di layar sm ke atas
 const SCENE_PAD = MAX_VISIBLE * SLOT_STEP + 8 // ruang di atas kartu untuk intipan tumpukan
 
 // geometri sleeve dompet di sekeliling tumpukan
@@ -809,11 +810,22 @@ export const WalletCardStack = memo(function WalletCardStack({
               beberapa piksel di atasnya, jadi label itu cuma mengulang hal yang
               sama di SETIAP kartu. Angka tetap memakai DESIGN TOKEN bersama
               (`lib/typography.ts`) supaya tidak "beda rasa" dengan halaman
-              Dompet & Akun. */}
-          <p className={cn(AMOUNT_XL, 'leading-none')}>{money(amount)}</p>
+              Dompet & Akun.
+
+              KOREKSI OPTIS ke atas (permintaan pemilik produk: angka nominal
+              kartu "dibuat sedikit lebih ke atas"): sebar rata `justify-between`
+              menaruh angka di TITIK TENGAH GEOMETRIS kartu, padahal bibir
+              kantong menutupi LIP_OVERLAP = 18px di tepi bawah — bidang yang
+              benar-benar TERLIHAT tingginya cuma `--card-h - 18px`, dan titik
+              tengahnya ±9px lebih tinggi. Tanpa koreksi, angka terbaca sedikit
+              "turun" dari pusat pandangan. `-translate-y-2` (8px, dibulatkan
+              dari 9px) menaikkannya ke pusat bidang yang terlihat. Dipakai
+              `translate`, BUKAN margin: pembagian ruang tiga blok tetap utuh,
+              jadi kepala kartu & baris bawah tidak ikut bergeser. */}
+          <p className={cn(AMOUNT_XL, '-translate-y-2 leading-none')}>{money(amount)}</p>
 
           {/* BARIS BAWAH kartu — kiri: chip EMV + ikon contactless (detil benda
-              fisik kartu); kanan: brand mark CatetInd (wordmark `cətet`, EMAS).
+              fisik kartu); kanan: brand mark CatetInd (wordmark `cətet`, PUTIH).
 
               Mark-nya SENGAJA duduk di baris ini, bukan di pojok kanan-bawah
               kartu: `pb-7` di induk = 28px sedangkan bibir kantong menutupi
@@ -833,24 +845,28 @@ export const WalletCardStack = memo(function WalletCardStack({
             </span>
             <Wifi className="size-4 rotate-90 text-cream/50" strokeWidth={2.25} aria-hidden />
 
-            {/* BRAND MARK CatetInd — wordmark `cətet` EMAS di ujung KANAN baris
+            {/* BRAND MARK CatetInd — wordmark `cətet` PUTIH di ujung KANAN baris
                 bawah SETIAP muka kartu: kartu agregat "Semua Dompet" maupun
                 tiap dompet (BCA, GoPay, …). Dulu hanya kartu agregat yang
                 punya; yang di kartu dompet masih lambang jaringan bank di
                 kanan ATAS, jadi satu kartu tetap satu logo di kanan bawah
                 (keputusan pemilik produk: "semuanya").
 
-                Warnanya = token `daisy` (`#ecd768`) yang sama dengan chip EMV
-                persis di sebelah kirinya — aset logo tidak punya versi emas
-                (hijau/hitam), jadi bentuknya diambil dari ALPHA
-                `public/Dashboard.png` lewat `mask-image` + `bg-daisy`: warnanya
-                persis token, bukan hasil kira-kira filter. Ukuran tetap sama
-                seperti sebelumnya (`h-2.5` = 10px, rasio aset 890×245 → lebar
-                ±36px), hanya warna & cakupan kartunya yang berubah. */}
+                WARNANYA PUTIH (permintaan pemilik produk; sebelumnya emas
+                `bg-daisy` `#ecd768`): bentuknya diambil dari ALPHA wordmark
+                putih master `public/Dashboard-putih.png` (1779×490 — bentuk &
+                cakupan sama dengan `Dashboard.png`, hanya 2× resolusi) lewat
+                `mask-image`, lalu diisi token `cream` yang nilainya memang
+                PUTIH RATA `#ffffff` (kelas putih bawaan Tailwind sengaja TIDAK
+                dipakai — penjaga palet menandainya sebagai warna di luar
+                palet). Jadi warnanya persis token, bukan hasil kira-kira
+                filter, dan tidak ada elemen raster tambahan per kartu.
+                Ukuran tetap sama seperti sebelumnya (`h-2.5` = 10px, rasio
+                aset 1779×490 → lebar ±36px). */}
             <span
               role="img"
               aria-label="CatetInd"
-              className="ml-auto block h-2.5 aspect-[890/245] bg-daisy opacity-90 [mask-image:url(/Dashboard.png)] [mask-position:center] [mask-repeat:no-repeat] [mask-size:contain]"
+              className="ml-auto block h-2.5 aspect-[1779/490] bg-cream opacity-90 [mask-image:url(/Dashboard-putih.png)] [mask-position:center] [mask-repeat:no-repeat] [mask-size:contain]"
             />
           </div>
 
@@ -904,7 +920,7 @@ export const WalletCardStack = memo(function WalletCardStack({
           (50–70) tidak bocor ke root & tidak menembus overlay global (AI Chat, dll.) */}
       <div
         ref={sceneRef}
-        className="relative isolate select-none [touch-action:pan-y] [--card-h:248px] sm:[--card-h:272px] xl:[--card-h:312px]"
+        className="relative isolate select-none [touch-action:pan-y] [--card-h:176px] sm:[--card-h:192px] xl:[--card-h:218px]"
         style={{ height: `calc(${SCENE_PAD}px + var(--card-h, ${CARD_H}px))` }}
         onPointerMove={handleMove}
         onPointerDown={handleDown}

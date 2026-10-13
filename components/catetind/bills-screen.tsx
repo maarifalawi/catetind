@@ -25,6 +25,8 @@ import {
   CONFIRM_DELETE_BILL_COPY,
   CONFIRM_UNPAID_COPY,
   CURRENT_DAY,
+  BILLS_ALL_PAID_COPY,
+  BILL_ADD_PLACEHOLDER,
   DELETE_BILL_TOAST,
   MARK_PAID_SHEET_COPY,
   MARK_PAID_TOAST,
@@ -668,6 +670,50 @@ export function BillsScreen() {
                   ))
                 )}
               </div>
+
+              {/* H6-4 (audit UI/UX): tombol "+ Tagihan" di kanan atas mudah
+                  terlewat, jadi ada card placeholder mengajak di bawah daftar. */}
+              <button
+                type="button"
+                onClick={() => setShowAddBill(true)}
+                className="mt-3 group flex w-full items-center gap-3 rounded-[1.5rem] border border-dashed border-forest/20 bg-gradient-to-br from-sage/40 to-cream px-4 py-3.5 text-left transition-all hover:border-forest/35 active:scale-[0.99]"
+              >
+                <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-cream text-forest ring-1 ring-soil/12 transition-transform duration-300 group-hover:scale-105">
+                  <Plus className="size-5" strokeWidth={2.6} aria-hidden />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-[13px] font-medium text-forest">
+                    {BILL_ADD_PLACEHOLDER.title}
+                  </span>
+                  <span className="mt-0.5 block text-[11.5px] leading-relaxed text-forest/50">
+                    {BILL_ADD_PLACEHOLDER.body}
+                  </span>
+                </span>
+              </button>
+
+              {/* H6-1 (audit UI/UX): saat SEMUA tagihan bulan ini lunas, halaman
+                  terasa kosong. Beri reinforcement positif + siapkan bulan depan. */}
+              {scopedBills.length > 0 && scopedBills.every((b) => b.isPaidThisMonth) && (
+                <div className="mt-3 rounded-[1.5rem] bg-gradient-to-br from-mint/25 to-cream p-4 ring-1 ring-forest/10">
+                  <p className="text-[13px] font-medium text-forest">{BILLS_ALL_PAID_COPY.title}</p>
+                  <p className="mt-1 text-[12px] leading-relaxed text-forest/55">{BILLS_ALL_PAID_COPY.body}</p>
+                  <p className="mt-3 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-forest/40">
+                    {BILLS_ALL_PAID_COPY.nextTitle}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {scopedBills.map((b) => (
+                      <span
+                        key={b.id}
+                        className="inline-flex items-center gap-1.5 rounded-full bg-cream px-2.5 py-1 text-[11.5px] font-medium text-forest ring-1 ring-soil/10"
+                      >
+                        <span aria-hidden>{b.emoji}</span>
+                        {b.name}
+                      </span>
+                    ))}
+                  </div>
+                  <p className="mt-2 text-[11px] text-forest/45">{BILLS_ALL_PAID_COPY.nextBody}</p>
+                </div>
+              )}
           </div>
         )}
 

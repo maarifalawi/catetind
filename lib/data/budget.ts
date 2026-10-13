@@ -1742,6 +1742,67 @@ export const BUDGET_CARD_ACTION_COPY = {
   delete: (category: string) => `Hapus budget ${category}`,
 } as const
 
+/* ── H5-1 (audit UI/UX) — microcopy nurturing saat kategori lewat limit ──────
+   Temuan audit: angka "614%" tanpa penjelasan terasa menghakimi dan bikin user
+   defensif. Kartu tetap menampilkan FAKTA (rupiah lebih dulu), lalu menemani
+   dengan satu kalimat yang menyebut ini bisa dibahas bareng — bukan tuduhan. */
+export const BUDGET_OVER_NURTURE =
+  'Minggu ini memang lebih besar dari biasa — kita review bareng yuk?'
+
+/* ── H5-4 (audit UI/UX) — kewajiban celengan PER HARI ───────────────────────
+   Angka bulanan (mis. Rp 3.061.225/bulan) terasa berat; per-hari terasa lebih
+   terjangkau secara psikologis. Pembaginya jumlah hari bulan berjalan (30) —
+   angka turunan, bukan angka kedua yang ditulis manual. */
+export const SINKING_PER_DAY_DAYS = 30
+
+/* ── H5-2 (audit UI/UX) — saran kategori budget dari RIWAYAT transaksi ───────
+   Halaman budget cuma punya satu kategori; audit meminta saran kategori yang
+   memang sering dipakai user. Turunannya membaca baris ledger NYATA (tipe
+   `expense`) dan mengabaikan kategori yang sudah punya limit. */
+export const BUDGET_SUGGEST_COPY = {
+  title: 'Saran dari riwayatmu',
+  body: (category: string) =>
+    `Kamu sering belanja di kategori ${category} — mau set budget juga?`,
+  cta: 'Set budget',
+} as const
+
+/** kategori pengeluaran paling sering yang BELUM punya limit (null = tidak ada) */
+export function suggestedBudgetCategory(
+  rows: { category: string; type: string }[],
+  existingCategories: string[],
+): { category: string; count: number } | null {
+  const counts = new Map<string, number>()
+  for (const row of rows) {
+    if (row.type !== 'expense') continue
+    const key = row.category.trim()
+    if (!key || existingCategories.includes(key)) continue
+    counts.set(key, (counts.get(key) ?? 0) + 1)
+  }
+  let best: { category: string; count: number } | null = null
+  for (const [category, count] of counts) {
+    if (!best || count > best.count) best = { category, count }
+  }
+  return best
+}
+
+/* ── H5-5 (audit UI/UX) — placeholder inviting untuk tombol tambah ───────────
+   Audit: "+ Tambah Budget Baru" & "+ Tambah Celengan Baru" terlalu subtle (cuma
+   text link bergaris putus-putus). Diganti card placeholder berilustrasi kecil
+   dengan copy yang mengajak. */
+export const BUDGET_ADD_PLACEHOLDER = {
+  budgetTitle: 'Tambah batas kategori',
+  budgetBody: 'Pilih kategori & limitnya — biar porsi jajan tetap kepantau.',
+  goalTitle: 'Tanam celengan baru',
+  goalBody: 'Kasih nama impianmu, mulai dari angka kecil juga sah.',
+} as const
+
+/* ── H5-3 (audit UI/UX) — keterangan "Sisa periode" ─────────────────────────
+   Audit: angka "Sisa periode: Rp 16.314.111" besar & bikin bingung — sisa dari
+   apa? Kalimat ini menjelaskan asalnya (pemasukan − cicilan − tagihan rutin) dan
+   dipakai sebagai tooltip (`title`) + keterangan kecil di kartu. */
+export const BUDGET_REMAINING_HINT = (incomeLabel: string) =>
+  `Sisa dari pemasukan ${incomeLabel} dikurangi cicilan & tagihan rutin.`
+
 
 /* ── COPY HALAMAN DETAIL CELENGAN (/budget/[id]) ─────────────────────────────
    Semua teks halaman detail tinggal di sini — tidak ada satu kalimat pun yang
@@ -1871,6 +1932,8 @@ export const FUND_CARD_ACTION_COPY = {
 export const SINKING_FUND_CARD_COPY = {
   /** nominal setoran bulanan — bentuk mikro, tanpa kalimat */
   perMonth: (amountLabel: string) => `${amountLabel}/bulan`,
+  /** H5-4 — nominal yang sama per hari, supaya terasa lebih terjangkau */
+  perDay: (amountLabel: string) => `~${amountLabel}/hari`,
   /** keterangan pembaca layar untuk bar progres (persen + nominal, jujur apa adanya) */
   progressAria: (
     name: string,

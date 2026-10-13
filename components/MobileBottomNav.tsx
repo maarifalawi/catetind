@@ -169,10 +169,16 @@ export function MobileBottomNav() {
 
   return (
     <>
+      {/* PERFORMA (paket 86): nav ini `fixed` dan selalu terlihat saat halaman
+          digulir. `backdrop-blur-xl`-nya dilepas karena blur seluas bar dihitung
+          ulang tiap frame di atas konten yang bergerak — salah satu sumber frame
+          drop di iOS Safari. Latar `bg-cream/95` sudah cukup pekat, jadi
+          tampilannya tidak berubah berarti. (Kelas `lg:hidden` berarti blur ini
+          memang selalu terbayar di HP tanpa pernah dipakai di desktop.) */}
       <nav
         aria-label={MOBILE_NAV_COPY.navAria}
         className={cn(
-          'fixed inset-x-8 bottom-5 z-40 mx-auto flex max-w-sm items-center rounded-full bg-cream/95 shadow-[0_24px_50px_-16px_rgba(0,0,0,0.18)] ring-1 ring-soil/12 backdrop-blur-xl lg:hidden',
+          'fixed inset-x-8 bottom-5 z-40 mx-auto flex max-w-sm items-center rounded-full bg-cream/95 shadow-[0_24px_50px_-16px_rgba(0,0,0,0.18)] ring-1 ring-soil/12 lg:hidden',
           /* tinggi + padding + easing halus, sejalan dengan penyusutan isinya */
           'transition-[height,padding] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none',
           compact ? 'h-14 px-3.5' : 'h-16 px-4',

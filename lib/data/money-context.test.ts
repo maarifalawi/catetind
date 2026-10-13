@@ -5,12 +5,18 @@ import { INITIAL_DEBTS, INITIAL_INVESTMENTS } from './wealth'
 import {
   CONTEXT_EMPTY_COPY,
   CONTEXT_LABEL,
+  CONTEXT_OPTIONS,
+  CONTEXT_ORDER,
+  CONTEXT_SETTINGS_COPY,
   JOINT_CONTEXT_COPY,
   SCOPE_NOTE,
+  availableContexts,
   contextCaption,
   contextName,
+  contextOptionsFor,
   scopedItems,
 } from './money-context'
+import type { MoneyContext } from '../types'
 
 /* ── Test KONTEKS UANG DI SELURUH HALAMAN (paket 47) ────────────────────────
    Dua hal yang dikunci di sini:
@@ -119,5 +125,49 @@ describe('copy konteks', () => {
   it('notice /joint menyebut konteks aktif & menyediakan satu tombol pindah', () => {
     expect(JOINT_CONTEXT_COPY.body('Pribadi')).toContain('Pribadi')
     expect(JOINT_CONTEXT_COPY.cta).toBe('Pindah ke Bersama')
+  })
+})
+
+/* ── KONTEKS YANG TAMPIL DI PEMILIH (paket 87) ────────────────────────────────
+   Yang dikunci: user yang cuma memakai "Pribadi" tidak melihat pemilih sama
+   sekali; pilihan user menambah konteks; dan konteks yang MASIH berisi dompet
+   tidak pernah bisa disembunyikan (uang user jangan hilang dari jangkauan). */
+describe('availableContexts', () => {
+  it('default: cuma Pribadi → pemilih tidak perlu punya pilihan', () => {
+    expect(availableContexts(['pribadi'])).toEqual(['pribadi'])
+    expect(contextOptionsFor(['pribadi'])).toHaveLength(1)
+  })
+
+  it('pilihan user menambah konteks, urutan tetap Pribadi → Keluarga → Bersama', () => {
+    expect(availableContexts(['bersama', 'keluarga'])).toEqual(['pribadi', 'keluarga', 'bersama'])
+    expect(contextOptionsFor(['pribadi', 'bersama']).map((option) => option.label)).toEqual([
+      'Pribadi',
+      'Bersama',
+    ])
+  })
+
+  it('konteks yang masih berisi dompet TIDAK bisa disembunyikan', () => {
+    expect(availableContexts(['pribadi'], ['bersama'])).toEqual(['pribadi', 'bersama'])
+    expect(availableContexts(['pribadi'], ['keluarga', 'bersama'])).toEqual([
+      'pribadi',
+      'keluarga',
+      'bersama',
+    ])
+  })
+
+  it('duplikat & nilai asing tidak menggandakan entri', () => {
+    expect(availableContexts(['pribadi', 'pribadi'], ['pribadi'])).toEqual(['pribadi'])
+    expect(availableContexts([])).toEqual(['pribadi'])
+    expect(availableContexts(['hantu' as MoneyContext])).toEqual(['pribadi'])
+  })
+
+  it('copy panel Pengaturan lengkap untuk tiap konteks', () => {
+    for (const ctx of CONTEXT_ORDER) {
+      expect(CONTEXT_SETTINGS_COPY.itemHelper[ctx].length).toBeGreaterThan(5)
+    }
+    expect(CONTEXT_OPTIONS).toHaveLength(3)
+    expect(CONTEXT_SETTINGS_COPY.lockedByWallets(2)).toContain('2')
+    expect(CONTEXT_SETTINGS_COPY.toggleAria('Keluarga', false)).toContain('Sembunyikan')
+    expect(CONTEXT_SETTINGS_COPY.toggleAria('Keluarga', true)).toContain('Tampilkan')
   })
 })

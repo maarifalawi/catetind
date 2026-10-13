@@ -26,7 +26,7 @@ export function LandingNavbar() {
       className={cn(
         'fixed inset-x-0 top-0 z-50 transition-colors duration-300 motion-reduce:transition-none',
         scrolled
-          ? 'border-b border-soil/10 bg-canvas/85 backdrop-blur-md'
+          ? 'border-b border-soil/10 bg-canvas lg:bg-canvas/85 lg:backdrop-blur-md'
           : 'border-b border-transparent bg-transparent',
       )}
     >

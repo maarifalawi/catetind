@@ -1,4 +1,4 @@
-import { WALLET_SEED, toHomeWallet, type Wallet, type WalletSeed } from '@/lib/wallets'
+import { WALLET_SEED, toHomeWallet, walletCardRecipe, type Wallet, type WalletSeed } from '@/lib/wallets'
 import { restConfigured, restFetch } from '@/lib/supabase/rest'
 import { toWalletDbRow, toWalletSeed, type WalletDbRow } from '@/lib/supabase/mappers'
 
@@ -25,7 +25,16 @@ import { toWalletDbRow, toWalletSeed, type WalletDbRow } from '@/lib/supabase/ma
 const g = globalThis as unknown as { catetindWalletStore?: Map<string, Wallet[]> }
 
 /** `Wallet` (deck Home) → `WalletSeed` (bentuk tabel) */
-function toSeed(wallet: Wallet): WalletSeed {
+function toSeed(wallet: Wallet, index = 0): WalletSeed {
+  /* WARNA MUKA (paket 88) — dulu dua kolom di bawah diisi string kosong.
+     Akibatnya baris dompet yang lahir lewat route ini tersimpan TANPA gradien
+     sama sekali, dan kartunya tampil terang/transparan dengan nominal putih
+     yang nyaris tak terbaca (kelas warna kartu hidup di data, jadi Tailwind
+     tidak mungkin menambalnya dari sisi CSS). Warna tetap TIDAK boleh datang
+     dari user (aturan paket 04): resepnya diambil dari palet kanon, sama persis
+     dengan `addWalletAccount()` di store klien. */
+  const recipe = walletCardRecipe(index)
+  const canon = WALLET_SEED[index % WALLET_SEED.length]
   return {
     id: wallet.id,
     name: wallet.name,
@@ -40,10 +49,10 @@ function toSeed(wallet: Wallet): WalletSeed {
     type: wallet.kind === 'bank' ? 'Bank' : wallet.kind === 'ewallet' ? 'E-Wallet' : 'Cash',
     context: wallet.context,
     art: wallet.art,
-    color: '',
-    face: '',
-    bandClass: wallet.bandClass,
-    faceClass: wallet.faceClass,
+    color: recipe.color,
+    face: recipe.face,
+    bandClass: wallet.bandClass || canon.bandClass,
+    faceClass: wallet.faceClass || canon.faceClass,
     ...(wallet.glowClass ? { glowClass: wallet.glowClass } : {}),
   }
 }
@@ -115,10 +124,11 @@ export async function insertWallet(userId: string, wallet: Wallet, token: string
     memoryWallets(userId).push(wallet)
     return wallet
   }
+  const sortIndex = memoryWallets(userId).length
   const res = await restFetch<WalletDbRow[]>('wallets', {
     method: 'POST',
     accessToken: token,
-    body: toWalletDbRow(toSeed(wallet), memoryWallets(userId).length),
+    body: toWalletDbRow(toSeed(wallet, sortIndex), sortIndex),
   })
   const row = res.data?.[0]
   return row ? toWallet(row) : wallet

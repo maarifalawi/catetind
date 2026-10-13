@@ -183,10 +183,21 @@ export const REFERRAL_HISTORY: ReferralFriend[] = [
   { id: 'lisa', name: 'Lisa Permata', converted: false, joinedAt: '26 Sep 2026', reward: '-' },
 ]
 
-/** label status teman — emoji dipakai sebagai penanda cepat, bukan ikon baru */
+/** label status teman — emoji dipakai sebagai penanda cepat, bukan ikon baru.
+ *  H10-3 (audit UI/UX): yang belum bayar TIDAK disebut "Belum bayar" (terasa
+ *  menghakimi) — pakai "Menunggu", dan chip-nya kini netral abu (bukan merah),
+ *  supaya halaman tetap terasa mengundang. */
 export function friendStatusLabel(converted: boolean): string {
-  return converted ? '✅ Sudah beli paket' : '⏳ Belum bayar'
+  return converted ? '✅ Sudah beli paket' : '⏳ Menunggu'
 }
+
+/** H10-2 (audit UI/UX) — penjelasan tier reward di balik badge paket. Audit:
+ *  badge "Paket Sultan" muncul tanpa penjelasan; user berhak tahu apa artinya
+ *  bagi reward referral-nya. Dipakai sebagai tooltip (`title`) + tautan kecil. */
+export const PLAN_TIER_EXPLAIN = {
+  linkLabel: (plan: string) => `Apa itu ${plan}?`,
+  body: 'Paketmu menentukan bonus yang kamu dapat tiap kali teman membeli lewat linkmu — makin tinggi paketnya, makin besar bonus Token AI-nya. Semua paket CatetInd berlaku selamanya (sekali bayar).',
+} as const
 
 /* ── CARA KERJA (4D) ──────────────────────────────────────────────────────── */
 

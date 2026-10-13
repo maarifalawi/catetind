@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Check, Pencil, RotateCcw, Trash2 } from 'lucide-react'
+import { Check, Pencil, RotateCcw, Trash2, Wallet } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   BILL_CARD_ACTION_COPY,
@@ -80,6 +80,10 @@ export function BillCard({
   const metaLine = [due.text, billWalletName(bill.walletId), endAfterLabel(bill)]
     .filter(Boolean)
     .join(' · ')
+  /* H6-3 (audit UI/UX): dompet sumber dipisah dari baris teks supaya bisa
+     tampil sebagai badge yang menonjol (ikon + nama). */
+  const walletName = billWalletName(bill.walletId)
+  const metaText = [due.text, endAfterLabel(bill)].filter(Boolean).join(' · ')
 
   const [dx, setDx] = useState(0)
   const [dragging, setDragging] = useState(false)
@@ -239,8 +243,18 @@ export function BillCard({
               >
                 {bill.name}
               </span>
-              <span className={cn('mt-0.5 block truncate text-[11px] font-medium', due.className)}>
-                {metaLine}
+              <span className="mt-0.5 flex min-w-0 flex-wrap items-center gap-1.5">
+                {metaText && (
+                  <span className={cn('truncate text-[11px] font-medium', due.className)}>
+                    {metaText}
+                  </span>
+                )}
+                {walletName && (
+                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-sage/70 px-2 py-0.5 text-[10.5px] font-medium text-forest ring-1 ring-inset ring-forest/10">
+                    <Wallet className="size-3" strokeWidth={2.4} aria-hidden />
+                    {walletName}
+                  </span>
+                )}
               </span>
             </span>
 

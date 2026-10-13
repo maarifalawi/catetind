@@ -51,6 +51,7 @@ import {
   sinkingObligationOf,
   spentInWindow,
   spentOn,
+  suggestedBudgetCategory,
   totalSurplus,
   walletSourceName,
   type BudgetItem,
@@ -249,6 +250,18 @@ export function BudgetScreen({
     [visibleBudgets, period, ledger],
   )
 
+  /* H5-2 (audit UI/UX) — saran kategori budget dari RIWAYAT nyata: kategori
+     pengeluaran tersering yang belum punya limit di konteks ini. Turunan murni
+     (`suggestedBudgetCategory`), jadi tidak ada angka contoh yang dikarang. */
+  const budgetSuggestion = useMemo(
+    () =>
+      suggestedBudgetCategory(
+        ledger,
+        visibleBudgets.map((budget) => budget.category),
+      ),
+    [ledger, visibleBudgets],
+  )
+
   /* ── JATAH HARIAN — dihitung SETELAH cicilan & celengan (audit UX #2) ──
      Kalau kewajiban celengan bulan ini melebihi sisa uang, `hud.shortfall`
      bernilai true → kartu Jatah Hari Ini pindah ke nada terracotta dan jatah
@@ -432,6 +445,13 @@ export function BudgetScreen({
   function handleCloseAddBudget() {
     setShowAddBudget(false)
     setPrefilledCategory(undefined)
+  }
+
+  /** H5-2 (audit UI/UX) — buka sheet tambah budget dengan kategori saran
+   *  dari riwayat sudah terpilih. */
+  function handleAddSuggested(category: string) {
+    setPrefilledCategory(category)
+    setShowAddBudget(true)
   }
 
   /** 4C — celengan baru selalu mulai dari benih 🌱 (ditulis lewat store, jadi
@@ -649,6 +669,8 @@ export function BudgetScreen({
               onSweep={() => setShowSweepModal(true)}
               onReviewCoach={handleReviewCoach}
               onDeleteBudget={handleDeleteBudget}
+              suggestion={budgetSuggestion}
+              onAddSuggested={handleAddSuggested}
             />
           </section>
 

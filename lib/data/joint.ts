@@ -1339,3 +1339,10 @@ export const JOINT_DELETE_COPY = {
     'Jendela Undo-nya sudah lewat — catatannya bisa kamu tambahkan lagi kalau memang masih perlu 🌿',
 } as const
 
+
+/* H9-2 (audit UI/UX) - progres 3 langkah membangun dompet bersama. */
+export const JOINT_STEP_COPY = {
+  aria: 'Progres membangun dompet bersama',
+  steps: ['Buat kantong', 'Ajak pasangan', 'Mulai catat'],
+  marks: { done: '✅', current: '🔄', todo: '⬜' },
+} as const

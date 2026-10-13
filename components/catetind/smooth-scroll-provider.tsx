@@ -43,6 +43,18 @@ export function SmoothScrollProvider() {
   const pathname = usePathname()
 
   useEffect(() => {
+    /* PERFORMA MOBILE (paket 86): Lenis hanya berguna untuk inersia RODA MOUSE.
+       Di perangkat sentuh gulirnya sudah 1:1 native, jadi membiarkan instance
+       Lenis hidup hanya menambah satu loop `requestAnimationFrame` +
+       MutationObserver yang berjalan terus-menerus. Di `hover: none & pointer:
+       coarse` (praktis semua HP) kita SAMA SEKALI tidak memasang Lenis — satu
+       sumber beban hilang, dan gulir kembali 100% native. */
+    if (
+      typeof window !== 'undefined' &&
+      window.matchMedia('(hover: none) and (pointer: coarse)').matches
+    ) {
+      return
+    }
     const lenis = new Lenis({
       // 0.1 = standar Lenis: inersia halus, tidak terasa "nyangkut"
       lerp: 0.1,
