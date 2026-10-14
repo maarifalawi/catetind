@@ -119,6 +119,15 @@ export function contextName(ctx: MoneyContext): string {
  * menampilkan label PENUH; teks tombolnya (bukan ikon) tinggal di sini supaya
  * tidak ada copy di JSX.
  */
+/** keterangan satu baris per konteks di PANEL pemilih konteks (paket 95).
+ *  Dipakai pemilih konteks (mobile & desktop) supaya tiap opsi menjelaskan
+ *  dirinya di baris kedua — bukan cuma satu kata yang harus ditebak. */
+export const CONTEXT_MENU_HELPER: Record<MoneyContext, string> = {
+  pribadi: 'Uangmu sendiri',
+  keluarga: 'Uang tanggungan & keluarga',
+  bersama: 'Uang patungan sama pasangan',
+}
+
 export const CONTEXT_MENU_COPY = {
   /** aria-label tombol pembuka (ikon + label konteks aktif + chevron) */
   triggerAria: 'Ganti konteks keuangan',

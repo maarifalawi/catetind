@@ -150,10 +150,6 @@ export const HOME_MONEY_COPY = {
   /** subjudul kartu transaksi — daftar di kartu itu SEJAK PAKET 58 dibatasi
    *  7 hari kalender (58.6), jadi subjudulnya menyebut itu apa adanya */
   txnSubtitle: 'Catatan 7 hari terakhir',
-  /** H2-2 — badge halus saat ada beberapa transaksi bernama sama di satu hari,
-   *  supaya dua kartu "MCD" berturut-turut tidak terbaca sebagai catatan ganda
-   *  yang salah. */
-  txnDuplicateHint: (count: number) => `${count} transaksi serupa`,
   /** tombol kepala kartu menuju halaman Riwayat (filter lengkap ada di sana) */
   seeAll: 'Lihat semua',
   /** potongan strip kartu transaksi: "<period> +X masuk, -Y keluar — net Z" */

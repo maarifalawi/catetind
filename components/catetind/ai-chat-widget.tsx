@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ArrowRight, Check, Mic, Plus, ScanLine, Send, Sparkles, X } from 'lucide-react'
@@ -394,23 +395,21 @@ export function AIChatWidget() {
           type="button"
           onClick={openPanel}
           aria-label={AI_CHAT_COPY.openLabel}
-          /* PAKET 75: ukuran diperkecil dari `size-14` (56px) ke `size-12`
-             (48px) atas permintaan pemilik produk — bubble AI Coach tidak lagi
-             "berebut perhatian" dengan FAB "Catat" (yang kini justru dibesarkan
-             lewat warna brand). 48px tetap ≥ 44px, jadi target sentuh aman. */
-          className="animate-bubble-in fixed bottom-24 right-5 z-50 flex size-12 items-center justify-center rounded-full bg-forest shadow-[0_18px_40px_-12px_rgba(0,0,0,0.45)] ring-1 ring-forest/20 transition-transform duration-150 hover:scale-105 active:scale-95 lg:bottom-8 lg:right-8"
+          /* PAKET 95 (permintaan pemilik produk): tombol ini PURE GAMBAR dari
+             `public/Buka AI Coach.png` yang ditaruh langsung pemilik produk —
+             artwork-nya SUDAH membawa cakram + stroke sendiri, jadi tidak ada lagi
+             `bg-forest`, `ring`, shadow, atau glif tambahan. Ukuran & target sentuh
+             tetap sama (48px ≥ 44px) plus animasi hover/scale yang lama. */
+          className="animate-bubble-in fixed bottom-24 right-5 z-50 block size-12 transition-transform duration-150 hover:scale-105 active:scale-95 lg:bottom-8 lg:right-8"
         >
-          {/* PAKET 94 (revisi 3): penanda tombol ini MARK AI dari artwork
-              `public/logo-ai.png` (brush "A!i") — file yang ditaruh langsung
-              pemilik produk dan dipakai APA ADANYA: tidak diproses/digenerate lagi
-              (langkah `pnpm icons` untuk file itu sudah dicabut), tanpa crop, tanpa
-              ring, tanpa latar tambahan. Yang terlihat di atas lingkaran
-              `bg-forest` ini adalah cakram putih artwork itu sendiri — tepi
-              bulatnya dibawa alpha-nya, bukan `rounded-full`.
-              `size-8` (32px) di dalam tombol 48px menyisakan bibir forest 8px,
-              sepadan dengan ikon lama (`size-5`). Lingkaran `bg-forest` tetap:
-              yang bertukar hanya glifnya. */}
-          <AIAvatar className="size-8" />
+          <Image
+            src="/Buka AI Coach.png"
+            alt=""
+            aria-hidden
+            width={1916}
+            height={1930}
+            className="size-full"
+          />
           {hasInsight && (
             <span className="absolute -right-0.5 -top-0.5 flex size-3.5">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-mint opacity-80" />

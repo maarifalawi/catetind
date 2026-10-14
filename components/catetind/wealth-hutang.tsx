@@ -17,6 +17,7 @@ import {
   Wallet,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { MenuOption, MenuPanel } from './menu-panel'
 import { BudgetSheet, ChoicePills, RupiahField, SheetSubmit, DateField as SheetDateField } from './budget-sheet'
 import {
   ALL_SETTLED_COPY,
@@ -724,34 +725,30 @@ function DebtActionRow({
           <MoreVertical className="size-4" strokeWidth={2.4} aria-hidden />
         </button>
         {actionsOpen && (
-          <div
-            role="menu"
-            className="absolute right-0 top-full z-20 mt-1 flex w-32 flex-col overflow-hidden rounded-2xl bg-cream shadow-[0_18px_40px_-24px_rgba(0,0,0,0.6)] ring-1 ring-soil/12"
-          >
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                setActionsOpen(false)
-                onEdit()
-              }}
-              className="flex items-center gap-2 px-3.5 py-2.5 text-left text-[12.5px] font-medium text-forest transition-colors hover:bg-sage/50"
-            >
-              <Pencil className="size-3.5" strokeWidth={2.4} aria-hidden />
-              {WEALTH_ROW_ACTION.edit}
-            </button>
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                setActionsOpen(false)
-                onDelete()
-              }}
-              className="flex items-center gap-2 border-t border-soil/10 px-3.5 py-2.5 text-left text-[12.5px] font-medium text-hud-terracotta transition-colors hover:bg-plum/10"
-            >
-              <Trash2 className="size-3.5" strokeWidth={2.4} aria-hidden />
-              {WEALTH_ROW_ACTION.remove}
-            </button>
+          <div className="absolute right-0 top-full z-20 mt-1">
+            {/* PAKET 95 — menu "…" memakai panel daftar bersama (ikon + judul +
+                sub-barisan), sama seperti pemilih konteks & menu kartu dompet. */}
+            <MenuPanel role="menu" label={WEALTH_ROW_ACTION.menuAria(name)} className="w-52">
+              <MenuOption
+                icon={Pencil}
+                label={WEALTH_ROW_ACTION.edit}
+                role="menuitem"
+                onClick={() => {
+                  setActionsOpen(false)
+                  onEdit()
+                }}
+              />
+              <MenuOption
+                icon={Trash2}
+                label={WEALTH_ROW_ACTION.remove}
+                role="menuitem"
+                tone="danger"
+                onClick={() => {
+                  setActionsOpen(false)
+                  onDelete()
+                }}
+              />
+            </MenuPanel>
           </div>
         )}
       </div>

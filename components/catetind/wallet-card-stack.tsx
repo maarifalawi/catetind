@@ -59,13 +59,25 @@ const ENTER_RISE = 170 // px — kartu baru / kartu yang di-swipe naik dari bawa
 // Ini" (fitur killer) kelihatan tanpa harus menggulir. Saldo dompet sifatnya
 // pasif, jadi ruang vertikalnya diserahkan ke Jatah Hari Ini & Tanaman.
 const CARD_H = 192 // px — tinggi kartu di layar sm ke atas
-const SCENE_PAD = MAX_VISIBLE * SLOT_STEP + 8 // ruang di atas kartu untuk intipan tumpukan
 
 // geometri sleeve dompet di sekeliling tumpukan
 const SLEEVE_X = 14 // px — sleeve lebih lebar dari kartu di tiap sisi
 const SLEEVE_TOP = 18 // px — sleeve menjulang di atas kartu depan
 const SLEEVE_BOTTOM = 26 // px — kedalaman kantong di bawah kartu depan
 const LIP_OVERLAP = 18 // px — seberapa jauh bibir kantong menutupi tepi bawah kartu
+
+/**
+ * Ruang intipan tumpukan DI ATAS kartu depan — sejak paket 95 nilainya
+ * MENGIKUTI JUMLAH KARTU, bukan selalu ruang untuk 4 kartu (`MAX_VISIBLE`).
+ * Dulu 1 dompet pun menyisakan ±128px kosong di atas kartunya; sekarang
+ * `scenePadFor()` mengembalikan hanya sebesar intipan yang benar-benar ada.
+ * Panjang scene terpendek (1 kartu) tetap menyisakan bibir sleeve penuh.
+ */
+const SCENE_PAD_MIN = SLEEVE_TOP + 4
+function scenePadFor(cardCount: number): number {
+  const peeks = Math.max(0, Math.min(cardCount - 1, MAX_VISIBLE))
+  return Math.max(SCENE_PAD_MIN, peeks * SLOT_STEP + 8)
+}
 
 // konfigurasi spring per properti: k = stiffness, z = damping ratio
 // (<1 = overshoot halus & hidup, 1 = tanpa overshoot)
@@ -224,6 +236,12 @@ export const WalletCardStack = memo(function WalletCardStack({
     const k = ((rot % len) + len) % len
     return [...deck.slice(k), ...deck.slice(0, k)]
   }, [deck, rot])
+
+  /* PAKET 95 — tinggi scene & semua geometri kantong memakai SATU angka ini,
+     turunan dari jumlah kartu: 1 dompet = pekat (tanpa space kosong), 3 dompet =
+     ruang intipan secukupnya. `deck.length` (bukan hasil `order`) supaya nilainya
+     tidak berubah saat deck diputar. */
+  const scenePad = scenePadFor(deck.length)
 
   /**
    * TOTAL SALDO deck = `cashTotal(snapshot)` — SATU definisi untuk seluruh app
@@ -921,7 +939,7 @@ export const WalletCardStack = memo(function WalletCardStack({
       <div
         ref={sceneRef}
         className="relative isolate select-none [touch-action:pan-y] [--card-h:176px] sm:[--card-h:192px] xl:[--card-h:218px]"
-        style={{ height: `calc(${SCENE_PAD}px + var(--card-h, ${CARD_H}px))` }}
+        style={{ height: `calc(${scenePad}px + var(--card-h, ${CARD_H}px))` }}
         onPointerMove={handleMove}
         onPointerDown={handleDown}
         onPointerUp={handleUp}
@@ -988,7 +1006,7 @@ export const WalletCardStack = memo(function WalletCardStack({
           aria-hidden
           className="pointer-events-none absolute rounded-[2.25rem] bg-gradient-to-b from-forest-soft via-forest to-evergreen-deep shadow-[0_2px_6px_rgba(0,0,0,0.25),0_24px_48px_-16px_rgba(0,0,0,0.5),0_48px_90px_-32px_rgba(0,0,0,0.45)] ring-1 ring-cream/10"
           style={{
-            top: SCENE_PAD - SLEEVE_TOP,
+            top: scenePad - SLEEVE_TOP,
             height: `calc(var(--card-h, ${CARD_H}px) + ${SLEEVE_TOP + SLEEVE_BOTTOM}px)`,
             left: -SLEEVE_X,
             right: -SLEEVE_X,
@@ -1015,7 +1033,7 @@ export const WalletCardStack = memo(function WalletCardStack({
           const isFront = i === 0
           const restDepth = Math.min(i, MAX_VISIBLE)
           const style: CSSProperties = {
-            top: SCENE_PAD,
+            top: scenePad,
             height: `var(--card-h, ${CARD_H}px)`,
             transform: `translate3d(0, ${-restDepth * SLOT_STEP}px, 0) scale(${1 - restDepth * SLOT_SCALE})`,
             zIndex: 50 - Math.round(restDepth * 10),
@@ -1090,7 +1108,7 @@ export const WalletCardStack = memo(function WalletCardStack({
           aria-hidden
           className="pointer-events-none absolute z-[70]"
           style={{
-            top: `calc(${SCENE_PAD - LIP_OVERLAP}px + var(--card-h, ${CARD_H}px))`,
+            top: `calc(${scenePad - LIP_OVERLAP}px + var(--card-h, ${CARD_H}px))`,
             height: LIP_OVERLAP + SLEEVE_BOTTOM,
             left: -SLEEVE_X,
             right: -SLEEVE_X,

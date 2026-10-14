@@ -1,12 +1,13 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Check, ChevronDown, User, Users, UsersRound, type LucideIcon } from 'lucide-react'
+import { ChevronDown, User, Users, UsersRound, type LucideIcon } from 'lucide-react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { cn } from '@/lib/utils'
-import { CONTEXT_LABEL, CONTEXT_MENU_COPY } from '@/lib/data/money-context'
+import { CONTEXT_LABEL, CONTEXT_MENU_COPY, CONTEXT_MENU_HELPER } from '@/lib/data/money-context'
 import type { MoneyContext } from '@/lib/types'
 import { useMoneyContext } from './money-context-provider'
+import { MenuOption, MenuPanel } from './menu-panel'
 
 /* ── MENU KONTEKS UANG (paket 65 · Tugas E) ──────────────────────────────────
    Pengganti segmented control `ContextSwitcher` di Dashboard. Trigger-nya
@@ -94,43 +95,32 @@ export function ContextMenu({
 
       <AnimatePresence>
         {open && (
-          <motion.ul
-            role="listbox"
-            aria-label={CONTEXT_MENU_COPY.menuAria}
-            initial={reduce ? false : { opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={reduce ? { opacity: 1 } : { opacity: 0, y: -4 }}
-            transition={{ duration: reduce ? 0 : 0.15, ease: 'easeOut' }}
-            className="absolute right-0 z-[60] mt-2 w-44 overflow-hidden rounded-2xl bg-cream p-1.5 shadow-[0_18px_40px_-20px_rgba(0,0,0,0.55)] ring-1 ring-soil/12"
+          <motion.div
+            initial={reduce ? false : { opacity: 0, y: -6, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={reduce ? { opacity: 1 } : { opacity: 0, y: -6, scale: 0.97 }}
+            transition={{ duration: reduce ? 0 : 0.16, ease: 'easeOut' }}
+            className="absolute right-0 z-[60] mt-2 origin-top-right"
           >
-            {options.map(({ id, icon: Icon }) => {
-              const selected = id === value
-              return (
-                <li key={id} role="option" aria-selected={selected}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onChange(id)
-                      setOpen(false)
-                    }}
-                    className={cn(
-                      /* `min-h-11` (44px) — paket 75: menu ini kini dipakai di
-                         SEMUA halaman (bukan cuma Dashboard), jadi tiap opsi
-                         wajib jadi target sentuh yang nyaman di mobile. */
-                      'flex min-h-11 w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25',
-                      selected
-                        ? 'bg-sage text-forest'
-                        : 'text-forest/70 hover:bg-sage/50 hover:text-forest',
-                    )}
-                  >
-                    <Icon className="size-4 shrink-0" strokeWidth={2.2} aria-hidden />
-                    <span className="whitespace-nowrap">{CONTEXT_LABEL[id]}</span>
-                    {selected && <Check className="ml-auto size-4" strokeWidth={2.6} aria-hidden />}
-                  </button>
-                </li>
-              )
-            })}
-          </motion.ul>
+            {/* PAKET 95: panel daftar memakai komponen bersama `MenuPanel` —
+                ikon di tile + judul + keterangan baris kedua + centang pilihan
+                aktif, bukan daftar teks polos. */}
+            <MenuPanel label={CONTEXT_MENU_COPY.menuAria} className="w-60">
+              {options.map(({ id, icon: Icon }) => (
+                <MenuOption
+                  key={id}
+                  icon={Icon}
+                  label={CONTEXT_LABEL[id]}
+                  helper={CONTEXT_MENU_HELPER[id]}
+                  selected={id === value}
+                  onClick={() => {
+                    onChange(id)
+                    setOpen(false)
+                  }}
+                />
+              ))}
+            </MenuPanel>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

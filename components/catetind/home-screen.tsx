@@ -251,10 +251,11 @@ export function HomeScreen() {
         {/* ── SUSUNAN BENTO GRID 12 KOLOM, DI-TENGAHKAN (paket 68) ────────────
             Desktop memakai bento grid 12 kolom YANG DI-TENGAHKAN (`max-w-1400px`
             + `mx-auto`) dengan baris terurut atas→bawah dan NOL ruang mati:
-              ROW 1 · Strip notifikasi/banner + rekap + target (12/12);
+              ROW 1 · Strip notifikasi/banner + rekap (12/12);
               ROW 2 · Dompet (6/12) + Arus Uang (6/12) — 50/50;
               ROW 3 · Transaksi Terakhir (12/12) — daftarnya multi-kolom;
-              ROW 4 · Jatah Hari Ini (6/12) + Distribusi Pengeluaran (6/12);
+              ROW 4 · Jatah Hari Ini (6/12) + Distribusi Pengeluaran
+                      & kartu target bulan ini (6/12);
               ROW 5 · Tabungan Impian (6/12) + Tanamanmu (6/12).
             Tiap sel `h-full`/`flex-1` supaya kartunya benar-benar MENGISI sel
             (bukan sekadar duduk di atasnya). Posisi desktop dipatok lewat
@@ -269,28 +270,26 @@ export function HomeScreen() {
             turun ke dalam panel dompet. Desktop melihat susunan yang sama. */}
         <div className="flex flex-col">
           <div className="mx-auto mt-5 grid w-full max-w-[1400px] grid-cols-1 gap-5 lg:mt-6 lg:grid-cols-12 lg:gap-6">
-            {/* ── BARIS 1 · STRIP NOTIFIKASI / CTA (+ rekap & target) ───────────
+            {/* ── BARIS 1 · STRIP NOTIFIKASI / CTA (+ rekap) ────────────────────
                 PAKET 87: strip ini DULU hidup DI LUAR & DI ATAS grid. Sekarang ia
                 jadi SEL GRID: di MOBILE `order-2` — tepat SETELAH kartu dompet,
                 jadi tidak ada apa pun di atas dompet; di DESKTOP `lg:row-start-1`
-                = baris penuh paling atas, sama seperti sebelumnya. */}
+                = baris penuh paling atas, sama seperti sebelumnya. Kartu target
+                bulan ini TIDAK lagi di sini (lihat sel ROW 4). */}
             <div className="order-2 space-y-2.5 lg:order-none lg:col-span-12 lg:col-start-1 lg:row-start-1">
               <HomeBanners />
-              {/* Rekap mingguan & kartu target bulan ini: keduanya memang berbentuk
-                  strip notifikasi/CTA, bukan kartu data — dan sejak paket 87 ikut
-                  tinggal di dalam sel strip ini (di mobile turun ke BAWAH dompet).
-                  `monthly.ready` tetap menahan render sampai penanda localStorage
-                  dibaca supaya kartu target tidak berkedip dari "belum ada" ke
-                  nominalnya. */}
+              {/* Rekap mingguan saja: bentuknya strip notifikasi/CTA, bukan kartu
+                  data — sejak paket 87 ia ikut tinggal di dalam sel strip ini (di
+                  mobile turun ke BAWAH dompet).
+
+                  Kartu "Hemat Rp …" (`MonthlyTargetCard`) SEMPAT tinggal di strip
+                  atas ini (desktop) DAN di paling bawah dashboard (mobile,
+                  `order-9`). Atas permintaan pemilik produk, ia TIDAK boleh jadi
+                  elemen paling atas lagi — sekarang ia menempel di BAWAH kartu
+                  "Distribusi Pengeluaran" (sel `order-6` / `lg:row-start-4`, kolom
+                  kanan). Satu node cukup melayani dua breakpoint, jadi dua
+                  instance lama dilebur jadi satu. */}
               <WeeklyRecapBanner onOpen={openRecap} />
-              {monthly.ready && (
-                <MonthlyTargetCard
-                  savedThisMonth={monthly.savedThisMonth}
-                  amount={monthly.saved?.amount ?? 0}
-                  fundId={monthly.saved?.fundId ?? null}
-                  onOpen={monthly.openModal}
-                />
-              )}
             </div>
             {/* ── ROW 2 · DOMPET (6/12, kolom 1) ───────────────────────────────
                 SETENGAH lebar: 4/12 terbukti terlalu sempit untuk tumpukan kartu
@@ -348,10 +347,29 @@ export function HomeScreen() {
               <DailyHudCard />
               <DailyNudge />
             </div>
-            {/* ── ROW 4 · DISTRIBUSI PENGELUARAN — kanan 6/12 ──────────────────
-                Daftar bar horizontal bulat (bukan pie/donut). Di MOBILE (order-6). */}
-            <div className="order-6 h-full lg:order-none lg:col-span-6 lg:col-start-7 lg:row-start-4">
-              <ExpenseDistributionCard />
+            {/* ── ROW 4 · DISTRIBUSI PENGELUARAN + KARTU TARGET — kanan 6/12 ───
+                Donat modern (bukan bar). Di BAWAHNYA menempel kartu "Hemat Rp …"
+                (`MonthlyTargetCard`) — permintaan pemilik produk: kartu target
+                tidak boleh jadi elemen paling atas, cukup di BAWAH Distribusi
+                Pengeluaran. Keduanya ditumpuk dalam SATU sel (`flex flex-col`)
+                supaya satu node melayani dua breakpoint; pembungkus `flex-1` +
+                `min-h-0` menjaga donat tetap mengisi sel (bento 50/50 dengan Jatah
+                Hari Ini) sementara kartu target mengambil tinggi alaminya.
+                `monthly.ready` menahan render sampai penanda localStorage dibaca
+                supaya kartunya tidak berkedip dari "belum ada" ke nominalnya.
+                Di MOBILE (order-6). */}
+            <div className="order-6 flex h-full flex-col gap-5 lg:order-none lg:col-span-6 lg:col-start-7 lg:row-start-4 lg:gap-6">
+              <div className="min-h-0 flex-1">
+                <ExpenseDistributionCard />
+              </div>
+              {monthly.ready && (
+                <MonthlyTargetCard
+                  savedThisMonth={monthly.savedThisMonth}
+                  amount={monthly.saved?.amount ?? 0}
+                  fundId={monthly.saved?.fundId ?? null}
+                  onOpen={monthly.openModal}
+                />
+              )}
             </div>
             {/* ── ROW 5 · TABUNGAN IMPIAN — kiri 6/12 ──────────────────────────
                 Kartunya sudah `h-full` ⇒ daftar celengan mengisi sel. Di MOBILE

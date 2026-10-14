@@ -24,10 +24,12 @@
    tampil tetap dibaca dari IndexedDB (`lib/money/idb.ts`) — tidak ada API yang
    mengembalikan data keuangan dari cache. */
 
-/* v2 (paket 91): nama cache dinaikkan setiap deploy yang mengubah shell/bundel —
-   di `activate`, semua cache bernama lain dihapus (aturan 4 di atas), jadi user
-   tidak bisa tersangkut aset lama setelah update. */
-const CACHE_VERSION = 'catetind-shell-v2'
+/* v3 (paket 95): nama cache dinaikkan lagi setiap deploy yang mengubah
+   shell/bundel — di `activate`, semua cache bernama lain dihapus (aturan 4 di
+   atas), jadi PWA yang sudah ter-install di HP TIDAK tersangkut bundel lama.
+   Ini juga jalan tercepat "menyembuhkan" HP yang masih memegang versi lama
+   sebelum user sempat Clear site data. */
+const CACHE_VERSION = 'catetind-shell-v3'
 /** dokumen yang disiapkan supaya app setidaknya bisa DIBUKA saat benar-benar offline */
 const SHELL_DOCUMENT = '/'
 /** aset ber-hash: aman disajikan dari cache lalu diperbarui di belakang */

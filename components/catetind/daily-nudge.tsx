@@ -104,9 +104,6 @@ export function DailyNudge() {
           <p className="mt-1 text-[13.5px] font-medium leading-snug text-forest">
             {HOME_NUDGE_COPY.title}
           </p>
-          <p className="mt-1 text-[12.5px] leading-snug text-forest/55">
-            {HOME_NUDGE_COPY.body}
-          </p>
           <button
             type="button"
             onClick={() => setAddOpen(true)}

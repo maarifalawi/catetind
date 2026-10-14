@@ -236,9 +236,6 @@ export const HOME_WALLET_STACK_COPY = {
 export const HOME_NUDGE_COPY = {
   coachLabel: 'AI Coach',
   title: 'Hari ini belum ada catatan nih 🌿',
-  /* AUDIT "CLEAN UI" (paket 63): badan dua klausa di kartu Home dipangkas jadi
-     satu ajakan — nudge bukan paragraf pengantar. */
-  body: 'Kopi atau ongkos tadi udah dicatat belum?',
   cta: 'Catat sekarang',
   dismissLabel: 'Tutup pengingat hari ini',
 } as const

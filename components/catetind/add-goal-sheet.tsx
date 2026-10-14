@@ -81,11 +81,13 @@ export function AddGoalSheet({
   }
 
   /* ── buka pemilih tanggal native ─────────────────────────────────────────────
-     Dulu field ini `<span>` dengan `<input type="date" opacity-0>` ditumpuk di
-     atasnya. Di sebagian browser klik tidak membuka apa pun (input transparan
-     bukan sasaran klik yang andal). Sekarang seluruh area adalah kontrol yang
-     memanggil `showPicker()`; kalau API itu tidak ada, jatuh ke fokus + klik
-     bawaan input-nya. */
+     Field ini adalah `<input type="date">` yang benar-benar bisa DITAP (lapisan
+     transparan penuh di atas pill visual). Dulu seluruh area adalah `role="button"`
+     yang memanggil `showPicker()`, dan input-nya `pointer-events-none` — di
+     sebagian browser mobile (iOS Safari & beberapa WebView Android) tap di situ
+     tidak membuka apa pun, jadi field terasa "mati". Sekarang browser asli yang
+     membuka pemilihnya (paling andal di iOS/Android); `showPicker()` tetap
+     dipanggil sebagai penambah bila API-nya ada. */
   function openPicker() {
     const el = dateRef.current
     if (!el) return
@@ -93,13 +95,10 @@ export function AddGoalSheet({
     if (typeof withPicker.showPicker === 'function') {
       try {
         withPicker.showPicker()
-        return
       } catch {
-        /* jatuh ke fokus + klik bawaan */
+        /* biarkan klik bawaan input yang membuka pemilih */
       }
     }
-    el.focus()
-    el.click()
   }
 
   return (
@@ -107,7 +106,6 @@ export function AddGoalSheet({
       open={open}
       onClose={onClose}
       title="Tanam Celengan Baru"
-      description="Kasih nama impiannya, lalu kita hitung bareng nabungnya."
       footer={<SheetSubmit onClick={submit} disabled={!ready} gate>Tanam Celengan 🌱</SheetSubmit>}
     >
       {/* ── STEP 1 — nama + target ─────────────────────────────────────── */}
@@ -128,11 +126,7 @@ export function AddGoalSheet({
         onDigitsChange={setDigits}
         placeholder="Rp 15.000.000"
         inputRef={targetRef}
-        hint={
-          target > 0 && !deadline
-            ? 'Isi tanggal target di bawah biar aku hitung nabung per bulannya 🌱'
-            : 'Boleh dibulatkan, yang penting mulai dulu.'
-        }
+        hint="Boleh dibulatkan, yang penting mulai dulu."
       />
 
       {/* ── STEP 2 — deadline + prioritas + auto-kalkulasi ─────────────── */}
@@ -141,40 +135,39 @@ export function AddGoalSheet({
           <span className="text-[13px] font-medium leading-snug text-forest">
             Mau tercapai kapan?
           </span>
-          {/* field tanggal: seluruh area dapat diklik → membuka pemilih native */}
-          <div
-            role="button"
-            tabIndex={0}
-            aria-label="Pilih target tanggal"
-            onClick={openPicker}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault()
-                openPicker()
-              }
-            }}
-            className="relative mt-2 flex w-full cursor-pointer items-center gap-2 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/16 transition-shadow hover:ring-soil/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/35"
-          >
-            <CalendarDays className="size-4 shrink-0 text-forest/35" strokeWidth={2.2} />
-            <span
-              className={cn(
-                'flex-1 text-[14px] font-medium tabular-nums',
-                deadline ? 'text-forest' : 'text-forest/25',
-              )}
-            >
-              {deadline ? formatDeadline(deadline) : 'Pilih target tanggal'}
-            </span>
-            {deadline && <Check className="size-4 shrink-0 text-hud-sage" strokeWidth={3} />}
+          {/* field tanggal: INPUT native yang jadi lapisan tap penuh (paling
+              andal di iOS/Android), pill visual murni hiasan `pointer-events-none`
+              sehingga tidak pernah menghalangi tap. Urutan DOM: input dulu, baru
+              pill — supaya `peer-focus-visible` bisa menyalakan ring fokus. */}
+          <div className="relative mt-2">
             <input
               ref={dateRef}
               type="date"
               value={deadline}
               min={TODAY_ISO}
               onChange={(event) => setDeadline(event.target.value)}
-              aria-hidden
-              tabIndex={-1}
-              className="pointer-events-none absolute inset-0 size-full opacity-0"
+              onClick={openPicker}
+              aria-label="Pilih target tanggal"
+              className="peer absolute inset-0 size-full cursor-pointer opacity-0"
             />
+            <div
+              aria-hidden
+              className={cn(
+                'pointer-events-none flex w-full items-center gap-2 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/16 transition-shadow',
+                'peer-hover:ring-soil/30 peer-focus-visible:ring-2 peer-focus-visible:ring-forest/35',
+              )}
+            >
+              <CalendarDays className="size-4 shrink-0 text-forest/35" strokeWidth={2.2} />
+              <span
+                className={cn(
+                  'flex-1 text-[14px] font-medium tabular-nums',
+                  deadline ? 'text-forest' : 'text-forest/25',
+                )}
+              >
+                {deadline ? formatDeadline(deadline) : 'Pilih target tanggal'}
+              </span>
+              {deadline && <Check className="size-4 shrink-0 text-hud-sage" strokeWidth={3} />}
+            </div>
           </div>
 
           <div className="mt-4">
