@@ -1180,6 +1180,16 @@ export interface ExpenseInput {
   note: string
   category?: string
   dateISO?: string
+  /**
+   * Jam lokal `HH:MM` baris catatan. Opsional: kosong = jam dinding saat dicatat
+   * (`clockLabel()`), dan itu memang benar untuk catatan user.
+   *
+   * Diisi HANYA oleh seed demo (`lib/money/demo-bootstrap.ts`) supaya riwayat
+   * contoh punya jam yang masuk akal untuk tanggalnya — tanpa ini SEMUA baris
+   * seed tercatat di menit yang sama (jam seed dijalankan), dan riwayatnya
+   * kelihatan jelas karangan.
+   */
+  time?: string
   clientTxId?: string
 }
 
@@ -1206,6 +1216,7 @@ export function postExpense(input: ExpenseInput): MoneyRow | null {
     note: input.note,
     category: input.category,
     dateISO: input.dateISO,
+    time: input.time,
     clientTxId: input.clientTxId,
   })
   trackCreatedRow(row, before)
@@ -1227,6 +1238,7 @@ export function postIncome(input: ExpenseInput): MoneyRow | null {
     note: input.note,
     category: input.category,
     dateISO: input.dateISO,
+    time: input.time,
     clientTxId: input.clientTxId,
   })
   trackCreatedRow(row, before)
@@ -1240,6 +1252,17 @@ export interface TransferInput {
   amount: number
   note: string
   dateISO?: string
+  /**
+   * Jam lokal `HH:MM` baris pindah dana. Opsional: kosong = jam dinding saat
+   * dicatat (`clockLabel()`), dan itu memang benar untuk pindah dana yang
+   * dilakukan user.
+   *
+   * Diisi HANYA oleh seed demo (`lib/money/demo-bootstrap.ts`), alasannya sama
+   * dengan `ExpenseInput.time`: tanpa ini baris pindah dana contoh berjam "jam
+   * seed dijalankan", jadi ia bisa muncul di ATAS catatan yang lebih baru di
+   * kartu "Transaksi Terakhir" — urutan yang tidak masuk akal untuk pembaca.
+   */
+  time?: string
 }
 
 /**
@@ -1275,6 +1298,7 @@ export function postTransfer(input: TransferInput): MoneyRow | null {
     category: WALLET_TRANSFER_LOG_COPY.transferCategory,
     counterWalletId: input.toWalletId,
     dateISO: input.dateISO,
+    time: input.time,
   })
   trackCreatedRow(row, before)
   return row
