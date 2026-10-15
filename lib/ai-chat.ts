@@ -1,11 +1,15 @@
 // ---------------------------------------------------------------------------
-// AI Coach CatetInd — kontrak data & konten mock (Domain 4B, DeepSeek V3).
+// AI Coach CatetInd — kontrak data & konten copy (Domain 4B).
 // Semua copy AI Coach dikumpulkan di sini supaya hook (use-ai-chat) dan widget
 // (ai-chat-widget) pakai satu sumber kebenaran — nanti tinggal diganti respons
 // asli dari /api/ai/text tanpa menyentuh UI.
+// CATATAN MEREK: berkas ini ikut ke bundel KLIEN, jadi ia TIDAK BOLEH menyebut
+// nama penyedia model — dulu itu yang membuat nama vendor bisa dibaca siapa pun
+// dari berkas .js. Nama mesin yang dilihat user hidup di `lib/ai/engine.ts`.
 // ---------------------------------------------------------------------------
 
 import type { CaptureSource } from './transaction-ai'
+import { AI_ENGINE_NAME } from './ai/engine'
 
 /** Siapa pengirim pesan */
 export type ChatRole = 'user' | 'ai'
@@ -413,14 +417,23 @@ export const AI_CAPTURE_REPLY = {
 
 /* ── STATUS AI DI HALAMAN PENGATURAN → AI (paket 44 · diperbarui paket 82) ────
    Tombol "Hubungkan AI" di AI Coach menuju `/settings/ai`. Sejak paket 63 model
-   AI benar-benar tersambung (kini DeepSeek, kunci HANYA di server), jadi halaman
-   itu menyebut keadaan hari ini apa adanya — termasuk apa yang terjadi kalau
-   provider sedang tak bisa dihubungi (jatuh ke aturan lokal, dengan label jujur). */
+   AI benar-benar tersambung (kunci HANYA di server), jadi halaman itu menyebut
+   keadaan hari ini apa adanya — termasuk apa yang terjadi kalau sambungannya
+   sedang tak bisa dihubungi (jatuh ke aturan lokal, dengan label jujur).
+
+   NAMA MESIN (revisi privasi merek): copy ini dulu menulis nama PENYEDIA di
+   dalam kurung, dan kalimatnya ikut ke bundel klien — jadi siapa pun bisa
+   membacanya dari berkas .js tanpa membuka app. Yang dibutuhkan user bukan nama
+   vendor, melainkan tahu APA yang dikirim dan APA yang terjadi saat gagal.
+   Karena itu namanya diganti nama mesin milik produk (`AI_ENGINE_NAME` di
+   `lib/ai/engine.ts`, satu sumber) — merek pihak ketiga yang tidak dipakai app
+   ini DILARANG dipakai, dan identitas pemroses data tetap disebut di dokumen
+   hukum `lib/legal/privacy.ts` (hak tahu user, UU PDP). */
 
 export const AI_STATUS_COPY = {
   badge: 'Tersambung ke model',
   title: 'Status AI hari ini',
-  body: 'AI Coach CatetInd tersambung ke model AI (DeepSeek) lewat server kami — kuncinya disimpan di server dan tidak pernah ikut ke browser. Scan struk, input suara, dan transaksi yang kamu ketik di chat dibaca model yang sama. Kalau sambungannya sedang penuh atau mati, AI Coach otomatis kembali menjawab dari aturan lokal + data di perangkatmu (jawabannya diberi label "belum pakai model"), dan pencatatan manual tetap jalan penuh.',
+  body: `AI Coach CatetInd berjalan lewat ${AI_ENGINE_NAME} di server kami — kuncinya disimpan di server dan tidak pernah ikut ke browser. Scan struk, input suara, dan transaksi yang kamu ketik di chat dibaca mesin yang sama. Kalau sambungannya sedang penuh atau mati, AI Coach otomatis kembali menjawab dari aturan lokal + data di perangkatmu (jawabannya diberi label "belum pakai model"), dan pencatatan manual tetap jalan penuh.`,
   worksNow:
     'Yang selalu jalan: catat transaksi manual (kategorinya kamu pilih sendiri — bukan tebakan app), ketik transaksimu di AI Coach ("kopi 25rb"), scan struk, dan input suara. Dua saklar di bawah mengatur apakah AI boleh mengisi kategori & menamai catatanmu secara otomatis.',
 } as const

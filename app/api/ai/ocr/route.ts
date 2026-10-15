@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { aiCallerId } from '@/lib/ai/caller'
-import { aiConfigured, generateFromImage, parseJsonLoose, visionModel } from '@/lib/ai/provider'
+import { AI_ENGINE_ID } from '@/lib/ai/engine'
+import {
+  aiConfigured,
+  aiUserMessage,
+  generateFromImage,
+  logAiFailure,
+  parseJsonLoose,
+} from '@/lib/ai/provider'
 import { EXTRACTION_SYSTEM_PROMPT, EXTRACTION_EXAMPLES } from '@/lib/ai/prompts'
 import { normalizeExtraction, type RawExtraction } from '@/lib/ai/extract'
 import { allowAiCall } from '@/lib/ai/rate-limit'
@@ -16,6 +23,10 @@ import { requireCapability } from '@/lib/subscription/capability'
    penggantian mock → API tidak menyentuh UI. Balasan:
      { ok:true, transaction, model }                             → 200
      { ok:false, reason, error }                                 → 400/413/422/429/503
+
+   `model` = nama mesin versi PUBLIK (`AI_ENGINE_ID`, lihat `lib/ai/engine.ts`),
+   dan `error` = pesan kanon app (`aiUserMessage()`) — bukan nama/pesan mentah
+   penyedia, supaya balasan tidak jadi tempat menebak vendor di balik app.
 
    Privasi (PRD 2111): gambar dikirim ke provider DARI SERVER (kunci tidak bocor
    ke browser), dan identitasnya dibaca `aiCallerId()` (sesi bila ada, kalau tidak
@@ -104,8 +115,10 @@ export async function POST(req: NextRequest) {
   })
 
   if (!result.ok) {
+    /* pesan penyedia dicatat di LOG SERVER; yang keluar ke klien hanya copy app */
+    logAiFailure(result.error)
     return NextResponse.json(
-      { ok: false, reason: result.error.kind, error: result.error.message },
+      { ok: false, reason: result.error.kind, error: aiUserMessage(result.error.kind) },
       { status: result.error.kind === 'rate-limit' ? 429 : 503 },
     )
   }
@@ -121,6 +134,6 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     ok: true,
     transaction: normalizeExtraction('receipt', raw),
-    model: visionModel(),
+    model: AI_ENGINE_ID,
   })
 }

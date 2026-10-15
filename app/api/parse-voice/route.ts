@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { aiCallerId } from '@/lib/ai/caller'
-import { aiConfigured, generateJSON, textModel } from '@/lib/ai/provider'
+import { AI_ENGINE_ID } from '@/lib/ai/engine'
+import { aiConfigured, aiUserMessage, generateJSON, logAiFailure } from '@/lib/ai/provider'
 import { EXTRACTION_SYSTEM_PROMPT, EXTRACTION_EXAMPLES } from '@/lib/ai/prompts'
 import { normalizeExtraction, type RawExtraction } from '@/lib/ai/extract'
 import { allowAiCall } from '@/lib/ai/rate-limit'
@@ -20,7 +21,9 @@ import { requireCapability } from '@/lib/subscription/capability'
 
    Keluaran `ExtractedTransaction` sama dengan `parseSpokenTransaction()` lama,
    jadi kartu konfirmasi di chat tidak berubah. Balasan:
-     { ok:true, transaction, model } → 200 · { ok:false, reason, error } → 400/422/429/503 */
+     { ok:true, transaction, model } → 200 · { ok:false, reason, error } → 400/422/429/503
+   `model` = nama mesin versi PUBLIK (`AI_ENGINE_ID`, lihat `lib/ai/engine.ts`),
+   dan `error` = pesan kanon app (`aiUserMessage()`), bukan pesan mentah penyedia. */
 
 export const dynamic = 'force-dynamic'
 
@@ -97,8 +100,10 @@ export async function POST(req: NextRequest) {
   })
 
   if (!result.ok) {
+    /* pesan penyedia dicatat di LOG SERVER; yang keluar ke klien hanya copy app */
+    logAiFailure(result.error)
     return NextResponse.json(
-      { ok: false, reason: result.error.kind, error: result.error.message },
+      { ok: false, reason: result.error.kind, error: aiUserMessage(result.error.kind) },
       { status: result.error.kind === 'rate-limit' ? 429 : 503 },
     )
   }
@@ -106,6 +111,6 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     ok: true,
     transaction: normalizeExtraction(source, result.value, today),
-    model: textModel(),
+    model: AI_ENGINE_ID,
   })
 }

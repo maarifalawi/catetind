@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { aiCallerId } from '@/lib/ai/caller'
 import { claimsRecordedAction, detectOutOfScope } from '@/lib/ai/coach-guard'
+import { AI_ENGINE_ID } from '@/lib/ai/engine'
 import {
   aiConfigured,
+  aiUserMessage,
   generateJSON,
   generateText,
-  textModel,
+  logAiFailure,
   type ChatTurn,
 } from '@/lib/ai/provider'
 import { COACH_REPLY_ENVELOPE_PROMPT, COACH_SYSTEM_PROMPT } from '@/lib/ai/prompts'
@@ -23,6 +25,11 @@ import { requireCapability } from '@/lib/subscription/capability'
      { ok:true, reply:'', model, ruleBased:false, blocked:'scope' } → 200 (tolakan)
      { ok:true, reply:'', …, blocked:'claim' }                      → 200 (klaim palsu)
      { ok:false, reason, error }                                    → 400/422/429/503
+
+   `model` = nama mesin versi PUBLIK (`AI_ENGINE_ID`, lihat `lib/ai/engine.ts`) —
+   BUKAN nama penyedia modelnya, dan `error` = pesan kanon app
+   (`aiUserMessage()`), bukan pesan mentah penyedia: keduanya dulu membuat
+   nama/sidik jari vendor bisa dibaca dari response.
 
    `reason` dipakai UI untuk memutuskan fallback JUJUR (aturan lokal) saat provider
    tidak bisa dihubungi — bukan untuk mengarang balasan model.
@@ -141,7 +148,7 @@ terkirim dan arahkan ke ringkasan di app. Jangan mengaku sudah mencatat apa pun.
      perilakunya tidak bisa berbeda antara pagar klien & pagar server. */
   const lastUserText = turns[turns.length - 1]?.text ?? ''
   const blocked = (kind: BlockedKind) =>
-    NextResponse.json({ ok: true, reply: '', model: textModel(), ruleBased: false, blocked: kind })
+    NextResponse.json({ ok: true, reply: '', model: AI_ENGINE_ID, ruleBased: false, blocked: kind })
 
   if (detectOutOfScope(lastUserText)) return blocked('scope')
 
@@ -164,7 +171,7 @@ terkirim dan arahkan ke ringkasan di app. Jangan mengaku sudah mencatat apa pun.
       return NextResponse.json({
         ok: true,
         reply,
-        model: textModel(),
+        model: AI_ENGINE_ID,
         ruleBased: false,
         blocked: null,
       })
@@ -174,8 +181,10 @@ terkirim dan arahkan ke ringkasan di app. Jangan mengaku sudah mencatat apa pun.
 
   const result = await generateText({ system, turns, maxOutputTokens: 700 })
   if (!result.ok) {
+    /* pesan penyedia dicatat di LOG SERVER; yang keluar ke klien hanya copy app */
+    logAiFailure(result.error)
     return NextResponse.json(
-      { ok: false, reason: result.error.kind, error: result.error.message },
+      { ok: false, reason: result.error.kind, error: aiUserMessage(result.error.kind) },
       { status: result.error.kind === 'rate-limit' ? 429 : 503 },
     )
   }
@@ -187,7 +196,7 @@ terkirim dan arahkan ke ringkasan di app. Jangan mengaku sudah mencatat apa pun.
   return NextResponse.json({
     ok: true,
     reply: result.value,
-    model: textModel(),
+    model: AI_ENGINE_ID,
     ruleBased: false,
     blocked: null,
   })

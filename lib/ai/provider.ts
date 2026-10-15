@@ -127,6 +127,44 @@ function normalizeHttpError(status: number, payload: unknown): AiError {
   return { kind: 'provider', status, message: apiMessage || `Permintaan ditolak provider (${status}).` }
 }
 
+/* ── PESAN YANG BOLEH DILIHAT USER ───────────────────────────────────────────
+   Route AI dulu meneruskan `error.message` penyedia APA ADANYA ke klien
+   (`{ ok:false, reason, error }`). Dua masalahnya:
+     1. Pesan penyedia itu sidik jari. Kalimat seperti "Insufficient Balance" atau
+        "Rate limit reached" khas endpoint bergaya OpenAI, jadi ia bisa dipakai
+        orang luar untuk menebak siapa penyedia di balik app.
+     2. Isinya istilah internal berbahasa Inggris — tidak berguna bagi user.
+   Karena itu balasan ke klien memakai pesan KANON di bawah (Bahasa Indonesia,
+   tanpa nama penyedia), sementara kenyataan aslinya tetap dicatat di log SERVER
+   lewat `logAiFailure()`. Operator tetap bisa mendiagnosis; user tetap dapat
+   kalimat jujur tanpa bocoran. */
+export function aiUserMessage(kind: AiErrorKind): string {
+  switch (kind) {
+    case 'no-key':
+      return 'AI belum tersambung di server ini.'
+    case 'timeout':
+      return 'Model AI-nya lama menjawab — coba lagi sebentar ya 🌿'
+    case 'rate-limit':
+      return 'Model AI sedang penuh — tunggu sebentar, lalu coba lagi ya 🌿'
+    case 'empty':
+      return 'Model AI belum mengirim jawaban — coba lagi ya 🌿'
+    case 'parse':
+      return 'Jawaban model belum bisa dibaca — coba lagi ya 🌿'
+    default:
+      return 'Model AI belum bisa dihubungi — coba lagi sebentar ya 🌿'
+  }
+}
+
+/**
+ * Catat kegagalan penyedia di log server — SATU-SATUNYA tempat pesan aslinya
+ * boleh muncul. Tanpa ini, penutupan kebocoran di atas berubah jadi kehilangan
+ * informasi: operator tidak akan pernah tahu penyebab aslinya.
+ */
+export function logAiFailure(error: AiError): void {
+  const status = error.status === undefined ? '' : ` (${error.status})`
+  console.warn(`[ai] ${error.kind}${status}: ${error.message}`)
+}
+
 /** satu panggilan HTTP; TIDAK retry (retry di `generate`) */
 async function postOnce(body: OpenAiBody): Promise<AiResult<string>> {
   const apiKey = (process.env.DEEPSEEK_API_KEY ?? '').trim()

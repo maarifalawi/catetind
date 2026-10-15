@@ -5,7 +5,7 @@
    - Reward-nya SENGAJA bukan poin/badge/leaderboard (PRD 1746–1752). Yang
      dirayakan cuma dua hal: tanaman yang tumbuh + satu kalimat personal.
    - Pesannya 100% TEMPLATE client-side yang diisi dari data lokal, jadi NOL
-     panggilan API ke DeepSeek (PRD 2046–2049: ~95% apresiasi dari template,
+     panggilan API ke penyedia model (PRD 2046–2049: ~95% apresiasi dari template,
      hanya 4–6 pesan/bulan yang benar-benar AI). Slot `{days}`/`{activeDays}`
      diisi dari state — bukan dari model.
    - Tidak ada satu pun copy yang menakut-nakuti soal streak (CONTEXT §5.3 no.1):

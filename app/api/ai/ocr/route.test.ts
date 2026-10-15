@@ -3,20 +3,23 @@ import { NextRequest } from 'next/server'
 
 /* Sejak paket 70 route AI memakai `aiCallerId()` (sesi Supabase bila ada, kalau
    tidak identitas anonim per-jaringan) — bukan lagi `requireUser()`, karena
-   Dashboard CatetInd memang bisa dipakai tanpa login. */
+   Dashboard CatetInd memang bisa dipakai tanpa login.
+
+   PAKET 86: yang di-mock hanya panggilan providernya (`importOriginal` +
+   override), supaya `aiUserMessage()`/`logAiFailure()` yang ASLI ikut diuji —
+   dan `visionModel` sengaja TIDAK ada lagi di mock: field `model` berhenti
+   memakai nama model penyedia (kini `AI_ENGINE_ID`). */
 
 vi.mock('@/lib/ai/caller', () => ({ aiCallerId: vi.fn(() => 'anon:local') }))
-vi.mock('@/lib/ai/provider', () => ({
-  aiConfigured: vi.fn(),
-  generateFromImage: vi.fn(),
-  visionModel: () => 'deepseek-flash',
-  /* parser asli cukup diwakili JSON.parse untuk pengujian jalur route */
-  parseJsonLoose: (text: string) => JSON.parse(text),
-}))
+vi.mock('@/lib/ai/provider', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/ai/provider')>()
+  return { ...actual, aiConfigured: vi.fn(), generateFromImage: vi.fn() }
+})
 vi.mock('@/lib/ai/rate-limit', () => ({ allowAiCall: vi.fn() }))
 
 import { POST } from './route'
-import { aiConfigured, generateFromImage } from '@/lib/ai/provider'
+import { AI_ENGINE_ID } from '@/lib/ai/engine'
+import { aiConfigured, aiUserMessage, generateFromImage } from '@/lib/ai/provider'
 import { allowAiCall } from '@/lib/ai/rate-limit'
 
 const configured = aiConfigured as unknown as Mock
@@ -80,13 +83,26 @@ describe('POST /api/ai/ocr', () => {
     expect(body.transaction.category).toBe('Belanja')
     expect(typeof body.transaction.confidence).toBe('number')
     expect(Array.isArray(body.transaction.lowFields)).toBe(true)
+    /* nama mesin versi publik + tidak ada nama vendor di balasan (paket 86) */
+    expect(body.model).toBe(AI_ENGINE_ID)
+    expect(JSON.stringify(body).toLowerCase()).not.toContain('deepseek')
   })
 
-  it('503 saat provider gagal', async () => {
+  it('503 saat provider gagal - pesan kanon app, bukan pesan mentah penyedia', async () => {
     ready()
-    genImage.mockResolvedValueOnce({ ok: false, error: { kind: 'provider', message: 'boom' } })
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    genImage.mockResolvedValueOnce({
+      ok: false,
+      error: { kind: 'provider', status: 500, message: 'deepseek upstream: Insufficient Balance' },
+    })
     const res = await POST(request({ image: 'aGVsbG8=' }))
     expect(res.status).toBe(503)
-    expect((await res.json()).reason).toBe('provider')
+    const body = await res.json()
+    expect(body.reason).toBe('provider')
+    expect(body.error).toBe(aiUserMessage('provider'))
+    expect(JSON.stringify(body).toLowerCase()).not.toContain('deepseek')
+    /* diagnosis tidak hilang - pesan aslinya masuk log server */
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('Insufficient Balance'))
+    warn.mockRestore()
   })
 })

@@ -6,12 +6,14 @@
 // jadi tidak ada dua logika OCR yang bisa saling menyimpang — persis yang
 // dilarang prompt 20.
 //
-// Arah produksi (TIDAK dipanggil di repo demo ini):
-//   • struk → `POST /api/ocr` → GPT-4o-mini (vision). System prompt + aturan
+// Arah produksi (TIDAK dipanggil di repo demo ini) — nama mesin yang dilihat user
+// hidup di `lib/ai/engine.ts`; berkas ini ikut ke bundel KLIEN, jadi merek
+// penyedia model TIDAK ditulis di sini (dulu justru inilah jalur bocornya):
+//   • struk → `POST /api/ai/ocr` (vision, server-side). Sistem prompt + aturan
 //     output JSON-nya ada di PRD 414–451. Hasil nyatanya mengisi bentuk
 //     `ExtractedTransaction` yang sama, termasuk `confidence` (PRD A11).
 //   • ucapan → Web Speech API (STT di browser, PRD A3) → `POST /api/parse-voice`
-//     → DeepSeek V3. Contoh utterance yang wajib dikenali ada di PRD 462–470.
+//     (server-side). Contoh utterance yang wajib dikenali ada di PRD 462–470.
 // Karena bentuk keluarannya sudah disamakan, penggantian mock → API tidak
 // menyentuh UI sama sekali.
 //

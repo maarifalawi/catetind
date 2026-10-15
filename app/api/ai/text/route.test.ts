@@ -5,15 +5,22 @@ import { NextRequest, NextResponse } from 'next/server'
    DI-MOCK: yang diperiksa adalah ATURAN endpoint — kapan menolak, kapan jujur
    berkata belum tersambung. Sejak paket 70 identitas dibaca `aiCallerId()`
    (sesi Supabase bila ada, kalau tidak identitas anonim per-jaringan), jadi
-   endpoint ini tetap jalan di Dashboard yang memang bisa dipakai tanpa login. */
+   endpoint ini tetap jalan di Dashboard yang memang bisa dipakai tanpa login.
+
+   PAKET 86 (nama mesin publik & kebocoran vendor): yang di-mock HANYA panggilan
+   providernya (`importOriginal` + override), supaya `aiUserMessage()` dan
+   `logAiFailure()` yang ASLI ikut diuji. Kalau keduanya ikut di-mock, test ini
+   cuma menguji tiruannya sendiri.
+
+   `textModel` sengaja TIDAK lagi ada di mock: route berhenti bergantung pada
+   nama model penyedia (field `model` kini `AI_ENGINE_ID`). Kalau suatu saat ada
+   yang memakainya lagi, test di file ini gagal — bukan bocor diam-diam. */
 
 vi.mock('@/lib/ai/caller', () => ({ aiCallerId: vi.fn(() => 'anon:local') }))
-vi.mock('@/lib/ai/provider', () => ({
-  aiConfigured: vi.fn(),
-  generateText: vi.fn(),
-  generateJSON: vi.fn(),
-  textModel: () => 'deepseek-flash',
-}))
+vi.mock('@/lib/ai/provider', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/ai/provider')>()
+  return { ...actual, aiConfigured: vi.fn(), generateText: vi.fn(), generateJSON: vi.fn() }
+})
 vi.mock('@/lib/ai/rate-limit', () => ({ allowAiCall: vi.fn() }))
 /* Kunci fitur per tier DI-MOCK di sini: aturan keputusannya diuji tersendiri
    (`lib/subscription/capability.test.ts`); yang diperiksa di file ini adalah
@@ -21,7 +28,8 @@ vi.mock('@/lib/ai/rate-limit', () => ({ allowAiCall: vi.fn() }))
 vi.mock('@/lib/subscription/capability', () => ({ requireCapability: vi.fn() }))
 
 import { POST } from './route'
-import { aiConfigured, generateJSON, generateText } from '@/lib/ai/provider'
+import { AI_ENGINE_ID } from '@/lib/ai/engine'
+import { aiConfigured, aiUserMessage, generateJSON, generateText } from '@/lib/ai/provider'
 import { allowAiCall } from '@/lib/ai/rate-limit'
 import { requireCapability } from '@/lib/subscription/capability'
 
@@ -97,11 +105,16 @@ describe('POST /api/ai/text', () => {
 
   it('provider rate-limit → 429 reason rate-limit (UI jatuh ke aturan lokal)', async () => {
     ready()
+    /* `logAiFailure()` yang asli menulis ke console.warn — dibungkam di sini
+       supaya keluaran test bersih (yang diuji perilakunya, bukan suara lognya;
+       isi lognya sendiri dikunci di `lib/ai/provider.test.ts`). */
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     genJson.mockResolvedValueOnce({ ok: false, error: { kind: 'rate-limit', message: 'penuh' } })
     genText.mockResolvedValueOnce({ ok: false, error: { kind: 'rate-limit', message: 'penuh' } })
     const res = await POST(request({ messages: [{ role: 'user', content: 'hai' }] }))
     expect(res.status).toBe(429)
     expect((await res.json()).reason).toBe('rate-limit')
+    warn.mockRestore()
   })
 })
 
@@ -177,5 +190,71 @@ describe('POST /api/ai/text - kunci fitur per tier (paket 84)', () => {
     expect((await res.json()).reason).toBe('plan-locked')
     expect(genJson).not.toHaveBeenCalled()
     expect(genText).not.toHaveBeenCalled()
+  })
+})
+
+describe('POST /api/ai/text - nama mesin publik & kebocoran vendor (paket 86)', () => {
+  /* Yang dijaga di sini bukan kerapian, melainkan dua kebocoran yang sudah
+     terbukti: (1) field `model` dulu diisi nama MODEL penyedia, (2) pesan gagal
+     penyedia diteruskan apa adanya — dua-duanya bisa dibaca siapa pun dari tab
+     Network. Nama penyedia di test ini sengaja dipakai sebagai contoh pesan
+     PALSU dari provider untuk membuktikan ia tidak pernah ikut keluar. */
+
+  it('200: model = AI_ENGINE_ID, dan balasan tidak memuat nama vendor', async () => {
+    ready()
+    answers('Semangat ya!')
+    const res = await POST(request({ messages: [{ role: 'user', content: 'hai' }] }))
+    const body = await res.json()
+    expect(body.model).toBe(AI_ENGINE_ID)
+    expect(JSON.stringify(body).toLowerCase()).not.toContain('deepseek')
+  })
+
+  it('tolakan di luar konteks juga memakai nama mesin publik', async () => {
+    ready()
+    const res = await POST(
+      request({ messages: [{ role: 'user', content: 'buatkan script python buat scraping' }] }),
+    )
+    const body = await res.json()
+    expect(body.blocked).toBe('scope')
+    expect(body.model).toBe(AI_ENGINE_ID)
+  })
+
+  it('gagal provider: klien dapat pesan kanon, pesan asli hanya ke log server', async () => {
+    ready()
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const upstream = {
+      ok: false,
+      error: { kind: 'provider', status: 500, message: 'deepseek upstream: Insufficient Balance' },
+    }
+    genJson.mockResolvedValueOnce(upstream)
+    genText.mockResolvedValueOnce(upstream)
+    const res = await POST(request({ messages: [{ role: 'user', content: 'hai' }] }))
+    expect(res.status).toBe(503)
+    const body = await res.json()
+    expect(body.reason).toBe('provider')
+    expect(body.error).toBe(aiUserMessage('provider'))
+    expect(JSON.stringify(body).toLowerCase()).not.toContain('deepseek')
+    expect(JSON.stringify(body)).not.toContain('Insufficient Balance')
+    /* diagnosis TIDAK hilang - pesan aslinya tercatat di log server */
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('Insufficient Balance'))
+    warn.mockRestore()
+  })
+
+  it('rate-limit: 429 dengan pesan kanon, bukan kalimat penyedia', async () => {
+    ready()
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const limited = {
+      ok: false,
+      error: { kind: 'rate-limit', message: 'Rate limit reached for deepseek' },
+    }
+    genJson.mockResolvedValueOnce(limited)
+    genText.mockResolvedValueOnce(limited)
+    const res = await POST(request({ messages: [{ role: 'user', content: 'hai' }] }))
+    expect(res.status).toBe(429)
+    const body = await res.json()
+    expect(body.reason).toBe('rate-limit')
+    expect(body.error).toBe(aiUserMessage('rate-limit'))
+    expect(JSON.stringify(body).toLowerCase()).not.toContain('deepseek')
+    warn.mockRestore()
   })
 })

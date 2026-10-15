@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { aiCallerId } from '@/lib/ai/caller'
-import { aiConfigured, generateJSON, textModel } from '@/lib/ai/provider'
+import { AI_ENGINE_ID } from '@/lib/ai/engine'
+import { aiConfigured, generateJSON } from '@/lib/ai/provider'
 import { CATEGORIZE_SYSTEM_PROMPT } from '@/lib/ai/prompts'
 import { allowAiCall } from '@/lib/ai/rate-limit'
 import { TRANSACTION_CATEGORY_OPTIONS, TRANSACTION_FALLBACK_CATEGORY } from '@/lib/data/history'
@@ -9,6 +10,8 @@ import { requireCapability } from '@/lib/subscription/capability'
 
 /* ── POST /api/ai/categorize — saran kategori (Domain 4B) ────────────────────
    Body: `{ name: string, amount?: number }` → `{ ok:true, category, source }`.
+   `model` (hanya muncul di jalur model) = nama mesin versi PUBLIK
+   (`AI_ENGINE_ID`, lihat `lib/ai/engine.ts`) — bukan nama penyedianya.
 
    Resolusi konflik PRD 2791: kategorisasi punya FALLBACK rule-based (keyword),
    karena kalau provider down, user tetap harus bisa menyimpan catatan. Karena
@@ -73,7 +76,7 @@ export async function POST(req: NextRequest) {
     })
     const category = result.ok && typeof result.value.category === 'string' ? result.value.category.trim() : ''
     if ((TRANSACTION_CATEGORY_OPTIONS as readonly string[]).includes(category)) {
-      return NextResponse.json({ ok: true, category, source: 'model', model: textModel() })
+      return NextResponse.json({ ok: true, category, source: 'model', model: AI_ENGINE_ID })
     }
   }
 

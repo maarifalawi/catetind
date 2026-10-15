@@ -24,7 +24,8 @@ const makeId = () => `msg-${++nextId}`
  * Domain 4B (zero API cost), TANPA memanggil model.
  *
  * PAKET 63: balasan utama sekarang datang dari MODEL (`POST /api/ai/text`,
- * Gemini, server-side). Fungsi ini jadi JARING AMAN: dipakai saat provider tak
+ * server-side — nama penyedianya tidak ditulis di berkas klien ini, lihat
+ * `lib/ai/engine.ts`). Fungsi ini jadi JARING AMAN: dipakai saat provider tak
  * bisa dihubungi (tanpa kunci / kuota penyedia penuh / jaringan mati). Karena itu
  * ia hanya menjawab pertanyaan yang jawabannya ada di data lokal, dan setiap
  * jawabannya membawa penanda `ruleBased: true` — widget mencetak label

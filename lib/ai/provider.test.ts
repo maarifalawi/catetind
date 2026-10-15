@@ -1,5 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { aiConfigured, generateJSON, generateText, parseJsonLoose } from './provider'
+import {
+  aiConfigured,
+  aiUserMessage,
+  generateJSON,
+  generateText,
+  logAiFailure,
+  parseJsonLoose,
+  type AiErrorKind,
+} from './provider'
 
 /* Provider diuji dengan `fetch` di-mock: yang diperiksa adalah PEMETAAN error,
    retry, dan pengambilan teks — bukan jaringan sungguhan. */
@@ -146,5 +154,36 @@ describe('parseJsonLoose', () => {
   })
   it('undefined untuk sampah', () => {
     expect(parseJsonLoose('tidak ada json di sini')).toBeUndefined()
+  })
+})
+
+describe('aiUserMessage & logAiFailure (paket 86)', () => {
+  /* Pesan penyedia tidak lagi diteruskan ke klien (lihat catatan di provider.ts).
+     Dua sisi dari keputusan itu dikunci di sini: yang keluar ke klien harus
+     kalimat kanon tanpa nama vendor, dan kenyataan aslinya tetap tercatat di log
+     server — kalau tidak, penutupan kebocoran ini berubah jadi kehilangan
+     informasi bagi operator. */
+
+  const KINDS: AiErrorKind[] = ['no-key', 'timeout', 'rate-limit', 'provider', 'empty', 'parse']
+
+  it('setiap jenis kegagalan punya pesan kanon yang tidak menyebut penyedia', () => {
+    for (const kind of KINDS) {
+      const message = aiUserMessage(kind)
+      expect(message.trim().length).toBeGreaterThan(0)
+      expect(message.toLowerCase()).not.toContain('deepseek')
+      expect(message.toLowerCase()).not.toContain('api key')
+    }
+  })
+
+  it('pesannya berbeda per jenis (bukan satu kalimat untuk semua kegagalan)', () => {
+    const unique = new Set(KINDS.map((kind) => aiUserMessage(kind)))
+    expect(unique.size).toBe(KINDS.length)
+  })
+
+  it('logAiFailure mencatat kenyataan aslinya ke log server', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    logAiFailure({ kind: 'provider', status: 500, message: 'Insufficient Balance' })
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('Insufficient Balance'))
+    warn.mockRestore()
   })
 })
