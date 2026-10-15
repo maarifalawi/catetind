@@ -18,6 +18,8 @@
 
 import { SITE_ORIGIN } from '../site'
 import { PLANS, LIFETIME_LABEL, formatIDR, type PlanId } from './pricing'
+import { OVERVIEW_PANEL_COPY } from './home'
+import { HOME_MONEY_COPY, HOME_MONEY_DAY_LABEL } from './home-money'
 
 /** satu pintu impor untuk konsumen harga landing */
 export { formatIDR }
@@ -90,15 +92,211 @@ export const HERO_COPY = {
   scrollAria: 'Gulir ke bawah untuk membuka kalkulator pengeluaran',
 } as const
 
-/** mockup HUD jatah harian di hero — ILUSTRASI antarmuka, bukan data nyata */
+/** mockup HUD jatah harian di hero — ILUSTRASI antarmuka, bukan data nyata.
+ *  Angkanya sengaja disamakan dengan persona demo di `lib/money/demo-bootstrap.ts`
+ *  (anak 20-an, gaji Rp 7,3 juta, awal bulan sisa pas-pasan) supaya hero landing
+ *  benar-benar "cermin" dari dashboard yang bisa dilihat di `/app`. */
 export const HERO_HUD = {
   eyebrow: 'Jatah harian',
-  amount: 'Rp 165.000',
+  amount: 'Rp 72.000',
   note: 'Aman 3 hari berturut-turut 🌿',
   /** 0..1 — panjang bar progres */
   progress: 0.62,
-  plantLabel: 'Tanamanmu lagi tumbuh',
+  plantLabel: 'Tahap 2 · Tunas — tanamanmu lagi happy!',
 } as const
+
+/* ── SECTION 1b · ADEGAN "PONSEL DI TANGAN" ─────────────────────────────────
+   Mockup hero bukan lagi satu kartu melayang, melainkan SATU ADEGAN utuh: layar
+   aplikasi di dalam bingkai iPhone yang dipegang tangan — pola "product shot"
+   yang sama dengan gambar referensi pemilik produk.
+
+   Tiga hal yang mengikat isi blok ini:
+
+     1. LAYAR = REPLIKA home sungguhan (`/app`): strip status, header, deck
+        dompet, sampai kartu "Transaksi Terakhir". Karena itu seluruh kalimat
+        yang SUDAH punya rumah di `lib/data/home*.ts` DIBACA dari sana
+        (`HOME_MONEY_COPY`, `HOME_MONEY_DAY_LABEL`, `OVERVIEW_PANEL_COPY`) —
+        tidak ada satu pun yang ditulis ulang di sini. Kalau copy app berubah,
+        hero ikut berubah; mustahil ada dua versi kalimat yang sama.
+
+     2. ANGKA = CERMIN persona demo (`lib/money/demo-bootstrap.ts`): dompet BCA
+        1.650.000 · GoPay 320.000 · ShopeePay 85.000 · Tunai 65.000, gaji
+        Rp 7.300.000, pengeluaran Rp 5.180.000. Saldo agregat kartu depan TIDAK
+        ditulis tangan — ia dijumlahkan dari daftar dompet di bawah, dan
+        ringkasan periode menurunkan `net` dari dua angkanya sendiri, jadi angka
+        yang tidak konsisten mustahil lolos (dikunci `landing.test.ts`). Inilah
+        yang membuat hero ini boleh dipakai sebagai janji: angka di landing
+        adalah angka yang benar-benar muncul di dalam app.
+
+     3. LAYAR BISA DITUKAR GAMBAR. Kalau pemilik produk ingin memakai screenshot
+        asli (hasil tangkapan dari HP), cukup simpan berkasnya di `public/` lalu
+        isi `HERO_DEVICE_SCREENSHOT` di bawah — tidak ada komponen yang perlu
+        disentuh. Selama nilainya `null`, hero memakai replika UI live yang lebih
+        tajam di semua ukuran layar (tanpa aset raster, otomatis ikut token).
+   ────────────────────────────────────────────────────────────────────────── */
+
+/** Salinan layar (gambar) — `null` = pakai replika UI live di komponen. */
+export const HERO_DEVICE_SCREENSHOT: string | null = null
+
+/** jam di strip status layar hero — angka kanon mockup Apple (bukan jam user) */
+export const HERO_DEVICE_STATUS_TIME = '9:41'
+
+/**
+ * Dompet di deck hero. URUTANNYA = urutan pembuatan di persona demo, dan itu
+ * penting: deck app menumpuk `[Semua Dompet, ...dompet]` dengan slot 0 di depan,
+ * jadi dompet TERAKHIR (Tunai) duduk paling dalam — label yang mengintip paling
+ * atas di tumpukan. Urutan itu diturunkan di bawah, bukan diketik terpisah.
+ */
+const HERO_DEVICE_WALLETS = [
+  { name: 'BCA', type: 'Bank', balance: 1_650_000 },
+  { name: 'GoPay', type: 'E-Wallet', balance: 320_000 },
+  { name: 'ShopeePay', type: 'E-Wallet', balance: 85_000 },
+  { name: 'Tunai', type: 'Cash', balance: 65_000 },
+] as const
+
+/** saldo kartu agregat = JUMLAH dompet di atas (Rp 2.120.000) */
+const HERO_DEVICE_BALANCE = HERO_DEVICE_WALLETS.reduce((sum, wallet) => sum + wallet.balance, 0)
+
+/** dua angka bulan berjalan — dipakai strip ringkasan layar & kartu melayang */
+const HERO_DEVICE_MONTHLY = { income: 7_300_000, spending: 5_180_000 } as const
+
+/**
+ * Baris "Transaksi Terakhir" di layar hero — nama, kategori, dan jamnya PERSIS
+ * baris seed persona demo untuk hari ini, jadi pengunjung yang mendaftar lalu
+ * membuka `/app` melihat catatan yang sama seperti yang ia lihat di landing.
+ *
+ * Nominalnya angka mentah + `type`: label `-Rp …` disusun komponen lewat kanon
+ * `amountSign()` + `formatIDR()` — sama seperti kartu aslinya, jadi tidak ada
+ * string rupiah yang ditulis dua kali di dua tempat.
+ */
+const HERO_DEVICE_TXN_ROWS = [
+  {
+    title: 'Nongkrong (teh + gorengan)',
+    category: 'Kopi & Nongkrong',
+    time: '16:05',
+    amount: 34_500,
+    type: 'expense',
+  },
+  {
+    title: 'Warteg Bahari',
+    category: 'Makan Siang & GoFood',
+    time: '12:45',
+    amount: 35_000,
+    type: 'expense',
+  },
+  {
+    title: 'Mie Gacoan (makan siang bareng kantor)',
+    category: 'Makan Siang & GoFood',
+    time: '12:40',
+    amount: 28_500,
+    type: 'expense',
+  },
+  {
+    title: 'Kopi Kenangan Oat Latte',
+    category: 'Kopi & Nongkrong',
+    time: '09:15',
+    amount: 32_000,
+    type: 'expense',
+  },
+  {
+    title: 'Gojek ke Stasiun (hujan deras)',
+    category: 'Transport (Ojol & KRL)',
+    time: '07:20',
+    amount: 19_000,
+    type: 'expense',
+  },
+] as const
+
+/** isi layar hero: deck dompet & kartu transaksi (satu paket data) */
+export const HERO_DEVICE = {
+  walletDeck: {
+    /** "Semua Dompet" — kata yang sama dengan badge panel Ringkasan Saldo */
+    label: OVERVIEW_PANEL_COPY.badgeAll,
+    /** jumlah dompet aktif, dibaca dari daftar dompet (bukan diketik ulang) */
+    sub: `${HERO_DEVICE_WALLETS.length} dompet aktif`,
+    total: HERO_DEVICE_BALANCE,
+    /** label yang mengintip di belakang kartu depan, URUT DALAM → DEPAN */
+    peeking: [...HERO_DEVICE_WALLETS]
+      .reverse()
+      .slice(0, HERO_DEVICE_WALLETS.length - 1)
+      .map((wallet) => wallet.name),
+    /** titik indikator geser = kartu agregat + tiap dompet */
+    dots: HERO_DEVICE_WALLETS.length + 1,
+  },
+  txn: {
+    title: HOME_MONEY_COPY.txnTitle,
+    subtitle: HOME_MONEY_COPY.txnSubtitle,
+    seeAll: HOME_MONEY_COPY.seeAll,
+    /** label grup hari (ditampilkan huruf besar) — satu definisi dengan app */
+    dayLabel: HOME_MONEY_DAY_LABEL.today,
+    rows: HERO_DEVICE_TXN_ROWS,
+  },
+} as const
+
+/**
+ * Ringkasan periode di strip bawah kartu transaksi layar hero. `net` DITURUNKAN
+ * dari dua angkanya sendiri, jadi angka di layar tidak mungkin berbeda cerita
+ * dengan pengurangannya; kata sambungnya (`masuk,` / `keluar — net`) memakai
+ * string kanon `HOME_MONEY_COPY` yang sama dengan kartu Home sungguhan.
+ */
+export const HERO_DEVICE_MONTHLY_SUMMARY = {
+  period: HOME_MONEY_COPY.period,
+  income: HERO_DEVICE_MONTHLY.income,
+  spending: HERO_DEVICE_MONTHLY.spending,
+  net: HERO_DEVICE_MONTHLY.income - HERO_DEVICE_MONTHLY.spending,
+  inflow: HOME_MONEY_COPY.txnInflow,
+  outflow: HOME_MONEY_COPY.txnOutflow,
+} as const
+
+/**
+ * Kartu kaca melayang di sekitar ponsel — pola "floating cards" pada gambar
+ * referensi pemilik produk. Isinya SENGAJA bukan hiasan acak: kartu "Jatah
+ * harian" dan "Tanaman" memakai `HERO_HUD` yang sama dengan mockup lama, dan
+ * dua kartu uang memakai angka bulan yang sama dengan strip ringkasan di layar.
+ * Jadi seluruh hero menceritakan SATU keadaan keuangan, bukan tiga versi.
+ *
+ * `progress` (0..1) menggambar bar tipis seperti kartu jatah harian di Home;
+ * `null` = kartu tanpa bar. Tata letaknya TIDAK di sini — posisi tiap kartu
+ * diatur komponen (`hero-device.tsx`) karena itu urusan tampilan, bukan isi.
+ */
+export const HERO_DEVICE_FLOAT = [
+  {
+    id: 'jatah',
+    label: HERO_HUD.eyebrow,
+    value: HERO_HUD.amount,
+    hint: HERO_HUD.note,
+    progress: HERO_HUD.progress,
+  },
+  {
+    id: 'masuk',
+    label: 'Uang masuk',
+    value: `+${formatIDR(HERO_DEVICE_MONTHLY.income)}`,
+    hint: HOME_MONEY_COPY.period,
+    progress: null,
+  },
+  {
+    id: 'keluar',
+    label: 'Uang keluar',
+    value: `-${formatIDR(HERO_DEVICE_MONTHLY.spending)}`,
+    hint: HOME_MONEY_COPY.period,
+    progress: null,
+  },
+  {
+    id: 'tanaman',
+    label: 'Tanaman',
+    value: HERO_HUD.plantLabel,
+    hint: '',
+    progress: null,
+  },
+] as const
+
+/**
+ * Kalimat pengganti adegan hero untuk pembaca layar. Adegannya murni ILUSTRASI
+ * (seluruh elemennya `aria-hidden`), jadi isi layarnya diringkas SEKALI di sini
+ * — bukan ditulis di JSX — dan angkanya ikut data yang sama dengan yang
+ * digambar, jadi deskripsinya tidak bisa melenceng dari gambarnya.
+ */
+export const HERO_DEVICE_ARIA = `Ilustrasi aplikasi CatetInd: layar Home di dalam ponsel yang dipegang tangan, menampilkan ${HERO_DEVICE.walletDeck.label} ${formatIDR(HERO_DEVICE.walletDeck.total)} dari ${HERO_DEVICE.walletDeck.sub} serta daftar ${HERO_DEVICE.txn.title}. Contoh antarmuka, bukan data pengunjung.`
 
 /* ── SECTION 2 · PAIN CALCULATOR ────────────────────────────────────────────
    Semua perhitungan di klien, nol API, hitung ulang tiap input berubah. */

@@ -67,6 +67,9 @@
      serempak; token @theme supaya tetap bisa dimatikan lewat
      `motion-reduce:animate-none`. */
   --animate-welcome-float: welcome-float 6s ease-in-out infinite;
+  /* adegan hero landing (ponsel di tangan) — mengapung SANGAT pelan; token
+     @theme supaya utility-nya bisa dimatikan lewat `motion-reduce:animate-none` */
+  --animate-hero-device: hero-device-float 9s ease-in-out infinite;
   /* ═══════════════════════════════════════════════════════════════════════════
      PALET WARNA KANON — "EARTH PASTEL"  ·  SATU SUMBER KEBENARAN WARNA
      Dokumen lengkap + cara kembali ke palet lama: docs/theme/PALETTE.md
@@ -849,6 +852,24 @@ body[data-catetind-sheet-open='true'] [data-catetind-page-root] {
   }
   50% {
     text-shadow: 0 0 20px rgba(145, 187, 158, 0.85);
+  }
+}
+
+/* ── Landing page · ponsel di tangan mengapung (Section 1) ───────────────────
+   Adegan hero (bingkai iPhone + tangan + layar app) naik-turun 10px dengan
+   sedikit rotasi supaya terasa seperti benda yang dipegang — bukan stiker yang
+   ditempel. Tangan & ponsel ada di SATU pembungkus yang dianimasikan, jadi
+   keduanya mustahil bergeser sendiri-sendiri; kartu kaca melayang di sekitarnya
+   sengaja TIDAK ikut bergerak (mereka jangkar visualnya). Dipasang lewat token
+   `--animate-hero-device` + `motion-safe:animate-hero-device`, jadi saat user
+   minta gerak minimal animasinya memang tidak pernah menyala. */
+@keyframes hero-device-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(-0.8deg);
   }
 }
 

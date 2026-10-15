@@ -1,13 +1,16 @@
 import { ChevronDown } from 'lucide-react'
-import { PlantIllustration } from '@/components/catetind/plant-illustration'
-import { HERO_COPY, HERO_HUD } from '@/lib/data/landing'
+import { HERO_COPY, HERO_DEVICE_ARIA } from '@/lib/data/landing'
+import { HeroDevice } from './hero-device'
 
 /* ── SECTION 1 · HOOK (above the fold) ──────────────────────────────────────
    Nol CTA, nol harga, nol daftar fitur — satu tujuan saja: bikin pengunjung
-   berhenti dan bertanya ke dirinya sendiri. Visualnya mockup HUD jatah harian
-   + tanaman kecil (ILUSTRASI antarmuka, jadi `aria-hidden`; isinya diringkas di
-   teks `sr-only`). Penanda gulir di bawah membuat rasa penasaran menuju
-   Section 2. */
+   berhenti dan bertanya ke dirinya sendiri. Visualnya ADEGAN "ponsel di
+   tangan": layar Home CatetInd di dalam bingkai iPhone yang digenggam, dengan
+   kartu-kartu kaca melayang di sekitarnya (`hero-device.tsx`) — jadi
+   pengunjung melihat barang yang akan ia pakai, bukan ilustrasi yang perlu
+   dijelaskan. Adegan itu ILUSTRASI antarmuka, jadi isinya `aria-hidden` dan
+   diringkas sekali di `HERO_DEVICE_ARIA`. Penanda gulir di bawah membuat rasa
+   penasaran menuju Section 2. */
 export function Hero() {
   return (
     <section
@@ -38,42 +41,11 @@ export function Hero() {
           </p>
         </div>
 
-        {/* ── ilustrasi mockup app (HUD jatah harian + tanaman) ── */}
-        <div className="relative mx-auto w-full max-w-[380px]">
-          <div aria-hidden className="relative">
-            <div className="rounded-[2rem] bg-cream p-4 shadow-[0_40px_80px_-40px_rgba(0,0,0,0.5)] ring-1 ring-soil/12">
-              <div className="rounded-[1.5rem] bg-gradient-to-br from-forest-soft via-forest to-evergreen-deep p-4 text-cream">
-                <p className="text-[10.5px] font-medium tracking-[0.16em] text-cream/60 uppercase">
-                  {HERO_HUD.eyebrow}
-                </p>
-                <p className="mt-1 font-display text-3xl font-medium tracking-tight tabular-nums">
-                  {HERO_HUD.amount}
-                </p>
-                <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-cream/15">
-                  <div
-                    className="h-full rounded-full bg-mint"
-                    style={{ width: `${Math.round(HERO_HUD.progress * 100)}%` }}
-                  />
-                </div>
-                <p className="mt-2 text-[12px] font-medium text-mint">{HERO_HUD.note}</p>
-              </div>
-
-              <div className="mt-3 flex items-center gap-3 rounded-[1.5rem] bg-sage/55 px-4 py-3 ring-1 ring-soil/8">
-                <span className="w-11 shrink-0">
-                  <PlantIllustration stage={2} />
-                </span>
-                <p className="text-[12.5px] leading-snug font-medium text-forest/70">
-                  {HERO_HUD.plantLabel}
-                </p>
-              </div>
-            </div>
-          </div>
-          <p className="sr-only">
-            Ilustrasi aplikasi CatetInd menampilkan jatah harian {HERO_HUD.amount} dan tanaman
-            yang tumbuh.
-          </p>
-        </div>
+        {/* ── adegan "ponsel di tangan" — layar Home app + kartu melayang ── */}
+        <HeroDevice />
       </div>
+
+      <p className="sr-only">{HERO_DEVICE_ARIA}</p>
 
       {/* ── penanda gulir — bikin penasaran ke Section 2 ── */}
       <div className="relative mt-12 flex justify-center lg:mt-14">
