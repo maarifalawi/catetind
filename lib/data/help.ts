@@ -605,7 +605,7 @@ export const HELP_SUPPORT_FOOTNOTE = 'Balasan langsung dari founder — bukan bo
 export const HELP_EXPORT_LABEL = 'Export Data Saya (JSON)'
 export const HELP_CONTACT_LABEL = 'Hubungi Founder'
 export const HELP_CONTACT_SUBJECT = 'Butuh Bantuan - CatetInd'
-export const HELP_CONTACT_TO = 'support@catetind.com'
+export const HELP_CONTACT_TO = 'halo@catetind.com'
 export const HELP_EXPORT_TOAST =
   'File JSON-nya udah masuk perangkatmu 📦 Cuma kamu yang punya salinannya.'
 

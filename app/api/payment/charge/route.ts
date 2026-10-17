@@ -11,9 +11,11 @@ import type { PaymentInstructions, PaymentPurpose, PaymentState } from '@/lib/pa
 import {
   PLANS,
   applyReferralDiscount,
-  isDowngradeOrSame,
+  asBillingPeriod,
   isValidOfferAmount,
   priceFor,
+  rankOf,
+  type BillingPeriod,
   type PlanId,
 } from '@/lib/data/pricing'
 /* Harga add-on token AI hidup di `lib/ai-quota.ts` (satu sumber, bukan salinan).
@@ -47,7 +49,7 @@ import { restFetch } from '@/lib/supabase/rest'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-const PURPOSES: PaymentPurpose[] = ['subscribe', 'topup', 'upgrade']
+const PURPOSES: PaymentPurpose[] = ['subscribe', 'topup', 'upgrade', 'renew']
 
 interface PendingRow {
   order_id?: string
@@ -55,6 +57,7 @@ interface PendingRow {
 
 interface ChargeBody {
   purpose?: unknown
+  period?: unknown
   amount?: unknown
   planId?: unknown
   /** id paket add-on token AI (hanya untuk `purpose: 'topup'`) */
@@ -64,13 +67,17 @@ interface ChargeBody {
 }
 
 /**
- * order `pending` terakhir milik PEMANGGIL untuk paket yang sama (RLS yang
- * menyaring). Sejak paket 84 tidak ada periode lagi: `billing_period` selalu
- * `'lifetime'`, jadi kuncinya cukup paket + status.
+ * order `pending` terakhir milik PEMANGGIL untuk paket + periode yang sama
+ * (RLS yang menyaring). Periode ikut jadi kunci supaya tagihan monthly yang
+ * masih hidup tidak dipakai ulang untuk pembelian lifetime.
  */
 async function findPendingOrder(
   token: string,
-  { planId, purpose }: { planId?: string | null; purpose: PaymentPurpose },
+  {
+    planId,
+    purpose,
+    period,
+  }: { planId?: string | null; purpose: PaymentPurpose; period: BillingPeriod | null },
 ): Promise<string | null> {
   const query = new URLSearchParams({
     select: 'order_id',
@@ -80,6 +87,7 @@ async function findPendingOrder(
     limit: '1',
   })
   if (planId) query.set('tier_name', `eq.${planId}`)
+  if (period) query.set('billing_period', `eq.${period}`)
   const res = await restFetch<PendingRow[]>(`purchases?${query.toString()}`, { accessToken: token })
   if (!res.ok || !Array.isArray(res.data)) return null
   return res.data[0]?.order_id ?? null
@@ -115,6 +123,22 @@ export async function POST(req: NextRequest) {
       { ok: false, reason: 'invalid', error: 'Tujuan atau nominal pembayaran tidak sah.' },
       { status: 422 },
     )
+  }
+
+  /* Periode wajib untuk pembelian paket. Body tanpa `period` diperlakukan
+     sebagai monthly (produk utama) — nilai lain ditolak 422, tidak ditebak. */
+  let period: BillingPeriod | null = 'monthly'
+  if (purpose === 'topup') {
+    period = null
+  } else if (body.period !== undefined && body.period !== null && body.period !== '') {
+    const parsed = asBillingPeriod(String(body.period))
+    if (!parsed) {
+      return NextResponse.json(
+        { ok: false, reason: 'invalid', error: 'Periode pembayaran tidak dikenal.' },
+        { status: 422 },
+      )
+    }
+    period = parsed
   }
 
   const method = paymentMethod(body.method)
@@ -191,42 +215,74 @@ export async function POST(req: NextRequest) {
 
   const plan = PLANS.find((item) => item.id === String(body.planId))
   let ownedPlanId: PlanId | null = null
+  let ownedIsLifetime = false
 
-  if (purpose === 'subscribe' || purpose === 'upgrade') {
-    if (!plan) {
+  const isPlanPurpose = purpose === 'subscribe' || purpose === 'upgrade' || purpose === 'renew'
+  if (isPlanPurpose) {
+    if (!plan || !period) {
       return NextResponse.json(
-        { ok: false, reason: 'invalid', error: 'Paket tidak dikenal.' },
+        { ok: false, reason: 'invalid', error: 'Paket atau periode tidak dikenal.' },
         { status: 422 },
       )
     }
 
     const caller = await readCallerPlan(auth.token)
-    ownedPlanId = caller.active ? caller.planId : null
+    /* Paket tetap dibaca walau masa aktifnya sudah habis: user berhak
+       memperpanjang paket yang sama dan membeli lifetime dari tier itu. */
+    ownedPlanId = caller.planId
+    ownedIsLifetime = caller.isLifetime
 
-    if (purpose === 'upgrade' && !ownedPlanId) {
+    if (purpose === 'renew' && period !== 'monthly') {
       return NextResponse.json(
         {
           ok: false,
-          reason: 'not-owned',
-          error: 'Upgrade cuma untuk user yang sudah punya paket. Beli paketnya dulu ya.',
+          reason: 'invalid',
+          error: 'Perpanjangan hanya untuk langganan prabayar 30 hari.',
         },
-        { status: 403 },
+        { status: 422 },
       )
     }
 
-    if (purpose === 'upgrade' && plan && isDowngradeOrSame(plan, ownedPlanId)) {
-      return NextResponse.json(
-        {
-          ok: false,
-          reason: 'not-upgrade',
-          error: 'Tujuan upgrade harus paket yang lebih tinggi. Downgrade tidak ditawarkan.',
-        },
-        { status: 403 },
-      )
+    if (period === 'monthly') {
+      /* Lifetime tidak boleh diturunkan ke monthly — tidak ada refund sisa hari. */
+      if (ownedIsLifetime) {
+        return NextResponse.json(
+          {
+            ok: false,
+            reason: 'lifetime-active',
+            error: 'Paketmu sudah lifetime. Pembelian monthly tidak bisa menurunkan akses itu.',
+          },
+          { status: 403 },
+        )
+      }
+      /* Tier monthly boleh sama/naik/turun: renew & pindah tier tanpa refund. */
+    } else {
+      /* lifetime */
+      if (purpose === 'upgrade' && !ownedPlanId) {
+        return NextResponse.json(
+          {
+            ok: false,
+            reason: 'not-owned',
+            error: 'Upgrade cuma untuk user yang sudah punya paket. Beli paketnya dulu ya.',
+          },
+          { status: 403 },
+        )
+      }
+      if (ownedIsLifetime && rankOf(ownedPlanId) >= plan.rank) {
+        return NextResponse.json(
+          {
+            ok: false,
+            reason: 'not-needed',
+            error: 'Paket lifetime ini (atau yang lebih tinggi) sudah kamu miliki.',
+          },
+          { status: 403 },
+        )
+      }
     }
 
-    const expected = priceFor(plan, purpose === 'upgrade' ? ownedPlanId : null)
-    if (expected <= 0 || !isValidOfferAmount(plan, amount, purpose === 'upgrade' ? ownedPlanId : null)) {
+    const context = { period, ownedPlanId, ownedIsLifetime }
+    const expected = priceFor(plan, context)
+    if (expected <= 0 || !isValidOfferAmount(plan, amount, context)) {
       return NextResponse.json(
         { ok: false, reason: 'invalid', error: 'Nominal tidak sesuai harga produk.' },
         { status: 422 },
@@ -243,14 +299,14 @@ export async function POST(req: NextRequest) {
     typeof body.itemName === 'string' && body.itemName
       ? body.itemName
       : plan
-        ? `${plan.name} (akses selamanya)`
+        ? `${plan.name} (${period === 'monthly' ? 'Langganan 30 hari' : 'akses selamanya'})`
         : addonName
           ? `${addonName} — token AI`
           : 'CatetInd'
 
   /* ── 1. Pakai ulang order yang masih pending (kalau memang bisa & cocok) ── */
   if (plan) {
-    const existingOrderId = await findPendingOrder(auth.token, { planId: plan.id, purpose })
+    const existingOrderId = await findPendingOrder(auth.token, { planId: plan.id, purpose, period })
     if (existingOrderId) {
       const status = await fetchTransactionStatus(existingOrderId, method)
       if (status.ok) {
@@ -308,7 +364,7 @@ export async function POST(req: NextRequest) {
       order_id: orderId,
       status: 'pending',
       tier_name: plan?.id ?? null,
-      billing_period: 'lifetime',
+      billing_period: period,
       /* dipakai webhook: niat pembayaran (subscribe/upgrade/topup) + nominal
          yang seharusnya ditagih + jumlah token (top-up) */
       purpose,

@@ -44,7 +44,8 @@ const USER = { id: 'a1b2c3d4-aaaa-bbbb-cccc-dddddddddddd', email: 'a@b.c', name:
 const OFFER = {
   purpose: 'subscribe',
   planId: HERO_PLAN.id,
-  amount: HERO_PLAN.lifetime,
+  period: 'monthly',
+  amount: HERO_PLAN.monthly,
   method: 'qris',
 }
 
@@ -58,7 +59,7 @@ const PENDING_STATUS = {
     paymentType: 'qris',
     method: 'qris',
     transactionId: 'tx-1',
-    amount: HERO_PLAN.lifetime,
+    amount: HERO_PLAN.monthly,
     expiresAt: '2026-10-10T21:15:45.000Z',
     instructions: { channel: 'qris', qrImageUrl: 'https://qr/contoh', qrString: '00020101' },
   },
@@ -71,12 +72,16 @@ const PENDING_STATUS = {
  */
 const readPlan = readCallerPlan as unknown as Mock
 
-function owned(tier: string | null, active = true): void {
+function owned(tier: string | null, active = true, isLifetime = false): void {
   readPlan.mockResolvedValue({
     configured: true,
     planId: tier,
     purchasedAt: active ? '2026-01-01T00:00:00Z' : null,
+    expiresAt: null,
+    isLifetime,
+    billingPeriod: isLifetime ? 'lifetime' : tier ? 'monthly' : null,
     active,
+    expired: false,
     failed: false,
   })
 }
@@ -107,7 +112,7 @@ beforeEach(() => {
       transactionStatus: 'pending',
       fraudStatus: null,
       transactionId: 'tx-1',
-      amount: HERO_PLAN.lifetime,
+      amount: HERO_PLAN.monthly,
       expiresAt: '2026-10-10T21:15:45.000Z',
       instructions: { channel: 'qris', qrImageUrl: 'https://qr/contoh', qrString: '00020101' },
     },
@@ -185,7 +190,7 @@ describe('POST /api/payment/charge', () => {
     expect(options.body.status).toBe('pending')
     expect(options.body.order_id).toBe(body.orderId)
     expect(options.body.tier_name).toBe(HERO_PLAN.id)
-    expect(options.body.billing_period).toBe('lifetime')
+    expect(options.body.billing_period).toBe('monthly')
 
     expect(charge).toHaveBeenCalledTimes(1)
     const [intent, method] = charge.mock.calls[0] as [
@@ -193,30 +198,31 @@ describe('POST /api/payment/charge', () => {
       { id: string },
     ]
     expect(intent.orderId).toBe(body.orderId)
-    expect(intent.amount).toBe(HERO_PLAN.lifetime)
+    expect(intent.amount).toBe(HERO_PLAN.monthly)
     expect(method.id).toBe('qris')
     expect(intent.notificationUrl).toBe('http://localhost:3000/api/payment/webhook')
     expect(intent.finishUrl).toContain('http://localhost:3000/checkout/selesai?order_id=')
   })
 
   it('nominal diskon referral (10%) diterima', async () => {
-    const res = await POST(request({ ...OFFER, amount: applyReferralDiscount(HERO_PLAN.lifetime) }))
+    const res = await POST(request({ ...OFFER, amount: applyReferralDiscount(HERO_PLAN.monthly) }))
     expect(res.status).toBe(200)
     expect(charge).toHaveBeenCalledTimes(1)
   })
 
-  /* ── UPGRADE = SELISIH, DIHITUNG SERVER (paket 84) ─────────────────────────
+  /* ── UPGRADE LIFETIME = SELISIH, DIHITUNG SERVER ───────────────────────────
      Aturan yang dikunci di sini: klien hanya mengirim TUJUAN. Nominalnya
-     diturunkan server dari paket yang tersimpan, dan naik tier tidak boleh
-     ditagih seharga penuh. */
+     diturunkan server dari paket lifetime yang tersimpan, dan naik tier tidak
+     boleh ditagih seharga penuh. */
 
-  it('upgrade: nominal = SELISIH dari paket yang sudah dimiliki', async () => {
-    owned('catet-aja')
+  it('upgrade lifetime: nominal = SELISIH dari lifetime yang sudah dimiliki', async () => {
+    owned('catet-aja', true, true)
     const target = PLANS[1]
     const res = await POST(
       request({
         purpose: 'upgrade',
         planId: target.id,
+        period: 'lifetime',
         amount: target.lifetime - PLANS[0].lifetime,
         method: 'qris',
       }),
@@ -227,42 +233,123 @@ describe('POST /api/payment/charge', () => {
     expect(intent.ownedPlanId).toBe('catet-aja')
   })
 
-  it('upgrade ke paket yang lebih RENDAH/sama → 403 (downgrade tidak ditawarkan)', async () => {
-    owned('sultan')
+  it('upgrade ke lifetime yang sudah dimiliki (atau lebih tinggi) → 403', async () => {
+    owned('sultan', true, true)
     const res = await POST(
       request({
         purpose: 'upgrade',
         planId: PLANS[0].id,
+        period: 'lifetime',
         amount: PLANS[0].lifetime,
         method: 'qris',
       }),
     )
     expect(res.status).toBe(403)
-    expect((await res.json()).reason).toBe('not-upgrade')
+    expect((await res.json()).reason).toBe('not-needed')
     expect(charge).not.toHaveBeenCalled()
   })
 
   it('upgrade tanpa paket sama sekali → 403 (belum ada yang bisa ditambah)', async () => {
-owned(null, false)
+    owned(null, false)
     const res = await POST(
-      request({ purpose: 'upgrade', planId: PLANS[1].id, amount: 20_000, method: 'qris' }),
+      request({
+        purpose: 'upgrade',
+        planId: PLANS[1].id,
+        period: 'lifetime',
+        amount: 20_000,
+        method: 'qris',
+      }),
     )
     expect(res.status).toBe(403)
     expect((await res.json()).reason).toBe('not-owned')
     expect(charge).not.toHaveBeenCalled()
   })
 
-  it('upgrade dengan nominal harga PENUH → 422 (nominal tidak dipercaya)', async () => {
-    owned('catet-aja')
+  it('upgrade lifetime dengan nominal harga PENUH → 422 (nominal tidak dipercaya)', async () => {
+    owned('catet-aja', true, true)
     const target = PLANS[1]
     const res = await POST(
       request({
         purpose: 'upgrade',
         planId: target.id,
+        period: 'lifetime',
         amount: target.lifetime,
         method: 'qris',
       }),
     )
+    expect(res.status).toBe(422)
+    expect(charge).not.toHaveBeenCalled()
+  })
+
+  /* ── PRABAYAR 30 HARI (rilis landing) ─────────────────────────────────────── */
+
+  it('monthly menulis billing_period monthly + harga monthly penuh', async () => {
+    owned('waras', true, false)
+    const res = await POST(
+      request({
+        purpose: 'renew',
+        planId: 'waras',
+        period: 'monthly',
+        amount: PLANS[1].monthly,
+        method: 'qris',
+      }),
+    )
+    expect(res.status).toBe(200)
+    const [, options] = insertCalls()[0] as [string, { body: { billing_period: string } }]
+    expect(options.body.billing_period).toBe('monthly')
+    const [intent] = charge.mock.calls[0] as [{ amount: number }]
+    expect(intent.amount).toBe(PLANS[1].monthly)
+  })
+
+  it('renew paket yang sama / turun tier monthly TIDAK ditolak guard upgrade', async () => {
+    owned('sultan', true, false)
+    const res = await POST(
+      request({
+        purpose: 'renew',
+        planId: 'catet-aja',
+        period: 'monthly',
+        amount: PLANS[0].monthly,
+        method: 'qris',
+      }),
+    )
+    expect(res.status).toBe(200)
+  })
+
+  it('lifetime menulis billing_period lifetime + harga lifetime penuh dari monthly', async () => {
+    owned('waras', true, false)
+    const res = await POST(
+      request({
+        purpose: 'subscribe',
+        planId: 'waras',
+        period: 'lifetime',
+        amount: PLANS[1].lifetime,
+        method: 'qris',
+      }),
+    )
+    expect(res.status).toBe(200)
+    const [, options] = insertCalls()[0] as [string, { body: { billing_period: string } }]
+    expect(options.body.billing_period).toBe('lifetime')
+  })
+
+  it('user lifetime tidak bisa membeli monthly → 403', async () => {
+    owned('waras', true, true)
+    const res = await POST(
+      request({
+        purpose: 'subscribe',
+        planId: 'waras',
+        period: 'monthly',
+        amount: PLANS[1].monthly,
+        method: 'qris',
+      }),
+    )
+    expect(res.status).toBe(403)
+    expect((await res.json()).reason).toBe('lifetime-active')
+    expect(charge).not.toHaveBeenCalled()
+  })
+
+  it('periode tidak dikenal → 422, provider tidak dipanggil', async () => {
+    owned(null, false)
+    const res = await POST(request({ ...OFFER, period: 'annual' }))
     expect(res.status).toBe(422)
     expect(charge).not.toHaveBeenCalled()
   })

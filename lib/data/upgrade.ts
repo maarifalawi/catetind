@@ -1,30 +1,18 @@
-/* ── AJAKAN UPGRADE + AKSES PAKET (paket 84) ─────────────────────────────────
-   File ini MENGGANTIKAN `lib/data/renewal.ts`. Alasan penggantiannya keras dan
-   disengaja: sejak paket 84 semua paket adalah AKSES SELAMANYA (sekali bayar),
-   jadi "perpanjangan", "masa aktif", "tanggal berakhir", "grace period 7 hari",
-   dan "pengingat H-7/H-3/H-1" TIDAK PERNAH BISA TERJADI lagi. Mempertahankan
-   alur perpanjangan berarti mempertahankan layar yang menceritakan keadaan yang
-   mustahil — dan itu persis yang dilarang aturan proyek ini:
+/* ── AJAKAN UPGRADE + AKSES PAKET ────────────────────────────────────────────
+   Sejak rilis prepaid ada DUA periode nyata:
+     1. `monthly` — prabayar 30 hari; bisa diperpanjang manual, pindah tier,
+        termasuk turun tier tanpa refund.
+     2. `lifetime` — sekali bayar, akses selamanya.
 
-     "jangan pernah membuat UI/route yang mengaku sudah jalan padahal belum".
+   File ini mengurus tiga keadaan yang diturunkan dari `priceFor()`:
+     · AJAKAN UPGRADE — user sudah punya paket dan ingin tier lebih tinggi;
+       nominal selalu dari `priceFor()` (bisa selisih lifetime atau harga penuh
+       lifetime kalau asalnya monthly).
+     · EXPIRED — prabayar lewat tanggal; banner ramah, CTA perpanjang monthly.
+     · KUNCI PENUH — belum punya paket; baca & jelajah tetap jalan, catat ditahan.
 
-   Yang menggantikannya ada dua, keduanya turunan dari `lib/data/pricing.ts`:
-
-     1. AJAKAN UPGRADE — user sudah beli tapi belum di tier tertinggi; yang
-        mereka lihat bukan "masa aktifmu habis" melainkan "buka semua fitur X
-        dengan selisih Rp…". Nominal SELALU dari `priceFor()`.
-     2. KUNCI PENUH — user yang belum punya paket sama sekali. Perilakunya
-        sudah ada sejak paket 23 (gerbang input global di
-        `subscription-gate-provider.tsx`): baca & jelajah tetap jalan, catat
-        yang baru ditahan sampai ada paket. Gerbangnya tidak dihapus — hanya
-        pemicunya berubah dari "masa aktif habis" menjadi "belum ada paket",
-        karena itulah satu-satunya keadaan yang masih nyata.
-
-   TIDAK ADA penanda localStorage lagi: "muncul 1x per siklus masa aktif" dulu
-   ada supaya pengingat tidak jadi nagging. Sekarang tidak ada siklus, dan yang
-   tersisa (banner ajakan upgrade) tidak pernah muncul sendiri sebagai modal —
-   ia hanya bar yang bisa diabaikan.
-   ────────────────────────────────────────────────────────────────────────── */
+   Jangan mengarang nominal atau status: semua dibaca dari `pricing.ts` dan
+   `SubscriptionGateProvider`. */
 
 import {
   PLANS,
@@ -52,12 +40,13 @@ export function upgradeTargets(ownedPlanId: PlanId | null | undefined): PlanDefi
   return PLANS.filter((plan) => plan.rank > currentRank)
 }
 
-/** selisih yang harus dibayar untuk naik ke `target` — dari `priceFor()`, bukan angka tulis tangan */
+/** selisih lifetime untuk naik ke `target` — dari `priceFor()`, bukan angka tulis tangan */
 export function upgradeAmount(
   target: PlanDefinition,
   ownedPlanId: PlanId | null | undefined,
+  ownedIsLifetime = false,
 ): number {
-  return priceFor(target, ownedPlanId)
+  return priceFor(target, { period: 'lifetime', ownedPlanId, ownedIsLifetime })
 }
 
 /** rincian ajakan upgrade untuk satu kemampuan yang belum terbuka */
@@ -80,12 +69,13 @@ export interface CapabilityUpgradeOffer {
 export function capabilityUpgradeOffer(
   capability: Capability,
   ownedPlanId: PlanId | null | undefined,
+  ownedIsLifetime = false,
 ): CapabilityUpgradeOffer {
   const target = capabilityUnlockedBy(capability)
   return {
     target,
-    amount: priceFor(target, ownedPlanId),
-    href: buildUpgradeHref(target.id, ownedPlanId),
+    amount: priceFor(target, { period: 'lifetime', ownedPlanId, ownedIsLifetime }),
+    href: buildUpgradeHref(target.id, ownedPlanId, 'lifetime'),
   }
 }
 
@@ -146,7 +136,7 @@ export const UPGRADE_BANNER_COPY = {
   noPurchase: {
     eyebrow: 'Belum ada paket aktif',
     title: 'Pilih paket buat mulai catat',
-    body: 'Sekali bayar, akses selamanya. Nggak ada tagihan bulanan.',
+    body: 'Prabayar 30 hari atau sekali bayar lifetime. Tanpa auto-debet.',
     cta: 'Pilih paket',
   },
   /**
@@ -156,8 +146,15 @@ export const UPGRADE_BANNER_COPY = {
   upgrade: {
     eyebrow: 'Masih ada fitur terkunci',
     title: 'Buka semua fitur {target}',
-    body: 'Cukup nambah {amount} dari yang sudah kamu bayar — aksesnya selamanya.',
+    body: 'Upgrade ke lifetime {target}: {amount}. Aksesnya selamanya, tanpa auto-debet.',
     cta: 'Upgrade',
+  },
+  /** Masa aktif prabayar habis: ramah, bukan menuduh, dan menawarkan renew. */
+  expired: {
+    eyebrow: 'Masa aktif habis',
+    title: 'Masa aktif {plan} habis — perpanjang 30 hari',
+    body: 'Semua catatanmu tetap aman dan bisa dibaca/diekspor. Tombol tambah data hidup lagi setelah diperpanjang.',
+    cta: 'Perpanjang',
   },
 } as const
 
@@ -170,6 +167,7 @@ export const UPGRADE_BANNER_COPY = {
 export function upgradeBannerCopy(
   ownedPlanId: PlanId | null | undefined,
   formatAmount: (value: number) => string,
+  ownedIsLifetime = false,
 ): UpgradeBannerCopy | null {
   const plan = PLANS.find((item) => item.id === ownedPlanId) ?? null
   if (!plan) return UPGRADE_BANNER_COPY.noPurchase
@@ -179,7 +177,19 @@ export function upgradeBannerCopy(
     ...UPGRADE_BANNER_COPY.upgrade,
     title: fill(UPGRADE_BANNER_COPY.upgrade.title, { target: target.name }),
     body: fill(UPGRADE_BANNER_COPY.upgrade.body, {
-      amount: formatAmount(priceFor(target, plan.id)),
+      amount: formatAmount(priceFor(target, { period: 'lifetime', ownedPlanId: plan.id, ownedIsLifetime })),
     }),
+  }
+}
+
+/**
+ * Copy banner saat masa aktif prabayar habis. CTA-nya perpanjangan monthly —
+ * bukan upgrade lifetime — karena kebutuhan user saat itu adalah membuka lagi
+ * pencatatan, bukan membeli akses yang lebih tinggi.
+ */
+export function expiredBannerCopy(planName: string): UpgradeBannerCopy {
+  return {
+    ...UPGRADE_BANNER_COPY.expired,
+    title: fill(UPGRADE_BANNER_COPY.expired.title, { plan: planName }),
   }
 }

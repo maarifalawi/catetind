@@ -37,10 +37,15 @@ describe('GET /api/subscription', () => {
     expect(res.status).toBe(200)
     expect(body.active).toBe(false)
     expect(body.configured).toBe(false)
+    expect(body.planId).toBeNull()
+    expect(body.expiresAt).toBeNull()
+    expect(body.isLifetime).toBe(false)
+    expect(body.billingPeriod).toBeNull()
+    expect(body.expired).toBe(false)
     expect(fetchRest).not.toHaveBeenCalled()
   })
 
-  it('ada baris paket aktif → active:true + planId', async () => {
+  it('ada baris paket lifetime aktif → active:true + planId + isLifetime', async () => {
     guard.mockReturnValue({ ok: true, user: USER, token: 't' })
     configured.mockReturnValue(true)
     fetchRest.mockResolvedValue({
@@ -51,6 +56,9 @@ describe('GET /api/subscription', () => {
           tier_name: 'waras',
           is_active: true,
           started_at: '2026-10-10T00:00:00Z',
+          expires_at: null,
+          is_lifetime: true,
+          billing_period: 'lifetime',
         },
       ],
     })
@@ -58,6 +66,61 @@ describe('GET /api/subscription', () => {
     expect(body.active).toBe(true)
     expect(body.planId).toBe('waras')
     expect(body.purchasedAt).toBe('2026-10-10T00:00:00Z')
+    expect(body.expiresAt).toBeNull()
+    expect(body.isLifetime).toBe(true)
+    expect(body.billingPeriod).toBe('lifetime')
+    expect(body.expired).toBe(false)
+  })
+
+  it('monthly aktif → expiresAt & billingPeriod dilaporkan', async () => {
+    guard.mockReturnValue({ ok: true, user: USER, token: 't' })
+    configured.mockReturnValue(true)
+    const future = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString()
+    fetchRest.mockResolvedValue({
+      ok: true,
+      status: 200,
+      data: [
+        {
+          tier_name: 'waras',
+          is_active: true,
+          started_at: '2026-10-10T00:00:00Z',
+          expires_at: future,
+          is_lifetime: false,
+          billing_period: 'monthly',
+        },
+      ],
+    })
+    const body = await (await GET(request())).json()
+    expect(body.active).toBe(true)
+    expect(body.expired).toBe(false)
+    expect(body.expiresAt).toBe(future)
+    expect(body.billingPeriod).toBe('monthly')
+  })
+
+  it('monthly kedaluwarsa → active false, expired true, planId tetap ada', async () => {
+    guard.mockReturnValue({ ok: true, user: USER, token: 't' })
+    configured.mockReturnValue(true)
+    const past = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    fetchRest.mockResolvedValue({
+      ok: true,
+      status: 200,
+      data: [
+        {
+          tier_name: 'sultan',
+          is_active: true,
+          started_at: '2026-09-01T00:00:00Z',
+          expires_at: past,
+          is_lifetime: false,
+          billing_period: 'monthly',
+        },
+      ],
+    })
+    const body = await (await GET(request())).json()
+    expect(body.active).toBe(false)
+    expect(body.expired).toBe(true)
+    expect(body.planId).toBe('sultan')
+    expect(body.expiresAt).toBe(past)
+    expect(body.billingPeriod).toBe('monthly')
   })
 
   it('tier LAMA (founding_member) tetap dipetakan ke paket baru', async () => {
@@ -66,7 +129,16 @@ describe('GET /api/subscription', () => {
     fetchRest.mockResolvedValue({
       ok: true,
       status: 200,
-      data: [{ tier_name: 'founding_member', is_active: true, started_at: '2026-01-01T00:00:00Z' }],
+      data: [
+        {
+          tier_name: 'founding_member',
+          is_active: true,
+          started_at: '2026-01-01T00:00:00Z',
+          expires_at: null,
+          is_lifetime: true,
+          billing_period: 'lifetime',
+        },
+      ],
     })
     const body = await (await GET(request())).json()
     expect(body.active).toBe(true)

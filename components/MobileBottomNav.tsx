@@ -69,9 +69,13 @@ import { TransferFlow } from '@/components/catetind/transfer-flow'
  *      (lihat `isFocusRoute` di bawah) supaya tidak menyerap `/app`, `/wallet`.
  *   9. `/registered` — halaman "Terima kasih" setelah registrasi dari landing:
  *      satu layar penutup alur, tanpa navigasi app.
+ *  10. `/changelog` — riwayat rilis produk publik: dibaca seperti dokumen,
+ *      bukan layar app.
  */
 const FOCUS_ROUTES = [
   '/',
+  /* /contact — halaman kontak publik: form WhatsApp/email, bukan app. */
+  '/contact',
   '/registered',
   '/app/onboarding',
   '/welcome',
@@ -81,6 +85,7 @@ const FOCUS_ROUTES = [
   '/share',
   '/privacy',
   '/terms',
+  '/changelog',
 ]
 
 function NavLink({

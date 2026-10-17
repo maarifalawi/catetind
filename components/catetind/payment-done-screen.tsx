@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ArrowRight, CheckCircle2, Clock, RotateCw, XCircle } from 'lucide-react'
 import { LogoWordmark } from './logo-wordmark'
 import { PAY_DONE_COPY } from '@/lib/data/pricing'
+import { buildLoginHref } from '@/lib/data/auth'
 
 /* SELESAI BAYAR (/checkout/selesai) -------------------------------------------
    Halaman setelah pembayaran. Statusnya DIBACA dari database
@@ -21,6 +22,7 @@ type PayState = 'checking' | 'active' | 'pending'
 export function PaymentDoneScreen({ orderId, failed }: { orderId: string | null; failed: boolean }) {
   const [state, setState] = useState<PayState>('checking')
   const [attempts, setAttempts] = useState(0)
+  const [isLifetime, setIsLifetime] = useState(false)
 
   const check = useCallback(async () => {
     try {
@@ -29,7 +31,8 @@ export function PaymentDoneScreen({ orderId, failed }: { orderId: string | null;
         setState('pending')
         return
       }
-      const data = (await res.json()) as { active?: boolean }
+      const data = (await res.json()) as { active?: boolean; isLifetime?: boolean }
+      setIsLifetime(data?.isLifetime === true)
       setState(data?.active ? 'active' : 'pending')
     } catch {
       setState('pending')
@@ -59,7 +62,9 @@ export function PaymentDoneScreen({ orderId, failed }: { orderId: string | null;
           : PAY_DONE_COPY.checkingTitle
   const body =
     state === 'active'
-      ? PAY_DONE_COPY.activeBody
+      ? isLifetime
+        ? PAY_DONE_COPY.activeBodyLifetime
+        : PAY_DONE_COPY.activeBodyMonthly
       : showFailed
         ? PAY_DONE_COPY.failedBody
         : state === 'pending'
@@ -103,8 +108,13 @@ export function PaymentDoneScreen({ orderId, failed }: { orderId: string | null;
 
           <div className="mt-7 flex flex-col items-center gap-2 lg:flex-row lg:justify-center">
             {state === 'active' ? (
+              /* Pintu ke Dashboard SELALU lewat login. Dulu tautannya langsung
+                 ke `/app`; di build demo (gerbang sesi dilewati) itu berarti
+                 orang bisa masuk app tanpa pernah masuk akun. Sekarang
+                 middleware menjaga /app DAN tautan ini membawa `next=/app`,
+                 jadi setelah kode email diverifikasi user mendarat di Dashboard. */
               <Link
-                href="/app"
+                href={buildLoginHref('/app')}
                 className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-forest px-6 text-[13.5px] font-medium text-cream lg:w-auto lg:min-w-[200px]"
               >
                 {PAY_DONE_COPY.appCta}

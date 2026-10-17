@@ -1,0 +1,276 @@
+<section #mission [About] .framer-cclrbl
+  <div [container] .framer-7i0eow
+    <div [container] .framer-1d07zj0
+      <div .framer-14j8xzp
+        <div .
+          <div .framer-kxscip | transform:none
+            <h3 .framer-text.framer-styles-preset-1ej12dw
+              <strong .framer-text
+                <span | display:inline-block; opacity:0.001; transform:translateX(0px) translateY(24px) scale(1) rotate(0deg) skewX(0deg) skewY(0deg)
+                <span | display:inline-block; opacity:0.001; transform:translateX(0px) translateY(24px) scale(1) rotate(0deg) skewX(0deg) skewY(0deg)
+                <span | display:inline-block; opacity:0.001; transform:translateX(0px) translateY(24px) scale(1) rotate(0deg) skewX(0deg) skewY(0deg)
+                <span | display:inline-block; opacity:0.001; transform:translateX(0px) translateY(24px) scale(1) rotate(0deg) skewX(0deg) skewY(0deg)
+                <span | display:inline-block; opacity:0.001; transform:translateX(0px) translateY(24px) scale(1) rotate(0deg) skewX(0deg) skewY(0deg)
+                <span | display:inline-block; opacity:0.001; transform:translateX(0px) translateY(24px) scale(1) rotate(0deg) skewX(0deg) skewY(0deg)
+                <span | display:inline-block; opacity:0.001; transform:translateX(0px) translateY(24px) scale(1) rotate(0deg) skewX(0deg) skewY(0deg)
+                <span | display:inline-block; opacity:0.001; transform:translateX(0px) translateY(24px) scale(1) rotate(0deg) skewX(0deg) skewY(0deg)
+                <span | display:inline-block; opacity:0.001; transform:translateX(0px) translateY(24px) scale(1) rotate(0deg) skewX(0deg) skewY(0deg)
+                <span | display:inline-block; opacity:0.001; transform:translateX(0px) translateY(24px) scale(1) rotate(0deg) skewX(0deg) skewY(0deg)
+                <span | display:inline-block; opacity:0.001; transform:translateX(0px) translateY(24px) scale(1) rotate(0deg) skewX(0deg) skewY(0deg)
+                <span | display:inline-block; opacity:0.001; transform:translateX(0px) translateY(24px) scale(1) rotate(0deg) skewX(0deg) skewY(0deg)
+                <span | display:inline-block; opacity:0.001; transform:translateX(0px) translateY(24px) scale(1) rotate(0deg) skewX(0deg) skewY(0deg)
+                <span | display:inline-block; opacity:0.001; transform:translateX(0px) translateY(24px) scale(1) rotate(0deg) skewX(0deg) skewY(0deg)
+                <div .
+                <div .framer-kxscip | transform:none
+                <h3 .framer-text.framer-styles-preset-1ej12dw
+                <strong .framer-text
+                <span | display:inline-block; opacity:0.001; transform:translateX(0px) translateY(24px) scale(1) rotate(0deg) skewX(0deg) skewY(0deg)
+                <span | display:inline-block; opacity:0.001; transform:translateX(0px) translateY(24px) scale(1) rotate(0deg) skewX(0deg) skewY(0deg)
+                <span | display:inline-block; opacity:0.001; transform:translateX(0px) translateY(24px) scale(1) rotate(0deg) skewX(0deg) skewY(0deg)
+                <span | display:inline-block; opacity:0.001; transform:translateX(0px) translateY(24px) scale(1) rotate(0deg) skewX(0deg) skewY(0deg)
+                <span | display:inline-block; opacity:0.001; transform:translateX(0px) translateY(24px) scale(1) rotate(0deg) skewX(0deg) skewY(0deg)
+                <span | display:inline-block; opacity:0.001; transform:translateX(0px) translateY(24px) scale(1) rotate(0deg) skewX(0deg) skewY(0deg)
+                <span | display:inline-block; opacity:0.001; transform:translateX(0px) translateY(24px) scale(1) rotate(0deg) skewX(0deg) skewY(0deg)
+                <span | display:inline-block; opacity:0.001; transform:translateX(0px) translateY(24px) scale(1) rotate(0deg) skewX(0deg) skewY(0deg)
+                <span | display:inline-block; opacity:0.001; transform:translateX(0px) translateY(24px) scale(1) rotate(0deg) skewX(0deg) skewY(0deg)
+                <span | display:inline-block; opacity:0.001; transform:translateX(0px) translateY(24px) scale(1) rotate(0deg) skewX(0deg) skewY(0deg)
+                <span | display:inline-block; opacity:0.001; transform:translateX(0px) translateY(24px) scale(1) rotate(0deg) skewX(0deg) skewY(0deg)
+                <span | display:inline-block; opacity:0.001; transform:translateX(0px) translateY(24px) scale(1) rotate(0deg) skewX(0deg) skewY(0deg)
+                <span | display:inline-block; opacity:0.001; transform:translateX(0px) translateY(24px) scale(1) rotate(0deg) skewX(0deg) skewY(0deg)
+                <span | display:inline-block; opacity:0.001; transform:translateX(0px) translateY(24px) scale(1) rotate(0deg) skewX(0deg) skewY(0deg)
+                <div .framer-1dmsqyr
+                <div .framer-1lq3rlp
+                <div .framer-ko7ji8
+                <div .
+                <div .framer-1v52zj0-container | opacity:0; transform:translateY(24px)
+                <div [Fit] .framer-Ryhbh.framer-R5PKu.framer-n7xf9.framer-25f4lx.framer-v-25f4lx
+                <div .framer-1wq2p9z | background-color:rgb(69, 89, 78); border-bottom-left-radius:8px; border-bottom-right-radius:8px; border-top-left-radius:8px; border-top-right-radius:8px
+                <svg .framer-p2S2k.framer-k0felb | transform:translate(-50%, -50%)
+                <div .framer-roxk9k
+                <div .framer-wtgdfs | transform:none
+                <p .framer-text.framer-styles-preset-15gu9gr
+                <strong .framer-text
+                <div .framer-12xepn7 | transform:none
+                <p .framer-text.framer-styles-preset-ftfde0
+                <div .
+                <div .framer-1v52zj0-container | opacity:0; transform:translateY(24px)
+                <div [Fill] .framer-Ryhbh.framer-R5PKu.framer-n7xf9.framer-25f4lx.framer-v-axr39t | width:100%
+                <div .framer-1wq2p9z | background-color:rgb(69, 89, 78); border-bottom-left-radius:8px; border-bottom-right-radius:8px; border-top-left-radius:8px; border-top-right-radius:8px
+                <svg .framer-p2S2k.framer-k0felb | transform:translate(-50%, -50%)
+                <div .framer-roxk9k
+                <div .framer-wtgdfs | transform:none
+                <p .framer-text.framer-styles-preset-15gu9gr
+                <strong .framer-text
+                <div .framer-12xepn7 | transform:none
+                <p .framer-text.framer-styles-preset-ftfde0
+                <div .
+                <div .framer-1v52zj0-container | opacity:0; transform:translateY(24px)
+                <div [Fill] .framer-Ryhbh.framer-R5PKu.framer-n7xf9.framer-25f4lx.framer-v-axr39t | width:100%
+                <div .framer-1wq2p9z | background-color:rgb(69, 89, 78); border-bottom-left-radius:8px; border-bottom-right-radius:8px; border-top-left-radius:8px; border-top-right-radius:8px
+                <svg .framer-p2S2k.framer-k0felb | transform:translate(-50%, -50%)
+                <div .framer-roxk9k
+                <div .framer-wtgdfs | transform:none
+                <p .framer-text.framer-styles-preset-15gu9gr
+                <strong .framer-text
+                <div .framer-12xepn7 | transform:none
+                <p .framer-text.framer-styles-preset-ftfde0
+                <div .
+                <div .framer-lnu7qg-container | opacity:0; transform:translateY(24px)
+                <div [Fit] .framer-Ryhbh.framer-R5PKu.framer-n7xf9.framer-25f4lx.framer-v-25f4lx
+                <div .framer-1wq2p9z | background-color:rgb(69, 89, 78); border-bottom-left-radius:8px; border-bottom-right-radius:8px; border-top-left-radius:8px; border-top-right-radius:8px
+                <svg .framer-G7MnZ.framer-k0felb | transform:translate(-50%, -50%)
+                <div .framer-roxk9k
+                <div .framer-wtgdfs | transform:none
+                <p .framer-text.framer-styles-preset-15gu9gr
+                <strong .framer-text
+                <div .framer-12xepn7 | transform:none
+                <p .framer-text.framer-styles-preset-ftfde0
+                <div .
+                <div .framer-lnu7qg-container | opacity:0; transform:translateY(24px)
+                <div [Fill] .framer-Ryhbh.framer-R5PKu.framer-n7xf9.framer-25f4lx.framer-v-axr39t | width:100%
+                <div .framer-1wq2p9z | background-color:rgb(69, 89, 78); border-bottom-left-radius:8px; border-bottom-right-radius:8px; border-top-left-radius:8px; border-top-right-radius:8px
+                <svg .framer-G7MnZ.framer-k0felb | transform:translate(-50%, -50%)
+                <div .framer-roxk9k
+                <div .framer-wtgdfs | transform:none
+                <p .framer-text.framer-styles-preset-15gu9gr
+                <strong .framer-text
+                <div .framer-12xepn7 | transform:none
+                <p .framer-text.framer-styles-preset-ftfde0
+                <div .
+                <div .framer-qomfng-container | opacity:0; transform:translateY(24px)
+                <div [Fit] .framer-Ryhbh.framer-R5PKu.framer-n7xf9.framer-25f4lx.framer-v-25f4lx
+                <div .framer-1wq2p9z | background-color:rgb(69, 89, 78); border-bottom-left-radius:8px; border-bottom-right-radius:8px; border-top-left-radius:8px; border-top-right-radius:8px
+                <svg .framer-YQDD3.framer-k0felb | transform:translate(-50%, -50%)
+                <div .framer-roxk9k
+                <div .framer-wtgdfs | transform:none
+                <p .framer-text.framer-styles-preset-15gu9gr
+                <strong .framer-text
+                <div .framer-12xepn7 | transform:none
+                <p .framer-text.framer-styles-preset-ftfde0
+                <div .
+                <div .framer-qomfng-container | opacity:0; transform:translateY(24px)
+                <div [Fill] .framer-Ryhbh.framer-R5PKu.framer-n7xf9.framer-25f4lx.framer-v-axr39t | width:100%
+                <div .framer-1wq2p9z | background-color:rgb(69, 89, 78); border-bottom-left-radius:8px; border-bottom-right-radius:8px; border-top-left-radius:8px; border-top-right-radius:8px
+                <svg .framer-YQDD3.framer-k0felb | transform:translate(-50%, -50%)
+                <div .framer-roxk9k
+                <div .framer-wtgdfs | transform:none
+                <p .framer-text.framer-styles-preset-15gu9gr
+                <strong .framer-text
+                <div .framer-12xepn7 | transform:none
+                <p .framer-text.framer-styles-preset-ftfde0
+                <div .framer-fwfsym
+                <div #card-1 [1] .framer-1dxlmp7
+                <div .
+                <div [benefits-tiles] .framer-kcuyts
+                <div | position:absolute; border-radius:inherit; right:0; bottom:0; left:0
+                <img src=jsno522lfGcAGkYuLdJhgYTGPWs.jpg?width=2400&amp;height=1600 | display:block; width:100%; height:100%; border-radius:inherit
+                <div [opinionated] .framer-1v51on4
+                <div [Wrapper] .framer-ctjsil
+                <div [Copy] .framer-o7vsot
+                <div .framer-1ud9lsy
+                <div .framer-195r3y | opacity:0; transform:translateY(48px)
+                <h2 .framer-text.framer-styles-preset-2x9gcz
+                <div .framer-1r5xb8g | opacity:0; transform:translateY(72px)
+                <p .framer-text.framer-styles-preset-ftfde0
+                <div .framer-96b0tl
+                <svg .framer-Fr3y6.framer-1klz2b7
+                <div .framer-e3ig4g | transform:none
+                <p .framer-text.framer-styles-preset-ftfde0
+                <div [IMG] .framer-jyp6g6
+                <div .
+                <div [benefits-tiles] .framer-kcuyts
+                <div | position:absolute; border-radius:inherit; right:0; bottom:0; left:0
+                <img src=jsno522lfGcAGkYuLdJhgYTGPWs.jpg?width=2400&amp;height=1600 | display:block; width:100%; height:100%; border-radius:inherit
+                <div [opinionated] .framer-1v51on4
+                <div [Wrapper] .framer-ctjsil
+                <div [Copy] .framer-o7vsot
+                <div .framer-1ud9lsy
+                <div .framer-195r3y | opacity:0; transform:translateY(48px)
+                <h3 .framer-text.framer-styles-preset-1ej12dw
+                <div .framer-1r5xb8g | opacity:0; transform:translateY(72px)
+                <p .framer-text.framer-styles-preset-ftfde0
+                <div .framer-96b0tl
+                <svg .framer-Fr3y6.framer-1klz2b7
+                <div .framer-e3ig4g | transform:none
+                <p .framer-text.framer-styles-preset-ftfde0
+                <div [IMG] .framer-jyp6g6
+                <div | position:absolute; border-radius:inherit; right:0; bottom:0; left:0
+                <img src=GZf5e93mN9nyzezny85w11V92A.png?width=1760&amp;height=1551 | display:block; width:100%; height:100%; border-radius:inherit
+                <div #card-2 [1] .framer-101fy7l
+                <div .
+                <div [benefits-tiles] .framer-aaa97l
+                <div | position:absolute; border-radius:inherit; right:0; bottom:0; left:0
+                <img src=aaddGluOTfsjFg6mEDRc6Okaaw.jpg?width=2400&amp;height=1600 | display:block; width:100%; height:100%; border-radius:inherit
+                <div [opinionated] .framer-10yun6w
+                <div [IMG] .framer-1phcoz2
+                <div [Wrapper] .framer-1ve6yqn
+                <div [Copy] .framer-1vpilmq
+                <div .framer-lv572n
+                <div .framer-15zi8p2 | opacity:0; transform:translateY(48px)
+                <h2 .framer-text.framer-styles-preset-2x9gcz
+                <div .framer-2a19pi | opacity:0; transform:translateY(72px)
+                <p .framer-text.framer-styles-preset-ftfde0
+                <div .framer-1r9olp9
+                <svg .framer-Fr3y6.framer-6laak6
+                <div .framer-vnkjeo | transform:none
+                <p .framer-text.framer-styles-preset-ftfde0
+                <div .
+                <div [benefits-tiles] .framer-aaa97l
+                <div | position:absolute; border-radius:inherit; right:0; bottom:0; left:0
+                <img src=aaddGluOTfsjFg6mEDRc6Okaaw.jpg?width=2400&amp;height=1600 | display:block; width:100%; height:100%; border-radius:inherit
+                <div [opinionated] .framer-10yun6w
+                <div [IMG] .framer-1phcoz2
+                <div | position:absolute; border-radius:inherit; right:0; bottom:0; left:0
+                <img src=JGNlpZorYUD1969W8D79sZaZqc8.png?width=1600&amp;height=1822 | display:block; width:100%; height:100%; border-radius:inherit
+                <div [Wrapper] .framer-1ve6yqn
+                <div [Copy] .framer-1vpilmq
+                <div .framer-lv572n
+                <div .framer-15zi8p2 | opacity:0; transform:translateY(48px)
+                <h3 .framer-text.framer-styles-preset-1ej12dw
+                <div .framer-2a19pi | opacity:0; transform:translateY(72px)
+                <p .framer-text.framer-styles-preset-ftfde0
+                <div .framer-1r9olp9
+                <svg .framer-Fr3y6.framer-6laak6
+                <div .framer-vnkjeo | transform:none
+                <p .framer-text.framer-styles-preset-ftfde0
+                <div #card-3 [1] .framer-yrud2y
+                <div .
+                <div [benefits-tiles] .framer-17yj502
+                <div | position:absolute; border-radius:inherit; right:0; bottom:0; left:0
+                <img src=kG7BakFp07XkwgugzJJqzrRBu0.jpg?width=2400&amp;height=1600 | display:block; width:100%; height:100%; border-radius:inherit
+                <div [opinionated] .framer-10l6opl
+                <div [Wrapper] .framer-1em0wx1
+                <div [Copy] .framer-1q4qq56
+                <div .framer-qw25jq
+                <div .framer-575545 | opacity:0; transform:translateY(48px)
+                <h2 .framer-text.framer-styles-preset-2x9gcz
+                <div .framer-1lc6nvo | opacity:0; transform:translateY(72px)
+                <p .framer-text.framer-styles-preset-ftfde0
+                <div .framer-1q3rebe
+                <svg .framer-Fr3y6.framer-15wcglx
+                <div .framer-ftph0d | transform:none
+                <p .framer-text.framer-styles-preset-ftfde0
+                <div [IMG] .framer-10vpp05
+                <div .
+                <div [benefits-tiles] .framer-17yj502
+                <div | position:absolute; border-radius:inherit; right:0; bottom:0; left:0
+                <img src=kG7BakFp07XkwgugzJJqzrRBu0.jpg?width=2400&amp;height=1600 | display:block; width:100%; height:100%; border-radius:inherit
+                <div [opinionated] .framer-10l6opl
+                <div [Wrapper] .framer-1em0wx1
+                <div [Copy] .framer-1q4qq56
+                <div .framer-qw25jq
+                <div .framer-575545 | opacity:0; transform:translateY(48px)
+                <h3 .framer-text.framer-styles-preset-1ej12dw
+                <div .framer-1lc6nvo | opacity:0; transform:translateY(72px)
+                <p .framer-text.framer-styles-preset-ftfde0
+                <div .framer-1q3rebe
+                <svg .framer-Fr3y6.framer-15wcglx
+                <div .framer-ftph0d | transform:none
+                <p .framer-text.framer-styles-preset-ftfde0
+                <div [IMG] .framer-10vpp05
+                <div | position:absolute; border-radius:inherit; right:0; bottom:0; left:0
+                <img src=YMk3tQnWLxb57QQxHONgAGoLXts.png?width=1760&amp;height=1700 | display:block; width:100%; height:100%; border-radius:inherit
+                <div #card-4 [1] .framer-1r4wz5e
+                <div .
+                <div [benefits-tiles] .framer-1qp4cig
+                <div | position:absolute; border-radius:inherit; right:0; bottom:0; left:0
+                <img src=XVPhDzT6GjT1T0sovCSOrxRjg.jpg?width=2400&amp;height=1600 | display:block; width:100%; height:100%; border-radius:inherit
+                <div [opinionated] .framer-r78z5o
+                <div [IMG] .framer-9fag8c
+                <div [Wrapper] .framer-9kz0xn
+                <div [Copy] .framer-xaycpz
+                <div .framer-1f4cc9y
+                <div .framer-4v46hq | opacity:0; transform:translateY(48px)
+                <h2 .framer-text.framer-styles-preset-2x9gcz
+                <div .framer-hy4tu5 | opacity:0; transform:translateY(72px)
+                <p .framer-text.framer-styles-preset-ftfde0
+                <div .framer-1b9fbgc
+                <svg .framer-Fr3y6.framer-795zs6
+                <div .framer-1evp05g | transform:none
+                <p .framer-text.framer-styles-preset-ftfde0
+                <div .
+                <div [benefits-tiles] .framer-1qp4cig
+                <div | position:absolute; border-radius:inherit; right:0; bottom:0; left:0
+                <img src=XVPhDzT6GjT1T0sovCSOrxRjg.jpg?width=2400&amp;height=1600 | display:block; width:100%; height:100%; border-radius:inherit
+                <div [opinionated] .framer-r78z5o
+                <div [IMG] .framer-9fag8c
+                <div | position:absolute; border-radius:inherit; right:0; bottom:0; left:0
+                <img src=7sb0bft74jaizzoCn2e3juoSY.png?width=1608&amp;height=1743 | display:block; width:100%; height:100%; border-radius:inherit
+                <div [Wrapper] .framer-9kz0xn
+                <div [Copy] .framer-xaycpz
+                <div .framer-1f4cc9y
+                <div .framer-4v46hq | opacity:0; transform:translateY(48px)
+                <h3 .framer-text.framer-styles-preset-1ej12dw
+                <div .framer-hy4tu5 | opacity:0; transform:translateY(72px)
+                <p .framer-text.framer-styles-preset-ftfde0
+                <div .framer-1b9fbgc
+                <svg .framer-Fr3y6.framer-795zs6
+                <div .framer-1evp05g | transform:none
+                <p .framer-text.framer-styles-preset-ftfde0
+                <div [section triggers] .framer-2tcwkq
+                <div #fold-chat [1] .framer-xqb1ch
+                <div #fold-artifacts [2] .framer-zyyx00
+                <div #fold-board [3] .framer-6xx0cv
+                <div #fold-logic [4] .framer-50fevr
+                <div .framer-vq22ql
+                <div #nav-dark-trigger [Nav Dark Trigger] .framer-1y5m7bt

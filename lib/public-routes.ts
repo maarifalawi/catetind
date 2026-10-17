@@ -1,6 +1,8 @@
-/* ── DAFTAR ROUTE PUBLIK / PRE-APP (satu sumber, dua gerbang) ─────────────────
-   Daftar ini dipakai DUA gerbang global yang hidup di root layout:
+/* ── DAFTAR ROUTE PUBLIK / PRE-APP (satu sumber, tiga gerbang) ────────────────
+   Daftar ini dipakai TIGA gerbang global:
 
+     • `middleware.ts` — gerbang SESI: semua route di luar daftar ini wajib
+       punya sesi Supabase yang sudah diverifikasi (`/app`, `/wallet`, dst.);
      • `SubscriptionGateProvider` — jangan mengunci input di halaman yang user
        belum tentu punya langganan (mis. dia sedang MEMBAYAR di /checkout);
      • `AppLockProvider` — jangan menahan user di balik layar kunci PIN di
@@ -23,6 +25,12 @@ export const PUBLIC_ROUTES = [
   /* Halaman "Terima kasih" setelah registrasi dari landing — user baru saja
      mendaftar, ia belum bisa login/berlangganan, jadi gerbang pun dilewati. */
   '/registered',
+  /* Halaman kontak (Milestone C) — form membuka WhatsApp/email, bukan alur
+     bayar. Pengunjungnya belum tentu punya akun, jadi gerbang sesi/PIN
+     dilewati. */
+  '/contact',
+  /* Changelog publik — riwayat rilis produk, dibaca sebelum orang punya akun. */
+  '/changelog',
   '/welcome',
   '/login',
   '/checkout',
@@ -30,7 +38,6 @@ export const PUBLIC_ROUTES = [
   '/terms',
   '/join',
   '/share',
-  '/app/onboarding',
 ] as const
 
 /* `/install` SENGAJA TIDAK ada di daftar ini walau bisa dibuka tanpa akun.
@@ -42,4 +49,19 @@ export const PUBLIC_ROUTES = [
 /** true kalau pathname berada di (atau di bawah) halaman publik/pre-app */
 export function isPublicRoute(pathname: string): boolean {
   return PUBLIC_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`))
+}
+
+/* ── RUTE YANG DIKECUALIKAN DARI GERBANG PROVIDER (bukan dari gerbang sesi) ──
+   `/app/onboarding` WAJIB login (jadi TIDAK ada di `PUBLIC_ROUTES`), tapi ia
+   juga tidak boleh dikunci oleh gerbang langganan/PIN: ini langkah pertama
+   setelah akun dibuat, sebelum user sempat memilih paket. Dulu pengecualian ini
+   menumpang di `PUBLIC_ROUTES`; sekarang dipisah supaya gerbang SESI di
+   middleware bisa tegas tanpa memenjarakan user baru di layar onboarding. */
+export const PROVIDER_EXEMPT_ROUTES = [...PUBLIC_ROUTES, '/app/onboarding'] as const
+
+/** true kalau pathname bebas dari gerbang langganan & kunci PIN */
+export function isProviderExemptRoute(pathname: string): boolean {
+  return PROVIDER_EXEMPT_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`),
+  )
 }

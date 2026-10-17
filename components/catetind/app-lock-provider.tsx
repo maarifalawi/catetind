@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from 'react'
 import { usePathname } from 'next/navigation'
-import { isPublicRoute } from '@/lib/public-routes'
+import { isProviderExemptRoute } from '@/lib/public-routes'
 import {
   AUTO_LOCK_IDLE_MS,
   EMPTY_ATTEMPT_STATE,
@@ -298,7 +298,7 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
    * Route publik/pre-app dilewati: user yang belum bisa masuk tidak boleh
    * ditahan di balik layar kunci milik perangkat (lihat catatan di atas).
    */
-  const gateShows = enabled && locked && !isPublicRoute(pathname)
+  const gateShows = enabled && locked && !isProviderExemptRoute(pathname)
 
   return (
     <AppLockContext.Provider value={value}>

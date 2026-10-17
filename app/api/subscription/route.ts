@@ -8,14 +8,13 @@ import { readCallerPlan } from '@/lib/subscription/plan'
    `components/catetind/subscription-gate-provider.tsx` sebagai sumber paket
    untuk kunci fitur per tier.
 
-   Bentuk balasan (paket 84 — tidak ada lagi periode/masa aktif):
-     { ok, configured, active, planId, purchasedAt }
+   Bentuk balasan (rilis prepaid):
+     { ok, configured, active, planId, purchasedAt, expiresAt, isLifetime,
+       billingPeriod, expired }
 
-   Baris dibaca dengan token PEMANGGIL; RLS `user_id = auth.uid()` yang
-   menyaring, jadi route ini tidak pernah bisa membocorkan paket user lain.
-
-   Tanpa backend Supabase (build tanpa env / test) → jawaban jujur
-   `{ active:false, configured:false }`, bukan "sepertinya aktif". */
+   `active` true hanya kalau baris ADA, `is_active`, dan masa aktifnya belum
+   lewat. `planId` tetap dikembalikan saat expired supaya panel billing bisa
+   menawarkan perpanjangan paket yang sama. */
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -29,13 +28,18 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, error: 'Paket tidak bisa dibaca.' }, { status: 502 })
   }
 
-  /* `active` sengaja hanya true kalau barisnya ADA dan ditandai aktif: baris
-     yang belum dipenuhi webhook tidak boleh mengaku memberi akses. */
+  /* `active` sengaja hanya true kalau barisnya ADA, ditandai aktif, DAN masa
+     aktifnya belum lewat. `planId` tetap dikembalikan saat expired supaya panel
+     billing bisa menawarkan perpanjangan paket yang sama. */
   return NextResponse.json({
     ok: true,
     configured: caller.configured,
     active: caller.configured && caller.active,
-    planId: caller.active ? caller.planId : null,
-    purchasedAt: caller.active ? caller.purchasedAt : null,
+    planId: caller.configured ? caller.planId : null,
+    purchasedAt: caller.configured ? caller.purchasedAt : null,
+    expiresAt: caller.configured ? caller.expiresAt : null,
+    isLifetime: caller.configured ? caller.isLifetime : false,
+    billingPeriod: caller.configured ? caller.billingPeriod : null,
+    expired: caller.configured ? caller.expired : false,
   })
 }

@@ -1,34 +1,19 @@
 import type { Metadata } from 'next'
-import { LandingNavbar } from '@/components/landing/landing-navbar'
-import { Hero } from '@/components/landing/hero'
-import { PainCalculator } from '@/components/landing/pain-calculator'
-import { WealthGap } from '@/components/landing/wealth-gap'
-import { SocialProof } from '@/components/landing/social-proof'
-import { PricingSection } from '@/components/landing/pricing-section'
-import { FaqSection } from '@/components/landing/faq-section'
-import { LandingFooter } from '@/components/landing/landing-footer'
-import { StickyCtaBar } from '@/components/landing/sticky-cta-bar'
-import { LandingCtaProvider } from '@/components/landing/landing-cta-provider'
+import { LandingFaqLp } from '@/components/landing/lp/faq'
+import { LandingFooterLp } from '@/components/landing/lp/footer'
+import { LandingHeroLp } from '@/components/landing/lp/hero'
+import { LandingMissionLp } from '@/components/landing/lp/mission'
+import { LandingNavbarLp } from '@/components/landing/lp/navbar'
+import { LandingPricingLp } from '@/components/landing/lp/pricing'
 import { LANDING_META } from '@/lib/data/landing'
 
-/**
- * LANDING PAGE PUBLIK — route root `/` (inventaris #1–#2).
- *
- * Sebelumnya root adalah Dashboard; sejak dashboard pindah ke `/app`, root jadi
- * halaman pemasaran. Struktur section (atas → bawah):
- *   1. Navbar (fixed, transparan → berlatar saat digulir)
- *   2. Hook emosional (nol CTA)
- *   3. Pain Calculator (interaktif, klien)
- *   4. Wealth Gap Visualizer (Recharts, animasi saat terlihat)
- *   5. Social proof (feed + testimoni)
- *   6. Pricing + CTA primer → membuka sheet pendaftaran
- *   7. FAQ accordion
- *   8. Footer · Sticky CTA bar (muncul setelah Section 5 terlewat)
- *
- * `revalidate` membuat halaman ini ISR-ready (SSR + cache berkala) — isinya
- * statis, jadi cukup di-revalidate sesekali. Seluruh copy & angka dibaca dari
- * `lib/data/landing.ts`; tidak ada string user-facing di JSX.
- */
+/* ── LANDING PUBLIK `/` ──────────────────────────────────────────────────────
+   Landing baru (port Framer yang sekarang memakai Design System CatetInd:
+   Earth Pastel + Inter). Section: navbar → hero → mission → pricing → FAQ →
+   footer (footer sudah berisi CTA penutup). Semua copy + angka dibaca dari
+   `lib/data/landing.ts` / `lib/data/pricing.ts`; tidak ada string user-facing
+   di JSX. Rute preview lama sekarang 301 ke sini. */
+
 export const revalidate = 3600
 
 export const metadata: Metadata = {
@@ -52,22 +37,13 @@ export const metadata: Metadata = {
 
 export default function LandingPage() {
   return (
-    <main className="relative w-full bg-canvas text-forest">
-      <LandingNavbar />
-      {/* Provider CTA memegang state sheet pendaftaran + tier terpilih. Anaknya
-          tetap Server Component (dioper sebagai `children`), jadi hanya shell
-          kecil ini yang menjadi klien. */}
-      <LandingCtaProvider>
-        <Hero />
-        <PainCalculator />
-        <WealthGap />
-        <SocialProof />
-        <PricingSection />
-        <FaqSection />
-        <LandingFooter />
-        <StickyCtaBar />
-      </LandingCtaProvider>
+    <main className="w-full bg-canvas font-sans text-forest">
+      <LandingNavbarLp />
+      <LandingHeroLp />
+      <LandingMissionLp />
+      <LandingPricingLp />
+      <LandingFaqLp />
+      <LandingFooterLp />
     </main>
   )
 }
-

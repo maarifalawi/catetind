@@ -16,19 +16,14 @@ import {
 import { nextTier, upgradeTargets } from '@/lib/data/upgrade'
 import { useSubscriptionGate } from './subscription-gate-provider'
 
-/* ── MODAL UPGRADE (paket 84) ────────────────────────────────────────────────
-   Menggantikan `renewal-modal.tsx` (perpanjangan) DAN `annual-plan-modal.tsx`
-   (pemilih paket tahunan). Dua alur itu sekarang satu: naik tier dengan bayar
-   SELISIH.
-
-   Prinsip yang dipegang di sini:
-     · nominal SELALU dari `priceFor()` — tidak ada angka tulis tangan, jadi
-       tidak mungkin beda dengan yang ditagih server;
-     · hanya paket yang LEBIH TINGGI yang ditawarkan (downgrade tidak ada,
-       karena tidak ada refund);
-     · user yang belum punya paket tidak melihat tabel selisih, tapi ajakan
-       membeli yang jelas;
-     · tidak ada tombol palsu: semua CTA benar-benar menuju halaman bayar. */
+/* ── MODAL UPGRADE ───────────────────────────────────────────────────────────
+   Menampilkan target tier yang lebih tinggi. Nominal SELALU dari `priceFor()`:
+     · lifetime → lifetime lebih rendah: selisih;
+     · monthly → lifetime: harga penuh lifetime (tanpa prorate);
+     · belum punya paket: harga penuh target.
+   Tidak ada tombol palsu: semua CTA menuju halaman bayar dengan `period` yang
+   benar. Modal ini bukan satu-satunya jalan renew — perpanjangan monthly ada di
+   billing panel dan banner expired. */
 
 function fill(template: string, values: Record<string, string>): string {
   return Object.entries(values).reduce(
@@ -38,7 +33,7 @@ function fill(template: string, values: Record<string, string>): string {
 }
 
 export function UpgradeModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { plan, planId } = useSubscriptionGate()
+  const { plan, planId, isLifetime } = useSubscriptionGate()
   useBodyScrollLock(open)
 
   if (!open) return null
@@ -106,7 +101,12 @@ export function UpgradeModal({ open, onClose }: { open: boolean; onClose: () => 
         {plan && targets.length > 0 && (
           <ul className="mt-5 flex flex-col gap-2.5">
             {targets.map((target) => (
-              <UpgradeTargetRow key={target.id} target={target} ownedPlanId={planId} />
+              <UpgradeTargetRow
+                key={target.id}
+                target={target}
+                ownedPlanId={planId}
+                ownedIsLifetime={isLifetime}
+              />
             ))}
           </ul>
         )}
@@ -127,11 +127,13 @@ export function UpgradeModal({ open, onClose }: { open: boolean; onClose: () => 
 function UpgradeTargetRow({
   target,
   ownedPlanId,
+  ownedIsLifetime,
 }: {
   target: PlanDefinition
   ownedPlanId: PlanId | null
+  ownedIsLifetime: boolean
 }) {
-  const diff = priceFor(target, ownedPlanId)
+  const diff = priceFor(target, { period: 'lifetime', ownedPlanId, ownedIsLifetime })
   return (
     <li className="rounded-2xl bg-cream p-4 ring-1 ring-soil/12">
       <div className="flex items-start justify-between gap-3">
@@ -158,11 +160,12 @@ function UpgradeTargetRow({
         {fill(UPGRADE_COPY.diffNote, {
           target: target.name,
           full: formatIDR(target.lifetime),
+          amount: formatIDR(diff),
         })}
       </p>
 
       <Link
-        href={buildUpgradeHref(target.id, ownedPlanId)}
+        href={buildUpgradeHref(target.id, ownedPlanId, 'lifetime')}
         className="group mt-3 flex h-11 w-full items-center justify-between gap-2 rounded-full bg-forest pl-5 pr-1.5 text-cream transition-colors hover:bg-forest-soft"
       >
         <span className="flex items-center gap-1.5 text-[13px] font-medium">

@@ -14,12 +14,20 @@ import { restConfigured, restFetch } from '@/lib/supabase/rest'
 export interface CallerPlan {
   /** backend Supabase terkonfigurasi? kalau false, jawabannya "tidak tahu" */
   configured: boolean
-  /** paket aktif yang tersimpan; `null` = belum pernah beli */
+  /** paket yang tersimpan; `null` = belum pernah beli. Tetap diisi saat expired. */
   planId: PlanId | null
   /** kapan pembelian dicatat (ISO); `null` kalau tidak diketahui */
   purchasedAt: string | null
-  /** true = ada baris langganan aktif */
+  /** kapan masa aktif 30 hari berakhir (ISO); `null` untuk lifetime */
+  expiresAt: string | null
+  /** true = paket lifetime (tidak punya tanggal berakhir) */
+  isLifetime: boolean
+  /** periode yang tercatat di database */
+  billingPeriod: 'monthly' | 'lifetime' | null
+  /** true = akses boleh dipakai sekarang (`is_active` + masa aktif) */
   active: boolean
+  /** true = prabayar 30 hari sudah lewat tanggal berakhir → mode baca-saja */
+  expired: boolean
   /**
    * true = pembacaan GAGAL (jaringan/DB), bukan "tidak punya paket".
    * Pembeda ini penting: route yang memakai guard harus tahu bedanya
@@ -32,6 +40,9 @@ interface SubscriptionRow {
   tier_name?: string | null
   is_active?: boolean | null
   started_at?: string | null
+  expires_at?: string | null
+  is_lifetime?: boolean | null
+  billing_period?: string | null
 }
 
 /**
@@ -70,23 +81,69 @@ export function normalizeTier(value: string | null | undefined): PlanId | null {
  */
 export async function readCallerPlan(token: string): Promise<CallerPlan> {
   if (!restConfigured()) {
-    return { configured: false, planId: null, purchasedAt: null, active: false, failed: false }
+    return {
+      configured: false,
+      planId: null,
+      purchasedAt: null,
+      expiresAt: null,
+      isLifetime: false,
+      billingPeriod: null,
+      active: false,
+      expired: false,
+      failed: false,
+    }
   }
 
   const res = await restFetch<SubscriptionRow[]>(
-    'user_subscriptions?select=tier_name,is_active,started_at&limit=1',
+    'user_subscriptions?select=tier_name,is_active,started_at,expires_at,is_lifetime,billing_period&limit=1',
     { accessToken: token },
   )
   if (!res.ok) {
-    return { configured: true, planId: null, purchasedAt: null, active: false, failed: true }
+    return {
+      configured: true,
+      planId: null,
+      purchasedAt: null,
+      expiresAt: null,
+      isLifetime: false,
+      billingPeriod: null,
+      active: false,
+      expired: false,
+      failed: true,
+    }
   }
 
   const row = Array.isArray(res.data) ? res.data[0] : undefined
+  const isLifetime = row?.is_lifetime === true
+  const expiresAt = row?.expires_at ?? null
+  const expiresMs = expiresAt ? Date.parse(expiresAt) : null
+  const hasValidExpiry = expiresMs !== null && Number.isFinite(expiresMs)
+
+  /* `is_active` saja TIDAK cukup: baris prabayar yang sudah lewat tanggal harus
+     dianggap tidak aktif untuk penulisan, walau `is_active` masih true. */
+  const now = Date.now()
+  const active = Boolean(row?.is_active) && (isLifetime || (hasValidExpiry && expiresMs > now))
+  const expired =
+    Boolean(row?.is_active) && !isLifetime && hasValidExpiry && expiresMs <= now
+
+  const rawPeriod = row?.billing_period
+  const billingPeriod: CallerPlan['billingPeriod'] =
+    rawPeriod === 'monthly' || rawPeriod === 'lifetime'
+      ? rawPeriod
+      : isLifetime
+        ? 'lifetime'
+        : row
+          ? 'monthly'
+          : null
+
   return {
     configured: true,
     planId: normalizeTier(row?.tier_name),
     purchasedAt: row?.started_at ?? null,
-    active: Boolean(row?.is_active),
+    expiresAt,
+    isLifetime,
+    billingPeriod,
+    active,
+    expired,
     failed: false,
   }
 }

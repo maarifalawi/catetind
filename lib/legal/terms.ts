@@ -69,8 +69,7 @@ export const TERMS_DOC: LegalDocument = {
   eyebrow: 'Legal · CatetInd',
   title: 'Syarat & Ketentuan',
   intro: [
-    'Halaman ini aturan main memakai CatetInd: apa yang layanan ini lakukan, apa yang sengaja TIDAK dilakukannya, dan apa yang tetap jadi milikmu. Kami menulisnya dengan bahasa manusia, termasuk bagian yang biasanya disembunyikan di huruf kecil.',
-    'Kalau kamu hanya punya waktu satu menit, baca bagian Ringkasan di bawah. Sisanya adalah penjelasan lengkap untuk tiap janji — plus tanda jujur di bagian mana yang masih menunggu tinjauan hukum.',
+    'Aturan main layanan ini: apa yang CatetInd lakukan, apa yang tidak dilakukannya, dan apa yang tetap jadi milikmu.',
   ],
   updatedLabel: 'Terakhir diperbarui',
   updatedHuman: TERMS_UPDATED_HUMAN,
@@ -253,7 +252,7 @@ export const TERMS_DOC: LegalDocument = {
         'Setiap paket dibayar SEKALI untuk akses selamanya. Tidak ada periode bulanan/tahunan, jadi tidak ada penagihan berulang yang harus dihitung ulang.',
         'Naik ke paket yang lebih tinggi cukup membayar SELISIH dari harga paket yang sedang kamu miliki. Sistem menghitungnya sendiri dari daftar harga resmi, dan angkanya tampil sebelum kamu membayar.',
         'Downgrade tidak kami tawarkan: tidak ada pengembalian uang, dan kami tidak mau menagihmu untuk akses yang lebih sedikit.',
-        'Garansi uang kembali: kalau dalam 30 hari kamu merasa CatetInd bukan untukmu, kirim email ke support@catetind.com dengan alasan singkat dan kami proses pengembaliannya dalam 3–5 hari kerja. Tanpa pertanyaan yang aneh-aneh.',
+        'Garansi uang kembali: kalau dalam 30 hari kamu merasa CatetInd bukan untukmu, kirim email ke halo@catetind.com dengan alasan singkat dan kami proses pengembaliannya dalam 3–5 hari kerja. Tanpa pertanyaan yang aneh-aneh.',
       ],
       note: {
         label: 'REVIEW LEGAL — cakupan garansi',
@@ -358,7 +357,7 @@ export const TERMS_DOC: LegalDocument = {
       title: 'Kontak',
       paragraphs: [
         'Pertanyaan, keberatan, atau permintaan soal akun dan datamu bisa dimulai dari Pusat Bantuan: buka artikel mana pun, tekan 👎 di kakinya, lalu kirim pesan. Balasan datang dari manusia — langsung dari founder, bukan bot dan bukan tiket yang mengantre.',
-        'Kalau lebih nyaman lewat email, kirim ke support@catetind.com — sertakan screenshot untuk masalah tampilan, karena kami memang tidak bisa membuka datamu untuk mengeceknya sendiri.',
+        'Kalau lebih nyaman lewat email, kirim ke halo@catetind.com — sertakan screenshot untuk masalah tampilan, karena kami memang tidak bisa membuka datamu untuk mengeceknya sendiri.',
       ],
     },
   ],

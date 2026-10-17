@@ -4,46 +4,42 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Lock, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { CHECKOUT_PATH, formatIDR } from '@/lib/data/pricing'
-import { upgradeBannerCopy } from '@/lib/data/upgrade'
+import { CHECKOUT_PATH, buildCheckoutHref, formatIDR } from '@/lib/data/pricing'
+import { expiredBannerCopy, upgradeBannerCopy } from '@/lib/data/upgrade'
 import { useSubscriptionGate } from './subscription-gate-provider'
 import { UpgradeModal } from './upgrade-modal'
 
-/* ── BANNER PAKET GLOBAL (paket 84 — pengganti banner masa aktif) ────────────
-   Dulu banner ini mengabarkan "masa aktifmu tersisa N hari" dan membuka modal
-   perpanjangan. Karena semua paket sekarang AKSES SELAMANYA, keadaan itu tidak
-   pernah bisa terjadi lagi — jadi isinya diganti dengan dua keadaan yang NYATA:
+/* ── BANNER PAKET GLOBAL ─────────────────────────────────────────────────────
+   Banner ini menampilkan keadaan yang NYATA:
+     1. prabayar 30 hari sudah lewat tanggal → ajak perpanjang monthly;
+     2. user punya paket tapi belum di tier tertinggi → ajakan upgrade;
+     3. user terverifikasi belum punya paket → ajakan memilih paket.
 
-     1. user sudah beli tapi belum di tier tertinggi → ajakan upgrade dengan
-        selisih dari `priceFor()` (tidak ada angka tulis tangan);
-     2. user terverifikasi belum punya paket → ajakan memilih paket.
+   Nominal selalu dari `priceFor()`; tidak ada angka tulis tangan. Banner tidak
+   muncul saat status paket belum bisa dipastikan (configured:false / tanpa
+   Supabase) karena menuduh user belum bayar berdasarkan ketidaktahuan itu salah.
 
-   Banner ini SENGAJA tidak muncul saat paket user belum bisa dipastikan
-   (`configured:false`, mis. build demo/tanpa Supabase): mengabarkan "belum ada
-   paket aktif" untuk user yang statusnya tidak kita ketahui adalah menuduh,
-   dan di build demo berarti bar ini nongol di setiap halaman.
-
-   Bisa ditutup (tombol X) — beda dari banner masa-aktif dulu yang sengaja tidak
-   bisa ditutup karena ia menjelaskan tombol yang mati. Sekarang tidak ada tombol
-   yang mati karena banner ini, jadi menutupnya tidak menyembunyikan sebab apa
-   pun; ia kembali muncul setelah user me-refresh (state tidak disimpan, supaya
-   tidak ada penanda localStorage baru yang perlu dirawat). */
+   Bisa ditutup (tombol X). State dismiss tidak disimpan; refresh memunculkannya
+   lagi supaya user masih punya jalan ke perpanjangan/upgrade. */
 
 export function SubscriptionBanner() {
-  const { planId, inputLocked, onPublicRoute } = useSubscriptionGate()
+  const { plan, planId, isLifetime, expired, inputLocked, onPublicRoute } = useSubscriptionGate()
   const [open, setOpen] = useState(false)
   const [dismissed, setDismissed] = useState(false)
 
-  /* `inputLocked` = user terverifikasi belum punya paket (lihat provider) */
-  const copy = planId
-    ? upgradeBannerCopy(planId, formatIDR)
-    : inputLocked
-      ? upgradeBannerCopy(null, formatIDR)
-      : null
+  /* Tiga keadaan nyata: expired (ajak perpanjang), sudah beli (ajak upgrade),
+     atau terverifikasi belum punya paket (ajak pilih paket). */
+  const copy = expired
+    ? expiredBannerCopy(plan?.name ?? 'paket')
+    : planId
+      ? upgradeBannerCopy(planId, formatIDR, isLifetime)
+      : inputLocked
+        ? upgradeBannerCopy(null, formatIDR)
+        : null
 
   if (onPublicRoute || !copy || dismissed) return null
 
-  const isUpgrade = Boolean(planId)
+  const isUpgrade = Boolean(planId) && !expired
 
   return (
     <>
@@ -94,7 +90,7 @@ export function SubscriptionBanner() {
             </button>
           ) : (
             <Link
-              href={CHECKOUT_PATH}
+              href={expired ? buildCheckoutHref(planId ?? null, 'monthly') : CHECKOUT_PATH}
               className="shrink-0 rounded-full bg-forest px-4 py-2 text-xs font-medium text-cream shadow-[0_12px_24px_-16px_rgba(0,0,0,0.9)] transition-colors hover:bg-forest-soft active:scale-95"
             >
               {copy.cta}

@@ -28,3 +28,13 @@ node_modules
 # tanpa perubahan kode apa pun. File lokalnya TIDAK dihapus - hanya berhenti
 # dilacak git (task 22).
 tsconfig.tsbuildinfo
+
+# Export Framer sumber port landing (HTML 534 KB + folder "Save page" browser).
+# Spesifikasi yang dipakai kode sudah diekstrak ke docs/landing/framer-spec.json
+# dan gambar yang dibutuhkan sudah disalin ke public/landing/, jadi dua artefak
+# ini cukup disimpan lokal sebagai bahan kerja (`pnpm landing:spec`).
+LP CATETIND.html
+LP CATETIND_files/
+
+# Screenshot QA landing — hasil sekali pakai `scripts/landing/shoot.mjs`.
+docs/landing/shots/

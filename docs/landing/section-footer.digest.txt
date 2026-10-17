@@ -1,0 +1,121 @@
+<div | position:absolute; border-radius:inherit; right:0; bottom:0; left:0
+  <img src=ecsvVHaKUpgixFh7HmsoZYYI.png?width=2400&amp;height=1800 | display:block; width:100%; height:100%; border-radius:inherit
+  <footer [Footer] .framer-4ci17t
+    <div [container] .framer-1he0b7y
+      <div [Footer Content] .framer-1cvijec
+        <div .framer-y05n1n
+          <div .framer-1bzndpn
+            <div .framer-6ZoTL.framer-hda1bv
+              <div .framer-blkg1e
+                <div .framer-48xza5
+                <div .framer-1c8dihg | transform:none
+                <p .framer-text.framer-styles-preset-ftfde0
+                <strong .framer-text
+                <div [Links] .framer-zqsmk2
+                <div [Footer Menu Wrapper] .framer-hiubw3
+                <div .framer-1hy3fqo
+                <div .framer-1ef7bri | transform:none
+                <p .framer-text.framer-styles-preset-15gu9gr
+                <strong .framer-text
+                <div .framer-6mn5qe
+                <div .framer-1lvrftj | transform:none
+                <p .framer-text.framer-styles-preset-ftfde0
+                <a .framer-text.framer-styles-preset-1ioamtf href=./#hero
+                <div .framer-1w2fe7b | transform:none
+                <p .framer-text.framer-styles-preset-ftfde0
+                <a .framer-text.framer-styles-preset-1ioamtf href=./#card-1
+                <div .framer-1hc1h47 | transform:none
+                <p .framer-text.framer-styles-preset-ftfde0
+                <a .framer-text.framer-styles-preset-1ioamtf href=./#pricing
+                <div .framer-1blnf3s | transform:none
+                <p .framer-text.framer-styles-preset-ftfde0
+                <a .framer-text.framer-styles-preset-1ioamtf href=./
+                <div .framer-1rdpqno | transform:none
+                <p .framer-text.framer-styles-preset-ftfde0
+                <a .framer-text.framer-styles-preset-1ioamtf href=./#faq
+                <div .framer-1uuv6qn
+                <div .framer-1p73xip | transform:none
+                <p .framer-text.framer-styles-preset-15gu9gr
+                <strong .framer-text
+                <div .framer-40dfnd
+                <div .framer-yuayn1 | transform:none
+                <p .framer-text.framer-styles-preset-ftfde0
+                <a .framer-text.framer-styles-preset-1ioamtf href=./
+                <div .framer-ekn7ge | transform:none
+                <p .framer-text.framer-styles-preset-ftfde0
+                <a .framer-text.framer-styles-preset-1ioamtf href=./changelog
+                <div .framer-1wfesal | transform:none
+                <p .framer-text.framer-styles-preset-ftfde0
+                <a .framer-text.framer-styles-preset-1ioamtf href=./contact
+                <div .framer-5d043s | transform:none
+                <p .framer-text.framer-styles-preset-ftfde0
+                <a .framer-text.framer-styles-preset-1ioamtf href=./
+                <div .framer-1h6g5kv
+                <div .framer-1uluh99 | transform:none
+                <p .framer-text.framer-styles-preset-15gu9gr
+                <strong .framer-text
+                <div .framer-1g07k13
+                <div .framer-yqzyan | transform:none
+                <p .framer-text.framer-styles-preset-ftfde0
+                <a .framer-text.framer-styles-preset-1ioamtf href=https://x.com/
+                <div .framer-13kwd6h | transform:none
+                <p .framer-text.framer-styles-preset-ftfde0
+                <a .framer-text.framer-styles-preset-1ioamtf href=https://www.facebook.com/?
+                <div .framer-16uw2i3 | transform:none
+                <p .framer-text.framer-styles-preset-ftfde0
+                <a .framer-text.framer-styles-preset-1ioamtf href=https://www.instagram.com
+                <div .framer-1eck1n7 | transform:none
+                <p .framer-text.framer-styles-preset-ftfde0
+                <a .framer-text.framer-styles-preset-1ioamtf href=https://discord.com
+                <div .framer-vxgbxp
+                <div .framer-btbbsd | transform:none
+                <p .framer-text.framer-styles-preset-15gu9gr
+                <strong .framer-text
+                <div .framer-80pc19
+                <div .framer-1aq22m1 | transform:none
+                <p .framer-text.framer-styles-preset-ftfde0
+                <a .framer-text.framer-styles-preset-1ioamtf href=./terms-of-use
+                <div .framer-1xwxtfw | transform:none
+                <p .framer-text.framer-styles-preset-ftfde0
+                <a .framer-text.framer-styles-preset-1ioamtf href=./privacy-policy
+                <div .framer-2r3oiq | transform:none
+                <p .framer-text.framer-styles-preset-ftfde0
+                <a .framer-text.framer-styles-preset-1ioamtf href=./cookie-policy
+                <div [Big Label] .framer-gtsb1f
+                <div .
+                <svg .framer-ms8g6c | transform:none
+                <h1 .framer-text
+                <span .framer-text
+                <div .
+                <svg .framer-ms8g6c | transform:none
+                <h1 .framer-text
+                <div .framer-15r8o0p-container
+                <li href=https://unpkg.com/lenis@1.3.17-framer/dist/lenis.css
+                <div #template-overlay
+                <div #__framer-badge-container
+                <a #n0ccwk [Light] .framer-6jWyo.framer-n0ccwk.framer-v-n0ccwk.framer-bmpgw8 href=https://www.framer.com | opacity:0.001; transform:translateY(10px)
+                <div [Backdrop] .framer-13yxzio | background-color:rgb(255, 255, 255); border-bottom-left-radius:10px; border-bottom-right-radius:10px; border-top-left-radius:10px; border-top-right-radius:10px; box-shadow:0px 0.6021873017743928px 1.5656869846134214px -1.5px rgba(0, 0, 0, 0.17), 0px 2.288533303243457px 5.950186588432988px -3px rgba(0, 0, 0, 0.14), 0px 10px 26px -4.5px rgba(0, 0, 0, 0.02)
+                <div [Content] .framer-19yaanm | transform:translate(-50%, -50%)
+                <div .framer-1kflzx5
+                <div [Logo] .framer-hcsc7.framer-e50co | transform:translateX(-50%)
+                <p | position:absolute; transform:scale(0.001)
+                <div [Text] .framer-g7oZR.framer-1um7t9d
+                <div [Bottom] .framer-j4ugry | border-bottom-left-radius:11px; border-bottom-right-radius:11px; border-top-left-radius:11px; border-top-right-radius:11px; box-shadow:inset 0px 0px 0px 1px rgb(0, 0, 0); opacity:0.06
+                <div [Border] .framer-jnuwbw | border-bottom-left-radius:11px; border-bottom-right-radius:11px; border-top-left-radius:11px; border-top-right-radius:11px; box-shadow:inset 0px 0px 0px 1px rgb(0, 0, 0); opacity:0.04
+                <li href=https://framerusercontent.com/sites/5acCjlgl68PTnBB45PA6L1/rolldown-runtime.Dh6celcD.mjs
+                <li href=https://framerusercontent.com/sites/5acCjlgl68PTnBB45PA6L1/react.DSZvp07T.mjs
+                <li href=https://framerusercontent.com/sites/5acCjlgl68PTnBB45PA6L1/motion.DYtuZRjO.mjs
+                <li href=https://framerusercontent.com/sites/5acCjlgl68PTnBB45PA6L1/framer.aAgHhXsl.mjs
+                <li href=https://framerusercontent.com/sites/5acCjlgl68PTnBB45PA6L1/liMtXIE85.B9i14Q47.mjs
+                <li href=https://framerusercontent.com/sites/5acCjlgl68PTnBB45PA6L1/shared-lib.D1TZR2IZ.mjs
+                <li href=https://framerusercontent.com/sites/5acCjlgl68PTnBB45PA6L1/Y8gUMSZo3.BLboVB6M.mjs
+                <li href=https://framerusercontent.com/sites/5acCjlgl68PTnBB45PA6L1/ghVUCRsUm.DXa4OUe6.mjs
+                <li href=https://framerusercontent.com/sites/5acCjlgl68PTnBB45PA6L1/c4UgmpNtn.CCyvwRZG.mjs
+                <li href=https://framerusercontent.com/sites/5acCjlgl68PTnBB45PA6L1/-zHLsPxn-kA-_EvAKYBm6F9ei6P7Mp1KLzPpviW591w.D9dBpI3Q.mjs
+                <li href=https://framerusercontent.com/sites/5acCjlgl68PTnBB45PA6L1/bkjB1FjjJ.BJS47k4o.mjs
+                <li href=https://framerusercontent.com/sites/5acCjlgl68PTnBB45PA6L1/tjq8ws9eh.DLOXtAw9.mjs
+                <li href=https://framerusercontent.com/sites/5acCjlgl68PTnBB45PA6L1/aWc_i4Jv8.DsOvjyl3.mjs
+                <li href=https://framerusercontent.com/sites/5acCjlgl68PTnBB45PA6L1/mHPzr8Usi.Cu56vhAI.mjs
+                <li href=https://framerusercontent.com/sites/5acCjlgl68PTnBB45PA6L1/h_FVrZyoG.Bu9t2LQf.mjs
+                <li href=https://framerusercontent.com/sites/5acCjlgl68PTnBB45PA6L1/KvNWXwfvasZC_4gL-N0F_ahjGNTvbQix5CUqitIedQc.CdnVtSl9.mjs
+                <div #svg-templates | position: absolute; bottom: 0; left: 0; width: 0; height: 0; z-index: 0

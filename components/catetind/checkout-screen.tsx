@@ -9,9 +9,10 @@ import {
   CHECKOUT_COPY,
   CHECKOUT_STEPS,
   HERO_PLAN,
-  LIFETIME_LABEL,
+  PERIOD_LABEL,
   PLANS,
   PRICING_TRUST_BADGES,
+  PREPAID_BADGE,
   REFERRAL_DISCOUNT_PCT,
   SEKALI_BAYAR_BADGE,
   applyReferralDiscount,
@@ -20,6 +21,7 @@ import {
   formatIDR,
   isValidReferralCode,
   offerPrice,
+  type BillingPeriod,
   type PlanDefinition,
   type PlanId,
   type TrustBadge,
@@ -41,50 +43,45 @@ import { WELCOME_PATH } from '@/lib/data/welcome'
    kanan. Semua isi lama tetap ada (langkah, pilihan paket, harga, trust badge,
    kode teman, ringkasan, tombol bayar) — yang berubah hanya bingkainya.
 
-   PAKET 64 — ALUR AKTUAL (Midtrans di-bypass sprint ini):
-     CTA "Daftar & mulai" → sheet registrasi (email + nama + kode teman
-     divalidasi ke DATABASE) → akun Supabase dibuat tanpa password →
-       · verifikasi email wajib  → `/login/verify` (langkah "buka emailmu")
-       · auto-login (autoconfirm) → Dashboard
-   `SnapPaymentSheet` sengaja TIDAK lagi dibuka dari sini: pembayaran Midtrans
-   ditunda, dan halaman tidak boleh berpura-pura menagih. Komponennya masih ada
-   untuk sprint berikutnya.
+   Halaman ini memilih paket + periode (monthly/lifetime), lalu registrasi
+   (email + nama + kode teman) dan pembayaran di `/checkout/bayar`. Tidak ada
+   harga yang ditulis di JSX: semua dari `lib/data/pricing.ts`.
 
    Yang TIDAK ada di sini, dan memang sengaja:
-   • field password/telepon/alamat/gender/tanggal lahir (PRD 5904–5905)
-   • hitungan mundur "harga naik 5 menit lagi" atau angka pembelian fiktif
-     (PRD 5174–5177) — halaman ini hanya menampilkan yang benar-benar diketahui
-   • daftar harga sendiri: semua angka dibaca dari `lib/data/pricing.ts`
+     • field password/telepon/alamat/gender/tanggal lahir
+     • hitungan mundur harga palsu atau angka pembelian fiktif
+     • daftar harga sendiri: semua angka dibaca dari `lib/data/pricing.ts`
 
-   Kenapa satu pembelian, bukan dua daftar SKU: PRD 4594–4606 menuntut satu
-   harga per tier di mana pun. Harga bulanan di sini diturunkan dari harga kanon
-   yang sama, dan pilihan "Seumur hidup" membawa paket Founding Member.
+   Kenapa satu sumber harga: PRD 4594–4606 menuntut satu harga per tier di mana
+   pun. Monthly dan lifetime sama-sama berasal dari `PLANS`.
    ────────────────────────────────────────────────────────────────────────── */
-
-/** paket yang bisa dipilih: 3 tier akses selamanya */
 type OfferId = PlanId
 
 export function CheckoutScreen({
   initialPlanId,
+  initialPeriod = 'monthly',
   initialReferralCode,
 }: {
   /**
-   * Pilihan awal dari query `/checkout?plan=…&kode=…`.
+   * Pilihan awal dari query `/checkout?plan=…&period=…&kode=…`.
    *
    * Sebelum ini halaman selalu membuka paket hero, sehingga konteks user hilang
    * begitu ia keluar dari halaman ini (klik "Masuk", atau datang dari tautan
    * referral `/r/<kode>`): paket yang tadi dipilih harus dipilih ulang. Nilainya
    * dipercaya HANYA setelah dicocokkan dengan katalog kanon — query string tidak
-   * boleh menentukan penawaran yang tidak dijual. Sejak paket 84 tidak ada lagi
-   * parameter `period`.
+   * boleh menentukan penawaran yang tidak dijual.
    */
   initialPlanId?: PlanId
+  /** `monthly` (prabayar 30 hari) atau `lifetime` */
+  initialPeriod?: BillingPeriod
   initialReferralCode?: string | null
 } = {}) {
   /** paket terpilih — default paket hero (Waras), yaitu rekomendasi produk */
   const [offerId, setOfferId] = useState<OfferId>(() =>
     initialPlanId && PLANS.some((item) => item.id === initialPlanId) ? initialPlanId : HERO_PLAN.id,
   )
+  /** periode terpilih — default prabayar 30 hari */
+  const [period, setPeriod] = useState<BillingPeriod>(initialPeriod)
   /** kode teman: input mentah, kode yang sudah dipakai, dan status error */
   const [codeInput, setCodeInput] = useState(() => initialReferralCode?.toUpperCase() ?? '')
   const [appliedCode, setAppliedCode] = useState<string | null>(() => {
@@ -99,12 +96,13 @@ export function CheckoutScreen({
 
   const plan: PlanDefinition = PLANS.find((item) => item.id === offerId) ?? HERO_PLAN
 
-  const listPrice = offerPrice(plan)
+  const listPrice = offerPrice(plan, { period })
   const discount = appliedCode ? listPrice - applyReferralDiscount(listPrice) : 0
   const total = listPrice - discount
   const offerName = plan.name
   const features = plan.features
-  const periodLabel = LIFETIME_LABEL
+  const periodLabel = PERIOD_LABEL[period]
+  const premiumBadge = period === 'monthly' ? PREPAID_BADGE : SEKALI_BAYAR_BADGE
 
   function handleApplyCode() {
     const trimmed = codeInput.trim()
@@ -139,7 +137,7 @@ export function CheckoutScreen({
        user yang baru memverifikasi email langsung mendarat di pembayaran (paket
        yang sedang dipilih) — bukan Dashboard — dan tautan di emailnya pun
        mengarah ke sana. */
-    const payHref = buildPayHref(offerId, appliedCode)
+    const payHref = buildPayHref(offerId, period, appliedCode)
     const outcome = await registerAccount({
       email: result.email,
       nickname: result.nickname,
@@ -163,7 +161,7 @@ export function CheckoutScreen({
     void fetchSessionUser()
       .then((user) => {
         if (user) {
-          router.push(buildPayHref(offerId, appliedCode))
+          router.push(buildPayHref(offerId, period, appliedCode))
           return
         }
         setRegistrationOpen(true)
@@ -260,17 +258,60 @@ export function CheckoutScreen({
               </span>
             </div>
 
-            {/* Sejak paket 84 tidak ada pemilih periode: satu paket = satu harga,
-                sekali bayar untuk akses selamanya. Yang ditampilkan justru
-                keterangan durasinya — supaya user tidak menebak-nebak. */}
-            <p className="mt-3.5 text-[12.5px] font-medium text-forest/70">{LIFETIME_LABEL}</p>
+            {/* Dua periode nyata: prabayar 30 hari (default) dan lifetime.
+                Keduanya sekali bayar; tidak ada auto-debet. */}
+            <div
+              role="radiogroup"
+              aria-label={CHECKOUT_COPY.periodTitle}
+              className="mt-3.5 grid grid-cols-2 gap-2"
+            >
+              <button
+                type="button"
+                role="radio"
+                aria-checked={period === 'monthly'}
+                onClick={() => setPeriod('monthly')}
+                className={cn(
+                  'rounded-2xl px-3.5 py-2.5 text-left ring-1 transition-colors',
+                  period === 'monthly'
+                    ? 'bg-sage/70 ring-forest/35'
+                    : 'bg-cream ring-soil/12 hover:bg-sage/40',
+                )}
+              >
+                <span className="block text-[12.5px] font-medium text-forest">
+                  {CHECKOUT_COPY.periodMonthlyLabel}
+                </span>
+                <span className="mt-0.5 block text-[10.5px] leading-relaxed text-forest/50">
+                  {CHECKOUT_COPY.periodMonthlyNote}
+                </span>
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={period === 'lifetime'}
+                onClick={() => setPeriod('lifetime')}
+                className={cn(
+                  'rounded-2xl px-3.5 py-2.5 text-left ring-1 transition-colors',
+                  period === 'lifetime'
+                    ? 'bg-sage/70 ring-forest/35'
+                    : 'bg-cream ring-soil/12 hover:bg-sage/40',
+                )}
+              >
+                <span className="block text-[12.5px] font-medium text-forest">
+                  {CHECKOUT_COPY.periodLifetimeLabel}
+                </span>
+                <span className="mt-0.5 block text-[10.5px] leading-relaxed text-forest/50">
+                  {CHECKOUT_COPY.periodLifetimeNote}
+                </span>
+              </button>
+            </div>
 
-            {/* tier akses selamanya — satu daftar */}
+            {/* tier paket — harga mengikuti periode terpilih */}
             <ul className="mt-3.5 space-y-2">
               {PLANS.map((item) => (
                 <li key={item.id}>
                   <OfferOption
                     plan={item}
+                    period={period}
                     active={item.id === offerId}
                     onSelect={() => setOfferId(item.id)}
                   />
@@ -318,7 +359,7 @@ export function CheckoutScreen({
                 <ShieldCheck className="size-4" strokeWidth={2.2} aria-hidden />
               </span>
               <p className="min-w-0 self-center rounded-2xl bg-mint/25 px-3.5 py-2.5 text-[12.5px] leading-relaxed font-medium text-forest ring-1 ring-forest/10">
-                {SEKALI_BAYAR_BADGE}
+                {premiumBadge}
               </p>
             </div>
 
@@ -455,7 +496,7 @@ export function CheckoutScreen({
         onContinue={handleRegistered}
         /* "Sudah punya akun? Masuk" harus mengembalikan user ke pilihan yang
            SAMA setelah ia masuk — lihat `buildCheckoutHref()`. */
-        loginHref={buildCheckoutHref(offerId, appliedCode)}
+        loginHref={buildCheckoutHref(offerId, period, appliedCode)}
       />
     </>
   )
@@ -468,15 +509,17 @@ export function CheckoutScreen({
    bulanan/tahunan; pemilih periode itu sudah dihapus. */
 function OfferOption({
   plan,
+  period,
   active,
   onSelect,
 }: {
   plan: PlanDefinition
+  period: BillingPeriod
   active: boolean
   onSelect: () => void
 }) {
-  const price = plan.lifetime
-  const label = LIFETIME_LABEL
+  const price = period === 'monthly' ? plan.monthly : plan.lifetime
+  const label = PERIOD_LABEL[period]
 
   return (
     <button

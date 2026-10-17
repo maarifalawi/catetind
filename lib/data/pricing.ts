@@ -11,17 +11,19 @@
      • app/api/payment/charge/route.ts              → verifikasi nominal (server)
      • app/api/ai/* + lib/ai-quota.ts               → kunci kemampuan (server & UI)
 
-   PAKET 84 — KEPUTUSAN PRODUK YANG MENGIKAT SELURUH FILE INI:
-     1. HARGA = AKSES SELAMANYA. Sekali bayar, bukan langganan. TIDAK ADA
-        paket bulanan/tahunan, TIDAK ADA auto-renew, TIDAK ADA masa aktif,
-        tanggal kedaluwarsa, grace period, atau perpanjangan.
-        (`BillingPeriod` di bawah tinggal satu nilai: `lifetime`.)
+   KEPUTUSAN PRODUK YANG MENGIKAT SELURUH FILE INI (rilis prepaid):
+     1. DUA PERIODE NYATA. `monthly` = prabayar 30 hari (sekali bayar via
+        Midtrans, TANPA auto-debet; user memperpanjang manual). `lifetime` =
+        sekali bayar untuk akses selamanya. Tidak ada auto-renew dan tidak ada
+        token kartu yang disimpan.
      2. KUNCI FITUR PER TIER. Pembeli tier bawah tidak mendapat fitur tier atas
         — benar-benar terkunci: server menolak (403), klien menampilkan ajakan
         upgrade. Peta `PLAN_CAPABILITIES` adalah satu-satunya sumbernya.
-     3. UPGRADE = bayar SELISIH. Selisih selalu DIHITUNG dari `PLANS` lewat
-        `priceFor()` — tidak pernah angka yang ditulis ulang di komponen.
-     4. DOWNGRADE tidak ditawarkan (tidak ada refund).
+     3. UPGRADE LIFETIME = bayar SELISIH (dari lifetime yang sudah dimiliki),
+        sedangkan pembelian monthly selalu harga penuh monthly — boleh renew
+        maupun pindah tier (termasuk turun tier, tanpa refund sisa hari).
+     4. LIFETIME TIDAK BISA DITURUNKAN ke monthly. Server menolak pembelian
+        monthly saat user sudah lifetime.
 
    DILARANG menulis nominal paket langsung di JSX. Butuh angka baru? Tambahkan
    di sini — kalau tidak, lahir "daftar harga kedua" (larangan tegas di prompt
@@ -34,18 +36,41 @@ import { formatIDR } from '../weekly-recap'
 /** satu pintu impor untuk konsumen harga (pola sama dengan lib/data/bills.ts) */
 export { formatIDR }
 
-/* ── PAKET: AKSES SELAMANYA, SEKALI BAYAR ─────────────────────────────────── */
+/* ── PAKET: DUA PERIODE (PRABAYAR 30 HARI & LIFETIME) ─────────────────────── */
 
 export type PlanId = 'catet-aja' | 'waras' | 'sultan'
 
-/** satu-satunya periode yang dijual sejak paket 84: akses selamanya, sekali bayar */
-export type BillingPeriod = 'lifetime'
+/** periode yang benar-benar dijual: prabayar 30 hari atau akses selamanya */
+export type BillingPeriod = 'monthly' | 'lifetime'
+
+/** validasi query/body mentah → periode kanon; `null` kalau tidak dikenal */
+export function asBillingPeriod(value: unknown): BillingPeriod | null {
+  return value === 'monthly' || value === 'lifetime' ? value : null
+}
+
+/** lama paket prabayar — SATU angka, dipakai UI/SQL/tes */
+export const MONTHLY_DAYS = 30
 
 /** label durasi kanon — dipakai ringkasan checkout, kartu paket, dan billing */
 export const LIFETIME_LABEL = 'Sekali bayar, akses selamanya'
 
-/** badge kepercayaan pengganti "tanpa auto-renew": sekarang tidak ada tagihan berkala */
-export const SEKALI_BAYAR_BADGE = '✅ Sekali bayar — tidak ada tagihan bulanan.'
+/** label periode prabayar — jangan memakai "/bulan" (bukan langganan otomatis) */
+export const MONTHLY_LABEL = 'Langganan 30 hari'
+
+/** penjelasan mekanisme prabayar, dipakai badge & catatan checkout */
+export const PREPAID_LABEL = 'Prabayar 30 hari, tanpa auto-debet'
+
+/** label periode siap tampil di samping nominal */
+export const PERIOD_LABEL: Record<BillingPeriod, string> = {
+  monthly: 'per 30 hari',
+  lifetime: LIFETIME_LABEL,
+}
+
+/** badge kepercayaan periode prabayar */
+export const PREPAID_BADGE = '✅ Prabayar 30 hari — tanpa auto-debet.'
+
+/** badge periode lifetime (tetap dijual) */
+export const SEKALI_BAYAR_BADGE = '✅ Sekali bayar — akses selamanya.'
 
 export interface PlanDefinition {
   id: PlanId
@@ -53,10 +78,9 @@ export interface PlanDefinition {
   rank: 1 | 2 | 3
   name: string
   subtitle: string
-  /**
-   * harga akses selamanya (rupiah) — SATU-SATUNYA angka paket ini. Nominal
-   * bulanan/tahunan lama sudah tidak ada; jangan hidupkan kembali.
-   */
+  /** harga prabayar 30 hari (rupiah) — sekali bayar, tanpa auto-debet */
+  monthly: number
+  /** harga akses selamanya (rupiah) */
   lifetime: number
   /** rincian yang didapat — dipakai kartu checkout, modal upgrade, & billing */
   features: string[]
@@ -72,12 +96,13 @@ export const PLANS: PlanDefinition[] = [
     rank: 1,
     name: 'Paket Catet Aja',
     subtitle: 'Catat manual, tanpa AI',
+    monthly: 49_000,
     lifetime: 109_000,
     features: [
       'Catat pemasukan & pengeluaran',
       'Budget & kategori manual',
       'Pohon Uang (basic)',
-      'Akses selamanya — sekali bayar',
+      'Bisa dipakai di web & home screen (PWA)',
     ],
   },
   {
@@ -85,6 +110,7 @@ export const PLANS: PlanDefinition[] = [
     rank: 2,
     name: 'Paket Waras',
     subtitle: 'AI yang bantu kamu waras finansial',
+    monthly: 79_000,
     lifetime: 129_000,
     features: [
       'Semua fitur Paket Catet Aja',
@@ -104,6 +130,7 @@ export const PLANS: PlanDefinition[] = [
     rank: 3,
     name: 'Paket Sultan',
     subtitle: 'Unlimited AI, tanpa batas',
+    monthly: 199_000,
     lifetime: 299_000,
     features: [
       'Semua fitur Paket Waras',
@@ -134,46 +161,71 @@ export function isDowngradeOrSame(plan: PlanDefinition, ownedPlanId?: PlanId | n
 }
 
 /**
- * nominal yang HARUS dibayar user untuk paket `plan`.
+ * Konteks harga. Sengaja objek eksplisit (bukan parameter posisi) supaya tidak
+ * mungkin tertukar antara "periode" dan "paket yang dimiliki".
+ */
+export interface PriceContext {
+  period: BillingPeriod
+  /** paket yang SUDAH dimiliki (dari `user_subscriptions`) */
+  ownedPlanId?: PlanId | null
+  /** true = paket yang dimiliki adalah lifetime (tidak bisa turun ke monthly) */
+  ownedIsLifetime?: boolean
+}
+
+/**
+ * nominal yang HARUS dibayar user untuk paket `plan` pada periode tertentu.
  *
- *   · belum pernah beli            → harga penuh paket itu
- *   · sudah di tier yang sama/atas → 0 (tidak ada yang ditagih, bukan refund)
- *   · naik tier                    → SELISIH harga, dihitung dari `PLANS`
+ *   monthly
+ *     · selalu harga monthly penuh — boleh renew, boleh pindah/turun tier;
+ *       tidak ada refund sisa hari.
+ *     · sudah lifetime → 0 (tidak dijual; server menolak dengan 403).
+ *   lifetime
+ *     · belum punya lifetime → harga lifetime penuh (termasuk dari monthly).
+ *     · sudah lifetime di tier lebih rendah → SELISIH lifetime.
+ *     · sudah lifetime di tier sama/lebih tinggi → 0.
  *
  * Angka ini dipakai SERVER sebagai dasar verifikasi nominal kiriman klien, dan
- * dipakai KLIEN sebagai teks CTA ("Buka dengan upgrade — Rp20.000"). Karena
- * keduanya memanggil fungsi yang sama, tidak mungkin beda cerita.
+ * dipakai KLIEN sebagai teks CTA. Keduanya memanggil fungsi yang sama.
  */
-export function priceFor(plan: PlanDefinition, ownedPlanId?: PlanId | null): number {
-  const owned = planById(ownedPlanId)
-  if (!owned) return plan.lifetime
-  if (owned.id === plan.id) return 0
+export function priceFor(plan: PlanDefinition, context: PriceContext): number {
+  if (context.period === 'monthly') {
+    if (context.ownedIsLifetime) return 0
+    return plan.monthly
+  }
+
+  const owned = planById(context.ownedPlanId)
+  if (!owned || !context.ownedIsLifetime) return plan.lifetime
+  if (owned.id === plan.id || owned.rank >= plan.rank) return 0
   return Math.max(0, plan.lifetime - owned.lifetime)
 }
 
-/** selisih harga antar dua tier (untuk laporan, test, & teks penjelasan) */
+/** selisih harga upgrade lifetime antar dua tier (untuk laporan & teks) */
 export function upgradeDiff(from: PlanId | null | undefined, to: PlanId | null | undefined): number {
   const target = planById(to)
   if (!target) return 0
-  return priceFor(target, from)
+  return priceFor(target, {
+    period: 'lifetime',
+    ownedPlanId: from,
+    ownedIsLifetime: Boolean(from),
+  })
 }
 
 /**
  * Harga kanon satu pembelian. Nama lama dipertahankan supaya route & UI yang
- * sudah memakainya tidak perlu berubah bentuk; parameternya sekarang
- * `ownedPlanId` (paket yang sudah dibeli), BUKAN periode.
+ * sudah memakainya tidak perlu berubah bentuk; parameternya sekarang objek
+ * `PriceContext` (periode + paket yang dimiliki).
  */
-export function offerPrice(plan: PlanDefinition, ownedPlanId?: PlanId | null): number {
-  return priceFor(plan, ownedPlanId)
+export function offerPrice(plan: PlanDefinition, context: PriceContext): number {
+  return priceFor(plan, context)
 }
 
 /** `true` = nominal ini sah (harga kanon ATAU versi diskon teman) */
 export function isValidOfferAmount(
   plan: PlanDefinition,
   amount: number,
-  ownedPlanId?: PlanId | null,
+  context: PriceContext,
 ): boolean {
-  const base = priceFor(plan, ownedPlanId)
+  const base = priceFor(plan, context)
   return amount === base || amount === applyReferralDiscount(base)
 }
 
@@ -277,11 +329,15 @@ export const CHECKOUT_PATH = '/checkout'
 export const PAY_PATH = '/checkout/bayar'
 
 /**
- * Tautan ke halaman BAYAR untuk satu paket (`kode` = kode teman, opsional).
- * TIDAK ada parameter periode lagi (paket 84): satu paket = satu harga.
+ * Tautan ke halaman BAYAR untuk satu paket + periode (`kode` = kode teman).
+ * Periode default monthly karena itu produk utama yang dijual.
  */
-export function buildPayHref(planId: PlanId, code?: string | null): string {
-  const query = new URLSearchParams({ plan: planId })
+export function buildPayHref(
+  planId: PlanId,
+  period: BillingPeriod = 'monthly',
+  code?: string | null,
+): string {
+  const query = new URLSearchParams({ plan: planId, period })
   if (code) query.set('kode', code)
   return `${PAY_PATH}?${query.toString()}`
 }
@@ -294,12 +350,15 @@ export function buildPayHref(planId: PlanId, code?: string | null): string {
  * masuk user harus kembali ke pilihan yang sama, bukan mulai dari paket hero;
  * (b) `/r/<kode>` (tautan referral) yang membawa kode teman.
  */
-export function buildCheckoutHref(planId?: PlanId | null, code?: string | null): string {
-  const query = new URLSearchParams()
+export function buildCheckoutHref(
+  planId?: PlanId | null,
+  period: BillingPeriod = 'monthly',
+  code?: string | null,
+): string {
+  const query = new URLSearchParams({ period })
   if (planId) query.set('plan', planId)
   if (code) query.set('kode', code)
-  const tail = query.toString()
-  return tail ? `${CHECKOUT_PATH}?${tail}` : CHECKOUT_PATH
+  return `${CHECKOUT_PATH}?${query.toString()}`
 }
 
 /**
@@ -310,8 +369,12 @@ export function buildCheckoutHref(planId?: PlanId | null, code?: string | null):
  * `upgrade=1` supaya halaman bayar bisa memakai copy "upgrade" — bukan
  * "pembelian pertama" — tanpa menebak-nebak dari selisih nominal.
  */
-export function buildUpgradeHref(planId: PlanId, from?: PlanId | null): string {
-  const query = new URLSearchParams({ plan: planId, upgrade: '1' })
+export function buildUpgradeHref(
+  planId: PlanId,
+  from?: PlanId | null,
+  period: BillingPeriod = 'lifetime',
+): string {
+  const query = new URLSearchParams({ plan: planId, period, upgrade: '1' })
   if (from) query.set('dari', from)
   return `${PAY_PATH}?${query.toString()}`
 }
@@ -338,12 +401,12 @@ export function applyReferralDiscount(
 }
 
 /* ── TRUST BADGE (PRD 4509 & 4585–4587) ─────────────────────────────────────
-   Badge ini BUKAN disclaimer — ia selling point. Sejak paket 84 klaimnya
-   berubah dari "tanpa auto-renew" (karena memang tidak ada tagihan berkala lagi)
-   menjadi "sekali bayar, akses selamanya". */
+   Badge ini BUKAN disclaimer — ia selling point. Sejak produk menjual prabayar
+   30 hari, badge pertama menjelaskan mekanismenya (tanpa auto-debet), dan badge
+   kedua menjual opsi lifetime yang tetap tersedia. */
 
 export interface TrustBadge {
-  id: 'sekali-bayar' | 'data-aman' | 'satu-harga'
+  id: 'prabayar' | 'sekali-bayar' | 'data-aman' | 'satu-harga'
   /** judul tebal */
   label: string
   /** penjelasan satu baris — hangat, bukan bahasa legal */
@@ -352,14 +415,19 @@ export interface TrustBadge {
 
 export const PRICING_TRUST_BADGES: TrustBadge[] = [
   {
+    id: 'prabayar',
+    label: 'Prabayar 30 hari',
+    note: 'Sekali bayar, tanpa auto-debet dan tanpa perpanjangan otomatis.',
+  },
+  {
     id: 'sekali-bayar',
-    label: 'Sekali bayar, akses selamanya',
-    note: 'Nggak ada tagihan bulanan dan nggak ada perpanjangan.',
+    label: 'Lifetime tersedia',
+    note: 'Mau sekali beres? Bayar sekali untuk akses selamanya.',
   },
   {
     id: 'data-aman',
     label: 'Data aman',
-    note: 'Catatanmu tersimpan tanpa batas waktu.',
+    note: 'Catatanmu tetap tersimpan dan bisa diekspor kapan pun.',
   },
   {
     id: 'satu-harga',
@@ -376,15 +444,20 @@ export const CHECKOUT_COPY = {
   eyebrow: 'Checkout',
   title: 'Pembayaran',
   subtitle:
-    'Dua field, satu langkah. Nggak ada password, nggak ada data pribadi lain, dan nggak ada tagihan bulanan.',
+    'Dua field, satu langkah. Nggak ada password dan nggak ada data pribadi lain. Prabayar 30 hari, tanpa auto-debet.',
   planSectionTitle: 'Pilih paketmu',
   planSectionNote:
-    'Sekali bayar untuk akses selamanya. Harganya sama persis dengan di Pengaturan → Langganan.',
+    'Prabayar 30 hari atau sekali bayar lifetime. Harganya sama persis dengan di Pengaturan → Langganan.',
+  periodTitle: 'Durasi',
+  periodMonthlyLabel: MONTHLY_LABEL,
+  periodMonthlyNote: 'Aktif 30 hari. Perpanjang manual kapan pun.',
+  periodLifetimeLabel: 'Lifetime',
+  periodLifetimeNote: LIFETIME_LABEL,
   /** catatan pada paket yang sudah dimiliki user (dari sesi) */
   currentPlanNote: 'Ini paketmu sekarang.',
   featuresTitle: 'Yang kamu dapat',
   lockedTitle: 'Masih terkunci di paket ini',
-  lockedNote: 'Buka kapan aja dengan bayar selisihnya — nggak perlu beli dari nol.',
+  lockedNote: 'Buka kapan aja lewat halaman paket — harga selalu dari sumber yang sama.',
   stepsTitle: 'Sisa prosesmu',
   stepsBadge: '2 langkah',
   referralTitle: REFERRED_FRIEND_BENEFIT,
@@ -405,7 +478,7 @@ export const CHECKOUT_COPY = {
    * Yang benar-benar terjadi setelah CTA: akun dibuat tanpa password, lalu
    * tautan/kode konfirmasi dikirim ke email (Supabase `signInWithOtp`).
    */
-  ctaHint: 'Kami kirim tautan konfirmasi ke emailmu. Tanpa password, tanpa tagihan bulanan.',
+  ctaHint: 'Kami kirim tautan konfirmasi ke emailmu. Tanpa password, tanpa auto-debet.',
   escapeLabel: 'Nanti aja dulu',
   escapeHint: 'Kamu bisa balik kapan aja.',
 } as const
@@ -431,23 +504,58 @@ export const CHECKOUT_STEPS: CheckoutStep[] = [
 
 export const UPGRADE_COPY = {
   eyebrow: 'Buka fitur terkunci',
-  title: 'Naik paket, cukup bayar selisihnya',
-  diffLabel: 'Selisih yang dibayar',
-  /** `{target}` nama paket, `{full}` harga penuh paket itu */
-  diffNote: 'Harga penuh {target} adalah {full} — kamu cuma menambah selisihnya.',
+  title: 'Buka fitur lebih banyak',
+  diffLabel: 'Yang dibayar sekarang',
+  /** `{target}` nama paket, `{full}` harga penuh, `{amount}` yang dibayar sekarang */
+  diffNote:
+    'Harga penuh {target} adalah {full}. Yang perlu dibayar sekarang {amount} — tanpa prorate dan tanpa refund sisa hari.',
   /** teks tombol: `{amount}` dari `priceFor()`, `{target}` nama paket */
   cta: 'Buka dengan upgrade — {amount}',
   topTierTitle: 'Kamu sudah di paket tertinggi 🎉',
   topTierBody: 'Semua fitur CatetInd sudah terbuka untukmu. Nggak ada yang perlu ditambah.',
   noPurchaseTitle: 'Belum ada paket aktif',
   noPurchaseBody:
-    'Pilih satu paket untuk membuka fitur CatetInd. Sekali bayar, akses selamanya.',
+    'Pilih satu paket untuk membuka fitur CatetInd. Prabayar 30 hari, atau sekali bayar lifetime.',
   ctaLabel: 'Buka halaman paket',
   closeLabel: 'Tutup panel upgrade',
   /** label tombol "nanti saja" — dipakai modal upgrade & panel terkunci lain */
   laterLabel: 'Nanti aja',
   /** keterangan kecil di bawah CTA */
-  note: 'Downgrade nggak ditawarkan dan nggak ada refund — pembayaran cuma menambah akses.',
+  note: 'Upgrade lifetime tidak menurunkan akses yang sudah kamu bayar. Pembelian monthly tidak memberi refund sisa hari.',
+  /** ajakan memperpanjang saat masa aktif monthly habis */
+  renewTitle: 'Masa aktif habis — perpanjang 30 hari',
+  renewBody:
+    'Catatanmu tetap aman dan bisa dibaca/diekspor. Semua tombol tambah data hidup lagi setelah kamu memperpanjang.',
+  renewCta: 'Perpanjang 30 hari',
+} as const
+
+/* ── COPY PANEL BILLING (Pengaturan → Langganan) ─────────────────────────────
+   Semua label status/periode/tombol di `billing-panel.tsx`; nominal tetap dari
+   `PLANS` + `priceFor()`. */
+export const BILLING_COPY = {
+  statusActiveMonthly: 'Aktif · prabayar 30 hari',
+  statusActiveLifetime: 'Aktif · akses selamanya',
+  statusExpired: 'Masa aktif habis',
+  statusUnknown: 'Status paket belum bisa dibaca',
+  noPlan: 'Belum ada paket',
+  noPlanBody: 'Pilih paket buat membuka fitur CatetInd. Prabayar 30 hari atau lifetime.',
+  activeMonthlyBody: 'Aktif sampai tanggal di bawah. Perpanjang manual, tanpa auto-debet 🌿',
+  activeLifetimeBody: 'Akses selamanya. Sekali bayar, tanpa tagihan berkala 🌿',
+  expiredBody: 'Catatanmu tetap aman. Perpanjang 30 hari untuk membuka lagi tombol tambah data.',
+  durationLabel: 'Durasi',
+  priceLabel: 'Harga paket',
+  expiresLabel: 'Aktif sampai',
+  periodLabel: 'Periode',
+  lifetimePeriod: 'Akses selamanya',
+  monthlyPeriod: 'Prabayar 30 hari',
+  renewLabel: 'Perpanjang Paket',
+  upgradeLifetimeLabel: 'Upgrade ke Lifetime',
+  choosePlanLabel: 'Lihat paket',
+  noRenewNote: 'Lifetime tidak perlu diperpanjang.',
+  readOnlyNote: 'Masa aktif habis: data bisa dibaca & diekspor, penambahan data ditahan sampai diperpanjang.',
+  historyTitle: 'Riwayat Pembayaran',
+  historyBody: 'Semua transaksi kamu tercatat rapi di sini.',
+  paidLabel: 'Lunas',
 } as const
 
 /* ── COPY UI TERKUNCI ────────────────────────────────────────────────────────
@@ -484,10 +592,13 @@ export const PAY_START_COPY = {
   eyebrow: 'Langkah terakhir',
   title: 'Bayar paketmu',
   subtitle: 'Instruksi bayarnya muncul di halaman ini.',
-  /** judul khusus saat user sedang UPGRADE, bukan pembelian pertama */
+  /** judul khusus saat user sedang UPGRADE lifetime, bukan pembelian pertama */
   upgradeTitle: 'Bayar selisih upgrade-mu',
   upgradeSubtitle:
     'Kamu cuma menambah selisihnya — akses yang sudah dibeli tetap terpakai.',
+  /** judul khusus saat user memperpanjang monthly */
+  renewTitle: 'Perpanjang 30 hari',
+  renewSubtitle: 'Sekali bayar, tanpa auto-debet. Masa aktif baru ditambahkan dari sisa hari.',
   backLabel: 'Ganti paket',
   planLabel: 'Yang kamu beli',
   totalLabel: 'Total',
@@ -556,7 +667,8 @@ export const PAY_DONE_COPY = {
   checkingTitle: 'Lagi cek pembayaranmu…',
   checkingBody: 'Biasanya masuk dalam beberapa detik.',
   activeTitle: 'Aksesmu aktif 🎉',
-  activeBody: 'Semua fitur paketmu sudah terbuka — dan tetap terbuka, selamanya.',
+  activeBodyMonthly: 'Paketmu aktif 30 hari. Bisa diperpanjang manual kapan pun, tanpa auto-debet.',
+  activeBodyLifetime: 'Semua fitur paketmu sudah terbuka — dan tetap terbuka, selamanya.',
   pendingTitle: 'Pembayaran belum tercatat',
   pendingBody:
     'Kalau kamu sudah bayar, aksesmu sedang diaktifkan — halaman ini update sendiri.',

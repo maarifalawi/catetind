@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import {
   CalendarClock,
   Check,
@@ -19,9 +20,16 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { LIFETIME_LABEL, PLANS, formatIDR, priceFor } from '@/lib/data/pricing'
+import {
+  BILLING_COPY,
+  LIFETIME_LABEL,
+  MONTHLY_LABEL,
+  PLANS,
+  buildCheckoutHref,
+  formatIDR,
+  priceFor,
+} from '@/lib/data/pricing'
 import { useSubscriptionGate } from './subscription-gate-provider'
-import { UpgradeModal } from './upgrade-modal'
 import { useAiQuotaReset } from '@/hooks/use-ai-quota-reset'
 /* Semua angka kuota AI datang dari sini — bagian tampilan tidak menyimpan
    satu pun kuota/harga add-on (aturan yang sama dengan `lib/data/pricing.ts`). */
@@ -114,16 +122,6 @@ function barTone(remainingPct: number) {
 
 export function BillingPanel() {
   const [topUpOpen, setTopUpOpen] = useState(false)
-  /**
-   * Modal UPGRADE — dibuka dari tombol "Upgrade paket" di kartu paket aktif.
-   *
-   * Sejak paket 84 hanya ada SATU alur kenaikan akses: naik tier dengan bayar
-   * selisih. Dulu ada dua modal yang harus dijaga agar tidak saling menabrak
-   * (`annual-plan-modal` untuk memilih paket/periode dan `renewal-modal` untuk
-   * memperpanjang masa aktif); keduanya dihapus dan digantikan `UpgradeModal`,
-   * karena perpanjangan tidak punya arti untuk akses selamanya.
-   */
-  const [upgradeOpen, setUpgradeOpen] = useState(false)
 
   /* Band "Top Up AI Token" hanya relevan untuk paket BERKUOTA (paket 85):
      Paket Sultan tidak dibatasi (tidak ada kuota yang perlu ditambah) dan
@@ -136,7 +134,7 @@ export function BillingPanel() {
   return (
     <>
       <div className="grid gap-4 lg:grid-cols-[1.05fr_1fr]">
-        <CurrentPlanCard onUpgrade={() => setUpgradeOpen(true)} />
+        <CurrentPlanCard />
         <FuelGaugeCard />
       </div>
 
@@ -169,18 +167,44 @@ export function BillingPanel() {
       <BillingHistorySection />
 
       <TopUpModal open={topUpOpen} onClose={() => setTopUpOpen(false)} />
-      <UpgradeModal open={upgradeOpen} onClose={() => setUpgradeOpen(false)} />
     </>
   )
 }
 
-/* ── kartu 1: paket aktif + perpanjang ───────────────────────────────────────── */
-function CurrentPlanCard({ onUpgrade }: { onUpgrade: () => void }) {
+/* ── kartu 1: paket aktif + perpanjang/upgrade ─────────────────────────────── */
+function formatExpiry(iso: string): string {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return iso
+  return new Intl.DateTimeFormat('id-ID', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(date)
+}
+
+function CurrentPlanCard() {
   /* Paket dibaca dari gerbang global (`/api/subscription`) — SATU sumber, sama
      dengan yang dipakai kunci fitur di seluruh app. Kalau paketnya belum bisa
      dibaca, kartu ini jujur berkata "belum ada paket"; tidak ada paket karangan. */
-  const { plan, planId } = useSubscriptionGate()
-  const hasHigherTier = PLANS.some((item) => priceFor(item, planId) > 0)
+  const { plan, planId, expiresAt, isLifetime, billingPeriod, expired } = useSubscriptionGate()
+  const monthly = billingPeriod !== 'lifetime'
+  const higherLifetime = PLANS.filter(
+    (item) =>
+      priceFor(item, {
+        period: 'lifetime',
+        ownedPlanId: planId,
+        ownedIsLifetime: isLifetime,
+      }) > 0,
+  )
+
+  const body = !plan
+    ? BILLING_COPY.noPlanBody
+    : expired
+      ? BILLING_COPY.expiredBody
+      : monthly
+        ? BILLING_COPY.activeMonthlyBody
+        : BILLING_COPY.activeLifetimeBody
+
   return (
     <section className="flex flex-col rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12 sm:p-6">
       <div className="flex items-start gap-3">
@@ -190,13 +214,9 @@ function CurrentPlanCard({ onUpgrade }: { onUpgrade: () => void }) {
         <div className="min-w-0 flex-1">
           <PlanPill />
           <h2 className="mt-2 text-xl font-medium tracking-tight text-forest">
-            {plan ? plan.name : 'Belum ada paket'}
+            {plan ? plan.name : BILLING_COPY.noPlan}
           </h2>
-          <p className="mt-1 text-[13px] leading-relaxed break-words text-forest/55">
-            {plan
-              ? 'Akses selamanya. Sekali bayar, tanpa tagihan bulanan 🌿'
-              : 'Pilih paket buat membuka fitur CatetInd. Sekali bayar, akses selamanya.'}
-          </p>
+          <p className="mt-1 text-[13px] leading-relaxed break-words text-forest/55">{body}</p>
         </div>
       </div>
 
@@ -204,53 +224,88 @@ function CurrentPlanCard({ onUpgrade }: { onUpgrade: () => void }) {
         <div className="rounded-2xl bg-cream px-3.5 py-3 ring-1 ring-soil/8">
           <dt className="flex items-center gap-1.5 text-[11px] text-forest/45">
             <CalendarClock className="size-3.5" strokeWidth={2.2} />
-            Durasi
+            {monthly ? BILLING_COPY.expiresLabel : BILLING_COPY.durationLabel}
           </dt>
           <dd className="mt-1 text-[13px] font-medium leading-snug text-forest">
-            {LIFETIME_LABEL}
+            {monthly
+              ? plan
+                ? expiresAt
+                  ? formatExpiry(expiresAt)
+                  : MONTHLY_LABEL
+                : '—'
+              : plan
+                ? LIFETIME_LABEL
+                : '—'}
           </dd>
         </div>
         <div className="rounded-2xl bg-cream px-3.5 py-3 ring-1 ring-soil/8">
           <dt className="flex items-center gap-1.5 text-[11px] text-forest/45">
             <CreditCard className="size-3.5" strokeWidth={2.2} />
-            Harga paket
+            {BILLING_COPY.priceLabel}
           </dt>
           <dd className="mt-1 text-[13px] font-medium leading-snug text-forest tabular-nums">
-            {plan ? formatIDR(plan.lifetime) : '—'}
+            {plan
+              ? formatIDR(monthly ? plan.monthly : plan.lifetime)
+              : '—'}
           </dd>
         </div>
       </dl>
 
-      <div className="mt-auto pt-5">
-        {/* Tombol ini membuka modal UPGRADE: satu-satunya alur kenaikan akses
-            sejak paket 84 (naik tier dengan bayar selisih). */}
-        <button
-          type="button"
-          onClick={onUpgrade}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-forest py-3.5 text-sm font-medium text-mint transition-colors hover:bg-forest-soft active:scale-[0.99]"
-        >
-          <RefreshCw className="size-4" strokeWidth={2.4} />
-          {hasHigherTier ? 'Upgrade paket' : 'Lihat paket'}
-        </button>
-        <p className="mt-3 text-center text-[11px] leading-relaxed text-forest/45">
-          {plan
-            ? `${formatIDR(plan.lifetime)} sekali bayar · tidak ada tagihan berkala, dan tidak ada yang dipotong diam-diam.`
-            : 'Semua harga dibaca dari satu sumber yang sama dengan halaman checkout.'}
+      <div className="mt-auto flex flex-col gap-2 pt-5">
+        {planId && monthly && (
+          <Link
+            href={buildCheckoutHref(planId, 'monthly')}
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-forest py-3.5 text-sm font-medium text-mint transition-colors hover:bg-forest-soft active:scale-[0.99]"
+          >
+            <RefreshCw className="size-4" strokeWidth={2.4} />
+            {BILLING_COPY.renewLabel}
+          </Link>
+        )}
+
+        {planId && (monthly || higherLifetime.length > 0) && (
+          <Link
+            href={buildCheckoutHref(planId, 'lifetime')}
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-sage py-3.5 text-sm font-medium text-forest ring-1 ring-soil/12 transition-colors hover:bg-oat active:scale-[0.99]"
+          >
+            {BILLING_COPY.upgradeLifetimeLabel}
+          </Link>
+        )}
+
+        {!planId && (
+          <Link
+            href={buildCheckoutHref(null, 'monthly')}
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-forest py-3.5 text-sm font-medium text-mint transition-colors hover:bg-forest-soft active:scale-[0.99]"
+          >
+            {BILLING_COPY.choosePlanLabel}
+          </Link>
+        )}
+
+        <p className="mt-1 text-center text-[11px] leading-relaxed text-forest/45">
+          {plan && !monthly ? BILLING_COPY.noRenewNote : BILLING_COPY.readOnlyNote}
         </p>
       </div>
     </section>
   )
 }
-/** pill paket aktif — sengaja selalu kabar baik: paket = akses selamanya.
-    Kalau paketnya belum terbaca, pill-nya berkata apa adanya (bukan "Aktif"). */
+
+/** pill status paket — jujur untuk tiga keadaan: aktif, expired, belum diketahui. */
 function PlanPill() {
-  const { plan, planKnown } = useSubscriptionGate()
+  const { plan, planKnown, expired, isLifetime } = useSubscriptionGate()
 
   if (!plan) {
     return (
       <span className="inline-flex items-center gap-1.5 rounded-full bg-hud-amber/30 px-2.5 py-1 text-[11px] font-medium text-forest/70">
         <TriangleAlert className="size-3.5" strokeWidth={2.4} aria-hidden />
-        {planKnown ? 'Belum ada paket' : 'Status paket belum bisa dibaca'}
+        {planKnown ? BILLING_COPY.noPlan : BILLING_COPY.statusUnknown}
+      </span>
+    )
+  }
+
+  if (expired) {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-hud-amber/30 px-2.5 py-1 text-[11px] font-medium text-forest">
+        <TriangleAlert className="size-3.5" strokeWidth={2.4} aria-hidden />
+        {BILLING_COPY.statusExpired}
       </span>
     )
   }
@@ -258,7 +313,7 @@ function PlanPill() {
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full bg-mint/30 px-2.5 py-1 text-[11px] font-medium text-forest">
       <ShieldCheck className="size-3.5" strokeWidth={2.4} aria-hidden />
-      Aktif · akses selamanya
+      {isLifetime ? BILLING_COPY.statusActiveLifetime : BILLING_COPY.statusActiveMonthly}
     </span>
   )
 }
@@ -443,9 +498,9 @@ function BillingHistorySection() {
     <section className="mt-4 rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12 sm:p-6">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="text-xl font-medium tracking-tight text-forest">Riwayat Pembayaran</h2>
+          <h2 className="text-xl font-medium tracking-tight text-forest">{BILLING_COPY.historyTitle}</h2>
           <p className="mt-1 text-[13px] leading-relaxed text-forest/55">
-            Semua transaksi kamu tercatat rapi di sini.
+            {BILLING_COPY.historyBody}
           </p>
         </div>
         <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-sage text-forest">
@@ -466,7 +521,7 @@ function BillingHistorySection() {
               </span>
               <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-mint/30 px-2 py-0.5 text-[10px] font-medium text-forest">
                 <Check className="size-2.5" strokeWidth={3.6} />
-                Lunas
+                {BILLING_COPY.paidLabel}
               </span>
             </span>
           </li>

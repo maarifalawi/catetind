@@ -63,8 +63,7 @@ export const PRIVACY_DOC: LegalDocument = {
   eyebrow: 'Legal · CatetInd',
   title: 'Kebijakan Privasi',
   intro: [
-    'Halaman ini menjelaskan data apa yang kami simpan, siapa yang bisa melihatnya, dan apa yang bisa kamu lakukan terhadapnya — semuanya sebelum kamu menekan "setuju" pada apa pun.',
-    'Kami menulisnya spesifik, bukan dengan kalimat aman yang bisa diartikan apa saja. Kalau ada bagian yang belum bisa kami janjikan, itu kami tandai terang-terangan sebagai belum ditinjau hukum.',
+    'Data apa yang kami simpan, siapa yang bisa melihatnya, dan cara kamu mengekspor atau menghapusnya.',
   ],
   updatedLabel: 'Terakhir diperbarui',
   updatedHuman: PRIVACY_UPDATED_HUMAN,
@@ -247,7 +246,7 @@ export const PRIVACY_DOC: LegalDocument = {
         'Membetulkan — setiap catatan bisa diedit atau dihapus sendiri: transaksi lewat geser pada barisnya, tagihan dan celengan lewat tombol edit di halamannya.',
         'Menghapus akun — Pengaturan → Keamanan & Privasi → "Hapus Akun Permanen". Konfirmasinya dengan mengetik emailmu, dan seluruh transaksi, dompet, budget, serta hutang ikut terhapus.',
         'Mengatur AI & notifikasi — AI Preferences dan pengaturan Notifikasi bisa dimatikan kapan saja tanpa kehilangan data.',
-        'Bertanya soal data — lewat Pusat Bantuan ke founder, atau email ke support@catetind.com.',
+        'Bertanya soal data — lewat Pusat Bantuan ke founder, atau email ke halo@catetind.com.',
       ],
       note: {
         label: 'REVIEW LEGAL — rujukan pasal & tenggat tanggapan',
@@ -291,7 +290,7 @@ export const PRIVACY_DOC: LegalDocument = {
       title: 'Kontak',
       paragraphs: [
         'Pertanyaan, keberatan, atau permintaan soal datamu bisa mulai dari Pusat Bantuan: buka artikel mana pun, tekan 👎 di kakinya, lalu kirim pesan. Balasan datang dari manusia — langsung dari founder, bukan bot dan bukan tiket yang mengantre.',
-        'Kalau lebih nyaman lewat email, kirim ke support@catetind.com — sertakan screenshot untuk masalah tampilan, karena kami memang tidak bisa membuka datamu untuk mengeceknya sendiri.',
+        'Kalau lebih nyaman lewat email, kirim ke halo@catetind.com — sertakan screenshot untuk masalah tampilan, karena kami memang tidak bisa membuka datamu untuk mengeceknya sendiri.',
       ],
     },
   ],

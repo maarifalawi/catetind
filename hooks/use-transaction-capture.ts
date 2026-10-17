@@ -128,17 +128,71 @@ function voiceProblemCopy(error: string): string {
      · UCAPAN — transkripnya NYATA (dari Web Speech API), jadi parser aturan lokal
        tetap jujur dipakai sebagai jaring aman saat provider mati. */
 
-/** File gambar → base64 tanpa prefix data URL (mimeType dikirim terpisah) */
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onerror = () => reject(new Error('Gagal membaca berkas gambar.'))
-    reader.onload = () => {
-      const result = typeof reader.result === 'string' ? reader.result : ''
-      const comma = result.indexOf(',')
-      resolve(comma >= 0 ? result.slice(comma + 1) : result)
+/** batas sisi terpanjang foto struk setelah dinormalkan (piksel) */
+const MAX_RECEIPT_EDGE = 1600
+
+/** kualitas JPEG hasil normalisasi — cukup tajam untuk OCR, jauh di bawah batas ukuran route */
+const RECEIPT_JPEG_QUALITY = 0.85
+
+interface ReceiptImage {
+  /** base64 tanpa prefix data URL */
+  data: string
+  mimeType: 'image/jpeg'
+}
+
+/**
+ * Foto struk dinormalkan ke JPEG DI BROWSER sebelum dikirim (paket 87).
+ *
+ * Kenapa: penyedia vision hanya menerima webp/png/jpeg/gif. Foto kamera iPhone
+ * lahir sebagai HEIC/HEIF — `file.type` tidak bisa dipercaya dan Chrome/Windows
+ * tidak bisa men-decode-nya sama sekali. Dengan menggambar berkas ke `<canvas>`
+ * lalu `toDataURL('image/jpeg')`, format apa pun yang BISA dibaca browser keluar
+ * sebagai JPEG (format yang pasti diterima), sekaligus mengecilkan foto kamera
+ * 12 MP supaya tidak kena batas ukuran route.
+ *
+ * `null` = browser ini tidak bisa membuka berkasnya (HEIC di Chrome desktop,
+ * berkas rusak/terpotong). Pemanggil menampilkan pesan format yang jujur, bukan
+ * "scan gagal" generik yang menyesatkan.
+ */
+function receiptImageToJpeg(file: File): Promise<ReceiptImage | null> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file)
+    const image = new Image()
+    image.onload = () => {
+      try {
+        if (!image.naturalWidth || !image.naturalHeight) {
+          resolve(null)
+          return
+        }
+        const scale = Math.min(1, MAX_RECEIPT_EDGE / Math.max(image.naturalWidth, image.naturalHeight))
+        const width = Math.max(1, Math.round(image.naturalWidth * scale))
+        const height = Math.max(1, Math.round(image.naturalHeight * scale))
+        const canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext('2d')
+        if (!ctx) {
+          resolve(null)
+          return
+        }
+        /* JPEG tidak punya alpha: PNG transparan jangan sampai jadi hitam */
+        ctx.fillStyle = '#ffffff'
+        ctx.fillRect(0, 0, width, height)
+        ctx.drawImage(image, 0, 0, width, height)
+        const dataUrl = canvas.toDataURL('image/jpeg', RECEIPT_JPEG_QUALITY)
+        const comma = dataUrl.indexOf(',')
+        resolve(comma >= 0 ? { data: dataUrl.slice(comma + 1), mimeType: 'image/jpeg' } : null)
+      } catch {
+        resolve(null)
+      } finally {
+        URL.revokeObjectURL(url)
+      }
     }
-    reader.readAsDataURL(file)
+    image.onerror = () => {
+      URL.revokeObjectURL(url)
+      resolve(null)
+    }
+    image.src = url
   })
 }
 
@@ -262,10 +316,13 @@ export function useTransactionCapture({
 
   /* ── 📸 SCAN STRUK ────────────────────────────────────────────────────────
      File dipilih lewat `<input type="file" accept="image/*"
-     capture="environment">` (kamera belakang di HP, file picker di web). Berkasnya
-     dikirim sebagai base64 ke `POST /api/ai/ocr` (model vision di server, PRD
-     385–412), lalu hasilnya masuk kartu konfirmasi. Gagal = state problem jujur;
-     TIDAK ada tebakan yang dipajang seolah hasil baca struk. */
+     capture="environment">` (kamera belakang di HP, file picker di web).
+     Sejak paket 87 berkasnya dinormalkan dulu ke JPEG di browser
+     (`receiptImageToJpeg`) — penyedia vision hanya menerima png/jpeg/webp/gif,
+     dan foto iPhone lahir sebagai HEIC. Baru setelah itu base64-nya dikirim ke
+     `POST /api/ai/ocr` (model vision di server, PRD 385–412), lalu hasilnya
+     masuk kartu konfirmasi. Gagal = state problem jujur; TIDAK ada tebakan yang
+     dipajang seolah hasil baca struk. */
   const startReceiptScan = useCallback(
     (file: File) => {
       releaseVoice()
@@ -282,15 +339,27 @@ export function useTransactionCapture({
       retryRef.current = () => startReceiptScan(file)
 
       void (async () => {
+        /* Normalisasi dulu (paket 87): apa pun format pilihannya, yang dikirim ke
+           route selalu JPEG yang benar-benar bisa dibaca — atau null kalau
+           browser ini pun tidak bisa membukanya. */
+        const image = await receiptImageToJpeg(file)
+        if (!image) {
+          setProblem(AI_CAPTURE_COPY.scanUnsupported)
+          setPhase('problem')
+          return
+        }
+        /* Pesan gagal bawaan = kalimat app. Route bisa mengirim alasan yang
+           lebih spesifik dan tetap berbahasa user (format foto tidak didukung,
+           model sedang penuh, …) — pakai itu kalau ada, jangan ditelan. */
+        let failure: string = AI_CAPTURE_COPY.scanFailed
         try {
-          const base64 = await fileToBase64(file)
           const res = await fetch('/api/ai/ocr', {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ image: base64, mimeType: file.type || undefined }),
+            body: JSON.stringify({ image: image.data, mimeType: image.mimeType }),
           })
-          const payload = res.ok ? await res.json() : null
-          const transaction = readTransaction(payload)
+          const payload: unknown = await res.json().catch(() => null)
+          const transaction = res.ok ? readTransaction(payload) : null
           if (transaction) {
             /* preferensi user + DOMPET NYATA diterapkan SEBELUM draft masuk kartu
                konfirmasi (paket 54 & 79): kalau "Kategorisasi/Penamaan Otomatis"
@@ -301,10 +370,12 @@ export function useTransactionCapture({
             setPhase('confirm')
             return
           }
+          const message = (payload as { error?: unknown } | null)?.error
+          if (typeof message === 'string' && message) failure = message
         } catch {
           /* jaringan/berkas gagal → problem di bawah */
         }
-        setProblem(AI_CAPTURE_COPY.scanFailed)
+        setProblem(failure)
         setPhase('problem')
       })()
     },

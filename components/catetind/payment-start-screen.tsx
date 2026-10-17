@@ -7,19 +7,21 @@ import { ArrowLeft, ArrowRight, BadgeCheck, Info, ShieldCheck, Tag } from 'lucid
 import { LogoWordmark } from './logo-wordmark'
 import { PaymentInstructionCard, type ActiveInvoice } from './payment-instruction-card'
 import {
-  LIFETIME_LABEL,
   PAY_METHOD_COPY,
   PAY_START_COPY,
+  PERIOD_LABEL,
+  PREPAID_BADGE,
   SEKALI_BAYAR_BADGE,
   applyReferralDiscount,
   formatIDR,
   priceFor,
+  type BillingPeriod,
   type PlanDefinition,
   type PlanId,
 } from '@/lib/data/pricing'
 import { PAY_METHODS, type PaymentMethodId } from '@/lib/payments/methods'
 import { buildLoginHref } from '@/lib/data/auth'
-import { buildPayHref } from '@/lib/data/pricing'
+import { buildCheckoutHref, buildPayHref } from '@/lib/data/pricing'
 import { fetchSessionUser } from '@/lib/session-client'
 
 /* MULAI PEMBAYARAN (/checkout/bayar, paket 83) - DI DALAM APP ------------------
@@ -53,15 +55,24 @@ interface ChargeResponse {
 
 export function PaymentStartScreen({
   plan,
+  period,
   ownedPlanId,
+  ownedIsLifetime,
   isUpgrade,
+  isRenewal,
   referralCode,
 }: {
   plan: PlanDefinition
+  /** `monthly` (prabayar 30 hari) atau `lifetime` */
+  period: BillingPeriod
   /** paket yang SUDAH dimiliki (dari server) — dasar hitung selisih upgrade */
   ownedPlanId: PlanId | null
-  /** true = ini upgrade, bukan pembelian pertama (mengubah copy, bukan angkanya) */
+  /** true = paket yang dimiliki adalah lifetime */
+  ownedIsLifetime: boolean
+  /** true = ini upgrade lifetime, bukan pembelian pertama (mengubah copy) */
   isUpgrade: boolean
+  /** true = memperpanjang / pindah tier monthly yang sudah dimiliki */
+  isRenewal: boolean
   referralCode: string | null
 }) {
   const router = useRouter()
@@ -79,9 +90,10 @@ export function PaymentStartScreen({
   /* Nominal memakai `priceFor()` dari PAKET YANG SUDAH DIMILIKI (dibaca server di
      `app/checkout/bayar/page.tsx`) — jadi angka yang user lihat di sini persis
      angka yang diverifikasi `/api/payment/charge`. Bukan angka kiriman klien. */
-  const basePrice = priceFor(plan, isUpgrade ? ownedPlanId : null)
+  const basePrice = priceFor(plan, { period, ownedPlanId, ownedIsLifetime })
   const total = verifiedCode ? applyReferralDiscount(basePrice) : basePrice
   const discount = basePrice - total
+  const premiumBadge = period === 'monthly' ? PREPAID_BADGE : SEKALI_BAYAR_BADGE
 
   useEffect(() => {
     let active = true
@@ -126,13 +138,12 @@ export function PaymentStartScreen({
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          purpose: isUpgrade ? 'upgrade' : 'subscribe',
+          purpose: isUpgrade ? 'upgrade' : isRenewal ? 'renew' : 'subscribe',
+          period,
           amount: total,
           planId: plan.id,
           method,
-          itemName: isUpgrade
-            ? `${plan.name} (upgrade — akses selamanya)`
-            : `${plan.name} (akses selamanya)`,
+          itemName: `${plan.name} (${period === 'monthly' ? 'Langganan 30 hari' : 'akses selamanya'})`,
         }),
       })
       if (res.status === 401) {
@@ -163,7 +174,7 @@ export function PaymentStartScreen({
     } finally {
       setPaying(false)
     }
-  }, [paying, total, plan, isUpgrade, method, router])
+  }, [paying, total, plan, isUpgrade, isRenewal, period, method, router])
   /* ringkasan pembelian - kolom KIRI di desktop (sticky), di atas cara bayar di ponsel */
   const summary = (
     <section className="rounded-[1.5rem] bg-cream p-5 ring-1 ring-soil/12 lg:rounded-[1.75rem] lg:p-6">
@@ -174,7 +185,7 @@ export function PaymentStartScreen({
         <div className="min-w-0">
           <p className="text-[14px] font-medium text-forest">{plan.name}</p>
           <p className="text-[12px] text-forest/50">
-            {plan.subtitle} - {LIFETIME_LABEL}
+            {plan.subtitle} - {PERIOD_LABEL[period]}
           </p>
         </div>
       </div>
@@ -199,7 +210,7 @@ export function PaymentStartScreen({
 
       <p className="mt-4 flex items-start gap-2 text-[11.5px] leading-relaxed text-forest/50">
         <ShieldCheck className="mt-0.5 size-3.5 shrink-0" strokeWidth={2.4} aria-hidden />
-        {SEKALI_BAYAR_BADGE}
+        {premiumBadge}
       </p>
     </section>
   )
@@ -210,7 +221,7 @@ export function PaymentStartScreen({
         <div className="flex items-center justify-between gap-4">
           <LogoWordmark className="h-6" />
           <Link
-            href="/checkout"
+            href={buildCheckoutHref(plan.id, period)}
             className="inline-flex items-center gap-1.5 text-[12px] font-medium text-forest/50 transition-colors duration-200 hover:text-forest motion-reduce:transition-none"
           >
             <ArrowLeft className="size-3.5" strokeWidth={2.4} aria-hidden />
@@ -226,10 +237,18 @@ export function PaymentStartScreen({
               {PAY_START_COPY.eyebrow}
             </p>
             <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight text-forest lg:text-[1.9rem]">
-              {isUpgrade ? PAY_START_COPY.upgradeTitle : PAY_START_COPY.title}
+              {isUpgrade
+                ? PAY_START_COPY.upgradeTitle
+                : isRenewal
+                  ? PAY_START_COPY.renewTitle
+                  : PAY_START_COPY.title}
             </h1>
             <p className="mt-1 text-[12.5px] text-forest/50">
-              {isUpgrade ? PAY_START_COPY.upgradeSubtitle : PAY_START_COPY.subtitle}
+              {isUpgrade
+                ? PAY_START_COPY.upgradeSubtitle
+                : isRenewal
+                  ? PAY_START_COPY.renewSubtitle
+                  : PAY_START_COPY.subtitle}
             </p>
 
             {session === 'guest' ? (
@@ -241,7 +260,7 @@ export function PaymentStartScreen({
                   {PAY_START_COPY.loginBody}
                 </p>
                 <Link
-                  href={buildLoginHref(buildPayHref(plan.id, referralCode))}
+                  href={buildLoginHref(buildPayHref(plan.id, period, referralCode))}
                   className="mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-forest px-5 text-[13px] font-medium text-cream lg:min-w-[200px]"
                 >
                   {PAY_START_COPY.loginCta}

@@ -18,6 +18,8 @@ import { SITE_ORIGIN } from '@/lib/site'
 export default function sitemap(): MetadataRoute.Sitemap {
   return [
     { url: `${SITE_ORIGIN}/`, changeFrequency: 'monthly', priority: 1 },
+    { url: `${SITE_ORIGIN}/contact`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_ORIGIN}/changelog`, changeFrequency: 'weekly', priority: 0.6 },
     { url: `${SITE_ORIGIN}/welcome`, changeFrequency: 'monthly', priority: 0.9 },
     { url: `${SITE_ORIGIN}/checkout`, changeFrequency: 'monthly', priority: 0.9 },
     { url: `${SITE_ORIGIN}/install`, changeFrequency: 'monthly', priority: 0.7 },

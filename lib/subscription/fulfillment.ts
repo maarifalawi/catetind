@@ -1,9 +1,9 @@
-import { rankOf, type PlanId } from '@/lib/data/pricing'
+import { MONTHLY_DAYS, rankOf, type BillingPeriod, type PlanId } from '@/lib/data/pricing'
 import { normalizeTier } from './plan'
 
 /* ── ATURAN PEMENUHAN — CERMIN TYPE-SCRIPT DARI RPC SQL (paket 85) ───────────
    Sumber kebenarannya adalah `public.catetind_fulfill_purchase` di
-   `supabase/migrations/20261011120000_catetind_akses_selamanya.sql`. Karena SQL
+   `supabase/migrations/20261014120000_catetind_prepaid_30_hari.sql`. Karena SQL
    tidak punya test di repo ini, aturan yang paling mahal-kalau-salah ditulis
    ulang di sini sebagai fungsi MURNI supaya bisa dikunci test:
 
@@ -51,4 +51,69 @@ export function isAmountMismatch(
   if (expected === null || expected === undefined) return false
   if (!Number.isFinite(expected) || !Number.isFinite(gross)) return false
   return Math.round(gross) !== Math.round(expected)
+}
+
+/**
+ * Cermin TS dari hasil akhir `catetind_fulfill_purchase` (migrasi
+ * `20261014120000_catetind_prepaid_30_hari.sql`). Dipakai test supaya aturan
+ * yang paling mahal-kalau-salah (perpanjangan & downgrade) punya pengunci:
+ *
+ *   monthly
+ *     · sudah lifetime → lifetime TIDAK diturunkan (tier & expiry lama tetap);
+ *     · selain itu → tier = yang dibeli (boleh turun), expiry =
+ *       max(now, expiry lama) + 30 hari.
+ *   lifetime
+ *     · is_lifetime = true, expires_at = NULL;
+ *     · tier = yang lebih tinggi antara lifetime lama & pembelian; pembelian
+ *       dari monthly memakai tier baru.
+ */
+export interface SubscriptionState {
+  tier: PlanId | null
+  isLifetime: boolean
+  billingPeriod: BillingPeriod
+  expiresAt: string | null
+}
+
+export function resolveSubscriptionAfterPurchase(input: {
+  purchasedTier: string | null | undefined
+  period: BillingPeriod
+  now: Date
+  existing?: {
+    tier: string | null | undefined
+    isLifetime: boolean
+    expiresAt: string | null
+  } | null
+}): SubscriptionState {
+  const purchased = normalizeTier(input.purchasedTier)
+  const existing = input.existing ?? null
+  const existingTier = normalizeTier(existing?.tier)
+  const existingLifetime = existing?.isLifetime === true
+
+  if (input.period === 'monthly') {
+    if (existingLifetime) {
+      return {
+        tier: existingTier,
+        isLifetime: true,
+        billingPeriod: 'lifetime',
+        expiresAt: null,
+      }
+    }
+    const existingExpiry = existing?.expiresAt ? Date.parse(existing.expiresAt) : Number.NaN
+    const base = Number.isFinite(existingExpiry)
+      ? Math.max(input.now.getTime(), existingExpiry)
+      : input.now.getTime()
+    const expires = new Date(base + MONTHLY_DAYS * 24 * 60 * 60 * 1000)
+    return {
+      tier: purchased,
+      isLifetime: false,
+      billingPeriod: 'monthly',
+      expiresAt: expires.toISOString(),
+    }
+  }
+
+  const tier =
+    existingLifetime && existingTier && purchased && rankOf(existingTier) >= rankOf(purchased)
+      ? existingTier
+      : purchased
+  return { tier, isLifetime: true, billingPeriod: 'lifetime', expiresAt: null }
 }

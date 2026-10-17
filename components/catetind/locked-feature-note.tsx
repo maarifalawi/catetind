@@ -31,10 +31,10 @@ export function LockedFeatureNote({
   /** versi ringkas: satu baris, tanpa kartu — untuk dipasang di dalam panel */
   compact?: boolean
 }) {
-  const { planId, planKnown } = useSubscriptionGate()
+  const { planId, planKnown, isLifetime } = useSubscriptionGate()
   if (!planKnown) return null
 
-  const offer = capabilityUpgradeOffer(capability, planId)
+  const offer = capabilityUpgradeOffer(capability, planId, isLifetime)
 
   if (compact) {
     return (

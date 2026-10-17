@@ -1,27 +1,26 @@
+import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { isPublicRoute } from '@/lib/public-routes'
+import { hasSupabaseConfig, supabaseAnonKey, supabaseUrl } from '@/lib/supabase/config'
 
-/* ── GERBANG SESI (PERBAIKAN AUDIT K4) ────────────────────────────────────────
-   Sebelum berkas ini ada, TIDAK ADA satu pun proteksi route: `/app`, `/wallet`,
-   `/settings`, dst. bisa dibuka siapa saja. Halaman app memang tetap merender
-   (data dibaca dari store perangkat), tapi begitu backend nyata dipakai,
-   membiarkan halaman uang terbuka adalah kesalahan yang mahal.
+/* ── GERBANG SESI (PERBAIKAN AUDIT K4 + ATURAN AKSES /app) ───────────────────
+   ATURAN PRODUK YANG MENGIKAT: TIDAK ADA satu pun halaman app (`/app`,
+   `/wallet`, `/budget`, `/settings`, dst.) yang boleh dirender untuk pemanggil
+   anonim. Satu-satunya pintu masuk adalah `/login`.
 
-   DUA SYARAT AGAR GERBANG INI MENYALA — sengaja konservatif supaya tidak
-   mematikan repo DEMO/desain ini:
+   Sebelum revisi ini, middleware punya DUA jalan pintas:
+     • `NEXT_PUBLIC_DEMO=1`  → seluruh gerbang dilewati;
+     • Supabase belum diisi  → seluruh gerbang dilewati.
+   Jalan pintas pertama membuat siapa pun yang membuka `localhost:3000/app`
+   (atau menekan tautan apa pun yang mengarah ke sana) langsung masuk Dashboard
+   tanpa login — persis pelanggaran yang dilaporkan. Karena itu keduanya
+   DIHAPUS: gerbang sekarang hanya mengenal dua keadaan, publik atau sesi.
 
-     1. Supabase HARUS dikonfigurasi (`NEXT_PUBLIC_SUPABASE_URL`). Tanpa itu
-        tidak ada sesi yang mungkin dibuat, jadi mengunci user = mengunci
-        semuanya tanpa jalan masuk.
-     2. `NEXT_PUBLIC_DEMO` BUKAN `1`. Repo ini memakai flag yang sama untuk
-        seed data contoh (lihat komentar `DemoSeedGate` di `app/layout.tsx`), jadi
-        build demo/review desain tetap bisa dijelajahi seluruh halamannya.
-
-   Sesi diperiksa lewat KEBERADAAN cookie Supabase Auth (`sb-<ref>-auth-token`,
-   termasuk varian terpotong `.0`/`.1`). Cookie tidak diverifikasi di sini —
-   verifikasi tanda tangan terjadi di server (`/api/session`) dan di database
-   (RLS). Middleware ini hanya gerbang cepat supaya halaman app tidak pernah
-   dirender untuk pemanggil anonim.
+   Sesi TIDAK CUKUP diperiksa dari keberadaan cookie: cookie bernama
+   `sb-<ref>-auth-token` bisa ditempel siapa saja lewat DevTools, dan di build
+   demo app tetap merender data lokal — itu jalan masuk tanpa login. Karena itu
+   middleware memanggil `supabase.auth.getUser()` (memverifikasi token ke Auth
+   server). Cookie yang dipalsukan = tidak ada user = tetap ditolak.
 
    Tujuan asli dipulihkan lewat `?next=` — `app/login/page.tsx` sudah membacanya
    dan `LoginScreen` mengembalikan user ke sana setelah masuk. */
@@ -32,14 +31,55 @@ function hasSupabaseSessionCookie(request: NextRequest): boolean {
     .some((cookie) => cookie.name.startsWith('sb-') && cookie.name.includes('-auth-token'))
 }
 
-export function middleware(request: NextRequest) {
-  const demoMode = process.env.NEXT_PUBLIC_DEMO === '1'
-  const supabaseConfigured = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL)
-  if (demoMode || !supabaseConfigured) return NextResponse.next()
+/**
+ * Verifikasi sesi ke Supabase Auth.
+ *
+ * `response` dikembalikan bersama hasil supaya token yang di-refresh oleh
+ * `@supabase/ssr` ikut ditulis ke browser pada request yang sah (pola resmi
+ * Supabase middleware). Tanpa cookie, fungsi ini tidak menghubungi jaringan.
+ */
+async function hasVerifiedSession(
+  request: NextRequest,
+): Promise<{ ok: boolean; response: NextResponse }> {
+  const response = NextResponse.next({ request })
+  if (!hasSupabaseConfig() || !hasSupabaseSessionCookie(request)) {
+    return { ok: false, response }
+  }
 
+  const supabase = createServerClient(supabaseUrl(), supabaseAnonKey(), {
+    auth: { flowType: 'pkce' },
+    cookies: {
+      getAll() {
+        return request.cookies.getAll()
+      },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+        cookiesToSet.forEach(({ name, value, options }) =>
+          response.cookies.set(name, value, options),
+        )
+      },
+    },
+  })
+
+  try {
+    const { data, error } = await supabase.auth.getUser()
+    return { ok: !error && Boolean(data.user), response }
+  } catch {
+    return { ok: false, response }
+  }
+}
+
+export async function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl
+  /* Rute legacy `/preview-landing` adalah REDIRECT 301, bukan halaman app.
+     Gerbang sesi harus melewatkannya supaya pengunjung anonim menerima 301
+     ke `/`, bukan 307 ke `/login?next=…`. Tidak dimasukkan ke
+     `PUBLIC_ROUTES` karena ia bukan halaman — hanya redirect. */
+  if (pathname === '/preview-landing') return NextResponse.next()
   if (isPublicRoute(pathname)) return NextResponse.next()
-  if (hasSupabaseSessionCookie(request)) return NextResponse.next()
+
+  const session = await hasVerifiedSession(request)
+  if (session.ok) return session.response
 
   const loginUrl = request.nextUrl.clone()
   loginUrl.pathname = '/login'

@@ -10,7 +10,7 @@
 
 import type { PaymentMethodId } from './methods'
 
-export type PaymentPurpose = 'subscribe' | 'topup' | 'upgrade'
+export type PaymentPurpose = 'subscribe' | 'topup' | 'upgrade' | 'renew'
 
 /** niat pembayaran yang dikirim route ke provider */
 export interface PaymentIntent {

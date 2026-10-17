@@ -382,6 +382,14 @@ export const AI_CAPTURE_COPY = {
    */
   scanFailed:
     'Aku belum bisa baca struk ini — fotonya mungkin kurang jelas, atau sambungannya lagi goyang. Coba foto ulang ya, atau isi manual dulu 🌿',
+  /**
+   * PAKET 87: sebagian foto tidak bisa DIBUKA browser-nya sama sekali (paling
+   * sering HEIC dari iPhone di Chrome/Windows). Dulu berkas seperti itu tetap
+   * dikirim, lalu gagal di penyedia dan user cuma melihat "belum bisa baca
+   * struk". Sekarang pesannya menyebut masalahnya + jalan keluarnya.
+   */
+  scanUnsupported:
+    'Format fotonya belum bisa kubaca di perangkat ini — simpan ulang sebagai JPG atau PNG, lalu coba lagi ya 🌿 Atau isi manual dulu.',
   problemRetry: 'Coba lagi',
   problemFallback: 'Oke, ketik aja',
 

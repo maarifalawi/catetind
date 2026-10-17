@@ -34,6 +34,10 @@ const inter = Inter({
   axes: ['opsz'],
 })
 
+/* ── SATU FONT UNTUK SELURUH SISTEM (termasuk landing) ───────────────────────
+   Landing sekarang memakai Design System CatetInd: Inter untuk body (`font-sans`)
+   dan judul (`font-display`). Tidak ada lagi font kedua khusus landing. */
+
 export const metadata: Metadata = {
   title: 'CatetInd — Track. Grow. Secure.',
   description:

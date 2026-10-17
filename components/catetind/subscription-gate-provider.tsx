@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from 'react'
 import { usePathname } from 'next/navigation'
-import { PUBLIC_ROUTES, isPublicRoute } from '@/lib/public-routes'
+import { PUBLIC_ROUTES, isProviderExemptRoute } from '@/lib/public-routes'
 import {
   capabilitiesOf,
   canUse as canUseCapability,
@@ -57,7 +57,7 @@ export const SUBSCRIPTION_PUBLIC_ROUTES = PUBLIC_ROUTES
 
 /** true kalau pathname berada di (atau di bawah) halaman publik/pre-app */
 export function isSubscriptionPublicRoute(pathname: string): boolean {
-  return isPublicRoute(pathname)
+  return isProviderExemptRoute(pathname)
 }
 
 export interface CallerPlanState {
@@ -68,6 +68,12 @@ export interface CallerPlanState {
   ready: boolean
   /** kapan pembelian dicatat (ISO) */
   purchasedAt: string | null
+  /** kapan masa aktif 30 hari berakhir; `null` untuk lifetime */
+  expiresAt: string | null
+  isLifetime: boolean
+  billingPeriod: 'monthly' | 'lifetime' | null
+  /** true = prabayar sudah lewat tanggal → mode baca-saja */
+  expired: boolean
 }
 
 const UNKNOWN_PLAN: CallerPlanState = {
@@ -75,6 +81,10 @@ const UNKNOWN_PLAN: CallerPlanState = {
   configured: false,
   ready: false,
   purchasedAt: null,
+  expiresAt: null,
+  isLifetime: false,
+  billingPeriod: null,
+  expired: false,
 }
 
 type SubscriptionGateValue = {
@@ -82,6 +92,11 @@ type SubscriptionGateValue = {
   plan: PlanDefinition | null
   planId: PlanId | null
   purchasedAt: string | null
+  expiresAt: string | null
+  isLifetime: boolean
+  billingPeriod: 'monthly' | 'lifetime' | null
+  /** true = masa aktif prabayar habis; data tetap bisa dibaca & diekspor */
+  expired: boolean
   capabilities: Capability[]
   canUse: (capability: Capability) => boolean
   /**
@@ -92,10 +107,10 @@ type SubscriptionGateValue = {
    */
   planKnown: boolean
   /**
-   * true = tombol yang MENAMBAH data keuangan harus non-aktif.
-   * Sejak paket 84 artinya "user belum punya paket" — bukan "masa aktif habis".
-   * Pembacaan data, navigasi, dokumen legal, dan pembayaran TIDAK pernah ikut
-   * terkunci.
+   * true = tombol yang MENAMBAH data keuangan harus non-aktif — user belum
+   * punya paket ATAU masa aktif prabayarnya sudah habis.
+   * Pembacaan data, ekspor, navigasi, dokumen legal, dan pembayaran TIDAK
+   * pernah ikut terkunci.
    */
   inputLocked: boolean
   /** true = gerbang sengaja dimatikan karena user ada di halaman publik/pre-app */
@@ -110,6 +125,10 @@ interface SubscriptionResponse {
   configured?: unknown
   planId?: unknown
   purchasedAt?: unknown
+  expiresAt?: unknown
+  isLifetime?: unknown
+  billingPeriod?: unknown
+  expired?: unknown
 }
 
 export function SubscriptionGateProvider({ children }: { children: ReactNode }) {
@@ -125,10 +144,18 @@ export function SubscriptionGateProvider({ children }: { children: ReactNode }) 
         return
       }
       const body = (await res.json()) as SubscriptionResponse
+      const period =
+        body.billingPeriod === 'monthly' || body.billingPeriod === 'lifetime'
+          ? body.billingPeriod
+          : null
       setState({
         configured: body.configured === true,
         planId: typeof body.planId === 'string' ? (body.planId as PlanId) : null,
         purchasedAt: typeof body.purchasedAt === 'string' ? body.purchasedAt : null,
+        expiresAt: typeof body.expiresAt === 'string' ? body.expiresAt : null,
+        isLifetime: body.isLifetime === true,
+        billingPeriod: period,
+        expired: body.expired === true,
         ready: true,
       })
     } catch {
@@ -144,21 +171,39 @@ export function SubscriptionGateProvider({ children }: { children: ReactNode }) 
   const plan = useMemo(() => planById(state.planId), [state.planId])
   const capabilities = useMemo(() => capabilitiesOf(state.planId), [state.planId])
 
-  const inputLocked = state.configured && state.ready && !state.planId && !onPublicRoute
+  const inputLocked =
+    state.configured && state.ready && (!state.planId || state.expired) && !onPublicRoute
 
   const value = useMemo<SubscriptionGateValue>(
     () => ({
       plan,
       planId: state.planId,
       purchasedAt: state.purchasedAt,
+      expiresAt: state.expiresAt,
+      isLifetime: state.isLifetime,
+      billingPeriod: state.billingPeriod,
+      expired: state.expired,
       capabilities,
-      canUse: (capability: Capability) => canUseCapability(state.planId, capability),
+      canUse: (capability: Capability) =>
+        state.expired ? false : canUseCapability(state.planId, capability),
       planKnown: state.configured && state.ready,
       inputLocked,
       onPublicRoute,
       refresh: () => void load(),
     }),
-    [plan, state.planId, state.purchasedAt, capabilities, inputLocked, onPublicRoute, load],
+    [
+      plan,
+      state.planId,
+      state.purchasedAt,
+      state.expiresAt,
+      state.isLifetime,
+      state.billingPeriod,
+      state.expired,
+      capabilities,
+      inputLocked,
+      onPublicRoute,
+      load,
+    ],
   )
 
   return (
