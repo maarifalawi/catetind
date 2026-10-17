@@ -163,10 +163,11 @@ describe('HERO_DEVICE — satu cerita angka di seluruh hero', () => {
    copy template Inggris (termasuk nama "Makro") yang lolos ke layar. */
 
 describe('LP_PRICING — harga yang diiklankan = harga yang ditagih', () => {
-  it('default mode = prabayar 30 hari', () => {
-    expect(LP_PRICING.defaultMode).toBe('monthly')
+  it('default mode = lifetime', () => {
+    expect(LP_PRICING.defaultMode).toBe('lifetime')
     expect(LP_PRICING.modes.map((entry) => entry.id)).toEqual(['monthly', 'lifetime'])
     expect(LP_PRICING.periodLabels.monthly).toBe('per 30 hari')
+    expect(LP_PRICING.periodLabels.lifetime).toBe('Sekali bayar, akses selamanya')
   })
 
   it('harga monthly landing = PLANS[].monthly', () => {

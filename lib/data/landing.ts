@@ -1150,7 +1150,8 @@ export const LP_MISSION = {
        tanpa auto-debet; CTA `/checkout?plan=<id>&period=monthly`.
      • Lifetime → `PLANS[].lifetime` (109k/129k/299k); CTA membawa
        `period=lifetime`.
-   Default produk = monthly. Tidak ada nominal di JSX.
+   Default tampilan = lifetime (pemilik produk ingin harga sekali bayar yang
+   muncul lebih dulu). Tidak ada nominal di JSX.
 
    Slot "Khusus Pasangan" tetap diganti fakta nyata: Joint Wallet termasuk di
    Paket Waras. Tidak ada dua akun, tidak ada harga baru. */
@@ -1161,16 +1162,14 @@ export const LP_PRICING = {
   eyebrow: 'Harga',
   titleBefore: 'Beresin bocor halus, mulai ',
   titleEmphasis: '1 kopi',
-  subtitle:
-    'Prabayar 30 hari atau sekali bayar lifetime. Tanpa biaya tersembunyi, tanpa auto-debet, tanpa jebakan perpanjangan otomatis.',
   /** a11y: nama grup dua tombol mode harga */
   toggleAria: 'Pilih durasi paket',
   modes: [
     { id: 'monthly', label: MONTHLY_LABEL, note: 'Aktif 30 hari · perpanjang manual' },
     { id: 'lifetime', label: 'Lifetime', note: 'Sekali bayar · akses selamanya' },
   ] as const satisfies readonly { id: LpPricingMode; label: string; note: string }[],
-  /** default produk: prabayar 30 hari */
-  defaultMode: 'monthly' as LpPricingMode,
+  /** default tampilan: sekali bayar lifetime */
+  defaultMode: 'lifetime' as LpPricingMode,
   /** label periode di samping nominal */
   periodLabels: PERIOD_LABEL,
   /** badge di atas kartu — dibaca per mode */
@@ -1246,8 +1245,6 @@ export const LP_FAQ = {
   eyebrow: 'FAQ',
   titleBefore: 'Jawaban yang sering ',
   titleEmphasis: 'ditanya',
-  subtitle:
-    'Pertanyaan yang paling sering masuk sebelum orang mulai nyatet. Kalau masih ada yang bikin ragu, chat WhatsApp atau kirim email aja.',
   /** a11y: nama rail desktop + dropdown mobile */
   categoryRailLabel: 'Kategori pertanyaan',
   categorySelectLabel: 'Pilih kategori pertanyaan',

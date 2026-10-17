@@ -44,7 +44,7 @@ menyimpan keputusan produk, cara kerja alat screenshot/audit, dan sisa risiko.
   - `catet-aja` Rp109.000
   - `waras` Rp129.000
   - `sultan` Rp299.000
-- Default toggle landing = **Langganan 30 hari**.
+- Default toggle landing = **Lifetime**.
 - Sekali bayar via Midtrans (QRIS/VA/e-wallet). **Tidak ada auto-renew**, tidak
   ada token kartu yang disimpan, tidak ada tagihan diam-diam.
 

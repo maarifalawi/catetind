@@ -70,16 +70,8 @@ export function LandingFaqLp() {
               className="mx-auto max-w-full text-center font-display text-[36px] leading-[1.15] font-medium tracking-[-0.03em] text-forest landing-tab:max-w-[520px] landing-tab:text-[48px] landing:max-w-[720px] landing:text-[56px]"
             >
               {LP_FAQ.titleBefore}
-              <mark className="box-decoration-clone whitespace-nowrap rounded-[16px] bg-daisy px-3 pb-1 text-forest landing:px-4">
-                {LP_FAQ.titleEmphasis}
-              </mark>
+              <span className="whitespace-nowrap">{LP_FAQ.titleEmphasis}</span>
             </h2>
-          </LandingReveal>
-
-          <LandingReveal y={72} delay={0.4} className="w-full">
-            <p className="mx-auto max-w-[540px] text-center text-[16px] leading-[1.5] text-forest/60 landing-tab:text-[18px]">
-              {LP_FAQ.subtitle}
-            </p>
           </LandingReveal>
         </div>
 
@@ -387,7 +379,7 @@ function ContactCard() {
         </LandingButton>
         <a
           href={LP_FAQ.contact.emailHref}
-          className="text-[13px] font-medium text-forest underline underline-offset-4"
+          className="text-[13px] font-medium text-forest underline-offset-4 hover:underline"
         >
           {LP_FAQ.contact.emailLabel}
         </a>

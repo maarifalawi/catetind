@@ -43,7 +43,11 @@ export function LandingMissionLp() {
       aria-labelledby="landing-mission-title"
       className="relative w-full scroll-mt-24 overflow-clip bg-canvas px-6 landing-tab:px-10"
     >
-      <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-8 pt-8 landing-tab:gap-12 landing-tab:pt-[60px]">
+      {/* `pb` di mobile wajib: section memakai `overflow-clip`, sedangkan ring
+          kartu terakhir digambar DI LUAR border box. Tanpa ruang bawah, garis
+          bawah kartu ke-4 (dan sudut rounded-nya) ikut terpotong. Desktop tidak
+          perlu karena artikel setinggi layar menyisakan `py-16`. */}
+      <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-8 pt-8 pb-8 landing-tab:gap-12 landing-tab:pt-[60px] landing-tab:pb-0">
         {/* blok heading menempel di layar desktop; kartu-kartu bergulir di atasnya */}
         <div className="relative z-0 flex flex-col items-center gap-6 pt-10 landing-tab:sticky landing-tab:top-0 landing-tab:min-h-screen landing-tab:justify-center landing-tab:gap-12 landing-tab:pt-0">
           <LandingReveal y={24} className="w-full">
