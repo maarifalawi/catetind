@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 
 export default function ContactPage() {
   return (
-    <main className="w-full bg-canvas font-sans text-forest">
+    <main id="top" className="w-full bg-canvas font-sans text-forest">
       <LandingNavbarLp basePath="/" />
       <LandingContactLp />
       <LandingFooterLp basePath="/" />

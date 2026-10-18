@@ -26,8 +26,6 @@ import {
   type PlanId,
   type TrustBadge,
 } from '@/lib/data/pricing'
-import { LogoWordmark } from './logo-wordmark'
-import { BrandPanel } from './brand-panel'
 import { RegistrationSheet, type RegistrationOutcome, type RegistrationResult } from './registration-sheet'
 import { fetchSessionUser, registerAccount } from '@/lib/session-client'
 import { buildVerifyHref } from '@/lib/data/auth'
@@ -38,10 +36,11 @@ import { WELCOME_PATH } from '@/lib/data/welcome'
    RINGAN (maksimal 3 langkah, 2 field, tanpa password) dan JUJUR (harga
    konsisten, tanpa auto-renew, tanpa countdown/social proof palsu).
 
-   Tata letak (revisi desain): DUA KOLOM, sama seperti `/login` — panel brand
-   batik di kiri (komponen bersama `BrandPanel`) dan seluruh alur checkout di
-   kanan. Semua isi lama tetap ada (langkah, pilihan paket, harga, trust badge,
-   kode teman, ringkasan, tombol bayar) — yang berubah hanya bingkainya.
+   Tata letak (revisi desain): BINGKAI LANDING — navbar + footer landing
+   dipasang route, kepala halaman memakai pill eyebrow + H1 display, lalu satu
+   kolom kartu putih ber-hairline. Desain lama (panel batik dua kolom +
+   PublicNavbar) sudah tidak dipakai. Semua isi lama tetap ada (langkah,
+   pilihan paket, harga, trust badge, kode teman, ringkasan, tombol bayar).
 
    Halaman ini memilih paket + periode (monthly/lifetime), lalu registrasi
    (email + nama + kode teman) dan pembayaran di `/checkout/bayar`. Tidak ada
@@ -171,30 +170,26 @@ export function CheckoutScreen({
 
   return (
     <>
-      {/* ── Tata letak 2 kolom, SAMA seperti /login: panel brand batik di kiri
-             (komponen bersama `BrandPanel`), seluruh alur checkout di kanan. Di
-             mobile panel menjadi banner di ATAS — tidak disembunyikan, supaya
-             tagline produk tetap terbaca. ──────────────────────────────────── */}
-      <div className="mx-auto flex w-full max-w-[1080px] flex-col gap-5 px-5 pt-6 pb-56 sm:px-6 lg:flex-row lg:items-start lg:gap-8 lg:px-8 lg:pt-10 lg:pb-16">
-        {/* `lg:sticky` + tinggi viewport: panel batik menemani scroll tanpa ikut
-            menjulang sepanjang konten (kontennya jauh lebih panjang di sini) */}
-        <BrandPanel className="rounded-[1.5rem] lg:sticky lg:top-10 lg:h-[calc(100dvh-5rem)] lg:w-[41%] lg:shrink-0 lg:rounded-[2rem]" />
-
-        {/* ── kolom KANAN: seluruh alur checkout ─────────────────────────── */}
-        <div className="flex w-full min-w-0 flex-col lg:flex-1">
-          {/* ── 1. header ──────────────────────────────────────────────────── */}
-          <header>
-            <LogoWordmark className="h-6" />
-            <p className="mt-6 text-[11px] font-medium tracking-[0.16em] text-forest/40 uppercase">
-              {CHECKOUT_COPY.eyebrow}
-            </p>
-            <h1 className="mt-1.5 font-display text-3xl font-semibold tracking-tight text-forest lg:text-4xl">
+      <section className="w-full bg-canvas px-5 pt-[120px] pb-20 landing-tab:px-10 landing-tab:pt-[160px] landing:pt-[180px] landing:pb-[120px]">
+        <div className="mx-auto flex w-full max-w-[760px] flex-col items-center gap-8">
+          {/* kepala halaman — resep yang sama dengan hero landing */}
+          <header className="flex w-full flex-col items-center gap-4 text-center">
+            <span className="inline-flex items-center gap-2 rounded-full bg-canvas py-0.5 pr-4 pl-0.5 ring-1 ring-soil/10">
+              <span className="flex size-6 items-center justify-center rounded-full bg-sage">
+                <ShieldCheck className="size-3.5 text-forest" aria-hidden />
+              </span>
+              <span className="text-[14px] leading-[1.5] text-forest">{CHECKOUT_COPY.eyebrow}</span>
+            </span>
+            <h1 className="max-w-[620px] text-balance font-display text-[40px] leading-[1.12] font-medium tracking-[-0.03em] text-forest landing-tab:text-[52px] landing:text-[60px]">
               {CHECKOUT_COPY.title}
             </h1>
-            <p className="mt-2.5 text-[13px] leading-relaxed text-forest/55">{CHECKOUT_COPY.subtitle}</p>
+            <p className="max-w-[520px] text-balance text-[16px] leading-[1.5] text-forest-muted">
+              {CHECKOUT_COPY.subtitle}
+            </p>
           </header>
 
-          {/* ── 2. sisa prosesnya: 3 langkah (PRD 5887) ─────────────────────── */}
+          <div className="flex w-full min-w-0 flex-col">
+            {/* ── 2. sisa prosesnya: 3 langkah (PRD 5887) ─────────────────────── */}
           <section className="mt-6 rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12">
             <div className="flex items-baseline justify-between gap-2">
               <h2 className="font-display text-[15px] font-medium tracking-tight text-forest">
@@ -474,18 +469,11 @@ export function CheckoutScreen({
             </dl>
           </section>
 
-          {/* CTA untuk DESKTOP: mengalir di ujung kolom kanan. Di mobile
-              tombolnya tetap bar di bawah viewport (blok setelah ini). */}
-          <CheckoutCta onStart={handleStart} className="mt-5 hidden lg:block" />
+          {/* CTA — mengalir seperti CTA landing, satu bentuk untuk semua ukuran */}
+          <CheckoutCta onStart={handleStart} className="mt-5" />
         </div>
       </div>
-
-      {/* ── CTA MOBILE: bar tetap di zona ibu jari (tidak ikut scroll) ───── */}
-      <div className="fixed inset-x-0 bottom-0 z-40 bg-gradient-to-t from-canvas via-canvas/95 to-transparent pt-10 pb-[max(1rem,env(safe-area-inset-bottom))] lg:hidden">
-        <div className="mx-auto w-full max-w-[560px] px-5 sm:px-6">
-          <CheckoutCta onStart={handleStart} />
-        </div>
-      </div>
+      </section>
 
       {/* ── Sheet registrasi (email + nama, tanpa password). Midtrans di-bypass
              sprint ini, jadi tidak ada sheet pembayaran setelah ini — lihat

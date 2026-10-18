@@ -1,20 +1,24 @@
 import type { Metadata } from 'next'
 import { CheckoutScreen } from '@/components/catetind/checkout-screen'
+import { LandingFooterLp } from '@/components/landing/lp/footer'
+import { LandingNavbarLp } from '@/components/landing/lp/navbar'
 import { asBillingPeriod, type PlanId } from '@/lib/data/pricing'
-import { PhoneStage } from '@/components/catetind/phone-stage'
 
 /**
  * Checkout (/checkout) — inventaris #3, halaman PUBLIK.
+ *
+ * Bingkai halaman SAMA dengan landing page: `LandingNavbarLp` + `LandingFooterLp`
+ * di dalam satu `<main id="top">`. Desain lama (PhoneStage + panel batik dua
+ * kolom) sudah tidak dipakai lagi di sini.
  *
  * Aturan warna, frasa, dan angka dipenuhi dari satu tempat:
  *   • harga, paket, trust badge, dan seluruh copy → `lib/data/pricing.ts`
  *   • copy form registrasi + validasi email     → `lib/data/auth.ts`
  * Komponennya sendiri nol string copy (CONTEXT-WAJIB §4).
  *
- * `PhoneStage plain` — seperti onboarding: layar fokus tanpa watermark raksasa di
- * latar. TANPA ScreenShell/sidebar, dan `MobileBottomNav` + AI chat widget
- * menyembunyikan dirinya sendiri di prefix `/checkout` (lihat komentar di kedua
- * komponen itu) supaya tidak ada navigasi app yang mengganggu alur membayar.
+ * TANPA ScreenShell/sidebar, dan `MobileBottomNav` + AI chat widget
+ * menyembunyikan dirinya sendiri di prefix `/checkout` supaya tidak ada
+ * navigasi app yang mengganggu alur membayar.
  *
  * KATALOG: 3 tier `PLANS` × dua periode nyata — `monthly` (prabayar 30 hari)
  * dan `lifetime` (akses selamanya). Harga dibaca dari `lib/data/pricing.ts`;
@@ -51,12 +55,14 @@ export default async function CheckoutPage({
   const period = asBillingPeriod(first(params.period)) ?? 'monthly'
 
   return (
-    <PhoneStage plain>
+    <main id="top" className="w-full bg-canvas font-sans text-forest">
+      <LandingNavbarLp basePath="/" />
       <CheckoutScreen
         initialPlanId={plan ? (plan as PlanId) : undefined}
         initialPeriod={period}
         initialReferralCode={kode || null}
       />
-    </PhoneStage>
+      <LandingFooterLp basePath="/" />
+    </main>
   )
 }

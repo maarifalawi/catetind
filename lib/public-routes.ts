@@ -36,6 +36,7 @@ export const PUBLIC_ROUTES = [
   '/checkout',
   '/privacy',
   '/terms',
+  '/security',
   '/join',
   '/share',
 ] as const

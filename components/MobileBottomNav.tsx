@@ -85,6 +85,7 @@ const FOCUS_ROUTES = [
   '/share',
   '/privacy',
   '/terms',
+  '/security',
   '/changelog',
 ]
 

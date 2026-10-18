@@ -1,20 +1,21 @@
 import type { Metadata } from 'next'
+import { LandingFooterLp } from '@/components/landing/lp/footer'
+import { LandingNavbarLp } from '@/components/landing/lp/navbar'
 import { LoginScreen } from '@/components/catetind/login-screen'
-import { PhoneStage } from '@/components/catetind/phone-stage'
-import { PublicNavbar } from '@/components/catetind/public-navbar'
 import { safeNextPath } from '@/lib/data/auth'
 
 /**
  * Masuk (/login) — inventaris #8, halaman PUBLIK/pre-app.
  *
- * `PhoneStage plain` — layar fokus tanpa watermark raksasa di latar, sama seperti
- * /checkout: user datang untuk SATU hal (masuk), bukan jalan-jalan. Sejak revisi
- * desain, jalur UTAMA = kode 6 angka yang diketik DI halaman ini (nol pindah app);
+ * Sejak revisi desain, bingkai halaman ini SAMA dengan landing: `LandingNavbarLp`
+ * di atas dan `LandingFooterLp` di bawah, di dalam satu `<main id="top">`.
+ * Desain lama (PhoneStage + PublicNavbar + panel batik dua kolom) sudah tidak
+ * dipakai lagi di sini.
+ *
+ * Jalur UTAMA = kode 6 angka yang diketik DI halaman ini (nol pindah app);
  * magic link tetap jalan lewat `/login/verify` untuk user yang memilih klik dari inbox.
  * TANPA ScreenShell/sidebar, dan `MobileBottomNav` + AI chat widget menyembunyikan
  * dirinya di prefix `/login` supaya tidak ada navigasi app di tengah alur masuk.
- * Yang dipasang sebagai gantinya adalah `PublicNavbar` — navbar SITUS (di luar
- * sistem app), konsisten dengan /login/verify.
  *
  * Semua copy user-facing tinggal di `lib/data/auth.ts` (nol string di JSX).
  * Tautan "Daftar" di halaman ini menuju `/checkout` yang sudah ada, dan sebaliknya
@@ -40,9 +41,10 @@ export default async function LoginPage({
   const next = safeNextPath(Array.isArray(raw) ? raw[0] : raw)
 
   return (
-    <PhoneStage plain>
-      <PublicNavbar />
+    <main id="top" className="w-full bg-canvas font-sans text-forest">
+      <LandingNavbarLp basePath="/" />
       <LoginScreen next={next} />
-    </PhoneStage>
+      <LandingFooterLp basePath="/" />
+    </main>
   )
 }

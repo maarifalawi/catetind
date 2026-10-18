@@ -27,7 +27,6 @@ import {
   resendCountdownLabel,
   resolveAuthLanding,
 } from '@/lib/data/auth'
-import { BrandPanel } from './brand-panel'
 import { completeMagicLink, sendLoginLink, verifyEmailOtp } from '@/lib/session-client'
 
 /* ── Cek Email / Callback (/login/verify) — inventaris #9 · PRD 5931–5933 ─────
@@ -37,17 +36,16 @@ import { completeMagicLink, sendLoginLink, verifyEmailOtp } from '@/lib/session-
    litas, daftar 3 langkah, catatan umur tautan) sampai yang tersisa cuma yang
    benar-benar dipakai:
 
-     • TATA LETAK DESKTOP: kartu dua kolom (panel brand batik + konten),
-       pola yang SAMA dengan /login & /checkout. Sebelumnya halaman ini satu
-       kolom sempit ±480px, sehingga di browser desktop terlihat seperti ponsel
-       yang melar.
+     • TATA LETAK: kepala halaman gaya landing (pill eyebrow + H1 display +
+       subjudul) dan satu kartu putih ber-hairline — bukan lagi panel batik
+       dua kolom;
      • alamat emailnya DITAMPILKAN (dari `?email=`) → user yakin tautannya ke
        alamat yang benar;
      • "Kirim ulang" ber-cooldown 60 detik dengan teks hitung mundur;
      • STATE KEDALUWARSA punya kartu sendiri + jalan keluar (jangan layar buntu);
      • jalan masuk lewat KODE 6 angka dari email (jalur Supabase `verifyOtp`).
 
-   Halaman PUBLIK: navbar-nya dari `PublicNavbar` (dipasang di route), tanpa
+   Halaman PUBLIK: navbar & footer landing dipasang di route, tanpa
    sidebar/bottom-nav app. Semua copy di `lib/data/auth.ts`.
    ────────────────────────────────────────────────────────────────────────── */
 
@@ -169,23 +167,27 @@ export function VerifyEmailScreen({
   )
 
   return (
-    /* tinggi dikurangi tinggi navbar (`h-16` = 4rem) supaya kartunya benar-benar
-       di tengah layar tanpa memaksa scroll — bukan ponsel melar di desktop. */
-    <div className="flex min-h-[calc(100dvh-4rem)] w-full items-center justify-center px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
-      <div className="grid w-full max-w-[1040px] overflow-hidden rounded-[1.5rem] bg-cream ring-1 ring-soil/10 shadow-[0_40px_90px_-55px_rgba(0,0,0,0.5)] lg:grid-cols-2 lg:rounded-[2rem]">
-        {/* panel brand batik — komponen BERSAMA (/login & /checkout). Tagline
-            di sini bukan judul halaman (judulnya di kolom kanan), jadi `p`. */}
-        <BrandPanel as="p" />
+    <section className="w-full bg-canvas px-5 pt-[120px] pb-20 landing-tab:px-10 landing-tab:pt-[160px] landing:pt-[180px] landing:pb-[120px]">
+      <div className="mx-auto flex w-full max-w-[560px] flex-col items-center gap-8">
+        {/* kepala halaman — resep yang sama dengan hero landing */}
+        <header className="flex w-full flex-col items-center gap-4 text-center">
+          <span className="inline-flex items-center gap-2 rounded-full bg-canvas py-0.5 pr-4 pl-0.5 ring-1 ring-soil/10">
+            <span className="flex size-6 items-center justify-center rounded-full bg-sage">
+              <MailCheck className="size-3.5 text-forest" aria-hidden />
+            </span>
+            <span className="text-[14px] leading-[1.5] text-forest">{VERIFY_COPY.eyebrow}</span>
+          </span>
+          <h1 className="max-w-[560px] text-balance font-display text-[40px] leading-[1.12] font-medium tracking-[-0.03em] text-forest landing-tab:text-[52px] landing:text-[60px]">
+            {VERIFY_COPY.title}
+          </h1>
+          <p className="max-w-[440px] text-balance text-[16px] leading-[1.5] text-forest-muted">
+            {VERIFY_COPY.subtitle}
+          </p>
+        </header>
 
-        {/* ── kolom konten ─────────────────────────────────────────────────── */}
-        <div className="flex flex-col px-7 py-9 sm:px-10 lg:px-12 lg:py-12">
-          <div className="mx-auto flex w-full max-w-[400px] flex-1 flex-col justify-center">
-            <header>
-              <h1 className="font-display text-[1.9rem] leading-tight font-semibold tracking-[-0.02em] text-forest lg:text-[2.1rem]">
-                {VERIFY_COPY.title}
-              </h1>
-              <p className="mt-2.5 text-[13.5px] leading-relaxed text-forest/55">{VERIFY_COPY.subtitle}</p>
-            </header>
+        {/* kartu status + kode masuk — satu permukaan putih ber-hairline */}
+        <div className="w-full rounded-[28px] bg-cream p-6 ring-1 ring-soil/10 shadow-landing-soft landing:p-8">
+          <div className="flex w-full flex-col">
 
             {/* kartu status: terkirim ATAU kedaluwarsa (dua-duanya ada jalan keluar) */}
             <AnimatePresence mode="wait" initial={false}>
@@ -296,7 +298,7 @@ export function VerifyEmailScreen({
           </footer>
         </div>
       </div>
-    </div>
+    </section>
   )
 }
 

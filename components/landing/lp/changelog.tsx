@@ -42,7 +42,7 @@ export function LandingChangelogLp() {
             {CHANGELOG_META.title}
           </h1>
 
-          <p className="max-w-[560px] text-center text-[16px] leading-[1.6] text-forest/60 landing-tab:text-[18px] landing:leading-[27px]">
+          <p className="max-w-[560px] text-center text-[16px] leading-[1.6] text-forest-muted landing:leading-[27px]">
             {CHANGELOG_META.description}
           </p>
         </div>
@@ -73,14 +73,14 @@ function ChangelogEntryBlock({ entry, latest }: { entry: ChangelogEntry; latest:
     >
       {/* kolom kiri — STATIS (tidak sticky): versi ikut tergulir bersama kartu */}
       <div className="flex items-center justify-between gap-3 border-b border-soil/10 pb-3.5 landing:mt-[58px] landing:self-start">
-        <time dateTime={entry.dateIso} className="text-[14px] leading-[21px] text-forest/45">
+        <time dateTime={entry.dateIso} className="text-[14px] leading-[21px] text-forest-muted">
           {entry.dateHuman}
         </time>
         <span
           className={
             latest
               ? 'inline-flex items-center rounded-full bg-forest px-4 py-1 text-[14px] leading-[21px] text-cream'
-              : 'inline-flex items-center rounded-full bg-sage px-4 py-1 text-[14px] leading-[21px] text-forest/70'
+              : 'inline-flex items-center rounded-full bg-sage px-4 py-1 text-[14px] leading-[21px] text-forest-muted'
           }
         >
           {entry.version}
@@ -88,8 +88,8 @@ function ChangelogEntryBlock({ entry, latest }: { entry: ChangelogEntry; latest:
       </div>
 
       {/* kartu rilis */}
-      <div className="mt-5 min-w-0 rounded-[24px] border border-soil/10 bg-canvas p-6 shadow-[0_24px_60px_-48px_rgba(69,89,78,0.35)] landing:mt-0 landing:p-[60px]">
-        <h2 className="border-b border-soil/10 pb-4 text-[18px] leading-[27px] font-semibold text-forest">
+      <div className="mt-5 min-w-0 rounded-[24px] border border-soil/10 bg-canvas p-6 shadow-landing-soft landing:mt-0 landing:p-[60px]">
+        <h2 className="border-b border-soil/10 pb-4 text-[24px] leading-[1.3] font-semibold text-forest">
           {entry.title}
         </h2>
 
@@ -97,7 +97,7 @@ function ChangelogEntryBlock({ entry, latest }: { entry: ChangelogEntry; latest:
           {entry.summary.map((paragraph) => (
             <p
               key={paragraph}
-              className="text-[16px] leading-[27px] text-forest/60 landing-tab:text-[18px]"
+              className="text-[16px] leading-[27px] text-forest-muted"
             >
               {paragraph}
             </p>
@@ -118,7 +118,7 @@ function ChangelogEntryBlock({ entry, latest }: { entry: ChangelogEntry; latest:
         <div className="mt-8 max-w-[620px] space-y-6">
           {entry.groups.map((group) => (
             <section key={group.title}>
-              <h3 className="text-[16px] leading-[27px] text-forest/75 landing-tab:text-[18px]">
+              <h3 className="text-[16px] leading-[27px] text-forest-muted">
                 {group.title}
               </h3>
               <ul className="mt-2 space-y-1.5">
@@ -128,7 +128,7 @@ function ChangelogEntryBlock({ entry, latest }: { entry: ChangelogEntry; latest:
                       aria-hidden
                       className="mt-[10px] size-1.5 shrink-0 rounded-full bg-mint"
                     />
-                    <span className="min-w-0 text-[15px] leading-[1.6] text-forest/60 landing-tab:text-[16px]">
+                    <span className="min-w-0 text-[16px] leading-[1.6] text-forest-muted">
                       {item}
                     </span>
                   </li>

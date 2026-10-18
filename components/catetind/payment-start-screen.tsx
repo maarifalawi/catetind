@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, ArrowRight, BadgeCheck, Info, ShieldCheck, Tag } from 'lucide-react'
-import { LogoWordmark } from './logo-wordmark'
 import { PaymentInstructionCard, type ActiveInvoice } from './payment-instruction-card'
 import {
   PAY_METHOD_COPY,
@@ -30,8 +29,9 @@ import { fetchSessionUser } from '@/lib/session-client'
    Mandiri Bill. Tidak ada redirect ke domain Midtrans.
 
    Tata letak: ponsel satu kolom; desktop melebar (`max-w-[1080px]`) dengan
-   ringkasan pembelian sticky di kiri dan area cara bayar di kanan - sejajar
-   dengan lebar halaman `/checkout`, jadi alurnya terasa satu halaman.
+   ringkasan pembelian sticky di kiri dan area cara bayar di kanan. Bingkainya
+   SAMA dengan landing page (navbar + footer landing dari route), tanpa logo
+   ganda di dalam konten.
 
    Dua hal yang sengaja TIDAK dilakukan halaman ini:
      . menagih tanpa sesi - `/api/payment/charge` memakai identitas dari cookie,
@@ -216,13 +216,12 @@ export function PaymentStartScreen({
   )
 
   return (
-    <div className="relative w-full px-5 pt-6 pb-24 text-forest sm:px-6 lg:px-8 lg:pt-10 lg:pb-16">
+    <div className="relative w-full px-5 pt-[112px] pb-20 text-forest landing-tab:px-10 landing-tab:pt-[132px] landing:pb-[120px] landing:pt-[140px]">
       <div className="mx-auto w-full max-w-[1080px]">
-        <div className="flex items-center justify-between gap-4">
-          <LogoWordmark className="h-6" />
+        <div className="flex items-center justify-end gap-4">
           <Link
             href={buildCheckoutHref(plan.id, period)}
-            className="inline-flex items-center gap-1.5 text-[12px] font-medium text-forest/50 transition-colors duration-200 hover:text-forest motion-reduce:transition-none"
+            className="inline-flex h-11 items-center gap-1.5 rounded-full px-4 text-[13px] font-medium text-forest ring-1 ring-soil/15 transition-colors duration-200 hover:bg-sage/60 motion-reduce:transition-none"
           >
             <ArrowLeft className="size-3.5" strokeWidth={2.4} aria-hidden />
             {PAY_START_COPY.backLabel}
@@ -230,20 +229,23 @@ export function PaymentStartScreen({
         </div>
 
         <div className="mt-6 lg:mt-10 lg:flex lg:items-start lg:gap-10">
-          <div className="lg:sticky lg:top-10 lg:w-[340px] lg:shrink-0">{summary}</div>
+          <div className="lg:sticky lg:top-24 lg:w-[340px] lg:shrink-0">{summary}</div>
 
           <div className="mt-5 min-w-0 lg:mt-0 lg:flex-1">
-            <p className="text-[11px] font-medium tracking-[0.16em] text-forest/40 uppercase">
-              {PAY_START_COPY.eyebrow}
-            </p>
-            <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight text-forest lg:text-[1.9rem]">
+            <span className="inline-flex items-center gap-2 rounded-full bg-canvas py-0.5 pr-4 pl-0.5 ring-1 ring-soil/10">
+              <span className="flex size-6 items-center justify-center rounded-full bg-sage">
+                <ShieldCheck className="size-3.5 text-forest" aria-hidden />
+              </span>
+              <span className="text-[14px] leading-[1.5] text-forest">{PAY_START_COPY.eyebrow}</span>
+            </span>
+            <h1 className="mt-4 font-display text-[32px] font-medium tracking-[-0.03em] text-forest lg:text-[40px]">
               {isUpgrade
                 ? PAY_START_COPY.upgradeTitle
                 : isRenewal
                   ? PAY_START_COPY.renewTitle
                   : PAY_START_COPY.title}
             </h1>
-            <p className="mt-1 text-[12.5px] text-forest/50">
+            <p className="mt-2 text-[16px] leading-[1.5] text-forest-muted">
               {isUpgrade
                 ? PAY_START_COPY.upgradeSubtitle
                 : isRenewal

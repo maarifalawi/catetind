@@ -34,7 +34,7 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
   return (
-    <main className="w-full bg-canvas font-sans text-forest">
+    <main id="top" className="w-full bg-canvas font-sans text-forest">
       <LandingNavbarLp basePath="/" />
       <LegalShell document={TERMS_DOC} kind="terms" />
       <LandingFooterLp basePath="/" />

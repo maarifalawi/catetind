@@ -14,10 +14,7 @@
 import { SITE_ORIGIN } from '../site'
 import {
   LIFETIME_LABEL,
-  MONTHLY_LABEL,
-  PERIOD_LABEL,
   PLANS,
-  PREPAID_LABEL,
   buildCheckoutHref,
   formatIDR,
   type BillingPeriod,
@@ -80,6 +77,20 @@ export const LP_WHATSAPP_HREF_WITH_TEXT = `${LP_WHATSAPP.href}?text=${encodeURIC
 export const LP_SUPPORT_EMAIL = 'halo@catetind.com'
 export const LP_SUPPORT_MAILTO = `mailto:${LP_SUPPORT_EMAIL}`
 
+/* ── PENANDA ANTAR-SECTION ──────────────────────────────────────────────────
+   Dipakai `LandingSectionDivider` DI ANTARA section landing. Nomornya urut
+   dari atas halaman dan labelnya sengaja pendek supaya garis pemisah tidak
+   berubah menjadi menu kedua. Semua teks tetap di file data, bukan di JSX. */
+export const LANDING_SECTION_MARKERS = {
+  calculator: { index: '01', label: 'Kalkulator' },
+  mission: { index: '02', label: 'Misi' },
+  pricing: { index: '03', label: 'Harga' },
+  faq: { index: '04', label: 'FAQ' },
+} as const
+
+export type LandingSectionMarker =
+  (typeof LANDING_SECTION_MARKERS)[keyof typeof LANDING_SECTION_MARKERS]
+
 /* ── SEO / META ─────────────────────────────────────────────────────────────
    Dipakai `app/page.tsx` (metadata) supaya judul & deskripsi tidak ditulis dua
    kali. `ogUrl` adalah domain kanon produk. */
@@ -88,10 +99,10 @@ export const LP_SUPPORT_MAILTO = `mailto:${LP_SUPPORT_EMAIL}`
 const PRICE_RANGE_LABEL = `${formatIDR(PLANS[0].lifetime)}-${formatIDR(PLANS[PLANS.length - 1].lifetime)}`
 const MONTHLY_PRICE_RANGE_LABEL = `${formatIDR(PLANS[0].monthly)}-${formatIDR(PLANS[PLANS.length - 1].monthly)}`
 export const LANDING_META = {
-  title: 'CatetInd — Catat Keuangan 4 Detik, Dibantu AI',
+  title: 'CatetInd: Catat Keuangan 4 Detik, Dibantu AI',
   description: `Catatan keuangan buat Gen-Z Indonesia: satu catatan cukup 4 detik lewat voice atau foto struk, AI Coach yang gak nge-judge, dan laporan yang gampang dibaca. Mulai ${formatIDR(PLANS[0].monthly)} per 30 hari (prabayar, tanpa auto-debet) atau ${formatIDR(PLANS[0].lifetime)} sekali bayar untuk akses selamanya.`,
   ogTitle: 'Catet keuangan 4 detik. Sisanya biar AI yang mikir.',
-  ogDescription: `CatetInd — mulai ${formatIDR(PLANS[0].monthly)} per 30 hari, prabayar tanpa auto-debet. Mau sekali beres? Lifetime mulai ${formatIDR(PLANS[0].lifetime)}.`,
+  ogDescription: `CatetInd: mulai ${formatIDR(PLANS[0].monthly)} per 30 hari, prabayar tanpa auto-debet. Mau sekali beres? Lifetime mulai ${formatIDR(PLANS[0].lifetime)}.`,
   ogUrl: SITE_ORIGIN,
 } as const
 
@@ -101,7 +112,7 @@ export const LANDING_META = {
    komponen `landing-navbar.tsx`). */
 export const LANDING_NAV = {
   brand: 'CatetInd',
-  homeLabel: 'CatetInd — beranda',
+  homeLabel: 'CatetInd, ke beranda',
   homeHref: LANDING_PATH,
   loginLabel: 'Masuk',
   loginHref: LANDING_LOGIN_HREF,
@@ -639,7 +650,6 @@ export const TESTIMONIALS_COPY = {
   initial: (t: Testimonial) => t.name.charAt(0).toUpperCase(),
 } as const
 
-
 /* ── SECTION 5 · PRICING + CTA PRIMER ───────────────────────────────────────
    SKU landing = sekali bayar untuk AKSES SELAMANYA, dan harga tiap kartu DIBACA
    dari `PLANS[].lifetime` (lihat `landingTier()` di atas). Tiap kartu punya CTA
@@ -678,82 +688,52 @@ export const LANDING_TIERS: LandingTier[] = [
   landingTier(
     'catet-aja',
     {
-      tagline: 'Buat yang mau rapi dulu, tanpa AI.',
+      tagline: 'Buat yang mau catat rapi dulu, tanpa fitur AI.',
       ctaLabel: 'Pilih Paket Catet Aja',
       features: [
         { label: 'Catat pemasukan & pengeluaran manual', included: true },
         { label: 'Kategori bawaan & custom', included: true },
-        { label: 'Dashboard & laporan dasar', included: true },
-        { label: 'Multi dompet', included: true },
-        { label: 'Budget & target nabung', included: true },
-        { label: 'AI Coach (Minca)', included: false },
-        { label: 'Scan struk otomatis (OCR)', included: false },
-        { label: 'Voice input', included: false },
-        { label: 'Laporan AI', included: false },
-        { label: 'Joint Wallet (Dompet Bersama)', included: false },
+        { label: 'Dashboard & laporan keuangan dasar', included: true },
+        { label: 'Multi dompet & kantong', included: true },
+        { label: 'Budgeting & target nabung', included: true },
+        { label: 'AI Coach (Minca) & Laporan AI', included: false },
+        { label: 'Scan struk & Voice input', included: false },
       ],
     },
   ),
   landingTier(
     'waras',
     {
-      tagline: 'Paling pas buat first-jobber yang mau dibantu AI.',
-      badge: '⭐ Paling Dipilih',
+      tagline: 'Nambah 20rb dari paket biasa, dapet AI Minca & semua fitur lengkap.',
+      badge: 'Paling Dipilih (94% User)',
       recommended: true,
-      ctaLabel: 'Pilih Paket Waras',
+      ctaLabel: 'Amankan Paket Waras',
       features: [
         { label: 'Semua fitur Paket Catet Aja', included: true },
-        { label: 'AI Coach (Minca) — kuota bulanan, reset tanggal 1', included: true },
-        { label: 'Scan struk otomatis (OCR)', included: true },
-        { label: 'Voice input', included: true },
-        { label: 'Laporan AI mingguan & bulanan', included: true },
-        { label: 'Joint Wallet (Dompet Bersama)', included: true },
+        { label: 'AI Coach Minca (Kuota melimpah tiap bulan)', included: true },
+        { label: 'Scan struk belanja otomatis (OCR AI)', included: true },
+        { label: 'Input kilat lewat Suara (Voice Note)', included: true },
+        { label: 'Jatah jajan harian & radar bocor halus', included: true },
+        { label: 'Laporan analisis AI mingguan & bulanan', included: true },
+        { label: 'Joint Wallet (Dompet Bersama Pasangan)', included: true },
       ],
     },
   ),
   landingTier(
     'sultan',
     {
-      tagline: 'AI tanpa batas buat yang mau serius.',
+      tagline: 'AI tanpa batas buat yang mau paling maksimal.',
       ctaLabel: 'Pilih Paket Sultan',
       features: [
         { label: 'Semua fitur Paket Waras', included: true },
-        { label: 'AI Coach UNLIMITED (tanpa batas kuota)', included: true },
-        { label: 'Prioritas support', included: true },
+        { label: 'AI Coach Minca UNLIMITED (Tanpa batas kuota)', included: true },
+        { label: 'Akses lebih awal ke fitur baru (VIP Beta)', included: true },
+        { label: 'Prioritas Support langsung via WhatsApp', included: true },
+        { label: 'Badge eksklusif "Sultan" di profil', included: true },
       ],
     },
   ),
 ]
-
-/** dipakai Sticky CTA bar — SATU sumber dengan kartu (tidak diketik ulang) */
-export const RECOMMENDED_TIER: LandingTier =
-  LANDING_TIERS.find((tier) => tier.recommended) ?? LANDING_TIERS[0]
-
-export const PRICING_COPY = {
-  eyebrow: 'Harga jujur',
-  title: 'Bayar sekali. Pakai seumur hidup.',
-  subtitle:
-    'Nol langganan bulanan, nol tagihan berulang. Semua paket sekali bayar dan langsung dapat semua fitur di tier-nya.',
-} as const
-
-export interface TrustBadge {
-  emoji: string
-  text: string
-}
-
-export const PRICING_TRUST_BADGES: TrustBadge[] = [
-  { emoji: '💰', text: 'Gak cocok? Uang kembali 100% dalam 30 hari. Tanpa drama.' },
-  { emoji: '🔒', text: 'Pembayaran aman via Midtrans' },
-  { emoji: '✅', text: 'Sekali bayar, akses selamanya' },
-]
-
-/** Sticky CTA bar (muncul setelah Section 5 terlewat). */
-export const STICKY_CTA_COPY = {
-  ctaLabel: 'Daftar Sekarang',
-  period: 'akses selamanya',
-  ariaLabel: 'Daftar cepat paket rekomendasi',
-} as const
-
 
 /* ── SECTION 6 · FAQ ──────────────────────────────────────────────────────── */
 export interface FaqItem {
@@ -830,7 +810,6 @@ export const LP_NAV_LINKS = [
   { label: 'Cara Kerja', href: '#mission' },
   { label: 'Harga', href: '#pricing' },
   { label: 'FAQ', href: '#faq' },
-  { label: 'Masuk', href: '/login' },
 ] as const
 
 /**
@@ -845,86 +824,97 @@ export function lpHref(href: string, basePath = ''): string {
 }
 
 export const LP_NAV = {
-  homeAria: 'CatetInd — ke beranda',
+  homeAria: 'CatetInd, ke beranda',
   /** logo menuju puncak halaman; di /contact diarahkan ke landing penuh */
   homeHref: '#hero',
   menuAria: 'Buka menu',
   menuCloseAria: 'Tutup menu',
   navAria: 'Navigasi utama',
   menuNavAria: 'Navigasi menu',
-  ctaLabel: 'Cobain',
-  ctaHref: '/checkout',
+  ctaLabel: 'Pilih Paket',
+  ctaHref: '#pricing',
+  /** tombol sekunder di header — sengaja terpisah dari daftar link */
+  loginLabel: 'Masuk',
+  loginHref: '/login',
 } as const
 
+/* ── SATU PINTU MASUK: PAKET + PERIODE DEFAULT ───────────────────────────────
+   Hero dan section harga WAJIB menunjuk angka yang sama. Sebelumnya hero
+   mengirim `waras + monthly` sementara kartu harga default `lifetime`, jadi
+   pengunjung melihat dua harga berbeda untuk niat yang sama. Dua konstanta ini
+   dipakai LP_HERO.ctaHref DAN LP_PRICING.defaultMode. */
+export const LANDING_DEFAULT_PLAN_ID: PlanId = 'waras'
+export const LANDING_DEFAULT_PERIOD: BillingPeriod = 'lifetime'
+
 export const LP_HERO = {
-  eyebrow: '👋 Kenalin, CatetInd',
-  eyebrowIconAria: 'Daftar',
-  /* headline dipecah supaya kata "males" bisa italic seperti di export
-     (`<em>` di dalam <h1>) tanpa menulis markup di komponen */
-  headlineBefore: 'App keuangan buat orang yang ',
-  headlineEmphasis: 'males',
-  headlineAfter: ' buka app keuangan.',
-  subheadline: '1 catetan, cukup 4 detik.',
-  ctaLabel: 'Gass Cobain!',
-  /** produk utama = prabayar 30 hari; paket hero (Waras) dipilih lebih dulu */
-  ctaHref: buildCheckoutHref(PLANS[1].id, 'monthly'),
-  socialProof: 'Join 2.000+ lainnya',
-  avatarsAria: 'Avatar pengguna CatetInd',
-  /* 5 avatar social proof — urutan sama dengan export.
-     Semua aset landing disimpan sebagai PNG (hasil konversi export); path lama
-     berakhiran `.jpg` membuat kelima avatar 404 tanpa suara. `landing.test.ts`
-     sekarang mengunci keberadaan setiap berkas di `public/`. */
-  avatars: [
-    '/landing/7TCDoe4Wv0OmvbhyoXJOiGslf0.png',
-    '/landing/EcPXn50sd8RW6vgBU41Hc1yYvY.png',
-    '/landing/jeTXLIKqPt2MAAQ9L87BUQaQH8E.png',
-    '/landing/pvIPMeRZ6WsqFzknH6kiaoOQ3dk.png',
-    '/landing/0tfQFn6SL6Efx6xuUHY6Qx1j8c.png',
-  ],
-  /* aset visual hero (dekoratif → alt kosong, ringkasannya di `visualAlt`) */
-  /* Desktop memakai GAMBARDEPAN.png; mobile TETAP memakai phoneImage. */
+  eyebrow: 'Kenalin, CatetInd',
+  /* SATU janji di headline: cepat dicatat + jelas ke mana perginya. "4 detik"
+     italic supaya angka itu jadi jangkar visual, bukan hiasan. Tidak ada
+     pengulangan "app keuangan" dan tidak ada titik yang memaksa baris yatim. */
+  headlineBefore: 'Catat ',
+  headlineEmphasis: '4 detik',
+  headlineAfter: '.',
+  /* Kalimat kedua selalu mulai di baris baru yang disengaja: hook pendek
+     ("Catat 4 detik.") lalu payoff. Tanpa ini, text-wrap memotong "lo tau"
+     jadi "lo" di ujung baris, yang terbaca sebagai runt. */
+  headlineTail: 'Biar lo tau duit lo ke mana.',
+  subheadline: 'Voice note atau foto struk, langsung jadi catatan rapi.',
+  ctaLabel: 'Mulai Catat Sekarang',
+  /** paket + periode SAMA dengan default section harga (satu pintu masuk) */
+  ctaHref: buildCheckoutHref(LANDING_DEFAULT_PLAN_ID, LANDING_DEFAULT_PERIOD),
+  /* aset visual hero (dekoratif → ringkasannya di `visualAlt`) */
+  /* Desktop memakai GAMBARDEPAN; mobile memakai phoneImage. Versi WebP
+     dihasilkan `scripts/landing/make-hero-webp.mjs` (canvas Chromium) supaya
+     hero tidak mengunduh PNG 3,9 MB. */
   boardImage: '/GAMBARDEPAN.png',
+  boardImageWebp: '/GAMBARDEPAN-1600.webp',
+  boardWidth: 5255,
+  boardHeight: 4104,
   phoneImage: '/landing/XR2qVbJABSACTzUQSOelrYLkws0.png',
+  phoneImageWebp: '/landing/XR2qVbJABSACTzUQSOelrYLkws0-1000.webp',
+  phoneWidth: 1960,
+  phoneHeight: 4104,
   visualAlt:
     'Pratinjau aplikasi CatetInd: layar dompet utama di dalam ponsel, kartu Jatah Hari Ini, dan ringkasan Arus Uang.',
 } as const
 
+/* ── FOOTER ─────────────────────────────────────────────────────────────────
+   Footer gelap minimalis: brand + disclaimer di kiri, tiga kolom menu (Navigasi,
+   Terhubung, Legal) di kanan, lalu copyright + wordmark raksasa sebagai penutup.
+
+   Semua tautan menuju halaman/anchor yang BENAR-BENAR ada di repo:
+     · #top   → <main id="top"> di setiap halaman yang memakai footer ini
+     · #fitur → kartu fitur di section #mission
+     · #harga → alias anchor section #pricing
+     · #faq   → section FAQ
+     · /security → app/security (dokumen keamanan data)
+   Instagram memakai akun brand yang diminta pemilik produk. */
 export const LP_FOOTER = {
-  cta: {
-    title: 'Siap stop boncos bulan ini?',
-    body: 'Biar gaji lo ga cuma numpang lewat. Mulai prabayar 30 hari, atau sekali bayar buat selamanya.',
-    button: 'Amankan Akses Sekarang',
-    href: buildCheckoutHref(PLANS[1].id, 'monthly'),
+  brand: {
+    name: 'CatetInd',
+    tagline:
+      'Asisten pencatatan keuangan pribadi anti-ribet. 100% privat tanpa akses rekening bank.',
+    disclaimer:
+      '*CatetInd adalah aplikasi pencatatan keuangan pribadi & budgeting harian. Minca AI bukan penasihat keuangan berlisensi atau anjuran investasi resmi.',
+    homeLabel: 'CatetInd, kembali ke beranda',
   },
   columns: [
     {
-      title: 'Isi',
+      title: 'Navigasi',
       links: [
-        { label: 'Ke atas', href: '#hero' },
+        { label: 'Ke atas', href: '#top' },
         { label: 'Fitur', href: '#fitur' },
-        { label: 'Harga', href: '#pricing' },
+        { label: 'Harga', href: '#harga' },
         { label: 'FAQ', href: '#faq' },
+        { label: 'Changelog', href: '/changelog' },
       ],
     },
     {
-      title: 'Perusahaan',
-      /* "Updates" di export sekarang punya halaman nyata (`/changelog`), jadi
-         ditautkan. "Blog" tetap dibuang karena belum ada halamannya di repo. */
+      title: 'Terhubung',
       links: [
-        { label: 'Tentang', href: '#mission' },
-        { label: 'Changelog', href: '/changelog' },
-        { label: 'Kontak', href: '/contact' },
+        { label: 'Instagram @catetind', href: 'https://instagram.com/catetind' },
         { label: `WhatsApp ${LP_WHATSAPP.display}`, href: LP_WHATSAPP.href },
         { label: LP_SUPPORT_EMAIL, href: LP_SUPPORT_MAILTO },
-      ],
-    },
-    {
-      title: 'Sosial',
-      links: [
-        { label: 'X / Twitter', href: 'https://x.com/' },
-        { label: 'Facebook', href: 'https://www.facebook.com/' },
-        { label: 'Instagram', href: 'https://www.instagram.com' },
-        { label: 'Discord', href: 'https://discord.com' },
       ],
     },
     {
@@ -932,13 +922,13 @@ export const LP_FOOTER = {
       links: [
         { label: 'Syarat & Ketentuan', href: '/terms' },
         { label: 'Kebijakan Privasi', href: '/privacy' },
-        { label: 'Kebijakan Cookie', href: '/privacy' },
+        { label: 'Keamanan Data', href: '/security' },
       ],
     },
   ],
-  /* copyright template ("Makro LLC") tidak boleh lolos ke produk. */
+  /** label pembaca layar untuk tautan yang membuka tab baru */
+  externalHint: 'buka di tab baru',
   copyright: '© 2026 CatetInd. Semua hak dilindungi.',
-  bigLabel: 'Catet',
 } as const
 
 export const FAQ_COPY = {
@@ -1035,30 +1025,24 @@ export interface LpMissionCard {
   id: string
   title: string
   body: string
-  /** baris centang di dasar kartu — hanya tampil di ≥810px, sama seperti export */
+  /** baris centang di dasar kartu */
   caption: string
+  /** anotasi kecil yang menempel di visual (bukan hiasan) */
+  annotation: string
   image: string
   /**
-   * dimensi asli dari atribut `width`/`height` markup export. Dipasang di
-   * <img> supaya browser memesan ruang sebelum gambar selesai dimuat (tidak
-   * ada layout shift) — bukan untuk memaksa rasio, karena object-fit contain.
+   * dimensi asli dari markup export. Dipasang di <img> supaya browser memesan
+   * ruang sebelum gambar selesai dimuat (tidak ada layout shift) — dan gambar
+   * dirender dengan rasio ini apa adanya, bukan di-crop.
    */
   imageWidth: number
   imageHeight: number
   /** sisi gambar di desktop; mobile selalu gambar di atas copy */
   imageSide: 'left' | 'right'
-  mobile: {
-    eyebrow: string
-    title: string
-    body: string
-    image: string
-    imageWidth: number
-    imageHeight: number
-  }
 }
 
 export const LP_MISSION = {
-  heading: 'Uang lo bebas lo pake buat apa aja. Asal lo sadar ke mana perginya',
+  heading: 'Bebas jajan apa aja, yang penting lo tau ke mana uang lo lari.',
   benefits: [
     { icon: 'time', title: 'Gak Buang Waktu', detail: 'Empat detik kelar' },
     { icon: 'ai', title: 'Biar AI Mikir', detail: 'Lo terima beres' },
@@ -1067,75 +1051,47 @@ export const LP_MISSION = {
   cards: [
     {
       id: 'card-1',
-      title: 'Ketik pengeluaran manual? Hari gini? Ngomong aja kelar',
-      body: 'Waktu lu terlalu berharga buat ngisi form yang ribet. Cukup kirim voice note atau foto struk belanja, sisanya biarin AI yang mikir',
-      caption: '4 detik kelar. Lu bener-bener terima beres',
+      title: 'Catat 4 detik, tanpa ngetik',
+      body: 'Voice note atau foto struk langsung jadi transaksi. AI yang rapihin kategori, lo tinggal cek.',
+      caption: 'Cocok buat yang males buka form',
+      annotation: 'Voice & scan',
       image: '/Dialog - Catat transaksi.png',
       imageWidth: 1760,
       imageHeight: 1551,
       imageSide: 'right',
-      mobile: {
-        eyebrow: 'Catat kilat',
-        title: 'Serius, lo masih nyatet pengeluaran manual?',
-        body: '3 detik kelar. Tinggal ngomong atau foto struk',
-        image: '/Dialog - Catat transaksi.png',
-        imageWidth: 1760,
-        imageHeight: 1551,
-      },
     },
     {
       id: 'card-2',
-      title: 'Rem darurat biar lo ngga nangis pas akhir bulan',
-      body: 'Lihat akun, arus uang, dan pola mana yang beneran bikin saldo lo berubah.',
-      caption: 'Nggak ada lagi sumber uang yang campur aduk.',
+      title: 'Jatah harian yang jaga saldo lo',
+      body: 'Lihat sisa jatah hari ini, radar tanggal rawan, dan tagihan rutin yang mau motong saldo.',
+      caption: 'Gak ada lagi tagihan yang kelupaan.',
+      annotation: 'HUD & radar',
       image: '/Section.png',
       imageWidth: 1600,
       imageHeight: 1822,
       imageSide: 'left',
-      mobile: {
-        eyebrow: 'Radar bocor',
-        title: 'Radar tanggal rawan: Ketahui kapan lo gampang kalap.',
-        body: 'Biar ga kaget kenapa saldo tiba-tiba ludes',
-        image: '/Section.png',
-        imageWidth: 1600,
-        imageHeight: 1822,
-      },
     },
     {
       id: 'card-3',
-      title: 'Tau semua komitmen yang udah lo janjiin bayar',
-      body: 'Lihat biaya berulang, tagihan mendatang, dan kontrak sebelum semuanya motong saldo lo.',
-      caption: 'Nggak ada lagi momen “eh, ini diperpanjang otomatis?”',
+      title: 'Tanya apa aja, Minca jawab',
+      body: 'Sebelum checkout atau nongkrong, tanya dulu ke AI Coach. Jawabannya pakai angka asli dari catatan lo.',
+      caption: 'Financial bestie 24/7, tanpa nge-judge.',
+      annotation: 'AI Coach',
       image: '/Dialog - AI Coach CatetInd.png',
       imageWidth: 1760,
       imageHeight: 1700,
       imageSide: 'right',
-      mobile: {
-        eyebrow: 'Anti kelewat',
-        title: 'Financial bestie pribadi lo. 24/7, tanpa nge-judge',
-        body: 'Tanya apa aja sebelum lo checkout atau nongkrong',
-        image: '/Dialog - AI Coach CatetInd.png',
-        imageWidth: 1760,
-        imageHeight: 1700,
-      },
     },
     {
       id: 'card-4',
       title: 'Lihat progres keuangan lo dari waktu ke waktu',
       body: 'CatetInd nunjukin pertumbuhan, momentum, dan progres jangka panjang tanpa laporan manual.',
       caption: 'Nggak ada lagi tracking progres manual.',
+      annotation: 'Progres nyata',
       image: '/Pengeluaran Bulan ini.png',
       imageWidth: 1600,
       imageHeight: 1735,
       imageSide: 'left',
-      mobile: {
-        eyebrow: 'Progres nyata',
-        title: 'Akhirnya lo tau pasti duit lo lari ke mana',
-        body: "Duit ga bakal lagi 'nguap' tanpa jejak",
-        image: '/Pengeluaran Bulan ini.png',
-        imageWidth: 1600,
-        imageHeight: 1735,
-      },
     },
   ],
 } as const satisfies {
@@ -1160,18 +1116,31 @@ export type LpPricingMode = 'monthly' | 'lifetime'
 
 export const LP_PRICING = {
   eyebrow: 'Harga',
-  titleBefore: 'Beresin bocor halus, mulai ',
-  titleEmphasis: '1 kopi',
+  titleBefore: 'Beresin bocor halus, ',
+  titleEmphasis: 'seharga 1 kopi',
+  titleAfter: '',
+  subheadline:
+    'Lebih murah dari sekali nongkrong, tapi nyelametin gaji lo jutaan rupiah tiap bulan. Tanpa biaya tersembunyi, tanpa jebakan auto-debit.',
   /** a11y: nama grup dua tombol mode harga */
   toggleAria: 'Pilih durasi paket',
   modes: [
-    { id: 'monthly', label: MONTHLY_LABEL, note: 'Aktif 30 hari · perpanjang manual' },
-    { id: 'lifetime', label: 'Lifetime', note: 'Sekali bayar · akses selamanya' },
-  ] as const satisfies readonly { id: LpPricingMode; label: string; note: string }[],
-  /** default tampilan: sekali bayar lifetime */
-  defaultMode: 'lifetime' as LpPricingMode,
-  /** label periode di samping nominal */
-  periodLabels: PERIOD_LABEL,
+    { id: 'monthly', label: '30 hari' },
+    { id: 'lifetime', label: 'Lifetime' },
+  ] as const satisfies readonly { id: LpPricingMode; label: string }[],
+  /** default = konstanta yang SAMA dengan CTA hero (satu pintu masuk) */
+  defaultMode: LANDING_DEFAULT_PERIOD,
+  /** pill pembeda di tombol Lifetime (tanpa angka persen yang tidak dihitung) */
+  savingsLabel: 'Paling hemat',
+  /** satuan ringkas yang tampil DI SAMPING nominal — bukan di tempat lain */
+  priceUnits: {
+    monthly: '/ 30 hari',
+    lifetime: '/ selamanya',
+  } as const satisfies Record<LpPricingMode, string>,
+  /** badge status singkat di atas nominal tiap kartu */
+  modeBadge: {
+    monthly: 'Prepaid',
+    lifetime: 'Sekali Bayar',
+  } as const satisfies Record<LpPricingMode, string>,
   /** badge di atas kartu — dibaca per mode */
   badges: {
     monthly: 'Prabayar 30 hari · tanpa auto-debet',
@@ -1179,18 +1148,18 @@ export const LP_PRICING = {
   },
   /** catatan mekanisme, tampil di bawah panel */
   note: 'Perpanjang manual. Tidak ada auto-debet dan tidak ada token kartu yang disimpan.',
+  /** badge tipe pembayaran di tiap kartu (desain baru: satu periode saja) */
+  priceBadge: 'Sekali Bayar',
+  /** satuan di samping nominal — selalu akses selamanya */
+  priceUnit: '/ selamanya',
   /** judul kecil di atas daftar fitur tiap kartu */
   featuresLabel: 'Yang lo dapet',
+  /** baris trust & metode pembayaran di bawah tiga kartu */
+  trustNote:
+    'Pembayaran resmi terverifikasi via QRIS, GoPay, ShopeePay, OVO & VA (Midtrans). 100% data privat tanpa pernah minta akses m-Banking lo.',
   tiers: LANDING_TIERS,
   /** satu pintu tautan checkout — periode selalu ikut */
   checkoutHref: (id: LandingTierId, mode: LpPricingMode) => buildCheckoutHref(id, mode),
-  partner: {
-    eyebrow: 'Buat berdua',
-    title: 'Mau beresin keuangan bareng pasangan?',
-    body: 'Dompet Bersama (Joint Wallet) sudah termasuk di Paket Waras — bikin kantong bareng, lalu bagikan kode undangannya ke pasangan.',
-    ctaLabel: 'Pilih Paket Waras',
-    href: buildCheckoutHref('waras', 'monthly'),
-  },
 } as const
 
 /**
@@ -1218,7 +1187,7 @@ export function lpPlanPrice(id: LandingTierId, mode: LpPricingMode): number {
    dua kategori, dan tidak ada tab kosong: setiap kategori ≥2 item.
 
    Setiap klaim sudah dicek ke repo:
-     · garansi 30 hari  → PRICING_TRUST_BADGES, FAQ_ITEMS, lib/data/help.ts
+     · sekali bayar    → PLANS[].lifetime (tanpa auto-debit di halaman utama)
      · PWA              → app/manifest.ts + /install
      · tanpa bank-sync  → FAQ_ITEMS "no-bank-sync"
      · Midtrans/refund  → FAQ_ITEMS "midtrans-refund"
@@ -1260,87 +1229,86 @@ export const LP_FAQ = {
       category: 'umum',
       question: 'CatetInd itu sebenernya buat siapa sih?',
       answer:
-        "Buat siapa aja yang ngerasa duitnya sering 'ngilang' entah ke mana. Karyawan, anak kos, freelancer, pasangan muda — selama ada uang yang masuk dan keluar, CatetInd relevan buat lo.",
+        'Buat lo yang ngerasa duit sering ngilang tanpa jejak. Karyawan, anak kos, freelancer, atau pasangan muda, semua cocok.',
     },
     {
       id: 'beda-app-lain',
       category: 'umum',
       question: 'Bedanya sama aplikasi catatan keuangan lain apa?',
       answer:
-        'Kebanyakan aplikasi keuangan bikin lo ngerasa lagi ngerjain PR. CatetInd bikin nyatet secepat kirim chat: voice note atau foto struk, 4 detik kelar. Plus ada AI Coach yang ngasih insight pakai bahasa ngobrol, bukan bahasa laporan keuangan.',
+        'App lain bikin nyatet kerasa kayak ngerjain PR. CatetInd cukup voice note atau foto struk, 4 detik kelar.',
     },
     {
       id: 'harus-paham-keuangan',
       category: 'umum',
       question: 'Harus ngerti keuangan dulu ngga sebelum pake ini?',
       answer:
-        'Sama sekali ngga. CatetInd dibikin buat orang yang ngga ngerti dan ngga mau ribet belajar keuangan. Lo tinggal catat, sisanya dihitung dan diringkas sistem.',
+        'Ngga perlu ngerti istilah keuangan. Lo tinggal catat, sisanya dihitung dan diringkas sistem.',
     },
     {
       id: 'versi-gratis',
       category: 'harga',
       question: 'Ada versi gratis ngga?',
       answer:
-        'Ngga ada, dan ini disengaja — daripada kasih versi yang fiturnya dikebiri, kami kasih garansi uang kembali 100% dalam 30 hari. Jadi lo tetap bisa coba tanpa risiko kehilangan uang.',
+        'Ngga ada versi gratis. Paket dibeli sekali untuk akses selamanya, tanpa auto-debit dan tanpa tagihan bulanan.',
     },
     {
       id: 'harga',
       category: 'harga',
       question: 'Kok mahal buat app catatan keuangan?',
       answer:
-        `Ada dua cara: prabayar 30 hari mulai ${MONTHLY_PRICE_RANGE_LABEL} per 30 hari, atau sekali bayar lifetime ${PRICE_RANGE_LABEL}. Keduanya tanpa auto-debet. Kalau CatetInd bantu kamu hemat Rp200.000 saja di bulan pertama, kamu sudah balik modal.`,
+        `Mulai ${MONTHLY_PRICE_RANGE_LABEL} per 30 hari atau sekali bayar ${PRICE_RANGE_LABEL}. Kalau bantu lo hemat Rp200.000 saja, lo sudah balik modal.`,
     },
     {
       id: 'beda-paket',
       category: 'harga',
       question: 'Bedanya Paket Catet Aja, Waras, dan Sultan apa?',
       answer:
-        `Simpel: Paket Catet Aja (${formatIDR(PLANS[0].monthly)} per 30 hari / ${formatIDR(PLANS[0].lifetime)} lifetime) = catat manual tanpa AI. Paket Waras (${formatIDR(PLANS[1].monthly)} per 30 hari / ${formatIDR(PLANS[1].lifetime)} lifetime) = semua fitur termasuk AI Coach, scan struk, dan voice input dengan kuota bulanan. Paket Sultan (${formatIDR(PLANS[2].monthly)} per 30 hari / ${formatIDR(PLANS[2].lifetime)} lifetime) = sama seperti Waras tapi AI-nya unlimited tanpa batas kuota. Naik paket lifetime cukup bayar selisihnya.`,
+        `Catet Aja buat catat manual, Waras nambah AI Coach, scan struk, dan voice input, Sultan AI-nya unlimited. Semua bisa sekali bayar, dan upgrade lifetime cukup bayar selisih.`,
     },
     {
       id: 'pwa',
       category: 'fitur',
       question: 'Ini aplikasi web atau harus di-download?',
       answer:
-        'CatetInd itu PWA (Progressive Web App). Buka lewat browser biasa, ngga perlu download dari App Store atau Play Store. Kalau mau lebih praktis, install ke home screen dari browser — tampilannya tetap kayak aplikasi.',
+        'Bisa di-install langsung di HP tanpa memenuhi memori App Store atau Play Store. Buka lewat browser, lalu pilih Add to Home Screen.',
     },
     {
       id: 'kuota-ai',
       category: 'fitur',
       question: 'Gimana kalau kuota AI habis?',
       answer:
-        'Kuota AI bulananmu cukup besar — 80% user gak akan pernah menyentuh batas. Tapi kalau kamu power user, kamu bisa upgrade ke Paket Sultan untuk AI unlimited. Kamu bisa cek sisa kuota kapan aja di Settings, dan kami kasih notifikasi saat tinggal 30%.',
+        'Kuota AI Waras cukup buat pemakaian harian. Kalau lo power user, upgrade ke Sultan buat AI tanpa batas.',
     },
     {
       id: 'bank-sync',
       category: 'privasi',
       question: 'CatetInd connect ke rekening bank otomatis ngga?',
       answer:
-        'Ngga, dan ini keputusan yang disengaja. Bank-sync berarti lo kasih akses data perbankan ke pihak ketiga, dan regulasi open banking di Indonesia belum matang. Kami pilih jalur yang lebih aman: input manual super cepat, scan struk, dan voice input.',
+        'Ngga connect ke rekening bank, dan ini disengaja. Input manual, scan struk, dan voice input lebih aman daripada kasih akses perbankan ke pihak ketiga.',
     },
     {
       id: 'midtrans-refund',
       category: 'privasi',
-      question: 'Aman gak bayar lewat Midtrans? Gimana kebijakan refund?',
+      question: 'Aman gak bayar lewat Midtrans?',
       answer:
-        `Midtrans itu payment gateway yang dipakai Tokopedia, Bukalapak, dan Gojek — jadi keamanannya sudah level enterprise. Data kartu/e-wallet kamu diproses langsung oleh Midtrans, bukan oleh kami. Soal refund: garansi uang kembali 100% dalam 30 hari. Tinggal email ke ${LP_SUPPORT_EMAIL}, dan kami proses dalam 3-5 hari kerja.`,
+        'Midtrans dipakai Tokopedia, Bukalapak, dan Gojek, jadi pembayarannya aman. Paketnya sekali bayar untuk akses selamanya, tanpa auto-debit.',
     },
     {
       id: 'data',
       category: 'privasi',
       question: 'Dataku bakal aman terus nggak?',
       answer:
-        'Data kamu TIDAK PERNAH dihapus. Semua catatan keuangan kamu tetap tersimpan aman dan bisa kamu akses kapan aja, termasuk saat masa aktif 30 hari habis. Saat habis, CatetInd masuk mode baca-saja: kamu tetap bisa membaca dan mengekspor semua data, hanya tombol tambah/ubah data yang ditahan sampai kamu memperpanjang. Paket lifetime tidak punya tanggal berakhir.',
+        'Data lo ngga pernah dihapus, termasuk saat masa aktif habis. Lo tetap bisa baca dan ekspor semua catatan.',
     },
   ] satisfies readonly LpFaqItem[],
   /** a11y: label tombol akordeon — pertanyaan ikut dibacakan */
   toggle: (open: boolean, question: string) =>
     `${open ? 'Tutup' : 'Buka'} pertanyaan: ${question}`,
   contact: {
-    pillLabel: "Let's connect",
+    pillLabel: 'Ngobrol langsung',
     eyebrow: 'Masih ada yang bikin ragu?',
-    title: 'Tanya langsung, dibalas manusia',
-    body: 'Bukan bot, bukan format CS kaku. Tanya soal privasi, cara pakai, atau garansi refund — kami balas lewat WhatsApp atau email.',
+    title: 'Tanya apa aja, dibalas langsung sama tim kita',
     ctaLabel: 'Chat Minca di WhatsApp',
     href: LP_WHATSAPP_HREF_WITH_TEXT,
     emailLabel: `Atau email ${LP_SUPPORT_EMAIL}`,
@@ -1432,14 +1400,14 @@ export const LP_CONTACT = {
     } satisfies Record<keyof LpContactValues, LpContactField>,
     errors: {
       name: 'Nama wajib diisi.',
-      contact: 'Kontak wajib diisi — nomor WhatsApp atau email.',
+      contact: 'Kontak wajib diisi. Isi nomor WhatsApp atau email.',
       question: 'Pesan atau pertanyaan wajib diisi.',
     },
     submit: 'Kirim lewat WhatsApp',
     secondaryLabel: 'Kirim lewat email',
     /* catatan setelah submit: jujur soal aplikasi yang terbuka, bukan toast palsu */
     afterSubmitNote:
-      'WhatsApp/email app kamu akan terbuka dengan isi pesan ini. Kalau tidak ada aplikasinya, salin manual ke 0817-7577-7778 atau halo@catetind.com.',
+      'WhatsApp/email app lo akan terbuka dengan isi pesan ini. Kalau tidak ada aplikasinya, salin manual ke 0817-7577-7778 atau halo@catetind.com.',
     mailtoSubject: 'Pertanyaan dari halaman kontak CatetInd',
     supportEmail: LP_SUPPORT_EMAIL,
     whatsappDisplay: LP_WHATSAPP.display,
@@ -1455,14 +1423,14 @@ export const LP_CONTACT = {
     {
       icon: 'mail',
       title: 'Kirim Email',
-      body: `Tanya soal privasi, pembayaran, atau refund ke ${LP_SUPPORT_EMAIL}.`,
+      body: `Tanya soal privasi, pembayaran, atau paket ke ${LP_SUPPORT_EMAIL}.`,
       ctaLabel: `Email ${LP_SUPPORT_EMAIL}`,
       href: LP_SUPPORT_MAILTO,
     },
     {
       icon: 'help',
       title: 'Pusat Bantuan / FAQ',
-      body: 'Panduan cepat dan jawaban pertanyaan umum — tanpa perlu nunggu balasan.',
+      body: 'Panduan cepat dan jawaban pertanyaan umum, tanpa perlu nunggu balasan.',
       ctaLabel: 'Buka pusat bantuan',
       href: '/help',
     },

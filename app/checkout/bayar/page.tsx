@@ -1,7 +1,8 @@
 import type { Metadata } from 'next'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { PhoneStage } from '@/components/catetind/phone-stage'
+import { LandingFooterLp } from '@/components/landing/lp/footer'
+import { LandingNavbarLp } from '@/components/landing/lp/navbar'
 import { PaymentStartScreen } from '@/components/catetind/payment-start-screen'
 import { PLANS, asBillingPeriod, rankOf, type PlanId } from '@/lib/data/pricing'
 import { readCallerPlan } from '@/lib/subscription/plan'
@@ -9,6 +10,9 @@ import { readSupabaseSession } from '@/lib/supabase/session-cookie'
 
 /**
  * /checkout/bayar — mulai pembayaran.
+ *
+ * Bingkai halaman SAMA dengan landing page: `LandingNavbarLp` + `LandingFooterLp`
+ * di dalam satu `<main id="top">` (desain lama PhoneStage + logo sendiri dilepas).
  *
  * Halaman ini membaca PAKET + PERIODE + kode teman dari query. Nominal TIDAK
  * dititipkan di URL dan identitas pembeli tidak pernah datang dari klien:
@@ -73,7 +77,8 @@ export default async function CheckoutPayPage({
   const isRenewal = period === 'monthly' && Boolean(ownedPlanId)
 
   return (
-    <PhoneStage plain>
+    <main id="top" className="w-full bg-canvas font-sans text-forest">
+      <LandingNavbarLp basePath="/" />
       <PaymentStartScreen
         plan={plan}
         period={period}
@@ -83,7 +88,8 @@ export default async function CheckoutPayPage({
         isRenewal={isRenewal}
         referralCode={code || null}
       />
-    </PhoneStage>
+      <LandingFooterLp basePath="/" />
+    </main>
   )
 }
 

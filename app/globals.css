@@ -79,6 +79,23 @@
   /* marquee avatar landing — 20 detik linear tanpa jeda; dimatikan lewat
      `motion-reduce:animate-none` dan dipause saat hover/fokus */
   --animate-landing-marquee: landing-marquee 20s linear infinite;
+  /* ── SHADOW LANDING — SATU SUMBER ────────────────────────────────────────
+     Sebelumnya 18 nilai `rgba(69,89,78,…)`/hitam ditulis langsung di className.
+     Semua bayangan landing sekarang memakai token ini; jangan menulis
+     `shadow-[0_…_rgba(…)]` lagi di komponen. */
+  --shadow-landing-hairline: 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-landing-hairline2: 0 1px 2px rgba(0, 0, 0, 0.02);
+  --shadow-landing-soft: 0 24px 60px -48px rgba(69, 89, 78, 0.35);
+  --shadow-landing-frame: 0 24px 48px -32px rgba(69, 89, 78, 0.45);
+  --shadow-landing-card: 0 24px 60px -36px rgba(69, 89, 78, 0.35);
+  --shadow-landing-deep: 0 30px 70px -30px rgba(69, 89, 78, 0.65);
+  --shadow-landing-cta: 0 12px 28px -16px rgba(69, 89, 78, 0.7);
+  --shadow-landing-item: 0 18px 48px -24px rgba(69, 89, 78, 0.35);
+  --shadow-landing-pop: 0 18px 50px rgba(0, 0, 0, 0.16);
+  --shadow-landing-nav: 0 10px 30px rgba(0, 0, 0, 0.1);
+  --shadow-landing-toggle: 0 2px 10px rgba(0, 0, 0, 0.06);
+  --shadow-landing-rail: 0 8px 24px rgba(0, 0, 0, 0.06);
+  --shadow-landing-thumb: 0 1px 4px rgba(0, 0, 0, 0.18);
   /* ═══════════════════════════════════════════════════════════════════════════
      PALET WARNA KANON — "EARTH PASTEL"  ·  SATU SUMBER KEBENARAN WARNA
      Dokumen lengkap + cara kembali ke palet lama: docs/theme/PALETTE.md
@@ -122,6 +139,14 @@
   --color-ink: #000000; /* = soil (hitam) — `bg-ink`/ring/scrim, BUKAN teks */
   --color-forest: #45594e; /* = evergreen */
   --color-forest-soft: #52685c; /* turunan evergreen (dicerahkan) */
+  /* ── TEKS SEKUNDER — SOLID, BUKAN OPACITY ────────────────────────────────
+     Opacity 40–60% di atas putih cuma menghasilkan 1,9–2,9:1 dan gagal WCAG
+     AA. Dua token ini SATU-SATUNYA cara menurunkan hierarki teks:
+       forest-muted   5,7:1 di canvas · 4,6:1 di sage   → body, label, catatan
+       cream-muted    5,8:1 di forest · 4,7:1 di forest-soft → teks di atas gelap
+     Opacity hanya untuk dekorasi (ikon, garis, glow), BUKAN untuk teks. */
+  --color-forest-muted: #5a6a61;
+  --color-cream-muted: #dfe4e1;
   --color-brand: #ecd768; /* = daisy */
   --color-mint: #91bb9e; /* = leaf (uang/positif) */
   --color-mint-soft: #dbe4c7; /* turunan leaf (tint) */

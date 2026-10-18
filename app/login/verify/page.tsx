@@ -1,13 +1,13 @@
 import type { Metadata } from 'next'
-import { PhoneStage } from '@/components/catetind/phone-stage'
-import { PublicNavbar } from '@/components/catetind/public-navbar'
+import { LandingFooterLp } from '@/components/landing/lp/footer'
+import { LandingNavbarLp } from '@/components/landing/lp/navbar'
 import { VerifyEmailScreen } from '@/components/catetind/verify-email-screen'
 import { safeNextPath } from '@/lib/data/auth'
 
 /**
  * Cek Email (/login/verify) — inventaris #9, halaman PUBLIK/pre-app.
  *
- * Ini tujuan tautan di dalam email (produksi: `emailRedirectTo` Supabase) DAN
+ * Tujuan tautan di dalam email (produksi: `emailRedirectTo` Supabase) DAN
  * halaman yang dituju setelah user menekan "Kirim Magic Link". Dua query dibaca
  * di SINI (server), bukan di komponen klien:
  *
@@ -20,9 +20,8 @@ import { safeNextPath } from '@/lib/data/auth'
  * menghindari `useSearchParams()` + Suspense boundary di komponen klien dan menjaga
  * halaman tetap bisa dirender tanpa hydration mismatch.
  *
- * `PhoneStage plain` sama seperti /login & /checkout: layar fokus, tanpa
- * sidebar/bottom-nav app. Satu-satunya navigasi di sini adalah `PublicNavbar` —
- * navbar SITUS (di luar sistem app), dipakai supaya konsisten dengan /login.
+ * Bingkai halaman SAMA dengan landing page: `LandingNavbarLp` + `LandingFooterLp`
+ * di dalam satu `<main id="top">` (desain lama PhoneStage + PublicNavbar dilepas).
  */
 export const metadata: Metadata = {
   title: 'Cek Email — CatetInd',
@@ -53,15 +52,15 @@ export default async function VerifyEmailPage({
   const errorParam = firstValue(params.error)
 
   return (
-    <PhoneStage plain>
-      {/* navbar SITUS (di luar sistem app) — konsisten dengan /login */}
-      <PublicNavbar />
+    <main id="top" className="w-full bg-canvas font-sans text-forest">
+      <LandingNavbarLp basePath="/" />
       <VerifyEmailScreen
         email={firstValue(params.email)}
         expired={status === 'expired' || errorParam.length > 0}
         code={firstValue(params.code) || undefined}
         next={safeNextPath(firstValue(params.next)) ?? undefined}
       />
-    </PhoneStage>
+      <LandingFooterLp basePath="/" />
+    </main>
   )
 }

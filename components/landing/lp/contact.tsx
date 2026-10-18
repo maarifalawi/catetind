@@ -50,7 +50,7 @@ export function LandingContactLp() {
             </LandingReveal>
 
             <LandingReveal y={72} delay={0.4}>
-              <p className="max-w-[480px] text-[16px] leading-[1.5] text-forest/60 landing-tab:text-[18px]">
+              <p className="max-w-[480px] text-[16px] leading-[1.5] text-forest-muted">
                 {LP_CONTACT.body}
               </p>
             </LandingReveal>
@@ -60,7 +60,7 @@ export function LandingContactLp() {
                 {LP_CONTACT.trustChips.map((chip) => (
                   <li
                     key={chip}
-                    className="inline-flex items-center gap-2 rounded-full bg-sage px-4 py-2 text-[12px] leading-[1.5] text-forest/70"
+                    className="inline-flex items-center gap-2 rounded-full bg-sage px-4 py-2 text-[12px] leading-[1.5] text-forest-muted"
                   >
                     <CheckCircle2 className="size-3.5 shrink-0 text-forest" aria-hidden />
                     {chip}
@@ -74,10 +74,10 @@ export function LandingContactLp() {
           <LandingReveal y={72} delay={0.3} className="w-full">
             <div className="flex flex-col gap-6 rounded-[36px] bg-forest p-3 landing:p-4">
               <div className="flex flex-col gap-2 px-4 pt-3 landing:px-6">
-                <h2 className="text-[28px] leading-[1.25] tracking-[-0.03em] text-cream landing:text-[32px]">
+                <h2 className="text-[24px] leading-[1.25] tracking-[-0.03em] text-cream">
                   {LP_CONTACT.form.title}
                 </h2>
-                <p className="text-[14px] leading-[1.5] text-cream/70">
+                <p className="text-[14px] leading-[1.5] text-cream-muted">
                   {LP_CONTACT.form.subtitle}
                 </p>
               </div>
@@ -114,7 +114,7 @@ function HelpCard({ card }: { card: LpContactHelpCard }) {
           <h3 className="text-[20px] leading-[1.25] tracking-[-0.02em] text-forest">
             {card.title}
           </h3>
-          <p className="text-[14px] leading-[1.5] text-forest/60">{card.body}</p>
+          <p className="text-[14px] leading-[1.5] text-forest-muted">{card.body}</p>
         </div>
       </div>
 

@@ -28,7 +28,6 @@ import {
   resolveAuthLanding,
 } from '@/lib/data/auth'
 import { sendLoginLink, verifyEmailOtp } from '@/lib/session-client'
-import { BrandPanel } from './brand-panel'
 
 /* ── Masuk (/login) — inventaris #8 · PRD 5931–5933 ──────────────────────────
    Magic link adalah "janji kepercayaan" produk ini: *kami tidak menyimpan
@@ -37,28 +36,18 @@ import { BrandPanel } from './brand-panel'
    §5): (1) ZERO password — satu email, satu kode, selesai; (2) jangan mengungkap
    keberadaan akun; (3) jangan membuat user terjebak di layar buntu.
 
-   ── REVISI DESAIN (panel 2 kolom + OTP jadi jalur utama) ────────────────────
-   Tata letak mengikuti mock: kartu dua kolom — panel brand batik di kiri dan
-   form di kanan. Panel kiri adalah komponen BERSAMA `BrandPanel` (dipakai juga
-   oleh /checkout): gradien Evergreen + motif batik ala muka kartu dompet, TANPA
-   logo dan tanpa teks lain selain tagline (permintaan desain).
+   ── REVISI DESAIN: BINGKAI LANDING ──────────────────────────────────────────
+   Tata letak mengikuti landing page: kepala halaman (pill eyebrow + H1 display +
+   subjudul muted) lalu satu kartu putih ber-hairline. Navbar & footer landing
+   dipasang oleh route (`app/login/page.tsx`), jadi halaman ini TIDAK lagi
+   memakai panel batik dua kolom / PublicNavbar lama.
 
-   Mekanisme login kini DUA LANGKAH DI SATU HALAMAN:
+   Mekanisme login DUA LANGKAH DI SATU HALAMAN:
      1. tulis email  → `signInWithOtp` mengirim kode 6 angka;
      2. ketik kode   → `verifyOtp` membuat sesi, lalu ke Dashboard.
-   Sebelumnya langkah 2 hidup di `/login/verify` (user harus pindah halaman).
-   Alasannya pindah jalur: magic link gampang DIMINTA tapi paling repot
-   DISELESAIKAN (keluar app → cari email → klik → balik), sementara OTP diketik
-   di halaman yang sama — nol perpindahan app. Itu yang paling gampang untuk
-   user "males" yang jadi sasaran tagline. Magic link TETAP hidup lewat
-   `/login/verify` (`?code=` + kartu OTP di sana) — nol tautan mati, nol dua
-   jalur data (keduanya memakai `lib/session-client.ts` yang sama).
 
-   Halaman ini PUBLIK/pre-app: `PhoneStage plain` di route, TANPA ScreenShell;
-   `MobileBottomNav` + AI chat widget menyembunyikan diri di prefix `/login`.
-   Satu-satunya navigasi di sini adalah `PublicNavbar` (navbar SITUS, dipasang
-   di route) — jadi "Halaman depan" sudah punya pintunya lewat logo di sana dan
-   tidak perlu diulang di dalam kartu.
+   Halaman ini PUBLIK/pre-app: tanpa ScreenShell; `MobileBottomNav` + AI chat
+   widget menyembunyikan diri di prefix `/login`.
 
    Semua copy ada di `lib/data/auth.ts` — komponen ini nol string user-facing.
    ────────────────────────────────────────────────────────────────────────── */
@@ -186,26 +175,36 @@ export function LoginScreen({ next }: { next?: string | null }) {
   }
 
   return (
-    <div className="flex min-h-[calc(100dvh-4rem)] w-full items-center justify-center px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
-      {/* kartu dua kolom: panel brand (kiri) + form (kanan) — mengikuti mock,
-          tapi permukaan/warnanya dari palet kanon kita, bukan gradien biru. */}
-      <div className="grid w-full max-w-[1040px] overflow-hidden rounded-[1.5rem] bg-cream ring-1 ring-soil/10 shadow-[0_40px_90px_-55px_rgba(0,0,0,0.5)] lg:grid-cols-2 lg:rounded-[2rem]">
-        {/* panel brand batik — komponen BERSAMA, dipakai /login DAN /checkout.
-            Tagline jadi `h1` di sini karena halaman ini tidak punya judul lain. */}
-        <BrandPanel as="h1" />
+    <section className="w-full bg-canvas px-5 pt-[120px] pb-20 landing-tab:px-10 landing-tab:pt-[160px] landing:pt-[180px] landing:pb-[120px]">
+      <div className="mx-auto flex w-full max-w-[560px] flex-col items-center gap-8">
+        {/* kepala halaman — resep yang sama dengan hero landing */}
+        <div className="flex w-full flex-col items-center gap-4 text-center">
+          <span className="inline-flex items-center gap-2 rounded-full bg-canvas py-0.5 pr-4 pl-0.5 ring-1 ring-soil/10">
+            <span className="flex size-6 items-center justify-center rounded-full bg-sage">
+              <KeyRound className="size-3.5 text-forest" aria-hidden />
+            </span>
+            <span className="text-[14px] leading-[1.5] text-forest">{LOGIN_COPY.eyebrow}</span>
+          </span>
 
-        {/* ── panel form ────────────────────────────────────────────────────── */}
-        <div className="flex flex-col px-7 py-9 sm:px-10 lg:px-12 lg:py-12">
-          <div className="mx-auto flex w-full max-w-[400px] flex-1 flex-col">
-            <div className="flex flex-1 flex-col justify-center py-8 lg:py-6">
+          <h1 className="max-w-[560px] text-balance font-display text-[40px] leading-[1.12] font-medium tracking-[-0.03em] text-forest landing-tab:text-[52px] landing:text-[60px]">
+            {LOGIN_COPY.title}
+          </h1>
+
+          <p className="max-w-[440px] text-balance text-[16px] leading-[1.5] text-forest-muted">
+            {LOGIN_COPY.subtitle}
+          </p>
+        </div>
+
+        {/* kartu form — permukaan putih + hairline, satu keluarga dengan kartu landing */}
+        <div className="w-full rounded-[28px] bg-cream p-6 ring-1 ring-soil/10 shadow-landing-soft landing:p-8">
+          <div className="flex w-full flex-col">
+            <div className="flex flex-col">
               {step === 'email' ? (
                 /* ── LANGKAH 1 · email ─────────────────────────────────────── */
                 <form onSubmit={handleSubmit} noValidate>
-                  <h2 className="font-display text-[1.9rem] leading-tight font-medium tracking-[-0.02em] text-forest lg:text-[2.1rem]">
-                    {LOGIN_COPY.title}
-                  </h2>
+                  <h2 className="sr-only">{LOGIN_COPY.title}</h2>
 
-                  <label className="mt-8 block" htmlFor="login-email">
+                  <label className="block" htmlFor="login-email">
                     <span className="flex items-center gap-1.5 text-[13.5px] leading-snug font-medium text-forest">
                       <Mail className="size-4 text-forest/40" strokeWidth={2.4} aria-hidden />
                       {LOGIN_COPY.emailLabel}
@@ -276,7 +275,7 @@ export function LoginScreen({ next }: { next?: string | null }) {
               ) : (
                 /* ── LANGKAH 2 · kode 6 angka (jalur utama) ─────────────────── */
                 <form onSubmit={handleVerify} noValidate>
-                  <h2 className="font-display text-[1.9rem] leading-tight font-medium tracking-[-0.02em] text-forest lg:text-[2.1rem]">
+                  <h2 className="font-display text-[22px] leading-tight font-medium tracking-[-0.02em] text-forest lg:text-[24px]">
                     {LOGIN_COPY.codeTitle}
                   </h2>
 
@@ -421,6 +420,6 @@ export function LoginScreen({ next }: { next?: string | null }) {
           </div>
         </div>
       </div>
-    </div>
+    </section>
   )
 }

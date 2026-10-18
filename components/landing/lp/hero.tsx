@@ -57,28 +57,29 @@ export function LandingHeroLp() {
           </LandingReveal>
 
           <LandingReveal y={48} delay={0.2} trigger="load" className="w-full">
-            <h1 className="mx-auto max-w-[460px] text-center font-display text-[40px] leading-[1.12] font-medium tracking-[-0.03em] text-forest landing-tab:max-w-[620px] landing-tab:text-[56px] landing:max-w-[720px] landing:text-[64px]">
-              {LP_HERO.headlineBefore}
-              <em className="italic">{LP_HERO.headlineEmphasis}</em>
-              {LP_HERO.headlineAfter}
+            <h1 className="mx-auto max-w-[520px] text-balance text-center font-display text-[40px] leading-[1.12] font-medium tracking-[-0.03em] text-forest landing-tab:max-w-[780px] landing-tab:text-[56px] landing:max-w-[900px] landing:text-[64px]">
+              <span className="block">
+                {LP_HERO.headlineBefore}
+                <em className="italic">{LP_HERO.headlineEmphasis}</em>
+                {LP_HERO.headlineAfter}
+              </span>
+              <span className="block">{LP_HERO.headlineTail}</span>
             </h1>
           </LandingReveal>
 
           <LandingReveal y={72} delay={0.4} trigger="load" className="w-full">
-            <p className="mx-auto max-w-[480px] text-balance text-center text-[16px] leading-[1.5] text-forest/60 landing-tab:text-[18px] landing:max-w-[540px]">
+            <p className="mx-auto max-w-[480px] text-balance text-center text-[16px] leading-[1.5] text-forest-muted landing:max-w-[540px]">
               {LP_HERO.subheadline}
             </p>
           </LandingReveal>
         </LandingReveal>
 
-        {/* CTA + social proof */}
+        {/* CTA */}
         <LandingReveal y={96} delay={0.6} trigger="load" className="w-full">
-          <div className="flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-6">
+          <div className="flex flex-col items-center justify-center gap-3">
             <LandingButton href={LP_HERO.ctaHref} tone="dark" size="md">
               {LP_HERO.ctaLabel}
             </LandingButton>
-
-            <AvatarMarquee />
           </div>
         </LandingReveal>
       </div>
@@ -94,56 +95,25 @@ export function LandingHeroLp() {
         className="relative z-10 flex min-h-[520px] w-full max-w-[1200px] items-center justify-center landing-tab:min-h-[840px]"
       >
         <picture>
+          <source
+            media="(min-width: 1200px)"
+            type="image/webp"
+            srcSet={LP_HERO.boardImageWebp}
+          />
           <source media="(min-width: 1200px)" srcSet={LP_HERO.boardImage} />
+          <source type="image/webp" srcSet={LP_HERO.phoneImageWebp} />
           <img
             src={LP_HERO.phoneImage}
             alt={LP_HERO.visualAlt}
+            width={LP_HERO.phoneWidth}
+            height={LP_HERO.phoneHeight}
             loading="eager"
             fetchPriority="high"
-            className="mx-auto w-[333px] max-w-full object-contain landing:mx-0 landing:max-h-[840px] landing:w-full"
+            decoding="async"
+            className="mx-auto h-auto w-[333px] max-w-full object-contain landing:mx-0 landing:max-h-[840px] landing:w-full"
           />
         </picture>
       </LandingReveal>
     </section>
-  )
-}
-
-
-/* ── MARQUEE AVATAR ──────────────────────────────────────────────────────────
-   Lima avatar diduplikasi 2× lalu digeser kanan→kiri 20 detik linear. Mask
-   kiri/kanan membuat avatar “masuk/keluar” tanpa garis potong; hover & fokus
-   menghentikan animasi, dan `motion-reduce:animate-none` mematikan gerak untuk
-   yang meminta gerak minimal. Teks social proof tetap statis & terbaca SR. */
-function AvatarMarquee() {
-  const avatars = [...LP_HERO.avatars, ...LP_HERO.avatars]
-
-  return (
-    <div className="group flex flex-col items-center gap-1 sm:items-start">
-      <div
-        tabIndex={0}
-        role="group"
-        aria-label={LP_HERO.avatarsAria}
-        className="landing-marquee-mask w-[180px] overflow-hidden rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40"
-      >
-        <ul
-          aria-hidden
-          className="flex w-max animate-landing-marquee items-center motion-reduce:animate-none group-hover:[animation-play-state:paused] group-focus-within:[animation-play-state:paused]"
-        >
-          {avatars.map((src, index) => (
-            <li key={`${src}-${index}`} className="pr-2">
-              <img
-                src={src}
-                alt=""
-                width={35}
-                height={35}
-                loading="eager"
-                className="size-[35px] rounded-full border-2 border-canvas object-cover"
-              />
-            </li>
-          ))}
-        </ul>
-      </div>
-      <p className="text-[14px] leading-[1.5] text-forest/40">{LP_HERO.socialProof}</p>
-    </div>
   )
 }

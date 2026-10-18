@@ -5,7 +5,6 @@ import { motion, useReducedMotion } from 'framer-motion'
 import { ChevronDown, CircleHelp, MessageCircle, Plus } from 'lucide-react'
 import { LP_FAQ, type LpFaqCategoryId, type LpFaqItem } from '@/lib/data/landing'
 import { cn } from '@/lib/utils'
-import { LandingButton } from './button'
 import { LandingReveal } from './reveal'
 
 /* ── SECTION #faq ────────────────────────────────────────────────────────────
@@ -51,7 +50,7 @@ export function LandingFaqLp() {
     <section
       id="faq"
       aria-labelledby="landing-faq-title"
-      className="w-full scroll-mt-24 bg-canvas px-6 py-20 landing-tab:px-10 landing:py-[120px]"
+      className="w-full scroll-mt-24 bg-canvas px-5 py-20 landing-tab:px-10 landing:py-[120px]"
     >
       <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-12">
         <div className="flex flex-col items-center gap-4">
@@ -67,7 +66,7 @@ export function LandingFaqLp() {
           <LandingReveal y={48} delay={0.2} className="w-full">
             <h2
               id="landing-faq-title"
-              className="mx-auto max-w-full text-center font-display text-[36px] leading-[1.15] font-medium tracking-[-0.03em] text-forest landing-tab:max-w-[520px] landing-tab:text-[48px] landing:max-w-[720px] landing:text-[56px]"
+              className="mx-auto max-w-full text-balance text-center font-display text-[24px] leading-[1.2] font-medium tracking-[-0.03em] text-forest landing-tab:max-w-[620px] landing-tab:text-[36px] landing:max-w-[900px] landing:text-[40px]"
             >
               {LP_FAQ.titleBefore}
               <span className="whitespace-nowrap">{LP_FAQ.titleEmphasis}</span>
@@ -93,10 +92,10 @@ export function LandingFaqLp() {
                   data-landing-category={entry.id}
                   onClick={() => selectCategory(entry.id)}
                   className={cn(
-                    'rounded-[16px] px-5 py-4 text-left text-[15px] leading-[1.5] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40',
+                    'rounded-[16px] px-5 py-4 text-left text-[14px] leading-[1.5] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40',
                     active
-                      ? 'bg-canvas text-forest shadow-[0_8px_24px_rgba(0,0,0,0.06)]'
-                      : 'text-forest/55 hover:bg-canvas/60 hover:text-forest',
+                      ? 'bg-canvas text-forest shadow-landing-rail'
+                      : 'text-forest-muted hover:bg-canvas/60 hover:text-forest',
                   )}
                 >
                   {entry.label}
@@ -225,12 +224,12 @@ function CategoryDropdown({
           )
           setOpen(true)
         }}
-        className="flex h-12 w-full items-center justify-between gap-3 rounded-[16px] border border-soil/10 bg-canvas px-5 text-left text-[16px] leading-[1.5] text-forest shadow-[0_1px_2px_rgba(0,0,0,0.02)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40"
+        className="flex h-12 w-full items-center justify-between gap-3 rounded-[16px] border border-soil/10 bg-canvas px-5 text-left text-[16px] leading-[1.5] text-forest shadow-landing-hairline2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40"
       >
         <span>{activeCategory.label}</span>
         <ChevronDown
           className={cn(
-            'size-5 shrink-0 text-forest/40 transition-transform duration-200 motion-reduce:transition-none',
+            'size-5 shrink-0 text-forest/70 transition-transform duration-200 motion-reduce:transition-none',
             open && 'rotate-180',
           )}
           aria-hidden
@@ -252,7 +251,7 @@ function CategoryDropdown({
             role="listbox"
             aria-label={LP_FAQ.categoryRailLabel}
             onKeyDown={onListKeyDown}
-            className="absolute inset-x-0 top-[calc(100%+8px)] z-40 flex flex-col gap-1 rounded-[16px] bg-canvas p-1 shadow-[0_18px_50px_rgba(0,0,0,0.16)]"
+            className="absolute inset-x-0 top-[calc(100%+8px)] z-40 flex flex-col gap-1 rounded-[16px] bg-canvas p-1 shadow-landing-pop"
           >
             {LP_FAQ.categories.map((entry, index) => {
               const selected = entry.id === value
@@ -271,7 +270,7 @@ function CategoryDropdown({
                       'flex w-full items-center rounded-[10px] px-4 py-3 text-left text-[16px] leading-[1.5] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40',
                       selected
                         ? 'bg-sage/60 text-forest'
-                        : 'text-forest/60 hover:bg-sage/60 hover:text-forest',
+                        : 'text-forest-muted hover:bg-sage/60 hover:text-forest',
                     )}
                   >
                     {entry.label}
@@ -305,8 +304,8 @@ function FaqRow({
       className={cn(
         'overflow-hidden rounded-[20px] border bg-canvas transition-shadow duration-200 motion-reduce:transition-none',
         open
-          ? 'border-forest/15 shadow-[0_18px_48px_-24px_rgba(69,89,78,0.35)]'
-          : 'border-soil/10 shadow-[0_1px_2px_rgba(0,0,0,0.02)]',
+          ? 'border-forest/15 shadow-landing-item'
+          : 'border-soil/10 shadow-landing-hairline2',
       )}
     >
       <button
@@ -320,15 +319,15 @@ function FaqRow({
       >
         <span
           className={cn(
-            'flex-1 pr-4 text-[18px] leading-[1.4] tracking-[-0.01em] transition-colors landing-tab:text-[21px]',
-            open ? 'text-forest' : 'text-forest/70',
+            'flex-1 pr-4 text-[16px] leading-[1.4] tracking-[-0.01em] transition-colors',
+            open ? 'text-forest' : 'text-forest-muted',
           )}
         >
           {item.question}
         </span>
         <Plus
           className={cn(
-            'mt-1 size-5 shrink-0 text-forest/40 transition-transform duration-200 motion-reduce:transition-none',
+            'mt-1 size-5 shrink-0 text-forest/70 transition-transform duration-200 motion-reduce:transition-none',
             open && 'rotate-45',
           )}
           strokeWidth={1.75}
@@ -348,7 +347,7 @@ function FaqRow({
         transition={reduceMotion ? { duration: 0 } : { duration: 0.28, ease: 'easeInOut' }}
         className="overflow-hidden"
       >
-        <p className="max-w-[680px] px-6 pb-6 pr-16 text-[15px] leading-[1.6] text-forest/60 landing-tab:px-7 landing-tab:pb-7 landing-tab:text-[16px]">
+        <p className="max-w-[680px] px-6 pb-6 pr-16 text-[16px] leading-[1.6] text-forest-muted landing-tab:px-7 landing-tab:pb-7">
           {item.answer}
         </p>
       </motion.div>
@@ -358,28 +357,35 @@ function FaqRow({
 
 function ContactCard() {
   return (
-    <div className="mt-1 flex flex-col gap-6 rounded-[20px] border border-soil/10 bg-canvas px-6 py-7 shadow-[0_1px_2px_rgba(0,0,0,0.02)] landing:flex-row landing:items-center landing:justify-between landing:gap-10 landing:px-8 landing:py-8">
+    <div className="mt-1 flex flex-col gap-6 rounded-[20px] border border-soil/10 bg-canvas px-6 py-7 shadow-landing-hairline2 landing:flex-row landing:items-center landing:justify-between landing:gap-10 landing:px-8 landing:py-8">
       <div className="flex flex-col gap-3">
         <span className="inline-flex w-fit items-center gap-2 rounded-full bg-sage/60 px-3 py-1.5 text-[12px] leading-[1.5] font-medium text-forest">
           <MessageCircle className="size-3.5" strokeWidth={1.75} aria-hidden />
           {LP_FAQ.contact.pillLabel}
         </span>
-        <h3 className="max-w-[560px] font-display text-[22px] leading-[1.25] font-medium tracking-[-0.02em] text-forest">
+        <h3 className="max-w-[560px] font-display text-[24px] leading-[1.25] font-medium tracking-[-0.02em] text-forest">
           {LP_FAQ.contact.eyebrow}
         </h3>
-        <p className="max-w-[520px] text-[14px] leading-[1.5] text-forest/60">
-          <span className="font-medium text-forest">{LP_FAQ.contact.title}. </span>
-          {LP_FAQ.contact.body}
+        <p className="max-w-[520px] text-[16px] leading-[1.5] font-medium text-forest">
+          {LP_FAQ.contact.title}
         </p>
       </div>
 
-      <div className="flex w-fit shrink-0 flex-col items-start gap-2">
-        <LandingButton href={LP_FAQ.contact.href} tone="dark" size="sm" className="w-fit">
+      <div className="flex w-full shrink-0 flex-col items-stretch gap-2 landing:w-auto landing:items-start">
+        <a
+          href={LP_FAQ.contact.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="group inline-flex min-h-[52px] w-full items-center justify-center gap-3 rounded-full bg-forest px-6 py-3 text-[14px] font-medium text-cream shadow-landing-cta transition-all duration-200 hover:-translate-y-0.5 hover:bg-forest-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40 focus-visible:ring-offset-2 motion-reduce:transition-none motion-reduce:hover:translate-y-0 landing:w-auto"
+        >
+          <span className="flex size-7 items-center justify-center rounded-full bg-daisy text-forest">
+            <MessageCircle className="size-4" strokeWidth={2} aria-hidden />
+          </span>
           {LP_FAQ.contact.ctaLabel}
-        </LandingButton>
+        </a>
         <a
           href={LP_FAQ.contact.emailHref}
-          className="text-[13px] font-medium text-forest underline-offset-4 hover:underline"
+          className="inline-flex min-h-11 items-center justify-center text-[14px] font-medium text-forest underline-offset-4 hover:underline landing:justify-start"
         >
           {LP_FAQ.contact.emailLabel}
         </a>

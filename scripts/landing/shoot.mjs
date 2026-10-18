@@ -17,10 +17,18 @@
  *
  * OPSI (semua opsional):
  *   --only=desktop|tablet|mobile   hanya satu viewport
+ *   --viewport=<nama>:<w>x<h>      GANTI daftar viewport, mis.
+ *                                  `--viewport=mobile:375x812` atau
+ *                                  `--viewport=small:375x812,large:414x896`.
+ *                                  Wajib dipakai untuk audit 375/414px yang
+ *                                  tidak ada di preset.
  *   --scroll=0,1400,bottom         screenshot tambahan di posisi scroll tsb
  *   --click=<selector>             klik dulu sebelum screenshot (mis. buka menu)
  *   --wait=<ms>                    jeda sebelum screenshot (default 4000)
  *   --clip=<selector>              potret HANYA elemen itu (paling aman & kecil)
+ *   --hide=<selector>              sembunyikan elemen fixed (mis. `header`)
+ *                                  sebelum memotret, supaya navbar mengambang
+ *                                  tidak menutupi section di dalam hasil klip.
  *   --maxHeight=<px>               batas tinggi satu gambar (default 3000). Kalau
  *                                  fullPage lebih tinggi dari ini, hasilnya
  *                                  OTOMATIS dipecah jadi beberapa bagian
@@ -63,6 +71,8 @@ const waitMs = waitArg ? Number(waitArg.slice('--wait='.length)) : 4000
    hasilnya kecil, tidak kena batas tinggi, dan tidak perlu scroll manual. */
 const clipArg = process.argv.find((a) => a.startsWith('--clip='))
 const clipSelector = clipArg ? clipArg.slice('--clip='.length) : null
+const hideArg = process.argv.find((a) => a.startsWith('--hide='))
+const hideSelector = hideArg ? hideArg.slice('--hide='.length) : null
 /* Batas tinggi satu gambar. Di atas ini pembaca gambar menolak file-nya
    (gejalanya "You have uploaded an unsupported image"), jadi fullPage dipecah. */
 const maxHeightArg = process.argv.find((a) => a.startsWith('--maxHeight='))
@@ -118,11 +128,28 @@ if (!url) {
 const OUT_DIR = path.join(process.cwd(), 'docs', 'landing', 'shots')
 fs.mkdirSync(OUT_DIR, { recursive: true })
 
-const VIEWPORTS = [
-  { name: 'desktop', width: 1440, height: 1000 },
-  { name: 'tablet', width: 1024, height: 1000 },
-  { name: 'mobile', width: 390, height: 844 },
-]
+/* `--viewport` menimpa preset. Format tiap entri: `nama:lebarxtinggi`,
+   dipisah koma. Berguna untuk audit mobile 375px (iPhone SE/mini) dan 414px
+   (iPhone Plus) yang tidak ada di daftar default. */
+const viewportArg = process.argv.find((a) => a.startsWith('--viewport='))
+const VIEWPORTS = viewportArg
+  ? viewportArg
+      .slice('--viewport='.length)
+      .split(',')
+      .map((spec) => {
+        const [name, size] = spec.trim().split(':')
+        const [width, height] = (size ?? '').split('x').map(Number)
+        if (!name || !Number.isFinite(width) || !Number.isFinite(height)) {
+          console.error(`--viewport tidak valid: "${spec}" (contoh: mobile:375x812)`)
+          process.exit(1)
+        }
+        return { name, width, height }
+      })
+  : [
+      { name: 'desktop', width: 1440, height: 1000 },
+      { name: 'tablet', width: 1024, height: 1000 },
+      { name: 'mobile', width: 390, height: 844 },
+    ]
 
 const channel = fs.existsSync('C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe')
   ? 'msedge'
@@ -148,14 +175,36 @@ for (const vp of VIEWPORTS) {
     await page.waitForTimeout(1200)
   }
 
+  /* Elemen `fixed` (navbar) ikut terpotret di posisi viewport terakhir, jadi
+     bisa menutupi section yang sedang di-clip. Sembunyikan hanya untuk QA. */
+  if (hideSelector) {
+    await page.addStyleTag({
+      content: `${hideSelector}{visibility:hidden!important}`,
+    })
+  }
+
   const fileBase = `${base}-${vp.name}`
   /* ── Mode 1: potret satu elemen (`--clip`) ──────────────────────────────── */
   if (clipSelector) {
+    /* Panaskan reveal/lazy dulu: elemen `whileInView` yang belum pernah masuk
+       viewport tetap opacity 0, sehingga klip terlihat "kosong" padahal bukan. */
     await warmLazyContent(page)
     const target = page.locator(clipSelector).first()
     await target.scrollIntoViewIfNeeded()
     await page.waitForTimeout(800)
-    const box = await target.boundingBox()
+    /* `page.screenshot({fullPage:true, clip})` memakai koordinat DOKUMEN, bukan
+       viewport. `locator.boundingBox()` mengembalikan koordinat viewport, jadi
+       section di bawah lipatan sempat terpotret di posisi hero. Ambil rect +
+       scrollY supaya klip selalu jatuh di elemen yang benar. */
+    const box = await target.evaluate((el) => {
+      const rect = el.getBoundingClientRect()
+      return {
+        x: rect.left + window.scrollX,
+        y: rect.top + window.scrollY,
+        width: rect.width,
+        height: rect.height,
+      }
+    })
     const file = await capture(page, `${fileBase}-clip`, { fullPage: true, clip: box })
     report(file, Math.round(box.width), Math.round(box.height))
   } else if (fullPage) {

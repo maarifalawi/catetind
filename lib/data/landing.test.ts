@@ -9,6 +9,8 @@ import {
   HERO_DEVICE_MONTHLY_SUMMARY,
   HERO_DEVICE_SCREENSHOT,
   HERO_HUD,
+  LANDING_DEFAULT_PERIOD,
+  LANDING_SECTION_MARKERS,
   LIVE_FEED_SEED,
   LIVE_FEED_VISIBLE,
   LP_CONTACT,
@@ -16,6 +18,7 @@ import {
   LP_FOOTER,
   LP_HERO,
   LP_MISSION,
+  LP_NAV,
   LP_PRICING,
   LP_SUPPORT_EMAIL,
   LP_WHATSAPP,
@@ -166,8 +169,7 @@ describe('LP_PRICING — harga yang diiklankan = harga yang ditagih', () => {
   it('default mode = lifetime', () => {
     expect(LP_PRICING.defaultMode).toBe('lifetime')
     expect(LP_PRICING.modes.map((entry) => entry.id)).toEqual(['monthly', 'lifetime'])
-    expect(LP_PRICING.periodLabels.monthly).toBe('per 30 hari')
-    expect(LP_PRICING.periodLabels.lifetime).toBe('Sekali bayar, akses selamanya')
+    expect(LP_PRICING.savingsLabel).toBe('Paling hemat')
   })
 
   it('harga monthly landing = PLANS[].monthly', () => {
@@ -211,6 +213,45 @@ describe('LP_PRICING — harga yang diiklankan = harga yang ditagih', () => {
   })
 })
 
+describe('LP_PRICING — satuan & badge per periode', () => {
+  it('setiap mode punya satuan yang tampil di samping nominal', () => {
+    expect(LP_PRICING.priceUnits.monthly).toContain('30 hari')
+    expect(LP_PRICING.priceUnits.lifetime).toContain('selamanya')
+  })
+
+  it('badge status singkat membedakan prepaid dan sekali bayar', () => {
+    expect(LP_PRICING.modeBadge.monthly).toBe('Prepaid')
+    expect(LP_PRICING.modeBadge.lifetime).toBe('Sekali Bayar')
+  })
+})
+
+describe('LP_PRICING — copy & struktur kartu versi baru', () => {
+  it('tidak ada janji "Garansi 30 hari" di section harga', () => {
+    expect(JSON.stringify(LP_PRICING)).not.toMatch(/garansi 30 hari/i)
+    expect('cardNote' in LP_PRICING).toBe(false)
+  })
+
+  it('tiga kartu: Catet Aja, Waras (hero), Sultan', () => {
+    expect(LP_PRICING.tiers.map((tier) => tier.id)).toEqual(['catet-aja', 'waras', 'sultan'])
+    expect(LP_PRICING.tiers.filter((tier) => tier.recommended)).toHaveLength(1)
+    expect(LP_PRICING.tiers[1].recommended).toBe(true)
+    expect(LP_PRICING.tiers[1].badge).toContain('94% User')
+  })
+
+  it('Sultan tidak menduplikasi Joint Wallet yang sudah ada di Waras', () => {
+    const sultan = LP_PRICING.tiers.find((tier) => tier.id === 'sultan')
+    expect(sultan?.features.some((feature) => /joint wallet/i.test(feature.label))).toBe(false)
+    const waras = LP_PRICING.tiers.find((tier) => tier.id === 'waras')
+    expect(waras?.features.some((feature) => /joint wallet/i.test(feature.label))).toBe(true)
+  })
+
+  it('baris trust menyebut Midtrans dan tanpa akses m-Banking', () => {
+    expect(LP_PRICING.trustNote).toContain('Midtrans')
+    expect(LP_PRICING.trustNote).toMatch(/m-Banking/i)
+  })
+})
+
+
 describe('LP_MISSION — anchor & aset', () => {
   it('empat kartu memakai id anchor yang diminta navbar/footer', () => {
     expect(LP_MISSION.cards.map((card) => card.id)).toEqual([
@@ -221,19 +262,18 @@ describe('LP_MISSION — anchor & aset', () => {
     ])
   })
 
-  it('setiap kartu punya copy desktop & mobile yang tidak kosong', () => {
+  it('setiap kartu punya copy dan anotasi yang tidak kosong', () => {
     for (const card of LP_MISSION.cards) {
       expect(card.title.trim().length).toBeGreaterThan(8)
       expect(card.body.trim().length).toBeGreaterThan(8)
       expect(card.caption.trim().length).toBeGreaterThan(8)
-      expect(card.mobile.title.trim().length).toBeGreaterThan(8)
-      expect(card.mobile.body.trim().length).toBeGreaterThan(8)
-      expect(card.mobile.eyebrow.trim().length).toBeGreaterThan(3)
+      expect(card.annotation.trim().length).toBeGreaterThan(3)
+      expect('mobile' in card).toBe(false)
     }
   })
 
   it('semua gambar mission ada di public dan punya dimensi asli', () => {
-    const sources = LP_MISSION.cards.flatMap((card) => [card.image, card.mobile.image])
+    const sources = LP_MISSION.cards.map((card) => card.image)
     for (const src of sources) {
       const file = path.join(
         process.cwd(),
@@ -247,17 +287,11 @@ describe('LP_MISSION — anchor & aset', () => {
     for (const card of LP_MISSION.cards) {
       expect(card.imageWidth).toBeGreaterThan(0)
       expect(card.imageHeight).toBeGreaterThan(0)
-      expect(card.mobile.imageWidth).toBeGreaterThan(0)
-      expect(card.mobile.imageHeight).toBeGreaterThan(0)
     }
   })
 
   it('gambar hero yang dipakai halaman preview juga ada', () => {
-    const sources = [
-      LP_HERO.boardImage,
-      LP_HERO.phoneImage,
-      ...LP_HERO.avatars,
-    ]
+    const sources = [LP_HERO.boardImage, LP_HERO.phoneImage]
     for (const src of sources) {
       const file = path.join(process.cwd(), 'public', src.replace(/^\//, ''))
       expect(fs.existsSync(file), `${src} tidak ada`).toBe(true)
@@ -401,12 +435,25 @@ describe('LP_CONTACT — tiga field, WhatsApp utama + email fallback', () => {
   })
 })
 
-describe('LP_HERO — social proof marquee', () => {
-  it('lima avatar (duplikasi 2× dilakukan di komponen) + aria', () => {
-    expect(LP_HERO.avatars).toHaveLength(5)
-    expect(new Set(LP_HERO.avatars).size).toBe(5)
-    expect(LP_HERO.socialProof).toBe('Join 2.000+ lainnya')
-    expect(LP_HERO.avatarsAria.trim().length).toBeGreaterThan(4)
+describe('LP_HERO — satu janji, CTA jujur, tanpa bukti sosial karangan', () => {
+  it('headline tidak mengulang "app keuangan" dan memakai satu janji', () => {
+    const headline = `${LP_HERO.headlineBefore}${LP_HERO.headlineEmphasis}${LP_HERO.headlineAfter} ${LP_HERO.headlineTail}`
+    expect(headline).toBe('Catat 4 detik. Biar lo tau duit lo ke mana.')
+    expect(headline.match(/app keuangan/gi)).toBeNull()
+  })
+
+  it('CTA memakai paket + periode yang SAMA dengan default section harga', () => {
+    expect(LP_HERO.ctaHref).toBe(
+      `/checkout?period=${LP_PRICING.defaultMode}&plan=${LP_PRICING.tiers[1].id}`,
+    )
+    expect(LP_PRICING.defaultMode).toBe(LANDING_DEFAULT_PERIOD)
+    expect(LP_HERO.ctaLabel).not.toMatch(/cobain/i)
+    expect(LP_NAV.ctaLabel).not.toMatch(/cobain/i)
+  })
+
+  it('tidak ada angka komunitas atau avatar stok yang tidak bisa dibuktikan', () => {
+    expect('socialProof' in LP_HERO).toBe(false)
+    expect('avatars' in LP_HERO).toBe(false)
   })
 })
 
@@ -418,21 +465,30 @@ describe('lpHref — anchor dari halaman lain', () => {
     expect(lpHref('#mission')).toBe('#mission')
   })
 
-  it('footer Kontak menuju /contact + WhatsApp/email resmi', () => {
-    const company = LP_FOOTER.columns.find((column) => column.title === 'Perusahaan')
-    expect(company?.links.find((link) => link.label === 'Kontak')?.href).toBe('/contact')
-    expect(company?.links.some((link) => link.href === LP_WHATSAPP.href)).toBe(true)
-    expect(company?.links.some((link) => link.href === `mailto:${LP_SUPPORT_EMAIL}`)).toBe(true)
+  it('footer Navigasi memakai anchor yang benar-benar ada', () => {
+    const nav = LP_FOOTER.columns.find((column) => column.title === 'Navigasi')
+    expect(nav?.links.map((link) => link.href)).toEqual([
+      '#top',
+      '#fitur',
+      '#harga',
+      '#faq',
+      '/changelog',
+    ])
   })
 
-  it('footer Fitur memakai anchor stabil, bukan id kartu yang sticky', () => {
-    const isi = LP_FOOTER.columns.find((column) => column.title === 'Isi')
-    expect(isi?.links.map((link) => link.href)).toEqual(['#hero', '#fitur', '#pricing', '#faq'])
+  it('footer Terhubung memuat Instagram, WhatsApp, dan email resmi', () => {
+    const connected = LP_FOOTER.columns.find((column) => column.title === 'Terhubung')
+    expect(connected?.links.some((link) => link.href === LP_WHATSAPP.href)).toBe(true)
+    expect(connected?.links.some((link) => link.href === `mailto:${LP_SUPPORT_EMAIL}`)).toBe(true)
+    expect(connected?.links.some((link) => link.href === 'https://instagram.com/catetind')).toBe(
+      true,
+    )
   })
 
   it('footer Legal menuju halaman legal yang benar-benar ada', () => {
     const legal = LP_FOOTER.columns.find((column) => column.title === 'Legal')
-    expect(legal?.links.map((link) => link.href)).toEqual(['/terms', '/privacy', '/privacy'])
+
+    expect(legal?.links.map((link) => link.href)).toEqual(['/terms', '/privacy', '/security'])
   })
 })
 
@@ -471,5 +527,34 @@ describe('LP_* — tidak ada sisa copy template Inggris / nama Makro', () => {
 
   it.each(forbidden)('tidak mengandung "%s"', (phrase) => {
     expect(serialized).not.toContain(phrase)
+  })
+
+  it('copy landing bebas em-dash, "lu", dan "kamu"', () => {
+    const copy = JSON.stringify({
+      hero: LP_HERO,
+      nav: LP_NAV,
+      footer: LP_FOOTER,
+      mission: LP_MISSION,
+      pricing: LP_PRICING,
+      faq: LP_FAQ,
+      contact: LP_CONTACT,
+    })
+    expect(copy).not.toContain('—')
+    expect(copy).not.toMatch(/\blu\b/i)
+    expect(copy).not.toMatch(/\bkamu\b/i)
+  })
+})
+
+/* ── PENANDA ANTAR-SECTION ──────────────────────────────────────────────────
+   Nomor harus urut dan tidak boleh ada yang dobel; label dipakai garis pemisah
+   di halaman, jadi cukup pendek dan tidak mengandung em-dash. */
+describe('LANDING_SECTION_MARKERS', () => {
+  it('memberi nomor urut dan label pendek untuk tiap batas section', () => {
+    expect(Object.values(LANDING_SECTION_MARKERS)).toEqual([
+      { index: '01', label: 'Kalkulator' },
+      { index: '02', label: 'Misi' },
+      { index: '03', label: 'Harga' },
+      { index: '04', label: 'FAQ' },
+    ])
   })
 })

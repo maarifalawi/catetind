@@ -2,18 +2,13 @@ import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
-/* ── TOMBOL LANDING (pill + kotak ikon panah) ────────────────────────────────
-   Satu bentuk tombol dipakai tiga tempat di export Framer:
-     • navbar  → putih, tinggi 44, teks 14px, radius 12  (size "sm", tone "light")
-     • hero    → gelap, tinggi 60, teks 18px, radius 20  (size "md", tone "dark")
-     • CTA     → lime,  tinggi 60, teks 18px, radius 20  (size "md", tone "lime")
-   Strukturnya sama: kotak ikon panah di KIRI (Framer memakai panah kustom
-   `M 0 7 L 18 7 M 18 7 L 11 0 M 18 7 L 11 14`), lalu label. Panah itu ditulis
-   ulang sebagai path SVG di sini supaya bentuknya identik tapi tetap ringan.
-
-   Hover di Framer mengubah variant (kotak ikon melebar). Di sini versinya
-   dijaga sederhana — panah bergeser sedikit + tombol naik 1px — dan dimatikan
-   untuk `prefers-reduced-motion`. */
+/* ── TOMBOL LANDING (pill + lingkaran panah di KANAN) ───────────────────────
+   Satu bentuk tombol untuk seluruh landing:
+     • sm (navbar)  → tinggi 44, teks 14, ikon 36  (size "sm")
+     • md (hero)    → tinggi 52, teks 16, ikon 44  (size "md")
+   Panah SELALU di kanan dan selalu menunjuk ke kanan; radius pill penuh.
+   Hover hanya menggeser panah 2px + mengangkat tombol 1px, dan dimatikan untuk
+   `prefers-reduced-motion`. Tidak ada lagi kotak panah besar di kiri. */
 
 type Tone = 'dark' | 'light' | 'lime' | 'darkLime'
 type Size = 'sm' | 'md'
@@ -28,16 +23,16 @@ const TONE: Record<Tone, { button: string; icon: string }> = {
 
 const SIZE: Record<Size, { button: string; icon: string; arrow: string; label: string }> = {
   sm: {
-    button: 'gap-4 rounded-[12px] p-0.5 pr-5',
-    icon: 'size-8 rounded-[10px]',
+    button: 'h-11 gap-2.5 rounded-full py-1 pr-1 pl-4',
+    icon: 'size-9 rounded-full',
     arrow: 'size-4',
     label: 'text-[14px] leading-[1.5]',
   },
   md: {
-    button: 'gap-4 rounded-[20px] p-1 pr-6',
-    icon: 'size-14 rounded-[16px]',
-    arrow: 'size-6',
-    label: 'text-[16px] leading-[1.5] md:text-[18px]',
+    button: 'h-[52px] gap-4 rounded-full py-1 pr-1 pl-6',
+    icon: 'size-11 rounded-full',
+    arrow: 'size-[18px]',
+    label: 'text-[16px] leading-[1.5]',
   },
 }
 
@@ -64,12 +59,14 @@ export function LandingButton({
   tone = 'dark',
   size = 'md',
   className,
+  onClick,
 }: {
   href: string
   children: ReactNode
   tone?: Tone
   size?: Size
   className?: string
+  onClick?: () => void
 }) {
   const toneStyle = TONE[tone]
   const sizeStyle = SIZE[size]
@@ -81,6 +78,7 @@ export function LandingButton({
   )
   const content = (
     <>
+      <span className={sizeStyle.label}>{children}</span>
       <span
         className={cn(
           'flex shrink-0 items-center justify-center transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transition-none',
@@ -90,7 +88,6 @@ export function LandingButton({
       >
         <ArrowMark className={sizeStyle.arrow} />
       </span>
-      <span className={sizeStyle.label}>{children}</span>
     </>
   )
 
@@ -98,21 +95,27 @@ export function LandingButton({
      supaya aplikasi email terbuka tanpa router Next. */
   if (href.startsWith('http')) {
     return (
-      <a href={href} target="_blank" rel="noopener noreferrer" className={classes}>
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={classes}
+        onClick={onClick}
+      >
         {content}
       </a>
     )
   }
   if (href.startsWith('mailto:')) {
     return (
-      <a href={href} className={classes}>
+      <a href={href} className={classes} onClick={onClick}>
         {content}
       </a>
     )
   }
 
   return (
-    <Link href={href} className={classes}>
+    <Link href={href} className={classes} onClick={onClick}>
       {content}
     </Link>
   )

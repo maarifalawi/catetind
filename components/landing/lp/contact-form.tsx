@@ -29,9 +29,9 @@ type Errors = Partial<Record<keyof LpContactValues, string>>
 type Opened = 'whatsapp' | 'email' | null
 
 const INPUT_CLASS =
-  'h-12 w-full rounded-[12px] border border-soil/10 bg-canvas px-4 text-[14px] leading-[1.5] text-forest placeholder:text-forest/40 focus-visible:border-forest/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/30'
+  'h-12 w-full rounded-[12px] border border-soil/10 bg-canvas px-4 text-[14px] leading-[1.5] text-forest placeholder:text-forest-muted focus-visible:border-forest/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/30'
 
-const LABEL_CLASS = 'text-[13px] font-medium leading-[1.5] text-forest'
+const LABEL_CLASS = 'text-[14px] font-medium leading-[1.5] text-forest'
 
 const ERROR_CLASS = 'text-[12px] font-medium leading-[1.5] text-hud-terracotta'
 
@@ -215,7 +215,7 @@ export function LandingContactForm() {
       </div>
 
       {opened ? (
-        <p role="status" aria-live="polite" className="text-[12px] leading-[1.5] text-forest/60">
+        <p role="status" aria-live="polite" className="text-[12px] leading-[1.5] text-forest-muted">
           {LP_CONTACT.form.afterSubmitNote}
         </p>
       ) : null}

@@ -113,24 +113,17 @@ export const RESENT_NOTE_MS = 6000
 export const LOGIN_PATH = '/login'
 export const VERIFY_PATH = '/login/verify'
 
-/**
- * TAGLINE panel brand — SATU kalimat, SATU tempat, dipakai DUA halaman:
- * `/login` dan `/checkout`. Panelnya sendiri komponen bersama
- * (`components/catetind/brand-panel.tsx`), jadi mustahil dua halaman menulis
- * tagline yang berbeda.
- */
-export const AUTH_BRAND_TAGLINE = 'App keuangan buat orang yang males buka app keuangan.'
-
 export const LOGIN_COPY = {
-  /* Catatan revisi desain (permintaan desain): panel brand kiri kini HANYA
-     memuat tagline (`AUTH_BRAND_TAGLINE`) — `brandEyebrow`, catatan pendukung,
-     dan tiga chip jaminan DIHAPUS, supaya batik-nya yang bicara bukan teksnya.
-     Di form, `subtitle`, `emailHint`, `trustNote`, `codeSubtitle`, dan
-     `codeHint` juga dihapus: cukup judul + label + tombol. Pesan ERROR tetap
-     tampil saat input salah — itu informasi, bukan hiasan. */
+  /* Catatan revisi desain (permintaan desain): halaman /login memakai bingkai
+     landing (navbar + footer landing), jadi `eyebrow` dan `subtitle` kembali
+     dipakai sebagai kepala halaman. `emailHint`, `trustNote`, `codeSubtitle`,
+     dan `codeHint` tetap tidak dipakai: cukup judul + label + tombol. Pesan
+     ERROR tetap tampil saat input salah — itu informasi, bukan hiasan. */
 
   /* ── langkah 1: email ──────────────────────────────────────────────────── */
+  eyebrow: 'Masuk',
   title: 'Masuk ke CatetInd',
+  subtitle: 'Satu email, satu kode 6 angka. Tanpa password, tanpa data pribadi lain.',
   emailLabel: 'Email',
   emailPlaceholder: 'namakamu@email.com',
   submitLabel: 'Kirim kode masuk',
@@ -175,6 +168,7 @@ export const LOGIN_COPY = {
    ulang ber-cooldown, dan jalan masuk lewat kode 6 angka. */
 
 export const VERIFY_COPY = {
+  eyebrow: 'Langkah terakhir',
   title: 'Cek emailmu',
   /** satu baris pengantar; detail alamatnya ada di kartu status di bawahnya */
   subtitle: 'Kami kirim tautan masuk & kode 6 angka ke email ini:',

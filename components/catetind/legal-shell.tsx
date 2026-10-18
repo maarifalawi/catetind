@@ -36,9 +36,10 @@ import type { LegalDocument, LegalNote, LegalSection } from '@/lib/legal/types'
         terbaca utuh walau JavaScript gagal dimuat.
    ────────────────────────────────────────────────────────────────────────── */
 
-const KIND_ICON: Record<'privacy' | 'terms', LucideIcon> = {
+const KIND_ICON: Record<'privacy' | 'terms' | 'security', LucideIcon> = {
   privacy: ShieldCheck,
   terms: ScrollText,
+  security: Lock,
 }
 
 export type LegalShellKind = keyof typeof KIND_ICON

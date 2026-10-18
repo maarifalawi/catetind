@@ -60,7 +60,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   colorScheme: 'light',
   themeColor: '#ffffff',
-  userScalable: false,
+  /* `userScalable: false` DIHAPUS: mematikan pinch-zoom melanggar WCAG 1.4.4
+     dan bikin pengguna low-vision tidak bisa memperbesar teks. */
   /* ── KEYBOARD VIRTUAL DI MOBILE (paket 64) ────────────────────────────────
      `interactive-widget=resizes-content` membuat CHROME ANDROID benar-benar
      menyusutkan viewport saat keyboard terbuka.
@@ -86,7 +87,7 @@ export default function RootLayout({
        Kanvas halaman sudah eksplisit putih (`bg-canvas`), jadi tanpa kelas ini
        perangkat bermode gelap akan mendapat kanvas putih + permukaan shadcn
        gelap — tidak konsisten. Sesuai `viewport.colorScheme: 'light'`. */
-    <html lang="en" className={`light ${inter.variable}`}>
+    <html lang="id" className={`light ${inter.variable}`}>
       <body className="font-sans antialiased">
         <ServiceWorkerRegistration />
         {/* Smooth scroll global (Lenis) — dipasang di root layout supaya

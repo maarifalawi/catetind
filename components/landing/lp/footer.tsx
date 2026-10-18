@@ -1,131 +1,142 @@
 import Link from 'next/link'
 import { LP_FOOTER, lpHref } from '@/lib/data/landing'
-import { LogoWordmark } from '@/components/catetind/logo-wordmark'
-import { LandingButton } from './button'
-import { LandingMarkBadge } from './marks'
 
-/* ── CTA + FOOTER LANDING ────────────────────────────────────────────────────
-   1. KARTU CTA GELAP — section putih, kartu radius 36 dengan `bg-forest`,
-      judul `text-cream`, tombol `bg-daisy text-forest`, lalu UI shot dengan
-      perspektif + mask. Ditandai `data-nav-theme="dark"` supaya navbar ikut
-      berubah gelap saat melewatinya.
-   2. FOOTER — permukaan gelap `bg-forest`, teks `cream`, 4 kolom link +
-      wordmark "Catet" yang sengaja terpotong tepi bawah. Nomor WhatsApp dan
-      email ada di kolom Perusahaan (satu sumber: `LP_FOOTER`). */
+/* ── FOOTER LANDING ──────────────────────────────────────────────────────────
+   Permukaan hijau tua (`#1e2c22` → `#243629`) dengan teks putih dan tiga kolom
+   menu. Footer ini sengaja TANPA logo/wordmark: hanya nama brand sebagai teks,
+   supaya penutup halaman terasa tenang dan tidak mengulang brand mark navbar.
 
-const CTA_SHOT = '/landing/ecsvVHaKUpgixFh7HmsoZYYI.png'
+   Struktur semantic: <footer> → <nav aria-labelledby> → <ul> → <li>.
 
-const FOOTER_LINK_CLASS =
-  'rounded-[2px] text-cream/60 underline-offset-4 transition-colors hover:text-cream hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream/60 motion-reduce:transition-none'
+   Tautan:
+     · anchor murni (`#…`) memakai <a> supaya Lenis menanganinya sebagai scroll;
+     · rute internal memakai <Link>;
+     · WhatsApp/Instagram membuka tab baru + `rel="noopener noreferrer"` dan
+       diberi keterangan pembaca layar;
+     · mailto memakai <a> agar aplikasi email terbuka tanpa router.
+
+   `basePath` dipakai halaman legal/kontak/changelog: anchor section diarahkan
+   ke `/#…` supaya tidak mati. `#top` sengaja TIDAK diberi basePath — setiap
+   halaman yang memakai footer ini punya `<main id="top">` sendiri, jadi tombol
+   "Ke atas" selalu menggulir halaman yang sedang dibaca.
+
+   Target sentuh: semua tautan `min-h-11` (44px). Fokus terlihat di permukaan
+   gelap lewat ring emerald. `data-nav-theme="dark"` membuat navbar ikut gelap
+   saat melewati footer. */
+
+const FOCUS_RING =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#1e2c22]'
+
+const LINK_CLASS = `inline-flex min-h-11 items-center rounded-[6px] py-1 text-[14px] leading-[1.5] text-white/80 transition-colors hover:text-emerald-300 ${FOCUS_RING}`
+
+function FooterLink({
+  link,
+  basePath,
+}: {
+  link: { label: string; href: string }
+  basePath: string
+}) {
+  const external = link.href.startsWith('http')
+  const mail = link.href.startsWith('mailto:')
+  const href = link.href === '#top' ? '#top' : lpHref(link.href, basePath)
+
+  if (external) {
+    return (
+      <a href={href} target="_blank" rel="noopener noreferrer" className={LINK_CLASS}>
+        {link.label}
+        <span className="sr-only"> ({LP_FOOTER.externalHint})</span>
+      </a>
+    )
+  }
+
+  if (mail) {
+    return (
+      <a href={href} className={LINK_CLASS}>
+        {link.label}
+      </a>
+    )
+  }
+
+  /* anchor murni (termasuk #top) → <a>, bukan router Next */
+  if (href.startsWith('#')) {
+    return (
+      <a href={href} className={LINK_CLASS}>
+        {link.label}
+      </a>
+    )
+  }
+
+  return (
+    <Link href={href} className={LINK_CLASS}>
+      {link.label}
+    </Link>
+  )
+}
 
 export function LandingFooterLp({ basePath = '' }: { basePath?: string }) {
+  const homeHref = lpHref('#hero', basePath)
+
   return (
-    <>
-      <section
-        data-nav-theme="dark"
-        aria-labelledby="landing-cta-title"
-        className="flex w-full justify-center bg-canvas px-4"
-      >
-        <div className="flex w-full flex-col items-center rounded-[36px] bg-gradient-to-b from-forest to-forest-soft px-5 pt-[80px] landing-tab:px-5 landing-tab:pt-[96px] landing:px-6 landing:pt-[120px]">
-          <div className="flex w-full max-w-[1200px] flex-col items-center gap-10 landing:gap-[60px]">
-            <div className="flex flex-col items-center">
-              <LandingMarkBadge className="h-14 w-[58px] text-cream" />
-              <h2
-                id="landing-cta-title"
-                className="mt-4 max-w-[720px] text-center font-display text-[40px] leading-[1.15] font-medium tracking-[-0.03em] text-cream landing-tab:text-[52px] landing:text-[64px]"
-              >
-                {LP_FOOTER.cta.title}
-              </h2>
-              <p className="mt-4 max-w-[540px] text-center text-[16px] leading-[1.5] text-cream/80 landing-tab:text-[18px]">
-                {LP_FOOTER.cta.body}
-              </p>
-              <LandingButton href={LP_FOOTER.cta.href} tone="lime" size="md" className="mt-14">
-                {LP_FOOTER.cta.button}
-              </LandingButton>
-            </div>
-
-            {/* UI shot: gambar penuh + perspektif, dipudarkan ke bawah oleh mask */}
-            <div
-              className="flex h-[253px] w-full items-start justify-center overflow-hidden px-1 pt-1 landing-tab:h-[420px] landing-tab:px-3 landing-tab:pt-3 landing:h-[600px]"
-              style={{
-                maskImage: 'linear-gradient(#000 0%, transparent 100%)',
-                WebkitMaskImage: 'linear-gradient(#000 0%, transparent 100%)',
-              }}
+    <footer
+      data-nav-theme="dark"
+      className="relative w-full overflow-hidden bg-[#1e2c22] bg-[radial-gradient(120%_90%_at_50%_0%,#243629_0%,#1e2c22_58%,#18251d_100%)] text-white"
+    >
+      <div className="mx-auto w-full max-w-[1200px] px-5 pt-16 landing-tab:px-10 landing-tab:pt-20 landing:pt-24">
+        {/* ── GRID: brand + tiga kolom menu ─────────────────────────────────── */}
+        <div className="grid grid-cols-1 gap-10 landing-tab:grid-cols-3 landing-tab:gap-x-10 landing-tab:gap-y-12 landing:grid-cols-[minmax(0,1.55fr)_minmax(0,0.85fr)_minmax(0,1.1fr)_minmax(0,0.9fr)] landing:gap-12">
+          {/* brand & disclaimer — tanpa logo/wordmark */}
+          <div className="landing-tab:col-span-3 landing:col-span-1">
+            <Link
+              href={homeHref}
+              aria-label={LP_FOOTER.brand.homeLabel}
+              className={`inline-flex min-h-11 items-center rounded-[8px] text-[19px] leading-none font-semibold tracking-[-0.02em] text-white ${FOCUS_RING}`}
             >
-              <img
-                src={CTA_SHOT}
-                alt=""
-                aria-hidden
-                loading="lazy"
-                className="w-full rounded-t-2xl shadow-[0_0_0_4px_rgba(255,255,255,0.25)] landing:shadow-[0_0_0_12px_rgba(255,255,255,0.25)]"
-                style={{
-                  transform: 'perspective(1200px) translateY(66px) rotateX(8deg)',
-                  transformOrigin: 'center top',
-                }}
-              />
-            </div>
+              {LP_FOOTER.brand.name}
+            </Link>
+
+            <p className="mt-5 max-w-[36ch] text-[14px] leading-[1.65] text-emerald-100/60">
+              {LP_FOOTER.brand.tagline}
+            </p>
+
+            <p className="mt-5 max-w-[44ch] text-[11.5px] leading-[1.6] text-emerald-100/55">
+              {LP_FOOTER.brand.disclaimer}
+            </p>
+          </div>
+
+          {/* tiga kolom menu */}
+          {LP_FOOTER.columns.map((column, index) => (
+            <nav
+              key={column.title}
+              aria-labelledby={`footer-column-${index}`}
+              className="min-w-0"
+            >
+              <h2
+                id={`footer-column-${index}`}
+                className="text-[11px] leading-[1.5] font-medium tracking-[0.18em] text-emerald-100/55 uppercase"
+              >
+                {column.title}
+              </h2>
+              <ul className="mt-3 flex flex-col">
+                {column.links.map((link) => (
+                  <li key={`${column.title}-${link.label}`}>
+                    <FooterLink link={link} basePath={basePath} />
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          ))}
+        </div>
+
+        {/* ── BOTTOM BAR ────────────────────────────────────────────────────── */}
+        <div className="mt-14 border-t border-white/10 landing:mt-20">
+          <div className="flex flex-col gap-4 py-6">
+            <p className="mx-auto text-center text-[12.5px] leading-[1.6] text-emerald-100/70">
+              {LP_FOOTER.copyright}
+            </p>
           </div>
         </div>
-      </section>
-
-      <footer className="overflow-hidden bg-forest px-5 text-cream landing-tab:px-6 landing:px-10">
-        <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-9 pt-12 landing:flex-row landing:gap-12 landing:pt-[72px]">
-          {/* kolom kiri — mark di atas, copyright di dasar (mobile: paling bawah) */}
-          <div className="order-3 flex w-full flex-col justify-between gap-6 landing:order-1 landing:w-[384px] landing:flex-none">
-            <LandingMarkBadge className="hidden h-14 w-[58px] text-cream landing:block" />
-            <div className="flex w-full justify-center rounded-t-2xl bg-evergreen-deeper px-6 py-4">
-              <p className="text-center text-[14px] leading-[1.5] text-cream/80">
-                {LP_FOOTER.copyright}
-              </p>
-            </div>
-          </div>
-
-          {/* kolom kanan — link + wordmark (urutan dibalik di desktop) */}
-          <div className="order-2 flex min-w-0 flex-1 flex-col gap-9 landing:gap-20">
-            <div className="order-1 landing:order-2">
-              <div className="flex items-center landing:h-[182px]">
-                <LogoWordmark
-                  tone="light"
-                  className="h-[96px] w-auto opacity-25 landing:h-[182px]"
-                />
-              </div>
-            </div>
-
-            <div className="relative z-10 order-2 flex flex-wrap gap-x-12 gap-y-9 landing:order-1">
-              {LP_FOOTER.columns.map((column) => (
-                <div key={column.title} className="flex min-w-[144px] flex-1 flex-col gap-4">
-                  <p className="text-[18px] leading-[1.5] text-cream/60">{column.title}</p>
-                  <ul className="flex flex-col gap-2 text-[14px] leading-[1.5]">
-                    {column.links.map((link) => (
-                      <li key={`${column.title}-${link.label}`}>
-                        {link.href.startsWith('http') ? (
-                          <a
-                            href={link.href}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={FOOTER_LINK_CLASS}
-                          >
-                            {link.label}
-                          </a>
-                        ) : link.href.startsWith('mailto:') ? (
-                          <a href={link.href} className={FOOTER_LINK_CLASS}>
-                            {link.label}
-                          </a>
-                        ) : (
-                          <Link href={lpHref(link.href, basePath)} className={FOOTER_LINK_CLASS}>
-                            {link.label}
-                          </Link>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </footer>
-    </>
+      </div>
+    </footer>
   )
 }
 

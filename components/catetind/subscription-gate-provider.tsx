@@ -163,11 +163,17 @@ export function SubscriptionGateProvider({ children }: { children: ReactNode }) 
     }
   }, [])
 
-  useEffect(() => {
-    void load()
-  }, [load])
-
   const onPublicRoute = isSubscriptionPublicRoute(pathname)
+
+  useEffect(() => {
+    /* Halaman publik (landing, /contact, /terms, /checkout, …) TIDAK punya
+       sesi. Fetch `/api/subscription` di sana hanya menghasilkan 401 di
+       console + satu request sia-sia; status paket juga tidak dipakai karena
+       banner & gerbang memang dimatikan di rute publik. */
+    if (onPublicRoute) return
+    void load()
+  }, [load, onPublicRoute])
+
   const plan = useMemo(() => planById(state.planId), [state.planId])
   const capabilities = useMemo(() => capabilitiesOf(state.planId), [state.planId])
 

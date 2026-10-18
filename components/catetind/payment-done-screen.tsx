@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ArrowRight, CheckCircle2, Clock, RotateCw, XCircle } from 'lucide-react'
-import { LogoWordmark } from './logo-wordmark'
 import { PAY_DONE_COPY } from '@/lib/data/pricing'
 import { buildLoginHref } from '@/lib/data/auth'
 
@@ -14,8 +13,8 @@ import { buildLoginHref } from '@/lib/data/auth'
    Karena webhook tiba kapan saja (biasanya dalam hitungan detik), halaman ini
    mencoba beberapa kali (+-30 detik) sebelum bilang "belum tercatat".
 
-   Tampilannya SATU kartu di tengah untuk semua ukuran layar - di desktop kartu
-   itulah bingkainya (bukan teks melayang di halaman kosong). */
+   Tampilannya SATU kartu di tengah dengan bingkai landing (navbar + footer
+   landing dari route) — bukan halaman kosong dengan logo yatim. */
 
 type PayState = 'checking' | 'active' | 'pending'
 
@@ -80,11 +79,9 @@ export function PaymentDoneScreen({ orderId, failed }: { orderId: string | null;
         : 'bg-sage text-forest ring-soil/20'
 
   return (
-    <div className="relative flex min-h-[100dvh] w-full items-center justify-center px-5 py-12 text-forest lg:px-8">
-      <div className="w-full max-w-[520px]">
-        <LogoWordmark className="mx-auto h-6" />
-
-        <section className="mt-6 rounded-[1.75rem] bg-cream px-6 py-8 text-center ring-1 ring-soil/12 lg:px-8 lg:py-10">
+    <section className="w-full bg-canvas px-5 pt-[140px] pb-20 text-forest landing-tab:px-10 landing-tab:pt-[180px] landing:pb-[120px]">
+      <div className="mx-auto w-full max-w-[560px]">
+        <div className="rounded-[28px] bg-cream px-6 py-10 text-center ring-1 ring-soil/10 shadow-landing-soft lg:px-10 lg:py-12">
           <span
             className={`mx-auto flex size-14 items-center justify-center rounded-full ring-1 ${tone}`}
           >
@@ -139,8 +136,8 @@ export function PaymentDoneScreen({ orderId, failed }: { orderId: string | null;
               </>
             )}
           </div>
-        </section>
+        </div>
       </div>
-    </div>
+    </section>
   )
 }
