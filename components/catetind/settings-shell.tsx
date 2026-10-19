@@ -17,6 +17,8 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { ScreenShell } from './screen-shell'
+import { useSubscriptionGate } from './subscription-gate-provider'
+import { pageLockText } from '@/lib/subscription/page-access'
 import { cn } from '@/lib/utils'
 
 /* ── Pengaturan (inventaris #15–#22) — MASTER-DETAIL DI DALAM APP SHELL ────────
@@ -140,6 +142,10 @@ export function SettingsShell({ children }: { children: ReactNode }) {
   const activeId = settingsSectionFromPath(pathname)
   /** `/settings` = indeks: daftar menu di mobile, panel profil di desktop */
   const isIndex = activeId === 'profile'
+  /* Paket menentukan menu mana yang terkunci (mis. AI Preferences butuh
+     `ai-chat`). Badge 🔒 hanya informatif; kliknya dicegat listener global
+     `UpgradeGateProvider` — popup upgrade muncul, bukan pindah halaman. */
+  const { lockedPageCapability } = useSubscriptionGate()
 
   return (
     <ScreenShell>
@@ -167,12 +173,19 @@ export function SettingsShell({ children }: { children: ReactNode }) {
                   const active = item.id === activeId
                   const danger = item.tone === 'danger'
                   const Icon = item.icon
+                  /* Menu tetap tampil walau terkunci: badge 🔒 + title menyebut
+                     paket pembukanya, dan tautannya menuju kartu upgrade. */
+                  const lockText = lockedPageCapability(item.href)
+                    ? pageLockText(item.href)
+                    : null
 
                   return (
                     <li key={item.id}>
                       <Link
                         href={item.href}
                         aria-current={active ? 'page' : undefined}
+                        aria-label={lockText ? `${item.title} — ${lockText}` : undefined}
+                        title={lockText ?? undefined}
                         className={cn(
                           'flex w-full items-start gap-3 border-l-[3px] py-2.5 pr-2 pl-3 transition-colors',
                           active
@@ -204,6 +217,13 @@ export function SettingsShell({ children }: { children: ReactNode }) {
                             )}
                           >
                             {item.title}
+                            {lockText && (
+                              <Lock
+                                className="ml-1 inline size-3 align-[-1px] text-forest/35"
+                                strokeWidth={2.4}
+                                aria-hidden
+                              />
+                            )}
                           </span>
                           <span className="mt-0.5 block text-[11px] leading-snug text-forest/45">
                             {item.desc}

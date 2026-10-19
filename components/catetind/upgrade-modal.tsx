@@ -32,7 +32,16 @@ function fill(template: string, values: Record<string, string>): string {
   )
 }
 
-export function UpgradeModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function UpgradeModal({
+  open,
+  onClose,
+  reason,
+}: {
+  open: boolean
+  onClose: () => void
+  /** alasan spesifik (mis. halaman yang sedang dicoba dibuka) */
+  reason?: string | null
+}) {
   const { plan, planId, isLifetime } = useSubscriptionGate()
   useBodyScrollLock(open)
 
@@ -46,7 +55,7 @@ export function UpgradeModal({ open, onClose }: { open: boolean; onClose: () => 
       role="dialog"
       aria-modal="true"
       aria-label={UPGRADE_COPY.title}
-      className="fixed inset-0 z-[70] flex items-end justify-center bg-ink/40 backdrop-blur-sm sm:items-center sm:p-6"
+      className="fixed inset-0 z-[90] flex items-end justify-center bg-ink/40 backdrop-blur-sm sm:items-center sm:p-6"
     >
       {/* area luar = tombol tutup yang jujur (bukan kotak mati) */}
       <button
@@ -71,6 +80,13 @@ export function UpgradeModal({ open, onClose }: { open: boolean; onClose: () => 
         <p className="mt-2 text-[13px] leading-relaxed text-forest/60">
           {plan ? UPGRADE_COPY.note : UPGRADE_COPY.noPurchaseBody}
         </p>
+
+        {reason && (
+          <p className="mt-3 flex items-start gap-2 rounded-2xl bg-hud-amber/20 px-3.5 py-2.5 text-[12px] font-medium leading-relaxed text-forest ring-1 ring-hud-amber/30">
+            <Lock className="mt-0.5 size-3.5 shrink-0" strokeWidth={2.4} aria-hidden />
+            {reason}
+          </p>
+        )}
 
         {plan && (
           <p className="mt-3 flex items-center gap-2 rounded-2xl bg-sage/50 px-3.5 py-2.5 text-[12px] text-forest ring-1 ring-soil/10">

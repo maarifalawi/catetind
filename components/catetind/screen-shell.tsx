@@ -1,11 +1,14 @@
 'use client'
 
-import { usePathname } from 'next/navigation'
-import type { ReactNode } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
+import { useEffect, type ReactNode } from 'react'
 import { AI_COACH_ROUTES } from '@/lib/ai-chat'
+import { pageLockCapability } from '@/lib/subscription/page-access'
 import { DesktopSidebar } from './desktop-sidebar'
 import { MobileNavDrawer, MobileNavProvider } from './mobile-nav-drawer'
 import { MobileAppHeader } from './app-mobile-header'
+import { useUpgradeGate } from './upgrade-gate-provider'
+import { useSubscriptionGate } from './subscription-gate-provider'
 import { cn } from '@/lib/utils'
 
 /**
@@ -23,13 +26,37 @@ export function ScreenShell({
   children: ReactNode
   className?: string
 }) {
-  /* FAB AI Coach hanya hidup di Dashboard (`AI_COACH_ROUTES`). Padding bawah
-     ekstra di desktop ADA untuk FAB itu — memasangnya di semua halaman app
-     (seperti sebelumnya) hanya menyisakan ~112px ruang kosong tanpa sebab di
-     Dompet, Pengaturan, dst. Padding MOBILE tetap besar karena bottom nav
-     memang fixed di semua halaman app. */
   const pathname = usePathname()
-  const hasCoachFab = AI_COACH_ROUTES.includes(pathname)
+  const router = useRouter()
+  /* ── GERBANG HALAMAN (akses per paket) ──────────────────────────────────────
+     Halaman terkunci TIDAK PERNAH dirender:
+
+       · `waitingForPlan` — halaman ini berbayar dan paket belum diperiksa →
+         isi halaman ditahan (null), jadi HTML awal tidak membocorkan halaman;
+       · `lockedCapability` — paket terbaca & tidak berhak → popup upgrade
+         dibuka, lalu user dipindahkan ke halaman aman (Dashboard / Pengaturan).
+
+     `lockedPageCapability()` mengembalikan `null` saat paket belum terbaca ATAU
+     backend tidak bisa diperiksa; dalam kedua kasus halaman akhirnya terbuka —
+     aturan lama "jangan menuduh karena ketidaktahuan" tetap dipegang. */
+  const { lockedPageCapability, planReady } = useSubscriptionGate()
+  const { openUpgradeForPage } = useUpgradeGate()
+  const requiredCapability = pageLockCapability(pathname)
+  const lockedCapability = lockedPageCapability(pathname)
+  const waitingForPlan = requiredCapability !== null && !planReady
+
+  useEffect(() => {
+    if (!lockedCapability) return
+    openUpgradeForPage(pathname)
+    /* Halaman terkunci tidak boleh jadi tujuan akhir: pindahkan ke halaman
+       aman terdekat. Popup tetap hidup karena provider-nya ada di root layout. */
+    const fallback =
+      pathname === '/settings' || pathname.startsWith('/settings/') ? '/settings' : '/app'
+    router.replace(fallback)
+  }, [lockedCapability, pathname, openUpgradeForPage, router])
+
+  const hasCoachFab =
+    !lockedCapability && !waitingForPlan && AI_COACH_ROUTES.includes(pathname)
 
   return (
     <MobileNavProvider>
@@ -73,7 +100,7 @@ export function ScreenShell({
                 Di desktop header ini `lg:hidden` — sidebar + header halaman
                 sendiri yang berlaku. */}
             <MobileAppHeader />
-            {children}
+            {waitingForPlan || lockedCapability ? null : children}
           </div>
         </div>
       </section>

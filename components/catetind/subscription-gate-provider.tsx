@@ -19,6 +19,7 @@ import {
   type PlanDefinition,
   type PlanId,
 } from '@/lib/data/pricing'
+import { pageLockCapability as pageCapabilityFor } from '@/lib/subscription/page-access'
 
 /* ── GERBANG PAKET GLOBAL (paket 84 — pengganti gerbang masa aktif) ──────────
    Satu provider di root (`app/layout.tsx`) memegang SATU fakta: paket apa yang
@@ -107,6 +108,25 @@ type SubscriptionGateValue = {
    */
   planKnown: boolean
   /**
+   * true = jawaban `/api/subscription` sudah datang (apa pun hasilnya).
+   *
+   * Dipakai gerbang halaman untuk MENAHAN render halaman berbayar selama paket
+   * belum diperiksa — supaya isi halaman terkunci tidak sempat tampil di HTML
+   * awal. Kalau jawabannya "tidak tahu" (`configured:false`), halaman dibuka
+   * seperti biasa; `planReady` hanya menandai pemeriksaan selesai.
+   */
+  planReady: boolean
+  /**
+   * Kemampuan yang membuka halaman `pathname`; `null` = halaman boleh dibuka.
+   *
+   * Sudah memuat aturan "jangan mengunci karena ketidaktahuan": selama paket
+   * belum terbaca (`configured/ready` false) hasilnya `null`, sama seperti
+   * `LockedFeatureNote` yang tidak dirender saat `planKnown` false.
+   */
+  lockedPageCapability: (pathname: string) => Capability | null
+  /** true = paket yang diketahui boleh membuka halaman ini */
+  canAccessPage: (pathname: string) => boolean
+  /**
    * true = tombol yang MENAMBAH data keuangan harus non-aktif — user belum
    * punya paket ATAU masa aktif prabayarnya sudah habis.
    * Pembacaan data, ekspor, navigasi, dokumen legal, dan pembayaran TIDAK
@@ -180,6 +200,27 @@ export function SubscriptionGateProvider({ children }: { children: ReactNode }) 
   const inputLocked =
     state.configured && state.ready && (!state.planId || state.expired) && !onPublicRoute
 
+  /* ── GERBANG HALAMAN (peta `PAGE_ACCESS`) ──────────────────────────────────
+     Dipakai `ScreenShell`, sidebar, dan menu Pengaturan. Aturan "jangan mengunci
+     karena ketidaktahuan" dipegang di sini: selama paket belum terbaca, hasilnya
+     `null` (terbuka) — sama seperti `LockedFeatureNote` yang hanya dirender saat
+     `planKnown` true. */
+  const lockedPageCapability = useCallback(
+    (pathname: string) => {
+      if (!state.configured || !state.ready) return null
+      const capability = pageCapabilityFor(pathname)
+      if (!capability) return null
+      const allowed = !state.expired && canUseCapability(state.planId, capability)
+      return allowed ? null : capability
+    },
+    [state.configured, state.ready, state.expired, state.planId],
+  )
+
+  const canAccessPage = useCallback(
+    (pathname: string) => lockedPageCapability(pathname) === null,
+    [lockedPageCapability],
+  )
+
   const value = useMemo<SubscriptionGateValue>(
     () => ({
       plan,
@@ -193,6 +234,9 @@ export function SubscriptionGateProvider({ children }: { children: ReactNode }) 
       canUse: (capability: Capability) =>
         state.expired ? false : canUseCapability(state.planId, capability),
       planKnown: state.configured && state.ready,
+      planReady: state.ready,
+      lockedPageCapability,
+      canAccessPage,
       inputLocked,
       onPublicRoute,
       refresh: () => void load(),
@@ -205,7 +249,10 @@ export function SubscriptionGateProvider({ children }: { children: ReactNode }) 
       state.isLifetime,
       state.billingPeriod,
       state.expired,
+      state.ready,
       capabilities,
+      lockedPageCapability,
+      canAccessPage,
       inputLocked,
       onPublicRoute,
       load,

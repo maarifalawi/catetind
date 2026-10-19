@@ -13,6 +13,7 @@ import { ServiceWorkerRegistration } from '@/components/catetind/service-worker-
 import { SmoothScrollProvider } from '@/components/catetind/smooth-scroll-provider'
 import { SubscriptionBanner } from '@/components/catetind/subscription-banner'
 import { SubscriptionGateProvider } from '@/components/catetind/subscription-gate-provider'
+import { UpgradeGateProvider } from '@/components/catetind/upgrade-gate-provider'
 import { Toaster } from '@/components/ui/toaster'
 import './globals.css'
 
@@ -108,44 +109,49 @@ export default function RootLayout({
                 Banner-nya ditaruh paling atas supaya langsung terlihat di halaman
                 app mana pun (dan menyembunyikan diri di halaman publik/pre-app). */}
             <SubscriptionGateProvider>
-              {/* Gerbang Kunci Perangkat (paket 39): kalau PIN app aktif &
-                  belum dibuka, provider ini MENGGANTIKAN seluruh isi app —
-                  termasuk bottom nav, tombol mata, toast, dan AI chat — dengan
-                  layar kunci. Dulu toggle PIN di Pengaturan cuma `useState`
-                  yang tidak dibaca siapa pun. */}
-              <AppLockProvider>
-                {/* ── WRAPPER LATAR APLIKASI (`data-catetind-page-root`) ──────
-                    Selagi bottom sheet terbuka, wrapper ini diberi `inert` +
-                    `pointer-events: none` oleh `useSheetBackgroundIsolation`
-                    (hooks/use-sheet-viewport-cage.ts) supaya seluruh halaman,
-                    navigasi, banner, dan tombol mengapung di belakangnya
-                    benar-benar mati — tidak ada elemen sticky/fixed latar (mis.
-                    CTA "Daftar & mulai" di /checkout) yang ikut bergeser dan
-                    bocor saat keyboard HP terbuka. Vaul merender sheet-nya lewat
-                    PORTAL ke <body>, jadi sheet ada DI LUAR wrapper ini dan
-                    tetap interaktif. */}
-                <div data-catetind-page-root>
-                  {/* Gerbang seed demo (paket 65): menulis data contoh lewat store
-                      HANYA saat NEXT_PUBLIC_DEMO=1 — di produksi ia no-op. */}
-                  <DemoSeedGate />
-                  <SubscriptionBanner />
-                  {/* Banner Offline & Antrean Lokal (paket 42) — di bawah banner
-                      langganan supaya saat keduanya tampil user melihat dua-duanya.
-                      Menyembunyikan diri sendiri kalau online & antrean kosong. */}
-                  <OfflineBanner />
-                  {children}
-                  <MobileBottomNav />
-                  {/* Floating AI Chat — AI Coach CatetInd (Domain 4B); state percakapan
-                      persisten lintas halaman karena layout tidak unmount saat navigasi */}
-                  <AIChatWidget />
-                </div>
+              {/* Gerbang upgrade global: halaman terkunci tidak dirender; klik
+                  menu atau URL langsung memunculkan SATU popup upgrade yang
+                  sama (dipakai sidebar, drawer, menu Pengaturan, & ScreenShell). */}
+              <UpgradeGateProvider>
+                {/* Gerbang Kunci Perangkat (paket 39): kalau PIN app aktif &
+                    belum dibuka, provider ini MENGGANTIKAN seluruh isi app —
+                    termasuk bottom nav, tombol mata, toast, dan AI chat — dengan
+                    layar kunci. Dulu toggle PIN di Pengaturan cuma `useState`
+                    yang tidak dibaca siapa pun. */}
+                <AppLockProvider>
+                  {/* ── WRAPPER LATAR APLIKASI (`data-catetind-page-root`) ──────
+                      Selagi bottom sheet terbuka, wrapper ini diberi `inert` +
+                      `pointer-events: none` oleh `useSheetBackgroundIsolation`
+                      (hooks/use-sheet-viewport-cage.ts) supaya seluruh halaman,
+                      navigasi, banner, dan tombol mengapung di belakangnya
+                      benar-benar mati — tidak ada elemen sticky/fixed latar (mis.
+                      CTA "Daftar & mulai" di /checkout) yang ikut bergeser dan
+                      bocor saat keyboard HP terbuka. Vaul merender sheet-nya lewat
+                      PORTAL ke <body>, jadi sheet ada DI LUAR wrapper ini dan
+                      tetap interaktif. */}
+                  <div data-catetind-page-root>
+                    {/* Gerbang seed demo (paket 65): menulis data contoh lewat store
+                        HANYA saat NEXT_PUBLIC_DEMO=1 — di produksi ia no-op. */}
+                    <DemoSeedGate />
+                    <SubscriptionBanner />
+                    {/* Banner Offline & Antrean Lokal (paket 42) — di bawah banner
+                        langganan supaya saat keduanya tampil user melihat dua-duanya.
+                        Menyembunyikan diri sendiri kalau online & antrean kosong. */}
+                    <OfflineBanner />
+                    {children}
+                    <MobileBottomNav />
+                    {/* Floating AI Chat — AI Coach CatetInd (Domain 4B); state percakapan
+                        persisten lintas halaman karena layout tidak unmount saat navigasi */}
+                    <AIChatWidget />
+                  </div>
 
-                {/* Toast SENGAJA di luar wrapper inert: notifikasi (mis. "tersalin")
-                    harus tetap bisa diklik walau ada sheet terbuka. */}
-                <Toaster />
-                {/* Toast "Setup selesai!" — sekali jalan tepat setelah onboarding */}
-                <OnboardingWelcomeToast />
-              </AppLockProvider>
+                  {/* Toast SENGAJA di luar wrapper inert: notifikasi (mis. "tersalin")
+                      harus tetap bisa diklik walau ada sheet terbuka. */}
+                  <Toaster />
+                  {/* Toast "Setup selesai!" — sekali jalan tepat setelah onboarding */}
+                  <OnboardingWelcomeToast />
+                </AppLockProvider>
+              </UpgradeGateProvider>
             </SubscriptionGateProvider>
           </PrivacyProvider>
         </MoneyContextProvider>

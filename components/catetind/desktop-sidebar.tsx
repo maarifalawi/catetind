@@ -4,7 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { LogOut, Plus, PanelLeftClose, PanelLeftOpen, ArrowLeftRight } from 'lucide-react'
+import { LogOut, Plus, PanelLeftClose, PanelLeftOpen, ArrowLeftRight, Lock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { SESSION_COPY } from '@/lib/data/auth'
@@ -12,6 +12,7 @@ import { FEATURE_LOCK_COPY } from '@/lib/data/upgrade'
 import { useSessionUser } from '@/hooks/use-session-user'
 import { TRANSFER_DOOR_COPY } from '@/lib/data/add-wallet'
 import { NAV_GROUPS } from '@/lib/navigation'
+import { pageLockText } from '@/lib/subscription/page-access'
 import { TransactionWebModal } from '@/components/dashboard/transaction-web-modal'
 import { TransferFlow } from './transfer-flow'
 import { useSubscriptionGate } from './subscription-gate-provider'
@@ -81,7 +82,7 @@ export function DesktopSidebar({
   const collapsed = variant === 'drawer' ? false : collapsedState
   /* pintu masuk input utama di desktop (pasangan FAB mobile) — dikunci saat masa
      aktif habis. Navigasi & pembacaan data tidak tersentuh. */
-  const { inputLocked } = useSubscriptionGate()
+  const { inputLocked, lockedPageCapability } = useSubscriptionGate()
 
   // hidrasi preferensi collapse dari localStorage (setelah mount,
   // supaya server & client render identik dan tidak ada hydration mismatch)
@@ -233,11 +234,18 @@ export function DesktopSidebar({
             <div className="flex flex-col gap-0.5">
               {section.items.map(({ href, icon: Icon, label }) => {
                 const isActive = pathname === href
+                /* Halaman yang butuh paket lebih tinggi tetap DITAMPILKAN (bukan
+                   disembunyikan) supaya batasannya terlihat; badge 🔒 + title
+                   menjelaskan paket pembukanya sebelum user menekan. Tautannya
+                   tetap hidup: halaman tujuan menampilkan kartu upgrade. */
+                const lockText = lockedPageCapability(href) ? pageLockText(href) : null
                 return (
                   <Link
                     key={href}
                     href={href}
                     aria-current={isActive ? 'page' : undefined}
+                    aria-label={lockText ? `${label} — ${lockText}` : undefined}
+                    title={lockText ?? undefined}
                     className={cn(
                       'group/item relative flex items-center text-[13px] transition-all duration-200',
                       collapsed
@@ -262,7 +270,14 @@ export function DesktopSidebar({
                     >
                       {label}
                     </span>
-                    {collapsed && <NavTooltip label={label} />}
+                    {!collapsed && lockText && (
+                      <Lock
+                        className="ml-auto size-3 shrink-0 text-forest/35"
+                        strokeWidth={2.4}
+                        aria-hidden
+                      />
+                    )}
+                    {collapsed && <NavTooltip label={lockText ?? label} />}
                   </Link>
                 )
               })}
