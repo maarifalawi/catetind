@@ -588,10 +588,11 @@ describe('LP_LIVE_SUBSCRIBERS', () => {
     }
   })
 
-  it('label publik memakai 1.000+, bukan seed database 234', () => {
+  it('label publik memakai 1.000+ orang, bukan seed database 234', () => {
     expect(LP_LIVE_SUBSCRIBERS.startCount).toBe(234)
     expect(LP_LIVE_SUBSCRIBERS.displayCount).toBe(1_000)
     expect(LP_LIVE_SUBSCRIBERS.displaySuffix).toBe('+')
+    expect(LP_LIVE_SUBSCRIBERS.labelTail).toBe('orang udah pake')
   })
 })
 

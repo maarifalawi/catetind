@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils'
        pihak ketiga), berderet dengan outline GELAP TIPIS — bukan halo warna.
        Stroke memakai border 1px DI DALAM kotak avatar (bukan ring di luar),
        jadi tidak mungkin terpotong oleh `overflow-hidden` ancestor;
-     · label publik `1.000+ udah pake` — angka statis, supaya hero tidak
+     · label publik `1.000+ orang udah pake` — angka statis, supaya hero tidak
        pernah menampilkan seed database 234;
      · siluet `UserRound` di belakang foto: kalau file gagal dimuat, lingkaran
        tetap rapi (tidak ada ikon gambar rusak).

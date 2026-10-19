@@ -860,8 +860,8 @@ export const LP_LIVE_SUBSCRIBERS = {
   /** angka publik yang ditampilkan di hero */
   displayCount: 1_000,
   displaySuffix: '+',
-  /** kalimat setelah angka — mis. "1.000+ udah pake" */
-  labelTail: 'udah pake',
+  /** kalimat setelah angka — mis. "1.000+ orang udah pake" */
+  labelTail: 'orang udah pake',
   avatarPool: [
     { src: '/AVA 1.png' },
     { src: '/AVA 2.png' },
