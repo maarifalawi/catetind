@@ -9,8 +9,8 @@ import { LandingReveal } from './reveal'
    Tiga kartu, satu periode: akses selamanya (sekali bayar). Struktur harga
    mengikuti psikologi "anchor + hero + premium":
 
-     Catet Aja (109rb)  → pintu masuk, fitur AI dikunci
-     Waras (129rb)      → kartu hero: +20rb untuk semua fitur AI
+     Catet Aja (Rp1)    → pintu masuk uji coba, fitur AI dikunci
+     Waras (129rb)      → kartu hero: +128.999 untuk semua fitur AI
      Sultan (299rb)     → plafon harga, membuat Waras terasa murah
 
    ATURAN YANG MENGIKAT:

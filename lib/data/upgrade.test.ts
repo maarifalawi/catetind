@@ -40,9 +40,9 @@ describe('nextTier() / upgradeTargets()', () => {
 
 describe('upgradeAmount()', () => {
   it('selisih lifetime, bukan harga penuh', () => {
-    expect(upgradeAmount(WARAS, 'catet-aja', true)).toBe(20_000)
+    expect(upgradeAmount(WARAS, 'catet-aja', true)).toBe(128_999)
     expect(upgradeAmount(SULTAN, 'waras', true)).toBe(170_000)
-    expect(upgradeAmount(SULTAN, 'catet-aja', true)).toBe(190_000)
+    expect(upgradeAmount(SULTAN, 'catet-aja', true)).toBe(298_999)
   })
 
   it('dari paket monthly → harga lifetime penuh', () => {
@@ -54,13 +54,13 @@ describe('capabilityUpgradeOffer() — teks CTA & tautan dari satu sumber', () =
   it('paket pembuka + selisih + tautan lifetime', () => {
     const offer = capabilityUpgradeOffer('ai-chat', 'catet-aja', true)
     expect(offer.target.id).toBe('waras')
-    expect(offer.amount).toBe(20_000)
+    expect(offer.amount).toBe(128_999)
     expect(offer.href).toBe('/checkout/bayar?plan=waras&period=lifetime&upgrade=1&dari=catet-aja')
   })
 
   it('kemampuan yang hanya ada di Sultan menunjuk selisih yang benar', () => {
     expect(capabilityUpgradeOffer('ai-unlimited', 'waras', true).amount).toBe(170_000)
-    expect(capabilityUpgradeOffer('priority-support', 'catet-aja', true).amount).toBe(190_000)
+    expect(capabilityUpgradeOffer('priority-support', 'catet-aja', true).amount).toBe(298_999)
   })
 
   it('belum punya paket → harga penuh paket pembukanya', () => {
@@ -78,7 +78,7 @@ describe('upgradeBannerCopy()', () => {
   it('lifetime lebih rendah → menyebut paket berikutnya + selisihnya', () => {
     const copy = upgradeBannerCopy('catet-aja', formatIDR, true)
     expect(copy?.title).toContain('Paket Waras')
-    expect(copy?.body).toContain(formatIDR(20_000))
+    expect(copy?.body).toContain(formatIDR(128_999))
   })
 
   it('dari monthly → menyebut harga lifetime penuh', () => {

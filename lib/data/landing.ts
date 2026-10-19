@@ -7,7 +7,7 @@
      1. Landing lama sudah dihapus; `app/page.tsx` sekarang merender section baru
         di `components/landing/lp/*`.
      2. HARGA (`LANDING_TIERS`/`LP_PRICING`) HANYA DIBACA dari `PLANS` di
-        `lib/data/pricing.ts`: lifetime 109k/129k/299k (sekali bayar, akses
+        `lib/data/pricing.ts`: lifetime 1/129k/299k (sekali bayar, akses
         selamanya). Paket bulanan sudah tidak dijual. Jangan menulis nominal di
         komponen.
    ────────────────────────────────────────────────────────────────────────── */
@@ -1468,7 +1468,7 @@ export const LP_MISSION = {
 }
 
 /* ── SECTION #pricing ───────────────────────────────────────────────────────
-   SATU PERIODE: Lifetime → `PLANS[].lifetime` (109k/129k/299k), sekali bayar
+   SATU PERIODE: Lifetime → `PLANS[].lifetime` (1/129k/299k), sekali bayar
    untuk akses selamanya. CTA membawa `period=lifetime`. Paket 30 hari sudah
    tidak dijual. Tidak ada nominal di JSX.
 

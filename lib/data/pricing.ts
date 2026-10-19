@@ -107,7 +107,9 @@ export const PLANS: PlanDefinition[] = [
     name: 'Paket Catet Aja',
     subtitle: 'Catat manual, tanpa AI',
     monthly: 49_000,
-    lifetime: 109_000,
+    /* Harga uji coba QRIS Midtrans: sengaja Rp1 supaya checkout sandbox bisa
+       diuji ujung-ke-ujung. `monthly` tetap harga WARISAN untuk pembelian lama. */
+    lifetime: 1,
     features: [
       'Catat pemasukan & pengeluaran',
       'Budget & kategori manual',
@@ -249,7 +251,7 @@ export function isValidOfferAmount(
 }
 
 /* ── KEMAMPUAN (KUNCI FITUR PER TIER) ─────────────────────────────────────────
-   "kalau ada orang yang subs 109k, fitur-fitur yang 129k itu di-lock, jadi
+   "kalau ada orang yang subs paket bawah, fitur-fitur paket atas itu di-lock, jadi
    nanti kalau mau akses harus upgrade ke 129k."
 
    Kenapa peta, bukan `if` yang disebar: kunci ini harus dibaca SERVER (403 di

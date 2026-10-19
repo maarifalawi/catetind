@@ -11,7 +11,7 @@ import { restConfigured } from '@/lib/supabase/rest'
 import { readCallerPlan } from './plan'
 
 /* ── GUARD KEMAMPUAN (SERVER) — kunci fitur yang BENAR-BENAR terkunci ────────
-   Permintaan produk: "kalau ada orang yang subs 109k, fitur-fitur yang 129k itu
+   Permintaan produk: "kalau ada orang yang subs paket bawah, fitur-fitur paket atas itu
    di-lock". Menyembunyikan tombol saja bukan kunci — endpoint harus menolak.
    Karena itu route `/api/ai/*` memanggil `requireCapability()` sebelum
    menyentuh provider: paket yang tidak punya kemampuan itu dijawab 403.
