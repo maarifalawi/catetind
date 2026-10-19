@@ -8,7 +8,9 @@ import { cn } from '@/lib/utils'
 /* ── BUKTI SOSIAL HERO ───────────────────────────────────────────────────────
    Satu blok kecil di samping CTA:
      · LIMA avatar lokal `public/AVA 1.png` … `AVA 5.png` (bukan foto stok
-       pihak ketiga), berderet dengan outline GELAP TIPIS — bukan halo warna;
+       pihak ketiga), berderet dengan outline GELAP TIPIS — bukan halo warna.
+       Stroke memakai border 1px DI DALAM kotak avatar (bukan ring di luar),
+       jadi tidak mungkin terpotong oleh `overflow-hidden` ancestor;
      · label publik `1.000+ udah pake` — angka statis, supaya hero tidak
        pernah menampilkan seed database 234;
      · siluet `UserRound` di belakang foto: kalau file gagal dimuat, lingkaran
@@ -34,7 +36,7 @@ export function LandingLiveSubscribers({ className }: { className?: string }) {
   const displayCount = `${NUMBER.format(COPY.displayCount)}${COPY.displaySuffix}`
 
   return (
-    <div className={cn('relative flex min-w-0 flex-col gap-1 overflow-hidden landing-tab:gap-2', className)}>
+    <div className={cn('relative flex min-w-0 flex-col gap-1 landing-tab:gap-2', className)}>
       {/* ticker avatar: 5 foto, gap 4px seperti export. Tidak ada fade tepi
           lagi karena baris CTA kini selebar konten dan dipusatkan, bukan
           dipotong oleh kolom `flex-1`. */}
@@ -46,7 +48,7 @@ export function LandingLiveSubscribers({ className }: { className?: string }) {
           {COPY.avatarPool.map((avatar) => (
             <span
               key={avatar.src}
-              className="relative flex size-7 items-center justify-center rounded-full ring-1 ring-forest/40 min-[420px]:size-8 landing-tab:size-9"
+              className="relative flex size-7 items-center justify-center rounded-full border border-forest/40 min-[420px]:size-8 landing-tab:size-9"
             >
               <span className="relative flex size-full items-center justify-center overflow-hidden rounded-full bg-canvas">
                 <UserRound
