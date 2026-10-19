@@ -35,11 +35,12 @@ export function LandingLiveSubscribers({ className }: { className?: string }) {
 
   return (
     <div className={cn('relative flex min-w-0 flex-col gap-1 overflow-hidden landing-tab:gap-2', className)}>
-      {/* ticker avatar: 5 foto, gap 4px seperti export; sisi kanan memudar
-          saat ruang sempit (desktop semua muat, jadi fade disembunyikan) */}
+      {/* ticker avatar: 5 foto, gap 4px seperti export. Tidak ada fade tepi
+          lagi karena baris CTA kini selebar konten dan dipusatkan, bukan
+          dipotong oleh kolom `flex-1`. */}
       <span
         aria-hidden
-        className="relative flex h-7 items-center overflow-hidden min-[420px]:h-8 landing-tab:h-9"
+        className="relative flex h-7 items-center min-[420px]:h-8 landing-tab:h-9"
       >
         <span className="flex w-max items-center gap-1">
           {COPY.avatarPool.map((avatar) => (
@@ -68,9 +69,6 @@ export function LandingLiveSubscribers({ className }: { className?: string }) {
             </span>
           ))}
         </span>
-
-        <span className="pointer-events-none absolute inset-y-0 left-0 w-3 bg-gradient-to-r from-canvas to-transparent landing-tab:hidden" />
-        <span className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-canvas to-transparent landing-tab:hidden" />
       </span>
 
       <p className="whitespace-nowrap text-[12px] leading-none text-forest-muted min-[420px]:text-[13px] landing-tab:text-[14px] max-[380px]:text-[11px]">

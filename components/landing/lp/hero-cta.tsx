@@ -15,8 +15,9 @@ import { LandingLiveSubscribers } from './live-subscribers'
    kanon Earth Pastel yang dipakai section lain.
 
    Susunannya SATU BARIS di semua layar: tombol di kiri, avatar + label di
-   kanan. Di mobile blok social mengambil sisa lebar dan avatar yang tidak muat
-   dipotong halus dengan fade — sama seperti ticker export. */
+   kanan, dan SELURUH grup di tengah. Blok sosial sengaja selebar kontennya
+   (bukan `flex-1`), karena kalau memenuhi sisa lebar, tombol terdorong ke tepi
+   kiri dan grup tidak pernah terlihat center. */
 
 function ArrowMark({ className }: { className?: string }) {
   return (
@@ -39,7 +40,7 @@ export function LandingHeroCta() {
   return (
     <div
       id="hero-cta"
-      className="mx-auto flex w-full items-center justify-center gap-4 landing-tab:w-fit"
+      className="mx-auto flex w-full items-center justify-center gap-4 max-[360px]:gap-2 landing-tab:w-fit"
     >
       <Link
         href={LP_HERO.ctaHref}
@@ -53,7 +54,7 @@ export function LandingHeroCta() {
         </span>
       </Link>
 
-      <div className="min-w-0 flex-1 landing-tab:flex-none">
+      <div className="flex-none">
         <LandingLiveSubscribers />
       </div>
     </div>
