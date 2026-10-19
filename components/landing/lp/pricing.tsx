@@ -39,10 +39,10 @@ export function LandingPricingLp() {
           <LandingReveal y={40} delay={0.1} className="w-full">
             <h2
               id="landing-pricing-title"
-              className="mx-auto max-w-[920px] text-balance font-display text-[30px] leading-[1.18] font-semibold tracking-[-0.035em] text-forest landing-tab:text-[40px] landing:text-[48px]"
+              className="mx-auto max-w-[920px] text-balance font-display text-[30px] leading-[1.18] font-medium tracking-[-0.035em] text-forest landing-tab:text-[40px] landing:text-[48px]"
             >
               {LP_PRICING.titleBefore}
-              <span className="inline-block whitespace-nowrap rounded-full bg-[#e5eecb] px-3 py-1 align-baseline font-bold text-[#243629]">
+              <span className="whitespace-nowrap font-semibold">
                 {LP_PRICING.titleEmphasis}
               </span>
               {LP_PRICING.titleAfter}

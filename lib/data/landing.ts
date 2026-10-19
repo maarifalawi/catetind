@@ -1480,13 +1480,12 @@ export type LpPricingMode = 'lifetime'
 
 export const LP_PRICING = {
   eyebrow: 'Harga',
-  /* Satu baris saja (tanpa subjudul): klaim harga di-highlight di tengah
-     kalimat. "Rp 150" sengaja dipisah dari "/hari" supaya pill tetap muat di
-     layar sempit, sementara teks yang terbaca utuh:
-     "Beresin bocor halus, cuma Rp 150 perak/hari". */
-  titleBefore: 'Beresin bocor halus, ',
-  titleEmphasis: 'cuma Rp 150',
-  titleAfter: ' perak/hari',
+  /* Satu baris saja (tanpa subjudul): angka harian di-highlight TIPIS di
+     tengah kalimat, tanpa pill/latar. Hanya nominal yang ditebalkan, jadi
+     teks terbaca: "Beresin bocor halus, cuma Rp 150/hari". */
+  titleBefore: 'Beresin bocor halus, cuma ',
+  titleEmphasis: 'Rp 150/hari',
+  titleAfter: '',
   /** a11y: nama grup mode harga (kini hanya satu: lifetime) */
   toggleAria: 'Durasi paket',
   modes: [{ id: 'lifetime', label: 'Lifetime' }] as const satisfies readonly {
