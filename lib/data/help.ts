@@ -25,6 +25,7 @@ import { INITIAL_BILLS } from './bills'
 import { INITIAL_SINKING_FUNDS } from './budget'
 import { INITIAL_DEBTS, INITIAL_INVESTMENTS } from './wealth'
 import { ALL_TRANSACTIONS } from './transactions'
+import { LOGIN_PATH } from './auth'
 import { PRIVACY_LINK_COPY } from '../legal/privacy'
 import { TERMS_LINK_COPY } from '../legal/terms'
 import { WALLET_SEED } from '../wallets'
@@ -624,6 +625,59 @@ export const HELP_LEGAL_LINKS: { href: string; label: string }[] = [
   { href: '/privacy', label: PRIVACY_LINK_COPY.label },
   { href: '/terms', label: TERMS_LINK_COPY.label },
 ]
+
+/* ── 5b. HALAMAN BANTUAN PUBLIK `/bantuan` ──────────────────────────────────
+   Kenapa ada dua halaman bantuan (dan kenapa itu SENGAJA):
+
+     · `/help`    → Pusat Bantuan DI DALAM app. Memakai `ScreenShell`, jadi ia
+                    menampilkan sidebar + navigasi app (Dompet, Budget, Insight,
+                    …) dan tombol "Export Data Saya". Halaman ini WAJIB di balik
+                    login (lihat `lib/public-routes.ts`).
+     · `/bantuan` → halaman ini. Untuk pengunjung yang BELUM masuk — termasuk
+                    orang yang menekan "Emailmu nggak ketemu? Kabarin kami di
+                    Pusat Bantuan" di halaman masuk. Isinya hanya artikel bantuan
+                    + jalan kontak: TIDAK ada sidebar, TIDAK ada data keuangan,
+                    dan TIDAK ada jalan langsung ke dashboard. Jadi aturan
+                    "tidak ada yang masuk app kecuali lewat login" tetap utuh,
+                    sementara user tidak dijebak di tautan yang memantul balik ke
+                    halaman masuk.
+
+   Semua copy halaman publik tinggal di sini supaya komponen landanya nol string
+   user-facing (konvensi `lib/data/landing.ts`). */
+export const PUBLIC_HELP_PATH = '/bantuan'
+
+export const PUBLIC_HELP_COPY = {
+  eyebrow: HELP_TITLE,
+  title: 'Ada yang bikin bingung?',
+  subtitle:
+    'Semua jawaban di bawah ini bisa dibaca tanpa akun. Kalau masih mentok, kabarin kami — balasan datang dari manusia, bukan bot.',
+  description:
+    'Pusat Bantuan CatetInd: jawaban singkat soal paket, pencatatan, AI, dan privasi — bisa dibaca tanpa akun. Masih bingung? WhatsApp atau email tim CatetInd.',
+  meta: `${totalHelpArticles()} artikel · ${HELP_TOPICS.length} topik`,
+  searchLabel: HELP_SEARCH_LABEL,
+  searchPlaceholder: HELP_SEARCH_PLACEHOLDER,
+  searchClearLabel: 'Hapus pencarian',
+  quickTitle: HELP_DEFAULT_TITLE,
+  topicsTitle: 'Jelajahi topik',
+  topicsLabel: 'Topik bantuan',
+  resultTitle: HELP_RESULT_TITLE,
+  emptyTitle: HELP_EMPTY_TITLE,
+  emptyBody: 'Coba kata kunci lain, atau kabarin kami lewat WhatsApp/email di bawah.',
+  proTipLabel: HELP_PRO_TIP_LABEL,
+  supportTitle: 'Masih butuh bantuan?',
+  supportBody:
+    'Emailmu nggak ketemu atau ada yang terasa aneh? Kabarin kami langsung. Kami tidak bisa melihat datamu, jadi sertakan screenshot kalau masalahnya soal tampilan.',
+  whatsappCta: 'Chat WhatsApp',
+  emailCta: 'Kirim email',
+  loginTitle: 'Sudah punya akun?',
+  loginBody: 'Dashboard dan catatan keuanganmu ada di balik login.',
+  loginCta: 'Masuk ke CatetInd',
+  loginHref: LOGIN_PATH,
+  registerCta: 'Belum punya akun? Lihat paket',
+  registerHref: '/checkout',
+  footerNote:
+    'Halaman bantuan ini terbuka untuk siapa saja dan tidak menampilkan data keuangan siapa pun.',
+} as const
 
 /* ── 6. EXPORT DATA (PRD Domain 4C, Mekanisme 1) ──────────────────────────── */
 

@@ -152,6 +152,9 @@
   --color-mint-soft: #dbe4c7; /* turunan leaf (tint) */
   --color-sage: #ebe4de; /* = oat (permukaan pucat) */
   --color-cream: #ffffff; /* = canvas (dasar putih) */
+  /* Charcoal CTA hero landing — token khusus untuk badan tombol CTA hero,
+     diambil dari computed style export Framer. Bukan teks/permukaan umum. */
+  --color-graphite: #35363b;
   /* palet status Daily HUD — kanon PRD Domain 2B.2 (BUKAN merah untuk over-budget) */
   --color-hud-sage: #b5b987; /* = olive   · aman / on-track */
   --color-hud-amber: #ffb885; /* = cantelope · mendekati batas */
@@ -926,3 +929,39 @@ body[data-catetind-sheet-open='true'] [data-catetind-page-root] {
   -webkit-mask-image: linear-gradient(to right, transparent, black 12%, black 88%, transparent);
   mask-image: linear-gradient(to right, transparent, black 12%, black 88%, transparent);
 }
+/* ── Landing & checkout · corak batik pada kartu paket ────────────────────────
+   Dua mask ini dipakai `BatikBackdrop` (components/landing/lp/batik-backdrop.tsx)
+   untuk memudarkan corak kawung & mega mendung sebelum mencapai tengah kartu.
+   Hasilnya: kartu terasa seperti kain tercetak di sudutnya, sementara nominal
+   dan daftar fitur tetap tajam. Mask, bukan opacity: yang memudar hanya pola,
+   bukan teks di atasnya. */
+.batik-mask-kawung {
+  -webkit-mask-image: radial-gradient(
+    135% 115% at 0% 0%,
+    #000 0%,
+    rgba(0, 0, 0, 0.55) 26%,
+    transparent 58%
+  );
+  mask-image: radial-gradient(
+    135% 115% at 0% 0%,
+    #000 0%,
+    rgba(0, 0, 0, 0.55) 26%,
+    transparent 58%
+  );
+}
+
+.batik-mask-mendung {
+  -webkit-mask-image: radial-gradient(
+    125% 105% at 100% 100%,
+    #000 0%,
+    rgba(0, 0, 0, 0.5) 30%,
+    transparent 62%
+  );
+  mask-image: radial-gradient(
+    125% 105% at 100% 100%,
+    #000 0%,
+    rgba(0, 0, 0, 0.5) 30%,
+    transparent 62%
+  );
+}
+

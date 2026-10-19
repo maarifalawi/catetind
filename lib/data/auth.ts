@@ -21,12 +21,8 @@ export const REGISTRATION_COPY = {
   description: 'Dua field aja. Nggak ada password, nggak ada data pribadi lain.',
   emailLabel: 'Email',
   emailPlaceholder: 'namakamu@email.com',
-  emailHint: 'Tautan masuk & struk pembayaran dikirim ke alamat ini.',
   nameLabel: 'Nama panggilan',
   namePlaceholder: 'Rina',
-  nameHint: 'Dipakai buat nyapa kamu di app. Bisa diubah kapan aja.',
-  /** copy kanon PRD 5933 — kekuatan halaman ini ada di kalimat ini */
-  noPasswordNote: 'Nggak perlu bikin password — kita kirim tautan masuk ke emailmu.',
   submitLabel: 'Buat akun',
   /** label tombol saat permintaan registrasi sedang berjalan (paket 64) —
    *  mencegah dua ketukan membuat dua pendaftaran */
@@ -38,8 +34,9 @@ export const REGISTRATION_COPY = {
   hasAccountLink: 'Masuk',
   /** catatan langkah berikutnya di sheet (paket 64). Sheet registrasi BENAR-BENAR
    *  mendaftarkan akun Supabase, jadi user wajib tahu langkah berikutnya ada di
-   *  inbox. Paragraf "demo" yang panjang dihapus — footer sheet bukan disclaimer. */
-  emailNextNote: 'Langkah terakhir: buka tautan konfirmasi yang kami kirim ke emailmu.',
+   *  inbox. Dua baris pendek — bukan paragraf disclaimer. */
+  emailNextLead: 'Cek inbox',
+  emailNextNote: 'Tautan konfirmasi sudah dikirim ke emailmu.',
 } as const
 
 /**
@@ -115,7 +112,7 @@ export const VERIFY_PATH = '/login/verify'
 
 export const LOGIN_COPY = {
   /* Catatan revisi desain (permintaan desain): halaman /login memakai bingkai
-     landing (navbar + footer landing), jadi `eyebrow` dan `subtitle` kembali
+     landing (navbar landing TANPA footer), jadi `eyebrow` dan `subtitle` kembali
      dipakai sebagai kepala halaman. `emailHint`, `trustNote`, `codeSubtitle`,
      dan `codeHint` tetap tidak dipakai: cukup judul + label + tombol. Pesan
      ERROR tetap tampil saat input salah — itu informasi, bukan hiasan. */
@@ -152,10 +149,13 @@ export const LOGIN_COPY = {
   /** aksi sekunder: belum punya akun → daftar (route /checkout sudah ada) */
   registerLead: 'Belum punya akun?',
   registerLink: 'Daftar',
-  /** jalan keluar kecil di kaki halaman — bukan user yang disalahkan, tapi kami yang dibantu */
+  /** jalan keluar kecil di kaki halaman — bukan user yang disalahkan, tapi kami yang dibantu.
+   *  Tujuannya `/bantuan` (publik), BUKAN `/help`: `/help` adalah Pusat Bantuan
+   *  di dalam app (sidebar + data keuangan) dan hanya boleh dibuka setelah
+   *  login. Tautan dari halaman masuk tidak boleh melewati gerbang itu. */
   helpLead: 'Emailmu nggak ketemu?',
   helpLink: 'Kabarin kami di Pusat Bantuan.',
-  helpHref: '/help',
+  helpHref: '/bantuan',
 } as const
 
 

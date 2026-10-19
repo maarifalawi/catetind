@@ -34,7 +34,9 @@ export const PUBLIC_NAV: {
   homeLabel: 'Halaman depan',
   links: [
     { label: 'Harga', href: '/checkout' },
-    { label: 'Bantuan', href: '/help' },
+    /* Pusat Bantuan PUBLIK — `/help` butuh login, jadi navbar situs tidak
+       boleh menautkannya (pengunjung akan memantul ke /login). */
+    { label: 'Bantuan', href: '/bantuan' },
   ],
   loginLabel: 'Masuk',
   loginHref: '/login',

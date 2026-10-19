@@ -213,6 +213,42 @@ describe('POST /api/payment/webhook', () => {
     expect(fulfilled).toBe(true)
   })
 
+  it('pembayaran DISKON (expected_amount = nominal diskon) tetap dipenuhi', async () => {
+    probe.serviceKey.value = 'service-key-palsu'
+    let fulfilled = false
+    probe.rpc.value = () => {
+      fulfilled = true
+      return {
+        ok: true,
+        status: 200,
+        data: [
+          {
+            claimed_slot: null,
+            claimed_price: 71100,
+            claimed_tier: 'waras',
+            already_processed: false,
+          },
+        ],
+      }
+    }
+    /* 79.000 - 10% = 71.100 — nominal inilah yang ditagih & disimpan charge */
+    probe.fetch.value = () => ({
+      ok: true,
+      status: 200,
+      data: [{ expected_amount: 71100, status: 'pending' }],
+    })
+
+    const res = await POST(
+      notify({
+        gross_amount: '71100.00',
+        signature_key: signature(ORDER, CODE, '71100.00'),
+      }),
+    )
+    expect(res.status).toBe(200)
+    expect((await res.json()).handled).toBe(true)
+    expect(fulfilled).toBe(true)
+  })
+
   /* ── REWARD REFERRAL (paket 85 · TUGAS 6) ────────────────────────────────
      Reward diberikan dari WEBHOOK setelah pembelian paket dipenuhi, ke
      PENGUNDANG (bukan pembeli), idempoten per order_id. Top-up token TIDAK

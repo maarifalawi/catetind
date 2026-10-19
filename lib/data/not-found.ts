@@ -40,7 +40,9 @@ export const NOT_FOUND_SHORTCUTS: NotFoundShortcut[] = [
   { href: '/wallet', label: 'Dompet & Akun', blurb: 'Cek saldo' },
   { href: '/history', label: 'Riwayat & Insight', blurb: 'Semua catatan' },
   { href: '/budget', label: 'Budget & Nabung', blurb: 'Jatah & celengan' },
-  { href: '/help', label: 'Pusat Bantuan', blurb: 'Jawaban cepat' },
+  /* `/bantuan` = Pusat Bantuan PUBLIK. `/help` butuh login, jadi tidak boleh
+     jadi pintasan di halaman 404 yang dibuka tanpa sesi. */
+  { href: '/bantuan', label: 'Pusat Bantuan', blurb: 'Jawaban cepat' },
   /* dua pintu SITUS — supaya pengunjung yang belum punya akun (mis. membuka
      tautan lama `/r/<kode>`) tidak buntu di halaman yang isinya semua app */
   { href: '/welcome', label: 'Halaman Depan', blurb: 'Belum punya akun?' },

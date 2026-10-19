@@ -54,7 +54,7 @@ const SHORTCUT_ICON: Record<string, LucideIcon> = {
   '/wallet': Wallet,
   '/history': PieChart,
   '/budget': Target,
-  '/help': CircleHelp,
+  '/bantuan': CircleHelp,
   '/welcome': Sprout,
   '/': Home,
 }
@@ -142,7 +142,7 @@ export function NotFoundScreen() {
               🌿 {NOT_FOUND_HELP_BODY}
             </p>
             <Link
-              href="/help"
+              href="/bantuan"
               className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-forest px-4 text-[12.5px] font-medium text-cream transition-colors duration-200 hover:bg-forest-soft active:scale-[0.98] motion-reduce:transition-none"
             >
               {NOT_FOUND_HELP_CTA}

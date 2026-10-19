@@ -5,6 +5,7 @@ import { LandingHeroLp } from '@/components/landing/lp/hero'
 import { LandingMissionLp } from '@/components/landing/lp/mission'
 import { LandingNavbarLp } from '@/components/landing/lp/navbar'
 import { LandingPricingLp } from '@/components/landing/lp/pricing'
+import { LandingPurchaseToasts } from '@/components/landing/lp/purchase-toasts'
 import { LandingSectionDivider } from '@/components/landing/lp/section-divider'
 import { LandingPainCalculator } from '@/components/landing/pain-calculator'
 import { LANDING_META, LANDING_SECTION_MARKERS } from '@/lib/data/landing'
@@ -51,6 +52,8 @@ export default function LandingPage() {
       <LandingPricingLp />
       <LandingSectionDivider marker={LANDING_SECTION_MARKERS.faq} />
       <LandingFaqLp />
+      {/* notifikasi pembelian bergiliran (kanan/kiri bawah) — hanya di landing */}
+      <LandingPurchaseToasts />
       <LandingFooterLp />
     </main>
   )

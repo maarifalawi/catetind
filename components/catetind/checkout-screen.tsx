@@ -1,50 +1,43 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import Link from 'next/link'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowRight, Check, Info, ShieldCheck, Tag } from 'lucide-react'
+import { ArrowRight, Check, Info, ShieldCheck, Sparkles, Tag } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { BatikBackdrop } from '@/components/landing/lp/batik-backdrop'
 import {
   CHECKOUT_COPY,
-  CHECKOUT_STEPS,
   HERO_PLAN,
-  PERIOD_LABEL,
   PLANS,
   PRICING_TRUST_BADGES,
-  PREPAID_BADGE,
   REFERRAL_DISCOUNT_PCT,
-  SEKALI_BAYAR_BADGE,
   applyReferralDiscount,
   buildCheckoutHref,
   buildPayHref,
   formatIDR,
   isValidReferralCode,
   offerPrice,
-  type BillingPeriod,
   type PlanDefinition,
   type PlanId,
-  type TrustBadge,
 } from '@/lib/data/pricing'
 import { RegistrationSheet, type RegistrationOutcome, type RegistrationResult } from './registration-sheet'
 import { fetchSessionUser, registerAccount } from '@/lib/session-client'
 import { buildVerifyHref } from '@/lib/data/auth'
-import { WELCOME_PATH } from '@/lib/data/welcome'
 
 /* ── Checkout (/checkout) — inventaris #3 · PRD 5887–5935 ─────────────────────
    Halaman pilih paket + daftar akun. Dua hal harus terasa sepanjang halaman:
    RINGAN (maksimal 3 langkah, 2 field, tanpa password) dan JUJUR (harga
    konsisten, tanpa auto-renew, tanpa countdown/social proof palsu).
 
-   Tata letak (revisi desain): BINGKAI LANDING — navbar + footer landing
-   dipasang route, kepala halaman memakai pill eyebrow + H1 display, lalu satu
-   kolom kartu putih ber-hairline. Desain lama (panel batik dua kolom +
-   PublicNavbar) sudah tidak dipakai. Semua isi lama tetap ada (langkah,
-   pilihan paket, harga, trust badge, kode teman, ringkasan, tombol bayar).
+   Tata letak (revisi desain): BINGKAI LANDING dengan LEBAR HEADER — satu
+   kolom `max-w-[1200px]` seperti navbar (tanpa footer landing), bukan kolom
+   ponsel yang sempit. Di desktop isinya dua kolom: kartu paket di kiri dan
+   ringkasan sticky di kanan; di layar kecil keduanya menumpuk.
 
-   Halaman ini memilih paket + periode (monthly/lifetime), lalu registrasi
-   (email + nama + kode teman) dan pembayaran di `/checkout/bayar`. Tidak ada
-   harga yang ditulis di JSX: semua dari `lib/data/pricing.ts`.
+   Teks dijaga sependek mungkin: judul + stepper label, kartu paket (nama,
+   harga, 3 fitur teratas), lalu ringkasan. Kalimat penjelas hidup di
+   `lib/data/pricing.ts`, bukan di JSX (CONTEXT-WAJIB §4) — dan yang tidak
+   perlu dikatakan tidak ditampilkan sama sekali.
 
    Yang TIDAK ada di sini, dan memang sengaja:
      • field password/telepon/alamat/gender/tanggal lahir
@@ -52,17 +45,17 @@ import { WELCOME_PATH } from '@/lib/data/welcome'
      • daftar harga sendiri: semua angka dibaca dari `lib/data/pricing.ts`
 
    Kenapa satu sumber harga: PRD 4594–4606 menuntut satu harga per tier di mana
-   pun. Monthly dan lifetime sama-sama berasal dari `PLANS`.
+   pun. Hanya ada SATU periode yang dijual — lifetime — dan angkanya berasal
+   dari `PLANS` (harga `monthly` tinggal sebagai warisan baca, bukan tombol).
    ────────────────────────────────────────────────────────────────────────── */
 type OfferId = PlanId
 
 export function CheckoutScreen({
   initialPlanId,
-  initialPeriod = 'monthly',
   initialReferralCode,
 }: {
   /**
-   * Pilihan awal dari query `/checkout?plan=…&period=…&kode=…`.
+   * Pilihan awal dari query `/checkout?plan=…&kode=…`.
    *
    * Sebelum ini halaman selalu membuka paket hero, sehingga konteks user hilang
    * begitu ia keluar dari halaman ini (klik "Masuk", atau datang dari tautan
@@ -71,54 +64,148 @@ export function CheckoutScreen({
    * boleh menentukan penawaran yang tidak dijual.
    */
   initialPlanId?: PlanId
-  /** `monthly` (prabayar 30 hari) atau `lifetime` */
-  initialPeriod?: BillingPeriod
   initialReferralCode?: string | null
 } = {}) {
   /** paket terpilih — default paket hero (Waras), yaitu rekomendasi produk */
   const [offerId, setOfferId] = useState<OfferId>(() =>
     initialPlanId && PLANS.some((item) => item.id === initialPlanId) ? initialPlanId : HERO_PLAN.id,
   )
-  /** periode terpilih — default prabayar 30 hari */
-  const [period, setPeriod] = useState<BillingPeriod>(initialPeriod)
-  /** kode teman: input mentah, kode yang sudah dipakai, dan status error */
-  const [codeInput, setCodeInput] = useState(() => initialReferralCode?.toUpperCase() ?? '')
-  const [appliedCode, setAppliedCode] = useState<string | null>(() => {
-    const code = initialReferralCode?.trim().toUpperCase() ?? ''
-    return code && isValidReferralCode(code) ? code : null
+  /** kode teman: input mentah, kode yang sudah diverifikasi, dan status error */
+  const [codeInput, setCodeInput] = useState(() => initialReferralCode?.trim().toUpperCase() ?? '')
+  const [appliedCode, setAppliedCode] = useState<string | null>(null)
+  const [codeError, setCodeError] = useState<string | null>(() => {
+    const code = initialReferralCode?.trim() ?? ''
+    return code && !isValidReferralCode(code) ? CHECKOUT_COPY.referralInvalid : null
   })
-  const [codeError, setCodeError] = useState(false)
+  const [checkingCode, setCheckingCode] = useState(false)
+  /** penanda request terakhir: jawaban lama tidak boleh menimpa input terbaru */
+  const verifyRequest = useRef(0)
   /** sheet registrasi (paket 64: pembayaran Midtrans di-bypass, jadi tidak ada
    *  sheet pembayaran yang dibuka dari sini) */
   const [registrationOpen, setRegistrationOpen] = useState(false)
   const router = useRouter()
 
+  /* Kode dari URL (`/r/<kode>` → `?kode=`) DIPERIKSA DULU ke database. Diskon
+     tidak pernah tampil hanya karena bentuk kodenya wajar. */
+  useEffect(() => {
+    const candidate = initialReferralCode?.trim().toUpperCase() ?? ''
+    if (!candidate || !isValidReferralCode(candidate)) return
+
+    let active = true
+    const requestId = ++verifyRequest.current
+    setCheckingCode(true)
+    setCodeError(null)
+
+    fetch('/api/referral/validate', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ code: candidate }),
+    })
+      .then(async (res) => {
+        const data = (await res.json().catch(() => null)) as {
+          ok?: boolean
+          verified?: boolean
+          error?: string
+        } | null
+        if (!active || requestId !== verifyRequest.current) return
+        if (res.ok && data?.ok && data.verified) {
+          setAppliedCode(candidate)
+          setCodeInput(candidate)
+          setCodeError(null)
+          return
+        }
+        setAppliedCode(null)
+        setCodeError(
+          res.status === 422
+            ? (data?.error ?? CHECKOUT_COPY.referralInvalid)
+            : CHECKOUT_COPY.referralUnavailable,
+        )
+      })
+      .catch(() => {
+        if (active && requestId === verifyRequest.current) {
+          setAppliedCode(null)
+          setCodeError(CHECKOUT_COPY.referralUnavailable)
+        }
+      })
+      .finally(() => {
+        if (active && requestId === verifyRequest.current) setCheckingCode(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [initialReferralCode])
+
   const plan: PlanDefinition = PLANS.find((item) => item.id === offerId) ?? HERO_PLAN
 
-  const listPrice = offerPrice(plan, { period })
+  /* Satu-satunya periode yang dijual: akses selamanya. Tidak ada state periode
+     dan tidak ada toggle — jadi tidak mungkin checkout mengirim `monthly`. */
+  const listPrice = offerPrice(plan, { period: 'lifetime' })
   const discount = appliedCode ? listPrice - applyReferralDiscount(listPrice) : 0
   const total = listPrice - discount
   const offerName = plan.name
-  const features = plan.features
-  const periodLabel = PERIOD_LABEL[period]
-  const premiumBadge = period === 'monthly' ? PREPAID_BADGE : SEKALI_BAYAR_BADGE
+  const periodShort = CHECKOUT_COPY.periodShortLifetime
 
-  function handleApplyCode() {
-    const trimmed = codeInput.trim()
-    if (!trimmed) return
-    if (isValidReferralCode(trimmed)) {
-      setAppliedCode(trimmed.toUpperCase())
-      setCodeError(false)
+  /**
+   * Tombol "Pakai" TIDAK boleh percaya bentuk kode saja. Kode diperiksa ke
+   * `/api/referral/validate`; diskon baru aktif kalau server menjawab
+   * `verified: true`. Kode karangan berhenti di sini, bukan di halaman bayar.
+   */
+  async function handleApplyCode() {
+    const trimmed = codeInput.trim().toUpperCase()
+    if (!trimmed || checkingCode) return
+
+    if (!isValidReferralCode(trimmed)) {
+      setAppliedCode(null)
+      setCodeError(CHECKOUT_COPY.referralInvalid)
       return
     }
-    setAppliedCode(null)
-    setCodeError(true)
+
+    const requestId = ++verifyRequest.current
+    setCheckingCode(true)
+    setCodeError(null)
+    try {
+      const res = await fetch('/api/referral/validate', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ code: trimmed }),
+      })
+      const data = (await res.json().catch(() => null)) as {
+        ok?: boolean
+        verified?: boolean
+        error?: string
+      } | null
+      if (requestId !== verifyRequest.current) return
+
+      if (res.ok && data?.ok && data.verified) {
+        setAppliedCode(trimmed)
+        setCodeInput(trimmed)
+        setCodeError(null)
+        return
+      }
+
+      setAppliedCode(null)
+      setCodeError(
+        res.status === 422
+          ? (data?.error ?? CHECKOUT_COPY.referralInvalid)
+          : CHECKOUT_COPY.referralUnavailable,
+      )
+    } catch {
+      if (requestId === verifyRequest.current) {
+        setAppliedCode(null)
+        setCodeError(CHECKOUT_COPY.referralUnavailable)
+      }
+    } finally {
+      if (requestId === verifyRequest.current) setCheckingCode(false)
+    }
   }
 
   function handleClearCode() {
+    verifyRequest.current += 1
+    setCheckingCode(false)
     setAppliedCode(null)
     setCodeInput('')
-    setCodeError(false)
+    setCodeError(null)
   }
 
   /**
@@ -136,7 +223,7 @@ export function CheckoutScreen({
        user yang baru memverifikasi email langsung mendarat di pembayaran (paket
        yang sedang dipilih) — bukan Dashboard — dan tautan di emailnya pun
        mengarah ke sana. */
-    const payHref = buildPayHref(offerId, period, appliedCode)
+    const payHref = buildPayHref(offerId, 'lifetime', appliedCode)
     const outcome = await registerAccount({
       email: result.email,
       nickname: result.nickname,
@@ -155,12 +242,13 @@ export function CheckoutScreen({
   /**
    * CTA utama: kalau user SUDAH masuk, langsung ke halaman bayar (paket dan
    * kode teman yang sedang dipilih). Kalau belum, buka sheet registrasi —
-   * `/api/payment/charge` memang butuh sesi (identitas dari cookie). */
+   * `/api/payment/charge` memang butuh sesi (identitas dari cookie).
+   */
   function handleStart() {
     void fetchSessionUser()
       .then((user) => {
         if (user) {
-          router.push(buildPayHref(offerId, period, appliedCode))
+          router.push(buildPayHref(offerId, 'lifetime', appliedCode))
           return
         }
         setRegistrationOpen(true)
@@ -170,431 +258,395 @@ export function CheckoutScreen({
 
   return (
     <>
-      <section className="w-full bg-canvas px-5 pt-[120px] pb-20 landing-tab:px-10 landing-tab:pt-[160px] landing:pt-[180px] landing:pb-[120px]">
-        <div className="mx-auto flex w-full max-w-[760px] flex-col items-center gap-8">
-          {/* kepala halaman — resep yang sama dengan hero landing */}
-          <header className="flex w-full flex-col items-center gap-4 text-center">
+      <section className="w-full bg-canvas px-5 pt-[116px] pb-20 landing-tab:px-10 landing-tab:pt-[148px] landing:pt-[160px] landing:pb-[120px]">
+        <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-8 landing:gap-10">
+          {/* kepala halaman — judul saja; detail proses hidup di kartu paket */}
+          <header className="flex w-full flex-col items-start gap-3.5">
             <span className="inline-flex items-center gap-2 rounded-full bg-canvas py-0.5 pr-4 pl-0.5 ring-1 ring-soil/10">
               <span className="flex size-6 items-center justify-center rounded-full bg-sage">
                 <ShieldCheck className="size-3.5 text-forest" aria-hidden />
               </span>
               <span className="text-[14px] leading-[1.5] text-forest">{CHECKOUT_COPY.eyebrow}</span>
             </span>
-            <h1 className="max-w-[620px] text-balance font-display text-[40px] leading-[1.12] font-medium tracking-[-0.03em] text-forest landing-tab:text-[52px] landing:text-[60px]">
+            <h1 className="font-display text-[36px] leading-[1.08] font-semibold tracking-[-0.03em] text-forest landing-tab:text-[44px] landing:text-[52px]">
               {CHECKOUT_COPY.title}
             </h1>
-            <p className="max-w-[520px] text-balance text-[16px] leading-[1.5] text-forest-muted">
-              {CHECKOUT_COPY.subtitle}
-            </p>
           </header>
 
-          <div className="flex w-full min-w-0 flex-col">
-            {/* ── 2. sisa prosesnya: 3 langkah (PRD 5887) ─────────────────────── */}
-          <section className="mt-6 rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12">
-            <div className="flex items-baseline justify-between gap-2">
-              <h2 className="font-display text-[15px] font-medium tracking-tight text-forest">
-                {CHECKOUT_COPY.stepsTitle}
-              </h2>
-              <span className="rounded-full bg-sage px-2.5 py-0.5 text-[10.5px] font-medium text-forest/55">
-                {CHECKOUT_COPY.stepsBadge}
-              </span>
-            </div>
-
-            <ol className="mt-3.5 space-y-3">
-              {CHECKOUT_STEPS.map((step, index) => {
-                /* langkah 1 = yang sedang berjalan (user belum mengisi datanya) */
-                const active = index === 0
-                return (
-                  <li key={step.id} className="flex items-start gap-3">
-                    <span
-                      aria-hidden
-                      className={cn(
-                        'mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold tabular-nums',
-                        active ? 'bg-forest text-mint' : 'bg-sage text-forest/70',
-                      )}
-                    >
-                      {index + 1}
-                    </span>
-                    <span className="min-w-0">
-                      <span
-                        className={cn(
-                          'block text-[13px] font-medium',
-                          active ? 'text-forest' : 'text-forest/60',
-                        )}
-                      >
-                        {step.label}
-                      </span>
-                      <span className="mt-0.5 block text-[11.5px] leading-relaxed text-forest/45">
-                        {step.hint}
-                      </span>
-                    </span>
-                  </li>
-                )
-              })}
-            </ol>
-
-          {/* paket 64: paragraf "tiga langkah tanpa verifikasi" DIHAPUS — langkah
-              konfirmasi email sudah tertulis di daftar di atas, jadi tidak diulang */}
-          </section>
-
-          {/* ── 3. paket + harga ─────────────────────────────────── */}
-          <section className="mt-4 rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12">
-            <div className="flex items-start justify-between gap-3">
+          <div className="grid w-full grid-cols-1 gap-6 landing:grid-cols-[minmax(0,1fr)_360px] landing:items-start landing:gap-8">
+            {/* ── KIRI: pilih paket ─────────────────────────────────────────── */}
+            <div className="min-w-0">
+              {/* SATU periode: akses selamanya. Toggle bulanan/lifetime sudah
+                  dihapus — paket 30 hari tidak dijual lagi. */}
               <div className="min-w-0">
-                <h2 className="font-display text-[15px] font-medium tracking-tight text-forest">
+                <h2 className="font-display text-[22px] font-semibold tracking-[-0.02em] text-forest">
                   {CHECKOUT_COPY.planSectionTitle}
                 </h2>
-                <p className="mt-1 text-[11.5px] leading-relaxed text-forest/45">
+                <p className="mt-1 text-[12.5px] leading-[1.5] text-forest/50">
                   {CHECKOUT_COPY.planSectionNote}
                 </p>
               </div>
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-sage text-forest">
-                <Tag className="size-4" strokeWidth={2.2} aria-hidden />
-              </span>
-            </div>
 
-            {/* Dua periode nyata: prabayar 30 hari (default) dan lifetime.
-                Keduanya sekali bayar; tidak ada auto-debet. */}
-            <div
-              role="radiogroup"
-              aria-label={CHECKOUT_COPY.periodTitle}
-              className="mt-3.5 grid grid-cols-2 gap-2"
-            >
-              <button
-                type="button"
-                role="radio"
-                aria-checked={period === 'monthly'}
-                onClick={() => setPeriod('monthly')}
-                className={cn(
-                  'rounded-2xl px-3.5 py-2.5 text-left ring-1 transition-colors',
-                  period === 'monthly'
-                    ? 'bg-sage/70 ring-forest/35'
-                    : 'bg-cream ring-soil/12 hover:bg-sage/40',
-                )}
+              {/* tiga kartu paket — memilih = klik kartu, bukan membaca tabel */}
+              <ul
+                role="radiogroup"
+                aria-label={CHECKOUT_COPY.planSectionTitle}
+                className="mt-7 grid grid-cols-1 items-stretch gap-4 pt-5 landing-tab:grid-cols-3 landing:gap-4"
               >
-                <span className="block text-[12.5px] font-medium text-forest">
-                  {CHECKOUT_COPY.periodMonthlyLabel}
-                </span>
-                <span className="mt-0.5 block text-[10.5px] leading-relaxed text-forest/50">
-                  {CHECKOUT_COPY.periodMonthlyNote}
-                </span>
-              </button>
-              <button
-                type="button"
-                role="radio"
-                aria-checked={period === 'lifetime'}
-                onClick={() => setPeriod('lifetime')}
-                className={cn(
-                  'rounded-2xl px-3.5 py-2.5 text-left ring-1 transition-colors',
-                  period === 'lifetime'
-                    ? 'bg-sage/70 ring-forest/35'
-                    : 'bg-cream ring-soil/12 hover:bg-sage/40',
-                )}
-              >
-                <span className="block text-[12.5px] font-medium text-forest">
-                  {CHECKOUT_COPY.periodLifetimeLabel}
-                </span>
-                <span className="mt-0.5 block text-[10.5px] leading-relaxed text-forest/50">
-                  {CHECKOUT_COPY.periodLifetimeNote}
-                </span>
-              </button>
-            </div>
+                {PLANS.map((item) => (
+                  <li key={item.id} className="min-w-0">
+                    <OfferOption
+                      plan={item}
+                      active={item.id === offerId}
+                      onSelect={() => setOfferId(item.id)}
+                    />
+                  </li>
+                ))}
+              </ul>
 
-            {/* tier paket — harga mengikuti periode terpilih */}
-            <ul className="mt-3.5 space-y-2">
-              {PLANS.map((item) => (
-                <li key={item.id}>
-                  <OfferOption
-                    plan={item}
-                    period={period}
-                    active={item.id === offerId}
-                    onSelect={() => setOfferId(item.id)}
-                  />
-                </li>
-              ))}
-            </ul>
-
-            {/* harga — angka besar di font-display, harga coret kalau ada diskon */}
-            <div className="mt-4 flex flex-wrap items-baseline gap-x-2 gap-y-1 rounded-2xl bg-sage/60 px-4 py-3.5 ring-1 ring-soil/8">
-              <span className="font-display text-3xl font-medium tracking-tight tabular-nums text-forest">
-                {formatIDR(total)}
-              </span>
-              <span className="text-[12px] font-medium text-forest/50">{periodLabel}</span>
-              {discount > 0 && (
-                <span className="text-[12.5px] font-medium tabular-nums text-forest/40 line-through">
-                  {formatIDR(listPrice)}
-                </span>
-              )}
-            </div>
-            <p className="mt-1.5 text-[11.5px] leading-relaxed text-forest/45">
-              {CHECKOUT_COPY.lockedNote}
-            </p>
-
-            {/* rincian yang didapat */}
-            <h3 className="mt-5 text-[11px] font-medium tracking-[0.16em] text-forest/40 uppercase">
-              {CHECKOUT_COPY.featuresTitle}
-            </h3>
-            <ul className="mt-1 flex flex-col">
-              {features.map((feature) => (
-                <li
-                  key={feature}
-                  className="flex items-start gap-2 border-t border-soil/12 py-2 text-[12.5px] leading-relaxed text-forest/70 first:border-t-0"
-                >
-                  <Check className="mt-0.5 size-3.5 shrink-0 text-forest/70" strokeWidth={3} aria-hidden />
-                  <span className="min-w-0">{feature}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          {/* ── 4. trust badge — selling point, bukan disclaimer (PRD 4509) ── */}
-          <section className="mt-4 rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12">
-            <div className="flex items-start gap-3">
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-sage text-forest">
-                <ShieldCheck className="size-4" strokeWidth={2.2} aria-hidden />
-              </span>
-              <p className="min-w-0 self-center rounded-2xl bg-mint/25 px-3.5 py-2.5 text-[12.5px] leading-relaxed font-medium text-forest ring-1 ring-forest/10">
-                {premiumBadge}
-              </p>
-            </div>
-
-            {/* ketiga badge kepercayaan (PRD 4585–4587) — semuanya ditampilkan,
-                tidak ada lagi yang disaring keluar seperti "tanpa auto-renew" */}
-            <ul className="mt-3 space-y-2.5">
-              {PRICING_TRUST_BADGES.map((badge) => (
-                <TrustBadgeItem key={badge.id} badge={badge} />
-              ))}
-            </ul>
-          </section>
-
-          {/* ── 5. kode dari teman (opsional) — diskon dua arah Domain 7D ───── */}
-          <section className="mt-4 rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12">
-            <div className="flex items-start gap-3">
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-sage text-forest">
-                <Tag className="size-4" strokeWidth={2.2} aria-hidden />
-              </span>
-              <h2 className="min-w-0 self-center font-display text-[15px] font-medium tracking-tight text-forest">
-                {CHECKOUT_COPY.referralTitle}
-              </h2>
-            </div>
-
-            <label className="mt-3.5 block" htmlFor="checkout-referral">
-              <span className="text-[12.5px] font-medium text-forest">
-                {CHECKOUT_COPY.referralLabel}
-              </span>
-              <span className="mt-2 flex gap-2">
-                <input
-                  id="checkout-referral"
-                  value={codeInput}
-                  onChange={(event) => setCodeInput(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key !== 'Enter') return
-                    event.preventDefault()
-                    handleApplyCode()
-                  }}
-                  placeholder={CHECKOUT_COPY.referralPlaceholder}
-                  aria-describedby="checkout-referral-status"
-                  aria-invalid={codeError}
-                  className={cn(
-                    'min-w-0 flex-1 rounded-2xl bg-cream px-4 py-3 text-[14px] font-medium tracking-wide text-forest outline-none ring-1 transition-shadow placeholder:font-medium placeholder:tracking-normal placeholder:text-forest/25 focus:ring-2 focus:ring-forest/35',
-                    codeError ? 'ring-plum/50' : 'ring-soil/16',
-                  )}
-                />
-                <button
-                  type="button"
-                  onClick={handleApplyCode}
-                  className="shrink-0 rounded-2xl bg-forest px-4 text-[13px] font-medium text-mint transition-colors duration-200 hover:bg-forest-soft active:scale-[0.98] motion-reduce:transition-none"
-                >
-                  {CHECKOUT_COPY.referralApply}
-                </button>
-              </span>
-            </label>
-
-            {/* status kode diumumkan ke screen reader, bukan cuma dilihat */}
-            <div id="checkout-referral-status" aria-live="polite">
-              {appliedCode ? (
-                <>
-                  <span className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-mint/30 px-2.5 py-1 text-[11px] font-medium text-forest">
-                    <Check className="size-3" strokeWidth={3.4} aria-hidden />
-                    {CHECKOUT_COPY.referralApplied} · {appliedCode}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleClearCode}
-                    className="ml-2 text-[11.5px] font-medium text-forest/55 underline underline-offset-2 hover:text-forest"
+              {/* trust badge sebagai chip: label saja, bukan dinding teks */}
+              <ul className="mt-6 flex flex-wrap gap-2">
+                {PRICING_TRUST_BADGES.map((badge) => (
+                  <li
+                    key={badge.id}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-cream px-3 py-1.5 text-[11.5px] font-medium text-forest/70 ring-1 ring-soil/10"
                   >
-                    {CHECKOUT_COPY.referralClear}
-                  </button>
-                  <p className="mt-2 text-[11.5px] leading-relaxed text-forest/45">
-                    {CHECKOUT_COPY.referralAppliedNote}
-                  </p>
-                </>
-              ) : codeError ? (
-                <p className="mt-2.5 flex items-start gap-1.5 text-[11.5px] leading-relaxed text-plum">
-                  <Info className="mt-0.5 size-3.5 shrink-0" strokeWidth={2.4} aria-hidden />
-                  <span>{CHECKOUT_COPY.referralInvalid}</span>
-                </p>
-              ) : null}
+                    <Check className="size-3 shrink-0 text-forest/60" strokeWidth={3} aria-hidden />
+                    {badge.label}
+                  </li>
+                ))}
+              </ul>
             </div>
-          </section>
 
-          {/* ── 6. ringkasan akhir sebelum bayar ───────────────────────────── */}
-          <section className="mt-4 rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12">
-            <h2 className="font-display text-[15px] font-medium tracking-tight text-forest">
-              {CHECKOUT_COPY.summaryTitle}
-            </h2>
-            <dl className="mt-3 space-y-2.5 text-[12.5px]">
-              <div className="flex items-start justify-between gap-3">
-                <dt className="text-forest/50">{CHECKOUT_COPY.summaryPlan}</dt>
-                <dd className="min-w-0 text-right font-medium text-forest">{offerName}</dd>
-              </div>
-              <div className="flex items-start justify-between gap-3">
-                <dt className="text-forest/50">{CHECKOUT_COPY.summaryDuration}</dt>
-                <dd className="font-medium text-forest">{periodLabel}</dd>
-              </div>
-              {discount > 0 && (
-                <div className="flex items-start justify-between gap-3">
-                  <dt className="text-forest/50">
-                    {CHECKOUT_COPY.summaryDiscount} ({REFERRAL_DISCOUNT_PCT}%)
-                  </dt>
-                  <dd className="font-medium tabular-nums text-forest">− {formatIDR(discount)}</dd>
+            {/* ── KANAN: ringkasan sebelum bayar (sticky di desktop) ────────── */}
+            <aside className="min-w-0 landing:sticky landing:top-24 landing:self-start">
+              <div className="rounded-[24px] bg-cream p-5 shadow-landing-hairline ring-1 ring-soil/12">
+                <h2 className="font-display text-[15px] font-medium tracking-tight text-forest">
+                  {CHECKOUT_COPY.summaryTitle}
+                </h2>
+
+                <dl className="mt-3 space-y-2 text-[12.5px]">
+                  <div className="flex items-start justify-between gap-3">
+                    <dt className="text-forest/50">{CHECKOUT_COPY.summaryPlan}</dt>
+                    <dd className="min-w-0 text-right font-medium text-forest">{offerName}</dd>
+                  </div>
+                  <div className="flex items-start justify-between gap-3">
+                    <dt className="text-forest/50">{CHECKOUT_COPY.summaryDuration}</dt>
+                    <dd className="text-right font-medium text-forest">{periodShort}</dd>
+                  </div>
+                  {discount > 0 && (
+                    <div className="flex items-start justify-between gap-3">
+                      <dt className="text-forest/50">
+                        {CHECKOUT_COPY.summaryDiscount} ({REFERRAL_DISCOUNT_PCT}%)
+                      </dt>
+                      <dd className="font-medium tabular-nums text-forest">− {formatIDR(discount)}</dd>
+                    </div>
+                  )}
+                </dl>
+
+                {/* kode teman — opsional, satu baris input */}
+                <div className="mt-4 border-t border-soil/12 pt-4">
+                  <label
+                    htmlFor="checkout-referral"
+                    className="flex items-center gap-1.5 text-[11.5px] font-medium text-forest/60"
+                  >
+                    <Tag className="size-3.5" strokeWidth={2.2} aria-hidden />
+                    {CHECKOUT_COPY.referralLabel}
+                  </label>
+                  <span className="mt-2 flex gap-2">
+                    <input
+                      id="checkout-referral"
+                      value={codeInput}
+                      onChange={(event) => {
+                        setCodeInput(event.target.value)
+                        /* input berubah = kode lama tidak lagi mewakili isi kotak */
+                        verifyRequest.current += 1
+                        setCheckingCode(false)
+                        setAppliedCode(null)
+                        setCodeError(null)
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key !== 'Enter') return
+                        event.preventDefault()
+                        void handleApplyCode()
+                      }}
+                      placeholder={CHECKOUT_COPY.referralPlaceholder}
+                      aria-describedby="checkout-referral-status"
+                      aria-invalid={Boolean(codeError)}
+                      className={cn(
+                        'min-w-0 flex-1 rounded-xl bg-canvas px-3.5 py-2.5 text-[13px] font-medium tracking-wide text-forest outline-none ring-1 transition-shadow placeholder:font-medium placeholder:tracking-normal placeholder:text-forest/25 focus:ring-2 focus:ring-forest/35',
+                        codeError ? 'ring-plum/50' : 'ring-soil/16',
+                      )}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => void handleApplyCode()}
+                      disabled={checkingCode}
+                      aria-busy={checkingCode}
+                      className="shrink-0 rounded-xl bg-forest px-4 text-[12.5px] font-medium text-mint transition-colors duration-200 hover:bg-forest-soft active:scale-[0.98] disabled:cursor-wait disabled:opacity-60 motion-reduce:transition-none"
+                    >
+                      {checkingCode ? CHECKOUT_COPY.referralChecking : CHECKOUT_COPY.referralApply}
+                    </button>
+                  </span>
+
+                  {/* status kode diumumkan ke screen reader, bukan cuma dilihat */}
+                  <div id="checkout-referral-status" aria-live="polite">
+                    {checkingCode ? (
+                      <p className="mt-2.5 text-[11.5px] leading-relaxed text-forest/55">
+                        {CHECKOUT_COPY.referralChecking}
+                      </p>
+                    ) : appliedCode ? (
+                      <span className="mt-2.5 flex flex-wrap items-center gap-2">
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-mint/35 px-2.5 py-1 text-[11px] font-medium text-forest">
+                          <Check className="size-3" strokeWidth={3.4} aria-hidden />
+                          {CHECKOUT_COPY.referralApplied} · {appliedCode}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleClearCode}
+                          className="text-[11.5px] font-medium text-forest/55 underline underline-offset-2 hover:text-forest"
+                        >
+                          {CHECKOUT_COPY.referralClear}
+                        </button>
+                      </span>
+                    ) : codeError ? (
+                      <p className="mt-2.5 flex items-start gap-1.5 text-[11.5px] leading-relaxed text-plum">
+                        <Info className="mt-0.5 size-3.5 shrink-0" strokeWidth={2.4} aria-hidden />
+                        <span>{codeError}</span>
+                      </p>
+                    ) : null}
+                  </div>
                 </div>
-              )}
-              <div className="flex items-baseline justify-between gap-3 border-t border-soil/12 pt-2.5">
-                <dt className="font-medium text-forest">{CHECKOUT_COPY.summaryTotal}</dt>
-                <dd className="font-display text-lg font-medium tabular-nums text-forest">
-                  {formatIDR(total)}
-                </dd>
-              </div>
-            </dl>
-          </section>
 
-          {/* CTA — mengalir seperti CTA landing, satu bentuk untuk semua ukuran */}
-          <CheckoutCta onStart={handleStart} className="mt-5" />
+                {/* total — satu angka besar, harga coret hanya kalau ada diskon */}
+                <div className="mt-4 flex items-baseline justify-between gap-3 border-t border-soil/12 pt-4">
+                  <span className="text-[12.5px] font-medium text-forest/60">
+                    {CHECKOUT_COPY.summaryTotal}
+                  </span>
+                  <span className="flex flex-wrap items-baseline justify-end gap-x-2 gap-y-1">
+                    {discount > 0 && (
+                      <span className="text-[12px] font-medium tabular-nums text-forest/35 line-through">
+                        {formatIDR(listPrice)}
+                      </span>
+                    )}
+                    <span className="font-display text-[28px] leading-none font-semibold tracking-[-0.03em] tabular-nums text-forest">
+                      {formatIDR(total)}
+                    </span>
+                  </span>
+                </div>
+
+                <CheckoutCta onStart={handleStart} className="mt-4" disabled={checkingCode} />
+              </div>
+            </aside>
+          </div>
         </div>
-      </div>
       </section>
 
       {/* ── Sheet registrasi (email + nama, tanpa password). Midtrans di-bypass
-             sprint ini, jadi tidak ada sheet pembayaran setelah ini — lihat
-             catatan alur di atas file. ────────────────────────────────────── */}
+             sprint ini, jadi tidak ada sheet pembayaran setelah ini. ────────── */}
       <RegistrationSheet
         open={registrationOpen}
         onClose={() => setRegistrationOpen(false)}
         onContinue={handleRegistered}
         /* "Sudah punya akun? Masuk" harus mengembalikan user ke pilihan yang
            SAMA setelah ia masuk — lihat `buildCheckoutHref()`. */
-        loginHref={buildCheckoutHref(offerId, period, appliedCode)}
+        loginHref={buildCheckoutHref(offerId, 'lifetime', appliedCode)}
       />
     </>
   )
 }
 
-/* ── baris pilihan paket (pilih-satu) ─────────────────────────────────────────
-   Harga di baris ini adalah harga akses selamanya (`PLANS[].lifetime`) — angka
-   yang sama dengan yang ditagih server, jadi yang dibandingkan user memang angka
-   yang akan dia bayar. Sebelum paket 84 baris ini ikut berubah mengikuti periode
-   bulanan/tahunan; pemilih periode itu sudah dihapus. */
+/* ── kartu pilihan paket (pilih-satu) ─────────────────────────────────────────
+   Kartu = tombol radio. Harga di kartu SELALU harga akses selamanya dan dibaca
+   dari `PLANS` (angka yang sama dengan yang ditagih server), jadi yang
+   dibandingkan user memang angka yang akan dia bayar.
+
+   DESAIN (revisi): kartu terpilih memakai permukaan gradien Evergreen + CORAK
+   BATIK (kawung & mega mendung) yang dipudarkan mask radial, badge "Sekali
+   Bayar" kaca, radio putih, dan glow mint tipis. Kartu lain tetap putih
+   ber-hairline supaya kontras pilihan jelas.
+
+   SELURUH fitur tampil (revisi permintaan desain): tidak ada lagi ringkasan
+   "+N fitur lain". User membandingkan isi paket secara utuh sebelum membayar,
+   jadi tidak ada informasi yang disembunyikan di balik satu baris kecil. */
 function OfferOption({
   plan,
-  period,
   active,
   onSelect,
 }: {
   plan: PlanDefinition
-  period: BillingPeriod
   active: boolean
   onSelect: () => void
 }) {
-  const price = period === 'monthly' ? plan.monthly : plan.lifetime
-  const label = PERIOD_LABEL[period]
+  const price = plan.lifetime
+  const unit = CHECKOUT_COPY.priceUnitLifetime
 
   return (
     <button
       type="button"
       role="radio"
       aria-checked={active}
+      aria-labelledby={`checkout-plan-${plan.id}`}
       onClick={onSelect}
       className={cn(
-        'flex w-full items-center gap-3 rounded-2xl px-3.5 py-3 text-left ring-1 transition-colors duration-200',
-        active ? 'bg-sage/70 ring-forest/35' : 'bg-cream ring-soil/12 hover:bg-sage/40',
+        'group relative flex h-full w-full flex-col rounded-[30px] p-1 text-left transition-all duration-300 motion-reduce:transition-none',
+        active
+          ? 'z-10 bg-gradient-to-b from-evergreen-light/55 via-white/15 to-transparent shadow-landing-deep landing:scale-[1.02]'
+          : 'bg-soil/[0.06] hover:-translate-y-0.5 hover:bg-soil/[0.09]',
       )}
     >
-      <span className="min-w-0 flex-1">
-        <span className="flex items-center gap-1.5">
-          <span className="truncate text-[13.5px] font-medium text-forest">{plan.name}</span>
-          {plan.badge && (
-            <span className="shrink-0 rounded-full bg-forest px-2 py-0.5 text-[9.5px] font-medium whitespace-nowrap text-mint">
-              {plan.badge}
-            </span>
-          )}
+      {plan.badge ? (
+        <span className="absolute -top-4 left-1/2 z-30 inline-flex -translate-x-1/2 items-center gap-1.5 whitespace-nowrap rounded-full bg-daisy px-3.5 py-1.5 text-[11px] leading-none font-semibold text-[#2d3a30] shadow-sm ring-1 ring-black/5">
+          <Sparkles className="size-3" strokeWidth={2.2} aria-hidden />
+          {plan.badge}
         </span>
-        <span className="mt-0.5 block truncate text-[11.5px] text-forest/50">{plan.subtitle}</span>
-      </span>
-
-      <span className="shrink-0 text-right">
-        <span className="block font-display text-[15px] font-medium tabular-nums text-forest">
-          {formatIDR(price)}
-        </span>
-        <span className="block text-[10.5px] font-medium text-forest/45">{label}</span>
-      </span>
+      ) : null}
 
       <span
-        aria-hidden
         className={cn(
-          'flex size-4 shrink-0 items-center justify-center rounded-full border transition-colors',
-          active ? 'border-forest bg-forest text-mint' : 'border-ink/20 bg-cream text-transparent',
+          'relative flex h-full flex-1 flex-col overflow-hidden rounded-[26px] p-5 pt-7 landing:p-6 landing:pt-8',
+          active
+            ? 'bg-forest text-cream ring-1 ring-white/15'
+            : 'bg-canvas text-forest ring-1 ring-soil/10',
         )}
       >
-        <Check className="size-2.5" strokeWidth={3.6} />
+        {active ? (
+          <>
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-0 bg-gradient-to-br from-evergreen-deep/75 via-forest/10 to-evergreen-deeper/85"
+            />
+            <BatikBackdrop id={`checkout-batik-${plan.id}`} className="opacity-90" />
+            <span
+              aria-hidden
+              className="pointer-events-none absolute -top-24 left-1/2 size-64 -translate-x-1/2 rounded-full bg-mint/15 blur-3xl"
+            />
+          </>
+        ) : null}
+
+        <span className="relative z-10 flex flex-1 flex-col">
+          <span className="flex items-start justify-between gap-3">
+            <span
+              className={cn(
+                'inline-flex w-fit items-center rounded-full px-2.5 py-1 text-[10.5px] leading-[1.5] font-medium',
+                active
+                  ? 'bg-white/10 text-cream ring-1 ring-white/20 backdrop-blur-sm'
+                  : 'bg-sage text-forest',
+              )}
+            >
+              {CHECKOUT_COPY.priceBadge}
+            </span>
+
+            <span
+              aria-hidden
+              className={cn(
+                'flex size-6 shrink-0 items-center justify-center rounded-full border transition-colors',
+                active
+                  ? 'border-cream bg-cream text-forest shadow-sm'
+                  : 'border-soil/20 bg-canvas text-transparent group-hover:border-forest/40',
+              )}
+            >
+              <Check className="size-3.5" strokeWidth={3.4} />
+            </span>
+          </span>
+
+          <span
+            id={`checkout-plan-${plan.id}`}
+            className="mt-4 block font-display text-[22px] leading-[1.2] font-semibold tracking-[-0.02em] landing:text-[24px]"
+          >
+            {plan.name}
+          </span>
+
+          <span className="mt-3 flex flex-wrap items-baseline gap-x-1.5">
+            <span className="font-display text-[32px] leading-[1.02] font-semibold tracking-[-0.045em] whitespace-nowrap tabular-nums landing:text-[36px]">
+              {formatIDR(price)}
+            </span>
+            <span
+              className={cn(
+                'text-[12px] leading-[1.5] font-medium',
+                active ? 'text-cream/65' : 'text-forest/50',
+              )}
+            >
+              {unit}
+            </span>
+          </span>
+
+          <span
+            className={cn(
+              'mt-2 block min-h-[40px] text-[12.5px] leading-[1.5]',
+              active ? 'text-cream/75' : 'text-forest/60',
+            )}
+          >
+            {plan.subtitle}
+          </span>
+
+          <span
+            className={cn(
+              'mt-5 flex flex-1 flex-col border-t pt-4',
+              active ? 'border-white/15' : 'border-soil/10',
+            )}
+          >
+            <span
+              className={cn(
+                'text-[10px] leading-[1.5] font-medium tracking-[0.16em] uppercase',
+                active ? 'text-cream/55' : 'text-forest/40',
+              )}
+            >
+              {CHECKOUT_COPY.featuresTitle}
+            </span>
+            <span className="mt-3 flex flex-1 flex-col gap-2.5">
+              {plan.features.map((feature) => (
+                <span
+                  key={feature}
+                  className="flex items-start gap-2.5 text-[12px] leading-[1.45]"
+                >
+                  <span
+                    aria-hidden
+                    className={cn(
+                      'mt-[1px] flex size-4 shrink-0 items-center justify-center rounded-full',
+                      active ? 'bg-white/10 text-mint' : 'bg-sage text-forest',
+                    )}
+                  >
+                    <Check className="size-2.5" strokeWidth={3.2} />
+                  </span>
+                  <span className={active ? 'text-cream/90' : 'text-forest/80'}>{feature}</span>
+                </span>
+              ))}
+            </span>
+          </span>
+        </span>
       </span>
     </button>
   )
 }
 
-/* ── satu baris trust badge (PRD 4586–4587) ─────────────────────────────────── */
-function TrustBadgeItem({ badge }: { badge: TrustBadge }) {
-  return (
-    <li className="flex items-start gap-2.5">
-      <Check className="mt-0.5 size-3.5 shrink-0 text-forest/70" strokeWidth={3} aria-hidden />
-      <span className="min-w-0 text-[12px] leading-relaxed">
-        <b className="font-medium text-forest">{badge.label}</b>
-        <span className="text-forest/55"> — {badge.note}</span>
-      </span>
-    </li>
-  )
-}
-
-/* ── CTA primer checkout — SATU definisi, DUA tempat render ───────────────────
-   Di MOBILE tombolnya bagian dari bar tetap di bawah viewport (zona ibu jari);
-   di DESKTOP ia mengalir di ujung kolom kanan. Karena label & gaya tombolnya
-   harus identik di kedua tempat, markup-nya hidup di sini sekali saja — kalau
-   ditulis dua kali, cepat atau lambat salinannya berbeda. Ringkasan biaya sudah
-   ada di kolom kanan, jadi tombol ini cukup satu pil + catatan kecil. */
-function CheckoutCta({ onStart, className }: { onStart: () => void; className?: string }) {
+/* ── CTA primer checkout ────────────────────────────────────────────────────
+   Satu definisi, satu tempat render (di dalam kartu ringkasan). Ringkasan
+   biaya ada tepat di atasnya, jadi tombolnya cukup satu pil. */
+function CheckoutCta({
+  onStart,
+  className,
+  disabled = false,
+}: {
+  onStart: () => void
+  className?: string
+  /** true = kode teman masih diperiksa; jangan lanjut dengan harga yang belum final */
+  disabled?: boolean
+}) {
   return (
     <div className={className}>
       <button
         type="button"
         onClick={onStart}
-        className="group flex h-14 w-full items-center justify-between gap-3 rounded-full bg-forest pl-6 pr-2 text-cream shadow-[0_16px_34px_-18px_rgba(0,0,0,0.85)] transition-colors duration-200 hover:bg-forest-soft active:scale-[0.98] motion-reduce:transition-none"
+        disabled={disabled}
+        className="group flex h-14 w-full items-center justify-between gap-3 rounded-full bg-forest pr-2 pl-6 text-cream shadow-landing-cta transition-colors duration-200 hover:bg-forest-soft active:scale-[0.98] disabled:cursor-wait disabled:opacity-60 motion-reduce:transition-none"
       >
         <span className="text-[15.5px] font-medium tracking-[-0.01em]">{CHECKOUT_COPY.cta}</span>
         <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-cream text-forest transition-colors duration-200 group-hover:bg-mint">
           <ArrowRight className="size-[18px]" strokeWidth={2.4} aria-hidden />
         </span>
       </button>
-
-      <p className="mt-2.5 text-center text-[11px] leading-relaxed text-forest/50">{CHECKOUT_COPY.ctaHint}</p>
-      <Link
-        href={WELCOME_PATH}
-        className="mt-1.5 block text-center text-[11.5px] leading-relaxed text-forest/45"
-      >
-        <span className="font-medium text-forest/60 underline underline-offset-2">
-          {CHECKOUT_COPY.escapeLabel}
-        </span>{' '}
-        · {CHECKOUT_COPY.escapeHint}
-      </Link>
     </div>
   )
 }
+

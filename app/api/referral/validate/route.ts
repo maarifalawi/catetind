@@ -90,6 +90,14 @@ export async function POST(req: NextRequest) {
         { status: 502 },
       )
     }
+    /* `false` = kode sah tetapi TIDAK boleh dipakai untuk email ini
+       (self-referral, atau email sudah terhubung ke pengundang lain). */
+    if (recorded.data === false) {
+      return NextResponse.json(
+        { ok: false, error: REFERRAL_VALIDATE_COPY.conflict },
+        { status: 422 },
+      )
+    }
   }
 
   return NextResponse.json({ ok: true, verified: true, discountPct: REFERRAL_DISCOUNT_PCT })

@@ -6,6 +6,8 @@ import { cn } from '@/lib/utils'
    Satu bentuk tombol untuk seluruh landing:
      • sm (navbar)  → tinggi 44, teks 14, ikon 36  (size "sm")
      • md (hero)    → tinggi 52, teks 16, ikon 44  (size "md")
+   CTA hero punya komponen sendiri (`hero-cta.tsx`) karena bentuknya kotak
+   charcoal + kotak panah putih di kiri, persis export Framer.
    Panah SELALU di kanan dan selalu menunjuk ke kanan; radius pill penuh.
    Hover hanya menggeser panah 2px + mengangkat tombol 1px, dan dimatikan untuk
    `prefers-reduced-motion`. Tidak ada lagi kotak panah besar di kiri. */

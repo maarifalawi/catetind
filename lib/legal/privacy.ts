@@ -316,7 +316,9 @@ export const PRIVACY_DOC: LegalDocument = {
         desc: 'Aturan main layanan ini: batas AI Coach, cara kerja paket akses selamanya, dan kuota token.',
       },
       {
-        href: '/help',
+        /* `/bantuan` (bukan `/help`): dokumen legal dibaca sebelum punya akun,
+           sedangkan `/help` ada di balik login. */
+        href: '/bantuan',
         label: 'Pusat Bantuan',
         desc: 'Cari jawaban pakai bahasa sehari-hari, atau kirim pesan langsung ke founder.',
       },

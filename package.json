@@ -18,6 +18,9 @@
     "landing:hero-webp": "node scripts/landing/make-hero-webp.mjs",
     "landing:spec": "node scripts/landing/extract-framer-spec.mjs",
     "supabase:migrate": "node scripts/supabase/apply-migrations.mjs",
+    "supabase:emails": "node scripts/supabase/apply-email-templates.mjs",
+    "brand:bimi": "node scripts/brand/validate-bimi-svg.mjs",
+    "brand:check": "node scripts/brand/check-bimi-dns.mjs",
     "supabase:verify": "node scripts/supabase/verify-rls.mjs",
     "supabase:grant": "node scripts/supabase/grant-akses.mjs"
   },

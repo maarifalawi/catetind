@@ -29,6 +29,13 @@ export const PUBLIC_ROUTES = [
      bayar. Pengunjungnya belum tentu punya akun, jadi gerbang sesi/PIN
      dilewati. */
   '/contact',
+  /* Pusat Bantuan PUBLIK (`/bantuan`) — artikel bantuan + jalan kontak tanpa
+     sidebar/data app. Ini tujuan tautan "Emailmu nggak ketemu? Kabarin kami di
+     Pusat Bantuan" di `/login`, landing, dokumen legal, dan 404.
+     PENTING: `/help` (Pusat Bantuan DI DALAM app) TIDAK pernah masuk daftar
+     ini. Ia memakai `ScreenShell` — sidebar Dompet/Budget/Insight — jadi
+     membukanya untuk anonim berarti membocorkan navigasi app sebelum login. */
+  '/bantuan',
   /* Changelog publik — riwayat rilis produk, dibaca sebelum orang punya akun. */
   '/changelog',
   '/welcome',

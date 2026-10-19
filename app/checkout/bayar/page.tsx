@@ -1,28 +1,29 @@
 import type { Metadata } from 'next'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { LandingFooterLp } from '@/components/landing/lp/footer'
 import { LandingNavbarLp } from '@/components/landing/lp/navbar'
 import { PaymentStartScreen } from '@/components/catetind/payment-start-screen'
-import { PLANS, asBillingPeriod, rankOf, type PlanId } from '@/lib/data/pricing'
+import { PLANS, rankOf, type PlanId } from '@/lib/data/pricing'
 import { readCallerPlan } from '@/lib/subscription/plan'
 import { readSupabaseSession } from '@/lib/supabase/session-cookie'
 
 /**
  * /checkout/bayar — mulai pembayaran.
  *
- * Bingkai halaman SAMA dengan landing page: `LandingNavbarLp` + `LandingFooterLp`
- * di dalam satu `<main id="top">` (desain lama PhoneStage + logo sendiri dilepas).
+ * Bingkai halaman: `LandingNavbarLp` di dalam satu `<main id="top">`, TANPA
+ * footer landing — halaman ini berakhir di kartu pembayaran (termasuk saat
+ * instruksi QRIS tampil), bukan di menu pemasaran. Lebar & padding konten
+ * disamakan dengan header (`max-w-[1200px]` + `px-5`/`landing-tab:px-10`)
+ * supaya tepi kiri/kanan halaman lurus dengan logo dan CTA.
  *
- * Halaman ini membaca PAKET + PERIODE + kode teman dari query. Nominal TIDAK
- * dititipkan di URL dan identitas pembeli tidak pernah datang dari klien:
- * keduanya ditentukan server — paket yang sudah dimiliki dibaca dari
- * `user_subscriptions` (`readCallerPlan`), lalu nominalnya dihitung
- * `lib/data/pricing.ts` (`priceFor`).
+ * Halaman ini membaca PAKET + kode teman dari query. Nominal TIDAK dititipkan di
+ * URL dan identitas pembeli tidak pernah datang dari klien: keduanya ditentukan
+ * server — paket yang sudah dimiliki dibaca dari `user_subscriptions`
+ * (`readCallerPlan`), lalu nominalnya dihitung `lib/data/pricing.ts` (`priceFor`).
  *
- * `monthly` = prabayar 30 hari; `lifetime` = akses selamanya. Renewal monthly
- * dan pindah tier tetap boleh; lifetime tidak bisa diturunkan. Paket yang tidak
- * dikenal / kombinasi yang tidak dijual dikembalikan ke `/checkout`.
+ * Satu-satunya periode yang dijual adalah `lifetime` (akses selamanya). Tidak
+ * ada parameter `period` yang dipercaya dan tidak ada perpanjangan bulanan:
+ * paket yang sudah dimiliki di tier sama/lebih tinggi dikembalikan ke `/checkout`.
  */
 export const dynamic = 'force-dynamic'
 
@@ -41,15 +42,12 @@ export default async function CheckoutPayPage({
   searchParams: Promise<{
     plan?: string | string[]
     kode?: string | string[]
-    period?: string | string[]
     upgrade?: string | string[]
   }>
 }) {
   const params = await searchParams
   const plan = PLANS.find((item) => item.id === (first(params.plan) as PlanId))
   if (!plan) redirect('/checkout')
-
-  const period = asBillingPeriod(first(params.period)) ?? 'monthly'
 
   /* Paket yang SUDAH dimiliki dibaca di server (cookie → PostgREST). Ini yang
      membuat halaman tidak pernah menagih angka yang berbeda dari yang diputuskan
@@ -60,35 +58,28 @@ export default async function CheckoutPayPage({
   const ownedPlanId = caller?.planId ?? null
   const ownedIsLifetime = caller?.isLifetime === true
 
-  /* Guard periode:
-       · monthly saat sudah lifetime → tidak dijual (lifetime tidak diturunkan);
-       · lifetime saat sudah lifetime di tier sama/lebih tinggi → tidak ada yang
-         perlu dibayar;
-       · monthly tier sama/lebih rendah TETAP boleh — itu renew / pindah tier.
-     Expired monthly tetap boleh memperpanjang (planId dibaca, active=false). */
-  if (period === 'monthly' && ownedIsLifetime) redirect('/checkout')
-  if (period === 'lifetime' && ownedIsLifetime && rankOf(ownedPlanId) >= plan.rank) {
+  /* Satu periode: lifetime. Kalau paket lifetime yang sama/lebih tinggi sudah
+     dimiliki, tidak ada yang perlu dibayar — kembalikan ke halaman paket.
+     Pelanggan lama (monthly) tetap boleh membeli lifetime; nominalnya harga
+     penuh lifetime, bukan perpanjangan 30 hari. */
+  if (ownedIsLifetime && rankOf(ownedPlanId) >= plan.rank) {
     redirect('/checkout')
   }
 
   const code = first(params.kode).toUpperCase()
   const isUpgrade =
-    period === 'lifetime' && ownedIsLifetime && rankOf(ownedPlanId) > 0 && plan.rank > rankOf(ownedPlanId)
-  const isRenewal = period === 'monthly' && Boolean(ownedPlanId)
+    ownedIsLifetime && rankOf(ownedPlanId) > 0 && plan.rank > rankOf(ownedPlanId)
 
   return (
     <main id="top" className="w-full bg-canvas font-sans text-forest">
       <LandingNavbarLp basePath="/" />
       <PaymentStartScreen
         plan={plan}
-        period={period}
         ownedPlanId={ownedPlanId}
         ownedIsLifetime={ownedIsLifetime}
         isUpgrade={isUpgrade}
-        isRenewal={isRenewal}
         referralCode={code || null}
       />
-      <LandingFooterLp basePath="/" />
     </main>
   )
 }

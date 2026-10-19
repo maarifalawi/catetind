@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import { LandingFooterLp } from '@/components/landing/lp/footer'
 import { LandingNavbarLp } from '@/components/landing/lp/navbar'
 import { LoginScreen } from '@/components/catetind/login-screen'
 import { safeNextPath } from '@/lib/data/auth'
@@ -7,10 +6,10 @@ import { safeNextPath } from '@/lib/data/auth'
 /**
  * Masuk (/login) — inventaris #8, halaman PUBLIK/pre-app.
  *
- * Sejak revisi desain, bingkai halaman ini SAMA dengan landing: `LandingNavbarLp`
- * di atas dan `LandingFooterLp` di bawah, di dalam satu `<main id="top">`.
- * Desain lama (PhoneStage + PublicNavbar + panel batik dua kolom) sudah tidak
- * dipakai lagi di sini.
+ * Sejak revisi desain, bingkai halaman ini memakai `LandingNavbarLp` di atas
+ * dalam satu `<main id="top">` — TANPA footer landing: halaman masuk sengaja
+ * berakhir di kartu formulir, bukan di menu pemasaran. Desain lama (PhoneStage +
+ * PublicNavbar + panel batik dua kolom) sudah tidak dipakai lagi di sini.
  *
  * Jalur UTAMA = kode 6 angka yang diketik DI halaman ini (nol pindah app);
  * magic link tetap jalan lewat `/login/verify` untuk user yang memilih klik dari inbox.
@@ -44,7 +43,6 @@ export default async function LoginPage({
     <main id="top" className="w-full bg-canvas font-sans text-forest">
       <LandingNavbarLp basePath="/" />
       <LoginScreen next={next} />
-      <LandingFooterLp basePath="/" />
     </main>
   )
 }

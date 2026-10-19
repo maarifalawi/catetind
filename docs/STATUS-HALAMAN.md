@@ -81,7 +81,7 @@ komentar arah produksi di titik integrasi).
 | 28 | **Joint Wallet** | `/app/joint` | `/joint` 🧩 | ✅ | `joint-screen.tsx` (timbangan, split, privat, invite). |
 | 29 | **Wealth & Debt Tracking** | `/app/wealth` | `/wealth` 🧩 | ⚠️ | Tab 1 Investasi ✅ & Tab 3 Hutang ✅; **Tab 2 Properti = teaser** (PRD A12, lihat §10). |
 | 30 | **Panduan / Help Center** | `/app/help` | `/help` 🧩 | ✅ | `help-center-screen.tsx` + Screenshot Policy. |
-| 31 | **Referral Dashboard** | `/app/referral` | `/referral` 🧩 | ⚠️ | UI + `POST /api/referral/validate` ada; **grant reward otomatis** setelah bayar belum. Sejak paket 84 rewardnya SATU bentuk (Token AI). Paket 85: reward **diberikan otomatis dari webhook** (idempoten per `order_id`); data kode/riwayat masih contoh dan kini ditandai "Contoh". |
+| 31 | **Referral Dashboard** | `/app/referral` | `/referral` 🧩 | ⚠️ | UI + `POST /api/referral/validate` ada. Diskon 10% kini **hanya sah bila kode terverifikasi server** (`/api/payment/charge`), relasi menulis `referred_user_id`, dan reward **diberikan otomatis dari webhook** (idempoten per `order_id`). Data kode/riwayat di halaman ini masih contoh dan ditandai "Contoh". |
 | 32 | **404 / Not Found** | catch-all | `app/not-found.tsx` | ✅ | `not-found-screen.tsx`, status HTTP 404. |
 
 **Rekap Tabel A:** ✅ 26 · ⚠️ 5 (#3, #16, #18, #29, #31) · ❌ 1 (#1).
@@ -171,11 +171,11 @@ Route ini **nyata ada di repo** tetapi **tidak** termasuk 32 kanon inventaris
 | 3 | Offline Transaction Retry | ✅ | Optimistic + retry queue + FAILED_PERMANENT. |
 | 4 | Data Export ("Export Data Saya") | ✅ | `/settings/data` + `lib/money/export.ts` (unduh JSON nyata). |
 | 5 | Share Report (Privacy-Safe) | ⚠️ | Kartu + pratinjau ada; **generate image** (slide 1/2/4) → IG Story belum. |
-| 6 | Two-Sided Referral | ⚠️ | `/referral` + `POST /api/referral/validate` ada; **grant reward otomatis** setelah bayar belum (butuh webhook). |
+| 6 | Two-Sided Referral | ✅ | `/referral` + `POST /api/referral/validate`; diskon 10% divalidasi ke DB di `/api/payment/charge` (kode palsu/self-referral ditolak), `purchases.referral_code` menyimpan bukti, `referred_user_id` diisi (RPC + trigger), reward otomatis dari webhook. Data dashboard `/referral` masih contoh. |
 | 7 | Waitlist Referral Loop | ❌ | Bergantung halaman waitlist (#1) yang di-skip. |
 | 8 | Upgrade Paket (dulu Renewal Manual) | ✅ | Paket 84: posisi perpanjang diganti **upgrade**. `UpgradeModal` + `SubscriptionBanner` menampilkan SELISIH dari `priceFor()`, CTA ke `/checkout/bayar?plan=…`. Pembayaran nyata via Core API (paket 83). |
 
-**Rekap Tabel E:** ✅ 4 · ⚠️ 3 · ❌ 1.
+**Rekap Tabel E:** ✅ 5 · ⚠️ 2 · ❌ 1.
 
 ---
 
@@ -265,11 +265,18 @@ Diurutkan dari yang paling "belum" ke yang paling "sebagian".
   mengekspor **hanya slide 1/2/4** (PRD 6578–6611). `share/[id]/page.tsx:50` menjelaskan
   gambar thumbnail belum ada.
 
-### 9.7 🛠️ Reward referral otomatis — Key Flow #6
-- **Apa yang ada:** `/referral`, validasi kode via RPC (`/api/referral/validate`), copy.
-- **Paket 85:** reward **diberikan otomatis oleh WEBHOOK** pembayaran ke PENGUNDANG
-  (Token AI = kuota dasar bulanan; idempoten per `order_id` lewat `referral_rewards.order_id`).
-  `POST /api/referral/reward` menolak panggilan klien (409, webhook-only).
+### 9.7 ✅ Reward referral otomatis — Key Flow #6
+- **Apa yang ada:** `/referral`, validasi kode via RPC (`/api/referral/validate`), diskon 10%
+  yang **hanya sah setelah kode diverifikasi server** (`/api/payment/charge` menolak nominal
+  diskon tanpa kode, kode palsu, dan kode milik sendiri).
+- **Jejak pembelian:** `purchases.referral_code` menyimpan kode yang dipakai;
+  `purchases.expected_amount` = nominal yang benar-benar ditagih, sehingga pembayaran diskon
+  tidak lagi ditandai `amount_mismatch` oleh webhook.
+- **Relasi & reward:** `record_referral` mengisi `referred_user_id` (plus trigger `auth.users`
+  untuk akun baru), menolak self-referral dan pengundang kedua. Reward **diberikan otomatis
+  oleh WEBHOOK** pembayaran ke PENGUNDANG (Token AI = kuota dasar bulanan; idempoten per
+  `order_id` lewat `referral_rewards.order_id`). `POST /api/referral/reward` menolak
+  panggilan klien (409, webhook-only).
 - **Apa yang hilang:** kode & riwayat di halaman `/referral` masih MOCK — kini ditandai
   "Contoh" (`REFERRAL_IS_SAMPLE`) supaya tidak terbaca sebagai data user; pembacaan nyata
   dari tabel `referrals` belum.

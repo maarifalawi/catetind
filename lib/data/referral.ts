@@ -86,6 +86,9 @@ export const REFERRED_FRIEND_BENEFIT = 'Temanmu dapat diskon 10% saat checkout'
 export const REFERRAL_VALIDATE_COPY = {
   /** kode tidak ada di database (atau bentuknya tidak wajar) */
   invalid: 'Kode temannya nggak ketemu. Cek lagi ya, atau lanjut tanpa kode.',
+  /** kode ada, tetapi tidak boleh dipakai oleh email/akun ini */
+  conflict:
+    'Kode ini nggak bisa dipakai untuk akunmu. Kalau kamu sudah pernah pakai kode lain, kode pertama yang berlaku.',
   /** backend tidak bisa dihubungi saat memeriksa — beda dari "kode salah" */
   unavailable: 'Lagi nggak bisa memeriksa kode teman. Coba lagi sebentar ya.',
 } as const

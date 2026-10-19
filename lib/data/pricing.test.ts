@@ -24,32 +24,34 @@ import {
   upgradeDiff,
 } from './pricing'
 
-/* ── HARGA & KEMAMPUAN (rilis prepaid) ───────────────────────────────────────
+/* ── HARGA & KEMAMPUAN (akses selamanya) ─────────────────────────────────────
    File ini mengunci keputusan produk yang paling mahal kalau salah:
-     · dua periode nyata: monthly 49k/79k/199k, lifetime 109k/129k/299k;
-     · monthly selalu harga penuh (renew/pindah tier), lifetime dari lifetime
-       lebih rendah = SELISIH; lifetime dari monthly = harga penuh;
+     · SATU periode yang dijual: lifetime 109k/129k/299k. Harga monthly yang
+       tersisa hanya untuk membaca pembelian LAMA (bukan produk aktif);
+     · `asBillingPeriod('monthly')` = null → server menolak 422;
+     · lifetime dari lifetime lebih rendah = SELISIH; dari paket lama = penuh;
      · kunci fitur = peta kemampuan, dibaca server DAN klien. */
 
 const [CATET_AJA, WARAS, SULTAN] = PLANS
 
 describe('katalog paket', () => {
-  it('3 tier dengan harga prabayar 30 hari + lifetime kanon', () => {
+  it('3 tier dengan harga lifetime kanon', () => {
     expect(PLANS.map((plan) => plan.id)).toEqual(['catet-aja', 'waras', 'sultan'])
-    expect(CATET_AJA.monthly).toBe(49_000)
-    expect(WARAS.monthly).toBe(79_000)
-    expect(SULTAN.monthly).toBe(199_000)
     expect(CATET_AJA.lifetime).toBe(109_000)
     expect(WARAS.lifetime).toBe(129_000)
     expect(SULTAN.lifetime).toBe(299_000)
+    /* harga WARISAN: hanya untuk menampilkan pembelian lama, bukan dijual */
+    expect(CATET_AJA.monthly).toBe(49_000)
+    expect(WARAS.monthly).toBe(79_000)
+    expect(SULTAN.monthly).toBe(199_000)
   })
 
-  it('periode yang dijual hanya monthly & lifetime', () => {
+  it('periode yang dijual hanya lifetime — monthly ditolak', () => {
     expect(MONTHLY_DAYS).toBe(30)
     expect(PERIOD_LABEL.monthly).toBe('per 30 hari')
     expect(PERIOD_LABEL.lifetime).toBe(LIFETIME_LABEL)
-    expect(asBillingPeriod('monthly')).toBe('monthly')
     expect(asBillingPeriod('lifetime')).toBe('lifetime')
+    expect(asBillingPeriod('monthly')).toBeNull()
     expect(asBillingPeriod('annual')).toBeNull()
   })
 
@@ -65,7 +67,7 @@ describe('katalog paket', () => {
 })
 
 describe('priceFor() — harga per periode, dari PLANS', () => {
-  it('monthly = harga penuh monthly (termasuk renew & turun tier)', () => {
+  it('monthly (WARISAN) = harga penuh monthly untuk membaca pembelian lama', () => {
     expect(priceFor(CATET_AJA, { period: 'monthly' })).toBe(49_000)
     expect(priceFor(WARAS, { period: 'monthly' })).toBe(79_000)
     expect(priceFor(SULTAN, { period: 'monthly' })).toBe(199_000)
@@ -77,7 +79,7 @@ describe('priceFor() — harga per periode, dari PLANS', () => {
     ).toBe(79_000)
   })
 
-  it('monthly TIDAK dijual saat user sudah lifetime (0)', () => {
+  it('monthly (warisan) tidak dihitung saat user sudah lifetime (0)', () => {
     expect(
       priceFor(WARAS, { period: 'monthly', ownedPlanId: 'catet-aja', ownedIsLifetime: true }),
     ).toBe(0)
@@ -133,11 +135,23 @@ describe('priceFor() — harga per periode, dari PLANS', () => {
 })
 
 describe('isValidOfferAmount() — nominal kiriman klien tidak dipercaya', () => {
-  it('harga monthly & versi diskon teman diterima', () => {
-    expect(isValidOfferAmount(WARAS, 79_000, { period: 'monthly' })).toBe(true)
+  it('harga lifetime diterima; versi diskon hanya sah bila kode terverifikasi', () => {
+    expect(isValidOfferAmount(WARAS, 129_000, { period: 'lifetime' })).toBe(true)
+    /* nominal 90% TANPA bukti kode = ditolak */
     expect(
-      isValidOfferAmount(WARAS, applyReferralDiscount(79_000), { period: 'monthly' }),
+      isValidOfferAmount(WARAS, applyReferralDiscount(129_000), { period: 'lifetime' }),
+    ).toBe(false)
+    expect(
+      isValidOfferAmount(WARAS, applyReferralDiscount(129_000), { period: 'lifetime' }, {
+        referral: true,
+      }),
     ).toBe(true)
+  })
+
+  it('nominal asing tetap ditolak walau kode referral terverifikasi', () => {
+    expect(
+      isValidOfferAmount(WARAS, 1_000, { period: 'lifetime' }, { referral: true }),
+    ).toBe(false)
   })
 
   it('harga lifetime penuh diterima; selisih lifetime hanya sah dari lifetime', () => {
@@ -159,7 +173,6 @@ describe('isValidOfferAmount() — nominal kiriman klien tidak dipercaya', () =>
   })
 
   it('nominal karangan ditolak', () => {
-    expect(isValidOfferAmount(WARAS, 1_000, { period: 'monthly' })).toBe(false)
     expect(isValidOfferAmount(WARAS, 1_000, { period: 'lifetime' })).toBe(false)
   })
 })
@@ -212,22 +225,21 @@ describe('capabilitiesOf() / canUse() — kunci fitur per tier', () => {
   })
 })
 
-describe('bentuk tautan — periode selalu ikut', () => {
-  it('buildPayHref() membawa period', () => {
-    expect(buildPayHref('waras')).toBe(`${PAY_PATH}?plan=waras&period=monthly`)
-    expect(buildPayHref('waras', 'lifetime')).toBe(`${PAY_PATH}?plan=waras&period=lifetime`)
-    expect(buildPayHref('waras', 'monthly', 'RINA-X7K')).toBe(
-      `${PAY_PATH}?plan=waras&period=monthly&kode=RINA-X7K`,
+describe('bentuk tautan — periode selalu lifetime', () => {
+  it('buildPayHref() default lifetime', () => {
+    expect(buildPayHref('waras')).toBe(`${PAY_PATH}?plan=waras&period=lifetime`)
+    expect(buildPayHref('waras', 'lifetime', 'RINA-X7K')).toBe(
+      `${PAY_PATH}?plan=waras&period=lifetime&kode=RINA-X7K`,
     )
   })
 
-  it('buildCheckoutHref() membawa period (default monthly)', () => {
-    expect(buildCheckoutHref()).toBe(`${CHECKOUT_PATH}?period=monthly`)
-    expect(buildCheckoutHref('sultan', 'lifetime')).toBe(
+  it('buildCheckoutHref() default lifetime', () => {
+    expect(buildCheckoutHref()).toBe(`${CHECKOUT_PATH}?period=lifetime`)
+    expect(buildCheckoutHref('sultan')).toBe(
       `${CHECKOUT_PATH}?period=lifetime&plan=sultan`,
     )
-    expect(buildCheckoutHref('sultan', 'monthly', 'RINA-X7K')).toBe(
-      `${CHECKOUT_PATH}?period=monthly&plan=sultan&kode=RINA-X7K`,
+    expect(buildCheckoutHref('sultan', 'lifetime', 'RINA-X7K')).toBe(
+      `${CHECKOUT_PATH}?period=lifetime&plan=sultan&kode=RINA-X7K`,
     )
   })
 
@@ -240,14 +252,15 @@ describe('bentuk tautan — periode selalu ikut', () => {
     )
   })
 
-  it('setiap tautan pembelian membawa period yang sah', () => {
+  it('setiap tautan pembelian hanya membawa period=lifetime', () => {
     const hrefs = [
-      buildPayHref('waras', 'monthly'),
-      buildCheckoutHref('waras', 'lifetime'),
+      buildPayHref('waras'),
+      buildCheckoutHref('waras'),
       buildUpgradeHref('waras', 'catet-aja', 'lifetime'),
     ]
     for (const href of hrefs) {
-      expect(href).toMatch(/period=(monthly|lifetime)/)
+      expect(href).toContain('period=lifetime')
+      expect(href).not.toContain('monthly')
       expect(href).not.toContain('annual')
     }
   })

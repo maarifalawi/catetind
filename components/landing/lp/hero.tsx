@@ -1,19 +1,21 @@
 import { LP_HERO } from '@/lib/data/landing'
-import { LandingButton } from './button'
+import { LandingHeroCta } from './hero-cta'
 import { LandingReveal } from './reveal'
 
 /* ── HERO LANDING ────────────────────────────────────────────────────────────
-   Port dari export Framer, tapi IDENTITAS VISUALNYA sekarang Design System
-   CatetInd (Earth Pastel + Inter): latar putih (`bg-canvas`), teks `forest`,
-   aksen Sage/Mint/Daisy. Paritas piksel Framer sudah ditinggalkan.
+   Port dari export Framer dengan Design System CatetInd (Earth Pastel + Inter):
+   latar putih (`bg-canvas`), teks `forest`, aksen Sage/Mint/Daisy.
+   CTA hero mempertahankan BENTUK export Framer (kotak panah putih + avatar
+   ticker) tapi warnanya memakai palet brand Evergreen, bukan charcoal; lihat
+   `hero-cta.tsx` untuk nilai-nilai yang diambil dari computed style.
 
    Susunan:
      section        bg-canvas, padding 0 20 (40 tablet+)
      blok teks      max-w 1200, item center, gap 48
      pill eyebrow   bg-canvas + ring halus, ikon 24
-     h1             40/56/64px — Inter tidak perlu 88px agar 3 baris rapi
+     h1             40/56/64px — "males" semibold + italic, tanpa latar highlight
      sub            16/18, max-w 540
-     CTA            tombol gelap + marquee avatar
+     CTA dock       tombol brand + label publik 1.000+ + 5 avatar lokal, sejajar
      visual         1200×840 object-contain (mobile: layar ponsel)
 
    Animasi stagger tetap memakai `LandingReveal` (data framer/appear). */
@@ -57,13 +59,12 @@ export function LandingHeroLp() {
           </LandingReveal>
 
           <LandingReveal y={48} delay={0.2} trigger="load" className="w-full">
-            <h1 className="mx-auto max-w-[520px] text-balance text-center font-display text-[40px] leading-[1.12] font-medium tracking-[-0.03em] text-forest landing-tab:max-w-[780px] landing-tab:text-[56px] landing:max-w-[900px] landing:text-[64px]">
-              <span className="block">
-                {LP_HERO.headlineBefore}
-                <em className="italic">{LP_HERO.headlineEmphasis}</em>
-                {LP_HERO.headlineAfter}
-              </span>
-              <span className="block">{LP_HERO.headlineTail}</span>
+            <h1 className="mx-auto max-w-[560px] text-balance text-center font-display text-[40px] leading-[1.12] font-medium tracking-[-0.03em] text-forest landing-tab:max-w-[820px] landing-tab:text-[56px] landing:max-w-[900px] landing:text-[64px]">
+              {LP_HERO.headlineBefore}
+              {/* jangkar visual: "males" lebih tebal + italic saja, TANPA
+                  sapuan/latar highlight di belakangnya. */}
+              <em className="font-semibold italic">{LP_HERO.headlineEmphasis}</em>
+              {LP_HERO.headlineAfter}
             </h1>
           </LandingReveal>
 
@@ -74,13 +75,11 @@ export function LandingHeroLp() {
           </LandingReveal>
         </LandingReveal>
 
-        {/* CTA */}
-        <LandingReveal y={96} delay={0.6} trigger="load" className="w-full">
-          <div className="flex flex-col items-center justify-center gap-3">
-            <LandingButton href={LP_HERO.ctaHref} tone="dark" size="md">
-              {LP_HERO.ctaLabel}
-            </LandingButton>
-          </div>
+        {/* CTA + bukti sosial — SATU BARIS di semua layar, komposisinya persis
+            export Framer: tombol brand + kotak panah putih di kiri, lalu lima
+            avatar dan label di kanan. */}
+        <LandingReveal y={80} delay={0.6} trigger="load" className="w-full">
+          <LandingHeroCta />
         </LandingReveal>
       </div>
 

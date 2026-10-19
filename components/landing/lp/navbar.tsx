@@ -13,16 +13,22 @@ import { LANDING_SPRING } from './reveal'
    Perilaku yang disalin dari export Framer:
      • di puncak halaman  → bar transparan, konten menyatu dengan hero;
      • setelah digulir    → bar menjadi pill PUTIH mengambang (radius 24,
-                            shadow lembut, turun 12px dari tepi atas);
+                            shadow lembut);
+   JARAK ATAS: header SELALU menyisakan ruang aman dari tepi atas — 16px di
+   mobile, 20px di desktop. Sebelumnya bar menempel tepat di `top-0` saat
+   halaman belum digulir, jadi logo terlihat "mepet" ke tepi (terutama di
+   browser tanpa chrome/UI). Padding ini dipasang di <header> supaya jaraknya
+   tidak ikut hilang saat state `floating` berganti.
      • di atas section gelap (`[data-nav-theme="dark"]`, mis. kartu CTA)
                           → pill berubah gelap dan teksnya putih;
      • < 1200px           → link tengah diganti tombol menu.
 
    KEPUTUSAN LAYERING (Milestone C): header dan panel menu TIDAK pernah
    bertumpuk. Header tetap satu-satunya permukaan dengan logo + tombol tutup;
-   panel dimulai 8px DI BAWAH header (`top-[76px]` = 12 margin + 56 tinggi + 8
-   jarak), jadi tidak ada dua logo / dua tombol close. Backdrop satu lapis
-   (`fixed inset-0`) duduk di bawah panel dan menutup menu saat diklik.
+   panel dimulai 8px DI BAWAH header (`top-[80px]` = 16 padding + 56 tinggi + 8
+   jarak; `landing:top-[84px]` = 20 + 56 + 8), jadi tidak ada dua logo / dua
+   tombol close. Backdrop satu lapis (`fixed inset-0`) duduk di bawah panel dan
+   menutup menu saat diklik.
 
    Fokus: saat menu dibuka fokus pindah ke tautan pertama, Tab berputar di
    dalam panel (tidak bocor ke konten di belakang backdrop), Escape menutup dan
@@ -141,16 +147,19 @@ export function LandingNavbarLp({ basePath = '' }: { basePath?: string }) {
 
   return (
     <>
-      <header ref={headerRef} className="fixed inset-x-0 top-0 z-50 w-full px-5 landing:px-10">
+      <header
+        ref={headerRef}
+        className="fixed inset-x-0 top-0 z-50 w-full px-5 pt-4 landing:px-10 landing:pt-5"
+      >
         <motion.div
           initial={reduceMotion ? false : { opacity: 0, y: -80 }}
           animate={{ opacity: 1, y: 0 }}
           transition={LANDING_SPRING}
           className={cn(
-            'mx-auto flex h-14 w-full max-w-[1200px] items-center transition-[background-color,box-shadow,margin,color] duration-300 motion-reduce:transition-none',
+            'mx-auto flex h-14 w-full max-w-[1200px] items-center transition-[background-color,box-shadow,color] duration-300 motion-reduce:transition-none',
             floating
-              ? 'mt-3 rounded-[24px] px-2 shadow-landing-nav landing:px-5'
-              : 'mt-0 rounded-none px-0 shadow-none',
+              ? 'rounded-[24px] pr-1 pl-4 shadow-landing-nav landing:px-5'
+              : 'rounded-none px-0 shadow-none',
             menuOpen
               ? 'bg-canvas'
               : dark
@@ -264,7 +273,7 @@ export function LandingNavbarLp({ basePath = '' }: { basePath?: string }) {
             initial={reduceMotion ? false : { opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={reduceMotion ? { duration: 0 } : { duration: 0.2, ease: 'easeOut' }}
-            className="fixed inset-x-0 top-[76px] z-40 px-5 landing:px-10"
+            className="fixed inset-x-0 top-[80px] z-40 px-5 landing:top-[84px] landing:px-10"
           >
             <div className="mx-auto flex w-full max-w-[1200px] flex-col rounded-[24px] bg-canvas px-5 pb-8 pt-5 shadow-landing-pop">
               <nav

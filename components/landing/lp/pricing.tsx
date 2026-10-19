@@ -1,12 +1,8 @@
 import Link from 'next/link'
 import { ArrowRight, Check, Minus, ShieldCheck, Star } from 'lucide-react'
-import {
-  LP_PRICING,
-  formatIDR,
-  lpPlanPrice,
-  type LandingTier,
-} from '@/lib/data/landing'
+import { LP_PRICING, formatIDR, lpPlanPrice, type LandingTier } from '@/lib/data/landing'
 import { cn } from '@/lib/utils'
+import { BatikBackdrop } from './batik-backdrop'
 import { LandingReveal } from './reveal'
 
 /* ── SECTION #pricing ────────────────────────────────────────────────────────
@@ -52,12 +48,6 @@ export function LandingPricingLp() {
               {LP_PRICING.titleAfter}
             </h2>
           </LandingReveal>
-
-          <LandingReveal y={48} delay={0.2} className="w-full">
-            <p className="mx-auto max-w-[720px] text-balance text-[15px] leading-[1.6] text-forest-muted landing:text-[16px]">
-              {LP_PRICING.subheadline}
-            </p>
-          </LandingReveal>
         </div>
 
         <div className="grid grid-cols-1 items-stretch gap-6 pt-4 landing:grid-cols-3 landing:gap-5">
@@ -84,9 +74,9 @@ function PricingCard({ tier }: { tier: LandingTier }) {
   const price = lpPlanPrice(tier.id, 'lifetime')
 
   const ctaClass = cn(
-    'group mt-6 inline-flex h-12 w-full items-center justify-between gap-3 rounded-full px-5 text-[14px] font-semibold leading-[1.5] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 motion-reduce:transition-none',
+    'group mt-6 flex h-12 w-full items-center justify-between gap-3 rounded-full pr-1.5 pl-5 text-[14px] font-medium leading-[1.5] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 motion-reduce:transition-none',
     recommended
-      ? 'bg-[#e8d8a6] text-[#2d3a30] hover:bg-[#efe2b8] focus-visible:ring-[#d8c48c] focus-visible:ring-offset-[#45594e]'
+      ? 'bg-daisy text-forest hover:bg-daisy-light focus-visible:ring-daisy focus-visible:ring-offset-forest'
       : 'bg-forest text-cream hover:bg-forest-soft focus-visible:ring-forest focus-visible:ring-offset-canvas',
   )
 
@@ -96,125 +86,143 @@ function PricingCard({ tier }: { tier: LandingTier }) {
       className={cn(
         'relative flex h-full flex-col rounded-[28px] p-6 pt-8 landing:p-8',
         recommended
-          ? 'landing:z-10 bg-[#45594e] text-cream ring-1 ring-white/10 shadow-[0_28px_64px_-40px_rgba(69,89,78,0.55)] landing:scale-[1.025]'
+          ? 'landing:z-10 bg-gradient-to-br from-evergreen-deep via-forest to-evergreen-deep text-cream ring-1 ring-white/15 shadow-landing-deep landing:scale-[1.025]'
           : 'bg-canvas text-forest ring-1 ring-soil/10 shadow-landing-soft',
       )}
     >
+      {recommended ? (
+        <>
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]"
+          >
+            <span className="absolute inset-0 bg-gradient-to-tr from-evergreen-deeper/85 via-transparent to-evergreen-light/10" />
+            <span className="absolute -top-24 right-0 size-64 rounded-full bg-mint/15 blur-3xl" />
+          </span>
+          <BatikBackdrop id={`landing-batik-${tier.id}`} className="opacity-90" />
+        </>
+      ) : null}
+
       {recommended && tier.badge ? (
-        <span className="absolute -top-3.5 left-1/2 inline-flex -translate-x-1/2 items-center gap-1.5 whitespace-nowrap rounded-full bg-[#efdfb3] px-3.5 py-1.5 text-[11.5px] font-semibold leading-none text-[#3b4a3e] shadow-sm ring-1 ring-black/5">
-          <Star className="size-3.5 fill-[#3b4a3e]" strokeWidth={1.8} aria-hidden />
+        <span className="absolute -top-3.5 left-1/2 z-20 inline-flex -translate-x-1/2 items-center gap-1.5 whitespace-nowrap rounded-full bg-daisy px-3.5 py-1.5 text-[11.5px] font-semibold leading-none text-forest shadow-sm ring-1 ring-black/5">
+          <Star className="size-3.5 fill-forest" strokeWidth={1.8} aria-hidden />
           {tier.badge}
         </span>
       ) : null}
 
-      <span
-        className={cn(
-          'inline-flex w-fit items-center rounded-full px-2.5 py-1 text-[11.5px] leading-[1.5] font-medium',
-          recommended
-            ? 'bg-white/10 text-cream ring-1 ring-white/15'
-            : 'bg-sage text-forest',
-        )}
-      >
-        {LP_PRICING.priceBadge}
-      </span>
-
-      <h3
-        id={`plan-${tier.id}-name`}
-        className="mt-4 font-display text-[24px] leading-[1.2] font-semibold tracking-[-0.02em]"
-      >
-        {tier.name}
-      </h3>
-
-      <p className="mt-5 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-        <span className="font-display text-[38px] leading-[1.02] font-semibold tracking-[-0.045em] tabular-nums landing:text-[42px]">
-          {formatIDR(price)}
-        </span>
+      <div className="relative z-10 flex h-full flex-1 flex-col">
         <span
           className={cn(
-            'text-[12.5px] leading-[1.5] font-medium landing:text-[13.5px]',
-            recommended ? 'text-cream/60' : 'text-forest-muted',
+            'inline-flex w-fit items-center rounded-full px-2.5 py-1 text-[11.5px] leading-[1.5] font-medium',
+            recommended
+              ? 'bg-white/10 text-cream ring-1 ring-white/20 backdrop-blur-sm'
+              : 'bg-sage text-forest',
           )}
         >
-          {LP_PRICING.priceUnit}
+          {LP_PRICING.priceBadge}
         </span>
-      </p>
 
-      <p
-        className={cn(
-          'mt-2 min-h-[44px] text-[13.5px] leading-[1.55]',
-          recommended ? 'text-cream/70' : 'text-forest-muted',
-        )}
-      >
-        {tier.tagline}
-      </p>
-
-      <Link
-        href={LP_PRICING.checkoutHref(tier.id, 'lifetime')}
-        className={ctaClass}
-        aria-label={`${tier.ctaLabel}, ${formatIDR(price)} sekali bayar, akses selamanya`}
-      >
-        <span>{tier.ctaLabel}</span>
-        <ArrowRight
-          className="size-4 shrink-0 transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transition-none"
-          aria-hidden
-        />
-      </Link>
-
-      <div
-        className={cn(
-          'mt-7 flex flex-1 flex-col border-t pt-6',
-          recommended ? 'border-white/15' : 'border-soil/10',
-        )}
-      >
-        <p
-          className={cn(
-            'text-[11px] leading-[1.5] font-medium tracking-[0.16em] uppercase',
-            recommended ? 'text-cream/50' : 'text-forest-muted',
-          )}
+        <h3
+          id={`plan-${tier.id}-name`}
+          className="mt-4 font-display text-[24px] leading-[1.2] font-semibold tracking-[-0.02em]"
         >
-          {LP_PRICING.featuresLabel}
+          {tier.name}
+        </h3>
+
+        <p className="mt-5 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+          <span className="font-display text-[38px] leading-[1.02] font-semibold tracking-[-0.045em] tabular-nums landing:text-[42px]">
+            {formatIDR(price)}
+          </span>
+          <span
+            className={cn(
+              'text-[12.5px] leading-[1.5] font-medium landing:text-[13.5px]',
+              recommended ? 'text-cream-muted' : 'text-forest-muted',
+            )}
+          >
+            {LP_PRICING.priceUnit}
+          </span>
         </p>
 
-        <ul className="mt-4 flex flex-1 flex-col gap-3">
-          {tier.features.map((feature) => (
-            <li key={feature.label} className="flex items-start gap-2.5">
-              {feature.included ? (
-                <Check
-                  className={cn(
-                    'mt-0.5 size-4 shrink-0',
-                    recommended ? 'text-[#cbdcc8]' : 'text-forest',
-                  )}
-                  strokeWidth={2.4}
-                  aria-hidden
-                />
-              ) : (
-                <Minus
-                  className={cn(
-                    'mt-0.5 size-4 shrink-0',
-                    recommended ? 'text-cream/35' : 'text-forest-muted/45',
-                  )}
-                  strokeWidth={2}
-                  aria-hidden
-                />
-              )}
-              <span
-                className={cn(
-                  'text-[13.5px] leading-[1.55]',
-                  feature.included
-                    ? recommended
-                      ? 'text-cream/90'
-                      : 'text-forest'
-                    : recommended
-                      ? 'text-cream/40'
-                      : 'text-forest-muted/55',
-                )}
-              >
-                {feature.label}
-              </span>
-            </li>
-          ))}
-        </ul>
+        <p
+          className={cn(
+            'mt-2 min-h-[44px] text-[13.5px] leading-[1.55]',
+            recommended ? 'text-cream-muted' : 'text-forest-muted',
+          )}
+        >
+          {tier.tagline}
+        </p>
 
+        <Link
+          href={LP_PRICING.checkoutHref(tier.id, 'lifetime')}
+          className={ctaClass}
+          aria-label={`${tier.ctaLabel}, ${formatIDR(price)} sekali bayar, akses selamanya`}
+        >
+          <span>{tier.ctaLabel}</span>
+          <span
+            className={cn(
+              'flex size-9 shrink-0 items-center justify-center rounded-full transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transition-none',
+              recommended ? 'bg-forest text-cream' : 'bg-cream text-forest',
+            )}
+          >
+            <ArrowRight className="size-4" strokeWidth={2.2} aria-hidden />
+          </span>
+        </Link>
+
+        <div
+          className={cn(
+            'mt-7 flex flex-1 flex-col border-t pt-6',
+            recommended ? 'border-white/15' : 'border-soil/10',
+          )}
+        >
+          <p
+            className={cn(
+              'text-[11px] leading-[1.5] font-medium tracking-[0.16em] uppercase',
+              recommended ? 'text-cream-muted' : 'text-forest-muted',
+            )}
+          >
+            {LP_PRICING.featuresLabel}
+          </p>
+
+          <ul className="mt-4 flex flex-1 flex-col gap-3">
+            {tier.features.map((feature) => (
+              <li key={feature.label} className="flex items-start gap-2.5">
+                <span
+                  aria-hidden
+                  className={cn(
+                    'mt-[1px] flex size-4 shrink-0 items-center justify-center rounded-full',
+                    feature.included
+                      ? recommended
+                        ? 'bg-white/10 text-mint'
+                        : 'bg-sage text-forest'
+                      : recommended
+                        ? 'bg-white/5 text-cream/35'
+                        : 'bg-sage/60 text-forest-muted/50',
+                  )}
+                >
+                  {feature.included ? (
+                    <Check className="size-2.5" strokeWidth={3.2} />
+                  ) : (
+                    <Minus className="size-2.5" strokeWidth={2.6} />
+                  )}
+                </span>
+                <span
+                  className={cn(
+                    'text-[13.5px] leading-[1.55]',
+                    feature.included
+                      ? recommended
+                        ? 'text-cream/90'
+                        : 'text-forest'
+                      : recommended
+                        ? 'text-cream-muted'
+                        : 'text-forest-muted/60',
+                  )}
+                >
+                  {feature.label}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
     </article>
   )

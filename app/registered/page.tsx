@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { ArrowRight, CheckCircle2 } from 'lucide-react'
 import { LogoWordmark } from '@/components/catetind/logo-wordmark'
 import { LANDING_PATH, REGISTERED_COPY } from '@/lib/data/landing'
-import { PLANS, asBillingPeriod, buildPayHref } from '@/lib/data/pricing'
+import { PLANS, buildPayHref } from '@/lib/data/pricing'
 
 /**
  * /registered — halaman "Terima Kasih" setelah registrasi dari landing.
@@ -26,7 +26,6 @@ export default async function RegisteredPage({
   searchParams: Promise<{
     email?: string | string[]
     plan?: string | string[]
-    period?: string | string[]
   }>
 }) {
   const params = await searchParams
@@ -38,8 +37,6 @@ export default async function RegisteredPage({
   const rawPlan = params.plan
   const planId = (Array.isArray(rawPlan) ? rawPlan[0] : rawPlan)?.trim()
   const plan = PLANS.find((item) => item.id === planId) ?? null
-  const rawPeriod = params.period
-  const period = asBillingPeriod((Array.isArray(rawPeriod) ? rawPeriod[0] : rawPeriod)?.trim()) ?? 'monthly'
   const body =
     plan && email
       ? REGISTERED_COPY.bodyWithPlan(email, plan.name)
@@ -84,7 +81,7 @@ export default async function RegisteredPage({
         </section>
 
         <Link
-          href={plan ? buildPayHref(plan.id, period) : LANDING_PATH}
+          href={plan ? buildPayHref(plan.id) : LANDING_PATH}
           className="group mt-8 inline-flex h-12 items-center justify-center gap-2 rounded-full bg-forest px-6 text-[14px] font-medium text-cream shadow-[0_16px_34px_-18px_rgba(0,0,0,0.85)] transition-colors duration-200 hover:bg-forest-soft motion-reduce:transition-none"
         >
           {plan ? REGISTERED_COPY.ctaPay : REGISTERED_COPY.cta}

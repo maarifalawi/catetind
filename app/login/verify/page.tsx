@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import { LandingFooterLp } from '@/components/landing/lp/footer'
 import { LandingNavbarLp } from '@/components/landing/lp/navbar'
 import { VerifyEmailScreen } from '@/components/catetind/verify-email-screen'
 import { safeNextPath } from '@/lib/data/auth'
@@ -20,8 +19,9 @@ import { safeNextPath } from '@/lib/data/auth'
  * menghindari `useSearchParams()` + Suspense boundary di komponen klien dan menjaga
  * halaman tetap bisa dirender tanpa hydration mismatch.
  *
- * Bingkai halaman SAMA dengan landing page: `LandingNavbarLp` + `LandingFooterLp`
- * di dalam satu `<main id="top">` (desain lama PhoneStage + PublicNavbar dilepas).
+ * Bingkai halaman memakai `LandingNavbarLp` di dalam satu `<main id="top">`,
+ * TANPA footer landing — halaman ini bagian dari alur masuk yang sengaja
+ * berakhir di kartu konfirmasi (desain lama PhoneStage + PublicNavbar dilepas).
  */
 export const metadata: Metadata = {
   title: 'Cek Email — CatetInd',
@@ -60,7 +60,6 @@ export default async function VerifyEmailPage({
         code={firstValue(params.code) || undefined}
         next={safeNextPath(firstValue(params.next)) ?? undefined}
       />
-      <LandingFooterLp basePath="/" />
     </main>
   )
 }

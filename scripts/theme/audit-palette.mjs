@@ -25,6 +25,8 @@ const ALLOWED = new Set(
     '#52685c', '#c4c7af', '#1f2823', '#161c19', '#767676',
     '#dbe4c7', '#e6e4c0', '#51533d', '#dbdccf', '#414853', '#e7d8c3', '#534141',
     '#fbe3c0', '#e8b06a', '#73533c', '#f6edb7', '#6a612f',
+    /* charcoal CTA hero — token `--color-graphite`, nilai computed style export Framer */
+    '#35363b',
     /* netral teknis — dasar permukaan putih (token `--color-canvas` / `--color-cream`) */
     '#ffffff',
   ].map((h) => h.toLowerCase()),

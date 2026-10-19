@@ -38,9 +38,10 @@ import { sendLoginLink, verifyEmailOtp } from '@/lib/session-client'
 
    ── REVISI DESAIN: BINGKAI LANDING ──────────────────────────────────────────
    Tata letak mengikuti landing page: kepala halaman (pill eyebrow + H1 display +
-   subjudul muted) lalu satu kartu putih ber-hairline. Navbar & footer landing
-   dipasang oleh route (`app/login/page.tsx`), jadi halaman ini TIDAK lagi
-   memakai panel batik dua kolom / PublicNavbar lama.
+   subjudul muted) lalu satu kartu putih ber-hairline. Navbar landing dipasang
+   oleh route (`app/login/page.tsx`) TANPA footer — halaman masuk sengaja
+   berakhir di kartu formulir. Halaman ini TIDAK lagi memakai panel batik dua
+   kolom / PublicNavbar lama.
 
    Mekanisme login DUA LANGKAH DI SATU HALAMAN:
      1. tulis email  → `signInWithOtp` mengirim kode 6 angka;

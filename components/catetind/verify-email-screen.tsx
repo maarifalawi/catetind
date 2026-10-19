@@ -45,7 +45,7 @@ import { completeMagicLink, sendLoginLink, verifyEmailOtp } from '@/lib/session-
      • STATE KEDALUWARSA punya kartu sendiri + jalan keluar (jangan layar buntu);
      • jalan masuk lewat KODE 6 angka dari email (jalur Supabase `verifyOtp`).
 
-   Halaman PUBLIK: navbar & footer landing dipasang di route, tanpa
+   Halaman PUBLIK: navbar landing dipasang di route (tanpa footer), tanpa
    sidebar/bottom-nav app. Semua copy di `lib/data/auth.ts`.
    ────────────────────────────────────────────────────────────────────────── */
 

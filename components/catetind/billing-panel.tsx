@@ -23,7 +23,6 @@ import { cn } from '@/lib/utils'
 import {
   BILLING_COPY,
   LIFETIME_LABEL,
-  MONTHLY_LABEL,
   PLANS,
   buildCheckoutHref,
   formatIDR,
@@ -231,7 +230,7 @@ function CurrentPlanCard() {
               ? plan
                 ? expiresAt
                   ? formatExpiry(expiresAt)
-                  : MONTHLY_LABEL
+                  : BILLING_COPY.monthlyPeriod
                 : '—'
               : plan
                 ? LIFETIME_LABEL
@@ -252,28 +251,21 @@ function CurrentPlanCard() {
       </dl>
 
       <div className="mt-auto flex flex-col gap-2 pt-5">
-        {planId && monthly && (
-          <Link
-            href={buildCheckoutHref(planId, 'monthly')}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-forest py-3.5 text-sm font-medium text-mint transition-colors hover:bg-forest-soft active:scale-[0.99]"
-          >
-            <RefreshCw className="size-4" strokeWidth={2.4} />
-            {BILLING_COPY.renewLabel}
-          </Link>
-        )}
-
+        {/* Tidak ada tombol perpanjang: paket 30 hari sudah tidak dijual.
+            Pelanggan lama diarahkan ke lifetime (selisih/harga penuh dari server). */}
         {planId && (monthly || higherLifetime.length > 0) && (
           <Link
             href={buildCheckoutHref(planId, 'lifetime')}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-sage py-3.5 text-sm font-medium text-forest ring-1 ring-soil/12 transition-colors hover:bg-oat active:scale-[0.99]"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-forest py-3.5 text-sm font-medium text-mint transition-colors hover:bg-forest-soft active:scale-[0.99]"
           >
-            {BILLING_COPY.upgradeLifetimeLabel}
+            <RefreshCw className="size-4" strokeWidth={2.4} />
+            {monthly ? BILLING_COPY.legacyUpgradeLabel : BILLING_COPY.upgradeLifetimeLabel}
           </Link>
         )}
 
         {!planId && (
           <Link
-            href={buildCheckoutHref(null, 'monthly')}
+            href={buildCheckoutHref(null, 'lifetime')}
             className="flex w-full items-center justify-center gap-2 rounded-2xl bg-forest py-3.5 text-sm font-medium text-mint transition-colors hover:bg-forest-soft active:scale-[0.99]"
           >
             {BILLING_COPY.choosePlanLabel}

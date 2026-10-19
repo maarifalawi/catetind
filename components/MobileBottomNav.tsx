@@ -76,6 +76,9 @@ const FOCUS_ROUTES = [
   '/',
   /* /contact — halaman kontak publik: form WhatsApp/email, bukan app. */
   '/contact',
+  /* /bantuan — Pusat Bantuan publik: artikel + kontak, tanpa sidebar app.
+     Tautan "Emailmu nggak ketemu?" di /login mendarat di sini. */
+  '/bantuan',
   '/registered',
   '/app/onboarding',
   '/welcome',

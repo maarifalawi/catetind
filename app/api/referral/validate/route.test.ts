@@ -78,6 +78,16 @@ describe('POST /api/referral/validate', () => {
     expect(rpc).toHaveBeenCalledTimes(1)
   })
 
+  it('kode sah tetapi relasi TIDAK boleh dibuat (self/ sudah terhubung) → 422', async () => {
+    configured.mockReturnValue(true)
+    rpc.mockResolvedValueOnce({ ok: true, status: 200, data: 'referrer-uuid' })
+    rpc.mockResolvedValueOnce({ ok: true, status: 200, data: false })
+
+    const res = await POST(request({ code: GOOD_CODE, email: EMAIL }))
+    expect(res.status).toBe(422)
+    expect((await res.json()).error).toBe(REFERRAL_VALIDATE_COPY.conflict)
+  })
+
   it('kode sah tanpa email → tidak ada tulisan relasi (belum ada yang diundang)', async () => {
     configured.mockReturnValue(true)
     rpc.mockResolvedValueOnce({ ok: true, status: 200, data: 'referrer-uuid' })

@@ -60,7 +60,8 @@ Total **38 route halaman** (`page.tsx`) + halaman sistem. Dikelompokkan jadi
 | 6 | [`/join/[code]`](https://catetind.com/join/A7K2M9) | `app/join/[code]/page.tsx` | `join-invite-screen.tsx` | **Landing undangan Joint Wallet** (sisi B). Kode 6 karakter. |
 | 7 | [`/r/[code]`](https://catetind.com/r/A7K2M9) ⟲ | `app/r/[code]/page.tsx` | — | **Tautan referral** → redirect ke [`/checkout`](https://catetind.com/checkout)`?kode=<KODE>`. |
 | 8 | [`/share/[id]`](https://catetind.com/share/1) | `app/share/[id]/page.tsx` | `share-preview-screen.tsx` | **Pratinjau kartu share** publik (nol angka rupiah). |
-| 9 | [`/help`](https://catetind.com/help) | `app/help/page.tsx` | `help-center-screen.tsx` | Pusat Bantuan (dipakai publik & app). |
+| 9 | [`/help`](https://catetind.com/help) 🔒 | `app/help/page.tsx` | `help-center-screen.tsx` | Pusat Bantuan **di dalam app** — memakai `ScreenShell` (sidebar + data). Wajib login; tidak pernah ada di `PUBLIC_ROUTES`. |
+| 9b | [`/bantuan`](https://catetind.com/bantuan) | `app/bantuan/page.tsx` | `landing/lp/help-center.tsx` | Pusat Bantuan **publik** (artikel + kontak, tanpa sidebar app). Tujuan tautan "Emailmu nggak ketemu?" di [`/login`](https://catetind.com/login). |
 
 ### 1B. Auth (pintu masuk)
 
@@ -390,8 +391,8 @@ Kapan pun koneksi putus (halaman app mana pun)
 
 ### FLOW 20 — Bantuan & Panduan Install
 
-- (publik) navbar situs "Bantuan" di [`/welcome`](https://catetind.com/welcome), [`/login`](https://catetind.com/login), [`/checkout`](https://catetind.com/checkout) → [`/help`](https://catetind.com/help)
-- (app) sidebar "Pusat Bantuan" → [`/help`](https://catetind.com/help)
+- (publik) navbar situs / footer / kaki [`/login`](https://catetind.com/login) "Emailmu nggak ketemu?" → [`/bantuan`](https://catetind.com/bantuan) *(tanpa sidebar app; aman dibuka sebelum login)*
+- (app) sidebar "Pusat Bantuan" → [`/help`](https://catetind.com/help) 🔒 *(memakai `ScreenShell`; hanya untuk user yang sudah masuk)*
 - (app) sidebar "Panduan Install" → [`/install`](https://catetind.com/install) → QR + langkah per platform (iOS Safari / Android Chrome / Desktop)
 
 ### FLOW 21 — Halaman legal & 404 / error
@@ -493,7 +494,7 @@ Gerbang hidup di root layout / middleware, bukan di tiap halaman:
 
 | Gerbang | Berkas | Aturan |
 |---|---|---|
-| **Sesi** | `middleware.ts` + `lib/public-routes.ts` | Halaman app (di luar `PUBLIC_ROUTES`) tanpa cookie Supabase → `⟲` [`/login`](https://catetind.com/login)`?next=<tujuan>`. Aktif hanya bila Supabase dikonfigurasi **dan** `NEXT_PUBLIC_DEMO !== '1'`. |
+| **Sesi** | `middleware.ts` + `lib/public-routes.ts` | Halaman app (di luar `PUBLIC_ROUTES`) tanpa sesi Supabase yang **diverifikasi** (`supabase.auth.getUser()`, bukan cuma cookie) → `⟲` [`/login`](https://catetind.com/login)`?next=<tujuan>`. **Tidak ada jalan pintas demo/env**: `NEXT_PUBLIC_DEMO=1` dan Supabase kosong tetap ditolak. `/help` & `/install` termasuk halaman app; `/bantuan` & `/contact` publik. |
 | **Langganan** | `SubscriptionGateProvider` | Mengunci input transaksi bagi user tanpa paket; dilewati di `PUBLIC_ROUTES`. |
 | **Kunci perangkat (PIN)** | `AppLockProvider` | PIN aktif & belum dibuka → `AppLockScreen` menggantikan seluruh isi app. Dilewati di halaman publik. |
 | **Toggle nominal (mata)** | `lib/shows-amounts.ts` | Tombol sensor hanya di `AMOUNT_ROUTES`: [app](https://catetind.com/app), [wallet](https://catetind.com/wallet), [history](https://catetind.com/history), [budget](https://catetind.com/budget), [bills](https://catetind.com/bills), [calendar](https://catetind.com/calendar), [wealth](https://catetind.com/wealth), [joint](https://catetind.com/joint). |

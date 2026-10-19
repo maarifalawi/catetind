@@ -11,9 +11,12 @@ import { UpgradeModal } from './upgrade-modal'
 
 /* ── BANNER PAKET GLOBAL ─────────────────────────────────────────────────────
    Banner ini menampilkan keadaan yang NYATA:
-     1. prabayar 30 hari sudah lewat tanggal → ajak perpanjang monthly;
+     1. paket LAMA 30 hari sudah lewat tanggal → ajak lanjut ke lifetime;
      2. user punya paket tapi belum di tier tertinggi → ajakan upgrade;
      3. user terverifikasi belum punya paket → ajakan memilih paket.
+
+   Tidak ada lagi ajakan memperpanjang 30 hari: paket bulanan sudah tidak
+   dijual, jadi jalan keluarnya selalu akses selamanya.
 
    Nominal selalu dari `priceFor()`; tidak ada angka tulis tangan. Banner tidak
    muncul saat status paket belum bisa dipastikan (configured:false / tanpa
@@ -90,7 +93,7 @@ export function SubscriptionBanner() {
             </button>
           ) : (
             <Link
-              href={expired ? buildCheckoutHref(planId ?? null, 'monthly') : CHECKOUT_PATH}
+              href={expired ? buildCheckoutHref(planId ?? null, 'lifetime') : CHECKOUT_PATH}
               className="shrink-0 rounded-full bg-forest px-4 py-2 text-xs font-medium text-cream shadow-[0_12px_24px_-16px_rgba(0,0,0,0.9)] transition-colors hover:bg-forest-soft active:scale-95"
             >
               {copy.cta}

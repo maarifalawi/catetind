@@ -17,9 +17,11 @@ import {
   LP_FAQ,
   LP_FOOTER,
   LP_HERO,
+  LP_LIVE_SUBSCRIBERS,
   LP_MISSION,
   LP_NAV,
   LP_PRICING,
+  LP_PURCHASE_NOTIF,
   LP_SUPPORT_EMAIL,
   LP_WHATSAPP,
   buildContactMailto,
@@ -28,7 +30,10 @@ import {
   liveFeedFromPurchases,
   lpHref,
   lpPlanPrice,
+  purchaseNotificationsFromPurchases,
+  randomPurchasePackageName,
   relativeFeedTime,
+  seededPurchaseNotifications,
 } from './landing'
 
 /* ── FEED PEMBELIAN NYATA (paket 85) ─────────────────────────────────────────
@@ -166,17 +171,10 @@ describe('HERO_DEVICE — satu cerita angka di seluruh hero', () => {
    copy template Inggris (termasuk nama "Makro") yang lolos ke layar. */
 
 describe('LP_PRICING — harga yang diiklankan = harga yang ditagih', () => {
-  it('default mode = lifetime', () => {
+  it('default mode = lifetime dan hanya lifetime yang dijual', () => {
     expect(LP_PRICING.defaultMode).toBe('lifetime')
-    expect(LP_PRICING.modes.map((entry) => entry.id)).toEqual(['monthly', 'lifetime'])
+    expect(LP_PRICING.modes.map((entry) => entry.id)).toEqual(['lifetime'])
     expect(LP_PRICING.savingsLabel).toBe('Paling hemat')
-  })
-
-  it('harga monthly landing = PLANS[].monthly', () => {
-    for (const plan of PLANS) {
-      expect(lpPlanPrice(plan.id, 'monthly')).toBe(plan.monthly)
-    }
-    expect(PLANS.map((plan) => plan.monthly)).toEqual([49_000, 79_000, 199_000])
   })
 
   it('harga lifetime landing = PLANS[].lifetime', () => {
@@ -193,34 +191,27 @@ describe('LP_PRICING — harga yang diiklankan = harga yang ditagih', () => {
     expect(LP_PRICING.tiers).toHaveLength(PLANS.length)
   })
 
-  it('CTA kartu membawa plan + period yang dibaca halaman checkout', () => {
+  it('CTA kartu membawa plan + period=lifetime yang dibaca halaman checkout', () => {
     for (const tier of LP_PRICING.tiers) {
-      expect(LP_PRICING.checkoutHref(tier.id, 'monthly')).toBe(
-        `/checkout?period=monthly&plan=${tier.id}`,
-      )
       expect(LP_PRICING.checkoutHref(tier.id, 'lifetime')).toBe(
         `/checkout?period=lifetime&plan=${tier.id}`,
       )
     }
   })
 
-  it('badge & catatan menjelaskan prabayar tanpa auto-debet', () => {
-    expect(LP_PRICING.badges.monthly).toContain('Prabayar 30 hari')
-    expect(LP_PRICING.badges.monthly.toLowerCase()).toContain('tanpa auto-debet')
+  it('badge & catatan menjelaskan sekali bayar tanpa tagihan bulanan', () => {
     expect(LP_PRICING.badges.lifetime).toContain('selamanya')
-    expect(LP_PRICING.note.toLowerCase()).toContain('perpanjang manual')
+    expect(LP_PRICING.note.toLowerCase()).toContain('tanpa tagihan bulanan')
     expect(JSON.stringify(LP_PRICING)).not.toContain('belum tersedia di checkout')
   })
 })
 
-describe('LP_PRICING — satuan & badge per periode', () => {
-  it('setiap mode punya satuan yang tampil di samping nominal', () => {
-    expect(LP_PRICING.priceUnits.monthly).toContain('30 hari')
+describe('LP_PRICING — satuan & badge periode', () => {
+  it('mode lifetime punya satuan yang tampil di samping nominal', () => {
     expect(LP_PRICING.priceUnits.lifetime).toContain('selamanya')
   })
 
-  it('badge status singkat membedakan prepaid dan sekali bayar', () => {
-    expect(LP_PRICING.modeBadge.monthly).toBe('Prepaid')
+  it('badge status singkat menegaskan sekali bayar', () => {
     expect(LP_PRICING.modeBadge.lifetime).toBe('Sekali Bayar')
   })
 })
@@ -405,7 +396,7 @@ describe('LP_CONTACT — tiga field, WhatsApp utama + email fallback', () => {
     const hrefs = LP_CONTACT.helpCards.map((card) => card.href)
     expect(hrefs[0].startsWith(LP_WHATSAPP.href)).toBe(true)
     expect(hrefs[1]).toBe(`mailto:${LP_SUPPORT_EMAIL}`)
-    expect(hrefs[2]).toBe('/help')
+    expect(hrefs[2]).toBe('/bantuan')
   })
 
   it('buildContactWhatsApp membawa nama, kontak, dan pertanyaan', () => {
@@ -436,19 +427,23 @@ describe('LP_CONTACT — tiga field, WhatsApp utama + email fallback', () => {
 })
 
 describe('LP_HERO — satu janji, CTA jujur, tanpa bukti sosial karangan', () => {
-  it('headline tidak mengulang "app keuangan" dan memakai satu janji', () => {
-    const headline = `${LP_HERO.headlineBefore}${LP_HERO.headlineEmphasis}${LP_HERO.headlineAfter} ${LP_HERO.headlineTail}`
-    expect(headline).toBe('Catat 4 detik. Biar lo tau duit lo ke mana.')
-    expect(headline.match(/app keuangan/gi)).toBeNull()
+  it('headline menyapa yang males nyatet tanpa titik & tanpa latar highlight', () => {
+    const headline = `${LP_HERO.headlineBefore}${LP_HERO.headlineEmphasis}${LP_HERO.headlineAfter}`
+    expect(headline).toBe('Aplikasi keuangan buat lo yang males nyatet')
+    expect(headline.endsWith('.')).toBe(false)
+    expect(LP_HERO.headlineEmphasis).toBe('males')
+    expect(LP_HERO.subheadline).toBe(
+      'Cuma butuh 4 detik. Tinggal kirim voice note atau foto struk',
+    )
   })
 
-  it('CTA memakai paket + periode yang SAMA dengan default section harga', () => {
+  it('CTA hero memakai label "Cobain" dan paket + periode default section harga', () => {
+    expect(LP_HERO.ctaLabel).toBe('Cobain')
     expect(LP_HERO.ctaHref).toBe(
       `/checkout?period=${LP_PRICING.defaultMode}&plan=${LP_PRICING.tiers[1].id}`,
     )
     expect(LP_PRICING.defaultMode).toBe(LANDING_DEFAULT_PERIOD)
-    expect(LP_HERO.ctaLabel).not.toMatch(/cobain/i)
-    expect(LP_NAV.ctaLabel).not.toMatch(/cobain/i)
+    expect(LP_NAV.ctaLabel).toBe('Pilih Paket')
   })
 
   it('tidak ada angka komunitas atau avatar stok yang tidak bisa dibuktikan', () => {
@@ -556,5 +551,155 @@ describe('LANDING_SECTION_MARKERS', () => {
       { index: '03', label: 'Harga' },
       { index: '04', label: 'FAQ' },
     ])
+  })
+})
+
+/* ── PENGHITUNG PENGGUNA LIVE & NOTIFIKASI PEMBELIAN ─────────────────────────
+   Angka & nama di sini harus bisa ditelusuri:
+     · `startCount` = seed migrasi (234), bukan angka bebas di JSX;
+     · nama paket di notifikasi dibaca dari `PLANS`;
+     · pembelian nyata dipetakan apa adanya, nominal asing tidak dipaksa masuk
+       tier yang tidak cocok. */
+describe('LP_LIVE_SUBSCRIBERS', () => {
+  it('titik awal sama dengan seed migrasi (234)', () => {
+    expect(LP_LIVE_SUBSCRIBERS.startCount).toBe(234)
+  })
+
+  it('avatar memakai lima file lokal AVA 1–AVA 5, bukan foto stok', () => {
+    const sources = LP_LIVE_SUBSCRIBERS.avatarPool.map((avatar) => avatar.src)
+    expect(sources).toEqual([
+      '/AVA 1.png',
+      '/AVA 2.png',
+      '/AVA 3.png',
+      '/AVA 4.png',
+      '/AVA 5.png',
+    ])
+
+    for (const avatar of LP_LIVE_SUBSCRIBERS.avatarPool) {
+      const file = path.join(
+        process.cwd(),
+        'public',
+        decodeURIComponent(avatar.src.replace(/^\//, '')),
+      )
+      expect(fs.existsSync(file), `${avatar.src} tidak ada`).toBe(true)
+      /* bingkai avatar kini outline gelap tipis di komponen — data tidak
+         membawa warna halo lagi */
+      expect('tone' in avatar).toBe(false)
+    }
+  })
+
+  it('label publik memakai 1.000+, bukan seed database 234', () => {
+    expect(LP_LIVE_SUBSCRIBERS.startCount).toBe(234)
+    expect(LP_LIVE_SUBSCRIBERS.displayCount).toBe(1_000)
+    expect(LP_LIVE_SUBSCRIBERS.displaySuffix).toBe('+')
+  })
+})
+
+describe('notifikasi pembelian', () => {
+  it('daftar contoh memakai nama paket kanon dari PLANS', () => {
+    const canonical = new Set(PLANS.map((plan) => plan.name))
+    const seeded = seededPurchaseNotifications()
+
+    expect(seeded).toHaveLength(LP_PURCHASE_NOTIF.fallbackBuyers.length)
+    for (const item of seeded) {
+      expect(canonical.has(item.packageName)).toBe(true)
+      expect(item.handle.startsWith('@')).toBe(true)
+      expect(item.initial).toHaveLength(1)
+      expect(item.city.trim().length).toBeGreaterThan(0)
+      expect(item.tone.startsWith('bg-')).toBe(true)
+    }
+  })
+
+  it('pool 600 unik: tidak ada handle ganda & kota beragam', () => {
+    const buyers = LP_PURCHASE_NOTIF.fallbackBuyers
+    const handles = buyers.map((buyer) => buyer.handle)
+    const cities = new Set(buyers.map((buyer) => buyer.city))
+
+    expect(handles.length).toBeGreaterThanOrEqual(500)
+    expect(new Set(handles).size).toBe(handles.length)
+    expect(cities.size).toBeGreaterThanOrEqual(30)
+    for (const buyer of buyers) {
+      expect(buyer.handle).toMatch(/^@[a-z0-9._]+$/)
+      expect(buyer.city.trim().length).toBeGreaterThan(0)
+      expect(buyer.tone.startsWith('bg-')).toBe(true)
+    }
+  })
+
+  it('36 seed asli tetap di awal pool', () => {
+    expect(LP_PURCHASE_NOTIF.fallbackBuyers[0]).toEqual({
+      handle: '@rinajkt',
+      city: 'Jakarta',
+      tone: 'bg-mint',
+    })
+    expect(
+      LP_PURCHASE_NOTIF.fallbackBuyers.some((buyer) => buyer.handle === '@zakif'),
+    ).toBe(true)
+  })
+
+  it('tone dibagi rata (selisih maksimal 1)', () => {
+    const counts = new Map<string, number>()
+    for (const buyer of LP_PURCHASE_NOTIF.fallbackBuyers) {
+      counts.set(buyer.tone, (counts.get(buyer.tone) ?? 0) + 1)
+    }
+    const values = [...counts.values()]
+    expect(values).toHaveLength(4)
+    expect(Math.max(...values) - Math.min(...values)).toBeLessThanOrEqual(1)
+  })
+
+  it('paket notifikasi hanya Waras 60% / Sultan 40% (tanpa Catet Aja)', () => {
+    expect(randomPurchasePackageName(() => 0)).toBe('Paket Waras')
+    expect(randomPurchasePackageName(() => 0.599)).toBe('Paket Waras')
+    expect(randomPurchasePackageName(() => 0.6)).toBe('Paket Sultan')
+    expect(randomPurchasePackageName(() => 0.999)).toBe('Paket Sultan')
+
+    for (const roll of [0, 0.25, 0.59, 0.6, 0.8, 0.99]) {
+      expect(randomPurchasePackageName(() => roll)).not.toBe('Paket Catet Aja')
+    }
+  })
+
+  it('seed 600 memakai Waras 60% / Sultan 40%, tanpa Catet Aja', () => {
+    const seeded = seededPurchaseNotifications()
+    const waras = seeded.filter((item) => item.packageName === 'Paket Waras').length
+    const sultan = seeded.filter((item) => item.packageName === 'Paket Sultan').length
+
+    expect(waras).toBe(360)
+    expect(sultan).toBe(240)
+    expect(seeded.some((item) => item.packageName === 'Paket Catet Aja')).toBe(false)
+  })
+
+  it('pembelian Catet Aja tidak pernah masuk notifikasi', () => {
+    const items = purchaseNotificationsFromPurchases(
+      [{ name: 'Sinta', price: 109000, at: '2026-10-19T11:58:00Z' }],
+      Date.parse('2026-10-19T12:00:00Z'),
+    )
+    expect(items).toEqual([])
+  })
+
+  it('pembelian nyata: harga tier cocok → nama paketnya; harga asing tidak dikarang', () => {
+    const now = Date.parse('2026-10-19T12:00:00Z')
+    const items = purchaseNotificationsFromPurchases(
+      [
+        { name: 'Rina', price: 129000, at: '2026-10-19T11:58:00Z' },
+        { name: 'Budi', price: 555000, at: '2026-10-19T11:50:00Z' },
+      ],
+      now,
+    )
+
+    expect(items[0]).toMatchObject({
+      handle: '@rina',
+      packageName: 'Paket Waras',
+      time: '2 menit lalu',
+    })
+    expect(items[1]).toMatchObject({
+      handle: '@budi',
+      packageName: 'paket CatetInd',
+    })
+  })
+
+  it('nama kosong tidak menjadi handle palsu', () => {
+    const [item] = purchaseNotificationsFromPurchases([{ name: '', price: 0, at: '' }], Date.now())
+    expect(item.handle).toBe('@seseorang')
+    expect(item.packageName).toBe('paket CatetInd')
+    expect(item.time).toBe('baru aja')
   })
 })

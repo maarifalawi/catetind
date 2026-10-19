@@ -2,7 +2,7 @@
 
 import { useRef, useState, type KeyboardEvent } from 'react'
 import Link from 'next/link'
-import { Info, Lock, Mail, UserRound } from 'lucide-react'
+import { Info, Mail, UserRound } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   EMAIL_MAX_LENGTH,
@@ -128,10 +128,6 @@ export function RegistrationSheet({
               {REGISTRATION_COPY.hasAccountLink}
             </Link>
           </p>
-          <p className="mt-2.5 flex items-start justify-center gap-1.5 text-center text-[11px] leading-relaxed text-forest/45">
-            <Lock className="mt-0.5 size-3 shrink-0" strokeWidth={2.4} aria-hidden />
-            <span>{REGISTRATION_COPY.noPasswordNote}</span>
-          </p>
         </>
       }
     >
@@ -161,20 +157,20 @@ export function RegistrationSheet({
             onKeyDown={handleEnter}
             placeholder={REGISTRATION_COPY.emailPlaceholder}
             aria-invalid={showErrors && !emailValid}
-            aria-describedby="checkout-email-hint"
+            aria-describedby={showErrors && !emailValid ? 'checkout-email-hint' : undefined}
             className={cn(
               'mt-2.5 w-full rounded-2xl bg-sage/45 px-4 py-3.5 text-[15px] font-medium text-forest outline-none ring-1 transition-all placeholder:font-medium placeholder:text-forest/30 focus:bg-cream focus:ring-2 focus:ring-forest/30',
               showErrors && !emailValid ? 'ring-plum/50' : 'ring-transparent',
             )}
           />
-          <span
-            id="checkout-email-hint"
-            className="mt-1.5 block text-[11px] leading-relaxed text-forest/45"
-          >
-            {showErrors && !emailValid
-              ? REGISTRATION_COPY.invalidEmail
-              : REGISTRATION_COPY.emailHint}
-          </span>
+          {showErrors && !emailValid ? (
+            <span
+              id="checkout-email-hint"
+              className="mt-1.5 block text-[11px] leading-relaxed text-plum/80"
+            >
+              {REGISTRATION_COPY.invalidEmail}
+            </span>
+          ) : null}
         </label>
         {/* ── nama panggilan ────────────────────────────────────────────── */}
         <label className="mt-4 block" htmlFor="checkout-nickname">
@@ -193,27 +189,37 @@ export function RegistrationSheet({
             onKeyDown={handleEnter}
             placeholder={REGISTRATION_COPY.namePlaceholder}
             aria-invalid={showErrors && !nicknameValid}
-            aria-describedby="checkout-nickname-hint"
+            aria-describedby={showErrors && !nicknameValid ? 'checkout-nickname-hint' : undefined}
             className={cn(
               'mt-2.5 w-full rounded-2xl bg-sage/45 px-4 py-3.5 text-[15px] font-medium text-forest outline-none ring-1 transition-all placeholder:font-medium placeholder:text-forest/30 focus:bg-cream focus:ring-2 focus:ring-forest/30',
               showErrors && !nicknameValid ? 'ring-plum/50' : 'ring-transparent',
             )}
           />
-          <span
-            id="checkout-nickname-hint"
-            className="mt-1.5 block text-[11px] leading-relaxed text-forest/45"
-          >
-            {showErrors && !nicknameValid
-              ? REGISTRATION_COPY.invalidNickname
-              : REGISTRATION_COPY.nameHint}
-          </span>
+          {showErrors && !nicknameValid ? (
+            <span
+              id="checkout-nickname-hint"
+              className="mt-1.5 block text-[11px] leading-relaxed text-plum/80"
+            >
+              {REGISTRATION_COPY.invalidNickname}
+            </span>
+          ) : null}
         </label>
 
-        {/* ── catatan jujur: paragraf demo DIHAPUS (paket 64) ───────────────────────────────────── */}
-        <p className="mt-5 flex items-start gap-2 rounded-2xl bg-sage/70 px-3.5 py-3 text-[11.5px] leading-relaxed text-forest/60 ring-1 ring-soil/8">
-          <Mail className="mt-0.5 size-3.5 shrink-0 text-forest" strokeWidth={2.4} aria-hidden />
-          <span>{REGISTRATION_COPY.emailNextNote}</span>
-        </p>
+        {/* langkah berikutnya — dua baris pendek; bukan kotak disclaimer yang
+            menambah beban baca sebelum menekan tombol */}
+        <div className="mt-6 flex items-center gap-3">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-sage/60 text-forest">
+            <Mail className="size-3.5" strokeWidth={2.2} aria-hidden />
+          </span>
+          <p className="min-w-0">
+            <span className="block text-[12px] leading-[1.4] font-medium text-forest">
+              {REGISTRATION_COPY.emailNextLead}
+            </span>
+            <span className="mt-0.5 block text-[11.5px] leading-[1.45] text-forest/50">
+              {REGISTRATION_COPY.emailNextNote}
+            </span>
+          </p>
+        </div>
       </form>
     </BudgetSheet>
   )

@@ -7,8 +7,9 @@
      1. Landing lama sudah dihapus; `app/page.tsx` sekarang merender section baru
         di `components/landing/lp/*`.
      2. HARGA (`LANDING_TIERS`/`LP_PRICING`) HANYA DIBACA dari `PLANS` di
-        `lib/data/pricing.ts`: monthly 49k/79k/199k (prabayar 30 hari) dan
-        lifetime 109k/129k/299k. Jangan menulis nominal di komponen.
+        `lib/data/pricing.ts`: lifetime 109k/129k/299k (sekali bayar, akses
+        selamanya). Paket bulanan sudah tidak dijual. Jangan menulis nominal di
+        komponen.
    ────────────────────────────────────────────────────────────────────────── */
 
 import { SITE_ORIGIN } from '../site'
@@ -38,8 +39,8 @@ export const REGISTERED_PLAN_PARAM = 'plan'
  *
  * `LANDING_TIERS[].id` memakai id yang SAMA dengan `PlanId` di
  * `lib/data/pricing.ts` ('catet-aja' | 'waras' | 'sultan'), dan harganya
- * DIBACA dari `PLANS[]` (monthly + lifetime). Tautan checkout selalu membawa
- * `period`, jadi tidak ada lagi dua daftar harga.
+ * DIBACA dari `PLANS[]` (lifetime — satu-satunya periode yang dijual). Tautan
+ * checkout selalu membawa `period=lifetime`, jadi tidak ada dua daftar harga.
  */
 
 
@@ -53,7 +54,7 @@ export const REGISTERED_PLAN_PARAM = 'plan'
 export function buildRegisteredHref(
   email: string,
   planId?: PlanId | null,
-  period: BillingPeriod = 'monthly',
+  period: BillingPeriod = 'lifetime',
 ): string {
   const query = new URLSearchParams({ email: email.trim(), period })
   if (planId) query.set(REGISTERED_PLAN_PARAM, planId)
@@ -97,12 +98,11 @@ export type LandingSectionMarker =
 
 /** rentang harga kanon dalam teks — dipakai copy landing supaya angkanya tidak ditulis tangan */
 const PRICE_RANGE_LABEL = `${formatIDR(PLANS[0].lifetime)}-${formatIDR(PLANS[PLANS.length - 1].lifetime)}`
-const MONTHLY_PRICE_RANGE_LABEL = `${formatIDR(PLANS[0].monthly)}-${formatIDR(PLANS[PLANS.length - 1].monthly)}`
 export const LANDING_META = {
   title: 'CatetInd: Catat Keuangan 4 Detik, Dibantu AI',
-  description: `Catatan keuangan buat Gen-Z Indonesia: satu catatan cukup 4 detik lewat voice atau foto struk, AI Coach yang gak nge-judge, dan laporan yang gampang dibaca. Mulai ${formatIDR(PLANS[0].monthly)} per 30 hari (prabayar, tanpa auto-debet) atau ${formatIDR(PLANS[0].lifetime)} sekali bayar untuk akses selamanya.`,
+  description: `Catatan keuangan buat Gen-Z Indonesia: satu catatan cukup 4 detik lewat voice atau foto struk, AI Coach yang gak nge-judge, dan laporan yang gampang dibaca. Mulai ${formatIDR(PLANS[0].lifetime)} sekali bayar untuk akses selamanya, tanpa tagihan bulanan.`,
   ogTitle: 'Catet keuangan 4 detik. Sisanya biar AI yang mikir.',
-  ogDescription: `CatetInd: mulai ${formatIDR(PLANS[0].monthly)} per 30 hari, prabayar tanpa auto-debet. Mau sekali beres? Lifetime mulai ${formatIDR(PLANS[0].lifetime)}.`,
+  ogDescription: `CatetInd: sekali bayar untuk akses selamanya, mulai ${formatIDR(PLANS[0].lifetime)}. Tanpa tagihan bulanan dan tanpa auto-debet.`,
   ogUrl: SITE_ORIGIN,
 } as const
 
@@ -839,27 +839,395 @@ export const LP_NAV = {
 } as const
 
 /* ── SATU PINTU MASUK: PAKET + PERIODE DEFAULT ───────────────────────────────
-   Hero dan section harga WAJIB menunjuk angka yang sama. Sebelumnya hero
-   mengirim `waras + monthly` sementara kartu harga default `lifetime`, jadi
-   pengunjung melihat dua harga berbeda untuk niat yang sama. Dua konstanta ini
-   dipakai LP_HERO.ctaHref DAN LP_PRICING.defaultMode. */
+   Hero dan section harga WAJIB menunjuk angka yang sama. Periode default
+   `lifetime` karena itu satu-satunya yang dijual; konstanta ini dipakai
+   LP_HERO.ctaHref DAN LP_PRICING.defaultMode. */
 export const LANDING_DEFAULT_PLAN_ID: PlanId = 'waras'
 export const LANDING_DEFAULT_PERIOD: BillingPeriod = 'lifetime'
 
+/* ── BUKTI SOSIAL HERO (angka & avatar) ─────────────────────────────────────
+   Angka yang tampil di hero adalah angka PUBLIK `1.000+`, bukan seed database
+   (234). Seed 234 tetap dipakai `/api/landing/stats`; hero sengaja memakai
+   label statis supaya tidak berubah-ubah saat angka riil masih kecil.
+
+   Avatar memakai LIMA file lokal yang sudah disiapkan desainer
+   (`public/AVA 1.png` … `public/AVA 5.png`) — bukan foto stok pihak ketiga.
+   Tidak ada `tone` warna-warni lagi: bingkai avatar digambar komponen sebagai
+   outline gelap tipis supaya lima foto terlihat satu keluarga. */
+export const LP_LIVE_SUBSCRIBERS = {
+  /** seed database untuk `/api/landing/stats` (tidak ditampilkan di hero) */
+  startCount: 234,
+  /** angka publik yang ditampilkan di hero */
+  displayCount: 1_000,
+  displaySuffix: '+',
+  /** kalimat setelah angka — mis. "1.000+ udah pake" */
+  labelTail: 'udah pake',
+  avatarPool: [
+    { src: '/AVA 1.png' },
+    { src: '/AVA 2.png' },
+    { src: '/AVA 3.png' },
+    { src: '/AVA 4.png' },
+    { src: '/AVA 5.png' },
+  ],
+} as const
+
+/* ── NOTIFIKASI PEMBELIAN (landing) ─────────────────────────────────────────
+   Toast kecil di pojok kiri bawah: "@rinajkt baru saja beli Paket Waras".
+
+   ANTI-REPETISI (revisi):
+     · pool 36 akun + kota + warna avatar, bukan 8 nama yang sama terus;
+     · urutan diacak per SESI (seed di sessionStorage), lalu diacak ULANG tiap
+       putaran selesai — pengunjung jam 1 siang dan jam 4 sore tidak melihat
+       urutan yang sama;
+     · posisi disimpan, jadi pindah halaman (landing → checkout) melanjutkan
+       rotasi, bukan mengulang dari nama pertama;
+     · satu nama tidak pernah muncul dua kali berurutan;
+     · paket ikut diacak tiap notifikasi: Waras 60%, Sultan 40%
+       (Paket Catet Aja sengaja tidak dipakai di notifikasi);
+     · jeda TIDAK tetap: 8–16 detik, sesekali 22–34 detik (bukan metronom).
+
+   Sumber pembelian NYATA tetap didahulukan bila feed tersedia (`freshMs`). */
+/* ── POOL BUYER NOTIFIKASI — 36 SEED + GENERATOR PROSEDURAL ──────────────────
+   Kenapa procedural: pool 600 nama tidak boleh ditulis manual (ribuan baris,
+   gampang duplikat). Generator ini DETERMINISTIK — tidak memakai Math.random —
+   jadi server, klien, dan test melihat daftar yang sama persis.
+
+   Bahan:
+     · 94 nama depan modern Indonesia;
+     · 14 sufiks handle yang wajar (prtm, putra, w, .r, dst.);
+     · 42 kota + singkatannya (jkt, bdg, sby, …);
+     · 4 token warna avatar yang dipakai bergiliran.
+
+   Format handle: @nama, @namaa (dobel huruf), @namajkt, @nama.jkt,
+   @namaprtm, @nama.prtm, … Sufiks dirotasi per nama supaya semua sufiks
+   terpakai, bukan hanya sufiks pertama. Semua masuk lewat Set → 100% unik.
+   ────────────────────────────────────────────────────────────────────────── */
+
+const NOTIF_FIRST_NAMES = [
+  'rina', 'dimas', 'amelia', 'bayu', 'nadya', 'fajar', 'intan', 'yosua',
+  'dewi', 'raka', 'sinta', 'arya', 'nabila', 'bagas', 'citra', 'dika',
+  'eka', 'farah', 'gita', 'hana', 'ivan', 'joko', 'kiki', 'lukman',
+  'maya', 'niko', 'putri', 'reza', 'sari', 'tio', 'vina', 'zaki',
+  'adit', 'bima', 'clarissa', 'dion', 'gilang', 'ilham', 'kevin', 'naufal',
+  'rendy', 'yoga', 'zahra', 'alya', 'arsy', 'bella', 'cindy', 'della',
+  'erik', 'fauzan', 'gina', 'hafiz', 'indah', 'jihan', 'kirana', 'laila',
+  'mira', 'nadia', 'oki', 'prima', 'qori', 'rafi', 'salma', 'tari',
+  'umi', 'vito', 'wulan', 'yudi', 'zulfa', 'anggi', 'bram', 'cahya',
+  'dinda', 'ega', 'farhan', 'galuh', 'hilda', 'iqbal', 'jasmine', 'kaisar',
+  'laras', 'miko', 'nessa', 'omar', 'pasha', 'raina', 'sabrina', 'taufik',
+  'ulfa', 'vania', 'wira', 'yusuf', 'zara', 'aditya',
+] as const
+
+const NOTIF_HANDLE_SUFFIXES = [
+  'prtm',
+  'putra',
+  'putri',
+  'lestari',
+  'w',
+  'p',
+  'rm',
+  's',
+  'f',
+  'dew',
+  'a',
+  'r',
+  'syah',
+  'hadi',
+] as const
+
+const NOTIF_CITIES = [
+  { name: 'Jakarta', abbr: 'jkt' },
+  { name: 'Bandung', abbr: 'bdg' },
+  { name: 'Surabaya', abbr: 'sby' },
+  { name: 'Yogyakarta', abbr: 'jogja' },
+  { name: 'Semarang', abbr: 'smg' },
+  { name: 'Malang', abbr: 'mlg' },
+  { name: 'Depok', abbr: 'dpk' },
+  { name: 'Bekasi', abbr: 'bks' },
+  { name: 'Tangerang', abbr: 'tng' },
+  { name: 'Bogor', abbr: 'bgr' },
+  { name: 'Solo', abbr: 'solo' },
+  { name: 'Medan', abbr: 'mdn' },
+  { name: 'Palembang', abbr: 'plm' },
+  { name: 'Makassar', abbr: 'mks' },
+  { name: 'Denpasar', abbr: 'dps' },
+  { name: 'Padang', abbr: 'pdg' },
+  { name: 'Sleman', abbr: 'slm' },
+  { name: 'Batam', abbr: 'btm' },
+  { name: 'Pekanbaru', abbr: 'pkb' },
+  { name: 'Balikpapan', abbr: 'bpp' },
+  { name: 'Samarinda', abbr: 'smd' },
+  { name: 'Banjarmasin', abbr: 'bjm' },
+  { name: 'Pontianak', abbr: 'ptk' },
+  { name: 'Manado', abbr: 'mdo' },
+  { name: 'Bandar Lampung', abbr: 'bdl' },
+  { name: 'Mataram', abbr: 'mtr' },
+  { name: 'Cirebon', abbr: 'crb' },
+  { name: 'Sukabumi', abbr: 'sbm' },
+  { name: 'Jember', abbr: 'jbr' },
+  { name: 'Kediri', abbr: 'kdr' },
+  { name: 'Probolinggo', abbr: 'pbl' },
+  { name: 'Madiun', abbr: 'mdu' },
+  { name: 'Magelang', abbr: 'mgl' },
+  { name: 'Salatiga', abbr: 'slg' },
+  { name: 'Purwokerto', abbr: 'pwt' },
+  { name: 'Tasikmalaya', abbr: 'tsk' },
+  { name: 'Cimahi', abbr: 'cmh' },
+  { name: 'Serang', abbr: 'srg' },
+  { name: 'Banda Aceh', abbr: 'bna' },
+  { name: 'Kupang', abbr: 'kpg' },
+  { name: 'Ambon', abbr: 'abn' },
+  { name: 'Jayapura', abbr: 'jpr' },
+] as const
+
+const NOTIF_TONES = ['bg-mint', 'bg-cantelope', 'bg-thistle', 'bg-plum'] as const
+
+export type NotificationBuyer = {
+  handle: string
+  city: string
+  tone: (typeof NOTIF_TONES)[number]
+}
+
+/** 36 akun asli — dipertahankan sebagai seed awal (handle, kota, tone aslinya) */
+const NOTIF_SEED_BUYERS: NotificationBuyer[] = [
+  { handle: '@rinajkt', city: 'Jakarta', tone: 'bg-mint' },
+  { handle: '@dimasprtm', city: 'Bandung', tone: 'bg-cantelope' },
+  { handle: '@ameliaa', city: 'Yogyakarta', tone: 'bg-thistle' },
+  { handle: '@bayu.w', city: 'Surabaya', tone: 'bg-plum' },
+  { handle: '@nadyaa', city: 'Depok', tone: 'bg-mint' },
+  { handle: '@fajarrm', city: 'Malang', tone: 'bg-cantelope' },
+  { handle: '@intanp', city: 'Semarang', tone: 'bg-thistle' },
+  { handle: '@yosuaa', city: 'Jakarta', tone: 'bg-plum' },
+  { handle: '@dewira', city: 'Bekasi', tone: 'bg-mint' },
+  { handle: '@rakaputra', city: 'Tangerang', tone: 'bg-cantelope' },
+  { handle: '@sintaa', city: 'Bogor', tone: 'bg-thistle' },
+  { handle: '@aryaw', city: 'Solo', tone: 'bg-plum' },
+  { handle: '@nabilaf', city: 'Medan', tone: 'bg-mint' },
+  { handle: '@bagass', city: 'Palembang', tone: 'bg-cantelope' },
+  { handle: '@citral', city: 'Makassar', tone: 'bg-thistle' },
+  { handle: '@dikap', city: 'Denpasar', tone: 'bg-plum' },
+  { handle: '@ekaputri', city: 'Padang', tone: 'bg-mint' },
+  { handle: '@farahh', city: 'Bandung', tone: 'bg-cantelope' },
+  { handle: '@gitap', city: 'Semarang', tone: 'bg-thistle' },
+  { handle: '@hanaf', city: 'Jakarta', tone: 'bg-plum' },
+  { handle: '@ivanr', city: 'Surabaya', tone: 'bg-mint' },
+  { handle: '@jokos', city: 'Sleman', tone: 'bg-cantelope' },
+  { handle: '@kikii', city: 'Malang', tone: 'bg-thistle' },
+  { handle: '@lukmanh', city: 'Bogor', tone: 'bg-plum' },
+  { handle: '@mayas', city: 'Depok', tone: 'bg-mint' },
+  { handle: '@nikop', city: 'Bekasi', tone: 'bg-cantelope' },
+  { handle: '@oktavi', city: 'Tangerang', tone: 'bg-thistle' },
+  { handle: '@putria', city: 'Yogyakarta', tone: 'bg-plum' },
+  { handle: '@rezaf', city: 'Bandung', tone: 'bg-mint' },
+  { handle: '@saridew', city: 'Solo', tone: 'bg-cantelope' },
+  { handle: '@tiow', city: 'Medan', tone: 'bg-thistle' },
+  { handle: '@umik', city: 'Palembang', tone: 'bg-plum' },
+  { handle: '@vinaa', city: 'Makassar', tone: 'bg-mint' },
+  { handle: '@wawanp', city: 'Denpasar', tone: 'bg-cantelope' },
+  { handle: '@yunia', city: 'Padang', tone: 'bg-thistle' },
+  { handle: '@zakif', city: 'Jakarta', tone: 'bg-plum' },
+]
+
+/**
+ * Format handle per putaran. Putaran 0–3: polos, dobel huruf, abbr kota, dan
+ * titik+abbr kota. Putaran 4+: sufiks, dengan indeks sufiks dirotasi per nama
+ * supaya semua 14 sufiks terpakai (bukan hanya sufiks pertama).
+ */
+function notifHandleFor(
+  round: number,
+  name: string,
+  nameIndex: number,
+  cityAbbr: string,
+): string {
+  if (round === 0) return `@${name}`
+  if (round === 1) return `@${name}${name.slice(-1)}`
+  if (round === 2) return `@${name}${cityAbbr}`
+  if (round === 3) return `@${name}.${cityAbbr}`
+
+  let suffix =
+    NOTIF_HANDLE_SUFFIXES[(nameIndex + round) % NOTIF_HANDLE_SUFFIXES.length] ?? 'prtm'
+  /* hindari handle seperti "@putriputri" — nama yang sama jadi sufiks */
+  if (suffix === name) {
+    suffix =
+      NOTIF_HANDLE_SUFFIXES[(nameIndex + round + 1) % NOTIF_HANDLE_SUFFIXES.length] ??
+      'prtm'
+  }
+  return round % 2 === 0 ? `@${name}${suffix}` : `@${name}.${suffix}`
+}
+
+/**
+ * Bangun pool buyer: seed dulu, lalu variasi prosedural sampai `total`.
+ * Kota & tone mengikuti posisi entri (tone 4 putaran, kota 42 putaran) jadi
+ * distribusinya rata. Handle dicek lewat Set → nol duplikat.
+ */
+function buildNotifBuyers(
+  seed: readonly NotificationBuyer[],
+  total: number,
+): NotificationBuyer[] {
+  if (seed.length >= total) return [...seed]
+
+  const entries = [...seed]
+  const seen = new Set(entries.map((entry) => entry.handle))
+  let round = 0
+
+  while (entries.length < total && round < 200) {
+    for (let nameIndex = 0; nameIndex < NOTIF_FIRST_NAMES.length; nameIndex += 1) {
+      if (entries.length >= total) break
+
+      const name = NOTIF_FIRST_NAMES[nameIndex]
+      if (!name) continue
+
+      const city = NOTIF_CITIES[entries.length % NOTIF_CITIES.length]
+      const tone = NOTIF_TONES[entries.length % NOTIF_TONES.length]
+      if (!city || !tone) continue
+
+      const handle = notifHandleFor(round, name, nameIndex, city.abbr)
+      if (seen.has(handle)) continue
+
+      seen.add(handle)
+      entries.push({ handle, city: city.name, tone })
+    }
+    round += 1
+  }
+
+  return entries
+}
+
+const NOTIF_BUYERS = buildNotifBuyers(NOTIF_SEED_BUYERS, 600)
+
+
+export const LP_PURCHASE_NOTIF = {
+  eyebrow: 'Pembelian terbaru',
+  prefix: 'baru saja beli',
+  dismissAria: 'Tutup notifikasi pembelian',
+  /**
+   * Pool buyer: 36 seed asli + hasil generator prosedural (total 600 unik).
+   * Lihat `buildNotifBuyers` di atas — tidak ada baris yang ditulis ribuan kali,
+   * dan semua handle dijamin unik oleh Set.
+   */
+  fallbackBuyers: NOTIF_BUYERS,
+  /** "baru aja" lebih sering — yang dipajang memang pembelian baru */
+  fallbackTimes: [
+    'baru aja',
+    'baru aja',
+    'baru aja',
+    '1 menit lalu',
+    '2 menit lalu',
+    '3 menit lalu',
+  ],
+  /** jeda acak antar notifikasi (setelah toast sebelumnya hilang) */
+  minGapMs: 8_000,
+  maxGapMs: 16_000,
+  longGapChance: 0.12,
+  longGapMinMs: 22_000,
+  longGapMaxMs: 34_000,
+  firstDelayMinMs: 2_000,
+  firstDelayMaxMs: 4_500,
+  visibleMs: 5_200,
+  /** umur maksimum pembelian NYATA yang masih boleh tampil */
+  freshMs: 30 * 60_000,
+} as const
+
+export interface PurchaseNotification {
+  id: string
+  handle: string
+  initial: string
+  packageName: string
+  /** kota pengguna; kosong untuk pembelian nyata (endpoint belum membawanya) */
+  city: string
+  /** kelas token latar avatar (bg-mint/bg-cantelope/bg-thistle/bg-plum) */
+  tone: string
+  time: string
+}
+
+/** `@rinajkt` → `R` (huruf pertama, tanpa `@` dan tanda baca) */
+function notifInitial(handle: string): string {
+  const clean = handle.replace(/^@/, '').replace(/[^a-zA-Z0-9]/g, '')
+  return (clean.charAt(0) || 'C').toUpperCase()
+}
+
+/** nama paket dari id kanon (selalu ada di PLANS; cadangan = PLANS[0]) */
+function planNameById(planId: PlanId): string {
+  return PLANS.find((plan) => plan.id === planId)?.name ?? PLANS[0].name
+}
+
+/**
+ * Nama paket untuk notifikasi: Waras 60%, Sultan 40%.
+ * Paket Catet Aja sengaja TIDAK dipakai — notifikasi hanya menampilkan paket
+ * ber-AI, jadi tidak ada kesan bahwa yang beli cuma paket paling murah.
+ * Tiap notifikasi independen; dua notifikasi berurutan boleh memakai paket
+ * yang sama karena hanya ada dua pilihan.
+ */
+export function randomPurchasePackageName(random: () => number = Math.random): string {
+  const roll = random()
+  return planNameById(roll < 0.6 ? 'waras' : 'sultan')
+}
+
+/**
+ * Notifikasi contoh yang dirotasi saat feed pembelian masih kosong.
+ * Nama paket tetap dibaca dari `PLANS`; kota & warna avatar ikut dibawa supaya
+ * dua notifikasi berurutan tidak terlihat seperti salinan yang sama.
+ */
+export function seededPurchaseNotifications(): PurchaseNotification[] {
+  return LP_PURCHASE_NOTIF.fallbackBuyers.map((buyer, index) => ({
+    id: `seed-${index}`,
+    handle: buyer.handle,
+    initial: notifInitial(buyer.handle),
+    /* 3 dari 5 = Waras (60%), 2 dari 5 = Sultan (40%). Catet Aja tidak dipakai. */
+    packageName: planNameById(index % 5 < 3 ? 'waras' : 'sultan'),
+    city: buyer.city,
+    tone: buyer.tone,
+    time: LP_PURCHASE_NOTIF.fallbackTimes[index % LP_PURCHASE_NOTIF.fallbackTimes.length],
+  }))
+}
+
+/**
+ * Pembelian NYATA → notifikasi. Nama kosong menjadi "@seseorang", harga yang
+ * tidak cocok dengan satu tier tetap dihormati (disebut "paket CatetInd"),
+ * jadi tidak ada tier yang dikarang untuk nominal asing. `id` memakai waktu
+ * (bukan indeks) supaya baris yang sama tidak tampil dua kali saat polling.
+ *
+ * Paket Catet Aja DIBUANG dari hasil: notifikasi hanya menampilkan paket
+ * ber-AI (Waras/Sultan), sesuai keputusan produk.
+ */
+export function purchaseNotificationsFromPurchases(
+  items: RecentPurchaseItem[],
+  nowMs: number,
+): PurchaseNotification[] {
+  return items.flatMap((item, index) => {
+    const name = typeof item.name === 'string' ? item.name.trim() : ''
+    const handle = name ? `@${name.toLowerCase().replace(/\s+/g, '')}` : '@seseorang'
+    const price = Number(item.price) || 0
+    const matched = PLANS.find((plan) => plan.lifetime === price)
+    if (matched?.id === 'catet-aja') return []
+
+    const at = typeof item.at === 'string' ? item.at : ''
+    return [
+      {
+        id: `live-${at || index}-${handle}`,
+        handle,
+        initial: notifInitial(handle),
+        packageName: matched?.name ?? 'paket CatetInd',
+        city: '',
+        tone: NOTIF_TONES[index % NOTIF_TONES.length],
+        time: at ? relativeFeedTime(at, nowMs) : 'baru aja',
+      },
+    ]
+  })
+}
+
 export const LP_HERO = {
   eyebrow: 'Kenalin, CatetInd',
-  /* SATU janji di headline: cepat dicatat + jelas ke mana perginya. "4 detik"
-     italic supaya angka itu jadi jangkar visual, bukan hiasan. Tidak ada
-     pengulangan "app keuangan" dan tidak ada titik yang memaksa baris yatim. */
-  headlineBefore: 'Catat ',
-  headlineEmphasis: '4 detik',
-  headlineAfter: '.',
-  /* Kalimat kedua selalu mulai di baris baru yang disengaja: hook pendek
-     ("Catat 4 detik.") lalu payoff. Tanpa ini, text-wrap memotong "lo tau"
-     jadi "lo" di ujung baris, yang terbaca sebagai runt. */
-  headlineTail: 'Biar lo tau duit lo ke mana.',
-  subheadline: 'Voice note atau foto struk, langsung jadi catatan rapi.',
-  ctaLabel: 'Mulai Catat Sekarang',
+  /* SATU janji di headline yang langsung menyapa kebiasaan target: males
+     nyatet. Kata "males" dipisah supaya komponen bisa menebalkan + memiringkan
+     HANYA kata itu (jangkar visual), tanpa memecah kalimat jadi dua baris
+     paksa. Tanpa titik di akhir — headline tampil sebagai frasa, bukan kalimat
+     berkala. */
+  headlineBefore: 'Aplikasi keuangan buat lo yang ',
+  headlineEmphasis: 'males',
+  headlineAfter: ' nyatet',
+  subheadline: 'Cuma butuh 4 detik. Tinggal kirim voice note atau foto struk',
+  ctaLabel: 'Cobain',
   /** paket + periode SAMA dengan default section harga (satu pintu masuk) */
   ctaHref: buildCheckoutHref(LANDING_DEFAULT_PLAN_ID, LANDING_DEFAULT_PERIOD),
   /* aset visual hero (dekoratif → ringkasannya di `visualAlt`) */
@@ -965,8 +1333,7 @@ export const LEAD_SHEET_COPY = {
   referralHint: 'Punya kode dari teman? Isi biar kamu dapat diskon.',
   submit: 'Buat akun',
   submitting: 'Mendaftarkan…',
-  emailNextNote:
-    'Langkah terakhir: buka tautan konfirmasi yang kami kirim ke emailmu.',
+  emailNextNote: 'Tautan konfirmasi sudah dikirim ke emailmu.',
 } as const
 
 /* ── HALAMAN /registered (Terima Kasih) ───────────────────────────────────── */
@@ -1101,53 +1468,49 @@ export const LP_MISSION = {
 }
 
 /* ── SECTION #pricing ───────────────────────────────────────────────────────
-   DUA PERIODE NYATA (rilis prepaid):
-     • Langganan 30 hari → `PLANS[].monthly` (49k/79k/199k), sekali bayar,
-       tanpa auto-debet; CTA `/checkout?plan=<id>&period=monthly`.
-     • Lifetime → `PLANS[].lifetime` (109k/129k/299k); CTA membawa
-       `period=lifetime`.
-   Default tampilan = lifetime (pemilik produk ingin harga sekali bayar yang
-   muncul lebih dulu). Tidak ada nominal di JSX.
+   SATU PERIODE: Lifetime → `PLANS[].lifetime` (109k/129k/299k), sekali bayar
+   untuk akses selamanya. CTA membawa `period=lifetime`. Paket 30 hari sudah
+   tidak dijual. Tidak ada nominal di JSX.
 
    Slot "Khusus Pasangan" tetap diganti fakta nyata: Joint Wallet termasuk di
    Paket Waras. Tidak ada dua akun, tidak ada harga baru. */
 
-export type LpPricingMode = 'monthly' | 'lifetime'
+/** SATU mode yang dijual. Tipe tetap ada supaya signature tidak berubah. */
+export type LpPricingMode = 'lifetime'
 
 export const LP_PRICING = {
   eyebrow: 'Harga',
+  /* Satu baris saja (tanpa subjudul): klaim harga di-highlight di tengah
+     kalimat. "Rp 150" sengaja dipisah dari "/hari" supaya pill tetap muat di
+     layar sempit, sementara teks yang terbaca utuh:
+     "Beresin bocor halus, cuma Rp 150 perak/hari". */
   titleBefore: 'Beresin bocor halus, ',
-  titleEmphasis: 'seharga 1 kopi',
-  titleAfter: '',
-  subheadline:
-    'Lebih murah dari sekali nongkrong, tapi nyelametin gaji lo jutaan rupiah tiap bulan. Tanpa biaya tersembunyi, tanpa jebakan auto-debit.',
-  /** a11y: nama grup dua tombol mode harga */
-  toggleAria: 'Pilih durasi paket',
-  modes: [
-    { id: 'monthly', label: '30 hari' },
-    { id: 'lifetime', label: 'Lifetime' },
-  ] as const satisfies readonly { id: LpPricingMode; label: string }[],
+  titleEmphasis: 'cuma Rp 150',
+  titleAfter: ' perak/hari',
+  /** a11y: nama grup mode harga (kini hanya satu: lifetime) */
+  toggleAria: 'Durasi paket',
+  modes: [{ id: 'lifetime', label: 'Lifetime' }] as const satisfies readonly {
+    id: LpPricingMode
+    label: string
+  }[],
   /** default = konstanta yang SAMA dengan CTA hero (satu pintu masuk) */
   defaultMode: LANDING_DEFAULT_PERIOD,
-  /** pill pembeda di tombol Lifetime (tanpa angka persen yang tidak dihitung) */
+  /** pill pembeda di kartu (tanpa angka persen yang tidak dihitung) */
   savingsLabel: 'Paling hemat',
   /** satuan ringkas yang tampil DI SAMPING nominal — bukan di tempat lain */
   priceUnits: {
-    monthly: '/ 30 hari',
     lifetime: '/ selamanya',
   } as const satisfies Record<LpPricingMode, string>,
   /** badge status singkat di atas nominal tiap kartu */
   modeBadge: {
-    monthly: 'Prepaid',
     lifetime: 'Sekali Bayar',
   } as const satisfies Record<LpPricingMode, string>,
-  /** badge di atas kartu — dibaca per mode */
+  /** badge di atas kartu */
   badges: {
-    monthly: 'Prabayar 30 hari · tanpa auto-debet',
     lifetime: LIFETIME_LABEL,
   },
   /** catatan mekanisme, tampil di bawah panel */
-  note: 'Perpanjang manual. Tidak ada auto-debet dan tidak ada token kartu yang disimpan.',
+  note: 'Sekali bayar, tanpa tagihan bulanan. Tidak ada auto-debet dan tidak ada token kartu yang disimpan.',
   /** badge tipe pembayaran di tiap kartu (desain baru: satu periode saja) */
   priceBadge: 'Sekali Bayar',
   /** satuan di samping nominal — selalu akses selamanya */
@@ -1159,17 +1522,19 @@ export const LP_PRICING = {
     'Pembayaran resmi terverifikasi via QRIS, GoPay, ShopeePay, OVO & VA (Midtrans). 100% data privat tanpa pernah minta akses m-Banking lo.',
   tiers: LANDING_TIERS,
   /** satu pintu tautan checkout — periode selalu ikut */
-  checkoutHref: (id: LandingTierId, mode: LpPricingMode) => buildCheckoutHref(id, mode),
+  checkoutHref: (id: LandingTierId, mode: LpPricingMode = 'lifetime') =>
+    buildCheckoutHref(id, mode),
 } as const
 
 /**
- * Satu pintu pembacaan harga landing. Angka monthly/lifetime DIBACA dari
- * `PLANS` — tidak ada daftar harga kedua yang bisa melenceng dari checkout.
+ * Satu pintu pembacaan harga landing. Angka lifetime DIBACA dari `PLANS` —
+ * tidak ada daftar harga kedua yang bisa melenceng dari checkout. Parameter
+ * mode dipertahankan demi signature lama; nilainya kini selalu lifetime.
  */
-export function lpPlanPrice(id: LandingTierId, mode: LpPricingMode): number {
+export function lpPlanPrice(id: LandingTierId, _mode: LpPricingMode = 'lifetime'): number {
   const plan = PLANS.find((item) => item.id === id)
   if (!plan) throw new Error(`Paket ${id} tidak ada di PLANS`)
-  return mode === 'monthly' ? plan.monthly : plan.lifetime
+  return plan.lifetime
 }
 
 
@@ -1257,7 +1622,7 @@ export const LP_FAQ = {
       category: 'harga',
       question: 'Kok mahal buat app catatan keuangan?',
       answer:
-        `Mulai ${MONTHLY_PRICE_RANGE_LABEL} per 30 hari atau sekali bayar ${PRICE_RANGE_LABEL}. Kalau bantu lo hemat Rp200.000 saja, lo sudah balik modal.`,
+        `Sekali bayar ${PRICE_RANGE_LABEL} untuk akses selamanya, tanpa tagihan bulanan. Kalau bantu lo hemat Rp200.000 saja, lo sudah balik modal.`,
     },
     {
       id: 'beda-paket',
@@ -1361,7 +1726,7 @@ export const LP_CONTACT = {
   body: 'Nol trik marketing, nol jebakan perpanjangan otomatis. Kalo mau mastiin CatetInd beneran cocok buat dompet lo, tanya aja dulu. Kita jawab jujur apa adanya.',
   trustChips: [
     'Tanpa akses rekening bank',
-    'Prabayar 30 hari, tanpa auto-debet',
+    'Sekali bayar, akses selamanya',
     'Data tetap milik lo',
   ],
   form: {
@@ -1432,7 +1797,9 @@ export const LP_CONTACT = {
       title: 'Pusat Bantuan / FAQ',
       body: 'Panduan cepat dan jawaban pertanyaan umum, tanpa perlu nunggu balasan.',
       ctaLabel: 'Buka pusat bantuan',
-      href: '/help',
+      /* `/bantuan` = halaman bantuan PUBLIK (tanpa sidebar app). `/help`
+         khusus user yang sudah login; halaman ini dibaca sebelum punya akun. */
+      href: '/bantuan',
     },
   ],
 } as const

@@ -8,7 +8,7 @@ vi.mock('@/lib/payments/midtrans', () => ({
   fetchTransactionStatus: vi.fn(),
   cancelTransaction: vi.fn(),
 }))
-vi.mock('@/lib/supabase/rest', () => ({ restFetch: vi.fn() }))
+vi.mock('@/lib/supabase/rest', () => ({ restFetch: vi.fn(), restRpc: vi.fn() }))
 vi.mock('@/lib/subscription/plan', () => ({ readCallerPlan: vi.fn() }))
 
 import { POST } from './route'
@@ -19,7 +19,7 @@ import {
   fetchTransactionStatus,
   midtransConfigured,
 } from '@/lib/payments/midtrans'
-import { restFetch } from '@/lib/supabase/rest'
+import { restFetch, restRpc } from '@/lib/supabase/rest'
 import { readCallerPlan } from '@/lib/subscription/plan'
 import { HERO_PLAN, PLANS, applyReferralDiscount } from '@/lib/data/pricing'
 import { AI_ADDON_PACKAGES } from '@/lib/ai-quota'
@@ -38,14 +38,15 @@ const charge = createCoreCharge as unknown as Mock
 const status = fetchTransactionStatus as unknown as Mock
 const cancel = cancelTransaction as unknown as Mock
 const rest = restFetch as unknown as Mock
+const rpc = restRpc as unknown as Mock
 
 const USER = { id: 'a1b2c3d4-aaaa-bbbb-cccc-dddddddddddd', email: 'a@b.c', name: 'Rina' }
 
 const OFFER = {
   purpose: 'subscribe',
   planId: HERO_PLAN.id,
-  period: 'monthly',
-  amount: HERO_PLAN.monthly,
+  period: 'lifetime',
+  amount: HERO_PLAN.lifetime,
   method: 'qris',
 }
 
@@ -59,7 +60,7 @@ const PENDING_STATUS = {
     paymentType: 'qris',
     method: 'qris',
     transactionId: 'tx-1',
-    amount: HERO_PLAN.monthly,
+    amount: HERO_PLAN.lifetime,
     expiresAt: '2026-10-10T21:15:45.000Z',
     instructions: { channel: 'qris', qrImageUrl: 'https://qr/contoh', qrString: '00020101' },
   },
@@ -112,13 +113,18 @@ beforeEach(() => {
       transactionStatus: 'pending',
       fraudStatus: null,
       transactionId: 'tx-1',
-      amount: HERO_PLAN.monthly,
+      amount: HERO_PLAN.lifetime,
       expiresAt: '2026-10-10T21:15:45.000Z',
       instructions: { channel: 'qris', qrImageUrl: 'https://qr/contoh', qrString: '00020101' },
     },
   })
   status.mockResolvedValue({ ok: false, reason: 'not-found', status: 404, message: 'belum ada' })
   cancel.mockResolvedValue(true)
+  rpc.mockImplementation(async (fn: string) => {
+    if (fn === 'validate_referral_code') return { ok: true, status: 200, data: 'referrer-uuid' }
+    if (fn === 'record_referral') return { ok: true, status: 200, data: true }
+    return { ok: true, status: 200, data: null }
+  })
   rest.mockImplementation(async (_path: string, options: { method?: string }) =>
     options?.method === 'POST'
       ? { ok: true, status: 201, data: null }
@@ -190,7 +196,7 @@ describe('POST /api/payment/charge', () => {
     expect(options.body.status).toBe('pending')
     expect(options.body.order_id).toBe(body.orderId)
     expect(options.body.tier_name).toBe(HERO_PLAN.id)
-    expect(options.body.billing_period).toBe('monthly')
+    expect(options.body.billing_period).toBe('lifetime')
 
     expect(charge).toHaveBeenCalledTimes(1)
     const [intent, method] = charge.mock.calls[0] as [
@@ -198,16 +204,113 @@ describe('POST /api/payment/charge', () => {
       { id: string },
     ]
     expect(intent.orderId).toBe(body.orderId)
-    expect(intent.amount).toBe(HERO_PLAN.monthly)
+    expect(intent.amount).toBe(HERO_PLAN.lifetime)
     expect(method.id).toBe('qris')
     expect(intent.notificationUrl).toBe('http://localhost:3000/api/payment/webhook')
     expect(intent.finishUrl).toContain('http://localhost:3000/checkout/selesai?order_id=')
   })
 
-  it('nominal diskon referral (10%) diterima', async () => {
-    const res = await POST(request({ ...OFFER, amount: applyReferralDiscount(HERO_PLAN.monthly) }))
+  const DISCOUNTED = applyReferralDiscount(HERO_PLAN.lifetime)
+  const REFERRAL = 'RINA-X7K'
+
+  it('nominal diskon TANPA kode → 422 (diskon tidak boleh hanya dari angka)', async () => {
+    const res = await POST(request({ ...OFFER, amount: DISCOUNTED }))
+    expect(res.status).toBe(422)
+    expect(charge).not.toHaveBeenCalled()
+  })
+
+  it('kode yang bentuknya tidak wajar → 422 tanpa menyentuh database', async () => {
+    const res = await POST(request({ ...OFFER, amount: DISCOUNTED, code: 'x' }))
+    expect(res.status).toBe(422)
+    expect(rpc).not.toHaveBeenCalled()
+    expect(charge).not.toHaveBeenCalled()
+  })
+
+  it('kode tidak ada di database → 422 (diskon tidak dipakai)', async () => {
+    rpc.mockResolvedValueOnce({ ok: true, status: 200, data: null })
+    const res = await POST(request({ ...OFFER, amount: DISCOUNTED, code: REFERRAL }))
+    expect(res.status).toBe(422)
+    expect(charge).not.toHaveBeenCalled()
+    expect(insertCalls()).toHaveLength(0)
+  })
+
+  it('kode milik akun sendiri → 422 (tidak boleh mengajak diri sendiri)', async () => {
+    rpc.mockResolvedValueOnce({ ok: true, status: 200, data: USER.id })
+    const res = await POST(request({ ...OFFER, amount: DISCOUNTED, code: REFERRAL }))
+    expect(res.status).toBe(422)
+    expect(charge).not.toHaveBeenCalled()
+  })
+
+  it('diskon dengan kode sah → expected_amount = nominal DIBayar & kode tercatat', async () => {
+    const res = await POST(request({ ...OFFER, amount: DISCOUNTED, code: REFERRAL }))
     expect(res.status).toBe(200)
-    expect(charge).toHaveBeenCalledTimes(1)
+
+    const [intent] = charge.mock.calls[0] as [{ amount: number }]
+    expect(intent.amount).toBe(DISCOUNTED)
+
+    const [, options] = insertCalls()[0] as [
+      string,
+      { body: { expected_amount: number; referral_code: string } },
+    ]
+    /* yang disimpan = nominal yang benar-benar ditagih; kalau harga penuh,
+       webhook akan menandainya amount_mismatch. */
+    expect(options.body.expected_amount).toBe(DISCOUNTED)
+    expect(options.body.referral_code).toBe(REFERRAL)
+
+    expect(rpc).toHaveBeenNthCalledWith(1, 'validate_referral_code', { p_code: REFERRAL }, 't')
+    expect(rpc).toHaveBeenNthCalledWith(
+      2,
+      'record_referral',
+      { p_code: REFERRAL, p_referred_email: USER.email },
+      't',
+    )
+  })
+
+  it('relasi referral gagal dicatat → 422, tagihan tidak dibuat', async () => {
+    rpc.mockImplementation(async (fn: string) =>
+      fn === 'validate_referral_code'
+        ? { ok: true, status: 200, data: 'referrer-uuid' }
+        : { ok: true, status: 200, data: false },
+    )
+    const res = await POST(request({ ...OFFER, amount: DISCOUNTED, code: REFERRAL }))
+    expect(res.status).toBe(422)
+    expect(charge).not.toHaveBeenCalled()
+    expect(insertCalls()).toHaveLength(0)
+  })
+
+  it('pending lama sudah SETTLED → tidak dibatalkan & tidak menagih ulang walau kode berubah', async () => {
+    rest.mockImplementation(async (_path: string, options: { method?: string }) =>
+      options?.method === 'POST'
+        ? { ok: true, status: 201, data: null }
+        : {
+            ok: true,
+            status: 200,
+            data: [
+              {
+                order_id: 'subscribe-a1b2c3d4-1',
+                expected_amount: HERO_PLAN.lifetime,
+                referral_code: null,
+              },
+            ],
+          },
+    )
+    status.mockResolvedValue({
+      ok: true,
+      value: { ...PENDING_STATUS.value, state: 'settled', instructions: null },
+    })
+
+    const res = await POST(
+      request({ ...OFFER, amount: applyReferralDiscount(HERO_PLAN.lifetime), code: 'RINA-X7K' }),
+    )
+    const body = await res.json()
+    expect(res.status).toBe(200)
+    expect(body.state).toBe('settled')
+    expect(body.orderId).toBe('subscribe-a1b2c3d4-1')
+    /* nominal yang dilaporkan = nominal tagihan lama yang sudah dibayar */
+    expect(body.amount).toBe(HERO_PLAN.lifetime)
+    expect(cancel).not.toHaveBeenCalled()
+    expect(charge).not.toHaveBeenCalled()
+    expect(insertCalls()).toHaveLength(0)
   })
 
   /* ── UPGRADE LIFETIME = SELISIH, DIHITUNG SERVER ───────────────────────────
@@ -281,41 +384,40 @@ describe('POST /api/payment/charge', () => {
     expect(charge).not.toHaveBeenCalled()
   })
 
-  /* ── PRABAYAR 30 HARI (rilis landing) ─────────────────────────────────────── */
+  /* ── SATU PERIODE: LIFETIME ───────────────────────────────────────────────── */
 
-  it('monthly menulis billing_period monthly + harga monthly penuh', async () => {
+  it('monthly sudah tidak dijual → 422, provider tidak dipanggil', async () => {
     owned('waras', true, false)
     const res = await POST(
       request({
-        purpose: 'renew',
+        purpose: 'subscribe',
         planId: 'waras',
         period: 'monthly',
         amount: PLANS[1].monthly,
         method: 'qris',
       }),
     )
-    expect(res.status).toBe(200)
-    const [, options] = insertCalls()[0] as [string, { body: { billing_period: string } }]
-    expect(options.body.billing_period).toBe('monthly')
-    const [intent] = charge.mock.calls[0] as [{ amount: number }]
-    expect(intent.amount).toBe(PLANS[1].monthly)
+    expect(res.status).toBe(422)
+    expect((await res.json()).reason).toBe('invalid')
+    expect(charge).not.toHaveBeenCalled()
   })
 
-  it('renew paket yang sama / turun tier monthly TIDAK ditolak guard upgrade', async () => {
+  it('purpose renew (perpanjangan 30 hari) ditolak 422', async () => {
     owned('sultan', true, false)
     const res = await POST(
       request({
         purpose: 'renew',
         planId: 'catet-aja',
-        period: 'monthly',
-        amount: PLANS[0].monthly,
+        period: 'lifetime',
+        amount: PLANS[0].lifetime,
         method: 'qris',
       }),
     )
-    expect(res.status).toBe(200)
+    expect(res.status).toBe(422)
+    expect(charge).not.toHaveBeenCalled()
   })
 
-  it('lifetime menulis billing_period lifetime + harga lifetime penuh dari monthly', async () => {
+  it('lifetime menulis billing_period lifetime + harga lifetime penuh dari paket lama', async () => {
     owned('waras', true, false)
     const res = await POST(
       request({
@@ -331,7 +433,7 @@ describe('POST /api/payment/charge', () => {
     expect(options.body.billing_period).toBe('lifetime')
   })
 
-  it('user lifetime tidak bisa membeli monthly → 403', async () => {
+  it('user lifetime tidak bisa membeli monthly → 422', async () => {
     owned('waras', true, true)
     const res = await POST(
       request({
@@ -342,8 +444,8 @@ describe('POST /api/payment/charge', () => {
         method: 'qris',
       }),
     )
-    expect(res.status).toBe(403)
-    expect((await res.json()).reason).toBe('lifetime-active')
+    expect(res.status).toBe(422)
+    expect((await res.json()).reason).toBe('invalid')
     expect(charge).not.toHaveBeenCalled()
   })
 
@@ -376,7 +478,7 @@ describe('POST /api/payment/charge', () => {
     rest.mockImplementation(async (_path: string, options: { method?: string }) =>
       options?.method === 'POST'
         ? { ok: true, status: 201, data: null }
-        : { ok: true, status: 200, data: [{ order_id: 'subscribe-a1b2c3d4-1' }] },
+        : { ok: true, status: 200, data: [{ order_id: 'subscribe-a1b2c3d4-1', expected_amount: HERO_PLAN.lifetime, referral_code: null }] },
     )
     status.mockResolvedValue(PENDING_STATUS)
 
@@ -395,7 +497,7 @@ describe('POST /api/payment/charge', () => {
     rest.mockImplementation(async (_path: string, options: { method?: string }) =>
       options?.method === 'POST'
         ? { ok: true, status: 201, data: null }
-        : { ok: true, status: 200, data: [{ order_id: 'subscribe-a1b2c3d4-1' }] },
+        : { ok: true, status: 200, data: [{ order_id: 'subscribe-a1b2c3d4-1', expected_amount: HERO_PLAN.lifetime, referral_code: null }] },
     )
     status.mockResolvedValue({
       ok: true,
@@ -417,7 +519,7 @@ describe('POST /api/payment/charge', () => {
     rest.mockImplementation(async (_path: string, options: { method?: string }) =>
       options?.method === 'POST'
         ? { ok: true, status: 201, data: null }
-        : { ok: true, status: 200, data: [{ order_id: 'subscribe-a1b2c3d4-1' }] },
+        : { ok: true, status: 200, data: [{ order_id: 'subscribe-a1b2c3d4-1', expected_amount: HERO_PLAN.lifetime, referral_code: null }] },
     )
     status.mockResolvedValue({
       ok: true,
@@ -431,6 +533,37 @@ describe('POST /api/payment/charge', () => {
     expect(insertCalls()).toHaveLength(1)
     expect(charge).toHaveBeenCalledTimes(1)
     expect(body.orderId).not.toBe('subscribe-a1b2c3d4-1')
+  })
+
+  it('pending harga PENUH tidak dipakai ulang untuk pembelian diskon → dibatalkan', async () => {
+    rest.mockImplementation(async (_path: string, options: { method?: string }) =>
+      options?.method === 'POST'
+        ? { ok: true, status: 201, data: null }
+        : {
+            ok: true,
+            status: 200,
+            data: [
+              {
+                order_id: 'subscribe-a1b2c3d4-1',
+                expected_amount: HERO_PLAN.lifetime,
+                referral_code: null,
+              },
+            ],
+          },
+    )
+    const discounted = applyReferralDiscount(HERO_PLAN.lifetime)
+
+    const res = await POST(request({ ...OFFER, amount: discounted, code: 'RINA-X7K' }))
+    expect(res.status).toBe(200)
+    /* tagihan penuh lama tidak boleh hidup berdampingan dengan tagihan diskon */
+    expect(cancel).toHaveBeenCalledWith('subscribe-a1b2c3d4-1')
+
+    const [, options] = insertCalls()[0] as [
+      string,
+      { body: { expected_amount: number; referral_code: string } },
+    ]
+    expect(options.body.expected_amount).toBe(discounted)
+    expect(options.body.referral_code).toBe('RINA-X7K')
   })
 
   it('provider menolak → status & pesannya diteruskan apa adanya', async () => {
@@ -492,10 +625,25 @@ describe('POST /api/payment/charge · purpose topup', () => {
     expect(options.body.tier_name).toBeNull()
   })
 
-  it('nominal versi diskon teman diterima', async () => {
+  it('nominal diskon top-up TANPA kode → 422', async () => {
     owned('waras')
     const res = await POST(request({ ...TOPUP, amount: applyReferralDiscount(SEDANG_PKG.price) }))
+    expect(res.status).toBe(422)
+    expect(charge).not.toHaveBeenCalled()
+  })
+
+  it('nominal versi diskon teman + kode sah diterima & expected_amount = nominal dibayar', async () => {
+    owned('waras')
+    const discounted = applyReferralDiscount(SEDANG_PKG.price)
+    const res = await POST(request({ ...TOPUP, amount: discounted, code: 'RINA-X7K' }))
     expect(res.status).toBe(200)
+
+    const [, options] = insertCalls()[0] as [
+      string,
+      { body: { expected_amount: number; referral_code: string } },
+    ]
+    expect(options.body.expected_amount).toBe(discounted)
+    expect(options.body.referral_code).toBe('RINA-X7K')
   })
 
   it('paket tanpa kuota (Catet Aja) & tanpa batas (Sultan) tidak boleh top up → 403', async () => {

@@ -159,6 +159,72 @@ export function subscribeAiUsageChanges(onChange: () => void): WealthRealtimeHan
   return subscribeTables('ai-usage-changes', ['ai_usage', 'ai_addons'], onChange)
 }
 
+/* ── REALTIME PENGHITUNG PENGGUNA LANDING (paket 87) ─────────────────────────
+   Helper untuk angka publik di `landing_stats`: ketika ada langganan baru,
+   trigger database menaikkan `subscriber_count`, dan helper ini mengirim ANGKA
+   barunya ke pemanggil. Hero landing sekarang memakai label statis `1.000+`,
+   jadi helper ini tidak dipanggil dari hero; tetap tersedia untuk pemakaian
+   lain yang membutuhkan angka realtime (mis. halaman internal/eksperimen).
+
+   Yang dikirim ke pemanggil hanya ANGKA — bukan baris mentah — karena itu
+   satu-satunya kolom yang boleh tampil di landing. Seperti channel lain di
+   file ini: RLS tetap berlaku, channel ditutup saat tab disembunyikan, dan
+   `stop()` aman dipanggil berkali-kali. */
+export function subscribeLandingStats(
+  onCount: (count: number) => void,
+): JointRealtimeHandle | null {
+  const client = browserSupabase()
+  if (!client) return null
+
+  let channel: RealtimeChannel | null = null
+  let stopped = false
+
+  const open = () => {
+    if (stopped || channel) return
+    channel = client
+      .channel('landing:stats')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'landing_stats',
+          filter: 'id=eq.global',
+        },
+        (payload) => {
+          const row = payload.new as { subscriber_count?: unknown } | null
+          const next = Number(row?.subscriber_count)
+          if (Number.isFinite(next) && next > 0) onCount(Math.floor(next))
+        },
+      )
+      .subscribe()
+  }
+
+  const close = () => {
+    if (!channel) return
+    const current = channel
+    channel = null
+    void client.removeChannel(current)
+  }
+
+  const onVisibility = () => {
+    if (document.visibilityState === 'hidden') close()
+    else open()
+  }
+
+  open()
+  document.addEventListener('visibilitychange', onVisibility)
+
+  return {
+    live: true,
+    stop: () => {
+      stopped = true
+      document.removeEventListener('visibilitychange', onVisibility)
+      close()
+    },
+  }
+}
+
 export function subscribeJointTransactions(
   jointWalletId: string,
   onInsert: (row: JointTransactionPayload) => void,

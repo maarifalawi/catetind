@@ -64,7 +64,7 @@ function CopyField({ label, value, large = false }: { label: string; value: stri
         <p className="text-[10.5px] font-medium tracking-[0.14em] text-forest/40 uppercase">{label}</p>
         <p
           className={`mt-1 truncate font-display font-semibold tabular-nums text-forest ${
-            large ? 'text-[20px] lg:text-[22px]' : 'text-[16px]'
+            large ? 'text-[20px] landing-tab:text-[22px]' : 'text-[16px]'
           }`}
         >
           {value}
@@ -169,7 +169,7 @@ export function PaymentInstructionCard({
   const live = !dead && !settled
 
   return (
-    <section className="rounded-[1.5rem] bg-cream p-5 ring-1 ring-soil/12 lg:rounded-[1.75rem] lg:p-6">
+    <section className="rounded-[24px] bg-cream p-5 shadow-landing-hairline ring-1 ring-soil/12 landing:p-6">
       <div className="flex items-center justify-between gap-3">
         <p className="text-[13.5px] font-medium text-forest">{methodCopy.label}</p>
         <span
@@ -181,7 +181,7 @@ export function PaymentInstructionCard({
       </div>
 
       {/* nominal + hitungan mundur dalam satu baris (hemat teks, mata langsung ke angka) */}
-      <div className="mt-3 flex items-baseline justify-between gap-3 border-t border-soil/12 pt-3.5">
+      <div className="mt-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-t border-soil/12 pt-3.5">
         <span className="text-[12.5px] text-forest/50">{PAY_CARD_COPY.totalLabel}</span>
         <span className="flex items-baseline gap-3">
           {live && remaining !== null && (
@@ -190,33 +190,33 @@ export function PaymentInstructionCard({
             </span>
           )}
           {dead && <span className="font-medium text-plum">{PAY_CARD_COPY.timeUpLabel}</span>}
-          <span className="font-display text-[19px] font-semibold tabular-nums text-forest lg:text-[21px]">
+          <span className="font-display text-[19px] font-semibold tabular-nums text-forest landing-tab:text-[21px]">
             {formatIDR(invoice.amount)}
           </span>
         </span>
       </div>
 
       {live && instructions?.channel === 'qris' && (
-        <div className="mt-4 lg:grid lg:grid-cols-[220px_minmax(0,1fr)] lg:items-center lg:gap-6">
-          {/* <img> biasa: sumbernya URL gambar dari provider, bukan aset app */}
-          <img
-            src={instructions.qrImageUrl}
-            alt={PAY_CARD_COPY.qrAlt}
-            width={220}
-            height={220}
-            className="mx-auto size-[210px] rounded-2xl bg-canvas object-contain p-3 ring-1 ring-soil/10 lg:mx-0"
-          />
-          <div className="mt-4 lg:mt-0">
+        <div className="mx-auto mt-4 w-full max-w-[420px] rounded-[20px] bg-canvas p-4 ring-1 ring-soil/10 landing:p-5">
+          <div className="mx-auto flex w-full max-w-[340px] flex-col items-center text-center">
             <p className="text-[12.5px] font-medium text-forest">{PAY_CARD_COPY.qrisScanTitle}</p>
-            {instructions.qrString && (
-              <>
-                <p className="mt-3 text-[11.5px] text-forest/45">{PAY_CARD_COPY.qrStringLabel}</p>
-                <div className="mt-2">
-                  <CopyField label={PAY_CARD_COPY.qrisScanTitle} value={instructions.qrString} />
-                </div>
-              </>
-            )}
+            {/* <img> biasa: sumbernya URL gambar dari provider, bukan aset app */}
+            <img
+              src={instructions.qrImageUrl}
+              alt={PAY_CARD_COPY.qrAlt}
+              width={220}
+              height={220}
+              className="mt-4 size-[210px] rounded-2xl bg-white object-contain p-3 ring-1 ring-soil/12 landing-tab:size-[220px]"
+            />
+            <p className="mt-3 text-[11.5px] leading-relaxed text-forest/50">{methodCopy.hint}</p>
           </div>
+        </div>
+      )}
+
+      {live && instructions?.channel === 'qris' && instructions.qrString && (
+        <div className="mt-3">
+          <p className="mb-2 text-[11.5px] text-forest/45">{PAY_CARD_COPY.qrStringLabel}</p>
+          <CopyField label={methodCopy.label} value={instructions.qrString} />
         </div>
       )}
 
@@ -237,7 +237,7 @@ export function PaymentInstructionCard({
             href={instructions.deeplinkUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-forest px-6 text-[13.5px] font-medium text-cream transition-colors duration-200 hover:bg-forest-soft motion-reduce:transition-none lg:w-auto lg:min-w-[260px]"
+            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-forest px-6 text-[13.5px] font-medium text-cream transition-colors duration-200 hover:bg-forest-soft motion-reduce:transition-none landing-tab:w-auto landing-tab:min-w-[260px]"
           >
             {PAY_CARD_COPY.ewalletCta}
             <ExternalLink className="size-4" strokeWidth={2.4} aria-hidden />
@@ -248,7 +248,7 @@ export function PaymentInstructionCard({
 
       {live && instructions?.channel === 'bill' && (
         <div className="mt-4">
-          <div className="grid gap-2.5 lg:grid-cols-2">
+          <div className="grid gap-2.5 landing-tab:grid-cols-2">
             <CopyField label={PAY_CARD_COPY.billerLabel} value={instructions.billerCode} />
             <CopyField label={PAY_CARD_COPY.billKeyLabel} value={instructions.billKey} large />
           </div>
@@ -283,11 +283,11 @@ export function PaymentInstructionCard({
                 : PAY_CARD_COPY.failedBody}
             </span>
           </p>
-          <div className="mt-3 flex flex-col gap-2 lg:flex-row">
+          <div className="mt-3 flex flex-col gap-2 landing-tab:flex-row">
             <button
               type="button"
               onClick={onNewInvoice}
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-forest px-6 text-[13.5px] font-medium text-cream transition-colors duration-200 hover:bg-forest-soft motion-reduce:transition-none lg:min-w-[200px]"
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-forest px-6 text-[13.5px] font-medium text-cream transition-colors duration-200 hover:bg-forest-soft motion-reduce:transition-none landing-tab:min-w-[200px]"
             >
               <RefreshCw className="size-4" strokeWidth={2.4} aria-hidden />
               {PAY_CARD_COPY.newInvoiceLabel}

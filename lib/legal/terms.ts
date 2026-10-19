@@ -382,7 +382,8 @@ export const TERMS_DOC: LegalDocument = {
         desc: 'Data apa yang kami simpan, siapa yang boleh melihatnya, dan sakelar untuk mematikan AI.',
       },
       {
-        href: '/help',
+        /* `/bantuan` (bukan `/help`): S&K dibaca sebelum login. */
+        href: '/bantuan',
         label: 'Pusat Bantuan',
         desc: 'Cara pakai sehari-hari, batas kuota AI, dan jalan ngobrol langsung sama founder.',
       },

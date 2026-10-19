@@ -1,14 +1,13 @@
 /* ── AJAKAN UPGRADE + AKSES PAKET ────────────────────────────────────────────
-   Sejak rilis prepaid ada DUA periode nyata:
-     1. `monthly` — prabayar 30 hari; bisa diperpanjang manual, pindah tier,
-        termasuk turun tier tanpa refund.
-     2. `lifetime` — sekali bayar, akses selamanya.
+   Satu periode yang dijual: `lifetime` — sekali bayar, akses selamanya. Nilai
+   `monthly` hanya tersisa pada pembelian LAMA (warisan), bukan produk aktif.
 
    File ini mengurus tiga keadaan yang diturunkan dari `priceFor()`:
      · AJAKAN UPGRADE — user sudah punya paket dan ingin tier lebih tinggi;
-       nominal selalu dari `priceFor()` (bisa selisih lifetime atau harga penuh
-       lifetime kalau asalnya monthly).
-     · EXPIRED — prabayar lewat tanggal; banner ramah, CTA perpanjang monthly.
+       nominal selalu dari `priceFor()` (selisih lifetime, atau harga penuh
+       lifetime bila asalnya paket 30 hari lama).
+     · EXPIRED — paket 30 hari lama lewat tanggal; banner ramah, CTA lanjut
+       ke lifetime (bukan perpanjang bulanan yang sudah tidak dijual).
      · KUNCI PENUH — belum punya paket; baca & jelajah tetap jalan, catat ditahan.
 
    Jangan mengarang nominal atau status: semua dibaca dari `pricing.ts` dan
@@ -136,7 +135,7 @@ export const UPGRADE_BANNER_COPY = {
   noPurchase: {
     eyebrow: 'Belum ada paket aktif',
     title: 'Pilih paket buat mulai catat',
-    body: 'Prabayar 30 hari atau sekali bayar lifetime. Tanpa auto-debet.',
+    body: 'Sekali bayar untuk akses selamanya. Tanpa tagihan bulanan.',
     cta: 'Pilih paket',
   },
   /**
@@ -149,12 +148,15 @@ export const UPGRADE_BANNER_COPY = {
     body: 'Upgrade ke lifetime {target}: {amount}. Aksesnya selamanya, tanpa auto-debet.',
     cta: 'Upgrade',
   },
-  /** Masa aktif prabayar habis: ramah, bukan menuduh, dan menawarkan renew. */
+  /**
+   * Paket 30 hari LAMA sudah berakhir: ramah, bukan menuduh, dan menawarkan
+   * jalan ke akses selamanya — perpanjangan bulanan sudah tidak dijual.
+   */
   expired: {
-    eyebrow: 'Masa aktif habis',
-    title: 'Masa aktif {plan} habis — perpanjang 30 hari',
-    body: 'Semua catatanmu tetap aman dan bisa dibaca/diekspor. Tombol tambah data hidup lagi setelah diperpanjang.',
-    cta: 'Perpanjang',
+    eyebrow: 'Paket lama berakhir',
+    title: 'Paket {plan} sudah berakhir — lanjut ke Lifetime',
+    body: 'Semua catatanmu tetap aman dan bisa dibaca/diekspor. Sekali bayar lifetime membuka lagi tombol tambah data, selamanya.',
+    cta: 'Lanjut ke Lifetime',
   },
 } as const
 
@@ -183,9 +185,9 @@ export function upgradeBannerCopy(
 }
 
 /**
- * Copy banner saat masa aktif prabayar habis. CTA-nya perpanjangan monthly —
- * bukan upgrade lifetime — karena kebutuhan user saat itu adalah membuka lagi
- * pencatatan, bukan membeli akses yang lebih tinggi.
+ * Copy banner saat paket 30 hari LAMA habis. CTA-nya akses selamanya karena
+ * perpanjangan bulanan sudah tidak dijual; kebutuhan user saat itu adalah
+ * membuka lagi pencatatan, dan lifetime adalah satu-satunya jalan.
  */
 export function expiredBannerCopy(planName: string): UpgradeBannerCopy {
   return {

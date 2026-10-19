@@ -19,11 +19,11 @@ import { useSubscriptionGate } from './subscription-gate-provider'
 /* ── MODAL UPGRADE ───────────────────────────────────────────────────────────
    Menampilkan target tier yang lebih tinggi. Nominal SELALU dari `priceFor()`:
      · lifetime → lifetime lebih rendah: selisih;
-     · monthly → lifetime: harga penuh lifetime (tanpa prorate);
+     · paket lama → lifetime: harga penuh lifetime (tanpa prorate);
      · belum punya paket: harga penuh target.
-   Tidak ada tombol palsu: semua CTA menuju halaman bayar dengan `period` yang
-   benar. Modal ini bukan satu-satunya jalan renew — perpanjangan monthly ada di
-   billing panel dan banner expired. */
+   Tidak ada tombol palsu: semua CTA menuju halaman bayar dengan
+   `period=lifetime` (satu-satunya periode yang dijual). Tidak ada perpanjangan
+   bulanan di mana pun — pelanggan lama diarahkan ke lifetime. */
 
 function fill(template: string, values: Record<string, string>): string {
   return Object.entries(values).reduce(
