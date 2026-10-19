@@ -37,14 +37,13 @@ export function LandingLiveSubscribers({ className }: { className?: string }) {
 
   return (
     <div className={cn('relative flex min-w-0 flex-col gap-1 landing-tab:gap-2', className)}>
-      {/* ticker avatar: 5 foto, gap 4px seperti export. Tidak ada fade tepi
-          lagi karena baris CTA kini selebar konten dan dipusatkan, bukan
-          dipotong oleh kolom `flex-1`. */}
+      {/* ticker avatar: 5 foto DEMPET (overlap 2px) seperti tumpukan avatar.
+          Tidak ada fade tepi karena baris CTA selebar konten dan dipusatkan. */}
       <span
         aria-hidden
         className="relative flex h-7 items-center min-[420px]:h-8 landing-tab:h-9"
       >
-        <span className="flex w-max items-center gap-1">
+        <span className="flex w-max items-center -space-x-0.5">
           {COPY.avatarPool.map((avatar) => (
             <span
               key={avatar.src}
