@@ -149,13 +149,6 @@ export const LOGIN_COPY = {
   /** aksi sekunder: belum punya akun → daftar (route /checkout sudah ada) */
   registerLead: 'Belum punya akun?',
   registerLink: 'Daftar',
-  /** jalan keluar kecil di kaki halaman — bukan user yang disalahkan, tapi kami yang dibantu.
-   *  Tujuannya `/bantuan` (publik), BUKAN `/help`: `/help` adalah Pusat Bantuan
-   *  di dalam app (sidebar + data keuangan) dan hanya boleh dibuka setelah
-   *  login. Tautan dari halaman masuk tidak boleh melewati gerbang itu. */
-  helpLead: 'Emailmu nggak ketemu?',
-  helpLink: 'Kabarin kami di Pusat Bantuan.',
-  helpHref: '/bantuan',
 } as const
 
 
@@ -219,8 +212,6 @@ export const SESSION_COPY = {
   /** label tombol saat permintaan sesi sedang berjalan (tukar tautan / kode) */
   signingIn: 'Menyambungkan ke akunmu…',
   signInToast: 'Kamu sudah masuk 🌿',
-  signInToastDescription:
-    'Sesi ini milik Supabase Auth: tokennya ditandatangani server, dan datamu hanya bisa dibaca atas nama akunmu (RLS di database).',
   signInFailed: 'Gagal masuk',
   /** panel Keluar */
   signedOutToast: 'Sampai jumpa lagi! 👋',

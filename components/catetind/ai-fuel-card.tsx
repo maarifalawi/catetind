@@ -1,16 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowUpRight, Mic, RotateCcw } from 'lucide-react'
 import {
   AI_FUEL_COPY,
   AI_PLAN_LOCKED_COPY,
   AI_QUOTA_EXHAUSTED_COPY,
   AI_QUOTA_RESET_FALLBACK,
   AI_UNLIMITED_BADGE,
-  AI_UNLIMITED_NOTE,
-  compactNumber,
-  formatDuration,
   planQuota,
 } from '@/lib/ai-quota'
 import { useAiQuota } from '@/hooks/use-ai-quota'
@@ -18,30 +14,21 @@ import { useAiQuotaReset } from '@/hooks/use-ai-quota-reset'
 import { useSubscriptionGate } from './subscription-gate-provider'
 import { NavTooltip } from './nav-tooltip'
 
-/* ── Bahan Bakar AI (sidebar desktop) — versi MINIMALIS ──────────────────────
-   Sisa kuota AI (token + voice) di satu kartu kecil yang selalu terlihat.
+/* ── Bahan Bakar AI (sidebar) — SATU ANGKA, SATU BARIS MAKNA ─────────────────
+   Sisa kuota AI di satu kartu kecil yang selalu terlihat. Prinsipnya: sekali
+   lirik langsung terbaca.
 
-   Angka: SEMUA turunan dari `lib/ai-quota.ts` (satu sumber kebenaran) dan nama
-   paket dari `lib/data/pricing.ts` — jadi angka & label di sini tidak mungkin
-   lagi berbeda dengan /settings/billing, header AI Coach, banner Home, atau
-   dokumen /terms.
+    1. KEPALA → "Bahan Bakar AI" + nama paket (`lib/data/pricing.ts`).
+    2. ANGKA  → satu nilai besar: "23% sisa" (atau "Tanpa batas").
+    3. MAKNA  → terjemahan angkanya, satu baris: "≈ 718 catatan AI lagi".
+    4. GARIS  → satu hairline 3px, tanpa kilau.
+    5. EKOR   → voice + reset dalam SATU baris kecil, tanpa ikon.
 
-   Angka besar = SISA KUOTA DASAR (kolam yang di-reset tanggal 1) — sama seperti
-   contoh PRD 4919–4930. Token add-on sengaja tidak digabung ke persen ini; ia
-   punya barisnya sendiri di Billing supaya dua kolam tidak jadi satu angka kabur.
-
-   Redesign: versi lama terlalu ramai (ring SVG + badge pill + 2 bar + 4 ikon +
-   aurora blur + kilau berjalan). Sekarang prinsipnya "satu baris satu makna":
-
-   1. LABEL  → "Bahan Bakar AI" + nama paket di kanan (tanpa badge pill).
-   2. ANGKA  → satu angka besar yang langsung dibaca: "23% sisa".
-   3. MAKNA  → terjemahan angka teknisnya (token & catatan AI) satu baris saja.
-   4. GARIS  → satu hairline 3px sebagai isyarat visual, tanpa kilau.
-   5. EKOR   → voice + reset + jalur "Top up" dalam satu baris kecil.
-
-   Framing selalu "sisa" (tanpa kata limit/habis, tanpa merah) — kanon 2B.2/5C.
-   Voice memakai satuan kanon PRD (PANGGILAN), bukan jam.
-   Saat sidebar collapsed, kartu mengecil jadi angka persentase + tooltip. */
+   Yang sengaja TIDAK ada di kartu ini: paragraf fair-use, rincian token mentah,
+   dan tautan "Top up" terpisah — SELURUH kartu sudah menuju /settings/billing,
+   tempat semua rincian itu hidup. Framing selalu "sisa" (tanpa kata limit/habis,
+   tanpa merah); satuan voice = PANGGILAN (kanon PRD), bukan jam.
+   Saat sidebar collapsed, kartu mengecil jadi angka + tooltip. */
 
 export function AiFuelCard({ collapsed }: { collapsed: boolean }) {
   /* NOL angka di komponen ini — semuanya dari satu snapshot kuota hidup
@@ -62,16 +49,17 @@ export function AiFuelCard({ collapsed }: { collapsed: boolean }) {
   const pq = planQuota(planId)
   const planName = plan?.name ?? 'Belum ada paket'
 
-  /* satu label untuk tooltip (collapsed) & pembaca layar. Durasi voice di sini
-     cuma terjemahan turunan dari sisa PANGGILAN, bukan angka tersendiri. */
-  const summary = `${AI_FUEL_COPY.cardTitle} ${planName}: ${quota.remainingPct}% sisa · ${compactNumber(
-    quota.baseTokensRemaining,
-  )} token (≈ ${recordsLeft.toLocaleString('id-ID')} catatan AI) · voice ${quota.voiceCallsRemaining} panggilan sisa (≈ ${formatDuration(
-    quota.voiceRemainingSeconds,
-  )}) · reset ${resetDaysLabel}`
+  /* satu label untuk tooltip (collapsed) & pembaca layar — versi ringkas dari
+     isi kartu, bukan daftar angka mentah. */
+  const summary = pq.unlimited
+    ? `${AI_FUEL_COPY.cardTitle} ${planName}: ${AI_UNLIMITED_BADGE} · ${quota.voiceCallsRemaining} panggilan`
+    : `${AI_FUEL_COPY.cardTitle} ${planName}: ${quota.remainingPct}% ${AI_FUEL_COPY.remainingLabel} · ${AI_FUEL_COPY.recordsLeft(
+        recordsLeft,
+      )} · ${quota.voiceCallsRemaining} panggilan · Reset ${resetDaysLabel}`
 
   /* PAKET TANPA AI (paket 84): kartu tidak menampilkan tangki kosong yang
-     membingungkan — ia berkata apa adanya dan mengarahkan ke halaman paket. */
+     membingungkan — cukup nama paket + satu pernyataan, tanpa paragraf.
+     Penjelasan lengkapnya tetap dibacakan lewat `aria-label`. */
   if (planKnown && !pq.aiEnabled) {
     return (
       <Link
@@ -79,31 +67,31 @@ export function AiFuelCard({ collapsed }: { collapsed: boolean }) {
         aria-label={`${AI_PLAN_LOCKED_COPY.cardTitle}. ${AI_PLAN_LOCKED_COPY.body}`}
         className="group/lock mt-4 block shrink-0 rounded-[1.35rem] bg-cream p-4 ring-1 ring-ink/[0.06] transition-colors duration-200 hover:bg-sage/70"
       >
-        <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-forest/40">
-          {AI_FUEL_COPY.cardTitle}
+        <span className="flex items-baseline justify-between gap-2">
+          <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-forest/40">
+            {AI_FUEL_COPY.cardTitle}
+          </span>
+          <span className="truncate text-[11px] font-medium text-forest/45">{planName}</span>
         </span>
         <span className="mt-2 block text-[12.5px] font-medium leading-snug text-forest">
           {AI_PLAN_LOCKED_COPY.cardTitle}
-        </span>
-        <span className="mt-1.5 block text-[11px] leading-snug text-forest/55">
-          {AI_PLAN_LOCKED_COPY.body}
         </span>
       </Link>
     )
   }
 
   /* versi collapsed: cukup angkanya, detail lengkap lewat tooltip.
-     Tooltip-nya dibikin MULTILINE (max-w + whitespace-normal): versi sebelumnya
-     satu baris panjang yang menjulur keluar tepi layar sehingga teksnya
-     terpotong tepat di tengah frasa ("Voice ... sisa ..."). */
+     Paket tanpa batas memakai "∞" — bukan "100%" yang menyiratkan tangki penuh. */
   if (collapsed) {
     return (
       <Link
         href="/settings/billing"
         aria-label={summary}
-        className="group/item relative mt-4 flex size-11 shrink-0 items-center justify-center rounded-2xl bg-cream text-[10px] font-medium tabular-nums text-forest ring-1 ring-ink/[0.06] transition-colors duration-200 hover:bg-sage active:scale-95 motion-reduce:transition-none"
+        className="group/item relative mt-4 flex size-11 shrink-0 items-center justify-center rounded-2xl bg-cream text-[12px] font-medium tabular-nums text-forest ring-1 ring-ink/[0.06] transition-colors duration-200 hover:bg-sage active:scale-95 motion-reduce:transition-none"
       >
-        <span className="relative">{quota.remainingPct}%</span>
+        <span className="relative" aria-hidden>
+          {pq.unlimited ? '∞' : `${quota.remainingPct}%`}
+        </span>
         <NavTooltip
           label={summary}
           className="max-w-[240px] whitespace-normal text-left leading-snug"
@@ -117,24 +105,22 @@ export function AiFuelCard({ collapsed }: { collapsed: boolean }) {
       href="/settings/billing"
       aria-label={summary}
       /* shrink-0: kartu ini tidak boleh ikut menyusut saat tinggi sidebar
-         terbatas — kalau menyusut, barisnya yang paling bawah (voice + reset)
-         yang "hilang" lebih dulu. Daftar menu di atasnya yang menggulir. */
+         terbatas — kalau menyusut, barisnya yang paling bawah yang "hilang"
+         lebih dulu. Daftar menu di atasnya yang menggulir. */
       className="group/fuel mt-4 block shrink-0 rounded-[1.35rem] bg-cream p-4 ring-1 ring-ink/[0.06] transition-colors duration-200 hover:bg-sage/70"
     >
-      {/* label + nama paket — wrap, bukan truncate, supaya tidak pernah "...' */}
-      <span className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
+      {/* 1 · KEPALA — judul + nama paket, satu baris, tanpa pill */}
+      <span className="flex items-baseline justify-between gap-2">
         <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-forest/40">
           {AI_FUEL_COPY.cardTitle}
         </span>
-        <span className="text-[11px] font-medium text-forest/45">{planName}</span>
+        <span className="truncate text-[11px] font-medium text-forest/45">{planName}</span>
       </span>
 
-      {/* satu angka besar yang langsung terbaca. Untuk paket tanpa batas
-          (Paket Sultan) angkanya diganti pernyataan yang benar — bukan "100%
-          sisa" yang menyiratkan ada tangki yang bisa kosong. */}
-      <span className="mt-2.5 flex items-baseline gap-1.5 text-forest">
+      {/* 2 · ANGKA — satu nilai besar yang langsung terbaca */}
+      <span className="mt-2 flex items-baseline gap-1.5 text-forest">
         {pq.unlimited ? (
-          <span className="text-[15px] font-medium leading-none tracking-[-0.02em]">
+          <span className="text-[20px] font-medium leading-none tracking-[-0.03em]">
             {AI_UNLIMITED_BADGE}
           </span>
         ) : (
@@ -148,54 +134,43 @@ export function AiFuelCard({ collapsed }: { collapsed: boolean }) {
           </>
         )}
       </span>
-      <span className="mt-1.5 block break-words text-[11.5px] leading-snug tabular-nums text-forest/50">
-        {pq.unlimited
-          ? AI_UNLIMITED_NOTE
-          : `${compactNumber(quota.baseTokensRemaining)} token ${AI_FUEL_COPY.recordsLeft(recordsLeft)}`}
-      </span>
 
-      {/* hairline sisa kuota — arah isian = kuota yang MASIH tersisa */}
-      <span
-        role="progressbar"
-        aria-label={quota.exhausted ? AI_QUOTA_EXHAUSTED_COPY.progressLabel : 'Sisa kuota AI'}
-        aria-valuenow={quota.remainingPct}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        className="mt-3 block h-[3px] w-full overflow-hidden rounded-full bg-ink/[0.08]"
-      >
-        <span
-          className="block h-full rounded-full bg-forest"
-          style={{ width: `${Math.max(2, quota.remainingPct)}%` }}
-        />
-      </span>
+      {!pq.unlimited && (
+        <>
+          {/* 3 · MAKNA — terjemahan angkanya, bukan istilah teknis */}
+          <span className="mt-1 block text-[11.5px] leading-snug tabular-nums text-forest/50">
+            {AI_FUEL_COPY.recordsLeft(recordsLeft)}
+          </span>
 
-      {/* STATE KOSONG (paket 42): kalau dua kolam benar-benar habis, kartu ini
-          menyebut jalan keluarnya alih-alih menampilkan "0%" tanpa penjelasan —
-          user tetap tahu bahwa mencatat MANUAL belum ikut berhenti. */}
-      {quota.exhausted && (
-        <span className="mt-2.5 block text-[11px] leading-snug text-forest/55">
-          {AI_QUOTA_EXHAUSTED_COPY.gaugeNote(reset?.label ?? AI_QUOTA_RESET_FALLBACK)}
-        </span>
+          {/* 4 · GARIS — arah isian = kuota yang MASIH tersisa */}
+          <span
+            role="progressbar"
+            aria-label={quota.exhausted ? AI_QUOTA_EXHAUSTED_COPY.progressLabel : 'Sisa kuota AI'}
+            aria-valuenow={quota.remainingPct}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            className="mt-3 block h-[3px] w-full overflow-hidden rounded-full bg-ink/[0.08]"
+          >
+            <span
+              className="block h-full rounded-full bg-forest"
+              style={{ width: `${Math.max(2, quota.remainingPct)}%` }}
+            />
+          </span>
+        </>
       )}
 
-      {/* ekor: DUA baris penuh — sengaja TIDAK memakai `truncate`.
-          Sebelumnya "Voice ... · Reset ..." dan "Top up" berebut ruang di lebar
-          kartu ~230px sehingga teksnya terpotong "...". Sekarang tiap makna
-          punya barisnya sendiri. */}
-      <span className="mt-3 block text-[11px]">
-        <span className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
-          <span className="inline-flex items-center gap-1.5 font-medium tabular-nums text-forest/45">
-            <Mic className="size-3 shrink-0" strokeWidth={2.2} aria-hidden />
-            Voice {quota.voiceCallsRemaining} panggilan sisa
-          </span>
-          <span className="inline-flex shrink-0 items-center gap-0.5 font-medium text-forest">
-            Top up
-            <ArrowUpRight className="size-3" strokeWidth={2.4} aria-hidden />
-          </span>
+      {/* 5 · EKOR — voice + reset dalam SATU baris kecil, tanpa ikon.
+          Saat kuota benar-benar habis, "Kuota habis" menggantikan "Reset" supaya
+          keadaan itu terbaca tanpa menambah baris/paragraf baru. */}
+      <span className="mt-3 flex flex-wrap items-center gap-x-1.5 text-[11px] font-medium tabular-nums text-forest/40">
+        <span>{quota.voiceCallsRemaining} panggilan</span>
+        <span aria-hidden className="text-forest/25">
+          ·
         </span>
-        <span className="mt-1 flex items-center gap-1.5 font-medium tabular-nums text-forest/40">
-          <RotateCcw className="size-3 shrink-0" strokeWidth={2.2} aria-hidden />
-          Reset {resetDaysLabel}
+        <span>
+          {!pq.unlimited && quota.exhausted
+            ? `${AI_QUOTA_EXHAUSTED_COPY.badge} · Reset ${resetDaysLabel}`
+            : `Reset ${resetDaysLabel}`}
         </span>
       </span>
     </Link>

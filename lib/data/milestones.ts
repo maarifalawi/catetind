@@ -307,5 +307,4 @@ export const CELEBRATION_COPY = {
   closeBackdropLabel: 'Tutup perayaan',
   /** caption tahap tanaman di bawah ilustrasi */
   stageCaption: (stageName: string) => `Tanamanmu — ${stageName}`,
-  footnote: 'Tanpa poin, tanpa papan peringkat — cuma tanda kamu konsisten 🌿',
 } as const

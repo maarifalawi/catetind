@@ -425,7 +425,7 @@ export function askAgainLead(inviterName: string | null): string {
 export const ASK_AGAIN_COPY = {
   hint: 'Salin pesannya, lalu tempel di chat kalian. Undangan kedaluwarsa itu hal biasa, kok.',
   copyLabel: 'Salin pesan minta link',
-  copiedLabel: 'Tersalin ✓',
+  copiedLabel: 'Tersalin',
 } as const
 
 /**

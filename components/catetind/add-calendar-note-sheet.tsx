@@ -7,7 +7,7 @@ import {
   TransactionInputEngine,
   type TransactionDraft,
 } from '@/components/dashboard/transaction-input-engine'
-import { CALENDAR_NOTE_TYPES, longDateLabel, shortDateLabel } from '@/lib/data/calendar'
+import { CALENDAR_NOTE_TYPES, shortDateLabel } from '@/lib/data/calendar'
 
 /* ── Modal "Tambah Catatan di Tgl X" (2B Zero-Friction Backdating) ────────────
    Masalah yang diselesaikan: user men-tap tanggal 15 di kalender, lalu ditanya
@@ -86,7 +86,6 @@ export function AddCalendarNoteSheet({
       open={open}
       onClose={onClose}
       title={`Catatan ${shortDateLabel(dateValue)}`}
-      description={`Catat pengeluaran atau pemasukan di ${longDateLabel(dateValue)}.`}
     >
       {/* ── field tanggal: terisi otomatis & terkunci ────────────────────── */}
       <div className="rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/12">
@@ -111,12 +110,6 @@ export function AddCalendarNoteSheet({
             </span>
           )}
         </div>
-
-        <p className="mt-1.5 text-[11px] leading-relaxed text-forest/45">
-          {unlocked
-            ? 'Tanggal dibuka — pastikan sudah benar sebelum mencatat.'
-            : 'Tanggal terkunci dari kalender, jadi kamu bisa langsung mencatat tanpa memilih tanggal lagi.'}
-        </p>
 
         {!unlocked && (
           <button

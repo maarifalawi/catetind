@@ -174,7 +174,7 @@ export const MOCK_SPENDING_REVIEW_REPLY: Omit<ChatMessage, 'id'> = {
       catat" padahal tidak ada baris yang tertulis (temuan uji pakai: "makn
       gacoan 30k" → dijawab "sudah tercatat sebagai pengeluaranmu", Riwayat tetap
       kosong). Kalimat ini menggantikan klaim itu dan menyebut satu-satunya jalan
-      yang benar: kartu konfirmasi + tombol "Catat ✓". */
+      yang benar: kartu konfirmasi + tombol "Catat". */
 export const AI_OUT_OF_SCOPE_REPLY: Omit<ChatMessage, 'id'> = {
   role: 'ai',
   kind: 'coaching',
@@ -190,7 +190,7 @@ export const AI_NO_RECORD_REPLY: Omit<ChatMessage, 'id'> = {
   kind: 'coaching',
   ruleBased: true,
   content:
-    'Aku belum mencatat apa pun dari pesan itu ya 🌿 Catatan baru masuk kalau kamu setujui kartu konfirmasi (tombol “Catat ✓”) — aku sendiri tidak bisa menulis ke riwayatmu. Ketik ulang dengan nominalnya, mis. “catet makan gacoan 30k”, nanti aku rapikan di kartunya.',
+    'Aku belum mencatat apa pun dari pesan itu ya 🌿 Catatan baru masuk kalau kamu setujui kartu konfirmasi (tombol “Catat”) — aku sendiri tidak bisa menulis ke riwayatmu. Ketik ulang dengan nominalnya, mis. “catet makan gacoan 30k”, nanti aku rapikan di kartunya.',
 }
 
 /* ── BAHASA SHELL PANEL AI COACH ─────────────────────────────────────────────
@@ -350,7 +350,7 @@ export const AI_CAPTURE_COPY = {
   needTransferFlow:
     'Ini kedengeran seperti pindah dana. Pindah dana dicatat lewat alur “Pindah Dana” ya — di situ dompet asal & tujuannya ditanyakan sekali jalan.',
   transferFlowCta: 'Buka Dompet & Akun → Pindah Dana',
-  save: 'Catat ✓',
+  save: 'Catat',
   /** dipakai kalau user mengosongkan nama catatannya sendiri */
   untitled: 'Catatan dari AI Coach',
   /** jaring aman kalau penyimpanan gagal (produksi: POST /api/transactions) */

@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import { LandingFooterLp } from '@/components/landing/lp/footer'
 import { LandingNavbarLp } from '@/components/landing/lp/navbar'
 import { PaymentDoneScreen } from '@/components/catetind/payment-done-screen'
 
@@ -10,8 +9,10 @@ import { PaymentDoneScreen } from '@/components/catetind/payment-done-screen'
  * TIDAK diambil dari query string, melainkan dari database (`/api/subscription`).
  * Dengan begitu halaman ini tidak pernah menjadi jalur "mengaku sudah bayar".
  *
- * Bingkai halaman SAMA dengan landing page: `LandingNavbarLp` + `LandingFooterLp`
- * di dalam satu `<main id="top">`.
+ * Bingkai halaman: `LandingNavbarLp` + layar status yang mengisi sisa tinggi
+ * layar. Footer landing SENGAJA TIDAK dipasang di sini (permintaan pemilik
+ * produk): setelah pembayaran, satu-satunya hal yang perlu dibaca adalah status
+ * dan tombol masuk — bukan menu pemasaran.
  */
 export const dynamic = 'force-dynamic'
 
@@ -31,13 +32,12 @@ export default async function CheckoutDonePage({
   const orderId = (Array.isArray(rawOrder) ? rawOrder[0] : rawOrder)?.trim() || null
   const failed = (Array.isArray(rawStatus) ? rawStatus[0] : rawStatus) === 'error'
 
-  /* Bingkai landing yang sama dengan /login & /checkout: satu <main> per
-     halaman, navbar + footer landing dari route. */
+  /* Satu <main> per halaman; tanpa footer supaya penutupnya adalah aksi
+     "Masuk ke dashboard", bukan navigasi marketing. */
   return (
     <main id="top" className="w-full bg-canvas font-sans text-forest">
       <LandingNavbarLp basePath="/" />
       <PaymentDoneScreen orderId={orderId} failed={failed} />
-      <LandingFooterLp basePath="/" />
     </main>
   )
 }

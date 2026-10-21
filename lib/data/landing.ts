@@ -705,7 +705,7 @@ export const LANDING_TIERS: LandingTier[] = [
     'waras',
     {
       tagline: 'Nambah 20rb dari paket biasa, dapet AI Minca & semua fitur lengkap.',
-      badge: 'Paling Dipilih (94% User)',
+      badge: 'Paling Dipilih (98% User)',
       recommended: true,
       ctaLabel: 'Amankan Paket Waras',
       features: [
@@ -1126,7 +1126,38 @@ export const LP_PURCHASE_NOTIF = {
   visibleMs: 5_200,
   /** umur maksimum pembelian NYATA yang masih boleh tampil */
   freshMs: 30 * 60_000,
+  /* ── JAM TAYANG (permintaan pemilik produk) ──────────────────────────────
+     Notifikasi "baru saja beli" hanya masuk akal saat orang memang sedang
+     online. Checkout jam 2 pagi itu kemungkinan kecil, dan notifikasi jam
+     segitu justru bikin landing terasa palsu. Karena itu toast HANYA tayang
+     di jendela jam rame WIB (UTC+7) di bawah; di luar jendela penjadwal
+     berhenti dan memeriksa ulang tiap `offPeakCheckMs`. */
+  peakWindows: [
+    { start: 7 * 60, end: 10 * 60 }, // berangkat & jam kantor
+    { start: 11 * 60 + 30, end: 14 * 60 }, // makan siang
+    { start: 17 * 60, end: 22 * 60 }, // pulang kerja & malam
+  ],
+  /** jeda saat di luar jam rame — cek lagi tanpa membangunkan timer tiap detik */
+  offPeakCheckMs: 5 * 60_000,
 } as const
+
+/* ── JAM rame dalam WIB ─────────────────────────────────────────────────────
+   WIB tidak memakai DST, jadi UTC+7 cukup dan hasilnya deterministik di
+   server maupun browser (tidak bergantung zona waktu perangkat pengunjung —
+   pembeli kami di Indonesia, bukan di zona waktu server Vercel). */
+export function wibMinutesOfDay(now: Date): number {
+  const utcMinutes = now.getUTCHours() * 60 + now.getUTCMinutes()
+  return (utcMinutes + 7 * 60) % (24 * 60)
+}
+
+/** true = sekarang berada di salah satu jendela jam rame WIB */
+export function isPurchaseNotifPeak(now: Date = new Date()): boolean {
+  const minutes = wibMinutesOfDay(now)
+  return LP_PURCHASE_NOTIF.peakWindows.some(
+    (window) => minutes >= window.start && minutes < window.end,
+  )
+}
+
 
 export interface PurchaseNotification {
   id: string
@@ -1297,6 +1328,7 @@ export const LP_FOOTER = {
   /** label pembaca layar untuk tautan yang membuka tab baru */
   externalHint: 'buka di tab baru',
   copyright: '© 2026 CatetInd. Semua hak dilindungi.',
+  madeIn: 'Dibuat di Jakarta 🌿',
 } as const
 
 export const FAQ_COPY = {
@@ -1392,9 +1424,7 @@ export interface LpMissionCard {
   id: string
   title: string
   body: string
-  /** baris centang di dasar kartu */
-  caption: string
-  /** anotasi kecil yang menempel di visual (bukan hiasan) */
+  /** anotasi kecil di pojok judul — penanda konteks, bukan hiasan */
   annotation: string
   image: string
   /**
@@ -1418,9 +1448,8 @@ export const LP_MISSION = {
   cards: [
     {
       id: 'card-1',
-      title: 'Catat 4 detik, tanpa ngetik',
-      body: 'Voice note atau foto struk langsung jadi transaksi. AI yang rapihin kategori, lo tinggal cek.',
-      caption: 'Cocok buat yang males buka form',
+      title: 'Catet 4 detik, tanpa ngetik',
+      body: 'Tinggal ngomong atau foto struk',
       annotation: 'Voice & scan',
       image: '/Dialog - Catat transaksi.png',
       imageWidth: 1760,
@@ -1429,9 +1458,8 @@ export const LP_MISSION = {
     },
     {
       id: 'card-2',
-      title: 'Jatah harian yang jaga saldo lo',
-      body: 'Lihat sisa jatah hari ini, radar tanggal rawan, dan tagihan rutin yang mau motong saldo.',
-      caption: 'Gak ada lagi tagihan yang kelupaan.',
+      title: 'Tau batas jajan lo tiap pagi',
+      body: 'Otomatis ngitung jatah aman harian biar akhir bulan ga sekarat',
       annotation: 'HUD & radar',
       image: '/Section.png',
       imageWidth: 1600,
@@ -1440,9 +1468,8 @@ export const LP_MISSION = {
     },
     {
       id: 'card-3',
-      title: 'Tanya apa aja, Minca jawab',
-      body: 'Sebelum checkout atau nongkrong, tanya dulu ke AI Coach. Jawabannya pakai angka asli dari catatan lo.',
-      caption: 'Financial bestie 24/7, tanpa nge-judge.',
+      title: 'Tanya Minca sebelum checkout',
+      body: 'Konsultasi jatah jajan real-time dari data asli lo, tanpa di-judge',
       annotation: 'AI Coach',
       image: '/Dialog - AI Coach CatetInd.png',
       imageWidth: 1760,
@@ -1451,9 +1478,8 @@ export const LP_MISSION = {
     },
     {
       id: 'card-4',
-      title: 'Lihat progres keuangan lo dari waktu ke waktu',
-      body: 'CatetInd nunjukin pertumbuhan, momentum, dan progres jangka panjang tanpa laporan manual.',
-      caption: 'Nggak ada lagi tracking progres manual.',
+      title: 'Tau pasti duit lo lari ke mana',
+      body: 'Liat pos boncos dari printilan kecil sampe gede.',
       annotation: 'Progres nyata',
       image: '/Pengeluaran Bulan ini.png',
       imageWidth: 1600,

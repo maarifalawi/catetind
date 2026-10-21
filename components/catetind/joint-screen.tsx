@@ -3,31 +3,24 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
-import { Heart, HeartHandshake, Pencil, Plus, ReceiptText, Scale } from 'lucide-react'
+import { Heart, HeartHandshake, Pencil, Plus } from 'lucide-react'
 import { ScreenShell } from './screen-shell'
 import { useSubscriptionGate } from './subscription-gate-provider'
 import { LockedFeatureNote } from './locked-feature-note'
 import { ConfirmDialog } from './confirm-dialog'
-import { JointStateCard } from './joint-state-card'
 import { GlobalPrivacyToggle } from './global-privacy-toggle'
 import { ContextMenu } from './context-menu'
 import { useMoneyContext } from './money-context-provider'
 import { usePrivacy } from './privacy-provider'
-import { JointBalanceScale } from './joint-balance-scale'
-import { JointStatsRow } from './joint-stats-row'
+import { JointSettlementCard } from './joint-settlement-card'
+import { JointEntrySheet } from './joint-entry-sheet'
 import { JointTimeline } from './joint-timeline'
 import { JointSplitSheet, type JointSplitDraft } from './joint-split-sheet'
 import { JointSettlementModal } from './joint-settlement-modal'
 import { JointAddSheet } from './joint-add-sheet'
 import { JointInviteCodeModal, JointInviteFlow, JointJoinedCelebration } from './joint-invite-flow'
+import { JointPushBanner } from './joint-recap-banners'
 import {
-  JointMonthlyRecapBanner,
-  JointPushBanner,
-  JointWeeklyRecapBanner,
-} from './joint-recap-banners'
-import {
-  DEMO_FORCE_MONTHLY_RECAP,
-  DEMO_FORCE_WEEKLY_RECAP,
   DEMO_JOINED_CELEBRATION,
   DEMO_REALTIME_MOCK,
   JOINT_DELETE_COPY,
@@ -41,9 +34,7 @@ import {
   REALTIME_ARRIVAL_DELAY,
   REALTIME_TYPING_DELAY,
   computeSettlement,
-  jointDateLong,
   moneyLabel,
-  recapBannerVisibility,
   splitSpecOf,
   type JointPerson,
   type JointSettlementRecord,
@@ -74,7 +65,6 @@ import {
 } from '@/lib/money/joint-store'
 import { UNDO_WINDOW_MS } from '@/lib/data/history'
 import { trackMoneyEvent } from '@/lib/analytics'
-import { JOINT_CONTEXT_COPY, CONTEXT_LABEL } from '@/lib/data/money-context'
 import { cn } from '@/lib/utils'
 
 /* ── Joint Wallet (/app/joint) — PRD Domain 2D ───────────────────────────────
@@ -82,17 +72,17 @@ import { cn } from '@/lib/utils'
    terasa seperti MILESTONE hubungan — hangat, intim, sedikit playful — bukan
    buku besar korporat. Dua visual tanda tangannya:
 
-   1. Balance Scale Settlement Gauge (Section 3) — timbangan yang miring ke sisi
-      yang nalangin lebih banyak, plus copy "siapa transfer berapa ke siapa".
-   2. Together Timeline (Section 5) — catatan dua orang dijalin di satu garis
-      waktu berselang-seling kiri/kanan, seperti buku harian bersama.
+   1. Kartu Settlement tunggal — arah transfer + nominal + satu CTA; tidak ada
+      lagi panci timbangan, banner rekap, dan kartu settle duplikat.
+   2. Cerita Kita — daftar transaksi bergaya halaman Riwayat (kepala hari garis
+      rambut, baris kartu tipis, satu tap target → bottom sheet).
 
    DUA KOREKSI BESAR (audit fintech #1 & #4):
    • TIDAK ADA "saldo bersama". Ini shared ledger — uang tidak dikumpulkan di
      satu rekening, jadi hero-nya adalah TOTAL PENGELUARAN BERSAMA bulan ini
      (angka yang memang ada di catatan), bukan saldo fiktif.
-   • Layout DESKTOP 2 KOLOM dan melebar penuh: kiri = ringkasan (timbangan,
-     statistik pembayar, banner rekap), kanan = aktivitas (Cerita Kita).
+   • Layout DESKTOP 2 KOLOM dan melebar penuh: kiri = settlement, kanan =
+     aktivitas (Cerita Kita).
 
    Aturan hitungnya ada di `lib/data/joint.ts` (paidBy vs weighedPaidBy) —
    jangan menghitung ulang nominal di komponen.
@@ -144,22 +134,6 @@ export function JointScreen() {
   const joint = useJointStore()
   const wallet = joint.wallet
   const partnerJoined = jointPartnerJoined(joint)
-  /**
-   * KEADAAN KANTONG yang sedang dilihat (paket 61.3) — dibaca dari store, bukan
-   * dari state pajangan halaman:
-   *   1. `empty`   → belum ada kantong (belum pernah dibuat);
-   *   2. `waiting` → kantong sudah dibuat, pasangan belum bergabung;
-   *   3. `active`  → pasangan sudah bergabung → buku besar terbuka.
-   *
-   * Dua keadaan pertama dulu tampak SAMA (nama seed "Dompet Kita 💚" sudah
-   * terisi), jadi user tidak pernah tahu langkahnya sudah sampai mana. Penanda
-   * `wallet.created` dipasang `createJointPocket()` — bukan ditebak dari nama.
-   */
-  const jointState: 'empty' | 'waiting' | 'active' = partnerJoined
-    ? 'active'
-    : wallet.created
-      ? 'waiting'
-      : 'empty'
   const [nameDraft, setNameDraft] = useState(wallet.name)
   const [editingName, setEditingName] = useState(false)
   const [showInviteModal, setShowInviteModal] = useState(false)
@@ -186,26 +160,12 @@ export function JointScreen() {
   const [pushTx, setPushTx] = useState<JointTransaction | null>(null)
   /** catatan bareng yang menunggu konfirmasi hapus (paket 61.3) — tidak pernah langsung hilang */
   const [pendingDeleteTx, setPendingDeleteTx] = useState<JointTransaction | null>(null)
+  /** id catatan yang detailnya sedang dibuka di bottom sheet (null = tertutup) */
+  const [detailTxId, setDetailTxId] = useState<string | null>(null)
+  /** salinan terakhir untuk sheet — supaya animasi tutup tidak kehilangan isinya */
+  const [detailTxSnapshot, setDetailTxSnapshot] = useState<JointTransaction | null>(null)
   /** hak Undo hapus: id baris yang masih bisa dikembalikan selama jendelanya hidup */
   const undoJointRef = useRef<string | null>(null)
-  /**
-   * Banner rekap mana yang boleh tampil (Section 10 + audit #8).
-   * Gate tanggal dihitung SETELAH MOUNT (null = belum siap → tidak render apa
-   * pun) supaya HTML server & client identik, lalu `recapBannerVisibility()`
-   * menerapkan hierarki bulanan > mingguan supaya dua banner raksasa tidak
-   * pernah bertumpuk di satu layar.
-   */
-  const [recapWindow, setRecapWindow] = useState<{ monthly: boolean; weekly: boolean } | null>(null)
-  useEffect(() => {
-    setRecapWindow(
-      recapBannerVisibility(new Date(), {
-        forceMonthly: DEMO_FORCE_MONTHLY_RECAP,
-        forceWeekly: DEMO_FORCE_WEEKLY_RECAP,
-      }),
-    )
-  }, [])
-  const showMonthlyRecap = recapWindow?.monthly ?? false
-  const showWeeklyRecap = recapWindow?.weekly ?? false
 
   /* Penanda settle (Stage 2 #5) tidak lagi dipulihkan lewat efek mount: ia hidup
      di store, dan halaman cuma membaca turunannya — lihat blok "DATA TURUNAN"
@@ -338,7 +298,7 @@ export function JointScreen() {
       )
       if (splitTarget === 'new') {
         setDraftSplit(draft)
-        toast.success('Pembagian disiapkan ✓', {
+        toast.success('Pembagian disiapkan', {
           description: 'Berlaku saat transaksinya dicatat.',
         })
         /* lanjutkan form-nya: nominal, "siapa yang nalangin", & toggle privasi
@@ -351,7 +311,7 @@ export function JointScreen() {
          sebagai override di halaman, supaya angka yang dilihat halaman lain &
          ekspor membaca pembagian yang sama */
       const updated = updateSplit(splitTarget, split)
-      if (updated) toast.success('Pembagian diperbarui ✓')
+      if (updated) toast.success('Pembagian diperbarui')
       else toast.error('Catatan itu tidak bisa diubah pembagiannya')
     },
     [splitTarget, me.id, partner.id],
@@ -510,7 +470,7 @@ export function JointScreen() {
   const handleChangePaidBy = useCallback((tx: JointTransaction, userId: string) => {
     const updated = setJointPaidBy(tx.id, userId)
     if (!updated) return
-    toast.success(`Dicatat dari kantong ${userId === JOINT_ME.id ? me.name : partner.name} ✓`)
+    toast.success(`Dicatat dari kantong ${userId === JOINT_ME.id ? me.name : partner.name}`)
   }, [me.name, partner.name])
 
   /**
@@ -575,6 +535,9 @@ export function JointScreen() {
   /* baris settlement bukan "catatan": kalau yang ada cuma baris settle, empty
      state-nya harus tetap muncul */
   const isEmptyJoint = partnerJoined && jointNotes(joint).length === 0
+  /** catatan yang dibuka di bottom sheet — dicari dari feed supaya ikut ter-update */
+  const detailTx = detailTxId ? (feed.find((tx) => tx.id === detailTxId) ?? null) : null
+  const detailTxView = detailTx ?? detailTxSnapshot
 
   /* ── KUNCI PAKET (paket 84) ────────────────────────────────────────────────
      Joint Wallet hanya ada di paket Waras ke atas. Halaman ini tetap BISA
@@ -618,37 +581,6 @@ export function JointScreen() {
           </div>
         </div>
 
-        {/* notice jujur: halaman ini milik konteks Bersama — bukan daftar kosong
-            tanpa penjelasan, tapi satu ketukan untuk pindah ke sana */}
-        {context !== 'bersama' && (
-          <div className="mt-3 flex flex-col gap-3 rounded-[1.75rem] border-2 border-dashed border-hud-amber/40 bg-cream/70 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0">
-              <p className="font-display text-[14.5px] font-medium tracking-tight text-forest">
-                {JOINT_CONTEXT_COPY.title}
-              </p>
-              <p className="mt-1 text-[12.5px] leading-relaxed text-forest/55">
-                {JOINT_CONTEXT_COPY.body(CONTEXT_LABEL[context])}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setContext('bersama')}
-              className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-2xl bg-forest px-5 text-[13px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
-            >
-              <HeartHandshake className="size-4" strokeWidth={2.4} />
-              {JOINT_CONTEXT_COPY.cta}
-            </button>
-          </div>
-        )}
-
-        {/* ── 61.3: KONDISI KANTONG (tiga keadaan) + relasi dengan kas pribadi ──
-            Diletakkan di ATAS percabangan supaya ketiga wujud halaman membaca
-            langkah yang sama: 1) belum ada kantong, 2) menunggu pasangan,
-            3) kantong aktif. Sebelumnya perpindahan antar keadaan tidak pernah
-            dikatakan, dan "belum ada kantong" tidak bisa dibedakan dari
-            "menunggu pasangan" karena nama kantong seed sudah terisi. */}
-        <JointStateCard state={jointState} />
-
         {!partnerJoined ? (
           /* ── SECTION 8: invite flow (halaman berubah total) ────────────── */
           <JointInviteFlow
@@ -667,14 +599,22 @@ export function JointScreen() {
           />
         ) : (
           <>
-            {/* ── SECTION 2: header (nama dompet editable) + saldo ────────── */}
-            <header className="sticky top-2 z-30 rounded-[1.5rem] bg-cream/90 px-4 py-3.5 shadow-[0_18px_40px_-32px_rgba(0,0,0,0.65)] ring-1 ring-soil/10 backdrop-blur-md">
+            {/* ── MODERN HERO (redesign): chip partner + total + split bar ──
+                Satu blok ringkas menggantikan header lama yang memuat dua baris
+                penjelas dan tiga kartu statistik. Tidak ada paragraf onboarding:
+                hanya identitas, angka bulan ini, dan porsi masing-masing. */}
+            <header className="mt-3 rounded-[1.75rem] bg-cream px-5 py-5 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] ring-1 ring-soil/10">
               <div className="flex items-start justify-between gap-3">
-                <div className="flex min-w-0 items-start gap-3">
-                  <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-hud-sage/60 via-cream to-hud-amber/40 text-forest ring-1 ring-forest/10">
-                    <Heart className="size-[18px]" strokeWidth={2.2} />
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-hud-sage/20 text-forest ring-1 ring-hud-sage/30">
+                    <Heart className="size-[18px]" strokeWidth={2.2} aria-hidden />
                   </span>
                   <div className="min-w-0">
+                    <h1 className="truncate font-display text-[19px] font-semibold tracking-tight text-forest lg:text-[22px]">
+                      {me.name} &amp; {partner.name}
+                    </h1>
+
+                    {/* nama dompet tetap bisa diubah — satu tap, tanpa paragraf */}
                     {editingName ? (
                       <input
                         autoFocus
@@ -689,7 +629,7 @@ export function JointScreen() {
                           }
                         }}
                         aria-label="Nama dompet bersama"
-                        className="w-full rounded-xl bg-cream px-2.5 py-1 font-display text-[19px] font-medium tracking-tight text-forest outline-none ring-2 ring-forest/35 lg:text-[22px]"
+                        className="mt-0.5 w-full rounded-lg bg-cream px-1.5 py-0.5 text-[12px] font-medium text-forest outline-none ring-2 ring-forest/35"
                       />
                     ) : (
                       <button
@@ -699,58 +639,72 @@ export function JointScreen() {
                           setEditingName(true)
                         }}
                         aria-label="Ubah nama dompet bersama"
-                        className="group flex max-w-full items-center gap-1.5 text-left"
+                        className="group mt-0.5 flex max-w-full items-center gap-1.5 text-left"
                       >
-                        <h1 className="truncate font-display text-[19px] font-semibold tracking-tight text-forest lg:text-[22px]">
+                        <span className="truncate text-[11.5px] font-medium text-forest/45">
                           {wallet.name}
-                        </h1>
+                        </span>
                         <Pencil
                           aria-hidden
-                          className="size-3.5 shrink-0 text-forest/25 transition-colors group-hover:text-forest/50"
+                          className="size-3 shrink-0 text-forest/25 transition-colors group-hover:text-forest/50"
                           strokeWidth={2.4}
                         />
                       </button>
                     )}
-
-                    {/* indikator pasangan: dua avatar + hati di antaranya */}
-                    <p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px]">
-                      <span aria-hidden>{me.avatar}</span>
-                      <span aria-hidden className="text-[10px]">
-                        💚
-                      </span>
-                      <span aria-hidden>{partner.avatar}</span>
-                      <span className="font-medium text-forest/60">
-                        {me.name} &amp; {partner.name}
-                      </span>
-                      <span className="text-forest/40">
-                        · Bersama sejak {jointDateLong(wallet.createdAt)}
-                      </span>
-                    </p>
                   </div>
                 </div>
 
-                <GlobalPrivacyToggle />
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-hud-sage/20 px-2.5 py-1 text-[9.5px] font-medium uppercase tracking-wide text-forest ring-1 ring-hud-sage/30">
+                    <span aria-hidden className="size-1.5 rounded-full bg-hud-sage" />
+                    Aktif
+                  </span>
+                </div>
               </div>
 
-              {/* HERO (audit fintech #1): dompet ini SHARED LEDGER — uang tidak
-                  dikumpulkan di satu rekening, jadi "saldo bersama" itu angka
-                  fiktif dan dihapus. Yang benar-benar bisa dipertanggungjawabkan
-                  adalah TOTAL PENGELUARAN BERSAMA bulan ini. */}
-              <div className="mt-3 border-t border-soil/10 pt-3">
-                <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10.5px] font-medium uppercase tracking-[0.14em] text-forest/40">
-                  <ReceiptText className="size-3.5 shrink-0" strokeWidth={2.4} />
+              {/* focal nominal: total pengeluaran bersama bulan ini */}
+              <div className="mt-5">
+                <p className="text-[10.5px] font-medium uppercase tracking-[0.14em] text-forest/40">
                   Total Pengeluaran Bersama
-                  <span className="rounded-full bg-hud-sage/20 px-2 py-0.5 text-[9.5px] font-medium tracking-wide text-forest ring-1 ring-hud-sage/30">
-                    {JOINT_MONTH_LABEL}
-                  </span>
                 </p>
-                <p className="mt-1 font-display text-[28px] font-semibold leading-none tabular-nums tracking-tight text-forest">
+                <p className="mt-1 font-display text-[32px] font-semibold leading-none tabular-nums tracking-tight text-forest">
                   {moneyLabel(settlement.totalSpent, isMasked)}
                 </p>
-                <p className="mt-1.5 text-[10.5px] leading-snug text-forest/45">
-                  Catatan gabungan {me.name} &amp; {partner.name} — bukan saldo rekening bersama. Uang
-                  tetap di dompet masing-masing, dihitung impas pas settle.
-                </p>
+                <p className="mt-1 text-[11.5px] font-medium text-forest/45">{JOINT_MONTH_LABEL}</p>
+              </div>
+
+              {/* contribution split bar — dua segmen, persen + nominal */}
+              <div className="mt-5">
+                <div className="flex items-center justify-between text-[11.5px] font-medium text-forest">
+                  <span>
+                    {me.name}{' '}
+                    <span className="text-forest/45">({settlement.myPct}%)</span>
+                  </span>
+                  <span>
+                    {partner.name}{' '}
+                    <span className="text-forest/45">({settlement.partnerPct}%)</span>
+                  </span>
+                </div>
+                <div
+                  role="img"
+                  aria-label={`Porsi pengeluaran ${me.name} ${settlement.myPct} persen, ${partner.name} ${settlement.partnerPct} persen`}
+                  className="mt-2 flex h-2.5 overflow-hidden rounded-full bg-soil/[0.07]"
+                >
+                  <span
+                    aria-hidden
+                    className="h-full bg-hud-sage transition-[width] duration-500"
+                    style={{ width: `${settlement.myPct}%` }}
+                  />
+                  <span
+                    aria-hidden
+                    className="h-full bg-hud-amber transition-[width] duration-500"
+                    style={{ width: `${settlement.partnerPct}%` }}
+                  />
+                </div>
+                <div className="mt-1.5 flex items-center justify-between text-[11.5px] font-medium tabular-nums text-forest/55">
+                  <span>{moneyLabel(settlement.myTotalSpent, isMasked)}</span>
+                  <span>{moneyLabel(settlement.partnerTotalSpent, isMasked)}</span>
+                </div>
               </div>
             </header>
             {/* ── SECTION 11: banner gaya push (pengeluaran > Rp 500.000) ── */}
@@ -761,86 +715,29 @@ export function JointScreen() {
               onOpenSplit={openSplitFor}
             />
 
-            {/* ── DUA KOLOM DI DESKTOP (audit #4) ────────────────────────────
-                Mobile & tablet: tetap satu kolom dengan urutan alur cerita
-                (timbangan → statistik → rekap → Cerita Kita).
-                Desktop ≥ lg: grid 12 kolom — KIRI 5/12 = RINGKASAN (timbangan,
-                statistik pembayar, banner rekap), KANAN 7/12 = AKTIVITAS (feed
-                "Cerita Kita"). Tanpa container sempit di tengah layar. */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 lg:gap-6">
-              {/* ── KIRI (5/12): ringkasan ─────────────────────────────────── */}
-              <div className="lg:col-span-5">
-                {/* ── SECTION 3: Balance Scale Settlement Gauge (hero visual) ── */}
-                <section className="mt-4 rounded-[1.75rem] bg-cream px-4 pb-4 pt-5 ring-1 ring-soil/10 sm:px-6 lg:mt-6">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h2 className="flex items-center gap-2 font-display text-[15px] font-semibold tracking-tight text-forest">
-                        <Scale className="size-4 text-hud-terracotta" strokeWidth={2.3} />
-                        Timbangan Kita
-                      </h2>
-                      <p className="mt-0.5 text-[11.5px] text-forest/45">
-                        Sisi yang turun = yang nalangin lebih banyak (patungan saja)
-                      </p>
-                    </div>
-                    <span className="shrink-0 rounded-full bg-hud-sage/15 px-2.5 py-1 text-[10.5px] font-medium uppercase tracking-wide text-forest ring-1 ring-hud-sage/30">
-                      {JOINT_MONTH_LABEL.split(' ')[0]}
-                    </span>
-                  </div>
-
-                  <div className="mt-3">
-                    <JointBalanceScale
-                      settlement={settlement}
-                      masked={isMasked}
-                      me={me}
-                      partner={partner}
-                      onSettle={() => setShowSettlementModal(true)}
-                    />
-                  </div>
-                </section>
-
-                {/* ── SECTION 4: stats row (tiap kartu bisa dibuka) ──────────── */}
-                <section className="mt-4">
-                  <JointStatsRow
-                    settlement={settlement}
-                    transactions={feed}
-                    masked={isMasked}
-                    me={me}
-                    partner={partner}
-                  />
-                  {/* pembeda dua lapisan angka (audit #2 & #3): kartu = seluruh
-                      catatan, panci timbangan = patungan saja */}
-                  <p className="mt-2.5 text-[10.5px] leading-relaxed text-forest/40">
-                    Kartu di atas = seluruh uang yang keluar dari kantong {me.name} &amp;{' '}
-                    {partner.name} bulan ini (traktiran &amp; 🔒 privat ikut). Panci timbangan di
-                    atasnya cuma menimbang yang patungan.
-                  </p>
-                </section>
-
-                {/* ── SECTION 10: rekap (audit #8 — bulanan menang atas mingguan) ── */}
-                <JointMonthlyRecapBanner
+            {/* ── DUA KOLOM DI DESKTOP ──────────────────────────────────────
+                Mobile: satu kolom — settlement dulu, lalu Cerita Kita.
+                Desktop ≥ lg: KIRI 5/12 = SATU kartu settlement (sticky),
+                KANAN 7/12 = daftar transaksi. Tidak ada lagi ringkasan
+                bertumpuk (timbangan + 3 kartu statistik + 2 banner rekap). */}
+            <div className="mt-4 grid grid-cols-1 items-start gap-4 lg:grid-cols-12 lg:gap-6">
+              <div className="lg:col-span-5 lg:sticky lg:top-4">
+                <JointSettlementCard
                   settlement={settlement}
                   masked={isMasked}
                   me={me}
                   partner={partner}
-                  show={showMonthlyRecap}
-                  onOpenSettlement={() => setShowSettlementModal(true)}
+                  onSettle={() => setShowSettlementModal(true)}
                 />
-                <JointWeeklyRecapBanner show={showWeeklyRecap} />
               </div>
 
-              {/* ── KANAN (7/12): aktivitas ─────────────────────────────────── */}
-              {/* ── SECTION 5: Together Timeline / SECTION 12: empty state ──── */}
-              <section className="mt-6 lg:col-span-7 lg:mt-6">
-                <div className="flex items-end justify-between gap-3">
-                  <div>
-                    <h2 className="flex items-center gap-2 font-display text-[15px] font-semibold tracking-tight text-forest">
-                      <Heart className="size-4 text-hud-terracotta" strokeWidth={2.3} />
-                      Cerita Kita
-                    </h2>
-                    <p className="mt-0.5 text-[11.5px] text-forest/45">
-                      Jejak catatan kalian, terjalin dalam satu garis waktu
-                    </p>
-                  </div>
+              {/* ── KANAN (7/12): Cerita Kita ──────────────────────────────── */}
+              <section className="lg:col-span-7">
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="flex items-center gap-2 font-display text-[15px] font-semibold tracking-tight text-forest">
+                    <Heart className="size-4 text-hud-terracotta" strokeWidth={2.3} />
+                    Cerita Kita
+                  </h2>
                   <span className="shrink-0 text-[10.5px] font-medium text-forest/35">
                     {feed.length} catatan
                   </span>
@@ -883,13 +780,10 @@ export function JointScreen() {
                     me={me}
                     partner={partner}
                     partnerTyping={partnerTyping}
-                    onOpenSplit={openSplitFor}
-                    onChangePaidBy={handleChangePaidBy}
-                    /* boleh-hapus dihitung dari SATU aturan di store, jadi
-                       tombol tidak pernah muncul untuk baris yang akan ditolak
-                       (bulan yang sudah disettle) */
-                    deleteState={(tx) => jointDeleteState(joint, tx)}
-                    onDelete={setPendingDeleteTx}
+                    onOpenEntry={(tx) => {
+                      setDetailTxSnapshot(tx)
+                      setDetailTxId(tx.id)
+                    }}
                   />
                 )}
               </section>
@@ -948,7 +842,26 @@ export function JointScreen() {
         partner={partner}
       />
 
-      {/* 7 — Settlement modal (dari Balance Scale atau banner rekap) */}
+      {/* 6b — Detail catatan: dibuka dari SATU tap pada baris Cerita Kita.
+          Sheet ditutup dulu sebelum Split Sheet dibuka (pola yang sama dengan
+          form tambah → split) supaya dua Drawer tidak hidup bersamaan. */}
+      <JointEntrySheet
+        open={detailTx !== null}
+        tx={detailTxView}
+        masked={isMasked}
+        me={me}
+        partner={partner}
+        onClose={() => setDetailTxId(null)}
+        onOpenSplit={(tx) => {
+          setDetailTxId(null)
+          openSplitFor(tx)
+        }}
+        onChangePaidBy={handleChangePaidBy}
+        deleteState={detailTxView ? jointDeleteState(joint, detailTxView) : undefined}
+        onDelete={setPendingDeleteTx}
+      />
+
+      {/* 7 — Settlement modal (satu-satunya aksi transfer, dibuka dari kartu settle) */}
       <JointSettlementModal
         open={showSettlementModal}
         onClose={() => setShowSettlementModal(false)}

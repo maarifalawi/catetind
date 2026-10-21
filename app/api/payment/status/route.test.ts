@@ -6,12 +6,22 @@ vi.mock('@/lib/payments/midtrans', () => ({
   midtransConfigured: vi.fn(),
   fetchTransactionStatus: vi.fn(),
 }))
-vi.mock('@/lib/supabase/rest', () => ({ restFetch: vi.fn() }))
+vi.mock('@/lib/supabase/rest', () => ({
+  restConfigured: vi.fn(() => true),
+  restFetch: vi.fn(),
+  restRpc: vi.fn(async () => ({ ok: true, status: 200, data: [] })),
+}))
+/* Rekonsiliasi membutuhkan kunci peran server; di test nilainya ditentukan di
+   sini supaya tidak bergantung pada `.env.local` mesin yang menjalankan test. */
+vi.mock('@/lib/supabase/config', () => ({
+  hasSupabaseServiceRole: () => true,
+  supabaseServiceKey: () => 'service-key-test',
+}))
 
 import { GET } from './route'
 import { requireUser } from '@/lib/session'
 import { fetchTransactionStatus, midtransConfigured } from '@/lib/payments/midtrans'
-import { restFetch } from '@/lib/supabase/rest'
+import { restFetch, restRpc } from '@/lib/supabase/rest'
 
 /* ── GET /api/payment/status (paket 83) ──────────────────────────────────────
    Yang dikunci:
@@ -25,6 +35,7 @@ const guard = requireUser as unknown as Mock
 const configured = midtransConfigured as unknown as Mock
 const status = fetchTransactionStatus as unknown as Mock
 const rest = restFetch as unknown as Mock
+const rpc = restRpc as unknown as Mock
 
 const USER = { id: 'a1b2c3d4-aaaa-bbbb-cccc-dddddddddddd', email: 'a@b.c', name: 'Rina' }
 const ORDER = 'subscribe-a1b2c3d4-1'
@@ -139,7 +150,7 @@ describe('GET /api/payment/status — status jujur', () => {
     expect(body.order.pricePaid).toBe(109_000)
   })
 
-  it('dibayar tapi webhook belum mencatat → state settled, order.status apa adanya', async () => {
+  it('dibayar tapi webhook belum mencatat → state settled DAN order dipenuhi otomatis', async () => {
     status.mockResolvedValue(
       providerPending({
         state: 'settled',
@@ -150,8 +161,11 @@ describe('GET /api/payment/status — status jujur', () => {
     )
     const body = await (await GET(request())).json()
     expect(body.state).toBe('settled')
-    expect(body.order.status).toBe('pending')
-    expect(body.instructions).toBeNull()
+    /* paket 99: route ini tidak lagi hanya melaporkan — ia memenuhi order
+       lewat RPC yang sama dengan webhook, jadi aksesnya langsung aktif. */
+    expect(body.order.status).toBe('settlement')
+    expect(body.fulfillment).toBe('fulfilled')
+    expect(rpc).toHaveBeenCalledTimes(1)
   })
 
   it('provider belum punya transaksi (404) → state unknown, jujur', async () => {

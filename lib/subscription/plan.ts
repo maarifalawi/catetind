@@ -1,5 +1,6 @@
 import { planById, type PlanId } from '@/lib/data/pricing'
 import { restConfigured, restFetch } from '@/lib/supabase/rest'
+import { isSubscriptionActive } from './app-access'
 
 /* ── PAKET YANG DIMILIKI PEMANGGIL (satu sumber untuk server) ────────────────
    Sejak paket 84 harga & kemampuan ditentukan PAKET, bukan masa aktif. Jadi
@@ -119,9 +120,11 @@ export async function readCallerPlan(token: string): Promise<CallerPlan> {
   const hasValidExpiry = expiresMs !== null && Number.isFinite(expiresMs)
 
   /* `is_active` saja TIDAK cukup: baris prabayar yang sudah lewat tanggal harus
-     dianggap tidak aktif untuk penulisan, walau `is_active` masih true. */
+     dianggap tidak aktif untuk penulisan, walau `is_active` masih true.
+     Aturannya tinggal SATU — `isSubscriptionActive()` di `app-access.ts`, yang
+     juga dipakai gerbang masuk app. */
   const now = Date.now()
-  const active = Boolean(row?.is_active) && (isLifetime || (hasValidExpiry && expiresMs > now))
+  const active = isSubscriptionActive(row, { now })
   const expired =
     Boolean(row?.is_active) && !isLifetime && hasValidExpiry && expiresMs <= now
 
@@ -147,3 +150,26 @@ export async function readCallerPlan(token: string): Promise<CallerPlan> {
     failed: false,
   }
 }
+
+/**
+ * Bentuk balasan HTTP `/api/subscription` — satu sumber supaya route
+ * rekonsiliasi pembayaran (paket 99) tidak mengarang bentuk kedua.
+ *
+ * `active` sengaja hanya true kalau barisnya ADA, ditandai aktif, DAN masa
+ * aktifnya belum lewat. `planId` tetap dikembalikan saat expired supaya panel
+ * billing bisa menawarkan perpanjangan paket yang sama.
+ */
+export function subscriptionPayload(caller: CallerPlan) {
+  return {
+    ok: true,
+    configured: caller.configured,
+    active: caller.configured && caller.active,
+    planId: caller.configured ? caller.planId : null,
+    purchasedAt: caller.configured ? caller.purchasedAt : null,
+    expiresAt: caller.configured ? caller.expiresAt : null,
+    isLifetime: caller.configured ? caller.isLifetime : false,
+    billingPeriod: caller.configured ? caller.billingPeriod : null,
+    expired: caller.configured ? caller.expired : false,
+  }
+}
+

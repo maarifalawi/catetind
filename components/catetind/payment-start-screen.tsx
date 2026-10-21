@@ -58,6 +58,7 @@ export function PaymentStartScreen({
   ownedIsLifetime,
   isUpgrade,
   referralCode,
+  sandbox,
 }: {
   plan: PlanDefinition
   /** paket yang SUDAH dimiliki (dari server) — dasar hitung selisih upgrade */
@@ -67,6 +68,8 @@ export function PaymentStartScreen({
   /** true = ini upgrade lifetime, bukan pembelian pertama (mengubah copy) */
   isUpgrade: boolean
   referralCode: string | null
+  /** true = server memakai kredensial Midtrans sandbox (bukan uang sungguhan) */
+  sandbox: boolean
 }) {
   const router = useRouter()
   const [session, setSession] = useState<'checking' | 'guest' | 'ready'>('checking')
@@ -297,6 +300,7 @@ export function PaymentStartScreen({
               <div ref={invoiceRef} className="scroll-mt-24">
                 <PaymentInstructionCard
                   invoice={invoice}
+                  sandbox={sandbox}
                   onSwitchMethod={() => {
                     setInvoice(null)
                     setError(null)

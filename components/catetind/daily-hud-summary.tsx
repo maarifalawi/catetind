@@ -136,9 +136,6 @@ export function DailyHudSummary({
             <p className="mt-3 text-[14.5px] font-medium leading-snug text-forest">
               {HUD_COPY.drySpellTitle}
             </p>
-            <p className="mt-1 text-[13px] leading-relaxed text-forest/55">
-              {HUD_COPY.drySpellBody}
-            </p>
             {/* CTA nyata: buka Transaction Input Engine dengan tipe Pemasukan */}
             <TransactionBottomSheet
               defaultType="income"
@@ -155,7 +152,7 @@ export function DailyHudSummary({
         </div>
       ) : hud.shortfall ? (
         /* ── SHORTFALL — saldo tidak cukup untuk celengan bulan ini ───────── */
-        <div className="relative overflow-hidden rounded-[1.6rem] bg-gradient-to-br from-hud-terracotta/[0.14] via-cream to-hud-amber/[0.14] p-4 ring-1 ring-hud-terracotta/25 shadow-[0_14px_30px_-24px_rgba(184,145,145,0.85)]">
+        <div className="relative overflow-hidden rounded-[1.6rem] bg-cream p-4 ring-1 ring-hud-terracotta/20 shadow-[0_18px_40px_-38px_rgba(0,0,0,0.5)]">
           <div className="flex items-start justify-between gap-3">
             <span className="min-w-0">
               <p className="text-[12.5px] font-medium text-hud-terracotta">{HUD_COPY.title}</p>
@@ -218,8 +215,21 @@ export function DailyHudSummary({
           />
           <span
             aria-hidden
-            className="pointer-events-none absolute -bottom-28 -left-16 size-52 rounded-full bg-hud-sage/10 blur-3xl"
+            className="pointer-events-none absolute -bottom-28 -left-16 size-52 rounded-full bg-mint/10 blur-3xl"
           />
+          {/* tekstur titik halus — memberi "bahan" pada permukaan gelap tanpa
+              menambah informasi atau warna baru */}
+          <svg
+            aria-hidden
+            className="pointer-events-none absolute inset-0 h-full w-full opacity-[0.07]"
+          >
+            <defs>
+              <pattern id="budget-hero-dots" width="22" height="22" patternUnits="userSpaceOnUse">
+                <circle cx="1.5" cy="1.5" r="1.2" fill="#ffffff" />
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#budget-hero-dots)" />
+          </svg>
 
           <div className="relative flex items-center justify-between gap-3">
             <span className="inline-flex items-center gap-2 text-[12.5px] font-medium text-cream/70">
@@ -239,18 +249,21 @@ export function DailyHudSummary({
               pengeluaran hari ini) terbaca seolah "tidak ada yang terpakai",
               padahal periode ini sudah ada pengeluaran. Persen PERIODE duduk di
               bar bawah — dua angka itu tidak lagi saling membingungkan. */}
-          <div className="relative mt-5 flex items-center justify-between gap-3">
+          <div className="relative mt-6 flex items-end justify-between gap-4">
             <div className="min-w-0">
-              <p className="text-[clamp(1.75rem,7vw,2.5rem)] font-semibold leading-none tracking-tight tabular-nums">
+              <p className="whitespace-nowrap text-[clamp(2rem,7.5vw,3.5rem)] font-semibold leading-none tracking-tight tabular-nums">
                 {maskNominal(hud.dailyBudget, masked)}
               </p>
             </div>
-            <span className="flex shrink-0 flex-col items-center gap-1">
+            <span className="flex shrink-0 flex-col items-center gap-1.5">
               <HudRing
                 usedPct={hud.todayUsedPct}
                 ariaLabel={HUD_COPY.ringAria(Math.round(hud.todayUsedPct * 100))}
+                size={96}
+                stroke={8}
+                accent="mint"
               />
-              <span className="text-[9.5px] font-medium uppercase tracking-[0.14em] text-cream/45">
+              <span className="text-[9.5px] font-medium uppercase tracking-[0.16em] text-cream/45">
                 {HUD_COPY.todayCaption}
               </span>
             </span>
@@ -260,7 +273,7 @@ export function DailyHudSummary({
               periode. Bar-nya menjawab "sudah kepakai berapa persen dari uang
               periode ini" — pertanyaan yang dulu tidak terjawab karena meternya
               hanya mengukur pemakaian HARI INI. */}
-          <div className="relative mt-5 space-y-2.5">
+          <div className="relative mt-5 space-y-2.5 rounded-2xl bg-cream/[0.07] px-4 py-3.5 ring-1 ring-cream/10">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11.5px] font-medium text-cream/60">
               {/* H5-3 (audit UI/UX) — "Sisa periode" diberi penjelasan asalnya:
                   tooltip untuk mouse + keterangan kecil di bawah, supaya angka
@@ -285,7 +298,7 @@ export function DailyHudSummary({
               aria-valuemax={100}
               aria-valuenow={Math.round(periodPct * 100)}
             >
-              <div className="h-1 w-full overflow-hidden rounded-full bg-cream/15">
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-cream/15">
                 <div
                   className="h-full rounded-full bg-mint transition-[width] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
                   style={{ width: `${Math.round(periodPct * 100)}%` }}

@@ -221,8 +221,8 @@ export const INSTALL_HANDOFF = {
   copyLabel: 'Salin link',
   /** teks status setelah aksi — user harus tahu aksinya berhasil, bukan menebak */
   status: {
-    copied: 'Link tersalin ✓',
-    shared: 'Link terkirim ✓',
+    copied: 'Link tersalin',
+    shared: 'Link terkirim',
     failed: 'Gagal menyalin — salin link-nya manual ya',
   },
   instruction: "Buka di HP, lalu pilih 'Add to Home Screen'.",

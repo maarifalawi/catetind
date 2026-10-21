@@ -141,8 +141,6 @@ export function MilestoneCelebration({
           {CELEBRATION_COPY.continueLabel}
           <Sparkles className="size-4" strokeWidth={2.4} aria-hidden />
         </button>
-
-        <p className="mt-3 text-[10.5px] leading-relaxed text-forest/40">{CELEBRATION_COPY.footnote}</p>
       </motion.div>
     </div>
   )

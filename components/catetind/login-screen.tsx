@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
   ArrowRight,
-  CircleHelp,
   KeyRound,
   LoaderCircle,
   Mail,
@@ -146,7 +145,7 @@ export function LoginScreen({ next }: { next?: string | null }) {
       toast.error(VERIFY_COPY.otpFailedTitle, { description: result.error })
       return
     }
-    toast.success(SESSION_COPY.signInToast, { description: SESSION_COPY.signInToastDescription })
+    toast.success(SESSION_COPY.signInToast)
     /* kembali ke TUJUAN user (mis. `/checkout/bayar?plan=…`), bukan selalu
        Dashboard — `next` dibawa oleh `buildLoginHref()` dari halaman yang
        mengirim user ke sini. Tanpa `next` yang aman, jatuh ke Dashboard. */
@@ -403,20 +402,6 @@ export function LoginScreen({ next }: { next?: string | null }) {
               >
                 {LOGIN_COPY.registerLink}
               </Link>
-            </p>
-
-            {/* jalan keluar kecil: bukan user yang disalahkan, tapi kami yang dibantu */}
-            <p className="mt-3 flex items-start justify-center gap-1.5 text-center text-[12px] leading-relaxed text-forest/45">
-              <CircleHelp className="mt-0.5 size-3.5 shrink-0" strokeWidth={2.4} aria-hidden />
-              <span>
-                {LOGIN_COPY.helpLead}{' '}
-                <Link
-                  href={LOGIN_COPY.helpHref}
-                  className="font-medium text-forest/60 underline underline-offset-2 hover:text-forest"
-                >
-                  {LOGIN_COPY.helpLink}
-                </Link>
-              </span>
             </p>
           </div>
         </div>

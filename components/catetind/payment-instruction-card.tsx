@@ -84,10 +84,13 @@ function CopyField({ label, value, large = false }: { label: string; value: stri
 
 export function PaymentInstructionCard({
   invoice,
+  sandbox = false,
   onSwitchMethod,
   onNewInvoice,
 }: {
   invoice: ActiveInvoice
+  /** true = tagihan dari Midtrans sandbox (hanya bisa dibayar lewat simulator) */
+  sandbox?: boolean
   /** kembali ke daftar metode (tagihan lama dibatalkan server saat bayar ulang) */
   onSwitchMethod: () => void
   /** minta tagihan baru untuk metode yang sama */
@@ -195,6 +198,24 @@ export function PaymentInstructionCard({
           </span>
         </span>
       </div>
+
+      {sandbox && live && (
+        <div className="mt-4 flex items-start gap-2.5 rounded-2xl bg-sage/60 px-4 py-3 text-[11.5px] leading-relaxed text-forest ring-1 ring-soil/15">
+          <Info className="mt-0.5 size-3.5 shrink-0" strokeWidth={2.4} aria-hidden />
+          <p>
+            <strong className="font-medium">{PAY_CARD_COPY.sandboxTitle}.</strong>{' '}
+            {PAY_CARD_COPY.sandboxBody}{' '}
+            <a
+              href="https://simulator.sandbox.midtrans.com/"
+              target="_blank"
+              rel="noreferrer"
+              className="font-medium underline decoration-forest/30 underline-offset-2 hover:decoration-forest"
+            >
+              {PAY_CARD_COPY.sandboxCta}
+            </a>
+          </p>
+        </div>
+      )}
 
       {live && instructions?.channel === 'qris' && (
         <div className="mx-auto mt-4 w-full max-w-[420px] rounded-[20px] bg-canvas p-4 ring-1 ring-soil/10 landing:p-5">

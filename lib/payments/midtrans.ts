@@ -39,10 +39,19 @@ export function midtransConfigured(): boolean {
   return midtransServerKey().length > 0
 }
 
+/**
+ * `true` = kredensial produksi (uang sungguhan). Default `false` (sandbox),
+ * sama seperti `midtransCoreBase()`.
+ */
+export function midtransIsProduction(): boolean {
+  return (process.env.MIDTRANS_IS_PRODUCTION ?? '') === '1'
+}
+
 /** basis API sesuai mode (sandbox default — aman untuk uji) */
 export function midtransCoreBase(): string {
-  const production = (process.env.MIDTRANS_IS_PRODUCTION ?? '') === '1'
-  return production ? 'https://api.midtrans.com' : 'https://api.sandbox.midtrans.com'
+  return midtransIsProduction()
+    ? 'https://api.midtrans.com'
+    : 'https://api.sandbox.midtrans.com'
 }
 
 /** endpoint tagihan Core API */

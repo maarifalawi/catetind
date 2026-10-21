@@ -160,7 +160,7 @@ export function AIChatWidget() {
      saat paketnya benar-benar dibaca dan memang tidak memuat kemampuan ini.
 
      Dua kunci yang hidup berdampingan dan TIDAK boleh tertukar:
-       · `inputLocked` = belum ada paket sama sekali → tombol "Catat ✓" ditahan;
+       · `inputLocked` = belum ada paket sama sekali → tombol "Catat" ditahan;
        · `aiLocked`    = paket ada tapi tanpa AI → pintu AI yang ditahan. */
   const { inputLocked, canUse, planKnown } = useSubscriptionGate()
   const aiLocked = planKnown && !canUse('ai-chat')
@@ -279,7 +279,7 @@ export function AIChatWidget() {
     capture.startVoice()
   }
 
-  /* ── "Catat ✓" di kartu konfirmasi — satu-satunya jalan menuju penyimpanan ─ */
+  /* ── "Catat" di kartu konfirmasi — satu-satunya jalan menuju penyimpanan ─ */
   function handleConfirmCapture() {
     /* masa aktif habis: jangan simpan, tapi jangan buang draftnya juga — user
        bisa membaca kembali isiannya begitu masa aktifnya lanjut (task 23) */
@@ -343,7 +343,7 @@ export function AIChatWidget() {
        2. pesan terdengar seperti UCAPAN TRANSAKSI ("gua habis makan 50k, catet
           ya") → KARTU KONFIRMASI (jalur yang sama dengan input suara/struk),
           karena AI tidak boleh mengaku mencatat sebelum barisnya benar-benar
-          ditulis — dan yang menulis adalah tombol "Catat ✓", bukan AI.
+          ditulis — dan yang menulis adalah tombol "Catat", bukan AI.
      Pesan biasa (pertanyaan keuangan) tetap ke model. */
   function handleSend() {
     const text = input.trim()

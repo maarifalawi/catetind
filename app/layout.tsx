@@ -8,6 +8,7 @@ import { OnboardingWelcomeToast } from '@/components/catetind/onboarding-welcome
 import { MobileBottomNav } from '@/components/MobileBottomNav'
 import { MoneyContextProvider } from '@/components/catetind/money-context-provider'
 import { OfflineBanner } from '@/components/catetind/offline-banner'
+import { PlantArtDefs } from '@/components/catetind/plant-art-defs'
 import { PrivacyProvider } from '@/components/catetind/privacy-provider'
 import { ServiceWorkerRegistration } from '@/components/catetind/service-worker-registration'
 import { SmoothScrollProvider } from '@/components/catetind/smooth-scroll-provider'
@@ -88,8 +89,26 @@ export default function RootLayout({
        Kanvas halaman sudah eksplisit putih (`bg-canvas`), jadi tanpa kelas ini
        perangkat bermode gelap akan mendapat kanvas putih + permukaan shadcn
        gelap — tidak konsisten. Sesuai `viewport.colorScheme: 'light'`. */
-    <html lang="id" className={`light ${inter.variable}`}>
-      <body className="font-sans antialiased">
+    /* ── `suppressHydrationWarning` = PERISAI EKSTENSI BROWSER ─────────────────
+       Ekstensi “custom cursor” (mis. yang menulis `data-cc-prev-cursor`) dan
+       penerjemah halaman menyuntikkan atribut/`style` ke <html> & <body> SEBELUM
+       React hydrate. Server tidak mungkin mengirim atribut itu, jadi React
+       melaporkan “tree hydrated but some attributes … didn't match”.
+
+       Itu bukan bug aplikasi: markup kita memang sama. Menambahkan prop ini
+       membuat React tidak membandingkan atribut pada dua elemen itu (isi &
+       komponen di dalamnya TETAP diperiksa), sehingga error console hilang
+       tanpa mematikan pemeriksaan hydration untuk seluruh app.
+
+       JANGAN dihapus juga saat ada yang melihat diff atribut di DevTools —
+       selisihnya berasal dari ekstensi di browser pengunjung, bukan dari HTML
+       yang kita render. */
+    <html lang="id" className={`light ${inter.variable}`} suppressHydrationWarning>
+      <body className="font-sans antialiased" suppressHydrationWarning>
+        {/* Gradien tanaman (SVG) — satu definisi untuk seluruh app. Wajib di
+            root supaya tanaman di halaman/tab mana pun memakai definisi yang
+            sama, termasuk saat section lain sedang `display:none`. */}
+        <PlantArtDefs />
         <ServiceWorkerRegistration />
         {/* Smooth scroll global (Lenis) — dipasang di root layout supaya
             gulir terasa halus di SEMUA halaman, bukan cuma dashboard */}

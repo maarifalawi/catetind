@@ -63,7 +63,11 @@ export function FinancialHealthCard({
 
   const ready = state === 'ready'
   const title = ready ? HEALTH_CARD_COPY.readyTitle : HEALTH_CARD_COPY.calibratingTitle
-  const subtitle = ready ? HEALTH_CARD_COPY.readySubtitle : HEALTH_CARD_COPY.calibratingSubtitle
+  /* Kartu "ready" sengaja tidak punya subjudul — judulnya sudah menyebut apa
+     yang diukur, dan pemilik produk meminta keterangan "Dihitung dari
+     catatanmu sendiri" tidak ditampilkan lagi. Subjudul kalibrasi tetap ada
+     karena ia menjelaskan MENGAPA skornya belum muncul. */
+  const subtitle = ready ? null : HEALTH_CARD_COPY.calibratingSubtitle
 
   return (
     <section className="flex h-full flex-col rounded-[2rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] ring-1 ring-soil/12 sm:p-6">
@@ -74,7 +78,7 @@ export function FinancialHealthCard({
           </span>
           <div>
             <h2 className="font-display text-[15px] font-semibold tracking-tight text-forest">{title}</h2>
-            <p className="text-[11.5px] text-forest/45">{subtitle}</p>
+            {subtitle && <p className="text-[11.5px] text-forest/45">{subtitle}</p>}
           </div>
         </div>
         <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-cream px-2.5 py-1 text-[10.5px] font-medium uppercase tracking-[0.1em] text-forest/45 ring-1 ring-soil/12">

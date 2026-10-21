@@ -10,6 +10,7 @@ import {
   SheetSubmit,
   useFocusOnOpen,
 } from './budget-sheet'
+import { billEmojiIcon } from './bill-glyph'
 import { cn } from '@/lib/utils'
 import {
   BILL_CATEGORY_OPTIONS,
@@ -175,38 +176,25 @@ export function AddBillSheet({
         </SheetSubmit>
       }
     >
-      {/* ── STEP 1 — identitas: emoji + nama + nominal (opsional) ────────── */}
+      {/* ── STEP 1 — identitas: ikon + nama + nominal (opsional) ─────────── */}
       <div>
         <p className="text-[13px] font-medium leading-snug text-forest">Pilih ikonnya</p>
         <div
           role="radiogroup"
-          aria-label="Pilih emoji tagihan"
+          aria-label="Pilih ikon tagihan"
           className="mt-2 grid grid-cols-6 gap-1.5 sm:grid-cols-12"
         >
-          {BILL_EMOJI_PRESETS.map((option) => {
-            const active = emoji === option
-            return (
-              <button
-                key={option}
-                type="button"
-                role="radio"
-                aria-checked={active}
-                aria-label={`Emoji ${option}`}
-                onClick={() => setEmoji(option)}
-                className={cn(
-                  'flex h-10 items-center justify-center rounded-xl text-[19px] transition-all duration-200 active:scale-90',
-                  active
-                    ? 'bg-forest ring-2 ring-forest'
-                    : 'bg-cream ring-1 ring-soil/14 hover:bg-cream',
-                )}
-              >
-                <span aria-hidden>{option}</span>
-              </button>
-            )
-          })}
+          {BILL_EMOJI_PRESETS.map((option) => (
+            <BillIconOption
+              key={option}
+              emoji={option}
+              active={emoji === option}
+              onSelect={() => setEmoji(option)}
+            />
+          ))}
         </div>
 
-        {/* 'Lainnya' → grid emoji tambahan (tanpa dependensi emoji-picker) */}
+        {/* 'Lainnya' → grid ikon tambahan (tanpa dependensi emoji-picker) */}
         <button
           type="button"
           aria-expanded={moreEmojiOpen}
@@ -226,30 +214,17 @@ export function AddBillSheet({
         <RevealStep show={moreEmojiOpen}>
           <div
             role="radiogroup"
-            aria-label="Emoji tagihan lainnya"
+            aria-label="Ikon tagihan lainnya"
             className="mt-2 grid grid-cols-6 gap-1.5 sm:grid-cols-12"
           >
-            {BILL_EMOJI_MORE.map((option) => {
-              const active = emoji === option
-              return (
-                <button
-                  key={option}
-                  type="button"
-                  role="radio"
-                  aria-checked={active}
-                  aria-label={`Emoji ${option}`}
-                  onClick={() => setEmoji(option)}
-                  className={cn(
-                    'flex h-10 items-center justify-center rounded-xl text-[19px] transition-all duration-200 active:scale-90',
-                    active
-                      ? 'bg-forest ring-2 ring-forest'
-                      : 'bg-cream ring-1 ring-soil/14 hover:bg-cream',
-                  )}
-                >
-                  <span aria-hidden>{option}</span>
-                </button>
-              )
-            })}
+            {BILL_EMOJI_MORE.map((option) => (
+              <BillIconOption
+                key={option}
+                emoji={option}
+                active={emoji === option}
+                onSelect={() => setEmoji(option)}
+              />
+            ))}
           </div>
         </RevealStep>
 
@@ -468,6 +443,38 @@ export function AddBillSheet({
         </div>
       </RevealStep>
     </BudgetSheet>
+  )
+}
+
+/** satu pilihan ikon di picker — garis Lucide, sama dengan ikon di daftar */
+function BillIconOption({
+  emoji,
+  active,
+  onSelect,
+}: {
+  emoji: string
+  active: boolean
+  onSelect: () => void
+}) {
+  const Icon = billEmojiIcon(emoji)
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={active}
+      aria-label={`Pilih ikon ${emoji}`}
+      onClick={onSelect}
+      className={cn(
+        'flex h-10 items-center justify-center rounded-xl transition-all duration-200 active:scale-90',
+        active
+          ? 'bg-forest text-cream ring-2 ring-forest'
+          : 'bg-cream text-forest ring-1 ring-soil/14 hover:bg-cream',
+      )}
+    >
+      <span aria-hidden className="flex items-center justify-center">
+        {Icon ? <Icon className="size-[18px]" strokeWidth={1.9} /> : <span className="text-[19px] leading-none">{emoji}</span>}
+      </span>
+    </button>
   )
 }
 

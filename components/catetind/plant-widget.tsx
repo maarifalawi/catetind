@@ -116,6 +116,7 @@ export const PlantWidget = memo(function PlantWidget({
             />
             <PlantIllustration
               stage={4}
+              progress={100}
               className="pointer-events-none absolute -bottom-8 left-1/2 h-[120%] w-auto max-w-none -translate-x-1/2 opacity-95 lg:h-[128%]"
             />
             {/* scrim atas & bawah supaya teks header + kaki kartu tetap terbaca */}
@@ -210,6 +211,7 @@ export const PlantWidget = memo(function PlantWidget({
               )}
               <PlantIllustration
                 stage={stage}
+                progress={nutritionPct}
                 wilted={wilted}
                 sleeping={sleeping}
                 className={cn(

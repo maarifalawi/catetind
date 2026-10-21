@@ -15,6 +15,23 @@ tidak berhak → navigasi dibatalkan + popup upgrade. Buka URL langsung → hala
 ditahan (tidak ada isi di HTML), lalu user dipindahkan ke halaman aman terdekat
 (Dashboard / Pengaturan) sambil popup upgrade tetap terbuka.
 
+## 0. Syarat MASUK app: paket aktif
+
+Sebelum aturan per-paket di bawah berlaku, ada satu gerbang global di
+`middleware.ts` (`lib/subscription/app-access.ts`):
+
+| Keadaan user | Yang terjadi |
+|---|---|
+| punya sesi + paket aktif | app boleh dibuka |
+| punya sesi, **belum pernah beli** | **dialihkan ke `/checkout`** (halaman harga) |
+| punya sesi, paket kedaluwarsa | dialihkan ke `/checkout` |
+| punya sesi, paket gagal dibaca (DB/jaringan) | app dibuka — "tidak tahu" ≠ "belum bayar" |
+| backend belum dikonfigurasi (demo/test) | app dibuka |
+
+Artinya Dashboard & halaman app lain **tidak dirender** untuk user yang belum
+membayar — bukan sekadar menampilkan popup di atas app. Rute publik di daftar
+`PUBLIC_ROUTES` tetap terbuka untuk semua orang.
+
 ## 1. Halaman publik / pre-app
 
 Tidak butuh sesi dan **tidak pernah** butuh paket:

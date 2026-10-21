@@ -258,22 +258,18 @@ export const DEBT_CASH_CATEGORY: Record<'debt_payment' | 'receivable_payment' | 
 export const DEBT_CASH_COPY = {
   pay: {
     title: (name: string) => `Catat Bayar ${name}`,
-    description:
-      'Pembayaran langsung mendebit dompet yang kamu pilih — uangnya benar-benar keluar, dan sisa hutangnya ikut menyusut.',
     amountLabel: 'Nominal dibayar',
     walletLabel: 'Dompet sumber',
-    submit: 'Simpan Pembayaran ✓',
+    submit: 'Simpan Pembayaran',
     toastTitle: (name: string) => `Pembayaran ${name} dicatat! 💪`,
     toastShrinking: 'Bar snowball-mu langsung menyusut.',
     toastSettled: 'Hutang ini lunas! 🎉',
   },
   receive: {
     title: (name: string) => `Terima dari ${name}`,
-    description:
-      'Uangnya langsung masuk ke dompet yang kamu pilih, dan piutangnya berkurang — bukan cuma ditandai lunas.',
     amountLabel: 'Nominal diterima',
     walletLabel: 'Dompet tujuan',
-    submit: 'Simpan Penerimaan ✓',
+    submit: 'Simpan Penerimaan',
     toastTitle: (name: string) => `Pelunasan dari ${name} dicatat! 🌿`,
     toastShrinking: 'Piutangmu langsung berkurang.',
     toastSettled: 'Piutang ini lunas! 🎉',
@@ -291,6 +287,12 @@ export const DEBT_CASH_COPY = {
   actionLabel: {
     pay: 'Catat Bayar',
     receive: 'Diterima',
+    /**
+     * Versi PENDEK untuk pil aksi inline di baris padat (mis. baris snowball):
+     * bentuknya sengaja sama dengan "Bayar →" di halaman Tagihan, dan
+     * `aria-label` di tombolnya tetap memakai versi panjang + nama catatan.
+     */
+    payShort: 'Bayar',
   },
   /** penanda arah di baris riwayat pembayaran (uang MASUK ke dompet) */
   receivableTag: 'Diterima',

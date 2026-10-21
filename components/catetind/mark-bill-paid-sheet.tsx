@@ -1,7 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { BudgetSheet, ChoicePills, RupiahField, SheetSubmit } from './budget-sheet'
+import { Check, Wallet } from 'lucide-react'
+import { BudgetSheet, RupiahField, SheetSubmit } from './budget-sheet'
+import { cn } from '@/lib/utils'
 import { MARK_PAID_SHEET_COPY, maskMoney, type Bill } from '@/lib/data/bills'
 
 /* ── "TANDAI LUNAS" = PILIH DOMPET, BUKAN STEMPEL (paket 51 · temuan E) ──────
@@ -80,7 +82,6 @@ export function MarkBillPaidSheet({
       open={bill !== null}
       onClose={onClose}
       title={bill ? MARK_PAID_SHEET_COPY.title(bill.name) : MARK_PAID_SHEET_COPY.title('')}
-      description={MARK_PAID_SHEET_COPY.description}
       footer={
         <SheetSubmit onClick={submit} disabled={submitDisabled} gate>
           {MARK_PAID_SHEET_COPY.submit}
@@ -97,7 +98,7 @@ export function MarkBillPaidSheet({
 
       {/* kalimat yang membuat klaimnya jujur: uangnya keluar dari dompet mana */}
       {selected && amount > 0 && (
-        <p className="mt-3 rounded-2xl bg-sage/60 px-4 py-3 text-[12px] leading-relaxed text-forest/70">
+        <p className="mt-3 rounded-2xl bg-sage/60 px-4 py-3 text-[12px] font-medium leading-relaxed text-forest-muted">
           {MARK_PAID_SHEET_COPY.cashLine(maskMoney(amount, masked), selected.label)}
         </p>
       )}
@@ -111,20 +112,60 @@ export function MarkBillPaidSheet({
             {MARK_PAID_SHEET_COPY.noWallet}
           </p>
         ) : (
-          <>
-            <ChoicePills
-              className="mt-2"
-              ariaLabel={MARK_PAID_SHEET_COPY.walletLabel}
-              options={walletOptions.map((option) => ({ id: option.id, label: option.label }))}
-              value={wallet}
-              onChange={setWallet}
-            />
-            {selected && (
-              <p className="mt-2 text-[11px] text-forest/45 tabular-nums">
-                {MARK_PAID_SHEET_COPY.walletBalance(maskMoney(selected.balance, masked))}
-              </p>
-            )}
-          </>
+          /* Daftar dompet VERTIKAL: nama + saldo penuh sejajar, bukan deret pill
+             yang memotong nominal. Saldo adalah alasan user memilih dompet ini,
+             jadi ia harus terbaca utuh — termasuk saat angkanya panjang. */
+          <div
+            role="radiogroup"
+            aria-label={MARK_PAID_SHEET_COPY.walletLabel}
+            className="mt-2 flex flex-col gap-1.5"
+          >
+            {walletOptions.map((option) => {
+              const active = option.id === wallet
+              const insufficient = amount > option.balance
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={active}
+                  onClick={() => setWallet(option.id)}
+                  className={cn(
+                    'flex w-full items-center gap-3 rounded-2xl px-3.5 py-3 text-left ring-1 transition-colors',
+                    active
+                      ? 'bg-mint/30 ring-leaf/45'
+                      : 'bg-cream ring-soil/10 hover:bg-sage/40',
+                  )}
+                >
+                  <span
+                    aria-hidden
+                    className={cn(
+                      'flex size-9 shrink-0 items-center justify-center rounded-xl',
+                      active ? 'bg-cream text-forest' : 'bg-sage text-forest',
+                    )}
+                  >
+                    <Wallet className="size-4" strokeWidth={2.2} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block break-words text-[13px] font-semibold leading-tight text-forest">
+                      {option.label}
+                    </span>
+                    <span
+                      className={cn(
+                        'mt-0.5 block text-[11.5px] font-medium leading-tight tabular-nums',
+                        insufficient ? 'text-hud-terracotta' : 'text-forest-muted',
+                      )}
+                    >
+                      {MARK_PAID_SHEET_COPY.walletBalance(maskMoney(option.balance, masked))}
+                    </span>
+                  </span>
+                  {active && (
+                    <Check className="size-4 shrink-0 text-forest" strokeWidth={2.6} aria-hidden />
+                  )}
+                </button>
+              )
+            })}
+          </div>
         )}
 
         {/* saldo tidak cukup / nominal tidak sah / ditolak store: tampil DI SINI,

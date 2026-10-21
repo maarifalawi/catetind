@@ -34,7 +34,7 @@ import type { TransactionType } from '@/lib/types'
                  yang keyakinannya rendah (PRD A11), micro-copy PRD 550
      problem   → penjelasan + jalan keluar; tidak pernah menyebut istilah mesin
 
-   Yang tidak dilakukan komponen ini: menyimpan apa pun. Menekan "Catat ✓" cuma
+   Yang tidak dilakukan komponen ini: menyimpan apa pun. Menekan "Catat" cuma
    memanggil `onConfirm` — hook yang memutuskan. */
 
 /** tinggi tiap bar gelombang suara (px) — versi ramping untuk lebar bubble chat */
@@ -408,7 +408,7 @@ function ConfirmBubble({
         <CaptureField label={AI_CAPTURE_COPY.fieldLabels.category} flagged={flagged('category')}>
           {/* PAKET 54: nilai ini bisa KOSONG dengan sengaja — saat user mematikan
               "Kategorisasi Otomatis oleh AI". Pemilih menampilkan ajakan memilih
-              (bukan kategori karangan), dan "Catat ✓" tetap tertahan sampai
+              (bukan kategori karangan), dan "Catat" tetap tertahan sampai
               user memutuskan. Nilai di luar katalog (mis. tebakan AI `Makanan`,
               `Gaji Utama`) ditampilkan apa adanya oleh pemilihnya, jadi field
               yang sudah terisi tidak pernah terbaca kosong. */}

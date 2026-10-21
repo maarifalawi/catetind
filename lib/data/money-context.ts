@@ -237,8 +237,6 @@ export const CONTEXT_EMPTY_COPY = {
   /** /wealth tab Hutang — tidak ada hutang/piutang di konteks ini */
   debts: {
     title: (label: string) => `Belum ada hutang atau piutang di konteks ${label} 💳`,
-    body:
-      'Hutang platform maupun catatan ke teman bisa dikelompokkan per konteks, jadi jelas ini urusan siapa.',
     cta: 'Catat hutang/piutang',
   },
 } as const

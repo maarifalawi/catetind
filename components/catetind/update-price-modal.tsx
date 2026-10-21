@@ -71,7 +71,6 @@ export function UpdatePriceModal({
   const newValue = (data?.quantity ?? 0) * price
   const invested = data?.totalInvested ?? 0
   const returnValue = newValue - invested
-  const stamp = formatPriceStamp(new Date().toISOString())
   const stale = data ? isAssetStale(data) : false
 
   function submit() {
@@ -84,7 +83,6 @@ export function UpdatePriceModal({
       open={open}
       onClose={onClose}
       title={PRICE_UPDATE_COPY.title}
-      description={PRICE_UPDATE_COPY.description}
       footer={
         <SheetSubmit onClick={submit} disabled={!data || price <= 0} gate>
           <span className="inline-flex items-center gap-2">
@@ -132,7 +130,6 @@ export function UpdatePriceModal({
             digits={digits}
             onDigitsChange={setDigits}
             placeholder="Rp 9.875"
-            hint={PRICE_UPDATE_COPY.fieldHint}
             size="lg"
           />
 
@@ -159,10 +156,6 @@ export function UpdatePriceModal({
               </div>
             </div>
           )}
-
-          <p className="mt-3 text-[10.5px] leading-relaxed text-forest/40">
-            {PRICE_UPDATE_COPY.stampNote(stamp)}
-          </p>
         </>
       )}
     </BudgetSheet>

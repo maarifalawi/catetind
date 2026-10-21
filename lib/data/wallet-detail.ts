@@ -317,6 +317,15 @@ export const WALLET_QUICK_ACTION_COPY = {
 export const WALLET_TOTAL_COPY = {
   /** aria-label nominal hero, supaya pembaca layar mendengar cakupannya */
   heroAmountLabel: (amount: string) => `Total Saldo semua dompet: ${amount}`,
+  /** eyebrow kecil di atas judul halaman — konteks, bukan pengulangan H1 */
+  /**
+   * Eyebrow & subjudul halaman DIHAPUS (permintaan pemilik produk): kepala
+   * halaman Dompet cukup satu H1 "Dompet & Akun" — dua baris kecil di atas dan
+   * di bawahnya hanya mengulang hal yang sudah jelas dari daftar kartunya.
+   */
+
+  /** eyebrow kecil di atas judul panel Komposisi */
+  compositionEyebrow: 'Sebaran saldo',
   /**
    * Kepala panel "Komposisi" — jumlah akun + cakupannya.
    *

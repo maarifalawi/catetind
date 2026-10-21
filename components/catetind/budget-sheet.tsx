@@ -329,7 +329,7 @@ export function ChoicePills<T extends string>({
               'rounded-full px-3.5 py-2 text-[12.5px] font-medium transition-all duration-200 active:scale-95',
               active
                 ? 'bg-forest text-mint shadow-[0_10px_22px_-14px_rgba(0,0,0,0.75)]'
-                : 'bg-cream text-forest/60 ring-1 ring-soil/14 hover:bg-cream hover:text-forest',
+                : 'bg-cream text-forest ring-1 ring-soil/14 hover:bg-cream hover:text-forest',
             )}
           >
             {option.label}

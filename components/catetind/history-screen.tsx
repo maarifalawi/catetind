@@ -57,7 +57,9 @@ import {
   DELETE_TRANSACTION_TOAST,
   HISTORY_CLEAR_ALL_COPY,
   HISTORY_CLEAR_ALL_TOAST,
+  HISTORY_LIST_COPY,
   HISTORY_NO_DATA_COPY,
+  HISTORY_PAGE_SIZE,
   HISTORY_TABS,
   HISTORY_TABS_ARIA,
   INITIAL_FILTERS,
@@ -70,6 +72,7 @@ import {
   filterHistoryTransactions,
   financialHealthScore,
   groupTransactionsByDate,
+  latestTransactions,
   localISODate,
   maskMoney,
   type HistoryTab,
@@ -122,6 +125,8 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
      Setelahnya kolom ini tetap milik user — ia bisa mengubah/menghapusnya. */
   const [searchQuery, setSearchQuery] = useState(initialQuery ?? '')
   const [activeFilters, setActiveFilters] = useState<HistoryFilters>(INITIAL_FILTERS)
+  /** false = daftar Catatan berhenti di `HISTORY_PAGE_SIZE` baris pertama */
+  const [showAllTransactions, setShowAllTransactions] = useState(false)
   /** filter yang sheet opsinya sedang terbuka (null = tertutup) */
   const [openFilter, setOpenFilter] = useState<FilterKey | null>(null)
   const [selectedTransaction, setSelectedTransaction] = useState<HistoryTransaction | null>(null)
@@ -177,6 +182,12 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
     setRecapWindow(day === 0 || day === 5 || day === 6)
   }, [])
 
+  /* Filter, pencarian, atau konteks berubah = daftar baru. Kembalikan ke 10
+     baris pertama supaya hasil pencarian tidak langsung memanjang lagi. */
+  useEffect(() => {
+    setShowAllTransactions(false)
+  }, [activeFilters, searchQuery, context])
+
   /* timer Undo dibersihkan saat halaman ditinggalkan */
   useEffect(
     () => () => {
@@ -212,7 +223,29 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
     () => filterHistoryTransactions(visibleTransactions, activeFilters, searchQuery, today),
     [visibleTransactions, activeFilters, searchQuery, today],
   )
-  const groups = useMemo(() => groupTransactionsByDate(filtered, today), [filtered, today])
+  /*
+   * DAFTAR CATATAN DIPOTONG 10 BARIS (permintaan pemilik produk).
+   *
+   * Urutannya tidak boleh berubah gara-gara pemotongan, jadi kelompokkan dulu
+   * (fungsi yang sama dengan tampilan), RATAKAN sesuai urutan tampil (hari
+   * terbaru → jam terbaru), baru ambil 10 pertama. Pengelompokan ulang
+   * dilakukan atas baris yang terlihat saja supaya total/net harian di kepala
+   * grup tidak menghitung baris yang belum ditampilkan.
+   */
+  const allGroups = useMemo(() => groupTransactionsByDate(filtered, today), [filtered, today])
+  const listedTransactions = useMemo(
+    () =>
+      latestTransactions(
+        filtered,
+        today,
+        showAllTransactions ? filtered.length : HISTORY_PAGE_SIZE,
+      ),
+    [filtered, today, showAllTransactions],
+  )
+  const groups = useMemo(
+    () => groupTransactionsByDate(listedTransactions, today),
+    [listedTransactions, today],
+  )
   const summary = useMemo(() => summarizeTransactions(filtered), [filtered])
   /**
    * Jumlah catatan yang DIKONTEKS ini punya (sebelum filter/pencarian user) —
@@ -495,6 +528,49 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
         })}
       </div>
 
+      {/* ── 0 CATATAN = TIDAK ADA YANG DIKLAIM (paket 59 · 59.1) ────────────
+         Kartu ini duduk di LUAR kedua panel tab supaya tab Insight tidak pernah
+         tampil kosong saat belum ada catatan sama sekali. Dulu ia hanya hidup di
+         panel Riwayat, jadi pindah ke Insight = layar kosong tanpa penjelasan.
+
+         Dulu di keadaan ini kartu kalibrasi menuliskan "0/30 transaksi" dan
+         insight menyebut angka mock — dua permukaan yang bicara tentang data
+         yang tidak ada. Sekarang keduanya digantikan SATU kartu jujur berisi
+         apa yang bisa dihitung (belum apa-apa) + CTA mencatat.
+
+         Heatmap, skor, & insight ikut tidak dirender di sini: grafik pola
+         pengeluaran yang digambar dari data tanpa catatan akan terbaca sebagai
+         klaim. */}
+      {totalTransactions === 0 && (
+        <section className="mt-5 flex flex-col items-center rounded-[2rem] bg-cream px-6 py-10 text-center shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] ring-1 ring-soil/12 lg:mt-6">
+          <span
+            className="flex size-14 items-center justify-center rounded-2xl border-2 border-dashed border-forest/20 bg-cream/60"
+            aria-hidden
+          >
+            <Sprout className="size-6 text-forest/45" strokeWidth={1.8} />
+          </span>
+          <h2 className="mt-4 font-display text-[16px] font-semibold tracking-tight text-forest">
+            {HISTORY_NO_DATA_COPY.title}
+          </h2>
+          <p className="mt-2 max-w-md text-[13px] leading-relaxed text-forest/60">
+            {HISTORY_NO_DATA_COPY.body}
+          </p>
+          <div className="mt-5">
+            <TransactionBottomSheet
+              trigger={
+                <button
+                  type="button"
+                  className="inline-flex h-11 items-center gap-2 rounded-2xl bg-forest px-5 text-[13.5px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
+                >
+                  <ReceiptText className="size-4" strokeWidth={2.6} aria-hidden />
+                  {HISTORY_NO_DATA_COPY.cta}
+                </button>
+              }
+            />
+          </div>
+        </section>
+      )}
+
       {/* ── FILTER GLOBAL — tepat di bawah judul, di ATAS semua konten ──────────
           Audit hierarki (Gestalt): dulu search + filter nyempil di TENGAH
           halaman (antara insight dan list) sehingga terlihat hanya berlaku
@@ -635,45 +711,6 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
           (kartu target bulan ini di baris strip Home), jadi menampilkannya lagi
           di /history membuat posisinya terasa acak. */}
 
-      {/* ── 0 CATATAN = TIDAK ADA YANG DIKLAIM (paket 59 · 59.1) ────────────
-         Dulu di keadaan ini kartu kalibrasi menuliskan "0/30 transaksi" dan
-         insight menyebut angka mock — dua permukaan yang bicara tentang data
-         yang tidak ada. Sekarang keduanya digantikan SATU kartu jujur berisi
-         apa yang bisa dihitung (belum apa-apa) + CTA mencatat.
-
-         Heatmap, skor, & insight ikut tidak dirender di sini: grafik pola
-         pengeluaran yang digambar dari data tanpa catatan akan terbaca sebagai
-         klaim. */}
-      {totalTransactions === 0 && (
-        <section className="mt-5 flex flex-col items-center rounded-[2rem] bg-cream px-6 py-10 text-center shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] ring-1 ring-soil/12 lg:mt-6">
-          <span
-            className="flex size-14 items-center justify-center rounded-2xl border-2 border-dashed border-forest/20 bg-cream/60"
-            aria-hidden
-          >
-            <Sprout className="size-6 text-forest/45" strokeWidth={1.8} />
-          </span>
-          <h2 className="mt-4 font-display text-[16px] font-semibold tracking-tight text-forest">
-            {HISTORY_NO_DATA_COPY.title}
-          </h2>
-          <p className="mt-2 max-w-md text-[13px] leading-relaxed text-forest/60">
-            {HISTORY_NO_DATA_COPY.body}
-          </p>
-          <div className="mt-5">
-            <TransactionBottomSheet
-              trigger={
-                <button
-                  type="button"
-                  className="inline-flex h-11 items-center gap-2 rounded-2xl bg-forest px-5 text-[13.5px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
-                >
-                  <ReceiptText className="size-4" strokeWidth={2.6} aria-hidden />
-                  {HISTORY_NO_DATA_COPY.cta}
-                </button>
-              }
-            />
-          </div>
-        </section>
-      )}
-
       {/* ── CATATAN: daftar transaksi dikelompokkan per tanggal ─────────────────
           REDESIGN. Versi lama bertumpuk tiga lapis: kartu putih → kartu krem per
           hari → kartu putih per transaksi, dengan banyak pill (label hari, chip
@@ -692,7 +729,7 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
               <h2 className="font-display text-[15px] font-semibold tracking-tight text-forest">Catatan</h2>
               <p className="text-[11.5px] text-forest/45">
                 {summary.count} transaksi
-                {groups.length > 0 ? ` · ${groups.length} hari` : ''}
+                {allGroups.length > 0 ? ` · ${allGroups.length} hari` : ''}
               </p>
             </div>
           </div>
@@ -708,11 +745,7 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
                 {summary.count} dari {contextCount}
               </span>
             )}
-            </div>
-
-      {/* ---- TAB "INSIGHT": skor kewarasan + insight AI ---- */}
-      <div className={cn(tab !== 'insight' && 'hidden')}>
-      {totalTransactions > 0 && (
+            {totalTransactions > 0 && (
               <button
                 type="button"
                 onClick={() => setClearAllOpen(true)}
@@ -802,10 +835,37 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
             ))}
           </div>
         )}
-      </section>
 
-      {/* ── SKOR KEWARASAN + INSIGHT AI — paling bawah, sesuai urutan yang
-          diminta: filter → keborosan → ritual → catatan → skor → insight.
+        {/* ── SATU TOMBOL UNTUK SISANYA ──────────────────────────────────────
+            10 baris terbaru dulu supaya halaman tidak kepanjangan. Tombolnya
+            hanya muncul kalau memang ada yang disembunyikan, menyebut jumlah
+            TOTAL catatan (bukan jumlah yang tersisa) supaya user tahu ukuran
+            daftarnya, dan bisa ditutup lagi tanpa mengubah filter/pencarian. */}
+        {filtered.length > HISTORY_PAGE_SIZE && (
+          <div className="mt-4 flex justify-center">
+            <button
+              type="button"
+              onClick={() => setShowAllTransactions((value) => !value)}
+              aria-expanded={showAllTransactions}
+              className="inline-flex h-11 items-center gap-2 rounded-full bg-cream px-5 text-[13px] font-medium text-forest ring-1 ring-soil/12 transition-colors hover:bg-sage/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25 active:scale-[0.98]"
+            >
+              {showAllTransactions
+                ? HISTORY_LIST_COPY.showLess
+                : HISTORY_LIST_COPY.showAll(filtered.length)}
+              <ChevronDown
+                className={cn('size-3.5 transition-transform', showAllTransactions && 'rotate-180')}
+                strokeWidth={2.6}
+                aria-hidden
+              />
+            </button>
+          </div>
+        )}
+      </section>
+      </div>
+
+      {/* ---- TAB "INSIGHT": skor kewarasan + insight AI ---- */}
+      <div className={cn(tab !== 'insight' && 'hidden')}>
+      {/* ── SKOR KEWARASAN + INSIGHT AI — isi tab Insight.
           Skor dihitung dari SELURUH catatan (metrik global user), sedangkan
           insight lahir dari catatan KONTEKS AKTIF — konteks yang datanya tipis
           tidak diberi klaim sama sekali. */}

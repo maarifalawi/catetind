@@ -388,7 +388,9 @@ export const CATEGORY_PICKER_COPY = {
 
   /** Layer 1 */
   quickTitle: 'Sering dipakai',
-  quickHint: 'Ketuk buat langsung pakai.',
+  /* `quickHint` ("Ketuk buat langsung pakai.") DIHAPUS atas permintaan pemilik
+     produk — kartu Quick Pick sudah berbentuk tombol, jadi kalimat itu mengulang
+     hal yang sudah jelas dan hanya menambah tinggi sheet. */
   viewAll: 'Lihat Semua Kategori',
 
   /** Layer 2 */

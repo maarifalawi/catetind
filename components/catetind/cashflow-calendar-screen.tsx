@@ -24,7 +24,6 @@ import {
   isWithinPeriod,
   periodBounds,
   periodLabel,
-  periodRangeLabel,
   selectCell,
   shiftAnchor,
   summarizePeriod,
@@ -60,10 +59,9 @@ import { parseISO } from 'date-fns'
       server & client identik (tidak ada hydration mismatch).
    4. Nominal diformat lewat `maskMoney(value, masked)` sehingga tombol mata
       global menyensor halaman ini sama seperti halaman lain.
-   5. REDESIGN: tap tanggal tidak lagi menggulirkan layar ke panel detail.
-      Umpan balik instannya adalah bubble di atas sel (lihat
-      cashflow-calendar-grid.tsx); panel detail cukup mengikuti tanggal yang
-      dipilih, jadi tidak ada gerakan layar yang mengagetkan.
+   5. REDESIGN: tap tanggal tidak menggulirkan layar dan tidak memunculkan
+      tooltip. Panel detail di bawah kalender langsung mengikuti tanggal yang
+      dipilih; sel kalender sendiri tidak pernah menampilkan nominal.
    6. PAKET 49 — halaman ini TIDAK menyimpan daftar catatannya sendiri. Entri
       satu hari = konstanta demo `CALENDAR_ENTRIES` + baris ledger sungguhan
       (`calendarEntriesFromLedger()`), sementara catatan baru ditulis lewat
@@ -232,7 +230,6 @@ export function CashflowCalendarScreen() {
   )
 
   const label = periodLabel(anchor, periodMode, paydayDate)
-  const rangeLabel = periodRangeLabel(anchor, periodMode, paydayDate)
 
   /* ── HANDLER ────────────────────────────────────────────────────────────── */
 
@@ -366,9 +363,7 @@ export function CashflowCalendarScreen() {
           <CashflowCalendarGrid
             grid={grid}
             mode={periodMode}
-            paydayDate={paydayDate}
             label={label}
-            rangeLabel={rangeLabel}
             summary={summary}
             selectedDate={selectedDate}
             masked={masked}
@@ -402,7 +397,6 @@ export function CashflowCalendarScreen() {
           <CashflowInspector
             cell={cell}
             masked={masked}
-            dailyAverage={grid.dailyAverage}
             onAddNote={() => setNoteSheetOpen(true)}
           />
         </div>

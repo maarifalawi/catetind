@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireUser } from '@/lib/session'
-import { readCallerPlan } from '@/lib/subscription/plan'
+import { readCallerPlan, subscriptionPayload } from '@/lib/subscription/plan'
 
 /* ── GET /api/subscription — PAKET YANG DIMILIKI PEMANGGIL ────────────────────
    Dipakai halaman /checkout/selesai untuk membuktikan (bukan mengarang) bahwa
@@ -29,17 +29,7 @@ export async function GET(req: NextRequest) {
   }
 
   /* `active` sengaja hanya true kalau barisnya ADA, ditandai aktif, DAN masa
-     aktifnya belum lewat. `planId` tetap dikembalikan saat expired supaya panel
-     billing bisa menawarkan perpanjangan paket yang sama. */
-  return NextResponse.json({
-    ok: true,
-    configured: caller.configured,
-    active: caller.configured && caller.active,
-    planId: caller.configured ? caller.planId : null,
-    purchasedAt: caller.configured ? caller.purchasedAt : null,
-    expiresAt: caller.configured ? caller.expiresAt : null,
-    isLifetime: caller.configured ? caller.isLifetime : false,
-    billingPeriod: caller.configured ? caller.billingPeriod : null,
-    expired: caller.configured ? caller.expired : false,
-  })
+     aktifnya belum lewat. Bentuk balasannya satu sumber dengan route
+     rekonsiliasi pembayaran — lihat `subscriptionPayload()`. */
+  return NextResponse.json(subscriptionPayload(caller))
 }

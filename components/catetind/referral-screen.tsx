@@ -6,20 +6,15 @@ import {
   Check,
   ChevronDown,
   CircleHelp,
-  Clock,
   Copy,
   Gift,
   HeartHandshake,
-  Link2,
-  Lock,
+  Info,
   Share2,
-  Sparkles,
   Users,
-  type LucideIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { ScreenShell } from './screen-shell'
-import { MetaChip } from './meta-chip'
 import { cn } from '@/lib/utils'
 import {
   REFERRAL_HISTORY,
@@ -30,41 +25,34 @@ import {
   REFERRED_FRIEND_BENEFIT,
   SHARE_TEXT,
   SHARE_TITLE,
-  planLabel,
   buildReferralShareText,
   buildReferralShareUrl,
-  friendStatusLabel,
   getReferrerReward,
   referralState,
-  PLAN_TIER_EXPLAIN,
   type ReferralFriend,
   type RewardCopy,
 } from '@/lib/data/referral'
 
-/* ── Ajak Teman (/app/referral) — mesin pertumbuhan organik (Domain 7D) ──────
-   Halaman ini sengaja HANYA punya satu pekerjaan: membuat user menekan tombol
-   bagikan. Karena itu urutannya PSIKOLOGIS, bukan urutan data:
+/* ── Ajak Teman (/app/referral) — satu pekerjaan: membuat user menekan tombol
+   bagikan. Konten dibaca sebagai satu alur dari atas ke bawah:
 
-     KIRI  (5/12)  1. Bahan Bakar AI menipis           → "aku butuh isi ulang"
-                   2. Kartu reward dinamis             → "oh, aku dapat ini"
-                   3. Link + satu CTA + segel privasi  → "tinggal tekan, aman"
-     KANAN (7/12)  4. KPI + total reward               → "lihat gunung reward-nya"
-                   5. Riwayat teman                    → "siapa yang belum bayar?"
-                   6. Cara kerja (accordion)           → "tanpa proses klaim, ya"
+     1. Reward Lo        — apa yang user dapat (satu kartu, tanpa tautan paket)
+     2. Link Referral Lo — tinggal salin / bagikan (dua tombol sejajar)
+     3. Pencapaian Lo    — tiga angka + total reward dalam SATU blok
+     4. Riwayat Teman    — dikelompokkan per status, tanpa badge berulang
+     5. Cara kerja       — accordion tertutup default
 
-   Tidak ada leaderboard, tidak ada fitur sosial, tidak ada kartu opsional —
-   setiap elemen di sini harus mendorong tombol Bagikan. Layout melebar penuh
-   (`lg:grid-cols-12`, sama seperti Tagihan & Joint) TANPA container sempit di
-   tengah layar.
-
-   Warna memakai token palet apa adanya: Cantelope (`hud-amber`) = "mendekati
-   batas" untuk gauge token yang menipis, Sage/Mint (`leaf`) = positif & reward
-   cair, Evergreen (`forest`) = tombol utama + hero total reward, Daisy
-   (`brand`) = pop brand di lingkaran ikon reward.
+   Zero noise: tidak ada eyebrow, paragraf penjelas, disclaimer privasi inline,
+   chip kode di header, atau badge reward per baris teman. Privasi hidup di balik
+   ikon info. Warna hanya memakai token yang sudah ada (cream, sage, mint,
+   forest, soil, hud-amber) — tanpa hex atau warna baru.
    ────────────────────────────────────────────────────────────────────────── */
 
 /** cubic-bezier khas app: masuk cepat lalu settle lembut (animasi accordion 4D) */
 const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1]
+
+/** label kecil di atas judul kartu — satu gaya untuk semua kartu halaman ini */
+const CARD_EYEBROW = 'text-[10px] font-medium uppercase tracking-[0.14em] text-forest/40'
 
 export function ReferralScreen() {
   /** accordion 4D — tertutup default, teks langkah baru dibaca kalau diminta */
@@ -73,7 +61,6 @@ export function ReferralScreen() {
   const [copied, setCopied] = useState(false)
 
   const {
-    userSubscription,
     referralCode,
     referralLink,
     totalClicks,
@@ -139,44 +126,22 @@ export function ReferralScreen() {
   /* ── RENDER ─────────────────────────────────────────────────────────────── */
   return (
     <ScreenShell>
-      {/* ── HEADER — resep kanonik H1 yang sama dengan Dashboard & halaman lain ── */}
-      <header className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <p className="text-[13px] font-medium text-forest/45">Program Ajak Teman</p>
-          <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-forest lg:text-4xl">
-            Ajak Teman
-          </h1>
-          <div className="mt-2 flex flex-wrap items-center gap-2 lg:mt-3">
-            <MetaChip icon={Gift}>Kode {referralCode}</MetaChip>
-            <MetaChip icon={Link2}>{totalClicks} klik link</MetaChip>
-            <MetaChip icon={Users}>{friendsConverted} teman sudah beli paket</MetaChip>
-          </div>
-        </div>
+      {/* HEADER — judul saja. Eyebrow lama & tiga chip (kode/klik/beli)
+          dicabut: kode sudah ada di kartu link, angka sudah ada di blok
+          pencapaian. */}
+      <header className="mt-4 flex items-start justify-between gap-3 lg:mt-0">
+        <h1 className="font-display text-3xl font-semibold tracking-tight text-forest lg:text-4xl">
+          Ajak Teman
+        </h1>
       </header>
 
-      {/* Tanda JUJUR (paket 85): angka & riwayat di halaman ini masih CONTOH —
-          jangan sampai statistik teman karangan terbaca sebagai milik user. */}
-      {REFERRAL_IS_SAMPLE && (
-        <p className="mt-4 flex flex-wrap items-center gap-2 rounded-2xl bg-hud-amber/15 px-3.5 py-2.5 text-[12px] leading-relaxed text-forest/70 ring-1 ring-hud-amber/30">
-          <span className="rounded-full bg-hud-amber/40 px-2 py-0.5 text-[10.5px] font-medium tracking-wide text-forest">
-            {REFERRAL_SAMPLE_NOTICE.badge}
-          </span>
-          {REFERRAL_SAMPLE_NOTICE.body}
-        </p>
-      )}
-
-      {/* ── FULL-WIDTH 2 KOLOM ───────────────────────────────────────────────
-          KIRI (5/12)  = motivator + satu aksi
-          KANAN (7/12) = statistik & transparansi
-          Di mobile tetap satu kolom, urutannya sama (motivasi dulu, baru bukti). */}
+      {/* ── SATU ALUR, DUA KOLOM DI DESKTOP ─────────────────────────────────
+          KIRI  (5/12) = janji reward + aksi bagikan
+          KANAN (7/12) = bukti (pencapaian + riwayat) + cara kerja
+          Di mobile urutannya sama: reward dulu, baru link, baru bukti. */}
       <div className="mt-5 grid grid-cols-1 gap-5 lg:mt-6 lg:grid-cols-12 lg:gap-6">
         <div className="flex flex-col gap-5 lg:col-span-5 lg:gap-6">
-          {/* H10-1 (audit UI/UX): kartu "Sisa Token AI-mu: 15% — Menipis"
-              DIPINDAH dari halaman ini. Audit menilainya guilt-trip, bukan
-              incentive. Meter "Bahan Bakar AI" sudah hidup di Dashboard/sidebar
-              (ai-fuel-card), jadi halaman referral cukup fokus ke REWARD yang
-              user DAPAT — bukan token yang menipis. */}
-          <RewardCard reward={reward} planLabel={planLabel(userSubscription)} />
+          <RewardCard reward={reward} />
           <ShareCard
             referralLink={referralLink}
             copied={copied}
@@ -186,13 +151,27 @@ export function ReferralScreen() {
         </div>
 
         <div className="flex flex-col gap-5 lg:col-span-7 lg:gap-6">
-          <KpiRow clicks={totalClicks} pending={friendsPending} converted={friendsConverted} />
-          <TotalRewardCard total={totalRewardEarned} />
-          <HistoryCard
-            friends={REFERRAL_HISTORY}
+          <AchievementCard
+            clicks={totalClicks}
+            registered={friendsPending}
             converted={friendsConverted}
-            pending={friendsPending}
+            total={totalRewardEarned}
           />
+
+          {/* Tanda JUJUR (paket 85): angka & riwayat di halaman ini masih
+              CONTOH — jangan sampai statistik teman karangan terbaca sebagai
+              milik user. Ditempatkan dekat data yang ia jelaskan. */}
+          {REFERRAL_IS_SAMPLE && (
+            <p className="flex flex-wrap items-center gap-2 rounded-2xl bg-hud-amber/15 px-3.5 py-2.5 text-[12px] leading-relaxed text-forest/70 ring-1 ring-hud-amber/30">
+              <span className="rounded-full bg-hud-amber/40 px-2 py-0.5 text-[10.5px] font-medium tracking-wide text-forest">
+                {REFERRAL_SAMPLE_NOTICE.badge}
+              </span>
+              {REFERRAL_SAMPLE_NOTICE.body}
+            </p>
+          )}
+
+          <FriendHistoryCard friends={REFERRAL_HISTORY} />
+
           <HowItWorksCard
             open={howItWorksOpen}
             onToggle={() => setHowItWorksOpen((prev) => !prev)}
@@ -204,51 +183,22 @@ export function ReferralScreen() {
 }
 
 /* ── komponen kecil halaman ini ───────────────────────────────────────────── */
-/* H10-1 (audit UI/UX): kartu "Bahan Bakar AI" (FuelGaugeCard) DIPINDAH dari
-   halaman ini ke Dashboard/sidebar (components/catetind/ai-fuel-card.tsx) —
-   meter token sudah hidup di sana. Halaman referral fokus ke REWARD user. */
 
 /**
- * 3B — Kartu reward. Kalimat reward-nya TIDAK ditulis di sini: ia datang dari
- * `getReferrerReward()` supaya teksnya tidak mungkin berbeda dari aturan produk.
- * Sejak paket 84 semua paket akses selamanya, jadi rewardnya SATU bentuk
- * (Token AI) untuk paket apa pun. Chip paket di sebelah label tetap ditampilkan
- * sebagai transparansi — user melihat sendiri paket yang ia miliki.
+ * REWARD LO — satu janji, satu kartu, tanpa tautan penjelasan paket. Kalimat
+ * reward datang dari `getReferrerReward()` supaya tidak mungkin berbeda dari
+ * aturan produk. Baris kedua adalah sisi lain program dua arah: apa yang
+ * didapat TEMAN saat checkout.
  */
-function RewardCard({ reward, planLabel }: { reward: RewardCopy; planLabel: string }) {
+export function RewardCard({ reward }: { reward: RewardCopy }) {
   return (
     <section className="rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12 sm:p-6">
-      <div className="flex items-start gap-3.5">
-        {/* Daisy = pop brand; ikon di atas aksen terang memakai tinta hitam */}
-        <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-brand text-forest">
-          <Sparkles className="size-5" strokeWidth={2.2} />
-        </span>
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-forest/40">
-              Reward kamu
-            </p>
-            <span title={PLAN_TIER_EXPLAIN.body} className="cursor-help rounded-full bg-sage/70 px-2.5 py-0.5 text-[10.5px] font-medium text-forest ring-1 ring-forest/10">
-              {planLabel}
-            </span>
-          </div>
-          <p className="mt-1.5 text-[14.5px] font-medium leading-snug text-forest">
-            {reward.lead}{' '}
-            <span className="font-display font-medium tracking-tight">{reward.highlight}</span>
-          </p>
-          <details className="mt-2">
-            <summary className="w-fit cursor-pointer text-[11.5px] font-medium text-forest/60 underline decoration-dotted underline-offset-4 marker:content-none hover:text-forest">
-              {PLAN_TIER_EXPLAIN.linkLabel(planLabel)}
-            </summary>
-            <p className="mt-1.5 text-[11.5px] leading-relaxed text-forest/55">
-              {PLAN_TIER_EXPLAIN.body}
-            </p>
-          </details>
-        </div>
-      </div>
-
-      {/* sisi lain dari program dua arah: apa yang didapat TEMAN saat checkout */}
-      <p className="mt-4 flex items-start gap-2 border-t border-soil/12 pt-3.5 text-[12.5px] leading-relaxed text-forest/65">
+      <p className={CARD_EYEBROW}>Reward Lo</p>
+      <p className="mt-2 font-display text-[22px] font-semibold leading-snug tracking-tight text-forest sm:text-[26px]">
+        {reward.lead}{' '}
+        <span className="font-medium">{reward.highlight}</span>
+      </p>
+      <p className="mt-3 flex items-start gap-2 border-t border-soil/12 pt-3.5 text-[12.5px] leading-relaxed text-forest/65">
         <HeartHandshake
           className="mt-0.5 size-4 shrink-0 text-forest/70"
           strokeWidth={2.2}
@@ -261,14 +211,11 @@ function RewardCard({ reward, planLabel }: { reward: RewardCopy; planLabel: stri
 }
 
 /**
- * 3C + 3D + 3E — Blok aksi: kotak link mono, SATU tombol bagikan, lalu segel
- * privasi. Ketiganya satu kartu karena secara psikologis ia satu gerakan:
- * "lihat link → tekan → tenang karena data kamu aman".
- *
- * Tombol Copy sengaja dibuat tenang (Oat/Sage) supaya satu-satunya tombol yang
- * berteriak adalah "Bagikan ke Teman".
+ * LINK REFERRAL LO — hanya label, link, dan dua aksi. Tidak ada sub-teks
+ * penjelas. Satu-satunya informasi tambahan (janji privasi) hidup di balik
+ * ikon info supaya tidak masuk alur baca utama.
  */
-function ShareCard({
+export function ShareCard({
   referralLink,
   copied,
   onCopy,
@@ -281,212 +228,185 @@ function ShareCard({
 }) {
   return (
     <section className="rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12 sm:p-6">
-      <h2 className="font-display text-[17px] font-semibold tracking-tight text-forest">Link unikmu</h2>
-      <p className="mt-0.5 text-[11.5px] leading-relaxed text-forest/45">
-        Semua teman yang mendaftar lewat link ini otomatis tercatat atas namamu.
-      </p>
+      <div className="flex items-center justify-between gap-2">
+        <p className={CARD_EYEBROW}>Link Referral Lo</p>
 
-      {/* H10-4 (audit UI/UX): kotak link, Copy, dan Bagikan digabung jadi SATU
-          baris — dulu tombol "Bagikan ke Teman" terpisah jauh di bawah link.
-          Di mobile barisnya membungkus rapi (kolom), di sm+ benar-benar sebaris. */}
-      <div className="mt-3.5 flex flex-col gap-2 rounded-2xl bg-cream p-1.5 ring-1 ring-soil/12 sm:flex-row sm:items-center">
-        <span className="min-w-0 flex-1 truncate rounded-xl bg-soil/[0.06] px-3.5 py-2.5 font-mono text-[12.5px] text-forest/70">
-          {referralLink}
+        {/* 3E — segel privasi dipindah ke tooltip. `title` tetap jadi cadangan
+            native; hover/focus menampilkan kalimat lengkapnya. */}
+        <span
+          tabIndex={0}
+          aria-describedby="referral-privacy-tip"
+          title={REFERRAL_PRIVACY_PLEDGE}
+          className="group relative inline-flex size-6 shrink-0 cursor-help items-center justify-center rounded-full text-forest/35 outline-none transition-colors hover:text-forest/60 focus-visible:ring-2 focus-visible:ring-forest/25"
+        >
+          <Info className="size-3.5" strokeWidth={2.4} aria-hidden />
+          <span
+            id="referral-privacy-tip"
+            role="tooltip"
+            className="pointer-events-none absolute right-0 bottom-full z-20 mb-2 w-60 rounded-xl bg-forest px-3 py-2 text-left text-[11px] font-normal leading-relaxed text-cream opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none"
+          >
+            {REFERRAL_PRIVACY_PLEDGE}
+          </span>
         </span>
-        <div className="flex shrink-0 items-center gap-2">
-          <button
-            type="button"
-            onClick={onCopy}
-            aria-label={copied ? 'Link sudah tersalin' : 'Salin link referral'}
-            className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-xl bg-sage px-3.5 text-[12.5px] font-medium text-forest transition-colors hover:bg-sage/70 active:scale-[0.97]"
-          >
-            {copied ? (
-              <Check className="size-4" strokeWidth={2.6} aria-hidden />
-            ) : (
-              <Copy className="size-4" strokeWidth={2.2} aria-hidden />
-            )}
-            {copied ? 'Tersalin' : 'Copy Link'}
-          </button>
-          <button
-            type="button"
-            onClick={onShare}
-            className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-forest px-4 text-[13px] font-medium text-cream shadow-[0_18px_36px_-20px_rgba(0,0,0,0.95)] transition-colors hover:bg-forest-soft active:scale-[0.97]"
-          >
-            <Share2 className="size-4" strokeWidth={2.4} aria-hidden />
-            Bagikan ke Teman
-          </button>
-        </div>
       </div>
 
-      {/* 3E — segel privasi. Satu baris, ikon kunci, nada tenang: ini yang
-          membunuh keberatan nomor satu ("nanti data keuanganku kelihatan"). */}
-      <p className="mt-3 flex items-start gap-1.5 text-[11.5px] leading-relaxed text-forest/45">
-        <Lock className="mt-[1px] size-3.5 shrink-0" strokeWidth={2.2} aria-hidden />
-        {REFERRAL_PRIVACY_PLEDGE}
+      <p className="mt-3 truncate rounded-xl bg-soil/[0.06] px-3.5 py-3 font-mono text-[13px] text-forest/70">
+        {referralLink}
       </p>
+
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          onClick={onCopy}
+          aria-label={copied ? 'Link sudah tersalin' : 'Salin link referral'}
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-sage px-3 text-[12.5px] font-medium text-forest transition-colors hover:bg-sage/70 active:scale-[0.97]"
+        >
+          {copied ? (
+            <Check className="size-4" strokeWidth={2.6} aria-hidden />
+          ) : (
+            <Copy className="size-4" strokeWidth={2.2} aria-hidden />
+          )}
+          {copied ? 'Tersalin' : 'Copy Link'}
+        </button>
+        <button
+          type="button"
+          onClick={onShare}
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-forest px-3 text-[12.5px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.97]"
+        >
+          <Share2 className="size-4" strokeWidth={2.4} aria-hidden />
+          Bagikan
+        </button>
+      </div>
     </section>
   )
 }
 
-/** label kepala kolom riwayat — satu kelas untuk tiga kolom pertama */
-const HISTORY_HEAD = 'text-[10.5px] font-medium uppercase tracking-[0.14em] text-forest/40'
-
 /**
- * 4A — KPI ringkas: TIGA kartu dalam satu baris. Di mobile tetap 3 kolom
- * (isinya menyusut vertikal: ikon → angka → label) supaya ketiga angka bisa
- * dibandingkan tanpa menggulir.
+ * PENCAPAIAN LO — penggabungan baris KPI (12 / 3 / 2) dan kartu hero total
+ * reward menjadi SATU blok. Angka besar & tebal, label kecil & redup; total
+ * reward duduk di bawah garis pemisah sebagai ringkasan, bukan kartu kedua.
  */
-function KpiRow({
+export function AchievementCard({
   clicks,
-  pending,
+  registered,
   converted,
+  total,
 }: {
   clicks: number
-  pending: number
+  registered: number
   converted: number
+  total: string
 }) {
-  const cards: { id: string; label: string; value: number; icon: LucideIcon; positive?: boolean }[] =
-    [
-      { id: 'clicks', label: 'Klik Link', value: clicks, icon: Link2 },
-      { id: 'pending', label: 'Teman Mendaftar', value: pending, icon: Clock },
-      /* sudah beli paket = uang berpindah = satu-satunya kartu bernada positif (Sage) */
-      { id: 'converted', label: 'Teman Sudah Beli', value: converted, icon: Check, positive: true },
-    ]
+  const stats: { id: string; label: string; value: number }[] = [
+    { id: 'clicks', label: 'Klik Link', value: clicks },
+    { id: 'registered', label: 'Mendaftar', value: registered },
+    { id: 'converted', label: 'Sudah Beli', value: converted },
+  ]
 
-  return (
-    <section aria-label="Statistik referral" className="grid grid-cols-3 gap-2.5 sm:gap-3">
-      {cards.map(({ id, label, value, icon: Icon, positive }) => (
-        <div key={id} className="rounded-[1.5rem] bg-cream p-3.5 ring-1 ring-soil/12 sm:p-4">
-          <span
-            className={cn(
-              'flex size-8 items-center justify-center rounded-xl sm:size-9',
-              positive ? 'bg-mint/30 text-forest' : 'bg-sage text-forest/80',
-            )}
-          >
-            <Icon className="size-4" strokeWidth={2.4} aria-hidden />
-          </span>
-          <p className="mt-2.5 font-display text-[22px] font-semibold leading-none tracking-tight tabular-nums text-forest sm:text-[26px]">
-            {value}
-          </p>
-          <p className="mt-1 text-[10.5px] font-medium leading-tight text-forest/45 sm:text-[11.5px]">
-            {label}
-          </p>
-        </div>
-      ))}
-    </section>
-  )
-}
-
-/**
- * 4B — Hero "ego bait": akumulasi reward ditulis besar di atas permukaan
- * Evergreen supaya terasa seperti pencapaian, bukan baris tabel. Kalimat
- * lengkapnya tetap utuh untuk pembaca layar lewat aria-label.
- */
-function TotalRewardCard({ total }: { total: string }) {
   return (
     <section
-      aria-label={`Total Reward yang Kamu Dapat: ${total}`}
-      className="flex items-center gap-4 rounded-[1.75rem] bg-forest p-5 text-cream shadow-[0_24px_50px_-30px_rgba(0,0,0,0.95)] sm:p-6"
+      aria-label="Pencapaian referral"
+      className="rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12 sm:p-6"
     >
-      <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-brand text-forest">
-        <Gift className="size-5" strokeWidth={2.2} aria-hidden />
-      </span>
-      <div className="min-w-0">
-        <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-cream/55">
-          Total Reward yang Kamu Dapat
-        </p>
-        <p className="mt-1 font-display text-[26px] font-medium leading-none tracking-tight text-cream sm:text-[30px]">
+      <p className={CARD_EYEBROW}>Pencapaian Lo</p>
+
+      <div className="mt-4 grid grid-cols-3 gap-3">
+        {stats.map(({ id, label, value }) => (
+          <div key={id}>
+            <p className="font-display text-[28px] font-semibold leading-none tracking-tight tabular-nums text-forest sm:text-[32px]">
+              {value}
+            </p>
+            <p className="mt-1.5 text-[10.5px] font-medium leading-tight text-forest/45 sm:text-[11.5px]">
+              {label}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-4 flex items-center justify-between gap-3 border-t border-soil/12 pt-4">
+        <span className="flex min-w-0 items-center gap-2 text-[12.5px] text-forest/55">
+          <Gift className="size-4 shrink-0" strokeWidth={2.2} aria-hidden />
+          Total Reward
+        </span>
+        <span className="shrink-0 text-right font-display text-[15px] font-semibold tracking-tight text-forest sm:text-[16px]">
           {total}
-        </p>
+        </span>
       </div>
     </section>
   )
 }
 
-/**
- * Baris riwayat teman. HP = 2 kolom (nama + status, lalu tanggal + reward),
- * >= sm = 4 kolom sejajar seperti tabel. Penempatannya dibiarkan mengalir
- * otomatis (`grid` flow), jadi hanya ada SATU salinan markup per teman —
- * tidak ada tabel ganda yang harus dijaga tetap sinkron.
- */
-const HISTORY_ROW =
-  'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 py-3.5 sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1.15fr)_minmax(0,0.8fr)_auto] sm:gap-3'
-
-const HISTORY_COLS_SM =
-  'sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1.15fr)_minmax(0,0.8fr)_auto]'
+/** kelompok riwayat — urutan tetap: yang sudah membayar dulu, baru yang menunggu */
+const FRIEND_GROUPS = [
+  { id: 'converted', label: 'Sudah Beli', converted: true },
+  { id: 'pending', label: 'Menunggu Pembayaran', converted: false },
+] as const
 
 /**
- * 4C — Riwayat teman: transparansi "kenapa reward saya belum nambah?".
- * Teman yang BELUM bayar dibuat buram (`opacity-55`) supaya perbedaan
- * "sudah beli paket" vs "belum bayar" terasa tanpa warna/ikon alarm baru.
+ * RIWAYAT TEMAN — dikelompokkan per status dengan pembatas tipis (pola yang
+ * sama dengan "Akan Datang" / "Sudah Dibayar" di halaman Tagihan). Status
+ * dibawa oleh kelompok + tint baris, jadi tiap baris cukup nama & tanggal:
+ * tidak ada badge status maupun badge reward berulang.
  */
-function HistoryCard({
-  friends,
-  converted,
-  pending,
-}: {
-  friends: ReferralFriend[]
-  converted: number
-  pending: number
-}) {
+export function FriendHistoryCard({ friends }: { friends: ReferralFriend[] }) {
+  const groups = FRIEND_GROUPS.map((group) => ({
+    ...group,
+    items: friends.filter((friend) => friend.converted === group.converted),
+  })).filter((group) => group.items.length > 0)
+
   return (
     <section className="rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12 sm:p-6">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="font-display text-xl font-medium tracking-tight text-forest">
-            Riwayat Teman yang Kamu Ajak
-          </h2>
-          <p className="mt-1 text-[13px] leading-relaxed text-forest/55">
-            {converted} sudah beli paket · {pending} masih menunggu pembayaran
-          </p>
-        </div>
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="font-display text-xl font-medium tracking-tight text-forest">
+          Riwayat Teman
+        </h2>
         <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-sage text-forest">
           <Users className="size-4" strokeWidth={2.2} aria-hidden />
         </span>
       </div>
 
-      {/* kepala kolom: hanya di >= sm; di HP tiap baris sudah menjelaskan diri */}
-      <div
-        className={cn(
-          'mt-4 hidden gap-3 border-b border-soil/12 pb-2 sm:grid',
-          HISTORY_COLS_SM,
-        )}
-      >
-        <span className={HISTORY_HEAD}>Nama</span>
-        <span className={HISTORY_HEAD}>Status</span>
-        <span className={HISTORY_HEAD}>Tanggal</span>
-        <span className={cn(HISTORY_HEAD, 'justify-self-end')}>Reward</span>
-      </div>
+      <div className="mt-4 flex flex-col gap-4">
+        {groups.map((group) => (
+          <div key={group.id}>
+            <div className="flex items-center gap-3 px-1">
+              <h3 className="shrink-0 text-[11px] font-medium text-forest-muted">
+                {group.label}
+              </h3>
+              <span aria-hidden className="h-px flex-1 bg-soil/10" />
+            </div>
 
-      <ul className="divide-y divide-soil/12 border-t border-soil/12 sm:border-t-0">
-        {friends.map((friend) => (
-          <li key={friend.id} className={cn(HISTORY_ROW, !friend.converted && 'opacity-55')}>
-            <span className="min-w-0 truncate text-[13px] font-medium text-forest">
-              {friend.name}
-            </span>
-
-            <span
-              className={cn(
-                'inline-flex shrink-0 items-center justify-self-end rounded-full px-2.5 py-0.5 text-[10.5px] font-medium sm:justify-self-start',
-                friend.converted ? 'bg-mint/30 text-forest' : 'bg-soil/[0.06] text-forest/55',
-              )}
-            >
-              {friendStatusLabel(friend.converted)}
-            </span>
-
-            <span className="text-[11.5px] tabular-nums text-forest/50">{friend.joinedAt}</span>
-
-            <span
-              className={cn(
-                'justify-self-end text-right text-[12.5px] tabular-nums',
-                friend.converted ? 'font-medium text-forest' : 'text-forest/40',
-              )}
-            >
-              {friend.reward}
-            </span>
-          </li>
+            <ul className="mt-2 flex flex-col gap-1">
+              {group.items.map((friend) => (
+                <li
+                  key={friend.id}
+                  className={cn(
+                    'flex items-center justify-between gap-3 rounded-xl px-3 py-2.5',
+                    /* tint Mint 14% — token yang sama dengan baris "Lunas" di Tagihan */
+                    group.converted && 'bg-mint/[0.14]',
+                  )}
+                >
+                  <span
+                    className={cn(
+                      'min-w-0 truncate text-[13px] font-medium',
+                      group.converted ? 'text-forest' : 'text-forest/55',
+                    )}
+                  >
+                    {friend.name}
+                  </span>
+                  <span
+                    className={cn(
+                      'shrink-0 text-[11.5px] tabular-nums',
+                      group.converted ? 'text-forest/50' : 'text-forest/40',
+                    )}
+                  >
+                    {friend.joinedAt}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
         ))}
-      </ul>
+      </div>
     </section>
   )
 }
@@ -495,7 +415,7 @@ function HistoryCard({
  * 4D — Accordion "Bagaimana cara kerjanya?": tiga langkah, tertutup default.
  * Pola buka/tutupnya sama dengan "Detail per Aset" di halaman Kekayaan
  * (AnimatePresence + tinggi auto + chevron berputar) supaya bahasa geraknya
- * konsisten lintas halaman.
+ * konsisten lintas halaman. TIDAK diubah oleh redesain ini.
  */
 function HowItWorksCard({ open, onToggle }: { open: boolean; onToggle: () => void }) {
   return (
@@ -555,3 +475,4 @@ function HowItWorksCard({ open, onToggle }: { open: boolean; onToggle: () => voi
     </section>
   )
 }
+

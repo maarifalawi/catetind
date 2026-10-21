@@ -76,8 +76,11 @@ function Bloom({
       {angles.map((deg) => (
         <circle
           key={`pollen-${deg}`}
-          cx={Math.cos((deg * Math.PI) / 180) * 3.2}
-          cy={Math.sin((deg * Math.PI) / 180) * 3.2}
+          /* koordinat dibulatkan ke 3 desimal — Math.sin/cos bisa menghasilkan
+             digit terakhir yang berbeda antara server & browser, dan itu memicu
+             hydration mismatch pada atribut SVG. */
+          cx={Math.round(Math.cos((deg * Math.PI) / 180) * 3200) / 1000}
+          cy={Math.round(Math.sin((deg * Math.PI) / 180) * 3200) / 1000}
           r="1"
           fill="#ffffff"
           opacity="0.9"
@@ -106,19 +109,53 @@ function Bloom({
  */
 export function PlantIllustration({
   stage,
+  progress,
   wilted = false,
   sleeping = false,
   className,
 }: {
   stage: PlantStage
+  /**
+   * PROGRES CELENGAN (0–100), OPSIONAL.
+   *
+   * Tanaman dulu hanya punya EMPAT wujud diskret (benih → tunas → muda →
+   * berbunga), jadi celengan 20% dan 80% bisa tampak hampir sama — terutama di
+   * kartu kecil. Dengan `progress`, dua hal terjadi sekaligus:
+   *
+   *   1. tahapnya DITURUNKAN dari progres (bukan dari field `stage` yang bisa
+   *      tertinggal), dan
+   *   2. seluruh tanaman diskalakan kontinu dari 0,55× ke 1× (titik tumbuh di
+   *      bibir pot), jadi 20% benar-benar terlihat lebih kecil & lebih muda
+   *      daripada 80%.
+   *
+   * Tanpa `progress`, perilakunya persis seperti sebelumnya — semua pemanggil
+   * lama tidak berubah.
+   */
+  progress?: number
   wilted?: boolean
   /** true = mode "menunggu paket aktif" (tanpa angka HP) */
   sleeping?: boolean
   className?: string
 }) {
+  /* progres dijepit 0–100; `null` = komponen memakai `stage` apa adanya */
+  const clamped = progress == null ? null : Math.min(100, Math.max(0, progress))
+  const resolvedStage: PlantStage =
+    clamped == null
+      ? stage
+      : clamped >= 75
+        ? 4
+        : clamped >= 50
+          ? 3
+          : clamped >= 25
+            ? 2
+            : 1
+  /* 0% → 0.55× (kecambah mungil) · 100% → 1× (tanaman penuh) */
+  const growth = clamped == null ? 1 : 0.55 + 0.45 * (clamped / 100)
   const label = sleeping
     ? PLANT_SLEEP_COPY.aria
-    : `Tanaman tahap ${STAGE_NAMES[stage]}${wilted ? ' (layu)' : ''}`
+    : `Tanaman tahap ${STAGE_NAMES[resolvedStage]}${
+        clamped == null ? '' : `, progres ${Math.round(clamped)}%`
+      }${wilted ? ' (layu)' : ''}`
 
   return (
     <svg
@@ -127,52 +164,11 @@ export function PlantIllustration({
       role="img"
       aria-label={label}
     >
-      {/* defs - seluruh gradien palet kanon, dipakai lintas tahap */}
-      <defs>
-        <radialGradient id="catetindGlow" cx="50%" cy="42%" r="58%">
-          <stop offset="0%" stopColor="#91bb9e" stopOpacity="0.4" />
-          <stop offset="55%" stopColor="#91bb9e" stopOpacity="0.12" />
-          <stop offset="100%" stopColor="#91bb9e" stopOpacity="0" />
-        </radialGradient>
-        <linearGradient id="catetindLeaf" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#dbe4c7" />
-          <stop offset="48%" stopColor="#91bb9e" />
-          <stop offset="100%" stopColor="#52685c" />
-        </linearGradient>
-        <linearGradient id="catetindLeafDeep" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#91bb9e" />
-          <stop offset="100%" stopColor="#45594e" />
-        </linearGradient>
-        <linearGradient id="catetindStem" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#91bb9e" />
-          <stop offset="100%" stopColor="#45594e" />
-        </linearGradient>
-        <linearGradient id="catetindPot" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#52685c" />
-          <stop offset="100%" stopColor="#1f2823" />
-        </linearGradient>
-        <linearGradient id="catetindPotRim" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#91bb9e" />
-          <stop offset="100%" stopColor="#52685c" />
-        </linearGradient>
-        <linearGradient id="catetindPetalBack" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#fbe3c0" />
-          <stop offset="100%" stopColor="#b89191" />
-        </linearGradient>
-        <linearGradient id="catetindPetal" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#fbe3c0" />
-          <stop offset="100%" stopColor="#b89191" />
-        </linearGradient>
-        <radialGradient id="catetindCore" cx="35%" cy="30%" r="75%">
-          <stop offset="0%" stopColor="#f6edb7" />
-          <stop offset="55%" stopColor="#ffb885" />
-          <stop offset="100%" stopColor="#e8b06a" />
-        </radialGradient>
-        <radialGradient id="catetindSheen" cx="32%" cy="28%" r="72%">
-          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.55" />
-          <stop offset="70%" stopColor="#ffffff" stopOpacity="0" />
-        </radialGradient>
-      </defs>
+      {/* Gradien tanaman hidup SEKALI di <PlantArtDefs/> (root layout). Dulu
+          tiap instance menulis <defs> sendiri dengan id yang sama; saat beberapa
+          tanaman ada di halaman dan salah satunya di section tersembunyi,
+          browser memakai definisi pertama yang tidak terlihat dan pot/daun
+          tanaman lain kehilangan gradien. Lihat plant-art-defs.tsx. */}
 
       {/* halo mint lembut di belakang tanaman + bayangan tanah */}
       <ellipse cx="100" cy="118" rx="86" ry="98" fill="url(#catetindGlow)" />
@@ -187,9 +183,16 @@ export function PlantIllustration({
           className={cn(wilted && 'translate-y-1 rotate-[3deg] opacity-75 saturate-50')}
           style={{ transformOrigin: '100px 170px' }}
         >
+          {/* SKALA PERTUMBUHAN KONTINU (lihat `progress` di atas). Transform-nya
+              CSS, bukan atribut, supaya bisa dianimasikan halus ketika user
+              menyetor — 20% dan 80% jadi terbaca beda tinggi & rimbunnya. */}
+          <g
+            className="transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
+            style={{ transform: `scale(${growth})`, transformOrigin: '100px 172px' }}
+          >
           {/* ── TAHAP 1 · BENIH ──────────────────────────────────────────────
               gundukan tanah + biji dengan tunas mungil yang baru pecah keluar */}
-          {stage === 1 && (
+          {resolvedStage === 1 && (
             <g>
               <path d="M70 168 Q100 145 130 168 Z" fill="#73533c" />
               <path d="M77 168 Q100 152 123 168 Z" fill="#73533c" />
@@ -203,7 +206,7 @@ export function PlantIllustration({
           )}
 
           {/* ── TAHAP 2 · TUNAS ───────────────────────────────────────────── */}
-          {stage === 2 && (
+          {resolvedStage === 2 && (
             <g>
               <path
                 d="M100 170 C 100 161 100 152 100 143"
@@ -225,9 +228,9 @@ export function PlantIllustration({
           )}
 
           {/* ── BATANG (tahap 3–4) ────────────────────────────────────────── */}
-          {stage >= 3 && (
+          {resolvedStage >= 3 && (
             <path
-              d={stage === 4 ? 'M100 172 C 102 148 98 112 100 82' : 'M100 172 C 101 152 99 128 100 104'}
+              d={resolvedStage === 4 ? 'M100 172 C 102 148 98 112 100 82' : 'M100 172 C 101 152 99 128 100 104'}
               fill="none"
               stroke="url(#catetindStem)"
               strokeWidth="5"
@@ -235,7 +238,7 @@ export function PlantIllustration({
             />
           )}
           {/* ── TAHAP 3–4 · DEDAUNAN (empat lapis, makin ke atas makin muda) ── */}
-          {stage >= 3 && (
+          {resolvedStage >= 3 && (
             <g style={{ transformOrigin: '100px 150px' }}>
               <Leaf
                 d="M100 152 C 80 150 64 139 58 119 C 79 122 94 133 100 148 Z"
@@ -276,7 +279,7 @@ export function PlantIllustration({
           )}
 
           {/* ── TAHAP 3 · KUNCUP & DAUN PUCUK (belum berbunga) ────────────── */}
-          {stage === 3 && (
+          {resolvedStage === 3 && (
             <g>
               <path
                 d="M100 107 c -3.4 0 -6 -3.1 -6 -6.8 c 0 -3.9 2.7 -7 6 -7 c 3.3 0 6 3.1 6 7 c 0 3.7 -2.6 6.8 -6 6.8 Z"
@@ -295,7 +298,7 @@ export function PlantIllustration({
           )}
 
           {/* ── TAHAP 4 · BERBUNGA (kuntum berlapis + serbuk sari) ────────── */}
-          {stage === 4 && (
+          {resolvedStage === 4 && (
             <g>
               {/* dua daun tambahan di bawah supaya terasa rimbun, bukan sebatang */}
               <Leaf
@@ -324,6 +327,8 @@ export function PlantIllustration({
               <circle cx="134" cy="118" r="1.1" fill="#91bb9e" opacity="0.6" />
             </g>
           )}
+          </g>
+
         </g>
       </g>
 

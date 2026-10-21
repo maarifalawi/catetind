@@ -25,6 +25,7 @@ export function HudRing({
   size = 80,
   stroke = 7,
   tone = 'dark',
+  accent = 'status',
 }: {
   /** porsi jatah hari ini yang terpakai (0..1) — dari `computeDailyHud` */
   usedPct: number
@@ -36,9 +37,16 @@ export function HudRing({
   stroke?: number
   /** 'dark' = di atas permukaan forest (track putih transparan), 'light' = di atas putih */
   tone?: 'light' | 'dark'
+  /**
+   * Warna busur. `status` = tiga warna kanon (olive/amber/plum) untuk pemakaian
+   * jatah; `mint` = satu warna brand. Hero /budget memakai `mint` supaya cincin
+   * oranye/olive tidak menjadi warna kesepuluh di halaman yang justru diminta
+   * lebih tenang — status tetap terbaca dari angka & bar periode.
+   */
+  accent?: 'status' | 'mint'
 }) {
   const model = hudMeter(usedPct)
-  const fill = HOME_HUD_COPY.status[model.status].ring
+  const fill = accent === 'mint' ? '#91bb9e' : HOME_HUD_COPY.status[model.status].ring
   const radius = (size - stroke) / 2
   const circumference = 2 * Math.PI * radius
   const percentLabel = `${Math.round(model.usedPct * 100)}%`

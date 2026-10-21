@@ -10,6 +10,7 @@ import { Plus, LayoutGrid, ArrowLeftRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useNavCompact } from '@/hooks/use-nav-compact'
 import { FEATURE_LOCK_COPY } from '@/lib/data/upgrade'
+import { pageLockText, pageUnlockPlan } from '@/lib/subscription/page-access'
 import { TRANSFER_DOOR_COPY } from '@/lib/data/add-wallet'
 import { MOBILE_NAV_COPY } from '@/lib/data/mobile-nav'
 import {
@@ -21,6 +22,7 @@ import {
 import { useSubscriptionGate } from '@/components/catetind/subscription-gate-provider'
 import { TransactionBottomSheet } from '@/components/dashboard/transaction-bottom-sheet'
 import { TransferFlow } from '@/components/catetind/transfer-flow'
+import { NavLockBadge } from '@/components/catetind/nav-lock-badge'
 
 /* Navigasi (tab bawah + laci "Lainnya") = SATU sumber di `lib/navigation.ts`,
    dibagi dengan sidebar desktop — dulu daftar ini ditulis dua kali dan label
@@ -107,10 +109,15 @@ function NavLink({
       ? pathname === item.href
       : pathname.startsWith(item.href)
   const Icon = item.icon
+  /* Tab bawah bisa ikut terkunci kalau nanti ada halaman berbayar yang naik
+     jadi tab utama. Hari ini ketiganya terbuka untuk semua paket, tetapi
+     penandanya disiapkan di sini supaya aturannya tidak ditulis ulang. */
+  const { lockedPageCapability } = useSubscriptionGate()
+  const locked = lockedPageCapability(item.href) !== null
   return (
     <Link
       href={item.href}
-      aria-label={item.label}
+      aria-label={locked ? `${item.label} (terkunci)` : item.label}
       aria-current={isActive ? 'page' : undefined}
       className={cn(
         'flex flex-1 items-center justify-center',
@@ -120,14 +127,17 @@ function NavLink({
         compact ? 'py-2' : 'py-3',
       )}
     >
-      <Icon
-        className={cn(
-          'transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none',
-          compact ? 'size-[18px]' : 'size-[22px]',
-          isActive ? 'text-forest' : 'text-forest/25 hover:text-forest/45',
-        )}
-        strokeWidth={1.8}
-      />
+      <span className="relative inline-flex">
+        <Icon
+          className={cn(
+            'transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none',
+            compact ? 'size-[18px]' : 'size-[22px]',
+            isActive ? 'text-forest' : 'text-forest/25 hover:text-forest/45',
+          )}
+          strokeWidth={1.8}
+        />
+        {locked && <NavLockBadge variant="dot" />}
+      </span>
     </Link>
   )
 }
@@ -147,7 +157,7 @@ export function MobileBottomNav() {
   const [transferOpen, setTransferOpen] = useState(false)
   /* paket belum aktif → FAB ini satu-satunya pintu input dari bottom nav, jadi
      ia yang dikunci. Membaca data, pindah halaman, & menu "Lainnya" tetap jalan. */
-  const { inputLocked } = useSubscriptionGate()
+  const { inputLocked, lockedPageCapability } = useSubscriptionGate()
   /* NAV DINAMIS (paket 75): menggulir ke bawah → nav memadat (py-2, ikon lebih
      kecil); menggulir ke atas → kembali penuh. Aturannya di
      `hooks/use-nav-compact.ts` (fungsi murni + test). `useReducedMotion` dipakai
@@ -156,6 +166,11 @@ export function MobileBottomNav() {
   const reduceMotion = useReducedMotion()
 
   const menuActive = NAV_HREFS.some((href) => pathname.startsWith(href))
+  /* Kalau ada satu saja menu di laci yang terkunci, tombol “Lainnya” diberi
+     titik emas — supaya batasannya terlihat SEBELUM laci dibuka. */
+  const menuHasLock = MOBILE_MENU_GROUPS.some((group) =>
+    group.items.some((item) => lockedPageCapability(item.href) !== null),
+  )
   /* Halaman Joint Wallet punya FAB-nya sendiri (form transaksi + split +
      privasi), jadi FAB bottom-nav disembunyikan di sana supaya tetap hanya ada
      SATU tombol tambah di layar. */
@@ -256,14 +271,17 @@ export function MobileBottomNav() {
             compact ? 'py-2' : 'py-3',
           )}
         >
-          <LayoutGrid
-            className={cn(
-              'transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none',
-              compact ? 'size-[18px]' : 'size-[22px]',
-              menuActive ? 'text-forest' : 'text-forest/25 hover:text-forest/45',
-            )}
-            strokeWidth={1.8}
-          />
+          <span className="relative inline-flex">
+            <LayoutGrid
+              className={cn(
+                'transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none',
+                compact ? 'size-[18px]' : 'size-[22px]',
+                menuActive ? 'text-forest' : 'text-forest/25 hover:text-forest/45',
+              )}
+              strokeWidth={1.8}
+            />
+            {menuHasLock && <NavLockBadge variant="dot" />}
+          </span>
         </button>
       </nav>
 
@@ -324,29 +342,50 @@ export function MobileBottomNav() {
                   <div className="mt-3 grid grid-cols-3 gap-2.5">
                     {group.items.map(({ href, icon: Icon, label, hint }) => {
                       const isActive = pathname.startsWith(href)
+                      /* Menu terkunci tetap DITAMPILKAN (bukan disembunyikan):
+                         batasannya harus terlihat, bukan baru terasa setelah
+                         ditekan. Kliknya sudah dicegat `UpgradeGateProvider`. */
+                      const locked = lockedPageCapability(href) !== null
+                      const lockText = locked ? pageLockText(href) : null
+                      const unlockPlan = locked ? pageUnlockPlan(href) : null
+                      const unlockName =
+                        unlockPlan?.name.replace(/^paket\s+/i, '') ?? 'paket lebih tinggi'
                       return (
                         <Link
                           key={href}
                           href={href}
                           onClick={() => setMenuOpen(false)}
-                          title={hint}
+                          title={lockText ?? hint}
+                          aria-label={lockText ? `${label} (${lockText})` : undefined}
                           aria-current={isActive ? 'page' : undefined}
                           className={cn(
-                            'flex flex-col items-center gap-1.5 rounded-2xl px-2 py-3.5 text-center transition-all duration-150 active:scale-95',
+                            'relative flex flex-col items-center gap-1.5 rounded-2xl px-2 py-3.5 text-center transition-all duration-150 active:scale-95',
                             isActive
                               ? 'bg-brand/25 font-medium text-forest'
                               : 'bg-soil/[0.03] font-medium text-forest/55 hover:bg-soil/[0.11]',
                           )}
                         >
-                          <Icon className="size-6 text-forest" />
+                          <span className="relative inline-flex">
+                            <Icon className="size-6 text-forest" />
+                            {locked && <NavLockBadge variant="dot" />}
+                          </span>
                           <span className="text-xs font-medium leading-tight">
                             {label}
                           </span>
                           {/* keterangan singkat (audit "Navigation Clunkiness"):
                               satu baris konteks supaya tiap tujuan jelas tanpa
-                              perlu membukanya dulu */}
-                          <span className="text-[10px] font-normal leading-snug text-forest/40">
-                            {hint}
+                              perlu membukanya dulu. Yang terkunci diganti
+                              keterangan paket pembukanya — tetap satu baris,
+                              tetapi langsung menjawab "kenapa digembok". */}
+                          <span
+                            className={cn(
+                              'text-[10px] leading-snug',
+                              locked
+                                ? 'font-semibold text-daisy-deep'
+                                : 'font-normal text-forest/40',
+                            )}
+                          >
+                            {locked ? `Buka di ${unlockName}` : hint}
                           </span>
                         </Link>
                       )

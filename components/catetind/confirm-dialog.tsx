@@ -33,8 +33,9 @@ export function ConfirmDialog({
   /** aria-label tombol gelap di belakang dialog (klik = batal) */
   overlayLabel: string
   title: string
-  /** isi kalimat; boleh memuat elemen tebal (mis. nominalnya) */
-  body: ReactNode
+  /** isi kalimat; boleh memuat elemen tebal (mis. nominalnya). Opsional — dialog
+   *  hapus budget hanya memakai judul supaya tidak mengulang hal yang jelas. */
+  body?: ReactNode
   /**
    * Baris pengaman di atas tombol: menjelaskan bahwa aksinya MASIH bisa
    * dibatalkan (Undo). Ditaruh sebelum user menekan Hapus, bukan sesudah —
@@ -96,7 +97,9 @@ export function ConfirmDialog({
         >
           {title}
         </h2>
-        <p className="mt-1.5 text-[12.5px] leading-relaxed text-forest/55">{body}</p>
+        {body && (
+          <p className="mt-1.5 text-[12.5px] leading-relaxed text-forest/55">{body}</p>
+        )}
 
         {note && (
           <p className="mt-3 rounded-2xl bg-soil/[0.1] px-3.5 py-2.5 text-[11.5px] leading-relaxed text-forest/60">

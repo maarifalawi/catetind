@@ -67,7 +67,7 @@ komentar arah produksi di titik integrasi).
 | 14 | **History & Insights** | `/app/history` | `/history` 🧩 | ✅ | `history-screen.tsx` + insight cards + heatmap; pintasan `?q=`. |
 | 15 | **Settings (Menu Master)** | `/app/settings` | `/settings` 🧩 | ✅ | `settings-shell.tsx` (master–detail, sidebar tetap). |
 | 16 | **Share Preview (Public)** | `/share/[id]` | `/share/[id]` | ⚠️ | Pratinjau kartu ada; **generator gambar** (untuk OG/IG Story) belum (`share/[id]/page.tsx:50`). |
-| 17 | **Profil & Akun** | `/app/settings/profile` | `/settings` 🧩 | ✅ | Digabung sebagai section default `/settings` (`settings-panel-account.tsx`). |
+| 17 | **Profil & Akun** | `/app/settings/profile` | `/settings/profile` 🧩 | ✅ | Route sendiri (`settings-panel-account.tsx`); di mobile dibuka dari indeks `/settings`. |
 | 18 | **Langganan & Billing** | `/app/settings/billing` | `/settings/billing` | ⚠️ | `billing-panel.tsx` + Fuel Gauge; kartu paket & jalur upgrade nyata (paket 84). Kuota AI kini per paket (`planQuota()`): tier 1 tanpa AI, tier 2 berkuota, tier 3 tanpa batas. Top up token AI kini **nyata** (Midtrans Core API + `ai_addons`, paket 85) dan band Top-Up hanya tampil untuk paket berkuota. |
 | 19 | **Tampilan & Tema** | `/app/settings/appearance` | `/settings/appearance` | ✅ | `settings-panel-preferences.tsx`. |
 | 20 | **Kustomisasi Kategori** | `/app/settings/categories` | `/settings/categories` | ✅ | idem. |
@@ -300,7 +300,7 @@ Diurutkan dari yang paling "belum" ke yang paling "sebagian".
 | Item | Keputusan | Alasan (sumber) |
 |---|---|---|
 | **Prefix `/app`** hanya untuk Dashboard & Onboarding | `/wallet`, `/history`, `/budget`, `/settings`, … tanpa prefix | Disederhanakan; semua tautan konsisten (`lib/navigation.ts`). |
-| **Profil & Akun** tidak di `/settings/profile` | Digabung sebagai section default `/settings` | `SETTINGS_MENU` (`settings-shell.tsx`). |
+| **Profil & Akun** punya rute sendiri | `/settings/profile`; `/settings` tetap indeks | `SETTINGS_MENU` (`settings-shell.tsx`) — mobile butuh pola indeks → detail supaya menu profil bisa dibuka. |
 | **Tab Properti** `/wealth` = teaser | Tidak dibangun | PRD A12 (di luar V1). |
 | **Bank-sync / open banking** | Tidak ada | Anti-dark-pattern; manual-first. |
 | **Supabase/RLS/Midtrans nyata** | Mock + komentar arah produksi | Repo DEMO. |

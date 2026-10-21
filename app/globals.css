@@ -930,38 +930,54 @@ body[data-catetind-sheet-open='true'] [data-catetind-page-root] {
   mask-image: linear-gradient(to right, transparent, black 12%, black 88%, transparent);
 }
 /* ── Landing & checkout · corak batik pada kartu paket ────────────────────────
-   Dua mask ini dipakai `BatikBackdrop` (components/landing/lp/batik-backdrop.tsx)
-   untuk memudarkan corak kawung & mega mendung sebelum mencapai tengah kartu.
-   Hasilnya: kartu terasa seperti kain tercetak di sudutnya, sementara nominal
-   dan daftar fitur tetap tajam. Mask, bukan opacity: yang memudar hanya pola,
-   bukan teks di atasnya. */
+   Empat mask ini dipakai `BatikBackdrop` (components/landing/lp/batik-backdrop.tsx)
+   untuk memetakan satu motif ke satu sudut kartu:
+
+     parang       → kiri bawah   (pita S diagonal + mlinjon)
+     kawung       → kiri atas    (kelopak kolang-kaling)
+     mega mendung → kanan bawah  (awan berlapis)
+     truntum      → kanan atas   (bunga bintang + taburan titik)
+
+   Hasilnya: kartu terasa seperti kain yang dicap di keempat tepinya, sementara
+   bidang tengah — tempat nominal & daftar fitur — tetap bersih. Mask, bukan
+   opacity: yang memudar hanya pola, bukan teks di atasnya. */
 .batik-mask-kawung {
   -webkit-mask-image: radial-gradient(
-    135% 115% at 0% 0%,
+    82% 54% at 0% 0%,
     #000 0%,
-    rgba(0, 0, 0, 0.55) 26%,
-    transparent 58%
+    rgba(0, 0, 0, 0.5) 30%,
+    transparent 64%
   );
-  mask-image: radial-gradient(
-    135% 115% at 0% 0%,
-    #000 0%,
-    rgba(0, 0, 0, 0.55) 26%,
-    transparent 58%
-  );
+  mask-image: radial-gradient(82% 54% at 0% 0%, #000 0%, rgba(0, 0, 0, 0.5) 30%, transparent 64%);
 }
 
 .batik-mask-mendung {
   -webkit-mask-image: radial-gradient(
-    125% 105% at 100% 100%,
+    88% 58% at 100% 100%,
     #000 0%,
     rgba(0, 0, 0, 0.5) 30%,
-    transparent 62%
+    transparent 66%
   );
-  mask-image: radial-gradient(
-    125% 105% at 100% 100%,
+  mask-image: radial-gradient(88% 58% at 100% 100%, #000 0%, rgba(0, 0, 0, 0.5) 30%, transparent 66%);
+}
+
+.batik-mask-parang {
+  -webkit-mask-image: radial-gradient(
+    64% 56% at 0% 100%,
     #000 0%,
-    rgba(0, 0, 0, 0.5) 30%,
-    transparent 62%
+    rgba(0, 0, 0, 0.45) 32%,
+    transparent 70%
   );
+  mask-image: radial-gradient(64% 56% at 0% 100%, #000 0%, rgba(0, 0, 0, 0.45) 32%, transparent 70%);
+}
+
+.batik-mask-truntum {
+  -webkit-mask-image: radial-gradient(
+    62% 42% at 100% 0%,
+    #000 0%,
+    rgba(0, 0, 0, 0.45) 34%,
+    transparent 74%
+  );
+  mask-image: radial-gradient(62% 42% at 100% 0%, #000 0%, rgba(0, 0, 0, 0.45) 34%, transparent 74%);
 }
 

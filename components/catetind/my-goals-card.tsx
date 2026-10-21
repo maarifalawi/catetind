@@ -231,7 +231,7 @@ function HeroFund({ fund }: { fund: SinkingFundItem }) {
 
       {/* tanaman + tahap + batang tumbuh, sejajar supaya hemat tinggi */}
       <div className="relative mt-2 flex items-center gap-4">
-        <PlantIllustration stage={stage} className="w-24 shrink-0 sm:w-28" />
+        <PlantIllustration stage={stage} progress={pct} className="w-24 shrink-0 sm:w-28" />
         <div className="min-w-0 flex-1">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-cream/85 px-2.5 py-1 text-[11px] font-medium text-forest ring-1 ring-forest/10">
             <Sprout className="size-3" strokeWidth={2.4} aria-hidden />

@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { LandingNavbarLp } from '@/components/landing/lp/navbar'
 import { PaymentStartScreen } from '@/components/catetind/payment-start-screen'
 import { PLANS, rankOf, type PlanId } from '@/lib/data/pricing'
+import { midtransIsProduction } from '@/lib/payments/midtrans'
 import { readCallerPlan } from '@/lib/subscription/plan'
 import { readSupabaseSession } from '@/lib/supabase/session-cookie'
 
@@ -79,6 +80,7 @@ export default async function CheckoutPayPage({
         ownedIsLifetime={ownedIsLifetime}
         isUpgrade={isUpgrade}
         referralCode={code || null}
+        sandbox={!midtransIsProduction()}
       />
     </main>
   )

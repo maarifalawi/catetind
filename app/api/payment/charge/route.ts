@@ -423,8 +423,11 @@ export async function POST(req: NextRequest) {
   }
 
   /* URL webhook + halaman selesai diambil dari `Origin` request: tidak ada domain
-     yang di-hardcode, jadi benar baik di localhost maupun produksi. */
-  const origin = req.headers.get('origin')
+     yang di-hardcode, jadi benar baik di localhost maupun produksi. Kalau header
+     itu tidak dikirim (mis. sebagian klien/proxy), pakai origin URL request —
+     lebih baik daripada `undefined`, yang membuat Midtrans memakai setelan
+     dashboard dan bisa menunjuk host lain. */
+  const origin = req.headers.get('origin') ?? new URL(req.url).origin
 
   const itemName =
     typeof body.itemName === 'string' && body.itemName

@@ -1,4 +1,5 @@
 import { formatIDR } from '../wallets'
+import { categoryGroupIdOf, type CategoryGroupId } from './categories'
 import {
   HISTORY_TODAY_ISO,
   HISTORY_TRANSACTIONS,
@@ -430,6 +431,30 @@ export function windowTransactions<T extends HistoryTransaction>(
 /** uang keluar NYATA di dalam jendela (dipakai sebagai `spent` HUD) */
 export function spentInWindow(txs: HistoryTransaction[], window: PeriodWindow): number {
   return summarizeTransactions(windowTransactions(txs, window)).expense
+}
+
+/**
+ * Uang keluar SATU kategori budget di dalam jendela periode.
+ *
+ * Ini pengganti perbandingan `tx.category === budget.category` yang dulu membuat
+ * kartu budget selalu 0% (kategori budget kasar vs kategori transaksi rinci —
+ * lihat `budgetCategoryOfTransaction`). Hanya baris `expense` yang dihitung:
+ * setoran tabungan & pemasukan bukan pengeluaran kategori, sedangkan transfer
+ * memang netral.
+ */
+export function spentForBudget(
+  budget: BudgetItem,
+  txs: HistoryTransaction[],
+  window: PeriodWindow,
+): number {
+  return summarizeTransactions(
+    windowTransactions(
+      txs.filter(
+        (tx) => tx.type === 'expense' && transactionMatchesBudget(budget.category, tx.category),
+      ),
+      window,
+    ),
+  ).expense
 }
 
 /** uang masuk NYATA di dalam jendela (dipakai sebagai pemasukan non-bulanan) */
@@ -1001,6 +1026,58 @@ export const BUDGET_CATEGORY_OPTIONS: { label: string; icon: string }[] = [
   { label: 'Lainnya', icon: '✨' },
 ]
 
+/* ── SATU KATEGORI TRANSAKSI ↔ SATU KATEGORI BUDGET ──────────────────────────
+   INI AKAR MASALAH "budget Makanan Rp 500.000 tetap 0%" (temuan pemilik
+   produk): kategori budget bersifat KASAR (Makanan, Transportasi, Kopi, …),
+   sedangkan kategori transaksi bersifat RINCI (Delivery Makanan, Makan di Luar,
+   Kopi & Minuman, …). Dulu `spent` dihitung dengan `tx.category ===
+   budget.category`, jadi tidak ada satu pun transaksi yang pernah cocok dan
+   kartu selalu terbaca 0%.
+
+   Sekarang setiap kategori transaksi dipetakan ke TEPAT SATU kategori budget
+   (aturan "yang paling spesifik menang", jadi tidak ada pengeluaran yang
+   terhitung dua kali):
+     · Kopi & Minuman  → Kopi   (supaya budget Kopi berdiri sendiri)
+     · grup Makan      → Makanan
+     · grup lainnya    → label budget dengan nama grupnya
+     · Pendidikan/Keuangan/Sosial & kategori asing → Lainnya
+   Pemetaan memakai grup kanon di `lib/data/categories.ts`, bukan daftar nama
+   kedua yang cepat atau lambat menyimpang. */
+const BUDGET_CATEGORY_OF_GROUP: Record<CategoryGroupId, string> = {
+  makan: 'Makanan',
+  transportasi: 'Transportasi',
+  belanja: 'Belanja',
+  hiburan: 'Hiburan',
+  kesehatan: 'Kesehatan',
+  tagihan: 'Tagihan',
+  pendidikan: 'Lainnya',
+  keuangan: 'Lainnya',
+  sosial: 'Lainnya',
+}
+
+/** kategori budget yang menampung pengeluaran dengan kategori transaksi ini */
+export function budgetCategoryOfTransaction(category: string): string {
+  const label = category.trim()
+  if (!label) return 'Lainnya'
+  if (label.toLowerCase() === 'kopi & minuman') return 'Kopi'
+  /* label KASAR dari data lama / hasil AI ("Makanan", "Transportasi", …) sudah
+     sama dengan nama kategori budget — jangan dilempar ke grup lebih dulu. */
+  const direct = BUDGET_CATEGORY_OPTIONS.find(
+    (option) => option.label.toLowerCase() === label.toLowerCase(),
+  )
+  if (direct) return direct.label
+  if (label.toLowerCase() === 'pendidikan') return 'Lainnya'
+  const groupId = categoryGroupIdOf(label)
+  return groupId ? BUDGET_CATEGORY_OF_GROUP[groupId] : 'Lainnya'
+}
+
+/** apakah pengeluaran berkategori `txCategory` masuk ke limit `budgetCategory`? */
+export function transactionMatchesBudget(budgetCategory: string, txCategory: string): boolean {
+  return (
+    budgetCategoryOfTransaction(txCategory).toLowerCase() === budgetCategory.trim().toLowerCase()
+  )
+}
+
 export const BUDGET_PERIOD_OPTIONS: { id: BudgetPeriod; label: string }[] = [
   { id: 'weekly', label: 'Mingguan' },
   { id: 'monthly', label: 'Bulanan' },
@@ -1047,13 +1124,14 @@ export function budgetPlantHref(): string {
 /**
  * Jalan keluar dari kartu Jatah Hari Ini menuju konfigurasi uang user (paket 57).
  *
- * Rutenya `/settings` — panel "Profil & Akun" adalah section DEFAULT halaman itu
- * (`app/settings/page.tsx` → `ProfileSettingsPanel`), dan di situlah field
- * PEMASUKAN BULANAN + TOTAL CICILAN BULANAN hidup. Sengaja konstanta, bukan
- * string di JSX: satu tautan yang salah ketik = CTA yang tidak menuju ke mana
- * pun, dan repo ini tidak punya halaman pengaturan kedua yang bisa menampung.
+ * Rutenya `/settings/profile` — panel "Profil & Akun", tempat field PEMASUKAN
+ * BULANAN + TOTAL CICILAN BULANAN hidup. Sejak indeks `/settings` dipakai
+ * sebagai DAFTAR MENU di mobile, menaut ke sana berarti mendarat di daftar yang
+ * harus diketuk sekali lagi; deep-link ini langsung membuka panelnya di mobile
+ * maupun desktop. Sengaja konstanta, bukan string di JSX: satu tautan yang salah
+ * ketik = CTA yang tidak menuju ke mana pun.
  */
-export const MONEY_SETTINGS_HREF = '/settings'
+export const MONEY_SETTINGS_HREF = '/settings/profile'
 
 /** baca parameter URL apa pun menjadi boolean — `?tanam=1` / `?tanam=true` */
 export function flagParamOf(value: string | string[] | undefined): boolean {
@@ -1399,7 +1477,6 @@ export const HUD_COPY = {
     `Setelah dipotong cicilan ${installmentsLabel} & celengan ${obligationLabel}`,
   /** Dry Spell — menggantikan SELURUH HUD (tanpa Rp 0/hari) */
   drySpellTitle: 'Belum ada pemasukan di periode ini.',
-  drySpellBody: 'Yuk catat begitu masuk! 💪',
   drySpellCta: '+ Catat Pemasukan',
   drySpellA11y: 'Belum ada pemasukan di periode ini',
   /**
@@ -1667,16 +1744,19 @@ export const BUDGET_ZONE_A_COPY = {
    periode yang sedang aktif ("limit mingguan", "limit per siklus gajian"). */
 export const BUDGET_ADD_COPY = {
   title: 'Tambah Budget Baru',
-  description: 'Tiga langkah singkat — kategori, limit, lalu periode.',
+  /**
+   * `description` ("Tiga langkah singkat…") & `footer` ("Rp 500.000 per minggu —
+   * bisa kamu ubah lagi kapan aja") DIHAPUS atas permintaan pemilik produk:
+   * sheet-nya sudah progressive (kategori → nominal → periode), jadi kalimat
+   * yang menjelaskan urutan itu hanya menambah tinggi tanpa menambah informasi.
+   */
   categoryLabel: 'Pilih kategori budget',
   amountLabel: (category: string, periodWord: string) =>
     `Berapa limit ${periodWord} untuk ${category}?`,
   amountHint: 'Perkiraan aja dulu — limitnya bisa diubah kapan pun kok.',
   periodTitle: 'Periode limit',
   periodAria: 'Periode budget',
-  footer: (amountLabel: string, unit: string) =>
-    `${amountLabel} per ${unit} — bisa kamu ubah lagi kapan aja 🌿`,
-  submit: 'Simpan Budget ✓',
+  submit: 'Simpan Budget',
 } as const
 
 /* ── COPY MODE ATUR ULANG LIMIT (paket 28) ───────────────────────────────────
@@ -1688,7 +1768,7 @@ export const BUDGET_ADD_COPY = {
 export const BUDGET_EDIT_COPY = {
   title: 'Atur Ulang Limit',
   description: 'Kategori ini sudah punya limit — ubah angkanya ya.',
-  submit: 'Simpan Limit ✓',
+  submit: 'Simpan Limit',
   /** hint kecil di atas field nominal (jangkar konteks, bukan peringatan) */
   hint: 'Angka lama sudah terisi, jadi kamu cuma perlu menyesuaikan.',
 } as const
@@ -1716,11 +1796,11 @@ export const BUDGET_SAVE_TOAST = {
 export const BUDGET_DELETE_COPY = {
   overlay: 'Batal hapus budget',
   title: 'Hapus budget ini?',
-  body: (category: string, periodWord: string) =>
-    `Limit ${periodWord} untuk ${category} bakal dicabut dari daftar.`,
-  /** apa yang TIDAK ikut hilang — catatan asli, saldo, dan Jatah Harian */
-  note:
-    'Ini cuma mencabut target yang kamu pasang sendiri. Saldo dompet dan Jatah Harian TIDAK berubah — keduanya dihitung dari catatan pengeluaranmu, bukan dari limit ini.',
+  /**
+   * `body` dan `note` DIHAPUS atas permintaan pemilik produk. Dialog hapus budget
+   * kini cukup judul + jaminan Undo: limit budget bukan uang, dan kalimat panjang
+   * tentang saldo/Jatah Harian justru membuat aksi sederhana terasa berat.
+   */
   safety: (seconds: number) => `Masih bisa kamu balikin lewat tombol Undo selama ${seconds} detik.`,
   cancel: 'Batal',
   confirm: 'Hapus',
@@ -1741,13 +1821,6 @@ export const BUDGET_DELETE_TOAST = {
 export const BUDGET_CARD_ACTION_COPY = {
   delete: (category: string) => `Hapus budget ${category}`,
 } as const
-
-/* ── H5-1 (audit UI/UX) — microcopy nurturing saat kategori lewat limit ──────
-   Temuan audit: angka "614%" tanpa penjelasan terasa menghakimi dan bikin user
-   defensif. Kartu tetap menampilkan FAKTA (rupiah lebih dulu), lalu menemani
-   dengan satu kalimat yang menyebut ini bisa dibahas bareng — bukan tuduhan. */
-export const BUDGET_OVER_NURTURE =
-  'Minggu ini memang lebih besar dari biasa — kita review bareng yuk?'
 
 /* ── H5-4 (audit UI/UX) — kewajiban celengan PER HARI ───────────────────────
    Angka bulanan (mis. Rp 3.061.225/bulan) terasa berat; per-hari terasa lebih
@@ -1771,15 +1844,26 @@ export function suggestedBudgetCategory(
   rows: { category: string; type: string }[],
   existingCategories: string[],
 ): { category: string; count: number } | null {
+  const existing = new Set(existingCategories.map((category) => category.trim().toLowerCase()))
   const counts = new Map<string, number>()
   for (const row of rows) {
     if (row.type !== 'expense') continue
-    const key = row.category.trim()
-    if (!key || existingCategories.includes(key)) continue
+    /* kategori transaksi dipetakan ke kategori BUDGET (Makanan, Transportasi, …)
+       supaya tombol "Set budget" membuka sheet dengan pilihan yang benar-benar
+       ada di `BUDGET_CATEGORY_OPTIONS` — dulu label rinci seperti "Delivery
+       Makanan" diteruskan apa adanya dan sheet-nya terbuka tanpa kategori. */
+    const key = budgetCategoryOfTransaction(row.category)
+    /* "Lainnya" BUKAN saran yang berguna: kategori itu penampung, bukan pola
+       belanja. Kartu saran yang berbunyi "kamu sering belanja di Lainnya" hanya
+       menambah kebisingan (terlihat di demo). */
+    if (key === 'Lainnya') continue
+    if (existing.has(key.toLowerCase())) continue
     counts.set(key, (counts.get(key) ?? 0) + 1)
   }
   let best: { category: string; count: number } | null = null
   for (const [category, count] of counts) {
+    /* butuh minimal 2 catatan supaya kalimat "sering belanja" jujur */
+    if (count < 2) continue
     if (!best || count > best.count) best = { category, count }
   }
   return best
@@ -1791,7 +1875,6 @@ export function suggestedBudgetCategory(
    dengan copy yang mengajak. */
 export const BUDGET_ADD_PLACEHOLDER = {
   budgetTitle: 'Tambah batas kategori',
-  budgetBody: 'Pilih kategori & limitnya — biar porsi jajan tetap kepantau.',
   goalTitle: 'Tanam celengan baru',
   goalBody: 'Kasih nama impianmu, mulai dari angka kecil juga sah.',
 } as const
@@ -1816,10 +1899,23 @@ export const FUND_DETAIL_COPY = {
   /** judul tab + judul halaman saat id di URL tidak punya celengan */
   notFoundTitle: 'Celengan tidak ditemukan',
   heroLabel: 'Terkumpul',
-  /** mengapa angka halaman ini bisa dipercaya */
-  heroHint: 'Dihitung dari riwayat setoranmu sendiri.',
   planTitle: 'Rencana Nabung',
   projectionTitle: 'Perkiraan Penuh',
+  /* ── KARTU RENCANA RINGKAS (revisi "kebanyakan teks") ─────────────────────
+     Halaman detail tidak lagi menjelaskan rencana dengan kalimat panjang. Dua
+     fakta yang benar-benar dicari user (nabung per bulan & perkiraan penuh)
+     tampil sebagai LABEL + ANGKA, dan alasan sesingkat mungkin sebagai chip. */
+  planPerMonth: 'Nabung / bulan',
+  /** pengganti angka saat target sudah lunas (monthlyNeeded = 0) */
+  planDoneValue: 'Target penuh 🎉',
+  /** chip sisa waktu — tiga kata, bukan kalimat */
+  monthsLeftShort: (months: number) => (months <= 1 ? 'Bulan ini' : `${months} bln lagi`),
+  /** nilai proyeksi saat belum ada setoran sama sekali */
+  projectionEmpty: 'Belum ada setoran',
+  /** chip ketepatan proyeksi — menggantikan kalimat "kalau ritmenya konsisten…" */
+  projectionAhead: 'Lebih cepat',
+  projectionOnTime: 'Tepat waktu',
+  projectionLate: 'Sedikit lewat',
   /** label kolom di hero — "Target" = nominal tujuan, "Target tanggal" = deadline */
   targetLabel: 'Target',
   deadlineLabel: 'Target tanggal',
@@ -1926,9 +2022,9 @@ export const FUND_CARD_ACTION_COPY = {
    string user-facing di JSX.
 
    Sekaligus dipendekkan mengikuti permintaan pemilik produk ("budget & target
-   nabung: strip out unnecessary text"): kalimat panjang versi kalimat penuh
-   tetap hidup di `FUND_PLAN_COPY` untuk tempat yang memang butuh kalimat (halaman
-   detail celengan), sedangkan KARTU hanya menampilkan angka + label mikro. */
+   nabung: strip out unnecessary text"): halaman detail pun kini memakai label +
+   angka ringkas (lihat `FUND_DETAIL_COPY.planPerMonth/projectionTitle`),
+   sedangkan KARTU hanya menampilkan angka + label mikro. */
 export const SINKING_FUND_CARD_COPY = {
   /** nominal setoran bulanan — bentuk mikro, tanpa kalimat */
   perMonth: (amountLabel: string) => `${amountLabel}/bulan`,
@@ -1941,10 +2037,11 @@ export const SINKING_FUND_CARD_COPY = {
     amountLabel: string,
     targetLabel: string,
   ) => `Progres celengan ${name}: ${percentLabel}, ${amountLabel} dari ${targetLabel}.`,
-  /** pintasan pintu masuk ke halaman detail (teks, bukan kalimat) */
-  detail: 'Lihat detail',
   /** tombol setor cepat di kaki kartu */
   contribute: 'Setor',
+  /** nama aksesibel tombol setor — menyebut celengannya, karena di daftar ada
+   *  banyak tombol "Setor" berderet yang tak bisa dibedakan pembaca layar */
+  contributeAria: (name: string) => `Setor ke celengan ${name}`,
 } as const
 
 /** copy addendum kartu nudge, empty state, & CTA Zona B (paket 78) */
@@ -2005,10 +2102,9 @@ export const FUND_HISTORY_COPY = {
   /** nama kolom dompet sumber di tiap baris */
   walletLead: 'dari',
   emptyTitle: 'Belum ada setoran di sini 🌱',
-  emptyBody:
-    'Setoran pertamamu bakal muncul di daftar ini lengkap dengan tanggal dan dompet sumbernya.',
-  emptyHint: (exampleLabel: string) =>
-    `Mulai dari kecil aja — ${exampleLabel} juga tetap dihitung.`,
+  /** empty state ringkas — satu baris pengantar, tanpa ajakan panjang (CTA-nya
+   *  sudah ada di bar Setor yang menempel di bawah halaman) */
+  emptyCompact: 'Setoran pertama kamu bakal muncul di sini.',
 } as const
 
 /** PRD 2C.4 (baris 857) — dipakai saat sisa ≤ FUND_NEAR_THRESHOLD */
@@ -2098,9 +2194,15 @@ export function pacingPercent(
   return Math.min(100, (activeDay / periodDays) * 100)
 }
 
-/** hex warna bar progres kategori — tiga warna kanon Daily HUD (PRD 2B.2) */
+/** hex warna bar progres kategori.
+ *
+ *  REDESAIN paket 99: nada "sage" (on-track) memakai MINT `#91bb9e` — warna
+ *  progres yang sudah dipakai bar celengan & meter Jatah Harian. Olive
+ *  `#b5b987` dulu membuat halaman Budget punya bahasa warna sendiri yang tidak
+ *  dipakai di halaman lain. Amber (cantelope) & terracotta (plum) tetap hanya
+ *  untuk status "mendekati" & "lewat" limit. */
 export const PACING_HEX: Record<PacingTone, string> = {
-  sage: '#b5b987',
+  sage: '#91bb9e',
   amber: '#ffb885',
   terracotta: '#b89191',
 }

@@ -17,8 +17,9 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { ScreenShell } from './screen-shell'
+import { NavLockBadge } from './nav-lock-badge'
 import { useSubscriptionGate } from './subscription-gate-provider'
-import { pageLockText } from '@/lib/subscription/page-access'
+import { pageLockText, pageUnlockPlan } from '@/lib/subscription/page-access'
 import { cn } from '@/lib/utils'
 
 /* ── Pengaturan (inventaris #15–#22) — MASTER-DETAIL DI DALAM APP SHELL ────────
@@ -64,7 +65,7 @@ export type SettingsMenuItem = {
 export const SETTINGS_MENU: SettingsMenuItem[] = [
   {
     id: 'profile',
-    href: '/settings',
+    href: '/settings/profile',
     icon: User,
     title: 'Profil & Akun',
     desc: 'Nama, email, gajian',
@@ -131,17 +132,31 @@ export const SETTINGS_LOGOUT_ITEM = {
   desc: 'Akhiri sesi ini',
 } as const
 
-/** Section aktif dari URL: `/settings` → profil, `/settings/<id>` → id itu. */
+/** Section aktif dari URL: `/settings` → profil, `/settings/<id>` → id itu,
+ *  dan `/settings/logout` → logout (rute konfirmasi yang bukan item menu). */
 export function settingsSectionFromPath(pathname: string): SettingsSectionId {
-  const segment = pathname.split('/').filter(Boolean)[1]
+  const clean = pathname.split('?')[0]?.split('#')[0]?.replace(/\/+$/, '') ?? ''
+  const segment = clean.split('/').filter(Boolean)[1]
+  if (segment === 'logout') return 'logout'
   return SETTINGS_MENU.find((item) => item.id === segment)?.id ?? 'profile'
 }
 
 export function SettingsShell({ children }: { children: ReactNode }) {
   const pathname = usePathname()
   const activeId = settingsSectionFromPath(pathname)
-  /** `/settings` = indeks: daftar menu di mobile, panel profil di desktop */
-  const isIndex = activeId === 'profile'
+  /**
+   * Indeks HANYA tepat di `/settings`: daftar menu di mobile, panel profil di
+   * desktop. Section lain — termasuk `/settings/profile` — menampilkan panelnya
+   * sendiri di mobile.
+   *
+   * PERBAIKAN MOBILE: dulu `isIndex = activeId === 'profile'`. Akibatnya
+   *   · `/settings` (= href "Profil & Akun") menyembunyikan panel profil di
+   *     mobile, dan tautannya cuma kembali ke daftar menu yang sama — menu itu
+   *     terasa mati; dan
+   *   · `/settings/logout` juga dianggap indeks, sehingga halaman konfirmasi
+   *     keluar tidak pernah tampil di mobile.
+   */
+  const isIndex = pathname.replace(/\/+$/, '') === '/settings'
   /* Paket menentukan menu mana yang terkunci (mis. AI Preferences butuh
      `ai-chat`). Badge 🔒 hanya informatif; kliknya dicegat listener global
      `UpgradeGateProvider` — popup upgrade muncul, bukan pindah halaman. */
@@ -177,6 +192,9 @@ export function SettingsShell({ children }: { children: ReactNode }) {
                      paket pembukanya, dan tautannya menuju kartu upgrade. */
                   const lockText = lockedPageCapability(item.href)
                     ? pageLockText(item.href)
+                    : null
+                  const unlockPlan = lockedPageCapability(item.href)
+                    ? pageUnlockPlan(item.href)
                     : null
 
                   return (
@@ -218,10 +236,9 @@ export function SettingsShell({ children }: { children: ReactNode }) {
                           >
                             {item.title}
                             {lockText && (
-                              <Lock
-                                className="ml-1 inline size-3 align-[-1px] text-forest/35"
-                                strokeWidth={2.4}
-                                aria-hidden
+                              <NavLockBadge
+                                planName={unlockPlan?.name}
+                                className="ml-1.5 align-middle"
                               />
                             )}
                           </span>

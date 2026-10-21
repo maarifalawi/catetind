@@ -4,9 +4,11 @@ import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   ArrowDownLeft,
+  ArrowRight,
   ArrowUpRight,
   Check,
   ChevronDown,
+  HandCoins,
   MoreVertical,
   Pencil,
   Plus,
@@ -33,9 +35,8 @@ import {
   PAYMENT_HISTORY_EMPTY,
   PAYMENT_HISTORY_EMPTY_HINT,
   PAYMENT_HISTORY_TITLE,
-  PERSONAL_SECTION_COPY,
-  SNOWBALL_EMPTY,
-  SNOWBALL_HELP,
+  PERSONAL_EMPTY_LINE,
+  SNOWBALL_PROGRESS_ARIA,
   SNOWBALL_TITLE,
   DTI_UNKNOWN_COPY,
   DEBT_STATUS_COPY,
@@ -44,19 +45,15 @@ import {
   allDebtsSettled,
   counterpartyLabel,
   debtName,
-  debtPaid,
-  debtPaidPct,
   debtPointsToMe,
   dtiBadge,
   dtiRatio,
-  estimatedInterest,
   formatShortDate,
   maskMoney,
   paymentCountLabel,
   paymentsOfDebt,
   personalDebts,
   platformDebts,
-  providerEmoji,
   snowballProgress,
   snowballRows,
   totalMonthInstallments,
@@ -86,17 +83,24 @@ import {
       Ini yang membuat melunasi hutang terasa seperti menamatkan level game,
       bukan membayar tagihan.
 
+      Sejak redesain ini, baris snowball JUGA daftar hutangnya: provider,
+      konteks, sisa, jatuh tempo, pil "Catat Bayar", dan menu "…" hidup di satu
+      baris. Section PLATFORM kedua yang mengulang data yang sama sudah dihapus,
+      begitu pula badge "Mulai dari sini", label "% lunas" per baris, dan
+      subtitle onboarding "Lunasi dari yang terkecil dulu."
+
    2. DTI yang jujur tapi tidak menghakimi (7B) — cicilan platform dibanding
       pemasukan bulanan, dengan tiga nada kanon (sage / amber / terracotta).
       Terracotta BUKAN merah: PRD 2E.2 sengaja memilih warna hangat + copy
-      empatik supaya tidak memicu financial anxiety.
+      empatik supaya tidak memicu financial anxiety. Badge DTI adalah sinyal
+      utama; "Cicilan …/bln" menempel sebagai sub-label redup.
 
    Cicilan platform juga dinyatakan terang-terangan: uangnya sudah dipotong dari
    Jatah Harian (Domain 2B) — user tahu ke mana income pool pergi sebelum
    dana bagi-bagi harian.
 
-   Sejak paket 17, kartu detail tiap hutang platform juga memuat RIWAYAT
-   PEMBAYARAN (`debt_payments`): tanggal + dompet sumber tiap pembayaran. Dulu
+   Sejak paket 17, tiap baris hutang platform memuat RIWAYAT PEMBAYARAN
+   (`debt_payments`) saat dibuka: tanggal + dompet sumber tiap pembayaran. Dulu
    tempatnya hanya paragraf janji "akan tampil di sini" — sekarang setiap baris
    adalah pembayaran nyata, termasuk yang baru dicatat lewat "Catat Bayar".
 
@@ -107,16 +111,11 @@ import {
    (`walletOptions`), bukan daftar mock — dulu daftar itu memuat "OVO" yang tidak
    ada di ledger, sehingga memilihnya berarti hutang "lunas" tanpa uang pindah.
 
-   Sejak paket 61 setiap kartu punya BARIS AKSI yang selalu terlihat
+   Sejak paket 61 setiap kartu PERSONAL punya BARIS AKSI yang selalu terlihat
    (`DebtActionRow`): aksi uang, Edit, dan Hapus — bukan lagi aksi yang harus
    ditebak lewat gestur atau dibuka dengan expand. Yang menulis ke store tetap
    halaman (`wealth-screen.tsx`), termasuk dialog konfirmasi & jendela Undo.
    ────────────────────────────────────────────────────────────────────────── */
-
-/** lebar area aksi "Catat Bayar" yang tersingkap (px) saat kartu digeser kanan */
-const REVEAL_PAY = 116
-/** ambang snap: geseran > 44px langsung membuka penuh */
-const SNAP = 44
 
 export function WealthHutang({
   debts,
@@ -222,12 +221,12 @@ export function WealthHutang({
           transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
           className="flex flex-col gap-5"
         >
-          {/* baris mikro: cicilan bulanan + nada DTI. TANPA total — totalnya
-              sudah jadi fokus di kepala kartu panel (wealth-screen). */}
-          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
-            <p className="text-[11.5px] font-medium text-forest/45 tabular-nums">
-              Cicilan {maskMoney(installments, masked)}/bln
-            </p>
+          {/* Baris metrik: DTI adalah badge UTAMA (satu-satunya sinyal status),
+              cicilan bulanan jadi sub-label redup di sampingnya. Dulu keduanya
+              berbagi satu baris tanpa hierarki — mata tidak tahu mana yang
+              harus dibaca dulu. Tanpa total: totalnya sudah jadi fokus di
+              kepala kartu panel (wealth-screen). */}
+          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
             <span
               title={badgeCopy}
               className={cn(
@@ -236,6 +235,9 @@ export function WealthHutang({
               )}
             >
               {dtiKnown ? `DTI ${ratio}% · ${badgeLabel}` : badgeLabel}
+            </span>
+            <span className="text-[11px] font-medium text-forest/45 tabular-nums">
+              Cicilan {maskMoney(installments, masked)}/bln
             </span>
           </div>
 
@@ -248,35 +250,23 @@ export function WealthHutang({
             />
           ) : (
             <div className="flex flex-col gap-5">
-              {/* ── 7C: Debt Snowball Tracker (signature visual) ────────── */}
-              {view === 'hutangku' && (
+              {/* ── 7C + 7D: Debt Snowball Tracker = daftar hutang platform ──
+                  Satu kartu, satu baris per hutang. Aksi "Catat Bayar" dan
+                  menu "…" menempel di barisnya sendiri (pola halaman Tagihan),
+                  jadi section PLATFORM yang dulu mengulang provider, sisa, dan
+                  jatuh tempo yang sama sudah tidak ada. Kartu hanya muncul
+                  kalau memang ada hutang platform. */}
+              {view === 'hutangku' && rows.length > 0 && (
                 <SnowballTracker
                   rows={rows}
                   progress={progress}
+                  payments={payments}
                   masked={masked}
                   celebrateId={celebrateId}
+                  onPay={setPayTarget}
+                  onEdit={onEditDebt}
+                  onDelete={onDeleteDebt}
                 />
-              )}
-
-              {/* ── 7D: daftar hutang platform + Catat Bayar ─────────── */}
-              {view === 'hutangku' && myPlatform.length > 0 && (
-                <section>
-                  <SectionHeader title="PLATFORM" />
-                  <ul className="space-y-3.5">
-                    {myPlatform.map((debt, index) => (
-                      <PlatformDebtCard
-                        key={debt.id}
-                        debt={debt}
-                        payments={paymentsOfDebt(payments, debt.id)}
-                        masked={masked}
-                        delay={0.03 * index}
-                        onPay={() => setPayTarget(debt)}
-                        onEdit={() => onEditDebt(debt)}
-                        onDelete={() => onDeleteDebt(debt)}
-                      />
-                    ))}
-                  </ul>
-                </section>
               )}
 
               {/* ── 7E: daftar hutang personal (selalu terpisah) ─────── */}
@@ -287,6 +277,7 @@ export function WealthHutang({
                 masked={masked}
                 celebrateId={celebrateId}
                 onCash={setPayTarget}
+                onAdd={onAddDebt}
                 onEdit={onEditDebt}
                 onDelete={onDeleteDebt}
               />
@@ -320,15 +311,12 @@ export function WealthHutang({
 /* SummaryCard DIHAPUS — total & DTI dulu diulang di sini; sekarang totalnya di
    kepala kartu panel dan DTI jadi baris mikro di `WealthHutang`. */
 
-/** judul kelompok daftar (PLATFORM / PERSONAL / PIUTANG) */
-function SectionHeader({ title, helper }: { title: string; helper?: string }) {
+/** judul kelompok daftar (PERSONAL / PIUTANG) */
+function SectionHeader({ title }: { title: string }) {
   return (
-    <div className="mb-2.5 flex items-baseline justify-between gap-3">
-      <h3 className="text-[11px] font-semibold uppercase tracking-[0.22em] text-forest/35">
-        {title}
-      </h3>
-      {helper && <span className="text-[10.5px] text-forest/30">{helper}</span>}
-    </div>
+    <h3 className="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-forest/35">
+      {title}
+    </h3>
   )
 }
 
@@ -403,13 +391,13 @@ function EmptyDebtState({
       <h2 className="mt-3 font-display text-[16px] font-semibold tracking-tight text-forest">
         {contextLine ?? (piutang ? EMPTY_PIUTANG_TITLE : EMPTY_HUTANG_TITLE)}
       </h2>
-      <p className="mt-1.5 max-w-sm text-[13px] leading-relaxed text-forest/55">
-        {contextLine
-          ? CONTEXT_EMPTY_COPY.debts.body
-          : piutang
-            ? EMPTY_PIUTANG_COPY
-            : EMPTY_HUTANG_COPY}
-      </p>
+      {/* empty state per konteks: judul + satu tombol saja. Paragraf penjelas
+          "apa itu konteks" dihapus — konteksnya sudah aktif di kepala halaman. */}
+      {!contextLine && (
+        <p className="mt-1.5 max-w-sm text-[13px] leading-relaxed text-forest/55">
+          {piutang ? EMPTY_PIUTANG_COPY : EMPTY_HUTANG_COPY}
+        </p>
+      )}
       <button
         type="button"
         onClick={onAdd}
@@ -426,112 +414,137 @@ function EmptyDebtState({
   )
 }
 
-/* ── 7C: DEBT SNOWBALL TRACKER — visual khas halaman ini ────────────────────
+/* ── 7C: DEBT SNOWBALL TRACKER — sekaligus DAFTAR hutang platform ───────────
    Satu kartu berisi:
-   - header progres keseluruhan ('Rp X / Rp Y lunas (Z%)') + bar linier tipis
-   - satu bar per hutang platform, DIURUT dari sisa terkecil → terbesar
+   - header progres keseluruhan: bar tipis dengan nominal DIBAYAR di ujung kiri
+     dan TOTAL POKOK di ujung kanan (tanpa label teks "lunas" — panjang bar
+     sudah menyatakan progresnya)
+   - satu baris per hutang platform, DIURUT dari sisa terkecil → terbesar
      (metode bola salju: habisi yang kecil dulu, menang cepat, baru yang besar)
-   - label kiri provider + sisa, label kanan '% lunas'
-   - baris terkecil diberi penanda "Mulai dari sini" — arah baca yang jelas
+   - tiap baris membawa aksinya sendiri: "Catat Bayar" (pil kanan) + menu "…"
+     berisi Edit/Hapus, persis pola halaman Tagihan
    - hutang yang baru lunas: bar jadi sage penuh + confetti + kolaps pegas
    ────────────────────────────────────────────────────────────────────────── */
 function SnowballTracker({
   rows,
   progress,
+  payments,
   masked,
   celebrateId,
+  onPay,
+  onEdit,
+  onDelete,
 }: {
   rows: SnowballRow[]
   progress: { paid: number; principal: number; pct: number }
+  /** ledger pembayaran — riwayat tiap hutang diturunkan dari daftar yang sama */
+  payments: DebtPayment[]
   masked: boolean
   celebrateId: string | null
+  onPay: (debt: Debt) => void
+  onEdit: (debt: Debt) => void
+  onDelete: (debt: Debt) => void
 }) {
   return (
-    <section className="relative overflow-hidden rounded-[1.75rem] bg-cream p-5 shadow-[0_20px_46px_-30px_rgba(0,0,0,0.5)] ring-1 ring-soil/10 sm:p-6">
+    <section className="relative rounded-[1.75rem] bg-cream p-5 shadow-[0_20px_46px_-30px_rgba(0,0,0,0.5)] ring-1 ring-soil/10 sm:p-6">
+      {/* dekorasi diklip di pembungkus SENDIRI: section-nya tidak boleh
+          `overflow-hidden`, karena menu "…" pada baris terakhir harus bisa
+          keluar dari kartu (kalau tidak, dropdown-nya terpotong). */}
       <div
         aria-hidden
-        className="pointer-events-none absolute -left-16 -top-20 size-52 rounded-full bg-hud-terracotta/12 blur-3xl"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -bottom-20 -right-10 size-48 rounded-full bg-hud-sage/25 blur-3xl"
-      />
+        className="pointer-events-none absolute inset-0 overflow-hidden rounded-[1.75rem]"
+      >
+        <div className="absolute -left-16 -top-20 size-52 rounded-full bg-hud-terracotta/12 blur-3xl" />
+        <div className="absolute -bottom-20 -right-10 size-48 rounded-full bg-hud-sage/25 blur-3xl" />
+      </div>
       <div className="relative">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h3 className="flex items-center gap-1.5 font-display text-[14px] font-semibold tracking-tight text-forest">
-              <Snowflake className="size-4 text-hud-sage" strokeWidth={2.4} />
-              {SNOWBALL_TITLE}
-            </h3>
-            <p className="mt-1 text-[11px] leading-relaxed text-forest/45">{SNOWBALL_HELP}</p>
+        <h3 className="flex items-center gap-1.5 font-display text-[14px] font-semibold tracking-tight text-forest">
+          <Snowflake className="size-4 text-hud-sage" strokeWidth={2.4} />
+          {SNOWBALL_TITLE}
+        </h3>
+
+        {/* progres keseluruhan — bar tipis, nominal di kedua ujungnya.
+            Tidak ada teks "Snowball Progress: … lunas": bar + dua nominal ini
+            mengucapkan hal yang sama tanpa satu kalimat pun. */}
+        <div className="mt-4">
+          <div className="flex items-baseline justify-between gap-3 text-[10.5px] font-medium text-forest/45 tabular-nums">
+            <span>{maskMoney(progress.paid, masked)}</span>
+            <span>{maskMoney(progress.principal, masked)}</span>
           </div>
-          <span className="shrink-0 rounded-full bg-hud-sage/25 px-2.5 py-1 text-[10.5px] font-semibold text-forest tabular-nums">
-            {progress.pct}% lunas
-          </span>
-        </div>
-
-        {/* progres keseluruhan */}
-        <p className="mt-3 text-[12px] font-medium text-forest/70 tabular-nums">
-          Snowball Progress: {maskMoney(progress.paid, masked)}/{maskMoney(progress.principal, masked)}{' '}
-          lunas
-        </p>
-        <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-cream ring-1 ring-inset ring-forest/10">
-          <motion.span
-            initial={false}
-            animate={{ width: `${progress.pct}%` }}
-            transition={{ type: 'spring', stiffness: 130, damping: 20 }}
-            className="relative block h-full rounded-full bg-gradient-to-r from-hud-sage to-hud-sage"
+          <div
+            role="progressbar"
+            aria-label={SNOWBALL_PROGRESS_ARIA}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={progress.pct}
+            className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-soil/[0.09]"
           >
-            <span aria-hidden className="progress-shimmer" />
-          </motion.span>
+            <motion.span
+              initial={false}
+              animate={{ width: `${progress.pct}%` }}
+              transition={{ type: 'spring', stiffness: 130, damping: 20 }}
+              className="relative block h-full rounded-full bg-hud-sage"
+            >
+              <span aria-hidden className="progress-shimmer" />
+            </motion.span>
+          </div>
         </div>
 
-        {/* bar per hutang (urut sisa terkecil) */}
-        {rows.length === 0 ? (
-          <p className="mt-4 rounded-2xl bg-cream/70 px-3.5 py-3 text-[12px] leading-relaxed text-forest/55">
-            {SNOWBALL_EMPTY}
-          </p>
-        ) : (
-          <ul className="mt-4 space-y-3.5">
-            {rows.map((row, index) => (
-              <SnowballBar
-                key={row.debt.id}
-                row={row}
-                masked={masked}
-                first={index === 0}
-                celebrate={celebrateId === row.debt.id}
-              />
-            ))}
-          </ul>
-        )}
+        {/* baris per hutang (urut sisa terkecil) + aksinya masing-masing */}
+        <ul className="mt-4 space-y-3.5">
+          {rows.map((row) => (
+            <SnowballBar
+              key={row.debt.id}
+              row={row}
+              payments={paymentsOfDebt(payments, row.debt.id)}
+              masked={masked}
+              celebrate={celebrateId === row.debt.id}
+              onPay={() => onPay(row.debt)}
+              onEdit={() => onEdit(row.debt)}
+              onDelete={() => onDelete(row.debt)}
+            />
+          ))}
+        </ul>
       </div>
     </section>
   )
 }
 
 
-/* ── satu bar gunung es ─────────────────────────────────────────────────────
+/* ── satu baris hutang platform (bar gunung es + aksi + riwayat) ─────────────
    Lebar track = ukuran pokok asli (relatif terhadap pokok terbesar), lebar isi
    = sisa hutang. Jadi sekali lihat: "yang ini besar banget, yang ini tinggal
    dikit" — sekaligus kelihatan mana yang paling cepat habis.
+
+   Baris ini JUGA entri daftar hutangnya (section PLATFORM terpisah sudah
+   dihapus): provider, konteks, sisa, jatuh tempo, dan "Catat Bayar" hidup di
+   satu tempat. Tap pada identitas → riwayat pembayaran (data ledger yang tidak
+   tampil di mana pun lagi).
 
    Saat baru lunas: bar jadi sage penuh, confetti meletus, lalu bar MENYUSUT
    ke tinggi 0 dengan pegas — gunung esnya benar-benar "mencair" dan hilang
    dari daftar. */
 function SnowballBar({
   row,
+  payments,
   masked,
-  first,
   celebrate,
+  onPay,
+  onEdit,
+  onDelete,
 }: {
   row: SnowballRow
+  payments: DebtPayment[]
   masked: boolean
-  first: boolean
   celebrate: boolean
+  onPay: () => void
+  onEdit: () => void
+  onDelete: () => void
 }) {
   const { debt, emoji, provider, widthPct, remainingPct, paidPct } = row
   const done = paidPct >= 100
   const [collapsed, setCollapsed] = useState(false)
+  const [expanded, setExpanded] = useState(false)
 
   useEffect(() => {
     if (!celebrate) return
@@ -549,33 +562,69 @@ function SnowballBar({
     >
       {celebrate && <ConfettiBurst />}
 
-      <div className="flex items-center justify-between gap-3">
-        <span className="flex min-w-0 items-center gap-2">
-          <span aria-hidden className="text-[14px]">
-            {emoji}
-          </span>
-          <span className="min-w-0">
-            <span className="block truncate text-[12.5px] font-medium text-forest">{provider}</span>
-            <span className="block truncate text-[10.5px] text-forest/45 tabular-nums">
-              {done ? 'Lunas! 🎉' : `${maskMoney(debt.remaining, masked)} sisa`}
+      <div className="flex items-start gap-2">
+        {/* identitas + progres: satu tombol yang membuka riwayat pembayaran */}
+        <button
+          type="button"
+          onClick={() => setExpanded((prev) => !prev)}
+          aria-expanded={expanded}
+          aria-label={`${provider}, sisa ${maskMoney(debt.remaining, masked)}`}
+          className="min-w-0 flex-1 rounded-2xl text-left outline-none focus-visible:ring-2 focus-visible:ring-forest/30"
+        >
+          <span className="flex items-center gap-2">
+            <span aria-hidden className="text-[14px]">
+              {emoji}
             </span>
-          </span>
-        </span>
-        <span className="flex shrink-0 items-center gap-2">
-          {first && !done && (
-            <span className="rounded-full bg-hud-amber/25 px-2 py-0.5 text-[9.5px] font-medium uppercase tracking-wide text-hud-terracotta">
-              Mulai dari sini
-            </span>
-          )}
-          <span
-            className={cn(
-              'text-[11.5px] font-semibold tabular-nums',
-              done ? 'text-hud-sage' : 'text-forest/55',
+            <span className="truncate text-[12.5px] font-medium text-forest">{provider}</span>
+            {done && (
+              <span className="shrink-0 rounded-full bg-hud-sage/30 px-2 py-0.5 text-[9.5px] font-medium uppercase tracking-wide text-forest">
+                {DEBT_STATUS_COPY.settled}
+              </span>
             )}
-          >
-            {paidPct}% lunas
+            <ChevronDown
+              aria-hidden
+              className={cn(
+                'size-3.5 shrink-0 text-forest/25 transition-transform duration-300',
+                expanded && 'rotate-180',
+              )}
+              strokeWidth={2.4}
+            />
           </span>
-        </span>
+          <span className="mt-0.5 block text-[10.5px] leading-snug text-forest/45 tabular-nums">
+            {done ? DEBT_STATUS_COPY.settled : `${maskMoney(debt.remaining, masked)} sisa`}
+            {/* konteks uang ikut di baris kedua (bukan chip di baris nama) supaya
+                nama platform tetap utuh walau pil "Bayar" ada di kanan */}
+            <span className="text-forest/35"> · {CONTEXT_LABEL[debt.scope]}</span>
+            {/* label jatuh tempo HANYA dirender kalau tanggalnya ada — label
+                kosong ("Jatuh tempo tanggal" tanpa angka) lebih buruk daripada
+                tidak ada label sama sekali */}
+            {debt.dueDate ? ` · Jatuh tempo tanggal ${debt.dueDate}` : ''}
+          </span>
+        </button>
+
+        {/* aksi selalu terlihat: pil "Bayar →" (bentuk yang SAMA dengan aksi di
+            halaman Tagihan) + menu "…" berisi Edit/Hapus. Labelnya pendek
+            (`payShort`) supaya nama platform tidak terpotong; `aria-label`
+            tetap menyebut aksi panjang + nama platform.
+            Badge "Mulai dari sini" dihapus — urutan barisnya sendiri sudah
+            menyatakan dari mana mulai. */}
+        <div className="flex shrink-0 items-center gap-1 self-center">
+          {!done && (
+            <button
+              type="button"
+              onClick={onPay}
+              aria-label={`${DEBT_CASH_COPY.actionLabel.pay} ${provider}`}
+              title={DEBT_CASH_COPY.actionLabel.pay}
+              className="inline-flex h-8 items-center gap-1 whitespace-nowrap rounded-full bg-forest pl-3 pr-2 text-cream transition-colors hover:bg-forest-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/30 active:scale-95"
+            >
+              <span className="text-[10px] font-semibold leading-none">
+                {DEBT_CASH_COPY.actionLabel.payShort}
+              </span>
+              <ArrowRight className="size-3.5" strokeWidth={2.6} aria-hidden />
+            </button>
+          )}
+          <DebtRowMenu name={debtName(debt)} onEdit={onEdit} onDelete={onDelete} compact />
+        </div>
       </div>
 
       {/* bar: sage = porsi lunas, terracotta → amber = sisa yang harus dilumerkan */}
@@ -598,6 +647,68 @@ function SnowballBar({
           )}
         </div>
       </div>
+
+      {/* riwayat pembayaran — satu-satunya data hutang ini yang tidak tampil
+          di baris (tanggal + dompet sumber tiap pembayaran) */}
+      <AnimatePresence initial={false}>
+        {expanded && (
+          <motion.div
+            key="platform-history"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
+            className="overflow-hidden"
+          >
+            <div className="mt-2 rounded-2xl bg-cream px-3.5 py-3 ring-1 ring-inset ring-soil/8">
+              <p className="flex items-center justify-between gap-2 text-[10px] font-medium uppercase tracking-[0.14em] text-forest/40">
+                <span className="flex items-center gap-1.5">
+                  <Receipt className="size-3.5" strokeWidth={2.6} />
+                  {PAYMENT_HISTORY_TITLE}
+                </span>
+                {payments.length > 0 && (
+                  <span className="font-medium normal-case tracking-normal text-forest/35">
+                    {paymentCountLabel(payments.length)}
+                  </span>
+                )}
+              </p>
+
+              {payments.length === 0 ? (
+                <div className="mt-2">
+                  <p className="text-[11px] font-medium leading-relaxed text-forest/55">
+                    {PAYMENT_HISTORY_EMPTY}
+                  </p>
+                  <p className="mt-1 text-[10.5px] leading-relaxed text-forest/40">
+                    {PAYMENT_HISTORY_EMPTY_HINT}
+                  </p>
+                </div>
+              ) : (
+                <ul className="mt-2 space-y-1.5">
+                  {payments.map((payment) => (
+                    <li key={payment.id} className="flex items-center gap-2 text-[11px]">
+                      <span className="shrink-0 text-forest/55 tabular-nums">
+                        {formatShortDate(payment.paidAtISO)}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate text-forest/40">
+                        · {payment.kind === 'receivable' ? `${DEBT_CASH_COPY.receivableTag} · ` : ''}
+                        {payment.walletName}
+                        {payment.changeAmount ? (
+                          <span className="ml-1 text-hud-terracotta">
+                            {DEBT_CASH_COPY.changeRecorded(maskMoney(payment.changeAmount, masked))}
+                          </span>
+                        ) : null}
+                      </span>
+                      <span className="shrink-0 font-medium text-forest/75 tabular-nums">
+                        {maskMoney(payment.amount, masked)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.li>
   )
 }
@@ -645,28 +756,84 @@ function ConfettiBurst() {
 }
 
 
-/* ── 7D: kartu hutang platform ──────────────────────────────────────────────
-   Geser KANAN → tombol sage "Catat Bayar" (aksi utama, seperti geser-kanan
-   menandai lunas di halaman Tagihan). Tap → detail perhitungan otomatis:
-   sisa pokok, sudah dibayar, estimasi total bunga, dan riwayat pembayaran. */
-/* ── BARIS AKSI KARTU HUTANG — SELALU TERLIHAT (paket 61.1) ─────────────────
-   Sebelum paket 61 aksi di halaman ini hidup di tempat yang tidak terlihat
-   sebelum dicoba: "Catat Bayar" tersembunyi di dalam panel yang harus
-   di-expand, plus versi geseran kanan yang cuma muncul kalau user menebak ada
-   gestur — padahal aksi inilah alasan halaman ini ada. Sekarang satu baris
-   tombol selalu tampil di SETIAP kartu (platform & personal), tinggi 40 px
-   supaya masuk zona jempol di 375 px:
+/* ── MENU "…" KARTU HUTANG — satu bentuk untuk platform & personal ──────────
+   Edit/Hapus tidak boleh mendominasi kartu (H8-3), jadi keduanya hidup di balik
+   satu menu. Dipakai dua tempat:
+     · baris snowball platform → varian `compact` (size-8, tanpa ring) supaya
+       sejajar dengan pil "Catat Bayar";
+     · baris aksi personal → size-10 dengan ring, sejajar tombol aksi uang.
+   Komponen ini MURNI tampilan; halaman yang memutuskan aksinya. */
+function DebtRowMenu({
+  name,
+  onEdit,
+  onDelete,
+  compact = false,
+}: {
+  /** nama catatan — dipakai di `aria-label` supaya tombol ikonnya tidak ambigu */
+  name: string
+  onEdit: () => void
+  onDelete: () => void
+  /** true = varian ringkas untuk baris padat */
+  compact?: boolean
+}) {
+  const [actionsOpen, setActionsOpen] = useState(false)
 
-     [ Catat Bayar / Diterima ]   [ Edit ]   [ Hapus ]
+  return (
+    <div className="relative shrink-0">
+      <button
+        type="button"
+        onClick={() => setActionsOpen((prev) => !prev)}
+        aria-label={WEALTH_ROW_ACTION.menuAria(name)}
+        aria-haspopup="menu"
+        aria-expanded={actionsOpen}
+        title={WEALTH_ROW_ACTION.menuAria(name)}
+        className={cn(
+          'inline-flex items-center justify-center text-forest/45 transition-colors hover:bg-soil/[0.06] hover:text-forest active:scale-95',
+          compact ? 'size-8 rounded-full' : 'size-10 rounded-2xl ring-1 ring-inset ring-soil/10',
+        )}
+      >
+        <MoreVertical className="size-4" strokeWidth={2.4} aria-hidden />
+      </button>
+      {actionsOpen && (
+        <div className="absolute right-0 top-full z-20 mt-1">
+          {/* PAKET 95 — menu "…" memakai panel daftar bersama (ikon + judul +
+              sub-barisan), sama seperti pemilih konteks & menu kartu dompet. */}
+          <MenuPanel role="menu" label={WEALTH_ROW_ACTION.menuAria(name)} className="w-52">
+            <MenuOption
+              icon={Pencil}
+              label={WEALTH_ROW_ACTION.edit}
+              role="menuitem"
+              onClick={() => {
+                setActionsOpen(false)
+                onEdit()
+              }}
+            />
+            <MenuOption
+              icon={Trash2}
+              label={WEALTH_ROW_ACTION.remove}
+              role="menuitem"
+              tone="danger"
+              onClick={() => {
+                setActionsOpen(false)
+                onDelete()
+              }}
+            />
+          </MenuPanel>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ── BARIS AKSI KARTU HUTANG PERSONAL — SELALU TERLIHAT (paket 61.1) ─────────
+   Kartu personal tetap memakai baris aksi selebar kartu karena isinya bukan
+   tabel: aksi uang ("Diterima"/"Catat Bayar") adalah alasan kartu itu ada, dan
+   baris hutang platform kini membawa pil aksinya sendiri di dalam baris snowball.
 
    Catatan yang sudah lunas tidak menawarkan aksi uang (tidak ada yang perlu
-   dibayar) — gantinya stempel LUNAS — tapi Edit & Hapus tetap ada, karena
-   dua-duanya masih berguna untuk catatan yang sudah lunas (salah ketik, dan
-   catatan yang sudah tidak dipakai).
-
-   Komponen ini MURNI tampilan: tidak ada state, tidak ada tulisan ke store.
-   Halaman (`wealth-screen.tsx`) yang memutuskan apa yang terjadi — begitu juga
-   dialog konfirmasi & jendela Undo-nya. */
+   dibayar) — gantinya stempel LUNAS — tapi Edit & Hapus tetap ada lewat menu
+   "…". Komponen ini MURNI tampilan: halaman (`wealth-screen.tsx`) yang
+   memutuskan apa yang terjadi — begitu juga dialog konfirmasi & jendela Undo. */
 function DebtActionRow({
   name,
   payLabel,
@@ -686,8 +853,6 @@ function DebtActionRow({
   onDelete: () => void
 }) {
   const pay = payLabel !== undefined && onPay !== undefined
-  /* H8-3 (audit UI/UX): Edit & Hapus disembunyikan di balik menu "...". */
-  const [actionsOpen, setActionsOpen] = useState(false)
 
   return (
     <div className="mt-3 flex w-full items-stretch gap-2">
@@ -709,338 +874,10 @@ function DebtActionRow({
         )
       )}
 
-      {/* H8-3 (audit UI/UX): Edit & Hapus dulu tombol berwarna yang menonjol;
-          sekarang disembunyikan di balik satu menu "..." supaya aksi merusak
-          tidak mendominasi kartu. */}
-      <div className="relative shrink-0">
-        <button
-          type="button"
-          onClick={() => setActionsOpen((prev) => !prev)}
-          aria-label={WEALTH_ROW_ACTION.menuAria(name)}
-          aria-haspopup="menu"
-          aria-expanded={actionsOpen}
-          title={WEALTH_ROW_ACTION.menuAria(name)}
-          className="inline-flex size-10 items-center justify-center rounded-2xl text-forest/45 ring-1 ring-inset ring-soil/10 transition-colors hover:bg-soil/[0.06] hover:text-forest active:scale-95"
-        >
-          <MoreVertical className="size-4" strokeWidth={2.4} aria-hidden />
-        </button>
-        {actionsOpen && (
-          <div className="absolute right-0 top-full z-20 mt-1">
-            {/* PAKET 95 — menu "…" memakai panel daftar bersama (ikon + judul +
-                sub-barisan), sama seperti pemilih konteks & menu kartu dompet. */}
-            <MenuPanel role="menu" label={WEALTH_ROW_ACTION.menuAria(name)} className="w-52">
-              <MenuOption
-                icon={Pencil}
-                label={WEALTH_ROW_ACTION.edit}
-                role="menuitem"
-                onClick={() => {
-                  setActionsOpen(false)
-                  onEdit()
-                }}
-              />
-              <MenuOption
-                icon={Trash2}
-                label={WEALTH_ROW_ACTION.remove}
-                role="menuitem"
-                tone="danger"
-                onClick={() => {
-                  setActionsOpen(false)
-                  onDelete()
-                }}
-              />
-            </MenuPanel>
-          </div>
-        )}
-      </div>
+      {/* Edit & Hapus di balik satu menu "…" supaya aksi merusak tidak
+          mendominasi kartu (H8-3). */}
+      <DebtRowMenu name={name} onEdit={onEdit} onDelete={onDelete} />
     </div>
-  )
-}
-
-function PlatformDebtCard({
-  debt,
-  payments,
-  masked,
-  delay,
-  onPay,
-  onEdit,
-  onDelete,
-}: {
-  debt: Debt
-  /** riwayat pembayaran hutang ini, terbaru di atas (turunan `debt_payments`) */
-  payments: DebtPayment[]
-  masked: boolean
-  delay: number
-  onPay: () => void
-  /** buka sheet edit (paket 61) */
-  onEdit: () => void
-  /** minta konfirmasi hapus (paket 61) */
-  onDelete: () => void
-}) {
-  const [expanded, setExpanded] = useState(false)
-  const [dx, setDx] = useState(0)
-  const [dragging, setDragging] = useState(false)
-  const startX = useRef<number | null>(null)
-  const moved = useRef(false)
-
-  const paidPct = debtPaidPct(debt)
-  const paid = debtPaid(debt)
-  const interest = estimatedInterest(debt)
-  const done = paidPct >= 100
-
-  const onPointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
-    startX.current = event.clientX
-    moved.current = false
-    event.currentTarget.setPointerCapture(event.pointerId)
-  }
-
-  const onPointerMove = (event: React.PointerEvent<HTMLButtonElement>) => {
-    if (startX.current === null) return
-    const distance = event.clientX - startX.current
-    if (Math.abs(distance) > 6) {
-      moved.current = true
-      setDragging(true)
-    }
-    setDx(Math.max(0, Math.min(REVEAL_PAY, distance)))
-  }
-
-  const settle = () => {
-    if (startX.current === null) return
-    startX.current = null
-    setDragging(false)
-    setDx((value) => (value > SNAP ? REVEAL_PAY : 0))
-  }
-
-  const handleClick = () => {
-    if (moved.current) {
-      moved.current = false
-      setDx(0)
-      return
-    }
-    setExpanded((prev) => !prev)
-  }
-
-  return (
-    <motion.li
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.34, delay, ease: [0.22, 1, 0.36, 1] }}
-      className="relative grid grid-cols-1"
-    >
-      {/* Aksi di balik kartu (terungkap saat digeser kanan).
-
-          DULU `absolute inset-y-0 left-0`: tingginya mengikuti SELURUH <li>,
-          padahal <li> ini juga memuat baris aksi "Catat Bayar" dan panel
-          riwayat pembayaran yang SELALU terlihat. Karena area aksi `absolute`
-          (positioned) sementara dua bagian itu `static`, blok sage-nya
-          menjulur ke bawah dan MENIMPA keduanya walau kartu tidak digeser.
-
-          Sekarang area aksi jadi ITEM GRID di baris 1 (sebaris dengan kartu):
-          tingginya persis setinggi kartu, sedangkan baris aksi & riwayat
-          pembayaran tetap bersih di baris berikutnya. */}
-      <div className="col-start-1 row-start-1 flex overflow-hidden rounded-[1.35rem]">
-        <button
-          type="button"
-          onClick={() => {
-            setDx(0)
-            onPay()
-          }}
-          className="flex w-[116px] flex-col items-center justify-center gap-1 bg-hud-sage text-[10.5px] font-medium text-forest transition-colors hover:brightness-105"
-        >
-          <Wallet className="size-4" strokeWidth={2.4} />
-          {DEBT_CASH_COPY.actionLabel.pay}
-        </button>
-      </div>
-
-      <motion.button
-        type="button"
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={settle}
-        onPointerCancel={settle}
-        onClick={handleClick}
-        aria-expanded={expanded}
-        aria-label={`${debt.provider}, sisa ${maskMoney(debt.remaining, masked)}`}
-        animate={{ x: dx }}
-        transition={dragging ? { duration: 0 } : { type: 'spring', stiffness: 320, damping: 30 }}
-        style={{ touchAction: 'pan-y' }}
-        className="col-start-1 row-start-1 relative w-full cursor-pointer touch-pan-y rounded-[1.35rem] bg-cream px-3.5 py-3.5 text-left shadow-[0_10px_28px_-24px_rgba(0,0,0,0.6)] ring-1 ring-soil/10 outline-none focus-visible:ring-2 focus-visible:ring-forest/30"
-      >
-        <span className="flex items-center gap-3">
-          <span
-            aria-hidden
-            className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-cream text-[17px] ring-1 ring-inset ring-soil/8"
-          >
-            {providerEmoji(debt.provider)}
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="flex items-center gap-1.5">
-              <span className="truncate text-[13.5px] font-medium text-forest">{debt.provider}</span>
-              {/* badge konteks uang hutang ini (paket 47) */}
-              <span className="shrink-0 rounded-full bg-sage/70 px-1.5 py-0.5 text-[9.5px] font-medium uppercase tracking-wide text-forest ring-1 ring-inset ring-forest/10">
-                {CONTEXT_LABEL[debt.scope]}
-              </span>
-              {done && (
-                <span className="shrink-0 rounded-full bg-hud-sage/30 px-2 py-0.5 text-[9.5px] font-medium uppercase tracking-wide text-forest">
-                  Lunas
-                </span>
-              )}
-            </span>
-            <span className="mt-1 block truncate text-[10.5px] text-forest/45 tabular-nums">
-              Bulan {debt.currentMonth}/{debt.tenor} · Cicilan{' '}
-              {maskMoney(debt.monthlyInstallment ?? 0, masked)}/bln · Bunga{' '}
-              {debt.interestRate ?? 0}%
-            </span>
-            <span className="mt-0.5 block truncate text-[10.5px] text-forest/40">
-              Jatuh tempo tanggal {debt.dueDate}
-            </span>
-          </span>
-          <span className="flex shrink-0 flex-col items-end">
-            <span className="text-[13.5px] font-semibold text-forest tabular-nums">
-              {maskMoney(debt.remaining, masked)}
-            </span>
-            <span className="mt-0.5 text-[10.5px] text-forest/40 tabular-nums">
-              dari {maskMoney(debt.principal, masked)}
-            </span>
-            <ChevronDown
-              className={cn(
-                'mt-1 size-3.5 text-forest/30 transition-transform duration-300',
-                expanded && 'rotate-180',
-              )}
-              strokeWidth={2.4}
-            />
-          </span>
-        </span>
-
-        {/* progres pembayaran: terracotta (sisa) → sage (lunas) */}
-        <span className="mt-3 flex h-2 w-full overflow-hidden rounded-full bg-hud-sage/40 ring-1 ring-inset ring-forest/5">
-          <motion.span
-            initial={false}
-            animate={{ width: `${100 - paidPct}%` }}
-            transition={{ type: 'spring', stiffness: 130, damping: 20 }}
-            className="h-full rounded-full bg-gradient-to-r from-hud-terracotta to-hud-amber"
-          />
-        </span>
-      </motion.button>
-
-      {/* AKSI UTAMA LANGSUNG TERLIHAT (paket 61.1). Dulu "Catat Bayar" hanya
-          muncul setelah kartu di-expand — atau lewat geseran kanan yang tidak
-          terlihat sama sekali sebelum user mencobanya — jadi aksi terpenting
-          halaman ini tersembunyi di balik gestur. Sekarang barisnya selalu ada
-          di kartu, di zona jempol, dengan ukuran ≥ 40 px. */}
-      <DebtActionRow
-        name={debtName(debt)}
-        payLabel={done ? undefined : DEBT_CASH_COPY.actionLabel.pay}
-        settled={done}
-        onPay={done ? undefined : onPay}
-        onEdit={onEdit}
-        onDelete={onDelete}
-      />
-
-      {/* detail perhitungan otomatis (tap kartu) */}
-      <AnimatePresence initial={false}>
-        {expanded && (
-          <motion.div
-            key="platform-detail"
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
-            className="overflow-hidden"
-          >
-            <div className="mt-2 rounded-[1.35rem] bg-cream/70 px-3.5 py-3.5 ring-1 ring-inset ring-soil/8">
-              <dl className="space-y-2 text-[11.5px]">
-                <div className="flex items-center justify-between gap-3">
-                  <dt className="text-forest/50">Sisa pokok</dt>
-                  <dd className="font-semibold text-forest tabular-nums">
-                    {maskMoney(debt.remaining, masked)}
-                  </dd>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <dt className="text-forest/50">Sudah dibayar</dt>
-                  <dd className="font-semibold text-hud-sage tabular-nums">
-                    {maskMoney(paid, masked)}
-                  </dd>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <dt className="text-forest/50">Estimasi total bunga</dt>
-                  <dd className="font-semibold text-hud-terracotta tabular-nums">
-                    {maskMoney(interest, masked)}
-                  </dd>
-                </div>
-                {debt.notes && (
-                  <div className="flex items-start justify-between gap-3">
-                    <dt className="shrink-0 text-forest/50">Catatan</dt>
-                    <dd className="text-right text-forest/70">{debt.notes}</dd>
-                  </div>
-                )}
-              </dl>
-
-              {/* riwayat pembayaran — turunan ledger `debt_payments`
-                  (debt_id, amount, payment_date, wallet_id). Setiap baris di sini
-                  adalah pembayaran nyata yang user catat, bukan hiasan: tanggal +
-                  dompet sumbernya ikut tersimpan supaya angka "Sudah dibayar" di
-                  atas bisa diaudit baris per baris. */}
-              <div className="mt-3 rounded-2xl bg-cream px-3.5 py-3 ring-1 ring-inset ring-soil/8">
-                <p className="flex items-center justify-between gap-2 text-[10px] font-medium uppercase tracking-[0.14em] text-forest/40">
-                  <span className="flex items-center gap-1.5">
-                    <Receipt className="size-3.5" strokeWidth={2.6} />
-                    {PAYMENT_HISTORY_TITLE}
-                  </span>
-                  {payments.length > 0 && (
-                    <span className="font-medium normal-case tracking-normal text-forest/35">
-                      {paymentCountLabel(payments.length)}
-                    </span>
-                  )}
-                </p>
-
-                {payments.length === 0 ? (
-                  <div className="mt-2">
-                    <p className="text-[11px] font-medium leading-relaxed text-forest/55">
-                      {PAYMENT_HISTORY_EMPTY}
-                    </p>
-                    <p className="mt-1 text-[10.5px] leading-relaxed text-forest/40">
-                      {PAYMENT_HISTORY_EMPTY_HINT}
-                    </p>
-                  </div>
-                ) : (
-                  <ul className="mt-2 space-y-1.5">
-                    {payments.map((payment) => (
-                      <li key={payment.id} className="flex items-center gap-2 text-[11px]">
-                        <span className="shrink-0 text-forest/55 tabular-nums">
-                          {formatShortDate(payment.paidAtISO)}
-                        </span>
-                        <span className="min-w-0 flex-1 truncate text-forest/40">
-                          {/* arah uang ikut ditulis: pelunasan piutang tidak boleh
-                              terbaca seperti pembayaran hutang */}
-                          · {payment.kind === 'receivable' ? `${DEBT_CASH_COPY.receivableTag} · ` : ''}
-                          {payment.walletName}
-                          {/* kembalian punya jejaknya sendiri di sini supaya
-                              nominal di kartu & baris kas bisa ditelusuri */}
-                          {payment.changeAmount ? (
-                            <span className="ml-1 text-hud-terracotta">
-                              {DEBT_CASH_COPY.changeRecorded(maskMoney(payment.changeAmount, masked))}
-                            </span>
-                          ) : null}
-                        </span>
-                        <span className="shrink-0 font-medium text-forest/75 tabular-nums">
-                          {maskMoney(payment.amount, masked)}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-
-              {/* Tombol "Catat Bayar" DIHAPUS dari panel ini (paket 61.1): satu
-                  kartu tidak boleh punya dua tombol untuk aksi yang sama.
-                  Aksinya sekarang tinggal di baris aksi kartu yang selalu
-                  terlihat, jadi panel ini murni informatif (perhitungan +
-                  riwayat pembayaran). */}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.li>
   )
 }
 
@@ -1133,7 +970,6 @@ function DebtCashSheet({
       open={debt !== null}
       onClose={onClose}
       title={debt ? copy.title(name) : DEBT_CASH_COPY.pay.title('')}
-      description={copy.description}
       footer={
         <SheetSubmit onClick={submit} disabled={submitDisabled} gate>
           {copy.submit}
@@ -1214,9 +1050,10 @@ function DebtCashSheet({
 
 
 /* ── 7E: kelompok hutang personal (dipisah dari platform) ───────────────────
-   Copy-nya sengaja nurturing (PRD 2E.2): "Catat aja biar gak lupa, bukan buat
-   ngejar-ngejar ya 😊". Hutang personal bukan produk kredit — jadi tidak ada
-   bunga, tenor, atau badge menakutkan di sini, cuma arah, nama, nominal. */
+   Nada nurturing tetap ada di mana yang perlu (empty state satu baris), tapi
+   paragraf pembuka yang selalu tampil sudah dihapus: hutang personal bukan
+   produk kredit — tidak ada bunga, tenor, atau badge menakutkan di sini, cuma
+   arah, nama, nominal. */
 function PersonalSection({
   title,
   active,
@@ -1224,6 +1061,7 @@ function PersonalSection({
   masked,
   celebrateId,
   onCash,
+  onAdd,
   onEdit,
   onDelete,
 }: {
@@ -1234,6 +1072,8 @@ function PersonalSection({
   /** id catatan yang baru saja lunas lewat aksi uang (memicu confetti section) */
   celebrateId: string | null
   onCash: (debt: Debt) => void
+  /** tombol "+" di empty state — satu-satunya jalan keluar dari daftar kosong */
+  onAdd: () => void
   /** pintu edit & hapus (paket 61) — diteruskan apa adanya ke tiap kartu */
   onEdit: (debt: Debt) => void
   onDelete: (debt: Debt) => void
@@ -1268,14 +1108,34 @@ function PersonalSection({
   return (
     <section className="relative">
       <SectionHeader title={title} />
-      <p className="mb-2.5 text-[11px] leading-relaxed text-forest/40">{PERSONAL_SECTION_COPY}</p>
 
       {burst && <ConfettiBurst />}
 
+      {/* empty state BAKU app: ikon kecil + satu baris + satu tombol aksi.
+          Paragraf nurturing yang dulu menetap di atas daftar sudah dihapus —
+          user yang paham tidak perlu membacanya lagi, user baru cukup membaca
+          satu baris ini. Disusun vertikal (bukan sebaris) supaya kalimatnya
+          tidak terpotong/terlipat di layar 320–390 px. */}
       {active.length === 0 ? (
-        <p className="rounded-2xl bg-cream/70 px-3.5 py-3 text-[11.5px] leading-relaxed text-forest/45">
-          {title === 'PIUTANG' ? 'Belum ada piutang aktif 🌿' : 'Belum ada hutang personal aktif 🌿'}
-        </p>
+        <div className="flex flex-col items-center rounded-2xl bg-cream/70 px-4 py-5 text-center ring-1 ring-inset ring-soil/8">
+          <span
+            aria-hidden
+            className="flex size-9 shrink-0 items-center justify-center rounded-2xl bg-sage/60 text-forest"
+          >
+            <HandCoins className="size-4" strokeWidth={2.2} />
+          </span>
+          <p className="mt-2 text-[11.5px] font-medium leading-snug text-forest/55">
+            {title === 'PIUTANG' ? PERSONAL_EMPTY_LINE.piutang : PERSONAL_EMPTY_LINE.hutang}
+          </p>
+          <button
+            type="button"
+            onClick={onAdd}
+            className="mt-3 inline-flex h-8 shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-forest pl-2.5 pr-3 text-[10.5px] font-semibold text-cream transition-colors hover:bg-forest-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/30 active:scale-95"
+          >
+            <Plus className="size-3" strokeWidth={3} aria-hidden />
+            {title === 'PIUTANG' ? EMPTY_PIUTANG_CTA : EMPTY_HUTANG_CTA}
+          </button>
+        </div>
       ) : (
         <ul className="space-y-2.5">
           {active.map((debt, index) => (

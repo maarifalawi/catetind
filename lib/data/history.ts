@@ -209,7 +209,6 @@ export function healthScoreBand(score: number): { min: number; label: string; ch
 /** copy kartu hero (kalibrasi & skor). Angka & persen selalu diisi pemanggil. */
 export const HEALTH_CARD_COPY = {
   readyTitle: 'Skor Kewarasan Finansial',
-  readySubtitle: 'Dihitung dari catatanmu sendiri',
   calibratingTitle: 'Kalibrasi Profil AI',
   calibratingSubtitle: 'AI Coach sedang menyelaraskan polamu',
   /** badge kanan atas kartu */
@@ -244,6 +243,18 @@ export const HISTORY_NO_DATA_COPY = {
   title: 'Belum ada satu catatan pun di sini',
   body: 'Skor kewarasan, insight AI, dan pola pengeluaran baru bisa dihitung setelah ada catatan pertama. Skor contoh tidak kami tampilkan — angka di halaman ini selalu dari catatanmu.',
   cta: 'Catat Sekarang',
+} as const
+
+/* ── DAFTAR CATATAN: 10 BARIS DULU, SISANYA LEWAT TOMBOL ──────────────────────
+   Permintaan pemilik produk: daftar riwayat jangan langsung tampil semua —
+   halaman jadi kepanjangan. Sepuluh catatan terbaru cukup untuk konteks;
+   sisanya dibuka lewat satu tombol yang menyebut jumlah totalnya apa adanya,
+   dan bisa ditutup lagi tanpa kehilangan posisi filter/pencarian. */
+export const HISTORY_PAGE_SIZE = 10
+
+export const HISTORY_LIST_COPY = {
+  showAll: (total: number) => `Lihat semua ${total} catatan`,
+  showLess: 'Tampilkan lebih sedikit',
 } as const
 
 /**
@@ -519,6 +530,26 @@ export function groupTransactionsByDate<T extends HistoryTransaction>(
       moved: items.reduce((sum, tx) => (isMoneyMovement(tx) ? sum + tx.amount : sum), 0),
       items: [...items].sort((a, b) => (a.time < b.time ? 1 : -1)),
     }))
+}
+
+/* ── DAFTAR CATATAN: 10 TERBARU DALAM URUTAN TAMPIL ──────────────────────────
+   Permintaan pemilik produk: daftar riwayat jangan langsung tampil semua —
+   halaman jadi kepanjangan. Potongannya TIDAK boleh memakai urutan array mentah
+   (`filtered`), karena yang digambar layar adalah urutan hasil pengelompokan
+   (hari terbaru dulu, lalu jam terbaru). Karena itu ratakan dulu lewat
+   `groupTransactionsByDate()`, baru ambil `limit` pertama — hasilnya selalu
+   "10 catatan terbaru yang benar-benar terlihat di atas".
+
+   `limit <= 0` berarti tidak ada baris yang ditampilkan (bukan "semua"). */
+export function latestTransactions<T extends HistoryTransaction>(
+  txs: T[],
+  todayIso: string,
+  limit: number,
+): T[] {
+  if (limit <= 0) return []
+  return groupTransactionsByDate(txs, todayIso)
+    .flatMap((group) => group.items)
+    .slice(0, limit)
 }
 
 export interface HistorySummary {
@@ -998,8 +1029,7 @@ export const TRANSACTION_INPUT_COPY = {
      sebelum disimpan — copy-nya tinggal di sini supaya engine tidak menyimpan
      satu pun string user-facing (aturan repo). */
   /** petunjuk format — singkatan yang benar-benar dipakai orang, bukan teori */
-  amountHint: (maxDigits: number) =>
-    `Bisa tulis singkat: 50rb, 2,5jt — atau angka penuh (maks ${maxDigits} digit). Titik ribuan muncul sendiri kok.`,
+  amountHint: 'Bisa tulis singkat: 50rb, 2,5jt',
   /** chip konfirmasi untuk nilai hasil parsing, mis. "Rp 2.500.000?" */
   amountConfirm: (amount: number) => `Rp ${amount.toLocaleString('id-ID')}?`,
   amountConfirmHint: 'Nilai ini yang bakal disimpan.',
@@ -1026,7 +1056,7 @@ export const TRANSACTION_INPUT_COPY = {
      jadi Riwayat penuh kategori yang tidak pernah dipilih siapa pun. Sekarang
      kategori di form tambah HANYA datang dari pilihan user
      (`TRANSACTION_CATEGORY_OPTIONS`), dan formnya tertahan sampai pilihan itu
-     ada. Copy di bawah yang menjelaskan kenapa — bukan JSX (aturan repo). */
+     ada. Nama field di bawah tetap satu sumber copy — bukan JSX (aturan repo). */
   /** label pemilih kategori di form TAMBAH (mode edit pakai `EDIT_TRANSACTION_COPY`) */
   categoryLabel: 'Kategori',
   /*
@@ -1037,10 +1067,11 @@ export const TRANSACTION_INPUT_COPY = {
    * (`lib/data/categories.ts`). Dua salinan kalimat yang sama hanya akan
    * berbeda diam-diam di kemudian hari.
    */
-  /** petunjuk tetap di bawah pemilih kategori */
-  categoryHint: 'Kategori ini yang dipakai filter Riwayat & rincian pengeluaranmu.',
-  /** petunjuk + toast saat form selebihnya sudah siap, kecuali kategorinya */
-  categoryNeeded: 'Pilih kategori dulu ya 🌿 Cuma kategori yang kamu pilih yang disimpan.',
+  /** toast pengaman saat Enter ditekan padahal kategori belum dipilih.
+   *  Kalimat panjang "Pilih kategori dulu ya 🌿 Cuma kategori yang kamu pilih
+   *  yang disimpan." DIHAPUS atas permintaan pemilik produk — guard-nya tetap
+   *  ada, tapi cukup satu kalimat pendek tanpa mengulang aturan. */
+  categoryNeeded: 'Kategorinya belum dipilih.',
 
   /* ── SUMBER DOMPET (paket 69) ────────────────────────────────────────────────
      Sebelum paket 69 form TAMBAH tidak menanyakan dompet sama sekali: catatannya
@@ -1051,8 +1082,9 @@ export const TRANSACTION_INPUT_COPY = {
   walletLabel: 'Sumber Dompet',
   /** opsi kosong di pemilih — bukan dompet, jadi tidak boleh jadi nilai tersimpan */
   walletPlaceholder: 'Pilih dompet…',
-  /** petunjuk tetap di bawah pemilih dompet */
-  walletHint: 'Saldo dompet inilah yang bergerak saat catatannya disimpan.',
+  /* `walletHint` ("Saldo dompet inilah yang bergerak…") DIHAPUS atas permintaan
+     pemilik produk. Petunjuk hanya muncul saat memang ada yang perlu dikatakan:
+     dompet belum dipilih, atau saldonya tidak cukup. */
   /** petunjuk + toast saat user belum memilih dompet */
   walletNeeded: 'Pilih dompetnya dulu ya 🌿 Biar jelas uangnya keluar dari mana.',
   /** judul sheet pemilih dompet */
@@ -1262,12 +1294,10 @@ export const TRANSACTION_DEFAULT_NAME: Record<TransactionType, string> = {
 }
 
 /* ── H3-4 (audit UI/UX) — ajakan mengisi deskripsi singkat ──────────────────
-   Audit menemukan entri "Pengeluaran cepat" yang tak informatif (user lupa itu
-   apa). Paket 86 sudah mengganti nama kosong dengan KATEGORI pilihan user, tapi
-   audit tetap meminta dorongan minimal 1 kata deskripsi saat input. Sifatnya
-   MENDORONG, bukan mewajibkan — menambah gesekan mencatat bukan tujuan app ini. */
-export const TRANSACTION_NOTE_HINT =
-  'Tambah 1 kata aja (mis. "Gacoan") biar gampang diingat nanti.'
+   Konstanta `TRANSACTION_NOTE_HINT` ("Tambah 1 kata aja…") DIHAPUS atas
+   permintaan pemilik produk: form catat transaksi cukup memakai placeholder
+   "Catatan (Opsional)". Audit H3-4 tetap terpenuhi lewat nama baris yang kini
+   memakai kategori pilihan user (paket 86). */
 
 /**
  * ATURAN DOMPET CATATAN BARU (paket 59 · temuan audit #1) — pengganti catatan

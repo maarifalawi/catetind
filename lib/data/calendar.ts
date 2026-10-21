@@ -17,7 +17,7 @@ import { MONTHLY_INCOME, type BudgetScope } from './budget'
 import type { MoneyContext, TransactionType } from '../types'
 import { matchesContext, tagTransactionsForContext, type ContextTransaction, type RowContext } from '../money/context-filter'
 import { recordedTransactions, type MoneySnapshot } from '../money/store'
-import { MASKED_AMOUNT, localISODate, mulberry32 } from './history'
+import { localISODate, mulberry32 } from './history'
 
 /* ── Kalender Cashflow (/app/calendar) ───────────────────────────────────────
    Satu sumber data + logika murni (TANPA React) untuk halaman Kalender, persis
@@ -86,7 +86,7 @@ export interface CalendarEntry {
   type: CalendarEntryType
   category: string
   wallet: string
-  /** emoji identitas — dipakai sebagai ikon kecil di sel kalender */
+  /** emoji identitas entri (data demo); sel kalender tidak lagi menampilkannya */
   emoji: string
   /** jam lokal `HH:MM` (hanya untuk entri yang sudah tercatat) */
   time?: string
@@ -161,7 +161,7 @@ export interface CalendarCell {
   cleanDay: boolean
   /** panjang rentetan hari bersih yang berakhir di tanggal ini */
   streak: number
-  /** emoji entri tercatat di tanggal ini (maks 3) */
+  /** emoji entri tercatat di tanggal ini (maks 3) — tersedia, tidak dirender di sel */
   markers: string[]
 }
 
@@ -188,8 +188,6 @@ export const CALENDAR_WEEKDAYS = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min
 export const DEFICIT_SPIKE_RATIO = 1.6
 /** lantai absolut — hari dengan belanja kecil tidak pernah disebut "boros" */
 export const DEFICIT_MIN_AMOUNT = 150_000
-/** rentetan hari bersih yang dianggap milestone (glow emas di sel) */
-export const CLEAN_STREAK_MILESTONE = 3
 
 /* ── MATEMATIKA SIKLUS GAJIAN (INTI HALAMAN) ─────────────────────────────── */
 
@@ -275,34 +273,14 @@ export function periodLabel(
   })}`
 }
 
-/** `2026-09-25` → `Kamis, 25 Sep 2026` (judul Micro Inspector) */
+/** `2026-09-25` → `Kamis, 25 September 2026` (judul panel detail tanggal) */
 export function longDateLabel(iso: string): string {
-  return format(parseISO(iso), 'EEEE, d MMM yyyy', { locale: localeId })
+  return format(parseISO(iso), 'EEEE, d MMMM yyyy', { locale: localeId })
 }
 
 /** `2026-09-25` → `25 Sep` (kepala hari di daftar transaksi) */
 export function shortDateLabel(iso: string): string {
   return format(parseISO(iso), 'd MMM', { locale: localeId })
-}
-
-/**
- * Rentang tanggal yang benar-benar dirender grid — ditulis di bawah navigator
- * supaya mode siklus gajian tidak pernah ambigu:
- *   standard → `1 – 30 September 2026`
- *   payday   → `25 Agustus – 24 September 2026`
- */
-export function periodRangeLabel(
-  anchor: Date,
-  mode: PeriodMode,
-  paydayDate: number = DEFAULT_PAYDAY_DATE,
-): string {
-  const { start, end } = periodBounds(anchor, mode, paydayDate)
-  if (mode === 'standard') {
-    return `1 – ${format(end, 'd MMMM yyyy', { locale: localeId })}`
-  }
-  return `${format(start, 'd MMMM', { locale: localeId })} – ${format(end, 'd MMMM yyyy', {
-    locale: localeId,
-  })}`
 }
 
 /* ── KLASIFIKASI HEATMAP (PEMISAH IMPULSIF vs TERENCANA) ─────────────────── */
@@ -981,41 +959,7 @@ export function summarizePeriod(cells: CalendarCell[]): PeriodSummary {
   return summary
 }
 
-/* ── LEGENDA & COPY TETAP ────────────────────────────────────────────────── */
-
-/** pesan AI saat hari yang dipilih benar-benar kosong (bukan menghakimi) */
-export const EMPTY_DAY_AI_MESSAGE = 'Hari ini aman terkendali. Tidak ada pengeluaran.'
-
-/** penjelasan yang membedakan belanja impulsif dari tagihan tetap yang aman */
-export const FIXED_BILL_SAFE_NOTE =
-  'Tagihan terjadwal tampil netral — uang yang sudah direncanakan tidak dihitung boros.'
-
-/**
- * Label tagihan tetap (paket 56).
- *
- * Dulu bernama `PLANNED_BADGE_LABEL` dan berbunyi "Terencana" — kata yang dipakai
- * halaman ini untuk menandai RAMALAN tagihan. Sekarang label yang sama hanya
- * dipakai untuk dua hal yang keduanya fakta: sel yang isinya MURNI tagihan tetap
- * yang sudah tercatat, dan baris tagihan tetap di daftar hari. Karena artinya
- * sudah berubah, namanya ikut diubah — nama `planned` yang bermakna "rencana
- * masa depan" tidak boleh diwariskan diam-diam.
- */
-export const FIXED_BILL_BADGE_LABEL = 'Tagihan Tetap'
-
-/**
- * Chip label per jenis entri di daftar hari (satu sumber untuk panel detail).
- * `className` boleh tinggal di sini: warna teks baris memang bahasa visual,
- * sama seperti `CALENDAR_LOOK_CELL` di bawah.
- */
-export const CALENDAR_ENTRY_CHIP: Record<
-  CalendarEntryType,
-  { label: string; className: string }
-> = {
-  income: { label: 'Pemasukan', className: 'text-forest' },
-  fixed_bill: { label: FIXED_BILL_BADGE_LABEL, className: 'text-thistle' },
-  variable_expense: { label: 'Variabel', className: 'text-hud-terracotta' },
-  money_movement: { label: 'Pindah dana', className: 'text-thistle' },
-}
+/* ── COPY TETAP ──────────────────────────────────────────────────────────── */
 
 /**
  * Copy panel detail tanggal (paket 56) — semua kalimat yang dibaca user di panel
@@ -1033,33 +977,27 @@ export const CALENDAR_DAY_COPY = {
   /** CTA zero-friction backdating — tanggalnya terkunci ke tanggal terpilih */
   addNote: (day: number) => `Tambah Catatan di Tgl ${day}`,
   /** judul daftar: hari yang belum lewat belum punya "transaksi", hanya catatan */
-  listTitle: (isFuture: boolean) => (isFuture ? 'Catatan Tercatat' : 'Transaksi Hari Ini'),
+  listTitle: (isFuture: boolean) => (isFuture ? 'Catatan' : 'Transaksi'),
   countLabel: (count: number) => `${count} catatan`,
   /** baris ringkasan saat tidak ada satu pun uang bergerak di hari itu */
   neutralSummary: 'Tidak ada uang yang bergerak',
-  /** bubble di atas sel saat tanggalnya tidak punya catatan sama sekali */
-  bubbleEmpty: 'Belum ada catatan',
-  /** hari kosong: arahkan ke tombol catat, jangan janjikan apa pun */
+  /** hari kosong: satu kalimat, tanpa emoji/paragraf penjelasan */
   emptyFuture: {
-    emoji: '🗓️',
     title: 'Belum ada catatan',
-    body: 'Tidak ada uang tercatat di tanggal ini. Kalau ada yang perlu dicatat, pakai tombol di atas — tanggalnya sudah menunjuk hari ini.',
   },
-  /** hari yang sudah lewat dan benar-benar kosong (pesan AI yang menenangkan) */
+  /** hari yang sudah lewat dan benar-benar kosong */
   emptyPast: {
-    emoji: '🌿',
     title: 'Kosong & aman',
-    body: EMPTY_DAY_AI_MESSAGE,
   },
 } as const
 
-/* ── TAMPILAN SEL: PALET BERSIH (satu sumber untuk grid & legenda) ────────────
+/* ── TAMPILAN SEL: PALET BERSIH ────────────────────────────────────────────
    Redesign: sel kalender tidak lagi memakai corak garis diagonal, glow
-   beranimasi, emoji bertumpuk, titik biru, chip nominal, atau angka bulan.
-   Sekarang satu sel = SATU angka tanggal di atas satu latar polos, persis
-   bahasa visual heatmap "Kapan Kamu Sering Boros?" di halaman Riwayat.
+   beranimasi, emoji bertumpuk, titik biru, chip nominal, angka bulan, atau
+   nominal ringkas. Sekarang satu sel = angka tanggal di atas satu latar
+   polos; detail uang hanya muncul di panel hari setelah tanggalnya ditap.
 
-   Enam "muka" sel (`CalendarLook`) memakai palet brand yang sudah ada —
+   Tujuh "muka" sel (`CalendarLook`) memakai palet brand yang sudah ada —
    tidak ada warna baru di sistem:
      terracotta → belanja variabel melonjak (satu-satunya yang boleh "marah")
      forest     → surplus / ada belanja biasa
@@ -1109,41 +1047,6 @@ export function calendarCellLook(cell: CalendarCell): CalendarLook {
   if (cell.isFuture) return 'upcoming'
   return 'empty'
 }
-
-/**
- * H7-3 (audit UI/UX): label pengeluaran RINGKAS untuk dibaca DI DALAM sel —
- * supaya tanggal merah tidak dibiarkan "tanpa penjelasan". Nominal penuh
- * (Rp 600.000) tidak muat di kotak 7 kolom, jadi dipadatkan (600rb / 1,2jt) dan
- * ikut tombol mata global (masked ⇒ topeng, bukan angka bohong).
- */
-export function calendarCellSpendLabel(cell: CalendarCell, masked: boolean): string | null {
-  if (cell.income > 0) return null
-  if (cell.totalSpend <= 0) return null
-  if (masked) return MASKED_AMOUNT
-  const v = cell.totalSpend
-  if (v >= 1_000_000) {
-    const jt = v / 1_000_000
-    const shown = jt >= 10 ? Math.round(jt) : Math.round(jt * 10) / 10
-    return `−${shown.toString().replace('.', ',')}jt`
-  }
-  if (v >= 1_000) return `−${Math.round(v / 1_000)}rb`
-  return `−${v}`
-}
-
-/** keterangan warna untuk pengguna — satu baris, label sependek mungkin.
- *  PAKET 56: tidak ada lagi penanda "Terencana"/ramalan di daftar ini; yang
- *  tersisa hanya penjelasan warna sel, jadi tiap muka yang masih dipakai tetap
- *  punya keterangannya sendiri. */
-export const CALENDAR_LEGEND: { id: CalendarLook; label: string }[] = [
-  { id: 'deficit', label: 'Boros' },
-  { id: 'surplus', label: 'Surplus' },
-  { id: 'clean', label: 'Nol jajan' },
-  { id: 'spend', label: 'Ada belanja' },
-  { id: 'planned', label: FIXED_BILL_BADGE_LABEL },
-  /* H7-4 — tanggal yang belum berjalan dijelaskan apa adanya supaya user tidak
-     menebak-nebak kenapa kotaknya abu. */
-  { id: 'upcoming', label: 'Belum berjalan' },
-]
 
 /* ── CATATAN SIKLUS GAJIAN (paket 60 · 60.5) ─────────────────────────────────
    `paydayDate` dibaca dari konfigurasi uang user (`lib/user-money-settings.ts`,

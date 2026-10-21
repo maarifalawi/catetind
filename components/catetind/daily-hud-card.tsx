@@ -175,7 +175,6 @@ export const DailyHudCard = memo(function DailyHudCard() {
             <CircleDashed className="size-6" strokeWidth={1.8} />
           </span>
           <p className="mt-4 text-base font-medium text-forest">{HUD_COPY.drySpellTitle}</p>
-          <p className="mt-1.5 text-sm leading-relaxed text-forest/50">{HUD_COPY.drySpellBody}</p>
           <TransactionBottomSheet
             defaultType="income"
             trigger={

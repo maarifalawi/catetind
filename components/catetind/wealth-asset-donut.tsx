@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
-import { cn } from '@/lib/utils'
 import {
   allocationSlices,
   maskMoney,
@@ -22,6 +21,14 @@ import {
      porsi saat satu segmen disorot/di-tap.
    - tooltip custom memakai palet app & ikut privasi (nominal dimask).
 
+   DUA PEMANGKASAN PENTING (permintaan desain):
+   1. Dengan SATU aset donut cuma menggambar lingkaran penuh berisi "1 ASET" —
+      nol informasi di luar satu baris teks. Karena itu donut DISEMBUNYIKAN saat
+      jumlah aset ≤ 1, dan daftar aset langsung tampil.
+   2. Legenda di bawah donut ("● Saham · 100% · Rp 900.000") DIHAPUS: ia
+      mengulang potongan yang sudah terlihat di donut dan baris aset di bawahnya.
+      Donutnya yang jadi legenda; detail nominal per aset hidup di daftar aset.
+
    Warna segmen datang dari `ASSET_TYPE_META` (tangga sage + amber kanon),
    jadi tidak ada warna baru di halaman ini.
    ────────────────────────────────────────────────────────────────────────── */
@@ -37,7 +44,10 @@ export function WealthAssetDonut({
   const [activeIndex, setActiveIndex] = useState(-1)
   const active = activeIndex >= 0 ? slices[activeIndex] : null
 
-  if (slices.length === 0) return null
+  /* satu aset (atau nol) = tidak ada alokasi untuk dibandingkan; satu JENIS
+     (mis. dua reksadana) juga menghasilkan lingkaran penuh yang sama
+     tidak informatifnya — donut hanya tampil kalau ada ≥ 2 potongan */
+  if (investments.length <= 1 || slices.length <= 1) return null
 
   return (
     <div className="rounded-[1.75rem] bg-cream p-5 shadow-[0_18px_44px_-30px_rgba(0,0,0,0.45)] ring-1 ring-soil/10 sm:p-6">
@@ -119,43 +129,6 @@ export function WealthAssetDonut({
           )}
         </div>
       </div>
-
-      {/* legenda: titik warna + nama jenis + porsi + nominal */}
-      <ul className="mt-4 space-y-1.5">
-        {slices.map((slice, index) => {
-          const highlighted = activeIndex === index
-          return (
-            <li key={slice.type}>
-              <button
-                type="button"
-                onMouseEnter={() => setActiveIndex(index)}
-                onMouseLeave={() => setActiveIndex(-1)}
-                onClick={() => setActiveIndex((prev) => (prev === index ? -1 : index))}
-                aria-label={`${slice.label} ${slice.pct} persen`}
-                className={cn(
-                  'flex w-full items-center gap-2.5 rounded-2xl px-2.5 py-2 text-left transition-colors duration-200',
-                  highlighted ? 'bg-cream' : 'hover:bg-cream/70',
-                )}
-              >
-                <span
-                  aria-hidden
-                  className="size-2.5 shrink-0 rounded-full ring-2 ring-cream"
-                  style={{ backgroundColor: slice.color }}
-                />
-                <span className="min-w-0 flex-1 truncate text-[12.5px] font-medium text-forest/75">
-                  {slice.label}
-                </span>
-                <span className="shrink-0 text-[12px] font-semibold text-forest tabular-nums">
-                  {slice.pct}%
-                </span>
-                <span className="w-[92px] shrink-0 text-right text-[11px] text-forest/45 tabular-nums">
-                  {maskMoney(slice.value, masked)}
-                </span>
-              </button>
-            </li>
-          )
-        })}
-      </ul>
     </div>
   )
 }

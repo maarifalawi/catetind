@@ -4,7 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { LogOut, Plus, PanelLeftClose, PanelLeftOpen, ArrowLeftRight, Lock } from 'lucide-react'
+import { LogOut, Plus, PanelLeftClose, PanelLeftOpen, ArrowLeftRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { SESSION_COPY } from '@/lib/data/auth'
@@ -12,13 +12,14 @@ import { FEATURE_LOCK_COPY } from '@/lib/data/upgrade'
 import { useSessionUser } from '@/hooks/use-session-user'
 import { TRANSFER_DOOR_COPY } from '@/lib/data/add-wallet'
 import { NAV_GROUPS } from '@/lib/navigation'
-import { pageLockText } from '@/lib/subscription/page-access'
+import { pageLockText, pageUnlockPlan } from '@/lib/subscription/page-access'
 import { TransactionWebModal } from '@/components/dashboard/transaction-web-modal'
 import { TransferFlow } from './transfer-flow'
 import { useSubscriptionGate } from './subscription-gate-provider'
 import { AiFuelCard } from './ai-fuel-card'
 import { LogoWordmark } from './logo-wordmark'
 import { NavTooltip } from './nav-tooltip'
+import { NavLockBadge } from './nav-lock-badge'
 
 /* ── CATATAN: ENTRI /family DIHAPUS — KEPUTUSAN SADAR (task 06) ───────────────
    Dulu grup `Aset & Bersama` punya satu entri menu menuju halaman bernama
@@ -238,7 +239,9 @@ export function DesktopSidebar({
                    disembunyikan) supaya batasannya terlihat; badge 🔒 + title
                    menjelaskan paket pembukanya sebelum user menekan. Tautannya
                    tetap hidup: halaman tujuan menampilkan kartu upgrade. */
-                const lockText = lockedPageCapability(href) ? pageLockText(href) : null
+                const lockedCapability = lockedPageCapability(href)
+                const lockText = lockedCapability ? pageLockText(href) : null
+                const unlockPlan = lockedCapability ? pageUnlockPlan(href) : null
                 return (
                   <Link
                     key={href}
@@ -256,10 +259,15 @@ export function DesktopSidebar({
                         : 'font-medium text-forest/55 hover:bg-ink/[0.03] hover:text-forest',
                     )}
                   >
-                    <Icon
-                      className="size-[18px] shrink-0"
-                      strokeWidth={isActive ? 2.2 : 1.8}
-                    />
+                    <span className="relative inline-flex shrink-0">
+                      <Icon
+                        className="size-[18px]"
+                        strokeWidth={isActive ? 2.2 : 1.8}
+                      />
+                      {/* sidebar ciut: tidak ada ruang untuk teks, jadi gembok
+                          emas kecil menempel di pojok ikon */}
+                      {collapsed && lockText && <NavLockBadge variant="dot" />}
+                    </span>
                     <span
                       className={cn(
                         'overflow-hidden whitespace-nowrap transition-all duration-300',
@@ -271,11 +279,7 @@ export function DesktopSidebar({
                       {label}
                     </span>
                     {!collapsed && lockText && (
-                      <Lock
-                        className="ml-auto size-3 shrink-0 text-forest/35"
-                        strokeWidth={2.4}
-                        aria-hidden
-                      />
+                      <NavLockBadge planName={unlockPlan?.name} />
                     )}
                     {collapsed && <NavTooltip label={lockText ?? label} />}
                   </Link>

@@ -157,7 +157,7 @@ export function CategoryPicker({
             ? CATEGORY_PICKER_COPY.resultTitle(hits.length)
             : view === 'all'
               ? CATEGORY_PICKER_COPY.allHint(EXPENSE_GROUPS.length, EXPENSE_CATEGORIES.length)
-              : CATEGORY_PICKER_COPY.quickHint
+              : undefined
         }
         onBack={onDeeperLayer ? reset : undefined}
         backLabel={CATEGORY_PICKER_COPY.back}

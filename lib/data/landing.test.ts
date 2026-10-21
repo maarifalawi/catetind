@@ -27,6 +27,7 @@ import {
   buildContactMailto,
   buildContactWhatsApp,
   formatIDR,
+  isPurchaseNotifPeak,
   liveFeedFromPurchases,
   lpHref,
   lpPlanPrice,
@@ -34,6 +35,7 @@ import {
   randomPurchasePackageName,
   relativeFeedTime,
   seededPurchaseNotifications,
+  wibMinutesOfDay,
 } from './landing'
 
 /* ── FEED PEMBELIAN NYATA (paket 85) ─────────────────────────────────────────
@@ -226,7 +228,7 @@ describe('LP_PRICING — copy & struktur kartu versi baru', () => {
     expect(LP_PRICING.tiers.map((tier) => tier.id)).toEqual(['catet-aja', 'waras', 'sultan'])
     expect(LP_PRICING.tiers.filter((tier) => tier.recommended)).toHaveLength(1)
     expect(LP_PRICING.tiers[1].recommended).toBe(true)
-    expect(LP_PRICING.tiers[1].badge).toContain('94% User')
+    expect(LP_PRICING.tiers[1].badge).toContain('98% User')
   })
 
   it('Sultan tidak menduplikasi Joint Wallet yang sudah ada di Waras', () => {
@@ -257,8 +259,9 @@ describe('LP_MISSION — anchor & aset', () => {
     for (const card of LP_MISSION.cards) {
       expect(card.title.trim().length).toBeGreaterThan(8)
       expect(card.body.trim().length).toBeGreaterThan(8)
-      expect(card.caption.trim().length).toBeGreaterThan(8)
       expect(card.annotation.trim().length).toBeGreaterThan(3)
+      /* caption centang lama sudah dihapus atas permintaan pemilik produk */
+      expect('caption' in card).toBe(false)
       expect('mobile' in card).toBe(false)
     }
   })
@@ -702,5 +705,29 @@ describe('notifikasi pembelian', () => {
     expect(item.handle).toBe('@seseorang')
     expect(item.packageName).toBe('paket CatetInd')
     expect(item.time).toBe('baru aja')
+  })
+})
+
+describe('jam tayang notifikasi (WIB)', () => {
+  it('jam 2 pagi bukan jam rame', () => {
+    /* 02:00 WIB = 19:00 UTC hari sebelumnya */
+    expect(isPurchaseNotifPeak(new Date('2026-10-18T19:00:00Z'))).toBe(false)
+    expect(isPurchaseNotifPeak(new Date('2026-10-18T20:30:00Z'))).toBe(false) // 03:30 WIB
+  })
+
+  it('tiga jendela jam rame: pagi, makan siang, malam', () => {
+    expect(isPurchaseNotifPeak(new Date('2026-10-19T00:30:00Z'))).toBe(true) // 07:30 WIB
+    expect(isPurchaseNotifPeak(new Date('2026-10-19T05:00:00Z'))).toBe(true) // 12:00 WIB
+    expect(isPurchaseNotifPeak(new Date('2026-10-19T12:00:00Z'))).toBe(true) // 19:00 WIB
+  })
+
+  it('ujung jendela eksklusif (10:00 WIB = tutup)', () => {
+    expect(isPurchaseNotifPeak(new Date('2026-10-19T02:59:00Z'))).toBe(true) // 09:59 WIB
+    expect(isPurchaseNotifPeak(new Date('2026-10-19T03:00:00Z'))).toBe(false) // 10:00 WIB
+  })
+
+  it('wibMinutesOfDay membungkus tengah malam', () => {
+    expect(wibMinutesOfDay(new Date('2026-10-18T17:00:00Z'))).toBe(0)
+    expect(wibMinutesOfDay(new Date('2026-10-18T23:59:00Z'))).toBe(6 * 60 + 59)
   })
 })

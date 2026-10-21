@@ -373,21 +373,8 @@ export const REALTIME_ARRIVAL: JointTransaction = {
   justArrived: true,
 }
 
-/* ── REKAP MINGGUAN & BULANAN (Section 10) ───────────────────────────────── */
-export const JOINT_WEEKLY = {
-  /** total pengeluaran bersama 7 hari terakhir (mock) */
-  total: 728000,
-  /** dibanding minggu lalu (negatif = lebih hemat) */
-  trendPct: -12,
-  /** jumlah catatan per orang — dipakai copy "paling rajin catat" */
-  counts: { [JOINT_ME.id]: 4, [JOINT_PARTNER.id]: 5 } as Record<string, number>,
-}
-
-/** label bulan untuk rekap (mock: September 2026) */
+/* ── LABEL BULAN (mock: September 2026) ──────────────────────────────────── */
 export const JOINT_MONTH_LABEL = 'September 2026'
-/** total pengeluaran bersama bulan lalu — pembanding trend di stats row.
- *  Dianotasi `number` supaya perbandingan `=== 0` di UI tetap valid secara tipe. */
-export const JOINT_PREV_MONTH_TOTAL: number = 1985000
 
 /* ── HITUNGAN SETTLEMENT (Section 3) ─────────────────────────────────────── */
 /** ambang "perlu settle" — di atas ini baru muncul ajakan transfer (kanon 2D.3) */
@@ -586,7 +573,7 @@ function clamp(value: number, min: number, max: number): number {
  *     ditimbang (patungan saja; traktiran keluar, privat tetap masuk —
  *     kecuali `privatePolicy: 'excluded'`, lihat `joint-ledger.ts`).
  * `settled: true` memaksa scale kembali rata (0°) — dipakai setelah user
- * menekan "Tandai Sudah Settle ✓" supaya animasi pegasnya jalan ke level.
+ * menekan "Tandai Sudah Settle" supaya animasi pegasnya jalan ke level.
  */
 export function computeSettlement(
   transactions: JointTransaction[],
@@ -1073,7 +1060,7 @@ export const DEFAULT_SETTLEMENT_METHOD: SettlementMethod = 'BCA'
 export const SETTLE_METHOD_LABEL = 'Transfernya lewat mana?'
 
 /** label baris settlement di timeline */
-export const SETTLE_ENTRY_LABEL = 'Settle ✓'
+export const SETTLE_ENTRY_LABEL = 'Settle'
 export const SETTLE_TRANSFER_PREFIX = 'Transfer '
 
 /** pemilih "Siapa yang nalangin?" di form tambah (Stage 2 #3) — mengisi
@@ -1262,50 +1249,6 @@ export function readJointSettlementRecords(): Record<string, JointSettlementReco
  *  yang justru ditutup paket ini. Pembacanya (`readJointSettlementRecords()`)
  *  tetap ada untuk migrasi satu kali. */
 
-/* ── COPY: TIGA KEADAAN /joint (paket 61.3) ──────────────────────────────────
-   Halaman ini punya tiga wujud yang sangat berbeda, dan sebelum paket 61
-   perpindahannya tidak pernah dijelaskan: user menekan "Buat Dompet & Ajak
-   Pasangan", lalu layar berubah, dan ia harus menebak apa yang barusan terjadi
-   dan apa yang belum. Blok ini untuk MENGATAKAN keadaan itu — apa yang sudah
-   ada, apa yang sedang menunggu, dan apa langkah berikutnya: ekspektasi yang
-   jelas, bukan kalimat penyemangat. */
-export const JOINT_STATE_COPY: Record<
-  'empty' | 'waiting' | 'active',
-  { badge: string; title: string; body: string; note: string }
-> = {
-  empty: {
-    badge: 'Langkah 1 dari 3',
-    title: 'Belum ada kantong bersama',
-    body: 'Kasih nama kantong kalian, lalu bagikan kode undangannya ke pasangan. Buku besar bersama baru dibuka setelah dia bergabung.',
-    note: 'Kantong yang baru dibuat selalu KOSONG — catatan contoh tidak ikut terbawa.',
-  },
-  waiting: {
-    badge: 'Langkah 2 dari 3',
-    title: 'Menunggu pasanganmu bergabung',
-    body: 'Kantongnya sudah ada (masih kosong) dan kode undangannya sudah bisa dibagikan. Di halaman pasangan, kode itu membuka kantong yang sama.',
-    note: 'Kamu tetap bisa mencatat sekarang; angka timbangannya baru berarti setelah kalian berdua ada di kantong ini.',
-  },
-  active: {
-    badge: 'Langkah 3 dari 3',
-    title: 'Kantong kalian sudah aktif',
-    body: 'Buku besar bersama terbuka: catat bareng, atur pembagian tiap catatan, lalu tandai settle kalau sudah waktunya impas.',
-    note: 'Timbangan menampilkan posisi bersih (patungan saja); kartu statistik di bawahnya menghitung SEMUA catatan, termasuk traktiran.',
-  },
-}
-
-/**
- * RELASI KANTONG BERSAMA DENGAN KAS PRIBADI (paket 61.3) — dinyatakan di layar,
- * bukan disimpulkan user sendiri.
- *
- * Kanon teknisnya ada di `lib/money/joint-store.ts` (§"KANTONG BERSAMA BUKAN
- * BAGIAN TOTAL SALDO"): buku besar ini SENGAJA tidak menyentuh
- * `lib/money/store.ts`, jadi saldo BCA/GoPay/Tunai tidak pernah berubah karena
- * catatan bareng. Kalau ini tidak dikatakan, user akan menduga uangnya berpindah
- * — atau sebaliknya, menduga catatannya tidak berpengaruh sama sekali.
- */
-export const JOINT_PERSONAL_CASH_COPY =
-  'Buku besar ini terpisah dari dompet pribadimu: mencatat bareng TIDAK mengubah saldo BCA/GoPay/Tunai dan tidak muncul di Riwayat pribadi. Yang dicatat di sini cuma siapa menalangi berapa.'
-
 /* ── COPY: HAPUS SATU BARIS CATATAN BERSAMA (paket 61.3) ────────────────────
    Yang berubah saat satu baris dihapus bukan cuma daftarnya: angka PATUNGAN
    pasangan ikut terhitung ulang. Itu sebabnya copy-nya menyebut akibat itu
@@ -1340,9 +1283,3 @@ export const JOINT_DELETE_COPY = {
 } as const
 
 
-/* H9-2 (audit UI/UX) - progres 3 langkah membangun dompet bersama. */
-export const JOINT_STEP_COPY = {
-  aria: 'Progres membangun dompet bersama',
-  steps: ['Buat kantong', 'Ajak pasangan', 'Mulai catat'],
-  marks: { done: '✅', current: '🔄', todo: '⬜' },
-} as const

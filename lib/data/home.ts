@@ -125,9 +125,9 @@ export const HOME_PLANT_COPY = {
   /** pct sudah 100: tidak ada lagi yang dikejar, dan itu boleh dirayakan */
   targetReached: 'Target celengan ini tercapai 🎉',
   /* ── MODAL DETAIL TANAMAN (paket 58) ──────────────────────────────────────
-     Dua label + kalimat ini dulu ditulis langsung di `plant-detail-modal.tsx`;
-     dipindah ke sini supaya copy user-facing tetap satu pintu (§8). Saat belum
-     ada aktivitas, modal tidak menulis "0 hari" — ia menyebut apa adanya
+     Label ini dulu ditulis langsung di `plant-detail-modal.tsx`; dipindah ke
+     sini supaya copy user-facing tetap satu pintu (§8). Saat belum ada
+     aktivitas, modal tidak menulis "0 hari" — ia menyebut apa adanya
      "Belum ada aktivitas", karena tanamannya belum pernah disiram. */
   detailTitle: 'Tanamanmu 🌿',
   hpLabel: 'Kesehatan tanaman',
@@ -135,10 +135,6 @@ export const HOME_PLANT_COPY = {
   activeDaysLabel: 'Hari aktif bulan ini',
   activeDaysValue: (days: number) => `${days} hari`,
   activeEmptyValue: 'Belum ada aktivitas',
-  activeBody: (days: number) =>
-    `Kamu udah catat ${days} hari bulan ini — tanamanmu tumbuh karena konsistensimu. Lanjutin ya! 💚`,
-  activeEmptyBody:
-    'Belum ada aktivitas bulan ini — catat transaksi pertamamu, tanamanmu langsung ikut tumbuh 🌱',
 } as const
 
 /** Donat saldo (panel "Your Balance Overview") — tiga pintasan ke halaman nyata. */

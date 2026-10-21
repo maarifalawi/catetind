@@ -1,15 +1,13 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import Link from 'next/link'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Plus } from 'lucide-react'
+import { ArrowRight, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { ScreenShell } from './screen-shell'
 import { GlobalPrivacyToggle } from './global-privacy-toggle'
 import { usePrivacy } from './privacy-provider'
-import { ShieldMeter } from './shield-meter'
-import { SalaryWaterfall } from './salary-waterfall'
+import { BillsOverview } from './bills-overview'
 import { BillTimeline } from './bill-timeline'
 import { BillCard, type StampState } from './bill-card'
 import { BillNotifNudge } from './bill-notif-nudge'
@@ -22,10 +20,11 @@ import { cn } from '@/lib/utils'
 import {
   ADD_BILL_TOAST,
   BILL_FILTERS,
+  CLEAR_PAID_TOAST,
+  CONFIRM_CLEAR_PAID_COPY,
   CONFIRM_DELETE_BILL_COPY,
   CONFIRM_UNPAID_COPY,
   CURRENT_DAY,
-  BILLS_ALL_PAID_COPY,
   BILL_ADD_PLACEHOLDER,
   DELETE_BILL_TOAST,
   MARK_PAID_SHEET_COPY,
@@ -35,7 +34,6 @@ import {
   UNDO_WINDOW_MS,
   UNPAID_TOAST,
   UPDATE_BILL_TOAST,
-  WATERFALL_NO_INCOME_COPY,
   billFilterCounts,
   billWalletName,
   filterBills,
@@ -44,7 +42,6 @@ import {
   type Bill,
   type BillFilter,
 } from '@/lib/data/bills'
-import { MONEY_SETTINGS_HREF } from '@/lib/data/budget'
 import {
   CONTEXT_EMPTY_COPY,
   CONTEXT_LABEL,
@@ -61,29 +58,30 @@ import {
   useBillsStore,
 } from '@/lib/money/bills-store'
 import { defaultWalletNameFor, useMoneyStore, walletIdOfName, walletOptionsFor } from '@/lib/money/store'
-import { useUserMoneySettings } from '@/lib/user-money-settings'
 import { dayOfMonth } from '@/lib/time'
 import { useTodayISO } from '@/lib/use-today-iso'
 
 /* ── Tagihan Rutin (/app/bills) ──────────────────────────────────────────────
-   Halaman ini SENGAJA bukan tabel daftar tagihan. Alurnya dibikin seperti
-   checklist game:
+   Desain halaman ini sengaja TIPIS: satu ringkasan, satu strip tanggal, satu
+   daftar berwarna lembut, satu ajakan menambah.
 
-   1. Tameng Proteksi  — tiap tagihan yang lunas menutup satu lajur perisai.
-   2. Waterfall Gaji   — gaji "dimakan" potongan demi potongan, terbesar dulu.
-   3. Timeline 7 hari  — tagihan terdekat; tap untuk lompat ke kartunya.
-   4. Kartu tagihan    — TOMBOL yang selalu terlihat untuk "Tandai Lunas" /
-                         "Batal lunas" (paket 60.4, supaya bisa dipakai di
-                         desktop tanpa gesture), sementara geser kanan tetap
-                         jadi jalur cepat untuk cap LUNAS (haptic + stempel
-                         karet) dan geser kiri untuk Edit / Hapus.
+   1. Ringkasan   — hanya nominal belum dibayar, cincin persentase, bar progres,
+                    dan satu baris status. Tidak ada "Gaji terpakai": porsi
+                    pemasukan adalah cerita Dashboard & Budget.
+   2. Kalender 14 hari — tanggal + satu titik aksen untuk hari yang punya tagihan.
+                    Ketuk tanggalnya → bubble berisi nama & nominal saja.
+                    Tidak ada baris pratinjau duplikat dan tidak ada legenda.
+   3. Daftar       — baris diberi tint Earth Pastel per status (hangat = belum
+                    dibayar, hijau dingin = lunas, plum tipis = telat). Saat
+                    tagihannya ≤5, tab filter diganti pembatas grup yang tenang.
+   4. Kartu tagihan — tombol "Bayar →" selalu terlihat; geser kanan tetap jadi
+                    jalur cepat cap LUNAS, geser kiri untuk Edit / Hapus.
 
    Privasi memakai state GLOBAL (<GlobalPrivacyToggle /> + usePrivacy) supaya
    tombol mata di halaman ini menyensor nominal yang sama dengan halaman lain.
-   (Sebelumnya halaman ini punya `isMasked` lokal yang tidak pernah berubah —
-   toggle-nya nyata-nyata tidak menyensor apa pun.) "Hari ini" dibaca dari
-   `useTodayISO()` (paket 57): status "telat" memakai tanggal yang berjalan,
-   bukan konstanta `CURRENT_DAY` — konstanta itu tinggal sebagai jangkar seed.
+   "Hari ini" dibaca dari `useTodayISO()` (paket 57): status "telat" memakai
+   tanggal yang berjalan, bukan konstanta `CURRENT_DAY` — konstanta itu tinggal
+   sebagai jangkar seed.
    ────────────────────────────────────────────────────────────────────────── */
 
 /** jeda sampai stempel "fresh" menyusut jadi stempel samar milik kartu lunas.
@@ -126,6 +124,14 @@ export function BillsScreen() {
   const paidRef = useRef(false)
   /** tagihan yang stempel LUNAS-nya baru saja dicap (animasi + haptic) */
   const [stampId, setStampId] = useState<string | null>(null)
+  /**
+   * "Bersihkan" = HAPUS semua tagihan lunas sekaligus (bukan disembunyikan).
+   * Aksi merusak, jadi selalu lewat dialog konfirmasi lebih dulu — dan setelah
+   * dihapus masih ada jendela Undo yang sama dengan hapus satu tagihan.
+   */
+  const [pendingClearPaid, setPendingClearPaid] = useState<Bill[] | null>(null)
+  /** jejak Undo BERSIHKAN (banyak id sekaligus) */
+  const clearUndoRef = useRef<string[] | null>(null)
 
   /* ── SATU SUMBER TAGIHAN (paket 51 · temuan E laporan 46) ────────────────
      Daftar tagihan sekarang hidup di `lib/money/bills-store.ts`, bukan di
@@ -142,16 +148,13 @@ export function BillsScreen() {
   /** kartu yang sedang disorot karena tanggalnya dipilih di timeline */
   const [highlightId, setHighlightId] = useState<string | null>(null)
 
-  /* ── JANGKAR TANGGAL + PEMASUKAN USER (paket 57) ─────────────────────────
+  /* ── JANGKAR TANGGAL (paket 57) ───────────────────────────────────────────
      `today` diisi setelah mount, jadi render server tidak menyebut tanggal
-     perangkat. Sebelumnya `currentDay` dipatok 25 dan gaji memakai konstanta
-     7.500.000: status telat bisa salah ("telat 3 hari" padahal hari ini 28) dan
-     Waterfall Gaji membagi tagihan dengan pemasukan yang bukan milik user. */
+     perangkat. Sebelumnya `currentDay` dipatok 25, sehingga status telat bisa
+     salah ("telat 3 hari" padahal hari ini 28). */
   const today = useTodayISO()
   const todayIso = today || TODAY_ISO
-  const settings = useUserMoneySettings()
   const currentDay = today ? dayOfMonth(today, CURRENT_DAY) : CURRENT_DAY
-  const monthlyIncome = settings.monthlyIncome
 
   /** semua timer halaman — dibersihkan saat unmount supaya tidak ada set state
    *  pada komponen yang sudah hilang */
@@ -176,14 +179,38 @@ export function BillsScreen() {
     () => billFilterCounts(scopedBills, currentDay),
     [scopedBills, currentDay],
   )
+  /* Jumlah tagihan ≤5 → tidak ada tab sama sekali. Tiga baris isi yang dipecah
+     menjadi "Semua · Aktif · Lunas" membuat halaman terasa lebih rumit daripada
+     isinya; pembatas grup di daftar sudah cukup memisahkan status. */
+  const showFilterRail = scopedBills.length > 5
+  /* Pil berisi 0 disembunyikan — deretan "Semua · Aktif · Telat 0 · Lunas"
+     terlalu ramai dan "Telat 0" tidak punya tujuan. "Semua" selalu ada, dan
+     pil yang sedang AKTIF tetap ditampilkan supaya user bisa keluar darinya. */
+  const visibleFilters = useMemo(
+    () =>
+      showFilterRail
+        ? BILL_FILTERS.filter(
+            (pill) => pill.id === 'semua' || pill.id === activeFilter || counts[pill.id] > 0,
+          )
+        : [],
+    [showFilterRail, activeFilter, counts],
+  )
+  const effectiveFilter: BillFilter = showFilterRail ? activeFilter : 'semua'
   const visibleBills = useMemo(
-    () => filterBills(scopedBills, activeFilter, currentDay),
-    [scopedBills, activeFilter, currentDay],
+    () => filterBills(scopedBills, effectiveFilter, currentDay),
+    [scopedBills, effectiveFilter, currentDay],
   )
   const groups = useMemo(() => groupBills(visibleBills, currentDay), [visibleBills, currentDay])
   /** tagihan yang benar-benar ada di list "Aktif" (belum lunas) — dipakai
    *  timeline supaya kalender & daftar tidak kontradiksi (audit #3) */
-  const activeBills = useMemo(() => bills.filter((bill) => !bill.isPaidThisMonth), [bills])
+  /** tagihan AKTIF (belum lunas) milik konteks yang sedang dilihat — dipakai
+   *  kalender 14 hari. Memakai `scopedBills` supaya agenda dan daftar bercerita
+   *  sama; sebelumnya strip membaca SEMUA konteks sehingga tanggal yang
+   *  ditandai bisa tidak punya kartu di daftar. */
+  const activeBills = useMemo(
+    () => scopedBills.filter((bill) => !bill.isPaidThisMonth),
+    [scopedBills],
+  )
   /** Dompet awal di sheet "Tandai Lunas": dompet tagihannya (kalau masih ada di
    *  ledger), kalau tidak → dompet pertama konteks uang aktif (paket 47). Dua
    *  jawaban itu bisa dijelaskan ke user; tidak ada tebakan baru. */
@@ -399,6 +426,67 @@ export function BillsScreen() {
     })
   }
 
+  /**
+   * "Bersihkan" = hapus SEMUA tagihan lunas yang tadi tampil, sekaligus.
+   * Sebelum menghapus, statusnya dibaca ULANG dari store: bisa saja salah satu
+   * sudah dibatalkan lunas di tab lain antara dialog dibuka dan tombol ditekan —
+   * tagihan seperti itu tidak boleh ikut terhapus.
+   *
+   * Baris kas pembayarannya TIDAK ikut dihapus (sama seperti hapus satuan):
+   * uangnya memang sudah keluar, jadi jejaknya tetap ada di Riwayat.
+   */
+  function confirmClearPaid() {
+    if (!pendingClearPaid) return
+    const targets = pendingClearPaid
+    setPendingClearPaid(null)
+
+    const stillPaid = new Set(
+      bills.filter((bill) => bill.isPaidThisMonth).map((bill) => bill.id),
+    )
+    const ids = targets.map((bill) => bill.id).filter((id) => stillPaid.has(id))
+    const deleted: string[] = []
+    for (const id of ids) {
+      if (deleteBill(id)) deleted.push(id)
+    }
+
+    if (deleted.length === 0) {
+      toast(CLEAR_PAID_TOAST.failed)
+      return
+    }
+
+    clearUndoRef.current = deleted
+    toast.success(CLEAR_PAID_TOAST.title(deleted.length), {
+      description: CLEAR_PAID_TOAST.description,
+      action: { label: CLEAR_PAID_TOAST.undo, onClick: () => undoClearPaid(deleted) },
+      /* lama toast = lama hak undo; keduanya dibaca dari satu konstanta */
+      duration: UNDO_WINDOW_MS,
+    })
+
+    later(() => {
+      if (clearUndoRef.current === deleted) clearUndoRef.current = null
+    }, UNDO_WINDOW_MS)
+  }
+
+  /** Undo BERSIHKAN: kembalikan semua tagihan yang baru dihapus dalam batch. */
+  function undoClearPaid(batch: string[]) {
+    if (clearUndoRef.current !== batch) {
+      toast(CLEAR_PAID_TOAST.expired)
+      return
+    }
+    clearUndoRef.current = null
+    let restored = 0
+    for (const id of batch) {
+      if (restoreBillInStore(id)) restored += 1
+    }
+    if (restored === 0) {
+      toast(CLEAR_PAID_TOAST.expired)
+      return
+    }
+    toast.success(CLEAR_PAID_TOAST.undoneTitle, {
+      description: CLEAR_PAID_TOAST.undoneDescription,
+    })
+  }
+
   /** 9D — tagihan baru masuk sebagai lajur kosong berikutnya di tameng */
   function handleSaveBill(data: NewBill) {
     /* Mode EDIT: id & status "lunas bulan ini" dipertahankan — yang berubah cuma
@@ -451,44 +539,40 @@ export function BillsScreen() {
   /* ── RENDER ─────────────────────────────────────────────────────────────── */
   return (
     <ScreenShell>
-      {/* Pemilih konteks uang + tombol mata kini menyatu di baris judul (di atas),
-          jadi tidak ada lagi baris konteks terpisah di mobile. */}
-      {/* HEADER PADAT: judul + satu baris statistik (tanpa chip-kartu), pemilih
-          konteks & tombol mata di kanan. Menghitung SEMUA tagihan (bukan yang
-          tersaring) supaya tidak ada dua angka untuk satu label di satu layar.
-          Tombol mata disembunyikan di mobile karena header global sudah punya. */}
-      <div className="mt-4 flex items-start justify-between gap-3 lg:mt-0">
+      {/* HEADER — judul saja. Eyebrow "Kewajiban bulanan" dicabut: "Tagihan
+          Rutin" sudah menjelaskan dirinya sendiri. Pemilih konteks & tombol
+          mata di kanan. */}
+      <header className="mt-4 flex items-start justify-between gap-3 lg:mt-0">
         <div className="min-w-0">
           <h1 className="font-display text-3xl font-semibold tracking-tight text-forest lg:text-4xl">
             Tagihan Rutin
           </h1>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2 pt-0.5">
           <ContextMenu value={context} onChange={setContext} className="w-32 sm:w-36" />
           <GlobalPrivacyToggle className="hidden lg:flex" />
         </div>
-      </div>
+      </header>
 
         {bills.length === 0 ? (
-          /* 10. EMPTY STATE — tameng kelabu 0/0 + ajakan mencatat tagihan pertama */
-          <EmptyState masked={masked} currentDay={currentDay} onAdd={() => setShowAddBill(true)} />
+          /* 10. EMPTY STATE — ajakan mencatat tagihan pertama */
+          <EmptyState onAdd={() => setShowAddBill(true)} />
         ) : scopedBills.length === 0 ? (
           /* EMPTY STATE PER KONTEKS (paket 47): tagihan ada, tapi tidak satu pun
              milik konteks aktif. Daftar kosong tanpa penjelasan = user mengira
              datanya hilang; di sini alasannya disebut + ada CTA menambah. */
           <div className="mt-4 lg:mt-6">
-            <ShieldMeter bills={[]} masked={masked} currentDay={currentDay} variant="compact" />
-            <div className="mt-4 flex flex-col items-center rounded-3xl border-2 border-dashed border-forest/15 bg-cream/50 px-6 py-8 text-center">
+            <div className="flex flex-col items-center rounded-[1.75rem] border border-dashed border-forest/15 bg-cream px-6 py-10 text-center">
               <h2 className="font-display text-[15px] font-semibold tracking-tight text-forest">
                 {CONTEXT_EMPTY_COPY.bills.title(CONTEXT_LABEL[context])}
               </h2>
-              <p className="mt-1 max-w-sm text-[12.5px] leading-relaxed text-forest/55">
+              <p className="mt-1 max-w-sm text-[12.5px] leading-relaxed text-forest-muted">
                 {CONTEXT_EMPTY_COPY.bills.body}
               </p>
               <button
                 type="button"
                 onClick={() => setShowAddBill(true)}
-                className="mt-4 inline-flex h-10 items-center gap-2 rounded-2xl bg-forest px-4 text-[13px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
+                className="mt-4 inline-flex h-10 items-center gap-2 rounded-full bg-forest px-4 text-[13px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
               >
                 <Plus className="size-4" strokeWidth={2.6} />
                 {CONTEXT_EMPTY_COPY.bills.cta}
@@ -496,65 +580,44 @@ export function BillsScreen() {
             </div>
           </div>
         ) : (
-          /* ── RINGKASAN + DAFTAR (padat) ──────────────────────────────────
-             Tameng & waterfall berdampingan di desktop; timeline + nudge
-             membentang penuh di bawahnya; lalu filter & daftar. Satu kolom di
-             mobile supaya tidak ada ruang kosong di antara kartu. */
+          /* ── RINGKASAN → AGENDA → DAFTAR ────────────────────────────────
+             Satu kartu ringkasan (nominal + progres), lalu strip 7 hari, lalu
+             daftar. Semua permukaan memakai radius dan hairline yang sama
+             supaya halaman terbaca sebagai satu kolom. */
           <div className="mt-5 flex flex-col lg:mt-6">
-            <div className="grid gap-3 lg:grid-cols-2 lg:gap-4">
-              {/* 3. TAMENG PROTEKSI */}
-              <ShieldMeter bills={bills} masked={masked} currentDay={currentDay} />
+            {/* Di layar lebar ringkasan & agenda berdampingan supaya kartu
+                ringkasan tidak membentang kosong selebar konten. */}
+            <div className="flex flex-col gap-3 xl:grid xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] xl:items-start">
+              <BillsOverview bills={scopedBills} masked={masked} currentDay={currentDay} />
 
-              {/* 4. WATERFALL GAJI — pembaginya pemasukan user (paket 57).
-                  Kalau belum diatur, kartu diganti tautan ke Pengaturan:
-                  membagi dengan konstanta demo (atau nol) dua-duanya klaim palsu. */}
-              {monthlyIncome > 0 ? (
-                <SalaryWaterfall bills={bills} masked={masked} monthlyIncome={monthlyIncome} />
-              ) : (
-                <section
-                  aria-label={WATERFALL_NO_INCOME_COPY.title}
-                  className="flex flex-col justify-center gap-2 rounded-3xl bg-cream p-4 ring-1 ring-soil/10"
-                >
-                  <h2 className="text-[12.5px] font-semibold text-forest">
-                    {WATERFALL_NO_INCOME_COPY.title}
-                  </h2>
-                  <Link
-                    href={MONEY_SETTINGS_HREF}
-                    className="inline-flex w-fit items-center gap-1.5 rounded-full bg-forest px-3.5 py-1.5 text-[12px] font-medium text-cream transition-colors hover:bg-forest-soft"
-                  >
-                    {WATERFALL_NO_INCOME_COPY.cta}
-                  </Link>
-                </section>
-              )}
+              {/* 5. KALENDER 14 HARI — hanya tagihan yang ada di list Aktif */}
+              <BillTimeline
+                bills={activeBills}
+                currentDay={currentDay}
+                todayIso={todayIso}
+                masked={masked}
+                onPick={handlePickBill}
+              />
             </div>
-
-            {/* 5. TIMELINE 7 HARI — hanya tagihan yang ada di list Aktif */}
-            <BillTimeline
-              bills={activeBills}
-              currentDay={currentDay}
-              todayIso={todayIso}
-              onPick={handlePickBill}
-              className="mt-3 lg:mt-4"
-            />
 
             {/* 8. NUDGE NOTIFIKASI — hanya saat izin belum pernah diminta */}
             <BillNotifNudge className="mt-3" />
 
-            {/* 6. FILTER + TAMBAH — satu baris: pill menggeser, tombol tetap */}
-            <div className="mt-4 flex items-center gap-2 lg:mt-6">
-              {/* segmented control: satu rel Oat, pil aktif terisi Evergreen.
-                  Angka dihitung dari SEMUA tagihan (bukan yang tersaring). */}
+            {/* 6. FILTER + TAMBAH — muncul HANYA saat daftar cukup panjang untuk
+                benar-benar disaring (>5 tagihan). Angka dihitung dari daftar
+                yang disaring, bukan dari seluruh tagihan. */}
+            {showFilterRail && (
+              <div className="mt-6 flex items-center gap-2">
               <div className="hide-scrollbar -ml-5 flex flex-1 overflow-x-auto pl-5 pr-1 sm:-ml-8 sm:pl-8 lg:ml-0 lg:pl-0">
                 <div
                   role="group"
                   aria-label="Filter tagihan"
-                  className="flex shrink-0 items-center gap-0.5 rounded-full bg-sage/70 p-1"
+                  className="flex shrink-0 items-center gap-0.5 rounded-full bg-sage/60 p-1"
                 >
-                  {BILL_FILTERS.map((pill) => {
+                  {visibleFilters.map((pill) => {
                     const count = counts[pill.id]
                     const active = activeFilter === pill.id
                     const isLate = pill.id === 'telat'
-                    const isPaidPill = pill.id === 'lunas'
                     const showLateDot = isLate && count > 0 && !active
                     return (
                       <button
@@ -563,10 +626,10 @@ export function BillsScreen() {
                         aria-pressed={active}
                         onClick={() => setActiveFilter(pill.id)}
                         className={cn(
-                          'inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1.5 text-[11px] font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25',
+                          'inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-[11.5px] font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25',
                           active
-                            ? 'bg-forest text-cream shadow-[0_8px_18px_-12px_rgba(0,0,0,0.85)]'
-                            : 'text-forest/55 hover:bg-cream/80 hover:text-forest',
+                            ? 'bg-cream text-forest shadow-[0_2px_10px_-4px_rgba(0,0,0,0.25)]'
+                            : 'text-forest-muted hover:bg-cream/70 hover:text-forest',
                         )}
                       >
                         {showLateDot && (
@@ -576,16 +639,16 @@ export function BillsScreen() {
                           </span>
                         )}
                         <span className="whitespace-nowrap">
-                          {isPaidPill ? 'Lunas ✓' : pill.label}
+                          {pill.label}
                         </span>
                         <span
                           className={cn(
                             'tabular-nums',
                             active
-                              ? 'text-cream/65'
+                              ? 'text-forest-muted'
                               : count > 0
-                                ? 'text-forest/45'
-                                : 'text-forest/30',
+                                ? 'text-forest-muted'
+                                : 'text-forest-muted/60',
                           )}
                         >
                           {count}
@@ -599,17 +662,24 @@ export function BillsScreen() {
               <button
                 type="button"
                 onClick={() => setShowAddBill(true)}
-                className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-forest px-3.5 text-[12px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.97]"
+                aria-label="Tambah tagihan rutin"
+                className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-forest px-3 text-[12px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.97]"
               >
-                <Plus className="size-4" strokeWidth={2.6} />
+                <Plus className="size-4" strokeWidth={2.6} aria-hidden />
                 <span className="hidden sm:inline">Tagihan</span>
               </button>
-            </div>
+              </div>
+            )}
 
             {/* 7. DAFTAR TAGIHAN — dikelompokkan per status, 2 kolom di desktop */}
-            <div className="mt-3 flex flex-col gap-5 pb-1">
+            <div
+              className={cn(
+                'flex flex-col gap-5 pb-1',
+                showFilterRail ? 'mt-4' : 'mt-6',
+              )}
+            >
                 {groups.length === 0 ? (
-                  <p className="rounded-2xl bg-cream/70 px-4 py-6 text-center text-[12.5px] font-medium text-forest/45 ring-1 ring-soil/8">
+                  <p className="rounded-[1.25rem] bg-cream px-4 py-6 text-center text-[12.5px] font-medium text-forest-muted ring-1 ring-soil/8">
                     Gak ada tagihan di filter ini.
                   </p>
                 ) : (
@@ -621,34 +691,36 @@ export function BillsScreen() {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.32, ease: EASE }}
                     >
-                      {/* kepala grup — titik status + label, tanpa garis dekoratif */}
-                      <div className="flex items-center gap-2 px-0.5">
-                        <span
-                          aria-hidden
-                          className={cn('size-1.5 rounded-full', group.meta.barClass)}
-                        />
-                        <span
-                          className={cn(
-                            'text-[10px] font-semibold uppercase tracking-[0.14em]',
-                            group.meta.labelClass,
-                          )}
-                        >
-                          {group.meta.label}
-                        </span>
-                        <span className="text-[10.5px] font-semibold tabular-nums text-forest/35">
-                          {group.items.length}
-                        </span>
+                      {/* kepala grup — SATU baris tenang: label muted + jumlah,
+                          ditutup hairline. Grup "Sudah dibayar" punya aksi
+                          Bersihkan = HAPUS semua baris lunas, lewat konfirmasi. */}
+                      <div className="flex items-center gap-3 px-1">
+                        <h3 className="shrink-0 text-[11px] font-medium tabular-nums text-forest-muted">
+                          {group.meta.label} · {group.items.length}
+                        </h3>
+                        <span aria-hidden className="h-px flex-1 bg-soil/10" />
+                        {group.meta.status === 'paid' && (
+                          <button
+                            type="button"
+                            onClick={() => setPendingClearPaid(group.items)}
+                            title="Hapus tagihan yang sudah dibayar dari daftar rutin"
+                            className="shrink-0 rounded-full px-1.5 py-0.5 text-[10.5px] font-semibold text-hud-terracotta transition-colors hover:text-plum focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25"
+                          >
+                            Bersihkan
+                          </button>
+                        )}
                       </div>
 
-                      <motion.ul layout className="mt-2 grid gap-2 lg:grid-cols-2">
+                      <motion.ul
+                        id={`bills-group-${group.meta.status}`}
+                        layout
+                        className="mt-2.5 grid gap-2 lg:grid-cols-2"
+                      >
                         {group.items.map((bill) => {
                           const delay = 60 + rowIndex++ * 45
-                          const stamp: StampState =
-                            stampId === bill.id
-                              ? 'fresh'
-                              : bill.isPaidThisMonth
-                                ? 'settled'
-                                : 'none'
+                          /* hanya kartu yang BARU dibayar yang dicap; kartu
+                             lunas menetap tidak lagi diberi watermark */
+                          const stamp: StampState = stampId === bill.id ? 'fresh' : 'none'
                           return (
                             <BillCard
                               key={bill.id}
@@ -671,49 +743,31 @@ export function BillsScreen() {
                 )}
               </div>
 
-              {/* H6-4 (audit UI/UX): tombol "+ Tagihan" di kanan atas mudah
-                  terlewat, jadi ada card placeholder mengajak di bawah daftar. */}
+              {/* CTA TAMBAH — bentuknya mengikuti kartu ajakan di Budget:
+                  putus-putus + tint Oat tipis (bukan blok warna pekat). Ikon +
+                  di lingkaran cream, judul tebal, sub-teks pendek, chevron. */}
               <button
                 type="button"
                 onClick={() => setShowAddBill(true)}
-                className="mt-3 group flex w-full items-center gap-3 rounded-[1.5rem] border border-dashed border-forest/20 bg-gradient-to-br from-sage/40 to-cream px-4 py-3.5 text-left transition-all hover:border-forest/35 active:scale-[0.99]"
+                className="group mt-3 flex w-full items-center gap-3.5 rounded-[1.5rem] border border-dashed border-forest/20 bg-sage/20 px-4 py-4 text-left transition-colors hover:border-forest/30 hover:bg-sage/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25 active:scale-[0.99]"
               >
-                <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-cream text-forest ring-1 ring-soil/12 transition-transform duration-300 group-hover:scale-105">
+                <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-cream text-forest ring-1 ring-soil/[0.06] transition-transform duration-200 group-hover:scale-105">
                   <Plus className="size-5" strokeWidth={2.6} aria-hidden />
                 </span>
-                <span className="min-w-0">
-                  <span className="block text-[13px] font-medium text-forest">
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[14px] font-semibold leading-tight text-forest">
                     {BILL_ADD_PLACEHOLDER.title}
                   </span>
-                  <span className="mt-0.5 block text-[11.5px] leading-relaxed text-forest/50">
+                  <span className="mt-1 block text-[11.5px] leading-tight text-forest-muted">
                     {BILL_ADD_PLACEHOLDER.body}
                   </span>
                 </span>
+                <ArrowRight
+                  className="size-[18px] shrink-0 text-forest/45 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-forest"
+                  strokeWidth={2.2}
+                  aria-hidden
+                />
               </button>
-
-              {/* H6-1 (audit UI/UX): saat SEMUA tagihan bulan ini lunas, halaman
-                  terasa kosong. Beri reinforcement positif + siapkan bulan depan. */}
-              {scopedBills.length > 0 && scopedBills.every((b) => b.isPaidThisMonth) && (
-                <div className="mt-3 rounded-[1.5rem] bg-gradient-to-br from-mint/25 to-cream p-4 ring-1 ring-forest/10">
-                  <p className="text-[13px] font-medium text-forest">{BILLS_ALL_PAID_COPY.title}</p>
-                  <p className="mt-1 text-[12px] leading-relaxed text-forest/55">{BILLS_ALL_PAID_COPY.body}</p>
-                  <p className="mt-3 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-forest/40">
-                    {BILLS_ALL_PAID_COPY.nextTitle}
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {scopedBills.map((b) => (
-                      <span
-                        key={b.id}
-                        className="inline-flex items-center gap-1.5 rounded-full bg-cream px-2.5 py-1 text-[11.5px] font-medium text-forest ring-1 ring-soil/10"
-                      >
-                        <span aria-hidden>{b.emoji}</span>
-                        {b.name}
-                      </span>
-                    ))}
-                  </div>
-                  <p className="mt-2 text-[11px] text-forest/45">{BILLS_ALL_PAID_COPY.nextBody}</p>
-                </div>
-              )}
           </div>
         )}
 
@@ -780,6 +834,25 @@ export function BillsScreen() {
           />
         )}
       </AnimatePresence>
+
+      {/* konfirmasi "Bersihkan": menghapus SEMUA tagihan lunas sekaligus —
+          aksi merusak, jadi ditolak dulu; setelah itu pun masih ada Undo. */}
+      <AnimatePresence>
+        {pendingClearPaid && (
+          <ConfirmDialog
+            titleId="bersihkan-lunas-judul"
+            overlayLabel={CONFIRM_CLEAR_PAID_COPY.overlay}
+            title={CONFIRM_CLEAR_PAID_COPY.title(pendingClearPaid.length)}
+            body={CONFIRM_CLEAR_PAID_COPY.body}
+            safety={CONFIRM_CLEAR_PAID_COPY.safety}
+            note={CONFIRM_CLEAR_PAID_COPY.note}
+            cancelLabel={CONFIRM_CLEAR_PAID_COPY.cancel}
+            confirmLabel={CONFIRM_CLEAR_PAID_COPY.confirm}
+            onCancel={() => setPendingClearPaid(null)}
+            onConfirm={confirmClearPaid}
+          />
+        )}
+      </AnimatePresence>
     </ScreenShell>
   )
 }
@@ -787,32 +860,23 @@ export function BillsScreen() {
 /* ── komponen kecil halaman ini ───────────────────────────────────────────── */
 
 /** 10. Empty state nurturing: belum ada tagihan rutin sama sekali */
-function EmptyState({
-  masked,
-  currentDay,
-  onAdd,
-}: {
-  masked: boolean
-  /** hari ke berapa hari ini — dari tanggal perangkat (paket 57), bukan CURRENT_DAY */
-  currentDay: number
-  onAdd: () => void
-}) {
+function EmptyState({ onAdd }: { onAdd: () => void }) {
   return (
-    <div className="mt-4 lg:mt-6">
-      {/* tameng 0/0 — kelabu penuh, tanpa ringkasan uang */}
-      <ShieldMeter bills={[]} masked={masked} currentDay={currentDay} variant="compact" />
-
-      <div className="mt-4 flex flex-col items-center rounded-3xl border-2 border-dashed border-forest/15 bg-cream/50 px-6 py-8 text-center">
-        <h2 className="font-display text-[15px] font-semibold tracking-tight text-forest">
+    <div className="mt-5 lg:mt-6">
+      <div className="flex flex-col items-center rounded-[1.75rem] border border-dashed border-forest/15 bg-cream px-6 py-10 text-center">
+        <span className="flex size-12 items-center justify-center rounded-full bg-sage/60 text-forest">
+          <Plus className="size-5" strokeWidth={2.4} aria-hidden />
+        </span>
+        <h2 className="mt-4 font-display text-[16px] font-semibold tracking-tight text-forest">
           Belum ada tagihan rutin
         </h2>
-        <p className="mt-1 max-w-sm text-[12.5px] leading-relaxed text-forest/55">
+        <p className="mt-1.5 max-w-sm text-[12.5px] leading-relaxed text-forest-muted">
           Kos, langganan, cicilan — catat biar jatah harianmu lebih akurat.
         </p>
         <button
           type="button"
           onClick={onAdd}
-          className="mt-4 inline-flex h-10 items-center gap-2 rounded-2xl bg-forest px-4 text-[13px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
+          className="mt-5 inline-flex h-10 items-center gap-2 rounded-full bg-forest px-4 text-[13px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
         >
           <Plus className="size-4" strokeWidth={2.6} />
           Tambah Tagihan

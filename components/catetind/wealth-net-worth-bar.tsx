@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { NET_WORTH_COPY, maskMoney, netWorthParts, tugOfWar } from '@/lib/data/wealth'
+import { NET_WORTH_COPY, compactMoney, maskMoney, netWorthParts, tugOfWar } from '@/lib/data/wealth'
 
 /* ── HERO · KEKAYAAN BERSIH (Net Worth) ──────────────────────────────────────
    Satu-satunya angka yang harus dipahami user dalam satu detik: nominal Net
@@ -10,9 +10,10 @@ import { NET_WORTH_COPY, maskMoney, netWorthParts, tugOfWar } from '@/lib/data/w
    legenda yang menjawab "asetku berapa, hutangku berapa".
 
      Kekayaan Bersih
-     Rp 14.549.330            ← fokus absolut, tipografi yang bicara
+     Rp 1,26 M                ← fokus absolut, ringkas supaya tak terpotong
+     Rp 1.261.847.037         ← nominal penuh sebagai sub-label
      ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁    ← mint = aset, terracotta = hutang
-     ┌ Aset 82% · Rp … │ Hutang 18% · Rp … ┐
+     ┌ Aset  Rp …  │ Hutang  Rp … ┐
 
    REVISI DESAIN: versi lama adalah kotak hijau rata dengan dua bulatan blur
    besar. Sekarang kartunya memakai RESEP MUKA KARTU yang sama dengan hero
@@ -56,7 +57,11 @@ export function WealthNetWorthBar({
   const parts = netWorthParts({ cash, investments, physical, receivables, debts })
   const tug = tugOfWar(parts.assets, parts.debts)
 
-  const netLabel = maskMoney(tug.netWorth, masked)
+  const netLabel = compactMoney(tug.netWorth, masked)
+  /* nominal PENUH selalu ikut ditampilkan sebagai sub-label selama tidak
+     disensor: angka ringkas tidak boleh menjadi satu-satunya sumber kebenaran */
+  const netExact = maskMoney(tug.netWorth, masked)
+  const showExact = !masked && netExact !== netLabel
   const assetLabel = maskMoney(tug.assets, masked)
   const debtLabel = maskMoney(tug.debts, masked)
   /* dua-duanya nol: bar netral penuh supaya hero tidak terlihat rusak */
@@ -135,9 +140,21 @@ export function WealthNetWorthBar({
         <p className="text-[10.5px] font-medium uppercase tracking-[0.24em] text-mint/70">
           {NET_WORTH_COPY.label}
         </p>
-        <p className="mt-2.5 truncate font-display text-[2.75rem] font-semibold leading-[0.95] tracking-tight tabular-nums sm:text-[3.6rem] lg:text-[4.25rem]">
+        {/*
+          Angka hero TIDAK PERNAH dipotong. Nominal memakai bentuk ringkas
+          (`compactMoney` → "Rp 1,26 M") supaya selalu muat di 320 px, lalu
+          nominal penuh ditulis tepat di bawahnya sebagai sub-label. Dulu baris
+          ini memakai `truncate` sehingga angka terpenting halaman berakhir
+          sebagai "Rp 1.261.847.0...".
+        */}
+        <p className="mt-2.5 font-display text-[2.5rem] font-semibold leading-[0.95] tracking-tight tabular-nums sm:text-[3.4rem] lg:text-[4.25rem]">
           {netLabel}
         </p>
+        {showExact && (
+          <p className="mt-1.5 font-display text-[12px] font-medium tracking-tight text-cream/70 tabular-nums sm:text-[13.5px]">
+            {netExact}
+          </p>
+        )}
       </div>
 
       {/* BAR RASIO — aset (mint) vs hutang (terracotta), lebar ikut data.
@@ -167,26 +184,29 @@ export function WealthNetWorthBar({
           )}
         </div>
 
-        {/* STRIP LEGENDA — dua kolom, dipisah hairline vertikal. Nominal memakai
+        {/* STRIP LEGENDA — dua kolom, dipisah hairline vertikal. Hanya label
+            SATU kata + nominal: persen sudah dibawa oleh bar di atasnya, jadi
+            menuliskannya lagi di sini cuma menambah teks. Nominal memakai
             font-display + tabular-nums supaya dua angka tetap sejajar kolomnya
-            walau digitnya beda panjang. */}
+            walau digitnya beda panjang; `break-words` menjaga nominal panjang
+            tetap utuh di layar sempit (tidak pernah dipotong "..."). */}
         <div className="mt-4 flex items-stretch gap-3 rounded-2xl bg-cream/[0.06] px-3.5 py-3 ring-1 ring-inset ring-cream/10">
           <div className="min-w-0 flex-1">
             <p className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.16em] text-mint/70">
               <span aria-hidden className="size-1.5 rounded-full bg-mint" />
-              {NET_WORTH_COPY.asset} · {tug.assetPctLabel}%
+              {NET_WORTH_COPY.asset}
             </p>
-            <p className="mt-1 truncate font-display text-[15px] font-semibold tabular-nums">
+            <p className="mt-1 break-words font-display text-[12px] font-semibold leading-snug tabular-nums sm:text-[15px]">
               {assetLabel}
             </p>
           </div>
           <span aria-hidden className="w-px shrink-0 bg-cream/12" />
           <div className="min-w-0 flex-1 text-right">
             <p className="flex items-center justify-end gap-1.5 text-[10px] font-medium uppercase tracking-[0.16em] text-hud-terracotta/80">
-              {NET_WORTH_COPY.debt} · {tug.debtPctLabel}%
+              {NET_WORTH_COPY.debt}
               <span aria-hidden className="size-1.5 rounded-full bg-hud-terracotta" />
             </p>
-            <p className="mt-1 truncate font-display text-[15px] font-semibold tabular-nums">
+            <p className="mt-1 break-words font-display text-[12px] font-semibold leading-snug tabular-nums sm:text-[15px]">
               {debtLabel}
             </p>
           </div>

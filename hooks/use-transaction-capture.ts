@@ -29,7 +29,7 @@ import type { MoneyContext } from '@/lib/types'
         ditolak, tidak ada suara, mesin STT putus.
 
    Yang TIDAK dilakukannya: menyimpan tanpa konfirmasi user. `confirmCapture()`
-   hanya jalan kalau user benar-benar menekan "Catat ✓".
+   hanya jalan kalau user benar-benar menekan "Catat".
 
    PAKET 54: draft yang datang dari AI melewati `withCapturePrefs()` dulu —
    itulah tempat dua saklar di Pengaturan ("Kategorisasi/Penamaan Otomatis oleh
@@ -564,7 +564,7 @@ export function useTransactionCapture({
    *
    * Sumbernya ditandai `'chat'` sehingga kartu konfirmasi TIDAK bicara soal suara
    * ("ucapanmu"/"yang aku denger") dan nama catatannya diambil dari ketikan user.
-   * Tidak ada uang yang ditulis di sini; user tetap harus menekan "Catat ✓"
+   * Tidak ada uang yang ditulis di sini; user tetap harus menekan "Catat"
    * (`confirmCapture`).
    * @returns `true` kalau alur dimulai (kartu konfirmasi menyusul setelah dibaca)
    */
@@ -618,7 +618,7 @@ export function useTransactionCapture({
 
   /**
    * Simpan hasil konfirmasi. HANYA di sini transaksi benar-benar ditulis —
-   * dan hanya karena user menekan "Catat ✓" (prompt 20: dilarang menyimpan
+   * dan hanya karena user menekan "Catat" (prompt 20: dilarang menyimpan
    * tanpa konfirmasi). Nominal wajib > 0: tanpa angka, catatannya tidak berarti.
    *
    * @returns transaksi yang tercatat, atau null kalau masih ada yang kurang

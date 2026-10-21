@@ -18,9 +18,7 @@ import {
   budgetSheetMode,
   categoryOptionOf,
   findBudgetByCategory,
-  formatIDR,
   periodLimitWord,
-  periodUnitWord,
   type BudgetItem,
   type BudgetPeriod,
   type BudgetScope,
@@ -152,7 +150,7 @@ export function AddBudgetSheet({
       open={open}
       onClose={onClose}
       title={existing ? BUDGET_EDIT_COPY.title : BUDGET_ADD_COPY.title}
-      description={existing ? BUDGET_EDIT_COPY.description : BUDGET_ADD_COPY.description}
+      description={existing ? BUDGET_EDIT_COPY.description : undefined}
       footer={
         <SheetSubmit onClick={submit} disabled={!ready} gate>
           {existing ? BUDGET_EDIT_COPY.submit : BUDGET_ADD_COPY.submit}
@@ -163,7 +161,7 @@ export function AddBudgetSheet({
       <div
         role="radiogroup"
         aria-label={BUDGET_ADD_COPY.categoryLabel}
-        className="grid grid-cols-2 gap-2 sm:grid-cols-4"
+        className="grid grid-cols-2 gap-2 sm:grid-cols-3"
       >
         {BUDGET_CATEGORY_OPTIONS.map((option) => {
           const active = category?.label === option.label
@@ -213,9 +211,6 @@ export function AddBudgetSheet({
             onChange={setPeriod}
             ariaLabel={BUDGET_ADD_COPY.periodAria}
           />
-          <p className="mt-3 text-[11px] leading-relaxed text-forest/40">
-            {BUDGET_ADD_COPY.footer(formatIDR(amount), periodUnitWord(period))}
-          </p>
         </div>
       </RevealStep>
     </BudgetSheet>

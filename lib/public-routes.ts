@@ -1,8 +1,11 @@
-/* ── DAFTAR ROUTE PUBLIK / PRE-APP (satu sumber, tiga gerbang) ────────────────
-   Daftar ini dipakai TIGA gerbang global:
+/* ── DAFTAR ROUTE PUBLIK / PRE-APP (satu sumber, empat gerbang) ───────────────
+   Daftar ini dipakai EMPAT gerbang global:
 
      • `middleware.ts` — gerbang SESI: semua route di luar daftar ini wajib
        punya sesi Supabase yang sudah diverifikasi (`/app`, `/wallet`, dst.);
+     • `middleware.ts` + `lib/subscription/app-access.ts` — gerbang PAKET:
+       semua route di luar daftar ini juga wajib punya paket aktif; user yang
+       belum membayar dialihkan ke `/checkout`;
      • `SubscriptionGateProvider` — jangan mengunci input di halaman yang user
        belum tentu punya langganan (mis. dia sedang MEMBAYAR di /checkout);
      • `AppLockProvider` — jangan menahan user di balik layar kunci PIN di

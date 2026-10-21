@@ -109,7 +109,7 @@ export function WalletPicker({
           {selected ? (
             <>
               <span className="truncate">{selected.label}</span>
-              <span className="shrink-0 text-[11.5px] text-forest/45">
+              <span className="shrink-0 text-[11.5px] font-medium text-forest-muted">
                 {selected.hint ?? maskMoney(selected.balance, masked)}
               </span>
             </>
@@ -170,7 +170,7 @@ export function WalletPicker({
                       <span className="block truncate text-[13px] font-medium text-forest">
                         {option.label}
                       </span>
-                      <span className="mt-0.5 block text-[11px] text-forest/45">
+                      <span className="mt-0.5 block text-[11px] font-medium text-forest-muted">
                         {option.hint ??
                           TRANSACTION_INPUT_COPY.walletBalance(maskMoney(option.balance, masked))}
                       </span>

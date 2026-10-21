@@ -1,8 +1,14 @@
 import type { Metadata } from 'next'
+import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
 import { CheckoutScreen } from '@/components/catetind/checkout-screen'
 import { LandingNavbarLp } from '@/components/landing/lp/navbar'
 import { LandingPurchaseToasts } from '@/components/landing/lp/purchase-toasts'
+import { safeNextPath } from '@/lib/data/auth'
 import type { PlanId } from '@/lib/data/pricing'
+import { readCallerPlan } from '@/lib/subscription/plan'
+import { reconcileCallerPurchases } from '@/lib/subscription/reconcile'
+import { readSupabaseSession } from '@/lib/supabase/session-cookie'
 
 /**
  * Checkout (/checkout) — inventaris #3, halaman PUBLIK.
@@ -41,6 +47,8 @@ export default async function CheckoutPage({
   searchParams: Promise<{
     plan?: string | string[]
     kode?: string | string[]
+    /** halaman app yang tadi dituju sebelum middleware melempar ke sini */
+    lanjut?: string | string[]
   }>
 }) {
   /* Query dibaca di SERVER (pola `app/budget/page.tsx`): dipakai tautan
@@ -52,6 +60,35 @@ export default async function CheckoutPage({
     (Array.isArray(value) ? value[0] : value)?.trim() ?? ''
   const plan = first(params.plan)
   const kode = first(params.kode)
+  const lanjut = safeNextPath(first(params.lanjut))
+
+  /* ── PEMULIHAN PEMBAYARAN SEBELUM HALAMAN DIRENDER (paket 99) ─────────────
+     Masalah yang ditutup di sini: user sudah membayar, middleware tidak melihat
+     paket aktif (webhook telat), lalu melemparnya ke `/checkout`. Sebelum
+     halaman harga digambar, server mencocokkan order `pending` user ke Midtrans
+     — persis yang dilakukan tombol “Cek lagi”. Kalau ternyata sudah lunas,
+     aksesnya dipenuhi dan user LANGSUNG dikembalikan ke halaman yang tadi
+     dituju (`?lanjut=`, dipasang middleware), bukan disuruh membeli lagi.
+
+     Yang TIDAK dilakukan: redirect membabi buta untuk semua user yang sudah
+     punya paket. Tanpa `lanjut`/pemenuhan baru, halaman checkout tetap boleh
+     dibuka — di sinilah user yang ingin UPGRADE memilih paket yang lebih tinggi.
+     Anonim juga tidak disentuh: tanpa sesi, `readSupabaseSession` = null. */
+  const session = readSupabaseSession((await cookies()).toString())
+  if (session) {
+    let caller = await readCallerPlan(session.accessToken)
+    let justFulfilled = false
+
+    if (!caller.active) {
+      const reconciled = await reconcileCallerPurchases(session.accessToken)
+      justFulfilled = reconciled.fulfilled.length > 0
+      if (justFulfilled) caller = await readCallerPlan(session.accessToken)
+    }
+
+    if (caller.active && (justFulfilled || lanjut)) {
+      redirect(lanjut ?? '/app')
+    }
+  }
 
   return (
     <main id="top" className="w-full bg-canvas font-sans text-forest">

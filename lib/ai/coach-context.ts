@@ -94,7 +94,7 @@ export function buildRecordedReply(
  *      ("minggu ini aku keluar 200k").
  *
  * Sinyal 3 boleh agak longgar karena jalurnya AMAN: yang muncul hanya kartu
- * konfirmasi yang bisa dibatalkan (`Catat ✓` yang menulis, bukan AI), dan semua
+ * konfirmasi yang bisa dibatalkan (`Catat` yang menulis, bukan AI), dan semua
  * nilainya dibaca dari ketikan user — sementara salah tafsir di jalur model
  * harganya klaim palsu.
  */

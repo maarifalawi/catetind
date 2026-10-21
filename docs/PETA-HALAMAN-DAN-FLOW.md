@@ -110,7 +110,8 @@ section. Daftar menunya satu sumber: `SETTINGS_MENU` di `settings-shell.tsx`.
 
 | # | Route | File | Panel | Isi |
 |---|---|---|---|---|
-| 29 | [`/settings`](https://catetind.com/settings) | `app/settings/page.tsx` | `ProfileSettingsPanel` | **Profil & Akun** (section default). Nama, email, gajian, konteks uang. |
+| 29 | [`/settings`](https://catetind.com/settings) | `app/settings/page.tsx` | Daftar menu (mobile) / `ProfileSettingsPanel` (desktop) | **Indeks Pengaturan** — di mobile berisi daftar menu; di desktop panel **Profil & Akun** tampil di kolom kanan. |
+| 29b | [`/settings/profile`](https://catetind.com/settings/profile) | `app/settings/profile/page.tsx` | `ProfileSettingsPanel` | **Profil & Akun** — nama, email, gajian, konteks uang (dibuka dari indeks di mobile). |
 | 30 | [`/settings/billing`](https://catetind.com/settings/billing) | `app/settings/billing/page.tsx` | `BillingSettingsPanel` | **Langganan** — kartu paket, kuota AI, jalur **upgrade**, top-up token. |
 | 31 | [`/settings/appearance`](https://catetind.com/settings/appearance) | `app/settings/appearance/page.tsx` | `settings-panel-preferences.tsx` | **Tampilan** — terang/gelap. |
 | 32 | [`/settings/categories`](https://catetind.com/settings/categories) | `app/settings/categories/page.tsx` | `settings-panel-preferences.tsx` | **Kategori** — atur/hapus/pulihkan kategori. |

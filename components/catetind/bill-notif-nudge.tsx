@@ -91,14 +91,17 @@ export function BillNotifNudge({ className }: { className?: string }) {
           exit={{ opacity: 0, y: -6 }}
           transition={{ duration: 0.28, ease: EASE }}
           className={cn(
-            'flex items-center gap-3 rounded-2xl bg-hud-amber/12 px-3.5 py-2.5 ring-1 ring-inset ring-hud-amber/25',
+            'flex items-center gap-3 rounded-[1.25rem] bg-cream px-4 py-3 ring-1 ring-soil/8',
             className,
           )}
         >
-          <span aria-hidden className="shrink-0 text-[15px] leading-none">
-            🔔
+          <span
+            aria-hidden
+            className="flex size-8 shrink-0 items-center justify-center rounded-full bg-sage/60 text-forest"
+          >
+            <Bell className="size-4" strokeWidth={2.2} />
           </span>
-          <p className="min-w-0 flex-1 text-[12px] font-medium leading-snug text-forest">
+          <p className="min-w-0 flex-1 text-[11.5px] font-medium leading-snug text-forest-muted">
             {NOTIF_NUDGE_COPY}
           </p>
 
@@ -107,7 +110,7 @@ export function BillNotifNudge({ className }: { className?: string }) {
               <button
                 type="button"
                 onClick={activate}
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-forest px-3 py-1.5 text-[11.5px] font-medium text-mint transition-colors hover:bg-forest-soft active:scale-[0.97]"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-forest px-3 py-1.5 text-[11.5px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.97]"
               >
                 <Bell className="size-3.5" strokeWidth={2.4} aria-hidden />
                 Aktifkan
@@ -115,13 +118,13 @@ export function BillNotifNudge({ className }: { className?: string }) {
               <button
                 type="button"
                 onClick={dismiss}
-                className="shrink-0 text-[11.5px] font-medium text-forest/45 transition-colors hover:text-forest/75"
+                className="shrink-0 text-[11.5px] font-medium text-forest-muted transition-colors hover:text-forest"
               >
                 Nanti
               </button>
             </>
           ) : (
-            <span className="shrink-0 text-[11px] font-medium text-forest/50">
+            <span className="shrink-0 text-[11px] font-medium text-forest-muted">
               Diblokir di browser
             </span>
           )}

@@ -27,14 +27,13 @@ import {
   type SettlementState,
 } from '@/lib/data/joint'
 import { toast } from 'sonner'
-import { JointBalanceScale } from './joint-balance-scale'
 import { ChoicePills } from './budget-sheet'
 import { useSubscriptionGate } from './subscription-gate-provider'
 import { SubscriptionLockNote } from './subscription-lock-note'
 import { cn } from '@/lib/utils'
 
 /* ── Settlement Modal (Section 7) ────────────────────────────────────────────
-   Rekap bulanan + instruksi transfer + tombol "Tandai Sudah Settle ✓".
+   Rekap bulanan + instruksi transfer + tombol "Tandai Sudah Settle".
    Sengaja dibuka dari Balance Scale ("Settle Sekarang") ATAU dari banner rekap
    bulanan — dua pintu ke satu layar yang sama.
 
@@ -69,7 +68,7 @@ export function JointSettlementModal({
   onClose: () => void
   settlement: SettlementState
   masked: boolean
-  /** user menekan "Tandai Sudah Settle ✓" — halaman menulis entri ledger-nya */
+  /** user menekan "Tandai Sudah Settle" — halaman menulis entri ledger-nya */
   onSettle: (method: SettlementMethod) => void
   /** penanda bulan lalu yang masih menyisakan utang (null = tidak ada sisa) */
   carryOverRecord?: JointSettlementRecord | null
@@ -159,17 +158,6 @@ export function JointSettlementModal({
                 </button>
               </div>
 
-              {/* versi mungil timbangan — pengingat visual kondisi bulan ini */}
-              <div className="mt-2 flex justify-center">
-                <JointBalanceScale
-                  settlement={settlement}
-                  masked={masked}
-                  me={me}
-                  partner={partner}
-                  size="sm"
-                  showCopy={false}
-                />
-              </div>
               {/* dua lapisan angka (audit #1–#3): seluruh catatan vs POSISI BERSIH
                   yang benar-benar menentukan transfer — supaya baris "Satu transfer"
                   di bawah bisa ditelusuri */}

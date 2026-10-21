@@ -10,6 +10,7 @@ import {
   midtransChargeEndpoint,
   midtransCoreBase,
   midtransExpiryToIso,
+  midtransIsProduction,
   midtransQrImageUrl,
   midtransStatusEndpoint,
   paymentInstructionsFromTransaction,
@@ -57,8 +58,10 @@ function lastCall(): { url: string; init: RequestInit } {
 
 describe('endpoint & kredensial', () => {
   it('default sandbox, produksi hanya saat MIDTRANS_IS_PRODUCTION=1', () => {
+    expect(midtransIsProduction()).toBe(false)
     expect(midtransCoreBase()).toBe('https://api.sandbox.midtrans.com')
     process.env.MIDTRANS_IS_PRODUCTION = '1'
+    expect(midtransIsProduction()).toBe(true)
     expect(midtransCoreBase()).toBe('https://api.midtrans.com')
   })
 

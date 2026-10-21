@@ -642,6 +642,14 @@ export const PAY_CARD_COPY = {
   expiredBody: 'Tidak ada yang terpotong. Bikin tagihan baru untuk lanjut.',
   failedTitle: 'Tagihan tidak bisa dipakai lagi',
   failedBody: 'Bikin tagihan baru atau pilih metode lain.',
+  /* Tagihan dari Midtrans SANDBOX tidak bisa dibayar aplikasi asli (GoPay,
+     ShopeePay, m-banking): QR/VA-nya cuma hidup di simulator. Tanpa keterangan
+     ini orang wajar mengira akunnya yang bermasalah — dan Midtrans memperingatkan
+     QRIS sandbox bisa menunjuk merchant ID production (uang nyata bisa nyasar). */
+  sandboxTitle: 'Mode uji (sandbox)',
+  sandboxBody:
+    'Tagihan ini dibuat di lingkungan uji Midtrans, jadi aplikasi e-wallet atau m-banking asli akan menolaknya. Selesaikan lewat Simulator Midtrans — jangan pakai uang sungguhan.',
+  sandboxCta: 'Buka Simulator Midtrans',
   newInvoiceLabel: 'Bikin tagihan baru',
   switchMethodLabel: 'Ganti metode',
   statusLabel: 'Status',
@@ -662,16 +670,22 @@ export const PAY_DONE_COPY = {
   checkingTitle: 'Lagi cek pembayaranmu…',
   checkingBody: 'Biasanya masuk dalam beberapa detik.',
   activeTitle: 'Aksesmu aktif 🎉',
-  activeBodyMonthly:
-    'Paket lama 30 hari aktif. Paket bulanan sudah tidak dijual, lifetime tersedia kapan saja.',
-  activeBodyLifetime: 'Semua fitur paketmu sudah terbuka — dan tetap terbuka, selamanya.',
+  activeBodyMonthly: 'Paket lamamu aktif kembali.',
+  activeBodyLifetime: 'Semua fitur sudah terbuka. Selamanya.',
   pendingTitle: 'Pembayaran belum tercatat',
   pendingBody:
-    'Kalau kamu sudah bayar, aksesmu sedang diaktifkan — halaman ini update sendiri.',
+    'Kalau kamu sudah bayar, kami cocokkan otomatis ke Midtrans. Halaman ini update sendiri — tidak perlu bayar ulang.',
   failedTitle: 'Pembayarannya belum berhasil',
   failedBody: 'Coba lagi ya — catatanmu tetap aman.',
   orderLabel: 'Order',
   retryLabel: 'Cek lagi',
+  /** label saat tombol “Cek lagi” sedang mencocokkan ke Midtrans */
+  retryChecking: 'Mencocokkan…',
+  /** keterangan setelah pemeriksaan manual yang belum menemukan pembayaran */
+  stillPendingNote:
+    'Midtrans belum melaporkan pembayaran untuk order ini. Kalau kamu baru saja membayar, tunggu sebentar lalu tekan Cek lagi — tidak perlu membayar ulang.',
+  /** keterangan di bawah CTA saat akses sudah aktif */
+  autoRedirectNote: 'Membuka dashboard…',
   appCta: 'Masuk ke dashboard',
   homeCta: 'Kembali ke checkout',
 } as const

@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import {
   ArrowRight,
-  CircleHelp,
   Clock,
   LoaderCircle,
   Mail,
@@ -120,7 +119,7 @@ export function VerifyEmailScreen({
         toast.error(VERIFY_COPY.linkFailedTitle, { description: result.error })
         return
       }
-      toast.success(SESSION_COPY.signInToast, { description: SESSION_COPY.signInToastDescription })
+      toast.success(SESSION_COPY.signInToast)
       router.push(landing)
     })()
     return () => {
@@ -138,7 +137,7 @@ export function VerifyEmailScreen({
       toast.error(VERIFY_COPY.otpFailedTitle, { description: result.error })
       return
     }
-    toast.success(SESSION_COPY.signInToast, { description: SESSION_COPY.signInToastDescription })
+    toast.success(SESSION_COPY.signInToast)
     router.push(landing)
   }
 
@@ -280,22 +279,6 @@ export function VerifyEmailScreen({
               </form>
             </section>
           </div>
-
-          {/* jalan keluar kecil di kaki kolom */}
-          <footer className="mx-auto mt-8 w-full max-w-[400px]">
-            <p className="flex items-start justify-center gap-1.5 text-center text-[11.5px] leading-relaxed text-forest/50">
-              <CircleHelp className="mt-0.5 size-3.5 shrink-0" strokeWidth={2.4} aria-hidden />
-              <span>
-                {LOGIN_COPY.helpLead}{' '}
-                <Link
-                  href={LOGIN_COPY.helpHref}
-                  className="font-medium text-forest/70 underline underline-offset-2 hover:text-forest"
-                >
-                  {LOGIN_COPY.helpLink}
-                </Link>
-              </span>
-            </p>
-          </footer>
         </div>
       </div>
     </section>

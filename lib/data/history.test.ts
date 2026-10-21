@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   HEALTH_SCORE_THRESHOLD,
+  HISTORY_LIST_COPY,
+  HISTORY_PAGE_SIZE,
   INSIGHT_MIN_CATEGORY_TX,
   INSIGHT_MIN_SAVINGS_TX,
   TRANSACTION_CATEGORY_OPTIONS,
@@ -10,6 +12,7 @@ import {
   countHistoryTransactions,
   financialHealthScore,
   healthCardState,
+  latestTransactions,
   manualCategoryChoice,
   savingsRatePct,
   spendingSpike7d,
@@ -301,5 +304,37 @@ describe('insight AI dari catatan user (59.1)', () => {
     expect(buildHistoryInsights(more, '2026-09-28').map((item) => item.id)).toEqual([
       'category-trend',
     ])
+  })
+})
+
+/* ── DAFTAR CATATAN DIPOTONG 10 BARIS (permintaan pemilik produk) ─────────────
+   Halaman Riwayat dulu langsung menampilkan SEMUA catatan sehingga kepanjangan.
+   Yang dikunci di sini: potongan diambil dari URUTAN TAMPIL (hari terbaru lalu
+   jam terbaru), bukan urutan array mentah — kalau salah, "10 terbaru" bisa
+   berisi baris lama dari hari lain. */
+describe('daftar Catatan: 10 terbaru dulu, sisanya lewat tombol', () => {
+  const base = tx('expense', 10_000, '2026-09-20')
+
+  it('memotong dari urutan tampil (hari lalu jam terbaru), bukan urutan array', () => {
+    const txs: HistoryTransaction[] = [
+      { ...base, id: 1, amount: 10_000, date: '2026-09-20', time: '08:00' },
+      { ...base, id: 2, amount: 20_000, date: '2026-09-28', time: '09:00' },
+      { ...base, id: 3, amount: 30_000, date: '2026-09-28', time: '21:00' },
+    ]
+
+    expect(latestTransactions(txs, '2026-09-28', 2).map((item) => item.id)).toEqual([3, 2])
+  })
+
+  it('batasnya 10 baris & label tombol menyebut jumlah TOTAL catatan', () => {
+    expect(HISTORY_PAGE_SIZE).toBe(10)
+    expect(HISTORY_LIST_COPY.showAll(34)).toBe('Lihat semua 34 catatan')
+    expect(HISTORY_LIST_COPY.showLess).toBe('Tampilkan lebih sedikit')
+    expect(
+      latestTransactions(expenses(12, '2026-09-20'), '2026-09-28', HISTORY_PAGE_SIZE),
+    ).toHaveLength(10)
+  })
+
+  it('limit 0 = tidak ada baris (bukan diam-diam menampilkan semua)', () => {
+    expect(latestTransactions(expenses(3), '2026-09-28', 0)).toEqual([])
   })
 })

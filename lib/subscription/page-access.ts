@@ -7,8 +7,11 @@
 
    File ini menjawab pertanyaan itu secara eksplisit. Aturannya:
 
-     • `capability: null` → halaman terbuka untuk SEMUA paket (termasuk user
-       yang belum pernah membeli; pencatatan tetap dijaga `inputLocked`).
+     • `capability: null` → halaman terbuka untuk SEMUA PAKET. Perhatikan:
+       user yang BELUM PUNYA PAKET tidak sampai ke halaman-halaman ini — ia
+       dialihkan middleware ke `/checkout` oleh gerbang `app-access.ts`. Jadi
+       `capability: null` di sini berarti "tidak ada kunci per-tier", bukan
+       "boleh dibuka tanpa bayar".
      • `capability: '...'` → halaman hanya terbuka bila paket memiliki kemampuan
        itu. Sumber kebenaran kemampuan tetap `PLAN_CAPABILITIES` di
        `lib/data/pricing.ts` — file ini TIDAK menyalin peta paket, hanya

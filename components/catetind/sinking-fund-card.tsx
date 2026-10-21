@@ -18,44 +18,23 @@ import {
   type SinkingFundItem,
 } from '@/lib/data/budget'
 
-/* ── Kartu Celengan Impian (Zona B) — tanaman + bar progres tipis (paket 78) ──
-   Kartu tempat tanaman bertumbuh. Progres digambar sebagai TANAMAN (SVG statis
-   seed → sprout → plant → flower) plus auto-kalkulasi "nabung Rp X/bulan biar
-   tercapai tepat waktu" (rumus PRD 2C.3). Tanaman di list view sengaja SVG
-   statis (resolusi CANDRA, PRD Domain 3B): animasi berat hanya di halaman detail.
+/* ── Kartu Celengan Impian (Zona B) ──────────────────────────────────────────
+   REDESAIN (paket 101) — kartu ini sekarang BERDIRI SENDIRI, bukan baris di
+   dalam satu kartu daftar panjang:
 
-   ⚠️ OWNER OVERRIDE (paket 78) — BACA SEBELUM MENGUBAH BAR LAGI.
-   Audit UX #1 dulu MENGHAPUS progress bar generik karena PRD menolak progress
-   bar untuk goal: "tanaman adalah SATU-SATUNYA indikator visual". Pemilik produk
-   lalu meminta halaman Budget & Target Nabung direnovasi dengan "progress bars,
-   clean typography, dan whitespace" — karena itu keputusan paket 78 adalah
-   MENAMBAH, bukan mengganti:
+     · chrome kartu sendiri: putih, ring tipis, shadow lembut, sudut 1,4rem —
+       jadi batas antar celengan terbaca tanpa perlu hairline pemisah;
+     · tanaman tetap ANCHOR visual di kiri (tile bergradien mint→sage);
+     · prioritas & konteks jadi chip pastel kecil, bukan deretan teks + titik;
+     · persen besar + nama tahap di kanan;
+     · bar progres tipis ber-track sage (bukan abu-abu), isian mint→forest;
+     · kaki kartu dipisah hairline: deadline (chip sage) di kiri, aksi di kanan;
+     · "Setor" memakai pill mint lembut (bukan blok hijau tua) supaya lima kartu
+       berturut-turut tidak terasa berat.
 
-     · TANAMAN TIDAK DIHAPUS. Ia tetap ada sebagai penanda identitas/jiwa kartu
-       dan satu-satunya yang membedakan celengan dari kartu budget biasa;
-     · PERSENTASE TIDAK DIHAPUS. Ia duduk di kanan atas kartu, sebaris dengan nama;
-     · Bar progres `h-2` tipis ditambahkan MENDAMPINGI keduanya, memakai bahasa
-       visual meter Jatah Hari Ini (paket 76): track `bg-soil/[0.09]`, isian
-       membulat penuh, transisi `[cubic-bezier(0.22,1,0.36,1)]`, aman untuk
-       `prefers-reduced-motion`. Warna isiannya mint (keluarga "tumbuh") — BUKAN
-       tiga warna status Jatah Harian, karena untuk celengan makin penuh = makin
-       baik, jadi amber/terracotta akan salah terbaca sebagai peringatan.
-
-   Kalau kelak tanamannya yang justru harus dilepas, itu keputusan pemilik produk
-   — bukan keputusan yang boleh diambil diam-diam di file ini.
-
-   Area kartu dibagi dua tombol supaya jelas: badan kartu = buka detail,
-   tombol `Setor` = langsung menyetor tanpa meninggalkan halaman.
-
-   PAKET 60.2: footer kartu menambah tombol hapus (`onDelete`). Konfirmasi,
-   kalimat efek uang, dan jendela Undo-nya dipasang halaman pemilik state
-   (`budget-screen`), bukan di kartu ini — kartu ini murni presentasional.
-
-   PAKET 78 (tipografi): jumlah ukuran teks dikurangi — nama, satu baris angka,
-   bar, lalu satu baris mikro (setoran bulanan + deadline). Label tahap tanaman
-   ("Baru ditanam") TIDAK lagi ditulis karena ilustrasinya sudah menunjukkan
-   tahapnya, dan pembaca layar tetap mendengarnya dari `aria-label` SVG tanaman
-   (`plant-illustration.tsx`). ─────────────────────────────────────────────── */
+   `progress` diteruskan ke PlantIllustration supaya tinggi & rimbun tanaman
+   benar-benar mengikuti persen (20% vs 80% tidak lagi tampak sama).
+   ────────────────────────────────────────────────────────────────────────── */
 
 export function SinkingFundCard({
   fund,
@@ -75,18 +54,35 @@ export function SinkingFundCard({
   const percent = fundPercent(fund)
   const reached = percent >= 100
   const perMonth = monthlyNeeded(fund.target, fund.current, fund.deadline)
-  /* H5-4 — kewajiban yang sama dinyatakan per hari (pembagi kanon 30 hari) */
   const perDay = Math.round(perMonth / SINKING_PER_DAY_DAYS)
   const percentLabel = `${Math.round(percent)}%`
+  /* label tahap DITURUNKAN dari persen yang sama dengan ilustrasi — jangan baca
+     `fund.stage` yang bisa tertinggal dari progres sebenarnya */
+  const stageLabel = reached
+    ? PLANT_STAGES.bloom.label
+    : percent >= 75
+      ? PLANT_STAGES.flower.label
+      : percent >= 50
+        ? PLANT_STAGES.plant.label
+        : percent >= 25
+          ? PLANT_STAGES.sprout.label
+          : PLANT_STAGES.seed.label
 
   return (
     <article
       className={cn(
-        'group/card flex flex-col rounded-[1.4rem] bg-cream p-3.5 ring-1 transition-shadow duration-300 hover:shadow-[0_18px_40px_-26px_rgba(0,0,0,0.4)]',
-        reached ? 'ring-mint/60' : 'ring-soil/10',
+        'group/card relative overflow-hidden rounded-[1.4rem] bg-cream p-3.5 ring-1 ring-soil/10',
+        'shadow-[0_14px_34px_-28px_rgba(69,89,78,0.45)]',
+        'transition-[box-shadow,transform] duration-300 hover:-translate-y-px hover:ring-forest/15 hover:shadow-[0_20px_40px_-28px_rgba(69,89,78,0.4)]',
+        'motion-reduce:transition-none motion-reduce:hover:translate-y-0 sm:p-4',
       )}
     >
-      {/* badan kartu → halaman detail celengan */}
+      {/* halo mint di sudut — dekorasi, bukan informasi */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute -right-10 -top-12 size-28 rounded-full bg-mint/15 blur-2xl"
+      />
+
       <button
         type="button"
         onClick={() => onOpen(fund)}
@@ -96,114 +92,97 @@ export function SinkingFundCard({
           maskNominal(fund.current, masked),
           maskNominal(fund.target, masked),
         )}
-        className="w-full text-left outline-none focus-visible:ring-2 focus-visible:ring-forest/30 rounded-2xl"
+        className="relative block w-full rounded-[1.1rem] text-left outline-none focus-visible:ring-2 focus-visible:ring-forest/25"
       >
-        {/* baris 1 — tanaman (identitas/jiwa kartu) · nama + meta · persen.
-            REDESAIN paket 82 (round 2): dua badge (konteks + prioritas) diganti
-            SATU sub-baris yang tenang — titik warna prioritas · label prioritas ·
-            konteks uang. Tiga pil berdampingan terasa ramai; satu baris titik+teks
-            menyampaikan informasi yang sama tanpa berebut perhatian dengan NAMA
-            celengan & persennya. */}
-        <div className="flex items-center gap-3">
-          {/* tanaman = identitas/jiwa kartu (SVG statis; animasi hanya di detail) */}
-          <span className="flex size-11 shrink-0 items-end justify-center overflow-hidden rounded-xl bg-sage/45 ring-1 ring-soil/8">
+        <span className="flex items-center gap-3">
+          <span className="flex size-16 shrink-0 items-center justify-center rounded-[1.25rem] bg-gradient-to-br from-mint/30 via-sage/55 to-sage/25 p-1 ring-1 ring-soil/[0.04] sm:size-[68px]">
             <PlantIllustration
               stage={PLANT_STAGE_INDEX[fund.stage] as IllustrationStage}
-              className="w-8"
+              progress={percent}
+              className="w-12 sm:w-[52px]"
             />
           </span>
 
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-[14.5px] font-medium leading-tight tracking-tight text-forest">
-              {fund.name}
-            </span>
-            {/* meta: prioritas (titik berwarna + label) · konteks uang (paket 47) —
-                konteks tetap terbaca supaya jelas celengan ini milik Pribadi,
-                Keluarga, atau Bersama di halaman mana pun */}
-            <span className="mt-0.5 flex items-center gap-1.5 text-[10px] font-medium text-forest/45">
-              <span aria-hidden className={cn('size-1.5 shrink-0 rounded-full', priority.dot)} />
-              {priority.label}
-              <span aria-hidden className="text-forest/20">
-                ·
+            <span className="flex items-start gap-1">
+              <span className="min-w-0 flex-1 truncate text-[14.5px] font-semibold leading-tight tracking-tight text-forest">
+                {fund.name}
               </span>
-              {CONTEXT_LABEL[fund.scope]}
+              {/* affordance buka detail: seluruh badan kartu sudah bisa ditekan,
+                  jadi cukup chevron — tanpa teks "Lihat detail" */}
+              <ChevronRight
+                className="mt-0.5 size-4 shrink-0 text-forest/25 transition-transform duration-300 group-hover/card:translate-x-0.5 motion-reduce:transition-none"
+                strokeWidth={2.2}
+                aria-hidden
+              />
+            </span>
+            {/* meta dipadatkan jadi chip pastel — bukan deretan teks + titik */}
+            <span className="mt-1.5 flex flex-wrap items-center gap-1">
+              <span className="inline-flex items-center gap-1 rounded-full bg-sage/60 px-2 py-[3px] text-[9.5px] font-medium text-forest-muted">
+                <span aria-hidden className={cn('size-1.5 shrink-0 rounded-full', priority.dot)} />
+                {priority.label}
+              </span>
+              <span className="inline-flex items-center rounded-full bg-sage/40 px-2 py-[3px] text-[9.5px] font-medium text-forest-muted">
+                {CONTEXT_LABEL[fund.scope]}
+              </span>
             </span>
           </span>
+        </span>
 
-          {/* persen — pil mint: angka besar kedua di kartu, jadi ia bisa dipindai
-              tanpa membaca baris nominal (paket 82) */}
-          <span className="shrink-0 rounded-full bg-mint/25 px-2.5 py-1 text-[12.5px] font-semibold tabular-nums text-forest">
-            {percentLabel}
-          </span>
-        </div>
-
-        {/* baris 2 — nominal terkumpul / target */}
-        <div className="mt-3 flex items-end justify-between gap-3">
-          <p className="text-[19px] font-semibold leading-none tracking-tight text-forest tabular-nums">
+        {/* nominal + persen SEBARIS di bawah identitas — nama celengan dapat
+            seluruh lebar kartu, dan target tidak lagi terpotong kolom persen */}
+        <span className="mt-3 flex items-end justify-between gap-2">
+          <span className="min-w-0 truncate text-[15px] font-semibold leading-none tracking-tight tabular-nums text-forest">
             {maskNominal(fund.current, masked)}
-          </p>
-          <p className="shrink-0 text-[11.5px] font-medium text-forest/45 tabular-nums">
-            / {maskNominal(fund.target, masked)}
-          </p>
-        </div>
+            <span className="ml-1 text-[10.5px] font-medium text-forest-muted">
+              / {maskNominal(fund.target, masked)}
+            </span>
+          </span>
+          <span className="flex shrink-0 flex-col items-end">
+            <span className="font-display text-[22px] font-semibold leading-none tracking-tight tabular-nums text-forest">
+              {percentLabel}
+            </span>
+            <span className="mt-1 text-[9px] font-medium uppercase tracking-[0.1em] text-forest-muted">
+              {stageLabel}
+            </span>
+          </span>
+        </span>
 
-        {/* baris 3 — BAR PROGRES TIPIS (paket 78 · owner override, lihat catatan
-            di atas kartu ini): mendampingi tanaman & persentase, bukan
-            menggantikannya. Bar-nya `aria-hidden` karena angka progresnya SUDAH
-            diumumkan oleh `aria-label` tombol badan kartu di atas (persen +
-            nominal) — satu sumber pengumuman, tidak dobel di pembaca layar. */}
-        <div
+        <span
           aria-hidden
-          className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-soil/[0.07]"
+          className="mt-3.5 block h-1.5 w-full overflow-hidden rounded-full bg-sage/70"
         >
-          <div
-            className="h-full rounded-full bg-mint transition-[width] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
+          <span
+            className="block h-full rounded-full bg-gradient-to-r from-mint to-forest/45 transition-[width] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
             style={{ width: `${Math.min(100, Math.max(0, percent))}%` }}
           />
-        </div>
+        </span>
 
-        {/* baris 4 — mikro: setoran bulanan (kalau belum penuh) + tanggal deadline,
-            satu baris dua fakta, tanpa kalimat */}
-        <div className="mt-2 flex items-center justify-between gap-2 text-[10.5px] text-forest/45">
-          <span className="truncate tabular-nums">
-            {reached ? (
-              /* target penuh → `monthlyNeeded()` = 0, jadi jangan pernah tulis
-                 "Rp 0/bulan"; label tahap kanon (`PLANT_STAGES.bloom`) yang tampil */
-              <span className="font-medium text-forest/60">{PLANT_STAGES.bloom.label}</span>
-            ) : (
-              <>
-                {SINKING_FUND_CARD_COPY.perMonth(maskNominal(perMonth, masked))}
-                {/* H5-4 — angka yang sama dipecah per hari supaya terasa lebih
-                    terjangkau (mis. "~Rp 102.000/hari"). */}
-                <span className="text-forest/35">
-                  {' · '}
-                  {SINKING_FUND_CARD_COPY.perDay(maskNominal(perDay, masked))}
-                </span>
-              </>
-            )}
+        <span className="mt-2 block truncate text-[10.5px] tabular-nums text-forest-muted">
+          {SINKING_FUND_CARD_COPY.perMonth(maskNominal(perMonth, masked))}
+          <span className="text-forest/50">
+            {' · '}
+            {SINKING_FUND_CARD_COPY.perDay(maskNominal(perDay, masked))}
           </span>
-          <span className="inline-flex shrink-0 items-center gap-1 tabular-nums">
-            <CalendarDays className="size-3" strokeWidth={2.2} aria-hidden />
-            {formatDeadline(fund.deadline)}
-          </span>
-        </div>
+        </span>
       </button>
 
-      {/* footer — pintasan setor tanpa harus masuk detail */}
-      <div className="mt-3.5 flex items-center justify-between gap-2 border-t border-soil/12 pt-3">
-        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-forest/35 transition-colors group-hover/card:text-forest/55">
-          {SINKING_FUND_CARD_COPY.detail}
-          <ChevronRight className="size-3" strokeWidth={2.4} />
+      {/* ── KAKI KARTU — deadline di kiri, aksi di kanan, dipisah hairline
+          supaya area sentuh "Setor" tidak bercampur dengan badan kartu. */}
+      <div className="relative mt-3 flex items-center justify-between gap-2 border-t border-soil/[0.06] pt-3">
+        <span className="inline-flex min-w-0 items-center gap-1.5 rounded-full bg-sage/50 px-2.5 py-1 text-[10px] font-medium tabular-nums text-forest-muted">
+          <CalendarDays className="size-3 shrink-0" strokeWidth={2.2} aria-hidden />
+          <span className="truncate">{formatDeadline(fund.deadline)}</span>
         </span>
-        <span className="flex items-center gap-1.5">
-          {/* hapus (paket 60.2) — ikon dengan nama yang menyebut celengannya */}
+
+        <span className="flex shrink-0 items-center gap-1">
           {onDelete && (
             <button
               type="button"
               onClick={() => onDelete(fund)}
               aria-label={FUND_CARD_ACTION_COPY.delete(fund.name)}
               title={FUND_CARD_ACTION_COPY.deleteLabel}
-              className="flex size-8 items-center justify-center rounded-full text-forest/30 transition-colors hover:bg-plum/12 hover:text-plum focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25 active:scale-95"
+              className="flex size-9 items-center justify-center rounded-full text-forest/35 transition-all hover:bg-plum/10 hover:text-plum focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25 active:scale-95 lg:opacity-0 lg:group-hover/card:opacity-100 lg:focus-visible:opacity-100"
             >
               <Trash2 className="size-3.5" strokeWidth={2.4} aria-hidden />
             </button>
@@ -211,9 +190,10 @@ export function SinkingFundCard({
           <button
             type="button"
             onClick={() => onContribute(fund)}
-            className="inline-flex items-center gap-1.5 rounded-full bg-forest px-3.5 py-2 text-[12px] font-medium text-mint transition-colors hover:bg-forest-soft active:scale-95"
+            aria-label={SINKING_FUND_CARD_COPY.contributeAria(fund.name)}
+            className="inline-flex h-9 items-center gap-1 rounded-full bg-mint/30 px-3.5 text-[11.5px] font-medium text-forest ring-1 ring-mint/60 transition-colors hover:bg-mint/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25 active:scale-95"
           >
-            <Plus className="size-3.5" strokeWidth={3} />
+            <Plus className="size-3.5" strokeWidth={3} aria-hidden />
             {SINKING_FUND_CARD_COPY.contribute}
           </button>
         </span>

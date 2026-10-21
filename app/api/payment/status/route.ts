@@ -3,6 +3,7 @@ import { requireUser } from '@/lib/session'
 import { paymentMethod } from '@/lib/payments/methods'
 import { fetchTransactionStatus, midtransConfigured } from '@/lib/payments/midtrans'
 import type { PaymentInstructions, PaymentState } from '@/lib/payments/types'
+import { reconcileOrder } from '@/lib/subscription/reconcile'
 import { restFetch } from '@/lib/supabase/rest'
 
 /* ── GET /api/payment/status?order_id=…&method=… (paket 83) ──────────────────
@@ -29,6 +30,8 @@ interface PurchaseRow {
   tier_name?: string | null
   billing_period?: string | null
   price_paid?: number | null
+  /** nominal yang SEHARUSNYA ditagih — dasar verifikasi rekonsiliasi */
+  expected_amount?: number | string | null
   paid_at?: string | null
 }
 
@@ -58,7 +61,7 @@ export async function GET(req: NextRequest) {
   const method = paymentMethod(params.get('method'))
 
   const query = new URLSearchParams({
-    select: 'order_id,status,tier_name,billing_period,price_paid,paid_at',
+    select: 'order_id,status,tier_name,billing_period,price_paid,expected_amount,paid_at',
     order_id: `eq.${orderId}`,
     limit: '1',
   })
@@ -113,6 +116,33 @@ export async function GET(req: NextRequest) {
   const detail = provider.value
   const state: PaymentState = purchase.status === 'settlement' ? 'settled' : detail.state
 
+  /* ── PEMULIHAN OTOMATIS (paket 99) ─────────────────────────────────────────
+     Provider bilang LUNAS, tetapi baris `purchases` masih `pending` — artinya
+     webhook belum sampai. Dulu kartu pembayaran cuma menampilkan “Pembayaran
+     diterima · aksesmu sedang diaktifkan…” lalu pindah ke `/checkout/selesai`
+     yang selamanya bilang “belum tercatat”. Sekarang di titik ini juga order
+     dipenuhi (RPC yang sama dengan webhook, idempoten), jadi aksesnya benar-
+     benar aktif tanpa menunggu notifikasi.
+
+     `provider: detail` dioper supaya tidak ada request status kedua ke Midtrans.
+     Kegagalan pemenuhan TIDAK mengubah status tampilan: uangnya tetap sudah
+     diterima, dan tombol “Cek lagi” akan mencoba lagi. */
+  let orderStatus = purchase.status ?? null
+  let fulfillment: string | null = null
+  if (state === 'settled' && purchase.status !== 'settlement') {
+    const rawExpected = purchase.expected_amount
+    const expectedNumber =
+      rawExpected === null || rawExpected === undefined ? Number.NaN : Number(rawExpected)
+    const outcome = await reconcileOrder({
+      orderId,
+      expectedAmount: Number.isFinite(expectedNumber) ? expectedNumber : null,
+      purchaseStatus: purchase.status ?? null,
+      provider: detail,
+    })
+    fulfillment = outcome.reason
+    if (outcome.fulfilled) orderStatus = 'settlement'
+  }
+
   return NextResponse.json({
     ok: true,
     orderId,
@@ -128,6 +158,8 @@ export async function GET(req: NextRequest) {
     },
     method: detail.method,
     instructions: (detail.instructions ?? null) satisfies PaymentInstructions | null,
-    order,
+    order: { ...order, status: orderStatus },
+    /** alasan rekonsiliasi: `fulfilled` = akses baru saja diaktifkan */
+    fulfillment,
   })
 }

@@ -46,7 +46,6 @@ import {
   TRANSACTION_FIXED_CATEGORY,
   TRANSACTION_INSUFFICIENT_FUNDS_COPY,
   TRANSACTION_INPUT_COPY,
-  TRANSACTION_NOTE_HINT,
   manualCategoryChoice,
   type HistoryTransaction,
 } from '@/lib/data/history'
@@ -1049,7 +1048,7 @@ export function TransactionInputEngine({
 
               {/* ── BANTUAN NOMINAL (paket 42, disetel ulang paket 44) ─────────
                   Tiga keadaannya saling menggantikan, sesuai isi field:
-                    1. belum ada masalah → petunjuk singkatan + batas digit;
+                    1. belum ada masalah → petunjuk singkatan;
                     2. input tidak terbaca **dan** field sudah ditinggalkan /
                        submit dicoba → KALIMAT masalahnya. Selama user masih
                        mengetik, kalimat ini sengaja TIDAK muncul (paket 44);
@@ -1088,7 +1087,7 @@ export function TransactionInputEngine({
                     isDialog ? 'text-[12px]' : 'text-[11px]',
                   )}
                 >
-                  {TRANSACTION_INPUT_COPY.amountHint(AMOUNT_MAX_DIGITS)}
+                  {TRANSACTION_INPUT_COPY.amountHint}
                 </p>
               )}
 
@@ -1130,21 +1129,9 @@ export function TransactionInputEngine({
                           onChange={setCategory}
                           variant={typeId === 'income' ? 'income' : 'expense'}
                           invalid={showCategoryNeeded}
-                          describedBy="tx-category-help"
                           ariaLabel={TRANSACTION_INPUT_COPY.categoryLabel}
                         />
                       </EditField>
-                      <p
-                        id="tx-category-help"
-                        className={cn(
-                          'mt-1.5 text-[11px] leading-relaxed',
-                          showCategoryNeeded ? 'font-medium text-forest/70' : 'text-forest/45',
-                        )}
-                      >
-                        {showCategoryNeeded
-                          ? TRANSACTION_INPUT_COPY.categoryNeeded
-                          : TRANSACTION_INPUT_COPY.categoryHint}
-                      </p>
                     </>
                   )}
                 </div>
@@ -1166,16 +1153,11 @@ export function TransactionInputEngine({
                           {sourceLabel}
                         </span>
                       </p>
-                      <p
-                        className={cn(
-                          'mt-1.5 text-[11px] leading-relaxed',
-                          showFundsShort ? 'font-medium text-forest/70' : 'text-forest/45',
-                        )}
-                      >
-                        {showFundsShort
-                          ? TRANSACTION_INSUFFICIENT_FUNDS_COPY.body(decidedWallet)
-                          : TRANSACTION_INPUT_COPY.walletHint}
-                      </p>
+                      {showFundsShort && (
+                        <p className="mt-1.5 text-[11px] font-medium leading-relaxed text-forest/70">
+                          {TRANSACTION_INSUFFICIENT_FUNDS_COPY.body(decidedWallet)}
+                        </p>
+                      )}
                     </div>
                   ) : (
                     <>
@@ -1189,21 +1171,16 @@ export function TransactionInputEngine({
                           describedBy="tx-wallet-help"
                         />
                       </EditField>
-                      <p
-                        id="tx-wallet-help"
-                        className={cn(
-                          'mt-1.5 text-[11px] leading-relaxed',
-                          showWalletNeeded || showFundsShort
-                            ? 'font-medium text-forest/70'
-                            : 'text-forest/45',
-                        )}
-                      >
-                        {showWalletNeeded
-                          ? TRANSACTION_INPUT_COPY.walletNeeded
-                          : showFundsShort
-                            ? TRANSACTION_INSUFFICIENT_FUNDS_COPY.body(decidedWallet)
-                            : TRANSACTION_INPUT_COPY.walletHint}
-                      </p>
+                      {(showWalletNeeded || showFundsShort) && (
+                        <p
+                          id="tx-wallet-help"
+                          className="mt-1.5 text-[11px] font-medium leading-relaxed text-forest/70"
+                        >
+                          {showWalletNeeded
+                            ? TRANSACTION_INPUT_COPY.walletNeeded
+                            : TRANSACTION_INSUFFICIENT_FUNDS_COPY.body(decidedWallet)}
+                        </p>
+                      )}
                     </>
                   )}
                 </div>
@@ -1217,15 +1194,10 @@ export function TransactionInputEngine({
                 aria-label="Catatan transaksi (opsional)"
                 className="mt-4 h-12 w-full rounded-2xl bg-soil/[0.09] px-4 text-[13.5px] font-medium text-forest outline-none ring-1 ring-transparent transition-all placeholder:text-forest/30 focus:bg-cream focus:ring-forest/15"
               />
-              {/* H3-4 (audit UI/UX): dorongan (bukan kewajiban) menambah minimal
-                  satu kata deskripsi saat catatan masih kosong. Paket 86 sudah
-                  memakai kategori sebagai nama baris, tapi satu kata dari user
-                  tetap jauh lebih informatif saat ia membuka Riwayat nanti. */}
-              {note.trim() === '' && (
-                <p className="mt-1.5 px-1 text-[11.5px] leading-relaxed text-forest/45">
-                  {TRANSACTION_NOTE_HINT}
-                </p>
-              )}
+              {/* H3-4 (audit UI/UX) sempat menambahkan dorongan "Tambah 1 kata
+                  aja…" di bawah field catatan. Baris itu DIHAPUS atas permintaan
+                  pemilik produk: placeholder "Catatan (Opsional)" sudah cukup
+                  menjelaskan, dan form yang lebih ringkas lebih penting. */}
 
               {/* ── MODE EDIT: tiga field detail yang nilainya SUDAH ADA ────────
                   Di mode tambah, kategori/dompet/tanggal tidak ditentukan AI:

@@ -43,12 +43,12 @@ import {
   maskNominal,
   periodFromTab,
   periodIncome,
-  periodLimitWord,
   periodWindowForTab,
   removeBudget,
   restoreBudget,
   scopeCaptionFor,
   sinkingObligationOf,
+  spentForBudget,
   spentInWindow,
   spentOn,
   suggestedBudgetCategory,
@@ -242,10 +242,7 @@ export function BudgetScreen({
     () =>
       budgetsForPeriod(visibleBudgets, period).map((budget) => ({
         ...budget,
-        spent: spentInWindow(
-          ledger.filter((tx) => tx.category === budget.category),
-          period,
-        ),
+        spent: spentForBudget(budget, ledger, period),
       })),
     [visibleBudgets, period, ledger],
   )
@@ -582,11 +579,6 @@ export function BudgetScreen({
           karena label panjang ("Keluarga"/"Bersama") terpotong di lebar sempit.
           Di desktop tab zona disembunyikan (kedua zona sudah berdampingan) dan
           pemilih konteksnya PINDAH ke baris judul di bawah. */}
-      <div className="mt-4 flex flex-wrap items-center justify-center gap-2.5 lg:hidden">
-        <ContextMenu value={context} onChange={setContext} className="w-56" />
-        <ZoneTabs value={activeTab} onChange={handleZoneTab} />
-      </div>
-
       {/* ── baris judul — struktur & spasi identik dengan header Dashboard ─── */}
       <div className="mt-4 lg:mt-0 lg:flex lg:items-center lg:justify-between lg:gap-8">
         <div className="min-w-0">
@@ -598,7 +590,7 @@ export function BudgetScreen({
           <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-forest lg:text-4xl">
             {BUDGET_PAGE_COPY.title}
           </h1>
-          <div className="mt-2 flex flex-wrap items-center gap-2 lg:mt-3">
+          <div className="mt-2 hidden flex-wrap items-center gap-2 lg:mt-3 lg:flex">
             <MetaChip icon={TargetIcon}>
               {BUDGET_PAGE_COPY.budgetCount(visibleBudgets.length)}
             </MetaChip>
@@ -615,6 +607,14 @@ export function BudgetScreen({
           <ContextMenu value={context} onChange={setContext} className="w-44" />
           <GlobalPrivacyToggle />
         </div>
+      </div>
+
+      {/* Konteks + tab zona (MOBILE) — diletakkan SETELAH judul supaya hierarki
+          halaman terbaca: judul dulu, baru cara berpindah zona. Di desktop tab
+          disembunyikan karena kedua zona sudah tampil berdampingan. */}
+      <div className="mt-4 flex flex-wrap items-center justify-center gap-2.5 lg:hidden">
+        <ContextMenu value={context} onChange={setContext} className="w-56" />
+        <ZoneTabs value={activeTab} onChange={handleZoneTab} />
       </div>
 
       {/* ── JATAH HARI INI — kartu super-hero full-width (audit #3) ──────────
@@ -644,7 +644,7 @@ export function BudgetScreen({
             id="zone-budget"
             aria-label={BUDGET_PAGE_COPY.zoneBudget}
             className={cn(
-              'scroll-mt-36 lg:col-span-6 lg:scroll-mt-40',
+              'scroll-mt-36 lg:col-span-7 lg:scroll-mt-40',
               activeTab !== 'budget' && 'hidden lg:block',
             )}
           >
@@ -653,7 +653,7 @@ export function BudgetScreen({
                 {BUDGET_PAGE_COPY.zoneBudget}
               </h2>
               <span
-                className="rounded-full bg-cream px-2 py-0.5 text-[10.5px] font-semibold text-forest/45 tabular-nums ring-1 ring-soil/12"
+                className="rounded-full bg-sage/50 px-2 py-0.5 text-[10.5px] font-semibold text-forest/55 tabular-nums"
                 aria-label={BUDGET_PAGE_COPY.budgetPeriodCount(period.label)}
               >
                 {periodBudgets.length}
@@ -679,7 +679,7 @@ export function BudgetScreen({
             id="zone-goals"
             aria-label={BUDGET_PAGE_COPY.zoneGoals}
             className={cn(
-              'scroll-mt-36 lg:col-span-6 lg:scroll-mt-40',
+              'scroll-mt-36 lg:col-span-5 lg:scroll-mt-40',
               activeTab !== 'goals' && 'hidden lg:block',
             )}
           >
@@ -687,7 +687,7 @@ export function BudgetScreen({
               <h2 className="font-display text-[17px] font-semibold tracking-tight text-forest">
                 {BUDGET_PAGE_COPY.zoneGoals}
               </h2>
-              <span className="rounded-full bg-cream px-2 py-0.5 text-[10.5px] font-semibold text-forest/45 tabular-nums ring-1 ring-soil/12">
+              <span className="rounded-full bg-sage/50 px-2 py-0.5 text-[10.5px] font-semibold text-forest/55 tabular-nums">
                 {visibleFunds.length}
               </span>
             </div>
@@ -766,11 +766,6 @@ export function BudgetScreen({
             titleId="hapus-budget-judul"
             overlayLabel={BUDGET_DELETE_COPY.overlay}
             title={BUDGET_DELETE_COPY.title}
-            body={BUDGET_DELETE_COPY.body(
-              pendingBudgetDelete.category,
-              periodLimitWord(pendingBudgetDelete.period),
-            )}
-            note={BUDGET_DELETE_COPY.note}
             safety={BUDGET_DELETE_COPY.safety(UNDO_WINDOW_MS / 1000)}
             cancelLabel={BUDGET_DELETE_COPY.cancel}
             confirmLabel={BUDGET_DELETE_COPY.confirm}

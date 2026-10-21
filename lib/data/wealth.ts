@@ -3,7 +3,7 @@ import { MONTHLY_INCOME, type BudgetScope } from './budget'
 /* jendela Undo dibaca dari SATU definisi (`lib/data/history.ts`) — dipakai
    dialog hapus hutang & aset di sini supaya angka "5 detik" yang ditulis di
    layar benar-benar sama dengan yang berlaku di Riwayat & Tagihan */
-import { UNDO_WINDOW_MS } from './history'
+import { maskMoney, UNDO_WINDOW_MS } from './history'
 
 /** satu pintu impor untuk halaman Kekayaan & Hutang: komponennya cukup ambil dari sini */
 export { formatIDR }
@@ -367,7 +367,7 @@ export const ASSET_TYPE_META: Record<
   },
 }
 
-/** urutan tetap alokasi — dipakai donut & legenda supaya warnanya konsisten */
+/** urutan tetap alokasi — dipakai donut supaya warnanya konsisten */
 export const ASSET_TYPE_ORDER: AssetType[] = ['mutual_fund', 'stock', 'gold', 'crypto']
 
 /* ── PORTOFOLIO (MOCK) ─────────────────────────────────────────────────────── */
@@ -560,6 +560,36 @@ export function formatNumber(value: number, maxDecimals = 4): string {
   const [whole, decimals] = trimmed.split('.')
   const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
   return decimals ? `${grouped},${decimals}` : grouped
+}
+
+/**
+ * Nominal RINGKAS untuk angka hero — `Rp 1,26 M`, `Rp 1,26 jt`, `Rp 950.000`.
+ *
+ * Kenapa ada: nominal Net Worth adalah angka paling penting di halaman ini, dan
+ * `truncate` di baris judul memotongnya jadi "Rp 1.261.847.0..." di layar
+ * sempit. Versi ringkas selalu muat tanpa mengubah datanya; pemanggil tetap
+ * menampilkan nominal PENUH sebagai sub-label (`maskMoney`), jadi tidak ada
+ * informasi yang hilang — hanya urutan prioritasnya yang dibalik.
+ *
+ * Aturan unit: ≥ 1 M miliar → "M", ≥ 1 juta → "jt", di bawah itu nominal penuh
+ * (sudah pendek). Desimal dipangkas ke yang benar-benar perlu: 1,26 M · 12,6 jt
+ * · 126 jt. Tanda minus memakai "−" (bukan hyphen) supaya sejajar dengan
+ * tipografi nominal lain di repo.
+ */
+export function compactMoney(value: number, masked = false): string {
+  if (masked) return maskMoney(value, true)
+  if (!Number.isFinite(value)) return formatIDR(0)
+  const abs = Math.abs(value)
+  const sign = value < 0 ? '−' : ''
+  if (abs < 1_000_000) return `${sign}${formatIDR(abs)}`
+
+  const [divisor, unit] = abs >= 1_000_000_000 ? [1_000_000_000, 'M'] : [1_000_000, 'jt']
+  const scaled = abs / divisor
+  const decimals = scaled >= 100 ? 0 : scaled >= 10 ? 1 : 2
+  const fixed = scaled.toFixed(decimals)
+  /* "1,40" → "1,4" dan "1,00" → "1": nol di ekor tidak menambah informasi */
+  const trimmed = fixed.includes('.') ? fixed.replace(/0+$/, '').replace(/\.$/, '') : fixed
+  return `${sign}Rp ${trimmed.replace('.', ',')} ${unit}`
 }
 
 /** `150,5432 unit` · `5 lot` · `0,00234 BTC` · `2 gram` */
@@ -1124,12 +1154,24 @@ export function netWorthParts(input: {
 
 /* ── COPY TETAP (Section 7E & 8) ───────────────────────────────────────────── */
 
-export const PERSONAL_SECTION_COPY =
-  'Catat aja biar gak lupa, bukan buat ngejar-ngejar ya 😊'
-
 export const SNOWBALL_TITLE = 'Debt Snowball Tracker'
-export const SNOWBALL_HELP = 'Lunasi dari yang terkecil dulu.'
-export const SNOWBALL_EMPTY = 'Belum ada hutang platform aktif. Bebas cicilan! 🌿'
+/**
+ * aria-label bar progres snowball. Penjelasan "lunasi dari yang terkecil dulu"
+ * DIHAPUS dari layar: itu onboarding copy, bukan UI operasional — bar + nominal
+ * di kedua ujungnya sudah bicara sendiri. Urutan barisnya tetap kecil → besar.
+ */
+export const SNOWBALL_PROGRESS_ARIA = 'Progres pelunasan hutang platform'
+
+/**
+ * Baris pendek empty state PERSONAL — pola baku aplikasi: ikon kecil + SATU
+ * baris + satu tombol aksi (`EMPTY_HUTANG_CTA`). Paragraf nurturing yang dulu
+ * menetap di atas daftar dihapus: user yang sudah paham tidak perlu membacanya
+ * lagi setiap kali membuka tab.
+ */
+export const PERSONAL_EMPTY_LINE = {
+  hutang: 'Belum ada hutang personal aktif 🌿',
+  piutang: 'Belum ada piutang aktif 🌿',
+} as const
 
 export const EMPTY_INVESTASI_TITLE = 'Belum punya catatan investasi'
 export const EMPTY_INVESTASI_COPY =
@@ -1166,7 +1208,7 @@ export const INVESTMENT_SHEET_COPY: Record<
   add: {
     title: 'Tambah Investasi',
     description: 'Catat beli/jualnya — harga rata-rata kamu dihitung otomatis.',
-    submit: 'Simpan Transaksi ✓',
+    submit: 'Simpan Transaksi',
   },
   edit: {
     title: 'Edit Aset',
@@ -1210,13 +1252,8 @@ export function priceUpdatedLabel(stamp: string): string {
 
 export const PRICE_UPDATE_COPY = {
   title: 'Update Manual',
-  description:
-    'CatetInd gak nyambung ke bank/broker, jadi harga terakhir kamu isi sendiri — apa adanya.',
   fieldLabel: 'Harga sekarang (per unit)',
-  fieldHint: 'Pakai harga yang kamu lihat di aplikasi broker/bursa hari ini.',
-  submit: 'Simpan Harga Baru ✓',
-  /** catatan transparansi: kapan angka ini dicatat (jam ditulis WIB) */
-  stampNote: (stamp: string) => `Waktu update dicatat ${stamp} WIB.`,
+  submit: 'Simpan Harga Baru',
   toastTitle: 'Harga diperbarui! ✅',
   toastDescription: (name: string) => `${name} sekarang memakai harga yang baru kamu isi.`,
   valueLabel: 'Nilai aset setelah update',
@@ -1228,8 +1265,6 @@ export const ASSET_HISTORY_TITLE = 'Riwayat Beli/Jual'
 export const ASSET_HISTORY_EMPTY = 'Belum ada transaksi beli/jual untuk aset ini.'
 export const ASSET_HISTORY_EMPTY_HINT =
   'Riwayat dibaca dari transaksi beli/jual aset, bukan dari nilai yang kamu isi di "Edit Aset" — jadi aset yang nilainya diisi manual bisa tampil kosong di sini.'
-export const ASSET_HISTORY_FOOTNOTE =
-  'Harga rata-rata dihitung otomatis (weighted average) dari riwayat ini.'
 
 /* ── COPY: RIWAYAT PEMBAYARAN HUTANG (Section 7D) ──────────────────────────── */
 export const PAYMENT_HISTORY_TITLE = 'Riwayat Pembayaran'
@@ -1257,12 +1292,11 @@ export const ASSET_EDIT_TOAST = {
 /** sheet Tambah/Edit utang-piutang: satu sheet, dua mode (pola `INVESTMENT_SHEET_COPY`) */
 export const DEBT_SHEET_COPY: Record<
   'add' | 'edit',
-  { title: string; description: string; submit: string }
+  { title: string; description?: string; submit: string }
 > = {
   add: {
     title: 'Tambah Utang / Piutang',
-    description: 'Catat aja dulu — nanti bisa ditandai lunas kapan pun.',
-    submit: 'Simpan ✓',
+    submit: 'Simpan',
   },
   edit: {
     title: 'Edit Utang / Piutang',

@@ -132,10 +132,6 @@ export function PlantDetailModal({
           </StatRow>
         </div>
 
-        <p className="mt-5 rounded-2xl bg-cream/70 px-4 py-3 text-center text-[13px] leading-relaxed text-forest/60 ring-1 ring-soil/8">
-          {plant.activeDays > 0 ? HOME_PLANT_COPY.activeBody(plant.activeDays) : HOME_PLANT_COPY.activeEmptyBody}
-        </p>
-
         {/* pintu meninjau ulang perayaan (inventaris #k) — bukan aksi utama,
             jadi gayanya sekunder; hanya muncul kalau pemanggil menyediakannya */}
         {onReplay && (

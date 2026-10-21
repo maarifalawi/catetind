@@ -5,6 +5,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { BadgeCheck, ShoppingBag, X } from 'lucide-react'
 import {
   LP_PURCHASE_NOTIF as COPY,
+  isPurchaseNotifPeak,
   purchaseNotificationsFromPurchases,
   randomPurchasePackageName,
   seededPurchaseNotifications,
@@ -28,6 +29,9 @@ import { cn } from '@/lib/utils'
      5. DATA NYATA DIDAHULUKAN. Pembelian dari feed (< 30 menit) tampil lebih
         dulu; feed dicek ulang tiap 45 detik supaya pembelian baru ikut muncul.
      6. VARIASI VISUAL. Kota, warna avatar, paket, dan label waktu ikut berubah.
+     7. JAM TAYANG. Toast HANYA hidup di jam rame WIB (07–10, 11.30–14, 17–22).
+        Di luar jendela itu penjadwal berhenti dan memeriksa ulang tiap 5 menit;
+        pembelian nyata yang terjadi di luar jam rame juga tidak diantrekan.
 
    Aksesibilitas: satu toast pada satu waktu, role="status", tidak merebut fokus,
    tombol tutup menghentikan rotasi, dan reduced-motion menghapus geseran. */
@@ -130,9 +134,17 @@ export function LandingPurchaseToasts() {
 
   const ingest = useCallback((items: RecentPurchaseItem[]) => {
     const now = Date.now()
+    /* di luar jam rame tidak ada yang diantrekan: pembelian malam tidak boleh
+       "menumpuk" lalu muncul pagi hari seolah baru terjadi */
+    if (!isPurchaseNotifPeak(new Date(now))) return
     const fresh = items.filter((item) => {
       const at = typeof item.at === 'string' ? Date.parse(item.at) : Number.NaN
-      return Number.isFinite(at) && now - at < COPY.freshMs
+      return (
+        Number.isFinite(at) &&
+        now - at < COPY.freshMs &&
+        /* pembelian yang memang terjadi di luar jam rame juga tidak dipajang */
+        isPurchaseNotifPeak(new Date(at))
+      )
     })
     if (fresh.length === 0) return
 
@@ -208,6 +220,14 @@ export function LandingPurchaseToasts() {
 
     const tick = () => {
       if (cancelled) return
+      /* JAM TAYANG: di luar jam rame tidak ada toast sama sekali — tidak ada
+         checkout jam 2 pagi yang dipaksakan muncul. Timer tetap hidup dan
+         memeriksa ulang setiap beberapa menit, jadi notifikasi otomatis mulai
+         lagi begitu jendela jam rame berikutnya dibuka. */
+      if (!isPurchaseNotifPeak()) {
+        nextId = window.setTimeout(tick, COPY.offPeakCheckMs)
+        return
+      }
       const item = pick()
       if (!item) {
         nextId = window.setTimeout(tick, 8_000)

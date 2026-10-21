@@ -1,5 +1,5 @@
 import { formatIDR } from '../wallets'
-import { MONTHLY_INCOME, type BudgetScope } from './budget'
+import type { BudgetScope } from './budget'
 import { UNDO_WINDOW_MS, shiftISODate } from './history'
 
 /** satu pintu impor untuk halaman Tagihan: komponennya cukup ambil dari sini */
@@ -12,9 +12,12 @@ export { maskMoney, UNDO_WINDOW_MS } from './history'
    1. Daftar tagihan berulang (Kos, Netflix, Spotify, cicilan HP, Kredivo, …)
       beserta status bulan ini.
    2. Fungsi status/filter/pengelompokan — dipakai chip filter & daftar.
-   3. Data turunan untuk dua visual khas halaman ini: Shield Protection Meter
-      (bagian tertutup = tagihan lunas) dan Waterfall Salary Drain (gaji yang
-      "dimakan" tiap tagihan, dari yang terbesar).
+   3. Data turunan untuk dua visual khas halaman ini: ringkasan nominal
+      (belum dibayar · progres · total) dan strip 7 hari (tanggal + titik).
+
+   Yang TIDAK ada lagi di sini: Waterfall Gaji / "Gaji terpakai". Porsi
+   pemasukan adalah cerita Dashboard & Budget; halaman Tagihan hanya bicara
+   nominal tagihan, progres membayar, dan tanggal jatuh tempo.
 
    Catatan tanggal: "hari ini" dipatok KONSTAN (TODAY_ISO / CURRENT_DAY), bukan
    `new Date()`. Sebabnya dua: (1) HTML hasil render server & render pertama
@@ -26,8 +29,6 @@ export { maskMoney, UNDO_WINDOW_MS } from './history'
 
 export type BillStatus = 'upcoming' | 'due_today' | 'overdue' | 'paid'
 export type BillFilter = 'semua' | 'aktif' | 'telat' | 'lunas'
-/** warna kanon status (PRD 2B.2) — resolusi: BUKAN merah */
-export type BillTone = 'sage' | 'amber' | 'terracotta' | 'neutral'
 
 export interface Bill {
   id: string
@@ -53,8 +54,8 @@ export interface Bill {
    * hanya punya SATU definisi konteks; tidak ada tipe konteks kedua.
    *
    * Halaman Tagihan menyaring daftarnya dengan kolom ini, sementara ringkasan
-   * (tameng proteksi, waterfall gaji, % beban tetap) tetap menghitung SEMUA
-   * tagihan — konteks menyaring daftar & arus, bukan total (kanon paket 47).
+   * (nominal belum dibayar & progres lunas) tetap menghitung SEMUA tagihan —
+   * konteks menyaring daftar & arus, bukan total (kanon paket 47).
    */
   scope: BudgetScope
   /** cicilan berbatas: total tenor dalam bulan (kosong = tanpa batas) */
@@ -79,37 +80,13 @@ export interface Bill {
    PAKET 57: "hari ini" milik user datang dari `lib/time.ts`. Konstanta tanggal di
    bawah tinggal sebagai jangkar DEFAULT (render server, test, data seed) dan
    TIDAK lagi dibaca layar — halaman Tagihan mengirim `todayIso` dari
-   `useTodayISO()` supaya strip 7 hari, status telat, dan tameng memakai hari yang
+   `useTodayISO()` supaya strip 7 hari & status telat memakai hari yang
    benar-benar berjalan. */
 export const TODAY_ISO = '2026-09-25'
 export const CURRENT_DAY = 25
 export const DAYS_IN_MONTH = 30
-/**
- * Angka gaji DEMO — sekarang SATU sumber: `MONTHLY_INCOME` di `lib/data/budget.ts`
- * (kanon yang sama dengan Daily HUD). Sebelum paket 57 angka 7.500.000 ditulis
- * ulang di tiga file (`budget`, `bills`, `wealth`) plus 8.500.000 di dua tempat
- * lain (`history` & `calendar`) — lima angka gaji untuk satu user. Diteruskan di
- * sini supaya pemanggil lama (`salary-waterfall`, `bills-screen`) tidak putus,
- * tapi nilainya tidak lagi punya salinan.
- */
-export { MONTHLY_INCOME } from './budget'
-/** panjang strip pratinjau di timeline (section 5) */
-export const TIMELINE_DAYS = 7
-
-/**
- * Copy pengganti Waterfall Gaji saat pemasukan bulanan BELUM diatur (paket 57).
- *
- * Waterfall = "gaji dimakan tagihan demi tagihan", jadi ia butuh PEMBAGI. Dulu
- * pembaginya konstanta 7.500.000 — angka contoh yang membuat kartunya terlihat
- * benar padahal bukan pemasukan user. Begitu konfigurasi user dipakai, pembagi
- * bisa 0; membagi dengan 0 (atau menyalin konstanta demo) dua-duanya salah, jadi
- * kartunya diganti kalimat jujur + satu tautan ke tempat mengaturnya.
- */
-export const WATERFALL_NO_INCOME_COPY = {
-  title: 'Waterfall Gaji belum bisa dihitung',
-  body: 'Isi pemasukan bulananmu dulu — Waterfall membagi tagihan dengan angka itu, bukan dengan contoh.',
-  cta: 'Atur Pemasukan Bulanan',
-} as const
+/** panjang kalender tagihan di halaman Tagihan (dua minggu ke depan) */
+export const TIMELINE_DAYS = 14
 
 /* ── MOCK TAGIHAN BULAN INI ─────────────────────────────────────────────────
    Sengaja campur: 4 sudah lunas, 1 jatuh tempo HARI INI (Cicilan HP), 1 masih
@@ -231,7 +208,7 @@ export function dueContext(
   status: BillStatus,
   currentDay: number = CURRENT_DAY,
 ): { text: string; className: string } {
-  if (status === 'paid') return { text: 'Lunas ✓', className: 'text-hud-sage' }
+  if (status === 'paid') return { text: 'Lunas', className: 'text-hud-sage' }
   if (status === 'overdue') {
     return {
       text: `Jatuh tempo tgl ${bill.dueDate} — Telat ${daysLate(bill, currentDay)} hari`,
@@ -259,12 +236,6 @@ export function totalMonthlyBills(bills: Bill[]): number {
 
 export function paidBills(bills: Bill[]): Bill[] {
   return bills.filter((bill) => bill.isPaidThisMonth)
-}
-
-/** persentase gaji yang "dijanjikan" ke tagihan — dibulatkan */
-export function burnPercentage(bills: Bill[], monthlyIncome: number = MONTHLY_INCOME): number {
-  if (monthlyIncome <= 0) return 0
-  return Math.round((totalMonthlyBills(bills) / monthlyIncome) * 100)
 }
 
 /* ── FILTER (chip Section 6) ──────────────────────────────────────────────── */
@@ -315,129 +286,19 @@ export function billFilterCounts(
 export interface BillGroupMeta {
   status: BillStatus
   label: string
-  icon: string
-  /** warna label section + garis pemisahnya */
-  labelClass: string
-  barClass: string
 }
 
 /** urutan prioritas: telat → hari ini → akan datang → sudah dibayar */
 export const BILL_GROUPS: BillGroupMeta[] = [
-  {
-    status: 'overdue',
-    label: 'Terlambat',
-    icon: '🔴',
-    labelClass: 'text-hud-terracotta',
-    barClass: 'bg-hud-terracotta',
-  },
-  {
-    status: 'due_today',
-    label: 'Hari Ini',
-    icon: '🟡',
-    labelClass: 'text-hud-amber',
-    barClass: 'bg-hud-amber',
-  },
-  {
-    status: 'upcoming',
-    label: 'Akan Datang',
-    icon: '🔵',
-    labelClass: 'text-forest/45',
-    barClass: 'bg-ink/20',
-  },
-  {
-    status: 'paid',
-    label: 'Sudah Dibayar',
-    icon: '✅',
-    labelClass: 'text-hud-sage',
-    barClass: 'bg-hud-sage',
-  },
+  { status: 'overdue', label: 'Terlambat' },
+  { status: 'due_today', label: 'Hari ini' },
+  { status: 'upcoming', label: 'Akan datang' },
+  { status: 'paid', label: 'Sudah dibayar' },
 ]
 
 export interface BillGroup {
   meta: BillGroupMeta
   items: Bill[]
-}
-
-/* ── WATERFALL SALARY DRAIN (Section 4) ───────────────────────────────────── */
-
-export interface WaterfallSegment {
-  id: string
-  emoji: string
-  name: string
-  amount: number
-  /** porsi terhadap pemasukan bulanan (%) */
-  percent: number
-  /** kelas latar Tailwind — sage dari tergelap ke termuda sesuai peringkat */
-  barClass: string
-}
-
-/** gradasi sage: transparansi token `hud-sage` di atas latar terang, jadi tetap
- *  satu keluarga warna — bukan palet baru. Peringkat 1 = penyedot terbesar. */
-const SAGE_RAMP = [
-  'bg-hud-sage',
-  'bg-hud-sage/85',
-  'bg-hud-sage/70',
-  'bg-hud-sage/55',
-  'bg-hud-sage/42',
-  'bg-hud-sage/32',
-] as const
-
-export interface Waterfall {
-  /** tersortir menurun: tagihan terbesar = segmen paling kiri & paling lebar */
-  segments: WaterfallSegment[]
-  total: number
-  burnPercentage: number
-  remaining: number
-}
-
-export function buildWaterfall(
-  bills: Bill[],
-  monthlyIncome: number = MONTHLY_INCOME,
-): Waterfall {
-  const sorted = [...bills].sort((a, b) => b.amount - a.amount)
-  const total = totalMonthlyBills(sorted)
-  const segments = sorted.map((bill, i) => ({
-    id: bill.id,
-    emoji: bill.emoji,
-    name: bill.name,
-    amount: bill.amount,
-    percent: monthlyIncome > 0 ? (bill.amount / monthlyIncome) * 100 : 0,
-    barClass: SAGE_RAMP[Math.min(i, SAGE_RAMP.length - 1)],
-  }))
-  return {
-    segments,
-    total,
-    burnPercentage: burnPercentage(sorted, monthlyIncome),
-    remaining: Math.max(0, monthlyIncome - total),
-  }
-}
-
-/** warna + copy ringkasan beban tetap (Section 4 — ambang 40% / 60%) */
-export function burnTone(
-  burn: number,
-): { tone: BillTone; copy: string; textClass: string; panelClass: string } {
-  if (burn < 40) {
-    return {
-      tone: 'sage',
-      copy: 'Beban tetapmu ringan. Banyak ruang buat nabung! 🌿',
-      textClass: 'text-forest',
-      panelClass: 'bg-hud-sage/15 ring-hud-sage/25',
-    }
-  }
-  if (burn <= 60) {
-    return {
-      tone: 'amber',
-      copy: 'Lumayan padat. Ada yang bisa dipangkas? 🌤️',
-      textClass: 'text-hud-terracotta',
-      panelClass: 'bg-hud-amber/15 ring-hud-amber/25',
-    }
-  }
-  return {
-    tone: 'terracotta',
-    copy: 'Beban tetapmu tinggi. Mau review bareng? 🫂',
-    textClass: 'text-hud-terracotta',
-    panelClass: 'bg-hud-terracotta/12 ring-hud-terracotta/25',
-  }
 }
 
 /* ── TIMELINE 7 HARI (Section 5) ─────────────────────────────────────────── */
@@ -485,23 +346,6 @@ export function billsOnDay(bills: Bill[], day: number): Bill[] {
   return bills.filter((bill) => bill.dueDate === day)
 }
 
-/**
- * Warna titik di bawah tanggal:
- * - `null`  → tidak ada titik (tagihan bulan ini sudah lunas)
- * - `amber` → belum dibayar / siklus bulan depan
- * - `terracotta` → sudah lewat jatuh tempo
- */
-export function timelineDotTone(
-  bill: Bill,
-  nextMonth: boolean,
-  currentDay: number = CURRENT_DAY,
-): 'amber' | 'terracotta' | null {
-  if (nextMonth) return 'amber'
-  if (bill.isPaidThisMonth) return null
-  return bill.dueDate < currentDay ? 'terracotta' : 'amber'
-}
-
-
 /** kelompokkan tagihan; grup kosong tidak dikembalikan; di dalam grup diurut
  *  naik berdasarkan tanggal jatuh tempo */
 export function groupBills(bills: Bill[], currentDay: number = CURRENT_DAY): BillGroup[] {
@@ -515,7 +359,9 @@ export function groupBills(bills: Bill[], currentDay: number = CURRENT_DAY): Bil
 
 /* ── PILIHAN DI SHEET TAMBAH TAGIHAN (Section 9) ─────────────────────────── */
 
-/** 12 emoji preset — dipakai sebagai baris pertama emoji picker */
+/** 12 kunci ikon preset — baris pertama picker. Nilainya tetap emoji supaya
+ *  data tagihan lama (dan sinkronisasi Supabase) tidak perlu dimigrasi; yang
+ *  dirender ke user adalah ikon garis dari `bill-glyph.tsx`. */
 export const BILL_EMOJI_PRESETS = [
   '🏠', '🎬', '🎵', '📱', '💳', '📶', '🔌', '💧', '🏋️', '📚', '🚗', '✨',
 ] as const
@@ -590,12 +436,12 @@ export const BILL_SHEET_COPY = {
   add: {
     title: 'Tambah Tagihan Baru',
     description: 'Cukup nama & tanggal jatuh tempo dulu — sisanya opsional.',
-    submit: 'Simpan Tagihan ✓',
+    submit: 'Simpan Tagihan',
   },
   edit: {
     title: 'Edit Tagihan',
     description: 'Ubah bagian yang keliru aja — sisanya tetap seperti semula.',
-    submit: 'Simpan Perubahan ✓',
+    submit: 'Simpan Perubahan',
   },
 } as const
 
@@ -621,9 +467,9 @@ export const MARK_PAID_TOAST = (name: string, amount: string, walletName: string
   `${name} ${amount} lunas dari ${walletName} ✅`
 
 /* ── KONFIRMASI & UNDO HAPUS TAGIHAN ────────────────────────────────────────
-   Menghapus tagihan rutin itu merusak kebiasaan yang sudah jalan (tameng
-   proteksi & waterfall ikut berubah). Karena itu hapus SELALU lewat
-   konfirmasi + menyediakan Undo 5 detik — bukan langsung hilang. */
+   Menghapus tagihan rutin itu merusak kebiasaan yang sudah jalan (ringkasan &
+   progres ikut berubah). Karena itu hapus SELALU lewat konfirmasi + menyediakan
+   Undo 5 detik — bukan langsung hilang. */
 export const CONFIRM_DELETE_BILL_COPY = {
   overlay: 'Batal hapus tagihan',
   title: 'Hapus tagihan ini?',
@@ -643,6 +489,31 @@ export const DELETE_BILL_TOAST = {
   undoneDescription: 'Tagihannya balik ke daftar seperti semula.',
   /** jaring pengaman tetap jujur kalau tombol Undo ditekan setelah jendelanya tutup */
   expired: 'Jendela Undo-nya sudah lewat — tagihannya bisa ditambahkan lagi kapan aja 🌿',
+} as const
+
+/**
+ * "Bersihkan" = HAPUS semua tagihan lunas sekaligus (bukan sekadar disembunyikan).
+ * Karena itu ia selalu lewat konfirmasi lebih dulu + tetap punya jendela Undo,
+ * sama seperti hapus satu tagihan.
+ */
+export const CONFIRM_CLEAR_PAID_COPY = {
+  overlay: 'Batal bersihkan tagihan lunas',
+  title: (count: number) => `Bersihkan ${count} tagihan lunas?`,
+  body: 'Tagihan yang sudah dibayar akan dihapus dari daftar rutin dan tidak muncul lagi bulan depan.',
+  safety: `Masih bisa dibatalkan lewat Undo selama ${UNDO_WINDOW_MS / 1000} detik.`,
+  note: 'Catatan pembayarannya tetap tersimpan di Riwayat — yang hilang cuma tagihannya dari daftar rutin.',
+  cancel: 'Nanti saja',
+  confirm: 'Bersihkan',
+} as const
+
+export const CLEAR_PAID_TOAST = {
+  title: (count: number) => `${count} tagihan lunas dibersihkan`,
+  description: 'Catatan pembayarannya tetap ada di Riwayat.',
+  undo: 'Undo',
+  undoneTitle: 'Tagihan lunas dikembalikan 🌿',
+  undoneDescription: 'Tagihannya balik ke daftar seperti semula.',
+  expired: 'Jendela Undo-nya sudah lewat — tagihannya tetap terhapus.',
+  failed: 'Tidak ada tagihan lunas yang bisa dibersihkan — daftarnya sudah berubah.',
 } as const
 
 export const HUD_DEDUCTION_HELPER =
@@ -672,14 +543,12 @@ export const BILL_PAYMENT_CATEGORY = 'Tagihan'
 /** sheet "Tandai Lunas" — pemilih dompet + nominal yang benar-benar dibayar */
 export const MARK_PAID_SHEET_COPY = {
   title: (name: string) => `Tandai ${name} lunas`,
-  description:
-    'Pilih dompet yang benar-benar kamu pakai bayar: saldonya langsung berkurang dan catatannya muncul di Riwayat.',
   amountLabel: 'Nominal dibayar',
   walletLabel: 'Dompet sumber',
-  submit: 'Tandai Lunas ✓',
+  submit: 'Tandai Lunas',
   /** pengingat sebelum menekan simpan: uangnya keluar dari dompet mana */
   cashLine: (amount: string, walletName: string) => `${amount} akan keluar dari ${walletName}.`,
-  walletBalance: (value: string) => `Saldo sekarang ${value}`,
+  walletBalance: (value: string) => `Saldo ${value}`,
   noWallet: 'Belum ada dompet yang bisa dipakai. Tambah dompet dulu di halaman Dompet & Akun.',
   invalid: 'Nominalnya belum sah — isi angka rupiah lebih dari nol.',
   insufficient: (walletName: string) =>
@@ -739,7 +608,7 @@ export const BILL_CARD_ACTION_COPY = {
   markPaidA11y: (name: string) => `Tandai ${name} lunas`,
   markPaidHint: 'Pilih dompet sumbernya — saldonya langsung berkurang.',
   /** label di area aksi yang tersingkap saat geser kanan (jalur cepat) */
-  markPaidSwipe: 'Tandai Lunas ✓',
+  markPaidSwipe: 'Tandai Lunas',
   unmarkPaid: 'Batal lunas',
   unmarkPaidA11y: (name: string) => `Batalkan status lunas ${name}`,
   unmarkPaidHint: 'Mengembalikan uangnya ke dompet yang kamu pakai membayar.',
@@ -778,22 +647,10 @@ export const UNPAID_TOAST = {
 } as const
 
 /* ── COPY REVISI AUDIT UI/UX (H6) ────────────────────────────────────────────
-   H6-2 — kalimat saat 7 hari ke depan bersih dari tagihan.
-   H6-1 — dorongan positif saat SEMUA tagihan bulan ini sudah lunas.
    H6-4 — placeholder mengajak menambah tagihan rutin lain. */
-export const BILL_TIMELINE_COPY = {
-  safeWeek: 'Minggu ini aman — tidak ada tagihan 🎉',
-} as const
-
-export const BILLS_ALL_PAID_COPY = {
-  title: 'Semua tagihan bulan ini lunas 🎉',
-  body: 'Kamu bayar semuanya tepat waktu — itu bikin rencana bulan depan jauh lebih tenang.',
-  nextTitle: 'Tagihan bulan depan yang sudah bisa kamu siapkan',
-  nextBody: 'Daftar rutin ini bakal jatuh tempo lagi bulan depan.',
-} as const
 
 export const BILL_ADD_PLACEHOLDER = {
   title: 'Tambah tagihan rutin lainnya',
-  body: 'Langganan, kos, atau cicilan — biar nggak ada yang kelewat.',
+  body: 'Langganan, kos, atau cicilan',
 } as const
 
