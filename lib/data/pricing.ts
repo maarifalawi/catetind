@@ -107,12 +107,15 @@ export const PLANS: PlanDefinition[] = [
     name: 'Paket Catet Aja',
     subtitle: 'Catat manual, tanpa AI',
     monthly: 49_000,
-    /* Harga uji coba QRIS Midtrans: sengaja Rp1 supaya checkout sandbox bisa
-       diuji ujung-ke-ujung. `monthly` tetap harga WARISAN untuk pembelian lama. */
-    lifetime: 1,
+    /* Harga kanon akses selamanya. Sempat dipasang Rp1 khusus uji sandbox
+       QRIS; itu TIDAK boleh ikut rilis karena membuat paket dasar nyaris
+       gratis dan menghapus alasan upgrade. `monthly` tetap harga WARISAN
+       untuk pembelian lama. */
+    lifetime: 109_000,
     features: [
       'Catat pemasukan & pengeluaran',
       'Budget & kategori manual',
+      'Tagihan rutin & pengingat',
       'Pohon Uang (basic)',
       'Bisa dipakai di web & home screen (PWA)',
     ],
@@ -132,6 +135,8 @@ export const PLANS: PlanDefinition[] = [
       'Auto-kategorisasi transaksi',
       'Insight & laporan mingguan AI',
       'Joint Wallet (dompet bersama)',
+      'Kalender Cashflow (proyeksi arus uang)',
+      'Kekayaan & Hutang (net worth + debt snowball)',
       '🎁 Eksklusif: Skin Pot Emas untuk Tanamanmu',
     ],
     badge: 'Pilihan Gen-Z 🏆',
@@ -266,13 +271,26 @@ export type Capability =
   | 'voice'
   | 'ai-report'
   | 'joint-wallet'
+  | 'cashflow-calendar'
+  | 'wealth-tracking'
   | 'ai-unlimited'
   | 'priority-support'
 
 export const PLAN_CAPABILITIES: Record<PlanId, Capability[]> = {
-  /* tier 1 — SENGAJA kosong: catat manual tidak butuh AI sama sekali */
+  /* tier 1 — SENGAJA kosong: catat manual, tanpa AI & tanpa modul lanjutan.
+     Budget, tagihan, dompet, dan riwayat tetap milik paket ini; yang dikunci
+     adalah AI, Joint Wallet, Kalender Cashflow, dan Kekayaan & Hutang. */
   'catet-aja': [],
-  waras: ['ai-chat', 'ai-categorize', 'ocr', 'voice', 'ai-report', 'joint-wallet'],
+  waras: [
+    'ai-chat',
+    'ai-categorize',
+    'ocr',
+    'voice',
+    'ai-report',
+    'joint-wallet',
+    'cashflow-calendar',
+    'wealth-tracking',
+  ],
   /* tier 3 = semuanya, termasuk yang tidak dimiliki tier 2 */
   sultan: [
     'ai-chat',
@@ -281,6 +299,8 @@ export const PLAN_CAPABILITIES: Record<PlanId, Capability[]> = {
     'voice',
     'ai-report',
     'joint-wallet',
+    'cashflow-calendar',
+    'wealth-tracking',
     'ai-unlimited',
     'priority-support',
   ],
@@ -312,6 +332,8 @@ export const ALL_CAPABILITIES: Capability[] = [
   'voice',
   'ai-report',
   'joint-wallet',
+  'cashflow-calendar',
+  'wealth-tracking',
   'ai-unlimited',
   'priority-support',
 ]
@@ -330,6 +352,8 @@ export const CAPABILITY_LABEL: Record<Capability, string> = {
   voice: 'Input suara',
   'ai-report': 'Laporan & rekap AI',
   'joint-wallet': 'Joint Wallet',
+  'cashflow-calendar': 'Kalender Cashflow',
+  'wealth-tracking': 'Kekayaan & Hutang',
   'ai-unlimited': 'AI tanpa batas',
   'priority-support': 'Priority support',
 }

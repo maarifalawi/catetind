@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { Sprout } from 'lucide-react'
 import { EMPTY_ACCOUNT_COPY } from '@/lib/data/account'
-import { isAccountEmpty, useMoneyStore } from '@/lib/money/store'
+import { isAccountEmpty, useMoneyStore, usePendingLocalImport } from '@/lib/money/store'
 import { ONBOARDING_ROUTE } from '@/lib/onboarding'
 
 /* ── KEADAAN KOSONG SETELAH AKUN DIHAPUS (paket 43 · Stage 6 #2) ─────────────
@@ -20,6 +20,11 @@ import { ONBOARDING_ROUTE } from '@/lib/onboarding'
 
 export function EmptyAccountNotice() {
   const snapshot = useMoneyStore()
+  const pendingImport = usePendingLocalImport()
+  /* Kalau masih ada data lama yang menunggu keputusan, `LocalDataNotice` yang
+     mengambil alih: menampilkan "akun kosong, mulai onboarding" di saat yang
+     sama akan menyuruh user meninggalkan data yang mungkin ingin ia selamatkan. */
+  if (pendingImport) return null
   if (!isAccountEmpty(snapshot)) return null
 
   return (

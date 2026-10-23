@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { DEMO_MODE, SHOWS_SAMPLE_DATA } from './demo'
+import { DEMO_ALLOW_SESSION, DEMO_MODE, SHOWS_SAMPLE_DATA } from './demo'
 import {
   DEMO_FORCE_MONTHLY_RECAP,
   DEMO_FORCE_WEEKLY_RECAP,
@@ -26,8 +26,12 @@ import { DEMO_DAY_OVERRIDE, DEMO_THIN_DATA } from './data/monthly-review'
 
 describe('saklar demo · satu gerbang NEXT_PUBLIC_DEMO', () => {
   it('nilai saklar selalu mengikuti env, di kedua mode', () => {
-    const expected = process.env.NEXT_PUBLIC_DEMO === '1'
+    const expected =
+      process.env.NEXT_PUBLIC_DEMO === '1' && process.env.NODE_ENV !== 'production'
     expect(DEMO_MODE).toBe(expected)
+    expect(DEMO_ALLOW_SESSION).toBe(
+      expected && process.env.NEXT_PUBLIC_DEMO_ALLOW_SESSION === '1',
+    )
 
     /* perilaku yang dulu dipaksa tampil keras di produksi */
     expect(DEMO_PARTNER_JOINED).toBe(expected)
@@ -41,6 +45,17 @@ describe('saklar demo · satu gerbang NEXT_PUBLIC_DEMO', () => {
     /* dua saklar yang MEMANG selalu mati (dinyalakan manual saat ditinjau) */
     expect(DEMO_JOINED_CELEBRATION).toBe(false)
     expect(DEMO_THIN_DATA).toBe(false)
+  })
+
+  it('produksi TIDAK PERNAH menyalakan demo walau env=1 (pagar paket 100)', async () => {
+    vi.resetModules()
+    vi.stubEnv('NODE_ENV', 'production')
+    vi.stubEnv('NEXT_PUBLIC_DEMO', '1')
+    const prod = await import('./demo')
+    expect(prod.DEMO_MODE).toBe(false)
+    expect(prod.SHOWS_SAMPLE_DATA).toBe(false)
+    vi.unstubAllEnvs()
+    vi.resetModules()
   })
 
   /* ── paket 64 · Paket D: gerbang seed data contoh ─────────────────────────

@@ -172,6 +172,26 @@ export const QUICK_WALLET_PICKS: {
    catet-sidebar-collapsed) supaya gampang diaudit. */
 export const ONBOARDING_STORE_KEY = 'catet-onboarding'
 export const WELCOME_TOAST_KEY = 'catet-welcome-toast'
+/**
+ * Penanda SESI (bukan localStorage): onboarding baru saja selesai di tab ini.
+ * Gerbang memakainya supaya POST ke server yang telat/gagal tidak membuat user
+ * memantul balik ke setup. Sengaja tidak dibaca lintas akun/perangkat — data
+ * milik akun tetap `user_settings.onboarding` di server.
+ */
+export const ONBOARDING_SESSION_KEY = 'catet-onboarding-selesai'
+/**
+ * Penanda SESI kalau user memilih keluar dari onboarding (konfirmasi browser).
+ * Gerbang menghormati pilihan itu untuk sesi ini — Home menampilkan ajakan
+ * onboarding lagi, tapi user tidak dipenjara di layar setup. Hilang saat tab
+ * ditutup/akun berganti, jadi onboarding tetap diminta lagi di sesi berikutnya.
+ */
+export const ONBOARDING_SKIP_KEY = 'catet-onboarding-lewati'
+/**
+ * Penanda sesaat sebelum reload yang DISENGAJA (mis. setelah user memilih
+ * "Masukkan ke akun" dari data lama). Tanpa ini, guard `beforeunload` di
+ * onboarding akan memblokir reload tersebut dengan dialog konfirmasi.
+ */
+export const ONBOARDING_RELOAD_KEY = 'catet-onboarding-reload'
 
 /**
  * Halaman onboarding itu sendiri — tujuan SETELAH pembayaran sukses di
@@ -234,6 +254,9 @@ export function saveOnboardingResult(result: OnboardingResult) {
     /* sessionStorage (bukan localStorage): toast sambutan cukup sekali per sesi,
        tidak muncul lagi tiap kali app dibuka. */
     sessionStorage.setItem(WELCOME_TOAST_KEY, '1')
+    sessionStorage.setItem(ONBOARDING_SESSION_KEY, '1')
+    sessionStorage.removeItem(ONBOARDING_SKIP_KEY)
+    sessionStorage.removeItem(ONBOARDING_RELOAD_KEY)
   } catch {
     /* storage penuh / private mode — jangan sampai bikin onboarding gagal */
   }

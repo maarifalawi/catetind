@@ -37,7 +37,7 @@ const [CATET_AJA, WARAS, SULTAN] = PLANS
 describe('katalog paket', () => {
   it('3 tier dengan harga lifetime kanon', () => {
     expect(PLANS.map((plan) => plan.id)).toEqual(['catet-aja', 'waras', 'sultan'])
-    expect(CATET_AJA.lifetime).toBe(1)
+    expect(CATET_AJA.lifetime).toBe(109_000)
     expect(WARAS.lifetime).toBe(129_000)
     expect(SULTAN.lifetime).toBe(299_000)
     /* harga WARISAN: hanya untuk menampilkan pembelian lama, bukan dijual */
@@ -86,7 +86,7 @@ describe('priceFor() — harga per periode, dari PLANS', () => {
   })
 
   it('lifetime pembelian pertama = harga penuh', () => {
-    expect(priceFor(CATET_AJA, { period: 'lifetime' })).toBe(1)
+    expect(priceFor(CATET_AJA, { period: 'lifetime' })).toBe(109_000)
     expect(priceFor(WARAS, { period: 'lifetime' })).toBe(129_000)
     expect(priceFor(SULTAN, { period: 'lifetime' })).toBe(299_000)
   })
@@ -100,13 +100,13 @@ describe('priceFor() — harga per periode, dari PLANS', () => {
   it('lifetime dari lifetime lebih rendah = selisih', () => {
     expect(
       priceFor(WARAS, { period: 'lifetime', ownedPlanId: 'catet-aja', ownedIsLifetime: true }),
-    ).toBe(128_999)
+    ).toBe(20_000)
     expect(
       priceFor(SULTAN, { period: 'lifetime', ownedPlanId: 'waras', ownedIsLifetime: true }),
     ).toBe(170_000)
     expect(
       priceFor(SULTAN, { period: 'lifetime', ownedPlanId: 'catet-aja', ownedIsLifetime: true }),
-    ).toBe(298_999)
+    ).toBe(190_000)
   })
 
   it('lifetime dari lifetime sama/lebih tinggi → 0', () => {
@@ -119,10 +119,10 @@ describe('priceFor() — harga per periode, dari PLANS', () => {
   })
 
   it('upgradeDiff() = priceFor() lifetime target dari paket asal lifetime', () => {
-    expect(upgradeDiff('catet-aja', 'waras')).toBe(128_999)
+    expect(upgradeDiff('catet-aja', 'waras')).toBe(20_000)
     expect(upgradeDiff('waras', 'sultan')).toBe(170_000)
-    expect(upgradeDiff('catet-aja', 'sultan')).toBe(298_999)
-    expect(upgradeDiff(null, 'catet-aja')).toBe(1)
+    expect(upgradeDiff('catet-aja', 'sultan')).toBe(190_000)
+    expect(upgradeDiff(null, 'catet-aja')).toBe(109_000)
     expect(upgradeDiff('sultan', 'waras')).toBe(0)
   })
 
@@ -157,14 +157,14 @@ describe('isValidOfferAmount() — nominal kiriman klien tidak dipercaya', () =>
   it('harga lifetime penuh diterima; selisih lifetime hanya sah dari lifetime', () => {
     expect(isValidOfferAmount(WARAS, 129_000, { period: 'lifetime' })).toBe(true)
     expect(
-      isValidOfferAmount(WARAS, 128_999, {
+      isValidOfferAmount(WARAS, 20_000, {
         period: 'lifetime',
         ownedPlanId: 'catet-aja',
         ownedIsLifetime: true,
       }),
     ).toBe(true)
     expect(
-      isValidOfferAmount(WARAS, 128_999, {
+      isValidOfferAmount(WARAS, 20_000, {
         period: 'lifetime',
         ownedPlanId: 'catet-aja',
         ownedIsLifetime: false,
@@ -176,9 +176,9 @@ describe('isValidOfferAmount() — nominal kiriman klien tidak dipercaya', () =>
     expect(isValidOfferAmount(WARAS, 1_000, { period: 'lifetime' })).toBe(false)
   })
 
-  it('Paket Catet Aja Rp1 tetap nominal sah (harga uji QRIS)', () => {
-    expect(isValidOfferAmount(CATET_AJA, 1, { period: 'lifetime' })).toBe(true)
-    expect(isValidOfferAmount(CATET_AJA, 2, { period: 'lifetime' })).toBe(false)
+  it('Paket Catet Aja Rp109.000 adalah nominal kanon', () => {
+    expect(isValidOfferAmount(CATET_AJA, 109_000, { period: 'lifetime' })).toBe(true)
+    expect(isValidOfferAmount(CATET_AJA, 1, { period: 'lifetime' })).toBe(false)
   })
 })
 
@@ -188,13 +188,17 @@ describe('capabilitiesOf() / canUse() — kunci fitur per tier', () => {
     expect(canUse('catet-aja', 'ai-chat')).toBe(false)
     expect(canUse('catet-aja', 'ocr')).toBe(false)
     expect(canUse('catet-aja', 'joint-wallet')).toBe(false)
+    expect(canUse('catet-aja', 'cashflow-calendar')).toBe(false)
+    expect(canUse('catet-aja', 'wealth-tracking')).toBe(false)
   })
 
-  it('tier 2 punya AI tapi BUKAN tanpa batas', () => {
+  it('tier 2 punya AI + modul lanjutan, tapi BUKAN tanpa batas', () => {
     expect(canUse('waras', 'ai-chat')).toBe(true)
     expect(canUse('waras', 'ocr')).toBe(true)
     expect(canUse('waras', 'ai-report')).toBe(true)
     expect(canUse('waras', 'joint-wallet')).toBe(true)
+    expect(canUse('waras', 'cashflow-calendar')).toBe(true)
+    expect(canUse('waras', 'wealth-tracking')).toBe(true)
     expect(canUse('waras', 'ai-unlimited')).toBe(false)
     expect(canUse('waras', 'priority-support')).toBe(false)
   })
@@ -219,6 +223,8 @@ describe('capabilitiesOf() / canUse() — kunci fitur per tier', () => {
   it('paket pembuka tiap kemampuan ditentukan sekali di sini', () => {
     expect(capabilityUnlockedBy('ai-chat').id).toBe('waras')
     expect(capabilityUnlockedBy('ocr').id).toBe('waras')
+    expect(capabilityUnlockedBy('cashflow-calendar').id).toBe('waras')
+    expect(capabilityUnlockedBy('wealth-tracking').id).toBe('waras')
     expect(capabilityUnlockedBy('ai-unlimited').id).toBe('sultan')
     expect(capabilityUnlockedBy('priority-support').id).toBe('sultan')
   })

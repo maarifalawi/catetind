@@ -14,14 +14,18 @@ import { cn } from '@/lib/utils'
 import {
   EXIT_WARNING,
   LIFE_SITUATIONS,
+  ONBOARDING_SKIP_KEY,
+  ONBOARDING_RELOAD_KEY,
   POST_ONBOARDING_ROUTE,
   saveOnboardingResult,
   type DashboardPeriod,
   type OnboardingModule,
+  type OnboardingResult,
 } from '@/lib/onboarding'
 import { OnboardingStepSituation } from './onboarding-step-situation'
 import { OnboardingStepIncome } from './onboarding-step-income'
 import { OnboardingStepFirstTransaction } from './onboarding-step-first-transaction'
+import { LocalDataNotice } from './local-data-notice'
 import type { TransactionTypeId } from '@/components/dashboard/transaction-input-engine'
 import { addWalletAccount, getMoneySnapshot, walletIdOfName } from '@/lib/money/store'
 import { recordTransaction } from '@/lib/transaction-bus'
@@ -107,6 +111,16 @@ export function OnboardingFlow() {
     if (firstTransactionDone) return
 
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      try {
+        /* Reload yang diminta sendiri oleh notice data lama bukan "keluar tidak
+           sengaja" — jangan blokir dengan dialog. */
+        if (sessionStorage.getItem(ONBOARDING_RELOAD_KEY) === '1') {
+          sessionStorage.removeItem(ONBOARDING_RELOAD_KEY)
+          return
+        }
+      } catch {
+        /* private mode — tetap pasang guard */
+      }
       event.preventDefault()
       event.returnValue = ''
     }
@@ -117,6 +131,13 @@ export function OnboardingFlow() {
 
     const onPopState = () => {
       if (window.confirm(EXIT_WARNING)) {
+        /* Hormati pilihan user: jangan penjara di layar setup. Gerbang membaca
+           penanda SESI ini, lalu Home menampilkan ajakan onboarding lagi. */
+        try {
+          sessionStorage.setItem(ONBOARDING_SKIP_KEY, '1')
+        } catch {
+          /* private mode — biarkan percobaan keluar tetap jalan */
+        }
         window.location.assign(POST_ONBOARDING_ROUTE)
         return
       }
@@ -206,7 +227,7 @@ export function OnboardingFlow() {
 
   /** Simpan hasil onboarding → masuk dashboard (toast sambutan muncul di sana) */
   function handleEnterDashboard() {
-    saveOnboardingResult({
+    const result: OnboardingResult = {
       situations: selectedSituations,
       modules: selectedModules,
       dashboardPeriod,
@@ -221,6 +242,18 @@ export function OnboardingFlow() {
       },
       reminderEnabled,
       completedAt: new Date().toISOString(),
+    }
+    saveOnboardingResult(result)
+    /* Onboarding adalah data AKUN, bukan cuma perangkat. Kirim ke server supaya
+       perangkat kedua tidak mengulang setup. Tidak ditunggu: penanda lokal sudah
+       membuat gerbang menganggap selesai, dan kegagalan jaringan tidak boleh
+       menahan user di layar ini. */
+    void fetch('/api/onboarding', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(result),
+    }).catch(() => {
+      /* tetap lanjut; percobaan berikutnya bisa mengirim ulang hasil yang sama */
     })
     /* replace: tombol Back tidak memutar ulang flow yang sudah selesai */
     router.replace(POST_ONBOARDING_ROUTE)
@@ -322,6 +355,11 @@ export function OnboardingFlow() {
             </button>
           )}
         </div>
+        {/* Data lama di perangkat: tawarkan keputusan SEBELUM user membuat dompet
+            baru, karena setelah akun punya dompet jalur impor ditutup. */}
+        <LocalDataNotice />
+
+
 
         {/* ── isi step: slide horizontal + fade (AnimatePresence) ────────── */}
         <AnimatePresence mode="wait" custom={direction} initial={false}>

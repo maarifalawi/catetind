@@ -47,8 +47,6 @@ describe('canAccessPage() — matriks tiga paket', () => {
     '/wallet',
     '/budget',
     '/bills',
-    '/calendar',
-    '/wealth',
     '/referral',
     '/help',
     '/install',
@@ -68,21 +66,25 @@ describe('canAccessPage() — matriks tiga paket', () => {
     }
   })
 
-  it('Paket Catet Aja: Joint Wallet & AI Preferences terkunci', () => {
+  it('Paket Catet Aja: Joint Wallet, Kalender, Kekayaan & AI Preferences terkunci', () => {
     expect(canAccessPage('catet-aja', '/joint')).toBe(false)
+    expect(canAccessPage('catet-aja', '/calendar')).toBe(false)
+    expect(canAccessPage('catet-aja', '/wealth')).toBe(false)
     expect(canAccessPage('catet-aja', '/settings/ai')).toBe(false)
     expect(pageLockCapability('/joint')).toBe('joint-wallet')
+    expect(pageLockCapability('/calendar')).toBe('cashflow-calendar')
+    expect(pageLockCapability('/wealth')).toBe('wealth-tracking')
     expect(pageLockCapability('/settings/ai')).toBe('ai-chat')
   })
 
   it('Paket Waras: SEMUA halaman terbuka', () => {
-    for (const path of [...manualPages, '/joint', '/settings/ai']) {
+    for (const path of [...manualPages, '/calendar', '/wealth', '/joint', '/settings/ai']) {
       expect(canAccessPage('waras', path), path).toBe(true)
     }
   })
 
   it('Paket Sultan: SEMUA halaman terbuka', () => {
-    for (const path of [...manualPages, '/joint', '/settings/ai']) {
+    for (const path of [...manualPages, '/calendar', '/wealth', '/joint', '/settings/ai']) {
       expect(canAccessPage('sultan', path), path).toBe(true)
     }
   })
@@ -91,19 +93,24 @@ describe('canAccessPage() — matriks tiga paket', () => {
     expect(canAccessPage(null, '/app')).toBe(true)
     expect(canAccessPage(null, '/wallet')).toBe(true)
     expect(canAccessPage(null, '/settings')).toBe(true)
+    expect(canAccessPage(null, '/calendar')).toBe(false)
+    expect(canAccessPage(null, '/wealth')).toBe(false)
     expect(canAccessPage(null, '/joint')).toBe(false)
     expect(canAccessPage(null, '/settings/ai')).toBe(false)
   })
 
   it('paket kedaluwarsa (planId null) diperlakukan sama dengan belum punya paket', () => {
     expect(canAccessPage(null, '/joint')).toBe(false)
+    expect(canAccessPage(null, '/calendar')).toBe(false)
     expect(canAccessPage(null, '/history')).toBe(true)
   })
 })
 
 describe('daftar halaman terkunci / terbuka', () => {
-  it('Catet Aja hanya kehilangan dua halaman', () => {
+  it('Catet Aja kehilangan empat halaman', () => {
     expect(lockedPagesFor('catet-aja').map((rule) => rule.path)).toEqual([
+      '/calendar',
+      '/wealth',
       '/joint',
       '/settings/ai',
     ])
@@ -127,10 +134,16 @@ describe('daftar halaman terkunci / terbuka', () => {
 describe('copy lock halaman', () => {
   it('menyebut paket pembuka & kemampuan yang kurang', () => {
     expect(pageUnlockPlan('/joint')?.id).toBe('waras')
+    expect(pageUnlockPlan('/calendar')?.id).toBe('waras')
+    expect(pageUnlockPlan('/wealth')?.id).toBe('waras')
     expect(pageUnlockPlan('/settings/ai')?.id).toBe('waras')
     expect(pageLockText('/joint')).toContain('Joint Wallet')
     expect(pageLockText('/joint')).toContain('Paket Waras')
+    expect(pageLockText('/calendar')).toContain('Kalender Cashflow')
+    expect(pageLockText('/wealth')).toContain('Kekayaan & Hutang')
     expect(pageLockText('/settings/ai')).toContain('AI Coach')
     expect(pageLockText('/wallet')).toBeNull()
+    expect(pageLockText('/budget')).toBeNull()
+    expect(pageLockText('/bills')).toBeNull()
   })
 })

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'reac
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ArrowRight, Check, Mic, Plus, ScanLine, Send, Sparkles, X } from 'lucide-react'
+import { ArrowRight, Check, Lock, Mic, Plus, ScanLine, Send, Sparkles, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { useAIChat } from '@/hooks/use-ai-chat'
@@ -394,7 +394,11 @@ export function AIChatWidget() {
         <button
           type="button"
           onClick={openPanel}
-          aria-label={AI_CHAT_COPY.openLabel}
+          aria-label={
+            aiLocked
+              ? `${lockedBadgeText('ai-chat')} — ${AI_CHAT_COPY.openLabel}`
+              : AI_CHAT_COPY.openLabel
+          }
           /* PAKET 95 (permintaan pemilik produk): tombol ini PURE GAMBAR dari
              `public/Buka AI Coach.png` yang ditaruh langsung pemilik produk —
              artwork-nya SUDAH membawa cakram + stroke sendiri, jadi tidak ada lagi
@@ -410,12 +414,16 @@ export function AIChatWidget() {
             height={1930}
             className="size-full"
           />
-          {hasInsight && (
+          {aiLocked ? (
+            <span className="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-gradient-to-br from-daisy-light via-daisy to-daisy-deep text-daisy-deep ring-2 ring-cream">
+              <Lock className="size-2.5" strokeWidth={3.2} aria-hidden />
+            </span>
+          ) : hasInsight ? (
             <span className="absolute -right-0.5 -top-0.5 flex size-3.5">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-mint opacity-80" />
               <span className="relative inline-flex size-3.5 rounded-full bg-mint ring-2 ring-cream" />
             </span>
-          )}
+          ) : null}
         </button>
       )}
 

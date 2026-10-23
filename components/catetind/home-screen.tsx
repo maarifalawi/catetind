@@ -19,6 +19,7 @@ import { WeeklyRecapBanner } from './weekly-recap-banner'
 import { WeeklyRecapModal } from './weekly-recap-modal'
 import { HomeBanners } from './home-banner'
 import { EmptyAccountNotice } from './empty-account-notice'
+import { LocalDataNotice } from './local-data-notice'
 import { MonthlyReviewModal } from './monthly-review-modal'
 import { MonthlyTargetCard } from './monthly-target-card'
 import { MilestoneCelebration } from './milestone-celebration'
@@ -174,6 +175,7 @@ export function HomeScreen() {
             lib/data/home.ts — dipakai halaman Dompet & Akun. */}
         {/* keadaan kosong (paket 43): hanya muncul setelah akun dihapus — lihat
             komponennya untuk alasan mengapa satu kalimat ini wajib ada */}
+        <LocalDataNotice />
         <EmptyAccountNotice />
         <div className="mt-4 lg:mt-0 lg:flex lg:items-center lg:justify-between lg:gap-8">
           <div className="min-w-0">

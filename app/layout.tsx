@@ -4,6 +4,7 @@ import { Inter } from 'next/font/google'
 import { AIChatWidget } from '@/components/catetind/ai-chat-widget'
 import { AppLockProvider } from '@/components/catetind/app-lock-provider'
 import { DemoSeedGate } from '@/components/catetind/demo-seed-gate'
+import { OnboardingGate } from '@/components/catetind/onboarding-gate'
 import { OnboardingWelcomeToast } from '@/components/catetind/onboarding-welcome-toast'
 import { MobileBottomNav } from '@/components/MobileBottomNav'
 import { MoneyContextProvider } from '@/components/catetind/money-context-provider'
@@ -148,21 +149,23 @@ export default function RootLayout({
                       bocor saat keyboard HP terbuka. Vaul merender sheet-nya lewat
                       PORTAL ke <body>, jadi sheet ada DI LUAR wrapper ini dan
                       tetap interaktif. */}
-                  <div data-catetind-page-root>
-                    {/* Gerbang seed demo (paket 65): menulis data contoh lewat store
-                        HANYA saat NEXT_PUBLIC_DEMO=1 — di produksi ia no-op. */}
-                    <DemoSeedGate />
-                    <SubscriptionBanner />
-                    {/* Banner Offline & Antrean Lokal (paket 42) — di bawah banner
-                        langganan supaya saat keduanya tampil user melihat dua-duanya.
-                        Menyembunyikan diri sendiri kalau online & antrean kosong. */}
-                    <OfflineBanner />
-                    {children}
-                    <MobileBottomNav />
-                    {/* Floating AI Chat — AI Coach CatetInd (Domain 4B); state percakapan
-                        persisten lintas halaman karena layout tidak unmount saat navigasi */}
-                    <AIChatWidget />
-                  </div>
+                  <OnboardingGate>
+                    <div data-catetind-page-root>
+                      {/* Gerbang seed demo (paket 65): menulis data contoh lewat store
+                          HANYA saat NEXT_PUBLIC_DEMO=1 — di produksi ia no-op. */}
+                      <DemoSeedGate />
+                      <SubscriptionBanner />
+                      {/* Banner Offline & Antrean Lokal (paket 42) — di bawah banner
+                          langganan supaya saat keduanya tampil user melihat dua-duanya.
+                          Menyembunyikan diri sendiri kalau online & antrean kosong. */}
+                      <OfflineBanner />
+                      {children}
+                      <MobileBottomNav />
+                      {/* Floating AI Chat — AI Coach CatetInd (Domain 4B); state percakapan
+                          persisten lintas halaman karena layout tidak unmount saat navigasi */}
+                      <AIChatWidget />
+                    </div>
+                  </OnboardingGate>
 
                   {/* Toast SENGAJA di luar wrapper inert: notifikasi (mis. "tersalin")
                       harus tetap bisa diklik walau ada sheet terbuka. */}

@@ -62,8 +62,11 @@ export const PAGE_ACCESS: PageAccessRule[] = [
   { path: '/wallet', label: 'Dompet & Akun', capability: null },
   { path: '/budget', label: 'Budget & Target Nabung', capability: null },
   { path: '/bills', label: 'Tagihan Rutin', capability: null },
-  { path: '/calendar', label: 'Kalender Cashflow', capability: null },
-  { path: '/wealth', label: 'Kekayaan & Hutang', capability: null },
+  /* Modul lanjutan: terbuka untuk Waras ke atas. Catet Aja tetap punya
+     pencatatan manual + budget + tagihan, tapi proyeksi arus uang & net worth
+     adalah nilai utama Paket Waras — lihat `PLANS[].features`. */
+  { path: '/calendar', label: 'Kalender Cashflow', capability: 'cashflow-calendar' },
+  { path: '/wealth', label: 'Kekayaan & Hutang', capability: 'wealth-tracking' },
   { path: '/joint', label: 'Joint Wallet', capability: 'joint-wallet' },
   { path: '/referral', label: 'Ajak Teman', capability: null },
   { path: '/help', label: 'Pusat Bantuan', capability: null },

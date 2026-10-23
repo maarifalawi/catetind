@@ -183,7 +183,7 @@ describe('LP_PRICING — harga yang diiklankan = harga yang ditagih', () => {
     for (const plan of PLANS) {
       expect(lpPlanPrice(plan.id, 'lifetime')).toBe(plan.lifetime)
     }
-    expect(PLANS.map((plan) => plan.lifetime)).toEqual([1, 129_000, 299_000])
+    expect(PLANS.map((plan) => plan.lifetime)).toEqual([109_000, 129_000, 299_000])
   })
 
   it('tidak ada daftar harga kedua di LP_PRICING', () => {
@@ -673,7 +673,7 @@ describe('notifikasi pembelian', () => {
 
   it('pembelian Catet Aja tidak pernah masuk notifikasi', () => {
     const items = purchaseNotificationsFromPurchases(
-      [{ name: 'Sinta', price: 1, at: '2026-10-19T11:58:00Z' }],
+      [{ name: 'Sinta', price: 109_000, at: '2026-10-19T11:58:00Z' }],
       Date.parse('2026-10-19T12:00:00Z'),
     )
     expect(items).toEqual([])

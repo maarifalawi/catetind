@@ -1,19 +1,21 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowRight, Lock, Sparkles } from 'lucide-react'
+import { ArrowRight, Check, Lock, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock'
 import {
+  CAPABILITY_LABEL,
   CHECKOUT_PATH,
   UPGRADE_COPY,
   buildUpgradeHref,
   formatIDR,
+  lockedCapabilitiesFor,
   priceFor,
   type PlanDefinition,
   type PlanId,
 } from '@/lib/data/pricing'
-import { nextTier, upgradeTargets } from '@/lib/data/upgrade'
+import { nextTier, upgradeHighlights, upgradeTargets } from '@/lib/data/upgrade'
 import { useSubscriptionGate } from './subscription-gate-provider'
 
 /* ── MODAL UPGRADE ───────────────────────────────────────────────────────────
@@ -49,6 +51,10 @@ export function UpgradeModal({
 
   const targets = upgradeTargets(planId)
   const hero = nextTier(planId)
+  const heroFeatures = hero ? upgradeHighlights(planId, hero, 10) : []
+  const stillLocked = hero
+    ? lockedCapabilitiesFor(hero.id).map((capability) => CAPABILITY_LABEL[capability])
+    : []
 
   return (
     <div
@@ -93,6 +99,40 @@ export function UpgradeModal({
             <Sparkles className="size-3.5 shrink-0" strokeWidth={2.4} aria-hidden />
             Paketmu sekarang: <b className="font-medium">{plan.name}</b>
           </p>
+        )}
+
+        {/* ── NILAI YANG DIDAPAT, BUKAN CUMA HARGA (paket 100) ──────────────
+            Dulu modal ini hanya menampilkan baris paket + nominal. User yang
+            merasa "cukup" tidak punya alasan untuk menekan tombol. Sekarang
+            daftar kemampuan yang BARU terbuka diturunkan dari matriks
+            `PLAN_CAPABILITIES` — bukan copy kedua. */}
+        {plan && hero && heroFeatures.length > 0 && (
+          <section className="mt-4 rounded-2xl bg-cream p-4 ring-1 ring-soil/12">
+            <p className="text-[12.5px] font-medium text-forest">
+              Yang kamu dapat di {hero.name}
+            </p>
+            <ul className="mt-2 grid gap-1.5">
+              {heroFeatures.map((feature) => (
+                <li
+                  key={feature}
+                  className="flex items-start gap-2 text-[12px] leading-relaxed text-forest/70"
+                >
+                  <Check
+                    className="mt-0.5 size-3.5 shrink-0 text-forest"
+                    strokeWidth={2.8}
+                    aria-hidden
+                  />
+                  {feature}
+                </li>
+              ))}
+            </ul>
+            {stillLocked.length > 0 && (
+              <p className="mt-2.5 flex items-start gap-1.5 border-t border-soil/10 pt-2.5 text-[11px] leading-relaxed text-forest/50">
+                <Lock className="mt-0.5 size-3 shrink-0" strokeWidth={2.6} aria-hidden />
+                Masih terkunci setelah upgrade ini: {stillLocked.join(', ')}.
+              </p>
+            )}
+          </section>
         )}
 
         {!plan && (

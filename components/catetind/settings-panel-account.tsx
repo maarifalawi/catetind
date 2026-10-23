@@ -13,7 +13,15 @@ import {
   SettingsPanel,
   TonePill,
 } from './settings-ui'
-import { clampPayday, digitsToDisplay, onlyDigits, type DashboardPeriod } from '@/lib/onboarding'
+import {
+  ONBOARDING_SESSION_KEY,
+  ONBOARDING_SKIP_KEY,
+  WELCOME_TOAST_KEY,
+  clampPayday,
+  digitsToDisplay,
+  onlyDigits,
+  type DashboardPeriod,
+} from '@/lib/onboarding'
 import {
   MONEY_SETTINGS_COPY,
   enabledContextsOf,
@@ -30,7 +38,6 @@ import { useSubscriptionGate } from './subscription-gate-provider'
 import { activeInviteFor } from '@/lib/invite-store'
 import { useSessionUser } from '@/hooks/use-session-user'
 import { endSession } from '@/lib/session-client'
-import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 
 /* ── Panel: Profil & Akun + Keluar (inventaris #15, #23) ──────────────────────
@@ -602,7 +609,6 @@ export function ProfileSettingsPanel() {
 export function LogoutSettingsPanel() {
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
-  const router = useRouter()
   /* identitas dari SESI (perbaikan audit K4): kalimat panel ini dulu memajang
      alamat contoh seolah-olah itu akun user. */
   const { user } = useSessionUser()
@@ -626,10 +632,24 @@ export function LogoutSettingsPanel() {
       })
       return
     }
+    /* Penanda onboarding adalah milik SESI tab ini. Saat akun berganti, akun
+       berikutnya tidak boleh dianggap sudah onboarding hanya karena akun
+       sebelumnya menyelesaikannya di browser yang sama. */
+    try {
+      sessionStorage.removeItem(ONBOARDING_SESSION_KEY)
+      sessionStorage.removeItem(ONBOARDING_SKIP_KEY)
+      sessionStorage.removeItem(WELCOME_TOAST_KEY)
+    } catch {
+      /* private mode — tidak ada yang bisa dibersihkan */
+    }
     toast.success(SESSION_COPY.signedOutToast, {
       description: SESSION_COPY.signedOutToastDescription,
     })
-    router.push(LOGIN_PATH)
+    /* Reload penuh, bukan navigasi client: store uang & store domain lain hidup
+       di memory modul. Kalau hanya `router.push`, akun berikutnya di tab yang
+       sama bisa melihat sisa data akun sebelumnya sampai halaman di-refresh.
+       `assign` memastikan semua modul lahir kosong dan membaca sesi baru. */
+    window.location.assign(LOGIN_PATH)
   }
 
   return (

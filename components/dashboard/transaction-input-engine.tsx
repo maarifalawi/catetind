@@ -15,6 +15,7 @@ import {
   ArrowLeftRight,
   Camera,
   Check,
+  Lock,
   Mic,
   PiggyBank,
   ScanLine,
@@ -39,6 +40,7 @@ import { amountInputFont } from '@/lib/typography'
 import { useAiQuota } from '@/hooks/use-ai-quota'
 import { FEATURE_LOCK_COPY } from '@/lib/data/upgrade'
 import { useSubscriptionGate } from '@/components/catetind/subscription-gate-provider'
+import { useUpgradeGate } from '@/components/catetind/upgrade-gate-provider'
 import { SubscriptionLockNote } from '@/components/catetind/subscription-lock-note'
 import { MOCK_RECEIPT_AMOUNT, MOCK_RECEIPT_READ_MS, receiptNoteFromFileName } from '@/lib/transaction-ai'
 import {
@@ -344,7 +346,18 @@ export function TransactionInputEngine({
      Ditempel DI ENGINE, bukan di tiap shell (bottom sheet, modal web, joint,
      kalender, edit transaksi), supaya nol titik yang bisa terlewat. Form-nya
      tetap bisa dibuka & dibaca — yang berhenti hanya penyimpanannya. */
-  const { inputLocked } = useSubscriptionGate()
+  const { inputLocked, planKnown, canUse } = useSubscriptionGate()
+  /* PINTU OCR & VOICE ADALAH FITUR BERBAYAR (paket 84, diperketat di paket
+     100): dulu keduanya cuma membaca `inputLocked` + kuota, sehingga paket
+     Catet Aja tetap bisa "scan struk" dan "input suara" — bahkan lewat jalur
+     mock. Sekarang kemampuan paket diperiksa DI SINI, sebelum file picker atau
+     timer mock disentuh. Saat paket belum diketahui (`planKnown` false), tidak
+     ada yang dikunci: mengunci berdasarkan ketidaktahuan akan memenjarakan
+     build demo & user yang backend-nya sedang tidak bisa dibaca. */
+  const ocrLocked = planKnown && !canUse('ocr')
+  const voiceLocked = planKnown && !canUse('voice')
+  const captureLocked = ocrLocked || voiceLocked
+  const { openUpgrade } = useUpgradeGate()
   /* Kuota AI yang BENAR-BENAR terpakai (paket 42): dua quick-action di stage ini
      (scan struk & input suara) memang memanggil AI, jadi keduanya mati saat kuota
      habis — dengan penjelasan, dan TANPA mengunci pencatatan manual. */
@@ -686,6 +699,15 @@ export function TransactionInputEngine({
 
   /** 📸 OCR (mock Domain 2A.2 Mode 2) — pilih foto struk lewat kamera native. */
   function handlePickPhoto() {
+    /* Kunci paket diperiksa SEBELUM apa pun: tombol yang terlihat terkunci
+       tidak boleh membuka file picker lewat jalur mana pun. */
+    if (ocrLocked) {
+      openUpgrade(
+        'ocr',
+        'Scan struk aktif di Paket Waras. Upgrade untuk membaca struk otomatis.',
+      )
+      return
+    }
     if (mode === 'ocr') {
       clearMock()
       setMode('manual')
@@ -704,6 +726,15 @@ export function TransactionInputEngine({
     const file = event.target.files?.[0]
     event.target.value = '' // file yang sama tetap bisa dipilih ulang
     if (!file) return
+    /* jaring pengaman: kalau input file terbuka lewat cara lain (mis. DevTools),
+       hasilnya tetap tidak diproses untuk paket yang tidak berhak. */
+    if (ocrLocked) {
+      openUpgrade(
+        'ocr',
+        'Scan struk aktif di Paket Waras. Upgrade untuk membaca struk otomatis.',
+      )
+      return
+    }
 
     clearMock()
     setMode('ocr')
@@ -728,6 +759,13 @@ export function TransactionInputEngine({
 
   /** 🎤 Voice (mock Domain 2A.2 Mode 3) — gelombang suara hangat saat listening. */
   function handleVoiceToggle() {
+    if (voiceLocked) {
+      openUpgrade(
+        'voice',
+        'Input suara aktif di Paket Waras. Upgrade untuk mencatat pakai suara.',
+      )
+      return
+    }
     if (mode === 'voice') {
       clearMock()
       setMode('manual')
@@ -1339,13 +1377,22 @@ export function TransactionInputEngine({
         <button
           type="button"
           onClick={handlePickPhoto}
-          /* kuota AI habis → OCR mati (paket 42); alasannya ditulis di bawah baris
-             aksi, bukan dibiarkan sebagai tombol yang tidak menjawab */
-          disabled={quotaExhausted}
-          aria-disabled={quotaExhausted || undefined}
-          aria-describedby={quotaExhausted ? 'tx-ai-off' : undefined}
+          /* Dua alasan tombol ini bisa tidak bekerja, dan keduanya dijelaskan
+             di bawah baris aksi:
+               · paket tidak punya `ocr` → popup upgrade (tetap bisa ditekan)
+               · kuota AI habis → benar-benar disabled (tidak ada yang bisa
+                 diproses sekarang) */
+          disabled={!ocrLocked && quotaExhausted}
+          aria-disabled={ocrLocked || quotaExhausted || undefined}
+          aria-describedby={
+            ocrLocked ? 'tx-ai-locked' : quotaExhausted ? 'tx-ai-off' : undefined
+          }
           aria-label={
-            mode === 'ocr' ? 'Batal scan struk' : 'Scan struk dengan kamera'
+            ocrLocked
+              ? 'Scan struk terkunci, aktif di Paket Waras'
+              : mode === 'ocr'
+                ? 'Batal scan struk'
+                : 'Scan struk dengan kamera'
           }
           className={cn(
             'flex shrink-0 items-center justify-center',
@@ -1353,21 +1400,25 @@ export function TransactionInputEngine({
             isDialog
               ? 'h-14 gap-2 rounded-2xl px-5 text-[13px] font-medium max-lg:px-3.5'
               : 'size-14 rounded-full',
-            quotaExhausted
+            quotaExhausted && !ocrLocked
               ? 'cursor-not-allowed bg-soil/[0.07] text-forest/30 ring-1 ring-soil/12'
-              : mode === 'ocr'
-                ? 'bg-forest text-cream'
-                : 'bg-soil/[0.1] text-forest/70 ring-1 ring-soil/12 hover:bg-soil/[0.1]',
+              : ocrLocked
+                ? 'bg-soil/[0.07] text-forest/45 ring-1 ring-soil/12 hover:bg-soil/[0.12]'
+                : mode === 'ocr'
+                  ? 'bg-forest text-cream'
+                  : 'bg-soil/[0.1] text-forest/70 ring-1 ring-soil/12 hover:bg-soil/[0.1]',
           )}
         >
-          {mode === 'ocr' ? (
+          {ocrLocked ? (
+            <Lock className="size-5" strokeWidth={2.1} />
+          ) : mode === 'ocr' ? (
             <X className="size-5" />
           ) : (
             <Camera className="size-5" strokeWidth={2.1} />
           )}
           {isDialog && (
             <span className="hidden lg:inline">
-              {mode === 'ocr' ? 'Batal' : 'Scan Struk'}
+              {ocrLocked ? 'Scan Struk' : mode === 'ocr' ? 'Batal' : 'Scan Struk'}
             </span>
           )}
         </button>
@@ -1422,13 +1473,19 @@ export function TransactionInputEngine({
         <button
           type="button"
           onClick={handleVoiceToggle}
-          /* kuota AI habis → input suara mati (paket 42), dengan penjelasan
-             di bawah baris aksi. Catat manual tetap jalan penuh. */
-          disabled={quotaExhausted}
-          aria-disabled={quotaExhausted || undefined}
-          aria-describedby={quotaExhausted ? 'tx-ai-off' : undefined}
+          /* sama seperti scan struk: paket tanpa `voice` tetap bisa menekan
+             tombol untuk melihat jalan upgrade; kuota habis = disabled. */
+          disabled={!voiceLocked && quotaExhausted}
+          aria-disabled={voiceLocked || quotaExhausted || undefined}
+          aria-describedby={
+            voiceLocked ? 'tx-ai-locked' : quotaExhausted ? 'tx-ai-off' : undefined
+          }
           aria-label={
-            mode === 'voice' ? 'Batal input suara' : 'Catat pakai suara'
+            voiceLocked
+              ? 'Input suara terkunci, aktif di Paket Waras'
+              : mode === 'voice'
+                ? 'Batal input suara'
+                : 'Catat pakai suara'
           }
           className={cn(
             'flex shrink-0 items-center justify-center',
@@ -1436,21 +1493,25 @@ export function TransactionInputEngine({
             isDialog
               ? 'h-14 gap-2 rounded-2xl px-5 text-[13px] font-medium max-lg:px-3.5'
               : 'size-14 rounded-full',
-            quotaExhausted
+            quotaExhausted && !voiceLocked
               ? 'cursor-not-allowed bg-soil/[0.07] text-forest/30 ring-1 ring-soil/12'
-              : mode === 'voice'
-                ? 'bg-forest text-cream'
-                : 'bg-soil/[0.1] text-forest/70 ring-1 ring-soil/12 hover:bg-soil/[0.1]',
+              : voiceLocked
+                ? 'bg-soil/[0.07] text-forest/45 ring-1 ring-soil/12 hover:bg-soil/[0.12]'
+                : mode === 'voice'
+                  ? 'bg-forest text-cream'
+                  : 'bg-soil/[0.1] text-forest/70 ring-1 ring-soil/12 hover:bg-soil/[0.1]',
           )}
         >
-          {mode === 'voice' ? (
+          {voiceLocked ? (
+            <Lock className="size-5" strokeWidth={2.1} />
+          ) : mode === 'voice' ? (
             <X className="size-5" />
           ) : (
             <Mic className="size-5" strokeWidth={2.1} />
           )}
           {isDialog && (
             <span className="hidden lg:inline">
-              {mode === 'voice' ? 'Batal' : 'Input Suara'}
+              {voiceLocked ? 'Input Suara' : mode === 'voice' ? 'Batal' : 'Input Suara'}
             </span>
           )}
         </button>
@@ -1461,10 +1522,39 @@ export function TransactionInputEngine({
         <SubscriptionLockNote className={isDialog ? 'mt-3' : 'mt-2.5'} />
       )}
 
+      {/* Kunci paket untuk dua quick-action AI. Disembunyikan saat `inputLocked`
+          karena `SubscriptionLockNote` sudah menjelaskan keadaan yang lebih
+          mendasar (belum ada paket sama sekali). */}
+      {captureLocked && !inputLocked && (
+        <p
+          id="tx-ai-locked"
+          role="status"
+          className={cn(
+            'flex flex-wrap items-center gap-x-1.5 gap-y-1 rounded-2xl bg-sage/40 px-3.5 py-2.5 leading-relaxed text-forest/70 ring-1 ring-soil/12',
+            isDialog ? 'mt-3 text-[12.5px]' : 'mt-2.5 text-[11.5px]',
+          )}
+        >
+          <Lock className="size-3.5 shrink-0 text-forest" strokeWidth={2.6} aria-hidden />
+          <span>Scan struk & input suara aktif di Paket Waras.</span>
+          <button
+            type="button"
+            onClick={() =>
+              openUpgrade(
+                ocrLocked ? 'ocr' : 'voice',
+                'Scan struk & input suara aktif di Paket Waras. Upgrade untuk membukanya.',
+              )
+            }
+            className="font-medium text-forest underline underline-offset-2"
+          >
+            Buka dengan upgrade
+          </button>
+        </p>
+      )}
+
       {/* penjelasan kenapa scan struk & input suara mati (paket 42): kuota AI
           habis. Dua tombol itu memang dimatikan, tapi yang TIDAK ikut mati
           disebutkan juga — user butuh tahu ia masih bisa mencatat. */}
-      {quotaExhausted && (
+      {quotaExhausted && !captureLocked && (
         <p
           id="tx-ai-off"
           role="status"

@@ -41,7 +41,7 @@ import type { MoneyContext, TransactionType } from '@/lib/types'
 import { newClientTxId } from '@/lib/client-tx'
 import { trackMoneyEvent } from '@/lib/analytics'
 import { readOnline } from '@/lib/connection'
-import { loadMoneyState, saveMoneyState } from './idb'
+import { clearMoneyState, loadDeviceState, loadMoneyState, saveDeviceState, saveMoneyState } from './idb'
 import {
   deleteRemoteRow,
   deleteRemoteWallet,
@@ -52,8 +52,9 @@ import {
   updateRemoteRow,
   type RemoteMoney,
 } from '@/lib/supabase/money-remote'
-import { migrateLocalDataToServer } from '@/lib/supabase/local-migration'
+import { markMigrated, migrateLocalDataToServer } from '@/lib/supabase/local-migration'
 import { browserUserId } from '@/lib/supabase/client'
+import { ONBOARDING_RELOAD_KEY, ONBOARDING_ROUTE } from '@/lib/onboarding'
 
 import {
   assertLedgerInvariant,
@@ -281,6 +282,46 @@ const EMPTY_SNAPSHOT: MoneySnapshot = Object.freeze({
  */
 let accountPurged = false
 
+/* ── KEPEMILIKAN DATA PERANGKAT (paket 100) ──────────────────────────────────
+   Dua fakta yang dulu tidak pernah disimpan, dan justru itu yang membuat akun
+   baru bisa langsung punya saldo:
+     · `accountOwnerUserId` = siapa pemilik snapshot IndexedDB ini;
+     · `pendingLocalImport` = ada data lama yang TIDAK boleh naik otomatis.
+
+   Penandanya ditulis ke localStorage supaya tetap benar setelah reload —
+   snapshot-nya sendiri disimpan di key IndexedDB terpisah (`pending-import`)
+   supaya tidak tertimpa ketika user menyelesaikan onboarding. */
+const PENDING_IMPORT_KEY = 'pending-import'
+const PENDING_IMPORT_FLAG = 'catet-local-import-pending'
+
+let accountOwnerUserId: string | null = null
+let pendingLocalImport = false
+
+function readPendingFlag(): boolean {
+  if (typeof window === 'undefined') return false
+  try {
+    return window.localStorage.getItem(PENDING_IMPORT_FLAG) === '1'
+  } catch {
+    return false
+  }
+}
+
+function writePendingFlag(value: boolean): void {
+  pendingLocalImport = value
+  if (typeof window === 'undefined') return
+  try {
+    if (value) window.localStorage.setItem(PENDING_IMPORT_FLAG, '1')
+    else window.localStorage.removeItem(PENDING_IMPORT_FLAG)
+  } catch {
+    /* mode privat: penanda memory tetap menjaga sesi ini */
+  }
+}
+
+/** true = ada data lama di perangkat yang menunggu keputusan user */
+export function hasPendingLocalImport(): boolean {
+  return pendingLocalImport || readPendingFlag()
+}
+
 /** id baris ledger — mulai 9.001 supaya mustahil bertabrakan dengan id mock (1–900) */
 let nextSeq = 9001
 /** urutan dompet buatan user (`w-1`, `w-2`, …) */
@@ -333,6 +374,8 @@ function commit(next: MoneySnapshot): void {
     /* penanda "akun ini sudah dihapus" ikut ditulis: tanpa itu, refresh setelah
        hapus akun akan menghidupkan lagi dompet contoh (lihat `EMPTY_SNAPSHOT`) */
     purged: accountPurged,
+    /* pemilik snapshot — dasar keputusan migrasi berikutnya */
+    ownerUserId: accountOwnerUserId ?? undefined,
   })
   emit()
 }
@@ -394,6 +437,12 @@ export interface PersistedMoney {
    * mengembalikan array kosong karena barisnya memang sudah dihapus di database.
    */
   purged?: boolean
+  /**
+   * Pemilik snapshot lokal. Ditulis setiap `commit()` setelah user diketahui
+   * (login). Snapshot tanpa pemilik = data demo/akun lama/perangkat bersama →
+   * TIDAK boleh naik otomatis ke akun baru (paket 100).
+   */
+  ownerUserId?: string
 }
 
 function nextWalletId(existing: readonly WalletSeed[]): string {
@@ -563,18 +612,55 @@ export async function hydrateMoneyStore(): Promise<void> {
   /* akun yang sudah dihapus tetap dihapus setelah refresh: penandanya dibaca
      SEBELUM merge, dan ikut ke setiap penulisan berikutnya (`commit`) */
   accountPurged = persisted?.purged === true
+  accountOwnerUserId = persisted?.ownerUserId ?? null
 
   if (!accountPurged) {
     const remote = await readRemoteMoney()
     if (remote) {
       const userId = await browserUserId()
       if (userId) {
+        const localHasData =
+          (persisted?.wallets?.length ?? 0) > 0 || (persisted?.rows?.length ?? 0) > 0
+        const ownerMatches = persisted?.ownerUserId === userId
+        const remoteEmpty = remote.wallets.length === 0 && remote.rows.length === 0
+
+        /* ── DATA LAMA TIDAK BOLEH NAIK OTOMATIS (paket 100) ────────────────
+           Kasus yang dilaporkan: akun baru langsung punya 3 dompet & saldo
+           ratusan juta. Penyebabnya `migrateLocalDataToServer` menyalin
+           snapshot IndexedDB apa pun ke akun baru selama server masih kosong —
+           termasuk data demo / akun lain di perangkat yang sama.
+
+           Sekarang: kalau server kosong dan snapshot BUKAN milik user ini,
+           tampilkan akun yang benar-benar kosong. Snapshot aslinya disimpan di
+           key terpisah (`pending-import`) supaya tidak tertimpa onboarding, dan
+           user memutuskan lewat `LocalDataNotice` (masukkan / unduh / hapus). */
+        if (localHasData && !ownerMatches && remoteEmpty) {
+          writePendingFlag(true)
+          if (persisted) void saveDeviceState(PENDING_IMPORT_KEY, persisted)
+          accountOwnerUserId = userId
+          live = EMPTY_SNAPSHOT
+          assertSnapshot(live)
+          emit()
+          return
+        }
+
+        accountOwnerUserId = userId
         const local = mergeMoneySnapshot(persisted)
         const migration = await migrateLocalDataToServer({
           userId,
           wallets: [...local.wallets],
           rows: local.rows,
+          ownerUserId: persisted?.ownerUserId ?? null,
         })
+        if (migration.needsConsent) {
+          writePendingFlag(true)
+          if (persisted) void saveDeviceState(PENDING_IMPORT_KEY, persisted)
+          accountOwnerUserId = userId
+          live = EMPTY_SNAPSHOT
+          assertSnapshot(live)
+          emit()
+          return
+        }
         /* migrasi mengisi server → bacaan pertama sudah basi; ambil yang baru */
         const fresh = migration.ran ? await readRemoteMoney() : null
         const authoritative = fresh ?? remote
@@ -589,6 +675,73 @@ export async function hydrateMoneyStore(): Promise<void> {
   live = mergeMoneySnapshot(persisted)
   assertSnapshot(live)
   emit()
+}
+
+/* ── KEPUTUSAN ATAS DATA LAMA DI PERANGKAT (paket 100) ──────────────────────
+   Dipakai `LocalDataNotice` di Home. Ketiganya sengaja eksplisit: tidak ada
+   jalur yang menghapus atau mengunggah data tanpa aksi user. */
+
+/** reload yang disengaja — beri tahu guard onboarding supaya tidak memblokir */
+function reloadAfterLocalDataDecision(): void {
+  if (typeof window === 'undefined') return
+  try {
+    if (window.location.pathname.startsWith(ONBOARDING_ROUTE)) {
+      window.sessionStorage.setItem(ONBOARDING_RELOAD_KEY, '1')
+    }
+  } catch {
+    /* private mode — reload tetap jalan */
+  }
+  window.location.reload()
+}
+
+/** masukkan snapshot lama ke akun ini — hanya saat akun masih kosong */
+export async function importPendingLocalData(): Promise<boolean> {
+  if (typeof window === 'undefined') return false
+  if (!isAccountEmpty(live)) return false
+
+  const userId = await browserUserId()
+  if (!userId) return false
+
+  const pending = await loadDeviceState<PersistedMoney>(PENDING_IMPORT_KEY)
+  const persisted = pending ?? (await loadMoneyState<PersistedMoney>())
+  const migration = await migrateLocalDataToServer({
+    userId,
+    wallets: persisted?.wallets,
+    rows: persisted?.rows ?? [],
+    ownerUserId: persisted?.ownerUserId ?? null,
+    consent: true,
+  })
+  if (!migration.ran) return false
+
+  accountOwnerUserId = userId
+  writePendingFlag(false)
+  void saveDeviceState(PENDING_IMPORT_KEY, null)
+  reloadAfterLocalDataDecision()
+  return true
+}
+
+/** unduh snapshot lama sebagai JSON — data tetap di perangkat, tidak ke server */
+export async function pendingLocalDataJson(): Promise<string | null> {
+  if (typeof window === 'undefined') return null
+  const pending = await loadDeviceState<PersistedMoney>(PENDING_IMPORT_KEY)
+  const persisted = pending ?? (await loadMoneyState<PersistedMoney>())
+  if (!persisted) return null
+  return JSON.stringify(
+    { exportedAt: new Date().toISOString(), source: 'perangkat', money: persisted },
+    null,
+    2,
+  )
+}
+
+/** hapus data lama dari perangkat (tidak menyentuh data akun di server) */
+export async function discardPendingLocalData(): Promise<void> {
+  if (typeof window === 'undefined') return
+  const userId = await browserUserId()
+  await clearMoneyState()
+  if (userId) markMigrated(userId)
+  accountOwnerUserId = userId
+  writePendingFlag(false)
+  reloadAfterLocalDataDecision()
 }
 
 /**
@@ -629,6 +782,8 @@ function assertRemoteAggreement(remote: RemoteMoney): void {
 /** kosongkan store karena akunnya dihapus; snapshot kosongnya jadi state hidup */
 export function purgeMoneyStore(): MoneySnapshot {
   accountPurged = true
+  accountOwnerUserId = null
+  writePendingFlag(false)
   nextSeq = 9001
   nextWalletSeq = 1
   poolIndex = 0
@@ -687,6 +842,17 @@ export function isAccountEmpty(snapshot: MoneySnapshot = live): boolean {
  */
 export function useMoneyStore(): MoneySnapshot {
   return useSyncExternalStore(subscribeMoneyStore, getMoneySnapshot, getServerMoneySnapshot)
+}
+
+/**
+ * Status "ada data lama di perangkat" untuk komponen client.
+ *
+ * `getServerSnapshot` sengaja `false`: penandanya hidup di localStorage, jadi
+ * HTML server tidak boleh mengarang nilai. Setelah hidrasi, nilai sebenarnya
+ * dibaca dari perangkat — tanpa hydration mismatch.
+ */
+export function usePendingLocalImport(): boolean {
+  return useSyncExternalStore(subscribeMoneyStore, hasPendingLocalImport, () => false)
 }
 
 /* ── SELECTOR (semua saldo lewat sini) ─────────────────────────────────────── */

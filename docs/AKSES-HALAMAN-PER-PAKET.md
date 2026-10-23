@@ -32,6 +32,23 @@ Artinya Dashboard & halaman app lain **tidak dirender** untuk user yang belum
 membayar — bukan sekadar menampilkan popup di atas app. Rute publik di daftar
 `PUBLIC_ROUTES` tetap terbuka untuk semua orang.
 
+## 0b. Gerbang onboarding (paket 100)
+
+Setelah paket aktif, status onboarding dibaca dari `user_settings.onboarding`
+(`GET /api/onboarding`, lihat `lib/subscription/onboarding.ts`):
+
+| Keadaan | Yang terjadi |
+|---|---|
+| `onboarding.completedAt` ada | app boleh dibuka |
+| onboarding kosong + sudah punya dompet/catatan | dianggap **legacy selesai** — pelanggan lama tidak dipaksa onboarding ulang |
+| onboarding kosong + belum punya dompet/catatan | dialihkan ke `/app/onboarding` |
+| status tidak bisa dibaca (DB/jaringan/backend kosong) | app dibuka — "tidak tahu" ≠ "belum onboarding" |
+
+Hasil onboarding disimpan ke `user_settings.onboarding` lewat
+`POST /api/onboarding`; localStorage hanya menjadi penanda perangkat/sesi.
+Snapshot IndexedDB yang bukan milik user yang login **tidak** lagi diunggah
+otomatis ke akun baru — itu penyebab akun baru bisa langsung punya saldo.
+
 ## 1. Halaman publik / pre-app
 
 Tidak butuh sesi dan **tidak pernah** butuh paket:
@@ -55,8 +72,8 @@ untuk paket yang tidak punya `joint-wallet`.
 | Dompet & Akun | `/wallet` | ✅ | ✅ | ✅ | terbuka |
 | Budget & Target Nabung | `/budget` | ✅ | ✅ | ✅ | terbuka |
 | Tagihan Rutin | `/bills` | ✅ | ✅ | ✅ | terbuka |
-| Kalender Cashflow | `/calendar` | ✅ | ✅ | ✅ | terbuka |
-| Kekayaan & Hutang | `/wealth` | ✅ | ✅ | ✅ | terbuka |
+| Kalender Cashflow | `/calendar` | 🔒 | ✅ | ✅ | butuh `cashflow-calendar` |
+| Kekayaan & Hutang | `/wealth` | 🔒 | ✅ | ✅ | butuh `wealth-tracking` |
 | Ajak Teman | `/referral` | ✅ | ✅ | ✅ | terbuka |
 | Pusat Bantuan (app) | `/help` | ✅ | ✅ | ✅ | terbuka |
 | Panduan Install | `/install` | ✅ | ✅ | ✅ | terbuka |
@@ -74,11 +91,13 @@ kemampuan paket:
 | Fitur | Letak | Catet Aja | Waras | Sultan |
 |---|---|:---:|:---:|:---:|
 | AI Coach (chat) | FAB `/app` + panel chat | 🔒 | ✅ | ✅ |
-| Scan struk (OCR) | AI capture di AI Coach | 🔒 | ✅ | ✅ |
-| Input suara (parsing) | AI capture di AI Coach | 🔒 | ✅ | ✅ |
+| Scan struk (OCR) | AI capture di AI Coach & sheet Tambah Transaksi | 🔒 | ✅ | ✅ |
+| Input suara (parsing) | AI capture di AI Coach & sheet Tambah Transaksi | 🔒 | ✅ | ✅ |
 | Auto-kategorisasi | `POST /api/ai/categorize` | 🔒 403 | ✅ | ✅ |
 | Rekap mingguan AI | `/app` (banner Jumat–Minggu) & `/history` | 🔒 | ✅ | ✅ |
 | Joint Wallet | `/joint` | 🔒 | ✅ | ✅ |
+| Kalender Cashflow | `/calendar` | 🔒 | ✅ | ✅ |
+| Kekayaan & Hutang | `/wealth` | 🔒 | ✅ | ✅ |
 | AI tanpa batas | kuota AI (`ai-unlimited`) | 🔒 | 🔒 | ✅ |
 | Priority support | `priority-support` | 🔒 | 🔒 | ✅ |
 | Top up token AI | `/settings/billing` | 🔒 (tidak punya AI) | ✅ | ❌ (unlimited) |

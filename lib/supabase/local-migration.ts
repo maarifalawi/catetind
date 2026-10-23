@@ -86,6 +86,8 @@ export interface LocalMigrationResult {
   ran: boolean
   /** true = sudah pernah (atau tidak ada yang perlu diimpor) */
   alreadyDone: boolean
+  /** true = ada data lokal yang TIDAK diimpor karena belum ada persetujuan */
+  needsConsent: boolean
   wallets: number
   rows: number
   settings: boolean
@@ -97,6 +99,14 @@ export async function migrateLocalDataToServer(
     userId: string
     wallets: PersistedMoney['wallets'] | undefined
     rows: readonly MoneyRow[]
+    /**
+     * Pemilik snapshot lokal. Snapshot yang ditulis sesi login MENYIMPAN id
+     * user-nya; data tanpa pemilik (demo / akun lama / perangkat bersama)
+     * TIDAK boleh naik otomatis ke akun yang kebetulan sedang login.
+     */
+    ownerUserId?: string | null
+    /** true = user sudah memilih "Masukkan ke akun" di notice perangkat */
+    consent?: boolean
   },
   { readSettings = readLocalSettings }: { readSettings?: () => LocalSettingsSnapshot } = {},
 ): Promise<LocalMigrationResult> {
@@ -105,6 +115,7 @@ export async function migrateLocalDataToServer(
   const empty: LocalMigrationResult = {
     ran: false,
     alreadyDone: false,
+    needsConsent: false,
     wallets: 0,
     rows: 0,
     settings: false,
@@ -123,6 +134,22 @@ export async function migrateLocalDataToServer(
   if ((walletCount.count ?? 0) > 0 || (rowCount.count ?? 0) > 0) {
     markMigrated(input.userId)
     return { ...empty, alreadyDone: true }
+  }
+
+  const hasLocalData = walletsToImport.length > 0 || rowsToImport.length > 0
+  if (!hasLocalData) {
+    markMigrated(input.userId)
+    return { ...empty, alreadyDone: true }
+  }
+
+  /* ── GERBANG KEPEMILIKAN DATA (paket 100) ─────────────────────────────────
+     Inilah penyebab akun baru bisa langsung punya saldo: data IndexedDB dari
+     demo / akun lain di perangkat yang sama dulu disalin diam-diam ke akun
+     baru. Sekarang hanya snapshot MILIK user ini (atau yang sudah disetujui
+     eksplisit lewat `consent`) yang boleh naik. */
+  const ownerMatches = Boolean(input.ownerUserId && input.ownerUserId === input.userId)
+  if (!ownerMatches && input.consent !== true) {
+    return { ...empty, needsConsent: true }
   }
 
   let wallets = 0
@@ -153,8 +180,8 @@ export async function migrateLocalDataToServer(
      percobaan berikutnya mengirim ulang — dan itu aman (idempotent). */
   if (wallets === walletsToImport.length && rows === rowsToImport.length) {
     markMigrated(input.userId)
-    return { ran: true, alreadyDone: false, wallets, rows, settings }
+    return { ran: true, alreadyDone: false, needsConsent: false, wallets, rows, settings }
   }
 
-  return { ran: true, alreadyDone: false, wallets, rows, settings }
+  return { ran: true, alreadyDone: false, needsConsent: false, wallets, rows, settings }
 }

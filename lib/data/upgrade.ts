@@ -14,9 +14,11 @@
    `SubscriptionGateProvider`. */
 
 import {
+  CAPABILITY_LABEL,
   PLANS,
   buildUpgradeHref,
   capabilityUnlockedBy,
+  capabilitiesOf,
   priceFor,
   type Capability,
   type PlanDefinition,
@@ -76,6 +78,24 @@ export function capabilityUpgradeOffer(
     amount: priceFor(target, { period: 'lifetime', ownedPlanId, ownedIsLifetime }),
     href: buildUpgradeHref(target.id, ownedPlanId, 'lifetime'),
   }
+}
+
+/* ── HIGHLIGHT FITUR YANG BARU TERBUKA ──────────────────────────────────────
+   Satu turunan untuk banner, kartu sidebar, dan modal upgrade: daftar
+   kemampuan yang DIMILIKI paket target tapi BELUM dimiliki paket sekarang.
+   Labelnya dari `CAPABILITY_LABEL` — bukan copy kedua yang bisa melenceng dari
+   matriks `PLAN_CAPABILITIES`. */
+export function upgradeHighlights(
+  ownedPlanId: PlanId | null | undefined,
+  target: PlanDefinition,
+  limit = 4,
+): string[] {
+  const owned = new Set(capabilitiesOf(ownedPlanId))
+  const labels = capabilitiesOf(target.id)
+    .filter((capability) => !owned.has(capability))
+    .map((capability) => CAPABILITY_LABEL[capability])
+  if (limit <= 0 || labels.length <= limit) return labels
+  return [...labels.slice(0, limit), `+${labels.length - limit} lainnya`]
 }
 
 /* ── COPY AKSES BELUM AKTIF (dipakai gerbang input global) ───────────────────
@@ -140,12 +160,14 @@ export const UPGRADE_BANNER_COPY = {
   },
   /**
    * Sudah beli tapi belum di tier tertinggi — `{target}` nama paket berikutnya,
-   * `{amount}` selisih dari `priceFor()`.
+   * `{features}` daftar kemampuan yang baru terbuka, `{amount}` selisih dari
+   * `priceFor()`. Semua placeholder DIISI oleh `upgradeBannerCopy()`; tidak ada
+   * yang boleh bocor ke layar sebagai teks `{...}`.
    */
   upgrade: {
     eyebrow: 'Masih ada fitur terkunci',
     title: 'Buka semua fitur {target}',
-    body: 'Upgrade ke lifetime {target}: {amount}. Aksesnya selamanya, tanpa auto-debet.',
+    body: '{features}. Selisih {amount} ke {target} — akses selamanya, tanpa auto-debet.',
     cta: 'Upgrade',
   },
   /**
@@ -179,6 +201,8 @@ export function upgradeBannerCopy(
     ...UPGRADE_BANNER_COPY.upgrade,
     title: fill(UPGRADE_BANNER_COPY.upgrade.title, { target: target.name }),
     body: fill(UPGRADE_BANNER_COPY.upgrade.body, {
+      features: upgradeHighlights(plan.id, target, 3).join(', '),
+      target: target.name,
       amount: formatAmount(priceFor(target, { period: 'lifetime', ownedPlanId: plan.id, ownedIsLifetime })),
     }),
   }

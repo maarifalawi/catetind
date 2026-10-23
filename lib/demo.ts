@@ -10,6 +10,11 @@
      · `NEXT_PUBLIC_DEMO=1`  → perilaku review desain (semua banner dipaksa tampil)
      · tidak diisi / nilai lain → perilaku produksi (default, termasuk `pnpm build`)
 
+   PAKET 100 menambahkan pagar kedua: `NODE_ENV=production` SELALU mematikan
+   demo, bahkan kalau `NEXT_PUBLIC_DEMO=1` tidak sengaja ikut di-set di
+   environment produksi. Persona demo menulis dompet/transaksi lewat API nyata;
+   satu env yang salah tidak boleh membuat akun pelanggan berisi data contoh.
+
    Cara review desain lokal:
      PowerShell → `$env:NEXT_PUBLIC_DEMO='1'; pnpm dev`
      (atau tambahkan barisnya ke `.env.local` — jangan pernah di-set di
@@ -24,7 +29,20 @@
    dibuktikan `lib/demo.test.ts`. Satu gerbang = satu grep yang bisa membuktikan
    semuanya; itulah alasan file ini ada. */
 
-export const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO === '1'
+export const DEMO_MODE =
+  process.env.NEXT_PUBLIC_DEMO === '1' && process.env.NODE_ENV !== 'production'
+
+/**
+ * Izin KHUSUS REVIEW DESAIN: menyemai persona demo walau ada sesi login.
+ *
+ * Default `false` — karena seed demo menulis lewat API store yang sama dengan
+ * data user, jadi ia bisa menjadi data akun sungguhan. Nyalakan HANYA di
+ * perangkat dev dengan akun demo khusus:
+ *   NEXT_PUBLIC_DEMO_ALLOW_SESSION=1
+ * dan jangan pernah mengisinya di environment produksi.
+ */
+export const DEMO_ALLOW_SESSION =
+  DEMO_MODE && process.env.NEXT_PUBLIC_DEMO_ALLOW_SESSION === '1'
 
 /**
  * `true` = data CONTOH boleh tampil sebagai isi awal layar (mode demo/desain,

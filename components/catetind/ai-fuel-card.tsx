@@ -1,17 +1,20 @@
 'use client'
 
 import Link from 'next/link'
+import { ArrowRight, Lock } from 'lucide-react'
 import {
   AI_FUEL_COPY,
-  AI_PLAN_LOCKED_COPY,
   AI_QUOTA_EXHAUSTED_COPY,
   AI_QUOTA_RESET_FALLBACK,
   AI_UNLIMITED_BADGE,
   planQuota,
 } from '@/lib/ai-quota'
+import { capabilityUnlockedBy, formatIDR } from '@/lib/data/pricing'
+import { capabilityUpgradeOffer, nextTier, upgradeHighlights } from '@/lib/data/upgrade'
 import { useAiQuota } from '@/hooks/use-ai-quota'
 import { useAiQuotaReset } from '@/hooks/use-ai-quota-reset'
 import { useSubscriptionGate } from './subscription-gate-provider'
+import { useUpgradeGate } from './upgrade-gate-provider'
 import { NavTooltip } from './nav-tooltip'
 
 /* ── Bahan Bakar AI (sidebar) — SATU ANGKA, SATU BARIS MAKNA ─────────────────
@@ -45,7 +48,8 @@ export function AiFuelCard({ collapsed }: { collapsed: boolean }) {
   /* Paket aktif dibaca dari gerbang global — labenya sama dengan /settings/billing
      & /checkout, dan kuota yang berlaku ditentukan `planQuota()` (paket tanpa AI
      tidak punya kuota sama sekali; Paket Sultan tanpa batas). */
-  const { plan, planId, planKnown } = useSubscriptionGate()
+  const { plan, planId, planKnown, isLifetime } = useSubscriptionGate()
+  const { openUpgrade } = useUpgradeGate()
   const pq = planQuota(planId)
   const planName = plan?.name ?? 'Belum ada paket'
 
@@ -57,15 +61,43 @@ export function AiFuelCard({ collapsed }: { collapsed: boolean }) {
         recordsLeft,
       )} · ${quota.voiceCallsRemaining} panggilan · Reset ${resetDaysLabel}`
 
-  /* PAKET TANPA AI (paket 84): kartu tidak menampilkan tangki kosong yang
-     membingungkan — cukup nama paket + satu pernyataan, tanpa paragraf.
-     Penjelasan lengkapnya tetap dibacakan lewat `aria-label`. */
+  /* PAKET TANPA AI (paket 84, diperkuat paket 100): kartu tidak menampilkan
+     tangki kosong. Dulu isinya cuma "AI belum aktif di paketmu" — user tidak
+     tahu APA yang hilang, jadi tidak punya alasan upgrade. Sekarang kartu ini
+     menyebut fitur Waras yang terkunci + selisihnya, dari sumber yang sama
+     dengan modal upgrade (`priceFor()` → `capabilityUpgradeOffer()`). */
   if (planKnown && !pq.aiEnabled) {
+    const target = planId ? nextTier(planId) : capabilityUnlockedBy('ai-chat')
+    const offer = capabilityUpgradeOffer('ai-chat', planId, isLifetime)
+    const allFeatures = target ? upgradeHighlights(planId, target, 0) : []
+    const features = allFeatures.slice(0, 4)
+    const lockedSummary = `${
+      target?.name ?? 'Paket Waras'
+    } membuka ${allFeatures.join(', ')}. Selisih ${formatIDR(offer.amount)}.`
+
+    if (collapsed) {
+      return (
+        <button
+          type="button"
+          onClick={() => openUpgrade('ai-chat', lockedSummary)}
+          aria-label={lockedSummary}
+          className="group/item relative mt-4 flex size-11 shrink-0 items-center justify-center rounded-2xl bg-cream text-forest ring-1 ring-ink/[0.06] transition-colors duration-200 hover:bg-sage active:scale-95 motion-reduce:transition-none"
+        >
+          <Lock className="size-4" strokeWidth={2.2} aria-hidden />
+          <NavTooltip
+            label={lockedSummary}
+            className="max-w-[240px] whitespace-normal text-left leading-snug"
+          />
+        </button>
+      )
+    }
+
     return (
-      <Link
-        href="/checkout"
-        aria-label={`${AI_PLAN_LOCKED_COPY.cardTitle}. ${AI_PLAN_LOCKED_COPY.body}`}
-        className="group/lock mt-4 block shrink-0 rounded-[1.35rem] bg-cream p-4 ring-1 ring-ink/[0.06] transition-colors duration-200 hover:bg-sage/70"
+      <button
+        type="button"
+        onClick={() => openUpgrade('ai-chat', lockedSummary)}
+        aria-label={lockedSummary}
+        className="group/lock mt-4 block w-full shrink-0 rounded-[1.35rem] bg-cream p-4 text-left ring-1 ring-ink/[0.06] transition-colors duration-200 hover:bg-sage/70"
       >
         <span className="flex items-baseline justify-between gap-2">
           <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-forest/40">
@@ -73,10 +105,25 @@ export function AiFuelCard({ collapsed }: { collapsed: boolean }) {
           </span>
           <span className="truncate text-[11px] font-medium text-forest/45">{planName}</span>
         </span>
-        <span className="mt-2 block text-[12.5px] font-medium leading-snug text-forest">
-          {AI_PLAN_LOCKED_COPY.cardTitle}
+        <span className="mt-2 flex items-center gap-1.5 text-[12.5px] font-medium leading-snug text-forest">
+          <Lock className="size-3.5 shrink-0" strokeWidth={2.4} aria-hidden />
+          {allFeatures.length} fitur {target?.name?.replace(/^paket\s+/i, '') ?? 'Waras'} terkunci
         </span>
-      </Link>
+        <span className="mt-1.5 block text-[11px] leading-relaxed text-forest/55">
+          {features.join(' · ')}
+          {allFeatures.length > features.length
+            ? ` · +${allFeatures.length - features.length} lainnya`
+            : ''}
+        </span>
+        <span className="mt-3 flex items-center justify-between gap-2 rounded-full bg-forest pl-3.5 pr-1 py-1 text-cream">
+          <span className="text-[11.5px] font-medium">
+            Buka dengan {formatIDR(offer.amount)}
+          </span>
+          <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-cream text-forest">
+            <ArrowRight className="size-3.5" strokeWidth={2.4} aria-hidden />
+          </span>
+        </span>
+      </button>
     )
   }
 
