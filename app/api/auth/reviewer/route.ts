@@ -18,6 +18,7 @@ import {
   supabaseServiceKey,
   supabaseUrl,
 } from '@/lib/supabase/config'
+import { ensureReviewerAccess } from '@/lib/subscription/reviewer-plan'
 
 /* ── POST /api/auth/reviewer — SESI UNTUK REVIEWER MIDTRANS ──────────────────
    Kenapa route ini ada: login normal mengirim OTP ke inbox email. Reviewer
@@ -32,7 +33,10 @@ import {
         dengan `email_confirm: true`; kalau sudah ada, lanjut);
      3. `admin.generateLink({ type: 'magiclink' })` → `hashed_token` (Supabase
         TIDAK mengirim email di jalur admin ini);
-     4. balas `hashed_token` ke browser; klien menukarnya jadi sesi dengan
+     4. bootstrap akun reviewer: paket WARAS lifetime + penanda onboarding
+        selesai (`ensureReviewerAccess`) — supaya reviewer langsung memakai app,
+        bukan mendarat di paywall/onboarding;
+     5. balas `hashed_token` ke browser; klien menukarnya jadi sesi dengan
         `verifyOtp({ token_hash, type: 'magiclink' })` — cookie sesi ditulis
         `@supabase/ssr` seperti login OTP biasa.
 
@@ -152,6 +156,27 @@ export async function POST(request: NextRequest) {
     if (link.error || !tokenHash) {
       console.error('[reviewer-login] generateLink gagal:', link.error?.message ?? 'tanpa token')
       return fail(REVIEWER_SESSION_FAILED_MESSAGE, 502)
+    }
+
+    /* 3 — bootstrap paket Waras + onboarding. Kegagalan di sini TIDAK
+       menggagalkan login: sesi tetap diberikan, reviewer bisa mencoba lagi. */
+    const reviewerUserId = link.data?.user?.id
+    if (reviewerUserId) {
+      const bootstrap = await ensureReviewerAccess(reviewerUserId)
+      if (!bootstrap.ok) {
+        console.error('[reviewer-login] bootstrap paket Waras gagal untuk', reviewerUserId)
+      } else if (bootstrap.planWritten || bootstrap.onboardingSeeded) {
+        console.log(
+          '[reviewer-login] bootstrap akun reviewer:',
+          JSON.stringify({
+            plan: bootstrap.planId,
+            planWritten: bootstrap.planWritten,
+            onboardingSeeded: bootstrap.onboardingSeeded,
+          }),
+        )
+      }
+    } else {
+      console.error('[reviewer-login] generateLink tidak mengembalikan user — bootstrap dilewati')
     }
 
     return NextResponse.json({

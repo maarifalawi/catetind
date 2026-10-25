@@ -30,10 +30,27 @@ normal yang dikirim Supabase ke inbox masing-masing.
    `supabase.auth.verifyOtp({ token_hash, type: 'magiclink' })`.
    Cookie sesi ditulis `@supabase/ssr` — **sama persis** dengan login OTP biasa,
    jadi middleware, gerbang paket, dan RLS tidak punya pengecualian apa pun.
-5. Setelah masuk, reviewer mendarat di `/app` → gerbang paket mengarahkannya ke
-   `/checkout` (akun reviewer belum punya langganan — memang begitu seharusnya).
-   Di sana reviewer bisa memilih paket dan menjalankan alur pembayaran Midtrans
-   sandbox/production sesuai konfigurasi server.
+5. Sebelum token dikembalikan, route menjalankan **bootstrap akun reviewer**
+   (`lib/subscription/reviewer-plan.ts`):
+   - `user_subscriptions` di-upsert ke paket **Waras lifetime** (`is_lifetime`,
+     tanpa `expires_at`) — tapi **tidak pernah menurunkan** paket yang rank-nya
+     lebih tinggi (kalau akun itu sudah Sultan, dibiarkan);
+   - `user_settings.onboarding` diberi `completedAt` (hanya jika belum ada), jadi
+     gerbang onboarding tidak menahan reviewer di layar setup.
+6. Setelah masuk, reviewer langsung berada di Dashboard dengan paket **Waras** —
+   tanpa paywall dan tanpa onboarding. Checkout tetap bisa diuji lewat
+   `/checkout` (atau panel Langganan), memakai Midtrans sandbox/production
+   sesuai konfigurasi server.
+
+## Paket otomatis untuk akun reviewer
+
+| Hal | Nilai |
+|---|---|
+| Paket | `waras` (Waras) |
+| Tipe | lifetime (`is_lifetime = true`, `expires_at = null`, `is_active = true`) |
+| Onboarding | ditandai selesai supaya langsung masuk Dashboard |
+| Idempoten | login berulang tidak menulis ulang kalau sudah benar |
+| Tidak menurunkan | akun dengan rank ≥ Waras (mis. Sultan) dibiarkan apa adanya |
 
 ## Konfigurasi yang dibutuhkan
 
@@ -54,8 +71,9 @@ tidak bisa berubah karena salah konfigurasi.
 - Pesan error tidak membedakan "email salah" dan "kode salah", dan tidak
   membocorkan detail Supabase.
 - Rate-limit 20 percobaan / 10 menit per IP (best-effort per instance server).
-- Akun reviewer adalah **akun biasa**: RLS `user_id = auth.uid()` tetap berlaku,
-  dan gerbang paket tetap mendorongnya ke `/checkout` selama belum membayar.
+- Akun reviewer adalah **akun biasa**: RLS `user_id = auth.uid()` tetap berlaku.
+  Bedanya hanya satu — paket Waras lifetime diaktifkan otomatis untuk akun uji
+  ini, supaya reviewer bisa melihat app yang sebenarnya (bukan paywall).
 - Kunci `SUPABASE_SERVICE_ROLE_KEY` hanya dipakai di route server
   (`app/api/auth/reviewer/route.ts`), tidak pernah di variabel `NEXT_PUBLIC_*`.
 

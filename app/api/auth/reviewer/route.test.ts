@@ -15,16 +15,22 @@ vi.mock('@/lib/supabase/config', () => ({
   supabaseUrl: vi.fn(() => 'https://project.supabase.co'),
   supabaseServiceKey: vi.fn(() => 'service-key-test'),
 }))
+vi.mock('@/lib/subscription/reviewer-plan', () => ({
+  REVIEWER_PLAN_ID: 'waras',
+  ensureReviewerAccess: vi.fn(),
+}))
 
 import { POST, resetReviewerAttemptsForTest } from './route'
 import { createClient } from '@supabase/supabase-js'
 import { hasSupabaseConfig, hasSupabaseServiceRole } from '@/lib/supabase/config'
+import { ensureReviewerAccess } from '@/lib/subscription/reviewer-plan'
 
 const createUser = vi.fn()
 const generateLink = vi.fn()
 const create = createClient as unknown as Mock
 const serviceConfigured = hasSupabaseServiceRole as unknown as Mock
 const supabaseConfigured = hasSupabaseConfig as unknown as Mock
+const ensureAccess = ensureReviewerAccess as unknown as Mock
 
 const EMAIL = 'reviewer@catetind.com'
 const CODE = '123456'
@@ -48,6 +54,7 @@ beforeEach(() => {
   create.mockReset()
   createUser.mockReset()
   generateLink.mockReset()
+  ensureAccess.mockReset()
 
   createUser.mockResolvedValue({ data: { user: { id: 'user-reviewer' } }, error: null })
   generateLink.mockResolvedValue({
@@ -55,6 +62,12 @@ beforeEach(() => {
     error: null,
   })
   create.mockReturnValue({ auth: { admin: { createUser, generateLink } } })
+  ensureAccess.mockResolvedValue({
+    ok: true,
+    planId: 'waras',
+    planWritten: true,
+    onboardingSeeded: true,
+  })
   serviceConfigured.mockReturnValue(true)
   supabaseConfigured.mockReturnValue(true)
 })
@@ -88,6 +101,27 @@ describe('POST /api/auth/reviewer', () => {
 
     expect(res.status).toBe(200)
     expect(generateLink).toHaveBeenCalledTimes(1)
+  })
+
+  it('memberi paket Waras + onboarding untuk user reviewer yang sah', async () => {
+    const res = await POST(request({ email: EMAIL, code: CODE }))
+
+    expect(res.status).toBe(200)
+    expect(ensureAccess).toHaveBeenCalledWith('user-reviewer')
+  })
+
+  it('login tetap berhasil walau bootstrap paket gagal', async () => {
+    ensureAccess.mockResolvedValue({
+      ok: false,
+      planId: 'waras',
+      planWritten: false,
+      onboardingSeeded: false,
+    })
+
+    const res = await POST(request({ email: EMAIL, code: CODE }))
+
+    expect(res.status).toBe(200)
+    expect(await bodyOf(res)).toMatchObject({ ok: true, tokenHash: 'hashed-token-123' })
   })
 
   it('menolak email lain walau kodenya benar — tanpa menyentuh Admin API', async () => {
