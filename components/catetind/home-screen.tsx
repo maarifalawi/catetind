@@ -32,8 +32,9 @@ import { OverviewPanel } from './overview-panel'
 import { cashTotal, useMoneyStore } from '@/lib/money/store'
 import type { DeckSelection } from '@/lib/wallets'
 import { HISTORY_SEARCH_PARAM, historySearchHref } from '@/lib/data/history'
-import { HOME_HEADER_COPY } from '@/lib/data/home'
+import { HOME_HEADER_COPY, greetingNameOf } from '@/lib/data/home'
 import { CONTEXT_MENU_COPY, contextOptionsFor } from '@/lib/data/money-context'
+import { useSessionUser } from '@/hooks/use-session-user'
 
 export function HomeScreen() {
   const [overviewOpen, setOverviewOpen] = useState(false)
@@ -56,6 +57,14 @@ export function HomeScreen() {
      halaman Riwayat (lihat handleSearchSubmit). */
   const [searchQuery, setSearchQuery] = useState('')
   const router = useRouter()
+  /* ── NAMA SAPAAN DARI SESI (bukan nama contoh) ────────────────────────────
+     Dulu judul di bawah menulis literal `Jon` untuk semua user — persis pola
+     "identitas orang lain di layar user" yang sudah diperbaiki di sidebar &
+     Pengaturan (audit K4). Sekarang nama dibaca dari `/api/session` lewat hook
+     yang sama; selama belum terbaca (atau memang tanpa sesi), sapaan tampil
+     TANPA nama — bukan menebak "Jon". */
+  const { user } = useSessionUser()
+  const greetingName = greetingNameOf(user?.name)
 
   useEffect(() => {
     /* Jam perangkat dibaca SETELAH mount (hidrasi aman) DAN diperbarui tiap
@@ -184,7 +193,8 @@ export function HomeScreen() {
                 ("Senin, 5 Oktober 2026") DIHAPUS (permintaan pemilik produk):
                 di layar ini ia tidak menambah keputusan apa pun. */}
             <h1 className="hidden font-display text-3xl font-semibold tracking-tight text-forest lg:block lg:text-4xl">
-              {sapaan}, Jon 🌿
+              {sapaan}
+              {greetingName ? `, ${greetingName}` : ''} 🌿
             </h1>
             {/* meta ringkas sebagai chip — di DESKTOP saja (mobile punya baris
                 sendiri yang di-TENGAHKAN di bawah Context Switcher) */}

@@ -28,6 +28,25 @@ export const HOME_HEADER_COPY = {
 } as const
 
 /**
+ * Nama panggilan untuk sapaan Dashboard ("Selamat sore, Rina 🌿").
+ *
+ * Kenapa fungsi, bukan template di komponen:
+ *   · sapaan Home dulu menulis nama CONTOH (`Jon`) untuk semua user — orang
+ *     yang sudah masuk dengan akunnya sendiri melihat nama orang lain;
+ *   · nama dari sesi bisa berupa nama lengkap ("Rina Putri") atau kosong;
+ *   · email yang tidak sengaja tersimpan sebagai nama tidak boleh dipanggil
+ *     mentah-mentah.
+ *
+ * Aturannya: ambil kata pertama, dan `null` kalau tidak ada nama yang layak —
+ * pemanggil lalu menyapa TANPA nama ("Selamat sore 🌿"), bukan menebak.
+ */
+export function greetingNameOf(name: string | null | undefined): string | null {
+  const first = (name ?? '').trim().split(/\s+/)[0] ?? ''
+  if (!first || first.includes('@')) return null
+  return first
+}
+
+/**
  * Panel notifikasi (paket 64) — lonceng di header membuka panel ini, bukan
  * langsung berpindah halaman. Keadaan kosong HARUS tetap terasa selesai: ia
  * menjelaskan kenapa belum ada apa-apa dan menawarkan tempat mengaturnya,
