@@ -214,6 +214,38 @@ export const ONBOARDING_ROUTE = '/app/onboarding'
  */
 export const POST_ONBOARDING_ROUTE = '/app'
 
+/* ── "MULAI LAGI DARI ONBOARDING" (kartu akun kosong) ────────────────────────
+   Gerbang onboarding sengaja memantulkan user yang SUDAH onboarding keluar dari
+   `/app/onboarding` (`router.replace('/app')`). Akibatnya tombol "Mulai Lagi
+   dari Onboarding" dulu terasa cuma me-refresh halaman.
+
+   Solusinya bukan mematikan gerbang itu, melainkan memberi satu jalan masuk yang
+   EKSPLISIT: URL membawa `?ulang=1`, gerbang membuang penanda sesi lama dan
+   memaksa status `needed`. Parameter ini sengaja tetap di URL selama flow
+   berjalan supaya refresh di tengah onboarding tidak memantul ke Dashboard. */
+export const ONBOARDING_RESTART_PARAM = 'ulang'
+
+/** tautan kanon tombol "Mulai Lagi dari Onboarding" */
+export function onboardingRestartHref(): string {
+  return `${ONBOARDING_ROUTE}?${ONBOARDING_RESTART_PARAM}=1`
+}
+
+/**
+ * true = user MEMINTA onboarding diulang (bukan kunjungan biasa).
+ *
+ * Menerima `location.search` apa adanya (boleh dengan/tanpa `?`). Nilai yang
+ * tidak bisa diparse (mis. `location` tidak tersedia) → false: jangan pernah
+ * memaksa onboarding hanya karena parser gagal.
+ */
+export function isOnboardingRestart(search: string): boolean {
+  if (!search) return false
+  try {
+    return new URLSearchParams(search).get(ONBOARDING_RESTART_PARAM) === '1'
+  } catch {
+    return false
+  }
+}
+
 /** Copy guard keluar (5D) — dipakai beforeunload & popstate. */
 export const EXIT_WARNING =
   'Yakin mau keluar? Progress onboarding kamu belum selesai.'

@@ -22,6 +22,7 @@ import {
   type OnboardingModule,
   type OnboardingResult,
 } from '@/lib/onboarding'
+import { saveUserMoneySettings } from '@/lib/user-money-settings'
 import { OnboardingStepSituation } from './onboarding-step-situation'
 import { OnboardingStepIncome } from './onboarding-step-income'
 import { OnboardingStepFirstTransaction } from './onboarding-step-first-transaction'
@@ -244,6 +245,21 @@ export function OnboardingFlow() {
       completedAt: new Date().toISOString(),
     }
     saveOnboardingResult(result)
+    /* ── KONFIGURASI UANG IKUT DISIMPAN (bukan cuma "diwarisi") ──────────────
+       Kartu "Jatah Hari Ini" & konteks AI membaca `lib/user-money-settings.ts`.
+       Sebelumnya nilai itu hanya diwarisi dari hasil onboarding SELAMA belum ada
+       konfigurasi tersimpan — akibatnya mengulang onboarding (mis. lewat tombol
+       "Mulai Lagi dari Onboarding" di kartu akun kosong) tidak pernah
+       memperbarui pemasukan yang sudah tersimpan 0.
+
+       Pemasukan hanya ditulis bila user benar-benar mengisinya (`!== null`),
+       supaya melewati langkah opsional tidak menghapus angka yang sudah diatur. */
+    const moneyPatch: Parameters<typeof saveUserMoneySettings>[0] = {
+      dashboardPeriod,
+      paydayDate: dashboardPeriod === 'cycle' ? paydayDate : null,
+    }
+    if (monthlyIncome !== null) moneyPatch.monthlyIncome = monthlyIncome
+    saveUserMoneySettings(moneyPatch)
     /* Onboarding adalah data AKUN, bukan cuma perangkat. Kirim ke server supaya
        perangkat kedua tidak mengulang setup. Tidak ditunggu: penanda lokal sudah
        membuat gerbang menganggap selesai, dan kegagalan jaringan tidak boleh
@@ -349,7 +365,7 @@ export function OnboardingFlow() {
             <button
               type="button"
               onClick={() => goToStep(currentStep - 1)}
-              className="-mr-2 rounded-full px-3 py-1.5 text-[13px] font-medium tracking-[-0.01em] text-forest/40 transition-colors hover:bg-ink/[0.04] hover:text-forest"
+              className="-mr-2 rounded-full px-3 py-1.5 text-[13px] font-medium tracking-normal text-forest/40 transition-colors hover:bg-ink/[0.04] hover:text-forest"
             >
               Kembali
             </button>
@@ -425,7 +441,7 @@ export function OnboardingFlow() {
                 : 'bg-forest text-cream shadow-[0_16px_34px_-18px_rgba(0,0,0,0.85)] hover:bg-forest-soft active:scale-[0.98]',
             )}
           >
-            <span className="text-[15.5px] font-medium tracking-[-0.01em]">
+            <span className="text-[15.5px] font-medium tracking-normal">
               {cta.label}
             </span>
             <span
