@@ -1,8 +1,10 @@
 import { mentionsWordLoose } from './coach-guard'
-import { computeDailyHud } from '@/lib/data/budget'
+import { computeDailyHud, periodWindowForTab, spentInWindow, spentOn } from '@/lib/data/budget'
 import { cashTotal, getMoneySnapshot, recordedTransactions, walletAccounts } from '@/lib/money/store'
 import { getFundsSnapshot, liveFunds } from '@/lib/money/funds-store'
 import { getWealthSnapshot } from '@/lib/money/wealth-store'
+import { hasConfiguredIncome, readUserMoneySettings } from '@/lib/user-money-settings'
+import { localISODate } from '@/lib/time'
 
 /* ── RINGKASAN DATA NYATA UNTUK AI COACH (paket 65 · Tugas D) ────────────────
    Akar masalah yang ditutup: `/api/ai/text` memanggil model TANPA ringkasan data
@@ -14,6 +16,17 @@ import { getWealthSnapshot } from '@/lib/money/wealth-store'
    Fungsi PURE (tanpa store) ada di atas agar bisa diuji tanpa browser; satu
    kolektor `collectCoachSummary()` membaca store yang sama dengan halaman. */
 
+/**
+ * Keadaan jatah harian — SATU-SATUNYA izin bagi AI untuk menyebut nominal jatah.
+ *
+ * Tiga nilai ini sengaja memetakan PERSIS tiga cabang kartu "Jatah Hari Ini"
+ * (`components/catetind/daily-hud-card.tsx`): belum diatur (CTA), jatah ditahan
+ * (shortfall), atau angka siap dibaca. Tanpa status ini, ringkasan hanya bisa
+ * mengirim angka 0 dan model akan menyebut "Rp 0" sebagai jatah — klaim yang sama
+ * palsunya dengan angka demo.
+ */
+export type CoachAllowanceState = 'ready' | 'not-configured' | 'shortfall'
+
 /** ringkasan angka NYATA yang boleh disebut AI (di luar ini AI DILARANG mengarang) */
 export interface CoachDataSummary {
   /** label bulan berjalan, mis. "Oktober 2026" */
@@ -22,8 +35,15 @@ export interface CoachDataSummary {
   expenseThisMonth: number
   /** kategori pengeluaran terbesar bulan ini — `null` kalau belum ada pengeluaran */
   topCategory: string | null
-  /** sisa jatah harian dari `computeDailyHud()` — inti kartu "Jatah Hari Ini" */
+  /**
+   * Sisa jatah harian dari `computeDailyHud()` — inti kartu "Jatah Hari Ini".
+   *
+   * HANYA bermakna saat `allowanceState === 'ready'`. Akun baru (belum ada
+   * pemasukan yang diatur) bernilai 0 di sini, dan 0 itu BUKAN jatah user.
+   */
   remainingToday: number
+  /** apakah nominal `remainingToday` boleh disebut ke user */
+  allowanceState: CoachAllowanceState
   walletCount: number
   cashTotal: number
   /** total sisa hutang aktif (dari sisi "hutangku") */
@@ -36,6 +56,20 @@ export function formatRupiah(value: number): string {
   return `Rp ${Math.round(value).toLocaleString('id-ID')}`
 }
 
+/**
+ * Satu baris jatah harian untuk prompt sistem — TIDAK PERNAH memuat nominal saat
+ * angkanya belum ada, jadi model tidak punya angka untuk dikarang/diulang.
+ */
+function allowanceLine(summary: CoachDataSummary): string {
+  if (summary.allowanceState === 'ready') {
+    return `Sisa jatah harian: ${formatRupiah(summary.remainingToday)}`
+  }
+  if (summary.allowanceState === 'shortfall') {
+    return 'Sisa jatah harian: DITAHAN (pemasukan bulan ini belum cukup menutup cicilan & celengan) — JANGAN sebut nominal jatah apa pun'
+  }
+  return 'Sisa jatah harian: BELUM TERSEDIA (pemasukan bulan ini belum diatur user) — JANGAN sebut nominal jatah apa pun'
+}
+
 /** ringkasan angka → teks yang disisipkan ke prompt sistem (server) */
 export function buildCoachContext(summary: CoachDataSummary): string {
   return [
@@ -43,23 +77,49 @@ export function buildCoachContext(summary: CoachDataSummary): string {
     `Pemasukan bulan ini: ${formatRupiah(summary.incomeThisMonth)}`,
     `Pengeluaran bulan ini: ${formatRupiah(summary.expenseThisMonth)}`,
     `Kategori pengeluaran teratas: ${summary.topCategory ?? '(belum ada pengeluaran)'}`,
-    `Sisa jatah harian: ${formatRupiah(summary.remainingToday)}`,
+    allowanceLine(summary),
     `Jumlah dompet: ${summary.walletCount} · Total saldo: ${formatRupiah(summary.cashTotal)}`,
     `Hutang aktif: ${summary.activeDebtTotal > 0 ? formatRupiah(summary.activeDebtTotal) : 'tidak ada'}`,
     `Celengan aktif: ${summary.fundCount}`,
   ].join('\n')
 }
 
-/** sapaan pembuka yang memakai angka NYATA (bukan "Rp 150.000" template) */
+/**
+ * Sapaan pembuka dari data NYATA — dan TIDAK menyebut angka jatah kalau angkanya
+ * belum ada. Akar bug yang ditutup: akun yang baru dibuat (0 dompet, 0 catatan,
+ * pemasukan belum diatur) dulu disapa "Sisa jatah harianmu Rp 1.100.000" karena
+ * ringkasannya memakai konstanta demo.
+ */
 export function buildWelcomeText(summary: CoachDataSummary): string {
-  const parts = [
-    `Halo! 👋 Sisa jatah harianmu hari ini ${formatRupiah(summary.remainingToday)}.`,
-    `${summary.walletCount} dompet aktif dengan total saldo ${formatRupiah(summary.cashTotal)}.`,
-  ]
-  if (summary.topCategory) {
-    parts.push(`Pengeluaran terbesarmu bulan ini di kategori ${summary.topCategory}.`)
+  const parts = ['Halo! 👋']
+
+  if (summary.allowanceState === 'ready') {
+    parts.push(`Sisa jatah harianmu hari ini ${formatRupiah(summary.remainingToday)}.`)
+    parts.push(
+      `${summary.walletCount} dompet aktif dengan total saldo ${formatRupiah(summary.cashTotal)}.`,
+    )
+    if (summary.topCategory) {
+      parts.push(`Pengeluaran terbesarmu bulan ini di kategori ${summary.topCategory}.`)
+    }
+    parts.push('Mau aku bantu catat sesuatu, atau review pengeluaranmu?')
+    return parts.join(' ')
   }
-  parts.push('Mau aku bantu catat sesuatu, atau review pengeluaranmu?')
+
+  parts.push(
+    summary.allowanceState === 'shortfall'
+      ? 'Jatah harianmu sedang ditahan karena pemasukan bulan ini belum cukup menutup cicilan dan celengan.'
+      : 'Jatah harianmu belum bisa dihitung karena pemasukan bulananmu belum diatur di Pengaturan.',
+  )
+  parts.push(
+    summary.walletCount > 0
+      ? `Kamu punya ${summary.walletCount} dompet aktif dengan total saldo ${formatRupiah(summary.cashTotal)}.`
+      : 'Dompetmu juga masih kosong (0 dompet, saldo Rp 0).',
+  )
+  parts.push(
+    summary.walletCount > 0
+      ? 'Isi pemasukan bulanan di Pengaturan supaya aku bisa menghitung jatah harianmu 🌿'
+      : 'Yuk mulai dari menu Dompet (bikin dompet pertama) lalu isi pemasukan bulanan di Pengaturan — setelah itu aku bisa bantu hitung jatah harianmu 🌿',
+  )
   return parts.join(' ')
 }
 
@@ -67,13 +127,17 @@ export function buildWelcomeText(summary: CoachDataSummary): string {
  * Balasan jujur setelah pencatatan SUKSES dari chat — menyebut angka NYATA
  * SESUDAH baris benar-benar tertulis (sisa jatah harian baru dari
  * `computeDailyHud`), bukan angka lama/karangan.
+ *
+ * `remainingLabel: null` = jatah harian belum bisa dihitung (akun baru / jatah
+ * ditahan) → kalimat sisa jatah DILEWATI, bukan diganti "Rp 0".
  */
 export function buildRecordedReply(
   name: string,
   amountLabel: string,
-  remainingLabel: string,
+  remainingLabel: string | null,
 ): string {
-  return `Sip, "${name}" senilai ${amountLabel} sudah aku catat ya 🌿 Sisa jatah harianmu sekarang ${remainingLabel}.`
+  const saved = `Sip, "${name}" senilai ${amountLabel} sudah aku catat ya 🌿`
+  return remainingLabel ? `${saved} Sisa jatah harianmu sekarang ${remainingLabel}.` : saved
 }
 
 /**
@@ -229,7 +293,41 @@ export function collectCoachSummary(now: Date = new Date()): CoachDataSummary {
   const topCategory = [...byCategory.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null
 
   const funds = liveFunds(getFundsSnapshot())
-  const hud = computeDailyHud({ sinkingFunds: funds })
+
+  /* ── JATAH HARIAN DARI DATA USER, BUKAN KONSTANTA DEMO ─────────────────────
+     BUG YANG DITUTUP: dulu di sini cuma `computeDailyHud({ sinkingFunds: funds })`.
+     Semua argumen lain jatuh ke DEFAULT DEMO — pemasukan 7.500.000, cicilan
+     800.000, pengeluaran 2.300.000, dan 4 hari tersisa (CURRENT_DAY 27 /
+     DAYS_IN_MONTH 30) — sehingga akun yang benar-benar baru (0 dompet, 0 catatan,
+     pemasukan belum diatur) disapa AI dengan "Sisa jatah harianmu Rp 1.100.000":
+     (7.500.000 − 800.000 − 2.300.000) ÷ 4.
+
+     Sekarang argumennya SAMA dengan kartu "Jatah Hari Ini"
+     (`components/catetind/daily-hud-card.tsx`): konfigurasi uang user
+     (`lib/user-money-settings.ts`), baris ledger NYATA, dan jendela bulan
+     kalender dari tanggal perangkat. Jadi angka yang disebut AI = angka di layar,
+     dan akun kosong tidak punya dasar untuk menyebut nominal apa pun. */
+  const todayIso = localISODate(now)
+  const window = periodWindowForTab('monthly', todayIso)
+  const settings = readUserMoneySettings()
+  const hud = computeDailyHud({
+    monthlyIncome: settings.monthlyIncome,
+    totalInstallments: settings.totalInstallments,
+    sinkingFunds: funds,
+    spent: spentInWindow(txs, window),
+    spentToday: spentOn(txs, todayIso),
+    window,
+  })
+
+  /* Tiga keadaan yang PERSIS memetakan tiga cabang kartu Home: belum diatur
+     (CTA), jatah ditahan (shortfall), atau angka siap disebut. Tanpa ini, akun
+     kosong akan mengirim `remainingToday: 0` dan model menyebut "Rp 0" seolah
+     itu jatah user — sama palsunya dengan angka demo. */
+  const allowanceState: CoachAllowanceState = !hasConfiguredIncome(settings)
+    ? 'not-configured'
+    : hud.shortfall
+      ? 'shortfall'
+      : 'ready'
 
   const debts = getWealthSnapshot().debts
   const activeDebtTotal = debts
@@ -241,7 +339,8 @@ export function collectCoachSummary(now: Date = new Date()): CoachDataSummary {
     incomeThisMonth,
     expenseThisMonth,
     topCategory,
-    remainingToday: hud.remainingToday,
+    remainingToday: allowanceState === 'ready' ? hud.remainingToday : 0,
+    allowanceState,
     walletCount: walletAccounts(snapshot).length,
     cashTotal: cashTotal(snapshot),
     activeDebtTotal,

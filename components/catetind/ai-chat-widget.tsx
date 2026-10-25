@@ -316,7 +316,11 @@ export function AIChatWidget() {
          tanpa angka supaya tidak mengarang. */
       let replyContent = AI_CAPTURE_COPY.saved(transaction.name, amountLabel)
       try {
-        const remaining = formatRupiah(collectCoachSummary().remainingToday)
+        /* angka jatah hanya disebut kalau memang ADA dasar hitungnya (akun baru /
+           jatah ditahan → kalimat tanpa angka, bukan "Rp 0") */
+        const summary = collectCoachSummary()
+        const remaining =
+          summary.allowanceState === 'ready' ? formatRupiah(summary.remainingToday) : null
         replyContent = buildRecordedReply(transaction.name, amountLabel, remaining)
       } catch {
         /* biarkan kalimat tanpa angka */
