@@ -379,7 +379,7 @@ export function JointScreen() {
       /* store menolak (nominal ≤ 0 / kantong bukan anggota) → TIDAK ada yang
          ditulis, jadi jangan mengabarkan "tersimpan" */
       if (!tx) {
-        toast.error('Catatan bareng gagal disimpan — cek nominalnya ya')
+        toast.error('Catatan bareng gagal disimpan, cek nominalnya ya')
         return
       }
 
@@ -431,7 +431,7 @@ export function JointScreen() {
       }
       const stored = recordSettlement(record)
       if (!stored) {
-        toast.error('Settle-nya gagal disimpan — coba lagi ya')
+        toast.error('Settle-nya gagal disimpan, coba lagi ya')
         return
       }
       /* JEJAK (paket 43): settle menyelesaikan kewajiban bulan ini. Yang dikirim

@@ -143,15 +143,15 @@ export function aiUserMessage(kind: AiErrorKind): string {
     case 'no-key':
       return 'AI belum tersambung di server ini.'
     case 'timeout':
-      return 'Model AI-nya lama menjawab — coba lagi sebentar ya 🌿'
+      return 'Model AI-nya lama menjawab, coba lagi sebentar ya 🌿'
     case 'rate-limit':
-      return 'Model AI sedang penuh — tunggu sebentar, lalu coba lagi ya 🌿'
+      return 'Model AI sedang penuh, tunggu sebentar, lalu coba lagi ya 🌿'
     case 'empty':
-      return 'Model AI belum mengirim jawaban — coba lagi ya 🌿'
+      return 'Model AI belum mengirim jawaban, coba lagi ya 🌿'
     case 'parse':
-      return 'Jawaban model belum bisa dibaca — coba lagi ya 🌿'
+      return 'Jawaban model belum bisa dibaca, coba lagi ya 🌿'
     default:
-      return 'Model AI belum bisa dihubungi — coba lagi sebentar ya 🌿'
+      return 'Model AI belum bisa dihubungi, coba lagi sebentar ya 🌿'
   }
 }
 

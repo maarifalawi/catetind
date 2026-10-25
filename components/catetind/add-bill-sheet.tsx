@@ -247,7 +247,7 @@ export function AddBillSheet({
           digits={digits}
           onDigitsChange={setDigits}
           placeholder="Rp 1.500.000"
-          hint="(Opsional — kosongkan kalau nominalnya berubah-ubah)"
+          hint="(Opsional, kosongkan kalau nominalnya berubah-ubah)"
         />
       </div>
 

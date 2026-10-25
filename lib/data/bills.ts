@@ -211,7 +211,7 @@ export function dueContext(
   if (status === 'paid') return { text: 'Lunas', className: 'text-hud-sage' }
   if (status === 'overdue') {
     return {
-      text: `Jatuh tempo tgl ${bill.dueDate} — Telat ${daysLate(bill, currentDay)} hari`,
+      text: `Jatuh tempo tgl ${bill.dueDate}, Telat ${daysLate(bill, currentDay)} hari`,
       className: 'text-hud-terracotta',
     }
   }
@@ -435,12 +435,12 @@ export const BILL_REMINDER_OPTIONS: { days: number; label: string }[] = [
 export const BILL_SHEET_COPY = {
   add: {
     title: 'Tambah Tagihan Baru',
-    description: 'Cukup nama & tanggal jatuh tempo dulu — sisanya opsional.',
+    description: 'Cukup nama & tanggal jatuh tempo dulu, sisanya opsional.',
     submit: 'Simpan Tagihan',
   },
   edit: {
     title: 'Edit Tagihan',
-    description: 'Ubah bagian yang keliru aja — sisanya tetap seperti semula.',
+    description: 'Ubah bagian yang keliru aja, sisanya tetap seperti semula.',
     submit: 'Simpan Perubahan',
   },
 } as const
@@ -474,7 +474,7 @@ export const CONFIRM_DELETE_BILL_COPY = {
   overlay: 'Batal hapus tagihan',
   title: 'Hapus tagihan ini?',
   body: (name: string) => `“${name}” bakal keluar dari daftar rutinmu.`,
-  safety: `Tenang — masih bisa kamu balikin lewat tombol Undo selama ${
+  safety: `Tenang, masih bisa kamu balikin lewat tombol Undo selama ${
     UNDO_WINDOW_MS / 1000
   } detik.`,
   cancel: 'Batal',
@@ -488,7 +488,7 @@ export const DELETE_BILL_TOAST = {
   undoneTitle: 'Tagihan dikembalikan 🌿',
   undoneDescription: 'Tagihannya balik ke daftar seperti semula.',
   /** jaring pengaman tetap jujur kalau tombol Undo ditekan setelah jendelanya tutup */
-  expired: 'Jendela Undo-nya sudah lewat — tagihannya bisa ditambahkan lagi kapan aja 🌿',
+  expired: 'Jendela Undo-nya sudah lewat, tagihannya bisa ditambahkan lagi kapan aja 🌿',
 } as const
 
 /**
@@ -501,7 +501,7 @@ export const CONFIRM_CLEAR_PAID_COPY = {
   title: (count: number) => `Bersihkan ${count} tagihan lunas?`,
   body: 'Tagihan yang sudah dibayar akan dihapus dari daftar rutin dan tidak muncul lagi bulan depan.',
   safety: `Masih bisa dibatalkan lewat Undo selama ${UNDO_WINDOW_MS / 1000} detik.`,
-  note: 'Catatan pembayarannya tetap tersimpan di Riwayat — yang hilang cuma tagihannya dari daftar rutin.',
+  note: 'Catatan pembayarannya tetap tersimpan di Riwayat, yang hilang cuma tagihannya dari daftar rutin.',
   cancel: 'Nanti saja',
   confirm: 'Bersihkan',
 } as const
@@ -512,8 +512,8 @@ export const CLEAR_PAID_TOAST = {
   undo: 'Undo',
   undoneTitle: 'Tagihan lunas dikembalikan 🌿',
   undoneDescription: 'Tagihannya balik ke daftar seperti semula.',
-  expired: 'Jendela Undo-nya sudah lewat — tagihannya tetap terhapus.',
-  failed: 'Tidak ada tagihan lunas yang bisa dibersihkan — daftarnya sudah berubah.',
+  expired: 'Jendela Undo-nya sudah lewat, tagihannya tetap terhapus.',
+  failed: 'Tidak ada tagihan lunas yang bisa dibersihkan, daftarnya sudah berubah.',
 } as const
 
 export const HUD_DEDUCTION_HELPER =
@@ -550,7 +550,7 @@ export const MARK_PAID_SHEET_COPY = {
   cashLine: (amount: string, walletName: string) => `${amount} akan keluar dari ${walletName}.`,
   walletBalance: (value: string) => `Saldo ${value}`,
   noWallet: 'Belum ada dompet yang bisa dipakai. Tambah dompet dulu di halaman Dompet & Akun.',
-  invalid: 'Nominalnya belum sah — isi angka rupiah lebih dari nol.',
+  invalid: 'Nominalnya belum sah, isi angka rupiah lebih dari nol.',
   insufficient: (walletName: string) =>
     `Saldo ${walletName} gak cukup untuk ini. Pilih dompet lain atau catat nominal yang lebih kecil.`,
   /** ditolak store (mis. statusnya keburu berubah / dompetnya sudah tidak ada) */
@@ -560,7 +560,7 @@ export const MARK_PAID_SHEET_COPY = {
    * statusnya sengaja TIDAK berubah. Kalimat ini yang dikatakan ke user — bukan
    * stempel LUNAS tanpa uang keluar.
    */
-  closedNote: 'Belum ada yang dibayar — status tagihannya masih seperti semula.',
+  closedNote: 'Belum ada yang dibayar, status tagihannya masih seperti semula.',
 } as const
 
 /** detail toast setelah baris kasnya benar-benar tertulis */
@@ -571,7 +571,7 @@ export const MARK_PAID_TOAST_EXTRA = {
   undoneTitle: 'Tanda lunas dibatalkan',
   undoneDescription: 'Catatan pembayarannya ikut dibatalkan, saldo dompetmu kembali seperti semula.',
   /** jaring pengaman kalau tombolnya ditekan setelah jendelanya tutup */
-  expired: 'Jendela batal-nya sudah lewat — catatan pembayarannya tetap ada di Riwayat 🌿',
+  expired: 'Jendela batal-nya sudah lewat, catatan pembayarannya tetap ada di Riwayat 🌿',
 } as const
 
 /**
@@ -606,7 +606,7 @@ export const BILL_UNPAID_REVERSAL_NOTE = (name: string) => `Batal bayar ${name}`
 export const BILL_CARD_ACTION_COPY = {
   markPaid: 'Tandai Lunas',
   markPaidA11y: (name: string) => `Tandai ${name} lunas`,
-  markPaidHint: 'Pilih dompet sumbernya — saldonya langsung berkurang.',
+  markPaidHint: 'Pilih dompet sumbernya, saldonya langsung berkurang.',
   /** label di area aksi yang tersingkap saat geser kanan (jalur cepat) */
   markPaidSwipe: 'Tandai Lunas',
   unmarkPaid: 'Batal lunas',
@@ -630,7 +630,7 @@ export const CONFIRM_UNPAID_COPY = {
   body: (name: string, amountLabel: string) =>
     `“${name}” balik jadi belum dibayar, dan ${amountLabel} dikembalikan ke dompet yang kamu pakai membayar.`,
   note:
-    'Catatan pembayarannya tetap tersimpan di Riwayat sebagai baris yang dibatalkan — jejak uangnya tidak dihapus, supaya saldo dompetmu tetap bisa dijelaskan.',
+    'Catatan pembayarannya tetap tersimpan di Riwayat sebagai baris yang dibatalkan, jejak uangnya tidak dihapus, supaya saldo dompetmu tetap bisa dijelaskan.',
   cancel: 'Nanti saja',
   confirm: 'Batalkan lunas',
 } as const
@@ -641,7 +641,7 @@ export const UNPAID_TOAST = {
   description: (amountLabel: string, walletName: string) =>
     `${amountLabel} kembali ke ${walletName}, dan tagihannya masuk lagi ke daftar aktif.`,
   /** percobaan yang tidak mengubah apa pun (statusnya keburu berubah di tab lain) */
-  rejected: 'Status tagihan ini sudah berubah — tidak ada yang dibatalkan.',
+  rejected: 'Status tagihan ini sudah berubah, tidak ada yang dibatalkan.',
   /** tagihan contoh: tidak ada baris kas yang bisa dibalikkan */
   noRow: 'Tagihan contoh ini tidak punya catatan pembayaran di app, jadi tidak ada uang yang bisa dikembalikan.',
 } as const

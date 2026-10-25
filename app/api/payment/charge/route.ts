@@ -216,7 +216,7 @@ export async function POST(req: NextRequest) {
 
   if (!midtransConfigured()) {
     return NextResponse.json(
-      { ok: false, reason: 'not-configured', error: 'Pembayaran belum aktif — menunggu Midtrans.' },
+      { ok: false, reason: 'not-configured', error: 'Pembayaran belum aktif, menunggu Midtrans.' },
       { status: 503 },
     )
   }
@@ -435,7 +435,7 @@ export async function POST(req: NextRequest) {
       : plan
         ? `${plan.name} (akses selamanya)`
         : addonName
-          ? `${addonName} — token AI`
+          ? `${addonName}, token AI`
           : 'CatetInd'
 
   /* ── 1. Pakai ulang order yang masih pending (kalau memang bisa & cocok) ── */
@@ -467,7 +467,7 @@ export async function POST(req: NextRequest) {
             state: 'settled' satisfies PaymentState,
             expiresAt: previous.value.expiresAt,
             instructions: null,
-            note: 'Pembayaran sebelumnya sudah diterima provider — langganan sedang diaktifkan.',
+            note: 'Pembayaran sebelumnya sudah diterima provider, langganan sedang diaktifkan.',
           })
         }
         /* tagihan lama tidak mewakili niat pembayaran yang sekarang */
@@ -486,7 +486,7 @@ export async function POST(req: NextRequest) {
               state: 'settled' satisfies PaymentState,
               expiresAt: detail.expiresAt,
               instructions: null,
-              note: 'Pembayaran sudah diterima provider — langganan sedang diaktifkan.',
+              note: 'Pembayaran sudah diterima provider, langganan sedang diaktifkan.',
             })
           }
           /* masih pending, metode sama, dan instruksinya bisa dirender ulang */

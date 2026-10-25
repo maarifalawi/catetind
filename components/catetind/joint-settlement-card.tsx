@@ -102,7 +102,7 @@ export function JointSettlementCard({
                 ? 'Bulan ini sudah ditutup.'
                 : allEven
                   ? 'Tidak ada transfer yang perlu dilakukan.'
-                  : `Selisih ${moneyLabel(difference, masked)} — tidak perlu transfer.`}
+                  : `Selisih ${moneyLabel(difference, masked)}, tidak perlu transfer.`}
             </p>
           </div>
           <span className="ml-auto shrink-0 text-[11px] font-medium text-forest/40">

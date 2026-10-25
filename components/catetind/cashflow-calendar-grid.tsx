@@ -206,7 +206,7 @@ function CalendarDayCell({
   const look = calendarCellLook(cell)
   const hasFixedBill = cell.entries.some((entry) => entry.type === 'fixed_bill')
   const darkFill = look === 'deficit' || look === 'surplus'
-  const ariaLabel = `${cell.day} ${cell.monthShort} — ${CALENDAR_LOOK_WORD[look]}${
+  const ariaLabel = `${cell.day} ${cell.monthShort}, ${CALENDAR_LOOK_WORD[look]}${
     hasFixedBill ? ', ada tagihan tetap' : ''
   }`
 

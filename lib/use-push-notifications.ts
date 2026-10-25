@@ -116,7 +116,7 @@ export function usePushNotifications() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: 'CatetInd 🌿',
-          body: 'Push remote BERHASIL! Ini dikirim server — muncul walau app ditutup.',
+          body: 'Push remote BERHASIL! Ini dikirim server, muncul walau app ditutup.',
           url: '/',
         }),
       })

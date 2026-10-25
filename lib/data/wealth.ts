@@ -612,7 +612,7 @@ const MONTHS_SHORT = [
  */
 export function formatPriceStamp(iso: string, withTime = true): string {
   const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return '—'
+  if (Number.isNaN(date.getTime())) return '-'
   const parts = new Intl.DateTimeFormat('en-GB', {
     timeZone: WEALTH_TIME_ZONE,
     day: '2-digit',
@@ -777,7 +777,7 @@ export function dtiRatio(installments: number, income: number = MONTHLY_INCOME):
  */
 export const DTI_UNKNOWN_COPY = {
   label: 'Belum bisa dihitung',
-  copy: 'Atur pemasukan bulananmu dulu — DTI membandingkan cicilan dengan pemasukanmu, bukan dengan angka contoh.',
+  copy: 'Atur pemasukan bulananmu dulu, DTI membandingkan cicilan dengan pemasukanmu, bukan dengan angka contoh.',
 } as const
 
 /** Badge DTI — tiga nada kanon PRD 2E.2, copy empatik (bukan menakut-nakuti) */
@@ -796,7 +796,7 @@ export function dtiBadge(ratio: number): DtiBadge {
       ratio,
       tone: 'amber',
       label: 'Perlu perhatian',
-      copy: 'Cicilan mulai lumayan — pantau terus ya',
+      copy: 'Cicilan mulai lumayan, pantau terus ya',
       pillClassName: 'bg-hud-amber/25 text-hud-terracotta ring-hud-amber/45',
     }
   }
@@ -1175,7 +1175,7 @@ export const PERSONAL_EMPTY_LINE = {
 
 export const EMPTY_INVESTASI_TITLE = 'Belum punya catatan investasi'
 export const EMPTY_INVESTASI_COPY =
-  'Saham, reksadana, crypto, emas — catat di sini agar Net Worth akurat.'
+  'Saham, reksadana, crypto, emas, catat di sini agar Net Worth akurat.'
 export const EMPTY_INVESTASI_CTA = 'Tambah Investasi Pertama'
 
 export const EMPTY_HUTANG_TITLE = 'Gak ada hutang aktif'
@@ -1207,12 +1207,12 @@ export const INVESTMENT_SHEET_COPY: Record<
 > = {
   add: {
     title: 'Tambah Investasi',
-    description: 'Catat beli/jualnya — harga rata-rata kamu dihitung otomatis.',
+    description: 'Catat beli/jualnya, harga rata-rata kamu dihitung otomatis.',
     submit: 'Simpan Transaksi',
   },
   edit: {
     title: 'Edit Aset',
-    description: 'Perbaiki datanya — kartu & total portofolio langsung ikut berubah.',
+    description: 'Perbaiki datanya, kartu & total portofolio langsung ikut berubah.',
     submit: 'Simpan Perubahan',
   },
 }
@@ -1264,7 +1264,7 @@ export const PRICE_UPDATE_COPY = {
 export const ASSET_HISTORY_TITLE = 'Riwayat Beli/Jual'
 export const ASSET_HISTORY_EMPTY = 'Belum ada transaksi beli/jual untuk aset ini.'
 export const ASSET_HISTORY_EMPTY_HINT =
-  'Riwayat dibaca dari transaksi beli/jual aset, bukan dari nilai yang kamu isi di "Edit Aset" — jadi aset yang nilainya diisi manual bisa tampil kosong di sini.'
+  'Riwayat dibaca dari transaksi beli/jual aset, bukan dari nilai yang kamu isi di "Edit Aset", jadi aset yang nilainya diisi manual bisa tampil kosong di sini.'
 
 /* ── COPY: RIWAYAT PEMBAYARAN HUTANG (Section 7D) ──────────────────────────── */
 export const PAYMENT_HISTORY_TITLE = 'Riwayat Pembayaran'
@@ -1301,7 +1301,7 @@ export const DEBT_SHEET_COPY: Record<
   edit: {
     title: 'Edit Utang / Piutang',
     description:
-      'Betulkan datanya — kartu, DTI, dan Net Worth langsung ikut berubah. Pelunasan tetap lewat "Catat Bayar" supaya selalu ada baris kasnya.',
+      'Betulkan datanya, kartu, DTI, dan Net Worth langsung ikut berubah. Pelunasan tetap lewat "Catat Bayar" supaya selalu ada baris kasnya.',
     submit: 'Simpan Perubahan',
   },
 }
@@ -1323,15 +1323,15 @@ export const WEALTH_ROW_ACTION = {
 /* ── H8-4 (audit UI/UX) — baris ringkas saat hutang/piutang KOSONG ───────────
    Dulu section kosong menyisakan satu kartu besar yang menghabiskan ruang.
    Sekarang cukup SATU baris positif + "Tambah" sebagai text link. */
-export const HUTANG_ZERO_LINE = '🎉 Hutang: Rp 0 — Bersih!'
-export const PIUTANG_ZERO_LINE = '🎉 Piutang: Rp 0 — Bersih!'
+export const HUTANG_ZERO_LINE = '🎉 Hutang: Rp 0, Bersih!'
+export const PIUTANG_ZERO_LINE = '🎉 Piutang: Rp 0, Bersih!'
 
 /* ── H8-1 (audit UI/UX) — kartu onboarding untuk user baru ───────────────────
    Halaman Kekayaan terasa intimidating buat user baru. Kartu ini menjelaskan
    dengan bahasa kecil-dulu, sesuai contoh audit. */
 export const WEALTH_ONBOARD_COPY = {
   title: 'Semua asetmu, dari yang kecil',
-  body: 'Halaman ini buat track semua aset kamu — dari tabungan Rp 500.000 sampai motor. Mulai dari yang kecil dulu!',
+  body: 'Halaman ini buat track semua aset kamu, dari tabungan Rp 500.000 sampai motor. Mulai dari yang kecil dulu!',
   cta: 'Catat aset pertama',
 } as const
 
@@ -1366,7 +1366,7 @@ export const DEBT_SHEET_FIELD_COPY = {
 export const DEBT_EDIT_TOAST = {
   title: 'Catatan diperbarui ✅',
   description: (name: string) =>
-    `${name} sudah dibetulkan — kartu, DTI, dan Net Worth ikut menyesuaikan.`,
+    `${name} sudah dibetulkan, kartu, DTI, dan Net Worth ikut menyesuaikan.`,
 }
 
 /* ── COPY: DIALOG HAPUS (WAJIB JUJUR — keputusan paket 50) ──────────────────
@@ -1385,7 +1385,7 @@ export const DEBT_EDIT_TOAST = {
 /** jenis catatan dari sudut pandang user */
 type DebtKindCopy = 'hutang' | 'piutang'
 
-const DELETE_SAFETY_COPY = `Tenang — masih bisa kamu balikin lewat tombol Undo selama ${
+const DELETE_SAFETY_COPY = `Tenang, masih bisa kamu balikin lewat tombol Undo selama ${
   UNDO_WINDOW_MS / 1000
 } detik.`
 
@@ -1426,9 +1426,9 @@ export const DELETE_DEBT_TOAST = {
   description: (name: string) => `${name} keluar dari daftar hutangmu.`,
   undo: 'Undo',
   undoneTitle: 'Catatan dikembalikan 🌿',
-  undoneDescription: 'Catatannya balik ke daftar — riwayat pembayarannya ikut utuh.',
+  undoneDescription: 'Catatannya balik ke daftar, riwayat pembayarannya ikut utuh.',
   expired:
-    'Jendela Undo-nya sudah lewat — catatannya bisa kamu tambahkan lagi kalau memang masih perlu 🌿',
+    'Jendela Undo-nya sudah lewat, catatannya bisa kamu tambahkan lagi kalau memang masih perlu 🌿',
 } as const
 
 export const DELETE_ASSET_TOAST = {
@@ -1437,7 +1437,7 @@ export const DELETE_ASSET_TOAST = {
   undo: 'Undo',
   undoneTitle: 'Aset dikembalikan 🌿',
   undoneDescription: 'Nilainya balik ke portofolio & Net Worth seperti semula.',
-  expired: 'Jendela Undo-nya sudah lewat — asetnya bisa kamu tambahkan lagi kapan aja 🌿',
+  expired: 'Jendela Undo-nya sudah lewat, asetnya bisa kamu tambahkan lagi kapan aja 🌿',
 } as const
 
 /* ── TAB PROPERTI / ASET FISIK (paket 63) ────────────────────────────────────
@@ -1448,7 +1448,7 @@ export const DELETE_ASSET_TOAST = {
 
 export const PHYSICAL_TAB_COPY = {
   title: 'Properti & Aset Fisik',
-  blurb: 'Rumah, tanah, kendaraan, logam mulia — nilainya kamu isi sendiri.',
+  blurb: 'Rumah, tanah, kendaraan, logam mulia, nilainya kamu isi sendiri.',
   totalLabel: 'Total nilai aset fisik',
   addLabel: 'Tambah Aset',
   emptyTitle: 'Belum ada aset fisik tercatat',
@@ -1489,7 +1489,7 @@ export const PHYSICAL_TAB_COPY = {
     undo: 'Undo',
     restoredTitle: 'Aset dikembalikan 🌿',
     restoredBody: 'Nilainya balik ke Total Kekayaan seperti semula.',
-    undoExpired: 'Jendela Undo-nya sudah lewat — asetnya bisa kamu tambahkan lagi kapan aja 🌿',
+    undoExpired: 'Jendela Undo-nya sudah lewat, asetnya bisa kamu tambahkan lagi kapan aja 🌿',
   },
 } as const
 

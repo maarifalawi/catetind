@@ -366,7 +366,7 @@ export const WALLET_SYNC_ADJUSTMENT_COPY = {
   modalHint: {
     expense: 'Pengeluaran Tak Tercatat akan ditambahkan otomatis ke catatanmu.',
     income: 'Pemasukan Tak Tercatat akan ditambahkan otomatis ke catatanmu.',
-    none: 'Saldo di catatanmu sudah sama dengan saldo asli — tidak ada yang perlu dikoreksi.',
+    none: 'Saldo di catatanmu sudah sama dengan saldo asli, tidak ada yang perlu dikoreksi.',
   },
 } as const
 
@@ -418,10 +418,10 @@ export const WALLET_DELETE_COPY = {
       : ' tidak lagi ikut dihitung di Total Saldo, Net Worth, dan Jatah Harian. Belum ada catatan di dompet ini.',
   /** fakta yang TIDAK boleh disembunyikan sebelum user menekan Hapus */
   keepNote:
-    'Uang yang sudah keluar TIDAK kembali, dan catatannya tetap ada di Riwayat — yang kamu hapus dompetnya, bukan pengeluarannya.',
+    'Uang yang sudah keluar TIDAK kembali, dan catatannya tetap ada di Riwayat, yang kamu hapus dompetnya, bukan pengeluarannya.',
   /** jalan yang lebih aman, ditawarkan SEBELUM user menekan Hapus */
   moveFirstHint:
-    'Masih ada isinya? Tutup dialog ini dan pakai “Pindah Dana” dulu — saldonya pindah utuh ke dompet lain.',
+    'Masih ada isinya? Tutup dialog ini dan pakai “Pindah Dana” dulu, saldonya pindah utuh ke dompet lain.',
   /** jaring pengaman: hak Undo 5 detik yang sama dengan hapus catatan */
   safety: (seconds: number) =>
     `Masih bisa dibatalkan lewat tombol Undo selama ${seconds} detik setelah kamu menekannya.`,
@@ -438,7 +438,7 @@ export const WALLET_DELETE_TOAST = {
   undoneTitle: 'Dompet dikembalikan 🌿',
   undoneDescription: 'Dompetnya balik ke daftar beserta saldonya.',
   /** jaring pengaman tetap jujur kalau Undo ditekan setelah jendelanya tutup */
-  expired: 'Jendela Undo-nya sudah lewat — dompetnya bisa ditambahkan lagi kapan aja 🌿',
+  expired: 'Jendela Undo-nya sudah lewat, dompetnya bisa ditambahkan lagi kapan aja 🌿',
 } as const
 
 /**

@@ -105,7 +105,7 @@ export function tutorialAriaLabel(label: string): string {
 export const TUTORIALS: Record<DeviceType, Tutorial> = {
   ios: {
     label: 'iPhone / iPad',
-    note: 'Wajib Safari ya — Chrome & browser lain di iPhone tidak bisa install PWA.',
+    note: 'Wajib Safari ya, Chrome & browser lain di iPhone tidak bisa install PWA.',
     steps: [
       {
         text: 'Buka catetind.com di browser Safari (wajib Safari, Chrome iOS tidak support).',
@@ -119,7 +119,7 @@ export const TUTORIALS: Record<DeviceType, Tutorial> = {
         visual: 'ios-add-to-home',
       },
       {
-        text: "Tap 'Tambah' di pojok kanan atas. Selesai — ikon CatetInd langsung nongol di layar utama.",
+        text: "Tap 'Tambah' di pojok kanan atas. Selesai, ikon CatetInd langsung nongol di layar utama.",
       },
     ],
   },
@@ -141,7 +141,7 @@ export const TUTORIALS: Record<DeviceType, Tutorial> = {
   },
   desktop: {
     label: 'Desktop',
-    note: 'Chrome atau Edge — paling cepat lewat ikon install di address bar.',
+    note: 'Chrome atau Edge, paling cepat lewat ikon install di address bar.',
     steps: [
       { text: 'Buka catetind.com di Chrome atau Edge.' },
       {
@@ -188,7 +188,7 @@ export const INSTALL_LIMITS: {
      yang BISA dilakukan ("Notifikasi bisa aktif di Chrome & Edge ✅"), detail
      batasnya tetap jujur di dalam disclosure. */
   title: 'Yang bisa kamu andalkan',
-  blurb: 'CatetInd sudah siap di browser modern — ini yang bisa kamu harapkan.',
+  blurb: 'CatetInd sudah siap di browser modern, ini yang bisa kamu harapkan.',
   detailLabel: 'Detail',
   points: [
     {
@@ -223,7 +223,7 @@ export const INSTALL_HANDOFF = {
   status: {
     copied: 'Link tersalin',
     shared: 'Link terkirim',
-    failed: 'Gagal menyalin — salin link-nya manual ya',
+    failed: 'Gagal menyalin, salin link-nya manual ya',
   },
   instruction: "Buka di HP, lalu pilih 'Add to Home Screen'.",
 } as const

@@ -160,7 +160,7 @@ export function LegalShell({
                   <span className="font-medium text-forest/80">
                     {document.reviewNote.label}
                   </span>{' '}
-                  — {document.reviewNote.body}
+, {document.reviewNote.body}
                 </span>
               </p>
 

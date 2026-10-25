@@ -76,7 +76,7 @@ export const PERIOD_LABEL: Record<BillingPeriod, string> = {
 }
 
 /** badge periode lifetime — satu-satunya periode yang dijual */
-export const SEKALI_BAYAR_BADGE = '✅ Sekali bayar — akses selamanya.'
+export const SEKALI_BAYAR_BADGE = '✅ Sekali bayar, akses selamanya.'
 
 export interface PlanDefinition {
   id: PlanId
@@ -462,7 +462,7 @@ export const PRICING_TRUST_BADGES: TrustBadge[] = [
   {
     id: 'tanpa-bulanan',
     label: 'Tanpa tagihan bulanan',
-    note: 'Sekali bayar, akses selamanya — tidak ada auto-debet.',
+    note: 'Sekali bayar, akses selamanya, tidak ada auto-debet.',
   },
   {
     id: 'sekali-bayar',
@@ -502,7 +502,7 @@ export const CHECKOUT_COPY = {
   currentPlanNote: 'Ini paketmu sekarang.',
   featuresTitle: 'Yang kamu dapat',
   lockedTitle: 'Masih terkunci di paket ini',
-  lockedNote: 'Buka kapan aja lewat halaman paket — harga selalu dari sumber yang sama.',
+  lockedNote: 'Buka kapan aja lewat halaman paket, harga selalu dari sumber yang sama.',
   referralTitle: REFERRED_FRIEND_BENEFIT,
   referralLabel: 'Kode dari teman (opsional)',
   referralPlaceholder: 'Contoh: RINA-X7K',
@@ -525,25 +525,22 @@ export const CHECKOUT_COPY = {
    diisi dari `priceFor()` oleh pemanggil, bukan ditulis di sini. */
 
 export const UPGRADE_COPY = {
-  eyebrow: 'Buka fitur terkunci',
   title: 'Buka fitur lebih banyak',
   diffLabel: 'Yang dibayar sekarang',
   /** `{target}` nama paket, `{full}` harga penuh, `{amount}` yang dibayar sekarang */
   diffNote:
-    'Harga penuh {target} adalah {full}. Yang perlu dibayar sekarang {amount} — tanpa prorate dan tanpa biaya tersembunyi.',
+    'Harga penuh {target} adalah {full}. Yang perlu dibayar sekarang {amount}, tanpa prorate dan tanpa biaya tersembunyi.',
   /** teks tombol: `{amount}` dari `priceFor()`, `{target}` nama paket */
-  cta: 'Buka dengan upgrade — {amount}',
+  cta: 'Buka dengan upgrade, {amount}',
   topTierTitle: 'Kamu sudah di paket tertinggi 🎉',
   topTierBody: 'Semua fitur CatetInd sudah terbuka untukmu. Nggak ada yang perlu ditambah.',
   noPurchaseTitle: 'Belum ada paket aktif',
   noPurchaseBody:
-    'Pilih satu paket untuk membuka fitur CatetInd. Sekali bayar, akses selamanya — tanpa tagihan bulanan.',
+    'Pilih satu paket untuk membuka fitur CatetInd. Sekali bayar, akses selamanya, tanpa tagihan bulanan.',
   ctaLabel: 'Buka halaman paket',
   closeLabel: 'Tutup panel upgrade',
   /** label tombol "nanti saja" — dipakai modal upgrade & panel terkunci lain */
   laterLabel: 'Nanti aja',
-  /** keterangan kecil di bawah CTA */
-  note: 'Upgrade lifetime tidak menurunkan akses yang sudah kamu bayar. Tidak ada perpanjangan otomatis.',
 } as const
 
 /* ── COPY PANEL BILLING (Pengaturan → Langganan) ─────────────────────────────
@@ -559,7 +556,7 @@ export const BILLING_COPY = {
   noPlan: 'Belum ada paket',
   noPlanBody: 'Pilih paket sekali bayar untuk akses selamanya. Tanpa tagihan bulanan.',
   activeMonthlyBody:
-    'Paket lama 30 hari masih aktif sampai tanggal di bawah. Paket bulanan sudah tidak dijual — lifetime tetap bisa dibeli.',
+    'Paket lama 30 hari masih aktif sampai tanggal di bawah. Paket bulanan sudah tidak dijual, lifetime tetap bisa dibeli.',
   activeLifetimeBody: 'Akses selamanya. Sekali bayar, tanpa tagihan berkala 🌿',
   expiredBody:
     'Catatanmu tetap aman. Paket lama 30 hari sudah berakhir; lanjutkan dengan akses selamanya.',
@@ -617,7 +614,7 @@ export const PAY_START_COPY = {
   /** judul khusus saat user sedang UPGRADE lifetime, bukan pembelian pertama */
   upgradeTitle: 'Bayar selisih upgrade-mu',
   upgradeSubtitle:
-    'Kamu cuma menambah selisihnya — akses yang sudah dibeli tetap terpakai.',
+    'Kamu cuma menambah selisihnya, akses yang sudah dibeli tetap terpakai.',
   backLabel: 'Ganti paket',
   planLabel: 'Yang kamu beli',
   totalLabel: 'Total',
@@ -672,7 +669,7 @@ export const PAY_CARD_COPY = {
      QRIS sandbox bisa menunjuk merchant ID production (uang nyata bisa nyasar). */
   sandboxTitle: 'Mode uji (sandbox)',
   sandboxBody:
-    'Tagihan ini dibuat di lingkungan uji Midtrans, jadi aplikasi e-wallet atau m-banking asli akan menolaknya. Selesaikan lewat Simulator Midtrans — jangan pakai uang sungguhan.',
+    'Tagihan ini dibuat di lingkungan uji Midtrans, jadi aplikasi e-wallet atau m-banking asli akan menolaknya. Selesaikan lewat Simulator Midtrans, jangan pakai uang sungguhan.',
   sandboxCta: 'Buka Simulator Midtrans',
   newInvoiceLabel: 'Bikin tagihan baru',
   switchMethodLabel: 'Ganti metode',
@@ -698,16 +695,16 @@ export const PAY_DONE_COPY = {
   activeBodyLifetime: 'Semua fitur sudah terbuka. Selamanya.',
   pendingTitle: 'Pembayaran belum tercatat',
   pendingBody:
-    'Kalau kamu sudah bayar, kami cocokkan otomatis ke Midtrans. Halaman ini update sendiri — tidak perlu bayar ulang.',
+    'Kalau kamu sudah bayar, kami cocokkan otomatis ke Midtrans. Halaman ini update sendiri, tidak perlu bayar ulang.',
   failedTitle: 'Pembayarannya belum berhasil',
-  failedBody: 'Coba lagi ya — catatanmu tetap aman.',
+  failedBody: 'Coba lagi ya, catatanmu tetap aman.',
   orderLabel: 'Order',
   retryLabel: 'Cek lagi',
   /** label saat tombol “Cek lagi” sedang mencocokkan ke Midtrans */
   retryChecking: 'Mencocokkan…',
   /** keterangan setelah pemeriksaan manual yang belum menemukan pembayaran */
   stillPendingNote:
-    'Midtrans belum melaporkan pembayaran untuk order ini. Kalau kamu baru saja membayar, tunggu sebentar lalu tekan Cek lagi — tidak perlu membayar ulang.',
+    'Midtrans belum melaporkan pembayaran untuk order ini. Kalau kamu baru saja membayar, tunggu sebentar lalu tekan Cek lagi, tidak perlu membayar ulang.',
   /** keterangan di bawah CTA saat akses sudah aktif */
   autoRedirectNote: 'Membuka dashboard…',
   appCta: 'Masuk ke dashboard',

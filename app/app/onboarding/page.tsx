@@ -3,7 +3,7 @@ import { PhoneStage } from '@/components/catetind/phone-stage'
 import { OnboardingFlow } from '@/components/catetind/onboarding-flow'
 
 export const metadata: Metadata = {
-  title: 'Kenalan Dulu Yuk — CatetInd',
+  title: 'Kenalan Dulu Yuk | CatetInd',
   description:
     'Onboarding 3 langkah: pilih situasi keuanganmu, buat dompet pertamamu (pemasukan bulanan opsional), lalu catat transaksi pertamamu. Kurang dari 1 menit.',
 }

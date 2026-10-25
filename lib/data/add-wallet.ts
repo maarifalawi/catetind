@@ -31,7 +31,7 @@ export const ADD_WALLET_SHEET_COPY = {
   namePlaceholder: 'Contoh: BCA Tabungan, GoPay, Dompet Tunai',
   numberLabel: '4 angka terakhir',
   numberPlaceholder: '0849',
-  numberHint: 'Cuma buat pajangan di kartunya — nomor aslinya nggak perlu diketik.',
+  numberHint: 'Cuma buat pajangan di kartunya, nomor aslinya nggak perlu diketik.',
   balanceLabel: 'Saldo sekarang',
   balanceHint: 'Boleh dikosongin. Nanti bisa dirapikan lewat “Sesuaikan Saldo”.',
   /* `previewBalanceLabel: 'Saldo'` DIHAPUS di paket 77: label mikro "Saldo" di
@@ -51,12 +51,12 @@ export const TRANSFER_SHEET_COPY = {
    * menemukan aksi yang sama persis di semua pintu.
    */
   title: 'Pindah Dana',
-  description: 'Dua saldo ikut menyesuaikan sekaligus — nggak ada yang dobel.',
+  description: 'Dua saldo ikut menyesuaikan sekaligus, nggak ada yang dobel.',
   /** dompet asal sudah DIPUTUSKAN pintu masuknya (kartu / dompet detail) */
   fromLabel: 'Dari dompet ini',
   /** dompet asal belum diketahui (pintu “Lainnya”) → langkah 1 = memilih */
   fromPickLabel: 'Dari dompet mana?',
-  fromPickHint: 'Ketuk dompet yang saldonya mau dipindah — sisanya tinggal dua langkah.',
+  fromPickHint: 'Ketuk dompet yang saldonya mau dipindah, sisanya tinggal dua langkah.',
   /** tombol kecil di kartu asal: user tetap boleh membetulkan pilihannya */
   changeFrom: 'Ganti dompet asal',
   toLabel: 'Ke dompet mana?',
@@ -67,7 +67,7 @@ export const TRANSFER_SHEET_COPY = {
   dateLabel: 'Tanggal',
   today: 'Hari ini',
   noteLabel: 'Catatan',
-  notePlaceholder: 'Opsional — mis. “bagi uang jajan”',
+  notePlaceholder: 'Opsional, mis. “bagi uang jajan”',
   summaryLabel: 'Ringkasan',
   /**
    * Ringkasan sebelum disimpan: `Rp 250.000 · BCA → GoPay`.
@@ -77,7 +77,7 @@ export const TRANSFER_SHEET_COPY = {
   summary: (amountLabel: string, from: string, to: string) => `${amountLabel} · ${from} → ${to}`,
   /** copy menolak dengan nada menemani (BUKAN pesan error merah) */
   overBalance: (sourceName: string, balance: number) =>
-    `Saldo ${sourceName} tinggal ${formatIDR(balance)} — kecilin nominalnya dulu ya.`,
+    `Saldo ${sourceName} tinggal ${formatIDR(balance)}, kecilin nominalnya dulu ya.`,
   /**
    * Saldo asal nol: chip “Semua” mati, dan alasannya DIKATAKAN — kontrol yang
    * mati tanpa penjelasan adalah pelanggaran kanon paket 29/49. Pindah dana
@@ -97,7 +97,7 @@ export const TRANSFER_SHEET_COPY = {
    * Saldo tidak berubah) — yang dibutuhkan cuma kesadaran, bukan larangan.
    */
   crossContextNote: (toLabel: string, fromLabel: string) =>
-    `Tujuanmu ada di konteks ${toLabel}, asalnya di ${fromLabel}. Total Saldo tetap sama — yang pindah cuma dompet yang menampungnya.`,
+    `Tujuanmu ada di konteks ${toLabel}, asalnya di ${fromLabel}. Total Saldo tetap sama, yang pindah cuma dompet yang menampungnya.`,
   submit: 'Pindah Dana ⇄',
   /** tombol menyebut nominalnya sendiri supaya tidak ada tebakan sebelum tekan */
   submitFor: (amountLabel: string) => `Pindah ${amountLabel}`,
@@ -107,7 +107,7 @@ export const TRANSFER_SHEET_COPY = {
    * lain di antara membuka sheet dan menekan tombol. Tetap dikatakan, bukan
    * gagal diam-diam.
    */
-  failed: 'Pindah dananya belum jadi — cek lagi saldo dompet asalnya ya.',
+  failed: 'Pindah dananya belum jadi, cek lagi saldo dompet asalnya ya.',
   toastTitle: 'Pindah dana beres 🌿',
   /**
    * Nominal datang sebagai LABEL yang sudah lewat sensor tombol mata
@@ -116,7 +116,7 @@ export const TRANSFER_SHEET_COPY = {
    * nama dompet asal/tujuan TETAP terbaca (nama ≠ nominal, §5.7).
    */
   toastDescription: (amountLabel: string, from: string, to: string) =>
-    `${amountLabel} dari ${from} ke ${to} — dua saldo langsung ikut menyesuaikan.`,
+    `${amountLabel} dari ${from} ke ${to}, dua saldo langsung ikut menyesuaikan.`,
 
   /* ── PEMBATALAN (paket 55) ────────────────────────────────────────────────
      Pindah dana yang salah dibatalkan dari Riwayat/Home/dompet detail — jalur
@@ -135,8 +135,8 @@ export const TRANSFER_SHEET_COPY = {
    * dengan menyebut sisa saldonya, bukan gagal diam-diam.
    */
   cancelRefused: (toName: string, balanceLabel: string) =>
-    `Saldo ${toName} tinggal ${balanceLabel}, sedangkan uang pindahnya lebih besar dari itu — sudah kepakai ya. Sesuaikan dulu saldo dompet itu, baru batalkan.`,
-  cancelToastTitle: 'Pindah dana dibatalkan — uangnya balik 🌿',
+    `Saldo ${toName} tinggal ${balanceLabel}, sedangkan uang pindahnya lebih besar dari itu, sudah kepakai ya. Sesuaikan dulu saldo dompet itu, baru batalkan.`,
+  cancelToastTitle: 'Pindah dana dibatalkan, uangnya balik 🌿',
   cancelToastDescription: (fromName: string, toName: string) =>
     `${fromName} dan ${toName} kembali seperti sebelum pindah. Jejak pembatalannya tercatat di Riwayat.`,
   /**

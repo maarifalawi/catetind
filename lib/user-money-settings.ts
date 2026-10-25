@@ -124,7 +124,7 @@ export const MONEY_SETTINGS_COPY = {
   incomeNote: 'Isi gaji bulanan kamu supaya Jatah Hari Ini bisa dihitung akurat.',
   incomePlaceholder: '',
   installmentsLabel: 'Total Cicilan Bulanan',
-  installmentsNote: 'Cicilan platform (HP, paylater, motor) — dipotong lebih dulu dari pemasukan.',
+  installmentsNote: 'Cicilan platform (HP, paylater, motor), dipotong lebih dulu dari pemasukan.',
   installmentsPlaceholder: '800.000',
   effectNote:
     'Nilai ini menggantikan angka contoh: begitu diisi, kartu “Jatah Hari Ini” di Dashboard & Budget langsung memakai angka kamu.',

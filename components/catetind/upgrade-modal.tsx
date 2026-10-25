@@ -77,15 +77,17 @@ export function UpgradeModal({
           'max-h-[88dvh] overflow-y-auto',
         )}
       >
-        <p className="text-[10.5px] font-medium tracking-[0.16em] text-forest/45 uppercase">
-          {UPGRADE_COPY.eyebrow}
-        </p>
-        <h2 className="mt-1.5 font-display text-xl font-semibold tracking-tight text-forest">
+        <h2 className="font-display text-xl font-semibold tracking-tight text-forest">
           {plan ? UPGRADE_COPY.title : UPGRADE_COPY.noPurchaseTitle}
         </h2>
-        <p className="mt-2 text-[13px] leading-relaxed text-forest/60">
-          {plan ? UPGRADE_COPY.note : UPGRADE_COPY.noPurchaseBody}
-        </p>
+        {/* Catatan kecil hanya muncul saat user belum punya paket aktif. Untuk
+            user yang sudah punya paket, panel cukup menampilkan judul + daftar
+            fitur — tanpa paragraf pengantar yang mengulang informasi. */}
+        {!plan && (
+          <p className="mt-2 text-[13px] leading-relaxed text-forest/60">
+            {UPGRADE_COPY.noPurchaseBody}
+          </p>
+        )}
 
         {reason && (
           <p className="mt-3 flex items-start gap-2 rounded-2xl bg-hud-amber/20 px-3.5 py-2.5 text-[12px] font-medium leading-relaxed text-forest ring-1 ring-hud-amber/30">

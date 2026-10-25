@@ -66,7 +66,7 @@ export const HELP_TOPICS: HelpTopic[] = [
         id: 'mulai-siapin',
         title: 'Siapin CatetInd dalam 2 Menit',
         steps: [
-          'Isi nama kamu — nama panggilan juga boleh, gue yang bakal manggil 😄',
+          'Isi nama kamu, nama panggilan juga boleh, gue yang bakal manggil 😄',
           'Masukin penghasilan bulanan. Nggak harus pas, perkiraan aja dulu.',
           'Pilih situasi kamu (mahasiswa, kerja, freelance) biar saran gue lebih nyambung.',
           'Lihat tanamanmu muncul di dashboard. Dia tumbuh tiap kamu rajin nyatet 🌱',
@@ -78,7 +78,7 @@ export const HELP_TOPICS: HelpTopic[] = [
         id: 'mulai-tanaman',
         title: 'Tanaman Gue Ngapain Sih?',
         steps: [
-          'Dia bukan hiasan — dia ringkasan visual kebiasaan catat kamu.',
+          'Dia bukan hiasan, dia ringkasan visual kebiasaan catat kamu.',
           'Catat tiap hari → dia tumbuh, dari benih sampai mekar 🌸',
           'Skip beberapa hari → dia agak lesu. Nggak mati, cuma ngambek dikit.',
           'Makin sehat tanamanmu, makin tajam saran yang gue kasih.',
@@ -100,7 +100,7 @@ export const HELP_TOPICS: HelpTopic[] = [
         steps: [
           'Tap tombol + gede di tengah bawah',
           'Masukin angkanya (nggak perlu ketik "Rp")',
-          'Pilih kategori — atau biarin Minca yang nebak otomatis',
+          'Pilih kategori, atau biarin Minca yang nebak otomatis',
           'Done! Cuma 4 tap.',
         ],
         proTip:
@@ -112,7 +112,7 @@ export const HELP_TOPICS: HelpTopic[] = [
         steps: [
           'Tap transaksinya di Riwayat atau di kartu "Transaksi Terakhir".',
           'Pilih Edit, terus ganti kategorinya.',
-          'Gue belajar dari koreksi kamu — beberapa kali koreksi biasanya cukup buat nangkep polanya.',
+          'Gue belajar dari koreksi kamu, beberapa kali koreksi biasanya cukup buat nangkep polanya.',
           'Nggak mau nunggu? Set aturan tetap di Pengaturan → Kategori (mis. "kopi" selalu Makanan).',
         ],
         proTip:
@@ -122,7 +122,7 @@ export const HELP_TOPICS: HelpTopic[] = [
         id: 'catat-offline',
         title: 'Catat Pas Nggak Ada Sinyal, Bisa?',
         steps: [
-          'Bisa banget. Catat kayak biasa — gue simpan dulu di HP kamu.',
+          'Bisa banget. Catat kayak biasa, gue simpan dulu di HP kamu.',
           'Transaksinya muncul dengan ikon jam kecil ⏳ artinya masih ngantri kirim.',
           'Begitu sinyal balik, semuanya otomatis terkirim. Kamu nggak perlu ngapa-ngapain.',
           'Kalau setelah 5 menit masih gagal, gue kasih tanda + tombol "Coba Lagi".',
@@ -154,7 +154,7 @@ export const HELP_TOPICS: HelpTopic[] = [
         id: 'budget-lewat',
         title: 'Budget Gue Lewat, Panik Nggak?',
         steps: [
-          'Nggak usah. Gue nggak pakai warna merah buat ngagetin kamu — ada aksen sendiri buat "lewat batas".',
+          'Nggak usah. Gue nggak pakai warna merah buat ngagetin kamu, ada aksen sendiri buat "lewat batas".',
           'Kartunya bilang kamu lewat berapa, dan sisa hari di bulan ini masih berapa.',
           'Kalau porsinya memang kurang realistis, tap kategori → "Sesuaikan Budget".',
           'Kalau cuma boros minggu ini, gue kasih tahu kebiasaan mana yang paling nyumbang.',
@@ -167,7 +167,7 @@ export const HELP_TOPICS: HelpTopic[] = [
         title: 'Bikin Target Nabung (Sinking Fund)',
         steps: [
           'Buka tab Target Nabung, tap "Tambah Target".',
-          'Isi tujuannya: "Dana darurat", "Laptop baru", "Tiket konser" — apa aja, gue nggak nge-judge.',
+          'Isi tujuannya: "Dana darurat", "Laptop baru", "Tiket konser", apa aja, gue nggak nge-judge.',
           'Masukin nominal target + tenggatnya. Gue hitung sendiri berapa yang perlu kamu sisihkan per bulan.',
           'Tiap kamu sisihkan duit, targetnya naik dan benihnya ikut tumbuh 🌱',
         ],
@@ -192,19 +192,19 @@ export const HELP_TOPICS: HelpTopic[] = [
           'Set reminder H-3, atau H-1 buat kamu yang suka adrenaline 😅',
         ],
         proTip:
-          'Tagihan yang nominalnya nggak tetap (listrik, air) boleh dikosongin — gue bakal tanya pas kamu tandai lunas.',
+          'Tagihan yang nominalnya nggak tetap (listrik, air) boleh dikosongin, gue bakal tanya pas kamu tandai lunas.',
       },
       {
         id: 'tagihan-reminder',
         title: 'Reminder-nya Datang di Mana?',
         steps: [
           'Default: push notification H-3 sebelum jatuh tempo.',
-          'Aktifin push dulu — banner di halaman Tagihan akan nawarin.',
+          'Aktifin push dulu, banner di halaman Tagihan akan nawarin.',
           'Di iPhone, push cuma jalan kalau CatetInd udah di-install ke Home Screen. Itu aturan iOS, bukan salah kita 😅',
           'Nggak mau notif sama sekali? Matiin di Pengaturan → Notifikasi, aplikasinya tetap jalan penuh.',
         ],
         proTip:
-          'Pembayaranmu nggak pernah otomatis didebit. CatetInd nggak nyambung ke rekening bank — gue cuma ngingetin.',
+          'Pembayaranmu nggak pernah otomatis didebit. CatetInd nggak nyambung ke rekening bank, gue cuma ngingetin.',
       },
       {
         id: 'tagihan-lunas',
@@ -232,7 +232,7 @@ export const HELP_TOPICS: HelpTopic[] = [
         steps: [
           'Buka Dompet Kita, tap transaksi yang mau kamu sembunyiin.',
           'Nyalain toggle 🔒 Privat.',
-          'Nama itemnya berubah jadi "Pengeluaran Privat" — pasanganmu nggak lihat kamu beli apa.',
+          'Nama itemnya berubah jadi "Pengeluaran Privat", pasanganmu nggak lihat kamu beli apa.',
           'Nominalnya tetap kehitung di patungan, jadi pembagiannya tetap fair.',
         ],
         proTip:
@@ -244,7 +244,7 @@ export const HELP_TOPICS: HelpTopic[] = [
         steps: [
           'Tap "Buat Dompet Kita" → kasih nama (mis. "Kos Melati", "Dana Trip Bali").',
           'Bagikan kode 6 karakter ke orang yang mau kamu ajak.',
-          'Mereka buka kodenya, login, langsung gabung — nggak ada proses persetujuan yang ribet.',
+          'Mereka buka kodenya, login, langsung gabung, nggak ada proses persetujuan yang ribet.',
           'Satu dompet maksimal 2 orang, biar pembagiannya selalu jelas.',
         ],
         proTip:
@@ -256,7 +256,7 @@ export const HELP_TOPICS: HelpTopic[] = [
         steps: [
           'Buka Dompet Kita → lihat widget "siapa utang siapa" di halaman itu.',
           'Kalau angkanya beda dengan hitunganmu, cek daftar transaksinya.',
-          'Transaksi privat tetap dihitung, cuma nama itemnya disamarkan — nominalnya tetap bisa kamu cek.',
+          'Transaksi privat tetap dihitung, cuma nama itemnya disamarkan, nominalnya tetap bisa kamu cek.',
           'Ada yang salah catat? Tap transaksinya → Edit. Angka settlement ikut berubah otomatis.',
         ],
         proTip:
@@ -277,7 +277,7 @@ export const HELP_TOPICS: HelpTopic[] = [
           'Buka Kekayaan & Hutang → tab Investasi → "Tambah Investasi".',
           'Pilih jenisnya: reksadana, saham, emas, atau properti.',
           'Isi jumlah unit + harga belinya. Gue yang hitung nilai dan return-nya.',
-          'Punya aset lama yang dibeli setahun lalu? Pilih "Sudah punya" — saldo dompetmu nggak ikut terpotong.',
+          'Punya aset lama yang dibeli setahun lalu? Pilih "Sudah punya", saldo dompetmu nggak ikut terpotong.',
         ],
         proTip:
           'Harga sebagian aset di-refresh berkala. Kalau angkanya keliatan basi, gue kasih tanda + tombol update manual.',
@@ -288,7 +288,7 @@ export const HELP_TOPICS: HelpTopic[] = [
         steps: [
           'Tab Hutang → "Tambah Hutang".',
           'Isi total pinjaman, cicilan per bulan, dan sisa tenornya.',
-          'Gue hitung rasio cicilan vs penghasilanmu — kalau masuk zona aman, santai aja.',
+          'Gue hitung rasio cicilan vs penghasilanmu, kalau masuk zona aman, santai aja.',
           'Nyalain Debt Snowball: gue urutin dari hutang terkecil biar kamu cepat dapat kemenangan pertama.',
         ],
         proTip:
@@ -301,7 +301,7 @@ export const HELP_TOPICS: HelpTopic[] = [
           'Lihat Net Worth bar di bagian atas halaman.',
           'Bandingin dua sisinya: total aset dan total hutang.',
           'Aset turun biasanya karena harga pasar (saham/emas), bukan karena kamu salah.',
-          'Hutang turun itu kabar bagus — walau angka "total"-nya jadi kelihatan lebih kecil.',
+          'Hutang turun itu kabar bagus, walau angka "total"-nya jadi kelihatan lebih kecil.',
         ],
         proTip:
           'Lihat tren per bulan, bukan per hari. Kamu nggak bisa menilai keuangan dari satu hari yang jelek.',
@@ -321,7 +321,7 @@ export const HELP_TOPICS: HelpTopic[] = [
           'Tap balon chat di pojok kanan bawah.',
           'Nanya pakai bahasa sehari-hari aja: "boros nggak nih bulan ini?"',
           'Makin spesifik makin tajam: "bulan lalu gue keluar berapa buat kopi?"',
-          'Gue jawab dari data kamu sendiri — nggak ada banding-bandingin sama pengguna lain.',
+          'Gue jawab dari data kamu sendiri, nggak ada banding-bandingin sama pengguna lain.',
         ],
         proTip:
           'Ketik "scan struk" atau foto struknya langsung. Gue baca nominal + kategorinya, kamu tinggal konfirmasi.',
@@ -345,7 +345,7 @@ export const HELP_TOPICS: HelpTopic[] = [
           'Kalau di bagian atas halaman ini ada tanda kuning, artinya antrean gue sedang panjang.',
           'Coba lagi beberapa menit. Pertanyaanmu nggak hilang, kok.',
           'Kalau kamu sedang offline, gue bakal bilang jawabannya pakai data lama.',
-          'Masih lama? Tunggu sampai statusnya balik hijau — tim kami cepat sadar dan langsung benerin.',
+          'Masih lama? Tunggu sampai statusnya balik hijau, tim kami cepat sadar dan langsung benerin.',
         ],
         proTip:
           'Gue nggak akan ngarang angka. Kalau datanya belum cukup, gue bilang belum cukup.',
@@ -363,7 +363,7 @@ export const HELP_TOPICS: HelpTopic[] = [
         title: 'Siapa Sih yang Bisa Lihat Data Keuangan Gue?',
         steps: [
           'Jawaban singkatnya: cuma kamu. Titik.',
-          'Tim CatetInd — termasuk founder — nggak punya endpoint atau admin panel buat buka data transaksi individual.',
+          'Tim CatetInd | termasuk founder, nggak punya endpoint atau admin panel buat buka data transaksi individual.',
           'Ini bukan janji marketing. Struktur database-nya (row-level security milikmu sendiri) yang bikin itu mustahil.',
           'Yang bisa kami lihat cuma angka agregat anonim, mis. "berapa banyak orang yang pakai fitur Budget".',
         ],
@@ -376,7 +376,7 @@ export const HELP_TOPICS: HelpTopic[] = [
         steps: [
           'Tap ikon mata di header, dan SEMUA nominal di layar langsung tersamar.',
           'Cocok buat: lagi di KRL, antre di kasir, atau ngobrol sama orang tua 😅',
-          'Statusnya berlaku ke seluruh halaman (dashboard, budget, riwayat) — nggak perlu diulang.',
+          'Statusnya berlaku ke seluruh halaman (dashboard, budget, riwayat), nggak perlu diulang.',
           'Tap lagi buat balikin angkanya.',
         ],
         proTip:
@@ -388,7 +388,7 @@ export const HELP_TOPICS: HelpTopic[] = [
         steps: [
           'Buka Pengaturan → "Export Data Saya".',
           'Datamu di-compile jadi file JSON: transaksi, dompet, hutang, dan target nabung.',
-          'Simpan di HP atau laptop kamu sendiri — nggak ada yang perlu kamu minta izin dulu.',
+          'Simpan di HP atau laptop kamu sendiri, nggak ada yang perlu kamu minta izin dulu.',
           'Mau berhenti pakai CatetInd kapan pun? Datamu tetap bisa kamu export kapan saja.',
         ],
         proTip:
@@ -400,7 +400,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     id: 'langganan-pembayaran',
     label: 'Paket & Pembayaran',
     emoji: '💳',
-    blurb: 'Bayar sekali, naik paket, isi ulang token — tombolnya ada di depan semua, nggak disembunyiin.',
+    blurb: 'Bayar sekali, naik paket, isi ulang token, tombolnya ada di depan semua, nggak disembunyiin.',
     articles: [
       {
         id: 'langganan-upgrade',
@@ -408,7 +408,7 @@ export const HELP_TOPICS: HelpTopic[] = [
         steps: [
           'Buka Pengaturan → Langganan.',
           'Tap tombol "Upgrade paket", lalu pilih paket tujuan.',
-          'Yang kamu bayar cuma SELISIH harganya — bukan harga penuh dari nol.',
+          'Yang kamu bayar cuma SELISIH harganya, bukan harga penuh dari nol.',
           'Setelah pembayaran tercatat, fitur paket barunya langsung terbuka dan berlaku selamanya.',
         ],
         proTip:
@@ -419,8 +419,8 @@ export const HELP_TOPICS: HelpTopic[] = [
         title: 'Bayar Pakai Apa Aja?',
         steps: [
           'QRIS (paling cepat), Virtual Account bank, atau kartu.',
-          'Tagihan dan instruksi bayarnya muncul di halaman ini juga — nggak pindah ke situs lain.',
-          'Setelah pembayaran masuk, aksesmu aktif otomatis — kadang cuma hitungan detik.',
+          'Tagihan dan instruksi bayarnya muncul di halaman ini juga, nggak pindah ke situs lain.',
+          'Setelah pembayaran masuk, aksesmu aktif otomatis, kadang cuma hitungan detik.',
           'Metode favoritmu belum ada? Kabarin kami lewat tombol di bawah artikel ini ya.',
         ],
         proTip:
@@ -430,13 +430,13 @@ export const HELP_TOPICS: HelpTopic[] = [
         id: 'langganan-refund',
         title: 'Refund & Salah Bayar',
         steps: [
-          'Kelewat bayar dua kali? Duitnya nggak hilang — ada garansi uang kembali 100% dalam 30 hari.',
+          'Kelewat bayar dua kali? Duitnya nggak hilang, ada garansi uang kembali 100% dalam 30 hari.',
           'Kalau mau dikembalikan: klik 👎 di bawah artikel ini, terus pilih "Hubungi Founder".',
           'Sertakan screenshot bukti bayarnya. Nggak ada data transaksi yang perlu kamu bocorin ke kami 🙂',
           'Yang menangani langsung founder, bukan tim CS berlapis.',
         ],
         proTip:
-          'Cukup screenshot bagian yang bermasalah. Jangan kirim data yang nggak perlu — sekecil apa pun itu.',
+          'Cukup screenshot bagian yang bermasalah. Jangan kirim data yang nggak perlu, sekecil apa pun itu.',
       },
     ],
   },
@@ -459,7 +459,7 @@ export const HELP_QUICK_ANSWERS: QuickAnswer[] = [
     id: 'saldo-sinkron',
     question: 'Kok saldo gue kayaknya nggak sinkron?',
     answer:
-      'Tenang, ini biasanya karena ada transaksi yang belum ke-sync (misal kamu tadi offline). Coba tarik ke bawah buat refresh. Kalau masih beda, cek di Riwayat — mungkin ada yang kedobel atau belum tercatat.',
+      'Tenang, ini biasanya karena ada transaksi yang belum ke-sync (misal kamu tadi offline). Coba tarik ke bawah buat refresh. Kalau masih beda, cek di Riwayat, mungkin ada yang kedobel atau belum tercatat.',
     topic: 'Catat Transaksi',
   },
   {
@@ -474,14 +474,14 @@ export const HELP_QUICK_ANSWERS: QuickAnswer[] = [
     id: 'stop-langganan',
     question: 'Kalau gue mau berhenti pakai, gimana? Ribet nggak?',
     answer:
-      'Nggak ribet sama sekali — dan yang penting: TIDAK ADA yang perlu dibatalkan. CatetInd nggak punya langganan bulanan, auto-debit, atau perpanjangan otomatis, karena paketnya sekali bayar untuk akses selamanya. Mau berhenti pakai? Tinggal berhenti. Datamu tetap bisa di-export kapan aja, dan akunmu bisa kamu hapus sendiri dari Pengaturan.',
+      'Nggak ribet sama sekali, dan yang penting: TIDAK ADA yang perlu dibatalkan. CatetInd nggak punya langganan bulanan, auto-debit, atau perpanjangan otomatis, karena paketnya sekali bayar untuk akses selamanya. Mau berhenti pakai? Tinggal berhenti. Datamu tetap bisa di-export kapan aja, dan akunmu bisa kamu hapus sendiri dari Pengaturan.',
     topic: 'Paket & Pembayaran',
   },
   {
     id: 'aman-data',
     question: 'Aman nggak sih data keuangan gue di sini?',
     answer:
-      'Super aman. Bahkan tim CatetInd sendiri — termasuk founder — TIDAK BISA melihat data transaksi kamu. Ini bukan janji marketing, ini arsitektur database-nya yang memang nggak memungkinkan. Nggak ada endpoint, nggak ada admin panel yang bisa intip data individual.',
+      'Super aman. Bahkan tim CatetInd sendiri, termasuk founder, TIDAK BISA melihat data transaksi kamu. Ini bukan janji marketing, ini arsitektur database-nya yang memang nggak memungkinkan. Nggak ada endpoint, nggak ada admin panel yang bisa intip data individual.',
     topic: 'Keamanan & Privasi',
   },
   {
@@ -601,8 +601,8 @@ export const HELP_FEEDBACK_QUESTION = 'Apakah artikel ini membantu?'
 export const HELP_FEEDBACK_THANKS = 'Senang bisa membantu! 💚'
 export const HELP_PRO_TIP_LABEL = '💡 Perlu Tahu'
 export const HELP_PRIVACY_SHIELD =
-  'Kami nggak bisa mengakses data transaksimu. Kalau ada masalah teknis, kirim screenshot — kami bantu tanpa melihat datamu.'
-export const HELP_SUPPORT_FOOTNOTE = 'Balasan langsung dari founder — bukan bot, bukan tiket.'
+  'Kami nggak bisa mengakses data transaksimu. Kalau ada masalah teknis, kirim screenshot, kami bantu tanpa melihat datamu.'
+export const HELP_SUPPORT_FOOTNOTE = 'Balasan langsung dari founder, bukan bot, bukan tiket.'
 export const HELP_EXPORT_LABEL = 'Export Data Saya (JSON)'
 export const HELP_CONTACT_LABEL = 'Hubungi Founder'
 export const HELP_CONTACT_SUBJECT = 'Butuh Bantuan - CatetInd'
@@ -650,9 +650,9 @@ export const PUBLIC_HELP_COPY = {
   eyebrow: HELP_TITLE,
   title: 'Ada yang bikin bingung?',
   subtitle:
-    'Semua jawaban di bawah ini bisa dibaca tanpa akun. Kalau masih mentok, kabarin kami — balasan datang dari manusia, bukan bot.',
+    'Semua jawaban di bawah ini bisa dibaca tanpa akun. Kalau masih mentok, kabarin kami, balasan datang dari manusia, bukan bot.',
   description:
-    'Pusat Bantuan CatetInd: jawaban singkat soal paket, pencatatan, AI, dan privasi — bisa dibaca tanpa akun. Masih bingung? WhatsApp atau email tim CatetInd.',
+    'Pusat Bantuan CatetInd: jawaban singkat soal paket, pencatatan, AI, dan privasi, bisa dibaca tanpa akun. Masih bingung? WhatsApp atau email tim CatetInd.',
   meta: `${totalHelpArticles()} artikel · ${HELP_TOPICS.length} topik`,
   searchLabel: HELP_SEARCH_LABEL,
   searchPlaceholder: HELP_SEARCH_PLACEHOLDER,

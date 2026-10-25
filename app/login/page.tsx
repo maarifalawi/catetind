@@ -21,7 +21,7 @@ import { safeNextPath } from '@/lib/data/auth'
  * sheet registrasi di /checkout menautkan balik ke sini — dua arah, nol tautan mati.
  */
 export const metadata: Metadata = {
-  title: 'Masuk — CatetInd',
+  title: 'Masuk | CatetInd',
   description:
     'Masuk ke CatetInd dengan satu email: kami kirim kode 6 angka ke inboxmu, lalu kamu ketik kodenya di halaman ini. Tanpa password.',
 }

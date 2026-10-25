@@ -110,7 +110,7 @@ export function OnboardingPlantCeremony({
               </p>
               <p className="mt-1 text-[12.5px] leading-relaxed text-forest/45">
                 {granted
-                  ? 'Kami cuma muncul 2x sehari — jam 12:30 & 19:00. Tidak akan spam.'
+                  ? 'Kami cuma muncul 2x sehari, jam 12:30 & 19:00. Tidak akan spam.'
                   : 'Cuma 2x sehari, jam 12:30 (setelah makan siang) dan 19:00 (setelah makan malam). Gak akan spam.'}
               </p>
             </div>

@@ -24,9 +24,9 @@ import { safeNextPath } from '@/lib/data/auth'
  * berakhir di kartu konfirmasi (desain lama PhoneStage + PublicNavbar dilepas).
  */
 export const metadata: Metadata = {
-  title: 'Cek Email — CatetInd',
+  title: 'Cek Email | CatetInd',
   description:
-    'Tautan masuk sudah dikirim ke emailmu. Buka inbox, klik tautannya, dan kamu langsung masuk — tanpa password.',
+    'Tautan masuk sudah dikirim ke emailmu. Buka inbox, klik tautannya, dan kamu langsung masuk, tanpa password.',
 }
 
 /** query bisa datang sebagai string[] (`?email=a&email=b`) — ambil yang pertama */

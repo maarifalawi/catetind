@@ -276,7 +276,7 @@ export const DEBT_CASH_COPY = {
   },
   /** `Sisa setelah transaksi ini: Rp 0 — langsung LUNAS! 🎉` */
   remainingLine: (value: string, settled: boolean) =>
-    `Sisa setelah transaksi ini: ${value}${settled ? ' — langsung LUNAS! 🎉' : ''}`,
+    `Sisa setelah transaksi ini: ${value}${settled ? ', langsung LUNAS! 🎉' : ''}`,
   /** pengingat bahwa kas-nya benar-benar bergerak */
   cashOutLine: (value: string, walletName: string) =>
     `${value} akan benar-benar keluar dari ${walletName}.`,
@@ -298,7 +298,7 @@ export const DEBT_CASH_COPY = {
   receivableTag: 'Diterima',
   /** kembalian yang masih di tangan kita → jadi hutang kita */
   changeReturned: (value: string, name: string) =>
-    `Kamu menerima ${value} lebih dari piutangnya. Kembalian itu dicatat sebagai hutangmu ke ${name} — uangnya bukan milik kita, jadi harus dikembalikan.`,
+    `Kamu menerima ${value} lebih dari piutangnya. Kembalian itu dicatat sebagai hutangmu ke ${name}, uangnya bukan milik kita, jadi harus dikembalikan.`,
   /** kembalian yang masih dipegang lawan → jadi piutang kita */
   changePending: (value: string, name: string) =>
     `Kamu menyerahkan ${value} lebih dari sisa hutangnya. Kembalian itu dicatat sebagai piutang ke ${name} supaya tidak lupa ditagih.`,
@@ -307,7 +307,7 @@ export const DEBT_CASH_COPY = {
   /** saldo dompet terpilih — supaya user tahu batasnya sebelum menekan simpan */
   walletBalance: (value: string) => `Saldo sekarang ${value}`,
   noWallet: 'Belum ada dompet yang bisa dipakai. Tambah dompet dulu di halaman Dompet & Akun.',
-  invalid: 'Nominalnya belum sah — isi angka rupiah lebih dari nol.',
+  invalid: 'Nominalnya belum sah, isi angka rupiah lebih dari nol.',
   changeRecorded: (value: string) => `Kembalian ${value} ikut tercatat sebagai catatan baru.`,
 } as const
 

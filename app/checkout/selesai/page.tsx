@@ -17,7 +17,7 @@ import { PaymentDoneScreen } from '@/components/catetind/payment-done-screen'
 export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
-  title: 'Status pembayaran — CatetInd',
+  title: 'Status pembayaran | CatetInd',
   robots: { index: false, follow: false },
 }
 

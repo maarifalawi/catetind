@@ -84,7 +84,7 @@ export function generateUniqueInviteCode(
   }
   /* praktis tidak pernah terjadi; kalau terjadi, lebih baik gagal terang-terangan
      daripada menyimpan kode duplikat yang membuka dompet orang lain */
-  throw new Error('Gagal membuat kode undangan unik — coba lagi.')
+  throw new Error('Gagal membuat kode undangan unik, coba lagi.')
 }
 
 export function createInviteRecord({
@@ -293,7 +293,7 @@ export const INVITE_CODE_COPY = {
   expiresAt: (label: string) => `Berlaku sampai ${label}.`,
   /** satu kode aktif per dompet: membuat kode baru = mencabut yang lama */
   refresh: 'Buat kode baru',
-  refreshHint: 'Kode lama langsung tidak berlaku — satu dompet, satu kode aktif.',
+  refreshHint: 'Kode lama langsung tidak berlaku, satu dompet, satu kode aktif.',
   /** status kode yang sudah tidak bisa dipakai (dipakai / lewat 24 jam) */
   invalidNote: 'Kode ini sudah nggak bisa dipakai. Buat kode baru di bawah ya 👇',
   /** umpan balik setelah menekan "Buat kode baru" */
@@ -313,7 +313,7 @@ export function buildInviteUrl(code: string): string {
  * kode yang sama.
  */
 export function buildInviteShareText(name: string, code: string, walletName: string): string {
-  return `Halo! Aku (${name}) mengajakmu kelola uang bareng di CatetInd 💚 Dompet: ${walletName} — Kode: ${code} — klik link ini: ${buildInviteUrl(code)}`
+  return `Halo! Aku (${name}) mengajakmu kelola uang bareng di CatetInd 💚 Dompet: ${walletName}, Kode: ${code}, klik link ini: ${buildInviteUrl(code)}`
 }
 
 /** label sisa masa berlaku. Dihitung HANYA di handler/pasca-mount (jam lokal user). */
@@ -366,7 +366,7 @@ export const JOIN_COPY = {
     {
       emoji: '🤝',
       title: 'Bagi pengeluaran berdua',
-      desc: 'Patungan otomatis 50/50 — atau atur sendiri kalau porsi kalian beda.',
+      desc: 'Patungan otomatis 50/50, atau atur sendiri kalau porsi kalian beda.',
     },
     {
       emoji: '📊',
@@ -388,7 +388,7 @@ export const JOIN_COPY = {
   /** CTA primer — mengarah ke /login (belum ada sesi = masuk dulu, lalu auto-join) */
   ctaJoin: 'Gabung Dompet Ini',
   ctaJoinHint:
-    'Masuk dulu pakai tautan email — tanpa password. Belum punya akun? Tautan itu sekaligus bikin akunmu.',
+    'Masuk dulu pakai tautan email, tanpa password. Belum punya akun? Tautan itu sekaligus bikin akunmu.',
   /** CTA sekunder — nyata, sopan, tanpa rasa bersalah (tanpa countdown/urgensi) */
   ctaLater: 'Nanti aja',
   ctaLaterHint: 'Nggak ada pengingat beruntun dan nggak ada batas waktu yang dipaksa.',
@@ -403,7 +403,7 @@ export const INVALID_INVITE_COPY: Record<
   expired: {
     emoji: '⏳',
     title: 'Tautan undangannya sudah kedaluwarsa',
-    body: 'Undangan dompet bersama cuma berlaku 24 jam demi keamanan kalian. Nggak ada yang hilang kok — tinggal minta link baru.',
+    body: 'Undangan dompet bersama cuma berlaku 24 jam demi keamanan kalian. Nggak ada yang hilang kok, tinggal minta link baru.',
   },
   used: {
     emoji: '✅',
@@ -443,7 +443,7 @@ export const JOIN_DEMO_COPY = {
   body: 'Demo ini belum tersambung ke backend, jadi tombol "Gabung Dompet Ini" mengarah ke halaman masuk dan penggabungan dompetnya masih simulasi.',
   joinLabel: 'Lihat hasil setelah gabung (demo)',
   joinHint:
-    'Lompati langkah masuk supaya alurnya bisa ditelusuri sampai ujung. Kode undangannya langsung ditandai TERPAKAI — buka ulang tautan ini untuk melihat state "sudah dipakai".',
+    'Lompati langkah masuk supaya alurnya bisa ditelusuri sampai ujung. Kode undangannya langsung ditandai TERPAKAI, buka ulang tautan ini untuk melihat state "sudah dipakai".',
   statesLabel: 'Coba state lain',
 } as const
 
@@ -451,7 +451,7 @@ export const JOIN_DEMO_COPY = {
 
 export const JOIN_SUCCESS_COPY = {
   title: (walletName: string) => `Kalian sekarang punya ${walletName} 💚`,
-  body: 'Dompet bersama aktif dan mulai dari Rp0. Riwayat pribadi kalian tetap terpisah — nggak ada catatan yang tercampur.',
+  body: 'Dompet bersama aktif dan mulai dari Rp0. Riwayat pribadi kalian tetap terpisah, nggak ada catatan yang tercampur.',
   cta: 'Buka dompet bersama',
   restart: 'Balik lihat undangannya',
 } as const

@@ -340,7 +340,7 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
                   selected ? 'text-forest' : 'text-forest/35',
                 )}
               >
-                {selected ? formatIDR(selected.price) : '—'}
+                {selected ? formatIDR(selected.price) : '-'}
               </span>
             </div>
 

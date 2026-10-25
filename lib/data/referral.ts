@@ -114,7 +114,7 @@ export const REFERRAL_IS_SAMPLE = !SHOWS_SAMPLE_DATA
 /** tanda jujur saat angka referral masih contoh (dipakai halaman /referral) */
 export const REFERRAL_SAMPLE_NOTICE = {
   badge: 'Contoh',
-  body: 'Angka & riwayat di halaman ini masih contoh — statistik referral asli menyusul begitu sinkronisasi aktif.',
+  body: 'Angka & riwayat di halaman ini masih contoh, statistik referral asli menyusul begitu sinkronisasi aktif.',
 } as const
 
 export interface RewardCopy {
@@ -199,7 +199,7 @@ export function friendStatusLabel(converted: boolean): string {
  *  bagi reward referral-nya. Dipakai sebagai tooltip (`title`) + tautan kecil. */
 export const PLAN_TIER_EXPLAIN = {
   linkLabel: (plan: string) => `Apa itu ${plan}?`,
-  body: 'Paketmu menentukan bonus yang kamu dapat tiap kali teman membeli lewat linkmu — makin tinggi paketnya, makin besar bonus Token AI-nya. Semua paket CatetInd berlaku selamanya (sekali bayar).',
+  body: 'Paketmu menentukan bonus yang kamu dapat tiap kali teman membeli lewat linkmu, makin tinggi paketnya, makin besar bonus Token AI-nya. Semua paket CatetInd berlaku selamanya (sekali bayar).',
 } as const
 
 /* ── CARA KERJA (4D) ──────────────────────────────────────────────────────── */
@@ -207,7 +207,7 @@ export const PLAN_TIER_EXPLAIN = {
 export const REFERRAL_STEPS: string[] = [
   'Bagikan link unikmu ke teman via WhatsApp, Twitter, atau DM',
   'Temanmu mendaftar dan membeli paket (otomatis dapat diskon 10%)',
-  'Kamu langsung dapat reward — tanpa proses klaim, otomatis masuk!',
+  'Kamu langsung dapat reward, tanpa proses klaim, otomatis masuk!',
 ]
 
 /* ── PAYLOAD SHARE (3D) ───────────────────────────────────────────────────── */

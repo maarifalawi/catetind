@@ -103,8 +103,8 @@ function sniffImageMime(data: string): string | null {
 function unsupportedImageMessage(mime: string | null): string {
   const label = mime ? MIME_LABEL[mime] : ''
   return label
-    ? `Format ${label} belum bisa dibaca — simpan ulang sebagai JPG atau PNG, lalu coba lagi ya 🌿`
-    : 'Fotonya belum bisa dibaca — pakai JPG, PNG, WEBP, atau GIF ya 🌿'
+    ? `Format ${label} belum bisa dibaca, simpan ulang sebagai JPG atau PNG, lalu coba lagi ya 🌿`
+    : 'Fotonya belum bisa dibaca, pakai JPG, PNG, WEBP, atau GIF ya 🌿'
 }
 
 function splitDataUrl(value: string): { data: string; mimeType: string | null } {
@@ -132,7 +132,7 @@ export async function POST(req: NextRequest) {
 
   if (!allowAiCall(callerId)) {
     return NextResponse.json(
-      { ok: false, reason: 'rate-limit', error: 'Kebanyakan permintaan sekaligus — tunggu sebentar ya 🌿' },
+      { ok: false, reason: 'rate-limit', error: 'Kebanyakan permintaan sekaligus, tunggu sebentar ya 🌿' },
       { status: 429 },
     )
   }
@@ -159,7 +159,7 @@ export async function POST(req: NextRequest) {
   const base64 = data.replace(/\s+/g, '')
   if (base64.length > MAX_IMAGE_BASE64) {
     return NextResponse.json(
-      { ok: false, reason: 'invalid', error: 'Fotonya kegedean — coba potret ulang atau kecilkan dulu ya 🌿' },
+      { ok: false, reason: 'invalid', error: 'Fotonya kegedean, coba potret ulang atau kecilkan dulu ya 🌿' },
       { status: 413 },
     )
   }

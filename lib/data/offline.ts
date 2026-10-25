@@ -10,7 +10,7 @@
    disclosurenya). Kewajiban jujurnya tetap: user selalu bisa tahu arti
    "tersinkron" tanpa membuka apa pun. */
 export const OFFLINE_COPY = {
-  offlineTitle: 'Offline — catatanmu aman',
+  offlineTitle: 'Offline, catatanmu aman',
   /** kalimat keadaan; angka antreannya disusun di data, bukan di komponen */
   offlineBody: (pending: number) =>
     pending > 0
@@ -32,9 +32,9 @@ export const OFFLINE_COPY = {
   honestySummary: 'Tanpa server, "tersinkron" = tersimpan di perangkat ini.',
   /** detail teknis, dibuka hanya kalau user minta */
   honestyBody:
-    'Selama app ini belum punya backend, semua catatan tinggal di perangkatmu (IndexedDB). Nggak ada satu pun yang dikirim ke mana pun — kirimannya baru jalan begitu online.',
+    'Selama app ini belum punya backend, semua catatan tinggal di perangkatmu (IndexedDB). Nggak ada satu pun yang dikirim ke mana pun, kirimannya baru jalan begitu online.',
   honestyLabel: 'Maksudnya?',
   /** toast setelah menyimpan saat perangkat OFFLINE — jangan mengaku "kecatat & terkirim" */
   savedOfflineTitle: 'Tersimpan di perangkat 📴',
-  savedOfflineBody: 'Masuk antrean — diproses begitu online.',
+  savedOfflineBody: 'Masuk antrean, diproses begitu online.',
 } as const

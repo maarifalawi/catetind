@@ -19,7 +19,7 @@ import { UpgradeGateProvider } from '@/components/catetind/upgrade-gate-provider
 import { Toaster } from '@/components/ui/toaster'
 import './globals.css'
 
-/* ── TIPOGRAFI — HANYA SATU FONT DI SELURUH SISTEM: INTER ────────────────────
+/* ── TIPOGRAFI — HANYA SATU FONT DI SELURUH SISTEM: INTER DISPLAY ────────────
    Inter dimuat `next/font/google` dan ikut di-self-host saat build, jadi TIDAK
    ada request ke CDN font saat runtime dan TIDAK ada layout shift.
 
@@ -27,35 +27,44 @@ import './globals.css'
    (judul, angka besar & metrik) — lihat app/globals.css. Jadi seluruh app
    hanya memakai SATU typeface.
 
-   Axis `opsz` (optical size 14–32) ikut dimuat supaya Inter berperan sebagai
-   "Display": browser otomatis memakai potongan optik yang dirancang untuk teks
-   besar (judul & nominal) dan memakai potongan "text" untuk body — satu font,
-   dua optimasi ukuran, tanpa menambah font kedua. */
-const inter = Inter({
+   Axis `opsz` (optical size 14–32) ikut dimuat karena potongan "Inter Display"
+   adalah instance `opsz: 32` dari keluarga Inter yang sama — Google Fonts tidak
+   menyediakan family "Inter Display" terpisah. app/globals.css memaku
+   `font-variation-settings: 'opsz' 32` pada `html`, sehingga SEMUA teks (bukan
+   hanya judul) memakai potongan Display dan tidak ada font kedua. */
+const interDisplay = Inter({
   subsets: ['latin'],
   variable: '--font-inter',
   axes: ['opsz'],
 })
 
 /* ── SATU FONT UNTUK SELURUH SISTEM (termasuk landing) ───────────────────────
-   Landing sekarang memakai Design System CatetInd: Inter untuk body (`font-sans`)
-   dan judul (`font-display`). Tidak ada lagi font kedua khusus landing. */
+   Landing sekarang memakai Design System CatetInd: Inter Display untuk body
+   (`font-sans`) dan judul (`font-display`). Tidak ada lagi font kedua khusus
+   landing. Bobot maksimum semibold (600); `font-bold`/`extrabold`/`black`
+   dipetakan ke 600 di app/globals.css. */
 
 export const metadata: Metadata = {
-  title: 'CatetInd — Track. Grow. Secure.',
+  title: 'CatetInd | Catet Keuangan 4 Detik, Tanpa Ribet',
   description:
-    'CatetInd is a modern, minimalist personal finance app to track spending, earnings, and insights.',
+    'Aplikasi keuangan buat lo yang males nyatet. Tinggal kirim voice note atau foto struk, 4 detik beres. Biar lo tau duit lari ke mana dan gaji ga cuma numpang lewat.',
   generator: 'v0.app',
-  /* Favicon = public/LOGO.png (aset resmi, 1080×1080) — PAKET 70: titiknya
-     dipindah dari `favicon.png` ke `LOGO.png` atas permintaan pemilik produk.
-     File itu dipakai APA ADANYA: TIDAK digenerate ulang, TIDAK diwarnai ulang,
-     TIDAK di-crop — jadi warna favicon persis seperti aset aslinya.
+  /* Favicon = aset brand kotak penuh (public/icons/icon-512.png) yang juga
+     digenerate ke `app/icon.png` dan `app/favicon.ico` oleh
+     `scripts/generate-favicon.mjs`. Google butuh favicon persegi minimal 48px
+     di root (`/favicon.ico`) supaya logo tampil di hasil pencarian, dulu yang
+     dideklarasikan hanya `/LOGO.png` (wordmark 1080px dengan latar putih),
+     sehingga Google menampilkan ikon globe tanpa logo.
      Ikon Home Screen / PWA tetap public/icons/*.png (digenerate
      scripts/generate-icons.mjs) supaya saat di-Add to Home Screen logonya
      kotak penuh, bukan ikon polos. */
   icons: {
-    icon: [{ url: '/LOGO.png', type: 'image/png', sizes: '1080x1080' }],
-    shortcut: '/LOGO.png',
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/icon.png', type: 'image/png', sizes: '512x512' },
+      { url: '/icons/icon-192.png', type: 'image/png', sizes: '192x192' },
+    ],
+    shortcut: '/favicon.ico',
     apple: [{ url: '/icons/apple-icon.png', sizes: '180x180', type: 'image/png' }],
   },
 }
@@ -104,7 +113,7 @@ export default function RootLayout({
        JANGAN dihapus juga saat ada yang melihat diff atribut di DevTools —
        selisihnya berasal dari ekstensi di browser pengunjung, bukan dari HTML
        yang kita render. */
-    <html lang="id" className={`light ${inter.variable}`} suppressHydrationWarning>
+    <html lang="id" className={`light ${interDisplay.variable}`} suppressHydrationWarning>
       <body className="font-sans antialiased" suppressHydrationWarning>
         {/* Gradien tanaman (SVG) — satu definisi untuk seluruh app. Wajib di
             root supaya tanaman di halaman/tab mana pun memakai definisi yang

@@ -21,17 +21,17 @@ const PREFS = [
   {
     id: 'reminder-harian',
     label: 'Reminder Harian',
-    desc: 'Ingatkan catat pengeluaran — jam 12:30 & 19:00 WIB (maks 2x/hari)',
+    desc: 'Ingatkan catat pengeluaran, jam 12:30 & 19:00 WIB (maks 2x/hari)',
   },
   {
     id: 'laporan-mingguan',
     label: 'Laporan Mingguan',
-    desc: 'Recap 7 hari terakhir — Minggu 20:00 WIB',
+    desc: 'Recap 7 hari terakhir, Minggu 20:00 WIB',
   },
   {
     id: 'laporan-bulanan',
     label: 'Laporan Bulanan',
-    desc: 'AI recap bulanan — tanggal 1 tiap bulan',
+    desc: 'AI recap bulanan, tanggal 1 tiap bulan',
   },
   {
     id: 'tanaman-layu',
@@ -110,7 +110,7 @@ export function NotificationSettings() {
       /* jujur: endpoint-nya memang menolak tanpa sesi (401) sejak paket 39 */
       setSentMsg(null)
     } else {
-      setSentMsg('Push belum terkirim — coba lagi sebentar ya.')
+      setSentMsg('Push belum terkirim, coba lagi sebentar ya.')
     }
     setTimeout(() => setSentMsg(null), 4000)
   }
@@ -155,13 +155,13 @@ export function NotificationSettings() {
         )}
         {support === 'unsupported' && (
           <p className="mt-4 rounded-2xl bg-soil/[0.1] px-4 py-3 text-[13px] text-forest/55">
-            Browser ini belum mendukung Web Push — coba Chrome/Edge atau
+            Browser ini belum mendukung Web Push, coba Chrome/Edge atau
             Safari iOS 16.4+ yang sudah di-install ke Home Screen.
           </p>
         )}
         {permission === 'denied' && support === 'supported' && (
           <p className="mt-4 rounded-2xl bg-hud-terracotta/10 px-4 py-3 text-[13px] text-hud-terracotta">
-            Izin notifikasi ditolak browser — ubah lewat ikon 🔒 → Izin Situs →
+            Izin notifikasi ditolak browser, ubah lewat ikon 🔒 → Izin Situs →
             Notifikasi.
           </p>
         )}
@@ -245,7 +245,7 @@ export function NotificationSettings() {
 
         <p className="mt-4 flex items-start gap-2 rounded-2xl bg-cream px-4 py-3 text-xs leading-relaxed text-forest/50">
           <Smartphone className="mt-0.5 size-3.5 shrink-0 text-forest/40" />
-          CatetInd kirim MAKSIMAL 3 push per minggu — bantu kamu balik catat,
+          CatetInd kirim MAKSIMAL 3 push per minggu, bantu kamu balik catat,
           bukan nge-spam.
         </p>
       </section>
@@ -254,7 +254,7 @@ export function NotificationSettings() {
       <section className="rounded-[2rem] bg-cream p-5 ring-1 ring-soil/12 sm:p-6">
         <h2 className="text-base font-medium text-forest">Jenis Notifikasi</h2>
         <p className="mt-0.5 text-sm text-forest/50">
-          Pilih yang penting buat kamu — sisanya kita gak ganggu.
+          Pilih yang penting buat kamu, sisanya kita gak ganggu.
         </p>
 
         <ul className="mt-4 divide-y divide-soil/10">

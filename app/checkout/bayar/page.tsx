@@ -29,7 +29,7 @@ import { readSupabaseSession } from '@/lib/supabase/session-cookie'
 export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
-  title: 'Bayar — CatetInd',
+  title: 'Bayar | CatetInd',
   robots: { index: false, follow: false },
 }
 

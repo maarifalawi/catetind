@@ -93,7 +93,7 @@ export const HOME_GOALS_COPY = {
    *  ini tidak boleh pecah kalau daftarnya suatu saat kosong */
   emptyTitle: 'Belum ada celengan impian',
   emptyBody:
-    'Mulai dari satu celengan saja dulu — angka kecil juga sah. Tiap setoran bikin tanamanmu naik tahap 🌱',
+    'Mulai dari satu celengan saja dulu, angka kecil juga sah. Tiap setoran bikin tanamanmu naik tahap 🌱',
   emptyCta: 'Tanam celengan pertama',
   /** H2-3 (audit UI/UX) — empty state yang MENGGODA, bukan sekadar "belum ada
    *  data": tiga contoh celengan populer sebagai placeholder yang bisa ditap.
@@ -163,7 +163,7 @@ export const HOME_INCOME_COPY = {
    * dipakai sebagai grid dua kolom simetris, sel yang hilang membuat sisinya
    * timpang. Yang ditulis adalah penanda kosong, BUKAN `0%`/`+100%` karangan.
    */
-  noBaseline: '—',
+  noBaseline: '-',
   /** keadaan kosong jujur — bukan angka contoh */
   emptyTitle: 'Belum ada pemasukan bulan ini',
   emptyHint: 'Catat pemasukan biar grafiknya kebaca 🌱',
@@ -223,7 +223,7 @@ export const HOME_TOTAL_COPY = {
 export const HOME_WALLET_STACK_COPY = {
   addTitle: 'Tambah Dompet',
   addSubtitle: 'Bank, e-wallet, atau tunai',
-  emptyLine: 'Belum ada dompet — tambah satu dulu biar saldomu kebaca 🌱',
+  emptyLine: 'Belum ada dompet, tambah satu dulu biar saldomu kebaca 🌱',
 } as const
 
 /** Copy slot nudge AI Coach di Home (paket 58 — 58.4). Dipindah dari JSX

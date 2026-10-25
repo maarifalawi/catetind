@@ -292,7 +292,7 @@ export function AddInvestmentSheet({
             />
           </span>
           <span className="mt-1.5 block text-[11px] leading-relaxed text-forest/45">
-            Kode yang tampil sebagai badge di kartu aset — mis. BBCA, BTC, RDPU.
+            Kode yang tampil sebagai badge di kartu aset, mis. BBCA, BTC, RDPU.
           </span>
         </label>
       )}

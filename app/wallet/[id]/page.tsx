@@ -26,8 +26,8 @@ type WalletDetailPageProps = { params: Promise<{ id: string }> }
 export async function generateMetadata({ params }: WalletDetailPageProps): Promise<Metadata> {
   const { id } = await params
   return {
-    title: `Dompet ${id} — CatetInd`,
-    description: `${WALLET_DETAIL_COPY.heroLabel}, arus uang 30 hari terakhir, dan catatan transaksinya — semua di satu halaman CatetInd.`,
+    title: `Dompet ${id} | CatetInd`,
+    description: `${WALLET_DETAIL_COPY.heroLabel}, arus uang 30 hari terakhir, dan catatan transaksinya, semua di satu halaman CatetInd.`,
   }
 }
 

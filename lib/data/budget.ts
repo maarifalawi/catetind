@@ -1489,7 +1489,7 @@ export const HUD_COPY = {
    */
   notConfiguredTitle: 'Jatah harianmu belum bisa dihitung',
   notConfiguredBody:
-    'Atur pemasukanmu dulu biar jatah hariannya benar — angkanya kami hitung dari pemasukan & cicilanmu, bukan dari contoh.',
+    'Atur pemasukanmu dulu biar jatah hariannya benar, angkanya kami hitung dari pemasukan & cicilanmu, bukan dari contoh.',
   notConfiguredCta: 'Atur Pemasukan & Cicilan',
   notConfiguredA11y: 'Pemasukan bulanan belum diatur',
   /** CTA kecil di kartu Jatah Hari Ini /budget (paket 57.4) */
@@ -1600,7 +1600,7 @@ export function hudMeter(usedPct: number, total = HUD_METER_SEGMENTS): HudMeterM
    bukan tombol yang diam (prompt 24). */
 export const SINKING_NUDGE_COPY = {
   title: 'Dana Darurat belum dikasih jatah bulan ini',
-  body: 'Udah lewat tanggal 5 — yuk sisihkan sedikit. Tanamanmu senang kalau kamu konsisten 🌱',
+  body: 'Udah lewat tanggal 5, yuk sisihkan sedikit. Tanamanmu senang kalau kamu konsisten 🌱',
   cta: 'Setor',
   ctaHref: '/budget',
   dismissLabel: 'Tutup pengingat nabung',
@@ -1621,7 +1621,7 @@ export const SPENDING_REVIEW_MIN_NOTES = 3
 
 export const SPENDING_REVIEW_COPY = {
   title: 'Review Pengeluaran Hari Ini',
-  description: 'Kita lihat bareng pelan-pelan — nggak ada yang perlu dihakimi.',
+  description: 'Kita lihat bareng pelan-pelan, nggak ada yang perlu dihakimi.',
   /** label angka utama panel */
   spentLabel: 'Keluar hari ini',
   budgetLead: 'dari jatah harian',
@@ -1644,7 +1644,7 @@ export const SPENDING_REVIEW_COPY = {
   notesMore: (count: number) => `+${count} catatan lainnya`,
   /** CTA lanjut ke AI Coach (PRD 649: CTA sekunder "Over" ujungnya memang AI Coach) */
   coachCta: 'Lanjut ngobrol sama Minca',
-  coachHint: 'Pertanyaanmu langsung terkirim ke Minca — kamu tinggal lanjut ngobrol.',
+  coachHint: 'Pertanyaanmu langsung terkirim ke Minca, kamu tinggal lanjut ngobrol.',
   /** pertanyaan seed yang dikirim ke AI Coach lewat lib/ai-chat-bus.ts */
   coachSeed: 'Boros nggak nih hari ini?',
   /** satu kalimat per kondisi — apa adanya dari PRD (lihat catatan di atas) */
@@ -1735,7 +1735,7 @@ export const BUDGET_ZONE_A_COPY = {
   overQuestion: 'Mau review bareng AI Coach? 🤖',
   overCta: 'Review Pengeluaran Hari Ini',
   /** empty state dipendekkan (paket 78): satu baris saja, tanpa tiga kalimat */
-  emptyBody: 'Belum ada budget di periode ini — mulai dari yang kecil juga boleh.',
+  emptyBody: 'Belum ada budget di periode ini, mulai dari yang kecil juga boleh.',
   emptyCta: 'Buat Budget Pertama',
 } as const
 
@@ -1753,7 +1753,7 @@ export const BUDGET_ADD_COPY = {
   categoryLabel: 'Pilih kategori budget',
   amountLabel: (category: string, periodWord: string) =>
     `Berapa limit ${periodWord} untuk ${category}?`,
-  amountHint: 'Perkiraan aja dulu — limitnya bisa diubah kapan pun kok.',
+  amountHint: 'Perkiraan aja dulu, limitnya bisa diubah kapan pun kok.',
   periodTitle: 'Periode limit',
   periodAria: 'Periode budget',
   submit: 'Simpan Budget',
@@ -1767,7 +1767,7 @@ export const BUDGET_ADD_COPY = {
    Kopi" di /history, yang dulu selalu membuka mode tambah. */
 export const BUDGET_EDIT_COPY = {
   title: 'Atur Ulang Limit',
-  description: 'Kategori ini sudah punya limit — ubah angkanya ya.',
+  description: 'Kategori ini sudah punya limit, ubah angkanya ya.',
   submit: 'Simpan Limit',
   /** hint kecil di atas field nominal (jangkar konteks, bukan peringatan) */
   hint: 'Angka lama sudah terisi, jadi kamu cuma perlu menyesuaikan.',
@@ -1781,7 +1781,7 @@ export const BUDGET_SAVE_TOAST = {
   created: (category: string) => `Budget ${category} dibuat! 🌿`,
   createdBody: (limitLabel: string) => `${limitLabel} siap kamu jaga bersama.`,
   updated: (category: string) => `Limit ${category} diperbarui 🌿`,
-  updatedBody: (limitLabel: string) => `Baris yang sama — sekarang limitnya ${limitLabel}.`,
+  updatedBody: (limitLabel: string) => `Baris yang sama, sekarang limitnya ${limitLabel}.`,
 } as const
 
 /* ── COPY HAPUS BUDGET KATEGORI (paket 60 · 60.1) ────────────────────────────
@@ -1808,12 +1808,12 @@ export const BUDGET_DELETE_COPY = {
 
 export const BUDGET_DELETE_TOAST = {
   title: (category: string) => `Budget ${category} dicabut`,
-  description: 'Saldo & Jatah Harian tidak berubah — limitnya saja yang dilepas.',
+  description: 'Saldo & Jatah Harian tidak berubah, limitnya saja yang dilepas.',
   undo: 'Undo',
   undoneTitle: 'Budget dikembalikan 🌱',
   undoneDescription: 'Limitnya balik ke posisi semula di daftar.',
   /** jaring pengaman kalau Undo ditekan setelah jendelanya tutup */
-  expired: 'Jendela Undo-nya sudah lewat — budget ini bisa kamu buat lagi kapan aja 🌱',
+  expired: 'Jendela Undo-nya sudah lewat, budget ini bisa kamu buat lagi kapan aja 🌱',
 } as const
 
 /** tombol hapus di kartu kategori (dipakai `aria-label` + tooltip, jadi tidak
@@ -1835,7 +1835,7 @@ export const SINKING_PER_DAY_DAYS = 30
 export const BUDGET_SUGGEST_COPY = {
   title: 'Saran dari riwayatmu',
   body: (category: string) =>
-    `Kamu sering belanja di kategori ${category} — mau set budget juga?`,
+    `Kamu sering belanja di kategori ${category}, mau set budget juga?`,
   cta: 'Set budget',
 } as const
 
@@ -1925,12 +1925,12 @@ export const FUND_DETAIL_COPY = {
   setHint: 'Setoran langsung nambah progres & riwayat di halaman ini.',
   /** toast setelah setor — pemisah `{amount}` & `{name}` diisi di handler */
   setToastTitle: (amountLabel: string, name: string) => `${amountLabel} disetor ke ${name}! 🌱`,
-  setToastHint: (walletName: string) => `Dari ${walletName} — tanamannya makin subur.`,
+  setToastHint: (walletName: string) => `Dari ${walletName}, tanamannya makin subur.`,
   /** halaman detail dibuka dari id yang belum ada di perangkat ini — HOT di
    *  client (`useFundsStore`) karena celengan baru hidup di store perangkat,
    *  bukan di konstanta `lib/data/*`. Kopi jujur, bukan "Error 404". */
   notFoundBody:
-    'Celengan ini nggak ada di perangkatmu. Kalau kamu baru menanamnya di perangkat lain, celengannya belum ikut ke sini — cek daftar di halaman Budget & Target.',
+    'Celengan ini nggak ada di perangkatmu. Kalau kamu baru menanamnya di perangkat lain, celengannya belum ikut ke sini, cek daftar di halaman Budget & Target.',
   notFoundCta: 'Lihat daftar celengan',
   /** jeda singkat saat id belum dikenal & store perangkat belum selesai dibaca.
    *  Tanpa copy ini, celengan buatan user sempat terlihat "tidak ditemukan". */
@@ -1940,7 +1940,7 @@ export const FUND_DETAIL_COPY = {
 /** toast halaman /budget setelah celengan baru disimpan (4C "Tanam Celengan") */
 export const FUND_CREATE_TOAST = {
   title: 'Celengan baru ditanam! 🌱',
-  body: (name: string) => `${name} siap dikejar — setor kapan aja ya.`,
+  body: (name: string) => `${name} siap dikejar, setor kapan aja ya.`,
 } as const
 
 /** toast 3G "Sapu Bersih" setelah sisa limit dipindahkan ke celengan */
@@ -1970,10 +1970,10 @@ export const FUND_DELETE_COPY = {
   body: (name: string) => `${name} bakal keluar dari daftar Celengan Impian.`,
   /** uang yang sudah keluar dari dompet tidak kembali karena catatannya dihapus */
   cashNote:
-    'Uang yang sudah kamu setor TIDAK kembali ke dompet — catatan setorannya tetap tersimpan, karena uangnya memang sudah keluar.',
+    'Uang yang sudah kamu setor TIDAK kembali ke dompet, catatan setorannya tetap tersimpan, karena uangnya memang sudah keluar.',
   /** dampak NYATA ke Jatah Hari Ini, lengkap nominalnya */
   obligationNote: (releasedLabel: string) =>
-    `Kewajiban ${releasedLabel}/bulan yang tadi dipotong dari Jatah Hari Ini akan dilepas — jadi jatah harianmu naik setelah ini.`,
+    `Kewajiban ${releasedLabel}/bulan yang tadi dipotong dari Jatah Hari Ini akan dilepas, jadi jatah harianmu naik setelah ini.`,
   /** kenapa jatah harian TIDAK berubah (kewajiban bulan ini sudah lunas / target penuh) */
   noObligationNote:
     'Celengan ini tidak punya kewajiban bulanan yang masih ditagih (sudah kamu setor bulan ini atau targetnya sudah penuh), jadi Jatah Hari Ini tidak berubah.',
@@ -1999,12 +1999,12 @@ export const FUND_DELETE_COPY = {
 
 export const FUND_DELETE_TOAST = {
   title: (name: string) => `Celengan ${name} dicabut`,
-  description: 'Uang yang sudah disetor tetap tercatat — yang dilepas cuma targetnya.',
+  description: 'Uang yang sudah disetor tetap tercatat, yang dilepas cuma targetnya.',
   undo: 'Undo',
   undoneTitle: 'Celengan dikembalikan 🌱',
   undoneDescription: 'Target & progresnya balik seperti semula, begitu juga jatah harianmu.',
   /** jaring pengaman kalau Undo ditekan setelah jendelanya tutup */
-  expired: 'Jendela Undo-nya sudah lewat — celengan ini bisa kamu tanam lagi kapan aja 🌱',
+  expired: 'Jendela Undo-nya sudah lewat, celengan ini bisa kamu tanam lagi kapan aja 🌱',
 } as const
 
 /** aria-label tombol hapus di kartu celengan & di halaman detail (tidak ada
@@ -2013,7 +2013,7 @@ export const FUND_CARD_ACTION_COPY = {
   delete: (name: string) => `Hapus celengan ${name}`,
   /** label tombol yang terlihat di halaman detail */
   deleteLabel: 'Hapus celengan',
-  deleteHint: 'Target & progresnya dilepas — uang yang sudah disetor tetap tercatat.',
+  deleteHint: 'Target & progresnya dilepas, uang yang sudah disetor tetap tercatat.',
 } as const
 
 /* ── COPY KARTU CELENGAN & ZONA B (paket 78) ─────────────────────────────────
@@ -2083,14 +2083,14 @@ export const FUND_PROJECTION_COPY = {
   assumption: (count: number, avgLabel: string) =>
     `Dirata-ratakan dari ${count} setoran terakhir (${avgLabel}/bulan).`,
   ahead: (dateLabel: string, deadlineLabel: string) =>
-    `Kalau ritmenya konsisten, celengan ini penuh sekitar ${dateLabel} — lebih cepat dari target ${deadlineLabel} 🎉`,
+    `Kalau ritmenya konsisten, celengan ini penuh sekitar ${dateLabel}, lebih cepat dari target ${deadlineLabel} 🎉`,
   onTime: (dateLabel: string, deadlineLabel: string) =>
     `Kalau ritmenya konsisten, celengan ini penuh sekitar ${dateLabel}, pas sebelum target ${deadlineLabel}.`,
   behind: (dateLabel: string, deadlineLabel: string) =>
-    `Dengan ritme sekarang, perkiraan penuh sekitar ${dateLabel} — sedikit lewat dari target ${deadlineLabel}. Nambah dikit tiap bulan udah cukup kok.`,
+    `Dengan ritme sekarang, perkiraan penuh sekitar ${dateLabel}, sedikit lewat dari target ${deadlineLabel}. Nambah dikit tiap bulan udah cukup kok.`,
   unknown: 'Belum ada setoran, jadi aku belum bisa memperkirakan kapan celengan ini penuh 🌱',
   /** state 100%: proyeksi tanggal tidak relevan lagi (tidak ada sisa untuk dikejar) */
-  done: 'Celengan ini udah penuh, jadi nggak ada sisa yang perlu dikejar — waktunya bikin target baru 🌱',
+  done: 'Celengan ini udah penuh, jadi nggak ada sisa yang perlu dikejar, waktunya bikin target baru 🌱',
 } as const
 
 export const FUND_HISTORY_COPY = {
@@ -2116,7 +2116,7 @@ export const FUND_NEAR_COPY = (remainingLabel: string) =>
 export const FUND_LATE_COPY = {
   title: 'Gapapa kalau sempat jeda',
   body: (name: string, weeks: number) =>
-    `${name} belum nambah ${weeks} minggu ini. Gapapa, mulai lagi kapan aja ya — kecil-kecilan juga gak masalah 🤗`,
+    `${name} belum nambah ${weeks} minggu ini. Gapapa, mulai lagi kapan aja ya, kecil-kecilan juga gak masalah 🤗`,
   cta: 'Setor sedikit aja',
   dismiss: 'Tutup',
 } as const
@@ -2125,7 +2125,7 @@ export const FUND_LATE_COPY = {
 export const FUND_ACHIEVED_COPY = {
   body: (name: string) => `🎉 ${name} TERCAPAI! Kamu udah jaga impian ini dengan cara yang luar biasa.`,
   cta: 'Buat target baru',
-  hint: 'Targetnya sudah penuh — waktunya menanam celengan yang baru 🌱',
+  hint: 'Targetnya sudah penuh, waktunya menanam celengan yang baru 🌱',
 } as const
 
 /* ── HELPER MURNI (dipakai komponen Zona A & B) ──────────────────────────── */

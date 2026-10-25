@@ -230,7 +230,7 @@ export function JointSettlementModal({
               ) : settlement.level === 'equal' ? (
                 <div className="mt-4 rounded-[1.5rem] bg-hud-sage/15 px-4 py-3.5 text-center ring-1 ring-hud-sage/35">
                   <p className="text-[13px] font-medium leading-relaxed text-forest">
-                    Kalian impas — gak ada yang perlu transfer bulan ini ⚖️✨
+                    Kalian impas, gak ada yang perlu transfer bulan ini ⚖️✨
                   </p>
                 </div>
               ) : settlement.level === 'close' ? (
@@ -238,7 +238,7 @@ export function JointSettlementModal({
                    ajakan transfer supaya tidak bertabrakan dengan copy di atas */
                 <div className="mt-4 rounded-[1.5rem] bg-hud-sage/15 px-4 py-3.5 text-center ring-1 ring-hud-sage/35">
                   <p className="text-[13px] font-medium leading-relaxed text-forest">
-                    Hampir impas! Posisi bersih kalian beda cuma {moneyLabel(difference, masked)} — gak
+                    Hampir impas! Posisi bersih kalian beda cuma {moneyLabel(difference, masked)}, gak
                     perlu settle 💚
                   </p>
                 </div>
@@ -249,7 +249,7 @@ export function JointSettlementModal({
                     <b className="font-semibold tabular-nums text-hud-terracotta">
                       {moneyLabel(settlementAmount, masked)}
                     </b>{' '}
-                    ke <b className="font-medium">{whoIsOwed.name}</b> — satu transfer, langsung lunas.
+                    ke <b className="font-medium">{whoIsOwed.name}</b>, satu transfer, langsung lunas.
                   </p>
                 </div>
               )}

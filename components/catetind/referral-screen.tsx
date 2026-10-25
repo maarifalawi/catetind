@@ -81,7 +81,7 @@ export function ReferralScreen() {
       toast.success('Link berhasil disalin!')
       window.setTimeout(() => setCopied(false), 2000)
     } catch {
-      toast.error('Gagal menyalin — salin link-nya manual ya')
+      toast.error('Gagal menyalin, salin link-nya manual ya')
     }
   }
 
@@ -119,7 +119,7 @@ export function ReferralScreen() {
         description: 'Tinggal tempel di WhatsApp, Twitter, atau DM temanmu.',
       })
     } catch {
-      toast.error('Gagal menyalin — pakai tombol Copy Link ya')
+      toast.error('Gagal menyalin, pakai tombol Copy Link ya')
     }
   }
 

@@ -191,7 +191,7 @@ export function JointSplitSheet({
               </p>
             ) : (
               <p className="text-[11.5px] leading-relaxed text-forest/45">
-                Ketik di salah satu sisi — sisi satunya menyesuaikan sendiri supaya tetap pas{' '}
+                Ketik di salah satu sisi, sisi satunya menyesuaikan sendiri supaya tetap pas{' '}
                 {moneyLabel(total, false)}.
               </p>
             )}

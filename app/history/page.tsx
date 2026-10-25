@@ -4,7 +4,7 @@ import { HistoryScreen } from '@/components/catetind/history-screen'
 import { HISTORY_SEARCH_PARAM } from '@/lib/data/history'
 
 export const metadata: Metadata = {
-  title: 'Riwayat & Insight — CatetInd',
+  title: 'Riwayat & Insight | CatetInd',
   description:
     'Otak analitik CatetInd: kalibrasi profil AI & skor kewarasan finansial, insight AI dengan aksi lanjutan, heatmap keborosan dalam matriks kalender, dan riwayat transaksi yang bisa dicari & difilter.',
 }

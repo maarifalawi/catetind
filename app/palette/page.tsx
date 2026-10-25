@@ -8,9 +8,9 @@ import { PhoneStage } from '@/components/catetind/phone-stage'
    `lib/data/palette.ts`. */
 
 export const metadata: Metadata = {
-  title: 'Palet Warna — CatetInd',
+  title: 'Palet Warna | CatetInd',
   description:
-    'Referensi visual palet kanon "Earth Pastel": sepuluh warna, alias semantik, nilai turunan, dan maknanya — untuk review desain.',
+    'Referensi visual palet kanon "Earth Pastel": sepuluh warna, alias semantik, nilai turunan, dan maknanya, untuk review desain.',
   /* halaman internal: jangan diindeks mesin pencari */
   robots: { index: false, follow: false },
 }

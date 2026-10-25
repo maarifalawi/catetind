@@ -442,7 +442,7 @@ export function AddWalletSheet({
         </div>
         <p className="mt-2 text-[11.5px] leading-relaxed text-forest/55">
           {activeTheme
-            ? `${activeTheme.name} — ${activeTheme.note}`
+            ? `${activeTheme.name}, ${activeTheme.note}`
             : WALLET_THEME_COPY.defaultNote}
         </p>
       </div>

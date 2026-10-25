@@ -24,7 +24,7 @@ import { SITE_ORIGIN } from '@/lib/site'
  * penuh di server (lebih ringan, tanpa hydration mismatch).
  */
 export const metadata: Metadata = {
-  title: 'Kebijakan Privasi — CatetInd',
+  title: 'Kebijakan Privasi | CatetInd',
   description:
     'Data apa yang CatetInd simpan, siapa yang boleh melihatnya (tidak ada admin yang bisa), bagaimana bantuan bekerja tanpa akses data, dan cara kamu mengekspor atau menghapus semuanya.',
   alternates: { canonical: `${SITE_ORIGIN}/privacy` },

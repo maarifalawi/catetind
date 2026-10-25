@@ -156,7 +156,7 @@ export const MOCK_SPENDING_REVIEW_REPLY: Omit<ChatMessage, 'id'> = {
   /** melanjutkan panel yang angkanya dihitung data lokal — tanpa model */
   ruleBased: true,
   content:
-    'Barusan kita lihat bareng di panel ya — jadi aku nggak ngulang angkanya di sini 🌿 Mau lanjut yang mana dulu: rapikan limit kategori, atau cari celah buat nyisihin ke celengan?',
+    'Barusan kita lihat bareng di panel ya, jadi aku nggak ngulang angkanya di sini 🌿 Mau lanjut yang mana dulu: rapikan limit kategori, atau cari celah buat nyisihin ke celengan?',
 }
 
 /* ── H. AI MENOLAK: DI LUAR KONTEKS & KLAIM YANG TIDAK TERJADI (paket 80) ─────
@@ -190,7 +190,7 @@ export const AI_NO_RECORD_REPLY: Omit<ChatMessage, 'id'> = {
   kind: 'coaching',
   ruleBased: true,
   content:
-    'Aku belum mencatat apa pun dari pesan itu ya 🌿 Catatan baru masuk kalau kamu setujui kartu konfirmasi (tombol “Catat”) — aku sendiri tidak bisa menulis ke riwayatmu. Ketik ulang dengan nominalnya, mis. “catet makan gacoan 30k”, nanti aku rapikan di kartunya.',
+    'Aku belum mencatat apa pun dari pesan itu ya 🌿 Catatan baru masuk kalau kamu setujui kartu konfirmasi (tombol “Catat”), aku sendiri tidak bisa menulis ke riwayatmu. Ketik ulang dengan nominalnya, mis. “catet makan gacoan 30k”, nanti aku rapikan di kartunya.',
 }
 
 /* ── BAHASA SHELL PANEL AI COACH ─────────────────────────────────────────────
@@ -274,7 +274,7 @@ export const AI_CAPTURE_COPY = {
   } as Record<'voice' | 'chat', string>,
   /** sedang merapikan KETIKAN user lewat model (sebelum kartu konfirmasi) */
   parsingTitle: 'Lagi aku rapikan tulisanmu... ✨',
-  parsingHint: 'Sebentar ya — aku cocokin nominal, kategori, dan dompetnya',
+  parsingHint: 'Sebentar ya, aku cocokin nominal, kategori, dan dompetnya',
   fieldLabels: {
     type: 'Tipe',
     name: 'Nama catatan',
@@ -292,7 +292,7 @@ export const AI_CAPTURE_COPY = {
    */
   lowConfidenceAlarm: 'AI kurang yakin dengan hasil bacanya. Tolong cek ulang datanya ya ✨',
   /** penanda per-field di bawah field yang keyakinannya rendah */
-  lowFieldHint: 'Yang ini aku belum yakin — boleh dicek dulu?',
+  lowFieldHint: 'Yang ini aku belum yakin, boleh dicek dulu?',
   needAmount: 'Isi nominalnya dulu ya 🌿',
   /**
    * PAKET 54: hasil ekstraksi bisa datang tanpa kategori — itu keadaan sah saat
@@ -312,7 +312,7 @@ export const AI_CAPTURE_COPY = {
    * tebakan AI-nya tetap disebut supaya user tahu apa yang AI baca.
    */
   walletGuessNote: (guessed: string, used: string) =>
-    `AI nebak dompetnya “${guessed}”, tapi dompet itu belum ada di daftarmu — jadi aku isi ${used}. Ganti kalau bukan itu ya 🌿`,
+    `AI nebak dompetnya “${guessed}”, tapi dompet itu belum ada di daftarmu, jadi aku isi ${used}. Ganti kalau bukan itu ya 🌿`,
   /**
    * Dipakai saat dompetnya MEMANG milik user, tapi ada di konteks lain daripada
    * yang sedang dibuka (mis. switcher di "Bersama", dompetnya di "Keluarga").
@@ -333,11 +333,11 @@ export const AI_CAPTURE_COPY = {
    * dipakai hanya kalau dompetnya memang tidak disebut user sendiri.
    */
   walletContextNote: (contextLabel: string, wallet: string) =>
-    `Dompet aku isi ${wallet} — dompet konteks ${contextLabel} yang sedang kamu buka. Ganti di kolom Dompet kalau uangnya keluar dari dompet lain ya 🌿`,
+    `Dompet aku isi ${wallet}, dompet konteks ${contextLabel} yang sedang kamu buka. Ganti di kolom Dompet kalau uangnya keluar dari dompet lain ya 🌿`,
   needWallet:
     'Dompetnya belum ada di daftarmu. Pilih salah satu dompetmu di kolom Dompet dulu ya 🌿 Catatan tanpa dompet tidak masuk ke konteks mana pun.',
   noWalletToPick:
-    'Kamu belum punya dompet di konteks ini, jadi catatannya belum bisa masuk ke konteks mana pun. Tambah dompetnya dulu ya — setelah itu catatannya tinggal kamu pilih dompetnya.',
+    'Kamu belum punya dompet di konteks ini, jadi catatannya belum bisa masuk ke konteks mana pun. Tambah dompetnya dulu ya, setelah itu catatannya tinggal kamu pilih dompetnya.',
   /** CTA kecil di kartu saat belum ada dompet yang bisa dipilih */
   walletAddCta: 'Tambah dompet di Dompet & Akun',
 
@@ -348,13 +348,13 @@ export const AI_CAPTURE_COPY = {
    * Jadi kalimatnya mengarahkan ke alur yang benar, bukan menawarkan simpan.
    */
   needTransferFlow:
-    'Ini kedengeran seperti pindah dana. Pindah dana dicatat lewat alur “Pindah Dana” ya — di situ dompet asal & tujuannya ditanyakan sekali jalan.',
+    'Ini kedengeran seperti pindah dana. Pindah dana dicatat lewat alur “Pindah Dana” ya, di situ dompet asal & tujuannya ditanyakan sekali jalan.',
   transferFlowCta: 'Buka Dompet & Akun → Pindah Dana',
   save: 'Catat',
   /** dipakai kalau user mengosongkan nama catatannya sendiri */
   untitled: 'Catatan dari AI Coach',
   /** jaring aman kalau penyimpanan gagal (produksi: POST /api/transactions) */
-  saveFailed: 'Aduh, gagal nyimpan. Coba lagi ya — data kamu aman kok.',
+  saveFailed: 'Aduh, gagal nyimpan. Coba lagi ya, data kamu aman kok.',
   saveFailedRetry: 'Coba simpan lagi',
 
   /* ── hasil ─────────────────────────────────────────────────────────────── */
@@ -362,15 +362,15 @@ export const AI_CAPTURE_COPY = {
   photoEcho: (fileName: string) => `📎 ${fileName}`,
   savedToast: {
     title: 'Sip, udah dicatet dengan aman! 🌿',
-    description: (amount: string) => `${amount} masuk ke Riwayat — buka kapan aja buat ngecek.`,
+    description: (amount: string) => `${amount} masuk ke Riwayat, buka kapan aja buat ngecek.`,
   },
-  saved: (name: string, amount: string) => `Beres! “${name}” — ${amount} udah masuk Riwayat 🌿`,
+  saved: (name: string, amount: string) => `Beres! “${name}”, ${amount} udah masuk Riwayat 🌿`,
   viewHistory: 'Lihat riwayat',
 
   /* ── graceful degradation (prompt 20 butir 2) ───────────────────────────── */
-  voiceUnsupported: 'Di perangkat ini belum bisa bicara — ketik aja ya, sama cepatnya 🌿',
+  voiceUnsupported: 'Di perangkat ini belum bisa bicara, ketik aja ya, sama cepatnya 🌿',
   voiceDenied:
-    'Izin mikrofonnya belum nyala. Boleh dinyalain dulu di pengaturan browser — atau ketik aja ya, sama enaknya 🌿',
+    'Izin mikrofonnya belum nyala. Boleh dinyalain dulu di pengaturan browser, atau ketik aja ya, sama enaknya 🌿',
   voiceNoSpeech: 'Aku belum denger suaranya. Coba lagi ya, atau ketik aja 🌿',
   voiceNoMic: 'Mikrofonnya belum kebaca di perangkat ini. Coba lagi, atau ketik aja ya 🌿',
   voiceNetwork: 'Sambungannya lagi goyang, jadi suaramu keputus. Ketik aja ya 🌿',
@@ -381,7 +381,7 @@ export const AI_CAPTURE_COPY = {
    * adanya dan menawarkan foto ulang atau isi manual.
    */
   scanFailed:
-    'Aku belum bisa baca struk ini — fotonya mungkin kurang jelas, atau sambungannya lagi goyang. Coba foto ulang ya, atau isi manual dulu 🌿',
+    'Aku belum bisa baca struk ini, fotonya mungkin kurang jelas, atau sambungannya lagi goyang. Coba foto ulang ya, atau isi manual dulu 🌿',
   /**
    * PAKET 87: sebagian foto tidak bisa DIBUKA browser-nya sama sekali (paling
    * sering HEIC dari iPhone di Chrome/Windows). Dulu berkas seperti itu tetap
@@ -389,12 +389,12 @@ export const AI_CAPTURE_COPY = {
    * struk". Sekarang pesannya menyebut masalahnya + jalan keluarnya.
    */
   scanUnsupported:
-    'Format fotonya belum bisa kubaca di perangkat ini — simpan ulang sebagai JPG atau PNG, lalu coba lagi ya 🌿 Atau isi manual dulu.',
+    'Format fotonya belum bisa kubaca di perangkat ini, simpan ulang sebagai JPG atau PNG, lalu coba lagi ya 🌿 Atau isi manual dulu.',
   problemRetry: 'Coba lagi',
   problemFallback: 'Oke, ketik aja',
 
   /* ── composer ──────────────────────────────────────────────────────────── */
-  finishDraftFirst: 'Selesaikan dulu catatan di atas ya — sebentar aja 🌿',
+  finishDraftFirst: 'Selesaikan dulu catatan di atas ya, sebentar aja 🌿',
 } as const
 
 /** E. Demo pesan Appreciation — di production dipicu event "transaksi tercatat" */
@@ -404,7 +404,7 @@ export const MOCK_APPRECIATION_REPLY: Omit<ChatMessage, 'id'> = {
   /** pujian terkurasi (bukan hasil model) — labelnya jujur karena itu */
   ruleBased: true,
   content:
-    'Makasih udah mau cerita, Jon! Ngomongin duit itu nggak gampang — dan kamu udah ambil langkah paling penting 💚',
+    'Makasih udah mau cerita, Jon! Ngomongin duit itu nggak gampang, dan kamu udah ambil langkah paling penting 💚',
 }
 
 /**
@@ -417,7 +417,7 @@ export const MOCK_APPRECIATION_REPLY: Omit<ChatMessage, 'id'> = {
  */
 export const AI_CAPTURE_REPLY = {
   /** pengantar sebelum kartu konfirmasi muncul di chat */
-  intro: 'Oke, aku rapikan dulu ya — cek sebentar, udah pas belum?',
+  intro: 'Oke, aku rapikan dulu ya, cek sebentar, udah pas belum?',
   /** hasil konfirmasi kartu di chat (dipakai saat `recordTransaction` benar-benar mengembalikan baris) */
   viewHistory: 'Lihat riwayat',
 } as const
@@ -441,7 +441,7 @@ export const AI_CAPTURE_REPLY = {
 export const AI_STATUS_COPY = {
   badge: 'Tersambung ke model',
   title: 'Status AI hari ini',
-  body: `AI Coach CatetInd berjalan lewat ${AI_ENGINE_NAME} di server kami — kuncinya disimpan di server dan tidak pernah ikut ke browser. Scan struk, input suara, dan transaksi yang kamu ketik di chat dibaca mesin yang sama. Kalau sambungannya sedang penuh atau mati, AI Coach otomatis kembali menjawab dari aturan lokal + data di perangkatmu (jawabannya diberi label "belum pakai model"), dan pencatatan manual tetap jalan penuh.`,
+  body: `AI Coach CatetInd berjalan lewat ${AI_ENGINE_NAME} di server kami, kuncinya disimpan di server dan tidak pernah ikut ke browser. Scan struk, input suara, dan transaksi yang kamu ketik di chat dibaca mesin yang sama. Kalau sambungannya sedang penuh atau mati, AI Coach otomatis kembali menjawab dari aturan lokal + data di perangkatmu (jawabannya diberi label "belum pakai model"), dan pencatatan manual tetap jalan penuh.`,
   worksNow:
-    'Yang selalu jalan: catat transaksi manual (kategorinya kamu pilih sendiri — bukan tebakan app), ketik transaksimu di AI Coach ("kopi 25rb"), scan struk, dan input suara. Dua saklar di bawah mengatur apakah AI boleh mengisi kategori & menamai catatanmu secara otomatis.',
+    'Yang selalu jalan: catat transaksi manual (kategorinya kamu pilih sendiri, bukan tebakan app), ketik transaksimu di AI Coach ("kopi 25rb"), scan struk, dan input suara. Dua saklar di bawah mengatur apakah AI boleh mengisi kategori & menamai catatanmu secara otomatis.',
 } as const

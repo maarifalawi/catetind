@@ -127,5 +127,5 @@ export const AI_PREFS_COPY = {
   },
   /** batas yang wajib disebut: apa yang TIDAK diubah dua saklar ini */
   manualScopeNote:
-    'Catatan yang kamu input manual selalu pakai kategori yang kamu pilih sendiri — dua saklar ini tidak mengubahnya.',
+    'Catatan yang kamu input manual selalu pakai kategori yang kamu pilih sendiri, dua saklar ini tidak mengubahnya.',
 } as const

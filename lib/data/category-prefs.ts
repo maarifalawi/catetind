@@ -156,14 +156,14 @@ export const CATEGORY_PREFS_COPY = {
   defaultTitle: 'Kategori Bawaan',
   /** penjelasan SINGKAT — tombolnya ada, jadi kenapa tidak ada tombol hapus */
   defaultDesc:
-    'Cuma bisa disembunyikan — nggak bisa dihapus, biar laporan lintas bulan tetap konsisten.',
+    'Cuma bisa disembunyikan, nggak bisa dihapus, biar laporan lintas bulan tetap konsisten.',
   /**
    * Penjelasan PANJANG (paket 62 · temuan audit #10): sebelum ini alasan "kenapa
    * tidak bisa dihapus" tidak pernah muncul di layar, sehingga toggle-nya terasa
    * seperti keterbatasan yang disembunyikan.
    */
   defaultExplain: (count: number) =>
-    `Kenapa ${count} kategori ini nggak bisa dihapus: laporan, insight, dan peta kebiasaanmu membandingkan bulan ke bulan per kategori. Kalau salah satunya dihapus, perbandingannya kehilangan kolomnya dan angka bulan lalu ikut berubah. Kalau memang nggak kamu pakai, sembunyikan saja — catatannya tetap terbaca.`,
+    `Kenapa ${count} kategori ini nggak bisa dihapus: laporan, insight, dan peta kebiasaanmu membandingkan bulan ke bulan per kategori. Kalau salah satunya dihapus, perbandingannya kehilangan kolomnya dan angka bulan lalu ikut berubah. Kalau memang nggak kamu pakai, sembunyikan saja, catatannya tetap terbaca.`,
   visibleLabel: 'Tampil',
   hiddenLabel: 'Disembunyikan',
   toggleA11y: (name: string) => `Tampilkan kategori ${name}`,
@@ -172,7 +172,7 @@ export const CATEGORY_PREFS_COPY = {
 
   /** ── 2. kategori kustom ── */
   customTitle: 'Kategori Kustom',
-  customDesc: 'Bikin, ubah, hapus sesuka kamu — tidak ada yang dikunci.',
+  customDesc: 'Bikin, ubah, hapus sesuka kamu, tidak ada yang dikunci.',
   customEmpty: 'Belum ada kategori custom. Bikin satu di bawah 👇',
   customEmptyHint: 'Contoh: 🐾 Kucing, 💅 Perawatan, 🎁 Hadiah.',
   addCta: 'Tambah Kategori Baru',
@@ -205,7 +205,7 @@ export const CATEGORY_PREFS_COPY = {
   deleteToast: (emoji: string, name: string) => `${emoji} ${name} dihapus`,
   deleteToastDescription: 'Kategori kustom bisa dibikin lagi kapan aja.',
   undo: 'Undo',
-  undoExpired: 'Jendela Undo-nya sudah lewat — kategorinya bisa dibikin lagi kapan aja 🌿',
+  undoExpired: 'Jendela Undo-nya sudah lewat, kategorinya bisa dibikin lagi kapan aja 🌿',
   undoneToast: 'Kategori dikembalikan 🌿',
   undoneDescription: 'Kategorinya balik ke posisi semula.',
 

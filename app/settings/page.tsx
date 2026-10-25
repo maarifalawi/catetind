@@ -8,7 +8,7 @@ import { ProfileSettingsPanel } from '@/components/catetind/settings-panel-accou
      global yang hilang, karena layout-nya sama). */
 
 export const metadata: Metadata = {
-  title: 'Pengaturan — CatetInd',
+  title: 'Pengaturan | CatetInd',
 }
 
 export default function SettingsPage() {

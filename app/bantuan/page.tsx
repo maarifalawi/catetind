@@ -22,7 +22,7 @@ import { SITE_ORIGIN } from '@/lib/site'
    dibuka di landing utama, bukan menunjuk anchor mati di halaman ini. */
 
 export const metadata: Metadata = {
-  title: 'Pusat Bantuan — CatetInd',
+  title: 'Pusat Bantuan | CatetInd',
   description: PUBLIC_HELP_COPY.description,
   alternates: { canonical: `${SITE_ORIGIN}${PUBLIC_HELP_PATH}` },
 }

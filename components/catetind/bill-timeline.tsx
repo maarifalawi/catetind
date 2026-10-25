@@ -159,7 +159,7 @@ export function BillTimeline({
                 const placement = bubblePlacement(colIdx)
                 const weekend = mondayIndex(day.iso) >= 5
                 const ariaLabel = hasBills
-                  ? `${formatDayLabel(day.iso)} — ${dayBills.length} tagihan jatuh tempo`
+                  ? `${formatDayLabel(day.iso)}, ${dayBills.length} tagihan jatuh tempo`
                   : formatDayLabel(day.iso)
 
                 return (

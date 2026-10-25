@@ -39,10 +39,10 @@ export async function generateMetadata({
        menjanjikan hal yang tidak bisa dibuka */
     title:
       invite.status === 'valid'
-        ? `${invite.inviterName} mengajakmu ke ${invite.walletName} — CatetInd`
-        : 'Undangan dompet bersama — CatetInd',
+        ? `${invite.inviterName} mengajakmu ke ${invite.walletName} | CatetInd`
+        : 'Undangan dompet bersama | CatetInd',
     description:
-      'Nama pengundang, dompet yang ditawarkan, tiga manfaat singkat, jaminan privasi, lalu pilihan gabung atau nanti aja — tanpa password dan tanpa hitungan mundur.',
+      'Nama pengundang, dompet yang ditawarkan, tiga manfaat singkat, jaminan privasi, lalu pilihan gabung atau nanti aja, tanpa password dan tanpa hitungan mundur.',
     /* URL undangan mengandung kode: jangan pernah masuk mesin pencari */
     robots: { index: false, follow: false },
   }

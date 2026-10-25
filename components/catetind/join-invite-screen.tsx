@@ -291,7 +291,7 @@ function InvalidInviteView({ invite }: { invite: InvalidInvite }) {
       /* micro-feedback 2 detik — pola sama dengan tombol salin di /referral */
       window.setTimeout(() => setCopied(false), 2000)
     } catch {
-      toast.error('Gagal menyalin otomatis — salin manual dari kotak di atas ya.')
+      toast.error('Gagal menyalin otomatis, salin manual dari kotak di atas ya.')
     }
   }
 

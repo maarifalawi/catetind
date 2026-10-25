@@ -41,7 +41,7 @@ export const RETENTION_POLICY = {
     {
       icon: 'database' as const,
       title: 'Basis lokal dikosongkan',
-      body: 'Penyimpanan lokal tempat ledger disimpan dihapus seluruhnya — bukan cuma dikosongkan isinya.',
+      body: 'Penyimpanan lokal tempat ledger disimpan dihapus seluruhnya, bukan cuma dikosongkan isinya.',
     },
     {
       icon: 'server' as const,
@@ -51,7 +51,7 @@ export const RETENTION_POLICY = {
     {
       icon: 'lock' as const,
       title: 'Yang tetap tertinggal',
-      body: 'Satu penanda kecil "akun sudah dihapus" — tanpa nominal, tanpa catatan — supaya dompet contoh nggak muncul lagi.',
+      body: 'Satu penanda kecil "akun sudah dihapus", tanpa nominal, tanpa catatan, supaya dompet contoh nggak muncul lagi.',
     },
   ],
 } as const
@@ -124,10 +124,10 @@ export const EXPORT_DATA_COPY = {
   emailTitle: 'Kirim ke email saya',
   emailDemoBadge: 'Demo',
   emailBody:
-    'Jalur ini disiapkan untuk produksi. Demo ini belum punya server pengirim, jadi tombolnya nggak mengirim email — unduh filenya di atas.',
+    'Jalur ini disiapkan untuk produksi. Demo ini belum punya server pengirim, jadi tombolnya nggak mengirim email, unduh filenya di atas.',
   emailCta: 'Kirim ke Email Saya (demo)',
   emailToastTitle: 'Belum ada server pengirim email',
-  emailToastDescription: 'Nggak ada email yang dikirim — pakai tombol unduh di atas ya.',
+  emailToastDescription: 'Nggak ada email yang dikirim, pakai tombol unduh di atas ya.',
   emailTargetLabel: 'Alamat tujuan',
 } as const
 
@@ -137,8 +137,8 @@ export const EXPORT_DATA_COPY = {
    dari onboarding. */
 
 export const EMPTY_ACCOUNT_COPY = {
-  title: 'Akun ini kosong — datanya sudah dihapus',
+  title: 'Akun ini kosong, datanya sudah dihapus',
   body: 'Kartu-kartu di halaman ini masih pakai angka contoh sampai kamu mulai mencatat lagi.',
   cta: 'Mulai Lagi dari Onboarding',
-  hint: 'Nggak ada salinan yang bisa dipulihkan — demo ini belum punya server.',
+  hint: 'Nggak ada salinan yang bisa dipulihkan, demo ini belum punya server.',
 } as const

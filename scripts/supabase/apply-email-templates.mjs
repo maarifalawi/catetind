@@ -27,7 +27,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '.
 const TEMPLATES_DIR = path.join(ROOT, 'supabase', 'email-templates')
 
 /** Subjek yang dipakai BOTH alur — kode OTP adalah bintangnya, bukan tautan. */
-const SUBJECT = '{{ .Token }} — Kode masuk CatetInd lo 🌿'
+const SUBJECT = '{{ .Token }} | Kode masuk CatetInd lo 🌿'
 
 /** Copy email menjanjikan 10 menit; konfigurasi Supabase harus ikut sama. */
 const OTP_EXP_SECONDS = 600

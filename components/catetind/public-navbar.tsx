@@ -23,7 +23,7 @@ export function PublicNavbar() {
         {/* logo → halaman depan publik */}
         <Link
           href={PUBLIC_NAV.homeHref}
-          aria-label={`CatetInd — ${PUBLIC_NAV.homeLabel}`}
+          aria-label={`CatetInd | ${PUBLIC_NAV.homeLabel}`}
           className="flex shrink-0 items-center"
         >
           <LogoWordmark className="h-5 lg:h-6" />

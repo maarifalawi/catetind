@@ -89,7 +89,7 @@ export const MONEY_EVENT_CATALOG: readonly {
 }[] = [
   {
     name: 'transaction_created',
-    when: 'baris ledger baru benar-benar tertulis (panel input & AI capture) — bukan pengulangan idempotensi',
+    when: 'baris ledger baru benar-benar tertulis (panel input & AI capture), bukan pengulangan idempotensi',
     payload: ['kind', 'offline', 'ai_generated', 'linked'],
     never: ['nominal', 'nama catatan', 'nama dompet', 'kategori', 'clientTxId'],
   },

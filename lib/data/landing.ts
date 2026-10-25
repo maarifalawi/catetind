@@ -99,10 +99,12 @@ export type LandingSectionMarker =
 /** rentang harga kanon dalam teks — dipakai copy landing supaya angkanya tidak ditulis tangan */
 const PRICE_RANGE_LABEL = `${formatIDR(PLANS[0].lifetime)}-${formatIDR(PLANS[PLANS.length - 1].lifetime)}`
 export const LANDING_META = {
-  title: 'CatetInd: Catat Keuangan 4 Detik, Dibantu AI',
-  description: `Catatan keuangan buat Gen-Z Indonesia: satu catatan cukup 4 detik lewat voice atau foto struk, AI Coach yang gak nge-judge, dan laporan yang gampang dibaca. Mulai ${formatIDR(PLANS[0].lifetime)} sekali bayar untuk akses selamanya, tanpa tagihan bulanan.`,
-  ogTitle: 'Catet keuangan 4 detik. Sisanya biar AI yang mikir.',
-  ogDescription: `CatetInd: sekali bayar untuk akses selamanya, mulai ${formatIDR(PLANS[0].lifetime)}. Tanpa tagihan bulanan dan tanpa auto-debet.`,
+  title: 'CatetInd | Catet Keuangan 4 Detik, Tanpa Ribet',
+  description:
+    'Aplikasi keuangan buat lo yang males nyatet. Tinggal kirim voice note atau foto struk, 4 detik beres. Biar lo tau duit lari ke mana dan gaji ga cuma numpang lewat.',
+  ogTitle: 'CatetInd | Catet Keuangan 4 Detik, Tanpa Ribet',
+  ogDescription:
+    'Aplikasi keuangan buat lo yang males nyatet. Tinggal kirim voice note atau foto struk, 4 detik beres. Biar lo tau duit lari ke mana dan gaji ga cuma numpang lewat.',
   ogUrl: SITE_ORIGIN,
 } as const
 
@@ -137,7 +139,7 @@ export const HERO_HUD = {
   note: 'Aman 3 hari berturut-turut 🌿',
   /** 0..1 — panjang bar progres */
   progress: 0.62,
-  plantLabel: 'Tahap 2 · Tunas — tanamanmu lagi happy!',
+  plantLabel: 'Tahap 2 · Tunas, tanamanmu lagi happy!',
 } as const
 
 /* ── SECTION 1b · ADEGAN "PONSEL DI TANGAN" ─────────────────────────────────
@@ -339,12 +341,12 @@ export const CALCULATOR_COPY = {
   eyebrow: 'Hitung sendiri',
   title: 'Berapa yang sebenarnya menguap?',
   subtitle:
-    'Isi dua angka. Gak ada yang dikirim ke mana pun — hitungannya jalan di HP-mu sendiri.',
+    'Isi dua angka. Gak ada yang dikirim ke mana pun, hitungannya jalan di HP-mu sendiri.',
   incomeLabel: 'Gaji per bulan',
   incomeHelper: 'Gaji pokok + tunjangan yang masuk rekening',
   spendingLabel: "Estimasi pengeluaran yang 'gak jelas' per bulan",
   spendingHelper:
-    'Yang kamu sendiri gak tau ke mana — jajan, impulse buy, "lah kok habis?"',
+    'Yang kamu sendiri gak tau ke mana, jajan, impulse buy, "lah kok habis?"',
   yearlyLead: 'Dalam 1 tahun, kamu kehilangan',
   yearlyTail: 'tanpa jejak.',
   fiveYearLead: 'Dalam 5 tahun, itu jadi',
@@ -353,7 +355,7 @@ export const CALCULATOR_COPY = {
   investLeadNote: 'dengan return konservatif 5%/tahun',
   shareOfIncomeLead: 'Itu sekitar',
   shareOfIncomeTail: 'dari gajimu tiap bulan.',
-  bridge: 'Yang hilang bukan uangnya — tapi pilihan yang bisa kamu punya.',
+  bridge: 'Yang hilang bukan uangnya, tapi pilihan yang bisa kamu punya.',
   softCta: 'Mulai Catat Sekarang',
   /** target gulir-halus ke Section 5 (Pricing) */
   softCtaHref: '#pricing',
@@ -414,7 +416,7 @@ export function computePain(monthlyIncome: number, unknownSpending: number): Pai
 export const WEALTH_GAP_COPY = {
   eyebrow: 'Bukan soal gaji',
   headline: 'Di usia 30, gap-nya sudah Rp43 juta.',
-  subtitle: 'Dan perbedaannya bukan dari gaji — tapi dari kebiasaan.',
+  subtitle: 'Dan perbedaannya bukan dari gaji, tapi dari kebiasaan.',
   chartLabel: 'Proyeksi kekayaan dari usia 24 sampai 40 tahun',
   seriesWithout: 'Tanpa tracking',
   seriesWith: 'Dengan CatetInd',
@@ -601,7 +603,7 @@ export const TESTIMONIALS: Testimonial[] = [
     role: 'Marketing Executive',
     city: 'Jakarta',
     quote:
-      "Selama ini gue cuma tau 'duit habis' tapi gak tau habis ke mana. Setelah 2 minggu pake CatetInd, ketahuan gue ngabisin Rp2.1 juta buat kopi dan jajan — PER BULAN. Shock sih, tapi AI Coach-nya gak nge-judge. Malah bantu atur jatah harian.",
+      "Selama ini gue cuma tau 'duit habis' tapi gak tau habis ke mana. Setelah 2 minggu pake CatetInd, ketahuan gue ngabisin Rp2.1 juta buat kopi dan jajan, PER BULAN. Shock sih, tapi AI Coach-nya gak nge-judge. Malah bantu atur jatah harian.",
   },
   {
     id: 'budi',
@@ -610,7 +612,7 @@ export const TESTIMONIALS: Testimonial[] = [
     role: 'Junior Developer',
     city: 'Bandung',
     quote:
-      "Gue freelancer, income naik turun. CatetInd ngerti itu — daily budget-nya adjust otomatis. Bulan pertama gue berhasil sisihkan Rp800.000 yang biasanya 'menguap'. Input transaksi-nya 4 tap doang, gak ganggu flow kerja.",
+      "Gue freelancer, income naik turun. CatetInd ngerti itu, daily budget-nya adjust otomatis. Bulan pertama gue berhasil sisihkan Rp800.000 yang biasanya 'menguap'. Input transaksi-nya 4 tap doang, gak ganggu flow kerja.",
   },
   {
     id: 'sari',
@@ -619,7 +621,7 @@ export const TESTIMONIALS: Testimonial[] = [
     role: 'Fresh Graduate',
     city: 'Surabaya',
     quote:
-      'Niat nabung buat dana darurat tapi gak pernah kesampaian. CatetInd ada sinking fund dengan visualisasi tanaman — sekarang tanamanmu udah berbunga 🌸 artinya target Rp5jt tercapai. Gak nyangka bisa.',
+      'Niat nabung buat dana darurat tapi gak pernah kesampaian. CatetInd ada sinking fund dengan visualisasi tanaman, sekarang tanamanmu udah berbunga 🌸 artinya target Rp5jt tercapai. Gak nyangka bisa.',
   },
   {
     id: 'dimas',
@@ -628,7 +630,7 @@ export const TESTIMONIALS: Testimonial[] = [
     role: 'Startup Ops',
     city: 'Jakarta',
     quote:
-      'Pacar gue juga pake. Joint Wallet-nya bener-bener ngebantu — kita tau siapa yang nombok makan bulan ini tanpa berantem. Split bill otomatis, dan ada fitur private buat beliin kado surprise.',
+      'Pacar gue juga pake. Joint Wallet-nya bener-bener ngebantu, kita tau siapa yang nombok makan bulan ini tanpa berantem. Split bill otomatis, dan ada fitur private buat beliin kado surprise.',
   },
   {
     id: 'amel',
@@ -637,13 +639,13 @@ export const TESTIMONIALS: Testimonial[] = [
     role: 'Content Creator',
     city: 'Yogyakarta',
     quote:
-      "Udah coba 3 app keuangan, semuanya ribet atau boring. CatetInd beda — scan struk langsung ter-catat, voice input 'beli indomaret 25rb' langsung masuk. Feels like self-care, bukan ngerjain PR.",
+      "Udah coba 3 app keuangan, semuanya ribet atau boring. CatetInd beda, scan struk langsung ter-catat, voice input 'beli indomaret 25rb' langsung masuk. Feels like self-care, bukan ngerjain PR.",
   },
 ]
 
 export const TESTIMONIALS_COPY = {
   eyebrow: 'Kata mereka',
-  title: 'Bukan janji kami — kata penggunanya',
+  title: 'Bukan janji kami, kata penggunanya',
   /** label kota+profesi, mis. "24 · Marketing Executive · Jakarta" */
   meta: (t: Testimonial) => `${t.age} · ${t.role} · ${t.city}`,
   /** inisial untuk avatar huruf */
@@ -747,7 +749,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'no-trial',
     question: 'Kenapa gak ada trial / versi gratis dulu?',
     answer:
-      'Kekhawatiranmu masuk akal. Kebanyakan app keuangan kasih trial karena mereka gak yakin kamu akan stay. Kami yakin — makanya kami kasih yang lebih baik: garansi uang kembali 100% dalam 30 hari. Kalau dalam 30 hari CatetInd gak bantu kamu, uangmu balik tanpa drama. Jadi kamu tetap bisa coba tanpa risiko — bedanya, kamu langsung dapet semua fitur dari hari pertama.',
+      'Kekhawatiranmu masuk akal. Kebanyakan app keuangan kasih trial karena mereka gak yakin kamu akan stay. Kami yakin, makanya kami kasih yang lebih baik: garansi uang kembali 100% dalam 30 hari. Kalau dalam 30 hari CatetInd gak bantu kamu, uangmu balik tanpa drama. Jadi kamu tetap bisa coba tanpa risiko, bedanya, kamu langsung dapet semua fitur dari hari pertama.',
   },
   {
     id: 'no-bank-sync',
@@ -759,25 +761,25 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'harga',
     question: 'Kok mahal buat app catatan keuangan?',
     answer:
-      `Dari Pain Calculator tadi, rata-rata first-jobber 'kehilangan' Rp1.5 juta per bulan tanpa tracking. ${PRICE_RANGE_LABEL} itu kurang dari 20% uang yang biasa kamu buang dalam 1 bulan. Dan itu sekali bayar — bukan langganan bulanan. Kalau CatetInd bantu kamu hemat Rp200.000 saja di bulan pertama, kamu sudah balik modal.`,
+      `Dari Pain Calculator tadi, rata-rata first-jobber 'kehilangan' Rp1.5 juta per bulan tanpa tracking. ${PRICE_RANGE_LABEL} itu kurang dari 20% uang yang biasa kamu buang dalam 1 bulan. Dan itu sekali bayar, bukan langganan bulanan. Kalau CatetInd bantu kamu hemat Rp200.000 saja di bulan pertama, kamu sudah balik modal.`,
   },
   {
     id: 'beda-paket',
     question: 'Bedanya Paket Catet Aja, Waras, dan Sultan apa?',
     answer:
-      `Simpel: Paket Catet Aja (${formatIDR(PLANS[0].lifetime)}) = catat manual tanpa AI. Paket Waras (${formatIDR(PLANS[1].lifetime)}) = semua fitur termasuk AI Coach, scan struk, dan voice input dengan kuota bulanan. Paket Sultan (${formatIDR(PLANS[2].lifetime)}) = sama seperti Waras tapi AI-nya unlimited tanpa batas kuota. Semua sekali bayar untuk akses selamanya — dan naik paket cukup bayar selisihnya.`,
+      `Simpel: Paket Catet Aja (${formatIDR(PLANS[0].lifetime)}) = catat manual tanpa AI. Paket Waras (${formatIDR(PLANS[1].lifetime)}) = semua fitur termasuk AI Coach, scan struk, dan voice input dengan kuota bulanan. Paket Sultan (${formatIDR(PLANS[2].lifetime)}) = sama seperti Waras tapi AI-nya unlimited tanpa batas kuota. Semua sekali bayar untuk akses selamanya, dan naik paket cukup bayar selisihnya.`,
   },
   {
     id: 'kuota-ai',
     question: 'Gimana kalau kuota AI habis?',
     answer:
-      'Kuota AI bulananmu cukup besar — 80% user gak akan pernah menyentuh batas. Tapi kalau kamu power user, kamu bisa upgrade ke Paket Sultan untuk AI unlimited. Kamu bisa cek sisa kuota kapan aja di Settings, dan kami kasih notifikasi saat tinggal 30%.',
+      'Kuota AI bulananmu cukup besar, 80% user gak akan pernah menyentuh batas. Tapi kalau kamu power user, kamu bisa upgrade ke Paket Sultan untuk AI unlimited. Kamu bisa cek sisa kuota kapan aja di Settings, dan kami kasih notifikasi saat tinggal 30%.',
   },
   {
     id: 'midtrans-refund',
     question: 'Aman gak bayar lewat Midtrans? Gimana kebijakan refund?',
     answer:
-      'Midtrans itu payment gateway yang dipakai Tokopedia, Bukalapak, dan Gojek — jadi keamanannya sudah level enterprise. Data kartu/e-wallet kamu diproses langsung oleh Midtrans, bukan oleh kami. Soal refund: garansi uang kembali 100% dalam 30 hari. Tinggal email ke halo@catetind.com, dan kami proses dalam 3-5 hari kerja.',
+      'Midtrans itu payment gateway yang dipakai Tokopedia, Bukalapak, dan Gojek, jadi keamanannya sudah level enterprise. Data kartu/e-wallet kamu diproses langsung oleh Midtrans, bukan oleh kami. Soal refund: garansi uang kembali 100% dalam 30 hari. Tinggal email ke halo@catetind.com, dan kami proses dalam 3-5 hari kerja.',
   },
   {
     id: 'data',
@@ -1379,19 +1381,19 @@ export const REGISTERED_COPY = {
    * akun dibuat dan kode masuk dikirim ke email (Supabase `signInWithOtp`).
    */
   body: (email: string) =>
-    `Akun dengan ${email} sudah siap. Kode masuk dikirim ke alamat itu — pakai buat masuk kapan aja.`,
+    `Akun dengan ${email} sudah siap. Kode masuk dikirim ke alamat itu, pakai buat masuk kapan aja.`,
   bodyFallback:
-    'Akun kamu sudah siap. Kode masuk dikirim ke alamat yang kamu isi — pakai buat masuk kapan aja.',
+    'Akun kamu sudah siap. Kode masuk dikirim ke alamat yang kamu isi, pakai buat masuk kapan aja.',
   cta: 'Kembali ke Beranda',
   /** CTA utama begitu paket yang dipilih terbawa dari kartu harga landing */
   ctaPay: 'Lanjut bayar paket ini',
-  ctaPayHint: 'Paket yang kamu pilih sudah tersimpan — tinggal selesaikan pembayarannya.',
+  ctaPayHint: 'Paket yang kamu pilih sudah tersimpan, tinggal selesaikan pembayarannya.',
   /**
    * Body khusus saat paket terbawa: jangan mengulang janji "pembayaran belum
    * dibuka" (itu copy waitlist) sementara `/checkout` jelas-jelas sudah menagih.
    */
   bodyWithPlan: (email: string, planName: string) =>
-    `Pilihanmu — ${planName} — sudah kami simpan. Konfirmasi dikirim ke ${email}, dan kamu bisa langsung lanjut ke pembayaran sekarang.`,
+    `Pilihanmu, ${planName}, sudah kami simpan. Konfirmasi dikirim ke ${email}, dan kamu bisa langsung lanjut ke pembayaran sekarang.`,
   nextStepsTitle: 'Sambil menunggu, siapkan ini',
   nextSteps: [
     'Unduh aplikasi ke home screen (opsional, biar gampang dibuka)',

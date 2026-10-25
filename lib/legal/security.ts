@@ -114,7 +114,7 @@ export const SECURITY_DOC: LegalDocument = {
     },
   ],
   reviewNote: {
-    label: 'REVIEW LEGAL — belum lewat tinjauan hukum',
+    label: 'REVIEW LEGAL, belum lewat tinjauan hukum',
     body: 'Halaman ini disusun oleh tim produk, bukan advokat. Teks final menunggu tinjauan hukum; tanggal dan nomor versi diperbarui setiap kali isinya berubah.',
     tone: 'review',
   },
@@ -140,7 +140,7 @@ export const SECURITY_DOC: LegalDocument = {
       },
     ],
     crossNote:
-      'Kebijakan Privasi, Syarat & Ketentuan, dan halaman Keamanan Data diperbarui sebagai satu paket — nomor versinya naik bersamaan supaya tidak ada janji yang berbeda di antara ketiganya.',
+      'Kebijakan Privasi, Syarat & Ketentuan, dan halaman Keamanan Data diperbarui sebagai satu paket, nomor versinya naik bersamaan supaya tidak ada janji yang berbeda di antara ketiganya.',
   },
   disclaimer:
     'CatetInd adalah aplikasi pencatatan keuangan pribadi & budgeting harian. Minca AI bukan penasihat keuangan berlisensi atau anjuran investasi resmi.',

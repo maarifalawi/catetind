@@ -11,6 +11,7 @@
     "test:watch": "vitest",
     "shots": "node scripts/landing/shoot.mjs",
     "icons": "node scripts/generate-icons.mjs",
+    "favicon": "node scripts/generate-favicon.mjs",
     "theme:apply": "node scripts/theme/apply-palette.mjs",
     "theme:audit": "node scripts/theme/audit-palette.mjs",
     "theme:tokenize": "node scripts/theme/tokenize-literal-colors.mjs",

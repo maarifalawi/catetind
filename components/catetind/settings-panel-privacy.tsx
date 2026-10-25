@@ -62,7 +62,7 @@ import {
  * komponen yang memakainya; sebelum sesi terbaca, yang tampil adalah tanda
  * hubung — bukan alamat orang lain.
  */
-const EMAIL_UNKNOWN = '—'
+const EMAIL_UNKNOWN = '-'
 
 /** ikon kebijakan retensi → ikon lucide (copy-nya di `lib/data/account.ts`) */
 const RETENTION_ICONS = {
@@ -268,7 +268,7 @@ export function SecuritySettingsPanel() {
     <SettingsPanel
       eyebrow="Keamanan"
       title="Keamanan & Privasi"
-      desc="Kunci app di perangkat ini — plus jalan keluar yang jelas kalau kamu mau pergi."
+      desc="Kunci app di perangkat ini, plus jalan keluar yang jelas kalau kamu mau pergi."
     >
       {/* ── KUNCI APP ────────────────────────────────────────────────────── */}
       <SettingsCard title="Kunci Aplikasi">
@@ -310,7 +310,7 @@ export function SecuritySettingsPanel() {
         {pinEnabled && (
           <SettingsRow
             label="PIN aktif di perangkat ini"
-            helper="Yang tersimpan cuma sidik PIN-nya (hash), bukan angkanya — dan tidak pernah dikirim ke server kami."
+            helper="Yang tersimpan cuma sidik PIN-nya (hash), bukan angkanya, dan tidak pernah dikirim ke server kami."
             className="mt-1 border-t border-soil/10"
           >
             <button

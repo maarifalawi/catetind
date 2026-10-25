@@ -154,11 +154,11 @@ export const WEEKLY_RECAP_COPY = {
   /** judul panel saat rekap AI belum terbuka di paket user (paket 84) */
   lockedTitle: 'Rekap mingguan AI',
   /** banner Home saat pekan belum punya catatan */
-  bannerEmpty: 'Belum ada catatan minggu ini — catat yuk',
+  bannerEmpty: 'Belum ada catatan minggu ini, catat yuk',
   /** panel pengganti seluruh slide saat rekap kosong */
   emptyTitle: 'Belum ada catatan minggu ini',
   emptyBody:
-    'Rekap ini menggambar dari catatanmu sendiri — catat transaksi pertama, dan angka serta grafiknya langsung hidup.',
+    'Rekap ini menggambar dari catatanmu sendiri, catat transaksi pertama, dan angka serta grafiknya langsung hidup.',
   emptyCta: '+ Catat Transaksi',
   /** Cakupan slide Pengeluaran — SENGAJA "pekan ini", BUKAN "7 hari terakhir".
       Jendela rekap = pekan kalender Senin–Minggu dari tanggal perangkat, jadi
@@ -167,11 +167,11 @@ export const WEEKLY_RECAP_COPY = {
       sumber yang sama dengan chip kepala modal — jadi tidak bisa berbeda. */
   expensesScope: 'dalam pekan ini',
   /** Slide 2 saat pemasukan ada tapi pengeluaran belum ada */
-  expensesEmpty: 'Belum ada pengeluaran minggu ini — yang kamu catat otomatis muncul di sini.',
+  expensesEmpty: 'Belum ada pengeluaran minggu ini, yang kamu catat otomatis muncul di sini.',
   /** Slide 4 saat belum ada pos pengeluaran (langkah kategori disembunyikan) */
-  planNoCategory: 'Pengeluaran pekan ini masih nol — minggu depan bebas kamu atur.',
+  planNoCategory: 'Pengeluaran pekan ini masih nol, minggu depan bebas kamu atur.',
   /** Slide 1 saat belum ada pemasukan: perbandingan tidak bisa dihitung */
-  noIncome: 'Belum ada pemasukan minggu ini — catat pemasukan biar perbandingannya kebaca.',
+  noIncome: 'Belum ada pemasukan minggu ini, catat pemasukan biar perbandingannya kebaca.',
   /** badge saving rate saat pengeluaran melebihi pemasukan */
   savingNegative: 'minus',
   savingHealthy: 'sehat',

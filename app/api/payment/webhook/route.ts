@@ -163,7 +163,7 @@ export async function POST(req: NextRequest) {
         handled: false,
         reason: 'amount-mismatch',
         orderId,
-        note: 'Nominal notifikasi tidak sama dengan yang seharusnya ditagih — pembelian tidak dipenuhi.',
+        note: 'Nominal notifikasi tidak sama dengan yang seharusnya ditagih, pembelian tidak dipenuhi.',
       })
     }
   }
@@ -189,7 +189,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         ok: true,
         handled: false,
-        note: `Order ${orderId} belum tercatat — tidak ada yang dipenuhi.`,
+        note: `Order ${orderId} belum tercatat, tidak ada yang dipenuhi.`,
       })
     }
     return NextResponse.json(

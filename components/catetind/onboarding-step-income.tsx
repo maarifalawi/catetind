@@ -119,7 +119,7 @@ export function OnboardingStepIncome({
         <span aria-hidden className="w-7 shrink-0" />
       </div>
       <p className="mt-3 text-center text-[12.5px] leading-relaxed text-forest/40">
-        Kosongkan aja kalau belum ada — nanti bisa diisi di Pengaturan.
+        Kosongkan aja kalau belum ada, nanti bisa diisi di Pengaturan.
       </p>
 
       {/* ── preview alokasi 50/30/20 (read-only, hanya kalau angkanya ada) ──
@@ -165,7 +165,7 @@ export function OnboardingStepIncome({
               </div>
 
               <p className="mt-4 text-[11.5px] leading-relaxed text-forest/40">
-                Saran awal aja — bisa diubah kapan aja di halaman Budget.
+                Saran awal aja, bisa diubah kapan aja di halaman Budget.
               </p>
             </div>
           </motion.section>

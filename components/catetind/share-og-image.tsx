@@ -64,13 +64,13 @@ export function ShareOgImage({ card }: { card: ShareCard }): ReactElement {
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', fontSize: 32, fontWeight: 800, letterSpacing: -0.5, color: CREAM }}>
+        <div style={{ display: 'flex', fontSize: 32, fontWeight: 600, letterSpacing: -0.5, color: CREAM }}>
           {SHARE_IMAGE_COPY.brand}
         </div>
         <div style={{ display: 'flex', fontSize: 22, fontWeight: 600, color: MINT }}>{card.monthLabel}</div>
       </div>
 
-      <div style={{ display: 'flex', marginTop: 30, fontSize: 46, fontWeight: 800, lineHeight: 1.15, maxWidth: 940 }}>
+      <div style={{ display: 'flex', marginTop: 30, fontSize: 46, fontWeight: 600, lineHeight: 1.15, maxWidth: 940 }}>
         {shareHeadline(card.ownerName)}
       </div>
 
@@ -90,7 +90,7 @@ export function ShareOgImage({ card }: { card: ShareCard }): ReactElement {
           paddingTop: 18,
         }}
       >
-        <div style={{ display: 'flex', fontSize: 26, fontWeight: 800, color: MINT }}>{SHARE_HASHTAG}</div>
+        <div style={{ display: 'flex', fontSize: 26, fontWeight: 600, color: MINT }}>{SHARE_HASHTAG}</div>
         <div style={{ display: 'flex', fontSize: 20, color: MUTED }}>
           {SHARE_IMAGE_COPY.footer} · {SHARE_CARD_DOMAIN}
         </div>
@@ -115,14 +115,14 @@ export function ShareStoryImage({ card }: { card: ShareCard }): ReactElement {
         fontFamily: 'sans-serif',
       }}
     >
-      <div style={{ display: 'flex', fontSize: 40, fontWeight: 800, letterSpacing: -0.5 }}>
+      <div style={{ display: 'flex', fontSize: 40, fontWeight: 600, letterSpacing: -0.5 }}>
         {SHARE_IMAGE_COPY.brand}
       </div>
       <div style={{ display: 'flex', marginTop: 12, fontSize: 26, fontWeight: 600, color: MINT }}>
         {SHARE_IMAGE_COPY.eyebrow} · {card.monthLabel}
       </div>
 
-      <div style={{ display: 'flex', marginTop: 56, fontSize: 64, fontWeight: 800, lineHeight: 1.1 }}>
+      <div style={{ display: 'flex', marginTop: 56, fontSize: 64, fontWeight: 600, lineHeight: 1.1 }}>
         {shareHeadline(card.ownerName)}
       </div>
 
@@ -159,7 +159,7 @@ export function ShareStoryImage({ card }: { card: ShareCard }): ReactElement {
           paddingTop: 28,
         }}
       >
-        <div style={{ display: 'flex', fontSize: 36, fontWeight: 800, color: MINT }}>{SHARE_HASHTAG}</div>
+        <div style={{ display: 'flex', fontSize: 36, fontWeight: 600, color: MINT }}>{SHARE_HASHTAG}</div>
         <div style={{ display: 'flex', fontSize: 26, color: MUTED }}>{SHARE_CARD_DOMAIN}</div>
       </div>
     </div>

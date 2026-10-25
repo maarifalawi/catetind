@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
 
   if (!allowAiCall(callerId)) {
     return NextResponse.json(
-      { ok: false, reason: 'rate-limit', error: 'Kebanyakan pesan sekaligus — tunggu sebentar ya 🌿' },
+      { ok: false, reason: 'rate-limit', error: 'Kebanyakan pesan sekaligus, tunggu sebentar ya 🌿' },
       { status: 429 },
     )
   }
@@ -112,12 +112,12 @@ export async function POST(req: NextRequest) {
 ${contextText}
 
 ATURAN ANGKA: Jangan pernah menyebut nominal saldo, jatah harian, atau kategori
-yang TIDAK ada di daftar DATA USER di atas — kalau tidak ada, katakan belum
+yang TIDAK ada di daftar DATA USER di atas, kalau tidak ada, katakan belum
 tersedia. Jangan mengaku sudah mencatat/menjalankan aksi apa pun.`
     : `${COACH_SYSTEM_PROMPT}
 
 ## DATA USER
-(kosong — kamu TIDAK punya angka user saat ini) Jangan menyebut nominal saldo
+(kosong, kamu TIDAK punya angka user saat ini) Jangan menyebut nominal saldo
 atau jatah harian apa pun. Kalau user menanyakan angka, katakan datanya belum
 terkirim dan arahkan ke ringkasan di app. Jangan mengaku sudah mencatat apa pun.`
 

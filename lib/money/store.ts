@@ -764,7 +764,7 @@ function assertRemoteAggreement(remote: RemoteMoney): void {
     if (derived[walletId] !== serverValue) {
       console.warn(
         `[CatetInd] saldo ${walletId} berbeda antara server (${serverValue}) dan klien (${derived[walletId]}). ` +
-          'Rumusnya sama (opening + Σ baris) — periksa baris yang belum tersinkron.',
+          'Rumusnya sama (opening + Σ baris), periksa baris yang belum tersinkron.',
       )
     }
   }

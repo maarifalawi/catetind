@@ -109,9 +109,9 @@ export const FEATURE_LOCK_COPY = {
   /** keterangan tombol simpan di dalam sheet/modal yang sudah terbuka */
   saveHint: 'Pencatatan aktif setelah paketmu dipilih 🌿',
   /** aria-label FAB di bottom nav saat terkunci */
-  fabAria: 'Catat transaksi belum aktif — pilih paket dulu biar bisa mulai catat',
+  fabAria: 'Catat transaksi belum aktif, pilih paket dulu biar bisa mulai catat',
   /** aria-label tombol Tambah di sidebar saat terkunci */
-  addAria: 'Tambah transaksi belum aktif — pilih paket dulu biar bisa mulai catat',
+  addAria: 'Tambah transaksi belum aktif, pilih paket dulu biar bisa mulai catat',
 } as const
 
 /* ── COPY TANAMAN "MENUNGGU PAKET" (inventaris state VI · PRD 4542) ──────────
@@ -122,7 +122,7 @@ export const FEATURE_LOCK_COPY = {
 export const PLANT_SLEEP_COPY = {
   badge: 'Belum aktif',
   caption:
-    'Tanamanmu nunggu paketmu aktif dulu — dia belum bisa tumbuh sebelum kamu mulai catat 🌙',
+    'Tanamanmu nunggu paketmu aktif dulu, dia belum bisa tumbuh sebelum kamu mulai catat 🌙',
   aria: 'Tanaman (menunggu paket aktif)',
   /** pengganti baris "Tap untuk lihat detail" saat menunggu */
   detailHint: 'Pilih paket buat mulai menumbuhkan dia 🌿',
@@ -167,7 +167,7 @@ export const UPGRADE_BANNER_COPY = {
   upgrade: {
     eyebrow: 'Masih ada fitur terkunci',
     title: 'Buka semua fitur {target}',
-    body: '{features}. Selisih {amount} ke {target} — akses selamanya, tanpa auto-debet.',
+    body: '{features}. Selisih {amount} ke {target}, akses selamanya, tanpa auto-debet.',
     cta: 'Upgrade',
   },
   /**
@@ -176,7 +176,7 @@ export const UPGRADE_BANNER_COPY = {
    */
   expired: {
     eyebrow: 'Paket lama berakhir',
-    title: 'Paket {plan} sudah berakhir — lanjut ke Lifetime',
+    title: 'Paket {plan} sudah berakhir, lanjut ke Lifetime',
     body: 'Semua catatanmu tetap aman dan bisa dibaca/diekspor. Sekali bayar lifetime membuka lagi tombol tambah data, selamanya.',
     cta: 'Lanjut ke Lifetime',
   },

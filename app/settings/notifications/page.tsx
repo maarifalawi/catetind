@@ -5,7 +5,7 @@ import { NotificationsSettingsPanel } from '@/components/catetind/settings-panel
    yang sudah terhubung ke Web Push asli (lib/use-push-notifications.ts). */
 
 export const metadata: Metadata = {
-  title: 'Notifikasi — CatetInd',
+  title: 'Notifikasi | CatetInd',
 }
 
 export default function NotificationsSettingsPage() {

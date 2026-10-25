@@ -316,7 +316,7 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
             persen sudah menyampaikan tahap yang sama, dan halaman ini direvisi
             supaya tidak penuh label). */}
         <section
-          aria-label={`${fund.name} — ${stage.label}`}
+          aria-label={`${fund.name}, ${stage.label}`}
           className={cn(
             'relative mt-4 overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-sage/60 via-cream to-cream p-4 shadow-[0_18px_40px_-34px_rgba(0,0,0,0.55)] ring-1 ring-soil/12 sm:p-5',
             reached && 'ring-mint/70',

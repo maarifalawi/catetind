@@ -17,7 +17,7 @@ import { SITE_ORIGIN } from '@/lib/site'
  * orang boleh membaca komitmen keamanan sebelum punya akun.
  */
 export const metadata: Metadata = {
-  title: 'Keamanan Data — CatetInd',
+  title: 'Keamanan Data | CatetInd',
   description:
     'Cara CatetInd menjaga catatan keuanganmu: tanpa akses rekening bank, data dipisahkan per akun, tidak ada panel admin, dan kamu bisa mengekspor atau menghapus data sendiri.',
   alternates: { canonical: `${SITE_ORIGIN}/security` },

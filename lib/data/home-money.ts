@@ -154,7 +154,7 @@ export const HOME_MONEY_COPY = {
   seeAll: 'Lihat semua',
   /** potongan strip kartu transaksi: "<period> +X masuk, -Y keluar — net Z" */
   txnInflow: 'masuk,',
-  txnOutflow: 'keluar — net',
+  txnOutflow: 'keluar, net',
   /** badge kepala kartu chart — surplus/defisit, bukan selalu "Surplus" */
   chartBadgeSurplus: (pct: number) => `Surplus ${pct}%`,
   chartBadgeDeficit: (pct: number) => `Defisit ${pct}%`,
@@ -175,7 +175,7 @@ export const HOME_MONEY_COPY = {
   /** netto periode ini — "Sisa" lebih ramah daripada "Net" */
   chartNetLabel: 'Sisa',
   /** aria grafik (tidak tampil): satuan gambar kartu ini = SATU TITIK PER HARI */
-  chartAria: 'Grafik arus uang harian bulan ini — tiap titik satu tanggal',
+  chartAria: 'Grafik arus uang harian bulan ini, tiap titik satu tanggal',
   /** penanda "Hari ini" di grafik (paket 90) — garis putus-putus tipis di titik
    *  tanggal hari ini; tanpa ini ekor rata di ujung kanan terbaca seperti
    *  "pengeluaran berhenti", padahal itu sisa bulan yang belum jalan */
@@ -220,18 +220,18 @@ export const HOME_MONEY_COPY = {
   chartRhythmLabel: 'Irama pekan',
   /** satu-satunya kalimat di kartu saat belum ada pemasukan (pengeluaran saja) */
   chartNoIncome:
-    'Belum ada pemasukan di periode ini — catat pemasukan dulu biar arus uangnya kebaca 🌱',
+    'Belum ada pemasukan di periode ini, catat pemasukan dulu biar arus uangnya kebaca 🌱',
   /** judul + EMPTY STATE Arus Uang (58.1) */
   chartTitle: 'Arus Uang',
   chartEmptyTitle: 'Arus uangmu belum tergambar',
   chartEmptyBody:
-    'Grafik ini menggambar dari catatanmu sendiri — catat pemasukan & pengeluaran pertama, dan dua garisnya langsung hidup.',
+    'Grafik ini menggambar dari catatanmu sendiri, catat pemasukan & pengeluaran pertama, dan dua garisnya langsung hidup.',
   chartEmptyCta: '+ Catat Transaksi',
   /** judul + EMPTY STATE Distribusi Pengeluaran (58.2 · temuan #11) */
   distributionTitle: 'Distribusi Pengeluaran',
   distributionEmptyTitle: 'Belum ada pengeluaran bulan ini',
   distributionEmptyBody:
-    'Mulai catat pengeluaranmu — di sini kelihatan kategori mana yang paling menelan. Nggak ada yang perlu dihakimi.',
+    'Mulai catat pengeluaranmu, di sini kelihatan kategori mana yang paling menelan. Nggak ada yang perlu dihakimi.',
   distributionEmptyCta: '+ Catat Pengeluaran',
   /** caption TENGAH donat Distribusi Pengeluaran (paket 68 — bentuk "pie
    *  modern"). Sengaja pendek ("Total") supaya muat di lubang donat; nominalnya

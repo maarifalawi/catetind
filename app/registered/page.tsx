@@ -14,7 +14,7 @@ import { PLANS, buildPayHref } from '@/lib/data/pricing'
  * halaman yang perlu muncul di mesin pencari.
  */
 export const metadata: Metadata = {
-  title: 'Terima kasih — CatetInd',
+  title: 'Terima kasih | CatetInd',
   description:
     'Akun CatetInd kamu sudah terdaftar. Kode masuk sudah dikirim ke emailmu.',
   robots: { index: false, follow: false },

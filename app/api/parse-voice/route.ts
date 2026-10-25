@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
 
   if (!allowAiCall(callerId)) {
     return NextResponse.json(
-      { ok: false, reason: 'rate-limit', error: 'Kebanyakan permintaan sekaligus — tunggu sebentar ya 🌿' },
+      { ok: false, reason: 'rate-limit', error: 'Kebanyakan permintaan sekaligus, tunggu sebentar ya 🌿' },
       { status: 429 },
     )
   }

@@ -253,11 +253,11 @@ export function buildMoneyExport(
       'Data di file ini dibaca dari perangkat ini (store uang, store kekayaan, store celengan, store tagihan + IndexedDB + data contoh repo).',
       'Tidak ada salinan di server: repo demo ini belum punya backend, jadi tidak ada data yang dikirim ke mana pun saat penghapusan akun.',
       'Baris ledger berisi catatan yang kamu buat/diubah di app ini; transaksi contoh dari masa lalu hidup di konstanta lib/data/* dan ikut apa adanya.',
-      'Hutang, piutang, pembayaran, dan aset investasi dibaca dari store perangkat ini — termasuk yang baru kamu catat di halaman Kekayaan (paket 50).',
+      'Hutang, piutang, pembayaran, dan aset investasi dibaca dari store perangkat ini, termasuk yang baru kamu catat di halaman Kekayaan (paket 50).',
       'Saldo dompet dihitung dari opening + baris ledger (tidak pernah disimpan sebagai angka terpisah).',
-      'Tagihan rutin dibaca dari store perangkat ini — termasuk yang baru kamu tambah/ubah di halaman Tagihan, dan status "lunas bulan ini" apa adanya (paket 51).',
-      'Pemasukan bulanan, total cicilan, tanggal gajian, dan periode dashboard dibaca dari konfigurasi uang yang kamu isi (onboarding atau Pengaturan) — angka itulah yang dipakai kartu Jatah Hari Ini, bukan konstanta contoh (paket 57).',
-      'Dompet yang kamu hapus tetap ikut di file ini (ditandai `removed: true`), tapi saldonya TIDAK ikut dihitung di `totals.cash` — angka itu sama dengan Total Saldo yang tampil di app (paket 62).',
+      'Tagihan rutin dibaca dari store perangkat ini, termasuk yang baru kamu tambah/ubah di halaman Tagihan, dan status "lunas bulan ini" apa adanya (paket 51).',
+      'Pemasukan bulanan, total cicilan, tanggal gajian, dan periode dashboard dibaca dari konfigurasi uang yang kamu isi (onboarding atau Pengaturan), angka itulah yang dipakai kartu Jatah Hari Ini, bukan konstanta contoh (paket 57).',
+      'Dompet yang kamu hapus tetap ikut di file ini (ditandai `removed: true`), tapi saldonya TIDAK ikut dihitung di `totals.cash`, angka itu sama dengan Total Saldo yang tampil di app (paket 62).',
     ],
   }
 }

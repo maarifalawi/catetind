@@ -202,7 +202,7 @@ export function SettingsShell({ children }: { children: ReactNode }) {
                       <Link
                         href={item.href}
                         aria-current={active ? 'page' : undefined}
-                        aria-label={lockText ? `${item.title} — ${lockText}` : undefined}
+                        aria-label={lockText ? `${item.title}, ${lockText}` : undefined}
                         title={lockText ?? undefined}
                         className={cn(
                           'flex w-full items-start gap-3 border-l-[3px] py-2.5 pr-2 pl-3 transition-colors',
@@ -280,7 +280,7 @@ export function SettingsShell({ children }: { children: ReactNode }) {
             className="flex w-full items-center justify-center gap-2 rounded-2xl border border-plum/30 bg-plum/10 px-5 py-3.5 text-[13.5px] font-medium text-plum transition-colors hover:bg-plum/20 active:scale-[0.99]"
           >
             <LogOut className="size-4" strokeWidth={2.4} aria-hidden />
-            {SETTINGS_LOGOUT_ITEM.title} — {SETTINGS_LOGOUT_ITEM.desc}
+            {SETTINGS_LOGOUT_ITEM.title}, {SETTINGS_LOGOUT_ITEM.desc}
           </Link>
         </div>
       )}

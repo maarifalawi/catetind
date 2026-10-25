@@ -55,14 +55,14 @@ export interface PaletteMeaning {
 /** copy halaman (user-facing, TIDAK ditulis di JSX) */
 export const PALETTE_PAGE_COPY = {
   eyebrow: 'Review Desain',
-  title: 'Palet Warna — Earth Pastel',
-  lede: 'Satu sumber kebenaran warna untuk seluruh CatetInd. Sepuluh warna kanon dipakai lewat token — komponen tidak pernah menulis hex sendiri.',
+  title: 'Palet Warna, Earth Pastel',
+  lede: 'Satu sumber kebenaran warna untuk seluruh CatetInd. Sepuluh warna kanon dipakai lewat token, komponen tidak pernah menulis hex sendiri.',
   sourceNote:
     'Sumber: blok @theme inline di app/globals.css · dokumen lengkap di docs/theme/PALETTE.md',
   hint: 'Klik kartu untuk menyalin kodenya',
   countLabel: (count: number) => `${count} warna`,
   copiedToast: (hex: string) => `Kode ${hex} tersalin`,
-  copyFailedToast: 'Gagal menyalin — salin manual dulu ya',
+  copyFailedToast: 'Gagal menyalin, salin manual dulu ya',
   a11yCopy: (name: string, hex: string) => `Salin kode warna ${hex} dari ${name}`,
   meaningTitle: 'Makna warna',
   meaningDesc:
@@ -76,7 +76,7 @@ export const PALETTE_LAYERS: { step: string; title: string; body: string }[] = [
   {
     step: 'Lapis 1',
     title: 'Palet kanon',
-    body: 'Sepuluh warna dasar "Earth Pastel" — sumber hue seluruh sistem.',
+    body: 'Sepuluh warna dasar "Earth Pastel", sumber hue seluruh sistem.',
   },
   {
     step: 'Lapis 2',
@@ -86,7 +86,7 @@ export const PALETTE_LAYERS: { step: string; title: string; body: string }[] = [
   {
     step: 'Lapis 3',
     title: 'Nilai turunan',
-    body: 'Tint & shade yang dihitung dari palet — hanya untuk gradien, bayangan, dan shade kartu.',
+    body: 'Tint & shade yang dihitung dari palet, hanya untuk gradien, bayangan, dan shade kartu.',
   },
 ]
 
@@ -109,7 +109,7 @@ const CANON: PaletteEntry[] = [
   {
     name: 'Ivory',
     hex: '#fbf6d9',
-    note: 'Aksen hangat opsional — sudah pensiun sebagai permukaan.',
+    note: 'Aksen hangat opsional, sudah pensiun sebagai permukaan.',
     swatchClass: 'bg-ivory',
     onClass: 'text-ink',
   },
@@ -172,7 +172,7 @@ const ALIASES: PaletteEntry[] = [
     name: 'ink',
     hex: '#000000',
     alias: 'soil',
-    note: 'Garis, ring, & scrim overlay — BUKAN teks di latar terang.',
+    note: 'Garis, ring, & scrim overlay, BUKAN teks di latar terang.',
     swatchClass: 'bg-ink',
     onClass: 'text-cream',
   },
@@ -277,7 +277,7 @@ const DERIVED: PaletteEntry[] = [
   {
     name: 'evergreen-deeper',
     hex: '#161c19',
-    note: 'Evergreen ×0.32 — shade tergelap kartu',
+    note: 'Evergreen ×0.32, shade tergelap kartu',
     swatchClass: 'bg-evergreen-deeper',
     onClass: 'text-cream',
   },
@@ -441,7 +441,7 @@ export const PALETTE_GROUPS: PaletteGroup[] = [
     id: 'turunan',
     title: 'Lapis 3 · Nilai turunan',
     description:
-      'Tint & shade yang dihitung dari palet — hanya untuk gradien, bayangan, dan shade kartu.',
+      'Tint & shade yang dihitung dari palet, hanya untuk gradien, bayangan, dan shade kartu.',
     entries: DERIVED,
   },
   {
@@ -473,13 +473,13 @@ export const PALETTE_MEANINGS: PaletteMeaning[] = [
     label: 'Mendekati batas',
     hex: '#ffb885',
     dotClass: 'bg-hud-amber',
-    note: 'Peringatan lembut — belum melewati jatah (cantelope).',
+    note: 'Peringatan lembut, belum melewati jatah (cantelope).',
   },
   {
     label: 'Lewat batas',
     hex: '#b89191',
     dotClass: 'bg-hud-terracotta',
-    note: 'Alert — sengaja BUKAN merah (plum).',
+    note: 'Alert, sengaja BUKAN merah (plum).',
   },
   {
     label: 'Uang masuk',

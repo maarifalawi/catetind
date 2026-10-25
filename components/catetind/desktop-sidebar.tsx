@@ -247,7 +247,7 @@ export function DesktopSidebar({
                     key={href}
                     href={href}
                     aria-current={isActive ? 'page' : undefined}
-                    aria-label={lockText ? `${label} — ${lockText}` : undefined}
+                    aria-label={lockText ? `${label}, ${lockText}` : undefined}
                     title={lockText ?? undefined}
                     className={cn(
                       'group/item relative flex items-center text-[13px] transition-all duration-200',

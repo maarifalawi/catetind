@@ -83,17 +83,17 @@ export const TERMS_DOC: LegalDocument = {
       id: 'ringkasan',
       title: 'Ringkasan: inti yang kamu setujui',
       paragraphs: [
-        'Empat hal ini yang paling penting. Semuanya dijelaskan lebih lengkap di bagian berikutnya — mereka ada di atas supaya kamu benar-benar membacanya, bukan supaya kamu melewatinya.',
+        'Empat hal ini yang paling penting. Semuanya dijelaskan lebih lengkap di bagian berikutnya, mereka ada di atas supaya kamu benar-benar membacanya, bukan supaya kamu melewatinya.',
       ],
       bullets: [
-        'CatetInd adalah alat pencatatan keuangan pribadi dengan fitur edukasi berbasis AI. Ia membantu kamu belajar mengelola uang — bukan mengelola uangmu, dan bukan memberi keputusan keuangan untukmu.',
+        'CatetInd adalah alat pencatatan keuangan pribadi dengan fitur edukasi berbasis AI. Ia membantu kamu belajar mengelola uang, bukan mengelola uangmu, dan bukan memberi keputusan keuangan untukmu.',
         'Langganan bersifat PRABAYAR dan berlaku SELAMANYA: kamu membayar satu kali untuk paketmu, dan tidak ada tagihan berkala di sistem kami, kapan pun.',
         'Paket Catet Aja tidak memuat fitur AI. Fitur AI (AI Coach, scan struk, input suara, laporan AI) dan Joint Wallet aktif mulai Paket Waras; kuota AI tanpa batas ada di Paket Sultan. Paket yang sudah dibayar TIDAK dibatasi waktu dan tidak pernah ditagih lagi.',
         'Data keuanganmu milikmu. Kamu bisa mengekspornya jadi satu file JSON atau menghapus akunmu sendiri, tanpa perlu menghubungi siapa pun.',
       ],
       note: {
         label: 'Kami bukan penasihat investasi',
-        body: 'Batas itu sengaja ditulis tebal-tebal di bagian "Yang CatetInd BUKAN". Kalau ada jawaban AI yang terasa seperti nasihat produk keuangan, itu bukan cara kerja yang kami rancang — laporkan lewat Pusat Bantuan supaya bisa kami telusuri.',
+        body: 'Batas itu sengaja ditulis tebal-tebal di bagian "Yang CatetInd BUKAN". Kalau ada jawaban AI yang terasa seperti nasihat produk keuangan, itu bukan cara kerja yang kami rancang, laporkan lewat Pusat Bantuan supaya bisa kami telusuri.',
         tone: 'info',
       },
     },
@@ -108,7 +108,7 @@ export const TERMS_DOC: LegalDocument = {
       ],
       note: {
         label: 'Tidak tersambung ke rekening bank mana pun',
-        body: 'Tidak ada bank sync dan tidak ada akses ke rekeningmu. Semua catatan masuk dari tanganmu sendiri — diketik, diucapkan, atau dipindai dari struk. Karena itu akurasi laporanmu sepenuhnya bergantung pada lengkapnya catatanmu (lihat bagian "Sejauh mana tanggung jawab kami").',
+        body: 'Tidak ada bank sync dan tidak ada akses ke rekeningmu. Semua catatan masuk dari tanganmu sendiri, diketik, diucapkan, atau dipindai dari struk. Karena itu akurasi laporanmu sepenuhnya bergantung pada lengkapnya catatanmu (lihat bagian "Sejauh mana tanggung jawab kami").',
         tone: 'info',
       },
     },
@@ -132,7 +132,7 @@ export const TERMS_DOC: LegalDocument = {
       ],
       note: {
         label: 'Kenapa empat baris ini ditulis lebih tebal',
-        body: 'Kami tidak berizin dan tidak menawarkan jasa keuangan apa pun. CatetInd adalah alat bantu belajar dan mencatat — sama seperti buku catatan atau spreadsheet, hanya dengan AI yang membantu merapikan isinya.',
+        body: 'Kami tidak berizin dan tidak menawarkan jasa keuangan apa pun. CatetInd adalah alat bantu belajar dan mencatat, sama seperti buku catatan atau spreadsheet, hanya dengan AI yang membantu merapikan isinya.',
         tone: 'info',
       },
     },
@@ -155,7 +155,7 @@ export const TERMS_DOC: LegalDocument = {
       ],
       note: {
         label: 'Berarti itu memang informasi, bukan arahan',
-        body: 'CatetInd menampilkan datamu dan menjelaskan artinya — misalnya "pengeluaran makan bulan ini naik dibanding bulan lalu". Yang memutuskan untuk mengubah kebiasaan, memperpanjang celengan, atau mengambil produk keuangan tetap kamu. Untuk keputusan yang besar, perencana keuangan bersertifikat (CFP) adalah tempat yang tepat.',
+        body: 'CatetInd menampilkan datamu dan menjelaskan artinya, misalnya "pengeluaran makan bulan ini naik dibanding bulan lalu". Yang memutuskan untuk mengubah kebiasaan, memperpanjang celengan, atau mengambil produk keuangan tetap kamu. Untuk keputusan yang besar, perencana keuangan bersertifikat (CFP) adalah tempat yang tepat.',
         tone: 'info',
       },
     },
@@ -167,7 +167,7 @@ export const TERMS_DOC: LegalDocument = {
       id: 'ai-batas',
       title: 'Batas Minca, AI Coach',
       paragraphs: [
-        'Minca adalah AI Financial Coach di CatetInd — teman belajar keuangan, bukan penasihat. Ia bekerja dengan batas yang sengaja dipasang, dan batas itu kami sebut di sini supaya kamu tidak perlu menemukannya sendiri lewat coba-coba.',
+        'Minca adalah AI Financial Coach di CatetInd | teman belajar keuangan, bukan penasihat. Ia bekerja dengan batas yang sengaja dipasang, dan batas itu kami sebut di sini supaya kamu tidak perlu menemukannya sendiri lewat coba-coba.',
         'Saat pertama kamu membuka AI Coach, Minca memperkenalkan dua daftar ini:',
       ],
       bullets: [
@@ -182,7 +182,7 @@ export const TERMS_DOC: LegalDocument = {
       ],
       note: {
         label: 'Yang diblokir otomatis',
-        body: 'Jawaban yang menyebut nama produk investasi spesifik, angka imbal hasil, atau nama perusahaan asuransi diblokir otomatis oleh sistem. Dan setiap jawaban yang menyentuh investasi, hutang, atau asuransi ditutup otomatis — bukan pesan yang bisa dimatikan — dengan kalimat: "ℹ️ Ini informasi edukatif, bukan saran keuangan profesional."',
+        body: 'Jawaban yang menyebut nama produk investasi spesifik, angka imbal hasil, atau nama perusahaan asuransi diblokir otomatis oleh sistem. Dan setiap jawaban yang menyentuh investasi, hutang, atau asuransi ditutup otomatis, bukan pesan yang bisa dimatikan, dengan kalimat: "ℹ️ Ini informasi edukatif, bukan saran keuangan profesional."',
         tone: 'info',
       },
     },
@@ -193,20 +193,20 @@ export const TERMS_DOC: LegalDocument = {
       id: 'langganan',
       title: 'Cara kerja akses selamanya & upgrade paket',
       paragraphs: [
-        'CatetInd dijual SEKALI BAYAR untuk akses selamanya. Kamu membayar satu kali, memakai fitur paketmu tanpa batas waktu, dan tidak ada tagihan yang datang lagi. Kami tidak menyimpan mandat penagihan — tidak ada satu pun mekanisme di sistem kami yang bisa menarik uangmu sendiri.',
-        'Karena itu TIDAK ADA masa aktif, tanggal berakhir, masa tenggang, atau perpanjangan untuk ketiga paket ini. Kalau kamu mau fitur paket yang lebih tinggi, yang kamu bayar adalah SELISIH harganya — bukan harga penuh dari nol. Selisih itu dihitung dari daftar harga yang sama yang kamu lihat di halaman pembelian, dan selalu ditampilkan sebelum kamu menekan tombol bayar.',
+        'CatetInd dijual SEKALI BAYAR untuk akses selamanya. Kamu membayar satu kali, memakai fitur paketmu tanpa batas waktu, dan tidak ada tagihan yang datang lagi. Kami tidak menyimpan mandat penagihan, tidak ada satu pun mekanisme di sistem kami yang bisa menarik uangmu sendiri.',
+        'Karena itu TIDAK ADA masa aktif, tanggal berakhir, masa tenggang, atau perpanjangan untuk ketiga paket ini. Kalau kamu mau fitur paket yang lebih tinggi, yang kamu bayar adalah SELISIH harganya, bukan harga penuh dari nol. Selisih itu dihitung dari daftar harga yang sama yang kamu lihat di halaman pembelian, dan selalu ditampilkan sebelum kamu menekan tombol bayar.',
       ],
       bullets: [
         'Daftar paketnya: Paket Catet Aja (pencatatan manual), Paket Waras (AI Coach, scan struk, input suara, laporan AI, Joint Wallet), dan Paket Sultan (semua fitur Waras plus AI tanpa batas kuota dan prioritas dukungan). Nominal rupiahnya tampil dari sumber yang sama di halaman pembelian maupun di Pengaturan → Langganan.',
-        'Upgrade tersedia kapan saja, dan hanya untuk naik ke paket yang LEBIH TINGGI. Downgrade tidak kami tawarkan karena tidak ada pengembalian uang (refund) — dan kami tidak mau menagihmu untuk akses yang lebih sedikit.',
+        'Upgrade tersedia kapan saja, dan hanya untuk naik ke paket yang LEBIH TINGGI. Downgrade tidak kami tawarkan karena tidak ada pengembalian uang (refund), dan kami tidak mau menagihmu untuk akses yang lebih sedikit.',
         'Bonus dari mengajak teman berbentuk tambahan Token AI, bukan tambahan hari: sejak akses berlaku selamanya, tidak ada masa aktif yang bisa ditambahi.',
-        'Fitur berbayar benar-benar TERKUNCI di paket yang tidak memuatnya. Permintaan ke fitur itu ditolak di sisi server — bukan sekadar tombolnya disembunyikan — dan app menunjukkan ajakan upgrade beserta selisihnya.',
+        'Fitur berbayar benar-benar TERKUNCI di paket yang tidak memuatnya. Permintaan ke fitur itu ditolak di sisi server, bukan sekadar tombolnya disembunyikan, dan app menunjukkan ajakan upgrade beserta selisihnya.',
         'Kalau ada penyesuaian harga untuk pembelian baru, paket yang sudah kamu bayar TIDAK terpengaruh: aksesmu tetap seperti saat kamu membelinya.',
         'Data TIDAK PERNAH dihapus dan tidak pernah disandera. Semua catatanmu bisa diekspor kapan saja, terlepas dari paket yang kamu miliki.',
       ],
       note: {
         label: 'Sekali bayar, akses selamanya',
-        body: 'Tidak ada tagihan bulanan, tidak ada auto-renew, dan tidak ada pengingat perpanjangan — karena tidak ada yang perlu diperpanjang. Kalau suatu saat kami mengubah model ini untuk pelanggan BARU, pembelian yang sudah terjadi tetap berlaku sesuai versi ketentuan saat kamu membeli, dan perubahan seperti itu kami beritahukan lebih dulu lewat notifikasi di app dan email.',
+        body: 'Tidak ada tagihan bulanan, tidak ada auto-renew, dan tidak ada pengingat perpanjangan, karena tidak ada yang perlu diperpanjang. Kalau suatu saat kami mengubah model ini untuk pelanggan BARU, pembelian yang sudah terjadi tetap berlaku sesuai versi ketentuan saat kamu membeli, dan perubahan seperti itu kami beritahukan lebih dulu lewat notifikasi di app dan email.',
         tone: 'info',
       },
     },
@@ -220,20 +220,20 @@ export const TERMS_DOC: LegalDocument = {
       id: 'token-ai',
       title: 'Kuota & Token AI',
       paragraphs: [
-        'Fitur AI — kategorisasi otomatis, penamaan transaksi, chat dengan Minca, pindai struk, input suara, apresiasi, dan recap mingguan — dihitung dengan token. Kuota dasarnya termasuk dalam Paket Waras, dan Paket Sultan memberi AI TANPA BATAS KUOTA (dengan kebijakan pemakaian wajar: kalau pemakaiannya ekstrem kami hubungi dulu, bukan memotong diam-diam). Paket Catet Aja tidak memuat fitur AI sama sekali.',
+        'Fitur AI, kategorisasi otomatis, penamaan transaksi, chat dengan Minca, pindai struk, input suara, apresiasi, dan recap mingguan, dihitung dengan token. Kuota dasarnya termasuk dalam Paket Waras, dan Paket Sultan memberi AI TANPA BATAS KUOTA (dengan kebijakan pemakaian wajar: kalau pemakaiannya ekstrem kami hubungi dulu, bukan memotong diam-diam). Paket Catet Aja tidak memuat fitur AI sama sekali.',
         'Ini rinciannya, tanpa angka yang disembunyikan:',
       ],
       bullets: [
         'Kuota dasar per bulan sekitar 601.500 token, setara kurang lebih 1.265 panggilan: kategorisasi & penamaan 800 panggilan, chat 200, pindai struk (OCR) 100, input suara 150, apresiasi AI 10, dan recap mingguan 5.',
         'Kuota dasar di-reset setiap tanggal 1, bukan dihitung bergulir 30 hari. Sisa kuota bulan lalu tidak menumpuk ke bulan baru.',
-        'Kalau kuotanya habis, fitur AI berhenti sampai bulan berganti atau sampai kamu mengisi ulang. Mencatat manual TIDAK terbatas — app tetap berfungsi penuh tanpa AI.',
+        'Kalau kuotanya habis, fitur AI berhenti sampai bulan berganti atau sampai kamu mengisi ulang. Mencatat manual TIDAK terbatas, app tetap berfungsi penuh tanpa AI.',
         'Isi ulang (add-on) tersedia dalam tiga ukuran: 200.000 token, 400.000 token, dan 800.000 token. Harganya tampil apa adanya sebelum kamu membayar, dan tidak ada harga berbeda di halaman lain.',
-        'Token isi ulang TIDAK hangus saat bulan berganti — ia berlaku sampai benar-benar terpakai. Yang di-reset bulanan hanya kuota dasarnya.',
-        'Sisa kuotamu bisa dilihat kapan saja di Pengaturan → Langganan, di kartu "Bahan Bakar AI". Framingnya sisa bahan bakar, bukan hitungan mundur — kami sengaja tidak memakai warna alarm untuk hal ini.',
+        'Token isi ulang TIDAK hangus saat bulan berganti, ia berlaku sampai benar-benar terpakai. Yang di-reset bulanan hanya kuota dasarnya.',
+        'Sisa kuotamu bisa dilihat kapan saja di Pengaturan → Langganan, di kartu "Bahan Bakar AI". Framingnya sisa bahan bakar, bukan hitungan mundur, kami sengaja tidak memakai warna alarm untuk hal ini.',
       ],
       note: {
-        label: 'REVIEW LEGAL — rincian yang belum diputuskan',
-        body: 'Angka kuota, siklus reset, dan aturan "token isi ulang tidak hangus" sudah final. Yang belum diputuskan: cara menghitung kuota kalau kamu naik paket di tengah bulan, dan pemakaian dari dua perangkat sekaligus. Dua hal itu sengaja belum kami tulis di sini — lebih baik kosong dan bisa ditanyakan lewat Pusat Bantuan daripada tegas tapi salah.',
+        label: 'REVIEW LEGAL, rincian yang belum diputuskan',
+        body: 'Angka kuota, siklus reset, dan aturan "token isi ulang tidak hangus" sudah final. Yang belum diputuskan: cara menghitung kuota kalau kamu naik paket di tengah bulan, dan pemakaian dari dua perangkat sekaligus. Dua hal itu sengaja belum kami tulis di sini, lebih baik kosong dan bisa ditanyakan lewat Pusat Bantuan daripada tegas tapi salah.',
         tone: 'review',
       },
     },
@@ -244,9 +244,9 @@ export const TERMS_DOC: LegalDocument = {
       id: 'pembayaran',
       title: 'Pembayaran',
       paragraphs: [
-        'Semua pembayaran diproses oleh Midtrans — payment gateway yang juga dipakai layanan besar di Indonesia. Data kartu atau e-wallet-mu diproses langsung oleh Midtrans: kami tidak pernah melihatnya dan tidak pernah menyimpannya.',
-        'Harga yang kamu lihat di halaman pembelian adalah harga yang kamu bayar. Satu harga per paket, sama di semua tempat — halaman pembelian dan Pengaturan → Langganan. Tidak ada biaya tersembunyi, tidak ada harga yang berubah setelah kamu menyetujui, dan tidak ada promo yang bikin harga aslinya jadi misterius.',
-        'Satu-satunya potongan harga adalah diskon 10% untuk teman yang kamu ajak lewat kode referral — dan potongan itu selalu terlihat di ringkasan sebelum kamu menekan tombol bayar.',
+        'Semua pembayaran diproses oleh Midtrans, payment gateway yang juga dipakai layanan besar di Indonesia. Data kartu atau e-wallet-mu diproses langsung oleh Midtrans: kami tidak pernah melihatnya dan tidak pernah menyimpannya.',
+        'Harga yang kamu lihat di halaman pembelian adalah harga yang kamu bayar. Satu harga per paket, sama di semua tempat, halaman pembelian dan Pengaturan → Langganan. Tidak ada biaya tersembunyi, tidak ada harga yang berubah setelah kamu menyetujui, dan tidak ada promo yang bikin harga aslinya jadi misterius.',
+        'Satu-satunya potongan harga adalah diskon 10% untuk teman yang kamu ajak lewat kode referral, dan potongan itu selalu terlihat di ringkasan sebelum kamu menekan tombol bayar.',
       ],
       bullets: [
         'Setiap paket dibayar SEKALI untuk akses selamanya. Tidak ada periode bulanan/tahunan, jadi tidak ada penagihan berulang yang harus dihitung ulang.',
@@ -255,8 +255,8 @@ export const TERMS_DOC: LegalDocument = {
         'Garansi uang kembali: kalau dalam 30 hari kamu merasa CatetInd bukan untukmu, kirim email ke halo@catetind.com dengan alasan singkat dan kami proses pengembaliannya dalam 3–5 hari kerja. Tanpa pertanyaan yang aneh-aneh.',
       ],
       note: {
-        label: 'REVIEW LEGAL — cakupan garansi',
-        body: 'Poin garansi di atas adalah janji publik, jadi kami tulis apa adanya — bukan "syarat & ketentuan berlaku" yang kabur. Yang belum diputuskan: perlakuan untuk pembelian token AI isi ulang yang sudah terpakai sebagian, dan untuk upgrade yang sedang berjalan saat garansi diklaim. Dua kasus itu masih ditinjau kasus per kasus sampai ada aturan tertulisnya.',
+        label: 'REVIEW LEGAL, cakupan garansi',
+        body: 'Poin garansi di atas adalah janji publik, jadi kami tulis apa adanya, bukan "syarat & ketentuan berlaku" yang kabur. Yang belum diputuskan: perlakuan untuk pembelian token AI isi ulang yang sudah terpakai sebagian, dan untuk upgrade yang sedang berjalan saat garansi diklaim. Dua kasus itu masih ditinjau kasus per kasus sampai ada aturan tertulisnya.',
         tone: 'review',
       },
     },
@@ -266,18 +266,18 @@ export const TERMS_DOC: LegalDocument = {
       id: 'akun',
       title: 'Akun & hal yang tidak boleh dilakukan',
       paragraphs: [
-        'Akun CatetInd dibuat dengan email dan nama panggilan — tanpa password, nomor telepon, alamat, KTP, atau tanggal lahir. Kamu bisa mengunci app dengan PIN atau biometrik, dan PIN itu hanya tersimpan di perangkatmu, bukan di server kami.',
+        'Akun CatetInd dibuat dengan email dan nama panggilan, tanpa password, nomor telepon, alamat, KTP, atau tanggal lahir. Kamu bisa mengunci app dengan PIN atau biometrik, dan PIN itu hanya tersimpan di perangkatmu, bukan di server kami.',
         'Aturan pakainya pendek, karena app ini memang dirancang untuk satu orang:',
       ],
       bullets: [
         'Satu akun untuk satu orang. Isinya kondisi keuanganmu, jadi jangan dipakai bergantian atau diperjualbelikan.',
-        'Jangan memakai CatetInd untuk hal yang melanggar hukum, atau untuk mengganggu layanan — misalnya menyerang server, menyalin isi app secara otomatis, atau memakai fitur AI di luar pemakaian wajar.',
-        'Jangan memasukkan data milik orang lain tanpa izinnya. Dompet Bersama memang untuk berdua, tapi undangannya dikirim satu per satu ke orang yang kamu pilih — bukan tautan yang bisa disebar.',
+        'Jangan memakai CatetInd untuk hal yang melanggar hukum, atau untuk mengganggu layanan, misalnya menyerang server, menyalin isi app secara otomatis, atau memakai fitur AI di luar pemakaian wajar.',
+        'Jangan memasukkan data milik orang lain tanpa izinnya. Dompet Bersama memang untuk berdua, tapi undangannya dikirim satu per satu ke orang yang kamu pilih, bukan tautan yang bisa disebar.',
         'Jangan mengaku sebagai CatetInd untuk mendapatkan data orang lain. Kami tidak pernah menghubungimu untuk meminta data pribadi atau uang.',
         'Kalau kamu merasa akunmu diakses orang lain, kamu bisa langsung mengunci atau menghapusnya sendiri dari Pengaturan → Keamanan & Privasi.',
       ],
       note: {
-        label: 'REVIEW LEGAL — langkah yang belum diputuskan',
+        label: 'REVIEW LEGAL, langkah yang belum diputuskan',
         body: 'Tim produk belum memutuskan langkah yang kami ambil kalau ada akun yang melanggar aturan di atas (peringatan, pembekuan sementara, atau penutupan akun). Kami tidak menulis sanksi yang belum disepakati; bagian ini menunggu keputusan hukum sebelum dokumen ini mengikat.',
         tone: 'review',
       },
@@ -293,9 +293,9 @@ export const TERMS_DOC: LegalDocument = {
         'Kamu bisa membawa datamu keluar kapan saja. Tombol Export Data Saya membuat salinan lengkap dalam bentuk JSON dan mengirimkannya ke emailmu sendiri. Kamu juga bisa menghapus akunmu sendiri dari Pengaturan → Keamanan & Privasi.',
       ],
       bullets: [
-        'Tidak ada satu pun orang di CatetInd yang bisa membuka catatan transaksimu — termasuk kami sendiri. Kalau kamu menghubungi support, kami meminta screenshot, bukan akses ke data.',
+        'Tidak ada satu pun orang di CatetInd yang bisa membuka catatan transaksimu, termasuk kami sendiri. Kalau kamu menghubungi support, kami meminta screenshot, bukan akses ke data.',
         'Data yang kamu hapus benar-benar hilang dari sistem kami, bukan disembunyikan atau disimpan diam-diam.',
-        'Rincian lengkap soal data — apa yang disimpan, bagian mana yang diproses penyedia model AI, dan sakelar untuk mematikannya — ada di Kebijakan Privasi. Sengaja tidak kami ulang di sini supaya tidak lahir dua versi janji yang sama.',
+        'Rincian lengkap soal data, apa yang disimpan, bagian mana yang diproses penyedia model AI, dan sakelar untuk mematikannya, ada di Kebijakan Privasi. Sengaja tidak kami ulang di sini supaya tidak lahir dua versi janji yang sama.',
         'Data tetap tersimpan dan tetap bisa kamu ekspor, terlepas dari paket yang kamu miliki. Tidak ada catatan yang disandera di balik paket berbayar.',
       ],
     },
@@ -306,18 +306,18 @@ export const TERMS_DOC: LegalDocument = {
       id: 'tanggung-jawab',
       title: 'Sejauh mana tanggung jawab kami',
       paragraphs: [
-        'CatetInd adalah alat bantu mencatat dan belajar. Kami berusaha keras supaya angka yang ditampilkan benar, tapi hasilnya bergantung pada data yang kamu masukkan sendiri — dan kamu yang paling tahu angka sebenarnya.',
-        'Dua hal teknis yang menjelaskan kenapa itu penting: saldo dompet disimpan sebagai angka yang diperbarui setiap kali kamu mencatat transaksi (bukan hasil membaca rekening bank, karena kami memang tidak terhubung ke bank), dan tabungan, transfer, serta pengeluaran adalah tiga tipe transaksi yang terpisah. Salah memilih tipe membuat ringkasanmu melenceng — untungnya setiap transaksi bisa kamu edit kapan saja.',
+        'CatetInd adalah alat bantu mencatat dan belajar. Kami berusaha keras supaya angka yang ditampilkan benar, tapi hasilnya bergantung pada data yang kamu masukkan sendiri, dan kamu yang paling tahu angka sebenarnya.',
+        'Dua hal teknis yang menjelaskan kenapa itu penting: saldo dompet disimpan sebagai angka yang diperbarui setiap kali kamu mencatat transaksi (bukan hasil membaca rekening bank, karena kami memang tidak terhubung ke bank), dan tabungan, transfer, serta pengeluaran adalah tiga tipe transaksi yang terpisah. Salah memilih tipe membuat ringkasanmu melenceng, untungnya setiap transaksi bisa kamu edit kapan saja.',
       ],
       bullets: [
         'Keputusan keuangan tetap milikmu, beserta hasilnya. Keuntungan maupun kerugian dari keputusan itu bukan tanggung jawab kami.',
         'Kami tidak menjanjikan hasil finansial tertentu. Insight kami adalah pembacaan atas datamu, bukan jaminan.',
-        'Kalau ada kekeliruan teknis — angka tidak tampil, salah hitung, atau penyimpanan gagal — laporkan lewat Pusat Bantuan. Kami perbaiki, dan kalau perlu membantu memulihkan catatanmu dari file export.',
+        'Kalau ada kekeliruan teknis, angka tidak tampil, salah hitung, atau penyimpanan gagal, laporkan lewat Pusat Bantuan. Kami perbaiki, dan kalau perlu membantu memulihkan catatanmu dari file export.',
         'Kami bisa menghentikan sementara sebuah fitur untuk perbaikan, tapi tidak akan menghentikan layanan ini diam-diam: kalau CatetInd benar-benar berhenti permanen, kami beri tahu lebih dulu lewat email supaya kamu sempat mengekspor datamu.',
       ],
       note: {
-        label: 'REVIEW LEGAL — batas ganti rugi',
-        body: 'Apakah ganti rugi dibatasi sebesar biaya paket yang pernah kamu bayar, dan bagaimana rumusannya, belum diputuskan. Kami tidak mencantumkan batas angka yang belum disetujui — bagian ini menunggu rumusan advokat, dan tanggal versinya akan naik begitu isinya berubah.',
+        label: 'REVIEW LEGAL, batas ganti rugi',
+        body: 'Apakah ganti rugi dibatasi sebesar biaya paket yang pernah kamu bayar, dan bagaimana rumusannya, belum diputuskan. Kami tidak mencantumkan batas angka yang belum disetujui, bagian ini menunggu rumusan advokat, dan tanggal versinya akan naik begitu isinya berubah.',
         tone: 'review',
       },
     },
@@ -327,13 +327,13 @@ export const TERMS_DOC: LegalDocument = {
       id: 'perubahan',
       title: 'Kalau syarat ini berubah',
       paragraphs: [
-        'Halaman ini punya nomor versi dan tanggal di bagian atas. Setiap kali isinya berubah, keduanya ikut naik — dan Kebijakan Privasi diperbarui bersamaan, supaya tidak pernah ada dua dokumen legal yang saling bertentangan.',
+        'Halaman ini punya nomor versi dan tanggal di bagian atas. Setiap kali isinya berubah, keduanya ikut naik, dan Kebijakan Privasi diperbarui bersamaan, supaya tidak pernah ada dua dokumen legal yang saling bertentangan.',
       ],
       bullets: [
-        'Perubahan yang mengubah hakmu — aturan paket & akses selamanya, kuota AI, atau cara pembayaran — kami beri tahu lewat notifikasi di app dan email SEBELUM berlaku, bukan sesudah.',
+        'Perubahan yang mengubah hakmu, aturan paket & akses selamanya, kuota AI, atau cara pembayaran, kami beri tahu lewat notifikasi di app dan email SEBELUM berlaku, bukan sesudah.',
         'Perubahan kecil (perbaikan kalimat, tambahan contoh) tidak perlu notifikasi, tapi nomor versinya tetap naik supaya riwayatnya bisa ditelusuri.',
         'Versi yang berlaku adalah yang tampil di halaman ini; salinan yang tersebar di tempat lain bukan acuan.',
-        'Kalau kamu tidak setuju dengan versi barunya, kamu tidak wajib membeli apa pun lagi — dan seperti biasa, datamu tetap bisa kamu ekspor dan hapus sendiri.',
+        'Kalau kamu tidak setuju dengan versi barunya, kamu tidak wajib membeli apa pun lagi, dan seperti biasa, datamu tetap bisa kamu ekspor dan hapus sendiri.',
       ],
     },
 
@@ -342,10 +342,10 @@ export const TERMS_DOC: LegalDocument = {
       id: 'hukum',
       title: 'Hukum yang berlaku',
       paragraphs: [
-        'Syarat & Ketentuan ini tunduk pada hukum Republik Indonesia. Kalau ada perselisihan, kami akan mengupayakan penyelesaian lewat Pusat Bantuan dan email lebih dulu — jalur yang paling cepat dan paling murah untuk kita berdua.',
+        'Syarat & Ketentuan ini tunduk pada hukum Republik Indonesia. Kalau ada perselisihan, kami akan mengupayakan penyelesaian lewat Pusat Bantuan dan email lebih dulu, jalur yang paling cepat dan paling murah untuk kita berdua.',
       ],
       note: {
-        label: 'REVIEW LEGAL — badan hukum & pengadilan',
+        label: 'REVIEW LEGAL, badan hukum & pengadilan',
         body: 'Nama badan hukum penyelenggara, domisili, dan pengadilan yang berwenang belum ditetapkan: pendaftaran merchant masih atas nama individu. Rumusan bagian ini menunggu advokat dan akan diperbarui bersamaan dengan berdirinya badan hukum, tanpa mengubah janji di bagian lain.',
         tone: 'review',
       },
@@ -356,8 +356,8 @@ export const TERMS_DOC: LegalDocument = {
       id: 'kontak',
       title: 'Kontak',
       paragraphs: [
-        'Pertanyaan, keberatan, atau permintaan soal akun dan datamu bisa dimulai dari Pusat Bantuan: buka artikel mana pun, tekan 👎 di kakinya, lalu kirim pesan. Balasan datang dari manusia — langsung dari founder, bukan bot dan bukan tiket yang mengantre.',
-        'Kalau lebih nyaman lewat email, kirim ke halo@catetind.com — sertakan screenshot untuk masalah tampilan, karena kami memang tidak bisa membuka datamu untuk mengeceknya sendiri.',
+        'Pertanyaan, keberatan, atau permintaan soal akun dan datamu bisa dimulai dari Pusat Bantuan: buka artikel mana pun, tekan 👎 di kakinya, lalu kirim pesan. Balasan datang dari manusia, langsung dari founder, bukan bot dan bukan tiket yang mengantre.',
+        'Kalau lebih nyaman lewat email, kirim ke halo@catetind.com, sertakan screenshot untuk masalah tampilan, karena kami memang tidak bisa membuka datamu untuk mengeceknya sendiri.',
       ],
     },
   ],
@@ -367,12 +367,12 @@ export const TERMS_DOC: LegalDocument = {
      masih demo, (3) tautan ke halaman yang BENAR-BENAR ada di repo. Semuanya
      disebut apa adanya — sama seperti yang dilakukan `/privacy`. */
   reviewNote: {
-    label: 'REVIEW LEGAL — belum lewat tinjauan hukum',
+    label: 'REVIEW LEGAL, belum lewat tinjauan hukum',
     body: 'CatetInd masih di tahap awal dan syarat ini disusun oleh tim produk, bukan advokat. Setiap bagian yang masih menunggu keputusan ditandai terang-terangan di atas, dan bagian yang belum ada aturannya sengaja kami kosongkan daripada diisi klausul karangan. Nomor versi dan tanggal di atas naik setiap kali isinya berubah.',
     tone: 'review',
   },
   demoNote:
-    'Catatan build demo: versi CatetInd yang sedang kamu buka adalah prototipe desain. Bagian paket & harga, kuota token, dan pembayaran di atas menjelaskan cara kerja versi produksinya — di build ini tidak ada pembayaran nyata, tidak ada penagihan, dan tidak ada satu pun permintaan yang benar-benar dikirim ke penyedia model AI.',
+    'Catatan build demo: versi CatetInd yang sedang kamu buka adalah prototipe desain. Bagian paket & harga, kuota token, dan pembayaran di atas menjelaskan cara kerja versi produksinya, di build ini tidak ada pembayaran nyata, tidak ada penagihan, dan tidak ada satu pun permintaan yang benar-benar dikirim ke penyedia model AI.',
   related: {
     title: 'Lihat juga',
     links: [

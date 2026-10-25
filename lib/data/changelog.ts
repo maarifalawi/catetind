@@ -36,7 +36,7 @@ export const CHANGELOG_META = {
   eyebrow: 'Changelog',
   title: 'Product Updates',
   description:
-    'Semua yang baru di CatetInd — fitur, peningkatan, dan perbaikan di setiap versi. Ringkas, tanpa bahasa marketing.',
+    'Semua yang baru di CatetInd | fitur, peningkatan, dan perbaikan di setiap versi. Ringkas, tanpa bahasa marketing.',
 } as const
 
 /** terbaru lebih dulu — urutan ini yang dipakai halaman */
@@ -48,7 +48,7 @@ export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
     dateHuman: '20 Januari 2026',
     title: 'Catat 4 detik: struk, suara, dan Minca',
     summary: [
-      'Nyatet nggak harus buka form. Kirim chat, foto struk, atau voice note — Minca yang merapikan jadi transaksi.',
+      'Nyatet nggak harus buka form. Kirim chat, foto struk, atau voice note, Minca yang merapikan jadi transaksi.',
       'Scan struk membaca nominal, tanggal, dan merchant langsung dari foto. Kalau ada yang meleset, kamu masih bisa mengeditnya sebelum disimpan.',
     ],
     image: '/landing/ecsvVHaKUpgixFh7HmsoZYYI.png',
@@ -89,7 +89,7 @@ export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
     title: 'Dompet Bersama & rekap yang lebih jujur',
     summary: [
       'Kelola uang bareng pasangan, keluarga, atau teman tanpa spreadsheet. Setiap anggota melihat catatan yang sama, dan pembagian patungan kelihatan jelas.',
-      'Rekap mingguan dan bulanan sekarang bisa dibagikan sebagai kartu — tanpa angka saldo yang sensitif.',
+      'Rekap mingguan dan bulanan sekarang bisa dibagikan sebagai kartu, tanpa angka saldo yang sensitif.',
     ],
     groups: [
       {

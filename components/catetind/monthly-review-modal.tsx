@@ -263,16 +263,13 @@ export function MonthlyReviewModal({
             : 'translate-y-full opacity-0 lg:translate-y-3 lg:scale-[0.98]',
         )}
       >
-        {/* zona drag (mobile): handle + hint swipe-down */}
+        {/* zona drag (mobile): handle saja — tanpa teks petunjuk */}
         <div
           {...handlers}
           style={{ touchAction: 'none' }}
           className="shrink-0 select-none pb-1 pt-3 lg:hidden"
         >
           <div className="mx-auto h-1.5 w-10 rounded-full bg-ink/15" aria-hidden />
-          <p className="mt-1.5 text-center text-[10px] font-medium text-forest/30">
-            {COPY.swipeHint}
-          </p>
         </div>
         {/* handle statis di desktop (modal tengah — tanpa swipe) */}
         <div
@@ -283,13 +280,9 @@ export function MonthlyReviewModal({
         {/* kepala modal — sapaan hangat, bukan instruksi */}
         <div className="mt-3 flex shrink-0 items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-forest/40">
-              {COPY.eyebrow}
-            </p>
-            <h2 className="mt-1 text-2xl font-medium leading-tight tracking-tight text-forest">
+            <h2 className="text-2xl font-medium leading-tight tracking-tight text-forest">
               {COPY.title}
             </h2>
-            <p className="mt-1.5 text-[12px] leading-relaxed text-forest/50">{COPY.subtitle}</p>
           </div>
           <button
             ref={closeRef}

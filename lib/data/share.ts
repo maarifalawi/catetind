@@ -137,7 +137,7 @@ export function buildShareLinkText(id: string): string {
 export const SHARE_HASHTAG = '#CatetAjaDulu'
 
 /** judul share di sistem operasi (WhatsApp/IG/Twitter) — tanpa angka keuangan */
-export const SHARE_ACTION_TITLE = 'CatetInd — Kartu Pencapaian'
+export const SHARE_ACTION_TITLE = 'CatetInd | Kartu Pencapaian'
 
 /**
  * Kalimat yang menemani link saat dibagikan. Disusun dari kalimat tetap + link;
@@ -236,7 +236,7 @@ export function shareHeadline(ownerName: string): string {
 }
 
 export const SHARE_PAGE_SUBHEAD =
-  'Kartu ini bukan laporan keuangan — hanya jumlah catatan, hari konsisten, dan tahap tanamannya.'
+  'Kartu ini bukan laporan keuangan, hanya jumlah catatan, hari konsisten, dan tahap tanamannya.'
 
 /** label kecil di dalam kartu, sebelum baris pencapaian */
 export function shareCardLead(ownerName: string): string {
@@ -265,7 +265,7 @@ export const SHARE_CARD_DOMAIN = SITE_DOMAIN
 
 /** lapis 1 — di bawah kartu, satu baris, menjelaskan isi kartu */
 export const SHARE_CARD_PRIVACY_LINE =
-  'Yang tampil di kartu ini cuma jumlah catatan, hari konsisten, dan tahap tanaman — tanpa nominal, kategori, atau nama merchant.'
+  'Yang tampil di kartu ini cuma jumlah catatan, hari konsisten, dan tahap tanaman, tanpa nominal, kategori, atau nama merchant.'
 
 /** lapis 2 — PRD 6633, VERBATIM, jangan diedit gayanya */
 export const SHARE_PRIVACY_NOTE =
@@ -273,7 +273,7 @@ export const SHARE_PRIVACY_NOTE =
 
 /** janji privasi untuk PENGUNJUNG (PRD 7032–7057: privasi = keunggulan struktural) */
 export function shareVisitorPledge(ownerName: string): string {
-  return `Rincian keuangannya tetap 100% privat. ${ownerName} sendiri yang memilih bagian ini untuk dibagikan — sisanya tidak pernah ikut keluar.`
+  return `Rincian keuangannya tetap 100% privat. ${ownerName} sendiri yang memilih bagian ini untuk dibagikan, sisanya tidak pernah ikut keluar.`
 }
 
 /* ── CTA (PRD 6568 & inventaris #16) ──────────────────────────────────────── */
@@ -286,7 +286,7 @@ export const SHARE_CTA_HINT = 'Empat tap buat nyatat, satu tanaman buat nemenin 
 /** kartu ajakan untuk pengunjung yang belum kenal CatetInd (bukan hard-sell) */
 export const SHARE_INVITE_TITLE = 'Tanaman kamu mulai dari benih 🌱'
 export const SHARE_INVITE_BODY =
-  'Nyatat pengeluaran cukup 4 tap. Tiap kali kamu konsisten, tanamanmu tumbuh — dan kartu seperti di atas dibuat otomatis dari catatanmu.'
+  'Nyatat pengeluaran cukup 4 tap. Tiap kali kamu konsisten, tanamanmu tumbuh, dan kartu seperti di atas dibuat otomatis dari catatanmu.'
 
 
 /** satu kalimat nurturing untuk CTA kartu yang datanya masih tipis */
@@ -299,18 +299,18 @@ export const SHARE_GROWING_TITLE = 'Kartu ini masih tumbuh 🌱'
 
 /** apa adanya: sebut jumlahnya, jangan dibulatkan jadi pencapaian palsu */
 export function shareGrowingNote(card: ShareCard): string {
-  return `Baru ${card.totalTransactions} catatan tercatat di ${card.monthLabel}. Kami tampilkan apa adanya — nggak ada pencapaian yang dikarang.`
+  return `Baru ${card.totalTransactions} catatan tercatat di ${card.monthLabel}. Kami tampilkan apa adanya, nggak ada pencapaian yang dikarang.`
 }
 
 /* ── STATE "KARTU TIDAK ADA" (inventaris #16: hangat, bukan 404 kaku) ─────── */
 
 export const SHARE_UNAVAILABLE_TITLE = 'Kartu ini sudah tidak tersedia atau tautannya salah 🌱'
 export const SHARE_UNAVAILABLE_BODY =
-  'Mungkin tautannya terpotong saat dikirim, atau pemiliknya sudah menghapus kartunya. Nggak ada yang rusak — kamu tetap bisa kenalan sama CatetInd di bawah.'
+  'Mungkin tautannya terpotong saat dikirim, atau pemiliknya sudah menghapus kartunya. Nggak ada yang rusak, kamu tetap bisa kenalan sama CatetInd di bawah.'
 /** CTA pulang ke beranda (bukan halaman error) */
 export const SHARE_UNAVAILABLE_CTA = 'Balik ke Beranda'
 export const SHARE_UNAVAILABLE_CTA_HREF = '/'
-export const SHARE_UNAVAILABLE_ART_LABEL = 'Tunas kecil di pot — tanaman CatetInd masih tumbuh'
+export const SHARE_UNAVAILABLE_ART_LABEL = 'Tunas kecil di pot, tanaman CatetInd masih tumbuh'
 
 /* ── PANEL BAGIKAN DI DALAM APP (trigger dari Rekap Mingguan) ──────────────── */
 
@@ -327,7 +327,7 @@ export const SHARE_PANEL_COPY = {
     copied: 'Link kartu tersalin!',
     shared: 'Kartu terkirim! 🌿',
     downloaded: 'Gambar kartu tersimpan di perangkatmu 🌿',
-    failed: 'Gagal menyalin — salin link-nya manual ya',
+    failed: 'Gagal menyalin, salin link-nya manual ya',
   },
   /** pola JOIN_PREVIEW_COPY: pratinjau halaman yang dilihat orang lain */
   previewLabel: 'Lihat kartu seperti yang dilihat temanmu',
@@ -357,7 +357,7 @@ export function buildShareImagePath(id: string): string {
 
 /** teks alternatif gambar kartu (a11y di halaman publik) */
 export function shareImageAlt(card: ShareCard): string {
-  return `Kartu pencapaian ${card.ownerName} di CatetInd — ${card.monthLabel}`
+  return `Kartu pencapaian ${card.ownerName} di CatetInd | ${card.monthLabel}`
 }
 
 /* ── KAKI DEMO ────────────────────────────────────────────────────────────────
@@ -383,18 +383,18 @@ export const DEMO_SHARE_STATES: { label: string; id: string }[] = [
    penulisannya sengaja TIDAK menyisipkan nominal apa pun. */
 
 export function shareMetadataTitle(card: ShareCard): string {
-  return `${shareHeadline(card.ownerName)} — CatetInd`
+  return `${shareHeadline(card.ownerName)} | CatetInd`
 }
 
 export function shareMetadataDescription(card: ShareCard): string {
-  return `Kartu pencapaian ${card.ownerName} di CatetInd: jumlah catatan, hari konsisten, dan tahap tanaman — tanpa satu pun angka rupiah.`
+  return `Kartu pencapaian ${card.ownerName} di CatetInd: jumlah catatan, hari konsisten, dan tahap tanaman, tanpa satu pun angka rupiah.`
 }
 
 /** judul/deskripsi untuk id yang tidak dikenal: sebut apa adanya, jangan mengarang nama */
-export const SHARE_UNKNOWN_METADATA_TITLE = 'Kartu pencapaian — CatetInd'
+export const SHARE_UNKNOWN_METADATA_TITLE = 'Kartu pencapaian | CatetInd'
 
 export const SHARE_UNKNOWN_METADATA_DESCRIPTION =
-  'Kartu pencapaian CatetInd: jumlah catatan, hari konsisten, dan tahap tanaman — tanpa satu pun angka rupiah.'
+  'Kartu pencapaian CatetInd: jumlah catatan, hari konsisten, dan tahap tanaman, tanpa satu pun angka rupiah.'
 
 
 

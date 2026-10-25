@@ -19,10 +19,10 @@ export const NOT_FOUND_EYEBROW = 'Kode 404'
 export const NOT_FOUND_TITLE = 'Halaman ini nggak ada di kebun kita 🌱'
 
 /** SATU baris: sebabnya + penenangnya, tanpa paragraf kedua */
-export const NOT_FOUND_BODY = 'Tautannya mungkin salah ketik atau sudah pindah — datamu aman.'
+export const NOT_FOUND_BODY = 'Tautannya mungkin salah ketik atau sudah pindah, datamu aman.'
 
 /** label ilustrasi tanaman kecil di kepala halaman (dekoratif, tetap punya makna) */
-export const NOT_FOUND_ART_LABEL = 'Tunas kecil di pot — tanaman CatetInd masih tumbuh'
+export const NOT_FOUND_ART_LABEL = 'Tunas kecil di pot, tanaman CatetInd masih tumbuh'
 
 /** CTA utama — satu tombol, satu arah: pulang ke Dashboard */
 export const NOT_FOUND_HOME_CTA = 'Balik ke Beranda'

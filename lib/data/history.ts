@@ -231,8 +231,8 @@ export const HEALTH_CARD_COPY = {
   /** kalimat hasil: angkanya dari data user, bukan contoh */
   verdict: (rate: number) =>
     rate >= 0
-      ? `Kamu menyisihkan ${rate}% dari seluruh pemasukan yang kamu catat. Sisanya kepakai buat hidup — selama di atas nol, kamu masih jalan ke depan 💪`
-      : `Pengeluaranmu ${Math.abs(rate)}% lebih besar dari pemasukan yang kamu catat. Nggak perlu panik — pelan-pelan cek kategori paling gemuk di daftar.`,
+      ? `Kamu menyisihkan ${rate}% dari seluruh pemasukan yang kamu catat. Sisanya kepakai buat hidup, selama di atas nol, kamu masih jalan ke depan 💪`
+      : `Pengeluaranmu ${Math.abs(rate)}% lebih besar dari pemasukan yang kamu catat. Nggak perlu panik, pelan-pelan cek kategori paling gemuk di daftar.`,
   /** satu kalimat yang menjelaskan APA yang diukur skor ini (anti metrik misterius) */
   measured: (rate: number) =>
     `Skor ini cuma satu angka: rasio pemasukan vs pengeluaran dari catatanmu (kamu menyisihkan ${rate}%).`,
@@ -241,7 +241,7 @@ export const HEALTH_CARD_COPY = {
 /** copy blok pengganti saat BELUM ADA satu catatan pun (kartu hero & insight) */
 export const HISTORY_NO_DATA_COPY = {
   title: 'Belum ada satu catatan pun di sini',
-  body: 'Skor kewarasan, insight AI, dan pola pengeluaran baru bisa dihitung setelah ada catatan pertama. Skor contoh tidak kami tampilkan — angka di halaman ini selalu dari catatanmu.',
+  body: 'Skor kewarasan, insight AI, dan pola pengeluaran baru bisa dihitung setelah ada catatan pertama. Skor contoh tidak kami tampilkan, angka di halaman ini selalu dari catatanmu.',
   cta: 'Catat Sekarang',
 } as const
 
@@ -496,8 +496,8 @@ export interface HistoryDayGroup<T extends HistoryTransaction = HistoryTransacti
 /** label relatif hari (butuh `todayIso`; tanpa itu jatuh ke tanggal polos) */
 export function resolveDayLabel(iso: string, todayIso: string): string {
   if (!todayIso) return formatDayLabel(iso)
-  if (iso === todayIso) return `Hari Ini — ${formatDayLabel(iso)}`
-  if (iso === shiftISODate(todayIso, -1)) return `Kemarin — ${formatDayLabel(iso)}`
+  if (iso === todayIso) return `Hari Ini, ${formatDayLabel(iso)}`
+  if (iso === shiftISODate(todayIso, -1)) return `Kemarin, ${formatDayLabel(iso)}`
   return formatDayLabel(iso)
 }
 
@@ -718,7 +718,7 @@ export function buildHistoryInsights(
         copy:
           rate >= 0
             ? `Kamu berhasil sisihkan ${rate}% dari pemasukan bulan ini! 🌿`
-            : `Pengeluaran bulan ini ${Math.abs(rate)}% lebih besar dari pemasukanmu — belum ada yang tersisih.`,
+            : `Pengeluaran bulan ini ${Math.abs(rate)}% lebih besar dari pemasukanmu, belum ada yang tersisih.`,
         tone: rate >= 0 ? 'good' : 'alert',
         actions: [
           { label: 'Alokasikan ke Sinking Fund', href: HISTORY_INSIGHT_HREF.budget },
@@ -959,7 +959,7 @@ export const CONFIRM_DELETE_COPY = {
   /** pengaman psikologis: user tahu ADA jalan balik sebelum menekan Hapus.
    *  Ini juga yang bikin bodyTail tidak lagi bilang "nggak bisa dibatalin" —
    *  kalimat itu sudah tidak benar sejak Undo ada. */
-  safety: `Tenang — masih bisa kamu balikin lewat tombol Undo selama ${
+  safety: `Tenang, masih bisa kamu balikin lewat tombol Undo selama ${
     UNDO_WINDOW_MS / 1000
   } detik.`,
   cancel: 'Batal',
@@ -974,7 +974,7 @@ export const DELETE_TRANSACTION_TOAST = {
   undoneTitle: 'Catatan dikembalikan 🌿',
   undoneDescription: 'Catatan itu balik ke tempatnya semula.',
   /** jaring pengaman tetap jujur kalau tombol Undo ditekan setelah jendelanya tutup */
-  expired: 'Jendela Undo-nya sudah lewat — catatannya bisa dicatat ulang kapan aja 🌿',
+  expired: 'Jendela Undo-nya sudah lewat, catatannya bisa dicatat ulang kapan aja 🌿',
 } as const
 
 /* ── HAPUS SEMUA RIWAYAT (paket 59 · item 59.2) ───────────────────────────────
@@ -996,7 +996,7 @@ export const HISTORY_CLEAR_ALL_COPY = {
   title: 'Hapus semua riwayat?',
   /** kalimat yang MENYEBUT jumlah catatan yang akan hilang + cakupannya */
   body: (count: number) =>
-    `${count} catatan akan keluar dari Riwayat — seluruh catatanmu, termasuk yang ada di konteks uang lain. Ringkasan bulanan, insight AI, dan riwayat di setiap dompet ikut kosong.`,
+    `${count} catatan akan keluar dari Riwayat, seluruh catatanmu, termasuk yang ada di konteks uang lain. Ringkasan bulanan, insight AI, dan riwayat di setiap dompet ikut kosong.`,
   /** fakta paling penting, ditebalkan di dialog */
   balanceNote:
     'Saldo dompet TIDAK ikut berubah: uang yang sudah keluar tetap tercatat sebagai sudah keluar.',
@@ -1034,7 +1034,7 @@ export const TRANSACTION_INPUT_COPY = {
   amountConfirm: (amount: number) => `Rp ${amount.toLocaleString('id-ID')}?`,
   amountConfirmHint: 'Nilai ini yang bakal disimpan.',
   /** pesan per jenis masalah — input tidak valid TIDAK boleh gagal diam-diam */
-  amountUnsupported: 'Nominalnya belum kebaca. Coba tulis angka aja — misal 50000 atau 50rb.',
+  amountUnsupported: 'Nominalnya belum kebaca. Coba tulis angka aja, misal 50000 atau 50rb.',
   amountTooBig: (maxDigits: number) =>
     `Nominalnya kelebihan: maksimal ${maxDigits} digit (Rp 9.999.999.999.999).`,
   amountNegative:
@@ -1117,7 +1117,7 @@ export const TRANSACTION_INPUT_COPY = {
      supaya user tidak merasa dilempar dari form. */
   transferDoorLabel: 'Pindah Dana',
   transferDoorHint:
-    'Pindah uang antar dompet — dompet asal & tujuannya ditanyakan sekaligus di alurnya sendiri.',
+    'Pindah uang antar dompet, dompet asal & tujuannya ditanyakan sekaligus di alurnya sendiri.',
 } as const
 
 /* ── OPSI FIELD DI MODE EDIT ─────────────────────────────────────────────────
@@ -1154,12 +1154,12 @@ export const TRANSACTION_FIXED_CATEGORY: Partial<
   saving: {
     category: 'Tabungan',
     reason:
-      'Setoran selalu tercatat "Tabungan" — bukan tebakan: uangnya pindah ke celengan, bukan dibelanjakan.',
+      'Setoran selalu tercatat "Tabungan", bukan tebakan: uangnya pindah ke celengan, bukan dibelanjakan.',
   },
   transfer: {
     category: 'Transfer',
     reason:
-      'Pindah dana selalu tercatat "Transfer" — bukan tebakan: uangnya cuma pindah dompet, bukan pengeluaran baru.',
+      'Pindah dana selalu tercatat "Transfer", bukan tebakan: uangnya cuma pindah dompet, bukan pengeluaran baru.',
   },
 }
 
@@ -1234,7 +1234,7 @@ export const TRANSACTION_WALLET_OPTIONS = ['BCA', 'GoPay', 'OVO', 'Tunai'] as co
    input?". Sheet-nya sudah terisi (pre-filled); copy-nya cukup menegaskan itu. */
 export const EDIT_TRANSACTION_COPY = {
   title: (name: string) => `Edit ${name}`,
-  description: 'Ubah yang keliru aja — sisanya tetap seperti semula.',
+  description: 'Ubah yang keliru aja, sisanya tetap seperti semula.',
   /** label tiga field detail yang HANYA muncul di mode edit */
   categoryLabel: 'Kategori',
   walletLabel: 'Dompet',
@@ -1322,7 +1322,7 @@ export const TRANSACTION_DEFAULT_NAME: Record<TransactionType, string> = {
  */
 export const TRANSACTION_NO_WALLET_COPY = {
   title: 'Catatan ini belum punya dompet',
-  body: 'Konteks uangmu sekarang belum punya dompet sendiri, jadi catatannya tidak ditulis — biar tidak ada saldo dompet lain yang terpotong tanpa kamu pilih. Pindah ke konteks yang punya dompet (Pribadi/Keluarga), atau tambah dompetnya dulu di Dompet & Akun.',
+  body: 'Konteks uangmu sekarang belum punya dompet sendiri, jadi catatannya tidak ditulis, biar tidak ada saldo dompet lain yang terpotong tanpa kamu pilih. Pindah ke konteks yang punya dompet (Pribadi/Keluarga), atau tambah dompetnya dulu di Dompet & Akun.',
   /** label dompet di sheet yang memang tidak punya pemilih dompet (mis. catatan kalender) */
   sourceFallback: 'Belum ada dompet di konteks ini',
 } as const
@@ -1358,7 +1358,7 @@ export const TRANSACTION_SUCCESS_CHEER: Record<TransactionType, readonly string[
     'Sip, {amount} dicatat! 🌿',
     'Mantap, pengeluaran kopi masih aman! 🎉',
     'Beres, {amount} kecatat rapi ✨',
-    'Catat 1, aman 1 — {amount} tersimpan 🌱',
+    'Catat 1, aman 1, {amount} tersimpan 🌱',
   ],
   income: [
     'Asik, {amount} masuk! 🌿',

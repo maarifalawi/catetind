@@ -36,11 +36,11 @@ function findSeedFund(id: string) {
 export async function generateMetadata({ params }: GoalDetailPageProps): Promise<Metadata> {
   const { id } = await params
   const fund = findSeedFund(id)
-  if (!fund) return { title: `${FUND_DETAIL_COPY.notFoundTitle} — CatetInd` }
+  if (!fund) return { title: `${FUND_DETAIL_COPY.notFoundTitle} | CatetInd` }
 
   return {
-    title: `${fund.name} — CatetInd`,
-    description: `Progres, riwayat setoran, dan perkiraan tanggal tercapainya celengan ${fund.name} — plus rencana nabung per bulan biar targetnya tepat waktu.`,
+    title: `${fund.name} | CatetInd`,
+    description: `Progres, riwayat setoran, dan perkiraan tanggal tercapainya celengan ${fund.name}, plus rencana nabung per bulan biar targetnya tepat waktu.`,
   }
 }
 

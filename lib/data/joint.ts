@@ -222,7 +222,7 @@ export type JointWallet = {
 
 /** label + hint tiap mode pembagian di Split Bill Sheet (Section 6A) */
 export const SPLIT_MODES: { id: JointSplitType; label: string; hint: string }[] = [
-  { id: 'equal', label: 'Bagi Rata', hint: '50 / 50 — paling sering dipakai' },
+  { id: 'equal', label: 'Bagi Rata', hint: '50 / 50, paling sering dipakai' },
   { id: 'percentage', label: 'Persentase', hint: 'Geser slider, sisi lain ikut menyesuaikan' },
   { id: 'nominal', label: 'Nominal Custom', hint: 'Isi satu sisi, sisanya dihitung otomatis' },
   { id: 'single_payer', label: 'Yang Ini Gue Yang Bayar', hint: '100% ditanggung satu orang' },
@@ -936,7 +936,7 @@ export const PRIVACY_WARNING_COPY =
  *  store menulis lambang privasi sebagai kategorinya (`PRIVATE_CATEGORY`), dan
  *  itu memang aturan privasi — bukan bug yang disembunyikan. */
 export const PRIVATE_CATEGORY_NOTE =
-  'Kategori catatan privat disimpan anonim: di timeline tampil "🔒 Privat" — bahkan buatmu — supaya pasangan nggak bisa nebak isinya dari kategori.'
+  'Kategori catatan privat disimpan anonim: di timeline tampil "🔒 Privat", bahkan buatmu, supaya pasangan nggak bisa nebak isinya dari kategori.'
 /** penjelasan aturan timbangan (audit #2 & #3) — dipakai di halaman & modal.
  *  Stage 2: panci menampilkan POSISI BERSIH, jadi copy-nya tidak boleh lagi
  *  bilang "timbangan menimbang pengeluaran patungan" tanpa menyebut net. */
@@ -1067,7 +1067,7 @@ export const SETTLE_TRANSFER_PREFIX = 'Transfer '
  *  `paidByUserId`, jadi catatan yang uangnya keluar dari kantong pasangan tidak
  *  lagi tercatat sebagai pengeluaran pencatat. */
 export const PAID_BY_LABEL = 'Siapa yang nalangin?'
-export const PAID_BY_HINT = 'Uangnya keluar dari kantong siapa — bukan siapa yang mengetik.'
+export const PAID_BY_HINT = 'Uangnya keluar dari kantong siapa, bukan siapa yang mengetik.'
 export const PAID_BY_ME_LABEL = 'Aku'
 
 /** jam mock baris settlement — deterministik, pola tanggal/jam mock repo ini */
@@ -1105,7 +1105,7 @@ export function buildSettlementEntry(
     id: `settle-${record.month}-${record.from}-${record.to}`,
     userId: record.from,
     paidByUserId: record.from,
-    description: `Settle ${monthLabelOf(record.month)} — transfer ke ${jointNameOf(record.to)}`,
+    description: `Settle ${monthLabelOf(record.month)}, transfer ke ${jointNameOf(record.to)}`,
     amount: Math.max(0, Math.round(record.amount)),
     category: SETTLEMENT_CATEGORY,
     date: iso,
@@ -1263,7 +1263,7 @@ export const JOINT_DELETE_COPY = {
   /** dipotong dua supaya nominalnya bisa ditebalkan di tengah kalimat */
   bodyLead: (description: string) => `Catatan ${description} sebesar `,
   bodyTail:
-    'keluar dari buku besar bersama — saldo patungan kalian berdua ikut terhitung ulang.',
+    'keluar dari buku besar bersama, saldo patungan kalian berdua ikut terhitung ulang.',
   /** fakta yang wajib terbaca: yang berubah angka, bukan uang */
   cashNote:
     'Ini membatalkan catatannya, bukan memindahkan uang. Kalau transfernya memang sudah terjadi, catat ulang atau tandai settle ya 😊',
@@ -1272,14 +1272,14 @@ export const JOINT_DELETE_COPY = {
   confirm: 'Hapus',
   /** alasan baris di bulan yang sudah disettle TIDAK punya tombol hapus */
   lockedNote:
-    'Bulan ini sudah ditandai settle, jadi catatannya dikunci — angka yang sudah kalian sepakati tidak boleh berubah diam-diam.',
+    'Bulan ini sudah ditandai settle, jadi catatannya dikunci, angka yang sudah kalian sepakati tidak boleh berubah diam-diam.',
   toastTitle: 'Catatan bareng dihapus',
   toastDescription: (description: string) => `${description} keluar dari buku besar bersama.`,
   toastUndo: 'Undo',
   toastUndoneTitle: 'Catatan dikembalikan 🌿',
   toastUndoneDescription: 'Timbangan & posisi bersihnya kembali ke angka sebelum dihapus.',
   toastExpired:
-    'Jendela Undo-nya sudah lewat — catatannya bisa kamu tambahkan lagi kalau memang masih perlu 🌿',
+    'Jendela Undo-nya sudah lewat, catatannya bisa kamu tambahkan lagi kalau memang masih perlu 🌿',
 } as const
 
 

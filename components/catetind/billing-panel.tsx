@@ -231,10 +231,10 @@ function CurrentPlanCard() {
                 ? expiresAt
                   ? formatExpiry(expiresAt)
                   : BILLING_COPY.monthlyPeriod
-                : '—'
+                : '-'
               : plan
                 ? LIFETIME_LABEL
-                : '—'}
+                : '-'}
           </dd>
         </div>
         <div className="rounded-2xl bg-cream px-3.5 py-3 ring-1 ring-soil/8">
@@ -245,7 +245,7 @@ function CurrentPlanCard() {
           <dd className="mt-1 text-[13px] font-medium leading-snug text-forest tabular-nums">
             {plan
               ? formatIDR(monthly ? plan.monthly : plan.lifetime)
-              : '—'}
+              : '-'}
           </dd>
         </div>
       </dl>

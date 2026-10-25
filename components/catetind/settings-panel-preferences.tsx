@@ -105,7 +105,7 @@ export function AppearanceSettingsPanel() {
           onChange={handleChange}
         />
         <p className="mt-3 text-[11.5px] leading-relaxed text-forest/45">
-          Pilihanmu disimpan di perangkat ini dan langsung aktif — nggak perlu reload.
+          Pilihanmu disimpan di perangkat ini dan langsung aktif, nggak perlu reload.
         </p>
       </SettingsCard>
     </SettingsPanel>
@@ -121,7 +121,7 @@ export function NotificationsSettingsPanel() {
     <SettingsPanel
       eyebrow="Notifikasi"
       title="Notifikasi"
-      desc="Push notif muncul di HP walau app lagi ditutup — kayak WhatsApp."
+      desc="Push notif muncul di HP walau app lagi ditutup, kayak WhatsApp."
     >
       <NotificationSettings />
     </SettingsPanel>

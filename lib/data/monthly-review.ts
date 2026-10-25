@@ -541,14 +541,10 @@ export function readMonthlyReviewState(monthKey: string): {
 
 export const MONTHLY_REVIEW_COPY = {
   /* — kepala modal — */
-  eyebrow: 'Ritual bulanan',
   title: 'Bulan baru, lembaran baru 🌱',
-  subtitle: 'Sebentar aja — kita lihat bulan lalu, lalu pilih satu angka buat bulan ini.',
   /** pembaca layar untuk wadah dialog */
   dialogLabel: 'Monthly Review & Target Setup',
   close: 'Tutup rutinitas bulanan',
-  /** hint gestur di mobile (panel bisa ditarik turun seperti sheet lain) */
-  swipeHint: 'Geser ke bawah untuk menutup',
 
   /* — tab panel — */
   tabRecap: 'Recap Bulan Lalu',
@@ -567,21 +563,21 @@ export const MONTHLY_REVIEW_COPY = {
 
   /* status target bulan lalu — dua-duanya hangat, tidak ada yang menghakimi */
   targetTitle: 'Target bulan lalu',
-  targetAchieved: (amountLabel: string) => `Tercapai ✅ — target ${amountLabel} aman.`,
+  targetAchieved: (amountLabel: string) => `Tercapai ✅, target ${amountLabel} aman.`,
   targetAchievedCaption: 'Tanamanmu ikut berbunga karena ini 🌸',
   targetMissed: (amountLabel: string, pct: number) =>
     `Belum sampai ${amountLabel}, tapi kamu udah jalan ${pct}%-nya ⏳`,
-  targetMissedCaption: 'Nggak apa-apa — yang penting catatannya jalan terus.',
+  targetMissedCaption: 'Nggak apa-apa, yang penting catatannya jalan terus.',
 
   /* snapshot tanaman (angka level/streak tidak pernah ditampilkan) */
   plantTitle: 'Tanamanmu bulan lalu',
   plantCaption: (stageName: string) =>
-    `Sampai tahap ${stageName} — tumbuh karena kamu rutin nyatet.`,
+    `Sampai tahap ${stageName}, tumbuh karena kamu rutin nyatet.`,
 
   /* — kartu sabar (data < ambang, PRD 571–586) — */
   patientTitle: 'Aku masih belajar pola keuanganmu 📊',
   patientBody:
-    'Bulan lalu catatannya masih tipis, jadi aku belum bisa kasih ringkasan angka yang bisa dipercaya. Terus catat ya — nanti ringkasannya beneran berguna.',
+    'Bulan lalu catatannya masih tipis, jadi aku belum bisa kasih ringkasan angka yang bisa dipercaya. Terus catat ya, nanti ringkasannya beneran berguna.',
   patientProgress: (count: number, threshold: number) =>
     `[${count}/${threshold} transaksi] untuk unlock ringkasan`,
   patientReasonTransactions:
@@ -597,9 +593,9 @@ export const MONTHLY_REVIEW_COPY = {
   /** contoh format di field kosong — bukan copy, tapi tetap satu tempat dengan
    *  copy lain supaya tidak ada string user-facing yang tersembunyi di JSX */
   targetPlaceholder: 'Rp 1.000.000',
-  targetQuestionHint: 'Ini target yang kamu kejar sendiri — bukan limit belanja.',
+  targetQuestionHint: 'Ini target yang kamu kejar sendiri, bukan limit belanja.',
   targetHintSavedThisMonth: (amountLabel: string) =>
-    `Ini target yang tadi kamu simpan (${amountLabel}) — boleh diubah.`,
+    `Ini target yang tadi kamu simpan (${amountLabel}), boleh diubah.`,
   targetHintSaved: (amountLabel: string) =>
     `Terisi dari target bulan lalu (${amountLabel}).`,
   targetHintActual: (amountLabel: string) =>
@@ -632,7 +628,7 @@ export const MONTHLY_REVIEW_COPY = {
   /* — konfirmasi setelah tersimpan — */
   savedToastTitle: 'Target bulan ini tersimpan 🌿',
   savedToastBody: (amountLabel: string) =>
-    `${amountLabel} — bisa diubah kapan aja dari kartu Target di Home.`,
+    `${amountLabel}, bisa diubah kapan aja dari kartu Target di Home.`,
   savedToastFundBody: (amountLabel: string, fundName: string) =>
     `${amountLabel} · ${fundName}. Setornya di halaman Budget ya.`,
   savedToastAction: 'Setor sekarang',
@@ -645,7 +641,7 @@ export const MONTHLY_REVIEW_COPY = {
 export const MONTHLY_TARGET_CARD_COPY = {
   title: 'Target bulan ini',
   emptyTitle: 'Belum ada target bulan ini',
-  emptyBody: 'Set 20 detik aja — nanti gampang dilihat kalau lagi pengin jajan besar 🌱',
+  emptyBody: 'Set 20 detik aja, nanti gampang dilihat kalau lagi pengin jajan besar 🌱',
   ctaSet: 'Set target 📌',
   ctaEdit: 'Ubah',
   savingsLabel: (amountLabel: string) => `Hemat ${amountLabel}`,

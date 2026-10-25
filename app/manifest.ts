@@ -23,7 +23,7 @@ import type { MetadataRoute } from 'next'
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'CatetInd — Track. Grow. Secure.',
+    name: 'CatetInd | Catet Keuangan 4 Detik, Tanpa Ribet',
     short_name: 'CatetInd',
     description:
       'Catat keuangan harianmu, tanam kebiasaan baik, dan tumbuh bareng tanaman virtualmu.',

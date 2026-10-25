@@ -108,10 +108,10 @@ export const MILESTONE_MESSAGES: Record<MilestoneKind, MilestoneCopy> = {
     },
     messages: [
       /* contoh kanon PRD 2062 — judul "Minggu pertama!" + kalimat ini */
-      'Kamu udah catat {days} hari — tanamanmu mulai tumbuh 🌿',
+      'Kamu udah catat {days} hari, tanamanmu mulai tumbuh 🌿',
       '{days} hari berturut-turut! Konsisten banget, dan itu yang bikin tanamanmu subur 🌿',
       'Udah {days} hari kamu jalan bareng. Kecil-kecilan tapi terus, ya 💚',
-      '{days} hari terakhir nggak ada yang lewat begitu aja — semuanya kecatet 💚',
+      '{days} hari terakhir nggak ada yang lewat begitu aja, semuanya kecatet 💚',
     ],
   },
   'stage-up': {
@@ -126,7 +126,7 @@ export const MILESTONE_MESSAGES: Record<MilestoneKind, MilestoneCopy> = {
     title: 'Target tercapai! 🎉',
     messages: [
       'Celenganmu penuh! Ini hasil dari setoran kecil yang kamu lakukan terus 🎉',
-      'Targetmu tercapai — nggak ada jackpot, cuma kamu yang konsisten setor 🎉',
+      'Targetmu tercapai, nggak ada jackpot, cuma kamu yang konsisten setor 🎉',
       'Penuh! Dan yang bikin ini terjadi bukan keberuntungan, tapi kamu yang nggak berhenti 🌿',
     ],
   },
@@ -306,5 +306,5 @@ export const CELEBRATION_COPY = {
   replayHint: 'Putar ulang momen perayaan terakhirmu',
   closeBackdropLabel: 'Tutup perayaan',
   /** caption tahap tanaman di bawah ilustrasi */
-  stageCaption: (stageName: string) => `Tanamanmu — ${stageName}`,
+  stageCaption: (stageName: string) => `Tanamanmu, ${stageName}`,
 } as const

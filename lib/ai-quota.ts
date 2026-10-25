@@ -500,14 +500,14 @@ export const AI_QUOTA_EXHAUSTED_COPY = {
   badge: 'Kuota habis',
   /** penjelasan panjang (banner Home / kartu Billing) */
   body:
-    'Catat manual tetap jalan penuh — nominal, catatan, kategori, semuanya bisa kamu isi sendiri. Voice & scan struk nyala lagi setelah reset tanggal 1 atau setelah top up token.',
+    'Catat manual tetap jalan penuh, nominal, catatan, kategori, semuanya bisa kamu isi sendiri. Voice & scan struk nyala lagi setelah reset tanggal 1 atau setelah top up token.',
   /** alasan tombol voice dimatikan (engine input & widget AI Coach) */
   voiceOff: 'Input suara sedang mati karena kuota AI habis. Catat manual tetap bisa, kok 🌿',
   /** alasan tombol scan struk dimatikan */
   ocrOff: 'Scan struk sedang mati karena kuota AI habis. Isi nominalnya manual dulu ya 🌿',
   /** satu baris di gauge: menyebut sisa + jalan keluarnya, tanpa nada menuduh */
   gaugeNote: (resetDate: string) =>
-    `Kuota AI habis — reset ${resetDate}, atau tambah token kalau mau lanjut sekarang.`,
+    `Kuota AI habis, reset ${resetDate}, atau tambah token kalau mau lanjut sekarang.`,
   /** label pembaca layar untuk bar yang benar-benar kosong */
   progressLabel: 'Kuota AI habis',
 } as const
@@ -545,7 +545,7 @@ export const AI_UNLIMITED_BADGE = 'Tanpa batas'
 
 /** label batas kuota untuk paket yang TIDAK dibatasi (dipakai kartu & ToS) */
 export const AI_UNLIMITED_NOTE =
-  'Tanpa batas kuota. Fair-use berlaku: dipakai wajar ya — kalau pemakaiannya ekstrem, kami hubungi dulu, bukan memotong diam-diam.'
+  'Tanpa batas kuota. Fair-use berlaku: dipakai wajar ya, kalau pemakaiannya ekstrem, kami hubungi dulu, bukan memotong diam-diam.'
 
 /** kartu kuota saat paket TIDAK punya AI sama sekali (Paket Catet Aja) */
 export const AI_PLAN_LOCKED_COPY = {

@@ -735,8 +735,8 @@ export const WalletCardStack = memo(function WalletCardStack({
 
   const cardAriaLabel =
     activeEntry.type === 'add'
-      ? 'Tambah dompet baru — Enter untuk menambahkan'
-      : `${srLabel} — Enter untuk buka ringkasan, panah kiri kanan untuk memutar kartu`
+      ? 'Tambah dompet baru, Enter untuk menambahkan'
+      : `${srLabel}, Enter untuk buka ringkasan, panah kiri kanan untuk memutar kartu`
   /* ===== muka kartu: gradient vivid + aurora netral + kilau fisik + chip EMV =====
      CATATAN AUDIT: kartu dompet ini SENGAJA tidak punya tombol "Pemasukan /
      Pengeluaran" lagi. Dulu ada DUA pintu masuk (tombol sidebar + 2 tombol di

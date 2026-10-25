@@ -12,7 +12,7 @@ import { SITE_ORIGIN } from '@/lib/site'
    `components/landing/lp/contact*.tsx` dan `LP_CONTACT`. */
 
 export const metadata: Metadata = {
-  title: 'Kontak — CatetInd',
+  title: 'Kontak | CatetInd',
   description:
     'Tanya langsung ke tim CatetInd soal fitur, privasi, pembayaran, atau apa pun sebelum mulai nyatet. WhatsApp 0817-7577-7778 atau email halo@catetind.com.',
   alternates: { canonical: `${SITE_ORIGIN}/contact` },

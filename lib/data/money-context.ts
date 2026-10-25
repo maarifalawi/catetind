@@ -91,7 +91,7 @@ export const CONTEXT_SETTINGS_COPY = {
   title: 'Konteks Uang',
   /* H12-3 (audit UI/UX): kalimat lama ("Yang tidak dipakai tidak muncul di
      pemilih konteks") harus dibaca dua kali; disederhanakan. */
-  desc: 'Matikan konteks yang ngga kamu pakai biar ngga muncul di app — Pribadi selalu aktif.',
+  desc: 'Matikan konteks yang ngga kamu pakai biar ngga muncul di app, Pribadi selalu aktif.',
   /** keterangan satu baris per konteks */
   itemHelper: {
     pribadi: 'Uangmu sendiri. Selalu aktif, jadi pemilih konteks tidak muncul kalau cuma ini.',
@@ -103,7 +103,7 @@ export const CONTEXT_SETTINGS_COPY = {
     on ? `Tampilkan konteks ${label}` : `Sembunyikan konteks ${label}`,
   /** alasan saklar terkunci: konteksnya masih berisi dompet (tidak boleh disembunyikan) */
   lockedByWallets: (count: number) =>
-    `${count} dompet masih di konteks ini — tetap tampil supaya tidak tersembunyi.`,
+    `${count} dompet masih di konteks ini, tetap tampil supaya tidak tersembunyi.`,
 } as const
 
 /** nama konteks untuk di tengah kalimat ("dikontek keluarga") */
@@ -210,21 +210,21 @@ export const CONTEXT_EMPTY_COPY = {
   history: {
     title: (label: string) => `Belum ada catatan di konteks ${label} 🌱`,
     body:
-      'Catatan yang kamu buat sekarang masuk ke konteks yang sedang aktif. Catatan lama tetap aman di konteksnya masing-masing — pindah konteks untuk melihatnya.',
+      'Catatan yang kamu buat sekarang masuk ke konteks yang sedang aktif. Catatan lama tetap aman di konteksnya masing-masing, pindah konteks untuk melihatnya.',
     cta: 'Catat Sekarang',
   },
   /** /calendar — periode yang dibaca tidak punya entri di konteks ini */
   calendar: {
     title: (label: string) => `Kalender konteks ${label} masih kosong`,
     body:
-      'Catat pengeluaran atau pemasukan di tanggal yang kamu pilih — angkanya langsung masuk ke konteks ini.',
+      'Catat pengeluaran atau pemasukan di tanggal yang kamu pilih, angkanya langsung masuk ke konteks ini.',
     cta: 'Catat di tanggal ini',
   },
   /** /bills — konteks tanpa tagihan rutin */
   bills: {
     title: (label: string) => `Belum ada tagihan rutin di konteks ${label} 📋`,
     body:
-      'Kos, langganan, cicilan — tagihan yang kamu simpan di sini ikut konteks yang sedang aktif, jadi jatah harianmu tetap akurat.',
+      'Kos, langganan, cicilan, tagihan yang kamu simpan di sini ikut konteks yang sedang aktif, jadi jatah harianmu tetap akurat.',
     cta: 'Tambah tagihan',
   },
   /** /wealth tab Investasi — tidak ada aset di konteks ini */
@@ -252,6 +252,6 @@ export const CONTEXT_EMPTY_COPY = {
 export const JOINT_CONTEXT_COPY = {
   title: 'Dompet Bersama itu konteks Bersama',
   body: (label: string) =>
-    `Konteksmu sekarang ${label}. Kantong ini memang cuma untuk uang bersama (patungan) — pindah ke konteks Bersama biar switcher & catatan lain di halaman ini konsisten.`,
+    `Konteksmu sekarang ${label}. Kantong ini memang cuma untuk uang bersama (patungan), pindah ke konteks Bersama biar switcher & catatan lain di halaman ini konsisten.`,
   cta: 'Pindah ke Bersama',
 } as const

@@ -452,7 +452,7 @@ function SlideExpenses({ recap }: { recap: WeeklyRecap }) {
         </span>
         <p className="text-[13px] leading-relaxed text-forest/65">
           <b className="font-medium text-forest">{top.label}</b> jadi pos terbesar minggu
-          ini — {top.pct}% dari total pengeluaran ({money(top.amount)}).
+          ini, {top.pct}% dari total pengeluaran ({money(top.amount)}).
           Kategori ini yang paling worth dirapikan minggu depan.
         </p>
       </section>
@@ -543,7 +543,7 @@ function SlidePlant({ recap }: { recap: WeeklyRecap }) {
           />
         </div>
         <p className="mt-2.5 text-[11px] leading-relaxed text-forest/50">
-          Tanaman ini tumbuh dari kebiasaan mencatat minggu ini — bukan angka yang harus dikejar.
+          Tanaman ini tumbuh dari kebiasaan mencatat minggu ini, bukan angka yang harus dikejar.
         </p>
       </section>
 
@@ -708,7 +708,7 @@ function SlidePlan({
             {money(savingPerWeek)}
           </p>
           <p className="mt-2 text-[11px] leading-relaxed text-forest/60">
-            Setara {money(dailyCut)}/hari — kamu masih punya ruang buat ini.
+            Setara {money(dailyCut)}/hari, kamu masih punya ruang buat ini.
           </p>
         </div>
       </section>
@@ -989,16 +989,13 @@ function WeekRecapSheet({
             : 'translate-y-full opacity-0 lg:translate-y-3 lg:scale-[0.98]',
         )}
       >
-        {/* zona drag (mobile): handle + hint swipe-down */}
+        {/* zona drag (mobile): handle saja — tanpa teks petunjuk */}
         <div
           {...handlers}
           style={{ touchAction: 'none' }}
           className="shrink-0 select-none pb-1 pt-3 lg:hidden"
         >
           <div className="mx-auto h-1.5 w-10 rounded-full bg-ink/15" aria-hidden />
-          <p className="mt-1.5 text-center text-[10px] font-medium text-forest/30">
-            Geser ke bawah untuk menutup
-          </p>
         </div>
         {/* handle statis di desktop (modal tengah — tanpa swipe) */}
         <div

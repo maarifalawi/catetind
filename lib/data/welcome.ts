@@ -27,7 +27,7 @@ export const WELCOME_LINKS = {
 export const WELCOME_COPY = {
   eyebrow: 'Pelacak uang buat Gen-Z Indonesia',
   /** tiga tarikan napas — komponen merender tiap baris jadi satu blok */
-  headlineLines: ['Nggak ada lagi —', 'Ribet atau Buntu —', 'Cuma Catet yang Enak.'],
+  headlineLines: ['Nggak ada lagi', 'Ribet atau Buntu', 'Cuma Catet yang Enak.'],
   subtitle:
     'Catat pemasukan & pengeluaran tanpa drama. Rapi otomatis, jelas dalam sekali lihat, dan nggak perlu bikin password.',
   ctaPrimary: 'Mulai Sekarang',

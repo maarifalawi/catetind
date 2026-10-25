@@ -17,7 +17,7 @@ import { SITE_ORIGIN } from '@/lib/site'
  * punya akun, sama seperti `/terms` dan `/privacy`.
  */
 export const metadata: Metadata = {
-  title: 'Changelog — CatetInd',
+  title: 'Changelog | CatetInd',
   description: CHANGELOG_META.description,
   alternates: { canonical: `${SITE_ORIGIN}/changelog` },
 }

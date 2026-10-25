@@ -56,7 +56,7 @@ export const PRIVACY_LINK_COPY = {
    * versi mana yang lebih baru.
    */
   pairNote:
-    'Kebijakan Privasi dan Syarat & Ketentuan diperbarui sebagai satu paket — nomor versinya selalu naik bersamaan, jadi tidak akan pernah ada dua janji yang berbeda di antara keduanya.',
+    'Kebijakan Privasi dan Syarat & Ketentuan diperbarui sebagai satu paket, nomor versinya selalu naik bersamaan, jadi tidak akan pernah ada dua janji yang berbeda di antara keduanya.',
 } as const
 
 export const PRIVACY_DOC: LegalDocument = {
@@ -80,7 +80,7 @@ export const PRIVACY_DOC: LegalDocument = {
         'Kami taruh ringkasannya di depan, karena dokumen legal sepanjang puluhan halaman bukan cara jujur untuk menjelaskan ke mana datamu pergi.',
       ],
       bullets: [
-        'Yang kamu catat hanya bisa dibuka oleh akunmu sendiri — bukan admin, bukan founder, bukan tim support.',
+        'Yang kamu catat hanya bisa dibuka oleh akunmu sendiri, bukan admin, bukan founder, bukan tim support.',
         'CatetInd tidak tersambung ke rekening bankmu. Tidak ada bank-sync, tidak ada akses kontak, galeri, atau lokasi.',
         'Fitur AI memang memproses sebagian data keuangmu ke penyedia model bahasa. Kami tulis apa adanya di bagian AI, termasuk cara mematikannya.',
         'Kamu bisa mengekspor seluruh datamu (file JSON) dan menghapus akunmu sendiri, kapan saja, tanpa minta izin ke siapa pun.',
@@ -95,15 +95,15 @@ export const PRIVACY_DOC: LegalDocument = {
         'CatetInd adalah aplikasi pencatatan keuangan personal. Isinya berasal dari kamu sendiri: yang kamu ketik, foto struk yang kamu unggah, atau suara yang kamu rekam. Yang tersimpan:',
       ],
       bullets: [
-        'Catatan transaksi — nominal, tanggal, jenis, kategori, deskripsi, dan wallet sumbernya.',
-        'Dompet & saldo — termasuk catatan Dompet Bersama dan pembagian patungan di dalamnya.',
+        'Catatan transaksi, nominal, tanggal, jenis, kategori, deskripsi, dan wallet sumbernya.',
+        'Dompet & saldo, termasuk catatan Dompet Bersama dan pembagian patungan di dalamnya.',
         'Tagihan rutin, celengan (target tabungan), serta hutang dan investasi yang kamu input sendiri.',
-        'Preferensi — kategori custom, pengaturan AI, jam pengingat, dan gaya bicara Minca.',
-        'Akun — email dan nama panggilan. Tidak ada password, nomor telepon, alamat, KTP, atau tanggal lahir.',
+        'Preferensi, kategori custom, pengaturan AI, jam pengingat, dan gaya bicara Minca.',
+        'Akun, email dan nama panggilan. Tidak ada password, nomor telepon, alamat, KTP, atau tanggal lahir.',
       ],
       note: {
         label: 'Kenapa kami menyimpannya',
-        body: 'Supaya kamu bisa membuka catatanmu dari perangkat lain, dan supaya angka turunannya bisa dihitung: jatah harian, progres celengan, pengingat tagihan, rekap mingguan. Semua angka turunan itu dihitung dari catatan yang sama — tidak ada profil tersembunyi tentang dirimu yang disimpan di tempat lain.',
+        body: 'Supaya kamu bisa membuka catatanmu dari perangkat lain, dan supaya angka turunannya bisa dihitung: jatah harian, progres celengan, pengingat tagihan, rekap mingguan. Semua angka turunan itu dihitung dari catatan yang sama, tidak ada profil tersembunyi tentang dirimu yang disimpan di tempat lain.',
         tone: 'info',
       },
     },
@@ -116,10 +116,10 @@ export const PRIVACY_DOC: LegalDocument = {
         'Privasi yang jujur bukan cuma soal apa yang disimpan, tapi apa yang memang tidak pernah masuk. Ini yang tidak ada di CatetInd:',
       ],
       bullets: [
-        'Tidak ada bank-sync atau open banking. Tidak ada satu pun koneksi ke rekening bank/e-wallet-mu — angka di app ada karena kamu sendiri yang mencatat, memindai struk, atau berbicara.',
+        'Tidak ada bank-sync atau open banking. Tidak ada satu pun koneksi ke rekening bank/e-wallet-mu, angka di app ada karena kamu sendiri yang mencatat, memindai struk, atau berbicara.',
         'Tidak ada akses ke kontak, galeri, lokasi, atau SMS. Mikrofon hanya menyala saat kamu sengaja menekan tombol input suara, dan berhenti begitu rekamannya selesai.',
         'Tidak ada pelacak iklan, dan tidak ada iklan di dalam app. Kami tidak membangun profil perilaku untuk dijual ke pengiklan.',
-        'Kami tidak menjual, menyewakan, atau mengirimkan data transaksimu ke lembaga keuangan, agen asuransi, atau pihak ketiga mana pun — termasuk dalam bentuk lead.',
+        'Kami tidak menjual, menyewakan, atau mengirimkan data transaksimu ke lembaga keuangan, agen asuransi, atau pihak ketiga mana pun, termasuk dalam bentuk lead.',
         'Tidak ada tagihan bulanan dan tidak ada auto-debit: paket dibayar sekali untuk akses selamanya, jadi tidak ada penagihan yang bisa berjalan sendiri di belakangmu.',
       ],
       note: {
@@ -137,17 +137,17 @@ export const PRIVACY_DOC: LegalDocument = {
       title: 'Siapa yang bisa melihat data kamu',
       paragraphs: [
         'Jawaban singkatnya: cuma kamu.',
-        'Batasnya bukan di tampilan, tapi di lapisan basis data (row-level security). Setiap baris transaksi terikat ke satu akun, dan permintaan yang datang dari akun lain tidak akan pernah mengembalikannya. Tidak ada panel admin yang bisa membuka batas itu — karena panelnya memang tidak dibuat.',
-        'Tim CatetInd, termasuk founder, tidak punya endpoint atau halaman admin untuk membaca data individualmu. Yang tersedia untuk tim hanya statistik agregat tanpa identitas, misalnya "berapa banyak orang memakai fitur Budget bulan ini". Untuk bisa membaca data individual, kami harus menulis kebijakan akses baru, membuat endpoint baru, mengubah halaman ini lebih dulu, dan mengulang audit keamanan — bukan sekadar menyalakan sakelar.',
+        'Batasnya bukan di tampilan, tapi di lapisan basis data (row-level security). Setiap baris transaksi terikat ke satu akun, dan permintaan yang datang dari akun lain tidak akan pernah mengembalikannya. Tidak ada panel admin yang bisa membuka batas itu, karena panelnya memang tidak dibuat.',
+        'Tim CatetInd, termasuk founder, tidak punya endpoint atau halaman admin untuk membaca data individualmu. Yang tersedia untuk tim hanya statistik agregat tanpa identitas, misalnya "berapa banyak orang memakai fitur Budget bulan ini". Untuk bisa membaca data individual, kami harus menulis kebijakan akses baru, membuat endpoint baru, mengubah halaman ini lebih dulu, dan mengulang audit keamanan, bukan sekadar menyalakan sakelar.',
       ],
       bullets: [
         'Dompet Bersama punya lapisan privasi sendiri: pasanganmu hanya melihat transaksi yang dicatat di wallet bersama itu, dan wallet pribadimu tidak ikut terlihat saat kamu berpindah konteks.',
-        'Transaksi yang kamu tandai privat tidak ditampilkan ke pasanganmu — bahkan tidak ada tanda bahwa transaksi itu ada.',
+        'Transaksi yang kamu tandai privat tidak ditampilkan ke pasanganmu, bahkan tidak ada tanda bahwa transaksi itu ada.',
         'Sensor layar (ikon mata) menyembunyikan semua nominal di layar. Itu kontrol tampilan di perangkatmu sendiri, bukan fitur berbagi.',
       ],
       note: {
         label: 'Konsekuensinya kami tanggung',
-        body: 'Kalau kamu pernah pakai layanan yang CS-nya bisa "bantu cek transaksimu", artinya manusia di sana memang bisa membacanya. Di CatetInd tidak bisa — dan itu keputusan sadar (PRD Domain 8): kami menukar kemudahan support dengan jaminan bahwa tidak ada satu pun orang di sini yang bisa melihat catatanmu.',
+        body: 'Kalau kamu pernah pakai layanan yang CS-nya bisa "bantu cek transaksimu", artinya manusia di sana memang bisa membacanya. Di CatetInd tidak bisa, dan itu keputusan sadar (PRD Domain 8): kami menukar kemudahan support dengan jaminan bahwa tidak ada satu pun orang di sini yang bisa melihat catatanmu.',
         tone: 'info',
       },
     },
@@ -157,13 +157,13 @@ export const PRIVACY_DOC: LegalDocument = {
       id: 'bantuan-tanpa-akses',
       title: 'Kalau kamu butuh bantuan, padahal kami tidak bisa melihat datamu',
       paragraphs: [
-        'Ini konsekuensi nyata dari bagian sebelumnya, jadi kami jelaskan cara kerjanya — bukan cuma menjanjikan. Ada empat jalur, dan semuanya bertumpu pada datamu sendiri:',
+        'Ini konsekuensi nyata dari bagian sebelumnya, jadi kami jelaskan cara kerjanya, bukan cuma menjanjikan. Ada empat jalur, dan semuanya bertumpu pada datamu sendiri:',
       ],
       bullets: [
-        'Export Data Saya (Pengaturan → Export Data Saya) — seluruh catatanmu (transaksi, dompet, tagihan, celengan, hutang) dikompilasi menjadi file JSON dan dikirim ke emailmu sendiri. Kalau kamu mau memperlihatkan sebagiannya ke kami, kamu yang memilih bagiannya.',
-        'Screenshot policy — untuk masalah tampilan atau dugaan bug, sertakan screenshot layar yang bermasalah. Kami menelusuri masalahnya dari gambar yang kamu kirim sendiri, bukan dari data di server.',
-        'Laporan error tanpa identitas — saat terjadi error, yang tercatat hanya kode error dan berapa kali dicoba. Tidak ada nominal, nama merchant, kategori, atau identitasmu di dalamnya.',
-        'Pintu masuk bantuan — buka Pusat Bantuan, pilih artikel mana pun, lalu tekan 👎 di kakinya untuk mengirim pesan ke founder. Untuk masalah di Dompet Bersama, minta pasanganmu mengirim screenshot bagian miliknya sendiri — kami memang tidak bisa mengambilnya dari sini.',
+        'Export Data Saya (Pengaturan → Export Data Saya), seluruh catatanmu (transaksi, dompet, tagihan, celengan, hutang) dikompilasi menjadi file JSON dan dikirim ke emailmu sendiri. Kalau kamu mau memperlihatkan sebagiannya ke kami, kamu yang memilih bagiannya.',
+        'Screenshot policy, untuk masalah tampilan atau dugaan bug, sertakan screenshot layar yang bermasalah. Kami menelusuri masalahnya dari gambar yang kamu kirim sendiri, bukan dari data di server.',
+        'Laporan error tanpa identitas, saat terjadi error, yang tercatat hanya kode error dan berapa kali dicoba. Tidak ada nominal, nama merchant, kategori, atau identitasmu di dalamnya.',
+        'Pintu masuk bantuan, buka Pusat Bantuan, pilih artikel mana pun, lalu tekan 👎 di kakinya untuk mengirim pesan ke founder. Untuk masalah di Dompet Bersama, minta pasanganmu mengirim screenshot bagian miliknya sendiri, kami memang tidak bisa mengambilnya dari sini.',
       ],
       note: {
         label: 'Kalau masalahnya menyangkut isi catatanmu',
@@ -178,16 +178,16 @@ export const PRIVACY_DOC: LegalDocument = {
       id: 'ai-data',
       title: 'Fitur AI: data apa yang diproses',
       paragraphs: [
-        'CatetInd punya Minca, AI Coach yang membantu kategorisasi, merapikan nama transaksi, membaca struk, dan menemani review keuanganmu. Supaya itu bekerja, sebagian data harus diproses oleh penyedia model bahasa — dan kami sebut apa adanya:',
+        'CatetInd punya Minca, AI Coach yang membantu kategorisasi, merapikan nama transaksi, membaca struk, dan menemani review keuanganmu. Supaya itu bekerja, sebagian data harus diproses oleh penyedia model bahasa, dan kami sebut apa adanya:',
       ],
       bullets: [
-        'Kategorisasi & penamaan otomatis — teks yang kamu tulis di transaksi (misal "indmrt 24rb") dikirim untuk ditebak kategorinya dan dirapikan namanya.',
-        'Chat & coaching — pertanyaanmu beserta ringkasan angka yang relevan dengan pertanyaannya: pemasukan bulan ini, kategori terbesar, sisa jatah harian, progres celengan, cicilan aktif. Bukan seluruh riwayat transaksimu, dan bukan data wallet milik orang lain.',
-        'Scan struk — foto struk yang kamu unggah, untuk dibaca menjadi baris transaksi.',
-        'Input suara — ucapanmu diubah menjadi teks lebih dulu, lalu teks itulah yang diproses untuk menyusun baris transaksinya.',
+        'Kategorisasi & penamaan otomatis, teks yang kamu tulis di transaksi (misal "indmrt 24rb") dikirim untuk ditebak kategorinya dan dirapikan namanya.',
+        'Chat & coaching, pertanyaanmu beserta ringkasan angka yang relevan dengan pertanyaannya: pemasukan bulan ini, kategori terbesar, sisa jatah harian, progres celengan, cicilan aktif. Bukan seluruh riwayat transaksimu, dan bukan data wallet milik orang lain.',
+        'Scan struk, foto struk yang kamu unggah, untuk dibaca menjadi baris transaksi.',
+        'Input suara, ucapanmu diubah menjadi teks lebih dulu, lalu teks itulah yang diproses untuk menyusun baris transaksinya.',
       ],
       note: {
-        label: 'REVIEW LEGAL — masa simpan di sisi penyedia model',
+        label: 'REVIEW LEGAL, masa simpan di sisi penyedia model',
         body: 'Kami belum menandatangani perjanjian pemrosesan data dengan penyedia model bahasa, jadi belum bisa menjanjikan berapa lama data bertahan di sana atau menegaskan bahwa data itu tidak dipakai untuk pelatihan model. Kami menuliskannya di sini daripada mengklaim sesuatu yang belum ada kesepakatannya.',
         tone: 'review',
       },
@@ -199,8 +199,8 @@ export const PRIVACY_DOC: LegalDocument = {
       id: 'ai-kontrol',
       title: 'Kuota AI & cara mematikannya',
       paragraphs: [
-        'Pemakaian AI dihitung dengan kuota token bulanan yang di-reset setiap tanggal 1, dan angka kuotanya ditentukan paketmu: Paket Catet Aja tidak memuat fitur AI, Paket Waras memakai kuota dasar bulanan, dan Paket Sultan tanpa batas kuota. Paket token tambahan yang kamu beli berlaku sampai habis — tidak hangus saat bulan berganti. Kalau kuotanya habis, fitur AI berhenti sampai kamu isi ulang atau bulan berganti; pencatatan manual tetap jalan normal tanpa batas.',
-        'Semua yang berjalan otomatis bisa dimatikan di Pengaturan → AI Preferences, lewat sakelar "Kategorisasi Otomatis oleh AI" dan "Penamaan Otomatis Transaksi". Kalau keduanya kamu matikan, teks transaksimu tidak dikirim untuk dua tugas itu — kamu yang memilih kategorinya sendiri.',
+        'Pemakaian AI dihitung dengan kuota token bulanan yang di-reset setiap tanggal 1, dan angka kuotanya ditentukan paketmu: Paket Catet Aja tidak memuat fitur AI, Paket Waras memakai kuota dasar bulanan, dan Paket Sultan tanpa batas kuota. Paket token tambahan yang kamu beli berlaku sampai habis, tidak hangus saat bulan berganti. Kalau kuotanya habis, fitur AI berhenti sampai kamu isi ulang atau bulan berganti; pencatatan manual tetap jalan normal tanpa batas.',
+        'Semua yang berjalan otomatis bisa dimatikan di Pengaturan → AI Preferences, lewat sakelar "Kategorisasi Otomatis oleh AI" dan "Penamaan Otomatis Transaksi". Kalau keduanya kamu matikan, teks transaksimu tidak dikirim untuk dua tugas itu, kamu yang memilih kategorinya sendiri.',
         'Chat AI tidak pernah berjalan sendiri: ia memproses saat kamu mengirim pesan, dan berhenti kalau kamu berhenti memakainya. Kamu juga bisa mengatur gaya bicara Minca di halaman yang sama, tanpa memengaruhi data apa pun.',
       ],
       note: {
@@ -216,18 +216,18 @@ export const PRIVACY_DOC: LegalDocument = {
       id: 'pihak-ketiga',
       title: 'Pihak ketiga yang ikut bekerja',
       paragraphs: [
-        'Aplikasi ini tidak jalan sendiri. Berikut pihak yang menyentuh data, beserta perannya masing-masing — tidak ada yang lebih luas dari yang tertulis di sini:',
+        'Aplikasi ini tidak jalan sendiri. Berikut pihak yang menyentuh data, beserta perannya masing-masing, tidak ada yang lebih luas dari yang tertulis di sini:',
       ],
       bullets: [
-        'Basis data & autentikasi (Supabase) — menyimpan akun dan catatanmu, sekaligus menegakkan aturan akses per akun di sisi basis data. Tautan masuk ke email juga lewat layanan ini.',
-        'Penyedia model bahasa (DeepSeek — teks & gambar, termasuk membaca foto struk) — memproses teks atau foto hanya untuk tugas yang kamu picu, lalu mengembalikan hasilnya ke CatetInd.',
-        'Pembayaran (Midtrans) — memproses pembayaran paket dan paket token. Data kartu/e-wallet-mu diproses langsung di Midtrans, bukan di CatetInd: kami tidak pernah menyimpan detail pembayaranmu.',
-        'Email transaksional (Resend) — mengirim tautan masuk, struk pembayaran, dan file export data ke alamatmu sendiri.',
-        'Hosting & analitik dasar (Vercel) — menjalankan aplikasinya dan menghitung jumlah kunjungan tanpa cookie iklan dan tanpa identitasmu.',
-        'Kalau nanti ada pihak baru, namanya masuk ke daftar ini sebelum dipakai — bukan sesudah.',
+        'Basis data & autentikasi (Supabase), menyimpan akun dan catatanmu, sekaligus menegakkan aturan akses per akun di sisi basis data. Tautan masuk ke email juga lewat layanan ini.',
+        'Penyedia model bahasa (DeepSeek, teks & gambar, termasuk membaca foto struk), memproses teks atau foto hanya untuk tugas yang kamu picu, lalu mengembalikan hasilnya ke CatetInd.',
+        'Pembayaran (Midtrans), memproses pembayaran paket dan paket token. Data kartu/e-wallet-mu diproses langsung di Midtrans, bukan di CatetInd: kami tidak pernah menyimpan detail pembayaranmu.',
+        'Email transaksional (Resend), mengirim tautan masuk, struk pembayaran, dan file export data ke alamatmu sendiri.',
+        'Hosting & analitik dasar (Vercel), menjalankan aplikasinya dan menghitung jumlah kunjungan tanpa cookie iklan dan tanpa identitasmu.',
+        'Kalau nanti ada pihak baru, namanya masuk ke daftar ini sebelum dipakai, bukan sesudah.',
       ],
       note: {
-        label: 'REVIEW LEGAL — detail vendor belum dikunci',
+        label: 'REVIEW LEGAL, detail vendor belum dikunci',
         body: 'Daftar di atas berasal dari rencana teknis produk dan belum dilengkapi perjanjian pemrosesan data. Nama badan hukum resmi, lokasi server, dan mekanisme pemindahan data antar-negara belum ditetapkan, jadi semuanya masih perlu dikonfirmasi sebelum halaman ini dinyatakan final.',
         tone: 'review',
       },
@@ -242,15 +242,15 @@ export const PRIVACY_DOC: LegalDocument = {
         'Kamu tidak perlu meminta izin untuk mengurus datamu sendiri. Semua ini bisa kamu pakai langsung dari dalam app:',
       ],
       bullets: [
-        'Melihat & mengekspor — Pengaturan → "Export Data Saya" mengirim seluruh catatanmu sebagai file JSON ke emailmu sendiri.',
-        'Membetulkan — setiap catatan bisa diedit atau dihapus sendiri: transaksi lewat geser pada barisnya, tagihan dan celengan lewat tombol edit di halamannya.',
-        'Menghapus akun — Pengaturan → Keamanan & Privasi → "Hapus Akun Permanen". Konfirmasinya dengan mengetik emailmu, dan seluruh transaksi, dompet, budget, serta hutang ikut terhapus.',
-        'Mengatur AI & notifikasi — AI Preferences dan pengaturan Notifikasi bisa dimatikan kapan saja tanpa kehilangan data.',
-        'Bertanya soal data — lewat Pusat Bantuan ke founder, atau email ke halo@catetind.com.',
+        'Melihat & mengekspor, Pengaturan → "Export Data Saya" mengirim seluruh catatanmu sebagai file JSON ke emailmu sendiri.',
+        'Membetulkan, setiap catatan bisa diedit atau dihapus sendiri: transaksi lewat geser pada barisnya, tagihan dan celengan lewat tombol edit di halamannya.',
+        'Menghapus akun, Pengaturan → Keamanan & Privasi → "Hapus Akun Permanen". Konfirmasinya dengan mengetik emailmu, dan seluruh transaksi, dompet, budget, serta hutang ikut terhapus.',
+        'Mengatur AI & notifikasi, AI Preferences dan pengaturan Notifikasi bisa dimatikan kapan saja tanpa kehilangan data.',
+        'Bertanya soal data, lewat Pusat Bantuan ke founder, atau email ke halo@catetind.com.',
       ],
       note: {
-        label: 'REVIEW LEGAL — rujukan pasal & tenggat tanggapan',
-        body: 'Hak-hak ini mengikuti UU Perlindungan Data Pribadi. Rujukan pasalnya dan tenggat tanggapan permintaan (misalnya jumlah hari kerja) belum dicantumkan menunggu tinjauan hukum — kami tidak mau menulis tenggat yang belum tentu bisa kami penuhi.',
+        label: 'REVIEW LEGAL, rujukan pasal & tenggat tanggapan',
+        body: 'Hak-hak ini mengikuti UU Perlindungan Data Pribadi. Rujukan pasalnya dan tenggat tanggapan permintaan (misalnya jumlah hari kerja) belum dicantumkan menunggu tinjauan hukum, kami tidak mau menulis tenggat yang belum tentu bisa kami penuhi.',
         tone: 'review',
       },
     },
@@ -260,10 +260,10 @@ export const PRIVACY_DOC: LegalDocument = {
       title: 'Anak di bawah umur',
       paragraphs: [
         'CatetInd dibuat untuk orang yang sudah mengelola uangnya sendiri, dan produknya tidak menyasar anak-anak: tidak ada fitur yang memerlukan data anak, tidak ada uang jajan, tidak ada mode khusus anak.',
-        'Kami tidak mengumpulkan data anak dengan sengaja. Kalau kamu tahu ada akun yang dibuat oleh anak di bawah umur, beri tahu kami lewat Pusat Bantuan — akun dan seluruh datanya akan kami hapus.',
+        'Kami tidak mengumpulkan data anak dengan sengaja. Kalau kamu tahu ada akun yang dibuat oleh anak di bawah umur, beri tahu kami lewat Pusat Bantuan, akun dan seluruh datanya akan kami hapus.',
       ],
       note: {
-        label: 'REVIEW LEGAL — batas usia minimum',
+        label: 'REVIEW LEGAL, batas usia minimum',
         body: 'Angka pastinya (18 tahun, atau 17 tahun dengan izin orang tua) beserta kalimat izin orang tua belum ditetapkan, jadi belum kami tulis di sini. Menunggu keputusan hukum supaya tidak ada aturan yang tampak tegas tapi tidak dijalankan.',
         tone: 'review',
       },
@@ -274,13 +274,13 @@ export const PRIVACY_DOC: LegalDocument = {
       id: 'perubahan',
       title: 'Kalau kebijakan ini berubah',
       paragraphs: [
-        'Halaman ini punya nomor versi dan tanggal di bagian atas. Setiap kali isinya berubah, keduanya ikut naik — jadi kamu selalu bisa tahu versi mana yang sedang berlaku dan sejak kapan.',
+        'Halaman ini punya nomor versi dan tanggal di bagian atas. Setiap kali isinya berubah, keduanya ikut naik, jadi kamu selalu bisa tahu versi mana yang sedang berlaku dan sejak kapan.',
       ],
       bullets: [
-        'Perubahan yang memengaruhi caramu memakai app — misalnya jenis data baru yang dikumpulkan atau pemrosesan AI yang baru — kami beri tahu lewat notifikasi di app dan email sebelum berlaku, bukan sesudah.',
+        'Perubahan yang memengaruhi caramu memakai app, misalnya jenis data baru yang dikumpulkan atau pemrosesan AI yang baru, kami beri tahu lewat notifikasi di app dan email sebelum berlaku, bukan sesudah.',
         'Perubahan kecil (perbaikan kalimat, tambahan contoh) tidak perlu notifikasi, tapi nomor versinya tetap naik supaya riwayatnya bisa ditelusuri.',
         'Versi yang berlaku adalah yang tampil di halaman ini; salinan yang tersebar di tempat lain bukan acuan.',
-        'Kalau kamu tidak setuju dengan versi barunya, kamu selalu bisa mengekspor datamu lalu menghapus akunmu — tanpa perlu alasan dan tanpa perlu menghubungi kami.',
+        'Kalau kamu tidak setuju dengan versi barunya, kamu selalu bisa mengekspor datamu lalu menghapus akunmu, tanpa perlu alasan dan tanpa perlu menghubungi kami.',
       ],
     },
 
@@ -289,8 +289,8 @@ export const PRIVACY_DOC: LegalDocument = {
       id: 'kontak',
       title: 'Kontak',
       paragraphs: [
-        'Pertanyaan, keberatan, atau permintaan soal datamu bisa mulai dari Pusat Bantuan: buka artikel mana pun, tekan 👎 di kakinya, lalu kirim pesan. Balasan datang dari manusia — langsung dari founder, bukan bot dan bukan tiket yang mengantre.',
-        'Kalau lebih nyaman lewat email, kirim ke halo@catetind.com — sertakan screenshot untuk masalah tampilan, karena kami memang tidak bisa membuka datamu untuk mengeceknya sendiri.',
+        'Pertanyaan, keberatan, atau permintaan soal datamu bisa mulai dari Pusat Bantuan: buka artikel mana pun, tekan 👎 di kakinya, lalu kirim pesan. Balasan datang dari manusia, langsung dari founder, bukan bot dan bukan tiket yang mengantre.',
+        'Kalau lebih nyaman lewat email, kirim ke halo@catetind.com, sertakan screenshot untuk masalah tampilan, karena kami memang tidak bisa membuka datamu untuk mengeceknya sendiri.',
       ],
     },
   ],
@@ -299,7 +299,7 @@ export const PRIVACY_DOC: LegalDocument = {
      Tiga hal yang harus jujur di sini: (1) status hukumnya, (2) bahwa build ini
      masih demo, (3) tautan ke halaman yang BENAR-BENAR ada di repo. */
   reviewNote: {
-    label: 'REVIEW LEGAL — belum lewat tinjauan hukum',
+    label: 'REVIEW LEGAL, belum lewat tinjauan hukum',
     body: 'CatetInd masih di tahap awal dan dokumen ini disusun oleh tim produk, bukan advokat. Teks final menunggu tinjauan hukum; tanggal dan nomor versi di atas diperbarui setiap kali isinya berubah, jadi kamu bisa tahu versi mana yang sedang berlaku.',
     tone: 'review',
   },

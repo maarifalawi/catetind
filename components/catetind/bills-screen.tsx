@@ -871,7 +871,7 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
           Belum ada tagihan rutin
         </h2>
         <p className="mt-1.5 max-w-sm text-[12.5px] leading-relaxed text-forest-muted">
-          Kos, langganan, cicilan — catat biar jatah harianmu lebih akurat.
+          Kos, langganan, cicilan, catat biar jatah harianmu lebih akurat.
         </p>
         <button
           type="button"

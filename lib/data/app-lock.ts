@@ -122,7 +122,7 @@ export const LOCK_SCREEN_COPY = {
   /** keterangan jujur soal apa yang diverifikasi perangkat & apa yang tidak */
   biometricNote:
     'Sensor perangkat yang memeriksa sidik jari/wajahmu. CatetInd cuma menerima jawabannya sebagai pembuka layar ini.',
-  deviceOnlyNote: 'PIN & kunci datanya tersimpan di perangkat ini — tidak dikirim ke server.',
+  deviceOnlyNote: 'PIN & kunci datanya tersimpan di perangkat ini, tidak dikirim ke server.',
 } as const
 
 export const LOCK_SETTINGS_COPY = {
@@ -133,14 +133,14 @@ export const LOCK_SETTINGS_COPY = {
   biometricLabel: 'Buka dengan Sidik Jari / Face ID',
   biometricHelper: 'Setelah PIN dibuat, sensor perangkat bisa jadi jalan cepat membuka kunci.',
   biometricNeedsPin:
-    'Buat PIN dulu — sensor perangkat jadi jalan cepat, bukan satu-satunya kunci.',
+    'Buat PIN dulu, sensor perangkat jadi jalan cepat, bukan satu-satunya kunci.',
   biometricUnsupported:
     'Perangkat ini belum menyediakan sensor biometrik untuk web, jadi opsi itu disembunyikan.',
   createTitle: 'Buat PIN Aplikasi',
   changeTitle: 'Ubah PIN Aplikasi',
   disableTitle: 'Matikan Kunci PIN',
   createBody:
-    'PIN ini cuma tersimpan di perangkatmu — yang kami simpan sidiknya (hash), bukan angkanya.',
+    'PIN ini cuma tersimpan di perangkatmu, yang kami simpan sidiknya (hash), bukan angkanya.',
   changeBody: (length: number) => `Masukin PIN lama ${length} angka, lalu PIN barunya.`,
   disableBody: (length: number) =>
     `Masukin PIN ${length} angka buat memastikan yang mematikannya memang kamu.`,

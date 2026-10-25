@@ -257,7 +257,7 @@ export function ProfileSettingsPanel() {
   function handleKeepHistory() {
     setPartner(null)
     setDisconnectOpen(false)
-    toast.success('Dompet dipisah — riwayatmu tetap aman 💚', {
+    toast.success('Dompet dipisah, riwayatmu tetap aman 💚', {
       description: 'Transaksi pribadimu masih bisa kamu buka seperti biasa.',
     })
   }
@@ -532,7 +532,7 @@ export function ProfileSettingsPanel() {
       ) : (
         <SettingsCard
           title="Dompet Bersama"
-          desc="Catat pengeluaran patungan sama pasangan — timbangannya dihitung otomatis."
+          desc="Catat pengeluaran patungan sama pasangan, timbangannya dihitung otomatis."
         >
           <Link
             href="/joint"

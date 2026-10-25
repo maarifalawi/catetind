@@ -12,33 +12,32 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* ── TIPOGRAFI — HANYA SATU FONT DI SELURUH SISTEM: INTER ────────────────────
-   Inter → teks/body  → utility `font-sans` (+ default <body>)
-   Inter → judul, angka besar & metrik → utility `font-display`
+/* ── TIPOGRAFI — HANYA SATU FONT DI SELURUH SISTEM: INTER DISPLAY ────────────
+   Inter Display → SEMUA teks (body, label, chip, tombol, judul, angka).
 
    Satu typeface untuk semua peran: `--font-sans` dan `--font-display`
-   sama-sama menunjuk `var(--font-inter)`, jadi kelas `font-display` yang sudah
-   tersebar di seluruh komponen merender font yang PERSIS sama — tidak ada lagi
-   font kedua untuk judul/metrik.
+   sama-sama menunjuk `var(--font-inter)`, dan potongan optiknya DIKUNCI ke
+   "Display" oleh blok `html` di bawah. Jadi kelas `font-sans` maupun
+   `font-display` yang sudah tersebar di seluruh komponen merender wajah huruf
+   yang PERSIS sama — tidak ada font kedua di mana pun.
 
    Inter dimuat `next/font/google` di app/layout.tsx dan ikut di-self-host saat
    build, jadi TIDAK ada `@font-face` manual di file ini, tidak ada request ke
    CDN font saat runtime, dan tidak ada layout shift.
 
-   Kenapa Inter untuk slot display (dulu 'SF Pro Display' lewat `@font-face` +
-   `src: local(...)`, lalu Plus Jakarta Sans):
-     • `local(...)` hanya menyala di perangkat Apple, jadi mayoritas pengguna
-       CatetInd (Android) tidak pernah melihat SF Pro dan otomatis jatuh ke
-       Inter — slot display praktis kosong.
-     • File resmi SF Pro TIDAK boleh di-self-host: lisensi Apple membatasi
-       penggunaannya untuk aplikasi yang berjalan di platform Apple.
-     • Inter dimuat dengan axis `opsz` (optical size 14–32), jadi browser
-       memakai potongan optik "Display" untuk teks besar dan potongan "text"
-       untuk body — satu font, dua optimasi ukuran.
+   Kenapa "Inter Display" bukan family terpisah: di Google Fonts, Inter adalah
+   SATU keluarga variable dengan axis `opsz` 14–32. Potongan "Inter Display"
+   adalah instance `opsz: 32` dari font yang sama — bukan file/family kedua
+   (Google Fonts hanya punya "Inter" dan "Inter Tight"). Karena itu optical
+   sizing otomatis dimatikan dan `opsz` dipaku ke 32 untuk SEMUA ukuran teks,
+   bukan hanya teks besar seperti perilaku `font-optical-sizing: auto`.
 
-   ── SKALA BOBOT — JUDUL SEDIKIT TEBAL, SISANYA RINGAN ───────────────────────
-   Satu aturan bobot untuk seluruh app (tidak ada `font-black`/900 maupun
-   `font-bold`/700):
+   ── SKALA BOBOT — TIDAK ADA BOLD BERAT ──────────────────────────────────────
+   Inter Display sudah terlihat lebih tegas pada bobot yang sama, jadi bobot
+   maksimum app ini adalah `font-semibold` (600). Utility `font-bold` (700),
+   `font-extrabold` (800), dan `font-black` (900) DIPETAKAN ke 600 lewat blok
+   `@theme` di bawah, dan `<b>`/`<strong>` juga dikunci di 600 — supaya tidak
+   ada teks yang tiba-tiba terasa terlalu tebal.
      • Judul (h1–h3) & angka besar/metrik  → `font-semibold` (600).
      • Semua teks lain (label, chip, eyebrow, tombol, catatan, input) →
        `font-medium` (500) atau lebih ringan.
@@ -259,6 +258,17 @@
   --sidebar-ring: #91a0b8; /* thistle */
 }
 
+/* ── BOBOT FONT: BOLD DIPETAKAN KE SEMIBOLD ──────────────────────────────────
+   Permintaan desain: teks yang perlu tegas cukup semibold, jangan lebih berat.
+   Dengan memetakan token `bold`/`extrabold`/`black` ke 600, kelas lama (atau
+   kelas baru yang tidak sengaja memakai `font-bold`) tetap ringan — tidak perlu
+   berburu kelas satu per satu. `font-semibold` sendiri tetap 600. */
+@theme {
+  --font-weight-bold: 600;
+  --font-weight-extrabold: 600;
+  --font-weight-black: 600;
+}
+
 /* Varian gelap memakai palet yang SAMA (Soil sebagai kanvas, Evergreen sebagai
    permukaan) supaya primitif shadcn/ui tidak pernah keluar dari palet kanon. */
 .dark {
@@ -341,6 +351,28 @@
   body {
     @apply text-foreground;
   }
+  /* `b`/`strong` bawaan browser memakai `bolder` (dari 500 bisa melompat ke
+     700) — dikunci ke semibold supaya penekanan teks tidak pernah berat. */
+  b,
+  strong {
+    font-weight: 600;
+  }
+}
+
+/* ── KUNCI POTONGAN OPTIK: SELURUH TEKS = INTER DISPLAY ───────────────────────
+   Inter dari Google Fonts punya axis `opsz` 14–32 (default 14 = potongan
+   "text"). Sesuai arah desain, app ini hanya memakai potongan "Display":
+     • `font-optical-sizing: none` mematikan pemilihan otomatis per ukuran, dan
+     • `font-variation-settings: 'opsz' 32` memaku instance Display.
+   Keduanya diwariskan, jadi judul, body, input, chip, dan angka di seluruh app
+   memakai wajah huruf yang sama. `letter-spacing` tipis (-0.011em) membuat
+   ritmenya kompak; utility `tracking-*` di komponen tetap menang bila dipakai.
+   Ditaruh di luar `@layer` (seperti aturan kanvas di bawah) supaya tidak kalah
+   dari aturan layer lain. */
+html {
+  font-optical-sizing: none;
+  font-variation-settings: 'opsz' 32;
+  letter-spacing: -0.011em;
 }
 
 /* ── KANVAS DOKUMEN: SELALU PUTIH — TERMASUK AREA "PULL-DOWN" ─────────────────

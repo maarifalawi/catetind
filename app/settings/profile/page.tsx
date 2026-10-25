@@ -11,7 +11,7 @@ import { ProfileSettingsPanel } from '@/components/catetind/settings-panel-accou
    sehingga pola indeks → detail yang sama dengan section lain berlaku. */
 
 export const metadata: Metadata = {
-  title: 'Profil & Akun — CatetInd',
+  title: 'Profil & Akun | CatetInd',
 }
 
 export default function SettingsProfilePage() {

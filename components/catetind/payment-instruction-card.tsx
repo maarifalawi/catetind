@@ -54,7 +54,7 @@ function CopyField({ label, value, large = false }: { label: string; value: stri
       setCopied(true)
       toast.success(PAY_CARD_COPY.copiedLabel)
     } catch {
-      toast.error('Gagal menyalin — salin manual ya.')
+      toast.error('Gagal menyalin, salin manual ya.')
     }
   }
 

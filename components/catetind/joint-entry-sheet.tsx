@@ -184,7 +184,7 @@ export function JointEntrySheet({
 
       {isSettlement && (
         <p className="mt-4 rounded-2xl bg-hud-sage/15 px-3.5 py-3 text-[11.5px] leading-relaxed text-forest/60">
-          Jejak transfer settlement — angkanya sudah masuk ke timbangan bulan ini.
+          Jejak transfer settlement, angkanya sudah masuk ke timbangan bulan ini.
         </p>
       )}
     </BudgetSheet>

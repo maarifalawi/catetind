@@ -14,7 +14,7 @@ import { WelcomeScreen } from '@/components/catetind/welcome-screen'
  * ditawari navigasi app yang isinya data keuangan.
  */
 export const metadata: Metadata = {
-  title: 'CatetInd — Track. Grow. Secure.',
+  title: 'CatetInd | Track. Grow. Secure.',
   description:
     'Catat pemasukan & pengeluaran tanpa ribet. Rapi otomatis, jelas dalam sekali lihat, dan nggak perlu bikin password. Mulai gratis hari ini.',
 }

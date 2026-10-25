@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
 
   if (!midtransConfigured()) {
     return NextResponse.json(
-      { ok: false, reason: 'not-configured', error: 'Pembayaran belum aktif — menunggu Midtrans.' },
+      { ok: false, reason: 'not-configured', error: 'Pembayaran belum aktif, menunggu Midtrans.' },
       { status: 503 },
     )
   }

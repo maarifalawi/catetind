@@ -90,11 +90,11 @@ export const WALLET_QUICK_ADD_COPY = {
   badge: '1 ketukan',
   /** semua brand populer sudah dipakai → jalan keluar tetap ditunjuk */
   allOwned:
-    'Semua brand populer sudah kamu pakai — tambah dompet lain lewat “Lainnya” di bawah.',
+    'Semua brand populer sudah kamu pakai, tambah dompet lain lewat “Lainnya” di bawah.',
   /** tombol LEBAR PENUH di bawah tiga saran */
   other: 'Lainnya',
   /** aria-label tombol Lainnya — menyebut aksinya, bukan cuma "Lainnya" */
-  otherA11y: 'Tambah dompet lain — buka form Tambah Dompet',
+  otherA11y: 'Tambah dompet lain, buka form Tambah Dompet',
   /** aria-label tiap saran brand: menyebut brandnya supaya jelas apa yang terjadi */
-  brandA11y: (name: string) => `Tambah dompet ${name} — form dibuka dengan brand ini terisi`,
+  brandA11y: (name: string) => `Tambah dompet ${name}, form dibuka dengan brand ini terisi`,
 } as const

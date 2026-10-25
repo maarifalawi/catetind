@@ -5,7 +5,7 @@ import { BillingSettingsPanel } from '@/components/catetind/settings-panel-billi
    Isinya `BillingPanel` yang sudah ada + jalur berhenti berlangganan. */
 
 export const metadata: Metadata = {
-  title: 'Langganan & Billing — CatetInd',
+  title: 'Langganan & Billing | CatetInd',
 }
 
 export default function BillingSettingsPage() {

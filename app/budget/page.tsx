@@ -4,7 +4,7 @@ import { BudgetScreen } from '@/components/catetind/budget-screen'
 import { BUDGET_ADD_PARAM, BUDGET_PLANT_PARAM, categoryOptionOf, flagParamOf } from '@/lib/data/budget'
 
 export const metadata: Metadata = {
-  title: 'Budget & Target — CatetInd',
+  title: 'Budget & Target | CatetInd',
   description:
     'Atur limit pengeluaran per kategori dan tumbuhkan celengan impian: jatah harian, pacing ideal, sapu bersih sisa budget, dan sinking fund dengan metafora tanaman.',
 }

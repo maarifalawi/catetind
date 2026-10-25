@@ -190,7 +190,7 @@ export function SyncBalanceModal({
                     ? 'Pengeluaran Tak Tercatat akan ditambahkan otomatis ke catatanmu.'
                     : diff > 0
                       ? 'Pemasukan Tak Tercatat akan ditambahkan otomatis ke catatanmu.'
-                      : 'Saldo di catatanmu sudah sama dengan saldo asli — tidak ada yang perlu dikoreksi.'}
+                      : 'Saldo di catatanmu sudah sama dengan saldo asli, tidak ada yang perlu dikoreksi.'}
                 </p>
               </div>
             </div>

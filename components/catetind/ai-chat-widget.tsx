@@ -396,7 +396,7 @@ export function AIChatWidget() {
           onClick={openPanel}
           aria-label={
             aiLocked
-              ? `${lockedBadgeText('ai-chat')} — ${AI_CHAT_COPY.openLabel}`
+              ? `${lockedBadgeText('ai-chat')}, ${AI_CHAT_COPY.openLabel}`
               : AI_CHAT_COPY.openLabel
           }
           /* PAKET 95 (permintaan pemilik produk): tombol ini PURE GAMBAR dari

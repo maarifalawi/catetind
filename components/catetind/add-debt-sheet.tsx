@@ -317,7 +317,7 @@ export function AddDebtSheet({
         <span className="pr-2 text-[13px] font-medium leading-snug text-forest">
           Ini pinjaman platform/berbunga
           <span className="mt-0.5 block text-[11px] font-medium text-forest/45">
-            Kredivo, SPayLater, KTA — pakai tenor & cicilan
+            Kredivo, SPayLater, KTA, pakai tenor & cicilan
           </span>
         </span>
         <Switch checked={isPlatform} onChange={setIsPlatform} label="Pinjaman platform" />
@@ -402,7 +402,7 @@ export function AddDebtSheet({
           />
 
           <label className="block">
-            <span className="text-[12.5px] font-medium text-forest/70">Bunga (% — opsional)</span>
+            <span className="text-[12.5px] font-medium text-forest/70">Bunga (%, opsional)</span>
             <input
               value={interest}
               onChange={(event) => setInterest(sanitizeDecimal(event.target.value, 2))}

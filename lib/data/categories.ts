@@ -407,7 +407,7 @@ export const CATEGORY_PICKER_COPY = {
   resultTitle: (count: number) => `${count} hasil`,
   /** satu hasil pun tetap disebut, bukan "1 hasil" yang terasa kaku di demo */
   resultEmpty: (query: string) => `Nggak ada kategori yang cocok sama “${query}”.`,
-  resultEmptyHint: 'Coba kata lain — misal “kopi”, “bensin”, atau “kos”.',
+  resultEmptyHint: 'Coba kata lain, misal “kopi”, “bensin”, atau “kos”.',
   /** baris kecil di satu hasil: "Makan & Minum · Kopi, boba, jus" */
   resultMeta: (group: string, examples: string) => `${group} · ${examples}`,
 
@@ -418,6 +418,6 @@ export const CATEGORY_PICKER_COPY = {
 
   /** pemilih pemasukan — jumlahnya sedikit, jadi langsung chips (tanpa Layer 2/3) */
   incomeTitle: 'Pilih Kategori Pemasukan',
-  incomeHint: 'Pemasukan nggak perlu dipecah detail — tujuh pilihan ini sudah cukup.',
+  incomeHint: 'Pemasukan nggak perlu dipecah detail, tujuh pilihan ini sudah cukup.',
 } as const
 

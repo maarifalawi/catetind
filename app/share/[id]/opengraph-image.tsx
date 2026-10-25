@@ -29,7 +29,7 @@ function UnknownCard(): React.ReactElement {
         fontFamily: 'sans-serif',
       }}
     >
-      <div style={{ display: 'flex', fontSize: 44, fontWeight: 800 }}>{SHARE_IMAGE_COPY.brand}</div>
+      <div style={{ display: 'flex', fontSize: 44, fontWeight: 600 }}>{SHARE_IMAGE_COPY.brand}</div>
       <div style={{ display: 'flex', marginTop: 16, fontSize: 26, color: '#91bb9e' }}>
         Kartu ini sudah tidak tersedia
       </div>

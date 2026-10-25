@@ -36,9 +36,9 @@ import { readSupabaseSession } from '@/lib/supabase/session-cookie'
 export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
-  title: 'Pembayaran — CatetInd',
+  title: 'Pembayaran | CatetInd',
   description:
-    'Pilih paket, isi email & nama panggilan, bayar lewat QRIS/e-wallet/Virtual Account — langsung masuk onboarding tanpa langkah verifikasi yang menghadang.',
+    'Pilih paket, isi email & nama panggilan, bayar lewat QRIS/e-wallet/Virtual Account, langsung masuk onboarding tanpa langkah verifikasi yang menghadang.',
 }
 
 export default async function CheckoutPage({

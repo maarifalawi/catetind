@@ -59,7 +59,7 @@ export function JointPushBanner({
             </p>
             <p className="mt-1 text-[13px] font-medium leading-snug text-forest">
               {who.avatar} {who.name} barusan catat {tx.description}{' '}
-              <span className="tabular-nums">{moneyLabel(tx.amount, masked)}</span> — split-nya udah
+              <span className="tabular-nums">{moneyLabel(tx.amount, masked)}</span>, split-nya udah
               pas belum?
             </p>
             <button

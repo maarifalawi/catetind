@@ -28,9 +28,9 @@ export const SEGMENT_ERROR_COPY: Record<SegmentErrorArea, SegmentErrorCopy> = {
     eyebrow: 'Gagal dimuat',
     title: 'Halaman ini berhenti di tengah jalan',
     body: 'Bagian ini nggak bisa digambar sekarang.',
-    safeSummary: 'Catatanmu aman — nggak ada yang hilang.',
+    safeSummary: 'Catatanmu aman, nggak ada yang hilang.',
     safeBody:
-      'Data uangmu hidup di store ledger perangkat ini, bukan di layar yang gagal tadi — jadi tetap utuh.',
+      'Data uangmu hidup di store ledger perangkat ini, bukan di layar yang gagal tadi, jadi tetap utuh.',
   },
   wallet: {
     eyebrow: 'Dompet & Akun',
@@ -38,7 +38,7 @@ export const SEGMENT_ERROR_COPY: Record<SegmentErrorArea, SegmentErrorCopy> = {
     body: 'Kartu dompetmu nggak bisa digambar sekarang.',
     safeSummary: 'Saldo & ledger tetap utuh.',
     safeBody:
-      'Saldo dan baris ledger disimpan di perangkat ini — kegagalan menggambar kartunya nggak menyentuh angkanya.',
+      'Saldo dan baris ledger disimpan di perangkat ini, kegagalan menggambar kartunya nggak menyentuh angkanya.',
   },
   wealth: {
     eyebrow: 'Kekayaan & Hutang',
@@ -62,7 +62,7 @@ export const SEGMENT_ERROR_COPY: Record<SegmentErrorArea, SegmentErrorCopy> = {
     body: 'Jatah harian dan daftar celenganmu nggak bisa digambar sekarang.',
     safeSummary: 'Angka catatanmu nggak berubah.',
     safeBody:
-      'Budget dihitung ulang dari ledger perangkat ini tiap halaman dibuka — gagal menggambar kartunya nggak menyentuh satu baris pun.',
+      'Budget dihitung ulang dari ledger perangkat ini tiap halaman dibuka, gagal menggambar kartunya nggak menyentuh satu baris pun.',
   },
   joint: {
     eyebrow: 'Dompet Bersama',
@@ -70,7 +70,7 @@ export const SEGMENT_ERROR_COPY: Record<SegmentErrorArea, SegmentErrorCopy> = {
     body: 'Buku besar bersama kalian nggak bisa digambar sekarang.',
     safeSummary: 'Catatanmu sendiri tetap aman.',
     safeBody:
-      'Buku besar bersama dan catatan pribadimu disimpan terpisah — yang gagal satu, bukan dua-duanya.',
+      'Buku besar bersama dan catatan pribadimu disimpan terpisah, yang gagal satu, bukan dua-duanya.',
   },
 }
 

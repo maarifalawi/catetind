@@ -214,7 +214,7 @@ export function JointInviteCodeModal({
       await navigator.clipboard.writeText(invite.code)
       toast.success('Kode tersalin!')
     } catch {
-      toast.error('Gagal menyalin — catat kodenya manual ya')
+      toast.error('Gagal menyalin, catat kodenya manual ya')
     }
   }
 
