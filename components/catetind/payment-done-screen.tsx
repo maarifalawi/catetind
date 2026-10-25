@@ -210,7 +210,7 @@ export function PaymentDoneScreen({ orderId, failed }: { orderId: string | null;
 
             <h1
               id="pay-done-title"
-              className="mt-6 text-balance font-display text-[28px] leading-[1.15] font-semibold tracking-[-0.03em] text-forest landing-tab:text-[36px]"
+              className="mt-6 text-balance font-display text-[28px] leading-[1.15] font-semibold tracking-normal text-forest landing-tab:text-[36px]"
             >
               {title}
             </h1>

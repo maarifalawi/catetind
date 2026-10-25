@@ -12,8 +12,8 @@ import { LANDING_META, LANDING_SECTION_MARKERS } from '@/lib/data/landing'
 
 /* ── LANDING PUBLIK `/` ──────────────────────────────────────────────────────
    Landing baru (port Framer yang sekarang memakai Design System CatetInd:
-   Earth Pastel + Inter). Section: navbar → hero → kalkulator uang gaib →
-   mission → pricing → FAQ → footer. Semua copy + angka dibaca dari
+   Earth Pastel + font sistem Apple). Section: navbar → hero → kalkulator uang
+   gaib → mission → pricing → FAQ → footer. Semua copy + angka dibaca dari
    `lib/data/landing.ts`, `lib/data/pain-calculator.ts`
    / `lib/data/pricing.ts`; tidak ada string user-facing di JSX. Rute preview
    lama sekarang 301 ke sini. */

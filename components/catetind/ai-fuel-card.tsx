@@ -167,12 +167,12 @@ export function AiFuelCard({ collapsed }: { collapsed: boolean }) {
       {/* 2 · ANGKA — satu nilai besar yang langsung terbaca */}
       <span className="mt-2 flex items-baseline gap-1.5 text-forest">
         {pq.unlimited ? (
-          <span className="text-[20px] font-medium leading-none tracking-[-0.03em]">
+          <span className="text-[20px] font-medium leading-none tracking-normal">
             {AI_UNLIMITED_BADGE}
           </span>
         ) : (
           <>
-            <span className="text-[26px] font-medium leading-none tracking-[-0.04em] tabular-nums">
+            <span className="text-[26px] font-medium leading-none tracking-normal tabular-nums">
               {quota.remainingPct}%
             </span>
             <span className="text-[11.5px] font-medium text-forest/45">

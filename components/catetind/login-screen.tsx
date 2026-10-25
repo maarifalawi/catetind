@@ -215,7 +215,7 @@ export function LoginScreen({ next }: { next?: string | null }) {
             <span className="text-[14px] leading-[1.5] text-forest">{LOGIN_COPY.eyebrow}</span>
           </span>
 
-          <h1 className="max-w-[560px] text-balance font-display text-[40px] leading-[1.12] font-medium tracking-[-0.03em] text-forest landing-tab:text-[52px] landing:text-[60px]">
+          <h1 className="max-w-[560px] text-balance font-display text-[40px] leading-[1.12] font-medium tracking-normal text-forest landing-tab:text-[52px] landing:text-[60px]">
             {LOGIN_COPY.title}
           </h1>
 
@@ -280,7 +280,7 @@ export function LoginScreen({ next }: { next?: string | null }) {
                         : 'cursor-not-allowed bg-sage text-forest/40',
                     )}
                   >
-                    <span className="text-[16px] font-medium tracking-[-0.01em]">
+                    <span className="text-[16px] font-medium tracking-normal">
                       {sending ? LOGIN_COPY.sendingLabel : LOGIN_COPY.submitLabel}
                     </span>
                     <span
@@ -304,7 +304,7 @@ export function LoginScreen({ next }: { next?: string | null }) {
               ) : (
                 /* ── LANGKAH 2 · kode 6 angka (jalur utama) ─────────────────── */
                 <form onSubmit={handleVerify} noValidate>
-                  <h2 className="font-display text-[22px] leading-tight font-medium tracking-[-0.02em] text-forest lg:text-[24px]">
+                  <h2 className="font-display text-[22px] leading-tight font-medium tracking-normal text-forest lg:text-[24px]">
                     {LOGIN_COPY.codeTitle}
                   </h2>
 
@@ -378,7 +378,7 @@ export function LoginScreen({ next }: { next?: string | null }) {
                         : 'cursor-not-allowed bg-sage text-forest/40',
                     )}
                   >
-                    <span className="text-[16px] font-medium tracking-[-0.01em]">
+                    <span className="text-[16px] font-medium tracking-normal">
                       {verifying ? LOGIN_COPY.verifyingLabel : LOGIN_COPY.codeSubmitLabel}
                     </span>
                     <span

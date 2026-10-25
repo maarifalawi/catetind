@@ -92,3 +92,44 @@ describe('performa mobile — jeda animasi hias saat overlay terbuka', () => {
     expect(PAUSE).toContain('.progress-shimmer')
   })
 })
+
+/* ── TIPOGRAFI — FONT SISTEM APPLE (SAN FRANCISCO) ───────────────────────────
+   Permintaan produk: ganti font app ke font yang dipakai Apple. SF Pro tidak
+   boleh di-bundle sebagai webfont, jadi jalurnya FONT SISTEM: `-apple-system` +
+   `BlinkMacSystemFont` di depan stack (San Francisco di macOS/iOS, font sistem
+   native di platform lain).
+
+   Penjaga ini mencegah perubahan yang tidak sengaja: webfont pihak ketiga
+   (`var(--font-inter)` / pin `opsz` khusus Inter) tidak boleh kembali tanpa
+   keputusan sadar, dan kedua slot font harus tetap menunjuk keluarga yang sama. */
+describe('tipografi — font sistem Apple', () => {
+  const sans = RULES.match(/--font-sans:\s*([^;]+);/)?.[1] ?? ''
+  const display = RULES.match(/--font-display:\s*([^;]+);/)?.[1] ?? ''
+
+  it('`--font-sans` & `--font-display` memakai stack -apple-system', () => {
+    for (const stack of [sans, display]) {
+      expect(stack).toContain('-apple-system')
+      expect(stack).toContain('BlinkMacSystemFont')
+    }
+  })
+
+  it('tidak ada lagi pin optik / variabel khusus Inter', () => {
+    expect(RULES).not.toContain('var(--font-inter)')
+    expect(RULES).not.toContain("font-variation-settings: 'opsz'")
+  })
+
+  /* Keluhan nyata setelah font diganti: "jarak antar karakter deket banget".
+     Penyebabnya dua tuning Inter yang masih tertinggal — `letter-spacing`
+     negatif global dan token `tracking-tight` -0.025em. Sekarang keduanya 0:
+     body mewarisi `normal`, dan seluruh pemakaian `tracking-tight`/`tighter`
+     ikut jadi 0 lewat token. */
+  it('huruf tidak dipepetin: letter-spacing global & token tracking = 0', () => {
+    const htmlRule = RULES.match(/html\s*\{[^}]*\}/)?.[0] ?? ''
+    expect(htmlRule).toContain('letter-spacing: normal')
+    expect(htmlRule).not.toMatch(/letter-spacing:\s*-/)
+
+    expect(RULES).toMatch(/--tracking-tight:\s*0em/)
+    expect(RULES).toMatch(/--tracking-tighter:\s*0em/)
+  })
+})
+

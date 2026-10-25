@@ -133,7 +133,7 @@ export function OnboardingStepFirstTransaction({
               )}
             >
               <Icon className="size-[17px]" strokeWidth={2} />
-              <span className="text-[11px] font-medium tracking-[-0.01em] whitespace-nowrap">
+              <span className="text-[11px] font-medium tracking-normal whitespace-nowrap">
                 {item.label}
               </span>
             </button>
@@ -161,7 +161,7 @@ export function OnboardingStepFirstTransaction({
           placeholder="0"
           aria-label="Nominal transaksi pertama"
           className={cn(
-            'min-w-0 flex-1 bg-transparent text-center font-medium leading-none tracking-[-0.04em] text-forest tabular-nums outline-none placeholder:text-forest/[0.14]',
+            'min-w-0 flex-1 bg-transparent text-center font-medium leading-none tracking-normal text-forest tabular-nums outline-none placeholder:text-forest/[0.14]',
             display.length <= 7 ? 'text-[2.7rem]' : 'text-[2.15rem]',
           )}
         />
@@ -180,7 +180,7 @@ export function OnboardingStepFirstTransaction({
         }}
         placeholder="Contoh: Kopi Kenangan pagi tadi"
         aria-label="Catatan transaksi (opsional)"
-        className="mt-8 h-14 w-full rounded-[1.35rem] bg-cream px-4 text-[14px] font-medium tracking-[-0.01em] text-forest outline-none ring-1 ring-ink/[0.06] transition-all placeholder:text-forest/30 focus:ring-forest/25"
+        className="mt-8 h-14 w-full rounded-[1.35rem] bg-cream px-4 text-[14px] font-medium tracking-normal text-forest outline-none ring-1 ring-ink/[0.06] transition-all placeholder:text-forest/30 focus:ring-forest/25"
       />
     </div>
   )

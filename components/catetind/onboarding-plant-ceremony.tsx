@@ -77,10 +77,10 @@ export function OnboardingPlantCeremony({
         </div>
       </div>
 
-      <h2 className="mt-7 font-sans text-[1.55rem] font-medium leading-[1.15] tracking-[-0.035em] text-forest">
+      <h2 className="mt-7 font-sans text-[1.55rem] font-medium leading-[1.15] tracking-normal text-forest">
         Tanamanmu baru saja ditanam
       </h2>
-      <p className="mt-3 max-w-[32ch] text-[14.5px] leading-relaxed tracking-[-0.01em] text-forest/50">
+      <p className="mt-3 max-w-[32ch] text-[14.5px] leading-relaxed tracking-normal text-forest/50">
         Setiap kali kamu catat, tanamanmu akan tumbuh. Rawat dia baik-baik ya.
       </p>
 
@@ -105,7 +105,7 @@ export function OnboardingPlantCeremony({
               )}
             </span>
             <div className="min-w-0 flex-1">
-              <p className="text-[14px] font-medium leading-snug tracking-[-0.01em] text-forest">
+              <p className="text-[14px] font-medium leading-snug tracking-normal text-forest">
                 {granted ? 'Pengingat aktif' : 'Aktifkan pengingat?'}
               </p>
               <p className="mt-1 text-[12.5px] leading-relaxed text-forest/45">
@@ -122,7 +122,7 @@ export function OnboardingPlantCeremony({
                 type="button"
                 onClick={handleActivate}
                 disabled={busy}
-                className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-forest text-[13.5px] font-medium tracking-[-0.01em] text-cream transition-all duration-150 hover:bg-forest-soft active:scale-[0.98] disabled:opacity-60"
+                className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-forest text-[13.5px] font-medium tracking-normal text-cream transition-all duration-150 hover:bg-forest-soft active:scale-[0.98] disabled:opacity-60"
               >
                 {busy ? (
                   <Loader2 className="size-4 animate-spin" strokeWidth={2.4} />

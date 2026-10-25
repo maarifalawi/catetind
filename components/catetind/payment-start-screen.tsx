@@ -233,7 +233,7 @@ export function PaymentStartScreen({
         <span className="text-[12.5px] font-medium text-forest/60">
           {PAY_START_COPY.totalLabel}
         </span>
-        <span className="font-display text-[24px] leading-none font-semibold tracking-[-0.02em] tabular-nums text-forest">
+        <span className="font-display text-[24px] leading-none font-semibold tracking-normal tabular-nums text-forest">
           {formatIDR(total)}
         </span>
       </div>
@@ -265,7 +265,7 @@ export function PaymentStartScreen({
           </div>
 
           <div className="max-w-[620px]">
-            <h1 className="font-display text-[32px] leading-[1.08] font-semibold tracking-[-0.03em] text-forest landing-tab:text-[40px] landing:text-[44px]">
+            <h1 className="font-display text-[32px] leading-[1.08] font-semibold tracking-normal text-forest landing-tab:text-[40px] landing:text-[44px]">
               {isUpgrade ? PAY_START_COPY.upgradeTitle : PAY_START_COPY.title}
             </h1>
             <p className="mt-2 text-[15px] leading-[1.55] text-forest-muted landing-tab:text-[16px]">

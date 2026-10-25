@@ -1,14 +1,16 @@
 /* ── Bahasa visual Onboarding (inventaris #10) ────────────────────────────────
    Satu sumber untuk tipografi & permukaan step onboarding. Arah barunya MODERN
-   CLEAN MINIMALIS — karakter huruf gaya Apple/SF Pro. Catatan: font SF Pro
-   sendiri sudah TIDAK dipakai lagi (lisensi Apple + hanya jalan di perangkat
-   Apple); sistem satu font yang berlaku sekarang (Inter) ada di app/globals.css.
+   CLEAN MINIMALIS — karakter huruf gaya Apple/SF Pro. Font SF Pro tidak pernah
+   diunduh/di-bundle (lisensi Apple): app memakai FONT SISTEM perangkat, jadi
+   perangkat Apple merender San Francisco dan platform lain memakai font sistem
+   native-nya. Stack-nya satu untuk seluruh app di app/globals.css.
 
-   1. FONT: heading, subjudul, dan label memakai `font-sans` (Inter — satu-satunya
-      font app ini, dimuat di layout sebagai --font-sans). `font-display` pun kini
-      Inter yang sama; onboarding tetap menulis `font-sans` eksplisit sebagai
-      penanda resepnya. Bobot maksimum semibold + tracking negatif tipis memberi
-      kesan headline iOS/macOS (bukan font-black berat).
+   1. FONT: heading, subjudul, dan label memakai `font-sans` (font sistem Apple —
+      San Francisco di macOS/iOS; stack lengkapnya di app/globals.css).
+      `font-display` memakai keluarga yang sama; onboarding tetap menulis
+      `font-sans` eksplisit sebagai penanda resepnya. Bobot maksimum semibold +
+      tracking negatif tipis memberi kesan headline iOS/macOS (bukan font-black
+      berat).
    2. SATU heading besar per layar + satu subjudul. Tanpa emoji raksasa, tanpa
       badge bertumpuk, tanpa bar progres dobel.
    3. SATU warna aksen: forest (CTA & keadaan aktif). Sisanya skala `ink` dengan
@@ -23,11 +25,11 @@ import { cn } from '@/lib/utils'
     Semibold = bobot maksimum app ini: tidak ada `font-bold` (700) maupun
     `font-black` (900) di mana pun. */
 export const ONBOARD_TITLE =
-  'font-sans text-[1.9rem] font-semibold leading-[1.1] tracking-[-0.035em] text-forest sm:text-[2.1rem]'
+  'font-sans text-[1.9rem] font-semibold leading-[1.1] tracking-normal text-forest sm:text-[2.1rem]'
 
 /** subjudul pengantar — satu-dua kalimat, tanpa emoji */
 export const ONBOARD_SUBTITLE =
-  'mt-3 max-w-[40ch] text-[15px] leading-relaxed tracking-[-0.01em] text-forest/50'
+  'mt-3 max-w-[40ch] text-[15px] leading-relaxed tracking-normal text-forest/50'
 
 /** permukaan kartu standar onboarding: putih + radius besar.
     Ring sengaja TIDAK ikut di sini — setiap pemakaian menulis ringnya sendiri
