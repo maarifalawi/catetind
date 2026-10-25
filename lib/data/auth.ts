@@ -141,9 +141,19 @@ export const LOGIN_COPY = {
    *  `resendCountdownLabel()` supaya tidak ada dua kalimat yang berbeda */
   resendLabel: 'Kirim ulang kode',
   codeSentToast: 'Kode masuk sudah dikirim 📩',
-  codeSentToastDescription: 'Cek inbox (dan folder spam) ya — kodenya 6 angka.',
+  codeSentToastDescription: 'Cek inbox (dan folder spam) ya, kodenya 6 angka.',
   resendSentNote: 'Kode baru sudah dikirim. Cek inbox lagi ya 📩',
   invalidCode: 'Kodenya 6 angka ya. Cek lagi emailnya.',
+
+  /* ── AKUN REVIEWER MIDTRANS (verifikasi merchant) ──────────────────────────
+     Reviewer tidak punya inbox kita, jadi kode aksesnya tidak dikirim ke email.
+     Copy di sini menjelaskan keadaan itu tanpa mencetak kodenya di layar —
+     kodenya diberikan lewat catatan verifikasi Midtrans. */
+  reviewerCodeLead: 'Kode akses reviewer',
+  reviewerCodeReadyToast: 'Mode reviewer aktif',
+  reviewerCodeReadyDescription: 'Masukkan kode akses reviewer yang sudah diberikan.',
+  reviewerCodeHint: 'Pakai kode akses reviewer dari tim CatetInd.',
+  reviewerResendNote: 'Kode reviewer tetap sama — pakai kode akses yang sudah diberikan.',
 
   /* ── tautan sekunder ───────────────────────────────────────────────────── */
   /** aksi sekunder: belum punya akun → daftar (route /checkout sudah ada) */
@@ -176,7 +186,7 @@ export const VERIFY_COPY = {
   resendSentNote: 'Tautan baru sudah dikirim. Cek inbox lagi ya 📩',
   /** state #9b: tautan kedaluwarsa / sudah dipakai (jangan pernah layar buntu) */
   expiredTitle: 'Tautan ini sudah dipakai atau kedaluwarsa.',
-  expiredBody: 'Kirim ulang ya — nggak ada yang hilang.',
+  expiredBody: 'Kirim ulang ya, nggak ada yang hilang.',
   changeEmailLabel: 'Ganti email',
   /** kartu masuk dengan KODE dari email (paket 45: Supabase Auth, bukan demo) */
   otpTitle: 'Atau masukkan kode dari email',
@@ -196,7 +206,7 @@ export const VERIFY_COPY = {
 export const RELOGIN_COPY = {
   lead: 'Mau keluar dan masuk lagi nanti?',
   link: 'Masuk pakai tautan email',
-  suffix: '— tanpa password, cukup dari inbox.',
+  suffix: 'tanpa password, cukup dari inbox.',
 } as const
 
 /* ── SESI (paket 39) ────────────────────────────────────────────────────────
@@ -225,7 +235,7 @@ export const SESSION_COPY = {
    */
   noSessionTitle: 'Sesi belum aktif',
   noSessionBody:
-    'Masuk dulu lewat halaman masuk (tautan atau kode dari email) supaya notifikasi ini tersimpan atas namamu — bukan atas nama pemanggil anonim.',
+    'Masuk dulu lewat halaman masuk (tautan atau kode dari email) supaya notifikasi ini tersimpan atas namamu, bukan atas nama pemanggil anonim.',
   noSessionCta: 'Buka halaman masuk',
   /**
    * Identitas yang belum terbaca (tamu, atau `/api/session` belum menjawab).

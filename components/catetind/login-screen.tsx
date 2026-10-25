@@ -26,7 +26,8 @@ import {
   resendCountdownLabel,
   resolveAuthLanding,
 } from '@/lib/data/auth'
-import { sendLoginLink, verifyEmailOtp } from '@/lib/session-client'
+import { sendLoginLink, signInWithReviewerCode, verifyEmailOtp } from '@/lib/session-client'
+import { isReviewerEmail, isReviewerTestCode } from '@/lib/data/reviewer-access'
 
 /* ── Masuk (/login) — inventaris #8 · PRD 5931–5933 ──────────────────────────
    Magic link adalah "janji kepercayaan" produk ini: *kami tidak menyimpan
@@ -77,6 +78,8 @@ export function LoginScreen({ next }: { next?: string | null }) {
   const otpValid = isValidOtpCode(otp)
   const canResend = secondsLeft === 0
   const trimmedEmail = email.trim()
+  /** email reviewer Midtrans → jalur kode akses tetap, tanpa kirim email */
+  const reviewerMode = isReviewerEmail(trimmedEmail)
 
   /**
    * Cooldown kirim ulang: satu timeout berantai (bukan interval) — lebih murah
@@ -98,6 +101,22 @@ export function LoginScreen({ next }: { next?: string | null }) {
     }
 
     setShowError(false)
+
+    /* ── JALUR REVIEWER MIDTRANS ─────────────────────────────────────────────
+       Reviewer tidak punya inbox kita, jadi TIDAK ADA email yang perlu dikirim
+       (dan tidak ada rate-limit SMTP yang bisa menghalangi). Langsung ke langkah
+       kode; verifikasinya lewat `signInWithReviewerCode` di handleVerify. */
+    if (reviewerMode) {
+      setOtp('')
+      setCodeError(false)
+      setSecondsLeft(RESEND_SECONDS)
+      setStep('code')
+      toast.success(LOGIN_COPY.reviewerCodeReadyToast, {
+        description: LOGIN_COPY.reviewerCodeReadyDescription,
+      })
+      return
+    }
+
     setSending(true)
     /* NYATA: Supabase mengirim kode 6 angka (dan tautan) ke email ini. Kita
        TIDAK berpura-pura "mengirim" dengan timer — step hanya berubah setelah
@@ -138,7 +157,12 @@ export function LoginScreen({ next }: { next?: string | null }) {
 
     setCodeError(false)
     setVerifying(true)
-    const result = await verifyEmailOtp(trimmedEmail, otp)
+    /* Kode tetap reviewer → sesi dibuat server (tanpa inbox). Kode lain tetap
+       lewat Supabase `verifyOtp`, jadi reviewer pun bisa memakai kode email
+       kalau suatu saat inbox-nya memang menerima. */
+    const result = isReviewerTestCode(trimmedEmail, otp)
+      ? await signInWithReviewerCode(trimmedEmail, otp)
+      : await verifyEmailOtp(trimmedEmail, otp)
     setVerifying(false)
     if (!result.ok) {
       setCodeError(true)
@@ -161,6 +185,11 @@ export function LoginScreen({ next }: { next?: string | null }) {
   function handleResend() {
     if (!canResend) return
     setSecondsLeft(RESEND_SECONDS)
+    /* Reviewer: kodenya TETAP, tidak ada email untuk dikirim ulang. */
+    if (reviewerMode) {
+      toast.success(LOGIN_COPY.reviewerResendNote)
+      return
+    }
     void sendLoginLink(trimmedEmail).then((result) => {
       if (result.ok) toast.success(LOGIN_COPY.resendSentNote)
       else toast.error(VERIFY_COPY.resendFailed, { description: result.error })
@@ -284,7 +313,9 @@ export function LoginScreen({ next }: { next?: string | null }) {
                     <span className="flex min-w-0 items-center gap-2">
                       <MailCheck className="size-4 shrink-0 text-forest" strokeWidth={2.4} aria-hidden />
                       <span className="min-w-0">
-                        <span className="block text-[11px] leading-tight text-forest/45">{LOGIN_COPY.codeSentLead}</span>
+                        <span className="block text-[11px] leading-tight text-forest/45">
+                          {reviewerMode ? LOGIN_COPY.reviewerCodeLead : LOGIN_COPY.codeSentLead}
+                        </span>
                         <span className="block truncate text-[13.5px] font-medium text-forest">{trimmedEmail}</span>
                       </span>
                     </span>
@@ -329,7 +360,11 @@ export function LoginScreen({ next }: { next?: string | null }) {
                         codeError ? 'text-plum' : 'text-forest/45',
                       )}
                     >
-                      {codeError ? LOGIN_COPY.invalidCode : null}
+                      {codeError
+                        ? LOGIN_COPY.invalidCode
+                        : reviewerMode
+                          ? LOGIN_COPY.reviewerCodeHint
+                          : null}
                     </span>
                   </label>
 
@@ -364,18 +399,23 @@ export function LoginScreen({ next }: { next?: string | null }) {
                     </span>
                   </button>
 
-                  {/* dua jalan keluar kecil: buka inbox, atau kirim ulang (dengan cooldown) */}
+                  {/* dua jalan keluar kecil: buka inbox, atau kirim ulang (dengan cooldown).
+                      Reviewer tidak punya inbox → tautan email disembunyikan, kode tetap. */}
                   <div className="mt-4 flex items-center justify-center gap-3 text-[12.5px]">
-                    <a
-                      href="mailto:"
-                      className="inline-flex items-center gap-1.5 font-medium text-forest transition-colors hover:underline motion-reduce:transition-none"
-                    >
-                      <Mail className="size-3.5" strokeWidth={2.4} aria-hidden />
-                      {VERIFY_COPY.openMailLabel}
-                    </a>
-                    <span aria-hidden className="text-forest/20">
-                      ·
-                    </span>
+                    {!reviewerMode && (
+                      <>
+                        <a
+                          href="mailto:"
+                          className="inline-flex items-center gap-1.5 font-medium text-forest transition-colors hover:underline motion-reduce:transition-none"
+                        >
+                          <Mail className="size-3.5" strokeWidth={2.4} aria-hidden />
+                          {VERIFY_COPY.openMailLabel}
+                        </a>
+                        <span aria-hidden className="text-forest/20">
+                          ·
+                        </span>
+                      </>
+                    )}
                     <button
                       type="button"
                       disabled={!canResend}
