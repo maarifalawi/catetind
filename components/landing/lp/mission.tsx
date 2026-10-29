@@ -22,6 +22,14 @@ import { LandingReveal } from './reveal'
    sebagai satu kesatuan. Caption centang lama sudah dihapus (permintaan
    pemilik produk): judul + satu kalimat penjelas sudah cukup.
 
+   TINGKAT JUDUL (SEO): judul tiap kartu adalah <h2>, bukan <h3>. Satu-satunya
+   <h1> halaman ini ada di hero, dan empat fitur utama (voice note, scan struk,
+   jatah harian, AI Coach) masing-masing jadi satu <h2> — mesin pencari membaca
+   satu topik per blok, bukan satu daftar panjang tanpa judul. Jangan
+   diturunkan lagi ke <h3>: itu membuat fitur-fitur utama tidak terbaca sebagai
+   bagian dari struktur halaman. Gaya visualnya tetap sama (ukuran diatur
+   kelas, bukan oleh tag).
+
    Aturan data tetap: semua string di `lib/data/landing.ts`. */
 
 const BENEFIT_ICON = {
@@ -125,12 +133,12 @@ function MissionCard({ card }: { card: LpMissionCard }) {
           <span className="rounded-full bg-sage/70 px-2.5 py-1 text-[11px] leading-[1.5] font-medium text-forest ring-1 ring-inset ring-forest/8">
             {card.annotation}
           </span>
-          <h3
+          <h2
             id={`${card.id}-title`}
             className="min-w-0 max-w-[24ch] font-display text-[24px] leading-[1.18] font-medium tracking-[-0.02em] text-forest landing-tab:text-[34px]"
           >
             {card.title}
-          </h3>
+          </h2>
         </div>
         <p className="max-w-[420px] text-[15px] leading-[1.65] text-forest-muted landing-tab:text-[16px]">
           {card.body}

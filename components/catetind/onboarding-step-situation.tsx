@@ -81,7 +81,7 @@ export function OnboardingStepSituation({
                   {item.emoji}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[15px] font-medium leading-snug tracking-normal text-forest">
+                  <span className="block text-[15px] font-medium leading-snug tracking-[-0.01em] text-forest">
                     {item.label}
                   </span>
                   <span className="mt-0.5 block text-[12.5px] leading-snug text-forest/45">
@@ -136,7 +136,7 @@ export function OnboardingStepSituation({
                 aria-checked={active}
                 onClick={() => onPeriodChange(option.id)}
                 className={cn(
-                  'flex-1 rounded-full py-2.5 text-[13px] font-medium tracking-normal transition-all duration-200',
+                  'flex-1 rounded-full py-2.5 text-[13px] font-medium tracking-[-0.01em] transition-all duration-200',
                   active
                     ? 'bg-cream text-forest shadow-[0_1px_3px_rgba(0,0,0,0.12)]'
                     : 'text-forest/45 hover:text-forest/70',
@@ -168,7 +168,7 @@ export function OnboardingStepSituation({
                   ONBOARD_CARD,
                 )}
               >
-                <span className="text-[14px] font-medium tracking-normal text-forest">
+                <span className="text-[14px] font-medium tracking-[-0.01em] text-forest">
                   Tanggal gajian
                 </span>
                 <input

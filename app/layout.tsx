@@ -1,5 +1,6 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
+import localFont from 'next/font/local'
 import { AIChatWidget } from '@/components/catetind/ai-chat-widget'
 import { AppLockProvider } from '@/components/catetind/app-lock-provider'
 import { DemoSeedGate } from '@/components/catetind/demo-seed-gate'
@@ -16,33 +17,98 @@ import { SubscriptionBanner } from '@/components/catetind/subscription-banner'
 import { SubscriptionGateProvider } from '@/components/catetind/subscription-gate-provider'
 import { UpgradeGateProvider } from '@/components/catetind/upgrade-gate-provider'
 import { Toaster } from '@/components/ui/toaster'
+import { LANDING_META } from '@/lib/data/landing'
+import { SITE_ORIGIN } from '@/lib/site'
 import './globals.css'
 
-/* ── TIPOGRAFI — FONT SISTEM APPLE (SAN FRANCISCO) ───────────────────────────
-   Seluruh app memakai font sistem, BUKAN webfont. `-apple-system` /
-   `BlinkMacSystemFont` + 'SF Pro' adalah font yang dipakai Apple di macOS &
-   iOS (San Francisco). Tidak ada request ke CDN font, tidak ada `@font-face`
-   manual, dan tidak ada layout shift saat font selesai dimuat.
+/* ── TIPOGRAFI — HANYA SATU FONT DI SELURUH SISTEM: INTER DISPLAY ────────────
+   Inter DIBUNDEL DI REPO (`app/fonts/inter-latin-variable.woff2`, satu berkas
+   variable `wght 100–900` + `opsz 14–32`, subset latin) dan dimuat
+   `next/font/local`. Jadi:
+     · tidak ada request ke CDN font saat runtime MAUPUN saat build,
+     · tidak ada layout shift (Next menambahkan fallback ber-metrik sama),
+     · hasilnya SAMA di semua perangkat — Windows, macOS, Android.
 
-   Di perangkat NON-Apple (Windows/Android) SF Pro tidak boleh didistribusikan,
-   jadi stack jatuh ke font sistem native perangkat itu — Segoe UI Variable →
-   Segoe UI (Windows), Roboto/system-ui (Android). Itu memang "font sistem",
-   bukan font kedua yang diunduh app.
+   KENAPA BUKAN `next/font/google` LAGI: memuat font lewat Google Fonts berarti
+   build/`dev` WAJIB bisa menghubungi fonts.googleapis.com. Saat koneksi itu
+   gagal, Next TIDAK menggagalkan build — ia diam-diam memakai fallback Arial
+   ber-`size-adjust` (`@font-face { font-family: "Inter Fallback" }`) sehingga
+   seluruh app tiba-tiba merender Arial: huruf terasa "asing" dan teks kecil
+   tidak terbaca sejelas Inter. Berkas lokal menghapus ketergantungan itu.
 
-   Stack lengkapnya ada di app/globals.css (`--font-sans` & `--font-display`):
-   dua-duanya menunjuk keluarga yang sama, jadi kelas `font-sans` maupun
-   `font-display` yang sudah tersebar di seluruh komponen merender wajah huruf
-   yang sama — tidak ada typeface kedua di mana pun. */
+   Inter mengisi KEDUA slot: `--font-sans` (teks/body) DAN `--font-display`
+   (judul, angka besar & metrik) — lihat app/globals.css. Jadi seluruh app
+   hanya memakai SATU typeface.
+
+   Axis `opsz` (optical size 14–32) ikut dibawa berkas variable-nya karena
+   potongan "Inter Display" adalah instance `opsz: 32` dari keluarga yang sama.
+   app/globals.css memaku `font-variation-settings: 'opsz' 32` pada `html`,
+   sehingga SEMUA teks (bukan hanya judul) memakai potongan Display dan tidak
+   ada font kedua. */
+const interDisplay = localFont({
+  src: './fonts/inter-latin-variable.woff2',
+  variable: '--font-inter',
+  weight: '100 900',
+  style: 'normal',
+  display: 'swap',
+})
 
 /* ── SATU FONT UNTUK SELURUH SISTEM (termasuk landing) ───────────────────────
-   Landing memakai Design System CatetInd: font sistem yang sama untuk body
-   (`font-sans`) dan judul (`font-display`). Bobot maksimum semibold (600);
-   `font-bold`/`extrabold`/`black` dipetakan ke 600 di app/globals.css. */
+   Landing sekarang memakai Design System CatetInd: Inter Display untuk body
+   (`font-sans`) dan judul (`font-display`). Tidak ada lagi font kedua khusus
+   landing. Bobot maksimum semibold (600); `font-bold`/`extrabold`/`black`
+   dipetakan ke 600 di app/globals.css. */
 
 export const metadata: Metadata = {
-  title: 'CatetInd | Catet Keuangan 4 Detik, Tanpa Ribet',
-  description:
-    'Aplikasi keuangan buat lo yang males nyatet. Tinggal kirim voice note atau foto struk, 4 detik beres. Biar lo tau duit lari ke mana dan gaji ga cuma numpang lewat.',
+  /* ── METADATA AKAR (SEO halaman utama) ────────────────────────────────────
+     Judul/deskripsi DIBACA dari `LANDING_META` (lib/data/landing.ts), bukan
+     ditulis lagi di sini: `app/page.tsx` memakai konstanta yang sama, jadi
+     judul landing & judul metadata akar mustahil berbeda.
+
+     `metadataBase` WAJIB dipasang. Tanpa itu Next tidak tahu alamat absolut
+     situs, sehingga `og:image: "/og-image.png"` dikirim sebagai path relatif
+     (atau diresolusi ke `http://localhost:3000`) — WhatsApp/X/Facebook lalu
+     gagal menampilkan kartu pratinjau. Dengan `metadataBase`, SEMUA metadata
+     gambar relatif di seluruh rute otomatis menjadi URL absolut.
+
+     `alternates.canonical` di root = halaman utama (`https://catetind.com`).
+     Halaman publik lain WAJIB memasang canonical-nya sendiri (`/contact`,
+     `/changelog`, `/bantuan`, `/privacy`, `/terms`, `/security`, `/checkout`,
+     `/welcome`) — kalau tidak, ia mewarisi nilai ini dan Google menganggapnya
+     duplikat dari beranda. Halaman `noindex` (`/login`, `/registered`,
+     `/share/[id]`, `/join/[code]`) aman karena tetap tidak diindeks. */
+  metadataBase: new URL(SITE_ORIGIN),
+  title: LANDING_META.title,
+  description: LANDING_META.description,
+  alternates: { canonical: LANDING_META.ogUrl },
+  /* ── OPEN GRAPH & TWITTER CARD ────────────────────────────────────────────
+     Satu gambar 1200×630 untuk kedua kartu (`public/og-image.png`, digenerate
+     `scripts/landing/make-og-image.mjs`). `twitter.card: summary_large_image`
+     butuh rasio lebar; memakai gambar persegi di sini membuat pratinjau X
+     terpotong. `locale: id_ID` + `siteName` dipakai WhatsApp/X untuk label
+     sumber tautan. */
+  openGraph: {
+    type: 'website',
+    locale: LANDING_META.ogLocale,
+    siteName: LANDING_META.ogSiteName,
+    title: LANDING_META.ogTitle,
+    description: LANDING_META.ogDescription,
+    url: LANDING_META.ogUrl,
+    images: [
+      {
+        url: LANDING_META.ogImage,
+        width: LANDING_META.ogImageWidth,
+        height: LANDING_META.ogImageHeight,
+        alt: LANDING_META.ogImageAlt,
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: LANDING_META.ogTitle,
+    description: LANDING_META.ogDescription,
+    images: [LANDING_META.ogImage],
+  },
   generator: 'v0.app',
   /* Favicon = aset brand kotak penuh (public/icons/icon-512.png) yang juga
      digenerate ke `app/icon.png` dan `app/favicon.ico` oleh
@@ -108,7 +174,7 @@ export default function RootLayout({
        JANGAN dihapus juga saat ada yang melihat diff atribut di DevTools —
        selisihnya berasal dari ekstensi di browser pengunjung, bukan dari HTML
        yang kita render. */
-    <html lang="id" className="light" suppressHydrationWarning>
+    <html lang="id" className={`light ${interDisplay.variable}`} suppressHydrationWarning>
       <body className="font-sans antialiased" suppressHydrationWarning>
         {/* Gradien tanaman (SVG) — satu definisi untuk seluruh app. Wajib di
             root supaya tanaman di halaman/tab mana pun memakai definisi yang

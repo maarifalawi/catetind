@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { Sprout } from 'lucide-react'
 import { EMPTY_ACCOUNT_COPY } from '@/lib/data/account'
 import { isAccountEmpty, useMoneyStore, usePendingLocalImport } from '@/lib/money/store'
-import { onboardingRestartHref } from '@/lib/onboarding'
+import { ONBOARDING_ROUTE } from '@/lib/onboarding'
 
 /* ── KEADAAN KOSONG SETELAH AKUN DIHAPUS (paket 43 · Stage 6 #2) ─────────────
    Setelah user menghapus akunnya, Home TIDAK boleh lagi berpura-pura semuanya
@@ -48,7 +48,7 @@ export function EmptyAccountNotice() {
         </div>
 
         <Link
-          href={onboardingRestartHref()}
+          href={ONBOARDING_ROUTE}
           className="inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-forest px-5 py-3 text-sm font-medium text-mint transition-colors hover:bg-forest-soft"
         >
           {EMPTY_ACCOUNT_COPY.cta}

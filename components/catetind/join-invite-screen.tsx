@@ -251,7 +251,7 @@ function ValidInviteView({
             href="/login"
             className="group flex h-14 w-full items-center justify-between gap-3 rounded-full bg-forest pr-2 pl-6 text-cream shadow-[0_16px_34px_-18px_rgba(0,0,0,0.85)] transition-colors duration-200 hover:bg-forest-soft active:scale-[0.98] motion-reduce:transition-none"
           >
-            <span className="text-[15.5px] font-medium tracking-normal">{JOIN_COPY.ctaJoin}</span>
+            <span className="text-[15.5px] font-medium tracking-[-0.01em]">{JOIN_COPY.ctaJoin}</span>
             <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-cream text-forest transition-colors duration-200 group-hover:bg-mint">
               <ArrowRight className="size-[18px]" strokeWidth={2.4} aria-hidden />
             </span>
@@ -403,7 +403,7 @@ function JoinedView({ walletName, onRestart }: { walletName: string; onRestart: 
         href="/joint"
         className="group mt-6 flex h-14 w-full items-center justify-between gap-3 rounded-full bg-forest pr-2 pl-6 text-cream shadow-[0_16px_34px_-18px_rgba(0,0,0,0.85)] transition-colors duration-200 hover:bg-forest-soft active:scale-[0.98] motion-reduce:transition-none"
       >
-        <span className="text-[15.5px] font-medium tracking-normal">
+        <span className="text-[15.5px] font-medium tracking-[-0.01em]">
           {JOIN_SUCCESS_COPY.cta}
         </span>
         <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-cream text-forest transition-colors duration-200 group-hover:bg-mint">

@@ -176,7 +176,7 @@ export function VerifyEmailScreen({
             </span>
             <span className="text-[14px] leading-[1.5] text-forest">{VERIFY_COPY.eyebrow}</span>
           </span>
-          <h1 className="max-w-[560px] text-balance font-display text-[40px] leading-[1.12] font-medium tracking-normal text-forest landing-tab:text-[52px] landing:text-[60px]">
+          <h1 className="max-w-[560px] text-balance font-display text-[40px] leading-[1.12] font-medium tracking-[-0.03em] text-forest landing-tab:text-[52px] landing:text-[60px]">
             {VERIFY_COPY.title}
           </h1>
           <p className="max-w-[440px] text-balance text-[16px] leading-[1.5] text-forest-muted">

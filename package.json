@@ -17,6 +17,7 @@
     "theme:tokenize": "node scripts/theme/tokenize-literal-colors.mjs",
     "landing:assets": "node scripts/landing/download-assets.mjs",
     "landing:hero-webp": "node scripts/landing/make-hero-webp.mjs",
+    "landing:og-image": "node scripts/landing/make-og-image.mjs",
     "landing:spec": "node scripts/landing/extract-framer-spec.mjs",
     "supabase:migrate": "node scripts/supabase/apply-migrations.mjs",
     "supabase:emails": "node scripts/supabase/apply-email-templates.mjs",

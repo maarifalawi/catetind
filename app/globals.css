@@ -12,28 +12,37 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* ── TIPOGRAFI — FONT SISTEM APPLE (SAN FRANCISCO) ───────────────────────────
-   Seluruh app memakai font SISTEM, bukan webfont. Di macOS/iOS `-apple-system`
-   & `BlinkMacSystemFont` merender San Francisco — font yang dipakai Apple.
-   Tidak ada `next/font`, tidak ada `@font-face` manual, tidak ada request ke CDN
-   font, dan tidak ada layout shift saat font dimuat.
+/* ── TIPOGRAFI — HANYA SATU FONT DI SELURUH SISTEM: INTER DISPLAY ────────────
+   Inter Display → SEMUA teks (body, label, chip, tombol, judul, angka).
 
-   Satu keluarga untuk semua peran: `--font-sans` dan `--font-display` memakai
-   stack yang sama, jadi kelas `font-sans` maupun `font-display` yang sudah
-   tersebar di seluruh komponen merender wajah huruf yang PERSIS sama — tidak
-   ada typeface kedua di mana pun.
+   Satu typeface untuk semua peran: `--font-sans` dan `--font-display`
+   sama-sama menunjuk `var(--font-inter)`, dan potongan optiknya DIKUNCI ke
+   "Display" oleh blok `html` di bawah. Jadi kelas `font-sans` maupun
+   `font-display` yang sudah tersebar di seluruh komponen merender wajah huruf
+   yang PERSIS sama — tidak ada font kedua di mana pun.
 
-   BATAS JUJUR: SF Pro tidak boleh didistribusikan sebagai webfont, jadi di
-   perangkat non-Apple stack ini jatuh ke font sistem native-nya (Windows:
-   Segoe UI Variable → Segoe UI; Android: Roboto/system-ui). Itu pilihan yang
-   disengaja: setiap platform memakai huruf yang memang disediakan Apple /
-   Google / Microsoft untuk platform itu, tanpa mengunduh font pihak ketiga.
+   Inter DIBUNDEL DI REPO (`app/fonts/inter-latin-variable.woff2`) dan dimuat
+   `next/font/local` di app/layout.tsx. Jadi TIDAK ada `@font-face` manual di
+   file ini, TIDAK ada request ke CDN font (build maupun runtime), dan TIDAK ada
+   layout shift — hasilnya sama persis di Windows, macOS, dan Android.
+
+   KENAPA TIDAK LAGI `next/font/google`: kalau fonts.googleapis.com tidak bisa
+   dihubungi, Next cuma memberi PERINGATAN lalu memakai fallback Arial
+   ber-`size-adjust`. App tetap "jalan", tapi seluruh teks berubah wajah (terasa
+   asing dan kurang terbaca di ukuran kecil). Berkas lokal menutup celah itu.
+
+   Kenapa "Inter Display" bukan family terpisah: Inter adalah SATU keluarga
+   variable dengan axis `opsz` 14–32. Potongan "Inter Display" adalah instance
+   `opsz: 32` dari font yang sama — bukan file/family kedua. Karena itu optical
+   sizing otomatis dimatikan dan `opsz` dipaku ke 32 untuk SEMUA ukuran teks,
+   bukan hanya teks besar seperti perilaku `font-optical-sizing: auto`.
 
    ── SKALA BOBOT — TIDAK ADA BOLD BERAT ──────────────────────────────────────
-   Bobot maksimum app ini adalah `font-semibold` (600). Utility `font-bold`
-   (700), `font-extrabold` (800), dan `font-black` (900) DIPETAKAN ke 600 lewat
-   blok `@theme` di bawah, dan `<b>`/`<strong>` juga dikunci di 600 — supaya
-   tidak ada teks yang tiba-tiba terasa terlalu tebal.
+   Inter Display sudah terlihat lebih tegas pada bobot yang sama, jadi bobot
+   maksimum app ini adalah `font-semibold` (600). Utility `font-bold` (700),
+   `font-extrabold` (800), dan `font-black` (900) DIPETAKAN ke 600 lewat blok
+   `@theme` di bawah, dan `<b>`/`<strong>` juga dikunci di 600 — supaya tidak
+   ada teks yang tiba-tiba terasa terlalu tebal.
      • Judul (h1–h3) & angka besar/metrik  → `font-semibold` (600).
      • Semua teks lain (label, chip, eyebrow, tombol, catatan, input) →
        `font-medium` (500) atau lebih ringan.
@@ -52,34 +61,8 @@
    back, jadi resep di atas tidak berlaku untuknya. */
 
 @theme inline {
-  /* stack Apple dulu; fallback = font sistem platform (bukan webfont kedua).
-     'SF Pro Text'/'SF Pro Display' menjaga perangkat Apple yang mengekspos nama
-     keluarga itu langsung (mis. macOS dengan font terinstal). */
-  --font-sans:
-    -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display',
-    'Segoe UI Variable Text', 'Segoe UI', system-ui, Roboto, 'Helvetica Neue',
-    Arial, sans-serif;
-  --font-display:
-    -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text',
-    'Segoe UI Variable Display', 'Segoe UI', system-ui, Roboto,
-    'Helvetica Neue', Arial, sans-serif;
-  /* ── RITME HURUF (TRACKING) = NORMAL / 0 ───────────────────────────────────
-     `tracking-tight` & `tracking-tighter` dulu disetel untuk Inter Display
-     (-0.025em / -0.05em). SF Pro & Segoe UI sudah punya ritme bawaannya sendiri,
-     dan permintaan produk jelas: jangan dipepetin.
-
-     Jadi kedua token itu dipetakan ke **0em** — seluruh 175+ pemakaian
-     (`tracking-tight` di judul, nominal, label) otomatis memakai jarak normal,
-     tanpa menyunting satu per satu komponen. Utility `tracking-wide`,
-     `tracking-[0.14em]` (label uppercase), dan `tracking-[0.45em]` (kode OTP)
-     TIDAK diubah: itu memang sengaja dilebarkan.
-
-     Sisa nilai arbitrary negatif sudah dibersihkan dari komponen app
-     (onboarding, checkout, wallet, login, dll. → `tracking-normal`). Yang masih
-     memakai tracking display sendiri hanya halaman landing
-     (`components/landing/lp/*`), yang mengikuti desain port Framer-nya. */
-  --tracking-tight: 0em;
-  --tracking-tighter: 0em;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   /* BREAKPOINT LANDING — dua nilai ini PERSIS batas media query export Framer
      (tablet 810–1199.98px, desktop ≥1200px). Dipakai lewat varian
      `landing-tab:` dan `landing:` di components/landing/lp/* supaya responsifnya
@@ -381,21 +364,20 @@
   }
 }
 
-/* ── RITME HURUF GLOBAL: JANGAN DIPEPETIN ────────────────────────────────────
-   Font sistem Apple (San Francisco) & Segoe UI sudah punya tracking optik
-   bawaan. Tiga hal yang dulu menempel di sini dan sekarang DIHAPUS karena
-   khusus Inter / membuat huruf terasa rapat:
-     • `font-optical-sizing: none` + `font-variation-settings: 'opsz' 32`
-       (kunci instance Inter Display — font sistem tidak punya sumbu itu), dan
-     • `letter-spacing: -0.011em` yang diwarisi SELURUH teks body/label.
-
-   Sisanya `normal`: teks kecil di SF Pro justru butuh tracking sedikit POSITIF,
-   jadi jarak antar karakter sekarang mengikuti metrik font perangkat. Utility
-   `tracking-*` di komponen tetap berlaku, dan token `tracking-tight`/`tighter`
-   sudah dipetakan ke 0 di `@theme` di atas. Ditaruh di luar `@layer` supaya
-   tidak kalah dari aturan layer lain. */
+/* ── KUNCI POTONGAN OPTIK: SELURUH TEKS = INTER DISPLAY ───────────────────────
+   Inter dari Google Fonts punya axis `opsz` 14–32 (default 14 = potongan
+   "text"). Sesuai arah desain, app ini hanya memakai potongan "Display":
+     • `font-optical-sizing: none` mematikan pemilihan otomatis per ukuran, dan
+     • `font-variation-settings: 'opsz' 32` memaku instance Display.
+   Keduanya diwariskan, jadi judul, body, input, chip, dan angka di seluruh app
+   memakai wajah huruf yang sama. `letter-spacing` tipis (-0.011em) membuat
+   ritmenya kompak; utility `tracking-*` di komponen tetap menang bila dipakai.
+   Ditaruh di luar `@layer` (seperti aturan kanvas di bawah) supaya tidak kalah
+   dari aturan layer lain. */
 html {
-  letter-spacing: normal;
+  font-optical-sizing: none;
+  font-variation-settings: 'opsz' 32;
+  letter-spacing: -0.011em;
 }
 
 /* ── KANVAS DOKUMEN: SELALU PUTIH — TERMASUK AREA "PULL-DOWN" ─────────────────

@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync, statSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
 /* ── PENJAGA KANVAS DOKUMEN (app/globals.css) ────────────────────────────────
@@ -93,43 +93,48 @@ describe('performa mobile — jeda animasi hias saat overlay terbuka', () => {
   })
 })
 
-/* ── TIPOGRAFI — FONT SISTEM APPLE (SAN FRANCISCO) ───────────────────────────
-   Permintaan produk: ganti font app ke font yang dipakai Apple. SF Pro tidak
-   boleh di-bundle sebagai webfont, jadi jalurnya FONT SISTEM: `-apple-system` +
-   `BlinkMacSystemFont` di depan stack (San Francisco di macOS/iOS, font sistem
-   native di platform lain).
+/* ── TIPOGRAFI — INTER DISPLAY YANG DIBUNDEL DI REPO ─────────────────────────
+   Font app ini WAJIB datang dari berkas di repo (`app/fonts/…woff2`) lewat
+   `next/font/local`, BUKAN `next/font/google`. Alasannya bukan selera: saat
+   koneksi ke fonts.googleapis.com gagal, Next hanya memberi PERINGATAN lalu
+   memakai fallback Arial ber-`size-adjust` (`@font-face "Inter Fallback"`) —
+   build tetap sukses, tapi seluruh teks app berubah wajah: hurufnya terasa
+   "asing" dan teks kecil tidak terbaca sejelas Inter. Itu persis keluhan yang
+   muncul setelah font sistem dipakai, jadi jalur rapuh ini dijaga di sini.
 
-   Penjaga ini mencegah perubahan yang tidak sengaja: webfont pihak ketiga
-   (`var(--font-inter)` / pin `opsz` khusus Inter) tidak boleh kembali tanpa
-   keputusan sadar, dan kedua slot font harus tetap menunjuk keluarga yang sama. */
-describe('tipografi — font sistem Apple', () => {
-  const sans = RULES.match(/--font-sans:\s*([^;]+);/)?.[1] ?? ''
-  const display = RULES.match(/--font-display:\s*([^;]+);/)?.[1] ?? ''
+   Yang juga dikunci: potongan "Display" (opsz 32) dan tracking Inter yang
+   membuat teks tetap kompak tanpa dipepetin. */
+describe('tipografi — Inter Display dari berkas lokal', () => {
+  const LAYOUT = readFileSync(new URL('./layout.tsx', import.meta.url), 'utf8')
+  const FONT_FILE = new URL('./fonts/inter-latin-variable.woff2', import.meta.url)
 
-  it('`--font-sans` & `--font-display` memakai stack -apple-system', () => {
+  it('layout memuat font lokal, bukan Google Fonts', () => {
+    expect(LAYOUT).toContain("from 'next/font/local'")
+    expect(LAYOUT).not.toContain("from 'next/font/google'")
+    expect(LAYOUT).toContain("src: './fonts/inter-latin-variable.woff2'")
+    expect(LAYOUT).toContain("variable: '--font-inter'")
+  })
+
+  it('berkas fontnya benar-benar ada di repo (bukan hasil unduhan saat build)', () => {
+    expect(existsSync(FONT_FILE)).toBe(true)
+    expect(statSync(FONT_FILE).size).toBeGreaterThan(20_000)
+  })
+
+  it('`--font-sans` & `--font-display` menunjuk `var(--font-inter)`', () => {
+    const sans = RULES.match(/--font-sans:\s*([^;]+);/)?.[1] ?? ''
+    const display = RULES.match(/--font-display:\s*([^;]+);/)?.[1] ?? ''
     for (const stack of [sans, display]) {
-      expect(stack).toContain('-apple-system')
-      expect(stack).toContain('BlinkMacSystemFont')
+      expect(stack).toContain('var(--font-inter)')
     }
   })
 
-  it('tidak ada lagi pin optik / variabel khusus Inter', () => {
-    expect(RULES).not.toContain('var(--font-inter)')
-    expect(RULES).not.toContain("font-variation-settings: 'opsz'")
-  })
-
-  /* Keluhan nyata setelah font diganti: "jarak antar karakter deket banget".
-     Penyebabnya dua tuning Inter yang masih tertinggal — `letter-spacing`
-     negatif global dan token `tracking-tight` -0.025em. Sekarang keduanya 0:
-     body mewarisi `normal`, dan seluruh pemakaian `tracking-tight`/`tighter`
-     ikut jadi 0 lewat token. */
-  it('huruf tidak dipepetin: letter-spacing global & token tracking = 0', () => {
+  it('potongan Display dikunci (opsz 32) dan tracking Inter tidak dinolkan', () => {
     const htmlRule = RULES.match(/html\s*\{[^}]*\}/)?.[0] ?? ''
-    expect(htmlRule).toContain('letter-spacing: normal')
-    expect(htmlRule).not.toMatch(/letter-spacing:\s*-/)
-
-    expect(RULES).toMatch(/--tracking-tight:\s*0em/)
-    expect(RULES).toMatch(/--tracking-tighter:\s*0em/)
+    expect(htmlRule).toContain("font-variation-settings: 'opsz' 32")
+    expect(htmlRule).toContain('letter-spacing: -0.011em')
+    /* `tracking-tight`/`tighter` TIDAK boleh dipetakan ke 0: itu yang membuat
+       judul & nominal terasa longgar, bukan seperti Inter Display. */
+    expect(RULES).not.toMatch(/--tracking-tight:\s*0em/)
+    expect(RULES).not.toMatch(/--tracking-tighter:\s*0em/)
   })
 })
-

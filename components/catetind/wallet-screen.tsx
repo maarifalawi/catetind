@@ -507,7 +507,7 @@ export function WalletScreen() {
             menyensor SELURUH halaman — hero, tile likuiditas, dan saldo kartu. */}
         <header className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <h1 className="font-display text-[30px] leading-[1.1] font-semibold tracking-normal text-forest sm:text-[34px] lg:text-4xl">
+            <h1 className="font-display text-[30px] leading-[1.1] font-semibold tracking-[-0.035em] text-forest sm:text-[34px] lg:text-4xl">
               Dompet &amp; Akun
             </h1>
           </div>
@@ -641,7 +641,7 @@ export function WalletScreen() {
                 <p className="text-[10px] font-medium tracking-[0.2em] text-forest-muted uppercase">
                   {WALLET_TOTAL_COPY.compositionEyebrow}
                 </p>
-                <h2 className="mt-1 font-display text-[22px] leading-tight font-semibold tracking-normal text-forest">
+                <h2 className="mt-1 font-display text-[22px] leading-tight font-semibold tracking-[-0.025em] text-forest">
                   Komposisi
                 </h2>
                 <p className="mt-1 text-[11.5px] leading-[1.5] text-forest-muted tabular-nums">
@@ -729,7 +729,7 @@ export function WalletScreen() {
             tepi layar. */}
         <section className="flex flex-col rounded-[1.9rem] bg-gradient-to-b from-cream via-cream to-sage/25 p-5 shadow-landing-soft ring-1 ring-soil/[0.06] sm:p-6 xl:col-span-4">
           <div className="flex items-start justify-between gap-3">
-            <h2 className="font-display text-[20px] leading-tight font-semibold tracking-normal text-forest">
+            <h2 className="font-display text-[20px] leading-tight font-semibold tracking-[-0.025em] text-forest">
               {WALLET_QUICK_ADD_COPY.title}
             </h2>
             <span className="shrink-0 rounded-full bg-mint-soft/70 px-2.5 py-1 text-[10px] font-medium text-forest ring-1 ring-forest/[0.06]">
@@ -817,7 +817,7 @@ export function WalletScreen() {
         {transfers.length > 0 && (
           <section className="mt-5 rounded-[1.9rem] bg-gradient-to-b from-cream via-cream to-sage/25 p-5 shadow-landing-soft ring-1 ring-soil/[0.06] sm:p-6 xl:mt-6">
             <div className="flex items-center justify-between gap-3">
-              <h2 className="font-display text-[20px] leading-tight font-semibold tracking-normal text-forest">
+              <h2 className="font-display text-[20px] leading-tight font-semibold tracking-[-0.025em] text-forest">
                 {WALLET_TRANSFER_LOG_COPY.title}
               </h2>
               <span className="rounded-full bg-mint-soft/70 px-2.5 py-1 text-[10px] font-semibold text-forest tabular-nums ring-1 ring-forest/[0.06]">
@@ -880,7 +880,7 @@ export function WalletScreen() {
         <section className="mt-6 xl:mt-7">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div className="flex min-w-0 items-center gap-2.5">
-              <h2 className="font-display text-[20px] leading-tight font-semibold tracking-normal text-forest">
+              <h2 className="font-display text-[20px] leading-tight font-semibold tracking-[-0.025em] text-forest">
                 Dompet &amp; Akun
               </h2>
               <span className="rounded-full bg-mint-soft/70 px-2.5 py-1 text-[10px] font-semibold text-forest tabular-nums ring-1 ring-forest/[0.06]">

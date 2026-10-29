@@ -578,10 +578,13 @@ export function WealthScreen() {
   /* ── RENDER ─────────────────────────────────────────────────────────────── */
   return (
     <ScreenShell>
-      {/* kolom konten: SENGAJA tanpa batas lebar & tanpa `mx-auto` — persis
-          Dashboard (sumber kebenaran layout). Konten memakai seluruh lebar kolom
-          dari `ScreenShell`, jadi tepi kiri-kanan kedua halaman lurus. */}
-      <div>
+      {/* kolom konten: SAMA PERSIS dengan Dashboard (sumber kebenaran layout) —
+          satu kolom `max-w-[1400px]` yang di-tengah-kan. Header halaman, kartu
+          onboarding, hero net worth, dan grid dua kartu semuanya duduk di kolom
+          ini, jadi tepi kiri-kanan setiap baris lurus. (Dulu header memakai
+          lebar penuh kolom `ScreenShell` sementara grid dibatasi 1400px —
+          akibatnya tepinya tidak segaris di layar lebar.) */}
+      <div className="mx-auto w-full max-w-[1400px]">
         {/* ── SECTION 2: header halaman + toggle privasi ───────────────────
             Judul memakai gaya yang SAMA dengan halaman lain (polos, tanpa kotak
             latar) supaya konsisten di seluruh app. */}
@@ -643,9 +646,10 @@ export function WealthScreen() {
         {/* ── SECTION 4: DUA KARTU KEMBAR — KEKAYAAN | HUTANG ───────────────
             Grid, lebar maksimum, gap, DAN gaya kartu disalin PERSIS dari
             Dashboard (`home-screen.tsx`) supaya tepi & ritme dua halaman
-            identik — `max-w-[1400px] · grid lg:grid-cols-12 · gap-5 lg:gap-6`
+            identik — `grid lg:grid-cols-12 · gap-5 lg:gap-6` di dalam kolom
+            `max-w-[1400px]` milik pembungkus di atas
             + `rounded-[2rem] bg-cream p-4 ring-1 ring-soil/12`. */}
-        <div className="mx-auto mt-5 grid w-full max-w-[1400px] grid-cols-1 gap-5 lg:mt-6 lg:grid-cols-12 lg:gap-6">
+        <div className="mt-5 grid w-full grid-cols-1 gap-5 lg:mt-6 lg:grid-cols-12 lg:gap-6">
           {/* ── KIRI · KEKAYAAN (aset) ─────────────────────────────────────── */}
           <section aria-label="Kekayaan" className="lg:col-span-6 lg:col-start-1 lg:row-start-1">
             <WealthPanel

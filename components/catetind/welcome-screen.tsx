@@ -98,7 +98,7 @@ export function WelcomeScreen() {
           <p className="text-[11px] font-medium tracking-[0.18em] text-cream/45 uppercase">
             {WELCOME_COPY.eyebrow}
           </p>
-          <h1 className="mt-4 font-display text-[2.6rem] leading-[1.04] font-semibold tracking-normal text-cream lg:text-[5rem]">
+          <h1 className="mt-4 font-display text-[2.6rem] leading-[1.04] font-semibold tracking-[-0.03em] text-cream lg:text-[5rem]">
             {WELCOME_COPY.headlineLines.map((line) => (
               <span key={line} className="block">
                 {line}
@@ -160,7 +160,7 @@ export function WelcomeScreen() {
             <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-daisy text-forest transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transition-none">
               <ArrowRight className="size-[18px]" strokeWidth={2.6} aria-hidden />
             </span>
-            <span className="flex-1 text-left text-[15.5px] font-medium tracking-normal text-cream">
+            <span className="flex-1 text-left text-[15.5px] font-medium tracking-[-0.01em] text-cream">
               {WELCOME_COPY.ctaPrimary}
             </span>
           </Link>

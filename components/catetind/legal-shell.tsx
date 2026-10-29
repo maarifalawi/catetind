@@ -67,7 +67,7 @@ export function LegalShell({
 
           <h1
             id="legal-title"
-            className="max-w-[860px] text-center font-display text-[38px] leading-[1.1] font-medium tracking-normal text-forest landing-tab:text-[52px] landing:text-[60px]"
+            className="max-w-[860px] text-center font-display text-[38px] leading-[1.1] font-medium tracking-[-0.03em] text-forest landing-tab:text-[52px] landing:text-[60px]"
           >
             {document.title}
           </h1>
@@ -230,7 +230,7 @@ function LegalSectionBlock({ section, index }: { section: LegalSection; index: n
         >
           {String(index + 1).padStart(2, '0')}
         </span>
-        <h2 className="font-display text-[20px] leading-[1.3] font-medium tracking-normal text-forest landing-tab:text-[24px]">
+        <h2 className="font-display text-[20px] leading-[1.3] font-medium tracking-[-0.02em] text-forest landing-tab:text-[24px]">
           {section.title}
         </h2>
       </div>

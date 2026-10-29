@@ -112,7 +112,7 @@ export function OnboardingStepIncome({
           placeholder="5.000.000"
           aria-label="Pemasukan bulanan (opsional)"
           className={cn(
-            'min-w-0 flex-1 bg-transparent text-center font-medium leading-none tracking-normal text-forest tabular-nums outline-none placeholder:text-forest/[0.14]',
+            'min-w-0 flex-1 bg-transparent text-center font-medium leading-none tracking-[-0.04em] text-forest tabular-nums outline-none placeholder:text-forest/[0.14]',
             incomeDisplay.length <= 7 ? 'text-[2.7rem]' : 'text-[2.15rem]',
           )}
         />
@@ -142,7 +142,7 @@ export function OnboardingStepIncome({
                 {BUDGET_SPLITS.map((split) => (
                   <div key={split.id}>
                     <div className="flex items-baseline justify-between gap-3">
-                      <span className="text-[13.5px] font-medium tracking-normal text-forest">
+                      <span className="text-[13.5px] font-medium tracking-[-0.01em] text-forest">
                         {split.label}{' '}
                         <span className="text-forest/35">
                           {Math.round(split.percent * 100)}%
@@ -211,7 +211,7 @@ export function OnboardingStepIncome({
                 </span>
                 <span
                   className={cn(
-                    'text-[12px] font-medium tracking-normal',
+                    'text-[12px] font-medium tracking-[-0.01em]',
                     active ? 'text-forest' : 'text-forest/50',
                   )}
                 >
@@ -242,7 +242,7 @@ export function OnboardingStepIncome({
               <div className={cn('mt-3 px-4 py-4 ring-1 ring-ink/[0.06]', ONBOARD_CARD)}>
                 <label
                   htmlFor="onboarding-wallet-balance"
-                  className="block text-[12.5px] font-medium tracking-normal text-forest/45"
+                  className="block text-[12.5px] font-medium tracking-[-0.01em] text-forest/45"
                 >
                   Saldo {walletName} sekarang
                 </label>
@@ -269,7 +269,7 @@ export function OnboardingStepIncome({
                     enterKeyHint="next"
                     placeholder="1.000.000"
                     aria-label={'Saldo ' + walletName + ' kamu sekarang berapa?'}
-                    className="min-w-0 flex-1 bg-transparent text-center text-[1.7rem] font-medium leading-none tracking-normal text-forest tabular-nums outline-none placeholder:text-forest/[0.14]"
+                    className="min-w-0 flex-1 bg-transparent text-center text-[1.7rem] font-medium leading-none tracking-[-0.03em] text-forest tabular-nums outline-none placeholder:text-forest/[0.14]"
                   />
                   <span aria-hidden className="w-7 shrink-0" />
                 </div>

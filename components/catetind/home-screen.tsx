@@ -161,7 +161,16 @@ export function HomeScreen() {
 
   return (
     <ScreenShell>
-      <div>
+      {/* ── KOLOM KONTEN BER-LEBAR SAMA (perbaikan simetri) ─────────────────────
+          SELURUH isi dashboard — notifikasi keadaan kosong, baris sapaan +
+          cluster aksi, dan bento grid — duduk di SATU kolom `max-w-[1400px]`
+          yang di-tengah-kan. Sebelumnya hanya grid yang dibatasi 1400px,
+          sementara baris sapaan & kartu "akun kosong" memakai lebar penuh kolom
+          `ScreenShell`, sehingga di layar lebar tepi kiri/kanan keduanya TIDAK
+          segaris dengan kartu di bawahnya (terlihat miring, bukan simetris).
+          Grid di dalamnya kini cukup `w-full` — batas lebarnya dipegang di sini
+          supaya satu angka mengatur semua baris. */}
+      <div className="mx-auto w-full max-w-[1400px]">
         {/* PAKET 75: header mobile MILIK DASHBOARD DIHAPUS. Dulu di sini ada
             `MobileStickyHeader` dengan logo + tombol mata + lonceng + hamburger +
             AVATAR. Sekarang semuanya disediakan SATU header mobile GLOBAL yang
@@ -186,7 +195,14 @@ export function HomeScreen() {
             komponennya untuk alasan mengapa satu kalimat ini wajib ada */}
         <LocalDataNotice />
         <EmptyAccountNotice />
-        <div className="mt-4 lg:mt-0 lg:flex lg:items-center lg:justify-between lg:gap-8">
+        {/* Jarak atas header: `mt-4` di MOBILE (isinya kosong di sana — sapaan &
+            cluster aksi `hidden` — jadi jarak sebenarnya dipegang grid), `lg:mt-6`
+            di DESKTOP supaya ritmenya sama dengan jarak antar-baris grid.
+            `items-center` + TIDAK ada elemen kosong di bawah h1: dulu ada div
+            meta ber-`lg:mt-3` yang tingginya 0 tapi tetap menambah margin 12px,
+            sehingga cluster aksi turun ~6px dari garis tengah sapaan — terlihat
+            "miring" di layar lebar. */}
+        <div className="mt-4 lg:mt-6 lg:flex lg:items-center lg:justify-between lg:gap-8">
           <div className="min-w-0">
             {/* sapaan khusus desktop — di mobile blok ini dihilangkan supaya user
                 langsung sampai ke kartu dompet. Baris tanggal panjang
@@ -194,27 +210,19 @@ export function HomeScreen() {
                 di layar ini ia tidak menambah keputusan apa pun. */}
             <h1 className="hidden font-display text-3xl font-semibold tracking-tight text-forest lg:block lg:text-4xl">
               {sapaan}
-              {greetingName ? `, ${greetingName}` : ''} 🌿
+              {greetingName ? `, ${greetingName}` : ''}
+              {/* Daun dirapatkan ke kata terakhir dengan NON-BREAKING SPACE: tanpa
+                  itu, di lebar 1024–1366px baris ini memecah tepat sebelum emoji
+                  dan menyisakan daun sendirian di baris kedua — terlihat seperti
+                  layout rusak. Dengan `\u00A0` yang pindah baris adalah kata
+                  terakhir saja ("…, Midtrans 🌿" tetap utuh). */}
+              {'\u00A0🌿'}
             </h1>
-            {/* meta ringkas sebagai chip — di DESKTOP saja (mobile punya baris
-                sendiri yang di-TENGAHKAN di bawah Context Switcher) */}
-            <div className="hidden flex-wrap items-center gap-2 lg:mt-3 lg:flex">
-              {/* chip "N dompet · N transaksi" dihapus di paket 70 (lihat catatan
-                  di header mobile di atas) — yang tersisa di cluster ini cuma
-                  kontrol yang benar-benar dipakai user desktop: konteks uang. */}
-              {/* ── KONTEKS UANG (audit 46) ────────────────────────────────────
-                  Dulu di sini chip BACAAN "Pribadi", lalu segmented control yang
-                  MEMOTONG label panjang. Sejak paket 65 kontrol konteks pindah ke
-                  cluster aksi — DI SAMPING kolom search — dalam bentuk menu
-                  dropdown label-penuh (`ContextMenu`). State-nya tetap
-                  `useMoneyContext()` yang sama. */}
-            </div>
-            {/* ── KONTEKS AKTIF (paket 44) ─────────────────────────────────────
-                DIHAPUS di paket 64. Baris sementara "Dompet Pribadi: Rp X · Total
-                Saldo = semua dompet" terlalu bertele-tele untuk header: chip di
-                bawah Context Switcher (mobile) & di cluster ini (desktop) sudah
-                memuat dua fakta yang benar-benar dibutuhkan, dan angka totalnya
-                sudah punya tempat sendiri di kartu dompet + panel Overview. */}
+            {/* Chip "N dompet · N transaksi" dihapus di paket 70, dan kontrol
+                KONTEKS UANG pindah ke cluster aksi sejak paket 65 (menu dropdown
+                label-penuh `ContextMenu`, di samping kolom search). Jadi tidak ada
+                lagi elemen meta di bawah judul — sengaja: elemen kosong di sini
+                merusak garis tengah baris header. */}
           </div>
           <div className="hidden items-center gap-3 lg:flex">
             {/* Pencarian transaksi (desktop). Dulu kolom mati: bisa diketik, tapi
@@ -254,15 +262,21 @@ export function HomeScreen() {
                 pengaturannya tetap terjangkau lewat CTA di dalam panel. */}
             <NotificationBell />
             <span className="relative size-11 shrink-0 overflow-hidden rounded-full ring-1 ring-soil/12">
-              /* avatar dekoratif — identitas user datang dari sesi, jadi nama contoh
-                tidak boleh diumumkan ke screen reader (perbaikan audit K4) */
+              {/* avatar dekoratif — identitas user datang dari sesi, jadi nama
+                  contoh tidak boleh diumumkan ke screen reader (perbaikan audit
+                  K4). Dulu kalimat ini ditulis sebagai ANAK ELEMEN tanpa kurung
+                  kurawal, sehingga ikut dirender (dan dibacakan screen reader)
+                  di dalam lingkaran avatar. */}
               <Image src="/placeholder-user.jpg" alt="" aria-hidden fill sizes="44px" className="object-cover" />
             </span>
           </div>
         </div>
-        {/* ── SUSUNAN BENTO GRID 12 KOLOM, DI-TENGAHKAN (paket 68) ────────────
-            Desktop memakai bento grid 12 kolom YANG DI-TENGAHKAN (`max-w-1400px`
-            + `mx-auto`) dengan baris terurut atas→bawah dan NOL ruang mati:
+        {/* ── SUSUNAN BENTO GRID 12 KOLOM (paket 68) ──────────────────────────
+            Desktop memakai bento grid 12 kolom dengan baris terurut atas→bawah
+            dan NOL ruang mati. Lebar maksimum (`max-w-[1400px]` + `mx-auto`)
+            DIPEGANG PEMBUNGKUS DI ATAS, bukan di sini: dengan begitu baris
+            sapaan/aksi, kartu notifikasi keadaan kosong, dan grid ini berbagi
+            tepi kiri-kanan yang sama. Baris:
               ROW 1 · Strip notifikasi/banner + rekap (12/12);
               ROW 2 · Dompet (6/12) + Arus Uang (6/12) — 50/50;
               ROW 3 · Transaksi Terakhir (12/12) — daftarnya multi-kolom;
@@ -281,7 +295,7 @@ export function HomeScreen() {
             grid (`order-2` di mobile, baris 1 di desktop), dan pemilih konteks
             turun ke dalam panel dompet. Desktop melihat susunan yang sama. */}
         <div className="flex flex-col">
-          <div className="mx-auto mt-5 grid w-full max-w-[1400px] grid-cols-1 gap-5 lg:mt-6 lg:grid-cols-12 lg:gap-6">
+          <div className="mt-5 grid w-full grid-cols-1 gap-5 lg:mt-6 lg:grid-cols-12 lg:gap-6">
             {/* ── BARIS 1 · STRIP NOTIFIKASI / CTA (+ rekap) ────────────────────
                 PAKET 87: strip ini DULU hidup DI LUAR & DI ATAS grid. Sekarang ia
                 jadi SEL GRID: di MOBILE `order-2` — tepat SETELAH kartu dompet,

@@ -10,7 +10,9 @@ import {
   HERO_DEVICE_SCREENSHOT,
   HERO_HUD,
   LANDING_DEFAULT_PERIOD,
+  LANDING_META,
   LANDING_SECTION_MARKERS,
+  LANDING_SOFTWARE_APP,
   LIVE_FEED_SEED,
   LIVE_FEED_VISIBLE,
   LP_CONTACT,
@@ -430,9 +432,11 @@ describe('LP_CONTACT — tiga field, WhatsApp utama + email fallback', () => {
 })
 
 describe('LP_HERO — satu janji, CTA jujur, tanpa bukti sosial karangan', () => {
-  it('headline menyapa yang males nyatet tanpa titik & tanpa latar highlight', () => {
+  it('headline memuat "catet keuangan", tanpa titik & tanpa latar highlight', () => {
     const headline = `${LP_HERO.headlineBefore}${LP_HERO.headlineEmphasis}${LP_HERO.headlineAfter}`
-    expect(headline).toBe('Aplikasi keuangan buat lo yang males nyatet')
+    expect(headline).toBe('Aplikasi catet keuangan buat lo yang males nyatet')
+    /* frasa kunci halaman utama — H1 satu-satunya di `/` */
+    expect(headline).toContain('catet keuangan')
     expect(headline.endsWith('.')).toBe(false)
     expect(LP_HERO.headlineEmphasis).toBe('males')
     expect(LP_HERO.subheadline).toBe(
@@ -729,5 +733,118 @@ describe('jam tayang notifikasi (WIB)', () => {
   it('wibMinutesOfDay membungkus tengah malam', () => {
     expect(wibMinutesOfDay(new Date('2026-10-18T17:00:00Z'))).toBe(0)
     expect(wibMinutesOfDay(new Date('2026-10-18T23:59:00Z'))).toBe(6 * 60 + 59)
+  })
+})
+
+/* ── SEO HALAMAN UTAMA ───────────────────────────────────────────────────────
+   Yang dikunci di sini adalah janji ke mesin pencari, bukan tampilan:
+     · judul & deskripsi landing (dibaca `app/layout.tsx` DAN `app/page.tsx`);
+     · canonical = `https://catetind.com`;
+     · kartu pratinjau 1200×630 yang berkasnya BENAR-BENAR ada;
+     · JSON-LD `SoftwareApplication` tanpa `aggregateRating` karangan, dengan
+       harga yang dibaca dari `PLANS`;
+     · empat fitur utama benar-benar jadi H2 (lewat data judul kartu).
+   ────────────────────────────────────────────────────────────────────────── */
+
+describe('LANDING_META — metadata halaman utama', () => {
+  it('judul & deskripsi persis seperti yang dipakai layout dan landing', () => {
+    expect(LANDING_META.title).toBe('CatetInd — Aplikasi Catet Keuangan 4 Detik, Tanpa Ribet')
+    expect(LANDING_META.description).toBe(
+      'Aplikasi keuangan buat lo yang males nyatet. Voice note atau foto struk, 4 detik beres. Biar tau duit ke mana dan gaji ga cuma numpang lewat.',
+    )
+    /* judul ideal ≤ 60 karakter, deskripsi ≤ 160 — batas tampil di hasil Google */
+    expect(LANDING_META.title.length).toBeLessThanOrEqual(60)
+    expect(LANDING_META.description.length).toBeLessThanOrEqual(160)
+  })
+
+  it('canonical, siteName, dan locale memakai domain kanon', () => {
+    expect(LANDING_META.ogUrl).toBe('https://catetind.com')
+    expect(LANDING_META.ogSiteName).toBe('CatetInd')
+    expect(LANDING_META.ogLocale).toBe('id_ID')
+    expect(LANDING_META.ogTitle).toBe(LANDING_META.title)
+    expect(LANDING_META.ogDescription).toBe(LANDING_META.description)
+  })
+
+  it('gambar pratinjau 1200×630 dan berkasnya ada', () => {
+    expect(LANDING_META.ogImage).toBe('/og-image.png')
+    expect(LANDING_META.ogImageWidth).toBe(1200)
+    expect(LANDING_META.ogImageHeight).toBe(630)
+
+    const file = path.join(process.cwd(), 'public', LANDING_META.ogImage.replace(/^\//, ''))
+    expect(fs.existsSync(file), `${LANDING_META.ogImage} tidak ada`).toBe(true)
+
+    /* baca IHDR PNG (byte 16-23) — memastikan rasio berkasnya benar, bukan
+       hanya nama berkasnya. Regenerasi: `npm run landing:og-image`. */
+    const png = fs.readFileSync(file)
+    expect(png.subarray(1, 4).toString('ascii')).toBe('PNG')
+    const width = png.readUInt32BE(16)
+    const height = png.readUInt32BE(20)
+    expect({ width, height }).toEqual({
+      width: LANDING_META.ogImageWidth,
+      height: LANDING_META.ogImageHeight,
+    })
+  })
+})
+
+describe('LANDING_SOFTWARE_APP — JSON-LD SoftwareApplication', () => {
+  it('identitas produk sesuai halaman', () => {
+    expect(LANDING_SOFTWARE_APP['@context']).toBe('https://schema.org')
+    expect(LANDING_SOFTWARE_APP['@type']).toBe('SoftwareApplication')
+    expect(LANDING_SOFTWARE_APP.name).toBe('CatetInd')
+    expect(LANDING_SOFTWARE_APP.url).toBe('https://catetind.com')
+    expect(LANDING_SOFTWARE_APP.inLanguage).toBe('id-ID')
+    expect(LANDING_SOFTWARE_APP.applicationCategory).toBe('FinanceApplication')
+    expect(LANDING_SOFTWARE_APP.operatingSystem).toBe('Web, iOS, Android (PWA)')
+  })
+
+  it('featureList memuat empat fitur utama yang juga jadi H2', () => {
+    const features = LANDING_SOFTWARE_APP.featureList
+    expect(features).toHaveLength(5)
+    for (const keyword of ['voice note', 'struk', 'jatah jajan harian', 'AI Coach']) {
+      expect(features.some((feature) => feature.toLowerCase().includes(keyword.toLowerCase()))).toBe(
+        true,
+      )
+    }
+    expect(features.some((feature) => /tanpa langganan/i.test(feature))).toBe(true)
+  })
+
+  it('harga offer DIBACA dari PLANS — bukan angka kedua', () => {
+    const offers = LANDING_SOFTWARE_APP.offers
+    const prices = PLANS.map((plan) => plan.lifetime)
+
+    expect(offers['@type']).toBe('AggregateOffer')
+    expect(offers.priceCurrency).toBe('IDR')
+    expect(offers.offerCount).toBe(PLANS.length)
+    expect(Number(offers.lowPrice)).toBe(Math.min(...prices))
+    expect(Number(offers.highPrice)).toBe(Math.max(...prices))
+    expect(offers.lowPrice).toBe('109000')
+    expect(offers.highPrice).toBe('299000')
+  })
+
+  it('tidak mengarang aggregateRating', () => {
+    expect('aggregateRating' in LANDING_SOFTWARE_APP).toBe(false)
+    expect(JSON.stringify(LANDING_SOFTWARE_APP)).not.toContain('aggregateRating')
+  })
+
+  it('screenshot menunjuk aset yang ada di public', () => {
+    expect(LANDING_SOFTWARE_APP.screenshot).toHaveLength(1)
+    const url = LANDING_SOFTWARE_APP.screenshot[0]
+    expect(url.startsWith('https://catetind.com/')).toBe(true)
+
+    const file = path.join(process.cwd(), 'public', url.replace('https://catetind.com/', ''))
+    expect(fs.existsSync(file), `${url} tidak ada`).toBe(true)
+  })
+})
+
+describe('LP_MISSION — judul tiap fitur memuat kata kuncinya', () => {
+  const titles = LP_MISSION.cards.map((card) => card.title.toLowerCase())
+
+  it.each([
+    ['voice note', 'voice note'],
+    ['scan struk', 'scan struk'],
+    ['jatah harian', 'jatah jajan harian'],
+    ['AI Coach', 'ai coach'],
+  ])('ada H2 fitur yang menyebut "%s"', (_label, keyword) => {
+    expect(titles.some((title) => title.includes(keyword))).toBe(true)
   })
 })

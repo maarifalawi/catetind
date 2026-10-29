@@ -9,6 +9,7 @@ import type { PlanId } from '@/lib/data/pricing'
 import { readCallerPlan } from '@/lib/subscription/plan'
 import { reconcileCallerPurchases } from '@/lib/subscription/reconcile'
 import { readSupabaseSession } from '@/lib/supabase/session-cookie'
+import { SITE_ORIGIN } from '@/lib/site'
 
 /**
  * Checkout (/checkout) — inventaris #3, halaman PUBLIK.
@@ -39,6 +40,13 @@ export const metadata: Metadata = {
   title: 'Pembayaran | CatetInd',
   description:
     'Pilih paket, isi email & nama panggilan, bayar lewat QRIS/e-wallet/Virtual Account, langsung masuk onboarding tanpa langkah verifikasi yang menghadang.',
+  /* ── `canonical` SENDIRI — WAJIB ──────────────────────────────────────────
+     `app/layout.tsx` memasang `alternates.canonical` = beranda, dan nilai itu
+     diwarisi semua rute yang tidak menimpanya. Tanpa baris ini `/checkout`
+     (halaman harga yang justru paling ingin diindeks) dianggap duplikat
+     beranda. Query `?plan=`/`?kode=` sengaja dibuang: semuanya varian halaman
+     yang sama, dan canonical menunjuk versi bersihnya. */
+  alternates: { canonical: `${SITE_ORIGIN}/checkout` },
 }
 
 export default async function CheckoutPage({

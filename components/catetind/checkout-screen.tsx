@@ -268,7 +268,7 @@ export function CheckoutScreen({
               </span>
               <span className="text-[14px] leading-[1.5] text-forest">{CHECKOUT_COPY.eyebrow}</span>
             </span>
-            <h1 className="font-display text-[36px] leading-[1.08] font-semibold tracking-normal text-forest landing-tab:text-[44px] landing:text-[52px]">
+            <h1 className="font-display text-[36px] leading-[1.08] font-semibold tracking-[-0.03em] text-forest landing-tab:text-[44px] landing:text-[52px]">
               {CHECKOUT_COPY.title}
             </h1>
           </header>
@@ -279,7 +279,7 @@ export function CheckoutScreen({
               {/* SATU periode: akses selamanya. Toggle bulanan/lifetime sudah
                   dihapus — paket 30 hari tidak dijual lagi. */}
               <div className="min-w-0">
-                <h2 className="font-display text-[22px] font-semibold tracking-normal text-forest">
+                <h2 className="font-display text-[22px] font-semibold tracking-[-0.02em] text-forest">
                   {CHECKOUT_COPY.planSectionTitle}
                 </h2>
                 <p className="mt-1 text-[12.5px] leading-[1.5] text-forest/50">
@@ -429,7 +429,7 @@ export function CheckoutScreen({
                         {formatIDR(listPrice)}
                       </span>
                     )}
-                    <span className="font-display text-[28px] leading-none font-semibold tracking-normal tabular-nums text-forest">
+                    <span className="font-display text-[28px] leading-none font-semibold tracking-[-0.03em] tabular-nums text-forest">
                       {formatIDR(total)}
                     </span>
                   </span>
@@ -552,13 +552,13 @@ function OfferOption({
 
           <span
             id={`checkout-plan-${plan.id}`}
-            className="mt-4 block font-display text-[22px] leading-[1.2] font-semibold tracking-normal landing:text-[24px]"
+            className="mt-4 block font-display text-[22px] leading-[1.2] font-semibold tracking-[-0.02em] landing:text-[24px]"
           >
             {plan.name}
           </span>
 
           <span className="mt-3 flex flex-wrap items-baseline gap-x-1.5">
-            <span className="font-display text-[32px] leading-[1.02] font-semibold tracking-normal whitespace-nowrap tabular-nums landing:text-[36px]">
+            <span className="font-display text-[32px] leading-[1.02] font-semibold tracking-[-0.045em] whitespace-nowrap tabular-nums landing:text-[36px]">
               {formatIDR(price)}
             </span>
             <span
@@ -641,7 +641,7 @@ function CheckoutCta({
         disabled={disabled}
         className="group flex h-14 w-full items-center justify-between gap-3 rounded-full bg-forest pr-2 pl-6 text-cream shadow-landing-cta transition-colors duration-200 hover:bg-forest-soft active:scale-[0.98] disabled:cursor-wait disabled:opacity-60 motion-reduce:transition-none"
       >
-        <span className="text-[15.5px] font-medium tracking-normal">{CHECKOUT_COPY.cta}</span>
+        <span className="text-[15.5px] font-medium tracking-[-0.01em]">{CHECKOUT_COPY.cta}</span>
         <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-cream text-forest transition-colors duration-200 group-hover:bg-mint">
           <ArrowRight className="size-[18px]" strokeWidth={2.4} aria-hidden />
         </span>

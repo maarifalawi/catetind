@@ -93,19 +93,86 @@ export type LandingSectionMarker =
   (typeof LANDING_SECTION_MARKERS)[keyof typeof LANDING_SECTION_MARKERS]
 
 /* ── SEO / META ─────────────────────────────────────────────────────────────
-   Dipakai `app/page.tsx` (metadata) supaya judul & deskripsi tidak ditulis dua
-   kali. `ogUrl` adalah domain kanon produk. */
+   SATU SUMBER judul & deskripsi untuk `app/layout.tsx` (metadata akar) DAN
+   `app/page.tsx` (landing). `ogUrl` adalah domain kanon produk.
+
+   Kenapa tidak ditulis terpisah di dua file: dulu judul hanya ada di masing
+   masing file, jadi teks yang sama hidup dua kali dan bisa melenceng. Sekarang
+   keduanya membaca konstanta ini, sehingga mustahil ada judul lama yang
+   tertinggal di salah satu tempat.
+
+   `ogImage` WAJIB tepat 1200×630 px (`public/og-image.png`) — rasio yang
+   dipakai WhatsApp/X/Facebook untuk kartu pratinjau besar. Berkasnya
+   DIGENERATE `scripts/landing/make-og-image.mjs` (kanvas Chromium, bukan
+   gambar tangan), jadi kalau skrip itu diubah, jalankan ulang skripnya. */
 
 /** rentang harga kanon dalam teks — dipakai copy landing supaya angkanya tidak ditulis tangan */
 const PRICE_RANGE_LABEL = `${formatIDR(PLANS[0].lifetime)}-${formatIDR(PLANS[PLANS.length - 1].lifetime)}`
+
+/** harga lifetime terendah & tertinggi — dipakai JSON-LD `AggregateOffer` */
+const LIFETIME_PRICES = PLANS.map((plan) => plan.lifetime)
+const LIFETIME_LOWEST = Math.min(...LIFETIME_PRICES)
+const LIFETIME_HIGHEST = Math.max(...LIFETIME_PRICES)
+
 export const LANDING_META = {
-  title: 'CatetInd | Catet Keuangan 4 Detik, Tanpa Ribet',
+  title: 'CatetInd — Aplikasi Catet Keuangan 4 Detik, Tanpa Ribet',
   description:
-    'Aplikasi keuangan buat lo yang males nyatet. Tinggal kirim voice note atau foto struk, 4 detik beres. Biar lo tau duit lari ke mana dan gaji ga cuma numpang lewat.',
-  ogTitle: 'CatetInd | Catet Keuangan 4 Detik, Tanpa Ribet',
+    'Aplikasi keuangan buat lo yang males nyatet. Voice note atau foto struk, 4 detik beres. Biar tau duit ke mana dan gaji ga cuma numpang lewat.',
+  ogTitle: 'CatetInd — Aplikasi Catet Keuangan 4 Detik, Tanpa Ribet',
   ogDescription:
-    'Aplikasi keuangan buat lo yang males nyatet. Tinggal kirim voice note atau foto struk, 4 detik beres. Biar lo tau duit lari ke mana dan gaji ga cuma numpang lewat.',
+    'Aplikasi keuangan buat lo yang males nyatet. Voice note atau foto struk, 4 detik beres. Biar tau duit ke mana dan gaji ga cuma numpang lewat.',
+  ogSiteName: 'CatetInd',
+  ogLocale: 'id_ID',
   ogUrl: SITE_ORIGIN,
+  ogImage: '/og-image.png',
+  ogImageWidth: 1200,
+  ogImageHeight: 630,
+  ogImageAlt: 'CatetInd, aplikasi catet keuangan: voice note atau foto struk, 4 detik beres',
+} as const
+
+/* ── STRUCTURED DATA (JSON-LD) — SoftwareApplication ─────────────────────────
+   Dipasang `app/page.tsx` sebagai `<script type="application/ld+json">` di
+   halaman `/` saja (bukan di layout) supaya tidak menumpang di setiap rute.
+
+   Keputusan yang disengaja:
+
+     1. TIDAK ADA `aggregateRating`. Skema mengizinkan properti itu HANYA kalau
+        ratingnya benar-benar dikumpulkan dari ulasan pengguna. Repo ini tidak
+        punya tabel ulasan, jadi mengarang bintang = kebohongan terstruktur yang
+        justru bisa kena manual action Google.
+     2. `offers` memakai `AggregateOffer` dan `lowPrice`/`highPrice` DIBACA dari
+        `PLANS` (bukan ditulis tangan). Kalau harga berubah di
+        `lib/data/pricing.ts`, markup ini ikut berubah — mustahil ada dua daftar
+        harga.
+     3. `screenshot` menunjuk aset yang BENAR-BENAR ada di repo
+        (`public/Dashboard.png`), bukan URL karangan.
+   ────────────────────────────────────────────────────────────────────────── */
+export const LANDING_SOFTWARE_APP = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: 'CatetInd',
+  url: SITE_ORIGIN,
+  inLanguage: 'id-ID',
+  applicationCategory: 'FinanceApplication',
+  operatingSystem: 'Web, iOS, Android (PWA)',
+  description:
+    'Aplikasi catet keuangan untuk Gen Z Indonesia. Catet pengeluaran 4 detik lewat voice note atau foto struk.',
+  featureList: [
+    'Catet pengeluaran 4 detik lewat voice note',
+    'Scan foto struk otomatis',
+    'Jatah jajan harian otomatis',
+    'Tanya AI Coach soal pengeluaran',
+    'Sekali bayar seumur hidup, tanpa langganan',
+  ],
+  screenshot: [`${SITE_ORIGIN}/Dashboard.png`],
+  offers: {
+    '@type': 'AggregateOffer',
+    lowPrice: String(LIFETIME_LOWEST),
+    highPrice: String(LIFETIME_HIGHEST),
+    priceCurrency: 'IDR',
+    offerCount: PLANS.length,
+    url: `${SITE_ORIGIN}/checkout`,
+  },
 } as const
 
 /* ── NAVBAR ─────────────────────────────────────────────────────────────────
@@ -1255,8 +1322,13 @@ export const LP_HERO = {
      nyatet. Kata "males" dipisah supaya komponen bisa menebalkan + memiringkan
      HANYA kata itu (jangkar visual), tanpa memecah kalimat jadi dua baris
      paksa. Tanpa titik di akhir — headline tampil sebagai frasa, bukan kalimat
-     berkala. */
-  headlineBefore: 'Aplikasi keuangan buat lo yang ',
+     berkala.
+
+     H1 WAJIB memuat frasa "catet keuangan" (SEO halaman utama): itulah satu
+     satunya H1 di `/`, dan frasa itu yang dicari orang ("aplikasi catet
+     keuangan"). Kalau headline diubah, jaga frasa tersebut tetap ada —
+     `lib/data/landing.test.ts` menguncinya. */
+  headlineBefore: 'Aplikasi catet keuangan buat lo yang ',
   headlineEmphasis: 'males',
   headlineAfter: ' nyatet',
   subheadline: 'Cuma butuh 4 detik. Tinggal kirim voice note atau foto struk',
@@ -1447,10 +1519,16 @@ export const LP_MISSION = {
     { icon: 'ai', title: 'Biar AI Mikir', detail: 'Lo terima beres' },
     { icon: 'aware', title: 'Sadar Sebelum Habis', detail: 'Keliatan semua bocornya' },
   ],
+  /* EMPAT FITUR UTAMA — tiap kartu dirender sebagai <h2> (lihat
+     `mission.tsx`), bukan <h3>. Satu H1 (hero) → empat H2 fitur + H2 mission
+     membuat struktur judul halaman terbaca mesin pencari: satu topik per
+     blok. Judulnya sengaja memuat nama fitur apa adanya ("voice note", "scan
+     struk", "jatah harian", "AI Coach") karena itulah kata yang dicari orang,
+     tanpa mengubah nada bicara brand. */
   cards: [
     {
       id: 'card-1',
-      title: 'Catet 4 detik, tanpa ngetik',
+      title: 'Catet 4 detik lewat voice note atau scan struk',
       body: 'Tinggal ngomong atau foto struk',
       annotation: 'Voice & scan',
       image: '/Dialog - Catat transaksi.png',
@@ -1460,7 +1538,7 @@ export const LP_MISSION = {
     },
     {
       id: 'card-2',
-      title: 'Tau batas jajan lo tiap pagi',
+      title: 'Tau jatah jajan harian lo tiap pagi',
       body: 'Otomatis ngitung jatah aman harian biar akhir bulan ga sekarat',
       annotation: 'HUD & radar',
       image: '/Section.png',
@@ -1470,7 +1548,7 @@ export const LP_MISSION = {
     },
     {
       id: 'card-3',
-      title: 'Tanya Minca sebelum checkout',
+      title: 'Tanya AI Coach sebelum checkout',
       body: 'Konsultasi jatah jajan real-time dari data asli lo, tanpa di-judge',
       annotation: 'AI Coach',
       image: '/Dialog - AI Coach CatetInd.png',

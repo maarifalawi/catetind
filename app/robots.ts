@@ -2,22 +2,31 @@ import type { MetadataRoute } from 'next'
 import { SITE_ORIGIN } from '@/lib/site'
 
 /**
- * robots.txt (PERBAIKAN AUDIT R3).
+ * robots.txt — ATURAN YANG BERLAKU SEKARANG.
  *
- * Dua keputusan yang disengaja:
+ *   · `allow: '/'`  → seluruh halaman boleh DIBACA crawler.
+ *   · `disallow: '/api/'` → satu-satunya yang ditutup. Endpoint JSON bukan
+ *     halaman: crawler hanya akan membuang kuota di sana (dan `/api/payment/*`
+ *     bahkan menolak GET). Tidak ada konten yang perlu diindeks di dalamnya.
  *
- *   1. Halaman APP dilarang diindeks. Gerbang sesi (`middleware.ts`) memaksa
- *      login untuk `/app`, `/wallet`, `/settings`, `/help`, `/install`, dst.,
- *      dan halaman seperti `/wallet` menampilkan data keuangan — isinya tidak
- *      boleh masuk hasil pencarian.
- *   2. `/r/`, `/join/`, dan `/share/` dilarang karena isinya PER-USER (kode
- *      referral & kode undangan satu kali pakai). Halaman `/join/[code]` dan
- *      `/share/[id]` memang sudah `noindex` di metadata-nya; daftar ini
- *      menyamakan keduanya supaya tidak ada dua jawaban berbeda.
+ * KENAPA HALAMAN YANG TIDAK BOLEH MUNCUL DI GOOGLE *TIDAK* DILARANG DI SINI:
+ * `robots.txt` mencegah crawler MEMBACA halaman — termasuk membaca tag
+ * `<meta name="robots" content="noindex">`. Halaman yang diblokir bisa tetap
+ * muncul di hasil pencarian sebagai URL tanpa deskripsi ("terindeks karena
+ * ditautkan") dan tag noindex-nya tidak akan pernah terlihat. Karena itu
+ * pengecualian dilakukan di tingkat HALAMAN, bukan di robots.txt:
  *
- * `/bantuan` SENGAJA tidak dilarang: ia halaman PUBLIK (tanpa sidebar app)
- * dan ada di `app/sitemap.ts`. `/help` (Pusat Bantuan di dalam app) justru
- * masuk daftar larangan di bawah karena butuh login.
+ *   • `/login`, `/login/verify`      → `robots: { index: false, follow: true }`
+ *   • `/registered`, `/palette`      → `robots: { index: false, follow: false }`
+ *   • `/checkout/bayar`, `/checkout/selesai`, `/share/[id]`, `/join/[code]`
+ *                                    → `noindex` di metadata masing-masing
+ *   • `/app`, `/wallet`, `/settings`, `/help`, … → halaman app. Middleware
+ *     (`middleware.ts`) menolak pemanggil anonim dengan 307 ke `/login`, jadi
+ *     isi data keuangan tidak pernah dirender untuk crawler; tidak ada HTML
+ *     berisi data pribadi yang bisa masuk indeks.
+ *
+ * Daftar halaman publik yang layak diindeks ada di `app/sitemap.ts`; tautan
+ * sitemap di bawah ini yang memberi tahu Google di mana membacanya.
  */
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -25,25 +34,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: '/',
-        disallow: [
-          '/app',
-          '/wallet',
-          '/history',
-          '/budget',
-          '/bills',
-          '/calendar',
-          '/wealth',
-          '/joint',
-          '/referral',
-          '/settings',
-          '/help',
-          '/install',
-          '/registered',
-          '/r/',
-          '/join/',
-          '/share/',
-          '/api/',
-        ],
+        disallow: ['/api/'],
       },
     ],
     sitemap: `${SITE_ORIGIN}/sitemap.xml`,

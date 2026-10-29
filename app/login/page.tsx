@@ -24,6 +24,15 @@ export const metadata: Metadata = {
   title: 'Masuk | CatetInd',
   description:
     'Masuk ke CatetInd dengan satu email: kami kirim kode 6 angka ke inboxmu, lalu kamu ketik kodenya di halaman ini. Tanpa password.',
+  /* ── `noindex, follow` — SENGAJA, DAN JANGAN DILARANG DI robots.txt ────────
+     Halaman masuk tidak punya nilai pencarian (judulnya sama untuk semua orang,
+     isinya formulir), jadi tidak boleh masuk indeks. TAPI ia HARUS tetap bisa
+     dirayapi: `robots.txt` (`app/robots.ts`) sekarang hanya menutup `/api/`,
+     karena halaman yang diblokir di robots.txt tidak akan pernah dibaca
+     tag noindex-nya — akibatnya URL-nya bisa tetap muncul di hasil pencarian
+     tanpa deskripsi. `follow: true` membiarkan Google mengikuti tautan keluar
+     (Pusat Bantuan, legal) dari halaman ini. */
+  robots: { index: false, follow: true },
 }
 
 export default async function LoginPage({

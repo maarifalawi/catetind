@@ -27,6 +27,11 @@ export const metadata: Metadata = {
   title: 'Cek Email | CatetInd',
   description:
     'Tautan masuk sudah dikirim ke emailmu. Buka inbox, klik tautannya, dan kamu langsung masuk, tanpa password.',
+  /* Langkah tengah alur masuk ("buka inbox-mu") — tidak ada yang perlu
+     diindeks, dan isinya berbeda per query (`?email=`, `?status=`). Sama
+     seperti `/login`: `noindex, follow`, dan TIDAK dilarang di robots.txt
+     supaya tag ini benar-benar terbaca crawler. */
+  robots: { index: false, follow: true },
 }
 
 /** query bisa datang sebagai string[] (`?email=a&email=b`) — ambil yang pertama */
