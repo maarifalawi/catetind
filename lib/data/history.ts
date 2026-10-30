@@ -1118,6 +1118,21 @@ export const TRANSACTION_INPUT_COPY = {
   transferDoorLabel: 'Pindah Dana',
   transferDoorHint:
     'Pindah uang antar dompet, dompet asal & tujuannya ditanyakan sekaligus di alurnya sendiri.',
+
+  /* ── HASIL AI DI FORM CATAT (paket 101) ──────────────────────────────────────
+     Sebelum paket ini, dua tombol AI di form Catat sebenarnya MOCK: hasilnya
+     selalu "Rp 87.500 / Struk <nama berkas>" dan "Beli kopi / Rp 25.000".
+     Sekarang hasilnya datang dari model, jadi form perlu kalimat yang menyebut
+     (a) apa yang baru saja dibaca AI, dan (b) apa yang harus user cek — termasuk
+     saat totalnya benar-benar tidak terbaca. Nominalnya sendiri tetap
+     dikonfirmasi lewat chip `amountConfirm` yang sudah ada. */
+  aiScanFilled: 'Struknya kebaca. Cek nominal & kategorinya sebelum simpan ya 🌿',
+  aiVoiceFilled: 'Ucapannya kebaca. Cek dulu sebelum simpan ya 🌿',
+  /** total tidak terbaca → form TIDAK diisi angka karangan; user yang mengisi */
+  aiScanAmountMissing:
+    'Struknya kebaca, tapi totalnya belum jelas. Isi nominalnya manual dulu ya 🌿',
+  aiVoiceAmountMissing:
+    'Aku belum nemu nominalnya di ucapanmu. Isi manual dulu ya, atau coba ngomong lagi 🌿',
 } as const
 
 /* ── OPSI FIELD DI MODE EDIT ─────────────────────────────────────────────────

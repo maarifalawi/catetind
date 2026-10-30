@@ -75,6 +75,15 @@ describe('dompet yang baru dibuat tidak mewarisi catatan siapa pun (59.3)', () =
     expect(walletTransactionsOf(snapshot, created.id)).toHaveLength(0)
     expect(incomingTransfersFor(snapshot, created.id)).toHaveLength(0)
   })
+
+  it('catatan contoh TIDAK PERNAH muncul di build produksi (DEMO_MODE mati)', () => {
+    /* di test `DEMO_MODE` mati (NODE_ENV=test, NEXT_PUBLIC_DEMO tidak diisi),
+       jadi seluruh id kanon harus kosong — termasuk `bca` yang dulu punya 9
+       baris contoh dan bisa menempel ke dompet user bernama sama. */
+    expect(walletTransactions('bca')).toHaveLength(0)
+    expect(walletTransactions('gopay')).toHaveLength(0)
+    expect(walletTransactions('tunai')).toHaveLength(0)
+  })
 })
 
 describe('identitas baris = id dompet, bukan nama (59.3)', () => {

@@ -241,7 +241,7 @@ export function WalletTypeMark({
     return (
       <span
         className={cn(
-          'flex size-9 shrink-0 items-center justify-center rounded-xl bg-cream/20 text-[13px] font-medium text-cream ring-1 ring-inset ring-cream/30',
+          'flex size-9 shrink-0 items-center justify-center rounded-xl bg-cream/20 text-[14px] font-medium text-cream ring-1 ring-inset ring-cream/30',
           className,
         )}
       >

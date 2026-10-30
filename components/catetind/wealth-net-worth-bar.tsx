@@ -137,7 +137,7 @@ export function WealthNetWorthBar({
       />
 
       <div className="relative">
-        <p className="text-[10.5px] font-medium uppercase tracking-[0.24em] text-mint/70">
+        <p className="text-[11.5px] font-medium uppercase tracking-[0.24em] text-mint/70">
           {NET_WORTH_COPY.label}
         </p>
         {/*
@@ -151,7 +151,7 @@ export function WealthNetWorthBar({
           {netLabel}
         </p>
         {showExact && (
-          <p className="mt-1.5 font-display text-[12px] font-medium tracking-tight text-cream/70 tabular-nums sm:text-[13.5px]">
+          <p className="mt-1.5 font-display text-[13px] font-medium tracking-tight text-cream/70 tabular-nums sm:text-[14.5px]">
             {netExact}
           </p>
         )}
@@ -192,21 +192,21 @@ export function WealthNetWorthBar({
             tetap utuh di layar sempit (tidak pernah dipotong "..."). */}
         <div className="mt-4 flex items-stretch gap-3 rounded-2xl bg-cream/[0.06] px-3.5 py-3 ring-1 ring-inset ring-cream/10">
           <div className="min-w-0 flex-1">
-            <p className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.16em] text-mint/70">
+            <p className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.16em] text-mint/70">
               <span aria-hidden className="size-1.5 rounded-full bg-mint" />
               {NET_WORTH_COPY.asset}
             </p>
-            <p className="mt-1 break-words font-display text-[12px] font-semibold leading-snug tabular-nums sm:text-[15px]">
+            <p className="mt-1 break-words font-display text-[13px] font-semibold leading-snug tabular-nums sm:text-[16px]">
               {assetLabel}
             </p>
           </div>
           <span aria-hidden className="w-px shrink-0 bg-cream/12" />
           <div className="min-w-0 flex-1 text-right">
-            <p className="flex items-center justify-end gap-1.5 text-[10px] font-medium uppercase tracking-[0.16em] text-hud-terracotta/80">
+            <p className="flex items-center justify-end gap-1.5 text-[11px] font-medium uppercase tracking-[0.16em] text-hud-terracotta/80">
               {NET_WORTH_COPY.debt}
               <span aria-hidden className="size-1.5 rounded-full bg-hud-terracotta" />
             </p>
-            <p className="mt-1 break-words font-display text-[12px] font-semibold leading-snug tabular-nums sm:text-[15px]">
+            <p className="mt-1 break-words font-display text-[13px] font-semibold leading-snug tabular-nums sm:text-[16px]">
               {debtLabel}
             </p>
           </div>
@@ -216,7 +216,7 @@ export function WealthNetWorthBar({
             terbaca seperti kartu rusak */}
         {spanEmpty && (
           /* cream/70 (bukan /50): teks 11 px di atas Evergreen harus lolos 4,5:1 */
-          <p className="mt-3 text-[11px] leading-relaxed text-cream/70">{NET_WORTH_COPY.empty}</p>
+          <p className="mt-3 text-[12px] leading-relaxed text-cream/70">{NET_WORTH_COPY.empty}</p>
         )}
       </div>
     </section>

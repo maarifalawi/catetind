@@ -2,7 +2,7 @@
 
 import { memo } from 'react'
 import Link from 'next/link'
-import { ArrowUpRight, Goal, Plus, Sprout } from 'lucide-react'
+import { ArrowUpRight, Goal, Plane, Plus, ShieldCheck, Smartphone, Sprout } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   budgetPlantHref,
@@ -108,7 +108,7 @@ function GrowthTrack({ pct, stage }: { pct: number; stage: PlantStage }) {
           <span
             key={s}
             className={cn(
-              'text-[9.5px] font-medium tabular-nums transition-colors',
+              'text-[10.5px] font-medium tabular-nums transition-colors',
               s === stage
                 ? 'font-medium text-forest'
                 : s < stage
@@ -126,9 +126,12 @@ function GrowthTrack({ pct, stage }: { pct: number; stage: PlantStage }) {
 
 /* ── KEPALA KARTU ────────────────────────────────────────────────────────────
    Dipisah jadi komponen sendiri karena dipakai kartu berisi DAN empty state.
-   Tombol `+` ada di dua-duanya, dan ia bukan jalan buntu: `/budget?tanam=1`
-   benar-benar membuka sheet "Tanam Celengan Baru". */
-function CardHeader() {
+   Tombol `+` di kepala kartu DISEMBUNYIKAN saat daftar masih kosong: di keadaan
+   itu tombol utama "Buat celengan" di dalam kartu melakukan hal yang persis
+   sama, jadi dua tombol dengan aksi identik cuma bikin bingung. Begitu ada satu
+   celengan, tombol `+` muncul lagi (ia bukan jalan buntu: `/budget?tanam=1`
+   benar-benar membuka sheet "Tanam Celengan Baru"). */
+function CardHeader({ showAdd }: { showAdd: boolean }) {
   return (
     <div className="flex items-center justify-between px-1 pt-1">
       <div className="flex items-center gap-2.5">
@@ -139,22 +142,37 @@ function CardHeader() {
           <p className="text-sm font-medium text-forest">{HOME_GOALS_COPY.title}</p>
         </div>
       </div>
-      <Link
-        href={budgetPlantHref()}
-        aria-label={HOME_GOALS_COPY.addLabel}
-        className="flex size-8 items-center justify-center rounded-full bg-cream text-forest ring-1 ring-soil/16 transition-colors hover:bg-sage focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25 active:scale-95"
-      >
-        <Plus className="size-4" strokeWidth={2.4} aria-hidden />
-      </Link>
+      {showAdd && (
+        <Link
+          href={budgetPlantHref()}
+          aria-label={HOME_GOALS_COPY.addLabel}
+          className="flex size-8 items-center justify-center rounded-full bg-cream text-forest ring-1 ring-soil/16 transition-colors hover:bg-sage focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25 active:scale-95"
+        >
+          <Plus className="size-4" strokeWidth={2.4} aria-hidden />
+        </Link>
+      )}
     </div>
   )
 }
 
+/** ikon Lucide per chip contoh celengan. Data (`HOME_GOALS_COPY.emptyPopular`)
+ *  hanya menyimpan `id` + label, jadi tidak ada emoji yang ikut ke data layer
+ *  dan tidak ada nama ikon sebagai string yang gampang salah ketik: pemetaannya
+ *  dijaga tipe (`id` chip wajib punya ikon di sini). */
+const GOAL_IDEA_ICON: Record<
+  (typeof HOME_GOALS_COPY.emptyPopular)[number]['id'],
+  typeof Smartphone
+> = {
+  gadget: Smartphone,
+  holiday: Plane,
+  emergency: ShieldCheck,
+}
+
 /* ── EMPTY STATE ─────────────────────────────────────────────────────────────
-   Mock hari ini selalu berisi 3 celengan, jadi cabang ini belum pernah tampil —
-   dan itu justru alasannya ditulis: begitu daftarnya datang dari Supabase, kartu
-   kosong tidak boleh jadi kotak tanpa kalimat. CTA-nya tautan nyata ke
-   `/budget?tanam=1`, bukan tombol mati. */
+   Struktur FINAL (tanpa paragraf, tanpa emoji, tanpa label contoh):
+     ikon → "Belum ada celengan" → 3 chip contoh → tombol "Buat celengan".
+   Chip tetap memprefill nama celengan lewat jalur yang SAMA dengan tombol utama
+   (`/budget?tanam=1` → sheet "Tanam Celengan Baru"), bukan tombol mati. */
 function EmptyGoals() {
   return (
     <div className="mt-4 rounded-2xl border border-dashed border-oat bg-cream/60 px-5 py-8 text-center">
@@ -167,29 +185,26 @@ function EmptyGoals() {
         <Sprout className="size-5" strokeWidth={2.2} />
       </span>
       <p className="mt-2 text-sm font-medium text-forest">{HOME_GOALS_COPY.emptyTitle}</p>
-      <p className="mx-auto mt-1.5 max-w-[19rem] text-[12.5px] leading-relaxed text-forest/55">
-        {HOME_GOALS_COPY.emptyBody}
-      </p>
-      {/* H2-3 — contoh celengan populer: placeholder yang BISA DITAP, bukan cuma
-          gambar kosong. Tiap chip membuka sheet "Tanam Celengan Baru". */}
-      <p className="mt-3.5 text-[11px] font-medium uppercase tracking-[0.1em] text-forest/40">
-        {HOME_GOALS_COPY.emptyPopularTitle}
-      </p>
-      <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
-        {HOME_GOALS_COPY.emptyPopular.map((example) => (
-          <Link
-            key={example.label}
-            href={budgetPlantHref()}
-            className="inline-flex items-center gap-1.5 rounded-full bg-sage/70 px-3 py-1.5 text-[12px] font-medium text-forest ring-1 ring-forest/10 transition-colors hover:bg-sage focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25 active:scale-95"
-          >
-            <span aria-hidden>{example.emoji}</span>
-            {example.label}
-          </Link>
-        ))}
+      {/* contoh celengan populer: placeholder yang BISA DITAP. Ikonnya Lucide,
+          dipilih dari `id` di data supaya tidak ada emoji di data/JSX. */}
+      <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+        {HOME_GOALS_COPY.emptyPopular.map((example) => {
+          const IdeaIcon = GOAL_IDEA_ICON[example.id]
+          return (
+            <Link
+              key={example.id}
+              href={budgetPlantHref()}
+              className="inline-flex items-center gap-1.5 rounded-full bg-sage/70 px-3 py-1.5 text-[13px] font-medium text-forest ring-1 ring-forest/10 transition-colors hover:bg-sage focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25 active:scale-95"
+            >
+              <IdeaIcon className="size-3.5" strokeWidth={2.4} aria-hidden />
+              {example.label}
+            </Link>
+          )
+        })}
       </div>
       <Link
         href={budgetPlantHref()}
-        className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-forest px-4 py-2.5 text-[12.5px] font-medium text-cream transition-colors hover:bg-forest-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/30 active:scale-95"
+        className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-forest px-4 py-2.5 text-[13.5px] font-medium text-cream transition-colors hover:bg-forest-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/30 active:scale-95"
       >
         <Plus className="size-3.5" strokeWidth={3} aria-hidden />
         {HOME_GOALS_COPY.emptyCta}
@@ -233,7 +248,7 @@ function HeroFund({ fund }: { fund: SinkingFundItem }) {
       <div className="relative mt-2 flex items-center gap-4">
         <PlantIllustration stage={stage} progress={pct} className="w-24 shrink-0 sm:w-28" />
         <div className="min-w-0 flex-1">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-cream/85 px-2.5 py-1 text-[11px] font-medium text-forest ring-1 ring-forest/10">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-cream/85 px-2.5 py-1 text-[12px] font-medium text-forest ring-1 ring-forest/10">
             <Sprout className="size-3" strokeWidth={2.4} aria-hidden />
             {HOME_GOALS_COPY.stageBadge(stage, STAGE_NAMES[stage])}
           </span>
@@ -242,7 +257,7 @@ function HeroFund({ fund }: { fund: SinkingFundItem }) {
               (permintaan pemilik produk) — badge tahap + batang tumbuh di bawah
               sudah mengatakan hal yang sama tanpa mengulanginya tiap kali. */}
           {stage === 4 && (
-            <p className="mt-2 text-[11.5px] leading-snug text-forest/55">
+            <p className="mt-2 text-[12.5px] leading-snug text-forest/55">
               {HOME_GOALS_COPY.heroBlurbBloom}
             </p>
           )}
@@ -257,7 +272,7 @@ function HeroFund({ fund }: { fund: SinkingFundItem }) {
           tombol mata & halaman detail selalu bercerita hal yang sama. */}
       <div className="relative mt-4 border-t border-soil/12 pt-3.5">
         <div className="flex items-center justify-between gap-3">
-          <p className="shrink-0 text-[11px] font-medium uppercase tracking-[0.12em] text-forest/40">
+          <p className="shrink-0 text-[12px] font-medium uppercase tracking-[0.12em] text-forest/40">
             {HOME_GOALS_COPY.savedLabel}
           </p>
           <p className="truncate text-base font-medium text-forest tabular-nums">
@@ -265,7 +280,7 @@ function HeroFund({ fund }: { fund: SinkingFundItem }) {
           </p>
         </div>
         <div className="mt-1.5 flex items-center justify-between gap-3">
-          <p className="shrink-0 text-[11px] font-medium uppercase tracking-[0.12em] text-forest/45">
+          <p className="shrink-0 text-[12px] font-medium uppercase tracking-[0.12em] text-forest/45">
             {HOME_GOALS_COPY.targetLabel}
           </p>
           <p className="truncate text-sm font-medium text-forest/55 tabular-nums">
@@ -301,10 +316,10 @@ function MiniGoalRow({ fund, tintIndex }: { fund: SinkingFundItem; tintIndex: nu
           >
             <Sprout className="size-3" strokeWidth={2.4} aria-hidden />
           </span>
-          <p className="truncate text-[13px] font-medium text-forest">{fund.name}</p>
+          <p className="truncate text-[14px] font-medium text-forest">{fund.name}</p>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
-          <span className="text-[10.5px] font-medium text-forest">{SHORT_STAGE[stage]}</span>
+          <span className="text-[11.5px] font-medium text-forest">{SHORT_STAGE[stage]}</span>
           <span className="text-xs font-medium text-forest/55 tabular-nums">{pct}%</span>
           {/* ArrowUpRight (bukan ChevronDown): ikon ini MENUJU halaman, bukan
               membuka baris — chevron ke bawah dulu menjanjikan expand yang
@@ -346,13 +361,13 @@ export const MyGoalsCard = memo(function MyGoalsCard() {
 
   return (
     <div className="flex h-full flex-col rounded-[2rem] bg-cream p-4 ring-1 ring-soil/12 sm:p-5">
-      <CardHeader />
+      <CardHeader showAdd={hero !== null} />
       {hero ? (
         <>
           <HeroFund fund={hero} />
           {rest.length > 0 && (
             <div className="mt-3">
-              <p className="px-1 text-[11px] font-medium uppercase tracking-[0.12em] text-forest/40">
+              <p className="px-1 text-[12px] font-medium uppercase tracking-[0.12em] text-forest/40">
                 {HOME_GOALS_COPY.restTitle(rest.length)}
               </p>
               {/* tiap celengan punya batang tumbuhnya sendiri (4 segmen), jadi

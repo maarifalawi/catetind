@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
   AI_BASE_TOKENS_TOTAL,
+  AI_GAUGE_BANNER_COPY,
+  AI_SEED_USAGE_CALLS,
   aiQuotaResetInfo,
+  aiQuotaSnapshot,
+  complementaryPct,
   daysUntil,
   indonesianDateLabel,
   monthKeyOf,
@@ -80,5 +84,41 @@ describe('planQuota() — kuota mengikuti PAKET', () => {
     for (const value of [null, undefined]) {
       expect(planQuota(value)).toEqual({ aiEnabled: false, unlimited: false, monthlyTokens: 0 })
     }
+  })
+})
+
+/* ── JUDUL BANNER KUOTA = ANGKA BAR YANG SAMA ────────────────────────────────
+   Banner Home menampilkan bar pemakaian DAN judul "Kuota AI tinggal N%".
+   `usedPercent()`/`remainingPercent()` dibulatkan terpisah sehingga bisa
+   berjumlah 101, jadi judulnya diturunkan dari angka bar (`complementaryPct`).
+   Test ini mengunci dua hal: judul memuat sisa persen yang melengkapi bar, dan
+   tidak ada lagi teks pemakaian yang mengulang angka bar. */
+
+describe('complementaryPct() + judul banner kuota AI', () => {
+  it('sisa persen = 100 dikurangi angka terpakai yang digambar bar', () => {
+    expect(complementaryPct(77)).toBe(23)
+    expect(complementaryPct(0)).toBe(100)
+    expect(complementaryPct(100)).toBe(0)
+    /* pembulatan desimal diikuti bar, bukan dibulatkan ulang sendiri-sendiri */
+    expect(complementaryPct(76.5)).toBe(23)
+    expect(complementaryPct(23.5)).toBe(76)
+  })
+
+  it('nilai rusak / di luar 0–100 dijepit, tidak pernah negatif', () => {
+    expect(complementaryPct(-5)).toBe(100)
+    expect(complementaryPct(140)).toBe(0)
+    expect(complementaryPct(Number.NaN)).toBe(100)
+  })
+
+  it('judul memakai angka sisa dari snapshot kuota NYATA', () => {
+    const quota = aiQuotaSnapshot(AI_SEED_USAGE_CALLS)
+    expect(quota.usedPct).toBe(77)
+    expect(complementaryPct(quota.usedPct)).toBe(23)
+    expect(AI_GAUGE_BANNER_COPY.title(complementaryPct(quota.usedPct))).toBe(
+      'Kuota AI tinggal 23%',
+    )
+    /* angka bar tetap dibaca pembaca layar, tapi tidak diulang jadi kalimat */
+    expect(AI_GAUGE_BANNER_COPY.usageBarLabel(quota.usedPct)).toBe('Kuota AI terpakai 77%')
+    expect(AI_GAUGE_BANNER_COPY).not.toHaveProperty('usage')
   })
 })

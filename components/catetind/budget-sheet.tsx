@@ -119,7 +119,7 @@ export function BudgetSheet({
                   {title}
                 </Drawer.Title>
                 {description ? (
-                  <Drawer.Description className="mt-1 text-[13px] leading-relaxed text-forest/55">
+                  <Drawer.Description className="mt-1 text-[14px] leading-relaxed text-forest/55">
                     {description}
                   </Drawer.Description>
                 ) : (
@@ -263,7 +263,7 @@ export function RupiahField({
 
   return (
     <label className={cn('block', className)}>
-      {label && <span className="text-[13px] font-medium leading-snug text-forest">{label}</span>}
+      {label && <span className="text-[14px] font-medium leading-snug text-forest">{label}</span>}
       <span
         className={cn(
           'mt-2 flex items-center gap-2 rounded-2xl bg-cream px-4 ring-1 ring-soil/16 transition-shadow focus-within:ring-2 focus-within:ring-forest/35',
@@ -285,12 +285,12 @@ export function RupiahField({
           className={cn(
             'min-w-0 flex-1 bg-transparent text-forest outline-none placeholder:font-medium placeholder:text-forest/25',
             AMOUNT_INPUT_FIELD,
-            size === 'lg' ? 'text-xl' : 'text-[15px]',
+            size === 'lg' ? 'text-xl' : 'text-[16px]',
           )}
         />
       </span>
       {hint && (
-        <span className="mt-1.5 block text-[11px] leading-relaxed text-forest/45">{hint}</span>
+        <span className="mt-1.5 block text-[12px] leading-relaxed text-forest/45">{hint}</span>
       )}
     </label>
   )
@@ -326,7 +326,7 @@ export function ChoicePills<T extends string>({
             aria-checked={active}
             onClick={() => onChange(option.id)}
             className={cn(
-              'rounded-full px-3.5 py-2 text-[12.5px] font-medium transition-all duration-200 active:scale-95',
+              'rounded-full px-3.5 py-2 text-[13.5px] font-medium transition-all duration-200 active:scale-95',
               active
                 ? 'bg-forest text-mint shadow-[0_10px_22px_-14px_rgba(0,0,0,0.75)]'
                 : 'bg-cream text-forest ring-1 ring-soil/14 hover:bg-cream hover:text-forest',
@@ -401,7 +401,7 @@ export function DateField({
 
   return (
     <div className={cn('block', className)}>
-      {label && <span className="text-[13px] font-medium leading-snug text-forest">{label}</span>}
+      {label && <span className="text-[14px] font-medium leading-snug text-forest">{label}</span>}
       {/* INPUT native sebagai lapisan tap penuh (paling andal di iOS/Android);
           pill visual `pointer-events-none` supaya tidak pernah menghalangi tap.
           Urutan DOM: input dulu → `peer-focus-visible` bisa menyalakan ring fokus. */}
@@ -429,7 +429,7 @@ export function DateField({
           </span>
           <span
             className={cn(
-              'flex-1 text-[14px] font-medium tabular-nums',
+              'flex-1 text-[15px] font-medium tabular-nums',
               value ? 'text-forest' : 'text-forest/25',
             )}
           >

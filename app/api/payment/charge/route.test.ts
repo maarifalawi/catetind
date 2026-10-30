@@ -2,9 +2,17 @@ import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vite
 import { NextRequest, NextResponse } from 'next/server'
 
 vi.mock('@/lib/session', () => ({ requireUser: vi.fn() }))
+/* `isPaymentMethodActive` di-mock `true` supaya test di bawah menguji MEKANIKA
+   tagihan (nominal, urutan tulis DB, idempotensi) — bukan status aktivasi
+   merchant, yang diuji terpisah di `lib/payments/methods.test.ts` dan di satu
+   kasus khusus di bawah. */
+vi.mock('@/lib/payments/methods', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/payments/methods')>()
+  return { ...actual, isPaymentMethodActive: vi.fn(() => true) }
+})
 vi.mock('@/lib/payments/midtrans', () => ({
   midtransConfigured: vi.fn(),
-  createCoreCharge: vi.fn(),
+  createSnapCharge: vi.fn(),
   fetchTransactionStatus: vi.fn(),
   cancelTransaction: vi.fn(),
 }))
@@ -15,11 +23,12 @@ import { POST } from './route'
 import { requireUser } from '@/lib/session'
 import {
   cancelTransaction,
-  createCoreCharge,
+  createSnapCharge,
   fetchTransactionStatus,
   midtransConfigured,
 } from '@/lib/payments/midtrans'
 import { restFetch, restRpc } from '@/lib/supabase/rest'
+import { isPaymentMethodActive } from '@/lib/payments/methods'
 import { readCallerPlan } from '@/lib/subscription/plan'
 import { HERO_PLAN, PLANS, applyReferralDiscount } from '@/lib/data/pricing'
 import { AI_ADDON_PACKAGES } from '@/lib/ai-quota'
@@ -34,11 +43,13 @@ import { AI_ADDON_PACKAGES } from '@/lib/ai-quota'
 
 const guard = requireUser as unknown as Mock
 const configured = midtransConfigured as unknown as Mock
-const charge = createCoreCharge as unknown as Mock
+const charge = createSnapCharge as unknown as Mock
 const status = fetchTransactionStatus as unknown as Mock
 const cancel = cancelTransaction as unknown as Mock
 const rest = restFetch as unknown as Mock
 const rpc = restRpc as unknown as Mock
+/** status aktivasi kanal di merchant produksi (default di-mock aktif) */
+const activeMethod = isPaymentMethodActive as unknown as Mock
 
 const USER = { id: 'a1b2c3d4-aaaa-bbbb-cccc-dddddddddddd', email: 'a@b.c', name: 'Rina' }
 
@@ -103,6 +114,9 @@ function insertCalls(): unknown[][] {
 beforeEach(() => {
   guard.mockReturnValue({ ok: true, user: USER, token: 't' })
   configured.mockReturnValue(true)
+  /* default test: kanal dianggap sudah aktif di merchant produksi; kasus
+     "belum aktif" diuji eksplisit di bawah. */
+  activeMethod.mockReturnValue(true)
   /* default: user BELUM punya paket — kondisi pembelian pertama */
   owned(null, false)
   charge.mockResolvedValue({
@@ -110,12 +124,9 @@ beforeEach(() => {
     value: {
       state: 'pending',
       method: 'qris',
-      transactionStatus: 'pending',
-      fraudStatus: null,
-      transactionId: 'tx-1',
-      amount: HERO_PLAN.lifetime,
+      token: 'snap-token-1',
+      redirectUrl: 'https://app.sandbox.midtrans.com/snap/v1/transactions/snap-token-1',
       expiresAt: '2026-10-10T21:15:45.000Z',
-      instructions: { channel: 'qris', qrImageUrl: 'https://qr/contoh', qrString: '00020101' },
     },
   })
   status.mockResolvedValue({ ok: false, reason: 'not-found', status: 404, message: 'belum ada' })
@@ -177,15 +188,32 @@ describe('POST /api/payment/charge', () => {
     expect(charge).not.toHaveBeenCalled()
   })
 
-  it('menulis baris pending ATAS NAMA user, lalu menagih provider dengan instruksi server', async () => {
+  /* Audit pra-rilis 30 Okt 2026: seluruh kanal produksi membalas
+     `402 Payment channel is not activated`. Route menolak lebih awal supaya
+     tidak ada baris `purchases` pending yang lahir untuk tagihan yang mustahil
+     dibayar. */
+  it('metode yang belum aktif di merchant produksi → 503 tanpa menulis DB & tanpa memanggil provider', async () => {
+    activeMethod.mockReturnValue(false)
+    const res = await POST(request(OFFER))
+    expect(res.status).toBe(503)
+    const body = (await res.json()) as { ok: boolean; reason: string }
+    expect(body.ok).toBe(false)
+    expect(body.reason).toBe('method-inactive')
+    expect(insertCalls()).toHaveLength(0)
+    expect(charge).not.toHaveBeenCalled()
+  })
+
+  it('menulis baris pending ATAS NAMA user, lalu membuat token Snap', async () => {
     const res = await POST(request({ ...OFFER, itemName: 'CatetInd Waras — Tahunan' }, 'http://localhost:3000'))
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.ok).toBe(true)
     expect(body.orderId).toMatch(/^subscribe-a1b2c3d4-/)
     expect(body.method).toBe('qris')
-    expect(body.state).toBe('pending')
-    expect(body.instructions).toMatchObject({ channel: 'qris' })
+    /* Snap: yang dikembalikan adalah halaman pembayaran, bukan instruksi QR. */
+    expect(body.redirectUrl).toContain('/snap/v1/transactions/')
+    expect(body.token).toBe('snap-token-1')
+    expect(body.instructions).toBeNull()
 
     expect(insertCalls()).toHaveLength(1)
     const [path, options] = insertCalls()[0] as [
@@ -474,7 +502,7 @@ describe('POST /api/payment/charge', () => {
     expect(charge).not.toHaveBeenCalled()
   })
 
-  it('pakai ulang order pending yang cocok: tanpa insert & tanpa tagih ulang', async () => {
+  it('pakai ulang order pending yang cocok: TOKEN SNAP BARU, tanpa insert & tanpa tagihan kedua', async () => {
     rest.mockImplementation(async (_path: string, options: { method?: string }) =>
       options?.method === 'POST'
         ? { ok: true, status: 201, data: null }
@@ -487,9 +515,11 @@ describe('POST /api/payment/charge', () => {
     expect(res.status).toBe(200)
     expect(body.orderId).toBe('subscribe-a1b2c3d4-1')
     expect(body.reused).toBe(true)
-    expect(body.instructions).toMatchObject({ channel: 'qris' })
+    expect(body.redirectUrl).toContain('/snap/v1/transactions/')
     expect(insertCalls()).toHaveLength(0)
-    expect(charge).not.toHaveBeenCalled()
+    /* Snap: `order_id` yang sama boleh di-token ulang (diuji 201 di produksi),
+       jadi user mendapat halaman pembayaran baru tanpa baris purchases kedua. */
+    expect(charge).toHaveBeenCalledTimes(1)
     expect(cancel).not.toHaveBeenCalled()
   })
 
@@ -515,7 +545,7 @@ describe('POST /api/payment/charge', () => {
     expect(cancel).not.toHaveBeenCalled()
   })
 
-  it('instruksi tidak bisa dirender ulang (GoPay) → order lama dibatalkan lalu dibuat baru', async () => {
+  it('metode lain pada order yang masih pending → token Snap baru untuk order yang SAMA', async () => {
     rest.mockImplementation(async (_path: string, options: { method?: string }) =>
       options?.method === 'POST'
         ? { ok: true, status: 201, data: null }
@@ -529,10 +559,13 @@ describe('POST /api/payment/charge', () => {
     const res = await POST(request({ ...OFFER, method: 'gopay' }))
     const body = await res.json()
     expect(res.status).toBe(200)
-    expect(cancel).toHaveBeenCalledWith('subscribe-a1b2c3d4-1')
-    expect(insertCalls()).toHaveLength(1)
+    /* Snap tidak perlu membatalkan order lama: token baru dibuat untuk order
+       yang sama, jadi webhook tetap mengenali satu baris `purchases`. */
+    expect(cancel).not.toHaveBeenCalled()
+    expect(insertCalls()).toHaveLength(0)
     expect(charge).toHaveBeenCalledTimes(1)
-    expect(body.orderId).not.toBe('subscribe-a1b2c3d4-1')
+    expect(body.orderId).toBe('subscribe-a1b2c3d4-1')
+    expect(body.method).toBe('gopay')
   })
 
   it('pending harga PENUH tidak dipakai ulang untuk pembelian diskon → dibatalkan', async () => {

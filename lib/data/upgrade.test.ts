@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { formatIDR, PLANS } from './pricing'
 import {
   capabilityUpgradeOffer,
+  expiredBannerCopy,
   nextTier,
   upgradeAmount,
   upgradeBannerCopy,
@@ -76,17 +77,30 @@ describe('upgradeBannerCopy()', () => {
     expect(copy?.cta).toBe('Pilih paket')
   })
 
-  it('lifetime lebih rendah → menyebut paket berikutnya + selisihnya', () => {
+  it('lifetime lebih rendah → judul paket berikutnya + baris kedua berisi selisih', () => {
     const copy = upgradeBannerCopy('catet-aja', formatIDR, true)
-    expect(copy?.title).toContain('Paket Waras')
-    expect(copy?.body).toContain(formatIDR(20_000))
+    expect(copy?.title).toBe('Buka Semua Fitur Paket Waras')
+    /* judul & keterangan adalah DUA blok terpisah, bukan satu kalimat inline */
+    expect(copy?.title).not.toContain(formatIDR(20_000))
     expect(copy?.body).toContain('AI Coach')
+    expect(copy?.body).toContain(formatIDR(20_000))
+    /* sudah lifetime → nominalnya SELISIH, jadi "cukup tambah" itu benar */
+    expect(copy?.body).toContain('Cukup tambah')
     expect(copy?.body).not.toContain('{')
   })
 
-  it('dari monthly → menyebut harga lifetime penuh', () => {
+  it('tidak ada eyebrow di varian upgrade (dan di varian lain)', () => {
+    const upgrade = upgradeBannerCopy('catet-aja', formatIDR, true)
+    expect(upgrade).not.toBeNull()
+    expect(Object.keys(upgrade ?? {})).not.toContain('eyebrow')
+    expect(upgradeBannerCopy(null, formatIDR)).not.toHaveProperty('eyebrow')
+  })
+
+  it('dari paket 30 hari lama → yang ditulis HARGA PENUH, bukan "cukup tambah"', () => {
     const copy = upgradeBannerCopy('catet-aja', formatIDR, false)
     expect(copy?.body).toContain(formatIDR(129_000))
+    expect(copy?.body).toContain('Harga akses selamanya')
+    expect(copy?.body).not.toContain('Cukup tambah')
   })
 
   it('di tier tertinggi → tidak ada yang ditampilkan', () => {
@@ -95,8 +109,26 @@ describe('upgradeBannerCopy()', () => {
 
   it('memakai format nominal dari pemanggil (satu gaya di seluruh app)', () => {
     const copy = upgradeBannerCopy('waras', (value) => `Rp${value}`, true)
+    expect(copy?.title).toBe('Buka Semua Fitur Paket Sultan')
     expect(copy?.body).toContain('Rp170000')
+    expect(copy?.body).toContain('AI tanpa batas')
     expect(copy?.body).not.toContain('{')
+  })
+})
+
+describe('expiredBannerCopy()', () => {
+  it('tidak menggandakan kata "Paket" dari nama paket', () => {
+    const copy = expiredBannerCopy('Paket Waras')
+    expect(copy.title).toBe('Paket Waras sudah berakhir, lanjut ke Lifetime')
+    expect(copy.title).not.toContain('Paket Paket')
+  })
+
+  it('nama kosong tidak pernah tampil sebagai "undefined"', () => {
+    expect(expiredBannerCopy('').title).toBe('Paket kamu sudah berakhir, lanjut ke Lifetime')
+  })
+
+  it('tidak punya eyebrow (judul + body saja)', () => {
+    expect(expiredBannerCopy('Paket Waras')).not.toHaveProperty('eyebrow')
   })
 })
 

@@ -32,6 +32,7 @@ interface MidtransNotification {
   gross_amount?: unknown
   signature_key?: unknown
   transaction_status?: unknown
+  fraud_status?: unknown
   payment_type?: unknown
   transaction_id?: unknown
 }
@@ -112,7 +113,13 @@ export async function POST(req: NextRequest) {
 
   const orderId = String(body.order_id ?? '')
   const status = String(body.transaction_status ?? '')
+  const fraudStatus = typeof body.fraud_status === 'string' ? body.fraud_status : null
 
+  /* Tanda tangan produksi & sandbox memakai rumus yang SAMA
+     (sha512(order_id + status_code + gross_amount + serverKey)); yang berbeda
+     hanya kunci yang dibaca dari `MIDTRANS_SERVER_KEY`. Jadi begitu kunci ke
+     kunci Production, verifikasi di bawah otomatis memeriksa notifikasi
+     Production — tidak ada jalur kedua yang perlu diaktifkan. */
   const verified = verifyMidtransSignature({
     orderId,
     statusCode: String(body.status_code ?? ''),
@@ -133,6 +140,24 @@ export async function POST(req: NextRequest) {
   }
 
   const amount = Math.round(Number(body.gross_amount))
+
+  /* ── CAPTURE YANG BELUM LOLOS TINJAUAN FRAUD BUKAN PEMBAYARAN SAH ──────────
+     Kartu mengirim `transaction_status: 'capture'` dengan `fraud_status`
+     `accept` / `challenge` / `deny`. Hanya `accept` yang boleh mengaktifkan
+     paket — sama dengan `paymentStateFromTransaction()` di
+     `lib/payments/midtrans.ts`. Notifikasi `challenge`/`deny` TIDAK menyentuh
+     baris `purchases` sama sekali: balas 200 supaya Midtrans tidak me-retry
+     tanpa henti, lalu tunggu notifikasi berikutnya saat hasil tinjauan keluar. */
+  if (status === 'capture' && fraudStatus !== 'accept') {
+    return NextResponse.json({
+      ok: true,
+      handled: false,
+      orderId,
+      status,
+      fraudStatus,
+      note: 'Capture belum lolos tinjauan fraud, pembelian tidak dipenuhi.',
+    })
+  }
 
   /* ── Verifikasi NOMINAL (paket 85) — sebelum memenuhi apa pun ──
      Bandingkan `gross_amount` notifikasi dengan nominal yang SEHARUSNYA ditagih

@@ -57,7 +57,7 @@ komentar arah produksi di titik integrasi).
 | 4 | **Privacy Policy** | `/privacy` | `/privacy` | ✅ | Dokumen = data (`lib/legal/privacy.ts`) + `legal-shell`. |
 | 5 | **Terms of Service** | `/terms` | `/terms` | ✅ | `lib/legal/terms.ts`. |
 | 6 | **Cara Install PWA** | `/install` | `/install` | ✅ | `install-guide-screen.tsx` (+ QR & ilustrasi). |
-| 7 | **Joint Wallet Invite Landing** | `/join/[code]` | `/join/[code]` | ✅ | `join-invite-screen.tsx` + `lib/invite-store.ts`. |
+| 7 | **Joint Wallet Invite Landing** | `/join/[code]` | `/join/[code]` | ✅ | `join-invite-screen.tsx` + `lib/supabase/invite-server.ts`. Status undangan dibaca dari RPC `catetind_resolve_invite` di SERVER (bukan localStorage pengundang), tombol membawa `?next=/join/<kode>?terima=1` sehingga keanggotaan ditulis otomatis setelah masuk (PRD 917), dan `catetind_accept_invite` membedakan `joined` / `member` / `creator` (pratinjau pemilik tidak membakar kode). |
 | 8 | **Login (Magic Link)** | `/login` | `/login` | ✅ | Kode 6 angka + tautan `/login/verify`, `public-navbar`. |
 | 9 | **Cek Email / Callback** | `/login/verify` | `/login/verify` | ✅ | Baca `?email`,`?status`,… di server → `verify-email-screen`. |
 | 10 | **Onboarding (3 step)** | `/app/onboarding` | `/app/onboarding` | ✅ | `onboarding-flow.tsx` (situasi → pemasukan/dompet → transaksi pertama). |
@@ -81,7 +81,7 @@ komentar arah produksi di titik integrasi).
 | 28 | **Joint Wallet** | `/app/joint` | `/joint` 🧩 | ✅ | `joint-screen.tsx` (timbangan, split, privat, invite). |
 | 29 | **Wealth & Debt Tracking** | `/app/wealth` | `/wealth` 🧩 | ⚠️ | Tab 1 Investasi ✅ & Tab 3 Hutang ✅; **Tab 2 Properti = teaser** (PRD A12, lihat §10). |
 | 30 | **Panduan / Help Center** | `/app/help` | `/help` 🧩 | ✅ | `help-center-screen.tsx` + Screenshot Policy. |
-| 31 | **Referral Dashboard** | `/app/referral` | `/referral` 🧩 | ⚠️ | UI + `POST /api/referral/validate` ada. Diskon 10% kini **hanya sah bila kode terverifikasi server** (`/api/payment/charge`), relasi menulis `referred_user_id`, dan reward **diberikan otomatis dari webhook** (idempoten per `order_id`). Data kode/riwayat di halaman ini masih contoh dan ditandai "Contoh". |
+| 31 | **Referral Dashboard** | `/app/referral` | `/referral` 🧩 | ✅ | UI + `POST /api/referral/validate` + `GET /api/referral/me`. Diskon 10% **hanya sah bila kode terverifikasi server** (`/api/payment/charge`); reward **diberikan otomatis dari webhook** (idempoten per `order_id`). Seluruh angka di halaman ini (`kode`, `klik`, `mendaftar`, `sudah beli`, total reward, riwayat teman) datang dari RPC `catetind_referral_overview()` yang dibatasi `auth.uid()`. Konstanta contoh `RINA-X7K`/`Budi Santoso` sudah dihapus, dan klik link dicatat ke `referral_clicks` (tanpa IP, hanya hash user agent). |
 | 32 | **404 / Not Found** | catch-all | `app/not-found.tsx` | ✅ | `not-found-screen.tsx`, status HTTP 404. |
 
 **Rekap Tabel A:** ✅ 26 · ⚠️ 5 (#3, #16, #18, #29, #31) · ❌ 1 (#1).
@@ -171,7 +171,7 @@ Route ini **nyata ada di repo** tetapi **tidak** termasuk 32 kanon inventaris
 | 3 | Offline Transaction Retry | ✅ | Optimistic + retry queue + FAILED_PERMANENT. |
 | 4 | Data Export ("Export Data Saya") | ✅ | `/settings/data` + `lib/money/export.ts` (unduh JSON nyata). |
 | 5 | Share Report (Privacy-Safe) | ⚠️ | Kartu + pratinjau ada; **generate image** (slide 1/2/4) → IG Story belum. |
-| 6 | Two-Sided Referral | ✅ | `/referral` + `POST /api/referral/validate`; diskon 10% divalidasi ke DB di `/api/payment/charge` (kode palsu/self-referral ditolak), `purchases.referral_code` menyimpan bukti, `referred_user_id` diisi (RPC + trigger), reward otomatis dari webhook. Data dashboard `/referral` masih contoh. |
+| 6 | Two-Sided Referral | ✅ | `/referral` + `POST /api/referral/validate`; diskon 10% divalidasi ke DB di `/api/payment/charge` (kode palsu/self-referral ditolak), `purchases.referral_code` menyimpan bukti, `referred_user_id` diisi (RPC + trigger), reward otomatis dari webhook. Dashboard `/referral` kini membaca data NYATA lewat `GET /api/referral/me` (RPC `catetind_referral_overview()`): kode sendiri, klik link (`referral_clicks`), teman menunggu/beli, total reward cair. Konstanta contohnya sudah dihapus dari repo. |
 | 7 | Waitlist Referral Loop | ❌ | Bergantung halaman waitlist (#1) yang di-skip. |
 | 8 | Upgrade Paket (dulu Renewal Manual) | ✅ | Paket 84: posisi perpanjang diganti **upgrade**. `UpgradeModal` + `SubscriptionBanner` menampilkan SELISIH dari `priceFor()`, CTA ke `/checkout/bayar?plan=…`. Pembayaran nyata via Core API (paket 83). |
 
@@ -277,9 +277,13 @@ Diurutkan dari yang paling "belum" ke yang paling "sebagian".
   oleh WEBHOOK** pembayaran ke PENGUNDANG (Token AI = kuota dasar bulanan; idempoten per
   `order_id` lewat `referral_rewards.order_id`). `POST /api/referral/reward` menolak
   panggilan klien (409, webhook-only).
-- **Apa yang hilang:** kode & riwayat di halaman `/referral` masih MOCK — kini ditandai
-  "Contoh" (`REFERRAL_IS_SAMPLE`) supaya tidak terbaca sebagai data user; pembacaan nyata
-  dari tabel `referrals` belum.
+- **Apa yang hilang (SUDAH DITUTUP):** dulu kode & riwayat di `/referral` MOCK dan hanya
+  ditandai "Contoh" (`REFERRAL_IS_SAMPLE`). Sekarang halaman itu membaca data nyata:
+  `GET /api/referral/me` → RPC `catetind_referral_overview()` (kode sendiri, jumlah klik,
+  teman menunggu/beli, total reward cair, daftar teman), dan setiap kunjungan
+  `/r/<kode>` mencatat satu baris `referral_clicks`. Konstanta `referralState` /
+  `REFERRAL_HISTORY` / `REFERRAL_IS_SAMPLE` sudah DIHAPUS dari repo, dan migrasi
+  `20261029120000` memutar kode contoh `RINA-X7K` keluar dari database bila ada.
 
 ### 9.8 ⚠️ UI modul baca dari Supabase
 - **Apa yang ada:** skema + RLS + RPC di `supabase/migrations/*`.

@@ -119,10 +119,10 @@ export function BillTimeline({
             <CalendarDays className="size-[18px]" strokeWidth={2.2} aria-hidden />
           </span>
           <div className="min-w-0">
-            <h2 className="font-display text-[15px] font-semibold tracking-tight text-forest">
+            <h2 className="font-display text-[16px] font-semibold tracking-tight text-forest">
               Tagihan {TIMELINE_DAYS} hari ke depan
             </h2>
-            <p className="mt-0.5 text-[11.5px] font-medium leading-snug tabular-nums text-forest-muted">
+            <p className="mt-0.5 text-[12.5px] font-medium leading-snug tabular-nums text-forest-muted">
               {shortDateLabel(days[0].iso)} – {shortDateLabel(days[days.length - 1].iso)}
             </p>
           </div>
@@ -136,7 +136,7 @@ export function BillTimeline({
             <span
               key={weekday}
               className={cn(
-                'pb-1 text-center text-[10px] font-medium uppercase tracking-[0.08em]',
+                'pb-1 text-center text-[11px] font-medium uppercase tracking-[0.08em]',
                 index >= 5 ? 'text-forest/25' : 'text-forest/35',
               )}
             >
@@ -177,7 +177,7 @@ export function BillTimeline({
                         setOpenDay(open ? null : day.iso)
                       }}
                       className={cn(
-                        'relative flex aspect-square w-full items-center justify-center rounded-[10px] text-[11.5px] font-semibold tabular-nums ring-1 ring-inset ring-soil/8 transition-[background-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40 motion-reduce:transition-none motion-reduce:hover:translate-y-0 sm:min-h-[56px] sm:text-[12.5px]',
+                        'relative flex aspect-square w-full items-center justify-center rounded-[10px] text-[12.5px] font-semibold tabular-nums ring-1 ring-inset ring-soil/8 transition-[background-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40 motion-reduce:transition-none motion-reduce:hover:translate-y-0 sm:min-h-[56px] sm:text-[13.5px]',
                         hasBills
                           ? hasOverdue
                             ? 'bg-plum/[0.09] text-forest'
@@ -233,10 +233,10 @@ export function BillTimeline({
                                 }}
                                 className="flex w-full items-center justify-between gap-3 rounded-lg px-1 py-0.5 text-left transition-colors hover:bg-cream/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream/40"
                               >
-                                <span className="min-w-0 max-w-[7.5rem] truncate text-[11px] font-medium leading-tight">
+                                <span className="min-w-0 max-w-[7.5rem] truncate text-[12px] font-medium leading-tight">
                                   {bill.name}
                                 </span>
-                                <span className="shrink-0 text-[11px] font-semibold leading-tight tabular-nums">
+                                <span className="shrink-0 text-[12px] font-semibold leading-tight tabular-nums">
                                   {bill.amount > 0 ? maskMoney(bill.amount, masked) : 'Fleksibel'}
                                 </span>
                               </button>

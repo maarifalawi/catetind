@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
     const result = await generateJSON<CategorizeRaw>({
       system: CATEGORIZE_SYSTEM_PROMPT,
       turns: [{ role: 'user', text: `Catatan: "${name}"${Number.isFinite(amount) ? ` (Rp${amount})` : ''}` }],
-      maxOutputTokens: 80,
+      maxOutputTokens: 300,
     })
     const category = result.ok && typeof result.value.category === 'string' ? result.value.category.trim() : ''
     if ((TRANSACTION_CATEGORY_OPTIONS as readonly string[]).includes(category)) {

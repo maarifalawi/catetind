@@ -85,8 +85,8 @@ export function HudRing({
       <span
         className={
           tone === 'dark'
-            ? 'absolute inset-0 flex items-center justify-center text-[15px] font-semibold text-cream tabular-nums'
-            : 'absolute inset-0 flex items-center justify-center text-[15px] font-semibold text-forest tabular-nums'
+            ? 'absolute inset-0 flex items-center justify-center text-[16px] font-semibold text-cream tabular-nums'
+            : 'absolute inset-0 flex items-center justify-center text-[16px] font-semibold text-forest tabular-nums'
         }
       >
         {percentLabel}

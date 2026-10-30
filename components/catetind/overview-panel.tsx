@@ -131,7 +131,7 @@ export function OverviewPanel({
                 ("Pantau pemasukan, pengeluaran, & wawasan keuanganmu") DIHAPUS
                 (paket 82): panel ini sudah menjelaskan dirinya lewat angka, dan
                 baris itu cuma menambah tinggi header tanpa menambah pengertian. */}
-            <span className="mt-2.5 inline-flex max-w-full items-center gap-1.5 rounded-full bg-sage/70 px-2.5 py-1 text-[11px] font-medium text-forest ring-1 ring-forest/10">
+            <span className="mt-2.5 inline-flex max-w-full items-center gap-1.5 rounded-full bg-sage/70 px-2.5 py-1 text-[12px] font-medium text-forest ring-1 ring-forest/10">
               <Wallet className="size-3.5 shrink-0" strokeWidth={2.2} aria-hidden />
               <span className="truncate">
                 {selection?.type === 'wallet'
@@ -141,7 +141,7 @@ export function OverviewPanel({
             </span>
             {/* konteks dompet (jenis · nomor) — hanya saat kartu dompet yang dipencet */}
             {selection?.type === 'wallet' && (
-              <p className="mt-1.5 truncate text-[11px] text-forest/45">{ring.subtitle}</p>
+              <p className="mt-1.5 truncate text-[12px] text-forest/45">{ring.subtitle}</p>
             )}
           </div>
           <button

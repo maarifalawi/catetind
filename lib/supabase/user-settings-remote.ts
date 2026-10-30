@@ -20,6 +20,10 @@ export interface RemoteUserSettings {
   onboarding: unknown | null
   monthlyTargets: unknown | null
   privacy: Record<string, unknown>
+  /** konfigurasi uang (pemasukan, cicilan, gajian, periode, konteks) + updatedAt */
+  money: unknown | null
+  /** limit budget per kategori + updatedAt */
+  budgets: unknown | null
 }
 
 export async function readUserSettings(): Promise<RemoteUserSettings | null> {
@@ -28,7 +32,7 @@ export async function readUserSettings(): Promise<RemoteUserSettings | null> {
   try {
     const { data, error } = await client
       .from('user_settings')
-      .select('masked,onboarding,monthly_targets,privacy')
+      .select('masked,onboarding,monthly_targets,privacy,money,budgets')
       .maybeSingle()
     if (error || !data) return null
     return {
@@ -36,6 +40,8 @@ export async function readUserSettings(): Promise<RemoteUserSettings | null> {
       onboarding: data.onboarding ?? null,
       monthlyTargets: data.monthly_targets ?? null,
       privacy: (data.privacy ?? {}) as Record<string, unknown>,
+      money: data.money ?? null,
+      budgets: data.budgets ?? null,
     }
   } catch {
     return null
@@ -60,6 +66,8 @@ export async function patchUserSettings(patch: Partial<RemoteUserSettings>): Pro
     if (patch.onboarding !== undefined) row.onboarding = patch.onboarding
     if (patch.monthlyTargets !== undefined) row.monthly_targets = patch.monthlyTargets
     if (patch.privacy !== undefined) row.privacy = patch.privacy
+    if (patch.money !== undefined) row.money = patch.money
+    if (patch.budgets !== undefined) row.budgets = patch.budgets
 
     const { error } = await client.from('user_settings').upsert(row, { onConflict: 'user_id' })
     return !error

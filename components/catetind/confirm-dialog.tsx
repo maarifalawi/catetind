@@ -93,22 +93,22 @@ export function ConfirmDialog({
         </span>
         <h2
           id={titleId}
-          className="mt-3 font-display text-[16px] font-medium tracking-tight text-forest"
+          className="mt-3 font-display text-[17px] font-medium tracking-tight text-forest"
         >
           {title}
         </h2>
         {body && (
-          <p className="mt-1.5 text-[12.5px] leading-relaxed text-forest/55">{body}</p>
+          <p className="mt-1.5 text-[13.5px] leading-relaxed text-forest/55">{body}</p>
         )}
 
         {note && (
-          <p className="mt-3 rounded-2xl bg-soil/[0.1] px-3.5 py-2.5 text-[11.5px] leading-relaxed text-forest/60">
+          <p className="mt-3 rounded-2xl bg-soil/[0.1] px-3.5 py-2.5 text-[12.5px] leading-relaxed text-forest/60">
             {note}
           </p>
         )}
 
         {safety && (
-          <p className="mt-3 flex items-start gap-2 rounded-2xl bg-sage/50 px-3.5 py-2.5 text-[11.5px] leading-relaxed text-forest">
+          <p className="mt-3 flex items-start gap-2 rounded-2xl bg-sage/50 px-3.5 py-2.5 text-[12.5px] leading-relaxed text-forest">
             <RotateCcw className="mt-0.5 size-3.5 shrink-0" strokeWidth={2.4} aria-hidden />
             {safety}
           </p>
@@ -119,14 +119,14 @@ export function ConfirmDialog({
             type="button"
             autoFocus
             onClick={onCancel}
-            className="h-11 rounded-2xl bg-cream text-[13.5px] font-medium text-forest ring-1 ring-soil/12 transition-colors hover:bg-sage/60 active:scale-[0.98]"
+            className="h-11 rounded-2xl bg-cream text-[14.5px] font-medium text-forest ring-1 ring-soil/12 transition-colors hover:bg-sage/60 active:scale-[0.98]"
           >
             {cancelLabel}
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-plum text-[13.5px] font-medium text-cream transition-colors hover:bg-plum active:scale-[0.98]"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-plum text-[14.5px] font-medium text-cream transition-colors hover:bg-plum active:scale-[0.98]"
           >
             <Trash2 className="size-4" strokeWidth={2.3} aria-hidden />
             {confirmLabel}

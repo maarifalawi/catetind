@@ -21,10 +21,16 @@ import { buildLoginHref } from '@/lib/data/auth'
 import { buildCheckoutHref, buildPayHref } from '@/lib/data/pricing'
 import { fetchSessionUser } from '@/lib/session-client'
 
-/* MULAI PEMBAYARAN (/checkout/bayar, paket 83) - DI DALAM APP ------------------
-   Pilih metode lalu tekan "Bayar sekarang": `/api/payment/charge` membuat tagihan
-   Core API, dan halaman INI menampilkan QRIS / nomor VA / tautan e-wallet / kode
-   Mandiri Bill. Tidak ada redirect ke domain Midtrans.
+/* MULAI PEMBAYARAN (/checkout/bayar, paket 83 · SNAP sejak 30 Okt 2026) --------
+   Pilih metode lalu tekan "Bayar sekarang": `/api/payment/charge` membuat token
+   Midtrans Snap, dan halaman ini menampilkan SATU aksi utama menuju
+   `redirect_url` (halaman pembayaran Midtrans, sudah terpilih pada metode yang
+   user pilih). Setelah selesai, Snap mengembalikan user ke
+   `/checkout/selesai?order_id=…` lewat `callbacks.finish`.
+
+   Kenapa bukan Core API lagi: di merchant self-onboarded `M130180776`, Core
+   `/v2/charge` membalas `402 Payment channel is not activated` untuk semua
+   kanal, sementara Snap membalas `201` untuk kanal yang aktif di dashboard.
 
    Tata letak: ponsel satu kolom (judul → ringkasan → cara bayar); desktop dua
    kolom dengan ringkasan pembelian sticky di kiri dan area cara bayar di kanan.
@@ -48,6 +54,10 @@ interface ChargeResponse {
   state?: 'pending' | 'settled' | 'expired' | 'failed' | 'unknown'
   expiresAt?: string | null
   instructions?: ActiveInvoice['instructions']
+  /** halaman pembayaran Midtrans (Snap) — aksi utama kartu pembayaran */
+  redirectUrl?: string | null
+  /** token Snap (cadangan untuk `snap.js`) */
+  token?: string | null
   note?: string
   error?: string
 }
@@ -76,7 +86,7 @@ export function PaymentStartScreen({
   /** kode yang BENAR-BENAR ada di database - bukan sekadar bentuknya wajar */
   const [verifiedCode, setVerifiedCode] = useState<string | null>(null)
   /** metode yang sedang dipilih user (dari katalog `lib/payments/methods.ts`) */
-  const [method, setMethod] = useState<PaymentMethodId>('qris')
+  const [method, setMethod] = useState<PaymentMethodId | null>(PAY_METHODS[0]?.id ?? null)
   const [paying, setPaying] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
@@ -148,7 +158,9 @@ export function PaymentStartScreen({
 
 
   const handlePay = useCallback(async () => {
-    if (paying) return
+    /* Tanpa kanal aktif tidak ada yang bisa ditagih — tombolnya juga tidak
+       dirender, jadi cabang ini hanya jaring aman. */
+    if (paying || !method) return
     setPaying(true)
     setError(null)
     setNotice(null)
@@ -191,6 +203,10 @@ export function PaymentStartScreen({
         amount: data.amount ?? total,
         expiresAt: data.expiresAt ?? null,
         instructions: data.instructions ?? null,
+        /* Snap: kartu menampilkan satu aksi utama menuju halaman pembayaran
+           Midtrans; statusnya tetap di-poll dari server oleh kartu itu. */
+        redirectUrl: data.redirectUrl ?? null,
+        token: data.token ?? null,
       })
     } catch {
       setError(PAY_START_COPY.notConfigured)
@@ -201,7 +217,7 @@ export function PaymentStartScreen({
   /* ringkasan pembelian - kolom KIRI di desktop (sticky), di atas cara bayar di ponsel */
   const summary = (
     <section className="rounded-[24px] bg-cream p-5 shadow-landing-hairline ring-1 ring-soil/12 landing:p-6">
-      <p className="text-[11px] font-medium tracking-[0.16em] text-forest/40 uppercase">
+      <p className="text-[12px] font-medium tracking-[0.16em] text-forest/40 uppercase">
         {PAY_START_COPY.planLabel}
       </p>
 
@@ -210,15 +226,15 @@ export function PaymentStartScreen({
           <BadgeCheck className="size-4" strokeWidth={2.2} aria-hidden />
         </span>
         <div className="min-w-0">
-          <p className="text-[14px] font-medium text-forest">{plan.name}</p>
-          <p className="mt-0.5 text-[12px] leading-relaxed text-forest/50">
+          <p className="text-[15px] font-medium text-forest">{plan.name}</p>
+          <p className="mt-0.5 text-[13px] leading-relaxed text-forest/50">
             {plan.subtitle} - {PERIOD_LABEL.lifetime}
           </p>
         </div>
       </div>
 
       {discount > 0 && (
-        <dl className="mt-4 space-y-2 border-t border-soil/12 pt-4 text-[12.5px]">
+        <dl className="mt-4 space-y-2 border-t border-soil/12 pt-4 text-[13.5px]">
           <div className="flex items-center justify-between gap-3">
             <dt className="flex items-center gap-1.5 text-forest/50">
               <Tag className="size-3.5" strokeWidth={2.4} aria-hidden />
@@ -230,7 +246,7 @@ export function PaymentStartScreen({
       )}
 
       <div className="mt-4 flex items-baseline justify-between gap-3 rounded-2xl bg-canvas px-4 py-3 ring-1 ring-soil/10">
-        <span className="text-[12.5px] font-medium text-forest/60">
+        <span className="text-[13.5px] font-medium text-forest/60">
           {PAY_START_COPY.totalLabel}
         </span>
         <span className="font-display text-[24px] leading-none font-semibold tracking-[-0.02em] tabular-nums text-forest">
@@ -238,7 +254,7 @@ export function PaymentStartScreen({
         </span>
       </div>
 
-      <p className="mt-3 text-[11.5px] leading-relaxed text-forest/50">{premiumBadge}</p>
+      <p className="mt-3 text-[12.5px] leading-relaxed text-forest/50">{premiumBadge}</p>
     </section>
   )
 
@@ -252,12 +268,12 @@ export function PaymentStartScreen({
               <span className="flex size-6 items-center justify-center rounded-full bg-sage">
                 <ShieldCheck className="size-3.5 text-forest" aria-hidden />
               </span>
-              <span className="text-[14px] leading-[1.5] text-forest">{PAY_START_COPY.eyebrow}</span>
+              <span className="text-[15px] leading-[1.5] text-forest">{PAY_START_COPY.eyebrow}</span>
             </span>
 
             <Link
               href={buildCheckoutHref(plan.id, 'lifetime', referralCode)}
-              className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-cream px-3.5 text-[12.5px] font-medium text-forest ring-1 ring-soil/15 transition-colors duration-200 hover:bg-sage/60 motion-reduce:transition-none landing-tab:h-11 landing-tab:px-4 landing-tab:text-[13px]"
+              className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-cream px-3.5 text-[13.5px] font-medium text-forest ring-1 ring-soil/15 transition-colors duration-200 hover:bg-sage/60 motion-reduce:transition-none landing-tab:h-11 landing-tab:px-4 landing-tab:text-[14px]"
             >
               <ArrowLeft className="size-3.5" strokeWidth={2.4} aria-hidden />
               {PAY_START_COPY.backLabel}
@@ -268,7 +284,7 @@ export function PaymentStartScreen({
             <h1 className="font-display text-[32px] leading-[1.08] font-semibold tracking-[-0.03em] text-forest landing-tab:text-[40px] landing:text-[44px]">
               {isUpgrade ? PAY_START_COPY.upgradeTitle : PAY_START_COPY.title}
             </h1>
-            <p className="mt-2 text-[15px] leading-[1.55] text-forest-muted landing-tab:text-[16px]">
+            <p className="mt-2 text-[16px] leading-[1.55] text-forest-muted landing-tab:text-[17px]">
               {isUpgrade ? PAY_START_COPY.upgradeSubtitle : PAY_START_COPY.subtitle}
             </p>
           </div>
@@ -281,15 +297,15 @@ export function PaymentStartScreen({
           <div className="min-w-0">
             {session === 'guest' ? (
               <section className="rounded-[24px] bg-cream p-5 shadow-landing-hairline ring-1 ring-soil/12 landing:p-6">
-                <h2 className="font-display text-[15px] font-medium tracking-tight text-forest">
+                <h2 className="font-display text-[16px] font-medium tracking-tight text-forest">
                   {PAY_START_COPY.loginTitle}
                 </h2>
-                <p className="mt-1.5 text-[12.5px] leading-relaxed text-forest/55">
+                <p className="mt-1.5 text-[13.5px] leading-relaxed text-forest/55">
                   {PAY_START_COPY.loginBody}
                 </p>
                 <Link
                   href={buildLoginHref(buildPayHref(plan.id, 'lifetime', referralCode))}
-                  className="mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-forest px-5 text-[13px] font-medium text-cream landing-tab:min-w-[200px]"
+                  className="mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-forest px-5 text-[14px] font-medium text-cream landing-tab:min-w-[200px]"
                 >
                   {PAY_START_COPY.loginCta}
                   <ArrowRight className="size-4" strokeWidth={2.4} aria-hidden />
@@ -312,9 +328,27 @@ export function PaymentStartScreen({
                   }}
                 />
               </div>
+            ) : PAY_METHODS.length === 0 ? (
+              /* Tidak ada kanal yang terbukti aktif di merchant produksi.
+                 Menampilkan pilihan metode di sini berarti menawarkan tombol
+                 yang pasti berakhir "Payment channel is not activated". */
+              <section
+                className="rounded-[24px] bg-cream p-5 shadow-landing-hairline ring-1 ring-soil/12 landing:p-6"
+                role="status"
+              >
+                <h2 className="font-display text-[16px] font-medium tracking-tight text-forest">
+                  {PAY_START_COPY.noMethodTitle}
+                </h2>
+                <p className="mt-1.5 text-[13.5px] leading-relaxed text-forest/55">
+                  {PAY_START_COPY.noMethodBody}
+                </p>
+                <p className="mt-3 text-[13px] leading-relaxed text-forest/45">
+                  {PAY_START_COPY.noMethodNote}
+                </p>
+              </section>
             ) : (
               <section className="rounded-[24px] bg-cream p-5 shadow-landing-hairline ring-1 ring-soil/12 landing:p-6">
-                <h2 className="text-[11px] font-medium tracking-[0.16em] text-forest/40 uppercase">
+                <h2 className="text-[12px] font-medium tracking-[0.16em] text-forest/40 uppercase">
                   {PAY_START_COPY.methodLegend}
                 </h2>
 
@@ -347,10 +381,10 @@ export function PaymentStartScreen({
                         >
                           {active && <span className="size-1.5 rounded-full bg-cream" />}
                         </span>
-                        <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-forest">
+                        <span className="min-w-0 flex-1 truncate text-[14px] font-medium text-forest">
                           {copy.label}
                         </span>
-                        <span className="hidden shrink-0 text-[11px] text-forest/40 landing:inline">
+                        <span className="hidden shrink-0 text-[12px] text-forest/40 landing:inline">
                           {copy.hint}
                         </span>
                       </button>
@@ -360,7 +394,7 @@ export function PaymentStartScreen({
 
                 {error && (
                   <p
-                    className="mt-4 flex items-start gap-1.5 text-[12px] leading-relaxed text-plum"
+                    className="mt-4 flex items-start gap-1.5 text-[13px] leading-relaxed text-plum"
                     role="alert"
                   >
                     <Info className="mt-0.5 size-3.5 shrink-0" strokeWidth={2.4} aria-hidden />
@@ -371,7 +405,7 @@ export function PaymentStartScreen({
                 )}
 
                 {notice && (
-                  <p className="mt-4 text-[12px] leading-relaxed text-forest/70" role="status">
+                  <p className="mt-4 text-[13px] leading-relaxed text-forest/70" role="status">
                     {notice}
                   </p>
                 )}
@@ -380,7 +414,7 @@ export function PaymentStartScreen({
                   type="button"
                   onClick={() => void handlePay()}
                   disabled={paying || session === 'checking'}
-                  className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-forest px-6 text-[13.5px] font-medium text-cream transition-colors duration-200 hover:bg-forest-soft disabled:opacity-60 motion-reduce:transition-none landing-tab:w-auto landing-tab:min-w-[220px]"
+                  className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-forest px-6 text-[14.5px] font-medium text-cream transition-colors duration-200 hover:bg-forest-soft disabled:opacity-60 motion-reduce:transition-none landing-tab:w-auto landing-tab:min-w-[220px]"
                 >
                   {paying ? PAY_START_COPY.payingLabel : PAY_START_COPY.payLabel}
                   {!paying && <ArrowRight className="size-4" strokeWidth={2.4} aria-hidden />}

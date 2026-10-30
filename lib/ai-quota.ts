@@ -59,6 +59,21 @@ export function remainingPercent(used: number, limit: number): number {
   return Math.round((100 - usedPercent(used, limit)) * 10) / 10
 }
 
+/**
+ * Sisa persen yang SELALU melengkapi angka terpakai yang digambar sebuah bar.
+ *
+ * `usedPercent()` dan `remainingPercent()` dibulatkan sendiri-sendiri, jadi
+ * penjumlahannya bisa 101 (pemakaian 76,5% → bar dibulatkan ke 77 sementara
+ * teks sisanya dibulatkan ke 24). Banner Home menaruh angka sisa berdampingan
+ * dengan bar pemakaian, jadi sisanya diturunkan dari angka yang SAMA dengan
+ * lebar bar: bar menunjukkan X terpakai, judulnya menyebut 100 - X. Dengan
+ * begitu judul dan bar tidak pernah berbeda pendapat.
+ */
+export function complementaryPct(usedPct: number): number {
+  const safe = Number.isFinite(usedPct) ? usedPct : 0
+  return 100 - Math.min(100, Math.max(0, Math.round(safe)))
+}
+
 /** sisa token diterjemahkan ke nilai yang user rasakan, bukan angka teknis */
 export function estimateRecords(remainingTokens: number): number {
   return Math.max(0, Math.floor(remainingTokens / AI_TOKENS_PER_RECORD))
@@ -467,16 +482,18 @@ export const AI_TOPUP_COPY = {
 } as const
 
 /* ── 8. COPY BANNER SOFT-NUDGE DI HOME (kuota AI >70%) ──────────────────────
-   Banner ini AJAKAN menambah token, bukan pajangan statistik — karena itu
-   kalimatnya menyebut keadaan ("menyusut"), bukan menuduh. Angka pemakaian tetap
-   ditulis di data, bukan di JSX, supaya bar + teks di banner tidak bisa beda. */
+   Banner ini AJAKAN menambah token, bukan pajangan statistik. Angka yang
+   ditulis cuma SATU (sisa persen), karena bar di bawah judul sudah menunjukkan
+   pemakaian: menuliskannya lagi di teks = data ganda yang bisa melenceng.
+   `title()` menerima sisa persen dari `complementaryPct(quota.usedPct)` supaya
+   angka di judul dan lebar bar dijamin berasal dari angka yang sama. */
 export const AI_GAUGE_BANNER_COPY = {
-  title: 'Kuota AI-mu menyusut',
+  /** judul: sisa kuota dalam persen (`remainingPct`), bukan kalimat perasaan */
+  title: (remainingPct: number) => `Kuota AI tinggal ${remainingPct}%`,
+  /** label pembaca layar untuk bar pemakaian (angka terpakai, dibaca sekali) */
+  usageBarLabel: (usedPct: number) => `Kuota AI terpakai ${usedPct}%`,
   dismissLabel: 'Tutup info kuota AI',
   cta: 'Beli Add-On →',
-  /** dua angka dalam satu baris — disusun di data, bukan di komponen */
-  usage: (usedPct: number, remainingPct: number) =>
-    `${usedPct}% terpakai · ${remainingPct}% sisa`,
 } as const
 
 /* ── 9. STATE KUOTA HABIS + DEGRADASI (paket 42 · temuan audit #5) ──────────

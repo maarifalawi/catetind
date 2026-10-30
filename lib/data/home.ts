@@ -109,19 +109,19 @@ export const HOME_GOALS_COPY = {
    *  celengan itu, jadi kalimatnya satu bentuk (jelas tujuan + nama celengan) */
   openDetail: (name: string) => `Buka celengan ${name} di halaman Budget`,
   /** empty state — defensif: mock hari ini selalu punya 3 celengan, tapi kartu
-   *  ini tidak boleh pecah kalau daftarnya suatu saat kosong */
-  emptyTitle: 'Belum ada celengan impian',
-  emptyBody:
-    'Mulai dari satu celengan saja dulu, angka kecil juga sah. Tiap setoran bikin tanamanmu naik tahap 🌱',
-  emptyCta: 'Tanam celengan pertama',
-  /** H2-3 (audit UI/UX) — empty state yang MENGGODA, bukan sekadar "belum ada
-   *  data": tiga contoh celengan populer sebagai placeholder yang bisa ditap.
-   *  Setiap chip menautkan ke sheet "Tanam Celengan Baru" (jalur yang sama). */
-  emptyPopularTitle: 'Contoh yang sering ditabung orang:',
+   *  ini tidak boleh pecah kalau daftarnya suatu saat kosong.
+   *  PAKET COPY: paragraf ajakan di bawah judul DIHAPUS, judulnya dipendekkan,
+   *  dan tombolnya "Buat celengan" (label lama memakai metafora "tanam"). */
+  emptyTitle: 'Belum ada celengan',
+  emptyCta: 'Buat celengan',
+  /** H2-3 (audit UI/UX): tiga contoh celengan populer sebagai placeholder yang
+   *  BISA DITAP. Tiap chip menautkan ke sheet "Tanam Celengan Baru" (jalur yang
+   *  sama), dan IKONNYA digambar komponen dari `id` ini (Lucide, bukan emoji:
+   *  `GOAL_IDEA_ICON` di `my-goals-card.tsx`) — jadi data ini bebas emoji. */
   emptyPopular: [
-    { emoji: '📱', label: 'iPhone baru' },
-    { emoji: '🏝️', label: 'Liburan Bali' },
-    { emoji: '🛟', label: 'Dana Darurat' },
+    { id: 'gadget', label: 'iPhone baru' },
+    { id: 'holiday', label: 'Liburan Bali' },
+    { id: 'emergency', label: 'Dana Darurat' },
   ],
 } as const
 

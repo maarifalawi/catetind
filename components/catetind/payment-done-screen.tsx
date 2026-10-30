@@ -214,19 +214,19 @@ export function PaymentDoneScreen({ orderId, failed }: { orderId: string | null;
             >
               {title}
             </h1>
-            <p className="mx-auto mt-3 max-w-[34ch] text-balance text-[13.5px] leading-[1.7] text-forest-muted">
+            <p className="mx-auto mt-3 max-w-[34ch] text-balance text-[14.5px] leading-[1.7] text-forest-muted">
               {body}
             </p>
             {note && (
               <p
                 role="status"
-                className="mx-auto mt-3 max-w-[38ch] rounded-2xl bg-daisy-light/60 px-3.5 py-2.5 text-balance text-[12px] leading-relaxed text-daisy-deep ring-1 ring-daisy-deep/15"
+                className="mx-auto mt-3 max-w-[38ch] rounded-2xl bg-daisy-light/60 px-3.5 py-2.5 text-balance text-[13px] leading-relaxed text-daisy-deep ring-1 ring-daisy-deep/15"
               >
                 {note}
               </p>
             )}
             {state === 'active' && (
-              <p className="mt-3 text-[11.5px] text-forest/45">{PAY_DONE_COPY.autoRedirectNote}</p>
+              <p className="mt-3 text-[12.5px] text-forest/45">{PAY_DONE_COPY.autoRedirectNote}</p>
             )}
 
             <div className="mt-8 flex flex-col items-center justify-center gap-2 landing-tab:flex-row">
@@ -238,7 +238,7 @@ export function PaymentDoneScreen({ orderId, failed }: { orderId: string | null;
                    email sekali lagi. */
                 <Link
                   href="/app"
-                  className="group inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-forest px-6 text-[13.5px] font-medium text-cream shadow-landing-cta transition-all duration-300 hover:-translate-y-0.5 hover:bg-forest-soft motion-reduce:transition-none landing-tab:w-auto landing-tab:min-w-[220px]"
+                  className="group inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-forest px-6 text-[14.5px] font-medium text-cream shadow-landing-cta transition-all duration-300 hover:-translate-y-0.5 hover:bg-forest-soft motion-reduce:transition-none landing-tab:w-auto landing-tab:min-w-[220px]"
                 >
                   {PAY_DONE_COPY.appCta}
                   <ArrowRight
@@ -253,7 +253,7 @@ export function PaymentDoneScreen({ orderId, failed }: { orderId: string | null;
                     type="button"
                     onClick={() => void check({ manual: true })}
                     disabled={busy}
-                    className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-forest px-6 text-[13.5px] font-medium text-cream shadow-landing-cta transition-all duration-300 hover:-translate-y-0.5 hover:bg-forest-soft disabled:cursor-wait disabled:opacity-70 disabled:hover:translate-y-0 motion-reduce:transition-none landing-tab:w-auto landing-tab:min-w-[170px]"
+                    className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-forest px-6 text-[14.5px] font-medium text-cream shadow-landing-cta transition-all duration-300 hover:-translate-y-0.5 hover:bg-forest-soft disabled:cursor-wait disabled:opacity-70 disabled:hover:translate-y-0 motion-reduce:transition-none landing-tab:w-auto landing-tab:min-w-[170px]"
                   >
                     <RotateCw
                       className={`size-4 ${busy ? 'animate-spin motion-reduce:animate-none' : ''}`}
@@ -266,7 +266,7 @@ export function PaymentDoneScreen({ orderId, failed }: { orderId: string | null;
                   </button>
                   <Link
                     href="/checkout"
-                    className="inline-flex h-12 w-full items-center justify-center rounded-full px-6 text-[13.5px] font-medium text-forest-muted ring-1 ring-soil/10 transition-colors hover:bg-sage/50 hover:text-forest landing-tab:w-auto"
+                    className="inline-flex h-12 w-full items-center justify-center rounded-full px-6 text-[14.5px] font-medium text-forest-muted ring-1 ring-soil/10 transition-colors hover:bg-sage/50 hover:text-forest landing-tab:w-auto"
                   >
                     {PAY_DONE_COPY.homeCta}
                   </Link>

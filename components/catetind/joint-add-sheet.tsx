@@ -1,12 +1,10 @@
-'use client'
+﻿'use client'
 
 import { Drawer } from 'vaul'
 import { EyeOff, SlidersHorizontal, Wallet } from 'lucide-react'
 import { TransactionInputEngine } from '@/components/dashboard/transaction-input-engine'
 import {
   JOINT_DEFAULT_DESCRIPTION,
-  JOINT_ME,
-  JOINT_PARTNER,
   PAID_BY_HINT,
   PAID_BY_LABEL,
   PAID_BY_ME_LABEL,
@@ -19,24 +17,24 @@ import type { JointSplitDraft } from './joint-split-sheet'
 import { ChoicePills } from './budget-sheet'
 import { cn } from '@/lib/utils'
 
-/* ── Add Joint Transaction (Section 9) ──────────────────────────────────────
+/* â”€â”€ Add Joint Transaction (Section 9) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    FAB (+) di halaman Joint memakai Transaction Input Engine yang SAMA dengan
-   halaman lain — jadi perilaku input tidak pernah divergen — tapi dompet
+   halaman lain â€” jadi perilaku input tidak pernah divergen â€” tapi dompet
    bersamanya otomatis jadi sumber dana (`sourceLabel`) dan ada TIGA field
    tambahan khas halaman ini. Ketiganya kini berada DI ATAS tombol "Catat"
    (Stage 2 #4): user melihat opsinya lebih dulu, baru mencatat.
 
-   1. Pemilih split (default "Bagi Rata (50/50)") + tautan "Atur pembagian →"
+   1. Pemilih split (default "Bagi Rata (50/50)") + tautan "Atur pembagian â†’"
       yang membuka Split Bill Bottom Sheet (Section 6).
-   2. Pemilih "Siapa yang nalangin?" (2 chip, default Aku) → mengisi
+   2. Pemilih "Siapa yang nalangin?" (2 chip, default Aku) â†’ mengisi
       `paidByUserId`. Tanpa ini catatan yang uangnya keluar dari kantong
       pasangan selalu terhitung sebagai pengeluaran pencatat (audit #4).
-   3. Toggle "Sembunyikan dari pasangan 🔒" — saat menyala, pemilih split
+   3. Toggle "Sembunyikan dari pasangan ðŸ”’" â€” saat menyala, pemilih split
       DISEMBUNYIKAN karena pembagiannya bukan urusan pasangan, dan muncul
       peringatan. Catatan akuntansi (audit fintech #3): NOMINAL transaksi
-      privat tetap ikut dihitung di total bersama & timbangan settlement —
+      privat tetap ikut dihitung di total bersama & timbangan settlement â€”
       yang disembunyikan cuma itemnya. Lihat `weighedPaidBy()`.
-   ────────────────────────────────────────────────────────────────────────── */
+   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 export function JointAddSheet({
   open,
@@ -50,52 +48,65 @@ export function JointAddSheet({
   onTogglePrivate,
   onPaidByChange,
   onSubmitted,
-  me = JOINT_ME,
-  partner = JOINT_PARTNER,
+  me,
+  partner,
+  walletOptions = [],
+  cashWalletId = '',
+  onCashWalletChange,
 }: {
   open: boolean
   onClose: () => void
-  /** nama dompet bersama — ditampilkan sebagai sumber dana terpilih */
+  /** nama dompet bersama â€” ditampilkan sebagai sumber dana terpilih */
   walletName: string
   /** pembagian yang sedang dipilih (null = default bagi rata) */
   splitDraft: JointSplitDraft | null
   privateOn: boolean
-  /** kantong yang keluar uang (id anggota) — default "Aku" */
+  /** kantong yang keluar uang (id anggota) â€” default "Aku" */
   paidBy: string
   onAmountChange: (amount: number) => void
   onOpenSplit: () => void
   onTogglePrivate: () => void
   onPaidByChange: (userId: string) => void
-  /** transaksi selesai dicatat — halaman menyisipkannya ke timeline */
+  /** transaksi selesai dicatat â€” halaman menyisipkannya ke timeline */
   onSubmitted: (input: {
     description: string
     amount: number
     /**
      * kategori PILIHAN USER dari engine (paket 54). Boleh kosong hanya untuk
      * pemanggil lama; store-nya sendiri jatuh ke `JOINT_DEFAULT_CATEGORY`.
-     * Catatan privat tetap dianonimkan store (`PRIVATE_CATEGORY`) — lihat
+     * Catatan privat tetap dianonimkan store (`PRIVATE_CATEGORY`) â€” lihat
      * `PRIVATE_CATEGORY_NOTE` di bawah.
      */
     category?: string
     isPrivate: boolean
     split: JointSplitDraft | null
     paidByUserId: string
+    /** dompet pribadi yang benar-benar mengeluarkan uang (opsional) */
+    cashWalletId?: string
   }) => void
-  me?: JointPerson
-  partner?: JointPerson
+  me: JointPerson
+  partner: JointPerson
+  /**
+   * Dompet PRIBADI yang bisa dipakai sebagai sumber dana. Kalau dipilih, uangnya
+   * benar-benar keluar dari dompet itu dan muncul di Riwayat/Budget. Kosong =
+   * catatan bersama saja (buku besar patungan, tanpa menyentuh kas).
+   */
+  walletOptions?: { id: string; label: string }[]
+  cashWalletId?: string
+  onCashWalletChange?: (walletId: string) => void
 }) {
   const extraFields = (
     <div className="space-y-2.5">
-      {/* 1. pemilih split — disembunyikan saat transaksi privat */}
+      {/* 1. pemilih split â€” disembunyikan saat transaksi privat */}
       {!privateOn && (
         <div className="flex items-center justify-between gap-3 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/12">
           <span className="flex min-w-0 items-center gap-2">
             <SlidersHorizontal className="size-4 shrink-0 text-forest" strokeWidth={2.3} />
             <span className="min-w-0">
-              <span className="block truncate text-[12.5px] font-medium text-forest">
+              <span className="block truncate text-[13.5px] font-medium text-forest">
                 Split: {draftLabel(splitDraft, me, partner)}
               </span>
-              <span className="mt-0.5 block text-[11px] text-forest/45">
+              <span className="mt-0.5 block text-[12px] text-forest/45">
                 Bisa diubah kapan aja sebelum dicatat
               </span>
             </span>
@@ -103,20 +114,20 @@ export function JointAddSheet({
           <button
             type="button"
             onClick={onOpenSplit}
-            className="shrink-0 text-[11.5px] font-medium text-forest underline decoration-dotted underline-offset-4 transition-colors hover:text-forest-soft"
+            className="shrink-0 text-[12.5px] font-medium text-forest underline decoration-dotted underline-offset-4 transition-colors hover:text-forest-soft"
           >
-            Atur pembagian →
+            Atur pembagian â†’
           </button>
         </div>
       )}
 
-      {/* 2. pemilih "Siapa yang nalangin?" — 2 chip, default Aku (Stage 2 #3) */}
+      {/* 2. pemilih "Siapa yang nalangin?" â€” 2 chip, default Aku (Stage 2 #3) */}
       <div className="rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/12">
-        <p className="flex items-center gap-2 text-[12.5px] font-medium text-forest">
+        <p className="flex items-center gap-2 text-[13.5px] font-medium text-forest">
           <Wallet className="size-4 shrink-0 text-forest" strokeWidth={2.3} />
           {PAID_BY_LABEL}
         </p>
-        <p className="mt-0.5 text-[11px] leading-relaxed text-forest/45">{PAID_BY_HINT}</p>
+        <p className="mt-0.5 text-[12px] leading-relaxed text-forest/45">{PAID_BY_HINT}</p>
         <ChoicePills
           className="mt-2.5"
           options={[
@@ -129,12 +140,35 @@ export function JointAddSheet({
         />
       </div>
 
+      {/* 3. SUMBER DANA (opsional) â€” kalau dipilih, uangnya benar-benar keluar
+          dari dompet pribadi user dan muncul di Riwayat/Budget. Kalau tidak
+          dipilih, catatan ini murni buku besar patungan. */}
+      {onCashWalletChange && walletOptions.length > 0 && (
+        <div className="rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/12">
+          <p className="flex items-center gap-2 text-[13.5px] font-medium text-forest">
+            <Wallet className="size-4 shrink-0 text-forest" strokeWidth={2.3} />
+            Sumber Dana (opsional)
+          </p>
+          <p className="mt-0.5 text-[12px] leading-relaxed text-forest/45">
+            Pilih dompet kalau uangnya keluar dari kasmu. Tanpa dompet, catatan ini tidak menggeser
+            saldo apa pun.
+          </p>
+          <ChoicePills
+            className="mt-2.5"
+            options={[{ id: '', label: 'Tanpa dompet' }, ...walletOptions]}
+            value={cashWalletId}
+            onChange={onCashWalletChange}
+            ariaLabel="Sumber dana"
+          />
+        </div>
+      )}
+
       {/* 3. toggle privasi */}
       <div className="rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/12">
         <div className="flex items-center justify-between gap-3">
-          <span className="flex items-center gap-2 text-[12.5px] font-medium text-forest/80">
+          <span className="flex items-center gap-2 text-[13.5px] font-medium text-forest/80">
             <EyeOff className="size-4 text-forest/40" strokeWidth={2.3} />
-            Sembunyikan dari pasangan 🔒
+            Sembunyikan dari pasangan ðŸ”’
           </span>
           <button
             type="button"
@@ -157,12 +191,12 @@ export function JointAddSheet({
         </div>
         {privateOn && (
           <>
-            <p className="mt-2 text-[11px] leading-relaxed text-hud-terracotta">
+            <p className="mt-2 text-[12px] leading-relaxed text-hud-terracotta">
               {PRIVACY_WARNING_COPY}
             </p>
-            {/* pemilih kategori ada di form engine di atas — sebut lebih dulu
+            {/* pemilih kategori ada di form engine di atas â€” sebut lebih dulu
                 bahwa untuk catatan privat pilihannya tidak ikut tersimpan */}
-            <p className="mt-1.5 text-[11px] leading-relaxed text-forest/50">
+            <p className="mt-1.5 text-[12px] leading-relaxed text-forest/50">
               {PRIVATE_CATEGORY_NOTE}
             </p>
           </>
@@ -206,15 +240,18 @@ export function JointAddSheet({
                 onSubmitted({
                   description: payload.note || JOINT_DEFAULT_DESCRIPTION,
                   amount: payload.amount,
-                  /* kategori pilihan user diteruskan apa adanya (paket 54) —
+                  /* kategori pilihan user diteruskan apa adanya (paket 54) â€”
                      kalau dibuang di sini, pemilih kategori di form jadi kontrol
                      mati, dan rincian kategori halaman ini selalu "Lainnya" */
                   category: payload.category,
                   isPrivate: privateOn,
                   split: privateOn ? null : splitDraft,
-                  /* kantong yang keluar uang dikirim EKSPLISIT — inilah yang
-                     membedakan "Dany yang nalangin" dari "Jon yang mengetik" */
+                  /* kantong yang keluar uang dikirim EKSPLISIT â€” inilah yang
+                     membedakan "pasangan yang nalangin" dari "aku yang mengetik" */
                   paidByUserId: paidBy,
+                  /* dompet pribadi hanya dikirim kalau user MEMILIHNYA. Kosong =
+                     catatan bersama saja, tanpa menggeser saldo apa pun. */
+                  ...(cashWalletId ? { cashWalletId } : {}),
                 })
                 onClose()
               }}
@@ -228,7 +265,7 @@ export function JointAddSheet({
 
 /** label singkat pembagian untuk baris "Split: ..." di form. Dibaca dari
  *  `SplitSpec` (bukan `splits`), jadi bahasa form = bahasa timeline = bahasa
- *  ledger — dan persen tidak akan pernah tampil sebagai rupiah. */
+ *  ledger â€” dan persen tidak akan pernah tampil sebagai rupiah. */
 function draftLabel(
   draft: JointSplitDraft | null,
   me: JointPerson,

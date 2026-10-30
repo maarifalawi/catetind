@@ -1,10 +1,8 @@
-'use client'
+﻿'use client'
 
 import { AnimatePresence, motion } from 'framer-motion'
 import { Lock } from 'lucide-react'
 import {
-  JOINT_ME,
-  JOINT_PARTNER,
   groupJointTransactions,
   moneyLabel,
   pocketOf,
@@ -16,40 +14,40 @@ import { useTodayISO } from '@/lib/use-today-iso'
 import { cn } from '@/lib/utils'
 import { categoryVisualFor } from './transaction-category-visual'
 
-/* ── CERITA KITA — DAFTAR TRANSAKSI (redesign Dompet Bersama) ─────────────────
+/* â”€â”€ CERITA KITA â€” DAFTAR TRANSAKSI (redesign Dompet Bersama) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    Sebelumnya timeline ini adalah "buku harian" dua kolom dengan garis tengah,
-   kartu berselang-seling, dan panel aksi yang mengembang di dalam tiap kartu —
+   kartu berselang-seling, dan panel aksi yang mengembang di dalam tiap kartu â€”
    padat, dan berbeda bahasa visual dari halaman Riwayat.
 
    Sekarang bentuknya SAMA dengan daftar Riwayat (sumber yang sama:
    `transaction-category-visual.tsx` + `MONEY_TONE`):
-     • kepala hari = label kecil + garis rambut (bukan pill besar),
-     • baris = kartu tipis ber-tint keluarga kategori, avatar pembayar di kiri,
+     â€¢ kepala hari = label kecil + garis rambut (bukan pill besar),
+     â€¢ baris = kartu tipis ber-tint keluarga kategori, avatar pembayar di kiri,
        nominal + badge pembagian di kanan,
-     • seluruh baris adalah SATU tap target → detail & pembagian dibuka di
+     â€¢ seluruh baris adalah SATU tap target â†’ detail & pembagian dibuka di
        bottom sheet (`joint-entry-sheet.tsx`), bukan di dalam baris.
 
    Privasi tetap utuh: catatan privat milik pasangan hanya tampil sebagai
    "Pengeluaran Privat Partner" tanpa detail, dan nominalnya ikut sensor global.
-   ────────────────────────────────────────────────────────────────────────── */
+   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1]
 
 export function JointTimeline({
   transactions,
   masked,
-  me = JOINT_ME,
-  partner = JOINT_PARTNER,
+  me,
+  partner,
   partnerTyping = false,
   onOpenEntry,
 }: {
   transactions: JointTransaction[]
   masked: boolean
-  me?: JointPerson
-  partner?: JointPerson
+  me: JointPerson
+  partner: JointPerson
   /** true = indikator "Dany sedang mencatat..." tampil (mock Supabase Realtime) */
   partnerTyping?: boolean
-  /** tap satu baris → detail catatan & pembagian di bottom sheet */
+  /** tap satu baris â†’ detail catatan & pembagian di bottom sheet */
   onOpenEntry: (tx: JointTransaction) => void
 }) {
   const today = useTodayISO()
@@ -65,9 +63,9 @@ export function JointTimeline({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.24, ease: EASE }}
-            className="mb-3 flex items-center gap-2 rounded-full bg-cream px-3 py-1.5 text-[11.5px] font-medium text-forest/60 ring-1 ring-soil/10"
+            className="mb-3 flex items-center gap-2 rounded-full bg-cream px-3 py-1.5 text-[12.5px] font-medium text-forest/60 ring-1 ring-soil/10"
           >
-            <span aria-hidden className="text-[13px]">
+            <span aria-hidden className="text-[14px]">
               {partner.avatar}
             </span>
             {partner.name} sedang mencatat
@@ -95,12 +93,12 @@ export function JointTimeline({
             <section key={group.date}>
               {/* kepala hari: label + garis rambut, sama seperti halaman Riwayat */}
               <div className="flex items-center gap-2.5">
-                <p className="shrink-0 text-[11px] font-medium uppercase tracking-[0.12em] text-forest/45">
+                <p className="shrink-0 text-[12px] font-medium uppercase tracking-[0.12em] text-forest/45">
                   {group.label}
                 </p>
                 <span aria-hidden className="h-px min-w-4 flex-1 bg-soil/[0.09]" />
                 {spent > 0 && (
-                  <span className="shrink-0 text-[11.5px] font-semibold tabular-nums text-hud-terracotta">
+                  <span className="shrink-0 text-[12.5px] font-semibold tabular-nums text-hud-terracotta">
                     - {moneyLabel(spent, masked)}
                   </span>
                 )}
@@ -126,7 +124,7 @@ export function JointTimeline({
   )
 }
 
-/** Satu baris transaksi — seluruh baris adalah tombol (tap → bottom sheet) */
+/** Satu baris transaksi â€” seluruh baris adalah tombol (tap â†’ bottom sheet) */
 function TimelineRow({
   tx,
   masked,
@@ -151,7 +149,7 @@ function TimelineRow({
   const category = hiddenFromMe ? 'Privat' : tx.category
   const visual = categoryVisualFor(hiddenFromMe ? null : category)
 
-  const amountPrefix = isSettlement ? '⇄ ' : isOpening ? '' : '- '
+  const amountPrefix = isSettlement ? 'â‡„ ' : isOpening ? '' : '- '
   const amountTone = isSettlement || isOpening ? 'text-forest/55' : 'text-hud-terracotta'
 
   return (
@@ -169,11 +167,11 @@ function TimelineRow({
           visual.row,
         )}
       >
-        {/* avatar pembayar — pembeda dua orang tanpa garis waktu */}
+        {/* avatar pembayar â€” pembeda dua orang tanpa garis waktu */}
         <span
           aria-hidden
           className={cn(
-            'flex size-9 shrink-0 items-center justify-center rounded-full text-[16px] ring-1',
+            'flex size-9 shrink-0 items-center justify-center rounded-full text-[17px] ring-1',
             payer.tint,
           )}
         >
@@ -182,40 +180,40 @@ function TimelineRow({
 
         <span className="min-w-0 flex-1">
           <span className="flex items-center gap-1.5">
-            <span className="line-clamp-2 text-[13.5px] font-medium text-forest">
+            <span className="line-clamp-2 text-[14.5px] font-medium text-forest">
               {title}
             </span>
             {isPrivateMine && (
               <Lock className="size-3 shrink-0 text-forest/40" strokeWidth={2.4} aria-hidden />
             )}
             {tx.justArrived && (
-              <span className="shrink-0 rounded-full bg-hud-amber/25 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-hud-terracotta">
+              <span className="shrink-0 rounded-full bg-hud-amber/25 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-hud-terracotta">
                 Baru
               </span>
             )}
           </span>
 
-          <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[11.5px] text-forest/40">
+          <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[12.5px] text-forest/40">
             <span className="shrink-0">{payer.name}</span>
-            <span className="shrink-0">· {tx.time}</span>
+            <span className="shrink-0">Â· {tx.time}</span>
             <span
               className={cn(
-                'min-w-0 truncate rounded-full px-1.5 py-0.5 text-[10px] font-medium',
+                'min-w-0 truncate rounded-full px-1.5 py-0.5 text-[11px] font-medium',
                 hiddenFromMe ? 'bg-sage/70 text-forest/60' : visual.chip,
               )}
             >
-              {hiddenFromMe ? '🔒 Privat' : category}
+              {hiddenFromMe ? 'ðŸ”’ Privat' : category}
             </span>
           </span>
         </span>
 
         <span className="shrink-0 text-right">
-          <span className={cn('block text-[13.5px] font-medium tabular-nums', amountTone)}>
+          <span className={cn('block text-[14.5px] font-medium tabular-nums', amountTone)}>
             {amountPrefix}
             {moneyLabel(tx.amount, masked)}
           </span>
           {!hiddenFromMe && (
-            <span className="mt-1 inline-block max-w-[92px] truncate rounded-full bg-soil/[0.08] px-1.5 py-0.5 text-[10px] font-medium text-forest/50">
+            <span className="mt-1 inline-block max-w-[92px] truncate rounded-full bg-soil/[0.08] px-1.5 py-0.5 text-[11px] font-medium text-forest/50">
               {splitLabel(tx, masked)}
             </span>
           )}

@@ -133,7 +133,7 @@ export function OnboardingStepFirstTransaction({
               )}
             >
               <Icon className="size-[17px]" strokeWidth={2} />
-              <span className="text-[11px] font-medium tracking-[-0.01em] whitespace-nowrap">
+              <span className="text-[12px] font-medium tracking-[-0.01em] whitespace-nowrap">
                 {item.label}
               </span>
             </button>
@@ -180,7 +180,7 @@ export function OnboardingStepFirstTransaction({
         }}
         placeholder="Contoh: Kopi Kenangan pagi tadi"
         aria-label="Catatan transaksi (opsional)"
-        className="mt-8 h-14 w-full rounded-[1.35rem] bg-cream px-4 text-[14px] font-medium tracking-[-0.01em] text-forest outline-none ring-1 ring-ink/[0.06] transition-all placeholder:text-forest/30 focus:ring-forest/25"
+        className="mt-8 h-14 w-full rounded-[1.35rem] bg-cream px-4 text-[15px] font-medium tracking-[-0.01em] text-forest outline-none ring-1 ring-ink/[0.06] transition-all placeholder:text-forest/30 focus:ring-forest/25"
       />
     </div>
   )

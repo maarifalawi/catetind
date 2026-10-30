@@ -116,7 +116,7 @@ export function ConfirmDialog({
               </button>
             </div>
 
-            <div className="mt-3 text-[13.5px] leading-relaxed text-forest/60">{body}</div>
+            <div className="mt-3 text-[14.5px] leading-relaxed text-forest/60">{body}</div>
           </div>
 
           {/* aksi ditumpuk vertikal: tiap keputusan dapat barisnya sendiri, jadi

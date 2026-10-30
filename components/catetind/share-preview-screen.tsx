@@ -66,7 +66,7 @@ function EyebrowLine({ className }: { className?: string }) {
   return (
     <p
       className={cn(
-        'text-[11px] font-medium uppercase tracking-[0.16em] text-forest/40',
+        'text-[12px] font-medium uppercase tracking-[0.16em] text-forest/40',
         className,
       )}
     >
@@ -88,7 +88,7 @@ function CardView({ card }: { card: ShareCard }) {
         <h1 className="mt-1.5 font-display text-3xl font-semibold tracking-tight text-forest lg:text-4xl">
           {shareHeadline(card.ownerName)}
         </h1>
-        <p className="mt-2 max-w-xl text-[13.5px] leading-relaxed text-forest/60">
+        <p className="mt-2 max-w-xl text-[14.5px] leading-relaxed text-forest/60">
           {SHARE_PAGE_SUBHEAD}
         </p>
       </header>
@@ -98,11 +98,11 @@ function CardView({ card }: { card: ShareCard }) {
         <div className="flex flex-col gap-3 lg:col-span-5">
           <ShareAchievementCard card={card} />
 
-          <p className="flex items-start gap-1.5 text-[11.5px] leading-relaxed text-forest/50">
+          <p className="flex items-start gap-1.5 text-[12.5px] leading-relaxed text-forest/50">
             <Lock className="mt-[1px] size-3.5 shrink-0" strokeWidth={2.2} aria-hidden />
             {SHARE_CARD_PRIVACY_LINE}
           </p>
-          <p className="text-[11px] leading-relaxed text-forest/40">{SHARE_PRIVACY_NOTE}</p>
+          <p className="text-[12px] leading-relaxed text-forest/40">{SHARE_PRIVACY_NOTE}</p>
         </div>
 
         {/* ── KOLOM AJAKAN (kanan) — keadaan kartu dulu, baru CTA ─────────── */}
@@ -112,10 +112,10 @@ function CardView({ card }: { card: ShareCard }) {
               <span className="flex size-9 items-center justify-center rounded-xl bg-cream text-forest">
                 <Sprout className="size-4" strokeWidth={2.2} aria-hidden />
               </span>
-              <h2 className="mt-3 font-display text-[15px] font-semibold tracking-tight text-forest">
+              <h2 className="mt-3 font-display text-[16px] font-semibold tracking-tight text-forest">
                 {SHARE_GROWING_TITLE}
               </h2>
-              <p className="mt-1 text-[12.5px] leading-relaxed text-forest/60">
+              <p className="mt-1 text-[13.5px] leading-relaxed text-forest/60">
                 {shareGrowingNote(card)}
               </p>
             </section>
@@ -140,10 +140,10 @@ function InviteCard({ thin, ownerName }: { thin: boolean; ownerName: string }) {
       <span className="flex size-10 items-center justify-center rounded-2xl bg-mint/25 text-forest">
         <Sprout className="size-4" strokeWidth={2.2} aria-hidden />
       </span>
-      <h2 className="mt-3.5 font-display text-[19px] font-semibold tracking-tight text-forest">
+      <h2 className="mt-3.5 font-display text-[20px] font-semibold tracking-tight text-forest">
         {SHARE_INVITE_TITLE}
       </h2>
-      <p className="mt-1.5 text-[13px] leading-relaxed text-forest/60">{SHARE_INVITE_BODY}</p>
+      <p className="mt-1.5 text-[14px] leading-relaxed text-forest/60">{SHARE_INVITE_BODY}</p>
 
       <Link
         href={SHARE_CTA_HREF}
@@ -152,17 +152,17 @@ function InviteCard({ thin, ownerName }: { thin: boolean; ownerName: string }) {
         {SHARE_CTA}
         <ArrowRight className="size-4" strokeWidth={2.4} aria-hidden />
       </Link>
-      <p className="mt-2 text-center text-[11.5px] leading-relaxed text-forest/45">
+      <p className="mt-2 text-center text-[12.5px] leading-relaxed text-forest/45">
         {thin ? SHARE_THIN_CTA_HINT : SHARE_CTA_HINT}
       </p>
 
-      <p className="mt-3.5 border-t border-soil/12 pt-3.5 text-[11.5px] leading-relaxed text-forest/55">
+      <p className="mt-3.5 border-t border-soil/12 pt-3.5 text-[12.5px] leading-relaxed text-forest/55">
         {SEKALI_BAYAR_BADGE}
       </p>
 
       {/* janji privasi pengunjung — CONTEXT-WAJIB §5.3: halaman yang menyentuh
           data orang lain wajib mengulang janji ini */}
-      <p className="mt-3 flex items-start gap-1.5 text-[11.5px] leading-relaxed text-forest/45">
+      <p className="mt-3 flex items-start gap-1.5 text-[12.5px] leading-relaxed text-forest/45">
         <ShieldCheck className="mt-[1px] size-3.5 shrink-0" strokeWidth={2.2} aria-hidden />
         {shareVisitorPledge(ownerName)}
       </p>
@@ -195,7 +195,7 @@ function UnavailableView() {
       <h1 className="mt-1.5 font-display text-3xl font-semibold tracking-tight text-forest lg:text-4xl">
         {SHARE_UNAVAILABLE_TITLE}
       </h1>
-      <p className="mt-3 text-[13.5px] leading-relaxed text-forest/60">
+      <p className="mt-3 text-[14.5px] leading-relaxed text-forest/60">
         {SHARE_UNAVAILABLE_BODY}
       </p>
 
@@ -221,12 +221,12 @@ function UnavailableView() {
 function DemoStateLinks({ activeId }: { activeId: string }) {
   return (
     <section className="rounded-[1.75rem] bg-sage/50 p-5 ring-1 ring-soil/10">
-      <h2 className="font-display text-[14px] font-medium tracking-tight text-forest">
+      <h2 className="font-display text-[15px] font-medium tracking-tight text-forest">
         {SHARE_DEMO_COPY.title}
       </h2>
-      <p className="mt-1 text-[11.5px] leading-relaxed text-forest/55">{SHARE_DEMO_COPY.body}</p>
+      <p className="mt-1 text-[12.5px] leading-relaxed text-forest/55">{SHARE_DEMO_COPY.body}</p>
 
-      <p className="mt-3.5 border-t border-soil/12 pt-3.5 text-[10.5px] font-medium uppercase tracking-[0.14em] text-forest/40">
+      <p className="mt-3.5 border-t border-soil/12 pt-3.5 text-[11.5px] font-medium uppercase tracking-[0.14em] text-forest/40">
         {SHARE_DEMO_COPY.statesLabel}
       </p>
       <ul className="mt-2 flex flex-wrap gap-2">
@@ -238,7 +238,7 @@ function DemoStateLinks({ activeId }: { activeId: string }) {
                 href={buildShareHref(state.id)}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
-                  'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11.5px] font-medium transition-colors duration-200 motion-reduce:transition-none',
+                  'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12.5px] font-medium transition-colors duration-200 motion-reduce:transition-none',
                   active
                     ? 'bg-forest text-mint'
                     : 'bg-cream text-forest/60 ring-1 ring-soil/14 hover:text-forest',

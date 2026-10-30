@@ -51,7 +51,7 @@ export function JointSettlementCard({
     >
       {/* kepala kartu: label status + badge hasil */}
       <div className="flex items-center justify-between gap-3">
-        <p className="text-[10.5px] font-medium uppercase tracking-[0.14em] text-forest/40">Status</p>
+        <p className="text-[11.5px] font-medium uppercase tracking-[0.14em] text-forest/40">Status</p>
         <StatusBadge even={allEven} needsTransfer={needsTransfer} />
       </div>
 
@@ -70,7 +70,7 @@ export function JointSettlementCard({
 
           {/* nominal yang perlu dipindahkan — angka paling penting di kartu ini */}
           <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl bg-sage/60 px-4 py-3.5">
-            <span className="text-[11px] font-medium uppercase tracking-[0.12em] text-forest/50">
+            <span className="text-[12px] font-medium uppercase tracking-[0.12em] text-forest/50">
               Nominal transfer
             </span>
             <span className="font-display text-[22px] font-semibold leading-none tabular-nums tracking-tight text-hud-terracotta">
@@ -81,7 +81,7 @@ export function JointSettlementCard({
           <button
             type="button"
             onClick={onSettle}
-            className="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-forest text-[13.5px] font-medium text-mint shadow-[0_16px_32px_-22px_rgba(0,0,0,0.95)] transition-colors hover:bg-forest-soft active:scale-[0.99]"
+            className="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-forest text-[14.5px] font-medium text-mint shadow-[0_16px_32px_-22px_rgba(0,0,0,0.95)] transition-colors hover:bg-forest-soft active:scale-[0.99]"
           >
             Settle Sekarang
             <ArrowRight className="size-4" strokeWidth={2.6} />
@@ -94,10 +94,10 @@ export function JointSettlementCard({
             <CheckCircle2 className="size-[18px]" strokeWidth={2.3} aria-hidden />
           </span>
           <div className="min-w-0">
-            <p className="text-[13.5px] font-medium text-forest">
+            <p className="text-[14.5px] font-medium text-forest">
               {allEven ? 'Semua Impas' : 'Hampir Impas'}
             </p>
-            <p className="mt-0.5 text-[11.5px] leading-snug text-forest-muted">
+            <p className="mt-0.5 text-[12.5px] leading-snug text-forest-muted">
               {settled
                 ? 'Bulan ini sudah ditutup.'
                 : allEven
@@ -105,7 +105,7 @@ export function JointSettlementCard({
                   : `Selisih ${moneyLabel(difference, masked)}, tidak perlu transfer.`}
             </p>
           </div>
-          <span className="ml-auto shrink-0 text-[11px] font-medium text-forest/40">
+          <span className="ml-auto shrink-0 text-[12px] font-medium text-forest/40">
             {me.name} &amp; {partner.name}
           </span>
         </div>
@@ -119,7 +119,7 @@ function StatusBadge({ even, needsTransfer }: { even: boolean; needsTransfer: bo
   return (
     <span
       className={cn(
-        'inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-medium uppercase tracking-wide ring-1',
+        'inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide ring-1',
         even
           ? 'bg-hud-sage/20 text-forest ring-hud-sage/30'
           : needsTransfer
@@ -153,17 +153,17 @@ function PersonPill({
       <span
         aria-hidden
         className={cn(
-          'flex size-9 shrink-0 items-center justify-center rounded-full text-[16px] ring-1',
+          'flex size-9 shrink-0 items-center justify-center rounded-full text-[17px] ring-1',
           person.tint,
         )}
       >
         {person.avatar}
       </span>
       <span className="min-w-0">
-        <span className="block truncate text-[13px] font-medium leading-tight text-forest">
+        <span className="block truncate text-[14px] font-medium leading-tight text-forest">
           {person.name}
         </span>
-        <span className="mt-0.5 block truncate text-[10.5px] leading-tight text-forest/45">
+        <span className="mt-0.5 block truncate text-[11.5px] leading-tight text-forest/45">
           {caption}
         </span>
       </span>

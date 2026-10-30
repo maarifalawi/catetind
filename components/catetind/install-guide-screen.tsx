@@ -118,7 +118,7 @@ export function InstallGuideScreen() {
             Bagikan link (sekunder) → panduan perangkat lain → kaki. Alasan deviasi
             dari grid 12 kolom desktop: H1-1 memang meminta flow linear. */}
         <header>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-cream/70 px-3 py-1 text-[11px] font-medium tracking-[0.16em] text-forest uppercase ring-1 ring-soil/12">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-cream/70 px-3 py-1 text-[12px] font-medium tracking-[0.16em] text-forest uppercase ring-1 ring-soil/12">
             <Zap className="size-3" strokeWidth={2.6} aria-hidden />
             {INSTALL_HERO.badge}
           </span>
@@ -190,7 +190,7 @@ export function InstallGuideScreen() {
                   type="button"
                   onClick={() => setManualOpen((open) => !open)}
                   aria-expanded={manualOpen}
-                  className="flex w-full items-center justify-between gap-2 rounded-2xl bg-cream/70 px-4 py-3 text-left text-[12.5px] font-medium text-forest ring-1 ring-soil/12 transition-colors hover:bg-cream"
+                  className="flex w-full items-center justify-between gap-2 rounded-2xl bg-cream/70 px-4 py-3 text-left text-[13.5px] font-medium text-forest ring-1 ring-soil/12 transition-colors hover:bg-cream"
                 >
                   Cara install manual
                   {manualOpen ? (
@@ -270,7 +270,7 @@ export function InstallGuideScreen() {
               )}
 
               {/* kaki halaman: satu baris saja — bantuan + jalan masuk kalau belum punya akun */}
-              <p className="mt-6 text-center text-[11px] leading-relaxed text-forest/35">
+              <p className="mt-6 text-center text-[12px] leading-relaxed text-forest/35">
                 {INSTALL_HELP_FOOTER.prefix}
                 <a href="/help" className="font-medium text-forest/70 underline underline-offset-2">
                   {INSTALL_HELP_FOOTER.linkLabel}

@@ -29,14 +29,14 @@ export function SettingsPanel({
   return (
     <section className="flex w-full min-w-0 flex-col gap-4">
       <header className="min-w-0">
-        <p className="text-[10.5px] font-medium tracking-[0.16em] text-forest/40 uppercase">
+        <p className="text-[11.5px] font-medium tracking-[0.16em] text-forest/40 uppercase">
           {eyebrow}
         </p>
         <h2 className="mt-1.5 font-display text-xl font-medium tracking-tight text-forest sm:text-2xl">
           {title}
         </h2>
         {desc && (
-          <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-forest/55">{desc}</p>
+          <p className="mt-1.5 max-w-2xl text-[14px] leading-relaxed text-forest/55">{desc}</p>
         )}
       </header>
       {children}
@@ -75,14 +75,14 @@ export function SettingsCard({
             {title && (
               <h3
                 className={cn(
-                  'text-[15px] font-medium',
+                  'text-[16px] font-medium',
                   tone === 'danger' ? 'text-plum' : 'text-forest',
                 )}
               >
                 {title}
               </h3>
             )}
-            {desc && <p className="mt-1 text-[12.5px] leading-relaxed text-forest/55">{desc}</p>}
+            {desc && <p className="mt-1 text-[13.5px] leading-relaxed text-forest/55">{desc}</p>}
           </div>
           {action}
         </div>
@@ -137,7 +137,7 @@ export function TonePill({
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium',
+        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-medium',
         TONES[tone],
         className,
       )}
@@ -236,7 +236,7 @@ export function Segmented<T extends string>({
             aria-checked={active}
             onClick={() => onChange(option.id)}
             className={cn(
-              'inline-flex flex-1 items-center justify-center gap-1.5 rounded-[0.9rem] px-3.5 py-2 text-[12.5px] font-medium transition-colors sm:flex-none sm:rounded-full',
+              'inline-flex flex-1 items-center justify-center gap-1.5 rounded-[0.9rem] px-3.5 py-2 text-[13.5px] font-medium transition-colors sm:flex-none sm:rounded-full',
               active ? 'bg-cream text-forest shadow-sm' : 'text-forest/55 hover:text-forest',
             )}
           >
@@ -278,12 +278,12 @@ export function SettingsField({
     <div className="flex flex-col gap-1.5">
       <label
         htmlFor={htmlFor}
-        className="text-[11px] font-medium tracking-[0.08em] text-forest/45 uppercase"
+        className="text-[12px] font-medium tracking-[0.08em] text-forest/45 uppercase"
       >
         {label}
       </label>
       {children}
-      {note && <p className="text-[11.5px] leading-relaxed text-forest/45">{note}</p>}
+      {note && <p className="text-[12.5px] leading-relaxed text-forest/45">{note}</p>}
     </div>
   )
 }

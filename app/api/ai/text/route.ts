@@ -159,8 +159,12 @@ terkirim dan arahkan ke ringkasan di app. Jangan mengaku sudah mencatat apa pun.
   const envelope = await generateJSON<{ inScope?: unknown; reply?: unknown }>({
     system: `${system}\n\n${COACH_REPLY_ENVELOPE_PROMPT}`,
     turns,
-    maxOutputTokens: 900,
+    /* 1600 (dulu 900) + reasoning 'low': jawaban coach panjang, dan token
+       berpikir ikut memakan `max_tokens` — jatah lama bisa membuat balasannya
+       kosong ("Model AI belum mengirim jawaban", paket 101). */
+    maxOutputTokens: 1600,
     temperature: 0.7,
+    reasoningEffort: 'low',
   })
 
   if (envelope.ok) {
@@ -179,7 +183,7 @@ terkirim dan arahkan ke ringkasan di app. Jangan mengaku sudah mencatat apa pun.
     /* reply kosong tanpa alasan skop: bukan keadaan yang sah → jatuh ke jalur teks */
   }
 
-  const result = await generateText({ system, turns, maxOutputTokens: 700 })
+  const result = await generateText({ system, turns, maxOutputTokens: 1600 })
   if (!result.ok) {
     /* pesan penyedia dicatat di LOG SERVER; yang keluar ke klien hanya copy app */
     logAiFailure(result.error)

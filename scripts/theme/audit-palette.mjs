@@ -27,6 +27,11 @@ const ALLOWED = new Set(
     '#fbe3c0', '#e8b06a', '#73533c', '#f6edb7', '#6a612f',
     /* charcoal CTA hero — token `--color-graphite`, nilai computed style export Framer */
     '#35363b',
+    /* permukaan & teks redup — token `--color-forest-muted` (#5a6a61) dan
+       `--color-cream-muted` (#dfe4e1). Keduanya DIDEFINISIKAN di
+       `app/globals.css` sebagai token kanon, jadi nilai hex-nya muncul di file
+       itu sendiri dan harus diizinkan seperti token lain. */
+    '#5a6a61', '#dfe4e1',
     /* netral teknis — dasar permukaan putih (token `--color-canvas` / `--color-cream`) */
     '#ffffff',
   ].map((h) => h.toLowerCase()),

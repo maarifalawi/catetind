@@ -5,8 +5,10 @@ import {
   DEMO_VALID_CODE,
   INVITE_CODE_LENGTH,
   INVITE_TTL_MS,
+  JOIN_CLAIM_PARAM,
   buildInviteShareText,
   buildInviteUrl,
+  buildJoinClaimHref,
   buildJoinHref,
   consumeInviteIn,
   createInviteRecord,
@@ -14,9 +16,13 @@ import {
   generateInviteCode,
   generateUniqueInviteCode,
   inviteExpiryLabel,
+  inviteExpiryLabelFromTime,
+  inviteValidityUntilLabel,
   inviteWalletName,
   isInviteUsable,
+  isJoinClaimRequest,
   resolveInviteFrom,
+  resolveRemoteInviteView,
   type InviteRecord,
   type RandomBytes,
 } from './joint-invite'
@@ -104,10 +110,16 @@ describe('createInviteRecord · kode per wallet', () => {
 describe('resolveInviteFrom · valid / used / expired / unknown', () => {
   const record = createInviteRecord({ walletId: 'joint_1', now: NOW, random: fixedRandom(11) })
 
-  it('kode hidup → valid, dan menyebut pengundang + dompetnya', () => {
+  it('kode hidup → valid, dan menyebut dompetnya (nama pengundang dari server)', () => {
     const invite = resolveInviteFrom([record], record.code.toLowerCase(), NOW)
     expect(invite.status).toBe('valid')
-    expect(invite.inviterName).toBe('Jon')
+    /**
+     * Nama pengundang TIDAK dikarang di perangkat: jalur lokal tidak tahu siapa
+     * pembuat kode (dulu diisi konstanta "Jon"). Nilai `null` membuat layar
+     * memakai sebutan "Pasanganmu"; nama asli datang dari
+     * `catetind_resolve_invite` → `invite_inviter_name`.
+     */
+    expect(invite.inviterName).toBeNull()
     expect(invite.walletName).toBe(INITIAL_JOINT_WALLET.name)
     expect(invite.validUntilLabel).not.toBeNull()
   })
@@ -116,8 +128,8 @@ describe('resolveInviteFrom · valid / used / expired / unknown', () => {
     const invite = resolveInviteFrom([record], record.code, NOW + INVITE_TTL_MS)
     expect(invite.status).toBe('expired')
     expect(invite.validUntilLabel).toBeNull()
-    /* pengundangnya tetap disebut — user tahu harus minta link baru ke siapa */
-    expect(invite.inviterName).toBe('Jon')
+    /* tidak ada nama karangan untuk pengundang yang tidak diketahui */
+    expect(invite.inviterName).toBeNull()
   })
 
   it('sudah dipakai → used (dan menang atas kedaluwarsa)', () => {
@@ -196,4 +208,98 @@ describe('label & tautan undangan', () => {
     expect(inviteExpiryLabel(record)).not.toBe(inviteExpiryLabel(other))
   })
 })
+
+/* ── Paket 100: "login -> auto-join" & status dari SERVER ─────────────────────
+   Gap yang ditutup: tombol "Gabung Dompet Ini" dulu menaut ke `/login` POLOS
+   (kode undangan hilang di tengah jalan), dan jawaban `catetind_resolve_invite`
+   dibuang kecuali status used/expired — sehingga kode yang sah tampil
+   "Kodenya nggak ketemu" di perangkat yang diundang. Test di bawah mengunci
+   bentuk tautan tujuan login dan pemetaan status server -> copy layar. */
+
+describe('tautan auto-join setelah masuk', () => {
+  it('membawa kode undangan + penanda terima ke halaman masuk', () => {
+    const href = buildJoinClaimHref(' k4m2p9 ')
+    expect(href).toBe(`/join/K4M2P9?${JOIN_CLAIM_PARAM}=1`)
+  })
+
+  it('penanda hanya aktif untuk 1/true (bukan sembarang isi)', () => {
+    expect(isJoinClaimRequest('1')).toBe(true)
+    expect(isJoinClaimRequest(['1'])).toBe(true)
+    expect(isJoinClaimRequest('TRUE')).toBe(true)
+    expect(isJoinClaimRequest('0')).toBe(false)
+    expect(isJoinClaimRequest('ya')).toBe(false)
+    expect(isJoinClaimRequest(undefined)).toBe(false)
+  })
+})
+
+describe('resolveRemoteInviteView · jawaban server jadi copy /join', () => {
+  const expiresAt = new Date(NOW + INVITE_TTL_MS).toISOString()
+
+  it('valid: nama pengundang & dompet dari server dipakai apa adanya', () => {
+    const view = resolveRemoteInviteView({
+      status: 'valid',
+      walletName: 'Dompet Kita Berdua',
+      expiresAt,
+      inviterName: 'Dany',
+    })
+
+    expect(view.status).toBe('valid')
+    if (view.status !== 'valid') return
+    expect(view.inviterName).toBe('Dany')
+    expect(view.walletName).toBe('Dompet Kita Berdua')
+    expect(view.validUntilLabel?.startsWith('Kode berlaku sampai ')).toBe(true)
+  })
+
+  it('valid tanpa nama pengundang: jangan mengarang nama', () => {
+    const view = resolveRemoteInviteView({
+      status: 'valid',
+      walletName: 'Dompet Kita Berdua',
+      expiresAt,
+      inviterName: '   ',
+    })
+    expect(view.status).toBe('valid')
+    expect(view.inviterName).toBeNull()
+  })
+
+  it('used & expired mempertahankan nama dompet untuk konteks jalan keluar', () => {
+    const used = resolveRemoteInviteView({
+      status: 'used',
+      walletName: 'Dompet Kita Berdua',
+      expiresAt,
+      inviterName: 'Dany',
+    })
+    const expired = resolveRemoteInviteView({
+      status: 'expired',
+      walletName: 'Dompet Kita Berdua',
+      expiresAt,
+      inviterName: null,
+    })
+
+    expect(used.status).toBe('used')
+    expect(expired.status).toBe('expired')
+    if (used.status !== 'used' || expired.status !== 'expired') return
+    expect(used.walletName).toBe('Dompet Kita Berdua')
+    expect(used.validUntilLabel).toBeNull()
+    expect(expired.walletName).toBe('Dompet Kita Berdua')
+  })
+
+  it('not_found jadi status unknown tanpa nama karangan', () => {
+    const view = resolveRemoteInviteView({
+      status: 'not_found',
+      walletName: null,
+      expiresAt: null,
+      inviterName: null,
+    })
+    expect(view.status).toBe('unknown')
+    expect(view.walletName).toBeNull()
+    expect(view.inviterName).toBeNull()
+  })
+
+  it('label masa berlaku memakai waktu expiry, bukan klaim "24 jam"', () => {
+    const label = inviteValidityUntilLabel(Date.parse(expiresAt))
+    expect(label).toBe(`Kode berlaku sampai ${inviteExpiryLabelFromTime(Date.parse(expiresAt))}.`)
+    expect(label).not.toBe(inviteExpiryLabelFromTime(NOW))
+  })
+})
+
 

@@ -8,7 +8,7 @@ import {
   logAiFailure,
   parseJsonLoose,
 } from '@/lib/ai/provider'
-import { EXTRACTION_SYSTEM_PROMPT, EXTRACTION_EXAMPLES } from '@/lib/ai/prompts'
+import { EXTRACTION_SYSTEM_PROMPT, EXTRACTION_EXAMPLES, RECEIPT_EXTRACTION_PROMPT } from '@/lib/ai/prompts'
 import { normalizeExtraction, type RawExtraction } from '@/lib/ai/extract'
 import { allowAiCall } from '@/lib/ai/rate-limit'
 import { requireCapability } from '@/lib/subscription/capability'
@@ -178,7 +178,9 @@ export async function POST(req: NextRequest) {
   }
 
   const prompt = [
-    'Baca struk pada gambar ini dan ubah jadi SATU objek JSON transaksi.',
+    /* paket 101: instruksi "pilih total, bukan harga item" tinggal di
+       `lib/ai/prompts.ts` — route hanya merangkai. */
+    RECEIPT_EXTRACTION_PROMPT,
     'Contoh yang benar:',
     ...EXTRACTION_EXAMPLES.map((line) => `- ${line}`),
     'Balas HANYA JSON.',

@@ -69,7 +69,7 @@ export function BillsOverview({
     >
       <div className="flex items-start justify-between gap-5">
         <div className="min-w-0">
-          <p className="text-[10.5px] font-medium uppercase tracking-[0.16em] text-forest-muted">
+          <p className="text-[11.5px] font-medium uppercase tracking-[0.16em] text-forest-muted">
             {allPaid ? 'Sisa tagihan' : 'Belum dibayar'}
           </p>
           <p className="mt-2 font-display text-[30px] font-semibold leading-none tracking-tight tabular-nums text-forest sm:text-[34px]">
@@ -89,13 +89,13 @@ export function BillsOverview({
             {allPaid ? (
               <Check className="size-5 text-forest" strokeWidth={2.6} aria-hidden />
             ) : (
-              <span className="text-[11px] font-semibold tabular-nums text-forest">
+              <span className="text-[12px] font-semibold tabular-nums text-forest">
                 {Math.round(progress)}
-                <span className="text-[8px] font-medium text-forest-muted">%</span>
+                <span className="text-[9px] font-medium text-forest-muted">%</span>
               </span>
             )}
           </ProgressRing>
-          <span className="text-[9.5px] font-medium leading-none text-forest-muted">
+          <span className="text-[10.5px] font-medium leading-none text-forest-muted">
             {allPaid ? 'lunas' : 'nominal lunas'}
           </span>
         </div>
@@ -123,7 +123,7 @@ export function BillsOverview({
         />
       </div>
 
-      <div className="mt-3 flex items-center justify-between gap-3 text-[11.5px] font-medium tabular-nums text-forest-muted">
+      <div className="mt-3 flex items-center justify-between gap-3 text-[12.5px] font-medium tabular-nums text-forest-muted">
         <span className="min-w-0 truncate">{statusLine}</span>
         <span className="shrink-0 text-right">Total {maskMoney(total, masked)}</span>
       </div>

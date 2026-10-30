@@ -73,51 +73,6 @@ export async function verifyEmailOtp(email: string, token: string): Promise<Auth
 }
 
 /**
- * Masuk sebagai REVIEWER MIDTRANS (verifikasi merchant) memakai kode akses tetap
- * — lihat `lib/data/reviewer-access.ts` & `app/api/auth/reviewer/route.ts`.
- *
- * Dua langkah, keduanya nyata:
- *   1. server membuat token sesi lewat Supabase Admin API (tanpa email);
- *   2. browser menukar `token_hash` itu jadi sesi lewat `verifyOtp` — jalur yang
- *      SAMA dengan kode OTP email, jadi cookie & middleware tidak butuh
- *      pengecualian apa pun.
- *
- * Dipanggil HANYA kalau pasangan email + kode sudah lolos `isReviewerTestCode`;
- * route server tetap memvalidasi ulang (klien tidak pernah jadi sumber izin).
- */
-export async function signInWithReviewerCode(email: string, code: string): Promise<AuthResult> {
-  const client = browserSupabase()
-  if (!client) return { ok: false, error: 'Backend Supabase belum dikonfigurasi di build ini.' }
-  try {
-    const res = await fetch('/api/auth/reviewer', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email.trim(), code: code.trim() }),
-    })
-    const data = (await res.json().catch(() => null)) as
-      | { ok?: boolean; error?: string; tokenHash?: string }
-      | null
-
-    if (!res.ok || !data?.ok || !data.tokenHash) {
-      return {
-        ok: false,
-        error: data?.error ?? 'Kode reviewer belum bisa dipakai sekarang.',
-      }
-    }
-
-    const { error } = await client.auth.verifyOtp({
-      token_hash: data.tokenHash,
-      type: 'magiclink',
-    })
-    if (error) return { ok: false, error: error.message }
-    return { ok: true }
-  } catch {
-    return { ok: false, error: 'Jaringan tidak bisa dihubungi. Coba lagi ya.' }
-  }
-}
-
-
-/**
  * Tukar `?code=` dari tautan email jadi sesi (PKCE). Dipanggil halaman
  * /login/verify — jalur pertama yang selesai oleh user yang membuka email di
  * browser yang sama.

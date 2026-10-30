@@ -27,7 +27,7 @@ import { cn } from '@/lib/utils'
 
 export type NavLockBadgeVariant = 'pill' | 'dot'
 
-/** “Paket Waras” → “Waras” supaya pil tetap ringkas di sidebar 280 px */
+/** “Paket Waras” → “Waras” supaya pil tetap ringkas di sidebar 296 px */
 function shortPlanName(planName: string | null | undefined): string {
   const name = planName?.trim() || 'Paket Waras'
   return name.replace(/^paket\s+/i, '')
@@ -67,7 +67,7 @@ export function NavLockBadge({
       className={cn(
         'pointer-events-none ml-auto inline-flex shrink-0 items-center gap-1 rounded-full',
         'bg-gradient-to-r from-daisy-light via-daisy to-daisy-light px-1.5 py-[3px]',
-        'text-[9.5px] font-semibold tracking-[0.05em] text-daisy-deep uppercase',
+        'text-[10.5px] font-semibold tracking-[0.05em] text-daisy-deep uppercase',
         'ring-1 ring-daisy-deep/20',
         'shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_1px_2px_rgba(106,97,47,0.22)]',
         'transition-shadow duration-200 group-hover/item:shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_0_0_3px_rgba(236,215,104,0.28)]',

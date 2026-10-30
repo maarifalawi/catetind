@@ -19,6 +19,7 @@ import {
   periodWindowForTab,
   removeBudget,
   restoreBudget,
+  SINKING_NUDGE_COPY,
   scopeCaptionFor,
   sinkingObligationOf,
   spentInWindow,
@@ -530,6 +531,39 @@ describe('pacingStatusLabel · status tiga kata pengganti kalimat (paket 78)', (
       scope: 'pribadi',
     }
     expect(pacingStatusLabel(pacingOf(budget).tone)).toBe('Mendekati limit')
+  })
+})
+
+
+/* ── COPY NUDGE DANA DARURAT (beranda) ───────────────────────────────────────
+   Judul lamanya terlalu panjang sehingga TERPOTONG ellipsis di kartu banner
+   375px, dan baris keduanya membawa ajakan metafora tanaman plus emoji. Copy
+   sekarang deskriptif & pendek: judul menyebut keadaan, baris kedua satu aksi.
+   Trigger kapan kartu muncul TIDAK diuji di sini karena ia hidup di komponen
+   (tanggal > 5) — yang dikunci adalah isi copy-nya. */
+
+describe('SINKING_NUDGE_COPY · copy pendek tanpa emoji', () => {
+  it('judul & baris kedua memakai kalimat baru yang pendek', () => {
+    expect(SINKING_NUDGE_COPY.title).toBe('Dana Darurat belum diisi')
+    expect(SINKING_NUDGE_COPY.body).toBe('Sisihin dikit bulan ini.')
+    expect(SINKING_NUDGE_COPY.cta).toBe('Setor')
+  })
+
+  it('judul cukup pendek untuk satu baris di 375px', () => {
+    /* batas aman: ~26 karakter (± 14px font-medium) masih muat di kartu banner */
+    expect(SINKING_NUDGE_COPY.title.length).toBeLessThanOrEqual(26)
+  })
+
+  it('bebas emoji, em dash, dan kata "lu"', () => {
+    for (const text of [SINKING_NUDGE_COPY.title, SINKING_NUDGE_COPY.body]) {
+      expect(text).not.toContain('—')
+      expect(text).not.toMatch(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u)
+      expect(text).not.toMatch(/\blu\b/)
+    }
+  })
+
+  it('CTA tetap menunjuk halaman yang memegang aksi setor', () => {
+    expect(SINKING_NUDGE_COPY.ctaHref).toBe('/budget')
   })
 })
 

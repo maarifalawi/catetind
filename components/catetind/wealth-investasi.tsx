@@ -140,7 +140,7 @@ export function WealthInvestasi({
               ada di kepala kartu panel (wealth-screen), jadi tidak diduplikasi
               di sini. */}
           <div className="flex items-center justify-between gap-3">
-            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-forest/40">
+            <p className="text-[12px] font-medium uppercase tracking-[0.16em] text-forest/40">
               {investments.length} aset
             </p>
             <button
@@ -235,7 +235,7 @@ function AssetCard({
           {/* 5D — harga basi: banner amber tepat di atas isi kartu aset ini */}
           {stale && (
             <span className="mb-3 flex flex-wrap items-center gap-2 rounded-2xl bg-hud-amber/12 px-3 py-2 ring-1 ring-inset ring-hud-amber/25">
-              <span className="flex min-w-0 flex-1 items-start gap-1.5 text-[11px] leading-snug text-hud-terracotta">
+              <span className="flex min-w-0 flex-1 items-start gap-1.5 text-[12px] leading-snug text-hud-terracotta">
                 <AlertTriangle className="mt-px size-3.5 shrink-0" strokeWidth={2.4} />
                 <span>
                   {stalePriceWarning(meta.label, formatPriceStamp(asset.lastUpdate))}
@@ -254,7 +254,7 @@ function AssetCard({
                   event.stopPropagation()
                   onUpdatePrice()
                 }}
-                className="inline-flex shrink-0 items-center gap-1 rounded-full bg-cream px-2.5 py-1 text-[10.5px] font-medium text-hud-terracotta ring-1 ring-hud-amber/40 transition-colors hover:bg-hud-amber/15"
+                className="inline-flex shrink-0 items-center gap-1 rounded-full bg-cream px-2.5 py-1 text-[11.5px] font-medium text-hud-terracotta ring-1 ring-hud-amber/40 transition-colors hover:bg-hud-amber/15"
               >
                 <RefreshCw className="size-3" strokeWidth={2.6} />
                 Update Manual
@@ -269,7 +269,7 @@ function AssetCard({
           <span className="flex items-center gap-3">
             <span
               className={cn(
-                'flex size-10 shrink-0 items-center justify-center rounded-2xl text-[17px]',
+                'flex size-10 shrink-0 items-center justify-center rounded-2xl text-[18px]',
                 meta.chipClass,
               )}
               aria-hidden
@@ -278,19 +278,19 @@ function AssetCard({
             </span>
 
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-[13.5px] font-medium text-forest">
+              <span className="block truncate text-[14.5px] font-medium text-forest">
                 {asset.name}
               </span>
               <span className="mt-1 flex flex-wrap items-center gap-1.5">
-                <span className="shrink-0 rounded-full bg-ink/[0.05] px-1.5 py-0.5 text-[9.5px] font-medium uppercase tracking-wide text-forest/50">
+                <span className="shrink-0 rounded-full bg-ink/[0.05] px-1.5 py-0.5 text-[10.5px] font-medium uppercase tracking-wide text-forest/50">
                   {asset.symbol}
                 </span>
                 {/* badge konteks uang aset ini (paket 47) — aset yang muncul di
                     beberapa halaman harus menyebut milik siapa */}
-                <span className="shrink-0 rounded-full bg-sage/70 px-1.5 py-0.5 text-[9.5px] font-medium uppercase tracking-wide text-forest ring-1 ring-inset ring-forest/10">
+                <span className="shrink-0 rounded-full bg-sage/70 px-1.5 py-0.5 text-[10.5px] font-medium uppercase tracking-wide text-forest ring-1 ring-inset ring-forest/10">
                   {CONTEXT_LABEL[asset.scope]}
                 </span>
-                <span className="truncate text-[11.5px] text-forest/50 tabular-nums">
+                <span className="truncate text-[12.5px] text-forest/50 tabular-nums">
                   {formatAssetQuantity(asset)}
                 </span>
               </span>
@@ -313,12 +313,12 @@ function AssetCard({
               kiri = modal + umur harga (+ pintu Update Harga), kanan = hasil. */}
           <span className="mt-3 flex items-end justify-between gap-3">
             <span className="min-w-0">
-              <span className="block truncate text-[10.5px] text-forest/40 tabular-nums">
+              <span className="block truncate text-[11.5px] text-forest/40 tabular-nums">
                 Avg {maskMoney(asset.avgBuyPrice, masked)}
               </span>
               {/* "Terakhir diperbarui" per aset — satu-satunya tempat stempel harga
                   yang sah, karena jadwal update tiap aset berbeda (audit #4) */}
-              <span className="mt-0.5 block text-[10px] leading-snug text-forest/35 tabular-nums">
+              <span className="mt-0.5 block text-[11px] leading-snug text-forest/35 tabular-nums">
                 {priceUpdatedLabel(formatPriceStamp(asset.lastUpdate))}
               </span>
               {/* pintu UPDATE HARGA yang SELALU ada (bukan hanya saat harga basi):
@@ -342,7 +342,7 @@ function AssetCard({
                       onUpdatePrice()
                     }
                   }}
-                  className="mt-1.5 inline-flex shrink-0 items-center gap-1 rounded-full bg-sage/70 px-2.5 py-1 text-[10.5px] font-medium text-forest ring-1 ring-forest/10 transition-colors hover:bg-forest hover:text-mint"
+                  className="mt-1.5 inline-flex shrink-0 items-center gap-1 rounded-full bg-sage/70 px-2.5 py-1 text-[11.5px] font-medium text-forest ring-1 ring-forest/10 transition-colors hover:bg-forest hover:text-mint"
                 >
                   <RefreshCw className="size-3" strokeWidth={2.6} aria-hidden />
                   Update Harga
@@ -353,14 +353,14 @@ function AssetCard({
             <span className="shrink-0 text-right">
               <span
                 className={cn(
-                  'block text-[11px] font-semibold tabular-nums',
+                  'block text-[12px] font-semibold tabular-nums',
                   profit ? 'text-hud-sage' : 'text-hud-terracotta',
                 )}
               >
                 {profit ? '+' : '−'}
                 {formatIDR(Math.abs(ret.value))} ({Math.abs(ret.pct).toFixed(2)}%)
               </span>
-              <span className="mt-1 block font-display text-[17px] font-semibold text-forest tabular-nums">
+              <span className="mt-1 block font-display text-[18px] font-semibold text-forest tabular-nums">
                 {maskMoney(asset.currentValue, masked)}
               </span>
             </span>
@@ -404,7 +404,7 @@ function AssetCard({
             className="overflow-hidden"
           >
             <div className="mt-2 rounded-[1.35rem] bg-cream/70 px-3.5 py-3.5 ring-1 ring-inset ring-soil/8">
-              <p className="flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-[0.14em] text-forest/40">
+              <p className="flex items-center gap-1.5 text-[11.5px] font-medium uppercase tracking-[0.14em] text-forest/40">
                 <History className="size-3.5" strokeWidth={2.6} />
                 {ASSET_HISTORY_TITLE}
               </p>
@@ -415,10 +415,10 @@ function AssetCard({
                   user diberi tahu apa adanya + jalan keluarnya. */}
               {history.length === 0 ? (
                 <div className="mt-2.5 rounded-2xl bg-cream px-3.5 py-3 ring-1 ring-inset ring-soil/8">
-                  <p className="text-[11.5px] font-medium leading-relaxed text-forest/60">
+                  <p className="text-[12.5px] font-medium leading-relaxed text-forest/60">
                     {ASSET_HISTORY_EMPTY}
                   </p>
-                  <p className="mt-1 text-[10.5px] leading-relaxed text-forest/40">
+                  <p className="mt-1 text-[11.5px] leading-relaxed text-forest/40">
                     {ASSET_HISTORY_EMPTY_HINT}
                   </p>
                 </div>
@@ -426,10 +426,10 @@ function AssetCard({
                 <>
                   <ul className="mt-2.5 space-y-2">
                     {history.map((tx) => (
-                      <li key={tx.id} className="flex items-center gap-2.5 text-[11.5px]">
+                      <li key={tx.id} className="flex items-center gap-2.5 text-[12.5px]">
                         <span
                           className={cn(
-                            'shrink-0 rounded-full px-2 py-0.5 text-[9.5px] font-medium uppercase tracking-wide',
+                            'shrink-0 rounded-full px-2 py-0.5 text-[10.5px] font-medium uppercase tracking-wide',
                             tx.side === 'buy'
                               ? 'bg-hud-sage/25 text-forest'
                               : 'bg-hud-terracotta/15 text-hud-terracotta',

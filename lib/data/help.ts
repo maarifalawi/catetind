@@ -1,46 +1,37 @@
-/* ── Pusat Bantuan (/app/help, inventaris #30) · Domain 4C ───────────────────
+﻿/* â”€â”€ Pusat Bantuan (/app/help, inventaris #30) Â· Domain 4C â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    Satu sumber data + logika MURNI (tanpa React) untuk halaman bantuan:
 
-    1. TOPIK + ARTIKEL — 9 grup topik, masing-masing punya `blurb` (sapaan
+    1. TOPIK + ARTIKEL â€” 9 grup topik, masing-masing punya `blurb` (sapaan
        Minca) dan artikel berisi langkah bernomor + `proTip` ("Perlu Tahu").
        Gaya copy WAJIB suara Minca: santai, hangat, bahasa sehari-hari.
-    2. QUICK ANSWERS — 5 pertanyaan yang paling sering bikin panik. Ini konten
+    2. QUICK ANSWERS â€” 5 pertanyaan yang paling sering bikin panik. Ini konten
        DEFAULT saat belum ada topik yang dipilih.
-    3. PENCARIAN — `searchHelp()` mencocokkan judul + isi (langkah, proTip,
+    3. PENCARIAN â€” `searchHelp()` mencocokkan judul + isi (langkah, proTip,
        pertanyaan, jawaban) secara real-time, tanpa index eksternal.
-    4. PAYLOAD EXPORT — `buildHelpExportPayload()` menyusun JSON untuk tombol
-       "Export Data Saya" di dalam deflection loop (PRD Domain 4C, Mekanisme 1).
-       Di produksi data ini di-compile di server lalu dikirim ke email user
-       sendiri; di prototipe ini disusun di klien supaya tombolnya bekerja —
-       celengan & kekayaan (hutang/piutang/investasi) dioper dari store
-       perangkat (`lib/money/*-store.ts`) supaya file-nya memuat data yang
-       benar-benar dimiliki user, bukan hanya daftar contoh.
 
-   Catatan: semua angka/teks di bawah masih MOCK. Begitu endpoint asli siap,
-   cukup ganti nilai di file ini — komponen halaman hanya membaca turunan dari
-   sini, jadi tidak ada teks yang perlu diburu di JSX.
-   ────────────────────────────────────────────────────────────────────────── */
+   Yang DIHAPUS dari file ini: `buildHelpExportPayload()`. Fungsi itu menyusun
+   JSON ekspor dari KONSTANTA contoh (`WALLET_SEED`, `ALL_TRANSACTIONS`,
+   `INITIAL_*`), dan setelah tombol "Export Data Saya" memakai
+   `downloadMoneyExport()` (`lib/money/export.ts`, membaca store hidup) fungsi
+   itu tidak punya pemanggil lagi â€” hanya test yang memakainya, dan itulah cara
+   data contoh bisa hidup kembali. Satu jalur ekspor saja: `money/export.ts`.
+   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
-import { INITIAL_BILLS } from './bills'
-import { INITIAL_SINKING_FUNDS } from './budget'
-import { INITIAL_DEBTS, INITIAL_INVESTMENTS } from './wealth'
-import { ALL_TRANSACTIONS } from './transactions'
 import { LOGIN_PATH } from './auth'
 import { PRIVACY_LINK_COPY } from '../legal/privacy'
 import { TERMS_LINK_COPY } from '../legal/terms'
-import { WALLET_SEED } from '../wallets'
 import { SITE_DOMAIN } from '../site'
 
-/* ── 2. TOPIK + ARTIKEL ───────────────────────────────────────────────────── */
+/* â”€â”€ 2. TOPIK + ARTIKEL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 export interface HelpArticle {
-  /** id stabil — dipakai sebagai key React & penanda state feedback per artikel */
+  /** id stabil â€” dipakai sebagai key React & penanda state feedback per artikel */
   id: string
   /** mis. "Cara Catat Transaksi dalam 4 Tap" */
   title: string
   /** langkah bernomor, ditulis dengan suara Minca (nomornya digambar oleh <ol>) */
   steps: string[]
-  /** opsional — kotak "💡 Perlu Tahu" di bawah langkah */
+  /** opsional â€” kotak "ðŸ’¡ Perlu Tahu" di bawah langkah */
   proTip?: string
 }
 
@@ -59,28 +50,28 @@ export const HELP_TOPICS: HelpTopic[] = [
   {
     id: 'mulai',
     label: 'Mulai dari Sini',
-    emoji: '🚀',
+    emoji: 'ðŸš€',
     blurb: 'Baru kenalan sama CatetInd? Dua menit di sini, sisanya gue yang urus.',
     articles: [
       {
         id: 'mulai-siapin',
         title: 'Siapin CatetInd dalam 2 Menit',
         steps: [
-          'Isi nama kamu, nama panggilan juga boleh, gue yang bakal manggil 😄',
+          'Isi nama kamu, nama panggilan juga boleh, gue yang bakal manggil ðŸ˜„',
           'Masukin penghasilan bulanan. Nggak harus pas, perkiraan aja dulu.',
           'Pilih situasi kamu (mahasiswa, kerja, freelance) biar saran gue lebih nyambung.',
-          'Lihat tanamanmu muncul di dashboard. Dia tumbuh tiap kamu rajin nyatet 🌱',
+          'Lihat tanamanmu muncul di dashboard. Dia tumbuh tiap kamu rajin nyatet ðŸŒ±',
         ],
         proTip:
-          'Belum siap masukin angka? Skip aja. Semua isian bisa diubah kapan aja lewat Pengaturan → Profil.',
+          'Belum siap masukin angka? Skip aja. Semua isian bisa diubah kapan aja lewat Pengaturan â†’ Profil.',
       },
       {
         id: 'mulai-tanaman',
         title: 'Tanaman Gue Ngapain Sih?',
         steps: [
           'Dia bukan hiasan, dia ringkasan visual kebiasaan catat kamu.',
-          'Catat tiap hari → dia tumbuh, dari benih sampai mekar 🌸',
-          'Skip beberapa hari → dia agak lesu. Nggak mati, cuma ngambek dikit.',
+          'Catat tiap hari â†’ dia tumbuh, dari benih sampai mekar ðŸŒ¸',
+          'Skip beberapa hari â†’ dia agak lesu. Nggak mati, cuma ngambek dikit.',
           'Makin sehat tanamanmu, makin tajam saran yang gue kasih.',
         ],
         proTip:
@@ -91,7 +82,7 @@ export const HELP_TOPICS: HelpTopic[] = [
   {
     id: 'catat-transaksi',
     label: 'Catat Transaksi',
-    emoji: '✍️',
+    emoji: 'âœï¸',
     blurb: 'Empat tap, lalu balik ke hidupmu. Segitu doang.',
     articles: [
       {
@@ -113,7 +104,7 @@ export const HELP_TOPICS: HelpTopic[] = [
           'Tap transaksinya di Riwayat atau di kartu "Transaksi Terakhir".',
           'Pilih Edit, terus ganti kategorinya.',
           'Gue belajar dari koreksi kamu, beberapa kali koreksi biasanya cukup buat nangkep polanya.',
-          'Nggak mau nunggu? Set aturan tetap di Pengaturan → Kategori (mis. "kopi" selalu Makanan).',
+          'Nggak mau nunggu? Set aturan tetap di Pengaturan â†’ Kategori (mis. "kopi" selalu Makanan).',
         ],
         proTip:
           'Merchant yang sama salah terus? Itu tanda paling jelas buat bikin aturan tetap, bukan ngoreksi manual tiap hari.',
@@ -123,7 +114,7 @@ export const HELP_TOPICS: HelpTopic[] = [
         title: 'Catat Pas Nggak Ada Sinyal, Bisa?',
         steps: [
           'Bisa banget. Catat kayak biasa, gue simpan dulu di HP kamu.',
-          'Transaksinya muncul dengan ikon jam kecil ⏳ artinya masih ngantri kirim.',
+          'Transaksinya muncul dengan ikon jam kecil â³ artinya masih ngantri kirim.',
           'Begitu sinyal balik, semuanya otomatis terkirim. Kamu nggak perlu ngapa-ngapain.',
           'Kalau setelah 5 menit masih gagal, gue kasih tanda + tombol "Coba Lagi".',
         ],
@@ -135,7 +126,7 @@ export const HELP_TOPICS: HelpTopic[] = [
   {
     id: 'budget-target',
     label: 'Budget & Target Nabung',
-    emoji: '🎯',
+    emoji: 'ðŸŽ¯',
     blurb: 'Batasnya kamu yang nentuin. Gue cuma yang ingetin, bukan yang nyuruh.',
     articles: [
       {
@@ -156,7 +147,7 @@ export const HELP_TOPICS: HelpTopic[] = [
         steps: [
           'Nggak usah. Gue nggak pakai warna merah buat ngagetin kamu, ada aksen sendiri buat "lewat batas".',
           'Kartunya bilang kamu lewat berapa, dan sisa hari di bulan ini masih berapa.',
-          'Kalau porsinya memang kurang realistis, tap kategori → "Sesuaikan Budget".',
+          'Kalau porsinya memang kurang realistis, tap kategori â†’ "Sesuaikan Budget".',
           'Kalau cuma boros minggu ini, gue kasih tahu kebiasaan mana yang paling nyumbang.',
         ],
         proTip:
@@ -169,7 +160,7 @@ export const HELP_TOPICS: HelpTopic[] = [
           'Buka tab Target Nabung, tap "Tambah Target".',
           'Isi tujuannya: "Dana darurat", "Laptop baru", "Tiket konser", apa aja, gue nggak nge-judge.',
           'Masukin nominal target + tenggatnya. Gue hitung sendiri berapa yang perlu kamu sisihkan per bulan.',
-          'Tiap kamu sisihkan duit, targetnya naik dan benihnya ikut tumbuh 🌱',
+          'Tiap kamu sisihkan duit, targetnya naik dan benihnya ikut tumbuh ðŸŒ±',
         ],
         proTip:
           'Ada rejeki lebih di akhir bulan? Fitur Sweep mindahin sisa saldomu ke target otomatis.',
@@ -179,17 +170,17 @@ export const HELP_TOPICS: HelpTopic[] = [
   {
     id: 'tagihan-rutin',
     label: 'Tagihan Rutin',
-    emoji: '🔔',
+    emoji: 'ðŸ””',
     blurb: 'Biar Netflix dan kos nggak ngejutin kamu tiap tanggal 13.',
     articles: [
       {
         id: 'tagihan-tambah',
         title: 'Nambah Tagihan (Netflix, Kos, Wifi)',
         steps: [
-          'Buka Tagihan Rutin → tap "+ Tambah".',
+          'Buka Tagihan Rutin â†’ tap "+ Tambah".',
           'Pilih emojinya dulu, biar mata kamu gampang nyariin di daftar.',
           'Isi nominal + tanggal jatuh temponya tiap bulan.',
-          'Set reminder H-3, atau H-1 buat kamu yang suka adrenaline 😅',
+          'Set reminder H-3, atau H-1 buat kamu yang suka adrenaline ðŸ˜…',
         ],
         proTip:
           'Tagihan yang nominalnya nggak tetap (listrik, air) boleh dikosongin, gue bakal tanya pas kamu tandai lunas.',
@@ -200,8 +191,8 @@ export const HELP_TOPICS: HelpTopic[] = [
         steps: [
           'Default: push notification H-3 sebelum jatuh tempo.',
           'Aktifin push dulu, banner di halaman Tagihan akan nawarin.',
-          'Di iPhone, push cuma jalan kalau CatetInd udah di-install ke Home Screen. Itu aturan iOS, bukan salah kita 😅',
-          'Nggak mau notif sama sekali? Matiin di Pengaturan → Notifikasi, aplikasinya tetap jalan penuh.',
+          'Di iPhone, push cuma jalan kalau CatetInd udah di-install ke Home Screen. Itu aturan iOS, bukan salah kita ðŸ˜…',
+          'Nggak mau notif sama sekali? Matiin di Pengaturan â†’ Notifikasi, aplikasinya tetap jalan penuh.',
         ],
         proTip:
           'Pembayaranmu nggak pernah otomatis didebit. CatetInd nggak nyambung ke rekening bank, gue cuma ngingetin.',
@@ -223,7 +214,7 @@ export const HELP_TOPICS: HelpTopic[] = [
   {
     id: 'dompet-kita',
     label: 'Dompet Kita (Joint Wallet)',
-    emoji: '👫',
+    emoji: 'ðŸ‘«',
     blurb: 'Duit bareng pasangan, teman kos, atau tim trip. Transparan, tapi tetap ada privasi.',
     articles: [
       {
@@ -231,7 +222,7 @@ export const HELP_TOPICS: HelpTopic[] = [
         title: 'Cara Nyembunyiin Pengeluaran dari Pasangan',
         steps: [
           'Buka Dompet Kita, tap transaksi yang mau kamu sembunyiin.',
-          'Nyalain toggle 🔒 Privat.',
+          'Nyalain toggle ðŸ”’ Privat.',
           'Nama itemnya berubah jadi "Pengeluaran Privat", pasanganmu nggak lihat kamu beli apa.',
           'Nominalnya tetap kehitung di patungan, jadi pembagiannya tetap fair.',
         ],
@@ -242,7 +233,7 @@ export const HELP_TOPICS: HelpTopic[] = [
         id: 'dompet-buat',
         title: 'Bikin Dompet Kita Bareng Siapa Aja?',
         steps: [
-          'Tap "Buat Dompet Kita" → kasih nama (mis. "Kos Melati", "Dana Trip Bali").',
+          'Tap "Buat Dompet Kita" â†’ kasih nama (mis. "Kos Melati", "Dana Trip Bali").',
           'Bagikan kode 6 karakter ke orang yang mau kamu ajak.',
           'Mereka buka kodenya, login, langsung gabung, nggak ada proses persetujuan yang ribet.',
           'Satu dompet maksimal 2 orang, biar pembagiannya selalu jelas.',
@@ -254,10 +245,10 @@ export const HELP_TOPICS: HelpTopic[] = [
         id: 'dompet-settlement',
         title: 'Patungannya Nggak Cocok, Gimana?',
         steps: [
-          'Buka Dompet Kita → lihat widget "siapa utang siapa" di halaman itu.',
+          'Buka Dompet Kita â†’ lihat widget "siapa utang siapa" di halaman itu.',
           'Kalau angkanya beda dengan hitunganmu, cek daftar transaksinya.',
           'Transaksi privat tetap dihitung, cuma nama itemnya disamarkan, nominalnya tetap bisa kamu cek.',
-          'Ada yang salah catat? Tap transaksinya → Edit. Angka settlement ikut berubah otomatis.',
+          'Ada yang salah catat? Tap transaksinya â†’ Edit. Angka settlement ikut berubah otomatis.',
         ],
         proTip:
           'Setelah Lunas, semua catatannya tetap ada. Riwayat nggak pernah dihapus, cuma ditandai selesai.',
@@ -267,14 +258,14 @@ export const HELP_TOPICS: HelpTopic[] = [
   {
     id: 'kekayaan-hutang',
     label: 'Kekayaan & Hutang',
-    emoji: '💼',
+    emoji: 'ðŸ’¼',
     blurb: '"Net worth" kedengeran serem, padahal cuma: punya apa, dikurangi utang berapa.',
     articles: [
       {
         id: 'kekayaan-aset',
         title: 'Catat Investasi & Aset Pertama',
         steps: [
-          'Buka Kekayaan & Hutang → tab Investasi → "Tambah Investasi".',
+          'Buka Kekayaan & Hutang â†’ tab Investasi â†’ "Tambah Investasi".',
           'Pilih jenisnya: reksadana, saham, emas, atau properti.',
           'Isi jumlah unit + harga belinya. Gue yang hitung nilai dan return-nya.',
           'Punya aset lama yang dibeli setahun lalu? Pilih "Sudah punya", saldo dompetmu nggak ikut terpotong.',
@@ -286,7 +277,7 @@ export const HELP_TOPICS: HelpTopic[] = [
         id: 'kekayaan-hutang-catat',
         title: 'Daftarin Hutang Tanpa Rasa Malu',
         steps: [
-          'Tab Hutang → "Tambah Hutang".',
+          'Tab Hutang â†’ "Tambah Hutang".',
           'Isi total pinjaman, cicilan per bulan, dan sisa tenornya.',
           'Gue hitung rasio cicilan vs penghasilanmu, kalau masuk zona aman, santai aja.',
           'Nyalain Debt Snowball: gue urutin dari hutang terkecil biar kamu cepat dapat kemenangan pertama.',
@@ -311,7 +302,7 @@ export const HELP_TOPICS: HelpTopic[] = [
   {
     id: 'ai-coach',
     label: 'AI Coach (Minca)',
-    emoji: '✨',
+    emoji: 'âœ¨',
     blurb: 'Itu gue. Kerja 24 jam, nggak pernah nge-judge pengeluaranmu.',
     articles: [
       {
@@ -330,7 +321,7 @@ export const HELP_TOPICS: HelpTopic[] = [
         id: 'ai-token-habis',
         title: 'Token AI Habis, Ngapain?',
         steps: [
-          'Buka Pengaturan → AI Token → pilih paket isi ulang.',
+          'Buka Pengaturan â†’ AI Token â†’ pilih paket isi ulang.',
           'Atau lebih hemat: buka halaman "Ajak Teman" dan bagikan link referralmu.',
           '1 teman yang membeli paket = Token AI gratis 1 bulan, masuk otomatis tanpa klaim.',
           'Token dan Voice dihitung terpisah, jadi kamu bisa lihat mana yang lebih cepat habis.',
@@ -355,7 +346,7 @@ export const HELP_TOPICS: HelpTopic[] = [
   {
     id: 'keamanan-privasi',
     label: 'Keamanan & Privasi',
-    emoji: '🔒',
+    emoji: 'ðŸ”’',
     blurb: 'Ini bagian yang paling gue banggain: apa yang kami SENDIRI nggak bisa lihat.',
     articles: [
       {
@@ -375,7 +366,7 @@ export const HELP_TOPICS: HelpTopic[] = [
         title: 'Sensorkan Angka di Depan Orang (KRL Friendly)',
         steps: [
           'Tap ikon mata di header, dan SEMUA nominal di layar langsung tersamar.',
-          'Cocok buat: lagi di KRL, antre di kasir, atau ngobrol sama orang tua 😅',
+          'Cocok buat: lagi di KRL, antre di kasir, atau ngobrol sama orang tua ðŸ˜…',
           'Statusnya berlaku ke seluruh halaman (dashboard, budget, riwayat), nggak perlu diulang.',
           'Tap lagi buat balikin angkanya.',
         ],
@@ -386,7 +377,7 @@ export const HELP_TOPICS: HelpTopic[] = [
         id: 'privasi-export',
         title: 'Ambil Datamu Kapan Aja (No Lock-in)',
         steps: [
-          'Buka Pengaturan → "Export Data Saya".',
+          'Buka Pengaturan â†’ "Export Data Saya".',
           'Datamu di-compile jadi file JSON: transaksi, dompet, hutang, dan target nabung.',
           'Simpan di HP atau laptop kamu sendiri, nggak ada yang perlu kamu minta izin dulu.',
           'Mau berhenti pakai CatetInd kapan pun? Datamu tetap bisa kamu export kapan saja.',
@@ -399,14 +390,14 @@ export const HELP_TOPICS: HelpTopic[] = [
   {
     id: 'langganan-pembayaran',
     label: 'Paket & Pembayaran',
-    emoji: '💳',
+    emoji: 'ðŸ’³',
     blurb: 'Bayar sekali, naik paket, isi ulang token, tombolnya ada di depan semua, nggak disembunyiin.',
     articles: [
       {
         id: 'langganan-upgrade',
         title: 'Cara Naik Paket (Bayar Selisih Aja)',
         steps: [
-          'Buka Pengaturan → Langganan.',
+          'Buka Pengaturan â†’ Langganan.',
           'Tap tombol "Upgrade paket", lalu pilih paket tujuan.',
           'Yang kamu bayar cuma SELISIH harganya, bukan harga penuh dari nol.',
           'Setelah pembayaran tercatat, fitur paket barunya langsung terbuka dan berlaku selamanya.',
@@ -431,8 +422,8 @@ export const HELP_TOPICS: HelpTopic[] = [
         title: 'Refund & Salah Bayar',
         steps: [
           'Kelewat bayar dua kali? Duitnya nggak hilang, ada garansi uang kembali 100% dalam 30 hari.',
-          'Kalau mau dikembalikan: klik 👎 di bawah artikel ini, terus pilih "Hubungi Founder".',
-          'Sertakan screenshot bukti bayarnya. Nggak ada data transaksi yang perlu kamu bocorin ke kami 🙂',
+          'Kalau mau dikembalikan: klik ðŸ‘Ž di bawah artikel ini, terus pilih "Hubungi Founder".',
+          'Sertakan screenshot bukti bayarnya. Nggak ada data transaksi yang perlu kamu bocorin ke kami ðŸ™‚',
           'Yang menangani langsung founder, bukan tim CS berlapis.',
         ],
         proTip:
@@ -442,7 +433,7 @@ export const HELP_TOPICS: HelpTopic[] = [
   },
 ]
 
-/* ── 3. QUICK ANSWERS — konten DEFAULT "Sering Bikin Bingung" ─────────────── */
+/* â”€â”€ 3. QUICK ANSWERS â€” konten DEFAULT "Sering Bikin Bingung" â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 export interface QuickAnswer {
   id: string
@@ -450,7 +441,7 @@ export interface QuickAnswer {
   answer: string
   /** label topik tujuan (dicocokkan ke `HELP_TOPICS[].label` lewat `topicByLabel`) */
   topic: string
-  /** H11-3 — kartu keamanan/privasi ditandai "Paling Sering Ditanya" & lebih besar */
+  /** H11-3 â€” kartu keamanan/privasi ditandai "Paling Sering Ditanya" & lebih besar */
   mostAsked?: boolean
 }
 
@@ -467,7 +458,7 @@ export const HELP_QUICK_ANSWERS: QuickAnswer[] = [
     mostAsked: true,
     question: 'Cara nyembunyiin pengeluaran dari pasangan?',
     answer:
-      'Di Dompet Kita, setiap transaksi punya toggle 🔒 Privat. Kalau kamu nyalain ini, pasanganmu tetap bisa lihat nominalnya masuk ke perhitungan patungan, tapi nama itemnya jadi "Pengeluaran Privat". Jadi nggak ketahuan beli apa, tapi duitnya tetap kejitung fair.',
+      'Di Dompet Kita, setiap transaksi punya toggle ðŸ”’ Privat. Kalau kamu nyalain ini, pasanganmu tetap bisa lihat nominalnya masuk ke perhitungan patungan, tapi nama itemnya jadi "Pengeluaran Privat". Jadi nggak ketahuan beli apa, tapi duitnya tetap kejitung fair.',
     topic: 'Dompet Kita (Joint Wallet)',
   },
   {
@@ -488,22 +479,22 @@ export const HELP_QUICK_ANSWERS: QuickAnswer[] = [
     id: 'token-habis',
     question: 'Token AI gue habis, beli lagi di mana?',
     answer:
-      'Buka Settings → AI Token → Pilih paket isi ulang. Atau lebih hemat: ajak 1 teman pakai link referral kamu di halaman "Ajak Teman", dan kamu langsung dapat Token AI gratis 1 bulan!',
+      'Buka Settings â†’ AI Token â†’ Pilih paket isi ulang. Atau lebih hemat: ajak 1 teman pakai link referral kamu di halaman "Ajak Teman", dan kamu langsung dapat Token AI gratis 1 bulan!',
     topic: 'AI Coach (Minca)',
   },
 ]
 
-/** label → topik, dipakai kartu quick answer supaya bisa "buka topik"-nya */
+/** label â†’ topik, dipakai kartu quick answer supaya bisa "buka topik"-nya */
 export function topicByLabel(label: string): HelpTopic | undefined {
   return HELP_TOPICS.find((topic) => topic.label === label)
 }
 
-/** total artikel — dipakai chip meta di header (biar user tahu seberapa lengkap) */
+/** total artikel â€” dipakai chip meta di header (biar user tahu seberapa lengkap) */
 export function totalHelpArticles(topics: HelpTopic[] = HELP_TOPICS): number {
   return topics.reduce((sum, topic) => sum + topic.articles.length, 0)
 }
 
-/* ── 4. PENCARIAN ─────────────────────────────────────────────────────────── */
+/* â”€â”€ 4. PENCARIAN â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 export interface HelpArticleHit {
   /** artikel + topik pemiliknya, siap dirender tanpa lookup tambahan */
@@ -518,13 +509,13 @@ export interface HelpSearchResult {
   query: string
   articles: HelpArticleHit[]
   quickAnswers: QuickAnswer[]
-  /** true kalau query kosong → halaman menampilkan konten default */
+  /** true kalau query kosong â†’ halaman menampilkan konten default */
   idle: boolean
 }
 
 /**
  * Pecah query jadi kata kunci. Tanda baca & spasi jadi pemisah, dan kata
- * satu huruf dibuang karena terlalu umum ("e", "a") — kecuali query-nya
+ * satu huruf dibuang karena terlalu umum ("e", "a") â€” kecuali query-nya
  * memang cuma itu, maka dipakai apa adanya.
  */
 function queryWords(needle: string): string[] {
@@ -533,10 +524,10 @@ function queryWords(needle: string): string[] {
 }
 
 /**
- * Cocok kalau SEMUA kata kunci ada di haystack (AND) — bukan harus satu frasa
+ * Cocok kalau SEMUA kata kunci ada di haystack (AND) â€” bukan harus satu frasa
  * utuh. Ini yang bikin contoh di placeholder benar-benar bekerja:
  * "cara sembunyiin transaksi" tetap ketemu walau kalimat itu tidak pernah
- * ditulis persis — "cara" dari judul artikel, "sembunyiin" & "transaksi" dari
+ * ditulis persis â€” "cara" dari judul artikel, "sembunyiin" & "transaksi" dari
  * langkahnya. Tanpa ini, user yang meniru contoh placeholder akan selalu
  * mendapat "0 hasil" dan langsung curiga halamannya rusak.
  */
@@ -548,7 +539,7 @@ function matchesAllWords(haystack: string, words: string[]): boolean {
  * Pencarian sederhana tapi jujur: mencocokkan JUDUL + ISI (langkah, proTip,
  * pertanyaan, jawaban) per kata kunci. Urutannya judul dulu (skor 2), lalu isi
  * (skor 1), supaya yang paling relevan selalu naik ke atas. Tanpa index, tanpa
- * backend — cukup untuk 26 artikel + 5 quick answer.
+ * backend â€” cukup untuk 26 artikel + 5 quick answer.
  */
 export function searchHelp(query: string, topics: HelpTopic[] = HELP_TOPICS): HelpSearchResult {
   const needle = query.trim().toLowerCase()
@@ -573,14 +564,14 @@ export function searchHelp(query: string, topics: HelpTopic[] = HELP_TOPICS): He
     matchesAllWords(`${item.question} ${item.answer} ${item.topic}`.toLowerCase(), words),
   )
 
-  /* judul dulu, lalu isi — urutan asli tetap terjaga untuk skor yang sama
+  /* judul dulu, lalu isi â€” urutan asli tetap terjaga untuk skor yang sama
      karena `Array.prototype.sort` stabil, jadi topik tetap dalam urutan sidebar */
   articles.sort((a, b) => b.score - a.score)
 
   return { query, articles, quickAnswers, idle: false }
 }
 
-/* ── 5. COPY HALAMAN (semua bersuara Minca) ───────────────────────────────── */
+/* â”€â”€ 5. COPY HALAMAN (semua bersuara Minca) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 export const HELP_TITLE = 'Pusat Bantuan'
 export const HELP_SIDEBAR_TITLE = 'Topik'
@@ -589,17 +580,17 @@ export const HELP_DEFAULT_TITLE = 'Sering Bikin Bingung'
    dalam placeholder) + saran pencarian ditampilkan saat user mulai mengetik. */
 export const HELP_SEARCH_PLACEHOLDER = 'Cari bantuan...'
 export const HELP_SUGGEST_LABEL = 'Saran:'
-export const HELP_MOST_ASKED_BADGE = '🔒 Paling Sering Ditanya'
+export const HELP_MOST_ASKED_BADGE = 'ðŸ”’ Paling Sering Ditanya'
 export const HELP_SEARCH_LABEL = 'Cari di pusat bantuan'
 export const HELP_RESULT_TITLE = 'Hasil pencarian'
-export const HELP_EMPTY_TITLE = 'Gue nggak nemu yang pas 😅'
+export const HELP_EMPTY_TITLE = 'Gue nggak nemu yang pas ðŸ˜…'
 export const HELP_EMPTY_BLURB =
-  'Coba kata kunci lain atau pilih topik. Masih nggak ada? Klik 👎 di artikel mana pun.'
+  'Coba kata kunci lain atau pilih topik. Masih nggak ada? Klik ðŸ‘Ž di artikel mana pun.'
 export const HELP_BACK_TO_QUICK = 'Balik ke pertanyaan populer'
 export const HELP_OPEN_TOPIC = 'Buka topik'
 export const HELP_FEEDBACK_QUESTION = 'Apakah artikel ini membantu?'
-export const HELP_FEEDBACK_THANKS = 'Senang bisa membantu! 💚'
-export const HELP_PRO_TIP_LABEL = '💡 Perlu Tahu'
+export const HELP_FEEDBACK_THANKS = 'Senang bisa membantu! ðŸ’š'
+export const HELP_PRO_TIP_LABEL = 'ðŸ’¡ Perlu Tahu'
 export const HELP_PRIVACY_SHIELD =
   'Kami nggak bisa mengakses data transaksimu. Kalau ada masalah teknis, kirim screenshot, kami bantu tanpa melihat datamu.'
 export const HELP_SUPPORT_FOOTNOTE = 'Balasan langsung dari founder, bukan bot, bukan tiket.'
@@ -608,32 +599,32 @@ export const HELP_CONTACT_LABEL = 'Hubungi Founder'
 export const HELP_CONTACT_SUBJECT = 'Butuh Bantuan - CatetInd'
 export const HELP_CONTACT_TO = 'halo@catetind.com'
 export const HELP_EXPORT_TOAST =
-  'File JSON-nya udah masuk perangkatmu 📦 Cuma kamu yang punya salinannya.'
+  'File JSON-nya udah masuk perangkatmu ðŸ“¦ Cuma kamu yang punya salinannya.'
 
-/* ── 7. KAKI HALAMAN: jalan ke dokumen legal ────────────────────────────────
+/* â”€â”€ 7. KAKI HALAMAN: jalan ke dokumen legal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    Pusat Bantuan menjawab pertanyaan "data gue aman nggak?" (topik "Keamanan &
    Privasi"), jadi jawabannya harus bisa ditelusuri sampai dokumen tertulisnya.
-   Tanpa tautan ini, `/privacy` & `/terms` hanya bisa ditempuh dari Pengaturan —
+   Tanpa tautan ini, `/privacy` & `/terms` hanya bisa ditempuh dari Pengaturan â€”
    padahal orang yang paling skeptis justru sampai ke sini lebih dulu.
 
    Nama tiap dokumen diambil dari file datanya masing-masing
    (`lib/legal/privacy.ts` & `lib/legal/terms.ts`) supaya satu dokumen tidak
    pernah disebut dengan dua nama berbeda. `/terms` baru ditautkan di sini
-   SETELAH route-nya benar-benar ada (prompt 13) — bukan lebih dulu. */
+   SETELAH route-nya benar-benar ada (prompt 13) â€” bukan lebih dulu. */
 export const HELP_LEGAL_NOTE = 'Dokumen resmi:'
 export const HELP_LEGAL_LINKS: { href: string; label: string }[] = [
   { href: '/privacy', label: PRIVACY_LINK_COPY.label },
   { href: '/terms', label: TERMS_LINK_COPY.label },
 ]
 
-/* ── 5b. HALAMAN BANTUAN PUBLIK `/bantuan` ──────────────────────────────────
+/* â”€â”€ 5b. HALAMAN BANTUAN PUBLIK `/bantuan` â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    Kenapa ada dua halaman bantuan (dan kenapa itu SENGAJA):
 
-     · `/help`    → Pusat Bantuan DI DALAM app. Memakai `ScreenShell`, jadi ia
+     Â· `/help`    â†’ Pusat Bantuan DI DALAM app. Memakai `ScreenShell`, jadi ia
                     menampilkan sidebar + navigasi app (Dompet, Budget, Insight,
-                    …) dan tombol "Export Data Saya". Halaman ini WAJIB di balik
+                    â€¦) dan tombol "Export Data Saya". Halaman ini WAJIB di balik
                     login (lihat `lib/public-routes.ts`).
-     · `/bantuan` → halaman ini. Untuk pengunjung yang BELUM masuk — termasuk
+     Â· `/bantuan` â†’ halaman ini. Untuk pengunjung yang BELUM masuk â€” termasuk
                     orang yang menekan "Emailmu nggak ketemu? Kabarin kami di
                     Pusat Bantuan" di halaman masuk. Isinya hanya artikel bantuan
                     + jalan kontak: TIDAK ada sidebar, TIDAK ada data keuangan,
@@ -653,7 +644,7 @@ export const PUBLIC_HELP_COPY = {
     'Semua jawaban di bawah ini bisa dibaca tanpa akun. Kalau masih mentok, kabarin kami, balasan datang dari manusia, bukan bot.',
   description:
     'Pusat Bantuan CatetInd: jawaban singkat soal paket, pencatatan, AI, dan privasi, bisa dibaca tanpa akun. Masih bingung? WhatsApp atau email tim CatetInd.',
-  meta: `${totalHelpArticles()} artikel · ${HELP_TOPICS.length} topik`,
+  meta: `${totalHelpArticles()} artikel Â· ${HELP_TOPICS.length} topik`,
   searchLabel: HELP_SEARCH_LABEL,
   searchPlaceholder: HELP_SEARCH_PLACEHOLDER,
   searchClearLabel: 'Hapus pencarian',
@@ -678,78 +669,3 @@ export const PUBLIC_HELP_COPY = {
   footerNote:
     'Halaman bantuan ini terbuka untuk siapa saja dan tidak menampilkan data keuangan siapa pun.',
 } as const
-
-/* ── 6. EXPORT DATA (PRD Domain 4C, Mekanisme 1) ──────────────────────────── */
-
-/** asal file export - satu domain dengan `lib/site.ts` (dulu menulis `.app`) */
-export const HELP_EXPORT_SOURCE = `${SITE_DOMAIN}/help`
-
-export interface HelpExportPayload {
-  exported_at: string
-  source: typeof HELP_EXPORT_SOURCE
-  /** pengingat di dalam file: tidak ada manusia di CatetInd yang membacanya */
-  note: string
-  data: {
-    /** dompet & saldo PEMBUKA-nya — satu daftar kanon sejak paket 40 */
-    wallets: typeof WALLET_SEED
-    /**
-     * akun bank/e-wallet yang tersambung sebagai sumber saldo.
-     *
-     * Nama kolomnya dipertahankan supaya bentuk file export tetap sama dengan
-     * `/api/user/export` di PRD. Isinya kini daftar yang SAMA dengan `wallets`:
-     * app ini sudah tidak punya dua daftar dompet (dulu justru itu yang membuat
-     * saldo user berbeda antar halaman).
-     */
-    wallet_accounts: typeof WALLET_SEED
-    transactions: typeof ALL_TRANSACTIONS
-    bills: typeof INITIAL_BILLS
-    sinking_funds: typeof INITIAL_SINKING_FUNDS
-    debts: typeof INITIAL_DEBTS
-    investments: typeof INITIAL_INVESTMENTS
-  }
-}
-
-/**
- * Susun payload export versi KLIEN (prototipe). Bentuk objeknya sengaja dibuat
- * sama seperti respons `/api/user/export` di PRD Domain 4C supaya begitu
- * endpoint aslinya siap, komponen halaman tidak perlu diubah — cukup ganti
- * sumbernya dari mock ke `fetch`.
- *
- * `bills`, `sinkingFunds`, & `wealth` boleh dioper dari store perangkat
- * (`lib/money/bills-store.ts`, `lib/money/funds-store.ts`,
- * `lib/money/wealth-store.ts`) supaya file ekspor memuat tagihan, celengan,
- * hutang/piutang, dan investasi yang BENAR-BENAR dimiliki user — bukan hanya
- * daftar contoh dari konstanta (temuan D & E laporan 46). Default-nya tetap
- * daftar seed: fungsi murni ini juga dipakai test tanpa browser.
- */
-export function buildHelpExportPayload(
-  now: Date = new Date(),
-  bills: typeof INITIAL_BILLS = INITIAL_BILLS,
-  sinkingFunds: typeof INITIAL_SINKING_FUNDS = INITIAL_SINKING_FUNDS,
-  wealth: { debts: typeof INITIAL_DEBTS; investments: typeof INITIAL_INVESTMENTS } = {
-    debts: INITIAL_DEBTS,
-    investments: INITIAL_INVESTMENTS,
-  },
-): HelpExportPayload {
-  return {
-    exported_at: now.toISOString(),
-    source: HELP_EXPORT_SOURCE,
-    note: 'File ini dibuat atas permintaanmu sendiri. Tim CatetInd tidak memiliki salinan datamu.',
-    data: {
-      wallets: WALLET_SEED,
-      wallet_accounts: WALLET_SEED,
-      transactions: ALL_TRANSACTIONS,
-      bills,
-      sinking_funds: sinkingFunds,
-      debts: wealth.debts,
-      investments: wealth.investments,
-    },
-  }
-}
-
-/** nama file yang enak dibaca: catetind-export-2026-09-27.json */
-export function helpExportFilename(now: Date = new Date()): string {
-  /* `toISOString()` selalu UTC — dipotong saja tanggalnya, tanpa Intl, supaya
-     server & klien menghasilkan nama file yang sama (tidak ada hydration drift) */
-  return `catetind-export-${now.toISOString().slice(0, 10)}.json`
-}

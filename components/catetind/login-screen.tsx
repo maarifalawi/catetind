@@ -26,8 +26,7 @@ import {
   resendCountdownLabel,
   resolveAuthLanding,
 } from '@/lib/data/auth'
-import { sendLoginLink, signInWithReviewerCode, verifyEmailOtp } from '@/lib/session-client'
-import { isReviewerEmail, isReviewerTestCode } from '@/lib/data/reviewer-access'
+import { sendLoginLink, verifyEmailOtp } from '@/lib/session-client'
 
 /* ── Masuk (/login) — inventaris #8 · PRD 5931–5933 ──────────────────────────
    Magic link adalah "janji kepercayaan" produk ini: *kami tidak menyimpan
@@ -78,8 +77,6 @@ export function LoginScreen({ next }: { next?: string | null }) {
   const otpValid = isValidOtpCode(otp)
   const canResend = secondsLeft === 0
   const trimmedEmail = email.trim()
-  /** email reviewer Midtrans → jalur kode akses tetap, tanpa kirim email */
-  const reviewerMode = isReviewerEmail(trimmedEmail)
 
   /**
    * Cooldown kirim ulang: satu timeout berantai (bukan interval) — lebih murah
@@ -101,21 +98,6 @@ export function LoginScreen({ next }: { next?: string | null }) {
     }
 
     setShowError(false)
-
-    /* ── JALUR REVIEWER MIDTRANS ─────────────────────────────────────────────
-       Reviewer tidak punya inbox kita, jadi TIDAK ADA email yang perlu dikirim
-       (dan tidak ada rate-limit SMTP yang bisa menghalangi). Langsung ke langkah
-       kode; verifikasinya lewat `signInWithReviewerCode` di handleVerify. */
-    if (reviewerMode) {
-      setOtp('')
-      setCodeError(false)
-      setSecondsLeft(RESEND_SECONDS)
-      setStep('code')
-      toast.success(LOGIN_COPY.reviewerCodeReadyToast, {
-        description: LOGIN_COPY.reviewerCodeReadyDescription,
-      })
-      return
-    }
 
     setSending(true)
     /* NYATA: Supabase mengirim kode 6 angka (dan tautan) ke email ini. Kita
@@ -157,12 +139,10 @@ export function LoginScreen({ next }: { next?: string | null }) {
 
     setCodeError(false)
     setVerifying(true)
-    /* Kode tetap reviewer → sesi dibuat server (tanpa inbox). Kode lain tetap
-       lewat Supabase `verifyOtp`, jadi reviewer pun bisa memakai kode email
-       kalau suatu saat inbox-nya memang menerima. */
-    const result = isReviewerTestCode(trimmedEmail, otp)
-      ? await signInWithReviewerCode(trimmedEmail, otp)
-      : await verifyEmailOtp(trimmedEmail, otp)
+    /* SATU jalur masuk untuk semua email: kode 6 angka dari Supabase.
+       Jalur kode tetap khusus reviewer Midtrans sudah DIHAPUS setelah merchant
+       di-ACC — tidak ada lagi pintu masuk yang melewati inbox. */
+    const result = await verifyEmailOtp(trimmedEmail, otp)
     setVerifying(false)
     if (!result.ok) {
       setCodeError(true)
@@ -185,11 +165,6 @@ export function LoginScreen({ next }: { next?: string | null }) {
   function handleResend() {
     if (!canResend) return
     setSecondsLeft(RESEND_SECONDS)
-    /* Reviewer: kodenya TETAP, tidak ada email untuk dikirim ulang. */
-    if (reviewerMode) {
-      toast.success(LOGIN_COPY.reviewerResendNote)
-      return
-    }
     void sendLoginLink(trimmedEmail).then((result) => {
       if (result.ok) toast.success(LOGIN_COPY.resendSentNote)
       else toast.error(VERIFY_COPY.resendFailed, { description: result.error })
@@ -212,14 +187,14 @@ export function LoginScreen({ next }: { next?: string | null }) {
             <span className="flex size-6 items-center justify-center rounded-full bg-sage">
               <KeyRound className="size-3.5 text-forest" aria-hidden />
             </span>
-            <span className="text-[14px] leading-[1.5] text-forest">{LOGIN_COPY.eyebrow}</span>
+            <span className="text-[15px] leading-[1.5] text-forest">{LOGIN_COPY.eyebrow}</span>
           </span>
 
           <h1 className="max-w-[560px] text-balance font-display text-[40px] leading-[1.12] font-medium tracking-[-0.03em] text-forest landing-tab:text-[52px] landing:text-[60px]">
             {LOGIN_COPY.title}
           </h1>
 
-          <p className="max-w-[440px] text-balance text-[16px] leading-[1.5] text-forest-muted">
+          <p className="max-w-[440px] text-balance text-[17px] leading-[1.5] text-forest-muted">
             {LOGIN_COPY.subtitle}
           </p>
         </div>
@@ -234,7 +209,7 @@ export function LoginScreen({ next }: { next?: string | null }) {
                   <h2 className="sr-only">{LOGIN_COPY.title}</h2>
 
                   <label className="block" htmlFor="login-email">
-                    <span className="flex items-center gap-1.5 text-[13.5px] leading-snug font-medium text-forest">
+                    <span className="flex items-center gap-1.5 text-[14.5px] leading-snug font-medium text-forest">
                       <Mail className="size-4 text-forest/40" strokeWidth={2.4} aria-hidden />
                       {LOGIN_COPY.emailLabel}
                     </span>
@@ -253,7 +228,7 @@ export function LoginScreen({ next }: { next?: string | null }) {
                       aria-invalid={showError && !emailValid}
                       aria-describedby="login-email-hint"
                       className={cn(
-                        'mt-2.5 h-14 w-full rounded-2xl bg-sage/45 px-4 text-[16px] font-medium text-forest outline-none ring-1 transition-all placeholder:font-medium placeholder:text-forest/30 focus:bg-cream focus:ring-2 focus:ring-forest/30',
+                        'mt-2.5 h-14 w-full rounded-2xl bg-sage/45 px-4 text-[17px] font-medium text-forest outline-none ring-1 transition-all placeholder:font-medium placeholder:text-forest/30 focus:bg-cream focus:ring-2 focus:ring-forest/30',
                         showError && !emailValid ? 'ring-plum/50' : 'ring-transparent',
                       )}
                     />
@@ -261,7 +236,7 @@ export function LoginScreen({ next }: { next?: string | null }) {
                       id="login-email-hint"
                       aria-live="polite"
                       className={cn(
-                        'mt-2 block text-[12.5px] leading-relaxed',
+                        'mt-2 block text-[13.5px] leading-relaxed',
                         showError && !emailValid ? 'text-plum' : 'text-forest/45',
                       )}
                     >
@@ -280,7 +255,7 @@ export function LoginScreen({ next }: { next?: string | null }) {
                         : 'cursor-not-allowed bg-sage text-forest/40',
                     )}
                   >
-                    <span className="text-[16px] font-medium tracking-[-0.01em]">
+                    <span className="text-[17px] font-medium tracking-[-0.01em]">
                       {sending ? LOGIN_COPY.sendingLabel : LOGIN_COPY.submitLabel}
                     </span>
                     <span
@@ -313,23 +288,23 @@ export function LoginScreen({ next }: { next?: string | null }) {
                     <span className="flex min-w-0 items-center gap-2">
                       <MailCheck className="size-4 shrink-0 text-forest" strokeWidth={2.4} aria-hidden />
                       <span className="min-w-0">
-                        <span className="block text-[11px] leading-tight text-forest/45">
-                          {reviewerMode ? LOGIN_COPY.reviewerCodeLead : LOGIN_COPY.codeSentLead}
+                        <span className="block text-[12px] leading-tight text-forest/45">
+                          {LOGIN_COPY.codeSentLead}
                         </span>
-                        <span className="block truncate text-[13.5px] font-medium text-forest">{trimmedEmail}</span>
+                        <span className="block truncate text-[14.5px] font-medium text-forest">{trimmedEmail}</span>
                       </span>
                     </span>
                     <button
                       type="button"
                       onClick={backToEmail}
-                      className="shrink-0 text-[12px] font-medium text-forest/60 underline underline-offset-2 transition-colors hover:text-forest motion-reduce:transition-none"
+                      className="shrink-0 text-[13px] font-medium text-forest/60 underline underline-offset-2 transition-colors hover:text-forest motion-reduce:transition-none"
                     >
                       {LOGIN_COPY.changeEmailLabel}
                     </button>
                   </div>
 
                   <label className="mt-6 block" htmlFor="login-code">
-                    <span className="flex items-center gap-1.5 text-[13.5px] leading-snug font-medium text-forest">
+                    <span className="flex items-center gap-1.5 text-[14.5px] leading-snug font-medium text-forest">
                       <KeyRound className="size-4 text-forest/40" strokeWidth={2.4} aria-hidden />
                       {LOGIN_COPY.codeLabel}
                     </span>
@@ -346,26 +321,23 @@ export function LoginScreen({ next }: { next?: string | null }) {
                       onChange={(event) => handleOtpChange(event.target.value)}
                       placeholder={LOGIN_COPY.codePlaceholder}
                       aria-invalid={codeError}
-                      aria-describedby="login-code-hint"
+                      aria-describedby={codeError ? 'login-code-hint' : undefined}
                       className={cn(
                         'mt-2.5 h-16 w-full rounded-2xl bg-sage/45 text-center font-display text-[26px] font-medium tracking-[0.45em] text-forest outline-none ring-1 transition-all placeholder:font-medium placeholder:tracking-[0.3em] placeholder:text-forest/25 focus:bg-cream focus:ring-2 focus:ring-forest/30',
                         codeError ? 'ring-plum/50' : 'ring-transparent',
                       )}
                     />
-                    <span
-                      id="login-code-hint"
-                      aria-live="polite"
-                      className={cn(
-                        'mt-2 block text-[12.5px] leading-relaxed',
-                        codeError ? 'text-plum' : 'text-forest/45',
-                      )}
-                    >
-                      {codeError
-                        ? LOGIN_COPY.invalidCode
-                        : reviewerMode
-                          ? LOGIN_COPY.reviewerCodeHint
-                          : null}
-                    </span>
+                    {/* Hanya pesan ERROR yang menempati baris ini — tidak ada
+                        baris kosong permanen di bawah input. */}
+                    {codeError && (
+                      <span
+                        id="login-code-hint"
+                        aria-live="polite"
+                        className="mt-2 block text-[13.5px] leading-relaxed text-plum"
+                      >
+                        {LOGIN_COPY.invalidCode}
+                      </span>
+                    )}
                   </label>
 
                   <button
@@ -378,7 +350,7 @@ export function LoginScreen({ next }: { next?: string | null }) {
                         : 'cursor-not-allowed bg-sage text-forest/40',
                     )}
                   >
-                    <span className="text-[16px] font-medium tracking-[-0.01em]">
+                    <span className="text-[17px] font-medium tracking-[-0.01em]">
                       {verifying ? LOGIN_COPY.verifyingLabel : LOGIN_COPY.codeSubmitLabel}
                     </span>
                     <span
@@ -399,23 +371,18 @@ export function LoginScreen({ next }: { next?: string | null }) {
                     </span>
                   </button>
 
-                  {/* dua jalan keluar kecil: buka inbox, atau kirim ulang (dengan cooldown).
-                      Reviewer tidak punya inbox → tautan email disembunyikan, kode tetap. */}
-                  <div className="mt-4 flex items-center justify-center gap-3 text-[12.5px]">
-                    {!reviewerMode && (
-                      <>
-                        <a
-                          href="mailto:"
-                          className="inline-flex items-center gap-1.5 font-medium text-forest transition-colors hover:underline motion-reduce:transition-none"
-                        >
-                          <Mail className="size-3.5" strokeWidth={2.4} aria-hidden />
-                          {VERIFY_COPY.openMailLabel}
-                        </a>
-                        <span aria-hidden className="text-forest/20">
-                          ·
-                        </span>
-                      </>
-                    )}
+                  {/* dua jalan keluar kecil: buka inbox, atau kirim ulang (dengan cooldown) */}
+                  <div className="mt-4 flex items-center justify-center gap-3 text-[13.5px]">
+                    <a
+                      href="mailto:"
+                      className="inline-flex items-center gap-1.5 font-medium text-forest transition-colors hover:underline motion-reduce:transition-none"
+                    >
+                      <Mail className="size-3.5" strokeWidth={2.4} aria-hidden />
+                      {VERIFY_COPY.openMailLabel}
+                    </a>
+                    <span aria-hidden className="text-forest/20">
+                      ·
+                    </span>
                     <button
                       type="button"
                       disabled={!canResend}
@@ -434,7 +401,7 @@ export function LoginScreen({ next }: { next?: string | null }) {
             </div>
 
             {/* daftar: tautan dua arah ke /checkout yang sudah ada */}
-            <p className="mt-6 text-center text-[13px] text-forest/55">
+            <p className="mt-6 text-center text-[14px] text-forest/55">
               {LOGIN_COPY.registerLead}{' '}
               <Link
                 href="/checkout"

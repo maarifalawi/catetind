@@ -123,8 +123,12 @@ export type InvalidInviteStatus = Exclude<InviteStatus, 'valid'>
 
 export interface ValidInvite {
   status: 'valid'
-  /** invite yang valid selalu tahu siapa pengundang & dompetnya */
-  inviterName: string
+  /**
+   * nama panggilan pengundang. `null` = belum terbaca (backend tidak menjawab
+   * atau kode hanya ada di perangkat ini) — layar memakai sebutan "Pasanganmu",
+   * BUKAN nama karangan.
+   */
+  inviterName: string | null
   walletName: string
   /** masa berlaku (copy kanon dari /joint) */
   validUntilLabel: string
@@ -215,6 +219,32 @@ export function buildJoinHref(code: string): string {
   return `/join/${code.trim().toUpperCase()}`
 }
 
+/* ── AUTO-JOIN SETELAH MASUK (paket 100) ────────────────────────────────────
+   PRD 917 menuntut "login → auto-join wallet". Sebelum ini tombol "Gabung Dompet
+   Ini" hanya menaut ke `/login` POLOS, jadi kode undangannya hilang di tengah
+   jalan: user mendarat di `/app` dan undangan tidak pernah diterima. `next`
+   sekarang membawa halaman undangannya lagi PLUS penanda `terima=1`, sehingga
+   layar /join tahu kapan ia harus MENULIS keanggotaan (baru kembali dari masuk)
+   dan kapan harus menunggu tombol (pengunjung yang sudah punya sesi — termasuk
+   pengundang yang sedang memeriksa pratinjaunya sendiri).
+
+   Penanda ini sengaja eksplisit: auto-join diam-diam pada SETIAP kunjungan akan
+   membakar kode sekali-pakai hanya karena pemiliknya membuka tautan pratinjau. */
+
+export const JOIN_CLAIM_PARAM = 'terima'
+
+/** `/join/<kode>?terima=1` — tujuan setelah user berhasil masuk */
+export function buildJoinClaimHref(code: string): string {
+  return `${buildJoinHref(code)}?${JOIN_CLAIM_PARAM}=1`
+}
+
+/** true kalau halaman ini dibuka sebagai tujuan kembali dari `/login` */
+export function isJoinClaimRequest(value: string | string[] | null | undefined): boolean {
+  const raw = Array.isArray(value) ? value[0] : value
+  const normalized = (raw ?? '').trim().toLowerCase()
+  return normalized === '1' || normalized === 'true'
+}
+
 /**
  * Kode → status undangan (fungsi MURNI atas daftar record).
  *
@@ -238,16 +268,20 @@ export function resolveInviteFrom(
   const walletName = inviteWalletName(record.walletId)
 
   if (record.usedBy !== null) {
-    return { status: 'used', inviterName: JOINT_ME.name, walletName, validUntilLabel: null }
+    return { status: 'used', inviterName: null, walletName, validUntilLabel: null }
   }
 
   if (isInviteExpired(record, now)) {
-    return { status: 'expired', inviterName: JOINT_ME.name, walletName, validUntilLabel: null }
+    return { status: 'expired', inviterName: null, walletName, validUntilLabel: null }
   }
 
   return {
     status: 'valid',
-    inviterName: JOINT_ME.name,
+    /* Nama pengundang HANYA diketahui server (`catetind_resolve_invite`
+       mengembalikan `invite_inviter_name`). Jalur perangkat ini tidak bisa
+       mengetahuinya, jadi nilainya `null` — layar memakai sebutan "pasanganmu",
+       bukan nama karangan. */
+    inviterName: null,
     /* dompet yang sudah dihapus/di-rename tetap harus menyebut sesuatu yang jelas */
     walletName: walletName ?? INITIAL_JOINT_WALLET.name,
     validUntilLabel: INVITE_VALIDITY_COPY,
@@ -298,6 +332,13 @@ export const INVITE_CODE_COPY = {
   invalidNote: 'Kode ini sudah nggak bisa dipakai. Buat kode baru di bawah ya 👇',
   /** umpan balik setelah menekan "Buat kode baru" */
   refreshedToast: 'Kode baru siap 🌿',
+  /** kode benar-benar tercatat di `invite_codes` (paket 100) — bisa dipakai
+   *  pasangan di perangkat mana pun, bukan cuma di perangkat pembuatnya */
+  serverSyncedNote: 'Kode ini tersimpan di server, jadi bisa dipakai dari perangkat mana pun.',
+  /** RPC pembuatan kode gagal (tanpa sesi/backend): katakan apa adanya, jangan
+   *  biarkan user membagikan tautan yang tidak akan bisa dibuka orang lain */
+  offlineNote:
+    'Kode ini belum tersambung ke server, jadi baru bisa dibuka di perangkat ini. Coba buat ulang sebentar ya.',
 } as const
 
 /** `https://catetind.com/join/<kode>` — bentuk absolute untuk dibagikan lewat chat
@@ -316,9 +357,9 @@ export function buildInviteShareText(name: string, code: string, walletName: str
   return `Halo! Aku (${name}) mengajakmu kelola uang bareng di CatetInd 💚 Dompet: ${walletName}, Kode: ${code}, klik link ini: ${buildInviteUrl(code)}`
 }
 
-/** label sisa masa berlaku. Dihitung HANYA di handler/pasca-mount (jam lokal user). */
-export function inviteExpiryLabel(record: InviteRecord): string {
-  const date = new Date(record.expiresAt)
+/** label masa berlaku dari epoch ms. Dihitung HANYA di handler/pasca-mount (jam lokal user). */
+export function inviteExpiryLabelFromTime(expiresAt: number): string {
+  const date = new Date(expiresAt)
   const months = [
     'Jan',
     'Feb',
@@ -338,6 +379,60 @@ export function inviteExpiryLabel(record: InviteRecord): string {
   return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}, ${hour}.${minute}`
 }
 
+/** label masa berlaku satu record (kode demo/lokal) */
+export function inviteExpiryLabel(record: InviteRecord): string {
+  return inviteExpiryLabelFromTime(record.expiresAt)
+}
+
+/* ── STATUS DARI SERVER → BENTUK YANG DIPAKAI HALAMAN /join (paket 100) ──────
+   Sebelum ini `catetind_resolve_invite` hanya dipakai untuk menandai
+   `used`/`expired`; `walletName`, `inviterName`, dan `expiresAt`-nya DIBUANG.
+   Akibatnya kode yang dibuat di perangkat lain (kondisi NORMAL: pengundang dan
+   yang diundang tidak berbagi localStorage) ditampilkan "Kodenya nggak ketemu".
+   Fungsi murni ini menyalin jawaban server ke bentuk `ResolvedInvite` yang sudah
+   dipakai layar — copy-nya tetap tinggal di SATU file ini, bukan disusun ulang di
+   komponen. */
+
+export interface RemoteInviteViewInput {
+  status: 'valid' | 'expired' | 'used' | 'not_found'
+  walletName: string | null
+  /** ISO dari server; `null` kalau kode tidak dikenal */
+  expiresAt: string | null
+  /** nama panggilan pembuat kode — `null` = jangan mengarang */
+  inviterName: string | null
+}
+
+/** label masa berlaku yang menyebut TANGGAL nyata dari server (bukan klaim 24 jam) */
+export function inviteValidityUntilLabel(expiresAt: number): string {
+  return `Kode berlaku sampai ${inviteExpiryLabelFromTime(expiresAt)}.`
+}
+
+export function resolveRemoteInviteView(remote: RemoteInviteViewInput): ResolvedInvite {
+  const walletName = remote.walletName?.trim() || null
+  const inviterName = remote.inviterName?.trim() || null
+
+  if (remote.status === 'not_found') {
+    return { status: 'unknown', inviterName: null, walletName: null, validUntilLabel: null }
+  }
+  if (remote.status === 'used') {
+    return { status: 'used', inviterName, walletName, validUntilLabel: null }
+  }
+  if (remote.status === 'expired') {
+    return { status: 'expired', inviterName, walletName, validUntilLabel: null }
+  }
+
+  const expires = remote.expiresAt ? Date.parse(remote.expiresAt) : Number.NaN
+  return {
+    status: 'valid',
+    inviterName,
+    /* server sudah memastikan dompetnya ada; nama kosong tetap harus menyebut sesuatu */
+    walletName: walletName ?? INITIAL_JOINT_WALLET.name,
+    validUntilLabel: Number.isFinite(expires)
+      ? inviteValidityUntilLabel(expires)
+      : INVITE_VALIDITY_COPY,
+  }
+}
+
 
 /* ── COPY (inventaris #7 · PRD 900–932) ─────────────────────────────────────
    Semua teks user-facing halaman ini tinggal di sini; komponennya nol string. */
@@ -345,7 +440,10 @@ export function inviteExpiryLabel(record: InviteRecord): string {
 export const JOIN_COPY = {
   eyebrow: 'Undangan dompet bersama',
   /** pola persis PRD 915 — nama pengundang jadi subjek kalimat, bukan "Anda diundang" */
-  headline: (inviter: string) => `Halo! ${inviter} mengajakmu kelola uang bareng di CatetInd 💚`,
+  headline: (inviter: string | null) =>
+    inviter
+      ? `Halo! ${inviter} mengajakmu kelola uang bareng di CatetInd 💚`
+      : 'Halo! Kamu diajak kelola uang bareng di CatetInd 💚',
   walletLabel: 'Dompet bersama',
   /** penjelas singkat: apa yang terjadi setelah gabung, tanpa istilah teknis.
    *  H9-1 (audit UI/UX): dipendekkan jadi SATU kalimat; detailnya pindah ke
@@ -437,14 +535,36 @@ export function buildAskAgainMessage(inviterName: string | null): string {
   return `${sapaan}, link undangan dompet bersama CatetInd-nya udah nggak bisa dibuka. Boleh kirim ulang? 💚`
 }
 
-/** tautan review state (kaki halaman) — jujur berlabel demo */
+/* ── MODE DEMO (build TANPA backend) ─────────────────────────────────────────
+   Dipakai layar /join hanya ketika `hasSupabaseConfig()` false: kode undangan
+   hidup di localStorage perangkat, jadi tombol gabung mensimulasikan
+   keanggotaan lokal. Di build ber-backend, copy ini TIDAK pernah tampil —
+   penggabungannya ditulis ke `joint_members` lewat RPC. */
 export const JOIN_DEMO_COPY = {
-  title: 'Di build demo',
-  body: 'Demo ini belum tersambung ke backend, jadi tombol "Gabung Dompet Ini" mengarah ke halaman masuk dan penggabungan dompetnya masih simulasi.',
-  joinLabel: 'Lihat hasil setelah gabung (demo)',
-  joinHint:
-    'Lompati langkah masuk supaya alurnya bisa ditelusuri sampai ujung. Kode undangannya langsung ditandai TERPAKAI, buka ulang tautan ini untuk melihat state "sudah dipakai".',
-  statesLabel: 'Coba state lain',
+  title: 'Mode demo',
+  body: 'Build ini belum tersambung ke Supabase, jadi tombol "Gabung Dompet Ini" hanya mensimulasikan penggabungan di perangkat ini.',
+} as const
+
+
+/* ── STATUS SETELAH TOMBOL GABUNG DITEKAN (paket 100) ────────────────────────
+   Sebelumnya layar ini selalu bilang "berhasil" — bahkan saat `acceptInviteRemote`
+   gagal dan tidak ada satu baris keanggotaan pun yang ditulis. Copy di bawah
+   memisahkan tiga keadaan yang memang berbeda: sedang menulis, gagal (dengan
+   alasan dari server), dan pratinjau milik pengundang. */
+export const JOIN_CLAIM_COPY = {
+  connecting: 'Menghubungkan dompetmu…',
+  connectingHint: 'Sebentar ya, keanggotaanmu sedang dicatat di server.',
+  retry: 'Coba lagi',
+  failedTitle: 'Belum berhasil gabung',
+  /** sesi sudah ada: tombol ini yang benar-benar menulis keanggotaan */
+  signedInHint: 'Kamu sudah masuk. Tekan tombol di bawah untuk gabung — tanpa isi data lagi.',
+  /** pengundang membuka pratinjau kodenya sendiri: menekan tombol TIDAK membakar kode */
+  previewBadge: 'Pratinjau pengundang',
+  previewNote:
+    'Ini tampilan yang dilihat pasanganmu. Kode undangan baru terpakai setelah MEREKA menekan Gabung Dompet Ini.',
+  previewCta: 'Buka Dompet Bersama',
+  /** kode sudah dipakai orang lain, tapi pemanggil ternyata anggotanya */
+  memberNote: 'Kamu sudah tercatat sebagai anggota dompet ini.',
 } as const
 
 /* ── STATE SUKSES (PRD AC4: dompet mulai Rp0) ─────────────────────────────── */

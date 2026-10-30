@@ -237,7 +237,7 @@ export function AddInvestmentSheet({
       }
     >
       {/* ── STEP 1 — jenis aset, nama/ticker, arah transaksi ─────────────── */}
-      <span className="text-[13px] font-medium leading-snug text-forest">Jenis aset</span>
+      <span className="text-[14px] font-medium leading-snug text-forest">Jenis aset</span>
       <div className="mt-2 grid grid-cols-2 gap-2">
         {ASSET_TYPE_OPTIONS.map((option) => {
           const active = option.id === assetType
@@ -249,13 +249,13 @@ export function AddInvestmentSheet({
               onClick={() => setAssetType(option.id)}
               aria-pressed={active}
               className={cn(
-                'flex items-center gap-2 rounded-2xl px-3.5 py-3 text-left text-[13px] font-medium transition-all duration-200 active:scale-[0.98]',
+                'flex items-center gap-2 rounded-2xl px-3.5 py-3 text-left text-[14px] font-medium transition-all duration-200 active:scale-[0.98]',
                 active
                   ? 'bg-forest text-mint shadow-[0_12px_26px_-16px_rgba(0,0,0,0.85)]'
                   : 'bg-cream text-forest/65 ring-1 ring-soil/14 hover:bg-cream hover:text-forest',
               )}
             >
-              <span aria-hidden className="text-[15px]">
+              <span aria-hidden className="text-[16px]">
                 {meta.emoji}
               </span>
               {meta.label}
@@ -265,7 +265,7 @@ export function AddInvestmentSheet({
       </div>
 
       <label className="mt-4 block">
-        <span className="text-[13px] font-medium leading-snug text-forest">
+        <span className="text-[14px] font-medium leading-snug text-forest">
           {editing ? 'Nama aset' : 'Nama / ticker'}
         </span>
         <input
@@ -273,7 +273,7 @@ export function AddInvestmentSheet({
           value={name}
           onChange={(event) => setName(event.target.value)}
           placeholder="Contoh: BBCA, Bitcoin, Bibit RDPU"
-          className="mt-2 w-full rounded-2xl bg-cream px-4 py-3 text-[15px] font-medium text-forest outline-none ring-1 ring-soil/16 transition-shadow placeholder:font-medium placeholder:text-forest/25 focus:ring-2 focus:ring-forest/35"
+          className="mt-2 w-full rounded-2xl bg-cream px-4 py-3 text-[16px] font-medium text-forest outline-none ring-1 ring-soil/16 transition-shadow placeholder:font-medium placeholder:text-forest/25 focus:ring-2 focus:ring-forest/35"
         />
       </label>
 
@@ -281,17 +281,17 @@ export function AddInvestmentSheet({
           diturunkan otomatis dari nama (perilaku lama, tidak diubah). */}
       {editing && (
         <label className="mt-4 block">
-          <span className="text-[13px] font-medium leading-snug text-forest">Kode / ticker</span>
+          <span className="text-[14px] font-medium leading-snug text-forest">Kode / ticker</span>
           <span className="mt-2 flex items-center gap-2 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/16 focus-within:ring-2 focus-within:ring-forest/35">
             <input
               value={symbol}
               onChange={(event) => setSymbol(event.target.value.toUpperCase())}
               placeholder="BBCA"
               aria-label="Kode pasar atau ticker"
-              className="min-w-0 flex-1 bg-transparent text-[15px] font-medium uppercase tracking-wide text-forest outline-none placeholder:font-medium placeholder:text-forest/25"
+              className="min-w-0 flex-1 bg-transparent text-[16px] font-medium uppercase tracking-wide text-forest outline-none placeholder:font-medium placeholder:text-forest/25"
             />
           </span>
-          <span className="mt-1.5 block text-[11px] leading-relaxed text-forest/45">
+          <span className="mt-1.5 block text-[12px] leading-relaxed text-forest/45">
             Kode yang tampil sebagai badge di kartu aset, mis. BBCA, BTC, RDPU.
           </span>
         </label>
@@ -300,7 +300,7 @@ export function AddInvestmentSheet({
       {/* Arah transaksi = milik transaksi baru, bukan milik posisi aset */}
       {!editing && (
         <div className="mt-4">
-          <span className="text-[13px] font-medium leading-snug text-forest">Transaksi</span>
+          <span className="text-[14px] font-medium leading-snug text-forest">Transaksi</span>
           <ChoicePills
             className="mt-2"
             ariaLabel="Arah transaksi"
@@ -315,7 +315,7 @@ export function AddInvestmentSheet({
       <RevealStep show={stepOneDone}>
         <div className="mt-5 space-y-4">
           <label className="block">
-            <span className="text-[13px] font-medium leading-snug text-forest">
+            <span className="text-[14px] font-medium leading-snug text-forest">
               {quantityFieldLabel(assetType)}
             </span>
             <span className="mt-2 flex items-center gap-2 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/16 focus-within:ring-2 focus-within:ring-forest/35">
@@ -326,9 +326,9 @@ export function AddInvestmentSheet({
                 autoComplete="off"
                 placeholder="0"
                 aria-label={quantityFieldLabel(assetType)}
-                className="min-w-0 flex-1 bg-transparent text-[15px] font-medium tabular-nums text-forest outline-none placeholder:font-medium placeholder:text-forest/25"
+                className="min-w-0 flex-1 bg-transparent text-[16px] font-medium tabular-nums text-forest outline-none placeholder:font-medium placeholder:text-forest/25"
               />
-              <span className="shrink-0 text-[12px] font-medium text-forest/40">
+              <span className="shrink-0 text-[13px] font-medium text-forest/40">
                 {ASSET_TYPE_META[assetType].unit || 'koin'}
               </span>
             </span>
@@ -356,10 +356,10 @@ export function AddInvestmentSheet({
           {/* auto-kalkulasi real-time: quantity × price */}
           <div className="flex flex-col gap-2 rounded-2xl bg-sage/60 px-4 py-3">
             <div className="flex items-center justify-between gap-3">
-              <span className="text-[12.5px] font-medium text-forest/70">
+              <span className="text-[13.5px] font-medium text-forest/70">
                 {INVESTMENT_TOTAL_LABEL[mode]}
               </span>
-              <span className="font-display text-[16px] font-semibold tracking-tight text-forest tabular-nums">
+              <span className="font-display text-[17px] font-semibold tracking-tight text-forest tabular-nums">
                 {formatIDR(total)}
               </span>
             </div>
@@ -368,11 +368,11 @@ export function AddInvestmentSheet({
                 vs nilai sekarang, supaya user tahu angka di kartu akan jadi apa */}
             {editing && (
               <>
-                <div className="flex items-center justify-between gap-3 text-[12px] text-forest/55 tabular-nums">
+                <div className="flex items-center justify-between gap-3 text-[13px] text-forest/55 tabular-nums">
                   <span>Nilai sekarang (harga terakhir)</span>
                   <span className="font-medium">{formatIDR(editingCurrentValue)}</span>
                 </div>
-                <div className="flex items-center justify-between gap-3 text-[12px] tabular-nums">
+                <div className="flex items-center justify-between gap-3 text-[13px] tabular-nums">
                   <span className="text-forest/55">Return belum terealisasi</span>
                   <span
                     className={cn(
@@ -402,7 +402,7 @@ export function AddInvestmentSheet({
             aria-expanded={advancedOpen}
             className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left"
           >
-            <span className="text-[13px] font-medium text-forest">Detail Lanjutan</span>
+            <span className="text-[14px] font-medium text-forest">Detail Lanjutan</span>
             <ChevronDown
               className={cn(
                 'size-4 shrink-0 text-forest/35 transition-transform duration-200',
@@ -426,18 +426,18 @@ export function AddInvestmentSheet({
               {isStock && (
                 <div>
                   <div className="flex items-center justify-between gap-3">
-                    <span className="text-[13px] font-medium text-forest">Punya akun RDN?</span>
+                    <span className="text-[14px] font-medium text-forest">Punya akun RDN?</span>
                     <ToggleSwitch checked={hasRdn} onChange={setHasRdn} label="Punya akun RDN" />
                   </div>
                   <RevealStep show={hasRdn}>
                     <label className="mt-3 block">
-                      <span className="text-[12.5px] font-medium text-forest/70">Akun RDN</span>
+                      <span className="text-[13.5px] font-medium text-forest/70">Akun RDN</span>
                       <span className="relative mt-2 flex items-center gap-2 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/16 focus-within:ring-2 focus-within:ring-forest/35">
                         <select
                           value={rdnAccount}
                           onChange={(event) => setRdnAccount(event.target.value)}
                           aria-label="Akun RDN"
-                          className="flex-1 appearance-none bg-transparent text-[13.5px] font-medium text-forest outline-none"
+                          className="flex-1 appearance-none bg-transparent text-[14.5px] font-medium text-forest outline-none"
                         >
                           {RDN_ACCOUNTS.map((account) => (
                             <option key={account} value={account}>
@@ -453,13 +453,13 @@ export function AddInvestmentSheet({
               )}
 
               <label className="block">
-                <span className="text-[12.5px] font-medium text-forest/70">Catatan (opsional)</span>
+                <span className="text-[13.5px] font-medium text-forest/70">Catatan (opsional)</span>
                 <textarea
                   value={note}
                   onChange={(event) => setNote(event.target.value)}
                   rows={3}
                   placeholder="Misal: DCA bulanan rutin"
-                  className="mt-2 w-full resize-none rounded-2xl bg-cream px-4 py-3 text-[13px] leading-relaxed text-forest outline-none ring-1 ring-soil/16 transition-shadow placeholder:text-forest/25 focus:ring-2 focus:ring-forest/35"
+                  className="mt-2 w-full resize-none rounded-2xl bg-cream px-4 py-3 text-[14px] leading-relaxed text-forest outline-none ring-1 ring-soil/16 transition-shadow placeholder:text-forest/25 focus:ring-2 focus:ring-forest/35"
                 />
               </label>
             </div>

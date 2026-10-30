@@ -68,15 +68,15 @@ export function BudgetZoneB({
           className="relative overflow-hidden rounded-[1.4rem] bg-gradient-to-br from-sage/60 via-sage/40 to-mint/15 p-4 ring-1 ring-soil/[0.06]"
         >
           <div className="flex items-start gap-3">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-cream text-[16px] ring-1 ring-soil/[0.06]">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-cream text-[17px] ring-1 ring-soil/[0.06]">
               🌿
             </span>
             <div className="min-w-0">
-              <p className="text-[12.5px] leading-relaxed text-forest-muted">{NUDGE_COPY}</p>
+              <p className="text-[13.5px] leading-relaxed text-forest-muted">{NUDGE_COPY}</p>
               <button
                 type="button"
                 onClick={() => onContribute(funds[0])}
-                className="mt-2.5 rounded-full bg-cream px-3.5 py-2 text-[12px] font-medium text-forest ring-1 ring-forest/10 transition-colors hover:bg-cream/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25 active:scale-95"
+                className="mt-2.5 rounded-full bg-cream px-3.5 py-2 text-[13px] font-medium text-forest ring-1 ring-forest/10 transition-colors hover:bg-cream/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25 active:scale-95"
               >
                 {BUDGET_ZONE_B_COPY.nudgeCta}
               </button>
@@ -103,13 +103,13 @@ export function BudgetZoneB({
 
           <div className="relative flex items-end justify-between gap-4">
             <div className="min-w-0">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-forest-muted">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-forest-muted">
                 {BUDGET_ZONE_B_COPY.summaryLead}
               </p>
               <p className="mt-1.5 truncate text-[24px] font-semibold leading-none tracking-tight tabular-nums text-forest">
                 {maskNominal(totals.current, masked)}
               </p>
-              <p className="mt-1.5 text-[11px] font-medium tabular-nums text-forest-muted">
+              <p className="mt-1.5 text-[12px] font-medium tabular-nums text-forest-muted">
                 {BUDGET_ZONE_B_COPY.summaryOf(maskNominal(totals.target, masked))}
               </p>
             </div>
@@ -117,7 +117,7 @@ export function BudgetZoneB({
               <span className="font-display text-[30px] font-semibold leading-none tracking-tight tabular-nums text-forest">
                 {Math.round(totals.percent)}%
               </span>
-              <span className="mt-1 text-[9.5px] font-medium uppercase tracking-[0.14em] text-forest-muted">
+              <span className="mt-1 text-[10.5px] font-medium uppercase tracking-[0.14em] text-forest-muted">
                 {BUDGET_ZONE_B_COPY.summaryPctSuffix}
               </span>
             </span>
@@ -152,13 +152,13 @@ export function BudgetZoneB({
           <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-cream text-[22px] ring-1 ring-soil/[0.06]">
             🌱
           </span>
-          <p className="mx-auto mt-3 max-w-[19rem] text-[12.5px] leading-relaxed text-forest-muted">
+          <p className="mx-auto mt-3 max-w-[19rem] text-[13.5px] leading-relaxed text-forest-muted">
             {BUDGET_ZONE_B_COPY.emptyBody}
           </p>
           <button
             type="button"
             onClick={onAddGoal}
-            className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-mint/30 px-4 py-2.5 text-[12px] font-medium text-forest ring-1 ring-mint/60 transition-colors hover:bg-mint/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25 active:scale-95"
+            className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-mint/30 px-4 py-2.5 text-[13px] font-medium text-forest ring-1 ring-mint/60 transition-colors hover:bg-mint/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25 active:scale-95"
           >
             <Sprout className="size-3.5" strokeWidth={2.6} aria-hidden />
             {BUDGET_ZONE_B_COPY.emptyCta}
@@ -199,17 +199,17 @@ export function BudgetZoneB({
             <Sprout className="size-4" strokeWidth={2.4} aria-hidden />
           </span>
           <span className="min-w-0">
-            <span className="block text-[12.5px] font-medium text-forest">
+            <span className="block text-[13.5px] font-medium text-forest">
               {BUDGET_ADD_PLACEHOLDER.goalTitle}
             </span>
-            <span className="mt-0.5 block text-[11px] leading-relaxed text-forest-muted">
+            <span className="mt-0.5 block text-[12px] leading-relaxed text-forest-muted">
               {BUDGET_ADD_PLACEHOLDER.goalBody}
             </span>
           </span>
         </button>
       )}
 
-      <p className="px-1 text-center text-[10.5px] leading-relaxed text-forest/30">
+      <p className="px-1 text-center text-[11.5px] leading-relaxed text-forest/30">
         {SOCIAL_PROOF_COPY}
       </p>
     </div>

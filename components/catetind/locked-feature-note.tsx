@@ -39,7 +39,7 @@ export function LockedFeatureNote({
   if (compact) {
     return (
       <p
-        className={cn('flex items-center gap-1.5 text-[11px] leading-relaxed text-forest/55', className)}
+        className={cn('flex items-center gap-1.5 text-[12px] leading-relaxed text-forest/55', className)}
       >
         <Lock className="size-3 shrink-0" strokeWidth={2.6} aria-hidden />
         <span>{lockedBadgeText(capability)}</span>
@@ -58,7 +58,7 @@ export function LockedFeatureNote({
       )}
       role="status"
     >
-      <p className="flex items-center gap-1.5 text-[12.5px] font-medium text-forest">
+      <p className="flex items-center gap-1.5 text-[13.5px] font-medium text-forest">
         <Lock className="size-3.5 shrink-0" strokeWidth={2.6} aria-hidden />
         {lockedBadgeText(capability)}
       </p>
@@ -66,7 +66,7 @@ export function LockedFeatureNote({
         href={offer.href}
         className="group mt-3 flex h-10 w-full items-center justify-between gap-2 rounded-full bg-forest pl-4 pr-1 text-cream transition-colors hover:bg-forest-soft"
       >
-        <span className="text-[12.5px] font-medium">
+        <span className="text-[13.5px] font-medium">
           {LOCKED_FEATURE_COPY.ctaLabel}, {formatIDR(offer.amount)}
         </span>
         <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-cream text-forest">

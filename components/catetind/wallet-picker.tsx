@@ -53,7 +53,7 @@ export interface WalletPickerOption {
 }
 
 const TRIGGER_CLASS =
-  'flex w-full items-center justify-between gap-2 rounded-xl bg-soil/[0.09] px-3 py-2.5 text-left text-[12.5px] font-medium text-forest outline-none ring-1 ring-transparent transition-all hover:bg-soil/[0.12] focus-visible:bg-cream focus-visible:ring-forest/15'
+  'flex w-full items-center justify-between gap-2 rounded-xl bg-soil/[0.09] px-3 py-2.5 text-left text-[13.5px] font-medium text-forest outline-none ring-1 ring-transparent transition-all hover:bg-soil/[0.12] focus-visible:bg-cream focus-visible:ring-forest/15'
 
 export function WalletPicker({
   value,
@@ -109,7 +109,7 @@ export function WalletPicker({
           {selected ? (
             <>
               <span className="truncate">{selected.label}</span>
-              <span className="shrink-0 text-[11.5px] font-medium text-forest-muted">
+              <span className="shrink-0 text-[12.5px] font-medium text-forest-muted">
                 {selected.hint ?? maskMoney(selected.balance, masked)}
               </span>
             </>
@@ -138,10 +138,10 @@ export function WalletPicker({
             <span className="flex size-12 items-center justify-center rounded-full bg-sage text-forest">
               <Wallet className="size-5" strokeWidth={1.8} aria-hidden />
             </span>
-            <p className="mt-3 text-[13px] font-medium text-forest">
+            <p className="mt-3 text-[14px] font-medium text-forest">
               {TRANSACTION_INPUT_COPY.walletEmptyTitle}
             </p>
-            <p className="mt-1 text-[11.5px] leading-relaxed text-forest/50">
+            <p className="mt-1 text-[12.5px] leading-relaxed text-forest/50">
               {TRANSACTION_INPUT_COPY.walletEmptyBody}
             </p>
           </div>
@@ -167,10 +167,10 @@ export function WalletPicker({
                     )}
                   >
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[13px] font-medium text-forest">
+                      <span className="block truncate text-[14px] font-medium text-forest">
                         {option.label}
                       </span>
-                      <span className="mt-0.5 block text-[11px] font-medium text-forest-muted">
+                      <span className="mt-0.5 block text-[12px] font-medium text-forest-muted">
                         {option.hint ??
                           TRANSACTION_INPUT_COPY.walletBalance(maskMoney(option.balance, masked))}
                       </span>

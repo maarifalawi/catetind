@@ -126,14 +126,19 @@ describe('buildMoneyExport', () => {
     expect(file.counts.bills).toBe(liveBills(getBillsSnapshot()).length)
     expect(file.bills.some((bill) => bill.id === created.id)).toBe(true)
     expect(file.bills).toHaveLength(INITIAL_BILLS.length + 1)
-    expect(file.limits.join(' ')).toMatch(/tagihan rutin/i)
+    expect(file.limits.join(' ')).toMatch(/tagihan/i)
   })
 
   it('menuliskan batas jujurnya di dalam file (bukan cuma di komentar kode)', () => {
     const file = buildMoneyExport(collectExportSources(), EXPORTED_AT)
 
     expect(file.limits.length).toBeGreaterThan(2)
-    expect(file.limits.join(' ')).toMatch(/tidak ada salinan di server/i)
+    /* dua sumber yang BENAR: akun di server + cache perangkat */
+    expect(file.limits.join(' ')).toMatch(/server/i)
+    expect(file.limits.join(' ')).toMatch(/perangkat/i)
+    /* klaim lama "belum punya backend" sudah tidak benar, jadi tidak boleh ada */
+    expect(file.limits.join(' ')).not.toMatch(/belum punya backend/i)
+    expect(file.limits.join(' ')).not.toMatch(/data contoh/i)
     expect(file.app.buildStage).toBe('demo')
   })
 

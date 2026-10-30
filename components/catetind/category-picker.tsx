@@ -43,7 +43,7 @@ import { IncomeGrid, SearchResults } from './category-search-results'
 
 /** gaya trigger - senada dengan kontrol form engine (`EDIT_CONTROL_CLASS`) */
 const TRIGGER_CLASS =
-  'flex w-full items-center justify-between gap-2 rounded-xl bg-soil/[0.09] px-3 py-2.5 text-left text-[12.5px] font-medium text-forest outline-none ring-1 ring-transparent transition-all hover:bg-soil/[0.12] focus-visible:bg-cream focus-visible:ring-forest/15'
+  'flex w-full items-center justify-between gap-2 rounded-xl bg-soil/[0.09] px-3 py-2.5 text-left text-[13.5px] font-medium text-forest outline-none ring-1 ring-transparent transition-all hover:bg-soil/[0.12] focus-visible:bg-cream focus-visible:ring-forest/15'
 
 export function CategoryPicker({
   value,
@@ -170,7 +170,7 @@ export function CategoryPicker({
             {/* LAYER 1 - QUICK PICK */}
             {!searching && view === 'quick' && (
               <section aria-label={CATEGORY_PICKER_COPY.quickTitle}>
-                <p className="px-0.5 pb-2 text-[11px] font-medium tracking-[0.06em] text-forest/45 uppercase">
+                <p className="px-0.5 pb-2 text-[12px] font-medium tracking-[0.06em] text-forest/45 uppercase">
                   {CATEGORY_PICKER_COPY.quickTitle}
                 </p>
                 <div className="grid grid-cols-3 gap-2">
@@ -197,7 +197,7 @@ export function CategoryPicker({
               <button
                 type="button"
                 onClick={() => setView('all')}
-                className="mt-2.5 flex w-full items-center justify-between gap-2 rounded-2xl bg-sage/60 px-3.5 py-3 text-[12.5px] font-medium text-forest ring-1 ring-soil/10 transition-colors hover:bg-sage"
+                className="mt-2.5 flex w-full items-center justify-between gap-2 rounded-2xl bg-sage/60 px-3.5 py-3 text-[13.5px] font-medium text-forest ring-1 ring-soil/10 transition-colors hover:bg-sage"
               >
                 {CATEGORY_PICKER_COPY.viewAll}
                 <ChevronRight className="size-4 text-forest/45" aria-hidden />

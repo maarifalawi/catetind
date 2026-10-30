@@ -45,7 +45,7 @@ export function MenuPanel({
       {label && (
         <p
           aria-hidden
-          className="px-2.5 pb-1.5 pt-1 text-[10px] font-medium uppercase tracking-[0.16em] text-forest/40"
+          className="px-2.5 pb-1.5 pt-1 text-[11px] font-medium uppercase tracking-[0.16em] text-forest/40"
         >
           {label}
         </p>
@@ -96,14 +96,14 @@ export function MenuOption({
       <span className="min-w-0 flex-1 text-left">
         <span
           className={cn(
-            'block truncate text-[13px] font-medium leading-tight',
+            'block truncate text-[14px] font-medium leading-tight',
             danger ? 'text-plum' : 'text-forest',
           )}
         >
           {label}
         </span>
         {helper && (
-          <span className="mt-0.5 block truncate text-[11px] leading-snug text-forest/45">
+          <span className="mt-0.5 block truncate text-[12px] leading-snug text-forest/45">
             {helper}
           </span>
         )}

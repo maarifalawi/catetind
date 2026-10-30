@@ -1389,6 +1389,76 @@ export function postExpense(input: ExpenseInput): MoneyRow | null {
   return row
 }
 
+/**
+ * TARIK DANA dari celengan → uang MASUK kembali ke dompet.
+ *
+ * Jenis barisnya `saving_withdraw`, bukan `income`: menarik tabungan sendiri
+ * bukan pemasukan, jadi Arus Uang, Budget, dan Jatah Hari Ini TIDAK boleh naik.
+ * Di daftar Riwayat baris ini tampil sebagai `transfer` (aturan yang sama dengan
+ * setoran), jadi ia tidak pernah dihitung sebagai pengeluaran maupun pemasukan.
+ *
+ * `null` = dompet tidak ada / sudah dihapus user / nominal tidak sah → TIDAK ada
+ * baris yang ditulis.
+ */
+export function postFundWithdrawal(input: ExpenseInput): MoneyRow | null {
+  const amount = normalizeAmount(input.amount)
+  if (!amount || amount < 0) return null
+  const wallet = walletSeedOf(live, input.walletId)
+  if (!wallet) return null
+  const before = live.rows
+  const row = appendRow({
+    walletId: input.walletId,
+    walletName: wallet.name,
+    type: 'saving_withdraw',
+    amount,
+    note: input.note,
+    category: input.category,
+    dateISO: input.dateISO,
+    time: input.time,
+    clientTxId: input.clientTxId,
+  })
+  trackCreatedRow(row, before)
+  return row
+}
+
+/**
+ * UANG KELUAR untuk kewajiban BERSAMA (mis. settle patungan) dari dompet user.
+ *
+ * Jenisnya `transfer` satu sisi, BUKAN `expense`: uangnya memang keluar dari
+ * dompet ini, tapi ia bukan pengeluaran konsumsi — Arus Uang, Budget kategori,
+ * dan Jatah Hari Ini tidak boleh ikut turun karena berpindah ke pasangan.
+ * Barisnya tetap muncul di Riwayat (kategori `Settle`).
+ */
+export function postJointCashOut(input: ExpenseInput): MoneyRow | null {
+  const amount = normalizeAmount(input.amount)
+  if (!amount || amount < 0) return null
+  const wallet = walletSeedOf(live, input.walletId)
+  if (!wallet) return null
+  if (amount > walletBalance(live, input.walletId)) return null
+  const before = live.rows
+  const row = appendRow({
+    walletId: input.walletId,
+    walletName: wallet.name,
+    type: 'transfer',
+    amount,
+    note: input.note,
+    category: input.category,
+    dateISO: input.dateISO,
+    time: input.time,
+    clientTxId: input.clientTxId,
+  })
+  trackCreatedRow(row, before)
+  return row
+}
+
+/**
+ * UANG MASUK dari kewajiban BERSAMA (sisi penerima settle) ke dompet user.
+ * Jenisnya `saving_withdraw`: saldo naik tanpa menjadi pemasukan.
+ */
+export function postJointCashIn(input: ExpenseInput): MoneyRow | null {
+  return postFundWithdrawal(input)
+}
+
 /** pemasukan: uang masuk ke dompet */
 export function postIncome(input: ExpenseInput): MoneyRow | null {
   const amount = normalizeAmount(input.amount)
@@ -2374,6 +2444,71 @@ export function addWalletAccount(input: NewWalletInput): WalletSeed {
      (baris-barisnya sudah dikirim oleh `appendRow`/`flushPendingSync`) */
   void pushWalletToServer(record, live.wallets.length - 1)
   return record
+}
+
+/** bentuk perubahan identitas dompet — semuanya opsional */
+export interface WalletIdentityPatch {
+  name?: string
+  holder?: string
+  number?: string
+}
+
+/**
+ * GANTI NAMA / PEMEGANG / NOMOR DOMPET (bukan saldo).
+ *
+ * Sebelum ini dompet hanya bisa dibuat, dikoreksi saldonya, dan dihapus: nama
+ * yang salah ketik saat membuat dompet melekat selamanya. Fungsi ini menutupnya
+ * dengan tiga aturan:
+ *
+ *   1. NAMA WAJIB & UNIK per akun (tanpa peduli huruf besar/kecil). Ledger
+ *      mencocokkan dompet terutama lewat `walletId`, tapi pemilih dompet di app
+ *      ini menampilkan nama — dua dompet bernama sama membuat user tidak bisa
+ *      membedakan baris mana yang akan terpotong.
+ *   2. `walletName` di SETIAP baris ledger dompet ini ikut diperbarui, karena
+ *      nama itu disimpan denormalisasi di barisnya (dipakai Riwayat, Home,
+ *      Budget, dan log pindah dana). Tanpa langkah ini, mengganti nama dompet
+ *      meninggalkan baris lama bercerita tentang dompet yang "tidak ada".
+ *   3. `walletId` TIDAK PERNAH berubah — rujukan dompet di tagihan, celengan,
+ *      dan pelunasan hutang tetap sah.
+ *
+ * `null` = ditolak (dompet tidak ada/dihapus, nama kosong, atau nama sudah
+ * dipakai dompet lain) dan TIDAK ada yang ditulis.
+ */
+export function renameWalletAccount(
+  walletId: string,
+  patch: WalletIdentityPatch,
+): WalletSeed | null {
+  const wallet = walletSeedOf(live, walletId)
+  if (!wallet) return null
+
+  const nextName = patch.name === undefined ? wallet.name : patch.name.trim()
+  if (!nextName) return null
+  const key = nextName.toLowerCase()
+  const clash = liveWalletSeeds(live).some(
+    (item) => item.id !== wallet.id && item.name.trim().toLowerCase() === key,
+  )
+  if (clash) return null
+
+  const updated: WalletSeed = {
+    ...wallet,
+    name: nextName,
+    holder: patch.holder === undefined ? wallet.holder : patch.holder.trim(),
+    number: patch.number === undefined ? wallet.number : patch.number.trim(),
+  }
+  const renamed = updated.name !== wallet.name
+
+  commit({
+    ...live,
+    wallets: live.wallets.map((item) => (item.id === wallet.id ? updated : item)),
+    rows: renamed
+      ? live.rows.map((row) => (row.walletId === wallet.id ? { ...row, walletName: updated.name } : row))
+      : live.rows,
+  })
+  void pushWalletToServer(updated, live.wallets.findIndex((item) => item.id === wallet.id))
+  /* Sengaja TIDAK ada event analitik untuk rename: satu-satunya data yang
+     berubah adalah identitas dompet user, dan tidak ada pertanyaan produk yang
+     butuh angka itu. (Nama dompet memang haram dikirim ke analitik.) */
+  return updated
 }
 
 /** tombol "Tambah Dompet" di deck Home: ambil kandidat berikutnya dari pool demo */

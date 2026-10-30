@@ -116,7 +116,7 @@ const EXPENSE_DAY_DOT = dayDot(HOME_CASHFLOW_COLORS.expense)
 function TooltipRow({ dot, label, value }: { dot: string; label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-4">
-      <span className="flex items-center gap-1.5 text-[11px] font-medium text-cream/70">
+      <span className="flex items-center gap-1.5 text-[12px] font-medium text-cream/70">
         {/* `ring-cream` = garis tipis terang: ton BASE (warna GARIS serinya)
             tetap terbaca di atas kartu tooltip yang berlatar ink */}
         <span
@@ -126,7 +126,7 @@ function TooltipRow({ dot, label, value }: { dot: string; label: string; value: 
         />
         {label}
       </span>
-      <span className="text-[12.5px] font-medium tabular-nums">{value}</span>
+      <span className="text-[13.5px] font-medium tabular-nums">{value}</span>
     </div>
   )
 }
@@ -147,7 +147,7 @@ function CashFlowTooltip({
   const net = point.income - point.expense
   return (
     <div className="min-w-[10.5rem] rounded-2xl bg-ink px-3.5 py-3 text-cream shadow-[0_18px_40px_-16px_rgba(0,0,0,0.85)] ring-1 ring-cream/10">
-      <p className="text-[10.5px] font-medium tracking-wide text-cream/55">{point.label}</p>
+      <p className="text-[11.5px] font-medium tracking-wide text-cream/55">{point.label}</p>
       <div className="mt-2 space-y-1">
         {/* dot = ton BASE, sama persis dengan warna GARIS-nya (aturan satu hue
             per seri); ring terangnya yang menjaga dot tetap terbaca di kartu ink */}
@@ -163,10 +163,10 @@ function CashFlowTooltip({
         />
       </div>
       <div className="mt-2 flex items-center justify-between gap-4 border-t border-cream/10 pt-2">
-        <span className="text-[10.5px] font-medium text-cream/55">
+        <span className="text-[11.5px] font-medium text-cream/55">
           {HOME_MONEY_COPY.chartNetLabel}
         </span>
-        <span className="text-[12.5px] font-semibold tabular-nums">
+        <span className="text-[13.5px] font-semibold tabular-nums">
           {net < 0 ? '-' : ''}
           {money(Math.abs(net))}
         </span>
@@ -287,7 +287,7 @@ export const CashFlowCard = memo(function CashFlowCard() {
              dari kartu, bukan pil forest kecil yang mudah kelewat. */
           <span
             className={cn(
-              'inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-[12.5px] font-semibold tabular-nums ring-1',
+              'inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-[13.5px] font-semibold tabular-nums ring-1',
               net < 0
                 ? 'bg-hud-terracotta/15 text-hud-terracotta ring-hud-terracotta/25'
                 : 'bg-mint/35 text-forest ring-forest/20',
@@ -322,7 +322,7 @@ export const CashFlowCard = memo(function CashFlowCard() {
             trigger={
               <button
                 type="button"
-                className="mt-4 rounded-full bg-forest px-5 py-2.5 text-[13px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.97]"
+                className="mt-4 rounded-full bg-forest px-5 py-2.5 text-[14px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.97]"
               >
                 {HOME_MONEY_COPY.chartEmptyCta}
               </button>
@@ -330,7 +330,7 @@ export const CashFlowCard = memo(function CashFlowCard() {
           />
           <Link
             href="/history"
-            className="mt-2.5 text-[11.5px] font-medium text-forest transition-colors hover:text-forest-soft"
+            className="mt-2.5 text-[12.5px] font-medium text-forest transition-colors hover:text-forest-soft"
           >
             {HOME_MONEY_COPY.historyLink}
           </Link>
@@ -360,13 +360,13 @@ export const CashFlowCard = memo(function CashFlowCard() {
                   >
                     {AXIS_FACE[row.key].icon}
                   </span>
-                  <span className="truncate text-[12.5px] font-medium text-forest/60">
+                  <span className="truncate text-[13.5px] font-medium text-forest/60">
                     {row.label}
                   </span>
                 </div>
                 <p
                   className={cn(
-                    'self-center whitespace-nowrap text-right text-[15px] font-semibold',
+                    'self-center whitespace-nowrap text-right text-[16px] font-semibold',
                     HOME_CASHFLOW_AXIS.valueClass,
                     row.negative ? 'text-hud-terracotta' : 'text-forest',
                   )}
@@ -570,7 +570,7 @@ export const CashFlowCard = memo(function CashFlowCard() {
                 Dotnya memakai ton BASE — SAMA PERSIS dengan warna garisnya, jadi
                 legenda tidak bisa "beda warna" dari kurva yang ditunjuknya
                 (aturan satu hue per seri, paket 93). */}
-            <figcaption className="mt-2 flex items-center justify-center gap-5 text-[10.5px] font-medium text-forest/55">
+            <figcaption className="mt-2 flex items-center justify-center gap-5 text-[11.5px] font-medium text-forest/55">
               <span className="flex items-center gap-1.5">
                 <span
                   aria-hidden

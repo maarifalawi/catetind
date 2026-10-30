@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { normalizeExtraction } from './extract'
+import { normalizeExtraction, parseAmountValue } from './extract'
 
 /* Normalisasi menjepit JSON model ke nilai kanon app; yang diuji: field tak sah
    TIDAK dipakai apa adanya, dan `lowFields` jujur menyebut apa yang perlu dicek. */
@@ -67,6 +67,45 @@ describe('normalizeExtraction', () => {
     })
     expect(result.source).toBe('chat')
     expect(result.name).toBe('Air minum')
+    expect(result.lowFields).toEqual([])
+  })
+
+  /* ── PAKET 101 — nominal berformat struk tidak lagi hilang jadi 0 ───────────
+     Temuan uji pakai: struk "TOKO ABANG" bertotal Rp 200.000.000 keluar sebagai
+     angka lain / kosong, dan kategori model berhuruf kecil dibuang ke "Lainnya".
+     Test di bawah mengunci dua perbaikan itu. */
+  it('nominal berbentuk teks struk dibaca sebagai rupiah utuh', () => {
+    expect(parseAmountValue('Rp 200.000.000')).toBe(200000000)
+    expect(parseAmountValue('200.000.000')).toBe(200000000)
+    expect(parseAmountValue('200,000,000')).toBe(200000000)
+    expect(parseAmountValue('Rp 87.500')).toBe(87500)
+    expect(parseAmountValue('87.500,00')).toBe(87500)
+    expect(parseAmountValue('87500.00')).toBe(87500)
+    expect(parseAmountValue('87500')).toBe(87500)
+    expect(parseAmountValue(87500)).toBe(87500)
+  })
+
+  it('nominal yang tidak bisa dipercaya jatuh ke 0 (bukan angka karangan)', () => {
+    expect(parseAmountValue('')).toBe(0)
+    expect(parseAmountValue('-5000')).toBe(0)
+    expect(parseAmountValue('tidak terbaca')).toBe(0)
+    expect(parseAmountValue(Number.NaN)).toBe(0)
+    expect(parseAmountValue(null)).toBe(0)
+  })
+
+  it('kategori & dompet model dicocokkan tanpa membedakan huruf besar-kecil', () => {
+    const result = normalizeExtraction('receipt', {
+      name: 'Belanja Toko Abang',
+      amount: 'Rp 200.000.000',
+      category: 'belanja',
+      wallet: 'bca',
+      type: 'expense',
+      date: '2023-01-10',
+      confidence: 0.9,
+    })
+    expect(result.amount).toBe(200000000)
+    expect(result.category).toBe('Belanja')
+    expect(result.wallet).toBe('BCA')
     expect(result.lowFields).toEqual([])
   })
 })

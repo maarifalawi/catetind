@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -8,18 +8,18 @@ import { PAY_CARD_COPY, PAY_METHOD_COPY, formatIDR } from '@/lib/data/pricing'
 import type { PaymentMethodId } from '@/lib/payments/methods'
 import type { PaymentInstructions, PaymentState } from '@/lib/payments/types'
 
-/* ── KARTU PEMBAYARAN (paket 83) — INSTRUKSI BAYAR DI DALAM APP ──────────────
+/* â”€â”€ KARTU PEMBAYARAN (paket 83) â€” INSTRUKSI BAYAR DI DALAM APP â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    Muncul setelah user menekan "Bayar sekarang": QRIS (gambar + isi QR), nomor
-   Virtual Account, tautan e-wallet, atau kode Mandiri Bill — semuanya di dalam
+   Virtual Account, tautan e-wallet, atau kode Mandiri Bill â€” semuanya di dalam
    tema app, tanpa pindah domain. Di desktop isinya melebar dua kolom (QR di
    kiri, angka/kode di kanan); di mobile tetap satu kolom.
 
    Tiga hal yang sengaja TIDAK dilakukan di sini:
-     · menggambar QR/VA sendiri — kalau provider tidak mengirim instruksinya,
+     Â· menggambar QR/VA sendiri â€” kalau provider tidak mengirim instruksinya,
        kartu mengatakannya apa adanya dan menawarkan ganti metode;
-     · mengklaim "sudah dibayar" dari timer — status datang dari SERVER
+     Â· mengklaim "sudah dibayar" dari timer â€” status datang dari SERVER
        (`GET /api/payment/status`, yang membaca DB + Midtrans);
-     · membiarkan tagihan kedaluwarsa jadi layar buntu — selalu ada tombol
+     Â· membiarkan tagihan kedaluwarsa jadi layar buntu â€” selalu ada tombol
        "bikin tagihan baru" / "ganti metode". */
 
 const POLL_MS = 4000
@@ -31,7 +31,15 @@ export interface ActiveInvoice {
   method: PaymentMethodId
   amount: number
   expiresAt: string | null
+  /** instruksi QR/VA dari Core API (jalur lama) — Snap tidak mengirimnya */
   instructions: PaymentInstructions | null
+  /**
+   * Halaman pembayaran Midtrans (Snap). Kalau ada, kartu menampilkan SATU aksi
+   * utama menuju halaman itu; statusnya tetap dibaca dari server.
+   */
+  redirectUrl?: string | null
+  /** token Snap — dicadangkan untuk `snap.js` (popup) kalau nanti dipakai */
+  token?: string | null
 }
 
 type CardState = PaymentState | 'checking'
@@ -44,7 +52,7 @@ function formatRemaining(ms: number): string {
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
 }
 
-/** nilai yang bisa disalin — polanya sama dengan referral-screen (`navigator.clipboard` + toast) */
+/** nilai yang bisa disalin â€” polanya sama dengan referral-screen (`navigator.clipboard` + toast) */
 function CopyField({ label, value, large = false }: { label: string; value: string; large?: boolean }) {
   const [copied, setCopied] = useState(false)
 
@@ -61,10 +69,10 @@ function CopyField({ label, value, large = false }: { label: string; value: stri
   return (
     <div className="flex items-center justify-between gap-3 rounded-2xl bg-canvas px-4 py-3 ring-1 ring-soil/12">
       <div className="min-w-0">
-        <p className="text-[10.5px] font-medium tracking-[0.14em] text-forest/40 uppercase">{label}</p>
+        <p className="text-[11.5px] font-medium tracking-[0.14em] text-forest/40 uppercase">{label}</p>
         <p
           className={`mt-1 truncate font-display font-semibold tabular-nums text-forest ${
-            large ? 'text-[20px] landing-tab:text-[22px]' : 'text-[16px]'
+            large ? 'text-[20px] landing-tab:text-[22px]' : 'text-[17px]'
           }`}
         >
           {value}
@@ -73,7 +81,7 @@ function CopyField({ label, value, large = false }: { label: string; value: stri
       <button
         type="button"
         onClick={() => void handleCopy()}
-        className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-forest px-3.5 text-[12px] font-medium text-cream transition-colors duration-200 hover:bg-forest-soft motion-reduce:transition-none"
+        className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-forest px-3.5 text-[13px] font-medium text-cream transition-colors duration-200 hover:bg-forest-soft motion-reduce:transition-none"
       >
         <Copy className="size-3.5" strokeWidth={2.4} aria-hidden />
         {copied ? PAY_CARD_COPY.copiedLabel : PAY_CARD_COPY.copyLabel}
@@ -120,7 +128,7 @@ export function PaymentInstructionCard({
     void check()
   }, [check])
 
-  /* polling ±4 detik selagi belum kelar — statusnya milik server, bukan timer */
+  /* polling Â±4 detik selagi belum kelar â€” statusnya milik server, bukan timer */
   useEffect(() => {
     if (state !== 'checking' && state !== 'pending' && state !== 'unknown') return
     const timer = setInterval(() => void check(), POLL_MS)
@@ -140,7 +148,7 @@ export function PaymentInstructionCard({
     return () => clearInterval(timer)
   }, [invoice.expiresAt])
 
-  /* pembayaran masuk → halaman konfirmasi yang sudah ada (mem-poll status paket) */
+  /* pembayaran masuk â†’ halaman konfirmasi yang sudah ada (mem-poll status paket) */
   useEffect(() => {
     if (state !== 'settled') return
     const timer = setTimeout(() => {
@@ -153,6 +161,12 @@ export function PaymentInstructionCard({
   const dead = state === 'expired' || state === 'failed' || (timeUp && state !== 'settled')
   const settled = state === 'settled'
   const instructions = invoice.instructions
+  /* Halaman pembayaran Snap (kalau ada). Satu aksi utama menuju ke sana; status
+     tetap dibaca dari server, jadi kartu ini tidak pernah "mengarang lunas". */
+  const snapRedirect = invoice.redirectUrl ?? null
+  const openSnap = useCallback(() => {
+    if (snapRedirect) window.location.assign(snapRedirect)
+  }, [snapRedirect])
 
   const statusLabel = settled
     ? PAY_CARD_COPY.statusSettled
@@ -174,9 +188,9 @@ export function PaymentInstructionCard({
   return (
     <section className="rounded-[24px] bg-cream p-5 shadow-landing-hairline ring-1 ring-soil/12 landing:p-6">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-[13.5px] font-medium text-forest">{methodCopy.label}</p>
+        <p className="text-[14.5px] font-medium text-forest">{methodCopy.label}</p>
         <span
-          className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-[11.5px] font-medium ring-1 ${statusTone}`}
+          className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-[12.5px] font-medium ring-1 ${statusTone}`}
         >
           <StatusIcon className="size-3.5" strokeWidth={2.4} aria-hidden />
           {statusLabel}
@@ -185,7 +199,7 @@ export function PaymentInstructionCard({
 
       {/* nominal + hitungan mundur dalam satu baris (hemat teks, mata langsung ke angka) */}
       <div className="mt-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-t border-soil/12 pt-3.5">
-        <span className="text-[12.5px] text-forest/50">{PAY_CARD_COPY.totalLabel}</span>
+        <span className="text-[13.5px] text-forest/50">{PAY_CARD_COPY.totalLabel}</span>
         <span className="flex items-baseline gap-3">
           {live && remaining !== null && (
             <span className="font-medium tabular-nums text-forest/45">
@@ -193,14 +207,14 @@ export function PaymentInstructionCard({
             </span>
           )}
           {dead && <span className="font-medium text-plum">{PAY_CARD_COPY.timeUpLabel}</span>}
-          <span className="font-display text-[19px] font-semibold tabular-nums text-forest landing-tab:text-[21px]">
+          <span className="font-display text-[20px] font-semibold tabular-nums text-forest landing-tab:text-[21px]">
             {formatIDR(invoice.amount)}
           </span>
         </span>
       </div>
 
       {sandbox && live && (
-        <div className="mt-4 flex items-start gap-2.5 rounded-2xl bg-sage/60 px-4 py-3 text-[11.5px] leading-relaxed text-forest ring-1 ring-soil/15">
+        <div className="mt-4 flex items-start gap-2.5 rounded-2xl bg-sage/60 px-4 py-3 text-[12.5px] leading-relaxed text-forest ring-1 ring-soil/15">
           <Info className="mt-0.5 size-3.5 shrink-0" strokeWidth={2.4} aria-hidden />
           <p>
             <strong className="font-medium">{PAY_CARD_COPY.sandboxTitle}.</strong>{' '}
@@ -217,26 +231,53 @@ export function PaymentInstructionCard({
         </div>
       )}
 
+      {live && snapRedirect && (
+        <div className="mt-4 rounded-2xl bg-canvas px-4 py-4 ring-1 ring-soil/12">
+          <p className="text-[13.5px] font-medium text-forest">{PAY_CARD_COPY.snapTitle}</p>
+          <p className="mt-1 text-[12.5px] leading-relaxed text-forest/55">
+            {PAY_CARD_COPY.snapBody}
+          </p>
+          <div className="mt-3.5 flex flex-col gap-2 landing-tab:flex-row">
+            <button
+              type="button"
+              onClick={openSnap}
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-forest px-6 text-[14px] font-medium text-cream transition-colors duration-200 hover:bg-forest-soft motion-reduce:transition-none landing-tab:min-w-[220px]"
+            >
+              <ExternalLink className="size-4" strokeWidth={2.4} aria-hidden />
+              {PAY_CARD_COPY.snapCta}
+            </button>
+            <button
+              type="button"
+              onClick={() => void check()}
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-full px-5 text-[14px] font-medium text-forest/70 ring-1 ring-soil/16 transition-colors duration-200 hover:text-forest motion-reduce:transition-none"
+            >
+              <RefreshCw className="size-4" strokeWidth={2.4} aria-hidden />
+              {PAY_CARD_COPY.snapChecking}
+            </button>
+          </div>
+        </div>
+      )}
+
       {live && instructions?.channel === 'qris' && (
         <div className="mx-auto mt-4 w-full max-w-[420px] rounded-[20px] bg-canvas p-4 ring-1 ring-soil/10 landing:p-5">
           <div className="mx-auto flex w-full max-w-[340px] flex-col items-center text-center">
-            <p className="text-[12.5px] font-medium text-forest">{PAY_CARD_COPY.qrisScanTitle}</p>
+            <p className="text-[13.5px] font-medium text-forest">{PAY_CARD_COPY.qrisScanTitle}</p>
             {/* <img> biasa: sumbernya URL gambar dari provider, bukan aset app */}
             <img
               src={instructions.qrImageUrl}
               alt={PAY_CARD_COPY.qrAlt}
               width={220}
               height={220}
-              className="mt-4 size-[210px] rounded-2xl bg-white object-contain p-3 ring-1 ring-soil/12 landing-tab:size-[220px]"
+              className="mt-4 size-[210px] rounded-2xl bg-cream object-contain p-3 ring-1 ring-soil/12 landing-tab:size-[220px]"
             />
-            <p className="mt-3 text-[11.5px] leading-relaxed text-forest/50">{methodCopy.hint}</p>
+            <p className="mt-3 text-[12.5px] leading-relaxed text-forest/50">{methodCopy.hint}</p>
           </div>
         </div>
       )}
 
       {live && instructions?.channel === 'qris' && instructions.qrString && (
         <div className="mt-3">
-          <p className="mb-2 text-[11.5px] text-forest/45">{PAY_CARD_COPY.qrStringLabel}</p>
+          <p className="mb-2 text-[12.5px] text-forest/45">{PAY_CARD_COPY.qrStringLabel}</p>
           <CopyField label={methodCopy.label} value={instructions.qrString} />
         </div>
       )}
@@ -244,11 +285,11 @@ export function PaymentInstructionCard({
       {live && instructions?.channel === 'va' && (
         <div className="mt-4">
           <CopyField
-            label={`${PAY_CARD_COPY.vaLabel} · ${instructions.bank.toUpperCase()}`}
+            label={`${PAY_CARD_COPY.vaLabel} Â· ${instructions.bank.toUpperCase()}`}
             value={instructions.vaNumber}
             large
           />
-          <p className="mt-2.5 text-[11.5px] text-forest/45">{PAY_CARD_COPY.vaHint}</p>
+          <p className="mt-2.5 text-[12.5px] text-forest/45">{PAY_CARD_COPY.vaHint}</p>
         </div>
       )}
 
@@ -258,12 +299,12 @@ export function PaymentInstructionCard({
             href={instructions.deeplinkUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-forest px-6 text-[13.5px] font-medium text-cream transition-colors duration-200 hover:bg-forest-soft motion-reduce:transition-none landing-tab:w-auto landing-tab:min-w-[260px]"
+            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-forest px-6 text-[14.5px] font-medium text-cream transition-colors duration-200 hover:bg-forest-soft motion-reduce:transition-none landing-tab:w-auto landing-tab:min-w-[260px]"
           >
             {PAY_CARD_COPY.ewalletCta}
             <ExternalLink className="size-4" strokeWidth={2.4} aria-hidden />
           </a>
-          <p className="mt-2.5 text-[11.5px] text-forest/45">{PAY_CARD_COPY.ewalletHint}</p>
+          <p className="mt-2.5 text-[12.5px] text-forest/45">{PAY_CARD_COPY.ewalletHint}</p>
         </div>
       )}
 
@@ -273,26 +314,26 @@ export function PaymentInstructionCard({
             <CopyField label={PAY_CARD_COPY.billerLabel} value={instructions.billerCode} />
             <CopyField label={PAY_CARD_COPY.billKeyLabel} value={instructions.billKey} large />
           </div>
-          <p className="mt-2.5 text-[11.5px] text-forest/45">{PAY_CARD_COPY.billHint}</p>
+          <p className="mt-2.5 text-[12.5px] text-forest/45">{PAY_CARD_COPY.billHint}</p>
         </div>
       )}
 
-      {live && !instructions && (
-        <p className="mt-4 flex items-start gap-2 rounded-2xl bg-plum/10 px-3.5 py-3 text-[12px] leading-relaxed text-forest ring-1 ring-plum/20">
+      {live && !instructions && !snapRedirect && (
+        <p className="mt-4 flex items-start gap-2 rounded-2xl bg-plum/10 px-3.5 py-3 text-[13px] leading-relaxed text-forest ring-1 ring-plum/20">
           <Info className="mt-0.5 size-3.5 shrink-0" strokeWidth={2.4} aria-hidden />
           {PAY_CARD_COPY.noInstructions}
         </p>
       )}
 
       {settled && (
-        <p className="mt-4 rounded-2xl bg-mint/25 px-3.5 py-3 text-[12.5px] font-medium text-forest ring-1 ring-forest/10">
-          {PAY_CARD_COPY.settledTitle} · <span className="font-normal">{PAY_CARD_COPY.settledBody}</span>
+        <p className="mt-4 rounded-2xl bg-mint/25 px-3.5 py-3 text-[13.5px] font-medium text-forest ring-1 ring-forest/10">
+          {PAY_CARD_COPY.settledTitle} Â· <span className="font-normal">{PAY_CARD_COPY.settledBody}</span>
         </p>
       )}
 
       {dead && (
         <>
-          <p className="mt-4 rounded-2xl bg-plum/10 px-3.5 py-3 text-[12.5px] leading-relaxed text-forest ring-1 ring-plum/20">
+          <p className="mt-4 rounded-2xl bg-plum/10 px-3.5 py-3 text-[13.5px] leading-relaxed text-forest ring-1 ring-plum/20">
             <strong className="font-medium">
               {timeUp || state === 'expired'
                 ? PAY_CARD_COPY.expiredTitle
@@ -308,7 +349,7 @@ export function PaymentInstructionCard({
             <button
               type="button"
               onClick={onNewInvoice}
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-forest px-6 text-[13.5px] font-medium text-cream transition-colors duration-200 hover:bg-forest-soft motion-reduce:transition-none landing-tab:min-w-[200px]"
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-forest px-6 text-[14.5px] font-medium text-cream transition-colors duration-200 hover:bg-forest-soft motion-reduce:transition-none landing-tab:min-w-[200px]"
             >
               <RefreshCw className="size-4" strokeWidth={2.4} aria-hidden />
               {PAY_CARD_COPY.newInvoiceLabel}
@@ -316,7 +357,7 @@ export function PaymentInstructionCard({
             <button
               type="button"
               onClick={onSwitchMethod}
-              className="inline-flex h-12 items-center justify-center rounded-full px-6 text-[13.5px] font-medium text-forest/70 ring-1 ring-soil/16 transition-colors duration-200 hover:text-forest motion-reduce:transition-none"
+              className="inline-flex h-12 items-center justify-center rounded-full px-6 text-[14.5px] font-medium text-forest/70 ring-1 ring-soil/16 transition-colors duration-200 hover:text-forest motion-reduce:transition-none"
             >
               {PAY_CARD_COPY.switchMethodLabel}
             </button>
@@ -326,21 +367,21 @@ export function PaymentInstructionCard({
 
       {live && (
         <div className="mt-4 flex items-center justify-between gap-3 border-t border-soil/12 pt-3.5">
-          <span className="flex items-center gap-2 text-[11.5px] text-forest/45">
+          <span className="flex items-center gap-2 text-[12.5px] text-forest/45">
             <span className="size-1.5 animate-pulse rounded-full bg-forest/40" aria-hidden />
-            {PAY_CARD_COPY.waitingTitle}
+            {snapRedirect ? PAY_CARD_COPY.snapWaiting : PAY_CARD_COPY.waitingTitle}
           </span>
           <button
             type="button"
             onClick={onSwitchMethod}
-            className="text-[11.5px] font-medium text-forest/60 underline decoration-soil/40 underline-offset-4 transition-colors duration-200 hover:text-forest"
+            className="text-[12.5px] font-medium text-forest/60 underline decoration-soil/40 underline-offset-4 transition-colors duration-200 hover:text-forest"
           >
             {PAY_CARD_COPY.switchMethodLabel}
           </button>
         </div>
       )}
 
-      <p className="mt-3 text-[10.5px] tabular-nums text-forest/35">
+      <p className="mt-3 text-[11.5px] tabular-nums text-forest/35">
         {PAY_CARD_COPY.orderLabel} {invoice.orderId}
       </p>
     </section>

@@ -194,7 +194,7 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
               </h2>
               <p
                 id="topup-desc"
-                className="mt-0.5 text-[13px] leading-relaxed break-words text-forest/55"
+                className="mt-0.5 text-[14px] leading-relaxed break-words text-forest/55"
               >
                 {AI_TOPUP_COPY.description}
               </p>
@@ -251,7 +251,7 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
                     )}
                   >
                     {onAccent && (
-                      <span className="absolute -top-2 right-3 rounded-full bg-forest px-2.5 py-[3px] text-[10px] font-medium tracking-wide text-mint">
+                      <span className="absolute -top-2 right-3 rounded-full bg-forest px-2.5 py-[3px] text-[11px] font-medium tracking-wide text-mint">
                         {AI_TOPUP_COPY.bestBadge}
                       </span>
                     )}
@@ -259,7 +259,7 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
                     <span className="flex items-start justify-between gap-2">
                       <span
                         className={cn(
-                          'text-[13px] font-medium leading-snug',
+                          'text-[14px] font-medium leading-snug',
                           onAccent ? 'text-forest' : 'text-forest',
                         )}
                       >
@@ -290,7 +290,7 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
                     </span>
                     <span
                       className={cn(
-                        'text-[10px] font-medium',
+                        'text-[11px] font-medium',
                         onAccent ? 'text-forest/60' : 'text-forest/40',
                       )}
                     >
@@ -299,7 +299,7 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
 
                     <span
                       className={cn(
-                        'mt-2.5 block text-[11px] font-medium',
+                        'mt-2.5 block text-[12px] font-medium',
                         onAccent ? 'text-forest' : 'text-forest/80',
                       )}
                     >
@@ -307,7 +307,7 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
                     </span>
                     <span
                       className={cn(
-                        'mt-0.5 block text-[10px] leading-relaxed',
+                        'mt-0.5 block text-[11px] leading-relaxed',
                         onAccent ? 'text-forest/60' : 'text-forest/45',
                       )}
                     >
@@ -318,7 +318,7 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
               })}
             </div>
 
-            <p className="mt-3 mb-1 text-[11px] leading-relaxed text-forest/40">
+            <p className="mt-3 mb-1 text-[12px] leading-relaxed text-forest/40">
               {AI_RESET_RULE_COPY}
             </p>
           </div>
@@ -326,7 +326,7 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
           {/* footer — total, CTA, trust badge */}
           <div className="shrink-0 border-t border-soil/12 px-5 pt-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:px-6 lg:pb-5">
             {error && (
-              <p className="mb-3 rounded-2xl bg-plum/10 px-3.5 py-2.5 text-[11.5px] leading-relaxed text-forest ring-1 ring-plum/20">
+              <p className="mb-3 rounded-2xl bg-plum/10 px-3.5 py-2.5 text-[12.5px] leading-relaxed text-forest ring-1 ring-plum/20">
                 {error}
               </p>
             )}
@@ -365,7 +365,7 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
               )}
             </button>
 
-            <p className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-forest/45">
+            <p className="mt-3 flex items-center justify-center gap-1.5 text-[12px] text-forest/45">
               <Lock className="size-3 shrink-0" strokeWidth={2.4} />
               {AI_TOPUP_COPY.trustNote}
             </p>

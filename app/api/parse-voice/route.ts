@@ -96,7 +96,10 @@ export async function POST(req: NextRequest) {
   const result = await generateJSON<RawExtraction>({
     system: EXTRACTION_SYSTEM_PROMPT,
     turns: [{ role: 'user', text: prompt }],
-    maxOutputTokens: 400,
+    /* 1200 (dulu 400): token berpikir ikut memakan jatah ini. Sejak paket 101
+       reasoning dimatikan untuk ekstraksi, tapi jatahnya tetap diberi ruang
+       supaya jawaban tidak pernah kosong hanya karena soal anggaran. */
+    maxOutputTokens: 1200,
   })
 
   if (!result.ok) {

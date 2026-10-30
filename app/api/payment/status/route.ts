@@ -93,8 +93,13 @@ export async function GET(req: NextRequest) {
 
   const provider = await fetchTransactionStatus(orderId, method)
 
-  /* Provider belum punya transaksinya (mis. `/v2/charge` gagal di tengah jalan):
-     katakan apa adanya — jangan mengarang status. */
+  /* ── LIFECYCLE SNAP: 404 = BELUM ADA TRANSAKSI, BUKAN ERROR ────────────────
+     Sejak produksi memakai Snap, transaksi baru lahir saat user MEMBUKA halaman
+     pembayaran Midtrans. Jadi order yang tokennya belum dibuka (atau baru saja
+     dibuat, user masih di halaman Snap) memang tidak dikenal `GET
+     /v2/{order_id}/status` → `404`. Itu keadaan NORMAL dan berarti masih
+     menunggu, bukan kegagalan. Sebelumnya UI menampilkan "Belum tercatat" dan
+     user mengira tagihannya hilang. */
   if (!provider.ok) {
     if (provider.reason !== 'not-found') {
       return NextResponse.json(
@@ -102,14 +107,18 @@ export async function GET(req: NextRequest) {
         { status: provider.status },
       )
     }
+    const settledInDb = purchase.status === 'settlement'
     return NextResponse.json({
       ok: true,
       orderId,
-      state: (purchase.status === 'settlement' ? 'settled' : 'unknown') satisfies PaymentState,
-      provider: { state: 'unknown', transactionStatus: null, transactionId: null, expiresAt: null },
+      state: (settledInDb ? 'settled' : 'pending') satisfies PaymentState,
+      provider: { state: 'pending', transactionStatus: null, transactionId: null, expiresAt: null },
       method: method?.id ?? null,
       instructions: null,
       order,
+      note: settledInDb
+        ? null
+        : 'Pembayaran belum dibuka di Midtrans. Tagihanmu masih menunggu — selesaikan di halaman pembayaran.',
     })
   }
 

@@ -17,7 +17,7 @@ import { useLiveFunds } from '@/lib/money/funds-store'
  *
  * Dua wajah:
  *   • sudah ada target   → nominalnya + celengan pilihannya, tombol "Ubah"
- *   • belum ada target   → ajakan set target (20 detik), tombol "Set target 📌"
+ *   • belum ada target   → ajakan set target, tombol "Set target"
  *
  * Nama & saran bulanan celengan dibaca dari STORE (`useFundsStore()`), bukan
  * konstanta: kalau celengan yang dipilih ternyata sudah dihapus/diganti nama,
@@ -57,24 +57,29 @@ export const MonthlyTargetCard = memo(function MonthlyTargetCard({
         type="button"
         onClick={onOpen}
         aria-label={COPY.openLabel}
-        className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left transition-colors hover:bg-sage/25"
+        className="flex w-full items-center gap-2.5 rounded-2xl px-4 py-3 text-left transition-colors hover:bg-sage/25"
       >
         <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sage text-forest">
           <Target className="size-4.5" strokeWidth={2.2} />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-[13px] font-medium text-forest">
+          {/* tanpa `truncate`: judul keadaan kosong ("Belum ada target bulan
+              ini") tidak boleh berakhir jadi ellipsis di 375px — lebih baik
+              turun baris, teksnya tetap utuh. */}
+          <span className="block text-[14px] leading-snug font-medium break-words text-forest">
             {savedThisMonth ? COPY.savingsLabel(money(amount)) : COPY.emptyTitle}
           </span>
-          <span className="mt-0.5 block text-xs leading-relaxed text-forest/55">
-            {savedThisMonth
-              ? showFundLink && fundName
+          {/* Keadaan kosong cuma judul + tombol "Set target": tidak ada paragraf
+              ajakan lagi di bawah judul. */}
+          {savedThisMonth && (
+            <span className="mt-0.5 block text-xs leading-relaxed text-forest/55">
+              {showFundLink && fundName
                 ? COPY.fundLabel(fundName, money(fundMonthly))
-                : COPY.title
-              : COPY.emptyBody}
-          </span>
+                : COPY.title}
+            </span>
+          )}
         </span>
-        <span className="flex shrink-0 items-center gap-1 rounded-full bg-forest px-3.5 py-2 text-[11.5px] font-medium text-cream">
+        <span className="flex shrink-0 items-center gap-1 rounded-full bg-forest px-3 py-2 text-[12.5px] font-medium text-cream">
           {savedThisMonth ? COPY.ctaEdit : COPY.ctaSet}
           <ChevronRight className="size-3.5" strokeWidth={2.6} />
         </span>
@@ -86,7 +91,7 @@ export const MonthlyTargetCard = memo(function MonthlyTargetCard({
         <div className="border-t border-soil/8 px-4 py-2">
           <Link
             href="/budget"
-            className="inline-flex items-center gap-1.5 text-[11.5px] font-medium text-forest transition-colors hover:text-forest-soft"
+            className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-forest transition-colors hover:text-forest-soft"
           >
             <PiggyBank className="size-3.5" strokeWidth={2.4} />
             {COPY.fundLink}

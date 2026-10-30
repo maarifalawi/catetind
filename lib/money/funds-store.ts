@@ -13,7 +13,7 @@ import {
   type SinkingFundItem,
 } from '@/lib/data/budget'
 import { FUNDS_STATE_KEY, loadDeviceState, saveDeviceState } from './idb'
-import { getMoneySnapshot, postTransaction, walletNameOfId } from './store'
+import { getMoneySnapshot, postFundWithdrawal, postTransaction, walletNameOfId } from './store'
 import {
   deleteRemoteFund,
   pushContributionToServer,
@@ -522,6 +522,75 @@ export function sweepIntoFund(
   dateISO: string = TODAY_ISO,
 ): ContributionResult | null {
   return contributeToFund(fundId, amount, SWEEP_SOURCE_ID, dateISO)
+}
+
+/* ── TARIK DANA DARI CELENGAN (kebalikan setoran) ────────────────────────────
+   Sebelum ini satu-satunya jalan mengeluarkan uang dari celengan adalah
+   MENGHAPUS celengannya — dan itu bukan penarikan: riwayat setorannya jadi
+   yatim, dan tidak ada satu baris pun di Riwayat yang menjelaskan ke mana uang
+   itu pergi.
+
+   Bentuknya sengaja CERMIN dari `contributeToFund`, dengan tiga aturan uang:
+     1. `current` celengan TURUN, tahap tanaman ikut dihitung ulang;
+     2. dompet yang dipilih NAIK lewat `postFundWithdrawal()` — baris
+        `saving_withdraw`, bukan `income`, jadi Arus Uang/Budget/Jatah Hari Ini
+        TIDAK naik (menarik tabungan sendiri bukan pemasukan);
+     3. Riwayat menyimpan satu baris `direction: 'out'`, jadi /budget/<id> bisa
+        menunjukkan uang keluar-masuk celengan dengan jujur.
+
+   `null` = tidak sah (celengan tidak ada/dihapus, nominal ≤ 0, atau nominal
+   melebihi saldo celengan) → TIDAK ada yang ditulis. */
+export function withdrawFromFund(
+  fundId: number,
+  amount: number,
+  walletId: string,
+  dateISO: string = TODAY_ISO,
+): ContributionResult | null {
+  const target = live.funds.find((fund) => fund.id === fundId)
+  const rounded = Math.round(Number(amount))
+  if (!target || live.removedIds.includes(fundId)) return null
+  if (!Number.isFinite(rounded) || rounded <= 0) return null
+  if (rounded > target.current) return null
+  const walletName = walletNameOfId(getMoneySnapshot(), walletId)
+  if (!walletName) return null
+
+  const fund: SinkingFundItem = {
+    ...target,
+    current: target.current - rounded,
+    stage: plantStageFrom(target.current - rounded, target.target),
+    /* menarik dana tidak membatalkan status "kewajiban bulan ini sudah disetor" */
+    contributedThisMonth: target.contributedThisMonth,
+  }
+  const contribution: FundContribution = {
+    id: nextContributionId(),
+    fundId,
+    date: dateISO,
+    amount: rounded,
+    walletId,
+    direction: 'out',
+  }
+
+  const row = postFundWithdrawal({
+    walletId,
+    amount: rounded,
+    note: `Tarik ${fund.name}`,
+    category: 'Tabungan',
+    dateISO,
+    clientTxId: `fund-withdrawal-${contribution.id}`,
+  })
+  /* dompet yang tidak dikenal ledger menolak menulis; jangan mengubah celengan
+     kalau uangnya tidak mendarat di mana pun */
+  if (!row) return null
+
+  commit({
+    ...live,
+    funds: live.funds.map((item) => (item.id === fundId ? fund : item)),
+    contributions: [contribution, ...live.contributions],
+    hydrated: true,
+  })
+  void ensureFundOnServer(fund.id).then(() => ensureContributionOnServer(contribution.id))
+
+  return { fund, contribution, reachedNow: false }
 }
 
 /* ── HAPUS CELENGAN = TOMBSTONE + EFEK UANG YANG DIKATAKAN (paket 60 · 60.2) ─

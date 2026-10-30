@@ -110,12 +110,12 @@ export function AddGoalSheet({
     >
       {/* ── STEP 1 — nama + target ─────────────────────────────────────── */}
       <label className="block">
-        <span className="text-[13px] font-medium leading-snug text-forest">Mau nabung buat apa?</span>
+        <span className="text-[14px] font-medium leading-snug text-forest">Mau nabung buat apa?</span>
         <input
           value={name}
           onChange={(event) => setName(event.target.value)}
           placeholder="Biaya Operasi Mama"
-          className="mt-2 w-full rounded-2xl bg-cream px-4 py-3 text-[15px] font-medium text-forest outline-none ring-1 ring-soil/16 transition-shadow placeholder:font-medium placeholder:text-forest/25 focus:ring-2 focus:ring-forest/35"
+          className="mt-2 w-full rounded-2xl bg-cream px-4 py-3 text-[16px] font-medium text-forest outline-none ring-1 ring-soil/16 transition-shadow placeholder:font-medium placeholder:text-forest/25 focus:ring-2 focus:ring-forest/35"
         />
       </label>
 
@@ -132,7 +132,7 @@ export function AddGoalSheet({
       {/* ── STEP 2 — deadline + prioritas + auto-kalkulasi ─────────────── */}
       <RevealStep show={stepOneDone}>
         <div className="mt-5">
-          <span className="text-[13px] font-medium leading-snug text-forest">
+          <span className="text-[14px] font-medium leading-snug text-forest">
             Mau tercapai kapan?
           </span>
           {/* field tanggal: INPUT native yang jadi lapisan tap penuh (paling
@@ -160,7 +160,7 @@ export function AddGoalSheet({
               <CalendarDays className="size-4 shrink-0 text-forest/35" strokeWidth={2.2} />
               <span
                 className={cn(
-                  'flex-1 text-[14px] font-medium tabular-nums',
+                  'flex-1 text-[15px] font-medium tabular-nums',
                   deadline ? 'text-forest' : 'text-forest/25',
                 )}
               >
@@ -171,7 +171,7 @@ export function AddGoalSheet({
           </div>
 
           <div className="mt-4">
-            <p className="text-[13px] font-medium text-forest">Seberapa penting?</p>
+            <p className="text-[14px] font-medium text-forest">Seberapa penting?</p>
             <ChoicePills
               className="mt-2.5"
               options={[
@@ -188,7 +188,7 @@ export function AddGoalSheet({
 
           {/* auto-kalkulasi real-time — inti Step 2 */}
           {perMonth > 0 && (
-            <p className="mt-4 rounded-2xl bg-sage/60 px-4 py-3 text-[12.5px] leading-relaxed text-forest/70">
+            <p className="mt-4 rounded-2xl bg-sage/60 px-4 py-3 text-[13.5px] leading-relaxed text-forest/70">
               Kamu perlu nabung{' '}
               <b className="font-semibold text-forest tabular-nums">{formatIDR(perMonth)}</b>/bulan biar
               tercapai tepat waktu 🌿
@@ -206,7 +206,7 @@ export function AddGoalSheet({
             onClick={() => setAdvancedOpen((prev) => !prev)}
             className="flex w-full items-center justify-between gap-2 rounded-2xl bg-cream/70 px-4 py-3 text-left ring-1 ring-soil/12 transition-colors hover:bg-cream"
           >
-            <span className="text-[12.5px] font-medium text-forest/60">
+            <span className="text-[13.5px] font-medium text-forest/60">
               Pengaturan Lanjutan (Opsional)
             </span>
             <ChevronDown
@@ -222,19 +222,19 @@ export function AddGoalSheet({
             <div className="mt-4 space-y-4">
                   {/* catatan */}
                   <label className="block">
-                    <span className="text-[12.5px] font-medium text-forest/70">Catatan</span>
+                    <span className="text-[13.5px] font-medium text-forest/70">Catatan</span>
                     <textarea
                       value={note}
                       onChange={(event) => setNote(event.target.value)}
                       rows={3}
                       placeholder="Kenapa ini penting buat kamu?"
-                      className="mt-2 w-full resize-none rounded-2xl bg-cream px-4 py-3 text-[13px] leading-relaxed text-forest outline-none ring-1 ring-soil/16 transition-shadow placeholder:text-forest/25 focus:ring-2 focus:ring-forest/35"
+                      className="mt-2 w-full resize-none rounded-2xl bg-cream px-4 py-3 text-[14px] leading-relaxed text-forest outline-none ring-1 ring-soil/16 transition-shadow placeholder:text-forest/25 focus:ring-2 focus:ring-forest/35"
                     />
                   </label>
 
                   {/* dompet tertaut */}
                   <label className="block">
-                    <span className="text-[12.5px] font-medium text-forest/70">
+                    <span className="text-[13.5px] font-medium text-forest/70">
                       Dompet buat setor
                     </span>
                     <span className="relative mt-2 flex items-center gap-2 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/16 focus-within:ring-2 focus-within:ring-forest/35">
@@ -242,7 +242,7 @@ export function AddGoalSheet({
                       <select
                         value={wallet}
                         onChange={(event) => setWallet(event.target.value)}
-                        className="flex-1 appearance-none bg-transparent text-[13.5px] font-medium text-forest outline-none"
+                        className="flex-1 appearance-none bg-transparent text-[14.5px] font-medium text-forest outline-none"
                       >
                         {WALLET_SOURCES.map((source) => (
                           <option key={source.id} value={source.id}>
@@ -257,7 +257,7 @@ export function AddGoalSheet({
                   {/* pengingat nabung */}
                   <div className="rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/12">
                     <div className="flex items-center justify-between gap-3">
-                      <span className="text-[12.5px] font-medium text-forest/70">
+                      <span className="text-[13.5px] font-medium text-forest/70">
                         Pengingat nabung
                       </span>
                       <button

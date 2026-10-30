@@ -146,6 +146,8 @@ const LEDGER_TYPES: LedgerRowType[] = [
   'debt_payment',
   'receivable_payment',
   'change',
+  /* tarik dana dari celengan: uang MASUK ke dompet tanpa menjadi pemasukan */
+  'saving_withdraw',
 ]
 
 /**

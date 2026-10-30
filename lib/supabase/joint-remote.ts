@@ -39,6 +39,12 @@ export interface RemoteJointWallet {
   viewerId: string
   /** id anggota (pemilik + `joint_members`), unik, urut kali pertama terlihat */
   members: string[]
+  /**
+   * Nama panggilan anggota (dari RPC `catetind_joint_roster`, yang memeriksa
+   * keanggotaan lebih dulu). `{}` = nama belum terbaca; pemanggil memakai
+   * sebutan netral ("Kamu"/"Pasangan") alih-alih nama karangan.
+   */
+  memberNames: Record<string, string>
   /** catatan yang sudah ada di server, terbaru dulu (pola urut store) */
   rows: JointTransaction[]
 }
@@ -108,7 +114,75 @@ export async function readRemoteJointWallet(): Promise<RemoteJointWallet | null>
       },
       viewerId,
       members,
+      memberNames: await readMemberNames(raw.id, viewerId),
       rows,
+    }
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Nama panggilan anggota kantong (`catetind_joint_roster`).
+ *
+ * Dipisah & gagal-sunyi: kalau RPC-nya belum ada (backend lama) atau gagal,
+ * hasilnya `{}` dan layar memakai sebutan netral. Nama yang KOSONG tidak pernah
+ * diganti nama karangan.
+ */
+async function readMemberNames(
+  walletId: string,
+  viewerId: string,
+): Promise<Record<string, string>> {
+  const client = browserSupabase()
+  if (!client) return {}
+  try {
+    const { data, error } = await client.rpc('catetind_joint_roster', { p_wallet: walletId })
+    if (error || !data) return {}
+    const out: Record<string, string> = {}
+    for (const raw of data as { roster_user_id?: string; roster_nickname?: string }[]) {
+      const id = raw.roster_user_id
+      if (!id) continue
+      const name = (raw.roster_nickname ?? '').trim()
+      /* pemilik sesi selalu "Kamu" — itu yang dibaca user tentang dirinya di
+         buku besar bersama, bukan nama panggilan yang ia isi saat daftar */
+      out[id] = id === viewerId ? 'Kamu' : name || 'Pasangan'
+    }
+    return out
+  } catch {
+    return {}
+  }
+}
+
+/* ── KANTONG BERSAMA DI SERVER (paket 100) ──────────────────────────────────
+   `createJointPocket()` di store hanya menamai kantong di PERANGKAT. Akibatnya
+   `wallet.id` masih id kanon (`joint_1`) — bukan uuid — sehingga
+   `catetind_create_invite` selalu menjawab "Kamu bukan anggota dompet bersama
+   itu", dan kode undangan tidak pernah sampai ke tabel `invite_codes` (partner
+   di perangkat lain tidak akan pernah bisa gabung).
+
+   RPC `catetind_ensure_joint_pocket` menutupnya secara IDEMPOTEN: satu pemilik =
+   satu kantong (yang paling awal dibuat dipakai ulang), nama disesuaikan, dan
+   baris keanggotaan pemilik (`role = 'owner'`) dipastikan ada. `null` = tidak ada
+   sesi/backend atau RPC belum tersedia → pemanggil tetap di jalur lokal.
+*/
+export async function ensureJointPocketRemote(name: string): Promise<JointWallet | null> {
+  const client = browserSupabase()
+  if (!client) return null
+  const trimmed = name.trim()
+  try {
+    const { data, error } = await client.rpc('catetind_ensure_joint_pocket', {
+      p_name: trimmed.length > 0 ? trimmed : null,
+    })
+    if (error || !data) return null
+    const row = (Array.isArray(data) ? data[0] : data) as
+      | { pocket_id?: string; pocket_name?: string; pocket_created_at?: string }
+      | undefined
+    if (!row?.pocket_id) return null
+    return {
+      id: row.pocket_id,
+      name: row.pocket_name ?? trimmed,
+      /* kolomnya timestamptz; domain ini memakai tanggal lokal `YYYY-MM-DD` */
+      createdAt: (row.pocket_created_at ?? '').slice(0, 10),
     }
   } catch {
     return null
@@ -122,12 +196,39 @@ export async function readRemoteJointWallet(): Promise<RemoteJointWallet | null>
    `unique (joint_wallet_id, client_tx_id)` sudah ada, jadi double-tap / retry
    tidak menggandakan catatan.
 
-   CATATAN JUJUR: domain kantong bersama memakai identitas demo (`JOINT_ME.id`),
-   sedangkan kolom `user_id`/`paid_by_user_id` bertipe uuid. Yang bisa dipetakan
-   adalah pemanggil sesi sendiri (`viewerId`); karena itu baris yang ditulis dari
-   perangkat ini dikirim atas nama `viewerId`. `bearer_id` hanya dikirim kalau
-   nilainya sudah uuid (mode single_payer dari baris server). Batas ini ditulis
-   apa adanya di laporan paket 64. */
+   Kolom `user_id`/`paid_by_user_id` bertipe uuid, dan SEJAK identitas kantong
+   bersama memakai uuid sungguhan, `pocketId` memang uuid peserta. Baris lama
+   yang masih membawa id contoh dinormalkan oleh store
+   (`jointIdentityMap`) sebelum sampai ke sini. */
+
+/**
+ * Keluar dari kantong bersama: hapus baris keanggotaan MILIK SENDIRI.
+ *
+ * RLS `joint_members_owner_delete` mengizinkan `user_id = auth.uid()`, jadi ini
+ * satu-satunya jalur "putus koneksi" yang benar-benar mengubah data. Dompet &
+ * catatan pasangan TIDAK ikut terhapus — keluar dari satu kantong bukan alasan
+ * menghapus data orang lain.
+ *
+ * `false` = tidak ada sesi/backend; pemanggil tetap membersihkan state lokal dan
+ * mengatakannya apa adanya.
+ */
+export async function deleteRemoteJointMembership(
+  jointWalletId: string,
+  userId: string,
+): Promise<boolean> {
+  const client = browserSupabase()
+  if (!client) return false
+  try {
+    const { error } = await client
+      .from('joint_members')
+      .delete()
+      .eq('joint_wallet_id', jointWalletId)
+      .eq('user_id', userId)
+    return !error
+  } catch {
+    return false
+  }
+}
 
 export async function pushJointTransactionToServer(
   row: JointTransaction,

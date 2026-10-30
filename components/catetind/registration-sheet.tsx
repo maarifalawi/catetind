@@ -111,14 +111,14 @@ export function RegistrationSheet({
           {/* error backend tampil DI SINI (bukan toast) supaya tetap terlihat
               sambil user membetulkan kode temannya */}
           {formError ? (
-            <p className="mt-2.5 flex items-start justify-center gap-1.5 text-center text-[11.5px] leading-relaxed text-plum">
+            <p className="mt-2.5 flex items-start justify-center gap-1.5 text-center text-[12.5px] leading-relaxed text-plum">
               <Info className="mt-0.5 size-3.5 shrink-0" strokeWidth={2.4} aria-hidden />
               <span>{formError}</span>
             </p>
           ) : null}
           {/* tautan dua arah: dari daftar bisa langsung ke /login (prompt 09) —
               drawer-nya ditutup dulu supaya tidak tersisa terbuka saat kembali */}
-          <p className="mt-3 text-center text-[11.5px] leading-relaxed text-forest/55">
+          <p className="mt-3 text-center text-[12.5px] leading-relaxed text-forest/55">
             {REGISTRATION_COPY.hasAccountLead}{' '}
             <Link
               href={loginHref}
@@ -140,7 +140,7 @@ export function RegistrationSheet({
       >
         {/* ── email ─────────────────────────────────────────────────────── */}
         <label className="block" htmlFor="checkout-email">
-          <span className="flex items-center gap-1.5 text-[13px] font-medium leading-snug text-forest">
+          <span className="flex items-center gap-1.5 text-[14px] font-medium leading-snug text-forest">
             <Mail className="size-3.5 text-forest/40" strokeWidth={2.4} aria-hidden />
             {REGISTRATION_COPY.emailLabel}
           </span>
@@ -159,14 +159,14 @@ export function RegistrationSheet({
             aria-invalid={showErrors && !emailValid}
             aria-describedby={showErrors && !emailValid ? 'checkout-email-hint' : undefined}
             className={cn(
-              'mt-2.5 w-full rounded-2xl bg-sage/45 px-4 py-3.5 text-[15px] font-medium text-forest outline-none ring-1 transition-all placeholder:font-medium placeholder:text-forest/30 focus:bg-cream focus:ring-2 focus:ring-forest/30',
+              'mt-2.5 w-full rounded-2xl bg-sage/45 px-4 py-3.5 text-[16px] font-medium text-forest outline-none ring-1 transition-all placeholder:font-medium placeholder:text-forest/30 focus:bg-cream focus:ring-2 focus:ring-forest/30',
               showErrors && !emailValid ? 'ring-plum/50' : 'ring-transparent',
             )}
           />
           {showErrors && !emailValid ? (
             <span
               id="checkout-email-hint"
-              className="mt-1.5 block text-[11px] leading-relaxed text-plum/80"
+              className="mt-1.5 block text-[12px] leading-relaxed text-plum/80"
             >
               {REGISTRATION_COPY.invalidEmail}
             </span>
@@ -174,7 +174,7 @@ export function RegistrationSheet({
         </label>
         {/* ── nama panggilan ────────────────────────────────────────────── */}
         <label className="mt-4 block" htmlFor="checkout-nickname">
-          <span className="flex items-center gap-1.5 text-[13px] font-medium leading-snug text-forest">
+          <span className="flex items-center gap-1.5 text-[14px] font-medium leading-snug text-forest">
             <UserRound className="size-3.5 text-forest/40" strokeWidth={2.4} aria-hidden />
             {REGISTRATION_COPY.nameLabel}
           </span>
@@ -191,14 +191,14 @@ export function RegistrationSheet({
             aria-invalid={showErrors && !nicknameValid}
             aria-describedby={showErrors && !nicknameValid ? 'checkout-nickname-hint' : undefined}
             className={cn(
-              'mt-2.5 w-full rounded-2xl bg-sage/45 px-4 py-3.5 text-[15px] font-medium text-forest outline-none ring-1 transition-all placeholder:font-medium placeholder:text-forest/30 focus:bg-cream focus:ring-2 focus:ring-forest/30',
+              'mt-2.5 w-full rounded-2xl bg-sage/45 px-4 py-3.5 text-[16px] font-medium text-forest outline-none ring-1 transition-all placeholder:font-medium placeholder:text-forest/30 focus:bg-cream focus:ring-2 focus:ring-forest/30',
               showErrors && !nicknameValid ? 'ring-plum/50' : 'ring-transparent',
             )}
           />
           {showErrors && !nicknameValid ? (
             <span
               id="checkout-nickname-hint"
-              className="mt-1.5 block text-[11px] leading-relaxed text-plum/80"
+              className="mt-1.5 block text-[12px] leading-relaxed text-plum/80"
             >
               {REGISTRATION_COPY.invalidNickname}
             </span>
@@ -212,10 +212,10 @@ export function RegistrationSheet({
             <Mail className="size-3.5" strokeWidth={2.2} aria-hidden />
           </span>
           <p className="min-w-0">
-            <span className="block text-[12px] leading-[1.4] font-medium text-forest">
+            <span className="block text-[13px] leading-[1.4] font-medium text-forest">
               {REGISTRATION_COPY.emailNextLead}
             </span>
-            <span className="mt-0.5 block text-[11.5px] leading-[1.45] text-forest/50">
+            <span className="mt-0.5 block text-[12.5px] leading-[1.45] text-forest/50">
               {REGISTRATION_COPY.emailNextNote}
             </span>
           </p>

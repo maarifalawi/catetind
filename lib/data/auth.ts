@@ -145,16 +145,6 @@ export const LOGIN_COPY = {
   resendSentNote: 'Kode baru sudah dikirim. Cek inbox lagi ya 📩',
   invalidCode: 'Kodenya 6 angka ya. Cek lagi emailnya.',
 
-  /* ── AKUN REVIEWER MIDTRANS (verifikasi merchant) ──────────────────────────
-     Reviewer tidak punya inbox kita, jadi kode aksesnya tidak dikirim ke email.
-     Copy di sini menjelaskan keadaan itu tanpa mencetak kodenya di layar —
-     kodenya diberikan lewat catatan verifikasi Midtrans. */
-  reviewerCodeLead: 'Kode akses reviewer',
-  reviewerCodeReadyToast: 'Mode reviewer aktif',
-  reviewerCodeReadyDescription: 'Masukkan kode akses reviewer yang sudah diberikan.',
-  reviewerCodeHint: 'Pakai kode akses reviewer dari tim CatetInd.',
-  reviewerResendNote: 'Kode reviewer tetap sama — pakai kode akses yang sudah diberikan.',
-
   /* ── tautan sekunder ───────────────────────────────────────────────────── */
   /** aksi sekunder: belum punya akun → daftar (route /checkout sudah ada) */
   registerLead: 'Belum punya akun?',

@@ -49,10 +49,10 @@ export function WalletDetailTrend({
   return (
     <figure className={cn('mt-4', className)}>
       <div className="flex items-baseline justify-between gap-3">
-        <figcaption className="text-[11px] font-medium uppercase tracking-[0.14em] text-forest/45">
+        <figcaption className="text-[12px] font-medium uppercase tracking-[0.14em] text-forest/45">
           {WALLET_PERIOD_COPY.trendTitle}
         </figcaption>
-        <span className="text-[10.5px] text-forest/35">{WALLET_PERIOD_COPY.trendHint}</span>
+        <span className="text-[11.5px] text-forest/35">{WALLET_PERIOD_COPY.trendHint}</span>
       </div>
 
       <div className="mt-1.5 h-[116px] w-full">
@@ -99,7 +99,7 @@ export function WalletDetailTrend({
       </div>
 
       {/* rentang yang benar-benar digambar */}
-      <div className="mt-1.5 flex items-center justify-between gap-3 text-[10.5px] font-medium text-forest/40">
+      <div className="mt-1.5 flex items-center justify-between gap-3 text-[11.5px] font-medium text-forest/40">
         <span className="tabular-nums">{first.label}</span>
         <span className="tabular-nums">{last.label}</span>
       </div>
@@ -133,8 +133,8 @@ function TrendTooltip({
   if (!active || !point) return null
   return (
     <div className="rounded-2xl bg-ink px-3.5 py-2.5 text-cream shadow-[0_16px_34px_-16px_rgba(0,0,0,0.8)]">
-      <p className="text-[10.5px] text-cream/60">{point.label}</p>
-      <p className="mt-0.5 text-[12.5px] font-semibold tabular-nums">
+      <p className="text-[11.5px] text-cream/60">{point.label}</p>
+      <p className="mt-0.5 text-[13.5px] font-semibold tabular-nums">
         {maskMoney(point.balance, masked)}
       </p>
     </div>

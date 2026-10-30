@@ -48,8 +48,8 @@ function PeriodChip({
     <span
       className={
         tone === 'dark'
-          ? 'inline-flex items-center gap-1.5 rounded-full bg-cream/12 px-2.5 py-1 text-[10.5px] font-medium text-cream/80 ring-1 ring-cream/15'
-          : 'inline-flex items-center gap-1.5 rounded-full bg-sage/70 px-2.5 py-1 text-[10.5px] font-medium text-forest ring-1 ring-soil/8'
+          ? 'inline-flex items-center gap-1.5 rounded-full bg-cream/12 px-2.5 py-1 text-[11.5px] font-medium text-cream/80 ring-1 ring-cream/15'
+          : 'inline-flex items-center gap-1.5 rounded-full bg-sage/70 px-2.5 py-1 text-[11.5px] font-medium text-forest ring-1 ring-soil/8'
       }
     >
       <CalendarDays className="size-3" strokeWidth={2.6} aria-hidden />
@@ -88,7 +88,7 @@ export function DailyHudSummary({
             className="pointer-events-none absolute -right-16 -top-16 size-40 rounded-full bg-mint/15 blur-3xl"
           />
           <div className="relative flex items-center justify-between gap-3">
-            <span className="inline-flex items-center gap-2 text-[12.5px] font-medium text-forest/60">
+            <span className="inline-flex items-center gap-2 text-[13.5px] font-medium text-forest/60">
               <span className="flex size-6 items-center justify-center rounded-full bg-mint/25 text-forest">
                 <HandCoins className="size-3.5" strokeWidth={2.4} aria-hidden />
               </span>
@@ -100,16 +100,16 @@ export function DailyHudSummary({
             <span className="flex size-12 items-center justify-center rounded-full bg-cream text-forest ring-1 ring-soil/8">
               <Settings2 className="size-5" strokeWidth={2.2} aria-hidden />
             </span>
-            <p className="mt-3 text-[14.5px] font-medium leading-snug text-forest">
+            <p className="mt-3 text-[15.5px] font-medium leading-snug text-forest">
               {HUD_COPY.notConfiguredTitle}
             </p>
-            <p className="mt-1 text-[13px] leading-relaxed text-forest/55">
+            <p className="mt-1 text-[14px] leading-relaxed text-forest/55">
               {HUD_COPY.notConfiguredBody}
             </p>
             <Link
               href={MONEY_SETTINGS_HREF}
               aria-label={HUD_COPY.notConfiguredA11y}
-              className="mt-4 rounded-full bg-forest px-4 py-2.5 text-[12.5px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-95"
+              className="mt-4 rounded-full bg-forest px-4 py-2.5 text-[13.5px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-95"
             >
               {HUD_COPY.notConfiguredCta}
             </Link>
@@ -123,7 +123,7 @@ export function DailyHudSummary({
             className="pointer-events-none absolute -right-16 -top-16 size-40 rounded-full bg-mint/15 blur-3xl"
           />
           <div className="relative flex items-center justify-between gap-3">
-            <span className="inline-flex items-center gap-2 text-[12.5px] font-medium text-forest/60">
+            <span className="inline-flex items-center gap-2 text-[13.5px] font-medium text-forest/60">
               <span className="flex size-6 items-center justify-center rounded-full bg-mint/25 text-forest">
                 <HandCoins className="size-3.5" strokeWidth={2.4} aria-hidden />
               </span>
@@ -133,7 +133,7 @@ export function DailyHudSummary({
           </div>
           <div className="relative mt-4 flex flex-col items-center rounded-[1.25rem] bg-sage/40 px-6 py-7 text-center ring-1 ring-soil/8">
             <span className="text-[26px]">💼</span>
-            <p className="mt-3 text-[14.5px] font-medium leading-snug text-forest">
+            <p className="mt-3 text-[15.5px] font-medium leading-snug text-forest">
               {HUD_COPY.drySpellTitle}
             </p>
             {/* CTA nyata: buka Transaction Input Engine dengan tipe Pemasukan */}
@@ -142,7 +142,7 @@ export function DailyHudSummary({
               trigger={
                 <button
                   type="button"
-                  className="mt-4 rounded-full bg-forest px-4 py-2.5 text-[12.5px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-95"
+                  className="mt-4 rounded-full bg-forest px-4 py-2.5 text-[13.5px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-95"
                 >
                   {HUD_COPY.drySpellCta}
                 </button>
@@ -155,10 +155,10 @@ export function DailyHudSummary({
         <div className="relative overflow-hidden rounded-[1.6rem] bg-cream p-4 ring-1 ring-hud-terracotta/20 shadow-[0_18px_40px_-38px_rgba(0,0,0,0.5)]">
           <div className="flex items-start justify-between gap-3">
             <span className="min-w-0">
-              <p className="text-[12.5px] font-medium text-hud-terracotta">{HUD_COPY.title}</p>
+              <p className="text-[13.5px] font-medium text-hud-terracotta">{HUD_COPY.title}</p>
               <PeriodChip window={period} />
             </span>
-            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-hud-terracotta/12 px-2.5 py-1 text-[10px] font-medium uppercase tracking-wide text-hud-terracotta ring-1 ring-hud-terracotta/20">
+            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-hud-terracotta/12 px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide text-hud-terracotta ring-1 ring-hud-terracotta/20">
               <AlertTriangle className="size-3" strokeWidth={2.6} aria-hidden />
               {HUD_COPY.shortfallBadge}
             </span>
@@ -167,20 +167,20 @@ export function DailyHudSummary({
           <p className="mt-2 text-[32px] font-semibold leading-none tracking-tight text-hud-terracotta tabular-nums">
             {maskNominal(hud.dailyBudget, masked)}
           </p>
-          <p className="mt-1.5 text-[12px] font-medium text-forest/55">
+          <p className="mt-1.5 text-[13px] font-medium text-forest/55">
             {HUD_COPY.shortfallCaption}
           </p>
 
           {/* pesan AI — menahan tanpa menuduh (nada PRD) */}
           <div className="mt-3 flex items-start gap-2.5 rounded-2xl bg-cream/70 px-3.5 py-3 ring-1 ring-hud-terracotta/15">
             <Sparkles className="mt-0.5 size-4 shrink-0 text-hud-terracotta" strokeWidth={2.4} aria-hidden />
-            <p className="text-[12px] font-medium leading-relaxed text-forest/70">
+            <p className="text-[13px] font-medium leading-relaxed text-forest/70">
               {HUD_COPY.shortfallBody}
             </p>
           </div>
 
           {/* meta — kenapa ditahan: kurang sekian dari celengan bulan ini */}
-          <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-hud-terracotta/15 pt-2.5 text-[11px] text-forest/55">
+          <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-hud-terracotta/15 pt-2.5 text-[12px] text-forest/55">
             <span>
               {HUD_COPY.shortfallShortBy}{' '}
               <b className="font-semibold text-hud-terracotta tabular-nums">
@@ -232,7 +232,7 @@ export function DailyHudSummary({
           </svg>
 
           <div className="relative flex items-center justify-between gap-3">
-            <span className="inline-flex items-center gap-2 text-[12.5px] font-medium text-cream/70">
+            <span className="inline-flex items-center gap-2 text-[13.5px] font-medium text-cream/70">
               <span className="flex size-6 items-center justify-center rounded-full bg-cream/12 text-cream">
                 <HandCoins className="size-3.5" strokeWidth={2.4} aria-hidden />
               </span>
@@ -263,7 +263,7 @@ export function DailyHudSummary({
                 stroke={8}
                 accent="mint"
               />
-              <span className="text-[9.5px] font-medium uppercase tracking-[0.16em] text-cream/45">
+              <span className="text-[10.5px] font-medium uppercase tracking-[0.16em] text-cream/45">
                 {HUD_COPY.todayCaption}
               </span>
             </span>
@@ -274,7 +274,7 @@ export function DailyHudSummary({
               periode ini" — pertanyaan yang dulu tidak terjawab karena meternya
               hanya mengukur pemakaian HARI INI. */}
           <div className="relative mt-5 space-y-2.5 rounded-2xl bg-cream/[0.07] px-4 py-3.5 ring-1 ring-cream/10">
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11.5px] font-medium text-cream/60">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[12.5px] font-medium text-cream/60">
               {/* H5-3 (audit UI/UX) — "Sisa periode" diberi penjelasan asalnya:
                   tooltip untuk mouse + keterangan kecil di bawah, supaya angka
                   besar tidak bikin bingung. */}
@@ -288,7 +288,7 @@ export function DailyHudSummary({
                 </b>
               </span>
             </div>
-            <p className="text-[10.5px] leading-relaxed text-cream/45">
+            <p className="text-[11.5px] leading-relaxed text-cream/45">
               {BUDGET_REMAINING_HINT(maskNominal(income.amount, masked))}
             </p>
             <div
@@ -304,7 +304,7 @@ export function DailyHudSummary({
                   style={{ width: `${Math.round(periodPct * 100)}%` }}
                 />
               </div>
-              <p className="mt-1.5 text-[10.5px] font-medium text-cream/50 tabular-nums">
+              <p className="mt-1.5 text-[11.5px] font-medium text-cream/50 tabular-nums">
                 {HUD_COPY.periodUsed(Math.round(periodPct * 100))}
               </p>
             </div>
@@ -315,7 +315,7 @@ export function DailyHudSummary({
               "Jatah Hari Ini" hanya bisa dilihat, tidak bisa dibetulkan. */}
           <Link
             href={MONEY_SETTINGS_HREF}
-            className="relative mt-4 inline-flex items-center gap-1.5 text-[11px] font-medium text-cream/55 underline decoration-cream/25 underline-offset-4 transition-colors hover:text-cream hover:decoration-cream/60"
+            className="relative mt-4 inline-flex items-center gap-1.5 text-[12px] font-medium text-cream/55 underline decoration-cream/25 underline-offset-4 transition-colors hover:text-cream hover:decoration-cream/60"
           >
             <Settings2 className="size-3.5" strokeWidth={2.4} aria-hidden />
             {HUD_COPY.moneySettingsCta}

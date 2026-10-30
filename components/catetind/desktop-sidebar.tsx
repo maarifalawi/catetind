@@ -40,8 +40,12 @@ const COLLAPSED_KEY = 'catet-sidebar-collapsed'
 /** lebar sidebar (px) — dipakai `aside` DAN variabel CSS untuk kolom konten.
  *  Audit UX #10: expanded dinaikkan 264 → 280 supaya teks status AI di kartu
  *  "Bahan Bakar AI" (mis. "Voice 5 j 59 m sisa") punya ruang cukup dan tidak
- *  pernah terpotong. */
-const SIDEBAR_WIDTH = { expanded: 280, collapsed: 76 } as const
+ *  pernah terpotong.
+ *  KETERBACAAN: 280 → 296 setelah label menu naik 13 → 14 px dan ikon 18 → 20 px.
+ *  Tanpa tambahan ini baris terpanjang ("Budget & Target Nabung") plus lencana
+ *  paket terkunci tidak lagi muat. Lebar ini dipublikasikan sebagai
+ *  `--catet-sidebar-w`, jadi kolom konten otomatis ikut bergeser. */
+const SIDEBAR_WIDTH = { expanded: 296, collapsed: 76 } as const
 
 /** nama variabel CSS tempat lebar sidebar dipublikasikan ke kolom konten */
 const SIDEBAR_WIDTH_VAR = '--catet-sidebar-w'
@@ -138,7 +142,7 @@ export function DesktopSidebar({
         variant === 'drawer'
           ? 'relative flex h-full w-full flex-col bg-cream px-4 py-5'
           : 'fixed inset-y-0 left-0 z-30 hidden flex-col border-r border-ink/[0.06] bg-cream px-4 py-5 transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] lg:flex',
-        variant === 'fixed' && (collapsed ? 'w-[76px]' : 'w-[280px]'),
+        variant === 'fixed' && (collapsed ? 'w-[76px]' : 'w-[296px]'),
       )}
     >
       {/* ── header: wordmark + toggle collapse ─────────────────────── */}
@@ -193,11 +197,11 @@ export function DesktopSidebar({
           inputLocked
             ? 'cursor-not-allowed bg-ink/[0.07] text-forest/35'
             : 'bg-forest text-cream hover:bg-forest-soft active:scale-[0.97]',
-          collapsed ? 'mx-auto size-11' : 'w-full py-2.5 text-[13px] font-medium',
+          collapsed ? 'mx-auto size-11' : 'w-full py-3 text-[15px] font-semibold',
         )}
       >
         <Plus
-          className={cn('shrink-0', collapsed ? 'size-5' : 'size-4')}
+          className={cn('shrink-0', collapsed ? 'size-5' : 'size-[18px]')}
           strokeWidth={2.5}
         />
         <span
@@ -228,7 +232,7 @@ export function DesktopSidebar({
             {collapsed ? (
               <div className="mx-3 mb-2 h-px bg-ink/[0.07]" aria-hidden />
             ) : (
-              <p className="px-3.5 pb-1.5 text-[10px] font-medium uppercase tracking-[0.18em] text-forest/30">
+              <p className="px-3.5 pb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-forest-muted">
                 {section.label}
               </p>
             )}
@@ -250,18 +254,25 @@ export function DesktopSidebar({
                     aria-label={lockText ? `${label}, ${lockText}` : undefined}
                     title={lockText ?? undefined}
                     className={cn(
-                      'group/item relative flex items-center text-[13px] transition-all duration-200',
+                      /* KETERBACAAN (permintaan pemilik produk): label menu 13 → 14 px,
+                         ikon 18 → 20 px, dan baris sedikit lebih tinggi (`py-2.5`).
+                         Warna item non-aktif TIDAK lagi opasitas `forest/55` (kontras
+                         ~2,5:1 — gagal WCAG AA, terlihat pudar di monitor besar),
+                         melainkan token `forest-muted` (5,7:1 di kanvas). Item aktif
+                         dibedakan oleh pil latar + `font-semibold`, bukan oleh
+                         perbedaan warna yang tipis. */
+                      'group/item relative flex items-center text-[14px] transition-all duration-200',
                       collapsed
                         ? 'justify-center rounded-2xl px-0 py-2.5'
-                        : 'gap-3 rounded-full px-3.5 py-2',
+                        : 'gap-3.5 rounded-full px-3.5 py-2.5',
                       isActive
-                        ? 'bg-forest/[0.07] font-medium text-forest'
-                        : 'font-medium text-forest/55 hover:bg-ink/[0.03] hover:text-forest',
+                        ? 'bg-forest/[0.07] font-semibold text-forest'
+                        : 'font-medium text-forest-muted hover:bg-ink/[0.03] hover:text-forest',
                     )}
                   >
                     <span className="relative inline-flex shrink-0">
                       <Icon
-                        className="size-[18px]"
+                        className="size-[20px]"
                         strokeWidth={isActive ? 2.2 : 1.8}
                       />
                       {/* sidebar ciut: tidak ada ruang untuk teks, jadi gembok
@@ -270,7 +281,11 @@ export function DesktopSidebar({
                     </span>
                     <span
                       className={cn(
-                        'overflow-hidden whitespace-nowrap transition-all duration-300',
+                        /* `text-ellipsis`: kalau satu baris (label + lencana paket
+                           terkunci) benar-benar tidak muat, teksnya berakhir "…" —
+                           bukan terpotong di tengah huruf seperti `overflow-hidden`
+                           tanpa ellipsis. */
+                        'overflow-hidden text-ellipsis whitespace-nowrap transition-all duration-300',
                         collapsed
                           ? 'max-w-0 opacity-0'
                           : 'max-w-[160px] opacity-100',
@@ -299,13 +314,13 @@ export function DesktopSidebar({
                   onClick={() => setTransferOpen(true)}
                   title={TRANSFER_DOOR_COPY.menuHint}
                   className={cn(
-                    'group/item relative flex w-full items-center text-[13px] font-medium text-forest/55 transition-all duration-200 hover:bg-ink/[0.03] hover:text-forest',
+                    'group/item relative flex w-full items-center text-[14px] font-medium text-forest-muted transition-all duration-200 hover:bg-ink/[0.03] hover:text-forest',
                     collapsed
                       ? 'justify-center rounded-2xl px-0 py-2.5'
-                      : 'gap-3 rounded-full px-3.5 py-2',
+                      : 'gap-3.5 rounded-full px-3.5 py-2.5',
                   )}
                 >
-                  <ArrowLeftRight className="size-[18px] shrink-0" strokeWidth={1.8} />
+                  <ArrowLeftRight className="size-[20px] shrink-0" strokeWidth={1.8} />
                   <span
                     className={cn(
                       'overflow-hidden whitespace-nowrap text-left transition-all duration-300',
@@ -333,13 +348,13 @@ export function DesktopSidebar({
           <Link
             href="/settings/logout"
             className={cn(
-              'group/item relative flex w-full items-center text-[13px] font-medium text-forest/55 transition-all duration-200 hover:bg-plum/15 hover:text-plum',
+              'group/item relative flex w-full items-center text-[14px] font-medium text-forest-muted transition-all duration-200 hover:bg-plum/15 hover:text-plum',
               collapsed
                 ? 'justify-center rounded-2xl px-0 py-2.5'
-                : 'gap-3 rounded-full px-3.5 py-2',
+                : 'gap-3.5 rounded-full px-3.5 py-2.5',
             )}
           >
-            <LogOut className="size-[18px] shrink-0" strokeWidth={1.8} aria-hidden />
+            <LogOut className="size-[20px] shrink-0" strokeWidth={1.8} aria-hidden />
             <span
               className={cn(
                 'overflow-hidden whitespace-nowrap transition-all duration-300',
@@ -388,7 +403,7 @@ export function DesktopSidebar({
           )}
         >
           <p className="truncate text-sm font-medium text-forest">{userName}</p>
-          <p className="truncate text-xs text-forest/45">{userEmail}</p>
+          <p className="truncate text-xs text-forest-muted">{userEmail}</p>
         </div>
       </div>
 

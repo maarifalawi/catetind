@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -6,9 +6,7 @@ import { Check, X } from 'lucide-react'
 import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock'
 import {
   DEFAULT_SETTLEMENT_METHOD,
-  JOINT_ME,
   JOINT_MONTH_LABEL,
-  JOINT_PARTNER,
   NET_SECTION_TITLE,
   SETTLEMENT_DISCLAIMER,
   SETTLEMENT_METHODS,
@@ -32,25 +30,25 @@ import { useSubscriptionGate } from './subscription-gate-provider'
 import { SubscriptionLockNote } from './subscription-lock-note'
 import { cn } from '@/lib/utils'
 
-/* ── Settlement Modal (Section 7) ────────────────────────────────────────────
+/* â”€â”€ Settlement Modal (Section 7) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    Rekap bulanan + instruksi transfer + tombol "Tandai Sudah Settle".
    Sengaja dibuka dari Balance Scale ("Settle Sekarang") ATAU dari banner rekap
-   bulanan — dua pintu ke satu layar yang sama.
+   bulanan â€” dua pintu ke satu layar yang sama.
 
    Stage 2 #1 & #2:
-   • Blok rekap menampilkan NET per orang (`netPhrase`) — dulu isinya "patungan"
+   â€¢ Blok rekap menampilkan NET per orang (`netPhrase`) â€” dulu isinya "patungan"
      lalu "Selisih" tanpa pernah menyebut siapa berhak menerima berapa.
-   • Baris "Satu transfer" memberi nama pada nominalnya: satu transfer penuh
+   â€¢ Baris "Satu transfer" memberi nama pada nominalnya: satu transfer penuh
      memang menyelesaikan bulan ini (dulu user tidak tahu itu setengah selisih
      atau transfer penuh).
-   • User memilih metode transfernya, dan pilihannya dibawa ke halaman supaya
+   â€¢ User memilih metode transfernya, dan pilihannya dibawa ke halaman supaya
      baris ledger `settlement {from, to, amount, method, month}` punya isi.
 
    Mobile: bottom sheet. Desktop: dialog tengah (translate dipakai sebagai
    properti terpisah supaya tidak bentrok dengan animasi y Framer Motion).
    Disclaimer di bawah penting: CatetInd CUMA mencatat, uangnya tetap dipindah
-   manual — biar tidak ada salah paham "sudah transfer otomatis".
-   ────────────────────────────────────────────────────────────────────────── */
+   manual â€” biar tidak ada salah paham "sudah transfer otomatis".
+   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1]
 
@@ -61,25 +59,46 @@ export function JointSettlementModal({
   masked,
   onSettle,
   carryOverRecord = null,
-  me = JOINT_ME,
-  partner = JOINT_PARTNER,
+  me,
+  partner,
+  walletOptions = [],
+  cashWalletId = '',
+  onCashWalletChange,
+  onUndoSettle,
 }: {
   open: boolean
   onClose: () => void
   settlement: SettlementState
   masked: boolean
-  /** user menekan "Tandai Sudah Settle" — halaman menulis entri ledger-nya */
-  onSettle: (method: SettlementMethod) => void
+  /**
+   * user menekan "Tandai Sudah Settle" â€” halaman menulis penanda bulan dan, kalau
+   * dompet dipilih, baris kas yang benar-benar memindahkan uang.
+   */
+  onSettle: (method: SettlementMethod, cashWalletId?: string) => void
   /** penanda bulan lalu yang masih menyisakan utang (null = tidak ada sisa) */
   carryOverRecord?: JointSettlementRecord | null
-  me?: JointPerson
-  partner?: JointPerson
+  me: JointPerson
+  partner: JointPerson
+  /**
+   * Dompet PRIBADI milik pemilik sesi. Kalau dipilih, uangnya benar-benar pindah
+   * (pengirim: keluar, penerima: masuk) dan muncul di Riwayat. Kosong = hanya
+   * penanda kesepakatan, tanpa menggeser saldo.
+   */
+  walletOptions?: { id: string; label: string }[]
+  cashWalletId?: string
+  onCashWalletChange?: (walletId: string) => void
+  /**
+   * Batalkan settle bulan ini. Mencabut penanda bulan DAN baris kasnya (uangnya
+   * dikembalikan lewat satu baris koreksi), jadi salah tekan tidak mengunci
+   * sebulan angka.
+   */
+  onUndoSettle?: () => void
 }) {
   useBodyScrollLock(open, true)
-  /* menandai bulan "sudah settle" mengubah status data bersama → ikut terkunci
+  /* menandai bulan "sudah settle" mengubah status data bersama â†’ ikut terkunci
      saat masa aktif habis (task 23). Rekap & instruksi transfernya tetap terbaca. */
   const { inputLocked } = useSubscriptionGate()
-  /* metode transfer yang dipilih user — ikut tersimpan di baris ledger */
+  /* metode transfer yang dipilih user â€” ikut tersimpan di baris ledger */
   const [method, setMethod] = useState<SettlementMethod>(DEFAULT_SETTLEMENT_METHOD)
 
   /* Escape menutup modal (pola yang sama dengan detail transaksi) */
@@ -101,12 +120,12 @@ export function JointSettlementModal({
         navigator.vibrate([30, 50, 30])
       }
     } catch {
-      /* haptic itu bonus — jangan sampai memblokir aksi utama */
+      /* haptic itu bonus â€” jangan sampai memblokir aksi utama */
     }
     toast.success(SETTLED_TOAST)
-    /* metode transfer ikut dikirim: halaman yang menulis baris ledger-nya
-       (`settlement {from, to, amount, method, month}`), bukan modal ini */
-    onSettle(method)
+    /* metode transfer + dompet (kalau dipilih) ikut dikirim: halaman yang menulis
+       penanda bulan dan baris kasnya, bukan modal ini */
+    onSettle(method, cashWalletId || undefined)
     onClose()
   }
 
@@ -141,7 +160,7 @@ export function JointSettlementModal({
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-forest/40">
+                  <p className="text-[12px] font-medium uppercase tracking-[0.16em] text-forest/40">
                     Rekap settlement
                   </p>
                   <h2 className="mt-0.5 font-display text-xl font-semibold tracking-tight text-forest">
@@ -158,11 +177,11 @@ export function JointSettlementModal({
                 </button>
               </div>
 
-              {/* dua lapisan angka (audit #1–#3): seluruh catatan vs POSISI BERSIH
-                  yang benar-benar menentukan transfer — supaya baris "Satu transfer"
+              {/* dua lapisan angka (audit #1â€“#3): seluruh catatan vs POSISI BERSIH
+                  yang benar-benar menentukan transfer â€” supaya baris "Satu transfer"
                   di bawah bisa ditelusuri */}
               <div className="mt-3 space-y-2 rounded-[1.5rem] bg-cream px-4 py-3.5 ring-1 ring-soil/10">
-                <p className="text-[10.5px] font-medium uppercase tracking-[0.14em] text-forest/35">
+                <p className="text-[11.5px] font-medium uppercase tracking-[0.14em] text-forest/35">
                   Semua catatan bulan ini
                 </p>
                 <RecapRow
@@ -184,7 +203,7 @@ export function JointSettlementModal({
                   nilainya NET per orang + artinya, lalu satu baris transfer yang
                   benar-benar menyelesaikan bulan ini. */}
               <div className="mt-3 space-y-2 rounded-[1.5rem] bg-hud-sage/12 px-4 py-3.5 ring-1 ring-hud-sage/25">
-                <p className="text-[10.5px] font-medium uppercase tracking-[0.14em] text-forest">
+                <p className="text-[11.5px] font-medium uppercase tracking-[0.14em] text-forest">
                   {NET_SECTION_TITLE}
                 </p>
                 <RecapRow
@@ -196,14 +215,14 @@ export function JointSettlementModal({
                   value={netPhrase(settlement.partnerNet, masked)}
                 />
                 {carryOverRecord && (
-                  <p className="rounded-2xl bg-cream/75 px-2.5 py-2 text-[10.5px] leading-relaxed text-forest/85">
+                  <p className="rounded-2xl bg-cream/75 px-2.5 py-2 text-[11.5px] leading-relaxed text-forest/85">
                     {settlementCarryCopy(carryOverRecord, masked)}
                   </p>
                 )}
-                <p className="text-[10.5px] leading-relaxed text-forest/70">
+                <p className="text-[11.5px] leading-relaxed text-forest/70">
                   Yang ditimbang {moneyLabel(settlement.weighedTotal, masked)}
                   {settlement.treatTotal > 0
-                    ? ` · traktiran ${moneyLabel(settlement.treatTotal, masked)} tidak ditimbang`
+                    ? ` Â· traktiran ${moneyLabel(settlement.treatTotal, masked)} tidak ditimbang`
                     : ''}
                 </p>
                 <div className="border-t border-soil/12 pt-2">
@@ -212,39 +231,39 @@ export function JointSettlementModal({
                     value={moneyLabel(difference, masked)}
                     strong
                   />
-                  <p className="mt-1 text-[10.5px] leading-relaxed text-forest/85">
+                  <p className="mt-1 text-[11.5px] leading-relaxed text-forest/85">
                     {SETTLE_ONE_TRANSFER_HINT}
                   </p>
                 </div>
-                <p className="text-[10.5px] leading-relaxed text-forest/85">
+                <p className="text-[11.5px] leading-relaxed text-forest/85">
                   {SETTLEMENT_SCOPE_SHORT}
                 </p>
               </div>
 
               {settled ? (
                 <div className="mt-4 rounded-[1.5rem] bg-hud-sage/15 px-4 py-3.5 text-center ring-1 ring-hud-sage/35">
-                  <p className="text-[13px] font-medium leading-relaxed text-forest">
-                    Bulan ini sudah ditandai settle ✅ Scale-nya rata, gak ada yang perlu transfer.
+                  <p className="text-[14px] font-medium leading-relaxed text-forest">
+                    Bulan ini sudah ditandai settle âœ… Scale-nya rata, gak ada yang perlu transfer.
                   </p>
                 </div>
               ) : settlement.level === 'equal' ? (
                 <div className="mt-4 rounded-[1.5rem] bg-hud-sage/15 px-4 py-3.5 text-center ring-1 ring-hud-sage/35">
-                  <p className="text-[13px] font-medium leading-relaxed text-forest">
-                    Kalian impas, gak ada yang perlu transfer bulan ini ⚖️✨
+                  <p className="text-[14px] font-medium leading-relaxed text-forest">
+                    Kalian impas, gak ada yang perlu transfer bulan ini âš–ï¸âœ¨
                   </p>
                 </div>
               ) : settlement.level === 'close' ? (
                 /* audit #6: di bawah ambang A7 modal cuma jadi rekap, TANPA
                    ajakan transfer supaya tidak bertabrakan dengan copy di atas */
                 <div className="mt-4 rounded-[1.5rem] bg-hud-sage/15 px-4 py-3.5 text-center ring-1 ring-hud-sage/35">
-                  <p className="text-[13px] font-medium leading-relaxed text-forest">
+                  <p className="text-[14px] font-medium leading-relaxed text-forest">
                     Hampir impas! Posisi bersih kalian beda cuma {moneyLabel(difference, masked)}, gak
-                    perlu settle 💚
+                    perlu settle ðŸ’š
                   </p>
                 </div>
               ) : (
                 <div className="mt-4 rounded-[1.5rem] bg-hud-amber/15 px-4 py-3.5 ring-1 ring-hud-amber/35">
-                  <p className="text-[13px] leading-relaxed text-forest">
+                  <p className="text-[14px] leading-relaxed text-forest">
                     Biar impas, <b className="font-medium">{whoOwes.name}</b> perlu transfer{' '}
                     <b className="font-semibold tabular-nums text-hud-terracotta">
                       {moneyLabel(settlementAmount, masked)}
@@ -258,7 +277,7 @@ export function JointSettlementModal({
                   ledger-nya punya isi `method` (Stage 2 #5) */}
               {shouldPromptSettlement(settlement) && (
                 <div className="mt-3 rounded-2xl bg-cream px-3.5 py-3 ring-1 ring-soil/12">
-                  <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-forest/45">
+                  <p className="text-[12px] font-medium uppercase tracking-[0.14em] text-forest/45">
                     {SETTLE_METHOD_LABEL}
                   </p>
                   <ChoicePills
@@ -271,6 +290,26 @@ export function JointSettlementModal({
                 </div>
               )}
 
+              {/* dompet PRIBADI (opsional) â€” kalau dipilih, uangnya benar-benar
+                  pindah dan barisnya muncul di Riwayat. Tanpa dompet, yang
+                  tersimpan hanya kesepakatan bulan ini. */}
+              {shouldPromptSettlement(settlement) &&
+                onCashWalletChange &&
+                walletOptions.length > 0 && (
+                  <div className="mt-3 rounded-2xl bg-cream px-3.5 py-3 ring-1 ring-soil/12">
+                    <p className="text-[12px] font-medium uppercase tracking-[0.14em] text-forest/45">
+                      Dompet untuk transfer (opsional)
+                    </p>
+                    <ChoicePills
+                      className="mt-2"
+                      options={[{ id: '', label: 'Tanpa dompet' }, ...walletOptions]}
+                      value={cashWalletId}
+                      onChange={onCashWalletChange}
+                      ariaLabel="Dompet untuk transfer"
+                    />
+                  </div>
+                )}
+
               {shouldPromptSettlement(settlement) && (
                 <button
                   type="button"
@@ -278,7 +317,7 @@ export function JointSettlementModal({
                   disabled={inputLocked}
                   aria-disabled={inputLocked || undefined}
                   className={cn(
-                    'mt-3 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl text-[14px] font-medium transition-colors',
+                    'mt-3 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl text-[15px] font-medium transition-colors',
                     inputLocked
                       ? 'cursor-not-allowed bg-ink/[0.07] text-forest/35'
                       : 'bg-forest text-mint shadow-[0_16px_32px_-20px_rgba(0,0,0,0.95)] hover:bg-forest-soft active:scale-[0.99]',
@@ -290,15 +329,30 @@ export function JointSettlementModal({
               )}
               {inputLocked && <SubscriptionLockNote />}
 
+              {/* bulan ini sudah ditandai settle â†’ satu-satunya aksi yang masuk
+                  akal adalah membatalkannya (dan uangnya ikut kembali) */}
+              {settled && onUndoSettle && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onUndoSettle()
+                    onClose()
+                  }}
+                  className="mt-3 inline-flex h-11 w-full items-center justify-center rounded-2xl bg-cream text-[14px] font-medium text-forest/70 ring-1 ring-soil/12 transition-colors hover:bg-sage/60 hover:text-forest"
+                >
+                  Batalkan settle bulan ini
+                </button>
+              )}
+
               <button
                 type="button"
                 onClick={onClose}
-                className="mt-2 inline-flex h-11 w-full items-center justify-center rounded-2xl bg-transparent text-[13px] font-medium text-forest/55 transition-colors hover:bg-soil/[0.1]"
+                className="mt-2 inline-flex h-11 w-full items-center justify-center rounded-2xl bg-transparent text-[14px] font-medium text-forest/55 transition-colors hover:bg-soil/[0.1]"
               >
                 Nanti aja
               </button>
 
-              <p className="mt-3 text-center text-[11px] leading-relaxed text-forest/40">
+              <p className="mt-3 text-center text-[12px] leading-relaxed text-forest/40">
                 {SETTLEMENT_DISCLAIMER}
               </p>
             </motion.div>
@@ -321,11 +375,11 @@ function RecapRow({
 }) {
   return (
     <p className="flex items-center justify-between gap-3">
-      <span className="min-w-0 truncate text-[13px] text-forest/55">{label}</span>
+      <span className="min-w-0 truncate text-[14px] text-forest/55">{label}</span>
       <span
         className={cn(
           'shrink-0 tabular-nums',
-          strong ? 'text-[15px] font-medium text-forest' : 'text-[13px] font-medium text-forest',
+          strong ? 'text-[16px] font-medium text-forest' : 'text-[14px] font-medium text-forest',
         )}
       >
         {value}

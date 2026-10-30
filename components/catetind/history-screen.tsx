@@ -518,7 +518,7 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
               aria-selected={active}
               onClick={() => setTab(item.id)}
               className={cn(
-                'flex flex-1 items-center justify-center rounded-full px-4 py-2 text-[12.5px] font-medium transition-colors duration-200 active:scale-95 lg:flex-none',
+                'flex flex-1 items-center justify-center rounded-full px-4 py-2 text-[13.5px] font-medium transition-colors duration-200 active:scale-95 lg:flex-none',
                 active ? 'bg-forest text-cream' : 'text-forest/55 hover:text-forest',
               )}
             >
@@ -549,10 +549,10 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
           >
             <Sprout className="size-6 text-forest/45" strokeWidth={1.8} />
           </span>
-          <h2 className="mt-4 font-display text-[16px] font-semibold tracking-tight text-forest">
+          <h2 className="mt-4 font-display text-[17px] font-semibold tracking-tight text-forest">
             {HISTORY_NO_DATA_COPY.title}
           </h2>
-          <p className="mt-2 max-w-md text-[13px] leading-relaxed text-forest/60">
+          <p className="mt-2 max-w-md text-[14px] leading-relaxed text-forest/60">
             {HISTORY_NO_DATA_COPY.body}
           </p>
           <div className="mt-5">
@@ -560,7 +560,7 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
               trigger={
                 <button
                   type="button"
-                  className="inline-flex h-11 items-center gap-2 rounded-2xl bg-forest px-5 text-[13.5px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
+                  className="inline-flex h-11 items-center gap-2 rounded-2xl bg-forest px-5 text-[14.5px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
                 >
                   <ReceiptText className="size-4" strokeWidth={2.6} aria-hidden />
                   {HISTORY_NO_DATA_COPY.cta}
@@ -580,7 +580,7 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
       <div className={cn(tab !== 'riwayat' && 'hidden')}>
       <section className="mt-5 rounded-[1.75rem] bg-cream p-3 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] ring-1 ring-soil/12 sm:p-3.5 lg:mt-6">
         <div className="flex items-center justify-between gap-2 px-1 pb-2">
-          <span className="inline-flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-[0.14em] text-forest/40">
+          <span className="inline-flex items-center gap-1.5 text-[11.5px] font-medium uppercase tracking-[0.14em] text-forest/40">
             <SlidersHorizontal className="size-3.5" strokeWidth={2.4} aria-hidden />
             Filter Global
           </span>
@@ -589,7 +589,7 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
             <button
               type="button"
               onClick={resetFilters}
-              className="inline-flex items-center gap-1 rounded-full bg-cream px-2.5 py-1 text-[11px] font-medium text-forest/55 ring-1 ring-soil/8 transition-colors hover:bg-sage/60 hover:text-forest active:scale-95"
+              className="inline-flex items-center gap-1 rounded-full bg-cream px-2.5 py-1 text-[12px] font-medium text-forest/55 ring-1 ring-soil/8 transition-colors hover:bg-sage/60 hover:text-forest active:scale-95"
             >
               <RotateCcw className="size-3" strokeWidth={2.4} aria-hidden />
               Reset
@@ -607,7 +607,7 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder='Cari "pengeluaran kopi bulan lalu"…'
             aria-label="Cari catatan dengan bahasa sehari-hari"
-            className="w-full bg-transparent text-[13.5px] text-forest outline-none placeholder:text-forest/35"
+            className="w-full bg-transparent text-[14.5px] text-forest outline-none placeholder:text-forest/35"
           />
           {searchQuery && (
             <button
@@ -635,7 +635,7 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
                 aria-label={`Filter ${row.label}`}
                 aria-expanded={openFilter === row.key}
                 className={cn(
-                  'inline-flex shrink-0 items-center gap-1.5 rounded-full py-2 pl-3.5 pr-3 text-[12.5px] font-medium transition-all duration-200 active:scale-95',
+                  'inline-flex shrink-0 items-center gap-1.5 rounded-full py-2 pl-3.5 pr-3 text-[13.5px] font-medium transition-all duration-200 active:scale-95',
                   active
                     ? 'bg-forest text-cream shadow-[0_10px_22px_-16px_rgba(0,0,0,0.9)]'
                     : 'bg-cream text-forest/55 ring-1 ring-soil/10 hover:bg-sage/60 hover:text-forest',
@@ -679,10 +679,10 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
             onClick={() => setRecapOpen(true)}
             className="flex min-w-0 flex-1 items-center gap-3 py-3.5 text-left"
           >
-            <span aria-hidden className="text-[16px]">
+            <span aria-hidden className="text-[17px]">
               📈
             </span>
-            <span className="min-w-0 flex-1 text-[13.5px] font-medium">
+            <span className="min-w-0 flex-1 text-[14.5px] font-medium">
               Recap mingguan siap
             </span>
             <span aria-hidden className="pr-1 text-cream/60">
@@ -726,8 +726,8 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
               <ReceiptText className="size-[18px]" strokeWidth={2.2} />
             </span>
             <div>
-              <h2 className="font-display text-[15px] font-semibold tracking-tight text-forest">Catatan</h2>
-              <p className="text-[11.5px] text-forest/45">
+              <h2 className="font-display text-[16px] font-semibold tracking-tight text-forest">Catatan</h2>
+              <p className="text-[12.5px] text-forest/45">
                 {summary.count} transaksi
                 {allGroups.length > 0 ? ` · ${allGroups.length} hari` : ''}
               </p>
@@ -741,7 +741,7 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
               dampaknya, bukan labelnya. */}
           <div className="flex flex-wrap items-center justify-end gap-2">
             {(activeFilterCount > 0 || searchQuery) && (
-              <span className="rounded-full bg-cream px-3 py-1.5 text-[11.5px] font-medium tabular-nums text-forest/60 ring-1 ring-soil/12">
+              <span className="rounded-full bg-cream px-3 py-1.5 text-[12.5px] font-medium tabular-nums text-forest/60 ring-1 ring-soil/12">
                 {summary.count} dari {contextCount}
               </span>
             )}
@@ -750,7 +750,7 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
                 type="button"
                 onClick={() => setClearAllOpen(true)}
                 aria-label={HISTORY_CLEAR_ALL_COPY.actionA11y(totalTransactions)}
-                className="inline-flex items-center gap-1.5 rounded-full bg-cream px-3 py-1.5 text-[11.5px] font-medium text-plum ring-1 ring-plum/25 transition-colors hover:bg-plum/10 active:scale-[0.97]"
+                className="inline-flex items-center gap-1.5 rounded-full bg-cream px-3 py-1.5 text-[12.5px] font-medium text-plum ring-1 ring-plum/25 transition-colors hover:bg-plum/10 active:scale-[0.97]"
               >
                 <Trash2 className="size-3.5" strokeWidth={2.4} aria-hidden />
                 {HISTORY_CLEAR_ALL_COPY.action}
@@ -777,18 +777,18 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
                     Semua angka polos berwarna, tanpa pill — jadi mata membaca
                     kolom angka yang lurus, bukan deretan chip. */}
                 <div className="flex items-center gap-2.5">
-                  <p className="shrink-0 text-[11px] font-medium uppercase tracking-[0.12em] text-forest/45">
+                  <p className="shrink-0 text-[12px] font-medium uppercase tracking-[0.12em] text-forest/45">
                     {group.label}
                   </p>
                   <span className="h-px min-w-4 flex-1 bg-soil/[0.09]" aria-hidden />
                   {group.moved > 0 && (
-                    <span className="shrink-0 text-[11px] font-medium tabular-nums text-forest/40">
+                    <span className="shrink-0 text-[12px] font-medium tabular-nums text-forest/40">
                       ⇄ {maskMoney(group.moved, isMasked)}
                     </span>
                   )}
                   <span
                     className={cn(
-                      'shrink-0 text-[11.5px] font-semibold tabular-nums',
+                      'shrink-0 text-[12.5px] font-semibold tabular-nums',
                       group.net < 0
                         ? 'text-hud-terracotta'
                         : group.net > 0
@@ -847,7 +847,7 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
               type="button"
               onClick={() => setShowAllTransactions((value) => !value)}
               aria-expanded={showAllTransactions}
-              className="inline-flex h-11 items-center gap-2 rounded-full bg-cream px-5 text-[13px] font-medium text-forest ring-1 ring-soil/12 transition-colors hover:bg-sage/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25 active:scale-[0.98]"
+              className="inline-flex h-11 items-center gap-2 rounded-full bg-cream px-5 text-[14px] font-medium text-forest ring-1 ring-soil/12 transition-colors hover:bg-sage/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25 active:scale-[0.98]"
             >
               {showAllTransactions
                 ? HISTORY_LIST_COPY.showLess
@@ -899,7 +899,7 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
             <div className="mx-auto mt-3 h-1.5 w-10 shrink-0 rounded-full bg-ink/10" />
 
             <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-8 pt-4" data-lenis-prevent>
-              <Drawer.Title className="px-1 font-display text-[15px] font-medium tracking-tight text-forest">
+              <Drawer.Title className="px-1 font-display text-[16px] font-medium tracking-tight text-forest">
                 {openFilterRow?.label}
               </Drawer.Title>
               <Drawer.Description className="sr-only">
@@ -919,7 +919,7 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
                         setOpenFilter(null)
                       }}
                       className={cn(
-                        'flex w-full items-center justify-between gap-3 rounded-2xl px-3.5 py-3 text-left text-[14px] transition-colors',
+                        'flex w-full items-center justify-between gap-3 rounded-2xl px-3.5 py-3 text-left text-[15px] transition-colors',
                         isActive
                           ? 'bg-forest/[0.06] font-medium text-forest'
                           : 'font-medium text-forest/65 hover:bg-cream',
@@ -1062,13 +1062,13 @@ function EmptyState({
       >
         <Sprout className="size-7 text-forest/45" strokeWidth={1.8} />
       </div>
-      <p className="mt-4 max-w-xs text-[13.5px] font-medium leading-relaxed text-forest">
+      <p className="mt-4 max-w-xs text-[14.5px] font-medium leading-relaxed text-forest">
         {emptyContext && contextLabel
           ? CONTEXT_EMPTY_COPY.history.title(contextLabel)
           : 'Belum ada catatan di sini 🌱'}
       </p>
       {emptyContext && (
-        <p className="mt-1.5 max-w-sm text-[12.5px] leading-relaxed text-forest/55">
+        <p className="mt-1.5 max-w-sm text-[13.5px] leading-relaxed text-forest/55">
           {CONTEXT_EMPTY_COPY.history.body}
         </p>
       )}
@@ -1077,7 +1077,7 @@ function EmptyState({
           trigger={
             <button
               type="button"
-              className="inline-flex h-11 items-center gap-2 rounded-2xl bg-forest px-5 text-[13.5px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
+              className="inline-flex h-11 items-center gap-2 rounded-2xl bg-forest px-5 text-[14.5px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
             >
               {emptyContext ? CONTEXT_EMPTY_COPY.history.cta : 'Catat Sekarang'}
             </button>
@@ -1087,7 +1087,7 @@ function EmptyState({
           <button
             type="button"
             onClick={onReset}
-            className="inline-flex h-11 items-center rounded-2xl bg-cream px-4 text-[13.5px] font-medium text-forest/70 ring-1 ring-soil/12 transition-colors hover:bg-sage/50"
+            className="inline-flex h-11 items-center rounded-2xl bg-cream px-4 text-[14.5px] font-medium text-forest/70 ring-1 ring-soil/12 transition-colors hover:bg-sage/50"
           >
             Reset
           </button>

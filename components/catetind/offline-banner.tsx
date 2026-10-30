@@ -113,15 +113,15 @@ export function OfflineBanner() {
         </span>
 
         <div className="min-w-0 flex-1">
-          <p className="text-[13px] font-medium text-forest">
+          <p className="text-[14px] font-medium text-forest">
             {online ? OFFLINE_COPY.pendingTitle : OFFLINE_COPY.offlineTitle}
             {pending > 0 && (
-              <span className="ml-2 rounded-full bg-cream/80 px-2 py-0.5 text-[10.5px] font-medium tabular-nums text-forest/60">
+              <span className="ml-2 rounded-full bg-cream/80 px-2 py-0.5 text-[11.5px] font-medium tabular-nums text-forest/60">
                 {OFFLINE_COPY.pendingBadge(pending)}
               </span>
             )}
           </p>
-          <p className="mt-0.5 text-[11.5px] leading-relaxed text-forest/55">
+          <p className="mt-0.5 text-[12.5px] leading-relaxed text-forest/55">
             {online ? OFFLINE_COPY.pendingBody(pending) : OFFLINE_COPY.offlineBody(pending)}
           </p>
           {/* AUDIT "CLEAN UI" (paket 63): batas jujurnya tetap ada, tapi tidak

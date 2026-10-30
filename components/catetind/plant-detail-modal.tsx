@@ -94,7 +94,7 @@ export function PlantDetailModal({
                 />
                 <span
                   className={cn(
-                    'text-[10px] font-medium',
+                    'text-[11px] font-medium',
                     s === plant.stage ? 'text-forest' : 'text-forest/40',
                   )}
                 >
@@ -139,7 +139,7 @@ export function PlantDetailModal({
             type="button"
             onClick={onReplay}
             title={CELEBRATION_COPY.replayHint}
-            className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-cream text-[13.5px] font-medium text-forest ring-1 ring-soil/12 transition-colors hover:bg-sage/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25 active:scale-[0.99] motion-reduce:transition-none"
+            className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-cream text-[14.5px] font-medium text-forest ring-1 ring-soil/12 transition-colors hover:bg-sage/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25 active:scale-[0.99] motion-reduce:transition-none"
           >
             <Sparkles className="size-4 text-forest" strokeWidth={2.4} aria-hidden />
             {CELEBRATION_COPY.replayLabel}

@@ -182,7 +182,7 @@ export function BillCard({
               style={{ opacity: dx > 0 ? exposed : 0, pointerEvents: dx > 24 ? 'auto' : 'none' }}
             >
               <Check className="size-4" strokeWidth={2.8} aria-hidden />
-              <span className="text-[10px] font-medium">
+              <span className="text-[11px] font-medium">
                 {BILL_CARD_ACTION_COPY.markPaidSwipe}
               </span>
             </button>
@@ -204,7 +204,7 @@ export function BillCard({
                 className="flex w-[82px] flex-col items-center justify-center gap-1 rounded-2xl bg-hud-amber text-forest focus-visible:z-20 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-forest/40"
               >
                 <Pencil className="size-4" strokeWidth={2.4} aria-hidden />
-                <span className="text-[10px] font-medium">{BILL_CARD_ACTION_COPY.edit}</span>
+                <span className="text-[11px] font-medium">{BILL_CARD_ACTION_COPY.edit}</span>
               </button>
               <button
                 type="button"
@@ -216,7 +216,7 @@ export function BillCard({
                 className="flex w-[82px] flex-col items-center justify-center gap-1 rounded-2xl bg-hud-terracotta text-cream focus-visible:z-20 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-forest/40"
               >
                 <Trash2 className="size-4" strokeWidth={2.4} aria-hidden />
-                <span className="text-[10px] font-medium">{BILL_CARD_ACTION_COPY.delete}</span>
+                <span className="text-[11px] font-medium">{BILL_CARD_ACTION_COPY.delete}</span>
               </button>
             </div>
           )}
@@ -250,7 +250,7 @@ export function BillCard({
             <span className="min-w-0 flex-1">
               <span
                 className={cn(
-                  'block truncate text-[13px] font-semibold text-forest',
+                  'block truncate text-[14px] font-semibold text-forest',
                   paid && 'text-forest-muted',
                 )}
               >
@@ -258,12 +258,12 @@ export function BillCard({
               </span>
               <span className="mt-0.5 flex min-w-0 flex-wrap items-center gap-1.5">
                 {metaText && (
-                  <span className={cn('truncate text-[11px] font-medium', due.className)}>
+                  <span className={cn('truncate text-[12px] font-medium', due.className)}>
                     {metaText}
                   </span>
                 )}
                 {walletName && (
-                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-sage/70 px-2 py-0.5 text-[10px] font-medium text-forest-muted">
+                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-sage/70 px-2 py-0.5 text-[11px] font-medium text-forest-muted">
                     <Wallet className="size-3" strokeWidth={2.2} aria-hidden />
                     {walletName}
                   </span>
@@ -276,7 +276,7 @@ export function BillCard({
             <span className="flex shrink-0 flex-col items-end gap-1">
               <span
                 className={cn(
-                  'text-[12.5px] font-medium tabular-nums',
+                  'text-[13.5px] font-medium tabular-nums',
                   paid
                     ? 'text-forest-muted line-through decoration-forest/20'
                     : 'text-forest',
@@ -308,7 +308,7 @@ export function BillCard({
             title={BILL_CARD_ACTION_COPY.markPaid}
             className="inline-flex h-9 shrink-0 items-center gap-1.5 self-center whitespace-nowrap rounded-full bg-forest pl-3 pr-2.5 text-cream transition-colors hover:bg-forest-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/30 active:scale-95"
           >
-            <span className="text-[10px] font-semibold leading-none">
+            <span className="text-[11px] font-semibold leading-none">
               {status === 'overdue' ? 'Bayar Sekarang' : 'Bayar'}
             </span>
             <ArrowRight className="size-3.5" strokeWidth={2.6} aria-hidden />
@@ -359,7 +359,7 @@ function LunasStamp() {
         }}
         transition={{ duration: 0.2, ease: 'easeOut' }}
         className={cn(
-          'relative block select-none rounded-md border-2 border-hud-sage px-2 py-0.5 font-display text-[13px] font-medium uppercase leading-tight tracking-[0.22em] text-hud-sage',
+          'relative block select-none rounded-md border-2 border-hud-sage px-2 py-0.5 font-display text-[14px] font-medium uppercase leading-tight tracking-[0.22em] text-hud-sage',
           /* tepi kasar ala stempel karet: garis dalam putus-putus + tekstur tinta */
           'after:absolute after:inset-[2.5px] after:rounded-[3px] after:border after:border-dashed after:border-hud-sage/45',
           '[background-image:radial-gradient(rgba(181,185,135,0.28)_0.6px,transparent_0.9px)] [background-size:4px_4px]',

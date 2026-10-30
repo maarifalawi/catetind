@@ -100,15 +100,15 @@ export function UpdatePriceModal({
             <span
               aria-hidden
               className={cn(
-                'flex size-10 shrink-0 items-center justify-center rounded-2xl text-[17px]',
+                'flex size-10 shrink-0 items-center justify-center rounded-2xl text-[18px]',
                 meta.chipClass,
               )}
             >
               {meta.emoji}
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-[13.5px] font-medium text-forest">{data.name}</span>
-              <span className="mt-0.5 block truncate text-[11px] text-forest/45 tabular-nums">
+              <span className="block truncate text-[14.5px] font-medium text-forest">{data.name}</span>
+              <span className="mt-0.5 block truncate text-[12px] text-forest/45 tabular-nums">
                 {formatAssetQuantity(data)} · {maskMoney(data.currentPrice, masked)} per unit sekarang
               </span>
             </span>
@@ -117,7 +117,7 @@ export function UpdatePriceModal({
           {/* kalau kartunya memang sedang ditandai basi, sebutkan sebabnya di sini
               juga — user tahu kenapa ia berada di modal ini */}
           {stale && (
-            <p className="mt-3 flex items-start gap-2 rounded-2xl bg-hud-amber/12 px-3.5 py-3 text-[11.5px] leading-relaxed text-hud-terracotta ring-1 ring-inset ring-hud-amber/25">
+            <p className="mt-3 flex items-start gap-2 rounded-2xl bg-hud-amber/12 px-3.5 py-3 text-[12.5px] leading-relaxed text-hud-terracotta ring-1 ring-inset ring-hud-amber/25">
               <AlertTriangle className="mt-px size-3.5 shrink-0" strokeWidth={2.4} />
               <span className="min-w-0">
                 {stalePriceWarning(meta.label, formatPriceStamp(data.lastUpdate))}
@@ -135,7 +135,7 @@ export function UpdatePriceModal({
 
           {/* akibat update, live: nilai aset & return terhadap modal */}
           {price > 0 && (
-            <div className="mt-3.5 space-y-2 rounded-2xl bg-sage/60 px-4 py-3 text-[12px]">
+            <div className="mt-3.5 space-y-2 rounded-2xl bg-sage/60 px-4 py-3 text-[13px]">
               <div className="flex items-center justify-between gap-3">
                 <span className="text-forest/60">{PRICE_UPDATE_COPY.valueLabel}</span>
                 <span className="font-semibold text-forest tabular-nums">

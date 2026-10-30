@@ -214,7 +214,7 @@ function SwipeRow({
         style={{ opacity: dx < 0 ? exposed : 0, pointerEvents: dx < -20 ? 'auto' : 'none' }}
       >
         <Trash2 className="size-4" strokeWidth={2.2} />
-        <span className="text-[10px] font-medium">Hapus</span>
+        <span className="text-[11px] font-medium">Hapus</span>
       </button>
 
       {/* aksi kiri — swipe KANAN (edit) */}
@@ -226,7 +226,7 @@ function SwipeRow({
         style={{ opacity: dx > 0 ? exposed : 0, pointerEvents: dx > 20 ? 'auto' : 'none' }}
       >
         <Pencil className="size-4" strokeWidth={2.2} />
-        <span className="text-[10px] font-medium">Edit</span>
+        <span className="text-[11px] font-medium">Edit</span>
       </button>
 
       {/* konten baris */}
@@ -301,11 +301,11 @@ function SwipeRow({
               sama — dulu teks abu polos, jadi baris kategori hilang di antara
               nominal & jam. Jamnya tetap murni teks. `min-w-0 truncate` di chip
               menjaga baris ini tetap muat di 375px. */}
-          <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[11px] text-forest/45">
+          <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[12px] text-forest/45">
             {!categoryShownAsTitle && (
               <span
                 className={cn(
-                  'min-w-0 truncate rounded-full px-1.5 py-0.5 text-[10px] font-medium',
+                  'min-w-0 truncate rounded-full px-1.5 py-0.5 text-[11px] font-medium',
                   tx.chip,
                 )}
               >
@@ -424,7 +424,7 @@ export const RecentTransactionsCard = memo(function RecentTransactionsCard() {
         </div>
         <Link
           href="/history"
-          className="group/link flex items-center gap-1.5 rounded-full bg-sage py-1.5 pl-3 pr-1.5 text-[11px] font-medium text-forest transition-colors duration-300 hover:bg-forest hover:text-mint"
+          className="group/link flex items-center gap-1.5 rounded-full bg-sage py-1.5 pl-3 pr-1.5 text-[12px] font-medium text-forest transition-colors duration-300 hover:bg-forest hover:text-mint"
         >
           {HOME_MONEY_COPY.seeAll}
           <span className="flex size-4 items-center justify-center rounded-full bg-forest text-mint transition-colors duration-300 group-hover/link:bg-mint group-hover/link:text-forest">
@@ -453,7 +453,7 @@ export const RecentTransactionsCard = memo(function RecentTransactionsCard() {
             trigger={
               <button
                 type="button"
-                className="mt-4 rounded-full bg-forest px-5 py-2.5 text-[13px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.97]"
+                className="mt-4 rounded-full bg-forest px-5 py-2.5 text-[14px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.97]"
               >
                 {HOME_MONEY_COPY.txnEmptyCta}
               </button>
@@ -471,7 +471,7 @@ export const RecentTransactionsCard = memo(function RecentTransactionsCard() {
           {visibleGroups.map((group, gi) => (
             <section key={group.label}>
               <div className="mx-2 flex items-center gap-2">
-                <p className="text-[10px] font-medium tracking-[0.14em] text-forest/40 uppercase">
+                <p className="text-[11px] font-medium tracking-[0.14em] text-forest/40 uppercase">
                   {group.label}
                 </p>
                 {group.live && (

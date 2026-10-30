@@ -184,7 +184,7 @@ export function TransactionWebModal({
               </h2>
               <p
                 id="transaction-web-desc"
-                className="mt-0.5 text-[13px] leading-relaxed text-forest/55"
+                className="mt-0.5 text-[14px] leading-relaxed text-forest/55"
               >
                 4 tap aja, kurang dari 10 detik ⚡
               </p>

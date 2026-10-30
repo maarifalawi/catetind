@@ -50,7 +50,7 @@ export function ShareAchievementCard({
       {/* kepala — wordmark di kiri (pemiliknya jelas), bulan di kanan */}
       <header className="flex items-center justify-between gap-3">
         <LogoWordmark tone="light" className="h-4" />
-        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-cream/15 px-2.5 py-1 text-[10.5px] font-medium text-cream/85">
+        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-cream/15 px-2.5 py-1 text-[11.5px] font-medium text-cream/85">
           <CalendarDays className="size-3" strokeWidth={2.4} aria-hidden />
           {card.monthLabel}
         </span>
@@ -58,7 +58,7 @@ export function ShareAchievementCard({
 
       {/* tiga baris pencapaian — jumlah catatan, hari konsisten, milestone */}
       <div className="mt-5">
-        <p className="font-display text-[19px] font-medium leading-snug tracking-tight text-cream">
+        <p className="font-display text-[20px] font-medium leading-snug tracking-tight text-cream">
           {shareCardLead(card.ownerName)}
         </p>
         <ul className="mt-3 flex flex-col gap-2.5">
@@ -77,7 +77,7 @@ export function ShareAchievementCard({
                 >
                   <Icon className="size-3.5" strokeWidth={2.4} aria-hidden />
                 </span>
-                <span className="text-[13.5px] font-medium leading-snug tabular-nums text-cream">
+                <span className="text-[14.5px] font-medium leading-snug tabular-nums text-cream">
                   {row.text}
                 </span>
               </li>
@@ -92,7 +92,7 @@ export function ShareAchievementCard({
             {extra.map((milestone) => (
               <li
                 key={milestone}
-                className="rounded-full bg-mint/20 px-2.5 py-1 text-[11px] font-medium text-cream/85"
+                className="rounded-full bg-mint/20 px-2.5 py-1 text-[12px] font-medium text-cream/85"
               >
                 + {milestone}
               </li>
@@ -107,16 +107,16 @@ export function ShareAchievementCard({
           stage={card.plantStage}
           className="mx-auto w-[116px] motion-reduce:[&_g]:animate-none"
         />
-        <p className="mt-1 text-center text-[12px] font-medium text-forest/70">
+        <p className="mt-1 text-center text-[13px] font-medium text-forest/70">
           {SHARE_STAGE_CAPTION[card.plantStage]}
         </p>
       </div>
 
       <footer className="mt-4 flex items-center justify-between gap-3 border-t border-cream/15 pt-3">
-        <p className="font-display text-[15px] font-medium tracking-tight text-mint">
+        <p className="font-display text-[16px] font-medium tracking-tight text-mint">
           {SHARE_HASHTAG}
         </p>
-        <p className="font-mono text-[10.5px] text-cream/50">{SHARE_CARD_DOMAIN}</p>
+        <p className="font-mono text-[11.5px] text-cream/50">{SHARE_CARD_DOMAIN}</p>
       </footer>
     </article>
   )

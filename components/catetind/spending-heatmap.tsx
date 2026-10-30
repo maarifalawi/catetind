@@ -114,14 +114,14 @@ export function SpendingHeatmap({
             <Flame className="size-[18px]" strokeWidth={2.2} />
           </span>
           <div>
-            <h2 className="font-display text-[15px] font-semibold tracking-tight text-forest">
+            <h2 className="font-display text-[16px] font-semibold tracking-tight text-forest">
               Kapan Kamu Sering Boros?
             </h2>
             {/* ringkasan singkat: berapa hari benar-benar ada pengeluaran */}
-            <p className="text-[11.5px] text-forest/45">{activeDays} hari ada pengeluaran</p>
+            <p className="text-[12.5px] text-forest/45">{activeDays} hari ada pengeluaran</p>
           </div>
         </div>
-        <span className="rounded-full bg-cream px-3 py-1.5 text-[11.5px] font-medium text-forest/60 tabular-nums ring-1 ring-soil/12">
+        <span className="rounded-full bg-cream px-3 py-1.5 text-[12.5px] font-medium text-forest/60 tabular-nums ring-1 ring-soil/12">
           {maskMoney(totalSpend, masked)} / {DAYS} hari
         </span>
       </div>
@@ -138,7 +138,7 @@ export function SpendingHeatmap({
           {HEATMAP_WEEKDAYS.map((label) => (
             <span
               key={label}
-              className="pb-1 text-center text-[10px] font-medium uppercase tracking-[0.08em] text-forest/35"
+              className="pb-1 text-center text-[11px] font-medium uppercase tracking-[0.08em] text-forest/35"
             >
               {label}
             </span>
@@ -164,7 +164,7 @@ export function SpendingHeatmap({
                       aria-label={`${formatDayLabel(day.date)}: ${maskMoney(day.total, masked)}`}
                       aria-pressed={isActive}
                       className={cn(
-                        'flex aspect-square w-full items-center justify-center rounded-[7px] text-[10px] font-semibold tabular-nums ring-1 ring-inset ring-soil/8 transition-[transform,box-shadow,opacity] duration-200 animate-[fade-pop_0.4s_ease_backwards] hover:-translate-y-0.5 hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40',
+                        'flex aspect-square w-full items-center justify-center rounded-[7px] text-[11px] font-semibold tabular-nums ring-1 ring-inset ring-soil/8 transition-[transform,box-shadow,opacity] duration-200 animate-[fade-pop_0.4s_ease_backwards] hover:-translate-y-0.5 hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40',
                         LEVEL_CLASS[day.level],
                         LEVEL_TEXT_CLASS[day.level],
                         isActive && 'ring-2 ring-inset ring-forest/70',
@@ -178,13 +178,13 @@ export function SpendingHeatmap({
                     <span
                       role="tooltip"
                       className={cn(
-                        'pointer-events-none absolute bottom-full z-20 mb-2 w-max max-w-[12rem] rounded-xl bg-ink px-2.5 py-1.5 text-center text-[10.5px] font-medium leading-tight text-cream shadow-[0_12px_28px_-12px_rgba(0,0,0,0.7)] transition-opacity duration-150 motion-reduce:transition-none',
+                        'pointer-events-none absolute bottom-full z-20 mb-2 w-max max-w-[12rem] rounded-xl bg-ink px-2.5 py-1.5 text-center text-[11.5px] font-medium leading-tight text-cream shadow-[0_12px_28px_-12px_rgba(0,0,0,0.7)] transition-opacity duration-150 motion-reduce:transition-none',
                         placement.bubble,
                         isActive ? 'opacity-100' : 'opacity-0',
                       )}
                     >
                       <span className="block whitespace-nowrap">{formatDayLabel(day.date)}</span>
-                      <span className="block whitespace-nowrap text-[10px] font-medium text-cream/70">
+                      <span className="block whitespace-nowrap text-[11px] font-medium text-cream/70">
                         {maskMoney(day.total, masked)}
                         {day.date === peak.date ? ' · terboros' : ''}
                       </span>
@@ -207,7 +207,7 @@ export function SpendingHeatmap({
 
       {/* H3-2 — legenda skala warna DIPERBESAR + angka nyata (dulu cuma kata,
           kecil). Contoh: "🟩 < Rp 50.000" ala permintaan audit. */}
-      <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-[12.5px] font-medium text-forest/60">
+      <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-[13.5px] font-medium text-forest/60">
         <span className="text-forest/45">Skala</span>
         {legend.map(({ level, label }) => (
           <span key={level} className="inline-flex items-center gap-2">

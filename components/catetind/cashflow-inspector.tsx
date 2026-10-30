@@ -66,10 +66,10 @@ export function CashflowInspector({
   if (!cell) {
     return (
       <aside className="rounded-[2rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] ring-1 ring-soil/12 lg:sticky lg:top-8">
-        <h2 className="font-display text-[18px] font-medium tracking-tight text-forest">
+        <h2 className="font-display text-[19px] font-medium tracking-tight text-forest">
           {CALENDAR_DAY_COPY.pickTitle}
         </h2>
-        <p className="mt-1 text-[12.5px] text-forest/50">{CALENDAR_DAY_COPY.pickBody}</p>
+        <p className="mt-1 text-[13.5px] text-forest/50">{CALENDAR_DAY_COPY.pickBody}</p>
       </aside>
     )
   }
@@ -96,22 +96,22 @@ export function CashflowInspector({
         <p className="flex min-w-0 flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
           <span
             className={cn(
-              'text-[10.5px] font-semibold uppercase tracking-[0.14em] tabular-nums',
+              'text-[11.5px] font-semibold uppercase tracking-[0.14em] tabular-nums',
               relative.tone === 'today' ? 'text-forest' : 'text-forest/40',
             )}
           >
             {relative.text}
           </span>
-          <span aria-hidden className="text-[11px] font-medium text-forest/20">
+          <span aria-hidden className="text-[12px] font-medium text-forest/20">
             ·
           </span>
-          <span className="text-[12.5px] font-medium text-forest/60">
+          <span className="text-[13.5px] font-medium text-forest/60">
             {longDateLabel(cell.date)}
           </span>
         </p>
       </div>
 
-      <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[13px] font-medium tabular-nums">
+      <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[14px] font-medium tabular-nums">
         {cell.income > 0 && (
           <span className="text-forest">+{maskMoney(cell.income, masked)} masuk</span>
         )}
@@ -132,7 +132,7 @@ export function CashflowInspector({
       <button
         type="button"
         onClick={onAddNote}
-        className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-forest px-4 text-[13px] font-medium text-cream shadow-[0_16px_34px_-20px_rgba(0,0,0,0.9)] transition-colors hover:bg-forest-soft active:scale-[0.99]"
+        className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-forest px-4 text-[14px] font-medium text-cream shadow-[0_16px_34px_-20px_rgba(0,0,0,0.9)] transition-colors hover:bg-forest-soft active:scale-[0.99]"
       >
         <Plus className="size-4" strokeWidth={2.8} />
         {CALENDAR_DAY_COPY.addNote(cell.day)}
@@ -141,14 +141,14 @@ export function CashflowInspector({
       {/* ── 3C. DAFTAR CATATAN HARI ITU ─────────────────────────────────── */}
       <section className="mt-5 border-t border-soil/12 pt-4">
         <div className="flex items-center gap-2">
-          <h3 className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.12em] text-forest/45">
+          <h3 className="shrink-0 text-[12px] font-semibold uppercase tracking-[0.12em] text-forest/45">
             {CALENDAR_DAY_COPY.listTitle(cell.isFuture)}
           </h3>
           <span aria-hidden className="h-px flex-1 bg-soil/10" />
         </div>
 
         {isEmptyDay ? (
-          <p className="py-6 text-center text-[12px] leading-relaxed text-forest/45">
+          <p className="py-6 text-center text-[13px] leading-relaxed text-forest/45">
             {cell.isFuture
               ? CALENDAR_DAY_COPY.emptyFuture.title
               : CALENDAR_DAY_COPY.emptyPast.title}
@@ -197,16 +197,16 @@ function CashflowEntryRow({ entry, masked }: { entry: CalendarEntry; masked: boo
           </span>
 
           <span className="min-w-0 flex-1">
-            <span className="line-clamp-2 text-[13.5px] font-medium text-forest">
+            <span className="line-clamp-2 text-[14.5px] font-medium text-forest">
               {entry.name}
             </span>
-            <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[11.5px] text-forest/40">
+            <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[12.5px] text-forest/40">
               {entry.wallet && <span className="min-w-0 truncate">{entry.wallet} ·</span>}
               {entry.time && <span className="shrink-0">{entry.time}</span>}
               {!categoryShownAsTitle && (
                 <span
                   className={cn(
-                    'min-w-0 truncate rounded-full px-1.5 py-0.5 text-[10px] font-medium',
+                    'min-w-0 truncate rounded-full px-1.5 py-0.5 text-[11px] font-medium',
                     visual.chip,
                   )}
                 >
@@ -216,7 +216,7 @@ function CashflowEntryRow({ entry, masked }: { entry: CalendarEntry; masked: boo
             </span>
           </span>
 
-          <span className={cn('shrink-0 text-[13.5px] font-medium tabular-nums', tone.text)}>
+          <span className={cn('shrink-0 text-[14.5px] font-medium tabular-nums', tone.text)}>
             {amountSign(type)}
             {maskMoney(entry.amount, masked)}
           </span>

@@ -63,94 +63,20 @@ export interface ExtractedTransaction {
 }
 
 /* ── STRUK (OCR) ─────────────────────────────────────────────────────────────
-   Nilai kanon untuk demo. `MOCK_RECEIPT_AMOUNT` sengaja dipakai DUA tempat:
-   engine input manual (perilakunya tidak boleh berubah — selalu struk 87.500)
-   dan sampel pertama tabel OCR chat, jadi keduanya bercerita soal struk yang
-   sama, bukan dua angka karangan yang berbeda. */
+   PAKET 101 — MESIN MOCK STRUK DIHAPUS DARI REPO INI.
+   Dulu ada `mockReceiptScan()` + `MOCK_RECEIPT_AMOUNT` (selalu Rp 87.500) yang
+   dipakai tombol 📸 di form Catat: hasil "baca struk" diturunkan dari NAMA
+   BERKAS, bukan dari gambarnya. Akibatnya struk nyata bertotal Rp 200.000.000
+   tetap tercatat Rp 87.500 dan kategorinya tidak pernah terisi. Sekarang dua
+   pintu (form Catat & kartu AI Coach) membaca struk lewat model vision di
+   `POST /api/ai/ocr` — tidak ada lagi nilai struk yang dikarang di klien.
+   Yang tersisa di sini hanya dua konstanta yang MASIH dipakai jalur lain. */
 
-export const MOCK_RECEIPT_AMOUNT = 87500
-
-/** lama "baca struk" sebelum hasilnya muncul — dipakai engine & chat */
-export const MOCK_RECEIPT_READ_MS = 2200
-
-/**
- * Sampel hasil OCR (di produksi diganti balasan GPT-4o-mini). Nama file
- * menentukan sampel mana yang keluar, sehingga mencoba beberapa gambar memang
- * memberi cerita berbeda — bukan struk yang sama terus.
- */
-const RECEIPT_SAMPLES: { name: string; amount: number; category: string }[] = [
-  { name: 'Belanja Indomaret Cilandak', amount: MOCK_RECEIPT_AMOUNT, category: 'Belanja' },
-  { name: 'Makan Siang Warteg Bahari', amount: 27000, category: 'Makanan' },
-  { name: 'Belanja Alfamart Kemang', amount: 127500, category: 'Belanja' },
-  { name: 'Kopi Kenangan Oat Latte', amount: 32000, category: 'Makanan' },
-  { name: 'Belanja Bulanan Superindo', amount: 232500, category: 'Belanja' },
-]
-
-/** struk kertas hampir selalu tunai — tetap bisa dikoreksi user di kartu konfirmasi */
+/** dompet jatuh tempo saat ucapan tidak menyebut dompet (struk kertas ≈ tunai) */
 export const RECEIPT_DEFAULT_WALLET = 'Tunai'
 
-/** dipakai kalau nama file struk tidak menyisakan apa pun yang bisa dibaca */
+/** dipakai kalau model tidak menghasilkan nama catatan untuk sumber struk */
 export const FALLBACK_RECEIPT_NOTE = 'Belanja dari struk'
-
-/**
- * Nama catatan dari nama file struk. DIPAKAI ENGINE & CHAT supaya keduanya
- * menulis nama dengan cara yang sama (prompt 20 minta bagian bersama ini
- * diekstrak ke `lib/`, bukan disalin dua kali). Logikanya sengaja identik
- * dengan versi lama di engine: buang ekstensi, potong 24 karakter.
- */
-export function receiptNoteFromFileName(fileName: string): string {
-  const raw = fileName.replace(/\.[^.]+$/, '').slice(0, 24)
-  return raw ? `Struk ${raw}` : FALLBACK_RECEIPT_NOTE
-}
-
-/** hash FNV-1a 32-bit → pecahan 0.0–1.0; sumber "kepribadian" hasil mock */
-function seedFromName(name: string): number {
-  let hash = 2166136261
-  for (let i = 0; i < name.length; i += 1) {
-    hash ^= name.charCodeAt(i)
-    hash = Math.imul(hash, 16777619)
-  }
-  return (hash >>> 0) / 4294967295
-}
-
-/** turunan kedua dari seed yang sama supaya sampel & keyakinan tidak sejalan terus */
-function jitter(seed: number): number {
-  return (seed * 7919) % 1
-}
-
-/**
- * Hasil "OCR" mock: merchant, total, kategori, dan — yang penting untuk A11 —
- * `confidence`, diturunkan dari nama file. Struk yang keyakinannya rendah juga
- * menandai lebih banyak field: keyakinan turun ⇔ makin banyak yang perlu
- * dicek, bukan dua sinyal yang bisa saling bertentangan.
- */
-export function mockReceiptScan(
-  fileName: string,
-  today: string = localISODate(),
-): ExtractedTransaction {
-  const seed = seedFromName(fileName)
-  const sample = RECEIPT_SAMPLES[Math.floor(seed * RECEIPT_SAMPLES.length)] ?? RECEIPT_SAMPLES[0]
-  const confidence = Number((0.38 + 0.58 * jitter(seed)).toFixed(2))
-
-  const lowFields: ExtractedField[] =
-    confidence < LOW_CONFIDENCE_THRESHOLD
-      ? ['date', 'amount'] // struk pudar: tanggal & total paling sering salah baca
-      : confidence < 0.7
-        ? ['date'] // tanggal di struk thermal cepat mengelupas, nominal masih kebaca
-        : []
-
-  return {
-    source: 'receipt',
-    type: 'expense',
-    name: sample.name,
-    amount: sample.amount,
-    category: sample.category,
-    wallet: RECEIPT_DEFAULT_WALLET,
-    date: today,
-    confidence,
-    lowFields,
-  }
-}
 
 /* ── UCAPAN (VOICE) ──────────────────────────────────────────────────────────
    Berbeda dari struk, input di sini NYATA: teksnya datang dari Web Speech API,

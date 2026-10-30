@@ -893,7 +893,7 @@ export const WalletCardStack = memo(function WalletCardStack({
     )
   }
   const networkBadge = (network: string) => (
-    <span className="shrink-0 rounded-full border border-cream/20 bg-cream/[0.1] px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.14em] text-cream/75 backdrop-blur">
+    <span className="shrink-0 rounded-full border border-cream/20 bg-cream/[0.1] px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.14em] text-cream/75 backdrop-blur">
       {network}
     </span>
   )
@@ -916,7 +916,7 @@ export const WalletCardStack = memo(function WalletCardStack({
       {/* keadaan 0 dompet (58.7): kartu ini satu-satunya + kalimat jujur —
           dulu deck tetap menampilkan kartu agregat "Rp 0" di sebelahnya */}
       {wallets.length === 0 && (
-        <p className="relative mt-2 max-w-[15rem] text-[11px] leading-relaxed text-forest/45">
+        <p className="relative mt-2 max-w-[15rem] text-[12px] leading-relaxed text-forest/45">
           {HOME_WALLET_STACK_COPY.emptyLine}
         </p>
       )}

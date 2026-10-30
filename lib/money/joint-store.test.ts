@@ -12,7 +12,7 @@ import {
   type JointTransaction,
 } from '@/lib/data/joint'
 import { JOINT_STATE_KEY, loadDeviceState } from './idb'
-import { cashTotal, getMoneySnapshot, resetMoneyStore } from './store'
+import { cashTotal, getMoneySnapshot, recordedTransactions, resetMoneyStore, walletBalance } from './store'
 import {
   addJointMember,
   addJointTransaction,
@@ -29,6 +29,7 @@ import {
   jointDeleteState,
   jointLedgerFeed,
   jointNotes,
+  jointParticipants,
   jointPartnerJoined,
   jointRowKey,
   mergeJointRows,
@@ -36,6 +37,7 @@ import {
   mergeLegacySettlements,
   purgeJointStore,
   recordSettlement,
+  undoSettlement,
   renameJointWallet,
   resetJointStore,
   restoreJointTransaction,
@@ -480,33 +482,84 @@ describe('anti-dobel lanjutan: baris server, privasi, & kunci semantik settle', 
 describe('kantong dari SERVER (uuid): baris server & identitas', () => {
   const uuidA = '11111111-1111-1111-1111-111111111111'
   const uuidB = '22222222-2222-2222-2222-222222222222'
+  const walletId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
 
-  it('baris server jadi dasar (seed dibuang) & catatan tetap bisa ditulis', () => {
+  it('baris server jadi dasar (seed dibuang) & peserta SUNGGUHAN bisa mencatat', () => {
     const snapshot = applyRemoteJointWallet({
-      wallet: { id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', name: 'Kantong Server', createdAt: '2026-09-01' },
+      wallet: { id: walletId, name: 'Kantong Server', createdAt: '2026-09-01' },
       viewerId: uuidA,
       members: [uuidA, uuidB],
+      memberNames: { [uuidA]: 'Kamu', [uuidB]: 'Dewi' },
       rows: [newRow({ id: 'server-1', description: 'Makan dari server' })],
     })
 
-    expect(getJointRemoteWalletId()).toBe('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
+    expect(getJointRemoteWalletId()).toBe(walletId)
     expect(snapshot.wallet.name).toBe('Kantong Server')
     expect(snapshot.transactions.map((tx) => tx.id)).toEqual(['server-1'])
     expect(snapshot.members).toEqual([uuidA, uuidB])
+    expect(snapshot.viewerId).toBe(uuidA)
 
-    /* identitas server tidak memblokir pencatatan dua peserta demo */
+    /* identitas SUNGGUHAN (uuid) boleh mencatat & settle */
     expect(
-      addJointTransaction({ description: 'Baru', amount: 20_000, paidByUserId: JOINT_ME.id }),
+      addJointTransaction({ description: 'Baru', amount: 20_000, paidByUserId: uuidA }),
     ).not.toBeNull()
-    expect(recordSettlement(newRecord({ amount: 10_000 }))).not.toBeNull()
+    expect(
+      recordSettlement(newRecord({ from: uuidB, to: uuidA, amount: 10_000 })),
+    ).not.toBeNull()
     expect(settlementRecordFor(getJointSnapshot(), JOINT_MONTH_KEY)).not.toBeNull()
+  })
+
+  it('id contoh (user_a/user_b) DITOLAK sebagai peserta setelah identitas server diketahui', () => {
+    applyRemoteJointWallet({
+      wallet: { id: walletId, name: 'Kantong Server', createdAt: '2026-09-01' },
+      viewerId: uuidA,
+      members: [uuidA],
+      memberNames: { [uuidA]: 'Kamu' },
+      rows: [],
+    })
+
+    /* pasangan yang tidak pernah bergabung tidak boleh jadi pembayar */
+    expect(
+      addJointTransaction({ description: 'Palsu', amount: 20_000, paidByUserId: JOINT_PARTNER.id }),
+    ).toBeNull()
+    expect(
+      recordSettlement(newRecord({ from: JOINT_PARTNER.id, to: JOINT_ME.id })),
+    ).toBeNull()
+    expect(settlementRecordFor(getJointSnapshot(), JOINT_MONTH_KEY)).toBeNull()
+  })
+
+  it('nama peserta datang dari server; tanpa nama dipakai sebutan netral', () => {
+    const known = applyRemoteJointWallet({
+      wallet: { id: walletId, name: 'Kantong Server', createdAt: '2026-09-01' },
+      viewerId: uuidA,
+      members: [uuidA, uuidB],
+      memberNames: { [uuidA]: 'Kamu', [uuidB]: 'Dewi' },
+      rows: [],
+    })
+    const people = jointParticipants(known)
+    expect(people.me.name).toBe('Kamu')
+    expect(people.partner?.name).toBe('Dewi')
+    expect(people.partner?.name).not.toBe('Dany')
+    expect(jointPartnerJoined(known)).toBe(true)
+
+    const anonymous = applyRemoteJointWallet({
+      wallet: { id: walletId, name: 'Kantong Server', createdAt: '2026-09-01' },
+      viewerId: uuidA,
+      members: [uuidA, '33333333-3333-3333-3333-333333333333'],
+      memberNames: {},
+      rows: [],
+    })
+    const fallback = jointParticipants(anonymous)
+    expect(fallback.me.name).toBe('Kamu')
+    expect(fallback.partner?.name).toBe('Pasangan')
   })
 
   it('catatan privat milik partner server disamarkan, milik sendiri tampil apa adanya', () => {
     applyRemoteJointWallet({
-      wallet: { id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', name: 'Kantong Server', createdAt: '2026-09-01' },
+      wallet: { id: walletId, name: 'Kantong Server', createdAt: '2026-09-01' },
       viewerId: uuidA,
       members: [uuidA, uuidB],
+      memberNames: {},
       rows: [],
     })
 
@@ -733,6 +786,160 @@ describe('hapus satu baris & kantong baru kosong (paket 61.3)', () => {
     /* dan INVARIANT paket 61.3: kas pribadi tidak pernah tersentuh */
     expect(cashTotal(getMoneySnapshot())).toBe(cashBefore)
     expect(getMoneySnapshot().rows).toHaveLength(rowsBefore)
+  })
+})
+
+/* ── KAS PRIBADI: "Sumber Dana" & Settle ─────────────────────────────────────
+   Sebelum ini kantong bersama sama sekali tidak menyentuh dompet: mencatat
+   pengeluaran bareng Rp 450.000 tidak mengubah saldo siapa pun, dan
+   "Settle Sekarang" hanya menulis penanda bulan. Sekarang ada SATU pintu
+   opsional yang membuat uangnya benar-benar berpindah, dan test di bawah
+   mengunci kedua arahnya (bergerak saat dipilih, TIDAK bergerak saat tidak). */
+describe('kantong bersama menyentuh kas pribadi (Sumber Dana)', () => {
+  const uuidA = '11111111-1111-1111-1111-111111111111'
+  const uuidB = '22222222-2222-2222-2222-222222222222'
+  const walletId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+
+  /** kantong server dua anggota, pemilik sesi = uuidA, dompet uji = `bca` */
+  beforeEach(() => {
+    applyRemoteJointWallet({
+      wallet: { id: walletId, name: 'Kantong Server', createdAt: '2026-09-01' },
+      viewerId: uuidA,
+      members: [uuidA, uuidB],
+      memberNames: { [uuidA]: 'Kamu', [uuidB]: 'Dewi' },
+      rows: [],
+    })
+  })
+
+  it('aku yang nalangin + dompet dipilih: saldo turun & baris muncul di Riwayat', () => {
+    const before = walletBalance(getMoneySnapshot(), 'bca')
+
+    const tx = addJointTransaction({
+      description: 'Listrik PLN',
+      amount: 450_000,
+      paidByUserId: uuidA,
+      cashWalletId: 'bca',
+      dateISO: '2026-09-28',
+    })
+
+    expect(tx).not.toBeNull()
+    expect(walletBalance(getMoneySnapshot(), 'bca')).toBe(before - 450_000)
+    const row = recordedTransactions(getMoneySnapshot()).find((item) => item.name === 'Listrik PLN')
+    expect(row).toBeDefined()
+    expect(row!.amount).toBe(450_000)
+    expect(tx!.cashRowId).toBeTruthy()
+  })
+
+  it('PASANGAN yang nalangin: dompetku tidak ikut terdebit', () => {
+    const before = walletBalance(getMoneySnapshot(), 'bca')
+
+    const tx = addJointTransaction({
+      description: 'Makan bareng',
+      amount: 200_000,
+      paidByUserId: uuidB,
+      cashWalletId: 'bca',
+      dateISO: '2026-09-28',
+    })
+
+    expect(tx).not.toBeNull()
+    expect(walletBalance(getMoneySnapshot(), 'bca')).toBe(before)
+    expect(tx!.cashRowId).toBeUndefined()
+  })
+
+  it('tanpa dompet: catatan tersimpan, kas tidak bergerak', () => {
+    const before = walletBalance(getMoneySnapshot(), 'bca')
+    const rowsBefore = getMoneySnapshot().rows.length
+
+    const tx = addJointTransaction({
+      description: 'Kopi bareng',
+      amount: 60_000,
+      paidByUserId: uuidA,
+      dateISO: '2026-09-28',
+    })
+
+    expect(tx).not.toBeNull()
+    expect(walletBalance(getMoneySnapshot(), 'bca')).toBe(before)
+    expect(getMoneySnapshot().rows).toHaveLength(rowsBefore)
+  })
+
+  it('hapus catatan bareng mencabut barisnya, uang yang sudah keluar tetap tercatat', () => {
+    const before = walletBalance(getMoneySnapshot(), 'bca')
+    const tx = addJointTransaction({
+      description: 'Bensin',
+      amount: 150_000,
+      paidByUserId: uuidA,
+      cashWalletId: 'bca',
+      dateISO: '2026-09-28',
+    })!
+    expect(walletBalance(getMoneySnapshot(), 'bca')).toBe(before - 150_000)
+
+    deleteJointTransaction(tx.id)
+    /* aturan kanon: menghapus catatan TIDAK mengembalikan uang (uangnya sudah
+       benar-benar keluar). Yang hilang hanya catatannya — dan baris kasnya juga
+       tidak lagi tampil, supaya tidak ada dua cerita untuk satu kejadian. */
+    expect(walletBalance(getMoneySnapshot(), 'bca')).toBe(before - 150_000)
+    expect(recordedTransactions(getMoneySnapshot()).some((row) => row.name === 'Bensin')).toBe(false)
+    expect(getJointSnapshot().transactions.find((row) => row.id === tx.id)?.cashRowId).toBeUndefined()
+  })
+
+  it('settle dengan dompet: pengirim kehilangan uangnya, dan Undo mengembalikannya', () => {
+    const before = walletBalance(getMoneySnapshot(), 'bca')
+
+    const stored = recordSettlement({
+      month: JOINT_MONTH_KEY,
+      from: uuidA,
+      to: uuidB,
+      amount: 100_000,
+      method: 'BCA',
+      carryOver: 0,
+      cashWalletId: 'bca',
+    })
+    expect(stored).not.toBeNull()
+    expect(stored!.cashRowId).toBeTruthy()
+    expect(walletBalance(getMoneySnapshot(), 'bca')).toBe(before - 100_000)
+
+    const undone = undoSettlement(JOINT_MONTH_KEY)
+    expect(undone).not.toBeNull()
+    expect(settlementRecordFor(getJointSnapshot(), JOINT_MONTH_KEY)).toBeNull()
+    expect(walletBalance(getMoneySnapshot(), 'bca')).toBe(before)
+  })
+
+  it('settle tanpa dompet: penanda tersimpan, kas tidak bergerak', () => {
+    const before = walletBalance(getMoneySnapshot(), 'bca')
+    const stored = recordSettlement({
+      month: JOINT_MONTH_KEY,
+      from: uuidA,
+      to: uuidB,
+      amount: 100_000,
+      method: 'BCA',
+      carryOver: 0,
+    })
+    expect(stored).not.toBeNull()
+    expect(stored!.cashRowId).toBeUndefined()
+    expect(walletBalance(getMoneySnapshot(), 'bca')).toBe(before)
+  })
+
+  it('sisi PENERIMA: uang masuk ke dompetku tanpa menjadi pemasukan', () => {
+    const before = walletBalance(getMoneySnapshot(), 'bca')
+    const earnedBefore = cashTotal(getMoneySnapshot())
+
+    const stored = recordSettlement({
+      month: JOINT_MONTH_KEY,
+      from: uuidB,
+      to: uuidA,
+      amount: 75_000,
+      method: 'BCA',
+      carryOver: 0,
+      cashWalletId: 'bca',
+    })
+    expect(stored).not.toBeNull()
+    expect(walletBalance(getMoneySnapshot(), 'bca')).toBe(before + 75_000)
+    /* total kas naik karena uangnya memang masuk; yang TIDAK boleh adalah
+       baris itu dihitung sebagai pemasukan konsumsi */
+    expect(cashTotal(getMoneySnapshot())).toBe(earnedBefore + 75_000)
+    const row = recordedTransactions(getMoneySnapshot()).find((item) => item.name === `Settle ${JOINT_MONTH_KEY}`)
+    expect(row).toBeDefined()
+    expect(row!.type).toBe('transfer')
   })
 })
 

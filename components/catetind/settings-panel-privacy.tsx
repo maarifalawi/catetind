@@ -316,7 +316,7 @@ export function SecuritySettingsPanel() {
             <button
               type="button"
               onClick={() => openPinDialog('change')}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-sage px-3.5 py-2 text-[12.5px] font-medium text-forest transition-colors hover:bg-mint/40 focus-visible:ring-2 focus-visible:ring-forest/40 focus-visible:outline-none"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-sage px-3.5 py-2 text-[13.5px] font-medium text-forest transition-colors hover:bg-mint/40 focus-visible:ring-2 focus-visible:ring-forest/40 focus-visible:outline-none"
             >
               <KeyRound className="size-3.5" strokeWidth={2.4} aria-hidden />
               Ubah PIN
@@ -325,7 +325,7 @@ export function SecuritySettingsPanel() {
         )}
 
         {!biometricAvailable && (
-          <p className="mt-3 flex items-start gap-2 rounded-2xl bg-sage/50 px-4 py-3 text-[11.5px] leading-relaxed text-forest/55">
+          <p className="mt-3 flex items-start gap-2 rounded-2xl bg-sage/50 px-4 py-3 text-[12.5px] leading-relaxed text-forest/55">
             <Fingerprint className="mt-0.5 size-3.5 shrink-0 text-forest/40" aria-hidden />
             {LOCK_SETTINGS_COPY.biometricUnsupported}
           </p>
@@ -365,7 +365,7 @@ export function SecuritySettingsPanel() {
         </ul>
 
         <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
-          <p className="min-w-0 text-[12.5px] leading-relaxed text-forest/55">
+          <p className="min-w-0 text-[13.5px] leading-relaxed text-forest/55">
             {DELETE_ACCOUNT_COPY.cardBody}
           </p>
           <button
@@ -408,7 +408,7 @@ export function SecuritySettingsPanel() {
             <ArrowUpRight className="size-4" strokeWidth={2.4} aria-hidden />
           </Link>
         </div>
-        <p className="mt-3 text-[11.5px] leading-relaxed text-forest/55">
+        <p className="mt-3 text-[12.5px] leading-relaxed text-forest/55">
           {PRIVACY_LINK_COPY.pairNote}
         </p>
       </SettingsCard>
@@ -534,18 +534,18 @@ export function SecuritySettingsPanel() {
             {/* Unduh dulu — jalan keluar yang jujur: keputusan destruktif tidak
                 boleh memaksa user kehilangan salinan datanya. */}
             <div className="rounded-2xl bg-sage/60 px-4 py-3">
-              <p className="text-[12.5px] font-medium text-forest">
+              <p className="text-[13.5px] font-medium text-forest">
                 {DELETE_ACCOUNT_COPY.downloadFirstLead}
               </p>
               <button
                 type="button"
                 onClick={handleDownloadFromDialog}
-                className="mt-2 inline-flex items-center gap-2 rounded-full bg-cream px-3.5 py-2 text-[12.5px] font-medium text-forest ring-1 ring-soil/12 transition-colors hover:bg-sage"
+                className="mt-2 inline-flex items-center gap-2 rounded-full bg-cream px-3.5 py-2 text-[13.5px] font-medium text-forest ring-1 ring-soil/12 transition-colors hover:bg-sage"
               >
                 <Download className="size-3.5" strokeWidth={2.4} aria-hidden />
                 {DELETE_ACCOUNT_COPY.downloadFirstCta}
               </button>
-              <p className="mt-2 text-[11.5px] leading-relaxed text-forest/50">
+              <p className="mt-2 text-[12.5px] leading-relaxed text-forest/50">
                 {DELETE_ACCOUNT_COPY.downloadFirstHint}
               </p>
             </div>
@@ -670,7 +670,7 @@ export function DataExportSettingsPanel() {
           </span>
           <ul className="min-w-0 flex flex-col gap-1.5">
             {EXPORT_DATA_COPY.includes.map((item) => (
-              <li key={item} className="flex items-start gap-2 text-[13px] leading-relaxed text-forest/60">
+              <li key={item} className="flex items-start gap-2 text-[14px] leading-relaxed text-forest/60">
                 <span aria-hidden className="mt-[7px] size-1.5 shrink-0 rounded-full bg-forest/40" />
                 <span>{item}</span>
               </li>
@@ -678,7 +678,7 @@ export function DataExportSettingsPanel() {
           </ul>
         </div>
 
-        <p className="mt-3 flex items-start gap-2 text-[11.5px] leading-relaxed text-forest/45">
+        <p className="mt-3 flex items-start gap-2 text-[12.5px] leading-relaxed text-forest/45">
           <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-forest" strokeWidth={2.2} aria-hidden />
           {EXPORT_DATA_COPY.metadataNote}
         </p>
@@ -702,13 +702,13 @@ export function DataExportSettingsPanel() {
           diberi badge DEMO dan penjelasan mengapa tombolnya belum mengirim apa pun. */}
       <SettingsCard title={EXPORT_DATA_COPY.emailTitle}>
         <p className="mt-2 inline-flex flex-wrap items-center gap-2">
-          <span className="rounded-full bg-hud-amber/30 px-2 py-0.5 text-[10.5px] font-medium tracking-wide text-hud-terracotta uppercase">
+          <span className="rounded-full bg-hud-amber/30 px-2 py-0.5 text-[11.5px] font-medium tracking-wide text-hud-terracotta uppercase">
             {EXPORT_DATA_COPY.emailDemoBadge}
           </span>
         </p>
-        <p className="mt-2 text-[13px] leading-relaxed text-forest/60">{EXPORT_DATA_COPY.emailBody}</p>
+        <p className="mt-2 text-[14px] leading-relaxed text-forest/60">{EXPORT_DATA_COPY.emailBody}</p>
 
-        <p className="mt-3 inline-flex items-center gap-1.5 text-[11.5px] text-forest/45">
+        <p className="mt-3 inline-flex items-center gap-1.5 text-[12.5px] text-forest/45">
           <Mail className="size-3.5 shrink-0" strokeWidth={2.2} aria-hidden />
           {EXPORT_DATA_COPY.emailTargetLabel}: {user?.email ?? EMAIL_UNKNOWN}
         </p>

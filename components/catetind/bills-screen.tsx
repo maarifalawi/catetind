@@ -563,16 +563,16 @@ export function BillsScreen() {
              datanya hilang; di sini alasannya disebut + ada CTA menambah. */
           <div className="mt-4 lg:mt-6">
             <div className="flex flex-col items-center rounded-[1.75rem] border border-dashed border-forest/15 bg-cream px-6 py-10 text-center">
-              <h2 className="font-display text-[15px] font-semibold tracking-tight text-forest">
+              <h2 className="font-display text-[16px] font-semibold tracking-tight text-forest">
                 {CONTEXT_EMPTY_COPY.bills.title(CONTEXT_LABEL[context])}
               </h2>
-              <p className="mt-1 max-w-sm text-[12.5px] leading-relaxed text-forest-muted">
+              <p className="mt-1 max-w-sm text-[13.5px] leading-relaxed text-forest-muted">
                 {CONTEXT_EMPTY_COPY.bills.body}
               </p>
               <button
                 type="button"
                 onClick={() => setShowAddBill(true)}
-                className="mt-4 inline-flex h-10 items-center gap-2 rounded-full bg-forest px-4 text-[13px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
+                className="mt-4 inline-flex h-10 items-center gap-2 rounded-full bg-forest px-4 text-[14px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
               >
                 <Plus className="size-4" strokeWidth={2.6} />
                 {CONTEXT_EMPTY_COPY.bills.cta}
@@ -626,7 +626,7 @@ export function BillsScreen() {
                         aria-pressed={active}
                         onClick={() => setActiveFilter(pill.id)}
                         className={cn(
-                          'inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-[11.5px] font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25',
+                          'inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-[12.5px] font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25',
                           active
                             ? 'bg-cream text-forest shadow-[0_2px_10px_-4px_rgba(0,0,0,0.25)]'
                             : 'text-forest-muted hover:bg-cream/70 hover:text-forest',
@@ -663,7 +663,7 @@ export function BillsScreen() {
                 type="button"
                 onClick={() => setShowAddBill(true)}
                 aria-label="Tambah tagihan rutin"
-                className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-forest px-3 text-[12px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.97]"
+                className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-forest px-3 text-[13px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.97]"
               >
                 <Plus className="size-4" strokeWidth={2.6} aria-hidden />
                 <span className="hidden sm:inline">Tagihan</span>
@@ -679,7 +679,7 @@ export function BillsScreen() {
               )}
             >
                 {groups.length === 0 ? (
-                  <p className="rounded-[1.25rem] bg-cream px-4 py-6 text-center text-[12.5px] font-medium text-forest-muted ring-1 ring-soil/8">
+                  <p className="rounded-[1.25rem] bg-cream px-4 py-6 text-center text-[13.5px] font-medium text-forest-muted ring-1 ring-soil/8">
                     Gak ada tagihan di filter ini.
                   </p>
                 ) : (
@@ -695,7 +695,7 @@ export function BillsScreen() {
                           ditutup hairline. Grup "Sudah dibayar" punya aksi
                           Bersihkan = HAPUS semua baris lunas, lewat konfirmasi. */}
                       <div className="flex items-center gap-3 px-1">
-                        <h3 className="shrink-0 text-[11px] font-medium tabular-nums text-forest-muted">
+                        <h3 className="shrink-0 text-[12px] font-medium tabular-nums text-forest-muted">
                           {group.meta.label} · {group.items.length}
                         </h3>
                         <span aria-hidden className="h-px flex-1 bg-soil/10" />
@@ -704,7 +704,7 @@ export function BillsScreen() {
                             type="button"
                             onClick={() => setPendingClearPaid(group.items)}
                             title="Hapus tagihan yang sudah dibayar dari daftar rutin"
-                            className="shrink-0 rounded-full px-1.5 py-0.5 text-[10.5px] font-semibold text-hud-terracotta transition-colors hover:text-plum focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25"
+                            className="shrink-0 rounded-full px-1.5 py-0.5 text-[11.5px] font-semibold text-hud-terracotta transition-colors hover:text-plum focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25"
                           >
                             Bersihkan
                           </button>
@@ -755,10 +755,10 @@ export function BillsScreen() {
                   <Plus className="size-5" strokeWidth={2.6} aria-hidden />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[14px] font-semibold leading-tight text-forest">
+                  <span className="block text-[15px] font-semibold leading-tight text-forest">
                     {BILL_ADD_PLACEHOLDER.title}
                   </span>
-                  <span className="mt-1 block text-[11.5px] leading-tight text-forest-muted">
+                  <span className="mt-1 block text-[12.5px] leading-tight text-forest-muted">
                     {BILL_ADD_PLACEHOLDER.body}
                   </span>
                 </span>
@@ -867,16 +867,16 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
         <span className="flex size-12 items-center justify-center rounded-full bg-sage/60 text-forest">
           <Plus className="size-5" strokeWidth={2.4} aria-hidden />
         </span>
-        <h2 className="mt-4 font-display text-[16px] font-semibold tracking-tight text-forest">
+        <h2 className="mt-4 font-display text-[17px] font-semibold tracking-tight text-forest">
           Belum ada tagihan rutin
         </h2>
-        <p className="mt-1.5 max-w-sm text-[12.5px] leading-relaxed text-forest-muted">
+        <p className="mt-1.5 max-w-sm text-[13.5px] leading-relaxed text-forest-muted">
           Kos, langganan, cicilan, catat biar jatah harianmu lebih akurat.
         </p>
         <button
           type="button"
           onClick={onAdd}
-          className="mt-5 inline-flex h-10 items-center gap-2 rounded-full bg-forest px-4 text-[13px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
+          className="mt-5 inline-flex h-10 items-center gap-2 rounded-full bg-forest px-4 text-[14px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
         >
           <Plus className="size-4" strokeWidth={2.6} />
           Tambah Tagihan

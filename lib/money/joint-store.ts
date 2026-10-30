@@ -19,6 +19,7 @@ import {
   readJointSettlementRecords,
   settlementEntriesFor,
   splitSpecOf,
+  type JointPerson,
   type JointSettlementRecord,
   type JointTransaction,
   type JointWallet,
@@ -26,10 +27,11 @@ import {
 } from '@/lib/data/joint'
 import { monthOf, type SplitSpec } from '@/lib/data/joint-ledger'
 import { toJointTransaction, type JointTransactionDbRow } from '@/lib/supabase/mappers'
-import { readRemoteJointWallet, pushJointTransactionToServer, deleteRemoteJointTransaction, type RemoteJointWallet } from '@/lib/supabase/joint-remote'
-import { subscribeJointTransactions, type JointRealtimeHandle } from '@/lib/supabase/realtime'
+import { readRemoteJointWallet, pushJointTransactionToServer, deleteRemoteJointTransaction, deleteRemoteJointMembership, type RemoteJointWallet } from '@/lib/supabase/joint-remote'
+import { subscribeJointTransactions, subscribeTables, type WealthRealtimeHandle, type JointRealtimeHandle } from '@/lib/supabase/realtime'
 import { JOINT_STATE_KEY, loadDeviceState, saveDeviceState } from './idb'
 import { isUuid, randomUuid } from '@/lib/supabase/uuid'
+import { postBalanceAdjustment, postExpense, postJointCashIn, postJointCashOut, removeRow, walletBalance, getMoneySnapshot } from './store'
 
 /* ── SATU STORE KANTONG BERSAMA (paket 52 · temuan F laporan 46) ─────────────
    Temuan audit 28 Sep 2026: `/joint` memegang SALINAN datanya sendiri.
@@ -100,6 +102,13 @@ export interface PersistedJoint {
   /** id anggota kantong ini */
   members?: string[]
   /**
+   * id user pemanggil (uuid Supabase) — dipakai memutuskan siapa "Kamu" di buku
+   * besar ini. Disimpan supaya setelah refresh layar tidak perlu menebak.
+   */
+  viewerId?: string | null
+  /** nama panggilan anggota (`user_id` → nama). Kosong = sebutan netral. */
+  memberNames?: Record<string, string>
+  /**
    * TOMBSTONE id baris yang dihapus user (paket 61) — bentuk yang sama dengan
    * `removedIds` di `lib/money/store.ts`/`bills-store.ts`/`wealth-store.ts`.
    * Barisnya TIDAK dibuang supaya Undo mungkin, dan supaya catatan contoh tidak
@@ -114,7 +123,15 @@ export interface JointState {
   wallet: JointWallet
   transactions: JointTransaction[]
   settlements: Record<string, JointSettlementRecord>
+  /**
+   * Anggota kantong (uuid Supabase). Di produksi isinya datang dari
+   * `joint_members` + pemilik; di mode demo/test berisi dua id contoh.
+   */
   members: string[]
+  /** id user pemanggil — `null` = belum diketahui (belum ada sesi) */
+  viewerId: string | null
+  /** nama panggilan anggota; yang tidak ada di peta memakai sebutan netral */
+  memberNames: Record<string, string>
   /** id baris yang dihapus user (tombstone) */
   removedIds: string[]
 }
@@ -155,12 +172,31 @@ const SEED_JOINT_MEMBERS: string[] = DEMO_PARTNER_JOINED
   ? [JOINT_ME.id, JOINT_PARTNER.id]
   : [JOINT_ME.id]
 
+/* ── PENAMPILAN DUA PESERTA (bukan identitas) ────────────────────────────────
+   `JOINT_ME`/`JOINT_PARTNER` di `lib/data/joint.ts` adalah identitas CONTOH
+   (`user_a` bernama "Jon"). Yang dibawa ke produksi hanya bagian TAMPILANNYA
+   (avatar & kelas warna); `id` dan `name` selalu diganti data sungguhan oleh
+   `jointParticipants()`. Dengan pemisahan ini, tidak ada jalur produksi yang
+   bisa memunculkan nama "Jon"/"Dany" lagi. */
+const ME_PERSONA: JointPerson = {
+  ...JOINT_ME,
+  id: '',
+  name: 'Kamu',
+}
+const PARTNER_PERSONA: JointPerson = {
+  ...JOINT_PARTNER,
+  id: '',
+  name: 'Pasangan',
+}
+
 /** snapshot untuk render server & hidrasi — SELALU KOSONG sampai user mengisi */
 const SERVER_SNAPSHOT: JointSnapshot = Object.freeze({
   wallet: EMPTY_JOINT_WALLET,
   transactions: [] as JointTransaction[],
   settlements: {},
   members: [] as string[],
+  viewerId: null,
+  memberNames: {},
   removedIds: [] as string[],
   hydrated: false,
 })
@@ -171,6 +207,8 @@ const SEED_SNAPSHOT: JointSnapshot = Object.freeze({
   transactions: SEED_JOINT_TRANSACTIONS,
   settlements: {},
   members: SEED_JOINT_MEMBERS,
+  viewerId: JOINT_ME.id,
+  memberNames: { [JOINT_ME.id]: JOINT_ME.name, [JOINT_PARTNER.id]: JOINT_PARTNER.name },
   removedIds: [] as string[],
   hydrated: false,
 })
@@ -188,6 +226,8 @@ const EMPTY_SNAPSHOT: JointSnapshot = Object.freeze({
   transactions: [],
   settlements: {},
   members: [],
+  viewerId: null,
+  memberNames: {},
   removedIds: [] as string[],
   hydrated: true,
 })
@@ -204,6 +244,13 @@ let remoteWalletId: string | null = null
 let remoteViewerId: string | null = null
 /** channel realtime yang sedang hidup (dipakai `stopJointRealtime`) */
 let realtime: JointRealtimeHandle | null = null
+/**
+ * Langganan khusus KEANGGOTAAN: tanpa ini, pemilik kantong tidak pernah tahu
+ * pasangannya bergabung sampai ia me-refresh. Dulu satu-satunya pemicu adalah
+ * tombol "Simulasi" di perangkatnya sendiri — tombol itu sudah dihapus, jadi
+ * sekarang keanggotaan datang dari server dan sampai lewat channel ini.
+ */
+let membersRealtime: WealthRealtimeHandle | null = null
 
 export function getJointSnapshot(): JointSnapshot {
   return live
@@ -252,6 +299,8 @@ function persist(snapshot: JointState): void {
     transactions: snapshot.transactions.map(withoutArrivalBadge),
     settlements: snapshot.settlements,
     members: [...snapshot.members],
+    viewerId: snapshot.viewerId,
+    memberNames: { ...snapshot.memberNames },
     removedIds: [...snapshot.removedIds],
     purged: accountPurged,
   })
@@ -375,6 +424,11 @@ export function mergeJointState(
     transactions,
     settlements: { ...(known ? (persisted?.settlements ?? {}) : {}), ...current.settlements },
     members,
+    /* pemilik sesi & nama anggota ikut tersimpan: tanpa ini, setelah refresh
+       layar kembali menebak siapa "Kamu" (dan dulu menebaknya dengan nama
+       karangan "Jon") */
+    viewerId: current.viewerId ?? persisted?.viewerId ?? null,
+    memberNames: { ...(persisted?.memberNames ?? {}), ...current.memberNames },
     removedIds,
     hydrated: true,
   }
@@ -453,10 +507,22 @@ async function hydrateJointStore(): Promise<void> {
 export function applyRemoteJointWallet(remote: RemoteJointWallet): JointSnapshot {
   remoteWalletId = remote.wallet.id
   remoteViewerId = remote.viewerId
+  const members = remote.members.length > 0 ? remote.members : live.members
+  /* Nama anggota: SERVER yang menentukan, tapi nama yang sudah terbaca tetap
+     dipakai selama orangnya masih anggota (RPC nama bisa gagal sementara tanpa
+     membuat nama yang sudah sah hilang). Nama milik orang yang sudah keluar
+     dibuang, supaya tidak menempel ke kantong lain. */
+  const memberNames: Record<string, string> = {}
+  for (const id of members) {
+    const name = remote.memberNames[id] ?? live.memberNames[id]
+    if (name) memberNames[id] = name
+  }
   live = {
     ...live,
     wallet: remote.wallet,
-    members: remote.members.length > 0 ? remote.members : live.members,
+    members,
+    viewerId: remote.viewerId,
+    memberNames,
     transactions: mergeJointRows(live.transactions, remote.rows),
     hydrated: true,
   }
@@ -481,33 +547,55 @@ async function attachRemoteJoint(): Promise<void> {
 
   stopJointRealtime()
   realtime = subscribeJointTransactions(remote.wallet.id, applyRemoteJointRow)
+  /* perubahan keanggotaan (pasangan menerima undangan di perangkat lain) =>
+     baca ulang kantong dari server; baris & nama anggota ikut menyegar */
+  membersRealtime = subscribeTables(`joint-members-${remote.wallet.id}`, ['joint_members'], () => {
+    void refreshRemoteJoint()
+  })
+}
+
+/**
+ * Baca ulang kantong dari server lalu pasang ke store. Dipakai langganan
+ * keanggotaan dan tombol "coba lagi"; `false` = tidak ada yang berubah (tanpa
+ * sesi/server).
+ */
+export async function refreshRemoteJoint(): Promise<boolean> {
+  const remote = await readRemoteJointWallet()
+  if (!remote) return false
+  applyRemoteJointWallet(remote)
+  return true
 }
 
 /** hentikan langganan realtime (idempoten — dipakai Hapus Akun & test) */
 export function stopJointRealtime(): void {
   realtime?.stop()
   realtime = null
+  membersRealtime?.stop()
+  membersRealtime = null
 }
 
 /**
  * Kantong yang boleh muncul sebagai pembayar / arah transfer.
  *
- * Buku besar ini DUA ORANG (`JOINT_MEMBERS` di `lib/data/joint.ts`), jadi yang
- * sah hanya id dua peserta itu — dan kalau kantongnya masih memakai identitas
- * demo, orangnya harus benar-benar sudah jadi anggota (pasangan yang belum
- * gabung tidak boleh jadi pembayar).
- *
- * Kantong yang datang dari SERVER memakai identitas server (uuid) sementara
- * halaman `/joint` menggambar dua identitas demo; di situ keanggotaan tidak bisa
- * dibandingkan, jadi pemeriksaan anggota dilewati — membandingkan id demo dengan
- * uuid selalu gagal dan itu bukan tanda data salah. Batas ini ditulis apa adanya
- * di laporan §8.
+ * Buku besar ini DUA ORANG: yang sah adalah anggota kantong ini (`members`) dan
+ * pemilik sesi. Di perangkat yang BELUM punya sesi (mode demo/test), id contoh
+ * (`user_a`/`user_b`) tetap diterima supaya data seed masih bisa dipakai —
+ * tapi begitu `viewerId` diketahui (produksi), id contoh TIDAK lagi sah sebagai
+ * peserta baru: `user_b` berarti "pasangan yang tidak pernah bergabung".
  */
 function isAllowedPocket(snapshot: JointSnapshot, userId: string): boolean {
-  if (userId !== JOINT_ME.id && userId !== JOINT_PARTNER.id) return false
-  if (remoteWalletId) return true
-  return snapshot.members.includes(userId)
+  if (!userId) return false
+  const viewerId = snapshot.viewerId
+  const partnerId = viewerId ? (snapshot.members.find((id) => id !== viewerId) ?? null) : null
+  if (viewerId) {
+    if (userId === viewerId) return true
+    if (partnerId && userId === partnerId) return true
+    return snapshot.members.includes(userId)
+  }
+  if (remoteWalletId) return snapshot.members.includes(userId)
+  return userId === JOINT_ME.id || userId === JOINT_PARTNER.id || snapshot.members.includes(userId)
 }
+
 
 /* ── API TULIS — SATU-SATUNYA JALUR MENULIS KANTONG BERSAMA ────────────────
    Komponen tidak boleh menyentuh `transactions`/`wallet`/`settlements` langsung:
@@ -530,6 +618,15 @@ export interface NewJointTransactionInput {
   timeLabel?: string
   /** kategori; default `JOINT_DEFAULT_CATEGORY` (atau kategori privat) */
   category?: string
+  /**
+   * Dompet PRIBADI yang benar-benar mengeluarkan uang (opsional).
+   *
+   * Kalau diisi DAN yang menalangi adalah pemilik sesi, store juga menulis satu
+   * baris kas (`postExpense`, idempoten lewat `clientTxId = joint-<id>`). Kalau
+   * kosong, catatan ini murni buku besar patungan dan tidak menggeser saldo
+   * siapa pun — dan itu yang dikatakan UI.
+   */
+  cashWalletId?: string
 }
 
 /**
@@ -588,6 +685,33 @@ export function addJointTransaction(input: NewJointTransactionInput): JointTrans
     ...(isPrivate ? { isPrivate: true, privateForUser: JOINT_ME.id } : {}),
   }
 
+  /* ── SUNTIKAN KAS (opsional) ─────────────────────────────────────────────
+     Uang yang benar-benar keluar dari dompet user hanya ditulis kalau:
+       · user MEMILIH dompet (`cashWalletId`), DAN
+       · yang menalangi memang dirinya (`pocketIdOf(...) === viewerId`).
+     Kondisi kedua penting: kalau pasangan yang menalangi, mendebit dompet user
+     berarti mencatat uang keluar yang tidak pernah keluar dari kantongnya.
+     `clientTxId = joint-<id>` membuat penulisan ini idempoten terhadap
+     double-tap. */
+  const viewerId = live.viewerId
+  const cashWalletId = input.cashWalletId?.trim() ?? ''
+  let cashRowId: string | undefined
+  if (cashWalletId && viewerId && pocketIdOf(live, input.paidByUserId) === viewerId) {
+    const row = postExpense({
+      walletId: cashWalletId,
+      amount,
+      note: tx.description,
+      category: tx.category,
+      dateISO: tx.date,
+      time: tx.time,
+      clientTxId: `joint-${tx.id}`,
+    })
+    /* dompet tidak dikenal / saldo kurang → tidak ada baris kas; catatan bareng
+       tetap disimpan, dan UI tidak mengklaim uangnya berpindah */
+    if (row) cashRowId = row.id
+  }
+  if (cashRowId) tx.cashRowId = cashRowId
+
   commit({ ...live, transactions: [tx, ...live.transactions], hydrated: true })
   void syncJointRow(tx)
   return tx
@@ -635,7 +759,19 @@ export function setPaidBy(id: string, userId: string): JointTransaction | null {
   if (!isAllowedPocket(live, userId)) return null
   if (pocketOf(target) === userId) return target
 
-  const updated: JointTransaction = { ...target, paidByUserId: userId }
+  /* Kalau kantong pembayar berpindah MENJAUH dari pemilik sesi, baris kas yang
+     tadinya mencatat uang keluar dari dompetnya harus dicabut: uang itu tidak
+     pernah keluar dari kantongnya. Kalau berpindah MENJADI pemilik sesi, kas
+     tidak bisa dikarang (dompetnya tidak diketahui) — UI yang menawarkan
+     "Catat dari dompet" lewat form tambah. */
+  const viewerId = live.viewerId
+  let updated: JointTransaction = { ...target, paidByUserId: userId }
+  if (target.cashRowId && viewerId && userId !== viewerId) {
+    removeRow(target.cashRowId)
+    updated = { ...updated }
+    delete updated.cashRowId
+  }
+
   commit({
     ...live,
     transactions: live.transactions.map((tx) => (tx.id === id ? updated : tx)),
@@ -682,7 +818,20 @@ export function deleteJointTransaction(id: string): JointTransaction | null {
   if (isRemovedJointRow(id)) return null
   if (isMonthSettled(target.date)) return null
 
-  commit({ ...live, removedIds: [...live.removedIds, id], hydrated: true })
+  /* baris kas yang lahir bersama catatan ini ikut dicabut (tombstone, sama
+     seperti hapus catatan di Riwayat) — uang yang tidak lagi punya cerita tidak
+     boleh tetap tercatat di dompet */
+  if (target.cashRowId) removeRow(target.cashRowId)
+
+  const updated: JointTransaction = { ...target }
+  delete updated.cashRowId
+
+  commit({
+    ...live,
+    transactions: live.transactions.map((tx) => (tx.id === id ? updated : tx)),
+    removedIds: [...live.removedIds, id],
+    hydrated: true,
+  })
   if (target.remoteId) void deleteRemoteJointTransaction(target.remoteId)
   return target
 }
@@ -771,17 +920,85 @@ export function recordSettlement(record: JointSettlementRecord): JointSettlement
   const method: SettlementMethod = SETTLEMENT_METHODS.includes(record.method)
     ? record.method
     : DEFAULT_SETTLEMENT_METHOD
+  const amount = Math.max(0, Math.round(record.amount))
+
+  /* ── UANGNYA BENAR-BENAR PINDAH (kalau dompet dipilih) ────────────────────
+     Pemilik sesi hanya mencatat satu sisi, yaitu sisinya sendiri:
+       · dia PENGIRIM  → uang keluar dari dompetnya (`postJointCashOut`),
+       · dia PENERIMA  → uang masuk ke dompetnya (`postJointCashIn`).
+     Keduanya sengaja bukan `expense`/`income`: settle patungan bukan konsumsi
+     dan bukan pemasukan, jadi Arus Uang & Budget tidak boleh bergerak. Kalau
+     dompet tidak dipilih, penanda settle tetap disimpan (kesepakatan dua orang
+     itu fakta) tapi tidak ada saldo yang dikarang. */
+  const viewerId = live.viewerId
+  const cashWalletId = record.cashWalletId?.trim() ?? ''
+  const mine = viewerId
+    ? pocketIdOf(live, record.from) === viewerId
+      ? 'out'
+      : pocketIdOf(live, record.to) === viewerId
+        ? 'in'
+        : null
+    : null
+  let cashRowId: string | undefined
+  if (cashWalletId && mine && amount > 0) {
+    const input = {
+      walletId: cashWalletId,
+      amount,
+      note: `Settle ${month}`,
+      category: 'Settle',
+      clientTxId: `joint-settle-${month}`,
+    }
+    const row = mine === 'out' ? postJointCashOut(input) : postJointCashIn(input)
+    if (row) cashRowId = row.id
+  }
+
   const stored: JointSettlementRecord = {
     month,
     from: record.from,
     to: record.to,
-    amount: Math.max(0, Math.round(record.amount)),
+    amount,
     method,
     carryOver: Math.max(0, Math.round(record.carryOver)),
+    ...(cashWalletId ? { cashWalletId } : {}),
+    ...(cashRowId ? { cashRowId } : {}),
   }
 
   commit({ ...live, settlements: { ...live.settlements, [month]: stored }, hydrated: true })
   return stored
+}
+
+/**
+ * BATALKAN SETTLE satu bulan — mencabut penanda bulan DAN baris kasnya.
+ *
+ * Tanpa ini, "Settle Sekarang" yang salah tekan tidak bisa dibatalkan sama
+ * sekali: penandanya mengunci timbangan sebulan, dan baris kasnya (kalau ada)
+ * tetap memotong saldo dompet untuk transfer yang tidak pernah terjadi.
+ *
+ * `null` = tidak ada penanda untuk bulan itu.
+ */
+export function undoSettlement(month: string): JointSettlementRecord | null {
+  const record = live.settlements[month]
+  if (!record) return null
+  if (record.cashRowId) {
+    const row = getMoneySnapshot().rows.find((item) => item.id === record.cashRowId)
+    removeRow(record.cashRowId)
+    /* hapus baris saja TIDAK mengembalikan uang (aturan yang sama dengan hapus
+       catatan lain). Membatalkan settle berarti "transfer ini tidak pernah
+       terjadi", jadi uangnya dikembalikan lewat SATU baris koreksi bernama jelas
+       — pola `unmarkBillPaid()`. */
+    if (row && record.cashWalletId) {
+      postBalanceAdjustment({
+        walletId: record.cashWalletId,
+        newBalance: walletBalance(getMoneySnapshot(), record.cashWalletId) + row.amount,
+        note: `Batal settle ${month}`,
+        category: 'Settle',
+      })
+    }
+  }
+  const settlements = { ...live.settlements }
+  delete settlements[month]
+  commit({ ...live, settlements, hydrated: true })
+  return record
 }
 
 /**
@@ -794,6 +1011,40 @@ export function addJointMember(userId: string): JointSnapshot {
   const next: JointSnapshot = { ...live, members: [...live.members, userId], hydrated: true }
   commit(next)
   return next
+}
+
+/**
+ * KELUAR dari kantong bersama — aksi nyata, bukan lagi state halaman.
+ *
+ * Urutannya: hapus keanggotaan MILIK SENDIRI di server (RLS mengizinkan
+ * `user_id = auth.uid()`), lalu kosongkan kantong di perangkat: seluruh catatan
+ * ditandai terhapus (bukan dibuang, supaya Undo/audit masih mungkin), penanda
+ * settle dikosongkan, dan nama anggota dilepas. Dompet & catatan pasangan tidak
+ * disentuh.
+ *
+ * `serverOk` = keanggotaan di server benar-benar terhapus. `false` berarti tidak
+ * ada sesi/backend ATAU penolakan server — UI mengatakannya apa adanya, bukan
+ * mengklaim "sudah putus" untuk sesuatu yang masih ada di database.
+ */
+export async function leaveJointPocket(): Promise<{ left: boolean; serverOk: boolean }> {
+  const walletId = remoteWalletId ?? live.wallet.id
+  const viewerId = live.viewerId ?? remoteViewerId
+  let serverOk = false
+  if (walletId && viewerId) {
+    serverOk = await deleteRemoteJointMembership(walletId, viewerId)
+  }
+
+  const removedIds = [
+    ...new Set([...live.removedIds, ...live.transactions.map((tx) => tx.id)]),
+  ]
+  commit({
+    ...EMPTY_SNAPSHOT,
+    viewerId,
+    removedIds,
+  })
+  stopJointRealtime()
+  remoteWalletId = null
+  return { left: true, serverOk }
 }
 
 /**
@@ -933,10 +1184,13 @@ export function jointRowKey(tx: JointTransaction): string {
 export function jointLedgerFeed(snapshot: JointSnapshot, month: string): JointTransaction[] {
   const out: JointTransaction[] = []
   const seen = new Set<string>()
+  const identity = jointIdentityMap(snapshot)
   /* baris yang dihapus user tidak pernah masuk feed — timbangan, statistik, dan
      timeline membaca daftar yang SAMA, jadi satu penyaring cukup untuk
      ketiganya (paket 61.3) */
-  const notes = snapshot.transactions.filter((tx) => !snapshot.removedIds.includes(tx.id))
+  const notes = snapshot.transactions
+    .filter((tx) => !snapshot.removedIds.includes(tx.id))
+    .map((tx) => withRealIdentity(tx, identity))
   for (const tx of [...settlementEntriesOf(snapshot, month), ...notes]) {
     const key = jointRowKey(tx)
     if (seen.has(key)) continue
@@ -948,9 +1202,10 @@ export function jointLedgerFeed(snapshot: JointSnapshot, month: string): JointTr
 
 /** catatan yang benar-benar "catatan" (bukan baris settle/pembuka & bukan tombstone) */
 export function jointNotes(snapshot: JointSnapshot): JointTransaction[] {
-  return snapshot.transactions.filter(
-    (tx) => !tx.isSettlement && !snapshot.removedIds.includes(tx.id),
-  )
+  const identity = jointIdentityMap(snapshot)
+  return snapshot.transactions
+    .filter((tx) => !tx.isSettlement && !snapshot.removedIds.includes(tx.id))
+    .map((tx) => withRealIdentity(tx, identity))
 }
 
 /**
@@ -978,10 +1233,116 @@ export function jointDeleteState(
   return snapshot.settlements[monthOf(tx.date)] ? 'locked' : 'allowed'
 }
 
-/** true = kantong ini sudah punya pasangan (bukan lagi wujud undangan) */
-export function jointPartnerJoined(snapshot: JointSnapshot): boolean {
-  return snapshot.members.includes(JOINT_PARTNER.id)
+/**
+ * Id peserta yang BERLAKU untuk satu nilai tersimpan.
+ *
+ * Baris lama menyimpan `user_a`/`user_b`; setelah identitas server diketahui,
+ * `user_a` = pemilik sesi dan `user_b` = anggota lain. Semua pembanding
+ * identitas memakai fungsi ini supaya tidak ada dua aturan pemetaan.
+ */
+function pocketIdOf(snapshot: JointSnapshot, userId: string): string {
+  return jointIdentityMap(snapshot)[userId] ?? userId
 }
+
+/**
+ * Peta identitas LAMA → identitas SUNGGUHAN (uuid) untuk satu kantong.
+ *
+ * Sebelum paket ini picker "Siapa yang nalangin?" menulis id demo
+ * (`user_a`/`user_b`) karena `JOINT_ME.id` dipakai sebagai default. Baris lama
+ * itu masih ada di perangkat & di server. Membiarkannya berarti timbangan
+ * menghitung dua peserta yang tidak ada, jadi `user_a` dipetakan ke pemilik sesi
+ * (dialah yang selalu jadi "Aku" di perangkat ini) dan `user_b` ke anggota
+ * lainnya. Kalau tidak ada anggota lain, `user_b` TIDAK dipetakan: baris yang
+ * mengaku milik orang yang tidak ada memang tidak bisa dipercaya.
+ */
+export function jointIdentityMap(snapshot: JointSnapshot): Record<string, string> {
+  const map: Record<string, string> = {}
+  const viewerId = snapshot.viewerId
+  if (!viewerId) return map
+  const partnerId = snapshot.members.find((id) => id !== viewerId) ?? null
+  if (viewerId !== JOINT_ME.id) map[JOINT_ME.id] = viewerId
+  if (partnerId && partnerId !== JOINT_PARTNER.id) map[JOINT_PARTNER.id] = partnerId
+  return map
+}
+
+/** satu baris dengan identitas lama sudah dipetakan ke identitas sungguhan */
+function withRealIdentity(tx: JointTransaction, map: Record<string, string>): JointTransaction {
+  const pocket = pocketOf(tx)
+  const mapped = map[pocket]
+  const spec = tx.split ? mapSplitIds(splitSpecOf(tx), map) : undefined
+  const bearer = tx.payerId ? (map[tx.payerId] ?? tx.payerId) : undefined
+  if (!mapped && !spec && bearer === tx.payerId) return tx
+  return {
+    ...tx,
+    ...(mapped ? { paidByUserId: mapped, userId: map[tx.userId] ?? tx.userId } : {}),
+    ...(spec ? { split: spec } : {}),
+    ...(bearer ? { payerId: bearer } : {}),
+  }
+}
+
+/** peta id di dalam satu `SplitSpec` (persen/nominal/payer) */
+function mapSplitIds(spec: SplitSpec, map: Record<string, string>): SplitSpec {
+  if (spec.type === 'equal') return spec
+  if (spec.type === 'single_payer') {
+    return { ...spec, payerId: map[spec.payerId] ?? spec.payerId }
+  }
+  const remap = (source: Record<string, number>): Record<string, number> => {
+    const next: Record<string, number> = {}
+    for (const [id, value] of Object.entries(source)) {
+      const target = map[id] ?? id
+      next[target] = (next[target] ?? 0) + value
+    }
+    return next
+  }
+  return spec.type === 'percentage'
+    ? { ...spec, percents: remap(spec.percents) }
+    : { ...spec, amounts: remap(spec.amounts) }
+}
+
+/**
+ * Dua peserta kantong ini menurut data SUNGGUHAN: `me` = pemilik sesi
+ * (nama "Kamu"), `partner` = anggota lain (nama panggilannya, atau "Pasangan"
+ * kalau belum terbaca).
+ *
+ * `partner` = `null` kalau belum ada anggota lain → halaman menampilkan alur
+ * undangan. Tidak ada nama karangan di jalur mana pun: kalau backend belum
+ * memberi nama, yang dipakai sebutan netral.
+ */
+export function jointParticipants(snapshot: JointSnapshot): {
+  me: JointPerson
+  partner: JointPerson | null
+} {
+  const viewerId = snapshot.viewerId
+  const partnerId = viewerId
+    ? (snapshot.members.find((id) => id !== viewerId) ?? null)
+    : (snapshot.members.find((id) => id !== JOINT_ME.id) ?? null)
+
+  const meId = viewerId ?? snapshot.members[0] ?? JOINT_ME.id
+  const meName = snapshot.memberNames[meId] ?? (viewerId ? 'Kamu' : (ME_PERSONA.name))
+
+  const me: JointPerson = { ...ME_PERSONA, id: meId, name: meName }
+  if (!partnerId) return { me, partner: null }
+
+  const partner: JointPerson = {
+    ...PARTNER_PERSONA,
+    id: partnerId,
+    name: snapshot.memberNames[partnerId] ?? 'Pasangan',
+  }
+  return { me, partner }
+}
+
+/**
+ * true = kantong ini sudah punya pasangan (bukan lagi wujud undangan).
+ *
+ * Dasarnya data SUNGGUHAN: ada anggota lain selain pemilik sesi. Fungsi ini
+ * tidak lagi membandingkan dengan id contoh, jadi hasilnya sama di perangkat
+ * mana pun selama keanggotaannya sama, dan tidak bisa "menyala" oleh tombol
+ * simulasi di perangkat sendiri.
+ */
+export function jointPartnerJoined(snapshot: JointSnapshot): boolean {
+  return jointParticipants(snapshot).partner !== null
+}
+
 
 /**
  * Kosongkan store ke kondisi seed (dipakai test supaya tiap kasus mulai bersih).

@@ -344,8 +344,8 @@ describe('ekspor membaca store kekayaan', () => {
     expect(file.counts.investments).toBe(countsBefore.investments + 1)
     expect(file.debts.payable.some((row) => row.id === debt.id)).toBe(true)
     expect(file.investments.some((row) => row.id === asset.id)).toBe(true)
-    /* batas jujurnya juga menyebut bahwa kekayaan dibaca dari store perangkat */
-    expect(file.limits.join(' ')).toMatch(/store kekayaan/i)
+    /* batas jujurnya juga menyebut bahwa hutang & investasi ikut di file */
+    expect(file.limits.join(' ')).toMatch(/investasi/i)
   })
 
   it('pelunasan yang ditulis di /wealth ikut ke ekspor (baris kas + riwayat bayar)', () => {

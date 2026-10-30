@@ -132,7 +132,7 @@ function NavLink({
           className={cn(
             'transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none',
             compact ? 'size-[18px]' : 'size-[22px]',
-            isActive ? 'text-forest' : 'text-forest/25 hover:text-forest/45',
+            isActive ? 'text-forest' : 'text-forest/55 hover:text-forest/75',
           )}
           strokeWidth={1.8}
         />
@@ -276,7 +276,7 @@ export function MobileBottomNav() {
               className={cn(
                 'transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none',
                 compact ? 'size-[18px]' : 'size-[22px]',
-                menuActive ? 'text-forest' : 'text-forest/25 hover:text-forest/45',
+                menuActive ? 'text-forest' : 'text-forest/55 hover:text-forest/75',
               )}
               strokeWidth={1.8}
             />
@@ -309,7 +309,7 @@ export function MobileBottomNav() {
                   halaman — dan menutup laci ini lebih dulu supaya dua lapisan
                   sheet tidak bertumpuk di layar kecil. */}
               <section className="mt-6">
-                <p className="text-[11px] font-medium uppercase tracking-wider text-forest/35">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-forest-muted">
                   {TRANSFER_DOOR_COPY.menuGroupLabel}
                 </p>
                 <button
@@ -327,7 +327,7 @@ export function MobileBottomNav() {
                     <span className="block text-[13px] font-medium text-forest">
                       {TRANSFER_DOOR_COPY.menuLabel}
                     </span>
-                    <span className="mt-0.5 block text-[11px] text-forest/45">
+                    <span className="mt-0.5 block text-[12px] text-forest-muted">
                       {TRANSFER_DOOR_COPY.menuHint}
                     </span>
                   </span>
@@ -336,7 +336,7 @@ export function MobileBottomNav() {
 
               {MOBILE_MENU_GROUPS.map((group) => (
                 <section key={group.label} className="mt-6">
-                  <p className="text-[11px] font-medium uppercase tracking-wider text-forest/35">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-forest-muted">
                     {group.label}
                   </p>
                   <div className="mt-3 grid grid-cols-3 gap-2.5">
@@ -362,7 +362,7 @@ export function MobileBottomNav() {
                             'relative flex flex-col items-center gap-1.5 rounded-2xl px-2 py-3.5 text-center transition-all duration-150 active:scale-95',
                             isActive
                               ? 'bg-brand/25 font-medium text-forest'
-                              : 'bg-soil/[0.03] font-medium text-forest/55 hover:bg-soil/[0.11]',
+                              : 'bg-soil/[0.03] font-medium text-forest-muted hover:bg-soil/[0.11]',
                           )}
                         >
                           <span className="relative inline-flex">
@@ -382,7 +382,7 @@ export function MobileBottomNav() {
                               'text-[10px] leading-snug',
                               locked
                                 ? 'font-semibold text-daisy-deep'
-                                : 'font-normal text-forest/40',
+                                : 'font-normal text-forest-muted',
                             )}
                           >
                             {locked ? `Buka di ${unlockName}` : hint}

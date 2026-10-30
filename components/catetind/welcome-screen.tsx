@@ -87,7 +87,7 @@ export function WelcomeScreen() {
           <LogoWordmark className="h-6 lg:h-7" tone="light" />
           <Link
             href={WELCOME_LINKS.login}
-            className="rounded-full px-4 py-2 text-[13px] font-medium text-cream/70 ring-1 ring-cream/15 transition-colors duration-200 hover:bg-cream/10 hover:text-cream motion-reduce:transition-none"
+            className="rounded-full px-4 py-2 text-[14px] font-medium text-cream/70 ring-1 ring-cream/15 transition-colors duration-200 hover:bg-cream/10 hover:text-cream motion-reduce:transition-none"
           >
             {WELCOME_COPY.loginLink}
           </Link>
@@ -95,7 +95,7 @@ export function WelcomeScreen() {
 
         {/* ── 2. hero: satu janji, tiga tarikan napas ───────────────────────── */}
         <section className="mt-14 lg:mt-20">
-          <p className="text-[11px] font-medium tracking-[0.18em] text-cream/45 uppercase">
+          <p className="text-[12px] font-medium tracking-[0.18em] text-cream/45 uppercase">
             {WELCOME_COPY.eyebrow}
           </p>
           <h1 className="mt-4 font-display text-[2.6rem] leading-[1.04] font-semibold tracking-[-0.03em] text-cream lg:text-[5rem]">
@@ -105,7 +105,7 @@ export function WelcomeScreen() {
               </span>
             ))}
           </h1>
-          <p className="mt-6 max-w-xl text-[14.5px] leading-relaxed text-cream/60 lg:text-[16px]">
+          <p className="mt-6 max-w-xl text-[15.5px] leading-relaxed text-cream/60 lg:text-[17px]">
             {WELCOME_COPY.subtitle}
           </p>
         </section>
@@ -128,7 +128,7 @@ export function WelcomeScreen() {
                     )}
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <span className="text-[10px] font-medium tracking-[0.14em] uppercase opacity-60">
+                      <span className="text-[11px] font-medium tracking-[0.14em] uppercase opacity-60">
                         {card.tag}
                       </span>
                       <span
@@ -140,8 +140,8 @@ export function WelcomeScreen() {
                         <ArrowUpRight className="size-3.5" strokeWidth={2.6} />
                       </span>
                     </div>
-                    <p className="mt-4 text-[13px] font-medium lg:text-[14px]">{card.label}</p>
-                    <p className="mt-0.5 font-display text-[19px] font-medium tabular-nums lg:text-[22px]">
+                    <p className="mt-4 text-[14px] font-medium lg:text-[15px]">{card.label}</p>
+                    <p className="mt-0.5 font-display text-[20px] font-medium tabular-nums lg:text-[22px]">
                       {card.amount}
                     </p>
                   </div>
@@ -160,11 +160,11 @@ export function WelcomeScreen() {
             <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-daisy text-forest transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transition-none">
               <ArrowRight className="size-[18px]" strokeWidth={2.6} aria-hidden />
             </span>
-            <span className="flex-1 text-left text-[15.5px] font-medium tracking-[-0.01em] text-cream">
+            <span className="flex-1 text-left text-[16.5px] font-medium tracking-[-0.01em] text-cream">
               {WELCOME_COPY.ctaPrimary}
             </span>
           </Link>
-          <p className="mt-3 text-[11.5px] leading-relaxed text-cream/45">{WELCOME_COPY.ctaNote}</p>
+          <p className="mt-3 text-[12.5px] leading-relaxed text-cream/45">{WELCOME_COPY.ctaNote}</p>
 
           <ul className="mt-6 flex flex-wrap gap-2">
             {WELCOME_TRUST_CHIPS.map((chip) => {
@@ -172,7 +172,7 @@ export function WelcomeScreen() {
               return (
                 <li
                   key={chip.id}
-                  className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11.5px] font-medium text-cream/65 ring-1 ring-cream/12"
+                  className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12.5px] font-medium text-cream/65 ring-1 ring-cream/12"
                 >
                   <Icon className="size-3.5 text-mint" strokeWidth={2.4} aria-hidden />
                   {chip.label}
@@ -182,7 +182,7 @@ export function WelcomeScreen() {
           </ul>
 
           <div className="mt-10 flex flex-col gap-4 border-t border-cream/10 pt-6 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-[12.5px] text-cream/55">
+            <p className="text-[13.5px] text-cream/55">
               {WELCOME_COPY.loginLead}{' '}
               <Link
                 href={WELCOME_LINKS.login}
@@ -191,7 +191,7 @@ export function WelcomeScreen() {
                 {WELCOME_COPY.loginLink}
               </Link>
             </p>
-            <ul className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[11.5px] text-cream/40">
+            <ul className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[12.5px] text-cream/40">
               {WELCOME_LEGAL_LINKS.map((link) => (
                 <li key={link.href}>
                   <Link

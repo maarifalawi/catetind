@@ -98,17 +98,17 @@ export function MarkBillPaidSheet({
 
       {/* kalimat yang membuat klaimnya jujur: uangnya keluar dari dompet mana */}
       {selected && amount > 0 && (
-        <p className="mt-3 rounded-2xl bg-sage/60 px-4 py-3 text-[12px] font-medium leading-relaxed text-forest-muted">
+        <p className="mt-3 rounded-2xl bg-sage/60 px-4 py-3 text-[13px] font-medium leading-relaxed text-forest-muted">
           {MARK_PAID_SHEET_COPY.cashLine(maskMoney(amount, masked), selected.label)}
         </p>
       )}
 
       <div className="mt-4">
-        <span className="text-[13px] font-medium leading-snug text-forest">
+        <span className="text-[14px] font-medium leading-snug text-forest">
           {MARK_PAID_SHEET_COPY.walletLabel}
         </span>
         {walletOptions.length === 0 ? (
-          <p className="mt-2 rounded-2xl bg-hud-amber/15 px-4 py-3 text-[11.5px] leading-relaxed text-hud-terracotta">
+          <p className="mt-2 rounded-2xl bg-hud-amber/15 px-4 py-3 text-[12.5px] leading-relaxed text-hud-terracotta">
             {MARK_PAID_SHEET_COPY.noWallet}
           </p>
         ) : (
@@ -147,12 +147,12 @@ export function MarkBillPaidSheet({
                     <Wallet className="size-4" strokeWidth={2.2} />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block break-words text-[13px] font-semibold leading-tight text-forest">
+                    <span className="block break-words text-[14px] font-semibold leading-tight text-forest">
                       {option.label}
                     </span>
                     <span
                       className={cn(
-                        'mt-0.5 block text-[11.5px] font-medium leading-tight tabular-nums',
+                        'mt-0.5 block text-[12.5px] font-medium leading-tight tabular-nums',
                         insufficient ? 'text-hud-terracotta' : 'text-forest-muted',
                       )}
                     >
@@ -173,7 +173,7 @@ export function MarkBillPaidSheet({
             menebak. Dua sumbernya: pemeriksaan lokal atas saldo (`notEnough`)
             dan pesan dari percobaan simpan yang ditolak store (`error`). */}
         {walletOptions.length > 0 && (error || notEnough) && (
-          <p className="mt-2 rounded-2xl bg-hud-terracotta/12 px-4 py-3 text-[11.5px] leading-relaxed text-hud-terracotta ring-1 ring-inset ring-hud-terracotta/25">
+          <p className="mt-2 rounded-2xl bg-hud-terracotta/12 px-4 py-3 text-[12.5px] leading-relaxed text-hud-terracotta ring-1 ring-inset ring-hud-terracotta/25">
             {error || MARK_PAID_SHEET_COPY.insufficient(selected?.label ?? '')}
           </p>
         )}

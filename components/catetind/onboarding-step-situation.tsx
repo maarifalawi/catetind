@@ -76,15 +76,15 @@ export function OnboardingStepSituation({
               >
                 <span
                   aria-hidden
-                  className="flex size-10 shrink-0 items-center justify-center rounded-[0.9rem] bg-cream text-[17px]"
+                  className="flex size-10 shrink-0 items-center justify-center rounded-[0.9rem] bg-cream text-[18px]"
                 >
                   {item.emoji}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[15px] font-medium leading-snug tracking-[-0.01em] text-forest">
+                  <span className="block text-[16px] font-medium leading-snug tracking-[-0.01em] text-forest">
                     {item.label}
                   </span>
-                  <span className="mt-0.5 block text-[12.5px] leading-snug text-forest/45">
+                  <span className="mt-0.5 block text-[13.5px] leading-snug text-forest/45">
                     {item.subtitle}
                   </span>
                 </span>
@@ -109,7 +109,7 @@ export function OnboardingStepSituation({
               initial={{ opacity: 0, y: -4 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
-              className="mt-3 pl-1 text-[12px] font-medium text-forest/70"
+              className="mt-3 pl-1 text-[13px] font-medium text-forest/70"
             >
               Modul aktif: {activeModules.map((item) => item.moduleLabel).join(' · ')}
             </motion.p>
@@ -136,7 +136,7 @@ export function OnboardingStepSituation({
                 aria-checked={active}
                 onClick={() => onPeriodChange(option.id)}
                 className={cn(
-                  'flex-1 rounded-full py-2.5 text-[13px] font-medium tracking-[-0.01em] transition-all duration-200',
+                  'flex-1 rounded-full py-2.5 text-[14px] font-medium tracking-[-0.01em] transition-all duration-200',
                   active
                     ? 'bg-cream text-forest shadow-[0_1px_3px_rgba(0,0,0,0.12)]'
                     : 'text-forest/45 hover:text-forest/70',
@@ -147,7 +147,7 @@ export function OnboardingStepSituation({
             )
           })}
         </div>
-        <p className="mt-3 pl-1 text-[12.5px] leading-relaxed text-forest/45">
+        <p className="mt-3 pl-1 text-[13.5px] leading-relaxed text-forest/45">
           {activePeriod?.helper}
         </p>
 
@@ -168,7 +168,7 @@ export function OnboardingStepSituation({
                   ONBOARD_CARD,
                 )}
               >
-                <span className="text-[14px] font-medium tracking-[-0.01em] text-forest">
+                <span className="text-[15px] font-medium tracking-[-0.01em] text-forest">
                   Tanggal gajian
                 </span>
                 <input
@@ -179,7 +179,7 @@ export function OnboardingStepSituation({
                   value={paydayDate}
                   onChange={(event) => onPaydayChange(clampPayday(event.target.value))}
                   aria-label="Tanggal gajian (1 sampai 31)"
-                  className="w-16 rounded-xl bg-ink/[0.04] py-1.5 text-center text-[15px] font-medium tabular-nums text-forest outline-none ring-1 ring-transparent transition-all focus:bg-cream focus:ring-forest/25"
+                  className="w-16 rounded-xl bg-ink/[0.04] py-1.5 text-center text-[16px] font-medium tabular-nums text-forest outline-none ring-1 ring-transparent transition-all focus:bg-cream focus:ring-forest/25"
                 />
               </label>
             </motion.div>

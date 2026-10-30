@@ -146,6 +146,24 @@ export function weeklyRecapFrom(rows: HomeMoneyRow[], todayISO: string): WeeklyR
   }
 }
 
+/**
+ * Nominal NET pekan ini dengan tanda, siap tempel di baris kedua banner:
+ * `-Rp 75.000` / `+Rp 50.000`, dan nol tanpa tanda sama sekali.
+ *
+ * `formatAmount` sengaja disuntikkan pemanggil supaya format uang yang dipakai
+ * tetap SATU dengan seluruh app (banner memakai `money()` dari
+ * `PrivacyProvider`, jadi menyensor nominal pun tetap jalan). Tidak ada nominal
+ * cadangan di sini: angkanya selalu dari `WeeklyRecap.net`.
+ */
+export function recapNetLabel(
+  net: number,
+  formatAmount: (value: number) => string,
+): string {
+  const safe = Number.isFinite(net) ? Math.trunc(net) : 0
+  if (safe === 0) return formatAmount(0)
+  return `${safe < 0 ? '-' : '+'}${formatAmount(Math.abs(safe))}`
+}
+
 /* ── COPY (aturan §8: string user-facing tidak literal di JSX) ────────────────
    Kalimat EMPTY STATE & label baru yang lahir bersama data nyata. Saat pekan
    belum punya catatan, slide TIDAK menggambar Rp 0 / donut kosong — ia menyebut
@@ -153,9 +171,11 @@ export function weeklyRecapFrom(rows: HomeMoneyRow[], todayISO: string): WeeklyR
 export const WEEKLY_RECAP_COPY = {
   /** judul panel saat rekap AI belum terbuka di paket user (paket 84) */
   lockedTitle: 'Rekap mingguan AI',
-  /** banner Home saat pekan belum punya catatan */
-  bannerEmpty: 'Belum ada catatan minggu ini, catat yuk',
-  /** panel pengganti seluruh slide saat rekap kosong */
+  /** judul banner Home (angka dari rekap pekan NYATA, tanpa emoji/seruan) */
+  bannerTitle: 'Recap minggu ini siap',
+  /** baris kedua banner: `{jumlah} transaksi · {net}` — dua-duanya turunan */
+  bannerSummary: (count: number, net: string) => `${count} transaksi · ${net}`,
+  /** panel pengganti seluruh slide saat rekap kosong (sekalian judul banner) */
   emptyTitle: 'Belum ada catatan minggu ini',
   emptyBody:
     'Rekap ini menggambar dari catatanmu sendiri, catat transaksi pertama, dan angka serta grafiknya langsung hidup.',

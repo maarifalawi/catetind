@@ -1,5 +1,10 @@
-import { createHash } from 'node:crypto'
-import { midtransChargeExtras, type PaymentMethodDefinition, type PaymentMethodId } from './methods'
+import { createHash, timingSafeEqual } from 'node:crypto'
+import {
+  midtransChargeExtras,
+  snapEnabledPayments,
+  type PaymentMethodDefinition,
+  type PaymentMethodId,
+} from './methods'
 import type {
   ChargeDetails,
   PaymentInstructions,
@@ -39,12 +44,19 @@ export function midtransConfigured(): boolean {
   return midtransServerKey().length > 0
 }
 
+/* Nilai yang dianggap "produksi". Dulu hanya `'1'`, sehingga hosting yang
+   menulis `true` / `yes` / `on` diam-diam tetap memakai SANDBOX — dan tagihan
+   produksi yang dikirim ke sandbox selalu ditolak provider (401). Penerimaan
+   bentuk-bentuk itu menutup salah-set yang paling mudah terjadi. */
+const PRODUCTION_FLAGS = new Set(['1', 'true', 'yes', 'on'])
+
 /**
  * `true` = kredensial produksi (uang sungguhan). Default `false` (sandbox),
- * sama seperti `midtransCoreBase()`.
+ * sama seperti `midtransCoreBase()` — kosong/tak dikenal SELALU sandbox supaya
+ * salah konfigurasi tidak pernah menagih uang nyata tanpa sengaja.
  */
 export function midtransIsProduction(): boolean {
-  return (process.env.MIDTRANS_IS_PRODUCTION ?? '') === '1'
+  return PRODUCTION_FLAGS.has((process.env.MIDTRANS_IS_PRODUCTION ?? '').trim().toLowerCase())
 }
 
 /** basis API sesuai mode (sandbox default — aman untuk uji) */
@@ -75,6 +87,28 @@ export function midtransQrImageUrl(transactionId: string): string {
   return `${midtransCoreBase()}/v2/qris/${encodeURIComponent(transactionId)}/qr-code`
 }
 
+/* ── SNAP API — JALUR PRODUKSI SEJAK 30 OKTOBER 2026 ─────────────────────────
+   Merchant self-onboarded `M130180776` punya Snap aktif, tetapi Core API
+   `/v2/charge` membalas `402 Payment channel is not activated` untuk semua
+   kanal. Probe produksi membuktikan `POST /snap/v1/transactions` membalas
+   `201 { token, redirect_url }` — jadi tagihan dibuat lewat Snap, dan user
+   menyelesaikan pembayaran di halaman Midtrans (redirect_url) lalu kembali ke
+   `/checkout/selesai` lewat `callbacks.finish`.
+
+   Snap punya HOST SENDIRI (bukan `api.`): `app.midtrans.com` produksi,
+   `app.sandbox.midtrans.com` sandbox. Kunci & auth-nya sama persis dengan Core
+   API (Basic serverKey:). */
+
+/** host Snap sesuai mode (sandbox default — aman untuk uji) */
+export function midtransSnapBase(): string {
+  return midtransIsProduction() ? 'https://app.midtrans.com' : 'https://app.sandbox.midtrans.com'
+}
+
+/** endpoint pembuatan token Snap */
+export function midtransSnapEndpoint(): string {
+  return `${midtransSnapBase()}/snap/v1/transactions`
+}
+
 /** header Authorization Basic: key ditulis apa adanya, diikuti satu titik dua */
 export function midtransAuthHeader(serverKey = midtransServerKey()): string {
   return `Basic ${Buffer.from(`${serverKey}:`).toString('base64')}`
@@ -83,8 +117,17 @@ export function midtransAuthHeader(serverKey = midtransServerKey()): string {
 /**
  * Verifikasi tanda tangan notifikasi webhook Midtrans:
  *     sha512(order_id + status_code + gross_amount + serverKey)
+ *
+ * `serverKey` dibaca dari `MIDTRANS_SERVER_KEY` — jadi begitu env berisi kunci
+ * PRODUCTION (`Mid-server-…` dari dashboard produksi), rumus yang sama langsung
+ * memverifikasi notifikasi produksi. Tidak ada rumus khusus sandbox/produksi:
+ * Midtrans memakai formula yang identik di kedua mode.
+ *
  * `false` kalau kunci kosong — fail-closed: tanpa kunci, TIDAK ada notifikasi
- * yang dianggap sah. (Tidak diubah sejak paket 63; webhook bergantung padanya.)
+ * yang dianggap sah.
+ *
+ * Perbandingan memakai `timingSafeEqual` (bukan `===`) supaya waktu eksekusi
+ * tidak membocorkan berapa banyak karakter tanda tangan yang sudah cocok.
  */
 export function verifyMidtransSignature(input: {
   orderId: string
@@ -97,7 +140,9 @@ export function verifyMidtransSignature(input: {
   const expected = createHash('sha512')
     .update(`${input.orderId}${input.statusCode}${input.grossAmount}${key}`)
     .digest('hex')
-  return expected === input.signature
+  const received = input.signature.trim().toLowerCase()
+  if (received.length !== expected.length) return false
+  return timingSafeEqual(Buffer.from(expected, 'utf8'), Buffer.from(received, 'utf8'))
 }
 
 /**
@@ -261,8 +306,13 @@ async function callMidtrans(path: string, init: RequestInit): Promise<Response> 
 }
 
 /**
- * Bikin tagihan lewat `POST /v2/charge`. HANYA dipanggil saat
- * `midtransConfigured()` true; kalau tidak, hasilnya `not-configured` (route → 503).
+ * Bikin tagihan lewat `POST /v2/charge`.
+ *
+ * ⚠️ TIDAK DIPAKAI LAGI oleh `/api/payment/charge` sejak 30 Oktober 2026:
+ * merchant produksi membalas `402 Payment channel is not activated` untuk Core
+ * API, jadi produksi memakai Snap (`createSnapCharge` di bawah). Fungsi ini
+ * dipertahankan sebagai RUJUKAN bentuk body Core (dan tetap diuji) supaya kalau
+ * Midtrans mengaktifkan Core untuk akun ini, jalurnya tidak perlu ditulis ulang.
  *
  * Nominal, `order_id`, dan rincian item datang dari route (hasil keputusan
  * server), sedangkan bagian khas metode disusun `lib/payments/methods.ts`.
@@ -387,6 +437,10 @@ export async function fetchTransactionStatus(
  * kedaluwarsa). Kegagalan di sini TIDAK fatal: tagihan yang tidak bisa dibatalkan
  * akan kedaluwarsa sendiri, dan notifikasinya tetap masuk ke webhook yang sama
  * (baris `purchases`-nya lalu ditandai `cancel` oleh RPC pemenuhan).
+ *
+ * Pada Snap, transaksi baru lahir saat user membuka halaman pembayaran. Untuk
+ * order yang tokennya belum pernah dibuka, endpoint ini membalas 404 — itu
+ * BUKAN kegagalan yang perlu dilaporkan: tidak ada tagihan hidup yang tersisa.
  */
 export async function cancelTransaction(orderId: string): Promise<boolean> {
   if (!midtransConfigured()) return false
@@ -400,3 +454,105 @@ export async function cancelTransaction(orderId: string): Promise<boolean> {
     return false
   }
 }
+
+/* ── SNAP: BUAT TOKEN TAGIHAN (satu-satunya jalur produksi) ───────────────── */
+
+/** balasan `POST /snap/v1/transactions` — hanya field yang benar-benar dipakai */
+interface RawSnapToken {
+  token?: string
+  redirect_url?: string
+  status_code?: string
+  status_message?: string
+  error_messages?: string[]
+}
+
+/** hasil pembuatan tagihan Snap yang dipakai route & UI */
+export interface SnapCharge {
+  state: PaymentState
+  method: PaymentMethodId
+  /** token Snap (dicadangkan untuk `snap.js` kalau popup dipakai nanti) */
+  token: string
+  /** halaman pembayaran Midtrans — tujuan tombol utama di `/checkout/bayar` */
+  redirectUrl: string
+  /**
+   * Batas waktu tagihan. Snap TIDAK mengembalikan `expiry_time` saat token
+   * dibuat, jadi ini waktu yang kita MINTA (`expiry.duration`), bukan tebakan
+   * dari provider — UI memakainya sebagai pengingat, bukan sebagai bukti.
+   */
+  expiresAt: string
+}
+
+/**
+ * Bikin token pembayaran Snap. Hanya dipanggil saat `midtransConfigured()`
+ * true; kalau tidak, hasilnya `not-configured` (route → 503).
+ *
+ * `enabled_payments` dipetakan dari metode pilihan user
+ * (`snapEnabledPayments()`), jadi halaman Snap langsung terbuka pada metode itu.
+ * `callbacks.finish` membawa user kembali ke `/checkout/selesai?order_id=…`
+ * setelah membayar — halaman itu MEMBACA DATABASE, tidak mempercayai query.
+ */
+export async function createSnapCharge(
+  intent: PaymentIntent,
+  method: PaymentMethodDefinition,
+): Promise<PaymentOutcome<SnapCharge>> {
+  if (!midtransConfigured()) {
+    return failure('not-configured', 503, 'Pembayaran belum aktif.')
+  }
+
+  try {
+    const res = await callMidtrans(midtransSnapEndpoint(), {
+      method: 'POST',
+      /* Webhook MILIK KITA dititipkan per transaksi, sama seperti jalur Core:
+         app tidak bergantung pada setelan dashboard dan otomatis benar di
+         localhost maupun produksi. */
+      headers: intent.notificationUrl ? { 'X-Override-Notification': intent.notificationUrl } : {},
+      body: JSON.stringify({
+        transaction_details: { order_id: intent.orderId, gross_amount: intent.amount },
+        item_details: [
+          { id: intent.planId ?? intent.purpose, price: intent.amount, quantity: 1, name: intent.itemName },
+        ],
+        customer_details: intent.customerEmail
+          ? { first_name: intent.customerName ?? '', email: intent.customerEmail }
+          : undefined,
+        enabled_payments: snapEnabledPayments(method),
+        ...(intent.finishUrl ? { callbacks: { finish: intent.finishUrl } } : {}),
+        expiry: { unit: 'minutes', duration: CHARGE_EXPIRY_MINUTES },
+      }),
+    })
+
+    const raw = (await res.json().catch(() => null)) as RawSnapToken | null
+    const providerStatus = Number(raw?.status_code ?? res.status)
+    const token = typeof raw?.token === 'string' ? raw.token : ''
+    const redirectUrl = typeof raw?.redirect_url === 'string' ? raw.redirect_url : ''
+
+    /* Token kosong = tidak ada halaman yang bisa dibuka user; perlakukan sama
+       seperti penolakan provider, jangan mengembalikan `ok` tanpa tujuan. */
+    if (!res.ok || providerStatus >= 400 || !token || !redirectUrl) {
+      const providerMessage =
+        (raw?.error_messages ?? []).filter(Boolean).join(', ') ||
+        raw?.status_message ||
+        `Provider pembayaran menolak (${res.status}).`
+      return failure('provider', res.ok ? 502 : res.status, providerMessage)
+    }
+
+    return {
+      ok: true,
+      value: {
+        /* token dibuat = belum dibayar; state sebenarnya datang dari webhook /
+           `GET /v2/{order_id}/status` yang di-poll UI. */
+        state: 'pending',
+        method: method.id,
+        token,
+        redirectUrl,
+        expiresAt: new Date(Date.now() + CHARGE_EXPIRY_MINUTES * 60_000).toISOString(),
+      },
+    }
+  } catch (error) {
+    return failure(
+      'provider',
+      502,
+      error instanceof Error ? error.message : 'Gagal menghubungi provider pembayaran.',
+    )
+  }
+}
+

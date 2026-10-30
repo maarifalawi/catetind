@@ -101,21 +101,21 @@ export function BudgetZoneA({
           className="group w-full rounded-[1.5rem] bg-sage/45 p-4 text-left ring-1 ring-soil/8 transition-colors duration-300 hover:bg-sage/60 active:scale-[0.99]"
         >
           <div className="flex items-start gap-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-cream text-[18px] ring-1 ring-soil/8">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-cream text-[19px] ring-1 ring-soil/8">
               🧹
             </span>
             <div className="min-w-0">
-              <p className="text-[13.5px] font-medium tracking-tight text-forest">
+              <p className="text-[14.5px] font-medium tracking-tight text-forest">
                 {BUDGET_ZONE_A_COPY.sweepTitle}
               </p>
-              <p className="mt-1 text-[12px] leading-relaxed text-forest/55">
+              <p className="mt-1 text-[13px] leading-relaxed text-forest/55">
                 {BUDGET_ZONE_A_COPY.sweepLead}{' '}
                 <b className="font-semibold text-forest tabular-nums">
                   {maskNominal(sweepTotal, masked)}
                 </b>{' '}
                 {BUDGET_ZONE_A_COPY.sweepTail}
               </p>
-              <span className="mt-1.5 inline-flex items-center gap-1 text-[12px] font-medium text-forest">
+              <span className="mt-1.5 inline-flex items-center gap-1 text-[13px] font-medium text-forest">
                 {BUDGET_ZONE_A_COPY.sweepCta}
                 <span aria-hidden className="transition-transform group-hover:translate-x-0.5">
                   →
@@ -143,7 +143,7 @@ export function BudgetZoneA({
                   role="tab"
                   aria-selected={active}
                   onClick={() => onPeriodChange(tab.id)}
-                  className="relative flex-1 rounded-full px-2.5 py-1.5 text-[11.5px] font-medium transition-colors duration-200 active:scale-95"
+                  className="relative flex-1 rounded-full px-2.5 py-1.5 text-[12.5px] font-medium transition-colors duration-200 active:scale-95"
                 >
                   {active && (
                     <motion.span
@@ -170,18 +170,18 @@ export function BudgetZoneA({
             <div className="mt-4 rounded-2xl bg-sage/25 p-3.5 ring-1 ring-soil/[0.04]">
               <div className="flex items-center gap-4">
                 <div className="min-w-0 flex-1">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-forest/40">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-forest/40">
                     {BUDGET_ZONE_A_COPY.summaryLead}
                   </p>
                   <p className="mt-1.5 flex items-baseline gap-1.5 tabular-nums">
                     <span className="text-[24px] font-semibold leading-none tracking-tight text-forest">
                       {maskNominal(totals.spent, masked)}
                     </span>
-                    <span className="text-[11px] font-medium text-forest/35">
+                    <span className="text-[12px] font-medium text-forest/35">
                       / {maskNominal(totals.limit, masked)}
                     </span>
                   </p>
-                  <p className="mt-1.5 text-[10.5px] font-medium text-forest/40">
+                  <p className="mt-1.5 text-[11.5px] font-medium text-forest/40">
                     {window.rangeLabel}
                   </p>
                 </div>
@@ -196,7 +196,7 @@ export function BudgetZoneA({
                     Math.round(totals.percent),
                   )}
                 >
-                  <span className="text-[13px] font-semibold tabular-nums text-forest">
+                  <span className="text-[14px] font-semibold tabular-nums text-forest">
                     {Math.round(totals.percent)}%
                   </span>
                 </ProgressRing>
@@ -210,7 +210,7 @@ export function BudgetZoneA({
             <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-sage/50 text-[22px]">
               ☕
             </span>
-            <p className="mx-auto mt-3 max-w-[19rem] text-[12.5px] leading-relaxed text-forest/55">
+            <p className="mx-auto mt-3 max-w-[19rem] text-[13.5px] leading-relaxed text-forest/55">
               {BUDGET_ZONE_A_COPY.emptyBody}
             </p>
           </div>
@@ -247,7 +247,7 @@ export function BudgetZoneA({
               <Plus className="size-4" strokeWidth={2.6} aria-hidden />
             </span>
             <span className="min-w-0">
-              <span className="block text-[12.5px] font-medium text-forest">
+              <span className="block text-[13.5px] font-medium text-forest">
                 {BUDGET_ADD_PLACEHOLDER.budgetTitle}
               </span>
             </span>
@@ -261,13 +261,13 @@ export function BudgetZoneA({
           satu-satunya sinyal "perlu perhatian" di Zona A. */}
       {overBudget.length > 0 && (
         <div className="flex flex-col gap-3 rounded-[1.5rem] bg-plum/[0.06] p-4 ring-1 ring-plum/15 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-[12.5px] leading-relaxed text-forest/65">
+          <p className="text-[13.5px] leading-relaxed text-forest/65">
             {BUDGET_ZONE_A_COPY.overLead(overBudget.length, overBudget[0].category)}
           </p>
           <button
             type="button"
             onClick={onReviewCoach}
-            className="shrink-0 self-start rounded-full bg-forest px-4 py-2 text-[12px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-95 sm:self-auto"
+            className="shrink-0 self-start rounded-full bg-forest px-4 py-2 text-[13px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-95 sm:self-auto"
           >
             {BUDGET_ZONE_A_COPY.overCta}
           </button>
@@ -284,16 +284,16 @@ export function BudgetZoneA({
             <Lightbulb className="size-4" strokeWidth={2.2} aria-hidden />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-forest/40">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-forest/40">
               {BUDGET_SUGGEST_COPY.title}
             </p>
-            <p className="mt-1 text-[12.5px] leading-relaxed text-forest/65">
+            <p className="mt-1 text-[13.5px] leading-relaxed text-forest/65">
               {BUDGET_SUGGEST_COPY.body(suggestion.category)}
             </p>
             <button
               type="button"
               onClick={() => onAddSuggested(suggestion.category)}
-              className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-forest px-3.5 py-2 text-[12px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-95"
+              className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-forest px-3.5 py-2 text-[13px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-95"
             >
               <Plus className="size-3.5" strokeWidth={2.8} aria-hidden />
               {BUDGET_SUGGEST_COPY.cta}

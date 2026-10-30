@@ -34,10 +34,10 @@ export function SearchResults({
         <span className="flex size-12 items-center justify-center rounded-full bg-sage text-forest">
           <Search className="size-5" strokeWidth={1.8} aria-hidden />
         </span>
-        <p className="mt-3 text-[13px] font-medium text-forest">
+        <p className="mt-3 text-[14px] font-medium text-forest">
           {CATEGORY_PICKER_COPY.resultEmpty(query.trim())}
         </p>
-        <p className="mt-1 text-[11.5px] leading-relaxed text-forest/50">
+        <p className="mt-1 text-[12.5px] leading-relaxed text-forest/50">
           {CATEGORY_PICKER_COPY.resultEmptyHint}
         </p>
       </div>
@@ -64,10 +64,10 @@ export function SearchResults({
               {category.emoji}
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-[13px] font-medium text-forest">
+              <span className="block truncate text-[14px] font-medium text-forest">
                 {category.name}
               </span>
-              <span className="mt-0.5 block truncate text-[11px] text-forest/45">
+              <span className="mt-0.5 block truncate text-[12px] text-forest/45">
                 {CATEGORY_PICKER_COPY.resultMeta(category.groupName, category.examples)}
               </span>
             </span>
@@ -87,7 +87,7 @@ export function IncomeGrid({
 }) {
   return (
     <>
-      <p className="mb-3 flex items-start gap-1.5 rounded-2xl bg-mint-soft/50 px-3.5 py-2.5 text-[11.5px] leading-relaxed text-forest/70 ring-1 ring-leaf/25">
+      <p className="mb-3 flex items-start gap-1.5 rounded-2xl bg-mint-soft/50 px-3.5 py-2.5 text-[12.5px] leading-relaxed text-forest/70 ring-1 ring-leaf/25">
         <Sparkles className="mt-px size-3.5 shrink-0 text-forest" strokeWidth={2.4} aria-hidden />
         {CATEGORY_PICKER_COPY.incomeHint}
       </p>
@@ -109,7 +109,7 @@ export function IncomeGrid({
               <span aria-hidden className="text-lg leading-none">
                 {item.emoji}
               </span>
-              <span className="min-w-0 flex-1 truncate text-[12.5px] font-medium text-forest">
+              <span className="min-w-0 flex-1 truncate text-[13.5px] font-medium text-forest">
                 {item.name}
               </span>
               {item.name === value && (

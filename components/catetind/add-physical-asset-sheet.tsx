@@ -101,7 +101,7 @@ export function AddPhysicalAssetSheet({
     >
       <div className="space-y-4">
         <label className="block">
-          <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-forest/45">
+          <span className="mb-1 block text-[12px] font-medium uppercase tracking-wide text-forest/45">
             {PHYSICAL_TAB_COPY.form.name}
           </span>
           <input
@@ -112,12 +112,12 @@ export function AddPhysicalAssetSheet({
               setError(null)
             }}
             placeholder={PHYSICAL_TAB_COPY.form.namePlaceholder}
-            className="w-full rounded-xl bg-soil/[0.09] px-3.5 py-2.5 text-[14px] font-medium text-forest outline-none ring-1 ring-transparent transition-all focus:bg-cream focus:ring-forest/15"
+            className="w-full rounded-xl bg-soil/[0.09] px-3.5 py-2.5 text-[15px] font-medium text-forest outline-none ring-1 ring-transparent transition-all focus:bg-cream focus:ring-forest/15"
           />
         </label>
 
         <div>
-          <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-forest/45">
+          <span className="mb-1 block text-[12px] font-medium uppercase tracking-wide text-forest/45">
             {PHYSICAL_TAB_COPY.form.category}
           </span>
           <ChoicePills
@@ -151,19 +151,19 @@ export function AddPhysicalAssetSheet({
         />
 
         <label className="block">
-          <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-forest/45">
+          <span className="mb-1 block text-[12px] font-medium uppercase tracking-wide text-forest/45">
             {PHYSICAL_TAB_COPY.form.note}
           </span>
           <textarea
             value={note}
             onChange={(event) => setNote(event.target.value)}
             rows={2}
-            className="w-full resize-none rounded-xl bg-soil/[0.09] px-3.5 py-2.5 text-[13px] text-forest outline-none ring-1 ring-transparent focus:bg-cream focus:ring-forest/15"
+            className="w-full resize-none rounded-xl bg-soil/[0.09] px-3.5 py-2.5 text-[14px] text-forest outline-none ring-1 ring-transparent focus:bg-cream focus:ring-forest/15"
           />
         </label>
 
         {error && (
-          <p role="alert" className="text-[12px] font-medium text-hud-terracotta">
+          <p role="alert" className="text-[13px] font-medium text-hud-terracotta">
             {error}
           </p>
         )}

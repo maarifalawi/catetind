@@ -118,13 +118,13 @@ export function AppLockScreen() {
           <span className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-forest text-mint">
             <Lock className="size-5" strokeWidth={2.2} aria-hidden />
           </span>
-          <p className="mt-4 text-[11px] font-medium tracking-[0.16em] text-forest/40 uppercase">
+          <p className="mt-4 text-[12px] font-medium tracking-[0.16em] text-forest/40 uppercase">
             {LOCK_SCREEN_COPY.eyebrow}
           </p>
           <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight text-forest">
             {LOCK_SCREEN_COPY.title}
           </h1>
-          <p className="mt-1.5 text-[12.5px] leading-relaxed text-forest/55">
+          <p className="mt-1.5 text-[13.5px] leading-relaxed text-forest/55">
             {LOCK_SCREEN_COPY.subtitle(PIN_LENGTH)}
           </p>
         </header>
@@ -149,7 +149,7 @@ export function AppLockScreen() {
 
           <p
             aria-live="polite"
-            className="mt-4 min-h-[3rem] text-center text-[12px] leading-relaxed"
+            className="mt-4 min-h-[3rem] text-center text-[13px] leading-relaxed"
           >
             {locked ? (
               <span className="font-medium text-forest/70">
@@ -179,7 +179,7 @@ export function AppLockScreen() {
                 onClick={handleBiometric}
                 disabled={locked || biometricBusy}
                 className={cn(
-                  'flex h-12 w-full items-center justify-center gap-2 rounded-2xl text-[13.5px] font-medium transition-colors duration-200 motion-reduce:transition-none',
+                  'flex h-12 w-full items-center justify-center gap-2 rounded-2xl text-[14.5px] font-medium transition-colors duration-200 motion-reduce:transition-none',
                   locked || biometricBusy
                     ? 'cursor-not-allowed bg-cream text-forest/35 ring-1 ring-soil/12'
                     : 'bg-sage text-forest hover:bg-mint/40',
@@ -192,7 +192,7 @@ export function AppLockScreen() {
                 )}
                 {biometricBusy ? LOCK_SCREEN_COPY.biometricPending : LOCK_SCREEN_COPY.biometricCta}
               </button>
-              <p className="mt-1.5 text-center text-[10.5px] leading-relaxed text-forest/40">
+              <p className="mt-1.5 text-center text-[11.5px] leading-relaxed text-forest/40">
                 {LOCK_SCREEN_COPY.biometricNote}
               </p>
             </div>
@@ -238,7 +238,7 @@ export function AppLockScreen() {
           <button
             type="button"
             onClick={() => setForgotOpen(true)}
-            className="mx-auto mt-1 inline-flex items-center gap-1.5 text-[12px] font-medium text-forest/55 underline underline-offset-4 transition-colors hover:text-forest"
+            className="mx-auto mt-1 inline-flex items-center gap-1.5 text-[13px] font-medium text-forest/55 underline underline-offset-4 transition-colors hover:text-forest"
           >
             <KeyRound className="size-3.5" strokeWidth={2.4} aria-hidden />
             {LOCK_SCREEN_COPY.forgotLink}

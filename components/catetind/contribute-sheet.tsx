@@ -22,6 +22,7 @@ export function ContributeSheet({
   onClose,
   onContribute,
   masked,
+  mode = 'in',
 }: {
   /** celengan yang sedang disetor — null sebelum pernah dibuka */
   fund: SinkingFundItem | null
@@ -29,7 +30,14 @@ export function ContributeSheet({
   onClose: () => void
   onContribute: (fundId: number, amount: number, walletId: string) => void
   masked: boolean
+  /**
+   * `in` = setor (uang keluar dari dompet), `out` = tarik (uang kembali ke
+   * dompet). Copy dan proyeksi progres mengikuti arahnya, tapi bidang yang
+   * diisi tetap sama: nominal + dompet.
+   */
+  mode?: 'in' | 'out'
 }) {
+  const withdrawing = mode === 'out'
   const [digits, setDigits] = useState('')
   const [walletId, setWalletId] = useState(WALLET_SOURCES[0].id)
   const amountRef = useRef<HTMLInputElement>(null)
@@ -51,15 +59,22 @@ export function ContributeSheet({
 
   const amount = Number(digits || '0')
   const percent = shown ? fundPercent(shown) : 0
-  /** proyeksi progres setelah setoran — bikin setoran terasa berdampak */
+  /** proyeksi progres setelah setoran/penarikan — bikin aksinya terasa berdampak */
   const afterPercent =
     shown && shown.target > 0
-      ? Math.min(100, Math.round(((shown.current + amount) / shown.target) * 100))
+      ? Math.max(
+          0,
+          Math.min(
+            100,
+            Math.round(((shown.current + (withdrawing ? -amount : amount)) / shown.target) * 100),
+          ),
+        )
       : 0
-  const ready = shown !== null && amount > 0
+  const ready = shown !== null && amount > 0 && (!withdrawing || amount <= shown.current)
 
   function submit() {
     if (!shown || amount <= 0) return
+    if (withdrawing && amount > shown.current) return
     onContribute(shown.id, amount, walletId)
   }
 
@@ -67,13 +82,23 @@ export function ContributeSheet({
     <BudgetSheet
       open={open}
       onClose={onClose}
-      title={`Setor ke ${shown?.name ?? 'Celengan'}`}
-      description="Nabung kecil-kecilan hari ini, tetap dihitung 🌱"
-      footer={<SheetSubmit onClick={submit} disabled={!ready} gate>Setor 💰</SheetSubmit>}
+      title={
+        withdrawing ? `Tarik dari ${shown?.name ?? 'Celengan'}` : `Setor ke ${shown?.name ?? 'Celengan'}`
+      }
+      description={
+        withdrawing
+          ? 'Uangnya kembali ke dompet yang kamu pilih.'
+          : 'Nabung kecil-kecilan hari ini, tetap dihitung 🌱'
+      }
+      footer={
+        <SheetSubmit onClick={submit} disabled={!ready} gate>
+          {withdrawing ? 'Tarik Dana' : 'Setor 💰'}
+        </SheetSubmit>
+      }
     >
       {/* progres sekarang → proyeksi setelah setor */}
       <div className="rounded-2xl bg-cream p-3 ring-1 ring-soil/12">
-        <div className="flex items-center justify-between gap-3 text-[11.5px] font-medium text-forest/50">
+        <div className="flex items-center justify-between gap-3 text-[12.5px] font-medium text-forest/50">
           <span className="tabular-nums">
             {maskNominal(shown?.current ?? 0, masked)} dari{' '}
             {maskNominal(shown?.target ?? 0, masked)}
@@ -89,15 +114,15 @@ export function ContributeSheet({
           />
         </div>
         {amount > 0 && (
-          <p className="mt-2 text-[11.5px] font-medium text-forest">
-            Setelah setor ini: {afterPercent}% tercapai 🌿
+          <p className="mt-2 text-[12.5px] font-medium text-forest">
+            Setelah {withdrawing ? 'tarik' : 'setor'} ini: {afterPercent}% tercapai 🌿
           </p>
         )}
       </div>
 
       <RupiahField
         className="mt-4"
-        label="Mau setor berapa?"
+        label={withdrawing ? 'Mau tarik berapa?' : 'Mau setor berapa?'}
         digits={digits}
         onDigitsChange={setDigits}
         placeholder="Rp 100.000"
@@ -112,7 +137,7 @@ export function ContributeSheet({
             type="button"
             onClick={() => setDigits(String(value))}
             className={cn(
-              'rounded-full px-3 py-1.5 text-[11.5px] font-medium tabular-nums transition-all active:scale-95',
+              'rounded-full px-3 py-1.5 text-[12.5px] font-medium tabular-nums transition-all active:scale-95',
               Number(digits) === value
                 ? 'bg-forest text-mint'
                 : 'bg-cream text-forest/55 ring-1 ring-soil/14 hover:bg-cream hover:text-forest',
@@ -125,10 +150,12 @@ export function ContributeSheet({
 
       {/* ── dari dompet mana — tile berwarna brand, bukan dropdown abu-abu ── */}
       <div className="mt-4 pb-1">
-        <p className="text-[13px] font-medium text-forest">Setor dari dompet</p>
+        <p className="text-[14px] font-medium text-forest">
+          {withdrawing ? 'Kembalikan ke dompet' : 'Setor dari dompet'}
+        </p>
         <div
           role="radiogroup"
-          aria-label="Pilih dompet sumber"
+          aria-label={withdrawing ? 'Pilih dompet tujuan' : 'Pilih dompet sumber'}
           className="mt-2.5 grid grid-cols-3 gap-2"
         >
           {WALLET_SOURCES.map((source) => {
@@ -149,16 +176,16 @@ export function ContributeSheet({
               >
                 <span
                   className={cn(
-                    'flex size-8 items-center justify-center rounded-xl text-[12px] font-medium ring-1 ring-inset',
+                    'flex size-8 items-center justify-center rounded-xl text-[13px] font-medium ring-1 ring-inset',
                     source.tile,
                   )}
                 >
                   {source.name.charAt(0)}
                 </span>
-                <span className="text-[11.5px] font-medium leading-tight text-forest">
+                <span className="text-[12.5px] font-medium leading-tight text-forest">
                   {source.name}
                 </span>
-                <span className="flex items-center gap-1 text-[9.5px] font-medium text-forest/40">
+                <span className="flex items-center gap-1 text-[10.5px] font-medium text-forest/40">
                   <span aria-hidden className={cn('size-1.5 rounded-full', source.dot)} />
                   {source.kind}
                 </span>

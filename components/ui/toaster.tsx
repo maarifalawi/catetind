@@ -36,7 +36,7 @@ export function Toaster() {
             '[&_[data-icon]]:rounded-full [&_[data-icon]]:bg-mint/25 [&_[data-icon]]:text-forest',
             '[&_[data-icon]_svg]:size-[18px]',
           ].join(' '),
-          title: 'text-[13.5px] font-medium leading-snug text-forest',
+          title: 'text-[14.5px] font-medium leading-snug text-forest',
           description: 'mt-0.5 text-xs leading-relaxed text-forest/55',
           content: 'flex min-w-0 flex-1 flex-col',
           loading: 'text-forest',
@@ -46,12 +46,12 @@ export function Toaster() {
              Hijau brand = ajakan memulihkan, bukan aksi merusak. */
           actionButton: [
             'ml-auto shrink-0 rounded-xl bg-forest px-3 py-2',
-            'text-[12px] font-medium text-cream transition-colors hover:bg-forest-soft',
+            'text-[13px] font-medium text-cream transition-colors hover:bg-forest-soft',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25',
           ].join(' '),
           cancelButton: [
             'ml-auto shrink-0 rounded-xl bg-cream px-3 py-2',
-            'text-[12px] font-medium text-forest/70 ring-1 ring-soil/12 transition-colors hover:bg-sage/60',
+            'text-[13px] font-medium text-forest/70 ring-1 ring-soil/12 transition-colors hover:bg-sage/60',
           ].join(' '),
         },
       }}

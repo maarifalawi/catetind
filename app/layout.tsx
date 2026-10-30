@@ -4,6 +4,7 @@ import localFont from 'next/font/local'
 import { AIChatWidget } from '@/components/catetind/ai-chat-widget'
 import { AppLockProvider } from '@/components/catetind/app-lock-provider'
 import { DemoSeedGate } from '@/components/catetind/demo-seed-gate'
+import { SettingsSync } from '@/components/catetind/settings-sync'
 import { OnboardingGate } from '@/components/catetind/onboarding-gate'
 import { OnboardingWelcomeToast } from '@/components/catetind/onboarding-welcome-toast'
 import { MobileBottomNav } from '@/components/MobileBottomNav'
@@ -110,20 +111,24 @@ export const metadata: Metadata = {
     images: [LANDING_META.ogImage],
   },
   generator: 'v0.app',
-  /* Favicon = aset brand kotak penuh (public/icons/icon-512.png) yang juga
-     digenerate ke `app/icon.png` dan `app/favicon.ico` oleh
-     `scripts/generate-favicon.mjs`. Google butuh favicon persegi minimal 48px
-     di root (`/favicon.ico`) supaya logo tampil di hasil pencarian, dulu yang
+  /* Favicon = artwork `public/faviconn.png` (wordmark "catet" hijau tua di
+     kanvas putih 1080×1080) yang digenerate ke `app/favicon.ico`, `app/icon.png`,
+     dan `public/favicon-192.png` oleh `scripts/generate-favicon.mjs`
+     (`pnpm favicon`). Google butuh favicon persegi minimal 48px di root
+     (`/favicon.ico`) supaya logo tampil di hasil pencarian, dulu yang
      dideklarasikan hanya `/LOGO.png` (wordmark 1080px dengan latar putih),
      sehingga Google menampilkan ikon globe tanpa logo.
-     Ikon Home Screen / PWA tetap public/icons/*.png (digenerate
-     scripts/generate-icons.mjs) supaya saat di-Add to Home Screen logonya
-     kotak penuh, bukan ikon polos. */
+     Entri 192px sengaja memakai `/favicon-192.png`, BUKAN
+     `/icons/icon-192.png`: yang di `public/icons/` adalah ikon Home Screen /
+     notifikasi PWA (kotak penuh berlatar gelap, digenerate
+     `scripts/generate-icons.mjs`) dan tidak boleh berubah jadi artwork terang
+     hanya karena favicon berganti. Ikon Home Screen tetap public/icons/*.png
+     supaya saat di-Add to Home Screen logonya kotak penuh, bukan ikon polos. */
   icons: {
     icon: [
       { url: '/favicon.ico', sizes: 'any' },
       { url: '/icon.png', type: 'image/png', sizes: '512x512' },
-      { url: '/icons/icon-192.png', type: 'image/png', sizes: '192x192' },
+      { url: '/favicon-192.png', type: 'image/png', sizes: '192x192' },
     ],
     shortcut: '/favicon.ico',
     apple: [{ url: '/icons/apple-icon.png', sizes: '180x180', type: 'image/png' }],
@@ -224,6 +229,10 @@ export default function RootLayout({
                       {/* Gerbang seed demo (paket 65): menulis data contoh lewat store
                           HANYA saat NEXT_PUBLIC_DEMO=1 — di produksi ia no-op. */}
                       <DemoSeedGate />
+                      {/* Sinkron pengaturan uang & limit budget dari akun
+                          (paket 13): tanpa ini, pindah perangkat = Jatah Hari
+                          Ini kembali "belum diatur" & limit kategori hilang. */}
+                      <SettingsSync />
                       <SubscriptionBanner />
                       {/* Banner Offline & Antrean Lokal (paket 42) — di bawah banner
                           langganan supaya saat keduanya tampil user melihat dua-duanya.

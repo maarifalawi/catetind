@@ -1,28 +1,28 @@
-/**
+﻿/**
  * scripts/landing/make-og-image.mjs
- * ─────────────────────────────────────────────────────────────────────────────
- * Menghasilkan `public/og-image.png` — gambar pratinjau tautan 1200×630 yang
+ * â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+ * Menghasilkan `public/og-image.png` â€” gambar pratinjau tautan 1200Ã—630 yang
  * dipakai `og:image` & `twitter:image` (lihat `LANDING_META` di
  * `lib/data/landing.ts`).
  *
  * KENAPA DIGENERATE, BUKAN GAMBAR TANGAN:
- *   · ukurannya HARUS tepat 1200×630 — itu rasio kartu besar WhatsApp/X/Facebook.
+ *   Â· ukurannya HARUS tepat 1200Ã—630 â€” itu rasio kartu besar WhatsApp/X/Facebook.
  *     Gambar "kira-kira" bikin pratinjau terpotong atau berbingkai putih;
- *   · teksnya memakai Inter (font yang SAMA dengan app, `next/font/local`), jadi
+ *   Â· teksnya memakai Inter (font yang SAMA dengan app, `next/font/local`), jadi
  *     kartu pratinjau tidak terlihat seperti produk lain;
- *   · kalau judul landing berubah, cukup jalankan ulang skrip ini.
+ *   Â· kalau judul landing berubah, cukup jalankan ulang skrip ini.
  *
  * CARA KERJA: `sharp` tidak dipakai (di mesin ini ia tidak bisa merender teks
  * tanpa fontconfig), jadi HTML-nya digambar oleh Chromium yang SUDAH terpasang
- * (Edge/Chrome) lewat `playwright-core` — pola yang sama dengan
+ * (Edge/Chrome) lewat `playwright-core` â€” pola yang sama dengan
  * `make-hero-webp.mjs` dan `shoot.mjs`. Berkas font dibaca dari repo lalu
  * ditanam sebagai data URI, sehingga tidak ada request jaringan sama sekali
  * (skrip tetap jalan tanpa dev server).
  *
  * Pakai:
- *   node scripts/landing/make-og-image.mjs     → public/og-image.png
+ *   node scripts/landing/make-og-image.mjs     â†’ public/og-image.png
  *   npm run og-image
- * ─────────────────────────────────────────────────────────────────────────────
+ * â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
  */
 import fs from 'node:fs'
 import path from 'node:path'
@@ -33,7 +33,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '.
 const OUT = path.join(root, 'public', 'og-image.png')
 const FONT = path.join(root, 'app', 'fonts', 'inter-latin-variable.woff2')
 
-/** ukuran kanon kartu pratinjau — jangan diubah tanpa mengubah LANDING_META */
+/** ukuran kanon kartu pratinjau â€” jangan diubah tanpa mengubah LANDING_META */
 const SIZE = { width: 1200, height: 630 }
 
 const fontBase64 = fs.readFileSync(FONT).toString('base64')
@@ -79,7 +79,7 @@ const html = `<!doctype html>
   .pill {
     font-size: 17px;
     font-weight: 500;
-    color: #f3f1e2;
+    color: #fbf6d9;
     padding: 9px 18px;
     border-radius: 999px;
     background: rgba(0, 0, 0, 0.20);
@@ -92,7 +92,7 @@ const html = `<!doctype html>
     letter-spacing: -0.035em;
     max-width: 900px;
   }
-  .headline em { font-style: italic; color: #d8ecd9; }
+  .headline em { font-style: italic; color: #dbe4c7; }
   .sub {
     margin-top: 22px;
     font-size: 25px;
@@ -105,7 +105,7 @@ const html = `<!doctype html>
   .chip {
     font-size: 18px;
     font-weight: 500;
-    color: #e4efe4;
+    color: #dbe4c7;
     padding: 10px 18px;
     border-radius: 999px;
     background: rgba(251, 246, 217, 0.10);
@@ -144,13 +144,13 @@ const browser = await chromium.launch({ channel, headless: true })
 try {
   const page = await browser.newPage({ viewport: SIZE, deviceScaleFactor: 1 })
   await page.setContent(html, { waitUntil: 'load' })
-  /* tunggu font benar-benar siap — tanpa ini Chromium bisa memotret teks dengan
+  /* tunggu font benar-benar siap â€” tanpa ini Chromium bisa memotret teks dengan
      font fallback walau `font-display: block` sudah dipasang */
   await page.evaluate(() => document.fonts.ready)
   await page.screenshot({ path: OUT, type: 'png' })
 
   const kb = Math.round(fs.statSync(OUT).size / 1024)
-  console.log(`✓ public/og-image.png (${SIZE.width}×${SIZE.height}, ${kb} KB)`)
+  console.log(`âœ“ public/og-image.png (${SIZE.width}Ã—${SIZE.height}, ${kb} KB)`)
 } finally {
   await browser.close()
 }

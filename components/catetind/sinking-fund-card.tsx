@@ -105,7 +105,7 @@ export function SinkingFundCard({
 
           <span className="min-w-0 flex-1">
             <span className="flex items-start gap-1">
-              <span className="min-w-0 flex-1 truncate text-[14.5px] font-semibold leading-tight tracking-tight text-forest">
+              <span className="min-w-0 flex-1 truncate text-[15.5px] font-semibold leading-tight tracking-tight text-forest">
                 {fund.name}
               </span>
               {/* affordance buka detail: seluruh badan kartu sudah bisa ditekan,
@@ -118,11 +118,11 @@ export function SinkingFundCard({
             </span>
             {/* meta dipadatkan jadi chip pastel — bukan deretan teks + titik */}
             <span className="mt-1.5 flex flex-wrap items-center gap-1">
-              <span className="inline-flex items-center gap-1 rounded-full bg-sage/60 px-2 py-[3px] text-[9.5px] font-medium text-forest-muted">
+              <span className="inline-flex items-center gap-1 rounded-full bg-sage/60 px-2 py-[3px] text-[10.5px] font-medium text-forest-muted">
                 <span aria-hidden className={cn('size-1.5 shrink-0 rounded-full', priority.dot)} />
                 {priority.label}
               </span>
-              <span className="inline-flex items-center rounded-full bg-sage/40 px-2 py-[3px] text-[9.5px] font-medium text-forest-muted">
+              <span className="inline-flex items-center rounded-full bg-sage/40 px-2 py-[3px] text-[10.5px] font-medium text-forest-muted">
                 {CONTEXT_LABEL[fund.scope]}
               </span>
             </span>
@@ -132,9 +132,9 @@ export function SinkingFundCard({
         {/* nominal + persen SEBARIS di bawah identitas — nama celengan dapat
             seluruh lebar kartu, dan target tidak lagi terpotong kolom persen */}
         <span className="mt-3 flex items-end justify-between gap-2">
-          <span className="min-w-0 truncate text-[15px] font-semibold leading-none tracking-tight tabular-nums text-forest">
+          <span className="min-w-0 truncate text-[16px] font-semibold leading-none tracking-tight tabular-nums text-forest">
             {maskNominal(fund.current, masked)}
-            <span className="ml-1 text-[10.5px] font-medium text-forest-muted">
+            <span className="ml-1 text-[11.5px] font-medium text-forest-muted">
               / {maskNominal(fund.target, masked)}
             </span>
           </span>
@@ -142,7 +142,7 @@ export function SinkingFundCard({
             <span className="font-display text-[22px] font-semibold leading-none tracking-tight tabular-nums text-forest">
               {percentLabel}
             </span>
-            <span className="mt-1 text-[9px] font-medium uppercase tracking-[0.1em] text-forest-muted">
+            <span className="mt-1 text-[10px] font-medium uppercase tracking-[0.1em] text-forest-muted">
               {stageLabel}
             </span>
           </span>
@@ -158,7 +158,7 @@ export function SinkingFundCard({
           />
         </span>
 
-        <span className="mt-2 block truncate text-[10.5px] tabular-nums text-forest-muted">
+        <span className="mt-2 block truncate text-[11.5px] tabular-nums text-forest-muted">
           {SINKING_FUND_CARD_COPY.perMonth(maskNominal(perMonth, masked))}
           <span className="text-forest/50">
             {' · '}
@@ -170,7 +170,7 @@ export function SinkingFundCard({
       {/* ── KAKI KARTU — deadline di kiri, aksi di kanan, dipisah hairline
           supaya area sentuh "Setor" tidak bercampur dengan badan kartu. */}
       <div className="relative mt-3 flex items-center justify-between gap-2 border-t border-soil/[0.06] pt-3">
-        <span className="inline-flex min-w-0 items-center gap-1.5 rounded-full bg-sage/50 px-2.5 py-1 text-[10px] font-medium tabular-nums text-forest-muted">
+        <span className="inline-flex min-w-0 items-center gap-1.5 rounded-full bg-sage/50 px-2.5 py-1 text-[11px] font-medium tabular-nums text-forest-muted">
           <CalendarDays className="size-3 shrink-0" strokeWidth={2.2} aria-hidden />
           <span className="truncate">{formatDeadline(fund.deadline)}</span>
         </span>
@@ -191,7 +191,7 @@ export function SinkingFundCard({
             type="button"
             onClick={() => onContribute(fund)}
             aria-label={SINKING_FUND_CARD_COPY.contributeAria(fund.name)}
-            className="inline-flex h-9 items-center gap-1 rounded-full bg-mint/30 px-3.5 text-[11.5px] font-medium text-forest ring-1 ring-mint/60 transition-colors hover:bg-mint/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25 active:scale-95"
+            className="inline-flex h-9 items-center gap-1 rounded-full bg-mint/30 px-3.5 text-[12.5px] font-medium text-forest ring-1 ring-mint/60 transition-colors hover:bg-mint/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25 active:scale-95"
           >
             <Plus className="size-3.5" strokeWidth={3} aria-hidden />
             {SINKING_FUND_CARD_COPY.contribute}

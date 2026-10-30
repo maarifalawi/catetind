@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Fuel, PiggyBank, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { SINKING_NUDGE_COPY } from '@/lib/data/budget'
-import { AI_GAUGE_BANNER_COPY, AI_QUOTA_EXHAUSTED_COPY, planQuota } from '@/lib/ai-quota'
+import { AI_GAUGE_BANNER_COPY, AI_QUOTA_EXHAUSTED_COPY, complementaryPct, planQuota } from '@/lib/ai-quota'
 import { useAiQuota } from '@/hooks/use-ai-quota'
 import { useNudgeState } from '@/hooks/use-nudge-state'
 import {
@@ -58,25 +58,32 @@ function BannerShell({
     <div
       role="status"
       className={cn(
-        'flex items-center gap-3 rounded-2xl px-4 py-3 ring-1',
+        'rounded-2xl px-4 py-3 ring-1',
         tone === 'amber' && 'bg-hud-amber/10 ring-hud-amber/25',
         tone === 'white' && 'bg-cream ring-soil/12',
       )}
     >
-      {icon}
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-[13px] font-medium text-forest">{title}</p>
-        {body && <p className="mt-0.5 text-xs leading-relaxed text-forest/55">{body}</p>}
+      {/* Ikon + copy + tombol tutup di baris pertama; tombol AKSI di baris
+          sendiri (rata kanan). Dulu aksi duduk sebaris dengan judul, dan di
+          375px itu menyisakan ~140px untuk judul — judul pendek pun harus
+          dipotong ellipsis atau turun baris. Dengan aksi dipindah ke bawah,
+          judul dapat seluruh lebar kartu dan tetap SATU baris tanpa dipotong. */}
+      <div className="flex items-center gap-3">
+        {icon}
+        <div className="min-w-0 flex-1">
+          <p className="text-[14px] leading-snug font-medium break-words text-forest">{title}</p>
+          {body && <p className="mt-0.5 text-xs leading-relaxed text-forest/55">{body}</p>}
+        </div>
+        <button
+          type="button"
+          aria-label={dismissLabel}
+          onClick={onDismiss}
+          className="flex size-7 shrink-0 items-center justify-center rounded-full text-forest/35 transition-colors hover:bg-soil/8 hover:text-forest"
+        >
+          <X className="size-3.5" strokeWidth={2.4} />
+        </button>
       </div>
-      {cta}
-      <button
-        type="button"
-        aria-label={dismissLabel}
-        onClick={onDismiss}
-        className="flex size-7 shrink-0 items-center justify-center rounded-full text-forest/35 transition-colors hover:bg-soil/8 hover:text-forest"
-      >
-        <X className="size-3.5" strokeWidth={2.4} />
-      </button>
+      {cta && <div className="mt-2 flex justify-end">{cta}</div>}
     </div>
   )
 }
@@ -171,20 +178,32 @@ export const HomeBanners = memo(function HomeBanners() {
               <Fuel className="size-4.5" strokeWidth={2.2} />
             </span>
           }
-          title={quota.exhausted ? AI_QUOTA_EXHAUSTED_COPY.bannerTitle : AI_GAUGE_BANNER_COPY.title}
+          title={
+            quota.exhausted
+              ? AI_QUOTA_EXHAUSTED_COPY.bannerTitle
+              : /* sisa persen diturunkan dari angka yang SAMA dengan lebar bar di
+                   bawah judul, jadi judul & bar tidak mungkin berbeda */
+                AI_GAUGE_BANNER_COPY.title(complementaryPct(quota.usedPct))
+          }
           body={
             quota.exhausted ? (
               <span>{AI_QUOTA_EXHAUSTED_COPY.body}</span>
             ) : (
-              <span className="flex items-center gap-2">
-                <span className="h-1.5 w-24 overflow-hidden rounded-full bg-soil/[0.09]">
+              /* bar saja: angka "terpakai" tidak diulang sebagai teks, cukup
+                 judul yang menyebut sisa persen */
+              <span className="mt-1.5 flex items-center">
+                <span
+                  role="progressbar"
+                  aria-label={AI_GAUGE_BANNER_COPY.usageBarLabel(quota.usedPct)}
+                  aria-valuenow={quota.usedPct}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  className="block h-1.5 w-full max-w-40 overflow-hidden rounded-full bg-soil/[0.09]"
+                >
                   <span
                     className="block h-full rounded-full bg-hud-amber"
                     style={{ width: `${quota.usedPct}%` }}
                   />
-                </span>
-                <span className="tabular-nums">
-                  {AI_GAUGE_BANNER_COPY.usage(quota.usedPct, quota.remainingPct)}
                 </span>
               </span>
             )

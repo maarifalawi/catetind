@@ -214,15 +214,26 @@ export async function pushWalletToServer(wallet: WalletSeed, sortIndex = 0): Pro
  * dan tidak dibatalkan oleh kegagalan ini (bentuk lokalnya tombstone, jadi tidak
  * ada data user yang bergantung pada jawaban jaringan).
  */
+/**
+ * Hapus dompet di server.
+ *
+ * SEJAK `app/api/wallets/**` DIHAPUS (permukaan mati tanpa pemanggil, dan satu-
+ * satunya tempat `WALLET_SEED` bisa bocor ke akun nyata), fungsi ini menulis
+ * langsung ke PostgREST seperti fungsi lain di file ini. Dua lapis yang dulu
+ * dijaga route tetap berlaku tanpa route: `requireUser()` digantikan sesi klien
+ * (`browserSupabase()` hanya punya token pemanggil), dan RLS
+ * `user_id = auth.uid()` tetap menolak baris milik akun lain di database.
+ *
+ * `false` = tidak ada sesi/backend atau gagal. Hapus LOKAL sudah sah dan tidak
+ * dibatalkan oleh kegagalan ini (bentuk lokalnya tombstone).
+ */
 export async function deleteRemoteWallet(walletId: string): Promise<boolean> {
-  if (!walletId || typeof window === 'undefined') return false
+  if (!walletId) return false
+  const client = browserSupabase()
+  if (!client) return false
   try {
-    const response = await fetch(`/api/wallets/${encodeURIComponent(walletId)}`, {
-      method: 'DELETE',
-      headers: { accept: 'application/json' },
-      credentials: 'same-origin',
-    })
-    return response.ok
+    const { error } = await client.from('wallets').delete().eq('id', walletId)
+    return !error
   } catch {
     return false
   }

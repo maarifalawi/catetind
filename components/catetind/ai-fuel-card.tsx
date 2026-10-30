@@ -100,23 +100,23 @@ export function AiFuelCard({ collapsed }: { collapsed: boolean }) {
         className="group/lock mt-4 block w-full shrink-0 rounded-[1.35rem] bg-cream p-4 text-left ring-1 ring-ink/[0.06] transition-colors duration-200 hover:bg-sage/70"
       >
         <span className="flex items-baseline justify-between gap-2">
-          <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-forest/40">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-forest-muted">
             {AI_FUEL_COPY.cardTitle}
           </span>
-          <span className="truncate text-[11px] font-medium text-forest/45">{planName}</span>
+          <span className="truncate text-[12px] font-medium text-forest-muted">{planName}</span>
         </span>
-        <span className="mt-2 flex items-center gap-1.5 text-[12.5px] font-medium leading-snug text-forest">
+        <span className="mt-2 flex items-center gap-1.5 text-[13.5px] font-medium leading-snug text-forest">
           <Lock className="size-3.5 shrink-0" strokeWidth={2.4} aria-hidden />
           {allFeatures.length} fitur {target?.name?.replace(/^paket\s+/i, '') ?? 'Waras'} terkunci
         </span>
-        <span className="mt-1.5 block text-[11px] leading-relaxed text-forest/55">
+        <span className="mt-1.5 block text-[12px] leading-relaxed text-forest-muted">
           {features.join(' · ')}
           {allFeatures.length > features.length
             ? ` · +${allFeatures.length - features.length} lainnya`
             : ''}
         </span>
         <span className="mt-3 flex items-center justify-between gap-2 rounded-full bg-forest pl-3.5 pr-1 py-1 text-cream">
-          <span className="text-[11.5px] font-medium">
+          <span className="text-[12.5px] font-medium">
             Buka dengan {formatIDR(offer.amount)}
           </span>
           <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-cream text-forest">
@@ -134,7 +134,7 @@ export function AiFuelCard({ collapsed }: { collapsed: boolean }) {
       <Link
         href="/settings/billing"
         aria-label={summary}
-        className="group/item relative mt-4 flex size-11 shrink-0 items-center justify-center rounded-2xl bg-cream text-[12px] font-medium tabular-nums text-forest ring-1 ring-ink/[0.06] transition-colors duration-200 hover:bg-sage active:scale-95 motion-reduce:transition-none"
+        className="group/item relative mt-4 flex size-11 shrink-0 items-center justify-center rounded-2xl bg-cream text-[13px] font-medium tabular-nums text-forest ring-1 ring-ink/[0.06] transition-colors duration-200 hover:bg-sage active:scale-95 motion-reduce:transition-none"
       >
         <span className="relative" aria-hidden>
           {pq.unlimited ? '∞' : `${quota.remainingPct}%`}
@@ -156,12 +156,15 @@ export function AiFuelCard({ collapsed }: { collapsed: boolean }) {
          lebih dulu. Daftar menu di atasnya yang menggulir. */
       className="group/fuel mt-4 block shrink-0 rounded-[1.35rem] bg-cream p-4 ring-1 ring-ink/[0.06] transition-colors duration-200 hover:bg-sage/70"
     >
-      {/* 1 · KEPALA — judul + nama paket, satu baris, tanpa pill */}
+      {/* 1 · KEPALA — judul + nama paket, satu baris, tanpa pill.
+          Warna memakai `forest-muted`, bukan opasitas `forest/40`–`/45`:
+          opasitas 40% di atas putih cuma ~2:1 (gagal WCAG AA) dan itulah yang
+          membuat kartu ini terasa "pudar" di sidebar. */}
       <span className="flex items-baseline justify-between gap-2">
-        <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-forest/40">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-forest-muted">
           {AI_FUEL_COPY.cardTitle}
         </span>
-        <span className="truncate text-[11px] font-medium text-forest/45">{planName}</span>
+        <span className="truncate text-[12px] font-medium text-forest-muted">{planName}</span>
       </span>
 
       {/* 2 · ANGKA — satu nilai besar yang langsung terbaca */}
@@ -175,7 +178,7 @@ export function AiFuelCard({ collapsed }: { collapsed: boolean }) {
             <span className="text-[26px] font-medium leading-none tracking-[-0.04em] tabular-nums">
               {quota.remainingPct}%
             </span>
-            <span className="text-[11.5px] font-medium text-forest/45">
+            <span className="text-[12.5px] font-medium text-forest-muted">
               {AI_FUEL_COPY.remainingLabel}
             </span>
           </>
@@ -185,7 +188,7 @@ export function AiFuelCard({ collapsed }: { collapsed: boolean }) {
       {!pq.unlimited && (
         <>
           {/* 3 · MAKNA — terjemahan angkanya, bukan istilah teknis */}
-          <span className="mt-1 block text-[11.5px] leading-snug tabular-nums text-forest/50">
+          <span className="mt-1 block text-[12.5px] leading-snug tabular-nums text-forest-muted">
             {AI_FUEL_COPY.recordsLeft(recordsLeft)}
           </span>
 
@@ -209,7 +212,7 @@ export function AiFuelCard({ collapsed }: { collapsed: boolean }) {
       {/* 5 · EKOR — voice + reset dalam SATU baris kecil, tanpa ikon.
           Saat kuota benar-benar habis, "Kuota habis" menggantikan "Reset" supaya
           keadaan itu terbaca tanpa menambah baris/paragraf baru. */}
-      <span className="mt-3 flex flex-wrap items-center gap-x-1.5 text-[11px] font-medium tabular-nums text-forest/40">
+      <span className="mt-3 flex flex-wrap items-center gap-x-1.5 text-[12px] font-medium tabular-nums text-forest-muted">
         <span>{quota.voiceCallsRemaining} panggilan</span>
         <span aria-hidden className="text-forest/25">
           ·

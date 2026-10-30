@@ -59,6 +59,75 @@ function isIsoDate(value: unknown): value is string {
   return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value.trim())
 }
 
+/**
+ * Nominal dari model → integer rupiah (paket 101).
+ *
+ * Kenapa perlu, padahal prompt sudah minta `number`: model vision tetap sering
+ * mengembalikan nominal dalam bentuk yang dibacanya dari struk —
+ * `"Rp 200.000.000"`, `"200.000.000"`, `"200,000,000"`, bahkan `"87500,00"`.
+ * Dulu `Number(raw.amount)` mengubah semua itu jadi `NaN` → 0, sehingga struk
+ * yang TOTALNYA JELAS terbaca berakhir sebagai "nominal belum kebaca".
+ *
+ * Aturan pemisah (mengikuti cara struk Indonesia ditulis):
+ *   · titik & koma dua-duanya ada → yang TERAKHIR adalah desimal;
+ *   · hanya titik dan berpola ribuan (`200.000.000`) → titik = ribuan;
+ *   · hanya koma dan berpola ribuan (`200,000,000`) → koma = ribuan;
+ *   · selain pola itu → pemisah tunggal dianggap desimal, hasilnya dibulatkan.
+ *
+ * `0` = tidak ada nominal yang bisa dipercaya (pemanggil menandai `lowFields`).
+ */
+export function parseAmountValue(value: unknown): number {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? Math.max(0, Math.round(value)) : 0
+  }
+  if (typeof value !== 'string') return 0
+  /* buang mata uang, spasi, dan label: "Rp 200.000,00" → "200.000,00" */
+  const cleaned = value.replace(/[^\d.,-]/g, '')
+  if (!cleaned || cleaned === '-') return 0
+  if (cleaned.startsWith('-')) return 0
+
+  const lastDot = cleaned.lastIndexOf('.')
+  const lastComma = cleaned.lastIndexOf(',')
+  /* pola ribuan: satu jenis pemisah, tiap kelompok tepat 3 digit ("200.000.000") */
+  const thousands = /^\d{1,3}(?:([.,])\d{3})+$/.test(cleaned)
+
+  let digits: string
+  if (thousands) {
+    digits = cleaned.replace(/[.,]/g, '')
+  } else if (lastDot >= 0 && lastComma >= 0) {
+    /* desimal = pemisah yang muncul TERAKHIR; sisanya ribuan */
+    const decimalAt = Math.max(lastDot, lastComma)
+    digits = cleaned.slice(0, decimalAt).replace(/[.,]/g, '') + '.' + cleaned.slice(decimalAt + 1)
+  } else if (lastDot >= 0) {
+    /* satu titik diikuti 1–2 digit = desimal; selain itu pemisahnya salah tulis */
+    digits = /^\d+\.\d{1,2}$/.test(cleaned) ? cleaned : cleaned.replace(/\./g, '')
+  } else if (lastComma >= 0) {
+    digits = /^\d+,\d{1,2}$/.test(cleaned)
+      ? `${cleaned.slice(0, lastComma)}.${cleaned.slice(lastComma + 1)}`
+      : cleaned.replace(/,/g, '')
+  } else {
+    digits = cleaned
+  }
+
+  const parsed = Number(digits)
+  return Number.isFinite(parsed) ? Math.max(0, Math.round(parsed)) : 0
+}
+
+/**
+ * Cocokkan nilai teks model ke daftar kanon TANPA membedakan huruf besar-kecil.
+ *
+ * Model kadang menulis "belanja" / "bca" walau daftar di prompt berbunyi
+ * "Belanja" / "BCA". Dulu kegagalan itu dibuang ke `''` + `Lainnya`, dan user
+ * melihat "Pilih kategori…" padahal AI sudah menyebut kategori yang benar.
+ * `''` tetap berarti "tidak ada nilai yang sah" (bukan tebakan).
+ */
+function matchCanonical(list: readonly string[], value: unknown): string {
+  if (typeof value !== 'string') return ''
+  const wanted = value.trim().toLowerCase()
+  if (!wanted) return ''
+  return list.find((item) => item.toLowerCase() === wanted) ?? ''
+}
+
 /** JSON model → `ExtractedTransaction` yang aman dipakai UI */
 export function normalizeExtraction(
   source: ExtractedTransaction['source'],
@@ -69,18 +138,12 @@ export function normalizeExtraction(
     ? (raw.type as TransactionType)
     : 'expense'
 
-  const roundedAmount = Math.round(Number(raw.amount))
-  const amount = Number.isFinite(roundedAmount) && roundedAmount > 0 ? roundedAmount : 0
+  const roundedAmount = parseAmountValue(raw.amount)
+  const amount = roundedAmount > 0 ? roundedAmount : 0
 
-  const categoryValue = typeof raw.category === 'string' ? raw.category.trim() : ''
-  const category = (TRANSACTION_CATEGORY_OPTIONS as readonly string[]).includes(categoryValue)
-    ? categoryValue
-    : ''
-
-  const walletValue = typeof raw.wallet === 'string' ? raw.wallet.trim() : ''
-  const wallet = (TRANSACTION_WALLET_OPTIONS as readonly string[]).includes(walletValue)
-    ? walletValue
-    : TRANSACTION_FALLBACK_WALLET
+  const category = matchCanonical(TRANSACTION_CATEGORY_OPTIONS, raw.category)
+  const wallet =
+    matchCanonical(TRANSACTION_WALLET_OPTIONS, raw.wallet) || TRANSACTION_FALLBACK_WALLET
 
   const date = isIsoDate(raw.date) ? raw.date.trim() : today
   const name = typeof raw.name === 'string' ? raw.name.trim().slice(0, 80) : ''

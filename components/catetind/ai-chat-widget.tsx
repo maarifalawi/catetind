@@ -71,7 +71,7 @@ function ChatBubble({ message, onAction }: { message: ChatMessage; onAction: () 
         )}
       >
         {appreciation && (
-          <span className="mb-1 flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider text-forest-soft">
+          <span className="mb-1 flex items-center gap-1 text-[11px] font-medium uppercase tracking-wider text-forest-soft">
             <Sparkles className="size-3" />
             {AI_CHAT_COPY.appreciationBadge}
           </span>
@@ -81,7 +81,7 @@ function ChatBubble({ message, onAction }: { message: ChatMessage; onAction: () 
             kalau labelnya tidak ada, user membaca kalimat ini sebagai jawaban AI
             sungguhan (temuan uji pemakaian #5). */}
         {message.ruleBased && (
-          <span className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-forest/35">
+          <span className="mb-1 block text-[11px] font-medium uppercase tracking-wider text-forest/35">
             {AI_CHAT_COPY.ruleBasedBadge}
           </span>
         )}
@@ -463,7 +463,7 @@ export function AIChatWidget() {
                   <p className="text-sm font-medium tracking-tight text-forest">
                     {AI_CHAT_COPY.title}
                   </p>
-                  <p className="shrink-0 text-[11px] font-medium text-forest/45">
+                  <p className="shrink-0 text-[12px] font-medium text-forest/45">
                     {AI_CHAT_COPY.quota(quota.remainingPct)}
                   </p>
                 </div>
@@ -511,7 +511,7 @@ export function AIChatWidget() {
                 selalu tampil, dan setelah AI tersambung kalimat "belum pakai
                 model" jadi tidak benar. */}
             {modelConnected === false && (
-              <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 border-b border-soil/12 bg-sage/25 px-4 py-2 text-[11px] leading-relaxed text-forest">
+              <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 border-b border-soil/12 bg-sage/25 px-4 py-2 text-[12px] leading-relaxed text-forest">
                 <span>{AI_CHAT_COPY.notConnectedNote}</span>
                 <Link
                   href={AI_CONNECT_HREF}
@@ -544,6 +544,9 @@ export function AIChatWidget() {
                 problem={capture.problem}
                 formError={capture.formError}
                 voiceSupport={capture.voiceSupport}
+                /* paket 101: fase `parsing` memilih kalimat "tulisanmu" vs
+                   "ucapannya" dari sumber yang benar-benar dirapikan */
+                parsingSource={capture.parsingSource}
                 /* saldo dompet di pemilih ikut tombol mata global (paket 81) */
                 masked={masked}
                 onDraftChange={capture.updateDraft}
@@ -595,7 +598,7 @@ export function AIChatWidget() {
             >
               {/* pengingat lembut saat kartu konfirmasi masih menunggu jawaban */}
               {captureLocked && (
-                <p role="status" className="mb-2 text-[11px] leading-relaxed text-forest/45">
+                <p role="status" className="mb-2 text-[12px] leading-relaxed text-forest/45">
                   {AI_CAPTURE_COPY.finishDraftFirst}
                 </p>
               )}
@@ -688,7 +691,7 @@ export function AIChatWidget() {
               {/* jalan keluar di perangkat tanpa Speech API — selalu terlihat,
                   bukan cuma sesaat setelah tombolnya ditekan */}
               {voiceUnavailable && (
-                <p id="ai-voice-fallback" className="mt-2 text-[11px] leading-relaxed text-forest/45">
+                <p id="ai-voice-fallback" className="mt-2 text-[12px] leading-relaxed text-forest/45">
                   {AI_CAPTURE_COPY.voiceUnsupported}
                 </p>
               )}
@@ -696,7 +699,7 @@ export function AIChatWidget() {
               {/* KUOTA HABIS (paket 42): dua ikon di atas mati, dan alasannya
                   ditulis di sini — plus penegasan bahwa catat manual tetap jalan. */}
               {quotaExhausted && (
-                <p id="ai-quota-off" className="mt-2 text-[11px] leading-relaxed text-forest/55">
+                <p id="ai-quota-off" className="mt-2 text-[12px] leading-relaxed text-forest/55">
                   {AI_QUOTA_EXHAUSTED_COPY.body}
                 </p>
               )}

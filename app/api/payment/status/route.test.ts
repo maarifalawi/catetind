@@ -168,12 +168,13 @@ describe('GET /api/payment/status — status jujur', () => {
     expect(rpc).toHaveBeenCalledTimes(1)
   })
 
-  it('provider belum punya transaksi (404) → state unknown, jujur', async () => {
+  it('provider belum buka transaksinya (404 Snap) → state pending, bukan error', async () => {
     status.mockResolvedValue({ ok: false, reason: 'not-found', status: 404, message: 'belum ada' })
     const body = await (await GET(request())).json()
-    expect(body.state).toBe('unknown')
+    expect(body.state).toBe('pending')
     expect(body.provider.transactionStatus).toBeNull()
     expect(body.instructions).toBeNull()
+    expect(body.note).toContain('belum dibuka')
   })
 
   it('provider belum punya transaksi TAPI baris DB settlement → tetap settled', async () => {

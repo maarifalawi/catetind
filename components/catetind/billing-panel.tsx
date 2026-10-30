@@ -141,13 +141,13 @@ export function BillingPanel() {
           Disembunyikan untuk paket tanpa kuota AI / tanpa batas (paket 85). */}
       {showAddonBand && (
         <section className="mt-4 rounded-[1.75rem] bg-gradient-to-br from-forest to-forest-soft p-5 ring-1 ring-soil/12 sm:p-6">
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-cream/10 px-2.5 py-1 text-[11px] font-medium text-cream/80">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-cream/10 px-2.5 py-1 text-[12px] font-medium text-cream/80">
           <Zap className="size-3.5 text-mint" strokeWidth={2.4} />
           {AI_FUEL_COPY.addonBandBadge}
         </span>
 
         <div className="mt-4 lg:flex lg:items-center lg:justify-between lg:gap-6">
-          <p className="text-[13px] leading-relaxed break-words text-cream/65 lg:max-w-md">
+          <p className="text-[14px] leading-relaxed break-words text-cream/65 lg:max-w-md">
             <b className="font-medium text-cream">{AI_FUEL_COPY.addonBandTitle}</b>
           </p>
 
@@ -215,17 +215,17 @@ function CurrentPlanCard() {
           <h2 className="mt-2 text-xl font-medium tracking-tight text-forest">
             {plan ? plan.name : BILLING_COPY.noPlan}
           </h2>
-          <p className="mt-1 text-[13px] leading-relaxed break-words text-forest/55">{body}</p>
+          <p className="mt-1 text-[14px] leading-relaxed break-words text-forest/55">{body}</p>
         </div>
       </div>
 
       <dl className="mt-5 grid grid-cols-2 gap-2.5">
         <div className="rounded-2xl bg-cream px-3.5 py-3 ring-1 ring-soil/8">
-          <dt className="flex items-center gap-1.5 text-[11px] text-forest/45">
+          <dt className="flex items-center gap-1.5 text-[12px] text-forest/45">
             <CalendarClock className="size-3.5" strokeWidth={2.2} />
             {monthly ? BILLING_COPY.expiresLabel : BILLING_COPY.durationLabel}
           </dt>
-          <dd className="mt-1 text-[13px] font-medium leading-snug text-forest">
+          <dd className="mt-1 text-[14px] font-medium leading-snug text-forest">
             {monthly
               ? plan
                 ? expiresAt
@@ -238,11 +238,11 @@ function CurrentPlanCard() {
           </dd>
         </div>
         <div className="rounded-2xl bg-cream px-3.5 py-3 ring-1 ring-soil/8">
-          <dt className="flex items-center gap-1.5 text-[11px] text-forest/45">
+          <dt className="flex items-center gap-1.5 text-[12px] text-forest/45">
             <CreditCard className="size-3.5" strokeWidth={2.2} />
             {BILLING_COPY.priceLabel}
           </dt>
-          <dd className="mt-1 text-[13px] font-medium leading-snug text-forest tabular-nums">
+          <dd className="mt-1 text-[14px] font-medium leading-snug text-forest tabular-nums">
             {plan
               ? formatIDR(monthly ? plan.monthly : plan.lifetime)
               : '-'}
@@ -272,7 +272,7 @@ function CurrentPlanCard() {
           </Link>
         )}
 
-        <p className="mt-1 text-center text-[11px] leading-relaxed text-forest/45">
+        <p className="mt-1 text-center text-[12px] leading-relaxed text-forest/45">
           {plan && !monthly ? BILLING_COPY.noRenewNote : BILLING_COPY.readOnlyNote}
         </p>
       </div>
@@ -286,7 +286,7 @@ function PlanPill() {
 
   if (!plan) {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-hud-amber/30 px-2.5 py-1 text-[11px] font-medium text-forest/70">
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-hud-amber/30 px-2.5 py-1 text-[12px] font-medium text-forest/70">
         <TriangleAlert className="size-3.5" strokeWidth={2.4} aria-hidden />
         {planKnown ? BILLING_COPY.noPlan : BILLING_COPY.statusUnknown}
       </span>
@@ -295,7 +295,7 @@ function PlanPill() {
 
   if (expired) {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-hud-amber/30 px-2.5 py-1 text-[11px] font-medium text-forest">
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-hud-amber/30 px-2.5 py-1 text-[12px] font-medium text-forest">
         <TriangleAlert className="size-3.5" strokeWidth={2.4} aria-hidden />
         {BILLING_COPY.statusExpired}
       </span>
@@ -303,7 +303,7 @@ function PlanPill() {
   }
 
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-mint/30 px-2.5 py-1 text-[11px] font-medium text-forest">
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-mint/30 px-2.5 py-1 text-[12px] font-medium text-forest">
       <ShieldCheck className="size-3.5" strokeWidth={2.4} aria-hidden />
       {isLifetime ? BILLING_COPY.statusActiveLifetime : BILLING_COPY.statusActiveMonthly}
     </span>
@@ -347,7 +347,7 @@ function FuelGaugeCard() {
         <h2 className="text-xl font-medium tracking-tight text-forest">
           {AI_PLAN_LOCKED_COPY.cardTitle}
         </h2>
-        <p className="mt-2 text-[13px] leading-relaxed text-forest/55">
+        <p className="mt-2 text-[14px] leading-relaxed text-forest/55">
           {AI_PLAN_LOCKED_COPY.body}
         </p>
       </section>
@@ -367,7 +367,7 @@ function FuelGaugeCard() {
         </span>
       </div>
       {pq.unlimited && (
-        <p className="mt-2 text-[12.5px] leading-relaxed text-forest/55">{AI_UNLIMITED_NOTE}</p>
+        <p className="mt-2 text-[13.5px] leading-relaxed text-forest/55">{AI_UNLIMITED_NOTE}</p>
       )}
 
       {/* bar sisa KUOTA DASAR — nada hangat (mint → olive → cantelope), bukan alarm */}
@@ -393,33 +393,33 @@ function FuelGaugeCard() {
       {/* pemisahan kolam — "base quota vs add-on" yang diminta inventaris #18 */}
       <dl className="mt-3 grid grid-cols-2 gap-2.5">
         <div className="rounded-2xl bg-cream px-3.5 py-3 ring-1 ring-soil/8">
-          <dt className="flex items-center gap-1.5 text-[11px] text-forest/45">
+          <dt className="flex items-center gap-1.5 text-[12px] text-forest/45">
             <span className="size-2 shrink-0 rounded-full bg-forest" aria-hidden />
             {AI_FUEL_COPY.baseLabel}
           </dt>
-          <dd className="mt-1 text-[13px] font-medium tabular-nums text-forest">
+          <dd className="mt-1 text-[14px] font-medium tabular-nums text-forest">
             {formatTokens(quota.baseTokensRemaining)} sisa
           </dd>
-          <p className="mt-0.5 text-[11px] text-forest/45 tabular-nums">
+          <p className="mt-0.5 text-[12px] text-forest/45 tabular-nums">
             {AI_FUEL_COPY.recordsLeft(quota.recordsLeft)}
           </p>
         </div>
         <div className="rounded-2xl bg-cream px-3.5 py-3 ring-1 ring-soil/8">
-          <dt className="flex items-center gap-1.5 text-[11px] text-forest/45">
+          <dt className="flex items-center gap-1.5 text-[12px] text-forest/45">
             <span className="size-2 shrink-0 rounded-full bg-hud-sage" aria-hidden />
             {AI_FUEL_COPY.addonLabel}
           </dt>
-          <dd className="mt-1 text-[13px] font-medium tabular-nums text-forest">
+          <dd className="mt-1 text-[14px] font-medium tabular-nums text-forest">
             {formatTokens(addon.tokensRemaining)} sisa
           </dd>
-          <p className="mt-0.5 text-[11px] text-forest/45 tabular-nums">
+          <p className="mt-0.5 text-[12px] text-forest/45 tabular-nums">
             {AI_FUEL_COPY.recordsLeft(addon.recordsLeft)}
           </p>
         </div>
       </dl>
 
       {/* rincian per aktivitas — angka turunan tabel kanon PRD 4778–4786 */}
-      <p className="mt-4 text-[10px] font-medium tracking-[0.16em] text-forest/40 uppercase">
+      <p className="mt-4 text-[11px] font-medium tracking-[0.16em] text-forest/40 uppercase">
         {AI_FUEL_COPY.detailLabel}
       </p>
       <ul className="mt-3 space-y-3.5">
@@ -436,8 +436,8 @@ function FuelGaugeCard() {
                 <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-sage/20 text-forest">
                   <Icon className="size-3.5" strokeWidth={2.2} />
                 </span>
-                <span className="min-w-0 flex-1 text-[13px]">{row.label}</span>
-                <span className="shrink-0 text-[12px] font-medium text-forest/35 tabular-nums">
+                <span className="min-w-0 flex-1 text-[14px]">{row.label}</span>
+                <span className="shrink-0 text-[13px] font-medium text-forest/35 tabular-nums">
                   {AI_FUEL_COPY.callsRemaining(row.callsRemaining, row.calls)}
                 </span>
               </div>
@@ -467,18 +467,18 @@ function FuelGaugeCard() {
           (voice & scan struk) dan apa yang TETAP jalan (catat manual), plus dua
           jalan keluarnya. Tombol yang mati tanpa penjelasan = teka-teki. */}
       {quota.exhausted && (
-        <p className="mt-4 rounded-2xl bg-hud-amber/15 px-3.5 py-3 text-[12px] leading-relaxed text-forest/70 ring-1 ring-hud-amber/30">
+        <p className="mt-4 rounded-2xl bg-hud-amber/15 px-3.5 py-3 text-[13px] leading-relaxed text-forest/70 ring-1 ring-hud-amber/30">
           {AI_QUOTA_EXHAUSTED_COPY.body}
         </p>
       )}
 
       {/* tanggal reset + aturannya (kanon PRD 4800–4802) */}
-      <p className="mt-4 flex flex-wrap items-center gap-1.5 text-[12px] font-medium text-forest/55">
+      <p className="mt-4 flex flex-wrap items-center gap-1.5 text-[13px] font-medium text-forest/55">
         <CalendarClock className="size-3.5 shrink-0" strokeWidth={2.2} aria-hidden />
         {AI_FUEL_COPY.resetLabel}:
         <span className="tabular-nums">{reset?.label ?? AI_QUOTA_RESET_FALLBACK}</span>
       </p>
-      <p className="mt-1.5 text-[11px] leading-relaxed text-forest/40">{AI_RESET_RULE_COPY}</p>
+      <p className="mt-1.5 text-[12px] leading-relaxed text-forest/40">{AI_RESET_RULE_COPY}</p>
     </section>
   )
 }
@@ -491,7 +491,7 @@ function BillingHistorySection() {
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 className="text-xl font-medium tracking-tight text-forest">{BILLING_COPY.historyTitle}</h2>
-          <p className="mt-1 text-[13px] leading-relaxed text-forest/55">
+          <p className="mt-1 text-[14px] leading-relaxed text-forest/55">
             {BILLING_COPY.historyBody}
           </p>
         </div>
@@ -504,14 +504,14 @@ function BillingHistorySection() {
         {BILLING_HISTORY.map((item) => (
           <li key={item.id} className="flex items-center gap-3 py-3.5">
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-[13px] font-medium text-forest">{item.label}</span>
-              <span className="mt-0.5 block text-[11px] text-forest/45">{item.date}</span>
+              <span className="block truncate text-[14px] font-medium text-forest">{item.label}</span>
+              <span className="mt-0.5 block text-[12px] text-forest/45">{item.date}</span>
             </span>
             <span className="shrink-0 text-right">
-              <span className="block text-[13px] font-medium text-forest tabular-nums">
+              <span className="block text-[14px] font-medium text-forest tabular-nums">
                 {formatIDR(item.amount)}
               </span>
-              <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-mint/30 px-2 py-0.5 text-[10px] font-medium text-forest">
+              <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-mint/30 px-2 py-0.5 text-[11px] font-medium text-forest">
                 <Check className="size-2.5" strokeWidth={3.6} />
                 {BILLING_COPY.paidLabel}
               </span>

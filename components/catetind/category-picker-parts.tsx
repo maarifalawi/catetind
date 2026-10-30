@@ -63,7 +63,7 @@ export function QuickCard({
       <span aria-hidden className="text-xl leading-none">
         {item.emoji}
       </span>
-      <span className="line-clamp-2 text-[11px] leading-tight font-medium text-forest">
+      <span className="line-clamp-2 text-[12px] leading-tight font-medium text-forest">
         {item.name}
       </span>
     </button>
@@ -102,7 +102,7 @@ export function SearchField({
         spellCheck={false}
         enterKeyHint="search"
         inputMode="search"
-        className="h-11 w-full rounded-2xl bg-soil/[0.09] pr-11 pl-10 text-[13px] font-medium text-forest outline-none ring-1 ring-transparent transition-all placeholder:text-forest/35 focus:bg-cream focus:ring-forest/15 [&::-webkit-search-cancel-button]:hidden"
+        className="h-11 w-full rounded-2xl bg-soil/[0.09] pr-11 pl-10 text-[14px] font-medium text-forest outline-none ring-1 ring-transparent transition-all placeholder:text-forest/35 focus:bg-cream focus:ring-forest/15 [&::-webkit-search-cancel-button]:hidden"
       />
       {value.length > 0 && (
         <button
@@ -141,7 +141,7 @@ export function SubChip({
       <span aria-hidden className="text-base leading-none">
         {item.emoji}
       </span>
-      <span className="min-w-0 flex-1 truncate text-[11.5px] font-medium text-forest">
+      <span className="min-w-0 flex-1 truncate text-[12.5px] font-medium text-forest">
         {item.name}
       </span>
     </button>

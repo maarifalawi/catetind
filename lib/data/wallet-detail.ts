@@ -1,4 +1,5 @@
 import type { WalletAccount } from '../wallets'
+import { DEMO_MODE } from '../demo'
 import { TRANSFER_DOOR_COPY } from './add-wallet'
 import {
   formatDayLabel,
@@ -82,8 +83,17 @@ export const WALLET_DETAIL_TRANSACTIONS: Record<string, HistoryTransaction[]> = 
   tunai: [],
 }
 
-/** catatan mock milik satu dompet (id = `WalletSeed.id`) */
+/**
+ * Catatan CONTOH milik satu dompet (id = `WalletSeed.id`).
+ *
+ * HANYA MODE DEMO. Di build produksi fungsi ini SELALU mengembalikan daftar
+ * kosong, apa pun id dompetnya: dulu baris `bca`/`gopay` hidup di setiap
+ * perangkat dan bisa muncul di `/wallet/[id]` untuk dompet bernama sama milik
+ * user sungguhan. Data nyata halaman itu hanya baris ledger
+ * (`walletTransactionsOf` + `incomingTransfersFor`).
+ */
 export function walletTransactions(walletId: string): HistoryTransaction[] {
+  if (!DEMO_MODE) return []
   return WALLET_DETAIL_TRANSACTIONS[walletId] ?? []
 }
 
@@ -427,6 +437,19 @@ export const WALLET_DELETE_COPY = {
     `Masih bisa dibatalkan lewat tombol Undo selama ${seconds} detik setelah kamu menekannya.`,
   cancel: 'Batal',
   confirm: 'Hapus dompet',
+} as const
+
+/**
+ * UBAH IDENTITAS DOMPET (nama / nomor).
+ *
+ * Label aksi ini dipakai dua pintu (popover kartu `/wallet` dan bar aksi
+ * `/wallet/[id]`), dan keduanya membuka sheet yang SAMA dengan Tambah Dompet
+ * dalam mode ubah. Copy isi sheet-nya hidup di `EDIT_WALLET_SHEET_COPY`
+ * (`lib/data/add-wallet.ts`) — satu tempat, karena sheet-nya satu.
+ */
+export const WALLET_RENAME_COPY = {
+  action: 'Ubah dompet',
+  actionHint: 'Ganti nama, nomor, atau tema kartu',
 } as const
 
 export const WALLET_DELETE_TOAST = {

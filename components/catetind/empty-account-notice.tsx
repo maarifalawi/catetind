@@ -35,14 +35,14 @@ export function EmptyAccountNotice() {
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <p className="inline-flex items-center gap-2 text-[15px] font-medium text-forest">
+          <p className="inline-flex items-center gap-2 text-[16px] font-medium text-forest">
             <Sprout className="size-4 shrink-0 text-forest" strokeWidth={2.2} aria-hidden />
             {EMPTY_ACCOUNT_COPY.title}
           </p>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-forest/60">
+          <p className="mt-1.5 text-[14px] leading-relaxed text-forest/60">
             {EMPTY_ACCOUNT_COPY.body}
           </p>
-          <p className="mt-1.5 text-[11.5px] leading-relaxed text-forest/45">
+          <p className="mt-1.5 text-[12.5px] leading-relaxed text-forest/45">
             {EMPTY_ACCOUNT_COPY.hint}
           </p>
         </div>

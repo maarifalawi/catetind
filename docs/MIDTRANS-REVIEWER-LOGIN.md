@@ -1,100 +1,45 @@
-# Akun Reviewer Midtrans — Login Tanpa Inbox Email
+# Akun Reviewer Midtrans — SUDAH DIHAPUS
 
-Dokumen ini untuk **Midtrans Merchant Verification**. Reviewer manusia perlu
-masuk ke CatetInd dan mencoba alur checkout tanpa akses ke inbox email kita.
+> **Status: dihapus dari aplikasi.** Merchant CatetInd sudah resmi di-ACC
+> Midtrans, sehingga pintu masuk khusus reviewer tidak boleh lagi ada.
 
-## Kredensial yang diberikan ke Midtrans
+## Yang dihapus
 
-| Field | Nilai |
+| Dulu ada | Sekarang |
 |---|---|
-| URL login | `https://catetind.com/login` |
-| Email | `reviewer@catetind.com` |
-| Kode akses (OTP) | `123456` |
+| `POST /api/auth/reviewer` (membuat sesi lewat Admin API) | **dihapus** — route tidak ada lagi |
+| `reviewer@catetind.com` + kode tetap `123456` | **dihapus** — email biasa, OTP normal |
+| `lib/data/reviewer-access.ts` | **dihapus** |
+| `lib/subscription/reviewer-plan.ts` (bootstrap paket Waras otomatis) | **dihapus** |
+| `signInWithReviewerCode()` di `lib/session-client.ts` | **dihapus** |
+| Env `REVIEWER_TEST_LOGIN_ENABLED` | **dihapus** — tidak dibaca kode mana pun |
 
-Kode `123456` **hanya berlaku untuk email itu**. Email lain tetap memakai OTP
-normal yang dikirim Supabase ke inbox masing-masing.
+## Kenapa dihapus, bukan sekadar dimatikan
 
-## Cara kerja (teknis)
+Jalur itu menerima kode **statis** (`123456`) yang tidak pernah kedaluwarsa dan
+membuat sesi Supabase sungguhan lewat `SUPABASE_SERVICE_ROLE_KEY`. Selama kode
+itu ada, satu-satunya yang melindungi akun reviewer adalah komentar di
+dokumen — bukan kontrol teknis. Setelah ACC, tidak ada lagi alasan
+mempertahankannya.
 
-1. Reviewer mengetik `reviewer@catetind.com` di `/login`, lalu menekan
-   **Kirim kode masuk**. Untuk email ini aplikasi **tidak** memanggil SMTP —
-   layar langsung pindah ke langkah kode.
-2. Reviewer mengetik `123456` dan menekan **Masuk sekarang**.
-3. Browser memanggil `POST /api/auth/reviewer`:
-   - route memvalidasi email + kode reviewer (`lib/data/reviewer-access.ts`);
-   - akun `reviewer@catetind.com` dipastikan ada & terkonfirmasi
-     (`admin.createUser`, `email_confirm: true`);
-   - `admin.generateLink({ type: 'magiclink' })` membuat `hashed_token`
-     **tanpa mengirim email**.
-4. Browser menukar `hashed_token` menjadi sesi lewat
-   `supabase.auth.verifyOtp({ token_hash, type: 'magiclink' })`.
-   Cookie sesi ditulis `@supabase/ssr` — **sama persis** dengan login OTP biasa,
-   jadi middleware, gerbang paket, dan RLS tidak punya pengecualian apa pun.
-5. Sebelum token dikembalikan, route menjalankan **bootstrap akun reviewer**
-   (`lib/subscription/reviewer-plan.ts`):
-   - `user_subscriptions` di-upsert ke paket **Waras lifetime** (`is_lifetime`,
-     tanpa `expires_at`) — tapi **tidak pernah menurunkan** paket yang rank-nya
-     lebih tinggi (kalau akun itu sudah Sultan, dibiarkan);
-   - `user_settings.onboarding` diberi `completedAt` (hanya jika belum ada), jadi
-     gerbang onboarding tidak menahan reviewer di layar setup.
-6. Setelah masuk, reviewer langsung berada di Dashboard dengan paket **Waras** —
-   tanpa paywall dan tanpa onboarding. Checkout tetap bisa diuji lewat
-   `/checkout` (atau panel Langganan), memakai Midtrans sandbox/production
-   sesuai konfigurasi server.
+## Cara masuk sekarang (untuk semua orang)
 
-## Paket otomatis untuk akun reviewer
+1. Buka `https://catetind.com/login`.
+2. Tulis email, tekan **Kirim kode masuk**.
+3. Ambil kode 6 angka dari inbox email tersebut, lalu masukkan di layar yang sama.
 
-| Hal | Nilai |
-|---|---|
-| Paket | `waras` (Waras) |
-| Tipe | lifetime (`is_lifetime = true`, `expires_at = null`, `is_active = true`) |
-| Onboarding | ditandai selesai supaya langsung masuk Dashboard |
-| Idempoten | login berulang tidak menulis ulang kalau sudah benar |
-| Tidak menurunkan | akun dengan rank ≥ Waras (mis. Sultan) dibiarkan apa adanya |
+Tidak ada email yang dikecualikan, tidak ada kode cadangan, dan tidak ada route
+autentikasi yang melewati inbox.
 
-## Konfigurasi yang dibutuhkan
+## Kalau butuh akun uji internal
 
-| Env | Fungsi |
-|---|---|
-| `SUPABASE_SERVICE_ROLE_KEY` | **wajib** di server — dipakai Admin API untuk membuat sesi reviewer. Tidak pernah dikirim ke browser. |
-| `REVIEWER_TEST_LOGIN_ENABLED` | opsional. Kosong/`1` = aktif (default). `0`/`false`/`off` = matikan jalur reviewer. |
+Buat akun dengan email yang inboxnya benar-benar bisa dibaca tim (mis.
+`qa@catetind.com`), lalu beri paket lewat
+`scripts/supabase/grant-akses.mjs` atau `user_subscriptions` di Supabase —
+bukan dengan menambahkan kembali kode statis di kode aplikasi.
 
-Email dan kode reviewer **tidak** bisa diubah lewat env: keduanya konstanta di
-`lib/data/reviewer-access.ts`, supaya aturan "hanya `reviewer@catetind.com`"
-tidak bisa berubah karena salah konfigurasi.
+## Dokumen terkait
 
-## Batas keamanan
+Konfigurasi pembayaran Production (env, URL dashboard, webhook) ada di
+[`MIDTRANS-PRODUCTION.md`](./MIDTRANS-PRODUCTION.md).
 
-- Hanya email persis `reviewer@catetind.com` (trim + case-insensitive). Subdomain,
-  `+alias`, atau domain lain ditolak.
-- Hanya kode persis `123456`.
-- Pesan error tidak membedakan "email salah" dan "kode salah", dan tidak
-  membocorkan detail Supabase.
-- Rate-limit 20 percobaan / 10 menit per IP (best-effort per instance server).
-- Akun reviewer adalah **akun biasa**: RLS `user_id = auth.uid()` tetap berlaku.
-  Bedanya hanya satu — paket Waras lifetime diaktifkan otomatis untuk akun uji
-  ini, supaya reviewer bisa melihat app yang sebenarnya (bukan paywall).
-- Kunci `SUPABASE_SERVICE_ROLE_KEY` hanya dipakai di route server
-  (`app/api/auth/reviewer/route.ts`), tidak pernah di variabel `NEXT_PUBLIC_*`.
-
-## Uji manual cepat
-
-```bash
-# 1) kredensial salah → 401
-curl -i -X POST https://catetind.com/api/auth/reviewer \
-  -H 'Content-Type: application/json' \
-  -d '{"email":"someone@example.com","code":"123456"}'
-
-# 2) kredensial reviewer → 200 + tokenHash
-curl -i -X POST https://catetind.com/api/auth/reviewer \
-  -H 'Content-Type: application/json' \
-  -d '{"email":"reviewer@catetind.com","code":"123456"}'
-```
-
-Uji end-to-end lewat browser: `/login` → email reviewer → kode `123456` →
-halaman `/checkout` terbuka dengan sesi aktif.
-
-## Mematikan jalur reviewer
-
-Set `REVIEWER_TEST_LOGIN_ENABLED=0` lalu redeploy. Route akan menjawab `403`
-dan layar login kembali memakai OTP email biasa untuk semua alamat.

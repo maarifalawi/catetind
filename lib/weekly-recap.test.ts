@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
+  WEEKLY_RECAP_COPY,
   WEEKLY_RECAP_DAYS,
   WEEK_PERIOD,
+  formatIDR,
+  recapNetLabel,
   weeklyPlantStage,
   weeklyRecapFrom,
   weekPeriodLabel,
@@ -163,5 +166,54 @@ describe('weeklyPlantStage · pemetaan hari aktif → tahap', () => {
     expect(weeklyPlantStage(5)).toBe(3)
     expect(weeklyPlantStage(6)).toBe(4)
     expect(weeklyPlantStage(7)).toBe(4)
+  })
+})
+
+/* ── COPY BANNER HOME: SATU JUMLAH + SATU NOMINAL, DARI REKAP NYATA ──────────
+   Dulu banner menulis kalimat tetap "Minggu ini: 1 transaksi tercatat, net
+   -Rp 200.000" untuk SIAPA PUN. Sekarang barisnya disusun dari `WeeklyRecap`:
+   jumlah & net masuk apa adanya, tanpa kata "tercatat"/"net" dan tanpa emoji.
+   Test ini mengunci format nominal (tanda) dan susunan kalimatnya. */
+
+describe('recapNetLabel · nominal net dengan tanda', () => {
+  it('negatif diberi minus, positif diberi plus', () => {
+    expect(recapNetLabel(-200_000, formatIDR)).toBe(`-${formatIDR(200_000)}`)
+    expect(recapNetLabel(50_000, formatIDR)).toBe(`+${formatIDR(50_000)}`)
+  })
+
+  it('nol tidak diberi tanda sama sekali', () => {
+    expect(recapNetLabel(0, formatIDR)).toBe(formatIDR(0))
+  })
+
+  it('memakai formatter pemanggil (banner memakai formatter privasi)', () => {
+    expect(recapNetLabel(-1_500, (value) => `[${value}]`)).toBe('-[1500]')
+  })
+})
+
+describe('WEEKLY_RECAP_COPY.bannerSummary · kalimat dari rekap pekan NYATA', () => {
+  it('jumlah & net mengikuti isi ledger, bukan angka contoh', () => {
+    const recap = weeklyRecapFrom(
+      [
+        row({ date: '2026-10-02', amount: 200_000, type: 'expense' }),
+        row({ date: '2026-10-03', amount: 50_000, type: 'expense' }),
+      ],
+      TODAY,
+    )
+    const sub = WEEKLY_RECAP_COPY.bannerSummary(
+      recap.transactions,
+      recapNetLabel(recap.net, formatIDR),
+    )
+    expect(sub).toBe(`2 transaksi · -${formatIDR(250_000)}`)
+    /* tidak ada kata pengulang, tidak ada seruan, tidak ada emoji */
+    expect(sub).not.toContain('tercatat')
+    expect(sub).not.toContain('net ')
+    expect(sub).not.toMatch(/[\u{1F300}-\u{1FAFF}]/u)
+  })
+
+  it('judul banner pendek, tanpa emoji & tanpa em dash', () => {
+    expect(WEEKLY_RECAP_COPY.bannerTitle).toBe('Recap minggu ini siap')
+    expect(WEEKLY_RECAP_COPY.bannerTitle).not.toContain('—')
+    expect(WEEKLY_RECAP_COPY.bannerTitle).not.toMatch(/[\u{1F300}-\u{1FAFF}]/u)
+    expect(WEEKLY_RECAP_COPY.bannerSummary(1, formatIDR(0))).toBe('1 transaksi · Rp 0')
   })
 })

@@ -84,20 +84,20 @@ export function UpgradeModal({
             user yang sudah punya paket, panel cukup menampilkan judul + daftar
             fitur — tanpa paragraf pengantar yang mengulang informasi. */}
         {!plan && (
-          <p className="mt-2 text-[13px] leading-relaxed text-forest/60">
+          <p className="mt-2 text-[14px] leading-relaxed text-forest/60">
             {UPGRADE_COPY.noPurchaseBody}
           </p>
         )}
 
         {reason && (
-          <p className="mt-3 flex items-start gap-2 rounded-2xl bg-hud-amber/20 px-3.5 py-2.5 text-[12px] font-medium leading-relaxed text-forest ring-1 ring-hud-amber/30">
+          <p className="mt-3 flex items-start gap-2 rounded-2xl bg-hud-amber/20 px-3.5 py-2.5 text-[13px] font-medium leading-relaxed text-forest ring-1 ring-hud-amber/30">
             <Lock className="mt-0.5 size-3.5 shrink-0" strokeWidth={2.4} aria-hidden />
             {reason}
           </p>
         )}
 
         {plan && (
-          <p className="mt-3 flex items-center gap-2 rounded-2xl bg-sage/50 px-3.5 py-2.5 text-[12px] text-forest ring-1 ring-soil/10">
+          <p className="mt-3 flex items-center gap-2 rounded-2xl bg-sage/50 px-3.5 py-2.5 text-[13px] text-forest ring-1 ring-soil/10">
             <Sparkles className="size-3.5 shrink-0" strokeWidth={2.4} aria-hidden />
             Paketmu sekarang: <b className="font-medium">{plan.name}</b>
           </p>
@@ -110,14 +110,14 @@ export function UpgradeModal({
             `PLAN_CAPABILITIES` — bukan copy kedua. */}
         {plan && hero && heroFeatures.length > 0 && (
           <section className="mt-4 rounded-2xl bg-cream p-4 ring-1 ring-soil/12">
-            <p className="text-[12.5px] font-medium text-forest">
+            <p className="text-[13.5px] font-medium text-forest">
               Yang kamu dapat di {hero.name}
             </p>
             <ul className="mt-2 grid gap-1.5">
               {heroFeatures.map((feature) => (
                 <li
                   key={feature}
-                  className="flex items-start gap-2 text-[12px] leading-relaxed text-forest/70"
+                  className="flex items-start gap-2 text-[13px] leading-relaxed text-forest/70"
                 >
                   <Check
                     className="mt-0.5 size-3.5 shrink-0 text-forest"
@@ -129,7 +129,7 @@ export function UpgradeModal({
               ))}
             </ul>
             {stillLocked.length > 0 && (
-              <p className="mt-2.5 flex items-start gap-1.5 border-t border-soil/10 pt-2.5 text-[11px] leading-relaxed text-forest/50">
+              <p className="mt-2.5 flex items-start gap-1.5 border-t border-soil/10 pt-2.5 text-[12px] leading-relaxed text-forest/50">
                 <Lock className="mt-0.5 size-3 shrink-0" strokeWidth={2.6} aria-hidden />
                 Masih terkunci setelah upgrade ini: {stillLocked.join(', ')}.
               </p>
@@ -142,15 +142,15 @@ export function UpgradeModal({
             href={CHECKOUT_PATH}
             className="mt-5 flex h-13 w-full items-center justify-between gap-3 rounded-full bg-forest px-6 text-cream transition-colors hover:bg-forest-soft"
           >
-            <span className="text-[14.5px] font-medium">{UPGRADE_COPY.ctaLabel}</span>
+            <span className="text-[15.5px] font-medium">{UPGRADE_COPY.ctaLabel}</span>
             <ArrowRight className="size-4" strokeWidth={2.4} aria-hidden />
           </Link>
         )}
 
         {plan && hero === null && (
           <div className="mt-5 rounded-2xl bg-sage/40 p-4 ring-1 ring-soil/10">
-            <p className="text-[13px] font-medium text-forest">{UPGRADE_COPY.topTierTitle}</p>
-            <p className="mt-1 text-[12px] leading-relaxed text-forest/60">
+            <p className="text-[14px] font-medium text-forest">{UPGRADE_COPY.topTierTitle}</p>
+            <p className="mt-1 text-[13px] leading-relaxed text-forest/60">
               {UPGRADE_COPY.topTierBody}
             </p>
           </div>
@@ -172,7 +172,7 @@ export function UpgradeModal({
         <button
           type="button"
           onClick={onClose}
-          className="mt-4 w-full rounded-full px-4 py-2.5 text-[13px] font-medium text-forest/55 transition-colors hover:bg-sage/50"
+          className="mt-4 w-full rounded-full px-4 py-2.5 text-[14px] font-medium text-forest/55 transition-colors hover:bg-sage/50"
         >
           {UPGRADE_COPY.laterLabel}
         </button>
@@ -196,25 +196,25 @@ function UpgradeTargetRow({
     <li className="rounded-2xl bg-cream p-4 ring-1 ring-soil/12">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="flex items-center gap-1.5 text-[13.5px] font-medium text-forest">
+          <p className="flex items-center gap-1.5 text-[14.5px] font-medium text-forest">
             {target.name}
             {target.badge && (
-              <span className="shrink-0 rounded-full bg-forest px-2 py-0.5 text-[9.5px] font-medium text-mint">
+              <span className="shrink-0 rounded-full bg-forest px-2 py-0.5 text-[10.5px] font-medium text-mint">
                 {target.badge}
               </span>
             )}
           </p>
-          <p className="mt-0.5 text-[11.5px] text-forest/55">{target.subtitle}</p>
+          <p className="mt-0.5 text-[12.5px] text-forest/55">{target.subtitle}</p>
         </div>
         <div className="shrink-0 text-right">
-          <p className="font-display text-[15px] font-medium tabular-nums text-forest">
+          <p className="font-display text-[16px] font-medium tabular-nums text-forest">
             {formatIDR(diff)}
           </p>
-          <p className="text-[10.5px] text-forest/45">{UPGRADE_COPY.diffLabel}</p>
+          <p className="text-[11.5px] text-forest/45">{UPGRADE_COPY.diffLabel}</p>
         </div>
       </div>
 
-      <p className="mt-2 text-[11px] leading-relaxed text-forest/50">
+      <p className="mt-2 text-[12px] leading-relaxed text-forest/50">
         {fill(UPGRADE_COPY.diffNote, {
           target: target.name,
           full: formatIDR(target.lifetime),
@@ -226,7 +226,7 @@ function UpgradeTargetRow({
         href={buildUpgradeHref(target.id, ownedPlanId, 'lifetime')}
         className="group mt-3 flex h-11 w-full items-center justify-between gap-2 rounded-full bg-forest pl-5 pr-1.5 text-cream transition-colors hover:bg-forest-soft"
       >
-        <span className="flex items-center gap-1.5 text-[13px] font-medium">
+        <span className="flex items-center gap-1.5 text-[14px] font-medium">
           <Lock className="size-3.5" strokeWidth={2.6} aria-hidden />
           {fill(UPGRADE_COPY.cta, { amount: formatIDR(diff) })}
         </span>

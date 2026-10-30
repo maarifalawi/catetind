@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   DEFAULT_AUTH_LANDING,
+  LOGIN_COPY,
   OTP_LENGTH,
   buildVerifyHref,
   isValidEmail,
@@ -121,4 +122,24 @@ describe('buildVerifyHref · membawa ?next hanya kalau aman', () => {
       '/login/verify?email=rina%40email.com',
     )
   })
+
+/* ── JALUR REVIEWER SUDAH DIHAPUS ────────────────────────────────────────────
+   Dulu ada pintu masuk khusus `reviewer@catetind.com` + kode tetap untuk
+   verifikasi merchant Midtrans. Merchant sudah di-ACC, jadi pintu itu DIHAPUS
+   dari data layer sekaligus dari UI & route-nya: tidak boleh ada copy/aturan
+   yang menyiratkan jalur login tanpa inbox masih ada. */
+
+describe('LOGIN_COPY · tidak ada lagi jalur kode reviewer', () => {
+  it('tidak ada satu pun copy khusus reviewer yang tersisa', () => {
+    expect(LOGIN_COPY).not.toHaveProperty('reviewerCodeLead')
+    expect(LOGIN_COPY).not.toHaveProperty('reviewerCodeReadyToast')
+    expect(LOGIN_COPY).not.toHaveProperty('reviewerResendNote')
+    expect(JSON.stringify(LOGIN_COPY).toLowerCase()).not.toContain('reviewer')
+  })
+
+  it('pesan kode salah tetap ada (informasi, bukan hiasan)', () => {
+    expect(LOGIN_COPY.invalidCode).toBe('Kodenya 6 angka ya. Cek lagi emailnya.')
+  })
+})
+
 })

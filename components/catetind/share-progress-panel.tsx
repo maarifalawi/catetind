@@ -144,10 +144,10 @@ export function ShareProgressPanel({
           <Share2 className="size-4" strokeWidth={2.2} aria-hidden />
         </span>
         <div className="min-w-0">
-          <h3 className="font-display text-[13.5px] font-medium tracking-tight text-forest">
+          <h3 className="font-display text-[14.5px] font-medium tracking-tight text-forest">
             {SHARE_PANEL_COPY.title}
           </h3>
-          <p className="mt-0.5 text-[11px] leading-relaxed text-forest/55">
+          <p className="mt-0.5 text-[12px] leading-relaxed text-forest/55">
             {SHARE_PANEL_COPY.blurb}
           </p>
         </div>
@@ -157,7 +157,7 @@ export function ShareProgressPanel({
         <button
           type="button"
           onClick={shareLink}
-          className="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full bg-forest px-4 text-[12.5px] font-medium text-cream transition-colors duration-200 hover:bg-forest-soft active:scale-[0.98] motion-reduce:transition-none"
+          className="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full bg-forest px-4 text-[13.5px] font-medium text-cream transition-colors duration-200 hover:bg-forest-soft active:scale-[0.98] motion-reduce:transition-none"
         >
           <Share2 className="size-3.5" strokeWidth={2.4} aria-hidden />
           {SHARE_PANEL_COPY.shareLabel}
@@ -165,7 +165,7 @@ export function ShareProgressPanel({
         <button
           type="button"
           onClick={copyLink}
-          className="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full bg-cream px-4 text-[12.5px] font-medium text-forest ring-1 ring-soil/14 transition-colors duration-200 hover:bg-sage/70 active:scale-[0.98] motion-reduce:transition-none"
+          className="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full bg-cream px-4 text-[13.5px] font-medium text-forest ring-1 ring-soil/14 transition-colors duration-200 hover:bg-sage/70 active:scale-[0.98] motion-reduce:transition-none"
         >
           {status === 'copied' ? (
             <Check className="size-3.5" strokeWidth={2.6} aria-hidden />
@@ -180,26 +180,26 @@ export function ShareProgressPanel({
       <button
         type="button"
         onClick={shareImage}
-        className="mt-2 inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-full bg-cream px-4 text-[12.5px] font-medium text-forest ring-1 ring-soil/14 transition-colors duration-200 hover:bg-sage/70 active:scale-[0.98] motion-reduce:transition-none"
+        className="mt-2 inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-full bg-cream px-4 text-[13.5px] font-medium text-forest ring-1 ring-soil/14 transition-colors duration-200 hover:bg-sage/70 active:scale-[0.98] motion-reduce:transition-none"
       >
         <Download className="size-3.5" strokeWidth={2.4} aria-hidden />
         {SHARE_PANEL_COPY.shareImageLabel}
       </button>
 
       {/* status aksi — aria-live supaya screen reader ikut tahu, bukan cuma mata */}
-      <p aria-live="polite" className="mt-1.5 min-h-4 text-center text-[11px] font-medium text-forest/80">
+      <p aria-live="polite" className="mt-1.5 min-h-4 text-center text-[12px] font-medium text-forest/80">
         {statusText}
       </p>
 
       <div className="mt-1.5 border-t border-soil/12 pt-3">
         <Link
           href={buildShareHref(card.id)}
-          className="inline-flex items-center gap-1 text-[11.5px] font-medium text-forest underline underline-offset-2 transition-colors duration-200 hover:text-forest-soft motion-reduce:transition-none"
+          className="inline-flex items-center gap-1 text-[12.5px] font-medium text-forest underline underline-offset-2 transition-colors duration-200 hover:text-forest-soft motion-reduce:transition-none"
         >
           {SHARE_PANEL_COPY.previewLabel}
           <ArrowUpRight className="size-3.5" strokeWidth={2.4} aria-hidden />
         </Link>
-        <p className="mt-1 text-[10.5px] leading-relaxed text-forest/45">
+        <p className="mt-1 text-[11.5px] leading-relaxed text-forest/45">
           {SHARE_PANEL_COPY.previewHint}
         </p>
       </div>

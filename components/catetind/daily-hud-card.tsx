@@ -141,7 +141,7 @@ export const DailyHudCard = memo(function DailyHudCard() {
         </div>
         <span
           className={cn(
-            'rounded-full px-2 py-0.5 text-[10px] font-medium',
+            'rounded-full px-2 py-0.5 text-[11px] font-medium',
             status === 'onTrack' && 'bg-hud-sage/15 text-hud-sage',
             status === 'approaching' && 'bg-hud-amber/15 text-hud-terracotta',
             status === 'over' && 'bg-hud-terracotta/15 text-hud-terracotta',
@@ -162,7 +162,7 @@ export const DailyHudCard = memo(function DailyHudCard() {
           <Link
             href={MONEY_SETTINGS_HREF}
             aria-label={HUD_COPY.notConfiguredA11y}
-            className="mt-5 flex items-center gap-2 rounded-full bg-forest px-5 py-2.5 text-[13px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.97]"
+            className="mt-5 flex items-center gap-2 rounded-full bg-forest px-5 py-2.5 text-[14px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.97]"
           >
             <Settings2 className="size-4" strokeWidth={2.4} aria-hidden />
             {HUD_COPY.notConfiguredCta}
@@ -180,7 +180,7 @@ export const DailyHudCard = memo(function DailyHudCard() {
             trigger={
               <button
                 type="button"
-                className="mt-5 flex items-center gap-2 rounded-full bg-forest px-5 py-2.5 text-[13px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.97]"
+                className="mt-5 flex items-center gap-2 rounded-full bg-forest px-5 py-2.5 text-[14px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.97]"
               >
                 {HUD_COPY.drySpellCta}
               </button>
@@ -191,7 +191,7 @@ export const DailyHudCard = memo(function DailyHudCard() {
         /* ── Jatah ditahan (audit UX #2) — jangan pernah "Rp 0" tanpa sebab */
         <div className="mt-5 rounded-2xl bg-hud-terracotta/[0.08] px-4 py-6 text-center ring-1 ring-hud-terracotta/20">
           <p className="text-base font-medium text-hud-terracotta">{HUD_COPY.shortfallBadge}</p>
-          <p className="mt-1.5 text-[12px] leading-relaxed text-forest/60">{HUD_COPY.shortfallBody}</p>
+          <p className="mt-1.5 text-[13px] leading-relaxed text-forest/60">{HUD_COPY.shortfallBody}</p>
         </div>
       ) : (
         /* ── HUD PADAT (58.5 · 66): angka utama + bar progres ────────────────
@@ -219,7 +219,7 @@ export const DailyHudCard = memo(function DailyHudCard() {
               Persen tetap turun ke baris tipis di bawah supaya meternya bersih. */}
           <div className="mt-5">
             <HudMeter usedPct={usedPct} ariaLabel={HOME_HUD_COPY.title} />
-            <p className="mt-2 text-[11px] font-medium text-forest/45 tabular-nums">
+            <p className="mt-2 text-[12px] font-medium text-forest/45 tabular-nums">
               {Math.round(usedPct * 100)}% {HOME_HUD_COPY.usedCaption}
             </p>
           </div>
@@ -227,7 +227,7 @@ export const DailyHudCard = memo(function DailyHudCard() {
           {/* kalimat status: hanya saat statusnya perlu dibicarakan (chip status
               selalu tampil di header) */}
           {status !== 'onTrack' && (
-            <p className="mt-2 text-[12px] font-medium leading-snug text-forest/70">{STATUS.copy}</p>
+            <p className="mt-2 text-[13px] font-medium leading-snug text-forest/70">{STATUS.copy}</p>
           )}
 
           {/* kompromi DIAN: CTA ke AI Coach saat over — tanpa intimidasi */}
@@ -235,7 +235,7 @@ export const DailyHudCard = memo(function DailyHudCard() {
             <button
               type="button"
               onClick={() => openAICoachWithSeed(SPENDING_REVIEW_COPY.coachSeed)}
-              className="mt-2 flex w-fit items-center gap-1.5 rounded-full bg-hud-terracotta/10 px-3 py-1.5 text-[12px] font-medium text-hud-terracotta transition-colors hover:bg-hud-terracotta/20"
+              className="mt-2 flex w-fit items-center gap-1.5 rounded-full bg-hud-terracotta/10 px-3 py-1.5 text-[13px] font-medium text-hud-terracotta transition-colors hover:bg-hud-terracotta/20"
             >
               <Sparkles className="size-3.5" strokeWidth={2.2} aria-hidden />
               {HOME_HUD_COPY.reviewCta}

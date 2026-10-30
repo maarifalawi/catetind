@@ -505,7 +505,15 @@ export const CHECKOUT_COPY = {
   lockedNote: 'Buka kapan aja lewat halaman paket, harga selalu dari sumber yang sama.',
   referralTitle: REFERRED_FRIEND_BENEFIT,
   referralLabel: 'Kode dari teman (opsional)',
-  referralPlaceholder: 'Contoh: RINA-X7K',
+  /*
+   * Placeholder ini SENGAJA memakai kode yang bentuknya sah tapi TIDAK PERNAH
+   * ada di database (`ABCD-123`). Sebelumnya yang tertulis kode contoh yang
+   * benar-benar hidup di `referral_codes`, sehingga orang bisa mengetik contoh
+   * dari layar dan mendapat diskon atas nama pengguna lain. Migrasi
+   * `20261029120000` juga memutar kode itu keluar dari database.
+   */
+  referralPlaceholder: 'Contoh: ABCD-123',
+
   referralApply: 'Pakai',
   referralChecking: 'Memeriksa kode…',
   referralApplied: 'Kode dipakai',
@@ -622,6 +630,15 @@ export const PAY_START_COPY = {
   methodLegend: 'Cara bayar',
   payLabel: 'Bayar sekarang',
   payingLabel: 'Menyiapkan tagihan…',
+  /* Audit pra-rilis 30 Oktober 2026: seluruh kanal produksi membalas
+     `402 Payment channel is not activated`, jadi daftar metode yang boleh
+     dipilih KOSONG dan halaman ini tidak boleh menawarkan tombol bayar.
+     Kalimatnya menyebut fakta (kanal belum aktif) dan menegaskan tidak ada
+     uang yang tertarik — user tidak perlu mengira dirinya salah. */
+  noMethodTitle: 'Pembayaran belum bisa dimulai di sini',
+  noMethodBody:
+    'Kanal pembayaran (QRIS, Virtual Account, dan e-wallet) belum diaktifkan di akun pembayaran kami, jadi pilihan metode dan tombol bayar sengaja disembunyikan. Belum ada uang yang tertarik dan tidak ada tagihan yang menggantung.',
+  noMethodNote: 'Paketmu tidak berubah. Buka halaman ini lagi beberapa saat lagi ya 🌿',
   loginTitle: 'Masuk dulu ya',
   loginBody: 'Pembayaran tercatat atas namamu. Masuk pakai kode 6 angka dari email.',
   loginCta: 'Buka halaman masuk',
@@ -654,6 +671,16 @@ export const PAY_CARD_COPY = {
   ewalletCta: 'Buka aplikasi e-wallet',
   ewalletHint: 'Selesaikan di aplikasi itu, lalu balik ke tab ini.',
   noInstructions: 'Tagihan ini belum punya instruksi yang bisa ditampilkan. Pilih metode lain ya.',
+  /* ── SNAP (sejak 30 Oktober 2026) ──────────────────────────────────────────
+     Produksi memakai Midtrans Snap: QR/VA/e-wallet digambar oleh Midtrans, bukan
+     oleh app. Yang ditampilkan di sini adalah jalan masuknya (satu tombol) plus
+     status yang tetap dibaca dari server. */
+  snapTitle: 'Selesaikan di halaman pembayaran',
+  snapBody:
+    'Halaman pembayaran Midtrans terbuka di tab ini dan langsung memilih metode yang kamu pilih. Setelah selesai, kamu kembali ke halaman konfirmasi.',
+  snapCta: 'Buka halaman pembayaran',
+  snapChecking: 'Cek status pembayaran',
+  snapWaiting: 'Menunggu pembayaran di halaman Midtrans',
   waitingTitle: 'Menunggu pembayaran',
   waitingBody: 'Statusnya berubah sendiri begitu pembayaran masuk.',
   checkingLabel: 'Cek status…',

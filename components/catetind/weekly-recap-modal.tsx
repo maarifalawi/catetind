@@ -105,7 +105,7 @@ function MicroLabel({
   return (
     <p
       className={cn(
-        'text-[10px] font-medium uppercase tracking-[0.16em]',
+        'text-[11px] font-medium uppercase tracking-[0.16em]',
         tone === 'light' ? 'text-cream/55' : 'text-forest/40',
         className,
       )}
@@ -128,7 +128,7 @@ function PctBadge({
   return (
     <span
       className={cn(
-        'inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium tabular-nums',
+        'inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[12px] font-medium tabular-nums',
         tone === 'mint' && 'bg-mint/25 text-forest',
         tone === 'sage' && 'bg-sage text-forest',
         className,
@@ -165,7 +165,7 @@ function SlideOverview({ recap }: { recap: WeeklyRecap }) {
         />
 
         <div className="relative">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-mint px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.14em] text-forest">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-mint px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.14em] text-forest">
             <Calendar className="size-3" strokeWidth={2.6} />
             Minggu ini
           </span>
@@ -185,20 +185,20 @@ function SlideOverview({ recap }: { recap: WeeklyRecap }) {
 
           <dl className="mt-5 grid grid-cols-2 gap-3">
             <div className="rounded-2xl bg-cream/[0.07] px-3.5 py-3 ring-1 ring-inset ring-cream/10">
-              <dt className="flex items-center gap-1.5 text-[11px] text-cream/60">
+              <dt className="flex items-center gap-1.5 text-[12px] text-cream/60">
                 <span aria-hidden className="size-2 rounded-full bg-mint" />
                 Pemasukan
               </dt>
-              <dd className="mt-1 text-[15px] font-medium tabular-nums">
+              <dd className="mt-1 text-[16px] font-medium tabular-nums">
                 {money(income)}
               </dd>
             </div>
             <div className="rounded-2xl bg-cream/[0.07] px-3.5 py-3 ring-1 ring-inset ring-cream/10">
-              <dt className="flex items-center gap-1.5 text-[11px] text-cream/60">
+              <dt className="flex items-center gap-1.5 text-[12px] text-cream/60">
                 <span aria-hidden className="size-2 rounded-full bg-plum" />
                 Pengeluaran
               </dt>
-              <dd className="mt-1 text-[15px] font-medium tabular-nums">
+              <dd className="mt-1 text-[16px] font-medium tabular-nums">
                 {money(expense)}
               </dd>
             </div>
@@ -216,7 +216,7 @@ function SlideOverview({ recap }: { recap: WeeklyRecap }) {
                 </div>
               </>
             ) : (
-              <p className="text-[11px] leading-relaxed text-cream/60">
+              <p className="text-[12px] leading-relaxed text-cream/60">
                 {WEEKLY_RECAP_COPY.noIncome}
               </p>
             )}
@@ -231,14 +231,14 @@ function SlideOverview({ recap }: { recap: WeeklyRecap }) {
           <p className="mt-1.5 text-3xl font-medium leading-none tracking-tight tabular-nums text-forest">
             {recap.transactions}
           </p>
-          <p className="mt-1.5 text-[11px] text-forest/45">catatan minggu ini</p>
+          <p className="mt-1.5 text-[12px] text-forest/45">catatan minggu ini</p>
         </section>
         <section className="rounded-[1.75rem] bg-mint/20 p-4 ring-1 ring-mint/30">
           <MicroLabel>Rata-rata/hari</MicroLabel>
           <p className="mt-1.5 text-lg font-medium leading-tight tracking-tight tabular-nums text-forest">
             {money(avgPerDay)}
           </p>
-          <p className="mt-1.5 text-[11px] text-forest/55">pengeluaran harian</p>
+          <p className="mt-1.5 text-[12px] text-forest/55">pengeluaran harian</p>
         </section>
       </div>
 
@@ -263,7 +263,7 @@ function SlideOverview({ recap }: { recap: WeeklyRecap }) {
             style={{ width: `${Math.max(savingPct, 0)}%` }}
           />
         </div>
-        <p className="mt-2.5 text-[11px] leading-relaxed text-forest/50">
+        <p className="mt-2.5 text-[12px] leading-relaxed text-forest/50">
           {savingPct >= 0 ? (
             <>
               Dari {money(income)} pemasukan, {money(savedAmount)} nggak kepakai
@@ -306,7 +306,7 @@ function SlideExpenses({ recap }: { recap: WeeklyRecap }) {
   if (!top) {
     return (
       <div className="space-y-4">
-        <section className="rounded-[1.75rem] bg-cream p-5 text-[13px] leading-relaxed text-forest/60 ring-1 ring-soil/12">
+        <section className="rounded-[1.75rem] bg-cream p-5 text-[14px] leading-relaxed text-forest/60 ring-1 ring-soil/12">
           {WEEKLY_RECAP_COPY.expensesEmpty}
         </section>
       </div>
@@ -326,14 +326,14 @@ function SlideExpenses({ recap }: { recap: WeeklyRecap }) {
           className="pointer-events-none absolute -bottom-20 -right-12 size-44 rounded-full bg-daisy/10 blur-3xl"
         />
         <div className="relative">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-mint px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.14em] text-forest">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-mint px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.14em] text-forest">
             <BarChart3 className="size-3" strokeWidth={2.6} />
             Pengeluaran
           </span>
           {/* Cakupan + rentang BERGERAK: "pekan ini · 28 Sep – 4 Okt". Dulu
               "dalam 7 hari terakhir" — padahal jendelanya pekan kalender
               (Senin–Minggu) yang masih memuat besok, jadi kalimatnya berbohong. */}
-          <p className="mt-2.5 text-[11px] text-cream/50">
+          <p className="mt-2.5 text-[12px] text-cream/50">
             {WEEKLY_RECAP_COPY.expensesScope} · {recap.periodLabel}
           </p>
 
@@ -372,10 +372,10 @@ function SlideExpenses({ recap }: { recap: WeeklyRecap }) {
                 ))}
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center px-2 text-center">
-                <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-cream/45">
+                <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-cream/45">
                   Total
                 </span>
-                <span className="mt-1 text-[15px] font-medium leading-none tabular-nums">
+                <span className="mt-1 text-[16px] font-medium leading-none tabular-nums">
                   {money(expense)}
                 </span>
               </div>
@@ -383,8 +383,8 @@ function SlideExpenses({ recap }: { recap: WeeklyRecap }) {
 
             <dl className="min-w-0 flex-1 space-y-3">
               <div>
-                <dt className="text-[11px] text-cream/50">Pos terbesar</dt>
-                <dd className="mt-1 flex items-center gap-1.5 text-[13px] font-medium">
+                <dt className="text-[12px] text-cream/50">Pos terbesar</dt>
+                <dd className="mt-1 flex items-center gap-1.5 text-[14px] font-medium">
                   <span
                     aria-hidden
                     className="size-2 shrink-0 rounded-full"
@@ -395,8 +395,8 @@ function SlideExpenses({ recap }: { recap: WeeklyRecap }) {
                 </dd>
               </div>
               <div>
-                <dt className="text-[11px] text-cream/50">Rata-rata per hari</dt>
-                <dd className="mt-1 text-[13px] font-medium tabular-nums">
+                <dt className="text-[12px] text-cream/50">Rata-rata per hari</dt>
+                <dd className="mt-1 text-[14px] font-medium tabular-nums">
                   {money(avgPerDay)}
                 </dd>
               </div>
@@ -450,7 +450,7 @@ function SlideExpenses({ recap }: { recap: WeeklyRecap }) {
         >
           <Flame className="size-4" strokeWidth={2.4} style={{ color: top.color }} />
         </span>
-        <p className="text-[13px] leading-relaxed text-forest/65">
+        <p className="text-[14px] leading-relaxed text-forest/65">
           <b className="font-medium text-forest">{top.label}</b> jadi pos terbesar minggu
           ini, {top.pct}% dari total pengeluaran ({money(top.amount)}).
           Kategori ini yang paling worth dirapikan minggu depan.
@@ -476,7 +476,7 @@ function SlidePlant({ recap }: { recap: WeeklyRecap }) {
           className="pointer-events-none absolute bottom-16 left-1/2 h-20 w-44 -translate-x-1/2 rounded-full bg-mint/30 blur-2xl"
         />
         <div className="relative flex flex-col items-center">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-forest px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.14em] text-mint">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-forest px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.14em] text-mint">
             <Sprout className="size-3" strokeWidth={2.6} />
             Tahap {stage} · {STAGE_NAMES[stage]}
           </span>
@@ -506,7 +506,7 @@ function SlidePlant({ recap }: { recap: WeeklyRecap }) {
                   />
                   <span
                     className={cn(
-                      'text-center text-[10px] font-medium leading-tight',
+                      'text-center text-[11px] font-medium leading-tight',
                       isCurrent ? 'text-forest' : 'text-forest/40',
                     )}
                   >
@@ -542,7 +542,7 @@ function SlidePlant({ recap }: { recap: WeeklyRecap }) {
             style={{ width: `${levelPct}%` }}
           />
         </div>
-        <p className="mt-2.5 text-[11px] leading-relaxed text-forest/50">
+        <p className="mt-2.5 text-[12px] leading-relaxed text-forest/50">
           Tanaman ini tumbuh dari kebiasaan mencatat minggu ini, bukan angka yang harus dikejar.
         </p>
       </section>
@@ -555,14 +555,14 @@ function SlidePlant({ recap }: { recap: WeeklyRecap }) {
           <p className="mt-1.5 text-3xl font-medium leading-none tracking-tight tabular-nums text-forest">
             {recap.transactions}
           </p>
-          <p className="mt-1.5 text-[11px] text-forest/60">transaksi tercatat 🌱</p>
+          <p className="mt-1.5 text-[12px] text-forest/60">transaksi tercatat 🌱</p>
         </section>
         <section className="rounded-[1.75rem] bg-cream p-4 ring-1 ring-soil/12">
           <MicroLabel>Hari aktif</MicroLabel>
           <p className="mt-1.5 text-3xl font-medium leading-none tracking-tight tabular-nums text-forest">
             {recap.activeDays}
           </p>
-          <p className="mt-1.5 text-[11px] text-forest/45">hari kamu mencatat</p>
+          <p className="mt-1.5 text-[12px] text-forest/45">hari kamu mencatat</p>
         </section>
       </div>
     </div>
@@ -645,7 +645,7 @@ function SlidePlan({
         <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-cream text-forest">
           <Lightbulb className="size-4" strokeWidth={2.2} />
         </span>
-        <p className="text-[13px] leading-relaxed text-forest/70">
+        <p className="text-[14px] leading-relaxed text-forest/70">
           {top ? (
             <>
               Minggu depan coba kurangi kategori{' '}
@@ -671,7 +671,7 @@ function SlidePlan({
         <div className="mt-5 flex h-36 items-end justify-center gap-6">
           {bars.map((b, i) => (
             <div key={b.id} className="flex w-24 flex-col items-center gap-2">
-              <span className="whitespace-nowrap text-[11px] font-medium tabular-nums text-forest/70">
+              <span className="whitespace-nowrap text-[12px] font-medium tabular-nums text-forest/70">
                 {money(b.value)}
               </span>
               <span
@@ -684,7 +684,7 @@ function SlidePlan({
                   animationDelay: `${i * 90}ms`,
                 }}
               />
-              <span className="text-[10px] font-medium text-forest/45">{b.label}</span>
+              <span className="text-[11px] font-medium text-forest/45">{b.label}</span>
             </div>
           ))}
         </div>
@@ -707,7 +707,7 @@ function SlidePlan({
           <p className="mt-2 text-[1.75rem] font-medium leading-none tracking-tight tabular-nums text-forest">
             {money(savingPerWeek)}
           </p>
-          <p className="mt-2 text-[11px] leading-relaxed text-forest/60">
+          <p className="mt-2 text-[12px] leading-relaxed text-forest/60">
             Setara {money(dailyCut)}/hari, kamu masih punya ruang buat ini.
           </p>
         </div>
@@ -722,7 +722,7 @@ function SlidePlan({
               <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-sage text-forest">
                 <Icon className="size-4" strokeWidth={2.2} />
               </span>
-              <span className="min-w-0 flex-1 text-[13px] leading-snug text-forest/70">{text}</span>
+              <span className="min-w-0 flex-1 text-[14px] leading-snug text-forest/70">{text}</span>
               <PctBadge tone="sage" className="shrink-0">
                 {badge}
               </PctBadge>
@@ -758,7 +758,7 @@ function SlidePlan({
         </Link>
       </div>
 
-      <p className="text-center text-[11px] leading-relaxed text-forest/40">
+      <p className="text-center text-[12px] leading-relaxed text-forest/40">
         💡 Kurangi pengeluaran harian sekecil {money(dailyCut)}, tabung{' '}
         {money(savingPerWeek)}/minggu
       </p>
@@ -855,7 +855,7 @@ export function WeeklyRecapModal({
           <button
             type="button"
             onClick={onClose}
-            className="mt-4 w-full rounded-full px-4 py-2.5 text-[13px] font-medium text-forest/55 transition-colors hover:bg-sage/50"
+            className="mt-4 w-full rounded-full px-4 py-2.5 text-[14px] font-medium text-forest/55 transition-colors hover:bg-sage/50"
           >
             {UPGRADE_COPY.laterLabel}
           </button>
@@ -1011,11 +1011,11 @@ function WeekRecapSheet({
             </h2>
             {/* meta sebagai chip — bukan tiga baris teks bertingkat */}
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-cream px-2.5 py-1 text-[11px] font-medium text-forest/60 ring-1 ring-soil/12">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-cream px-2.5 py-1 text-[12px] font-medium text-forest/60 ring-1 ring-soil/12">
                 <Calendar className="size-3.5 text-forest/55" strokeWidth={2.2} />
                 {periodLabel}
               </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-cream px-2.5 py-1 text-[11px] font-medium text-forest/60 ring-1 ring-soil/12">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-cream px-2.5 py-1 text-[12px] font-medium text-forest/60 ring-1 ring-soil/12">
                 <BarChart3 className="size-3.5 text-forest/55" strokeWidth={2.2} />
                 {recap.transactions} transaksi tercatat
               </span>
@@ -1085,7 +1085,7 @@ function WeekRecapSheet({
                 aria-selected={active}
                 onClick={() => setSlide(i)}
                 className={cn(
-                  'flex min-w-0 items-center justify-center gap-1.5 rounded-full px-2 py-2 text-[11.5px] font-medium whitespace-nowrap transition-colors duration-200',
+                  'flex min-w-0 items-center justify-center gap-1.5 rounded-full px-2 py-2 text-[12.5px] font-medium whitespace-nowrap transition-colors duration-200',
                   active
                     ? 'bg-forest font-medium text-mint'
                     : 'text-forest/55 hover:bg-cream/70 hover:text-forest',
@@ -1135,7 +1135,7 @@ function WeekRecapSheet({
                   <Sprout className="size-6" strokeWidth={1.8} />
                 </span>
                 <p className="mt-4 text-base font-medium text-forest">{WEEKLY_RECAP_COPY.emptyTitle}</p>
-                <p className="mt-1.5 max-w-sm text-[13px] leading-relaxed text-forest/55">
+                <p className="mt-1.5 max-w-sm text-[14px] leading-relaxed text-forest/55">
                   {WEEKLY_RECAP_COPY.emptyBody}
                 </p>
               </div>

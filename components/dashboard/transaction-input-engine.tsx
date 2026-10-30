@@ -1,6 +1,7 @@
 'use client'
 
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -42,7 +43,16 @@ import { FEATURE_LOCK_COPY } from '@/lib/data/upgrade'
 import { useSubscriptionGate } from '@/components/catetind/subscription-gate-provider'
 import { useUpgradeGate } from '@/components/catetind/upgrade-gate-provider'
 import { SubscriptionLockNote } from '@/components/catetind/subscription-lock-note'
-import { MOCK_RECEIPT_AMOUNT, MOCK_RECEIPT_READ_MS, receiptNoteFromFileName } from '@/lib/transaction-ai'
+import { AI_CAPTURE_COPY } from '@/lib/ai-chat'
+import { requestReceiptTransaction, requestTextTransaction } from '@/lib/ai-capture-client'
+import { readAiPrefs } from '@/lib/ai-prefs'
+import { recordAiUsage } from '@/lib/ai-usage-store'
+import { useVoiceTranscript } from '@/hooks/use-voice-transcript'
+import {
+  LOW_CONFIDENCE_THRESHOLD,
+  parseSpokenTransaction,
+  type ExtractedTransaction,
+} from '@/lib/transaction-ai'
 import {
   EDIT_TRANSACTION_COPY,
   TRANSACTION_FIXED_CATEGORY,
@@ -55,11 +65,22 @@ import { CategoryPicker } from '@/components/catetind/category-picker'
 import { WalletPicker } from '@/components/catetind/wallet-picker'
 import { useMoneyContext } from '@/components/catetind/money-context-provider'
 import { usePrivacy } from '@/components/catetind/privacy-provider'
-import { defaultWalletNameFor, useMoneyStore, walletFundsCheck, walletOptionsFor } from '@/lib/money/store'
+import { defaultWalletNameFor, captureWalletChoice, useMoneyStore, walletFundsCheck, walletOptionsFor } from '@/lib/money/store'
 /* ── Transaction Input Engine (inventaris 97a/b/c) ────────────────────────────
    Falsafah "Zero Cognitive Load & 4-Tap Strict Rule": tidak ada menu "mau input
    bagaimana?". Panel langsung membuka form manual — OCR & Voice cuma
    quick-action sekunder di dalam panel yang sama.
+
+   PAKET 101 — DUA QUICK-ACTION ITU SEKARANG BENAR-BENAR AI.
+   Sebelumnya keduanya MOCK: 📸 selalu mengisi "Rp 87.500" + nama dari nama
+   berkas setelah 2,2 detik, dan 🎤 selalu mengisi "Beli kopi / Rp 25.000"
+   setelah 3 detik. Itu sebabnya struk nyata (mis. total Rp 200.000.000) tetap
+   terbaca "Rp 87.500" dan kategori tidak pernah terisi. Sekarang:
+     · 📸 → `POST /api/ai/ocr` (model vision) lewat `requestReceiptTransaction`;
+     · 🎤 → Web Speech API (`useVoiceTranscript`) → `POST /api/parse-voice`;
+     · hasilnya mengisi NOMINAL, NAMA, KATEGORI, TIPE (dan DOMPET untuk ucapan)
+       di form yang sama, dengan chip konfirmasi + kalimat jujur saat AI ragu;
+     · gagal / total tak terbaca TIDAK diisi angka karangan.
 
    Satu engine, dua shell (biar perilaku mobile & web tidak pernah divergen):
    • layout="sheet"  → di dalam Vaul bottom sheet (TransactionBottomSheet)
@@ -138,7 +159,7 @@ export interface TransactionDraft {
 }
 
 /** mode tampilan stage tengah engine */
-type SheetMode = 'manual' | 'ocr' | 'voice'
+type SheetMode = 'manual' | 'ocr' | 'voice' | 'parsing'
 
 type TransactionType = {
   id: TransactionTypeId
@@ -268,7 +289,7 @@ function haptic(pattern: number[]) {
 
 /** gaya kontrol kecil mode edit — senada dengan field catatan di atasnya */
 const EDIT_CONTROL_CLASS =
-  'w-full rounded-xl bg-soil/[0.09] px-3 py-2.5 text-[12.5px] font-medium text-forest outline-none ring-1 ring-transparent transition-all focus:bg-cream focus:ring-forest/15'
+  'w-full rounded-xl bg-soil/[0.09] px-3 py-2.5 text-[13.5px] font-medium text-forest outline-none ring-1 ring-transparent transition-all focus:bg-cream focus:ring-forest/15'
 
 export function TransactionInputEngine({
   active,
@@ -349,11 +370,11 @@ export function TransactionInputEngine({
   const { inputLocked, planKnown, canUse } = useSubscriptionGate()
   /* PINTU OCR & VOICE ADALAH FITUR BERBAYAR (paket 84, diperketat di paket
      100): dulu keduanya cuma membaca `inputLocked` + kuota, sehingga paket
-     Catet Aja tetap bisa "scan struk" dan "input suara" — bahkan lewat jalur
-     mock. Sekarang kemampuan paket diperiksa DI SINI, sebelum file picker atau
-     timer mock disentuh. Saat paket belum diketahui (`planKnown` false), tidak
-     ada yang dikunci: mengunci berdasarkan ketidaktahuan akan memenjarakan
-     build demo & user yang backend-nya sedang tidak bisa dibaca. */
+     Catet Aja tetap bisa "scan struk" dan "input suara" — dulu bahkan lewat
+     timer mock. Sekarang kemampuan paket diperiksa DI SINI, sebelum file picker
+     atau mikrofon disentuh. Saat paket belum diketahui (`planKnown` false),
+     tidak ada yang dikunci: mengunci berdasarkan ketidaktahuan akan
+     memenjarakan build demo & user yang backend-nya sedang tidak bisa dibaca. */
   const ocrLocked = planKnown && !canUse('ocr')
   const voiceLocked = planKnown && !canUse('voice')
   const captureLocked = ocrLocked || voiceLocked
@@ -413,12 +434,19 @@ export function TransactionInputEngine({
   const [mode, setMode] = useState<SheetMode>('manual')
   /** tombol Catat sedang memproses satu penyimpanan (paket 42) */
   const [submitting, setSubmitting] = useState(false)
+  /**
+   * Kalimat jujur setelah AI bekerja (paket 101): "AI kurang yakin…" atau
+   * "totalnya belum jelas". Ditampilkan DI FORM (bukan cuma toast yang lewat),
+   * dan hilang begitu user membetulkan salah satu field.
+   */
+  const [aiNotice, setAiNotice] = useState<string | null>(null)
 
   const amountRef = useRef<HTMLInputElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   /* fokus pemilih kategori — dipakai saat Enter ditekan tanpa kategori dipilih */
   const categoryRef = useRef<HTMLSelectElement>(null)
-  const mockTimer = useRef<number | null>(null)
+  /** pembatalan permintaan AI yang sedang jalan (scan struk / rapikan ucapan) */
+  const aiAbort = useRef<AbortController | null>(null)
   /**
    * KUNCI SUBMIT (paket 42) — sengaja `ref`, bukan state: dua pemanggilan
    * SINKRON dalam satu tick (Enter di keyboard numerik lalu tap tombol, atau
@@ -460,6 +488,110 @@ export function TransactionInputEngine({
      sengaja tidak tampil — yang diurus di situ justru koreksi baris lama. */
   const showTransferDoor = !isEdit && Boolean(onTransferRequest)
   const typeColumnCount = visibleTypes.length + (showTransferDoor ? 1 : 0)
+
+  /* ── HASIL AI → ISI FORM (paket 101) ────────────────────────────────────────
+     Satu fungsi untuk KETIGA sumber (struk, ucapan, dan nanti ketikan), supaya
+     aturan "apa yang boleh diisi AI" tidak berbeda antar pintu:
+
+       · TIPE      → hanya kalau tipe itu memang ditawarkan shell ini;
+       · NOMINAL   → hanya angka yang benar-benar dibaca AI; 0 = field DIBIARKAN
+                     kosong (tidak ada angka karangan — PRD A11);
+       · NAMA & KATEGORI → mengikuti dua saklar di Pengaturan (`lib/ai-prefs.ts`),
+                     sama seperti kartu konfirmasi AI Coach;
+       · DOMPET    → hanya untuk UCAPAN, mis. "makan 25rb pakai gopay".
+                     Foto struk TIDAK menentukan dompet: struk tidak pernah
+                     menyebut uangnya keluar dari dompet mana, jadi dompet yang
+                     sedang terpilih (konteks user) sengaja dibiarkan. Tebakan AI
+                     yang bukan milik user juga tidak dipakai;
+       · KATA JUJUR → nominal tak terbaca / keyakinan rendah diumumkan DI FORM,
+                     bukan disimpan diam-diam. */
+  const applyExtraction = useCallback(
+    (extracted: ExtractedTransaction, kind: 'scan' | 'voice') => {
+      const prefs = readAiPrefs()
+
+      if (offeredTypes.some((item) => item.id === extracted.type)) setTypeId(extracted.type)
+
+      if (extracted.amount > 0) {
+        /* `display` parser = bentuk kanon yang sama dengan ketikan user
+           ("2.000.000"), jadi chip konfirmasi muncul dari jalur yang sudah ada */
+        setAmountText(parseAmountInput(String(extracted.amount)).display)
+        setAmountSettled(true)
+        onAmountChange?.(extracted.amount)
+      } else {
+        setAmountText('')
+        setAmountSettled(false)
+        onAmountChange?.(0)
+      }
+
+      if (prefs.autoNaming && extracted.name) setNote(extracted.name)
+      if (prefs.autoCategory && extracted.category) setCategory(extracted.category)
+
+      if (kind === 'voice' && extracted.wallet) {
+        const choice = captureWalletChoice(walletSnapshot, context, extracted.wallet)
+        /* `unknownGuess` kosong = dompet yang disebut user memang miliknya */
+        if (!choice.unknownGuess && choice.value) setWallet(choice.value)
+      }
+
+      if (extracted.amount <= 0) {
+        const message =
+          kind === 'scan'
+            ? TRANSACTION_INPUT_COPY.aiScanAmountMissing
+            : TRANSACTION_INPUT_COPY.aiVoiceAmountMissing
+        setAiNotice(message)
+        toast(message)
+      } else if (extracted.confidence < LOW_CONFIDENCE_THRESHOLD) {
+        setAiNotice(AI_CAPTURE_COPY.lowConfidenceAlarm)
+        toast(kind === 'scan' ? TRANSACTION_INPUT_COPY.aiScanFilled : TRANSACTION_INPUT_COPY.aiVoiceFilled)
+      } else {
+        setAiNotice(null)
+        toast(kind === 'scan' ? TRANSACTION_INPUT_COPY.aiScanFilled : TRANSACTION_INPUT_COPY.aiVoiceFilled)
+      }
+
+      setMode('manual')
+      amountRef.current?.focus()
+    },
+    [context, offeredTypes, onAmountChange, walletSnapshot],
+  )
+
+  /**
+   * Transkrip ucapan → draft. Model di server dulu (`POST /api/parse-voice`);
+   * kalau provider tak bisa dipakai, parser aturan LOKAL merapikan teks yang
+   * SAMA — persis seperti jalur ucapan di AI Coach.
+   */
+  const runVoiceParse = useCallback(
+    async (transcript: string) => {
+      aiAbort.current?.abort()
+      const controller = new AbortController()
+      aiAbort.current = controller
+      setMode('parsing')
+
+      const extracted =
+        (await requestTextTransaction(transcript, 'voice', controller.signal)) ??
+        parseSpokenTransaction(transcript)
+      if (controller.signal.aborted) return
+      applyExtraction(extracted, 'voice')
+    },
+    [applyExtraction],
+  )
+
+  /* ── 🎤 MESIN STT (paket 101) ──────────────────────────────────────────────
+     Mesin yang SAMA dengan kartu AI Coach (`hooks/use-voice-transcript.ts`).
+     Dulu engine ini memakai timer 3 detik lalu mengisi "Beli kopi / 25.000". */
+  const voice = useVoiceTranscript({
+    onFinal: (transcript) => {
+      /* METERING AI (paket 42): satu permintaan parsing yang benar-benar jalan */
+      recordAiUsage('voice')
+      void runVoiceParse(transcript)
+    },
+    onProblem: (message) => {
+      setMode('manual')
+      setAiNotice(message)
+      toast(message)
+    },
+  })
+  const cancelVoice = voice.cancel
+  const startVoiceListening = voice.start
+  const stopVoiceListening = voice.stop
 
   /* `type` (objek tipe terpilih) TIDAK LAGI dihitung di sini (paket 54): satu-
      satunya yang pernah dibacanya adalah `type.suggested` (kategori tebakan),
@@ -577,12 +709,16 @@ export function TransactionInputEngine({
      jadi tidak ada lagi ukuran/bobot karangan di file ini (paket 53). */
   const amountFont = amountInputFont(amountText.replace(/\D/g, '').length)
 
-  function clearMock() {
-    if (mockTimer.current !== null) {
-      window.clearTimeout(mockTimer.current)
-      mockTimer.current = null
-    }
-  }
+  /**
+   * Batalkan pekerjaan AI yang sedang jalan (baca struk / rapikan ucapan).
+   * Dipakai saat panel ditutup, saat user menekan X, dan saat panel dibuka lagi
+   * — tanpa satu pun tulisan ke state: hasil yang datang setelahnya diabaikan.
+   */
+  const cancelAiWork = useCallback(() => {
+    aiAbort.current?.abort()
+    aiAbort.current = null
+    cancelVoice()
+  }, [cancelVoice])
 
   /**
    * Lepas kunci submit. Dipanggil sengaja dua kali: (1) setelah jeda aman
@@ -606,7 +742,7 @@ export function TransactionInputEngine({
      justru menambah langkah (harus ditutup dulu sebelum mengubah kategori). */
   useEffect(() => {
     if (!active) {
-      clearMock()
+      cancelAiWork()
       return
     }
     /* tipe awal: tipe data lama (mode edit) atau default shell. Kalau default
@@ -632,6 +768,8 @@ export function TransactionInputEngine({
     setWallet(initial?.wallet ?? contextDefaultWallet)
     setDate(initial?.date ?? '')
     setMode('manual')
+    /* panel baru dibuka = belum ada hasil AI dari sesi sebelumnya */
+    setAiNotice(null)
     releaseSubmitLock()
     /* kunci idempotensi BARU tiap panel dibuka; di mode edit dibiarkan kosong
        karena mode edit tidak pernah menulis baris baru (lihat `useTransactionSubmit`) */
@@ -639,13 +777,13 @@ export function TransactionInputEngine({
     if (initial) return
     const id = window.setTimeout(() => amountRef.current?.focus(), 110)
     return () => window.clearTimeout(id)
-  }, [active, defaultType, initial, offeredTypes])
+  }, [active, cancelAiWork, defaultType, initial, offeredTypes])
 
-  /* buang timer mock & timer kunci saat unmount supaya tidak setState di
+  /* buang timer kunci & permintaan AI saat unmount supaya tidak setState di
      komponen yang sudah mati */
   useEffect(
     () => () => {
-      clearMock()
+      aiAbort.current?.abort()
       if (unlockTimer.current !== null) window.clearTimeout(unlockTimer.current)
     },
     [],
@@ -668,6 +806,8 @@ export function TransactionInputEngine({
     setAmountText(next.display)
     /* user masih mengetik → masalah nominal belum diumumkan (baru saat blur/submit) */
     setAmountSettled(false)
+    /* user mulai membetulkan angkanya = peringatan AI yang lama sudah tidak perlu */
+    setAiNotice(null)
     /* laporan ke shell luar (opsional) — dipakai Split Bill Sheet halaman Joint
        Wallet untuk tahu total yang sedang dibagi, tanpa mengubah perilaku
        shell lama yang tidak mengirim prop ini. */
@@ -697,7 +837,13 @@ export function TransactionInputEngine({
     }
   }
 
-  /** 📸 OCR (mock Domain 2A.2 Mode 2) — pilih foto struk lewat kamera native. */
+  /**
+   * 📸 SCAN STRUK (paket 101) — pilih foto lewat kamera native, lalu model
+   * vision di server yang membacanya (`requestReceiptTransaction`).
+   *
+   * Sebelum paket ini fungsi ini memakai timer 2,2 detik lalu menulis "Rp 87.500"
+   * dan nama berkas — hasil struk nyata tidak pernah dibaca sama sekali.
+   */
   function handlePickPhoto() {
     /* Kunci paket diperiksa SEBELUM apa pun: tombol yang terlihat terkunci
        tidak boleh membuka file picker lewat jalur mana pun. */
@@ -708,8 +854,10 @@ export function TransactionInputEngine({
       )
       return
     }
+    /* Menekan X saat struk masih dibaca = batalkan permintaannya, bukan
+       menunggu hasil yang sudah tidak dibutuhkan. */
     if (mode === 'ocr') {
-      clearMock()
+      cancelAiWork()
       setMode('manual')
       return
     }
@@ -736,28 +884,32 @@ export function TransactionInputEngine({
       return
     }
 
-    clearMock()
+    cancelAiWork()
+    const controller = new AbortController()
+    aiAbort.current = controller
+    setAiNotice(null)
     setMode('ocr')
-    mockTimer.current = window.setTimeout(() => {
-      /* Nominal, nama catatan, dan tempo "baca struk" datang dari
-         `lib/transaction-ai.ts` — sumber yang SAMA dengan alur scan di chat AI
-         Coach (prompt 20). Jadi tidak ada dua logika OCR: kalau nanti hasil
-         aslinya datang dari /api/ocr, keduanya ikut berubah sekali jalan.
-         Perilaku engine sendiri tidak berubah sedikit pun: selalu struk 87.500
-         dengan nama dari nama file. */
-      setAmountText(parseAmountInput(String(MOCK_RECEIPT_AMOUNT)).display)
-      /* hasil AI dipasang sudah "settled": chip konfirmasi langsung tampil supaya
-         user melihat angka yang benar-benar akan disimpan (paket 44) — nominal dari
-         mesin justru yang paling perlu dikonfirmasi manusia. */
-      setAmountSettled(true)
-      onAmountChange?.(MOCK_RECEIPT_AMOUNT)
-      setNote(receiptNoteFromFileName(file.name))
-      setMode('manual')
-      amountRef.current?.focus()
-    }, MOCK_RECEIPT_READ_MS)
+    /* METERING AI (paket 42): struk yang dibaca = satu panggilan OCR. */
+    recordAiUsage('ocr')
+
+    void (async () => {
+      const result = await requestReceiptTransaction(file, controller.signal)
+      /* panel ditutup / user membatalkan → jangan menyentuh form lagi */
+      if (controller.signal.aborted) return
+      if (!result.ok) {
+        if (result.cancelled) return
+        /* Gagal = form TIDAK diisi apa pun; alasannya disebut apa adanya (copy
+           dari route bisa lebih spesifik: format foto, provider sedang penuh). */
+        setMode('manual')
+        setAiNotice(result.message)
+        toast(result.message)
+        return
+      }
+      applyExtraction(result.transaction, 'scan')
+    })()
   }
 
-  /** 🎤 Voice (mock Domain 2A.2 Mode 3) — gelombang suara hangat saat listening. */
+  /** 🎤 VOICE — gelombang suara hangat saat mendengar, transkrip NYATA. */
   function handleVoiceToggle() {
     if (voiceLocked) {
       openUpgrade(
@@ -766,8 +918,15 @@ export function TransactionInputEngine({
       )
       return
     }
+    /* Sedang mendengar → tombol mic = SELESAI (transkrip langsung diproses,
+       pola yang sama dengan kartu AI Coach). Sedang merapikan → tombolnya
+       membatalkan permintaan. Tidak ada satu pun jalur yang menyimpan uang. */
     if (mode === 'voice') {
-      clearMock()
+      stopVoiceListening()
+      return
+    }
+    if (mode === 'parsing') {
+      cancelAiWork()
       setMode('manual')
       return
     }
@@ -777,17 +936,14 @@ export function TransactionInputEngine({
       toast(AI_QUOTA_EXHAUSTED_COPY.voiceOff)
       return
     }
-    clearMock()
+
+    aiAbort.current?.abort()
+    cancelVoice()
+    setAiNotice(null)
+    /* `start()` = false berarti perangkat tanpa Speech API; alasannya sudah
+       tampil lewat `onProblem` (copy yang menyebut jalan keluarnya). */
+    if (!startVoiceListening()) return
     setMode('voice')
-    mockTimer.current = window.setTimeout(() => {
-      setAmountText(parseAmountInput('25000').display) // hasil "beli kopi 25 ribu"
-      /* sama seperti OCR: hasil mesin langsung "settled" → chip konfirmasi tampil */
-      setAmountSettled(true)
-      onAmountChange?.(25000)
-      setNote('Beli kopi')
-      setMode('manual')
-      amountRef.current?.focus()
-    }, 3000)
   }
 
   /**
@@ -911,7 +1067,7 @@ export function TransactionInputEngine({
       {/* sumber dana terpilih (opsional) — halaman Joint Wallet memakai ini untuk
           menegaskan dompet bersama sudah otomatis jadi sumber transaksi */}
       {sourceLabel && (
-        <div className="mb-3 flex items-center justify-center gap-2 rounded-2xl bg-hud-sage/15 px-3.5 py-2.5 text-[12px] font-medium text-forest ring-1 ring-hud-sage/30">
+        <div className="mb-3 flex items-center justify-center gap-2 rounded-2xl bg-hud-sage/15 px-3.5 py-2.5 text-[13px] font-medium text-forest ring-1 ring-hud-sage/30">
           <Wallet className="size-3.5" strokeWidth={2.4} />
           Dompet: {sourceLabel}
         </div>
@@ -938,6 +1094,7 @@ export function TransactionInputEngine({
               onClick={() => {
                 setTypeId(item.id)
                 setMode('manual')
+                setAiNotice(null)
                 amountRef.current?.focus()
               }}
               aria-pressed={active}
@@ -959,7 +1116,7 @@ export function TransactionInputEngine({
               <span
                 className={cn(
                   'leading-none whitespace-nowrap',
-                  isDialog ? 'text-[11.5px]' : 'text-[10.5px]',
+                  isDialog ? 'text-[12.5px]' : 'text-[11.5px]',
                 )}
               >
                 {item.label}
@@ -991,7 +1148,7 @@ export function TransactionInputEngine({
             <span
               className={cn(
                 'leading-none whitespace-nowrap',
-                isDialog ? 'text-[11.5px]' : 'text-[10.5px]',
+                isDialog ? 'text-[12.5px]' : 'text-[11.5px]',
               )}
             >
               {TRANSACTION_INPUT_COPY.transferDoorLabel}
@@ -1099,7 +1256,7 @@ export function TransactionInputEngine({
                   role="alert"
                   className={cn(
                     'mt-2.5 max-w-[20rem] text-center leading-relaxed text-hud-terracotta',
-                    isDialog ? 'text-[12.5px]' : 'text-[11.5px]',
+                    isDialog ? 'text-[13.5px]' : 'text-[12.5px]',
                   )}
                 >
                   {amountProblemCopy(amountProblem)}
@@ -1109,7 +1266,7 @@ export function TransactionInputEngine({
                   id="tx-amount-help"
                   className={cn(
                     'mt-2.5 inline-flex flex-wrap items-center justify-center gap-1.5 rounded-full bg-sage/40 px-3 py-1.5 font-medium text-forest ring-1 ring-mint/40',
-                    isDialog ? 'text-xs' : 'text-[11.5px]',
+                    isDialog ? 'text-xs' : 'text-[12.5px]',
                   )}
                 >
                   {TRANSACTION_INPUT_COPY.amountConfirm(amount)}
@@ -1122,10 +1279,26 @@ export function TransactionInputEngine({
                   id="tx-amount-help"
                   className={cn(
                     'mt-2.5 text-center leading-relaxed text-forest/40',
-                    isDialog ? 'text-[12px]' : 'text-[11px]',
+                    isDialog ? 'text-[13px]' : 'text-[12px]',
                   )}
                 >
                   {TRANSACTION_INPUT_COPY.amountHint}
+                </p>
+              )}
+
+              {/* ── KATA JUJUR SETELAH AI BEKERJA (paket 101) ─────────────────
+                  Muncul kalau AI tidak yakin atau totalnya tidak terbaca. Tidak
+                  hilang sendiri: user yang menghapusnya dengan membetulkan field
+                  (lihat `setAiNotice(null)` di handler di atas). */}
+              {aiNotice && (
+                <p
+                  role="status"
+                  className={cn(
+                    'mt-2.5 max-w-[20rem] rounded-2xl bg-hud-amber/15 px-3 py-2 text-center leading-relaxed text-forest/70 ring-1 ring-hud-amber/25',
+                    isDialog ? 'text-[13px]' : 'text-[12px]',
+                  )}
+                >
+                  {aiNotice}
                 </p>
               )}
 
@@ -1143,14 +1316,14 @@ export function TransactionInputEngine({
                 <div className="mt-4 w-full text-left">
                   {fixedCategory ? (
                     <div className="rounded-2xl bg-cream px-3.5 py-2.5 ring-1 ring-soil/12">
-                      <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] font-medium text-forest">
+                      <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] font-medium text-forest">
                         <Tag className="size-3.5 shrink-0 text-forest" strokeWidth={2.3} aria-hidden />
                         {TRANSACTION_INPUT_COPY.categoryLabel}
-                        <span className="inline-flex items-center rounded-full bg-sage px-2.5 py-0.5 text-[11.5px] font-medium text-forest">
+                        <span className="inline-flex items-center rounded-full bg-sage px-2.5 py-0.5 text-[12.5px] font-medium text-forest">
                           {fixedCategory.category}
                         </span>
                       </p>
-                      <p className="mt-1.5 text-[11px] leading-relaxed text-forest/45">
+                      <p className="mt-1.5 text-[12px] leading-relaxed text-forest/45">
                         {fixedCategory.reason}
                       </p>
                     </div>
@@ -1164,7 +1337,10 @@ export function TransactionInputEngine({
                       <EditField label={TRANSACTION_INPUT_COPY.categoryLabel}>
                         <CategoryPicker
                           value={category}
-                          onChange={setCategory}
+                          onChange={(next) => {
+                            setCategory(next)
+                            setAiNotice(null)
+                          }}
                           variant={typeId === 'income' ? 'income' : 'expense'}
                           invalid={showCategoryNeeded}
                           ariaLabel={TRANSACTION_INPUT_COPY.categoryLabel}
@@ -1184,15 +1360,15 @@ export function TransactionInputEngine({
                 <div className="mt-4 w-full text-left">
                   {walletIsFixed ? (
                     <div className="rounded-2xl bg-cream px-3.5 py-2.5 ring-1 ring-soil/12">
-                      <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] font-medium text-forest">
+                      <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] font-medium text-forest">
                         <Wallet className="size-3.5 shrink-0 text-forest" strokeWidth={2.3} aria-hidden />
                         {TRANSACTION_INPUT_COPY.walletLabel}
-                        <span className="inline-flex items-center rounded-full bg-sage px-2.5 py-0.5 text-[11.5px] font-medium text-forest">
+                        <span className="inline-flex items-center rounded-full bg-sage px-2.5 py-0.5 text-[12.5px] font-medium text-forest">
                           {sourceLabel}
                         </span>
                       </p>
                       {showFundsShort && (
-                        <p className="mt-1.5 text-[11px] font-medium leading-relaxed text-forest/70">
+                        <p className="mt-1.5 text-[12px] font-medium leading-relaxed text-forest/70">
                           {TRANSACTION_INSUFFICIENT_FUNDS_COPY.body(decidedWallet)}
                         </p>
                       )}
@@ -1203,7 +1379,10 @@ export function TransactionInputEngine({
                         <WalletPicker
                           value={wallet}
                           options={pickerWalletOptions}
-                          onChange={setWallet}
+                          onChange={(next) => {
+                            setWallet(next)
+                            setAiNotice(null)
+                          }}
                           masked={masked}
                           invalid={showWalletNeeded || showFundsShort}
                           describedBy="tx-wallet-help"
@@ -1212,7 +1391,7 @@ export function TransactionInputEngine({
                       {(showWalletNeeded || showFundsShort) && (
                         <p
                           id="tx-wallet-help"
-                          className="mt-1.5 text-[11px] font-medium leading-relaxed text-forest/70"
+                          className="mt-1.5 text-[12px] font-medium leading-relaxed text-forest/70"
                         >
                           {showWalletNeeded
                             ? TRANSACTION_INPUT_COPY.walletNeeded
@@ -1227,10 +1406,13 @@ export function TransactionInputEngine({
               {/* catatan opsional — satu baris, tidak wajib diisi */}
               <input
                 value={note}
-                onChange={(event) => setNote(event.target.value)}
+                onChange={(event) => {
+                  setNote(event.target.value)
+                  setAiNotice(null)
+                }}
                 placeholder="Catatan (Opsional)"
                 aria-label="Catatan transaksi (opsional)"
-                className="mt-4 h-12 w-full rounded-2xl bg-soil/[0.09] px-4 text-[13.5px] font-medium text-forest outline-none ring-1 ring-transparent transition-all placeholder:text-forest/30 focus:bg-cream focus:ring-forest/15"
+                className="mt-4 h-12 w-full rounded-2xl bg-soil/[0.09] px-4 text-[14.5px] font-medium text-forest outline-none ring-1 ring-transparent transition-all placeholder:text-forest/30 focus:bg-cream focus:ring-forest/15"
               />
               {/* H3-4 (audit UI/UX) sempat menambahkan dorongan "Tambah 1 kata
                   aja…" di bawah field catatan. Baris itu DIHAPUS atas permintaan
@@ -1284,7 +1466,7 @@ export function TransactionInputEngine({
                       />
                     </EditField>
                   </div>
-                  <p className="mt-2 text-[11px] leading-relaxed text-forest/45">
+                  <p className="mt-2 text-[12px] leading-relaxed text-forest/45">
                     {EDIT_TRANSACTION_COPY.hint}
                   </p>
                 </div>
@@ -1306,11 +1488,9 @@ export function TransactionInputEngine({
               </span>
               <p className="mt-4 flex items-center gap-1.5 text-sm font-medium text-forest">
                 <Sparkles className="size-4 text-forest" strokeWidth={2.4} />
-                Lagi baca struknya...
+                {AI_CAPTURE_COPY.readingTitle}
               </p>
-              <p className="mt-1 text-xs text-forest/45">
-                AI CatetInd lagi cocokin nominal &amp; tanggalnya
-              </p>
+              <p className="mt-1 text-xs text-forest/45">{AI_CAPTURE_COPY.readingHint}</p>
             </motion.div>
           )}
 
@@ -1343,12 +1523,38 @@ export function TransactionInputEngine({
                 ))}
               </div>
 
+              <p className="mt-4 text-sm font-medium text-forest">{AI_CAPTURE_COPY.listeningTitle}</p>
+              {/* Transkrip interim ditampilkan SEBELUM diproses (PRD 516). Kalau
+                  belum ada suara, yang tampil contoh ucapan — bukan kalimat palsu
+                  seolah AI sudah mendengar sesuatu. */}
+              <p className="mt-1 text-xs text-forest/45" aria-live="polite">
+                {voice.transcript.trim() || AI_CAPTURE_COPY.voiceExample}
+              </p>
+              <p className="mt-1 text-[11.5px] text-forest/35">
+                {AI_CAPTURE_COPY.listeningFinishHint}
+              </p>
+            </motion.div>
+          )}
+
+          {/* Parafrase ucapan sedang dirapikan model — fase yang sama dengan
+              kartu AI Coach, supaya user tahu bedanya "mendengar" dan "mengolah". */}
+          {mode === 'parsing' && (
+            <motion.div
+              key="parsing"
+              initial={{ opacity: 0, scale: 0.97 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.97 }}
+              transition={{ duration: 0.16, ease: 'easeOut' }}
+              className="flex flex-col items-center text-center"
+            >
+              <span className="relative flex size-14 items-center justify-center rounded-full bg-sage text-forest">
+                <Sparkles className="size-6" strokeWidth={2} />
+                <span className="absolute inset-0 animate-ping rounded-full bg-mint/40" />
+              </span>
               <p className="mt-4 text-sm font-medium text-forest">
-                Ngobrol aja, misal: beli kopi 25 ribu
+                {AI_CAPTURE_COPY.parsingVoiceTitle}
               </p>
-              <p className="mt-1 text-xs text-forest/45">
-                Lagi dengerin... ketuk mic buat batal
-              </p>
+              <p className="mt-1 text-xs text-forest/45">{AI_CAPTURE_COPY.parsingHint}</p>
             </motion.div>
           )}
         </AnimatePresence>
@@ -1398,7 +1604,7 @@ export function TransactionInputEngine({
             'flex shrink-0 items-center justify-center',
             'transition-all duration-150 active:scale-95 disabled:active:scale-100',
             isDialog
-              ? 'h-14 gap-2 rounded-2xl px-5 text-[13px] font-medium max-lg:px-3.5'
+              ? 'h-14 gap-2 rounded-2xl px-5 text-[14px] font-medium max-lg:px-3.5'
               : 'size-14 rounded-full',
             quotaExhausted && !ocrLocked
               ? 'cursor-not-allowed bg-soil/[0.07] text-forest/30 ring-1 ring-soil/12'
@@ -1484,14 +1690,16 @@ export function TransactionInputEngine({
             voiceLocked
               ? 'Input suara terkunci, aktif di Paket Waras'
               : mode === 'voice'
-                ? 'Batal input suara'
-                : 'Catat pakai suara'
+                ? 'Selesai bicara'
+                : mode === 'parsing'
+                  ? 'Batal input suara'
+                  : 'Catat pakai suara'
           }
           className={cn(
             'flex shrink-0 items-center justify-center',
             'transition-all duration-150 active:scale-95 disabled:active:scale-100',
             isDialog
-              ? 'h-14 gap-2 rounded-2xl px-5 text-[13px] font-medium max-lg:px-3.5'
+              ? 'h-14 gap-2 rounded-2xl px-5 text-[14px] font-medium max-lg:px-3.5'
               : 'size-14 rounded-full',
             quotaExhausted && !voiceLocked
               ? 'cursor-not-allowed bg-soil/[0.07] text-forest/30 ring-1 ring-soil/12'
@@ -1499,19 +1707,29 @@ export function TransactionInputEngine({
                 ? 'bg-soil/[0.07] text-forest/45 ring-1 ring-soil/12 hover:bg-soil/[0.12]'
                 : mode === 'voice'
                   ? 'bg-forest text-cream'
-                  : 'bg-soil/[0.1] text-forest/70 ring-1 ring-soil/12 hover:bg-soil/[0.1]',
+                  : mode === 'parsing'
+                    ? 'bg-forest/70 text-cream'
+                    : 'bg-soil/[0.1] text-forest/70 ring-1 ring-soil/12 hover:bg-soil/[0.1]',
           )}
         >
           {voiceLocked ? (
             <Lock className="size-5" strokeWidth={2.1} />
           ) : mode === 'voice' ? (
+            <Check className="size-5" strokeWidth={2.4} />
+          ) : mode === 'parsing' ? (
             <X className="size-5" />
           ) : (
             <Mic className="size-5" strokeWidth={2.1} />
           )}
           {isDialog && (
             <span className="hidden lg:inline">
-              {voiceLocked ? 'Input Suara' : mode === 'voice' ? 'Batal' : 'Input Suara'}
+              {voiceLocked
+                ? 'Input Suara'
+                : mode === 'voice'
+                  ? 'Selesai'
+                  : mode === 'parsing'
+                    ? 'Batal'
+                    : 'Input Suara'}
             </span>
           )}
         </button>
@@ -1531,7 +1749,7 @@ export function TransactionInputEngine({
           role="status"
           className={cn(
             'flex flex-wrap items-center gap-x-1.5 gap-y-1 rounded-2xl bg-sage/40 px-3.5 py-2.5 leading-relaxed text-forest/70 ring-1 ring-soil/12',
-            isDialog ? 'mt-3 text-[12.5px]' : 'mt-2.5 text-[11.5px]',
+            isDialog ? 'mt-3 text-[13.5px]' : 'mt-2.5 text-[12.5px]',
           )}
         >
           <Lock className="size-3.5 shrink-0 text-forest" strokeWidth={2.6} aria-hidden />
@@ -1560,10 +1778,10 @@ export function TransactionInputEngine({
           role="status"
           className={cn(
             'rounded-2xl bg-hud-amber/15 px-3.5 py-2.5 leading-relaxed text-forest/65 ring-1 ring-hud-amber/25',
-            isDialog ? 'mt-3 text-[12.5px]' : 'mt-2.5 text-[11.5px]',
+            isDialog ? 'mt-3 text-[13.5px]' : 'mt-2.5 text-[12.5px]',
           )}
         >
-          <span className="mr-1.5 inline-flex items-center rounded-full bg-hud-amber/40 px-2 py-0.5 text-[10px] font-medium tracking-[0.08em] text-forest/70 uppercase">
+          <span className="mr-1.5 inline-flex items-center rounded-full bg-hud-amber/40 px-2 py-0.5 text-[11px] font-medium tracking-[0.08em] text-forest/70 uppercase">
             {AI_QUOTA_EXHAUSTED_COPY.badge}
           </span>
           {AI_QUOTA_EXHAUSTED_COPY.body}
@@ -1572,13 +1790,13 @@ export function TransactionInputEngine({
 
       {/* petunjuk pintasan keyboard — cuma relevan di web */}
       {isDialog && (
-        <p className="mt-4 text-center text-[11.5px] text-forest/35">
+        <p className="mt-4 text-center text-[12.5px] text-forest/35">
           Tekan{' '}
-          <kbd className="rounded-md bg-soil/[0.11] px-1.5 py-0.5 font-sans text-[10.5px] font-medium text-forest/50">
+          <kbd className="rounded-md bg-soil/[0.11] px-1.5 py-0.5 font-sans text-[11.5px] font-medium text-forest/50">
             Enter
           </kbd>{' '}
           buat simpan ·{' '}
-          <kbd className="rounded-md bg-soil/[0.11] px-1.5 py-0.5 font-sans text-[10.5px] font-medium text-forest/50">
+          <kbd className="rounded-md bg-soil/[0.11] px-1.5 py-0.5 font-sans text-[11.5px] font-medium text-forest/50">
             Esc
           </kbd>{' '}
           buat tutup
@@ -1594,7 +1812,7 @@ export function TransactionInputEngine({
 function EditField({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label className="block text-left">
-      <span className="mb-1 block text-[11px] font-medium text-forest/50">{label}</span>
+      <span className="mb-1 block text-[12px] font-medium text-forest/50">{label}</span>
       {children}
     </label>
   )

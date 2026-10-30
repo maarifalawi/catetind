@@ -82,7 +82,7 @@ export function InfoNote({
         />
         <span className="min-w-0 flex-1">
           {title && (
-            <span className={cn('block font-medium text-forest', compact ? 'text-[12px]' : 'text-[13px]')}>
+            <span className={cn('block font-medium text-forest', compact ? 'text-[13px]' : 'text-[14px]')}>
               {title}
             </span>
           )}
@@ -90,7 +90,7 @@ export function InfoNote({
             <span
               className={cn(
                 'block text-forest/55',
-                compact ? 'text-[11px] leading-snug' : 'text-[12px] leading-relaxed',
+                compact ? 'text-[12px] leading-snug' : 'text-[13px] leading-relaxed',
                 title && 'mt-0.5',
               )}
             >
@@ -100,7 +100,7 @@ export function InfoNote({
           <span
             className={cn(
               'mt-1 inline-flex items-center gap-1 font-medium text-forest/70 transition-colors group-hover/note:text-forest',
-              compact ? 'text-[11px]' : 'text-[11.5px]',
+              compact ? 'text-[12px]' : 'text-[12.5px]',
             )}
           >
             {label}
@@ -128,7 +128,7 @@ export function InfoNote({
               <div
                 className={cn(
                   'border-t border-soil/10 pt-2.5 leading-relaxed text-forest/55',
-                  compact ? 'text-[11.5px]' : 'text-[12px]',
+                  compact ? 'text-[12.5px]' : 'text-[13px]',
                 )}
               >
                 {children}

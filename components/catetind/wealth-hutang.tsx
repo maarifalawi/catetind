@@ -230,13 +230,13 @@ export function WealthHutang({
             <span
               title={badgeCopy}
               className={cn(
-                'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10.5px] font-medium ring-1 ring-inset',
+                'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11.5px] font-medium ring-1 ring-inset',
                 badgePillClass,
               )}
             >
               {dtiKnown ? `DTI ${ratio}% · ${badgeLabel}` : badgeLabel}
             </span>
-            <span className="text-[11px] font-medium text-forest/45 tabular-nums">
+            <span className="text-[12px] font-medium text-forest/45 tabular-nums">
               Cicilan {maskMoney(installments, masked)}/bln
             </span>
           </div>
@@ -314,7 +314,7 @@ export function WealthHutang({
 /** judul kelompok daftar (PERSONAL / PIUTANG) */
 function SectionHeader({ title }: { title: string }) {
   return (
-    <h3 className="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-forest/35">
+    <h3 className="mb-2.5 text-[12px] font-semibold uppercase tracking-[0.22em] text-forest/35">
       {title}
     </h3>
   )
@@ -350,10 +350,10 @@ function EmptyDebtState({
         >
           <ShieldCheck className="size-8" strokeWidth={2.2} />
         </motion.span>
-        <h2 className="mt-4 font-display text-[17px] font-semibold tracking-tight text-forest">
+        <h2 className="mt-4 font-display text-[18px] font-semibold tracking-tight text-forest">
           🎉 {ALL_SETTLED_TITLE}
         </h2>
-        <p className="mt-1.5 max-w-sm text-[13px] leading-relaxed text-forest/60">
+        <p className="mt-1.5 max-w-sm text-[14px] leading-relaxed text-forest/60">
           {ALL_SETTLED_COPY}
         </p>
       </div>
@@ -369,13 +369,13 @@ function EmptyDebtState({
   if (!contextLine) {
     return (
       <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-mint/15 px-4 py-3 ring-1 ring-forest/10">
-        <p className="text-[13px] font-medium text-forest">
+        <p className="text-[14px] font-medium text-forest">
           {piutang ? PIUTANG_ZERO_LINE : HUTANG_ZERO_LINE}
         </p>
         <button
           type="button"
           onClick={onAdd}
-          className="text-[12.5px] font-medium text-forest underline decoration-dotted underline-offset-4 transition-colors hover:decoration-forest"
+          className="text-[13.5px] font-medium text-forest underline decoration-dotted underline-offset-4 transition-colors hover:decoration-forest"
         >
           {piutang ? EMPTY_PIUTANG_CTA : EMPTY_HUTANG_CTA}
         </button>
@@ -388,20 +388,20 @@ function EmptyDebtState({
       <span aria-hidden className="text-[28px]">
         {piutang ? '📮' : '🕊️'}
       </span>
-      <h2 className="mt-3 font-display text-[16px] font-semibold tracking-tight text-forest">
+      <h2 className="mt-3 font-display text-[17px] font-semibold tracking-tight text-forest">
         {contextLine ?? (piutang ? EMPTY_PIUTANG_TITLE : EMPTY_HUTANG_TITLE)}
       </h2>
       {/* empty state per konteks: judul + satu tombol saja. Paragraf penjelas
           "apa itu konteks" dihapus — konteksnya sudah aktif di kepala halaman. */}
       {!contextLine && (
-        <p className="mt-1.5 max-w-sm text-[13px] leading-relaxed text-forest/55">
+        <p className="mt-1.5 max-w-sm text-[14px] leading-relaxed text-forest/55">
           {piutang ? EMPTY_PIUTANG_COPY : EMPTY_HUTANG_COPY}
         </p>
       )}
       <button
         type="button"
         onClick={onAdd}
-        className="mt-5 inline-flex h-11 items-center gap-2 rounded-2xl bg-forest px-5 text-[13.5px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
+        className="mt-5 inline-flex h-11 items-center gap-2 rounded-2xl bg-forest px-5 text-[14.5px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
       >
         <Plus className="size-4" strokeWidth={2.6} />
         {contextLine
@@ -458,7 +458,7 @@ function SnowballTracker({
         <div className="absolute -bottom-20 -right-10 size-48 rounded-full bg-hud-sage/25 blur-3xl" />
       </div>
       <div className="relative">
-        <h3 className="flex items-center gap-1.5 font-display text-[14px] font-semibold tracking-tight text-forest">
+        <h3 className="flex items-center gap-1.5 font-display text-[15px] font-semibold tracking-tight text-forest">
           <Snowflake className="size-4 text-hud-sage" strokeWidth={2.4} />
           {SNOWBALL_TITLE}
         </h3>
@@ -467,7 +467,7 @@ function SnowballTracker({
             Tidak ada teks "Snowball Progress: … lunas": bar + dua nominal ini
             mengucapkan hal yang sama tanpa satu kalimat pun. */}
         <div className="mt-4">
-          <div className="flex items-baseline justify-between gap-3 text-[10.5px] font-medium text-forest/45 tabular-nums">
+          <div className="flex items-baseline justify-between gap-3 text-[11.5px] font-medium text-forest/45 tabular-nums">
             <span>{maskMoney(progress.paid, masked)}</span>
             <span>{maskMoney(progress.principal, masked)}</span>
           </div>
@@ -572,12 +572,12 @@ function SnowballBar({
           className="min-w-0 flex-1 rounded-2xl text-left outline-none focus-visible:ring-2 focus-visible:ring-forest/30"
         >
           <span className="flex items-center gap-2">
-            <span aria-hidden className="text-[14px]">
+            <span aria-hidden className="text-[15px]">
               {emoji}
             </span>
-            <span className="truncate text-[12.5px] font-medium text-forest">{provider}</span>
+            <span className="truncate text-[13.5px] font-medium text-forest">{provider}</span>
             {done && (
-              <span className="shrink-0 rounded-full bg-hud-sage/30 px-2 py-0.5 text-[9.5px] font-medium uppercase tracking-wide text-forest">
+              <span className="shrink-0 rounded-full bg-hud-sage/30 px-2 py-0.5 text-[10.5px] font-medium uppercase tracking-wide text-forest">
                 {DEBT_STATUS_COPY.settled}
               </span>
             )}
@@ -590,7 +590,7 @@ function SnowballBar({
               strokeWidth={2.4}
             />
           </span>
-          <span className="mt-0.5 block text-[10.5px] leading-snug text-forest/45 tabular-nums">
+          <span className="mt-0.5 block text-[11.5px] leading-snug text-forest/45 tabular-nums">
             {done ? DEBT_STATUS_COPY.settled : `${maskMoney(debt.remaining, masked)} sisa`}
             {/* konteks uang ikut di baris kedua (bukan chip di baris nama) supaya
                 nama platform tetap utuh walau pil "Bayar" ada di kanan */}
@@ -617,7 +617,7 @@ function SnowballBar({
               title={DEBT_CASH_COPY.actionLabel.pay}
               className="inline-flex h-8 items-center gap-1 whitespace-nowrap rounded-full bg-forest pl-3 pr-2 text-cream transition-colors hover:bg-forest-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/30 active:scale-95"
             >
-              <span className="text-[10px] font-semibold leading-none">
+              <span className="text-[11px] font-semibold leading-none">
                 {DEBT_CASH_COPY.actionLabel.payShort}
               </span>
               <ArrowRight className="size-3.5" strokeWidth={2.6} aria-hidden />
@@ -661,7 +661,7 @@ function SnowballBar({
             className="overflow-hidden"
           >
             <div className="mt-2 rounded-2xl bg-cream px-3.5 py-3 ring-1 ring-inset ring-soil/8">
-              <p className="flex items-center justify-between gap-2 text-[10px] font-medium uppercase tracking-[0.14em] text-forest/40">
+              <p className="flex items-center justify-between gap-2 text-[11px] font-medium uppercase tracking-[0.14em] text-forest/40">
                 <span className="flex items-center gap-1.5">
                   <Receipt className="size-3.5" strokeWidth={2.6} />
                   {PAYMENT_HISTORY_TITLE}
@@ -675,17 +675,17 @@ function SnowballBar({
 
               {payments.length === 0 ? (
                 <div className="mt-2">
-                  <p className="text-[11px] font-medium leading-relaxed text-forest/55">
+                  <p className="text-[12px] font-medium leading-relaxed text-forest/55">
                     {PAYMENT_HISTORY_EMPTY}
                   </p>
-                  <p className="mt-1 text-[10.5px] leading-relaxed text-forest/40">
+                  <p className="mt-1 text-[11.5px] leading-relaxed text-forest/40">
                     {PAYMENT_HISTORY_EMPTY_HINT}
                   </p>
                 </div>
               ) : (
                 <ul className="mt-2 space-y-1.5">
                   {payments.map((payment) => (
-                    <li key={payment.id} className="flex items-center gap-2 text-[11px]">
+                    <li key={payment.id} className="flex items-center gap-2 text-[12px]">
                       <span className="shrink-0 text-forest/55 tabular-nums">
                         {formatShortDate(payment.paidAtISO)}
                       </span>
@@ -860,14 +860,14 @@ function DebtActionRow({
         <button
           type="button"
           onClick={onPay}
-          className="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-2xl bg-hud-sage px-3 text-[12px] font-medium text-forest transition-colors hover:brightness-105 active:scale-[0.98]"
+          className="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-2xl bg-hud-sage px-3 text-[13px] font-medium text-forest transition-colors hover:brightness-105 active:scale-[0.98]"
         >
           <Wallet className="size-3.5 shrink-0" strokeWidth={2.6} />
           <span className="truncate">{payLabel}</span>
         </button>
       ) : (
         settled && (
-          <span className="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-2xl bg-hud-sage/30 text-[11px] font-medium uppercase tracking-wide text-forest">
+          <span className="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-2xl bg-hud-sage/30 text-[12px] font-medium uppercase tracking-wide text-forest">
             <Check className="size-3.5 shrink-0" strokeWidth={3} />
             {DEBT_STATUS_COPY.settled}
           </span>
@@ -986,21 +986,21 @@ function DebtCashSheet({
 
       {plan && (
         <div className="mt-3 space-y-2">
-          <p className="rounded-2xl bg-sage/60 px-4 py-3 text-[12px] leading-relaxed text-forest/70">
+          <p className="rounded-2xl bg-sage/60 px-4 py-3 text-[13px] leading-relaxed text-forest/70">
             {DEBT_CASH_COPY.remainingLine(
               maskMoney(Math.max(0, plan.remaining), masked),
               plan.settled,
             )}
           </p>
           {/* kas-nya benar-benar bergerak — sebutkan nominal & dompetnya */}
-          <p className="text-[11.5px] leading-relaxed text-forest/50">
+          <p className="text-[12.5px] leading-relaxed text-forest/50">
             {direction === 'out'
               ? DEBT_CASH_COPY.cashOutLine(maskMoney(plan.cashMoved, masked), selected?.label ?? '')
               : DEBT_CASH_COPY.cashInLine(maskMoney(plan.cashMoved, masked), selected?.label ?? '')}
           </p>
           {/* lebih bayar: JELASKAN sebelum disimpan, jangan biarkan user kaget */}
           {plan.changeAmount > 0 && (
-            <p className="rounded-2xl bg-hud-amber/15 px-4 py-3 text-[11.5px] leading-relaxed text-hud-terracotta ring-1 ring-inset ring-hud-amber/30">
+            <p className="rounded-2xl bg-hud-amber/15 px-4 py-3 text-[12.5px] leading-relaxed text-hud-terracotta ring-1 ring-inset ring-hud-amber/30">
               {direction === 'in'
                 ? DEBT_CASH_COPY.changeReturned(maskMoney(plan.changeAmount, masked), name)
                 : DEBT_CASH_COPY.changePending(maskMoney(plan.changeAmount, masked), name)}
@@ -1012,9 +1012,9 @@ function DebtCashSheet({
       <DateField value={date} onChange={setDate} label={DEBT_CASH_COPY.dateLabel} />
 
       <div className="mt-4">
-        <span className="text-[13px] font-medium leading-snug text-forest">{copy.walletLabel}</span>
+        <span className="text-[14px] font-medium leading-snug text-forest">{copy.walletLabel}</span>
         {walletOptions.length === 0 ? (
-          <p className="mt-2 rounded-2xl bg-hud-amber/15 px-4 py-3 text-[11.5px] leading-relaxed text-hud-terracotta">
+          <p className="mt-2 rounded-2xl bg-hud-amber/15 px-4 py-3 text-[12.5px] leading-relaxed text-hud-terracotta">
             {DEBT_CASH_COPY.noWallet}
           </p>
         ) : (
@@ -1027,7 +1027,7 @@ function DebtCashSheet({
               onChange={setWallet}
             />
             {selected && (
-              <p className="mt-2 text-[11px] text-forest/45 tabular-nums">
+              <p className="mt-2 text-[12px] text-forest/45 tabular-nums">
                 {DEBT_CASH_COPY.walletBalance(maskMoney(selected.balance, masked))}
               </p>
             )}
@@ -1039,7 +1039,7 @@ function DebtCashSheet({
             dan pemeriksaan lokal atas saldo dompet terpilih (`notEnough`), yang
             sudah menghalangi tombol simpan sejak awal. */}
         {(error || (notEnough && walletOptions.length > 0)) && (
-          <p className="mt-2 rounded-2xl bg-hud-terracotta/12 px-4 py-3 text-[11.5px] leading-relaxed text-hud-terracotta ring-1 ring-inset ring-hud-terracotta/25">
+          <p className="mt-2 rounded-2xl bg-hud-terracotta/12 px-4 py-3 text-[12.5px] leading-relaxed text-hud-terracotta ring-1 ring-inset ring-hud-terracotta/25">
             {error || DEBT_CASH_COPY.insufficient(selected?.label ?? '')}
           </p>
         )}
@@ -1124,13 +1124,13 @@ function PersonalSection({
           >
             <HandCoins className="size-4" strokeWidth={2.2} />
           </span>
-          <p className="mt-2 text-[11.5px] font-medium leading-snug text-forest/55">
+          <p className="mt-2 text-[12.5px] font-medium leading-snug text-forest/55">
             {title === 'PIUTANG' ? PERSONAL_EMPTY_LINE.piutang : PERSONAL_EMPTY_LINE.hutang}
           </p>
           <button
             type="button"
             onClick={onAdd}
-            className="mt-3 inline-flex h-8 shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-forest pl-2.5 pr-3 text-[10.5px] font-semibold text-cream transition-colors hover:bg-forest-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/30 active:scale-95"
+            className="mt-3 inline-flex h-8 shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-forest pl-2.5 pr-3 text-[11.5px] font-semibold text-cream transition-colors hover:bg-forest-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/30 active:scale-95"
           >
             <Plus className="size-3" strokeWidth={3} aria-hidden />
             {title === 'PIUTANG' ? EMPTY_PIUTANG_CTA : EMPTY_HUTANG_CTA}
@@ -1156,7 +1156,7 @@ function PersonalSection({
       {/* yang sudah lunas diletakkan paling bawah, dibiarkan samar */}
       {settled.length > 0 && (
         <>
-          <p className="mb-2 mt-4 text-[10.5px] font-medium uppercase tracking-[0.18em] text-forest/25">
+          <p className="mb-2 mt-4 text-[11.5px] font-medium uppercase tracking-[0.18em] text-forest/25">
             Sudah Lunas
           </p>
           <ul className="space-y-2 opacity-60">
@@ -1238,19 +1238,19 @@ function PersonalDebtCard({
         <span className="flex items-center gap-1.5">
           <span
             className={cn(
-              'truncate text-[13px] font-medium',
+              'truncate text-[14px] font-medium',
               settled ? 'text-forest/50 line-through' : 'text-forest',
             )}
           >
             {counterpartyLabel(debt)}
           </span>
           {/* badge konteks uang hutang/piutang personal (paket 47) */}
-          <span className="shrink-0 rounded-full bg-sage/70 px-1.5 py-0.5 text-[9.5px] font-medium uppercase tracking-wide text-forest ring-1 ring-inset ring-forest/10">
+          <span className="shrink-0 rounded-full bg-sage/70 px-1.5 py-0.5 text-[10.5px] font-medium uppercase tracking-wide text-forest ring-1 ring-inset ring-forest/10">
             {CONTEXT_LABEL[debt.scope]}
           </span>
         </span>
         {debt.notes && (
-          <span className={cn('mt-0.5 block truncate text-[11px]', settled ? 'text-forest/30' : 'text-forest/45')}>
+          <span className={cn('mt-0.5 block truncate text-[12px]', settled ? 'text-forest/30' : 'text-forest/45')}>
             {debt.notes}
           </span>
         )}
@@ -1259,7 +1259,7 @@ function PersonalDebtCard({
       <span className="flex shrink-0 flex-col items-end">
         <span
           className={cn(
-            'text-[13.5px] font-semibold tabular-nums',
+            'text-[14.5px] font-semibold tabular-nums',
             settled ? 'text-forest/40 line-through' : 'text-forest',
           )}
         >
@@ -1298,7 +1298,7 @@ function LunasStamp() {
   return (
     <span
       aria-hidden
-      className="pointer-events-none absolute right-3 top-1/2 z-10 -translate-y-1/2 -rotate-12 select-none rounded-md border-2 border-hud-sage px-2 py-0.5 font-display text-[11px] font-medium uppercase leading-tight tracking-[0.22em] text-hud-sage opacity-25 after:absolute after:inset-[2.5px] after:rounded-[3px] after:border after:border-dashed after:border-hud-sage/45"
+      className="pointer-events-none absolute right-3 top-1/2 z-10 -translate-y-1/2 -rotate-12 select-none rounded-md border-2 border-hud-sage px-2 py-0.5 font-display text-[12px] font-medium uppercase leading-tight tracking-[0.22em] text-hud-sage opacity-25 after:absolute after:inset-[2.5px] after:rounded-[3px] after:border after:border-dashed after:border-hud-sage/45"
     >
       LUNAS
     </span>

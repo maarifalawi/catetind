@@ -365,7 +365,7 @@ export function OnboardingFlow() {
             <button
               type="button"
               onClick={() => goToStep(currentStep - 1)}
-              className="-mr-2 rounded-full px-3 py-1.5 text-[13px] font-medium tracking-normal text-forest/40 transition-colors hover:bg-ink/[0.04] hover:text-forest"
+              className="-mr-2 rounded-full px-3 py-1.5 text-[14px] font-medium tracking-normal text-forest/40 transition-colors hover:bg-ink/[0.04] hover:text-forest"
             >
               Kembali
             </button>
@@ -441,7 +441,7 @@ export function OnboardingFlow() {
                 : 'bg-forest text-cream shadow-[0_16px_34px_-18px_rgba(0,0,0,0.85)] hover:bg-forest-soft active:scale-[0.98]',
             )}
           >
-            <span className="text-[15.5px] font-medium tracking-normal">
+            <span className="text-[16.5px] font-medium tracking-normal">
               {cta.label}
             </span>
             <span

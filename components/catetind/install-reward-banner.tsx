@@ -21,7 +21,7 @@ export function InstallRewardBanner({ className }: { className?: string }) {
         />
 
         <div className="relative">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-mint/15 px-2.5 py-1 text-[11px] font-medium tracking-[0.18em] text-mint uppercase">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-mint/15 px-2.5 py-1 text-[12px] font-medium tracking-[0.18em] text-mint uppercase">
             <Sparkles className="size-3" strokeWidth={2.4} />
             Bonus Eksklusif
           </span>

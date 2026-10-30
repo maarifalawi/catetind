@@ -42,6 +42,34 @@ export const ADD_WALLET_SHEET_COPY = {
   toastDescription: (name: string) => `${name} langsung ikut kehitung di Total Saldo.`,
 } as const
 
+/* ── MODE UBAH (dompet yang sudah ada) ───────────────────────────────────────
+   Sheet yang SAMA dipakai untuk mengubah nama/atas-nama/nomor dompet. Yang bisa
+   diubah sengaja dibatasi: identitas, bukan uang. Saldo punya jalurnya sendiri
+   (`Sesuaikan Saldo` → baris `balance_adjustment`), jadi menawarkannya di sini
+   akan menjadi pintu kedua untuk satu angka yang sama.
+
+   Copy dipisah dari `ADD_WALLET_SHEET_COPY` supaya mode tambah tidak berubah
+   satu kata pun (permintaan produk: alur tambah harus tetap sama). */
+export const EDIT_WALLET_SHEET_COPY = {
+  title: 'Ubah Dompet',
+  /** nama kartu saat field nama dikosongkan sementara */
+  previewFallbackName: 'Dompet',
+  nameLabel: 'Nama akun',
+  namePlaceholder: 'Contoh: BCA Tabungan, GoPay, Dompet Tunai',
+  numberLabel: '4 angka terakhir',
+  numberPlaceholder: '0849',
+  numberHint: 'Cuma buat pajangan di kartunya, nomor aslinya nggak perlu diketik.',
+  holderLabel: 'Atas nama (opsional)',
+  holderPlaceholder: 'Nama pemilik rekening',
+  /** kenapa saldo tidak bisa diubah di sini — dikatakan, bukan disembunyikan */
+  balanceNote: 'Saldo tidak diubah dari sini. Pakai “Sesuaikan Saldo” di halaman dompet.',
+  submit: 'Simpan Perubahan',
+  /** penolakan store: nama kosong / sudah dipakai dompet lain */
+  rejected: 'Nama dompet wajib diisi dan tidak boleh sama dengan dompet lain.',
+  toastTitle: 'Dompet diperbarui',
+  toastDescription: (name: string) => `Kartu & nama barunya langsung berlaku: ${name}.`,
+} as const
+
 export const TRANSFER_SHEET_COPY = {
   /**
    * Judul diseragamkan jadi “Pindah Dana” (paket 55) — sebelumnya sheet ini

@@ -131,9 +131,9 @@ export const PLANT_SLEEP_COPY = {
 /* ── COPY BANNER GLOBAL (dipakai subscription-banner.tsx) ─────────────────── */
 
 export interface UpgradeBannerCopy {
-  eyebrow: string
   title: string
-  body: string
+  /** baris kedua (muted) di bawah judul. Kosong = banner cukup judul + tombol. */
+  body?: string
   /** label tombol — SATU kata, satu aksi */
   cta: string
 }
@@ -153,21 +153,22 @@ export const UPGRADE_BANNER_COPY = {
    * bukan memaksa apa pun: membaca & menjelajah tetap jalan.
    */
   noPurchase: {
-    eyebrow: 'Belum ada paket aktif',
     title: 'Pilih paket buat mulai catat',
     body: 'Sekali bayar untuk akses selamanya. Tanpa tagihan bulanan.',
     cta: 'Pilih paket',
   },
   /**
-   * Sudah beli tapi belum di tier tertinggi — `{target}` nama paket berikutnya,
-   * `{features}` daftar kemampuan yang baru terbuka, `{amount}` selisih dari
-   * `priceFor()`. Semua placeholder DIISI oleh `upgradeBannerCopy()`; tidak ada
-   * yang boleh bocor ke layar sebagai teks `{...}`.
+   * Sudah beli tapi belum di tier tertinggi. `{target}` nama paket berikutnya,
+   * `{highlight}` satu kemampuan yang baru terbuka, `{price}` kalimat nominal
+   * dari `UPGRADE_BANNER_PRICE_COPY`. Semua placeholder DIISI oleh
+   * `upgradeBannerCopy()`; tidak ada yang boleh bocor ke layar sebagai `{...}`.
+   *
+   * Tidak ada eyebrow di sini (dan di varian lain): judul sudah berdiri sendiri
+   * sebagai blok pertama, keterangan duduk di baris berikutnya.
    */
   upgrade: {
-    eyebrow: 'Masih ada fitur terkunci',
-    title: 'Buka semua fitur {target}',
-    body: '{features}. Selisih {amount} ke {target}, akses selamanya, tanpa auto-debet.',
+    title: 'Buka Semua Fitur {target}',
+    body: '{highlight} · {price}',
     cta: 'Upgrade',
   },
   /**
@@ -175,11 +176,23 @@ export const UPGRADE_BANNER_COPY = {
    * jalan ke akses selamanya — perpanjangan bulanan sudah tidak dijual.
    */
   expired: {
-    eyebrow: 'Paket lama berakhir',
     title: 'Paket {plan} sudah berakhir, lanjut ke Lifetime',
     body: 'Semua catatanmu tetap aman dan bisa dibaca/diekspor. Sekali bayar lifetime membuka lagi tombol tambah data, selamanya.',
     cta: 'Lanjut ke Lifetime',
   },
+} as const
+
+/**
+ * Kalimat nominal untuk baris kedua banner. Dua bentuk karena ARTI nominalnya
+ * beda, dan menulis "cukup tambah" untuk harga penuh adalah janji palsu:
+ *   · `delta` → paket yang dimiliki sudah lifetime, jadi yang dibayar SELISIH;
+ *   · `full`  → pembelian lama 30 hari / belum punya paket, jadi yang dibayar
+ *     harga lifetime penuh.
+ * Nominalnya sendiri selalu dari `priceFor()`, tidak pernah ditulis di sini.
+ */
+export const UPGRADE_BANNER_PRICE_COPY = {
+  delta: 'Cukup tambah {amount} untuk akses selamanya.',
+  full: 'Harga akses selamanya {amount}.',
 } as const
 
 /**
@@ -197,14 +210,30 @@ export function upgradeBannerCopy(
   if (!plan) return UPGRADE_BANNER_COPY.noPurchase
   const target = nextTier(plan.id)
   if (!target) return null
+
+  /* Nominal SELALU dari `priceFor()` — angka yang sama dengan yang ditagih
+     server, bukan selisih tulis tangan. */
+  const amount = priceFor(target, { period: 'lifetime', ownedPlanId: plan.id, ownedIsLifetime })
+  /* satu kemampuan yang baru terbuka; `null` = tidak ada yang bisa disebut */
+  const highlight = upgradeHighlights(plan.id, target, 1)[0] ?? null
+  /* nominal 0 tidak pernah ditulis "cukup tambah Rp 0" — baris nominalnya
+     dibuang, bukan dipaksa tampil. */
+  const price =
+    amount > 0
+      ? fill(ownedIsLifetime ? UPGRADE_BANNER_PRICE_COPY.delta : UPGRADE_BANNER_PRICE_COPY.full, {
+          amount: formatAmount(amount),
+        })
+      : null
+
   return {
-    ...UPGRADE_BANNER_COPY.upgrade,
     title: fill(UPGRADE_BANNER_COPY.upgrade.title, { target: target.name }),
-    body: fill(UPGRADE_BANNER_COPY.upgrade.body, {
-      features: upgradeHighlights(plan.id, target, 3).join(', '),
-      target: target.name,
-      amount: formatAmount(priceFor(target, { period: 'lifetime', ownedPlanId: plan.id, ownedIsLifetime })),
-    }),
+    /* dua bagian: kalau salah satunya tidak bisa dinyatakan jujur, yang tersisa
+       tetap ditulis; kalau dua-duanya kosong, banner cukup judul + tombol. */
+    body:
+      highlight && price
+        ? fill(UPGRADE_BANNER_COPY.upgrade.body, { highlight, price })
+        : (highlight ?? price ?? undefined),
+    cta: UPGRADE_BANNER_COPY.upgrade.cta,
   }
 }
 
@@ -212,10 +241,15 @@ export function upgradeBannerCopy(
  * Copy banner saat paket 30 hari LAMA habis. CTA-nya akses selamanya karena
  * perpanjangan bulanan sudah tidak dijual; kebutuhan user saat itu adalah
  * membuka lagi pencatatan, dan lifetime adalah satu-satunya jalan.
+ *
+ * `PLANS[].name` sudah berbunyi "Paket Waras" sementara template di bawah sudah
+ * menulis "Paket", jadi awalan itu dibuang: judulnya tidak boleh berbunyi
+ * "Paket Paket Waras". Nama kosong jatuh ke "kamu", bukan kata "undefined".
  */
 export function expiredBannerCopy(planName: string): UpgradeBannerCopy {
+  const name = planName.replace(/^paket\s+/i, '').trim() || 'kamu'
   return {
     ...UPGRADE_BANNER_COPY.expired,
-    title: fill(UPGRADE_BANNER_COPY.expired.title, { plan: planName }),
+    title: fill(UPGRADE_BANNER_COPY.expired.title, { plan: name }),
   }
 }

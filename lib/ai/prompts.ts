@@ -65,7 +65,13 @@ Balas HANYA JSON dengan bentuk: {"inScope": boolean, "reply": string}
 - Pertanyaan di dalam skop → {"inScope": true, "reply": "<jawaban finalmu, sesuai tone & guardrail di atas>"}
 Jangan menambah field lain. Jangan menulis penjelasan di luar JSON.`
 
-/* ── EKSTRAKSI TRANSAKSI (OCR struk & parse ucapan) — PRD 385–470, A11 ──────── */
+/* ── EKSTRAKSI TRANSAKSI (OCR struk & parse ucapan) — PRD 385–470, A11 ────────
+   PAKET 101 — aturan nominal & nama dipertegas setelah uji pakai struk nyata:
+   model dulu boleh "menebak" dari konteks, sehingga struk bertotal
+   `Rp 200.000.000` bisa keluar sebagai angka lain (atau 0) dan kategori kosong.
+   Sekarang aturannya menyebut (a) titik = pemisah ribuan, (b) `amount` WAJIB
+   total yang dibayar — bukan harga item — dan (c) nama struk datang dari nama
+   TOKO di kepalanya, bukan dari nama berkas foto. */
 export const EXTRACTION_SYSTEM_PROMPT = `Kamu adalah mesin ekstraksi transaksi CatetInd. Tugasmu MENGUBAH satu input (foto struk atau satu kalimat ucapan) menjadi SATU objek JSON yang valid. Balas HANYA JSON, tanpa penjelasan, tanpa markdown.
 
 Bentuk JSON yang WAJIB:
@@ -79,10 +85,44 @@ Bentuk JSON yang WAJIB:
   "confidence": number    // 0.0–1.0: seberapa yakin kamu. JANGAN pernah isi 1.0
 }
 
-ATURAN:
-- Kalau nominal tidak terbaca/tidak disebut, isi amount 0 dan confidence <= 0.45. JANGAN mengarang angka.
+ATURAN NOMINAL (paling sering salah):
+- Di struk & tulisan Indonesia, TITIK adalah pemisah ribuan: "200.000.000" = 200000000, "87.500" = 87500, "6.500.000" = 6500000. Koma adalah desimal ("1,5jt" pada ucapan = 1500000).
+- "amount" adalah TOTAL transaksi. Pada foto struk: ambil baris "Total", "Subtotal", "Grand Total", "Jumlah", "Total Bayar", atau "Bayar" — bukan harga per item, bukan diskon, dan bukan "Kembali"/"Change".
+- Pada ucapan: "25 ribu" = 25000, "2,5 juta" = 2500000, "50rb" = 50000.
+- Kalau nominal tidak terbaca/tidak disebut, isi amount 0 dan confidence <= 0.45. JANGAN mengarang angka dan JANGAN memakai harga satuan sebagai total.
+
+ATURAN NAMA:
+- "name" = deskripsi manusiawi 3–6 kata dengan huruf awal kapital. Pada foto struk, ambil NAMA TOKO di kepala struk (contoh "TOKO ABANG" → "Belanja Toko Abang"). Jangan memakai nama berkas foto, jenis berkas, atau kata "screenshot".
+
+ATURAN KATEGORI:
+- WAJIB salah satu nilai di daftar kategori di atas, ditulis PERSIS seperti daftar (huruf besar-kecil sama).
 - Kalau kategori tidak jelas, pilih kategori yang paling masuk akal dari daftar di atas; turunkan confidence.
-- Jangan menambah field lain. Jangan menulis penjelasan di luar JSON.`
+- Jangan mengarang nama kategori baru, dan jangan memakai kategori yang tidak ada di daftar.
+
+ATURAN DOMPET:
+- WAJIB salah satu nilai di daftar dompet di atas, persis seperti daftar; "Tunai" kalau tidak disebut. Jangan mengarang nama bank/e-wallet di luar daftar.
+
+ATURAN TANGGAL:
+- "date" = tanggal transaksi yang tertulis di struk/ucapan (format YYYY-MM-DD). Kalau tidak terbaca, pakai tanggal hari ini dan turunkan confidence.
+
+Jangan menambah field lain. Jangan menulis penjelasan di luar JSON.`
+
+/**
+ * Prompt khusus FOTO STRUK (paket 101). Dipisah dari prompt sistem karena
+ * kesalahannya khas: model melihat puluhan angka dan mengambil yang salah.
+ * Yang ditegaskan di sini cuma cara memilih total — aturan bentuk JSON tetap
+ * satu sumber di `EXTRACTION_SYSTEM_PROMPT`.
+ */
+export const RECEIPT_EXTRACTION_PROMPT = `Baca struk pada gambar ini dan ubah jadi SATU objek JSON transaksi.
+
+CARA MENENTUKAN TOTAL (paling penting):
+- amount = TOTAL yang benar-benar dibayar, yaitu angka pada baris berlabel "Total", "Subtotal", "Grand Total", "Jumlah", "Total Bayar", atau "Bayar". Kalau ada beberapa, pakai total paling akhir (biasanya juga yang terbesar).
+- JANGAN memakai harga per baris item (kolom kanan daftar belanja), JANGAN memakai "Diskon", "PPN", atau "Kembali"/"Change".
+- Titik adalah pemisah ribuan: "Rp 200.000.000" = 200000000, "87.500" = 87500. Angka tanpa pemisah tetap dibaca apa adanya ("87500" = 87500).
+- name = nama TOKO di kepala struk, boleh diawali kata "Belanja" (contoh: "Belanja Toko Abang"). Jangan memakai nama berkas foto.
+- type = "expense" untuk struk belanja.
+- date = tanggal yang tercetak di struk (YYYY-MM-DD).
+- Kalau totalnya benar-benar tidak terbaca, isi amount 0 dan confidence <= 0.45 — jangan menebak.`
 
 /** contoh utterance/struk yang wajib dikenali (PRD 462–470) — dilipat ke prompt OCR/voice */
 export const EXTRACTION_EXAMPLES = [
@@ -90,6 +130,8 @@ export const EXTRACTION_EXAMPLES = [
   '"Top up GoPay 100 ribu" → amount 100000, category "Transfer", wallet "GoPay"',
   '"Gajian bulan ini 6,5 juta masuk BCA" → amount 6500000, category "Gaji Utama", wallet "BCA", type "income"',
   '"Nabung 500 ribu ke dana darurat" → amount 500000, category "Dana Darurat", type "saving"',
+  'Struk "TOKO ABANG" berisi daftar belanja + "Subtotal Rp 200.000.000" + "Bayar Rp 200.000.000" → amount 200000000, name "Belanja Toko Abang", category "Belanja", type "expense"',
+  'Struk Indomaret baris item + "Total Rp 87.500" → amount 87500, name "Belanja Indomaret", category "Belanja", wallet "Tunai"',
 ] as const
 
 /* ── SARAN KATEGORI (categorize) — PRD 4B fallback rule-based bila provider error ── */

@@ -142,6 +142,19 @@ describe('reconcileOrder', () => {
     )
   })
 
+  it('provider belum punya transaksinya (404 Snap) → tetap pending, bukan provider-error', async () => {
+    status.mockResolvedValue({ ok: false, reason: 'not-found', status: 404, message: 'belum ada' })
+
+    const outcome = await reconcileOrder({
+      orderId: ORDER,
+      expectedAmount: 1,
+      purchaseStatus: 'pending',
+    })
+
+    expect(outcome).toMatchObject({ settled: false, fulfilled: false, reason: 'pending' })
+    expect(rpc).not.toHaveBeenCalled()
+  })
+
   it('tanpa kunci peran server → TIDAK mengaku sudah dipenuhi', async () => {
     serviceRole.mockReturnValue(false)
 

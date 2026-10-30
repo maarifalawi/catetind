@@ -98,16 +98,16 @@ export function DailyNudge() {
         </span>
 
         <div className="min-w-0 flex-1">
-          <p className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.14em] text-forest/60">
+          <p className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.14em] text-forest/60">
             {HOME_NUDGE_COPY.coachLabel}
           </p>
-          <p className="mt-1 text-[13.5px] font-medium leading-snug text-forest">
+          <p className="mt-1 text-[14.5px] font-medium leading-snug text-forest">
             {HOME_NUDGE_COPY.title}
           </p>
           <button
             type="button"
             onClick={() => setAddOpen(true)}
-            className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-forest px-3.5 py-1.5 text-[12px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.97]"
+            className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-forest px-3.5 py-1.5 text-[13px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.97]"
           >
             {HOME_NUDGE_COPY.cta}
           </button>

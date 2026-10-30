@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   aiConfigured,
   aiUserMessage,
+  generateFromImage,
   generateJSON,
   generateText,
   logAiFailure,
@@ -144,6 +145,111 @@ describe('lib/ai/provider', () => {
     expect((JSON.parse(String(call[1].body)) as { model: string }).model).toBe('deepseek-v4-pro')
   })
 })
+describe('reasoning & jatah token (paket 101)', () => {
+  /* Temuan uji pakai: scan struk menjawab "Model AI belum mengirim jawaban"
+     setelah ~25 detik. Sebabnya token BERPIKIR memakan seluruh `max_tokens`
+     (700), sehingga `content` kosong. Test ini mengunci setelan yang mencegahnya
+     kembali: ekstraksi = reasoning mati + jatah cukup, coach = reasoning hidup. */
+
+  beforeEach(() => {
+    process.env.DEEPSEEK_API_KEY = 'test-key'
+    delete process.env.DEEPSEEK_MODEL_VISION
+  })
+  afterEach(() => {
+    vi.restoreAllMocks()
+    process.env = { ...ORIGINAL_ENV }
+  })
+
+  function bodyOf(fetchMock: ReturnType<typeof vi.fn>, index = 0) {
+    const call = fetchMock.mock.calls[index] as unknown as [string, RequestInit]
+    return JSON.parse(String(call[1].body)) as {
+      reasoning_effort?: string
+      max_tokens?: number
+      messages: { role: string; content: unknown }[]
+    }
+  }
+
+  it('OCR struk: reasoning dimatikan & jatah token cukup untuk JSON', async () => {
+    const fetchMock = vi.fn(async () => jsonResponse({ choices: [{ message: { content: '{"amount":1}' } }] }))
+    global.fetch = fetchMock
+
+    await generateFromImage({
+      system: 's',
+      prompt: 'p',
+      image: { mimeType: 'image/jpeg', data: 'abc' },
+    })
+
+    const body = bodyOf(fetchMock)
+    expect(body.reasoning_effort).toBe('none')
+    expect(body.max_tokens).toBeGreaterThanOrEqual(1500)
+    const content = body.messages.at(-1)?.content as { type: string; image_url?: { url: string } }[]
+    expect(content[0]?.image_url?.url).toBe('data:image/jpeg;base64,abc')
+  })
+
+  it('ekstraksi teks (parse ucapan/kategori): reasoning juga dimatikan', async () => {
+    const fetchMock = vi.fn(async () =>
+      jsonResponse({ choices: [{ message: { content: '{"category":"Makanan"}' } }] }),
+    )
+    global.fetch = fetchMock
+
+    await generateJSON({ system: 's', turns: [{ role: 'user', text: 'kopi' }] })
+
+    const body = bodyOf(fetchMock)
+    expect(body.reasoning_effort).toBe('none')
+    expect(body.max_tokens).toBeGreaterThanOrEqual(1200)
+  })
+
+  it('coach tetap boleh berpikir: reasoning hidup + jatah token lega', async () => {
+    const fetchMock = vi.fn(async () => jsonResponse({ choices: [{ message: { content: 'Halo' } }] }))
+    global.fetch = fetchMock
+
+    await generateText({ system: 's', turns: [{ role: 'user', text: 'hi' }] })
+
+    const body = bodyOf(fetchMock)
+    expect(body.reasoning_effort).toBe('low')
+    expect(body.max_tokens).toBeGreaterThanOrEqual(800)
+  })
+
+  it('pemanggil boleh meminta reasoning untuk envelope JSON coach', async () => {
+    const fetchMock = vi.fn(async () => jsonResponse({ choices: [{ message: { content: '{"reply":"ok"}' } }] }))
+    global.fetch = fetchMock
+
+    await generateJSON({
+      system: 's',
+      turns: [{ role: 'user', text: 'hi' }],
+      maxOutputTokens: 1600,
+      reasoningEffort: 'low',
+    })
+
+    expect(bodyOf(fetchMock).reasoning_effort).toBe('low')
+  })
+
+  it('jawaban kosong karena kehabisan token: sebabnya TERTULIS di log & dicoba ulang', async () => {
+    const fetchMock = vi.fn(async () =>
+      jsonResponse({
+        choices: [
+          { finish_reason: 'length', message: { content: '', reasoning_content: 'mikir panjang…' } },
+        ],
+        usage: { completion_tokens: 700, completion_tokens_details: { reasoning_tokens: 690 } },
+      }),
+    )
+    global.fetch = fetchMock
+
+    const res = await generateJSON({ system: 's', turns: [{ role: 'user', text: 'x' }] })
+
+    expect(res.ok).toBe(false)
+    if (!res.ok) {
+      expect(res.error.kind).toBe('empty')
+      /* angka ini yang membuat operator tahu harus menaikkan jatah / mematikan reasoning */
+      expect(res.error.message).toContain('reasoning_tokens=690')
+      expect(res.error.message).toContain('finish_reason=length')
+    }
+    /* satu percobaan ulang (paket 101) — bukan dua kegagalan yang tak terjelaskan */
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+})
+
+
 
 describe('parseJsonLoose', () => {
   it('melepas pagar markdown', () => {

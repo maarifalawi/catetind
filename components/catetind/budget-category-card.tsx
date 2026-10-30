@@ -54,15 +54,15 @@ export function BudgetCategoryCard({
   return (
     <article className="group/row">
       <div className="flex items-center gap-3">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-sage/45 text-[18px]">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-sage/45 text-[19px]">
           {budget.icon}
         </span>
 
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[14px] font-semibold leading-tight tracking-tight text-forest">
+          <p className="truncate text-[15px] font-semibold leading-tight tracking-tight text-forest">
             {budget.category}
           </p>
-          <p className="mt-1 truncate text-[11.5px] font-medium tabular-nums text-forest/45">
+          <p className="mt-1 truncate text-[12.5px] font-medium tabular-nums text-forest/45">
             {ratioLabel(budget.spent, budget.limit, masked)}
           </p>
           {/* Baris ini hanya muncul saat kategori lewat limit: satu tombol
@@ -70,7 +70,7 @@ export function BudgetCategoryCard({
               limit / Lewat limit" tidak lagi dicetak di kartu — statusnya
               sudah terbaca dari busur cincin (warna + tick pacing). */}
           {over && (
-            <div className="mt-1.5 flex items-center gap-1.5 text-[10px] font-medium text-forest/40">
+            <div className="mt-1.5 flex items-center gap-1.5 text-[11px] font-medium text-forest/40">
               <span
                 aria-hidden
                 className="size-1.5 shrink-0 rounded-full"
@@ -97,7 +97,7 @@ export function BudgetCategoryCard({
           title={pacingHint}
           className="cursor-help"
         >
-          <span className="text-[10.5px] font-semibold tabular-nums text-forest">
+          <span className="text-[11.5px] font-semibold tabular-nums text-forest">
             {Math.round(percent)}%
           </span>
         </ProgressRing>

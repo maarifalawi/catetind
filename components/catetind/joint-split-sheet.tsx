@@ -1,12 +1,10 @@
-'use client'
+﻿'use client'
 
 import { useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Scale } from 'lucide-react'
 import { BudgetSheet, ChoicePills, RevealStep, RupiahField, SheetSubmit } from './budget-sheet'
 import {
-  JOINT_ME,
-  JOINT_PARTNER,
   PERCENT_PRESETS,
   SPLIT_MODES,
   moneyLabel,
@@ -16,16 +14,16 @@ import {
 import type { SplitSpec } from '@/lib/data/joint-ledger'
 import { cn } from '@/lib/utils'
 
-/* ── Split Bill Bottom Sheet (Section 6) ─────────────────────────────────────
+/* â”€â”€ Split Bill Bottom Sheet (Section 6) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    Empat mode pembagian, urut dari yang paling sering dipakai:
-   1. Bagi Rata (default) · 2. Persentase (slider dua sisi yang bergerak
-   bersama) · 3. Nominal Custom (isi satu sisi, sisi lain dihitung otomatis) ·
+   1. Bagi Rata (default) Â· 2. Persentase (slider dua sisi yang bergerak
+   bersama) Â· 3. Nominal Custom (isi satu sisi, sisi lain dihitung otomatis) Â·
    4. "Yang ini gue yang bayar" (100% satu orang).
 
-   Semua mode menghasilkan DRAFT dengan bentuk yang sama — satu `SplitSpec`
-   (`lib/data/joint-ledger.ts`) — jadi halaman Joint cukup menyimpan satu objek
+   Semua mode menghasilkan DRAFT dengan bentuk yang sama â€” satu `SplitSpec`
+   (`lib/data/joint-ledger.ts`) â€” jadi halaman Joint cukup menyimpan satu objek
    kecil per transaksi dan tidak ada bentuk kedua yang bisa dibaca salah.
-   ────────────────────────────────────────────────────────────────────────── */
+   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 /**
  * Draft pembagian yang dikembalikan sheet ini.
@@ -49,17 +47,17 @@ export function JointSplitSheet({
   total,
   initial,
   onSave,
-  me = JOINT_ME,
-  partner = JOINT_PARTNER,
+  me,
+  partner,
 }: {
   open: boolean
   onClose: () => void
-  /** nominal transaksi — basis hitung mode persentase & nominal */
+  /** nominal transaksi â€” basis hitung mode persentase & nominal */
   total: number
   initial?: JointSplitDraft
   onSave: (draft: JointSplitDraft) => void
-  me?: JointPerson
-  partner?: JointPerson
+  me: JointPerson
+  partner: JointPerson
 }) {
   /* Nilai awal diambil dari transaksi yang dipilih; pemanggil memakai
      `key={targetId}` sehingga ganti target = instance baru (tanpa effect reset). */
@@ -116,7 +114,7 @@ export function JointSplitSheet({
       open={open}
       onClose={onClose}
       title="Atur Pembagian"
-      description="Biar adil, biar gak ada yang ngerasa berat sebelah. 💚"
+      description="Biar adil, biar gak ada yang ngerasa berat sebelah. ðŸ’š"
       footer={
         <SheetSubmit onClick={handleSave} disabled={!nominalReady} gate>
           Simpan Pembagian
@@ -125,11 +123,11 @@ export function JointSplitSheet({
     >
       {/* nominal transaksi yang sedang dibagi */}
       <div className="flex items-center justify-between gap-3 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/12">
-        <span className="flex items-center gap-2 text-[12.5px] font-medium text-forest/60">
+        <span className="flex items-center gap-2 text-[13.5px] font-medium text-forest/60">
           <Scale className="size-4 text-forest" strokeWidth={2.3} />
           Nominal transaksi
         </span>
-        <span className="text-[15px] font-semibold tabular-nums text-forest">
+        <span className="text-[16px] font-semibold tabular-nums text-forest">
           {moneyLabel(total, false)}
         </span>
       </div>
@@ -142,18 +140,18 @@ export function JointSplitSheet({
         onChange={setMode}
         ariaLabel="Mode pembagian"
       />
-      <p className="mt-2 text-[11.5px] leading-relaxed text-forest/45">
+      <p className="mt-2 text-[12.5px] leading-relaxed text-forest/45">
         {SPLIT_MODES.find((item) => item.id === mode)?.hint}
       </p>
 
-      {/* ── kendali per mode (progressive disclosure) ───────────────────── */}
+      {/* â”€â”€ kendali per mode (progressive disclosure) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="mt-4 space-y-3">
         <RevealStep show={mode === 'equal'}>
           <div className="rounded-2xl bg-cream px-4 py-3.5 ring-1 ring-soil/12">
-            <p className="text-[12.5px] font-medium text-forest/70">
-              {me.name} 50% · {partner.name} 50%
+            <p className="text-[13.5px] font-medium text-forest/70">
+              {me.name} 50% Â· {partner.name} 50%
             </p>
-            <p className="mt-1 text-[11.5px] text-forest/45">
+            <p className="mt-1 text-[12.5px] text-forest/45">
               Bagi rata = {moneyLabel(Math.round(total / 2), false)} per orang.
             </p>
           </div>
@@ -186,11 +184,11 @@ export function JointSplitSheet({
               placeholder="Rp 0"
             />
             {total <= 0 ? (
-              <p className="text-[11.5px] leading-relaxed text-hud-terracotta">
+              <p className="text-[12.5px] leading-relaxed text-hud-terracotta">
                 Isi nominal transaksinya dulu ya, biar sisi satunya bisa dihitung otomatis.
               </p>
             ) : (
-              <p className="text-[11.5px] leading-relaxed text-forest/45">
+              <p className="text-[12.5px] leading-relaxed text-forest/45">
                 Ketik di salah satu sisi, sisi satunya menyesuaikan sendiri supaya tetap pas{' '}
                 {moneyLabel(total, false)}.
               </p>
@@ -211,18 +209,18 @@ export function JointSplitSheet({
         </RevealStep>
       </div>
 
-      {/* ringkasan hasil pembagian — selalu terlihat sebelum simpan */}
+      {/* ringkasan hasil pembagian â€” selalu terlihat sebelum simpan */}
       <div className="mt-4 rounded-2xl bg-hud-sage/15 px-4 py-3 ring-1 ring-hud-sage/30">
-        <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-forest/70">
+        <p className="text-[12px] font-medium uppercase tracking-[0.14em] text-forest/70">
           Hasil pembagian
         </p>
-        <p className="mt-2 flex items-center justify-between gap-3 text-[12.5px] font-medium text-forest">
+        <p className="mt-2 flex items-center justify-between gap-3 text-[13.5px] font-medium text-forest">
           <span>
             {me.avatar} {me.name}
           </span>
           <span className="tabular-nums">{moneyLabel(mineShare, false)}</span>
         </p>
-        <p className="mt-1 flex items-center justify-between gap-3 text-[12.5px] font-medium text-forest">
+        <p className="mt-1 flex items-center justify-between gap-3 text-[13.5px] font-medium text-forest">
           <span>
             {partner.avatar} {partner.name}
           </span>
@@ -236,7 +234,7 @@ export function JointSplitSheet({
 /**
  * Slider persentase "dua sisi yang bergerak bersama": satu pegangan di batas
  * dua bagian, digeser dengan jari/pointer atau panah keyboard. Karena sisi
- * pasangan selalu `100 − aku`, kedua angka otomatis menyesuaikan.
+ * pasangan selalu `100 âˆ’ aku`, kedua angka otomatis menyesuaikan.
  */
 function PercentSlider({
   percent,
@@ -254,7 +252,7 @@ function PercentSlider({
   const trackRef = useRef<HTMLDivElement>(null)
   const [dragging, setDragging] = useState(false)
 
-  /** posisi pointer → persentase (langkah 5% supaya angkanya bulat) */
+  /** posisi pointer â†’ persentase (langkah 5% supaya angkanya bulat) */
   function percentFromClientX(clientX: number): number {
     const track = trackRef.current
     if (!track) return percent
@@ -267,7 +265,7 @@ function PercentSlider({
 
   return (
     <div className="rounded-2xl bg-cream px-4 py-4 ring-1 ring-soil/12">
-      <div className="flex items-center justify-between gap-2 text-[12.5px] font-medium">
+      <div className="flex items-center justify-between gap-2 text-[13.5px] font-medium">
         <span className="flex items-center gap-1.5 text-forest">
           <span aria-hidden>{me.avatar}</span>
           {me.name} {percent}%
@@ -314,7 +312,7 @@ function PercentSlider({
         <span className="absolute inset-x-0 top-1/2 h-2.5 -translate-y-1/2 overflow-hidden rounded-full bg-hud-amber/30">
           <span className="block h-full bg-hud-sage/80" style={{ width: `${percent}%` }} />
         </span>
-        {/* pegangan di batas dua sisi — begeser = dua sisi ikut menyesuaikan */}
+        {/* pegangan di batas dua sisi â€” begeser = dua sisi ikut menyesuaikan */}
         <motion.span
           aria-hidden
           animate={{ scale: dragging ? 1.14 : 1 }}
@@ -326,14 +324,14 @@ function PercentSlider({
         </motion.span>
       </div>
 
-      <div className="mt-1.5 flex items-center justify-between text-[11.5px] font-medium tabular-nums text-forest/50">
+      <div className="mt-1.5 flex items-center justify-between text-[12.5px] font-medium tabular-nums text-forest/50">
         <span>{moneyLabel(mineShare, false)}</span>
         <span>{moneyLabel(total - mineShare, false)}</span>
       </div>
 
-      {/* quick-pick 60/40 · 70/30 · 80/20 */}
+      {/* quick-pick 60/40 Â· 70/30 Â· 80/20 */}
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <span className="text-[11px] font-medium text-forest/40">Cepat:</span>
+        <span className="text-[12px] font-medium text-forest/40">Cepat:</span>
         {PERCENT_PRESETS.map((preset) => {
           const active = percent === preset.me
           return (
@@ -343,7 +341,7 @@ function PercentSlider({
               onClick={() => onPercentChange(preset.me)}
               aria-pressed={active}
               className={cn(
-                'rounded-full px-3 py-1.5 text-[11.5px] font-medium transition-colors active:scale-95',
+                'rounded-full px-3 py-1.5 text-[12.5px] font-medium transition-colors active:scale-95',
                 active
                   ? 'bg-forest text-mint'
                   : 'bg-soil/[0.1] text-forest/60 hover:bg-soil/[0.1]',

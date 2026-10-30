@@ -17,6 +17,7 @@ import {
   recordedTransactions,
   removeWalletAccount,
   removedWalletSeeds,
+  renameWalletAccount,
   resetMoneyStore,
   restoreWalletAccount,
   transferLogOf,
@@ -278,3 +279,54 @@ describe('jejak analitik hapus dompet', () => {
   })
 })
 
+
+/* ── UBAH IDENTITAS DOMPET (nama/pemegang/nomor) ─────────────────────────────
+   Dulu nama dompet hanya bisa ditulis SEKALI saat dibuat: salah ketik berarti
+   permanen, dan satu-satunya jalan keluar adalah menghapus dompet (yang membuang
+   saldo pembukanya). Test ini mengunci tiga hal yang membuat rename aman:
+   nama wajib & unik, `walletName` di baris ledger ikut berubah, dan `walletId`
+   tidak pernah berubah. */
+describe('rename dompet (identitas, bukan saldo)', () => {
+  it('mengganti nama: nama berubah, saldo & id tetap', () => {
+    const before = walletBalance(getMoneySnapshot(), 'bca')
+    const renamed = renameWalletAccount('bca', { name: 'BCA Harian' })
+
+    expect(renamed).not.toBeNull()
+    expect(renamed!.id).toBe('bca')
+    expect(renamed!.name).toBe('BCA Harian')
+    expect(walletBalance(getMoneySnapshot(), 'bca')).toBe(before)
+  })
+
+  it('baris ledger dompet itu ikut memakai nama baru (Riwayat/Home tidak yatim)', () => {
+    const row = postExpense({ walletId: 'bca', amount: 25_000, note: 'Kopi' })!
+    expect(row.walletName).toBe('BCA')
+
+    renameWalletAccount('bca', { name: 'BCA Harian' })
+
+    const after = getMoneySnapshot().rows.find((item) => item.id === row.id)
+    expect(after?.walletName).toBe('BCA Harian')
+
+    /* dan baris dompet lain tidak tersentuh */
+    const other = postExpense({ walletId: 'gopay', amount: 10_000, note: 'Parkir' })!
+    expect(getMoneySnapshot().rows.find((item) => item.id === other.id)?.walletName).toBe('GoPay')
+  })
+
+  it('menolak nama kosong & nama yang sudah dipakai dompet lain, tanpa menulis apa pun', () => {
+    const before = getMoneySnapshot().wallets.map((wallet) => ({ ...wallet }))
+
+    expect(renameWalletAccount('bca', { name: '   ' })).toBeNull()
+    expect(renameWalletAccount('bca', { name: 'GoPay' })).toBeNull()
+    /* huruf besar/kecil tidak membuat nama jadi unik */
+    expect(renameWalletAccount('bca', { name: 'gopay' })).toBeNull()
+    /* dompet yang tidak ada / sudah dihapus */
+    expect(renameWalletAccount('dompet-hantu', { name: 'Apa Saja' })).toBeNull()
+
+    expect(getMoneySnapshot().wallets).toEqual(before)
+  })
+
+  it('nama sama persis (tanpa perubahan) tetap sah dan tidak melempar', () => {
+    const renamed = renameWalletAccount('bca', { name: 'BCA' })
+    expect(renamed).not.toBeNull()
+    expect(renamed!.name).toBe('BCA')
+  })
+})

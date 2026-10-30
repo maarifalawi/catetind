@@ -1,24 +1,24 @@
-import Link from 'next/link'
+﻿import Link from 'next/link'
 import { ArrowRight, Check, Minus, ShieldCheck, Star } from 'lucide-react'
 import { LP_PRICING, formatIDR, lpPlanPrice, type LandingTier } from '@/lib/data/landing'
 import { cn } from '@/lib/utils'
 import { BatikBackdrop } from './batik-backdrop'
 import { LandingReveal } from './reveal'
 
-/* ── SECTION #pricing ────────────────────────────────────────────────────────
+/* â”€â”€ SECTION #pricing â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    Tiga kartu, satu periode: akses selamanya (sekali bayar). Struktur harga
    mengikuti psikologi "anchor + hero + premium":
 
-     Catet Aja (Rp1)    → pintu masuk uji coba, fitur AI dikunci
-     Waras (129rb)      → kartu hero: +128.999 untuk semua fitur AI
-     Sultan (299rb)     → plafon harga, membuat Waras terasa murah
+     Catet Aja (Rp1)    â†’ pintu masuk uji coba, fitur AI dikunci
+     Waras (129rb)      â†’ kartu hero: +128.999 untuk semua fitur AI
+     Sultan (299rb)     â†’ plafon harga, membuat Waras terasa murah
 
    ATURAN YANG MENGIKAT:
-     · nominal TIDAK ditulis di JSX — `lpPlanPrice()` membaca `PLANS` dari
+     Â· nominal TIDAK ditulis di JSX â€” `lpPlanPrice()` membaca `PLANS` dari
        `lib/data/pricing.ts`, jadi angka yang diiklankan = angka yang ditagih;
-     · CTA selalu membawa `period=lifetime` lewat `LP_PRICING.checkoutHref`;
-     · tidak ada "Garansi 30 hari" dan tidak ada catatan penutup di kartu;
-     · Joint Wallet hanya muncul di Waras. Sultan memakai "Semua fitur Paket
+     Â· CTA selalu membawa `period=lifetime` lewat `LP_PRICING.checkoutHref`;
+     Â· tidak ada "Garansi 30 hari" dan tidak ada catatan penutup di kartu;
+     Â· Joint Wallet hanya muncul di Waras. Sultan memakai "Semua fitur Paket
        Waras", jadi tidak ada duplikasi fitur.
 
    Aksesibilitas: tiap kartu satu <article aria-labelledby>, daftar fitur <ul>,
@@ -32,7 +32,7 @@ export function LandingPricingLp() {
       aria-labelledby="landing-pricing-title"
       className="w-full scroll-mt-24 bg-canvas px-5 py-20 landing-tab:px-10 landing:py-[120px]"
     >
-      {/* alias anchor untuk footer "Harga" (#harga) — section tetap #pricing
+      {/* alias anchor untuk footer "Harga" (#harga) â€” section tetap #pricing
           supaya tautan navbar lama tidak berubah. */}
       <div id="harga" className="mx-auto flex w-full max-w-[1200px] scroll-mt-24 flex-col gap-12">
         <div className="flex flex-col items-center gap-4 text-center">
@@ -86,7 +86,7 @@ function PricingCard({ tier }: { tier: LandingTier }) {
       className={cn(
         'relative flex h-full flex-col rounded-[28px] p-6 pt-8 landing:p-8',
         recommended
-          ? 'landing:z-10 bg-gradient-to-br from-evergreen-deep via-forest to-evergreen-deep text-cream ring-1 ring-white/15 shadow-landing-deep landing:scale-[1.025]'
+          ? 'landing:z-10 bg-gradient-to-br from-evergreen-deep via-forest to-evergreen-deep text-cream ring-1 ring-cream/15 shadow-landing-deep landing:scale-[1.025]'
           : 'bg-canvas text-forest ring-1 ring-soil/10 shadow-landing-soft',
       )}
     >
@@ -104,7 +104,7 @@ function PricingCard({ tier }: { tier: LandingTier }) {
       ) : null}
 
       {recommended && tier.badge ? (
-        <span className="absolute -top-3.5 left-1/2 z-20 inline-flex -translate-x-1/2 items-center gap-1.5 whitespace-nowrap rounded-full bg-daisy px-3.5 py-1.5 text-[11.5px] font-semibold leading-none text-forest shadow-sm ring-1 ring-black/5">
+        <span className="absolute -top-3.5 left-1/2 z-20 inline-flex -translate-x-1/2 items-center gap-1.5 whitespace-nowrap rounded-full bg-daisy px-3.5 py-1.5 text-[11.5px] font-semibold leading-none text-forest shadow-sm ring-1 ring-ink/5">
           <Star className="size-3.5 fill-forest" strokeWidth={1.8} aria-hidden />
           {tier.badge}
         </span>
@@ -115,7 +115,7 @@ function PricingCard({ tier }: { tier: LandingTier }) {
           className={cn(
             'inline-flex w-fit items-center rounded-full px-2.5 py-1 text-[11.5px] leading-[1.5] font-medium',
             recommended
-              ? 'bg-white/10 text-cream ring-1 ring-white/20 backdrop-blur-sm'
+              ? 'bg-cream/10 text-cream ring-1 ring-cream/20 backdrop-blur-sm'
               : 'bg-sage text-forest',
           )}
         >
@@ -171,7 +171,7 @@ function PricingCard({ tier }: { tier: LandingTier }) {
         <div
           className={cn(
             'mt-7 flex flex-1 flex-col border-t pt-6',
-            recommended ? 'border-white/15' : 'border-soil/10',
+            recommended ? 'border-cream/15' : 'border-soil/10',
           )}
         >
           <p
@@ -192,10 +192,10 @@ function PricingCard({ tier }: { tier: LandingTier }) {
                     'mt-[1px] flex size-4 shrink-0 items-center justify-center rounded-full',
                     feature.included
                       ? recommended
-                        ? 'bg-white/10 text-mint'
+                        ? 'bg-cream/10 text-mint'
                         : 'bg-sage text-forest'
                       : recommended
-                        ? 'bg-white/5 text-cream/35'
+                        ? 'bg-cream/5 text-cream/35'
                         : 'bg-sage/60 text-forest-muted/50',
                   )}
                 >

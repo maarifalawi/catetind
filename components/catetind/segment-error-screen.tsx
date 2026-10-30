@@ -78,13 +78,13 @@ export function SegmentErrorScreen({
           <TriangleAlert className="size-5" strokeWidth={2.2} aria-hidden />
         </span>
 
-        <p className="mt-4 text-[10.5px] font-medium tracking-[0.16em] text-forest/40 uppercase">
+        <p className="mt-4 text-[11.5px] font-medium tracking-[0.16em] text-forest/40 uppercase">
           {copy.eyebrow}
         </p>
         <h1 className="mt-1.5 font-display text-xl font-semibold tracking-tight text-forest sm:text-2xl">
           {copy.title}
         </h1>
-        <p className="mt-2 text-[13.5px] leading-relaxed text-forest/60">{copy.body}</p>
+        <p className="mt-2 text-[14.5px] leading-relaxed text-forest/60">{copy.body}</p>
 
         <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:items-center">
           <button
@@ -114,7 +114,7 @@ export function SegmentErrorScreen({
           )}
         </div>
 
-        <p className="mt-3 text-[11.5px] leading-relaxed text-forest/40">
+        <p className="mt-3 text-[12.5px] leading-relaxed text-forest/40">
           {SEGMENT_ERROR_ACTIONS.exportHint}
         </p>
 

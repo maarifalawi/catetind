@@ -39,9 +39,11 @@ import { getFundsSnapshot, purgeFundsStore } from './money/funds-store'
 import { getWealthSnapshot, purgeWealthStore } from './money/wealth-store'
 import { purgePhysicalStore } from './money/physical-store'
 import { getMoneySnapshot, purgeMoneyStore } from './money/store'
+import { resetReferralStore } from './money/referral-store'
 import { purgeUserMoneySettings } from './user-money-settings'
 import { endSession } from './session-client'
 import { browserSupabase } from './supabase/client'
+
 
 /**
  * Bentuk terkecil dari Web Storage yang dibutuhkan pembersihan ini. Ditulis
@@ -204,6 +206,10 @@ export async function purgeDeviceData(): Promise<PurgeReport> {
 
   resetInviteStore()
   resetAiUsageStore()
+  /* Angka referral (kode, klik, teman) adalah data AKUN. Store-nya hidup di
+     memory saja, tapi setelah "Hapus Akun" layar tidak boleh sempat menampilkan
+     sisa angka milik akun yang baru saja dihapus. */
+  resetReferralStore()
 
   /* Konfigurasi UANG user (paket 57): pemasukan bulanan, total cicilan, tanggal
      gajian, periode dashboard. Dipanggil SETELAH penyapuan kunci `catet*` di

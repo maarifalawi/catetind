@@ -83,7 +83,7 @@ export function ContextMenu({
         aria-expanded={open}
         aria-label={CONTEXT_MENU_COPY.triggerAria}
         onClick={() => setOpen((v) => !v)}
-        className="flex h-11 w-full items-center gap-2 rounded-full bg-cream px-3.5 text-[13px] font-medium text-forest ring-1 ring-soil/12 transition-colors hover:bg-sage/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25"
+        className="flex h-11 w-full items-center gap-2 rounded-full bg-cream px-3.5 text-[14px] font-medium text-forest ring-1 ring-soil/12 transition-colors hover:bg-sage/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25"
       >
         <ActiveIcon className="size-4 shrink-0" strokeWidth={2.2} aria-hidden />
         <span className="whitespace-nowrap">{CONTEXT_LABEL[value]}</span>

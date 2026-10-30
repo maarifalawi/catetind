@@ -133,7 +133,14 @@ export async function reconcileOrder({
   let detail = provider
   if (!detail) {
     const result = await fetchTransactionStatus(orderId)
-    if (!result.ok) return { ...base, reason: 'provider-error' }
+    /* Snap: transaksi baru lahir saat halaman pembayaran DIBUKA. `404` karena
+       itu berarti "belum ada yang perlu dicocokkan" — order tetap `pending`,
+       bukan error provider (kalau dianggap error, setiap order baru akan
+       dilaporkan gagal dan user diberi tahu hal yang salah). */
+    if (!result.ok) {
+      if (result.reason === 'not-found') return { ...base, reason: 'pending' }
+      return { ...base, reason: 'provider-error' }
+    }
     detail = result.value
   }
 

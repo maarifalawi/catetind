@@ -115,7 +115,7 @@ export function SyncBalanceModal({
                 <Drawer.Title className="font-display text-xl font-medium leading-tight tracking-tight text-forest">
                   Sesuaikan Saldo {shown?.name ?? ''}
                 </Drawer.Title>
-                <Drawer.Description className="mt-1 text-[13px] leading-relaxed text-forest/55">
+                <Drawer.Description className="mt-1 text-[14px] leading-relaxed text-forest/55">
                   Berapa saldo aslinya sekarang? Buka aplikasi bank/e-wallet kamu, lalu
                   tulis angkanya di sini.
                 </Drawer.Description>
@@ -133,11 +133,11 @@ export function SyncBalanceModal({
 
             {/* saldo sistem — pembanding koreksi */}
             <div className="mt-5 flex items-center justify-between gap-3 rounded-2xl bg-sage/40 px-4 py-3 ring-1 ring-inset ring-forest/[0.06]">
-              <span className="flex items-center gap-2 text-[11.5px] font-medium text-forest/55">
+              <span className="flex items-center gap-2 text-[12.5px] font-medium text-forest/55">
                 <span className={cn('size-2 rounded-full', shown?.color ?? 'bg-forest')} />
                 Saldo sistem
               </span>
-              <span className="text-[13.5px] font-semibold text-forest tabular-nums">
+              <span className="text-[14.5px] font-semibold text-forest tabular-nums">
                 {formatIDR(systemBalance)}
               </span>
             </div>
@@ -182,10 +182,10 @@ export function SyncBalanceModal({
                 <Sparkles className="size-3.5" strokeWidth={2.4} />
               </span>
               <div className="min-w-0">
-                <p className={cn('text-[15px] font-semibold leading-tight tabular-nums', diffTone)}>
+                <p className={cn('text-[16px] font-semibold leading-tight tabular-nums', diffTone)}>
                   Selisih: {diffText}
                 </p>
-                <p className="mt-1 text-[11.5px] leading-relaxed text-forest/40">
+                <p className="mt-1 text-[12.5px] leading-relaxed text-forest/40">
                   {diff < 0
                     ? 'Pengeluaran Tak Tercatat akan ditambahkan otomatis ke catatanmu.'
                     : diff > 0
@@ -202,7 +202,7 @@ export function SyncBalanceModal({
               aria-disabled={inputLocked || undefined}
               className={cn(
                 'mt-6 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-b from-forest-soft to-forest',
-                'text-[15px] font-medium text-cream shadow-[0_18px_36px_-16px_rgba(0,0,0,0.85)]',
+                'text-[16px] font-medium text-cream shadow-[0_18px_36px_-16px_rgba(0,0,0,0.85)]',
                 'transition-all hover:brightness-[1.08] active:scale-[0.99]',
                 'disabled:cursor-not-allowed disabled:from-forest/20 disabled:to-forest/20 disabled:text-cream/70 disabled:shadow-none',
               )}

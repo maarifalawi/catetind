@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { BILL_PAYMENT_CATEGORY, BILL_UNPAID_REVERSAL_NOTE, INITIAL_BILLS, type Bill } from '@/lib/data/bills'
-import { buildHelpExportPayload } from '@/lib/data/help'
 import { BILLS_STATE_KEY, loadDeviceState } from './idb'
 import { buildMoneyExport, collectExportSources, moneyExportJson } from './export'
 import {
@@ -339,18 +338,17 @@ describe('ekspor & kontrak store untuk komponen', () => {
     /* tagihan yang sudah dihapus user tidak ikut (daftarnya sama dengan halaman) */
     expect(file.bills.some((bill) => bill.id === '2')).toBe(false)
     expect(file.counts.ledgerRows).toBe(1)
-    expect(file.limits.join(' ')).toMatch(/store tagihan/i)
+    expect(file.limits.join(' ')).toMatch(/tagihan/i)
   })
 
-  it('payload Pusat Bantuan memakai daftar yang dioper (default-nya tetap seed = murni)', () => {
+  it('payload ekspor memuat tagihan yang benar-benar dimiliki user (bukan konstanta)', () => {
+    /* SATU jalur ekspor yang dipakai UI (`/settings/data` dan Pusat Bantuan):
+       `downloadMoneyExport` → `collectExportSources()` → snapshot store. */
     const created = addBill(newBill({ name: 'Gym Bulanan' }))
-    const now = new Date('2026-09-27T10:15:00Z')
+    const file = buildMoneyExport(collectExportSources(), '2026-09-27T10:15:00Z')
 
-    const withStore = buildHelpExportPayload(now, liveBills(getBillsSnapshot()))
-    const withSeed = buildHelpExportPayload(now)
-
-    expect(withStore.data.bills.some((bill) => bill.id === created.id)).toBe(true)
-    expect(withSeed.data.bills).toHaveLength(INITIAL_BILLS.length)
+    expect(file.bills.some((bill) => bill.id === created.id)).toBe(true)
+    expect(file.counts.bills).toBe(liveBills(getBillsSnapshot()).length)
   })
 
   it('subscribe memberi notifikasi setiap tulisan, dan berhenti setelah unsubscribe', () => {

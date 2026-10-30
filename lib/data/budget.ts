@@ -993,6 +993,13 @@ export interface FundContribution {
   amount: number
   /** id dompet sumber — cocok dengan `WALLET_SOURCES` */
   walletId: string
+  /**
+   * `in` = setor (uang keluar dari dompet), `out` = tarik (uang kembali ke
+   * dompet). Baris lama tidak punya field ini dan SELALU dibaca sebagai `in` —
+   * begitulah keadaannya dulu, dan menebak sebaliknya akan mengubah arti riwayat
+   * yang sudah ada.
+   */
+  direction?: 'in' | 'out'
   /** id baris `goal_contributions` di Supabase (uuid) — lihat `SinkingFundItem.remoteId` */
   remoteId?: string
 }
@@ -1599,8 +1606,11 @@ export function hudMeter(usedPct: number, total = HUD_METER_SEGMENTS): HudMeterM
    (/budget → kartu Celengan Impian, satu-satunya tempat state dana hidup),
    bukan tombol yang diam (prompt 24). */
 export const SINKING_NUDGE_COPY = {
-  title: 'Dana Darurat belum dikasih jatah bulan ini',
-  body: 'Udah lewat tanggal 5, yuk sisihkan sedikit. Tanamanmu senang kalau kamu konsisten 🌱',
+  /* Copy pendek: judul WAJIB muat satu baris di 375px (dulu "…belum dikasih
+     jatah bulan ini" terpotong ellipsis), dan baris kedua tidak lagi membawa
+     ajakan metafora tanaman. */
+  title: 'Dana Darurat belum diisi',
+  body: 'Sisihin dikit bulan ini.',
   cta: 'Setor',
   ctaHref: '/budget',
   dismissLabel: 'Tutup pengingat nabung',

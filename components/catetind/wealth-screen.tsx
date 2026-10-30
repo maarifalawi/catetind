@@ -578,13 +578,12 @@ export function WealthScreen() {
   /* ── RENDER ─────────────────────────────────────────────────────────────── */
   return (
     <ScreenShell>
-      {/* kolom konten: SAMA PERSIS dengan Dashboard (sumber kebenaran layout) —
-          satu kolom `max-w-[1400px]` yang di-tengah-kan. Header halaman, kartu
-          onboarding, hero net worth, dan grid dua kartu semuanya duduk di kolom
-          ini, jadi tepi kiri-kanan setiap baris lurus. (Dulu header memakai
-          lebar penuh kolom `ScreenShell` sementara grid dibatasi 1400px —
-          akibatnya tepinya tidak segaris di layar lebar.) */}
-      <div className="mx-auto w-full max-w-[1400px]">
+      {/* kolom konten: lebar kolom TIDAK lagi dipasang di halaman ini — satu
+          batas (`max-w-[1800px]` + `mx-auto`) dipegang `ScreenShell` untuk
+          SEMUA halaman app, jadi tepi kiri-kanan header halaman, kartu
+          onboarding, hero net worth, dan grid dua kartu di sini lurus dengan
+          Dashboard, Budget, Tagihan, Riwayat, dan halaman lain. */}
+      <div className="w-full">
         {/* ── SECTION 2: header halaman + toggle privasi ───────────────────
             Judul memakai gaya yang SAMA dengan halaman lain (polos, tanpa kotak
             latar) supaya konsisten di seluruh app. */}
@@ -613,15 +612,15 @@ export function WealthScreen() {
         {investments.length === 0 && physicalAssets.length === 0 && (
           <div className="mt-5 flex flex-col gap-3 rounded-[1.5rem] bg-gradient-to-br from-sage/50 to-cream p-4 ring-1 ring-forest/10 sm:flex-row sm:items-center sm:justify-between lg:mt-6">
             <div className="min-w-0">
-              <p className="text-[13px] font-medium text-forest">{WEALTH_ONBOARD_COPY.title}</p>
-              <p className="mt-1 text-[12px] leading-relaxed text-forest/60">
+              <p className="text-[14px] font-medium text-forest">{WEALTH_ONBOARD_COPY.title}</p>
+              <p className="mt-1 text-[13px] leading-relaxed text-forest/60">
                 {WEALTH_ONBOARD_COPY.body}
               </p>
             </div>
             <button
               type="button"
               onClick={() => setShowAddInvestment(true)}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-forest px-4 py-2.5 text-[12.5px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-95"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-forest px-4 py-2.5 text-[13.5px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-95"
             >
               <Plus className="size-3.5" strokeWidth={2.8} aria-hidden />
               {WEALTH_ONBOARD_COPY.cta}
@@ -884,7 +883,7 @@ function WealthPanel({
     <div className="flex h-full flex-col rounded-[2rem] bg-cream p-4 ring-1 ring-soil/12 sm:p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[10.5px] font-medium uppercase tracking-[0.2em] text-forest/40">
+          <p className="text-[11.5px] font-medium uppercase tracking-[0.2em] text-forest/40">
             {label}
           </p>
           <p className="mt-1.5 truncate font-display text-[1.7rem] font-semibold leading-none tracking-tight text-forest tabular-nums sm:text-[1.95rem]">
@@ -941,7 +940,7 @@ function PanelToggle({
             aria-selected={isActive}
             onClick={() => onChange(option.id)}
             className={cn(
-              'relative flex flex-1 items-center justify-center rounded-full px-3 py-2 text-[12.5px] font-medium transition-colors duration-200',
+              'relative flex flex-1 items-center justify-center rounded-full px-3 py-2 text-[13.5px] font-medium transition-colors duration-200',
               isActive ? 'text-cream' : 'text-forest/55 hover:text-forest',
             )}
           >
@@ -979,16 +978,16 @@ function EmptyInvestasi({
       <span aria-hidden className="text-[30px]">
         🌱
       </span>
-      <h2 className="mt-3 font-display text-[16px] font-semibold tracking-tight text-forest">
+      <h2 className="mt-3 font-display text-[17px] font-semibold tracking-tight text-forest">
         {contextLine ?? EMPTY_INVESTASI_TITLE}
       </h2>
-      <p className="mt-1.5 max-w-sm text-[13px] leading-relaxed text-forest/55">
+      <p className="mt-1.5 max-w-sm text-[14px] leading-relaxed text-forest/55">
         {contextLine ? CONTEXT_EMPTY_COPY.investments.body : EMPTY_INVESTASI_COPY}
       </p>
       <button
         type="button"
         onClick={onAdd}
-        className="mt-5 inline-flex h-11 items-center gap-2 rounded-2xl bg-forest px-5 text-[13.5px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
+        className="mt-5 inline-flex h-11 items-center gap-2 rounded-2xl bg-forest px-5 text-[14.5px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
       >
         <Plus className="size-4" strokeWidth={2.6} />
         {contextLine ? CONTEXT_EMPTY_COPY.investments.cta : EMPTY_INVESTASI_CTA}

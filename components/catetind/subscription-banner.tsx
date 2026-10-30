@@ -59,7 +59,7 @@ export function SubscriptionBanner() {
           isUpgrade ? 'bg-sage/90 ring-soil/12' : 'bg-hud-amber/20 ring-hud-amber/35',
         )}
       >
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-3 gap-y-1.5">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-2.5 gap-y-1.5 sm:gap-x-3">
           <span
             className={cn(
               'flex size-8 shrink-0 items-center justify-center rounded-full',
@@ -74,27 +74,28 @@ export function SubscriptionBanner() {
           </span>
 
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-medium tracking-[0.16em] text-forest/45 uppercase">
-              {copy.eyebrow}
-            </p>
-            <p className="text-[13px] leading-snug font-medium text-forest">
-              {copy.title}{' '}
-              <span className="font-normal text-forest/70">{copy.body}</span>
-            </p>
+            {/* Judul = blok sendiri, keterangan di baris berikutnya. Dulu
+                keduanya menyatu dalam satu <p> (inline) sehingga judul dan body
+                mengalir jadi satu paragraf panjang. Eyebrow "Masih ada fitur
+                terkunci" DIHAPUS: judulnya sudah bicara sendiri. */}
+            <p className="text-[14px] leading-snug font-medium text-forest">{copy.title}</p>
+            {copy.body && (
+              <p className="mt-0.5 text-[12.5px] leading-snug text-forest/70">{copy.body}</p>
+            )}
           </div>
 
           {isUpgrade ? (
             <button
               type="button"
               onClick={() => setOpen(true)}
-              className="shrink-0 rounded-full bg-forest px-4 py-2 text-xs font-medium text-cream shadow-[0_12px_24px_-16px_rgba(0,0,0,0.9)] transition-colors hover:bg-forest-soft active:scale-95"
+              className="shrink-0 rounded-full bg-forest px-3.5 py-2 text-xs font-medium text-cream shadow-[0_12px_24px_-16px_rgba(0,0,0,0.9)] transition-colors hover:bg-forest-soft active:scale-95"
             >
               {copy.cta}
             </button>
           ) : (
             <Link
               href={expired ? buildCheckoutHref(planId ?? null, 'lifetime') : CHECKOUT_PATH}
-              className="shrink-0 rounded-full bg-forest px-4 py-2 text-xs font-medium text-cream shadow-[0_12px_24px_-16px_rgba(0,0,0,0.9)] transition-colors hover:bg-forest-soft active:scale-95"
+              className="shrink-0 rounded-full bg-forest px-3.5 py-2 text-xs font-medium text-cream shadow-[0_12px_24px_-16px_rgba(0,0,0,0.9)] transition-colors hover:bg-forest-soft active:scale-95"
             >
               {copy.cta}
             </Link>
@@ -106,7 +107,7 @@ export function SubscriptionBanner() {
             onClick={() => setDismissed(true)}
             className="flex size-7 shrink-0 items-center justify-center rounded-full text-forest/35 transition-colors hover:bg-soil/8 hover:text-forest"
           >
-            <span aria-hidden className="text-[15px] leading-none">
+            <span aria-hidden className="text-[16px] leading-none">
               ×
             </span>
           </button>

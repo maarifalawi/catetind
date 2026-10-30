@@ -179,6 +179,15 @@ export type JointTransaction = {
   isSettlement?: boolean
   /** true = baris PEMBUKA bulan: sisa bulan lalu yang dibawa (Stage 2 #5) */
   isOpening?: boolean
+  /**
+   * id baris kas di dompet PRIBADI yang lahir bersama catatan ini (opsional).
+   *
+   * Diisi hanya kalau user memilih "Sumber Dana" saat mencatat. Fungsinya satu:
+   * supaya menghapus catatan bareng juga mencabut baris kasnya — tanpa ini, uang
+   * yang sudah keluar tetap tercatat di dompet padahal catatannya hilang.
+   * Baris lama tidak punya field ini.
+   */
+  cashRowId?: string
   /** metode transfer di baris settlement (BCA/GoPay/Cash) */
   settlementMethod?: string
   /** baru masuk dari partner (mock Realtime) → animasi slide-in + badge "Baru" */
@@ -1089,6 +1098,16 @@ export interface JointSettlementRecord {
    *  sisa itu diposting sebagai pembuka bulan berikutnya supaya utangnya tidak
    *  hilang diam-diam saat penanda bulan berganti. */
   carryOver: number
+  /**
+   * Dompet PRIBADI yang dipakai saat settle (opsional) + id baris kasnya.
+   *
+   * Settle yang menyentuh dompet berarti uang benar-benar berpindah: pengirim
+   * kehilangan `amount`, penerima menerimanya. Baris kasnya dicatat supaya
+   * Riwayat & saldo dompet bercerita sama — dan supaya "Batalkan settle" bisa
+   * mencabutnya kembali.
+   */
+  cashWalletId?: string
+  cashRowId?: string
 }
 
 /**

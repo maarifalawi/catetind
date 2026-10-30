@@ -100,7 +100,7 @@ export function InstallQrHandoff({ className }: { className?: string }) {
 
       {/* link ditulis apa adanya (mono) supaya bisa dibaca & diketik manual */}
       <div className="mt-4 rounded-2xl bg-sage/50 px-3.5 py-3 ring-1 ring-forest/10">
-        <p className="text-[10.5px] font-medium tracking-[0.16em] text-forest/45 uppercase">
+        <p className="text-[11.5px] font-medium tracking-[0.16em] text-forest/45 uppercase">
           {INSTALL_HANDOFF.linkLabel}
         </p>
         <p className="mt-1 font-mono text-sm font-medium break-all text-forest">
@@ -115,7 +115,7 @@ export function InstallQrHandoff({ className }: { className?: string }) {
         <button
           type="button"
           onClick={shareLink}
-          className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-sage px-4 py-2.5 text-[13px] font-medium text-forest ring-1 ring-forest/10 transition-colors duration-200 hover:bg-sage/70 active:scale-[0.98]"
+          className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-sage px-4 py-2.5 text-[14px] font-medium text-forest ring-1 ring-forest/10 transition-colors duration-200 hover:bg-sage/70 active:scale-[0.98]"
         >
           <Share2 className="size-4" strokeWidth={2.4} aria-hidden />
           {INSTALL_HANDOFF.shareLabel}
@@ -123,7 +123,7 @@ export function InstallQrHandoff({ className }: { className?: string }) {
         <button
           type="button"
           onClick={copyLink}
-          className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-cream px-4 py-2.5 text-[13px] font-medium text-forest/70 ring-1 ring-soil/12 transition-colors duration-200 hover:bg-sage/40 hover:text-forest active:scale-[0.98]"
+          className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-cream px-4 py-2.5 text-[14px] font-medium text-forest/70 ring-1 ring-soil/12 transition-colors duration-200 hover:bg-sage/40 hover:text-forest active:scale-[0.98]"
         >
           {status === 'copied' ? (
             <Check className="size-4" strokeWidth={2.6} aria-hidden />
@@ -142,7 +142,7 @@ export function InstallQrHandoff({ className }: { className?: string }) {
         {statusText}
       </p>
 
-      <p className="text-center text-[11px] leading-relaxed text-forest/50">
+      <p className="text-center text-[12px] leading-relaxed text-forest/50">
         {INSTALL_HANDOFF.instruction}
       </p>
     </section>

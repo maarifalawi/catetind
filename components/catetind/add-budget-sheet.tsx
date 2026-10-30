@@ -173,13 +173,13 @@ export function AddBudgetSheet({
               aria-checked={active}
               onClick={() => pickCategory(option)}
               className={cn(
-                'flex items-center gap-2 rounded-2xl px-3 py-2.5 text-left text-[12.5px] font-medium transition-all duration-200 active:scale-95',
+                'flex items-center gap-2 rounded-2xl px-3 py-2.5 text-left text-[13.5px] font-medium transition-all duration-200 active:scale-95',
                 active
                   ? 'bg-forest text-mint ring-2 ring-forest'
                   : 'bg-cream text-forest/70 ring-1 ring-soil/14 hover:bg-cream hover:text-forest',
               )}
             >
-              <span className="text-[16px] leading-none">{option.icon}</span>
+              <span className="text-[17px] leading-none">{option.icon}</span>
               <span className="truncate">{option.label}</span>
             </button>
           )
@@ -203,7 +203,7 @@ export function AddBudgetSheet({
       {/* ── STEP 3 — periode (auto-reveal) ─────────────────────────────── */}
       <RevealStep show={amount > 0}>
         <div className="mt-5 pb-1">
-          <p className="text-[13px] font-medium text-forest">{BUDGET_ADD_COPY.periodTitle}</p>
+          <p className="text-[14px] font-medium text-forest">{BUDGET_ADD_COPY.periodTitle}</p>
           <ChoicePills
             className="mt-2.5"
             options={BUDGET_PERIOD_OPTIONS}

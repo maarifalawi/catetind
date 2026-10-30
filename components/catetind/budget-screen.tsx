@@ -585,7 +585,7 @@ export function BudgetScreen({
           {/* caption konteks: HANYA keluarga & bersama (paket 78) — konteks pribadi
               tidak merender paragraf apa pun, jadi judulnya langsung di atas */}
           {scopeCaption ? (
-            <p className="text-[13px] font-medium text-forest/45">{scopeCaption}</p>
+            <p className="text-[14px] font-medium text-forest/45">{scopeCaption}</p>
           ) : null}
           <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-forest lg:text-4xl">
             {BUDGET_PAGE_COPY.title}
@@ -649,11 +649,11 @@ export function BudgetScreen({
             )}
           >
             <div className="mb-3 hidden items-center justify-between gap-3 lg:flex">
-              <h2 className="font-display text-[17px] font-semibold tracking-tight text-forest">
+              <h2 className="font-display text-[18px] font-semibold tracking-tight text-forest">
                 {BUDGET_PAGE_COPY.zoneBudget}
               </h2>
               <span
-                className="rounded-full bg-sage/50 px-2 py-0.5 text-[10.5px] font-semibold text-forest/55 tabular-nums"
+                className="rounded-full bg-sage/50 px-2 py-0.5 text-[11.5px] font-semibold text-forest/55 tabular-nums"
                 aria-label={BUDGET_PAGE_COPY.budgetPeriodCount(period.label)}
               >
                 {periodBudgets.length}
@@ -684,10 +684,10 @@ export function BudgetScreen({
             )}
           >
             <div className="mb-3 hidden items-center justify-between gap-3 lg:flex">
-              <h2 className="font-display text-[17px] font-semibold tracking-tight text-forest">
+              <h2 className="font-display text-[18px] font-semibold tracking-tight text-forest">
                 {BUDGET_PAGE_COPY.zoneGoals}
               </h2>
-              <span className="rounded-full bg-sage/50 px-2 py-0.5 text-[10.5px] font-semibold text-forest/55 tabular-nums">
+              <span className="rounded-full bg-sage/50 px-2 py-0.5 text-[11.5px] font-semibold text-forest/55 tabular-nums">
                 {visibleFunds.length}
               </span>
             </div>
@@ -851,7 +851,7 @@ function ZoneTabs({ value, onChange }: { value: ZoneTab; onChange: (value: ZoneT
             role="tab"
             aria-selected={active}
             onClick={() => onChange(tab.id)}
-            className="relative rounded-full px-3 py-1.5 text-[11.5px] font-medium transition-colors duration-200 active:scale-95"
+            className="relative rounded-full px-3 py-1.5 text-[12.5px] font-medium transition-colors duration-200 active:scale-95"
           >
             {active && (
               <motion.span

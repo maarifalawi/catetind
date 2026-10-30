@@ -161,16 +161,16 @@ export function HomeScreen() {
 
   return (
     <ScreenShell>
-      {/* ── KOLOM KONTEN BER-LEBAR SAMA (perbaikan simetri) ─────────────────────
-          SELURUH isi dashboard — notifikasi keadaan kosong, baris sapaan +
-          cluster aksi, dan bento grid — duduk di SATU kolom `max-w-[1400px]`
-          yang di-tengah-kan. Sebelumnya hanya grid yang dibatasi 1400px,
-          sementara baris sapaan & kartu "akun kosong" memakai lebar penuh kolom
-          `ScreenShell`, sehingga di layar lebar tepi kiri/kanan keduanya TIDAK
-          segaris dengan kartu di bawahnya (terlihat miring, bukan simetris).
-          Grid di dalamnya kini cukup `w-full` — batas lebarnya dipegang di sini
-          supaya satu angka mengatur semua baris. */}
-      <div className="mx-auto w-full max-w-[1400px]">
+      {/* ── LEBAR KOLOM KONTEN — DIPEGANG `ScreenShell` ─────────────────────────
+          Dashboard TIDAK LAGI memasang `max-w-[1400px]` + `mx-auto` sendiri.
+          Batas kiri-kanan sekarang satu untuk SEMUA halaman app dan dipegang
+          `screen-shell.tsx`, karena dulu hanya Dashboard & Kekayaan yang
+          dibatasi 1.400 px sementara halaman lain selebar penuh — jadi di layar
+          lebar tepi Dashboard tidak segaris dengan halaman lain (dan isinya
+          terlihat lebih kecil dari seharusnya). Pembungkus di sini cukup
+          `w-full` supaya seluruh baris dashboard (notifikasi keadaan kosong,
+          sapaan + cluster aksi, dan bento grid) tetap berbagi satu tepi. */}
+      <div className="w-full">
         {/* PAKET 75: header mobile MILIK DASHBOARD DIHAPUS. Dulu di sini ada
             `MobileStickyHeader` dengan logo + tombol mata + lonceng + hamburger +
             AVATAR. Sekarang semuanya disediakan SATU header mobile GLOBAL yang
@@ -273,10 +273,10 @@ export function HomeScreen() {
         </div>
         {/* ── SUSUNAN BENTO GRID 12 KOLOM (paket 68) ──────────────────────────
             Desktop memakai bento grid 12 kolom dengan baris terurut atas→bawah
-            dan NOL ruang mati. Lebar maksimum (`max-w-[1400px]` + `mx-auto`)
-            DIPEGANG PEMBUNGKUS DI ATAS, bukan di sini: dengan begitu baris
+            dan NOL ruang mati. Batas lebar kolom (`max-w-[1800px]` + `mx-auto`)
+            DIPEGANG `ScreenShell`, bukan di sini: dengan begitu baris
             sapaan/aksi, kartu notifikasi keadaan kosong, dan grid ini berbagi
-            tepi kiri-kanan yang sama. Baris:
+            tepi kiri-kanan yang sama dengan SEMUA halaman app lain. Baris:
               ROW 1 · Strip notifikasi/banner + rekap (12/12);
               ROW 2 · Dompet (6/12) + Arus Uang (6/12) — 50/50;
               ROW 3 · Transaksi Terakhir (12/12) — daftarnya multi-kolom;

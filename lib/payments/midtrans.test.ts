@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto'
 import {
   cancelTransaction,
   createCoreCharge,
+  createSnapCharge,
   fetchTransactionStatus,
   methodIdFromTransaction,
   midtransAuthHeader,
@@ -12,6 +13,8 @@ import {
   midtransExpiryToIso,
   midtransIsProduction,
   midtransQrImageUrl,
+  midtransSnapBase,
+  midtransSnapEndpoint,
   midtransStatusEndpoint,
   paymentInstructionsFromTransaction,
   paymentStateFromTransaction,
@@ -65,6 +68,19 @@ describe('endpoint & kredensial', () => {
     expect(midtransCoreBase()).toBe('https://api.midtrans.com')
   })
 
+  it('flag produksi menerima bentuk yang biasa ditulis hosting (1/true/yes/on)', () => {
+    for (const flag of ['1', 'true', 'TRUE', 'yes', 'On', ' true ']) {
+      process.env.MIDTRANS_IS_PRODUCTION = flag
+      expect(midtransIsProduction(), flag).toBe(true)
+      expect(midtransCoreBase(), flag).toBe('https://api.midtrans.com')
+    }
+    for (const flag of ['', '0', 'false', 'off', 'sandbox', 'production']) {
+      process.env.MIDTRANS_IS_PRODUCTION = flag
+      expect(midtransIsProduction(), flag).toBe(false)
+      expect(midtransCoreBase(), flag).toBe('https://api.sandbox.midtrans.com')
+    }
+  })
+
   it('endpoint charge/status/QR disusun dari basis yang sama', () => {
     expect(midtransChargeEndpoint()).toBe('https://api.sandbox.midtrans.com/v2/charge')
     expect(midtransStatusEndpoint('subscribe-a-1')).toBe(
@@ -112,6 +128,44 @@ describe('verifikasi tanda tangan webhook (tidak berubah sejak paket 63)', () =>
     delete process.env.MIDTRANS_SERVER_KEY
     expect(
       verifyMidtransSignature({ orderId: 'o', statusCode: '200', grossAmount: '1', signature: 'x' }),
+    ).toBe(false)
+  })
+
+  it('kunci PRODUCTION (Mid-server-…) memakai rumus yang sama dengan sandbox', () => {
+    const productionKey = 'Mid-server-kunci-produksi-uji'
+    process.env.MIDTRANS_SERVER_KEY = productionKey
+
+    const sign = (key: string) =>
+      createHash('sha512').update(`subscribe-prod-1` + `200` + `129000.00` + key).digest('hex')
+
+    /* tanda tangan dari KUNCI PRODUCTION → sah */
+    expect(
+      verifyMidtransSignature({
+        orderId: 'subscribe-prod-1',
+        statusCode: '200',
+        grossAmount: '129000.00',
+        signature: sign(productionKey),
+      }),
+    ).toBe(true)
+
+    /* huruf besar / spasi di tepi tidak mengubah arti tanda tangan yang sama */
+    expect(
+      verifyMidtransSignature({
+        orderId: 'subscribe-prod-1',
+        statusCode: '200',
+        grossAmount: '129000.00',
+        signature: ` ${sign(productionKey).toUpperCase()} `,
+      }),
+    ).toBe(true)
+
+    /* tanda tangan yang dibuat dengan kunci SANDBOX lama → DITOLAK */
+    expect(
+      verifyMidtransSignature({
+        orderId: 'subscribe-prod-1',
+        statusCode: '200',
+        grossAmount: '129000.00',
+        signature: sign(KEY),
+      }),
     ).toBe(false)
   })
 })
@@ -440,6 +494,143 @@ describe('cancelTransaction', () => {
   it('tanpa kunci: false tanpa memanggil provider', async () => {
     delete process.env.MIDTRANS_SERVER_KEY
     expect(await cancelTransaction('subscribe-abc-1')).toBe(false)
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+})
+
+/* ── SNAP API (jalur produksi sejak 30 Oktober 2026) ─────────────────────────
+   Yang dikunci: host Snap terpisah (`app.` bukan `api.`), `enabled_payments`
+   per metode, callback kembali ke `/checkout/selesai`, dan bahwa token yang
+   TIDAK lengkap (tanpa token/redirect_url) tidak pernah dianggap sukses.
+
+   Kenapa pindah: Core `/v2/charge` membalas `402 Payment channel is not
+   activated` di merchant self-onboarded, sedangkan Snap membalas `201`. */
+describe('createSnapCharge', () => {
+  const INTENT = {
+    purpose: 'subscribe' as const,
+    orderId: 'subscribe-a1b2c3d4-1750000000000',
+    amount: 109_000,
+    itemName: 'CatetInd Waras (akses selamanya)',
+    planId: 'waras',
+    customerName: 'Rina',
+    customerEmail: 'rina@contoh.id',
+    notificationUrl: 'https://catetind.com/api/payment/webhook',
+    finishUrl: 'https://catetind.com/checkout/selesai?order_id=subscribe-a1b2c3d4-1750000000000',
+  }
+
+  const SNAP_OK = {
+    token: 'snap-token-abc',
+    redirect_url: 'https://app.sandbox.midtrans.com/snap/v4/redirection/snap-token-abc',
+  }
+
+  it('host Snap: sandbox default, produksi saat MIDTRANS_IS_PRODUCTION=1', () => {
+    expect(midtransSnapBase()).toBe('https://app.sandbox.midtrans.com')
+    expect(midtransSnapEndpoint()).toBe('https://app.sandbox.midtrans.com/snap/v1/transactions')
+    process.env.MIDTRANS_IS_PRODUCTION = '1'
+    expect(midtransSnapBase()).toBe('https://app.midtrans.com')
+    expect(midtransSnapEndpoint()).toBe('https://app.midtrans.com/snap/v1/transactions')
+  })
+
+  it('201 → token + redirect_url + state pending', async () => {
+    fetchMock.mockResolvedValue(jsonResponse(SNAP_OK, 201))
+
+    const result = await createSnapCharge(INTENT, paymentMethod('qris')!)
+
+    expect(lastCall().url).toBe('https://app.sandbox.midtrans.com/snap/v1/transactions')
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.value.state).toBe('pending')
+    expect(result.value.token).toBe('snap-token-abc')
+    expect(result.value.redirectUrl).toBe(SNAP_OK.redirect_url)
+    expect(Number.isNaN(Date.parse(result.value.expiresAt))).toBe(false)
+  })
+
+  it('body: enabled_payments per metode + callbacks.finish + expiry + override webhook', async () => {
+    fetchMock.mockResolvedValue(jsonResponse(SNAP_OK, 201))
+
+    await createSnapCharge(INTENT, paymentMethod('bni-va')!)
+
+    const { init } = lastCall()
+    const body = JSON.parse(String(init.body)) as Record<string, unknown>
+    expect(body.transaction_details).toEqual({
+      order_id: INTENT.orderId,
+      gross_amount: INTENT.amount,
+    })
+    expect(body.enabled_payments).toEqual(['bni_va'])
+    expect(body.callbacks).toEqual({ finish: INTENT.finishUrl })
+    expect(body.expiry).toEqual({ unit: 'minutes', duration: 60 })
+    expect((init.headers as Record<string, string>)['X-Override-Notification']).toBe(
+      INTENT.notificationUrl,
+    )
+    expect((init.headers as Record<string, string>).Authorization).toBe(
+      `Basic ${Buffer.from(`${KEY}:`).toString('base64')}`,
+    )
+  })
+
+  it('enabled_payments memetakan setiap metode katalog ke kode Snap-nya', async () => {
+    const expected: Record<string, string[]> = {
+      qris: ['other_qris', 'gopay'],
+      gopay: ['gopay'],
+      'bni-va': ['bni_va'],
+      'bri-va': ['bri_va'],
+      'permata-va': ['permata_va'],
+      'mandiri-bill': ['echannel'],
+      'bca-va': ['bca_va'],
+      shopeepay: ['shopeepay'],
+    }
+
+    for (const [id, enabled] of Object.entries(expected)) {
+      fetchMock.mockResolvedValue(jsonResponse(SNAP_OK, 201))
+      await createSnapCharge(INTENT, paymentMethod(id)!)
+      const body = JSON.parse(String(lastCall().init.body)) as { enabled_payments: string[] }
+      expect(body.enabled_payments, id).toEqual(enabled)
+    }
+  })
+
+  it('kunci ditolak (401) → kegagalan provider yang jujur, bukan token karangan', async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({ error_messages: ['Access denied due to unauthorized transaction'] }, 401),
+    )
+
+    const result = await createSnapCharge(INTENT, paymentMethod('qris')!)
+
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.status).toBe(401)
+    expect(result.message).toContain('Access denied')
+  })
+
+  it('201 tanpa token/redirect_url → TIDAK dianggap sukses', async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ token: 'tanpa-url' }, 201))
+
+    const result = await createSnapCharge(INTENT, paymentMethod('qris')!)
+
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.reason).toBe('provider')
+  })
+
+  it('jaringan mati → provider 502 (bukan lemparan ke UI)', async () => {
+    fetchMock.mockRejectedValue(new Error('getaddrinfo ENOTFOUND'))
+
+    const result = await createSnapCharge(INTENT, paymentMethod('qris')!)
+
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.status).toBe(502)
+  })
+
+  it('tanpa kunci: 503 not-configured dan tidak memanggil provider', async () => {
+    delete process.env.MIDTRANS_SERVER_KEY
+
+    const result = await createSnapCharge(INTENT, paymentMethod('qris')!)
+
+    expect(result).toEqual({
+      ok: false,
+      reason: 'not-configured',
+      status: 503,
+      message: 'Pembayaran belum aktif.',
+    })
     expect(fetchMock).not.toHaveBeenCalled()
   })
 })

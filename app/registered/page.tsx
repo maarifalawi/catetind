@@ -58,21 +58,21 @@ export default async function RegisteredPage({
           <CheckCircle2 className="size-8" strokeWidth={2.4} aria-hidden />
         </span>
 
-        <p className="mt-5 text-[11px] font-medium tracking-[0.16em] text-forest uppercase">
+        <p className="mt-5 text-[12px] font-medium tracking-[0.16em] text-forest uppercase">
           {REGISTERED_COPY.eyebrow}
         </p>
         <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight text-forest lg:text-4xl">
           {REGISTERED_COPY.title}
         </h1>
-        <p className="mt-3 text-[14px] leading-relaxed text-forest/60">{body}</p>
+        <p className="mt-3 text-[15px] leading-relaxed text-forest/60">{body}</p>
 
         <section className="mt-8 rounded-[1.5rem] bg-sage/40 p-5 text-left ring-1 ring-soil/10">
-          <h2 className="text-[13px] font-medium text-forest">
+          <h2 className="text-[14px] font-medium text-forest">
             {REGISTERED_COPY.nextStepsTitle}
           </h2>
           <ul className="mt-3 flex flex-col gap-2">
             {REGISTERED_COPY.nextSteps.map((step) => (
-              <li key={step} className="flex items-start gap-2.5 text-[12.5px] leading-relaxed text-forest/65">
+              <li key={step} className="flex items-start gap-2.5 text-[13.5px] leading-relaxed text-forest/65">
                 <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-forest" strokeWidth={2.6} aria-hidden />
                 {step}
               </li>
@@ -82,7 +82,7 @@ export default async function RegisteredPage({
 
         <Link
           href={plan ? buildPayHref(plan.id) : LANDING_PATH}
-          className="group mt-8 inline-flex h-12 items-center justify-center gap-2 rounded-full bg-forest px-6 text-[14px] font-medium text-cream shadow-[0_16px_34px_-18px_rgba(0,0,0,0.85)] transition-colors duration-200 hover:bg-forest-soft motion-reduce:transition-none"
+          className="group mt-8 inline-flex h-12 items-center justify-center gap-2 rounded-full bg-forest px-6 text-[15px] font-medium text-cream shadow-[0_16px_34px_-18px_rgba(0,0,0,0.85)] transition-colors duration-200 hover:bg-forest-soft motion-reduce:transition-none"
         >
           {plan ? REGISTERED_COPY.ctaPay : REGISTERED_COPY.cta}
           <ArrowRight
@@ -93,7 +93,7 @@ export default async function RegisteredPage({
         </Link>
 
         {plan && (
-          <p className="mt-2.5 text-[12px] leading-relaxed text-forest/50">
+          <p className="mt-2.5 text-[13px] leading-relaxed text-forest/50">
             {REGISTERED_COPY.ctaPayHint}
           </p>
         )}

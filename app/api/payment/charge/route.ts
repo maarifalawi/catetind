@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireUser } from '@/lib/session'
-import { paymentMethod } from '@/lib/payments/methods'
+import { isPaymentMethodActive, paymentMethod } from '@/lib/payments/methods'
 import {
   cancelTransaction,
-  createCoreCharge,
+  createSnapCharge,
   fetchTransactionStatus,
   midtransConfigured,
 } from '@/lib/payments/midtrans'
@@ -25,11 +25,17 @@ import { AI_ADDON_PACKAGES, planQuota } from '@/lib/ai-quota'
 import { readCallerPlan } from '@/lib/subscription/plan'
 import { restFetch, restRpc } from '@/lib/supabase/rest'
 
-/* ── POST /api/payment/charge (paket 83) — TAGIHAN DI HALAMAN SENDIRI ────────
-   Ganti rail Snap (`/api/payment/create`, DIHAPUS di paket ini). Sekarang server
-   yang membuat tagihan Core API lalu mengembalikan INSTRUKSI BAYAR-nya ke UI
-   (QRIS / nomor VA / tautan e-wallet / kode Mandiri Bill) — user tidak pernah
-   pindah domain.
+/* ── POST /api/payment/charge (paket 83 · SNAP sejak 30 Okt 2026) ────────────
+   Membuat TAGIHAN lewat Midtrans Snap (`POST /snap/v1/transactions`) lalu
+   mengembalikan `redirectUrl` + `token` ke UI. User menyelesaikan pembayaran di
+   halaman Midtrans dan kembali ke `/checkout/selesai?order_id=…` lewat
+   `callbacks.finish`.
+
+   Kenapa pindah dari Core API: di merchant self-onboarded `M130180776`, Core
+   `/v2/charge` membalas `402 Payment channel is not activated` untuk SEMUA
+   kanal, sementara Snap membalas `201` dengan token untuk kanal yang sudah
+   aktif di dashboard. Snap juga yang menangani QRIS/VA/e-wallet/Mandiri Bill,
+   jadi app tidak lagi menggambar instruksi bayar sendiri.
 
    Yang TIDAK berubah: baris pertama `requireUser()` (identitas dari sesi cookie),
    guard harga kanon dari `lib/data/pricing.ts` (nominal dari klien tidak
@@ -37,15 +43,13 @@ import { restFetch, restRpc } from '@/lib/supabase/rest'
    user sebelum provider dipanggil — itulah satu-satunya cara webhook (yang tidak
    membawa sesi) memetakan notifikasi ke pemiliknya.
 
-   Idempotensi (DIUJI ke sandbox, bukan diasumsikan): `/v2/charge` dengan
-   `order_id` yang sama membalas `status_code 406` — jadi order yang masih
-   `pending` tidak boleh ditagih ulang. Karena itu:
-     · instruksinya masih bisa dirender ulang (QRIS/VA/ShopeePay/Mandiri) →
-       order yang SAMA dipakai ulang, tanpa memanggil `/v2/charge` lagi;
-     · sudah dibayar tapi webhook belum mencatat → dilaporkan apa adanya
-       (`state:'settled'`), TIDAK ada tagihan kedua (mencegah bayar dua kali);
-     · sisanya (tagihan kedaluwarsa, ganti metode, GoPay yang instruksinya tidak
-       ikut di balasan status) → tagihan lama dibatalkan, lalu dibuat baru. */
+   Idempotensi: token Snap dibuat per percobaan dan `order_id` yang SAMA boleh
+   di-token ulang (diuji langsung ke produksi: 201 dua kali). Jadi order pending
+   yang niatnya masih sama (nominal + kode teman) DIPAKAI ULANG — tidak ada baris
+   `purchases` kedua, dan user mendapat halaman pembayaran baru:
+     · sudah dibayar tapi webhook belum mencatat → dilaporkan `settled`, TIDAK
+       ada tagihan kedua (mencegah bayar dua kali);
+     · niat berubah (nominal/kode) → tagihan lama dibatalkan, order baru dibuat. */
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -271,6 +275,24 @@ export async function POST(req: NextRequest) {
     )
   }
 
+  /* Kanal yang belum aktif di merchant PRODUKSI ditolak SEBELUM baris
+     `purchases` ditulis dan sebelum provider dipanggil (audit pra-rilis 30 Okt
+     2026: seluruh kanal membalas 402 di produksi). Tanpa pagar ini, permintaan
+     langsung ke API meninggalkan baris `pending` yang tidak akan pernah bisa
+     dibayar — dan UI yang sudah menyembunyikan metodenya jadi tidak konsisten
+     dengan server. Sumber kebenarannya satu: `VERIFIED_ACTIVE_METHOD_IDS` di
+     `lib/payments/methods.ts`. */
+  if (!isPaymentMethodActive(method.id)) {
+    return NextResponse.json(
+      {
+        ok: false,
+        reason: 'method-inactive',
+        error: 'Metode pembayaran itu belum aktif. Pilih metode lain ya.',
+      },
+      { status: 503 },
+    )
+  }
+
   /* Kode teman diverifikasi KE DATABASE lebih dulu. `referralCode` hanya berisi
      kode yang benar-benar ada dan bukan milik akun pemanggil sendiri. */
   const referral = await resolveReferralCode(body.code, auth.token, auth.user.id)
@@ -438,7 +460,30 @@ export async function POST(req: NextRequest) {
           ? `${addonName}, token AI`
           : 'CatetInd'
 
-  /* ── 1. Pakai ulang order yang masih pending (kalau memang bisa & cocok) ── */
+  /* Satu bentuk niat pembayaran untuk Snap. `orderId` dioper supaya order yang
+     dipakai ulang maupun order baru memakai callback & URL webhook yang sama. */
+  const snapIntent = (orderId: string) => ({
+    purpose,
+    orderId,
+    amount,
+    itemName,
+    planId: plan?.id,
+    ownedPlanId: ownedPlanId ?? undefined,
+    customerEmail: auth.user.email,
+    customerName: auth.user.name,
+    notificationUrl: origin ? `${origin}/api/payment/webhook` : undefined,
+    finishUrl: origin
+      ? `${origin}/checkout/selesai?order_id=${encodeURIComponent(orderId)}`
+      : undefined,
+  })
+
+  /* ── 1. Order pending yang cocok: cukup diberi TOKEN SNAP BARU ─────────────
+     Sejak pindah ke Snap, tagihan tidak lagi "hidup" di sisi kita: transaksi
+     baru lahir saat user membuka halaman pembayaran. Token dibuat per
+     percobaan, dan `order_id` yang SAMA boleh di-token ulang (diuji langsung
+     ke produksi: 201 dua kali). Jadi order pending yang niatnya masih sama
+     dipakai ulang — satu baris `purchases`, webhook tetap mengenali ordernya —
+     sementara user mendapat halaman pembayaran yang baru. */
   if (plan) {
     const existing = await findPendingOrder(auth.token, { planId: plan.id, purpose, period })
     const existingOrderId = existing?.order_id ?? null
@@ -452,67 +497,50 @@ export async function POST(req: NextRequest) {
       const sameOffer =
         Number(existing?.expected_amount) === amount && existingCode === referralCode
 
-      if (!sameOffer) {
-        /* Tagihan lama mungkin SUDAH dibayar tapi webhook belum mencatat.
-           Jangan pernah membuat tagihan kedua untuk niat yang sama: kalau
-           statusnya settled, laporkan apa adanya. */
-        const previous = await fetchTransactionStatus(existingOrderId, method)
-        if (previous.ok && previous.value.state === 'settled') {
-          const paid = Number(existing?.expected_amount)
-          return NextResponse.json({
-            ok: true,
-            orderId: existingOrderId,
-            method: previous.value.method ?? method.id,
-            amount: Number.isFinite(paid) ? paid : amount,
-            state: 'settled' satisfies PaymentState,
-            expiresAt: previous.value.expiresAt,
-            instructions: null,
-            note: 'Pembayaran sebelumnya sudah diterima provider, langganan sedang diaktifkan.',
-          })
-        }
-        /* tagihan lama tidak mewakili niat pembayaran yang sekarang */
-        await cancelTransaction(existingOrderId)
-      } else {
-        const status = await fetchTransactionStatus(existingOrderId, method)
-        if (status.ok) {
-          const detail = status.value
-          /* sudah dibayar tapi webhook belum mencatat → jangan bikin tagihan kedua */
-          if (detail.state === 'settled') {
-            return NextResponse.json({
-              ok: true,
-              orderId: existingOrderId,
-              method: detail.method ?? method.id,
-              amount,
-              state: 'settled' satisfies PaymentState,
-              expiresAt: detail.expiresAt,
-              instructions: null,
-              note: 'Pembayaran sudah diterima provider, langganan sedang diaktifkan.',
-            })
-          }
-          /* masih pending, metode sama, dan instruksinya bisa dirender ulang */
-          if (
-            detail.state === 'pending' &&
-            detail.method === method.id &&
-            method.reRenderable &&
-            detail.instructions
-          ) {
-            return NextResponse.json({
-              ok: true,
-              orderId: existingOrderId,
-              method: method.id,
-              amount,
-              state: 'pending' satisfies PaymentState,
-              expiresAt: detail.expiresAt,
-              instructions: detail.instructions satisfies PaymentInstructions,
-              reused: true,
-            })
-          }
-        }
-        /* tagihan lama tidak dipakai lagi: dibatalkan supaya tidak ada dua tagihan
-           hidup untuk satu niat pembayaran (gagal membatalkan tidak fatal — tagihan
-           yang tidak bisa dibatalkan akan kedaluwarsa sendiri). */
-        await cancelTransaction(existingOrderId)
+      /* Tagihan lama mungkin SUDAH dibayar tapi webhook belum mencatat.
+         Jangan pernah membuat tagihan kedua untuk niat yang sama. */
+      const previous = await fetchTransactionStatus(existingOrderId, method)
+      if (previous.ok && previous.value.state === 'settled') {
+        const paid = Number(existing?.expected_amount)
+        return NextResponse.json({
+          ok: true,
+          orderId: existingOrderId,
+          method: previous.value.method ?? method.id,
+          amount: Number.isFinite(paid) ? paid : amount,
+          state: 'settled' satisfies PaymentState,
+          expiresAt: previous.value.expiresAt,
+          instructions: null,
+          redirectUrl: null,
+          token: null,
+          note: 'Pembayaran sebelumnya sudah diterima provider, langganan sedang diaktifkan.',
+        })
       }
+
+      if (sameOffer) {
+        const snap = await createSnapCharge(snapIntent(existingOrderId), method)
+        if (!snap.ok) {
+          return NextResponse.json(
+            { ok: false, reason: snap.reason, error: snap.message },
+            { status: snap.status },
+          )
+        }
+        return NextResponse.json({
+          ok: true,
+          orderId: existingOrderId,
+          method: method.id,
+          amount,
+          state: snap.value.state satisfies PaymentState,
+          expiresAt: snap.value.expiresAt,
+          redirectUrl: snap.value.redirectUrl,
+          token: snap.value.token,
+          instructions: null,
+          reused: true,
+        })
+      }
+
+      /* tagihan lama tidak mewakili niat pembayaran yang sekarang (nominal atau
+         kode berubah) — batalkan supaya tidak ada dua tagihan hidup. */
+      await cancelTransaction(existingOrderId)
     }
   }
 
@@ -551,28 +579,12 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const charge = await createCoreCharge(
-    {
-      purpose,
-      orderId,
-      amount,
-      itemName,
-      planId: plan?.id,
-      ownedPlanId: ownedPlanId ?? undefined,
-      customerEmail: auth.user.email,
-      customerName: auth.user.name,
-      notificationUrl: origin ? `${origin}/api/payment/webhook` : undefined,
-      finishUrl: origin
-        ? `${origin}/checkout/selesai?order_id=${encodeURIComponent(orderId)}`
-        : undefined,
-    },
-    method,
-  )
+  const snap = await createSnapCharge(snapIntent(orderId), method)
 
-  if (!charge.ok) {
+  if (!snap.ok) {
     return NextResponse.json(
-      { ok: false, reason: charge.reason, error: charge.message },
-      { status: charge.status },
+      { ok: false, reason: snap.reason, error: snap.message },
+      { status: snap.status },
     )
   }
 
@@ -581,8 +593,15 @@ export async function POST(req: NextRequest) {
     orderId,
     method: method.id,
     amount,
-    state: charge.value.state,
-    expiresAt: charge.value.expiresAt,
-    instructions: charge.value.instructions,
+    state: snap.value.state,
+    expiresAt: snap.value.expiresAt,
+    /* Halaman pembayaran Midtrans (Snap). UI membuka ini sebagai aksi utama;
+       setelah selesai, `callbacks.finish` mengembalikan user ke
+       `/checkout/selesai?order_id=…`. */
+    redirectUrl: snap.value.redirectUrl,
+    token: snap.value.token,
+    /* Snap tidak memberi instruksi QR/VA untuk digambar di app — jangan
+       mengarang. UI menampilkan tombol menuju halaman pembayaran. */
+    instructions: null satisfies PaymentInstructions | null,
   })
 }

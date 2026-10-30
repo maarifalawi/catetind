@@ -39,7 +39,7 @@ export function PublicNavbar() {
                 href={link.href}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
-                  'hidden rounded-full px-3.5 py-2 text-[13px] font-medium transition-colors duration-200 motion-reduce:transition-none md:inline-flex',
+                  'hidden rounded-full px-3.5 py-2 text-[14px] font-medium transition-colors duration-200 motion-reduce:transition-none md:inline-flex',
                   active ? 'bg-sage text-forest' : 'text-forest/60 hover:bg-sage/60 hover:text-forest',
                 )}
               >
@@ -51,13 +51,13 @@ export function PublicNavbar() {
           <Link
             href={PUBLIC_NAV.loginHref}
             aria-current={pathname === PUBLIC_NAV.loginHref ? 'page' : undefined}
-            className="rounded-full px-3 py-2 text-[13px] font-medium text-forest/70 transition-colors duration-200 hover:text-forest motion-reduce:transition-none"
+            className="rounded-full px-3 py-2 text-[14px] font-medium text-forest/70 transition-colors duration-200 hover:text-forest motion-reduce:transition-none"
           >
             {PUBLIC_NAV.loginLabel}
           </Link>
           <Link
             href={PUBLIC_NAV.ctaHref}
-            className="rounded-full bg-forest px-4 py-2 text-[13px] font-medium text-cream shadow-[0_12px_26px_-16px_rgba(0,0,0,0.9)] transition-colors duration-200 hover:bg-forest-soft active:scale-[0.98] motion-reduce:transition-none"
+            className="rounded-full bg-forest px-4 py-2 text-[14px] font-medium text-cream shadow-[0_12px_26px_-16px_rgba(0,0,0,0.9)] transition-colors duration-200 hover:bg-forest-soft active:scale-[0.98] motion-reduce:transition-none"
           >
             {PUBLIC_NAV.ctaLabel}
           </Link>

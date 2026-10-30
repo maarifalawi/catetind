@@ -250,14 +250,13 @@ export function buildMoneyExport(
     monthlyTarget: sources.monthlyTarget,
     settings: { privacy: sources.privacy, money: sources.moneySettings },
     limits: [
-      'Data di file ini dibaca dari perangkat ini (store uang, store kekayaan, store celengan, store tagihan + IndexedDB + data contoh repo).',
-      'Tidak ada salinan di server: repo demo ini belum punya backend, jadi tidak ada data yang dikirim ke mana pun saat penghapusan akun.',
-      'Baris ledger berisi catatan yang kamu buat/diubah di app ini; transaksi contoh dari masa lalu hidup di konstanta lib/data/* dan ikut apa adanya.',
-      'Hutang, piutang, pembayaran, dan aset investasi dibaca dari store perangkat ini, termasuk yang baru kamu catat di halaman Kekayaan (paket 50).',
-      'Saldo dompet dihitung dari opening + baris ledger (tidak pernah disimpan sebagai angka terpisah).',
-      'Tagihan rutin dibaca dari store perangkat ini, termasuk yang baru kamu tambah/ubah di halaman Tagihan, dan status "lunas bulan ini" apa adanya (paket 51).',
-      'Pemasukan bulanan, total cicilan, tanggal gajian, dan periode dashboard dibaca dari konfigurasi uang yang kamu isi (onboarding atau Pengaturan), angka itulah yang dipakai kartu Jatah Hari Ini, bukan konstanta contoh (paket 57).',
-      'Dompet yang kamu hapus tetap ikut di file ini (ditandai `removed: true`), tapi saldonya TIDAK ikut dihitung di `totals.cash`, angka itu sama dengan Total Saldo yang tampil di app (paket 62).',
+      'Data di file ini dibaca dari akunmu di server (dompet, baris ledger, hutang, piutang, investasi, celengan, tagihan) plus cache perangkat yang dipakai app saat offline.',
+      'Tidak ada manusia di CatetInd yang membacanya: file disusun di perangkatmu sendiri dan tidak dikirim ke mana pun.',
+      'Setiap baris ledger di sini adalah catatan yang benar-benar kamu buat atau ubah di app. Tidak ada baris contoh yang ikut.',
+      'Saldo dompet dihitung dari saldo pembuka + seluruh baris ledger, jadi angka di file sama dengan Total Saldo yang tampil di app.',
+      'Dompet yang kamu hapus tetap ikut (ditandai `removed: true`), tapi saldonya tidak dihitung di `totals.cash`.',
+      'Pemasukan bulanan, total cicilan, tanggal gajian, dan periode dashboard adalah konfigurasi yang kamu isi sendiri.',
+      'Isi file mengikuti keadaan terakhir yang tersinkron di perangkat ini. Kalau ada perubahan yang belum terkirim karena offline, perubahan itu muncul di file berikutnya setelah app tersambung lagi.',
     ],
   }
 }

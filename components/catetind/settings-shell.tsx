@@ -179,7 +179,7 @@ export function SettingsShell({ children }: { children: ReactNode }) {
             kembali). Desktop: selalu tampil menemani panel yang panjang. */}
         <aside className={cn('min-w-0 lg:col-span-3', !isIndex && 'hidden lg:block')}>
           <div className="lg:sticky lg:top-6">
-            <p className="px-3 text-[10.5px] font-medium tracking-[0.14em] text-forest/40 uppercase">
+            <p className="px-3 text-[11.5px] font-medium tracking-[0.14em] text-forest/40 uppercase">
               Menu Pengaturan
             </p>
             <nav aria-label="Menu pengaturan" className="mt-2">
@@ -226,7 +226,7 @@ export function SettingsShell({ children }: { children: ReactNode }) {
                         <span className="min-w-0 flex-1">
                           <span
                             className={cn(
-                              'block text-[13.5px] leading-snug',
+                              'block text-[14.5px] leading-snug',
                               danger
                                 ? 'font-medium text-plum'
                                 : active
@@ -242,7 +242,7 @@ export function SettingsShell({ children }: { children: ReactNode }) {
                               />
                             )}
                           </span>
-                          <span className="mt-0.5 block text-[11px] leading-snug text-forest/45">
+                          <span className="mt-0.5 block text-[12px] leading-snug text-forest/45">
                             {item.desc}
                           </span>
                         </span>
@@ -277,7 +277,7 @@ export function SettingsShell({ children }: { children: ReactNode }) {
         <div className="mt-8 border-t border-plum/20 pt-5">
           <Link
             href={SETTINGS_LOGOUT_ITEM.href}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-plum/30 bg-plum/10 px-5 py-3.5 text-[13.5px] font-medium text-plum transition-colors hover:bg-plum/20 active:scale-[0.99]"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-plum/30 bg-plum/10 px-5 py-3.5 text-[14.5px] font-medium text-plum transition-colors hover:bg-plum/20 active:scale-[0.99]"
           >
             <LogOut className="size-4" strokeWidth={2.4} aria-hidden />
             {SETTINGS_LOGOUT_ITEM.title}, {SETTINGS_LOGOUT_ITEM.desc}

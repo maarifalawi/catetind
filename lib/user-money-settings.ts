@@ -384,7 +384,101 @@ export function saveUserMoneySettings(patch: Partial<UserMoneySettings>): UserMo
   cache = next
   persist(next)
   notify()
+  /* PUSH ke server (sinkron antar-perangkat). Tidak ditunggu: penyimpanan lokal
+     sudah sah, dan kegagalan jaringan tidak boleh menggagalkan aksi user. */
+  void pushMoneySettingsToServer(next)
   return next
+}
+
+/* ── SINKRON ANTAR-PERANGKAT ─────────────────────────────────────────────────
+   Konfigurasi ini dipakai menghitung Jatah Hari Ini, jadi ia data AKUN, bukan
+   data perangkat. Dua fungsi di bawah menutup dua arahnya:
+
+     · `pushMoneySettingsToServer()` — dipanggil setiap penulisan;
+     · `hydrateMoneySettingsFromServer()` — dipanggil sekali saat app dibuka.
+
+   Aturan penggabungan: LAST-WRITE-WINS lewat `updatedAt`. Nilai server hanya
+   dipakai kalau lebih baru daripada nilai perangkat; sebaliknya nilai perangkat
+   yang lebih baru diunggah (migrasi sekali jalan, tanpa menimpa data server yang
+   lebih segar). Penanda `purged` selalu menang: akun yang sudah dihapus tidak
+   boleh diisi ulang oleh nilai server lama. */
+export async function pushMoneySettingsToServer(
+  settings: UserMoneySettings = readUserMoneySettings(),
+): Promise<boolean> {
+  const { patchUserSettings } = await import('./supabase/user-settings-remote')
+  return patchUserSettings({
+    money: {
+      version: settings.version ?? SETTINGS_VERSION,
+      monthlyIncome: settings.monthlyIncome,
+      totalInstallments: settings.totalInstallments,
+      paydayDate: settings.paydayDate,
+      dashboardPeriod: settings.dashboardPeriod,
+      enabledContexts: enabledContextsOf(settings),
+      updatedAt: settings.updatedAt ?? 0,
+      purged: settings.purged === true,
+    },
+  })
+}
+
+/**
+ * Ambil konfigurasi dari server dan terapkan kalau lebih baru.
+ *
+ * `applied` = nilai server benar-benar dipakai (perangkat ini berubah);
+ * `pushed`  = nilai perangkat yang lebih baru dikirim naik.
+ *
+ * `remote` boleh dioper oleh pemanggil yang SUDAH membaca `user_settings` —
+ * itulah yang membuat boot cukup SATU panggilan untuk uang, budget, onboarding,
+ * sensor, dan target bulanan (lihat `components/catetind/settings-sync.tsx`).
+ */
+export async function hydrateMoneySettingsFromServer(remote?: {
+  money?: unknown
+} | null): Promise<{
+  applied: boolean
+  pushed: boolean
+}> {
+  if (typeof window === 'undefined') return { applied: false, pushed: false }
+  let payload = remote
+  if (!payload) {
+    const { readUserSettings } = await import('./supabase/user-settings-remote')
+    payload = await readUserSettings()
+  }
+  if (!payload) return { applied: false, pushed: false }
+
+  const local = readUserMoneySettings()
+  /* akun yang sudah dihapus di perangkat ini tidak boleh diisi ulang */
+  if (local.purged) return { applied: false, pushed: false }
+
+  const remoteSettings = parseRemoteMoney(payload.money)
+  if (!remoteSettings) {
+    /* server belum punya nilai → unggah yang ada di perangkat (migrasi sekali) */
+    const pushed = await pushMoneySettingsToServer(local)
+    return { applied: false, pushed }
+  }
+
+  const localAt = local.updatedAt ?? 0
+  const remoteAt = remoteSettings.updatedAt ?? 0
+  if (remoteAt > localAt) {
+    cache = remoteSettings
+    persist(remoteSettings)
+    notify()
+    return { applied: true, pushed: false }
+  }
+  if (localAt > remoteAt) {
+    const pushed = await pushMoneySettingsToServer(local)
+    return { applied: false, pushed }
+  }
+  return { applied: false, pushed: false }
+}
+
+/**
+ * Bentuk JSON dari server → `UserMoneySettings` yang sah.
+ *
+ * Memakai parser yang SAMA dengan penyimpanan perangkat, jadi nilai asing di
+ * server tidak bisa menghasilkan angka uang yang tampak sah.
+ */
+export function parseRemoteMoney(value: unknown): UserMoneySettings | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  return parseUserMoneySettings(JSON.stringify(value))
 }
 
 /**

@@ -2,9 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AI_CAPTURE_COPY } from '@/lib/ai-chat'
+import {
+  requestReceiptTransaction,
+  requestTextTransaction,
+} from '@/lib/ai-capture-client'
 import { readAiPrefs, withCapturePrefs } from '@/lib/ai-prefs'
 import { recordAiUsage } from '@/lib/ai-usage-store'
 import type { HistoryTransaction } from '@/lib/data/history'
+import { useVoiceTranscript } from '@/hooks/use-voice-transcript'
 import { captureWalletChoice, getMoneySnapshot, walletIdOfName } from '@/lib/money/store'
 import { recordTransaction } from '@/lib/transaction-bus'
 import {
@@ -53,155 +58,26 @@ import type { MoneyContext } from '@/lib/types'
 
 export type CapturePhase = 'idle' | 'reading' | 'parsing' | 'listening' | 'confirm' | 'problem'
 
-/** dukungan STT baru dipastikan SETELAH mount (SSR tidak punya `window`) */
-export type VoiceSupport = 'unknown' | 'yes' | 'no'
+/* PAKET 101 — mesin STT pindah ke `hooks/use-voice-transcript.ts` supaya form
+   Catat memakai mesin yang SAMA (dulu ia punya timer mock sendiri). Tipe
+   `VoiceSupport` di-re-export dari sini karena `ai-capture-bubble.tsx` sudah
+   mengimpornya dari pintu ini. */
+export type { VoiceSupport } from '@/hooks/use-voice-transcript'
 
-/* ── Web Speech API — tipe minimum milik sendiri ────────────────────────────
-   lib.dom TypeScript belum memuat `SpeechRecognition` (hanya *Alternative /
-   *Result / *ResultList), jadi bentuk yang kita pakai dideklarasikan di sini.
-   Ini murni tipe: tidak ada dependency baru dan tidak ada polyfill (A3: STT
-   tetap jalan di browser user, zero server cost). */
-interface SpeechRecognitionResultLike {
-  readonly isFinal: boolean
-  readonly length: number
-  [index: number]: { readonly transcript: string } | undefined
-}
+/* ── JEMBATAN KE ROUTE AI (paket 63 · dipusatkan paket 101) ──────────────────
+   Dua pintu masuk (struk & ucapan) memanggil route NYATA (`POST /api/ai/ocr`,
+   `POST /api/parse-voice`) yang memakai model di server. Sejak paket 101 seluruh
+   pekerjaan "berkas → JPEG → route → ExtractedTransaction" tinggal di
+   `lib/ai-capture-client.ts`, karena form Catat memakai jalur yang sama:
 
-interface SpeechRecognitionEventLike {
-  readonly resultIndex: number
-  readonly results: {
-    readonly length: number
-    [index: number]: SpeechRecognitionResultLike | undefined
-  }
-}
-
-interface SpeechRecognitionLike {
-  lang: string
-  continuous: boolean
-  interimResults: boolean
-  maxAlternatives: number
-  start(): void
-  stop(): void
-  abort(): void
-  onresult: ((event: SpeechRecognitionEventLike) => void) | null
-  onerror: ((event: { readonly error: string }) => void) | null
-  onend: (() => void) | null
-}
-
-type SpeechRecognitionCtor = new () => SpeechRecognitionLike
-
-/** `SpeechRecognition` atau `webkitSpeechRecognition` — null kalau tidak ada */
-function getSpeechRecognition(): SpeechRecognitionCtor | null {
-  if (typeof window === 'undefined') return null
-  const w = window as unknown as {
-    SpeechRecognition?: SpeechRecognitionCtor
-    webkitSpeechRecognition?: SpeechRecognitionCtor
-  }
-  return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null
-}
-
-/** kode error STT → copy yang menyebut jalan keluarnya, bukan istilah mesin */
-function voiceProblemCopy(error: string): string {
-  switch (error) {
-    case 'not-allowed':
-    case 'service-not-allowed':
-      return AI_CAPTURE_COPY.voiceDenied
-    case 'no-speech':
-      return AI_CAPTURE_COPY.voiceNoSpeech
-    case 'audio-capture':
-      return AI_CAPTURE_COPY.voiceNoMic
-    case 'network':
-      return AI_CAPTURE_COPY.voiceNetwork
-    default:
-      return AI_CAPTURE_COPY.voiceFailed
-  }
-}
-
-/* ── JEMBATAN KE ROUTE AI (paket 63) ─────────────────────────────────────────
-   Dua pintu masuk (struk & ucapan) sekarang memanggil route NYATA
-   (`POST /api/ai/ocr`, `POST /api/parse-voice`) yang memakai model di server.
-   Kalau provider tak bisa dihubungi, perilakunya DIBEDAKAN dengan sengaja:
-
-     · STRUK — mock "OCR" (menebak merchant dari NAMA FILE) TIDAK dipakai lagi:
-       menampilkan tebakan sebagai hasil baca struk adalah klaim palsu. Gagal =
-       state problem jujur + ajakan foto ulang / isi manual.
+     · STRUK — mock "OCR" (menebak merchant dari NAMA FILE) sudah TIDAK ada di
+       repo ini. Gagal = state problem jujur + ajakan foto ulang / isi manual.
      · UCAPAN — transkripnya NYATA (dari Web Speech API), jadi parser aturan lokal
        tetap jujur dipakai sebagai jaring aman saat provider mati. */
 
-/** batas sisi terpanjang foto struk setelah dinormalkan (piksel) */
-const MAX_RECEIPT_EDGE = 1600
-
-/** kualitas JPEG hasil normalisasi — cukup tajam untuk OCR, jauh di bawah batas ukuran route */
-const RECEIPT_JPEG_QUALITY = 0.85
-
-interface ReceiptImage {
-  /** base64 tanpa prefix data URL */
-  data: string
-  mimeType: 'image/jpeg'
-}
-
-/**
- * Foto struk dinormalkan ke JPEG DI BROWSER sebelum dikirim (paket 87).
- *
- * Kenapa: penyedia vision hanya menerima webp/png/jpeg/gif. Foto kamera iPhone
- * lahir sebagai HEIC/HEIF — `file.type` tidak bisa dipercaya dan Chrome/Windows
- * tidak bisa men-decode-nya sama sekali. Dengan menggambar berkas ke `<canvas>`
- * lalu `toDataURL('image/jpeg')`, format apa pun yang BISA dibaca browser keluar
- * sebagai JPEG (format yang pasti diterima), sekaligus mengecilkan foto kamera
- * 12 MP supaya tidak kena batas ukuran route.
- *
- * `null` = browser ini tidak bisa membuka berkasnya (HEIC di Chrome desktop,
- * berkas rusak/terpotong). Pemanggil menampilkan pesan format yang jujur, bukan
- * "scan gagal" generik yang menyesatkan.
- */
-function receiptImageToJpeg(file: File): Promise<ReceiptImage | null> {
-  return new Promise((resolve) => {
-    const url = URL.createObjectURL(file)
-    const image = new Image()
-    image.onload = () => {
-      try {
-        if (!image.naturalWidth || !image.naturalHeight) {
-          resolve(null)
-          return
-        }
-        const scale = Math.min(1, MAX_RECEIPT_EDGE / Math.max(image.naturalWidth, image.naturalHeight))
-        const width = Math.max(1, Math.round(image.naturalWidth * scale))
-        const height = Math.max(1, Math.round(image.naturalHeight * scale))
-        const canvas = document.createElement('canvas')
-        canvas.width = width
-        canvas.height = height
-        const ctx = canvas.getContext('2d')
-        if (!ctx) {
-          resolve(null)
-          return
-        }
-        /* JPEG tidak punya alpha: PNG transparan jangan sampai jadi hitam */
-        ctx.fillStyle = '#ffffff'
-        ctx.fillRect(0, 0, width, height)
-        ctx.drawImage(image, 0, 0, width, height)
-        const dataUrl = canvas.toDataURL('image/jpeg', RECEIPT_JPEG_QUALITY)
-        const comma = dataUrl.indexOf(',')
-        resolve(comma >= 0 ? { data: dataUrl.slice(comma + 1), mimeType: 'image/jpeg' } : null)
-      } catch {
-        resolve(null)
-      } finally {
-        URL.revokeObjectURL(url)
-      }
-    }
-    image.onerror = () => {
-      URL.revokeObjectURL(url)
-      resolve(null)
-    }
-    image.src = url
-  })
-}
-
-/** payload route AI → `ExtractedTransaction`, atau `null` kalau bentuknya asing */
-function readTransaction(payload: unknown): ExtractedTransaction | null {
-  const transaction = (payload as { transaction?: unknown } | null)?.transaction
-  if (!transaction || typeof transaction !== 'object') return null
-  return transaction as ExtractedTransaction
-}
+/* Normalisasi foto struk (HEIC → JPEG di browser) tinggal di
+   `lib/ai-capture-client.ts` sejak paket 101, bersama pemanggilan route-nya —
+   dipakai jalur ini DAN form Catat, jadi tidak ada dua cara membaca foto. */
 
 /**
  * Dompet draft = DOMPET MILIK USER (paket 79) — bukan nama kanon tebakan AI.
@@ -261,76 +137,82 @@ export function useTransactionCapture({
 }) {
   const [phase, setPhase] = useState<CapturePhase>('idle')
   const [draft, setDraft] = useState<TransactionDraftForm | null>(null)
-  /** transkrip hidup selama mendengar — ditampilkan SEBELUM diproses */
-  const [liveTranscript, setLiveTranscript] = useState('')
   /** copy penjelasan saat alur tidak bisa jalan / gagal */
   const [problem, setProblem] = useState<string | null>(null)
   /** galat validasi form konfirmasi (mis. nominal belum diisi) */
   const [formError, setFormError] = useState<string | null>(null)
-  const [voiceSupport, setVoiceSupport] = useState<VoiceSupport>('unknown')
-
-  const readTimer = useRef<number | null>(null)
-  const recognition = useRef<SpeechRecognitionLike | null>(null)
-  /** transkrip final yang sudah terkumpul (handler `onend` membacanya) */
-  const transcriptRef = useRef('')
+  /**
+   * Sumber yang sedang dirapikan saat fase `parsing` (paket 101): "ucapanmu"
+   * dan "tulisanmu" bukan kalimat yang sama — bubble memilih judulnya dari sini
+   * alih-alih menebak.
+   */
+  const [parsingSource, setParsingSource] = useState<'voice' | 'chat' | null>(null)
   /** aksi terakhir (struk/ucapan) — tombol "Coba lagi" di state problem mengulanginya */
   const retryRef = useRef<(() => void) | null>(null)
+  /** pembatalan permintaan struk yang sedang jalan (paket 101) */
+  const scanAbort = useRef<AbortController | null>(null)
+  /** pembatalan "rapikan transkrip" (voice/chat) — supaya hasil yang datang
+   *  setelah user menutup panel tidak menulis draft ke panel yang sudah hilang */
+  const parseAbort = useRef<AbortController | null>(null)
 
-  /* dukungan Speech API baru dicek setelah mount: HTML server & render pertama
-     client harus identik dulu (pola yang sama dengan pembacaan
-     `prefers-reduced-motion` di repo ini) */
-  useEffect(() => {
-    setVoiceSupport(getSpeechRecognition() ? 'yes' : 'no')
-  }, [])
+  /* ── 🎤 MESIN STT (paket 101) ──────────────────────────────────────────────
+     Logika Web Speech API tinggal di `hooks/use-voice-transcript.ts` supaya form
+     Catat memakai mesin yang sama. Hook ini yang memutuskan apa arti transkrip:
+     kirim ke model, lalu bentuk kartu konfirmasi. */
+  const voice = useVoiceTranscript({
+    onFinal: (transcript) => {
+      /* METERING AI (paket 42): hanya transkrip yang BERHASIL diterima yang
+         dihitung — percobaan tanpa suara tidak mengambil kuota user */
+      recordAiUsage('voice')
+      onUserEcho(transcript)
+      /* draft dibentuk ASINKRON: transkrip → model di server (atau parser aturan
+         lokal saat provider tak bisa dihubungi). Fasenya pindah ke `parsing`
+         supaya bubble tidak bilang "mendengar" saat yang terjadi adalah
+         "merapikan" — paket 79/101. */
+      setPhase('parsing')
+      setParsingSource('voice')
+      void resolveVoiceDraft(transcript)
+    },
+    onProblem: (message) => {
+      setParsingSource(null)
+      setProblem(message)
+      setPhase('problem')
+    },
+  })
+  const liveTranscript = voice.transcript
+  const voiceSupport = voice.support
+  /* `cancel` stabil (useCallback di hook) — dipakai beberapa alur di bawah tanpa
+     membuat callback-nya ikut berubah tiap render */
+  const cancelVoice = voice.cancel
 
-  const clearReadTimer = useCallback(() => {
-    if (readTimer.current !== null) {
-      window.clearTimeout(readTimer.current)
-      readTimer.current = null
-    }
-  }, [])
-
-  /** lepas semua handler lalu matikan mesin STT — dipanggil di setiap transisi */
-  const releaseVoice = useCallback(() => {
-    const rec = recognition.current
-    if (!rec) return
-    rec.onresult = null
-    rec.onerror = null
-    rec.onend = null
-    try {
-      rec.abort()
-    } catch {
-      /* mesin sudah mati sendiri — tidak ada yang perlu dibereskan */
-    }
-    recognition.current = null
-  }, [])
-
-  /* bersihkan timer & mikrofon saat widget tak lagi terpasang */
+  /* bersihkan permintaan struk & parsing saat widget tak lagi terpasang */
   useEffect(
     () => () => {
-      clearReadTimer()
-      releaseVoice()
+      scanAbort.current?.abort()
+      parseAbort.current?.abort()
     },
-    [clearReadTimer, releaseVoice],
+    [],
   )
 
   /* ── 📸 SCAN STRUK ────────────────────────────────────────────────────────
      File dipilih lewat `<input type="file" accept="image/*"
      capture="environment">` (kamera belakang di HP, file picker di web).
-     Sejak paket 87 berkasnya dinormalkan dulu ke JPEG di browser
-     (`receiptImageToJpeg`) — penyedia vision hanya menerima png/jpeg/webp/gif,
-     dan foto iPhone lahir sebagai HEIC. Baru setelah itu base64-nya dikirim ke
-     `POST /api/ai/ocr` (model vision di server, PRD 385–412), lalu hasilnya
-     masuk kartu konfirmasi. Gagal = state problem jujur; TIDAK ada tebakan yang
-     dipajang seolah hasil baca struk. */
+     Sejak paket 101 seluruh jalur "berkas → JPEG di browser → POST /api/ai/ocr
+     → transaksi" ada di `lib/ai-capture-client.ts` dan dipakai juga oleh form
+     Catat. Gagal = state problem jujur; TIDAK ada tebakan yang dipajang seolah
+     hasil baca struk. */
   const startReceiptScan = useCallback(
     (file: File) => {
-      releaseVoice()
-      clearReadTimer()
+      cancelVoice()
+      scanAbort.current?.abort()
+      parseAbort.current?.abort()
+      const controller = new AbortController()
+      scanAbort.current = controller
+
       setDraft(null)
       setProblem(null)
       setFormError(null)
-      setLiveTranscript('')
+      setParsingSource(null)
       setPhase('reading')
       /* METERING AI (paket 42): struk yang dibaca = satu panggilan OCR. */
       recordAiUsage('ocr')
@@ -339,47 +221,25 @@ export function useTransactionCapture({
       retryRef.current = () => startReceiptScan(file)
 
       void (async () => {
-        /* Normalisasi dulu (paket 87): apa pun format pilihannya, yang dikirim ke
-           route selalu JPEG yang benar-benar bisa dibaca — atau null kalau
-           browser ini pun tidak bisa membukanya. */
-        const image = await receiptImageToJpeg(file)
-        if (!image) {
-          setProblem(AI_CAPTURE_COPY.scanUnsupported)
-          setPhase('problem')
+        const result = await requestReceiptTransaction(file, controller.signal)
+        /* panel ditutup / user membatalkan → jangan menulis state apa pun */
+        if (controller.signal.aborted) return
+        if (!result.ok && result.cancelled) return
+        if (result.ok) {
+          /* preferensi user + DOMPET NYATA diterapkan SEBELUM draft masuk kartu
+             konfirmasi (paket 54 & 79): kalau "Kategorisasi/Penamaan Otomatis"
+             dimatikan, field itu kosong dan user yang mengisinya; dan dompet
+             tebakan AI diganti dompet milik user supaya barisnya tidak lahir
+             "Belum berkonteks". */
+          setDraft(prepareDraft(result.transaction, undefined, context))
+          setPhase('confirm')
           return
         }
-        /* Pesan gagal bawaan = kalimat app. Route bisa mengirim alasan yang
-           lebih spesifik dan tetap berbahasa user (format foto tidak didukung,
-           model sedang penuh, …) — pakai itu kalau ada, jangan ditelan. */
-        let failure: string = AI_CAPTURE_COPY.scanFailed
-        try {
-          const res = await fetch('/api/ai/ocr', {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ image: image.data, mimeType: image.mimeType }),
-          })
-          const payload: unknown = await res.json().catch(() => null)
-          const transaction = res.ok ? readTransaction(payload) : null
-          if (transaction) {
-            /* preferensi user + DOMPET NYATA diterapkan SEBELUM draft masuk kartu
-               konfirmasi (paket 54 & 79): kalau "Kategorisasi/Penamaan Otomatis"
-               dimatikan, field itu kosong dan user yang mengisinya; dan dompet
-               tebakan AI diganti dompet milik user supaya barisnya tidak lahir
-               "Belum berkonteks". */
-            setDraft(prepareDraft(transaction, undefined, context))
-            setPhase('confirm')
-            return
-          }
-          const message = (payload as { error?: unknown } | null)?.error
-          if (typeof message === 'string' && message) failure = message
-        } catch {
-          /* jaringan/berkas gagal → problem di bawah */
-        }
-        setProblem(failure)
+        setProblem(result.message)
         setPhase('problem')
       })()
     },
-    [clearReadTimer, context, onUserEcho, releaseVoice],
+    [cancelVoice, context, onUserEcho],
   )
 
   /* ── MERAPIKAN TRANSKRIP → DRAFT ─────────────────────────────────────────────
@@ -389,22 +249,17 @@ export function useTransactionCapture({
      sama — hasilnya tetap jujur karena tidak ada yang dikarang. */
   const resolveVoiceDraft = useCallback(
     async (transcript: string) => {
-      try {
-        const res = await fetch('/api/parse-voice', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ transcript, source: 'voice' }),
-        })
-        const payload = res.ok ? await res.json() : null
-        const transaction = readTransaction(payload)
-        if (transaction) {
-          setDraft(prepareDraft(transaction, transcript, context))
-          setPhase('confirm')
-          return
-        }
-      } catch {
-        /* jatuh ke parser aturan lokal di bawah */
+      parseAbort.current?.abort()
+      const controller = new AbortController()
+      parseAbort.current = controller
+      const transaction = await requestTextTransaction(transcript, 'voice', controller.signal)
+      if (controller.signal.aborted) return
+      if (transaction) {
+        setDraft(prepareDraft(transaction, transcript, context))
+        setPhase('confirm')
+        return
       }
+      /* provider/route tak bisa dipakai → aturan lokal, dari teks yang SAMA */
       setDraft(prepareDraft(parseSpokenTransaction(transcript), transcript, context))
       setPhase('confirm')
     },
@@ -412,113 +267,29 @@ export function useTransactionCapture({
   )
 
   /* ── 🎤 VOICE ─────────────────────────────────────────────────────────────
-     STT terjadi di browser (PRD A3). Transkrip interim langsung ditampilkan,
-     jadi user melihat apa yang didengar SEBELUM apa pun disimpan (PRD 516). */
+     STT terjadi di browser (PRD A3) lewat `hooks/use-voice-transcript.ts`.
+     Transkrip interim langsung ditampilkan, jadi user melihat apa yang didengar
+     SEBELUM apa pun disimpan (PRD 516). */
   const startVoice = useCallback(() => {
-    const Ctor = getSpeechRecognition()
-    if (!Ctor) {
-      /* tidak ada tombol mati tanpa penjelasan: alasan + jalan keluarnya */
-      setProblem(AI_CAPTURE_COPY.voiceUnsupported)
-      setPhase('problem')
-      return
-    }
-
-    clearReadTimer()
-    releaseVoice()
-    transcriptRef.current = ''
+    scanAbort.current?.abort()
+    parseAbort.current?.abort()
     setDraft(null)
     setProblem(null)
     setFormError(null)
-    setLiveTranscript('')
-    setPhase('listening')
+    setParsingSource(null)
     /* "Coba lagi" di state problem mengulang mendengarkan */
     retryRef.current = () => startVoice()
-
-    const rec = new Ctor()
-    rec.lang = 'id-ID'
-    rec.continuous = false
-    rec.interimResults = true
-    rec.maxAlternatives = 1
-
-    /*
-     * `onend` tetap menyala SETELAH `onerror`, dan sebagian browser bisa
-     * memanggilnya dua kali. Satu penutup untuk sesi ini mencegah draft ganda
-     * atau pesan ganda dari satu ucapan — plus memastikan tidak ada setState
-     * dari mesin yang sudah lepas.
-     */
-    let settled = false
-    const settle = () => {
-      if (settled) return false
-      settled = true
-      rec.onresult = null
-      rec.onerror = null
-      rec.onend = null
-      recognition.current = null
-      return true
-    }
-
-    rec.onresult = (event) => {
-      let finalText = transcriptRef.current
-      let interim = ''
-      for (let i = event.resultIndex; i < event.results.length; i += 1) {
-        const result = event.results[i]
-        if (!result) continue
-        const text = result[0]?.transcript ?? ''
-        if (result.isFinal) finalText = `${finalText} ${text}`.trim()
-        else interim = `${interim} ${text}`.trim()
-      }
-      transcriptRef.current = finalText
-      setLiveTranscript(`${finalText} ${interim}`.trim())
-    }
-
-    rec.onerror = (event) => {
-      if (event.error === 'aborted') return // user sendiri yang menghentikan
-      if (!settle()) return
-      setProblem(voiceProblemCopy(event.error))
-      setPhase('problem')
-    }
-
-    rec.onend = () => {
-      if (!settle()) return
-      /* Dua sebab `onend`: user menekan "Selesai", atau mesin berhenti sendiri
-         setelah jeda. Dua-duanya diperlakukan sama — hasil yang sudah
-         kedengeran langsung dirapikan; kalau memang belum ada apa-apa, bilang
-         jujur daripada berpura-pura sibuk mendengar selamanya. */
-      const transcript = transcriptRef.current.trim()
-      if (!transcript) {
-        setProblem(AI_CAPTURE_COPY.voiceNoSpeech)
-        setPhase('problem')
-        return
-      }
-      /* METERING AI (paket 42): hanya transkrip yang BERHASIL jadi draft yang
-         dihitung — percobaan tanpa suara tidak mengambil kuota user */
-      recordAiUsage('voice')
-      onUserEcho(transcript)
-      /* draft dibentuk ASINKRON: transkrip → model di server (atau parser aturan
-         lokal saat provider tak bisa dihubungi). Selama menunggu, bubble tetap
-         menampilkan state "mendengar" — tidak ada state palsu yang dikarang. */
-      void resolveVoiceDraft(transcript)
-    }
-
-    recognition.current = rec
-    try {
-      rec.start()
-    } catch {
-      /* mis. izin masih menunggu atau mesin STT sedang dipakai proses lain */
-      settle()
-      setProblem(AI_CAPTURE_COPY.voiceFailed)
-      setPhase('problem')
-    }
-  }, [clearReadTimer, onUserEcho, releaseVoice, resolveVoiceDraft])
+    /* `start()` = false berarti perangkat ini tidak punya Speech API; alasannya
+       sudah dikirim lewat `onProblem` (copy yang menyebut jalan keluarnya), jadi
+       di sini tidak ada kalimat kedua yang perlu disusun. */
+    if (!voice.start()) return
+    setPhase('listening')
+  }, [voice])
 
   /** tombol "Selesai" — hentikan mendengar, hasilnya diproses oleh `onend` */
   const finishVoice = useCallback(() => {
-    try {
-      recognition.current?.stop()
-    } catch {
-      /* sudah berhenti sendiri */
-    }
-  }, [])
+    voice.stop()
+  }, [voice])
 
   /* ── KARTU KONFIRMASI ────────────────────────────────────────────────────
      Semua perubahan dilakukan user, bukan AI. Field yang disentuh user langsung
@@ -542,15 +313,15 @@ export function useTransactionCapture({
 
   /** keluar dari alur tanpa menyimpan — tidak ada apa pun yang ditulis */
   const cancelCapture = useCallback(() => {
-    clearReadTimer()
-    releaseVoice()
-    transcriptRef.current = ''
+    cancelVoice()
+    scanAbort.current?.abort()
+    parseAbort.current?.abort()
+    setParsingSource(null)
     setPhase('idle')
     setDraft(null)
     setProblem(null)
     setFormError(null)
-    setLiveTranscript('')
-  }, [clearReadTimer, releaseVoice])
+  }, [cancelVoice])
 
   /**
    * Buka kartu konfirmasi dari PESAN CHAT (paket 65 · Tugas D, diperluas paket 79).
@@ -570,21 +341,17 @@ export function useTransactionCapture({
    */
   const resolveChatDraft = useCallback(
     async (text: string) => {
-      try {
-        const res = await fetch('/api/parse-voice', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ transcript: text, source: 'chat' }),
-        })
-        const payload = res.ok ? await res.json() : null
-        const transaction = readTransaction(payload)
-        if (transaction) {
-          setDraft(prepareDraft(transaction, text, context))
-          setPhase('confirm')
-          return
-        }
-      } catch {
-        /* jatuh ke parser aturan lokal di bawah */
+      /* jalur yang SAMA dengan voice/struk, cuma sumbernya `'chat'` (paket 101:
+         satu jembatan klien untuk ketiga pintu) */
+      parseAbort.current?.abort()
+      const controller = new AbortController()
+      parseAbort.current = controller
+      const transaction = await requestTextTransaction(text, 'chat', controller.signal)
+      if (controller.signal.aborted) return
+      if (transaction) {
+        setDraft(prepareDraft(transaction, text, context))
+        setPhase('confirm')
+        return
       }
       setDraft(prepareDraft(parseTypedTransaction(text), text, context))
       setPhase('confirm')
@@ -596,16 +363,16 @@ export function useTransactionCapture({
     (transcript: string): boolean => {
       const text = transcript.trim()
       if (!text) return false
-      releaseVoice()
-      clearReadTimer()
-      transcriptRef.current = text
+      cancelVoice()
+      scanAbort.current?.abort()
+      parseAbort.current?.abort()
       setDraft(null)
-      setLiveTranscript('')
       setProblem(null)
       setFormError(null)
       /* fase 'parsing' (bukan 'reading'): kartu di layar mengatakan yang benar —
          tulisan user sedang dirapikan, bukan struk sedang dibaca */
       setPhase('parsing')
+      setParsingSource('chat')
       retryRef.current = () => {
         setPhase('parsing')
         void resolveChatDraft(text)
@@ -613,7 +380,7 @@ export function useTransactionCapture({
       void resolveChatDraft(text)
       return true
     },
-    [clearReadTimer, releaseVoice, resolveChatDraft],
+    [cancelVoice, resolveChatDraft],
   )
 
   /**
@@ -690,14 +457,14 @@ export function useTransactionCapture({
     const prefs = readAiPrefs()
     if (prefs.autoCategory || prefs.autoNaming) recordAiUsage('categorize')
 
-    transcriptRef.current = ''
+    cancelVoice()
+    setParsingSource(null)
     setPhase('idle')
     setDraft(null)
     setProblem(null)
     setFormError(null)
-    setLiveTranscript('')
     return transaction
-  }, [context, draft])
+  }, [cancelVoice, context, draft])
 
   /** ulangi aksi AI terakhir (foto struk atau mendengarkan) — tombol "Coba lagi" */
   const retryCapture = useCallback(() => {
@@ -715,6 +482,7 @@ export function useTransactionCapture({
     problem,
     formError,
     voiceSupport,
+    parsingSource,
     startReceiptScan,
     startVoice,
     finishVoice,

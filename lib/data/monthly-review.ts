@@ -641,8 +641,9 @@ export const MONTHLY_REVIEW_COPY = {
 export const MONTHLY_TARGET_CARD_COPY = {
   title: 'Target bulan ini',
   emptyTitle: 'Belum ada target bulan ini',
-  emptyBody: 'Set 20 detik aja, nanti gampang dilihat kalau lagi pengin jajan besar 🌱',
-  ctaSet: 'Set target 📌',
+  /* `emptyBody` SENGAJA tidak ada lagi: judul + tombol "Set target" sudah
+     menyatakan seluruh aksi kartu dalam keadaan kosong. */
+  ctaSet: 'Set target',
   ctaEdit: 'Ubah',
   savingsLabel: (amountLabel: string) => `Hemat ${amountLabel}`,
   fundLabel: (fundName: string, amountLabel: string) => `${fundName} · ${amountLabel}/bulan`,

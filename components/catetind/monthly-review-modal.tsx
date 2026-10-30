@@ -315,7 +315,7 @@ export function MonthlyReviewModal({
                 aria-controls={`monthly-review-panel-${item.id}`}
                 onClick={() => setPanel(item.id)}
                 className={cn(
-                  'flex min-w-0 items-center justify-center gap-1.5 rounded-full px-2 py-2 text-[11.5px] font-medium whitespace-nowrap transition-colors duration-200',
+                  'flex min-w-0 items-center justify-center gap-1.5 rounded-full px-2 py-2 text-[12.5px] font-medium whitespace-nowrap transition-colors duration-200',
                   active
                     ? 'bg-forest font-medium text-mint'
                     : 'text-forest/55 hover:bg-cream/70 hover:text-forest',
@@ -387,7 +387,7 @@ export function MonthlyReviewModal({
             type="button"
             onClick={onClose}
             aria-label={COPY.skipA11y}
-            className="shrink-0 rounded-full px-3 py-3 text-[12px] font-medium text-forest/45 transition-colors hover:text-forest/70"
+            className="shrink-0 rounded-full px-3 py-3 text-[13px] font-medium text-forest/45 transition-colors hover:text-forest/70"
           >
             {COPY.skip}
           </button>
@@ -431,14 +431,14 @@ export function MonthlyReviewModal({
 /** label mikro bergaya dashboard (mis. "PEMASUKAN") */
 function MicroLabel({ children }: { children: ReactNode }) {
   return (
-    <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-forest/40">{children}</p>
+    <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-forest/40">{children}</p>
   )
 }
 
 /** chip meta kecil (bulan, jumlah transaksi) */
 function MetaTag({ icon, children }: { icon: ReactNode; children: ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-cream px-2.5 py-1 text-[11px] font-medium text-forest/60 ring-1 ring-soil/12">
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-cream px-2.5 py-1 text-[12px] font-medium text-forest/60 ring-1 ring-soil/12">
       {icon}
       {children}
     </span>
@@ -476,10 +476,10 @@ function StatTile({
         >
           {icon}
         </span>
-        <span className="text-[11px] font-medium text-forest/50">{label}</span>
+        <span className="text-[12px] font-medium text-forest/50">{label}</span>
       </div>
-      <p className="mt-2 text-[17px] font-medium tabular-nums text-forest">{value}</p>
-      {hint && <p className="mt-1 text-[11px] leading-relaxed text-forest/45">{hint}</p>}
+      <p className="mt-2 text-[18px] font-medium tabular-nums text-forest">{value}</p>
+      {hint && <p className="mt-1 text-[12px] leading-relaxed text-forest/45">{hint}</p>}
     </div>
   )
 }
@@ -540,7 +540,7 @@ function RecapPanel({ recap }: { recap: MonthlyRecap }) {
               label={COPY.savedLabel}
               value={money(recap.savedLastMonth)}
               hint={
-                <span className="inline-flex items-center gap-1 rounded-full bg-mint/25 px-2 py-0.5 text-[10.5px] font-medium text-forest">
+                <span className="inline-flex items-center gap-1 rounded-full bg-mint/25 px-2 py-0.5 text-[11.5px] font-medium text-forest">
                   <Check className="size-3" strokeWidth={3} />
                   {COPY.savingsRateLabel(recap.savingsRate ?? 0)}
                 </span>
@@ -550,7 +550,7 @@ function RecapPanel({ recap }: { recap: MonthlyRecap }) {
           </div>
 
           {/* arti angkanya dijelaskan, tidak dibiarkan misterius */}
-          <p className="px-1 text-[11px] leading-relaxed text-forest/45">
+          <p className="px-1 text-[12px] leading-relaxed text-forest/45">
             {COPY.savingsRateCaption}
             {recap.setAside > 0 && ` ${COPY.setAsideNote(money(recap.setAside))}`}
           </p>
@@ -572,12 +572,12 @@ function RecapPanel({ recap }: { recap: MonthlyRecap }) {
                 )}
               </span>
               <div className="min-w-0">
-                <p className="text-[13px] font-medium leading-snug text-forest">
+                <p className="text-[14px] font-medium leading-snug text-forest">
                   {recap.targetAchieved
                     ? COPY.targetAchieved(money(recap.target))
                     : COPY.targetMissed(money(recap.target), targetPct)}
                 </p>
-                <p className="mt-1 text-[11px] leading-relaxed text-forest/45">
+                <p className="mt-1 text-[12px] leading-relaxed text-forest/45">
                   {recap.targetAchieved ? COPY.targetAchievedCaption : COPY.targetMissedCaption}
                 </p>
               </div>
@@ -591,7 +591,7 @@ function RecapPanel({ recap }: { recap: MonthlyRecap }) {
             </div>
             <div className="min-w-0">
               <MicroLabel>{COPY.plantTitle}</MicroLabel>
-              <p className="mt-1 text-[12.5px] leading-relaxed text-forest/60">
+              <p className="mt-1 text-[13.5px] leading-relaxed text-forest/60">
                 {COPY.plantCaption(STAGE_NAMES[recap.plantStage])}
               </p>
             </div>
@@ -605,14 +605,14 @@ function RecapPanel({ recap }: { recap: MonthlyRecap }) {
               <BarChart3 className="size-4" strokeWidth={2.2} />
             </span>
             <div className="min-w-0">
-              <p className="text-[13px] font-medium text-forest">{COPY.patientTitle}</p>
-              <p className="mt-1 text-[12px] leading-relaxed text-forest/60">{COPY.patientBody}</p>
+              <p className="text-[14px] font-medium text-forest">{COPY.patientTitle}</p>
+              <p className="mt-1 text-[13px] leading-relaxed text-forest/60">{COPY.patientBody}</p>
             </div>
           </div>
 
           {/* progress unlock — engagement yang jujur: menambah catatan, bukan menebak */}
           <div className="mt-3.5">
-            <div className="flex items-center justify-between gap-2 text-[11px] font-medium text-forest/55">
+            <div className="flex items-center justify-between gap-2 text-[12px] font-medium text-forest/55">
               <span className="tabular-nums">{readiness.progressLabel}</span>
               <span className="tabular-nums">{progressPct}%</span>
             </div>
@@ -630,13 +630,13 @@ function RecapPanel({ recap }: { recap: MonthlyRecap }) {
               />
             </div>
             {readiness.reasonLabel && (
-              <p className="mt-2 text-[11px] leading-relaxed text-forest/50">
+              <p className="mt-2 text-[12px] leading-relaxed text-forest/50">
                 {readiness.reasonLabel}
               </p>
             )}
           </div>
 
-          <p className="mt-3 text-[11.5px] font-medium text-forest">{COPY.patientSkipHint}</p>
+          <p className="mt-3 text-[12.5px] font-medium text-forest">{COPY.patientSkipHint}</p>
         </div>
       )}
     </div>
@@ -694,7 +694,7 @@ function TargetPanel({
           size="lg"
           hint={provenanceHint}
         />
-        <p className="mt-1.5 text-[11px] leading-relaxed text-forest/45">{COPY.targetQuestionHint}</p>
+        <p className="mt-1.5 text-[12px] leading-relaxed text-forest/45">{COPY.targetQuestionHint}</p>
         {/* pembaca layar menerima nominalnya sebagai kalimat utuh (angka di input
             terbaca satu-satu digit, jadi tidak berguna) */}
         <p className="sr-only" aria-live="polite">
@@ -710,7 +710,7 @@ function TargetPanel({
             type="button"
             onClick={() => onStep(delta)}
             aria-label={delta < 0 ? COPY.stepDown : COPY.stepUp}
-            className="flex items-center gap-1 rounded-full bg-cream px-3 py-2 text-[11.5px] font-medium text-forest ring-1 ring-soil/14 transition-all hover:bg-sage/50 active:scale-95"
+            className="flex items-center gap-1 rounded-full bg-cream px-3 py-2 text-[12.5px] font-medium text-forest ring-1 ring-soil/14 transition-all hover:bg-sage/50 active:scale-95"
           >
             {delta < 0 ? (
               <Minus className="size-3.5" strokeWidth={2.6} />
@@ -723,7 +723,7 @@ function TargetPanel({
         <button
           type="button"
           onClick={onReset}
-          className="flex items-center gap-1 rounded-full px-3 py-2 text-[11.5px] font-medium text-forest/50 transition-colors hover:text-forest"
+          className="flex items-center gap-1 rounded-full px-3 py-2 text-[12.5px] font-medium text-forest/50 transition-colors hover:text-forest"
         >
           <RotateCcw className="size-3.5" strokeWidth={2.4} />
           {COPY.stepReset}
@@ -732,7 +732,7 @@ function TargetPanel({
 
       {/* keluar dari rentang wajar → dikatakan, bukan dibiarkan lolos diam-diam */}
       {outOfRange && (
-        <p className="text-[11px] font-medium text-hud-terracotta">
+        <p className="text-[12px] font-medium text-hud-terracotta">
           {COPY.limitHint(shortIDR(TARGET_MIN), shortIDR(TARGET_MAX))}
         </p>
       )}
@@ -742,8 +742,8 @@ function TargetPanel({
           yang masih bisa ditambah (jangan menyisakan bagian kosong). */}
       {funds.length > 0 && (
         <section className="rounded-2xl bg-cream p-4 ring-1 ring-soil/12">
-          <p className="text-[13px] font-medium text-forest">{COPY.fundTitle}</p>
-          <p className="mt-0.5 text-[11px] leading-relaxed text-forest/45">{COPY.fundCaption}</p>
+          <p className="text-[14px] font-medium text-forest">{COPY.fundTitle}</p>
+          <p className="mt-0.5 text-[12px] leading-relaxed text-forest/45">{COPY.fundCaption}</p>
 
           <div role="radiogroup" aria-label={COPY.fundTitle} className="mt-3 space-y-2">
             {funds.map(({ fund, monthly, percent }) => {
@@ -765,7 +765,7 @@ function TargetPanel({
                   <span className="min-w-0">
                     <span
                       className={cn(
-                        'block truncate text-[13px] font-medium',
+                        'block truncate text-[14px] font-medium',
                         active ? 'text-mint' : 'text-forest',
                       )}
                     >
@@ -773,7 +773,7 @@ function TargetPanel({
                     </span>
                     <span
                       className={cn(
-                        'mt-0.5 block text-[11px] tabular-nums',
+                        'mt-0.5 block text-[12px] tabular-nums',
                         active ? 'text-mint/70' : 'text-forest/45',
                       )}
                     >
@@ -782,7 +782,7 @@ function TargetPanel({
                   </span>
                   <span
                     className={cn(
-                      'shrink-0 rounded-full px-3 py-1.5 text-[11.5px] font-medium tabular-nums',
+                      'shrink-0 rounded-full px-3 py-1.5 text-[12.5px] font-medium tabular-nums',
                       active ? 'bg-mint text-forest' : 'bg-sage text-forest',
                     )}
                   >
@@ -799,7 +799,7 @@ function TargetPanel({
               aria-checked={fundId === null}
               onClick={() => onFundChange(null)}
               className={cn(
-                'flex w-full items-center gap-2.5 rounded-2xl px-3.5 py-2.5 text-left text-[12.5px] font-medium transition-colors',
+                'flex w-full items-center gap-2.5 rounded-2xl px-3.5 py-2.5 text-left text-[13.5px] font-medium transition-colors',
                 fundId === null
                   ? 'bg-sage/70 text-forest'
                   : 'bg-cream text-forest/50 ring-1 ring-soil/14 hover:text-forest',
@@ -811,7 +811,7 @@ function TargetPanel({
           </div>
 
           {/* jujur soal batas: modal ini memutuskan, setorannya di /budget */}
-          <p className="mt-3 text-[11px] leading-relaxed text-forest/45">{COPY.fundSetorHint}</p>
+          <p className="mt-3 text-[12px] leading-relaxed text-forest/45">{COPY.fundSetorHint}</p>
         </section>
       )}
     </div>

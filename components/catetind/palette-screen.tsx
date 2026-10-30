@@ -52,14 +52,14 @@ export function PaletteScreen() {
       <div className="w-full">
         {/* ── KEPALA: eyebrow → judul → pembuka → sumber ─────────────────────── */}
         <header className="max-w-[68ch]">
-          <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-forest/55">
+          <p className="text-[12px] font-medium uppercase tracking-[0.16em] text-forest/55">
             {PALETTE_PAGE_COPY.eyebrow}
           </p>
           <h1 className="mt-1.5 font-display text-3xl font-semibold tracking-tight text-forest lg:text-4xl">
             {PALETTE_PAGE_COPY.title}
           </h1>
-          <p className="mt-3 text-[14px] leading-relaxed text-forest/70">{PALETTE_PAGE_COPY.lede}</p>
-          <p className="mt-2 flex items-start gap-1.5 text-[11.5px] leading-relaxed text-forest/50">
+          <p className="mt-3 text-[15px] leading-relaxed text-forest/70">{PALETTE_PAGE_COPY.lede}</p>
+          <p className="mt-2 flex items-start gap-1.5 text-[12.5px] leading-relaxed text-forest/50">
             <Palette className="mt-[1px] size-3.5 shrink-0" strokeWidth={2.2} aria-hidden />
             <span>{PALETTE_PAGE_COPY.sourceNote}</span>
           </p>
@@ -69,18 +69,18 @@ export function PaletteScreen() {
         <section aria-label="Arsitektur token warna" className="mt-6 grid gap-3 sm:grid-cols-3">
           {PALETTE_LAYERS.map((layer) => (
             <div key={layer.step} className="rounded-2xl bg-sage/60 p-4 ring-1 ring-forest/10">
-              <p className="text-[10.5px] font-medium uppercase tracking-[0.14em] text-forest/55">
+              <p className="text-[11.5px] font-medium uppercase tracking-[0.14em] text-forest/55">
                 {layer.step}
               </p>
-              <p className="mt-1 font-display text-[15px] font-semibold tracking-tight text-forest">
+              <p className="mt-1 font-display text-[16px] font-semibold tracking-tight text-forest">
                 {layer.title}
               </p>
-              <p className="mt-1 text-[12.5px] leading-relaxed text-forest/65">{layer.body}</p>
+              <p className="mt-1 text-[13.5px] leading-relaxed text-forest/65">{layer.body}</p>
             </div>
           ))}
         </section>
 
-        <p className="mt-4 text-[11.5px] text-forest/45">{PALETTE_PAGE_COPY.hint}</p>
+        <p className="mt-4 text-[12.5px] text-forest/45">{PALETTE_PAGE_COPY.hint}</p>
 
         {/* ── GRID WARNA: kanon → alias → turunan → netral → grafik ───────── */}
         {PALETTE_GROUPS.map((group) => (
@@ -94,10 +94,10 @@ export function PaletteScreen() {
 
         {/* ── MAKNA WARNA: status jatah harian + arah uang ─────────────────── */}
         <section className="mt-5 rounded-[2rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] ring-1 ring-soil/12 sm:p-6">
-          <h2 className="font-display text-[18px] font-semibold tracking-tight text-forest">
+          <h2 className="font-display text-[19px] font-semibold tracking-tight text-forest">
             {PALETTE_PAGE_COPY.meaningTitle}
           </h2>
-          <p className="mt-1.5 max-w-[68ch] text-[12.5px] leading-relaxed text-forest/60">
+          <p className="mt-1.5 max-w-[68ch] text-[13.5px] leading-relaxed text-forest/60">
             {PALETTE_PAGE_COPY.meaningDesc}
           </p>
           <ul className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -129,15 +129,15 @@ function PaletteGroupSection({
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <h2
           id={`palette-${group.id}`}
-          className="font-display text-[18px] font-semibold tracking-tight text-forest"
+          className="font-display text-[19px] font-semibold tracking-tight text-forest"
         >
           {group.title}
         </h2>
-        <span className="text-[10.5px] font-medium uppercase tracking-[0.12em] text-forest/45">
+        <span className="text-[11.5px] font-medium uppercase tracking-[0.12em] text-forest/45">
           {PALETTE_PAGE_COPY.countLabel(group.entries.length)}
         </span>
       </div>
-      <p className="mt-1.5 max-w-[68ch] text-[12.5px] leading-relaxed text-forest/60">
+      <p className="mt-1.5 max-w-[68ch] text-[13.5px] leading-relaxed text-forest/60">
         {group.description}
       </p>
       <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
@@ -181,7 +181,7 @@ function PaletteSwatch({
             entry.swatchClass,
           )}
         >
-          <span aria-hidden className={cn('text-[13px] font-medium leading-none', entry.onClass)}>
+          <span aria-hidden className={cn('text-[14px] font-medium leading-none', entry.onClass)}>
             Aa
           </span>
           {/* ikon salin: selalu tampak di sentuh, muncul saat hover/fokus di
@@ -198,15 +198,15 @@ function PaletteSwatch({
           </span>
         </span>
         <span className="mt-2 flex items-baseline justify-between gap-2">
-          <span className="truncate text-[13px] font-medium text-forest">{entry.name}</span>
+          <span className="truncate text-[14px] font-medium text-forest">{entry.name}</span>
           {entry.alias ? (
-            <span className="shrink-0 text-[10px] font-medium uppercase tracking-[0.06em] text-forest/40">
+            <span className="shrink-0 text-[11px] font-medium uppercase tracking-[0.06em] text-forest/40">
               = {entry.alias}
             </span>
           ) : null}
         </span>
-        <span className="mt-0.5 block text-[11.5px] tracking-tight text-forest/55">{entry.hex}</span>
-        <span className="mt-1 block text-[11.5px] leading-relaxed text-forest/60">{entry.note}</span>
+        <span className="mt-0.5 block text-[12.5px] tracking-tight text-forest/55">{entry.hex}</span>
+        <span className="mt-1 block text-[12.5px] leading-relaxed text-forest/60">{entry.note}</span>
       </button>
     </li>
   )
@@ -218,11 +218,11 @@ function PaletteMeaningRow({ meaning }: { meaning: PaletteMeaning }) {
     <li className="flex items-start gap-3 rounded-2xl bg-sage/50 px-3.5 py-3 ring-1 ring-forest/10">
       <span aria-hidden className={cn('mt-1 size-3 shrink-0 rounded-full', meaning.dotClass)} />
       <div className="min-w-0">
-        <p className="text-[13px] font-medium text-forest">
+        <p className="text-[14px] font-medium text-forest">
           {meaning.label}
-          <span className="ml-1.5 text-[11px] font-normal text-forest/45">{meaning.hex}</span>
+          <span className="ml-1.5 text-[12px] font-normal text-forest/45">{meaning.hex}</span>
         </p>
-        <p className="mt-0.5 text-[12px] leading-relaxed text-forest/65">{meaning.note}</p>
+        <p className="mt-0.5 text-[13px] leading-relaxed text-forest/65">{meaning.note}</p>
       </div>
     </li>
   )

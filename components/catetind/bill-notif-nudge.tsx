@@ -101,7 +101,7 @@ export function BillNotifNudge({ className }: { className?: string }) {
           >
             <Bell className="size-4" strokeWidth={2.2} />
           </span>
-          <p className="min-w-0 flex-1 text-[11.5px] font-medium leading-snug text-forest-muted">
+          <p className="min-w-0 flex-1 text-[12.5px] font-medium leading-snug text-forest-muted">
             {NOTIF_NUDGE_COPY}
           </p>
 
@@ -110,7 +110,7 @@ export function BillNotifNudge({ className }: { className?: string }) {
               <button
                 type="button"
                 onClick={activate}
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-forest px-3 py-1.5 text-[11.5px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.97]"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-forest px-3 py-1.5 text-[12.5px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.97]"
               >
                 <Bell className="size-3.5" strokeWidth={2.4} aria-hidden />
                 Aktifkan
@@ -118,13 +118,13 @@ export function BillNotifNudge({ className }: { className?: string }) {
               <button
                 type="button"
                 onClick={dismiss}
-                className="shrink-0 text-[11.5px] font-medium text-forest-muted transition-colors hover:text-forest"
+                className="shrink-0 text-[12.5px] font-medium text-forest-muted transition-colors hover:text-forest"
               >
                 Nanti
               </button>
             </>
           ) : (
-            <span className="shrink-0 text-[11px] font-medium text-forest-muted">
+            <span className="shrink-0 text-[12px] font-medium text-forest-muted">
               Diblokir di browser
             </span>
           )}

@@ -251,6 +251,13 @@ export const AI_CAPTURE_COPY = {
   listeningTitle: 'Lagi dengerin...',
   listeningHint: 'Bicara santai aja, nanti aku yang rapikan.',
   listeningPlaceholder: 'Belum kedengeran suara...',
+  /**
+   * PAKET 101 — contoh ucapan & cara membatalkan, dipakai stage input suara
+   * milik form Catat (engine). Sebelumnya dua kalimat ini menempel di JSX engine;
+   * sekarang copy user-facing tetap tinggal di `lib/` (aturan repo).
+   */
+  voiceExample: 'Ngobrol aja, misal: beli kopi 25 ribu',
+  listeningFinishHint: 'Kalau udah selesai, ketuk mic-nya ya',
   finish: 'Selesai',
   cancel: 'Batal',
 
@@ -274,6 +281,8 @@ export const AI_CAPTURE_COPY = {
   } as Record<'voice' | 'chat', string>,
   /** sedang merapikan KETIKAN user lewat model (sebelum kartu konfirmasi) */
   parsingTitle: 'Lagi aku rapikan tulisanmu... ✨',
+  /** PAKET 101 — versi untuk UCAPAN yang sedang dirapikan di form Catat */
+  parsingVoiceTitle: 'Lagi aku rapikan ucapannya... ✨',
   parsingHint: 'Sebentar ya, aku cocokin nominal, kategori, dan dompetnya',
   fieldLabels: {
     type: 'Tipe',

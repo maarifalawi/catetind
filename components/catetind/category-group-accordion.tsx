@@ -60,10 +60,10 @@ export function GroupAccordion({
                 {group.emoji}
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-[13px] font-medium text-forest">
+                <span className="block truncate text-[14px] font-medium text-forest">
                   {group.name}
                 </span>
-                <span className="mt-0.5 block text-[11px] text-forest/45">
+                <span className="mt-0.5 block text-[12px] text-forest/45">
                   {CATEGORY_PICKER_COPY.groupCount(group.items.length)}
                 </span>
               </span>

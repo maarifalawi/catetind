@@ -78,7 +78,7 @@ export function NotificationBell({ className }: { className?: string }) {
                DESKTOP: kembali menjadi dropdown yang menempel di lonceng. */
             className="fixed inset-x-4 top-16 z-50 rounded-3xl bg-cream p-4 ring-1 ring-soil/12 shadow-[0_24px_60px_-28px_rgba(0,0,0,0.55)] lg:absolute lg:inset-x-auto lg:right-0 lg:top-[calc(100%+0.5rem)] lg:w-[20rem]"
           >
-            <p className="font-display text-[14px] font-medium tracking-tight text-forest">
+            <p className="font-display text-[15px] font-medium tracking-tight text-forest">
               {HOME_NOTIFICATION_COPY.title}
             </p>
 
@@ -86,10 +86,10 @@ export function NotificationBell({ className }: { className?: string }) {
               <span className="flex size-11 items-center justify-center rounded-full bg-cream text-forest/70 ring-1 ring-soil/12">
                 <BellOff className="size-5" strokeWidth={2} aria-hidden />
               </span>
-              <p className="mt-3 text-[13px] font-medium text-forest">
+              <p className="mt-3 text-[14px] font-medium text-forest">
                 {HOME_NOTIFICATION_COPY.emptyTitle}
               </p>
-              <p className="mt-1 text-[11.5px] leading-relaxed text-forest/55">
+              <p className="mt-1 text-[12.5px] leading-relaxed text-forest/55">
                 {HOME_NOTIFICATION_COPY.emptyBody}
               </p>
             </div>
@@ -97,7 +97,7 @@ export function NotificationBell({ className }: { className?: string }) {
             <Link
               href={HOME_NOTIFICATION_COPY.settingsHref}
               onClick={() => setOpen(false)}
-              className="mt-3 flex items-center justify-between rounded-2xl bg-forest px-4 py-2.5 text-[12.5px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.99]"
+              className="mt-3 flex items-center justify-between rounded-2xl bg-forest px-4 py-2.5 text-[13.5px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.99]"
             >
               {HOME_NOTIFICATION_COPY.settingsLink}
               <ChevronRight className="size-4" strokeWidth={2.6} aria-hidden />

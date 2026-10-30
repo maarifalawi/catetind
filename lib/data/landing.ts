@@ -1435,7 +1435,8 @@ export const LEAD_SHEET_COPY = {
   description: 'Tiga field aja. Nggak ada password, nggak ada data pribadi lain.',
   selectedLabel: 'Paket pilihanmu',
   referralLabel: 'Kode referral (opsional)',
-  referralPlaceholder: 'Contoh: RINA-X7K',
+  /** contoh yang bentuknya sah tapi TIDAK ada di database — lihat `lib/data/pricing.ts` */
+  referralPlaceholder: 'Contoh: ABCD-123',
   referralHint: 'Punya kode dari teman? Isi biar kamu dapat diskon.',
   submit: 'Buat akun',
   submitting: 'Mendaftarkan…',

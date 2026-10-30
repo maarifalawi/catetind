@@ -183,7 +183,7 @@ export function HistoryTransactionRow({
         style={{ opacity: dx > 0 ? exposed : 0, pointerEvents: dx > 24 ? 'auto' : 'none' }}
       >
         <Pencil className="size-4" strokeWidth={2.3} />
-        <span className="text-[10px] font-medium">Edit</span>
+        <span className="text-[11px] font-medium">Edit</span>
       </button>
 
       {/* aksi KANAN — tersingkap saat swipe kiri (Hapus, rose = aksi merusak) */}
@@ -198,7 +198,7 @@ export function HistoryTransactionRow({
         style={{ opacity: dx < 0 ? exposed : 0, pointerEvents: dx < -24 ? 'auto' : 'none' }}
       >
         <Trash2 className="size-4" strokeWidth={2.3} />
-        <span className="text-[10px] font-medium">Hapus</span>
+        <span className="text-[11px] font-medium">Hapus</span>
       </button>
 
       {/* konten baris — dibungkus bersama tombol menu supaya keduanya ikut
@@ -255,7 +255,7 @@ export function HistoryTransactionRow({
                   sekarang namanya boleh membungkus sampai DUA baris, jadi yang
                   dibaca user selalu utuh (nama = kategori pilihannya, atau
                   catatan yang ia ketik sendiri). */}
-              <span className="line-clamp-2 text-[13.5px] font-medium text-forest">{tx.name}</span>
+              <span className="line-clamp-2 text-[14.5px] font-medium text-forest">{tx.name}</span>
               {tx.aiGenerated && (
                 <Sparkles
                   className="size-3 shrink-0 text-forest/50"
@@ -268,7 +268,7 @@ export function HistoryTransactionRow({
               {unknownContext && (
                 <span
                   title={UNKNOWN_CONTEXT_COPY.hint}
-                  className="shrink-0 rounded-full bg-cream px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.08em] text-forest/50 ring-1 ring-soil/12"
+                  className="shrink-0 rounded-full bg-cream px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.08em] text-forest/50 ring-1 ring-soil/12"
                 >
                   {UNKNOWN_CONTEXT_COPY.badge}
                 </span>
@@ -280,13 +280,13 @@ export function HistoryTransactionRow({
                 dipindai tanpa menambah satu kalimat pun.
                 Penanda "pindah dana" tetap teks redup — makna uang tidak perlu
                 warna kedua (audit warna). */}
-            <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[11.5px] text-forest/40">
+            <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[12.5px] text-forest/40">
               {showWallet && <span className="min-w-0 truncate">{tx.wallet} ·</span>}
               <span className="shrink-0">{tx.time}</span>
               {!categoryShownAsTitle && (
                 <span
                   className={cn(
-                    'min-w-0 truncate rounded-full px-1.5 py-0.5 text-[10px] font-medium',
+                    'min-w-0 truncate rounded-full px-1.5 py-0.5 text-[11px] font-medium',
                     visual.chip,
                   )}
                 >
@@ -301,7 +301,7 @@ export function HistoryTransactionRow({
 
           <span
             className={cn(
-              'shrink-0 text-[13.5px] font-medium tabular-nums',
+              'shrink-0 text-[14.5px] font-medium tabular-nums',
               tone.text,
             )}
           >

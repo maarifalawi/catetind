@@ -223,7 +223,7 @@ export const PlantWidget = memo(function PlantWidget({
               />
             </>
           )}
-                    <span className="mt-4 text-[11px] font-medium text-forest/40 transition-colors group-hover:text-forest">
+                    <span className="mt-4 text-[12px] font-medium text-forest/40 transition-colors group-hover:text-forest">
             {sleeping ? PLANT_SLEEP_COPY.detailHint : 'Tap untuk lihat detail'}
           </span>
           {/** sparkle kecil di samping teks untuk sentuhan modern (tidak saat tidur) */}
@@ -243,7 +243,7 @@ export const PlantWidget = memo(function PlantWidget({
         {sleeping && (
           <div className="mt-3 flex items-center gap-2 rounded-xl bg-sage/60 px-3 py-2 ring-1 ring-forest/[0.06]">
             <Moon className="size-3.5 shrink-0 text-forest" strokeWidth={2.4} aria-hidden />
-            <p className="text-[11.5px] leading-snug text-forest/65">{PLANT_SLEEP_COPY.caption}</p>
+            <p className="text-[12.5px] leading-snug text-forest/65">{PLANT_SLEEP_COPY.caption}</p>
           </div>
         )}
 
@@ -254,7 +254,7 @@ export const PlantWidget = memo(function PlantWidget({
             atasnya. Tahap terakhir tidak punya "tahap berikutnya": labelnya
             diganti kalimat target, bukan "menuju tahap 4 - Berbunga". */}
         <div className="relative z-10 mt-3 border-t border-soil/12 pt-3.5">
-          <div className="flex items-center justify-between text-[11px]">
+          <div className="flex items-center justify-between text-[12px]">
             <span className="font-medium text-forest/45">{footerLabel}</span>
             <span className="font-medium text-forest tabular-nums">{bandPct}%</span>
           </div>

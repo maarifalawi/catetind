@@ -120,7 +120,7 @@ export const ExpenseDistributionCard = memo(function ExpenseDistributionCard() {
             trigger={
               <button
                 type="button"
-                className="mt-4 rounded-full bg-forest px-5 py-2.5 text-[13px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.97]"
+                className="mt-4 rounded-full bg-forest px-5 py-2.5 text-[14px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.97]"
               >
                 {HOME_MONEY_COPY.distributionEmptyCta}
               </button>
@@ -128,7 +128,7 @@ export const ExpenseDistributionCard = memo(function ExpenseDistributionCard() {
           />
           <Link
             href="/history"
-            className="mt-2.5 text-[11.5px] font-medium text-forest transition-colors hover:text-forest-soft"
+            className="mt-2.5 text-[12.5px] font-medium text-forest transition-colors hover:text-forest-soft"
           >
             {HOME_MONEY_COPY.historyLink}
           </Link>
@@ -187,10 +187,10 @@ export const ExpenseDistributionCard = memo(function ExpenseDistributionCard() {
                 aria-hidden
                 className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-4 text-center"
               >
-                <span className="text-[9.5px] font-medium uppercase tracking-[0.16em] text-forest/40">
+                <span className="text-[10.5px] font-medium uppercase tracking-[0.16em] text-forest/40">
                   {active ? `${active.pct}%` : HOME_MONEY_COPY.distributionCenterLabel}
                 </span>
-                <span className="mt-1 max-w-full truncate text-[13px] font-semibold leading-tight tracking-tight text-forest tabular-nums">
+                <span className="mt-1 max-w-full truncate text-[14px] font-semibold leading-tight tracking-tight text-forest tabular-nums">
                   {active ? active.label : money(total)}
                 </span>
               </div>
@@ -222,13 +222,13 @@ export const ExpenseDistributionCard = memo(function ExpenseDistributionCard() {
                         className="size-2.5 shrink-0 rounded-full"
                         style={{ backgroundColor: PALETTE[i % PALETTE.length] }}
                       />
-                      <span className="min-w-0 flex-1 truncate text-[12.5px] font-medium text-forest">
+                      <span className="min-w-0 flex-1 truncate text-[13.5px] font-medium text-forest">
                         {seg.label}
                       </span>
-                      <span className="shrink-0 text-[12px] font-medium text-forest tabular-nums">
+                      <span className="shrink-0 text-[13px] font-medium text-forest tabular-nums">
                         {seg.pct}%
                       </span>
-                      <span className="w-[92px] shrink-0 text-right text-[11.5px] text-forest/45 tabular-nums">
+                      <span className="w-[92px] shrink-0 text-right text-[12.5px] text-forest/45 tabular-nums">
                         {money(seg.amount)}
                       </span>
                     </button>
@@ -267,9 +267,9 @@ function DistributionTooltip({
   if (!active || !seg) return null
   return (
     <div className="rounded-2xl bg-ink px-3.5 py-2.5 text-cream shadow-[0_16px_34px_-16px_rgba(0,0,0,0.8)]">
-      <p className="text-[11.5px] font-medium">{seg.label}</p>
-      <p className="mt-1 text-[12.5px] font-semibold tabular-nums">{money(seg.amount)}</p>
-      <p className="text-[10.5px] text-cream/60 tabular-nums">
+      <p className="text-[12.5px] font-medium">{seg.label}</p>
+      <p className="mt-1 text-[13.5px] font-semibold tabular-nums">{money(seg.amount)}</p>
+      <p className="text-[11.5px] text-cream/60 tabular-nums">
         {seg.pct}% {HOME_MONEY_COPY.distributionDetailTail}
       </p>
     </div>

@@ -79,7 +79,7 @@ export function ScreenShell({
           className={cn(
             'relative flex w-full min-w-0 flex-1 flex-col',
             'transition-[padding] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none',
-            'lg:pl-[var(--catet-sidebar-w,280px)]',
+            'lg:pl-[var(--catet-sidebar-w,296px)]',
           )}
         >
           {/* Audit UX #8: padding bawah desktop dinaikkan (pb-10 → pb-28 ≈ 112px)
@@ -92,15 +92,36 @@ export function ScreenShell({
               hasCoachFab ? 'lg:pb-28' : 'lg:pb-12',
             )}
           >
-            {/* HEADER MOBILE GLOBAL (paket 75): satu bar atas untuk semua
-                halaman app di mobile — lihat `app-mobile-header.tsx` untuk
-                isinya (logo, lonceng, tombol mata KONDISIONAL, hamburger).
-                Dulu tiap halaman menggambar header mobile sendiri sehingga
-                posisi & isinya beda-beda; sekarang lewat shell ini seragam.
-                Di desktop header ini `lg:hidden` — sidebar + header halaman
-                sendiri yang berlaku. */}
-            <MobileAppHeader />
-            {waitingForPlan || lockedCapability ? null : children}
+            {/* ── SATU KOLOM KONTEN UNTUK SEMUA HALAMAN APP ─────────────────────
+                Tepi kiri-kanan SETIAP halaman app dipegang di sini, bukan di
+                masing-masing screen. Dulu Dashboard & Kekayaan & Hutang punya
+                pembungkus sendiri `mx-auto max-w-[1400px]`, sementara Budget,
+                Tagihan, Riwayat, Dompet, Joint, dan Kalender memakai lebar penuh
+                kolom ini — akibatnya di layar lebar kedua kelompok halaman itu
+                punya margin kiri-kanan yang BEDA (Dashboard terlihat menyempit
+                dan ter-center, halaman lain melebar sampai tepi). Pindah halaman
+                jadi terasa seperti pindah aplikasi.
+
+                Sekarang semua halaman berbagi kolom yang sama di sini:
+                  · di layar kerja biasa (≤1.800 px kolom konten) → selebar penuh
+                    area konten, jadi Dashboard yang dulu 1.400 px ikut melebar
+                    dan sejajar dengan halaman lain;
+                  · di monitor ultra-wide (>2.000 px) → dibatasi 1.800 px dan
+                    di-tengah-kan supaya baris tabel/daftar tidak jadi terlalu
+                    panjang untuk dibaca.
+                Padding `px-*` di pembungkus luar tetap berlaku, jadi batas
+                kiri-kanan isi = padding itu + (kalau ada) sisa ruang tengah. */}
+            <div className="mx-auto flex w-full max-w-[1800px] flex-1 flex-col">
+              {/* HEADER MOBILE GLOBAL (paket 75): satu bar atas untuk semua
+                  halaman app di mobile — lihat `app-mobile-header.tsx` untuk
+                  isinya (logo, lonceng, tombol mata KONDISIONAL, hamburger).
+                  Dulu tiap halaman menggambar header mobile sendiri sehingga
+                  posisi & isinya beda-beda; sekarang lewat shell ini seragam.
+                  Di desktop header ini `lg:hidden` — sidebar + header halaman
+                  sendiri yang berlaku. */}
+              <MobileAppHeader />
+              {waitingForPlan || lockedCapability ? null : children}
+            </div>
           </div>
         </div>
       </section>

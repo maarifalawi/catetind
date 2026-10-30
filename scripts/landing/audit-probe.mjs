@@ -70,7 +70,11 @@ for (const width of widths) {
     const parse = (value) => {
       if (!value || value === 'transparent' || value === 'none') return null
       probeCtx.clearRect(0, 0, 1, 1)
-      probeCtx.fillStyle = '#010203'
+      /* Reset ke TRANSPARAN (bukan warna sentinel): kalau `value` tidak sah,
+         assignment `fillStyle` gagal dan kanvas tetap transparan → `a === 0` di
+         bawah mengembalikan `null`. Sentinel berwarna justru membuat warna tidak
+         sah terbaca sebagai warna nyata, dan itu warna di luar palet. */
+      probeCtx.fillStyle = 'rgba(0, 0, 0, 0)'
       probeCtx.fillStyle = value
       probeCtx.fillRect(0, 0, 1, 1)
       const [r, g, b, a] = probeCtx.getImageData(0, 0, 1, 1).data

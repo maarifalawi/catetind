@@ -207,7 +207,7 @@ export function PickerSheet({
                 >
                   {title}
                 </h2>
-                {subtitle ? <p className="mt-0.5 text-[11.5px] text-forest/50">{subtitle}</p> : null}
+                {subtitle ? <p className="mt-0.5 text-[12.5px] text-forest/50">{subtitle}</p> : null}
               </div>
               <button
                 type="button"

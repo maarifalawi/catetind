@@ -53,10 +53,10 @@ export function InsightCards({ insights }: { insights: HistoryInsight[] }) {
         <Sparkles className="size-[18px]" strokeWidth={2.2} />
       </span>
       <div className="min-w-0">
-        <h2 className="font-display text-[15px] font-semibold tracking-tight text-forest">
+        <h2 className="font-display text-[16px] font-semibold tracking-tight text-forest">
           {INSIGHT_CARD_COPY.title}
         </h2>
-        <p className="text-[11.5px] text-forest/45">
+        <p className="text-[12.5px] text-forest/45">
           {insights.length > 0
             ? INSIGHT_CARD_COPY.found(insights.length)
             : INSIGHT_CARD_COPY.waiting}
@@ -72,7 +72,7 @@ export function InsightCards({ insights }: { insights: HistoryInsight[] }) {
     return (
       <section className="flex h-full flex-col rounded-[2rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] ring-1 ring-soil/12 sm:p-6">
         {header}
-        <p className="mt-3 text-[13px] leading-relaxed text-forest/60">{INSIGHT_CARD_COPY.learning}</p>
+        <p className="mt-3 text-[14px] leading-relaxed text-forest/60">{INSIGHT_CARD_COPY.learning}</p>
       </section>
     )
   }
@@ -118,7 +118,7 @@ function InsightCardItem({
         </span>
         <span
           className={cn(
-            'min-w-0 flex-1 truncate text-[10.5px] font-medium uppercase tracking-[0.14em]',
+            'min-w-0 flex-1 truncate text-[11.5px] font-medium uppercase tracking-[0.14em]',
             tone.eyebrow,
           )}
         >
@@ -131,7 +131,7 @@ function InsightCardItem({
             key={action.label}
             href={action.href}
             className={cn(
-              'inline-flex w-fit shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-[11.5px] font-medium transition-colors active:scale-[0.97]',
+              'inline-flex w-fit shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-[12.5px] font-medium transition-colors active:scale-[0.97]',
               i === 0
                 ? 'bg-forest text-cream hover:bg-forest-soft'
                 : 'bg-cream text-forest ring-1 ring-inset ring-forest/20 hover:bg-sage/60',
@@ -143,7 +143,7 @@ function InsightCardItem({
         ))}
       </div>
 
-      <p className="text-[13px] font-medium leading-relaxed text-forest/75">{card.copy}</p>
+      <p className="text-[14px] font-medium leading-relaxed text-forest/75">{card.copy}</p>
     </motion.article>
   )
 }

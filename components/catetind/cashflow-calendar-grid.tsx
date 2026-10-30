@@ -69,13 +69,13 @@ export function CashflowCalendarGrid({
           Tidak ada sub-teks rentang tanggal; nama periode sudah cukup. */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
-          <h2 className="font-display text-[16px] font-semibold tracking-tight text-forest sm:text-[17px]">
+          <h2 className="font-display text-[17px] font-semibold tracking-tight text-forest sm:text-[18px]">
             {label}
           </h2>
-          <span aria-hidden className="text-[11.5px] font-medium text-forest/25">
+          <span aria-hidden className="text-[12.5px] font-medium text-forest/25">
             ·
           </span>
-          <p className="text-[11.5px] font-medium text-forest/50">
+          <p className="text-[12.5px] font-medium text-forest/50">
             Net{' '}
             <span
               className={cn(
@@ -124,7 +124,7 @@ export function CashflowCalendarGrid({
                 aria-pressed={active}
                 onClick={() => onModeChange(option.id)}
                 className={cn(
-                  'rounded-full px-3 py-1 text-[11.5px] font-medium transition-colors duration-200 active:scale-95',
+                  'rounded-full px-3 py-1 text-[12.5px] font-medium transition-colors duration-200 active:scale-95',
                   active ? 'bg-forest text-mint' : 'text-forest/50 hover:text-forest',
                 )}
               >
@@ -137,7 +137,7 @@ export function CashflowCalendarGrid({
         <button
           type="button"
           onClick={onToday}
-          className="h-7 shrink-0 rounded-full px-3 text-[11.5px] font-medium text-forest/55 transition-colors hover:bg-sage/50 hover:text-forest active:scale-95"
+          className="h-7 shrink-0 rounded-full px-3 text-[12.5px] font-medium text-forest/55 transition-colors hover:bg-sage/50 hover:text-forest active:scale-95"
         >
           Hari Ini
         </button>
@@ -154,7 +154,7 @@ export function CashflowCalendarGrid({
             <span
               key={day}
               className={cn(
-                'pb-1 text-center text-[10px] font-medium uppercase tracking-[0.08em]',
+                'pb-1 text-center text-[11px] font-medium uppercase tracking-[0.08em]',
                 index >= 5 ? 'text-forest/25' : 'text-forest/35',
               )}
             >
@@ -217,7 +217,7 @@ function CalendarDayCell({
       aria-pressed={selected}
       aria-label={ariaLabel}
       className={cn(
-        'relative flex aspect-square w-full items-center justify-center rounded-[10px] text-[12px] font-semibold tabular-nums ring-1 ring-inset ring-soil/8 transition-[transform,background-color,box-shadow] duration-200 animate-[fade-pop_0.4s_ease_backwards] hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40 sm:aspect-auto sm:min-h-[56px] sm:text-[13px] lg:min-h-[68px]',
+        'relative flex aspect-square w-full items-center justify-center rounded-[10px] text-[13px] font-semibold tabular-nums ring-1 ring-inset ring-soil/8 transition-[transform,background-color,box-shadow] duration-200 animate-[fade-pop_0.4s_ease_backwards] hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40 sm:aspect-auto sm:min-h-[56px] sm:text-[14px] lg:min-h-[68px]',
         CALENDAR_LOOK_CELL[look],
         selected
           ? darkFill

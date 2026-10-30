@@ -213,6 +213,51 @@ describe('POST /api/payment/webhook', () => {
     expect(fulfilled).toBe(true)
   })
 
+  /* ── CAPTURE + FRAUD STATUS ────────────────────────────────────────────────
+     `capture` baru boleh mengaktifkan paket saat `fraud_status: 'accept'`.
+     Challenge/deny = belum (atau tidak) lunas. */
+  it('capture dengan fraud accept → paket diaktifkan', async () => {
+    probe.serviceKey.value = 'service-key-palsu'
+    const calls: [string, Record<string, unknown>][] = []
+    probe.rpc.value = (fn, args) => {
+      calls.push([fn, args])
+      return {
+        ok: true,
+        status: 200,
+        data: [{ claimed_slot: null, claimed_price: 129000, claimed_tier: 'waras', already_processed: false }],
+      }
+    }
+    probe.fetch.value = () => ({ ok: true, status: 200, data: [{ expected_amount: 129000, status: 'pending' }] })
+
+    const res = await POST(notify({ transaction_status: 'capture', fraud_status: 'accept' }))
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.handled).toBe(true)
+    expect(body.settled).toBe(true)
+    expect(calls[0][1].p_status).toBe('capture')
+  })
+
+  it('capture dengan fraud challenge → TIDAK diaktifkan & RPC tidak dipanggil', async () => {
+    probe.serviceKey.value = 'service-key-palsu'
+    let fulfilled = false
+    probe.rpc.value = () => {
+      fulfilled = true
+      return {
+        ok: true,
+        status: 200,
+        data: [{ claimed_slot: null, claimed_price: 129000, claimed_tier: 'waras', already_processed: false }],
+      }
+    }
+    probe.fetch.value = () => ({ ok: true, status: 200, data: [{ expected_amount: 129000, status: 'pending' }] })
+
+    const res = await POST(notify({ transaction_status: 'capture', fraud_status: 'challenge' }))
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.handled).toBe(false)
+    expect(body.fraudStatus).toBe('challenge')
+    expect(fulfilled).toBe(false)
+  })
+
   it('pembayaran DISKON (expected_amount = nominal diskon) tetap dipenuhi', async () => {
     probe.serviceKey.value = 'service-key-palsu'
     let fulfilled = false

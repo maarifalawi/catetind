@@ -5,10 +5,10 @@ import { cn } from '@/lib/utils'
 
 /* ── FOOTER LANDING ──────────────────────────────────────────────────────────
    Penutup halaman versi ringan: satu panel besar bertinta sage → putih, sudut
-   sangat lembut, dan tiga kolom tautan yang tenang. Warna gelap lama
-   (`#1e2c22`) dihapus — footer ini memakai palet kanon yang sama dengan kartu
-   landing (canvas/sage/mint/forest), jadi tidak terasa seperti blok terpisah
-   yang ditempel di bawah halaman.
+   sangat lembut, dan tiga kolom tautan yang tenang. Warna gelap lama (nuansa
+   evergreen pekat di luar palet kanon) sudah dihapus — footer ini memakai palet
+   kanon yang sama dengan kartu landing (canvas/sage/mint/forest), jadi tidak
+   terasa seperti blok terpisah yang ditempel di bawah halaman.
 
    Struktur semantic: <footer> → <nav aria-labelledby> → <ul> → <li>.
 

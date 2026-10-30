@@ -58,6 +58,14 @@ export type LedgerRowType =
    * utang/piutang baru (`lib/data/wealth-cash.ts`), bukan cuma diselipkan di teks.
    */
   | 'change'
+  /**
+   * TARIK DANA dari celengan: uang MASUK kembali ke dompet.
+   *
+   * Bukan `income` (menarik tabungan sendiri bukan pemasukan, jadi Arus Uang dan
+   * Jatah Hari Ini tidak boleh naik) dan bukan `transfer` (yang selalu berarti
+   * uang KELUAR). Dua sisi uangnya: `current` celengan turun, saldo dompet naik.
+   */
+  | 'saving_withdraw'
 
 export interface LedgerRow {
   /** id unik baris di ledger (`session-9001`) */
@@ -102,6 +110,7 @@ export function walletDelta(row: LedgerRow, walletId: string): number {
     switch (row.type) {
       case 'income':
       case 'receivable_payment':
+      case 'saving_withdraw':
         return row.amount
       case 'balance_adjustment':
       case 'change':

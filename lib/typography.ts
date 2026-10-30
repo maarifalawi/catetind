@@ -14,7 +14,7 @@
    utuh di source code. */
 
 /** eyebrow kecil di atas nominal — "SALDO", "TOTAL SALDO" */
-export const AMOUNT_LABEL = 'text-[11px] font-medium uppercase tracking-[0.14em]'
+export const AMOUNT_LABEL = 'text-[12px] font-medium uppercase tracking-[0.14em]'
 
 /** nominal besar: hero Dompet & Akun + muka kartu "Total Saldo" di Dashboard */
 export const AMOUNT_XL = 'text-3xl font-medium tracking-tight tabular-nums sm:text-4xl'

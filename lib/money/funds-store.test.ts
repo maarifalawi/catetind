@@ -3,10 +3,13 @@ import {
   FUND_CONTRIBUTIONS,
   INITIAL_SINKING_FUNDS,
   computeDailyHud,
+  earnedInWindow,
   fundPercent,
   heroFundOf,
+  periodWindowForTab,
   sinkingObligationOf,
   sortFundsByUrgency,
+  spentInWindow,
   type SinkingFundItem,
 } from '@/lib/data/budget'
 import {
@@ -25,8 +28,11 @@ import {
   subscribeFundsStore,
   sweepIntoFund,
   useFundsStore,
+  withdrawFromFund,
   type PersistedFunds,
 } from './funds-store'
+import { balancesOf, getMoneySnapshot, recordedTransactions, resetMoneyStore, walletBalance } from './store'
+import { assertLedgerInvariant } from './ledger'
 
 /* ── SATU STORE CELENGAN (paket 46) ──────────────────────────────────────────
    Temuan uji pemakaian yang dijaga di sini: kartu "Tabungan Impian" di Dashboard
@@ -45,6 +51,9 @@ import {
    selector yang sama, jadi janji "satu sumber" cukup dikunci di lapis data. */
 
 beforeEach(() => {
+  /* store UANG juga direset: setoran & penarikan celengan menyentuh dompet, jadi
+     tanpa dompet kanon di ledger keduanya (benar) menolak menulis. */
+  resetMoneyStore()
   resetFundsStore()
 })
 
@@ -443,5 +452,104 @@ describe('deleteFund / restoreFund — hapus celengan (60.2)', () => {
     expect(purged.removedIds).toEqual([])
     expect(purged.funds).toEqual([])
     expect(liveFunds(getFundsSnapshot())).toEqual([])
+  })
+})
+
+/* ── TARIK DANA (kebalikan setoran) ──────────────────────────────────────────
+   Sebelum ini tidak ada jalan mengeluarkan uang dari celengan selain
+   MENGHAPUSNYA. Test di bawah mengunci janji uangnya, bukan cuma tombolnya:
+
+     1. saldo dompet NAIK tepat sebesar nominal yang ditarik;
+     2. Arus Uang / Budget / Jatah Hari Ini TIDAK naik (bukan pemasukan);
+     3. saldo celengan turun, tidak pernah di bawah nol;
+     4. Setor lalu tarik dengan nominal sama = saldo dompet kembali semula. */
+describe('tarik dana celengan (kebalikan setoran)', () => {
+  const WALLET = 'bca'
+
+  it('menarik dana menaikkan saldo dompet tepat sebesar nominalnya', () => {
+    const fund = liveFunds(getFundsSnapshot())[0]
+    const before = walletBalance(getMoneySnapshot(), WALLET)
+
+    const result = withdrawFromFund(fund.id, 200_000, WALLET, '2026-09-28')
+    expect(result).not.toBeNull()
+    expect(walletBalance(getMoneySnapshot(), WALLET)).toBe(before + 200_000)
+    expect(result!.fund.current).toBe(fund.current - 200_000)
+    expect(result!.contribution.direction).toBe('out')
+  })
+
+  it('setor lalu tarik dengan nominal sama: saldo dompet kembali seperti semula', () => {
+    const fund = liveFunds(getFundsSnapshot())[0]
+    const before = walletBalance(getMoneySnapshot(), WALLET)
+
+    contributeToFund(fund.id, 150_000, WALLET, '2026-09-27')
+    expect(walletBalance(getMoneySnapshot(), WALLET)).toBe(before - 150_000)
+
+    withdrawFromFund(fund.id, 150_000, WALLET, '2026-09-28')
+    expect(walletBalance(getMoneySnapshot(), WALLET)).toBe(before)
+  })
+
+  it('penarikan BUKAN pemasukan: Arus Uang & Jatah Hari Ini tidak naik', () => {
+    const fund = liveFunds(getFundsSnapshot())[0]
+    const rows = recordedTransactions(getMoneySnapshot())
+    const window = periodWindowForTab('monthly', '2026-09-28')
+    const spentBefore = spentInWindow(rows, window)
+    const earnedBefore = earnedInWindow(rows, window)
+    const hudBefore = computeDailyHud({ spent: spentBefore, window })
+
+    withdrawFromFund(fund.id, 100_000, WALLET, '2026-09-28')
+
+    const after = recordedTransactions(getMoneySnapshot())
+    expect(spentInWindow(after, window)).toBe(spentBefore)
+    expect(earnedInWindow(after, window)).toBe(earnedBefore)
+    const hudAfter = computeDailyHud({ spent: spentInWindow(after, window), window })
+    expect(hudAfter.dailyBudget).toBe(hudBefore.dailyBudget)
+    expect(hudAfter.remaining).toBe(hudBefore.remaining)
+  })
+
+  it('baris riwayatnya tampil sebagai pindah dana, bukan pemasukan', () => {
+    const fund = liveFunds(getFundsSnapshot())[0]
+    const result = withdrawFromFund(fund.id, 75_000, WALLET, '2026-09-28')
+    expect(result).not.toBeNull()
+
+    const rows = recordedTransactions(getMoneySnapshot())
+    const row = rows.find((tx) => tx.name === `Tarik ${result!.fund.name}`)
+    expect(row).toBeDefined()
+    expect(row!.type).toBe('transfer')
+    expect(row!.amount).toBe(75_000)
+    /* invariant ledger tetap seimbang setelah baris bertipe baru */
+    expect(() =>
+      assertLedgerInvariant(getMoneySnapshot().rows, {
+        openings: Object.fromEntries(
+          getMoneySnapshot().wallets.map((wallet) => [wallet.id, wallet.opening]),
+        ),
+        balances: balancesOf(getMoneySnapshot()),
+      }),
+    ).not.toThrow()
+  })
+
+  it('menolak nominal melebihi saldo celengan & tidak menulis apa pun', () => {
+    const fund = liveFunds(getFundsSnapshot())[0]
+    const before = {
+      wallet: walletBalance(getMoneySnapshot(), WALLET),
+      current: fund.current,
+      rows: getMoneySnapshot().rows.length,
+      contributions: getFundsSnapshot().contributions.length,
+    }
+
+    expect(withdrawFromFund(fund.id, fund.current + 1, WALLET)).toBeNull()
+    expect(withdrawFromFund(fund.id, 0, WALLET)).toBeNull()
+    expect(withdrawFromFund(fund.id, -5, WALLET)).toBeNull()
+    /* dompet yang belum ada di ledger juga ditolak (uang tidak mendarat) */
+    expect(withdrawFromFund(fund.id, 10_000, 'dompet-hantu')).toBeNull()
+
+    expect(walletBalance(getMoneySnapshot(), WALLET)).toBe(before.wallet)
+    expect(fundById(getFundsSnapshot(), fund.id)!.current).toBe(before.current)
+    expect(getMoneySnapshot().rows.length).toBe(before.rows)
+    expect(getFundsSnapshot().contributions.length).toBe(before.contributions)
+  })
+
+  it('celengan yang sudah dihapus tidak bisa ditarik', () => {
+    deleteFund(1)
+    expect(withdrawFromFund(1, 10_000, WALLET)).toBeNull()
   })
 })

@@ -76,22 +76,22 @@ export function LocalDataNotice() {
       aria-live="polite"
       className="mt-5 rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12 sm:p-6"
     >
-      <p className="inline-flex items-center gap-2 text-[15px] font-medium text-forest">
+      <p className="inline-flex items-center gap-2 text-[16px] font-medium text-forest">
         <HardDrive className="size-4 shrink-0 text-forest" strokeWidth={2.2} aria-hidden />
         Ada data lama di perangkat ini
       </p>
-      <p className="mt-1.5 text-[13px] leading-relaxed text-forest/60">
+      <p className="mt-1.5 text-[14px] leading-relaxed text-forest/60">
         Data ini <b className="font-medium text-forest">tidak</b> dimasukkan ke akunmu, supaya akun
         baru tidak mewarisi saldo dari demo atau akun lain di browser yang sama.
       </p>
       {!canImport && (
-        <p className="mt-1.5 text-[11.5px] leading-relaxed text-forest/45">
+        <p className="mt-1.5 text-[12.5px] leading-relaxed text-forest/45">
           Akun ini sudah punya data, jadi pilihan yang tersedia hanya unduh atau hapus dari
           perangkat.
         </p>
       )}
       {error && (
-        <p className="mt-2 text-[11.5px] font-medium text-hud-terracotta">{error}</p>
+        <p className="mt-2 text-[12.5px] font-medium text-hud-terracotta">{error}</p>
       )}
 
       <div className="mt-4 flex flex-wrap gap-2">
@@ -100,7 +100,7 @@ export function LocalDataNotice() {
             type="button"
             onClick={handleImport}
             disabled={busy !== null}
-            className="inline-flex items-center gap-2 rounded-2xl bg-forest px-4 py-2.5 text-[12.5px] font-medium text-mint transition-colors hover:bg-forest-soft disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-2xl bg-forest px-4 py-2.5 text-[13.5px] font-medium text-mint transition-colors hover:bg-forest-soft disabled:opacity-60"
           >
             <Upload className="size-3.5" strokeWidth={2.4} aria-hidden />
             {busy === 'import' ? 'Memasukkan…' : 'Masukkan ke akun'}
@@ -110,7 +110,7 @@ export function LocalDataNotice() {
           type="button"
           onClick={handleDownload}
           disabled={busy !== null}
-          className="inline-flex items-center gap-2 rounded-2xl bg-sage/60 px-4 py-2.5 text-[12.5px] font-medium text-forest transition-colors hover:bg-sage disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-2xl bg-sage/60 px-4 py-2.5 text-[13.5px] font-medium text-forest transition-colors hover:bg-sage disabled:opacity-60"
         >
           <Download className="size-3.5" strokeWidth={2.4} aria-hidden />
           {busy === 'download' ? 'Menyiapkan…' : 'Unduh JSON'}
@@ -119,7 +119,7 @@ export function LocalDataNotice() {
           type="button"
           onClick={handleDiscard}
           disabled={busy !== null}
-          className="inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-[12.5px] font-medium text-hud-terracotta transition-colors hover:bg-hud-amber/20 disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-[13.5px] font-medium text-hud-terracotta transition-colors hover:bg-hud-amber/20 disabled:opacity-60"
         >
           <Trash2 className="size-3.5" strokeWidth={2.4} aria-hidden />
           {busy === 'discard' ? 'Menghapus…' : 'Hapus dari perangkat'}

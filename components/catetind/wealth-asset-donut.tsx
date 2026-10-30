@@ -52,10 +52,10 @@ export function WealthAssetDonut({
   return (
     <div className="rounded-[1.75rem] bg-cream p-5 shadow-[0_18px_44px_-30px_rgba(0,0,0,0.45)] ring-1 ring-soil/10 sm:p-6">
       <div className="flex items-baseline justify-between gap-3">
-        <h3 className="font-display text-[13.5px] font-semibold tracking-tight text-forest">
+        <h3 className="font-display text-[14.5px] font-semibold tracking-tight text-forest">
           Alokasi Aset
         </h3>
-        <span className="text-[10.5px] font-medium uppercase tracking-[0.16em] text-forest/35">
+        <span className="text-[11.5px] font-medium uppercase tracking-[0.16em] text-forest/35">
           {slices.length} jenis
         </span>
       </div>
@@ -111,18 +111,18 @@ export function WealthAssetDonut({
               transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
               className="flex flex-col items-center"
             >
-              <span className="text-[15px] leading-none">{active.emoji}</span>
+              <span className="text-[16px] leading-none">{active.emoji}</span>
               <span className="mt-1 font-display text-[22px] font-semibold leading-none tracking-tight text-forest tabular-nums">
                 {active.pct}%
               </span>
-              <span className="mt-1 text-[10.5px] font-medium text-forest/45">{active.label}</span>
+              <span className="mt-1 text-[11.5px] font-medium text-forest/45">{active.label}</span>
             </motion.span>
           ) : (
             <>
               <span className="font-display text-[26px] font-semibold leading-none tracking-tight text-forest tabular-nums">
                 {investments.length}
               </span>
-              <span className="mt-1 text-[10.5px] font-medium uppercase tracking-[0.16em] text-forest/40">
+              <span className="mt-1 text-[11.5px] font-medium uppercase tracking-[0.16em] text-forest/40">
                 aset
               </span>
             </>
@@ -149,14 +149,14 @@ function DonutTooltip({
   if (!active || !slice) return null
   return (
     <div className="rounded-2xl bg-ink px-3.5 py-2.5 text-cream shadow-[0_16px_34px_-16px_rgba(0,0,0,0.8)]">
-      <p className="flex items-center gap-1.5 text-[11.5px] font-medium">
+      <p className="flex items-center gap-1.5 text-[12.5px] font-medium">
         <span aria-hidden>{slice.emoji}</span>
         {slice.label}
       </p>
-      <p className="mt-1 text-[12.5px] font-semibold tabular-nums">
+      <p className="mt-1 text-[13.5px] font-semibold tabular-nums">
         {maskMoney(slice.value, masked)}
       </p>
-      <p className="text-[10.5px] text-cream/60 tabular-nums">{slice.pct}% dari portofolio</p>
+      <p className="text-[11.5px] text-cream/60 tabular-nums">{slice.pct}% dari portofolio</p>
     </div>
   )
 }

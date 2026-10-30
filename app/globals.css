@@ -274,6 +274,37 @@
   --font-weight-black: 600;
 }
 
+/* ── SKALA TEKS: SATU TINGKAT LEBIH BESAR (permintaan keterbacaan) ───────────
+   Keluhan nyata di layar kerja lebar (≥1.900 px): seluruh isi app terasa kecil
+   dan label abu-abu di sidebar susah dibaca. Skala lama memang disetel untuk
+   kanvas 1.280–1.440 px, jadi di monitor besar huruf 11–13 px terlihat seperti
+   catatan kaki.
+
+   Perbaikannya SATU TINGKAT, bukan desain ulang: seluruh teks di bawah 20 px
+   naik 1 px — termasuk kelas `text-[…px]` yang tersebar di komponen app
+   (`components/catetind`, `components/dashboard`, `components/ui`) — sehingga
+   hierarkinya tetap:
+     · label mikro 10 → 11 px, meta 11,5 → 12,5 px,
+     · body/label 13 → 14 px,
+     · teks kartu `text-sm` 14 → 15 px, isi form `text-base` 16 → 17 px,
+       sub-judul `text-lg` 18 → 19 px.
+   Judul halaman (`text-3xl`/`text-4xl`) dan nominal besar SENGAJA tidak ikut:
+   keduanya sudah jadi jangkar visual, dan menaikkannya hanya memakan ruang.
+
+   `--text-*--line-height` ikut dinaikkan dengan rasio yang sama supaya jarak
+   baris tidak terasa sesak setelah hurufnya membesar (mis. sm: 21,4 px).
+   Angka px di komentar = nilai hasil (bukan tebakan). */
+@theme {
+  --text-xs: 0.8125rem; /* 13 px — sebelumnya 12 */
+  --text-xs--line-height: 1.0625rem; /* 17 px */
+  --text-sm: 0.9375rem; /* 15 px — sebelumnya 14 */
+  --text-sm--line-height: 1.34375rem; /* 21,5 px */
+  --text-base: 1.0625rem; /* 17 px — sebelumnya 16 */
+  --text-base--line-height: 1.59375rem; /* 25,5 px */
+  --text-lg: 1.1875rem; /* 19 px — sebelumnya 18 */
+  --text-lg--line-height: 1.84375rem; /* 29,5 px */
+}
+
 /* Varian gelap memakai palet yang SAMA (Soil sebagai kanvas, Evergreen sebagai
    permukaan) supaya primitif shadcn/ui tidak pernah keluar dari palet kanon. */
 .dark {
