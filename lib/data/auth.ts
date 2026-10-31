@@ -145,6 +145,14 @@ export const LOGIN_COPY = {
   resendSentNote: 'Kode baru sudah dikirim. Cek inbox lagi ya 📩',
   invalidCode: 'Kodenya 6 angka ya. Cek lagi emailnya.',
 
+  /* ── jalur kode tetap pemilik (tanpa email) ───────────────────────────────
+     Dipakai hanya untuk email di `lib/data/owner-access.ts`. Copy-nya sengaja
+     TIDAK menyebut kodenya di UI: yang perlu dikatakan hanya bahwa tidak ada
+     email yang dikirim. */
+  ownerCodeLead: 'Kode akses pemilik untuk',
+  ownerCodeToast: 'Kode akses pemilik siap 🔑',
+  ownerCodeToastDescription: 'Tidak ada email yang dikirim. Ketik kode akses pemilikmu di bawah.',
+
   /* ── tautan sekunder ───────────────────────────────────────────────────── */
   /** aksi sekunder: belum punya akun → daftar (route /checkout sudah ada) */
   registerLead: 'Belum punya akun?',

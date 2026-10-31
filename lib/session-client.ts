@@ -11,12 +11,22 @@ import { buildVerifyHref } from './data/auth'
      · masuk  → `verifyOtp` (kode 6 angka) atau `exchangeCodeForSession` (tautan);
      · keluar → `DELETE /api/session` (server yang mencabut token + hapus cookie).
 
+   Pengecualian tunggal: akun pemilik (env `OWNER_TEST_EMAIL` / `OWNER_TEST_OTP`
+   di server) masuk dengan kode tetap lewat `POST /api/auth/owner` — tidak ada
+   email, sesi dibuat server. Klien tidak pernah tahu email/kodenya; ia hanya
+   BERTANYA ke route itu (lihat `ownerFastLoginAvailable`).
+
    Semua fungsi di sini mengembalikan `{ ok }` alih-alih melempar: layar masuk
    harus bisa menampilkan pesan Indonesia yang manusiawi, dan kegagalan jaringan
    bukan pengecualian yang layak menutup halaman. */
 
 export type AuthResult =
-  | { ok: true; message?: string }
+  /**
+   * `emailSent: false` = jalur tanpa email (kode tetap pemilik). Layar masuk
+   * memakainya untuk tidak mengaku "kode dikirim ke inbox". Lihat
+   * `lib/data/owner-access.ts`.
+   */
+  | { ok: true; message?: string; emailSent?: boolean }
   | { ok: false; error: string }
 
 export interface SessionUserView {
@@ -36,6 +46,28 @@ export function loginRedirectUrl(email: string, next?: string | null): string {
 }
 
 /**
+ * Tanya ke SERVER apakah email ini memakai jalur kode tetap pemilik.
+ *
+ * Klien sengaja TIDAK menyimpan email/kode pemilik (nilainya hanya di env
+ * server, bukan `NEXT_PUBLIC_*`). Kalau route belum dikonfigurasi, dimatikan,
+ * atau tidak terjangkau, jawabannya `false` — login OTP biasa berjalan normal.
+ */
+async function ownerFastLoginAvailable(email: string): Promise<boolean> {
+  try {
+    const res = await fetch('/api/auth/owner', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email.trim() }),
+    })
+    if (!res.ok) return false
+    const data = (await res.json().catch(() => null)) as { fastLogin?: boolean } | null
+    return data?.fastLogin === true
+  } catch {
+    return false
+  }
+}
+
+/**
  * Kirim tautan masuk / kode OTP ke email. `shouldCreateUser: true` karena app ini
  * mendaftarkan user hanya dengan email (zero password, PRD 5933).
  *
@@ -43,6 +75,17 @@ export function loginRedirectUrl(email: string, next?: string | null): string {
  * baru harus membuka inbox dulu — layar /login/verify yang menjelaskan langkahnya.
  */
 export async function sendLoginLink(email: string, next?: string | null): Promise<AuthResult> {
+  /* Jalur kode tetap pemilik: TIDAK ada email yang dikirim. Supaya permintaan
+     ini tidak menyentuh SMTP Supabase sama sekali, layar masuk langsung lanjut
+     ke langkah kode dengan penanda `emailSent: false`. */
+  if (await ownerFastLoginAvailable(email)) {
+    return {
+      ok: true,
+      message: 'Kode akses pemilik siap dipakai.',
+      emailSent: false,
+    }
+  }
+
   const client = browserSupabase()
   if (!client) return { ok: false, error: 'Backend Supabase belum dikonfigurasi di build ini.' }
   try {
@@ -57,12 +100,53 @@ export async function sendLoginLink(email: string, next?: string | null): Promis
   }
 }
 
-/** Masuk dengan kode 6 angka dari email — tanpa password */
-export async function verifyEmailOtp(email: string, token: string): Promise<AuthResult> {
-  const client = browserSupabase()
-  if (!client) return { ok: false, error: 'Backend Supabase belum dikonfigurasi di build ini.' }
+/**
+ * Masuk dengan kode 6 angka.
+ *
+ * `fastLogin` = petunjuk dari layar masuk hasil `sendLoginLink`:
+ *   · `true`  → email ini jalur pemilik; JANGAN jatuh ke Supabase (OTP-nya
+ *               memang tidak pernah dikirim);
+ *   · `false` → jalur OTP biasa;
+ *   · tidak diisi (mis. halaman `/login/verify`) → coba jalur pemilik dulu,
+ *               lalu jatuh ke OTP biasa kalau route menjawab 401.
+ * Validasi kredensial pemilik tetap 100% di server (`/api/auth/owner`); petunjuk
+ * ini hanya memilih jalur, bukan memberi izin.
+ */
+export async function verifyEmailOtp(
+  email: string,
+  token: string,
+  { fastLogin }: { fastLogin?: boolean } = {},
+): Promise<AuthResult> {
   const code = token.replace(/\D/g, '')
   if (code.length < 6) return { ok: false, error: 'Kodenya 6 angka ya. Cek lagi emailnya.' }
+
+  /* ── JALUR PEMILIK: kode tetap, sesi dibuat SERVER ────────────────────────
+     Supabase tidak pernah mengirim OTP untuk jalur ini, jadi `verifyOtp` biasa
+     pasti ditolak. Route `/api/auth/owner` yang memvalidasi kredensial, membuat
+     token lewat Admin API tanpa email, lalu menukarnya jadi sesi + cookie lewat
+     `@supabase/ssr`. Browser tidak pernah menerima token itu. */
+  if (fastLogin !== false) {
+    try {
+      const res = await fetch('/api/auth/owner', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), code }),
+      })
+      const data = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null
+      if (res.ok && data?.ok === true) return { ok: true }
+      /* Petunjuk `true` = email ini memang jalur pemilik → jangan lanjut ke
+         Supabase; tampilkan alasan dari server apa adanya. */
+      if (fastLogin === true || res.status !== 401) {
+        return { ok: false, error: data?.error ?? 'Kode akses belum bisa dipakai.' }
+      }
+      /* 401 tanpa petunjuk = bukan jalur pemilik → verifikasi OTP biasa di bawah */
+    } catch {
+      /* jaringan bermasalah: biarkan jalur OTP biasa mencoba */
+    }
+  }
+
+  const client = browserSupabase()
+  if (!client) return { ok: false, error: 'Backend Supabase belum dikonfigurasi di build ini.' }
   try {
     const { error } = await client.auth.verifyOtp({ email: email.trim(), token: code, type: 'email' })
     if (error) return { ok: false, error: error.message }

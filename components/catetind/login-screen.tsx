@@ -72,6 +72,8 @@ export function LoginScreen({ next }: { next?: string | null }) {
   const [verifying, setVerifying] = useState(false)
   /** cooldown kirim ulang: 0 = tombol aktif, > 0 = hitung mundur */
   const [secondsLeft, setSecondsLeft] = useState(0)
+  /** true = email ini memakai jalur kode tetap pemilik (tanpa email) */
+  const [ownerPath, setOwnerPath] = useState(false)
 
   const emailValid = isValidEmail(email)
   const otpValid = isValidOtpCode(otp)
@@ -102,7 +104,8 @@ export function LoginScreen({ next }: { next?: string | null }) {
     setSending(true)
     /* NYATA: Supabase mengirim kode 6 angka (dan tautan) ke email ini. Kita
        TIDAK berpura-pura "mengirim" dengan timer — step hanya berubah setelah
-       server benar-benar menjawab. */
+       server benar-benar menjawab. (Jalur kode tetap pemilik menjawab tanpa
+       mengirim email; lihat `lib/data/owner-access.ts`.) */
     const result = await sendLoginLink(trimmedEmail)
     setSending(false)
     if (!result.ok) {
@@ -110,11 +113,16 @@ export function LoginScreen({ next }: { next?: string | null }) {
       return
     }
     /* lanjut ke langkah kode DI HALAMAN INI — user tidak pindah app/route */
+    const isOwner = result.emailSent === false
+    setOwnerPath(isOwner)
     setOtp('')
     setCodeError(false)
     setSecondsLeft(RESEND_SECONDS)
     setStep('code')
-    toast.success(LOGIN_COPY.codeSentToast, { description: LOGIN_COPY.codeSentToastDescription })
+    toast.success(
+      isOwner ? LOGIN_COPY.ownerCodeToast : LOGIN_COPY.codeSentToast,
+      { description: isOwner ? LOGIN_COPY.ownerCodeToastDescription : LOGIN_COPY.codeSentToastDescription },
+    )
   }
 
   /**
@@ -140,9 +148,11 @@ export function LoginScreen({ next }: { next?: string | null }) {
     setCodeError(false)
     setVerifying(true)
     /* SATU jalur masuk untuk semua email: kode 6 angka dari Supabase.
-       Jalur kode tetap khusus reviewer Midtrans sudah DIHAPUS setelah merchant
-       di-ACC — tidak ada lagi pintu masuk yang melewati inbox. */
-    const result = await verifyEmailOtp(trimmedEmail, otp)
+       Satu-satunya pengecualian adalah kode tetap milik PEMILIK aplikasi —
+       sesinya tetap sesi Supabase sungguhan, hanya dibuat server tanpa email
+       (`/api/auth/owner`, kredensialnya dari env server). `fastLogin` hanya
+       memilih jalur; izinnya tetap diperiksa server. */
+    const result = await verifyEmailOtp(trimmedEmail, otp, { fastLogin: ownerPath })
     setVerifying(false)
     if (!result.ok) {
       setCodeError(true)
@@ -166,8 +176,16 @@ export function LoginScreen({ next }: { next?: string | null }) {
     if (!canResend) return
     setSecondsLeft(RESEND_SECONDS)
     void sendLoginLink(trimmedEmail).then((result) => {
-      if (result.ok) toast.success(LOGIN_COPY.resendSentNote)
-      else toast.error(VERIFY_COPY.resendFailed, { description: result.error })
+      if (!result.ok) {
+        toast.error(VERIFY_COPY.resendFailed, { description: result.error })
+        return
+      }
+      /* jalur pemilik tidak mengirim email — jangan mengaku "kode baru dikirim" */
+      if (result.emailSent === false) {
+        toast.success(LOGIN_COPY.ownerCodeToast, { description: LOGIN_COPY.ownerCodeToastDescription })
+        return
+      }
+       toast.success(LOGIN_COPY.resendSentNote)
     })
   }
 
@@ -176,6 +194,7 @@ export function LoginScreen({ next }: { next?: string | null }) {
     setStep('email')
     setOtp('')
     setCodeError(false)
+    setOwnerPath(false)
   }
 
   return (
@@ -289,7 +308,7 @@ export function LoginScreen({ next }: { next?: string | null }) {
                       <MailCheck className="size-4 shrink-0 text-forest" strokeWidth={2.4} aria-hidden />
                       <span className="min-w-0">
                         <span className="block text-[12px] leading-tight text-forest/45">
-                          {LOGIN_COPY.codeSentLead}
+                          {ownerPath ? LOGIN_COPY.ownerCodeLead : LOGIN_COPY.codeSentLead}
                         </span>
                         <span className="block truncate text-[14.5px] font-medium text-forest">{trimmedEmail}</span>
                       </span>

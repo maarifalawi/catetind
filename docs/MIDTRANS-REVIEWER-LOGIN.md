@@ -31,6 +31,13 @@ mempertahankannya.
 Tidak ada email yang dikecualikan, tidak ada kode cadangan, dan tidak ada route
 autentikasi yang melewati inbox.
 
+> **Pengecualian tunggal (bukan jalur reviewer):** SATU akun **pemilik** bisa
+> diberi kode tetap tanpa email lewat `app/api/auth/owner/route.ts`. Email &
+> kodenya **tidak ditulis di kode** — hanya dari env server
+> (`OWNER_TEST_EMAIL` / `OWNER_TEST_OTP`), dan kosong = jalur mati. Itu
+> keputusan pemilik produk, bukan jalur reviewer. Lihat
+> [`OWNER-FAST-LOGIN.md`](./OWNER-FAST-LOGIN.md).
+
 ## Kalau butuh akun uji internal
 
 Buat akun dengan email yang inboxnya benar-benar bisa dibaca tim (mis.

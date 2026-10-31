@@ -148,8 +148,16 @@ export function VerifyEmailScreen({
     /* Kirim ulang NYATA: `signInWithOtp` diulang, dan rate-limit aslinya dijaga
        Supabase (server). Timer hitung mundur di sini kenyamanan UI, bukan pengaman. */
     void sendLoginLink(trimmedEmail, next).then((result) => {
-      if (result.ok) toast.success(VERIFY_COPY.resendSentNote)
-      else toast.error(VERIFY_COPY.resendFailed, { description: result.error })
+      if (!result.ok) {
+        toast.error(VERIFY_COPY.resendFailed, { description: result.error })
+        return
+      }
+      /* jalur pemilik tidak mengirim email — jangan mengaku "tautan baru dikirim" */
+      if (result.emailSent === false) {
+        toast.success(LOGIN_COPY.ownerCodeToast, { description: LOGIN_COPY.ownerCodeToastDescription })
+        return
+      }
+      toast.success(VERIFY_COPY.resendSentNote)
     })
 
     /* konfirmasi di halaman tampil sebentar saja: cukup untuk dibaca, tidak
