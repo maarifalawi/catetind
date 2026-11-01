@@ -42,6 +42,7 @@ export function TransactionBottomSheet({
   trigger,
   defaultType = 'expense',
   walletName,
+  walletId,
 }: {
   trigger: ReactNode
   /** tipe terpilih saat sheet dibuka — dipakai tombol cepat di kartu dompet */
@@ -57,6 +58,15 @@ export function TransactionBottomSheet({
    * dalam sheet (`sourceLabel`) supaya tidak ada penempelan diam-diam.
    */
   walletName?: string
+  /**
+   * ID dompet halaman pemanggil (paket 102) — WAJIB dikirim bersama `walletName`
+   * dari halaman dompet detail.
+   *
+   * Tanpa ini, tombol "Catat" di kartu BCA kedua menulis ke BCA pertama (store
+   * mencocokkan by-name). Nama saja dulu dianggap cukup karena nama dompet
+   * dianggap unik; sekarang tidak lagi.
+   */
+  walletId?: string
 }) {
   const [open, setOpen] = useState(false)
   /* dompet default ikut konteks uang aktif (Pribadi/Keluarga/Bersama) — sumber
@@ -128,6 +138,7 @@ export function TransactionBottomSheet({
               /* dompet yang sudah jelas dari halaman ditampilkan di sheet —
                  user melihat ke mana catatannya akan masuk (paket 59) */
               sourceLabel={walletName}
+              sourceId={walletId}
               onSubmitted={(draft) => submit(draft, () => setOpen(false))}
               /* pintu Pindah Dana (paket 70) */
               onTransferRequest={openTransferFlow}

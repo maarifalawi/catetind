@@ -155,7 +155,13 @@ export function readSupabaseSession(
     userId,
     email: parsed.user?.email ?? '',
     name:
-      parsed.user?.user_metadata?.nickname ?? parsed.user?.user_metadata?.full_name ?? 'Kamu',
+      /* NAMA TIDAK PERNAH DIKARANG. Dulu di sini ada `?? 'Kamu'`, dan itu membuat
+         sapaan Dashboard berbunyi "Selamat pagi, Kamu 🌿" untuk akun yang
+         metadata-nya belum punya nama — seolah "Kamu" adalah nama orangnya
+         (keluhan nyata pemilik produk). Sekarang namanya boleh kosong:
+         `greetingNameOf()` lalu menyapa tanpa nama, dan titik yang memang butuh
+         label memakai `SESSION_COPY`. */
+      (parsed.user?.user_metadata?.nickname ?? parsed.user?.user_metadata?.full_name ?? '').trim(),
     accessToken,
     refreshToken: parsed.refresh_token ?? '',
     expiresAt,

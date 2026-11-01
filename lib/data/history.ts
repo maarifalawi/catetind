@@ -24,6 +24,17 @@ export interface HistoryTransaction {
   type: TransactionType
   category: string
   wallet: string
+  /**
+   * ID dompet baris ini di ledger — opsional karena baris lama/mock hanya
+   * menyimpan NAMA.
+   *
+   * Kenapa perlu: nama dompet tidak unik (user boleh punya beberapa kartu BCA).
+   * Tanpa id, sheet Edit hanya bisa mencocokkan dompet lewat nama, dan perubahan
+   * dompet pada catatan akan mendarat di dompet PERTAMA yang namanya sama —
+   * bukan dompet yang dipilih user. Nilainya kosong = baris belum terhubung ke
+   * dompet hidup (lihat `walletId` di `RowPatch`, `lib/money/store.ts`).
+   */
+  walletId?: string
   /** tanggal lokal `YYYY-MM-DD` */
   date: string
   /** jam lokal `HH:MM` untuk subjudul baris & detail */
@@ -308,7 +319,16 @@ export const HISTORY_TRANSACTIONS: HistoryTransaction[] = [
 /* ── FILTER ──────────────────────────────────────────────────────────────── */
 
 export type TimeFilter = 'all' | 'today' | 'week' | 'month'
-export type WalletFilter = 'all' | 'bca' | 'gopay' | 'tunai' | 'ovo'
+/**
+ * Filter dompet: `'all'` atau SATU ID DOMPET (paket 102).
+ *
+ * Dulu tipenya union empat nama kanon (`'bca' | 'gopay' | 'tunai' | 'ovo'`),
+ * sehingga dompet buatan user (ShopeePay, Mandiri, dompet bersama, …) TIDAK
+ * PERNAH bisa difilter — dan tiga dompet bernama "BCA" selalu tercampur jadi
+ * satu pill. Sekarang nilainya ID dompet dari ledger; nama masih diterima
+ * sebagai fallback untuk baris lama/mock yang tidak punya `walletId`.
+ */
+export type WalletFilter = string
 export type TypeFilter = 'all' | 'expense' | 'income' | 'transfer' | 'saving'
 export type CategoryFilter = 'all' | 'makanan' | 'transportasi' | 'tagihan' | 'hiburan' | 'lainnya'
 
@@ -338,6 +358,8 @@ export const TIME_FILTERS: FilterOption<TimeFilter>[] = [
   { id: 'month', label: 'Bulan ini' },
 ]
 
+/** label default pill dompet — halaman Riwayat membangun daftar NYATA dari
+ *  ledger (paket 102); konstanta ini tinggal jangkar untuk render server/test. */
 export const WALLET_FILTERS: FilterOption<WalletFilter>[] = [
   { id: 'all', label: 'Semua dompet' },
   { id: 'bca', label: 'BCA' },
@@ -466,7 +488,15 @@ export function filterHistoryTransactions<T extends HistoryTransaction>(
   return txs.filter((tx) => {
     if (!matchesSearch(tx, query)) return false
     if (!matchesTime(tx, filters.time, todayIso)) return false
-    if (filters.wallet !== 'all' && tx.wallet.toLowerCase() !== filters.wallet) return false
+    if (filters.wallet !== 'all') {
+      /* ID dompet lebih dulu (paket 102): dua dompet bernama sama adalah dua
+         tujuan berbeda. Nama tetap dicocokkan untuk baris mock/lama yang tidak
+         menyimpan `walletId`, dan untuk filter lama (`'bca'`). */
+      const wanted = filters.wallet.trim().toLowerCase()
+      const idMatch = Boolean(tx.walletId) && tx.walletId!.trim().toLowerCase() === wanted
+      const nameMatch = tx.wallet.trim().toLowerCase() === wanted
+      if (!idMatch && !nameMatch) return false
+    }
     if (filters.type !== 'all' && tx.type !== filters.type) return false
     if (filters.category !== 'all' && categoryFilterBucketOf(tx.category) !== filters.category) {
       return false
@@ -1104,8 +1134,11 @@ export const TRANSACTION_INPUT_COPY = {
    * dikatakan hanya keadaan yang bisa dipastikan: tidak ada di daftar dompetmu.
    */
   walletNotOwned: 'Belum ada di daftarmu',
-  /** keadaan kosong pemilih — jujur: tanpa dompet, catatan tak punya tempat uang */
-  walletEmptyTitle: 'Belum ada dompet di konteks ini',
+  /** keadaan kosong pemilih — jujur: tanpa dompet, catatan tak punya tempat uang.
+   *  Sejak paket 102 daftar ini memuat SEMUA dompet hidup (bukan hanya konteks
+   *  aktif), jadi kalimatnya tidak lagi menyebut konteks: kosong di sini berarti
+   *  user memang belum punya dompet sama sekali. */
+  walletEmptyTitle: 'Belum ada dompet',
   walletEmptyBody:
     'Tambahkan dompet dulu di halaman Dompet & Akun, biar catatanmu punya tempat uang.',
 
@@ -1343,6 +1376,18 @@ export const TRANSACTION_NO_WALLET_COPY = {
 } as const
 
 /**
+ * Copy penolakan "dompet yang dipilih sudah tidak ada" (paket 103).
+ *
+ * Dipakai saat draft membawa `walletId` EKSPLISIT tetapi dompet itu sudah
+ * dihapus/tidak ditemukan. Lebih jujur menolak daripada memotong saldo dompet
+ * lain yang kebetulan namanya sama.
+ */
+export const TRANSACTION_WALLET_GONE_COPY = {
+  title: 'Dompet itu sudah nggak ada',
+  body: 'Dompet yang kamu pilih sudah dihapus. Pilih dompet lain dulu ya, catatannya belum ditulis.',
+} as const
+
+/**
  * Copy penolakan "saldo tidak cukup" (paket 74) — dipakai jalur tulis
  * (`postTransaction`/`postExpense`) DAN toast di shell input (`useTransactionSubmit`,
  * AI chat). Dompetnya disebut supaya user tahu dompet MANA yang kehabisan saldo.
@@ -1356,6 +1401,9 @@ export const TRANSACTION_INSUFFICIENT_FUNDS_COPY = {
   title: 'Saldo tidak mencukupi',
   body: (walletName: string) =>
     `Saldo ${walletName} tidak cukup untuk pengeluaran ini. Kurangi nominalnya, atau pilih dompet lain.`,
+  /** versi untuk tipe `saving` (setoran celengan) — uangnya juga keluar dompet */
+  savingBody: (walletName: string) =>
+    `Saldo ${walletName} tidak cukup untuk setoran ini. Kurangi nominalnya, atau pilih dompet lain.`,
 } as const
 
 /* ── TOAST SUKSES INPUT TRANSAKSI ────────────────────────────────────────────

@@ -3,6 +3,7 @@ import {
   HEALTH_SCORE_THRESHOLD,
   HISTORY_LIST_COPY,
   HISTORY_PAGE_SIZE,
+  INITIAL_FILTERS,
   INSIGHT_MIN_CATEGORY_TX,
   INSIGHT_MIN_SAVINGS_TX,
   TRANSACTION_CATEGORY_OPTIONS,
@@ -10,6 +11,7 @@ import {
   TRANSACTION_FIXED_CATEGORY,
   buildHistoryInsights,
   countHistoryTransactions,
+  filterHistoryTransactions,
   financialHealthScore,
   healthCardState,
   latestTransactions,
@@ -336,5 +338,61 @@ describe('daftar Catatan: 10 terbaru dulu, sisanya lewat tombol', () => {
 
   it('limit 0 = tidak ada baris (bukan diam-diam menampilkan semua)', () => {
     expect(latestTransactions(expenses(3), '2026-09-28', 0)).toEqual([])
+  })
+})
+
+
+/* ── FILTER DOMPET: ID DOMPET, BUKAN NAMA (paket 102) ────────────────────────
+   Laporan pemilik produk: punya tiga dompet, tapi daftar filter di Riwayat hanya
+   berisi empat nama kanon (BCA/GoPay/OVO/Tunai). Dompet buatan user tidak pernah
+   bisa difilter, dan tiga dompet bernama "BCA" selalu tercampur jadi satu pill.
+
+   Yang dikunci di sini:
+     1. filter berisi ID memilih dompet KEMBAR yang tepat (bukan semua BCA);
+     2. filter berisi nama tetap mencocokkan baris lama/mock yang tidak punya
+        `walletId` — jadi perilaku lama tidak hilang. */
+describe('filter dompet memakai ID dompet (paket 102)', () => {
+  const base: HistoryTransaction = {
+    id: 1,
+    name: 'Kopi',
+    amount: 20_000,
+    type: 'expense',
+    category: 'Makanan',
+    wallet: 'BCA',
+    date: '2026-10-31',
+    time: '09:00',
+    aiGenerated: false,
+  }
+  const rows: HistoryTransaction[] = [
+    { ...base, id: 1, walletId: 'w-1' },
+    { ...base, id: 2, walletId: 'w-2' },
+    /* baris lama/mock: cuma punya nama */
+    { ...base, id: 3 },
+  ]
+
+  it('ID dompet memilih dompet kembar yang tepat, bukan semua BCA', () => {
+    const filtered = filterHistoryTransactions(
+      rows,
+      { ...INITIAL_FILTERS, wallet: 'w-2' },
+      '',
+      '2026-10-31',
+    )
+    expect(filtered.map((row) => row.id)).toEqual([2])
+  })
+
+  it('nama tetap mencocokkan semua baris BCA — termasuk baris tanpa walletId', () => {
+    const filtered = filterHistoryTransactions(
+      rows,
+      { ...INITIAL_FILTERS, wallet: 'bca' },
+      '',
+      '2026-10-31',
+    )
+    expect(filtered.map((row) => row.id)).toEqual([1, 2, 3])
+  })
+
+  it("'all' tidak menyaring apa pun", () => {
+    expect(
+      filterHistoryTransactions(rows, INITIAL_FILTERS, '', '2026-10-31').map((row) => row.id),
+    ).toEqual([1, 2, 3])
   })
 })

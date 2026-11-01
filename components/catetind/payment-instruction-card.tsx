@@ -8,18 +8,18 @@ import { PAY_CARD_COPY, PAY_METHOD_COPY, formatIDR } from '@/lib/data/pricing'
 import type { PaymentMethodId } from '@/lib/payments/methods'
 import type { PaymentInstructions, PaymentState } from '@/lib/payments/types'
 
-/* â”€â”€ KARTU PEMBAYARAN (paket 83) â€” INSTRUKSI BAYAR DI DALAM APP â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+/* ── KARTU PEMBAYARAN (paket 83) — INSTRUKSI BAYAR DI DALAM APP ──────────────
    Muncul setelah user menekan "Bayar sekarang": QRIS (gambar + isi QR), nomor
-   Virtual Account, tautan e-wallet, atau kode Mandiri Bill â€” semuanya di dalam
+   Virtual Account, tautan e-wallet, atau kode Mandiri Bill — semuanya di dalam
    tema app, tanpa pindah domain. Di desktop isinya melebar dua kolom (QR di
    kiri, angka/kode di kanan); di mobile tetap satu kolom.
 
    Tiga hal yang sengaja TIDAK dilakukan di sini:
-     Â· menggambar QR/VA sendiri â€” kalau provider tidak mengirim instruksinya,
+     · menggambar QR/VA sendiri — kalau provider tidak mengirim instruksinya,
        kartu mengatakannya apa adanya dan menawarkan ganti metode;
-     Â· mengklaim "sudah dibayar" dari timer â€” status datang dari SERVER
+     · mengklaim "sudah dibayar" dari timer — status datang dari SERVER
        (`GET /api/payment/status`, yang membaca DB + Midtrans);
-     Â· membiarkan tagihan kedaluwarsa jadi layar buntu â€” selalu ada tombol
+     · membiarkan tagihan kedaluwarsa jadi layar buntu — selalu ada tombol
        "bikin tagihan baru" / "ganti metode". */
 
 const POLL_MS = 4000
@@ -52,7 +52,7 @@ function formatRemaining(ms: number): string {
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
 }
 
-/** nilai yang bisa disalin â€” polanya sama dengan referral-screen (`navigator.clipboard` + toast) */
+/** nilai yang bisa disalin — polanya sama dengan referral-screen (`navigator.clipboard` + toast) */
 function CopyField({ label, value, large = false }: { label: string; value: string; large?: boolean }) {
   const [copied, setCopied] = useState(false)
 
@@ -128,7 +128,7 @@ export function PaymentInstructionCard({
     void check()
   }, [check])
 
-  /* polling Â±4 detik selagi belum kelar â€” statusnya milik server, bukan timer */
+  /* polling ±4 detik selagi belum kelar — statusnya milik server, bukan timer */
   useEffect(() => {
     if (state !== 'checking' && state !== 'pending' && state !== 'unknown') return
     const timer = setInterval(() => void check(), POLL_MS)
@@ -148,7 +148,7 @@ export function PaymentInstructionCard({
     return () => clearInterval(timer)
   }, [invoice.expiresAt])
 
-  /* pembayaran masuk â†’ halaman konfirmasi yang sudah ada (mem-poll status paket) */
+  /* pembayaran masuk → halaman konfirmasi yang sudah ada (mem-poll status paket) */
   useEffect(() => {
     if (state !== 'settled') return
     const timer = setTimeout(() => {
@@ -285,7 +285,7 @@ export function PaymentInstructionCard({
       {live && instructions?.channel === 'va' && (
         <div className="mt-4">
           <CopyField
-            label={`${PAY_CARD_COPY.vaLabel} Â· ${instructions.bank.toUpperCase()}`}
+            label={`${PAY_CARD_COPY.vaLabel} · ${instructions.bank.toUpperCase()}`}
             value={instructions.vaNumber}
             large
           />
@@ -327,7 +327,7 @@ export function PaymentInstructionCard({
 
       {settled && (
         <p className="mt-4 rounded-2xl bg-mint/25 px-3.5 py-3 text-[13.5px] font-medium text-forest ring-1 ring-forest/10">
-          {PAY_CARD_COPY.settledTitle} Â· <span className="font-normal">{PAY_CARD_COPY.settledBody}</span>
+          {PAY_CARD_COPY.settledTitle} · <span className="font-normal">{PAY_CARD_COPY.settledBody}</span>
         </p>
       )}
 

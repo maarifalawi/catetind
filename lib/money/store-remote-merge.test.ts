@@ -40,6 +40,8 @@ const EMPTY: MoneySnapshot = {
   removedWalletIds: [],
   rowOverrides: {},
   syncedIds: [],
+  syncedWalletIds: [],
+  pendingWalletIds: [],
   hydrated: true,
 }
 
@@ -80,6 +82,8 @@ describe('mergeWithRemote · server jadi sumber, antrean lokal tidak hilang', ()
       rows: [],
       removedIds: ['session-2'],
       syncedIds: [],
+      syncedWalletIds: [],
+      pendingWalletIds: [],
     }
     const merged = mergeWithRemote({ wallets: [...WALLET_SEED], rows: [] }, persisted, current)
     expect([...merged.removedIds].sort()).toEqual(['session-1', 'session-2'])
@@ -93,6 +97,8 @@ describe('mergeWithRemote · server jadi sumber, antrean lokal tidak hilang', ()
       removedIds: [],
       rowOverrides: { 'seed-2': { amount: 9_000_000 } },
       syncedIds: [],
+      syncedWalletIds: [],
+      pendingWalletIds: [],
     }
     const merged = mergeWithRemote({ wallets: [...WALLET_SEED], rows: [] }, persisted, current)
 
@@ -114,5 +120,79 @@ describe('mergeWithRemote · server jadi sumber, antrean lokal tidak hilang', ()
     /* urutan tertinggi + 1 dipakai `appendRow` lewat `nextSeq` internal — diuji
        lewat perilaku: baris baru setelah hidrasi tidak memakai nomor yang sudah ada */
     expect(Math.max(...merged.rows.map((item) => item.seq))).toBe(9200)
+  })
+})
+
+/* ── KEPEMILIKAN SNAPSHOT PERANGKAT ────────────────────────────────────────────
+   Bug yang ditutup: cache uang TIDAK dipisah per akun (satu DB, satu key
+   `snapshot`). Saat akun A login di browser yang masih menyimpan snapshot akun
+   B / persona demo, `mergeWithRemote` dulu memasukkan SEMUA baris lokal yang
+   tidak ada di server sebagai "antrean offline" — jadi transaksi orang lain ikut
+   tampil (dan ikut terkirim) di akun A. Angka Arus Uang berubah setelah login
+   ulang / refresh, tanpa user mencatat apa pun.
+
+   Sekarang hidrasi memberi tahu fungsi ini bahwa snapshot itu ASING
+   (`includeLocalRows: false`): baris, tombstone, override, dan antreannya tidak
+   ikut — sementara baris yang lahir di SESI INI tetap dipertahankan. */
+describe('mergeWithRemote · snapshot perangkat milik identitas lain', () => {
+  const serverRow = row({ id: 'session-9001', seq: 9001, clientTxId: 'srv-1' })
+  const foreignPersisted = {
+    ownerUserId: 'user-LAIN',
+    wallets: [...WALLET_SEED],
+    rows: [
+      /* khas persona demo: tunjangan 300.000 (lib/money/demo-bootstrap.ts) */
+      row({
+        id: 'session-9100',
+        seq: 9100,
+        clientTxId: 'demo-tunjangan',
+        type: 'income' as const,
+        amount: 300_000,
+      }),
+    ],
+    removedIds: ['session-9001'],
+    removedWalletIds: ['bca'],
+    rowOverrides: { 'session-9001': { amount: 1 } },
+    syncedIds: ['demo-tunjangan'],
+    syncedWalletIds: [],
+    pendingWalletIds: [],
+  }
+
+  it('baris, tombstone, override, dan antrean snapshot asing TIDAK ikut', () => {
+    const merged = mergeWithRemote(
+      { wallets: [...WALLET_SEED], rows: [serverRow] },
+      foreignPersisted,
+      EMPTY,
+      { includeLocalRows: false },
+    )
+
+    expect(merged.rows.map((item) => item.id)).toEqual(['session-9001'])
+    /* tombstone asing tidak boleh menyembunyikan baris akun ini (id lokal bisa kembar) */
+    expect(merged.removedIds).toEqual([])
+    expect(merged.removedWalletIds).toEqual([])
+    expect(merged.rowOverrides).toEqual({})
+    expect(merged.syncedIds).toEqual(['srv-1'])
+  })
+
+  it('baris yang lahir di SESI INI tetap dipertahankan walau snapshot asing', () => {
+    const sessionRow = row({ id: 'session-9300', seq: 9300, clientTxId: 'baru-1' })
+    const merged = mergeWithRemote(
+      { wallets: [...WALLET_SEED], rows: [serverRow] },
+      foreignPersisted,
+      { ...EMPTY, rows: [sessionRow] },
+      { includeLocalRows: false },
+    )
+
+    expect(merged.rows.map((item) => item.id)).toEqual(['session-9300', 'session-9001'])
+  })
+
+  it('default (tanpa opsi) tetap menggabungkan snapshot sendiri — antrean offline tidak hilang', () => {
+    const merged = mergeWithRemote(
+      { wallets: [...WALLET_SEED], rows: [serverRow] },
+      foreignPersisted,
+      EMPTY,
+    )
+
+    expect(merged.rows.map((item) => item.id)).toEqual(['session-9100', 'session-9001'])
+    expect(merged.removedIds).toEqual(['session-9001'])
   })
 })

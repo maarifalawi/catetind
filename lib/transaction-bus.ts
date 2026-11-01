@@ -39,6 +39,12 @@ export interface NewTransactionInput {
   type: TransactionType
   category: string
   wallet: string
+  /**
+   * ID dompet bila pemanggil sudah tahu (paket 102). Diisi = store memakai
+   * dompet ITU, bukan dompet pertama yang namanya sama. Kosong = jalur lama
+   * (cocokkan nama).
+   */
+  walletId?: string
   /** tanggal lokal `YYYY-MM-DD` */
   date: string
   /**
@@ -60,6 +66,8 @@ export interface DraftTransactionInput {
   type: TransactionType
   category?: string
   wallet?: string
+  /** ID dompet pilihan user (paket 102) — pasangan `wallet` */
+  walletId?: string
   date?: string
   /** kunci idempotensi dari engine input (paket 42) */
   clientTxId?: string
@@ -87,6 +95,7 @@ export function recordTransaction(input: NewTransactionInput): HistoryTransactio
     type: input.type,
     category: input.category,
     wallet: input.wallet,
+    walletId: input.walletId,
     dateISO: input.date || localISODate(),
     /* namanya dirapikan AI (chat) ⇒ dapat badge ✨ di Riwayat, sama seperti
        catatan mock hasil parsing AI yang lain */
@@ -141,6 +150,7 @@ export function recordDraftTransaction(
     type: draft.type,
     category: draft.category || TRANSACTION_FALLBACK_CATEGORY,
     wallet: draft.wallet || fallbackWallet,
+    walletId: draft.walletId,
     date: draft.date || localISODate(),
     clientTxId: draft.clientTxId,
   })

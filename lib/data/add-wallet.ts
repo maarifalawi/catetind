@@ -38,6 +38,8 @@ export const ADD_WALLET_SHEET_COPY = {
      pratinjau (dan di semua muka kartu) dibuang karena mengulang hal yang sudah
      jelas — lihat catatan panjangnya di `wallet-card-face.tsx` / `wallet-screen.tsx`. */
   submit: 'Simpan Dompet 🌿',
+  /** store menolak: nama kosong / sudah dipakai dompet lain */
+  rejected: 'Nama dompet wajib diisi dan tidak boleh sama dengan dompet lain.',
   toastTitle: 'Dompet baru siap 🌿',
   toastDescription: (name: string) => `${name} langsung ikut kehitung di Total Saldo.`,
 } as const

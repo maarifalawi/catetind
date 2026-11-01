@@ -35,7 +35,7 @@ export function MarkBillPaidSheet({
   bill: Bill | null
   masked: boolean
   /** dompet dari ledger + saldonya (bukan daftar mock) */
-  walletOptions: { id: string; label: string; balance: number }[]
+  walletOptions: { id: string; label: string; displayLabel?: string; balance: number }[]
   /** dompet yang disarankan: dompet tagihan ini, kalau tidak ada → dompet konteks aktif */
   defaultWalletId: string
   onClose: () => void
@@ -148,7 +148,7 @@ export function MarkBillPaidSheet({
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block break-words text-[14px] font-semibold leading-tight text-forest">
-                      {option.label}
+                      {option.displayLabel ?? option.label}
                     </span>
                     <span
                       className={cn(

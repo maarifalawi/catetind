@@ -347,6 +347,13 @@ export interface TransactionDraftForm {
   amountDigits: string
   category: string
   wallet: string
+  /**
+   * ID dompet pilihan user/kartu konfirmasi (paket 102).
+   *
+   * `wallet` menyimpan NAMA (yang ditulis ke baris kas), sedangkan ID ini yang
+   * memastikan dompet KEMBAR bernama sama terpotong di dompet yang benar.
+   */
+  walletId?: string
   /** tanggal lokal `YYYY-MM-DD` */
   date: string
   confidence: number

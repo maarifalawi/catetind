@@ -470,7 +470,10 @@ export async function POST(req: NextRequest) {
     planId: plan?.id,
     ownedPlanId: ownedPlanId ?? undefined,
     customerEmail: auth.user.email,
-    customerName: auth.user.name,
+    /* Nama boleh kosong sejak `readSupabaseSession()` berhenti mengarang "Kamu";
+       Midtrans tetap butuh `first_name` yang tidak kosong, jadi pakai bagian
+       depan email sebagai label netral (bukan nama palsu). */
+    customerName: auth.user.name || auth.user.email.split('@')[0],
     notificationUrl: origin ? `${origin}/api/payment/webhook` : undefined,
     finishUrl: origin
       ? `${origin}/checkout/selesai?order_id=${encodeURIComponent(orderId)}`

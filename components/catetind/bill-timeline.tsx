@@ -8,7 +8,9 @@ import {
   TIMELINE_DAYS,
   TODAY_ISO,
   billsOnDay,
+  daysInMonthOf,
   getBillStatus,
+  isBillCompleted,
   maskMoney,
   upcomingDays,
   type Bill,
@@ -50,6 +52,7 @@ function bubblePlacement(col: number) {
 export function BillTimeline({
   bills,
   currentDay,
+  daysInMonth = 31,
   todayIso = TODAY_ISO,
   masked = false,
   onPick,
@@ -57,6 +60,8 @@ export function BillTimeline({
 }: {
   bills: Bill[]
   currentDay: number
+  /** hari terakhir bulan berjalan — dipakai status telat & clamp tanggal 29–31 */
+  daysInMonth?: number
   /** tanggal "hari ini" milik user (`useTodayISO()` di halaman) */
   todayIso?: string
   /** ikut tombol mata global — nominal di bubble tidak boleh bocor */
@@ -67,8 +72,9 @@ export function BillTimeline({
   className?: string
 }) {
   const days = upcomingDays(TIMELINE_DAYS, todayIso)
-  /* sabuk pengaman: apa pun yang dioper pemanggil, tagihan lunas tetap disaring */
-  const activeBills = bills.filter((bill) => !bill.isPaidThisMonth)
+  /* sabuk pengaman: apa pun yang dioper pemanggil, tagihan lunas & cicilan yang
+     sudah selesai tetap disaring */
+  const activeBills = bills.filter((bill) => !bill.isPaidThisMonth && !isBillCompleted(bill))
   /** iso hari yang bubble-nya terbuka (null = tidak ada) */
   const [openDay, setOpenDay] = useState<string | null>(null)
   const calendarRef = useRef<HTMLElement | null>(null)
@@ -150,10 +156,10 @@ export function BillTimeline({
             <div key={rowIdx} className="grid grid-cols-7 gap-1.5">
               {week.map((day, colIdx) => {
                 if (!day) return <span key={`blank-${rowIdx}-${colIdx}`} aria-hidden />
-                const dayBills = billsOnDay(activeBills, day.day)
+                const dayBills = billsOnDay(activeBills, day.day, daysInMonthOf(day.iso))
                 const hasBills = dayBills.length > 0
                 const hasOverdue = dayBills.some(
-                  (bill) => getBillStatus(bill, currentDay) === 'overdue',
+                  (bill) => getBillStatus(bill, currentDay, daysInMonth) === 'overdue',
                 )
                 const open = openDay === day.iso
                 const placement = bubblePlacement(colIdx)

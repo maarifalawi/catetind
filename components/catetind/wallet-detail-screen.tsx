@@ -43,6 +43,7 @@ import { TransactionBottomSheet } from '@/components/dashboard/transaction-botto
 import {
   applyRowOverride,
   cancelTransferRow,
+  editFundsProblem,
   editRow,
   incomingTransfersFor,
   isRowRemoved,
@@ -69,6 +70,7 @@ import { EDIT_WALLET_SHEET_COPY, TRANSFER_SHEET_COPY } from '@/lib/data/add-wall
 import {
   DELETE_TRANSACTION_TOAST,
   MONEY_TONE,
+  TRANSACTION_INSUFFICIENT_FUNDS_COPY,
   UNDO_WINDOW_MS,
   UPDATE_TRANSACTION_TOAST,
   groupTransactionsByDate,
@@ -97,26 +99,26 @@ import {
   type WalletPeriodSummary,
 } from '@/lib/data/wallet-detail'
 
-/* â”€â”€ Dompet Detail (/wallet/[id]) â€” inventaris #13 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+/* ── Dompet Detail (/wallet/[id]) — inventaris #13 ────────────────────────────
    Pertanyaan yang dijawab halaman ini bukan "berapa total uangku", tapi
-   "dompet INI gimana kondisinya?" â€” rekening yang sebentar lagi dipakai bayar
+   "dompet INI gimana kondisinya?" — rekening yang sebentar lagi dipakai bayar
    sesuatu. Karena itu isinya dompet-lokal semua:
 
-     1. HEADER â€” kembali ke /wallet, nama + jenis + nomor tersamarkan, dan
+     1. HEADER — kembali ke /wallet, nama + jenis + nomor tersamarkan, dan
         tombol mata privasi GLOBAL yang sama dengan halaman lain.
-     2. HERO â€” memakai <WalletFace/> yang SAMA dengan deck di /wallet (gradien
+     2. HERO — memakai <WalletFace/> yang SAMA dengan deck di /wallet (gradien
         `face` + motif batik + chip EMV). Saldonya dari `WalletAccount.balance`,
         bukan angka karangan; count-up-nya memakai hook bersama.
-     3. RINGKAS 30 HARI â€” Masuk / Keluar / Net (label bebas istilah akuntansi).
-        Garis "Arah Saldo" HANYA muncul kalau catatannya >= 7 (PRD 574â€“590);
-        di bawah itu yang muncul KARTU SABAR berisi progress â€” bukan trend yang
-        diklaim dari 2â€“3 transaksi.
+     3. RINGKAS 30 HARI — Masuk / Keluar / Net (label bebas istilah akuntansi).
+        Garis "Arah Saldo" HANYA muncul kalau catatannya >= 7 (PRD 574–590);
+        di bawah itu yang muncul KARTU SABAR berisi progress — bukan trend yang
+        diklaim dari 2–3 transaksi.
      4. DAFTAR TRANSAKSI dompet ini, dikelompokkan per hari (helper yang sama
         dengan Riwayat & Insight), tiap baris bisa dibuka detailnya.
-     5. AKSI CEPAT di STICKY BAWAH (zona ibu jari, PRD 2141â€“2145) â€” "Catat
+     5. AKSI CEPAT di STICKY BAWAH (zona ibu jari, PRD 2141–2145) — "Catat
         transaksi" & "Sesuaikan Saldo". Tidak ada aksi primer di header.
 
-   Net minus sengaja ditulis netral (tinta biasa + tanda "âˆ’"), BUKAN merah:
+   Net minus sengaja ditulis netral (tinta biasa + tanda "−"), BUKAN merah:
    saldo turun bukan pelanggaran. Merah hanya untuk aksi merusak (Hapus). */
 
 /** cubic-bezier khas app: masuk cepat lalu settle lembut */
@@ -127,11 +129,11 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
      termasuk angka di tooltip grafik */
   const { masked } = usePrivacy()
 
-  /* Dompet & saldonya dari SATU store uang (`lib/money/store.ts`) â€” bukan lagi
+  /* Dompet & saldonya dari SATU store uang (`lib/money/store.ts`) — bukan lagi
      prop yang dirender server dari konstanta. Sebabnya audit #6: koreksi saldo
      yang ditulis user di halaman lain tidak pernah terlihat di sini, karena
      halaman ini memegang salinan `wallet.balance` sejak HTML pertama. Sekarang
-     saldonya `opening + Î£ baris ledger`, jadi koreksi di `/wallet` langsung
+     saldonya `opening + Σ baris ledger`, jadi koreksi di `/wallet` langsung
      terbaca di sini (dan sebaliknya). */
   const snapshot = useMoneyStore()
   const wallet = walletAccountOf(snapshot, walletId)
@@ -181,18 +183,18 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
     [],
   )
 
-  /* â”€â”€ data turunan â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── data turunan ──────────────────────────────────────────────────────── */
   /* Catatan yang tampil di halaman ini HANYA milik dompet ini, dan identitasnya
-     DOMPET-ID â€” bukan nama (`paket 59 Â· 59.3`):
-       Â· `walletTransactionsOf()`  â†’ baris ledger ber-`walletId` dompet ini;
-       Â· `incomingTransfersFor()`  â†’ sisi MASUK pindah dana (baris `transfer`
+     DOMPET-ID — bukan nama (`paket 59 · 59.3`):
+       · `walletTransactionsOf()`  → baris ledger ber-`walletId` dompet ini;
+       · `incomingTransfersFor()`  → sisi MASUK pindah dana (baris `transfer`
          menyimpan dompet ASAL di kolom `wallet`, jadi tanpa ini halaman dompet
          tujuan tidak menampilkan apa pun padahal saldonya baru saja bertambah);
-       Â· `walletTransactions()`    â†’ baris CONTOH dompet ini dari konstanta
+       · `walletTransactions()`    → baris CONTOH dompet ini dari konstanta
          `lib/data/wallet-detail.ts`; kuncinya juga id dompet, jadi tidak pernah
          bocor ke dompet lain.
      Dulu baris sesi dicocokkan `tx.wallet === wallet.name`: dua dompet yang
-     namanya sama (kasus nyata â€” user menambah "BCA" kedua) saling menampilkan
+     namanya sama (kasus nyata — user menambah "BCA" kedua) saling menampilkan
      catatan satu sama lain. Baris lama tanpa `walletId` (dompetnya belum ada di
      ledger) SENGAJA tidak dipaksa masuk ke dompet mana pun; ia tetap tampil di
      Riwayat dengan penanda "Belum berkonteks". */
@@ -219,12 +221,12 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
   )
   const counted = useCountUp(balance)
 
-  /* â”€â”€ aksi â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── aksi ──────────────────────────────────────────────────────────────── */
 
   /**
    * Smart Sync: user menulis saldo ASLI yang ia baca sendiri di m-banking-nya.
    * Yang ditulis bukan cuma angka di layar, tapi BARIS LEDGER
-   * (`balance_adjustment` bertanda) â€” sehingga selisihnya benar-benar jadi
+   * (`balance_adjustment` bertanda) — sehingga selisihnya benar-benar jadi
    * catatan di Riwayat, persis seperti yang dijanjikan modal, dan Net Worth ikut
    * bergerak. Kalau saldonya sudah sama, tidak ada baris yang dibuat.
    */
@@ -265,24 +267,40 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
   }
 
   /**
-   * Simpan hasil edit lewat SATU pintu tulis (`editRow` di store uang) â€” baris
+   * Simpan hasil edit lewat SATU pintu tulis (`editRow` di store uang) — baris
    * store diperbarui di barisnya, baris mock lewat `rowOverrides` yang diterapkan
    * SEMUA halaman (Riwayat, Home, grafik arus uang). Dulu versi barunya hidup di
    * `useState` halaman ini saja, jadi halaman lain tetap menampilkan angka lama
    * (temuan B laporan 46). Toast hanya berbunyi kalau penulisannya berhasil.
    */
   function handleSaveEdit(next: HistoryTransaction) {
-    const written = editRow(next.id, {
+    const patch = {
       name: next.name,
       amount: next.amount,
       type: next.type,
       category: next.category,
       wallet: next.wallet,
+      /* paket 102: dompet kembar bernama sama dipindahkan lewat ID */
+      walletId: next.walletId,
       dateISO: next.date,
       aiGenerated: next.aiGenerated,
-    })
+    }
+    /* Penolakan karena SALDO dijelaskan di sini; `editRow` → `null` juga bisa
+       berarti barisnya sudah dihapus, dan untuk itu tidak ada toast sukses. */
+    const shortfall = editFundsProblem(next.id, patch)
+    const written = editRow(next.id, patch)
     setEditingTx(null)
-    if (!written) return
+    if (!written) {
+      if (shortfall) {
+        toast.error(TRANSACTION_INSUFFICIENT_FUNDS_COPY.title, {
+          description:
+            next.type === 'saving'
+              ? TRANSACTION_INSUFFICIENT_FUNDS_COPY.savingBody(shortfall.walletName)
+              : TRANSACTION_INSUFFICIENT_FUNDS_COPY.body(shortfall.walletName),
+        })
+      }
+      return
+    }
     toast.success(UPDATE_TRANSACTION_TOAST.title, {
       description: UPDATE_TRANSACTION_TOAST.description,
     })
@@ -290,7 +308,7 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
 
   /**
    * Undo hapus: hak mengembalikan catatan hidup selama UNDO_WINDOW_MS (PRD
-   * 2251). Sesudah jendelanya tutup, jejaknya dibuang â€” tombol yang datang
+   * 2251). Sesudah jendelanya tutup, jejaknya dibuang — tombol yang datang
    * terlambat ditolak dengan jujur, bukan diam-diam tidak bekerja.
    */
   function restoreTransaction(id: number) {
@@ -300,7 +318,7 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
     }
     undoRef.current = null
     /* kalau yang tadi dibatalkan adalah pindah dana, Undo-nya juga mencabut dua
-       baris koreksinya â€” bukan cuma mengembalikan catatannya (paket 55) */
+       baris koreksinya — bukan cuma mengembalikan catatannya (paket 55) */
     const cancellation = undoCancelRef.current
     undoCancelRef.current = null
     if (cancellation) {
@@ -322,7 +340,7 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
    * Baris pindah dana menggerakkan DUA dompet, jadi tombstone saja akan
    * menyisakan uang di dompet tujuan sementara dompet asal tetap kosong. Karena
    * itu `cancelTransferRow()` (store) menghapus barisnya SEKALIGUS menulis dua
-   * baris koreksi yang mengembalikan uangnya â€” dan mengembalikan `null` kalau
+   * baris koreksi yang mengembalikan uangnya — dan mengembalikan `null` kalau
    * barisnya bukan pindah dana (atau uangnya sudah terpakai di tujuan).
    * Kalau `null`, jatuh ke jalur hapus biasa: satu pintu, dua kemungkinan yang
    * dikatakan apa adanya lewat toast.
@@ -378,12 +396,12 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
     setMenuTx(null)
   }
 
-  /* â”€â”€ HAPUS DOMPET (paket 62) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-     Aksi yang sama dengan popover kartu di `/wallet` â€” hanya pintunya yang
+  /* ── HAPUS DOMPET (paket 62) ──────────────────────────────────────────────
+     Aksi yang sama dengan popover kartu di `/wallet` — hanya pintunya yang
      berbeda, jadi dialog, satu pintu tulis (`removeWalletAccount`), dan jendela
      Undo-nya juga sama persis. Bedanya satu: setelah dompetnya benar-benar
      hilang, halaman ini tidak punya bahan render lagi (store mengembalikan
-     `null`), jadi user diantar ke `/wallet` â€” dan tombol Undo di toast tetap
+     `null`), jadi user diantar ke `/wallet` — dan tombol Undo di toast tetap
      bekerja dari halaman itu. */
   function confirmWalletDelete() {
     if (!wallet) return
@@ -409,7 +427,7 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
     router.push('/wallet')
   }
 
-  /** Undo: dompetnya balik ke daftar â€” user tetap boleh balik ke halaman ini. */
+  /** Undo: dompetnya balik ke daftar — user tetap boleh balik ke halaman ini. */
   function undoWalletDelete(removal: WalletRemoval) {
     if (undoWalletRef.current?.walletId !== removal.walletId) {
       toast(WALLET_DELETE_TOAST.expired)
@@ -428,7 +446,7 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
   /** nomor baris global supaya animasi masuk tetap berurutan antar grup */
   let rowIndex = 0
 
-  /* id di URL tidak ketemu (mis. `/wallet/999`) â†’ halaman penjelas, bukan layar
+  /* id di URL tidak ketemu (mis. `/wallet/999`) → halaman penjelas, bukan layar
      kosong. SENGAJA bukan `notFound()`: dompet yang dibuat user baru ada setelah
      IndexedDB selesai dibaca, jadi render pertama (yang masih memakai snapshot
      server) tidak boleh langsung memutuskan halaman ini tidak ada. */
@@ -459,16 +477,16 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
 
   return (
     <ScreenShell>
-      {/* definisi motif batik â€” dibuat sekali, dipakai muka kartu hero */}
+      {/* definisi motif batik — dibuat sekali, dipakai muka kartu hero */}
       <WalletArtDefs />
 
       <div className="w-full">
-        {/* â”€â”€ HEADER: kembali + identitas dompet + toggle privasi GLOBAL â”€â”€â”€â”€â”€â”€â”€
+        {/* ── HEADER: kembali + identitas dompet + toggle privasi GLOBAL ───────
             SENGAJA TIDAK STICKY (paket 82). Permintaan pemilik produk: "header
             gausah ikut kalau di-scroll". Dulu bar ini `sticky top-2 z-30` +
             backdrop-blur, jadi ia mengambang dan menutupi daftar transaksi saat
             user menggulir; sekarang ia mengalir bersama konten. Kartu latar +
-            bayangannya juga dicabut supaya tidak ada blok berat di atas hero â€”
+            bayangannya juga dicabut supaya tidak ada blok berat di atas hero —
             identitas dompet sudah dibawa muka kartu di bawahnya. */}
         <header className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
@@ -488,7 +506,7 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
               </h1>
               <p className="truncate text-[12px] text-forest/45">
                 {WALLET_TYPE_LABEL[wallet.type]}
-                {wallet.number ? ` Â· ${wallet.number}` : ''}
+                {wallet.number ? ` · ${wallet.number}` : ''}
               </p>
             </div>
           </div>
@@ -496,11 +514,11 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
         </header>
 
         <div className="mt-5 grid grid-cols-1 gap-5 xl:mt-6 xl:grid-cols-2 xl:gap-6">
-          {/* â”€â”€ HERO (50/50): muka kartu dompet + saldo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-              Muka kartunya SENGAJA memakai <WalletFace/> â€” resep yang sama
+          {/* ── HERO (50/50): muka kartu dompet + saldo ─────────────────────
+              Muka kartunya SENGAJA memakai <WalletFace/> — resep yang sama
               dengan deck di /wallet. Kalau mau mengubah tampilan kartu dompet,
               ubah di wallet-card-face.tsx supaya dua halaman ikut berubah.
-              PAKET 82: kolomnya dulu 7/12 sehingga kartu terasa kegedean â€”
+              PAKET 82: kolomnya dulu 7/12 sehingga kartu terasa kegedean —
               sekarang dibelah rata dengan ringkasan 30 hari di sebelahnya, dan
               kartunya `h-full` supaya tidak menyisakan ruang kosong di kolom. */}
           <div className="group relative xl:col-span-1">
@@ -515,7 +533,7 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
                     <p className="truncate font-display text-[18px] font-medium tracking-tight sm:text-[20px]">
                       {wallet.name}
                     </p>
-                    {/* ikon contactless hanya untuk kartu bank â€” benda aslinya
+                    {/* ikon contactless hanya untuk kartu bank — benda aslinya
                         (uang kertas & saldo e-wallet) tidak punya RFID */}
                     {wallet.type === 'Bank' && (
                       <ContactlessIcon className="size-4 shrink-0 text-cream/55" />
@@ -535,12 +553,12 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
               </div>
 
               <div className="relative mt-auto pt-7">
-                {/* label mikro "Saldo" DIHAPUS (paket 77) â€” sama seperti muka
+                {/* label mikro "Saldo" DIHAPUS (paket 77) — sama seperti muka
                     kartu di /wallet: nama dompet di atasnya + angka besar di
                     bawahnya sudah menjelaskan diri, dan label itu terulang di
                     setiap muka kartu. Kalimat "Dibaca dari catatanmu sendiri,
                     bukan sambungan ke m-banking." juga DIHAPUS (permintaan
-                    pemilik produk, paket 82 round 3) â€” muka kartu hero tinggal
+                    pemilik produk, paket 82 round 3) — muka kartu hero tinggal
                     identitas + saldo. */}
                 <MaskedAmount
                   value={formatIDR(counted)}
@@ -551,18 +569,18 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
             </WalletFace>
           </div>
 
-          {/* â”€â”€ SISI KANAN (1/2): ringkas 30 hari + (kartu sabar) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-              `xl:col-span-1` â€” BUKAN nomor kolom grid 12. Induknya
+          {/* ── SISI KANAN (1/2): ringkas 30 hari + (kartu sabar) ────────────
+              `xl:col-span-1` — BUKAN nomor kolom grid 12. Induknya
               `xl:grid-cols-2` (dibelah rata dengan hero, paket 82). Sisa
               `col-span-5` dari tata letak lama (7/12 + 5/12, paket 40) membuat
               kolom ini melebar ke kolom implisit lalu TERDORONG ke baris
-              berikutnya â€” separuh kanan baris hero jadi kosong. Satu kolom = satu
+              berikutnya — separuh kanan baris hero jadi kosong. Satu kolom = satu
               kolom: kartu ringkasan duduk tepat di samping muka kartu. */}
           <div className="flex flex-col gap-4 xl:col-span-1">
             {summary ? (
               <PeriodSummaryCard summary={summary} trend={trend} masked={masked} />
             ) : txs.length > 0 ? (
-              /* ada catatan, tapi tidak satu pun di 30 hari terakhir â†’ dikatakan,
+              /* ada catatan, tapi tidak satu pun di 30 hari terakhir → dikatakan,
                  bukan dihilangkan diam-diam dari layar */
               <section className="rounded-[1.75rem] bg-cream p-5 text-[13.5px] leading-relaxed text-forest/60 shadow-[0_18px_40px_-34px_rgba(0,0,0,0.55)] ring-1 ring-soil/10">
                 {WALLET_PERIOD_COPY.emptyWindow(WALLET_DETAIL_WINDOW_DAYS)}
@@ -570,7 +588,7 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
             ) : null}
             {/* kartu sabar hanya saat ADA catatan tapi belum cukup (0 < n < 7):
                 dompet yang benar-benar kosong sudah punya empty state + CTA di
-                bawah â€” dua blok yang menjelaskan hal yang sama cuma menambah
+                bawah — dua blok yang menjelaskan hal yang sama cuma menambah
                 bising (dan `0/7` bukan informasi, itu kebisingan). */}
             {txs.length > 0 && txs.length < INSIGHT_MIN_TRANSACTIONS && (
               <PatientInsightCard count={txs.length} />
@@ -578,7 +596,7 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
           </div>
         </div>
 
-        {/* â”€â”€ DAFTAR TRANSAKSI DOMPET INI â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ── DAFTAR TRANSAKSI DOMPET INI ────────────────────────────────── */}
         <section className="mt-5 xl:mt-6">
           <div className="flex flex-wrap items-center gap-2">
             <span className="flex size-7 items-center justify-center rounded-xl bg-gradient-to-br from-sage via-cream to-mint-soft text-forest ring-1 ring-forest/10">
@@ -593,14 +611,14 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
           </div>
 
           {groups.length === 0 ? (
-            <EmptyTransactions walletName={wallet.name} />
+            <EmptyTransactions walletName={wallet.name} walletId={wallet.id} />
           ) : (
             <div className="mt-4 space-y-5">
               {groups.map((group) => (
                 <section key={group.date}>
                   {/* kepala hari: label + garis + (pindah dana) + TOTAL HARIAN
-                      dalam pill netral (tinta + tanda âˆ’/+), bukan merah untuk
-                      net minus â€” saldo turun bukan pelanggaran. */}
+                      dalam pill netral (tinta + tanda −/+), bukan merah untuk
+                      net minus — saldo turun bukan pelanggaran. */}
                   <div className="flex items-center gap-2.5">
                     <p className="shrink-0 text-[12px] font-medium uppercase tracking-[0.12em] text-forest/45">
                       {group.label}
@@ -608,7 +626,7 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
                     <span className="h-px min-w-4 flex-1 bg-soil/[0.09]" aria-hidden />
                     {group.moved > 0 && (
                       <span className="shrink-0 text-[12px] font-medium tabular-nums text-forest/40">
-                        â‡„ {maskMoney(group.moved, masked)}
+                        ⇄ {maskMoney(group.moved, masked)}
                       </span>
                     )}
                     <span className="shrink-0 rounded-full bg-sage/60 px-2.5 py-0.5 text-[12.5px] font-semibold tabular-nums text-forest/75">
@@ -616,7 +634,7 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
                     </span>
                   </div>
 
-                  {/* JARAK, BUKAN GARIS RAMBUT (paket 82 Â· aturan pemilik
+                  {/* JARAK, BUKAN GARIS RAMBUT (paket 82 · aturan pemilik
                       produk): setiap catatan dipisah `gap-1.5` seperti daftar
                       transaksi di Dashboard & Riwayat, jadi tidak ada dua
                       catatan yang menempel. `divide-y` dicabut. */}
@@ -646,18 +664,18 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
           )}
         </section>
 
-        {/* â”€â”€ AKSI CEPAT â€” STICKY DI ZONA IBU JARI (PRD 2141â€“2145) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        {/* ── AKSI CEPAT — STICKY DI ZONA IBU JARI (PRD 2141–2145) ───────────
             Tiga aksi primer halaman ini duduk di BAWAH, bukan di header: ibu jari
             menjangkau dasar layar, sedangkan header adalah hard-reach area.
 
-            â€œPindah Danaâ€ (paket 55) ditambahkan di sini karena halaman inilah
+            “Pindah Dana” (paket 55) ditambahkan di sini karena halaman inilah
             satu-satunya tempat yang tahu dompet MANA yang sedang dibaca:
             sebelumnya alur pindah dana hanya bisa dibuka dari popover kartu di
-            /wallet, dan halaman ini hanya menyebutnya di komentar â€” pintu yang
+            /wallet, dan halaman ini hanya menyebutnya di komentar — pintu yang
             benar-benar tidak ada.
 
             `bottom-[5.5rem]` di mobile = duduk TEPAT DI ATAS bottom nav
-            (nav = bottom-5 + tinggi 16 â‰ˆ 84px); di desktop nav-nya hilang jadi
+            (nav = bottom-5 + tinggi 16 ≈ 84px); di desktop nav-nya hilang jadi
             bar-nya turun ke dasar kolom; `max-w-xl` di tengah menjaga bar supaya tidak
             menabrak FAB AI Coach yang mengambang di kanan bawah. */}
         <div className="sticky bottom-[5.5rem] z-30 mt-6 lg:bottom-5">
@@ -671,6 +689,7 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
             <TransactionBottomSheet
               defaultType="expense"
               walletName={wallet.name}
+              walletId={wallet.id}
               trigger={
                 <button
                   type="button"
@@ -688,7 +707,7 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
             >
               <SlidersHorizontal className="size-[18px]" strokeWidth={2.4} aria-hidden />
             </IconAction>
-            {/* Ganti nama/pemegang/nomor â€” dulu identitas dompet hanya bisa
+            {/* Ganti nama/pemegang/nomor — dulu identitas dompet hanya bisa
                 ditulis SEKALI saat dibuat (salah ketik = permanen). */}
             <IconAction
               onClick={() => setRenameOpen(true)}
@@ -697,7 +716,7 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
             >
               <Pencil className="size-[18px]" strokeWidth={2.4} aria-hidden />
             </IconAction>
-            {/* dompet asalnya SUDAH jelas (halaman ini) â†’ user tidak memilih dua
+            {/* dompet asalnya SUDAH jelas (halaman ini) → user tidak memilih dua
                 kali; alurnya tetap sheet yang sama dengan pintu lain */}
             <IconAction
               onClick={() => setTransferOpen(true)}
@@ -707,7 +726,7 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
               <ArrowLeftRight className="size-[18px]" strokeWidth={2.4} aria-hidden />
             </IconAction>
             {/* Aksi merusak: tetap TERLIHAT di bar aksi (bukan cuma di popover),
-                tapi ikon-saja bernada plum â€” ia tidak boleh tampil sebesar aksi
+                tapi ikon-saja bernada plum — ia tidak boleh tampil sebesar aksi
                 primer. `aria-label` menyebut dompetnya supaya pembaca layar tahu
                 apa yang akan dihapus (paket 62). */}
             <IconAction
@@ -724,12 +743,12 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
       </div>
 
 
-      {/* â”€â”€ ALUR PINDAH DANA (paket 55) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      {/* ── ALUR PINDAH DANA (paket 55) ────────────────────────────────────────
           Satu host alur yang sama dipakai popover kartu /wallet, tombol di sini,
-          menu â€œLainnyaâ€, dan sidebar desktop. `source` = dompet halaman ini. */}
+          menu “Lainnya”, dan sidebar desktop. `source` = dompet halaman ini. */}
       <TransferFlow open={transferOpen} onOpenChange={setTransferOpen} source={wallet} />
 
-      {/* â”€â”€ SMART SYNC (Magic Vault) â€” koreksi saldo ke angka ASLI â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      {/* ── SMART SYNC (Magic Vault) — koreksi saldo ke angka ASLI ──────────
           Modal yang sama dengan halaman Dompet & Akun: user menulis saldo yang
           ia baca sendiri di m-banking-nya (tanpa open-banking), selisihnya
           dihitung live, lalu hero & grafik halaman ini ikut bergerak. */}
@@ -760,7 +779,7 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
         }}
       />
 
-      {/* detail transaksi â€” modal di desktop, bottom sheet di mobile */}
+      {/* detail transaksi — modal di desktop, bottom sheet di mobile */}
       <TransactionDetailSheet
         tx={selected}
         masked={masked}
@@ -769,7 +788,7 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
         onDelete={setPendingDelete}
       />
 
-      {/* sheet aksi titik tiga â€” wujud yang sama dengan Riwayat & Insight */}
+      {/* sheet aksi titik tiga — wujud yang sama dengan Riwayat & Insight */}
       <TransactionActionsSheet
         tx={menuTx}
         masked={masked}
@@ -779,7 +798,7 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
         onDelete={menuDelete}
       />
 
-      {/* sheet EDIT transaksi (paket 03) â€” engine yang sama dengan tombol "+" */}
+      {/* sheet EDIT transaksi (paket 03) — engine yang sama dengan tombol "+" */}
       <EditTransactionSheet
         tx={editingTx}
         onSave={handleSaveEdit}
@@ -798,7 +817,7 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
         )}
       </AnimatePresence>
 
-      {/* â”€â”€ KONFIRMASI HAPUS DOMPET (paket 62) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      {/* ── KONFIRMASI HAPUS DOMPET (paket 62) ─────────────────────────────────
           Dialog yang SAMA dengan hapus catatan; angkanya dibaca dari snapshot
           hidup (jumlah catatan yang menyentuh dompet ini + saldonya, disensor
           kalau tombol mata sedang ON). */}
@@ -831,7 +850,7 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
   )
 }
 
-/* â”€â”€ komponen kecil halaman ini â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── komponen kecil halaman ini ───────────────────────────────────────────── */
 
 /**
  * Tombol aksi SEKUNDER (ikon-saja) di bar aksi bawah halaman detail dompet.
@@ -840,7 +859,7 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
  * Dana, Hapus) MUSTAHIL berbeda ukuran/warna. Karena ikonnya tidak berlabel,
  * tiap tombol WAJIB punya `aria-label` yang menyebut aksinya + `title` sebagai
  * tooltip untuk pengguna mouse; `a11yLabel` dipakai kalau nama untuk pembaca
- * layar perlu lebih spesifik daripada label tampil (mis. hapus â†’ "Hapus dompet
+ * layar perlu lebih spesifik daripada label tampil (mis. hapus → "Hapus dompet
  * BCA"). Nada `danger` (plum) hanya untuk aksi merusak.
  */
 function IconAction({
@@ -882,7 +901,7 @@ function IconAction({
 /**
  * Ringkas 30 hari: tiga angka (Masuk / Keluar / Net) + garis arah saldo.
  *
- * Net ditulis dengan tinta netral apa pun tandanya â€” turun bukan kesalahan.
+ * Net ditulis dengan tinta netral apa pun tandanya — turun bukan kesalahan.
  * "Masuk" memakai hijau uang-masuk & "Keluar" terracotta, konsisten dengan
  * MONEY_TONE di daftar transaksi (bahasa warna uang yang sama di seluruh app).
  */
@@ -912,7 +931,7 @@ function PeriodSummaryCard({
         </span>
       </div>
 
-      {/* tiga angka dipisah hairline, BUKAN tiga kotak abu â€” lebih tenang,
+      {/* tiga angka dipisah hairline, BUKAN tiga kotak abu — lebih tenang,
           lebih padat, dan angkanya jadi satu baris baca yang utuh */}
       <dl className="mt-4 grid grid-cols-3 divide-x divide-soil/[0.08]">
         <PeriodStat
@@ -932,7 +951,7 @@ function PeriodSummaryCard({
         />
       </dl>
 
-      {/* grafik hanya kalau datanya memang cukup (>= 7 catatan). `mt-auto` â†’
+      {/* grafik hanya kalau datanya memang cukup (>= 7 catatan). `mt-auto` →
           grafiknya menempel ke dasar kartu, jadi kolom kanan yang lebih pendek
           dari hero TIDAK menyisakan ruang kosong (paket 82). `pt-4` menjaga
           jarak minimum saat isinya justru lebih tinggi dari hero. */}
@@ -944,7 +963,7 @@ function PeriodSummaryCard({
 }
 
 /**
- * Satu angka periode â€” rata kiri tanpa kotak latar, hanya dipisah hairline
+ * Satu angka periode — rata kiri tanpa kotak latar, hanya dipisah hairline
  * antar kolom (`divide-x` di induk). Nominalnya `truncate` supaya angka panjang
  * (Rp 1.234.567) tidak pernah mendorong kolom tetangga keluar barisnya.
  */
@@ -960,11 +979,11 @@ function PeriodStat({ label, value, tone }: { label: string; value: string; tone
 }
 
 /**
- * KARTU SABAR â€” "jujur soal data tipis" (celah kompetitif kita, PRD 572).
+ * KARTU SABAR — "jujur soal data tipis" (celah kompetitif kita, PRD 572).
  *
  * Muncul selama catatan dompet ini masih di bawah ambang insight. Isinya
- * progress menuju ambang, BUKAN kesimpulan finansial: klaim trend dari 2â€“3
- * transaksi itu gimmick yang merusak trust (PRD 584â€“590).
+ * progress menuju ambang, BUKAN kesimpulan finansial: klaim trend dari 2–3
+ * transaksi itu gimmick yang merusak trust (PRD 584–590).
  */
 function PatientInsightCard({ count }: { count: number }) {
   const progress = Math.min(count, INSIGHT_MIN_TRANSACTIONS)
@@ -986,7 +1005,7 @@ function PatientInsightCard({ count }: { count: number }) {
         </div>
       </div>
 
-      {/* progress [x/7] â€” engagement tanpa klaim prematur */}
+      {/* progress [x/7] — engagement tanpa klaim prematur */}
       <div className="mt-4 flex items-center gap-3">
         <span
           role="progressbar"
@@ -1015,7 +1034,7 @@ function PatientInsightCard({ count }: { count: number }) {
 }
 
 /** empty state nurturing: dompet ini belum punya satu catatan pun */
-function EmptyTransactions({ walletName }: { walletName: string }) {
+function EmptyTransactions({ walletName, walletId }: { walletName: string; walletId: string }) {
   return (
     <div className="mt-4 flex flex-col items-center rounded-[1.75rem] border-2 border-dashed border-forest/15 bg-cream/50 px-6 py-10 text-center">
       {/* ilustrasi sederhana dari ikon yang sudah dipakai empty state app
@@ -1034,10 +1053,11 @@ function EmptyTransactions({ walletName }: { walletName: string }) {
       </p>
       <div className="mt-5">
         {/* `walletName` = dompet halaman ini, jadi CTA-nya benar-benar menulis ke
-            dompet ini (dulu catatan dari sini jatuh ke dompet default konteks â€”
-            paket 59 Â· 59.3/59.4) dan sheet-nya menampilkan tujuannya */}
+            dompet ini (dulu catatan dari sini jatuh ke dompet default konteks —
+            paket 59 · 59.3/59.4) dan sheet-nya menampilkan tujuannya */}
         <TransactionBottomSheet
           walletName={walletName}
+          walletId={walletId}
           trigger={
             <button
               type="button"

@@ -8,10 +8,16 @@ import {
   successCheerFor,
   TRANSACTION_INSUFFICIENT_FUNDS_COPY,
   TRANSACTION_NO_WALLET_COPY,
+  TRANSACTION_WALLET_GONE_COPY,
 } from '@/lib/data/history'
 import { OFFLINE_COPY } from '@/lib/data/offline'
 import { recordDraftTransaction, type DraftTransactionInput } from '@/lib/transaction-bus'
-import { getMoneySnapshot, walletFundsCheck } from '@/lib/money/store'
+import {
+  getMoneySnapshot,
+  walletFundsCheck,
+  walletFundsCheckById,
+  walletSeedOf,
+} from '@/lib/money/store'
 import type { HistoryTransaction } from '@/lib/data/history'
 
 /* ── useTransactionSubmit — satu pintu "catat transaksi baru" (paket 33) ──────
@@ -115,17 +121,37 @@ export function useTransactionSubmit(
         return null
       }
 
+      /* ── ID EKSPLISIT TAPI DOMPETNYA SUDAH TIDAK ADA (paket 103) ──────────
+         Draft yang membawa `walletId` TIDAK boleh dialihkan ke dompet lain yang
+         namanya sama. Store juga menolaknya (`postTransaction`); di sini supaya
+         user membaca sebabnya, bukan panel yang diam. */
+      if (draft.walletId && !walletSeedOf(getMoneySnapshot(), draft.walletId.trim())) {
+        toast.error(TRANSACTION_WALLET_GONE_COPY.title, {
+          description: TRANSACTION_WALLET_GONE_COPY.body,
+        })
+        return null
+      }
+
       /* ── SALDO TIDAK BOLEH SUB-NOL (paket 74) ───────────────────────────────
-         Pengeluaran yang melebihi saldo dompet HIDUP ditolak SEBELUM ditulis:
-         tidak ada baris, saldo tidak bergerak, dan panelnya SENGAJA tidak ditutup
-         supaya nominal/catatan yang sudah diketik tidak hilang — user cukup
-         menurunkan nominalnya atau mengganti dompet. Penjaga yang sama juga hidup
-         di store (`postTransaction`) sebagai pagar terakhir untuk jalur lain. */
-      if (draft.type === 'expense') {
-        const funds = walletFundsCheck(getMoneySnapshot(), walletName, draft.amount ?? 0)
+         Uang yang KELUAR dari dompet ditolak SEBELUM ditulis kalau dompetnya
+         tidak sanggup membayar: tidak ada baris, saldo tidak bergerak, dan
+         panelnya SENGAJA tidak ditutup supaya nominal/catatan yang sudah diketik
+         tidak hilang — user cukup menurunkan nominalnya atau mengganti dompet.
+         `saving` (setoran celengan) ikut diperiksa: barisnya transfer satu sisi,
+         jadi nominalnya memotong saldo persis seperti pengeluaran. Penjaga yang
+         sama juga hidup di store (`postTransaction`) sebagai pagar terakhir. */
+      if (draft.type === 'expense' || draft.type === 'saving') {
+        /* paket 102: kalau engine sudah tahu ID dompetnya, saldo diperiksa pada
+           dompet ITU — bukan dompet pertama yang namanya kebetulan sama */
+        const funds = draft.walletId
+          ? walletFundsCheckById(getMoneySnapshot(), draft.walletId, draft.amount ?? 0)
+          : walletFundsCheck(getMoneySnapshot(), walletName, draft.amount ?? 0)
         if (funds.known && !funds.sufficient) {
           toast.error(TRANSACTION_INSUFFICIENT_FUNDS_COPY.title, {
-            description: TRANSACTION_INSUFFICIENT_FUNDS_COPY.body(walletName),
+            description:
+              draft.type === 'saving'
+                ? TRANSACTION_INSUFFICIENT_FUNDS_COPY.savingBody(walletName)
+                : TRANSACTION_INSUFFICIENT_FUNDS_COPY.body(walletName),
           })
           return null
         }

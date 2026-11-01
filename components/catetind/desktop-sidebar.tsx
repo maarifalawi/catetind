@@ -72,7 +72,9 @@ export function DesktopSidebar({
      di-hardcode, dan sidebar ini ada di SEMUA halaman app — jadi setiap user
      melihat identitas orang lain di layarnya sendiri. */
   const { user } = useSessionUser()
-  const userName = user?.name || SESSION_COPY.unknownName
+  /* Sudah masuk tapi belum punya nama → "Akun kamu", bukan "Belum masuk"
+     (menyebut user yang jelas sudah masuk sebagai "belum masuk" itu salah). */
+  const userName = user?.name || (user ? SESSION_COPY.unnamedUser : SESSION_COPY.unknownName)
   const userEmail = user?.email || SESSION_COPY.unknownEmail
   const [addOpen, setAddOpen] = useState(false)
   /**
@@ -386,8 +388,13 @@ export function DesktopSidebar({
             collapsed ? 'size-10' : 'size-9',
           )}
         >
+          {/* Foto profil dari `profiles.avatar_url` (lintas perangkat); kalau
+              belum ada, placeholder netral — bukan foto orang lain. Datanya
+              data URL kecil (≤ 20 KB) dari `/api/session`, bukan dari cookie. */}
           <Image
-            src="/placeholder-user.jpg"
+            src={user?.avatarUrl || '/placeholder-user.jpg'}
+            /* data URL tidak melewati optimizer Next (bukan aset statis) */
+            unoptimized={Boolean(user?.avatarUrl?.startsWith('data:'))}
             alt={userName}
             fill
             sizes="40px"

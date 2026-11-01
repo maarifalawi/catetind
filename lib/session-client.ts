@@ -33,6 +33,11 @@ export interface SessionUserView {
   id: string
   email: string
   name: string
+  /**
+   * Foto profil (data URL ≤ 20 KB) dari `profiles.avatar_url` — TIDAK PERNAH
+   * dari cookie sesi: cookie dibatasi 4096 byte (lihat `app/api/profile`).
+   */
+  avatarUrl?: string | null
 }
 
 /**
@@ -184,11 +189,182 @@ export async function endSession(): Promise<boolean> {
 }
 
 /**
+ * Pindah halaman SETELAH sesi jadi — RELOAD PENUH, bukan `router.push`.
+ *
+ * Kenapa bukan navigasi client: store uang (dan seluruh store domain lain)
+ * hidup di memory modul dan hanya dihidrasi SEKALI per dokumen
+ * (`hydrateMoneyStore()`). Dengan `router.push`, tab yang tadinya berisi sesi
+ * lain / data lokal tetap memakai state lama sampai user menekan refresh —
+ * persis gejala "setelah login tampilannya beda, setelah refresh baru benar".
+ * `assign` memastikan semua modul lahir kosong dan membaca sesi yang baru.
+ *
+ * Alasan yang sama dipakai tombol Keluar (`settings-panel-account.tsx`), jadi
+ * masuk & keluar memperlakukan memory modul dengan aturan yang sama.
+ */
+export function navigateAfterSignIn(path: string): void {
+  if (typeof window === 'undefined') return
+  window.location.assign(path)
+}
+
+/**
  * Siapa yang sedang masuk? Dibaca lewat `/api/session` (bukan
  * `supabase.auth.getSession()` di klien) supaya jawabannya SAMA dengan yang
  * dipakai route server — satu sumber kebenaran identitas, seperti sebelum paket
  * 45; yang berubah cuma isinya (sekarang token Supabase yang sah).
  */
+/* ── GANTI NAMA TAMPILAN (perbaikan: nama benar-benar tersimpan) ──────────────
+   Sebelum ini tombol "Simpan Perubahan" di Pengaturan → Profil & Akun hanya
+   menutup penanda `dirty` lalu menampilkan toast sukses. Tidak ada satu pun
+   tulisan yang keluar dari perangkat, jadi sapaan Dashboard & identitas di
+   sidebar tetap memakai nama lama selamanya — persis keluhan "di pengaturan
+   bilang berhasil, tapi nyatanya nggak berubah".
+
+   Sekarang namanya disimpan di DUA tempat, dan dua-duanya memang dipakai:
+     · `user_metadata.nickname` (Supabase Auth) → dibaca `readSupabaseSession()`
+       dan dipakai sapaan Dashboard, sidebar, serta panel Pengaturan;
+     · `profiles.nickname` → dipakai identitas di dompet bersama & referral
+       (RLS owner-only: user hanya bisa mengubah barisnya sendiri).
+
+   `profiles` diperlakukan best-effort: kalau barisnya tidak bisa diperbarui,
+   hasilnya tetap `ok` TAPI `profileSynced: false` supaya UI bisa mengatakan apa
+   yang belum ikut berubah — bukan mengaku semuanya beres. */
+
+/** panjang maksimum nama tampilan — cukup untuk nama lengkap, tidak untuk paragraf */
+export const DISPLAY_NAME_MAX = 40
+
+/** copy panel nama — satu sumber untuk validasi & pesan yang dilihat user */
+export const DISPLAY_NAME_COPY = {
+  empty: 'Nama nggak boleh kosong ya.',
+  tooLong: `Nama maksimal ${DISPLAY_NAME_MAX} karakter.`,
+  noBackend: 'Nama belum bisa disimpan: backend akun belum tersambung di build ini.',
+  noSession: 'Sesi kamu sudah berakhir. Masuk lagi untuk mengganti nama.',
+  failed: 'Nama belum tersimpan. Coba lagi ya.',
+  network: 'Jaringan tidak bisa dihubungi. Coba lagi ya.',
+} as const
+
+/** rapikan ketikan user: spasi ganda & spasi di tepi dibuang */
+export function normalizeDisplayName(raw: string): string {
+  return (raw ?? '').replace(/\s+/g, ' ').trim()
+}
+
+export type DisplayNameResult =
+  | { ok: true; name: string; profileSynced: boolean }
+  | { ok: false; error: string }
+
+/**
+ * Simpan nama tampilan. Urutannya sengaja: validasi dulu (tanpa jaringan),
+ * baru tulis metadata akun (sumber sapaan), lalu `profiles` (identitas yang
+ * dilihat anggota dompet bersama).
+ */
+export async function updateDisplayName(raw: string): Promise<DisplayNameResult> {
+  const name = normalizeDisplayName(raw)
+  if (!name) return { ok: false, error: DISPLAY_NAME_COPY.empty }
+  if (name.length > DISPLAY_NAME_MAX) return { ok: false, error: DISPLAY_NAME_COPY.tooLong }
+  if (typeof window === 'undefined') return { ok: false, error: DISPLAY_NAME_COPY.noBackend }
+
+  /* JALUR 1 — klien browser (token user, RLS yang menjaga). */
+  const client = browserSupabase()
+  if (client) {
+    try {
+      const { data: sessionData } = await client.auth.getSession()
+      const session = sessionData.session
+      if (session?.access_token) {
+        const { data, error } = await client.auth.updateUser({ data: { nickname: name } })
+        if (!error) {
+          const saved =
+            normalizeDisplayName(String(data.user?.user_metadata?.nickname ?? '')) || name
+          let profileSynced = false
+          try {
+            const { error: profileError } = await client
+              .from('profiles')
+              .update({ nickname: saved, updated_at: new Date().toISOString() })
+              .eq('user_id', session.user.id)
+            profileSynced = !profileError
+          } catch {
+            profileSynced = false
+          }
+          return { ok: true, name: saved, profileSynced }
+        }
+      }
+    } catch {
+      /* jatuh ke jalur server */
+    }
+  }
+
+  /* JALUR 2 — server dengan cookie sesi. Ini yang membuat user yang BISA
+     membuka app (middleware menerimanya) tidak pernah gagal mengganti nama
+     hanya karena klien Supabase di browser tidak punya sesi. */
+  return saveNameViaServer(name)
+}
+
+interface ProfilePatch {
+  name?: string
+  avatarUrl?: string | null
+}
+
+type ProfilePatchResult =
+  | { ok: true; name?: string; avatarUrl?: string | null }
+  | { ok: false; error: string }
+
+async function patchProfileViaServer(patch: ProfilePatch): Promise<ProfilePatchResult> {
+  try {
+    const res = await fetch('/api/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    })
+    const json = (await res.json().catch(() => null)) as
+      | { name?: string; avatarUrl?: string | null; error?: string }
+      | null
+    if (!res.ok) return { ok: false, error: json?.error ?? DISPLAY_NAME_COPY.failed }
+    return { ok: true, name: json?.name, avatarUrl: json?.avatarUrl }
+  } catch {
+    return { ok: false, error: DISPLAY_NAME_COPY.network }
+  }
+}
+
+async function saveNameViaServer(name: string): Promise<DisplayNameResult> {
+  const result = await patchProfileViaServer({ name })
+  if (!result.ok) return result
+  return {
+    ok: true,
+    name: normalizeDisplayName(result.name ?? name) || name,
+    profileSynced: true,
+  }
+}
+
+export type AvatarResult = { ok: true; avatarUrl: string | null } | { ok: false; error: string }
+
+/**
+ * Simpan (atau hapus, dengan `null`) foto profil. Data URL sudah dikompres klien
+ * (`lib/avatar.ts`); di sini hanya soal menulisnya ke `profiles.avatar_url`
+ * lewat jalur browser, dengan jalur server sebagai cadangan.
+ */
+export async function updateAvatar(avatarUrl: string | null): Promise<AvatarResult> {
+  if (typeof window === 'undefined') return { ok: false, error: DISPLAY_NAME_COPY.noBackend }
+
+  const client = browserSupabase()
+  if (client) {
+    try {
+      const { data: sessionData } = await client.auth.getSession()
+      const userId = sessionData.session?.user.id
+      if (userId) {
+        const { error } = await client
+          .from('profiles')
+          .update({ avatar_url: avatarUrl, updated_at: new Date().toISOString() })
+          .eq('user_id', userId)
+        if (!error) return { ok: true, avatarUrl }
+      }
+    } catch {
+      /* jatuh ke jalur server */
+    }
+  }
+
+  const result = await patchProfileViaServer({ avatarUrl })
+  if (!result.ok) return result
+  return { ok: true, avatarUrl: result.avatarUrl ?? avatarUrl }
+}
+
 export async function fetchSessionUser(): Promise<SessionUserView | null> {
   try {
     const res = await fetch('/api/session', { method: 'GET', cache: 'no-store' })

@@ -39,6 +39,15 @@ export interface WalletPickerOption {
   id: string
   /** nama dompet yang TERSIMPAN di baris transaksi */
   label: string
+  /**
+   * Nama yang DIBACA user (paket 102).
+   *
+   * Beda dari `label` hanya saat beberapa dompet bernama sama (mis. tiga kartu
+   * BCA): labelnya diberi pembeda `· ••1234` / `· 2`. Nilai yang ditulis ke
+   * baris kas tetap `label` (nama asli), sementara yang tampil di sini cukup
+   * untuk membedakan dompet mana yang akan terpotong.
+   */
+  displayLabel?: string
   balance: number
   /**
    * Baris kecil PENGGANTI "Saldo …" (paket 81).
@@ -57,22 +66,34 @@ const TRIGGER_CLASS =
 
 export function WalletPicker({
   value,
+  selectedId,
   options,
   onChange,
   masked = false,
   invalid = false,
   describedBy,
 }: {
+  /** nama dompet terpilih (nilai yang ditulis ke baris kas) */
   value: string
+  /**
+   * id dompet terpilih (paket 102). Diisi = pilihan dicocokkan lewat ID, jadi
+   * dompet kembar bernama sama bisa dibedakan. Tidak diisi = jatuh ke `value`
+   * (perilaku lama untuk pemanggil yang hanya punya nama).
+   */
+  selectedId?: string
   options: WalletPickerOption[]
-  onChange: (name: string) => void
+  /** `name` = nilai yang ditulis ke baris kas; `id` = dompet yang dipilih */
+  onChange: (name: string, id: string) => void
   /** tombol mata global aktif -> saldo disensor */
   masked?: boolean
   invalid?: boolean
   describedBy?: string
 }) {
   const [open, setOpen] = useState(false)
-  const selected = options.find((option) => option.label === value) ?? null
+  const selected =
+    (selectedId ? options.find((option) => option.id === selectedId) : null) ??
+    options.find((option) => option.label === value) ??
+    null
   /**
    * Nilai yang sedang terpakai tapi TIDAK ada di daftar opsi (paket 81).
    *
@@ -87,8 +108,8 @@ export function WalletPicker({
      (lihat catatan "PAKET 70" di picker-sheet.tsx). */
   const triggerRef = useRef<HTMLButtonElement>(null)
 
-  function choose(name: string) {
-    onChange(name)
+  function choose(option: WalletPickerOption) {
+    onChange(option.label, option.id)
     setOpen(false)
   }
 
@@ -108,7 +129,7 @@ export function WalletPicker({
         <span className="flex min-w-0 items-center gap-2">
           {selected ? (
             <>
-              <span className="truncate">{selected.label}</span>
+              <span className="truncate">{selected.displayLabel ?? selected.label}</span>
               <span className="shrink-0 text-[12.5px] font-medium text-forest-muted">
                 {selected.hint ?? maskMoney(selected.balance, masked)}
               </span>
@@ -150,13 +171,16 @@ export function WalletPicker({
              stroke opsi pertama tanpa menggeser satu pun elemen */
           <ul className={cn('flex flex-col gap-1.5', PICKER_LIST_GUTTER)}>
             {options.map((option) => {
-              const active = option.label === value
+              /* pilihan aktif dicocokkan lewat ID lebih dulu (paket 102): dompet
+                 kembar bernama sama tidak lagi terlihat "semuanya terpilih" */
+              const active = selectedId ? option.id === selectedId : option.label === value
+              const label = option.displayLabel ?? option.label
               return (
                 <li key={option.id}>
                   <button
                     type="button"
-                    onClick={() => choose(option.label)}
-                    aria-label={option.label}
+                    onClick={() => choose(option)}
+                    aria-label={label}
                     aria-pressed={active}
                     className={cn(
                       'flex w-full items-center gap-3 rounded-2xl px-3.5 py-3 text-left transition-[background,box-shadow] duration-200',
@@ -168,7 +192,7 @@ export function WalletPicker({
                   >
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-[14px] font-medium text-forest">
-                        {option.label}
+                        {label}
                       </span>
                       <span className="mt-0.5 block text-[12px] font-medium text-forest-muted">
                         {option.hint ??

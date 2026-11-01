@@ -1,5 +1,17 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { BILL_PAYMENT_CATEGORY, BILL_UNPAID_REVERSAL_NOTE, INITIAL_BILLS, type Bill } from '@/lib/data/bills'
+import {
+  BILL_PAYMENT_CATEGORY,
+  BILL_UNPAID_REVERSAL_NOTE,
+  INITIAL_BILLS,
+  billForMonth,
+  billPaidInMonth,
+  billsOnDay,
+  effectiveDueDay,
+  getBillStatus,
+  isBillCompleted,
+  monthKeyOf,
+  type Bill,
+} from '@/lib/data/bills'
 import { BILLS_STATE_KEY, loadDeviceState } from './idb'
 import { buildMoneyExport, collectExportSources, moneyExportJson } from './export'
 import {
@@ -369,5 +381,79 @@ describe('ekspor & kontrak store untuk komponen', () => {
        snapshot server = daftar seed (tanpa IDB), snapshot biasa = state hidup. */
     expect(typeof useBillsStore).toBe('function')
     expect(getBillsSnapshot().bills).toHaveLength(INITIAL_BILLS.length)
+  })
+})
+
+/* ── BULAN BERJALAN: LUNAS, TENOR, & JATUH TEMPO AKHIR BULAN (paket 103) ────
+   Tiga bug yang dikunci di sini:
+     1. tagihan yang dibayar bulan lalu tetap "Lunas" selamanya;
+     2. progres cicilan tidak pernah naik/turun mengikuti pelunasan;
+     3. tagihan tanggal 29–31 tidak pernah "jatuh tempo" di bulan pendek. */
+describe('bills: bulan berjalan, tenor, & jatuh tempo akhir bulan (paket 103)', () => {
+  const baseBill = (overrides: Partial<Bill> = {}): Bill => ({
+    id: 'x',
+    emoji: '',
+    name: 'Tagihan Uji',
+    amount: 50_000,
+    dueDate: 10,
+    isRecurring: true,
+    category: 'Tagihan',
+    walletId: 'bca',
+    isPaidThisMonth: false,
+    reminderDaysBefore: 1,
+    scope: 'pribadi',
+    ...overrides,
+  })
+
+  it('pembayaran bulan lalu tidak membuat tagihan lunas di bulan berjalan', () => {
+    const created = addBill(baseBill())
+    const paid = markBillPaid(created.id, 'BCA', 50_000, '1999-01-10')!
+    expect(paid.bill.paidMonth).toBe('1999-01')
+    expect(paid.bill.isPaidThisMonth).toBe(true)
+
+    const live = billById(getBillsSnapshot(), created.id)!
+    expect(live.isPaidThisMonth).toBe(false)
+    expect(unpaidBills(getBillsSnapshot()).some((bill) => bill.id === created.id)).toBe(true)
+    /* baris kas bulan lalu TETAP ada — yang berubah hanya status bulan ini */
+    expect(getMoneySnapshot().rows.some((row) => row.id === paid.row.id)).toBe(true)
+  })
+
+  it('cicilan naik satu langkah saat dibayar, turun saat dibatalkan, dan selesai di tenor akhir', () => {
+    const created = addBill(
+      baseBill({ amount: 100_000, currentMonth: 2, endAfterMonths: 2 }),
+    )
+
+    const paid = markBillPaid(created.id, 'BCA', 100_000)!
+    expect(paid.bill.currentMonth).toBe(3)
+    expect(isBillCompleted(paid.bill)).toBe(true)
+    expect(unpaidBills(getBillsSnapshot()).some((bill) => bill.id === created.id)).toBe(false)
+
+    const undone = unmarkBillPaid(created.id)!
+    expect(undone.bill.currentMonth).toBe(2)
+    expect(isBillCompleted(undone.bill)).toBe(false)
+    expect(unpaidBills(getBillsSnapshot()).some((bill) => bill.id === created.id)).toBe(true)
+  })
+
+  it('jatuh tempo 29/30/31 di-clamp ke hari terakhir bulan berjalan', () => {
+    const due31 = baseBill({ dueDate: 31 })
+    expect(effectiveDueDay(due31, 31)).toBe(31)
+    expect(effectiveDueDay(due31, 30)).toBe(30)
+    expect(effectiveDueDay(due31, 28)).toBe(28)
+
+    expect(getBillStatus(due31, 30, 30)).toBe('due_today')
+    expect(getBillStatus(due31, 29, 30)).toBe('upcoming')
+    expect(getBillStatus(due31, 30, 28)).toBe('overdue')
+    /* kalender 14 hari memakai tanggal efektif, jadi tagihan tgl 31 muncul di
+       tanggal 28 pada Februari */
+    expect(billsOnDay([due31], 28, 28)).toHaveLength(1)
+    expect(billsOnDay([due31], 31, 30)).toHaveLength(0)
+  })
+
+  it('penanda bulan bisa diturunkan dari tanggal baris kas (data lama tanpa paidMonth)', () => {
+    const bill = baseBill({ isPaidThisMonth: true, paidRowId: 'row-1' })
+    expect(billPaidInMonth(bill, '2026-10', '2026-10-05')).toBe(true)
+    expect(billPaidInMonth(bill, '2026-11', '2026-10-05')).toBe(false)
+    expect(billForMonth(bill, '2026-11', '2026-10-05').isPaidThisMonth).toBe(false)
+    expect(monthKeyOf('2026-10-05')).toBe('2026-10')
   })
 })

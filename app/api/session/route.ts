@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireUser } from '@/lib/session'
+import { adminSupabase } from '@/lib/supabase/admin'
 import { signOutServer } from '@/lib/supabase/server'
 
 /**
@@ -21,7 +22,31 @@ import { signOutServer } from '@/lib/supabase/server'
 export async function GET(req: NextRequest) {
   const auth = requireUser(req)
   if (!auth.ok) return auth.response
-  return NextResponse.json({ user: auth.user })
+
+  /* Nama & foto dibaca dari `profiles`, BUKAN hanya dari metadata di cookie:
+     metadata di JWT bisa basi (nama diganti di perangkat lain, atau diganti
+     lewat `/api/profile` yang menulis server-side). Cookie tetap kecil karena
+     foto profil TIDAK pernah disimpan di sini — lihat `app/api/profile`. */
+  let name = auth.user.name
+  let avatarUrl: string | null = null
+  const client = adminSupabase()
+  if (client) {
+    try {
+      const { data } = await client
+        .from('profiles')
+        .select('nickname,avatar_url')
+        .eq('user_id', auth.user.id)
+        .maybeSingle()
+      if (data && typeof data.nickname === 'string' && data.nickname.trim()) {
+        name = data.nickname.trim()
+      }
+      avatarUrl = typeof data?.avatar_url === 'string' ? data.avatar_url : null
+    } catch {
+      /* gagal baca profil bukan alasan menolak identitas: pakai nilai cookie */
+    }
+  }
+
+  return NextResponse.json({ user: { ...auth.user, name, avatarUrl } })
 }
 
 export async function DELETE() {

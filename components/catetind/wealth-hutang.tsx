@@ -143,7 +143,7 @@ export function WealthHutang({
   /** id hutang yang barnya baru saja lunas — memicu confetti + kolaps */
   celebrateId: string | null
   /** dompet dari ledger (BCA, GoPay, Tunai, dompet buatan user) + saldonya */
-  walletOptions: { id: string; label: string; balance: number }[]
+  walletOptions: { id: string; label: string; displayLabel?: string; balance: number }[]
   onAddDebt: () => void
   /**
    * Aksi uang: `amount` = nominal yang diserahkan/diterima, `walletId` = dompet
@@ -902,7 +902,7 @@ function DebtCashSheet({
   debt: Debt | null
   masked: boolean
   /** dompet dari ledger + saldonya — supaya user tahu uangnya cukup atau tidak */
-  walletOptions: { id: string; label: string; balance: number }[]
+  walletOptions: { id: string; label: string; displayLabel?: string; balance: number }[]
   onClose: () => void
   /** `true` = baris kas berhasil ditulis dan sheet boleh ditutup */
   onConfirm: (amount: number, date: string, wallet: string) => boolean
@@ -1022,7 +1022,11 @@ function DebtCashSheet({
             <ChoicePills
               className="mt-2"
               ariaLabel={copy.walletLabel}
-              options={walletOptions.map((option) => ({ id: option.id, label: option.label }))}
+              options={walletOptions.map((option) => ({
+                id: option.id,
+                label: option.label,
+                displayLabel: option.displayLabel,
+              }))}
               value={wallet}
               onChange={setWallet}
             />

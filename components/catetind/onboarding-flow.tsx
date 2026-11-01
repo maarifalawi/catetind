@@ -190,12 +190,17 @@ export function OnboardingFlow() {
     try {
       const snapshot = getMoneySnapshot()
       if (!walletIdOfName(snapshot, walletName)) {
-        addWalletAccount({
+        const created = addWalletAccount({
           name: walletName,
           type: 'Cash',
           opening: walletBalance ?? 0,
           context: 'pribadi',
         })
+        /* nama yang sudah dipakai = store menolak; jangan lanjut menulis
+           catatan ke dompet yang tidak ada */
+        if (!created && !walletIdOfName(getMoneySnapshot(), walletName)) {
+          throw new Error('Dompet onboarding tidak bisa dibuat')
+        }
       }
       recordTransaction({
         name: txNote.trim() || TRANSACTION_DEFAULT_NAME[txType],

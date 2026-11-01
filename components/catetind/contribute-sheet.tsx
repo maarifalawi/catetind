@@ -3,7 +3,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { BudgetSheet, RupiahField, SheetSubmit, useFocusOnOpen } from './budget-sheet'
 import { cn } from '@/lib/utils'
-import { WALLET_SOURCES, fundPercent, maskNominal, type SinkingFundItem } from '@/lib/data/budget'
+import {
+  FUND_CONTRIBUTE_INSUFFICIENT_COPY,
+  WALLET_SOURCES,
+  fundPercent,
+  maskNominal,
+  type SinkingFundItem,
+} from '@/lib/data/budget'
+import { useMoneyStore, walletFundsCheckById } from '@/lib/money/store'
 
 /* ── 4B. Setor ke Celengan — sheet kecil, satu ketukan selesai ───────────────
    Isinya sengaja cuma tiga hal: nominal, dari dompet mana, lalu setor. Nominal
@@ -59,6 +66,17 @@ export function ContributeSheet({
 
   const amount = Number(digits || '0')
   const percent = shown ? fundPercent(shown) : 0
+  /* ── SALDO TIDAK BOLEH SUB-NOL ────────────────────────────────────────────
+     Setor = uang keluar dari dompet, jadi dompet yang dipilih harus sanggup
+     membayar. Dulu sheet ini cuma memeriksa saldo CELENGAN saat menarik dana;
+     saat menyetor, nominal berapa pun bisa ditekan dan barisnya memotong saldo
+     dompet sampai MINUS. Pemeriksaannya murni (`walletFundsCheckById`, rumus yang
+     sama dengan pagar store) supaya alasannya bisa dibaca SEBELUM menekan
+     "Setor" — bukan toast yang hilang. */
+  const snapshot = useMoneyStore()
+  const sourceName = WALLET_SOURCES.find((source) => source.id === walletId)?.name ?? ''
+  const funds = walletFundsCheckById(snapshot, walletId, amount)
+  const notEnough = !withdrawing && funds.known && !funds.sufficient
   /** proyeksi progres setelah setoran/penarikan — bikin aksinya terasa berdampak */
   const afterPercent =
     shown && shown.target > 0
@@ -70,11 +88,13 @@ export function ContributeSheet({
           ),
         )
       : 0
-  const ready = shown !== null && amount > 0 && (!withdrawing || amount <= shown.current)
+  const ready =
+    shown !== null && amount > 0 && (!withdrawing || amount <= shown.current) && !notEnough
 
   function submit() {
     if (!shown || amount <= 0) return
     if (withdrawing && amount > shown.current) return
+    if (notEnough) return
     onContribute(shown.id, amount, walletId)
   }
 
@@ -193,6 +213,18 @@ export function ContributeSheet({
             )
           })}
         </div>
+
+        {/* Saldo dompet sumber tidak cukup → alasan tampil DI SINI dan tombol
+            Setor mati, jadi user tidak perlu menebak kenapa setorannya tidak
+            jalan (dan tidak ada baris yang terlanjur ditulis). */}
+        {notEnough && (
+          <p
+            role="status"
+            className="mt-3 rounded-2xl bg-daisy-light/60 px-3.5 py-2.5 text-[12.5px] font-medium leading-relaxed text-daisy-deep ring-1 ring-daisy-deep/15"
+          >
+            {FUND_CONTRIBUTE_INSUFFICIENT_COPY.body(sourceName)}
+          </p>
+        )}
       </div>
     </BudgetSheet>
   )

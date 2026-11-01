@@ -13,6 +13,7 @@ import {
 import { usePrivacy } from './privacy-provider'
 import { WALLET_TYPE_LABEL } from './wallet-card-face'
 import { cn } from '@/lib/utils'
+import { newClientTxId } from '@/lib/client-tx'
 import { formatDayLabel, maskMoney } from '@/lib/data/history'
 import { TRANSFER_SHEET_COPY, WALLET_TODAY_ISO } from '@/lib/data/add-wallet'
 import { useTodayISO } from '@/lib/use-today-iso'
@@ -76,7 +77,13 @@ export function TransferSheet({
    * SATU-SATUNYA jalur tulis pindah dana: parent memanggil `postTransfer()`
    * (`lib/money/store.ts`) lewat `useTransferSubmit()`, lalu menutup sheet ini.
    */
-  onTransfer: (fromWalletId: string, toWalletId: string, amount: number, note: string) => void
+  onTransfer: (
+    fromWalletId: string,
+    toWalletId: string,
+    amount: number,
+    note: string,
+    clientTxId: string,
+  ) => void
 }) {
   const { masked } = usePrivacy()
   /**
@@ -96,6 +103,16 @@ export function TransferSheet({
   /** pemilih asal dipaksa terbuka (tombol “Ganti dompet asal”) */
   const [pickingFrom, setPickingFrom] = useState(false)
   const amountRef = useRef<HTMLInputElement>(null)
+  /**
+   * Kunci idempotensi untuk satu aksi pindah dana (paket 102).
+   *
+   * Dibuat ulang SETIAP kali sheet dibuka, lalu dipakai untuk semua penulisan
+   * dari pembukaan itu. Double-tap pada tombol "Pindah" mengirim kunci yang sama,
+   * dan store mengembalikan baris yang SUDAH ADA — bukan mentransfer dua kali.
+   * Membuka sheet lagi = kunci baru, jadi dua transfer sah berturut-turut dengan
+   * nominal sama tetap tercatat dua kali.
+   */
+  const clientTxIdRef = useRef('')
 
   /* form selalu mulai bersih tiap kali dibuka / dompet asal berganti; saat
      MENUTUP sengaja tidak direset supaya isi sheet tidak berkedip kosong di
@@ -108,6 +125,7 @@ export function TransferSheet({
     setNote('')
     /* pintu “Lainnya” tidak membawa dompet asal → pemilihnya langsung terbuka */
     setPickingFrom(source === null)
+    clientTxIdRef.current = newClientTxId()
   }, [open, source])
 
   useFocusOnOpen(open, amountRef)
@@ -140,7 +158,8 @@ export function TransferSheet({
 
   function submit() {
     if (!origin || !destination || amount <= 0 || exceeded) return
-    onTransfer(origin.id, destination.id, amount, note.trim())
+    if (!clientTxIdRef.current) clientTxIdRef.current = newClientTxId()
+    onTransfer(origin.id, destination.id, amount, note.trim(), clientTxIdRef.current)
   }
 
   return (

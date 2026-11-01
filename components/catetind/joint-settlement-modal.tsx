@@ -30,25 +30,25 @@ import { useSubscriptionGate } from './subscription-gate-provider'
 import { SubscriptionLockNote } from './subscription-lock-note'
 import { cn } from '@/lib/utils'
 
-/* â”€â”€ Settlement Modal (Section 7) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+/* ── Settlement Modal (Section 7) ────────────────────────────────────────────
    Rekap bulanan + instruksi transfer + tombol "Tandai Sudah Settle".
    Sengaja dibuka dari Balance Scale ("Settle Sekarang") ATAU dari banner rekap
-   bulanan â€” dua pintu ke satu layar yang sama.
+   bulanan — dua pintu ke satu layar yang sama.
 
    Stage 2 #1 & #2:
-   â€¢ Blok rekap menampilkan NET per orang (`netPhrase`) â€” dulu isinya "patungan"
+   • Blok rekap menampilkan NET per orang (`netPhrase`) — dulu isinya "patungan"
      lalu "Selisih" tanpa pernah menyebut siapa berhak menerima berapa.
-   â€¢ Baris "Satu transfer" memberi nama pada nominalnya: satu transfer penuh
+   • Baris "Satu transfer" memberi nama pada nominalnya: satu transfer penuh
      memang menyelesaikan bulan ini (dulu user tidak tahu itu setengah selisih
      atau transfer penuh).
-   â€¢ User memilih metode transfernya, dan pilihannya dibawa ke halaman supaya
+   • User memilih metode transfernya, dan pilihannya dibawa ke halaman supaya
      baris ledger `settlement {from, to, amount, method, month}` punya isi.
 
    Mobile: bottom sheet. Desktop: dialog tengah (translate dipakai sebagai
    properti terpisah supaya tidak bentrok dengan animasi y Framer Motion).
    Disclaimer di bawah penting: CatetInd CUMA mencatat, uangnya tetap dipindah
-   manual â€” biar tidak ada salah paham "sudah transfer otomatis".
-   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+   manual — biar tidak ada salah paham "sudah transfer otomatis".
+   ────────────────────────────────────────────────────────────────────────── */
 
 const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1]
 
@@ -71,7 +71,7 @@ export function JointSettlementModal({
   settlement: SettlementState
   masked: boolean
   /**
-   * user menekan "Tandai Sudah Settle" â€” halaman menulis penanda bulan dan, kalau
+   * user menekan "Tandai Sudah Settle" — halaman menulis penanda bulan dan, kalau
    * dompet dipilih, baris kas yang benar-benar memindahkan uang.
    */
   onSettle: (method: SettlementMethod, cashWalletId?: string) => void
@@ -84,7 +84,7 @@ export function JointSettlementModal({
    * (pengirim: keluar, penerima: masuk) dan muncul di Riwayat. Kosong = hanya
    * penanda kesepakatan, tanpa menggeser saldo.
    */
-  walletOptions?: { id: string; label: string }[]
+  walletOptions?: { id: string; label: string; displayLabel?: string }[]
   cashWalletId?: string
   onCashWalletChange?: (walletId: string) => void
   /**
@@ -95,10 +95,10 @@ export function JointSettlementModal({
   onUndoSettle?: () => void
 }) {
   useBodyScrollLock(open, true)
-  /* menandai bulan "sudah settle" mengubah status data bersama â†’ ikut terkunci
+  /* menandai bulan "sudah settle" mengubah status data bersama → ikut terkunci
      saat masa aktif habis (task 23). Rekap & instruksi transfernya tetap terbaca. */
   const { inputLocked } = useSubscriptionGate()
-  /* metode transfer yang dipilih user â€” ikut tersimpan di baris ledger */
+  /* metode transfer yang dipilih user — ikut tersimpan di baris ledger */
   const [method, setMethod] = useState<SettlementMethod>(DEFAULT_SETTLEMENT_METHOD)
 
   /* Escape menutup modal (pola yang sama dengan detail transaksi) */
@@ -120,7 +120,7 @@ export function JointSettlementModal({
         navigator.vibrate([30, 50, 30])
       }
     } catch {
-      /* haptic itu bonus â€” jangan sampai memblokir aksi utama */
+      /* haptic itu bonus — jangan sampai memblokir aksi utama */
     }
     toast.success(SETTLED_TOAST)
     /* metode transfer + dompet (kalau dipilih) ikut dikirim: halaman yang menulis
@@ -177,8 +177,8 @@ export function JointSettlementModal({
                 </button>
               </div>
 
-              {/* dua lapisan angka (audit #1â€“#3): seluruh catatan vs POSISI BERSIH
-                  yang benar-benar menentukan transfer â€” supaya baris "Satu transfer"
+              {/* dua lapisan angka (audit #1–#3): seluruh catatan vs POSISI BERSIH
+                  yang benar-benar menentukan transfer — supaya baris "Satu transfer"
                   di bawah bisa ditelusuri */}
               <div className="mt-3 space-y-2 rounded-[1.5rem] bg-cream px-4 py-3.5 ring-1 ring-soil/10">
                 <p className="text-[11.5px] font-medium uppercase tracking-[0.14em] text-forest/35">
@@ -222,7 +222,7 @@ export function JointSettlementModal({
                 <p className="text-[11.5px] leading-relaxed text-forest/70">
                   Yang ditimbang {moneyLabel(settlement.weighedTotal, masked)}
                   {settlement.treatTotal > 0
-                    ? ` Â· traktiran ${moneyLabel(settlement.treatTotal, masked)} tidak ditimbang`
+                    ? ` · traktiran ${moneyLabel(settlement.treatTotal, masked)} tidak ditimbang`
                     : ''}
                 </p>
                 <div className="border-t border-soil/12 pt-2">
@@ -243,13 +243,13 @@ export function JointSettlementModal({
               {settled ? (
                 <div className="mt-4 rounded-[1.5rem] bg-hud-sage/15 px-4 py-3.5 text-center ring-1 ring-hud-sage/35">
                   <p className="text-[14px] font-medium leading-relaxed text-forest">
-                    Bulan ini sudah ditandai settle âœ… Scale-nya rata, gak ada yang perlu transfer.
+                    Bulan ini sudah ditandai settle ✅ Scale-nya rata, gak ada yang perlu transfer.
                   </p>
                 </div>
               ) : settlement.level === 'equal' ? (
                 <div className="mt-4 rounded-[1.5rem] bg-hud-sage/15 px-4 py-3.5 text-center ring-1 ring-hud-sage/35">
                   <p className="text-[14px] font-medium leading-relaxed text-forest">
-                    Kalian impas, gak ada yang perlu transfer bulan ini âš–ï¸âœ¨
+                    Kalian impas, gak ada yang perlu transfer bulan ini ⚖️✨
                   </p>
                 </div>
               ) : settlement.level === 'close' ? (
@@ -258,7 +258,7 @@ export function JointSettlementModal({
                 <div className="mt-4 rounded-[1.5rem] bg-hud-sage/15 px-4 py-3.5 text-center ring-1 ring-hud-sage/35">
                   <p className="text-[14px] font-medium leading-relaxed text-forest">
                     Hampir impas! Posisi bersih kalian beda cuma {moneyLabel(difference, masked)}, gak
-                    perlu settle ðŸ’š
+                    perlu settle 💚
                   </p>
                 </div>
               ) : (
@@ -290,7 +290,7 @@ export function JointSettlementModal({
                 </div>
               )}
 
-              {/* dompet PRIBADI (opsional) â€” kalau dipilih, uangnya benar-benar
+              {/* dompet PRIBADI (opsional) — kalau dipilih, uangnya benar-benar
                   pindah dan barisnya muncul di Riwayat. Tanpa dompet, yang
                   tersimpan hanya kesepakatan bulan ini. */}
               {shouldPromptSettlement(settlement) &&
@@ -329,7 +329,7 @@ export function JointSettlementModal({
               )}
               {inputLocked && <SubscriptionLockNote />}
 
-              {/* bulan ini sudah ditandai settle â†’ satu-satunya aksi yang masuk
+              {/* bulan ini sudah ditandai settle → satu-satunya aksi yang masuk
                   akal adalah membatalkannya (dan uangnya ikut kembali) */}
               {settled && onUndoSettle && (
                 <button

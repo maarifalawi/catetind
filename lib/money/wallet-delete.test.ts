@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import {
   balancesOf,
   cashTotal,
+  editRow,
   getMoneySnapshot,
   homeWallets,
   isAccountEmpty,
@@ -192,6 +193,33 @@ describe('pagar tulis: tidak ada uang baru di dompet yang sudah dihapus', () => 
     expect(cashTotal(after)).toBe(1_500_000)
     assertStillBalanced(after)
   })
+
+  it('edit TIDAK bisa memindahkan catatan ke dompet yang sudah dihapus', () => {
+    const row = postExpense({ walletId: 'bca', amount: 10_000, note: 'Kopi' })!
+    removeWalletAccount('gopay')
+
+    /* paket 102 — dulu pemeriksaannya memakai SEMUA dompet (termasuk tombstone),
+       jadi catatan bisa dipindah ke dompet yang tidak muncul di halaman mana pun
+       dan namanya berubah jadi kosong. */
+    expect(editRow(row.seq, { walletId: 'gopay' })).toBeNull()
+
+    const after = getMoneySnapshot()
+    expect(after.rows.find((item) => item.id === row.id)?.walletId).toBe('bca')
+    expect(walletBalance(after, 'bca')).toBe(1_440_000)
+    assertStillBalanced(after)
+  })
+
+  it('catatan milik dompet yang SUDAH dihapus tetap bisa diperbaiki', () => {
+    const row = postExpense({ walletId: 'gopay', amount: 10_000, note: 'Kopi' })!
+    removeWalletAccount('gopay')
+
+    /* uang yang sudah keluar tidak boleh kehilangan riwayatnya hanya karena
+       dompetnya dibuang user — memperbaiki nominal/catatan tetap sah */
+    const edited = editRow(row.seq, { name: 'Kopi susu', amount: 12_000 })
+    expect(edited).not.toBeNull()
+    expect(getMoneySnapshot().rows.find((item) => item.id === row.id)?.note).toBe('Kopi susu')
+    assertStillBalanced(getMoneySnapshot())
+  })
 })
 
 describe('tombstone bertahan setelah refresh & hidrasi dari server', () => {
@@ -205,6 +233,8 @@ describe('tombstone bertahan setelah refresh & hidrasi dari server', () => {
       removedIds: [...live.removedIds],
       removedWalletIds: [...live.removedWalletIds],
       syncedIds: [],
+      syncedWalletIds: [],
+      pendingWalletIds: [],
     }
 
     /* memory sesi kosong = keadaan setelah refresh */
@@ -215,6 +245,8 @@ describe('tombstone bertahan setelah refresh & hidrasi dari server', () => {
       removedWalletIds: [],
       rowOverrides: {},
       syncedIds: [],
+      syncedWalletIds: [],
+      pendingWalletIds: [],
       hydrated: false,
     })
 

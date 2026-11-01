@@ -30,10 +30,10 @@ import { getMoneySnapshot, postTransfer, walletAccountOf, walletNameOfId } from 
 */
 export function useTransferSubmit(masked = false) {
   return useCallback(
-    (fromWalletId: string, toWalletId: string, amount: number, note = ''): boolean => {
+    (fromWalletId: string, toWalletId: string, amount: number, note = '', clientTxId?: string): boolean => {
       /* dibaca SEBELUM menulis: saldonya dipakai untuk kalimat penolakan */
       const before = getMoneySnapshot()
-      const row = postTransfer({ fromWalletId, toWalletId, amount, note })
+      const row = postTransfer({ fromWalletId, toWalletId, amount, note, clientTxId })
 
       if (!row) {
         const source = walletAccountOf(before, fromWalletId)

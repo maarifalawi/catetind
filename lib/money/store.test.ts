@@ -16,6 +16,7 @@ import {
   incomingTransfersFor,
   isRowRemoved,
   mergeMoneySnapshot,
+  mergeWithRemote,
   pendingSyncCount,
   pendingSyncRows,
   postBalanceAdjustment,
@@ -28,6 +29,7 @@ import {
   recordedTransactions,
   removeRow,
   removeRows,
+  removeWalletAccount,
   resetMoneyStore,
   restoreRow,
   restoreRows,
@@ -42,6 +44,8 @@ import {
   walletIdOfName,
   walletNameOfId,
   walletOptionsFor,
+  walletSelectOptionsFor,
+  isWalletNameTaken,
   walletTransactionsOf,
   type MoneyRow,
   type MoneySnapshot,
@@ -49,6 +53,7 @@ import {
 import { assertLedgerInvariant, balanceOf, netEffect } from './ledger'
 import { setOnlineOverride } from '@/lib/connection'
 import { WALLET_SEED } from '@/lib/wallets'
+import { isUuid } from '@/lib/supabase/uuid'
 import { HISTORY_TRANSACTIONS, type HistoryTransaction } from '@/lib/data/history'
 import {
   HOME_MONEY_ROWS,
@@ -106,6 +111,29 @@ beforeEach(() => {
      lewat `setOnlineOverride(false)` (paket 42) */
   setOnlineOverride(null)
 })
+
+/**
+ * Dompet KEMBAR WARISAN untuk test (paket 103).
+ *
+ * `addWalletAccount()` sekarang menolak nama kembar, tetapi hydrate/server tetap
+ * menerima dompet kembar lama. Helper ini membentuk snapshot sintetis dengan
+ * dompet seperti itu — jalur baca (`walletSelectOptionsFor`,
+ * `captureWalletChoice`, `walletTransactionsOf`) menerima snapshot sebagai
+ * parameter, jadi tidak perlu menulis ke store hidup.
+ */
+function legacyWallet(
+  name: string,
+  opening: number,
+  id: string,
+  context: 'pribadi' | 'keluarga' | 'bersama' = 'pribadi',
+) {
+  const seed = getMoneySnapshot().wallets.find((wallet) => wallet.name === 'BCA')!
+  return { ...seed, id, name, opening, context }
+}
+function snapshotWithLegacy(extra: ReturnType<typeof legacyWallet>[]): MoneySnapshot {
+  const base = getMoneySnapshot()
+  return { ...base, wallets: [...base.wallets, ...extra] }
+}
 
 describe('store seed', () => {
   it('total saldo kanon = Rp 1.850.000 dan saldo tiap dompet = saldo pembukanya', () => {
@@ -185,6 +213,29 @@ describe('pindah dana & koreksi saldo', () => {
        yang bergerak sedikit pun */
     expect(getMoneySnapshot().rows).toHaveLength(0)
     expect(walletBalance(getMoneySnapshot(), 'bca')).toBe(1_450_000)
+  })
+
+  it('double-tap pindah dana tidak menggandakan uang (clientTxId, paket 102)', () => {
+    const first = postTransfer({
+      fromWalletId: 'bca',
+      toWalletId: 'gopay',
+      amount: 100_000,
+      note: '',
+      clientTxId: 'transfer-double-tap',
+    })
+    const second = postTransfer({
+      fromWalletId: 'bca',
+      toWalletId: 'gopay',
+      amount: 100_000,
+      note: '',
+      clientTxId: 'transfer-double-tap',
+    })
+
+    /* idempotency key: panggilan kedua mengembalikan baris yang SAMA */
+    expect(second?.id).toBe(first?.id)
+    expect(getMoneySnapshot().rows).toHaveLength(1)
+    expect(walletBalance(getMoneySnapshot(), 'bca')).toBe(1_350_000)
+    expect(walletBalance(getMoneySnapshot(), 'gopay')).toBe(450_000)
   })
 
   it('menulis kategori kanon “Transfer” supaya barisnya terjaring filter Riwayat', () => {
@@ -607,7 +658,7 @@ describe('Total Saldo per konteks uang (paket 44)', () => {
   })
 
   it('dompet baru & koreksi saldo mengalir ke konteksnya tanpa memecah invariant', () => {
-    const record = addWalletAccount({ name: 'OVO', type: 'E-Wallet', opening: 25_000 })
+    const record = addWalletAccount({ name: 'OVO', type: 'E-Wallet', opening: 25_000 })!
     /* store menandai dompet baru sebagai `pribadi` (dompet chat harian) */
     postBalanceAdjustment({ walletId: 'gopay', newBalance: 400_000 })
     const snapshot = getMoneySnapshot()
@@ -656,7 +707,7 @@ describe('hidrasi IndexedDB (gabungan state tersimpan)', () => {
   })
 
   it('dompet buatan user yang tersimpan tetap ada setelah refresh', () => {
-    const record = addWalletAccount({ name: 'Kas Kecil', type: 'Cash', opening: 25_000 })
+    const record = addWalletAccount({ name: 'Kas Kecil', type: 'Cash', opening: 25_000 })!
     const merged = mergeMoneySnapshot(
       { wallets: [WALLET_SEED[0]!, record], rows: [], removedIds: [] },
       getMoneySnapshot(),
@@ -669,7 +720,7 @@ describe('hidrasi IndexedDB (gabungan state tersimpan)', () => {
 
 describe('dompet baru masuk store yang sama', () => {
   it('dompet baru menambah total kas dan punya saldonya sendiri', () => {
-    const record = addWalletAccount({ name: 'Kas Kecil', type: 'Cash', opening: 25_000 })
+    const record = addWalletAccount({ name: 'Kas Kecil', type: 'Cash', opening: 25_000 })!
     const snapshot = getMoneySnapshot()
 
     expect(walletAccounts(snapshot)).toHaveLength(WALLET_SEED.length + 1)
@@ -1051,8 +1102,20 @@ describe('antrean offline (paket 42)', () => {
         rows: [...snapshot.rows],
         removedIds: [],
         syncedIds: [...snapshot.syncedIds],
+        syncedWalletIds: [...snapshot.syncedWalletIds],
+        pendingWalletIds: [...snapshot.pendingWalletIds],
       },
-      { wallets: WALLET_SEED, rows: [], removedIds: [], removedWalletIds: [], rowOverrides: {}, syncedIds: [], hydrated: false },
+      {
+        wallets: WALLET_SEED,
+        rows: [],
+        removedIds: [],
+        removedWalletIds: [],
+        rowOverrides: {},
+        syncedIds: [],
+        syncedWalletIds: [],
+        pendingWalletIds: [],
+        hydrated: false,
+      },
     )
 
     expect(pendingSyncCount(merged)).toBe(1)
@@ -1158,6 +1221,8 @@ describe('edit catatan = satu pintu tulis lintas halaman (paket 48)', () => {
         removedIds: [...snapshot.removedIds],
         rowOverrides: { ...snapshot.rowOverrides },
         syncedIds: [...snapshot.syncedIds],
+        syncedWalletIds: [...snapshot.syncedWalletIds],
+        pendingWalletIds: [...snapshot.pendingWalletIds],
       },
       {
         wallets: WALLET_SEED,
@@ -1166,6 +1231,8 @@ describe('edit catatan = satu pintu tulis lintas halaman (paket 48)', () => {
         removedWalletIds: [],
         rowOverrides: {},
         syncedIds: [],
+        syncedWalletIds: [],
+        pendingWalletIds: [],
         hydrated: false,
       },
     )
@@ -1507,7 +1574,7 @@ describe('konteks tanpa dompet tidak memotong dompet lain (59.4)', () => {
   })
 
   it('dompet yang benar-benar dipilih user bergerak — dan HANYA dompet itu', () => {
-    const chosen = addWalletAccount({ name: 'Kas Bersama', type: 'Cash', opening: 100_000 })
+    const chosen = addWalletAccount({ name: 'Kas Bersama', type: 'Cash', opening: 100_000 })!
     expect(postTransaction({ ...draft, wallet: chosen.name })).not.toBeNull()
 
     const snapshot = getMoneySnapshot()
@@ -1582,7 +1649,7 @@ describe('captureWalletChoice — dompet kartu konfirmasi AI', () => {
       type: 'Cash',
       opening: 100_000,
       context: 'bersama',
-    })
+    })!
     const choice = captureWalletChoice(getMoneySnapshot(), 'bersama', 'OVO')
 
     /* konsekuensinya terbaca di Riwayat: barisnya berkonteks, bukan "Belum berkonteks" */
@@ -1608,28 +1675,28 @@ describe('captureWalletChoice — dompet kartu konfirmasi AI', () => {
    sama (`addWalletAccount()` tidak melarangnya), sementara daftar pilihannya dulu
    berisi NAMA dompet — dan nama itu dipakai sebagai React key.
 
-   Yang dikunci di sini:
-     1. daftar pilihan dompet menggabungkan nama kembar jadi SATU baris, yang
-        PERTAMA menang — persis dompet yang menerima catatannya
-        (`walletIdOfName()` juga memilih yang pertama);
-     2. pilihan untuk pemilih kustom (`captureWalletOptionsFor`) punya `id` unik
-        sebagai kunci React, urut konteks aktif lebih dulu, dan urutannya SAMA
-        dengan daftar nama yang dipakai keputusan default `captureWalletChoice()`. */
-describe('pilihan dompet unik & urut konteks (paket 81)', () => {
-  it('dua dompet bernama sama → satu baris, yang pertama menang, id tetap unik', () => {
-    const first = addWalletAccount({ name: 'OVO', type: 'E-Wallet', opening: 25_000 })
-    const second = addWalletAccount({ name: 'ovo', type: 'E-Wallet', opening: 75_000 })
+   Yang dikunci di sini (PAKET 102 memperbarui aturannya):
+     1. daftar pilihan dompet memuat SATU BARIS PER DOMPET — dua dompet bernama
+        sama tidak digabung lagi, karena tiap baris membawa `id` yang dipakai
+        saat menulis uang;
+     2. label tampilannya berbeda (`displayLabel`), jadi user bisa membedakan
+        dompet mana yang akan terpotong;
+     3. pilihan untuk pemilih kustom (`captureWalletOptionsFor`) urut konteks
+        aktif lebih dulu. */
+describe('pilihan dompet per ID & urut konteks (paket 81/102)', () => {
+  it('dua dompet WARISAN bernama sama → dua baris, id unik, saldo masing-masing', () => {
+    const first = legacyWallet('OVO', 25_000, 'legacy-ovo-1')
+    const second = legacyWallet('ovo', 75_000, 'legacy-ovo-2')
     expect(second.id).not.toBe(first.id)
 
-    const options = walletOptionsFor(getMoneySnapshot())
-    const labels = options.map((option) => option.label.trim().toLowerCase())
-    expect(new Set(labels).size).toBe(labels.length)
-
-    const ovo = options.find((option) => option.label.trim().toLowerCase() === 'ovo')
-    expect(ovo?.id).toBe(first.id)
-    /* saldo yang dibaca = saldo dompet yang benar-benar akan bergerak, bukan
-       dompet kembar yang barisnya tak akan pernah mendarat di sana */
-    expect(ovo?.balance).toBe(25_000)
+    const options = walletOptionsFor(snapshotWithLegacy([first, second]))
+    const ovos = options.filter((option) => option.label.trim().toLowerCase() === 'ovo')
+    expect(ovos).toHaveLength(2)
+    expect(ovos[0]).toMatchObject({ id: first.id, balance: 25_000 })
+    expect(ovos[1]).toMatchObject({ id: second.id, balance: 75_000 })
+    /* kunci React tetap unik & label tampilan bisa dibedakan */
+    expect(new Set(options.map((option) => option.id)).size).toBe(options.length)
+    expect(new Set(ovos.map((option) => option.displayLabel)).size).toBe(2)
   })
 
   it('kartu AI: baris dompet konteks aktif lebih dulu, id unik, saldo ikut', () => {
@@ -1638,7 +1705,7 @@ describe('pilihan dompet unik & urut konteks (paket 81)', () => {
       type: 'Cash',
       opening: 100_000,
       context: 'bersama',
-    })
+    })!
 
     const options = captureWalletOptionsFor(getMoneySnapshot(), 'bersama')
     expect(options.map((option) => option.label)).toEqual(['Kas Bersama', 'BCA', 'GoPay', 'Tunai'])
@@ -1652,17 +1719,161 @@ describe('pilihan dompet unik & urut konteks (paket 81)', () => {
     )
   })
 
-  it('dompet kembar dari konteks lain juga tidak melahirkan baris kedua', () => {
-    const first = addWalletAccount({ name: 'OVO', type: 'E-Wallet', opening: 25_000 })
-    addWalletAccount({ name: 'OVO', type: 'E-Wallet', opening: 75_000, context: 'keluarga' })
+  it('dompet WARISAN kembar dari konteks lain muncul sebagai baris SENDIRI', () => {
+    const first = legacyWallet('OVO', 25_000, 'legacy-ovo-p')
+    const twin = { ...legacyWallet('OVO', 75_000, 'legacy-ovo-k'), context: 'keluarga' as const }
+    const snapshot = snapshotWithLegacy([first, twin])
 
-    const options = captureWalletOptionsFor(getMoneySnapshot(), 'pribadi')
-    expect(options.map((option) => option.label)).toEqual(['BCA', 'GoPay', 'OVO', 'Tunai'])
+    const options = captureWalletOptionsFor(snapshot, 'pribadi')
+    /* paket 102 — dua dompet = dua baris; yang di konteks aktif lebih dulu */
+    expect(options.map((option) => option.label)).toEqual([
+      'BCA',
+      'GoPay',
+      'OVO',
+      'Tunai',
+      'OVO',
+    ])
     expect(new Set(options.map((option) => option.id)).size).toBe(options.length)
-    expect(options.find((option) => option.label === 'OVO')).toMatchObject({
-      id: first.id,
-      balance: 25_000,
+    const ovoOptions = options.filter((option) => option.label === 'OVO')
+    expect(ovoOptions[0]).toMatchObject({ id: first.id, balance: 25_000 })
+    expect(ovoOptions[1]).toMatchObject({ id: twin.id, balance: 75_000 })
+    /* label tampilan diberi pembeda supaya user bisa memilih yang benar */
+    expect(new Set(ovoOptions.map((option) => option.displayLabel)).size).toBe(2)
+  })
+})
+
+/* ── DOMPET KEMBAR BISA DIPILIH & DIPAKAI (paket 102) ────────────────────────
+   Laporan pemilik produk: punya TIGA dompet, tapi pemilih dompet di form Catat
+   hanya menampilkan SATU pilihan. Penyebabnya bukan tampilan: daftar pilihan
+   dulu di-dedupe per NAMA, dan nilai yang dikirim balik ke store juga NAMA —
+   jadi dompet kedua & ketiga mustahil dipilih, dan kalaupun bisa, uangnya tetap
+   memotong dompet pertama yang namanya sama.
+
+   Yang dikunci di sini:
+     1. pemilih transaksi memuat SATU BARIS PER DOMPET (id unik), nama kembar
+        diberi pembeda yang bisa dibaca;
+     2. menulis dengan `walletId` memotong saldo dompet ITU — bukan yang pertama;
+     3. dua pintu (tambah & ubah) memakai aturan "satu nama = satu dompet". */
+describe('dompet kembar: pilihan per ID, bukan per nama (paket 102)', () => {
+  it('tiga dompet WARISAN bernama sama → tiga baris dengan id & label unik', () => {
+    const second = legacyWallet('BCA', 2_000_000, 'legacy-bca-2')
+    const third = legacyWallet('bca', 3_000_000, 'legacy-bca-3')
+    const snapshot = snapshotWithLegacy([second, third])
+
+    const options = walletSelectOptionsFor(snapshot)
+    const bcaOptions = options.filter((option) => option.label.toLowerCase() === 'bca')
+    /* seed punya satu BCA; dua dompet warisan menambah barisnya — TIDAK digabung */
+    expect(bcaOptions).toHaveLength(3)
+    expect(new Set(options.map((option) => option.id)).size).toBe(options.length)
+    expect(new Set(bcaOptions.map((option) => option.displayLabel)).size).toBe(3)
+    /* nama yang DITULIS ke baris kas tetap nama asli user */
+    expect(bcaOptions.every((option) => option.label.toLowerCase() === 'bca')).toBe(true)
+    expect(options.find((option) => option.id === second.id)?.balance).toBe(2_000_000)
+    expect(options.find((option) => option.id === third.id)?.balance).toBe(3_000_000)
+  })
+
+  it('mencatat dengan walletId memotong dompet yang DIPILIH, bukan yang pertama', () => {
+    const second = addWalletAccount({ name: 'BCA Cadangan', type: 'Bank', opening: 2_000_000 })!
+    const before = getMoneySnapshot()
+
+    const row = postTransaction({
+      name: 'Kopi',
+      amount: 250_000,
+      type: 'expense',
+      category: 'Makanan',
+      wallet: second.name,
+      walletId: second.id,
+      dateISO: '2026-10-31',
     })
+
+    expect(row?.walletId).toBe(second.id)
+    expect(walletBalance(getMoneySnapshot(), second.id)).toBe(1_750_000)
+    /* dompet BCA pertama (seed) tidak ikut terpotong */
+    expect(walletBalance(getMoneySnapshot(), 'bca')).toBe(walletBalance(before, 'bca'))
+    expect(row?.walletName).toBe('BCA Cadangan')
+  })
+
+  it('walletId eksplisit yang sudah dihapus DITOLAK, tidak dialihkan ke nama yang sama', () => {
+    const second = addWalletAccount({ name: 'BCA Cadangan', type: 'Bank', opening: 2_000_000 })!
+    removeWalletAccount(second.id)
+    const before = getMoneySnapshot()
+
+    const row = postTransaction({
+      name: 'Kopi',
+      amount: 25_000,
+      type: 'expense',
+      category: 'Makanan',
+      /* nama dompet lain sengaja dikirim: tanpa pagar ini, barisnya akan
+         memotong BCA pertama yang namanya berbeda pun tidak masalah — intinya
+         id eksplisit tidak boleh diabaikan */
+      wallet: 'BCA Cadangan',
+      walletId: second.id,
+      dateISO: '2026-10-31',
+    })
+
+    expect(row).toBeNull()
+    expect(getMoneySnapshot().rows).toHaveLength(before.rows.length)
+    expect(cashTotal(getMoneySnapshot())).toBe(cashTotal(before))
+  })
+
+  it('addWalletAccount menolak nama kembar (trim + case-insensitive)', () => {
+    expect(addWalletAccount({ name: '  bca  ', type: 'Bank', opening: 0 })).toBeNull()
+    expect(addWalletAccount({ name: 'BCA BARU', type: 'Bank', opening: 0 })).not.toBeNull()
+    expect(addWalletAccount({ name: 'bca baru', type: 'Bank', opening: 0 })).toBeNull()
+  })
+
+  it('ID dompet baru memakai UUID — bebas bentrok antar-perangkat', () => {
+    const first = addWalletAccount({ name: 'Dompet UUID A', type: 'Bank', opening: 0 })!
+    const second = addWalletAccount({ name: 'Dompet UUID B', type: 'Bank', opening: 0 })!
+    expect(first.id).not.toBe(second.id)
+    expect(isUuid(first.id.replace(/^w-/, ''))).toBe(true)
+    expect(isUuid(second.id.replace(/^w-/, ''))).toBe(true)
+  })
+
+  it('hydrate/server TETAP menerima dompet kembar warisan', () => {
+    const first = legacyWallet('OVO', 25_000, 'legacy-ovo-1')
+    const second = legacyWallet('ovo', 75_000, 'legacy-ovo-2')
+    const merged = mergeWithRemote({ wallets: [first, second], rows: [] }, null)
+    expect(merged.wallets.map((wallet) => wallet.id)).toEqual([first.id, second.id])
+  })
+
+  it('tanpa walletId perilaku lama dipertahankan: nama menunjuk dompet pertama', () => {
+    const first = walletIdOfName(getMoneySnapshot(), 'BCA')
+    const row = postTransaction({
+      name: 'Teh',
+      amount: 10_000,
+      type: 'expense',
+      category: 'Makanan',
+      wallet: '  bca  ',
+      dateISO: '2026-10-31',
+    })
+    expect(row?.walletId).toBe(first)
+  })
+
+  it('nama dompet yang sudah dipakai dikenali tanpa peduli besar-kecil & spasi', () => {
+    const snapshot = getMoneySnapshot()
+    expect(isWalletNameTaken(snapshot, '  bca  ')).toBe(true)
+    expect(isWalletNameTaken(snapshot, 'BCA', 'bca')).toBe(false)
+    expect(isWalletNameTaken(snapshot, 'Dompet Baru')).toBe(false)
+    expect(isWalletNameTaken(snapshot, '   ')).toBe(false)
+  })
+
+  it('pencarian ID & dompet default menormalkan huruf besar/kecil + spasi', () => {
+    const legacy = legacyWallet('  Dompet X  ', 10_000, 'legacy-x')
+    const snapshot = snapshotWithLegacy([legacy])
+    expect(walletIdOfName(snapshot, 'dompet x')).toBe(legacy.id)
+    expect(walletIdOfName(snapshot, '  DOMPET X  ')).toBe(legacy.id)
+
+    /* konteks tanpa dompet kanon: nama " bca " tetap diakui sebagai kanon */
+    purgeMoneyStore()
+    const created = addWalletAccount({
+      name: '  bca  ',
+      type: 'Bank',
+      opening: 0,
+      context: 'pribadi',
+    })!
+    expect(created.name).toBe('bca')
+    expect(defaultWalletNameFor('pribadi')).toBe('bca')
   })
 })
 

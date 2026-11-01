@@ -245,6 +245,14 @@ export const SESSION_COPY = {
    */
   unknownName: 'Belum masuk',
   unknownEmail: 'Masuk untuk melihat akunmu',
+  /**
+   * Dipakai saat user SUDAH masuk tapi belum pernah mengisi nama panggilan
+   * (akun lama / sesi pemilik tanpa metadata nama). Dulu kondisi ini memakai
+   * teks "Kamu" sebagai nama, dan sapaan Dashboard berubah jadi kalimat yang
+   * tidak masuk akal. Label ini netral: bukan nama siapa pun, tapi jelas bahwa
+   * yang tampil adalah akun user itu sendiri.
+   */
+  unnamedUser: 'Akun kamu',
   /** dipakai panel Keluar saat tidak ada identitas terbaca di perangkat ini */
   unknownAccount: 'Belum ada akun yang masuk di perangkat ini.',
 } as const

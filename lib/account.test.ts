@@ -238,6 +238,10 @@ describe('purgeDeviceData', () => {
          ada satu pun jejak data di perangkat ini */
       rowOverrides: {},
       syncedIds: [],
+      /* outbox dompet (paket 104) juga kosong: hapus akun berarti tidak ada
+         antrean dompet yang tersisa di perangkat ini */
+      syncedWalletIds: [],
+      pendingWalletIds: [],
       purged: true,
     })
   })

@@ -14,16 +14,16 @@ import {
 import type { SplitSpec } from '@/lib/data/joint-ledger'
 import { cn } from '@/lib/utils'
 
-/* â”€â”€ Split Bill Bottom Sheet (Section 6) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+/* ── Split Bill Bottom Sheet (Section 6) ─────────────────────────────────────
    Empat mode pembagian, urut dari yang paling sering dipakai:
-   1. Bagi Rata (default) Â· 2. Persentase (slider dua sisi yang bergerak
-   bersama) Â· 3. Nominal Custom (isi satu sisi, sisi lain dihitung otomatis) Â·
+   1. Bagi Rata (default) · 2. Persentase (slider dua sisi yang bergerak
+   bersama) · 3. Nominal Custom (isi satu sisi, sisi lain dihitung otomatis) ·
    4. "Yang ini gue yang bayar" (100% satu orang).
 
-   Semua mode menghasilkan DRAFT dengan bentuk yang sama â€” satu `SplitSpec`
-   (`lib/data/joint-ledger.ts`) â€” jadi halaman Joint cukup menyimpan satu objek
+   Semua mode menghasilkan DRAFT dengan bentuk yang sama — satu `SplitSpec`
+   (`lib/data/joint-ledger.ts`) — jadi halaman Joint cukup menyimpan satu objek
    kecil per transaksi dan tidak ada bentuk kedua yang bisa dibaca salah.
-   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+   ────────────────────────────────────────────────────────────────────────── */
 
 /**
  * Draft pembagian yang dikembalikan sheet ini.
@@ -52,7 +52,7 @@ export function JointSplitSheet({
 }: {
   open: boolean
   onClose: () => void
-  /** nominal transaksi â€” basis hitung mode persentase & nominal */
+  /** nominal transaksi — basis hitung mode persentase & nominal */
   total: number
   initial?: JointSplitDraft
   onSave: (draft: JointSplitDraft) => void
@@ -114,7 +114,7 @@ export function JointSplitSheet({
       open={open}
       onClose={onClose}
       title="Atur Pembagian"
-      description="Biar adil, biar gak ada yang ngerasa berat sebelah. ðŸ’š"
+      description="Biar adil, biar gak ada yang ngerasa berat sebelah. 💚"
       footer={
         <SheetSubmit onClick={handleSave} disabled={!nominalReady} gate>
           Simpan Pembagian
@@ -144,12 +144,12 @@ export function JointSplitSheet({
         {SPLIT_MODES.find((item) => item.id === mode)?.hint}
       </p>
 
-      {/* â”€â”€ kendali per mode (progressive disclosure) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── kendali per mode (progressive disclosure) ───────────────────── */}
       <div className="mt-4 space-y-3">
         <RevealStep show={mode === 'equal'}>
           <div className="rounded-2xl bg-cream px-4 py-3.5 ring-1 ring-soil/12">
             <p className="text-[13.5px] font-medium text-forest/70">
-              {me.name} 50% Â· {partner.name} 50%
+              {me.name} 50% · {partner.name} 50%
             </p>
             <p className="mt-1 text-[12.5px] text-forest/45">
               Bagi rata = {moneyLabel(Math.round(total / 2), false)} per orang.
@@ -209,7 +209,7 @@ export function JointSplitSheet({
         </RevealStep>
       </div>
 
-      {/* ringkasan hasil pembagian â€” selalu terlihat sebelum simpan */}
+      {/* ringkasan hasil pembagian — selalu terlihat sebelum simpan */}
       <div className="mt-4 rounded-2xl bg-hud-sage/15 px-4 py-3 ring-1 ring-hud-sage/30">
         <p className="text-[12px] font-medium uppercase tracking-[0.14em] text-forest/70">
           Hasil pembagian
@@ -234,7 +234,7 @@ export function JointSplitSheet({
 /**
  * Slider persentase "dua sisi yang bergerak bersama": satu pegangan di batas
  * dua bagian, digeser dengan jari/pointer atau panah keyboard. Karena sisi
- * pasangan selalu `100 âˆ’ aku`, kedua angka otomatis menyesuaikan.
+ * pasangan selalu `100 − aku`, kedua angka otomatis menyesuaikan.
  */
 function PercentSlider({
   percent,
@@ -252,7 +252,7 @@ function PercentSlider({
   const trackRef = useRef<HTMLDivElement>(null)
   const [dragging, setDragging] = useState(false)
 
-  /** posisi pointer â†’ persentase (langkah 5% supaya angkanya bulat) */
+  /** posisi pointer → persentase (langkah 5% supaya angkanya bulat) */
   function percentFromClientX(clientX: number): number {
     const track = trackRef.current
     if (!track) return percent
@@ -312,7 +312,7 @@ function PercentSlider({
         <span className="absolute inset-x-0 top-1/2 h-2.5 -translate-y-1/2 overflow-hidden rounded-full bg-hud-amber/30">
           <span className="block h-full bg-hud-sage/80" style={{ width: `${percent}%` }} />
         </span>
-        {/* pegangan di batas dua sisi â€” begeser = dua sisi ikut menyesuaikan */}
+        {/* pegangan di batas dua sisi — begeser = dua sisi ikut menyesuaikan */}
         <motion.span
           aria-hidden
           animate={{ scale: dragging ? 1.14 : 1 }}
@@ -329,7 +329,7 @@ function PercentSlider({
         <span>{moneyLabel(total - mineShare, false)}</span>
       </div>
 
-      {/* quick-pick 60/40 Â· 70/30 Â· 80/20 */}
+      {/* quick-pick 60/40 · 70/30 · 80/20 */}
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <span className="text-[12px] font-medium text-forest/40">Cepat:</span>
         {PERCENT_PRESETS.map((preset) => {

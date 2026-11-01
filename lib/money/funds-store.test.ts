@@ -31,7 +31,8 @@ import {
   withdrawFromFund,
   type PersistedFunds,
 } from './funds-store'
-import { balancesOf, getMoneySnapshot, recordedTransactions, resetMoneyStore, walletBalance } from './store'
+import { balancesOf, getMoneySnapshot, recordedTransactions, removeWalletAccount, resetMoneyStore, walletBalance } from './store'
+import { localISODate } from '@/lib/time'
 import { assertLedgerInvariant } from './ledger'
 
 /* ── SATU STORE CELENGAN (paket 46) ──────────────────────────────────────────
@@ -143,6 +144,19 @@ describe('pintu tulis celengan', () => {
     const after = getFundsSnapshot()
     expect(after.funds).toEqual(before.funds)
     expect(after.contributions).toEqual(before.contributions)
+  })
+
+  it('setoran ke dompet yang sudah DIHAPUS ditolak — progres celengan tidak bergerak', () => {
+    const before = getFundsSnapshot()
+    removeWalletAccount('bca')
+
+    const result = contributeToFund(before.funds[0].id, 10_000, 'bca')
+
+    /* paket 102 — dulu progres celengan sudah di-commit sebelum pintu kas
+       menolak, jadi celengan bertambah tanpa uang keluar dari dompet mana pun */
+    expect(result).toBeNull()
+    expect(getFundsSnapshot().funds).toEqual(before.funds)
+    expect(getFundsSnapshot().contributions).toEqual(before.contributions)
   })
 
   it('sweepIntoFund mencatat sumber "Sisa budget", bukan dompet', () => {
@@ -380,7 +394,10 @@ describe('deleteFund / restoreFund — hapus celengan (60.2)', () => {
   })
 
   it('kewajiban bulan ini SUDAH disetor → Jatah Harian tidak berubah', () => {
-    contributeToFund(kewajibanTerbesar.id, 2_000_000, 'bca')
+    /* nominal setoran cukup kecil untuk tertutup saldo BCA (1.450.000): sejak
+       pagar "saldo tidak boleh sub-nol", setoran di atas saldo dompet DITOLAK —
+       dan test ini memang tidak menguji nominal, hanya efek "sudah disetor". */
+    contributeToFund(kewajibanTerbesar.id, 1_000_000, 'bca', localISODate())
     const sebelum = computeDailyHud({ sinkingFunds: liveFunds(getFundsSnapshot()) })
     expect(sinkingObligationOf(liveFunds(getFundsSnapshot()))).toBe(1_600_000)
 
@@ -551,5 +568,33 @@ describe('tarik dana celengan (kebalikan setoran)', () => {
   it('celengan yang sudah dihapus tidak bisa ditarik', () => {
     deleteFund(1)
     expect(withdrawFromFund(1, 10_000, WALLET)).toBeNull()
+  })
+})
+
+/* ── STATUS SETORAN BULANAN DIHITUNG DINAMIS (paket 103) ─────────────────────
+   `contributedThisMonth` dulu penanda statis: sekali setor, selamanya true.
+   Sekarang statusnya diturunkan dari tanggal setoran/penarikan bulan berjalan. */
+describe('status setoran bulanan celengan (paket 103)', () => {
+  it('setoran bulan ini = sudah nyisih; tarik kembali = pengingat aktif lagi', () => {
+    const fund = liveFunds(getFundsSnapshot())[0]
+    const now = localISODate()
+
+    contributeToFund(fund.id, 100_000, 'bca', now)
+    expect(liveFunds(getFundsSnapshot()).find((item) => item.id === fund.id)?.contributedThisMonth).toBe(
+      true,
+    )
+
+    withdrawFromFund(fund.id, 100_000, 'bca', now)
+    expect(liveFunds(getFundsSnapshot()).find((item) => item.id === fund.id)?.contributedThisMonth).toBe(
+      false,
+    )
+  })
+
+  it('setoran bulan lalu tidak dihitung sebagai setoran bulan ini', () => {
+    const fund = liveFunds(getFundsSnapshot())[0]
+    contributeToFund(fund.id, 50_000, 'bca', '1999-01-10')
+    expect(liveFunds(getFundsSnapshot()).find((item) => item.id === fund.id)?.contributedThisMonth).toBe(
+      false,
+    )
   })
 })

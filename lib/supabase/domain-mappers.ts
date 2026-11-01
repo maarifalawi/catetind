@@ -373,6 +373,8 @@ export function toBill(row: BillDbRow, local?: Partial<Bill>): Bill {
         : intOf(row.remind_days),
     scope: local?.scope ?? 'pribadi',
     ...(local?.paidRowId ? { paidRowId: local.paidRowId } : {}),
+    ...(local?.paidMonth ? { paidMonth: local.paidMonth } : {}),
+    ...(local?.note ? { note: local.note } : {}),
     ...(local?.endAfterMonths !== undefined ? { endAfterMonths: local.endAfterMonths } : {}),
     ...(local?.currentMonth !== undefined ? { currentMonth: local.currentMonth } : {}),
   }

@@ -2007,6 +2007,23 @@ export const FUND_DELETE_COPY = {
   confirm: 'Hapus',
 } as const
 
+/**
+ * Setoran celengan DITOLAK karena saldo dompet sumber tidak cukup.
+ *
+ * Uang setoran benar-benar keluar dari dompet (baris `saving` = transfer satu
+ * sisi), jadi store menolak menulis progres celengan kalau saldonya tidak
+ * menutup. Tanpa kalimat ini, penolakan itu jatuh ke copy "celengan sudah
+ * dihapus" — dua sebab yang berbeda diucapkan dengan kalimat yang sama.
+ *
+ * Nominal saldo sengaja tidak dicantumkan: toast hidup di atas layar yang
+ * mungkin sedang disensor tombol mata (§5.7). Arahan tindakannya yang penting.
+ */
+export const FUND_CONTRIBUTE_INSUFFICIENT_COPY = {
+  title: 'Saldo dompet tidak cukup',
+  body: (walletName: string) =>
+    `Saldo ${walletName} belum cukup untuk setoran ini. Kurangi nominalnya, atau pilih dompet lain.`,
+} as const
+
 export const FUND_DELETE_TOAST = {
   title: (name: string) => `Celengan ${name} dicabut`,
   description: 'Uang yang sudah disetor tetap tercatat, yang dilepas cuma targetnya.',

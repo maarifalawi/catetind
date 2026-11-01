@@ -36,8 +36,10 @@ import {
   UPDATE_BILL_TOAST,
   billFilterCounts,
   billWalletName,
+  daysInMonthOf,
   filterBills,
   groupBills,
+  isBillCompleted,
   maskMoney,
   type Bill,
   type BillFilter,
@@ -155,6 +157,8 @@ export function BillsScreen() {
   const today = useTodayISO()
   const todayIso = today || TODAY_ISO
   const currentDay = today ? dayOfMonth(today, CURRENT_DAY) : CURRENT_DAY
+  /** hari terakhir bulan berjalan — dipakai clamp jatuh tempo 29/30/31 (paket 103) */
+  const daysInMonth = daysInMonthOf(todayIso)
 
   /** semua timer halaman — dibersihkan saat unmount supaya tidak ada set state
    *  pada komponen yang sudah hilang */
@@ -176,8 +180,8 @@ export function BillsScreen() {
    *  dari seluruh tagihan: pill "Telat (1)" yang membuka daftar kosong adalah
    *  janji palsu — angka itu milik daftar yang benar-benar ia saring. */
   const counts = useMemo(
-    () => billFilterCounts(scopedBills, currentDay),
-    [scopedBills, currentDay],
+    () => billFilterCounts(scopedBills, currentDay, daysInMonth),
+    [scopedBills, currentDay, daysInMonth],
   )
   /* Jumlah tagihan ≤5 → tidak ada tab sama sekali. Tiga baris isi yang dipecah
      menjadi "Semua · Aktif · Lunas" membuat halaman terasa lebih rumit daripada
@@ -197,10 +201,13 @@ export function BillsScreen() {
   )
   const effectiveFilter: BillFilter = showFilterRail ? activeFilter : 'semua'
   const visibleBills = useMemo(
-    () => filterBills(scopedBills, effectiveFilter, currentDay),
-    [scopedBills, effectiveFilter, currentDay],
+    () => filterBills(scopedBills, effectiveFilter, currentDay, daysInMonth),
+    [scopedBills, effectiveFilter, currentDay, daysInMonth],
   )
-  const groups = useMemo(() => groupBills(visibleBills, currentDay), [visibleBills, currentDay])
+  const groups = useMemo(
+    () => groupBills(visibleBills, currentDay, daysInMonth),
+    [visibleBills, currentDay, daysInMonth],
+  )
   /** tagihan yang benar-benar ada di list "Aktif" (belum lunas) — dipakai
    *  timeline supaya kalender & daftar tidak kontradiksi (audit #3) */
   /** tagihan AKTIF (belum lunas) milik konteks yang sedang dilihat — dipakai
@@ -208,7 +215,7 @@ export function BillsScreen() {
    *  sama; sebelumnya strip membaca SEMUA konteks sehingga tanggal yang
    *  ditandai bisa tidak punya kartu di daftar. */
   const activeBills = useMemo(
-    () => scopedBills.filter((bill) => !bill.isPaidThisMonth),
+    () => scopedBills.filter((bill) => !bill.isPaidThisMonth && !isBillCompleted(bill)),
     [scopedBills],
   )
   /** Dompet awal di sheet "Tandai Lunas": dompet tagihannya (kalau masih ada di
@@ -240,7 +247,7 @@ export function BillsScreen() {
    * keluar dari dompet yang dipilih user di `confirmBillPaid()` di bawah.
    */
   function handleMarkPaid(bill: Bill) {
-    if (bill.isPaidThisMonth) return
+    if (bill.isPaidThisMonth || isBillCompleted(bill)) return
     try {
       if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
         navigator.vibrate([30, 50, 30])
@@ -259,7 +266,7 @@ export function BillsScreen() {
    */
   function confirmBillPaid(amount: number, walletName: string): boolean {
     if (!payTarget) return false
-    const result = markBillPaid(payTarget.id, walletName, amount)
+    const result = markBillPaid(payTarget.id, walletName, amount, todayIso)
     if (!result) return false
 
     paidRef.current = true
@@ -295,7 +302,7 @@ export function BillsScreen() {
       return
     }
     paidUndoRef.current = null
-    const result = unmarkBillPaid(billId)
+    const result = unmarkBillPaid(billId, todayIso)
     if (!result) {
       toast(MARK_PAID_TOAST_EXTRA.expired)
       return
@@ -329,7 +336,7 @@ export function BillsScreen() {
     const bill = unpaidTarget
     setUnpaidTarget(null)
 
-    const result = unmarkBillPaid(bill.id)
+    const result = unmarkBillPaid(bill.id, todayIso)
     if (!result) {
       /* statusnya keburu berubah (mis. di tab lain) → tidak ada yang dibatalkan */
       toast(UNPAID_TOAST.rejected)
@@ -588,12 +595,18 @@ export function BillsScreen() {
             {/* Di layar lebar ringkasan & agenda berdampingan supaya kartu
                 ringkasan tidak membentang kosong selebar konten. */}
             <div className="flex flex-col gap-3 xl:grid xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] xl:items-start">
-              <BillsOverview bills={scopedBills} masked={masked} currentDay={currentDay} />
+              <BillsOverview
+                bills={scopedBills}
+                masked={masked}
+                currentDay={currentDay}
+                daysInMonth={daysInMonth}
+              />
 
               {/* 5. KALENDER 14 HARI — hanya tagihan yang ada di list Aktif */}
               <BillTimeline
                 bills={activeBills}
                 currentDay={currentDay}
+                daysInMonth={daysInMonth}
                 todayIso={todayIso}
                 masked={masked}
                 onPick={handlePickBill}
@@ -727,6 +740,7 @@ export function BillsScreen() {
                               bill={bill}
                               masked={masked}
                               currentDay={currentDay}
+                              daysInMonth={daysInMonth}
                               stamp={stamp}
                               highlighted={highlightId === bill.id}
                               delay={delay}

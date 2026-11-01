@@ -60,6 +60,7 @@ export function EditTransactionSheet({
       type: draft.type,
       category: draft.category ?? data.category,
       wallet: draft.wallet ?? data.wallet,
+      walletId: draft.walletId ?? data.walletId,
       date: draft.date ?? data.date,
       /* badge "dibuat AI" cuma jujur selama namanya memang belum disentuh user */
       aiGenerated: name === data.name ? data.aiGenerated : false,

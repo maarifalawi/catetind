@@ -403,7 +403,7 @@ describe('removeBudget / restoreBudget — hapus budget yang bisa dibatalkan (60
   })
 })
 
-/* ── "TERPAKAI" = PEMAKAIAN KOLAM PERIODE (audit Daily Budget Â· Symptom A) ──
+/* ── "TERPAKAI" = PEMAKAIAN KOLAM PERIODE (audit Daily Budget · Symptom A) ──
    Bar kartu Jatah Hari Ini dulu `spentToday / hud.dailyBudget`, padahal
    `dailyBudget = remaining / daysLeft` dan `remaining` SUDAH dikurangi
    pengeluaran (termasuk hari ini) — pembilang ikut mengurangi penyebutnya

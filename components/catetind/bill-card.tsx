@@ -65,6 +65,7 @@ export function BillCard({
   bill,
   masked,
   currentDay,
+  daysInMonth = 31,
   stamp,
   highlighted = false,
   delay = 0,
@@ -76,6 +77,8 @@ export function BillCard({
   bill: Bill
   masked: boolean
   currentDay: number
+  /** hari terakhir bulan berjalan — clamp jatuh tempo 29/30/31 (paket 103) */
+  daysInMonth?: number
   /** 'fresh' = stempel baru dicap (0 → 1.1 → 1.0); 'none' = tanpa stempel.
    *  Baris yang sudah menetap lunas TIDAK diberi watermark — statusnya cukup
    *  dibawa oleh nominal yang dicoret + tombol centang di kanan kartu. */
@@ -91,9 +94,9 @@ export function BillCard({
   onEdit: (bill: Bill) => void
   onDelete: (bill: Bill) => void
 }) {
-  const status = getBillStatus(bill, currentDay)
+  const status = getBillStatus(bill, currentDay, daysInMonth)
   const paid = status === 'paid'
-  const due = dueContext(bill, status, currentDay)
+  const due = dueContext(bill, status, currentDay, daysInMonth)
 
   /* satu baris keterangan: status jatuh tempo + info yang benar-benar dibaca
      (dompet sumber & tenor cicilan). Untuk baris LUNAS, teks statusnya tidak

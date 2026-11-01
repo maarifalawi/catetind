@@ -65,7 +65,7 @@ import { CategoryPicker } from '@/components/catetind/category-picker'
 import { WalletPicker } from '@/components/catetind/wallet-picker'
 import { useMoneyContext } from '@/components/catetind/money-context-provider'
 import { usePrivacy } from '@/components/catetind/privacy-provider'
-import { defaultWalletNameFor, captureWalletChoice, useMoneyStore, walletFundsCheck, walletOptionsFor } from '@/lib/money/store'
+import { defaultWalletNameFor, captureWalletChoice, useMoneyStore, walletFundsCheck, walletFundsCheckById, walletIdOfName, walletSelectOptionsFor } from '@/lib/money/store'
 /* ── Transaction Input Engine (inventaris 97a/b/c) ────────────────────────────
    Falsafah "Zero Cognitive Load & 4-Tap Strict Rule": tidak ada menu "mau input
    bagaimana?". Panel langsung membuka form manual — OCR & Voice cuma
@@ -147,6 +147,15 @@ export interface TransactionDraft {
   type: TransactionTypeId
   category?: string
   wallet?: string
+  /**
+   * ID dompet yang dipilih (paket 102).
+   *
+   * Wajib dikirim bersama `wallet` sejak user boleh punya beberapa dompet
+   * bernama sama: `postTransaction` memakai ID ini kalau ada, sehingga saldo
+   * yang bergerak adalah dompet yang benar-benar dipilih — bukan dompet pertama
+   * yang namanya kebetulan sama.
+   */
+  walletId?: string
   /** tanggal lokal `YYYY-MM-DD` */
   date?: string
   /**
@@ -298,6 +307,7 @@ export function TransactionInputEngine({
   initial = null,
   onSubmitted,
   sourceLabel,
+  sourceId,
   extraFields,
   onAmountChange,
   onTransferRequest,
@@ -322,6 +332,15 @@ export function TransactionInputEngine({
   onSubmitted: (payload: TransactionDraft) => void
   /** opsional: label sumber dana (mis. dompet bersama) yang auto-terpilih */
   sourceLabel?: string
+  /**
+   * opsional: ID dompet yang sudah pasti dari halaman pemanggil (paket 102).
+   *
+   * `sourceLabel` saja tidak cukup kalau nama dompet tidak unik: halaman
+   * `/wallet/[id]` bisa sedang membuka kartu BCA yang KEDUA, sedangkan store
+   * akan memilih BCA pertama kalau yang dikirim hanya namanya. Diisi = catatan
+   * dari halaman dompet selalu mendarat di dompet yang sedang dibuka.
+   */
+  sourceId?: string
   /** opsional: field tambahan khusus konteks (dipakai halaman Joint Wallet
       untuk pemilih split & toggle privasi) — dirender di bawah tombol Catat */
   extraFields?: ReactNode
@@ -385,13 +404,18 @@ export function TransactionInputEngine({
   const quota = useAiQuota()
   const quotaExhausted = quota.exhausted
   /* PAKET 69 - SUMBER DOMPET: daftar dompet datang dari LEDGER nyata
-     (`walletOptionsFor`) + konteks uang aktif, bukan konstanta mock: dompet yang
+     (`walletSelectOptionsFor`, paket 102), bukan konstanta mock: dompet yang
      baru ditambahkan user langsung muncul, yang sudah dihapus tidak pernah
-     ditawarkan lagi. Saldonya ikut tombol mata privasi global. */
+     ditawarkan lagi. Sejak paket 102 daftarnya SATU BARIS PER DOMPET (bukan per
+     nama), jadi tiga dompet bernama "BCA" tetap bisa dipilih satu per satu.
+     Saldonya ikut tombol mata privasi global. */
   const walletSnapshot = useMoneyStore()
   const { context } = useMoneyContext()
   const { masked } = usePrivacy()
-  const pickerWalletOptions = useMemo(() => walletOptionsFor(walletSnapshot), [walletSnapshot])
+  const pickerWalletOptions = useMemo(
+    () => walletSelectOptionsFor(walletSnapshot),
+    [walletSnapshot],
+  )
   /* PAKET 86 — dompet default ikut SNAPSHOT, bukan cuma `context`.
      `defaultWalletNameFor()` membaca state modul `live`; sebelum hidrasi selesai
      isinya masih kosong, sehingga memo ber-dependensi `[context]` bisa "mengunci"
@@ -401,6 +425,12 @@ export function TransactionInputEngine({
   const contextDefaultWallet = useMemo(
     () => defaultWalletNameFor(context),
     [context, walletSnapshot],
+  )
+  /* ID dompet default — dihitung dari nama yang SAMA, jadi dua nilai ini tidak
+     mungkin menunjuk dompet berbeda. */
+  const contextDefaultWalletId = useMemo(
+    () => walletIdOfName(walletSnapshot, contextDefaultWallet),
+    [walletSnapshot, contextDefaultWallet],
   )
 
   const [typeId, setTypeId] = useState<TransactionTypeId>(defaultType)
@@ -430,6 +460,14 @@ export function TransactionInputEngine({
   /* tiga field yang HANYA hidup di mode edit — nilainya dari transaksi aslinya */
   const [category, setCategory] = useState('')
   const [wallet, setWallet] = useState('')
+  /**
+   * ID dompet dari pilihan user (paket 102) — dikirim ke store bersama `wallet`.
+   *
+   * `wallet` sendiri tetap disimpan karena ia yang dibaca layar & ditulis ke
+   * baris kas, sementara `walletId` yang memastikan dompet KEMBAR bernama sama
+   * terpotong di dompet yang benar.
+   */
+  const [walletId, setWalletId] = useState('')
   const [date, setDate] = useState('')
   const [mode, setMode] = useState<SheetMode>('manual')
   /** tombol Catat sedang memproses satu penyimpanan (paket 42) */
@@ -529,7 +567,11 @@ export function TransactionInputEngine({
       if (kind === 'voice' && extracted.wallet) {
         const choice = captureWalletChoice(walletSnapshot, context, extracted.wallet)
         /* `unknownGuess` kosong = dompet yang disebut user memang miliknya */
-        if (!choice.unknownGuess && choice.value) setWallet(choice.value)
+        if (!choice.unknownGuess && choice.value) {
+          setWallet(choice.value)
+          /* paket 102: nama saja tidak cukup kalau dompetnya kembar */
+          setWalletId(walletIdOfName(walletSnapshot, choice.value))
+        }
       }
 
       if (extracted.amount <= 0) {
@@ -649,14 +691,27 @@ export function TransactionInputEngine({
      yang tampil di form mustahil berbeda dari yang bergerak saldonya. */
   const walletIsFixed = !isEdit && Boolean(sourceLabel)
   const decidedWallet = walletIsFixed ? (sourceLabel ?? '') : wallet
+  /**
+   * ID dompet yang benar-benar dipakai (paket 102) — pasangan `decidedWallet`.
+   *
+   * Tiga sumber, berurutan: (1) ID yang dikirim halaman pemanggil (dompet tetap),
+   * (2) pilihan user di pemilih, (3) nama yang sudah ada di ledger (dompet
+   * default / data lama). Kalau semuanya kosong, store jatuh ke jalur lama
+   * by-name — persis perilaku sebelum paket ini.
+   */
+  const decidedWalletId = walletIsFixed
+    ? (sourceId || walletIdOfName(walletSnapshot, sourceLabel ?? ''))
+    : (walletId || walletIdOfName(walletSnapshot, wallet))
   const walletNeeded = !isEdit && decidedWallet.trim().length === 0
   const showWalletNeeded = walletNeeded && (amountSettled || amount > 0)
 
   /**
    * SALDO TIDAK CUKUP — alasannya berdiri DI DALAM FORM (paket 86).
    *
-   * Pagar "saldo tidak boleh sub-nol" (paket 74) memang MENOLAK pengeluaran yang
-   * melebihi saldo dompet (lihat `useTransactionSubmit` & `postTransaction`).
+   * Pagar "saldo tidak boleh sub-nol" (paket 74) memang MENOLAK uang yang keluar
+   * melebihi saldo dompet — `expense` DAN `saving` (setoran celengan ikut
+   * memotong saldo karena ditulis sebagai transfer satu sisi); lihat
+   * `useTransactionSubmit` & `postTransaction`.
    * Masalahnya, penolakan itu cuma berbunyi sebagai toast sesaat: dompet BARU
    * dibuat dengan saldo Rp 0 (form Tambah Dompet men-default "Rp 0"), jadi user
    * yang mencatat pengeluaran pertama dari dompet itu melihat panel yang seolah
@@ -665,12 +720,15 @@ export function TransactionInputEngine({
    * nominalnya terisi, SEBELUM user menekan Catat.
    */
   const fundsCheck = useMemo(
-    () => walletFundsCheck(walletSnapshot, decidedWallet, amount || 0),
-    [walletSnapshot, decidedWallet, amount],
+    () =>
+      decidedWalletId
+        ? walletFundsCheckById(walletSnapshot, decidedWalletId, amount || 0)
+        : walletFundsCheck(walletSnapshot, decidedWallet, amount || 0),
+    [walletSnapshot, decidedWalletId, decidedWallet, amount],
   )
   const fundsShort =
     !isEdit &&
-    typeId === 'expense' &&
+    (typeId === 'expense' || typeId === 'saving') &&
     decidedWallet.trim().length > 0 &&
     fundsCheck.known &&
     !fundsCheck.sufficient
@@ -691,19 +749,23 @@ export function TransactionInputEngine({
    */
   const editWalletPickerOptions = useMemo(() => {
     const current = initial?.wallet?.trim() ?? ''
-    if (!current || pickerWalletOptions.some((option) => option.label === current)) {
+    const currentId = initial?.walletId ?? ''
+    const known =
+      Boolean(currentId) && pickerWalletOptions.some((option) => option.id === currentId)
+    if (!current || known || pickerWalletOptions.some((option) => option.label === current)) {
       return pickerWalletOptions
     }
     return [
       {
         id: `edit-current:${current}`,
         label: current,
+        displayLabel: current,
         balance: 0,
         hint: TRANSACTION_INPUT_COPY.walletNotOwned,
       },
       ...pickerWalletOptions,
     ]
-  }, [pickerWalletOptions, initial?.wallet])
+  }, [pickerWalletOptions, initial?.wallet, initial?.walletId])
   /* font menyesuaikan panjang angka — memakai banyak DIGIT (bukan panjang string:
      titik ribuan ikut terhitung di `display`) dan token dari `lib/typography.ts`,
      jadi tidak ada lagi ukuran/bobot karangan di file ini (paket 53). */
@@ -764,8 +826,17 @@ export function TransactionInputEngine({
     /* mode TAMBAH: dompet mulai dari dompet DEFAULT konteks uang aktif (dulu
        nilai ini tidak pernah tampil di form - paket 69). Konteks yang belum
        punya dompet menjawab '', dan pemilihnya yang meminta user memilih; mode
-       EDIT tetap memakai dompet data lamanya apa adanya. */
-    setWallet(initial?.wallet ?? contextDefaultWallet)
+       EDIT tetap memakai dompet data lamanya apa adanya.
+       ID-nya diisi SEKALIAN (paket 102): kalau nama dompetnya kembar, store
+       harus tahu dompet mana yang dimaksud tanpa menebak "yang pertama". */
+    const starterWallet = initial?.wallet ?? contextDefaultWallet
+    setWallet(starterWallet)
+    setWalletId(
+      initial?.walletId ||
+        (walletIsFixed
+          ? sourceId || walletIdOfName(walletSnapshot, sourceLabel ?? '')
+          : walletIdOfName(walletSnapshot, starterWallet)),
+    )
     setDate(initial?.date ?? '')
     setMode('manual')
     /* panel baru dibuka = belum ada hasil AI dari sesi sebelumnya */
@@ -1032,6 +1103,9 @@ export function TransactionInputEngine({
         type: typeId,
         category: chosenCategory || initial.category,
         wallet: wallet || initial.wallet,
+        /* paket 102: baris lama bisa punya dompet kembar; id yang dipilih user
+           harus ikut supaya `editRow` memindahkan catatan ke dompet ITU */
+        walletId: walletId || initial.walletId,
         date: date || initial.date,
       })
       haptic([30, 50, 30])
@@ -1049,8 +1123,10 @@ export function TransactionInputEngine({
       type: typeId,
       category: chosenCategory,
       /* dompet PILIHAN USER (paket 69): dikirim eksplisit supaya dompet yang
-         terlihat di form = dompet yang saldonya bergerak */
+         terlihat di form = dompet yang saldonya bergerak. `walletId` (paket 102)
+         menutup kasus nama kembar — dua dompet "BCA" bukan satu tujuan. */
       wallet: decidedWallet,
+      walletId: decidedWalletId || undefined,
       clientTxId: clientTxId.current,
     })
     haptic([30, 50, 30]) // getar fisik sukses — bonus, bukan syarat (lihat `haptic`)
@@ -1369,7 +1445,9 @@ export function TransactionInputEngine({
                       </p>
                       {showFundsShort && (
                         <p className="mt-1.5 text-[12px] font-medium leading-relaxed text-forest/70">
-                          {TRANSACTION_INSUFFICIENT_FUNDS_COPY.body(decidedWallet)}
+                          {typeId === 'saving'
+                            ? TRANSACTION_INSUFFICIENT_FUNDS_COPY.savingBody(decidedWallet)
+                            : TRANSACTION_INSUFFICIENT_FUNDS_COPY.body(decidedWallet)}
                         </p>
                       )}
                     </div>
@@ -1378,9 +1456,11 @@ export function TransactionInputEngine({
                       <EditField label={TRANSACTION_INPUT_COPY.walletLabel}>
                         <WalletPicker
                           value={wallet}
+                          selectedId={walletId}
                           options={pickerWalletOptions}
-                          onChange={(next) => {
-                            setWallet(next)
+                          onChange={(nextName, nextId) => {
+                            setWallet(nextName)
+                            setWalletId(nextId)
                             setAiNotice(null)
                           }}
                           masked={masked}
@@ -1450,8 +1530,14 @@ export function TransactionInputEngine({
                     <EditField label={EDIT_TRANSACTION_COPY.walletLabel}>
                       <WalletPicker
                         value={wallet}
+                        selectedId={
+                          walletId || (wallet ? `edit-current:${wallet}` : '')
+                        }
                         options={editWalletPickerOptions}
-                        onChange={setWallet}
+                        onChange={(nextName, nextId) => {
+                          setWallet(nextName)
+                          setWalletId(nextId)
+                        }}
                         masked={masked}
                       />
                     </EditField>

@@ -399,6 +399,11 @@ export const WalletCardStack = memo(function WalletCardStack({
         /* konteks yang sedang aktif — dompet baru langsung muncul di daftar ini */
         context,
       })
+      if (!account) {
+        setAddOpen(false)
+        toast.error(ADD_WALLET_SHEET_COPY.rejected)
+        return
+      }
       /* tema kartu yang dipilih di sheet disimpan setelah store memberi id
          (paket 77) — sama seperti jalur di /wallet, ia preferensi TAMPILAN, bukan
          bagian dari uang/ledger */
@@ -1194,6 +1199,7 @@ export const WalletCardStack = memo(function WalletCardStack({
       onClose={() => setAddOpen(false)}
       onSave={handleAddWalletSave}
       cardIndex={allWalletCount}
+      takenNames={homeWallets(snapshot, 'all').map((wallet) => wallet.name)}
     />
     </>
   )

@@ -99,6 +99,32 @@ describe('cookie sesi Supabase · bentuk & batasnya', () => {
     expect(readSupabaseSession(header)?.userId).toBe(session.userId)
   })
 
+  it('tanpa nama di metadata: nama KOSONG, bukan "Kamu" (identitas tidak dikarang)', () => {
+    const json = JSON.stringify({
+      access_token: 'token-tanpa-nama',
+      expires_at: Math.floor(Date.now() / 1000) + 600,
+      user: {
+        id: 'dddddddd-4444-4444-8444-dddddddddddd',
+        email: 'd@catetind.dev',
+        user_metadata: {},
+      },
+    })
+    expect(readSupabaseSession(`${sessionCookieName()}=${json}`)?.name).toBe('')
+  })
+
+  it('nama dari metadata dipakai apa adanya (spasi tepi dibuang)', () => {
+    const json = JSON.stringify({
+      access_token: 'token-bernama',
+      expires_at: Math.floor(Date.now() / 1000) + 600,
+      user: {
+        id: 'eeeeeeee-5555-4555-8555-eeeeeeeeeeee',
+        email: 'e@catetind.dev',
+        user_metadata: { nickname: '  Rina  ' },
+      },
+    })
+    expect(readSupabaseSession(`${sessionCookieName()}=${json}`)?.name).toBe('Rina')
+  })
+
   it('nilai JSON polos (tanpa prefix base64-) juga diterima', () => {
     const json = JSON.stringify({
       access_token: 'token-polos',

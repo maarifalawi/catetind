@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import {
   ArrowRight,
@@ -26,7 +25,7 @@ import {
   resendCountdownLabel,
   resolveAuthLanding,
 } from '@/lib/data/auth'
-import { completeMagicLink, sendLoginLink, verifyEmailOtp } from '@/lib/session-client'
+import { completeMagicLink, sendLoginLink, verifyEmailOtp, navigateAfterSignIn } from '@/lib/session-client'
 
 /* ── Cek Email / Callback (/login/verify) — inventaris #9 · PRD 5931–5933 ─────
    Halaman ini adalah tempat user MENUNGGU, dan menunggu yang hampa adalah
@@ -65,7 +64,6 @@ export function VerifyEmailScreen({
   next?: string | null
 }) {
   const reduceMotion = useReducedMotion()
-  const router = useRouter()
 
   /**
    * Permintaan sesi sedang berjalan — baik menukar `?code=` dari tautan email
@@ -120,12 +118,14 @@ export function VerifyEmailScreen({
         return
       }
       toast.success(SESSION_COPY.signInToast)
-      router.push(landing)
+      /* reload penuh: store domain hidup di memory modul (lihat
+         `navigateAfterSignIn`) — jangan biarkan tab ini memakai state lama */
+      navigateAfterSignIn(landing)
     })()
     return () => {
       alive = false
     }
-  }, [code, router, landing])
+  }, [code, landing])
 
   /** masuk dengan kode 6 angka dari email — jalur kedua, untuk kode yang diketik */
   async function handleVerifyOtp() {
@@ -138,7 +138,7 @@ export function VerifyEmailScreen({
       return
     }
     toast.success(SESSION_COPY.signInToast)
-    router.push(landing)
+    navigateAfterSignIn(landing)
   }
 
   function handleResend() {

@@ -10,7 +10,12 @@ import { readAiPrefs, withCapturePrefs } from '@/lib/ai-prefs'
 import { recordAiUsage } from '@/lib/ai-usage-store'
 import type { HistoryTransaction } from '@/lib/data/history'
 import { useVoiceTranscript } from '@/hooks/use-voice-transcript'
-import { captureWalletChoice, getMoneySnapshot, walletIdOfName } from '@/lib/money/store'
+import {
+  captureWalletChoice,
+  getMoneySnapshot,
+  walletIdOfName,
+  walletSeedOf,
+} from '@/lib/money/store'
 import { recordTransaction } from '@/lib/transaction-bus'
 import {
   draftFormFrom,
@@ -99,6 +104,9 @@ function withCaptureWallet(draft: TransactionDraftForm, ctx: MoneyContext): Tran
   return {
     ...draft,
     wallet: choice.value,
+    /* paket 102: default yang dipakai juga punya ID — nama saja ambigu kalau
+       user punya beberapa dompet bernama sama */
+    walletId: choice.value ? walletIdOfName(getMoneySnapshot(), choice.value) : undefined,
     unknownWalletGuess: choice.unknownGuess,
     walletOutsideContext: choice.outsideContext,
     /* dompetnya diisi app dari konteks aktif, bukan disebut user — kartu
@@ -434,7 +442,11 @@ export function useTransactionCapture({
       setFormError(AI_CAPTURE_COPY.noWalletToPick)
       return null
     }
-    if (!walletIdOfName(snapshot, draft.wallet)) {
+    const explicitWalletId = (draft.walletId ?? '').trim()
+    const walletId = explicitWalletId
+      ? (walletSeedOf(snapshot, explicitWalletId) ? explicitWalletId : '')
+      : walletIdOfName(snapshot, draft.wallet)
+    if (!walletId) {
       setFormError(AI_CAPTURE_COPY.needWallet)
       return null
     }
@@ -445,6 +457,8 @@ export function useTransactionCapture({
       type: draft.type,
       category: draft.category,
       wallet: draft.wallet,
+      /* paket 102: nama saja tidak cukup kalau dompetnya kembar */
+      walletId,
       date: draft.date,
     })
 

@@ -15,6 +15,13 @@ import {
 import { cn } from '@/lib/utils'
 import { LOGIN_PATH, SESSION_COPY } from '@/lib/data/auth'
 import { usePushNotifications } from '@/lib/use-push-notifications'
+import {
+  DEFAULT_NOTIF_PREFS,
+  readNotifPrefs,
+  writeNotifPrefs,
+  type NotifPrefId,
+} from '@/lib/notification-prefs'
+import { onPrefsChanged } from '@/lib/prefs-sync'
 
 /* 5 jenis notifikasi kanon inventaris #22 (Domain 3A) */
 const PREFS = [
@@ -53,15 +60,9 @@ const PREFS = [
 ] as const
 
 type PrefId = (typeof PREFS)[number]['id']
-const DEFAULT_PREFS: Record<PrefId, boolean> = {
-  'reminder-harian': true,
-  'laporan-mingguan': true,
-  'laporan-bulanan': true,
-  'tanaman-layu': true,
-  'tagihan-jatuh-tempo': true,
-  'budget-hampir-habis': true,
-}
-const PREFS_KEY = 'catet-notif-prefs'
+/* Nilai & penyimpanan hidup di `lib/notification-prefs.ts`: satu sumber untuk
+   saklar yang sama di perangkat ini DAN di akun (`user_settings.notif_prefs`). */
+const DEFAULT_PREFS: Record<NotifPrefId, boolean> = DEFAULT_NOTIF_PREFS
 
 export function NotificationSettings() {
   const {
@@ -79,20 +80,18 @@ export function NotificationSettings() {
   const [sentMsg, setSentMsg] = useState<string | null>(null)
 
   useEffect(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem(PREFS_KEY) ?? 'null')
-      if (saved) setPrefs({ ...DEFAULT_PREFS, ...saved })
-    } catch {
-      /* abaikan JSON rusak */
-    }
+    setPrefs(readNotifPrefs())
+    /* perangkat lain mengubah saklar ini → `settings-sync` menulis nilai barunya
+       ke perangkat ini dan memberi tahu lewat event ini (tanpa reload) */
+    return onPrefsChanged('notif', () => setPrefs(readNotifPrefs()))
   }, [])
 
   const toggle = (id: PrefId) => {
-    setPrefs((prev) => {
-      const next = { ...prev, [id]: !prev[id] }
-      localStorage.setItem(PREFS_KEY, JSON.stringify(next))
-      return next
-    })
+    const next = { ...prefs, [id]: !prefs[id] }
+    setPrefs(next)
+    /* perangkat ini + akun sekaligus: dulu hanya localStorage, jadi saklar yang
+       dimatikan di HP tetap menyala di laptop */
+    writeNotifPrefs(next)
   }
 
   const handleActivate = async () => {

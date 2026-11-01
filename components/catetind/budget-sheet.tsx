@@ -304,7 +304,7 @@ export function ChoicePills<T extends string>({
   ariaLabel,
   className,
 }: {
-  options: { id: T; label: string }[]
+  options: { id: T; label: string; displayLabel?: string }[]
   value: T
   onChange: (value: T) => void
   ariaLabel: string
@@ -332,7 +332,7 @@ export function ChoicePills<T extends string>({
                 : 'bg-cream text-forest ring-1 ring-soil/14 hover:bg-cream hover:text-forest',
             )}
           >
-            {option.label}
+            {option.displayLabel ?? option.label}
           </button>
         )
       })}

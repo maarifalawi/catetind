@@ -95,7 +95,9 @@ describe('writeAiPrefs — satu pintu tulis untuk kunci yang sama', () => {
       { getItem: () => null, setItem: (value) => (written = value) },
       () => expect(writeAiPrefs({ ...next })).toEqual(next),
     )
-    expect(JSON.parse(written)).toEqual(next)
+    /* payload yang disimpan kini membawa `updatedAt` (sinkron lintas perangkat);
+       nilai preferensinya tetap sama persis */
+    expect(JSON.parse(written)).toEqual({ ...next, updatedAt: expect.any(Number) })
   })
 
   it('storage diblokir → tidak melempar, preferensi tetap berlaku sesi ini', () => {

@@ -14,22 +14,22 @@ import { useTodayISO } from '@/lib/use-today-iso'
 import { cn } from '@/lib/utils'
 import { categoryVisualFor } from './transaction-category-visual'
 
-/* â”€â”€ CERITA KITA â€” DAFTAR TRANSAKSI (redesign Dompet Bersama) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+/* ── CERITA KITA — DAFTAR TRANSAKSI (redesign Dompet Bersama) ─────────────────
    Sebelumnya timeline ini adalah "buku harian" dua kolom dengan garis tengah,
-   kartu berselang-seling, dan panel aksi yang mengembang di dalam tiap kartu â€”
+   kartu berselang-seling, dan panel aksi yang mengembang di dalam tiap kartu —
    padat, dan berbeda bahasa visual dari halaman Riwayat.
 
    Sekarang bentuknya SAMA dengan daftar Riwayat (sumber yang sama:
    `transaction-category-visual.tsx` + `MONEY_TONE`):
-     â€¢ kepala hari = label kecil + garis rambut (bukan pill besar),
-     â€¢ baris = kartu tipis ber-tint keluarga kategori, avatar pembayar di kiri,
+     • kepala hari = label kecil + garis rambut (bukan pill besar),
+     • baris = kartu tipis ber-tint keluarga kategori, avatar pembayar di kiri,
        nominal + badge pembagian di kanan,
-     â€¢ seluruh baris adalah SATU tap target â†’ detail & pembagian dibuka di
+     • seluruh baris adalah SATU tap target → detail & pembagian dibuka di
        bottom sheet (`joint-entry-sheet.tsx`), bukan di dalam baris.
 
    Privasi tetap utuh: catatan privat milik pasangan hanya tampil sebagai
    "Pengeluaran Privat Partner" tanpa detail, dan nominalnya ikut sensor global.
-   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+   ────────────────────────────────────────────────────────────────────────── */
 
 const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1]
 
@@ -47,7 +47,7 @@ export function JointTimeline({
   partner: JointPerson
   /** true = indikator "Dany sedang mencatat..." tampil (mock Supabase Realtime) */
   partnerTyping?: boolean
-  /** tap satu baris â†’ detail catatan & pembagian di bottom sheet */
+  /** tap satu baris → detail catatan & pembagian di bottom sheet */
   onOpenEntry: (tx: JointTransaction) => void
 }) {
   const today = useTodayISO()
@@ -124,7 +124,7 @@ export function JointTimeline({
   )
 }
 
-/** Satu baris transaksi â€” seluruh baris adalah tombol (tap â†’ bottom sheet) */
+/** Satu baris transaksi — seluruh baris adalah tombol (tap → bottom sheet) */
 function TimelineRow({
   tx,
   masked,
@@ -149,7 +149,7 @@ function TimelineRow({
   const category = hiddenFromMe ? 'Privat' : tx.category
   const visual = categoryVisualFor(hiddenFromMe ? null : category)
 
-  const amountPrefix = isSettlement ? 'â‡„ ' : isOpening ? '' : '- '
+  const amountPrefix = isSettlement ? '⇄ ' : isOpening ? '' : '- '
   const amountTone = isSettlement || isOpening ? 'text-forest/55' : 'text-hud-terracotta'
 
   return (
@@ -167,7 +167,7 @@ function TimelineRow({
           visual.row,
         )}
       >
-        {/* avatar pembayar â€” pembeda dua orang tanpa garis waktu */}
+        {/* avatar pembayar — pembeda dua orang tanpa garis waktu */}
         <span
           aria-hidden
           className={cn(
@@ -195,14 +195,14 @@ function TimelineRow({
 
           <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[12.5px] text-forest/40">
             <span className="shrink-0">{payer.name}</span>
-            <span className="shrink-0">Â· {tx.time}</span>
+            <span className="shrink-0">· {tx.time}</span>
             <span
               className={cn(
                 'min-w-0 truncate rounded-full px-1.5 py-0.5 text-[11px] font-medium',
                 hiddenFromMe ? 'bg-sage/70 text-forest/60' : visual.chip,
               )}
             >
-              {hiddenFromMe ? 'ðŸ”’ Privat' : category}
+              {hiddenFromMe ? '🔒 Privat' : category}
             </span>
           </span>
         </span>

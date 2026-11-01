@@ -2,11 +2,12 @@
 
 import {
   addWalletAccount,
+  getMoneySnapshot,
   postExpense,
   postIncome,
   postTransfer,
 } from './store'
-import { addFund, contributeToFund } from './funds-store'
+import { addFund, contributeToFund, getFundsSnapshot } from './funds-store'
 import { addDebt, addInvestment } from './wealth-store'
 import { addBill } from './bills-store'
 import { addJointMember, addJointTransaction } from './joint-store'
@@ -188,11 +189,26 @@ export function resetDemoSeedMarker(): void {
 
 /**
  * Tulis data contoh akun demo lewat API tulis store — SEKALI saja.
+ * @param options.force `true` = tetap menyemai walau store sudah berisi baris.
+ *   HANYA dipakai jalur review desain yang eksplisit menyalakan
+ *   `NEXT_PUBLIC_DEMO_ALLOW_SESSION=1` (lihat `DemoSeedGate`). Default `false`:
+ *   data user tidak pernah ditumpuk persona demo.
  * @returns `true` kalau baris benar-benar ditulis, `false` kalau sudah pernah.
  */
-export function seedDemoDataOnce(): boolean {
+export function seedDemoDataOnce(options: { force?: boolean } = {}): boolean {
   const marker = readMarker()
   if (marker === DEMO_SEED_VERSION) return false
+
+  /* ── TIDAK BOLEH MENUMPUK DI ATAS DATA NYATA ───────────────────────────────
+     Penanda localStorage hanya menjaga "sekali per perangkat". Begitu penanda
+     itu hilang (localStorage dibersihkan browser, mode privat, ganti profil),
+     dulu persona demo ditulis DI ATAS apa pun yang sudah ada — termasuk baris
+     transaksi user. Hasilnya angka yang tidak pernah dibuat user (dan, karena
+     `appendRow` mengirim ke server, baris contoh itu masuk ke akun).
+     Sekarang: kalau store sudah berisi baris, seed menolak berjalan. Perangkat
+     yang benar-benar mau dijadikan demo bisa direset dulu ("fresh start") —
+     atau reviewer memakai `force` lewat env yang memang untuk itu. */
+  if (!options.force && getMoneySnapshot().rows.length > 0) return false
 
   /* ── FRESH START — hanya di BROWSER, dan hanya sekali per versi ─────────────
      Tiga syarat, semuanya penting supaya reload tidak bisa berulang tanpa akhir:
@@ -381,6 +397,9 @@ interface SeededWallets {
   bcaId: string
   gopayId: string
   shopeepayId: string
+  /** nominal top-up GoPay; lebih besar saat seed diulang (`force`) supaya
+   *  pengeluaran demo tetap tertutup saldo yang tersisa dari seed sebelumnya */
+  gopayTopUp: number
 }
 
 /** satu baris pengeluaran seed (dikumpulkan dulu, disisipkan urut kronologis) */
@@ -410,29 +429,54 @@ interface SeedExpense {
    TIDAK berubah (tetap 1.250.000), dan SALDO AKHIR tiap dompet tetap angka
    target di atas — pindah dana netral untuk total uang, bukan uang baru. */
 function seedWallets(): SeededWallets {
-  const bca = addWalletAccount({
-    name: 'BCA',
-    type: 'Bank',
-    number: '•••• 0849',
-    opening: 300_000,
-    context: 'pribadi',
-  })
-  const gopay = addWalletAccount({
-    name: 'GoPay',
-    type: 'E-Wallet',
-    number: '•••• 7781',
-    opening: 750_000,
-    context: 'pribadi',
-  })
-  const shopeepay = addWalletAccount({
-    name: 'ShopeePay',
-    type: 'E-Wallet',
-    number: '•••• 3390',
-    opening: 135_000,
-    context: 'pribadi',
-  })
-  addWalletAccount({ name: 'Tunai', type: 'Cash', opening: 65_000, context: 'pribadi' })
-  return { bcaId: bca.id, gopayId: gopay.id, shopeepayId: shopeepay.id }
+  /* Idempoten: kalau dompet bernama sama sudah ada (seed ulang `force`, atau
+     perangkat demo yang sudah pernah diisi), PAKAI yang ada — jangan menambah
+     dompet kembar yang sekarang ditolak store. */
+  const existing = (name: string) =>
+    getMoneySnapshot().wallets.find(
+      (wallet) => wallet.name.trim().toLowerCase() === name.trim().toLowerCase(),
+    ) ?? null
+  const reused = Boolean(existing('BCA') || existing('GoPay') || existing('ShopeePay'))
+
+  const bca =
+    existing('BCA') ??
+    addWalletAccount({
+      name: 'BCA',
+      type: 'Bank',
+      number: '•••• 0849',
+      opening: 300_000,
+      context: 'pribadi',
+    })
+  const gopay =
+    existing('GoPay') ??
+    addWalletAccount({
+      name: 'GoPay',
+      type: 'E-Wallet',
+      number: '•••• 7781',
+      opening: 750_000,
+      context: 'pribadi',
+    })
+  const shopeepay =
+    existing('ShopeePay') ??
+    addWalletAccount({
+      name: 'ShopeePay',
+      type: 'E-Wallet',
+      number: '•••• 3390',
+      opening: 135_000,
+      context: 'pribadi',
+    })
+  if (!existing('Tunai')) {
+    addWalletAccount({ name: 'Tunai', type: 'Cash', opening: 65_000, context: 'pribadi' })
+  }
+  if (!bca || !gopay || !shopeepay) {
+    throw new Error('Dompet demo tidak bisa dibuat: nama sudah dipakai.')
+  }
+  return {
+    bcaId: bca.id,
+    gopayId: gopay.id,
+    shopeepayId: shopeepay.id,
+    gopayTopUp: reused ? 900_000 : 200_000,
+  }
 }
 
 function seedMoneySettings(): void {
@@ -485,14 +529,14 @@ function seedIncome(bcaId: string): void {
  *      `opening` BCA/GoPay (lihat catatan di `seedWallets`). Σ pemasukan tetap
  *      7.300.000, Σ pengeluaran tetap 5.180.000, total dompet tetap 2.120.000.
  */
-function seedRecentActivity({ bcaId, gopayId }: SeededWallets): void {
+function seedRecentActivity({ bcaId, gopayId, gopayTopUp }: SeededWallets): void {
   const dateISO = daysAgoISO(0)
 
   /* pindah dana: netral untuk total uang, dan inilah "variasi" kedua di daftar */
   postTransfer({
     fromWalletId: bcaId,
     toWalletId: gopayId,
-    amount: 200_000,
+    amount: gopayTopUp,
     note: 'Top up GoPay dari BCA',
     dateISO,
     time: '22:15',
@@ -624,6 +668,14 @@ function seedExpenses({ bcaId, gopayId, shopeepayId }: SeededWallets): void {
 }
 
 function seedFunds(bcaId: string): void {
+  /* Idempoten: `force` tidak boleh menumpuk celengan contoh dengan nama sama. */
+  if (
+    getFundsSnapshot().funds.some(
+      (fund) => fund.name.trim().toLowerCase() === 'nabung liburan ke bali',
+    )
+  ) {
+    return
+  }
   const fund = addFund({
     name: 'Nabung Liburan ke Bali',
     target: 5_000_000,

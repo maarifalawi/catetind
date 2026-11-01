@@ -431,14 +431,18 @@ function ConfirmBubble({
               disertakan supaya tidak pernah ada nilai yang hilang dari daftar. */}
           <WalletPicker
             value={draft.wallet}
+            selectedId={draft.walletId}
             options={walletChoices}
-            onChange={(name) =>
+            onChange={(name, id) =>
               /* begitu user memilih sendiri, catatan "AI nebak ..." / "dompet ini
                  ada di konteks lain" tidak berlaku lagi — dua flag itu memang
                  keterangan tentang keputusan AWAL draft, bukan status permanen */
               onDraftChange(
                 {
                   wallet: name,
+                  /* paket 102: ID dompet yang dipilih ikut disimpan supaya
+                     dompet kembar bernama sama tidak tertukar saat mencatat */
+                  walletId: id,
                   unknownWalletGuess: '',
                   walletOutsideContext: false,
                   /* user memilihnya sendiri ⇒ ia bukan lagi "dompet konteks" */

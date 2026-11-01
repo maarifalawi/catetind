@@ -49,8 +49,14 @@ export interface RemoteJointWallet {
   rows: JointTransaction[]
 }
 
-/** jumlah baris yang boleh ditarik sekali baca (sama dengan batas cache lokal) */
-const REMOTE_ROW_LIMIT = 200
+/* ── BACA SEMUA BARIS, BUKAN 200 TERBARU ──────────────────────────────────────
+   Batas `limit(200)` membuat riwayat kantong bersama terpotong tanpa penjelasan:
+   pengeluaran lama hilang dari layar (dan dari timbangan settle) sementara di
+   perangkat lain masih ada. Sekarang dibaca bertahap dengan batas keras — pola
+   yang sama dengan `lib/supabase/money-remote.ts`. */
+const REMOTE_PAGE_SIZE = 500
+/** batas keras: 5000 baris ≈ beberapa tahun catatan bersama */
+const REMOTE_ROW_MAX = 5_000
 
 type WalletRow = { id: string; name: string; created_at?: string | null; owner_id?: string | null }
 
@@ -75,20 +81,34 @@ export async function readRemoteJointWallet(): Promise<RemoteJointWallet | null>
     const raw = ((walletRows ?? []) as WalletRow[])[0]
     if (!raw?.id) return null
 
-    const [membersRes, rowsRes] = await Promise.all([
-      client.from('joint_members').select('user_id').eq('joint_wallet_id', raw.id),
-      client
+    /* anggota & baris dibaca paralel; barisnya bertahap (lihat catatan di atas) */
+    const membersPromise = client
+      .from('joint_members')
+      .select('user_id')
+      .eq('joint_wallet_id', raw.id)
+
+    const allRows: JointTransactionDbRow[] = []
+    for (let from = 0; from < REMOTE_ROW_MAX; from += REMOTE_PAGE_SIZE) {
+      const to = Math.min(from + REMOTE_PAGE_SIZE, REMOTE_ROW_MAX) - 1
+      const { data, error } = await client
         .from('joint_transactions_public')
         .select('*')
         .eq('joint_wallet_id', raw.id)
         .order('date', { ascending: false })
-        .limit(REMOTE_ROW_LIMIT),
-    ])
+        /* `id` unik → urutan stabil antar-halaman (tanpa ini `range` bisa
+           menggandakan satu baris dan melewatkan baris lain) */
+        .order('id', { ascending: false })
+        .range(from, to)
+      /* Bacaannya hanya sah kalau barisnya benar-benar bisa dibaca: kalau gagal,
+         pemanggil memakai jalur lokal — bukan menampilkan kantong "kosong" yang
+         bisa disalahartikan sebagai data yang hilang. */
+      if (error) return null
+      const page = (data ?? []) as JointTransactionDbRow[]
+      allRows.push(...page)
+      if (page.length < REMOTE_PAGE_SIZE) break
+    }
 
-    /* Bacaannya hanya sah kalau barisnya benar-benar bisa dibaca: kalau gagal,
-       pemanggil memakai jalur lokal — bukan menampilkan kantong "kosong" yang
-       bisa disalahartikan sebagai data yang hilang. */
-    if (rowsRes.error) return null
+    const membersRes = await membersPromise
 
     const members: string[] = []
     const memberIds = [
@@ -100,7 +120,7 @@ export async function readRemoteJointWallet(): Promise<RemoteJointWallet | null>
       if (id && !members.includes(id)) members.push(id)
     }
 
-    const rows = ((rowsRes.data ?? []) as JointTransactionDbRow[])
+    const rows = allRows
       .filter((row) => Boolean(row?.id))
       .map((row) => toJointTransaction(row, viewerId))
 

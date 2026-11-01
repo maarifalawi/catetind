@@ -4,7 +4,6 @@ import { useMemo, useSyncExternalStore } from 'react'
 import {
   FUND_CONTRIBUTIONS,
   INITIAL_SINKING_FUNDS,
-  TODAY_ISO,
   fundContributions,
   plantStageFrom,
   type BudgetScope,
@@ -13,7 +12,8 @@ import {
   type SinkingFundItem,
 } from '@/lib/data/budget'
 import { FUNDS_STATE_KEY, loadDeviceState, saveDeviceState } from './idb'
-import { getMoneySnapshot, postFundWithdrawal, postTransaction, walletNameOfId } from './store'
+import { localISODate } from '@/lib/time'
+import { getMoneySnapshot, postFundWithdrawal, postTransaction, walletFundsCheckById, walletNameOfId } from './store'
 import {
   deleteRemoteFund,
   pushContributionToServer,
@@ -21,6 +21,7 @@ import {
   readRemoteFunds,
   type RemoteFunds,
 } from '@/lib/supabase/funds-remote'
+import { subscribeTables } from '@/lib/supabase/realtime'
 import { randomUuid } from '@/lib/supabase/uuid'
 
 /* ── SATU STORE CELENGAN (paket 46) ─────────────────────────────────────────
@@ -156,6 +157,8 @@ export function getServerFundsSnapshot(): FundsSnapshot {
 export function subscribeFundsStore(listener: () => void): () => void {
   listeners.add(listener)
   void hydrateFundsStore()
+  /* perubahan dari perangkat lain: realtime + tab kembali aktif */
+  startFundsRealtime()
   return () => {
     listeners.delete(listener)
   }
@@ -394,6 +397,55 @@ async function hydrateFundsStore(): Promise<void> {
   for (const row of live.contributions) if (!row.remoteId) await ensureContributionOnServer(row.id)
 }
 
+/**
+ * Tarik ulang celengan + riwayat setoran lalu rekonsiliasi (realtime /
+ * `visibilitychange` / `online`). Server otoritatif untuk baris ber-`remoteId`;
+ * baris lokal tanpa `remoteId` = antrean yang belum pernah terkirim.
+ */
+export async function refreshFundsFromServer(): Promise<boolean> {
+  if (typeof window === 'undefined' || !hydratedOnce || accountPurged) return false
+  const remote = await readRemoteFunds()
+  if (!remote) return false
+
+  const pendingFunds = live.funds.filter((fund) => !fund.remoteId)
+  const fundsById = new Map<number, SinkingFundItem>()
+  for (const fund of pendingFunds) fundsById.set(fund.id, fund)
+  for (const fund of remote.funds) fundsById.set(fund.id, fund)
+
+  const pendingContributions = live.contributions.filter((row) => !row.remoteId)
+  const contributionsById = new Map<number, FundContribution>()
+  for (const row of pendingContributions) contributionsById.set(row.id, row)
+  for (const row of remote.contributions) contributionsById.set(row.id, row)
+
+  live = {
+    ...live,
+    funds: [...fundsById.values()],
+    contributions: [...contributionsById.values()],
+    hydrated: true,
+  }
+  persist(live)
+  emit()
+
+  for (const fund of live.funds) if (!fund.remoteId) await ensureFundOnServer(fund.id)
+  for (const row of live.contributions) if (!row.remoteId) await ensureContributionOnServer(row.id)
+  return true
+}
+
+/** langganan realtime + penyegaran saat tab aktif lagi (idempoten) */
+let fundsRealtimeStarted = false
+export function startFundsRealtime(): void {
+  if (fundsRealtimeStarted || typeof window === 'undefined') return
+  fundsRealtimeStarted = true
+  subscribeTables('goals-changes', ['goals', 'goal_contributions'], () => {
+    void refreshFundsFromServer()
+  })
+  const wake = () => {
+    if (document.visibilityState === 'visible') void refreshFundsFromServer()
+  }
+  document.addEventListener('visibilitychange', wake)
+  window.addEventListener('online', wake)
+}
+
 /* ── API TULIS — satu-satunya jalur menulis celengan ─────────────────────────
    Komponen tidak boleh menyentuh `funds`/`contributions` langsung: Home,
    /budget, dan /budget/<id> membaca state yang sama, jadi perubahan harus lewat
@@ -444,7 +496,7 @@ export function contributeToFund(
   fundId: number,
   amount: number,
   walletId: string,
-  dateISO: string = TODAY_ISO,
+  dateISO: string = localISODate(),
 ): ContributionResult | null {
   const target = live.funds.find((fund) => fund.id === fundId)
   const rounded = Math.round(Number(amount))
@@ -453,6 +505,27 @@ export function contributeToFund(
      yang sudah tidak ada di layar mana pun. */
   if (!target || live.removedIds.includes(fundId) || !Number.isFinite(rounded) || rounded <= 0)
     return null
+
+  /* ── SALDO TIDAK BOLEH SUB-NOL (setoran celengan) ─────────────────────────
+     Setoran mengeluarkan uang dari dompet (barisnya `saving` = transfer satu
+     sisi), jadi saldonya diperiksa SEBELUM progres celengan ditulis. Dulu
+     pemeriksaan ini tidak ada di sini: celengan bertambah Rp 4.000.000 dari
+     dompet yang cuma punya Rp 1.450.000, dan saldo dompetnya jadi MINUS. Kalau
+     pemeriksaan hanya ditaruh di `postTransaction`, urutannya juga salah —
+     progres celengan sudah tersimpan saat baris kasnya ditolak. Sumber
+     non-dompet (Sapu Bersih) tidak diperiksa: uangnya tidak keluar dari dompet. */
+  const money = getMoneySnapshot()
+  const walletName = walletNameOfId(money, walletId)
+  /* id sumber yang BUKAN dompet (Sapu Bersih) sengaja tidak punya nama dompet.
+     Dompet yang sudah DIHAPUS juga menjawab '' — dan itu bukan sumber sah:
+     uangnya tidak keluar dari mana pun, jadi setoran harus ditolak. */
+  if (walletId !== SWEEP_SOURCE_ID && !walletName) return null
+  /* Pemeriksaan memakai ID (bukan nama): dua dompet boleh bernama sama, dan yang
+     membayar setoran ini adalah dompet yang benar-benar dipilih user. */
+  if (walletName) {
+    const funds = walletFundsCheckById(money, walletId, rounded)
+    if (funds.known && !funds.sufficient) return null
+  }
 
   const fund: SinkingFundItem = {
     ...target,
@@ -468,36 +541,39 @@ export function contributeToFund(
     walletId,
   }
 
+  /* ── REKAM KE LEDGER DULU, BARU PROGRES CELENGAN (paket 102) ─────────────
+     Urutannya dibalik dari versi lama. Dulu progres celengan di-commit lebih
+     dulu, lalu hasil `postTransaction` DIABAIKAN: kalau pintu kas menolak
+     (dompet terhapus / nominal ditolak), celengan tetap bertambah tanpa satu
+     rupiah pun keluar dari dompet — uang yang tidak pernah ada.
+
+     `clientTxId` = id setoran ⇒ idempoten: pemanggilan ganda tidak menulis dua
+     baris. Kalau `walletId` BUKAN dompet nyata (mis. sumber "Sisa budget" pada
+     Sapu Bersih — uang yang tidak pernah ada di dompet), name-nya kosong dan
+     TIDAK ada baris kas yang dikarang: sapu bersih memang tidak menyentuh kas. */
+  if (walletName) {
+    const row = postTransaction({
+      name: `Setor ${fund.name}`,
+      amount: rounded,
+      type: 'saving',
+      category: 'Tabungan',
+      wallet: walletName,
+      /* ID ikut dikirim: barisnya harus mendarat di dompet yang dipilih sheet,
+         bukan di dompet pertama yang namanya kebetulan sama. */
+      walletId,
+      dateISO,
+      clientTxId: `fund-contribution-${contribution.id}`,
+    })
+    /* kas menolak = tidak ada yang ditulis sama sekali (bukan cuma ledger) */
+    if (!row) return null
+  }
+
   commit({
     ...live,
     funds: live.funds.map((item) => (item.id === fundId ? fund : item)),
     contributions: [contribution, ...live.contributions],
     hydrated: true,
   })
-  /* ── REKAM KE LEDGER (paket 65 · Tugas B) ────────────────────────────────
-     Setoran celengan MENGGERAKKAN uang (keluar dari dompet). Karena itu ia WAJIB
-     menulis baris ledger lewat pintu yang sama dengan catatan manual. Dulu ini
-     ditulis di UI (`budget-screen.tsx`), jadi setoran dari pintu LAIN
-     (`goal-detail-screen.tsx`, modal review, sapu bersih) TIDAK pernah tercatat.
-     Sekarang ditulis DI SINI supaya SETIAP pemanggil `contributeToFund()` ikut
-     tercatat — satu pintu, tidak ada yang terlupa.
-
-     `clientTxId` = id setoran ⇒ idempoten: pemanggilan ganda tidak menulis dua
-     baris. Kalau `walletId` BUKAN dompet nyata (mis. sumber "Sisa budget" pada
-     Sapu Bersih — uang yang tidak pernah ada di dompet), name-nya kosong dan
-     TIDAK ada baris kas yang dikarang: sapu bersih memang tidak menyentuh kas. */
-  const walletName = walletNameOfId(getMoneySnapshot(), walletId)
-  if (walletName) {
-    postTransaction({
-      name: `Setor ${fund.name}`,
-      amount: rounded,
-      type: 'saving',
-      category: 'Tabungan',
-      wallet: walletName,
-      dateISO,
-      clientTxId: `fund-contribution-${contribution.id}`,
-    })
-  }
   /* celengan dulu (butuh uuid), baru setoran yang menunjuk uuid itu */
   void ensureFundOnServer(fund.id).then(() => ensureContributionOnServer(contribution.id))
 
@@ -519,7 +595,7 @@ export const SWEEP_SOURCE_ID = 'sweep'
 export function sweepIntoFund(
   fundId: number,
   amount: number,
-  dateISO: string = TODAY_ISO,
+  dateISO: string = localISODate(),
 ): ContributionResult | null {
   return contributeToFund(fundId, amount, SWEEP_SOURCE_ID, dateISO)
 }
@@ -544,7 +620,7 @@ export function withdrawFromFund(
   fundId: number,
   amount: number,
   walletId: string,
-  dateISO: string = TODAY_ISO,
+  dateISO: string = localISODate(),
 ): ContributionResult | null {
   const target = live.funds.find((fund) => fund.id === fundId)
   const rounded = Math.round(Number(amount))
@@ -661,8 +737,29 @@ export function useFundsStore(): FundsSnapshot {
  * tetap terpotong) padahal kartunya sudah hilang: dua cerita di satu layar.
  */
 export function liveFunds(snapshot: FundsSnapshot): SinkingFundItem[] {
-  if (snapshot.removedIds.length === 0) return snapshot.funds
-  return snapshot.funds.filter((fund) => !snapshot.removedIds.includes(fund.id))
+  const living =
+    snapshot.removedIds.length === 0
+      ? snapshot.funds
+      : snapshot.funds.filter((fund) => !snapshot.removedIds.includes(fund.id))
+  /* PAKET 103 — status "sudah nyisih bulan ini" dihitung dari RIWAYAT tanggal
+     setoran/penarikan, bukan dari penanda statis yang terkunci selamanya.
+     · setoran bulan ini menambah; penarikan bulan ini mengurangi;
+     · kalau hasilnya ≤ 0 (ditarik kembali), status kembali "belum nyisih";
+     · pindah bulan membuat perhitungan ini otomatis kembali false.
+     Data WARISAN yang belum punya satu pun catatan setoran tetap memakai flag
+     tersimpan sebagai fallback — supaya tidak mengubah cerita data lama. */
+  const currentMonthKey = localISODate().slice(0, 7)
+  return living.map((fund) => {
+    const history = snapshot.contributions.filter((item) => item.fundId === fund.id)
+    if (history.length === 0) return fund
+    const netThisMonth = history
+      .filter((item) => item.date.slice(0, 7) === currentMonthKey)
+      .reduce((sum, item) => sum + (item.direction === 'out' ? -item.amount : item.amount), 0)
+    const contributedThisMonth = netThisMonth > 0
+    return contributedThisMonth === fund.contributedThisMonth
+      ? fund
+      : { ...fund, contributedThisMonth }
+  })
 }
 
 /** daftar celengan hidup untuk komponen — satu hook supaya pemanggilnya tidak
@@ -676,7 +773,7 @@ export function useLiveFunds(): SinkingFundItem[] {
  *  sehingga halaman detail tidak pernah menampilkan celengan hantu */
 export function fundById(snapshot: FundsSnapshot, fundId: number): SinkingFundItem | null {
   if (snapshot.removedIds.includes(fundId)) return null
-  return snapshot.funds.find((fund) => fund.id === fundId) ?? null
+  return liveFunds(snapshot).find((fund) => fund.id === fundId) ?? null
 }
 
 /** riwayat setoran satu celengan, terbaru dulu (urutan tampil di halaman detail) */

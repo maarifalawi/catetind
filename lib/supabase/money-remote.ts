@@ -3,6 +3,7 @@
 import type { WalletSeed } from '@/lib/wallets'
 import type { MoneyRow } from '@/lib/money/store'
 import { browserSupabase } from './client'
+import { dataApi, dataApiOk } from './data-api'
 import {
   toLedgerInsert,
   toLedgerRow,
@@ -19,11 +20,13 @@ import {
      · saat login, store uang MEMBACA `wallets` + `ledger_rows` + `wallet_balances`
        dari Supabase (fungsi `readRemoteMoney`);
      · setiap baris baru DIKIRIM ke `ledger_rows` dengan `client_tx_id` sebagai
-       kunci idempotensi (`pushRowToServer`), jadi double-tap / retry / dua
+       kunci idempotensi (`pushRowToServerResult`), jadi double-tap / retry / dua
        perangkat tidak bisa menggandakan catatan — penjaganya constraint
        `unique (user_id, client_tx_id)` di database, bukan cuma di memory;
      · baris yang lahir offline tetap tinggal di antrean lokal (`lib/money/idb.ts`
-       sebagai cache) dan dikirim saat `flushRemoteQueue()`.
+       sebagai cache) dan dikirim saat `flushPendingSync()` di store;
+     · pembacaan menarik SELURUH baris (bertahap), bukan 200 terbaru — angka
+       bulan berjalan tidak boleh bergantung pada jendela baca.
 
    Semua fungsi di sini mengembalikan `null`/hasil kosong KALAU tidak ada sesi
    atau backend belum dipasangkan — pemanggil (store) lalu tetap jalan lokal.
@@ -42,8 +45,16 @@ export interface RemoteMoney {
   balances: Record<string, number>
 }
 
-/** jumlah baris yang boleh ditarik sekali baca (sama dengan batas cache lokal) */
-const REMOTE_ROW_LIMIT = 200
+/* ── BACA SEMUA BARIS, BUKAN 200 TERBARU (perbaikan "angka berubah setelah login")
+   Dulu bacaan dibatasi `limit(200)`. Akibatnya angka bulan berjalan bergantung
+   pada CARA pandang: cache perangkat bisa memuat baris lama yang tidak lagi
+   masuk jendela 200, sementara login baru / klien bersih hanya melihat 200 baris
+   terbaru — dua total untuk data yang sama. Sekarang seluruh baris dibaca
+   bertahap (`range`), dengan batas keras supaya tab tidak pernah menggantung
+   pada akun yang sudah bertahun-tahun mencatat. */
+const REMOTE_PAGE_SIZE = 500
+/** batas keras: 5000 baris ≈ beberapa tahun pencatatan harian */
+const REMOTE_ROW_MAX = 5_000
 
 function toMoneyRow(db: LedgerDbRow, walletNames: Map<string, string>): MoneyRow {
   const base = toLedgerRow(db)
@@ -57,10 +68,79 @@ function toMoneyRow(db: LedgerDbRow, walletNames: Map<string, string>): MoneyRow
 }
 
 /**
+ * Tarik SELURUH baris ledger pemanggil, bertahap.
+ *
+ * `null` = salah satu halaman gagal dibaca → pemanggil jatuh ke jalur lokal
+ * (lebih baik data cache yang tampil daripada saldo yang bolong).
+ *
+ * Urutannya (`date` lalu `seq`, dua-duanya menurun) SAMA untuk setiap halaman —
+ * tanpa urutan yang stabil, `range` bisa mengembalikan baris yang sama dua kali
+ * dan melewatkan baris lain.
+ */
+async function readAllLedgerRows(
+  client: NonNullable<ReturnType<typeof browserSupabase>>,
+): Promise<LedgerDbRow[] | null> {
+  const all: LedgerDbRow[] = []
+  for (let from = 0; from < REMOTE_ROW_MAX; from += REMOTE_PAGE_SIZE) {
+    const to = Math.min(from + REMOTE_PAGE_SIZE, REMOTE_ROW_MAX) - 1
+    const { data, error } = await client
+      .from('ledger_rows')
+      .select('*')
+      .order('date', { ascending: false })
+      .order('seq', { ascending: false })
+      .range(from, to)
+    if (error) return null
+    const page = (data ?? []) as LedgerDbRow[]
+    all.push(...page)
+    /* halaman terakhir: sisa kurang dari satu halaman penuh */
+    if (page.length < REMOTE_PAGE_SIZE) break
+  }
+  return all
+}
+
+/**
  * Baca seluruh state uang milik pemanggil. `null` = tidak ada sesi / backend mati
  * → store memakai jalur lokal (IndexedDB), bukan mengosongkan layar.
  */
 export async function readRemoteMoney(): Promise<RemoteMoney | null> {
+  /* Jalur browser dulu (RLS + token user = paling ketat). Kalau klien tidak ada,
+     tidak ada sesi, atau salah satu query ditolak, kita TIDAK langsung menyerah:
+     jalur server memakai cookie sesi yang sama dengan middleware, jadi user yang
+     bisa membuka app tetap bisa membaca datanya (lihat `app/api/data`). */
+  const viaBrowser = await readRemoteMoneyViaBrowser()
+  if (viaBrowser) return viaBrowser
+  return readRemoteMoneyViaServer()
+}
+
+/** jalur server: hanya dipakai saat jalur browser tidak menghasilkan apa pun */
+async function readRemoteMoneyViaServer(): Promise<RemoteMoney | null> {
+  const wallets = await dataApi<WalletDbRow>({
+    table: 'wallets',
+    op: 'select',
+    order: { column: 'sort_index', ascending: true },
+  })
+  if (!wallets) return null
+  const rowPayloads = await dataApi<LedgerDbRow>({
+    table: 'ledger_rows',
+    op: 'select',
+    order: { column: 'date', ascending: false },
+  })
+  if (!rowPayloads) return null
+  const balancesRaw = await dataApi<{ wallet_id: string; balance: number | string }>({
+    table: 'wallet_balances',
+    op: 'select',
+  })
+
+  const walletSeeds = wallets.map((row) => toWalletSeed(row))
+  const walletNames = new Map(walletSeeds.map((wallet) => [wallet.id, wallet.name]))
+  const rows = rowPayloads.map((row) => toMoneyRow(row, walletNames))
+  const balances = Object.fromEntries(
+    (balancesRaw ?? []).map((row) => [row.wallet_id, Math.round(Number(row.balance))]),
+  )
+  return { wallets: walletSeeds, rows, balances }
+}
+
+async function readRemoteMoneyViaBrowser(): Promise<RemoteMoney | null> {
   const client = browserSupabase()
   if (!client) return null
 
@@ -68,24 +148,19 @@ export async function readRemoteMoney(): Promise<RemoteMoney | null> {
     const { data: session } = await client.auth.getSession()
     if (!session.session?.access_token) return null
 
-    const [walletsRes, rowsRes, balancesRes] = await Promise.all([
+    const [walletsRes, rowsData, balancesRes] = await Promise.all([
       client.from('wallets').select('*').order('sort_index', { ascending: true }),
-      client
-        .from('ledger_rows')
-        .select('*')
-        .order('date', { ascending: false })
-        .order('seq', { ascending: false })
-        .limit(REMOTE_ROW_LIMIT),
+      readAllLedgerRows(client),
       client.from('wallet_balances').select('wallet_id,balance'),
     ])
 
     /* Satu tabel yang gagal dibaca = pembacaan ini tidak sah: lebih baik jatuh ke
        jalur lokal (data user tetap tampil) daripada menampilkan saldo yang bolong. */
-    if (walletsRes.error || rowsRes.error) return null
+    if (walletsRes.error || rowsData === null) return null
 
     const wallets = ((walletsRes.data ?? []) as WalletDbRow[]).map(toWalletSeed)
     const walletNames = new Map(wallets.map((wallet) => [wallet.id, wallet.name]))
-    const rows = ((rowsRes.data ?? []) as LedgerDbRow[]).map((row) => toMoneyRow(row, walletNames))
+    const rows = rowsData.map((row) => toMoneyRow(row, walletNames))
     const balances = Object.fromEntries(
       ((balancesRes.data ?? []) as { wallet_id: string; balance: number | string }[]).map((row) => [
         row.wallet_id,
@@ -98,34 +173,124 @@ export async function readRemoteMoney(): Promise<RemoteMoney | null> {
   }
 }
 
-/** penanda hasil kirim: cukup untuk laporan antrean, bukan untuk UI */
-export interface PushOutcome {
-  /** baris yang benar-benar masuk (atau sudah ada) di server */
-  synced: number
-  /** baris yang gagal (jaringan/server) — tetap di antrean */
-  failed: number
-  /** true = tidak ada sesi/backend → semua baris tetap di antrean lokal */
-  offline: boolean
+/**
+ * Hasil kirim SATU baris — lebih rinci daripada boolean, karena tiga keadaan itu
+ * punya tindakan yang BERBEDA di store:
+ *
+ *   · `synced`   → baris sah ada di server (baru masuk, atau sudah ada = retry
+ *                  idempoten). Boleh ditandai tersinkron.
+ *   · `offline`  → tidak ada sesi/backend. Baris tetap hidup di perangkat; store
+ *                  mempertahankan perilaku lama ("tersimpan di perangkat ini").
+ *   · `failed`   → ada sesi & percobaan benar-benar dilakukan, tapi server
+ *                  menolak/gagal. Baris WAJIB kembali ke antrean supaya dicoba
+ *                  lagi — jangan dicap tersinkron hanya karena perangkat online.
+ *   · `conflict` → `23505` tetapi bukan baris ini: `id`-nya sudah dipakai baris
+ *                  LAIN (id lokal `session-9001` bisa lahir ulang di perangkat
+ *                  yang cache-nya baru dibersihkan). Store memberi id baru lalu
+ *                  mengirim ulang, bukan menganggapnya sudah tersimpan.
+ */
+export type RowPushResult = 'synced' | 'offline' | 'failed' | 'conflict'
+
+/**
+ * Terjemahkan jawaban INSERT menjadi keputusan yang benar. Fungsi murni supaya
+ * kasus `23505` (satu-satunya kode yang dulu disalahartikan) bisa diuji tanpa
+ * jaringan.
+ *
+ * `23505` di tabel `ledger_rows` bisa berasal dari DUA constraint:
+ *   · `unique (user_id, client_tx_id)` → baris ini SUDAH ada (idempoten, aman);
+ *   · `primary key (user_id, id)`      → id ini dipakai baris lain (BUKAN baris
+ *     ini) → baris baru belum tersimpan dan tidak boleh dianggap sukses.
+ * Karena itu kita membaca baris yang menempati `id` itu dan membandingkan
+ * kunci idempotensinya.
+ */
+export function classifyInsertOutcome(
+  error: { code?: string } | null,
+  existing: { client_tx_id?: string | null } | null,
+  expectedClientTxId: string,
+): Exclude<RowPushResult, 'offline'> {
+  if (!error) return 'synced'
+  if (error.code !== '23505') return 'failed'
+  return (existing?.client_tx_id ?? '') === expectedClientTxId ? 'synced' : 'conflict'
 }
 
 /**
- * Kirim SATU baris ledger ke server.
+ * Kirim SATU baris ledger ke server, dengan hasil yang bisa dibedakan.
  *
- * `23505` (duplicate key) BUKAN kegagalan: artinya kunci idempotensi ini sudah
- * pernah sampai (double-tap, retry, atau perangkat lain yang sedang syncing) —
- * baris dianggap sudah tersimpan, karena memang begitu keadaannya di database.
+ * `23505` (duplicate key) TIDAK otomatis dianggap sukses lagi — lihat
+ * `classifyInsertOutcome`: idempotensi (`client_tx_id` sudah ada) = sukses,
+ * tabrakan `id` = `conflict` (baris belum tersimpan).
  */
-export async function pushRowToServer(row: MoneyRow): Promise<boolean> {
+export async function pushRowToServerResult(row: MoneyRow): Promise<RowPushResult> {
+  const viaBrowser = await pushRowViaBrowser(row)
+  if (viaBrowser !== 'unavailable') return viaBrowser
+  /* Tidak ada klien/sesi di browser (atau token basi) → jalur server. Ini yang
+     membuat sesi-cookie yang sah TIDAK pernah "berhasil di layar tapi gagal di
+     database". */
+  return pushRowViaServer(row)
+}
+
+/** `'unavailable'` = klien/sesi browser tidak bisa dipakai, bukan kegagalan data */
+async function pushRowViaBrowser(row: MoneyRow): Promise<RowPushResult | 'unavailable'> {
   const client = browserSupabase()
-  if (!client) return false
+  if (!client) return 'unavailable'
   try {
+    const { data: session } = await client.auth.getSession()
+    if (!session.session?.access_token) return 'unavailable'
+
+    const expected = row.clientTxId ?? row.id
     const { error } = await client.from('ledger_rows').insert(toLedgerInsert(row))
-    if (!error) return true
-    return error.code === '23505'
+    if (!error) return 'synced'
+    if (error.code !== '23505') return 'failed'
+    const { data } = await client
+      .from('ledger_rows')
+      .select('client_tx_id')
+      .eq('id', row.id)
+      .maybeSingle()
+    return classifyInsertOutcome(
+      error,
+      (data ?? null) as { client_tx_id?: string | null } | null,
+      expected,
+    )
   } catch {
-    return false
+    return 'failed'
   }
 }
+
+/** jalur server: idempoten lewat `client_tx_id`, konflik id dibedakan dari retry */
+async function pushRowViaServer(row: MoneyRow): Promise<RowPushResult> {
+  const inserted = await dataApi({
+    table: 'ledger_rows',
+    op: 'insert',
+    rows: [toLedgerInsert(row) as unknown as Record<string, unknown>],
+  })
+  if (inserted) return 'synced'
+
+  /* INSERT gagal: bisa karena duplikat (retry) atau karena jalur server memang
+     tidak tersedia. Dua-duanya dibedakan — jangan sampai baris hilang. */
+  const expected = row.clientTxId ?? row.id
+  const sameKey = await dataApi<{ client_tx_id?: string | null }>({
+    table: 'ledger_rows',
+    op: 'select',
+    filter: { client_tx_id: expected },
+  })
+  if (sameKey === null) return 'offline'
+  if (sameKey.length > 0) return 'synced'
+
+  const sameId = await dataApi<{ id: string }>({
+    table: 'ledger_rows',
+    op: 'select',
+    filter: { id: row.id },
+  })
+  if (sameId && sameId.length > 0) return 'conflict'
+  return 'failed'
+}
+
+/*
+ * CATATAN: dulu ada `pushRowToServer()` (boolean) yang menganggap `23505`
+ * sebagai sukses. Pembungkus itu dihapus supaya tidak ada jalur kedua yang
+ * kehilangan informasi "id bentrok" — semua pemanggil memakai
+ * `pushRowToServerResult()`.
+ */
 
 /**
  * Perbarui SATU baris ledger yang sudah ada di server (paket 48 — "edit"
@@ -145,53 +310,63 @@ export async function pushRowToServer(row: MoneyRow): Promise<boolean> {
  */
 export async function updateRemoteRow(row: MoneyRow): Promise<boolean> {
   const client = browserSupabase()
-  if (!client) return false
-  try {
-    const { error } = await client.from('ledger_rows').update(toLedgerInsert(row)).eq('id', row.id)
-    return !error
-  } catch {
-    return false
+  if (client) {
+    try {
+      const { error } = await client.from('ledger_rows').update(toLedgerInsert(row)).eq('id', row.id)
+      if (!error) return true
+    } catch {
+      /* jatuh ke jalur server di bawah */
+    }
   }
+  return dataApiOk({
+    table: 'ledger_rows',
+    op: 'update',
+    match: { id: row.id },
+    patch: toLedgerInsert(row) as unknown as Record<string, unknown>,
+  })
 }
 
-/** Kirim banyak baris (dipakai `flushPendingSync`). Berurutan supaya laporan jujur. */
-export async function flushRemoteQueue(rows: readonly MoneyRow[]): Promise<PushOutcome> {
-  const client = browserSupabase()
-  if (!client) return { synced: 0, failed: 0, offline: true }
-
-  let synced = 0
-  let failed = 0
-  for (const row of rows) {
-    if (await pushRowToServer(row)) synced += 1
-    else failed += 1
-  }
-  return { synced, failed, offline: false }
-}
+/*
+ * ANTREAN OFFLINE hidup di `lib/money/store.ts` (`flushPendingSync`), bukan di
+ * sini: ia perlu hasil PER BARIS (`RowPushResult`) supaya bisa membedakan
+ * "gagal → coba lagi" dari "id bentrok → beri id baru". Versi lama file ini
+ * punya `flushRemoteQueue()` yang hanya menghitung synced/failed — tidak cukup
+ * untuk keputusan itu, jadi ia dihapus, bukan dibiarkan sebagai jalur kedua.
+ */
 
 /** Hapus baris di server (hapus lokal sudah ditangani tombstone store) */
 export async function deleteRemoteRow(rowId: string): Promise<boolean> {
   const client = browserSupabase()
-  if (!client) return false
-  try {
-    const { error } = await client.from('ledger_rows').delete().eq('id', rowId)
-    return !error
-  } catch {
-    return false
+  if (client) {
+    try {
+      const { error } = await client.from('ledger_rows').delete().eq('id', rowId)
+      if (!error) return true
+    } catch {
+      /* jatuh ke jalur server */
+    }
   }
+  return dataApiOk({ table: 'ledger_rows', op: 'delete', match: { id: rowId } })
 }
 
 /** Simpan/perbarui dompet di server (opening ikut, karena saldo = opening + Σ baris) */
 export async function pushWalletToServer(wallet: WalletSeed, sortIndex = 0): Promise<boolean> {
   const client = browserSupabase()
-  if (!client) return false
-  try {
-    const { error } = await client
-      .from('wallets')
-      .upsert(toWalletDbRow(wallet, sortIndex), { onConflict: 'user_id,id' })
-    return !error
-  } catch {
-    return false
+  if (client) {
+    try {
+      const { error } = await client
+        .from('wallets')
+        .upsert(toWalletDbRow(wallet, sortIndex), { onConflict: 'user_id,id' })
+      if (!error) return true
+    } catch {
+      /* jatuh ke jalur server */
+    }
   }
+  return dataApiOk({
+    table: 'wallets',
+    op: 'upsert',
+    rows: [toWalletDbRow(wallet, sortIndex) as unknown as Record<string, unknown>],
+    onConflict: 'user_id,id',
+  })
 }
 
 /**
@@ -230,13 +405,15 @@ export async function pushWalletToServer(wallet: WalletSeed, sortIndex = 0): Pro
 export async function deleteRemoteWallet(walletId: string): Promise<boolean> {
   if (!walletId) return false
   const client = browserSupabase()
-  if (!client) return false
-  try {
-    const { error } = await client.from('wallets').delete().eq('id', walletId)
-    return !error
-  } catch {
-    return false
+  if (client) {
+    try {
+      const { error } = await client.from('wallets').delete().eq('id', walletId)
+      if (!error) return true
+    } catch {
+      /* jatuh ke jalur server */
+    }
   }
+  return dataApiOk({ table: 'wallets', op: 'delete', match: { id: walletId } })
 }
 
 /** Net worth dari view server (kas + aset + piutang − utang), `null` kalau tidak ada sesi */

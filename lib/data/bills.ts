@@ -73,6 +73,17 @@ export interface Bill {
    * memang tidak pernah ada di ledger (lihat catatan di `lib/money/bills-store.ts`).
    */
   paidRowId?: string
+  /**
+   * Bulan kalender pembayaran terakhir (`YYYY-MM`) — PAKET 103, LOKAL SAJA.
+   *
+   * Tabel `bills` di produksi TIDAK punya kolom ini (lihat `toBillDbRow()` yang
+   * memetakan field satu per satu). Nilainya hidup di snapshot perangkat, dan
+   * menjadi penanda aman untuk status "Lunas bulan ini": saat bulan berganti,
+   * tagihan otomatis kembali "belum dibayar" tanpa menghapus riwayat baris kas
+   * bulan lalu. Kalau kosong (data lama), bulannya diturunkan dari tanggal baris
+   * `paidRowId`.
+   */
+  paidMonth?: string
   note?: string
 }
 
@@ -185,21 +196,90 @@ export const INITIAL_BILLS: Bill[] = [
 
 /* ── STATUS ────────────────────────────────────────────────────────────────── */
 
-export function getBillStatus(bill: Bill, currentDay: number = CURRENT_DAY): BillStatus {
-  if (bill.isPaidThisMonth) return 'paid'
-  if (currentDay > bill.dueDate) return 'overdue'
-  if (currentDay === bill.dueDate) return 'due_today'
+/** kunci bulan `YYYY-MM` dari tanggal ISO */
+export function monthKeyOf(iso: string): string {
+  return iso.slice(0, 7)
+}
+
+/** jumlah hari pada bulan tanggal ISO (28/29/30/31) */
+export function daysInMonthOf(iso: string): number {
+  const [year, month] = iso.split('-').map(Number)
+  if (!year || !month) return 31
+  return new Date(Date.UTC(year, month, 0)).getUTCDate()
+}
+
+/**
+ * Tanggal jatuh tempo YANG BERLAKU pada bulan berjalan (paket 103).
+ *
+ * Tagihan tanggal 29/30/31 tidak boleh "menghilang" di bulan yang lebih pendek:
+ * tanggalnya di-clamp ke hari terakhir bulan itu (31 → 30 di April, 31 → 28/29
+ * di Februari), sehingga status telat/hari-ini tetap bisa tercapai.
+ */
+export function effectiveDueDay(bill: Bill, daysInMonth = 31): number {
+  return Math.min(Math.max(1, bill.dueDate), Math.max(1, daysInMonth))
+}
+
+/** true = cicilan berbatas sudah melunasi bulan terakhir tenor */
+export function isBillCompleted(bill: Bill): boolean {
+  if (!bill.endAfterMonths) return false
+  return (bill.currentMonth ?? 1) > bill.endAfterMonths
+}
+
+/**
+ * Status lunas untuk SATU bulan kalender (paket 103).
+ *
+ * Urutan bukti: `paidMonth` (penanda lokal) → tanggal baris `paidRowId` (ledger)
+ * → `isPaidThisMonth` (data lama tanpa penanda). Jadi pembayaran bulan lalu
+ * TIDAK lagi membuat tagihan tampak lunas di bulan baru, tanpa menghapus baris
+ * kas atau riwayatnya.
+ */
+export function billPaidInMonth(
+  bill: Bill,
+  monthKey: string,
+  paidRowDateISO?: string,
+): boolean {
+  if (bill.paidMonth) return bill.paidMonth === monthKey
+  if (bill.paidRowId && paidRowDateISO) return monthKeyOf(paidRowDateISO) === monthKey
+  return bill.isPaidThisMonth
+}
+
+/**
+ * Salinan tagihan dengan status lunas dievaluasi untuk `monthKey`.
+ * `paidRowDateISO` = tanggal baris kas `paidRowId` (kalau ada di ledger).
+ */
+export function billForMonth(
+  bill: Bill,
+  monthKey: string,
+  paidRowDateISO?: string,
+): Bill {
+  const paid = billPaidInMonth(bill, monthKey, paidRowDateISO)
+  return paid === bill.isPaidThisMonth ? bill : { ...bill, isPaidThisMonth: paid }
+}
+
+export function getBillStatus(
+  bill: Bill,
+  currentDay: number = CURRENT_DAY,
+  daysInMonth = 31,
+): BillStatus {
+  if (isBillCompleted(bill) || bill.isPaidThisMonth) return 'paid'
+  const dueDay = effectiveDueDay(bill, daysInMonth)
+  if (currentDay > dueDay) return 'overdue'
+  if (currentDay === dueDay) return 'due_today'
   return 'upcoming'
 }
 
 /** jumlah hari keterlambatan (selalu >= 0) */
-export function daysLate(bill: Bill, currentDay: number = CURRENT_DAY): number {
-  return Math.max(0, currentDay - bill.dueDate)
+export function daysLate(bill: Bill, currentDay: number = CURRENT_DAY, daysInMonth = 31): number {
+  return Math.max(0, currentDay - effectiveDueDay(bill, daysInMonth))
 }
 
 /** jumlah hari menuju jatuh tempo (selalu >= 0) */
-export function daysUntil(bill: Bill, currentDay: number = CURRENT_DAY): number {
-  return Math.max(0, bill.dueDate - currentDay)
+export function daysUntil(
+  bill: Bill,
+  currentDay: number = CURRENT_DAY,
+  daysInMonth = 31,
+): number {
+  return Math.max(0, effectiveDueDay(bill, daysInMonth) - currentDay)
 }
 
 /** konteks jatuh tempo di kartu tagihan — teks + warna kanonnya */
@@ -207,25 +287,31 @@ export function dueContext(
   bill: Bill,
   status: BillStatus,
   currentDay: number = CURRENT_DAY,
+  daysInMonth = 31,
 ): { text: string; className: string } {
-  if (status === 'paid') return { text: 'Lunas', className: 'text-hud-sage' }
+  if (status === 'paid') {
+    return { text: isBillCompleted(bill) ? 'Selesai' : 'Lunas', className: 'text-hud-sage' }
+  }
+  const dueDay = effectiveDueDay(bill, daysInMonth)
   if (status === 'overdue') {
     return {
-      text: `Jatuh tempo tgl ${bill.dueDate}, Telat ${daysLate(bill, currentDay)} hari`,
+      text: `Jatuh tempo tgl ${dueDay}, Telat ${daysLate(bill, currentDay, daysInMonth)} hari`,
       className: 'text-hud-terracotta',
     }
   }
   if (status === 'due_today') return { text: 'Jatuh tempo HARI INI', className: 'text-hud-amber' }
   return {
-    text: `Tgl ${bill.dueDate} · ${daysUntil(bill, currentDay)} hari lagi`,
+    text: `Tgl ${dueDay} · ${daysUntil(bill, currentDay, daysInMonth)} hari lagi`,
     className: 'text-forest/45',
   }
 }
 
-/** 'Bulan 5/12' untuk cicilan berbatas, null kalau tanpa batas */
+/** 'Bulan 5/12' untuk cicilan berbatas; 'Selesai 12/12' setelah tenor habis */
 export function endAfterLabel(bill: Bill): string | null {
   if (!bill.endAfterMonths) return null
-  return `Bulan ${bill.currentMonth ?? 1}/${bill.endAfterMonths}`
+  if (isBillCompleted(bill)) return `Selesai ${bill.endAfterMonths}/${bill.endAfterMonths}`
+  const current = Math.min(bill.currentMonth ?? 1, bill.endAfterMonths)
+  return `Bulan ${current}/${bill.endAfterMonths}`
 }
 
 /* ── RINGKASAN UANG ────────────────────────────────────────────────────────── */
@@ -251,8 +337,9 @@ export function matchesBillFilter(
   bill: Bill,
   filter: BillFilter,
   currentDay: number = CURRENT_DAY,
+  daysInMonth = 31,
 ): boolean {
-  const status = getBillStatus(bill, currentDay)
+  const status = getBillStatus(bill, currentDay, daysInMonth)
   if (filter === 'semua') return true
   if (filter === 'aktif') return status === 'upcoming' || status === 'due_today'
   if (filter === 'telat') return status === 'overdue'
@@ -263,8 +350,9 @@ export function filterBills(
   bills: Bill[],
   filter: BillFilter,
   currentDay: number = CURRENT_DAY,
+  daysInMonth = 31,
 ): Bill[] {
-  return bills.filter((bill) => matchesBillFilter(bill, filter, currentDay))
+  return bills.filter((bill) => matchesBillFilter(bill, filter, currentDay, daysInMonth))
 }
 
 /** jumlah per chip — selalu dihitung dari SEMUA tagihan, jadi angkanya tidak
@@ -272,12 +360,16 @@ export function filterBills(
 export function billFilterCounts(
   bills: Bill[],
   currentDay: number = CURRENT_DAY,
+  daysInMonth = 31,
 ): Record<BillFilter, number> {
   return {
     semua: bills.length,
-    aktif: bills.filter((bill) => matchesBillFilter(bill, 'aktif', currentDay)).length,
-    telat: bills.filter((bill) => matchesBillFilter(bill, 'telat', currentDay)).length,
-    lunas: bills.filter((bill) => matchesBillFilter(bill, 'lunas', currentDay)).length,
+    aktif: bills.filter((bill) => matchesBillFilter(bill, 'aktif', currentDay, daysInMonth))
+      .length,
+    telat: bills.filter((bill) => matchesBillFilter(bill, 'telat', currentDay, daysInMonth))
+      .length,
+    lunas: bills.filter((bill) => matchesBillFilter(bill, 'lunas', currentDay, daysInMonth))
+      .length,
   }
 }
 
@@ -341,19 +433,23 @@ export function upcomingDays(count: number = TIMELINE_DAYS, fromIso: string = TO
   })
 }
 
-/** tagihan yang jatuh tempo di tanggal `day` (1–31) */
-export function billsOnDay(bills: Bill[], day: number): Bill[] {
-  return bills.filter((bill) => bill.dueDate === day)
+/** tagihan yang jatuh tempo di tanggal `day` pada bulan dengan `daysInMonth` hari */
+export function billsOnDay(bills: Bill[], day: number, daysInMonth = 31): Bill[] {
+  return bills.filter((bill) => effectiveDueDay(bill, daysInMonth) === day)
 }
 
 /** kelompokkan tagihan; grup kosong tidak dikembalikan; di dalam grup diurut
- *  naik berdasarkan tanggal jatuh tempo */
-export function groupBills(bills: Bill[], currentDay: number = CURRENT_DAY): BillGroup[] {
+ *  naik berdasarkan tanggal jatuh tempo (efektif bulan berjalan) */
+export function groupBills(
+  bills: Bill[],
+  currentDay: number = CURRENT_DAY,
+  daysInMonth = 31,
+): BillGroup[] {
   return BILL_GROUPS.map((meta) => ({
     meta,
     items: bills
-      .filter((bill) => getBillStatus(bill, currentDay) === meta.status)
-      .sort((a, b) => a.dueDate - b.dueDate),
+      .filter((bill) => getBillStatus(bill, currentDay, daysInMonth) === meta.status)
+      .sort((a, b) => effectiveDueDay(a, daysInMonth) - effectiveDueDay(b, daysInMonth)),
   })).filter((group) => group.items.length > 0)
 }
 

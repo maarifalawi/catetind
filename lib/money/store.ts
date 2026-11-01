@@ -45,8 +45,7 @@ import { clearMoneyState, loadDeviceState, loadMoneyState, saveDeviceState, save
 import {
   deleteRemoteRow,
   deleteRemoteWallet,
-  flushRemoteQueue,
-  pushRowToServer,
+  pushRowToServerResult,
   pushWalletToServer,
   readRemoteMoney,
   updateRemoteRow,
@@ -54,6 +53,9 @@ import {
 } from '@/lib/supabase/money-remote'
 import { markMigrated, migrateLocalDataToServer } from '@/lib/supabase/local-migration'
 import { browserUserId } from '@/lib/supabase/client'
+import { hasSupabaseConfig } from '@/lib/supabase/config'
+import { subscribeTables } from '@/lib/supabase/realtime'
+import { randomUuid } from '@/lib/supabase/uuid'
 import { ONBOARDING_RELOAD_KEY, ONBOARDING_ROUTE } from '@/lib/onboarding'
 
 import {
@@ -167,6 +169,23 @@ export interface MoneySnapshot {
    * supaya tidak tumbuh tanpa batas.
    */
   syncedIds: readonly string[]
+  /**
+   * OUTBOX DOMPET — id dompet yang sudah DIKONFIRMASI server (pernah terlihat di
+   * jawaban server atau kirimannya berhasil). Dipakai untuk mendeteksi
+   * PENGHAPUSAN dari perangkat lain: ada di sini tetapi tidak ada di jawaban
+   * server = dihapus di perangkat lain → dibuang saat rekonsiliasi otoritatif.
+   */
+  syncedWalletIds: readonly string[]
+  /**
+   * PERUBAHAN DOMPET YANG BELUM TERKIRIM (create / rename / undo hapus).
+   *
+   * Dompet yang id-nya ada di sini memakai versi LOKAL saat rekonsiliasi —
+   * termasuk saat dompet itu sudah ada di server (kasus rename offline) — dan
+   * dikirim ulang oleh `flushWalletOutbox()` sampai server mengonfirmasi.
+   * Tanpa daftar ini, rename yang gagal terkirim akan diputar balik oleh
+   * jawaban server pada refresh berikutnya.
+   */
+  pendingWalletIds: readonly string[]
   /** true setelah state dari IndexedDB selesai dibaca */
   hydrated: boolean
 }
@@ -233,6 +252,8 @@ const SERVER_SNAPSHOT: MoneySnapshot = Object.freeze({
   removedWalletIds: [],
   rowOverrides: {},
   syncedIds: [],
+  syncedWalletIds: [],
+  pendingWalletIds: [],
   hydrated: false,
 })
 
@@ -249,6 +270,8 @@ const SEED_SNAPSHOT: MoneySnapshot = Object.freeze({
   removedWalletIds: [],
   rowOverrides: {},
   syncedIds: [],
+  syncedWalletIds: [],
+  pendingWalletIds: [],
   hydrated: false,
 })
 
@@ -273,6 +296,8 @@ const EMPTY_SNAPSHOT: MoneySnapshot = Object.freeze({
   removedWalletIds: [],
   rowOverrides: {},
   syncedIds: [],
+  syncedWalletIds: [],
+  pendingWalletIds: [],
   hydrated: true,
 })
 
@@ -345,8 +370,180 @@ export function subscribeMoneyStore(listener: () => void): () => void {
      client. Dipanggil di sini, bukan di tingkat modul, karena IndexedDB hanya
      ada di browser. */
   void hydrateMoneyStore()
+  /* langganan perubahan dari perangkat lain (wallets + ledger_rows) */
+  startMoneyRealtime()
   return () => {
     listeners.delete(listener)
+  }
+}
+
+/* ── PERUBAHAN DARI PERANGKAT LAIN (perbaikan: catatan baru tidak muncul) ────
+   Sebelum ini store uang hanya membaca server SEKALI per pemuatan halaman
+   (`hydrateMoneyStore`). Tab/perangkat yang sudah terbuka karena itu tidak
+   pernah melihat catatan yang dibuat di perangkat lain — dan itu terbaca
+   sebagai "transaksinya tidak ada di perangkat saya", padahal barisnya ADA di
+   database. Satu-satunya jalan lama adalah memuat ulang halaman.
+
+   Sekarang `wallets` + `ledger_rows` berlangganan Postgres Changes (RLS tetap
+   yang menyaring baris), dan sinyalnya hanya memicu BACA ULANG lewat jalur yang
+   sama dengan hidrasi (`mergeWithRemote`) — tidak ada pemetaan baris kedua yang
+   bisa berbeda dari jalur REST. Pembacaan diulang juga saat tab kembali terlihat
+   & saat jaringan pulih, karena perubahan yang terjadi selama tab disembunyikan
+   tidak dikirim ulang oleh channel yang sudah ditutup (`lib/supabase/realtime`).
+
+   BATAS JUJUR: penggabungan mempertahankan baris lokal yang belum ada di server
+   (antrean offline) dan tidak membuang baris yang dihapus di perangkat lain
+   sampai halaman dimuat ulang. Menghapus data dari layar user karena satu sinyal
+   realtime jauh lebih berbahaya daripada menampilkannya satu ronde lebih lama. */
+
+let moneyRealtimeStarted = false
+let moneyRefreshInFlight: Promise<boolean> | null = null
+
+/**
+ * Tarik ulang state uang dari server lalu gabungkan seperti hidrasi.
+ * `false` = tidak ada sesi/backend, snapshot milik identitas lain, atau gagal
+ * baca — dalam semua keadaan itu layar TIDAK dikosongkan.
+ */
+export async function refreshMoneyFromServer(): Promise<boolean> {
+  if (typeof window === 'undefined' || !hydrated || accountPurged) return false
+  if (moneyRefreshInFlight) return moneyRefreshInFlight
+
+  const run = (async () => {
+    try {
+      const remote = await readRemoteMoney()
+      if (!remote) return false
+      const userId = await browserUserId()
+      if (!userId) return false
+      /* snapshot perangkat milik identitas lain tidak boleh dicampur ke akun ini */
+      if (accountOwnerUserId && accountOwnerUserId !== userId) return false
+      /* hapus dompet yang dulu gagal dikirim: server masih memuatnya */
+      await retryPendingWalletDeletes(remote)
+      commit(mergeWithRemote(remote, null, live, { authoritative: true }))
+      /* dompet yang belum pernah sampai ke server dikirim sekarang (antrean) */
+      void flushWalletOutbox()
+      return true
+    } catch {
+      return false
+    }
+  })()
+
+  moneyRefreshInFlight = run
+  try {
+    return await run
+  } finally {
+    if (moneyRefreshInFlight === run) moneyRefreshInFlight = null
+  }
+}
+
+/** pasang langganan realtime + penyegaran saat tab aktif lagi (idempoten) */
+function startMoneyRealtime(): void {
+  if (moneyRealtimeStarted || typeof window === 'undefined') return
+  moneyRealtimeStarted = true
+
+  subscribeTables('money-changes', ['wallets', 'ledger_rows'], () => {
+    void refreshMoneyFromServer()
+  })
+
+  const refreshWhenActive = () => {
+    if (document.visibilityState !== 'visible') return
+    void refreshMoneyFromServer()
+    /* antrean dompet juga didorong saat tab aktif kembali / jaringan pulih —
+       tanpa menunggu perubahan berikutnya dari server */
+    void flushWalletOutbox()
+  }
+  document.addEventListener('visibilitychange', refreshWhenActive)
+  window.addEventListener('online', refreshWhenActive)
+}
+
+/* ── OUTBOX DOMPET ───────────────────────────────────────────────────────────
+   Sisi-tulis dari rekonsiliasi di atas. Baris ledger punya `clientTxId` +
+   `syncedIds`; dompet punya `syncedWalletIds` (lihat `MoneySnapshot`) dan
+   antrean hapus `pendingWalletDeletes`.
+
+   Kenapa perlu: `removeWalletAccount()` sudah mengirim DELETE, tetapi kalau
+   kiriman itu gagal (offline / token basi) dulu tidak ada yang mencobanya lagi —
+   dompet tetap ada di database dan muncul kembali di perangkat lain. Sekarang
+   kegagalannya diingat dan dicoba ulang pada hidrasi, realtime, `online`, dan
+   `visibilitychange`. */
+
+/** dompet yang BELUM dikonfirmasi server dan belum dihapus — isi antrean kirim */
+export function pendingWalletOutbox(snapshot: MoneySnapshot = live): WalletSeed[] {
+  const pending = new Set(snapshot.pendingWalletIds)
+  return snapshot.wallets.filter(
+    (wallet) => pending.has(wallet.id) && !snapshot.removedWalletIds.includes(wallet.id),
+  )
+}
+
+/** antrean hapus yang belum dikonfirmasi server (id dompet) */
+const pendingWalletDeletes = new Set<string>()
+
+/** id dompet yang hapusnya masih menunggu dikonfirmasi server (untuk test/indikator) */
+export function pendingWalletDeleteIds(): string[] {
+  return [...pendingWalletDeletes]
+}
+
+/** tandai satu dompet sudah dikonfirmasi server (keluar dari antrean) */
+function markWalletSynced(walletId: string): void {
+  const alreadyConfirmed = live.syncedWalletIds.includes(walletId)
+  const stillPending = live.pendingWalletIds.includes(walletId)
+  if (alreadyConfirmed && !stillPending) return
+  if (!live.wallets.some((wallet) => wallet.id === walletId)) return
+  commit({
+    ...live,
+    syncedWalletIds: alreadyConfirmed ? live.syncedWalletIds : [...live.syncedWalletIds, walletId],
+    pendingWalletIds: live.pendingWalletIds.filter((id) => id !== walletId),
+  })
+}
+
+/** tandai dompet punya perubahan lokal yang belum terkirim (create/rename/undo) */
+function pendingWith(pendingWalletIds: readonly string[], walletId: string): string[] {
+  return pendingWalletIds.includes(walletId) ? [...pendingWalletIds] : [...pendingWalletIds, walletId]
+}
+
+/** kirim satu dompet lalu tandai terkonfirmasi HANYA kalau server menjawab */
+function pushWalletAndMark(wallet: WalletSeed, sortIndex = 0): void {
+  void pushWalletToServer(wallet, sortIndex).then((ok) => {
+    if (ok) markWalletSynced(wallet.id)
+  })
+}
+
+/**
+ * Dorong seluruh antrean dompet: kirim yang belum terkonfirmasi, dan ulangi
+ * hapus yang dulu gagal. Mengembalikan jumlah dompet yang berhasil terkirim
+ * (dipakai test & bisa dipakai indikator).
+ */
+export async function flushWalletOutbox(): Promise<number> {
+  if (typeof window === 'undefined' || accountPurged) return 0
+
+  let flushed = 0
+  for (const wallet of pendingWalletOutbox()) {
+    const sortIndex = live.wallets.findIndex((item) => item.id === wallet.id)
+    const ok = await pushWalletToServer(wallet, sortIndex < 0 ? 0 : sortIndex)
+    if (!ok) continue
+    markWalletSynced(wallet.id)
+    flushed += 1
+  }
+
+  for (const walletId of [...pendingWalletDeletes]) {
+    if (await deleteRemoteWallet(walletId)) pendingWalletDeletes.delete(walletId)
+  }
+  return flushed
+}
+
+/**
+ * Hapus yang tertunda: dompet yang sudah di-tombstone di perangkat ini TETAPI
+ * masih ada di jawaban server. Dipanggil setelah setiap bacaan server, jadi
+ * penghapusan yang dulu gagal tidak menunggu sampai user menekan tombol lagi.
+ */
+async function retryPendingWalletDeletes(
+  remote: Pick<RemoteMoney, 'wallets'>,
+): Promise<void> {
+  const remoteIds = new Set(remote.wallets.map((wallet) => wallet.id))
+  const stillThere = live.removedWalletIds.filter((walletId) => remoteIds.has(walletId))
+  if (stillThere.length === 0) return
+  for (const walletId of stillThere) {
+    if (await deleteRemoteWallet(walletId)) pendingWalletDeletes.delete(walletId)
+    else pendingWalletDeletes.add(walletId)
   }
 }
 
@@ -371,6 +568,11 @@ function commit(next: MoneySnapshot): void {
        begitu halaman di-refresh (temuan B laporan 46) */
     rowOverrides: next.rowOverrides,
     syncedIds: next.syncedIds,
+    /* outbox dompet ikut ditulis: tanpa ini, dompet yang belum terkirim
+       kehilangan status "masih menunggu" setelah refresh dan bisa tertimpa
+       daftar server pada rekonsiliasi berikutnya */
+    syncedWalletIds: next.syncedWalletIds,
+    pendingWalletIds: next.pendingWalletIds,
     /* penanda "akun ini sudah dihapus" ikut ditulis: tanpa itu, refresh setelah
        hapus akun akan menghidupkan lagi dompet contoh (lihat `EMPTY_SNAPSHOT`) */
     purged: accountPurged,
@@ -428,6 +630,10 @@ export interface PersistedMoney {
    */
   rowOverrides?: Record<string, RowPatch>
   syncedIds?: string[]
+  /** outbox dompet: id dompet yang sudah dikonfirmasi server (lihat `MoneySnapshot`) */
+  syncedWalletIds?: string[]
+  /** perubahan dompet yang belum terkirim (create/rename/undo hapus) */
+  pendingWalletIds?: string[]
   /**
    * true = akun ini datanya sudah DIHAPUS user di perangkat ini (paket 43).
    * Efeknya satu, dan penting: daftar dompet yang kosong dipercaya APA ADANYA
@@ -445,13 +651,18 @@ export interface PersistedMoney {
   ownerUserId?: string
 }
 
+/**
+ * ID dompet baru: `w-<uuid>` (paket 103).
+ *
+ * Dulu `w-<counter>` per perangkat. Dua perangkat yang menambah dompet sebelum
+ * sempat sinkron bisa menghasilkan id yang SAMA (`w-4`), dan `pushWalletToServer`
+ * memakai upsert `(user_id,id)` — artinya dompet yang satu menimpa dompet yang
+ * lain. UUID membuat id unik tanpa koordinasi server, sementara dompet lama
+ * (`w-1`, `w-2`, id seed `bca`, …) tetap sah karena kolomnya `text`.
+ */
 function nextWalletId(existing: readonly WalletSeed[]): string {
-  let id = `w-${nextWalletSeq}`
-  while (existing.some((wallet) => wallet.id === id)) {
-    nextWalletSeq += 1
-    id = `w-${nextWalletSeq}`
-  }
-  nextWalletSeq += 1
+  let id = `w-${randomUuid()}`
+  while (existing.some((wallet) => wallet.id === id)) id = `w-${randomUuid()}`
   return id
 }
 
@@ -503,6 +714,14 @@ export function mergeMoneySnapshot(
   /* antrean lokal juga di-union: baris yang sudah ditandai tersimpan tetap
      tersimpan, dan yang belum tetap menunggu (pola yang sama dengan tombstone) */
   const syncedIds = Array.from(new Set([...current.syncedIds, ...(persisted?.syncedIds ?? [])]))
+  /* outbox dompet juga di-union: yang sudah dikonfirmasi tetap dianggap
+     terkonfirmasi, yang belum tetap menunggu */
+  const syncedWalletIds = Array.from(
+    new Set([...current.syncedWalletIds, ...(persisted?.syncedWalletIds ?? [])]),
+  )
+  const pendingWalletIds = Array.from(
+    new Set([...current.pendingWalletIds, ...(persisted?.pendingWalletIds ?? [])]),
+  )
 
   /* nomor urut & id dompet harus lanjut dari yang tersimpan, bukan mulai ulang */
   nextSeq = Math.max(9001, ...rows.map((row) => row.seq + 1).filter(Number.isFinite))
@@ -511,7 +730,42 @@ export function mergeMoneySnapshot(
     if (match) nextWalletSeq = Math.max(nextWalletSeq, Number(match[1]) + 1)
   }
 
-  return { wallets, rows, removedIds, removedWalletIds, rowOverrides, syncedIds, hydrated: true }
+  return {
+    wallets,
+    rows,
+    removedIds,
+    removedWalletIds,
+    rowOverrides,
+    syncedIds,
+    syncedWalletIds,
+    pendingWalletIds,
+    hydrated: true,
+  }
+}
+
+/**
+ * Opsi `mergeWithRemote()`.
+ *
+ * `includeLocalRows: false` dipakai saat snapshot perangkat ini terbukti MILIK
+ * IDENTITAS LAIN (akun lain / persona demo di browser yang sama). Semua isi lokal
+ * selain yang lahir di sesi ini — baris, tombstone, override, antrean — TIDAK
+ * boleh ikut ke akun yang sedang login. Untuk data milik user sendiri opsinya
+ * dibiarkan default (`true`) supaya antrean offline tetap terselamatkan.
+ */
+export interface MergeWithRemoteOptions {
+  includeLocalRows?: boolean
+  /**
+   * `true` = SERVER otoritatif untuk baris yang statusnya sudah diketahui.
+   *
+   * Baris lokal yang PERNAH tersinkron (`clientTxId` ada di `syncedIds`) tetapi
+   * TIDAK ADA di server artinya sudah DIHAPUS di perangkat lain — baris itu
+   * dibuang dari memory & IndexedDB, bukan dihidupkan kembali. Baris yang masih
+   * menunggu kiriman (belum ada di `syncedIds`) TETAP dipertahankan.
+   *
+   * Tanpa ini, hapus di Perangkat A tidak pernah sampai ke Perangkat B:
+   * penggabungan selalu menganggap baris lokal "lebih baru".
+   */
+  authoritative?: boolean
 }
 
 /**
@@ -524,6 +778,8 @@ export function mergeMoneySnapshot(
  *     kosong + jalan ke onboarding, bukan saldo contoh yang bukan miliknya.
  *   · `rows`     → baris server + baris lokal yang BELUM ada di server (antrean
  *     offline). Yang sudah ada di server dipakai versi server (itu yang sah).
+ *     Baris lokal hanya ikut kalau snapshot perangkat memang milik akun ini —
+ *     lihat `MergeWithRemoteOptions`.
  *   · `syncedIds`→ kunci idempotensi baris yang diketahui server + yang sudah
  *     ditandai tersimpan sebelumnya. Di sinilah antrean offline jadi bisa dihitung
  *     (`pendingSyncCount`) tanpa penghitung kedua.
@@ -538,10 +794,30 @@ export function mergeWithRemote(
   remote: Pick<RemoteMoney, 'wallets' | 'rows'>,
   persisted: PersistedMoney | null,
   current: MoneySnapshot = live,
+  options: MergeWithRemoteOptions = {},
 ): MoneySnapshot {
+  const includeLocalRows = options.includeLocalRows ?? true
   const remoteIds = new Set(remote.rows.map((row) => row.id))
-  const pendingLocal = (persisted?.rows ?? []).filter((row) => row?.id && !remoteIds.has(row.id))
-  const pendingCurrent = current.rows.filter((row) => row?.id && !remoteIds.has(row.id))
+  /** baris ini masih MENUNGGU kiriman? (belum dikonfirmasi server) */
+  const isPending = (row: MoneyRow): boolean => {
+    /* tanpa `clientTxId` statusnya tidak bisa dibuktikan → jangan buang */
+    if (!row.clientTxId) return true
+    return (
+      !current.syncedIds.includes(row.clientTxId) &&
+      !(includeLocalRows ? (persisted?.syncedIds ?? []) : []).includes(row.clientTxId)
+    )
+  }
+  /* baris dari snapshot perangkat: hanya "antrean offline" kalau snapshot itu
+     memang milik akun ini (lihat `MergeWithRemoteOptions`) */
+  const pendingLocal = includeLocalRows
+    ? (persisted?.rows ?? []).filter(
+        (row) => row?.id && !remoteIds.has(row.id) && (!options.authoritative || isPending(row)),
+      )
+    : []
+  /* baris yang lahir di SESI INI (sebelum hidrasi selesai) selalu milik akun ini */
+  const pendingCurrent = current.rows.filter(
+    (row) => row?.id && !remoteIds.has(row.id) && (!options.authoritative || isPending(row)),
+  )
 
   const rows = [...remote.rows]
   for (const row of [...pendingLocal, ...pendingCurrent]) {
@@ -554,7 +830,7 @@ export function mergeWithRemote(
     new Set([
       ...remote.rows.map((row) => row.clientTxId).filter((id): id is string => Boolean(id)),
       ...current.syncedIds,
-      ...(persisted?.syncedIds ?? []),
+      ...(includeLocalRows ? (persisted?.syncedIds ?? []) : []),
     ]),
   )
 
@@ -566,22 +842,97 @@ export function mergeWithRemote(
     if (match) nextWalletSeq = Math.max(nextWalletSeq, Number(match[1]) + 1)
   }
 
+  /* ── OUTBOX DOMPET (rekonsiliasi) ───────────────────────────────────────────
+     Dua daftar, dua tugas:
+       · `syncedWalletIds` = dompet yang PERNAH dikonfirmasi server (atau terlihat
+         di jawaban server). Ada di sini tapi tidak ada di server = dihapus di
+         perangkat lain → dibuang saat rekonsiliasi otoritatif;
+       · `pendingWalletIds` = perubahan lokal yang BELUM terkirim (create /
+         rename / undo hapus). Dompet di sini memakai versi LOKAL (termasuk saat
+         dompet itu sudah ada di server) dan masuk antrean `flushWalletOutbox()`.
+     Tombstone selalu menang: dompet yang sedang dihapus user tidak dihidupkan. */
+  const remoteWalletIds = new Set(remote.wallets.map((wallet) => wallet.id))
+  const tombstonedWallets = new Set([
+    ...current.removedWalletIds,
+    ...(includeLocalRows ? (persisted?.removedWalletIds ?? []) : []),
+  ])
+  const confirmedWalletIds = new Set([
+    ...current.syncedWalletIds,
+    ...(includeLocalRows ? (persisted?.syncedWalletIds ?? []) : []),
+    /* ada di jawaban server = terkonfirmasi, tanpa perlu disimpan dulu */
+    ...remoteWalletIds,
+  ])
+  const pendingWalletIds = new Set([
+    ...current.pendingWalletIds,
+    ...(includeLocalRows ? (persisted?.pendingWalletIds ?? []) : []),
+  ])
+
+  const localWalletsById = new Map<string, WalletSeed>()
+  if (includeLocalRows) {
+    for (const wallet of persisted?.wallets ?? []) {
+      if (wallet?.id) localWalletsById.set(wallet.id, wallet)
+    }
+  }
+  for (const wallet of current.wallets) {
+    if (wallet?.id) localWalletsById.set(wallet.id, wallet)
+  }
+
+  const isDirty = (walletId: string): boolean =>
+    pendingWalletIds.has(walletId) && !tombstonedWallets.has(walletId)
+
+  let wallets: WalletSeed[]
+  if (options.authoritative) {
+    /* server jadi dasar; perubahan lokal yang belum terkirim menang */
+    wallets = remote.wallets.map((remoteWallet) => {
+      const local = localWalletsById.get(remoteWallet.id)
+      return local && isDirty(remoteWallet.id) ? local : remoteWallet
+    })
+    for (const [walletId, wallet] of localWalletsById) {
+      if (remoteWalletIds.has(walletId) || !isDirty(walletId)) continue
+      wallets.push(wallet)
+    }
+  } else {
+    /* jalur lama (tanpa server otoritatif): daftar server apa adanya */
+    wallets = [...remote.wallets]
+  }
+  const keptWalletIds = new Set(wallets.map((wallet) => wallet.id))
+
   return {
-    wallets: [...remote.wallets],
+    wallets,
     rows,
-    removedIds: Array.from(new Set([...current.removedIds, ...(persisted?.removedIds ?? [])])),
+    /* TOMBSTONE ikut kepemilikan: id baris lokal (`session-9001`) bisa KEMBAR
+       antar-akun, jadi tombstone milik identitas lain tidak boleh menyembunyikan
+       baris akun ini. */
+    removedIds: Array.from(
+      new Set([
+        ...current.removedIds,
+        ...(includeLocalRows ? (persisted?.removedIds ?? []) : []),
+      ]),
+    ),
     /* tombstone DOMPET juga di-union (paket 62). Server tidak menyimpannya
        (di produksi barisnya memang sudah dihapus di database, jadi daftar
        dompet dari server sudah tidak memuatnya); yang disimpan di perangkat ini
        tetap yang sah supaya dompet yang baru dihapus tidak "lahir lagi" saat
        hidrasi berikutnya. */
     removedWalletIds: Array.from(
-      new Set([...current.removedWalletIds, ...(persisted?.removedWalletIds ?? [])]),
+      new Set([
+        ...current.removedWalletIds,
+        ...(includeLocalRows ? (persisted?.removedWalletIds ?? []) : []),
+      ]),
     ),
     /* override baris mock tidak punya kolom di server: yang sah adalah gabungan
        lokal (memory menang — tulisan terbaru di sesi ini) */
-    rowOverrides: { ...(persisted?.rowOverrides ?? {}), ...current.rowOverrides },
+    rowOverrides: {
+      ...(includeLocalRows ? (persisted?.rowOverrides ?? {}) : {}),
+      ...current.rowOverrides,
+    },
     syncedIds: prunedSyncedIds(rows, syncedIds),
+    /* outbox: dompet yang masih ada, belum terkonfirmasi kiriman terbarunya,
+       dan tidak sedang dihapus — dasar `flushWalletOutbox()` */
+    syncedWalletIds: [...confirmedWalletIds].filter((id) => keptWalletIds.has(id)),
+    pendingWalletIds: [...pendingWalletIds].filter(
+      (id) => keptWalletIds.has(id) && !tombstonedWallets.has(id),
+    ),
     hydrated: true,
   }
 }
@@ -623,6 +974,22 @@ export async function hydrateMoneyStore(): Promise<void> {
           (persisted?.wallets?.length ?? 0) > 0 || (persisted?.rows?.length ?? 0) > 0
         const ownerMatches = persisted?.ownerUserId === userId
         const remoteEmpty = remote.wallets.length === 0 && remote.rows.length === 0
+        /* ── SNAPSHOT MILIK IDENTITAS LAIN (akun lain / persona demo) ────────────
+           `ownerUserId` yang JELAS berbeda adalah bukti, bukan tebakan. Snapshot
+           seperti itu tidak boleh menyumbang baris/tombstone/override ke akun
+           ini — dulu ia digabung diam-diam cukup karena server sudah berisi data
+           (gerbang di bawah hanya menangani server KOSONG), dan itulah sebabnya
+           transaksi "bener-bener berubah" setelah login ulang / refresh di
+           perangkat yang sama.
+
+           Snapshot asing TIDAK dibuang: ia dipindah ke `pending-import` supaya
+           `LocalDataNotice` menawarkan unduh / hapus, dan akun ini tetap memakai
+           data SERVER apa adanya. Snapshot TANPA pemilik (data lama sebelum medan
+           ini ada, atau data yang ditulis tanpa sesi) diperlakukan sama ketatnya:
+           tanpa bukti kepemilikan, ia tidak boleh menyumbang baris ke akun mana
+           pun — user tetap bisa mengunduhnya dari notice itu. */
+        const foreignLocal = localHasData && !ownerMatches && !remoteEmpty
+        if (foreignLocal && persisted) await stashForeignSnapshot(persisted)
 
         /* ── DATA LAMA TIDAK BOLEH NAIK OTOMATIS (paket 100) ────────────────
            Kasus yang dilaporkan: akun baru langsung punya 3 dompet & saldo
@@ -635,8 +1002,7 @@ export async function hydrateMoneyStore(): Promise<void> {
            key terpisah (`pending-import`) supaya tidak tertimpa onboarding, dan
            user memutuskan lewat `LocalDataNotice` (masukkan / unduh / hapus). */
         if (localHasData && !ownerMatches && remoteEmpty) {
-          writePendingFlag(true)
-          if (persisted) void saveDeviceState(PENDING_IMPORT_KEY, persisted)
+          if (persisted) await stashForeignSnapshot(persisted)
           accountOwnerUserId = userId
           live = EMPTY_SNAPSHOT
           assertSnapshot(live)
@@ -648,13 +1014,13 @@ export async function hydrateMoneyStore(): Promise<void> {
         const local = mergeMoneySnapshot(persisted)
         const migration = await migrateLocalDataToServer({
           userId,
-          wallets: [...local.wallets],
-          rows: local.rows,
+          /* data milik identitas lain TIDAK boleh naik ke akun ini */
+          wallets: foreignLocal ? undefined : [...local.wallets],
+          rows: foreignLocal ? [] : local.rows,
           ownerUserId: persisted?.ownerUserId ?? null,
         })
         if (migration.needsConsent) {
-          writePendingFlag(true)
-          if (persisted) void saveDeviceState(PENDING_IMPORT_KEY, persisted)
+          if (persisted) await stashForeignSnapshot(persisted)
           accountOwnerUserId = userId
           live = EMPTY_SNAPSHOT
           assertSnapshot(live)
@@ -664,9 +1030,17 @@ export async function hydrateMoneyStore(): Promise<void> {
         /* migrasi mengisi server → bacaan pertama sudah basi; ambil yang baru */
         const fresh = migration.ran ? await readRemoteMoney() : null
         const authoritative = fresh ?? remote
-        live = mergeWithRemote(authoritative, persisted)
+        live = mergeWithRemote(authoritative, persisted, live, {
+          includeLocalRows: !foreignLocal,
+          /* server otoritatif: baris yang sudah tersinkron tapi tidak ada di
+             server = sudah dihapus di perangkat lain → jangan dihidupkan lagi */
+          authoritative: true,
+        })
         assertRemoteAggreement(authoritative)
         commit(live)
+        /* antrean dompet (dibuat/rename saat offline) + hapus yang tertunda */
+        await retryPendingWalletDeletes(authoritative)
+        void flushWalletOutbox()
         return
       }
     }
@@ -680,6 +1054,24 @@ export async function hydrateMoneyStore(): Promise<void> {
 /* ── KEPUTUSAN ATAS DATA LAMA DI PERANGKAT (paket 100) ──────────────────────
    Dipakai `LocalDataNotice` di Home. Ketiganya sengaja eksplisit: tidak ada
    jalur yang menghapus atau mengunggah data tanpa aksi user. */
+
+/**
+ * Simpan snapshot MILIK IDENTITAS LAIN ke key terpisah supaya tidak tertimpa
+ * ketika akun yang sekarang menulis snapshot-nya sendiri.
+ *
+ * Satu key `pending-import` hanya bisa memuat satu snapshot. Kalau di perangkat
+ * yang sama pernah dipakai DUA akun berbeda, snapshot akun ketiga tidak boleh
+ * menghapus snapshot akun kedua yang belum sempat diunduh user — karena itu
+ * snapshot dengan PEMILIK BERBEDA tidak ditimpa. Snapshot dengan pemilik yang
+ * SAMA selalu diperbarui (itu versi terbaru data akun itu).
+ */
+async function stashForeignSnapshot(persisted: PersistedMoney): Promise<void> {
+  const existing = await loadDeviceState<PersistedMoney>(PENDING_IMPORT_KEY)
+  const differentOwner =
+    Boolean(existing?.ownerUserId) && existing?.ownerUserId !== persisted.ownerUserId
+  if (!differentOwner) void saveDeviceState(PENDING_IMPORT_KEY, persisted)
+  writePendingFlag(true)
+}
 
 /** reload yang disengaja — beri tahu guard onboarding supaya tidak memblokir */
 function reloadAfterLocalDataDecision(): void {
@@ -800,6 +1192,8 @@ export function purgeMoneyStore(): MoneySnapshot {
        ada satu pun jejak "data contoh" yang hidup kembali di perangkat ini */
     rowOverrides: {},
     syncedIds: [],
+    syncedWalletIds: [],
+    pendingWalletIds: [],
     purged: true,
   })
   emit()
@@ -1055,6 +1449,11 @@ export function cashTotalByContext(
   return homeWallets(snapshot, ctx).reduce((sum, wallet) => sum + wallet.balance, 0)
 }
 
+/** kunci perbandingan nama dompet: trim + lowercase (paket 103) */
+export function walletNameKey(name: string): string {
+  return name.trim().toLowerCase()
+}
+
 /**
  * Pilihan dompet untuk sheet yang benar-benar menggerakkan uang (Catat Bayar,
  * Terima piutang, koreksi saldo). Sebelum paket 41 daftarnya adalah konstanta
@@ -1062,35 +1461,116 @@ export function cashTotalByContext(
  * dompet itu berarti baris kasnya tidak menyentuh saldo mana pun, dan user
  * mengira hutangnya lunas tanpa uang keluar. Sekarang daftarnya datang dari
  * ledger, termasuk dompet yang baru ditambahkan user.
+ *
+ * PAKET 102 — SATU BARIS PER DOMPET, BUKAN PER NAMA.
+ *
+ * Dulu daftar ini menggabungkan dompet bernama sama menjadi satu baris karena
+ * nilai yang dikirim balik ke sheet hanya NAMA. Akibatnya user yang punya tiga
+ * dompet "BCA" hanya melihat satu pilihan — dan di sheet lain (Catat Bayar,
+ * settle patungan, pelunasan hutang) dua dompet sisanya mustahil dipilih.
+ *
+ * Semua pemanggil fungsi ini sudah menulis lewat ID (`option.id`), jadi
+ * menghapus dedupe TIDAK membuat uang mendarat di dompet yang salah. Label
+ * tampilan untuk nama kembar diberi pembeda (`displayLabel`), sedangkan `label`
+ * tetap nama asli yang disimpan di baris kas.
  */
-export function walletOptionsFor(
-  snapshot: MoneySnapshot,
-): { id: string; label: string; balance: number }[] {
+export function walletOptionsFor(snapshot: MoneySnapshot): WalletSelectOption[] {
   /* hanya dompet HIDUP (paket 62): dompet yang sudah dihapus user tidak boleh
      muncul lagi sebagai pilihan di sheet mana pun — memilihnya berarti menulis
      uang ke dompet yang tidak ada di daftarnya */
-  const options: { id: string; label: string; balance: number }[] = []
-  /* PAKET 81 — SATU NAMA = SATU BARIS. User boleh punya dua dompet bernama sama
-     (`addWalletAccount()` tidak melarangnya), dan pencocokan dompet di app ini
-     memang BY-NAME (`walletIdOfName()` memakai yang pertama). Tanpa dedupe,
-     daftar ini melahirkan DUA baris berlabel identik di setiap pemilih — di
-     kartu konfirmasi AI itu sampai jadi galat React "Encountered two children
-     with the same key, `OVO`", dan di sheet lain jadi dua baris yang tidak bisa
-     dibedakan user padahal barisnya mendarat di dompet yang SAMA. Yang pertama
-     menang, persis dompet yang menerima catatannya. */
-  const seen = new Set<string>()
-  for (const wallet of liveWalletSeeds(snapshot)) {
+  return walletSelectOptionsFor(snapshot)
+}
+/**
+ * Pilihan dompet untuk PEMILIH TRANSAKSI (form Catat & sheet Edit) — SEMUA
+ * dompet hidup, dikenali lewat **ID**, bukan nama.
+ *
+ * ── MASALAH YANG DITUTUP (laporan pemilik produk) ────────────────────────────
+ * User punya tiga dompet (mis. tiga kartu BCA). Saat mencatat transaksi, pemilih
+ * dompet hanya menampilkan SATU baris. Sebabnya bukan UI-nya: `walletOptionsFor()`
+ * menggabungkan dompet bernama sama menjadi satu baris (karena nilai yang
+ * dikembalikan ke form dulu hanya NAMA, dan store mencocokkan dompet by-name).
+ * Dengan begitu dompet kedua & ketiga mustahil dipilih — dan kalau pun tampil,
+ * barisnya tetap mendarat di dompet pertama.
+ *
+ * Fungsi ini mengembalikan SATU baris per dompet, lengkap dengan `id` yang
+ * dikirim balik ke store (`postTransaction({ walletId })`), sehingga:
+ *   · ketiga dompet bisa dipilih;
+ *   · yang saldonya bergerak benar-benar dompet yang dipilih (bukan yang pertama
+ *     kebetulan namanya sama);
+ *   · nama di baris kas tetap nama asli user (`label`), karena itulah yang
+ *     dibaca Riwayat — bukan label tampilan yang diberi pembeda.
+ *
+ * `displayLabel` hanya diberi akhiran bila namanya KEMBAR, supaya dua baris bisa
+ * dibedakan. Kalau dompetnya punya 4 angka terakhir, akhiran itu yang dipakai
+ * (lebih bermakna daripada nomor urut); kalau tidak, nomor urut.
+ *
+ * Urutannya sengaja sama dengan `walletOptionsFor()` (urutan dompet di ledger),
+ * jadi pemilih ini tidak pernah "mengacak" posisi dompet yang biasa dipakai.
+ */
+export interface WalletSelectOption {
+  id: string
+  /** nama dompet APA ADANYA — nilai yang ditulis ke baris kas */
+  label: string
+  /** nama untuk dibaca user; beda dari `label` hanya saat namanya kembar */
+  displayLabel: string
+  balance: number
+}
+
+export function walletSelectOptionsFor(snapshot: MoneySnapshot): WalletSelectOption[] {
+  const wallets = liveWalletSeeds(snapshot)
+
+  /* hitung dulu berapa dompet yang namanya sama (tanpa peduli huruf besar/kecil
+     & spasi pinggir, persis aturan pencocokan nama di file ini) */
+  const usage = new Map<string, number>()
+  for (const wallet of wallets) {
     const key = wallet.name.trim().toLowerCase()
-    if (seen.has(key)) continue
-    seen.add(key)
-    options.push({
+    usage.set(key, (usage.get(key) ?? 0) + 1)
+  }
+
+  const seen = new Map<string, number>()
+  return wallets.map((wallet) => {
+    const key = wallet.name.trim().toLowerCase()
+    const twins = usage.get(key) ?? 1
+    const order = (seen.get(key) ?? 0) + 1
+    seen.set(key, order)
+
+    const last4 = (wallet.number ?? '').replace(/\D/g, '').slice(-4)
+    /* nomor urut SELALU ikut saat nama kembar: dua dompet bisa punya 4 angka
+       terakhir yang sama (hasil impor/kloning), dan label harus tetap unik */
+    const suffix = twins > 1 ? (last4 ? ` · ••${last4} (${order})` : ` · ${order}`) : ''
+
+    return {
       id: wallet.id,
       label: wallet.name,
+      displayLabel: `${wallet.name}${suffix}`,
       balance: walletBalance(snapshot, wallet.id),
-    })
-  }
-  return options
+    }
+  })
 }
+
+/**
+ * true = nama dompet sudah dipakai dompet HIDUP lain (tanpa peduli huruf
+ * besar/kecil & spasi pinggir).
+ *
+ * Dipakai form Tambah & Ubah Dompet DAN `addWalletAccount()` sendiri (paket
+ * 103). Sebelumnya hanya `renameWalletAccount()` yang menolak nama kembar,
+ * sehingga user bisa membuat tiga dompet bernama "BCA" lewat form tambah dan
+ * pemilih dompet hanya menampilkan satu di antaranya. Sekarang dua pintu itu
+ * memakai aturan yang SAMA; hydrate/server tetap menerima data warisan.
+ */
+export function isWalletNameTaken(
+  snapshot: MoneySnapshot,
+  name: string,
+  exceptId = '',
+): boolean {
+  const key = walletNameKey(name)
+  if (!key) return false
+  return liveWalletSeeds(snapshot).some(
+    (wallet) => wallet.id !== exceptId && walletNameKey(wallet.name) === key,
+  )
+}
+
+
 
 /** nama dompet dari id — dipakai menyimpan riwayat pembayaran (`walletName`) */
 export function walletNameOfId(snapshot: MoneySnapshot, walletId: string): string {
@@ -1099,10 +1579,13 @@ export function walletNameOfId(snapshot: MoneySnapshot, walletId: string): strin
 
 /** id dompet dari namanya (nama dipakai form & mock; id dipakai ledger) */
 export function walletIdOfName(snapshot: MoneySnapshot, name: string): string {
-  const key = name.trim().toLowerCase()
+  const key = walletNameKey(name)
+  if (!key) return ''
   /* dompet terhapus tidak dicari: nama dompet yang sudah dibuang user tidak boleh
      "hidup lagi" hanya karena form masih memuat namanya */
-  return liveWalletSeeds(snapshot).find((wallet) => wallet.name.toLowerCase() === key)?.id ?? ''
+  return (
+    liveWalletSeeds(snapshot).find((wallet) => walletNameKey(wallet.name) === key)?.id ?? ''
+  )
 }
 
 /**
@@ -1127,6 +1610,29 @@ export function walletFundsCheck(
 ): { known: boolean; sufficient: boolean; balance: number } {
   const walletId = walletIdOfName(snapshot, walletName)
   if (!walletId) return { known: false, sufficient: true, balance: 0 }
+  return walletFundsCheckById(snapshot, walletId, amount)
+}
+
+/**
+ * Versi `walletFundsCheck()` untuk pemanggil yang SUDAH memegang ID dompet.
+ *
+ * Ada karena dua dompet boleh bernama sama (`addWalletAccount()` tidak
+ * melarangnya), sementara pencocokan by-name selalu memakai yang pertama. Kalau
+ * pemeriksaan saldo memakai nama, uang di dompet kedua bisa dinilai dengan saldo
+ * dompet pertama — persis yang membuat setoran celengan demo ditolak padahal
+ * dompet sumbernya jelas punya uang.
+ *
+ * `known: false` = bukan dompet HIDUP (belum ada / sudah dihapus): tidak ada
+ * saldo yang akan terpotong, jadi tidak ada yang perlu dijaga.
+ */
+export function walletFundsCheckById(
+  snapshot: MoneySnapshot,
+  walletId: string,
+  amount: number,
+): { known: boolean; sufficient: boolean; balance: number } {
+  if (!walletId || !walletSeedOf(snapshot, walletId)) {
+    return { known: false, sufficient: true, balance: 0 }
+  }
   const balance = walletBalance(snapshot, walletId)
   return { known: true, sufficient: Math.round(amount) <= balance, balance }
 }
@@ -1270,20 +1776,95 @@ function appendRow(input: RowInput): MoneyRow {
   }
   nextSeq += 1
   const rows = [row, ...live.rows]
-  /* online → baris ini langsung tersimpan (IndexedDB ditulis oleh `commit`);
-     offline → biarkan menunggu di antrean supaya banner bisa jujur menghitungnya */
-  const syncedIds = readOnline()
+  /* ── BARIS BARU SELALU MASUK ANTREAN DULU ───────────────────────────────────
+     Dulu baris dicap "tersinkron" hanya karena `navigator.onLine` benar. Akibat
+     dua hal yang saling menguatkan:
+       · baris yang DITOLAK server tidak pernah dicoba lagi, dan
+       · baris itu tidak bisa dibedakan dari baris yang sudah ada di server —
+         sehingga rekonsiliasi tidak berani membuangnya (hapus di perangkat lain
+         tidak pernah sampai).
+     Sekarang: `syncedIds` hanya berisi baris yang DIKONFIRMASI server (atau
+     seluruh baris saat build ini memang tanpa backend / mode lokal). */
+  /* Mode LOKAL MURNI (build tanpa backend, perangkat online): tidak ada server
+     yang bisa dikonfirmasi, jadi baris langsung dianggap "tersimpan di perangkat
+     ini". Begitu backend ADA, baris SELALU menunggu konfirmasi server. */
+  const localOnly = !hasSupabaseConfig() && readOnline()
+  const syncedIds = localOnly
     ? prunedSyncedIds(rows, [...live.syncedIds, clientTxId])
     : prunedSyncedIds(rows, live.syncedIds)
   commit({ ...live, rows, syncedIds })
-  /* KIRIM KE SERVER (paket 45). Sengaja `void`: pencatatan tidak boleh menunggu
-     jaringan — kalau gagal (offline/backend mati), barisnya sudah ada di state
-     lokal + IndexedDB dan kuncinya TIDAK ada di `syncedIds`, jadi ia tetap
-     terhitung sebagai antrean (`pendingSyncCount`) dan dikirim ulang oleh
-     `flushPendingSync()`. Idempotensinya dijamin `unique (user_id, client_tx_id)`
-     di database, bukan oleh penjadwalan di sini. */
-  void pushRowToServer(row)
+  /* ── KIRIM KE SERVER (paket 45, diperbaiki: hasil kiriman DIBACA) ────────────
+     Pencatatan tetap tidak menunggu jaringan (`void`), tapi hasilnya tidak
+     dibuang lagi:
+       · `synced`   → tidak ada yang perlu dilakukan;
+       · `offline`  → tidak ada sesi/backend; perilaku lama dipertahankan
+                      ("tersimpan di perangkat ini");
+       · `failed`   → baris WAJIB kembali ke antrean (`dropSyncedId`) supaya
+                      `flushPendingSync()` mencobanya lagi. Sebelum ini baris
+                      dicap tersinkron hanya karena `navigator.onLine` benar,
+                      jadi catatan yang ditolak server hilang tanpa jejak;
+       · `conflict` → id `session-<seq>` sudah dipakai baris LAIN di server
+                      (bisa terjadi setelah cache perangkat dibersihkan). Baris
+                      ini diberi id baru lalu dikirim ulang — bukan dianggap
+                      "sudah tersimpan" seperti dulu (23505). */
+  void pushRowToServerResult(row).then((result) => {
+    if (result === 'synced') markRowSynced(clientTxId)
+    else if (result === 'conflict') reassignRowId(row.id, clientTxId)
+    /* 'failed' & 'offline' → baris TETAP di antrean: banner menghitungnya dan
+       `flushPendingSync()` mencobanya lagi (tidak ada lagi "sukses palsu") */
+  })
   return row
+}
+
+/** tandai satu baris sudah dikonfirmasi server (antrean berkurang) */
+function markRowSynced(clientTxId: string): void {
+  if (live.syncedIds.includes(clientTxId)) return
+  if (!live.rows.some((row) => row.clientTxId === clientTxId)) return
+  commit({ ...live, syncedIds: prunedSyncedIds(live.rows, [...live.syncedIds, clientTxId]) })
+}
+
+/**
+ * Cabut tanda "sudah tersinkron" dari satu baris karena kiriman ke server GAGAL.
+ *
+ * Hanya bekerja kalau baris itu masih ada dan masih memakai `clientTxId` yang
+ * sama — baris yang sudah dihapus user tidak boleh "hidup" hanya karena
+ * antreannya diperbarui.
+ */
+function dropSyncedId(clientTxId: string, rowId: string): void {
+  if (!live.syncedIds.includes(clientTxId)) return
+  const stillHere = live.rows.some((row) => row.id === rowId && row.clientTxId === clientTxId)
+  if (!stillHere) return
+  commit({ ...live, syncedIds: live.syncedIds.filter((id) => id !== clientTxId) })
+}
+
+/**
+ * Beri id BARU pada baris yang id-nya bertabrakan dengan baris lain di server,
+ * lalu kirim ulang.
+ *
+ * Kenapa perlu: id lokal berbentuk `session-<seq>` dan `seq` mulai lagi dari 9001
+ * setiap kali snapshot perangkat kosong (cache dibersihkan, hidrasi belum
+ * selesai). Server memakai `primary key (user_id, id)`, jadi id itu bisa sudah
+ * ditempati baris lain. Tanpa langkah ini, INSERT dijawab `23505` dan dulu
+ * diterjemahkan "sudah tersimpan" — padahal baris barunya tidak pernah masuk,
+ * dan setelah refresh baris LAMA dengan id itu yang tampil (transaksi "berubah").
+ *
+ * `seq` sengaja TIDAK diubah: `seq` adalah nomor urut tampilan/`HistoryTransaction.id`,
+ * dan mengubahnya bisa menabrak baris lain di perangkat ini. Yang unik hanya `id`.
+ */
+function reassignRowId(localId: string, clientTxId: string): void {
+  const target = live.rows.find((row) => row.id === localId && row.clientTxId === clientTxId)
+  if (!target) return
+  const freshId = `session-${nextSeq}`
+  nextSeq += 1
+  const rows = live.rows.map((row) =>
+    row.id === localId && row.clientTxId === clientTxId ? { ...row, id: freshId } : row,
+  )
+  commit({ ...live, rows })
+  const updated = rows.find((row) => row.id === freshId)
+  if (!updated) return
+  void pushRowToServerResult(updated).then((result) => {
+    if (result === 'failed') dropSyncedId(clientTxId, freshId)
+  })
 }
 
 
@@ -1305,14 +1886,6 @@ export function pendingSyncCount(snapshot: MoneySnapshot = live): number {
 }
 
 /**
- * Proses antrean lokal. Mengembalikan jumlah baris yang diproses.
- *
- * BATAS JUJUR: "diproses" di repo demo ini = ditandai sudah tersimpan di
- * IndexedDB (lihat doc `MoneySnapshot.syncedIds`). Tidak ada request jaringan
- * yang dikirim — kalau nanti backend-nya ada, di sinilah `POST /api/transactions`
- * per baris antrean dijalankan (dengan `clientTxId` sebagai Idempotency-Key).
- */
-/**
  * Proses antrean lokal — DAN (sejak paket 45) benar-benar mengirim ke server.
  *
  * Perilaku:
@@ -1330,9 +1903,32 @@ export async function flushPendingSync(): Promise<number> {
   const pending = pendingSyncRows()
   if (pending.length === 0) return 0
 
-  const outcome = await flushRemoteQueue(pending)
-  const processed = outcome.offline ? pending : pending.slice(0, outcome.synced)
-  const keys = processed.map((row) => row.clientTxId).filter((id): id is string => Boolean(id))
+  const syncedKeys: string[] = []
+  let offline = false
+  for (const row of pending) {
+    const clientTxId = row.clientTxId
+    if (!clientTxId) continue
+    const result = await pushRowToServerResult(row)
+    if (result === 'offline') {
+      /* Tanpa backend (build lokal/demo) tidak ada server yang bisa menerima,
+         jadi baris ditandai "tersimpan di perangkat ini" supaya banner tidak
+         jadi jalan buntu. Kalau backend ADA tetapi sesi tidak terbaca, baris
+         TETAP di antrean — itu jujur, dan akan dicoba lagi setelah login. */
+      if (!hasSupabaseConfig()) offline = true
+      break
+    }
+    if (result === 'conflict') {
+      /* id bertabrakan dengan baris lain → beri id baru & kirim ulang */
+      reassignRowId(row.id, clientTxId)
+      continue
+    }
+    if (result === 'synced') syncedKeys.push(clientTxId)
+    /* `failed` → tidak masuk daftar; tetap di antrean untuk dicoba lagi */
+  }
+
+  const keys = offline
+    ? pending.map((row) => row.clientTxId).filter((id): id is string => Boolean(id))
+    : syncedKeys
   if (keys.length === 0) return 0
 
   commit({ ...live, syncedIds: prunedSyncedIds(live.rows, [...live.syncedIds, ...keys]) })
@@ -1499,6 +2095,15 @@ export interface TransferInput {
    * kartu "Transaksi Terakhir" — urutan yang tidak masuk akal untuk pembaca.
    */
   time?: string
+  /**
+   * Kunci idempotensi aksi pindah dana (paket 102).
+   *
+   * Dibuat SEKALI saat sheet Pindah Dana dibuka, lalu dipakai untuk satu
+   * penulisan. Tanpa ini, double-tap pada tombol "Pindah" bisa menulis DUA baris
+   * transfer (uang keluar dua kali) — jalur catatan biasa sudah terlindungi
+   * `clientTxId` sejak paket 42, jalur pindah dana belum.
+   */
+  clientTxId?: string
 }
 
 /**
@@ -1535,6 +2140,7 @@ export function postTransfer(input: TransferInput): MoneyRow | null {
     counterWalletId: input.toWalletId,
     dateISO: input.dateISO,
     time: input.time,
+    clientTxId: input.clientTxId,
   })
   trackCreatedRow(row, before)
   return row
@@ -1604,6 +2210,13 @@ export interface RecordTransactionInput {
   category: string
   /** nama dompet pilihan user/form (`BCA`, `GoPay`, `OVO`, `Tunai`, …) */
   wallet: string
+  /**
+   * ID dompet bila pemanggil SUDAH tahu (mis. setoran celengan yang menerima
+   * `walletId` dari sheet dompetnya). Diisi = baris & pemeriksaan saldo memakai
+   * dompet ITU, bukan dompet pertama yang namanya kebetulan sama. Kosong = jalur
+   * lama: nama dicocokkan lewat `walletIdOfName()` (form/AI cuma punya nama).
+   */
+  walletId?: string
   dateISO: string
   aiGenerated?: boolean
   /**
@@ -1661,12 +2274,15 @@ function ledgerTypeOf(type: TransactionType): LedgerRowType {
  * `TRANSACTION_NO_WALLET_COPY` (`lib/data/history.ts`).
  *
  * ── PAGAR SALDO SUB-NOL (paket 74) ───────────────────────────────────────────
- * Pengeluaran yang melebihi saldo dompet HIDUP ditolak di sini: `null`, tanpa
- * satu baris pun. Ini jalur yang dipakai form manual (FAB/modal web/kalender) dan
- * AI capture (struk/ucapan/chat), jadi pagarnya berlaku untuk semuanya — termasuk
- * pelunasan tagihan yang menulis lewat `postExpense`. Pemeriksaannya MURNI lewat
- * `walletFundsCheck()` supaya UI bisa menampilkan alasannya lebih dulu; penolakan
- * di sini adalah pagar terakhir.
+ * Uang yang KELUAR dari dompet HIDUP — `expense` DAN `saving` (setoran celengan
+ * ditulis sebagai transfer satu sisi, jadi ia juga memotong saldo) — ditolak di
+ * sini kalau nominalnya melebihi saldo: `null`, tanpa satu baris pun. Ini jalur
+ * yang dipakai form manual (FAB/modal web/kalender) dan AI capture
+ * (struk/ucapan/chat), jadi pagarnya berlaku untuk semuanya — termasuk pelunasan
+ * tagihan yang menulis lewat `postExpense` dan setoran celengan yang menulis
+ * lewat `contributeToFund()`. Pemeriksaannya MURNI lewat `walletFundsCheckById()`
+ * supaya UI bisa menampilkan alasannya lebih dulu; penolakan di sini adalah pagar
+ * terakhir.
  *
  * Nama dompet yang TIDAK dikenal ledger tetap dicatat apa adanya dengan
  * `walletId: ''` (tidak menyentuh saldo mana pun, jadi tidak dijepit) —
@@ -1679,18 +2295,39 @@ export function postTransaction(input: RecordTransactionInput): MoneyRow | null 
   if (!amount || amount < 0) return null
   const walletName = input.wallet.trim()
   if (!walletName) return null
-  const walletId = walletIdOfName(live, walletName)
-  /* SALDO TIDAK BOLEH SUB-NOL — hanya untuk PENGELUARAN dari dompet yang dikenal
-     ledger (dompet tak dikenal menulis `walletId: ''` dan tidak memotong saldo). */
-  if (input.type === 'expense' && walletId) {
-    const funds = walletFundsCheck(live, walletName, amount)
+  /* ── ID EKSPLISIT = WAJIB HIDUP (paket 103) ───────────────────────────────
+     Kalau pemanggil sudah menyertakan `walletId`, dompet itu TIDAK boleh
+     diganti diam-diam hanya karena namanya kebetulan sama dengan dompet lain.
+     Dulu id basi/terhapus jatuh kembali ke pencocokan nama — dan kalau user
+     punya beberapa dompet bernama sama, uangnya bisa memotong dompet yang TIDAK
+     dipilih. Sekarang id eksplisit yang tidak hidup = transaksi DITOLAK.
+     Pencocokan nama HANYA dipakai kalau id memang tidak dikirim (jalur lama). */
+  const explicitWalletId = (input.walletId ?? '').trim()
+  let walletId = ''
+  let resolvedName = walletName
+  if (explicitWalletId) {
+    const requested = walletSeedOf(live, explicitWalletId)
+    if (!requested) return null
+    walletId = requested.id
+    resolvedName = requested.name
+  } else {
+    walletId = walletIdOfName(live, walletName)
+  }
+  /* SALDO TIDAK BOLEH SUB-NOL — hanya untuk uang yang benar-benar KELUAR dari
+     dompet yang dikenal ledger (dompet tak dikenal menulis `walletId: ''` dan
+     tidak memotong saldo). `saving` ikut dijaga: setoran celengan ditulis sebagai
+     `transfer` satu sisi, jadi nominalnya mengurangi saldo dompet persis seperti
+     pengeluaran. Sebelum ini hanya `expense` yang diperiksa, sehingga setoran
+     "Tabungan" yang lebih besar dari saldo membuat dompet MINUS. */
+  if ((input.type === 'expense' || input.type === 'saving') && walletId) {
+    const funds = walletFundsCheckById(live, walletId, amount)
     if (funds.known && !funds.sufficient) return null
   }
 
   const before = live.rows
   const row = appendRow({
     walletId,
-    walletName,
+    walletName: resolvedName,
     type: ledgerTypeOf(input.type),
     amount,
     note: input.name,
@@ -1973,8 +2610,13 @@ export function removeWalletAccount(id: string): WalletRemoval | null {
 
   commit({ ...live, removedWalletIds: [...live.removedWalletIds, key] })
 
-  /* hapus di server lewat endpoint yang sudah ada (paket 62 · temuan audit #2) */
-  void deleteRemoteWallet(wallet.id)
+  /* hapus di server lewat endpoint yang sudah ada (paket 62 · temuan audit #2).
+     Kalau gagal (offline/token basi), id-nya masuk antrean dan dicoba lagi pada
+     hidrasi / realtime / `online` — tanpa itu dompet "hidup lagi" di perangkat
+     lain karena barisnya masih ada di database. */
+  void deleteRemoteWallet(wallet.id).then((ok) => {
+    if (!ok) pendingWalletDeletes.add(wallet.id)
+  })
 
   /* JEJAK: konteks + ada/tidaknya catatan. Nama dompet & nominal TIDAK ikut
      (penyaring `lib/analytics.ts` membuangnya lagi sebagai penjaga kedua). */
@@ -2003,9 +2645,12 @@ export function restoreWalletAccount(removal: WalletRemoval): boolean {
   commit({
     ...live,
     removedWalletIds: live.removedWalletIds.filter((id) => id !== removal.walletId),
+    /* undo = dompet dikirim ulang; tandai belum terkirim supaya rekonsiliasi
+       tidak menghapusnya lagi sebelum server menerima versi ini */
+    pendingWalletIds: pendingWith(live.pendingWalletIds, removal.walletId),
   })
   const wallet = live.wallets.find((item) => item.id === removal.walletId)
-  if (wallet) void pushWalletToServer(wallet, live.wallets.indexOf(wallet))
+  if (wallet) pushWalletAndMark(wallet, live.wallets.indexOf(wallet))
   return true
 }
 
@@ -2220,8 +2865,13 @@ function normalizeRowPatch(patch: RowPatch): RowPatch | null {
     const walletId = patch.walletId.trim()
     /* `''` sah = "belum terhubung ke dompet" (keadaan baris yang dicatat dengan
        dompet yang belum ada di ledger). Id ASING ditolak: baris itu tidak akan
-       menggerakkan saldo mana pun, dan itu klaim palsu. */
-    if (walletId !== '' && !live.wallets.some((wallet) => wallet.id === walletId)) return null
+       menggerakkan saldo mana pun, dan itu klaim palsu. Dompet yang sudah
+       DIHAPUS tetap lolos di sini karena baris lama miliknya masih boleh
+       diperbaiki (nominal/catatan) — larangan MEMINDAHKAN catatan ke dompet
+       terhapus ada di `planLedgerRowEdit()`. */
+    if (walletId !== '' && !live.wallets.some((wallet) => wallet.id === walletId)) {
+      return null
+    }
     next.walletId = walletId
   }
 
@@ -2281,9 +2931,9 @@ function walletForRowAfterEdit(
 }
 
 /**
- * Terapkan patch ke baris LEDGER yang ada (bukan baris pajangan).
+ * Terapkan patch ke baris LEDGER yang ada (bukan baris pajangan) — TANPA menulis.
  *
- * Dua hal yang sengaja dijaga:
+ * Tiga hal yang sengaja dijaga:
  *   1. **Jenis baris tidak ikut berubah kalau user tidak mengubah tipe.**
  *      Baris `balance_adjustment` (koreksi saldo) & `change` (kembalian)
  *      nominalnya BERTANDA, sementara sheet menampilkannya sebagai
@@ -2294,9 +2944,24 @@ function walletForRowAfterEdit(
  *      Ledger menolak `expense` yang ber-`counterWalletId` (invarian), dan kalau
  *      dibiarkan dompet tujuan tetap menerima uang dari baris yang sudah bukan
  *      transfer lagi.
+ *   3. **Hasilnya baris baru, bukan tulisan.** Pemanggil yang memutuskan apakah
+ *      baris itu boleh dipasang (`editLedgerRow`) atau hanya ingin tahu apakah
+ *      saldo akan minus (`editFundsProblem`).
  */
-function editLedgerRow(row: MoneyRow, patch: RowPatch): MoneyRow | null {
+function planLedgerRowEdit(row: MoneyRow, patch: RowPatch): MoneyRow | null {
   const wallet = walletForRowAfterEdit(row, patch)
+  /* MEMINDAHKAN catatan ke dompet yang sudah dihapus DITOLAK (paket 102): baris
+     itu tidak muncul di halaman dompet mana pun dan namanya akan kosong. Baris
+     yang SUDAH berada di dompet terhapus tetap boleh diedit (nominal/catatan) —
+     uang yang sudah keluar tidak boleh kehilangan riwayatnya hanya karena
+     dompetnya dibuang user. */
+  if (
+    wallet.walletId !== row.walletId &&
+    wallet.walletId !== '' &&
+    !walletSeedOf(live, wallet.walletId)
+  ) {
+    return null
+  }
   const sameType = patch.type === undefined || patch.type === displayTypeOf(row)
   const type = sameType ? row.type : ledgerTypeOf(patch.type as TransactionType)
 
@@ -2321,10 +2986,51 @@ function editLedgerRow(row: MoneyRow, patch: RowPatch): MoneyRow | null {
     ...(patch.category !== undefined ? { category: patch.category } : {}),
   }
   if (!movesBetweenWallets(type)) delete nextRow.counterWalletId
+  return nextRow
+}
+
+/**
+ * Dompet yang saldonya JATUH DI BAWAH NOL gara-gara edit ini, atau `null`.
+ *
+ * Edit dulu sama sekali tidak memeriksa saldo: menaikkan nominal pengeluaran,
+ * mengubah pemasukan jadi pengeluaran, atau memindahkan pengeluaran ke dompet
+ * yang lebih tipis bisa membuat dompet MINUS — padahal catat dan hapus sudah
+ * dijaga. Pagar ini memakai rumus saldo yang sama (`opening + Σ baris`) supaya
+ * tidak ada rumus kedua.
+ *
+ * Yang ditolak hanya PENURUNAN yang melewati nol. Saldo minus yang sudah ada
+ * sebelumnya (data lama) tidak memblokir edit yang memperbaikinya — kalau tidak,
+ * satu-satunya jalan keluarnya justru tertutup.
+ */
+function walletDippedBelowZero(
+  before: readonly MoneyRow[],
+  after: readonly MoneyRow[],
+): string | null {
+  const walletIds = new Set<string>()
+  for (const row of [...before, ...after]) {
+    if (row.walletId) walletIds.add(row.walletId)
+    if (row.counterWalletId) walletIds.add(row.counterWalletId)
+  }
+  for (const walletId of walletIds) {
+    const wallet = live.wallets.find((item) => item.id === walletId)
+    if (!wallet) continue
+    const beforeBalance = balanceOf(before, walletId, wallet.opening)
+    const afterBalance = balanceOf(after, walletId, wallet.opening)
+    if (afterBalance < 0 && afterBalance < beforeBalance) return walletId
+  }
+  return null
+}
+
+function editLedgerRow(row: MoneyRow, patch: RowPatch): MoneyRow | null {
+  const nextRow = planLedgerRowEdit(row, patch)
+  if (!nextRow) return null
 
   const rows = live.rows.map((candidate) => (candidate.id === row.id ? nextRow : candidate))
+  /* SALDO TIDAK BOLEH SUB-NOL — pagar yang sama dengan `postExpense`/
+     `postTransfer`, tapi diukur pada baris HASIL edit (bukan cuma selisihnya). */
+  if (walletDippedBelowZero(live.rows, rows)) return null
   commit({ ...live, rows })
-  /* PATCH DI SERVER (paket 48): `pushRowToServer` TIDAK bisa dipakai untuk edit —
+  /* PATCH DI SERVER (paket 48): `pushRowToServerResult` TIDAK bisa dipakai untuk edit —
      barisnya sudah ada dan `client_tx_id`-nya unique, jadi jawabannya 23505 yang
      diterjemahkan sebagai "sudah tersimpan" padahal isinya masih lama. */
   void updateRemoteRow(nextRow)
@@ -2336,8 +3042,10 @@ function editLedgerRow(row: MoneyRow, patch: RowPatch): MoneyRow | null {
  * `/wallet/[id]`; tidak ada lagi `editedTxs` di state halaman).
  *
  * Mengembalikan `null` kalau TIDAK ada yang ditulis (input tidak sah, baris
- * tidak dikenal, atau barisnya sudah dihapus) — pemanggil memakai itu untuk
- * memutuskan apakah boleh berbunyi "tersimpan".
+ * tidak dikenal, barisnya sudah dihapus, atau saldo dompet akan jadi minus) —
+ * pemanggil memakai itu untuk memutuskan apakah boleh berbunyi "tersimpan".
+ * Untuk memisahkan penolakan SALDO dari penolakan lain, pemanggil bisa bertanya
+ * lebih dulu lewat `editFundsProblem()`.
  */
 export function editRow(
   id: string | number,
@@ -2377,6 +3085,41 @@ export function editRow(
   const next: MoneySnapshot = { ...live, rowOverrides }
   commit(next)
   return applyRowOverride(next, mock)
+}
+
+/**
+ * Apakah edit ini akan DITOLAK karena saldo dompet bakal minus — dan dompet mana
+ * yang kehabisan saldo.
+ *
+ * MURNI terhadap state saat ini (tidak menulis apa pun), dipakai UI Riwayat &
+ * `/wallet/[id]` supaya `editRow()` yang mengembalikan `null` punya penjelasan.
+ * Tanpa ini, penolakan saldo terasa seperti tombol "Simpan" yang tidak bekerja.
+ *
+ * `null` = tidak ada masalah saldo (bisa jadi patch-nya memang tidak sah atau
+ * barisnya bukan baris ledger — dua hal itu ditangani `editRow` sendiri).
+ */
+export function editFundsProblem(
+  id: string | number,
+  patch: RowPatch,
+): { walletName: string } | null {
+  const key = tombstoneKey(id)
+  if (live.removedIds.includes(key)) return null
+
+  const normalized = normalizeRowPatch(patch)
+  if (!normalized) return null
+
+  const row = live.rows.find((candidate) => candidate.id === key)
+  if (!row) return null
+
+  const nextRow = planLedgerRowEdit(row, normalized)
+  if (!nextRow) return null
+
+  const rows = live.rows.map((candidate) => (candidate.id === row.id ? nextRow : candidate))
+  const walletId = walletDippedBelowZero(live.rows, rows)
+  if (!walletId) return null
+  /* nama dompet untuk kalimat penolakan; baris lama tanpa dompet hidup memakai
+     nama yang tersimpan di barisnya sendiri */
+  return { walletName: walletNameOf(live, walletId) || nextRow.walletName }
 }
 
 /* ── DOMPET BARU ───────────────────────────────────────────────────────────── */
@@ -2419,12 +3162,27 @@ function walletRecipeFor(index: number): Pick<
   }
 }
 
-/** dompet baru dari form "Tambah Dompet" (`/wallet`) */
-export function addWalletAccount(input: NewWalletInput): WalletSeed {
+/**
+ * Dompet baru dari form "Tambah Dompet" (`/wallet`).
+ *
+ * `null` = DITOLAK dan tidak ada yang ditulis: nama kosong/sudah dipakai dompet
+ * HIDUP lain (paket 103). Aturan "satu nama = satu dompet" sekarang hidup di
+ * store, bukan cuma di form — supaya pemanggil lain (onboarding, demo, API)
+ * tidak bisa melahirkan dompet kembar yang tidak bisa dibedakan pemilih dompet.
+ *
+ * Dompet kembar WARISAN yang sudah terlanjur ada di akun user TIDAK disentuh:
+ * larangan ini hanya berlaku saat MENAMBAH. `mergeMoneySnapshot()`/
+ * `mergeWithRemote()` tetap menerima daftar dompet lama apa adanya, dan
+ * pemilih dompet memakai `walletSelectOptionsFor()` yang menampilkan semuanya
+ * dengan pembeda `displayLabel`.
+ */
+export function addWalletAccount(input: NewWalletInput): WalletSeed | null {
   const opening = Math.max(0, Math.round(input.opening) || 0)
+  const name = input.name.trim() || 'Dompet Baru'
+  if (isWalletNameTaken(live, name)) return null
   const record: WalletSeed = {
     id: nextWalletId(live.wallets),
-    name: input.name.trim() || 'Dompet Baru',
+    name,
     /* Pemegang dompet: nama dompet pertama yang sudah ada (biasanya milik user
        sendiri). Sebelumnya di sini ada nama karangan `'Jon Snow'` — identitas
        yang tidak pernah dimiliki siapa pun. Kalau belum ada dompet lain, kolomnya
@@ -2439,10 +3197,16 @@ export function addWalletAccount(input: NewWalletInput): WalletSeed {
     context: input.context ?? 'pribadi',
     ...walletRecipeFor(live.wallets.length),
   }
-  commit({ ...live, wallets: [...live.wallets, record] })
-  /* dompet baru langsung naik ke server supaya perangkat kedua melihatnya
-     (baris-barisnya sudah dikirim oleh `appendRow`/`flushPendingSync`) */
-  void pushWalletToServer(record, live.wallets.length - 1)
+  commit({
+    ...live,
+    wallets: [...live.wallets, record],
+    /* dompet baru = perubahan yang belum terkirim → masuk antrean sampai
+       server mengonfirmasi (`flushWalletOutbox`) */
+    pendingWalletIds: pendingWith(live.pendingWalletIds, record.id),
+  })
+  /* dompet baru langsung naik ke server supaya perangkat kedua melihatnya; kalau
+     kiriman ini gagal, dompetnya TETAP di sini sebagai antrean (`flushWalletOutbox`) */
+  pushWalletAndMark(record, live.wallets.length - 1)
   return record
 }
 
@@ -2483,11 +3247,7 @@ export function renameWalletAccount(
 
   const nextName = patch.name === undefined ? wallet.name : patch.name.trim()
   if (!nextName) return null
-  const key = nextName.toLowerCase()
-  const clash = liveWalletSeeds(live).some(
-    (item) => item.id !== wallet.id && item.name.trim().toLowerCase() === key,
-  )
-  if (clash) return null
+  if (isWalletNameTaken(live, nextName, wallet.id)) return null
 
   const updated: WalletSeed = {
     ...wallet,
@@ -2503,8 +3263,12 @@ export function renameWalletAccount(
     rows: renamed
       ? live.rows.map((row) => (row.walletId === wallet.id ? { ...row, walletName: updated.name } : row))
       : live.rows,
+    /* rename = perubahan yang belum terkirim: versi lokal menang saat
+       rekonsiliasi sampai server mengonfirmasi (tanpa ini rename offline
+       diputar balik oleh jawaban server) */
+    pendingWalletIds: pendingWith(live.pendingWalletIds, wallet.id),
   })
-  void pushWalletToServer(updated, live.wallets.findIndex((item) => item.id === wallet.id))
+  pushWalletAndMark(updated, live.wallets.findIndex((item) => item.id === wallet.id))
   /* Sengaja TIDAK ada event analitik untuk rename: satu-satunya data yang
      berubah adalah identitas dompet user, dan tidak ada pertanyaan produk yang
      butuh angka itu. (Nama dompet memang haram dikirim ke analitik.) */
@@ -2537,8 +3301,12 @@ export function addPoolWallet(): string | null {
     glowClass: candidate.glowClass,
     art: candidate.art,
   }
-  commit({ ...live, wallets: [...live.wallets, record] })
-  void pushWalletToServer(record, live.wallets.length - 1)
+  commit({
+    ...live,
+    wallets: [...live.wallets, record],
+    pendingWalletIds: pendingWith(live.pendingWalletIds, record.id),
+  })
+  pushWalletAndMark(record, live.wallets.length - 1)
   return record.id
 }
 
@@ -2569,6 +3337,9 @@ export function toHistoryTransaction(row: MoneyRow): HistoryTransaction {
     type: displayTypeOf(row),
     category: row.category ?? TRANSACTION_FALLBACK_CATEGORY,
     wallet: row.walletName || TRANSACTION_FALLBACK_WALLET,
+    /* `''` = baris belum terhubung ke dompet hidup. Dibiarkan undefined supaya
+       bentuk `HistoryTransaction` lama (mock & test) tetap sah tanpa field ini. */
+    ...(row.walletId ? { walletId: row.walletId } : {}),
     date: row.dateISO,
     time: row.time,
     aiGenerated: row.aiGenerated,
@@ -2684,10 +3455,11 @@ export function defaultWalletNameFor(ctx: MoneyContext): string {
      sendiri tidak boleh diabaikan: konteks yang isinya cuma dompet baru (mis.
      "Dompet Keluarga") dulu mengembalikan `''` sehingga form catatan menolak
      menulis dengan alasan "belum ada dompet" padahal dompetnya jelas ada — itu
-     bug yang membuat catatan kalender konteks Keluarga mustahil dibuat. */
-  const canonical = names.find((name) =>
-    (TRANSACTION_WALLET_OPTIONS as readonly string[]).includes(name),
-  )
+     bug yang membuat catatan kalender konteks Keluarga mustahil dibuat.
+     Perbandingan nama memakai `walletNameKey()` (paket 103): "bca " dan "BCA"
+     adalah dompet yang sama, jadi keduanya sama-sama diakui sebagai kanon. */
+  const canonicalKeys = TRANSACTION_WALLET_OPTIONS.map(walletNameKey)
+  const canonical = names.find((name) => canonicalKeys.includes(walletNameKey(name)))
   return canonical ?? names[0] ?? ''
 }
 
@@ -2760,13 +3532,13 @@ export function captureWalletChoice(
   const { inContext, options } = captureWalletNames(snapshot, ctx)
 
   const guess = guessed.trim()
-  const match = options.find((name) => name.toLowerCase() === guess.toLowerCase())
+  const guessKey = walletNameKey(guess)
+  const match = options.find((name) => walletNameKey(name) === guessKey)
 
   /* urutan pilihan default mengikuti jalur manual: dompet kanon pertama di
      konteks aktif (`defaultWalletNameFor`), baru dompet apa pun di konteks itu */
-  const canonical = inContext.find((name) =>
-    (TRANSACTION_WALLET_OPTIONS as readonly string[]).includes(name),
-  )
+  const canonicalKeys = TRANSACTION_WALLET_OPTIONS.map(walletNameKey)
+  const canonical = inContext.find((name) => canonicalKeys.includes(walletNameKey(name)))
 
   const value = match ?? canonical ?? inContext[0] ?? ''
 
@@ -2799,32 +3571,47 @@ function captureWalletNames(
   const otherContexts = wallets
     .filter((wallet) => wallet.context !== ctx)
     .map((wallet) => wallet.name)
-  return { inContext, options: [...new Set([...inContext, ...otherContexts])] }
+  /* nama kembar dibandingkan dengan kunci trim+lowercase (paket 103), bukan
+     lowercase mentah — "BCA " dan " bca" adalah dompet yang sama */
+  const seen = new Set<string>()
+  const options = [...inContext, ...otherContexts].filter((name) => {
+    const key = walletNameKey(name)
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+  return { inContext, options }
 }
 
 /**
  * Pilihan dompet kartu konfirmasi AI dalam bentuk yang dimakan PEMILIH DOMPET
- * (paket 81): `{ id, label, balance }` dengan `id` yang DIJAMIN unik, urut
- * konteks aktif lebih dulu.
+ * (paket 81): `{ id, label, displayLabel, balance }` dengan `id` yang DIJAMIN
+ * unik, urut konteks aktif lebih dulu.
  *
- * Kenapa ada, padahal `captureWalletChoice` sudah mengembalikan daftar nama:
- * kartu konfirmasi memakai `<select>` bawaan dengan `key={nama}` — begitu user
- * punya dua dompet bernama sama (`addWalletAccount()` mengizinkannya), React
- * melempar galat "two children with the same key, `OVO`" dan pemilihnya bisa
- * kehilangan baris. Pemilih kustom repo ini memakai `id` sebagai kunci, jadi
- * kunci yang unik harus datang dari SATU tempat: di sini — bukan disaring lagi
- * di dalam JSX.
+ * PAKET 102 — SATU BARIS PER DOMPET, bukan per nama. Dulu daftar ini di-dedupe
+ * lewat `walletOptionsFor()`; akibatnya kartu konfirmasi AI juga hanya bisa
+ * menawarkan satu dari beberapa dompet bernama sama (persis keluhan "dompet
+ * kedua tidak ada di pilihan"). Nilai yang dikirim balik sekarang ID
+ * (`draft.walletId`), jadi memilih "BCA · ••0849" benar-benar memotong dompet
+ * itu — bukan BCA pertama yang kebetulan namanya sama.
+ *
+ * Urutan nama untuk keputusan default TETAP dari `captureWalletChoice()`; fungsi
+ * ini hanya bentuk tampilan dari dompet-dompets yang sama.
  */
 export function captureWalletOptionsFor(
   snapshot: MoneySnapshot,
   ctx: MoneyContext,
-): { id: string; label: string; balance: number }[] {
-  const byName = new Map(
-    walletOptionsFor(snapshot).map((option) => [option.label.trim().toLowerCase(), option]),
+): { id: string; label: string; displayLabel: string; balance: number }[] {
+  const all = walletSelectOptionsFor(snapshot)
+  const inContextIds = new Set(
+    filterWalletsByContext(liveWalletSeeds(snapshot), ctx).map((wallet) => wallet.id),
   )
-  return captureWalletNames(snapshot, ctx)
-    .options.map((name) => byName.get(name.trim().toLowerCase()))
-    .filter((option): option is { id: string; label: string; balance: number } => Boolean(option))
+  /* konteks aktif dulu, lalu konteks lain — urutan ini sama dengan
+     `captureWalletNames()` sejak paket 81 */
+  return [
+    ...all.filter((option) => inContextIds.has(option.id)),
+    ...all.filter((option) => !inContextIds.has(option.id)),
+  ]
 }
 
 /**
@@ -2839,5 +3626,8 @@ export function resetMoneyStore(): void {
   nextSeq = 9001
   nextWalletSeq = 1
   poolIndex = 0
+  /* antrean hapus dompet hidup di memori; test yang mengulang skenario harus
+     mulai dari antrean kosong */
+  pendingWalletDeletes.clear()
   emit()
 }

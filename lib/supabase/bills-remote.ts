@@ -2,6 +2,7 @@
 
 import type { Bill } from '@/lib/data/bills'
 import { browserSupabase } from './client'
+import { dataApi, dataApiOk } from './data-api'
 import { toBill, toBillDbRow, type BillDbRow } from './domain-mappers'
 
 /* ── JALUR TAGIHAN KE SERVER (paket 64 · Paket D) ────────────────────────────
@@ -19,6 +20,18 @@ import { toBill, toBillDbRow, type BillDbRow } from './domain-mappers'
 
 /** baca seluruh tagihan milik pemanggil; `null` = tanpa sesi/backend atau gagal */
 export async function readRemoteBills(): Promise<Bill[] | null> {
+  const viaBrowser = await readBillsViaBrowser()
+  if (viaBrowser) return viaBrowser
+  const rows = await dataApi<BillDbRow>({
+    table: 'bills',
+    op: 'select',
+    order: { column: 'due_day', ascending: true },
+  })
+  if (!rows) return null
+  return rows.filter((row) => Boolean(row?.id)).map((row) => toBill(row))
+}
+
+async function readBillsViaBrowser(): Promise<Bill[] | null> {
   const client = browserSupabase()
   if (!client) return null
   try {
@@ -41,25 +54,34 @@ export async function readRemoteBills(): Promise<Bill[] | null> {
 /** simpan/perbarui satu tagihan (id = `remoteId` uuid baris itu) */
 export async function pushBillToServer(bill: Bill, remoteId: string): Promise<boolean> {
   const client = browserSupabase()
-  if (!client) return false
-  try {
-    const { error } = await client
-      .from('bills')
-      .upsert({ ...toBillDbRow(bill), id: remoteId }, { onConflict: 'id' })
-    return !error || error.code === '23505'
-  } catch {
-    return false
+  if (client) {
+    try {
+      const { error } = await client
+        .from('bills')
+        .upsert({ ...toBillDbRow(bill), id: remoteId }, { onConflict: 'id' })
+      if (!error || error.code === '23505') return true
+    } catch {
+      /* jatuh ke jalur server */
+    }
   }
+  return dataApiOk({
+    table: 'bills',
+    op: 'upsert',
+    rows: [{ ...toBillDbRow(bill), id: remoteId } as Record<string, unknown>],
+    onConflict: 'id',
+  })
 }
 
 /** hapus tagihan di server (hapus lokal sudah ditangani tombstone store) */
 export async function deleteRemoteBill(remoteId: string): Promise<boolean> {
   const client = browserSupabase()
-  if (!client) return false
-  try {
-    const { error } = await client.from('bills').delete().eq('id', remoteId)
-    return !error
-  } catch {
-    return false
+  if (client) {
+    try {
+      const { error } = await client.from('bills').delete().eq('id', remoteId)
+      if (!error) return true
+    } catch {
+      /* jatuh ke jalur server */
+    }
   }
+  return dataApiOk({ table: 'bills', op: 'delete', match: { id: remoteId } })
 }

@@ -2,6 +2,7 @@
 
 import type { FundContribution, SinkingFundItem } from '@/lib/data/budget'
 import { browserSupabase } from './client'
+import { dataApi, dataApiOk } from './data-api'
 import {
   toFundContribution,
   toGoalContributionDbRow,
@@ -28,6 +29,36 @@ export interface RemoteFunds {
 
 /** baca seluruh celengan milik pemanggil; `null` = tanpa sesi/backend atau gagal */
 export async function readRemoteFunds(): Promise<RemoteFunds | null> {
+  const viaBrowser = await readFundsViaBrowser()
+  if (viaBrowser) return viaBrowser
+  /* jalur server (sesi cookie) — lihat `app/api/data` */
+  const goals = await dataApi<GoalDbRow>({
+    table: 'goals',
+    op: 'select',
+    order: { column: 'created_at', ascending: true },
+  })
+  if (!goals) return null
+  const savings = await dataApi<{ goal_id: string; saved: number | string }>({
+    table: 'goal_savings',
+    op: 'select',
+  })
+  const contribRows = await dataApi<GoalContributionDbRow>({
+    table: 'goal_contributions',
+    op: 'select',
+    order: { column: 'contributed_at', ascending: false },
+  })
+
+  const savedById = new Map(
+    (savings ?? []).map((row) => [row.goal_id, Number(row.saved) || 0]),
+  )
+  const funds = goals.filter((row) => Boolean(row?.id)).map((row) => toSinkingFund(row, savedById.get(row.id) ?? 0))
+  const contributions = (contribRows ?? [])
+    .filter((row) => Boolean(row?.id))
+    .map((row) => toFundContribution(row))
+  return { funds, contributions }
+}
+
+async function readFundsViaBrowser(): Promise<RemoteFunds | null> {
   const client = browserSupabase()
   if (!client) return null
   try {
@@ -67,13 +98,15 @@ export async function readRemoteFunds(): Promise<RemoteFunds | null> {
 
 async function upsert(table: string, body: Record<string, unknown>): Promise<boolean> {
   const client = browserSupabase()
-  if (!client) return false
-  try {
-    const { error } = await client.from(table).upsert(body, { onConflict: 'id' })
-    return !error || error.code === '23505'
-  } catch {
-    return false
+  if (client) {
+    try {
+      const { error } = await client.from(table).upsert(body, { onConflict: 'id' })
+      if (!error || error.code === '23505') return true
+    } catch {
+      /* jatuh ke jalur server */
+    }
   }
+  return dataApiOk({ table, op: 'upsert', rows: [body], onConflict: 'id' })
 }
 
 /** simpan/perbarui celengan (id = `remoteId` uuid baris `goals`) */
@@ -95,11 +128,13 @@ export async function pushContributionToServer(
 /** hapus celengan di server (hapus lokal sudah ditangani tombstone store) */
 export async function deleteRemoteFund(remoteId: string): Promise<boolean> {
   const client = browserSupabase()
-  if (!client) return false
-  try {
-    const { error } = await client.from('goals').delete().eq('id', remoteId)
-    return !error
-  } catch {
-    return false
+  if (client) {
+    try {
+      const { error } = await client.from('goals').delete().eq('id', remoteId)
+      if (!error) return true
+    } catch {
+      /* jatuh ke jalur server */
+    }
   }
+  return dataApiOk({ table: 'goals', op: 'delete', match: { id: remoteId } })
 }

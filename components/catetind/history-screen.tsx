@@ -36,6 +36,7 @@ import { useMonthlyReview } from '@/hooks/use-monthly-review'
 import { cn } from '@/lib/utils'
 import {
   cancelTransferRow,
+  editFundsProblem,
   editRow,
   recordedTransactions,
   removeRow,
@@ -44,6 +45,7 @@ import {
   restoreRows,
   undoTransferCancellation,
   useMoneyStore,
+  walletOptionsFor,
   type TransferCancellation,
 } from '@/lib/money/store'
 import { TRANSFER_SHEET_COPY } from '@/lib/data/add-wallet'
@@ -66,8 +68,8 @@ import {
   TIME_FILTERS,
   TYPE_FILTERS,
   UNDO_WINDOW_MS,
+  TRANSACTION_INSUFFICIENT_FUNDS_COPY,
   UPDATE_TRANSACTION_TOAST,
-  WALLET_FILTERS,
   buildHistoryInsights,
   filterHistoryTransactions,
   financialHealthScore,
@@ -102,9 +104,8 @@ const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1]
    jadi tidak ada lagi dinding pill. */
 type FilterKey = keyof HistoryFilters
 
-const FILTER_ROWS: { key: FilterKey; label: string; options: FilterOption<string>[] }[] = [
+const FILTER_ROWS: { key: Exclude<FilterKey, 'wallet'>; label: string; options: FilterOption<string>[] }[] = [
   { key: 'time', label: 'Waktu', options: TIME_FILTERS },
-  { key: 'wallet', label: 'Dompet', options: WALLET_FILTERS },
   { key: 'type', label: 'Tipe', options: TYPE_FILTERS },
   { key: 'category', label: 'Kategori', options: CATEGORY_FILTERS },
 ]
@@ -139,6 +140,32 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
    */
   const snapshot = useMoneyStore()
   const recordedTxs = useMemo(() => recordedTransactions(snapshot), [snapshot])
+  /**
+   * Pilihan filter DOMPET dibangun dari ledger (paket 102).
+   *
+   * Sebelumnya daftarnya konstanta empat nama kanon (BCA/GoPay/OVO/Tunai), jadi
+   * dompet buatan user tidak pernah bisa difilter dan tiga dompet bernama "BCA"
+   * selalu tercampur. `id` = id dompet, dan label tampilan memakai pembeda
+   * (`••1234`) saat namanya kembar.
+   */
+  const walletFilterOptions = useMemo<FilterOption<string>[]>(
+    () => [
+      { id: 'all', label: 'Semua dompet' },
+      ...walletOptionsFor(snapshot).map((option) => ({
+        id: option.id,
+        label: option.displayLabel,
+      })),
+    ],
+    [snapshot],
+  )
+  const filterRows = useMemo<{ key: FilterKey; label: string; options: FilterOption<string>[] }[]>(
+    () => [
+      FILTER_ROWS[0]!,
+      { key: 'wallet', label: 'Dompet', options: walletFilterOptions },
+      ...FILTER_ROWS.slice(1),
+    ],
+    [walletFilterOptions],
+  )
   /** transaksi yang menunggu konfirmasi hapus */
   const [pendingDelete, setPendingDelete] = useState<HistoryTransaction | null>(null)
   /** transaksi yang sheet EDIT-nya sedang terbuka (paket 03) */
@@ -277,7 +304,7 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
     (activeFilters.category !== 'all' ? 1 : 0)
 
   /** baris filter yang sedang dibuka (judul + daftar opsinya) */
-  const openFilterRow = FILTER_ROWS.find((row) => row.key === openFilter) ?? null
+  const openFilterRow = filterRows.find((row) => row.key === openFilter) ?? null
 
   /* ── aksi ──────────────────────────────────────────────────────────────── */
 
@@ -316,17 +343,34 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
    * input ditolak atau barisnya sudah dihapus, dan itu bukan "tersimpan".
    */
   const handleSaveEdit = useCallback((next: HistoryTransaction) => {
-    const written = editRow(next.id, {
+    const patch = {
       name: next.name,
       amount: next.amount,
       type: next.type,
       category: next.category,
       wallet: next.wallet,
+      /* paket 102: dompet kembar bernama sama dipindahkan lewat ID */
+      walletId: next.walletId,
       dateISO: next.date,
       aiGenerated: next.aiGenerated,
-    })
+    }
+    /* DITANYA LEBIH DULU: kalau yang menolak adalah saldo dompet, user harus
+       membaca sebabnya. Tanpa ini, `editRow` → `null` cuma menutup sheet tanpa
+       satu pun tulisan — tombol Simpan terasa rusak. */
+    const shortfall = editFundsProblem(next.id, patch)
+    const written = editRow(next.id, patch)
     setEditingTx(null)
-    if (!written) return
+    if (!written) {
+      if (shortfall) {
+        toast.error(TRANSACTION_INSUFFICIENT_FUNDS_COPY.title, {
+          description:
+            next.type === 'saving'
+              ? TRANSACTION_INSUFFICIENT_FUNDS_COPY.savingBody(shortfall.walletName)
+              : TRANSACTION_INSUFFICIENT_FUNDS_COPY.body(shortfall.walletName),
+        })
+      }
+      return
+    }
     toast.success(UPDATE_TRANSACTION_TOAST.title, {
       description: UPDATE_TRANSACTION_TOAST.description,
     })
@@ -623,7 +667,7 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
 
         {/* chip filter: nama filter saat "Semua", nama pilihannya saat aktif */}
         <div className="hide-scrollbar mt-2.5 flex gap-2 overflow-x-auto px-0.5 py-0.5">
-          {FILTER_ROWS.map((row) => {
+          {filterRows.map((row) => {
             const value = activeFilters[row.key]
             const active = value !== 'all'
             const selected = row.options.find((opt) => opt.id === value)
@@ -641,7 +685,7 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
                     : 'bg-cream text-forest/55 ring-1 ring-soil/10 hover:bg-sage/60 hover:text-forest',
                 )}
               >
-                {active ? selected?.label : row.label}
+                {active ? (selected?.label ?? row.label) : row.label}
                 <ChevronDown
                   className={cn('size-3.5', active ? 'text-cream/70' : 'text-forest/35')}
                   strokeWidth={2.6}

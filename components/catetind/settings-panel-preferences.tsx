@@ -13,6 +13,7 @@ import {
   type AiPrefs,
   type MincaMode,
 } from '@/lib/ai-prefs'
+import { onPrefsChanged } from '@/lib/prefs-sync'
 import { NotificationSettings } from './notification-settings'
 import { ConfirmDialog } from './confirm-dialog'
 import {
@@ -186,14 +187,20 @@ export function CategoriesSettingsPanel() {
   }, [])
 
   function persist(nextHidden: string[], nextCustom: CategoryItem[]) {
+    const prefs = { hidden: nextHidden, custom: nextCustom } satisfies CategoryPrefs
     try {
-      localStorage.setItem(
-        CATEGORY_PREFS_STORAGE_KEY,
-        JSON.stringify({ hidden: nextHidden, custom: nextCustom } satisfies CategoryPrefs),
-      )
+      localStorage.setItem(CATEGORY_PREFS_STORAGE_KEY, JSON.stringify(prefs))
     } catch {
       /* abaikan — perubahan tetap berlaku untuk sesi ini */
     }
+    /* ── SIMPAN KE AKUN (lintas perangkat) ───────────────────────────────────
+       Kategori kustom & pilihan sembunyi itu DATA AKUN, bukan preferensi
+       perangkat: sebelum ini user yang menyusun kategorinya di HP harus
+       menyusunnya ulang di laptop. Ditulis ke `user_settings.categories`
+       (best-effort: kalau gagal, nilai lokal tetap sah dan bisa disusulkan). */
+    void import('@/lib/supabase/user-settings-remote').then(({ patchUserSettings }) =>
+      patchUserSettings({ categories: prefs }),
+    )
   }
 
   function toggleDefault(item: CategoryItem) {
@@ -573,9 +580,12 @@ export function AiSettingsPanel() {
 
   /* hidrasi preferensi dari localStorage SETELAH mount supaya render server &
      client identik (pola yang sama dengan preferensi tema & notifikasi).
-     Pembacanya satu sumber dengan jalur AI capture — `readAiPrefs()`. */
+     Pembacanya satu sumber dengan jalur AI capture — `readAiPrefs()`.
+     Perubahan dari PERANGKAT LAIN masuk lewat event `ai` (`settings-sync` yang
+     menulis nilai barunya ke perangkat ini setelah lolos cek `updatedAt`). */
   useEffect(() => {
     setPrefs(readAiPrefs())
+    return onPrefsChanged('ai', () => setPrefs(readAiPrefs()))
   }, [])
 
   function update(next: Partial<AiPrefs>, message?: string) {

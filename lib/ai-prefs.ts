@@ -21,6 +21,7 @@
    sementara di sini tidak ada tebakan sama sekali. */
 
 import type { TransactionDraftForm } from './transaction-ai'
+import { applyRemotePrefs, notifyPrefsChanged, withUpdatedAt, writePrefsRaw } from './prefs-sync'
 
 /** kunci localStorage — nama lama dipertahankan supaya preferensi user tidak hilang */
 export const AI_PREFS_KEY = 'catet-ai-prefs'
@@ -72,18 +73,31 @@ export function readAiPrefs(): AiPrefs {
 
 /**
  * Simpan preferensi AI — satu pintu untuk baca & tulis kunci yang sama dengan
- * jalur AI capture. Nilai yang dikembalikan = yang benar-benar berlaku: saat
- * localStorage diblokir (mode privat) preferensinya tetap hidup untuk sesi ini,
- * jadi pemanggilnya tidak perlu tahu soal storage sama sekali.
+ * jalur AI capture, DAN ke akun (`user_settings.ai_prefs`).
+ *
+ * Sebelumnya nilai ini hanya hidup di perangkat: mematikan "Kategorisasi
+ * Otomatis" di HP tidak berpengaruh di laptop. Sekarang payload membawa
+ * `updatedAt` dan dikirim best-effort; perangkat lain mengadopsinya lewat
+ * `settings-sync` (`applyRemoteAiPrefs`) dengan aturan last-write-wins.
+ *
+ * Nilai yang dikembalikan = yang benar-benar berlaku: saat localStorage diblokir
+ * (mode privat) preferensinya tetap hidup untuk sesi ini, jadi pemanggilnya
+ * tidak perlu tahu soal storage sama sekali.
  */
 export function writeAiPrefs(prefs: AiPrefs): AiPrefs {
   if (typeof window === 'undefined') return prefs
-  try {
-    window.localStorage.setItem(AI_PREFS_KEY, JSON.stringify(prefs))
-  } catch {
-    /* storage diblokir / penuh → preferensi tetap berlaku di sesi ini */
-  }
+  const payload = withUpdatedAt(prefs)
+  writePrefsRaw(AI_PREFS_KEY, payload)
+  notifyPrefsChanged('ai')
+  void import('./supabase/user-settings-remote').then(({ patchUserSettings }) =>
+    patchUserSettings({ aiPrefs: payload }),
+  )
   return prefs
+}
+
+/** adopsi preferensi AI dari `user_settings.ai_prefs` bila lebih baru (lintas perangkat) */
+export function applyRemoteAiPrefs(remote: unknown): boolean {
+  return applyRemotePrefs(AI_PREFS_KEY, remote, 'ai')
 }
 
 /**

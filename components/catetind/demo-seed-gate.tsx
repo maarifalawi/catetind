@@ -5,6 +5,8 @@ import { usePathname } from 'next/navigation'
 import { DEMO_ALLOW_SESSION, DEMO_MODE } from '@/lib/demo'
 import { isPublicRoute } from '@/lib/public-routes'
 import { browserSupabase } from '@/lib/supabase/client'
+import { loadMoneyState } from '@/lib/money/idb'
+import type { PersistedMoney } from '@/lib/money/store'
 import { seedDemoDataOnce } from '@/lib/money/demo-bootstrap'
 
 /* ── GERBANG SEED DEMO (paket 65 · Tugas A) ──────────────────────────────────
@@ -18,6 +20,13 @@ import { seedDemoDataOnce } from '@/lib/money/demo-bootstrap'
        lewat `addWalletAccount()` yang langsung mengirim baris ke server — jadi
        siapa pun yang login di build demo bisa mendapat dompet & transaksi contoh
        sebagai data akunnya. Sekarang demo hanya untuk perangkat tanpa sesi.
+
+   PAGAR KETIGA (perbaikan "transaksi berubah setelah login ulang"):
+     · seed juga TIDAK dijalankan kalau snapshot perangkat ini sudah punya
+       PEMILIK (`ownerUserId`). Artinya perangkat itu pernah dipakai akun nyata;
+       menulis persona demo di atasnya akan mencampur baris contoh dengan data
+       akun (dan `appendRow` mengirimnya ke server). Persona demo hanya untuk
+       perangkat yang benar-benar bersih.
 
    Ditaruh setelah hidrasi React (useEffect) supaya HTML server tetap = render
    pertama client (keduanya kosong) — tidak ada hydration mismatch.
@@ -46,7 +55,15 @@ export function DemoSeedGate() {
           /* sesi tidak terbaca → anggap belum login; seed lokal tetap aman */
         }
       }
-      if (active) seedDemoDataOnce()
+
+      /* Perangkat yang pernah dipakai akun nyata: snapshot-nya adalah data akun
+         itu. Menyemai persona demo di atasnya = mencampur dua cerita — kecuali
+         reviewer MENYALAKAN `NEXT_PUBLIC_DEMO_ALLOW_SESSION=1` (jalur dev yang
+         didokumentasikan di `lib/demo.ts`, default mati). */
+      const persisted = await loadMoneyState<PersistedMoney>()
+      if (persisted?.ownerUserId && !DEMO_ALLOW_SESSION) return
+
+      if (active) seedDemoDataOnce({ force: DEMO_ALLOW_SESSION })
     })()
 
     return () => {

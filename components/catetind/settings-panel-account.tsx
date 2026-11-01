@@ -41,17 +41,24 @@ import {
 } from '@/lib/money/joint-store'
 import { useSubscriptionGate } from './subscription-gate-provider'
 import { activeInviteFor } from '@/lib/invite-store'
-import { useSessionUser } from '@/hooks/use-session-user'
-import { endSession } from '@/lib/session-client'
+import { setSessionUserProfile, useSessionUser } from '@/hooks/use-session-user'
+import {
+  DISPLAY_NAME_COPY,
+  endSession,
+  normalizeDisplayName,
+  updateAvatar,
+  updateDisplayName,
+} from '@/lib/session-client'
+import { compressAvatarFile } from '@/lib/avatar'
 import { cn } from '@/lib/utils'
 
-/* â”€â”€ Panel: Profil & Akun + Keluar (inventaris #15, #23) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+/* ── Panel: Profil & Akun + Keluar (inventaris #15, #23) ──────────────────────
    Isi panel ini mengikuti tiga urutan yang paling sering dibutuhkan user:
-     1. IDENTITAS  â€” avatar (bisa diganti), nama, email (terkunci), badge member.
-     2. SIKLUS KEUANGAN â€” satu penentu kapan Dashboard & Kalender di-reset.
+     1. IDENTITAS  — avatar (bisa diganti), nama, email (terkunci), badge member.
+     2. SIKLUS KEUANGAN — satu penentu kapan Dashboard & Kalender di-reset.
         Nilainya memakai tipe `DashboardPeriod` + `clampPayday()` yang SAMA dengan
         onboarding (lib/onboarding.ts) supaya aturannya tidak pernah bercabang.
-     3. DOMPET BERSAMA â€” putus koneksi pasangan dengan dua pilihan yang jujur
+     3. DOMPET BERSAMA — putus koneksi pasangan dengan dua pilihan yang jujur
         (simpan riwayat sendiri / hapus semua), bukan satu tombol ambigu. */
 
 /** avatar netral selama user belum mengunggah fotonya sendiri */
@@ -59,12 +66,12 @@ const FALLBACK_AVATAR_URL = '/placeholder-user.jpg'
 
 /**
  * Badge paket di kartu identitas (paket 84). Dulu ini konstanta demo
- * `'ðŸ† Founding Member #47'` yang MENGARANG nomor member â€” tidak ada satu pun
+ * `'🏆 Founding Member #47'` yang MENGARANG nomor member — tidak ada satu pun
  * angka member di sistem. Sekarang badge-nya TURUNAN dari paket yang benar-benar
  * tersimpan (`/api/subscription` lewat gerbang global):
  *
- *   Â· paket diketahui â†’ "ðŸ† Akses Selamanya Â· Paket X" (+ tanggal beli kalau ada)
- *   Â· paket belum diketahui â†’ badge TIDAK dirender sama sekali (tidak mengarang)
+ *   · paket diketahui → badge nama paket + kalimat "Akses selamanya …" (sekali bayar)
+ *   · paket belum diketahui → badge TIDAK dirender sama sekali (tidak mengarang)
  */
 function formatPurchasedAt(value: string | null): string | null {
   if (!value) return null
@@ -78,7 +85,7 @@ function formatPurchasedAt(value: string | null): string | null {
   }).format(date)
 }
 
-/** "2026-07-15" â†’ "15 Juli 2026" â€” timeZone UTC supaya tanggalnya tidak
+/** "2026-07-15" → "15 Juli 2026" — timeZone UTC supaya tanggalnya tidak
  *  bergeser satu hari antara server & client (SSR-safe). */
 const POCKET_DATE = new Intl.DateTimeFormat('id-ID', {
   day: 'numeric',
@@ -88,8 +95,8 @@ const POCKET_DATE = new Intl.DateTimeFormat('id-ID', {
 })
 
 /**
- * Tanggal dibuatnya kantong bersama â€” DARI DATA KANTONG (`wallet.createdAt`),
- * bukan konstanta. Tanggal kosong/asing â†’ `null`, dan barisnya tidak dirender
+ * Tanggal dibuatnya kantong bersama — DARI DATA KANTONG (`wallet.createdAt`),
+ * bukan konstanta. Tanggal kosong/asing → `null`, dan barisnya tidak dirender
  * sama sekali (dulu yang tampil selalu "15 Juli 2026" milik data contoh).
  */
 function pocketSinceLabel(createdAt: string): string | null {
@@ -104,8 +111,12 @@ export function ProfileSettingsPanel() {
   const [period, setPeriod] = useState<DashboardPeriod>('calendar')
   const [payday, setPayday] = useState(25)
   const [dirty, setDirty] = useState(false)
+  /** true = nama sedang dikirim ke server (tombol dikunci, jangan klik dua kali) */
+  const [saving, setSaving] = useState(false)
+  /** true = foto sedang diproses (kompres + simpan); tombol foto dikunci */
+  const [avatarBusy, setAvatarBusy] = useState(false)
 
-  /* â”€â”€ IDENTITAS DARI SESI (perbaikan audit K4) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  /* ── IDENTITAS DARI SESI (perbaikan audit K4) ─────────────────────────────
      Nama & email di panel ini dulu konstanta demo yang tampil untuk SEMUA
      user. Sekarang nilainya dibaca dari sesi; sebelum sesi terbaca (atau saat
      tamu) yang tampil netral, bukan identitas orang lain. `name` tetap state
@@ -113,18 +124,20 @@ export function ProfileSettingsPanel() {
   const { user } = useSessionUser()
   const EMAIL = user?.email ?? ''
 
-  /* Paket yang dimiliki (paket 84) â€” dasar badge identitas. Kalau paketnya belum
+  /* Paket yang dimiliki (paket 84) — dasar badge identitas. Kalau paketnya belum
      diketahui, badge-nya tidak dirender sama sekali (lihat komentar di atas). */
   const { plan, purchasedAt } = useSubscriptionGate()
   const purchasedAtLabel = formatPurchasedAt(purchasedAt)
   useEffect(() => {
     if (!user) return
     setName((current) => current || user.name)
+    /* foto profil hidup di akun (`profiles.avatar_url`), bukan di perangkat */
+    setAvatarUrl((current) => current || (user.avatarUrl ?? ''))
   }, [user])
 
-  /* â”€â”€ KONFIGURASI UANG USER (paket 57) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  /* ── KONFIGURASI UANG USER (paket 57) ────────────────────────────────────
      Pemasukan bulanan & total cicilan adalah PEMBAGI jatah harian, jadi
-     nilainya wajib bisa diubah user â€” bukan cuma disimpan diam-diam. Sebelum
+     nilainya wajib bisa diubah user — bukan cuma disimpan diam-diam. Sebelum
      paket ini panel ini cuma punya "Tanggal Gajian", sementara kartu Jatah Hari
      Ini dihitung dari konstanta contoh.
 
@@ -142,7 +155,7 @@ export function ProfileSettingsPanel() {
    * Kode undangan yang benar-benar AKTIF untuk dompet bersama (paket 39).
    *
    * Dibaca setelah mount karena hidupnya di localStorage (`lib/invite-store.ts`).
-   * Kalau belum ada kode, panel ini TIDAK menampilkan tautan pratinjau palsu â€”
+   * Kalau belum ada kode, panel ini TIDAK menampilkan tautan pratinjau palsu —
    * kode undangan umurnya 24 jam, jadi tautan ke kode yang sudah mati justru
    * menyesatkan. Nilainya diisi jalur nyata ke /joint tempat kodenya dibuat.
    */
@@ -163,10 +176,10 @@ export function ProfileSettingsPanel() {
     if (moneySettings.paydayDate) setPayday(moneySettings.paydayDate)
   }, [moneySettings])
 
-  /* â”€â”€ KONTEKS UANG (paket 87) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  /* ── KONTEKS UANG (paket 87) ─────────────────────────────────────────────
      Konteks mana yang ditampilkan di pemilih konteks (Dashboard & header
      halaman). Disimpan lewat store yang sama dengan pemasukan/payday, dan
-     `useUserMoneySettings()` sekarang reaktif â€” jadi perubahan di sini langsung
+     `useUserMoneySettings()` sekarang reaktif — jadi perubahan di sini langsung
      terlihat di halaman lain tanpa reload. */
   const moneySnapshot = useMoneyStore()
   const walletCounts = useMemo(() => {
@@ -181,7 +194,7 @@ export function ProfileSettingsPanel() {
 
   /**
    * Nyalakan/matikan konteks. Konteks yang masih berisi DOMPET tidak bisa
-   * dimatikan â€” menyembunyikannya membuat uang user tidak bisa dijangkau (aturan
+   * dimatikan — menyembunyikannya membuat uang user tidak bisa dijangkau (aturan
    * yang sama dijaga `availableContexts()` di `lib/data/money-context.ts`).
    * `pribadi` selalu menyala karena ia titik berangkat seluruh app.
    */
@@ -194,7 +207,7 @@ export function ProfileSettingsPanel() {
     saveUserMoneySettings({ enabledContexts: next })
   }
 
-  /* â”€â”€ DOMPET BERSAMA: dari STORE, bukan konstanta â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  /* ── DOMPET BERSAMA: dari STORE, bukan konstanta ─────────────────────────
      Nama kantong, nama pasangan, dan tanggal dibuat semuanya data sungguhan
      (`lib/money/joint-store.ts`). Tidak ada lagi `DEMO_PARTNER_JOINED` /
      identitas contoh di jalur produksi: kalau belum ada anggota lain, blok
@@ -239,11 +252,11 @@ export function ProfileSettingsPanel() {
   }
 
   /**
-   * Pemasukan bulanan â€” field terpenting paket 57.
+   * Pemasukan bulanan — field terpenting paket 57.
    *
    * Angka ini yang membuat kartu "Jatah Hari Ini" di Home & /budget bisa
    * dihitung. Karena itu ia ditulis seketika (bukan menunggu "Simpan"), dan
-   * field kosong berarti "belum diatur" (0) â€” bukan 0 rupiah sebagai pemasukan.
+   * field kosong berarti "belum diatur" (0) — bukan 0 rupiah sebagai pemasukan.
    */
   function handleIncome(event: ChangeEvent<HTMLInputElement>) {
     const digits = onlyDigits(event.target.value, 12)
@@ -252,7 +265,7 @@ export function ProfileSettingsPanel() {
     saveUserMoneySettings({ monthlyIncome: digits ? Number(digits) : 0 })
   }
 
-  /** Total cicilan platform per bulan â€” dipotong dari pemasukan sebelum jatah harian */
+  /** Total cicilan platform per bulan — dipotong dari pemasukan sebelum jatah harian */
   function handleInstallments(event: ChangeEvent<HTMLInputElement>) {
     const digits = onlyDigits(event.target.value, 12)
     setInstallmentDigits(digits)
@@ -262,21 +275,105 @@ export function ProfileSettingsPanel() {
 
   function handleAvatar(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
+    /* reset input supaya memilih file yang SAMA dua kali tetap memicu onChange */
+    event.target.value = ''
     if (!file) return
-    /* URL.createObjectURL = preview lokal tanpa upload; produksi: unggah ke
-       storage lalu simpan URL-nya di profil */
-    setAvatarUrl(URL.createObjectURL(file))
-    setDirty(true)
-    toast.success('Foto profil diperbarui ðŸ“¸')
+    void persistAvatar(file)
   }
 
-  function handleSave() {
+  /**
+   * Foto profil: kompres di klien (`lib/avatar.ts`) → simpan ke
+   * `profiles.avatar_url` lewat `updateAvatar()` (browser, dengan jalur server
+   * sebagai cadangan) → pasang ke store sesi supaya sidebar langsung ikut.
+   *
+   * Dulu fungsi ini hanya `URL.createObjectURL(file)` + toast "diperbarui":
+   * pratinjaunya hilang begitu halaman dimuat ulang dan tidak pernah sampai ke
+   * perangkat lain. Sekarang hasilnya benar-benar tersimpan di akun.
+   */
+  async function persistAvatar(file: File) {
+    setAvatarBusy(true)
+    const compressed = await compressAvatarFile(file)
+    if (!compressed.ok) {
+      setAvatarBusy(false)
+      toast.error(compressed.error)
+      return
+    }
+    const result = await updateAvatar(compressed.dataUrl)
+    setAvatarBusy(false)
+    if (!result.ok) {
+      toast.error(result.error)
+      return
+    }
+    setAvatarUrl(result.avatarUrl ?? '')
+    setSessionUserProfile({ avatarUrl: result.avatarUrl ?? null })
+    toast.success('Foto profil tersimpan', {
+      description: `Ukurannya ± ${Math.max(1, Math.round(compressed.bytes / 1024))} KB, dan ikut terlihat di perangkat lain.`,
+    })
+  }
+
+  /** hapus foto profil (kembali ke placeholder netral) */
+  async function removeAvatar() {
+    setAvatarBusy(true)
+    const result = await updateAvatar(null)
+    setAvatarBusy(false)
+    if (!result.ok) {
+      toast.error(result.error)
+      return
+    }
+    setAvatarUrl('')
+    setSessionUserProfile({ avatarUrl: null })
+    toast('Foto profil dihapus')
+  }
+
+  /**
+   * Simpan nama tampilan — SATU-SATUNYA tombol di panel ini yang menunggu server.
+   *
+   * Sebelum ini fungsinya hanya `setDirty(false)` + toast sukses: namanya tidak
+   * pernah ditulis ke mana pun, jadi sapaan Dashboard & sidebar tetap memakai
+   * nama lama sampai kapan pun (persis keluhan "di pengaturan bilang berhasil,
+   * tapi nyatanya nggak berubah"). Sekarang `updateDisplayName()` menulis ke
+   * metadata akun (sumber sapaan) + `profiles` (identitas dompet bersama), lalu
+   * hasilnya dipasang ke store sesi supaya semua layar ikut berubah tanpa reload.
+   *
+   * Field uang (pemasukan, cicilan, periode, gajian) TIDAK menunggu tombol ini —
+   * semuanya write-through, dan karena itu toast di bawah menyebut apa yang
+   * benar-benar terjadi, bukan mengaku "semua tersimpan".
+   */
+  async function handleSave() {
+    if (saving) return
+    const nextName = normalizeDisplayName(name)
+    const currentName = normalizeDisplayName(user?.name ?? '')
+
+    /* nama tidak berubah: field uang sudah tersimpan sendiri saat diketik */
+    if (nextName === currentName) {
+      setDirty(false)
+      toast.success('Perubahan tersimpan', {
+        description:
+          period === 'cycle'
+            ? `Periode keuangan di-reset tiap tanggal ${payday}.`
+            : 'Periode keuangan mengikuti bulan kalender.',
+      })
+      return
+    }
+
+    setSaving(true)
+    const result = await updateDisplayName(nextName)
+    setSaving(false)
+
+    if (!result.ok) {
+      /* pesan asli dari `updateDisplayName`; `dirty` DIBIARKAN true supaya
+         tombolnya masih bisa dicoba lagi setelah masalahnya beres */
+      toast.error(result.error || DISPLAY_NAME_COPY.failed)
+      return
+    }
+
+    setName(result.name)
+    setSessionUserProfile({ name: result.name })
     setDirty(false)
-    toast.success('Perubahan profil tersimpan âœ…', {
-      description:
-        period === 'cycle'
-          ? `Periode keuangan di-reset tiap tanggal ${payday}.`
-          : 'Periode keuangan mengikuti bulan kalender.',
+    toast.success('Nama tersimpan', {
+      description: result.profileSynced
+        ? `Dashboard & sidebar sekarang menyapa kamu dengan nama "${result.name}".`
+        : `Nama akunmu sudah berganti. Nama di dompet bersama belum ikut berubah.`,
     })
   }
 
@@ -307,8 +404,11 @@ export function ProfileSettingsPanel() {
 
   return (
     <SettingsPanel eyebrow="Profil & Akun" title="Profil & Akun">
-      {/* â”€â”€ 1. IDENTITAS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-      <SettingsCard>
+      {/* ── 1. IDENTITAS ─────────────────────────────────────────────────── */}
+      <SettingsCard
+        title="Identitas"
+        desc="Nama & email yang dipakai akun ini. Nama juga yang menyapa kamu di Dashboard."
+      >
         <div className="flex items-center gap-4">
           <button
             type="button"
@@ -316,7 +416,7 @@ export function ProfileSettingsPanel() {
             aria-label="Ganti foto profil"
             className="group relative size-20 shrink-0 overflow-hidden rounded-full ring-1 ring-soil/12 transition-shadow focus-visible:ring-2 focus-visible:ring-forest/40"
           >
-            {/* <img> biasa â€” sumbernya bisa blob URL hasil pilih file, dan
+            {/* <img> biasa — sumbernya bisa blob URL hasil pilih file, dan
                 next/image hanya mengoptimasi URL statis/lokal yang dikenal */}
             <img src={avatarUrl || FALLBACK_AVATAR_URL} alt="Foto profil" className="size-full object-cover" />
             <span className="absolute inset-0 flex items-center justify-center bg-ink/45 opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
@@ -332,21 +432,44 @@ export function ProfileSettingsPanel() {
           />
 
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-forest">{name}</p>
-            <p className="mt-0.5 truncate text-xs text-forest/50">{EMAIL}</p>
+            <p className="text-sm font-medium text-forest">
+              {normalizeDisplayName(name) || SESSION_COPY.unnamedUser}
+            </p>
+            <p className="mt-0.5 truncate text-xs text-forest/50">
+              {EMAIL || SESSION_COPY.unknownEmail}
+            </p>
             {/* Badge paket: hanya dirender kalau paketnya BENAR-BENAR diketahui.
-                Tidak ada lagi nomor member karangan. */}
+                Tiga fakta dipisah supaya tidak terbaca sebagai satu kalimat
+                menggantung ("Akses Selamanya · Paket Sultan · sejak ..."):
+                  1. nama paketnya;
+                  2. arti "selamanya" — sekali bayar, tanpa tagihan bulanan;
+                  3. kapan dibeli, plus tautan ke rinciannya. */}
             {plan && (
-              <TonePill tone="warning" icon={BadgeCheck} className="mt-2">
-                ðŸ† Akses Selamanya Â· {plan.name}
-                {purchasedAtLabel ? ` Â· sejak ${purchasedAtLabel}` : ''}
-              </TonePill>
+              <div className="mt-2 flex flex-col items-start gap-1.5">
+                <TonePill tone="warning" icon={BadgeCheck}>
+                  {plan.name}
+                </TonePill>
+                <p className="text-[12px] leading-relaxed text-forest/55">
+                  Akses selamanya: sekali bayar, tanpa tagihan bulanan.
+                  {purchasedAtLabel ? ` Dibeli ${purchasedAtLabel}.` : ''}{' '}
+                  <Link
+                    href="/settings/billing"
+                    className="font-medium text-forest underline underline-offset-2"
+                  >
+                    Lihat rincian paket
+                  </Link>
+                </p>
+              </div>
             )}
           </div>
         </div>
 
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
-          <SettingsField label="Nama Lengkap" htmlFor="settings-name">
+          <SettingsField
+            label="Nama Panggilan"
+            htmlFor="settings-name"
+            note="Nama ini yang menyapa kamu di Dashboard & sidebar. Boleh nama lengkap juga."
+          >
             <SettingsInput
               id="settings-name"
               value={name}
@@ -364,23 +487,36 @@ export function ProfileSettingsPanel() {
           </SettingsField>
         </div>
 
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={!dirty}
-          className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-forest py-3.5 text-sm font-medium text-mint transition-colors hover:bg-forest-soft active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-ink/[0.07] disabled:text-forest/35 sm:w-auto sm:px-6"
-        >
-          <Save className="size-4" strokeWidth={2.4} aria-hidden />
-          Simpan Perubahan
-        </button>
+        <div className="mt-5 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={() => void handleSave()}
+            disabled={!dirty || saving}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-forest py-3.5 text-sm font-medium text-mint transition-colors hover:bg-forest-soft active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-ink/[0.07] disabled:text-forest/35 sm:w-auto sm:px-6"
+          >
+            <Save className="size-4" strokeWidth={2.4} aria-hidden />
+            {saving ? 'Menyimpan…' : 'Simpan Perubahan'}
+          </button>
+          {avatarUrl && (
+            <button
+              type="button"
+              onClick={() => void removeAvatar()}
+              disabled={avatarBusy}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-ink/[0.05] px-5 py-3.5 text-sm font-medium text-forest/60 transition-colors hover:bg-ink/[0.08] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <XCircle className="size-4" strokeWidth={2.2} aria-hidden />
+              {avatarBusy ? 'Menghapus…' : 'Hapus foto'}
+            </button>
+          )}
+        </div>
       </SettingsCard>
 
-      {/* â”€â”€ 2. SIKLUS KEUANGAN â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── 2. SIKLUS KEUANGAN ───────────────────────────────────────────── */}
       <SettingsCard
         title="Mulai Periode Keuangan"
         desc="Ini menentukan kapan dashboard dan kalender kamu di-reset setiap bulannya."
       >
-        {/* â”€â”€ UANG BULANAN (paket 57) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        {/* ── UANG BULANAN (paket 57) ─────────────────────────────────────────
             Dua angka yang MENENTUKAN Jatah Hari Ini di Dashboard & Budget. Dulu
             panel ini cuma punya "Tanggal Gajian", sehingga jatah harian mustahil
             dibetulkan dari mana pun. Ditulis seketika (write-through) supaya
@@ -425,8 +561,8 @@ export function ProfileSettingsPanel() {
             value={period}
             onChange={handlePeriod}
             options={[
-              { id: 'calendar', emoji: 'ðŸ“…', label: 'Awal Bulan (Tgl 1)' },
-              { id: 'cycle', emoji: 'ðŸ’°', label: 'Tanggal Gajian' },
+              { id: 'calendar', emoji: '📅', label: 'Awal Bulan (Tgl 1)' },
+              { id: 'cycle', emoji: '💰', label: 'Tanggal Gajian' },
             ]}
           />
         </div>
@@ -436,7 +572,7 @@ export function ProfileSettingsPanel() {
             <SettingsField
               label="Tanggal Gajian"
               htmlFor="settings-payday"
-              note="Rentang 1â€“31. Kalau bulan pendek, kami pakai hari terakhir."
+              note="Rentang 1–31. Kalau bulan pendek, kami pakai hari terakhir."
             >
               <SettingsInput
                 id="settings-payday"
@@ -453,7 +589,7 @@ export function ProfileSettingsPanel() {
         )}
       </SettingsCard>
 
-      {/* â”€â”€ 2b. KONTEKS UANG (paket 87) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      {/* ── 2b. KONTEKS UANG (paket 87) ────────────────────────────────────
           Konteks uang bukan fitur semua orang: user yang cuma mengelola uangnya
           sendiri tidak perlu melihat tombol "Keluarga"/"Bersama" sama sekali.
           Saklar ini menentukan konteks mana yang tampil di pemilih konteks;
@@ -499,7 +635,7 @@ export function ProfileSettingsPanel() {
         </ul>
       </SettingsCard>
 
-      {/* â”€â”€ 3. DOMPET BERSAMA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      {/* ── 3. DOMPET BERSAMA ──────────────────────────────────────────────
           Sumbernya STORE kantong bersama (bukan konstanta): nama kantong, nama
           pasangan, dan tanggal "terhubung sejak" semuanya data sungguhan. Kalau
           kantongnya belum punya anggota lain, blok ini TIDAK dirender (bukan
@@ -539,7 +675,7 @@ export function ProfileSettingsPanel() {
             Putus Koneksi Dompet
           </button>
 
-          {/* Pratinjau halaman undangan â€” memakai kode yang SEDANG AKTIF
+          {/* Pratinjau halaman undangan — memakai kode yang SEDANG AKTIF
               (paket 39). Kalau belum ada kode hidup, yang tampil bukan tautan
               mati melainkan jalan ke halaman tempat kodenya dibuat. */}
           <div className="mt-4 border-t border-soil/12 pt-3.5">
@@ -583,7 +719,7 @@ export function ProfileSettingsPanel() {
           <Link
             href="/joint"
             /* H12-4 (audit UI/UX): menekan "Ajak Pasangan" LANGSUNG mengaktifkan
-               konteks "Bersama" â€” user tidak perlu menyalakan toggle-nya manual
+               konteks "Bersama" — user tidak perlu menyalakan toggle-nya manual
                dulu (dua kontrol yang saling bertentangan sebelumnya). */
             onClick={() => {
               if (!enabledContexts.includes('bersama')) toggleContext('bersama')
@@ -596,7 +732,7 @@ export function ProfileSettingsPanel() {
         </SettingsCard>
       )}
 
-      {/* â”€â”€ DIALOG: putus koneksi (2 pilihan jujur) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── DIALOG: putus koneksi (2 pilihan jujur) ───────────────────────── */}
       <ConfirmDialog
         id="disconnect-joint"
         open={disconnectOpen}
@@ -649,9 +785,9 @@ export function ProfileSettingsPanel() {
   )
 }
 
-/* â”€â”€ Panel: Keluar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+/* ── Panel: Keluar ─────────────────────────────────────────────────────────────
    Tombol keluar ada di sini (bukan di menu yang lompat halaman) supaya tetap
-   satu keluarga dengan panel lain: klik â†’ konfirmasi â†’ selesai. */
+   satu keluarga dengan panel lain: klik → konfirmasi → selesai. */
 export function LogoutSettingsPanel() {
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -662,7 +798,7 @@ export function LogoutSettingsPanel() {
   /**
    * Keluar SUNGGUHAN (paket 39): cookie sesi dihapus server lewat
    * `DELETE /api/session`, lalu user dikembalikan ke /login. Sebelumnya handler
-   * ini cuma menampilkan toast "Demo: sesi belum benar-benar diakhiri" â€” dan
+   * ini cuma menampilkan toast "Demo: sesi belum benar-benar diakhiri" — dan
    * memang tidak ada sesi apa pun yang bisa diakhiri. Sekarang kalimatnya sesuai
    * kenyataan: yang berakhir adalah sesi di perangkat ini, bukan datanya.
    */
@@ -686,7 +822,7 @@ export function LogoutSettingsPanel() {
       sessionStorage.removeItem(ONBOARDING_SKIP_KEY)
       sessionStorage.removeItem(WELCOME_TOAST_KEY)
     } catch {
-      /* private mode â€” tidak ada yang bisa dibersihkan */
+      /* private mode — tidak ada yang bisa dibersihkan */
     }
     toast.success(SESSION_COPY.signedOutToast, {
       description: SESSION_COPY.signedOutToastDescription,
@@ -726,7 +862,7 @@ export function LogoutSettingsPanel() {
         </button>
 
         {/* Jembatan dua arah: panel ini tempat paling wajar untuk menawarkan
-            jalan masuk lagi â€” sebelumnya kalimat "masuk lagi" ada tanpa tautan
+            jalan masuk lagi — sebelumnya kalimat "masuk lagi" ada tanpa tautan
             apa pun. Prompt 09 melunasi itu setelah /login benar-benar ada. */}
         <p className="mt-4 text-[12.5px] leading-relaxed text-forest/50">
           {RELOGIN_COPY.lead}{' '}
@@ -751,7 +887,7 @@ export function LogoutSettingsPanel() {
         actions={
           <>
             <DialogButton tone="danger" disabled={busy} onClick={handleLogout}>
-              {busy ? 'Mengakhiri sesiâ€¦' : 'Ya, Keluar'}
+              {busy ? 'Mengakhiri sesi…' : 'Ya, Keluar'}
             </DialogButton>
             <DialogButton tone="neutral" onClick={() => setOpen(false)}>
               Batal

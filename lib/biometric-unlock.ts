@@ -72,7 +72,9 @@ export async function registerBiometric(user: {
         user: {
           id: new TextEncoder().encode(user.id),
           name: user.email,
-          displayName: user.name,
+          /* nama boleh kosong (akun tanpa nickname) — WebAuthn tetap butuh label
+             yang bisa dibaca user di dialog sidik jari, jadi pakai emailnya */
+          displayName: user.name || user.email,
         },
         pubKeyCredParams: [
           { type: 'public-key', alg: -7 },

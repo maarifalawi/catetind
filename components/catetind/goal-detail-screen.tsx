@@ -30,6 +30,7 @@ import {
   FALLBACK_WALLET_NAME,
   FUND_ACHIEVED_COPY,
   FUND_CARD_ACTION_COPY,
+  FUND_CONTRIBUTE_INSUFFICIENT_COPY,
   FUND_DELETE_COPY,
   FUND_DELETE_TOAST,
   FUND_DETAIL_COPY,
@@ -64,6 +65,7 @@ import {
   restoreFund,
   useFundsStore,
 } from '@/lib/money/funds-store'
+import { getMoneySnapshot, walletFundsCheckById } from '@/lib/money/store'
 
 /* ── Celengan Detail (/budget/[id]) — inventaris #25 ──────────────────────────
    Halaman ini SENGAJA bukan halaman administrasi: PRD 2C.3 menulisnya sebagai
@@ -268,6 +270,17 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
    *  benar-benar dilunasi setoran INI, jadi perayaannya berdasar perhitungan,
    *  bukan tebakan. */
   function handleContribute(fundId: number, amount: number, walletId: string) {
+    /* Dua sebab penolakan dibedakan SEBELUM memanggil store: saldo dompet sumber
+       tidak cukup (uang setoran benar-benar keluar dari dompet) vs celengannya
+       sudah dihapus. Dulu keduanya jatuh ke kalimat "celengan sudah tidak ada". */
+    const walletName = walletSourceName(walletId)
+    const funds = walletFundsCheckById(getMoneySnapshot(), walletId, amount)
+    if (funds.known && !funds.sufficient) {
+      toast.error(FUND_CONTRIBUTE_INSUFFICIENT_COPY.title, {
+        description: FUND_CONTRIBUTE_INSUFFICIENT_COPY.body(walletName),
+      })
+      return
+    }
     const result = contributeToFund(fundId, amount, walletId)
     /* celengannya keburu dihapus (store menolak) → katakan apa adanya, jangan
        biarkan user merasa setorannya masuk padahal tidak ada yang ditulis */

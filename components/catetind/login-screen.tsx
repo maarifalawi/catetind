@@ -2,7 +2,6 @@
 
 import { useEffect, useState, type FormEvent, type KeyboardEvent } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import {
   ArrowRight,
   KeyRound,
@@ -26,7 +25,7 @@ import {
   resendCountdownLabel,
   resolveAuthLanding,
 } from '@/lib/data/auth'
-import { sendLoginLink, verifyEmailOtp } from '@/lib/session-client'
+import { sendLoginLink, verifyEmailOtp, navigateAfterSignIn } from '@/lib/session-client'
 
 /* ── Masuk (/login) — inventaris #8 · PRD 5931–5933 ──────────────────────────
    Magic link adalah "janji kepercayaan" produk ini: *kami tidak menyimpan
@@ -56,8 +55,6 @@ import { sendLoginLink, verifyEmailOtp } from '@/lib/session-client'
 type LoginStep = 'email' | 'code'
 
 export function LoginScreen({ next }: { next?: string | null }) {
-  const router = useRouter()
-
   const [step, setStep] = useState<LoginStep>('email')
   const [email, setEmail] = useState('')
   /** error format email cuma muncul setelah user mencoba kirim — menemani, bukan menuduh */
@@ -162,8 +159,13 @@ export function LoginScreen({ next }: { next?: string | null }) {
     toast.success(SESSION_COPY.signInToast)
     /* kembali ke TUJUAN user (mis. `/checkout/bayar?plan=…`), bukan selalu
        Dashboard — `next` dibawa oleh `buildLoginHref()` dari halaman yang
-       mengirim user ke sini. Tanpa `next` yang aman, jatuh ke Dashboard. */
-    router.push(resolveAuthLanding(next))
+       mengirim user ke sini. Tanpa `next` yang aman, jatuh ke Dashboard.
+
+       RELOAD PENUH (`navigateAfterSignIn`), bukan `router.push`: store uang
+       hidup di memory modul & hanya dihidrasi sekali per dokumen, jadi tab yang
+       sama bisa menampilkan sisa state lama sampai user me-refresh. Itulah
+       "transaksi berubah setelah login ulang" yang dilaporkan. */
+    navigateAfterSignIn(resolveAuthLanding(next))
   }
 
   /** hanya angka, maksimal `OTP_LENGTH` — paste "1 2 3-4 5 6" tetap diterima */

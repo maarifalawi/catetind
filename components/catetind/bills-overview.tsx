@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion'
 import { Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { getBillStatus, maskMoney, type Bill } from '@/lib/data/bills'
+import { getBillStatus, isBillCompleted, maskMoney, type Bill } from '@/lib/data/bills'
 import { ProgressRing } from './progress-ring'
 
 /* ── RINGKASAN TAGIHAN — HANYA TIGA HAL ──────────────────────────────────────
@@ -33,21 +33,25 @@ export function BillsOverview({
   bills,
   masked,
   currentDay,
+  daysInMonth = 31,
   className,
 }: {
   bills: Bill[]
   masked: boolean
   /** hari berjalan — status "telat" memakai tanggal perangkat (paket 57) */
   currentDay: number
+  /** hari terakhir bulan berjalan — clamp jatuh tempo 29/30/31 (paket 103) */
+  daysInMonth?: number
   className?: string
 }) {
   const total = bills.reduce((sum, bill) => sum + bill.amount, 0)
-  const paidBills = bills.filter((bill) => bill.isPaidThisMonth)
+  /* cicilan yang tenornya sudah selesai dihitung "beres" — bukan tagihan aktif */
+  const paidBills = bills.filter((bill) => bill.isPaidThisMonth || isBillCompleted(bill))
   const paidAmount = paidBills.reduce((sum, bill) => sum + bill.amount, 0)
   /* tagihan bernominal fleksibel (amount 0) tidak boleh membuat "sisa" negatif */
   const unpaidAmount = Math.max(0, total - paidAmount)
   const overdueCount = bills.filter(
-    (bill) => getBillStatus(bill, currentDay) === 'overdue',
+    (bill) => getBillStatus(bill, currentDay, daysInMonth) === 'overdue',
   ).length
   const allPaid = bills.length > 0 && paidBills.length === bills.length
   const unpaidCount = Math.max(0, bills.length - paidBills.length)

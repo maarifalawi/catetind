@@ -71,10 +71,42 @@ describe('seedDemoDataOnce', () => {
     expect(getFundsSnapshot().funds.length).toBe(funds)
   })
 
-  it('setelah penanda dicabut, seed bisa jalan lagi dari state bersih', () => {
+  it('setelah penanda dicabut DAN state bersih, seed bisa jalan lagi', () => {
     seedDemoDataOnce()
     resetDemoSeedMarker()
+    /* state harus benar-benar bersih — lihat test berikutnya untuk alasannya */
+    resetMoneyStore()
     expect(seedDemoDataOnce()).toBe(true)
+  })
+
+  /* ── PENANDA HILANG ≠ BOLEH MENUMPUK (perbaikan "transaksi berubah") ─────────
+     Penanda demo hidup di localStorage. Begitu ia hilang (browser membersihkan
+     data situs, mode privat, profil lain), versi lama menulis persona demo DI
+     ATAS baris yang sudah ada — angka user berubah tanpa ia mencatat apa pun.
+     Sekarang seed menolak jalan selama store sudah berisi baris; pengguna yang
+     memang ingin demo mereset perangkat dulu ("fresh start"). */
+  it('penanda dicabut TIDAK cukup: seed menolak menumpuk di atas catatan yang ada', () => {
+    seedDemoDataOnce()
+    const rowsBefore = getMoneySnapshot().rows.length
+    const walletsBefore = getMoneySnapshot().wallets.length
+
+    resetDemoSeedMarker()
+    expect(seedDemoDataOnce()).toBe(false)
+
+    expect(getMoneySnapshot().rows.length).toBe(rowsBefore)
+    expect(getMoneySnapshot().wallets.length).toBe(walletsBefore)
+  })
+
+  /* Jalur review desain yang EKSPLISIT (`NEXT_PUBLIC_DEMO_ALLOW_SESSION=1`)
+     tetap bisa memaksa persona ditulis di atas state yang ada — itulah gunanya
+     `force`. Tanpa `force`, perilaku defaultnya menolak (test di atas). */
+  it('force (khusus review) tetap boleh menulis ulang di atas state yang ada', () => {
+    seedDemoDataOnce()
+    const rowsBefore = getMoneySnapshot().rows.length
+    resetDemoSeedMarker()
+
+    expect(seedDemoDataOnce({ force: true })).toBe(true)
+    expect(getMoneySnapshot().rows.length).toBe(rowsBefore * 2)
   })
 
   /* Penanda demo sekarang menyimpan VERSI (`2`), bukan boolean. Perangkat yang

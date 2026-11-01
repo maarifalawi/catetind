@@ -2,10 +2,20 @@
 
 import { useSyncExternalStore } from 'react'
 import type { BudgetScope } from '@/lib/data/budget'
-import { BILL_PAYMENT_CATEGORY, BILL_UNPAID_REVERSAL_NOTE, INITIAL_BILLS, TODAY_ISO, type Bill } from '@/lib/data/bills'
+import {
+  BILL_PAYMENT_CATEGORY,
+  BILL_UNPAID_REVERSAL_NOTE,
+  INITIAL_BILLS,
+  billForMonth,
+  isBillCompleted,
+  monthKeyOf,
+  type Bill,
+} from '@/lib/data/bills'
+import { localISODate } from '@/lib/time'
 import { scopedItems } from '@/lib/data/money-context'
 import { BILLS_STATE_KEY, loadDeviceState, saveDeviceState } from './idb'
 import { deleteRemoteBill, pushBillToServer, readRemoteBills } from '@/lib/supabase/bills-remote'
+import { subscribeTables } from '@/lib/supabase/realtime'
 import { randomUuid } from '@/lib/supabase/uuid'
 import {
   getMoneySnapshot,
@@ -142,6 +152,8 @@ export function getServerBillsSnapshot(): BillsSnapshot {
 export function subscribeBillsStore(listener: () => void): () => void {
   listeners.add(listener)
   void hydrateBillsStore()
+  /* perubahan dari perangkat lain: realtime + tab kembali aktif */
+  startBillsRealtime()
   return () => {
     listeners.delete(listener)
   }
@@ -221,7 +233,9 @@ export function mergeBillsState(
       (firstVisit || !SEED_BILLS.some((seed) => seed.id === bill.id)) &&
       !base.some((knownBill) => knownBill.id === bill.id),
   )
-  const bills = [...base, ...extras]
+  /* tagihan lunas WARISAN dapat penanda bulan saat dimigrasi (paket 103) */
+  const currentMonthKey = monthKeyOf(localISODate())
+  const bills = [...base, ...extras].map((bill) => withPaidMonthMarker(bill, currentMonthKey))
 
   const storedRemoved = known ? (persisted?.removedIds ?? []).filter((id) => id) : []
   const removedIds = [...new Set([...storedRemoved, ...current.removedIds])]
@@ -263,6 +277,10 @@ export function mergeWithRemoteBills(
       isPaidThisMonth: local.isPaidThisMonth,
       remoteId: row.id,
       ...(local.paidRowId ? { paidRowId: local.paidRowId } : {}),
+      ...(local.paidMonth ? { paidMonth: local.paidMonth } : {}),
+      ...(local.endAfterMonths !== undefined ? { endAfterMonths: local.endAfterMonths } : {}),
+      ...(local.currentMonth !== undefined ? { currentMonth: local.currentMonth } : {}),
+      ...(local.note ? { note: local.note } : {}),
     }
   })
 
@@ -284,7 +302,12 @@ export function mergeWithRemoteBills(
   }
 
   const removedIds = Array.from(new Set([...current.removedIds, ...(persisted?.removedIds ?? [])]))
-  return { bills, removedIds, hydrated: true }
+  const currentMonthKey = monthKeyOf(localISODate())
+  return {
+    bills: bills.map((bill) => withPaidMonthMarker(bill, currentMonthKey)),
+    removedIds,
+    hydrated: true,
+  }
 }
 
 /**
@@ -331,6 +354,49 @@ async function hydrateBillsStore(): Promise<void> {
   }
 }
 
+/**
+ * Tarik ulang tagihan dari server lalu rekonsiliasi (dipakai realtime,
+ * `visibilitychange`, dan `online`).
+ *
+ * Aturan: SERVER otoritatif untuk baris yang punya `remoteId` — baris yang
+ * dihapus di perangkat lain karena itu benar-benar hilang di sini juga. Baris
+ * lokal yang BELUM pernah terkirim (tanpa `remoteId`) dipertahankan sebagai
+ * antrean, lalu dinaikkan ke server.
+ */
+export async function refreshBillsFromServer(): Promise<boolean> {
+  if (typeof window === 'undefined' || !hydratedOnce || accountPurged) return false
+  const remote = await readRemoteBills()
+  if (!remote) return false
+
+  const pending = live.bills.filter((bill) => !bill.remoteId)
+  const merged = new Map<string, Bill>()
+  for (const bill of pending) merged.set(`local:${bill.id}`, bill)
+  for (const bill of remote) {
+    merged.set(bill.remoteId ? `remote:${bill.remoteId}` : `id:${bill.id}`, bill)
+  }
+  live = { ...live, bills: [...merged.values()], hydrated: true }
+  persist(live)
+  emit()
+
+  for (const bill of live.bills) if (!bill.remoteId) await ensureBillOnServer(bill.id)
+  return true
+}
+
+/** langganan realtime + penyegaran saat tab aktif lagi (idempoten) */
+let billsRealtimeStarted = false
+export function startBillsRealtime(): void {
+  if (billsRealtimeStarted || typeof window === 'undefined') return
+  billsRealtimeStarted = true
+  subscribeTables('bills-changes', ['bills'], () => {
+    void refreshBillsFromServer()
+  })
+  const wake = () => {
+    if (document.visibilityState === 'visible') void refreshBillsFromServer()
+  }
+  document.addEventListener('visibilitychange', wake)
+  window.addEventListener('online', wake)
+}
+
 /* ── API TULIS — satu-satunya jalur menulis tagihan ──────────────────────────
    Komponen tidak boleh menyentuh `bills`/`removedIds` langsung: halaman Tagihan,
    alat ekspor, dan Hapus Akun membaca state yang sama, jadi perubahan harus
@@ -343,9 +409,16 @@ export type NewBillInput = Omit<Bill, 'id'>
 export function addBill(input: NewBillInput): Bill {
   /* `paidRowId` sengaja TIDAK diterima dari luar: jejak uang hanya boleh lahir
      dari `markBillPaid()`, supaya mustahil ada tagihan yang mengaku punya baris
-     kas padahal tidak ada (atau sebaliknya). */
-  const { paidRowId: _paidRowId, ...fields } = input
-  const bill: Bill = { ...fields, id: nextBillId() }
+     kas padahal tidak ada (atau sebaliknya). `paidMonth` juga ditentukan di sini
+     untuk tagihan contoh yang memang sudah lunas saat dibuat. */
+  const { paidRowId: _paidRowId, paidMonth: _paidMonth, ...fields } = input
+  const paid = input.isPaidThisMonth === true
+  const bill: Bill = {
+    ...fields,
+    isPaidThisMonth: paid,
+    ...(paid ? { paidMonth: monthKeyOf(localISODate()) } : {}),
+    id: nextBillId(),
+  }
   commit({ ...live, bills: [...live.bills, bill], hydrated: true })
   void ensureBillOnServer(bill.id)
   return bill
@@ -365,7 +438,7 @@ export function addBill(input: NewBillInput): Bill {
  */
 export function editBill(
   id: string,
-  patch: Partial<Omit<Bill, 'id' | 'isPaidThisMonth' | 'paidRowId'>>,
+  patch: Partial<Omit<Bill, 'id' | 'isPaidThisMonth' | 'paidRowId' | 'paidMonth'>>,
 ): Bill | null {
   const target = live.bills.find((bill) => bill.id === id)
   if (!target || live.removedIds.includes(id)) return null
@@ -376,6 +449,8 @@ export function editBill(
   bill.isPaidThisMonth = target.isPaidThisMonth
   if (target.paidRowId === undefined) delete bill.paidRowId
   else bill.paidRowId = target.paidRowId
+  if (target.paidMonth === undefined) delete bill.paidMonth
+  else bill.paidMonth = target.paidMonth
 
   commit({
     ...live,
@@ -451,10 +526,10 @@ export function markBillPaid(
   id: string,
   walletName: string,
   amount?: number,
-  dateISO: string = TODAY_ISO,
+  dateISO: string = localISODate(),
 ): BillPaymentResult | null {
   const bill = billById(live, id)
-  if (!bill || bill.isPaidThisMonth) return null
+  if (!bill || bill.isPaidThisMonth || isBillCompleted(bill)) return null
 
   const walletId = walletIdOfName(getMoneySnapshot(), walletName)
   if (!walletId) return null
@@ -472,7 +547,19 @@ export function markBillPaid(
   })
   if (!row) return null
 
-  const updated: Bill = { ...bill, isPaidThisMonth: true, paidRowId: row.id }
+  /* Progres cicilan naik SATU langkah per pelunasan bulanan (paket 103).
+     `currentMonth` = bulan yang sedang dibayar; setelah dibayar, bulan berikutnya
+     menjadi giliran. `endAfterMonths + 1` = tenor selesai (tidak aktif lagi). */
+  const nextCurrentMonth = bill.endAfterMonths
+    ? Math.min((bill.currentMonth ?? 1) + 1, bill.endAfterMonths + 1)
+    : undefined
+  const updated: Bill = {
+    ...bill,
+    isPaidThisMonth: true,
+    paidRowId: row.id,
+    paidMonth: monthKeyOf(dateISO),
+    ...(nextCurrentMonth !== undefined ? { currentMonth: nextCurrentMonth } : {}),
+  }
   commit({
     ...live,
     bills: live.bills.map((item) => (item.id === id ? updated : item)),
@@ -520,7 +607,7 @@ export interface BillUnpaidResult {
  * `null` = tagihannya tidak ada atau memang belum ditandai lunas (membatalkan dua
  * kali ditolak, jadi uangnya tidak pernah dikembalikan dua kali).
  */
-export function unmarkBillPaid(id: string): BillUnpaidResult | null {
+export function unmarkBillPaid(id: string, dateISO: string = localISODate()): BillUnpaidResult | null {
   const bill = billById(live, id)
   if (!bill || !bill.isPaidThisMonth) return null
 
@@ -535,14 +622,25 @@ export function unmarkBillPaid(id: string): BillUnpaidResult | null {
       walletId: row.walletId,
       /* saldo setelah pembayaran + nominal yang dibatalkan = saldo sebelum bayar */
       newBalance: walletBalance(getMoneySnapshot(), row.walletId) + row.amount,
-      dateISO: TODAY_ISO,
+      dateISO,
       note: BILL_UNPAID_REVERSAL_NOTE(bill.name),
       category: BILL_PAYMENT_CATEGORY,
     })
   }
 
-  const updated: Bill = { ...bill, isPaidThisMonth: false }
+  /* Membatalkan pelunasan bulan ini juga menurunkan progres cicilan SATU langkah
+     (paket 103), sehingga "Bulan 6/12" kembali "Bulan 5/12" dan tenor yang sudah
+     selesai bisa aktif lagi. */
+  const previousCurrentMonth = bill.endAfterMonths
+    ? Math.max(1, (bill.currentMonth ?? 1) - 1)
+    : undefined
+  const updated: Bill = {
+    ...bill,
+    isPaidThisMonth: false,
+    ...(previousCurrentMonth !== undefined ? { currentMonth: previousCurrentMonth } : {}),
+  }
   delete updated.paidRowId
+  delete updated.paidMonth
   commit({
     ...live,
     bills: live.bills.map((item) => (item.id === id ? updated : item)),
@@ -575,23 +673,55 @@ export function useBillsStore(): BillsSnapshot {
 }
 
 /**
- * Tagihan yang BENAR-BENAR ada (bukan tombstone). Semua pembaca halaman memakai
- * ini, jadi "hapus" terlihat serentak di daftar, tameng, waterfall, timeline, dan
- * ekspor — tanpa satu pun dari mereka perlu tahu soal tombstone.
+ * Penanda bulan untuk tagihan LUNAS WARISAN yang belum punya `paidMonth`.
+ *
+ * Sumber paling jujur adalah tanggal baris kas `paidRowId` (ledger). Kalau
+ * barisnya tidak ada (tagihan contoh lama), bulan saat migrasi dipakai sebagai
+ * titik awal — supaya bulan berikutnya statusnya benar-benar kembali "belum
+ * dibayar" dan tidak terkunci selamanya.
+ */
+function withPaidMonthMarker(bill: Bill, currentMonthKey: string): Bill {
+  if (!bill.isPaidThisMonth || bill.paidMonth) return bill
+  if (bill.paidRowId) {
+    const row = getMoneySnapshot().rows.find((item) => item.id === bill.paidRowId)
+    if (row) return { ...bill, paidMonth: monthKeyOf(row.dateISO) }
+  }
+  return { ...bill, paidMonth: currentMonthKey }
+}
+
+/**
+ * Tagihan yang BENAR-BENAR ada (bukan tombstone) DAN status lunasnya sudah
+ * dievaluasi untuk BULAN BERJALAN (paket 103).
+ *
+ * Semua pembaca halaman memakai ini, jadi:
+ *   · tagihan yang dibayar bulan lalu otomatis tampil "belum dibayar" di bulan
+ *     baru tanpa menghapus baris kas/riwayatnya;
+ *   · cicilan yang tenornya sudah habis tidak lagi tampil sebagai tagihan aktif;
+ *   · `markBillPaid`/`unmarkBillPaid` memakai status yang sama (tidak ada dua
+ *     definisi "lunas bulan ini").
  */
 export function liveBills(snapshot: BillsSnapshot): Bill[] {
-  return snapshot.bills.filter((bill) => !snapshot.removedIds.includes(bill.id))
+  const money = getMoneySnapshot()
+  const currentMonthKey = monthKeyOf(localISODate())
+  return snapshot.bills
+    .filter((bill) => !snapshot.removedIds.includes(bill.id))
+    .map((bill) => {
+      const paidRow = bill.paidRowId
+        ? money.rows.find((item) => item.id === bill.paidRowId)
+        : undefined
+      return billForMonth(bill, currentMonthKey, paidRow?.dateISO)
+    })
 }
 
 /** satu tagihan dari id — `null` = belum ada / sedang dihapus (mis. id URL asing) */
 export function billById(snapshot: BillsSnapshot, id: string): Bill | null {
   if (snapshot.removedIds.includes(id)) return null
-  return snapshot.bills.find((bill) => bill.id === id) ?? null
+  return liveBills(snapshot).find((bill) => bill.id === id) ?? null
 }
 
 /** tagihan yang belum dibayar bulan ini (dasar list "Aktif" & timeline) */
 export function unpaidBills(snapshot: BillsSnapshot): Bill[] {
-  return liveBills(snapshot).filter((bill) => !bill.isPaidThisMonth)
+  return liveBills(snapshot).filter((bill) => !bill.isPaidThisMonth && !isBillCompleted(bill))
 }
 
 /**
@@ -609,7 +739,11 @@ export function billsForContext(snapshot: BillsSnapshot, scope: BudgetScope): Bi
  * cuma `purgeBillsStore()` saat user menghapus akunnya.
  */
 export function resetBillsStore(): void {
-  live = SEED_SNAPSHOT
+  const currentMonthKey = monthKeyOf(localISODate())
+  live = {
+    ...SEED_SNAPSHOT,
+    bills: SEED_SNAPSHOT.bills.map((bill) => withPaidMonthMarker(bill, currentMonthKey)),
+  }
   accountPurged = false
   hydrateStarted = false
   hydratedOnce = false

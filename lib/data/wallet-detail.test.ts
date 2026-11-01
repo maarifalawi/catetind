@@ -68,7 +68,7 @@ beforeEach(() => {
 
 describe('dompet yang baru dibuat tidak mewarisi catatan siapa pun (59.3)', () => {
   it('0 catatan dari KETIGA sumber yang dipakai halaman', () => {
-    const created = addWalletAccount({ name: 'Dompet Baru', type: 'Bank', opening: 0 })
+    const created = addWalletAccount({ name: 'Dompet Baru', type: 'Bank', opening: 0 })!
     const snapshot = getMoneySnapshot()
 
     expect(walletTransactions(created.id)).toHaveLength(0)
@@ -87,14 +87,15 @@ describe('dompet yang baru dibuat tidak mewarisi catatan siapa pun (59.3)', () =
 })
 
 describe('identitas baris = id dompet, bukan nama (59.3)', () => {
-  it('dua dompet ber-NAMA SAMA tidak saling menampilkan catatan', () => {
-    const first = addWalletAccount({ name: 'BCA', type: 'Bank', opening: 100_000 })
-    const second = addWalletAccount({ name: 'BCA', type: 'Bank', opening: 200_000 })
-    /* nama keduanya identik — pencocokan by-name mustahil membedakannya */
-    expect(first.name).toBe(second.name)
+  it('dompet WARISAN ber-NAMA SAMA tidak saling menampilkan catatan', () => {
+    const base = getMoneySnapshot()
+    const first = base.wallets.find((wallet) => wallet.name === 'BCA')!
+    /* dompet kembar warisan: dibentuk sebagai snapshot (jalur hydrate/server),
+       bukan lewat `addWalletAccount()` yang sekarang menolak nama kembar. */
+    const second = { ...first, id: 'legacy-bca-2', opening: 200_000 }
     postExpense({ walletId: first.id, amount: 25_000, note: 'Kopi di BCA pertama' })
 
-    const snapshot = getMoneySnapshot()
+    const snapshot = { ...getMoneySnapshot(), wallets: [...getMoneySnapshot().wallets, second] }
     expect(walletTransactionsOf(snapshot, first.id)).toHaveLength(1)
     expect(walletTransactionsOf(snapshot, second.id)).toHaveLength(0)
     /* nama dompet di barisnya tetap "BCA" — inilah yang dulu bikin bocor */

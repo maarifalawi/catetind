@@ -49,8 +49,8 @@ export function TransferFlow({
       source={source}
       open={open}
       onClose={() => onOpenChange(false)}
-      onTransfer={(fromWalletId, toWalletId, amount, note) => {
-        if (submit(fromWalletId, toWalletId, amount, note)) onOpenChange(false)
+      onTransfer={(fromWalletId, toWalletId, amount, note, clientTxId) => {
+        if (submit(fromWalletId, toWalletId, amount, note, clientTxId)) onOpenChange(false)
       }}
     />
   )

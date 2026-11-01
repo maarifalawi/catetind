@@ -40,6 +40,7 @@ import {
   budgetsForPeriod,
   computeDailyHud,
   earnedInWindow,
+  FUND_CONTRIBUTE_INSUFFICIENT_COPY,
   maskNominal,
   periodFromTab,
   periodIncome,
@@ -66,7 +67,7 @@ import {
   sweepIntoFund,
   useLiveFunds,
 } from '@/lib/money/funds-store'
-import { recordedTransactions, useMoneyStore } from '@/lib/money/store'
+import { getMoneySnapshot, recordedTransactions, useMoneyStore, walletFundsCheckById } from '@/lib/money/store'
 import { readBudgets, writeBudgets } from '@/lib/budget-storage'
 import { useUserMoneySettings } from '@/lib/user-money-settings'
 import { dayOfMonth } from '@/lib/time'
@@ -471,6 +472,18 @@ export function BudgetScreen({
    *  bertambah SEKALIGUS (satu tulisan di store, jadi halaman detail yang
    *  membaca setoran yang sama tidak mungkin bercerita beda) */
   function handleContribute(fundId: number, amount: number, walletId: string) {
+    /* Dua sebab penolakan dibedakan SEBELUM memanggil store: saldo dompet sumber
+       tidak cukup (uang setoran benar-benar keluar dari dompet) vs celengannya
+       sudah dihapus. Dulu keduanya jatuh ke kalimat "celengan sudah tidak ada",
+       jadi user yang saldonya kurang diberi tahu hal yang salah. */
+    const walletName = walletSourceName(walletId)
+    const funds = walletFundsCheckById(getMoneySnapshot(), walletId, amount)
+    if (funds.known && !funds.sufficient) {
+      toast.error(FUND_CONTRIBUTE_INSUFFICIENT_COPY.title, {
+        description: FUND_CONTRIBUTE_INSUFFICIENT_COPY.body(walletName),
+      })
+      return
+    }
     const result = contributeToFund(fundId, amount, walletId)
     /* store menolak (celengan sudah dihapus / nominal tidak sah) → tutup sheet &
        katakan apa adanya; jangan tinggalkan user menebak kenapa tidak terjadi apa-apa */
