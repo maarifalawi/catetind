@@ -67,8 +67,13 @@ export function isPublicRoute(pathname: string): boolean {
    juga tidak boleh dikunci oleh gerbang langganan/PIN: ini langkah pertama
    setelah akun dibuat, sebelum user sempat memilih paket. Dulu pengecualian ini
    menumpang di `PUBLIC_ROUTES`; sekarang dipisah supaya gerbang SESI di
-   middleware bisa tegas tanpa memenjarakan user baru di layar onboarding. */
-export const PROVIDER_EXEMPT_ROUTES = [...PUBLIC_ROUTES, '/app/onboarding'] as const
+   middleware bisa tegas tanpa memenjarakan user baru di layar onboarding.
+
+   `/admin` ikut di sini karena alasan yang sama: Dashboard Admin dijaga oleh
+   daftar email admin di server (bukan oleh paket), jadi gerbang langganan, FAB
+   AI, dan layar kunci PIN tidak boleh menutupinya. Ia TETAP bukan rute publik —
+   gerbang sesi middleware berlaku penuh. */
+export const PROVIDER_EXEMPT_ROUTES = [...PUBLIC_ROUTES, '/app/onboarding', '/admin'] as const
 
 /** true kalau pathname bebas dari gerbang langganan & kunci PIN */
 export function isProviderExemptRoute(pathname: string): boolean {

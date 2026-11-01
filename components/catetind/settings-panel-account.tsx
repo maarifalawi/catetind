@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { BadgeCheck, Camera, ExternalLink, HeartHandshake, LogOut, Save, Unlink, UserPlus, XCircle } from 'lucide-react'
+import { BadgeCheck, Camera, ExternalLink, HeartHandshake, LogOut, Save, ShieldCheck, Unlink, UserPlus, XCircle } from 'lucide-react'
 import { ConfirmDialog, DialogButton } from './settings-dialog'
 import {
   Segmented,
@@ -463,6 +463,29 @@ export function ProfileSettingsPanel() {
             )}
           </div>
         </div>
+
+        {/* ── PINTU DASHBOARD ADMIN (khusus pemilik/admin) ────────────────────
+            Muncul hanya kalau `/api/session` menjawab `isAdmin: true`. Ini
+            tautan kenyamanan, bukan izin: `/admin` memeriksa sesi + email lagi
+            di server, jadi menyembunyikannya tidak pernah menjadi satu-satunya
+            penjagaan. Daftar email admin sendiri tidak dikirim ke browser. */}
+        {user?.isAdmin && (
+          <Link
+            href="/admin"
+            className="mt-4 flex items-center gap-3 rounded-2xl bg-sage/60 px-4 py-3 ring-1 ring-forest/15 transition-colors hover:bg-sage"
+          >
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-forest text-mint">
+              <ShieldCheck className="size-4" strokeWidth={2.2} aria-hidden />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-medium text-forest">Dashboard Admin</span>
+              <span className="mt-0.5 block text-[12px] leading-snug text-forest/55">
+                Pantau user, langganan & pembayaran
+              </span>
+            </span>
+            <ExternalLink className="size-4 shrink-0 text-forest/50" aria-hidden />
+          </Link>
+        )}
 
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
           <SettingsField

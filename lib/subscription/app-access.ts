@@ -81,6 +81,17 @@ export function appAccessDecision(access: CallerAccess): AppAccessDecision {
 }
 
 /**
+ * Rute yang TETAP wajib sesi (jadi bukan publik) tetapi TIDAK boleh terkena
+ * gerbang paket: Dashboard Admin. Pemilik yang belum punya langganan pribadi
+ * tetap harus bisa memantau bisnisnya; yang menjaga halaman itu adalah daftar
+ * email admin di `lib/admin/access.ts`, bukan status langganannya.
+ *
+ * ⚠️ Jangan pindahkan rute ini ke `PUBLIC_ROUTES` — itu akan membukanya untuk
+ * pengunjung anonim, dan gerbang sesi di middleware ikut hilang.
+ */
+const OWNER_ONLY_ROUTES = ['/admin'] as const
+
+/**
  * true = halaman ini bagian dari APP dan wajib punya paket aktif.
  *
  * Kebalikannya adalah `PUBLIC_ROUTES` (`lib/public-routes.ts`) — daftar yang
@@ -89,6 +100,9 @@ export function appAccessDecision(access: CallerAccess): AppAccessDecision {
  * boleh dibuka user yang belum membayar.
  */
 export function requiresPaidAccess(pathname: string): boolean {
+  if (OWNER_ONLY_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`))) {
+    return false
+  }
   return !isPublicRoute(pathname)
 }
 

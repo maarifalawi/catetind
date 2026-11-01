@@ -38,6 +38,12 @@ export interface SessionUserView {
    * dari cookie sesi: cookie dibatasi 4096 byte (lihat `app/api/profile`).
    */
   avatarUrl?: string | null
+  /**
+   * true = akun pemilik/admin. Hanya BOOLEAN yang dikirim server — daftar
+   * emailnya tetap di `lib/admin/access.ts`. Dipakai menampilkan tautan
+   * Dashboard Admin; BUKAN dasar izin (halaman & API memeriksa ulang).
+   */
+  isAdmin?: boolean
 }
 
 /**

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { isAdminEmail } from '@/lib/admin/access'
 import { requireUser } from '@/lib/session'
 import { adminSupabase } from '@/lib/supabase/admin'
-import { signOutServer } from '@/lib/supabase/server'
+import { serverSupabase, signOutServer } from '@/lib/supabase/server'
 
 /**
  * /api/session — identitas pemanggil & pintu keluar. SATU-SATUNYA endpoint yang
@@ -46,7 +47,27 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ user: { ...auth.user, name, avatarUrl } })
+  /* ── ADMIN ────────────────────────────────────────────────────────────────
+     Hanya BOOLEAN yang dikirim ke browser — daftar email admin tetap di server
+     (`lib/admin/access.ts`). Sidebar & menu akun memakai nilai ini untuk
+     menampilkan tautan Dashboard Admin, sementara halaman `/admin` dan seluruh
+     route datanya tetap memverifikasi ulang di server.
+
+     PENTING: email admin ditentukan dari HASIL VERIFIKASI Supabase
+     (`auth.getUser()`), bukan dari cookie yang dibaca `requireUser()` — cookie
+     bisa ditempel siapa saja lewat DevTools. Kalau verifikasi tidak tersedia,
+     nilainya `false` (fail-closed): tautan tidak muncul, dan halaman `/admin`
+     tetap menolak lewat penjagaannya sendiri. */
+  let isAdmin = false
+  try {
+    const verifier = await serverSupabase()
+    const verified = verifier ? await verifier.auth.getUser() : null
+    isAdmin = Boolean(verified?.data.user && isAdminEmail(verified.data.user.email))
+  } catch {
+    isAdmin = false
+  }
+
+  return NextResponse.json({ user: { ...auth.user, name, avatarUrl, isAdmin } })
 }
 
 export async function DELETE() {

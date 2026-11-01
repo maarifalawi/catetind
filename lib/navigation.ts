@@ -11,6 +11,7 @@ import {
   CircleHelp,
   Settings,
   Download,
+  ShieldCheck,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -109,3 +110,17 @@ export const MOBILE_MENU_GROUPS: NavGroup[] = NAV_GROUPS.filter(
 export const NAV_HREFS: string[] = MOBILE_MENU_GROUPS.flatMap((group) =>
   group.items.map((item) => item.href),
 )
+
+/**
+ * Entri navigasi KHUSUS PEMILIK/ADMIN. Tidak dimasukkan ke `NAV_GROUPS` karena
+ * daftar itu dirender untuk semua user; sidebar memeriksa `user.isAdmin` dari
+ * `/api/session` lebih dulu, dan server tetap memverifikasi ulang saat halaman
+ * `/admin` dibuka. Dengan begitu tautan ini tidak pernah muncul untuk user
+ * biasa, tetapi juga bukan satu-satunya penjaga akses.
+ */
+export const ADMIN_NAV_ITEM: NavItem = {
+  href: '/admin',
+  icon: ShieldCheck,
+  label: 'Dashboard Admin',
+  hint: 'Pantau bisnis, user & pembayaran',
+}

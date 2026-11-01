@@ -4,14 +4,14 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { LogOut, Plus, PanelLeftClose, PanelLeftOpen, ArrowLeftRight } from 'lucide-react'
+import { LogOut, Plus, PanelLeftClose, PanelLeftOpen, ArrowLeftRight, ShieldCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { SESSION_COPY } from '@/lib/data/auth'
 import { FEATURE_LOCK_COPY } from '@/lib/data/upgrade'
 import { useSessionUser } from '@/hooks/use-session-user'
 import { TRANSFER_DOOR_COPY } from '@/lib/data/add-wallet'
-import { NAV_GROUPS } from '@/lib/navigation'
+import { NAV_GROUPS, ADMIN_NAV_ITEM } from '@/lib/navigation'
 import { pageLockText, pageUnlockPlan } from '@/lib/subscription/page-access'
 import { TransactionWebModal } from '@/components/dashboard/transaction-web-modal'
 import { TransferFlow } from './transfer-flow'
@@ -337,6 +337,52 @@ export function DesktopSidebar({
             </div>
           </div>
         ))}
+
+        {/* ── DASHBOARD ADMIN — HANYA UNTUK PEMILIK/ADMIN ──────────────────────
+            Tautan ini muncul setelah `/api/session` menjawab `isAdmin: true`.
+            Nilainya hanya boolean dari server; daftar email admin tidak pernah
+            ikut ke browser. Menyembunyikan tautan BUKAN penjagaan akses — halaman
+            `/admin` dan seluruh route datanya memverifikasi sesi + email lagi di
+            server, jadi user biasa yang mengetik URL tetap ditolak. */}
+        {user?.isAdmin && (
+          <div>
+            {collapsed ? (
+              <div className="mx-3 mb-2 h-px bg-ink/[0.07]" aria-hidden />
+            ) : (
+              <p className="px-3.5 pb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-forest-muted">
+                Admin
+              </p>
+            )}
+            <Link
+              href={ADMIN_NAV_ITEM.href}
+              aria-current={pathname === ADMIN_NAV_ITEM.href ? 'page' : undefined}
+              className={cn(
+                'group/item relative flex w-full items-center text-[14px] transition-all duration-200',
+                collapsed
+                  ? 'justify-center rounded-2xl px-0 py-2.5'
+                  : 'gap-3.5 rounded-full px-3.5 py-2.5',
+                pathname === ADMIN_NAV_ITEM.href
+                  ? 'bg-forest font-semibold text-cream'
+                  : 'font-medium text-forest-muted hover:bg-ink/[0.03] hover:text-forest',
+              )}
+            >
+              <ShieldCheck
+                className="size-[20px] shrink-0"
+                strokeWidth={pathname === ADMIN_NAV_ITEM.href ? 2.2 : 1.8}
+                aria-hidden
+              />
+              <span
+                className={cn(
+                  'overflow-hidden text-ellipsis whitespace-nowrap transition-all duration-300',
+                  collapsed ? 'max-w-0 opacity-0' : 'max-w-[160px] opacity-100',
+                )}
+              >
+                {ADMIN_NAV_ITEM.label}
+              </span>
+              {collapsed && <NavTooltip label={ADMIN_NAV_ITEM.label} />}
+            </Link>
+          </div>
+        )}
 
         {/* logout — bagian grup Sistem per inventaris */}
         <div>
