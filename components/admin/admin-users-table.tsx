@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Search, SlidersHorizontal } from 'lucide-react'
+import { Search } from 'lucide-react'
 import {
   countByFilter,
   daysUntil,
@@ -14,19 +14,25 @@ import { cn } from '@/lib/utils'
 import { AdminUserActions } from './admin-user-actions'
 import {
   AdminEmpty,
+  AdminMeta,
   AdminPill,
   AdminSection,
   daysLabel,
   formatDate,
-  formatDateTime,
   formatNumber,
+  formatRelative,
 } from './admin-ui'
 
-/* ── DIREKTORI USER + KONTROL HAK AKSES MANUAL ───────────────────────────────
-   Pencarian cepat (nama/email) dan filter status. Setiap baris hanya memuat
-   identitas + HITUNGAN aktivitas + keadaan paket — tidak ada isi catatan uang
-   user. Tombol "Kelola" membuka panel tindakan manual (paket, perpanjangan,
-   kuota AI) yang menulis lewat route server.
+/* ── TAB USER: CARI → SARING → KELOLA ────────────────────────────────────────
+   Satu baris kontrol (pencarian + saringan), satu angka "ditampilkan / cocok",
+   lalu tabel 5 kolom. Setiap baris hanya memuat identitas + HITUNGAN aktivitas +
+   keadaan paket — tidak ada isi catatan uang user.
+
+   Yang dipadatkan dari versi lama: kolom "Terdaftar", "Terakhir aktif", dan
+   "Onboarding" tidak lagi jadi kolom sendiri (tiga kolom sempit yang membuat
+   tabel melebar 860px). Terakhir aktif pindah ke baris identitas sebagai
+   "· aktif 3 hr lalu", dan onboarding hanya muncul sebagai pill saat BELUM
+   selesai — keadaan yang memang perlu ditindak.
    ────────────────────────────────────────────────────────────────────────── */
 
 const FILTERS: { id: AdminUserFilterId; label: string }[] = [
@@ -46,7 +52,7 @@ function PlanCell({ user, nowMs }: { user: AdminUserRow; nowMs: number }) {
     return (
       <div className="space-y-1">
         <AdminPill tone="thistle">Tanpa paket</AdminPill>
-        {user.plan.period && <p className="text-[11px] text-plum-deep">langganan tidak aktif</p>}
+        {user.plan.period && <p className="text-[10.5px] text-plum-deep">tidak aktif</p>}
       </div>
     )
   }
@@ -56,12 +62,12 @@ function PlanCell({ user, nowMs }: { user: AdminUserRow; nowMs: number }) {
       <AdminPill tone={user.plan.isLifetime ? 'mint' : 'forest'}>
         {planLabelOf(user.plan.planId)}
       </AdminPill>
-      <p className="text-[11px] leading-snug text-forest/55">
+      <p className="text-[10.5px] leading-snug tabular-nums text-forest/45">
         {user.plan.isLifetime
-          ? 'akses selamanya'
+          ? 'selamanya'
           : user.plan.expiresAt
             ? `${formatDate(user.plan.expiresAt)}${days === null ? '' : ` · ${daysLabel(days)}`}`
-            : 'tanpa tanggal berakhir'}
+            : 'tanpa tanggal'}
       </p>
     </div>
   )
@@ -95,15 +101,13 @@ export function AdminUsersTable({
   const shown = filtered.slice(0, ROW_LIMIT)
 
   return (
-    <AdminSection
-      title="Direktori User"
-      description="Cari berdasarkan nama atau email, saring menurut status, lalu kelola paket & kuota AI per akun. Isi catatan pribadi user tidak pernah ditampilkan di sini."
-    >
-      <div className="flex flex-col gap-3">
+    <AdminSection title="User">
+      <div className="flex flex-col gap-2.5">
         <div className="relative">
           <Search
-            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-forest/40"
+            className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-forest/35"
             aria-hidden
+            strokeWidth={1.8}
           />
           <input
             type="search"
@@ -111,12 +115,11 @@ export function AdminUsersTable({
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Cari nama atau email…"
             aria-label="Cari user berdasarkan nama atau email"
-            className="w-full rounded-2xl bg-sage/50 py-2.5 pl-9 pr-3 text-[13px] text-forest ring-1 ring-soil/10 outline-none transition placeholder:text-forest/40 focus:ring-2 focus:ring-forest/25"
+            className="w-full rounded-xl bg-sage/40 py-2 pl-9 pr-3 text-[12.5px] text-forest ring-1 ring-soil/[0.07] outline-none transition placeholder:text-forest/35 focus:ring-2 focus:ring-forest/20"
           />
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5">
-          <SlidersHorizontal className="mr-1 size-3.5 text-forest/40" aria-hidden />
           {FILTERS.map((item) => {
             const active = filter === item.id
             return (
@@ -126,17 +129,17 @@ export function AdminUsersTable({
                 onClick={() => setFilter(item.id)}
                 aria-pressed={active}
                 className={cn(
-                  'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors',
+                  'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors',
                   active
                     ? 'bg-forest text-cream'
-                    : 'bg-sage/60 text-forest/70 hover:bg-sage hover:text-forest',
+                    : 'bg-sage/50 text-forest/60 hover:bg-sage hover:text-forest',
                 )}
               >
                 {item.label}
                 <span
                   className={cn(
-                    'rounded-full px-1.5 py-0.5 text-[10px]',
-                    active ? 'bg-cream/20 text-cream' : 'bg-ink/[0.06] text-forest/60',
+                    'text-[10px] tabular-nums',
+                    active ? 'text-cream/70' : 'text-forest/35',
                   )}
                 >
                   {formatNumber(counts[item.id])}
@@ -144,12 +147,10 @@ export function AdminUsersTable({
               </button>
             )
           })}
+          <AdminMeta className="ml-auto">
+            {formatNumber(shown.length)} / {formatNumber(filtered.length)}
+          </AdminMeta>
         </div>
-
-        <p className="text-[11px] text-forest/50">
-          Menampilkan {formatNumber(shown.length)} dari {formatNumber(filtered.length)} akun yang
-          cocok{filtered.length > ROW_LIMIT ? ' (persempit dengan pencarian untuk melihat sisanya)' : ''}.
-        </p>
       </div>
 
       {selected && (
@@ -160,66 +161,66 @@ export function AdminUsersTable({
 
       {filtered.length === 0 ? (
         <div className="mt-3">
-          <AdminEmpty>Tidak ada akun yang cocok dengan pencarian & filter ini.</AdminEmpty>
+          <AdminEmpty>Tidak ada akun yang cocok.</AdminEmpty>
         </div>
       ) : (
-        <div className="-mx-1 mt-3 overflow-x-auto px-1">
-          <table className="w-full min-w-[860px] border-separate border-spacing-y-1.5 text-left">
+        <div className="-mx-1 mt-2 overflow-x-auto px-1">
+          <table className="w-full min-w-[680px] border-separate border-spacing-y-1 text-left">
             <thead>
-              <tr className="text-[10px] uppercase tracking-[0.12em] text-forest/45">
+              <tr className="text-[10px] uppercase tracking-[0.12em] text-forest/40">
                 <th className="px-2 pb-1 font-medium">User</th>
-                <th className="px-2 pb-1 font-medium">Terdaftar</th>
-                <th className="px-2 pb-1 font-medium">Terakhir aktif</th>
-                <th className="px-2 pb-1 font-medium">Onboarding</th>
-                <th className="px-2 pb-1 text-right font-medium">Dompet</th>
-                <th className="px-2 pb-1 text-right font-medium">Transaksi</th>
                 <th className="px-2 pb-1 font-medium">Paket</th>
-                <th className="px-2 pb-1 text-right font-medium">AI bulan ini</th>
-                <th className="px-2 pb-1 text-right font-medium">Aksi</th>
+                <th className="px-2 pb-1 text-right font-medium" title="dompet / transaksi">
+                  Aktivitas
+                </th>
+                <th className="px-2 pb-1 text-right font-medium" title="panggilan AI bulan ini">
+                  AI
+                </th>
+                <th className="px-2 pb-1 text-right font-medium">
+                  <span className="sr-only">Aksi</span>
+                </th>
               </tr>
             </thead>
             <tbody>
               {shown.map((user) => (
-                <tr key={user.id} className="bg-sage/30 align-top">
-                  <td className="max-w-[220px] rounded-l-xl px-2 py-2.5">
-                    <p className="truncate text-[13px] font-medium text-forest">
-                      {user.name || 'Tanpa nama'}
+                <tr key={user.id} className="bg-sage/25 align-top">
+                  <td className="max-w-[280px] rounded-l-xl px-2 py-2">
+                    <p className="flex items-center gap-1.5 text-[12.5px] font-medium text-forest">
+                      <span className="truncate">{user.name || 'Tanpa nama'}</span>
+                      {!user.onboardingCompleted && (
+                        <AdminPill tone="cantelope">belum onboarding</AdminPill>
+                      )}
                     </p>
-                    <p className="truncate text-[11px] text-forest/55">{user.email || user.id}</p>
+                    <p className="truncate text-[10.5px] tabular-nums text-forest/45">
+                      {user.email || user.id} · aktif {formatRelative(user.lastActiveAt, nowMs)}
+                    </p>
                   </td>
-                  <td className="px-2 py-2.5 text-[12px] text-forest/65">
-                    {formatDate(user.createdAt)}
-                  </td>
-                  <td className="px-2 py-2.5 text-[12px] text-forest/65">
-                    {formatDateTime(user.lastActiveAt)}
-                  </td>
-                  <td className="px-2 py-2.5">
-                    <AdminPill tone={user.onboardingCompleted ? 'mint' : 'cantelope'}>
-                      {user.onboardingCompleted ? 'selesai' : 'belum'}
-                    </AdminPill>
-                  </td>
-                  <td className="px-2 py-2.5 text-right text-[12px] font-semibold text-forest">
-                    {formatNumber(user.walletCount)}
-                  </td>
-                  <td className="px-2 py-2.5 text-right text-[12px] font-semibold text-forest">
-                    {formatNumber(user.transactionCount)}
-                  </td>
-                  <td className="px-2 py-2.5">
+                  <td className="px-2 py-2">
                     <PlanCell user={user} nowMs={nowMs} />
                   </td>
-                  <td className="px-2 py-2.5 text-right text-[12px] text-forest/65">
+                  <td
+                    className="px-2 py-2 text-right text-[12px] font-semibold tabular-nums text-forest"
+                    title={`${formatNumber(user.walletCount)} dompet · ${formatNumber(
+                      user.transactionCount,
+                    )} transaksi`}
+                  >
+                    {formatNumber(user.walletCount)}
+                    <span className="font-normal text-forest/25"> / </span>
+                    {formatNumber(user.transactionCount)}
+                  </td>
+                  <td className="px-2 py-2 text-right text-[12px] tabular-nums text-forest/55">
                     {formatNumber(user.aiCallsThisMonth)}
                   </td>
-                  <td className="rounded-r-xl px-2 py-2.5 text-right">
+                  <td className="rounded-r-xl px-2 py-2 text-right">
                     <button
                       type="button"
                       onClick={() => setSelectedId(selectedId === user.id ? null : user.id)}
                       aria-expanded={selectedId === user.id}
                       className={cn(
-                        'rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors',
+                        'rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors',
                         selectedId === user.id
                           ? 'bg-forest text-cream'
-                          : 'bg-cream text-forest ring-1 ring-soil/15 hover:bg-sage',
+                          : 'bg-cream text-forest/70 ring-1 ring-soil/[0.08] hover:bg-sage/60 hover:text-forest',
                       )}
                     >
                       {selectedId === user.id ? 'Tutup' : 'Kelola'}

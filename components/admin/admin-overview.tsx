@@ -1,328 +1,262 @@
 'use client'
 
-import { AlertTriangle, ArrowDownRight, Crown, ShieldCheck, TrendingUp, Users, Wallet } from 'lucide-react'
 import { formatIDR } from '@/lib/data/pricing'
-import type { AdminSnapshot } from '@/lib/admin/types'
+import type { AdminRevenueBlock, AdminSnapshot } from '@/lib/admin/types'
 import {
   AdminBar,
-  AdminEmpty,
-  AdminPill,
+  AdminList,
+  AdminListRow,
+  AdminMeta,
   AdminSection,
-  AdminStat,
   daysLabel,
   formatDate,
   formatNumber,
   formatPercent,
 } from './admin-ui'
 
-/* ── TAB RINGKASAN: EKSEKUTIF, CORONG, FITUR, PAKET ──────────────────────────
-   Semua angka datang dari `snapshot` yang dihitung server (`lib/admin/snapshot.ts`).
-   Komponen ini tidak menghitung ulang apa pun — kalau ia menghitung sendiri,
-   layar dan CSV bisa berbeda.
+/* ── TAB RINGKASAN: SATU LAYAR, EMPAT KEPUTUSAN ──────────────────────────────
+   Yang ingin dijawab layar ini cuma empat, dan urutannya mengikuti uang:
+
+     1. Uang masuk       → dari mana pendapatannya (paket vs kuota AI);
+     2. Paket aktif      → bauran pelanggan;
+     3. Corong & Fitur   → di mana orang berhenti / fitur mana yang dipakai;
+     4. Perlu perhatian  → paket yang mau habis / baru habis.
+
+   Tidak ada paragraf penjelas di sini: konteks yang penting hidup sebagai
+   tooltip ⓘ (`note`) dan keterangan satu baris (`AdminMeta`). Semua angka
+   datang dari `snapshot` yang dihitung server (`lib/admin/snapshot.ts`) —
+   komponen ini tidak menghitung ulang apa pun, supaya layar dan CSV tidak
+   pernah berbeda.
    ────────────────────────────────────────────────────────────────────────── */
 
-function Funnel({ snapshot }: { snapshot: AdminSnapshot }) {
-  const registered = snapshot.funnel.stages[0]?.count ?? 0
+/** tabel uang masuk: sumber uang dipisah, total di kanan (kolom angka rata) */
+function MoneyTable({ revenue }: { revenue: AdminRevenueBlock }) {
+  const rows = [
+    {
+      label: 'Hari ini',
+      plan: revenue.subscription.today,
+      addon: revenue.addon.today,
+      total: revenue.total.today,
+    },
+    {
+      label: 'Bulan ini',
+      plan: revenue.subscription.thisMonth,
+      addon: revenue.addon.thisMonth,
+      total: revenue.total.thisMonth,
+    },
+    {
+      label: 'Total',
+      plan: revenue.subscription.allTime,
+      addon: revenue.addon.allTime,
+      total: revenue.total.allTime,
+    },
+  ]
+
   return (
-    <AdminSection
-      title="Corong Aktivasi 5 Tahap"
-      description="Berapa user yang bertahan di setiap langkah. Tahap dengan angka berhenti terbesar adalah tempat perbaikan paling mendesak."
-    >
-      <ol className="space-y-3">
-        {snapshot.funnel.stages.map((stage, index) => {
-          const width = registered > 0 ? (stage.count / registered) * 100 : 0
-          const leak = snapshot.funnel.biggestDrop?.id === stage.id
+    <>
+      <table className="w-full text-[12px] tabular-nums">
+        <thead>
+          <tr className="text-[10px] uppercase tracking-[0.12em] text-forest/40">
+            <th className="pb-1.5 text-left font-medium">&nbsp;</th>
+            <th className="pb-1.5 text-right font-medium">Paket</th>
+            <th className="pb-1.5 text-right font-medium">AI</th>
+            <th className="pb-1.5 text-right font-medium">Total</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-soil/[0.06]">
+          {rows.map((row) => (
+            <tr key={row.label}>
+              <td className="py-1.5 text-forest/60">{row.label}</td>
+              <td className="py-1.5 text-right text-forest/50">{formatIDR(row.plan)}</td>
+              <td className="py-1.5 text-right text-forest/50">{formatIDR(row.addon)}</td>
+              <td className="py-1.5 text-right font-semibold text-forest">
+                {formatIDR(row.total)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <AdminMeta className="mt-2">
+        Rata-rata {formatIDR(revenue.averageTransaction)} ·{' '}
+        {formatNumber(revenue.settledCount)} transaksi lunas
+      </AdminMeta>
+    </>
+  )
+}
+
+function PlanMix({ snapshot }: { snapshot: AdminSnapshot }) {
+  const { tiers, withoutPlan, expired, totalAccounts } = snapshot.plans
+
+  return (
+    <>
+      <div className="space-y-2.5">
+        {tiers.map((tier) => {
+          const share = totalAccounts > 0 ? (tier.total / totalAccounts) * 100 : 0
           return (
-            <li key={stage.id}>
-              <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <p className="text-[13px] font-medium text-forest">
-                  <span className="mr-1.5 text-forest/40">{index + 1}.</span>
-                  {stage.label}
-                </p>
-                <p className="text-[12px] text-forest/60">
-                  <span className="font-semibold text-forest">{formatNumber(stage.count)}</span> user
-                  {index > 0 && (
-                    <span className="ml-1.5">
-                      · {formatPercent(stage.conversionFromPrevious)} lanjut
-                      {stage.droppedBefore > 0 && ` · ${formatNumber(stage.droppedBefore)} berhenti`}
-                    </span>
-                  )}
+            <div key={tier.planId}>
+              <div className="flex items-baseline justify-between gap-2">
+                <p className="truncate text-[12.5px] font-medium text-forest">{tier.label}</p>
+                <p className="shrink-0 text-[11.5px] tabular-nums text-forest/50">
+                  <span className="font-semibold text-forest">{formatNumber(tier.total)}</span> ·{' '}
+                  {formatPercent(share)}
                 </p>
               </div>
-              <div className="mt-1.5">
+              <div className="mt-1">
+                <AdminBar
+                  percent={share}
+                  tone={tier.lifetime > 0 ? 'mint' : 'forest'}
+                  label={`${tier.label}: ${tier.total} akun`}
+                />
+              </div>
+            </div>
+          )
+        })}
+      </div>
+      <AdminMeta className="mt-3">
+        Belum berlangganan {formatNumber(withoutPlan)} · Tidak aktif {formatNumber(expired)}
+      </AdminMeta>
+    </>
+  )
+}
+
+function Funnel({ snapshot }: { snapshot: AdminSnapshot }) {
+  const { stages, biggestDrop } = snapshot.funnel
+  const registered = stages[0]?.count ?? 0
+
+  return (
+    <>
+      <ol className="space-y-2.5">
+        {stages.map((stage, index) => {
+          const width = registered > 0 ? (stage.count / registered) * 100 : 0
+          const leak = biggestDrop?.id === stage.id
+          return (
+            <li key={stage.id}>
+              <div className="flex items-baseline justify-between gap-2">
+                <p className="truncate text-[12.5px] font-medium text-forest">
+                  <span className="mr-1.5 tabular-nums text-forest/30">{index + 1}</span>
+                  {stage.label}
+                </p>
+                <p className="shrink-0 text-[11.5px] tabular-nums text-forest/50">
+                  <span className="font-semibold text-forest">{formatNumber(stage.count)}</span>
+                  {index > 0 && <> · {formatPercent(stage.conversionFromPrevious)}</>}
+                </p>
+              </div>
+              <div className="mt-1">
                 <AdminBar
                   percent={width}
-                  tone={leak ? 'plum' : index === 4 ? 'mint' : 'forest'}
-                  label={`${stage.label}: ${stage.count} user`}
+                  tone={leak ? 'plum' : index === stages.length - 1 ? 'mint' : 'forest'}
+                  label={`${stage.label}: ${stage.count} akun`}
                 />
               </div>
             </li>
           )
         })}
       </ol>
-      {snapshot.funnel.biggestDrop ? (
-        <p className="mt-4 flex items-start gap-2 rounded-2xl bg-plum/10 px-3.5 py-3 text-[12px] leading-relaxed text-plum-deep">
-          <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
-          <span>
-            Kebocoran terbesar ada di tahap <strong>{snapshot.funnel.biggestDrop.label}</strong>:{' '}
-            {formatNumber(snapshot.funnel.biggestDrop.droppedBefore)} user berhenti tepat sebelumnya.
-          </span>
-        </p>
-      ) : (
-        <p className="mt-4 rounded-2xl bg-mint/15 px-3.5 py-3 text-[12px] text-forest/65">
-          Belum ada kebocoran yang terukur — semua user di data ini lanjut ke tahap berikutnya.
-        </p>
+      {biggestDrop && (
+        <AdminMeta className="mt-2 text-plum-deep">
+          Turun terbesar: {biggestDrop.label} · {formatNumber(biggestDrop.droppedBefore)} berhenti
+        </AdminMeta>
       )}
-    </AdminSection>
+    </>
   )
 }
 
-function FeatureTable({ snapshot }: { snapshot: AdminSnapshot }) {
+function Features({ snapshot }: { snapshot: AdminSnapshot }) {
+  return (
+    <div className="space-y-2.5">
+      {snapshot.featureAdoption.map((feature) => (
+        <div key={feature.id}>
+          <div className="flex items-baseline justify-between gap-2">
+            <p className="truncate text-[12.5px] font-medium text-forest">{feature.label}</p>
+            <p className="shrink-0 text-[11.5px] tabular-nums text-forest/50">
+              <span className="font-semibold text-forest">{formatNumber(feature.users)}</span> ·{' '}
+              {formatPercent(feature.sharePercent)}
+            </p>
+          </div>
+          <div className="mt-1">
+            <AdminBar
+              percent={feature.sharePercent}
+              tone={feature.users > 0 ? 'mint' : 'thistle'}
+              label={`${feature.label}: ${feature.users} akun`}
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/**
+ * Daftar "yang harus disentuh hari ini": paket yang berakhir ≤ 7 hari lagi dan
+ * yang baru habis ≤ 14 hari lalu. Digabung, dipotong 5 baris — angka lengkapnya
+ * ada di tab Langganan.
+ */
+function Attention({ snapshot }: { snapshot: AdminSnapshot }) {
+  const { expiringSoon, expiredRecently } = snapshot.expiryRadar
+  const entries = [
+    ...expiringSoon.map((entry) => ({ entry, expired: false })),
+    ...expiredRecently.map((entry) => ({ entry, expired: true })),
+  ]
+  if (entries.length === 0) return null
+
+  const shown = entries.slice(0, 5)
+  const rest = entries.length - shown.length
+
   return (
     <AdminSection
-      title="Peta Pemakaian Fitur"
-      description="Berapa akun yang benar-benar memakai tiap fitur utama. Ini hitungan aktivitas, bukan isi catatan."
+      title="Perlu perhatian"
+      note="Paket berakhir ≤ 7 hari lagi atau baru habis ≤ 14 hari lalu."
     >
-      <ul className="space-y-3">
-        {snapshot.featureAdoption.map((feature) => (
-          <li key={feature.id}>
-            <div className="flex items-baseline justify-between gap-2">
-              <p className="text-[13px] font-medium text-forest">{feature.label}</p>
-              <p className="text-[12px] text-forest/60">
-                <span className="font-semibold text-forest">{formatNumber(feature.users)}</span> user ·{' '}
-                {formatPercent(feature.sharePercent)}
-              </p>
-            </div>
-            <div className="mt-1.5">
-              <AdminBar
-                percent={feature.sharePercent}
-                tone={feature.users > 0 ? 'mint' : 'thistle'}
-                label={`${feature.label}: ${feature.users} user`}
-              />
-            </div>
-            <p className="mt-1 text-[11px] text-forest/45">{feature.hint}</p>
-          </li>
+      <AdminList>
+        {shown.map(({ entry, expired }) => (
+          <AdminListRow
+            key={`${entry.userId}-${entry.expiresAt}`}
+            left={entry.name || entry.email || entry.userId}
+            meta={
+              <span className={expired ? 'text-plum-deep' : undefined}>
+                {entry.planLabel} · {daysLabel(entry.daysLeft)}
+              </span>
+            }
+            right={formatDate(entry.expiresAt)}
+          />
         ))}
-      </ul>
-    </AdminSection>
-  )
-}
-
-function PlanTable({ snapshot }: { snapshot: AdminSnapshot }) {
-  return (
-    <AdminSection
-      title="Paket Berbayar yang Sedang Aktif"
-      description="Hanya tiga paket yang ada di sistem: Catet Aja, Waras, Sultan. Kolom 30 hari = baris prabayar lama (produk yang dijual sekarang hanya akses selamanya). Akun yang belum membeli tidak disebut paket — dihitung terpisah di bawah."
-    >
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[420px] border-separate border-spacing-y-1 text-left">
-          <thead>
-            <tr className="text-[11px] uppercase tracking-[0.12em] text-forest/45">
-              <th className="px-2 pb-1 font-medium">Paket</th>
-              <th className="px-2 pb-1 text-right font-medium">30 hari</th>
-              <th className="px-2 pb-1 text-right font-medium">Selamanya</th>
-              <th className="px-2 pb-1 text-right font-medium">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {snapshot.plans.tiers.map((tier) => (
-              <tr key={tier.planId} className="bg-sage/40">
-                <td className="rounded-l-xl px-2 py-2 text-[13px] font-medium text-forest">
-                  {tier.label}
-                </td>
-                <td className="px-2 py-2 text-right text-[13px] text-forest/70">
-                  {formatNumber(tier.monthly)}
-                </td>
-                <td className="px-2 py-2 text-right text-[13px] text-forest/70">
-                  {formatNumber(tier.lifetime)}
-                </td>
-                <td className="rounded-r-xl px-2 py-2 text-right text-[13px] font-semibold text-forest">
-                  {formatNumber(tier.total)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <div className="mt-3 flex flex-wrap gap-2">
-        <AdminPill tone="thistle">
-          {formatNumber(snapshot.plans.withoutPlan)} akun belum berlangganan
-        </AdminPill>
-        <AdminPill tone="plum">
-          {formatNumber(snapshot.plans.expired)} langganan tidak aktif
-        </AdminPill>
-        <AdminPill tone="forest">
-          {formatNumber(snapshot.plans.totalAccounts)} akun terdaftar
-        </AdminPill>
-      </div>
+      </AdminList>
+      {rest > 0 && <AdminMeta className="mt-2">+{formatNumber(rest)} lainnya di tab Langganan</AdminMeta>}
     </AdminSection>
   )
 }
 
 export function AdminOverview({ snapshot }: { snapshot: AdminSnapshot }) {
-  const growth = snapshot.growth
-  const revenue = snapshot.revenue
-
   return (
-    <div className="space-y-4">
-      <AdminSection
-        title="Pertumbuhan & Keaktifan User"
-        description="Dihitung dari tanggal akun dibuat dan waktu masuk terakhir (`last_sign_in_at`) — bukan tebakan dari aktivitas lain."
-      >
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
-          <AdminStat label="Total akun" value={formatNumber(growth.users.total)} hint="terdaftar" tone="forest" />
-          <AdminStat label="Daftar hari ini" value={formatNumber(growth.users.today)} hint="hari ini" tone="mint" />
-          <AdminStat label="7 hari" value={formatNumber(growth.users.last7)} hint="pendaftar baru" tone="mint" />
-          <AdminStat label="30 hari" value={formatNumber(growth.users.last30)} hint="pendaftar baru" tone="mint" />
-          <AdminStat label="Aktif harian" value={formatNumber(growth.activeDaily)} hint="masuk ≤ 24 jam" tone="daisy" />
-          <AdminStat label="Aktif bulanan" value={formatNumber(growth.activeMonthly)} hint="masuk ≤ 30 hari" tone="daisy" />
-        </div>
-        <div className="mt-2.5 flex flex-wrap gap-2">
-          <AdminPill tone="thistle">
-            <Users className="size-3" aria-hidden /> {formatNumber(growth.activeWeekly)} aktif mingguan
-          </AdminPill>
-          <AdminPill tone="mint">
-            <ShieldCheck className="size-3" aria-hidden />{' '}
-            {formatNumber(growth.onboardingCompleted)} selesai onboarding
-          </AdminPill>
-        </div>
-      </AdminSection>
-
-      <AdminSection
-        title="Pendapatan Bersih"
-        description="Hanya transaksi LUNAS. Paket langganan dan pembelian kuota AI dipisah supaya terlihat dari mana uangnya datang."
-      >
-        <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
-          <AdminStat
-            label="Hari ini"
-            value={formatIDR(revenue.total.today)}
-            hint={`paket ${formatIDR(revenue.subscription.today)} · AI ${formatIDR(revenue.addon.today)}`}
-            tone="mint"
-          />
-          <AdminStat
-            label="Bulan ini"
-            value={formatIDR(revenue.total.thisMonth)}
-            hint={`paket ${formatIDR(revenue.subscription.thisMonth)} · AI ${formatIDR(revenue.addon.thisMonth)}`}
-            tone="mint"
-          />
-          <AdminStat
-            label="Sepanjang waktu"
-            value={formatIDR(revenue.total.allTime)}
-            hint={`paket ${formatIDR(revenue.subscription.allTime)} · AI ${formatIDR(revenue.addon.allTime)}`}
-            tone="forest"
-          />
-          <AdminStat
-            label="Rata-rata transaksi"
-            value={formatIDR(revenue.averageTransaction)}
-            hint={`${formatNumber(revenue.settledCount)} transaksi lunas`}
-            tone="daisy"
-          />
-        </div>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <AdminPill tone="mint">
-            <TrendingUp className="size-3" aria-hidden /> Akun berbayar{' '}
-            {formatPercent(revenue.paidAccountPercent)} dari total akun
-          </AdminPill>
-          <AdminPill tone="forest">
-            <Crown className="size-3" aria-hidden /> {formatNumber(revenue.paidUsers)} akun punya paket
-          </AdminPill>
-          <AdminPill tone="thistle">
-            <Wallet className="size-3" aria-hidden /> {formatNumber(revenue.totalUsers)} akun terdaftar
-          </AdminPill>
-        </div>
-      </AdminSection>
-
-      <div className="grid gap-4 xl:grid-cols-2">
-        <Funnel snapshot={snapshot} />
-        <FeatureTable snapshot={snapshot} />
-      </div>
-
-      <div className="grid gap-4 xl:grid-cols-2">
-        <PlanTable snapshot={snapshot} />
+    <div className="space-y-3">
+      <div className="grid gap-3 lg:grid-cols-2">
         <AdminSection
-          title="Radar Masa Aktif Paket 30 Hari"
-          description="Paket yang akan habis ≤ 7 hari lagi dan yang baru habis ≤ 14 hari lalu."
+          title="Uang masuk"
+          note="Hanya transaksi lunas. Paket langganan dan kuota AI dipisah supaya terlihat dari mana uangnya datang."
         >
-          <div className="space-y-4">
-            <div>
-              <p className="flex items-center gap-1.5 text-[12px] font-semibold text-forest">
-                <ArrowDownRight className="size-3.5" aria-hidden /> Akan habis (
-                {formatNumber(snapshot.expiryRadar.expiringSoon.length)})
-              </p>
-              {snapshot.expiryRadar.expiringSoon.length === 0 ? (
-                <p className="mt-1.5 text-[12px] text-forest/50">
-                  Tidak ada paket yang mendekati habis.
-                </p>
-              ) : (
-                <ul className="mt-1.5 space-y-1.5">
-                  {snapshot.expiryRadar.expiringSoon.slice(0, 4).map((entry) => (
-                    <li
-                      key={entry.userId}
-                      className="flex flex-wrap items-baseline justify-between gap-1 rounded-xl bg-sage/40 px-3 py-2"
-                    >
-                      <span className="min-w-0 truncate text-[12px] text-forest">
-                        {entry.name || entry.email || entry.userId}
-                      </span>
-                      <span className="text-[11px] text-forest/60">
-                        {entry.planLabel} · {daysLabel(entry.daysLeft)} · {formatDate(entry.expiresAt)}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-            <div>
-              <p className="text-[12px] font-semibold text-plum-deep">
-                Baru habis ({formatNumber(snapshot.expiryRadar.expiredRecently.length)})
-              </p>
-              {snapshot.expiryRadar.expiredRecently.length === 0 ? (
-                <p className="mt-1.5 text-[12px] text-forest/50">Tidak ada paket yang baru habis.</p>
-              ) : (
-                <ul className="mt-1.5 space-y-1.5">
-                  {snapshot.expiryRadar.expiredRecently.slice(0, 4).map((entry) => (
-                    <li
-                      key={entry.userId}
-                      className="flex flex-wrap items-baseline justify-between gap-1 rounded-xl bg-plum/10 px-3 py-2"
-                    >
-                      <span className="min-w-0 truncate text-[12px] text-forest">
-                        {entry.name || entry.email || entry.userId}
-                      </span>
-                      <span className="text-[11px] text-plum-deep">
-                        {entry.planLabel} · {daysLabel(entry.daysLeft)}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
+          <MoneyTable revenue={snapshot.revenue} />
+        </AdminSection>
+        <AdminSection
+          title="Paket aktif"
+          note="30 hari = baris prabayar lama; produk yang dijual sekarang hanya akses selamanya. Persentase dari seluruh akun terdaftar."
+        >
+          <PlanMix snapshot={snapshot} />
         </AdminSection>
       </div>
 
-      <AdminSection title="Prinsip Privasi CatetInd">
-        <p className="text-[12px] leading-relaxed text-forest/65">
-          Halaman ini hanya menampilkan <strong>jumlah</strong> aktivitas per akun — berapa dompet dan
-          berapa transaksi — tanpa pernah membuka deskripsi transaksi, kategori, catatan, nama dompet,
-          atau saldo pribadi user. Nominal yang terlihat di tab Pembayaran adalah uang yang masuk ke
-          CatetInd, bukan saldo dompet user.
-        </p>
-        {snapshot.limits.usersTruncated && (
-          <div className="mt-3">
-            <AdminPill tone="plum">
-              <AlertTriangle className="size-3" aria-hidden /> Sebagian data menyentuh batas baca —
-              angka bisa terpotong
-            </AdminPill>
-          </div>
-        )}
-        {snapshot.users.length === 0 && (
-          <div className="mt-3">
-            <AdminEmpty>Belum ada akun yang bisa ditampilkan dari backend ini.</AdminEmpty>
-          </div>
-        )}
-      </AdminSection>
+      <div className="grid gap-3 lg:grid-cols-2">
+        <AdminSection title="Corong aktivasi" note="Berapa akun yang bertahan di setiap langkah.">
+          <Funnel snapshot={snapshot} />
+        </AdminSection>
+        <AdminSection
+          title="Fitur terpakai"
+          note="Jumlah akun yang memakai tiap fitur utama — hitungan aktivitas, bukan isi catatan."
+        >
+          <Features snapshot={snapshot} />
+        </AdminSection>
+      </div>
+
+      <Attention snapshot={snapshot} />
     </div>
   )
 }
-
-
-

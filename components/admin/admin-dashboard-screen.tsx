@@ -11,19 +11,34 @@ import {
   Download,
   LayoutDashboard,
   RefreshCw,
-  ShieldCheck,
   Users,
 } from 'lucide-react'
+import { formatIDR } from '@/lib/data/pricing'
 import type { AdminSnapshot } from '@/lib/admin/types'
 import { cn } from '@/lib/utils'
 import { AdminOverview } from './admin-overview'
 import { AdminPaymentsTable } from './admin-payments-table'
 import { AdminPlansTab } from './admin-plans-tab'
 import { AdminUsersTable } from './admin-users-table'
-import { AdminEmpty, AdminPill, formatDateTime, formatNumber } from './admin-ui'
+import {
+  ADMIN_PRIMARY_BUTTON,
+  ADMIN_SMALL_BUTTON,
+  ADMIN_TOOL_BUTTON,
+  AdminMeta,
+  AdminSection,
+  AdminStat,
+  formatNumber,
+  formatPercent,
+  formatRelative,
+} from './admin-ui'
 
-/* ── FOUNDER COMMAND CENTER — BINGKAI LAYAR ─────────────────────────────────
+/* ── DASHBOARD ADMIN — BINGKAI LAYAR ─────────────────────────────────────────
    Satu halaman, empat tab: Ringkasan · User · Langganan · Pembayaran.
+
+   Bentuk layar ini sengaja TIPIS: top bar 1 baris (judul + kesegaran data +
+   empat alat), satu baris 4 angka kunci, lalu tab. Tidak ada paragraf
+   pengantar — penjelasan yang dulu memakan 4 baris sekarang hidup sebagai
+   tooltip ⓘ di kotak yang membutuhkannya.
 
    Halaman ini TIDAK memakai `ScreenShell` app: ia bukan halaman pemakaian
    harian user, dan menu sidebar app tidak relevan untuk pemantauan bisnis.
@@ -42,11 +57,8 @@ const TABS: { id: AdminTabId; label: string; icon: typeof LayoutDashboard }[] = 
 
 function ExportLink({ type, label }: { type: 'users' | 'payments'; label: string }) {
   return (
-    <a
-      href={`/api/admin/export?type=${type}`}
-      className="inline-flex items-center gap-1.5 rounded-full bg-cream px-3 py-2 text-[11px] font-semibold text-forest ring-1 ring-soil/15 transition-colors hover:bg-sage"
-    >
-      <Download className="size-3.5" aria-hidden />
+    <a href={`/api/admin/export?type=${type}`} className={ADMIN_SMALL_BUTTON} title={`Unduh ${label}`}>
+      <Download className="size-3.5" aria-hidden strokeWidth={1.8} />
       {label}
     </a>
   )
@@ -77,158 +89,171 @@ export function AdminDashboardScreen({
     window.setTimeout(() => setRefreshing(false), 1200)
   }
 
+  const counts: Record<AdminTabId, number | null> = {
+    overview: null,
+    users: snapshot?.users.length ?? null,
+    plans: snapshot?.revenue.paidUsers ?? null,
+    payments: snapshot?.payments.summary.counts.all ?? null,
+  }
+
   return (
-    <div className="mx-auto w-full max-w-[1400px] px-4 pb-16 pt-6 sm:px-6 lg:px-10">
-      <header className="rounded-[1.6rem] bg-forest p-4 text-cream sm:p-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
+    <>
+      <header className="border-b border-soil/[0.07]">
+        <div className="mx-auto flex w-full max-w-[1200px] flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
           <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <AdminPill tone="daisy">
-                <ShieldCheck className="size-3" aria-hidden /> Khusus pemilik
-              </AdminPill>
-              <AdminPill tone="mint">Data live Supabase</AdminPill>
-              <span className="text-[11px] text-cream/60">{email}</span>
-            </div>
-            <h1 className="mt-2 text-[20px] font-semibold leading-tight sm:text-[24px]">
-              Founder Command Center
-            </h1>
-            <p className="mt-1 text-[12px] leading-relaxed text-cream/70">
-              {name ? `${name}, ini` : 'Ini'} ringkasan operasional CatetInd: pertumbuhan user,
-              pendapatan bersih, paket aktif, dan pembayaran Midtrans. Angka di bawah dibaca langsung
-              dari tabel Supabase (`auth.users`, `user_subscriptions`, `purchases`, dan tabel
-              aktivitas) — tanpa seed, tanpa data contoh, tanpa angka cadangan.
+            <p className="flex items-center gap-2 text-[13px] font-semibold tracking-tight text-forest">
+              Admin
+              <span className="inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-[0.12em] text-forest/40">
+                <span className="size-1.5 rounded-full bg-mint" aria-hidden />
+                live
+              </span>
+              {snapshot && (
+                <span className="text-[11px] font-normal tracking-normal text-forest/35">
+                  {formatRelative(snapshot.generatedAt, nowMs)}
+                </span>
+              )}
+            </p>
+            <p className="mt-0.5 max-w-[48vw] truncate text-[11px] text-forest/40" title={email}>
+              {name || email}
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Link
-              href="/app"
-              className="inline-flex items-center gap-1.5 rounded-full bg-cream/10 px-3 py-2 text-[11px] font-semibold text-cream ring-1 ring-cream/20 transition-colors hover:bg-cream/20"
-            >
-              <ArrowLeft className="size-3.5" aria-hidden /> Dashboard
-            </Link>
+
+          <div className="flex items-center gap-1.5">
+            <ExportLink type="users" label="CSV user" />
+            <ExportLink type="payments" label="CSV bayar" />
             <button
               type="button"
               onClick={refresh}
               disabled={refreshing}
-              className="inline-flex items-center gap-1.5 rounded-full bg-cream/10 px-3 py-2 text-[11px] font-semibold text-cream ring-1 ring-cream/20 transition-colors hover:bg-cream/20 disabled:opacity-60"
+              title="Muat ulang"
+              aria-label="Muat ulang data"
+              className={ADMIN_TOOL_BUTTON}
             >
-              <RefreshCw className={cn('size-3.5', refreshing && 'animate-spin')} aria-hidden />
-              {refreshing ? 'Memuat…' : 'Muat ulang'}
+              <RefreshCw
+                className={cn('size-4', refreshing && 'animate-spin')}
+                aria-hidden
+                strokeWidth={1.8}
+              />
             </button>
-            <ExportLink type="users" label="CSV User" />
-            <ExportLink type="payments" label="CSV Pembayaran" />
+            <Link
+              href="/app"
+              title="Kembali ke aplikasi"
+              aria-label="Kembali ke aplikasi"
+              className={ADMIN_TOOL_BUTTON}
+            >
+              <ArrowLeft className="size-4" aria-hidden strokeWidth={1.8} />
+            </Link>
           </div>
         </div>
-        {snapshot && (
-          <p className="mt-3 text-[11px] text-cream/55">
-            Snapshot dibuat {formatDateTime(snapshot.generatedAt)} · {formatNumber(snapshot.users.length)}{' '}
-            akun dibaca
-            {snapshot.limits.usersTruncated ? ' (menyentuh batas baca — angka bisa terpotong)' : ''}
-          </p>
-        )}
       </header>
 
-      {!snapshot ? (
-        <div className="mt-4 rounded-[1.4rem] bg-cream p-4 ring-1 ring-soil/10">
-          <div className="flex items-start gap-2">
-            <AlertTriangle className="mt-0.5 size-4 shrink-0 text-plum" aria-hidden />
-            <div>
-              <p className="text-[13px] font-semibold text-forest">Data admin belum bisa dibaca</p>
-              <p className="mt-1 text-[12px] leading-relaxed text-forest/65">
-                {error ?? 'Snapshot belum tersedia.'}
-              </p>
-              <p className="mt-2 text-[11px] leading-relaxed text-forest/50">
-                Dashboard ini membutuhkan `SUPABASE_SERVICE_ROLE_KEY` di server. Kunci itu tidak
-                pernah dikirim ke browser dan tidak boleh ditulis di kode.
-              </p>
-            </div>
-          </div>
-          <div className="mt-3">
-            <AdminEmpty>Perbaiki konfigurasi server lalu muat ulang halaman ini.</AdminEmpty>
-          </div>
-        </div>
-      ) : (
-        <>
-          <nav
-            aria-label="Bagian dashboard admin"
-            className="mt-4 flex flex-wrap items-center gap-1.5"
+      <div className="mx-auto w-full max-w-[1200px] px-4 pb-16 pt-4 sm:px-6 lg:px-8">
+        {!snapshot ? (
+          <AdminSection
+            title="Data belum bisa dibaca"
+            note="Dashboard membaca data lewat kunci peran server (SUPABASE_SERVICE_ROLE_KEY). Kunci itu tidak pernah dikirim ke browser."
           >
-            {TABS.map((item) => {
-              const Icon = item.icon
-              const active = tab === item.id
-              const badge =
-                item.id === 'users'
-                  ? snapshot.users.length
-                  : item.id === 'payments'
-                    ? snapshot.mismatches.length
-                    : item.id === 'plans'
-                      ? snapshot.revenue.paidUsers
-                      : null
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setTab(item.id)}
-                  aria-pressed={active}
-                  className={cn(
-                    'inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[12px] font-semibold transition-colors',
-                    active
-                      ? 'bg-forest text-cream'
-                      : 'bg-sage/60 text-forest/70 hover:bg-sage hover:text-forest',
-                  )}
-                >
-                  <Icon className="size-3.5" aria-hidden />
-                  {item.label}
-                  {badge !== null && badge > 0 && (
-                    <span
+            <p className="text-[12px] leading-relaxed text-forest/60">
+              {error ?? 'Snapshot belum tersedia.'}
+            </p>
+            <button type="button" onClick={refresh} className={cn(ADMIN_PRIMARY_BUTTON, 'mt-3')}>
+              <RefreshCw className={cn('size-3.5', refreshing && 'animate-spin')} aria-hidden />
+              Muat ulang
+            </button>
+          </AdminSection>
+        ) : (
+          <>
+            <AdminSection>
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                <AdminStat
+                  label="Pendapatan bulan ini"
+                  value={formatIDR(snapshot.revenue.total.thisMonth)}
+                  hint={`hari ini ${formatIDR(snapshot.revenue.total.today)}`}
+                />
+                <AdminStat
+                  label="Akun berbayar"
+                  value={formatNumber(snapshot.revenue.paidUsers)}
+                  hint={`${formatPercent(snapshot.revenue.paidAccountPercent)} dari ${formatNumber(
+                    snapshot.revenue.totalUsers,
+                  )} akun`}
+                />
+                <AdminStat
+                  label="Total akun"
+                  value={formatNumber(snapshot.growth.users.total)}
+                  hint={`+${formatNumber(snapshot.growth.users.last30)} / 30 hr`}
+                />
+                <AdminStat
+                  label="Aktif 30 hari"
+                  value={formatNumber(snapshot.growth.activeMonthly)}
+                  hint={`${formatNumber(snapshot.growth.activeDaily)} / 24 jam`}
+                />
+              </div>
+              {snapshot.limits.usersTruncated && (
+                <AdminMeta className="mt-3">
+                  Data menyentuh batas baca — angka bisa terpotong.
+                </AdminMeta>
+              )}
+            </AdminSection>
+
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <div className="inline-flex rounded-full bg-sage/60 p-1">
+                {TABS.map((item) => {
+                  const Icon = item.icon
+                  const active = tab === item.id
+                  const badge = counts[item.id]
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setTab(item.id)}
+                      aria-pressed={active}
                       className={cn(
-                        'rounded-full px-1.5 py-0.5 text-[10px]',
-                        item.id === 'payments'
-                          ? active
-                            ? 'bg-cream/20 text-cream'
-                            : 'bg-plum/20 text-plum-deep'
-                          : active
-                            ? 'bg-cream/20 text-cream'
-                            : 'bg-ink/[0.06] text-forest/60',
+                        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[11.5px] font-semibold transition-colors sm:px-3 sm:text-[12px]',
+                        active
+                          ? 'bg-cream text-forest ring-1 ring-soil/[0.08]'
+                          : 'text-forest/55 hover:text-forest',
                       )}
                     >
-                      {formatNumber(badge)}
-                    </span>
-                  )}
+                      <Icon className="hidden size-3.5 sm:block" aria-hidden strokeWidth={1.8} />
+                      {item.label}
+                      {badge !== null && badge > 0 && (
+                        <span className="text-[10px] font-medium tabular-nums text-forest/35">
+                          {formatNumber(badge)}
+                        </span>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+
+              {snapshot.mismatches.length > 0 && tab !== 'payments' && (
+                <button
+                  type="button"
+                  onClick={() => setTab('payments')}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-plum/10 px-3 py-1.5 text-[11.5px] font-semibold text-plum-deep transition-colors hover:bg-plum/15"
+                >
+                  <AlertTriangle className="size-3.5" aria-hidden strokeWidth={1.8} />
+                  {formatNumber(snapshot.mismatches.length)} pembayaran perlu dicek
                 </button>
-              )
-            })}
-          </nav>
+              )}
+            </div>
 
-          {snapshot.mismatches.length > 0 && tab !== 'payments' && (
-            <button
-              type="button"
-              onClick={() => setTab('payments')}
-              className="mt-3 flex w-full items-start gap-2 rounded-2xl bg-plum/10 px-3.5 py-3 text-left text-[12px] leading-relaxed text-plum-deep transition-colors hover:bg-plum/15"
-            >
-              <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
-              <span>
-                {formatNumber(snapshot.mismatches.length)} pembayaran lunas belum sinkron dengan hak
-                akses user. Buka tab Pembayaran untuk memperbaiki.
-              </span>
-            </button>
-          )}
-
-          <div className="mt-4">
-            {tab === 'overview' && <AdminOverview snapshot={snapshot} />}
-            {tab === 'users' && <AdminUsersTable users={snapshot.users} nowMs={nowMs} />}
-            {tab === 'plans' && <AdminPlansTab snapshot={snapshot} />}
-            {tab === 'payments' && (
-              <AdminPaymentsTable
-                payments={snapshot.payments.rows}
-                summary={snapshot.payments.summary}
-                abandoned={snapshot.abandoned}
-                mismatches={snapshot.mismatches}
-              />
-            )}
-          </div>
-        </>
-      )}
-    </div>
+            <div className="mt-3">
+              {tab === 'overview' && <AdminOverview snapshot={snapshot} />}
+              {tab === 'users' && <AdminUsersTable users={snapshot.users} nowMs={nowMs} />}
+              {tab === 'plans' && <AdminPlansTab snapshot={snapshot} />}
+              {tab === 'payments' && (
+                <AdminPaymentsTable
+                  payments={snapshot.payments.rows}
+                  summary={snapshot.payments.summary}
+                  abandoned={snapshot.abandoned}
+                  mismatches={snapshot.mismatches}
+                />
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    </>
   )
 }

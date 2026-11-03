@@ -27,10 +27,12 @@ import { AdminPill, formatDate, formatNumber } from './admin-ui'
 const DAY_OPTIONS = [7, 30, 90] as const
 
 const FIELD_CLASS =
-  'mt-1 w-full rounded-xl bg-cream px-3 py-2 text-[13px] text-forest ring-1 ring-soil/15 outline-none transition focus:ring-2 focus:ring-forest/30'
+  'mt-1 w-full rounded-xl bg-cream px-3 py-2 text-[12.5px] text-forest ring-1 ring-soil/[0.08] outline-none transition focus:ring-2 focus:ring-forest/25'
 
 const BUTTON_CLASS =
   'inline-flex items-center justify-center gap-1.5 rounded-xl bg-forest px-3.5 py-2 text-[12px] font-semibold text-cream transition-colors hover:bg-forest-soft disabled:cursor-not-allowed disabled:bg-ink/[0.07] disabled:text-forest/35'
+
+const CARD_CLASS = 'rounded-xl bg-cream/70 p-3 ring-1 ring-soil/[0.06]'
 
 export function AdminUserActions({
   user,
@@ -75,7 +77,7 @@ export function AdminUserActions({
   }
 
   return (
-    <div className="rounded-[1.4rem] bg-sage/60 p-4 ring-1 ring-forest/15">
+    <div className="rounded-2xl bg-sage/40 p-3 ring-1 ring-soil/[0.06]">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[13px] font-semibold text-forest">
@@ -93,7 +95,7 @@ export function AdminUserActions({
         </button>
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-1.5">
+      <div className="mt-3 flex flex-wrap items-center gap-1.5">
         <AdminPill tone={user.plan.active && user.plan.planId ? 'mint' : 'thistle'}>
           {planLabelOf(user.plan.planId)}
           {user.plan.isLifetime
@@ -102,15 +104,13 @@ export function AdminUserActions({
               ? ` · s/d ${formatDate(user.plan.expiresAt)}`
               : ''}
         </AdminPill>
-        <AdminPill tone="forest">{formatNumber(user.walletCount)} dompet</AdminPill>
-        <AdminPill tone="forest">{formatNumber(user.transactionCount)} transaksi</AdminPill>
         <AdminPill tone="daisy">AI {formatNumber(user.aiCallsThisMonth)} panggilan</AdminPill>
         <AdminPill tone="thistle">{formatNumber(user.aiBonusTokens)} token bonus</AdminPill>
       </div>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-3">
+      <div className="mt-3 grid gap-3 lg:grid-cols-3">
         {/* 1 — UBAH / BERI PAKET */}
-        <div className="rounded-2xl bg-cream/80 p-3 ring-1 ring-soil/[0.08]">
+        <div className={CARD_CLASS}>
           <p className="flex items-center gap-1.5 text-[12px] font-semibold text-forest">
             <Crown className="size-3.5" aria-hidden /> Beri / ubah paket
           </p>
@@ -152,12 +152,12 @@ export function AdminUserActions({
         </div>
 
         {/* 2 — PERPANJANG MASA AKTIF */}
-        <div className="rounded-2xl bg-cream/80 p-3 ring-1 ring-soil/[0.08]">
-          <p className="flex items-center gap-1.5 text-[12px] font-semibold text-forest">
-            <CalendarPlus className="size-3.5" aria-hidden /> Perpanjang masa aktif
-          </p>
-          <p className="mt-1 text-[11px] leading-snug text-forest/55">
-            Menumpuk dari sisa hari. Tidak berlaku untuk akses selamanya.
+        <div className={CARD_CLASS}>
+          <p
+            className="flex items-center gap-1.5 text-[12px] font-semibold text-forest"
+            title="Menumpuk dari sisa hari. Tidak berlaku untuk akses selamanya."
+          >
+            <CalendarPlus className="size-3.5" aria-hidden strokeWidth={1.8} /> Perpanjang
           </p>
           <div className="mt-2 space-y-2">
             <label className="block text-[11px] text-forest/55">
@@ -186,9 +186,9 @@ export function AdminUserActions({
         </div>
 
         {/* 3 — KUOTA AI */}
-        <div className="rounded-2xl bg-cream/80 p-3 ring-1 ring-soil/[0.08]">
+        <div className={CARD_CLASS}>
           <p className="flex items-center gap-1.5 text-[12px] font-semibold text-forest">
-            <Bot className="size-3.5" aria-hidden /> Kuota AI
+            <Bot className="size-3.5" aria-hidden strokeWidth={1.8} /> Kuota AI
           </p>
           <div className="mt-2 space-y-2">
             <label className="block text-[11px] text-forest/55">
@@ -245,21 +245,18 @@ export function AdminUserActions({
         </div>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-2">
+      <div className="mt-2.5 flex flex-wrap items-center gap-2">
         <button
           type="button"
           disabled={busy !== null}
           onClick={() => void run('repair', { action: 'repair-plan', userId: user.id })}
-          className="inline-flex items-center gap-1.5 rounded-xl bg-cream px-3 py-2 text-[11px] font-semibold text-forest ring-1 ring-soil/15 transition-colors hover:bg-sage disabled:cursor-not-allowed disabled:text-forest/35"
+          className="inline-flex items-center gap-1.5 rounded-xl bg-cream px-3 py-2 text-[11px] font-semibold text-forest ring-1 ring-soil/[0.08] transition-colors hover:bg-sage/60 disabled:cursor-not-allowed disabled:text-forest/35"
+          title="Menulis ulang hak akses ke user_subscriptions dari baris pembelian yang lunas."
         >
-          <RefreshCw className="size-3" aria-hidden />
-          {busy === 'repair' ? 'Menyinkronkan…' : 'Sinkronkan dari pembayaran lunas'}
+          <RefreshCw className="size-3" aria-hidden strokeWidth={1.8} />
+          {busy === 'repair' ? 'Menyinkronkan…' : 'Sinkron dari pembayaran lunas'}
         </button>
-        <p className="text-[11px] leading-snug text-forest/50">
-          Perubahan ditulis ke tabel yang SAMA dengan yang dibaca aplikasi: `user_subscriptions`
-          (middleware, `/api/subscription`, panel Billing), `ai_addons` & `ai_usage` (meter AI).
-          Tidak ada salinan terpisah — user akan melihatnya pada pemuatan/refresh berikutnya.
-        </p>
+        <span className="text-[10.5px] text-forest/35">ditulis ke tabel yang sama dengan aplikasi</span>
       </div>
     </div>
   )

@@ -1,9 +1,22 @@
 'use client'
 
 import type { ReactNode } from 'react'
+import { Info } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-/* ── PERANGKAT TAMPILAN DASHBOARD ADMIN ──────────────────────────────────────
+/* ── PERANGKAT TAMPILAN DASHBOARD ADMIN (versi ringkas) ──────────────────────
+   Aturan tampilan yang dipegang di sini — satu tempat, bukan di tiap halaman:
+
+     · ANGKA DULU. Kotak = judul 1–4 kata + angka/baris. Tidak ada paragraf
+       penjelasan; konteks yang benar-benar perlu hidup di `note` (ikon ⓘ).
+     · SATU ANGKA, SATU TEMPAT. Tidak ada nilai yang diulang jadi pill di
+       beberapa kotak — pill hanya untuk STATUS (lunas, tanpa paket, …).
+     · ANGKA RATA. Semua nominal & hitungan memakai `tabular-nums`, jadi kolom
+       angka tidak "bergoyang" antar baris.
+     · TANPA SHADOW. Pemisah = garis rambut (`ring-soil/[0.08]`,
+       `divide-soil/[0.06]`). Warna = arti, bukan hiasan: forest netral,
+       mint uang masuk, plum perlu dicek.
+
    Semua warna diambil dari token palet resmi (`app/globals.css`): cream, sage,
    forest, mint, daisy, plum, cantelope, thistle. Tidak ada hex/rgb literal dan
    tidak ada kelas bawaan Tailwind (audit `pnpm theme:audit`).
@@ -29,6 +42,18 @@ const BAR_TONES: Record<AdminTone, string> = {
   thistle: 'bg-thistle',
 }
 
+/** tombol ikon di top bar (satu bentuk untuk semua aksi alat) */
+export const ADMIN_TOOL_BUTTON =
+  'inline-flex size-8 shrink-0 items-center justify-center rounded-full text-forest/60 ring-1 ring-soil/[0.08] transition-colors hover:bg-sage/60 hover:text-forest disabled:cursor-not-allowed disabled:opacity-40'
+
+/** tombol teks kecil (aksi baris/tabel) */
+export const ADMIN_SMALL_BUTTON =
+  'inline-flex items-center gap-1.5 rounded-full bg-cream px-2.5 py-1.5 text-[11px] font-semibold text-forest ring-1 ring-soil/[0.08] transition-colors hover:bg-sage/60 disabled:cursor-not-allowed disabled:text-forest/35'
+
+/** tombol utama kecil (aksi yang mengubah data) */
+export const ADMIN_PRIMARY_BUTTON =
+  'inline-flex items-center justify-center gap-1.5 rounded-xl bg-forest px-3 py-2 text-[12px] font-semibold text-cream transition-colors hover:bg-forest-soft disabled:cursor-not-allowed disabled:bg-ink/[0.07] disabled:text-forest/35'
+
 export function AdminPill({
   children,
   tone = 'forest',
@@ -41,7 +66,7 @@ export function AdminPill({
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset',
+        'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-semibold ring-1 ring-inset',
         PILL_TONES[tone],
         className,
       )}
@@ -51,68 +76,122 @@ export function AdminPill({
   )
 }
 
+/**
+ * Konteks singkat di balik judul kotak — pengganti `description` yang dulu
+ * memakan 2–4 baris di setiap kartu. Teks panjangnya hidup di tooltip, jadi
+ * layar tetap "satu pandang" tanpa kehilangan artinya.
+ */
+export function AdminNote({ children }: { children: ReactNode }) {
+  const text = typeof children === 'string' ? children : undefined
+  return (
+    <span
+      className="inline-flex shrink-0 align-middle text-forest/25 transition-colors hover:text-forest/50"
+      title={text}
+      aria-label={text}
+      role="img"
+    >
+      <Info className="size-3.5" aria-hidden strokeWidth={1.8} />
+    </span>
+  )
+}
+
 export function AdminSection({
   title,
-  description,
+  note,
   action,
   children,
   className,
 }: {
-  title: string
-  description?: string
+  /** kosong = panel polos (tanpa judul) */
+  title?: string
+  /** konteks 1 kalimat → tampil sebagai ⓘ, bukan paragraf */
+  note?: string
   action?: ReactNode
   children: ReactNode
   className?: string
 }) {
+  const hasHeader = Boolean(title) || Boolean(action)
   return (
-    <section
-      className={cn(
-        'rounded-[1.4rem] bg-cream p-4 ring-1 ring-soil/10 sm:p-5',
-        'shadow-[0_18px_40px_-32px_rgba(0,0,0,0.35)]',
-        className,
-      )}
-    >
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="text-[15px] font-semibold text-forest">{title}</h2>
-          {description && (
-            <p className="mt-1 max-w-2xl text-[12px] leading-relaxed text-forest/55">
-              {description}
-            </p>
+    <section className={cn('rounded-2xl bg-cream p-4 ring-1 ring-soil/[0.08]', className)}>
+      {hasHeader && (
+        <div className="flex items-start justify-between gap-3">
+          {title && (
+            <h2 className="flex min-w-0 items-center gap-1.5 text-[13px] font-semibold tracking-tight text-forest">
+              {title}
+              {note && <AdminNote>{note}</AdminNote>}
+            </h2>
           )}
+          {action}
         </div>
-        {action}
-      </div>
-      <div className="mt-4">{children}</div>
+      )}
+      <div className={hasHeader ? 'mt-3' : undefined}>{children}</div>
     </section>
   )
 }
 
+/** daftar baris tanpa kotak per item — pemisah cukup garis rambut */
+export function AdminList({ children, className }: { children: ReactNode; className?: string }) {
+  return <ul className={cn('divide-y divide-soil/[0.06]', className)}>{children}</ul>
+}
+
+/** satu baris daftar: satu label di kiri, satu fakta di kanan */
+export function AdminListRow({
+  left,
+  right,
+  meta,
+  className,
+}: {
+  left: ReactNode
+  right?: ReactNode
+  /** baris kedua yang lebih kecil (tanggal/keadaan) — maksimal satu */
+  meta?: ReactNode
+  className?: string
+}) {
+  return (
+    <li className={cn('flex items-center justify-between gap-3 py-2', className)}>
+      <div className="min-w-0">
+        <p className="truncate text-[12.5px] font-medium text-forest">{left}</p>
+        {meta && <p className="mt-0.5 truncate text-[11px] tabular-nums text-forest/45">{meta}</p>}
+      </div>
+      {right && (
+        <div className="shrink-0 text-right text-[12px] font-semibold tabular-nums text-forest">
+          {right}
+        </div>
+      )}
+    </li>
+  )
+}
+
+/**
+ * Satu angka ringkas: label kecil di atas, nilai besar, satu keterangan pendek.
+ * Tidak punya latar sendiri — kelompoknya yang memberi permukaan (panel),
+ * supaya layar tidak penuh kotak-kotak kecil.
+ */
 export function AdminStat({
   label,
   value,
   hint,
-  tone = 'forest',
+  className,
 }: {
   label: string
   value: string
   hint?: string
-  tone?: AdminTone
+  className?: string
 }) {
   return (
-    <div className="rounded-2xl bg-sage/50 p-3 ring-1 ring-soil/[0.06]">
-      <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-forest/50">{label}</p>
-      <p className="mt-1 text-[20px] font-semibold leading-tight text-forest">{value}</p>
-      {hint && (
-        <p className="mt-1 flex items-center gap-1.5 text-[11px] leading-snug text-forest/55">
-          <span className={cn('size-1.5 shrink-0 rounded-full', BAR_TONES[tone])} aria-hidden />
-          {hint}
-        </p>
-      )}
+    <div className={cn('min-w-0', className)}>
+      <p className="text-[10.5px] font-medium uppercase tracking-[0.12em] text-forest/40">
+        {label}
+      </p>
+      <p className="mt-1 text-[22px] font-semibold leading-none tracking-tight tabular-nums text-forest">
+        {value}
+      </p>
+      {hint && <p className="mt-1.5 truncate text-[11px] tabular-nums text-forest/45">{hint}</p>}
     </div>
   )
 }
 
+/** bar tipis (bukan donut) — membandingkan porsi dalam satu garis pandang */
 export function AdminBar({
   percent,
   tone = 'forest',
@@ -126,7 +205,7 @@ export function AdminBar({
   const safe = Math.max(0, Math.min(100, Number.isFinite(percent) ? percent : 0))
   return (
     <div
-      className="h-2 w-full overflow-hidden rounded-full bg-ink/[0.07]"
+      className="h-1 w-full overflow-hidden rounded-full bg-ink/[0.06]"
       role="progressbar"
       aria-valuemin={0}
       aria-valuemax={100}
@@ -143,7 +222,16 @@ export function AdminBar({
 
 export function AdminEmpty({ children }: { children: ReactNode }) {
   return (
-    <p className="rounded-2xl bg-sage/40 px-4 py-6 text-center text-[12px] leading-relaxed text-forest/55">
+    <p className="rounded-xl bg-sage/40 px-3 py-4 text-center text-[11.5px] text-forest/45">
+      {children}
+    </p>
+  )
+}
+
+/** satu keterangan kecil di bawah isi kotak (bukan kalimat penjelas) */
+export function AdminMeta({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <p className={cn('text-[11px] leading-snug tabular-nums text-forest/45', className)}>
       {children}
     </p>
   )
@@ -181,6 +269,25 @@ export function formatDateTime(iso: string | null | undefined): string {
     hour: '2-digit',
     minute: '2-digit',
   }).format(new Date(time))
+}
+
+/**
+ * "baru saja" · "12 mnt lalu" · "3 jam lalu" · "5 hr lalu" — dipakai di top bar
+ * supaya kesegaran snapshot terbaca tanpa kalimat "Snapshot dibuat …".
+ * Nama bulan tetap muncul untuk data yang lebih tua dari 30 hari.
+ */
+export function formatRelative(iso: string | null | undefined, nowMs = Date.now()): string {
+  if (!iso) return '—'
+  const time = Date.parse(iso)
+  if (!Number.isFinite(time)) return '—'
+  const minutes = Math.round((nowMs - time) / 60_000)
+  if (minutes < 1) return 'baru saja'
+  if (minutes < 60) return `${minutes} mnt lalu`
+  const hours = Math.round(minutes / 60)
+  if (hours < 24) return `${hours} jam lalu`
+  const days = Math.round(hours / 24)
+  if (days < 30) return `${days} hr lalu`
+  return formatDate(iso)
 }
 
 /** 0 → "habis hari ini" · 3 → "3 hari lagi" · -2 → "lewat 2 hari" */
