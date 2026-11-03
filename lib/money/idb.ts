@@ -29,8 +29,26 @@
 
 const DB_NAME = 'catetind-money'
 const STORE_NAME = 'state'
-/** key snapshot uang (dompet + baris ledger) — dipakai `loadMoneyState`/`saveMoneyState` */
-const MONEY_STATE_KEY = 'snapshot'
+/**
+ * PREFIX key snapshot uang (dompet + baris ledger).
+ *
+ * Sejak cache dipisah per akun, key-nya `snapshot:<userId>` (atau
+ * `snapshot:anon` kalau belum ada sesi). Alasannya: satu browser boleh dipakai
+ * beberapa akun, dan data akun A tidak boleh muncul di akun B hanya karena
+ * keduanya pernah login di perangkat yang sama.
+ */
+const MONEY_KEY_PREFIX = 'snapshot'
+/**
+ * key LAMA (`snapshot`, satu untuk seluruh perangkat). Tidak ditulis lagi —
+ * hanya dibaca sekali oleh `lib/money/store.ts` untuk memindahkan data yang
+ * sudah ada ke key akun pemiliknya.
+ */
+export const LEGACY_MONEY_STATE_KEY = MONEY_KEY_PREFIX
+
+/** key snapshot uang milik satu akun (`snapshot:<userId>` / `snapshot:anon`) */
+export function moneyStateKey(userId: string | null | undefined): string {
+  return userId ? `${MONEY_KEY_PREFIX}:${userId}` : `${MONEY_KEY_PREFIX}:anon`
+}
 /** key state celengan impian — store kedua di database yang SAMA (paket 46) */
 export const FUNDS_STATE_KEY = 'funds'
 /** key state kekayaan (hutang/piutang/investasi) — store ketiga, database yang SAMA (paket 50) */
@@ -104,12 +122,12 @@ export function saveDeviceState<T>(key: string, state: T): void {
   })
 }
 
-export function loadMoneyState<T>(): Promise<T | null> {
-  return loadDeviceState<T>(MONEY_STATE_KEY)
+export function loadMoneyState<T>(userId?: string | null): Promise<T | null> {
+  return loadDeviceState<T>(moneyStateKey(userId))
 }
 
-export function saveMoneyState<T>(state: T): void {
-  saveDeviceState(MONEY_STATE_KEY, state)
+export function saveMoneyState<T>(state: T, userId?: string | null): void {
+  saveDeviceState(moneyStateKey(userId), state)
 }
 
 /**

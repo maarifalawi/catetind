@@ -7,6 +7,7 @@ import { isPublicRoute } from '@/lib/public-routes'
 import { browserSupabase } from '@/lib/supabase/client'
 import { loadMoneyState } from '@/lib/money/idb'
 import type { PersistedMoney } from '@/lib/money/store'
+import { getMoneySnapshot } from '@/lib/money/store'
 import { seedDemoDataOnce } from '@/lib/money/demo-bootstrap'
 
 /* ── GERBANG SEED DEMO (paket 65 · Tugas A) ──────────────────────────────────
@@ -52,7 +53,11 @@ export function DemoSeedGate() {
              `NEXT_PUBLIC_DEMO_ALLOW_SESSION=1` di perangkat dev. */
           if (data.session && !DEMO_ALLOW_SESSION) return
         } catch {
-          /* sesi tidak terbaca → anggap belum login; seed lokal tetap aman */
+          /* Sesi TIDAK terbaca ≠ belum login. Dulu kegagalan baca dianggap
+             "belum login", dan karena store saat itu bisa masih kosong jalur
+             "fresh start" langsung menghapus seluruh IndexedDB perangkat.
+             Kalau identitas tidak pasti, jangan menyentuh data apa pun. */
+          return
         }
       }
 
@@ -62,6 +67,11 @@ export function DemoSeedGate() {
          didokumentasikan di `lib/demo.ts`, default mati). */
       const persisted = await loadMoneyState<PersistedMoney>()
       if (persisted?.ownerUserId && !DEMO_ALLOW_SESSION) return
+
+      /* Store uang belum selesai dibaca → `getMoneySnapshot().rows` masih kosong
+         BUKAN berarti perangkat bersih. Menyemai (dan terutama "fresh start")
+         di titik ini bisa menghapus data yang sedang dibaca. Tunggu / lewati. */
+      if (!getMoneySnapshot().hydrated && !DEMO_ALLOW_SESSION) return
 
       if (active) seedDemoDataOnce({ force: DEMO_ALLOW_SESSION })
     })()

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { mergeWithRemote, type MoneyRow, type MoneySnapshot } from './store'
+import { mergeWithRemote, pendingWalletOutbox, type MoneyRow, type MoneySnapshot } from './store'
+import { assertLedgerInvariant, balanceOf } from './ledger'
 import { WALLET_SEED } from '@/lib/wallets'
 
 /* ── Test penggabungan SERVER ⇄ LOKAL (paket 45) ─────────────────────────────
@@ -123,76 +124,91 @@ describe('mergeWithRemote · server jadi sumber, antrean lokal tidak hilang', ()
   })
 })
 
-/* ── KEPEMILIKAN SNAPSHOT PERANGKAT ────────────────────────────────────────────
-   Bug yang ditutup: cache uang TIDAK dipisah per akun (satu DB, satu key
-   `snapshot`). Saat akun A login di browser yang masih menyimpan snapshot akun
-   B / persona demo, `mergeWithRemote` dulu memasukkan SEMUA baris lokal yang
-   tidak ada di server sebagai "antrean offline" — jadi transaksi orang lain ikut
-   tampil (dan ikut terkirim) di akun A. Angka Arus Uang berubah setelah login
-   ulang / refresh, tanpa user mencatat apa pun.
+/* ── SATU AKUN, SATU CACHE ────────────────────────────────────────────────────
+   Data uang sekarang disimpan per akun (`snapshot:<userId>`, lihat
+   `moneyStateKey()`), jadi fungsi ini TIDAK perlu lagi menebak "snapshot ini
+   punya siapa" dan tidak ada lagi opsi `includeLocalRows` yang membuang data
+   user. Dua konsekuensinya dikunci di sini:
 
-   Sekarang hidrasi memberi tahu fungsi ini bahwa snapshot itu ASING
-   (`includeLocalRows: false`): baris, tombstone, override, dan antreannya tidak
-   ikut — sementara baris yang lahir di SESI INI tetap dipertahankan. */
-describe('mergeWithRemote · snapshot perangkat milik identitas lain', () => {
+     1. isi cache akun yang sedang login SELALU ikut digabung (baris antrean,
+        tombstone, override) — itu data user sendiri;
+     2. jawaban server yang TIDAK memuat dompet/baris apa pun tidak boleh
+        dianggap bukti "dompet ini sudah dihapus di perangkat lain". Dulu
+        rekonsiliasi otoritatif membuang dompet lokal di keadaan itu — itulah
+        penyebab "dompet baru hilang setelah refresh". */
+describe('mergeWithRemote · satu akun, satu cache', () => {
   const serverRow = row({ id: 'session-9001', seq: 9001, clientTxId: 'srv-1' })
-  const foreignPersisted = {
-    ownerUserId: 'user-LAIN',
+  /* `current` kosong = store belum sempat diisi di sesi ini */
+  const NO_LOCAL: MoneySnapshot = { ...EMPTY, wallets: [] }
+
+  const ownPersisted = {
+    ownerUserId: 'user-INI',
     wallets: [...WALLET_SEED],
-    rows: [
-      /* khas persona demo: tunjangan 300.000 (lib/money/demo-bootstrap.ts) */
-      row({
-        id: 'session-9100',
-        seq: 9100,
-        clientTxId: 'demo-tunjangan',
-        type: 'income' as const,
-        amount: 300_000,
-      }),
-    ],
-    removedIds: ['session-9001'],
-    removedWalletIds: ['bca'],
+    rows: [row({ id: 'session-9100', seq: 9100, clientTxId: 'lokal-1' })],
+    removedIds: ['session-9101'],
+    removedWalletIds: [],
     rowOverrides: { 'session-9001': { amount: 1 } },
-    syncedIds: ['demo-tunjangan'],
+    syncedIds: ['srv-1'],
     syncedWalletIds: [],
     pendingWalletIds: [],
   }
 
-  it('baris, tombstone, override, dan antrean snapshot asing TIDAK ikut', () => {
+  it('isi cache akun ini ikut digabung: baris antrean, tombstone, dan override', () => {
     const merged = mergeWithRemote(
       { wallets: [...WALLET_SEED], rows: [serverRow] },
-      foreignPersisted,
+      ownPersisted,
       EMPTY,
-      { includeLocalRows: false },
-    )
-
-    expect(merged.rows.map((item) => item.id)).toEqual(['session-9001'])
-    /* tombstone asing tidak boleh menyembunyikan baris akun ini (id lokal bisa kembar) */
-    expect(merged.removedIds).toEqual([])
-    expect(merged.removedWalletIds).toEqual([])
-    expect(merged.rowOverrides).toEqual({})
-    expect(merged.syncedIds).toEqual(['srv-1'])
-  })
-
-  it('baris yang lahir di SESI INI tetap dipertahankan walau snapshot asing', () => {
-    const sessionRow = row({ id: 'session-9300', seq: 9300, clientTxId: 'baru-1' })
-    const merged = mergeWithRemote(
-      { wallets: [...WALLET_SEED], rows: [serverRow] },
-      foreignPersisted,
-      { ...EMPTY, rows: [sessionRow] },
-      { includeLocalRows: false },
-    )
-
-    expect(merged.rows.map((item) => item.id)).toEqual(['session-9300', 'session-9001'])
-  })
-
-  it('default (tanpa opsi) tetap menggabungkan snapshot sendiri — antrean offline tidak hilang', () => {
-    const merged = mergeWithRemote(
-      { wallets: [...WALLET_SEED], rows: [serverRow] },
-      foreignPersisted,
-      EMPTY,
+      { authoritative: true },
     )
 
     expect(merged.rows.map((item) => item.id)).toEqual(['session-9100', 'session-9001'])
-    expect(merged.removedIds).toEqual(['session-9001'])
+    expect(merged.removedIds).toContain('session-9101')
+    expect(merged.rowOverrides).toEqual({ 'session-9001': { amount: 1 } })
+  })
+
+  it('server kosong TIDAK menghapus dompet & baris lokal (dikirim ulang, bukan dibuang)', () => {
+    const wallet = { ...WALLET_SEED[0], id: 'w-baru', name: 'Dompet Baru', opening: 346_346_346 }
+    const persisted = {
+      ...ownPersisted,
+      wallets: [wallet],
+      rows: [row({ id: 'session-9500', seq: 9500, clientTxId: 'baru-1', walletId: 'w-baru' })],
+      /* dompet ini pernah dikonfirmasi server sebelum bacaan kosong ini */
+      syncedWalletIds: ['w-baru'],
+    }
+
+    const merged = mergeWithRemote({ wallets: [], rows: [] }, persisted, NO_LOCAL, {
+      authoritative: true,
+    })
+
+    expect(merged.wallets.map((item) => item.id)).toEqual(['w-baru'])
+    expect(merged.rows.map((item) => item.id)).toEqual(['session-9500'])
+    /* masuk lagi ke antrean kirim supaya perangkat lain juga melihatnya */
+    expect(pendingWalletOutbox(merged).map((item) => item.id)).toEqual(['w-baru'])
+  })
+
+  it('baris yang dompetnya tidak ada di jawaban server tetap punya dompetnya (invariant aman)', () => {
+    const wallet = { ...WALLET_SEED[0], id: 'w-lokal', name: 'Lokal' }
+    const persisted = {
+      ...ownPersisted,
+      wallets: [wallet],
+      rows: [row({ id: 'session-9600', seq: 9600, clientTxId: 'x-1', walletId: 'w-lokal' })],
+    }
+
+    const merged = mergeWithRemote(
+      { wallets: [...WALLET_SEED], rows: [serverRow] },
+      persisted,
+      NO_LOCAL,
+      { authoritative: true },
+    )
+
+    /* dompet lokal ikut dipertahankan karena barisnya masih dipakai */
+    expect(merged.wallets.some((item) => item.id === 'w-lokal')).toBe(true)
+
+    /* dan invariant `saldo = opening + Σ baris` tetap bisa dihitung */
+    const openings = Object.fromEntries(merged.wallets.map((item) => [item.id, item.opening]))
+    const balances = Object.fromEntries(
+      merged.wallets.map((item) => [item.id, balanceOf(merged.rows, item.id, item.opening)]),
+    )
+    expect(() => assertLedgerInvariant(merged.rows, { openings, balances })).not.toThrow()
   })
 })

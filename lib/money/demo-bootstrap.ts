@@ -209,6 +209,10 @@ export function seedDemoDataOnce(options: { force?: boolean } = {}): boolean {
      yang benar-benar mau dijadikan demo bisa direset dulu ("fresh start") —
      atau reviewer memakai `force` lewat env yang memang untuk itu. */
   if (!options.force && getMoneySnapshot().rows.length > 0) return false
+  /* Cache perangkat belum selesai dibaca → "belum ada baris" BUKAN berarti
+     perangkat bersih. Menjalankan "fresh start" (menghapus IndexedDB) di titik
+     ini bisa membuang data akun yang sedang dibaca. */
+  if (typeof window !== 'undefined' && !getMoneySnapshot().hydrated && !options.force) return false
 
   /* ── FRESH START — hanya di BROWSER, dan hanya sekali per versi ─────────────
      Tiga syarat, semuanya penting supaya reload tidak bisa berulang tanpa akhir:

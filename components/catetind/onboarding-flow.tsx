@@ -26,7 +26,6 @@ import { saveUserMoneySettings } from '@/lib/user-money-settings'
 import { OnboardingStepSituation } from './onboarding-step-situation'
 import { OnboardingStepIncome } from './onboarding-step-income'
 import { OnboardingStepFirstTransaction } from './onboarding-step-first-transaction'
-import { LocalDataNotice } from './local-data-notice'
 import type { TransactionTypeId } from '@/components/dashboard/transaction-input-engine'
 import { addWalletAccount, getMoneySnapshot, walletIdOfName } from '@/lib/money/store'
 import { recordTransaction } from '@/lib/transaction-bus'
@@ -376,11 +375,6 @@ export function OnboardingFlow() {
             </button>
           )}
         </div>
-        {/* Data lama di perangkat: tawarkan keputusan SEBELUM user membuat dompet
-            baru, karena setelah akun punya dompet jalur impor ditutup. */}
-        <LocalDataNotice />
-
-
 
         {/* ── isi step: slide horizontal + fade (AnimatePresence) ────────── */}
         <AnimatePresence mode="wait" custom={direction} initial={false}>
