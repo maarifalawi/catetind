@@ -42,17 +42,17 @@ function ExpiryList({
           left={
             <span className="flex items-center gap-1.5">
               {tone === 'cantelope' ? (
-                <CalendarClock className="size-3 text-cantelope-deep" aria-hidden strokeWidth={1.8} />
+                <CalendarClock className="size-3.5 text-cantelope-deep" aria-hidden strokeWidth={1.8} />
               ) : (
-                <Clock className="size-3 text-plum" aria-hidden strokeWidth={1.8} />
+                <Clock className="size-3.5 text-plum" aria-hidden strokeWidth={1.8} />
               )}
               <span className="truncate">{entry.name || entry.email || entry.userId}</span>
             </span>
           }
           meta={entry.email || 'tanpa email'}
           right={
-            <span className="block text-[11.5px]">
-              <span className="block text-forest/55">{entry.planLabel}</span>
+            <span className="block text-[13px]">
+              <span className="block text-forest-muted">{entry.planLabel}</span>
               <span className={tone === 'plum' ? 'text-plum-deep' : 'text-cantelope-deep'}>
                 {formatDate(entry.expiresAt)} · {daysLabel(entry.daysLeft)}
               </span>
@@ -81,11 +81,11 @@ export function AdminPlansTab({ snapshot }: { snapshot: AdminSnapshot }) {
             return (
               <div key={tier.planId}>
                 <div className="flex items-baseline justify-between gap-2">
-                  <p className="truncate text-[12.5px] font-medium text-forest">{tier.label}</p>
-                  <p className="shrink-0 text-[11.5px] tabular-nums text-forest/50">
+                  <p className="truncate text-[14px] font-medium text-forest">{tier.label}</p>
+                  <p className="shrink-0 text-[13px] tabular-nums text-forest-muted">
                     <span className="font-semibold text-forest">{formatNumber(tier.total)}</span> ·{' '}
                     {formatPercent(share)}
-                    <span className="ml-1.5 text-forest/35">
+                    <span className="ml-1.5 text-forest-muted">
                       ({formatNumber(tier.monthly)} 30 hr · {formatNumber(tier.lifetime)} selamanya)
                     </span>
                   </p>

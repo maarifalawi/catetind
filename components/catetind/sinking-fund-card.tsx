@@ -86,6 +86,7 @@ export function SinkingFundCard({
       <button
         type="button"
         onClick={() => onOpen(fund)}
+        data-catetind-fund-open={fund.name}
         aria-label={SINKING_FUND_CARD_COPY.progressAria(
           fund.name,
           percentLabel,
@@ -111,7 +112,7 @@ export function SinkingFundCard({
               {/* affordance buka detail: seluruh badan kartu sudah bisa ditekan,
                   jadi cukup chevron — tanpa teks "Lihat detail" */}
               <ChevronRight
-                className="mt-0.5 size-4 shrink-0 text-forest/25 transition-transform duration-300 group-hover/card:translate-x-0.5 motion-reduce:transition-none"
+                className="mt-0.5 size-4 shrink-0 text-forest-muted transition-transform duration-300 group-hover/card:translate-x-0.5 motion-reduce:transition-none"
                 strokeWidth={2.2}
                 aria-hidden
               />
@@ -160,7 +161,7 @@ export function SinkingFundCard({
 
         <span className="mt-2 block truncate text-[11.5px] tabular-nums text-forest-muted">
           {SINKING_FUND_CARD_COPY.perMonth(maskNominal(perMonth, masked))}
-          <span className="text-forest/50">
+          <span className="text-forest-muted">
             {' · '}
             {SINKING_FUND_CARD_COPY.perDay(maskNominal(perDay, masked))}
           </span>
@@ -181,8 +182,9 @@ export function SinkingFundCard({
               type="button"
               onClick={() => onDelete(fund)}
               aria-label={FUND_CARD_ACTION_COPY.delete(fund.name)}
+              data-catetind-fund-delete={fund.name}
               title={FUND_CARD_ACTION_COPY.deleteLabel}
-              className="flex size-9 items-center justify-center rounded-full text-forest/35 transition-all hover:bg-plum/10 hover:text-plum focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25 active:scale-95 lg:opacity-0 lg:group-hover/card:opacity-100 lg:focus-visible:opacity-100"
+              className="flex size-9 items-center justify-center rounded-full text-forest-muted transition-all hover:bg-plum/10 hover:text-plum focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25 active:scale-95 lg:opacity-0 lg:group-hover/card:opacity-100 lg:focus-visible:opacity-100"
             >
               <Trash2 className="size-3.5" strokeWidth={2.4} aria-hidden />
             </button>
@@ -191,6 +193,7 @@ export function SinkingFundCard({
             type="button"
             onClick={() => onContribute(fund)}
             aria-label={SINKING_FUND_CARD_COPY.contributeAria(fund.name)}
+            data-catetind-fund-contribute={fund.name}
             className="inline-flex h-9 items-center gap-1 rounded-full bg-mint/30 px-3.5 text-[12.5px] font-medium text-forest ring-1 ring-mint/60 transition-colors hover:bg-mint/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25 active:scale-95"
           >
             <Plus className="size-3.5" strokeWidth={3} aria-hidden />

@@ -144,10 +144,12 @@ describe('redesain Kalender Cashflow (render nyata)', () => {
 
     expect(html).toContain('Hari Ini')
     expect(html).toContain('Selasa, 22 September 2026')
-    expect(html).toContain('−Rp 1.100.000 keluar')
+    /* redesain mobile: nominal keluar berada di sel berlabel "Keluar" */
+    expect(html).toContain('>Keluar<')
+    expect(html).toContain('−Rp 1.100.000')
     expect(html).toContain('2 catatan')
     expect(html).toContain('Tambah Catatan di Tgl 22')
-    expect(html).toContain('h-11 w-full')
+    expect(html).toContain('h-10 w-full')
     expect(html).toContain('rounded-full bg-forest')
     expect(html).toContain('Transaksi')
 

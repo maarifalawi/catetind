@@ -91,7 +91,7 @@ describe('Ajak Teman — data nyata, tanpa kode/nama contoh', () => {
   it('kartu reward: satu janji reward, tanpa tautan paket', () => {
     const html = render(createElement(RewardCard, { reward: getReferrerReward() }))
 
-    expect(html).toContain('Reward Lo')
+    expect(html).toContain('Reward Kamu')
     expect(html).toContain(getReferrerReward().highlight)
     expect(html).toContain(REFERRED_FRIEND_BENEFIT)
 
@@ -104,7 +104,7 @@ describe('Ajak Teman — data nyata, tanpa kode/nama contoh', () => {
     const ownLink = buildReferralLinkText('DEWI-4KP')
     const html = shareHtml(ownLink)
 
-    expect(html).toContain('Link Referral Lo')
+    expect(html).toContain('Link Referral Kamu')
     expect(html).toContain(ownLink)
     expect(html).toContain('Copy Link')
     expect(html).toContain('Bagikan')
@@ -133,7 +133,7 @@ describe('Ajak Teman — data nyata, tanpa kode/nama contoh', () => {
       }),
     )
 
-    expect(html).toContain('Pencapaian Lo')
+    expect(html).toContain('Pencapaian Kamu')
     expect(html).toContain('Klik Link')
     expect(html).toContain('Mendaftar')
     expect(html).toContain('Sudah Beli')

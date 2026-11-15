@@ -16,12 +16,18 @@
        semula" yang gampang sekali salah kalau ditulis sebagai `filter` di
        komponen.
 
-   ⚠️ BATAS YANG DITULIS APA ADANYA DI UI (`storageNote`): daftar ini tersimpan di
-   perangkat ini dan BELUM tersambung ke pemilih kategori di form catat transaksi
-   (form itu memakai `TRANSACTION_CATEGORY_OPTIONS`). Menyambungkannya butuh
-   kategori sebagai data user di backend — di luar lingkup paket ini, jadi yang
-   dipilih adalah mengatakannya, bukan membiarkan panel menjanjikan sesuatu yang
-   tidak terjadi.
+   ⚠️ BATAS YANG DULU DITULIS DI UI (`storageNote`) — kini hanya di komentar ini:
+   daftar ini tersimpan di perangkat ini dan BELUM tersambung ke pemilih kategori
+   di form catat transaksi (form itu memakai `TRANSACTION_CATEGORY_OPTIONS`).
+   Menyambungkannya butuh kategori sebagai data user di backend — di luar lingkup
+   paket ini.
+
+   CATATAN REVISI: paragraf batas itu DIHAPUS dari layar atas permintaan pemilik
+   repo (halaman Pengaturan → Kategori sekarang hanya berisi daftar & aksi).
+   Klaim yang sama tetap tertulis di dokumen hukum `/terms` & `/privacy`, dan
+   `category-prefs.test.ts` menjaga supaya tidak ada teks panel yang MENGKLAIM
+   kategori buatan user sudah muncul di form catat transaksi. Jadi batasnya tidak
+   hilang — hanya berhenti dicetak di halaman pengaturan.
 
    🚧 Di produksi: `GET/PATCH /api/categories` (tabel `categories` + RLS), dan
    `hidden` jadi kolom `is_hidden` — fungsi murni di file ini tetap dipakai apa
@@ -142,28 +148,13 @@ export function restoreCategory(prefs: CategoryPrefs, removed: RemovedCategory):
 /* ── COPY PANEL KATEGORI ────────────────────────────────────────────────────── */
 
 export const CATEGORY_PREFS_COPY = {
-  eyebrow: 'Kategori',
   title: 'Kustomisasi Kategori',
-  /**
-   * Kalimat ini dulunya berbunyi "Atur kategori apa saja yang muncul saat kamu
-   * mencatat transaksi" — janji yang TIDAK benar: pemilih kategori di form masih
-   * memakai daftar baku app. Diganti dengan kalimat yang benar + catatan batasnya
-   * di bawah (`storageNote`), sesuai kanon "jujur di setiap klaim" (PRD 244).
-   */
-  desc: 'Simpan kategori tambahanmu di perangkat ini, dan sembunyikan kategori bawaan yang nggak kamu pakai.',
 
   /** ── 1. kategori bawaan ── */
   defaultTitle: 'Kategori Bawaan',
-  /** penjelasan SINGKAT — tombolnya ada, jadi kenapa tidak ada tombol hapus */
-  defaultDesc:
-    'Cuma bisa disembunyikan, nggak bisa dihapus, biar laporan lintas bulan tetap konsisten.',
-  /**
-   * Penjelasan PANJANG (paket 62 · temuan audit #10): sebelum ini alasan "kenapa
-   * tidak bisa dihapus" tidak pernah muncul di layar, sehingga toggle-nya terasa
-   * seperti keterbatasan yang disembunyikan.
-   */
-  defaultExplain: (count: number) =>
-    `Kenapa ${count} kategori ini nggak bisa dihapus: laporan, insight, dan peta kebiasaanmu membandingkan bulan ke bulan per kategori. Kalau salah satunya dihapus, perbandingannya kehilangan kolomnya dan angka bulan lalu ikut berubah. Kalau memang nggak kamu pakai, sembunyikan saja, catatannya tetap terbaca.`,
+  /* Catatan revisi: `defaultExplain()` (paragraf panjang "Kenapa 8 kategori ini
+     nggak bisa dihapus…") DIHAPUS dari layar & dari objek ini atas permintaan
+     pemilik produk — penjelasannya terlalu panjang untuk halaman pengaturan. */
   visibleLabel: 'Tampil',
   hiddenLabel: 'Disembunyikan',
   toggleA11y: (name: string) => `Tampilkan kategori ${name}`,
@@ -172,7 +163,6 @@ export const CATEGORY_PREFS_COPY = {
 
   /** ── 2. kategori kustom ── */
   customTitle: 'Kategori Kustom',
-  customDesc: 'Bikin, ubah, hapus sesuka kamu, tidak ada yang dikunci.',
   customEmpty: 'Belum ada kategori custom. Bikin satu di bawah 👇',
   customEmptyHint: 'Contoh: 🐾 Kucing, 💅 Perawatan, 🎁 Hadiah.',
   addCta: 'Tambah Kategori Baru',
@@ -184,7 +174,7 @@ export const CATEGORY_PREFS_COPY = {
   save: 'Simpan',
   cancel: 'Batal',
   /** validasi: kategori tanpa nama tidak bisa disimpan (jangan tulis setengah) */
-  nameRequired: 'Nama kategorinya diisi dulu ya 🌿',
+  nameRequired: 'Nama kategorinya diisi dulu ya 🧩',
   addedToast: (emoji: string, name: string) => `${emoji} ${name} ditambahkan!`,
   updatedToast: 'Kategori diperbarui ✅',
 
@@ -205,11 +195,7 @@ export const CATEGORY_PREFS_COPY = {
   deleteToast: (emoji: string, name: string) => `${emoji} ${name} dihapus`,
   deleteToastDescription: 'Kategori kustom bisa dibikin lagi kapan aja.',
   undo: 'Undo',
-  undoExpired: 'Jendela Undo-nya sudah lewat, kategorinya bisa dibikin lagi kapan aja 🌿',
-  undoneToast: 'Kategori dikembalikan 🌿',
+  undoExpired: 'Jendela Undo-nya sudah lewat, kategorinya bisa dibikin lagi kapan aja 🧩',
+  undoneToast: 'Kategori dikembalikan 🧩',
   undoneDescription: 'Kategorinya balik ke posisi semula.',
-
-  /** batas yang ditulis apa adanya, bukan disembunyikan (lihat catatan file) */
-  storageNote:
-    'Catatan: daftar ini tersimpan di perangkat ini. Pemilih kategori di form catat transaksi masih memakai daftar baku app (Makanan, Transportasi, …) sampai kategori jadi data user di backend.',
 } as const

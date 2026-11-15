@@ -8,7 +8,7 @@ import { motion, useReducedMotion } from 'framer-motion'
 import { toast } from 'sonner'
 import { Plus, LayoutGrid, ArrowLeftRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useNavCompact } from '@/hooks/use-nav-compact'
+import { matchesAnyRoute, matchesRoute } from '@/lib/route-match'
 import { FEATURE_LOCK_COPY } from '@/lib/data/upgrade'
 import { pageLockText, pageUnlockPlan } from '@/lib/subscription/page-access'
 import { TRANSFER_DOOR_COPY } from '@/lib/data/add-wallet'
@@ -29,13 +29,17 @@ import { NavLockBadge } from '@/components/catetind/nav-lock-badge'
    grupnya sudah melenceng antar platform (audit "Navigation Clunkiness"). */
 
 /**
- * NAVIGASI BAWAH SELALU TAMPIL (PAKET 70).
+ * NAVIGASI BAWAH SELALU TAMPIL, UKURAN TETAP, SAMA DI SEMUA HALAMAN.
  *
  * PRD 2A.5 menulis nav bawah "FIXED, STICKY, selalu visible". Sempat menyimpang
  * satu langkah (nav menyingkir saat menggulir ke bawah) atas permintaan pemilik
- * produk, tetapi permintaan TERBARU membalikkannya: "navigasi utama di-fix aja,
- * jangan di-hide, selalu stay". Jadi nav ini sekarang benar-benar FIXED dan
- * selalu terlihat — tidak ada lagi transform/inert yang menyembunyikannya.
+ * produk, lalu dibalikkan: "navigasi utama di-fix aja, jangan di-hide, selalu
+ * stay". Sejak itu nav ini FIXED dan selalu terlihat.
+ *
+ * REVISI TERBARU (keluhan "/wallet: nav bawah hilang kalau di-scroll"): perilaku
+ * MENYUSUT saat menggulir (paket 75: h-16 → h-14, ikon 22px → 18px) DICABUT.
+ * Nav sekarang satu tinggi dan satu bentuk di SEMUA halaman — persis yang tampil
+ * di Dashboard — jadi gulir sejauh apa pun tidak mengubah apa pun.
  *
  * Perulangan auto-hide-nya TIDAK dibuang: hook murninya (`useNavAutoHide`)
  * sekarang dipakai HEADER Dashboard mobile (lihat `MobileStickyHeader`), karena
@@ -86,6 +90,9 @@ const FOCUS_ROUTES = [
   '/welcome',
   '/checkout',
   '/login',
+  /* `/join/[code]` = halaman undangan PUBLIK. PENTING: pencocokannya memakai
+     BATAS SEGMEN (`lib/route-match.ts`), bukan `startsWith('/join')` mentah —
+     dulu `/joint` (Dompet Bersama) ikut cocok dan bottom nav-nya hilang. */
   '/join',
   '/share',
   '/privacy',
@@ -97,17 +104,11 @@ const FOCUS_ROUTES = [
 function NavLink({
   item,
   pathname,
-  compact,
 }: {
   item: NavItem
   pathname: string
-  /** nav sedang menyusut (digulir ke bawah) — py & ikon lebih kecil (paket 75) */
-  compact: boolean
 }) {
-  const isActive =
-    item.href === '/' || item.href === '/app'
-      ? pathname === item.href
-      : pathname.startsWith(item.href)
+  const isActive = matchesRoute(pathname, item.href)
   const Icon = item.icon
   /* Tab bawah bisa ikut terkunci kalau nanti ada halaman berbayar yang naik
      jadi tab utama. Hari ini ketiganya terbuka untuk semua paket, tetapi
@@ -119,20 +120,13 @@ function NavLink({
       href={item.href}
       aria-label={locked ? `${item.label} (terkunci)` : item.label}
       aria-current={isActive ? 'page' : undefined}
-      className={cn(
-        'flex flex-1 items-center justify-center',
-        /* padding & transisi sama dengan kontainer nav supaya menyusut terasa
-           satu gerakan, bukan dua elemen yang bergerak sendiri-sendiri */
-        'transition-[padding] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none',
-        compact ? 'py-2' : 'py-3',
-      )}
+      className="flex flex-1 items-center justify-center py-3"
     >
       <span className="relative inline-flex">
         <Icon
           className={cn(
-            'transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none',
-            compact ? 'size-[18px]' : 'size-[22px]',
-            isActive ? 'text-forest' : 'text-forest/55 hover:text-forest/75',
+            'size-[22px]',
+            isActive ? 'text-forest' : 'text-forest-muted hover:text-forest-soft',
           )}
           strokeWidth={1.8}
         />
@@ -158,14 +152,17 @@ export function MobileBottomNav() {
   /* paket belum aktif → FAB ini satu-satunya pintu input dari bottom nav, jadi
      ia yang dikunci. Membaca data, pindah halaman, & menu "Lainnya" tetap jalan. */
   const { inputLocked, lockedPageCapability } = useSubscriptionGate()
-  /* NAV DINAMIS (paket 75): menggulir ke bawah → nav memadat (py-2, ikon lebih
-     kecil); menggulir ke atas → kembali penuh. Aturannya di
-     `hooks/use-nav-compact.ts` (fungsi murni + test). `useReducedMotion` dipakai
-     untuk mematikan animasi pegas FAB bagi user yang meminta gerak minimal. */
-  const compact = useNavCompact()
+  /* NAV SATU TINGGI, SATU BENTUK, DI SEMUA HALAMAN (revisi pemilik produk).
+     Sebelumnya (paket 75) nav ini MENYUSUT saat digulir ke bawah (h-16 → h-14,
+     ikon 22px → 18px). Di halaman panjang seperti `/wallet` efeknya terasa
+     seperti nav "hilang" — padahal cuma memadat. Permintaan terbaru: nav bawah
+     harus SAMA PERSIS dengan yang ada di Dashboard di SEMUA halaman, jadi
+     penyusutan itu dicabut dan ukurannya dipaku. `hooks/use-nav-compact.ts`
+     (beserta test fungsi murninya) tetap disimpan sebagai utilitas, tetapi
+     TIDAK lagi dipakai di sini. */
   const reduceMotion = useReducedMotion()
 
-  const menuActive = NAV_HREFS.some((href) => pathname.startsWith(href))
+  const menuActive = NAV_HREFS.some((href) => matchesRoute(pathname, href))
   /* Kalau ada satu saja menu di laci yang terkunci, tombol “Lainnya” diberi
      titik emas — supaya batasannya terlihat SEBELUM laci dibuka. */
   const menuHasLock = MOBILE_MENU_GROUPS.some((group) =>
@@ -173,21 +170,21 @@ export function MobileBottomNav() {
   )
   /* Halaman Joint Wallet punya FAB-nya sendiri (form transaksi + split +
      privasi), jadi FAB bottom-nav disembunyikan di sana supaya tetap hanya ada
-     SATU tombol tambah di layar. */
-  const isJointPage = pathname.startsWith('/joint')
+     SATU tombol tambah di layar.
+       ⚠️ Dipecahkan dengan `matchesRoute`, BUKAN `startsWith('/joint')`/`/join`:
+       dulu `/joint` ikut cocok dengan FOCUS_ROUTES `/join` → SELURUH bottom nav
+       hilang dan yang tersisa hanya tombol `+` milik halaman Joint. */
+  const isJointPage = matchesRoute(pathname, '/joint')
 
   /* Flow fokus (landing, onboarding & checkout) = tanpa navigasi bawah sama
-     sekali: lihat catatan FOCUS_ROUTES di atas. `/` dicocokkan EXACT — kalau
-     memakai `startsWith('/')`, SEMUA route akan ikut cocok dan nav tak pernah
-     tampil. */
-  const isFocusRoute = FOCUS_ROUTES.some((route) =>
-    route === '/' ? pathname === '/' : pathname.startsWith(route),
-  )
+     sekali: lihat catatan FOCUS_ROUTES di atas. Pencocokan WAJIB per batas
+     segmen (`lib/route-match.ts`) — `/` exact supaya tidak menyerap semua
+     route, dan `/join` tidak boleh menyerap `/joint`. */
+  const isFocusRoute = matchesAnyRoute(pathname, FOCUS_ROUTES)
 
-  /* Nav SELALU tampil (paket 70) + MENYUSUT saat digulir ke bawah (paket 75).
-     Tidak ada lagi `useNavAutoHide` di sini — aturan auto-hide-nya dipakai
-     header mobile (`MobileStickyHeader`); yang tersisa di bawah cuma perubahan
-     KERAPATAN (`compact`), bukan menyembunyikan nav. */
+  /* Nav SELALU tampil (paket 70) dengan UKURAN TETAP (revisi terbaru):
+     tidak ada auto-hide dan tidak ada penyusutan — lihat catatan di atas
+     komponen. */
 
   if (isFocusRoute) return null
 
@@ -201,16 +198,11 @@ export function MobileBottomNav() {
           memang selalu terbayar di HP tanpa pernah dipakai di desktop.) */}
       <nav
         aria-label={MOBILE_NAV_COPY.navAria}
-        className={cn(
-          'fixed inset-x-8 bottom-5 z-40 mx-auto flex max-w-sm items-center rounded-full bg-cream/95 shadow-[0_24px_50px_-16px_rgba(0,0,0,0.18)] ring-1 ring-soil/12 lg:hidden',
-          /* tinggi + padding + easing halus, sejalan dengan penyusutan isinya */
-          'transition-[height,padding] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none',
-          compact ? 'h-14 px-3.5' : 'h-16 px-4',
-        )}
+        className="fixed inset-x-8 bottom-5 z-[60] mx-auto flex h-16 max-w-sm items-center rounded-full bg-cream/95 px-4 shadow-[0_24px_50px_-16px_rgba(0,0,0,0.18)] ring-1 ring-soil/12 lg:hidden"
         style={{ marginBottom: 'max(0rem, env(safe-area-inset-bottom))' }}
       >
-        <NavLink item={MOBILE_PRIMARY_ITEMS[0]} pathname={pathname} compact={compact} />
-        <NavLink item={MOBILE_PRIMARY_ITEMS[1]} pathname={pathname} compact={compact} />
+        <NavLink item={MOBILE_PRIMARY_ITEMS[0]} pathname={pathname} />
+        <NavLink item={MOBILE_PRIMARY_ITEMS[1]} pathname={pathname} />
 
         {/* FAB (+) Catat — langsung membuka Transaction Input Engine.
             Di /joint slot ini dikosongkan: halaman Joint punya FAB sendiri. */}
@@ -221,13 +213,13 @@ export function MobileBottomNav() {
             /* Paket belum aktif → FAB dikunci. Sengaja TIDAK memakai
                atribut `disabled`: tombol mati yang bisu membuat user mengira
                appnya rusak. Dengan `aria-disabled` + toast, alasannya langsung
-               terbaca ("Pilih paket dulu biar bisa mulai catat 🌿"). */
+               terbaca ("Pilih paket dulu biar bisa mulai catat 🧩"). */
             <button
               type="button"
               aria-disabled="true"
               aria-label={FEATURE_LOCK_COPY.fabAria}
               onClick={() => toast(FEATURE_LOCK_COPY.inputHint)}
-              className="-mt-8 flex size-14 items-center justify-center rounded-full bg-soil/[0.09] text-forest/30 ring-1 ring-soil/12 transition-transform duration-150 active:scale-95"
+              className="-mt-8 flex size-14 items-center justify-center rounded-full bg-soil/[0.09] text-forest-muted ring-1 ring-soil/12 transition-transform duration-150 active:scale-95"
             >
               <Plus className="size-6" strokeWidth={2.4} />
             </button>
@@ -258,25 +250,20 @@ export function MobileBottomNav() {
           )}
         </div>
 
-        <NavLink item={MOBILE_PRIMARY_ITEMS[2]} pathname={pathname} compact={compact} />
+        <NavLink item={MOBILE_PRIMARY_ITEMS[2]} pathname={pathname} />
 
         {/* Lainnya — buka vaul bottom sheet menu sekunder */}
         <button
           type="button"
           onClick={() => setMenuOpen(true)}
           aria-label={MOBILE_NAV_COPY.moreAria}
-          className={cn(
-            'flex flex-1 items-center justify-center',
-            'transition-[padding] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none',
-            compact ? 'py-2' : 'py-3',
-          )}
+          className="flex flex-1 items-center justify-center py-3"
         >
           <span className="relative inline-flex">
             <LayoutGrid
               className={cn(
-                'transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none',
-                compact ? 'size-[18px]' : 'size-[22px]',
-                menuActive ? 'text-forest' : 'text-forest/55 hover:text-forest/75',
+                'size-[22px]',
+                menuActive ? 'text-forest' : 'text-forest-muted hover:text-forest-soft',
               )}
               strokeWidth={1.8}
             />
@@ -341,7 +328,7 @@ export function MobileBottomNav() {
                   </p>
                   <div className="mt-3 grid grid-cols-3 gap-2.5">
                     {group.items.map(({ href, icon: Icon, label, hint }) => {
-                      const isActive = pathname.startsWith(href)
+                      const isActive = matchesRoute(pathname, href)
                       /* Menu terkunci tetap DITAMPILKAN (bukan disembunyikan):
                          batasannya harus terlihat, bukan baru terasa setelah
                          ditekan. Kliknya sudah dicegat `UpgradeGateProvider`. */

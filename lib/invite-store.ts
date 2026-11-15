@@ -165,6 +165,52 @@ export function resetInviteStore(): void {
   }
 }
 
+/**
+ * Catat kode yang SUDAH aktif di SERVER ke simpanan perangkat.
+ *
+ * Dipakai modal /joint supaya kode yang dibaca dari `invite_codes` (mis.
+ * `H9FKJF` yang masih berlaku) tampil dengan masa berlaku YANG SAMA seperti di
+ * server — bukan dibuat ulang secara lokal. Tanpa ini, membuka modal lagi akan
+ * mengarang kode baru dan (karena `catetind_create_invite` mencabut kode aktif
+ * sebelumnya) mematikan kode yang sudah dibagikan.
+ *
+ * `expiresAt` dari server (epoch ms). Nilai tidak sah → pakai TTL kanon 24 jam,
+ * bukan mengklaim masa berlaku yang tidak diketahui.
+ */
+export function adoptInviteFromServer(
+  code: string,
+  walletId: string,
+  expiresAt: number,
+  now = Date.now(),
+): InviteRecord | null {
+  const normalized = code.trim().toUpperCase()
+  if (!normalized) return null
+
+  const records = storedRecords()
+  const expires = Number.isFinite(expiresAt) && expiresAt > now ? expiresAt : now + INVITE_TTL_MS
+  const existing = records.find((record) => record.code === normalized)
+
+  if (existing) {
+    existing.walletId = walletId
+    existing.expiresAt = expires
+    /* server berkata `used_by = null` (masih berlaku) — itu yang menang */
+    existing.usedBy = null
+    persist()
+    return existing
+  }
+
+  const record: InviteRecord = {
+    code: normalized,
+    walletId,
+    createdAt: now,
+    expiresAt: expires,
+    usedBy: null,
+  }
+  records.push(record)
+  persist()
+  return record
+}
+
 /* ── STATUS DARI SERVER (paket 45) ──────────────────────────────────────────
    Kode undangan yang hidup di database (dibuat di perangkat lain) tidak dikenal
    simpanan lokal, jadi `resolveInvite()` akan bilang `unknown` — padahal

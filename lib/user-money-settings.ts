@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import { readOnboardingResult, type DashboardPeriod } from './onboarding'
+import { registerAccountCacheReset } from './account-scope'
 import type { MoneyContext } from './types'
 
 /* ── KONFIGURASI UANG USER — SATU SUMBER (paket 57 · audit AKAR D) ───────────
@@ -118,13 +119,12 @@ export function enabledContextsOf(settings: UserMoneySettings): MoneyContext[] {
    mengikuti §5: menjelaskan, tidak menyalahkan. */
 export const MONEY_SETTINGS_COPY = {
   incomeLabel: 'Pemasukan Bulanan',
-  /* H12-2 (audit UI/UX): angka contoh 75 juta tidak relatable buat target
-     Gen-Z (gaji 5-7 juta). Field dibiarkan KOSONG dengan prompt yang menjelaskan
-     kenapa sebaiknya diisi. */
-  incomeNote: 'Isi gaji bulanan kamu supaya Jatah Hari Ini bisa dihitung akurat.',
+  /* Catatan pendamping kedua field DIHAPUS (revisi pemilik repo): labelnya sudah
+     menjelaskan isinya, dan di dalam kartu yang sama masih ada `effectNote` yang
+     menerangkan akibatnya. Tiga baris penjelasan untuk dua kolom angka membuat
+     form ini terbaca seperti dokumen, bukan form. */
   incomePlaceholder: '',
   installmentsLabel: 'Total Cicilan Bulanan',
-  installmentsNote: 'Cicilan platform (HP, paylater, motor), dipotong lebih dulu dari pemasukan.',
   installmentsPlaceholder: '800.000',
   effectNote:
     'Nilai ini menggantikan angka contoh: begitu diisi, kartu “Jatah Hari Ini” di Dashboard & Budget langsung memakai angka kamu.',
@@ -502,6 +502,22 @@ export function purgeUserMoneySettings(): void {
     /* storage diblokir — cache di memori tetap membuat sesi ini jujur */
   }
 }
+
+/**
+ * Lupakan nilai yang dipegang MEMORY saja — penyimpanan tidak disentuh.
+ *
+ * Dipakai saat cakupan akun berganti (`lib/account-scope.ts`): nilai akun lama
+ * tidak boleh tetap hidup di `cache` modul ini walau penyimpanannya sudah
+ * diparkir. Berbeda dari `resetUserMoneySettings()` yang JUGA menghapus kunci
+ * localStorage — fungsi itu khusus "Hapus Akun"/test.
+ */
+export function clearUserMoneySettingsCache(): void {
+  cache = null
+  notify()
+}
+
+/* Setiap kali akun berganti/keluar, cache di atas dibuang lebih dulu. */
+registerAccountCacheReset(clearUserMoneySettingsCache)
 
 /** Kosongkan cache & kunci (dipakai test supaya tiap kasus mulai bersih) */
 export function resetUserMoneySettings(): void {

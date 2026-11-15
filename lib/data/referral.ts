@@ -174,7 +174,7 @@ export const REFERRAL_EMPTY_COPY = {
 
 export const SHARE_TITLE = 'CatetInd - Track Keuangan Tanpa Ribet'
 export const SHARE_TEXT =
-  'Gue lagi pakai CatetInd buat track keuangan. Cuma 4 tap buat catat pengeluaran dan ada AI Coach yang nggak nge-judge. Kalau mau coba, pake link gue buat dapet diskon 10%:'
+  'Aku lagi pakai CatetInd buat catat keuangan. Cuma 4 tap buat nyatet pengeluaran, ada AI yang bantu tanpa nyalahin. Kalau mau coba, pakai link aku, kamu dapat diskon 10%:'
 
 /** basis URL referral — selalu https + domain, satu sumber dengan `lib/site.ts` */
 export const REFERRAL_URL_BASE = `${SITE_ORIGIN}/r/`

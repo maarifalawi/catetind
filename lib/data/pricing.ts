@@ -107,11 +107,12 @@ export const PLANS: PlanDefinition[] = [
     name: 'Paket Catet Aja',
     subtitle: 'Catat manual, tanpa AI',
     monthly: 49_000,
-    /* Harga kanon akses selamanya. Sempat dipasang Rp1 khusus uji sandbox
-       QRIS; itu TIDAK boleh ikut rilis karena membuat paket dasar nyaris
-       gratis dan menghapus alasan upgrade. `monthly` tetap harga WARISAN
-       untuk pembelian lama. */
-    lifetime: 109_000,
+    /* Harga rilis (keputusan pemilik produk, 15 Nov 2026): Paket Catet Aja
+       Rp99.000 sekali bayar. Angka ini dipakai DUA sisi sekaligus — kartu
+       paket/checkout DAN verifikasi nominal `/api/payment/charge` lewat
+       `priceFor()`, jadi tidak ada harga tampilan yang berbeda dari tagihan.
+       `monthly` tetap harga WARISAN untuk pembelian lama. */
+    lifetime: 99_000,
     features: [
       'Catat pemasukan & pengeluaran',
       'Budget & kategori manual',
@@ -126,10 +127,14 @@ export const PLANS: PlanDefinition[] = [
     name: 'Paket Waras',
     subtitle: 'AI yang bantu kamu waras finansial',
     monthly: 79_000,
+    /* Harga rilis (keputusan pemilik produk, 15 Nov 2026): Paket Waras
+       Rp129.000 sekali bayar — SELISIH upgrade dari Catet Aja = Rp30.000.
+       Dipakai bersama oleh tampilan dan server (`priceFor`), bukan angka
+       terpisah di JSX. */
     lifetime: 129_000,
     features: [
       'Semua fitur Paket Catet Aja',
-      'AI Coach (chat & saran proaktif)',
+      'Minca (chat & saran proaktif)',
       'Scan Struk otomatis (OCR)',
       'Voice input',
       'Auto-kategorisasi transaksi',
@@ -137,7 +142,7 @@ export const PLANS: PlanDefinition[] = [
       'Joint Wallet (dompet bersama)',
       'Kalender Cashflow (proyeksi arus uang)',
       'Kekayaan & Hutang (net worth + debt snowball)',
-      '🎁 Eksklusif: Skin Pot Emas untuk Tanamanmu',
+      '🎁 Eksklusif: Skin Papan Emas untuk Puzzle-mu',
     ],
     badge: 'Pilihan Gen-Z 🏆',
     hero: true,
@@ -346,7 +351,7 @@ export function lockedCapabilitiesFor(planId: PlanId | null | undefined): Capabi
 
 /** nama kemampuan dalam bahasa manusia — untuk badge & daftar fitur terkunci */
 export const CAPABILITY_LABEL: Record<Capability, string> = {
-  'ai-chat': 'AI Coach (chat)',
+  'ai-chat': 'Minca (chat)',
   'ai-categorize': 'Kategorisasi otomatis',
   ocr: 'Scan struk',
   voice: 'Input suara',
@@ -565,7 +570,6 @@ export const BILLING_COPY = {
   noPlanBody: 'Pilih paket sekali bayar untuk akses selamanya. Tanpa tagihan bulanan.',
   activeMonthlyBody:
     'Paket lama 30 hari masih aktif sampai tanggal di bawah. Paket bulanan sudah tidak dijual, lifetime tetap bisa dibeli.',
-  activeLifetimeBody: 'Akses selamanya. Sekali bayar, tanpa tagihan berkala 🌿',
   expiredBody:
     'Catatanmu tetap aman. Paket lama 30 hari sudah berakhir; lanjutkan dengan akses selamanya.',
   durationLabel: 'Durasi',
@@ -577,12 +581,27 @@ export const BILLING_COPY = {
   upgradeLifetimeLabel: 'Upgrade ke Lifetime',
   legacyUpgradeLabel: 'Lanjut ke Lifetime',
   choosePlanLabel: 'Lihat paket',
-  noRenewNote: 'Lifetime tidak perlu diperpanjang.',
   readOnlyNote:
     'Paket lama berakhir: data bisa dibaca & diekspor, penambahan data ditahan sampai kamu membeli akses selamanya.',
   historyTitle: 'Riwayat Pembayaran',
-  historyBody: 'Semua transaksi kamu tercatat rapi di sini.',
   paidLabel: 'Lunas',
+  /* ── keadaan riwayat (paket 108) ──────────────────────────────────────────
+     Riwayat kini dibaca dari tabel `purchases` milik akun ini (`/api/billing/
+     purchases`). Karena itu ada tiga keadaan yang harus dinyatakan apa adanya:
+     belum ada pembayaran, belum bisa dibaca, dan gagal dimuat — jangan pernah
+     diisi baris contoh supaya kartunya "kelihatan penuh". */
+  historyEmptyTitle: 'Belum ada pembayaran',
+  historyEmptyBody:
+    'Semua pembelian paket & top up yang benar-benar tercatat di akunmu akan muncul di sini.',
+  historyUnavailableTitle: 'Riwayat belum bisa dibaca',
+  historyUnavailableBody:
+    'Server pembayaran belum terhubung, jadi riwayat tidak bisa dipastikan. Kami tidak menampilkan contoh — yang tidak diketahui ditulis apa adanya.',
+  historyFailedTitle: 'Riwayat gagal dimuat',
+  historyFailedBody: 'Koneksi ke server terputus sebentar. Muat ulang halaman ini ya.',
+  historyLoading: 'Memuat riwayat…',
+  historyStatusPending: 'Menunggu',
+  historyStatusFailed: 'Tidak selesai',
+  historyStatusRefunded: 'Dikembalikan',
 } as const
 
 /* ── COPY UI TERKUNCI ────────────────────────────────────────────────────────
@@ -618,7 +637,10 @@ export const PAY_METHOD_COPY: Record<PaymentMethodId, { label: string; hint: str
 export const PAY_START_COPY = {
   eyebrow: 'Langkah terakhir',
   title: 'Bayar paketmu',
-  subtitle: 'Instruksi bayarnya muncul di halaman ini.',
+  /* Subjudul lama ("Instruksi bayarnya muncul di halaman ini.") DIHAPUS atas
+     permintaan desain: judul + kartu pembayaran di bawahnya sudah menyatakan
+     hal yang sama. `upgradeSubtitle` tetap ada karena menambah informasi
+     (nominal yang dibayar hanya selisihnya). */
   /** judul khusus saat user sedang UPGRADE lifetime, bukan pembelian pertama */
   upgradeTitle: 'Bayar selisih upgrade-mu',
   upgradeSubtitle:
@@ -638,7 +660,7 @@ export const PAY_START_COPY = {
   noMethodTitle: 'Pembayaran belum bisa dimulai di sini',
   noMethodBody:
     'Kanal pembayaran (QRIS, Virtual Account, dan e-wallet) belum diaktifkan di akun pembayaran kami, jadi pilihan metode dan tombol bayar sengaja disembunyikan. Belum ada uang yang tertarik dan tidak ada tagihan yang menggantung.',
-  noMethodNote: 'Paketmu tidak berubah. Buka halaman ini lagi beberapa saat lagi ya 🌿',
+  noMethodNote: 'Paketmu tidak berubah. Buka halaman ini lagi beberapa saat lagi ya 🧩',
   loginTitle: 'Masuk dulu ya',
   loginBody: 'Pembayaran tercatat atas namamu. Masuk pakai kode 6 angka dari email.',
   loginCta: 'Buka halaman masuk',
@@ -672,15 +694,21 @@ export const PAY_CARD_COPY = {
   ewalletHint: 'Selesaikan di aplikasi itu, lalu balik ke tab ini.',
   noInstructions: 'Tagihan ini belum punya instruksi yang bisa ditampilkan. Pilih metode lain ya.',
   /* ── SNAP (sejak 30 Oktober 2026) ──────────────────────────────────────────
-     Produksi memakai Midtrans Snap: QR/VA/e-wallet digambar oleh Midtrans, bukan
-     oleh app. Yang ditampilkan di sini adalah jalan masuknya (satu tombol) plus
-     status yang tetap dibaca dari server. */
-  snapTitle: 'Selesaikan di halaman pembayaran',
+     Produksi memakai Midtrans Snap. Sejak revisi berikutnya halaman pembayaran
+     Snap itu DI-EMBED di kartu ini (`snap.embed(token, { embedId })` — BUKAN
+     `snap.pay()`, yang menolak opsi `embedId`), bukan dibuka di tab baru:
+     instruksi QRIS/VA muncul di tempat user menekan "Bayar", dan metode yang
+     dipilih di langkah sebelumnya sudah terkunci (`enabled_payments`), jadi
+     tidak ada pemilihan metode dua kali. */
+  snapTitle: 'Selesaikan pembayaran di sini',
   snapBody:
-    'Halaman pembayaran Midtrans terbuka di tab ini dan langsung memilih metode yang kamu pilih. Setelah selesai, kamu kembali ke halaman konfirmasi.',
-  snapCta: 'Buka halaman pembayaran',
+    'Instruksi bayarnya muncul di kotak ini. Metode yang kamu pilih sudah terkunci, jadi kamu tidak perlu memilihnya lagi. Setelah selesai, halaman konfirmasi terbuka sendiri.',
+  snapCta: 'Buka di tab baru',
+  snapLoading: 'Menyiapkan instruksi pembayaran…',
+  snapBlocked:
+    'Instruksi bayar tidak bisa ditampilkan di dalam halaman ini (pemblokir browser atau jaringan). Pakai tombol "Buka di tab baru" di bawah ya.',
   snapChecking: 'Cek status pembayaran',
-  snapWaiting: 'Menunggu pembayaran di halaman Midtrans',
+  snapWaiting: 'Menunggu pembayaran selesai',
   waitingTitle: 'Menunggu pembayaran',
   waitingBody: 'Statusnya berubah sendiri begitu pembayaran masuk.',
   checkingLabel: 'Cek status…',

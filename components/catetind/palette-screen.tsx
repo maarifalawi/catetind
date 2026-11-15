@@ -52,14 +52,14 @@ export function PaletteScreen() {
       <div className="w-full">
         {/* ── KEPALA: eyebrow → judul → pembuka → sumber ─────────────────────── */}
         <header className="max-w-[68ch]">
-          <p className="text-[12px] font-medium uppercase tracking-[0.16em] text-forest/55">
+          <p className="text-[12px] font-medium uppercase tracking-[0.16em] text-forest-muted">
             {PALETTE_PAGE_COPY.eyebrow}
           </p>
           <h1 className="mt-1.5 font-display text-3xl font-semibold tracking-tight text-forest lg:text-4xl">
             {PALETTE_PAGE_COPY.title}
           </h1>
-          <p className="mt-3 text-[15px] leading-relaxed text-forest/70">{PALETTE_PAGE_COPY.lede}</p>
-          <p className="mt-2 flex items-start gap-1.5 text-[12.5px] leading-relaxed text-forest/50">
+          <p className="mt-3 text-[15px] leading-relaxed text-forest-soft">{PALETTE_PAGE_COPY.lede}</p>
+          <p className="mt-2 flex items-start gap-1.5 text-[12.5px] leading-relaxed text-forest-muted">
             <Palette className="mt-[1px] size-3.5 shrink-0" strokeWidth={2.2} aria-hidden />
             <span>{PALETTE_PAGE_COPY.sourceNote}</span>
           </p>
@@ -69,18 +69,18 @@ export function PaletteScreen() {
         <section aria-label="Arsitektur token warna" className="mt-6 grid gap-3 sm:grid-cols-3">
           {PALETTE_LAYERS.map((layer) => (
             <div key={layer.step} className="rounded-2xl bg-sage/60 p-4 ring-1 ring-forest/10">
-              <p className="text-[11.5px] font-medium uppercase tracking-[0.14em] text-forest/55">
+              <p className="text-[11.5px] font-medium uppercase tracking-[0.14em] text-forest-muted">
                 {layer.step}
               </p>
               <p className="mt-1 font-display text-[16px] font-semibold tracking-tight text-forest">
                 {layer.title}
               </p>
-              <p className="mt-1 text-[13.5px] leading-relaxed text-forest/65">{layer.body}</p>
+              <p className="mt-1 text-[13.5px] leading-relaxed text-forest-soft">{layer.body}</p>
             </div>
           ))}
         </section>
 
-        <p className="mt-4 text-[12.5px] text-forest/45">{PALETTE_PAGE_COPY.hint}</p>
+        <p className="mt-4 text-[12.5px] text-forest-muted">{PALETTE_PAGE_COPY.hint}</p>
 
         {/* ── GRID WARNA: kanon → alias → turunan → netral → grafik ───────── */}
         {PALETTE_GROUPS.map((group) => (
@@ -97,7 +97,7 @@ export function PaletteScreen() {
           <h2 className="font-display text-[19px] font-semibold tracking-tight text-forest">
             {PALETTE_PAGE_COPY.meaningTitle}
           </h2>
-          <p className="mt-1.5 max-w-[68ch] text-[13.5px] leading-relaxed text-forest/60">
+          <p className="mt-1.5 max-w-[68ch] text-[13.5px] leading-relaxed text-forest-muted">
             {PALETTE_PAGE_COPY.meaningDesc}
           </p>
           <ul className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -133,11 +133,11 @@ function PaletteGroupSection({
         >
           {group.title}
         </h2>
-        <span className="text-[11.5px] font-medium uppercase tracking-[0.12em] text-forest/45">
+        <span className="text-[11.5px] font-medium uppercase tracking-[0.12em] text-forest-muted">
           {PALETTE_PAGE_COPY.countLabel(group.entries.length)}
         </span>
       </div>
-      <p className="mt-1.5 max-w-[68ch] text-[13.5px] leading-relaxed text-forest/60">
+      <p className="mt-1.5 max-w-[68ch] text-[13.5px] leading-relaxed text-forest-muted">
         {group.description}
       </p>
       <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
@@ -200,13 +200,13 @@ function PaletteSwatch({
         <span className="mt-2 flex items-baseline justify-between gap-2">
           <span className="truncate text-[14px] font-medium text-forest">{entry.name}</span>
           {entry.alias ? (
-            <span className="shrink-0 text-[11px] font-medium uppercase tracking-[0.06em] text-forest/40">
+            <span className="shrink-0 text-[11px] font-medium uppercase tracking-[0.06em] text-forest-muted">
               = {entry.alias}
             </span>
           ) : null}
         </span>
-        <span className="mt-0.5 block text-[12.5px] tracking-tight text-forest/55">{entry.hex}</span>
-        <span className="mt-1 block text-[12.5px] leading-relaxed text-forest/60">{entry.note}</span>
+        <span className="mt-0.5 block text-[12.5px] tracking-tight text-forest-muted">{entry.hex}</span>
+        <span className="mt-1 block text-[12.5px] leading-relaxed text-forest-muted">{entry.note}</span>
       </button>
     </li>
   )
@@ -220,9 +220,9 @@ function PaletteMeaningRow({ meaning }: { meaning: PaletteMeaning }) {
       <div className="min-w-0">
         <p className="text-[14px] font-medium text-forest">
           {meaning.label}
-          <span className="ml-1.5 text-[12px] font-normal text-forest/45">{meaning.hex}</span>
+          <span className="ml-1.5 text-[12px] font-normal text-forest-muted">{meaning.hex}</span>
         </p>
-        <p className="mt-0.5 text-[13px] leading-relaxed text-forest/65">{meaning.note}</p>
+        <p className="mt-0.5 text-[13px] leading-relaxed text-forest-soft">{meaning.note}</p>
       </div>
     </li>
   )

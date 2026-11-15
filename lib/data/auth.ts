@@ -32,11 +32,6 @@ export const REGISTRATION_COPY = {
   /** tautan dua arah ke /login — dilunasi di prompt 09 setelah route-nya ada */
   hasAccountLead: 'Sudah punya akun?',
   hasAccountLink: 'Masuk',
-  /** catatan langkah berikutnya di sheet (paket 64). Sheet registrasi BENAR-BENAR
-   *  mendaftarkan akun Supabase, jadi user wajib tahu langkah berikutnya ada di
-   *  inbox. Dua baris pendek — bukan paragraf disclaimer. */
-  emailNextLead: 'Cek inbox',
-  emailNextNote: 'Tautan konfirmasi sudah dikirim ke emailmu.',
 } as const
 
 /**
@@ -112,17 +107,17 @@ export const VERIFY_PATH = '/login/verify'
 
 export const LOGIN_COPY = {
   /* Catatan revisi desain (permintaan desain): halaman /login memakai bingkai
-     landing (navbar landing TANPA footer), jadi `eyebrow` dan `subtitle` kembali
-     dipakai sebagai kepala halaman. `emailHint`, `trustNote`, `codeSubtitle`,
-     dan `codeHint` tetap tidak dipakai: cukup judul + label + tombol. Pesan
-     ERROR tetap tampil saat input salah — itu informasi, bukan hiasan. */
+     landing (navbar landing TANPA footer), jadi `eyebrow` + judul menjadi kepala
+     halaman. Subjudul ikut DIHAPUS (kepala halaman cukup judul), dan
+     `emailHint`, `trustNote`, `codeSubtitle`, serta `codeHint` tetap tidak
+     dipakai. Placeholder input juga dihapus: label sudah menyebut isinya, jadi
+     "contoh email"/"123456" hanya menambah teks abu-abu yang tidak dipakai.
+     Pesan ERROR tetap tampil saat input salah — itu informasi, bukan hiasan. */
 
   /* ── langkah 1: email ──────────────────────────────────────────────────── */
   eyebrow: 'Masuk',
   title: 'Masuk ke CatetInd',
-  subtitle: 'Satu email, satu kode 6 angka. Tanpa password, tanpa data pribadi lain.',
   emailLabel: 'Email',
-  emailPlaceholder: 'namakamu@email.com',
   submitLabel: 'Kirim kode masuk',
   sendingLabel: 'Mengirim kode…',
 
@@ -133,7 +128,6 @@ export const LOGIN_COPY = {
   codeTitle: 'Masukkan kodenya',
   codeSentLead: 'Kode masuk dikirim ke',
   codeLabel: 'Kode 6 angka',
-  codePlaceholder: '123456',
   codeSubmitLabel: 'Masuk sekarang',
   verifyingLabel: 'Memeriksa kode…',
   changeEmailLabel: 'Ganti email',
@@ -141,8 +135,8 @@ export const LOGIN_COPY = {
    *  `resendCountdownLabel()` supaya tidak ada dua kalimat yang berbeda */
   resendLabel: 'Kirim ulang kode',
   codeSentToast: 'Kode masuk sudah dikirim 📩',
-  codeSentToastDescription: 'Cek inbox (dan folder spam) ya, kodenya 6 angka.',
-  resendSentNote: 'Kode baru sudah dikirim. Cek inbox lagi ya 📩',
+  codeSentToastDescription: 'Kodenya 6 angka, cek email & folder spam ya.',
+  resendSentNote: 'Kode baru sudah dikirim 📩',
   invalidCode: 'Kodenya 6 angka ya. Cek lagi emailnya.',
 
   /* ── jalur kode tetap pemilik (tanpa email) ───────────────────────────────
@@ -171,8 +165,6 @@ export const LOGIN_COPY = {
 export const VERIFY_COPY = {
   eyebrow: 'Langkah terakhir',
   title: 'Cek emailmu',
-  /** satu baris pengantar; detail alamatnya ada di kartu status di bawahnya */
-  subtitle: 'Kami kirim tautan masuk & kode 6 angka ke email ini:',
   /** diikuti alamat email di baris berikutnya — lihat `VerifyEmailScreen` */
   sentLead: 'Tautan masuk sudah dikirim ke',
   /** kalau user sampai ke sini tanpa `?email=` (mis. bookmark lama) */
@@ -181,7 +173,7 @@ export const VERIFY_COPY = {
   openMailLabel: 'Buka email',
   resendLabel: 'Kirim ulang',
   /** umpan balik kecil setelah kirim ulang — menenangkan, bukan heboh */
-  resendSentNote: 'Tautan baru sudah dikirim. Cek inbox lagi ya 📩',
+  resendSentNote: 'Tautan baru sudah dikirim 📩',
   /** state #9b: tautan kedaluwarsa / sudah dipakai (jangan pernah layar buntu) */
   expiredTitle: 'Tautan ini sudah dipakai atau kedaluwarsa.',
   expiredBody: 'Kirim ulang ya, nggak ada yang hilang.',
@@ -219,7 +211,7 @@ export const RELOGIN_COPY = {
 export const SESSION_COPY = {
   /** label tombol saat permintaan sesi sedang berjalan (tukar tautan / kode) */
   signingIn: 'Menyambungkan ke akunmu…',
-  signInToast: 'Kamu sudah masuk 🌿',
+  signInToast: 'Kamu sudah masuk 🧩',
   signInFailed: 'Gagal masuk',
   /** panel Keluar */
   signedOutToast: 'Sampai jumpa lagi! 👋',

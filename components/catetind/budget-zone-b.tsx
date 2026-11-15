@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Sprout } from 'lucide-react'
+import { Puzzle } from 'lucide-react'
 import { SinkingFundCard } from './sinking-fund-card'
 import {
   BUDGET_ADD_PLACEHOLDER,
@@ -14,9 +14,9 @@ import {
 } from '@/lib/data/budget'
 
 /* ── ZONA B — Celengan Impian (sinking funds) ────────────────────────────────
-   Kartu tanaman yang tumbuh, nudge penyemangat kalau belum setor bulan ini,
-   empty state, dan social proof. Semua elemen tambahan hanya muncul saat
-   relevan — begitu ada setoran, kartu nudge hilang sendiri.
+   Kartu papan puzzle yang makin terisi, nudge penyemangat kalau belum setor
+   bulan ini, empty state, dan social proof. Semua elemen tambahan hanya muncul
+   saat relevan — begitu ada setoran, kartu nudge hilang sendiri.
 
    REDESAIN (paket 101 · permintaan pemilik produk: "antar celengannya dibuat
    batas, jangan digabung") — daftar TIDAK lagi satu kartu panjang ber-hairline.
@@ -69,7 +69,7 @@ export function BudgetZoneB({
         >
           <div className="flex items-start gap-3">
             <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-cream text-[17px] ring-1 ring-soil/[0.06]">
-              🌿
+              🧩
             </span>
             <div className="min-w-0">
               <p className="text-[13.5px] leading-relaxed text-forest-muted">{NUDGE_COPY}</p>
@@ -87,8 +87,8 @@ export function BudgetZoneB({
 
       {/* ── RINGKASAN AGREGAT — kartu sendiri, terpisah dari daftar ────────
           Total terkumpul dari total target semua celengan di konteks ini —
-          jawaban cepat "seberapa jauh impianku" sebelum membaca tiap tanaman.
-          Isian bar-nya MINT (keluarga "tumbuh"): untuk celengan makin penuh =
+          jawaban cepat "seberapa jauh impianku" sebelum membaca tiap papan.
+          Isian bar-nya MINT (keluarga "kepingan terpasang"): untuk celengan makin penuh =
           makin baik, jadi tidak ada nada peringatan. */}
       {funds.length > 0 && (
         <section
@@ -148,19 +148,13 @@ export function BudgetZoneB({
           menumpang di satu kartu panjang ber-hairline, jadi batas antar impian
           tidak terbaca — user harus memilah barisnya sendiri. */}
       {funds.length === 0 ? (
-        <div className="rounded-[1.4rem] border border-dashed border-forest/15 bg-sage/25 px-5 py-8 text-center">
-          <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-cream text-[22px] ring-1 ring-soil/[0.06]">
-            🌱
-          </span>
-          <p className="mx-auto mt-3 max-w-[19rem] text-[13.5px] leading-relaxed text-forest-muted">
-            {BUDGET_ZONE_B_COPY.emptyBody}
-          </p>
+        <div data-catetind-empty className="flex flex-col items-center rounded-[1.4rem] border border-dashed border-forest/15 bg-sage/25 px-5 py-7 text-center">
+          <p className="text-[13.5px] font-medium text-forest">{BUDGET_ZONE_B_COPY.emptyTitle}</p>
           <button
             type="button"
             onClick={onAddGoal}
             className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-mint/30 px-4 py-2.5 text-[13px] font-medium text-forest ring-1 ring-mint/60 transition-colors hover:bg-mint/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25 active:scale-95"
           >
-            <Sprout className="size-3.5" strokeWidth={2.6} aria-hidden />
             {BUDGET_ZONE_B_COPY.emptyCta}
           </button>
         </div>
@@ -186,7 +180,7 @@ export function BudgetZoneB({
         </ul>
       )}
 
-      {/* ── TANAM CELENGAN BARU — kartu putus-putus, bukan baris di dalam
+      {/* ── BUAT CELENGAN BARU — kartu putus-putus, bukan baris di dalam
           kartu daftar. Saat daftar kosong, CTA empty state yang mengambil
           peran ini supaya tidak ada dua ajakan yang sama di satu layar. */}
       {funds.length > 0 && (
@@ -196,7 +190,7 @@ export function BudgetZoneB({
           className="group flex w-full items-center gap-3 rounded-[1.4rem] border border-dashed border-forest/20 bg-sage/20 px-4 py-3.5 text-left transition-colors hover:border-forest/30 hover:bg-sage/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25 active:scale-[0.99]"
         >
           <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-cream text-forest ring-1 ring-soil/[0.06] transition-transform duration-300 group-hover:scale-105">
-            <Sprout className="size-4" strokeWidth={2.4} aria-hidden />
+            <Puzzle className="size-4" strokeWidth={2.4} aria-hidden />
           </span>
           <span className="min-w-0">
             <span className="block text-[13.5px] font-medium text-forest">
@@ -209,7 +203,7 @@ export function BudgetZoneB({
         </button>
       )}
 
-      <p className="px-1 text-center text-[11.5px] leading-relaxed text-forest/30">
+      <p className="px-1 text-center text-[11.5px] leading-relaxed text-forest-muted">
         {SOCIAL_PROOF_COPY}
       </p>
     </div>

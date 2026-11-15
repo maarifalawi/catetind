@@ -1,32 +1,44 @@
 'use client'
 
-import { memo, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import {
   ArrowUpRight,
   ChevronRight,
   Pencil,
   ReceiptText,
-  Sprout,
   Trash2,
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatIDR } from '@/lib/wallets'
-import { amountSign } from '@/lib/data/history'
+import {
+  TRANSACTION_INSUFFICIENT_FUNDS_COPY,
+  UPDATE_TRANSACTION_TOAST,
+  amountSign,
+  type HistoryTransaction,
+} from '@/lib/data/history'
 import {
   HOME_MONEY_COPY,
   capHomeRecentRows,
   groupHomeMoneyRows,
-  homeRowsInLastDays,
   summarizeHomeMoney,
   type HomeMoneyRow,
 } from '@/lib/data/home-money'
-import { cancelTransferRow, removeRow, useMoneyStore } from '@/lib/money/store'
+import {
+  cancelTransferRow,
+  editFundsProblem,
+  editRow,
+  recordedTransactions,
+  removeRow,
+  useMoneyStore,
+} from '@/lib/money/store'
 import { homeMoneyRowsForContext } from '@/lib/money/context-filter'
 import { useTodayISO } from '@/lib/use-today-iso'
 import type { TransactionType } from '@/lib/types'
 import { TransactionBottomSheet } from '@/components/dashboard/transaction-bottom-sheet'
+import { EditTransactionSheet } from './edit-transaction-sheet'
 import { categoryVisualFor, moneyRowVisualFor } from './transaction-category-visual'
 import { useMoneyContext } from './money-context-provider'
 import { usePrivacy } from './privacy-provider'
@@ -152,10 +164,13 @@ function SwipeRow({
   tx,
   delay,
   onDelete,
+  onEdit,
 }: {
   tx: Transaction
   delay: number
   onDelete: () => void
+  /** membuka sheet Edit yang sudah terisi (paket 104) */
+  onEdit: () => void
 }) {
   const { hide } = usePrivacy()
   const [dx, setDx] = useState(0)
@@ -192,13 +207,19 @@ function SwipeRow({
     setDragging(false)
     setDx((v) => (Math.abs(v) > 44 ? Math.sign(v) * REVEAL : 0))
   }
-  /* klik biasa tetap jalan — tap tanpa geser dianggap buka detail */
+  /* Klik/tap biasa = BUKA EDIT (paket 104).
+     Dulu tap pada baris tidak melakukan apa pun, sementara chevron di ujungnya
+     menjanjikan "ada halaman lain di balik ini" — affordance yang berbohong.
+     Sekarang barisnya sendiri adalah tombol Edit: tap → sheet Edit yang sudah
+     terisi. Aksi Hapus tetap lewat geser kiri (plus tombol di area yang muncul). */
   const onClick = (e: React.MouseEvent) => {
     if (moved.current || dx !== 0) {
       e.preventDefault()
       e.stopPropagation()
       setDx(0)
+      return
     }
+    onEdit()
   }
 
   const exposed = Math.abs(dx) / REVEAL
@@ -221,7 +242,10 @@ function SwipeRow({
       <button
         type="button"
         aria-label={`Edit ${tx.title}`}
-        onClick={() => setDx(0)}
+        onClick={() => {
+          setDx(0)
+          onEdit()
+        }}
         className="absolute inset-y-0 left-0 flex w-[84px] flex-col items-center justify-center gap-1 rounded-l-2xl bg-sage text-forest transition-opacity"
         style={{ opacity: dx > 0 ? exposed : 0, pointerEvents: dx > 20 ? 'auto' : 'none' }}
       >
@@ -229,10 +253,10 @@ function SwipeRow({
         <span className="text-[11px] font-medium">Edit</span>
       </button>
 
-      {/* konten baris */}
+      {/* konten baris — tombolnya MEMBUKA EDIT, jadi labelnya menyebut aksi itu */}
       <button
         type="button"
-        aria-label={`${tx.title}, ${tx.category}, ${hide(moneyLabel(tx.value, tx.type))}`}
+        aria-label={`Edit ${tx.title}, ${tx.category}, ${hide(moneyLabel(tx.value, tx.type))}`}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={settle}
@@ -301,7 +325,7 @@ function SwipeRow({
               sama — dulu teks abu polos, jadi baris kategori hilang di antara
               nominal & jam. Jamnya tetap murni teks. `min-w-0 truncate` di chip
               menjaga baris ini tetap muat di 375px. */}
-          <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[12px] text-forest/45">
+          <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[12px] text-forest-muted">
             {!categoryShownAsTitle && (
               <span
                 className={cn(
@@ -330,8 +354,16 @@ function SwipeRow({
             Sekarang SATU chevron di dalam lingkaran tipis — pola "arrow in a
             chip" yang sudah dipakai tombol "Lihat semua" di header kartu ini —
             dengan hover halus (lingkaran terisi forest + panah bergeser) memakai
-            token warna & transisi design system yang sudah ada. */}
-        <span className="ml-1 flex size-6 shrink-0 items-center justify-center rounded-full bg-cream text-forest/30 ring-1 ring-soil/12 transition-all duration-300 group-hover:bg-forest group-hover:text-mint group-hover:ring-forest/20">
+            token warna & transisi design system yang sudah ada.
+
+            PAKET 104: panah ini BUKAN hiasan lagi. Dulu ia terlihat seperti pintu
+            ke halaman lain padahal barisnya tidak menanggapi ketukan sama sekali.
+            Kini seluruh baris membuka sheet Edit, jadi panahnya menandai aksi yang
+            benar-benar ada (bukan janji kosong). */}
+        <span
+          aria-hidden
+          className="ml-1 flex size-6 shrink-0 items-center justify-center rounded-full bg-cream text-forest-muted ring-1 ring-soil/12 transition-all duration-300 group-hover:bg-forest group-hover:text-mint group-hover:ring-forest/20"
+        >
           <ChevronRight className="size-3.5 transition-transform duration-300 group-hover:translate-x-0.5" strokeWidth={2.6} />
         </span>
       </button>
@@ -362,10 +394,17 @@ export const RecentTransactionsCard = memo(function RecentTransactionsCard() {
      Paket 64 menambah batas JUMLAH; paket 66 menurunkannya ke 5 baris supaya
      kartu ini tetap ringkasan & dashboard berakhir simetris — `/history` yang
      menyimpan daftar penuh. */
-  const recentRows = useMemo(
-    () => capHomeRecentRows(homeRowsInLastDays(rows, today)),
-    [rows, today],
-  )
+  /* ── BARIS YANG TAMPIL DI DASHBOARD (paket 105) ────────────────────────────
+     Dulu daftar ini DISARING ke 7 hari terakhir (`homeRowsInLastDays`). Akibat
+     yang dilaporkan pemilik produk: catatan yang tersimpan (dan terbaca di
+     Riwayat) TIDAK muncul di Dashboard sama sekali — uang yang sudah dicatat
+     seolah hilang, padahal hanya tanggalnya di luar jendela.
+
+     Sekarang kartu ini menampilkan catatan TERBARU (urut tanggal, potong 5
+     baris). Label grupnya tetap tanggal NYATA tiap baris ("29 Jun", "Hari ini"),
+     jadi tidak ada klaim "hari ini" untuk catatan lama — dan tidak ada lagi dua
+     cerita antara Dashboard dan Riwayat. */
+  const recentRows = useMemo(() => capHomeRecentRows(rows), [rows])
   const visibleGroups = useMemo(() => listGroups(recentRows, today), [recentRows, today])
   const totalItems = recentRows.length
 
@@ -399,6 +438,66 @@ export const RecentTransactionsCard = memo(function RecentTransactionsCard() {
     if (!cancellation) removeRow(tx.id)
   }
 
+  /* ── EDIT DARI KARTU INI (paket 104) ───────────────────────────────────────
+     Baris kartu ini adalah RINGKASAN (`HomeMoneyRow`, id `session-<seq>`),
+     sedangkan sheet Edit butuh bentuk lengkap `HistoryTransaction` (dompet, jam,
+     tanggal). Sumbernya tetap SATU: `recordedTransactions(snapshot)` — daftar
+     yang sama dengan halaman Riwayat, jadi yang dibuka di sini persis sama
+     dengan yang dibuka di sana (aturan "satu jalur tulis"). */
+  const historyById = useMemo(() => {
+    const map = new Map<string, HistoryTransaction>()
+    for (const tx of recordedTransactions(snapshot)) map.set(`session-${tx.id}`, tx)
+    return map
+  }, [snapshot])
+
+  /** transaksi yang sheet Edit-nya terbuka (null = tertutup) */
+  const [editingTx, setEditingTx] = useState<HistoryTransaction | null>(null)
+
+  const openEdit = useCallback(
+    (tx: Transaction) => {
+      /* baris tanpa padanan ledger (mis. catatan demo lama) tidak dibuka dengan
+         form kosong: form kosong akan MENIMPA catatan yang bukan isinya. */
+      const found = historyById.get(tx.id)
+      if (found) setEditingTx(found)
+    },
+    [historyById],
+  )
+
+  /**
+   * Simpan hasil edit lewat SATU pintu tulis (`editRow`), sama seperti Riwayat &
+   * `/wallet/[id]`. Toast hanya berbunyi kalau store benar-benar menulis sesuatu;
+   * penolakan saldo dijelaskan sebabnya, bukan menutup sheet tanpa kabar.
+   */
+  const saveEdit = useCallback((next: HistoryTransaction) => {
+    const patch = {
+      name: next.name,
+      amount: next.amount,
+      type: next.type,
+      category: next.category,
+      wallet: next.wallet,
+      walletId: next.walletId,
+      dateISO: next.date,
+      aiGenerated: next.aiGenerated,
+    }
+    const shortfall = editFundsProblem(next.id, patch)
+    const written = editRow(next.id, patch)
+    setEditingTx(null)
+    if (!written) {
+      if (shortfall) {
+        toast.error(TRANSACTION_INSUFFICIENT_FUNDS_COPY.title, {
+          description:
+            next.type === 'saving'
+              ? TRANSACTION_INSUFFICIENT_FUNDS_COPY.savingBody(shortfall.walletName)
+              : TRANSACTION_INSUFFICIENT_FUNDS_COPY.body(shortfall.walletName),
+        })
+      }
+      return
+    }
+    toast.success(UPDATE_TRANSACTION_TOAST.title, {
+      description: UPDATE_TRANSACTION_TOAST.description,
+    })
+  }, [])
+
   /* delay staggered kumulatif — direcompute dari grup yang masih tampil */
   const delays: number[] = (() => {
     let acc = 0
@@ -419,7 +518,7 @@ export const RecentTransactionsCard = memo(function RecentTransactionsCard() {
           </span>
           <div>
             <p className="text-sm font-medium text-forest">{HOME_MONEY_COPY.txnTitle}</p>
-            <p className="text-xs text-forest/45">{HOME_MONEY_COPY.txnSubtitle}</p>
+            <p className="text-xs text-forest-muted">{HOME_MONEY_COPY.txnSubtitle}</p>
           </div>
         </div>
         <Link
@@ -435,15 +534,9 @@ export const RecentTransactionsCard = memo(function RecentTransactionsCard() {
 
       {totalItems === 0 ? (
         /* ── Empty State I — copy nurturing (PRD State I) ── */
-        <div className="mx-2 mt-4 flex flex-col items-center rounded-2xl border-2 border-dashed border-forest/15 bg-cream/50 px-6 py-10 text-center">
-          <span className="flex size-12 items-center justify-center rounded-full bg-sage text-forest">
-            <Sprout className="size-6" strokeWidth={1.8} />
-          </span>
+        <div data-catetind-empty className="mx-2 mt-4 flex flex-col items-center rounded-2xl border-2 border-dashed border-forest/15 bg-cream/50 px-6 py-10 text-center">
           <p className="mt-4 text-sm font-medium text-forest">
             {HOME_MONEY_COPY.txnEmptyTitle}
-          </p>
-          <p className="mt-1 text-xs text-forest/50">
-            {HOME_MONEY_COPY.txnEmptyBody}
           </p>
           {/* CTA empty state: dulu tombol MATI (bisa dipencet, tidak terjadi apa
               pun). Sekarang membuka Transaction Input Engine — pola `trigger=`
@@ -471,7 +564,7 @@ export const RecentTransactionsCard = memo(function RecentTransactionsCard() {
           {visibleGroups.map((group, gi) => (
             <section key={group.label}>
               <div className="mx-2 flex items-center gap-2">
-                <p className="text-[11px] font-medium tracking-[0.14em] text-forest/40 uppercase">
+                <p className="text-[11px] font-medium tracking-[0.14em] text-forest-muted uppercase">
                   {group.label}
                 </p>
                 {group.live && (
@@ -490,6 +583,7 @@ export const RecentTransactionsCard = memo(function RecentTransactionsCard() {
                     tx={tx}
                     delay={120 + (delays[gi] + i) * 70}
                     onDelete={() => deleteTx(tx)}
+                    onEdit={() => openEdit(tx)}
                   />
                 ))}
               </ul>
@@ -501,7 +595,7 @@ export const RecentTransactionsCard = memo(function RecentTransactionsCard() {
       {/* insight periode — pola strip yang sama dengan kartu distribusi. Label
           periode & kata sambungnya dari `HOME_MONEY_COPY` (string yang SAMA
           dengan legend kartu "Arus Uang"), angkanya dari `period` (turunan). */}
-      <div className="mx-auto mt-4 flex max-w-3xl items-center justify-center gap-2 rounded-2xl bg-cream px-4 py-2.5 text-center text-xs leading-relaxed text-forest/55">
+      <div className="mx-auto mt-4 flex max-w-3xl items-center justify-center gap-2 rounded-2xl bg-cream px-4 py-2.5 text-center text-xs leading-relaxed text-forest-muted">
         <span>
           {HOME_MONEY_COPY.period}{' '}
           <b className="font-medium text-forest">{hide(`+${formatIDR(period.income)}`)}</b>{' '}
@@ -520,6 +614,14 @@ export const RecentTransactionsCard = memo(function RecentTransactionsCard() {
           </b>
         </span>
       </div>
+
+      {/* sheet EDIT transaksi (paket 104) — engine yang sama dengan tombol "+",
+          dibuka SUDAH TERISI data catatan yang diketuk di daftar di atas. */}
+      <EditTransactionSheet
+        tx={editingTx}
+        onSave={saveEdit}
+        onClose={() => setEditingTx(null)}
+      />
     </div>
   )
 })

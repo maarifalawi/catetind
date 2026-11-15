@@ -40,7 +40,7 @@ export function PublicNavbar() {
                 aria-current={active ? 'page' : undefined}
                 className={cn(
                   'hidden rounded-full px-3.5 py-2 text-[14px] font-medium transition-colors duration-200 motion-reduce:transition-none md:inline-flex',
-                  active ? 'bg-sage text-forest' : 'text-forest/60 hover:bg-sage/60 hover:text-forest',
+                  active ? 'bg-sage text-forest' : 'text-forest-muted hover:bg-sage/60 hover:text-forest',
                 )}
               >
                 {link.label}
@@ -51,7 +51,7 @@ export function PublicNavbar() {
           <Link
             href={PUBLIC_NAV.loginHref}
             aria-current={pathname === PUBLIC_NAV.loginHref ? 'page' : undefined}
-            className="rounded-full px-3 py-2 text-[14px] font-medium text-forest/70 transition-colors duration-200 hover:text-forest motion-reduce:transition-none"
+            className="rounded-full px-3 py-2 text-[14px] font-medium text-forest-soft transition-colors duration-200 hover:text-forest motion-reduce:transition-none"
           >
             {PUBLIC_NAV.loginLabel}
           </Link>

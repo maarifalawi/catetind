@@ -94,13 +94,13 @@ export function InstallQrHandoff({ className }: { className?: string }) {
         </span>
         <div className="min-w-0">
           <h2 className="text-sm font-medium text-forest">{INSTALL_HANDOFF.title}</h2>
-          <p className="mt-0.5 text-xs leading-relaxed text-forest/50">{INSTALL_HANDOFF.blurb}</p>
+          <p className="mt-0.5 text-xs leading-relaxed text-forest-muted">{INSTALL_HANDOFF.blurb}</p>
         </div>
       </header>
 
       {/* link ditulis apa adanya (mono) supaya bisa dibaca & diketik manual */}
       <div className="mt-4 rounded-2xl bg-sage/50 px-3.5 py-3 ring-1 ring-forest/10">
-        <p className="text-[11.5px] font-medium tracking-[0.16em] text-forest/45 uppercase">
+        <p className="text-[11.5px] font-medium tracking-[0.16em] text-forest-muted uppercase">
           {INSTALL_HANDOFF.linkLabel}
         </p>
         <p className="mt-1 font-mono text-sm font-medium break-all text-forest">
@@ -123,7 +123,7 @@ export function InstallQrHandoff({ className }: { className?: string }) {
         <button
           type="button"
           onClick={copyLink}
-          className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-cream px-4 py-2.5 text-[14px] font-medium text-forest/70 ring-1 ring-soil/12 transition-colors duration-200 hover:bg-sage/40 hover:text-forest active:scale-[0.98]"
+          className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-cream px-4 py-2.5 text-[14px] font-medium text-forest-soft ring-1 ring-soil/12 transition-colors duration-200 hover:bg-sage/40 hover:text-forest active:scale-[0.98]"
         >
           {status === 'copied' ? (
             <Check className="size-4" strokeWidth={2.6} aria-hidden />
@@ -137,12 +137,12 @@ export function InstallQrHandoff({ className }: { className?: string }) {
       {/* status aksi — aria-live supaya screen reader ikut tahu, bukan cuma mata */}
       <p
         aria-live="polite"
-        className="mt-2 min-h-4 text-center text-xs font-medium text-forest/80"
+        className="mt-2 min-h-4 text-center text-xs font-medium text-forest"
       >
         {statusText}
       </p>
 
-      <p className="text-center text-[12px] leading-relaxed text-forest/50">
+      <p className="text-center text-[12px] leading-relaxed text-forest-muted">
         {INSTALL_HANDOFF.instruction}
       </p>
     </section>

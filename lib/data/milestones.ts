@@ -23,19 +23,24 @@
    ─────────────────────────────────────────────────────────────────────────── */
 
 /** jenis perayaan yang dikenal sistem (inventaris #k) */
+/* Ambang tahap papan puzzle dipakai ULANG dari rekap bulanan — satu kebiasaan
+   mencatat tidak boleh melahirkan dua tahap berbeda di dua layar. */
+import { recapPuzzleStage } from './monthly-review'
+
 export type MilestoneKind = 'streak' | 'stage-up' | 'target-reached'
 
-/** Tahap ilustrasi tanaman (1 Benih … 4 Berbunga). Didefinisikan ulang di sini
- *  dengan sengaja: file ini lapis DATA dan tidak boleh mengimpor komponen
- *  (`plant-illustration.tsx`). Nilainya identik, jadi hasilnya tetap assignable. */
+/** Tahap ilustrasi puzzle (1 Awal tersusun … 4 Puzzle lengkap). Didefinisikan
+ *  ulang di sini dengan sengaja: file ini lapis DATA dan tidak boleh mengimpor
+ *  komponen (`plant-illustration.tsx`). Nilainya identik, jadi hasilnya tetap
+ *  assignable. */
 export type MilestonePlantStage = 1 | 2 | 3 | 4
 
 /** Hari ke-7/14/21/30 memicu celebration full-screen (PRD 1821 & 2088–2091) */
 export const MILESTONE_DAYS = [7, 14, 21, 30] as const
 export type MilestoneDay = (typeof MILESTONE_DAYS)[number]
 
-/** "Naik tahap" baru layak dirayakan dari Tanaman Muda ke atas — hari-hari
- *  pertama itu masa menanam, terlalu cepat untuk disebut pencapaian. */
+/** "Naik tahap" baru layak dirayakan dari tahap 3 ke atas — hari-hari pertama
+ *  itu masa menyusun awal, terlalu cepat untuk disebut pencapaian. */
 export const STAGE_UP_MIN_STAGE: MilestonePlantStage = 3
 
 export interface Milestone {
@@ -66,15 +71,79 @@ export interface MilestoneState {
    active_days, dan stage yang direcompute server. Nilai di bawah dipilih supaya
    demo Home benar-benar memicu perayaan "hari ke-7" SEKALI — sesuai acceptance
    criteria — jadi bukan angka hiasan. */
+/*
+ * PAKET 109 — komentar di atas sudah TIDAK berlaku untuk Home: konstanta ini
+ * berhenti menjadi default hook perayaan (dulu akun baru disambut "Minggu
+ * pertama!" untuk streak 7 hari yang tidak pernah terjadi). Sekarang ia hanya
+ * BAHAN test/demo; angka yang ditampilkan dihitung dari ledger nyata lewat
+ * `milestoneStateFromRecords()` di bawah.
+ */
 export const MILESTONE_STATE: MilestoneState = {
   streakDays: 7,
   activeDays: 7,
   plantStage: 2,
 }
 
+/** titik berangkat jujur: belum ada catatan → tidak ada yang dirayakan */
+export const EMPTY_MILESTONE_STATE: MilestoneState = {
+  streakDays: 0,
+  activeDays: 0,
+  plantStage: 1,
+}
+
+/** satu hari kalender sebelum `iso` (`YYYY-MM-DD`), tanpa bergantung zona waktu */
+function previousDay(iso: string): string {
+  const date = new Date(`${iso}T12:00:00`)
+  date.setDate(date.getDate() - 1)
+  return date.toISOString().slice(0, 10)
+}
+
+/**
+ * State perayaan dari baris ledger yang BENAR-BENAR dimiliki user.
+ *
+ * `streakDays` = hari berturut-turut (mundur dari hari ini, atau dari kemarin
+ * kalau hari ini belum mencatat) yang punya minimal satu catatan. `activeDays`
+ * = jumlah tanggal unik bercatatan. `plantStage` memakai ambang papan puzzle
+ * yang sama dengan rekap bulanan (`recapPuzzleStage`), supaya satu kebiasaan
+ * tidak melahirkan dua tahap berbeda di dua layar.
+ *
+ * `targetAchieved` sengaja TIDAK diisi di sini: itu hanya boleh diberikan
+ * halaman celengan setelah setoran benar-benar melunasi target.
+ */
+export function milestoneStateFromRecords(
+  rows: readonly { dateISO?: string; date?: string }[],
+  todayISO: string,
+): MilestoneState {
+  /* dua bentuk baris dipakai app ini: `MoneyRow` menulis `dateISO`, sedangkan
+     `HistoryTransaction` (hasil `recordedTransactions()`) menulis `date`. */
+  const days = new Set(
+    rows.map((row) => row.dateISO ?? row.date ?? '').filter((iso) => Boolean(iso)),
+  )
+  if (days.size === 0) return { ...EMPTY_MILESTONE_STATE }
+
+  /* `todayISO` kosong = belum mount (hidrasi). Hari aktif tetap dihitung, tapi
+     streak belum bisa dinilai — jangan menebak "hari ini" dari jam perangkat
+     saat render pertama (bisa berbeda dari server). */
+  let streakDays = 0
+  if (todayISO) {
+    /* hari ini belum mencatat bukan berarti streak putus — hitung dari kemarin */
+    let cursor = days.has(todayISO) ? todayISO : previousDay(todayISO)
+    while (days.has(cursor)) {
+      streakDays += 1
+      cursor = previousDay(cursor)
+    }
+  }
+
+  return {
+    streakDays,
+    activeDays: days.size,
+    plantStage: recapPuzzleStage(days.size) as MilestonePlantStage,
+  }
+}
+
 /** State untuk perayaan "target tercapai" (dipakai halaman detail celengan
  *  SETELAH setoran benar-benar melunasi target — bukan saat halaman dibuka).
- *  Tanaman ditampilkan di tahap Berbunga karena targetnya sudah penuh. */
+ *  Tanaman ditampilkan di tahap 4 (Puzzle lengkap) karena targetnya sudah penuh. */
 export const MILESTONE_TARGET_STATE: MilestoneState = {
   streakDays: 0,
   activeDays: 0,
@@ -108,8 +177,8 @@ export const MILESTONE_MESSAGES: Record<MilestoneKind, MilestoneCopy> = {
     },
     messages: [
       /* contoh kanon PRD 2062 — judul "Minggu pertama!" + kalimat ini */
-      'Kamu udah catat {days} hari, tanamanmu mulai tumbuh 🌿',
-      '{days} hari berturut-turut! Konsisten banget, dan itu yang bikin tanamanmu subur 🌿',
+      'Kamu udah catat {days} hari, puzzle-mu mulai tersusun 🧩',
+      '{days} hari berturut-turut! Konsisten banget, dan itu yang bikin puzzle-mu cepat lengkap 🧩',
       'Udah {days} hari kamu jalan bareng. Kecil-kecilan tapi terus, ya 💚',
       '{days} hari terakhir nggak ada yang lewat begitu aja, semuanya kecatet 💚',
     ],
@@ -117,9 +186,9 @@ export const MILESTONE_MESSAGES: Record<MilestoneKind, MilestoneCopy> = {
   'stage-up': {
     title: 'Naik satu tahap!',
     messages: [
-      'Tanamanmu naik tahap! Hasil dari {activeDays} hari catatanmu 🌿',
-      'Tumbuh terus! {activeDays} hari kamu rawat, sekarang tanamannya lebih besar 🌿',
-      'Satu tahap lagi dilewatin. {activeDays} hari yang kamu rawat, sekarang kelihatan hasilnya 🌿',
+      'Puzzle-mu naik tahap! Hasil dari {activeDays} hari catatanmu 🧩',
+      'Terus nambah! {activeDays} hari kamu catat, sekarang kepingannya makin banyak 🧩',
+      'Satu tahap lagi dilewatin. {activeDays} hari yang kamu rawat, sekarang kelihatan hasilnya 🧩',
     ],
   },
   'target-reached': {
@@ -127,7 +196,7 @@ export const MILESTONE_MESSAGES: Record<MilestoneKind, MilestoneCopy> = {
     messages: [
       'Celenganmu penuh! Ini hasil dari setoran kecil yang kamu lakukan terus 🎉',
       'Targetmu tercapai, nggak ada jackpot, cuma kamu yang konsisten setor 🎉',
-      'Penuh! Dan yang bikin ini terjadi bukan keberuntungan, tapi kamu yang nggak berhenti 🌿',
+      'Penuh! Dan yang bikin ini terjadi bukan keberuntungan, tapi kamu yang nggak berhenti 🧩',
     ],
   },
 }
@@ -305,6 +374,6 @@ export const CELEBRATION_COPY = {
   replayLabel: 'Lihat perayaan',
   replayHint: 'Putar ulang momen perayaan terakhirmu',
   closeBackdropLabel: 'Tutup perayaan',
-  /** caption tahap tanaman di bawah ilustrasi */
-  stageCaption: (stageName: string) => `Tanamanmu, ${stageName}`,
+  /** caption tahap puzzle di bawah ilustrasi */
+  stageCaption: (stageName: string) => `Puzzle-mu, ${stageName}`,
 } as const

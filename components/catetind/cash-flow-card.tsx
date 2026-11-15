@@ -116,7 +116,7 @@ const EXPENSE_DAY_DOT = dayDot(HOME_CASHFLOW_COLORS.expense)
 function TooltipRow({ dot, label, value }: { dot: string; label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-4">
-      <span className="flex items-center gap-1.5 text-[12px] font-medium text-cream/70">
+      <span className="flex items-center gap-1.5 text-[12px] font-medium text-cream">
         {/* `ring-cream` = garis tipis terang: ton BASE (warna GARIS serinya)
             tetap terbaca di atas kartu tooltip yang berlatar ink */}
         <span
@@ -147,7 +147,7 @@ function CashFlowTooltip({
   const net = point.income - point.expense
   return (
     <div className="min-w-[10.5rem] rounded-2xl bg-ink px-3.5 py-3 text-cream shadow-[0_18px_40px_-16px_rgba(0,0,0,0.85)] ring-1 ring-cream/10">
-      <p className="text-[11.5px] font-medium tracking-wide text-cream/55">{point.label}</p>
+      <p className="text-[11.5px] font-medium tracking-wide text-cream-muted">{point.label}</p>
       <div className="mt-2 space-y-1">
         {/* dot = ton BASE, sama persis dengan warna GARIS-nya (aturan satu hue
             per seri); ring terangnya yang menjaga dot tetap terbaca di kartu ink */}
@@ -163,7 +163,7 @@ function CashFlowTooltip({
         />
       </div>
       <div className="mt-2 flex items-center justify-between gap-4 border-t border-cream/10 pt-2">
-        <span className="text-[11.5px] font-medium text-cream/55">
+        <span className="text-[11.5px] font-medium text-cream-muted">
           {HOME_MONEY_COPY.chartNetLabel}
         </span>
         <span className="text-[13.5px] font-semibold tabular-nums">
@@ -276,7 +276,7 @@ export const CashFlowCard = memo(function CashFlowCard() {
           </span>
           <div>
             <p className="text-sm font-medium text-forest">{HOME_MONEY_COPY.chartTitle}</p>
-            <p className="text-xs text-forest/45">
+            <p className="text-xs text-forest-muted">
               {HOME_MONEY_COPY.period} · {monthShort}
             </p>
           </div>
@@ -310,14 +310,8 @@ export const CashFlowCard = memo(function CashFlowCard() {
            Grafik datar gampang dibaca sebagai "nol pengeluaran", padahal artinya
            "belum ada catatan" — jadi kalimatnya yang dipakai, plus dua pintu
            nyata: panel input & halaman Riwayat. */
-        <div className="mt-4 flex flex-1 flex-col items-center justify-center rounded-2xl border-2 border-dashed border-forest/15 bg-cream/50 px-6 py-8 text-center">
-          <span className="flex size-12 items-center justify-center rounded-full bg-sage text-forest">
-            <Waves className="size-5" strokeWidth={1.8} />
-          </span>
+        <div data-catetind-empty className="mt-4 flex flex-1 flex-col items-center justify-center rounded-2xl border-2 border-dashed border-forest/15 bg-cream/50 px-6 py-8 text-center">
           <p className="mt-3 text-sm font-medium text-forest">{HOME_MONEY_COPY.chartEmptyTitle}</p>
-          <p className="mt-1 max-w-[26rem] text-xs leading-relaxed text-forest/50">
-            {HOME_MONEY_COPY.chartEmptyBody}
-          </p>
           <TransactionBottomSheet
             trigger={
               <button
@@ -360,7 +354,7 @@ export const CashFlowCard = memo(function CashFlowCard() {
                   >
                     {AXIS_FACE[row.key].icon}
                   </span>
-                  <span className="truncate text-[13.5px] font-medium text-forest/60">
+                  <span className="truncate text-[13.5px] font-medium text-forest-muted">
                     {row.label}
                   </span>
                 </div>
@@ -570,7 +564,7 @@ export const CashFlowCard = memo(function CashFlowCard() {
                 Dotnya memakai ton BASE — SAMA PERSIS dengan warna garisnya, jadi
                 legenda tidak bisa "beda warna" dari kurva yang ditunjuknya
                 (aturan satu hue per seri, paket 93). */}
-            <figcaption className="mt-2 flex items-center justify-center gap-5 text-[11.5px] font-medium text-forest/55">
+            <figcaption className="mt-2 flex items-center justify-center gap-5 text-[11.5px] font-medium text-forest-muted">
               <span className="flex items-center gap-1.5">
                 <span
                   aria-hidden

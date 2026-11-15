@@ -42,7 +42,7 @@ import {
         Privacy guard-nya bukan di tampilan, tapi di tipe data: `ShareCard`
         memang tidak punya field uang (lihat `lib/data/share.ts`).
      2. JUJUR — kalau catatannya masih sedikit, kartunya tampil apa adanya
-        sebagai "masih tumbuh". Tidak ada testimoni atau angka sosial karangan.
+        sebagai "masih disusun". Tidak ada testimoni atau angka sosial karangan.
      3. HANGAT, BUKAN HARD-SELL — satu CTA, satu kalimat, tanpa hitungan mundur.
 
    Komponen ini TANPA `'use client'` dengan sengaja (pola `not-found-screen`):
@@ -66,7 +66,7 @@ function EyebrowLine({ className }: { className?: string }) {
   return (
     <p
       className={cn(
-        'text-[12px] font-medium uppercase tracking-[0.16em] text-forest/40',
+        'text-[12px] font-medium uppercase tracking-[0.16em] text-forest-muted',
         className,
       )}
     >
@@ -88,7 +88,7 @@ function CardView({ card }: { card: ShareCard }) {
         <h1 className="mt-1.5 font-display text-3xl font-semibold tracking-tight text-forest lg:text-4xl">
           {shareHeadline(card.ownerName)}
         </h1>
-        <p className="mt-2 max-w-xl text-[14.5px] leading-relaxed text-forest/60">
+        <p className="mt-2 max-w-xl text-[14.5px] leading-relaxed text-forest-muted">
           {SHARE_PAGE_SUBHEAD}
         </p>
       </header>
@@ -98,11 +98,11 @@ function CardView({ card }: { card: ShareCard }) {
         <div className="flex flex-col gap-3 lg:col-span-5">
           <ShareAchievementCard card={card} />
 
-          <p className="flex items-start gap-1.5 text-[12.5px] leading-relaxed text-forest/50">
+          <p className="flex items-start gap-1.5 text-[12.5px] leading-relaxed text-forest-muted">
             <Lock className="mt-[1px] size-3.5 shrink-0" strokeWidth={2.2} aria-hidden />
             {SHARE_CARD_PRIVACY_LINE}
           </p>
-          <p className="text-[12px] leading-relaxed text-forest/40">{SHARE_PRIVACY_NOTE}</p>
+          <p className="text-[12px] leading-relaxed text-forest-muted">{SHARE_PRIVACY_NOTE}</p>
         </div>
 
         {/* ── KOLOM AJAKAN (kanan) — keadaan kartu dulu, baru CTA ─────────── */}
@@ -115,7 +115,7 @@ function CardView({ card }: { card: ShareCard }) {
               <h2 className="mt-3 font-display text-[16px] font-semibold tracking-tight text-forest">
                 {SHARE_GROWING_TITLE}
               </h2>
-              <p className="mt-1 text-[13.5px] leading-relaxed text-forest/60">
+              <p className="mt-1 text-[13.5px] leading-relaxed text-forest-muted">
                 {shareGrowingNote(card)}
               </p>
             </section>
@@ -143,7 +143,7 @@ function InviteCard({ thin, ownerName }: { thin: boolean; ownerName: string }) {
       <h2 className="mt-3.5 font-display text-[20px] font-semibold tracking-tight text-forest">
         {SHARE_INVITE_TITLE}
       </h2>
-      <p className="mt-1.5 text-[14px] leading-relaxed text-forest/60">{SHARE_INVITE_BODY}</p>
+      <p className="mt-1.5 text-[14px] leading-relaxed text-forest-muted">{SHARE_INVITE_BODY}</p>
 
       <Link
         href={SHARE_CTA_HREF}
@@ -152,17 +152,17 @@ function InviteCard({ thin, ownerName }: { thin: boolean; ownerName: string }) {
         {SHARE_CTA}
         <ArrowRight className="size-4" strokeWidth={2.4} aria-hidden />
       </Link>
-      <p className="mt-2 text-center text-[12.5px] leading-relaxed text-forest/45">
+      <p className="mt-2 text-center text-[12.5px] leading-relaxed text-forest-muted">
         {thin ? SHARE_THIN_CTA_HINT : SHARE_CTA_HINT}
       </p>
 
-      <p className="mt-3.5 border-t border-soil/12 pt-3.5 text-[12.5px] leading-relaxed text-forest/55">
+      <p className="mt-3.5 border-t border-soil/12 pt-3.5 text-[12.5px] leading-relaxed text-forest-muted">
         {SEKALI_BAYAR_BADGE}
       </p>
 
       {/* janji privasi pengunjung — CONTEXT-WAJIB §5.3: halaman yang menyentuh
           data orang lain wajib mengulang janji ini */}
-      <p className="mt-3 flex items-start gap-1.5 text-[12.5px] leading-relaxed text-forest/45">
+      <p className="mt-3 flex items-start gap-1.5 text-[12.5px] leading-relaxed text-forest-muted">
         <ShieldCheck className="mt-[1px] size-3.5 shrink-0" strokeWidth={2.2} aria-hidden />
         {shareVisitorPledge(ownerName)}
       </p>
@@ -173,8 +173,8 @@ function InviteCard({ thin, ownerName }: { thin: boolean; ownerName: string }) {
 /* ── KARTU TIDAK ADA: empty state hangat (bukan 404 kaku) ─────────────────────
    Tautan kartu gampang terpotong saat dibagikan lewat chat. Orang yang datang
    ke sini belum tentu tahu CatetInd, jadi halamannya tidak boleh terasa seperti
-   sistem menegur: jelaskan ringan, tunjukkan tanaman kecil yang masih tumbuh,
-   lalu beri satu jalan pulang (pola yang sama dengan `not-found-screen`). */
+   sistem menegur: jelaskan ringan, tunjukkan papan puzzle yang masih setengah
+   tersusun, lalu beri satu jalan pulang (pola yang sama dengan `not-found-screen`). */
 function UnavailableView() {
   return (
     <div className="mx-auto flex w-full max-w-[480px] flex-col items-center px-5 pb-16 pt-10 text-center lg:max-w-[560px] lg:pt-16">
@@ -195,7 +195,7 @@ function UnavailableView() {
       <h1 className="mt-1.5 font-display text-3xl font-semibold tracking-tight text-forest lg:text-4xl">
         {SHARE_UNAVAILABLE_TITLE}
       </h1>
-      <p className="mt-3 text-[14.5px] leading-relaxed text-forest/60">
+      <p className="mt-3 text-[14.5px] leading-relaxed text-forest-muted">
         {SHARE_UNAVAILABLE_BODY}
       </p>
 
@@ -224,9 +224,9 @@ function DemoStateLinks({ activeId }: { activeId: string }) {
       <h2 className="font-display text-[15px] font-medium tracking-tight text-forest">
         {SHARE_DEMO_COPY.title}
       </h2>
-      <p className="mt-1 text-[12.5px] leading-relaxed text-forest/55">{SHARE_DEMO_COPY.body}</p>
+      <p className="mt-1 text-[12.5px] leading-relaxed text-forest-muted">{SHARE_DEMO_COPY.body}</p>
 
-      <p className="mt-3.5 border-t border-soil/12 pt-3.5 text-[11.5px] font-medium uppercase tracking-[0.14em] text-forest/40">
+      <p className="mt-3.5 border-t border-soil/12 pt-3.5 text-[11.5px] font-medium uppercase tracking-[0.14em] text-forest-muted">
         {SHARE_DEMO_COPY.statesLabel}
       </p>
       <ul className="mt-2 flex flex-wrap gap-2">
@@ -241,7 +241,7 @@ function DemoStateLinks({ activeId }: { activeId: string }) {
                   'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12.5px] font-medium transition-colors duration-200 motion-reduce:transition-none',
                   active
                     ? 'bg-forest text-mint'
-                    : 'bg-cream text-forest/60 ring-1 ring-soil/14 hover:text-forest',
+                    : 'bg-cream text-forest-muted ring-1 ring-soil/14 hover:text-forest',
                 )}
               >
                 {state.label}

@@ -34,9 +34,9 @@ export interface ChangelogEntry {
 
 export const CHANGELOG_META = {
   eyebrow: 'Changelog',
-  title: 'Product Updates',
+  title: 'Yang Baru di CatetInd',
   description:
-    'Semua yang baru di CatetInd | fitur, peningkatan, dan perbaikan di setiap versi. Ringkas, tanpa bahasa marketing.',
+    'Fitur baru, peningkatan, dan perbaikan di setiap versi. Ringkas, tanpa bahasa marketing.',
 } as const
 
 /** terbaru lebih dulu — urutan ini yang dipakai halaman */
@@ -48,7 +48,7 @@ export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
     dateHuman: '20 Januari 2026',
     title: 'Catat 4 detik: struk, suara, dan Minca',
     summary: [
-      'Nyatet nggak harus buka form. Kirim chat, foto struk, atau voice note, Minca yang merapikan jadi transaksi.',
+      'Nyatet nggak perlu buka form. Kirim chat, foto struk, atau voice note, Minca yang merapikan jadi transaksi.',
       'Scan struk membaca nominal, tanggal, dan merchant langsung dari foto. Kalau ada yang meleset, kamu masih bisa mengeditnya sebelum disimpan.',
     ],
     image: '/landing/ecsvVHaKUpgixFh7HmsoZYYI.png',
@@ -60,7 +60,7 @@ export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
         items: [
           'Scan struk (OCR) dengan koreksi otomatis',
           'Input suara untuk transaksi harian',
-          'AI Coach Minca dengan kuota token per paket',
+          'Minca dengan kuota token per paket',
         ],
       },
       {

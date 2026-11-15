@@ -199,29 +199,57 @@ export function toLedgerInsert(
 
 /* ── DOMPET BERSAMA ────────────────────────────────────────────────────────── */
 
-/** `SplitSpec` (domain) → kolom `split_type` + jsonb-nya. Satu rumus, dua kolom. */
+/** `SplitSpec` (domain) → kolom `split_type` + jsonb/array-nya. Satu rumus. */
 export function toSplitColumns(split: SplitSpec): {
   split_type: SplitSpec['type']
   split_percents: Record<string, number> | null
   split_amounts: Record<string, number> | null
+  /**
+   * Peserta mode Bagi Rata. Disimpan di server supaya porsi yang dipilih
+   * penginput TIDAK hilang di perangkat anggota lain (dulu hanya hidup di
+   * memori perangkat penginput).
+   */
+  split_members: string[] | null
 } {
   switch (split.type) {
     case 'percentage':
-      return { split_type: 'percentage', split_percents: split.percents, split_amounts: null }
+      return {
+        split_type: 'percentage',
+        split_percents: split.percents,
+        split_amounts: null,
+        split_members: null,
+      }
     case 'nominal':
-      return { split_type: 'nominal', split_percents: null, split_amounts: split.amounts }
+      return {
+        split_type: 'nominal',
+        split_percents: null,
+        split_amounts: split.amounts,
+        split_members: null,
+      }
     case 'single_payer':
-      return { split_type: 'single_payer', split_percents: null, split_amounts: null }
+      return {
+        split_type: 'single_payer',
+        split_percents: null,
+        split_amounts: null,
+        split_members: null,
+      }
     default:
-      return { split_type: 'equal', split_percents: null, split_amounts: null }
+      return {
+        split_type: 'equal',
+        split_percents: null,
+        split_amounts: null,
+        split_members:
+          split.participants && split.participants.length > 0 ? [...split.participants] : null,
+      }
   }
 }
 
-/** Kolom jsonb + `single_payer` → kembali `SplitSpec` (dipakai saat membaca) */
+/** Kolom jsonb + `single_payer` + peserta → kembali `SplitSpec` (saat membaca) */
 export function toSplitSpec(row: {
   split_type?: string | null
   split_percents?: Record<string, number> | null
   split_amounts?: Record<string, number> | null
+  split_members?: string[] | null
   bearer_id?: string | null
 }): SplitSpec {
   switch (row.split_type) {
@@ -232,7 +260,10 @@ export function toSplitSpec(row: {
     case 'single_payer':
       return { type: 'single_payer', payerId: row.bearer_id ?? '' }
     default:
-      return { type: 'equal' }
+      /* `split_members` kosong = semua anggota (data lama) */
+      return row.split_members && row.split_members.length > 0
+        ? { type: 'equal', participants: [...row.split_members] }
+        : { type: 'equal' }
   }
 }
 
@@ -261,12 +292,18 @@ export interface JointTransactionDbRow {
   split_type?: string | null
   split_percents?: Record<string, number> | null
   split_amounts?: Record<string, number> | null
+  /** peserta mode Bagi Rata (migrasi `joint_flex_split_settle`) */
+  split_members?: string[] | null
   bearer_id?: string | null
   is_private?: boolean | null
   private_for_user?: string | null
   is_settlement?: boolean | null
+  /** penerima manfaat 100% pada baris pelunasan (B bayar → A menerima) */
+  settle_to_user_id?: string | null
   month_key?: string | null
   client_tx_id?: string | null
+  /** `expense` (bawaan) atau `income` — kolom dari migrasi multi-member */
+  kind?: string | null
 }
 
 /**
@@ -284,6 +321,12 @@ export function toJointTransaction(
 ): JointTransaction {
   const author = row.user_id ?? viewerId
   const pocket = row.paid_by_user_id ?? author
+  /* Baris pelunasan: porsi 100% jatuh ke PENERIMA MANFAAT (`settle_to_user_id`),
+     bukan ke pencatat. `bearer_id` ikut dipertahankan sebagai jalur lama. */
+  const beneficiary = row.is_settlement ? (row.settle_to_user_id ?? row.bearer_id ?? null) : null
+  const split: SplitSpec = beneficiary
+    ? { type: 'single_payer', payerId: beneficiary }
+    : toSplitSpec(row)
   return {
     id: row.id,
     userId: author,
@@ -295,12 +338,18 @@ export function toJointTransaction(
     time: row.time_label ?? '00:00',
     /* bentuk kanonik: satu `SplitSpec` dari kolom-kolom split — jalur migrasi
        data lama hidup di `toSplitSpec()`, bukan di komponen */
-    split: toSplitSpec(row),
+    split,
     ...(row.is_private
       ? { isPrivate: true, privateForUser: row.private_for_user ?? author }
       : {}),
     /* baris settle/pembuka bulan: transfer penyelesaian, bukan pengeluaran */
     ...(row.is_settlement ? { isSettlement: true } : {}),
+    /* BULAN yang diselesaikan: kunci anti-dobel memakai ini, bukan tanggal
+       transfer (settle bulan lama bisa ditekan di bulan berikutnya) */
+    ...(row.is_settlement && row.month_key ? { settlementMonth: row.month_key } : {}),
+    /* pemasukan bersama: WAJIB dibawa dari database, kalau tidak baris income
+       yang ditulis hari ini akan terbaca sebagai pengeluaran setelah refresh */
+    ...(row.kind === 'income' ? { kind: 'income' as const } : {}),
   }
 }
 

@@ -9,7 +9,6 @@ import {
   Download,
   Loader2,
   Send,
-  Smartphone,
   UserRoundCheck,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -17,6 +16,7 @@ import { LOGIN_PATH, SESSION_COPY } from '@/lib/data/auth'
 import { usePushNotifications } from '@/lib/use-push-notifications'
 import {
   DEFAULT_NOTIF_PREFS,
+  PUSH_STATUS_COPY,
   readNotifPrefs,
   writeNotifPrefs,
   type NotifPrefId,
@@ -42,8 +42,8 @@ const PREFS = [
   },
   {
     id: 'tanaman-layu',
-    label: 'Tanaman Layu',
-    desc: 'Peringatan kalau kamu lama gak catat (tanamanmu kangen 🌱)',
+    label: 'Puzzle Belum Lengkap',
+    desc: 'Pengingat kalau kepingan puzzle-mu lama nggak nambah 🧩',
   },
   {
     id: 'tagihan-jatuh-tempo',
@@ -78,6 +78,8 @@ export function NotificationSettings() {
   const [prefs, setPrefs] = useState<Record<PrefId, boolean>>(DEFAULT_PREFS)
   const [busy, setBusy] = useState(false)
   const [sentMsg, setSentMsg] = useState<string | null>(null)
+  /** pesan saat aktivasi push GAGAL — dulu kegagalan hanya berhenti di spinner */
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   useEffect(() => {
     setPrefs(readNotifPrefs())
@@ -96,22 +98,47 @@ export function NotificationSettings() {
 
   const handleActivate = async () => {
     setBusy(true)
-    await activate()
-    setBusy(false)
+    /* `try/finally` WAJIB: dulu `setBusy(false)` dilewati kalau aktivasi
+       melempar, jadi tombol berputar selamanya tanpa penjelasan apa pun. */
+    try {
+      const result = await activate()
+      if (result === 'ok') {
+        setErrorMsg(null)
+        setSentMsg(PUSH_STATUS_COPY.activated)
+        setTimeout(() => setSentMsg(null), 4000)
+      } else {
+        setErrorMsg(
+          result === 'no-worker'
+            ? PUSH_STATUS_COPY.noWorker
+            : result === 'denied'
+              ? PUSH_STATUS_COPY.denied
+              : result === 'unsupported'
+                ? PUSH_STATUS_COPY.unsupported
+                : result === 'no-session'
+                  ? PUSH_STATUS_COPY.noSession
+                  : PUSH_STATUS_COPY.failed,
+        )
+      }
+    } finally {
+      setBusy(false)
+    }
   }
   const handleTestRemote = async () => {
     setBusy(true)
-    const result = await testRemote()
-    setBusy(false)
-    if (result === 'ok') {
-      setSentMsg('Push dikirim! Cek tray notifikasi HP kamu 🚀')
-    } else if (result === 'no-session') {
-      /* jujur: endpoint-nya memang menolak tanpa sesi (401) sejak paket 39 */
-      setSentMsg(null)
-    } else {
-      setSentMsg('Push belum terkirim, coba lagi sebentar ya.')
+    try {
+      const result = await testRemote()
+      if (result === 'ok') {
+        setSentMsg('Push dikirim! Cek tray notifikasi HP kamu 🚀')
+      } else if (result === 'no-session') {
+        /* jujur: endpoint-nya memang menolak tanpa sesi (401) sejak paket 39 */
+        setSentMsg(null)
+      } else {
+        setSentMsg('Push belum terkirim, coba lagi sebentar ya.')
+      }
+      setTimeout(() => setSentMsg(null), 4000)
+    } finally {
+      setBusy(false)
     }
-    setTimeout(() => setSentMsg(null), 4000)
   }
 
   return (
@@ -133,11 +160,15 @@ export function NotificationSettings() {
           </span>
           <div className="min-w-0 flex-1">
             <h2 className="text-base font-medium text-forest">Notifikasi Push HP</h2>
-            <p className="mt-0.5 text-sm leading-relaxed text-forest/55">
-              {subscribed
-                ? 'Aktif! Kamu bakal terima push walau app lagi ditutup.'
-                : 'Aktifkan biar dapat reminder tanpa harus buka app dulu.'}
-            </p>
+            {/* Dulu di sini ada kalimat "Daftarkan perangkat ini biar siap
+                nerima push." — DIMINTA DIHAPUS. Yang tersisa hanya keterangan
+                saat perangkat memang SUDAH terdaftar (informasi, bukan ajakan
+                yang mengulang tombol di bawah). */}
+            {subscribed && (
+              <p className="mt-0.5 text-sm leading-relaxed text-forest-muted">
+                {PUSH_STATUS_COPY.activated}
+              </p>
+            )}
           </div>
         </div>
 
@@ -145,7 +176,7 @@ export function NotificationSettings() {
         {support === 'needs-install' && (
           <div className="mt-4 flex items-start gap-3 rounded-2xl bg-hud-amber/10 px-4 py-3 ring-1 ring-hud-amber/25">
             <Download className="mt-0.5 size-4 shrink-0 text-hud-terracotta" />
-            <p className="text-[14px] leading-relaxed text-forest/70">
+            <p className="text-[14px] leading-relaxed text-forest-soft">
               Di iOS, pasang dulu CatetInd ke layar utama:{' '}
               <b>Safari → Share → Add to Home Screen</b>. Setelah itu push
               notif bisa aktif.
@@ -153,7 +184,7 @@ export function NotificationSettings() {
           </div>
         )}
         {support === 'unsupported' && (
-          <p className="mt-4 rounded-2xl bg-soil/[0.1] px-4 py-3 text-[14px] text-forest/55">
+          <p className="mt-4 rounded-2xl bg-soil/[0.1] px-4 py-3 text-[14px] text-forest-muted">
             Browser ini belum mendukung Web Push, coba Chrome/Edge atau
             Safari iOS 16.4+ yang sudah di-install ke Home Screen.
           </p>
@@ -192,7 +223,7 @@ export function NotificationSettings() {
                 <button
                   type="button"
                   onClick={deactivate}
-                  className="rounded-full px-4 py-2.5 text-[14px] font-medium text-forest/45 transition-colors hover:text-forest"
+                  className="rounded-full px-4 py-2.5 text-[14px] font-medium text-forest-muted transition-colors hover:text-forest"
                 >
                   Nonaktifkan
                 </button>
@@ -222,15 +253,26 @@ export function NotificationSettings() {
           </p>
         )}
 
+        {/* Kegagalan aktivasi DIJELASKAN, bukan didiamkan: dulu tombol cuma
+            berhenti berputar tanpa satu kata pun, jadi user mengira app-nya rusak. */}
+        {errorMsg && !sessionMissing && (
+          <p
+            role="status"
+            className="mt-3 rounded-2xl bg-hud-terracotta/10 px-4 py-3 text-[13px] leading-relaxed text-hud-terracotta ring-1 ring-hud-terracotta/25"
+          >
+            {errorMsg}
+          </p>
+        )}
+
         {/* 401 dari server (paket 39): tanpa sesi, subscription tidak punya
             pemilik — jadi bukan "berhasil", dan user diberi jalan keluarnya. */}
         {sessionMissing && (
           <div className="mt-3 rounded-2xl bg-hud-amber/20 px-4 py-3 ring-1 ring-hud-amber/50">
             <p className="flex items-center gap-2 text-[13.5px] font-medium text-forest">
-              <UserRoundCheck className="size-4 shrink-0 text-forest/60" strokeWidth={2.2} aria-hidden />
+              <UserRoundCheck className="size-4 shrink-0 text-forest-muted" strokeWidth={2.2} aria-hidden />
               {SESSION_COPY.noSessionTitle}
             </p>
-            <p className="mt-1 text-[12.5px] leading-relaxed text-forest/60">
+            <p className="mt-1 text-[12.5px] leading-relaxed text-forest-muted">
               {SESSION_COPY.noSessionBody}
             </p>
             <Link
@@ -242,19 +284,11 @@ export function NotificationSettings() {
           </div>
         )}
 
-        <p className="mt-4 flex items-start gap-2 rounded-2xl bg-cream px-4 py-3 text-xs leading-relaxed text-forest/50">
-          <Smartphone className="mt-0.5 size-3.5 shrink-0 text-forest/40" />
-          CatetInd kirim MAKSIMAL 3 push per minggu, bantu kamu balik catat,
-          bukan nge-spam.
-        </p>
       </section>
 
       {/* ── kartu toggle per jenis (inventaris #22) ── */}
       <section className="rounded-[2rem] bg-cream p-5 ring-1 ring-soil/12 sm:p-6">
         <h2 className="text-base font-medium text-forest">Jenis Notifikasi</h2>
-        <p className="mt-0.5 text-sm text-forest/50">
-          Pilih yang penting buat kamu, sisanya kita gak ganggu.
-        </p>
 
         <ul className="mt-4 divide-y divide-soil/10">
           {PREFS.map((pref) => (
@@ -264,7 +298,7 @@ export function NotificationSettings() {
             >
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium text-forest">{pref.label}</p>
-                <p className="mt-0.5 text-xs leading-relaxed text-forest/50">
+                <p className="mt-0.5 text-xs leading-relaxed text-forest-muted">
                   {pref.desc}
                 </p>
               </div>

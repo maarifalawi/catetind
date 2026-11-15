@@ -4,6 +4,7 @@ import type { FundContribution, SinkingFundItem } from '@/lib/data/budget'
 import { browserSupabase } from './client'
 import { dataApi, dataApiOk } from './data-api'
 import {
+  CONTRIBUTION_OUT_PREFIX,
   toFundContribution,
   toGoalContributionDbRow,
   toGoalDbRow,
@@ -11,6 +12,37 @@ import {
   type GoalContributionDbRow,
   type GoalDbRow,
 } from './domain-mappers'
+
+/**
+ * Terkumpul per goal DIHITUNG dari baris kontribusi, bukan dari view
+ * `goal_savings`.
+ *
+ * Alasannya konkret: skema `goal_contributions` hanya punya `amount > 0` dan
+ * view `goal_savings` menjumlahkan SEMUA baris, termasuk penarikan. Setelah
+ * "tarik dana Rp 100.000", view itu justru menaikkan angka terkumpul, sehingga
+ * reload menampilkan progres yang lebih besar daripada yang tersimpan di
+ * layar. Arah penarikan kini ditandai di `client_tx_id` (`out:`), jadi di sini
+ * angkanya bisa dijumlahkan bertanda — sumbernya tetap tabel server.
+ */
+function netSavedById(rows: readonly GoalContributionDbRow[]): Map<string, number> {
+  const map = new Map<string, number>()
+  for (const row of rows) {
+    if (!row?.id || !row.goal_id) continue
+    const amount = Number(row.amount) || 0
+    const sign = row.client_tx_id?.startsWith(CONTRIBUTION_OUT_PREFIX) ? -1 : 1
+    map.set(row.goal_id, (map.get(row.goal_id) ?? 0) + sign * amount)
+  }
+  return map
+}
+
+/** terkumpul satu goal: hasil hitung bertanda, fallback ke view untuk data lama */
+function savedFor(
+  id: string,
+  net: Map<string, number>,
+  savedById: Map<string, number>,
+): number {
+  return net.has(id) ? (net.get(id) ?? 0) : (savedById.get(id) ?? 0)
+}
 
 /* ── JALUR CELENGAN KE SERVER (paket 64 · Paket D) ───────────────────────────
    Celengan & riwayat setoran dulu hanya hidup di perangkat. Sekarang, saat ada
@@ -51,7 +83,10 @@ export async function readRemoteFunds(): Promise<RemoteFunds | null> {
   const savedById = new Map(
     (savings ?? []).map((row) => [row.goal_id, Number(row.saved) || 0]),
   )
-  const funds = goals.filter((row) => Boolean(row?.id)).map((row) => toSinkingFund(row, savedById.get(row.id) ?? 0))
+  const net = netSavedById(contribRows ?? [])
+  const funds = goals
+    .filter((row) => Boolean(row?.id))
+    .map((row) => toSinkingFund(row, savedFor(row.id, net, savedById)))
   const contributions = (contribRows ?? [])
     .filter((row) => Boolean(row?.id))
     .map((row) => toFundContribution(row))
@@ -82,9 +117,10 @@ async function readFundsViaBrowser(): Promise<RemoteFunds | null> {
         Number(row.saved) || 0,
       ]),
     )
+    const net = netSavedById((contribRes.data ?? []) as GoalContributionDbRow[])
     const funds = ((goalsRes.data ?? []) as GoalDbRow[])
       .filter((row) => Boolean(row?.id))
-      .map((row) => toSinkingFund(row, savedById.get(row.id) ?? 0))
+      .map((row) => toSinkingFund(row, savedFor(row.id, net, savedById)))
 
     const contributions = ((contribRes.data ?? []) as GoalContributionDbRow[])
       .filter((row) => Boolean(row?.id))

@@ -27,7 +27,7 @@ import { OnboardingStepSituation } from './onboarding-step-situation'
 import { OnboardingStepIncome } from './onboarding-step-income'
 import { OnboardingStepFirstTransaction } from './onboarding-step-first-transaction'
 import type { TransactionTypeId } from '@/components/dashboard/transaction-input-engine'
-import { addWalletAccount, getMoneySnapshot, walletIdOfName } from '@/lib/money/store'
+import { addWalletAccount, flushMoneyQueues, getMoneySnapshot, walletIdOfName } from '@/lib/money/store'
 import { recordTransaction } from '@/lib/transaction-bus'
 import {
   TRANSACTION_DEFAULT_NAME,
@@ -175,7 +175,7 @@ export function OnboardingFlow() {
   /** 4B — simpan transaksi pertama: tulis LEDGER, lalu haptic + toast + upacara. */
   function handleFirstTransaction() {
     if (!canSubmitTransaction) {
-      toast('Isi nominalnya dulu ya 🌿')
+      toast('Isi nominalnya dulu ya 🧩')
       return
     }
     if (firstTransactionDone) return
@@ -226,12 +226,20 @@ export function OnboardingFlow() {
     } catch {
       /* diabaikan dengan sengaja */
     }
-    toast.success('Sip, catatan pertamamu berhasil! 🌿')
+    toast.success('Sip, catatan pertamamu berhasil! 🧩')
     window.scrollTo(0, 0)
+    /* ── KONFIRMASI SERVER SEBELUM LANJUT (perbaikan BUG-1) ──────────────────
+       Catatan sudah aman di perangkat pada titik ini, tetapi Dashboard tidak
+       boleh menjadi satu-satunya tempat di mana ia terlihat. `flushMoneyQueues`
+       mengirim dompet (kalau belum terkonfirmasi) LALU barisnya, dan menjadwalkan
+       percobaan ulang kalau jaringan sedang tidak bersahabat. Tidak ditunggu di
+       sini supaya tombol tetap responsif; Dashboard memanggil jalur yang sama
+       setelah data awalnya selesai dimuat. */
+    void flushMoneyQueues()
   }
 
   /** Simpan hasil onboarding → masuk dashboard (toast sambutan muncul di sana) */
-  function handleEnterDashboard() {
+  function finishOnboarding() {
     const result: OnboardingResult = {
       situations: selectedSituations,
       modules: selectedModules,
@@ -240,11 +248,16 @@ export function OnboardingFlow() {
       /* 0 = user memilih melewati (pemasukan opsional, tidak dipaksa) */
       monthlyIncome: monthlyIncome ?? 0,
       wallet: { name: walletName, balance: walletBalance ?? 0 },
-      firstTransaction: {
-        type: txType,
-        amount: txAmount,
-        description: txNote.trim() || 'Pengeluaran pertama (onboarding)',
-      },
+      /* `null` = user MELEWATI langkah 3 (tidak punya transaksi untuk dicatat).
+         Jangan diisi transaksi karangan: nominal & deskripsi palsu akan terbaca
+         sebagai catatan sungguhan di Dashboard. */
+      firstTransaction: firstTransactionDone
+        ? {
+            type: txType,
+            amount: txAmount,
+            description: txNote.trim() || 'Pengeluaran pertama (onboarding)',
+          }
+        : null,
       reminderEnabled,
       completedAt: new Date().toISOString(),
     }
@@ -279,6 +292,19 @@ export function OnboardingFlow() {
     router.replace(POST_ONBOARDING_ROUTE)
   }
 
+  /**
+   * Langkah 3 DILEWATI user — selesai onboarding tanpa transaksi pertama.
+   *
+   * Dashboard tetap punya konteks sejak hari pertama (situasi, periode, dompet
+   * dari langkah 1–2); yang tidak ada cuma satu catatan, dan memang belum ada
+   * yang ingin dicatat. Empty state Home sudah punya CTA "catat sekarang",
+   * jadi user tetap tahu langkah berikutnya kapan pun ia siap.
+   */
+  function handleSkipFirstTransaction() {
+    if (firstTransactionDone) return
+    finishOnboarding()
+  }
+
 
   /* ── ANIMASI STEP: slide horizontal + fade 200ms ───────────────────── */
   const stepDuration = reduced ? 0 : 0.2
@@ -301,7 +327,7 @@ export function OnboardingFlow() {
   }
 
   /* ── CTA: satu pil sticky untuk semua step ──────────────────────────
-     Label & ikon sengaja dipisah supaya emoji di copy (🌿) tetap tampil apa
+     Label & ikon sengaja dipisah supaya emoji di copy (🧩) tetap tampil apa
      adanya, sedangkan panah/centang memakai ikon lucide di dalam bulatan. */
   const cta: {
     label: string
@@ -325,9 +351,9 @@ export function OnboardingFlow() {
           }
         : firstTransactionDone
           ? {
-              label: 'Masuk ke Dashboard 🌿',
+              label: 'Masuk ke Dashboard 🧩',
               disabled: false,
-              onClick: handleEnterDashboard,
+              onClick: finishOnboarding,
               icon: 'arrow',
             }
           : {
@@ -369,7 +395,7 @@ export function OnboardingFlow() {
             <button
               type="button"
               onClick={() => goToStep(currentStep - 1)}
-              className="-mr-2 rounded-full px-3 py-1.5 text-[14px] font-medium tracking-normal text-forest/40 transition-colors hover:bg-ink/[0.04] hover:text-forest"
+              className="-mr-2 rounded-full px-3 py-1.5 text-[14px] font-medium tracking-normal text-forest-muted transition-colors hover:bg-ink/[0.04] hover:text-forest"
             >
               Kembali
             </button>
@@ -418,6 +444,7 @@ export function OnboardingFlow() {
                 note={txNote}
                 onNoteChange={setTxNote}
                 onSubmit={handleFirstTransaction}
+                onSkip={handleSkipFirstTransaction}
                 done={firstTransactionDone}
                 onReminderChange={setReminderEnabled}
               />
@@ -436,7 +463,7 @@ export function OnboardingFlow() {
             className={cn(
               'group flex h-14 w-full items-center justify-between gap-3 rounded-full pl-6 pr-2 transition-all duration-200',
               cta.disabled
-                ? 'cursor-not-allowed bg-ink/[0.06] text-forest/35'
+                ? 'cursor-not-allowed bg-ink/[0.06] text-forest-muted'
                 : 'bg-forest text-cream shadow-[0_16px_34px_-18px_rgba(0,0,0,0.85)] hover:bg-forest-soft active:scale-[0.98]',
             )}
           >
@@ -447,7 +474,7 @@ export function OnboardingFlow() {
               className={cn(
                 'flex size-10 shrink-0 items-center justify-center rounded-full transition-colors duration-200',
                 cta.disabled
-                  ? 'bg-cream text-forest/25'
+                  ? 'bg-cream text-forest-muted'
                   : 'bg-cream text-forest group-hover:bg-mint',
               )}
             >

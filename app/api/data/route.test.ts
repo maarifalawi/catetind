@@ -39,4 +39,20 @@ describe('POST /api/data · pagar identitas & kunci', () => {
     const body = (await res.json()) as { error?: string }
     expect(body.error ?? '').toBeTruthy()
   })
+
+  /* "Tandai semua dibaca" & "Bersihkan" di lonceng dulu hanya lewat klien
+     browser. Saat klien itu tidak punya sesi, keduanya diam-diam tidak
+     menyentuh server. Dua operasi massal ini menutup jalur itu — dan tetap
+     melewati pagar identitas yang sama dengan operasi lain. */
+  it('aksi massal notifikasi dikenal, dan tetap fail-closed tanpa kunci server', async () => {
+    const { cookieHeader } = sessionFixture()
+    const bodies = [
+      { table: 'notifications', op: 'updateAll', patch: { is_read: true } },
+      { table: 'notifications', op: 'deleteAll' },
+    ]
+    for (const body of bodies) {
+      const res = await POST(request(body, cookieHeader))
+      expect(res.status).toBe(503)
+    }
+  })
 })

@@ -55,37 +55,37 @@ export const CATEGORY_VISUAL: Record<CategoryVisualKey, CategoryVisual> = {
     icon: Coffee,
     tile: 'bg-gradient-to-br from-cantelope/25 to-cantelope/10 text-cantelope shadow-[0_8px_16px_-8px_rgba(255,184,133,0.45)] group-hover:shadow-[0_14px_24px_-8px_rgba(255,184,133,0.6)]',
     row: 'bg-cantelope/[0.10] hover:bg-cantelope/[0.16]',
-    chip: 'bg-cantelope/[0.16] text-forest/70',
+    chip: 'bg-cantelope/[0.16] text-forest-soft',
   },
   transportasi: {
     icon: Car,
     tile: 'bg-gradient-to-br from-thistle/20 to-thistle/10 text-thistle shadow-[0_8px_16px_-8px_rgba(145,160,184,0.4)] group-hover:shadow-[0_14px_24px_-8px_rgba(145,160,184,0.55)]',
     row: 'bg-thistle/[0.10] hover:bg-thistle/[0.16]',
-    chip: 'bg-thistle/[0.16] text-forest/70',
+    chip: 'bg-thistle/[0.16] text-forest-soft',
   },
   belanja: {
     icon: ShoppingBag,
     tile: 'bg-gradient-to-br from-plum/20 to-plum/10 text-plum shadow-[0_8px_16px_-8px_rgba(184,145,145,0.4)] group-hover:shadow-[0_14px_24px_-8px_rgba(184,145,145,0.55)]',
     row: 'bg-plum/[0.09] hover:bg-plum/[0.15]',
-    chip: 'bg-plum/[0.14] text-forest/70',
+    chip: 'bg-plum/[0.14] text-forest-soft',
   },
   tagihan: {
     icon: Zap,
     tile: 'bg-gradient-to-br from-daisy/25 to-daisy/10 text-forest shadow-[0_8px_16px_-8px_rgba(255,184,133,0.45)] group-hover:shadow-[0_14px_24px_-8px_rgba(255,184,133,0.6)]',
     row: 'bg-daisy/[0.13] hover:bg-daisy/[0.20]',
-    chip: 'bg-daisy/[0.20] text-forest/70',
+    chip: 'bg-daisy/[0.20] text-forest-soft',
   },
   'gaji-utama': {
     icon: Banknote,
     tile: 'bg-gradient-to-br from-mint/80 to-mint/25 text-forest shadow-[0_8px_16px_-8px_rgba(145,187,158,0.55)] group-hover:shadow-[0_14px_24px_-8px_rgba(145,187,158,0.7)]',
     row: 'bg-mint/[0.14] hover:bg-mint/[0.20]',
-    chip: 'bg-mint/[0.30] text-forest/70',
+    chip: 'bg-mint/[0.30] text-forest-soft',
   },
   lainnya: {
     icon: ReceiptText,
     tile: 'bg-sage text-forest',
     row: 'bg-sage/60 hover:bg-sage/80',
-    chip: 'bg-sage/70 text-forest/60',
+    chip: 'bg-sage/70 text-forest-muted',
   },
 }
 

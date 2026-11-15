@@ -229,7 +229,7 @@ function CategoryDropdown({
         <span>{activeCategory.label}</span>
         <ChevronDown
           className={cn(
-            'size-5 shrink-0 text-forest/70 transition-transform duration-200 motion-reduce:transition-none',
+            'size-5 shrink-0 text-forest-soft transition-transform duration-200 motion-reduce:transition-none',
             open && 'rotate-180',
           )}
           aria-hidden
@@ -327,7 +327,7 @@ function FaqRow({
         </span>
         <Plus
           className={cn(
-            'mt-1 size-5 shrink-0 text-forest/70 transition-transform duration-200 motion-reduce:transition-none',
+            'mt-1 size-5 shrink-0 text-forest-soft transition-transform duration-200 motion-reduce:transition-none',
             open && 'rotate-45',
           )}
           strokeWidth={1.75}

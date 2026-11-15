@@ -72,28 +72,38 @@ export function WealthNetWorthBar({
       aria-label={NET_WORTH_COPY.aria}
       className="relative isolate overflow-hidden rounded-[2rem] bg-gradient-to-br from-forest-soft via-forest to-evergreen-deep px-5 py-7 text-cream shadow-[0_30px_70px_-32px_rgba(0,0,0,0.75)] ring-1 ring-inset ring-cream/10 sm:px-8 sm:py-9"
     >
-      {/* definisi CORAK BATIK — resep SAMA dengan muka kartu dompet & panel
+      {/* DEFINISI CORAK BATIK — resep SAMA dengan muka kartu dompet & panel
           brand; id diprefiks `networth-batik-` supaya tidak bentrok dengan
-          pattern halaman lain yang bisa hidup di DOM yang sama */}
-      <svg aria-hidden className="absolute size-0">
+          pattern halaman lain yang bisa hidup di DOM yang sama. */}
+      <svg aria-hidden data-catetind-batik className="pointer-events-none absolute size-0">
         <defs>
-          {/* batik kawung: lingkaran-lingkaran saling beririsan */}
-          <pattern id="networth-batik-kawung" width="72" height="72" patternUnits="userSpaceOnUse">
-            <g fill="none" stroke="white" strokeOpacity="0.14" strokeWidth="1.6">
-              <circle cx="36" cy="36" r="26" />
-              <circle cx="0" cy="0" r="26" />
-              <circle cx="72" cy="0" r="26" />
-              <circle cx="0" cy="72" r="26" />
-              <circle cx="72" cy="72" r="26" />
+          <g id="networth-batik-kawung-unit">
+            {[0, 90, 180, 270].map((angle) => (
+              <g key={angle} transform={`rotate(${angle})`}>
+                <ellipse cx="0" cy="-19" rx="8.6" ry="14" />
+                <ellipse cx="0" cy="-19" rx="4.3" ry="7.6" />
+              </g>
+            ))}
+            <circle cx="0" cy="0" r="1.6" fill="white" fillOpacity="0.45" stroke="none" />
+          </g>
+          <pattern id="networth-batik-kawung" width="64" height="64" patternUnits="userSpaceOnUse">
+            <g fill="none" stroke="white" strokeOpacity="0.17" strokeWidth="1.15">
+              {[
+                [32, 32],
+                [0, 0],
+                [64, 0],
+                [0, 64],
+                [64, 64],
+              ].map(([x, y]) => (
+                <use key={`${x}-${y}`} href="#networth-batik-kawung-unit" x={x} y={y} />
+              ))}
             </g>
-            <circle cx="36" cy="36" r="5" fill="white" fillOpacity="0.14" />
           </pattern>
-          {/* batik mega mendung: lengkung awan berlapis */}
-          <pattern id="networth-batik-mendung" width="90" height="44" patternUnits="userSpaceOnUse">
-            <g fill="none" stroke="white">
-              <path d="M0 44 Q22.5 8 45 44 Q67.5 8 90 44" strokeOpacity="0.16" strokeWidth="1.8" />
-              <path d="M0 32 Q22.5 -4 45 32 Q67.5 -4 90 32" strokeOpacity="0.1" strokeWidth="1.6" />
-              <path d="M0 20 Q22.5 -16 45 20 Q67.5 -16 90 20" strokeOpacity="0.07" strokeWidth="1.4" />
+          <pattern id="networth-batik-mendung" width="96" height="48" patternUnits="userSpaceOnUse">
+            <g fill="none" stroke="white" strokeLinecap="round">
+              <path d="M0 40 Q12 12 24 40 Q36 12 48 40 Q60 12 72 40 Q84 12 96 40" strokeOpacity="0.18" strokeWidth="1.8" />
+              <path d="M0 29 Q12 3 24 29 Q36 3 48 29 Q60 3 72 29 Q84 3 96 29" strokeOpacity="0.12" strokeWidth="1.6" />
+              <path d="M0 19 Q12 -6 24 19 Q36 -6 48 19 Q60 -6 72 19 Q84 -6 96 19" strokeOpacity="0.08" strokeWidth="1.4" />
             </g>
           </pattern>
         </defs>
@@ -115,13 +125,15 @@ export function WealthNetWorthBar({
           hanya menyentuh sudut kartu dan angka di tengah tetap bersih. */}
       <svg
         aria-hidden
-        className="pointer-events-none absolute inset-0 h-full w-full [mask-image:radial-gradient(130%_125%_at_8%_-14%,black_6%,transparent_68%)]"
+        data-catetind-batik
+        className="pointer-events-none absolute inset-0 h-full w-full [mask-image:radial-gradient(150%_140%_at_6%_-12%,black_10%,transparent_76%)]"
       >
         <rect width="100%" height="100%" fill="url(#networth-batik-kawung)" />
       </svg>
       <svg
         aria-hidden
-        className="pointer-events-none absolute inset-0 h-full w-full [mask-image:radial-gradient(125%_115%_at_104%_112%,black_4%,transparent_62%)]"
+        data-catetind-batik
+        className="pointer-events-none absolute inset-0 h-full w-full [mask-image:radial-gradient(145%_130%_at_104%_112%,black_8%,transparent_70%)]"
       >
         <rect width="100%" height="100%" fill="url(#networth-batik-mendung)" />
       </svg>
@@ -137,7 +149,7 @@ export function WealthNetWorthBar({
       />
 
       <div className="relative">
-        <p className="text-[11.5px] font-medium uppercase tracking-[0.24em] text-mint/70">
+        <p className="text-[11.5px] font-medium uppercase tracking-[0.24em] text-mint">
           {NET_WORTH_COPY.label}
         </p>
         {/*
@@ -151,7 +163,7 @@ export function WealthNetWorthBar({
           {netLabel}
         </p>
         {showExact && (
-          <p className="mt-1.5 font-display text-[13px] font-medium tracking-tight text-cream/70 tabular-nums sm:text-[14.5px]">
+          <p className="mt-1.5 font-display text-[13px] font-medium tracking-tight text-cream tabular-nums sm:text-[14.5px]">
             {netExact}
           </p>
         )}
@@ -192,7 +204,7 @@ export function WealthNetWorthBar({
             tetap utuh di layar sempit (tidak pernah dipotong "..."). */}
         <div className="mt-4 flex items-stretch gap-3 rounded-2xl bg-cream/[0.06] px-3.5 py-3 ring-1 ring-inset ring-cream/10">
           <div className="min-w-0 flex-1">
-            <p className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.16em] text-mint/70">
+            <p className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.16em] text-mint">
               <span aria-hidden className="size-1.5 rounded-full bg-mint" />
               {NET_WORTH_COPY.asset}
             </p>
@@ -202,7 +214,7 @@ export function WealthNetWorthBar({
           </div>
           <span aria-hidden className="w-px shrink-0 bg-cream/12" />
           <div className="min-w-0 flex-1 text-right">
-            <p className="flex items-center justify-end gap-1.5 text-[11px] font-medium uppercase tracking-[0.16em] text-hud-terracotta/80">
+            <p className="flex items-center justify-end gap-1.5 text-[11px] font-medium uppercase tracking-[0.16em] text-hud-terracotta">
               {NET_WORTH_COPY.debt}
               <span aria-hidden className="size-1.5 rounded-full bg-hud-terracotta" />
             </p>
@@ -216,7 +228,7 @@ export function WealthNetWorthBar({
             terbaca seperti kartu rusak */}
         {spanEmpty && (
           /* cream/70 (bukan /50): teks 11 px di atas Evergreen harus lolos 4,5:1 */
-          <p className="mt-3 text-[12px] leading-relaxed text-cream/70">{NET_WORTH_COPY.empty}</p>
+          <p data-catetind-empty className="mt-3 text-[12px] leading-relaxed text-cream">{NET_WORTH_COPY.empty}</p>
         )}
       </div>
     </section>

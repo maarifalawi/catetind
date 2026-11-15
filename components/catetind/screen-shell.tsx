@@ -68,7 +68,7 @@ export function ScreenShell({
           tinggi halaman mengikuti ISI-nya; latar tetap putih (`bg-canvas` di
           PhoneStage) dan navigasi/sidebar tetap `fixed`, jadi tidak ada yang
           bergeser — hanya ruang kosong di bawah yang hilang. */}
-      <section className={cn('relative flex w-full', className)}>
+      <section className={cn('relative flex w-full max-w-full overflow-x-clip', className)}>
         <DesktopSidebar />
         {/* Kolom konten digeser sebesar lebar sidebar (`--catet-sidebar-w`, di-set
             DesktopSidebar di <html>). Sidebar-nya sendiri `fixed` supaya kebal
@@ -77,7 +77,7 @@ export function ScreenShell({
             animasi buka/tutup sidebar supaya terasa satu gerakan. */}
         <div
           className={cn(
-            'relative flex w-full min-w-0 flex-1 flex-col',
+            'relative flex w-full min-w-0 max-w-full flex-1 flex-col overflow-x-clip',
             'transition-[padding] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none',
             'lg:pl-[var(--catet-sidebar-w,296px)]',
           )}
@@ -88,7 +88,7 @@ export function ScreenShell({
               terakhir di kolom kanan tertindih FAB. */}
           <div
             className={cn(
-              'relative flex w-full flex-1 flex-col px-5 pb-32 pt-6 sm:px-8 lg:px-10 lg:pt-8 xl:px-14 xl:pt-10',
+              'relative flex w-full min-w-0 max-w-full flex-1 flex-col overflow-x-clip px-5 pb-32 pt-6 sm:px-8 lg:px-10 lg:pt-8 xl:px-14 xl:pt-10',
               hasCoachFab ? 'lg:pb-28' : 'lg:pb-12',
             )}
           >

@@ -2,9 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
-import { Check, Info, Pencil, Plus, Trash2 } from 'lucide-react'
+import { Check, Pencil, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { AI_STATUS_COPY } from '@/lib/ai-chat'
 import {
   AI_PREFS_COPY,
   AI_PREFS_DEFAULT,
@@ -30,7 +29,6 @@ import {
 } from '@/lib/data/category-prefs'
 import { UNDO_WINDOW_MS } from '@/lib/data/history'
 import {
-  Segmented,
   SettingsCard,
   SettingsField,
   SettingsInput,
@@ -40,90 +38,13 @@ import {
 } from './settings-ui'
 import { cn } from '@/lib/utils'
 
-/* ── Panel: Tampilan & Tema ────────────────────────────────────────────────────
-   Tiga pilihan, tanpa opsi tambahan: Terang / Gelap / Ikuti Sistem. Yang
-   dikerjakan hanya menukar kelas di <html> — `light`/`dark` eksplisit, sedangkan
-   "Ikuti Sistem" melepas keduanya supaya blok `@media (prefers-color-scheme:
-   dark)` di app/globals.css yang memutuskan. Jadi tidak ada sistem tema kedua
-   yang perlu dirawat. */
-type ThemeMode = 'light' | 'dark' | 'system'
-
-const THEME_KEY = 'catet-theme'
-
-const THEME_OPTIONS: { id: ThemeMode; emoji: string; label: string }[] = [
-  { id: 'light', emoji: '☀️', label: 'Terang' },
-  { id: 'dark', emoji: '🌙', label: 'Gelap' },
-  { id: 'system', emoji: '🖥️', label: 'Ikuti Sistem' },
-]
-
-export function AppearanceSettingsPanel() {
-  const [mode, setMode] = useState<ThemeMode>('light')
-
-  /* hidrasi preferensi dari localStorage SETELAH mount supaya render server &
-     client identik (tanpa hydration mismatch) — pola yang sama dengan
-     preferensi notifikasi & sidebar */
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(THEME_KEY)
-      if (stored === 'light' || stored === 'dark' || stored === 'system') setMode(stored)
-    } catch {
-      /* localStorage diblokir (mode privat) — pakai default terang */
-    }
-  }, [])
-
-  useEffect(() => {
-    const root = document.documentElement
-    if (mode === 'system') {
-      root.classList.remove('light', 'dark')
-      return
-    }
-    root.classList.toggle('light', mode === 'light')
-    root.classList.toggle('dark', mode === 'dark')
-  }, [mode])
-
-  function handleChange(next: ThemeMode) {
-    setMode(next)
-    try {
-      localStorage.setItem(THEME_KEY, next)
-    } catch {
-      /* preferensi tetap jalan untuk sesi ini walau gagal disimpan */
-    }
-    const label = THEME_OPTIONS.find((option) => option.id === next)?.label ?? ''
-    toast.success(`Tema: ${label}`)
-  }
-
-  return (
-    <SettingsPanel
-      eyebrow="Tampilan"
-      title="Tampilan & Tema"
-      desc="Pilih mode yang paling nyaman buat matamu."
-    >
-      <SettingsCard>
-        <Segmented
-          label="Mode tampilan"
-          value={mode}
-          options={THEME_OPTIONS}
-          onChange={handleChange}
-        />
-        <p className="mt-3 text-[12.5px] leading-relaxed text-forest/45">
-          Pilihanmu disimpan di perangkat ini dan langsung aktif, nggak perlu reload.
-        </p>
-      </SettingsCard>
-    </SettingsPanel>
-  )
-}
-
 /* ── Panel: Notifikasi ─────────────────────────────────────────────────────────
    Isinya memakai `NotificationSettings` yang sudah ada (termasuk tombol aktifkan
    push asli lewat `usePushNotifications`), dibungkus kepala panel supaya tetap
    satu keluarga dengan section pengaturan lain. */
 export function NotificationsSettingsPanel() {
   return (
-    <SettingsPanel
-      eyebrow="Notifikasi"
-      title="Notifikasi"
-      desc="Push notif muncul di HP walau app lagi ditutup, kayak WhatsApp."
-    >
+    <SettingsPanel title="Notifikasi">
       <NotificationSettings />
     </SettingsPanel>
   )
@@ -302,22 +223,14 @@ export function CategoriesSettingsPanel() {
   }
 
   return (
-    <SettingsPanel
-      eyebrow={CATEGORY_PREFS_COPY.eyebrow}
-      title={CATEGORY_PREFS_COPY.title}
-      desc={CATEGORY_PREFS_COPY.desc}
-    >
+    <SettingsPanel title={CATEGORY_PREFS_COPY.title}>
       {/* ── 1. KATEGORI BAWAAN ───────────────────────────────────────────── */}
-      <SettingsCard
-        title={CATEGORY_PREFS_COPY.defaultTitle}
-        desc={CATEGORY_PREFS_COPY.defaultDesc}
-      >
-        {/* Alasan lengkapnya (temuan audit #10) — dulu hanya hidup di komentar
-            kode, jadi user melihat toggle tanpa tahu kenapa tidak ada Hapus. */}
-        <p className="mt-3 flex items-start gap-2 rounded-2xl bg-sage/50 px-3.5 py-2.5 text-[12.5px] leading-relaxed text-forest">
-          <Info className="mt-0.5 size-3.5 shrink-0" strokeWidth={2.4} aria-hidden />
-          {CATEGORY_PREFS_COPY.defaultExplain(DEFAULT_CATEGORIES.length)}
-        </p>
+      <SettingsCard title={CATEGORY_PREFS_COPY.defaultTitle}>
+        {/* Revisi: paragraf penjelas panjang "Kenapa 8 kategori ini nggak bisa
+            dihapus…" (CATEGORY_PREFS_COPY.defaultExplain) DIMINTA DIHAPUS dari
+            layar. Daftar + saklar Tampil/Disembunyikan di bawahnya tetap utuh,
+            dan satu-satunya aksi yang hilang (hapus) memang tidak pernah ada
+            untuk kategori bawaan. */}
         <div className="mt-3 divide-y divide-soil/10">
           {DEFAULT_CATEGORIES.map((item) => {
             const visible = !hidden.includes(item.id)
@@ -335,7 +248,7 @@ export function CategoriesSettingsPanel() {
                 <span
                   className={cn(
                     'shrink-0 text-[12px] font-medium',
-                    visible ? 'text-forest' : 'text-forest/35',
+                    visible ? 'text-forest' : 'text-forest-muted',
                   )}
                 >
                   {visible ? CATEGORY_PREFS_COPY.visibleLabel : CATEGORY_PREFS_COPY.hiddenLabel}
@@ -352,10 +265,7 @@ export function CategoriesSettingsPanel() {
       </SettingsCard>
 
       {/* ── 2. KATEGORI CUSTOM ───────────────────────────────────────────── */}
-      <SettingsCard
-        title={CATEGORY_PREFS_COPY.customTitle}
-        desc={CATEGORY_PREFS_COPY.customDesc}
-      >
+      <SettingsCard title={CATEGORY_PREFS_COPY.customTitle}>
         <ul className="mt-3 divide-y divide-soil/10">
           {custom.map((item) => (
             <li key={item.id} className="py-3">
@@ -406,9 +316,9 @@ export function CategoriesSettingsPanel() {
           ))}
 
           {custom.length === 0 && !adding && (
-            <li className="py-3 text-[13.5px] text-forest/45">
+            <li className="py-3 text-[13.5px] text-forest-muted">
               {CATEGORY_PREFS_COPY.customEmpty}
-              <span className="mt-1 block text-forest/35">{CATEGORY_PREFS_COPY.customEmptyHint}</span>
+              <span className="mt-1 block text-forest-muted">{CATEGORY_PREFS_COPY.customEmptyHint}</span>
             </li>
           )}
         </ul>
@@ -436,11 +346,6 @@ export function CategoriesSettingsPanel() {
           </button>
         )}
 
-        {/* batas yang ditulis apa adanya (paket 62): daftar ini belum tersambung
-            ke pemilih kategori di form catat transaksi */}
-        <p className="mt-4 text-[12px] leading-relaxed text-forest/45">
-          {CATEGORY_PREFS_COPY.storageNote}
-        </p>
       </SettingsCard>
 
       {/* konfirmasi hapus kategori kustom — dialog yang SAMA dengan aksi merusak
@@ -537,7 +442,7 @@ function CategoryForm({
           <button
             type="button"
             onClick={onCancel}
-            className="inline-flex flex-1 items-center justify-center rounded-2xl bg-cream px-4 py-3 text-sm font-medium text-forest/60 ring-1 ring-soil/12 transition-colors hover:bg-sage sm:flex-none"
+            className="inline-flex flex-1 items-center justify-center rounded-2xl bg-cream px-4 py-3 text-sm font-medium text-forest-muted ring-1 ring-soil/12 transition-colors hover:bg-sage sm:flex-none"
           >
             {CATEGORY_PREFS_COPY.cancel}
           </button>
@@ -563,7 +468,7 @@ function CategoryForm({
 const MINCA_MODES: { id: MincaMode; emoji: string; label: string; desc: string }[] = [
   {
     id: 'bestie',
-    emoji: '🌿',
+    emoji: '🧩',
     label: 'Mode Bestie',
     desc: 'Kalem, suportif, selalu nyemangatin kamu',
   },
@@ -599,26 +504,7 @@ export function AiSettingsPanel() {
   }
 
   return (
-    <SettingsPanel
-      eyebrow="AI Preferences"
-      title="AI Preferences"
-      desc="Atur seberapa jauh Minca boleh bantu di catatanmu."
-    >
-      {/* ── 0. STATUS AI (paket 44) ─────────────────────────────────────────
-          Tombol "Hubungkan AI" di AI Coach mendarat di halaman ini, jadi
-          keadaannya disebut lebih dulu sebelum saklar-saklarnya: AI belum
-          tersambung ke model, saklar di bawah baru berlaku penuh setelah
-          tersambung, dan pencatatan manual tetap jalan. Copy-nya di
-          `lib/ai-chat.ts` (`AI_STATUS_COPY`) — satu sumber dengan widget chat. */}
-      <SettingsCard title={AI_STATUS_COPY.title}>
-        <span className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-hud-amber/20 px-2.5 py-1 text-[12px] font-medium text-forest ring-1 ring-hud-amber/30">
-          <Info className="size-3.5" strokeWidth={2.4} aria-hidden />
-          {AI_STATUS_COPY.badge}
-        </span>
-        <p className="mt-2.5 text-[13.5px] leading-relaxed text-forest/60">{AI_STATUS_COPY.body}</p>
-        <p className="mt-2 text-[13.5px] leading-relaxed text-forest/45">{AI_STATUS_COPY.worksNow}</p>
-      </SettingsCard>
-
+    <SettingsPanel title="AI Preferences">
       {/* ── 1. BANTUAN SAAT MENCATAT ───────────────────────────────────────
           Dua saklar ini hidup di jalur AI capture (scan struk & input suara) dan
           tidak pernah menyentuh catatan manual — kalimatnya tinggal di
@@ -628,27 +514,19 @@ export function AiSettingsPanel() {
         <div className="mt-2 divide-y divide-soil/10">
           <ToggleRow
             label={AI_PREFS_COPY.toggles.autoCategory.label}
-            helper={AI_PREFS_COPY.toggles.autoCategory.helper}
             checked={prefs.autoCategory}
             onToggle={() => update({ autoCategory: !prefs.autoCategory })}
           />
           <ToggleRow
             label={AI_PREFS_COPY.toggles.autoNaming.label}
-            helper={AI_PREFS_COPY.toggles.autoNaming.helper}
             checked={prefs.autoNaming}
             onToggle={() => update({ autoNaming: !prefs.autoNaming })}
           />
         </div>
-        <p className="mt-3 text-[12.5px] leading-relaxed text-forest/50">
-          {AI_PREFS_COPY.manualScopeNote}
-        </p>
       </SettingsCard>
 
       {/* ── 2. GAYA BICARA MINCA ─────────────────────────────────────────── */}
-      <SettingsCard
-        title="Gaya Bicara Minca"
-        desc="Nentuin nada Minca waktu nemenin kamu review pengeluaran."
-      >
+      <SettingsCard title="Gaya Bicara Minca">
         <div
           role="radiogroup"
           aria-label="Gaya bicara Minca"
@@ -672,7 +550,7 @@ export function AiSettingsPanel() {
                   {mode.emoji}
                 </span>
                 <span className="mt-2 text-sm font-medium text-forest">{mode.label}</span>
-                <span className="mt-1 text-xs leading-relaxed text-forest/50">{mode.desc}</span>
+                <span className="mt-1 text-xs leading-relaxed text-forest-muted">{mode.desc}</span>
                 {active && (
                   <span className="mt-2.5 inline-flex items-center gap-1 text-[12px] font-medium text-forest">
                     <Check className="size-3.5" strokeWidth={3} aria-hidden />

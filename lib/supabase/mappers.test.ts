@@ -155,6 +155,7 @@ describe('mapper split dompet bersama · SplitSpec ⇄ kolom jsonb', () => {
       split_type: 'percentage',
       split_percents: { a: 60, b: 40 },
       split_amounts: null,
+      split_members: null,
     })
   })
 
@@ -163,6 +164,7 @@ describe('mapper split dompet bersama · SplitSpec ⇄ kolom jsonb', () => {
       split_type: 'nominal',
       split_percents: null,
       split_amounts: { a: 25_000, b: 0 },
+      split_members: null,
     })
   })
 
@@ -171,10 +173,24 @@ describe('mapper split dompet bersama · SplitSpec ⇄ kolom jsonb', () => {
       split_type: 'single_payer',
       split_percents: null,
       split_amounts: null,
+      split_members: null,
     })
     expect(toSplitSpec({ split_type: 'single_payer', bearer_id: 'a' })).toEqual({
       type: 'single_payer',
       payerId: 'a',
+    })
+  })
+
+  it('bagi rata sebagian anggota menyimpan peserta di `split_members`', () => {
+    expect(toSplitColumns({ type: 'equal', participants: ['a', 'c', 'd'] })).toEqual({
+      split_type: 'equal',
+      split_percents: null,
+      split_amounts: null,
+      split_members: ['a', 'c', 'd'],
+    })
+    expect(toSplitSpec({ split_type: 'equal', split_members: ['a', 'c', 'd'] })).toEqual({
+      type: 'equal',
+      participants: ['a', 'c', 'd'],
     })
   })
 

@@ -11,7 +11,13 @@ import {
   useFocusOnOpen,
 } from './budget-sheet'
 import { usePrivacy } from './privacy-provider'
-import { MaskedAmount, WALLET_TYPE_LABEL, WalletFace, WalletTypeMark } from './wallet-card-face'
+import {
+  MaskedAmount,
+  WALLET_TYPE_LABEL,
+  WalletArtDefs,
+  WalletFace,
+  WalletTypeMark,
+} from './wallet-card-face'
 import { cn } from '@/lib/utils'
 import { AMOUNT_LG } from '@/lib/typography'
 import { ADD_WALLET_SHEET_COPY, EDIT_WALLET_SHEET_COPY } from '@/lib/data/add-wallet'
@@ -295,6 +301,10 @@ export function AddWalletSheet({
         </SheetSubmit>
       }
     >
+      {/* DEFINISI CORAK BATIK — sheet ini bisa dibuka dari Dashboard (deck),
+          /wallet, maupun detail dompet, jadi definisinya dibawa sendiri agar
+          pratinjau kartu selalu bercorak di halaman mana pun. */}
+      <WalletArtDefs />
       {/* ── KARTU PREVIEW — warna & motifnya sudah final sebelum disimpan ── */}
       <div className="group relative">
         <WalletFace wallet={preview} className="rounded-[1.5rem] p-4">
@@ -303,12 +313,10 @@ export function AddWalletSheet({
               <p className="truncate font-display text-[15.5px] font-medium tracking-tight">
                 {preview.name}
               </p>
-              {preview.number && (
-                <p className="mt-1 truncate text-[11px] font-medium tracking-[0.2em] text-cream/60 tabular-nums">
-                  {preview.number}
-                </p>
-              )}
-              <span className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-cream/20 px-2.5 py-0.5 text-[10.5px] font-medium uppercase tracking-[0.1em] text-cream/90 ring-1 ring-inset ring-cream/30">
+              {/* PREVIEW BERSIH: nomor akun masking tidak dicetak di kartu.
+                  Nomor tetap bisa diisi di kolom identitas (bukan permukaan
+                  kartu) dan hanya dipakai sebagai data dompet. */}
+              <span className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-cream/20 px-2.5 py-0.5 text-[10.5px] font-medium uppercase tracking-[0.1em] text-cream ring-1 ring-inset ring-cream/30">
                 <span aria-hidden className="size-1.5 rounded-full bg-cream/70" />
                 {WALLET_TYPE_LABEL[preview.type]}
               </span>
@@ -406,10 +414,10 @@ export function AddWalletSheet({
               }}
               className="flex flex-col items-center justify-center gap-1.5 rounded-2xl border-2 border-dashed border-ink/[0.1] bg-cream/50 px-2 py-3 transition-all duration-200 hover:border-forest/25 hover:bg-cream active:scale-95"
             >
-              <span className="flex size-8 items-center justify-center rounded-xl bg-cream text-forest/40">
+              <span className="flex size-8 items-center justify-center rounded-xl bg-cream text-forest-muted">
                 <Plus className="size-4" strokeWidth={2.6} />
               </span>
-              <span className="text-[12.5px] font-medium leading-tight text-forest/45">
+              <span className="text-[12.5px] font-medium leading-tight text-forest-muted">
                 {ADD_WALLET_SHEET_COPY.brandNone}
               </span>
             </button>
@@ -432,7 +440,7 @@ export function AddWalletSheet({
             setRejected(false)
           }}
           placeholder={copy.namePlaceholder}
-          className="mt-2 w-full rounded-2xl bg-cream px-4 py-3 text-[16px] font-medium text-forest outline-none ring-1 ring-soil/16 transition-shadow placeholder:font-medium placeholder:text-forest/25 focus:ring-2 focus:ring-forest/35"
+          className="mt-2 w-full rounded-2xl bg-cream px-4 py-3 text-[16px] font-medium text-forest outline-none ring-1 ring-soil/16 transition-shadow placeholder:font-medium placeholder:text-forest-muted focus:ring-2 focus:ring-forest/35"
         />
       </label>
 
@@ -453,7 +461,7 @@ export function AddWalletSheet({
           <span className="mt-2 flex items-center gap-2 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/16 focus-within:ring-2 focus-within:ring-forest/35">
             <span
               aria-hidden
-              className="shrink-0 text-[16px] font-medium tracking-[0.18em] text-forest/30"
+              className="shrink-0 text-[16px] font-medium tracking-[0.18em] text-forest-muted"
             >
               {WALLET_NUMBER_MASK}
             </span>
@@ -464,10 +472,10 @@ export function AddWalletSheet({
               autoComplete="off"
               placeholder={copy.numberPlaceholder}
               aria-label={copy.numberLabel}
-              className="min-w-0 flex-1 bg-transparent text-[16px] font-medium tracking-[0.18em] text-forest tabular-nums outline-none placeholder:font-medium placeholder:tracking-normal placeholder:text-forest/25"
+              className="min-w-0 flex-1 bg-transparent text-[16px] font-medium tracking-[0.18em] text-forest tabular-nums outline-none placeholder:font-medium placeholder:tracking-normal placeholder:text-forest-muted"
             />
           </span>
-          <span className="mt-1.5 block text-[12.5px] leading-relaxed text-forest/45">
+          <span className="mt-1.5 block text-[12.5px] leading-relaxed text-forest-muted">
             {copy.numberHint}
           </span>
         </label>
@@ -479,7 +487,7 @@ export function AddWalletSheet({
           satu angka adalah cara paling mudah membuat saldo bercerita beda.
           Yang tampil menggantikannya adalah satu kalimat jalan keluarnya. */}
       {editing ? (
-        <p className="mt-5 rounded-2xl bg-sage/60 px-3.5 py-3 text-[12.5px] leading-relaxed text-forest/60">
+        <p className="mt-5 rounded-2xl bg-sage/60 px-3.5 py-3 text-[12.5px] leading-relaxed text-forest-muted">
           {EDIT_WALLET_SHEET_COPY.balanceNote}
         </p>
       ) : (
@@ -489,7 +497,6 @@ export function AddWalletSheet({
           digits={digits}
           onDigitsChange={setDigits}
           placeholder="Rp 0"
-          hint={ADD_WALLET_SHEET_COPY.balanceHint}
         />
       )}
 
@@ -552,7 +559,7 @@ export function AddWalletSheet({
             )
           })}
         </div>
-        <p className="mt-2 text-[12.5px] leading-relaxed text-forest/55">
+        <p className="mt-2 text-[12.5px] leading-relaxed text-forest-muted">
           {activeTheme
             ? `${activeTheme.name}, ${activeTheme.note}`
             : WALLET_THEME_COPY.defaultNote}

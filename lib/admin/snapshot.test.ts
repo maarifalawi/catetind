@@ -20,6 +20,7 @@ import {
   type AdminUserSources,
 } from './snapshot'
 import type { AdminPurchaseRecord, AdminUserRow } from './types'
+import { localISODate } from '@/lib/time'
 
 /* ── PERHITUNGAN DASHBOARD ADMIN ─────────────────────────────────────────────
    Yang dikunci di sini: pendapatan hanya dari transaksi lunas, corong menghitung
@@ -225,6 +226,37 @@ describe('revenueBlock', () => {
     )
     expect(revenue.total.thisMonth).toBe(5_000)
     expect(revenue.total.allTime).toBe(15_000)
+
+    /* RINCIAN PER BULAN (filter di tab Ringkasan): bulan berjalan + bulan lalu,
+       urut terbaru → lama, masing-masing dengan angka & jumlah transaksinya.
+       Kunci bulannya dihitung dari tanggal LOKAL, jadi test ini tidak bergantung
+       pada timezone mesin yang menjalankannya. */
+    const monthKeyOfDate = (date: Date) => localISODate(date).slice(0, 7)
+    const nowMonth = monthKeyOfDate(NOW)
+    const lastMonthKey = monthKeyOfDate(new Date(lastMonth))
+    expect(revenue.months.map((row) => row.month)).toEqual([nowMonth, lastMonthKey])
+    expect(revenue.months[0]).toMatchObject({
+      subscription: 5_000,
+      addon: 0,
+      total: 5_000,
+      settledCount: 1,
+    })
+    expect(revenue.months[1]).toMatchObject({
+      subscription: 10_000,
+      addon: 0,
+      total: 10_000,
+      settledCount: 1,
+    })
+  })
+
+  it('bulan tanpa penjualan tetap muncul sebagai nol (bukan bulan yang hilang)', () => {
+    const revenue = revenueBlock([], [], NOW)
+    expect(revenue.months).toHaveLength(1)
+    expect(revenue.months[0]).toMatchObject({
+      month: localISODate(NOW).slice(0, 7),
+      total: 0,
+      settledCount: 0,
+    })
   })
 })
 

@@ -1,19 +1,18 @@
 'use client'
 
 import Link from 'next/link'
-import { AlertTriangle, CalendarDays, HandCoins, Settings2, Sparkles } from 'lucide-react'
+import { AlertTriangle, CalendarDays, HandCoins, Settings2 } from 'lucide-react'
 import {
   BUDGET_REMAINING_HINT,
   HUD_COPY,
   MONEY_SETTINGS_HREF,
   maskNominal,
-  periodUsagePct,
   type BudgetHud,
   type PeriodIncome,
   type PeriodWindow,
 } from '@/lib/data/budget'
 import { TransactionBottomSheet } from '@/components/dashboard/transaction-bottom-sheet'
-import { HudRing } from './hud-ring'
+import { BatikCloth } from './batik-cloth'
 
 /* ── Jatah Hari Ini — KARTU SUPER-HERO (full-width, di atas dua kolom) ───────
    Audit UX #3: Jatah Harian adalah metrik GLOBAL (pemasukan − cicilan −
@@ -29,29 +28,20 @@ import { HudRing } from './hud-ring'
    juga tombol itu, karena ia hanya membalik state halaman /budget sementara
    `DailyHudCard` di Home tidak menerima prop apa pun (lihat `HUD_COPY`).
 
-   Sejak periode non-bulanan hidup (2B untuk freelancer), kartu ini juga
-   menampilkan PERIODE AKTIF + rentang tanggalnya (`window.label`), memakai
-   jendela yang sama dengan daftar budget di bawahnya. Pacing-nya makanya selalu
-   pas: tab Mingguan membagi sisa uang dengan sisa hari MINGGU itu. */
+   Sejak periode non-bulanan hidup (2B untuk freelancer), chip PERIODE AKTIF
+   (`window.label`) tetap muncul di varian "belum diatur" & "jatah ditahan".
+   Hero-nya sendiri kini HANYA berisi judul + nominal (revisi 11 Nov 2026):
+   cincin persen, caption "HARI INI", chip periode, dan ikon di samping judul
+   dicabut karena semuanya mengulang informasi yang sudah ada di Dashboard atau
+   di tab periode tepat di bawah kartu. Pacing tetap memakai jendela yang sama
+   dengan daftar budget di bawahnya — tab Mingguan membagi sisa uang dengan
+   sisa hari MINGGU itu. */
 
-/** chip periode aktif — satu tempat supaya ketiga varian kartu seragam.
- *  `tone="dark"` dipakai hero evergreen gelap (redesain paket 82) supaya chip-nya
- *  tetap terbaca di atas permukaan forest. */
-function PeriodChip({
-  window: period,
-  tone = 'light',
-}: {
-  window: PeriodWindow
-  tone?: 'light' | 'dark'
-}) {
+/** chip periode aktif — dipakai varian "belum diatur" & "jatah ditahan" supaya
+ *  user tahu angka itu dihitung untuk jendela yang mana. */
+function PeriodChip({ window: period }: { window: PeriodWindow }) {
   return (
-    <span
-      className={
-        tone === 'dark'
-          ? 'inline-flex items-center gap-1.5 rounded-full bg-cream/12 px-2.5 py-1 text-[11.5px] font-medium text-cream/80 ring-1 ring-cream/15'
-          : 'inline-flex items-center gap-1.5 rounded-full bg-sage/70 px-2.5 py-1 text-[11.5px] font-medium text-forest ring-1 ring-soil/8'
-      }
-    >
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-sage/70 px-2.5 py-1 text-[11.5px] font-medium text-forest ring-1 ring-soil/8">
       <CalendarDays className="size-3" strokeWidth={2.6} aria-hidden />
       {period.label}
     </span>
@@ -71,10 +61,8 @@ export function DailyHudSummary({
   /** pemasukan di jendela periode (dry spell & catatan pemasukan tengah periode) */
   income: PeriodIncome
 }) {
-  /** porsi kolam PERIODE yang sudah terpakai (0..1) — dasar bar di hero */
-  const periodPct = periodUsagePct(hud.availablePool, hud.spent)
   return (
-    <section aria-label={HUD_COPY.title} className="w-full">
+    <section aria-label={HUD_COPY.title} data-catetind-jatah="hari-ini" className="w-full">
       {!income.configured ? (
         /* ── BELUM DIATUR (paket 57) — bukan Dry Spell ───────────────────────
             Pemasukan bulanan belum pernah diisi → jatah harian memang tidak bisa
@@ -88,7 +76,7 @@ export function DailyHudSummary({
             className="pointer-events-none absolute -right-16 -top-16 size-40 rounded-full bg-mint/15 blur-3xl"
           />
           <div className="relative flex items-center justify-between gap-3">
-            <span className="inline-flex items-center gap-2 text-[13.5px] font-medium text-forest/60">
+            <span className="inline-flex items-center gap-2 text-[13.5px] font-medium text-forest-muted">
               <span className="flex size-6 items-center justify-center rounded-full bg-mint/25 text-forest">
                 <HandCoins className="size-3.5" strokeWidth={2.4} aria-hidden />
               </span>
@@ -103,7 +91,7 @@ export function DailyHudSummary({
             <p className="mt-3 text-[15.5px] font-medium leading-snug text-forest">
               {HUD_COPY.notConfiguredTitle}
             </p>
-            <p className="mt-1 text-[14px] leading-relaxed text-forest/55">
+            <p className="mt-1 text-[14px] leading-relaxed text-forest-muted">
               {HUD_COPY.notConfiguredBody}
             </p>
             <Link
@@ -123,7 +111,7 @@ export function DailyHudSummary({
             className="pointer-events-none absolute -right-16 -top-16 size-40 rounded-full bg-mint/15 blur-3xl"
           />
           <div className="relative flex items-center justify-between gap-3">
-            <span className="inline-flex items-center gap-2 text-[13.5px] font-medium text-forest/60">
+            <span className="inline-flex items-center gap-2 text-[13.5px] font-medium text-forest-muted">
               <span className="flex size-6 items-center justify-center rounded-full bg-mint/25 text-forest">
                 <HandCoins className="size-3.5" strokeWidth={2.4} aria-hidden />
               </span>
@@ -167,20 +155,19 @@ export function DailyHudSummary({
           <p className="mt-2 text-[32px] font-semibold leading-none tracking-tight text-hud-terracotta tabular-nums">
             {maskNominal(hud.dailyBudget, masked)}
           </p>
-          <p className="mt-1.5 text-[13px] font-medium text-forest/55">
+          <p className="mt-1.5 text-[13px] font-medium text-forest-muted">
             {HUD_COPY.shortfallCaption}
           </p>
 
           {/* pesan AI — menahan tanpa menuduh (nada PRD) */}
           <div className="mt-3 flex items-start gap-2.5 rounded-2xl bg-cream/70 px-3.5 py-3 ring-1 ring-hud-terracotta/15">
-            <Sparkles className="mt-0.5 size-4 shrink-0 text-hud-terracotta" strokeWidth={2.4} aria-hidden />
-            <p className="text-[13px] font-medium leading-relaxed text-forest/70">
+            <p className="text-[13px] font-medium leading-relaxed text-forest-soft">
               {HUD_COPY.shortfallBody}
             </p>
           </div>
 
           {/* meta — kenapa ditahan: kurang sekian dari celengan bulan ini */}
-          <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-hud-terracotta/15 pt-2.5 text-[12px] text-forest/55">
+          <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-hud-terracotta/15 pt-2.5 text-[12px] text-forest-muted">
             <span>
               {HUD_COPY.shortfallShortBy}{' '}
               <b className="font-semibold text-hud-terracotta tabular-nums">
@@ -197,130 +184,94 @@ export function DailyHudSummary({
           </p>
         </div>
       ) : (
-        /* ── 3A. DAILY HUD NORMAL — HERO GELAP (redesain paket 82) ───────────
-            Kartu ini satu-satunya permukaan evergreen gelap di halaman /budget;
-            ia naik jadi focal point dan berkata "ini uangmu untuk hari ini".
-            Bentuknya: judul + chip periode · angka jatah harian besar + CINCIN
-            pemakaian hari ini (`HudRing`) · satu baris statistik (sisa periode ·
-            persen terpakai) · pintu ke Pengaturan. Angka & warna tetap dari
-            `computeDailyHud()`, jadi tidak ada nilai baru yang dikarang di sini.
-            Label "Jatah harianmu", hitungan "n hari lagi", dan catatan pemasukan
-            tengah periode DIHAPUS atas permintaan pemilik produk. */
-        <div className="relative overflow-hidden rounded-[2rem] bg-forest px-5 py-5 text-cream shadow-[0_30px_64px_-34px_rgba(0,0,0,0.85)] sm:px-6 sm:py-6">
-          {/* dua glow lembut — mint di kanan atas, sage di kiri bawah. Cuma
-              cahaya, bukan informasi: `aria-hidden` + pointer-events-none. */}
-          <span
-            aria-hidden
-            className="pointer-events-none absolute -right-20 -top-24 size-56 rounded-full bg-mint/20 blur-3xl"
-          />
-          <span
-            aria-hidden
-            className="pointer-events-none absolute -bottom-28 -left-16 size-52 rounded-full bg-mint/10 blur-3xl"
-          />
-          {/* tekstur titik halus — memberi "bahan" pada permukaan gelap tanpa
-              menambah informasi atau warna baru */}
-          <svg
-            aria-hidden
-            className="pointer-events-none absolute inset-0 h-full w-full opacity-[0.07]"
-          >
-            <defs>
-              <pattern id="budget-hero-dots" width="22" height="22" patternUnits="userSpaceOnUse">
-                <circle cx="1.5" cy="1.5" r="1.2" fill="#ffffff" />
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#budget-hero-dots)" />
-          </svg>
+        /* ── 3A. DAILY HUD NORMAL — HERO GELAP + KAIN BATIK ──────────────────
+            Revisi 11 Nov 2026 (permintaan pemilik produk): kartu ini terlalu
+            banyak teks — "Sisa periode: Rp …", penjelasan asal angkanya, "1%
+            terpakai periode ini", dan tautan Pengaturan semuanya menumpuk di
+            dalam kartu sampai angka utamanya tenggelam. Coraknya juga belum
+            terasa batik. Sekarang:
 
-          <div className="relative flex items-center justify-between gap-3">
-            <span className="inline-flex items-center gap-2 text-[13.5px] font-medium text-cream/70">
-              <span className="flex size-6 items-center justify-center rounded-full bg-cream/12 text-cream">
-                <HandCoins className="size-3.5" strokeWidth={2.4} aria-hidden />
-              </span>
-              {HUD_COPY.title}
-            </span>
-            <PeriodChip window={period} tone="dark" />
-          </div>
+              · latar = KAIN BATIK sungguhan (`BatikCloth` — kawung di seluruh
+                bidang + sabuk parang di kaki kartu + tepi kain), jadi coraknya
+                benar-benar terbaca sebagai batik, bukan sekadar gradasi hijau;
+              · isi kartu tinggal DUA hal: label "Jatah Hari Ini" (medium, bukan
+                bold) dan nominal jatah harian di bawahnya. Cincin persen, chip
+                periode, ikon, dan caption "HARI INI" DICABUT;
+              · angka pendukung ("Sisa periode") + pintu ke Pengaturan pindah
+                ke BARIS DI BAWAH kartu — informasi tetap ada, tetapi tidak
+                lagi menenggelamkan angka utama.
 
-          {/* angka utama + cincin — cincin duduk di kanan supaya mata berhenti
-              dulu di nominal yang benar-benar boleh dibelanjakan hari ini.
-              Ukuran angka pakai `clamp` supaya nominal panjang (Rp 1.250.000)
-              TIDAK menabrak cincin di layar sempit — ia mengecil sendiri.
-              Caption "hari ini" WAJIB: tanpa itu angka cincin (0% saat belum ada
-              pengeluaran hari ini) terbaca seolah "tidak ada yang terpakai",
-              padahal periode ini sudah ada pengeluaran. Persen PERIODE duduk di
-              bar bawah — dua angka itu tidak lagi saling membingungkan. */}
-          <div className="relative mt-6 flex items-end justify-between gap-4">
-            <div className="min-w-0">
-              <p className="whitespace-nowrap text-[clamp(2rem,7.5vw,3.5rem)] font-semibold leading-none tracking-tight tabular-nums">
+            Angka & warna tetap dari `computeDailyHud()`: tidak ada nilai baru
+            yang dikarang di sini. */
+        <>
+          <div className="relative overflow-hidden rounded-[2rem] bg-forest text-cream shadow-[0_34px_70px_-38px_rgba(0,0,0,0.9)] ring-1 ring-forest/40">
+            {/* corak batik — murni dekorasi, tidak menangkap klik */}
+            <BatikCloth id="budget-hud-batik" />
+            {/* Dua scrim LOKAL (kelasnya di app/globals.css): hanya area judul &
+                nominal yang digelapkan — sisi kanan (cincin) dan sabuk parang di
+                tepi bawah tetap terbuka, jadi batiknya tetap kelihatan. */}
+            <span aria-hidden className="batik-scrim-title pointer-events-none absolute inset-0" />
+            <span aria-hidden className="batik-scrim-amount pointer-events-none absolute inset-0" />
+            {/* dua glow lembut — mint di kanan atas, sage di kiri bawah. Cuma
+                cahaya, bukan informasi: `aria-hidden` + pointer-events-none. */}
+            <span
+              aria-hidden
+              className="pointer-events-none absolute -right-20 -top-24 size-56 rounded-full bg-mint/20 blur-3xl"
+            />
+            <span
+              aria-hidden
+              className="pointer-events-none absolute -bottom-28 -left-16 size-52 rounded-full bg-mint/10 blur-3xl"
+            />
+
+            <div className="relative px-5 py-6 sm:px-7 sm:py-7">
+              {/* HANYA judul + nominal (permintaan pemilik produk, 11 Nov 2026):
+                  cincin persen, caption "HARI INI", chip periode, dan ikon di
+                  samping judul DICABUT. Alasannya sederhana — di hero /budget
+                  user cuma mencari satu angka: berapa uang yang boleh dipakai
+                  hari ini. Persentase sudah dibaca di kartu Dashboard, dan chip
+                  periode cuma mengulang tab "Bulanan" tepat di bawah kartu.
+                  Judulnya juga diturunkan bobotnya (medium, bukan semibold)
+                  supaya nominal tetap satu-satunya fokus. */}
+              <p className="text-[14.5px] font-medium tracking-tight text-cream/90 [text-shadow:0_1px_10px_rgba(0,0,0,0.55)]">
+                {HUD_COPY.title}
+              </p>
+              <p className="mt-2.5 whitespace-nowrap text-[clamp(2.25rem,8vw,3.75rem)] font-semibold leading-none tracking-tight tabular-nums [text-shadow:0_2px_3px_rgba(0,0,0,0.35),0_12px_32px_rgba(0,0,0,0.55)]">
                 {maskNominal(hud.dailyBudget, masked)}
               </p>
             </div>
-            <span className="flex shrink-0 flex-col items-center gap-1.5">
-              <HudRing
-                usedPct={hud.todayUsedPct}
-                ariaLabel={HUD_COPY.ringAria(Math.round(hud.todayUsedPct * 100))}
-                size={96}
-                stroke={8}
-                accent="mint"
-              />
-              <span className="text-[10.5px] font-medium uppercase tracking-[0.16em] text-cream/45">
-                {HUD_COPY.todayCaption}
-              </span>
-            </span>
+
+            {/* benang emas di tepi bawah kain — penutup visual, bukan informasi */}
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-x-5 bottom-0 h-px bg-gradient-to-r from-transparent via-daisy/45 to-transparent"
+            />
           </div>
 
-          {/* statistik periode (angka NYATA dari `hud`) + bar pemakaian kolam
-              periode. Bar-nya menjawab "sudah kepakai berapa persen dari uang
-              periode ini" — pertanyaan yang dulu tidak terjawab karena meternya
-              hanya mengukur pemakaian HARI INI. */}
-          <div className="relative mt-5 space-y-2.5 rounded-2xl bg-cream/[0.07] px-4 py-3.5 ring-1 ring-cream/10">
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[12.5px] font-medium text-cream/60">
-              {/* H5-3 (audit UI/UX) — "Sisa periode" diberi penjelasan asalnya:
-                  tooltip untuk mouse + keterangan kecil di bawah, supaya angka
-                  besar tidak bikin bingung. */}
-              <span
-                title={BUDGET_REMAINING_HINT(maskNominal(income.amount, masked))}
-                className="cursor-help underline decoration-cream/25 decoration-dotted underline-offset-4"
-              >
-                {HUD_COPY.remainingLead}{' '}
-                <b className="font-semibold text-cream tabular-nums">
-                  {maskNominal(hud.remaining, masked)}
-                </b>
-              </span>
-            </div>
-            <p className="text-[11.5px] leading-relaxed text-cream/45">
-              {BUDGET_REMAINING_HINT(maskNominal(income.amount, masked))}
-            </p>
-            <div
-              role="progressbar"
-              aria-label={HUD_COPY.periodUsed(Math.round(periodPct * 100))}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={Math.round(periodPct * 100)}
+          {/* ── DI LUAR KARTU: sisa periode + pintu Pengaturan ────────────────
+              Dulu dua baris ini hidup DI DALAM kartu. Sekarang cukup satu baris
+              tenang di bawahnya. Penjelasan panjang "Sisa dari pemasukan …
+              dikurangi cicilan & tagihan rutin" tetap tersedia sebagai tooltip
+              (`title`), jadi informasinya tidak hilang — hanya tidak lagi
+              memakan ruang kartu. */}
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-1">
+            <p
+              title={BUDGET_REMAINING_HINT(maskNominal(income.amount, masked))}
+              className="cursor-help text-[12px] font-medium text-forest-muted"
             >
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-cream/15">
-                <div
-                  className="h-full rounded-full bg-mint transition-[width] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
-                  style={{ width: `${Math.round(periodPct * 100)}%` }}
-                />
-              </div>
-              <p className="mt-1.5 text-[11.5px] font-medium text-cream/50 tabular-nums">
-                {HUD_COPY.periodUsed(Math.round(periodPct * 100))}
-              </p>
-            </div>
+              {HUD_COPY.remainingLead}{' '}
+              <b className="font-semibold text-forest tabular-nums">
+                {maskNominal(hud.remaining, masked)}
+              </b>
+            </p>
+            <Link
+              href={MONEY_SETTINGS_HREF}
+              className="inline-flex items-center gap-1.5 text-[12px] font-medium text-forest-muted underline decoration-soil/30 underline-offset-4 transition-colors hover:text-forest hover:decoration-forest/50"
+            >
+              <Settings2 className="size-3.5" strokeWidth={2.4} aria-hidden />
+              {HUD_COPY.moneySettingsCta}
+            </Link>
           </div>
-
-          {/* pintu MENGUBAH angka yang barusan dipakai (paket 57.4): pemasukan &
-              cicilan hidup di Pengaturan → Profil & Akun. Tanpa tautan ini,
-              "Jatah Hari Ini" hanya bisa dilihat, tidak bisa dibetulkan. */}
-          <Link
-            href={MONEY_SETTINGS_HREF}
-            className="relative mt-4 inline-flex items-center gap-1.5 text-[12px] font-medium text-cream/55 underline decoration-cream/25 underline-offset-4 transition-colors hover:text-cream hover:decoration-cream/60"
-          >
-            <Settings2 className="size-3.5" strokeWidth={2.4} aria-hidden />
-            {HUD_COPY.moneySettingsCta}
-          </Link>
-        </div>
+        </>
       )}
     </section>
   )

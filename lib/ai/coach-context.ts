@@ -36,6 +36,19 @@ export interface CoachDataSummary {
   /** kategori pengeluaran terbesar bulan ini — `null` kalau belum ada pengeluaran */
   topCategory: string | null
   /**
+   * Pengeluaran Senin–Minggu yang memuat hari ini + kategori teratasnya.
+   *
+   * Kenapa ada: user bertanya "pengeluaranku gimana minggu ini?", dan tanpa dua
+   * angka ini model hanya bisa menjawab "belum ada rincian per minggu" —
+   * jawaban yang benar secara teknis tapi tidak berguna. Angkanya dihitung dari
+   * jendela periode yang SAMA dengan tab Mingguan di `/budget`
+   * (`periodWindowForTab('weekly')`), jadi tidak ada definisi minggu kedua.
+   */
+  expenseThisWeek: number
+  topCategoryThisWeek: string | null
+  /** pengeluaran hari ini (tanggal perangkat) */
+  expenseToday: number
+  /**
    * Sisa jatah harian dari `computeDailyHud()` — inti kartu "Jatah Hari Ini".
    *
    * HANYA bermakna saat `allowanceState === 'ready'`. Akun baru (belum ada
@@ -77,6 +90,11 @@ export function buildCoachContext(summary: CoachDataSummary): string {
     `Pemasukan bulan ini: ${formatRupiah(summary.incomeThisMonth)}`,
     `Pengeluaran bulan ini: ${formatRupiah(summary.expenseThisMonth)}`,
     `Kategori pengeluaran teratas: ${summary.topCategory ?? '(belum ada pengeluaran)'}`,
+    /* Minggu ini & hari ini: tanpa dua baris ini, pertanyaan "gimana minggu ini?"
+       selalu dijawab "belum ada rincian" walau angkanya ada di app. */
+    `Pengeluaran minggu ini (Senin–Minggu): ${formatRupiah(summary.expenseThisWeek)}`,
+    `Kategori teratas minggu ini: ${summary.topCategoryThisWeek ?? '(belum ada pengeluaran minggu ini)'}`,
+    `Pengeluaran hari ini: ${formatRupiah(summary.expenseToday)}`,
     allowanceLine(summary),
     `Jumlah dompet: ${summary.walletCount} · Total saldo: ${formatRupiah(summary.cashTotal)}`,
     `Hutang aktif: ${summary.activeDebtTotal > 0 ? formatRupiah(summary.activeDebtTotal) : 'tidak ada'}`,
@@ -91,34 +109,36 @@ export function buildCoachContext(summary: CoachDataSummary): string {
  * ringkasannya memakai konstanta demo.
  */
 export function buildWelcomeText(summary: CoachDataSummary): string {
-  const parts = ['Halo! 👋']
+  const parts: string[] = []
 
   if (summary.allowanceState === 'ready') {
-    parts.push(`Sisa jatah harianmu hari ini ${formatRupiah(summary.remainingToday)}.`)
+    parts.push(`Yo! Jatah harian lo hari ini ${formatRupiah(summary.remainingToday)}.`)
     parts.push(
-      `${summary.walletCount} dompet aktif dengan total saldo ${formatRupiah(summary.cashTotal)}.`,
+      summary.walletCount > 0
+        ? `${summary.walletCount} dompet aktif, total saldo ${formatRupiah(summary.cashTotal)}.`
+        : 'Dompet lo masih kosong, saldo Rp 0.',
     )
     if (summary.topCategory) {
-      parts.push(`Pengeluaran terbesarmu bulan ini di kategori ${summary.topCategory}.`)
+      parts.push(`Paling banyak jajan di ${summary.topCategory} bulan ini.`)
     }
-    parts.push('Mau aku bantu catat sesuatu, atau review pengeluaranmu?')
+    parts.push('Mau catat sesuatu atau cek pengeluaran?')
     return parts.join(' ')
   }
 
   parts.push(
     summary.allowanceState === 'shortfall'
-      ? 'Jatah harianmu sedang ditahan karena pemasukan bulan ini belum cukup menutup cicilan dan celengan.'
-      : 'Jatah harianmu belum bisa dihitung karena pemasukan bulananmu belum diatur di Pengaturan.',
+      ? 'Jatah harian lo lagi ditahan — pemasukan bulan ini belum nutup cicilan & celengan.'
+      : 'Jatah harian lo belum bisa dihitung karena pemasukan bulanan belum diisi.',
   )
   parts.push(
     summary.walletCount > 0
-      ? `Kamu punya ${summary.walletCount} dompet aktif dengan total saldo ${formatRupiah(summary.cashTotal)}.`
-      : 'Dompetmu juga masih kosong (0 dompet, saldo Rp 0).',
+      ? `Dompet lo ${summary.walletCount}, total saldo ${formatRupiah(summary.cashTotal)}.`
+      : 'Dompet lo juga masih kosong.',
   )
   parts.push(
     summary.walletCount > 0
-      ? 'Isi pemasukan bulanan di Pengaturan supaya aku bisa menghitung jatah harianmu 🌿'
-      : 'Yuk mulai dari menu Dompet (bikin dompet pertama) lalu isi pemasukan bulanan di Pengaturan — setelah itu aku bisa bantu hitung jatah harianmu 🌿',
+      ? 'Isi pemasukan bulanan di Pengaturan, nanti gue hitungin jatah hariannya.'
+      : 'Bikin dompet pertama di menu Dompet, lalu isi pemasukan bulanan di Pengaturan — setelah itu gue bisa hitung jatah hariannya.',
   )
   return parts.join(' ')
 }
@@ -131,13 +151,41 @@ export function buildWelcomeText(summary: CoachDataSummary): string {
  * `remainingLabel: null` = jatah harian belum bisa dihitung (akun baru / jatah
  * ditahan) → kalimat sisa jatah DILEWATI, bukan diganti "Rp 0".
  */
+/**
+ * Pembuka balasan pencatatan — DIPILIH DETERMINISTIK dari nama catatannya.
+ *
+ * Kenapa variasinya ada: balasan yang selalu sama persis ("Sip, sudah aku catat
+ * ya 🧩") terbaca seperti struk kasir, bukan seperti sahabat yang ikut senang.
+ * Kenapa TIDAK pakai `Math.random()`: app ini dirender server & klien, jadi
+ * balasan acak akan berbeda antara dua render dan memicu hydration mismatch —
+ * ditambah test jadi tidak bisa diandalkan. Karena itu pilihannya diturunkan
+ * dari isi catatan: nama yang sama selalu dapat pembuka yang sama, nama berbeda
+ * berpencar ke pembuka yang berbeda.
+ */
+const RECORD_OPENERS = [
+  'Sip, masuk buku kas',
+  'Aman, udah kucatat',
+  'Beres',
+  'Oke, kucatat',
+] as const
+
+/** hash kecil & stabil (bukan kripto) hanya untuk memilih pembuka */
+function stableIndex(value: string, modulo: number): number {
+  let hash = 0
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash * 31 + value.charCodeAt(i)) % 100_000
+  }
+  return modulo > 0 ? hash % modulo : 0
+}
+
 export function buildRecordedReply(
   name: string,
   amountLabel: string,
   remainingLabel: string | null,
 ): string {
-  const saved = `Sip, "${name}" senilai ${amountLabel} sudah aku catat ya 🌿`
-  return remainingLabel ? `${saved} Sisa jatah harianmu sekarang ${remainingLabel}.` : saved
+  const opener = RECORD_OPENERS[stableIndex(name, RECORD_OPENERS.length)]
+  const saved = `${opener}: “${name}” ${amountLabel}.`
+  return remainingLabel ? `${saved} Sisa jatah lo ${remainingLabel}.` : saved
 }
 
 /**
@@ -319,6 +367,23 @@ export function collectCoachSummary(now: Date = new Date()): CoachDataSummary {
     window,
   })
 
+  /* ── MINGGU INI & HARI INI ─────────────────────────────────────────────────
+     Jendela minggunya SAMA dengan tab "Mingguan" di `/budget`
+     (`periodWindowForTab('weekly')` → Senin–Minggu), jadi tidak ada definisi
+     minggu kedua di app ini. Kategori teratas dihitung dari baris di jendela
+     itu saja; kalau belum ada pengeluaran, `null` — bukan nama kategori karangan. */
+  const weekWindow = periodWindowForTab('weekly', todayIso)
+  const weekByCategory = new Map<string, number>()
+  for (const tx of txs) {
+    if (tx.type !== 'expense') continue
+    if (tx.date < weekWindow.startISO || tx.date > weekWindow.endISO) continue
+    weekByCategory.set(tx.category, (weekByCategory.get(tx.category) ?? 0) + tx.amount)
+  }
+  const topCategoryThisWeek =
+    [...weekByCategory.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null
+  const expenseThisWeek = spentInWindow(txs, weekWindow)
+  const expenseToday = spentOn(txs, todayIso)
+
   /* Tiga keadaan yang PERSIS memetakan tiga cabang kartu Home: belum diatur
      (CTA), jatah ditahan (shortfall), atau angka siap disebut. Tanpa ini, akun
      kosong akan mengirim `remainingToday: 0` dan model menyebut "Rp 0" seolah
@@ -339,6 +404,9 @@ export function collectCoachSummary(now: Date = new Date()): CoachDataSummary {
     incomeThisMonth,
     expenseThisMonth,
     topCategory,
+    expenseThisWeek,
+    topCategoryThisWeek,
+    expenseToday,
     remainingToday: allowanceState === 'ready' ? hud.remainingToday : 0,
     allowanceState,
     walletCount: walletAccounts(snapshot).length,

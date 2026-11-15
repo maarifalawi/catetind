@@ -47,7 +47,13 @@ export const PRIVACY_LINK_COPY = {
   label: 'Kebijakan Privasi',
   /** judul kartu di Pengaturan → Keamanan & Privasi */
   cardTitle: 'Dokumen Legal',
-  hint: 'Versi tertulis dari janji privasi & aturan layanan yang dipakai seluruh halaman CatetInd.',
+  /**
+   * `hint` DIHAPUS (revisi pemilik repo): kalimat "Versi tertulis dari janji
+   * privasi & aturan layanan…" hanya menjelaskan bahwa dua tombol di bawahnya
+   * adalah dokumen — sesuatu yang sudah terbaca dari labelnya sendiri
+   * ("Kebijakan Privasi", "Syarat & Ketentuan"). `pairNote` TETAP ada karena ia
+   * dipakai sebagai `crossNote` di kaki kedua dokumen legal (bukan di Pengaturan).
+   */
   /**
    * Sejak prompt 13 `/terms` sudah terbit, jadi catatan "sedang disiapkan" di
    * sini WAJIB diganti. Isinya sekarang menjelaskan bahwa dua dokumen legal
@@ -56,7 +62,7 @@ export const PRIVACY_LINK_COPY = {
    * versi mana yang lebih baru.
    */
   pairNote:
-    'Kebijakan Privasi dan Syarat & Ketentuan diperbarui sebagai satu paket, nomor versinya selalu naik bersamaan, jadi tidak akan pernah ada dua janji yang berbeda di antara keduanya.',
+    'Kedua dokumen ini diterbitkan sebagai satu paket: nomor versinya selalu naik bersamaan, jadi tidak akan pernah ada dua janji yang berbeda di antara keduanya.',
 } as const
 
 export const PRIVACY_DOC: LegalDocument = {
@@ -178,7 +184,7 @@ export const PRIVACY_DOC: LegalDocument = {
       id: 'ai-data',
       title: 'Fitur AI: data apa yang diproses',
       paragraphs: [
-        'CatetInd punya Minca, AI Coach yang membantu kategorisasi, merapikan nama transaksi, membaca struk, dan menemani review keuanganmu. Supaya itu bekerja, sebagian data harus diproses oleh penyedia model bahasa, dan kami sebut apa adanya:',
+        'CatetInd punya Minca, asisten AI yang membantu kategorisasi, merapikan nama transaksi, membaca struk, dan menemani review keuanganmu. Supaya itu bekerja, sebagian data harus diproses oleh penyedia model bahasa, dan kami sebut apa adanya:',
       ],
       bullets: [
         'Kategorisasi & penamaan otomatis, teks yang kamu tulis di transaksi (misal "indmrt 24rb") dikirim untuk ditebak kategorinya dan dirapikan namanya.',
@@ -193,13 +199,13 @@ export const PRIVACY_DOC: LegalDocument = {
       },
     },
 
-    /* ── 6b. KUOTA & SAKELAR AI — PRD 5C (reset tanggal 1, add-on tidak hangus)
+    /* ── 6b. KUOTA & SAKELAR AI — PRD 5C (kuota dasar sekali pakai, add-on tidak hangus)
        + panel AI Preferences yang sudah ada di Settings ─────────────────── */
     {
       id: 'ai-kontrol',
       title: 'Kuota AI & cara mematikannya',
       paragraphs: [
-        'Pemakaian AI dihitung dengan kuota token bulanan yang di-reset setiap tanggal 1, dan angka kuotanya ditentukan paketmu: Paket Catet Aja tidak memuat fitur AI, Paket Waras memakai kuota dasar bulanan, dan Paket Sultan tanpa batas kuota. Paket token tambahan yang kamu beli berlaku sampai habis, tidak hangus saat bulan berganti. Kalau kuotanya habis, fitur AI berhenti sampai kamu isi ulang atau bulan berganti; pencatatan manual tetap jalan normal tanpa batas.',
+        'Pemakaian AI dihitung dengan kuota token, dan angka kuotanya ditentukan paketmu: Paket Catet Aja tidak memuat fitur AI, Paket Waras memakai kuota dasar, dan Paket Sultan tanpa batas kuota. Kuota dasar berlaku SEKALI di bulan pertama paket dan tidak diisi ulang otomatis; paket token tambahan yang kamu beli berlaku sampai habis dan tidak hangus. Kalau kuotanya habis, fitur AI berhenti sampai kamu menambah token; pencatatan manual tetap jalan normal tanpa batas.',
         'Semua yang berjalan otomatis bisa dimatikan di Pengaturan → AI Preferences, lewat sakelar "Kategorisasi Otomatis oleh AI" dan "Penamaan Otomatis Transaksi". Kalau keduanya kamu matikan, teks transaksimu tidak dikirim untuk dua tugas itu, kamu yang memilih kategorinya sendiri.',
         'Chat AI tidak pernah berjalan sendiri: ia memproses saat kamu mengirim pesan, dan berhenti kalau kamu berhenti memakainya. Kamu juga bisa mengatur gaya bicara Minca di halaman yang sama, tanpa memengaruhi data apa pun.',
       ],
@@ -313,7 +319,7 @@ export const PRIVACY_DOC: LegalDocument = {
            ditautkan (sebelumnya hanya disebut sebagai "menyusul") */
         href: '/terms',
         label: 'Syarat & Ketentuan',
-        desc: 'Aturan main layanan ini: batas AI Coach, cara kerja paket akses selamanya, dan kuota token.',
+        desc: 'Aturan main layanan ini: batas Minca, cara kerja paket akses selamanya, dan kuota token.',
       },
       {
         /* `/bantuan` (bukan `/help`): dokumen legal dibaca sebelum punya akun,

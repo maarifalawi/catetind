@@ -187,9 +187,6 @@ export function VerifyEmailScreen({
           <h1 className="max-w-[560px] text-balance font-display text-[40px] leading-[1.12] font-medium tracking-[-0.03em] text-forest landing-tab:text-[52px] landing:text-[60px]">
             {VERIFY_COPY.title}
           </h1>
-          <p className="max-w-[440px] text-balance text-[17px] leading-[1.5] text-forest-muted">
-            {VERIFY_COPY.subtitle}
-          </p>
         </header>
 
         {/* kartu status + kode masuk — satu permukaan putih ber-hairline */}
@@ -241,7 +238,7 @@ export function VerifyEmailScreen({
               <h2 className="font-display text-[16px] font-medium tracking-tight text-forest">
                 {VERIFY_COPY.otpTitle}
               </h2>
-              <p className="mt-1 text-[13px] leading-relaxed text-forest/55">{VERIFY_COPY.otpHint}</p>
+              <p className="mt-1 text-[13px] leading-relaxed text-forest-muted">{VERIFY_COPY.otpHint}</p>
 
               <form
                 className="mt-3.5"
@@ -264,7 +261,7 @@ export function VerifyEmailScreen({
                   aria-label={VERIFY_COPY.otpLabel}
                   className={cn(
                     'h-12 w-full rounded-2xl bg-cream text-center font-mono text-[20px] tracking-[0.4em] text-forest ring-1 ring-soil/12',
-                    'placeholder:text-forest/25 focus-visible:ring-2 focus-visible:ring-forest focus-visible:outline-none',
+                    'placeholder:text-forest-muted focus-visible:ring-2 focus-visible:ring-forest focus-visible:outline-none',
                   )}
                 />
 
@@ -323,7 +320,7 @@ function ResendButton({
           ? expiredTone
             ? 'bg-ink text-cream ring-transparent hover:bg-forest-soft'
             : 'bg-cream text-forest ring-soil/16 hover:bg-sage/60'
-          : 'cursor-not-allowed bg-cream/70 text-forest/40 ring-soil/12',
+          : 'cursor-not-allowed bg-cream/70 text-forest-muted ring-soil/12',
       )}
     >
       {canResend ? (
@@ -368,12 +365,12 @@ function SentCard({
           <MailCheck className="size-4" strokeWidth={2.2} aria-hidden />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-[13.5px] leading-relaxed text-forest/55">{VERIFY_COPY.sentLead}</p>
+          <p className="text-[13.5px] leading-relaxed text-forest-muted">{VERIFY_COPY.sentLead}</p>
           <p className="mt-0.5 font-display text-[16px] font-medium break-all text-forest">
             {displayEmail}
           </p>
-          <p className="mt-1 text-[12px] leading-relaxed text-forest/45">
-            dari <span className="font-medium text-forest/60">{MAGIC_LINK_SENDER}</span>
+          <p className="mt-1 text-[12px] leading-relaxed text-forest-muted">
+            dari <span className="font-medium text-forest-muted">{MAGIC_LINK_SENDER}</span>
           </p>
         </div>
       </div>
@@ -392,7 +389,7 @@ function SentCard({
 
         <Link
           href={LOGIN_PATH}
-          className="text-center text-[13px] font-medium text-forest/55 underline underline-offset-2 hover:text-forest"
+          className="text-center text-[13px] font-medium text-forest-muted underline underline-offset-2 hover:text-forest"
         >
           {VERIFY_COPY.changeEmailLabel}
         </Link>
@@ -426,14 +423,14 @@ function ExpiredCard({
       className="mt-6 rounded-[1.5rem] bg-hud-amber/25 p-5 ring-1 ring-hud-amber/60"
     >
       <div className="flex items-start gap-3">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-cream text-forest/70">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-cream text-forest-soft">
           <TriangleAlert className="size-4" strokeWidth={2.2} aria-hidden />
         </span>
         <div className="min-w-0">
           <h2 className="font-display text-[16px] leading-snug font-medium tracking-tight text-forest">
             {VERIFY_COPY.expiredTitle}
           </h2>
-          <p className="mt-1 text-[13.5px] leading-relaxed text-forest/60">
+          <p className="mt-1 text-[13.5px] leading-relaxed text-forest-muted">
             {VERIFY_COPY.expiredBody}
           </p>
         </div>
@@ -448,7 +445,7 @@ function ExpiredCard({
         />
         <Link
           href={LOGIN_PATH}
-          className="text-center text-[13px] font-medium text-forest/55 underline underline-offset-2 hover:text-forest"
+          className="text-center text-[13px] font-medium text-forest-muted underline underline-offset-2 hover:text-forest"
         >
           {VERIFY_COPY.changeEmailLabel}
         </Link>

@@ -527,8 +527,17 @@ export function toFundContribution(row: GoalContributionDbRow): FundContribution
     amount: intOf(row.amount),
     walletId: row.wallet_id ?? '',
     remoteId: row.id,
+    /* penarikan dibedakan dari setoran lewat penanda di `client_tx_id`:
+       skema `goal_contributions` hanya punya `amount > 0`, jadi arah uang
+       tidak punya kolomnya sendiri. Tanpa penanda ini, menarik Rp 100.000
+       akan terbaca sebagai setoran baru (+100.000) setiap kali halaman
+       dimuat ulang dari server. */
+    ...(row.client_tx_id?.startsWith(CONTRIBUTION_OUT_PREFIX) ? { direction: 'out' as const } : {}),
   }
 }
+
+/** penanda arah `out` di `client_tx_id` — lihat `toFundContribution` */
+export const CONTRIBUTION_OUT_PREFIX = 'out:'
 
 /** `FundContribution` → payload `goal_contributions` (butuh uuid goal induknya) */
 export function toGoalContributionDbRow(
@@ -542,7 +551,7 @@ export function toGoalContributionDbRow(
     amount: Math.round(c.amount),
     contributed_at: c.date,
     wallet_id: nullIfEmpty(c.walletId),
-    client_tx_id: id,
+    client_tx_id: c.direction === 'out' ? `${CONTRIBUTION_OUT_PREFIX}${id}` : id,
   }
 }
 

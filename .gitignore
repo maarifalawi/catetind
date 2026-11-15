@@ -38,3 +38,11 @@ LP CATETIND_files/
 
 # Screenshot QA landing — hasil sekali pakai `scripts/landing/shoot.mjs`.
 docs/landing/shots/
+
+# Laporan + screenshot QA — dihasilkan ulang tiap `pnpm qa:*` di root repo.
+# Sekali pakai, tidak pernah perlu di-track (alasan sama dengan log di atas).
+qa-*-report.json
+qa-shots/
+
+# Metadata folder Windows yang ikut tersalin saat repo diunduh ke Desktop.
+desktop.ini

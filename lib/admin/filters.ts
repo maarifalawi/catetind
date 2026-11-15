@@ -1,4 +1,5 @@
 import { planById } from '@/lib/data/pricing'
+import { AI_BASE_CALLS_TOTAL, planQuota, remainingPercent } from '@/lib/ai-quota'
 import type {
   AdminPaymentStatusGroup,
   AdminPaymentView,
@@ -29,6 +30,42 @@ export function daysUntil(iso: string | null | undefined, now: number): number |
  */
 export function planLabelOf(planId: string | null | undefined): string {
   return planById(planId)?.name ?? 'Tanpa paket'
+}
+
+/**
+ * SISA KUOTA AI SEBUAH AKUN, DALAM PERSEN — dipakai kolom "Sisa AI" di Direktori
+ * User.
+ *
+ * Tiga keadaan yang sengaja dibedakan, karena menampilkan angka untuk ketiganya
+ * akan menyesatkan:
+ *
+ *   · `'none'`      → paket ini tidak memuat AI sama sekali (Paket Catet Aja).
+ *                     Menulis "0%" akan terbaca seperti kuota yang habis, padahal
+ *                     fiturnya memang tidak ada.
+ *   · `'unlimited'` → Paket Sultan: tidak ada batas yang berlaku.
+ *   · `{ pct }`     → paket berkuota: sisa persen dari kuota dasar.
+ *
+ * Angkanya TURUNAN, bukan kolom baru di server: `aiCallsThisMonth` sudah dibaca
+ * dari `ai_usage.calls_used` dan `AI_BASE_CALLS_TOTAL` adalah angka kanon yang
+ * sama dengan yang dipakai kartu Bahan Bakar AI milik user. Jadi admin dan user
+ * tidak mungkin melihat dua persentase berbeda.
+ *
+ * Batas yang perlu diingat admin: `ai_usage` disimpan per bulan, sedangkan kuota
+ * dasar berlaku sekali untuk seluruh masa paket. Untuk paket lifetime, angka ini
+ * adalah pemakaian BULAN BERJALAN terhadap kuota dasar — bukan total seumur
+ * paket. Label kolomnya menyebut hal ini, bukan menyembunyikannya.
+ */
+export type AdminAiQuota =
+  | { kind: 'none' }
+  | { kind: 'unlimited' }
+  | { kind: 'limited'; pct: number }
+
+export function aiQuotaOf(user: AdminUserRow): AdminAiQuota {
+  const quota = planQuota(user.plan.planId)
+  if (!quota.aiEnabled) return { kind: 'none' }
+  if (quota.unlimited) return { kind: 'unlimited' }
+  const pct = remainingPercent(user.aiCallsThisMonth, AI_BASE_CALLS_TOTAL)
+  return { kind: 'limited', pct: Math.max(0, Math.min(100, pct)) }
 }
 
 /** true = paket 30 hari yang masa aktifnya berakhir ≤ 7 hari lagi */

@@ -7,7 +7,7 @@ import {
   DEMO_PARTNER_JOINED,
   DEMO_REALTIME_MOCK,
 } from './data/joint'
-import { DEMO_DAY_OVERRIDE, DEMO_THIN_DATA } from './data/monthly-review'
+import { DEMO_DAY_OVERRIDE } from './data/monthly-review'
 
 /* ── Test env-gate saklar demo (paket 42 · audit Stage 5 #5) ─────────────────
    Temuan auditnya: `DEMO_PARTNER_JOINED` / `DEMO_FORCE_WEEKLY_RECAP` /
@@ -42,9 +42,8 @@ describe('saklar demo · satu gerbang NEXT_PUBLIC_DEMO', () => {
     /* jendela trigger recap bulanan: `null` = tanggal sistem apa adanya */
     expect(DEMO_DAY_OVERRIDE).toBe(expected ? 2 : null)
 
-    /* dua saklar yang MEMANG selalu mati (dinyalakan manual saat ditinjau) */
+    /* saklar yang MEMANG selalu mati (dinyalakan manual saat ditinjau) */
     expect(DEMO_JOINED_CELEBRATION).toBe(false)
-    expect(DEMO_THIN_DATA).toBe(false)
   })
 
   it('produksi TIDAK PERNAH menyalakan demo walau env=1 (pagar paket 100)', async () => {

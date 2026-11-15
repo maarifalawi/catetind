@@ -3,40 +3,46 @@
 import { monthKeyOf, type AiQuotaActivityId } from '@/lib/ai-quota'
 import { browserSupabase } from './client'
 
-/* ── METER PEMAKAIAN AI DI SERVER (`ai_usage`) (paket 45) ───────────────────
+/* ── METER PEMAKAIAN AI DI SERVER (`ai_usage`) (paket 45 · revisi refill) ────
    Sebelum paket ini pemakaian AI hidup di memory sesi: refresh halaman =
    kembali ke titik berangkat demo, dan kuota user satu tab tidak pernah sepakat
    dengan tab lainnya (temuan audit Stage 5 #5 yang baru setengah ditutup).
 
-   Sekarang angka pemakaiannya satu baris per (user, bulan, aktivitas) di
-   `ai_usage`, dan penambahannya lewat RPC `catetind_record_ai_usage` supaya
-   ATOMIK: dua tab yang memakai AI bersamaan tidak saling menimpa.
+   CATATAN PENTING (keputusan produk — kuota dasar TIDAK di-refill):
+   baris `ai_usage` tetap ditulis per (user, bulan, aktivitas) untuk jejak audit,
+   tetapi PEMBACAANNYA MENJUMLAHKAN SELURUH BULAN. Artinya kuota dasar hanya
+   berlaku SEKALI di bulan pertama paket; begitu bulan berganti, tangki tidak
+   otomatis penuh lagi. Untuk memakai AI lagi user membeli token add-on (yang
+   memang tidak hangus). Sebelumnya pembacaan hanya bulan berjalan, sehingga
+   setiap tanggal 1 tangki kembali 100% — bukan model bisnis yang diinginkan.
 
-   Batas jujur: yang disimpan adalah PEMAKAIAN, bukan token sungguhan — provider
-   AI-nya sendiri masih mock (tidak ada DeepSeek/apa pun yang dipanggil). */
+   Batas jujur: yang disimpan adalah PEMAKAIAN (jumlah panggilan), bukan token
+   provider sungguhan. */
 
-/** bulan berjalan `YYYY-MM` — kunci baris `ai_usage`. Diturunkan dari
- *  `monthKeyOf()` (`lib/ai-quota.ts`) supaya kuncinya SATU definisi dengan
- *  tanggal reset yang ditampilkan UI — tidak ada dua perhitungan bulan. */
+/** bulan berjalan `YYYY-MM` — kunci TULIS baris `ai_usage` (jejak audit).
+ *  Diturunkan dari `monthKeyOf()` (`lib/ai-quota.ts`) supaya kuncinya SATU
+ *  definisi dengan tanggal yang ditampilkan UI. */
 export function currentMonthKey(now = new Date()): string {
   return monthKeyOf(now)
 }
 
 export interface RemoteAiUsage {
-  /** `activity → calls_used` untuk bulan ini */
+  /** `activity → calls_used` KUMULATIF (semua bulan) */
   callsUsed: Record<string, number>
   addonTokensRemaining: number
   purchasedTokens: number
 }
 
-export async function readAiUsage(monthKey = currentMonthKey()): Promise<RemoteAiUsage | null> {
+export async function readAiUsage(): Promise<RemoteAiUsage | null> {
   const client = browserSupabase()
   if (!client) return null
   try {
+    /* TANPA filter bulan: jumlahkan semua baris milik user (RLS menyaring
+       `user_id = auth.uid()`). Inilah yang membuat tangki tidak "reset sendiri"
+       saat bulan berganti. */
     const { data, error } = await client
       .from('ai_usage')
       .select('activity,calls_used,addon_tokens_remaining,purchased_tokens')
-      .eq('month_key', monthKey)
     if (error || !data) return null
 
     const callsUsed: Record<string, number> = {}
@@ -48,7 +54,7 @@ export async function readAiUsage(monthKey = currentMonthKey()): Promise<RemoteA
       addon_tokens_remaining: number
       purchased_tokens: number
     }[]) {
-      callsUsed[row.activity] = row.calls_used
+      callsUsed[row.activity] = (callsUsed[row.activity] ?? 0) + (row.calls_used ?? 0)
       addon = Math.max(addon, row.addon_tokens_remaining ?? 0)
       purchased = Math.max(purchased, row.purchased_tokens ?? 0)
     }

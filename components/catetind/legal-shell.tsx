@@ -72,11 +72,11 @@ export function LegalShell({
             {document.title}
           </h1>
 
-          <p className="max-w-[640px] text-center text-[16px] leading-[1.6] text-forest/60 landing-tab:text-[18px]">
+          <p className="max-w-[640px] text-center text-[16px] leading-[1.6] text-forest-muted landing-tab:text-[18px]">
             {document.intro[0]}
           </p>
 
-          <p className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[13.5px] leading-[1.5] text-forest/45">
+          <p className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[13.5px] leading-[1.5] text-forest-muted">
             <time dateTime={document.updatedIso}>
               {document.updatedLabel} {document.updatedHuman}
             </time>
@@ -93,10 +93,10 @@ export function LegalShell({
         <div className="grid w-full grid-cols-1 gap-8 landing:grid-cols-12 landing:gap-10">
           {/* mobile: daftar isi dilipat supaya isi tidak terdorong terlalu jauh */}
           <details className="group rounded-[20px] bg-sage/60 px-5 py-4 ring-1 ring-soil/10 landing:hidden">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-[12px] font-medium tracking-[0.16em] text-forest/55 uppercase [&::-webkit-details-marker]:hidden">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-[12px] font-medium tracking-[0.16em] text-forest-muted uppercase [&::-webkit-details-marker]:hidden">
               {document.tocLabel}
               <ChevronDown
-                className="size-4 shrink-0 text-forest/50 transition-transform duration-200 group-open:rotate-180 motion-reduce:transition-none"
+                className="size-4 shrink-0 text-forest-muted transition-transform duration-200 group-open:rotate-180 motion-reduce:transition-none"
                 aria-hidden
               />
             </summary>
@@ -109,7 +109,7 @@ export function LegalShell({
             className="hidden landing:sticky landing:top-28 landing:col-span-3 landing:block landing:self-start"
           >
             <div className="rounded-[20px] bg-sage/60 p-5 ring-1 ring-soil/10">
-              <p className="px-1 text-[11.5px] font-medium tracking-[0.16em] text-forest/50 uppercase">
+              <p className="px-1 text-[11.5px] font-medium tracking-[0.16em] text-forest-muted uppercase">
                 {document.tocLabel}
               </p>
               <LegalToc document={document} className="mt-3" />
@@ -126,7 +126,7 @@ export function LegalShell({
 
         {/* ── KAKI DOKUMEN: tautan + catatan status, tanpa kotak besar ────── */}
         <div className="mt-10 grid gap-5 border-t border-soil/10 pt-8 landing:grid-cols-[220px_minmax(0,1fr)] landing:gap-10">
-          <h2 className="text-[12px] font-medium tracking-[0.16em] text-forest/45 uppercase">
+          <h2 className="text-[12px] font-medium tracking-[0.16em] text-forest-muted uppercase">
             {document.related.title}
           </h2>
 
@@ -140,7 +140,7 @@ export function LegalShell({
                   >
                     {link.label}
                     <ArrowUpRight
-                      className="size-3.5 shrink-0 text-forest/40 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 motion-reduce:transition-none"
+                      className="size-3.5 shrink-0 text-forest-muted transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 motion-reduce:transition-none"
                       strokeWidth={2.2}
                       aria-hidden
                     />
@@ -150,23 +150,23 @@ export function LegalShell({
             </ul>
 
             <div className="flex max-w-[68ch] flex-col gap-2.5">
-              <p className="flex items-start gap-2 text-[12.5px] leading-[1.65] text-forest/55">
+              <p className="flex items-start gap-2 text-[12.5px] leading-[1.65] text-forest-muted">
                 <CircleAlert
                   className="mt-0.5 size-3.5 shrink-0 text-plum"
                   strokeWidth={2}
                   aria-hidden
                 />
                 <span>
-                  <span className="font-medium text-forest/80">
+                  <span className="font-medium text-forest">
                     {document.reviewNote.label}
                   </span>{' '}
 , {document.reviewNote.body}
                 </span>
               </p>
 
-              <p className="text-[12px] leading-[1.65] text-forest/40">{document.demoNote}</p>
+              <p className="text-[12px] leading-[1.65] text-forest-muted">{document.demoNote}</p>
 
-              <p className="flex items-start gap-2 text-[12px] leading-[1.65] text-forest/40">
+              <p className="flex items-start gap-2 text-[12px] leading-[1.65] text-forest-muted">
                 <Lock className="mt-0.5 size-3 shrink-0" strokeWidth={2} aria-hidden />
                 <span>{document.disclaimer}</span>
               </p>
@@ -191,11 +191,11 @@ function LegalToc({ document, className }: { document: LegalDocument; className?
         <li key={section.id}>
           <a
             href={`#${section.id}`}
-            className="group flex items-start gap-2.5 rounded-[12px] px-2.5 py-2 text-[14px] leading-[1.45] text-forest/60 transition-colors duration-200 hover:bg-canvas hover:text-forest focus-visible:ring-2 focus-visible:ring-forest/40 focus-visible:outline-none motion-reduce:transition-none"
+            className="group flex items-start gap-2.5 rounded-[12px] px-2.5 py-2 text-[14px] leading-[1.45] text-forest-muted transition-colors duration-200 hover:bg-canvas hover:text-forest focus-visible:ring-2 focus-visible:ring-forest/40 focus-visible:outline-none motion-reduce:transition-none"
           >
             <span
               aria-hidden
-              className="mt-px text-[11.5px] font-medium tabular-nums text-forest/35 transition-colors group-hover:text-forest/60"
+              className="mt-px text-[11.5px] font-medium tabular-nums text-forest-muted transition-colors group-hover:text-forest-muted"
             >
               {String(index + 1).padStart(2, '0')}
             </span>
@@ -226,7 +226,7 @@ function LegalSectionBlock({ section, index }: { section: LegalSection; index: n
       <div className="flex items-start gap-3">
         <span
           aria-hidden
-          className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-sage text-[12px] font-medium tabular-nums text-forest/55"
+          className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-sage text-[12px] font-medium tabular-nums text-forest-muted"
         >
           {String(index + 1).padStart(2, '0')}
         </span>
@@ -239,7 +239,7 @@ function LegalSectionBlock({ section, index }: { section: LegalSection; index: n
         {section.paragraphs.map((paragraph) => (
           <p
             key={paragraph}
-            className="text-[16px] leading-[1.7] text-forest/70 landing-tab:text-[17px]"
+            className="text-[16px] leading-[1.7] text-forest-soft landing-tab:text-[17px]"
           >
             {paragraph}
           </p>
@@ -250,7 +250,7 @@ function LegalSectionBlock({ section, index }: { section: LegalSection; index: n
             {section.bullets.map((item) => (
               <li key={item} className="flex items-start gap-2.5">
                 <span aria-hidden className="mt-[10px] size-1.5 shrink-0 rounded-full bg-mint" />
-                <span className="min-w-0 text-[16px] leading-[1.7] text-forest/70 landing-tab:text-[17px]">
+                <span className="min-w-0 text-[16px] leading-[1.7] text-forest-soft landing-tab:text-[17px]">
                   {item}
                 </span>
               </li>
@@ -287,7 +287,7 @@ function LegalNoteBox({ note, className }: { note: LegalNote; className?: string
         <NoteIcon className="size-3.5 shrink-0" strokeWidth={2} aria-hidden />
         {note.label}
       </p>
-      <p className="mt-1 text-[13.5px] leading-[1.65] text-forest/70">{note.body}</p>
+      <p className="mt-1 text-[13.5px] leading-[1.65] text-forest-soft">{note.body}</p>
     </div>
   )
 }

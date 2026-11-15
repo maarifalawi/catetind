@@ -8,9 +8,10 @@ import {
   ArrowDownToLine,
   ArrowLeft,
   CalendarClock,
+  Pencil,
   PiggyBank,
   Plus,
-  Sprout,
+  Puzzle,
   Target,
   Trash2,
 } from 'lucide-react'
@@ -19,6 +20,7 @@ import { ScreenShell } from './screen-shell'
 import { GlobalPrivacyToggle } from './global-privacy-toggle'
 import { usePrivacy } from './privacy-provider'
 import { ContributeSheet } from './contribute-sheet'
+import { EditGoalSheet } from './edit-goal-sheet'
 import { ConfirmDialog } from './confirm-dialog'
 import { MilestoneCelebration } from './milestone-celebration'
 import { PlantIllustration, type PlantStage as IllustrationStage } from './plant-illustration'
@@ -31,9 +33,11 @@ import {
   FUND_ACHIEVED_COPY,
   FUND_CARD_ACTION_COPY,
   FUND_CONTRIBUTE_INSUFFICIENT_COPY,
+  FUND_CONTRIBUTE_WALLET_GONE_COPY,
   FUND_DELETE_COPY,
   FUND_DELETE_TOAST,
   FUND_DETAIL_COPY,
+  FUND_EDIT_COPY,
   FUND_HISTORY_COPY,
   FUND_LATE_COPY,
   FUND_NEAR_COPY,
@@ -54,6 +58,7 @@ import {
   walletSourceById,
   walletSourceName,
   type FundContribution,
+  type FundLateInfo,
   type SinkingFundItem,
 } from '@/lib/data/budget'
 import {
@@ -62,10 +67,12 @@ import {
   contributionsOf,
   deleteFund,
   fundById,
+  getFundsSnapshot,
   restoreFund,
+  updateFund,
   useFundsStore,
 } from '@/lib/money/funds-store'
-import { getMoneySnapshot, walletFundsCheckById } from '@/lib/money/store'
+import { getMoneySnapshot, walletFundsCheckById, walletNameOfId } from '@/lib/money/store'
 
 /* ── Celengan Detail (/budget/[id]) — inventaris #25 ──────────────────────────
    Halaman ini SENGAJA bukan halaman administrasi: PRD 2C.3 menulisnya sebagai
@@ -120,6 +127,16 @@ const CONFETTI_PIECES: {
   { tone: 'size-2 bg-brand', fall: 185, drift: -18, rotate: 320, delay: 0.82 },
 ]
 
+/** bentuk netral `fundLateInfo` saat celengan belum terhidrasi (dipakai useMemo
+ *  di atas cabang render supaya jumlah hook tetap sama) */
+const NO_LATE_INFO: FundLateInfo = {
+  late: false,
+  days: null,
+  weeks: 0,
+  lastDateISO: null,
+  lastAmount: null,
+}
+
 export function GoalDetailScreen({ fundId }: { fundId: number }) {
   /* privasi = state GLOBAL app; satu klik menyensor SEMUA nominal halaman ini
      (hero, rencana bulanan, proyeksi, sampai riwayat) */
@@ -155,6 +172,8 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
   const [contributeOpen, setContributeOpen] = useState(false)
   /** sheet tarik dana — sheet yang sama dengan mode `out` */
   const [withdrawOpen, setWithdrawOpen] = useState(false)
+  /** sheet ubah nama & target celengan (sesi 5) */
+  const [editOpen, setEditOpen] = useState(false)
   /** nudge telat boleh ditutup, dan TIDAK muncul lagi di sesi ini
    *  (prompt: "sekali saja, tidak mengulang") */
   const [lateDismissed, setLateDismissed] = useState(false)
@@ -184,6 +203,20 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
      Hook dipanggil SEBELUM cabang render di bawah: jumlah hook tidak boleh
      berubah antar render (aturan React), jadi ia tidak boleh ada di dalam `if`. */
   const celebration = useMilestoneCelebration(MILESTONE_TARGET_STATE, { auto: false })
+
+  /* DUA useMemo ini WAJIB di ATAS cabang `if (!fund)`: jumlah hook tidak boleh
+     berubah antar render. Sebelumnya keduanya berada SETELAH early return, jadi
+     reload halaman detail (render pertama `fund` null saat hidrasi, render
+     berikutnya ada) memicu "Rendered more hooks than during the previous
+     render" dan seluruh segmen /budget jatuh ke error boundary. */
+  const projection = useMemo(
+    () => (fund ? projectedCompletion(fund, history) : null),
+    [fund, history],
+  )
+  const late = useMemo<FundLateInfo>(
+    () => (fund ? fundLateInfo(fund, history) : NO_LATE_INFO),
+    [fund, history],
+  )
 
   if (!fund) {
     /* id ini masih ada di URL, tapi celengannya sudah dicabut user (tombstone).
@@ -244,8 +277,6 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
   const perMonth = monthlyNeeded(fund.target, fund.current, fund.deadline)
   const remaining = fundRemaining(fund)
   const monthsLeft = monthsUntil(fund.deadline)
-  const projection = useMemo(() => projectedCompletion(fund, history), [fund, history])
-  const late = useMemo(() => fundLateInfo(fund, history), [fund, history])
   /** PRD 2C.4 baris 857 — "dikit lagi" hanya kalau sisanya benar-benar tipis */
   const nearTarget = !reached && remaining > 0 && remaining <= FUND_NEAR_THRESHOLD
   const showLateNudge = late.late && !lateDismissed && !reached
@@ -273,7 +304,7 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
     /* Dua sebab penolakan dibedakan SEBELUM memanggil store: saldo dompet sumber
        tidak cukup (uang setoran benar-benar keluar dari dompet) vs celengannya
        sudah dihapus. Dulu keduanya jatuh ke kalimat "celengan sudah tidak ada". */
-    const walletName = walletSourceName(walletId)
+    const walletName = walletNameOfId(getMoneySnapshot(), walletId) || walletSourceName(walletId)
     const funds = walletFundsCheckById(getMoneySnapshot(), walletId, amount)
     if (funds.known && !funds.sufficient) {
       toast.error(FUND_CONTRIBUTE_INSUFFICIENT_COPY.title, {
@@ -282,11 +313,18 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
       return
     }
     const result = contributeToFund(fundId, amount, walletId)
-    /* celengannya keburu dihapus (store menolak) → katakan apa adanya, jangan
-       biarkan user merasa setorannya masuk padahal tidak ada yang ditulis */
+    /* celengannya keburu dihapus ATAU dompetnya yang sudah tidak ada → dua sebab,
+       dua kalimat (paket 104). Jangan biarkan user merasa setorannya masuk padahal
+       tidak ada yang ditulis. */
     if (!result) {
       setContributeOpen(false)
-      toast(FUND_DELETE_COPY.goneNote)
+      if (fundById(getFundsSnapshot(), fundId)) {
+        toast.error(FUND_CONTRIBUTE_WALLET_GONE_COPY.title, {
+          description: FUND_CONTRIBUTE_WALLET_GONE_COPY.body,
+        })
+      } else {
+        toast(FUND_DELETE_COPY.goneNote)
+      }
       return
     }
 
@@ -295,7 +333,7 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
 
     if (result.reachedNow) celebration.replay()
     toast.success(FUND_DETAIL_COPY.setToastTitle(maskNominal(amount, masked), result.fund.name), {
-      description: FUND_DETAIL_COPY.setToastHint(walletSourceName(walletId)),
+      description: FUND_DETAIL_COPY.setToastHint(walletName),
     })
   }
 
@@ -320,6 +358,25 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
     }
     toast.success(`Dana ${maskNominal(amount, masked)} kembali ke dompetmu`, {
       description: `${result.fund.name} sekarang ${maskNominal(result.fund.current, masked)}.`,
+    })
+  }
+
+  /**
+   * UBAH CELENGAN (sesi 5) — koreksi nama & target lewat `updateFund()`.
+   * `current`, tahap, dan riwayat setoran tidak disentuh: uang yang sudah keluar
+   * tetap tercatat, yang berubah hanya identitas & jarak targetnya.
+   */
+  function handleEditSave(patch: { name: string; target: number }) {
+    const updated = updateFund(fundId, patch)
+    setEditOpen(false)
+    if (!updated) {
+      toast('Celengan belum bisa diubah', {
+        description: 'Pastikan namanya terisi dan targetnya lebih dari nol.',
+      })
+      return
+    }
+    toast.success(FUND_EDIT_COPY.toastTitle, {
+      description: FUND_EDIT_COPY.toastBody(updated.name),
     })
   }
 
@@ -350,14 +407,28 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
                 {fund.name}
               </h1>
               {/* di header ukuran kompak: tanggal setoran terakhir saja */}
-              <p className="truncate text-[12px] text-forest/45">
+              <p className="truncate text-[12px] text-forest-muted">
                 {late.lastDateISO
                   ? FUND_HISTORY_COPY.latest(formatDeadline(late.lastDateISO))
                   : FUND_HISTORY_COPY.never}
               </p>
             </div>
           </div>
-          <GlobalPrivacyToggle className="hidden lg:flex" />
+          <div className="flex shrink-0 items-center gap-2">
+            {/* Ubah nama & target (sesi 5) — satu-satunya pintu mengoreksi
+                celengan tanpa melepas progres yang sudah terkumpul. */}
+            <button
+              type="button"
+              onClick={() => setEditOpen(true)}
+              aria-label={FUND_EDIT_COPY.editAria(fund.name)}
+              data-catetind-fund-edit={fund.name}
+              title={FUND_EDIT_COPY.editLabel}
+              className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-cream text-forest ring-1 ring-soil/12 transition-colors hover:bg-sage/70 active:scale-95"
+            >
+              <Pencil className="size-4" strokeWidth={2.4} aria-hidden />
+            </button>
+            <GlobalPrivacyToggle className="hidden lg:flex" />
+          </div>
         </header>
 
         {/* ── HERO PADAT — SATU blok horizontal berisi tanaman · persen · bar,
@@ -392,7 +463,7 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
                   <span className="font-display text-[38px] font-semibold leading-none tracking-tight tabular-nums text-forest">
                     {Math.round(percent)}
                   </span>
-                  <span className="font-display text-[19px] font-medium text-forest/40">%</span>
+                  <span className="font-display text-[19px] font-medium text-forest-muted">%</span>
                 </span>
                 <span
                   aria-label={FUND_DETAIL_COPY.priorityA11y(priority.label)}
@@ -429,7 +500,7 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
               target · deadline, semuanya terbaca tanpa perlu menggulir */}
           <dl className="relative z-10 mt-4 grid grid-cols-3 gap-2">
             <div className="min-w-0 rounded-2xl bg-cream/70 px-2.5 py-2 ring-1 ring-soil/8">
-              <dt className="text-[10px] font-medium uppercase tracking-[0.1em] text-forest/45">
+              <dt className="text-[10px] font-medium uppercase tracking-[0.1em] text-forest-muted">
                 {FUND_DETAIL_COPY.heroLabel}
               </dt>
               <dd className="mt-0.5 truncate font-display text-[16px] font-semibold tabular-nums text-forest">
@@ -437,18 +508,18 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
               </dd>
             </div>
             <div className="min-w-0 rounded-2xl bg-cream/70 px-2.5 py-2 ring-1 ring-soil/8">
-              <dt className="text-[10px] font-medium uppercase tracking-[0.1em] text-forest/45">
+              <dt className="text-[10px] font-medium uppercase tracking-[0.1em] text-forest-muted">
                 {FUND_DETAIL_COPY.targetLabel}
               </dt>
-              <dd className="mt-0.5 truncate text-[14px] font-semibold tabular-nums text-forest/70">
+              <dd className="mt-0.5 truncate text-[14px] font-semibold tabular-nums text-forest-soft">
                 {money(fund.target)}
               </dd>
             </div>
             <div className="min-w-0 rounded-2xl bg-cream/70 px-2.5 py-2 ring-1 ring-soil/8">
-              <dt className="text-[10px] font-medium uppercase tracking-[0.1em] text-forest/45">
+              <dt className="text-[10px] font-medium uppercase tracking-[0.1em] text-forest-muted">
                 {FUND_DETAIL_COPY.deadlineLabel}
               </dt>
-              <dd className="mt-0.5 flex items-center gap-1 truncate text-[13px] font-medium tabular-nums text-forest/70">
+              <dd className="mt-0.5 flex items-center gap-1 truncate text-[13px] font-medium tabular-nums text-forest-soft">
                 <CalendarClock className="size-3 shrink-0 text-forest" strokeWidth={2.4} aria-hidden />
                 {formatDeadline(fund.deadline)}
               </dd>
@@ -476,7 +547,7 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
                 transition={reduceMotion ? { duration: 0 } : { duration: 0.4, ease: EASE }}
                 className="relative z-10 mt-4 flex items-start gap-2 rounded-2xl bg-mint-soft/70 px-3.5 py-3 text-[13.5px] font-medium leading-relaxed text-forest ring-1 ring-forest/10"
               >
-                <Sprout className="mt-0.5 size-4 shrink-0" strokeWidth={2.4} aria-hidden />
+                <Puzzle className="mt-0.5 size-4 shrink-0" strokeWidth={2.4} aria-hidden />
                 {FUND_NEAR_COPY(money(remaining))}
               </motion.p>
             )}
@@ -495,13 +566,13 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
             >
               <div className="flex items-start gap-3">
                 <span className="flex size-9 shrink-0 items-center justify-center rounded-2xl bg-sage/70 text-[18px]">
-                  🌿
+                  🧩
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="font-display text-[14.5px] font-medium tracking-tight text-forest">
                     {FUND_LATE_COPY.title}
                   </p>
-                  <p className="mt-1 text-[13.5px] leading-relaxed text-forest/60">
+                  <p className="mt-1 text-[13.5px] leading-relaxed text-forest-muted">
                     {FUND_LATE_COPY.body(fund.name, late.weeks)}
                   </p>
                   <div className="mt-2.5 flex flex-wrap items-center gap-2">
@@ -515,7 +586,7 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
                     <button
                       type="button"
                       onClick={() => setLateDismissed(true)}
-                      className="rounded-full px-3 py-2 text-[13px] font-medium text-forest/45 transition-colors hover:bg-sage/60 hover:text-forest"
+                      className="rounded-full px-3 py-2 text-[13px] font-medium text-forest-muted transition-colors hover:bg-sage/60 hover:text-forest"
                     >
                       {FUND_LATE_COPY.dismiss}
                     </button>
@@ -535,12 +606,12 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
           className="mt-4 rounded-[1.5rem] bg-cream p-4 shadow-[0_18px_40px_-34px_rgba(0,0,0,0.55)] ring-1 ring-soil/10"
         >
           <div className="flex items-center justify-between gap-3">
-            <span className="inline-flex items-center gap-2 text-[12px] font-medium text-forest/45">
+            <span className="inline-flex items-center gap-2 text-[12px] font-medium text-forest-muted">
               <Target className="size-3.5" strokeWidth={2.4} aria-hidden />
               {FUND_DETAIL_COPY.planPerMonth}
             </span>
             {!reached && (
-              <span className="shrink-0 rounded-full bg-sage/60 px-2 py-0.5 text-[11px] font-medium tabular-nums text-forest/55">
+              <span className="shrink-0 rounded-full bg-sage/60 px-2 py-0.5 text-[11px] font-medium tabular-nums text-forest-muted">
                 {FUND_DETAIL_COPY.monthsLeftShort(monthsLeft)}
               </span>
             )}
@@ -553,7 +624,7 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
           {!reached && (
             <>
               <div className="mt-3 flex items-center justify-between gap-3 border-t border-soil/8 pt-3">
-                <span className="inline-flex items-center gap-2 text-[12px] font-medium text-forest/45">
+                <span className="inline-flex items-center gap-2 text-[12px] font-medium text-forest-muted">
                   <CalendarClock className="size-3.5" strokeWidth={2.4} aria-hidden />
                   {FUND_DETAIL_COPY.projectionTitle}
                 </span>
@@ -564,7 +635,7 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
                         'shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium',
                         projection?.beforeDeadline
                           ? 'bg-mint/35 text-forest'
-                          : 'bg-hud-amber/20 text-forest/70',
+                          : 'bg-hud-amber/20 text-forest-soft',
                       )}
                     >
                       {projectionChip}
@@ -579,7 +650,7 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
               </div>
 
               {projection && (
-                <p className="mt-2 text-[11px] leading-snug text-forest/35">
+                <p className="mt-2 text-[11px] leading-snug text-forest-muted">
                   {FUND_PROJECTION_COPY.assumption(
                     projection.sampleCount,
                     money(projection.avgMonthly),
@@ -645,6 +716,7 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
                     onClick={() => setContributeOpen(true)}
                     title={FUND_ACHIEVED_COPY.hint}
                     aria-label={FUND_DETAIL_COPY.setCta}
+                    data-catetind-fund-contribute={fund.name}
                     className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-[1rem] bg-cream px-3.5 text-[14.5px] font-medium text-forest ring-1 ring-soil/12 transition-colors hover:bg-sage/60 active:scale-[0.99]"
                   >
                     <PiggyBank className="size-4 text-forest" strokeWidth={2.4} aria-hidden />
@@ -656,6 +728,7 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
                   type="button"
                   onClick={() => setContributeOpen(true)}
                   title={FUND_DETAIL_COPY.setHint}
+                  data-catetind-fund-contribute={fund.name}
                   className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-[1rem] bg-gradient-to-b from-forest-soft to-forest text-[14.5px] font-medium text-cream shadow-[0_14px_28px_-14px_rgba(0,0,0,0.85)] transition-all hover:brightness-[1.08] active:scale-[0.99]"
                 >
                   <PiggyBank className="size-4" strokeWidth={2.4} aria-hidden />
@@ -669,7 +742,8 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
                 onClick={() => setDeleteOpen(true)}
                 title={FUND_CARD_ACTION_COPY.deleteHint}
                 aria-label={FUND_CARD_ACTION_COPY.deleteLabel}
-                className="flex size-11 shrink-0 items-center justify-center rounded-[1rem] text-plum/75 ring-1 ring-plum/20 transition-colors hover:bg-plum/12 hover:text-plum focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-plum/30 active:scale-95"
+                data-catetind-fund-delete={fund.name}
+                className="flex size-11 shrink-0 items-center justify-center rounded-[1rem] text-plum-deep ring-1 ring-plum/20 transition-colors hover:bg-plum/12 hover:text-plum focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-plum/30 active:scale-95"
               >
                 <Trash2 className="size-4" strokeWidth={2.4} aria-hidden />
               </button>
@@ -682,12 +756,13 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
               type="button"
               onClick={() => setWithdrawOpen(true)}
               disabled={fund.current <= 0}
+              data-catetind-fund-withdraw={fund.name}
               title={fund.current > 0 ? 'Tarik dana dari celengan' : 'Belum ada saldo untuk ditarik'}
               className={cn(
                 'mt-2 inline-flex h-10 w-full items-center justify-center gap-2 rounded-[1rem] text-[13.5px] font-medium transition-colors',
                 fund.current > 0
                   ? 'bg-cream text-forest ring-1 ring-soil/12 hover:bg-sage/60 active:scale-[0.99]'
-                  : 'cursor-not-allowed bg-ink/[0.04] text-forest/30',
+                  : 'cursor-not-allowed bg-ink/[0.04] text-forest-muted',
               )}
             >
               <ArrowDownToLine className="size-4" strokeWidth={2.4} aria-hidden />
@@ -718,6 +793,13 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
         masked={masked}
         mode="out"
       />
+      {/* sheet ubah nama & target (sesi 5) — progres tidak disentuh */}
+      <EditGoalSheet
+        fund={fund}
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+        onSave={handleEditSave}
+      />
       {/* perayaan "target tercapai" (inventaris #k) — dipasang di halaman ini,
           bukan di Home, karena momennya milik setoran tadi. Auto-dismiss ~2.5
           detik, bisa langsung ditutup, dan penanda seen-nya ditulis oleh
@@ -740,7 +822,6 @@ export function GoalDetailScreen({ fundId }: { fundId: number }) {
             overlayLabel={FUND_DELETE_COPY.overlay}
             title={FUND_DELETE_COPY.title}
             body={FUND_DELETE_COPY.body(fund.name)}
-            note={fundDeleteNote(fund, masked)}
             safety={FUND_DELETE_COPY.safety(UNDO_WINDOW_MS / 1000)}
             cancelLabel={FUND_DELETE_COPY.cancel}
             confirmLabel={FUND_DELETE_COPY.confirm}
@@ -834,6 +915,11 @@ function ContributionRow({
   index: number
 }) {
   const source = walletSourceById(item.walletId)
+  /* Dompet buatan user (id sembarang) tidak ada di tabel sumber statis. Tanpa
+     nama dari ledger hidup, riwayat setorannya berbunyi "ke Dompet" — netral tapi
+     tidak informatif. `''` = memang tidak ketemu (mis. dompet sudah dihapus). */
+  const liveName = source ? '' : walletNameOfId(getMoneySnapshot(), item.walletId)
+  const sourceName = source?.name ?? liveName
 
   return (
     <motion.li
@@ -846,18 +932,18 @@ function ContributionRow({
         aria-hidden
         className={cn(
           'flex size-9 shrink-0 items-center justify-center rounded-2xl text-[13px] font-medium ring-1 ring-inset',
-          source?.tile ?? 'bg-sage text-forest/60 ring-soil/10',
+          source?.tile ?? 'bg-sage text-forest-muted ring-soil/10',
         )}
       >
-        {source?.name.charAt(0) ?? '·'}
+        {sourceName.charAt(0) || '·'}
       </span>
       <div className="min-w-0 flex-1">
         <p className="truncate text-[14px] font-medium tabular-nums text-forest">
           {formatDeadline(item.date)}
         </p>
-        <p className="flex items-center gap-1.5 text-[12px] text-forest/45">
+        <p className="flex items-center gap-1.5 text-[12px] text-forest-muted">
           <span aria-hidden className={cn('size-1.5 rounded-full', source?.dot ?? 'bg-ink/20')} />
-          {FUND_HISTORY_COPY.walletLead} {source?.name ?? FALLBACK_WALLET_NAME}
+          {FUND_HISTORY_COPY.walletLead} {sourceName || FALLBACK_WALLET_NAME}
         </p>
       </div>
       <p className="shrink-0 font-display text-[14.5px] font-semibold tabular-nums text-forest">
@@ -878,18 +964,12 @@ function ContributionRow({
  */
 function EmptyContributions() {
   return (
-    <div className="mt-3 flex items-center gap-3 rounded-2xl border border-dashed border-forest/15 bg-cream/50 px-4 py-4">
-      <span
-        className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-sage/50 text-forest/55"
-        aria-hidden
-      >
-        <PiggyBank className="size-5" strokeWidth={1.9} />
-      </span>
+    <div data-catetind-empty className="mt-3 flex items-center gap-3 rounded-2xl border border-dashed border-forest/15 bg-cream/50 px-4 py-4">
       <span className="min-w-0">
         <span className="block text-[13.5px] font-medium leading-snug text-forest">
           {FUND_HISTORY_COPY.emptyTitle}
         </span>
-        <span className="mt-0.5 block text-[12px] leading-snug text-forest/45">
+        <span className="mt-0.5 block text-[12px] leading-snug text-forest-muted">
           {FUND_HISTORY_COPY.emptyCompact}
         </span>
       </span>
@@ -925,7 +1005,7 @@ function FundUnavailable({ ready, removed = false }: { ready: boolean; removed?:
           aria-hidden
           className="flex size-14 items-center justify-center rounded-2xl border-2 border-dashed border-forest/20 bg-cream/60"
         >
-          <PiggyBank className="size-6 text-forest/45" strokeWidth={1.8} />
+          <PiggyBank className="size-6 text-forest-muted" strokeWidth={1.8} />
         </span>
 
         <h1 className="mt-4 font-display text-[20px] font-semibold tracking-tight text-forest">
@@ -936,7 +1016,7 @@ function FundUnavailable({ ready, removed = false }: { ready: boolean; removed?:
               : FUND_DETAIL_COPY.notFoundTitle}
         </h1>
         {ready && (
-          <p className="mt-2 max-w-sm text-[13.5px] leading-relaxed text-forest/55">
+          <p className="mt-2 max-w-sm text-[13.5px] leading-relaxed text-forest-muted">
             {removed ? FUND_DELETE_COPY.removedBody : FUND_DETAIL_COPY.notFoundBody}
           </p>
         )}

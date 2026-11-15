@@ -63,7 +63,7 @@ export function GroupAccordion({
                 <span className="block truncate text-[14px] font-medium text-forest">
                   {group.name}
                 </span>
-                <span className="mt-0.5 block text-[12px] text-forest/45">
+                <span className="mt-0.5 block text-[12px] text-forest-muted">
                   {CATEGORY_PICKER_COPY.groupCount(group.items.length)}
                 </span>
               </span>
@@ -71,7 +71,7 @@ export function GroupAccordion({
                 aria-hidden
                 animate={{ rotate: open ? 90 : 0 }}
                 transition={{ duration: reduce ? 0 : 0.18 }}
-                className="shrink-0 text-forest/40"
+                className="shrink-0 text-forest-muted"
               >
                 <ChevronRight className="size-4" />
               </motion.span>

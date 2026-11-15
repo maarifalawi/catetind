@@ -72,13 +72,13 @@ function BannerShell({
         {icon}
         <div className="min-w-0 flex-1">
           <p className="text-[14px] leading-snug font-medium break-words text-forest">{title}</p>
-          {body && <p className="mt-0.5 text-xs leading-relaxed text-forest/55">{body}</p>}
+          {body && <p className="mt-0.5 text-xs leading-relaxed text-forest-muted">{body}</p>}
         </div>
         <button
           type="button"
           aria-label={dismissLabel}
           onClick={onDismiss}
-          className="flex size-7 shrink-0 items-center justify-center rounded-full text-forest/35 transition-colors hover:bg-soil/8 hover:text-forest"
+          className="flex size-7 shrink-0 items-center justify-center rounded-full text-forest-muted transition-colors hover:bg-soil/8 hover:text-forest"
         >
           <X className="size-3.5" strokeWidth={2.4} />
         </button>
@@ -248,7 +248,7 @@ export const HomeBanners = memo(function HomeBanners() {
       )}
 
       {/* modal Top Up AI (prompt 24) — satu komponen untuk Home & Billing, jadi
-          harga, token, dan aturan reset tidak punya salinan kedua di repo ini */}
+          harga, token, dan aturan kuota tidak punya salinan kedua di repo ini */}
       <TopUpModal open={topUpOpen} onClose={() => setTopUpOpen(false)} />
     </>
   )

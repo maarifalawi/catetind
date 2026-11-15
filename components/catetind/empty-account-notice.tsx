@@ -41,10 +41,10 @@ export function EmptyAccountNotice() {
             <Sprout className="size-4 shrink-0 text-forest" strokeWidth={2.2} aria-hidden />
             {EMPTY_ACCOUNT_COPY.title}
           </p>
-          <p className="mt-1.5 text-[14px] leading-relaxed text-forest/60">
+          <p className="mt-1.5 text-[14px] leading-relaxed text-forest-muted">
             {EMPTY_ACCOUNT_COPY.body}
           </p>
-          <p className="mt-1.5 text-[12.5px] leading-relaxed text-forest/45">
+          <p className="mt-1.5 text-[12.5px] leading-relaxed text-forest-muted">
             {EMPTY_ACCOUNT_COPY.hint}
           </p>
         </div>

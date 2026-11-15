@@ -30,12 +30,12 @@ export function MetaChip({
         'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-medium ring-1',
         isScope
           ? 'bg-sage/70 text-forest ring-forest/10'
-          : 'bg-cream text-forest/60 ring-soil/12',
+          : 'bg-cream text-forest-muted ring-soil/12',
         className,
       )}
     >
       <Icon
-        className={cn('size-3.5', isScope ? 'text-forest/70' : 'text-forest/55')}
+        className={cn('size-3.5', isScope ? 'text-forest-soft' : 'text-forest-muted')}
         strokeWidth={2.2}
       />
       {children}

@@ -48,7 +48,6 @@ export function SweepSheet({
       open={open}
       onClose={onClose}
       title="Sapu Bersih Sisa Budget"
-      description="Sisa budget bulan ini dipindah jadi tabungan impian."
       footer={
         <SheetSubmit
           disabled={!target || total <= 0}
@@ -88,7 +87,7 @@ export function SweepSheet({
 
       {/* total yang akan disapu */}
       <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl bg-sage/60 px-4 py-3">
-        <span className="text-[13.5px] font-medium text-forest/60">Total keseluruhan</span>
+        <span className="text-[13.5px] font-medium text-forest-muted">Total keseluruhan</span>
         <span className="text-[16px] font-semibold text-forest tabular-nums">
           {maskNominal(total, masked)}
         </span>
@@ -110,9 +109,9 @@ export function SweepSheet({
               </option>
             ))}
           </select>
-          <ChevronDown className="size-4 shrink-0 text-forest/30" strokeWidth={2.4} />
+          <ChevronDown className="size-4 shrink-0 text-forest-muted" strokeWidth={2.4} />
         </span>
-        <p className="mt-2 text-[12px] leading-relaxed text-forest/40">
+        <p className="mt-2 text-[12px] leading-relaxed text-forest-muted">
           Sisa tiap kategori dianggap terpakai, jadi limitnya mulai dari nol lagi bulan depan.
         </p>
       </div>

@@ -1,4 +1,3 @@
-import { monthKeyOf } from '@/lib/ai-quota'
 import { adminSupabase } from '@/lib/supabase/admin'
 import { reconcileOrder, type ReconcileOrderOutcome } from '@/lib/subscription/reconcile'
 import {
@@ -158,12 +157,13 @@ export async function applyAdminAction(
   if (action.action === 'ai-reset') {
     const client = adminSupabase()
     if (!client) return fail('Kunci peran server belum dikonfigurasi.')
-    const monthKey = monthKeyOf(now)
+    /* SEMUA bulan, bukan bulan berjalan: sejak kuota dasar tidak di-refill,
+       pemakaian dibaca KUMULATIF — mereset satu bulan saja tidak mengembalikan
+       tangki user dan tombol ini akan terasa "tidak bekerja". */
     const { data, error } = await client
       .from('ai_usage')
       .update({ calls_used: 0, updated_at: now.toISOString() })
       .eq('user_id', action.userId)
-      .eq('month_key', monthKey)
       .select('user_id')
     if (error) return fail(`Reset pemakaian AI gagal: ${error.message}`)
     const rows = Array.isArray(data) ? data.length : 0
@@ -171,9 +171,9 @@ export async function applyAdminAction(
       ok: true,
       message:
         rows > 0
-          ? `Pemakaian AI bulan ${monthKey} direset (${rows} baris).`
-          : `Belum ada pemakaian AI tercatat di bulan ${monthKey}.`,
-      changes: { month_key: monthKey, rows },
+          ? `Pemakaian AI akun ini direset (${rows} baris, semua bulan).`
+          : 'Belum ada pemakaian AI tercatat untuk akun ini.',
+      changes: { rows },
     }
   }
 

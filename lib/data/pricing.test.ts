@@ -26,7 +26,7 @@ import {
 
 /* ── HARGA & KEMAMPUAN (akses selamanya) ─────────────────────────────────────
    File ini mengunci keputusan produk yang paling mahal kalau salah:
-     · SATU periode yang dijual: lifetime 1/129k/299k. Harga monthly yang
+     · SATU periode yang dijual: lifetime 99k/129k/299k. Harga monthly yang
        tersisa hanya untuk membaca pembelian LAMA (bukan produk aktif);
      · `asBillingPeriod('monthly')` = null → server menolak 422;
      · lifetime dari lifetime lebih rendah = SELISIH; dari paket lama = penuh;
@@ -37,7 +37,8 @@ const [CATET_AJA, WARAS, SULTAN] = PLANS
 describe('katalog paket', () => {
   it('3 tier dengan harga lifetime kanon', () => {
     expect(PLANS.map((plan) => plan.id)).toEqual(['catet-aja', 'waras', 'sultan'])
-    expect(CATET_AJA.lifetime).toBe(109_000)
+    /* Harga rilis 15 Nov 2026: Catet Aja Rp99.000 & Waras Rp129.000 */
+    expect(CATET_AJA.lifetime).toBe(99_000)
     expect(WARAS.lifetime).toBe(129_000)
     expect(SULTAN.lifetime).toBe(299_000)
     /* harga WARISAN: hanya untuk menampilkan pembelian lama, bukan dijual */
@@ -86,7 +87,7 @@ describe('priceFor() — harga per periode, dari PLANS', () => {
   })
 
   it('lifetime pembelian pertama = harga penuh', () => {
-    expect(priceFor(CATET_AJA, { period: 'lifetime' })).toBe(109_000)
+    expect(priceFor(CATET_AJA, { period: 'lifetime' })).toBe(99_000)
     expect(priceFor(WARAS, { period: 'lifetime' })).toBe(129_000)
     expect(priceFor(SULTAN, { period: 'lifetime' })).toBe(299_000)
   })
@@ -100,13 +101,13 @@ describe('priceFor() — harga per periode, dari PLANS', () => {
   it('lifetime dari lifetime lebih rendah = selisih', () => {
     expect(
       priceFor(WARAS, { period: 'lifetime', ownedPlanId: 'catet-aja', ownedIsLifetime: true }),
-    ).toBe(20_000)
+    ).toBe(30_000)
     expect(
       priceFor(SULTAN, { period: 'lifetime', ownedPlanId: 'waras', ownedIsLifetime: true }),
     ).toBe(170_000)
     expect(
       priceFor(SULTAN, { period: 'lifetime', ownedPlanId: 'catet-aja', ownedIsLifetime: true }),
-    ).toBe(190_000)
+    ).toBe(200_000)
   })
 
   it('lifetime dari lifetime sama/lebih tinggi → 0', () => {
@@ -119,10 +120,10 @@ describe('priceFor() — harga per periode, dari PLANS', () => {
   })
 
   it('upgradeDiff() = priceFor() lifetime target dari paket asal lifetime', () => {
-    expect(upgradeDiff('catet-aja', 'waras')).toBe(20_000)
+    expect(upgradeDiff('catet-aja', 'waras')).toBe(30_000)
     expect(upgradeDiff('waras', 'sultan')).toBe(170_000)
-    expect(upgradeDiff('catet-aja', 'sultan')).toBe(190_000)
-    expect(upgradeDiff(null, 'catet-aja')).toBe(109_000)
+    expect(upgradeDiff('catet-aja', 'sultan')).toBe(200_000)
+    expect(upgradeDiff(null, 'catet-aja')).toBe(99_000)
     expect(upgradeDiff('sultan', 'waras')).toBe(0)
   })
 
@@ -135,14 +136,17 @@ describe('priceFor() — harga per periode, dari PLANS', () => {
 })
 
 describe('isValidOfferAmount() — nominal kiriman klien tidak dipercaya', () => {
+  /* Diskon teman diuji di Sultan: 10% dari Rp299.000 = Rp269.100, jadi nominal
+     diskon benar-benar BERBEDA dari harga penuh — angka yang sama dengan tier
+     mana pun akan membuat pembuktian "kode wajib" jadi kabur. */
   it('harga lifetime diterima; versi diskon hanya sah bila kode terverifikasi', () => {
-    expect(isValidOfferAmount(WARAS, 129_000, { period: 'lifetime' })).toBe(true)
+    expect(isValidOfferAmount(SULTAN, 299_000, { period: 'lifetime' })).toBe(true)
     /* nominal 90% TANPA bukti kode = ditolak */
     expect(
-      isValidOfferAmount(WARAS, applyReferralDiscount(129_000), { period: 'lifetime' }),
+      isValidOfferAmount(SULTAN, applyReferralDiscount(299_000), { period: 'lifetime' }),
     ).toBe(false)
     expect(
-      isValidOfferAmount(WARAS, applyReferralDiscount(129_000), { period: 'lifetime' }, {
+      isValidOfferAmount(SULTAN, applyReferralDiscount(299_000), { period: 'lifetime' }, {
         referral: true,
       }),
     ).toBe(true)
@@ -157,14 +161,14 @@ describe('isValidOfferAmount() — nominal kiriman klien tidak dipercaya', () =>
   it('harga lifetime penuh diterima; selisih lifetime hanya sah dari lifetime', () => {
     expect(isValidOfferAmount(WARAS, 129_000, { period: 'lifetime' })).toBe(true)
     expect(
-      isValidOfferAmount(WARAS, 20_000, {
+      isValidOfferAmount(WARAS, 30_000, {
         period: 'lifetime',
         ownedPlanId: 'catet-aja',
         ownedIsLifetime: true,
       }),
     ).toBe(true)
     expect(
-      isValidOfferAmount(WARAS, 20_000, {
+      isValidOfferAmount(WARAS, 30_000, {
         period: 'lifetime',
         ownedPlanId: 'catet-aja',
         ownedIsLifetime: false,
@@ -176,9 +180,13 @@ describe('isValidOfferAmount() — nominal kiriman klien tidak dipercaya', () =>
     expect(isValidOfferAmount(WARAS, 1_000, { period: 'lifetime' })).toBe(false)
   })
 
-  it('Paket Catet Aja Rp109.000 adalah nominal kanon', () => {
-    expect(isValidOfferAmount(CATET_AJA, 109_000, { period: 'lifetime' })).toBe(true)
+  it('harga rilis tetap nominal sah: Catet Aja Rp99.000, Waras Rp129.000', () => {
+    expect(isValidOfferAmount(CATET_AJA, 99_000, { period: 'lifetime' })).toBe(true)
+    expect(isValidOfferAmount(WARAS, 129_000, { period: 'lifetime' })).toBe(true)
+    /* harga lama (109k) & nominal uji (Rp1/Rp2) sudah TIDAK sah */
+    expect(isValidOfferAmount(CATET_AJA, 109_000, { period: 'lifetime' })).toBe(false)
     expect(isValidOfferAmount(CATET_AJA, 1, { period: 'lifetime' })).toBe(false)
+    expect(isValidOfferAmount(WARAS, 2, { period: 'lifetime' })).toBe(false)
   })
 })
 

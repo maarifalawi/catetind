@@ -3,55 +3,60 @@ import {
   AI_BASE_TOKENS_TOTAL,
   AI_GAUGE_BANNER_COPY,
   AI_SEED_USAGE_CALLS,
-  aiQuotaResetInfo,
   aiQuotaSnapshot,
   complementaryPct,
-  daysUntil,
-  indonesianDateLabel,
   monthKeyOf,
   planQuota,
 } from './ai-quota'
+import { PRIVACY_DOC } from './legal/privacy'
+import { TERMS_DOC } from './legal/terms'
 
-/* ── Test tanggal reset kuota AI (audit fintech Stage 2 #6 → paket 86) ────────
-   Sebelumnya label tanggal ('1 Oktober 2026') dan sisa hari (4) adalah DUA
-   konstanta MOCK terpisah yang dipatok ke string tetap — di produksi keduanya
-   tidak pernah bergerak. Sekarang keduanya turunan dari SATU fungsi murni
-   `aiQuotaResetInfo(now)`; test ini mengunci kontraknya dengan tanggal yang
-   disuntik sendiri (tanpa menyentuh jam mesin). */
+/* ── KUOTA DASAR TIDAK DI-REFILL (revisi produk) ───────────────────────────────
+   Dulu UI menjanjikan "di-reset tanggal 1 tiap bulan" dan pembacaan server hanya
+   mengambil baris BULAN BERJALAN — artinya sisa 50% bulan ini kembali 100% bulan
+   depan. Pemilik produk memutuskan: kuota dasar hanya berlaku SEKALI di bulan
+   pertama paket; setelah habis, user membeli token AI tambahan.
 
-describe('tanggal reset kuota AI · tanggal NYATA (paket 86)', () => {
-  it('label tanggal & sisa hari diturunkan dari satu sumber (27 Sep → 1 Okt)', () => {
-    const info = aiQuotaResetInfo(new Date(2026, 8, 27))
-    expect(info.iso).toBe('2026-10-01')
-    expect(info.label).toBe(indonesianDateLabel(info.iso))
-    expect(info.label).toBe('1 Oktober 2026')
-    expect(info.daysUntil).toBe(4)
-    expect(info.monthKey).toBe('2026-09')
-  })
+   Test ini mengunci dua hal yang bisa dijaga di lapis murni:
+     1. kunci bulan untuk baris `ai_usage` tetap ditulis (jejak audit), dan
+     2. aturan "sekali pakai, tanpa refill, token tambahan tidak hangus" tetap
+        TERTULIS — sekarang di dokumen legal, bukan lagi di copy UI.
 
-  it('akhir Desember melewati batas tahun dengan benar', () => {
-    const info = aiQuotaResetInfo(new Date(2026, 11, 31))
-    expect(info.iso).toBe('2027-01-01')
-    expect(info.label).toBe('1 Januari 2027')
-    expect(info.daysUntil).toBe(1)
-    expect(info.monthKey).toBe('2026-12')
-  })
+   Sejak revisi pemilik repo, kalimat aturan itu DICABUT dari layar (modal Top Up
+   dan kartu Bahan Bakar AI) supaya tidak terbaca seperti dokumen jual. Karena
+   itu penjaganya dipindah ke sini: yang diperiksa adalah `/terms` §7 dan
+   `/privacy` §6b — dua halaman yang memang memuat janji tersebut. Kalau ada yang
+   menghapusnya dari sana, test ini gagal, jadi aturan bisnisnya tidak bisa
+   hilang diam-diam hanya karena UI-nya dirapikan. */
 
+/** semua teks yang tampil di satu dokumen legal (judul, paragraf, butir) */
+function legalText(doc: typeof TERMS_DOC): string {
+  const parts: string[] = [doc.title, ...doc.intro]
+  for (const section of doc.sections) {
+    parts.push(section.title, ...(section.paragraphs ?? []), ...(section.bullets ?? []))
+  }
+  return parts.join(' ').toLowerCase()
+}
+
+describe('kuota dasar AI · tanpa refill otomatis', () => {
   it('monthKeyOf menulis bulan dua digit (kunci baris ai_usage)', () => {
     expect(monthKeyOf(new Date(2026, 0, 5))).toBe('2026-01')
     expect(monthKeyOf(new Date(2026, 9, 1))).toBe('2026-10')
   })
 
-  it('daysUntil membulatkan hari & menolak nilai negatif', () => {
-    expect(daysUntil('2026-09-27', '2026-10-01')).toBe(4)
-    expect(daysUntil('2026-09-30', '2026-10-01')).toBe(1)
-    /* tanggal reset yang sudah lewat tidak boleh tampil sebagai sisa negatif */
-    expect(daysUntil('2026-10-02', '2026-10-01')).toBe(0)
-  })
+  it('/terms & /privacy tetap menyebut sekali pakai & token tambahan, bukan reset', () => {
+    const terms = legalText(TERMS_DOC)
+    const privacy = legalText(PRIVACY_DOC)
 
-  it('indonesianDateLabel menulis bulan Indonesia tanpa locale mesin', () => {
-    expect(indonesianDateLabel('2026-01-05')).toBe('5 Januari 2026')
-    expect(indonesianDateLabel('2026-12-31')).toBe('31 Desember 2026')
+    /* aturan pokoknya ada di KEDUA dokumen */
+    expect(terms).toContain('tidak diisi ulang otomatis')
+    expect(terms).toContain('tidak hangus')
+    expect(privacy).toContain('tidak diisi ulang otomatis')
+    expect(privacy).toContain('tidak hangus')
+
+    /* dan tidak satu pun menjanjikan tangki kembali penuh tiap tanggal 1 */
+    expect(terms).not.toContain('di-reset tanggal 1')
+    expect(privacy).not.toContain('di-reset tanggal 1')
   })
 })
 

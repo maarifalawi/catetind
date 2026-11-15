@@ -38,7 +38,7 @@ export function ManualTutorial({
         </span>
         <div className="min-w-0">
           <h2 className="text-sm font-medium text-forest">{tutorialCardTitle(tutorial.label)}</h2>
-          <p className="mt-0.5 text-xs leading-relaxed text-forest/50">{tutorial.note}</p>
+          <p className="mt-0.5 text-xs leading-relaxed text-forest-muted">{tutorial.note}</p>
         </div>
       </header>
 
@@ -52,7 +52,7 @@ export function ManualTutorial({
               <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-forest text-xs font-medium text-mint">
                 {index + 1}
               </span>
-              <p className="pt-1 text-sm leading-relaxed text-forest/75">{step.text}</p>
+              <p className="pt-1 text-sm leading-relaxed text-forest-soft">{step.text}</p>
             </div>
 
             {/* diagram hanya muncul kalau langkahnya memang punya visual jelas */}

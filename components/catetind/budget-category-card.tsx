@@ -62,7 +62,7 @@ export function BudgetCategoryCard({
           <p className="truncate text-[15px] font-semibold leading-tight tracking-tight text-forest">
             {budget.category}
           </p>
-          <p className="mt-1 truncate text-[12.5px] font-medium tabular-nums text-forest/45">
+          <p className="mt-1 truncate text-[12.5px] font-medium tabular-nums text-forest-muted">
             {ratioLabel(budget.spent, budget.limit, masked)}
           </p>
           {/* Baris ini hanya muncul saat kategori lewat limit: satu tombol
@@ -70,7 +70,7 @@ export function BudgetCategoryCard({
               limit / Lewat limit" tidak lagi dicetak di kartu — statusnya
               sudah terbaca dari busur cincin (warna + tick pacing). */}
           {over && (
-            <div className="mt-1.5 flex items-center gap-1.5 text-[11px] font-medium text-forest/40">
+            <div className="mt-1.5 flex items-center gap-1.5 text-[11px] font-medium text-forest-muted">
               <span
                 aria-hidden
                 className="size-1.5 shrink-0 rounded-full"
@@ -108,7 +108,7 @@ export function BudgetCategoryCard({
             onClick={() => onDelete(budget)}
             aria-label={BUDGET_CARD_ACTION_COPY.delete(budget.category)}
             title={BUDGET_CARD_ACTION_COPY.delete(budget.category)}
-            className="flex size-7 shrink-0 items-center justify-center rounded-lg text-forest/25 transition-all hover:bg-plum/10 hover:text-plum focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25 active:scale-95 lg:opacity-0 lg:group-hover/row:opacity-100 lg:focus-visible:opacity-100"
+            className="flex size-7 shrink-0 items-center justify-center rounded-lg text-forest-muted transition-all hover:bg-plum/10 hover:text-plum focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25 active:scale-95 lg:opacity-0 lg:group-hover/row:opacity-100 lg:focus-visible:opacity-100"
           >
             <Trash2 className="size-3.5" strokeWidth={2.4} aria-hidden />
           </button>

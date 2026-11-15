@@ -9,7 +9,7 @@ import { applyAdminAction } from '@/lib/admin/server-actions'
      set-plan      → beri/ubah paket (30 hari atau selamanya)
      extend-plan   → tambah masa aktif (mis. 7 / 30 hari)
      ai-bonus      → tambah bonus token AI
-     ai-reset      → nolkan pemakaian AI bulan berjalan
+     ai-reset      → nolkan pemakaian AI akumulatif akun (semua bulan)
      repair-plan   → sinkronkan hak akses dari pembayaran lunas (tombol perbaikan)
 
    Penjagaan: sesi diverifikasi server + email harus ada di daftar admin. Badan

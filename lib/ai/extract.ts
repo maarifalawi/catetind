@@ -59,6 +59,74 @@ function isIsoDate(value: unknown): value is string {
   return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value.trim())
 }
 
+/* ── TANGGAL: HANYA DIPERCAYA KALAU MASUK AKAL (dan disebut user) ─────────────
+   Temuan pemilik produk: mengetik "Warteg 20k, catet" di AI Coach menghasilkan
+   catatan bertanggal 29 Juni 2026 — tanggal yang TIDAK pernah disebut siapa pun
+   dan tidak ada di HP user. Sumbernya model: prompt meminta field `date`, jadi
+   model "mengarang" tanggal ISO supaya JSON-nya lengkap, dan
+   `normalizeExtraction` dulu menerimanya apa adanya (`isIsoDate`).
+
+   Akibatnya lebih parah dari sekadar label salah: catatan itu masuk Riwayat
+   tetapi tidak pernah muncul di Dashboard (kartu "Transaksi Terakhir" hanya
+   menampilkan jendela beberapa hari), sehingga user melihat dua cerita berbeda
+   untuk uang yang sama.
+
+   Aturan sekarang:
+     · tanggal harus ISO yang benar-benar ada di kalender (2026-02-31 ditolak);
+     · tidak boleh di MASA DEPAN (transaksi belum terjadi);
+     · untuk teks yang DIKETIK/DIUCAPKAN, tanggal model hanya dipakai kalau
+       user memang menyebut tanggal ("kemarin", "3 Okt", "03/10", …) — kalau
+       tidak, hari inilah jawabannya. Untuk struk, tanggal memang tercetak di
+       kertas, jadi yang dipakai hanya batas masuk akal (≤ 180 hari ke belakang). */
+const MONTH_WORDS =
+  /\b(januari|februari|maret|april|mei|juni|juli|agustus|september|oktober|november|desember|jan|feb|mar|apr|jun|jul|agu|ags|sep|okt|nov|des)\b/i
+const RELATIVE_DAY_WORDS =
+  /\b(hari ini|tadi|kemarin|kemaren|kemarinnya|lusa|minggu lalu|minggu kemarin|pekan lalu|bulan lalu|awal bulan|akhir bulan|tanggal)\b/i
+/** tanggal numerik gaya Indonesia: 03/10, 3-10, 03.10 */
+const NUMERIC_DATE = /\b\d{1,2}[/.-]\d{1,2}(?:[/.-]\d{2,4})?\b/
+
+/** true = teks user benar-benar menyebut tanggal (jadi tanggal model boleh dipakai) */
+export function textMentionsDate(text: string): boolean {
+  if (!text) return false
+  return (
+    /\d{4}-\d{2}-\d{2}/.test(text) || MONTH_WORDS.test(text) || RELATIVE_DAY_WORDS.test(text) || NUMERIC_DATE.test(text)
+  )
+}
+
+/** selisih hari (tanggal ISO) — positif = `later` lebih baru */
+function daysBetween(earlier: string, later: string): number {
+  const a = Date.parse(`${earlier}T00:00:00Z`)
+  const b = Date.parse(`${later}T00:00:00Z`)
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return Number.NaN
+  return Math.round((b - a) / 86_400_000)
+}
+
+/**
+ * Tanggal usulan model yang layak dipercaya, atau `''` (pemanggil memakai `today`).
+ * `maxDaysBack` = seberapa tua tanggal itu masih masuk akal untuk sumbernya.
+ */
+function trustedDate(value: string, today: string, maxDaysBack: number): string {
+  if (!isIsoDate(value)) return ''
+  const candidate = value.trim()
+  const parsed = new Date(`${candidate}T00:00:00`)
+  if (Number.isNaN(parsed.getTime())) return ''
+  /* tolak tanggal mustahil (2026-02-31 → 3 Maret) */
+  if (/^\d{4}-\d{2}-\d{2}$/.test(today)) {
+    const year = parsed.getFullYear()
+    const month = `${parsed.getMonth() + 1}`.padStart(2, '0')
+    const day = `${parsed.getDate()}`.padStart(2, '0')
+    if (`${year}-${month}-${day}` !== candidate) return ''
+  }
+  const age = daysBetween(candidate, today)
+  if (!Number.isFinite(age)) return ''
+  /* `age < 0` = tanggal di masa depan; `age > maxDaysBack` = terlalu tua */
+  if (age < 0 || age > maxDaysBack) return ''
+  return candidate
+}
+
+/** batas umur tanggal per sumber: struk boleh lebih tua daripada ucapan */
+const MAX_DAYS_BACK = { receipt: 180, chat: 31, voice: 31 } as const
+
 /**
  * Nominal dari model → integer rupiah (paket 101).
  *
@@ -133,6 +201,12 @@ export function normalizeExtraction(
   source: ExtractedTransaction['source'],
   raw: RawExtraction,
   today: string = localISODate(),
+  /**
+   * teks/ucapan ASLI user (opsional, tapi sangat dianjurkan untuk chat & voice).
+   * Dipakai hanya untuk memastikan tanggal yang disebut model memang ada di
+   * kalimat user — tanpa itu, tanggal karangan model dipakai apa adanya.
+   */
+  text = '',
 ): ExtractedTransaction {
   const type = KNOWN_TYPES.includes(raw.type as TransactionType)
     ? (raw.type as TransactionType)
@@ -145,7 +219,11 @@ export function normalizeExtraction(
   const wallet =
     matchCanonical(TRANSACTION_WALLET_OPTIONS, raw.wallet) || TRANSACTION_FALLBACK_WALLET
 
-  const date = isIsoDate(raw.date) ? raw.date.trim() : today
+  /* Tanggal: hanya dipakai kalau masuk akal — dan untuk teks yang diketik/
+     diucapkan, hanya kalau user menyebutnya sendiri (lihat `trustedDate`). */
+  const modelDate = isIsoDate(raw.date) ? trustedDate(String(raw.date), today, MAX_DAYS_BACK[source]) : ''
+  const date =
+    modelDate && (source === 'receipt' || textMentionsDate(text)) ? modelDate : today
   const name = typeof raw.name === 'string' ? raw.name.trim().slice(0, 80) : ''
   const confidence = clampConfidence(Number(raw.confidence), amount)
 

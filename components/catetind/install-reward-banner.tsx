@@ -1,19 +1,19 @@
-import { Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 /**
- * InstallRewardBanner — "bribe" terakhir di halaman /install.
+ * InstallRewardBanner — spanduk ajakan pasang CatetInd di layar utama HP.
  *
- * Bonus sengaja dikunci di balik pembukaan app dari Homescreen (standalone),
- * karena itulah aksi yang paling kuat membuat kebiasaan pakai PWA terbentuk.
+ * Nama komponen dibiarkan apa adanya karena sudah dipakai halaman /install,
+ * tapi isinya SUDAH BUKAN bonus. Dulu blok ini menjanjikan "+100 Nyawa AI" &
+ * "Skin Papan Emas" yang otomatis masuk setelah app dibuka dari Homescreen —
+ * janji yang tidak pernah bisa ditepati karena repo ini tidak punya backend
+ * reward. Sekarang copy-nya jujur: satu-satunya "hadiah" memasang app di layar
+ * utama adalah jalan pintas satu tap ke layar catat pengeluaran. Tidak ada
+ * klaim bonus yang dikirim ke mana pun.
  */
 export function InstallRewardBanner({ className }: { className?: string }) {
   return (
     <section className={cn('mt-6', className)}>
-      {/* Bonus di-grant server saat app pertama dibuka dalam mode standalone
-          (deteksi `display-mode: standalone` lalu klaim ke API reward). Repo
-          design/demo ini belum punya backend akun, jadi banner ini mengiklankan
-          bonusnya saja — tidak ada klaim palsu yang dikirim ke mana pun. */}
       <div className="relative overflow-hidden rounded-3xl bg-forest p-5 text-cream ring-1 ring-forest/20 sm:p-6">
         <div
           aria-hidden
@@ -22,28 +22,38 @@ export function InstallRewardBanner({ className }: { className?: string }) {
 
         <div className="relative">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-mint/15 px-2.5 py-1 text-[12px] font-medium tracking-[0.18em] text-mint uppercase">
-            <Sparkles className="size-3" strokeWidth={2.4} />
-            Bonus Eksklusif
+            Dari Bestie Kamu
           </span>
 
           <h2 className="mt-3 text-lg leading-snug font-medium sm:text-xl">
-            🎁 Bonus Eksklusif! Install CatetInd dan buka app dari Homescreen untuk langsung
-            dapat:
+            Pasang CatetInd di layar utama HP, yuk 💛
           </h2>
+
+          <p className="mt-2 text-sm leading-relaxed text-cream/85">
+            Biar buka aplikasi dan catat pengeluaran secepat kilat — tinggal tap ikonnya, gak
+            perlu buka browser atau ngetik alamat lagi.
+          </p>
 
           <ul className="mt-4 grid gap-2.5 sm:grid-cols-2">
             <li className="flex items-center gap-2.5 rounded-2xl bg-cream/10 px-3.5 py-3 ring-1 ring-cream/10">
-              <span className="text-base">💚</span>
-              <span className="text-sm font-medium">+100 Nyawa AI gratis</span>
+              <span aria-hidden className="text-base">
+                ⚡
+              </span>
+              <span className="text-sm font-medium">Sekali tap, app langsung kebuka.</span>
             </li>
             <li className="flex items-center gap-2.5 rounded-2xl bg-cream/10 px-3.5 py-3 ring-1 ring-cream/10">
-              <span className="text-base">🪴</span>
-              <span className="text-sm font-medium">Skin Pot Emas untuk Tanamanmu</span>
+              <span aria-hidden className="text-base">
+                ✍️
+              </span>
+              <span className="text-sm font-medium">
+                Langsung sampai ke layar catat, walau kamu lagi buru-buru.
+              </span>
             </li>
           </ul>
 
-          <p className="mt-4 text-xs leading-relaxed text-cream/60">
-            Bonus otomatis masuk ke akunmu saat pertama kali buka CatetInd dari Homescreen.
+          <p className="mt-4 text-xs leading-relaxed text-cream-muted">
+            Jujur ya: yang kamu dapat cuma satu hal — jalan pintas ke layar catat. Itu aja, dan
+            itu cukup bikin nyatet pengeluaran jadi lebih gampang.
           </p>
         </div>
       </div>

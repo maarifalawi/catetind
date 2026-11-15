@@ -139,12 +139,12 @@ export function WalletPicker({
                saldo yang tidak kita ketahui (paket 81) */
             <span className="truncate">{unresolved}</span>
           ) : (
-            <span className="truncate text-forest/40">
+            <span className="truncate text-forest-muted">
               {TRANSACTION_INPUT_COPY.walletPlaceholder}
             </span>
           )}
         </span>
-        <ChevronDown className="size-4 shrink-0 text-forest/40" aria-hidden />
+        <ChevronDown className="size-4 shrink-0 text-forest-muted" aria-hidden />
       </button>
 
       <PickerSheet
@@ -162,8 +162,7 @@ export function WalletPicker({
             <p className="mt-3 text-[14px] font-medium text-forest">
               {TRANSACTION_INPUT_COPY.walletEmptyTitle}
             </p>
-            <p className="mt-1 text-[12.5px] leading-relaxed text-forest/50">
-              {TRANSACTION_INPUT_COPY.walletEmptyBody}
+            <p className="mt-1 text-[12.5px] leading-relaxed text-forest-muted">
             </p>
           </div>
         ) : (

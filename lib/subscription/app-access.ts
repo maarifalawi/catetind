@@ -92,6 +92,17 @@ export function appAccessDecision(access: CallerAccess): AppAccessDecision {
 const OWNER_ONLY_ROUTES = ['/admin'] as const
 
 /**
+ * Rute yang WAJIB SESI tetapi TIDAK boleh dipaywall: Dompet Bersama.
+ *
+ * Aturan produknya: yang berlangganan cukup PEMBUAT dompet. Anggota yang
+ * diundang (akun gratis) harus bisa membuka `/joint` untuk memasukkan kode dan
+ * memakai seluruh fitur dompet bersama selama dompetnya aktif. Isi data tetap
+ * dijaga RLS (`joint_members`) — halaman ini hanya menampilkan pilihan
+ * "Buat / Gabung" bagi yang bukan anggota.
+ */
+const MEMBER_ACCESS_ROUTES = ['/joint'] as const
+
+/**
  * true = halaman ini bagian dari APP dan wajib punya paket aktif.
  *
  * Kebalikannya adalah `PUBLIC_ROUTES` (`lib/public-routes.ts`) — daftar yang
@@ -101,6 +112,13 @@ const OWNER_ONLY_ROUTES = ['/admin'] as const
  */
 export function requiresPaidAccess(pathname: string): boolean {
   if (OWNER_ONLY_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`))) {
+    return false
+  }
+  if (
+    MEMBER_ACCESS_ROUTES.some(
+      (route) => pathname === route || pathname.startsWith(`${route}/`),
+    )
+  ) {
     return false
   }
   return !isPublicRoute(pathname)

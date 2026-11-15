@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type ChangeEvent, type ReactNode, type RefObject } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { Drawer } from 'vaul'
-import { X, CalendarDays, Check } from 'lucide-react'
+import { X, CalendarDays, Check, ChevronLeft } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { cleanDigits, groupDigits } from '@/lib/money/amount-input'
 import { AMOUNT_INPUT_FIELD } from '@/lib/typography'
@@ -36,6 +36,7 @@ export const SHEET_EASE: [number, number, number, number] = [0.22, 1, 0.36, 1]
 export function BudgetSheet({
   open,
   onClose,
+  onBack,
   title,
   description,
   children,
@@ -43,6 +44,14 @@ export function BudgetSheet({
 }: {
   open: boolean
   onClose: () => void
+  /**
+   * opsional: tombol KEMBALI di kiri judul.
+   *
+   * Dipakai sheet yang dibuka dari langkah sebelumnya (mis. "Atur Pembagian"
+   * yang datang dari form Catat Bareng). Tanpa ini user hanya punya tombol
+   * tutup, dan menutup terasa seperti keluar dari alurnya — bukan kembali.
+   */
+  onBack?: () => void
   title: string
   description?: string
   children: ReactNode
@@ -114,12 +123,22 @@ export function BudgetSheet({
             {/* HEADER — dipaku ke atas sheet: `shrink-0`, tidak pernah ikut
                 mengecil maupun menggulir saat keyboard muncul */}
             <div className="relative flex shrink-0 items-start justify-between gap-3 px-5 pt-4 lg:px-6">
-              <div className="min-w-0">
+              {onBack && (
+                <button
+                  type="button"
+                  onClick={onBack}
+                  aria-label="Kembali"
+                  className="flex size-9 shrink-0 items-center justify-center rounded-full bg-cream text-forest ring-1 ring-soil/12 transition-colors hover:bg-sage active:scale-95"
+                >
+                  <ChevronLeft className="size-4" strokeWidth={2.4} />
+                </button>
+              )}
+              <div className={cn('min-w-0', onBack && 'flex-1')}>
                 <Drawer.Title className="font-display text-xl font-medium leading-tight tracking-tight text-forest">
                   {title}
                 </Drawer.Title>
                 {description ? (
-                  <Drawer.Description className="mt-1 text-[14px] leading-relaxed text-forest/55">
+                  <Drawer.Description className="mt-1 text-[14px] leading-relaxed text-forest-muted">
                     {description}
                   </Drawer.Description>
                 ) : (
@@ -271,7 +290,7 @@ export function RupiahField({
         )}
       >
         <span
-          className={cn('shrink-0 font-medium text-forest/35', size === 'lg' ? 'text-lg' : 'text-sm')}
+          className={cn('shrink-0 font-medium text-forest-muted', size === 'lg' ? 'text-lg' : 'text-sm')}
         >
           Rp
         </span>
@@ -283,14 +302,14 @@ export function RupiahField({
           autoComplete="off"
           placeholder={placeholder.replace(/^Rp\s*/, '')}
           className={cn(
-            'min-w-0 flex-1 bg-transparent text-forest outline-none placeholder:font-medium placeholder:text-forest/25',
+            'min-w-0 flex-1 bg-transparent text-forest outline-none placeholder:font-medium placeholder:text-forest-muted',
             AMOUNT_INPUT_FIELD,
             size === 'lg' ? 'text-xl' : 'text-[16px]',
           )}
         />
       </span>
       {hint && (
-        <span className="mt-1.5 block text-[12px] leading-relaxed text-forest/45">{hint}</span>
+        <span className="mt-1.5 block text-[12px] leading-relaxed text-forest-muted">{hint}</span>
       )}
     </label>
   )
@@ -424,13 +443,13 @@ export function DateField({
             'peer-hover:ring-soil/30 peer-focus-visible:ring-2 peer-focus-visible:ring-forest/35',
           )}
         >
-          <span className="shrink-0 text-forest/35">
+          <span className="shrink-0 text-forest-muted">
             {icon ?? <CalendarDays className="size-4" strokeWidth={2.2} />}
           </span>
           <span
             className={cn(
               'flex-1 text-[15px] font-medium tabular-nums',
-              value ? 'text-forest' : 'text-forest/25',
+              value ? 'text-forest' : 'text-forest-muted',
             )}
           >
             {formatDateLabel(value, placeholder)}
@@ -472,6 +491,7 @@ export function SheetSubmit({
   disabled,
   className,
   gate = false,
+  submitAttrs,
 }: {
   children: ReactNode
   onClick: () => void
@@ -479,6 +499,11 @@ export function SheetSubmit({
   className?: string
   /** true = tombol simpan/tambah data keuangan */
   gate?: boolean
+  /**
+   * atribut tambahan untuk <button> (mis. kait uji `data-catetind-*`).
+   * Hanya dilewatkan apa adanya — tidak mengubah perilaku tombol.
+   */
+  submitAttrs?: Record<string, string>
 }) {
   const { inputLocked } = useSubscriptionGate()
   const locked = gate && inputLocked
@@ -490,11 +515,12 @@ export function SheetSubmit({
         type="button"
         onClick={onClick}
         disabled={inert}
+        {...submitAttrs}
         aria-disabled={locked || undefined}
         className={cn(
           'flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-medium transition-all',
           inert
-            ? 'cursor-not-allowed bg-ink/[0.07] text-forest/35'
+            ? 'cursor-not-allowed bg-ink/[0.07] text-forest-muted'
             : 'bg-forest text-mint hover:bg-forest-soft active:scale-[0.99]',
           className,
         )}

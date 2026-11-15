@@ -97,7 +97,7 @@ export const ExpenseDistributionCard = memo(function ExpenseDistributionCard() {
         </span>
         <div>
           <p className="text-sm font-medium text-forest">{HOME_MONEY_COPY.distributionTitle}</p>
-          <p className="text-xs text-forest/45">{HOME_MONEY_COPY.period}</p>
+          <p className="text-xs text-forest-muted">{HOME_MONEY_COPY.period}</p>
         </div>
       </div>
 
@@ -112,9 +112,6 @@ export const ExpenseDistributionCard = memo(function ExpenseDistributionCard() {
           </span>
           <p className="mt-3 text-sm font-medium text-forest">
             {HOME_MONEY_COPY.distributionEmptyTitle}
-          </p>
-          <p className="mt-1 text-xs leading-relaxed text-forest/50">
-            {HOME_MONEY_COPY.distributionEmptyBody}
           </p>
           <TransactionBottomSheet
             trigger={
@@ -187,7 +184,7 @@ export const ExpenseDistributionCard = memo(function ExpenseDistributionCard() {
                 aria-hidden
                 className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-4 text-center"
               >
-                <span className="text-[10.5px] font-medium uppercase tracking-[0.16em] text-forest/40">
+                <span className="text-[10.5px] font-medium uppercase tracking-[0.16em] text-forest-muted">
                   {active ? `${active.pct}%` : HOME_MONEY_COPY.distributionCenterLabel}
                 </span>
                 <span className="mt-1 max-w-full truncate text-[14px] font-semibold leading-tight tracking-tight text-forest tabular-nums">
@@ -228,7 +225,7 @@ export const ExpenseDistributionCard = memo(function ExpenseDistributionCard() {
                       <span className="shrink-0 text-[13px] font-medium text-forest tabular-nums">
                         {seg.pct}%
                       </span>
-                      <span className="w-[92px] shrink-0 text-right text-[12.5px] text-forest/45 tabular-nums">
+                      <span className="w-[92px] shrink-0 text-right text-[12.5px] text-forest-muted tabular-nums">
                         {money(seg.amount)}
                       </span>
                     </button>
@@ -269,7 +266,7 @@ function DistributionTooltip({
     <div className="rounded-2xl bg-ink px-3.5 py-2.5 text-cream shadow-[0_16px_34px_-16px_rgba(0,0,0,0.8)]">
       <p className="text-[12.5px] font-medium">{seg.label}</p>
       <p className="mt-1 text-[13.5px] font-semibold tabular-nums">{money(seg.amount)}</p>
-      <p className="text-[11.5px] text-cream/60 tabular-nums">
+      <p className="text-[11.5px] text-cream-muted tabular-nums">
         {seg.pct}% {HOME_MONEY_COPY.distributionDetailTail}
       </p>
     </div>

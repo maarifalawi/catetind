@@ -6,7 +6,6 @@ import {
   ArrowUpRight,
   Coffee,
   PiggyBank,
-  Sparkles,
   TrendingUp,
   type LucideIcon,
 } from 'lucide-react'
@@ -36,7 +35,7 @@ type Tone = 'alert' | 'good' | 'neutral'
 const TONES: Record<Tone, { tile: string; eyebrow: string }> = {
   alert: { tile: 'bg-hud-amber/20 text-hud-terracotta', eyebrow: 'text-hud-terracotta' },
   good: { tile: 'bg-mint/30 text-forest', eyebrow: 'text-forest' },
-  neutral: { tile: 'bg-sage/70 text-forest', eyebrow: 'text-forest/70' },
+  neutral: { tile: 'bg-sage/70 text-forest', eyebrow: 'text-forest-soft' },
 }
 
 /** ikon per jenis insight — bagian dari penyajian, jadi tinggal di sini */
@@ -49,14 +48,11 @@ const INSIGHT_ICONS: Record<HistoryInsight['id'], LucideIcon> = {
 export function InsightCards({ insights }: { insights: HistoryInsight[] }) {
   const header = (
     <div className="flex items-center gap-2.5">
-      <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sage text-forest">
-        <Sparkles className="size-[18px]" strokeWidth={2.2} />
-      </span>
       <div className="min-w-0">
         <h2 className="font-display text-[16px] font-semibold tracking-tight text-forest">
           {INSIGHT_CARD_COPY.title}
         </h2>
-        <p className="text-[12.5px] text-forest/45">
+        <p className="text-[12.5px] text-forest-muted">
           {insights.length > 0
             ? INSIGHT_CARD_COPY.found(insights.length)
             : INSIGHT_CARD_COPY.waiting}
@@ -72,7 +68,6 @@ export function InsightCards({ insights }: { insights: HistoryInsight[] }) {
     return (
       <section className="flex h-full flex-col rounded-[2rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] ring-1 ring-soil/12 sm:p-6">
         {header}
-        <p className="mt-3 text-[14px] leading-relaxed text-forest/60">{INSIGHT_CARD_COPY.learning}</p>
       </section>
     )
   }
@@ -143,7 +138,7 @@ function InsightCardItem({
         ))}
       </div>
 
-      <p className="text-[14px] font-medium leading-relaxed text-forest/75">{card.copy}</p>
+      <p className="text-[14px] font-medium leading-relaxed text-forest-soft">{card.copy}</p>
     </motion.article>
   )
 }

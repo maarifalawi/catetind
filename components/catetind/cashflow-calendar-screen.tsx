@@ -338,13 +338,10 @@ export function CashflowCalendarScreen() {
           konteks aktif, katakan apa adanya + beri jalan keluar (bukan kalender
           kosong tanpa penjelasan). */}
       {periodEmpty && (
-        <div className="mt-5 flex flex-col items-center rounded-[1.75rem] border-2 border-dashed border-forest/15 bg-cream/60 px-6 py-8 text-center lg:mt-6">
+        <div data-catetind-empty className="mt-5 flex flex-col items-center rounded-[1.75rem] border-2 border-dashed border-forest/15 bg-cream/60 px-6 py-8 text-center lg:mt-6">
           <h2 className="font-display text-[16.5px] font-semibold tracking-tight text-forest">
             {CONTEXT_EMPTY_COPY.calendar.title(CONTEXT_LABEL[context])}
           </h2>
-          <p className="mt-1.5 max-w-md text-[13.5px] leading-relaxed text-forest/55">
-            {CONTEXT_EMPTY_COPY.calendar.body}
-          </p>
           <button
             type="button"
             onClick={() => setNoteSheetOpen(true)}
@@ -380,8 +377,8 @@ export function CashflowCalendarScreen() {
               muncul persis saat keadaan itu terjadi, lengkap dengan satu tautan
               ke tempat mengaturnya (Pengaturan → Profil & Akun). */}
           {periodMode === 'payday' && settings.paydayDate === null && (
-            <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-[1.5rem] bg-cream px-4 py-3 text-[12.5px] font-medium leading-relaxed text-forest/55 ring-1 ring-soil/12">
-              <CalendarDays className="size-3.5 shrink-0 text-forest/60" strokeWidth={2.4} aria-hidden />
+            <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-[1.5rem] bg-cream px-4 py-3 text-[12.5px] font-medium leading-relaxed text-forest-muted ring-1 ring-soil/12">
+              <CalendarDays className="size-3.5 shrink-0 text-forest-muted" strokeWidth={2.4} aria-hidden />
               {CALENDAR_PAYDAY_COPY.defaultNote(DEFAULT_PAYDAY_DATE)}
               <Link
                 href={MONEY_SETTINGS_HREF}

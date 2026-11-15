@@ -97,7 +97,7 @@ export function LandingPublicHelp() {
           </LandingReveal>
 
           <LandingReveal y={48} delay={0.3}>
-            <p className="text-[12px] leading-[1.5] font-medium tracking-[0.02em] text-forest/45">
+            <p className="text-[12px] leading-[1.5] font-medium tracking-[0.02em] text-forest-muted">
               {PUBLIC_HELP_COPY.meta}
             </p>
           </LandingReveal>
@@ -106,7 +106,7 @@ export function LandingPublicHelp() {
         {/* ── PENCARIAN ──────────────────────────────────────────────────── */}
         <LandingReveal y={48} delay={0.1}>
           <div className="relative flex w-full max-w-[720px] items-center gap-3 rounded-full bg-canvas px-5 py-3.5 ring-1 ring-soil/15 transition-shadow duration-200 focus-within:ring-2 focus-within:ring-forest/30 motion-reduce:transition-none">
-            <Search className="size-5 shrink-0 text-forest/45" aria-hidden />
+            <Search className="size-5 shrink-0 text-forest-muted" aria-hidden />
             <label htmlFor={searchId} className="sr-only">
               {PUBLIC_HELP_COPY.searchLabel}
             </label>
@@ -117,14 +117,14 @@ export function LandingPublicHelp() {
               onChange={(event) => setQuery(event.target.value)}
               placeholder={PUBLIC_HELP_COPY.searchPlaceholder}
               autoComplete="off"
-              className="min-h-6 w-full flex-1 bg-transparent text-[16px] leading-[1.5] text-forest placeholder:text-forest/35 focus:outline-none"
+              className="min-h-6 w-full flex-1 bg-transparent text-[16px] leading-[1.5] text-forest placeholder:text-forest-muted focus:outline-none"
             />
             {searching ? (
               <button
                 type="button"
                 onClick={() => setQuery('')}
                 aria-label={PUBLIC_HELP_COPY.searchClearLabel}
-                className="flex size-7 shrink-0 items-center justify-center rounded-full bg-sage/70 text-forest/70 transition-colors hover:text-forest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40"
+                className="flex size-7 shrink-0 items-center justify-center rounded-full bg-sage/70 text-forest-soft transition-colors hover:text-forest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40"
               >
                 <X className="size-4" aria-hidden />
               </button>
@@ -255,7 +255,7 @@ export function LandingPublicHelp() {
           </div>
         </LandingReveal>
 
-        <p className="text-center text-[12px] leading-[1.6] text-forest/40">
+        <p className="text-center text-[12px] leading-[1.6] text-forest-muted">
           {PUBLIC_HELP_COPY.footerNote}
         </p>
       </div>
@@ -299,7 +299,7 @@ function ArticleDetails({ article }: { article: HelpArticle }) {
           {article.title}
         </span>
         <ChevronDown
-          className="size-4 shrink-0 text-forest/50 transition-transform duration-200 group-open:rotate-180 motion-reduce:transition-none"
+          className="size-4 shrink-0 text-forest-muted transition-transform duration-200 group-open:rotate-180 motion-reduce:transition-none"
           aria-hidden
         />
       </summary>
@@ -341,13 +341,13 @@ function QuickAnswerDetails({ answer }: { answer: QuickAnswer }) {
           <span className="text-[15px] leading-[1.4] font-medium text-forest">
             {answer.question}
           </span>
-          <span className="text-[11px] leading-[1.5] text-forest/45">
+          <span className="text-[11px] leading-[1.5] text-forest-muted">
             {answer.topic}
             {answer.mostAsked ? ` · ${HELP_MOST_ASKED_BADGE}` : ''}
           </span>
         </span>
         <ChevronDown
-          className="mt-0.5 size-4 shrink-0 text-forest/50 transition-transform duration-200 group-open:rotate-180 motion-reduce:transition-none"
+          className="mt-0.5 size-4 shrink-0 text-forest-muted transition-transform duration-200 group-open:rotate-180 motion-reduce:transition-none"
           aria-hidden
         />
       </summary>
@@ -373,7 +373,7 @@ function SearchResults({
         <h2 className="font-display text-[24px] leading-[1.25] font-medium tracking-[-0.02em] text-forest landing-tab:text-[32px]">
           {PUBLIC_HELP_COPY.resultTitle}
         </h2>
-        <p className="text-[13px] leading-[1.5] text-forest/50">“{query}”</p>
+        <p className="text-[13px] leading-[1.5] text-forest-muted">“{query}”</p>
       </div>
 
       {empty ? (
@@ -399,7 +399,7 @@ function SearchResults({
             <div className="flex flex-col gap-3">
               {articles.map((hit) => (
                 <div key={hit.article.id} className="flex flex-col gap-1.5">
-                  <span className="text-[11px] leading-[1.5] font-medium tracking-[0.04em] text-forest/45 uppercase">
+                  <span className="text-[11px] leading-[1.5] font-medium tracking-[0.04em] text-forest-muted uppercase">
                     <span aria-hidden className="mr-1">
                       {hit.topic.emoji}
                     </span>

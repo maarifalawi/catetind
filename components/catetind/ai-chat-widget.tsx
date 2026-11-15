@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'reac
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ArrowRight, Check, Lock, Mic, Plus, ScanLine, Send, Sparkles, X } from 'lucide-react'
+import { ArrowRight, Check, Lock, Mic, Plus, ScanLine, Send, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { useAIChat } from '@/hooks/use-ai-chat'
@@ -72,17 +72,7 @@ function ChatBubble({ message, onAction }: { message: ChatMessage; onAction: () 
       >
         {appreciation && (
           <span className="mb-1 flex items-center gap-1 text-[11px] font-medium uppercase tracking-wider text-forest-soft">
-            <Sparkles className="size-3" />
             {AI_CHAT_COPY.appreciationBadge}
-          </span>
-        )}
-        {/* PAKET 44 — label kejujuran: balasan ini datang dari aturan lokal, bukan
-            model. Selama provider LLM belum tersambung, bubble-nya wajib mengaku;
-            kalau labelnya tidak ada, user membaca kalimat ini sebagai jawaban AI
-            sungguhan (temuan uji pemakaian #5). */}
-        {message.ruleBased && (
-          <span className="mb-1 block text-[11px] font-medium uppercase tracking-wider text-forest/35">
-            {AI_CHAT_COPY.ruleBasedBadge}
           </span>
         )}
         <p>{message.content}</p>
@@ -463,7 +453,7 @@ export function AIChatWidget() {
                   <p className="text-sm font-medium tracking-tight text-forest">
                     {AI_CHAT_COPY.title}
                   </p>
-                  <p className="shrink-0 text-[12px] font-medium text-forest/45">
+                  <p className="shrink-0 text-[12px] font-medium text-forest-muted">
                     {AI_CHAT_COPY.quota(quota.remainingPct)}
                   </p>
                 </div>
@@ -498,7 +488,7 @@ export function AIChatWidget() {
                 type="button"
                 onClick={() => setOpen(false)}
                 aria-label={AI_CHAT_COPY.closeLabel}
-                className="flex size-8 shrink-0 items-center justify-center rounded-full bg-soil/[0.1] text-forest/60 transition-colors hover:bg-sage hover:text-forest"
+                className="flex size-8 shrink-0 items-center justify-center rounded-full bg-soil/[0.1] text-forest-muted transition-colors hover:bg-sage hover:text-forest"
               >
                 <X className="size-4" />
               </button>
@@ -598,7 +588,7 @@ export function AIChatWidget() {
             >
               {/* pengingat lembut saat kartu konfirmasi masih menunggu jawaban */}
               {captureLocked && (
-                <p role="status" className="mb-2 text-[12px] leading-relaxed text-forest/45">
+                <p role="status" className="mb-2 text-[12px] leading-relaxed text-forest-muted">
                   {AI_CAPTURE_COPY.finishDraftFirst}
                 </p>
               )}
@@ -609,7 +599,7 @@ export function AIChatWidget() {
                   onChange={(e) => setInput(e.target.value)}
                   placeholder={AI_CHAT_COPY.inputPlaceholder}
                   aria-label={AI_CHAT_COPY.inputLabel}
-                  className="h-10 min-w-0 flex-1 rounded-full bg-soil/[0.1] px-4 text-sm text-forest outline-none placeholder:text-forest/35 focus:ring-2 focus:ring-forest/20"
+                  className="h-10 min-w-0 flex-1 rounded-full bg-soil/[0.1] px-4 text-sm text-forest outline-none placeholder:text-forest-muted focus:ring-2 focus:ring-forest/20"
                 />
                 <button
                   type="button"
@@ -631,8 +621,8 @@ export function AIChatWidget() {
                     'flex size-10 shrink-0 items-center justify-center rounded-full ring-1 transition-colors active:scale-95 disabled:opacity-35',
                     capture.phase === 'listening'
                       ? 'bg-forest text-cream ring-forest hover:bg-forest-soft'
-                      : 'bg-cream text-forest/60 ring-soil/12 hover:bg-sage hover:text-forest',
-                    voiceUnavailable && 'text-forest/35',
+                      : 'bg-cream text-forest-muted ring-soil/12 hover:bg-sage hover:text-forest',
+                    voiceUnavailable && 'text-forest-muted',
                   )}
                 >
                   {capture.phase === 'listening' ? (
@@ -656,7 +646,7 @@ export function AIChatWidget() {
                     'flex size-10 shrink-0 items-center justify-center rounded-full ring-1 transition-colors active:scale-95 disabled:opacity-35',
                     captureParsing
                       ? 'bg-forest text-cream ring-forest hover:bg-forest-soft'
-                      : 'bg-cream text-forest/60 ring-soil/12 hover:bg-sage hover:text-forest',
+                      : 'bg-cream text-forest-muted ring-soil/12 hover:bg-sage hover:text-forest',
                   )}
                 >
                   {captureParsing ? (
@@ -691,7 +681,7 @@ export function AIChatWidget() {
               {/* jalan keluar di perangkat tanpa Speech API — selalu terlihat,
                   bukan cuma sesaat setelah tombolnya ditekan */}
               {voiceUnavailable && (
-                <p id="ai-voice-fallback" className="mt-2 text-[12px] leading-relaxed text-forest/45">
+                <p id="ai-voice-fallback" className="mt-2 text-[12px] leading-relaxed text-forest-muted">
                   {AI_CAPTURE_COPY.voiceUnsupported}
                 </p>
               )}
@@ -699,7 +689,7 @@ export function AIChatWidget() {
               {/* KUOTA HABIS (paket 42): dua ikon di atas mati, dan alasannya
                   ditulis di sini — plus penegasan bahwa catat manual tetap jalan. */}
               {quotaExhausted && (
-                <p id="ai-quota-off" className="mt-2 text-[12px] leading-relaxed text-forest/55">
+                <p id="ai-quota-off" className="mt-2 text-[12px] leading-relaxed text-forest-muted">
                   {AI_QUOTA_EXHAUSTED_COPY.body}
                 </p>
               )}

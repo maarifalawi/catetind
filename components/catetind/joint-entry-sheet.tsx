@@ -5,7 +5,6 @@ import { BudgetSheet, ChoicePills } from './budget-sheet'
 import { categoryVisualFor } from './transaction-category-visual'
 import {
   JOINT_DELETE_COPY,
-  PAID_BY_HINT,
   PAID_BY_LABEL,
   PAID_BY_ME_LABEL,
   PRIVATE_OWNER_HINT,
@@ -34,8 +33,7 @@ export function JointEntrySheet({
   open,
   tx,
   masked,
-  me,
-  partner,
+  people,
   onClose,
   onOpenSplit,
   onChangePaidBy,
@@ -46,8 +44,8 @@ export function JointEntrySheet({
   /** catatan yang dibuka (null = sheet tertutup) */
   tx: JointTransaction | null
   masked: boolean
-  me: JointPerson
-  partner: JointPerson
+  /** seluruh anggota kantong (pemilik sesi di urutan pertama) */
+  people: JointPerson[]
   onClose: () => void
   /** buka Split Bill Sheet untuk catatan ini */
   onOpenSplit: (tx: JointTransaction) => void
@@ -57,11 +55,23 @@ export function JointEntrySheet({
 }) {
   if (!tx) return null
 
+  const me = people[0]
   const payerId = pocketOf(tx)
-  const payer = payerId === partner.id ? partner : me
+  /* pembayar yang sudah keluar tetap disebut netral — bukan diganti "Kamu" */
+  const payer =
+    people.find((person) => person.id === payerId) ??
+    ({
+      id: payerId,
+      name: 'Anggota',
+      avatar: '🧑',
+      tint: 'bg-sage/70 text-forest ring-soil/10',
+      dot: 'bg-hud-sage',
+      rail: 'bg-hud-sage',
+    } satisfies JointPerson)
   const hiddenFromMe = Boolean(tx.isPrivate) && tx.userId !== me.id
   const isPrivateMine = Boolean(tx.isPrivate) && tx.userId === me.id
   const isSettlement = Boolean(tx.isSettlement)
+  const isIncome = tx.kind === 'income'
   const title = hiddenFromMe ? 'Pengeluaran Privat Partner' : tx.description
   const category = hiddenFromMe ? 'Privat' : tx.category
   const visual = categoryVisualFor(hiddenFromMe ? null : category)
@@ -74,16 +84,16 @@ export function JointEntrySheet({
       open={open}
       onClose={onClose}
       title={title}
-      description={hiddenFromMe ? 'Detail disembunyikan oleh pasanganmu.' : `${payer.name} · ${tx.time}`}
+      description={hiddenFromMe ? undefined : `${payer.name} · ${tx.time}`}
     >
       {/* nominal — bahasa warna uang yang sama dengan baris Riwayat */}
       <p
         className={cn(
           'font-display text-[30px] font-semibold leading-none tracking-tight tabular-nums',
-          isSettlement ? 'text-forest/55' : 'text-hud-terracotta',
+          isSettlement ? 'text-forest-muted' : isIncome ? 'text-forest' : 'text-hud-terracotta',
         )}
       >
-        {isSettlement ? '⇄ ' : '- '}
+        {isSettlement ? '⇄ ' : isIncome ? '+ ' : '- '}
         {moneyLabel(tx.amount, masked)}
       </p>
 
@@ -91,18 +101,18 @@ export function JointEntrySheet({
         <span
           className={cn(
             'rounded-full px-2 py-0.5 text-[11.5px] font-medium',
-            hiddenFromMe ? 'bg-sage/70 text-forest/60' : visual.chip,
+            hiddenFromMe ? 'bg-sage/70 text-forest-muted' : visual.chip,
           )}
         >
           {hiddenFromMe ? '🔒 Privat' : `${categoryEmoji(category)} ${category}`}
         </span>
         {!hiddenFromMe && (
-          <span className="rounded-full bg-soil/[0.08] px-2 py-0.5 text-[11.5px] font-medium text-forest/50">
+          <span className="rounded-full bg-soil/[0.08] px-2 py-0.5 text-[11.5px] font-medium text-forest-muted">
             {splitLabel(tx, masked)}
           </span>
         )}
         {isPrivateMine && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-sage/70 px-2 py-0.5 text-[11.5px] font-medium text-forest/60">
+          <span className="inline-flex items-center gap-1 rounded-full bg-sage/70 px-2 py-0.5 text-[11.5px] font-medium text-forest-muted">
             <Lock className="size-3" strokeWidth={2.4} aria-hidden />
             {PRIVATE_OWNER_HINT}
           </span>
@@ -112,13 +122,13 @@ export function JointEntrySheet({
       {/* rincian ringkas — tanpa kalimat penjelas */}
       <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 rounded-2xl bg-sage/40 px-4 py-3.5">
         <div>
-          <dt className="text-[11px] font-medium uppercase tracking-[0.12em] text-forest/40">
+          <dt className="text-[11px] font-medium uppercase tracking-[0.12em] text-forest-muted">
             Dibayar
           </dt>
           <dd className="mt-0.5 text-[13.5px] font-medium text-forest">{payer.name}</dd>
         </div>
         <div className="text-right">
-          <dt className="text-[11px] font-medium uppercase tracking-[0.12em] text-forest/40">
+          <dt className="text-[11px] font-medium uppercase tracking-[0.12em] text-forest-muted">
             Tanggal
           </dt>
           <dd className="mt-0.5 text-[13.5px] font-medium tabular-nums text-forest">
@@ -132,20 +142,19 @@ export function JointEntrySheet({
           {/* "Siapa yang nalangin?" — koreksi kantong, ditulis ke store */}
           {onChangePaidBy && (
             <section className="mt-5">
-              <p className="text-[12px] font-medium uppercase tracking-[0.12em] text-forest/40">
+              <p className="text-[12px] font-medium uppercase tracking-[0.12em] text-forest-muted">
                 {PAID_BY_LABEL}
               </p>
               <ChoicePills
                 className="mt-2"
-                options={[
-                  { id: me.id, label: `${PAID_BY_ME_LABEL} (${me.name})` },
-                  { id: partner.id, label: partner.name },
-                ]}
+                options={people.map((person, index) => ({
+                  id: person.id,
+                  label: index === 0 ? `${PAID_BY_ME_LABEL} (${person.name})` : person.name,
+                }))}
                 value={payerId}
                 onChange={(userId) => onChangePaidBy(tx, userId)}
                 ariaLabel={PAID_BY_LABEL}
               />
-              <p className="mt-1.5 text-[11.5px] leading-relaxed text-forest/40">{PAID_BY_HINT}</p>
             </section>
           )}
 
@@ -177,13 +186,13 @@ export function JointEntrySheet({
       )}
 
       {locked && (
-        <p className="mt-4 rounded-2xl bg-soil/[0.08] px-3.5 py-2.5 text-[12px] leading-relaxed text-forest/55">
+        <p className="mt-4 rounded-2xl bg-soil/[0.08] px-3.5 py-2.5 text-[12px] leading-relaxed text-forest-muted">
           {JOINT_DELETE_COPY.lockedNote}
         </p>
       )}
 
       {isSettlement && (
-        <p className="mt-4 rounded-2xl bg-hud-sage/15 px-3.5 py-3 text-[12.5px] leading-relaxed text-forest/60">
+        <p className="mt-4 rounded-2xl bg-hud-sage/15 px-3.5 py-3 text-[12.5px] leading-relaxed text-forest-muted">
           Jejak transfer settlement, angkanya sudah masuk ke timbangan bulan ini.
         </p>
       )}

@@ -39,7 +39,7 @@ export function LockedFeatureNote({
   if (compact) {
     return (
       <p
-        className={cn('flex items-center gap-1.5 text-[12px] leading-relaxed text-forest/55', className)}
+        className={cn('flex items-center gap-1.5 text-[12px] leading-relaxed text-forest-muted', className)}
       >
         <Lock className="size-3 shrink-0" strokeWidth={2.6} aria-hidden />
         <span>{lockedBadgeText(capability)}</span>

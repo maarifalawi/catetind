@@ -200,7 +200,7 @@ export function LandingNavbarLp({ basePath = '' }: { basePath?: string }) {
                 className={cn(
                   'inline-flex min-h-11 min-w-11 items-center justify-center rounded-[4px] whitespace-nowrap text-[14px] leading-[1.5] transition-colors focus-visible:outline-none focus-visible:ring-2',
                   dark
-                    ? 'text-cream/80 hover:text-cream focus-visible:ring-cream/70'
+                    ? 'text-cream hover:text-cream focus-visible:ring-cream/70'
                     : 'text-forest-muted hover:text-forest focus-visible:ring-forest/40',
                 )}
               >

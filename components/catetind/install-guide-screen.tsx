@@ -1,296 +1,100 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import Link from 'next/link'
-import { ChevronDown, ChevronUp, MonitorDown, Share, Smartphone, Zap, type LucideIcon } from 'lucide-react'
+import { useState } from 'react'
+import { Smartphone } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useDeviceDetect, type DeviceType } from '@/hooks/use-device-detect'
+import type { DeviceType } from '@/hooks/use-device-detect'
+import { useDeviceDetect } from '@/hooks/use-device-detect'
 import { useInstallPrompt } from '@/hooks/use-install-prompt'
-import {
-  INSTALL_BENEFITS,
-  INSTALL_CHECKOUT_CTA,
-  INSTALL_DETECTING_LABEL,
-  INSTALL_HELP_FOOTER,
-  INSTALL_HERO,
-  INSTALL_IOS_CTA,
-  INSTALL_OTHER_GUIDES_LABEL,
-  INSTALL_TABLIST_LABEL,
-  TUTORIALS,
-} from '@/lib/data/install'
+import { INSTALL_HERO, TUTORIALS } from '@/lib/data/install'
 import { InstallCta } from './install-cta'
-import { InstallLimitsCard } from './install-limits-card'
-import { InstallQrHandoff } from './install-qr-handoff'
-import { InstallRewardBanner } from './install-reward-banner'
-import { IosInstallArrow } from './ios-install-arrow'
-import { ManualTutorial } from './manual-tutorial'
 import { ScreenShell } from './screen-shell'
 
-const TAB_ORDER: DeviceType[] = ['ios', 'android', 'desktop']
-const TAB_ICON: Record<DeviceType, LucideIcon> = {
-  ios: Smartphone,
-  android: Smartphone,
-  desktop: MonitorDown,
-}
+/* ── /install — SATU LAYAR, TIGA LANGKAH ──────────────────────────────────────
+   Redesain: halaman ini dulu memuat hero + tiga kartu manfaat + CTA + panduan
+   manual yang bisa dilipat + kartu batasan + serah-terima QR + panduan
+   perangkat lain + dua baris kaki. Sekarang tinggal SATU alur:
 
-/**
- * InstallGuideScreen — halaman /install.
- *
- * Mesin konversi install, bukan tutorial kaku:
- * - Deteksi perangkat → hanya panduan yang relevan yang tampil (device lain
- *   disembunyikan, bisa dibuka lewat link "Lihat panduan untuk perangkat lain").
- * - Android/desktop dapat tombol install 1-klik (beforeinstallprompt).
- * - iOS dapat panduan manual Safari + panah melayang yang menunjuk tombol Share.
- * - Desktop dapat serah-terima link ke HP (Bagikan/Salin), semua orang dapat
- *   kartu batasan PWA yang jujur + banner bonus.
- */
+     judul → pemilih tab (iPhone / Android) → 3 langkah bernomor.
+
+   Tombol install 1-klik tetap dipakai saat browser menawarkannya
+   (`beforeinstallprompt`) — itu aksi fungsional, bukan hiasan. Tidak ada
+   ilustrasi SVG, tidak ada paragraf penjelasan tambahan. */
+
+const TABS: DeviceType[] = ['ios', 'android']
+
 export function InstallGuideScreen() {
-  const { device, browser, isReady } = useDeviceDetect()
+  const { device, isReady } = useDeviceDetect()
   const { canInstall, isInstalled, isPrompting, install } = useInstallPrompt()
-
-  /* user pilih lihat perangkat lain → Tabs terbuka dengan semua panduan */
-  const [allGuidesOpen, setAllGuidesOpen] = useState(false)
-  /* tab default mengikuti perangkat hasil deteksi; user boleh menggeser */
   const [pickedTab, setPickedTab] = useState<DeviceType | null>(null)
-  const activeTab = pickedTab ?? device
-
-  /* H1-1 (audit UI/UX) — "Cara Manual" jadi collapsible. Terbuka default supaya
-     kejelasan langkah (yang dipuji audit) tidak hilang, tapi bisa dilipat. */
-  const [manualOpen, setManualOpen] = useState(true)
-
-  /* iOS: panah melayang auto-hilang begitu user lewat langkah-langkah tutorial */
-  const stepsEndRef = useRef<HTMLDivElement | null>(null)
-  const [passedSteps, setPassedSteps] = useState(false)
-
-  useEffect(() => {
-    if (device !== 'ios') return
-    const node = stepsEndRef.current
-    if (!node) return
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) setPassedSteps(true)
-      },
-      { rootMargin: '0px 0px -25% 0px' },
-    )
-    observer.observe(node)
-    return () => observer.disconnect()
-  }, [device, isReady])
-
-  /* panah hanya untuk iPhone yang dibuka di Safari, belum terpasang, dan
-     belum lewat langkah tutorial */
-  const showIosArrow =
-    isReady &&
-    device === 'ios' &&
-    browser === 'Safari' &&
-    !isInstalled &&
-    !passedSteps &&
-    !allGuidesOpen
+  const activeTab: DeviceType = pickedTab ?? (device === 'ios' ? 'ios' : 'android')
+  const tutorial = TUTORIALS[activeTab]
+  /* 3 langkah pertama saja — sisanya variasi browser yang jarang dipakai */
+  const steps = tutorial.steps.slice(0, 3)
 
   return (
     <ScreenShell>
-      {/* ── `/install` DI DALAM SHELL APP (paket 44) ────────────────────────────
-          Dulu halaman ini cuma `PhoneStage` + kolom sendiri, jadi saat dibuka dari
-          sidebar/menu "Lainnya" navigasinya HILANG: user kehilangan sidebar di
-          desktop dan tidak bisa pindah halaman dari panduan install. Sekarang ia
-          memakai `ScreenShell` seperti semua halaman app lain — sidebar desktop
-          tetap ada, dan bottom nav + FAB sudah aktif di route ini
-          (`components/MobileBottomNav.tsx` tidak memasukkan `/install` ke
-          FOCUS_ROUTES).
+      <div className="mx-auto w-full max-w-xl">
+        <h1 className="font-display text-2xl font-semibold tracking-tight text-forest sm:text-3xl">
+          {INSTALL_HERO.title}
+        </h1>
 
-          LAYOUT (audit 46): dulu isinya dibungkus `mx-auto max-w-2xl`, jadi di
-          layar lebar halaman ini tampak seperti halaman ponsel — kolom tipis di
-          tengah dengan sisa lebar menganggur di kiri-kanan. Sekarang polanya sama
-          dengan halaman app lain (kanon CONTEXT §6: desktop = grid 12 kolom):
+        {/* pemilih tab */}
+        <div
+          role="tablist"
+          aria-label="Pilih perangkat"
+          className="mt-4 flex items-center gap-1 rounded-full bg-cream p-1 ring-1 ring-soil/12"
+        >
+          {TABS.map((target) => {
+            const active = activeTab === target
+            return (
+              <button
+                key={target}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => setPickedTab(target)}
+                className={cn(
+                  'flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-2 text-[13px] font-medium transition-colors',
+                  active ? 'bg-sage text-forest' : 'text-forest-muted hover:text-forest',
+                )}
+              >
+                <Smartphone className="size-3.5" strokeWidth={2.2} aria-hidden />
+                {TUTORIALS[target].label}
+              </button>
+            )
+          })}
+        </div>
 
-            · mobile  → SATU kolom, urutan tetap: kenapa install → panduan → kaki;
-            · desktop → kolom kiri 5 (hero + 3 alasan + serah-terima link ke HP),
-                        kolom kanan 7 (CTA install, langkah, batasan, perangkat
-                        lain, kaki halaman).
+        {/* CTA install — baru dirender setelah perangkat terdeteksi, supaya
+            kalimat "install otomatis belum bisa" tidak pernah salah sasaran
+            (mis. kalimat desktop sempat tampil sekejap di iPhone). */}
+        {isReady && !isInstalled && (
+          <InstallCta
+            className="mt-3"
+            isInstalled={isInstalled}
+            canInstall={canInstall}
+            isPrompting={isPrompting}
+            onInstall={install}
+            device={device}
+          />
+        )}
 
-          Tidak ada lebar maksimum buatan: padding & lebar konten datang dari
-          shell, jadi tepi kiri/kanan `/install` sejajar dengan Dashboard. */}
-      <div className="mx-auto w-full max-w-2xl">
-        {/* ── HERO: jual alasannya dulu ──
-            H1-1 (audit UI/UX): halaman ini dulu grid 2 kolom (kiri hero+alasan,
-            kanan panduan) sehingga terasa seperti dua halaman yang ditempel.
-            Sekarang SATU kolom linear atas→bawah: Hero → Bonus → Selling Points →
-            CTA Install → Cara Manual (collapsible) → Yang Perlu Kamu Tahu →
-            Bagikan link (sekunder) → panduan perangkat lain → kaki. Alasan deviasi
-            dari grid 12 kolom desktop: H1-1 memang meminta flow linear. */}
-        <header>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-cream/70 px-3 py-1 text-[12px] font-medium tracking-[0.16em] text-forest uppercase ring-1 ring-soil/12">
-            <Zap className="size-3" strokeWidth={2.6} aria-hidden />
-            {INSTALL_HERO.badge}
-          </span>
-
-          <h1 className="mt-4 font-display text-3xl font-semibold tracking-tight text-forest lg:text-4xl">
-            {INSTALL_HERO.title}
-          </h1>
-          <p className="mt-2 text-sm leading-relaxed text-forest/55 sm:text-base">
-            {INSTALL_HERO.subtitle}
-          </p>
-        </header>
-
-        {/* ── H1-4. BONUS EKSKLUSIF — dipindah KE ATAS, tepat di bawah headline
-            "Install CatetInd di HP Kamu" sebagai sub-section eye-catching (dulu
-            mengendap di paling bawah, jarang terlihat). ─────────────────────── */}
-        <InstallRewardBanner className="mt-6" />
-
-        {/* ── SELLING POINTS (3 alasan install) ── */}
-        <ul className="mt-6 grid gap-2.5 sm:grid-cols-3">
-          {INSTALL_BENEFITS.map((benefit) => (
+        {/* tiga langkah bernomor */}
+        <ol data-catetind-langkah className="mt-4 flex flex-col gap-2">
+          {steps.map((step, index) => (
             <li
-              key={benefit.title}
-              className="flex items-center gap-3 rounded-2xl bg-cream/85 px-3.5 py-3 ring-1 ring-soil/12 backdrop-blur-xl sm:flex-col sm:items-start sm:gap-2 sm:py-4"
+              key={step.text}
+              className="flex items-start gap-3 rounded-2xl bg-cream px-3.5 py-3 ring-1 ring-soil/10"
             >
-              <span aria-hidden className="text-xl">
-                {benefit.emoji}
+              <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-forest text-[12px] font-semibold tabular-nums text-cream">
+                {index + 1}
               </span>
-              <div>
-                <p className="text-sm font-medium text-forest">{benefit.title}</p>
-                <p className="mt-0.5 text-xs leading-relaxed text-forest/50">{benefit.desc}</p>
-              </div>
+              <p className="min-w-0 text-[13.5px] leading-relaxed text-forest">{step.text}</p>
             </li>
           ))}
-        </ul>
-
-        {/* ── KOLOM PANDUAN (linear) ── */}
-        <div>
-          {!isReady ? (
-            /* deteksi perangkat jalan setelah mount — jangan sempat menampilkan
-               panduan perangkat yang salah */
-            <div className="mt-6 space-y-3" aria-live="polite">
-              <div className="h-16 animate-pulse rounded-3xl bg-cream/60 ring-1 ring-soil/12" />
-              <div className="h-64 animate-pulse rounded-3xl bg-cream/60 ring-1 ring-soil/12" />
-              <p className="text-center text-xs text-forest/40">{INSTALL_DETECTING_LABEL}</p>
-            </div>
-          ) : (
-            <>
-              {/* ── CTA 1-KLIK (Android & desktop) / arahan manual (iOS) ── */}
-              {device === 'ios' ? (
-                <div className="mt-6 flex items-start gap-3 rounded-3xl bg-sage/70 px-5 py-4 ring-1 ring-forest/10">
-                  <Share className="size-5 shrink-0 text-forest" strokeWidth={2.2} />
-                  <p className="text-sm leading-relaxed text-forest">
-                    {INSTALL_IOS_CTA(TUTORIALS.ios.steps.length)}
-                  </p>
-                </div>
-              ) : (
-                <InstallCta
-                  className="mt-6"
-                  isInstalled={isInstalled}
-                  canInstall={canInstall}
-                  isPrompting={isPrompting}
-                  onInstall={install}
-                />
-              )}
-              {/* ── H1-1. CARA MANUAL (collapsible) — panduan perangkat yang
-                  terdeteksi. Bisa dilipat supaya halaman tidak terasa panjang. */}
-              <div className="mt-4">
-                <button
-                  type="button"
-                  onClick={() => setManualOpen((open) => !open)}
-                  aria-expanded={manualOpen}
-                  className="flex w-full items-center justify-between gap-2 rounded-2xl bg-cream/70 px-4 py-3 text-left text-[13.5px] font-medium text-forest ring-1 ring-soil/12 transition-colors hover:bg-cream"
-                >
-                  Cara install manual
-                  {manualOpen ? (
-                    <ChevronUp className="size-3.5 shrink-0" strokeWidth={2.4} aria-hidden />
-                  ) : (
-                    <ChevronDown className="size-3.5 shrink-0" strokeWidth={2.4} aria-hidden />
-                  )}
-                </button>
-                {manualOpen && <ManualTutorial device={device} className="mt-3" />}
-              </div>
-              {/* sentinel: begitu masuk viewport, user sudah lewat langkah tutorial */}
-              {device === 'ios' && <div ref={stepsEndRef} aria-hidden className="h-px w-full" />}
-              {/* ── H1-2. "Bagikan link" / "Salin link" — SEKUNDER di bawah CTA
-                  install (audit: dua tombol ini dulu terlalu dominan). Hanya
-                  desktop (serah-terima link ke HP). `isReady` WAJIB ikut supaya
-                  HTML server & render pertama client identik. ── */}
-              {isReady && device === 'desktop' && <InstallQrHandoff className="mt-4" />}
-              {/* ── BATASAN: pasangan jujur dari kartu benefit di hero (PRD 4A) ── */}
-              <InstallLimitsCard className="mt-4" />
-              {/* ── PERANGKAT LAIN: panduan lain disembunyikan sampai diminta ── */}
-              <div className="mt-6 text-center">
-                <button
-                  type="button"
-                  onClick={() => setAllGuidesOpen((open) => !open)}
-                  aria-expanded={allGuidesOpen}
-                  className="inline-flex items-center gap-1.5 text-xs font-medium text-forest/70 underline-offset-4 transition-colors duration-200 hover:text-forest hover:underline"
-                >
-                  {allGuidesOpen ? INSTALL_OTHER_GUIDES_LABEL.close : INSTALL_OTHER_GUIDES_LABEL.open}
-                  {allGuidesOpen ? (
-                    <ChevronUp className="size-3.5" strokeWidth={2.4} />
-                  ) : (
-                    <ChevronDown className="size-3.5" strokeWidth={2.4} />
-                  )}
-                </button>
-              </div>
-              {allGuidesOpen && (
-                <div className="mt-4">
-                  <div
-                    role="tablist"
-                    aria-label={INSTALL_TABLIST_LABEL}
-                    className="flex w-full items-center gap-1 rounded-full bg-cream p-1 shadow-[0_10px_24px_-18px_rgba(0,0,0,0.55)] ring-1 ring-soil/12"
-                  >
-                    {TAB_ORDER.map((target) => {
-                      const active = activeTab === target
-                      const Icon = TAB_ICON[target]
-                      return (
-                        <button
-                          key={target}
-                          type="button"
-                          role="tab"
-                          id={`install-tab-${target}`}
-                          aria-selected={active}
-                          aria-controls={`install-panel-${target}`}
-                          onClick={() => setPickedTab(target)}
-                          className={cn(
-                            'flex flex-1 items-center justify-center gap-1.5 rounded-full px-2 py-2 text-xs font-medium transition-colors duration-200 active:scale-95',
-                            active
-                              ? 'bg-sage font-medium text-forest'
-                              : 'text-forest/50 hover:text-forest',
-                          )}
-                        >
-                          <Icon className="size-4 shrink-0" strokeWidth={2.2} />
-                          {TUTORIALS[target].label}
-                        </button>
-                      )
-                    })}
-                  </div>
-
-                  <div
-                    role="tabpanel"
-                    id={`install-panel-${activeTab}`}
-                    aria-labelledby={`install-tab-${activeTab}`}
-                  >
-                    <ManualTutorial device={activeTab} className="mt-3" />
-                  </div>
-                </div>
-              )}
-
-              {/* kaki halaman: satu baris saja — bantuan + jalan masuk kalau belum punya akun */}
-              <p className="mt-6 text-center text-[12px] leading-relaxed text-forest/35">
-                {INSTALL_HELP_FOOTER.prefix}
-                <a href="/help" className="font-medium text-forest/70 underline underline-offset-2">
-                  {INSTALL_HELP_FOOTER.linkLabel}
-                </a>
-                {INSTALL_HELP_FOOTER.suffix}
-                <span className="mx-1.5 text-forest/20">·</span>
-                {INSTALL_CHECKOUT_CTA.prefix}{' '}
-                <Link
-                  href={INSTALL_CHECKOUT_CTA.href}
-                  className="font-medium text-forest/70 underline underline-offset-2"
-                >
-                  {INSTALL_CHECKOUT_CTA.linkLabel}
-                </Link>
-              </p>
-            </>
-          )}
-        </div>
+        </ol>
       </div>
-
-      <IosInstallArrow show={showIosArrow} />
     </ScreenShell>
   )
 }

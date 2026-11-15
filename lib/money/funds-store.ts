@@ -11,7 +11,14 @@ import {
   type GoalPriority,
   type SinkingFundItem,
 } from '@/lib/data/budget'
-import { FUNDS_STATE_KEY, loadDeviceState, saveDeviceState } from './idb'
+import {
+  FUNDS_STATE_KEY,
+  accountStateKey,
+  loadDeviceState,
+  resolveDeviceOwner,
+  saveDeviceState,
+} from './idb'
+import { browserUserId } from '@/lib/supabase/client'
 import { localISODate } from '@/lib/time'
 import { getMoneySnapshot, postFundWithdrawal, postTransaction, walletFundsCheckById, walletNameOfId } from './store'
 import {
@@ -23,13 +30,18 @@ import {
 } from '@/lib/supabase/funds-remote'
 import { subscribeTables } from '@/lib/supabase/realtime'
 import { randomUuid } from '@/lib/supabase/uuid'
+import {
+  notifyFundDeposit,
+  notifyFundGoal,
+  notifyFundWithdraw,
+} from './notification-events'
 
 /* ── SATU STORE CELENGAN (paket 46) ─────────────────────────────────────────
    Temuan uji pemakaian: "Tabungan Impian" di Dashboard tidak sinkron dengan
    halaman lain. Sebelum paket ini ada TIGA sumber angka untuk celengan yang
    sama, dan ketiganya hidup sendiri-sendiri:
 
-     1. kartu "Tabungan Impian" + widget Tanamanmu di Home → `heroFundOf()` /
+     1. kartu "Tabungan Impian" + kartu "Puzzle kamu" di Home → `heroFundOf()` /
         `sortFundsByUrgency()` yang membaca `INITIAL_SINKING_FUNDS` (konstanta);
      2. halaman /budget → `useState(INITIAL_SINKING_FUNDS)` milik BudgetScreen;
      3. halaman /budget/<id> → `fund` + `history` di `useState` GoalDetailScreen.
@@ -138,6 +150,15 @@ const EMPTY_SNAPSHOT: FundsSnapshot = Object.freeze({
 let live: FundsSnapshot = SERVER_SNAPSHOT
 let accountPurged = false
 let hydrateStarted = false
+/**
+ * akun yang state-nya sedang dipegang store ini.
+ * `undefined` = belum pernah dibaca (hidrasi pertama yang menentukannya).
+ *
+ * Cache celengan dipisah PER AKUN (`accountStateKey`): satu browser boleh dipakai
+ * beberapa akun, dan celengan akun A tidak boleh muncul di akun B (laporan
+ * pemilik produk: "tabungan impian akun lama ada di akun baru").
+ */
+let deviceOwnerUserId: string | null | undefined = undefined
 const listeners = new Set<() => void>()
 
 export function getFundsSnapshot(): FundsSnapshot {
@@ -156,7 +177,7 @@ export function getServerFundsSnapshot(): FundsSnapshot {
  */
 export function subscribeFundsStore(listener: () => void): () => void {
   listeners.add(listener)
-  void hydrateFundsStore()
+  void hydrateFundsStore().then(() => syncFundsAccount())
   /* perubahan dari perangkat lain: realtime + tab kembali aktif */
   startFundsRealtime()
   return () => {
@@ -164,12 +185,42 @@ export function subscribeFundsStore(listener: () => void): () => void {
   }
 }
 
+/**
+ * Pastikan state yang dipegang store memang milik akun yang SEDANG masuk.
+ *
+ * Dipanggil setiap kali store dipakai lagi (mount komponen / realtime / tab
+ * kembali terlihat). Kalau id user berubah — logout lalu masuk akun lain di tab
+ * yang sama — seluruh state dibuang lebih dulu, lalu hidrasi membaca key akun
+ * yang baru. Tanpa langkah ini, celengan akun sebelumnya menempel di akun baru
+ * sampai user me-refresh paksa.
+ */
+async function syncFundsAccount(): Promise<void> {
+  if (typeof window === 'undefined') return
+  const userId = (await browserUserId()) ?? null
+  if (deviceOwnerUserId === undefined) {
+    /* hidrasi pertama sudah menetapkan pemiliknya; tidak ada yang perlu diubah */
+    if (deviceOwnerUserId !== undefined) return
+    deviceOwnerUserId = userId
+    return
+  }
+  if (userId === deviceOwnerUserId) return
+
+  deviceOwnerUserId = userId
+  hydrateStarted = false
+  hydratedOnce = false
+  accountPurged = false
+  nextPreHydrationId = PRE_HYDRATION_ID_BASE
+  live = SERVER_SNAPSHOT
+  emit()
+  await hydrateFundsStore()
+}
+
 function emit(): void {
   for (const listener of listeners) listener()
 }
 
 function persist(snapshot: FundsState): void {
-  saveDeviceState<PersistedFunds>(FUNDS_STATE_KEY, {
+  saveDeviceState<PersistedFunds>(accountStateKey(FUNDS_STATE_KEY, deviceOwnerUserId), {
     version: FUNDS_STATE_VERSION,
     funds: snapshot.funds,
     contributions: snapshot.contributions,
@@ -380,7 +431,11 @@ async function hydrateFundsStore(): Promise<void> {
   if (hydrateStarted) return
   hydrateStarted = true
 
-  const persisted = await loadDeviceState<PersistedFunds>(FUNDS_STATE_KEY)
+  /* Pemilik state dibaca DULU: cache celengan dipisah per akun, jadi key-nya
+     bergantung pada sesi yang sedang aktif (`funds:<userId>` / `funds:anon`). */
+  const userId = await resolveDeviceOwner(FUNDS_STATE_KEY, (await browserUserId()) ?? null)
+  deviceOwnerUserId = userId
+  const persisted = await loadDeviceState<PersistedFunds>(accountStateKey(FUNDS_STATE_KEY, userId))
   accountPurged = persisted?.purged === true
   live = mergeFundsState(persisted)
   hydratedOnce = true
@@ -403,7 +458,9 @@ async function hydrateFundsStore(): Promise<void> {
  * baris lokal tanpa `remoteId` = antrean yang belum pernah terkirim.
  */
 export async function refreshFundsFromServer(): Promise<boolean> {
-  if (typeof window === 'undefined' || !hydratedOnce || accountPurged) return false
+  if (typeof window === 'undefined') return false
+  await syncFundsAccount()
+  if (!hydratedOnce || accountPurged) return false
   const remote = await readRemoteFunds()
   if (!remote) return false
 
@@ -460,7 +517,7 @@ export interface NewFundInput {
   scope: BudgetScope
 }
 
-/** tanam celengan baru — selalu mulai dari nol & tahap benih (PRD 2C.3) */
+/** buat celengan baru — selalu mulai dari nol & tahap benih (PRD 2C.3) */
 export function addFund(input: NewFundInput): SinkingFundItem {
   const fund: SinkingFundItem = {
     id: nextFundId(),
@@ -476,6 +533,35 @@ export function addFund(input: NewFundInput): SinkingFundItem {
   commit({ ...live, funds: [...live.funds, fund], hydrated: true })
   void ensureFundOnServer(fund.id)
   return fund
+}
+
+export interface FundPatch {
+  name?: string
+  target?: number
+}
+
+/**
+ * Koreksi nama & target celengan yang sudah ada (sesi 5).
+ *
+ * Progres (`current`), tahap, dan riwayat setoran SENGAJA tidak disentuh: uang
+ * yang sudah keluar tetap tercatat, dan target baru hanya mengubah jarak yang
+ * masih harus dikejar. `null` = celengan tidak ada/dihapus atau input tidak sah
+ * (nama kosong, target ≤ 0), dan itu berarti TIDAK ada yang ditulis.
+ */
+export function updateFund(fundId: number, patch: FundPatch): SinkingFundItem | null {
+  const fund = live.funds.find((row) => row.id === fundId)
+  if (!fund || live.removedIds.includes(fundId)) return null
+  const name = (patch.name ?? fund.name).trim()
+  const target = Math.round(Number(patch.target ?? fund.target))
+  if (!name || !Number.isFinite(target) || target <= 0) return null
+  const updated: SinkingFundItem = { ...fund, name, target }
+  commit({
+    ...live,
+    funds: live.funds.map((row) => (row.id === fundId ? updated : row)),
+    hydrated: true,
+  })
+  void ensureFundOnServer(fundId)
+  return updated
 }
 
 export interface ContributionResult {
@@ -577,10 +663,17 @@ export function contributeToFund(
   /* celengan dulu (butuh uuid), baru setoran yang menunjuk uuid itu */
   void ensureFundOnServer(fund.id).then(() => ensureContributionOnServer(contribution.id))
 
+  /* LONCENG: setoran & target tercapai. `reachedNow` dihitung sekali di sini
+     supaya angka yang dipakai perayaan milestone dan notifikasi tidak bisa
+     berbeda cerita. */
+  const reachedNow = target.current < target.target && fund.current >= target.target
+  notifyFundDeposit(fund.name)
+  if (reachedNow) notifyFundGoal(fund.name)
+
   return {
     fund,
     contribution,
-    reachedNow: target.current < target.target && fund.current >= target.target,
+    reachedNow,
   }
 }
 
@@ -665,6 +758,7 @@ export function withdrawFromFund(
     hydrated: true,
   })
   void ensureFundOnServer(fund.id).then(() => ensureContributionOnServer(contribution.id))
+  notifyFundWithdraw(fund.name)
 
   return { fund, contribution, reachedNow: false }
 }
@@ -791,6 +885,7 @@ export function resetFundsStore(): void {
   accountPurged = false
   hydrateStarted = false
   hydratedOnce = false
+  deviceOwnerUserId = undefined
   nextPreHydrationId = PRE_HYDRATION_ID_BASE
   emit()
 }

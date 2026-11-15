@@ -156,7 +156,7 @@ export function readSupabaseSession(
     email: parsed.user?.email ?? '',
     name:
       /* NAMA TIDAK PERNAH DIKARANG. Dulu di sini ada `?? 'Kamu'`, dan itu membuat
-         sapaan Dashboard berbunyi "Selamat pagi, Kamu 🌿" untuk akun yang
+         sapaan Dashboard berbunyi "Selamat pagi, Kamu 🧩" untuk akun yang
          metadata-nya belum punya nama — seolah "Kamu" adalah nama orangnya
          (keluhan nyata pemilik produk). Sekarang namanya boleh kosong:
          `greetingNameOf()` lalu menyapa tanpa nama, dan titik yang memang butuh

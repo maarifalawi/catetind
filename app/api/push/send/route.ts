@@ -15,8 +15,11 @@ import { allSubscriptions, consumeRateSlot, dropEndpoint, subscriptionsOf } from
         supaya "kirim ke orang lain" bukan sekadar diabaikan, tapi ditolak.
      3. Broadcast lintas-user hanya lewat `INTERNAL_PUSH_TOKEN` di header
         (`x-internal-push-token`) — jalur server-to-server untuk scheduler
-        pengingat 12:30/19:00 WIB. Karena itu token ini WAJIB di-set di
+        pengingat 08:00/20:00 WIB. Karena itu token ini WAJIB di-set di
         produksi; kalau kosong, jalur internal mati (fail-closed), bukan terbuka.
+        (Pengingat terjadwal sendiri TIDAK lewat endpoint ini, melainkan
+        `/api/cron/reminders` + `lib/push/cron.ts`, yang memakai kunci peran
+        server dan stempel anti-spam harian.)
      4. Rate limit per user (5/menit, lihat `store.ts`) → 429 + `Retry-After`.
      5. `url` hanya boleh path internal (`/…`) supaya notifikasi tidak bisa
         dipakai mengarahkan user ke situs lain.
@@ -100,7 +103,7 @@ export async function POST(req: NextRequest) {
   }
 
   const payload = JSON.stringify({
-    title: (body.title ?? 'CatetInd 🌿').slice(0, MAX_TITLE_LENGTH),
+    title: (body.title ?? 'CatetInd 🧩').slice(0, MAX_TITLE_LENGTH),
     body: (body.body ?? 'Tes push berhasil!').slice(0, MAX_BODY_LENGTH),
     url: safeUrl(body.url),
     tag: 'catetind-test',

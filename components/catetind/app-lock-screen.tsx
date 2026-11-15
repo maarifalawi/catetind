@@ -118,13 +118,13 @@ export function AppLockScreen() {
           <span className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-forest text-mint">
             <Lock className="size-5" strokeWidth={2.2} aria-hidden />
           </span>
-          <p className="mt-4 text-[12px] font-medium tracking-[0.16em] text-forest/40 uppercase">
+          <p className="mt-4 text-[12px] font-medium tracking-[0.16em] text-forest-muted uppercase">
             {LOCK_SCREEN_COPY.eyebrow}
           </p>
           <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight text-forest">
             {LOCK_SCREEN_COPY.title}
           </h1>
-          <p className="mt-1.5 text-[13.5px] leading-relaxed text-forest/55">
+          <p className="mt-1.5 text-[13.5px] leading-relaxed text-forest-muted">
             {LOCK_SCREEN_COPY.subtitle(PIN_LENGTH)}
           </p>
         </header>
@@ -152,17 +152,17 @@ export function AppLockScreen() {
             className="mt-4 min-h-[3rem] text-center text-[13px] leading-relaxed"
           >
             {locked ? (
-              <span className="font-medium text-forest/70">
+              <span className="font-medium text-forest-soft">
                 {LOCK_SCREEN_COPY.lockoutTitle}{' '}
                 <span className="tabular-nums">{lockoutCountdown}</span>
-                <span className="mt-1 block font-normal text-forest/55">
+                <span className="mt-1 block font-normal text-forest-muted">
                   {LOCK_SCREEN_COPY.lockoutBody(lockoutCountdown ?? '')}
                 </span>
               </span>
             ) : failed ? (
               <span className="text-plum">{LOCK_SCREEN_COPY.wrongPin(attemptsLeftCount)}</span>
             ) : (
-              <span className="text-forest/40">{LOCK_SCREEN_COPY.deviceOnlyNote}</span>
+              <span className="text-forest-muted">{LOCK_SCREEN_COPY.deviceOnlyNote}</span>
             )}
           </p>
         </div>
@@ -181,7 +181,7 @@ export function AppLockScreen() {
                 className={cn(
                   'flex h-12 w-full items-center justify-center gap-2 rounded-2xl text-[14.5px] font-medium transition-colors duration-200 motion-reduce:transition-none',
                   locked || biometricBusy
-                    ? 'cursor-not-allowed bg-cream text-forest/35 ring-1 ring-soil/12'
+                    ? 'cursor-not-allowed bg-cream text-forest-muted ring-1 ring-soil/12'
                     : 'bg-sage text-forest hover:bg-mint/40',
                 )}
               >
@@ -192,7 +192,7 @@ export function AppLockScreen() {
                 )}
                 {biometricBusy ? LOCK_SCREEN_COPY.biometricPending : LOCK_SCREEN_COPY.biometricCta}
               </button>
-              <p className="mt-1.5 text-center text-[11.5px] leading-relaxed text-forest/40">
+              <p className="mt-1.5 text-center text-[11.5px] leading-relaxed text-forest-muted">
                 {LOCK_SCREEN_COPY.biometricNote}
               </p>
             </div>
@@ -229,7 +229,7 @@ export function AppLockScreen() {
               onClick={backspace}
               disabled={busy || locked || pin.length === 0}
               aria-label={LOCK_SCREEN_COPY.backspaceAria}
-              className="flex h-14 items-center justify-center rounded-2xl bg-sage/60 text-forest/70 ring-1 ring-soil/12 transition-colors duration-150 hover:bg-sage focus-visible:ring-2 focus-visible:ring-forest/40 focus-visible:outline-none disabled:opacity-40 motion-reduce:transition-none"
+              className="flex h-14 items-center justify-center rounded-2xl bg-sage/60 text-forest-soft ring-1 ring-soil/12 transition-colors duration-150 hover:bg-sage focus-visible:ring-2 focus-visible:ring-forest/40 focus-visible:outline-none disabled:opacity-40 motion-reduce:transition-none"
             >
               <Delete className="size-5" strokeWidth={2.2} aria-hidden />
             </button>
@@ -238,7 +238,7 @@ export function AppLockScreen() {
           <button
             type="button"
             onClick={() => setForgotOpen(true)}
-            className="mx-auto mt-1 inline-flex items-center gap-1.5 text-[13px] font-medium text-forest/55 underline underline-offset-4 transition-colors hover:text-forest"
+            className="mx-auto mt-1 inline-flex items-center gap-1.5 text-[13px] font-medium text-forest-muted underline underline-offset-4 transition-colors hover:text-forest"
           >
             <KeyRound className="size-3.5" strokeWidth={2.4} aria-hidden />
             {LOCK_SCREEN_COPY.forgotLink}

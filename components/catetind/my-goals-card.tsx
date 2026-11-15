@@ -2,18 +2,20 @@
 
 import { memo } from 'react'
 import Link from 'next/link'
-import { ArrowUpRight, Goal, Plane, Plus, ShieldCheck, Smartphone, Sprout } from 'lucide-react'
+import { ArrowUpRight, Goal, Plane, Plus, Puzzle, ShieldCheck, Smartphone } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { AMOUNT_LG } from '@/lib/typography'
 import {
   budgetPlantHref,
   fundPercentRounded,
   heroFundOf,
+  monthlyNeeded,
   sortFundsByUrgency,
   type SinkingFundItem,
 } from '@/lib/data/budget'
 import { HOME_GOALS_COPY } from '@/lib/data/home'
 import { useLiveFunds } from '@/lib/money/funds-store'
-import { PlantIllustration, STAGE_NAMES, type PlantStage } from './plant-illustration'
+import type { PlantStage } from './plant-illustration'
 import { usePrivacy } from './privacy-provider'
 
 /* ── SATU SUMBER: `INITIAL_SINKING_FUNDS` (paket 30) ─────────────────────────
@@ -30,7 +32,7 @@ import { usePrivacy } from './privacy-provider'
      • persen & tahap     → `fundPercentRounded()` + `stageFromPercent(pct)`
      • tiap panah         → `/budget/<id>` celengan yang benar-benar ada
      • tombol `+`         → `budgetPlantHref()` (`/budget?tanam=1`), satu-satunya
-                            jalur yang memang membuka sheet "Tanam Celengan
+                            jalur yang memang membuka sheet "Buat Celengan
                             Baru" (sheet itu milik state `funds` di /budget;
                             menulis celengan dari Home = janji palsu).
 
@@ -38,32 +40,34 @@ import { usePrivacy } from './privacy-provider'
    ditulis di `HOME_GOALS_COPY` (lib/data/home.ts), berdampingan dengan copy-nya
    supaya keputusan itu tidak bisa hilang dari konteksnya. */
 
-/* ── Metafora Tanaman untuk Sinking Fund (PRD Domain 2C & 3B) ────────────────
+/* ── Tahap untuk Sinking Fund (PRD Domain 2C & 3B) ───────────────────────────
    Sebelumnya Tabungan Impian digambar sebagai circular progress bar biasa,
-   sementara widget "Tanamanmu" berdiri sendiri tanpa konteks — jadi gamifikasi
-   terasa gimmick dan user tidak tahu APA yang membuat tanaman itu tumbuh.
+   sementara widget terpisah berdiri sendiri tanpa konteks — jadi gamifikasi
+   terasa gimmick dan user tidak tahu APA yang menentukan tahapnya.
 
-   Sekarang keduanya dijahit jadi satu: progress tabungan = TAHAP tanaman.
-   Setiap setoran = menyiram. Tidak ada angka streak, tidak ada hukuman.
+   Sekarang satu sumber: progress tabungan = TAHAP. Setiap setoran = satu
+   kepingan terpasang. Tidak ada angka streak, tidak ada hukuman.
 
    Dua helper di bawah tinggal di sini (bukan disalin ke kartu lain) supaya
-   tabel tahap Home hanya ada SATU: kartu Tabungan Impian memakai keduanya, dan
-   widget Tanamanmu memakai keduanya juga — pada layar yang sama keduanya harus
-   menyebut tahap yang sama untuk celengan yang sama. */
+   tabel tahap Home hanya ada SATU: kartu Tabungan Impian memakai keduanya untuk
+   badge & bar, dan kartu "Puzzle kamu" memakainya untuk papan puzzle — pada
+   layar yang sama keduanya harus menyebut tahap yang sama untuk celengan yang
+   sama. (Papannya sendiri sekarang HANYA di "Puzzle kamu"; kartu ini tidak lagi
+   menggambar papan kembar — lihat catatan di `HeroFund`.) */
 
 /** batas bawah tiap tahap dalam persen — SATU tabel untuk `stageFromPercent()`
  *  dan `stageBandProgress()`, jadi keduanya tidak mungkin berbeda pendapat */
 const STAGE_FLOOR = [0, 25, 50, 80] as const
 
 export function stageFromPercent(pct: number): PlantStage {
-  if (pct < STAGE_FLOOR[1]) return 1 // Benih
-  if (pct < STAGE_FLOOR[2]) return 2 // Tunas
-  if (pct < STAGE_FLOOR[3]) return 3 // Tanaman Muda
-  return 4 // Berbunga
+  if (pct < STAGE_FLOOR[1]) return 1 // Awal tersusun
+  if (pct < STAGE_FLOOR[2]) return 2 // Setengah jalan
+  if (pct < STAGE_FLOOR[3]) return 3 // Hampir lengkap
+  return 4 // Puzzle lengkap
 }
 
 /** progres DI DALAM tahap yang sedang berjalan (0–100) — jarak ke tahap
- *  berikutnya. Dipakai bar "menuju tahap berikutnya" di widget Tanamanmu supaya
+ *  berikutnya. Dipakai bar "menuju tahap berikutnya" di kartu Puzzle kamu supaya
  *  angkanya TURUNAN dari progres celengan, bukan angka pajangan terpisah yang
  *  bisa bertabrakan dengan persen di kartu sebelahnya. Tahap 4 = tahap terakhir
  *  (tidak ada tahap berikutnya), jadi barnya penuh. */
@@ -75,12 +79,12 @@ export function stageBandProgress(pct: number): number {
   return Math.max(0, Math.round((((pct - floor) / (ceiling - floor)) * 100)))
 }
 
-/* label ringkas untuk batang tumbuh 4 titik */
+/* label ringkas untuk jalur tahap 4 titik */
 const SHORT_STAGE: Record<PlantStage, string> = {
-  1: 'Benih',
-  2: 'Tunas',
-  3: 'Muda',
-  4: 'Berbunga',
+  1: 'Awal',
+  2: 'Setengah',
+  3: 'Hampir',
+  4: 'Lengkap',
 }
 
 /* warna pastel yang benar-benar berbeda per goal (olive · daisy · plum) —
@@ -91,8 +95,9 @@ const TINTS = [
   'bg-hud-terracotta/15 text-hud-terracotta',
 ]
 
-/** batang tumbuh: benih → tunas → muda → berbunga. Warnanya menanjak dari
- *  cokelat tanah ke olive lalu leaf — "tumbuh", bukan "progress bar". */
+/** jalur tahap papan: awal tersusun → setengah jalan → hampir lengkap →
+ *  puzzle lengkap. Warnanya menanjak dari terracotta ke olive lalu leaf —
+ *  "kepingan yang makin terpasang", bukan progress bar generik. */
 function GrowthTrack({ pct, stage }: { pct: number; stage: PlantStage }) {
   return (
     <div>
@@ -112,8 +117,8 @@ function GrowthTrack({ pct, stage }: { pct: number; stage: PlantStage }) {
               s === stage
                 ? 'font-medium text-forest'
                 : s < stage
-                  ? 'text-forest/45'
-                  : 'text-forest/30',
+                  ? 'text-forest-muted'
+                  : 'text-forest-muted',
             )}
           >
             {SHORT_STAGE[s]}
@@ -130,7 +135,7 @@ function GrowthTrack({ pct, stage }: { pct: number; stage: PlantStage }) {
    itu tombol utama "Buat celengan" di dalam kartu melakukan hal yang persis
    sama, jadi dua tombol dengan aksi identik cuma bikin bingung. Begitu ada satu
    celengan, tombol `+` muncul lagi (ia bukan jalan buntu: `/budget?tanam=1`
-   benar-benar membuka sheet "Tanam Celengan Baru"). */
+   benar-benar membuka sheet "Buat Celengan Baru"). */
 function CardHeader({ showAdd }: { showAdd: boolean }) {
   return (
     <div className="flex items-center justify-between px-1 pt-1">
@@ -172,18 +177,10 @@ const GOAL_IDEA_ICON: Record<
    Struktur FINAL (tanpa paragraf, tanpa emoji, tanpa label contoh):
      ikon → "Belum ada celengan" → 3 chip contoh → tombol "Buat celengan".
    Chip tetap memprefill nama celengan lewat jalur yang SAMA dengan tombol utama
-   (`/budget?tanam=1` → sheet "Tanam Celengan Baru"), bukan tombol mati. */
+   (`/budget?tanam=1` → sheet "Buat Celengan Baru"), bukan tombol mati. */
 function EmptyGoals() {
   return (
-    <div className="mt-4 rounded-2xl border border-dashed border-oat bg-cream/60 px-5 py-8 text-center">
-      {/* ikon (bukan emoji di JSX): copy kartu ini seluruhnya tinggal di
-          lib/data/home.ts, jadi tidak ada literal yang perlu diaudit di sini */}
-      <span
-        aria-hidden
-        className="mx-auto flex size-11 items-center justify-center rounded-full bg-sage text-forest"
-      >
-        <Sprout className="size-5" strokeWidth={2.2} />
-      </span>
+    <div data-catetind-empty className="mt-4 rounded-2xl border border-dashed border-oat bg-cream/60 px-5 py-8 text-center">
       <p className="mt-2 text-sm font-medium text-forest">{HOME_GOALS_COPY.emptyTitle}</p>
       {/* contoh celengan populer: placeholder yang BISA DITAP. Ikonnya Lucide,
           dipilih dari `id` di data supaya tidak ada emoji di data/JSX. */}
@@ -196,7 +193,6 @@ function EmptyGoals() {
               href={budgetPlantHref()}
               className="inline-flex items-center gap-1.5 rounded-full bg-sage/70 px-3 py-1.5 text-[13px] font-medium text-forest ring-1 ring-forest/10 transition-colors hover:bg-sage focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25 active:scale-95"
             >
-              <IdeaIcon className="size-3.5" strokeWidth={2.4} aria-hidden />
               {example.label}
             </Link>
           )
@@ -206,17 +202,23 @@ function EmptyGoals() {
         href={budgetPlantHref()}
         className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-forest px-4 py-2.5 text-[13.5px] font-medium text-cream transition-colors hover:bg-forest-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/30 active:scale-95"
       >
-        <Plus className="size-3.5" strokeWidth={3} aria-hidden />
         {HOME_GOALS_COPY.emptyCta}
       </Link>
     </div>
   )
 }
 
-/** Hero — tanaman sebagai wajah dari progress celengan yang paling perlu
- *  diingatkan (`heroFundOf()` di lib/data/budget.ts). Nama, nominal, persen, dan
- *  tahap di sini TURUNAN dari `fund`; tidak ada satu pun angka yang ditulis
- *  manual, jadi bagian mana pun bisa ditelusuri ke /budget/<id>-nya. */
+/** Hero — NOMINAL + TAHAP dari celengan yang paling perlu diingatkan
+ *  (`heroFundOf()` di lib/data/budget.ts). Nama, nominal, persen, dan tahap di
+ *  sini TURUNAN dari `fund`; tidak ada satu pun angka yang ditulis manual, jadi
+ *  bagian mana pun bisa ditelusuri ke /budget/<id>-nya.
+ *
+ *  REVISI (permintaan pemilik produk): PAPAN PUZZLE DICABUT dari kartu ini.
+ *  Dulu kartu ini menggambar papan puzzle kecil sebagai "wajah" progres, padahal
+ *  di sebelahnya ada kartu "Puzzle kamu" yang menggambar papan dari angka YANG
+ *  SAMA — jadi satu layar punya dua papan kembar. Sekarang pembagiannya tegas:
+ *    · kartu ini  → angka, badge tahap, dan bar progres (ringkas, tanpa papan);
+ *    · Puzzle kamu → SATU-SATUNYA papan puzzle di Dashboard. */
 function HeroFund({ fund }: { fund: SinkingFundItem }) {
   const { money } = usePrivacy()
   const pct = fundPercentRounded(fund)
@@ -224,12 +226,6 @@ function HeroFund({ fund }: { fund: SinkingFundItem }) {
 
   return (
     <div className="relative mt-4 overflow-hidden rounded-2xl bg-gradient-to-b from-sage/70 via-cream to-cream p-4 ring-1 ring-soil/8 sm:p-5">
-      {/* glow mint sangat lembut di belakang tanaman */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -left-6 top-6 h-28 w-40 rounded-full bg-mint/20 blur-3xl"
-      />
-
       <div className="relative flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate text-sm font-medium text-forest">{fund.name}</p>
@@ -244,47 +240,37 @@ function HeroFund({ fund }: { fund: SinkingFundItem }) {
         </Link>
       </div>
 
-      {/* tanaman + tahap + batang tumbuh, sejajar supaya hemat tinggi */}
-      <div className="relative mt-2 flex items-center gap-4">
-        <PlantIllustration stage={stage} progress={pct} className="w-24 shrink-0 sm:w-28" />
-        <div className="min-w-0 flex-1">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-cream/85 px-2.5 py-1 text-[12px] font-medium text-forest ring-1 ring-forest/10">
-            <Sprout className="size-3" strokeWidth={2.4} aria-hidden />
-            {HOME_GOALS_COPY.stageBadge(stage, STAGE_NAMES[stage])}
-          </span>
-          {/* kalimat penyemangat HANYA saat celengannya sudah penuh (tahap 4):
-              teks berulang "Tiap setoran bikin tanaman ini naik tahap…" DIHAPUS
-              (permintaan pemilik produk) — badge tahap + batang tumbuh di bawah
-              sudah mengatakan hal yang sama tanpa mengulanginya tiap kali. */}
-          {stage === 4 && (
-            <p className="mt-2 text-[12.5px] leading-snug text-forest/55">
-              {HOME_GOALS_COPY.heroBlurbBloom}
-            </p>
-          )}
-          <div className="mt-2.5">
-            <GrowthTrack pct={pct} stage={stage} />
-          </div>
-        </div>
+      {/* bar progres — tanpa badge tahap (diminta dihapus) dan tanpa ilustrasi,
+          jadi seluruh lebar kartu terpakai oleh informasi yang benar-benar
+          dibaca: seberapa jauh celengan ini jalan. */}
+      <div className="relative mt-3">
+        {/* kalimat penyemangat HANYA saat celengannya sudah penuh (tahap 4):
+            teks berulang "Tiap setoran bikin celengan ini naik tahap…" DIHAPUS
+            (permintaan pemilik produk) — bar progres di bawah sudah mengatakan
+            hal yang sama tanpa mengulanginya tiap kali. */}
+        {stage === 4 && (
+          <p className="mb-2 text-[12.5px] leading-snug text-forest-muted">
+            {HOME_GOALS_COPY.heroBlurbBloom}
+          </p>
+        )}
+        <GrowthTrack pct={pct} stage={stage} />
       </div>
 
-      {/* nominal — di luar area tanaman, angka besar tidak menimpa ilustrasi.
-          Nominalnya milik celengan hero (bukan angka kartu terpisah), jadi
-          tombol mata & halaman detail selalu bercerita hal yang sama. */}
+      {/* NOMINAL — gaya minimalis (revisi pemilik produk): TIDAK ada lagi dua
+          baris berlabel "TERKUMPUL / TARGET" yang saling menyaingi. Satu label
+          kecil di atas, satu angka besar sebagai pahlawan, dan target disebut
+          sekali sebagai konteks ("dari Rp 30.000.000"). Nominalnya tetap milik
+          celengan hero, jadi tombol mata & halaman detail bercerita sama. */}
       <div className="relative mt-4 border-t border-soil/12 pt-3.5">
-        <div className="flex items-center justify-between gap-3">
-          <p className="shrink-0 text-[12px] font-medium uppercase tracking-[0.12em] text-forest/40">
-            {HOME_GOALS_COPY.savedLabel}
-          </p>
-          <p className="truncate text-base font-medium text-forest tabular-nums">
+        <p className="text-[11.5px] font-medium text-forest-muted">
+          {HOME_GOALS_COPY.savedLabel}
+        </p>
+        <div className="mt-0.5 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+          <p className={cn('min-w-0 truncate text-forest', AMOUNT_LG)}>
             {money(fund.current)}
           </p>
-        </div>
-        <div className="mt-1.5 flex items-center justify-between gap-3">
-          <p className="shrink-0 text-[12px] font-medium uppercase tracking-[0.12em] text-forest/45">
-            {HOME_GOALS_COPY.targetLabel}
-          </p>
-          <p className="truncate text-sm font-medium text-forest/55 tabular-nums">
-            {money(fund.target)}
+          <p className="shrink-0 text-[12.5px] text-forest-muted tabular-nums">
+            {HOME_GOALS_COPY.targetPrefix} {money(fund.target)}
           </p>
         </div>
       </div>
@@ -314,20 +300,20 @@ function MiniGoalRow({ fund, tintIndex }: { fund: SinkingFundItem; tintIndex: nu
               TINTS[tintIndex % TINTS.length],
             )}
           >
-            <Sprout className="size-3" strokeWidth={2.4} aria-hidden />
+            <Puzzle className="size-3" strokeWidth={2.4} aria-hidden />
           </span>
           <p className="truncate text-[14px] font-medium text-forest">{fund.name}</p>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
           <span className="text-[11.5px] font-medium text-forest">{SHORT_STAGE[stage]}</span>
-          <span className="text-xs font-medium text-forest/55 tabular-nums">{pct}%</span>
+          <span className="text-xs font-medium text-forest-muted tabular-nums">{pct}%</span>
           {/* ArrowUpRight (bukan ChevronDown): ikon ini MENUJU halaman, bukan
               membuka baris — chevron ke bawah dulu menjanjikan expand yang
               tidak pernah ada */}
-          <ArrowUpRight className="size-3.5 text-forest/35" strokeWidth={2.2} aria-hidden />
+          <ArrowUpRight className="size-3.5 text-forest-muted" strokeWidth={2.2} aria-hidden />
         </div>
       </div>
-      {/* batang tumbuh mini: 4 segmen = 4 tahap */}
+      {/* jalur tahap mini: 4 segmen = 4 tahap */}
       <div className="mt-2 flex gap-1" aria-hidden>
         {([1, 2, 3, 4] as PlantStage[]).map((s) => (
           <span
@@ -355,9 +341,14 @@ function MiniGoalRow({ fund, tintIndex }: { fund: SinkingFundItem; tintIndex: nu
 export const MyGoalsCard = memo(function MyGoalsCard() {
   const funds = useLiveFunds()
   const hero = heroFundOf(funds)
+  const { money } = usePrivacy()
   /* baris mini = SEMUA celengan selain hero; urutannya prioritas → progres
      (`sortFundsByUrgency`). Kurang dari 3 celengan ⇒ tampil apa adanya. */
   const rest = sortFundsByUrgency(funds).filter((fund) => fund.id !== hero?.id)
+  /* kewajiban setoran bulanan celengan hero — angka NYATA dari target/tenggat
+     (`monthlyNeeded()` yang sama dengan halaman detail), dipakai sebagai baris
+     pendukung supaya dasar kartu tidak kosong saat dipasangkan dengan puzzle. */
+  const monthlySetAside = hero ? monthlyNeeded(hero.target, hero.current, hero.deadline) : 0
 
   return (
     <div className="flex h-full flex-col rounded-[2rem] bg-cream p-4 ring-1 ring-soil/12 sm:p-5">
@@ -366,19 +357,47 @@ export const MyGoalsCard = memo(function MyGoalsCard() {
         <>
           <HeroFund fund={hero} />
           {rest.length > 0 && (
-            <div className="mt-3">
-              <p className="px-1 text-[12px] font-medium uppercase tracking-[0.12em] text-forest/40">
+            <div className="mt-3 flex flex-1 flex-col">
+              <p className="px-1 text-[12px] font-medium uppercase tracking-[0.12em] text-forest-muted">
                 {HOME_GOALS_COPY.restTitle(rest.length)}
               </p>
-              {/* tiap celengan punya batang tumbuhnya sendiri (4 segmen), jadi
-                  bahasa visualnya sama dengan tanaman hero di atas */}
-              <div className="mt-2 flex flex-col gap-2">
+              {/* tiap celengan punya bar progresnya sendiri (4 segmen), jadi
+                  bahasa visualnya sama dengan hero di atas & papan puzzle.
+                  `justify-start` + `flex-1`: saat kartu dipasangkan dengan
+                  tetangga yang lebih tinggi, ruang sisa dibagi sebagai jarak
+                  antar-baris — bukan menumpuk jadi satu lubang di dasar. */}
+              <div className="mt-2 flex flex-1 flex-col justify-start gap-2">
                 {rest.map((fund, i) => (
                   <MiniGoalRow key={fund.id} fund={fund} tintIndex={i} />
                 ))}
               </div>
             </div>
           )}
+          {/* SETORAN BULAN INI — baris pendukung (bukan hiasan): angka dari
+              `monthlyNeeded()` celengan hero, statusnya dari
+              `contributedThisMonth`. Ditempatkan SEBELUM tautan penutup supaya
+              dasar kartu terisi informasi, bukan ruang kosong. */}
+          <div className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-sage/35 px-3 py-2 ring-1 ring-soil/[0.05]">
+            <span className="text-[11.5px] font-medium text-forest-muted">
+              {HOME_GOALS_COPY.monthlySetAside}
+            </span>
+            <span className="shrink-0 text-[11.5px] font-semibold text-forest tabular-nums">
+              {money(monthlySetAside)}
+              <span className="font-medium text-forest-muted">
+                /{HOME_GOALS_COPY.perMonth}
+              </span>
+            </span>
+          </div>
+          {/* PINTU KELUAR — tautan halaman penuh, dipaku di dasar kartu. Dulu
+              dasar kartu ini kosong saat tingginya mengikuti pasangan di sebelah;
+              sekarang baris ini yang menutup kartu, jadi tidak ada ruang mati. */}
+          <Link
+            href="/budget"
+            className="mt-auto flex items-center justify-between gap-2 pt-3 text-[12.5px] font-medium text-forest-muted transition-colors hover:text-forest"
+          >
+            {HOME_GOALS_COPY.seeAll}
+            <ArrowUpRight className="size-3.5 shrink-0" strokeWidth={2.4} aria-hidden />
+          </Link>
         </>
       ) : (
         <EmptyGoals />

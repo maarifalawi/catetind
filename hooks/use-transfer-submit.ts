@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { maskMoney } from '@/lib/data/history'
 import { TRANSFER_SHEET_COPY } from '@/lib/data/add-wallet'
 import { getMoneySnapshot, postTransfer, walletAccountOf, walletNameOfId } from '@/lib/money/store'
+import { notifyTransfer } from '@/lib/money/notification-events'
 
 /* ── useTransferSubmit — SATU pintu tulis pindah dana (paket 55) ──────────────
    Semua pintu masuk “Pindah Dana” (popover kartu dompet, tombol di halaman
@@ -52,6 +53,8 @@ export function useTransferSubmit(masked = false) {
           walletNameOfId(before, toWalletId),
         ),
       })
+      /* LONCENG: pindah dana adalah aktivitas akun — satu item per transfer */
+      notifyTransfer(walletNameOfId(before, fromWalletId), walletNameOfId(before, toWalletId))
       return true
     },
     [masked],

@@ -1,24 +1,29 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { BudgetSheet, RupiahField, SheetSubmit, useFocusOnOpen } from './budget-sheet'
 import { cn } from '@/lib/utils'
 import {
   FUND_CONTRIBUTE_INSUFFICIENT_COPY,
-  WALLET_SOURCES,
+  FUND_CONTRIBUTE_NO_WALLET_COPY,
   fundPercent,
   maskNominal,
   type SinkingFundItem,
 } from '@/lib/data/budget'
-import { useMoneyStore, walletFundsCheckById } from '@/lib/money/store'
+import { getMoneySnapshot, useMoneyStore, walletFundsCheckById, walletSelectOptionsFor } from '@/lib/money/store'
 
 /* ── 4B. Setor ke Celengan — sheet kecil, satu ketukan selesai ───────────────
    Isinya sengaja cuma tiga hal: nominal, dari dompet mana, lalu setor. Nominal
    cepat (chip) dipakai supaya mayoritas user tidak perlu mengetik sama sekali.
 
-   Pemilih dompet dibuat tile berwarna khas brand (BCA biru, GoPay teal, Tunai
-   amber) — bukan dropdown abu-abu — supaya terasa hidup & menyenangkan, sejalan
-   dengan kartu dompet di halaman Dompet & Akun.
+   PAKET 104 — SUMBER DOMPET = LEDGER NYATA, BUKAN DAFTAR STATIS.
+   Dulu pilihan dompetnya `WALLET_SOURCES` (bca/gopay/tunai) — konstanta contoh.
+   Untuk akun yang dompetnya dibuat sendiri (id & nama apa pun), id itu tidak ada
+   di ledger, sehingga `contributeToFund()` menolak dan sheet menampilkan
+   "Celengan ini sudah tidak ada di daftarmu" padahal celengannya ada di layar.
+   Sekarang pilihannya dibaca dari `walletSelectOptionsFor(snapshot)` — daftar
+   yang SAMA dengan pemilih dompet di engine input, lengkap dengan saldonya,
+   jadi setoran selalu mendarat di dompet yang benar-benar dimiliki user.
    ────────────────────────────────────────────────────────────────────────── */
 
 const QUICK_AMOUNTS = [50_000, 100_000, 250_000, 500_000]
@@ -46,7 +51,7 @@ export function ContributeSheet({
 }) {
   const withdrawing = mode === 'out'
   const [digits, setDigits] = useState('')
-  const [walletId, setWalletId] = useState(WALLET_SOURCES[0].id)
+  const [walletId, setWalletId] = useState('')
   const amountRef = useRef<HTMLInputElement>(null)
 
   /* snapshot celengan: Vaul masih beranimasi tutup setelah parent mengosongkan
@@ -56,10 +61,18 @@ export function ContributeSheet({
     if (fund) setShown(fund)
   }, [fund])
 
+  /* dompet HIDUP dari ledger (snapshot yang sama dengan halaman Dompet) */
+  const snapshot = useMoneyStore()
+  const walletOptions = useMemo(() => walletSelectOptionsFor(snapshot), [snapshot])
+
   useEffect(() => {
     if (!open) return
     setDigits('')
-    setWalletId(WALLET_SOURCES[0].id)
+    /* dompet pertama dipilihkan supaya mayoritas setoran tetap satu ketukan —
+       dibaca dari daftar hidup (`getMoneySnapshot`, bukan state turunan), jadi
+       id-nya selalu sah dan efek ini tidak ikut berjalan setiap kali saldo
+       berubah (angka yang sudah diketik user tidak boleh di-reset). */
+    setWalletId(walletSelectOptionsFor(getMoneySnapshot())[0]?.id ?? '')
   }, [open])
 
   useFocusOnOpen(open, amountRef)
@@ -73,10 +86,11 @@ export function ContributeSheet({
      dompet sampai MINUS. Pemeriksaannya murni (`walletFundsCheckById`, rumus yang
      sama dengan pagar store) supaya alasannya bisa dibaca SEBELUM menekan
      "Setor" — bukan toast yang hilang. */
-  const snapshot = useMoneyStore()
-  const sourceName = WALLET_SOURCES.find((source) => source.id === walletId)?.name ?? ''
+  const source = walletOptions.find((option) => option.id === walletId)
+  const sourceName = source?.label ?? ''
   const funds = walletFundsCheckById(snapshot, walletId, amount)
   const notEnough = !withdrawing && funds.known && !funds.sufficient
+
   /** proyeksi progres setelah setoran/penarikan — bikin aksinya terasa berdampak */
   const afterPercent =
     shown && shown.target > 0
@@ -89,7 +103,11 @@ export function ContributeSheet({
         )
       : 0
   const ready =
-    shown !== null && amount > 0 && (!withdrawing || amount <= shown.current) && !notEnough
+    shown !== null &&
+    walletId !== '' &&
+    amount > 0 &&
+    (!withdrawing || amount <= shown.current) &&
+    !notEnough
 
   function submit() {
     if (!shown || amount <= 0) return
@@ -105,11 +123,6 @@ export function ContributeSheet({
       title={
         withdrawing ? `Tarik dari ${shown?.name ?? 'Celengan'}` : `Setor ke ${shown?.name ?? 'Celengan'}`
       }
-      description={
-        withdrawing
-          ? 'Uangnya kembali ke dompet yang kamu pilih.'
-          : 'Nabung kecil-kecilan hari ini, tetap dihitung 🌱'
-      }
       footer={
         <SheetSubmit onClick={submit} disabled={!ready} gate>
           {withdrawing ? 'Tarik Dana' : 'Setor 💰'}
@@ -118,7 +131,7 @@ export function ContributeSheet({
     >
       {/* progres sekarang → proyeksi setelah setor */}
       <div className="rounded-2xl bg-cream p-3 ring-1 ring-soil/12">
-        <div className="flex items-center justify-between gap-3 text-[12.5px] font-medium text-forest/50">
+        <div className="flex items-center justify-between gap-3 text-[12.5px] font-medium text-forest-muted">
           <span className="tabular-nums">
             {maskNominal(shown?.current ?? 0, masked)} dari{' '}
             {maskNominal(shown?.target ?? 0, masked)}
@@ -135,7 +148,7 @@ export function ContributeSheet({
         </div>
         {amount > 0 && (
           <p className="mt-2 text-[12.5px] font-medium text-forest">
-            Setelah {withdrawing ? 'tarik' : 'setor'} ini: {afterPercent}% tercapai 🌿
+            Setelah {withdrawing ? 'tarik' : 'setor'} ini: {afterPercent}% tercapai 🧩
           </p>
         )}
       </div>
@@ -160,7 +173,7 @@ export function ContributeSheet({
               'rounded-full px-3 py-1.5 text-[12.5px] font-medium tabular-nums transition-all active:scale-95',
               Number(digits) === value
                 ? 'bg-forest text-mint'
-                : 'bg-cream text-forest/55 ring-1 ring-soil/14 hover:bg-cream hover:text-forest',
+                : 'bg-cream text-forest-muted ring-1 ring-soil/14 hover:bg-cream hover:text-forest',
             )}
           >
             {maskNominal(value, masked)}
@@ -168,51 +181,56 @@ export function ContributeSheet({
         ))}
       </div>
 
-      {/* ── dari dompet mana — tile berwarna brand, bukan dropdown abu-abu ── */}
+      {/* ── dari dompet mana — tile dompet HIDUP dari ledger ── */}
       <div className="mt-4 pb-1">
         <p className="text-[14px] font-medium text-forest">
           {withdrawing ? 'Kembalikan ke dompet' : 'Setor dari dompet'}
         </p>
-        <div
-          role="radiogroup"
-          aria-label={withdrawing ? 'Pilih dompet tujuan' : 'Pilih dompet sumber'}
-          className="mt-2.5 grid grid-cols-3 gap-2"
-        >
-          {WALLET_SOURCES.map((source) => {
-            const active = walletId === source.id
-            return (
-              <button
-                key={source.id}
-                type="button"
-                role="radio"
-                aria-checked={active}
-                onClick={() => setWalletId(source.id)}
-                className={cn(
-                  'flex flex-col items-center gap-1.5 rounded-2xl px-2 py-3 transition-all duration-200 active:scale-95',
-                  active
-                    ? 'bg-cream ring-2 ring-forest shadow-[0_12px_26px_-18px_rgba(0,0,0,0.65)]'
-                    : 'bg-cream/60 ring-1 ring-soil/12 hover:bg-cream',
-                )}
-              >
-                <span
+        {walletOptions.length === 0 ? (
+          <p
+            role="status"
+            className="mt-2.5 rounded-2xl bg-daisy-light/60 px-3.5 py-2.5 text-[12.5px] font-medium leading-relaxed text-daisy-deep ring-1 ring-daisy-deep/15"
+          >
+            {FUND_CONTRIBUTE_NO_WALLET_COPY}
+          </p>
+        ) : (
+          <div
+            role="radiogroup"
+            aria-label={withdrawing ? 'Pilih dompet tujuan' : 'Pilih dompet sumber'}
+            className="mt-2.5 grid grid-cols-2 gap-2"
+          >
+            {walletOptions.map((option) => {
+              const active = walletId === option.id
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={active}
+                  onClick={() => setWalletId(option.id)}
                   className={cn(
-                    'flex size-8 items-center justify-center rounded-xl text-[13px] font-medium ring-1 ring-inset',
-                    source.tile,
+                    'flex min-w-0 items-center gap-2.5 rounded-2xl px-2.5 py-2.5 text-left transition-all duration-200 active:scale-95',
+                    active
+                      ? 'bg-cream ring-2 ring-forest shadow-[0_12px_26px_-18px_rgba(0,0,0,0.65)]'
+                      : 'bg-cream/60 ring-1 ring-soil/12 hover:bg-cream',
                   )}
                 >
-                  {source.name.charAt(0)}
-                </span>
-                <span className="text-[12.5px] font-medium leading-tight text-forest">
-                  {source.name}
-                </span>
-                <span className="flex items-center gap-1 text-[10.5px] font-medium text-forest/40">
-                  <span aria-hidden className={cn('size-1.5 rounded-full', source.dot)} />
-                  {source.kind}
-                </span>
-              </button>
-            )
-          })}
-        </div>
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-sage/60 text-[13px] font-medium text-forest ring-1 ring-inset ring-soil/10">
+                    {option.label.charAt(0)}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block truncate text-[12.5px] font-medium leading-tight text-forest">
+                      {option.displayLabel}
+                    </span>
+                    <span className="mt-0.5 block truncate text-[10.5px] tabular-nums text-forest-muted">
+                      {maskNominal(option.balance, masked)}
+                    </span>
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        )}
 
         {/* Saldo dompet sumber tidak cukup → alasan tampil DI SINI dan tombol
             Setor mati, jadi user tidak perlu menebak kenapa setorannya tidak

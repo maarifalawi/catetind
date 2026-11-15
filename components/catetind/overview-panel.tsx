@@ -63,7 +63,7 @@ export function OverviewPanel({
       ? {
           amount: selection.wallet.balance,
           caption: selection.wallet.name,
-          subtitle: `${selection.wallet.network} · ${selection.wallet.number}`,
+          subtitle: selection.wallet.network,
         }
       : {
           amount: selection?.total ?? allTotal,
@@ -141,7 +141,7 @@ export function OverviewPanel({
             </span>
             {/* konteks dompet (jenis · nomor) — hanya saat kartu dompet yang dipencet */}
             {selection?.type === 'wallet' && (
-              <p className="mt-1.5 truncate text-[12px] text-forest/45">{ring.subtitle}</p>
+              <p className="mt-1.5 truncate text-[12px] text-forest-muted">{ring.subtitle}</p>
             )}
           </div>
           <button

@@ -229,7 +229,6 @@ export function AddInvestmentSheet({
       open={open}
       onClose={onClose}
       title={copy.title}
-      description={copy.description}
       footer={
         <SheetSubmit onClick={submit} disabled={!ready} gate>
           {copy.submit}
@@ -252,7 +251,7 @@ export function AddInvestmentSheet({
                 'flex items-center gap-2 rounded-2xl px-3.5 py-3 text-left text-[14px] font-medium transition-all duration-200 active:scale-[0.98]',
                 active
                   ? 'bg-forest text-mint shadow-[0_12px_26px_-16px_rgba(0,0,0,0.85)]'
-                  : 'bg-cream text-forest/65 ring-1 ring-soil/14 hover:bg-cream hover:text-forest',
+                  : 'bg-cream text-forest-soft ring-1 ring-soil/14 hover:bg-cream hover:text-forest',
               )}
             >
               <span aria-hidden className="text-[16px]">
@@ -273,7 +272,7 @@ export function AddInvestmentSheet({
           value={name}
           onChange={(event) => setName(event.target.value)}
           placeholder="Contoh: BBCA, Bitcoin, Bibit RDPU"
-          className="mt-2 w-full rounded-2xl bg-cream px-4 py-3 text-[16px] font-medium text-forest outline-none ring-1 ring-soil/16 transition-shadow placeholder:font-medium placeholder:text-forest/25 focus:ring-2 focus:ring-forest/35"
+          className="mt-2 w-full rounded-2xl bg-cream px-4 py-3 text-[16px] font-medium text-forest outline-none ring-1 ring-soil/16 transition-shadow placeholder:font-medium placeholder:text-forest-muted focus:ring-2 focus:ring-forest/35"
         />
       </label>
 
@@ -288,10 +287,10 @@ export function AddInvestmentSheet({
               onChange={(event) => setSymbol(event.target.value.toUpperCase())}
               placeholder="BBCA"
               aria-label="Kode pasar atau ticker"
-              className="min-w-0 flex-1 bg-transparent text-[16px] font-medium uppercase tracking-wide text-forest outline-none placeholder:font-medium placeholder:text-forest/25"
+              className="min-w-0 flex-1 bg-transparent text-[16px] font-medium uppercase tracking-wide text-forest outline-none placeholder:font-medium placeholder:text-forest-muted"
             />
           </span>
-          <span className="mt-1.5 block text-[12px] leading-relaxed text-forest/45">
+          <span className="mt-1.5 block text-[12px] leading-relaxed text-forest-muted">
             Kode yang tampil sebagai badge di kartu aset, mis. BBCA, BTC, RDPU.
           </span>
         </label>
@@ -326,9 +325,9 @@ export function AddInvestmentSheet({
                 autoComplete="off"
                 placeholder="0"
                 aria-label={quantityFieldLabel(assetType)}
-                className="min-w-0 flex-1 bg-transparent text-[16px] font-medium tabular-nums text-forest outline-none placeholder:font-medium placeholder:text-forest/25"
+                className="min-w-0 flex-1 bg-transparent text-[16px] font-medium tabular-nums text-forest outline-none placeholder:font-medium placeholder:text-forest-muted"
               />
-              <span className="shrink-0 text-[13px] font-medium text-forest/40">
+              <span className="shrink-0 text-[13px] font-medium text-forest-muted">
                 {ASSET_TYPE_META[assetType].unit || 'koin'}
               </span>
             </span>
@@ -339,7 +338,6 @@ export function AddInvestmentSheet({
             digits={priceDigits}
             onDigitsChange={setPriceDigits}
             placeholder="Rp 9.250"
-            hint={priceField.hint}
           />
 
           {/* tanggal transaksi hanya relevan untuk transaksi BARU — posisi aset
@@ -356,7 +354,7 @@ export function AddInvestmentSheet({
           {/* auto-kalkulasi real-time: quantity × price */}
           <div className="flex flex-col gap-2 rounded-2xl bg-sage/60 px-4 py-3">
             <div className="flex items-center justify-between gap-3">
-              <span className="text-[13.5px] font-medium text-forest/70">
+              <span className="text-[13.5px] font-medium text-forest-soft">
                 {INVESTMENT_TOTAL_LABEL[mode]}
               </span>
               <span className="font-display text-[17px] font-semibold tracking-tight text-forest tabular-nums">
@@ -368,12 +366,12 @@ export function AddInvestmentSheet({
                 vs nilai sekarang, supaya user tahu angka di kartu akan jadi apa */}
             {editing && (
               <>
-                <div className="flex items-center justify-between gap-3 text-[13px] text-forest/55 tabular-nums">
+                <div className="flex items-center justify-between gap-3 text-[13px] text-forest-muted tabular-nums">
                   <span>Nilai sekarang (harga terakhir)</span>
                   <span className="font-medium">{formatIDR(editingCurrentValue)}</span>
                 </div>
                 <div className="flex items-center justify-between gap-3 text-[13px] tabular-nums">
-                  <span className="text-forest/55">Return belum terealisasi</span>
+                  <span className="text-forest-muted">Return belum terealisasi</span>
                   <span
                     className={cn(
                       'font-medium',
@@ -405,7 +403,7 @@ export function AddInvestmentSheet({
             <span className="text-[14px] font-medium text-forest">Detail Lanjutan</span>
             <ChevronDown
               className={cn(
-                'size-4 shrink-0 text-forest/35 transition-transform duration-200',
+                'size-4 shrink-0 text-forest-muted transition-transform duration-200',
                 advancedOpen && 'rotate-180',
               )}
               strokeWidth={2.4}
@@ -419,7 +417,6 @@ export function AddInvestmentSheet({
                 digits={feesDigits}
                 onDigitsChange={setFeesDigits}
                 placeholder="Rp 0"
-                hint="Fee broker / biaya jual-beli, kalau ada."
               />
 
               {/* akun RDN hanya untuk saham — dan hanya kalau user punya */}
@@ -431,7 +428,7 @@ export function AddInvestmentSheet({
                   </div>
                   <RevealStep show={hasRdn}>
                     <label className="mt-3 block">
-                      <span className="text-[13.5px] font-medium text-forest/70">Akun RDN</span>
+                      <span className="text-[13.5px] font-medium text-forest-soft">Akun RDN</span>
                       <span className="relative mt-2 flex items-center gap-2 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/16 focus-within:ring-2 focus-within:ring-forest/35">
                         <select
                           value={rdnAccount}
@@ -445,7 +442,7 @@ export function AddInvestmentSheet({
                             </option>
                           ))}
                         </select>
-                        <ChevronDown className="size-4 shrink-0 text-forest/30" strokeWidth={2.4} />
+                        <ChevronDown className="size-4 shrink-0 text-forest-muted" strokeWidth={2.4} />
                       </span>
                     </label>
                   </RevealStep>
@@ -453,13 +450,13 @@ export function AddInvestmentSheet({
               )}
 
               <label className="block">
-                <span className="text-[13.5px] font-medium text-forest/70">Catatan (opsional)</span>
+                <span className="text-[13.5px] font-medium text-forest-soft">Catatan (opsional)</span>
                 <textarea
                   value={note}
                   onChange={(event) => setNote(event.target.value)}
                   rows={3}
                   placeholder="Misal: DCA bulanan rutin"
-                  className="mt-2 w-full resize-none rounded-2xl bg-cream px-4 py-3 text-[14px] leading-relaxed text-forest outline-none ring-1 ring-soil/16 transition-shadow placeholder:text-forest/25 focus:ring-2 focus:ring-forest/35"
+                  className="mt-2 w-full resize-none rounded-2xl bg-cream px-4 py-3 text-[14px] leading-relaxed text-forest outline-none ring-1 ring-soil/16 transition-shadow placeholder:text-forest-muted focus:ring-2 focus:ring-forest/35"
                 />
               </label>
             </div>

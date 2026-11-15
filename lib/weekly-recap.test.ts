@@ -5,7 +5,8 @@ import {
   WEEK_PERIOD,
   formatIDR,
   recapNetLabel,
-  weeklyPlantStage,
+  weekActivePct,
+  weeklyPuzzleStage,
   weeklyRecapFrom,
   weekPeriodLabel,
 } from './weekly-recap'
@@ -37,9 +38,9 @@ describe('weekPeriodLabel · batas pekan dinamis (audit Temporal Desync)', () =>
    Dulu `WEEK_DATA`/`WEEK_SEGMENTS`/`WEEK_PLANT` adalah konstanta (9 transaksi ·
    8,5 jt masuk · 1,24 jt keluar · 5 kategori contoh) yang tampil apa pun isi
    ledger user. Test ini mengunci bahwa `weeklyRecapFrom()` benar-benar membaca
-   baris yang dikirim: nominal, jumlah, kategori, hari aktif, dan tahap tanaman
-   semuanya bergerak bersama catatan user — dan baris di luar pekan / pindah
-   dana tidak dihitung sebagai pengeluaran. */
+   baris yang dikirim: nominal, jumlah, kategori, hari aktif, dan tahap papan
+   puzzle semuanya bergerak bersama catatan user — dan baris di luar pekan /
+   pindah dana tidak dihitung sebagai pengeluaran. */
 
 /** pekan 2 Okt 2026 = 28 Sep – 4 Okt */
 const TODAY = '2026-10-02'
@@ -134,7 +135,7 @@ describe('weeklyRecapFrom · seluruh angka dari ledger NYATA', () => {
     expect(recap.segments.reduce((sum, s) => sum + s.amount, 0)).toBe(recap.expense)
   })
 
-  it('hari aktif & tahap tanaman dari konsistensi pekan (bukan angka contoh)', () => {
+  it('hari aktif & tahap papan puzzle dari konsistensi pekan (bukan angka contoh)', () => {
     const recap = weeklyRecapFrom(
       [
         row({ date: '2026-09-28', amount: 10_000, type: 'expense' }),
@@ -146,7 +147,8 @@ describe('weeklyRecapFrom · seluruh angka dari ledger NYATA', () => {
       TODAY,
     )
     expect(recap.activeDays).toBe(4) // 28 Sep, 1, 3, 4 Okt (duplikat dihitung sekali)
-    expect(recap.plantStage).toBe(3) // 4 hari → Tanaman Muda
+    expect(recap.puzzleStage).toBe(3) // 4 hari → tahap 3
+    expect(recap.puzzleProgress).toBe(57) // 4/7 hari → 57% → 7 keping, bukan 9
   })
 
   it('rata-rata/hari = pengeluaran ÷ 7', () => {
@@ -158,14 +160,22 @@ describe('weeklyRecapFrom · seluruh angka dari ledger NYATA', () => {
   })
 })
 
-describe('weeklyPlantStage · pemetaan hari aktif → tahap', () => {
-  it('0–1 hari Benih · 2–3 Tunas · 4–5 Muda · 6–7 Berbunga', () => {
-    expect(weeklyPlantStage(0)).toBe(1)
-    expect(weeklyPlantStage(1)).toBe(1)
-    expect(weeklyPlantStage(3)).toBe(2)
-    expect(weeklyPlantStage(5)).toBe(3)
-    expect(weeklyPlantStage(6)).toBe(4)
-    expect(weeklyPlantStage(7)).toBe(4)
+describe('weeklyPuzzleStage · pemetaan hari aktif → tahap', () => {
+  it('0–1 hari tahap 1 · 2–3 tahap 2 · 4–5 tahap 3 · 6–7 tahap 4', () => {
+    expect(weeklyPuzzleStage(0)).toBe(1)
+    expect(weeklyPuzzleStage(1)).toBe(1)
+    expect(weeklyPuzzleStage(3)).toBe(2)
+    expect(weeklyPuzzleStage(5)).toBe(3)
+    expect(weeklyPuzzleStage(6)).toBe(4)
+    expect(weeklyPuzzleStage(7)).toBe(4)
+  })
+
+  it('porsi hari aktif = dasar jumlah KEPINGAN papan rekap', () => {
+    /* 2 hari dulu digambar 6 keping (tahap 2 × 3) padahal baru 29% pekan.
+       Sekarang papannya ikut porsi hari: 29% → 3 keping dari 12. */
+    expect(weekActivePct(2)).toBe(29)
+    expect(weekActivePct(7)).toBe(100)
+    expect(weekActivePct(9)).toBe(100) // dijepit: pekan tidak lebih dari 7 hari
   })
 })
 

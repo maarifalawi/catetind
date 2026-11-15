@@ -18,6 +18,8 @@
    menyebar di komentar), supaya tidak pernah ada dua daftar yang beda isi.
    ────────────────────────────────────────────────────────────────────────── */
 
+import { matchesRoute } from './route-match'
+
 export const PUBLIC_ROUTES = [
   /* Landing page publik di ROOT — pengunjungnya belum tentu punya akun, jadi
      kedua gerbang global (langganan & kunci PIN) harus dilewati di sini.
@@ -59,7 +61,10 @@ export const PUBLIC_ROUTES = [
 
 /** true kalau pathname berada di (atau di bawah) halaman publik/pre-app */
 export function isPublicRoute(pathname: string): boolean {
-  return PUBLIC_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`))
+  /* SATU aturan pencocokan untuk semua daftar rute (`lib/route-match.ts`):
+     batas segmen, bukan awalan string mentah. Dengan begitu `/joint`
+     (Dompet Bersama) tidak pernah dianggap sebagai `/join` (undangan publik). */
+  return PUBLIC_ROUTES.some((route) => matchesRoute(pathname, route))
 }
 
 /* ── RUTE YANG DIKECUALIKAN DARI GERBANG PROVIDER (bukan dari gerbang sesi) ──
@@ -77,7 +82,5 @@ export const PROVIDER_EXEMPT_ROUTES = [...PUBLIC_ROUTES, '/app/onboarding', '/ad
 
 /** true kalau pathname bebas dari gerbang langganan & kunci PIN */
 export function isProviderExemptRoute(pathname: string): boolean {
-  return PROVIDER_EXEMPT_ROUTES.some(
-    (route) => pathname === route || pathname.startsWith(`${route}/`),
-  )
+  return PROVIDER_EXEMPT_ROUTES.some((route) => matchesRoute(pathname, route))
 }

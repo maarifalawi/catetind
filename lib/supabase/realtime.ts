@@ -228,6 +228,14 @@ export function subscribeLandingStats(
 export function subscribeJointTransactions(
   jointWalletId: string,
   onInsert: (row: JointTransactionPayload) => void,
+  /**
+   * Baris dihapus di perangkat lain (termasuk pemilik dompet menghapus seluruh
+   * isi lewat cascade). Tanpa handler ini, catatan yang sudah dihapus masih
+   * tampil di layar anggota lain sampai halaman dimuat ulang.
+   */
+  onDelete?: (id: string) => void,
+  /** Pembagian / kantong pembayar diubah anggota lain → ganti baris di layar */
+  onUpdate?: (row: JointTransactionPayload) => void,
 ): JointRealtimeHandle | null {
   const client = browserSupabase()
   if (!client || !jointWalletId) return null
@@ -237,7 +245,7 @@ export function subscribeJointTransactions(
 
   const open = () => {
     if (stopped || channel) return
-    channel = client
+    let next = client
       .channel(`joint:${jointWalletId}`)
       .on(
         'postgres_changes',
@@ -253,7 +261,37 @@ export function subscribeJointTransactions(
           onInsert(row)
         },
       )
-      .subscribe()
+    if (onUpdate) {
+      next = next.on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'joint_transactions',
+          filter: `joint_wallet_id=eq.${jointWalletId}`,
+        },
+        (payload) => {
+          const row = payload.new as unknown as JointTransactionPayload
+          if (row?.id) onUpdate(row)
+        },
+      )
+    }
+    if (onDelete) {
+      next = next.on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'joint_transactions',
+          filter: `joint_wallet_id=eq.${jointWalletId}`,
+        },
+        (payload) => {
+          const old = payload.old as unknown as { id?: string }
+          if (old?.id) onDelete(old.id)
+        },
+      )
+    }
+    channel = next.subscribe()
   }
 
   const close = () => {

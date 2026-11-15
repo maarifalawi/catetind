@@ -27,6 +27,7 @@ import {
   restoreFund,
   subscribeFundsStore,
   sweepIntoFund,
+  updateFund,
   useFundsStore,
   withdrawFromFund,
   type PersistedFunds,
@@ -42,7 +43,7 @@ import { assertLedgerInvariant } from './ledger'
      1. celengan yang ditanam lewat satu pintu (`addFund`) TERLIHAT oleh setiap
         pembaca store — kartu Home (`heroFundOf`/`sortFundsByUrgency`), /budget,
         dan /budget/<id> (`fundById` + `contributionsOf`);
-     2. setoran lewat `contributeToFund` mengubah progres, tahap tanaman,
+     2. setoran lewat `contributeToFund` mengubah progres, tahap puzzle,
         kewajiban bulan ini, DAN riwayat setoran dalam satu tulisan;
      3. arti `reachedNow` (dasar perayaan milestone) benar di semua kasus tepi;
      4. `mergeFundsState` (hidrasi IndexedDB) tidak menghidupkan kembali data
@@ -71,7 +72,7 @@ describe('pintu tulis celengan', () => {
 
     const snapshot = getFundsSnapshot()
     expect(snapshot.funds).toHaveLength(before + 1)
-    /* celengan baru selalu mulai dari benih & belum disetor (PRD 2C.3) */
+    /* celengan baru selalu mulai dari tahap 'seed' & belum disetor (PRD 2C.3) */
     expect(created).toMatchObject({ current: 0, stage: 'seed', contributedThisMonth: false })
 
     /* tiga pembaca berbeda membaca angka yang SAMA */
@@ -568,6 +569,45 @@ describe('tarik dana celengan (kebalikan setoran)', () => {
   it('celengan yang sudah dihapus tidak bisa ditarik', () => {
     deleteFund(1)
     expect(withdrawFromFund(1, 10_000, WALLET)).toBeNull()
+  })
+})
+
+/* ── UBAH NAMA & TARGET CELENGAN (sesi 5) ────────────────────────────────────
+   Sebelum ini tidak ada pintu mengoreksi celengan tanpa menghapusnya. Yang
+   dijaga: progres (current) & riwayat setoran TIDAK berubah, input tidak sah
+   ditolak tanpa menulis apa pun, dan celengan yang sudah dihapus tidak bisa
+   diubah dari layar basi. */
+describe('ubah nama & target celengan (sesi 5)', () => {
+  it('mengubah nama & target tanpa menyentuh progres atau riwayat setoran', () => {
+    const fund = liveFunds(getFundsSnapshot())[0]
+    const before = fund.current
+    const historyBefore = contributionsOf(getFundsSnapshot(), fund.id).length
+
+    const updated = updateFund(fund.id, { name: 'Dana Darurat Baru', target: 2_000_000 })
+
+    expect(updated?.name).toBe('Dana Darurat Baru')
+    expect(updated?.target).toBe(2_000_000)
+    expect(updated?.current).toBe(before)
+    expect(liveFunds(getFundsSnapshot()).find((item) => item.id === fund.id)?.name).toBe(
+      'Dana Darurat Baru',
+    )
+    expect(contributionsOf(getFundsSnapshot(), fund.id).length).toBe(historyBefore)
+  })
+
+  it('menolak nama kosong atau target nol tanpa menulis apa pun', () => {
+    const fund = liveFunds(getFundsSnapshot())[0]
+    const snapshotBefore = JSON.stringify(getFundsSnapshot())
+
+    expect(updateFund(fund.id, { name: '   ' })).toBeNull()
+    expect(updateFund(fund.id, { target: 0 })).toBeNull()
+    expect(updateFund(fund.id, { target: -5 })).toBeNull()
+    expect(JSON.stringify(getFundsSnapshot())).toBe(snapshotBefore)
+  })
+
+  it('celengan yang sudah dihapus tidak bisa diubah (sheet basi ditolak)', () => {
+    const fund = liveFunds(getFundsSnapshot())[0]
+    deleteFund(fund.id)
+    expect(updateFund(fund.id, { name: 'Hantu', target: 1_000_000 })).toBeNull()
   })
 })
 

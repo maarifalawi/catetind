@@ -93,7 +93,7 @@ export function ProgressRing({
             stroke="currentColor"
             strokeWidth={1.5}
             strokeLinecap="round"
-            className="text-forest/30"
+            className="text-forest-muted"
             transform={`rotate(${(Math.min(100, Math.max(0, tickPct)) / 100) * 360} ${center} ${center})`}
           />
         )}

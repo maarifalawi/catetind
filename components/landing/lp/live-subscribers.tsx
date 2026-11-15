@@ -51,7 +51,7 @@ export function LandingLiveSubscribers({ className }: { className?: string }) {
             >
               <span className="relative flex size-full items-center justify-center overflow-hidden rounded-full bg-canvas">
                 <UserRound
-                  className="size-3.5 text-forest/45 landing-tab:size-4"
+                  className="size-3.5 text-forest-muted landing-tab:size-4"
                   strokeWidth={1.75}
                 />
                 {failedAvatars.has(avatar.src) ? null : (

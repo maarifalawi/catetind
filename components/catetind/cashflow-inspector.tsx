@@ -65,11 +65,10 @@ export function CashflowInspector({
 }) {
   if (!cell) {
     return (
-      <aside className="rounded-[2rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] ring-1 ring-soil/12 lg:sticky lg:top-8">
-        <h2 className="font-display text-[19px] font-medium tracking-tight text-forest">
+      <aside className="rounded-2xl bg-cream p-4 ring-1 ring-soil/12 lg:sticky lg:top-8">
+        <h2 className="font-display text-[16px] font-medium tracking-tight text-forest">
           {CALENDAR_DAY_COPY.pickTitle}
         </h2>
-        <p className="mt-1 text-[13.5px] text-forest/50">{CALENDAR_DAY_COPY.pickBody}</p>
       </aside>
     )
   }
@@ -79,76 +78,62 @@ export function CashflowInspector({
   const countLabel = CALENDAR_DAY_COPY.countLabel(cell.entries.length)
 
   return (
-    <aside className="flex flex-col rounded-[2rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] ring-1 ring-soil/12 lg:sticky lg:top-8">
-      {/* ── 3A. TANGGAL + RINGKASAN SATU BARIS ─────────────────────────── */}
-      <div className="flex items-center gap-2">
-        <span
-          aria-hidden
-          className={cn(
-            'size-1.5 shrink-0 rounded-full',
-            relative.tone === 'today'
-              ? 'bg-forest'
-              : relative.tone === 'ahead'
-                ? 'bg-forest/30'
-                : 'bg-soil/40',
-          )}
-        />
-        <p className="flex min-w-0 flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
-          <span
-            className={cn(
-              'text-[11.5px] font-semibold uppercase tracking-[0.14em] tabular-nums',
-              relative.tone === 'today' ? 'text-forest' : 'text-forest/40',
-            )}
-          >
-            {relative.text}
-          </span>
-          <span aria-hidden className="text-[12px] font-medium text-forest/20">
-            ·
-          </span>
-          <span className="text-[13.5px] font-medium text-forest/60">
-            {longDateLabel(cell.date)}
-          </span>
-        </p>
+    <aside
+      data-catetind-tanggal-detail="kalender"
+      className="flex flex-col rounded-2xl bg-cream p-4 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] ring-1 ring-soil/12 sm:p-5 lg:sticky lg:top-8"
+    >
+      {/* ── 3A. TANGGAL TERPILIH — hierarki jelas, tidak bertumpuk ────────
+          Baris 1: label relatif (Hari ini / Kemarin / 3 hari lagi).
+          Baris 2: tanggal lengkap, ukuran lebih besar.
+          Baris 3: grid dua kolom "Masuk" & "Keluar" + jumlah catatan.
+          Di ponsel pun tidak ada teks yang berdesakan dalam satu baris. */}
+      <div className="flex flex-col gap-1">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-forest-muted">
+          {relative.text}
+        </span>
+        <h2 className="text-[17px] font-semibold leading-snug tracking-tight text-forest">
+          {longDateLabel(cell.date)}
+        </h2>
       </div>
 
-      <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[14px] font-medium tabular-nums">
-        {cell.income > 0 && (
-          <span className="text-forest">+{maskMoney(cell.income, masked)} masuk</span>
-        )}
-        {cell.totalSpend > 0 && (
-          <span className="text-forest/70">−{maskMoney(cell.totalSpend, masked)} keluar</span>
-        )}
-        {cell.income === 0 && cell.totalSpend === 0 && (
-          <span className="font-medium text-forest/40">{CALENDAR_DAY_COPY.neutralSummary}</span>
-        )}
-        <span aria-hidden className="text-forest/25">
-          ·
-        </span>
-        <span className="font-medium text-forest/40">{countLabel}</span>
-      </p>
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <div className="rounded-xl bg-sage/30 px-3 py-2">
+          <p className="text-[11px] font-medium text-forest-muted">Masuk</p>
+          <p className="mt-0.5 truncate text-[14px] font-semibold tabular-nums text-forest">
+            {cell.income > 0 ? `+${maskMoney(cell.income, masked)}` : '—'}
+          </p>
+        </div>
+        <div className="rounded-xl bg-sage/30 px-3 py-2">
+          <p className="text-[11px] font-medium text-forest-muted">Keluar</p>
+          <p className="mt-0.5 truncate text-[14px] font-semibold tabular-nums text-forest-soft">
+            {cell.totalSpend > 0 ? `−${maskMoney(cell.totalSpend, masked)}` : '—'}
+          </p>
+        </div>
+      </div>
+      <p className="mt-2 text-[12px] font-medium text-forest-muted">{countLabel}</p>
 
       {/* ── 3B. ZERO-FRICTION BACKDATING ─────────────────────────────────
           Tombol penuh, gaya CTA yang sama dengan halaman Tagihan. */}
       <button
         type="button"
         onClick={onAddNote}
-        className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-forest px-4 text-[14px] font-medium text-cream shadow-[0_16px_34px_-20px_rgba(0,0,0,0.9)] transition-colors hover:bg-forest-soft active:scale-[0.99]"
+        className="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-full bg-forest px-4 text-[13.5px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.99]"
       >
-        <Plus className="size-4" strokeWidth={2.8} />
+        <Plus className="size-4" strokeWidth={2.8} aria-hidden />
         {CALENDAR_DAY_COPY.addNote(cell.day)}
       </button>
 
       {/* ── 3C. DAFTAR CATATAN HARI ITU ─────────────────────────────────── */}
       <section className="mt-5 border-t border-soil/12 pt-4">
         <div className="flex items-center gap-2">
-          <h3 className="shrink-0 text-[12px] font-semibold uppercase tracking-[0.12em] text-forest/45">
+          <h3 className="shrink-0 text-[12px] font-semibold uppercase tracking-[0.12em] text-forest-muted">
             {CALENDAR_DAY_COPY.listTitle(cell.isFuture)}
           </h3>
           <span aria-hidden className="h-px flex-1 bg-soil/10" />
         </div>
 
         {isEmptyDay ? (
-          <p className="py-6 text-center text-[13px] leading-relaxed text-forest/45">
+          <p className="py-6 text-center text-[13px] leading-relaxed text-forest-muted">
             {cell.isFuture
               ? CALENDAR_DAY_COPY.emptyFuture.title
               : CALENDAR_DAY_COPY.emptyPast.title}
@@ -200,7 +185,7 @@ function CashflowEntryRow({ entry, masked }: { entry: CalendarEntry; masked: boo
             <span className="line-clamp-2 text-[14.5px] font-medium text-forest">
               {entry.name}
             </span>
-            <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[12.5px] text-forest/40">
+            <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[12.5px] text-forest-muted">
               {entry.wallet && <span className="min-w-0 truncate">{entry.wallet} ·</span>}
               {entry.time && <span className="shrink-0">{entry.time}</span>}
               {!categoryShownAsTitle && (

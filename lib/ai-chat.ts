@@ -9,7 +9,6 @@
 // ---------------------------------------------------------------------------
 
 import type { CaptureSource } from './transaction-ai'
-import { AI_ENGINE_NAME } from './ai/engine'
 
 /** Siapa pengirim pesan */
 export type ChatRole = 'user' | 'ai'
@@ -48,11 +47,10 @@ export interface ChatMessage {
   /**
    * Jawaban ini datang dari ATURAN LOKAL, bukan dari model AI (paket 44).
    *
-   * Dipakai widget untuk mencetak label kecil **"belum pakai model"** di bubble
-   * — keputusan produk paket 44: selama provider LLM belum tersambung (butuh API
-   * key di server, lihat §AI prompt 44), copy tidak boleh menyiratkan kemampuan
-   * yang belum ada. Jawaban berbasis data lokal tetap berguna, jadi ia TIDAK
-   * dihapus — cuma diberi label yang jujur.
+   * Dipakai `hooks/use-ai-chat.ts` untuk menandai balasan yang dihitung dari
+   * data lokal (bukan model). Sejak revisi UI, widget TIDAK lagi mencetak label
+   * teknis di setiap bubble — penanda ini tetap ada supaya perilaku fallback
+   * bisa dibedakan di log/test.
    */
   ruleBased?: boolean
 }
@@ -95,15 +93,15 @@ export const PROACTIVE_WELCOME: Omit<ChatMessage, 'id'> = {
   kind: 'coaching',
   ruleBased: true,
   content:
-    'Halo! 👋 Aku AI Coach kamu. Aku bisa bantu catat pengeluaran/pemasukan dan bantu baca kondisi keuanganmu dari data di app ini. Mau mulai dari mana?',
+    'Yo! Gue Minca, temen ngobrol lo soal duit. Gue bisa bantu catat pengeluaran/pemasukan dan cek kondisi uang lo dari data di app ini — tanpa ngejudge. Mau mulai dari mana?',
 }
 
 /** C. Quick-suggestion chips di bawah sapaan — tap = kirim sebagai pesan user */
 export const QUICK_REPLIES = [
-  'Analisis pengeluaran minggu ini',
-  'Tips hemat bulan ini',
-  'Bantu atur ulang budget',
-  'Ceritain kondisi keuangan gue',
+  'Pengeluaranku gimana minggu ini?',
+  'Ada tips hemat buat tanggal tua?',
+  'Bantu rapikan budget-ku',
+  'Gimana kondisi uangku sekarang?',
 ] as const
 
 /**
@@ -122,7 +120,7 @@ export const AI_NOT_CONNECTED_REPLY: Omit<ChatMessage, 'id'> = {
   role: 'ai',
   kind: 'coaching',
   content:
-    'Jujur ya: aku belum tersambung ke model AI, jadi pertanyaan bebas belum bisa aku jawab. Yang bisa aku bantu sekarang: hal-hal yang jawabannya ada di data app kamu (pengeluaran hari ini, limit kategori, ringkasan arus uang). Mau aku bisa mikir lebih jauh? Hubungkan AI-nya dulu ya 🌿',
+    'Jujur ya: gue belum nyambung ke model AI, jadi pertanyaan bebas belum bisa gue jawab. Yang bisa gue bantu sekarang: hal yang jawabannya ada di data app lo (pengeluaran hari ini, limit kategori, ringkasan arus uang). Mau gue bisa mikir lebih jauh? Hubungkan AI-nya dulu ya.',
   action: { label: AI_CONNECT_LABEL, href: AI_CONNECT_HREF },
 }
 
@@ -136,7 +134,7 @@ export const MOCK_LIMIT_REPLY: Omit<ChatMessage, 'id'> = {
   /** aturan lokal (bukan model) — TIDAK menyebut angka yang tidak dihitung */
   ruleBased: true,
   content:
-    'Oke, limit kategori bisa kita atur di halaman Budget. Di sana kamu bisa tentukan batas per kategori, dan sisa jatah harianmu ikut menyesuaikan otomatis. Mau buka sekarang?',
+    'Oke, limit kategori bisa kita atur di halaman Budget. Lo bisa tentuin batas per kategori, sisa jatah harian ikut nyesuain otomatis. Mau buka sekarang?',
   action: {
     label: 'Atur limit di Budget',
     href: '/budget',
@@ -156,7 +154,7 @@ export const MOCK_SPENDING_REVIEW_REPLY: Omit<ChatMessage, 'id'> = {
   /** melanjutkan panel yang angkanya dihitung data lokal — tanpa model */
   ruleBased: true,
   content:
-    'Barusan kita lihat bareng di panel ya, jadi aku nggak ngulang angkanya di sini 🌿 Mau lanjut yang mana dulu: rapikan limit kategori, atau cari celah buat nyisihin ke celengan?',
+    'Barusan kita udah lihat bareng di panel, jadi angkanya nggak gue ulang di sini. Mau lanjut yang mana dulu: rapikan limit kategori, atau cari celah buat nyisihin ke celengan?',
 }
 
 /* ── H. AI MENOLAK: DI LUAR KONTEKS & KLAIM YANG TIDAK TERJADI (paket 80) ─────
@@ -181,7 +179,7 @@ export const AI_OUT_OF_SCOPE_REPLY: Omit<ChatMessage, 'id'> = {
   /** tolakan ini datang dari ATURAN app, bukan dari model — labelnya jujur */
   ruleBased: true,
   content:
-    'Yang ini di luar kemampuanku ya 🌿 Aku cuma menemani keuanganmu di CatetInd: catat transaksi, jatah harian, budget per kategori, celengan, sampai hutang. Untuk hal lain aku belum bisa bantu. Lanjut ke pengeluaranmu hari ini?',
+    'Ini di luar jangkauan gue. Gue cuma nemenin keuangan lo di CatetInd: catat transaksi, jatah harian, budget per kategori, celengan, sampai hutang. Lanjut ke pengeluaran lo hari ini?',
   action: { label: 'Lihat jatah & budget', href: '/budget' },
 }
 
@@ -190,7 +188,7 @@ export const AI_NO_RECORD_REPLY: Omit<ChatMessage, 'id'> = {
   kind: 'coaching',
   ruleBased: true,
   content:
-    'Aku belum mencatat apa pun dari pesan itu ya 🌿 Catatan baru masuk kalau kamu setujui kartu konfirmasi (tombol “Catat”), aku sendiri tidak bisa menulis ke riwayatmu. Ketik ulang dengan nominalnya, mis. “catet makan gacoan 30k”, nanti aku rapikan di kartunya.',
+    'Gue belum nyatet apa pun dari pesan itu. Catatan baru masuk kalau lo setujui kartu konfirmasi (tombol “Catat”) — gue nggak bisa nulis sendiri ke riwayat. Ketik ulang plus nominalnya, mis. “catet makan gacoan 30k”, nanti gue rapikan di kartunya.',
 }
 
 /* ── BAHASA SHELL PANEL AI COACH ─────────────────────────────────────────────
@@ -199,31 +197,24 @@ export const AI_NO_RECORD_REPLY: Omit<ChatMessage, 'id'> = {
    user-facing tinggal sebagai konstanta" berlaku juga untuk widget chat, bukan
    cuma untuk halaman. */
 export const AI_CHAT_COPY = {
-  panelLabel: 'AI Coach CatetInd',
-  title: 'AI Coach',
+  panelLabel: 'Minca',
+  title: 'Minca',
   /** label Fuel Gauge kuota AI di header panel */
   quota: (percent: number) => `${percent}% sisa`,
   inputPlaceholder: 'Tanya apa aja, atau ketik transaksimu: “kopi 25rb”',
-  inputLabel: 'Ketik pesan untuk AI Coach',
+  inputLabel: 'Ketik pesan untuk Minca',
   sendLabel: 'Kirim pesan',
-  closeLabel: 'Tutup AI Coach',
-  openLabel: 'Buka AI Coach',
+  closeLabel: 'Tutup Minca',
+  openLabel: 'Buka Minca',
   appreciationBadge: 'Apresiasi',
   quickRepliesLabel: 'Saran pertanyaan',
   /**
-   * Label kecil di bubble yang jawabannya datang dari ATURAN LOKAL (paket 44).
-   * Sengaja menyebut mekanismenya, bukan menyamarkan: user berhak tahu bahwa ia
-   * belum bicara dengan model — dan bahwa pertanyaan bebas belum bisa dijawab.
-   */
-  ruleBasedBadge: 'belum pakai model',
-  /**
-   * Status AI di panel (paket 44, keputusan §AI = opsi b): provider LLM belum
-   * tersambung karena belum ada API key yang boleh disimpan di server. Daripada
-   * membiarkan janji "Nanti aku bisa analisis real-time", panelnya menjelaskan
-   * keadaan hari ini + satu tombol ke tempat AI disambungkan.
+   * Status AI di panel saat server belum punya kunci model. Copy-nya menyebut
+   * sumber jawabannya (data di perangkatmu) tanpa label teknis di setiap bubble
+   * — permintaan pemilik produk: label teknis soal status model dihapus dari UI.
    */
   notConnectedNote:
-    'AI Coach masih menjawab dari aturan lokal (belum pakai model), jadi pertanyaan bebas belum bisa dijawab.',
+    'Minca sedang menjawab dari data di perangkatmu, jadi pertanyaan bebas belum bisa dijawab.',
   connectLabel: AI_CONNECT_LABEL,
   connectHint: 'Buka Pengaturan → AI',
 } as const
@@ -302,7 +293,7 @@ export const AI_CAPTURE_COPY = {
   lowConfidenceAlarm: 'AI kurang yakin dengan hasil bacanya. Tolong cek ulang datanya ya ✨',
   /** penanda per-field di bawah field yang keyakinannya rendah */
   lowFieldHint: 'Yang ini aku belum yakin, boleh dicek dulu?',
-  needAmount: 'Isi nominalnya dulu ya 🌿',
+  needAmount: 'Isi nominalnya dulu ya 🧩',
   /**
    * PAKET 54: hasil ekstraksi bisa datang tanpa kategori — itu keadaan sah saat
    * user mematikan "Kategorisasi Otomatis oleh AI" di Pengaturan
@@ -310,7 +301,7 @@ export const AI_CAPTURE_COPY = {
    * "aku belum yakin", tapi ajakan memilih: kategori karangan tidak boleh
    * tersimpan, dan 'Lainnya' bukan pilihan kalau user belum memutuskan.
    */
-  needCategory: 'Pilih kategorinya dulu ya 🌿 Kategori di Riwayat ikut pilihanmu.',
+  needCategory: 'Pilih kategorinya dulu ya 🧩 Kategori di Riwayat ikut pilihanmu.',
   /**
    * PAKET 79 — dompet kartu konfirmasi. Dua kalimat terpisah karena dua keadaan
    * yang berbeda: (a) tebakan AI tak ada di daftar dompet user, (b) user memang
@@ -321,7 +312,7 @@ export const AI_CAPTURE_COPY = {
    * tebakan AI-nya tetap disebut supaya user tahu apa yang AI baca.
    */
   walletGuessNote: (guessed: string, used: string) =>
-    `AI nebak dompetnya “${guessed}”, tapi dompet itu belum ada di daftarmu, jadi aku isi ${used}. Ganti kalau bukan itu ya 🌿`,
+    `AI nebak dompetnya “${guessed}”, tapi dompet itu belum ada di daftarmu, jadi aku isi ${used}. Ganti kalau bukan itu ya 🧩`,
   /**
    * Dipakai saat dompetnya MEMANG milik user, tapi ada di konteks lain daripada
    * yang sedang dibuka (mis. switcher di "Bersama", dompetnya di "Keluarga").
@@ -342,9 +333,9 @@ export const AI_CAPTURE_COPY = {
    * dipakai hanya kalau dompetnya memang tidak disebut user sendiri.
    */
   walletContextNote: (contextLabel: string, wallet: string) =>
-    `Dompet aku isi ${wallet}, dompet konteks ${contextLabel} yang sedang kamu buka. Ganti di kolom Dompet kalau uangnya keluar dari dompet lain ya 🌿`,
+    `Dompet aku isi ${wallet}, dompet konteks ${contextLabel} yang sedang kamu buka. Ganti di kolom Dompet kalau uangnya keluar dari dompet lain ya 🧩`,
   needWallet:
-    'Dompetnya belum ada di daftarmu. Pilih salah satu dompetmu di kolom Dompet dulu ya 🌿 Catatan tanpa dompet tidak masuk ke konteks mana pun.',
+    'Dompetnya belum ada di daftarmu. Pilih salah satu dompetmu di kolom Dompet dulu ya 🧩 Catatan tanpa dompet tidak masuk ke konteks mana pun.',
   noWalletToPick:
     'Kamu belum punya dompet di konteks ini, jadi catatannya belum bisa masuk ke konteks mana pun. Tambah dompetnya dulu ya, setelah itu catatannya tinggal kamu pilih dompetnya.',
   /** CTA kecil di kartu saat belum ada dompet yang bisa dipilih */
@@ -361,7 +352,7 @@ export const AI_CAPTURE_COPY = {
   transferFlowCta: 'Buka Dompet & Akun → Pindah Dana',
   save: 'Catat',
   /** dipakai kalau user mengosongkan nama catatannya sendiri */
-  untitled: 'Catatan dari AI Coach',
+  untitled: 'Catatan dari Minca',
   /** jaring aman kalau penyimpanan gagal (produksi: POST /api/transactions) */
   saveFailed: 'Aduh, gagal nyimpan. Coba lagi ya, data kamu aman kok.',
   saveFailedRetry: 'Coba simpan lagi',
@@ -370,27 +361,27 @@ export const AI_CAPTURE_COPY = {
   /** jejak user-side: foto yang barusan dipilih & transkrip yang barusan didengar */
   photoEcho: (fileName: string) => `📎 ${fileName}`,
   savedToast: {
-    title: 'Sip, udah dicatet dengan aman! 🌿',
+    title: 'Sip, udah dicatet dengan aman! 🧩',
     description: (amount: string) => `${amount} masuk ke Riwayat, buka kapan aja buat ngecek.`,
   },
-  saved: (name: string, amount: string) => `Beres! “${name}”, ${amount} udah masuk Riwayat 🌿`,
+  saved: (name: string, amount: string) => `Beres! “${name}”, ${amount} udah masuk Riwayat 🧩`,
   viewHistory: 'Lihat riwayat',
 
   /* ── graceful degradation (prompt 20 butir 2) ───────────────────────────── */
-  voiceUnsupported: 'Di perangkat ini belum bisa bicara, ketik aja ya, sama cepatnya 🌿',
+  voiceUnsupported: 'Di perangkat ini belum bisa bicara, ketik aja ya, sama cepatnya 🧩',
   voiceDenied:
-    'Izin mikrofonnya belum nyala. Boleh dinyalain dulu di pengaturan browser, atau ketik aja ya, sama enaknya 🌿',
-  voiceNoSpeech: 'Aku belum denger suaranya. Coba lagi ya, atau ketik aja 🌿',
-  voiceNoMic: 'Mikrofonnya belum kebaca di perangkat ini. Coba lagi, atau ketik aja ya 🌿',
-  voiceNetwork: 'Sambungannya lagi goyang, jadi suaramu keputus. Ketik aja ya 🌿',
-  voiceFailed: 'Aku keputus di tengah jalan. Coba lagi, atau ketik aja ya 🌿',
+    'Izin mikrofonnya belum nyala. Boleh dinyalain dulu di pengaturan browser, atau ketik aja ya, sama enaknya 🧩',
+  voiceNoSpeech: 'Aku belum denger suaranya. Coba lagi ya, atau ketik aja 🧩',
+  voiceNoMic: 'Mikrofonnya belum kebaca di perangkat ini. Coba lagi, atau ketik aja ya 🧩',
+  voiceNetwork: 'Sambungannya lagi goyang, jadi suaramu keputus. Ketik aja ya 🧩',
+  voiceFailed: 'Aku keputus di tengah jalan. Coba lagi, atau ketik aja ya 🧩',
   /**
    * PAKET 63: OCR nyata bisa gagal (provider mati, kuota penyedia penuh, atau foto
    * tak terbaca). Saat itu terjadi, hasilnya TIDAK dikarang — halaman bilang apa
    * adanya dan menawarkan foto ulang atau isi manual.
    */
   scanFailed:
-    'Aku belum bisa baca struk ini, fotonya mungkin kurang jelas, atau sambungannya lagi goyang. Coba foto ulang ya, atau isi manual dulu 🌿',
+    'Aku belum bisa baca struk ini, fotonya mungkin kurang jelas, atau sambungannya lagi goyang. Coba foto ulang ya, atau isi manual dulu 🧩',
   /**
    * PAKET 87: sebagian foto tidak bisa DIBUKA browser-nya sama sekali (paling
    * sering HEIC dari iPhone di Chrome/Windows). Dulu berkas seperti itu tetap
@@ -398,12 +389,12 @@ export const AI_CAPTURE_COPY = {
    * struk". Sekarang pesannya menyebut masalahnya + jalan keluarnya.
    */
   scanUnsupported:
-    'Format fotonya belum bisa kubaca di perangkat ini, simpan ulang sebagai JPG atau PNG, lalu coba lagi ya 🌿 Atau isi manual dulu.',
+    'Format fotonya belum bisa kubaca di perangkat ini, simpan ulang sebagai JPG atau PNG, lalu coba lagi ya 🧩 Atau isi manual dulu.',
   problemRetry: 'Coba lagi',
   problemFallback: 'Oke, ketik aja',
 
   /* ── composer ──────────────────────────────────────────────────────────── */
-  finishDraftFirst: 'Selesaikan dulu catatan di atas ya, sebentar aja 🌿',
+  finishDraftFirst: 'Selesaikan dulu catatan di atas ya, sebentar aja 🧩',
 } as const
 
 /** E. Demo pesan Appreciation — di production dipicu event "transaksi tercatat" */
@@ -413,7 +404,7 @@ export const MOCK_APPRECIATION_REPLY: Omit<ChatMessage, 'id'> = {
   /** pujian terkurasi (bukan hasil model) — labelnya jujur karena itu */
   ruleBased: true,
   content:
-    'Makasih udah mau cerita, Jon! Ngomongin duit itu nggak gampang, dan kamu udah ambil langkah paling penting 💚',
+    'Makasih udah mau cerita! Ngomongin duit itu nggak gampang, dan lo udah ambil langkah paling penting 💚',
 }
 
 /**
@@ -426,7 +417,7 @@ export const MOCK_APPRECIATION_REPLY: Omit<ChatMessage, 'id'> = {
  */
 export const AI_CAPTURE_REPLY = {
   /** pengantar sebelum kartu konfirmasi muncul di chat */
-  intro: 'Oke, aku rapikan dulu ya, cek sebentar, udah pas belum?',
+  intro: 'Oke, gue rapikan dulu. Cek bentar, udah pas belum?',
   /** hasil konfirmasi kartu di chat (dipakai saat `recordTransaction` benar-benar mengembalikan baris) */
   viewHistory: 'Lihat riwayat',
 } as const
@@ -447,10 +438,17 @@ export const AI_CAPTURE_REPLY = {
    ini DILARANG dipakai, dan identitas pemroses data tetap disebut di dokumen
    hukum `lib/legal/privacy.ts` (hak tahu user, UU PDP). */
 
-export const AI_STATUS_COPY = {
-  badge: 'Tersambung ke model',
-  title: 'Status AI hari ini',
-  body: `AI Coach CatetInd berjalan lewat ${AI_ENGINE_NAME} di server kami, kuncinya disimpan di server dan tidak pernah ikut ke browser. Scan struk, input suara, dan transaksi yang kamu ketik di chat dibaca mesin yang sama. Kalau sambungannya sedang penuh atau mati, AI Coach otomatis kembali menjawab dari aturan lokal + data di perangkatmu (jawabannya diberi label "belum pakai model"), dan pencatatan manual tetap jalan penuh.`,
-  worksNow:
-    'Yang selalu jalan: catat transaksi manual (kategorinya kamu pilih sendiri, bukan tebakan app), ketik transaksimu di AI Coach ("kopi 25rb"), scan struk, dan input suara. Dua saklar di bawah mengatur apakah AI boleh mengisi kategori & menamai catatanmu secara otomatis.',
-} as const
+/* ── 6b. KARTU STATUS AI — DIHAPUS (revisi pemilik repo) ─────────────────────
+   Sebelumnya ada `AI_STATUS_COPY` (badge status sambungan model, judul kartu
+   status AI, plus dua paragraf tentang Minca Engine) yang dirender sebagai kartu
+   pertama di Pengaturan → AI.
+
+   Kartunya dicabut atas permintaan pemilik repo: halaman itu dibuka untuk MENGATUR
+   dua switch, bukan untuk membaca cara kerja mesin. Semua isi yang dijanjikan
+   kartu itu TETAP tertulis di dokumen hukum — identitas pemroses & apa yang
+   dikirim ada di `lib/legal/privacy.ts` §AI, sedangkan batas AI Coach ada di
+   `lib/legal/terms.ts` §7 — jadi tidak ada janji yang hilang, hanya tempatnya
+   yang pindah ke halaman yang memang untuk itu.
+
+   `AI_ENGINE_NAME` sendiri tetap hidup di `lib/ai/engine.ts` (dipakai label
+   mesin di balasan `/api/ai/text` dan dijaga `engine.test.ts`). */

@@ -72,7 +72,7 @@ export const MonthlyTargetCard = memo(function MonthlyTargetCard({
           {/* Keadaan kosong cuma judul + tombol "Set target": tidak ada paragraf
               ajakan lagi di bawah judul. */}
           {savedThisMonth && (
-            <span className="mt-0.5 block text-xs leading-relaxed text-forest/55">
+            <span className="mt-0.5 block text-xs leading-relaxed text-forest-muted">
               {showFundLink && fundName
                 ? COPY.fundLabel(fundName, money(fundMonthly))
                 : COPY.title}

@@ -137,14 +137,14 @@ export function CategoryPicker({
             /* nilai di luar katalog ditampilkan APA ADANYA (paket 81) — lihat
                catatan `custom` di atas badan komponen */
             <>
-              <Tag className="size-4 shrink-0 text-forest/45" strokeWidth={2.2} aria-hidden />
+              <Tag className="size-4 shrink-0 text-forest-muted" strokeWidth={2.2} aria-hidden />
               <span className="truncate">{custom}</span>
             </>
           ) : (
-            <span className="truncate text-forest/40">{CATEGORY_PICKER_COPY.placeholder}</span>
+            <span className="truncate text-forest-muted">{CATEGORY_PICKER_COPY.placeholder}</span>
           )}
         </span>
-        <ChevronDown className="size-4 shrink-0 text-forest/40" aria-hidden />
+        <ChevronDown className="size-4 shrink-0 text-forest-muted" aria-hidden />
       </button>
 
       <PickerSheet
@@ -170,7 +170,7 @@ export function CategoryPicker({
             {/* LAYER 1 - QUICK PICK */}
             {!searching && view === 'quick' && (
               <section aria-label={CATEGORY_PICKER_COPY.quickTitle}>
-                <p className="px-0.5 pb-2 text-[12px] font-medium tracking-[0.06em] text-forest/45 uppercase">
+                <p className="px-0.5 pb-2 text-[12px] font-medium tracking-[0.06em] text-forest-muted uppercase">
                   {CATEGORY_PICKER_COPY.quickTitle}
                 </p>
                 <div className="grid grid-cols-3 gap-2">
@@ -200,7 +200,7 @@ export function CategoryPicker({
                 className="mt-2.5 flex w-full items-center justify-between gap-2 rounded-2xl bg-sage/60 px-3.5 py-3 text-[13.5px] font-medium text-forest ring-1 ring-soil/10 transition-colors hover:bg-sage"
               >
                 {CATEGORY_PICKER_COPY.viewAll}
-                <ChevronRight className="size-4 text-forest/45" aria-hidden />
+                <ChevronRight className="size-4 text-forest-muted" aria-hidden />
               </button>
             )}
 

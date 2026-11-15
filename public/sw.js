@@ -24,12 +24,12 @@
    tampil tetap dibaca dari IndexedDB (`lib/money/idb.ts`) — tidak ada API yang
    mengembalikan data keuangan dari cache. */
 
-/* v3 (paket 95): nama cache dinaikkan lagi setiap deploy yang mengubah
-   shell/bundel — di `activate`, semua cache bernama lain dihapus (aturan 4 di
-   atas), jadi PWA yang sudah ter-install di HP TIDAK tersangkut bundel lama.
-   Ini juga jalan tercepat "menyembuhkan" HP yang masih memegang versi lama
-   sebelum user sempat Clear site data. */
-const CACHE_VERSION = 'catetind-shell-v3'
+/* v4 (paket cron pengingat): selain kenaikan versi bundel, handler push/klik
+   di bawah kini MENGARAHKAN notifikasi ke halaman yang tepat (`/bills`, `/app`,
+   `/history`) dan mengidentifikasi pesan dengan `tag` — perubahan SW ini tidak
+   menyentuh aset, tetapi versi cache tetap dinaikkan supaya PWA ter-install
+   segera memakai SW baru (browser memeriksa isi file SW setiap kali app dibuka). */
+const CACHE_VERSION = 'catetind-shell-v4'
 /** dokumen yang disiapkan supaya app setidaknya bisa DIBUKA saat benar-benar offline */
 const SHELL_DOCUMENT = '/'
 /** aset ber-hash: aman disajikan dari cache lalu diperbarui di belakang */
@@ -116,43 +116,90 @@ self.addEventListener('fetch', (event) => {
   if (isStatic) event.respondWith(staleWhileRevalidate(request))
 })
 
-/* payload: { title, body, url } — dikirim dari /api/push/send */
+/* ── NOTIFIKASI: TAMPILAN & TAP ───────────────────────────────────────────────
+
+   Payload yang dikirim server (`lib/push/deliver.ts` → `pushPayload`):
+
+     { title, body, url, tag, kind }        kind = 'bills' | 'daily' | 'weekly'
+
+   `url` WAJIB path internal. Kalau pengirim (atau pihak lain) mengirim URL
+   absolut/`//domain-lain`, SW mengabaikannya dan memakai `/` — notifikasi tidak
+   boleh dipakai mengalihkan user ke situs lain, sekalipun push-nya sah. */
+
+const DEFAULT_NOTIFICATION_URL = '/'
+
+/** hanya path internal yang diterima (aturan yang sama dengan `/api/push/send`) */
+function safeInternalUrl(raw) {
+  if (typeof raw !== 'string' || !raw.startsWith('/') || raw.startsWith('//')) {
+    return DEFAULT_NOTIFICATION_URL
+  }
+  return raw
+}
+
 self.addEventListener('push', (event) => {
   let data = {}
   try {
     data = event.data ? event.data.json() : {}
   } catch {
-    data = { body: event.data?.text() }
+    data = { body: event.data && event.data.text ? event.data.text() : '' }
   }
 
+  const url = safeInternalUrl(data.url)
+  const tag = typeof data.tag === 'string' && data.tag ? data.tag : 'catetind'
+  const title = typeof data.title === 'string' && data.title ? data.title : 'CatetInd 🌿'
+  const body =
+    typeof data.body === 'string' && data.body ? data.body : 'Ada update keuanganmu nih.'
+
   event.waitUntil(
-    self.registration.showNotification(data.title ?? 'CatetInd 🌿', {
-      body: data.body ?? 'Ada update keuanganmu nih.',
+    self.registration.showNotification(title, {
+      body,
+      /* ikon aplikasi resmi — notifikasi adalah permukaan brand */
       icon: '/icons/icon-192.png',
       badge: '/icons/icon-192.png',
-      data: { url: data.url ?? '/' },
-      tag: data.tag ?? 'catetind',
+      /* `tag` membuat pesan sejenis SALING MEMPERBARUI (tidak menumpuk liar);
+         `renotify` memastikan pembaruan itu tetap memicu getar/alert */
+      tag,
       renotify: true,
+      data: { url, kind: typeof data.kind === 'string' ? data.kind : 'info' },
     }),
   )
 })
 
-/* tap notifikasi → fokus tab yang sudah ada, atau buka tab baru */
+/* Tap notifikasi:
+     1. jendela app yang SUDAH menampilkan tujuan → fokuskan saja;
+     2. jendela app lain → fokuskan lalu arahkan ke tujuan;
+     3. belum ada jendela app → buka jendela baru menuju tujuan.
+   `clients.openWindow` dipakai (bukan `window.open`) karena hanya ini yang
+   boleh dipanggil dari service worker. */
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
-  const url = event.notification.data?.url ?? '/'
+  const targetUrl = safeInternalUrl(event.notification.data && event.notification.data.url)
+  const target = new URL(targetUrl, self.location.origin)
+
   event.waitUntil(
-    self.clients
-      .matchAll({ type: 'window', includeUncontrolled: true })
-      .then((clients) => {
-        for (const client of clients) {
-          if ('focus' in client) {
-            client.focus()
-            if ('navigate' in client) client.navigate(url)
-            return
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      /* 1. sudah ada tab di halaman yang sama → cukup fokus */
+      for (const client of clientList) {
+        try {
+          if (new URL(client.url).pathname === target.pathname && 'focus' in client) {
+            return client.focus()
           }
+        } catch {
+          /* URL klien yang tidak bisa dibaca dilewati, bukan menggagalkan tap */
         }
-        return self.clients.openWindow(url)
-      }),
+      }
+
+      /* 2. tab app lain → fokus lalu arahkan */
+      for (const client of clientList) {
+        if (!('focus' in client)) continue
+        return Promise.resolve(client.focus()).then(() =>
+          'navigate' in client ? client.navigate(target.href) : client,
+        )
+      }
+
+      /* 3. belum ada jendela app → buka baru */
+      return self.clients.openWindow(target.href)
+    }),
   )
 })
+

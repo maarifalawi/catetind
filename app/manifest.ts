@@ -26,7 +26,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: 'CatetInd | Catet Keuangan 4 Detik, Tanpa Ribet',
     short_name: 'CatetInd',
     description:
-      'Catat keuangan harianmu, tanam kebiasaan baik, dan tumbuh bareng tanaman virtualmu.',
+      'Catat keuangan harianmu, susun kebiasaan baik, dan lengkapi puzzle keuanganmu keping demi keping.',
     start_url: '/app',
     scope: '/',
     display: 'standalone',

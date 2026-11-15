@@ -77,7 +77,7 @@ untuk paket yang tidak punya `joint-wallet`.
 | Ajak Teman | `/referral` | ✅ | ✅ | ✅ | terbuka |
 | Pusat Bantuan (app) | `/help` | ✅ | ✅ | ✅ | terbuka |
 | Panduan Install | `/install` | ✅ | ✅ | ✅ | terbuka |
-| Pengaturan (semua section kecuali AI) | `/settings`, `/settings/billing`, `/settings/appearance`, `/settings/categories`, `/settings/notifications`, `/settings/security`, `/settings/data`, `/settings/logout` | ✅ | ✅ | ✅ | terbuka |
+| Pengaturan (semua section kecuali AI) | `/settings`, `/settings/billing`, `/settings/categories`, `/settings/notifications`, `/settings/security`, `/settings/data`, `/settings/logout` | ✅ | ✅ | ✅ | terbuka |
 | **Joint Wallet** | `/joint` | 🔒 | ✅ | ✅ | butuh `joint-wallet` |
 | **AI Preferences** | `/settings/ai` | 🔒 | ✅ | ✅ | butuh `ai-chat` |
 

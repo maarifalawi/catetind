@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { CalendarClock, Pencil, Sparkles, Trash2, Wallet as WalletIcon, X } from 'lucide-react'
+import { CalendarClock, Pencil, Trash2, Wallet as WalletIcon, X } from 'lucide-react'
 import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock'
 import type { TransactionType } from '@/lib/types'
 import { MONEY_TONE, formatDayLong, maskMoney, type HistoryTransaction } from '@/lib/data/history'
@@ -150,7 +150,7 @@ function DetailBody({
           type="button"
           onClick={onClose}
           aria-label="Tutup"
-          className="flex size-8 shrink-0 items-center justify-center rounded-full text-forest/45 transition-colors hover:bg-cream hover:text-forest"
+          className="flex size-8 shrink-0 items-center justify-center rounded-full text-forest-muted transition-colors hover:bg-cream hover:text-forest"
         >
           <X className="size-4" strokeWidth={2.4} />
         </button>
@@ -169,15 +169,9 @@ function DetailBody({
             <h2 className="truncate font-display text-[18px] font-semibold tracking-tight text-forest">
               {tx.name}
             </h2>
-            {tx.aiGenerated && (
-              <Sparkles
-                className="size-3.5 shrink-0 text-forest/60"
-                strokeWidth={2.4}
-                aria-label="Nama dibuat AI"
-              />
-            )}
+            {/* SAPU BERSIH IKON HIASAN (sesi 3): lencana kilau AI dicabut. */}
           </div>
-          <p className="mt-0.5 text-[12.5px] text-forest/45">{tx.category}</p>
+          <p className="mt-0.5 text-[12.5px] text-forest-muted">{tx.category}</p>
         </div>
       </div>
 
@@ -197,8 +191,8 @@ function DetailBody({
         <span className="inline-flex items-center gap-1.5 rounded-full bg-sage/60 px-3 py-1.5 text-[12.5px] font-medium text-forest">
           {categoryEmoji(tx.category)} {tx.category}
         </span>
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-cream px-3 py-1.5 text-[12.5px] font-medium text-forest/70 ring-1 ring-soil/12">
-          <WalletIcon className="size-3.5 text-forest/70" strokeWidth={2.2} />
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-cream px-3 py-1.5 text-[12.5px] font-medium text-forest-soft ring-1 ring-soil/12">
+          <WalletIcon className="size-3.5 text-forest-soft" strokeWidth={2.2} />
           {tx.wallet}
         </span>
       </div>
@@ -206,8 +200,8 @@ function DetailBody({
       {/* meta: tanggal & waktu, dompet, tipe */}
       <dl className="mt-5 space-y-2.5 rounded-2xl bg-cream/70 p-3.5">
         <div className="flex items-center justify-between gap-3">
-          <dt className="inline-flex items-center gap-2 text-[13px] text-forest/50">
-            <CalendarClock className="size-3.5 text-forest/60" strokeWidth={2.2} />
+          <dt className="inline-flex items-center gap-2 text-[13px] text-forest-muted">
+            <CalendarClock className="size-3.5 text-forest-muted" strokeWidth={2.2} />
             Tanggal &amp; waktu
           </dt>
           <dd className="text-right text-[13.5px] font-medium text-forest">
@@ -215,18 +209,17 @@ function DetailBody({
           </dd>
         </div>
         <div className="flex items-center justify-between gap-3">
-          <dt className="text-[13px] text-forest/50">Dompet</dt>
+          <dt className="text-[13px] text-forest-muted">Dompet</dt>
           <dd className="text-right text-[13.5px] font-medium text-forest">{tx.wallet}</dd>
         </div>
         <div className="flex items-center justify-between gap-3">
-          <dt className="text-[13px] text-forest/50">Tipe</dt>
+          <dt className="text-[13px] text-forest-muted">Tipe</dt>
           <dd className="text-right text-[13.5px] font-medium text-forest">{TYPE_LABEL[tx.type]}</dd>
         </div>
       </dl>
 
       {tx.aiGenerated && (
         <p className="mt-3 flex items-start gap-2 rounded-2xl bg-mint/20 px-3.5 py-2.5 text-[12.5px] leading-relaxed text-forest">
-          <Sparkles className="mt-0.5 size-3.5 shrink-0" strokeWidth={2.4} />
           Nama transaksi ini dibuat AI dari catatanmu. Masih bisa kamu ubah lewat Edit.
         </p>
       )}

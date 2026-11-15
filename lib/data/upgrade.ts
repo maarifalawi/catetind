@@ -105,27 +105,27 @@ export function upgradeHighlights(
 
 export const FEATURE_LOCK_COPY = {
   /** copy utama saat user menyentuh titik masuk input yang belum aktif */
-  inputHint: 'Pilih paket dulu biar bisa mulai catat 🌿',
+  inputHint: 'Pilih paket dulu biar bisa mulai catat 🧩',
   /** keterangan tombol simpan di dalam sheet/modal yang sudah terbuka */
-  saveHint: 'Pencatatan aktif setelah paketmu dipilih 🌿',
+  saveHint: 'Pencatatan aktif setelah paketmu dipilih 🧩',
   /** aria-label FAB di bottom nav saat terkunci */
   fabAria: 'Catat transaksi belum aktif, pilih paket dulu biar bisa mulai catat',
   /** aria-label tombol Tambah di sidebar saat terkunci */
   addAria: 'Tambah transaksi belum aktif, pilih paket dulu biar bisa mulai catat',
 } as const
 
-/* ── COPY TANAMAN "MENUNGGU PAKET" (inventaris state VI · PRD 4542) ──────────
-   Tanaman menunggu — bukan mati, bukan layu, dan TIDAK memakai angka HP. PRD
-   1989–1994 melarang HP ditampilkan sebagai angka; saat menunggu, kelima
-   droplet visualnya disembunyikan supaya tidak terasa seperti hukuman. */
+/* ── COPY PUZZLE "MENUNGGU PAKET" (inventaris state VI · PRD 4542) ───────────
+   Papan puzzle menunggu — bukan rusak, bukan gagal, dan TIDAK memakai angka. PRD
+   1989–1994 melarang menampilkan angka yang terasa seperti hukuman; saat
+   menunggu, indikator kepingan disembunyikan. */
 
 export const PLANT_SLEEP_COPY = {
   badge: 'Belum aktif',
   caption:
-    'Tanamanmu nunggu paketmu aktif dulu, dia belum bisa tumbuh sebelum kamu mulai catat 🌙',
-  aria: 'Tanaman (menunggu paket aktif)',
+    'Puzzle-mu nunggu paket aktif dulu — kepingannya belum bisa dipasang sebelum kamu mulai catat 🌙',
+  aria: 'Papan puzzle (menunggu paket aktif)',
   /** pengganti baris "Tap untuk lihat detail" saat menunggu */
-  detailHint: 'Pilih paket buat mulai menumbuhkan dia 🌿',
+  detailHint: 'Pilih paket buat mulai nyusun puzzle-nya 🧩',
 } as const
 
 /* ── COPY BANNER GLOBAL (dipakai subscription-banner.tsx) ─────────────────── */

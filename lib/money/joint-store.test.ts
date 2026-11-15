@@ -12,6 +12,7 @@ import {
   type JointTransaction,
 } from '@/lib/data/joint'
 import { JOINT_STATE_KEY, loadDeviceState } from './idb'
+import { todayISO } from '@/lib/time'
 import { cashTotal, getMoneySnapshot, recordedTransactions, resetMoneyStore, walletBalance } from './store'
 import {
   addJointMember,
@@ -24,15 +25,19 @@ import {
   clearJointArrivalBadge,
   createJointPocket,
   deleteJointTransaction,
+  deleteJointPocket,
   getJointRemoteWalletId,
   getJointSnapshot,
   jointDeleteState,
   jointLedgerFeed,
+  jointMemberList,
   jointNotes,
   jointParticipants,
   jointPartnerJoined,
   jointRowKey,
+  joinJointPocketByCode,
   mergeJointRows,
+  mergeJointSettlements,
   mergeJointState,
   mergeLegacySettlements,
   purgeJointStore,
@@ -42,8 +47,10 @@ import {
   resetJointStore,
   restoreJointTransaction,
   setPaidBy,
+  settleJointTransfer,
   settlementRecordFor,
   updateSplit,
+  upgradeLegacySettlements,
   useJointStore,
   type PersistedJoint,
 } from './joint-store'
@@ -121,6 +128,10 @@ describe('satu pintu tulis: catatan, pembagian, kantong, nama', () => {
       description: 'Makan bareng',
       amount: 300_000,
       paidByUserId: JOINT_ME.id,
+      /* tanggal eksplisit = jangkar repo, supaya kasus ini tetap dihitung di
+         bulan yang sama dengan data seed (perilaku "tanggal hari ini" diuji
+         terpisah di bawah) */
+      dateISO: JOINT_TODAY_ISO,
       split: { type: 'percentage', percents: { [JOINT_ME.id]: 60, [JOINT_PARTNER.id]: 40 } },
     })
 
@@ -134,6 +145,21 @@ describe('satu pintu tulis: catatan, pembagian, kantong, nama', () => {
     expect(after.myNet).toBeGreaterThan(before.myNet)
     /* uang tidak pernah hilang/muncul: Σ net selalu 0 */
     expect(Math.round(after.myNet + after.partnerNet)).toBe(0)
+  })
+
+  it('catatan baru memakai tanggal HARI INI, bukan tanggal contoh repo', () => {
+    /* Regresi yang dilaporkan pemilik produk: catatan yang dicatat sekarang
+       diberi tanggal seed `2026-09-25`, jadi ia tidak pernah masuk bulan
+       berjalan dan "Total Pengeluaran Bersama" tetap Rp 0. */
+    const created = addJointTransaction({
+      description: 'Kopi hari ini',
+      amount: 25_000,
+      paidByUserId: JOINT_ME.id,
+    })
+
+    expect(created?.date).toBe(todayISO())
+    expect(created?.date).not.toBe(JOINT_TODAY_ISO)
+    expect(created?.date.slice(0, 7)).toBe(todayISO().slice(0, 7))
   })
 
   it('menolak input yang tidak masuk akal — dan tidak menulis apa pun', () => {
@@ -163,12 +189,12 @@ describe('satu pintu tulis: catatan, pembagian, kantong, nama', () => {
 
     const updated = updateSplit('lama-1', {
       type: 'nominal',
-      amounts: { [JOINT_ME.id]: 100_000, [JOINT_PARTNER.id]: 20_000 },
+      amounts: { [JOINT_ME.id]: 280_000, [JOINT_PARTNER.id]: 20_000 },
     })
 
     expect(splitSpecOf(updated!)).toEqual({
       type: 'nominal',
-      amounts: { [JOINT_ME.id]: 100_000, [JOINT_PARTNER.id]: 20_000 },
+      amounts: { [JOINT_ME.id]: 280_000, [JOINT_PARTNER.id]: 20_000 },
     })
     expect(updated?.splitType).toBeUndefined()
     expect(updated?.splits).toBeUndefined()
@@ -312,6 +338,155 @@ describe('migrasi penanda settle lama (localStorage → store)', () => {
   })
 })
 
+
+describe('penanda settle tersinkron antar akun (11 Nov 2026)', () => {
+  it('recordSettlement menyimpan waktu tekan SUNGGUHAN, bukan "1 <bulan> · 20:30"', () => {
+    withPartner()
+
+    const stored = recordSettlement(
+      newRecord({ settledAt: '2026-11-11', settledTime: '21:05' }),
+    )
+
+    expect(stored?.settledAt).toBe('2026-11-11')
+    expect(stored?.settledTime).toBe('21:05')
+
+    const entry = jointLedgerFeed(getJointSnapshot(), JOINT_MONTH_KEY).find((tx) =>
+      tx.id.startsWith('settle-'),
+    )
+    expect(entry?.date).toBe('2026-11-11')
+    expect(entry?.time).toBe('21:05')
+  })
+
+  it('tanpa settledAt memakai tanggal perangkat hari itu (bukan awal bulan)', () => {
+    withPartner()
+
+    const stored = recordSettlement(newRecord())
+
+    expect(stored?.settledAt).toBe(todayISO())
+    expect(stored?.settledTime).toMatch(/^\d{2}:\d{2}$/)
+  })
+
+  it('penanda dari SERVER langsung berlaku tanpa akun ini menekan tombol', () => {
+    const remote = newRecord({ settledAt: '2026-11-11', settledTime: '21:05' })
+
+    applyRemoteJointWallet({
+      wallet: {
+        id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+        name: 'Barengan',
+        createdAt: '2026-09-01',
+      },
+      viewerId: JOINT_PARTNER.id,
+      members: [JOINT_PARTNER.id, JOINT_ME.id],
+      memberNames: {},
+      rows: [],
+      settlements: { [JOINT_MONTH_KEY]: remote },
+    })
+
+    const record = settlementRecordFor(getJointSnapshot(), JOINT_MONTH_KEY)
+    expect(record?.from).toBe(JOINT_PARTNER.id)
+    expect(record?.settledAt).toBe('2026-11-11')
+  })
+
+  it('merge: server menang, pending lokal menang, tombstone menolak hidup lagi', () => {
+    const server = newRecord({ amount: 150_000 })
+    const localPending = newRecord({ month: '2026-08', amount: 10_000, pendingSync: true })
+    const localSynced = newRecord({ month: '2026-07', amount: 20_000 })
+
+    const merged = mergeJointSettlements(
+      {
+        [JOINT_MONTH_KEY]: localSynced,
+        '2026-08': localPending,
+        '2026-07': localSynced,
+      },
+      { [JOINT_MONTH_KEY]: server },
+      { tombstones: ['2026-07'] },
+    )
+
+    expect(merged[JOINT_MONTH_KEY]?.amount).toBe(150_000)
+    expect(merged['2026-08']?.amount).toBe(10_000)
+    expect(merged['2026-07']).toBeUndefined()
+  })
+
+  it('penanda LAMA (tanpa settledAt) diunggah sekali, bukan dibuang', () => {
+    const upgraded = upgradeLegacySettlements(
+      { [JOINT_MONTH_KEY]: newRecord() },
+      { date: '2026-11-11', time: '09:15' },
+    )
+
+    expect(upgraded.upgraded).toBe(1)
+    expect(upgraded.settlements[JOINT_MONTH_KEY]?.pendingSync).toBe(true)
+    expect(upgraded.settlements[JOINT_MONTH_KEY]?.settledAt).toBe('2026-11-11')
+
+    const fresh = upgradeLegacySettlements(
+      {
+        [JOINT_MONTH_KEY]: newRecord({ settledAt: '2026-11-11', settledTime: '21:05' }),
+      },
+      { date: '2026-11-11', time: '09:15' },
+    )
+    expect(fresh.upgraded).toBe(0)
+    expect(fresh.settlements[JOINT_MONTH_KEY]?.pendingSync).toBeUndefined()
+  })
+
+  it('pending lokal tidak dibuang saat server belum punya barisnya', () => {
+    const pending = newRecord({ pendingSync: true })
+
+    const merged = mergeJointSettlements({ [JOINT_MONTH_KEY]: pending }, {})
+
+    expect(merged[JOINT_MONTH_KEY]).toEqual(pending)
+  })
+
+  it('catatan SETELAH settle membuka selisih; pelunasan sisa menutupnya lagi', () => {
+    withPartner()
+
+    /* 1. settle penuh seperti biasa */
+    const first = computeSettlement(jointLedgerFeed(getJointSnapshot(), JOINT_MONTH_KEY))
+    recordSettlement(
+      newRecord({
+        from: first.whoOwes.id,
+        to: first.whoIsOwed.id,
+        amount: first.settlementAmount,
+      }),
+    )
+
+    /* 2. belanja baru setelah settle (uangnya keluar dari kantong partner) */
+    addJointTransaction({
+      description: 'Belanja setelah settle',
+      amount: 300_000,
+      paidByUserId: JOINT_PARTNER.id,
+      dateISO: JOINT_TODAY_ISO,
+      split: { type: 'equal' },
+    })
+
+    const after = computeSettlement(jointLedgerFeed(getJointSnapshot(), JOINT_MONTH_KEY), {
+      settled: true,
+    })
+    /* status WAJIB jujur: penanda settle tidak boleh menutupi utang baru */
+    expect(after.level).toBe('settle')
+    expect(after.difference).toBe(150_000)
+
+    /* 3. pelunasan SISA dicatat sebagai baris tersendiri (bukan menimpa penanda) */
+    const extra = settleJointTransfer({
+      month: JOINT_MONTH_KEY,
+      from: after.whoOwes.id,
+      to: after.whoIsOwed.id,
+      amount: after.settlementAmount,
+      dateISO: JOINT_TODAY_ISO,
+    })
+    expect(extra).not.toBeNull()
+
+    const done = computeSettlement(jointLedgerFeed(getJointSnapshot(), JOINT_MONTH_KEY), {
+      settled: true,
+    })
+    expect(Math.round(done.difference)).toBe(0)
+    expect(done.level).toBe('equal')
+
+    /* dua transfer tetap terlihat di timeline: settle pertama + sisa */
+    const settleRows = jointLedgerFeed(getJointSnapshot(), JOINT_MONTH_KEY).filter(
+      (tx) => tx.isSettlement,
+    )
+    expect(settleRows).toHaveLength(2)
+  })
+})
 
 describe('settle mengunci timbangan & sisa menyeberang bulan', () => {
   it('recordSettlement mengunci net jadi nol TANPA membengkakkan pengeluaran bersama', () => {
@@ -648,6 +823,7 @@ describe('hapus satu baris & kantong baru kosong (paket 61.3)', () => {
       description: 'Nonton bareng',
       amount: 400_000,
       paidByUserId: JOINT_ME.id,
+      dateISO: JOINT_TODAY_ISO,
     })!
     const before = computeSettlement(jointLedgerFeed(getJointSnapshot(), JOINT_MONTH_KEY))
     const notesBefore = jointNotes(getJointSnapshot()).length
@@ -670,6 +846,7 @@ describe('hapus satu baris & kantong baru kosong (paket 61.3)', () => {
       description: 'Nonton bareng',
       amount: 300_000,
       paidByUserId: JOINT_PARTNER.id,
+      dateISO: JOINT_TODAY_ISO,
     })!
     expect(recordSettlement(newRecord())).not.toBeNull()
 
@@ -941,5 +1118,172 @@ describe('kantong bersama menyentuh kas pribadi (Sumber Dana)', () => {
     expect(row).toBeDefined()
     expect(row!.type).toBe('transfer')
   })
+})
+
+
+/* ── GABUNG PAKAI KODE (sisi B) ───────────────────────────────────────────────
+   Yang bisa dikunci tanpa jaringan: kode yang bentuknya tidak sah DITOLAK
+   sebelum satu pun panggilan ke server — jadi tidak ada layar "menghubungkan"
+   untuk kode 3 karakter, dan tidak ada keanggotaan yang ditulis. */
+describe('joinJointPocketByCode · validasi sebelum menyentuh server', () => {
+  beforeEach(() => {
+    resetJointStore()
+  })
+
+  it('kode kurang dari 6 karakter ditolak tanpa mengubah keanggotaan', async () => {
+    const before = getJointSnapshot().members
+    const result = await joinJointPocketByCode('ABC')
+    expect(result.ok).toBe(false)
+    expect(result.outcome).toBeNull()
+    expect(result.error).toBeTruthy()
+    expect(getJointSnapshot().members).toEqual(before)
+  })
+
+  it('karakter di luar A–Z/0–9 ditolak (spasi & tanda baca dari tempel chat)', async () => {
+    const result = await joinJointPocketByCode('H9-FKJ')
+    expect(result.ok).toBe(false)
+    expect(result.outcome).toBeNull()
+  })
+
+  it('tanpa sesi/backend: gagal apa adanya, bukan "berhasil gabung"', async () => {
+    const result = await joinJointPocketByCode('H9FKJF')
+    expect(result.ok).toBe(false)
+    expect(result.outcome).toBeNull()
+    expect(jointPartnerJoined(getJointSnapshot())).toBe(false)
+  })
+
+/* ── PEMASUKAN, ANGGOTA KETIGA, & DEDUPE BARIS SERVER ──────────────────────
+   Tiga regresi yang dilaporkan pemilik produk:
+     1. "nambahin pemasukan malah pas di input keluarnya pengeluaran";
+     2. "join wallet cuma bisa sama 1 orang" (padahal kantong harusnya bisa
+        menampung orang ketiga & keempat);
+     3. catatan yang kita tulis sendiri muncul DUA KALI setelah barisnya datang
+        lagi dari server (id lokal vs `remoteId`). */
+
+describe('pemasukan bersama & anggota lebih dari dua', () => {
+  it('kind income tersimpan & tidak menambah "Total Pengeluaran Bersama"', () => {
+    const before = computeSettlement(jointLedgerFeed(getJointSnapshot(), JOINT_MONTH_KEY))
+
+    const income = addJointTransaction({
+      description: 'Talangan kas',
+      amount: 80_000,
+      paidByUserId: JOINT_ME.id,
+      kind: 'income',
+      dateISO: JOINT_TODAY_ISO,
+    })!
+
+    expect(income.kind).toBe('income')
+    expect(income.split).toEqual({ type: 'equal' })
+
+    const after = computeSettlement(jointLedgerFeed(getJointSnapshot(), JOINT_MONTH_KEY))
+    expect(after.totalSpent).toBe(before.totalSpent)
+    expect(after.totalIncome).toBe(before.totalIncome + 80_000)
+    /* talangan menambah posisi "berhak menerima" penyetornya */
+    expect(after.myNet).toBe(before.myNet + 80_000)
+  })
+
+  it('anggota ketiga & keempat bisa jadi pembayar catatan (bukan cuma 2 orang)', () => {
+    withPartner()
+    const third = 'anggota-ketiga'
+    addJointMember(third)
+
+    const created = addJointTransaction({
+      description: 'Kopi bertiga',
+      amount: 90_000,
+      paidByUserId: third,
+      dateISO: JOINT_TODAY_ISO,
+    })
+
+    expect(created?.paidByUserId).toBe(third)
+
+    const people = jointMemberList(getJointSnapshot())
+    expect(people.map((person) => person.id)).toContain(third)
+    /* pemilik sesi selalu di urutan pertama; nama yang sudah terbaca dipakai
+       apa adanya (di produksi server memetakan pemilik sesi ke "Kamu") */
+    expect(people[0]?.id).toBe(JOINT_ME.id)
+    expect(people[2]?.id).toBe(third)
+    expect(people[2]?.name).toBe('Anggota 3')
+  })
+})
+
+describe('dedupe baris yang datang dari server', () => {
+  it('baris lokal yang sudah terkirim (punya remoteId) tidak digandakan realtime', () => {
+    /* baris lokal yang sudah punya `remoteId` (hasil `syncJointRow`) */
+    const stored = applyJointRow(newRow({ id: 'lokal-1', remoteId: 'server-1' }), {
+      arrival: false,
+    })
+    expect(stored).not.toBeNull()
+
+    /* baris server yang SAMA datang lewat realtime: id-nya uuid baris server,
+       sedangkan baris lokal ber-id `lokal-1` → tanpa dedupe by `remoteId`
+       catatan ini akan tampil dua kali. */
+    const duplicate = applyJointRow(
+      newRow({ id: 'server-1', description: 'Nonton' }),
+      { arrival: false },
+    )
+    expect(duplicate).toBeNull()
+  })
+
+  it('mergeJointRows membuang baris lokal yang remoteId-nya sudah ada di server', () => {
+    const local: JointTransaction = newRow({ id: 'lokal-1', remoteId: 'server-1' })
+    const remote: JointTransaction = newRow({ id: 'server-1', description: 'dari server' })
+
+    const merged = mergeJointRows([local], [remote])
+    expect(merged).toHaveLength(1)
+    expect(merged[0]?.id).toBe('server-1')
+  })
+
+  it('baris yang belum sampai ke server (`pendingSync`) tetap ada setelah baca ulang', () => {
+    /* Baris yang gagal terkirim HARUS bertahan melewati `mergeJointRows` —
+       kalau tidak, `retryPendingJointRows()` tidak punya apa pun untuk dikirim
+       dan catatan itu hilang dari perangkat pengirim tanpa pernah sampai ke
+       pasangan. `pendingSync` juga wajib ikut terbawa, supaya chip "Belum
+       tersinkron" tidak hilang setelah refresh. */
+    const pending: JointTransaction = newRow({ id: 'lokal-1', pendingSync: true })
+    const remote: JointTransaction = newRow({ id: 'server-1' })
+
+    const merged = mergeJointRows([pending], [remote])
+    expect(merged.map((tx) => tx.id)).toEqual(['server-1', 'lokal-1'])
+    expect(merged.find((tx) => tx.id === 'lokal-1')?.pendingSync).toBe(true)
+  })
+})
+
+describe('navigator bulan pada daftar Cerita Kita', () => {
+  it('jointLedgerFeed hanya memuat catatan BULAN yang dipilih', () => {
+    applyJointRow(newRow({ id: 'bulan-sept', date: '2026-09-25' }), { arrival: false })
+    applyJointRow(newRow({ id: 'bulan-nov', date: '2026-11-03' }), { arrival: false })
+
+    const september = jointLedgerFeed(getJointSnapshot(), '2026-09')
+    const november = jointLedgerFeed(getJointSnapshot(), '2026-11')
+
+    expect(september.some((tx) => tx.id === 'bulan-sept')).toBe(true)
+    expect(september.some((tx) => tx.id === 'bulan-nov')).toBe(false)
+    expect(november.some((tx) => tx.id === 'bulan-nov')).toBe(true)
+    expect(november.some((tx) => tx.id === 'bulan-sept')).toBe(false)
+  })
+})
+
+describe('hapus dompet bersama', () => {
+  it('mengosongkan kantong di perangkat & menandai catatan terhapus', async () => {
+    withPartner()
+    addJointTransaction({
+      description: 'Belanja',
+      amount: 50_000,
+      paidByUserId: JOINT_ME.id,
+      dateISO: JOINT_TODAY_ISO,
+    })
+
+    const result = await deleteJointPocket()
+    expect(result.deleted).toBe(true)
+    /* tanpa sesi Supabase di test, server tidak bisa dihubungi → jujur `false` */
+    expect(result.serverOk).toBe(false)
+
+    const snapshot = getJointSnapshot()
+    expect(snapshot.members).toEqual([])
+    expect(jointParticipants(snapshot).partner).toBeNull()
+    expect(jointNotes(snapshot)).toHaveLength(0)
+  })
+})
+
 })
 

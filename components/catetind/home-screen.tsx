@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { ArrowRight, Search } from 'lucide-react'
 import { ScreenShell } from './screen-shell'
@@ -28,9 +27,11 @@ import { ExpenseDistributionCard } from './expense-distribution-card'
 import { MyGoalsCard } from './my-goals-card'
 import { RecentTransactionsCard } from './recent-transactions-card'
 import { OverviewPanel } from './overview-panel'
-import { cashTotal, useMoneyStore } from '@/lib/money/store'
+import { cashTotal, recordedTransactions, useMoneyStore } from '@/lib/money/store'
 import type { DeckSelection } from '@/lib/wallets'
 import { HISTORY_SEARCH_PARAM, historySearchHref } from '@/lib/data/history'
+import { milestoneStateFromRecords } from '@/lib/data/milestones'
+import { useTodayISO } from '@/lib/use-today-iso'
 import { HOME_HEADER_COPY, greetingNameOf } from '@/lib/data/home'
 import { CONTEXT_MENU_COPY, contextOptionsFor } from '@/lib/data/money-context'
 import { useSessionUser } from '@/hooks/use-session-user'
@@ -88,17 +89,41 @@ export function HomeScreen() {
                           hero `/wallet` & kas likuid Kekayaan;
        · `contextWallets` = daftar dompet KONTEKS AKTIF (chip jumlah dompet) —
                              angka yang SAMA dengan deck & badge /wallet.
-     PAKET 64 menghapus baris kecil "Dompet Pribadi: Rp X · Total Saldo = semua
-     dompet" dari header: chip di bawah Context Switcher cukup memuat dua fakta
-     ringan (jumlah dompet & jumlah transaksi), dan angka total sudah punya
-     tempatnya sendiri di kartu dompet + panel Overview. */
+     PAKET 64 menghapus baris rumus kecil di header (label dompet pribadi +
+     penegas bahwa total berasal dari seluruh dompet): chip di bawah Context
+     Switcher cukup memuat dua fakta ringan (jumlah dompet & jumlah transaksi),
+     dan angka total sudah punya tempatnya sendiri di kartu dompet + Overview. */
   /* PAKET 70 — `contextWallets` & `transactions` DIHAPUS bersama chip
      "N dompet · N transaksi". `total` tetap: ia dipakai panel Overview sebagai
      angka SELURUH dompet (konteks uang tidak pernah menyentuhnya). */
   const total = useMemo(() => cashTotal(snapshot), [snapshot])
 
   const hour = now?.getHours() ?? 12
-  const sapaan = !now ? 'Selamat datang' : hour < 11 ? 'Selamat pagi' : hour < 15 ? 'Selamat siang' : hour < 19 ? 'Selamat sore' : 'Selamat malam'
+  /* SAPAAN DINAMIS — mengikuti jam di perangkat user, dan bunyinya seperti
+     sahabat yang baru masuk ruangan, bukan seperti pengumuman kantor.
+
+     Dulu semuanya "Selamat pagi/siang/sore/malam" — benar, tapi dingin, dan
+     tidak membawa satu pun rasa. Sekarang tiap waktu punya kalimatnya sendiri
+     dengan emoji yang ikut berubah, jadi sapaan terasa hidup tanpa perlu data
+     uang apa pun (tidak ada angka yang bisa salah di sini).
+
+     `!now` = render server sebelum jam perangkat terbaca → "Hai" (netral).
+     Jangan pernah menebak waktu di server: server berada di zona waktu lain,
+     dan sapaan yang berubah sendiri setelah hidrasi adalah bug yang sudah
+     pernah terjadi di app ini. */
+  const sapaan = !now
+    ? 'Hai'
+    : hour < 4
+      ? 'Masih melek'
+      : hour < 11
+        ? 'Pagi'
+        : hour < 15
+          ? 'Siang'
+          : hour < 19
+            ? 'Sore'
+            : 'Malam'
+  /** emoji ikut waktu — pagi matahari, malam bulan; sisanya daun brand */
+  const sapaanEmoji = !now ? '🧩' : hour < 4 ? '🌙' : hour < 11 ? '☀️' : hour < 19 ? '🧩' : '🌙'
 
   /* CATATAN PERFORMA — efek "background zoom-out" (scale + opacity ke seluruh
      dashboard) SENGAJA DIHAPUS. Alasannya: begitu seluruh halaman di-scale atau
@@ -142,7 +167,17 @@ export function HomeScreen() {
   /* perayaan milestone (inventaris #k, task 16): streak 7/14/21/30 dari state
      mock `lib/data/milestones.ts`. Logikanya di hook — Home cuma memasang
      overlay & meneruskan pintu "Lihat perayaan" ke Plant Detail. */
-  const celebration = useMilestoneCelebration()
+  /* ── PERAYAAN MILESTONE DARI CATATAN NYATA ────────────────────────────────
+     Dulu hook ini dipanggil tanpa argumen, jadi ia memakai `MILESTONE_STATE`
+     (streak 7 hari contoh) dan akun yang baru dibuat langsung disambut
+     perayaan "Minggu pertama!". Sekarang angkanya dihitung dari baris ledger
+     milik user; tanpa catatan sama sekali, tidak ada yang dirayakan. */
+  const todayISO = useTodayISO()
+  const milestoneState = useMemo(
+    () => milestoneStateFromRecords(recordedTransactions(snapshot), todayISO),
+    [snapshot, todayISO],
+  )
+  const celebration = useMilestoneCelebration(milestoneState)
 
   /* "Atur target nabung" di recap mingguan menyambung ke alur target yang SUDAH
      ada di app (modal Target bulanan yang dikelola `useMonthlyReview`). Recap
@@ -208,13 +243,14 @@ export function HomeScreen() {
                 di layar ini ia tidak menambah keputusan apa pun. */}
             <h1 className="hidden font-display text-3xl font-semibold tracking-tight text-forest lg:block lg:text-4xl">
               {sapaan}
-              {greetingName ? `, ${greetingName}` : ''}
-              {/* Daun dirapatkan ke kata terakhir dengan NON-BREAKING SPACE: tanpa
+              {greetingName ? `, ${greetingName}` : ''}!
+              {/* Emoji dirapatkan ke kata terakhir dengan NON-BREAKING SPACE: tanpa
                   itu, di lebar 1024–1366px baris ini memecah tepat sebelum emoji
-                  dan menyisakan daun sendirian di baris kedua — terlihat seperti
+                  dan menyisakan emoji sendirian di baris kedua — terlihat seperti
                   layout rusak. Dengan `\u00A0` yang pindah baris adalah kata
-                  terakhir saja ("…, Midtrans 🌿" tetap utuh). */}
-              {'\u00A0🌿'}
+                  terakhir saja (", Midtrans ☀️" tetap utuh). */}
+              {'\u00A0'}
+              {sapaanEmoji}
             </h1>
             {/* Chip "N dompet · N transaksi" dihapus di paket 70, dan kontrol
                 KONTEKS UANG pindah ke cluster aksi sejak paket 65 (menu dropdown
@@ -236,7 +272,7 @@ export function HomeScreen() {
               role="search"
               className="flex h-11 w-48 items-center gap-2.5 rounded-full bg-cream px-3.5 ring-1 ring-soil/12 transition-shadow focus-within:ring-2 focus-within:ring-forest/30 xl:w-64"
             >
-              <Search className="size-4 shrink-0 text-forest/40" aria-hidden />
+              <Search className="size-4 shrink-0 text-forest-muted" aria-hidden />
               <input
                 type="search"
                 name={HISTORY_SEARCH_PARAM}
@@ -244,7 +280,7 @@ export function HomeScreen() {
                 onChange={(event) => setSearchQuery(event.target.value)}
                 placeholder={HOME_HEADER_COPY.searchPlaceholder}
                 aria-label={HOME_HEADER_COPY.searchAria}
-                className="w-full min-w-0 bg-transparent text-sm text-forest outline-none placeholder:text-forest/35"
+                className="w-full min-w-0 bg-transparent text-sm text-forest outline-none placeholder:text-forest-muted"
               />
               <button
                 type="submit"
@@ -259,14 +295,6 @@ export function HomeScreen() {
             {/* Lonceng notifikasi → panel keadaan kosong (paket 64). Halaman
                 pengaturannya tetap terjangkau lewat CTA di dalam panel. */}
             <NotificationBell />
-            <span className="relative size-11 shrink-0 overflow-hidden rounded-full ring-1 ring-soil/12">
-              {/* avatar dekoratif — identitas user datang dari sesi, jadi nama
-                  contoh tidak boleh diumumkan ke screen reader (perbaikan audit
-                  K4). Dulu kalimat ini ditulis sebagai ANAK ELEMEN tanpa kurung
-                  kurawal, sehingga ikut dirender (dan dibacakan screen reader)
-                  di dalam lingkaran avatar. */}
-              <Image src="/placeholder-user.jpg" alt="" aria-hidden fill sizes="44px" className="object-cover" />
-            </span>
           </div>
         </div>
         {/* ── SUSUNAN BENTO GRID 12 KOLOM (paket 68) ──────────────────────────
@@ -280,7 +308,7 @@ export function HomeScreen() {
               ROW 3 · Transaksi Terakhir (12/12) — daftarnya multi-kolom;
               ROW 4 · Jatah Hari Ini (6/12) + Distribusi Pengeluaran
                       & kartu target bulan ini (6/12);
-              ROW 5 · Tabungan Impian (6/12) + Tanamanmu (6/12).
+              ROW 5 · Tabungan Impian (6/12) + Puzzle-mu (6/12).
             Tiap sel `h-full`/`flex-1` supaya kartunya benar-benar MENGISI sel
             (bukan sekadar duduk di atasnya). Posisi desktop dipatok lewat
             `lg:col-start-*` + `lg:row-start-*`, jadi TIDAK bergantung urutan DOM;
@@ -292,8 +320,23 @@ export function HomeScreen() {
             notifikasi yang DULU hidup di luar & di atas grid sekarang jadi sel
             grid (`order-2` di mobile, baris 1 di desktop), dan pemilih konteks
             turun ke dalam panel dompet. Desktop melihat susunan yang sama. */}
-        <div className="flex flex-col">
-          <div className="mt-5 grid w-full grid-cols-1 gap-5 lg:mt-6 lg:grid-cols-12 lg:gap-6">
+            {/* ── KISI BENTO 12 KOLOM ─────────────────────────────────────────────
+                KEPUTUSAN TINGGI (revisi keluhan "banyak space kosong"):
+                default CSS grid = `align-items: stretch`, jadi kartu pendek
+                DITARIK setinggi pasangannya di baris yang sama, dan sisa
+                tingginya jadi ruang kosong DI DALAM kartu putih.
+                Solusinya BUKAN `items-start` di grid (itu mematikan perataan
+                baris Dompet/Arus Uang yang memang sepasang), melainkan
+                `lg:self-start` per sel untuk baris yang isinya tidak sepadan:
+                  · ROW 4 — Jatah Hari Ini (pendek) vs Distribusi + kartu target;
+                  · ROW 5 — Tabungan Impian (pendek) vs Puzzle kamu (papan penuh).
+                Dengan begitu baris 2 & 3 tetap rata seperti desain bento, dan
+                hanya dua baris itu yang tiap kartunya berhenti di tinggi isinya.
+                Catatan: `h-full` di wrapper sel WAJIB dilepas — `height:100%`
+                mengalahkan `self-start`, dan itulah sebabnya percobaan pertama
+                (menaruh `items-start` saja) tidak mengubah apa pun. */}
+            <div className="flex flex-col">
+              <div className="mt-5 grid w-full grid-cols-1 gap-5 lg:mt-6 lg:grid-cols-12 lg:gap-6">
             {/* ── BARIS 1 · STRIP NOTIFIKASI / CTA (+ rekap) ────────────────────
                 PAKET 87: strip ini DULU hidup DI LUAR & DI ATAS grid. Sekarang ia
                 jadi SEL GRID: di MOBILE `order-2` — tepat SETELAH kartu dompet,
@@ -371,21 +414,26 @@ export function HomeScreen() {
               <DailyHudCard />
               <DailyNudge />
             </div>
-            {/* ── ROW 4 · DISTRIBUSI PENGELUARAN + KARTU TARGET — kanan 6/12 ───
-                Donat modern (bukan bar). Di BAWAHNYA menempel kartu "Hemat Rp …"
-                (`MonthlyTargetCard`) — permintaan pemilik produk: kartu target
-                tidak boleh jadi elemen paling atas, cukup di BAWAH Distribusi
-                Pengeluaran. Keduanya ditumpuk dalam SATU sel (`flex flex-col`)
-                supaya satu node melayani dua breakpoint; pembungkus `flex-1` +
-                `min-h-0` menjaga donat tetap mengisi sel (bento 50/50 dengan Jatah
-                Hari Ini) sementara kartu target mengambil tinggi alaminya.
-                `monthly.ready` menahan render sampai penanda localStorage dibaca
-                supaya kartunya tidak berkedip dari "belum ada" ke nominalnya.
+            {/* ── ROW 4 · DISTRIBUSI PENGELUARAN — kanan 6/12 ──────────────────
+                REVISI (keluhan "space kosong"): kartu target "Hemat Rp …" DULU
+                menempel di bawah donat ini, sehingga sel kanan jauh lebih tinggi
+                dari Jatah Hari Ini dan sel kiri menyisakan lubang putih besar.
+                Kartu target DIPINDAH ke bawah Tabungan Impian (ROW 5 kiri) —
+                tempatnya juga lebih masuk akal: target bulanan itu soal nabung,
+                bukan soal komposisi pengeluaran. Dengan begitu tinggi donat ≈
+                tinggi Jatah, jadi baris ini nyaris tanpa sisa.
                 Di MOBILE (order-6). */}
-            <div className="order-6 flex h-full flex-col gap-5 lg:order-none lg:col-span-6 lg:col-start-7 lg:row-start-4 lg:gap-6">
-              <div className="min-h-0 flex-1">
-                <ExpenseDistributionCard />
-              </div>
+            <div className="order-6 min-h-0 lg:order-none lg:col-span-6 lg:col-start-7 lg:row-start-4">
+              <ExpenseDistributionCard />
+            </div>
+            {/* ── ROW 5 · TABUNGAN IMPIAN + KARTU TARGET — kiri 6/12 ───────────
+                Kartu target bulanan (`MonthlyTargetCard`) sekarang menumpang di
+                sini, tepat di bawah daftar celengan: dua-duanya bicara soal uang
+                yang disisihkan. `monthly.ready` menahan render sampai penanda
+                localStorage dibaca supaya kartunya tidak berkedip dari "belum
+                ada" ke nominalnya. Di MOBILE (order-7). */}
+            <div className="order-7 flex h-full flex-col gap-5 lg:order-none lg:col-span-6 lg:col-start-1 lg:row-start-5 lg:gap-6">
+              <MyGoalsCard />
               {monthly.ready && (
                 <MonthlyTargetCard
                   savedThisMonth={monthly.savedThisMonth}
@@ -395,17 +443,11 @@ export function HomeScreen() {
                 />
               )}
             </div>
-            {/* ── ROW 5 · TABUNGAN IMPIAN — kiri 6/12 ──────────────────────────
-                Kartunya sudah `h-full` ⇒ daftar celengan mengisi sel. Di MOBILE
-                (order-7). */}
-            <div className="order-7 h-full lg:order-none lg:col-span-6 lg:col-start-1 lg:row-start-5">
-              <MyGoalsCard />
-            </div>
-            {/* ── ROW 5 · TANAMANMU — kanan 6/12 ───────────────────────────────
+            {/* ── ROW 5 · PUZZLE-MU — kanan 6/12 ───────────────────────────────
                 SEPASANG 50/50 dengan Tabungan Impian — tata letak ini FINAL
-                (permintaan pemilik produk). Saat tahap 4 "Berbunga", yang berubah
+                (permintaan pemilik produk). Saat tahap 4 "Puzzle lengkap", yang berubah
                 adalah BENTUK di dalam kartunya (ilustrasi jadi latar penuh yang
-                rimbun), BUKAN lebar kolomnya: kartu tetap 6/12 supaya barisnya
+                bercahaya), BUKAN lebar kolomnya: kartu tetap 6/12 supaya barisnya
                 tidak menyisakan lubang. Di MOBILE (order-8). */}
             <div className="order-8 h-full lg:order-none lg:col-span-6 lg:col-start-7 lg:row-start-5">
               <PlantWidget onReplayCelebration={celebration.replay} />
@@ -431,13 +473,14 @@ export function HomeScreen() {
         open={monthly.open}
         monthKey={monthly.monthKey}
         saved={monthly.saved}
+        recap={monthly.recap}
         onClose={monthly.close}
         onSave={monthly.saveTarget}
       />
       {/* perayaan milestone (inventaris #k) — auto-dismiss ~2.5 detik, bisa
           langsung ditutup, dan milestone yang sama tidak muncul dua kali
           (penanda di `milestoneStorageKey()`). Pintu meninjau ulangnya ada di
-          Plant Detail: tombol "Lihat perayaan" di dalam kartu tanaman. */}
+          Plant Detail: tombol "Lihat perayaan" di dalam kartu puzzle. */}
       <MilestoneCelebration
         open={celebration.open && !celebrationBlocked}
         milestone={celebration.milestone}

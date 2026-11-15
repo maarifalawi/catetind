@@ -56,18 +56,37 @@ export async function pushBillToServer(bill: Bill, remoteId: string): Promise<bo
   const client = browserSupabase()
   if (client) {
     try {
-      const { error } = await client
-        .from('bills')
-        .upsert({ ...toBillDbRow(bill), id: remoteId }, { onConflict: 'id' })
+      const row = { ...toBillDbRow(bill), id: remoteId }
+      const { error } = await client.from('bills').upsert(row, { onConflict: 'id' })
       if (!error || error.code === '23505') return true
+      /* ── KUNCI ASING DOMPET (23503) ────────────────────────────────────────
+         `bills.wallet_id` menunjuk `wallets(user_id, id)`. Dompet lokal yang
+         belum/ditolak terkirim membuat SELURUH baris tagihan ditolak server —
+         tagihan lalu hidup hanya di perangkat dan hilang begitu cache akun
+         tidak terbaca. Tagihan tetap sah tanpa dompet, jadi simpan ulang tanpa
+         `wallet_id`; pilihan dompetnya tetap tersimpan lokal (overlay). */
+      if (error.code === '23503') {
+        const { error: retryError } = await client
+          .from('bills')
+          .upsert({ ...row, wallet_id: null }, { onConflict: 'id' })
+        if (!retryError || retryError.code === '23505') return true
+      }
     } catch {
       /* jatuh ke jalur server */
     }
   }
-  return dataApiOk({
+  const ok = await dataApiOk({
     table: 'bills',
     op: 'upsert',
     rows: [{ ...toBillDbRow(bill), id: remoteId } as Record<string, unknown>],
+    onConflict: 'id',
+  })
+  if (ok) return true
+  /* jalur server menolak karena kunci asing dompet → ulangi tanpa dompet */
+  return dataApiOk({
+    table: 'bills',
+    op: 'upsert',
+    rows: [{ ...toBillDbRow(bill), id: remoteId, wallet_id: null } as Record<string, unknown>],
     onConflict: 'id',
   })
 }

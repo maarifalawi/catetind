@@ -3,7 +3,9 @@
 import { useState } from 'react'
 import { CheckCircle2, Download, Loader2, Smartphone } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import type { DeviceType } from '@/hooks/use-device-detect'
 import type { InstallOutcome } from '@/hooks/use-install-prompt'
+import { INSTALL_CTA_COPY } from '@/lib/data/install'
 
 // beforeinstallprompt is supported on Chrome (Android, Windows, Mac), Edge, and Samsung Internet. Not supported on Safari/iOS.
 
@@ -15,19 +17,28 @@ import type { InstallOutcome } from '@/hooks/use-install-prompt'
  * 2. `canInstall`    → browser menyediakan dialog install native → tombol besar
  * 3. sisanya         → prompt belum/tidak tersedia → arahkan ke panduan manual
  *
- * Halaman /install tidak merender komponen ini ketika device = ios.
+ * Di iPhone/iPad browser tidak pernah menyediakan dialog install, jadi yang
+ * tampil adalah penjelasan + langkah manual di bawah.
+ * CATATAN PENTING (revisi copy): keadaan ketiga TIDAK selalu berarti browser
+ * user "kurang". Di iPhone/iPad tombol install otomatis memang tidak pernah
+ * bisa ada — Apple tidak menyediakan API-nya. Karena itu kalimatnya dibaca dari
+ * `INSTALL_CTA_COPY.unavailable(device)` supaya user tahu batas platformnya,
+ * bukan mengira aplikasinya yang rusak.
  */
 export function InstallCta({
   isInstalled,
   canInstall,
   isPrompting,
   onInstall,
+  device,
   className,
 }: {
   isInstalled: boolean
   canInstall: boolean
   isPrompting: boolean
   onInstall: () => Promise<InstallOutcome>
+  /** menentukan kalimat saat dialog install otomatis tidak tersedia */
+  device: DeviceType
   className?: string
 }) {
   /* hasil prompt terakhir — buat copy saat user dismiss */
@@ -50,7 +61,7 @@ export function InstallCta({
           <p className="text-sm font-medium text-forest">
             ✅ CatetInd sudah terpasang di perangkat ini!
           </p>
-          <p className="mt-1 text-xs leading-relaxed text-forest/70">
+          <p className="mt-1 text-xs leading-relaxed text-forest-soft">
             Buka lewat ikon di Homescreen biar bonus install-nya langsung masuk.
           </p>
         </div>
@@ -67,10 +78,10 @@ export function InstallCta({
         )}
       >
         <Smartphone className="size-5 shrink-0 text-forest" strokeWidth={2.2} />
-        <p className="text-sm leading-relaxed text-forest/60">
+        <p className="text-sm leading-relaxed text-forest-muted">
           {outcome === 'dismissed'
-            ? 'Oke, install-nya di-nanti dulu. Kamu bisa install kapan saja lewat langkah manual di bawah 👇'
-            : 'Tombol install otomatis belum tersedia di browser ini. Tenang, ada cara manual di bawah 👇'}
+            ? INSTALL_CTA_COPY.dismissed
+            : INSTALL_CTA_COPY.unavailable(device)}
         </p>
       </div>
     )
@@ -91,7 +102,7 @@ export function InstallCta({
         )}
         {isPrompting ? 'Membuka dialog install…' : 'Install CatetInd Sekarang'}
       </button>
-      <p className="mt-2.5 text-center text-xs text-forest/45">
+      <p className="mt-2.5 text-center text-xs text-forest-muted">
         Gratis · Tanpa App Store · Ikonnya langsung nongol di Homescreen
       </p>
     </div>

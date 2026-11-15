@@ -24,6 +24,9 @@ const SUMMARY: CoachDataSummary = {
   incomeThisMonth: 6_500_000,
   expenseThisMonth: 1_200_000,
   topCategory: 'Makanan',
+  expenseThisWeek: 275_000,
+  topCategoryThisWeek: 'Transportasi',
+  expenseToday: 45_000,
   remainingToday: 95_000,
   allowanceState: 'ready',
   walletCount: 3,
@@ -83,6 +86,14 @@ describe('buildCoachContext', () => {
     const ctx = buildCoachContext({ ...SUMMARY, topCategory: null })
     expect(ctx).toContain('(belum ada pengeluaran)')
   })
+
+  it('membawa angka minggu ini & hari ini — "gimana minggu ini?" bisa dijawab', () => {
+    const ctx = buildCoachContext(SUMMARY)
+    expect(ctx).toContain('Pengeluaran minggu ini')
+    expect(ctx).toContain(formatRupiah(275_000))
+    expect(ctx).toContain('Transportasi')
+    expect(ctx).toContain(formatRupiah(45_000))
+  })
 })
 
 describe('buildWelcomeText', () => {
@@ -125,6 +136,9 @@ describe('status jatah di prompt & sapaan', () => {
     incomeThisMonth: 0,
     expenseThisMonth: 0,
     topCategory: null,
+    expenseThisWeek: 0,
+    topCategoryThisWeek: null,
+    expenseToday: 0,
     remainingToday: 0,
     allowanceState: 'not-configured',
     walletCount: 0,
@@ -143,7 +157,7 @@ describe('status jatah di prompt & sapaan', () => {
     expect(welcome).not.toContain('Sisa jatah harianmu hari ini')
     expect(welcome).not.toContain('1.100.000')
     expect(welcome).toContain('belum bisa dihitung')
-    expect(welcome).toContain('Dompetmu juga masih kosong')
+    expect(welcome).toContain('Dompet lo juga masih kosong')
   })
 
   it('jatah ditahan: tidak menyebut Rp 0 seolah itu jatah', () => {
@@ -157,7 +171,7 @@ describe('status jatah di prompt & sapaan', () => {
     expect(buildCoachContext(shortfall)).not.toContain('Sisa jatah harian: Rp')
 
     const welcome = buildWelcomeText(shortfall)
-    expect(welcome).toContain('sedang ditahan')
+    expect(welcome).toContain('lagi ditahan')
     expect(welcome).not.toContain('Rp 0')
   })
 })

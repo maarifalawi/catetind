@@ -214,10 +214,6 @@ export function LoginScreen({ next }: { next?: string | null }) {
           <h1 className="max-w-[560px] text-balance font-display text-[40px] leading-[1.12] font-medium tracking-[-0.03em] text-forest landing-tab:text-[52px] landing:text-[60px]">
             {LOGIN_COPY.title}
           </h1>
-
-          <p className="max-w-[440px] text-balance text-[17px] leading-[1.5] text-forest-muted">
-            {LOGIN_COPY.subtitle}
-          </p>
         </div>
 
         {/* kartu form — permukaan putih + hairline, satu keluarga dengan kartu landing */}
@@ -231,7 +227,7 @@ export function LoginScreen({ next }: { next?: string | null }) {
 
                   <label className="block" htmlFor="login-email">
                     <span className="flex items-center gap-1.5 text-[14.5px] leading-snug font-medium text-forest">
-                      <Mail className="size-4 text-forest/40" strokeWidth={2.4} aria-hidden />
+                      <Mail className="size-4 text-forest-muted" strokeWidth={2.4} aria-hidden />
                       {LOGIN_COPY.emailLabel}
                     </span>
                     <input
@@ -245,11 +241,10 @@ export function LoginScreen({ next }: { next?: string | null }) {
                       value={email}
                       onChange={(event) => setEmail(event.target.value)}
                       onKeyDown={handleEnter}
-                      placeholder={LOGIN_COPY.emailPlaceholder}
                       aria-invalid={showError && !emailValid}
                       aria-describedby="login-email-hint"
                       className={cn(
-                        'mt-2.5 h-14 w-full rounded-2xl bg-sage/45 px-4 text-[17px] font-medium text-forest outline-none ring-1 transition-all placeholder:font-medium placeholder:text-forest/30 focus:bg-cream focus:ring-2 focus:ring-forest/30',
+                        'mt-2.5 h-14 w-full rounded-2xl bg-sage/45 px-4 text-[17px] font-medium text-forest outline-none ring-1 transition-all placeholder:font-medium placeholder:text-forest-muted focus:bg-cream focus:ring-2 focus:ring-forest/30',
                         showError && !emailValid ? 'ring-plum/50' : 'ring-transparent',
                       )}
                     />
@@ -258,7 +253,7 @@ export function LoginScreen({ next }: { next?: string | null }) {
                       aria-live="polite"
                       className={cn(
                         'mt-2 block text-[13.5px] leading-relaxed',
-                        showError && !emailValid ? 'text-plum' : 'text-forest/45',
+                        showError && !emailValid ? 'text-plum' : 'text-forest-muted',
                       )}
                     >
                       {showError && !emailValid ? REGISTRATION_COPY.invalidEmail : null}
@@ -273,7 +268,7 @@ export function LoginScreen({ next }: { next?: string | null }) {
                       'group mt-5 flex h-14 w-full items-center justify-between gap-3 rounded-full pr-2 pl-6 transition-colors duration-200 motion-reduce:transition-none',
                       emailValid && !sending
                         ? 'bg-forest text-cream shadow-[0_16px_34px_-18px_rgba(0,0,0,0.85)] hover:bg-forest-soft active:scale-[0.98]'
-                        : 'cursor-not-allowed bg-sage text-forest/40',
+                        : 'cursor-not-allowed bg-sage text-forest-muted',
                     )}
                   >
                     <span className="text-[17px] font-medium tracking-[-0.01em]">
@@ -282,7 +277,7 @@ export function LoginScreen({ next }: { next?: string | null }) {
                     <span
                       className={cn(
                         'flex size-10 shrink-0 items-center justify-center rounded-full transition-colors duration-200',
-                        emailValid && !sending ? 'bg-cream text-forest group-hover:bg-mint' : 'bg-cream/70 text-forest/30',
+                        emailValid && !sending ? 'bg-cream text-forest group-hover:bg-mint' : 'bg-cream/70 text-forest-muted',
                       )}
                     >
                       {sending ? (
@@ -309,7 +304,7 @@ export function LoginScreen({ next }: { next?: string | null }) {
                     <span className="flex min-w-0 items-center gap-2">
                       <MailCheck className="size-4 shrink-0 text-forest" strokeWidth={2.4} aria-hidden />
                       <span className="min-w-0">
-                        <span className="block text-[12px] leading-tight text-forest/45">
+                        <span className="block text-[12px] leading-tight text-forest-muted">
                           {ownerPath ? LOGIN_COPY.ownerCodeLead : LOGIN_COPY.codeSentLead}
                         </span>
                         <span className="block truncate text-[14.5px] font-medium text-forest">{trimmedEmail}</span>
@@ -318,7 +313,7 @@ export function LoginScreen({ next }: { next?: string | null }) {
                     <button
                       type="button"
                       onClick={backToEmail}
-                      className="shrink-0 text-[13px] font-medium text-forest/60 underline underline-offset-2 transition-colors hover:text-forest motion-reduce:transition-none"
+                      className="shrink-0 text-[13px] font-medium text-forest-muted underline underline-offset-2 transition-colors hover:text-forest motion-reduce:transition-none"
                     >
                       {LOGIN_COPY.changeEmailLabel}
                     </button>
@@ -326,7 +321,7 @@ export function LoginScreen({ next }: { next?: string | null }) {
 
                   <label className="mt-6 block" htmlFor="login-code">
                     <span className="flex items-center gap-1.5 text-[14.5px] leading-snug font-medium text-forest">
-                      <KeyRound className="size-4 text-forest/40" strokeWidth={2.4} aria-hidden />
+                      <KeyRound className="size-4 text-forest-muted" strokeWidth={2.4} aria-hidden />
                       {LOGIN_COPY.codeLabel}
                     </span>
                     <input
@@ -340,11 +335,10 @@ export function LoginScreen({ next }: { next?: string | null }) {
                       autoFocus
                       value={otp}
                       onChange={(event) => handleOtpChange(event.target.value)}
-                      placeholder={LOGIN_COPY.codePlaceholder}
                       aria-invalid={codeError}
                       aria-describedby={codeError ? 'login-code-hint' : undefined}
                       className={cn(
-                        'mt-2.5 h-16 w-full rounded-2xl bg-sage/45 text-center font-display text-[26px] font-medium tracking-[0.45em] text-forest outline-none ring-1 transition-all placeholder:font-medium placeholder:tracking-[0.3em] placeholder:text-forest/25 focus:bg-cream focus:ring-2 focus:ring-forest/30',
+                        'mt-2.5 h-16 w-full rounded-2xl bg-sage/45 text-center font-display text-[26px] font-medium tracking-[0.45em] text-forest outline-none ring-1 transition-all placeholder:font-medium placeholder:tracking-[0.3em] placeholder:text-forest-muted focus:bg-cream focus:ring-2 focus:ring-forest/30',
                         codeError ? 'ring-plum/50' : 'ring-transparent',
                       )}
                     />
@@ -368,7 +362,7 @@ export function LoginScreen({ next }: { next?: string | null }) {
                       'group mt-5 flex h-14 w-full items-center justify-between gap-3 rounded-full pr-2 pl-6 transition-colors duration-200 motion-reduce:transition-none',
                       otpValid && !verifying
                         ? 'bg-forest text-cream shadow-[0_16px_34px_-18px_rgba(0,0,0,0.85)] hover:bg-forest-soft active:scale-[0.98]'
-                        : 'cursor-not-allowed bg-sage text-forest/40',
+                        : 'cursor-not-allowed bg-sage text-forest-muted',
                     )}
                   >
                     <span className="text-[17px] font-medium tracking-[-0.01em]">
@@ -377,7 +371,7 @@ export function LoginScreen({ next }: { next?: string | null }) {
                     <span
                       className={cn(
                         'flex size-10 shrink-0 items-center justify-center rounded-full transition-colors duration-200',
-                        otpValid && !verifying ? 'bg-cream text-forest group-hover:bg-mint' : 'bg-cream/70 text-forest/30',
+                        otpValid && !verifying ? 'bg-cream text-forest group-hover:bg-mint' : 'bg-cream/70 text-forest-muted',
                       )}
                     >
                       {verifying ? (
@@ -392,25 +386,17 @@ export function LoginScreen({ next }: { next?: string | null }) {
                     </span>
                   </button>
 
-                  {/* dua jalan keluar kecil: buka inbox, atau kirim ulang (dengan cooldown) */}
+                  {/* satu jalan keluar kecil: kirim ulang kode (dengan cooldown).
+                      Tautan "Buka email" & pemisah "·" dihapus — tombol ini
+                      sudah cukup, dan membuka inbox bukan langkah wajib. */}
                   <div className="mt-4 flex items-center justify-center gap-3 text-[13.5px]">
-                    <a
-                      href="mailto:"
-                      className="inline-flex items-center gap-1.5 font-medium text-forest transition-colors hover:underline motion-reduce:transition-none"
-                    >
-                      <Mail className="size-3.5" strokeWidth={2.4} aria-hidden />
-                      {VERIFY_COPY.openMailLabel}
-                    </a>
-                    <span aria-hidden className="text-forest/20">
-                      ·
-                    </span>
                     <button
                       type="button"
                       disabled={!canResend}
                       onClick={handleResend}
                       className={cn(
                         'inline-flex items-center gap-1.5 font-medium transition-colors duration-200 motion-reduce:transition-none',
-                        canResend ? 'text-forest hover:underline' : 'cursor-not-allowed text-forest/40',
+                        canResend ? 'text-forest hover:underline' : 'cursor-not-allowed text-forest-muted',
                       )}
                     >
                       <RefreshCw className="size-3.5" strokeWidth={2.4} aria-hidden />
@@ -422,7 +408,7 @@ export function LoginScreen({ next }: { next?: string | null }) {
             </div>
 
             {/* daftar: tautan dua arah ke /checkout yang sudah ada */}
-            <p className="mt-6 text-center text-[14px] text-forest/55">
+            <p className="mt-6 text-center text-[14px] text-forest-muted">
               {LOGIN_COPY.registerLead}{' '}
               <Link
                 href="/checkout"

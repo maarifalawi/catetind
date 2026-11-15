@@ -62,7 +62,7 @@ export const WeeklyRecapBanner = memo(function WeeklyRecapBanner({
         {/* baris kedua = `{jumlah} transaksi · {net}` dari rekap pekan NYATA.
             Pekan kosong tidak memaksakan angka: sub-nya tidak dirender. */}
         {!recap.empty && (
-          <span className="mt-0.5 block text-[14px] break-words text-cream/60">
+          <span className="mt-0.5 block text-[14px] break-words text-cream-muted">
             {WEEKLY_RECAP_COPY.bannerSummary(
               recap.transactions,
               recapNetLabel(recap.net, money),

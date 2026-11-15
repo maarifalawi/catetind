@@ -109,6 +109,34 @@ export function midtransSnapEndpoint(): string {
   return `${midtransSnapBase()}/snap/v1/transactions`
 }
 
+/**
+ * CLIENT KEY Midtrans — aman dikirim ke browser (memang itu fungsinya: dipakai
+ * `snap.js` untuk mengenali merchant). BUKAN kunci rahasia; kunci rahasia
+ * (`MIDTRANS_SERVER_KEY`) tetap hanya di server.
+ *
+ * Sejak halaman pembayaran DI-EMBED di kartu checkout, klien butuh dua nilai ini
+ * untuk memuat `snap.js` dan memanggil `snap.embed(token, { embedId })`. Nilainya
+ * diturunkan server (`snapClientConfig()`) supaya mode sandbox/produksi tidak
+ * pernah berbeda antara tagihan dan skrip yang memuatnya.
+ */
+export function midtransClientKey(): string {
+  return (process.env.MIDTRANS_CLIENT_KEY ?? '').trim()
+}
+
+/** URL `snap.js` sesuai mode (sandbox vs produksi) */
+export function midtransSnapScriptUrl(): string {
+  return midtransIsProduction()
+    ? 'https://app.midtrans.com/snap/snap.js'
+    : 'https://app.sandbox.midtrans.com/snap/snap.js'
+}
+
+/** konfigurasi `snap.js` untuk browser; `null` = belum bisa di-embed */
+export function snapClientConfig(): { clientKey: string; scriptUrl: string } | null {
+  const clientKey = midtransClientKey()
+  if (!clientKey) return null
+  return { clientKey, scriptUrl: midtransSnapScriptUrl() }
+}
+
 /** header Authorization Basic: key ditulis apa adanya, diikuti satu titik dua */
 export function midtransAuthHeader(serverKey = midtransServerKey()): string {
   return `Basic ${Buffer.from(`${serverKey}:`).toString('base64')}`
@@ -480,6 +508,21 @@ export interface SnapCharge {
    * dari provider — UI memakainya sebagai pengingat, bukan sebagai bukti.
    */
   expiresAt: string
+}
+
+/**
+ * Apakah pesan provider berarti "order_id ini sudah dipakai transaksi lain"?
+ *
+ * Midtrans hanya mengizinkan satu transaksi hidup per `order_id`. Setelah
+ * transaksi lama kedaluwarsa/dibatalkan/dibayar, `POST /snap/v1/transactions`
+ * dengan id yang sama ditolak `406` dengan pesan persis
+ * `transaction_details.order_id has already been taken`. Pemanggil memakai
+ * pemeriksaan ini untuk memutuskan "buat order baru", bukan meneruskan pesan
+ * provider mentah ke layar user.
+ */
+export function isDuplicateOrderIdError(message: string | null | undefined): boolean {
+  if (!message) return false
+  return /order[_\s-]?id.{0,40}already.{0,12}taken/i.test(message)
 }
 
 /**

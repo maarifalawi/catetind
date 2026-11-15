@@ -21,8 +21,8 @@ export function LandingSectionDivider({
     >
       <div className="mx-auto flex w-full max-w-[1200px] items-center gap-3">
         <span className="h-px flex-1 bg-soil/10" />
-        <span className="inline-flex items-center gap-2 text-[10.5px] leading-none font-medium tracking-[0.18em] text-forest/45 uppercase">
-          <span className="tabular-nums text-forest/30">{marker.index}</span>
+        <span className="inline-flex items-center gap-2 text-[10.5px] leading-none font-medium tracking-[0.18em] text-forest-muted uppercase">
+          <span className="tabular-nums text-forest-muted">{marker.index}</span>
           <span className="size-0.5 rounded-full bg-forest/30" />
           {marker.label}
         </span>

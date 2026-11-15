@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { canUse } from '@/lib/data/pricing'
 import {
   canAccessPage,
   lockedPagesFor,
@@ -52,7 +53,6 @@ describe('canAccessPage() — matriks tiga paket', () => {
     '/install',
     '/settings',
     '/settings/billing',
-    '/settings/appearance',
     '/settings/categories',
     '/settings/notifications',
     '/settings/security',
@@ -66,12 +66,15 @@ describe('canAccessPage() — matriks tiga paket', () => {
     }
   })
 
-  it('Paket Catet Aja: Joint Wallet, Kalender, Kekayaan & AI Preferences terkunci', () => {
-    expect(canAccessPage('catet-aja', '/joint')).toBe(false)
+  it('Paket Catet Aja: Kalender, Kekayaan & AI Preferences terkunci — /joint TERBUKA', () => {
+    /* /joint sengaja TIDAK dikunci di lapis halaman: anggota gratis yang
+       diundang harus bisa memasukkan kode undangan. Gerbang paketnya ada di
+       dalam halaman (aksi "Buat Dompet"), bukan di routing. */
+    expect(canAccessPage('catet-aja', '/joint')).toBe(true)
     expect(canAccessPage('catet-aja', '/calendar')).toBe(false)
     expect(canAccessPage('catet-aja', '/wealth')).toBe(false)
     expect(canAccessPage('catet-aja', '/settings/ai')).toBe(false)
-    expect(pageLockCapability('/joint')).toBe('joint-wallet')
+    expect(pageLockCapability('/joint')).toBeNull()
     expect(pageLockCapability('/calendar')).toBe('cashflow-calendar')
     expect(pageLockCapability('/wealth')).toBe('wealth-tracking')
     expect(pageLockCapability('/settings/ai')).toBe('ai-chat')
@@ -89,29 +92,29 @@ describe('canAccessPage() — matriks tiga paket', () => {
     }
   })
 
-  it('belum punya paket: halaman manual tetap terbuka (mode baca + catat manual)', () => {
+  it('belum punya paket: halaman manual & /joint tetap terbuka (bisa gabung pakai kode)', () => {
     expect(canAccessPage(null, '/app')).toBe(true)
     expect(canAccessPage(null, '/wallet')).toBe(true)
     expect(canAccessPage(null, '/settings')).toBe(true)
     expect(canAccessPage(null, '/calendar')).toBe(false)
     expect(canAccessPage(null, '/wealth')).toBe(false)
-    expect(canAccessPage(null, '/joint')).toBe(false)
+    /* anggota gratis yang diundang wajib bisa membuka /joint */
+    expect(canAccessPage(null, '/joint')).toBe(true)
     expect(canAccessPage(null, '/settings/ai')).toBe(false)
   })
 
   it('paket kedaluwarsa (planId null) diperlakukan sama dengan belum punya paket', () => {
-    expect(canAccessPage(null, '/joint')).toBe(false)
+    expect(canAccessPage(null, '/joint')).toBe(true)
     expect(canAccessPage(null, '/calendar')).toBe(false)
     expect(canAccessPage(null, '/history')).toBe(true)
   })
 })
 
 describe('daftar halaman terkunci / terbuka', () => {
-  it('Catet Aja kehilangan empat halaman', () => {
+  it('Catet Aja kehilangan tiga halaman (Joint tetap terbuka untuk anggota undangan)', () => {
     expect(lockedPagesFor('catet-aja').map((rule) => rule.path)).toEqual([
       '/calendar',
       '/wealth',
-      '/joint',
       '/settings/ai',
     ])
   })
@@ -133,17 +136,23 @@ describe('daftar halaman terkunci / terbuka', () => {
 
 describe('copy lock halaman', () => {
   it('menyebut paket pembuka & kemampuan yang kurang', () => {
-    expect(pageUnlockPlan('/joint')?.id).toBe('waras')
+    expect(pageUnlockPlan('/joint')).toBeNull()
     expect(pageUnlockPlan('/calendar')?.id).toBe('waras')
     expect(pageUnlockPlan('/wealth')?.id).toBe('waras')
     expect(pageUnlockPlan('/settings/ai')?.id).toBe('waras')
-    expect(pageLockText('/joint')).toContain('Joint Wallet')
-    expect(pageLockText('/joint')).toContain('Paket Waras')
+    expect(pageLockText('/joint')).toBeNull()
     expect(pageLockText('/calendar')).toContain('Kalender Cashflow')
     expect(pageLockText('/wealth')).toContain('Kekayaan & Hutang')
-    expect(pageLockText('/settings/ai')).toContain('AI Coach')
+    expect(pageLockText('/settings/ai')).toContain('Minca')
     expect(pageLockText('/wallet')).toBeNull()
     expect(pageLockText('/budget')).toBeNull()
     expect(pageLockText('/bills')).toBeNull()
+  })
+
+  it('aksi "Buat Dompet" tetap butuh kemampuan joint-wallet', () => {
+    /* Halaman terbuka ≠ fitur gratis. Pembuat dompet wajib berlangganan;
+       anggota yang diundang tidak. Kontrak ini dijaga di `pricing.ts`. */
+    expect(canUse('catet-aja', 'joint-wallet')).toBe(false)
+    expect(canUse('waras', 'joint-wallet')).toBe(true)
   })
 })

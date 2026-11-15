@@ -15,6 +15,7 @@ import {
   previousMonthKey,
   settlementCarryCopy,
   settlementEntriesFor,
+  shouldPromptSettlement,
   signedMoneyLabel,
   splitSpecLabel,
   splitSpecOf,
@@ -191,6 +192,120 @@ describe('settle = entri ledger (bukan cuma useState)', () => {
     expect(s.partnerNet).toBe(0)
     expect(s.difference).toBe(0)
     expect(s.level).toBe('equal')
+  })
+})
+
+describe('settle dibaca dari waktu & nama SUNGGUHAN (bukan konstanta mock)', () => {
+  it('memakai settledAt/settledTime yang tersimpan', () => {
+    const entry = buildSettlementEntry(
+      settleRecord({ month: '2026-11', settledAt: '2026-11-11', settledTime: '21:05' }),
+    )
+
+    expect(entry.date).toBe('2026-11-11')
+    expect(entry.time).toBe('21:05')
+  })
+
+  it('data lama tanpa settledAt tetap memakai cadangan lama', () => {
+    const entry = buildSettlementEntry(settleRecord())
+
+    expect(entry.date).toBe(JOINT_TODAY_ISO)
+    expect(entry.time).toBe('20:30')
+  })
+
+  it('nama penerima datang dari roster sungguhan; tanpa resolver tidak mengarang nama', () => {
+    const named = buildSettlementEntry(settleRecord(), { nameOf: () => 'Alawi' })
+    expect(named.description).toContain('Alawi')
+
+    const bare = buildSettlementEntry(settleRecord())
+    expect(bare.description).toBe(`Settle ${monthLabelOf(JOINT_MONTH_KEY)}`)
+    expect(bare.description).not.toContain('Dany')
+    expect(bare.description).not.toContain('Jon')
+  })
+
+  it('settle yang ditekan bulan berikutnya tetap menutup bulan yang disettle', () => {
+    /* wifi 350rb dibayar Jon, bagi rata → DANY yang harus transfer 175rb.
+       Settle-nya baru ditekan 11 Nov (bulan berikutnya), tapi penandanya untuk
+       September — dan tetap harus menutup September. */
+    const settledLater = buildSettlementEntry(
+      settleRecord({
+        from: JOINT_PARTNER.id,
+        to: JOINT_ME.id,
+        amount: 175_000,
+        settledAt: '2026-11-11',
+        settledTime: '21:05',
+      }),
+    )
+    const s = computeSettlement([wifiTx({ type: 'equal' }), settledLater], {
+      month: JOINT_MONTH_KEY,
+    })
+
+    expect(s.myNet).toBe(0)
+    expect(s.partnerNet).toBe(0)
+  })
+})
+
+describe('penanda settle tidak menutupi selisih dari catatan baru', () => {
+  it('settle lama + sisa kecil → balik "hampir impas", palang tidak dipaksa rata', () => {
+    /* wifi 350rb dibagi rata → Jon berhak 175rb (Dany yang transfer). Settle lama
+       baru 100rb dari Dany, sisanya 75rb (di bawah ambang 100rb). */
+    const oldSettle = buildSettlementEntry(
+      settleRecord({ from: JOINT_PARTNER.id, to: JOINT_ME.id, amount: 100_000 }),
+    )
+    const s = computeSettlement([wifiTx({ type: 'equal' }), oldSettle], {
+      settled: true,
+      month: JOINT_MONTH_KEY,
+    })
+
+    expect(s.settled).toBe(true)
+    expect(s.difference).toBe(75_000)
+    expect(s.level).toBe('close')
+    expect(s.tiltDeg).not.toBe(0)
+  })
+
+  it('selisih besar setelah settle tetap "harus transfer", bukan "Semua Impas"', () => {
+    const big = {
+      ...wifiTx({ type: 'equal' }),
+      id: 'belanja-besar',
+      amount: 5_000_000,
+      date: `${JOINT_MONTH_KEY}-26`,
+    }
+    const s = computeSettlement([big], { settled: true, month: JOINT_MONTH_KEY })
+
+    expect(s.settled).toBe(true)
+    expect(s.level).toBe('settle')
+    expect(s.difference).toBe(2_500_000)
+    expect(s.tiltDeg).not.toBe(0)
+  })
+
+  it('tanpa selisih (settle penuh) tetap impas', () => {
+    const s = computeSettlement(
+      [
+        wifiTx({ type: 'equal' }),
+        buildSettlementEntry(
+          settleRecord({ from: JOINT_PARTNER.id, to: JOINT_ME.id, amount: 175_000 }),
+        ),
+      ],
+      { settled: true, month: JOINT_MONTH_KEY },
+    )
+
+    expect(s.level).toBe('equal')
+    expect(s.tiltDeg).toBe(0)
+    expect(shouldPromptSettlement(s)).toBe(false)
+  })
+
+  it('ajakan settle tetap muncul untuk SISA (tombol tidak boleh hilang)', () => {
+    /* REGRESI 11 Nov 2026: modal menampilkan "Rp 52.560.000" tanpa satu pun
+       tombol karena `shouldPromptSettlement` ikut memeriksa penanda settle. */
+    const big = {
+      ...wifiTx({ type: 'equal' }),
+      id: 'belanja-besar',
+      amount: 5_000_000,
+      date: `${JOINT_MONTH_KEY}-26`,
+    }
+    const s = computeSettlement([big], { settled: true, month: JOINT_MONTH_KEY })
+
+    expect(s.settled).toBe(true)
+    expect(shouldPromptSettlement(s)).toBe(true)
   })
 })
 

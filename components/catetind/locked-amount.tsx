@@ -37,6 +37,11 @@ export function LockedAmount({
   className?: string
 }) {
   const fade = 'transition-all duration-300 ease-out motion-reduce:transition-none'
+  /* `select-none` dipasang pada lapisan yang sedang TIDAK terlihat. Tanpa ini,
+     menyalin teks (Ctrl+A / seleksi) menghasilkan DUA nilai sekaligus —
+     "Rp 0" dan "Rp •••••••" — karena keduanya memang hidup di DOM (dan saat
+     mode sensor aktif, menyalin justru membawa angka aslinya). */
+  const hiddenSelect = 'select-none'
 
   return (
     <span className="inline-grid">
@@ -45,7 +50,7 @@ export function LockedAmount({
         className={cn(
           'col-start-1 row-start-1 justify-self-start',
           fade,
-          masked ? 'blur-[6px] opacity-0' : 'blur-0 opacity-100',
+          masked ? cn('blur-[6px] opacity-0', hiddenSelect) : 'blur-0 opacity-100',
           className,
         )}
       >
@@ -56,7 +61,7 @@ export function LockedAmount({
         className={cn(
           'col-start-1 row-start-1 justify-self-start',
           fade,
-          masked ? 'blur-0 opacity-100' : 'blur-[6px] opacity-0',
+          masked ? 'blur-0 opacity-100' : cn('blur-[6px] opacity-0', hiddenSelect),
           className,
         )}
       >

@@ -147,7 +147,7 @@ export function ShareProgressPanel({
           <h3 className="font-display text-[14.5px] font-medium tracking-tight text-forest">
             {SHARE_PANEL_COPY.title}
           </h3>
-          <p className="mt-0.5 text-[12px] leading-relaxed text-forest/55">
+          <p className="mt-0.5 text-[12px] leading-relaxed text-forest-muted">
             {SHARE_PANEL_COPY.blurb}
           </p>
         </div>
@@ -187,7 +187,7 @@ export function ShareProgressPanel({
       </button>
 
       {/* status aksi — aria-live supaya screen reader ikut tahu, bukan cuma mata */}
-      <p aria-live="polite" className="mt-1.5 min-h-4 text-center text-[12px] font-medium text-forest/80">
+      <p aria-live="polite" className="mt-1.5 min-h-4 text-center text-[12px] font-medium text-forest">
         {statusText}
       </p>
 
@@ -199,7 +199,7 @@ export function ShareProgressPanel({
           {SHARE_PANEL_COPY.previewLabel}
           <ArrowUpRight className="size-3.5" strokeWidth={2.4} aria-hidden />
         </Link>
-        <p className="mt-1 text-[11.5px] leading-relaxed text-forest/45">
+        <p className="mt-1 text-[11.5px] leading-relaxed text-forest-muted">
           {SHARE_PANEL_COPY.previewHint}
         </p>
       </div>

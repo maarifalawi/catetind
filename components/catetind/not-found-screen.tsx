@@ -40,8 +40,8 @@ import {
      tidak boleh kehilangan navigasi. Kontennya diletakkan di kolom 3–11 dari
      grid 12 kolom (bukan container sempit di tengah layar) agar tetap mengikuti
      ritme tata letak app di 1440px.
-   · Ilustrasi memakai `PlantIllustration` yang SUDAH ada (stage 2 Tunas: masih
-     kecil, masih tumbuh — pas untuk "halaman yang belum ada"), tanpa aset baru.
+   · Ilustrasi memakai `PlantIllustration` yang SUDAH ada (stage 2 Setengah
+     jalan: papan baru terisi sebagian — pas untuk "halaman yang belum ada"), tanpa aset baru.
      Ayunannya dimatikan bila `prefers-reduced-motion`.
    · Tombol memakai resep tombol repo (h-12, `rounded-2xl`, `bg-forest` +
      `text-cream`) dan dirender sebagai `next/link` — sama seperti semua CTA
@@ -75,18 +75,18 @@ export function NotFoundScreen() {
               className="flex size-32 items-center justify-center rounded-[2.25rem] bg-sage/45 ring-1 ring-soil/8 lg:size-36"
             >
               {/* `w-full` bawaan PlantIllustration ditimpa lebar eksplisit;
-                  ayunan `plant-sway` dimatikan bila user minta gerak minimal */}
+                  animasi "kepingan baru" dimatikan bila user minta gerak minimal */}
               <PlantIllustration
                 stage={2}
                 className="w-24 motion-reduce:[&_g]:animate-none lg:w-28"
               />
             </span>
 
-            <p className="mt-5 text-[14px] font-medium text-forest/45">{NOT_FOUND_EYEBROW}</p>
+            <p className="mt-5 text-[14px] font-medium text-forest-muted">{NOT_FOUND_EYEBROW}</p>
             <h1 className="mt-1.5 font-display text-3xl font-semibold tracking-tight text-forest lg:text-4xl">
               {NOT_FOUND_TITLE}
             </h1>
-            <p className="mt-3 max-w-md text-[14.5px] leading-relaxed text-forest/60 lg:text-sm">
+            <p className="mt-3 max-w-md text-[14.5px] leading-relaxed text-forest-muted lg:text-sm">
               {NOT_FOUND_BODY}
             </p>
           </header>
@@ -107,7 +107,7 @@ export function NotFoundScreen() {
           <section className="mt-10 lg:mt-12" aria-labelledby="not-found-shortcuts">
             <h2
               id="not-found-shortcuts"
-              className="text-center text-[12px] font-medium uppercase tracking-[0.14em] text-forest/40"
+              className="text-center text-[12px] font-medium uppercase tracking-[0.14em] text-forest-muted"
             >
               {NOT_FOUND_SHORTCUTS_TITLE}
             </h2>
@@ -126,7 +126,7 @@ export function NotFoundScreen() {
                       <span className="text-[14px] font-medium leading-snug text-forest">
                         {shortcut.label}
                       </span>
-                      <span className="text-[12.5px] leading-relaxed text-forest/50">
+                      <span className="text-[12.5px] leading-relaxed text-forest-muted">
                         {shortcut.blurb}
                       </span>
                     </Link>
@@ -138,8 +138,8 @@ export function NotFoundScreen() {
 
           {/* ── 4. KOTAK BANTUAN — pintu kedua, tanpa nada mendesak ───────── */}
           <div className="mt-8 flex flex-col items-center gap-3 rounded-2xl bg-sage/40 px-4 py-4 ring-1 ring-forest/10 sm:flex-row sm:justify-between sm:gap-4">
-            <p className="text-center text-[13.5px] leading-relaxed text-forest/70 sm:text-left">
-              🌿 {NOT_FOUND_HELP_BODY}
+            <p className="text-center text-[13.5px] leading-relaxed text-forest-soft sm:text-left">
+              🧩 {NOT_FOUND_HELP_BODY}
             </p>
             <Link
               href="/bantuan"

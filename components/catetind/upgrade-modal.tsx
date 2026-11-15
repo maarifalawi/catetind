@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowRight, Check, Lock, Sparkles } from 'lucide-react'
+import { ArrowRight, Check, Lock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock'
 import {
@@ -84,7 +84,7 @@ export function UpgradeModal({
             user yang sudah punya paket, panel cukup menampilkan judul + daftar
             fitur — tanpa paragraf pengantar yang mengulang informasi. */}
         {!plan && (
-          <p className="mt-2 text-[14px] leading-relaxed text-forest/60">
+          <p className="mt-2 text-[14px] leading-relaxed text-forest-muted">
             {UPGRADE_COPY.noPurchaseBody}
           </p>
         )}
@@ -98,7 +98,6 @@ export function UpgradeModal({
 
         {plan && (
           <p className="mt-3 flex items-center gap-2 rounded-2xl bg-sage/50 px-3.5 py-2.5 text-[13px] text-forest ring-1 ring-soil/10">
-            <Sparkles className="size-3.5 shrink-0" strokeWidth={2.4} aria-hidden />
             Paketmu sekarang: <b className="font-medium">{plan.name}</b>
           </p>
         )}
@@ -117,7 +116,7 @@ export function UpgradeModal({
               {heroFeatures.map((feature) => (
                 <li
                   key={feature}
-                  className="flex items-start gap-2 text-[13px] leading-relaxed text-forest/70"
+                  className="flex items-start gap-2 text-[13px] leading-relaxed text-forest-soft"
                 >
                   <Check
                     className="mt-0.5 size-3.5 shrink-0 text-forest"
@@ -129,7 +128,7 @@ export function UpgradeModal({
               ))}
             </ul>
             {stillLocked.length > 0 && (
-              <p className="mt-2.5 flex items-start gap-1.5 border-t border-soil/10 pt-2.5 text-[12px] leading-relaxed text-forest/50">
+              <p className="mt-2.5 flex items-start gap-1.5 border-t border-soil/10 pt-2.5 text-[12px] leading-relaxed text-forest-muted">
                 <Lock className="mt-0.5 size-3 shrink-0" strokeWidth={2.6} aria-hidden />
                 Masih terkunci setelah upgrade ini: {stillLocked.join(', ')}.
               </p>
@@ -150,7 +149,7 @@ export function UpgradeModal({
         {plan && hero === null && (
           <div className="mt-5 rounded-2xl bg-sage/40 p-4 ring-1 ring-soil/10">
             <p className="text-[14px] font-medium text-forest">{UPGRADE_COPY.topTierTitle}</p>
-            <p className="mt-1 text-[13px] leading-relaxed text-forest/60">
+            <p className="mt-1 text-[13px] leading-relaxed text-forest-muted">
               {UPGRADE_COPY.topTierBody}
             </p>
           </div>
@@ -172,7 +171,7 @@ export function UpgradeModal({
         <button
           type="button"
           onClick={onClose}
-          className="mt-4 w-full rounded-full px-4 py-2.5 text-[14px] font-medium text-forest/55 transition-colors hover:bg-sage/50"
+          className="mt-4 w-full rounded-full px-4 py-2.5 text-[14px] font-medium text-forest-muted transition-colors hover:bg-sage/50"
         >
           {UPGRADE_COPY.laterLabel}
         </button>
@@ -204,17 +203,17 @@ function UpgradeTargetRow({
               </span>
             )}
           </p>
-          <p className="mt-0.5 text-[12.5px] text-forest/55">{target.subtitle}</p>
+          <p className="mt-0.5 text-[12.5px] text-forest-muted">{target.subtitle}</p>
         </div>
         <div className="shrink-0 text-right">
           <p className="font-display text-[16px] font-medium tabular-nums text-forest">
             {formatIDR(diff)}
           </p>
-          <p className="text-[11.5px] text-forest/45">{UPGRADE_COPY.diffLabel}</p>
+          <p className="text-[11.5px] text-forest-muted">{UPGRADE_COPY.diffLabel}</p>
         </div>
       </div>
 
-      <p className="mt-2 text-[12px] leading-relaxed text-forest/50">
+      <p className="mt-2 text-[12px] leading-relaxed text-forest-muted">
         {fill(UPGRADE_COPY.diffNote, {
           target: target.name,
           full: formatIDR(target.lifetime),

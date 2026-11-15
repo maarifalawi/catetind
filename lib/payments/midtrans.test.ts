@@ -6,6 +6,7 @@ import {
   createCoreCharge,
   createSnapCharge,
   fetchTransactionStatus,
+  isDuplicateOrderIdError,
   methodIdFromTransaction,
   midtransAuthHeader,
   midtransChargeEndpoint,
@@ -569,7 +570,7 @@ describe('createSnapCharge', () => {
 
   it('enabled_payments memetakan setiap metode katalog ke kode Snap-nya', async () => {
     const expected: Record<string, string[]> = {
-      qris: ['other_qris', 'gopay'],
+      qris: ['other_qris'],
       gopay: ['gopay'],
       'bni-va': ['bni_va'],
       'bri-va': ['bri_va'],
@@ -634,3 +635,26 @@ describe('createSnapCharge', () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 })
+
+/* ---------------------------------------------------------------------------
+   ORDER_ID YANG SUDAH TERPAKAI
+   Balasan sandbox: 406 dengan `error_messages: ["transaction_details.order_id
+   has already been taken"]` saat `order_id` yang transaksinya sudah mati
+   ditokenkan lagi. Route memakai pemeriksaan ini untuk memilih "buat order
+   baru" alih-alih menampilkan pesan provider ke user.
+   ------------------------------------------------------------------------- */
+describe('isDuplicateOrderIdError', () => {
+  it('mengenali pesan Snap yang asli', () => {
+    expect(isDuplicateOrderIdError('transaction_details.order_id has already been taken')).toBe(true)
+    expect(isDuplicateOrderIdError('ORDER_ID HAS ALREADY BEEN TAKEN')).toBe(true)
+  })
+
+  it('pesan lain tidak dianggap duplikat', () => {
+    expect(isDuplicateOrderIdError('402 Payment channel is not activated')).toBe(false)
+    expect(isDuplicateOrderIdError('Access denied due to unauthorized transaction')).toBe(false)
+    expect(isDuplicateOrderIdError('')).toBe(false)
+    expect(isDuplicateOrderIdError(null)).toBe(false)
+    expect(isDuplicateOrderIdError(undefined)).toBe(false)
+  })
+})
+

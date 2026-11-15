@@ -54,10 +54,11 @@ interface ChargeResponse {
   state?: 'pending' | 'settled' | 'expired' | 'failed' | 'unknown'
   expiresAt?: string | null
   instructions?: ActiveInvoice['instructions']
-  /** halaman pembayaran Midtrans (Snap) — aksi utama kartu pembayaran */
+  /** halaman pembayaran Midtrans (Snap) — tautan cadangan kalau embed diblokir */
   redirectUrl?: string | null
-  /** token Snap (cadangan untuk `snap.js`) */
+  /** token Snap + konfigurasi `snap.js` untuk EMBED halaman pembayaran */
   token?: string | null
+  snap?: { clientKey: string; scriptUrl: string } | null
   note?: string
   error?: string
 }
@@ -203,10 +204,11 @@ export function PaymentStartScreen({
         amount: data.amount ?? total,
         expiresAt: data.expiresAt ?? null,
         instructions: data.instructions ?? null,
-        /* Snap: kartu menampilkan satu aksi utama menuju halaman pembayaran
-           Midtrans; statusnya tetap di-poll dari server oleh kartu itu. */
+        /* Snap: halaman pembayarannya DI-EMBED di kartu (tanpa tab baru);
+           statusnya tetap di-poll dari server oleh kartu itu. */
         redirectUrl: data.redirectUrl ?? null,
         token: data.token ?? null,
+        snap: data.snap ?? null,
       })
     } catch {
       setError(PAY_START_COPY.notConfigured)
@@ -217,7 +219,7 @@ export function PaymentStartScreen({
   /* ringkasan pembelian - kolom KIRI di desktop (sticky), di atas cara bayar di ponsel */
   const summary = (
     <section className="rounded-[24px] bg-cream p-5 shadow-landing-hairline ring-1 ring-soil/12 landing:p-6">
-      <p className="text-[12px] font-medium tracking-[0.16em] text-forest/40 uppercase">
+      <p className="text-[12px] font-medium tracking-[0.16em] text-forest-muted uppercase">
         {PAY_START_COPY.planLabel}
       </p>
 
@@ -227,7 +229,7 @@ export function PaymentStartScreen({
         </span>
         <div className="min-w-0">
           <p className="text-[15px] font-medium text-forest">{plan.name}</p>
-          <p className="mt-0.5 text-[13px] leading-relaxed text-forest/50">
+          <p className="mt-0.5 text-[13px] leading-relaxed text-forest-muted">
             {plan.subtitle} - {PERIOD_LABEL.lifetime}
           </p>
         </div>
@@ -236,7 +238,7 @@ export function PaymentStartScreen({
       {discount > 0 && (
         <dl className="mt-4 space-y-2 border-t border-soil/12 pt-4 text-[13.5px]">
           <div className="flex items-center justify-between gap-3">
-            <dt className="flex items-center gap-1.5 text-forest/50">
+            <dt className="flex items-center gap-1.5 text-forest-muted">
               <Tag className="size-3.5" strokeWidth={2.4} aria-hidden />
               {PAY_START_COPY.discountLabel}
             </dt>
@@ -246,7 +248,7 @@ export function PaymentStartScreen({
       )}
 
       <div className="mt-4 flex items-baseline justify-between gap-3 rounded-2xl bg-canvas px-4 py-3 ring-1 ring-soil/10">
-        <span className="text-[13.5px] font-medium text-forest/60">
+        <span className="text-[13.5px] font-medium text-forest-muted">
           {PAY_START_COPY.totalLabel}
         </span>
         <span className="font-display text-[24px] leading-none font-semibold tracking-[-0.02em] tabular-nums text-forest">
@@ -254,7 +256,7 @@ export function PaymentStartScreen({
         </span>
       </div>
 
-      <p className="mt-3 text-[12.5px] leading-relaxed text-forest/50">{premiumBadge}</p>
+      <p className="mt-3 text-[12.5px] leading-relaxed text-forest-muted">{premiumBadge}</p>
     </section>
   )
 
@@ -284,9 +286,14 @@ export function PaymentStartScreen({
             <h1 className="font-display text-[32px] leading-[1.08] font-semibold tracking-[-0.03em] text-forest landing-tab:text-[40px] landing:text-[44px]">
               {isUpgrade ? PAY_START_COPY.upgradeTitle : PAY_START_COPY.title}
             </h1>
-            <p className="mt-2 text-[16px] leading-[1.55] text-forest-muted landing-tab:text-[17px]">
-              {isUpgrade ? PAY_START_COPY.upgradeSubtitle : PAY_START_COPY.subtitle}
-            </p>
+            {/* Subjudul umum ("Instruksi bayarnya muncul di halaman ini.")
+                dihapus atas permintaan desain — judulnya sudah cukup. Keterangan
+                UPGRADE tetap tampil karena ia menambah informasi. */}
+            {isUpgrade && (
+              <p className="mt-2 text-[16px] leading-[1.55] text-forest-muted landing-tab:text-[17px]">
+                {PAY_START_COPY.upgradeSubtitle}
+              </p>
+            )}
           </div>
         </header>
 
@@ -300,7 +307,7 @@ export function PaymentStartScreen({
                 <h2 className="font-display text-[16px] font-medium tracking-tight text-forest">
                   {PAY_START_COPY.loginTitle}
                 </h2>
-                <p className="mt-1.5 text-[13.5px] leading-relaxed text-forest/55">
+                <p className="mt-1.5 text-[13.5px] leading-relaxed text-forest-muted">
                   {PAY_START_COPY.loginBody}
                 </p>
                 <Link
@@ -339,16 +346,16 @@ export function PaymentStartScreen({
                 <h2 className="font-display text-[16px] font-medium tracking-tight text-forest">
                   {PAY_START_COPY.noMethodTitle}
                 </h2>
-                <p className="mt-1.5 text-[13.5px] leading-relaxed text-forest/55">
+                <p className="mt-1.5 text-[13.5px] leading-relaxed text-forest-muted">
                   {PAY_START_COPY.noMethodBody}
                 </p>
-                <p className="mt-3 text-[13px] leading-relaxed text-forest/45">
+                <p className="mt-3 text-[13px] leading-relaxed text-forest-muted">
                   {PAY_START_COPY.noMethodNote}
                 </p>
               </section>
             ) : (
               <section className="rounded-[24px] bg-cream p-5 shadow-landing-hairline ring-1 ring-soil/12 landing:p-6">
-                <h2 className="text-[12px] font-medium tracking-[0.16em] text-forest/40 uppercase">
+                <h2 className="text-[12px] font-medium tracking-[0.16em] text-forest-muted uppercase">
                   {PAY_START_COPY.methodLegend}
                 </h2>
 
@@ -384,7 +391,7 @@ export function PaymentStartScreen({
                         <span className="min-w-0 flex-1 truncate text-[14px] font-medium text-forest">
                           {copy.label}
                         </span>
-                        <span className="hidden shrink-0 text-[12px] text-forest/40 landing:inline">
+                        <span className="hidden shrink-0 text-[12px] text-forest-muted landing:inline">
                           {copy.hint}
                         </span>
                       </button>
@@ -405,7 +412,7 @@ export function PaymentStartScreen({
                 )}
 
                 {notice && (
-                  <p className="mt-4 text-[13px] leading-relaxed text-forest/70" role="status">
+                  <p className="mt-4 text-[13px] leading-relaxed text-forest-soft" role="status">
                     {notice}
                   </p>
                 )}

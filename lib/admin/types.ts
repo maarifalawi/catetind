@@ -138,6 +138,24 @@ export interface AdminRevenueBlock {
   paidUsers: number
   /** jumlah akun terdaftar */
   totalUsers: number
+  /**
+   * Rincian pendapatan per bulan (urut terbaru → lama), maksimal 24 bulan.
+   * Dipakai filter "bulan mana" di tab Ringkasan: tanpa ini admin hanya bisa
+   * melihat bulan berjalan, padahal riwayat penjualan adalah pertanyaan pertama
+   * pemilik produk.
+   */
+  months: AdminRevenueMonth[]
+}
+
+/** satu bulan pada rincian pendapatan */
+export interface AdminRevenueMonth {
+  /** kunci bulan `YYYY-MM` */
+  month: string
+  subscription: number
+  addon: number
+  total: number
+  /** jumlah transaksi lunas di bulan itu */
+  settledCount: number
 }
 
 export interface AdminFunnelStage {

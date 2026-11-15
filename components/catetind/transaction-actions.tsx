@@ -51,7 +51,7 @@ export function TransactionActionsSheet({
             <Drawer.Title className="truncate px-1 font-display text-[16px] font-medium tracking-tight text-forest">
               {tx?.name ?? TRANSACTION_ACTIONS_COPY.sheetTitleFallback}
             </Drawer.Title>
-            <Drawer.Description className="mt-0.5 px-1 text-[13px] text-forest/50">
+            <Drawer.Description className="mt-0.5 px-1 text-[13px] text-forest-muted">
               {tx
                 ? `${TRANSACTION_TYPE_LABEL[tx.type]} · ${resolveCategoryLabel(tx)} · ${maskMoney(
                     tx.amount,
@@ -64,15 +64,15 @@ export function TransactionActionsSheet({
               <button
                 type="button"
                 onClick={onOpenDetail}
-                className="flex w-full items-center gap-3 rounded-2xl px-3.5 py-3 text-left text-[15px] font-medium text-forest/75 transition-colors hover:bg-cream"
+                className="flex w-full items-center gap-3 rounded-2xl px-3.5 py-3 text-left text-[15px] font-medium text-forest-soft transition-colors hover:bg-cream"
               >
-                <ReceiptText className="size-4 shrink-0 text-forest/45" strokeWidth={2.2} />
+                <ReceiptText className="size-4 shrink-0 text-forest-muted" strokeWidth={2.2} />
                 {TRANSACTION_ACTIONS_COPY.detail}
               </button>
               <button
                 type="button"
                 onClick={onEdit}
-                className="flex w-full items-center gap-3 rounded-2xl px-3.5 py-3 text-left text-[15px] font-medium text-forest/75 transition-colors hover:bg-cream"
+                className="flex w-full items-center gap-3 rounded-2xl px-3.5 py-3 text-left text-[15px] font-medium text-forest-soft transition-colors hover:bg-cream"
               >
                 <Pencil className="size-4 shrink-0 text-forest" strokeWidth={2.2} />
                 {TRANSACTION_ACTIONS_COPY.edit}

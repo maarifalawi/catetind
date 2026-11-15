@@ -3,26 +3,13 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import Link from 'next/link'
 import {
-  ArrowDownLeft,
-  BarChart3,
-  Calendar,
-  Check,
-  ChevronLeft,
-  ChevronRight,
-  Flame,
-  Lightbulb,
-  PiggyBank,
-  Share2,
-  Sprout,
-  TrendingUp,
-  X,
-} from 'lucide-react'
+  ArrowDownLeft, BarChart3, Calendar, Check, ChevronLeft, ChevronRight, Lightbulb, PiggyBank, Share2, Puzzle, TrendingUp, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock'
 /* gestur panel penuh (swipe-down mobile + deteksi bottom sheet) kini SATU sumber
    di `hooks/use-sheet-drag.ts` — dipakai bersama Monthly Review (inventaris #i) */
 import { useIsBottomSheet, useSheetDrag } from '@/hooks/use-sheet-drag'
-import { PlantIllustration, STAGE_NAMES } from './plant-illustration'
+import { PlantIllustration, PUZZLE_TOTAL, STAGE_NAMES, piecesForProgress } from './plant-illustration'
 import { ShareProgressPanel } from './share-progress-panel'
 import { usePrivacy } from './privacy-provider'
 import {
@@ -38,7 +25,7 @@ import { UPGRADE_COPY } from '@/lib/data/pricing'
 import { useSubscriptionGate } from './subscription-gate-provider'
 import { LockedFeatureNote } from './locked-feature-note'
 
-/* Seluruh angka slide (termasuk tahap tanaman) kini datang dari `WeeklyRecap`
+/* Seluruh angka slide (termasuk tahap papan puzzle) kini datang dari `WeeklyRecap`
    yang diturunkan `useWeeklyRecap()` — tidak ada lagi `WEEK_DATA`, `WEEK_PLANT`,
    `WEEK_SEGMENTS`, `PLANT_STAGE`, `TOP_SEGMENT`, atau `TOTAL_PCT` di tingkat
    modul. Itu justru akar masalahnya: konstanta modul TIDAK BISA membaca ledger
@@ -74,10 +61,10 @@ const SLIDES: SlideDef[] = [
     icon: <BarChart3 className="size-3.5" />,
   },
   {
-    id: 'plant',
-    label: 'Tanaman',
-    title: 'Tanaman Kamu',
-    icon: <Sprout className="size-3.5" />,
+    id: 'puzzle',
+    label: 'Puzzle',
+    title: 'Puzzle Kamu',
+    icon: <Puzzle className="size-3.5" />,
   },
   {
     id: 'plan',
@@ -106,7 +93,7 @@ function MicroLabel({
     <p
       className={cn(
         'text-[11px] font-medium uppercase tracking-[0.16em]',
-        tone === 'light' ? 'text-cream/55' : 'text-forest/40',
+        tone === 'light' ? 'text-cream-muted' : 'text-forest-muted',
         className,
       )}
     >
@@ -185,7 +172,7 @@ function SlideOverview({ recap }: { recap: WeeklyRecap }) {
 
           <dl className="mt-5 grid grid-cols-2 gap-3">
             <div className="rounded-2xl bg-cream/[0.07] px-3.5 py-3 ring-1 ring-inset ring-cream/10">
-              <dt className="flex items-center gap-1.5 text-[12px] text-cream/60">
+              <dt className="flex items-center gap-1.5 text-[12px] text-cream-muted">
                 <span aria-hidden className="size-2 rounded-full bg-mint" />
                 Pemasukan
               </dt>
@@ -194,7 +181,7 @@ function SlideOverview({ recap }: { recap: WeeklyRecap }) {
               </dd>
             </div>
             <div className="rounded-2xl bg-cream/[0.07] px-3.5 py-3 ring-1 ring-inset ring-cream/10">
-              <dt className="flex items-center gap-1.5 text-[12px] text-cream/60">
+              <dt className="flex items-center gap-1.5 text-[12px] text-cream-muted">
                 <span aria-hidden className="size-2 rounded-full bg-plum" />
                 Pengeluaran
               </dt>
@@ -216,7 +203,7 @@ function SlideOverview({ recap }: { recap: WeeklyRecap }) {
                 </div>
               </>
             ) : (
-              <p className="text-[12px] leading-relaxed text-cream/60">
+              <p className="text-[12px] leading-relaxed text-cream-muted">
                 {WEEKLY_RECAP_COPY.noIncome}
               </p>
             )}
@@ -231,14 +218,14 @@ function SlideOverview({ recap }: { recap: WeeklyRecap }) {
           <p className="mt-1.5 text-3xl font-medium leading-none tracking-tight tabular-nums text-forest">
             {recap.transactions}
           </p>
-          <p className="mt-1.5 text-[12px] text-forest/45">catatan minggu ini</p>
+          <p className="mt-1.5 text-[12px] text-forest-muted">catatan minggu ini</p>
         </section>
         <section className="rounded-[1.75rem] bg-mint/20 p-4 ring-1 ring-mint/30">
           <MicroLabel>Rata-rata/hari</MicroLabel>
           <p className="mt-1.5 text-lg font-medium leading-tight tracking-tight tabular-nums text-forest">
             {money(avgPerDay)}
           </p>
-          <p className="mt-1.5 text-[12px] text-forest/55">pengeluaran harian</p>
+          <p className="mt-1.5 text-[12px] text-forest-muted">pengeluaran harian</p>
         </section>
       </div>
 
@@ -263,11 +250,11 @@ function SlideOverview({ recap }: { recap: WeeklyRecap }) {
             style={{ width: `${Math.max(savingPct, 0)}%` }}
           />
         </div>
-        <p className="mt-2.5 text-[12px] leading-relaxed text-forest/50">
+        <p className="mt-2.5 text-[12px] leading-relaxed text-forest-muted">
           {savingPct >= 0 ? (
             <>
-              Dari {money(income)} pemasukan, {money(savedAmount)} nggak kepakai
-              minggu ini. Pertahankan ritmenya ya 🌿
+              Dari pemasukan minggu ini, {money(savedAmount)} nggak kepakai.
+              Keren, pertahankan ya 🧩
             </>
           ) : (
             <>Pengeluaran minggu ini {money(Math.abs(net))} lebih besar dari pemasukan.</>
@@ -306,7 +293,7 @@ function SlideExpenses({ recap }: { recap: WeeklyRecap }) {
   if (!top) {
     return (
       <div className="space-y-4">
-        <section className="rounded-[1.75rem] bg-cream p-5 text-[14px] leading-relaxed text-forest/60 ring-1 ring-soil/12">
+        <section className="rounded-[1.75rem] bg-cream p-5 text-[14px] leading-relaxed text-forest-muted ring-1 ring-soil/12">
           {WEEKLY_RECAP_COPY.expensesEmpty}
         </section>
       </div>
@@ -333,7 +320,7 @@ function SlideExpenses({ recap }: { recap: WeeklyRecap }) {
           {/* Cakupan + rentang BERGERAK: "pekan ini · 28 Sep – 4 Okt". Dulu
               "dalam 7 hari terakhir" — padahal jendelanya pekan kalender
               (Senin–Minggu) yang masih memuat besok, jadi kalimatnya berbohong. */}
-          <p className="mt-2.5 text-[12px] text-cream/50">
+          <p className="mt-2.5 text-[12px] text-cream-muted">
             {WEEKLY_RECAP_COPY.expensesScope} · {recap.periodLabel}
           </p>
 
@@ -372,7 +359,7 @@ function SlideExpenses({ recap }: { recap: WeeklyRecap }) {
                 ))}
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center px-2 text-center">
-                <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-cream/45">
+                <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-cream-muted">
                   Total
                 </span>
                 <span className="mt-1 text-[16px] font-medium leading-none tabular-nums">
@@ -383,7 +370,7 @@ function SlideExpenses({ recap }: { recap: WeeklyRecap }) {
 
             <dl className="min-w-0 flex-1 space-y-3">
               <div>
-                <dt className="text-[12px] text-cream/50">Pos terbesar</dt>
+                <dt className="text-[12px] text-cream-muted">Pos terbesar</dt>
                 <dd className="mt-1 flex items-center gap-1.5 text-[14px] font-medium">
                   <span
                     aria-hidden
@@ -391,11 +378,11 @@ function SlideExpenses({ recap }: { recap: WeeklyRecap }) {
                     style={{ backgroundColor: top.color }}
                   />
                   {top.label}
-                  <span className="font-medium text-cream/45">· {top.pct}%</span>
+                  <span className="font-medium text-cream-muted">· {top.pct}%</span>
                 </dd>
               </div>
               <div>
-                <dt className="text-[12px] text-cream/50">Rata-rata per hari</dt>
+                <dt className="text-[12px] text-cream-muted">Rata-rata per hari</dt>
                 <dd className="mt-1 text-[14px] font-medium tabular-nums">
                   {money(avgPerDay)}
                 </dd>
@@ -418,13 +405,13 @@ function SlideExpenses({ recap }: { recap: WeeklyRecap }) {
                     className="size-2.5 shrink-0 rounded-full"
                     style={{ backgroundColor: seg.color }}
                   />
-                  <span className="truncate font-medium text-forest/70">{seg.label}</span>
+                  <span className="truncate font-medium text-forest-soft">{seg.label}</span>
                 </span>
                 <span className="flex shrink-0 items-center gap-2">
                   <span className="font-medium tabular-nums text-forest">
                     {money(seg.amount)}
                   </span>
-                  <span className="w-8 text-right tabular-nums text-forest/40">{seg.pct}%</span>
+                  <span className="w-8 text-right tabular-nums text-forest-muted">{seg.pct}%</span>
                 </span>
               </div>
               <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-ink/[0.07]">
@@ -448,9 +435,8 @@ function SlideExpenses({ recap }: { recap: WeeklyRecap }) {
           className="flex size-9 shrink-0 items-center justify-center rounded-full"
           style={{ backgroundColor: `${top.color}33` }}
         >
-          <Flame className="size-4" strokeWidth={2.4} style={{ color: top.color }} />
-        </span>
-        <p className="text-[14px] leading-relaxed text-forest/65">
+          </span>
+        <p className="text-[14px] leading-relaxed text-forest-soft">
           <b className="font-medium text-forest">{top.label}</b> jadi pos terbesar minggu
           ini, {top.pct}% dari total pengeluaran ({money(top.amount)}).
           Kategori ini yang paling worth dirapikan minggu depan.
@@ -460,16 +446,19 @@ function SlideExpenses({ recap }: { recap: WeeklyRecap }) {
   )
 }
 
-/* ─────────────────────────── Slide 3 — Tanaman Kamu (habit loop) ─────────────────────────── */
-function SlidePlant({ recap }: { recap: WeeklyRecap }) {
-  /* tahap, hari aktif, & jumlah catatan semuanya turunan dari LEDGER pekan ini */
-  const stage = recap.plantStage
-  const levelPct = Math.round((recap.activeDays / WEEKLY_RECAP_DAYS) * 100)
+/* ─────────────────────────── Slide 3 — Puzzle Kamu (habit loop) ─────────────────────────── */
+function SlidePuzzle({ recap }: { recap: WeeklyRecap }) {
+  /* tahap, hari aktif, & jumlah catatan semuanya turunan dari LEDGER pekan ini.
+     `puzzleProgress` = porsi hari aktif (0–100) → jumlah KEPINGAN papan, jadi
+     papan rekap tidak lagi menggambar "setengah" padahal baru 2 hari mencatat. */
+  const stage = recap.puzzleStage
+  const progress = recap.puzzleProgress
+  const pieces = piecesForProgress(progress)
   const stages: (1 | 2 | 3 | 4)[] = [1, 2, 3, 4]
 
   return (
     <div className="space-y-4">
-      {/* kartu tanaman + jalur tahap Benih → Berbunga */}
+      {/* kartu papan puzzle + jalur tahap Awal tersusun → Puzzle lengkap */}
       <section className="relative overflow-hidden rounded-[1.75rem] bg-gradient-to-b from-sage/70 via-cream to-cream p-5 ring-1 ring-soil/8">
         <span
           aria-hidden
@@ -477,10 +466,15 @@ function SlidePlant({ recap }: { recap: WeeklyRecap }) {
         />
         <div className="relative flex flex-col items-center">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-forest px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.14em] text-mint">
-            <Sprout className="size-3" strokeWidth={2.6} />
+            <Puzzle className="size-3" strokeWidth={2.6} />
             Tahap {stage} · {STAGE_NAMES[stage]}
           </span>
-          <PlantIllustration stage={stage} className="mt-3 w-36" />
+          <PlantIllustration stage={stage} progress={progress} className="mt-3 w-36" />
+          {/* jumlah kepingan ditulis eksplisit supaya tidak perlu ditebak
+              dari gambar — dan angkanya sama dengan papan yang digambar di sini */}
+          <p className="mt-2 text-[12px] font-medium tabular-nums text-forest-muted">
+            {WEEKLY_RECAP_COPY.puzzlePieces(pieces, PUZZLE_TOTAL)}
+          </p>
         </div>
 
         <div className="relative mt-5">
@@ -507,7 +501,7 @@ function SlidePlant({ recap }: { recap: WeeklyRecap }) {
                   <span
                     className={cn(
                       'text-center text-[11px] font-medium leading-tight',
-                      isCurrent ? 'text-forest' : 'text-forest/40',
+                      isCurrent ? 'text-forest' : 'text-forest-muted',
                     )}
                   >
                     {STAGE_NAMES[s]}
@@ -517,6 +511,13 @@ function SlidePlant({ recap }: { recap: WeeklyRecap }) {
             })}
           </div>
         </div>
+
+        {/* sumber angka: hari aktif pekan ini, BUKAN progres celengan seperti
+            papan di Dashboard — perbedaan dua papan itu dinyatakan, bukan
+            dibiarkan jadi teka-teki. */}
+        <p className="relative mt-4 text-[11.5px] leading-relaxed text-forest-muted">
+          {WEEKLY_RECAP_COPY.puzzleSource}
+        </p>
       </section>
 
       {/* progres level (streak tersembunyi — yang tampil cuma level & framing positif) */}
@@ -526,24 +527,24 @@ function SlidePlant({ recap }: { recap: WeeklyRecap }) {
             <MicroLabel>Hari aktif minggu ini</MicroLabel>
             <p className="mt-1 text-2xl font-medium leading-none tracking-tight tabular-nums text-forest">
               {recap.activeDays}
-              <span className="text-base font-medium text-forest/35">
+              <span className="text-base font-medium text-forest-muted">
                 /{WEEKLY_RECAP_DAYS}
               </span>
             </p>
           </div>
           <PctBadge tone="mint">
             <TrendingUp className="size-3.5" strokeWidth={2.8} />
-            {levelPct}%
+            {progress}%
           </PctBadge>
         </div>
         <div className="mt-3 h-2 overflow-hidden rounded-full bg-ink/10">
           <div
             className="h-full rounded-full bg-gradient-to-r from-forest to-mint transition-[width] duration-700 ease-out"
-            style={{ width: `${levelPct}%` }}
+            style={{ width: `${progress}%` }}
           />
         </div>
-        <p className="mt-2.5 text-[12px] leading-relaxed text-forest/50">
-          Tanaman ini tumbuh dari kebiasaan mencatat minggu ini, bukan angka yang harus dikejar.
+        <p className="mt-2.5 text-[12px] leading-relaxed text-forest-muted">
+          {WEEKLY_RECAP_COPY.habitCaption}
         </p>
       </section>
 
@@ -555,14 +556,16 @@ function SlidePlant({ recap }: { recap: WeeklyRecap }) {
           <p className="mt-1.5 text-3xl font-medium leading-none tracking-tight tabular-nums text-forest">
             {recap.transactions}
           </p>
-          <p className="mt-1.5 text-[12px] text-forest/60">transaksi tercatat 🌱</p>
+          <p className="mt-1.5 text-[12px] text-forest-muted">
+            {WEEKLY_RECAP_COPY.transactionsCaption}
+          </p>
         </section>
         <section className="rounded-[1.75rem] bg-cream p-4 ring-1 ring-soil/12">
           <MicroLabel>Hari aktif</MicroLabel>
           <p className="mt-1.5 text-3xl font-medium leading-none tracking-tight tabular-nums text-forest">
             {recap.activeDays}
           </p>
-          <p className="mt-1.5 text-[12px] text-forest/45">hari kamu mencatat</p>
+          <p className="mt-1.5 text-[12px] text-forest-muted">hari kamu mencatat</p>
         </section>
       </div>
     </div>
@@ -620,7 +623,7 @@ function SlidePlan({
     ...(top
       ? [
           {
-            icon: Flame,
+            icon: PiggyBank,
             text: `Kurangi ${top.label} sekitar ${savedPct}%`,
             badge: `${savedPct}%`,
           },
@@ -632,8 +635,8 @@ function SlidePlan({
       badge: money(savingPerWeek),
     },
     {
-      icon: Sprout,
-      text: 'Catat transaksi tiap hari biar tanaman tumbuh',
+      icon: Puzzle,
+      text: WEEKLY_RECAP_COPY.habitStep,
       badge: '7 hari',
     },
   ]
@@ -645,7 +648,7 @@ function SlidePlan({
         <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-cream text-forest">
           <Lightbulb className="size-4" strokeWidth={2.2} />
         </span>
-        <p className="text-[14px] leading-relaxed text-forest/70">
+        <p className="text-[14px] leading-relaxed text-forest-soft">
           {top ? (
             <>
               Minggu depan coba kurangi kategori{' '}
@@ -671,7 +674,7 @@ function SlidePlan({
         <div className="mt-5 flex h-36 items-end justify-center gap-6">
           {bars.map((b, i) => (
             <div key={b.id} className="flex w-24 flex-col items-center gap-2">
-              <span className="whitespace-nowrap text-[12px] font-medium tabular-nums text-forest/70">
+              <span className="whitespace-nowrap text-[12px] font-medium tabular-nums text-forest-soft">
                 {money(b.value)}
               </span>
               <span
@@ -684,7 +687,7 @@ function SlidePlan({
                   animationDelay: `${i * 90}ms`,
                 }}
               />
-              <span className="text-[11px] font-medium text-forest/45">{b.label}</span>
+              <span className="text-[11px] font-medium text-forest-muted">{b.label}</span>
             </div>
           ))}
         </div>
@@ -707,7 +710,7 @@ function SlidePlan({
           <p className="mt-2 text-[1.75rem] font-medium leading-none tracking-tight tabular-nums text-forest">
             {money(savingPerWeek)}
           </p>
-          <p className="mt-2 text-[12px] leading-relaxed text-forest/60">
+          <p className="mt-2 text-[12px] leading-relaxed text-forest-muted">
             Setara {money(dailyCut)}/hari, kamu masih punya ruang buat ini.
           </p>
         </div>
@@ -722,7 +725,7 @@ function SlidePlan({
               <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-sage text-forest">
                 <Icon className="size-4" strokeWidth={2.2} />
               </span>
-              <span className="min-w-0 flex-1 text-[14px] leading-snug text-forest/70">{text}</span>
+              <span className="min-w-0 flex-1 text-[14px] leading-snug text-forest-soft">{text}</span>
               <PctBadge tone="sage" className="shrink-0">
                 {badge}
               </PctBadge>
@@ -751,14 +754,14 @@ function SlidePlan({
         <Link
           href="/budget"
           onClick={onClose}
-          className="flex w-full items-center justify-center gap-2 rounded-full bg-cream py-3 text-sm font-medium text-forest/60 ring-1 ring-soil/12 transition-colors hover:bg-sage/40 hover:text-forest active:scale-[0.98]"
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-cream py-3 text-sm font-medium text-forest-muted ring-1 ring-soil/12 transition-colors hover:bg-sage/40 hover:text-forest active:scale-[0.98]"
         >
           <TrendingUp className="size-4" strokeWidth={2.2} />
           {WEEKLY_RECAP_CTA_COPY.planLink}
         </Link>
       </div>
 
-      <p className="text-center text-[12px] leading-relaxed text-forest/40">
+      <p className="text-center text-[12px] leading-relaxed text-forest-muted">
         💡 Kurangi pengeluaran harian sekecil {money(dailyCut)}, tabung{' '}
         {money(savingPerWeek)}/minggu
       </p>
@@ -855,7 +858,7 @@ export function WeeklyRecapModal({
           <button
             type="button"
             onClick={onClose}
-            className="mt-4 w-full rounded-full px-4 py-2.5 text-[14px] font-medium text-forest/55 transition-colors hover:bg-sage/50"
+            className="mt-4 w-full rounded-full px-4 py-2.5 text-[14px] font-medium text-forest-muted transition-colors hover:bg-sage/50"
           >
             {UPGRADE_COPY.laterLabel}
           </button>
@@ -867,7 +870,7 @@ export function WeeklyRecapModal({
   const slides: Record<string, ReactNode> = {
     overview: <SlideOverview recap={recap} />,
     expenses: <SlideExpenses recap={recap} />,
-    plant: <SlidePlant recap={recap} />,
+    puzzle: <SlidePuzzle recap={recap} />,
     plan: <SlidePlan recap={recap} onSetTarget={onSetTarget} onClose={onClose} />,
   }
 
@@ -1011,12 +1014,12 @@ function WeekRecapSheet({
             </h2>
             {/* meta sebagai chip — bukan tiga baris teks bertingkat */}
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-cream px-2.5 py-1 text-[12px] font-medium text-forest/60 ring-1 ring-soil/12">
-                <Calendar className="size-3.5 text-forest/55" strokeWidth={2.2} />
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-cream px-2.5 py-1 text-[12px] font-medium text-forest-muted ring-1 ring-soil/12">
+                <Calendar className="size-3.5 text-forest-muted" strokeWidth={2.2} />
                 {periodLabel}
               </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-cream px-2.5 py-1 text-[12px] font-medium text-forest/60 ring-1 ring-soil/12">
-                <BarChart3 className="size-3.5 text-forest/55" strokeWidth={2.2} />
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-cream px-2.5 py-1 text-[12px] font-medium text-forest-muted ring-1 ring-soil/12">
+                <BarChart3 className="size-3.5 text-forest-muted" strokeWidth={2.2} />
                 {recap.transactions} transaksi tercatat
               </span>
             </div>
@@ -1088,7 +1091,7 @@ function WeekRecapSheet({
                   'flex min-w-0 items-center justify-center gap-1.5 rounded-full px-2 py-2 text-[12.5px] font-medium whitespace-nowrap transition-colors duration-200',
                   active
                     ? 'bg-forest font-medium text-mint'
-                    : 'text-forest/55 hover:bg-cream/70 hover:text-forest',
+                    : 'text-forest-muted hover:bg-cream/70 hover:text-forest',
                 )}
               >
                 <span className="shrink-0">{s.icon}</span>
@@ -1130,12 +1133,9 @@ function WeekRecapSheet({
               /* EMPTY STATE — pekan tanpa catatan: slide TIDAK menggambar Rp 0 /
                  donut kosong (itu terbaca seperti grafik rusak). Satu panel jujur
                  + satu tindakan. */
-              <div className="flex flex-col items-center rounded-[1.75rem] border-2 border-dashed border-forest/15 bg-cream px-6 py-10 text-center">
-                <span className="flex size-12 items-center justify-center rounded-full bg-sage text-forest">
-                  <Sprout className="size-6" strokeWidth={1.8} />
-                </span>
+              <div data-catetind-empty className="flex flex-col items-center rounded-[1.75rem] border-2 border-dashed border-forest/15 bg-cream px-6 py-10 text-center">
                 <p className="mt-4 text-base font-medium text-forest">{WEEKLY_RECAP_COPY.emptyTitle}</p>
-                <p className="mt-1.5 max-w-sm text-[14px] leading-relaxed text-forest/55">
+                <p className="mt-1.5 max-w-sm text-[14px] leading-relaxed text-forest-muted">
                   {WEEKLY_RECAP_COPY.emptyBody}
                 </p>
               </div>

@@ -2,10 +2,12 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Lock, Sparkles } from 'lucide-react'
+import { usePathname } from 'next/navigation'
+import { Lock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { CHECKOUT_PATH, buildCheckoutHref, formatIDR } from '@/lib/data/pricing'
 import { expiredBannerCopy, upgradeBannerCopy } from '@/lib/data/upgrade'
+import { isOnboardingRoute } from '@/lib/onboarding'
 import { useSubscriptionGate } from './subscription-gate-provider'
 import { UpgradeModal } from './upgrade-modal'
 
@@ -27,6 +29,7 @@ import { UpgradeModal } from './upgrade-modal'
 
 export function SubscriptionBanner() {
   const { plan, planId, isLifetime, expired, inputLocked, onPublicRoute } = useSubscriptionGate()
+  const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const [dismissed, setDismissed] = useState(false)
 
@@ -40,7 +43,7 @@ export function SubscriptionBanner() {
         ? upgradeBannerCopy(null, formatIDR)
         : null
 
-  if (onPublicRoute || !copy || dismissed) return null
+  if (onPublicRoute || isOnboardingRoute(pathname) || !copy || dismissed) return null
 
   const isUpgrade = Boolean(planId) && !expired
 
@@ -51,11 +54,11 @@ export function SubscriptionBanner() {
         aria-live="polite"
         className={cn(
           'sticky top-0 z-[45] w-full px-4 py-2.5 ring-1 ring-inset backdrop-blur-md',
-          /* margin (bukan padding) dipakai supaya kotaknya benar-benar MULAI di
-             kanan sidebar desktop — sidebar itu `fixed` z-30, jadi kotak yang
-             melebar ke kirinya akan menutupi logo. Di mobile margin-nya 0. */
-          'transition-[margin-left] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none',
-          'lg:ml-[var(--catet-sidebar-w,280px)]',
+          /* Banner ini HARUS selebar sisa layar setelah sidebar, bukan 100%
+             lalu digeser margin — `w-full` + `ml` melebarkan kotak 296px ke luar
+             viewport, dan yang paling dulu terpotong adalah tombol tutupnya. */
+          'lg:w-[calc(100%_-_var(--catet-sidebar-w,280px))] lg:ml-[var(--catet-sidebar-w,280px)]',
+          'transition-[margin-left,width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none',
           isUpgrade ? 'bg-sage/90 ring-soil/12' : 'bg-hud-amber/20 ring-hud-amber/35',
         )}
       >
@@ -66,11 +69,7 @@ export function SubscriptionBanner() {
               isUpgrade ? 'bg-forest/10 text-forest' : 'bg-hud-amber/35 text-hud-terracotta',
             )}
           >
-            {isUpgrade ? (
-              <Sparkles className="size-4" strokeWidth={2.2} aria-hidden />
-            ) : (
-              <Lock className="size-4" strokeWidth={2.2} aria-hidden />
-            )}
+            <Lock className="size-4" strokeWidth={2.2} aria-hidden />
           </span>
 
           <div className="min-w-0 flex-1">
@@ -80,7 +79,7 @@ export function SubscriptionBanner() {
                 terkunci" DIHAPUS: judulnya sudah bicara sendiri. */}
             <p className="text-[14px] leading-snug font-medium text-forest">{copy.title}</p>
             {copy.body && (
-              <p className="mt-0.5 text-[12.5px] leading-snug text-forest/70">{copy.body}</p>
+              <p className="mt-0.5 text-[12.5px] leading-snug text-forest-soft">{copy.body}</p>
             )}
           </div>
 
@@ -105,7 +104,7 @@ export function SubscriptionBanner() {
             type="button"
             aria-label="Tutup info paket"
             onClick={() => setDismissed(true)}
-            className="flex size-7 shrink-0 items-center justify-center rounded-full text-forest/35 transition-colors hover:bg-soil/8 hover:text-forest"
+            className="flex size-7 shrink-0 items-center justify-center rounded-full text-forest-muted transition-colors hover:bg-soil/8 hover:text-forest"
           >
             <span aria-hidden className="text-[16px] leading-none">
               ×

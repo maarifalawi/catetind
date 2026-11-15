@@ -1,27 +1,27 @@
-'use client'
+﻿'use client'
 
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { LockedAmount } from './locked-amount'
 import { useThemedWallet } from '@/hooks/use-wallet-theme'
-import type { WalletAccount } from '@/lib/wallets'
+import type { WalletAccount, WalletArt } from '@/lib/wallets'
 
-/* ── Muka kartu dompet — SATU sumber visual untuk /wallet DAN detailnya ──────
+/* â”€â”€ Muka kartu dompet â€” SATU sumber visual untuk /wallet DAN detailnya â”€â”€â”€â”€â”€â”€
    Sebelumnya seluruh resep muka kartu (gradien `face`, motif batik `art`,
    lapisan kaca, scrim, kilau holografik, chip EMV) hidup di dalam
    wallet-screen.tsx. Ketika halaman detail dompet butuh kartu yang SAMA persis,
    menyalin resepnya berarti cepat atau lambat kedua halaman akan berbeda
-   (satu kartu diubah, yang lain tertinggal) — dan user melihat dua "kartu BCA"
+   (satu kartu diubah, yang lain tertinggal) â€” dan user melihat dua "kartu BCA"
    yang tidak identik di satu app.
 
    Karena itu resepnya diangkat ke file ini:
-     · <WalletArtDefs/>  → definisi pattern batik (dibuat sekali per halaman)
-     · <WalletFace/>     → cangkang muka kartu + semua lapisan dekoratifnya
-     · <WalletTypeMark/> → elemen kanan-atas yang MENGIKUTI benda aslinya
-     · <MaskedAmount/>   → angka nominal yang ikut tombol mata global
+     Â· <WalletArtDefs/>  â†’ definisi pattern batik (dibuat sekali per halaman)
+     Â· <WalletFace/>     â†’ cangkang muka kartu + semua lapisan dekoratifnya
+     Â· <WalletTypeMark/> â†’ elemen kanan-atas yang MENGIKUTI benda aslinya
+     Â· <MaskedAmount/>   â†’ angka nominal yang ikut tombol mata global
 
    Aturan pakai: pemanggil HANYA boleh mengatur radius/padding/shadow/animasi
-   lewat `className` — warna & teksturnya tidak boleh ditimpa dari luar, supaya
+   lewat `className` â€” warna & teksturnya tidak boleh ditimpa dari luar, supaya
    deck kartu tetap satu keluarga di mana pun ia muncul. */
 
 /** label jenis akun berbahasa Indonesia (data `type` tetap Inggris) */
@@ -31,7 +31,7 @@ export const WALLET_TYPE_LABEL: Record<WalletAccount['type'], string> = {
   Cash: 'Tunai',
 }
 
-/** bayangan teks lembut — nama & saldo tetap terbaca di atas stop gradien termuda */
+/** bayangan teks lembut â€” nama & saldo tetap terbaca di atas stop gradien termuda */
 const CARD_TEXT_SHADOW = '[text-shadow:0_1px_9px_rgba(0,0,0,0.55)]'
 
 /** halo default di belakang kartu (mekar saat hover lewat `group`) */
@@ -40,41 +40,74 @@ const HALO_DEFAULT =
 
 /**
  * Definisi motif batik sekali di awal halaman, dipakai ulang tiap kartu lewat
- * `url(#wallet-art-…)`. Prefix `wallet-art` supaya tidak bentrok dengan id
- * pattern deck di Dashboard (`card-art-…`).
+ * `url(#wallet-art-â€¦)`. Prefix `wallet-art` supaya tidak bentrok dengan id
+ * pattern deck di Dashboard (`card-art-â€¦`).
  */
 export function WalletArtDefs() {
   return (
-    <svg aria-hidden className="absolute size-0">
+    <svg aria-hidden data-catetind-batik className="pointer-events-none absolute size-0">
       <defs>
-        {/* batik kawung: lingkaran-lingkaran saling beririsan */}
-        <pattern id="wallet-art-kawung" width="72" height="72" patternUnits="userSpaceOnUse">
-          <g fill="none" stroke="white" strokeOpacity="0.14" strokeWidth="1.6">
-            <circle cx="36" cy="36" r="26" />
-            <circle cx="0" cy="0" r="26" />
-            <circle cx="72" cy="0" r="26" />
-            <circle cx="0" cy="72" r="26" />
-            <circle cx="72" cy="72" r="26" />
+        {/* KAWUNG — empat kelopak kolang-kaling + inti mlinjon emas.
+            Motif ini yang membuat muka kartu benar-benar terbaca sebagai batik
+            (bukan cincin/gelembung seperti versi lama). */}
+        <g id="wallet-art-kawung-unit">
+          {[0, 90, 180, 270].map((angle) => (
+            <g key={angle} transform={`rotate(${angle})`}>
+              <ellipse cx="0" cy="-19" rx="8.6" ry="14" />
+              <ellipse cx="0" cy="-19" rx="4.3" ry="7.6" />
+            </g>
+          ))}
+          <circle cx="0" cy="0" r="1.6" fill="white" fillOpacity="0.45" stroke="none" />
+          <path d="M0 -27 1.6 -25 0 -23 -1.6 -25Z" fill="white" fillOpacity="0.3" stroke="none" />
+          <path d="M0 27 1.6 25 0 23 -1.6 25Z" fill="white" fillOpacity="0.3" stroke="none" />
+        </g>
+        <pattern id="wallet-art-kawung" width="64" height="64" patternUnits="userSpaceOnUse">
+          <g fill="none" stroke="white" strokeOpacity="0.17" strokeWidth="1.15">
+            {[
+              [32, 32],
+              [0, 0],
+              [64, 0],
+              [0, 64],
+              [64, 64],
+            ].map(([x, y]) => (
+              <use key={`${x}-${y}`} href="#wallet-art-kawung-unit" x={x} y={y} />
+            ))}
           </g>
-          <circle cx="36" cy="36" r="5" fill="white" fillOpacity="0.14" />
         </pattern>
-        {/* batik mega mendung: lengkung awan berlapis */}
-        <pattern id="wallet-art-mendung" width="90" height="44" patternUnits="userSpaceOnUse">
-          <g fill="none" stroke="white">
-            <path d="M0 44 Q22.5 8 45 44 Q67.5 8 90 44" strokeOpacity="0.16" strokeWidth="1.8" />
-            <path d="M0 32 Q22.5 -4 45 32 Q67.5 -4 90 32" strokeOpacity="0.1" strokeWidth="1.6" />
-            <path d="M0 20 Q22.5 -16 45 20 Q67.5 -16 90 20" strokeOpacity="0.07" strokeWidth="1.4" />
-          </g>
-        </pattern>
-        {/* batik parang: gelombang diagonal berirama */}
-        <pattern id="wallet-art-parang" width="48" height="48" patternUnits="userSpaceOnUse">
+
+        {/* MEGA MENDUNG — awan Cirebon berlapis dengan curl di ujung */}
+        <pattern id="wallet-art-mendung" width="96" height="48" patternUnits="userSpaceOnUse">
           <g fill="none" stroke="white" strokeLinecap="round">
-            <path d="M-12 36 Q0 24 12 36 T36 36 T60 36" strokeOpacity="0.15" strokeWidth="2" />
-            <path d="M-12 20 Q0 8 12 20 T36 20 T60 20" strokeOpacity="0.1" strokeWidth="1.8" />
-            <path d="M-12 44 Q0 32 12 44 T36 44 T60 44" strokeOpacity="0.07" strokeWidth="1.4" />
+            <path d="M0 40 Q12 12 24 40 Q36 12 48 40 Q60 12 72 40 Q84 12 96 40" strokeOpacity="0.18" strokeWidth="1.8" />
+            <path d="M0 29 Q12 3 24 29 Q36 3 48 29 Q60 3 72 29 Q84 3 96 29" strokeOpacity="0.12" strokeWidth="1.6" />
+            <path d="M0 19 Q12 -6 24 19 Q36 -6 48 19 Q60 -6 72 19 Q84 -6 96 19" strokeOpacity="0.08" strokeWidth="1.4" />
+          </g>
+          <g fill="white" fillOpacity="0.16" stroke="none">
+            <circle cx="24" cy="40" r="1.1" />
+            <circle cx="72" cy="29" r="1" />
+            <circle cx="48" cy="19" r="0.9" />
           </g>
         </pattern>
-        {/* rings: garis kontur topografi konsentris */}
+
+        {/* PARANG — pita S diagonal + mlinjon emas (aksen `daisy`) */}
+        <pattern
+          id="wallet-art-parang"
+          width="52"
+          height="52"
+          patternUnits="userSpaceOnUse"
+          patternTransform="rotate(45)"
+        >
+          <g fill="none" stroke="white" strokeOpacity="0.16" strokeWidth="1.9" strokeLinecap="round">
+            <path d="M-26 13 Q-13 3 0 13 T26 13 T52 13" />
+            <path d="M-26 33 Q-13 23 0 33 T26 33 T52 33" />
+          </g>
+          <g className="text-daisy" fill="currentColor" stroke="none" opacity="0.5">
+            <path d="M13 20 17 26 13 32 9 26Z" />
+            <path d="M39 40 43 46 39 52 35 46Z" />
+          </g>
+        </pattern>
+
+        {/* RINGS — kontur konsentris + cecek, motif "topografi" */}
         <pattern id="wallet-art-rings" width="150" height="150" patternUnits="userSpaceOnUse">
           <g fill="none" stroke="white" strokeWidth="1.6">
             <circle cx="150" cy="0" r="34" strokeOpacity="0.17" />
@@ -82,12 +115,14 @@ export function WalletArtDefs() {
             <circle cx="150" cy="0" r="90" strokeOpacity="0.1" />
             <circle cx="150" cy="0" r="118" strokeOpacity="0.07" />
           </g>
+          <g fill="white" fillOpacity="0.2" stroke="none">
+            <circle cx="24" cy="112" r="1.1" />
+            <circle cx="76" cy="46" r="1.1" />
+            <circle cx="118" cy="132" r="1" />
+          </g>
         </pattern>
-        {/* geometri modern (paket 77): kisi belah-ketupat tipis.
-            Lapisan ini dipasang di SELURUH muka kartu dengan `opacity-5` —
-            bukan motif tema per dompet, melainkan tekstur dasar yang membuat
-            kartu terasa benda fisik (tercetak), bukan gradien datar. Karena
-            sangat tipis ia tidak mengganggu kontras teks di atasnya. */}
+
+        {/* GEOMETRI — tekstur cetak dasar (bukan motif tema), dipasang tipis */}
         <pattern id="wallet-art-geo" width="36" height="36" patternUnits="userSpaceOnUse">
           <g fill="none" stroke="white" strokeWidth="1">
             <path d="M18 1 35 18 18 35 1 18Z" strokeOpacity="0.9" />
@@ -95,12 +130,26 @@ export function WalletArtDefs() {
             <circle cx="18" cy="18" r="2.4" strokeOpacity="0.7" />
           </g>
         </pattern>
-
       </defs>
     </svg>
   )
 }
 
+
+/** motif yang punya definisi pattern di `WalletArtDefs` */
+const KNOWN_ART: readonly WalletArt[] = ['kawung', 'mendung', 'parang', 'rings']
+
+/**
+ * motif aman untuk muka kartu.
+ *
+ * Data dompet lama / tema tak dikenal bisa membawa nilai di luar daftar. Tanpa
+ * penjaga ini `url(#wallet-art-undefined)` menghasilkan lapisan KOSONG — persis
+ * gejala "batik cuma muncul di 1–2 kartu". Kartu seperti itu sekarang jatuh ke
+ * kawung, jadi SEMUA kartu tetap bercorak.
+ */
+function artIdOf(art: WalletArt | string | undefined): WalletArt {
+  return KNOWN_ART.includes(art as WalletArt) ? (art as WalletArt) : 'kawung'
+}
 
 /**
  * Cangkang muka kartu dompet: gradien `wallet.face` + motif batik + lapisan
@@ -109,12 +158,12 @@ export function WalletArtDefs() {
  * Mengembalikan FRAGMENT (halo + article) karena halo-nya harus boleh mekar
  * keluar tepi kartu sementara article-nya `overflow-hidden`.
  *
- * PAKET 77 — dua hal baru yang penting dibaca sebelum mengubah file ini:
+ * PAKET 77 â€” dua hal baru yang penting dibaca sebelum mengubah file ini:
  *   1. TEMA: warna & motif yang dipakai BUKAN selalu `wallet.face` mentah. Bila
  *      user memilih tema kustom untuk dompet ini, `useThemedWallet()` menimpanya
  *      di sini (lihat komentar di dalam fungsi);
  *   2. TEKSTUR: ada satu lapisan SVG geometris (`wallet-art-geo`, `opacity-5`)
- *      sebagai dasar muka kartu — bukan motif tema, tapi tekstur cetak.
+ *      sebagai dasar muka kartu â€” bukan motif tema, tapi tekstur cetak.
  * Pemanggil tetap hanya boleh mengatur radius/padding/shadow/animasi.
  */
 export function WalletFace({
@@ -124,23 +173,26 @@ export function WalletFace({
   children,
 }: {
   wallet: WalletAccount
-  /** radius, padding, shadow, animasi hover — bukan warna */
+  /** radius, padding, shadow, animasi hover â€” bukan warna */
   className?: string
   /** penyesuaian halo bila kartunya dipakai sebagai hero (lebih besar) */
   haloClassName?: string
   children: ReactNode
 }) {
-  /* TEMA KARTU KUSTOM (paket 77) — dibaca DI SINI, bukan di tiap halaman.
-     Peta `walletId → themeId` hidup di `hooks/use-wallet-theme.ts`; karena muka
+  /* TEMA KARTU KUSTOM (paket 77) â€” dibaca DI SINI, bukan di tiap halaman.
+     Peta `walletId â†’ themeId` hidup di `hooks/use-wallet-theme.ts`; karena muka
      kartu inilah satu-satunya tempat warna/motif dompet diputuskan, /wallet,
      /wallet/[id], dan pratinjau Tambah Dompet mustahil menampilkan tema berbeda
      untuk dompet yang sama. Tema tidak dikenal = dompet dikembalikan apa adanya,
      jadi kartu tanpa tema tetap memakai resep palet bawaannya. */
   const themed = useThemedWallet(wallet)
+  const art = artIdOf(themed.art)
   return (
     <>
       <div aria-hidden className={cn('pointer-events-none', haloClassName, themed.color)} />
       <article
+        data-catetind-kartu-dompet
+        data-wallet-id={wallet.id}
         className={cn(
           'relative overflow-hidden text-cream ring-1 ring-inset ring-cream/30',
           CARD_TEXT_SHADOW,
@@ -148,17 +200,17 @@ export function WalletFace({
           className,
         )}
       >
-        {/* lapisan kaca: sorot lembut kiri atas + sudut gelap → kedalaman */}
+        {/* lapisan kaca: sorot lembut kiri atas + sudut gelap â†’ kedalaman */}
         <div
           aria-hidden
           className="absolute inset-0 bg-gradient-to-br from-cream/20 via-cream/[0.04] to-soil/25"
         />
-        {/* kilau holografik blush-lila menyapu diagonal — ciri kartu edisi khusus */}
+        {/* kilau holografik blush-lila menyapu diagonal â€” ciri kartu edisi khusus */}
         <div
           aria-hidden
           className="absolute inset-0 [background-image:linear-gradient(112deg,rgba(255,255,255,0.34)_0%,rgba(255,255,255,0)_32%,rgba(231,216,195,0.42)_56%,rgba(231,216,195,0.3)_72%,rgba(255,255,255,0)_92%)]"
         />
-        {/* scrim halus di sisi kiri — jaga kontras teks di atas stop terang */}
+        {/* scrim halus di sisi kiri â€” jaga kontras teks di atas stop terang */}
         <div
           aria-hidden
           className="absolute inset-0 bg-gradient-to-r from-evergreen-deep/35 via-transparent to-transparent"
@@ -168,21 +220,38 @@ export function WalletFace({
           aria-hidden
           className="absolute inset-0 opacity-[0.16] [background-image:radial-gradient(rgba(255,255,255,0.99)_1px,transparent_1.2px)] [background-size:9px_9px]"
         />
-        {/* TEKSTUR GEOMETRIS (paket 77) — lapisan dasar low-opacity supaya muka
-            kartu terasa benda fisik tercetak, bukan gradien datar. Duduk di
-            PALING BAWAH teks (sebelum motif tema & seluruh skrim/kilau), jadi
-            kontras nama + saldo di atasnya tidak berubah sedikit pun. */}
-        <svg aria-hidden className="absolute inset-0 h-full w-full opacity-5">
-          <rect width="100%" height="100%" fill="url(#wallet-art-geo)" />
-        </svg>
-        {/* aksen batik khas kartu (parang/mendung/kawung/rings) — tema per dompet
-            seperti kartu bank edisi batik. Duduk di atas warna dasar & di bawah
-            teks, memudar dari kanan atas supaya nama + saldo tetap terbaca. */}
+        {/* TEKSTUR GEOMETRIS — lapisan dasar low-opacity supaya muka kartu terasa
+            benda fisik tercetak, bukan gradien datar. Duduk di PALING BAWAH
+            teks (sebelum motif tema & seluruh skrim/kilau), jadi kontras nama
+            + saldo di atasnya tidak berubah sedikit pun. */}
         <svg
           aria-hidden
-          className="absolute inset-0 h-full w-full [mask-image:radial-gradient(150%_135%_at_92%_-18%,black_14%,transparent_74%)]"
+          data-catetind-batik
+          className="pointer-events-none absolute inset-0 h-full w-full opacity-5"
         >
-          <rect width="100%" height="100%" fill={`url(#wallet-art-${themed.art})`} />
+          <rect width="100%" height="100%" fill="url(#wallet-art-geo)" />
+        </svg>
+        {/* CORAK BATIK UTAMA (kawung/mendung/parang/rings sesuai tema dompet).
+            Memudar dari kanan atas supaya nama + saldo tetap tajam, tetapi
+            bidangnya sengaja lebih LUAS dari versi lama (74% → 86% radius)
+            supaya motif benar-benar terbaca di kartu yang kecil — termasuk
+            kartu ke-3, ke-4, dan seterusnya di deck Dashboard. */}
+        <svg
+          aria-hidden
+          data-catetind-batik
+          className="pointer-events-none absolute inset-0 h-full w-full [mask-image:radial-gradient(165%_150%_at_90%_-14%,black_20%,transparent_86%)]"
+        >
+          <rect width="100%" height="100%" fill={`url(#wallet-art-${art})`} />
+        </svg>
+        {/* SABUK PARANG di kaki kartu — motif yang SAMA untuk semua dompet
+            (bank, e-wallet, tunai). Ini jaminan bahwa tiap muka kartu punya
+            corak batik, bahkan bila tema dompet memakai motif lain. */}
+        <svg
+          aria-hidden
+          data-catetind-batik
+          className="pointer-events-none absolute inset-0 h-full w-full [mask-image:linear-gradient(to_top,black_0%,black_16%,transparent_48%)]"
+        >
+          <rect width="100%" height="100%" fill="url(#wallet-art-parang)" />
         </svg>
         <div aria-hidden className="absolute -right-12 -top-16 size-40 rounded-full bg-cream/25 blur-3xl" />
         {/* highlight tipis di bibir atas kartu */}
@@ -203,9 +272,9 @@ export function WalletFace({
 
 /**
  * Elemen kanan-atas muka kartu, MENGIKUTI benda aslinya:
- *   · Bank     → chip EMV + untaian mutiara
- *   · E-Wallet → monogram brand (tanpa chip/contactless/nomor kartu)
- *   · Tunai    → ilustrasi tumpukan uang kertas (tanpa chip/nomor seri)
+ *   Â· Bank     â†’ chip EMV + untaian mutiara
+ *   Â· E-Wallet â†’ monogram brand (tanpa chip/contactless/nomor kartu)
+ *   Â· Tunai    â†’ ilustrasi tumpukan uang kertas (tanpa chip/nomor seri)
  *
  * `chipId` wajib unik per instance: gradien chip didefinisikan inline, jadi id
  * yang dipakai dua kali akan membuat DOM punya id ganda (mis. saat dua halaman
@@ -221,19 +290,18 @@ export function WalletTypeMark({
   className?: string
 }) {
   if (wallet.type === 'Bank') {
+    /* SAPU BERSIH SVG HIASAN (sesi 3): chip EMV + untaian mutiara adalah
+       dekorasi tiruan kartu fisik. Diganti monogram huruf â€” tetap informatif
+       (membedakan jenis dompet), tanpa SVG. */
     return (
-      <div className={cn('flex shrink-0 flex-col items-end gap-2.5', className)}>
-        <ChipIcon
-          id={chipId}
-          className="mt-0.5 h-6 w-8 shrink-0 drop-shadow-[0_2px_5px_rgba(0,0,0,0.35)]"
-        />
-        {/* untaian mutiara kecil di bawah chip — sentuhan perhiasan */}
-        <span aria-hidden className="flex items-center gap-1 pr-0.5">
-          <span className="size-1 rounded-full bg-cream/45" />
-          <span className="size-1.5 rounded-full bg-cream/70 shadow-[0_0_6px_rgba(255,255,255,0.6)]" />
-          <span className="size-1 rounded-full bg-cream/40" />
-        </span>
-      </div>
+      <span
+        className={cn(
+          'flex size-9 shrink-0 items-center justify-center rounded-xl bg-cream/20 text-[14px] font-medium text-cream ring-1 ring-inset ring-cream/30',
+          className,
+        )}
+      >
+        {wallet.name.charAt(0)}
+      </span>
     )
   }
 
@@ -250,33 +318,27 @@ export function WalletTypeMark({
     )
   }
 
-  return (
-    <span
-      className={cn(
-        'flex size-9 shrink-0 items-center justify-center rounded-xl bg-cream/20 text-cream ring-1 ring-inset ring-cream/30',
-        className,
-      )}
-    >
-      <CashStackIcon className="size-5" />
-    </span>
-  )
+  /* SAPU BERSIH SVG HIASAN (sesi 3): tumpukan uang kertas adalah ilustrasi
+     dekoratif. Tunai tidak butuh penanda kanan-atas. */
+  void chipId
+  return null
 }
 
 /**
  * Angka saldo dengan transisi privasi.
  *
- * PAKET 59 · 59.5 — bentuknya sekarang delegasi ke `<LockedAmount/>`: lebar
+ * PAKET 59 Â· 59.5 â€” bentuknya sekarang delegasi ke `<LockedAmount/>`: lebar
  * dikunci oleh DUA lapis teks yang ditumpuk di satu sel grid, dan titik sensornya
  * rata kiri tanpa `tracking` tambahan sehingga jatuh persis di posisi angka tadi.
  * Versi lama mengunci lebar dengan angka aslinya, tapi titiknya ditaruh
- * `absolute inset-0 justify-center tracking-[0.18em]` — hasilnya titik tidak
+ * `absolute inset-0 justify-center tracking-[0.18em]` â€” hasilnya titik tidak
  * pernah berada di tempat angka tadi (angka rapat kiri, titik melebar ke tengah).
  *
- * SENSORNYA SATU — `MASKED_AMOUNT` (`lib/data/history.ts`), bukan titik lepas
+ * SENSORNYA SATU â€” `MASKED_AMOUNT` (`lib/data/history.ts`), bukan titik lepas
  * yang ditulis per pemanggil. Keputusan 27 Sep 2026: dua dialek titik yang dulu
- * hidup di muka kartu ('••••••' sebagai default & '••••' yang dioper /wallet,
+ * hidup di muka kartu ('â€¢â€¢â€¢â€¢â€¢â€¢' sebagai default & 'â€¢â€¢â€¢â€¢' yang dioper /wallet,
  * keduanya TANPA "Rp") dihapus supaya nominal tersensor selalu berbentuk
- * `Rp •••••••` di permukaan mana pun — sama seperti kartu, daftar transaksi, dan
+ * `Rp â€¢â€¢â€¢â€¢â€¢â€¢â€¢` di permukaan mana pun â€” sama seperti kartu, daftar transaksi, dan
  * toast.
  *
  * Nama & tanda tangannya dipertahankan supaya pemanggil lama (`/wallet`,
@@ -347,7 +409,7 @@ export function ContactlessIcon({ className }: { className?: string }) {
 /**
  * Ilustrasi uang kertas (varian muka kartu Tunai).
  *
- * Uang fisik TIDAK punya chip EMV, contactless, atau nomor seri — jadi elemen
+ * Uang fisik TIDAK punya chip EMV, contactless, atau nomor seri â€” jadi elemen
  * kanan atas kartu Tunai memakai tumpukan lembaran ini, bukan chip kuningan
  * yang hanya masuk akal di muka kartu bank.
  */

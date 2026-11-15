@@ -9,16 +9,15 @@ import { usePushNotifications } from '@/lib/use-push-notifications'
 import { ONBOARD_CARD } from './onboarding-ui'
 
 /**
- * Upacara Tanaman (section 4C) — tampilan setelah transaksi pertama tersimpan.
+ * Upacara Puzzle (section 4C) — tampilan setelah transaksi pertama tersimpan.
  *
  * Alasan ada: hadiah sensorik di akhir onboarding (Domain 3A/3B) — user baru
- * selesai 3 langkah dan langsung melihat tanaman stage 0 miliknya. Dari sini
+ * selesai 3 langkah dan langsung melihat papan puzzle pertamanya. Dari sini
  * juga minta izin push, karena momentumnya paling tepat (baru lihat hasil).
  *
- * Redesign minimalis: glow `animate-ping` dihapus (dua getaran di satu layar
- * terasa ramai), teks pemuka jadi satu heading SF-style + satu subjudul, dan
- * kartu izin notifikasi memakai permukaan onboarding (ONBOARD_CARD) supaya
- * konsisten dengan 3 step sebelumnya.
+ * Revisi metafora: dulu layar ini "menanam benih" (ilustrasi tanaman + tetesan
+ * air). Sekarang "memasang kepingan pertama" — ilustrasinya papan puzzle dan
+ * hiasannya halo yang berdenyut lembut, bukan tetesan air.
  */
 export function OnboardingPlantCeremony({
   onReminderChange,
@@ -30,12 +29,15 @@ export function OnboardingPlantCeremony({
   const [busy, setBusy] = useState(false)
   const [granted, setGranted] = useState(false)
 
-  /** izin notifikasi: activate() = requestPermission + subscribe push server */
+  /** izin notifikasi: activate() = requestPermission + subscribe push server.
+   *  Sejak hook-nya diperbaiki, hasilnya KODE ('ok' | 'denied' | 'no-worker' | …),
+   *  bukan boolean — jadi pengecekannya harus eksplisit `=== 'ok'`; string
+   *  apa pun selain itu truthy dan dulu akan salah dianggap berhasil. */
   async function handleActivate() {
     setBusy(true)
     try {
-      const ok = await activate()
-      if (ok) {
+      const result = await activate()
+      if (result === 'ok') {
         setGranted(true)
         onReminderChange(true)
         toast.success('Pengingat aktif! Maks 2x sehari, jam 12:30 & 19:00 🔔')
@@ -53,37 +55,24 @@ export function OnboardingPlantCeremony({
 
   return (
     <div className="flex flex-col items-center text-center">
-      {/* ── tanaman + animasi penyiraman ─────────────────────────────── */}
+      {/* ── papan puzzle + halo lembut ───────────────────────────────── */}
       <div className="relative flex w-full justify-center pt-2">
         <div className="relative w-36">
-          {/* tetes air jatuh bergantian; .water-drop didefinisikan di globals.css */}
-          <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0">
-            {[0, 1, 2].map((index) => (
-              <span
-                key={index}
-                className="water-drop absolute size-1.5 rounded-full bg-thistle/30"
-                style={{
-                  left: 38 + index * 7 + '%',
-                  animationDelay: index * 520 + 'ms',
-                }}
-              />
-            ))}
-          </span>
+          {/* halo yang berdenyut pelan — pengganti tetesan air versi tanaman */}
+          <span
+            aria-hidden
+            className="onboarding-puzzle-glow pointer-events-none absolute inset-x-0 top-1/4 mx-auto size-28 rounded-full bg-mint/30 blur-2xl"
+          />
 
-          {/* Ilustrasi tanaman bawaan (tahap Benih) — komponen yang SAMA dengan
-              Home & Plant Detail, jadi bahasa visualnya konsisten sejak upacara
-              pertama. Bukan placeholder: `PlantIllustration` adalah ilustrasi
-              produksi yang dipakai di seluruh app. */}
+          {/* Papan puzzle (tahap 1) — komponen yang SAMA dengan Home & Puzzle
+              Detail, jadi bahasa visualnya konsisten sejak upacara pertama. */}
           <PlantIllustration stage={1} className="relative z-10" />
         </div>
       </div>
 
       <h2 className="mt-7 font-sans text-[1.55rem] font-medium leading-[1.15] tracking-[-0.035em] text-forest">
-        Tanamanmu baru saja ditanam
+        Kepingan pertamamu sudah terpasang
       </h2>
-      <p className="mt-3 max-w-[32ch] text-[15.5px] leading-relaxed tracking-[-0.01em] text-forest/50">
-        Setiap kali kamu catat, tanamanmu akan tumbuh. Rawat dia baik-baik ya.
-      </p>
 
       {/* ── izin notifikasi ──────────────────────────────────────────────
           Cuma dirender kalau browser memang punya PushManager. Di iOS Safari
@@ -109,7 +98,7 @@ export function OnboardingPlantCeremony({
               <p className="text-[15px] font-medium leading-snug tracking-[-0.01em] text-forest">
                 {granted ? 'Pengingat aktif' : 'Aktifkan pengingat?'}
               </p>
-              <p className="mt-1 text-[13.5px] leading-relaxed text-forest/45">
+              <p className="mt-1 text-[13.5px] leading-relaxed text-forest-muted">
                 {granted
                   ? 'Kami cuma muncul 2x sehari, jam 12:30 & 19:00. Tidak akan spam.'
                   : 'Cuma 2x sehari, jam 12:30 (setelah makan siang) dan 19:00 (setelah makan malam). Gak akan spam.'}
@@ -135,7 +124,7 @@ export function OnboardingPlantCeremony({
               <button
                 type="button"
                 onClick={() => onReminderChange(false)}
-                className="h-11 rounded-full px-4 text-[14px] font-medium text-forest/40 transition-colors hover:bg-ink/[0.04] hover:text-forest/70"
+                className="h-11 rounded-full px-4 text-[14px] font-medium text-forest-muted transition-colors hover:bg-ink/[0.04] hover:text-forest-soft"
               >
                 Nanti aja
               </button>

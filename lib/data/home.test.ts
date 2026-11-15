@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { HOME_GOALS_COPY, greetingNameOf } from './home'
 
 /* ── NAMA SAPAAN DASHBOARD ───────────────────────────────────────────────────
-   Keluhan nyata: sapaan Dashboard selalu "Selamat sore, Jon 🌿" padahal nama user
+   Keluhan nyata: sapaan Dashboard selalu "Selamat sore, Jon 🧩" padahal nama user
    bukan Jon. Literal itu identitas contoh yang menempel untuk SEMUA akun — pola
    yang sama dengan "Jon Snow" di sidebar sebelum audit K4.
 

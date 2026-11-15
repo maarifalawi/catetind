@@ -1,6 +1,6 @@
 ﻿'use client'
 
-import { Check, Search, Sparkles } from 'lucide-react'
+import { Check, Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   CATEGORY_PICKER_COPY,
@@ -30,14 +30,11 @@ export function SearchResults({
 }) {
   if (hits.length === 0) {
     return (
-      <div className="mt-6 flex flex-col items-center px-6 text-center">
-        <span className="flex size-12 items-center justify-center rounded-full bg-sage text-forest">
-          <Search className="size-5" strokeWidth={1.8} aria-hidden />
-        </span>
+      <div data-catetind-empty className="mt-6 flex flex-col items-center px-6 text-center">
         <p className="mt-3 text-[14px] font-medium text-forest">
           {CATEGORY_PICKER_COPY.resultEmpty(query.trim())}
         </p>
-        <p className="mt-1 text-[12.5px] leading-relaxed text-forest/50">
+        <p className="mt-1 text-[12.5px] leading-relaxed text-forest-muted">
           {CATEGORY_PICKER_COPY.resultEmptyHint}
         </p>
       </div>
@@ -67,7 +64,7 @@ export function SearchResults({
               <span className="block truncate text-[14px] font-medium text-forest">
                 {category.name}
               </span>
-              <span className="mt-0.5 block truncate text-[12px] text-forest/45">
+              <span className="mt-0.5 block truncate text-[12px] text-forest-muted">
                 {CATEGORY_PICKER_COPY.resultMeta(category.groupName, category.examples)}
               </span>
             </span>
@@ -87,8 +84,7 @@ export function IncomeGrid({
 }) {
   return (
     <>
-      <p className="mb-3 flex items-start gap-1.5 rounded-2xl bg-mint-soft/50 px-3.5 py-2.5 text-[12.5px] leading-relaxed text-forest/70 ring-1 ring-leaf/25">
-        <Sparkles className="mt-px size-3.5 shrink-0 text-forest" strokeWidth={2.4} aria-hidden />
+      <p className="mb-3 flex items-start gap-1.5 rounded-2xl bg-mint-soft/50 px-3.5 py-2.5 text-[12.5px] leading-relaxed text-forest-soft ring-1 ring-leaf/25">
         {CATEGORY_PICKER_COPY.incomeHint}
       </p>
       <ul className="grid grid-cols-2 gap-2">

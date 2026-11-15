@@ -59,7 +59,7 @@ describe('kanvas dokumen — putih di semua keadaan tema', () => {
 
 /* ── PERFORMA MOBILE (paket 86) ───────────────────────────────────────────────
    Sisa biaya render yang bikin popup terasa "patah-patah" di HP: animasi HIAS di
-   latar (ayunan tanaman, kilau, denyut) tetap berjalan selama overlay terbuka.
+   latar (kepingan puzzle, kilau, denyut) tetap berjalan selama overlay terbuka.
    Yang dikunci di sini: ketiga jalur kunci-overlay di repo ini benar-benar
    memicu jeda itu, jedanya dibatasi ke elemen dekoratif (bukan seluruh halaman),
    dan tidak menumbuk animasi panel/sheet (yang di-render lewat portal di luar
@@ -88,7 +88,7 @@ describe('performa mobile — jeda animasi hias saat overlay terbuka', () => {
 
   it('yang dijeda hanya animasi hias — bukan semua animasi', () => {
     expect(PAUSE).toContain('animate-ping')
-    expect(PAUSE).toContain('plant-sway')
+    expect(PAUSE).toContain('puzzle-piece')
     expect(PAUSE).toContain('.progress-shimmer')
   })
 })

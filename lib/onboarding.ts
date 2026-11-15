@@ -164,7 +164,7 @@ export const QUICK_WALLET_PICKS: {
   {
     name: 'Tunai',
     type: 'Cash',
-    tile: 'bg-gradient-to-br from-oat via-oat to-oat text-forest/55 ring-ink/15',
+    tile: 'bg-gradient-to-br from-oat via-oat to-oat text-forest-muted ring-ink/15',
   },
 ]
 /* ── Kunci penyimpanan ──────────────────────────────────────────────────────
@@ -231,6 +231,19 @@ export function onboardingRestartHref(): string {
 }
 
 /**
+ * true = pathname sedang berada di dalam alur onboarding (termasuk turunannya).
+ *
+ * Dipakai lapisan chrome global (banner langganan, banner antrean sinkron) untuk
+ * MENYEMBUNYIKAN diri: selama user masih menyelesaikan setup, layar harus bersih
+ * — tidak ada ajakan upgrade, status sinkronisasi, atau kontrol app lain yang
+ * mengalihkan perhatian sebelum dashboard benar-benar dibuka.
+ */
+export function isOnboardingRoute(pathname: string | null | undefined): boolean {
+  if (!pathname) return false
+  return pathname === ONBOARDING_ROUTE || pathname.startsWith(`${ONBOARDING_ROUTE}/`)
+}
+
+/**
  * true = user MEMINTA onboarding diulang (bukan kunjungan biasa).
  *
  * Menerima `location.search` apa adanya (boleh dengan/tanpa `?`). Nilai yang
@@ -261,11 +274,19 @@ export interface OnboardingResult {
   /** 0 = user memilih melewati (pemasukan opsional) */
   monthlyIncome: number
   wallet: { name: string; balance: number }
+  /**
+   * Transaksi pertama (langkah 3). `null` = user MEMILIH MELEWATI langkah itu.
+   *
+   * Dulu field ini wajib, dan flow mengisinya dengan nominal 0 + deskripsi
+   * karangan supaya bentuknya valid — cara paling halus untuk menulis data
+   * palsu ke akun user. Sekarang melewati langkah berarti benar-benar tidak ada
+   * transaksi, dan semua pembaca bisa membedakannya dengan jelas.
+   */
   firstTransaction: {
     type: TransactionTypeId
     amount: number
     description: string
-  }
+  } | null
   reminderEnabled: boolean
   completedAt: string
 }

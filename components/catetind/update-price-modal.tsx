@@ -108,7 +108,7 @@ export function UpdatePriceModal({
             </span>
             <span className="min-w-0 flex-1">
               <span className="block truncate text-[14.5px] font-medium text-forest">{data.name}</span>
-              <span className="mt-0.5 block truncate text-[12px] text-forest/45 tabular-nums">
+              <span className="mt-0.5 block truncate text-[12px] text-forest-muted tabular-nums">
                 {formatAssetQuantity(data)} · {maskMoney(data.currentPrice, masked)} per unit sekarang
               </span>
             </span>
@@ -137,13 +137,13 @@ export function UpdatePriceModal({
           {price > 0 && (
             <div className="mt-3.5 space-y-2 rounded-2xl bg-sage/60 px-4 py-3 text-[13px]">
               <div className="flex items-center justify-between gap-3">
-                <span className="text-forest/60">{PRICE_UPDATE_COPY.valueLabel}</span>
+                <span className="text-forest-muted">{PRICE_UPDATE_COPY.valueLabel}</span>
                 <span className="font-semibold text-forest tabular-nums">
                   {maskMoney(newValue, masked)}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-3">
-                <span className="text-forest/60">{PRICE_UPDATE_COPY.returnLabel}</span>
+                <span className="text-forest-muted">{PRICE_UPDATE_COPY.returnLabel}</span>
                 <span
                   className={cn(
                     'font-semibold tabular-nums',

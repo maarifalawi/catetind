@@ -75,6 +75,41 @@ export async function resolveInviteRemote(code: string): Promise<RemoteInviteSta
   }
 }
 
+/**
+ * Kode undangan yang MASIH BERLAKU untuk satu dompet, dibaca dari server.
+ *
+ * Kenapa perlu: `catetind_create_invite` mencabut kode aktif sebelumnya setiap
+ * kali dipanggil. Dulu modal selalu membuat kode LOKAL baru saat dibuka, lalu
+ * mengirimkannya — artinya membuka modal dua kali mematikan kode yang sudah
+ * dikirim ke pasangan. Dengan membaca kode aktif lebih dulu, kode yang sama
+ * dipakai ulang (dan `H9FKJF` tetap hidup).
+ *
+ * RLS `invite_codes_creator_select` hanya mengizinkan PEMBUAT kode membacanya;
+ * anggota lain akan mendapat `null` dan modal membuat kode baru — perilaku yang
+ * benar: kode adalah otorisasi milik pembuatnya.
+ */
+export async function activeInviteRemote(
+  jointWalletId: string,
+): Promise<{ code: string; expiresAt: string } | null> {
+  const client = browserSupabase()
+  if (!client) return null
+  try {
+    const { data, error } = await client
+      .from('invite_codes')
+      .select('code,expires_at')
+      .eq('joint_wallet_id', jointWalletId)
+      .is('used_by', null)
+      .gt('expires_at', new Date().toISOString())
+      .order('created_at', { ascending: false })
+      .limit(1)
+    if (error || !data || data.length === 0) return null
+    const row = data[0] as { code: string; expires_at: string }
+    return { code: row.code, expiresAt: row.expires_at }
+  } catch {
+    return null
+  }
+}
+
 /** buat kode baru (satu kode aktif per dompet). `null` = jalur server tidak ada. */
 export async function createInviteRemote(
   jointWalletId: string,
@@ -104,19 +139,21 @@ export interface AcceptInviteResult {
   jointWalletId: string | null
   walletName: string | null
   /**
-   * Apa yang TERJADI di server (paket 100):
-   *   · `joined`  — baris keanggotaan baru ditulis & kode ditandai terpakai;
-   *   · `member`  — pemanggil sudah anggota dompet itu (idempoten, kode TIDAK dibakar);
-   *   · `creator` — pemanggil adalah PEMBUAT kode (pratinjau pemiliknya sendiri, kode TIDAK dibakar).
+   * Apa yang TERJADI di server (paket 100 + migrasi multi-member):
+   *   · `joined`  — baris keanggotaan baru ditulis; kode TIDAK dibakar, jadi
+   *                 orang ketiga/keempat masih bisa memakai tautan yang sama;
+   *   · `member`  — pemanggil sudah anggota dompet itu (idempoten);
+   *   · `creator` — pemanggil adalah PEMBUAT kode (pratinjau pemiliknya sendiri);
+   *   · `full`    — kantong sudah berisi batas maksimum anggota.
    * `null` = backend lama belum mengembalikan kolom ini / tidak ada backend.
    * Tanpa nilai ini layar tidak bisa membedakan "berhasil gabung" dari "sedang
    * memeriksa pratinjau sendiri" — dan dulu keduanya sama-sama tampil sukses.
    */
-  outcome: 'joined' | 'member' | 'creator' | null
+  outcome: 'joined' | 'member' | 'creator' | 'full' | null
   error?: string
 }
 
-/** terima undangan: masuk keanggotaan + kode ditandai terpakai (satu transaksi) */
+/** terima undangan: menulis keanggotaan (idempoten; kode tidak dibakar) */
 export async function acceptInviteRemote(code: string): Promise<AcceptInviteResult> {
   const client = browserSupabase()
   if (!client) {
@@ -141,7 +178,8 @@ export async function acceptInviteRemote(code: string): Promise<AcceptInviteResu
     const outcome =
       row?.join_outcome === 'joined' ||
       row?.join_outcome === 'member' ||
-      row?.join_outcome === 'creator'
+      row?.join_outcome === 'creator' ||
+      row?.join_outcome === 'full'
         ? row.join_outcome
         : null
     return {

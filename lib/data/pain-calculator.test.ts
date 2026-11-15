@@ -58,19 +58,19 @@ describe('roastFor()', () => {
   it('di bawah 15% → aman', () => {
     expect(roastFor(0).tone).toBe('safe')
     expect(roastFor(14.99).tone).toBe('safe')
-    expect(roastFor(14.99).message).toBe('Masih aman, tapi jangan lengah!')
+    expect(roastFor(14.99).message).toBe('Masih aman. Pelan-pelan aja.')
   })
 
   it('15% sampai 30% → waspada (batas atas inklusif)', () => {
     expect(roastFor(15).tone).toBe('warning')
     expect(roastFor(30).tone).toBe('warning')
-    expect(roastFor(30).message).toBe('Bocor halus terdeteksi! Gaji lo mulai terancam.')
+    expect(roastFor(30).message).toBe('Bocor halus terdeteksi. Gaji kamu mulai menipis.')
   })
 
   it('di atas 30% → darurat', () => {
     expect(roastFor(30.01).tone).toBe('danger')
     expect(roastFor(70).message).toBe(
-      'DARURAT! Gaji lo cuma numpang lewat buat foya-foya gaib.',
+      'Gaji kamu hampir habis buat jajan kecil. Masih bisa dirapikan, kok.',
     )
   })
 

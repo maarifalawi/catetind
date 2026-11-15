@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi, type Mock } from 'vitest'
+import { isPublicRoute } from '@/lib/public-routes'
 
 vi.mock('@/lib/supabase/rest', () => ({
   restConfigured: vi.fn(),
@@ -106,7 +107,6 @@ describe('requiresPaidAccess() — halaman app vs halaman publik', () => {
       '/bills',
       '/calendar',
       '/wealth',
-      '/joint',
       '/referral',
       '/help',
       '/install',
@@ -116,6 +116,15 @@ describe('requiresPaidAccess() — halaman app vs halaman publik', () => {
     ]) {
       expect(requiresPaidAccess(path), path).toBe(true)
     }
+  })
+
+  it('/joint wajib sesi tetapi TIDAK dipaywall (anggota gratis yang diundang)', () => {
+    /* Halaman Dompet Bersama harus bisa dibuka akun gratis untuk memasukkan
+       kode undangan. Yang berlangganan cukup PEMBUAT dompet. */
+    expect(requiresPaidAccess('/joint')).toBe(false)
+    expect(requiresPaidAccess('/joint/apa-saja')).toBe(false)
+    /* bukan berarti publik: gerbang sesi tetap berlaku (lihat public-routes) */
+    expect(isPublicRoute('/joint')).toBe(false)
   })
 
   it('pintu masuk publik & halaman harga TIDAK pernah dipaywall', () => {

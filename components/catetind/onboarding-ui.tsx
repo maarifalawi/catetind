@@ -27,7 +27,7 @@ export const ONBOARD_TITLE =
 
 /** subjudul pengantar — satu-dua kalimat, tanpa emoji */
 export const ONBOARD_SUBTITLE =
-  'mt-3 max-w-[40ch] text-[16px] leading-relaxed tracking-[-0.01em] text-forest/50'
+  'mt-3 max-w-[40ch] text-[16px] leading-relaxed tracking-[-0.01em] text-forest-muted'
 
 /** permukaan kartu standar onboarding: putih + radius besar.
     Ring sengaja TIDAK ikut di sini — setiap pemakaian menulis ringnya sendiri
@@ -46,7 +46,7 @@ export function OnboardLabel({
   return (
     <p
       className={cn(
-        'text-[12px] font-medium uppercase tracking-[0.16em] text-forest/35',
+        'text-[12px] font-medium uppercase tracking-[0.16em] text-forest-muted',
         className,
       )}
     >
@@ -66,18 +66,19 @@ export function OnboardingStepHeader({
   badge,
 }: {
   title: string
-  subtitle: string
+  /** subjudul opsional — sebagian step cukup judul saja (tanpa kalimat pengantar) */
+  subtitle?: string
   badge?: string
 }) {
   return (
     <header>
       {badge && (
-        <span className="mb-3.5 inline-flex items-center rounded-full bg-ink/[0.05] px-2.5 py-1 text-[11.5px] font-medium uppercase tracking-[0.12em] text-forest/40">
+        <span className="mb-3.5 inline-flex items-center rounded-full bg-ink/[0.05] px-2.5 py-1 text-[11.5px] font-medium uppercase tracking-[0.12em] text-forest-muted">
           {badge}
         </span>
       )}
       <h1 className={ONBOARD_TITLE}>{title}</h1>
-      <p className={ONBOARD_SUBTITLE}>{subtitle}</p>
+      {subtitle && <p className={ONBOARD_SUBTITLE}>{subtitle}</p>}
     </header>
   )
 }

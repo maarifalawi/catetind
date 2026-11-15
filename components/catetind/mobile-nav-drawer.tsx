@@ -15,6 +15,8 @@ import { Menu } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { HOME_HEADER_COPY } from '@/lib/data/home'
 import { DesktopSidebar } from './desktop-sidebar'
+import { TransferFlow } from './transfer-flow'
+import { TransactionWebModal } from '@/components/dashboard/transaction-web-modal'
 
 /* ── DRAWER NAVIGASI MOBILE (paket 64) ────────────────────────────────────────
    Header Dashboard dapat tombol hamburger, dan tombol itu membuka KONTEN sidebar
@@ -35,14 +37,54 @@ interface MobileNavValue {
   open: boolean
   setOpen: (open: boolean) => void
   toggle: () => void
+  /**
+   * Pindah Dana dari DALAM drawer. Sheet-nya di-host DI SINI (bukan di dalam
+   * `DesktopSidebar`), karena drawer ditutup sebelum sheet dibuka — kalau
+   * sheet hidup di dalam drawer, ia ikut ter-unmount dan pop-up langsung
+   * hilang. `requestTransfer` menutup drawer lebih dulu, lalu membuka sheet
+   * setelah drawer benar-benar lepas.
+   */
+  transferOpen: boolean
+  setTransferOpen: (open: boolean) => void
+  requestTransfer: () => void
+  /** modal Catat dari dalam drawer — host-nya juga di luar drawer (alasan sama) */
+  addOpen: boolean
+  setAddOpen: (open: boolean) => void
+  requestAdd: () => void
 }
 
 const MobileNavContext = createContext<MobileNavValue | null>(null)
 
 export function MobileNavProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false)
+  const [transferOpen, setTransferOpen] = useState(false)
+  const [addOpen, setAddOpen] = useState(false)
   const toggle = useCallback(() => setOpen((current) => !current), [])
-  const value = useMemo<MobileNavValue>(() => ({ open, setOpen, toggle }), [open, toggle])
+  const requestTransfer = useCallback(() => {
+    setOpen(false)
+    /* satu tick: drawer mulai menutup (vaul melepas overlay & scroll lock),
+       baru sheet Pindah Dana dirender. Mengetuk input di sheet tidak lagi
+       "bocor" ke overlay drawer yang menutupi layar. */
+    window.setTimeout(() => setTransferOpen(true), 180)
+  }, [])
+  const requestAdd = useCallback(() => {
+    setOpen(false)
+    window.setTimeout(() => setAddOpen(true), 180)
+  }, [])
+  const value = useMemo<MobileNavValue>(
+    () => ({
+      open,
+      setOpen,
+      toggle,
+      transferOpen,
+      setTransferOpen,
+      requestTransfer,
+      addOpen,
+      setAddOpen,
+      requestAdd,
+    }),
+    [open, toggle, transferOpen, requestTransfer, addOpen, requestAdd],
+  )
   return <MobileNavContext.Provider value={value}>{children}</MobileNavContext.Provider>
 }
 
@@ -74,7 +116,7 @@ export function MobileNavButton({ className }: { className?: string }) {
 
 /** panel drawer yang menampilkan konten sidebar sebagai menu mobile */
 export function MobileNavDrawer() {
-  const { open, setOpen } = useMobileNav()
+  const { open, setOpen, transferOpen, setTransferOpen, addOpen, setAddOpen } = useMobileNav()
   const pathname = usePathname()
 
   /* menavigasi lewat drawer harus menutupnya — kalau tidak, drawer tetap terbuka
@@ -84,7 +126,8 @@ export function MobileNavDrawer() {
   }, [pathname, setOpen])
 
   return (
-    <Drawer.Root open={open} onOpenChange={setOpen} direction="left">
+    <>
+      <Drawer.Root open={open} onOpenChange={setOpen} direction="left">
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 z-[80] bg-ink/60 lg:hidden" />
         <Drawer.Content
@@ -97,6 +140,13 @@ export function MobileNavDrawer() {
           </div>
         </Drawer.Content>
       </Drawer.Portal>
-    </Drawer.Root>
+      </Drawer.Root>
+
+      {/* Sheet Pindah Dana di-host di luar Drawer.Root: drawer sudah ditutup
+          lebih dulu (lihat `requestTransfer`), jadi tidak ada dua lapisan
+          modal yang saling menutup di layar kecil. */}
+      <TransferFlow open={transferOpen} onOpenChange={setTransferOpen} />
+      <TransactionWebModal open={addOpen} onOpenChange={setAddOpen} />
+    </>
   )
 }

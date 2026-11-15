@@ -113,7 +113,6 @@ section. Daftar menunya satu sumber: `SETTINGS_MENU` di `settings-shell.tsx`.
 | 29 | [`/settings`](https://catetind.com/settings) | `app/settings/page.tsx` | Daftar menu (mobile) / `ProfileSettingsPanel` (desktop) | **Indeks Pengaturan** — di mobile berisi daftar menu; di desktop panel **Profil & Akun** tampil di kolom kanan. |
 | 29b | [`/settings/profile`](https://catetind.com/settings/profile) | `app/settings/profile/page.tsx` | `ProfileSettingsPanel` | **Profil & Akun** — nama, email, gajian, konteks uang (dibuka dari indeks di mobile). |
 | 30 | [`/settings/billing`](https://catetind.com/settings/billing) | `app/settings/billing/page.tsx` | `BillingSettingsPanel` | **Langganan** — kartu paket, kuota AI, jalur **upgrade**, top-up token. |
-| 31 | [`/settings/appearance`](https://catetind.com/settings/appearance) | `app/settings/appearance/page.tsx` | `settings-panel-preferences.tsx` | **Tampilan** — terang/gelap. |
 | 32 | [`/settings/categories`](https://catetind.com/settings/categories) | `app/settings/categories/page.tsx` | `settings-panel-preferences.tsx` | **Kategori** — atur/hapus/pulihkan kategori. |
 | 33 | [`/settings/ai`](https://catetind.com/settings/ai) | `app/settings/ai/page.tsx` | `settings-panel-preferences.tsx` | **AI** — auto-kategori & gaya Minca (`lib/ai-prefs.ts`). |
 | 34 | [`/settings/notifications`](https://catetind.com/settings/notifications) | `app/settings/notifications/page.tsx` | `notification-settings.tsx` | **Notifikasi** — Web Push (`use-push-notifications.ts`). |
@@ -304,11 +303,14 @@ Dari [`/app`](https://catetind.com/app) (atau halaman app mana pun lewat FAB bot
 
 - "Ajak pasangan" → JointInviteFlow → kode 6 karakter + tombol Salin/Bagikan
   - tautan: [`/join/[code]`](https://catetind.com/join/A7K2M9) *(pratinjau dari [`/joint`](https://catetind.com/joint): `buildJoinHref()`)*
+- **Dua pilihan di `/joint` (saat belum ada pasangan):** "Buat Dompet" **atau** "Gabung pakai kode"
+  - [`/joint?kode=1`](https://catetind.com/joint?kode=1) membuka form kode langsung (juga ditautkan dari Pengaturan → Dompet Bersama)
+  - `JointJoinCodeForm` → `joinJointPocketByCode()` → RPC `catetind_accept_invite` (menulis `joint_members`, sekali pakai)
 - "Catat transaksi bersama" → form joint (FAB khusus [`/joint`](https://catetind.com/joint))
 - "Split bill" → JointSplitSheet (4 mode) + ringkasan settlement
 - privat per transaksi (toggle privasi)
 
-**Sisi B (pasangan):** [`/join/[code]`](https://catetind.com/join/A7K2M9) *(publik)*
+**Sisi B (pasangan):** [`/join/[code]`](https://catetind.com/join/A7K2M9) *(publik)* atau form "Gabung pakai kode" di `/joint` *(di dalam app, cukup kodenya)*
 
 - ⌛ valid → "Gabung":
   - ⌛ belum punya akun → [`/checkout`](https://catetind.com/checkout) lalu [`/login`](https://catetind.com/login)
@@ -349,7 +351,6 @@ Semua di bawah satu layout, sidebar **tidak pernah hilang**:
 
 1. sidebar / bottom-nav → "Pengaturan" → [`/settings`](https://catetind.com/settings) *(indeks; desktop tampil Profil & Akun)*
    - [`/settings/billing`](https://catetind.com/settings/billing) → kartu paket · kuota AI · top-up · upgrade → [`/checkout/bayar`](https://catetind.com/checkout/bayar)`?…`
-   - [`/settings/appearance`](https://catetind.com/settings/appearance) → terang/gelap
    - [`/settings/categories`](https://catetind.com/settings/categories) → atur/hapus/pulihkan kategori
    - [`/settings/ai`](https://catetind.com/settings/ai) → auto-kategori & gaya Minca
    - [`/settings/notifications`](https://catetind.com/settings/notifications) → izin Web Push (`POST /api/push/subscribe`)

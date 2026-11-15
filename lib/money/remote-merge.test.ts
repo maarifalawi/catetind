@@ -128,4 +128,58 @@ describe('mergeWithRemoteWealth', () => {
     expect(merged.investments).toHaveLength(1)
     expect(merged.investments[0]).toMatchObject({ id: 'inv-6', scope: 'bersama', remoteId: 'uuid-i1' })
   })
+
+  it('pembayaran server menempel ke id domain hutang lokal (debtId diterjemahkan)', () => {
+    const remoteWealth: RemoteWealth = {
+      investments: [],
+      debts: [
+        {
+          id: 'uuid-d1',
+          type: 'personal',
+          direction: 'owed_by_me',
+          counterparty: 'Andi',
+          principal: 1_000_000,
+          remaining: 700_000,
+          status: 'active',
+          scope: 'pribadi',
+          remoteId: 'uuid-d1',
+        },
+      ],
+      payments: [
+        {
+          id: 'uuid-p1',
+          debtId: 'uuid-d1',
+          amount: 300_000,
+          paidAtISO: '2026-11-15',
+          walletName: 'BCA',
+          walletId: 'bca',
+          kind: 'debt',
+          remoteId: 'uuid-p1',
+        },
+      ],
+      assetTransactions: [],
+    }
+    const merged = mergeWithRemoteWealth(remoteWealth, {
+      investments: [],
+      debts: [
+        {
+          id: 'debt-1',
+          type: 'personal',
+          direction: 'owed_by_me',
+          counterparty: 'Andi',
+          principal: 1_000_000,
+          remaining: 700_000,
+          status: 'active',
+          scope: 'pribadi',
+          remoteId: 'uuid-d1',
+        },
+      ],
+      payments: [],
+      assetTransactions: [],
+      removedIds: [],
+      hydrated: true,
+    })
+    expect(merged.debts[0]).toMatchObject({ id: 'debt-1', remoteId: 'uuid-d1' })
+    expect(merged.payments[0]).toMatchObject({ debtId: 'debt-1', remoteId: 'uuid-p1' })
+  })
 })

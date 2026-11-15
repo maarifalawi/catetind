@@ -42,9 +42,10 @@ describe('nextTier() / upgradeTargets()', () => {
 
 describe('upgradeAmount()', () => {
   it('selisih lifetime, bukan harga penuh', () => {
-    expect(upgradeAmount(WARAS, 'catet-aja', true)).toBe(20_000)
+    /* Harga rilis: Waras 129k - Catet Aja 99k = 30k */
+    expect(upgradeAmount(WARAS, 'catet-aja', true)).toBe(30_000)
     expect(upgradeAmount(SULTAN, 'waras', true)).toBe(170_000)
-    expect(upgradeAmount(SULTAN, 'catet-aja', true)).toBe(190_000)
+    expect(upgradeAmount(SULTAN, 'catet-aja', true)).toBe(200_000)
   })
 
   it('dari paket monthly → harga lifetime penuh', () => {
@@ -56,13 +57,13 @@ describe('capabilityUpgradeOffer() — teks CTA & tautan dari satu sumber', () =
   it('paket pembuka + selisih + tautan lifetime', () => {
     const offer = capabilityUpgradeOffer('ai-chat', 'catet-aja', true)
     expect(offer.target.id).toBe('waras')
-    expect(offer.amount).toBe(20_000)
+    expect(offer.amount).toBe(30_000)
     expect(offer.href).toBe('/checkout/bayar?plan=waras&period=lifetime&upgrade=1&dari=catet-aja')
   })
 
   it('kemampuan yang hanya ada di Sultan menunjuk selisih yang benar', () => {
     expect(capabilityUpgradeOffer('ai-unlimited', 'waras', true).amount).toBe(170_000)
-    expect(capabilityUpgradeOffer('priority-support', 'catet-aja', true).amount).toBe(190_000)
+    expect(capabilityUpgradeOffer('priority-support', 'catet-aja', true).amount).toBe(200_000)
   })
 
   it('belum punya paket → harga penuh paket pembukanya', () => {
@@ -81,9 +82,9 @@ describe('upgradeBannerCopy()', () => {
     const copy = upgradeBannerCopy('catet-aja', formatIDR, true)
     expect(copy?.title).toBe('Buka Semua Fitur Paket Waras')
     /* judul & keterangan adalah DUA blok terpisah, bukan satu kalimat inline */
-    expect(copy?.title).not.toContain(formatIDR(20_000))
-    expect(copy?.body).toContain('AI Coach')
-    expect(copy?.body).toContain(formatIDR(20_000))
+    expect(copy?.title).not.toContain(formatIDR(30_000))
+    expect(copy?.body).toContain('Minca')
+    expect(copy?.body).toContain(formatIDR(30_000))
     /* sudah lifetime → nominalnya SELISIH, jadi "cukup tambah" itu benar */
     expect(copy?.body).toContain('Cukup tambah')
     expect(copy?.body).not.toContain('{')
@@ -136,7 +137,7 @@ describe('upgradeHighlights()', () => {
   it('hanya menyebut kemampuan yang BELUM dimiliki paket sekarang', () => {
     const waras = PLANS.find((plan) => plan.id === 'waras')!
     const highlights = upgradeHighlights('catet-aja', waras, 10)
-    expect(highlights).toContain('AI Coach (chat)')
+    expect(highlights).toContain('Minca (chat)')
     expect(highlights).toContain('Scan struk')
     expect(highlights).toContain('Kalender Cashflow')
     expect(highlights).toContain('Kekayaan & Hutang')

@@ -16,8 +16,8 @@ import { createWalletAccount, walletBrandByName, WALLET_KIND_OPTIONS } from '../
 describe('copy sheet dompet', () => {
   it('mode TAMBAH tidak berubah kata per kata', () => {
     expect(ADD_WALLET_SHEET_COPY.title).toBe('Tambah Dompet')
-    expect(ADD_WALLET_SHEET_COPY.submit).toBe('Simpan Dompet 🌿')
-    expect(ADD_WALLET_SHEET_COPY.toastTitle).toBe('Dompet baru siap 🌿')
+    expect(ADD_WALLET_SHEET_COPY.submit).toBe('Simpan Dompet 🧩')
+    expect(ADD_WALLET_SHEET_COPY.toastTitle).toBe('Dompet baru siap 🧩')
     expect(ADD_WALLET_SHEET_COPY.kindLabel).toBe('Jenis akun')
     expect(ADD_WALLET_SHEET_COPY.balanceLabel).toBe('Saldo sekarang')
   })
@@ -30,7 +30,7 @@ describe('copy sheet dompet', () => {
     expect(EDIT_WALLET_SHEET_COPY.balanceNote).toMatch(/saldo/i)
     expect(EDIT_WALLET_SHEET_COPY.balanceNote).toMatch(/sesuaikan saldo/i)
     /* penolakan store punya kalimatnya sendiri, dipakai di dalam sheet */
-    expect(EDIT_WALLET_SHEET_COPY.rejected).toMatch(/wajib diisi/i)
+    expect(EDIT_WALLET_SHEET_COPY.rejected).toMatch(/perlu diisi/i)
   })
 
   it('tidak ada em-dash di copy yang baru (aturan nada app)', () => {

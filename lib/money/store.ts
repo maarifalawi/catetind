@@ -46,6 +46,7 @@ import {
   loadDeviceState,
   loadMoneyState,
   moneyStateKey,
+  resolveDeviceOwner,
   saveDeviceState,
   saveMoneyState,
 } from './idb'
@@ -57,6 +58,7 @@ import {
   readRemoteMoney,
   updateRemoteRow,
   type RemoteMoney,
+  type RowPushResult,
 } from '@/lib/supabase/money-remote'
 import { migrateLocalDataToServer } from '@/lib/supabase/local-migration'
 import { browserUserId } from '@/lib/supabase/client'
@@ -428,8 +430,10 @@ export async function refreshMoneyFromServer(): Promise<boolean> {
       /* hapus dompet yang dulu gagal dikirim: server masih memuatnya */
       await retryPendingWalletDeletes(remote)
       commit(mergeWithRemote(remote, null, live, { authoritative: true }))
-      /* dompet yang belum pernah sampai ke server dikirim sekarang (antrean) */
-      void flushWalletOutbox()
+      /* Dompet & baris yang belum pernah sampai ke server dikirim sekarang.
+         Baris ikut, bukan hanya dompet: baris yang dulu tertahan karena
+         dompetnya belum terkonfirmasi hanya bisa pulih lewat jalan ini. */
+      void flushMoneyQueues()
       return true
     } catch {
       return false
@@ -456,9 +460,9 @@ function startMoneyRealtime(): void {
   const refreshWhenActive = () => {
     if (document.visibilityState !== 'visible') return
     void refreshMoneyFromServer()
-    /* antrean dompet juga didorong saat tab aktif kembali / jaringan pulih —
-       tanpa menunggu perubahan berikutnya dari server */
-    void flushWalletOutbox()
+    /* antrean dompet & baris juga didorong saat tab aktif kembali / jaringan
+       pulih — tanpa menunggu perubahan berikutnya dari server */
+    void flushMoneyQueues()
   }
   document.addEventListener('visibilitychange', refreshWhenActive)
   window.addEventListener('online', refreshWhenActive)
@@ -486,6 +490,19 @@ export function pendingWalletOutbox(snapshot: MoneySnapshot = live): WalletSeed[
 /** antrean hapus yang belum dikonfirmasi server (id dompet) */
 const pendingWalletDeletes = new Set<string>()
 
+/**
+ * Kiriman dompet yang SEDANG berjalan — satu promise per dompet.
+ *
+ * Kenapa perlu: satu dompet bisa diminta naik oleh dua jalur sekaligus (outbox
+ * saat dibuat, lalu pengiriman transaksi pertama yang menunggunya). Tanpa peta
+ * ini, dua tulisan `upsert` berjalan bersamaan dan transaksi bisa tetap
+ * berangkat sebelum salah satunya selesai.
+ */
+const walletPushInFlight = new Map<string, Promise<boolean>>()
+
+/** baris (`clientTxId`) yang SEDANG dikirim — cegah dua INSERT kembar (409) */
+const rowPushInFlight = new Map<string, Promise<SendRowOutcome>>()
+
 /** id dompet yang hapusnya masih menunggu dikonfirmasi server (untuk test/indikator) */
 export function pendingWalletDeleteIds(): string[] {
   return [...pendingWalletDeletes]
@@ -509,11 +526,129 @@ function pendingWith(pendingWalletIds: readonly string[], walletId: string): str
   return pendingWalletIds.includes(walletId) ? [...pendingWalletIds] : [...pendingWalletIds, walletId]
 }
 
-/** kirim satu dompet lalu tandai terkonfirmasi HANYA kalau server menjawab */
+/**
+ * Kirim satu dompet SEKALI (dijadikan satu promise bersama) lalu tandai
+ * terkonfirmasi hanya kalau server menjawab.
+ */
+function pushWalletOnce(wallet: WalletSeed, sortIndex = 0): Promise<boolean> {
+  const inFlight = walletPushInFlight.get(wallet.id)
+  if (inFlight) return inFlight
+
+  const run = pushWalletToServer(wallet, sortIndex)
+    .then((ok) => {
+      if (ok) markWalletSynced(wallet.id)
+      return ok
+    })
+    .catch(() => false)
+    .finally(() => {
+      if (walletPushInFlight.get(wallet.id) === run) walletPushInFlight.delete(wallet.id)
+    })
+
+  walletPushInFlight.set(wallet.id, run)
+  return run
+}
+
+/** kirim dompet di latar belakang (tidak ditunggu) */
 function pushWalletAndMark(wallet: WalletSeed, sortIndex = 0): void {
-  void pushWalletToServer(wallet, sortIndex).then((ok) => {
-    if (ok) markWalletSynced(wallet.id)
-  })
+  void pushWalletOnce(wallet, sortIndex)
+}
+
+/**
+ * PASTIKAN dompet induk SUDAH ADA DI SERVER sebelum baris ledger dikirim.
+ *
+ * Kenapa wajib: `ledger_rows.wallet_id` merujuk dompet di database. Sebelum ini
+ * `addWalletAccount()` mengirim dompet tanpa ditunggu, sementara transaksi
+ * pertama (onboarding: dompet + catatan dibuat berurutan dalam satu ketukan)
+ * langsung berangkat — dan INSERT barisnya ditolak karena dompetnya belum
+ * sempat ada. Hasilnya "1 catatan masih menunggu" di akun yang baru dibuat.
+ *
+ * Aturan yang berlaku sekarang:
+ *   · dompet yang sudah dikonfirmasi server → langsung `true` (tanpa request);
+ *   · dompet baru/berubah → TUNGGU kiriman dompetnya (satu promise bersama);
+ *   · dompet yang tidak ada di perangkat ini (baris lama/impor) → `true`,
+ *     karena tidak ada yang bisa dijamin dari sini dan barisnya tetap dikirim;
+ *   · gagal mengirim dompet → `false`, dan baris TETAP di antrean (bukan
+ *     dikirim lalu ditolak server berulang kali).
+ */
+export async function ensureWalletOnServer(walletId: string): Promise<boolean> {
+  if (!walletId) return true
+  /* Build tanpa backend (demo/test lokal): tidak ada dompet yang bisa
+     "dipastikan di server", dan perilaku paket 42 dipertahankan — antrean
+     diproses sebagai "tersimpan di perangkat ini". */
+  if (!hasSupabaseConfig()) return true
+  const wallet = live.wallets.find((item) => item.id === walletId)
+  if (!wallet) return true
+  const pending = live.pendingWalletIds.includes(wallet.id)
+  const confirmed = live.syncedWalletIds.includes(wallet.id)
+  if (confirmed && !pending) return true
+  const index = live.wallets.findIndex((item) => item.id === wallet.id)
+  const ok = await pushWalletOnce(wallet, index < 0 ? 0 : index)
+  /* Kiriman dompet gagal (jaringan putus sesaat / token baru dibuat): baris
+     yang menunggu dompet ini TIDAK BOLEH tertinggal selamanya di antrean.
+     Penjadwal yang sama dengan antrean baris dipakai supaya percobaan ulang
+     tetap terjadi tanpa user harus menekan apa pun. */
+  if (!ok) scheduleMoneySyncRetry()
+  return ok
+}
+
+/* ── PENJADWAL ULANG ANTREAN (perbaikan BUG-1) ───────────────────────────────
+   Dulu ada TIGA jalan yang bisa meninggalkan baris di antrean tanpa jadwal:
+     · `appendRow()` saat dompet induk belum terkonfirmasi (`return` langsung);
+     · `flushPendingSync()` saat dompet yang sama belum siap (`continue`);
+     · `ensureWalletOnServer()` yang gagal karena jaringan.
+   Barisnya memang jujur ditandai "menunggu", tetapi tidak ada yang mencoba
+   lagi kecuali user menekan "Proses sekarang" atau berpindah tab. Sekarang
+   SEMUA jalan itu memanggil satu penjadwal ini: percobaan ulang otomatis,
+   berjenjang (1,2 s → 20 s) supaya server yang sedang menolak tidak dibanjiri,
+   dan berhenti sendiri saat perangkat offline (event `online` yang memulai
+   lagi lewat `flushMoneyQueues`).
+
+   Satu timer untuk seluruh modul: transaksi beruntun tidak menumpuk timer. */
+let syncRetryTimer: number | null = null
+let syncRetryAttempts = 0
+
+export function scheduleMoneySyncRetry(delayMs?: number): void {
+  if (typeof window === 'undefined' || accountPurged) return
+  /* Tanpa backend tidak ada yang bisa dikonfirmasi — jangan bikin timer abadi. */
+  if (!hasSupabaseConfig()) return
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return
+  if (syncRetryTimer !== null) return
+
+  const wait = delayMs ?? Math.min(1200 * 2 ** Math.min(syncRetryAttempts, 4), 20_000)
+  syncRetryAttempts += 1
+  syncRetryTimer = window.setTimeout(() => {
+    syncRetryTimer = null
+    void flushMoneyQueues()
+  }, wait)
+}
+
+/**
+ * Kirim SELURUH antrean yang belum tercatat di server: dompet dulu, lalu baris
+ * ledger (urutan itu wajib — `ledger_rows.wallet_id` merujuk dompet).
+ *
+ * Dipakai tiga tempat:
+ *   · akhir hidrasi & setiap penyegaran dari server (Dashboard dibuka →
+ *     antrean lama ikut dibereskan, bukan hanya antrean dompet);
+ *   · onboarding selesai (transaksi pertama sudah dicoba dikirim sebelum user
+ *     meninggalkan layar);
+ *   · penjadwal ulang otomatis di atas.
+ *
+ * Mengembalikan jumlah dompet & baris yang berhasil keluar dari antrean pada
+ * ronde ini. Kalau masih ada sisa, ronde berikutnya dijadwalkan.
+ */
+export async function flushMoneyQueues(): Promise<{ wallets: number; rows: number }> {
+  /* Tanpa `window` (test / render server) penjaga dompet sudah ada di
+     `flushWalletOutbox`; baris tetap boleh diproses supaya perilaku antrean
+     bisa diuji tanpa DOM. */
+  if (accountPurged) return { wallets: 0, rows: 0 }
+  const wallets = await flushWalletOutbox()
+  const rows = await flushPendingSync()
+  if (pendingWalletOutbox().length > 0 || pendingSyncRows().length > 0) {
+    scheduleMoneySyncRetry()
+  } else {
+    syncRetryAttempts = 0
+  }
+  return { wallets, rows }
 }
 
 /**
@@ -527,9 +662,8 @@ export async function flushWalletOutbox(): Promise<number> {
   let flushed = 0
   for (const wallet of pendingWalletOutbox()) {
     const sortIndex = live.wallets.findIndex((item) => item.id === wallet.id)
-    const ok = await pushWalletToServer(wallet, sortIndex < 0 ? 0 : sortIndex)
+    const ok = await pushWalletOnce(wallet, sortIndex < 0 ? 0 : sortIndex)
     if (!ok) continue
-    markWalletSynced(wallet.id)
     flushed += 1
   }
 
@@ -1038,7 +1172,7 @@ export async function hydrateMoneyStore(): Promise<void> {
   if (hydrated || hydrateStarted || typeof window === 'undefined') return
   hydrateStarted = true
 
-  accountOwnerUserId = await browserUserId()
+  accountOwnerUserId = await resolveDeviceOwner('snapshot', await browserUserId())
   const persisted = await loadAccountSnapshot(accountOwnerUserId)
   hydrated = true
   /* akun yang sudah dihapus tetap dihapus setelah refresh: penandanya dibaca
@@ -1077,7 +1211,10 @@ export async function hydrateMoneyStore(): Promise<void> {
       commitSafely(next, persisted)
       /* antrean dompet (dibuat/rename saat offline) + hapus yang tertunda */
       await retryPendingWalletDeletes(authoritative)
-      void flushWalletOutbox()
+      /* Dashboard selesai memuat data awal: bereskan SELURUH antrean yang
+         belum tercatat di server (dompet dulu, baru baris). Inilah jalan pulih
+         untuk catatan yang sempat tertinggal, tanpa user menekan apa pun. */
+      void flushMoneyQueues()
       return
     }
   }
@@ -1672,8 +1809,9 @@ function eventKindOf(type: LedgerRowType): string {
 function trackCreatedRow(row: MoneyRow | null, beforeRows: readonly MoneyRow[]): void {
   if (!row) return
   if (beforeRows.some((existing) => existing.id === row.id)) return
+  const kind = eventKindOf(row.type)
   trackMoneyEvent('transaction_created', {
-    kind: eventKindOf(row.type),
+    kind,
     offline: !readOnline(),
     ai_generated: row.aiGenerated,
     linked: row.walletId !== '',
@@ -1740,21 +1878,95 @@ function appendRow(input: RowInput): MoneyRow {
        · `synced`   → tidak ada yang perlu dilakukan;
        · `offline`  → tidak ada sesi/backend; perilaku lama dipertahankan
                       ("tersimpan di perangkat ini");
-       · `failed`   → baris WAJIB kembali ke antrean (`dropSyncedId`) supaya
-                      `flushPendingSync()` mencobanya lagi. Sebelum ini baris
-                      dicap tersinkron hanya karena `navigator.onLine` benar,
-                      jadi catatan yang ditolak server hilang tanpa jejak;
+       · `failed`   → baris WAJIB tetap di antrean supaya `flushPendingSync()`
+                      mencobanya lagi. Sebelum ini baris dicap tersinkron hanya
+                      karena `navigator.onLine` benar, jadi catatan yang ditolak
+                      server hilang tanpa jejak;
        · `conflict` → id `session-<seq>` sudah dipakai baris LAIN di server
                       (bisa terjadi setelah cache perangkat dibersihkan). Baris
                       ini diberi id baru lalu dikirim ulang — bukan dianggap
                       "sudah tersimpan" seperti dulu (23505). */
-  void pushRowToServerResult(row).then((result) => {
-    if (result === 'synced') markRowSynced(clientTxId)
-    else if (result === 'conflict') reassignRowId(row.id, clientTxId)
-    /* 'failed' & 'offline' → baris TETAP di antrean: banner menghitungnya dan
-       `flushPendingSync()` mencobanya lagi (tidak ada lagi "sukses palsu") */
-  })
+  /* ── DOMPET DULU, BARU BARISNYA ──────────────────────────────────────────────
+     Baris ledger menunjuk dompet lewat `wallet_id`; kalau dompetnya belum ada di
+     database, INSERT ditolak dan catatan "hilang" ke antrean tanpa sebab yang
+     terlihat user. Karena itu kiriman baris SELALU menunggu dompet induknya
+     dikonfirmasi server (`ensureWalletOnServer`), bukan menunggu jeda tebakan. */
+  void sendRowToServer(row)
   return row
+}
+
+/** hasil satu percobaan kirim baris (`skipped` = percobaan lain sedang berjalan) */
+type SendRowOutcome = RowPushResult | 'waiting' | 'skipped'
+
+/**
+ * SATU pintu kirim untuk satu baris, dengan penjaga "sedang dikirim".
+ *
+ * Kenapa perlu penjaga: transaksi pertama bisa memicu DUA jalur sekaligus —
+ * `appendRow()` mengirim tepat setelah menulis, dan `flushPendingSync()` (dari
+ * onboarding / Dashboard) melihat baris yang sama di antrean. Tanpa penjaga,
+ * dua INSERT dengan `id` yang sama berangkat bersamaan; satu menang (201), satu
+ * dijawab 409. Hasil akhirnya memang tetap satu baris (idempoten), tetapi
+ * request kedua itu murni pemborosan — dan di log server ia terlihat seperti
+ * kegagalan padahal bukan. Sekarang baris yang sedang dikirim dilewati.
+ */
+async function sendRowToServer(row: MoneyRow): Promise<SendRowOutcome> {
+  const clientTxId = row.clientTxId
+  if (!clientTxId) return 'skipped'
+  /* Percobaan yang SAMA dikembalikan, bukan dilewati: pemanggil kedua
+     (`flushPendingSync` tepat setelah `appendRow`) tetap menerima hasil akhir
+     yang sebenarnya — penting untuk jalur "tanpa backend", yang harus tahu
+     bahwa baris sudah dianggap tersimpan di perangkat. */
+  const existing = rowPushInFlight.get(clientTxId)
+  if (existing) return existing
+
+  const run = (async (): Promise<SendRowOutcome> => {
+    let current = row
+    /* dua percobaan: id bentrok → id baru → kirim sekali lagi (dalam satu
+       percobaan, jadi tidak ada request yang menunggu dirinya sendiri) */
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const walletReady = await ensureWalletOnServer(current.walletId)
+      /* dompet gagal dikirim → baris TETAP di antrean; percobaan berikutnya
+         mengulang dari dompetnya dulu. Penjadwal ulang WAJIB dipanggil di sini:
+         tanpa itu baris bisa tinggal di antrean sampai user menekan tombol. */
+      if (!walletReady) {
+        scheduleMoneySyncRetry()
+        return 'waiting'
+      }
+      const result = await pushRowToServerResult(current)
+      if (result === 'conflict') {
+        const updated = reassignRowId(current.id, clientTxId)
+        if (!updated) return 'conflict'
+        current = updated
+        continue
+      }
+      if (result === 'synced') markRowSynced(clientTxId)
+      else if (result === 'failed') {
+        /* 'failed' & 'offline' → baris TETAP di antrean: banner menghitungnya
+           dan `flushPendingSync()` mencobanya lagi (tidak ada lagi "sukses
+           palsu").
+
+           Percobaan ulang OTOMATIS (bukan cuma saat user menekan "Proses
+           sekarang"): kiriman pertama bisa gagal karena cookie sesi baru saja
+           dibuat (mis. transaksi pertama tepat setelah onboarding). `offline`
+           tidak dijadwalkan: artinya memang tidak ada sesi/backend, jadi
+           mengulanginya cuma membuang waktu. */
+        scheduleMoneySyncRetry()
+      }
+      return result
+    }
+    scheduleMoneySyncRetry()
+    return 'conflict'
+  })()
+
+  rowPushInFlight.set(clientTxId, run)
+  void run
+    .finally(() => {
+      if (rowPushInFlight.get(clientTxId) === run) rowPushInFlight.delete(clientTxId)
+    })
+    .catch(() => {
+      /* kegagalan sudah diterjemahkan menjadi hasil; di sini hanya penjaga map */
+    })
+  return run
 }
 
 /** tandai satu baris sudah dikonfirmasi server (antrean berkurang) */
@@ -1765,22 +1977,7 @@ function markRowSynced(clientTxId: string): void {
 }
 
 /**
- * Cabut tanda "sudah tersinkron" dari satu baris karena kiriman ke server GAGAL.
- *
- * Hanya bekerja kalau baris itu masih ada dan masih memakai `clientTxId` yang
- * sama — baris yang sudah dihapus user tidak boleh "hidup" hanya karena
- * antreannya diperbarui.
- */
-function dropSyncedId(clientTxId: string, rowId: string): void {
-  if (!live.syncedIds.includes(clientTxId)) return
-  const stillHere = live.rows.some((row) => row.id === rowId && row.clientTxId === clientTxId)
-  if (!stillHere) return
-  commit({ ...live, syncedIds: live.syncedIds.filter((id) => id !== clientTxId) })
-}
-
-/**
- * Beri id BARU pada baris yang id-nya bertabrakan dengan baris lain di server,
- * lalu kirim ulang.
+ * Beri id BARU pada baris yang id-nya bertabrakan dengan baris lain di server.
  *
  * Kenapa perlu: id lokal berbentuk `session-<seq>` dan `seq` mulai lagi dari 9001
  * setiap kali snapshot perangkat kosong (cache dibersihkan, hidrasi belum
@@ -1791,21 +1988,22 @@ function dropSyncedId(clientTxId: string, rowId: string): void {
  *
  * `seq` sengaja TIDAK diubah: `seq` adalah nomor urut tampilan/`HistoryTransaction.id`,
  * dan mengubahnya bisa menabrak baris lain di perangkat ini. Yang unik hanya `id`.
+ *
+ * MENGEMBALIKAN baris yang sudah berganti id (atau `null`) — pengiriman ulang
+ * dilakukan oleh pemanggil (`sendRowToServer`) DI DALAM percobaan yang sama.
+ * Dulu fungsi ini mengirim sendiri, dan itu membuat percobaan kedua menunggu
+ * promise dirinya sendiri (deadlock) setelah penjaga "sedang dikirim" ada.
  */
-function reassignRowId(localId: string, clientTxId: string): void {
+function reassignRowId(localId: string, clientTxId: string): MoneyRow | null {
   const target = live.rows.find((row) => row.id === localId && row.clientTxId === clientTxId)
-  if (!target) return
+  if (!target) return null
   const freshId = `session-${nextSeq}`
   nextSeq += 1
   const rows = live.rows.map((row) =>
     row.id === localId && row.clientTxId === clientTxId ? { ...row, id: freshId } : row,
   )
   commit({ ...live, rows })
-  const updated = rows.find((row) => row.id === freshId)
-  if (!updated) return
-  void pushRowToServerResult(updated).then((result) => {
-    if (result === 'failed') dropSyncedId(clientTxId, freshId)
-  })
+  return rows.find((row) => row.id === freshId) ?? null
 }
 
 
@@ -1849,7 +2047,10 @@ export async function flushPendingSync(): Promise<number> {
   for (const row of pending) {
     const clientTxId = row.clientTxId
     if (!clientTxId) continue
-    const result = await pushRowToServerResult(row)
+    /* Satu pintu kirim: dompet dulu, lalu baris; baris yang SEDANG dikirim
+       jalur lain (`appendRow`) dilewati supaya tidak ada INSERT kembar. */
+    const result = await sendRowToServer(row)
+    if (result === 'skipped' || result === 'waiting') continue
     if (result === 'offline') {
       /* Tanpa backend (build lokal/demo) tidak ada server yang bisa menerima,
          jadi baris ditandai "tersimpan di perangkat ini" supaya banner tidak
@@ -1859,8 +2060,9 @@ export async function flushPendingSync(): Promise<number> {
       break
     }
     if (result === 'conflict') {
-      /* id bertabrakan dengan baris lain → beri id baru & kirim ulang */
-      reassignRowId(row.id, clientTxId)
+      /* `sendRowToServer` sudah mencoba sekali lagi dengan id baru; kalau masih
+         bentrok juga, biarkan penjadwal yang mengulang (bukan loop di sini). */
+      scheduleMoneySyncRetry()
       continue
     }
     if (result === 'synced') syncedKeys.push(clientTxId)
@@ -2425,6 +2627,26 @@ export function restoreRow(id: string | number): void {
   const key = tombstoneKey(id)
   if (!live.removedIds.includes(key)) return
   commit({ ...live, removedIds: live.removedIds.filter((item) => item !== key) })
+}
+
+/**
+ * Sembunyikan baris HANYA di perangkat (tombstone), TANPA menghapusnya di server.
+ *
+ * Dipakai pembatalan pembayaran tagihan (`unmarkBillPaid`): pasangan barisnya
+ * harus tetap SEIMBANG di server — baris pengeluaran −500.000 dan baris koreksi
+ * +500.000 — supaya uangnya kembali tepat SATU kali. `removeRow()` menghapus
+ * baris pengeluaran di server, sehingga koreksi +500.000 menjadi pengembalian
+ * KEDUA (saldo naik Rp 1.000.000 untuk pembayaran Rp 500.000 — ketahuan lewat
+ * `wallet_balances` pada uji `qa:bills`).
+ *
+ * Riwayat tetap membaca "baris yang dibatalkan" karena tombstone ini membuat
+ * baris asalnya hilang dari semua pembaca; jejak pasangannya ada di baris
+ * koreksi bernama `Batal bayar <tagihan>`.
+ */
+export function hideRow(id: string | number): void {
+  const key = tombstoneKey(id)
+  if (live.removedIds.includes(key)) return
+  commit({ ...live, removedIds: [...live.removedIds, key] })
 }
 
 /* ── HAPUS & PULIHKAN MASSAL (paket 59 · item 59.2) ───────────────────────────
@@ -3570,5 +3792,8 @@ export function resetMoneyStore(): void {
   /* antrean hapus dompet hidup di memori; test yang mengulang skenario harus
      mulai dari antrean kosong */
   pendingWalletDeletes.clear()
+  /* kiriman dompet yang masih berjalan ikut dilepas: janji lama tidak boleh
+     dianggap "sedang berjalan" oleh skenario test berikutnya */
+  walletPushInFlight.clear()
   emit()
 }

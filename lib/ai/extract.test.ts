@@ -109,3 +109,61 @@ describe('normalizeExtraction', () => {
     expect(result.lowFields).toEqual([])
   })
 })
+
+/* ── TANGGAL KARANGAN MODEL (temuan pemilik produk) ──────────────────────────
+   "Warteg 20k, catet" di AI Coach menghasilkan catatan bertanggal 29 Juni 2026:
+   tanggal yang tidak disebut siapa pun. Catatan itu masuk Riwayat tapi TIDAK
+   pernah muncul di Dashboard — dua cerita untuk uang yang sama. Aturan yang
+   dikunci di sini: tanggal model hanya dipakai kalau MASUK AKAL dan (untuk
+   chat/voice) benar-benar disebut user. */
+describe('normalizeExtraction · tanggal yang boleh dipercaya', () => {
+  const TODAY = '2026-11-04'
+
+  it('chat tanpa tanggal di kalimatnya → HARI INI, walau model mengarang tanggal', () => {
+    const result = normalizeExtraction(
+      'chat',
+      { name: 'Makan Warteg', amount: 20000, date: '2026-06-29' },
+      TODAY,
+      'Warteg 20k, catet',
+    )
+    expect(result.date).toBe(TODAY)
+  })
+
+  it('chat yang menyebut tanggal ("kemarin") → tanggal model dipakai', () => {
+    const result = normalizeExtraction(
+      'chat',
+      { name: 'Makan Warteg', amount: 20000, date: '2026-11-03' },
+      TODAY,
+      'kemarin makan warteg 20rb, catet',
+    )
+    expect(result.date).toBe('2026-11-03')
+  })
+
+  it('tanggal di masa depan tidak pernah dipakai', () => {
+    const result = normalizeExtraction(
+      'voice',
+      { name: 'Kopi', amount: 18000, date: '2026-11-20' },
+      TODAY,
+      'kopi 18rb tanggal 20 november',
+    )
+    expect(result.date).toBe(TODAY)
+  })
+
+  it('tanggal mustahil (31 Februari) ditolak', () => {
+    const result = normalizeExtraction(
+      'receipt',
+      { name: 'Struk', amount: 50000, date: '2026-02-31' },
+      TODAY,
+    )
+    expect(result.date).toBe(TODAY)
+  })
+
+  it('struk boleh lebih tua daripada ucapan (≤ 180 hari)', () => {
+    const result = normalizeExtraction(
+      'receipt',
+      { name: 'Struk', amount: 50000, date: '2026-09-01' },
+      TODAY,
+    )
+    expect(result.date).toBe('2026-09-01')
+  })
+})

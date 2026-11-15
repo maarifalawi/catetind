@@ -44,15 +44,15 @@ const BAR_TONES: Record<AdminTone, string> = {
 
 /** tombol ikon di top bar (satu bentuk untuk semua aksi alat) */
 export const ADMIN_TOOL_BUTTON =
-  'inline-flex size-8 shrink-0 items-center justify-center rounded-full text-forest/60 ring-1 ring-soil/[0.08] transition-colors hover:bg-sage/60 hover:text-forest disabled:cursor-not-allowed disabled:opacity-40'
+  'inline-flex size-9 shrink-0 items-center justify-center rounded-full text-forest-muted ring-1 ring-soil/[0.08] transition-colors hover:bg-sage/60 hover:text-forest disabled:cursor-not-allowed disabled:opacity-40'
 
 /** tombol teks kecil (aksi baris/tabel) */
 export const ADMIN_SMALL_BUTTON =
-  'inline-flex items-center gap-1.5 rounded-full bg-cream px-2.5 py-1.5 text-[11px] font-semibold text-forest ring-1 ring-soil/[0.08] transition-colors hover:bg-sage/60 disabled:cursor-not-allowed disabled:text-forest/35'
+  'inline-flex items-center gap-1.5 rounded-full bg-cream px-2.5 py-1.5 text-[12.5px] font-semibold text-forest ring-1 ring-soil/[0.08] transition-colors hover:bg-sage/60 disabled:cursor-not-allowed disabled:text-forest-muted'
 
 /** tombol utama kecil (aksi yang mengubah data) */
 export const ADMIN_PRIMARY_BUTTON =
-  'inline-flex items-center justify-center gap-1.5 rounded-xl bg-forest px-3 py-2 text-[12px] font-semibold text-cream transition-colors hover:bg-forest-soft disabled:cursor-not-allowed disabled:bg-ink/[0.07] disabled:text-forest/35'
+  'inline-flex items-center justify-center gap-1.5 rounded-xl bg-forest px-3 py-2 text-[13.5px] font-semibold text-cream transition-colors hover:bg-forest-soft disabled:cursor-not-allowed disabled:bg-ink/[0.07] disabled:text-forest-muted'
 
 export function AdminPill({
   children,
@@ -66,7 +66,7 @@ export function AdminPill({
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-semibold ring-1 ring-inset',
+        'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[12px] font-semibold ring-1 ring-inset',
         PILL_TONES[tone],
         className,
       )}
@@ -85,12 +85,12 @@ export function AdminNote({ children }: { children: ReactNode }) {
   const text = typeof children === 'string' ? children : undefined
   return (
     <span
-      className="inline-flex shrink-0 align-middle text-forest/25 transition-colors hover:text-forest/50"
+      className="inline-flex shrink-0 align-middle text-forest-muted transition-colors hover:text-forest-muted"
       title={text}
       aria-label={text}
       role="img"
     >
-      <Info className="size-3.5" aria-hidden strokeWidth={1.8} />
+      <Info className="size-4" aria-hidden strokeWidth={1.8} />
     </span>
   )
 }
@@ -112,11 +112,11 @@ export function AdminSection({
 }) {
   const hasHeader = Boolean(title) || Boolean(action)
   return (
-    <section className={cn('rounded-2xl bg-cream p-4 ring-1 ring-soil/[0.08]', className)}>
+    <section className={cn('rounded-2xl bg-cream p-5 ring-1 ring-soil/[0.08]', className)}>
       {hasHeader && (
         <div className="flex items-start justify-between gap-3">
           {title && (
-            <h2 className="flex min-w-0 items-center gap-1.5 text-[13px] font-semibold tracking-tight text-forest">
+            <h2 className="flex min-w-0 items-center gap-1.5 text-[14.5px] font-semibold tracking-tight text-forest">
               {title}
               {note && <AdminNote>{note}</AdminNote>}
             </h2>
@@ -148,13 +148,13 @@ export function AdminListRow({
   className?: string
 }) {
   return (
-    <li className={cn('flex items-center justify-between gap-3 py-2', className)}>
+    <li className={cn('flex items-center justify-between gap-3 py-2.5', className)}>
       <div className="min-w-0">
-        <p className="truncate text-[12.5px] font-medium text-forest">{left}</p>
-        {meta && <p className="mt-0.5 truncate text-[11px] tabular-nums text-forest/45">{meta}</p>}
+        <p className="truncate text-[14px] font-medium text-forest">{left}</p>
+        {meta && <p className="mt-0.5 truncate text-[12.5px] tabular-nums text-forest-muted">{meta}</p>}
       </div>
       {right && (
-        <div className="shrink-0 text-right text-[12px] font-semibold tabular-nums text-forest">
+        <div className="shrink-0 text-right text-[13.5px] font-semibold tabular-nums text-forest">
           {right}
         </div>
       )}
@@ -180,13 +180,13 @@ export function AdminStat({
 }) {
   return (
     <div className={cn('min-w-0', className)}>
-      <p className="text-[10.5px] font-medium uppercase tracking-[0.12em] text-forest/40">
+      <p className="text-[12px] font-medium uppercase tracking-[0.12em] text-forest-muted">
         {label}
       </p>
-      <p className="mt-1 text-[22px] font-semibold leading-none tracking-tight tabular-nums text-forest">
+      <p className="mt-1 text-[26px] font-semibold leading-none tracking-tight tabular-nums text-forest">
         {value}
       </p>
-      {hint && <p className="mt-1.5 truncate text-[11px] tabular-nums text-forest/45">{hint}</p>}
+      {hint && <p className="mt-1.5 truncate text-[12.5px] tabular-nums text-forest-muted">{hint}</p>}
     </div>
   )
 }
@@ -222,7 +222,7 @@ export function AdminBar({
 
 export function AdminEmpty({ children }: { children: ReactNode }) {
   return (
-    <p className="rounded-xl bg-sage/40 px-3 py-4 text-center text-[11.5px] text-forest/45">
+    <p className="rounded-xl bg-sage/40 px-3 py-4 text-center text-[13px] text-forest-muted">
       {children}
     </p>
   )
@@ -231,7 +231,7 @@ export function AdminEmpty({ children }: { children: ReactNode }) {
 /** satu keterangan kecil di bawah isi kotak (bukan kalimat penjelas) */
 export function AdminMeta({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <p className={cn('text-[11px] leading-snug tabular-nums text-forest/45', className)}>
+    <p className={cn('text-[12.5px] leading-snug tabular-nums text-forest-muted', className)}>
       {children}
     </p>
   )
@@ -256,6 +256,17 @@ export function formatDate(iso: string | null | undefined): string {
     month: 'short',
     year: 'numeric',
   }).format(new Date(time))
+}
+
+/** `2026-10` → "Okt 2026" — label kolom bulan (tanpa hari) */
+export function formatMonth(monthKey: string): string {
+  const [year, month] = monthKey.split('-').map(Number)
+  if (!year || !month) return '—'
+  return new Intl.DateTimeFormat('id-ID', {
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(new Date(Date.UTC(year, month - 1, 1)))
 }
 
 export function formatDateTime(iso: string | null | undefined): string {

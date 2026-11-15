@@ -50,7 +50,6 @@ export function OnboardingStepSituation({
     <div>
       <OnboardingStepHeader
         title="Halo, kenalan dulu yuk."
-        subtitle="Pilih yang paling menggambarkan situasimu sekarang. Bisa lebih dari satu."
       />
 
       {/* ── 1. situasi hidup (baris toggle) ────────────────────────────── */}
@@ -84,7 +83,7 @@ export function OnboardingStepSituation({
                   <span className="block text-[16px] font-medium leading-snug tracking-[-0.01em] text-forest">
                     {item.label}
                   </span>
-                  <span className="mt-0.5 block text-[13.5px] leading-snug text-forest/45">
+                  <span className="mt-0.5 block text-[13.5px] leading-snug text-forest-muted">
                     {item.subtitle}
                   </span>
                 </span>
@@ -109,7 +108,7 @@ export function OnboardingStepSituation({
               initial={{ opacity: 0, y: -4 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
-              className="mt-3 pl-1 text-[13px] font-medium text-forest/70"
+              className="mt-3 pl-1 text-[13px] font-medium text-forest-soft"
             >
               Modul aktif: {activeModules.map((item) => item.moduleLabel).join(' · ')}
             </motion.p>
@@ -139,7 +138,7 @@ export function OnboardingStepSituation({
                   'flex-1 rounded-full py-2.5 text-[14px] font-medium tracking-[-0.01em] transition-all duration-200',
                   active
                     ? 'bg-cream text-forest shadow-[0_1px_3px_rgba(0,0,0,0.12)]'
-                    : 'text-forest/45 hover:text-forest/70',
+                    : 'text-forest-muted hover:text-forest-soft',
                 )}
               >
                 {option.label}
@@ -147,7 +146,7 @@ export function OnboardingStepSituation({
             )
           })}
         </div>
-        <p className="mt-3 pl-1 text-[13.5px] leading-relaxed text-forest/45">
+        <p className="mt-3 pl-1 text-[13.5px] leading-relaxed text-forest-muted">
           {activePeriod?.helper}
         </p>
 

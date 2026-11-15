@@ -53,8 +53,8 @@ export interface WeeklyRecapSegment {
   color: string
 }
 
-/** tahap ilustrasi tanaman (plant-illustration: 1..4) */
-export type RecapPlantStage = 1 | 2 | 3 | 4
+/** tahap papan puzzle (plant-illustration: 1..4) */
+export type RecapPuzzleStage = 1 | 2 | 3 | 4
 
 /** Seluruh angka slide — semuanya turunan, tidak ada satu pun nominal keras. */
 export interface WeeklyRecap {
@@ -81,25 +81,45 @@ export interface WeeklyRecap {
   savingPct: number
   /** jumlah TANGGAL unik yang punya catatan di pekan ini (0..7) */
   activeDays: number
-  /** tahap tanaman MINGGUAN dari konsistensi catat */
-  plantStage: RecapPlantStage
+  /** tahap papan puzzle MINGGUAN dari konsistensi catat */
+  puzzleStage: RecapPuzzleStage
+  /** porsi hari aktif pekan ini (0–100) — jumlah KEPINGAN papan rekap */
+  puzzleProgress: number
   /** true = tidak ada satu pun catatan di pekan ini */
   empty: boolean
 }
 
 /**
- * Tahap tanaman versi REKAP MINGGUAN — dari konsistensi mencatat di pekan ini.
+ * Tahap papan puzzle versi REKAP MINGGUAN — dari konsistensi mencatat pekan ini.
  *
- * Ini SENGAJA lensa berbeda dari widget Tanaman di Home (yang tumbuh dari progres
- * celengan): rekap menceritakan PEKAN, jadi yang digambar adalah kebiasaan
- * mencatat pekan itu. Keduanya turunan (nol mock), dan slide-nya menyebut
- * sumbernya apa adanya supaya tidak terklaim sebagai hal yang sama.
+ * Ini SENGAJA lensa berbeda dari kartu "Puzzle kamu" di Dashboard (yang kepingannya
+ * dari progres celengan): rekap menceritakan PEKAN, jadi yang digambar adalah
+ * kebiasaan mencatat pekan itu. Perbedaan lensa itu sekarang dinyatakan di layar
+ * (`WEEKLY_RECAP_COPY.puzzleSource`), bukan dibiarkan jadi teka-teki.
+ *
+ * Sejak revisi ini jumlah KEPINGAN papan rekap juga dari porsi hari aktif
+ * (`weekActivePct`), bukan `stage × 3`. Dulu 2 hari aktif = tahap 2 = 6 keping
+ * (setengah papan) padahal baru 2 dari 7 hari — angka yang terasa membesar
+ * sendiri. Sekarang 2 hari = 29% = 3 keping, dan 7 hari = 12 keping penuh.
+ * Ambang tahapnya memakai ambang yang SAMA dengan papan Dashboard (25/50/80),
+ * jadi badge tahap tidak pernah bertentangan dengan papannya sendiri.
  */
-export function weeklyPlantStage(activeDays: number): RecapPlantStage {
-  if (activeDays <= 1) return 1 // Benih
-  if (activeDays <= 3) return 2 // Tunas
-  if (activeDays <= 5) return 3 // Tanaman Muda
-  return 4 // Berbunga
+export function weeklyPuzzleStage(activeDays: number): RecapPuzzleStage {
+  return puzzleStageFromPercent(weekActivePct(activeDays))
+}
+
+/** porsi hari aktif pekan ini (0–100) — 2 hari = 29%, 7 hari = 100% */
+export function weekActivePct(activeDays: number): number {
+  const days = Math.min(WEEKLY_RECAP_DAYS, Math.max(0, activeDays))
+  return Math.round((days / WEEKLY_RECAP_DAYS) * 100)
+}
+
+/** ambang tahap = ambang papan Dashboard (`stageFromPercent`: 25/50/80) */
+function puzzleStageFromPercent(percent: number): RecapPuzzleStage {
+  if (percent >= 80) return 4 // tahap 4 · puzzle lengkap
+  if (percent >= 50) return 3 // tahap 3 · hampir lengkap
+  if (percent >= 25) return 2 // tahap 2 · setengah jalan
+  return 1 // tahap 1 · awal tersusun
 }
 
 /** segmen kategori + warna palet kanon (rotasi URUTAN, bukan nama kategori) */
@@ -125,6 +145,7 @@ export function weeklyRecapFrom(rows: HomeMoneyRow[], todayISO: string): WeeklyR
   const segments = segmentsWithColor(inWeek)
   const spentPct = income > 0 ? Math.round((expense / income) * 100) : 0
   const activeDays = new Set(inWeek.map((row) => row.date)).size
+  const puzzleProgress = weekActivePct(activeDays)
 
   return {
     startISO: window.startISO,
@@ -141,7 +162,8 @@ export function weeklyRecapFrom(rows: HomeMoneyRow[], todayISO: string): WeeklyR
     keptPct: Math.max(100 - spentPct, 0),
     savingPct: income > 0 ? Math.round((net / income) * 100) : 0,
     activeDays,
-    plantStage: weeklyPlantStage(activeDays),
+    puzzleStage: weeklyPuzzleStage(activeDays),
+    puzzleProgress,
     empty: count === 0,
   }
 }
@@ -175,10 +197,27 @@ export const WEEKLY_RECAP_COPY = {
   bannerTitle: 'Recap minggu ini siap',
   /** baris kedua banner: `{jumlah} transaksi · {net}` — dua-duanya turunan */
   bannerSummary: (count: number, net: string) => `${count} transaksi · ${net}`,
+  /* ── SLIDE "PUZZLE KAMU" (habit loop pekan) ───────────────────────────────
+     Slide ini dulu berjudul "Tanaman Kamu" dan 2 hari aktif digambar sebagai
+     6 dari 12 keping (setengah papan) — terasa bertabrakan dengan kartu
+     "Puzzle kamu" di Dashboard yang baru 2 keping. Sekarang kepingannya dari
+     porsi hari aktif (2 hari = 3 keping) DAN sumbernya ditulis di layar, jadi
+     dua papan itu tidak lagi terlihat saling menyalahkan. */
+  /** badge di bawah papan: jumlah kepingan pekan ini */
+  puzzlePieces: (filled: number, total: number) => `${filled} dari ${total} keping`,
+  /** satu baris sumber angka — pembeda tegas dengan papan Dashboard */
+  puzzleSource:
+    'Kepingan di sini dari hari kamu mencatat pekan ini. Papan di Dashboard dari progres celengan, jadi jumlahnya boleh beda.',
+  /** caption kartu "Hari aktif minggu ini" */
+  habitCaption:
+    'Papan ini terisi dari kebiasaan mencatat minggu ini, bukan angka yang perlu dikejar.',
+  /** caption mini-card jumlah catatan (emoji puzzle, bukan tunas) */
+  transactionsCaption: 'transaksi tercatat 🧩',
+  /** langkah habit di slide Rencana Minggu Depan */
+  habitStep: 'Catat transaksi tiap hari biar kepinganmu nambah',
   /** panel pengganti seluruh slide saat rekap kosong (sekalian judul banner) */
   emptyTitle: 'Belum ada catatan minggu ini',
-  emptyBody:
-    'Rekap ini menggambar dari catatanmu sendiri, catat transaksi pertama, dan angka serta grafiknya langsung hidup.',
+  emptyBody: 'Catat transaksi pertama, angka dan grafiknya langsung hidup.',
   emptyCta: '+ Catat Transaksi',
   /** Cakupan slide Pengeluaran — SENGAJA "pekan ini", BUKAN "7 hari terakhir".
       Jendela rekap = pekan kalender Senin–Minggu dari tanggal perangkat, jadi
@@ -187,11 +226,11 @@ export const WEEKLY_RECAP_COPY = {
       sumber yang sama dengan chip kepala modal — jadi tidak bisa berbeda. */
   expensesScope: 'dalam pekan ini',
   /** Slide 2 saat pemasukan ada tapi pengeluaran belum ada */
-  expensesEmpty: 'Belum ada pengeluaran minggu ini, yang kamu catat otomatis muncul di sini.',
+  expensesEmpty: 'Belum ada pengeluaran minggu ini. Catatanmu otomatis muncul di sini.',
   /** Slide 4 saat belum ada pos pengeluaran (langkah kategori disembunyikan) */
-  planNoCategory: 'Pengeluaran pekan ini masih nol, minggu depan bebas kamu atur.',
+  planNoCategory: 'Pengeluaran pekan ini masih nol. Minggu depan bebas kamu atur.',
   /** Slide 1 saat belum ada pemasukan: perbandingan tidak bisa dihitung */
-  noIncome: 'Belum ada pemasukan minggu ini, catat pemasukan biar perbandingannya kebaca.',
+  noIncome: 'Belum ada pemasukan minggu ini. Catat pemasukan biar perbandingannya kebaca.',
   /** badge saving rate saat pengeluaran melebihi pemasukan */
   savingNegative: 'minus',
   savingHealthy: 'sehat',

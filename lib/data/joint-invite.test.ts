@@ -6,6 +6,7 @@ import {
   INVITE_CODE_LENGTH,
   INVITE_TTL_MS,
   JOIN_CLAIM_PARAM,
+  JOINT_JOIN_PARAM,
   buildInviteShareText,
   buildInviteUrl,
   buildJoinClaimHref,
@@ -21,6 +22,7 @@ import {
   inviteWalletName,
   isInviteUsable,
   isJoinClaimRequest,
+  isJoinIntentParam,
   resolveInviteFrom,
   resolveRemoteInviteView,
   type InviteRecord,
@@ -55,6 +57,28 @@ function sequenceRandom(seeds: number[][]): RandomBytes {
     return Uint8Array.from({ length }, (_, index) => seed[index % seed.length])
   }
 }
+
+describe('isJoinIntentParam · tautan /joint?kode=1', () => {
+  it('membaca penanda gabung dari query string', () => {
+    expect(isJoinIntentParam('1')).toBe(true)
+    expect(isJoinIntentParam('true')).toBe(true)
+    expect(isJoinIntentParam('yes')).toBe(true)
+    expect(isJoinIntentParam(['1', '0'])).toBe(true)
+  })
+
+  it('bukan penanda gabung: kosong, nilai lain, atau kode undangan', () => {
+    expect(isJoinIntentParam(undefined)).toBe(false)
+    expect(isJoinIntentParam('')).toBe(false)
+    expect(isJoinIntentParam('0')).toBe(false)
+    /* `?kode=H9FKJF` BUKAN penanda: form tetap menampilkan input kosong */
+    expect(isJoinIntentParam('H9FKJF')).toBe(false)
+    expect(isJoinIntentParam(['0', '1'])).toBe(false)
+  })
+
+  it('nama parameternya `kode` (dipakai tautan Pengaturan)', () => {
+    expect(JOINT_JOIN_PARAM).toBe('kode')
+  })
+})
 
 describe('generateInviteCode · bentuk kode', () => {
   it('6 karakter, hanya dari alfabet aman-baca (tanpa 0/O/1/I/L)', () => {

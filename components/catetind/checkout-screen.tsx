@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowRight, Check, Info, ShieldCheck, Sparkles, Tag } from 'lucide-react'
+import { ArrowRight, Check, Info, ShieldCheck, Tag } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { BatikBackdrop } from '@/components/landing/lp/batik-backdrop'
 import {
@@ -282,7 +282,7 @@ export function CheckoutScreen({
                 <h2 className="font-display text-[22px] font-semibold tracking-[-0.02em] text-forest">
                   {CHECKOUT_COPY.planSectionTitle}
                 </h2>
-                <p className="mt-1 text-[13.5px] leading-[1.5] text-forest/50">
+                <p className="mt-1 text-[13.5px] leading-[1.5] text-forest-muted">
                   {CHECKOUT_COPY.planSectionNote}
                 </p>
               </div>
@@ -309,9 +309,9 @@ export function CheckoutScreen({
                 {PRICING_TRUST_BADGES.map((badge) => (
                   <li
                     key={badge.id}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-cream px-3 py-1.5 text-[12.5px] font-medium text-forest/70 ring-1 ring-soil/10"
+                    className="inline-flex items-center gap-1.5 rounded-full bg-cream px-3 py-1.5 text-[12.5px] font-medium text-forest-soft ring-1 ring-soil/10"
                   >
-                    <Check className="size-3 shrink-0 text-forest/60" strokeWidth={3} aria-hidden />
+                    <Check className="size-3 shrink-0 text-forest-muted" strokeWidth={3} aria-hidden />
                     {badge.label}
                   </li>
                 ))}
@@ -327,16 +327,16 @@ export function CheckoutScreen({
 
                 <dl className="mt-3 space-y-2 text-[13.5px]">
                   <div className="flex items-start justify-between gap-3">
-                    <dt className="text-forest/50">{CHECKOUT_COPY.summaryPlan}</dt>
+                    <dt className="text-forest-muted">{CHECKOUT_COPY.summaryPlan}</dt>
                     <dd className="min-w-0 text-right font-medium text-forest">{offerName}</dd>
                   </div>
                   <div className="flex items-start justify-between gap-3">
-                    <dt className="text-forest/50">{CHECKOUT_COPY.summaryDuration}</dt>
+                    <dt className="text-forest-muted">{CHECKOUT_COPY.summaryDuration}</dt>
                     <dd className="text-right font-medium text-forest">{periodShort}</dd>
                   </div>
                   {discount > 0 && (
                     <div className="flex items-start justify-between gap-3">
-                      <dt className="text-forest/50">
+                      <dt className="text-forest-muted">
                         {CHECKOUT_COPY.summaryDiscount} ({REFERRAL_DISCOUNT_PCT}%)
                       </dt>
                       <dd className="font-medium tabular-nums text-forest">− {formatIDR(discount)}</dd>
@@ -348,7 +348,7 @@ export function CheckoutScreen({
                 <div className="mt-4 border-t border-soil/12 pt-4">
                   <label
                     htmlFor="checkout-referral"
-                    className="flex items-center gap-1.5 text-[12.5px] font-medium text-forest/60"
+                    className="flex items-center gap-1.5 text-[12.5px] font-medium text-forest-muted"
                   >
                     <Tag className="size-3.5" strokeWidth={2.2} aria-hidden />
                     {CHECKOUT_COPY.referralLabel}
@@ -374,7 +374,7 @@ export function CheckoutScreen({
                       aria-describedby="checkout-referral-status"
                       aria-invalid={Boolean(codeError)}
                       className={cn(
-                        'min-w-0 flex-1 rounded-xl bg-canvas px-3.5 py-2.5 text-[14px] font-medium tracking-wide text-forest outline-none ring-1 transition-shadow placeholder:font-medium placeholder:tracking-normal placeholder:text-forest/25 focus:ring-2 focus:ring-forest/35',
+                        'min-w-0 flex-1 rounded-xl bg-canvas px-3.5 py-2.5 text-[14px] font-medium tracking-wide text-forest outline-none ring-1 transition-shadow placeholder:font-medium placeholder:tracking-normal placeholder:text-forest-muted focus:ring-2 focus:ring-forest/35',
                         codeError ? 'ring-plum/50' : 'ring-soil/16',
                       )}
                     />
@@ -392,7 +392,7 @@ export function CheckoutScreen({
                   {/* status kode diumumkan ke screen reader, bukan cuma dilihat */}
                   <div id="checkout-referral-status" aria-live="polite">
                     {checkingCode ? (
-                      <p className="mt-2.5 text-[12.5px] leading-relaxed text-forest/55">
+                      <p className="mt-2.5 text-[12.5px] leading-relaxed text-forest-muted">
                         {CHECKOUT_COPY.referralChecking}
                       </p>
                     ) : appliedCode ? (
@@ -404,7 +404,7 @@ export function CheckoutScreen({
                         <button
                           type="button"
                           onClick={handleClearCode}
-                          className="text-[12.5px] font-medium text-forest/55 underline underline-offset-2 hover:text-forest"
+                          className="text-[12.5px] font-medium text-forest-muted underline underline-offset-2 hover:text-forest"
                         >
                           {CHECKOUT_COPY.referralClear}
                         </button>
@@ -420,12 +420,12 @@ export function CheckoutScreen({
 
                 {/* total — satu angka besar, harga coret hanya kalau ada diskon */}
                 <div className="mt-4 flex items-baseline justify-between gap-3 border-t border-soil/12 pt-4">
-                  <span className="text-[13.5px] font-medium text-forest/60">
+                  <span className="text-[13.5px] font-medium text-forest-muted">
                     {CHECKOUT_COPY.summaryTotal}
                   </span>
                   <span className="flex flex-wrap items-baseline justify-end gap-x-2 gap-y-1">
                     {discount > 0 && (
-                      <span className="text-[13px] font-medium tabular-nums text-forest/35 line-through">
+                      <span className="text-[13px] font-medium tabular-nums text-forest-muted line-through">
                         {formatIDR(listPrice)}
                       </span>
                     )}
@@ -497,7 +497,6 @@ function OfferOption({
     >
       {plan.badge ? (
         <span className="absolute -top-4 left-1/2 z-30 inline-flex -translate-x-1/2 items-center gap-1.5 whitespace-nowrap rounded-full bg-daisy px-3.5 py-1.5 text-[12px] leading-none font-semibold text-evergreen-deep shadow-sm ring-1 ring-ink/5">
-          <Sparkles className="size-3" strokeWidth={2.2} aria-hidden />
           {plan.badge}
         </span>
       ) : null}
@@ -564,7 +563,7 @@ function OfferOption({
             <span
               className={cn(
                 'text-[13px] leading-[1.5] font-medium',
-                active ? 'text-cream/65' : 'text-forest/50',
+                active ? 'text-cream' : 'text-forest-muted',
               )}
             >
               {unit}
@@ -574,7 +573,7 @@ function OfferOption({
           <span
             className={cn(
               'mt-2 block min-h-[40px] text-[13.5px] leading-[1.5]',
-              active ? 'text-cream/75' : 'text-forest/60',
+              active ? 'text-cream' : 'text-forest-muted',
             )}
           >
             {plan.subtitle}
@@ -589,7 +588,7 @@ function OfferOption({
             <span
               className={cn(
                 'text-[11px] leading-[1.5] font-medium tracking-[0.16em] uppercase',
-                active ? 'text-cream/55' : 'text-forest/40',
+                active ? 'text-cream-muted' : 'text-forest-muted',
               )}
             >
               {CHECKOUT_COPY.featuresTitle}
@@ -609,7 +608,7 @@ function OfferOption({
                   >
                     <Check className="size-2.5" strokeWidth={3.2} />
                   </span>
-                  <span className={active ? 'text-cream/90' : 'text-forest/80'}>{feature}</span>
+                  <span className={active ? 'text-cream' : 'text-forest'}>{feature}</span>
                 </span>
               ))}
             </span>

@@ -28,7 +28,7 @@ export const HOME_HEADER_COPY = {
 } as const
 
 /**
- * Nama panggilan untuk sapaan Dashboard ("Selamat sore, Rina 🌿").
+ * Nama panggilan untuk sapaan Dashboard ("Selamat sore, Rina 🧩").
  *
  * Kenapa fungsi, bukan template di komponen:
  *   · sapaan Home dulu menulis nama CONTOH (`Jon`) untuk semua user — orang
@@ -38,7 +38,7 @@ export const HOME_HEADER_COPY = {
  *     mentah-mentah.
  *
  * Aturannya: ambil kata pertama, dan `null` kalau tidak ada nama yang layak —
- * pemanggil lalu menyapa TANPA nama ("Selamat sore 🌿"), bukan menebak.
+ * pemanggil lalu menyapa TANPA nama ("Selamat sore 🧩"), bukan menebak.
  */
 export function greetingNameOf(name: string | null | undefined): string | null {
   const first = (name ?? '').trim().split(/\s+/)[0] ?? ''
@@ -55,8 +55,6 @@ export function greetingNameOf(name: string | null | undefined): string | null {
 export const HOME_NOTIFICATION_COPY = {
   title: 'Notifikasi',
   emptyTitle: 'Belum ada notifikasi',
-  emptyBody:
-    'Pengingat tagihan, rekap mingguan, dan info paketmu bakal muncul di sini. Kamu bisa atur jenisnya kapan aja.',
   settingsLink: 'Atur notifikasi',
   settingsHref: '/settings/notifications',
   closeLabel: 'Tutup panel notifikasi',
@@ -91,20 +89,33 @@ export const HOME_NOTIFICATION_COPY = {
  */
 export const HOME_GOALS_COPY = {
   title: 'Tabungan Impian',
-  /** tombol `+` di kepala kartu → membuka sheet "Tanam Celengan Baru" di /budget */
-  addLabel: 'Tanam celengan baru',
+  /** tombol `+` di kepala kartu → membuka sheet "Celengan Baru" di /budget */
+  addLabel: 'Mulai celengan baru',
   /** label baris nominal di dalam hero */
   savedLabel: 'Terkumpul',
-  targetLabel: 'Target',
-  /** badge tahap tanaman di dalam hero — "Tahap 2 · Tunas" */
-  stageBadge: (stage: number, stageName: string) => `Tahap ${stage} · ${stageName}`,
+  /** kata sambung sebelum TARGET — konteks satu baris: "dari Rp 30.000.000".
+   *  Revisi pemilik produk: label "Target" yang berdiri sebagai baris kedua
+   *  DIHAPUS; target cukup disebut sekali sebagai pembanding angka utama. */
+  targetPrefix: 'dari',
+  /* Catatan revisi: `stageBadge` ("Tahap 2 · Setengah jalan") DICABUT dari
+     kartu Tabungan Impian atas permintaan pemilik produk — tahapnya sudah
+     terbaca dari bar 4 segmen di bawahnya, dan badge itu mengulang hal yang
+     sama dengan papan puzzle di kartu sebelah. */
   /** kalimat penyemangat hero saat celengannya sudah PENUH (tanpa angka, jadi
    *  tidak ikut disensor). Tahap 1–3 tidak lagi punya kalimat penyemangat —
    *  permintaan pemilik produk (dashboard 66): teks berulang di setiap kartu
-   *  dikurangi, dan batang tumbuh 4 tahap sudah bercerita sendiri. */
-  heroBlurbBloom: 'Sudah berbunga! Tanaman ini tumbuh dari konsistensi setoranmu 🌸',
+   *  dikurangi, dan bar progres 4 tahap sudah bercerita sendiri. */
+  heroBlurbBloom: 'Puzzle-nya lengkap! Semua kepingan tersusun dari konsistensi setoranmu 🧩',
   /** judul kecil di atas baris mini — sekaligus menyebut jumlahnya apa adanya */
   restTitle: (count: number) => `${count} celengan lain`,
+  /** tautan penutup kartu ke daftar lengkap (`/budget`). Ditambahkan saat kartu
+   *  ini dipasangkan dengan tetangga yang lebih tinggi: baris ini menutup dasar
+   *  kartu sehingga tidak ada ruang kosong menggantung. */
+  seeAll: 'Lihat semua celengan',
+  /** baris pendukung: kewajiban setoran bulanan celengan hero */
+  monthlySetAside: 'Setoran bulan ini',
+  /** satuan setelah nominal — "Rp 1.000.000/bulan" */
+  perMonth: 'bulan',
   /** aria-label panah hero & baris mini; dua-duanya membuka `/budget/<id>`
    *  celengan itu, jadi kalimatnya satu bentuk (jelas tujuan + nama celengan) */
   openDetail: (name: string) => `Buka celengan ${name} di halaman Budget`,
@@ -115,7 +126,7 @@ export const HOME_GOALS_COPY = {
   emptyTitle: 'Belum ada celengan',
   emptyCta: 'Buat celengan',
   /** H2-3 (audit UI/UX): tiga contoh celengan populer sebagai placeholder yang
-   *  BISA DITAP. Tiap chip menautkan ke sheet "Tanam Celengan Baru" (jalur yang
+   *  BISA DITAP. Tiap chip menautkan ke sheet "Buat Celengan Baru" (jalur yang
    *  sama), dan IKONNYA digambar komponen dari `id` ini (Lucide, bukan emoji:
    *  `GOAL_IDEA_ICON` di `my-goals-card.tsx`) — jadi data ini bebas emoji. */
   emptyPopular: [
@@ -126,7 +137,7 @@ export const HOME_GOALS_COPY = {
 } as const
 
 /**
- * Widget "Tanamanmu" di Home — kaki "menuju tahap berikutnya".
+ * Kartu "Puzzle kamu" di Home — kaki "menuju tahap berikutnya".
  *
  * Sejak paket 30 baris ini menyebut CELENGAN YANG SAMA dengan kartu Tabungan
  * Impian (`heroFundOf()`), bukan mock tampilan kedua yang persennya ditulis
@@ -137,20 +148,20 @@ export const HOME_GOALS_COPY = {
  * menyatakan hal yang sama tanpa satu kalimat pengulang di setiap kunjungan.
  */
 export const HOME_PLANT_COPY = {
-  /** kaki kartu: jarak ke tahap tanaman berikutnya (tahap 1–3) */
-  nextStage: (stage: number, stageName: string) => `Menuju tahap ${stage} - ${stageName}`,
+  /** kaki kartu: tahap berikutnya (tahap 1–3) — "Menuju" supaya jelas ini tujuan */
+  nextStage: (stage: number, stageName: string) => `Menuju tahap ${stage} · ${stageName}`,
   /** tahap 4 tidak punya "tahap berikutnya" — jangan tulis "menuju tahap 4" */
-  lastStage: 'Tahap terakhir · menuju target tercapai',
+  lastStage: 'Semua keping terpasang · menuju target tercapai',
   /** pct sudah 100: tidak ada lagi yang dikejar, dan itu boleh dirayakan */
   targetReached: 'Target celengan ini tercapai 🎉',
-  /* ── MODAL DETAIL TANAMAN (paket 58) ──────────────────────────────────────
+  /* ── MODAL DETAIL PUZZLE (paket 58) ──────────────────────────────────────
      Label ini dulu ditulis langsung di `plant-detail-modal.tsx`; dipindah ke
      sini supaya copy user-facing tetap satu pintu (§8). Saat belum ada
      aktivitas, modal tidak menulis "0 hari" — ia menyebut apa adanya
-     "Belum ada aktivitas", karena tanamannya belum pernah disiram. */
-  detailTitle: 'Tanamanmu 🌿',
-  hpLabel: 'Kesehatan tanaman',
-  hpTitle: (pct: number) => `Kesehatan tanaman ${pct}%`,
+     "Belum ada aktivitas". */
+  detailTitle: 'Puzzle kamu 🧩',
+  hpLabel: 'Kepingan terpasang',
+  hpTitle: (pct: number) => `Progres puzzle ${pct}%`,
   activeDaysLabel: 'Hari aktif bulan ini',
   activeDaysValue: (days: number) => `${days} hari`,
   activeEmptyValue: 'Belum ada aktivitas',
@@ -185,7 +196,7 @@ export const HOME_INCOME_COPY = {
   noBaseline: '-',
   /** keadaan kosong jujur — bukan angka contoh */
   emptyTitle: 'Belum ada pemasukan bulan ini',
-  emptyHint: 'Catat pemasukan biar grafiknya kebaca 🌱',
+  emptyHint: 'Catat pemasukan biar grafiknya kebaca 🧩',
 } as const
 
 /**
@@ -205,9 +216,9 @@ export const OVERVIEW_PANEL_COPY = {
 } as const
 
 /**
- * Chip ringkas di header Home (paket 44 / 64) — menggantikan baris teks
- * "Dompet Pribadi: Rp X · Total Saldo = semua dompet" yang terlalu bertele-tele
- * dan dipindahkan/dipangkas di paket 64: yang penting di header cuma DUA fakta
+ * Chip ringkas di header Home (paket 44 / 64) — menggantikan baris rumus
+ * dompet-pribadi-dan-total yang terlalu bertele-tele dan dipangkas di paket 64:
+ * yang penting di header cuma DUA fakta
  * ringan (jumlah dompet & jumlah transaksi), dan keduanya kini duduk rapi di
  * TENGAH, tepat di bawah Context Switcher.
  *
@@ -215,25 +226,15 @@ export const OVERVIEW_PANEL_COPY = {
  *   · **Total Saldo = SELURUH dompet** (`cashTotal()` di `lib/money/store.ts`),
  *     tidak pernah ikut mengecil saat konteks uang aktif;
  *   · chip dompet di header juga menghitung semua dompet — bukan yang tersaring;
- *   · penegas cakupan ("Total Saldo = semua dompet") tidak lagi ditulis di layar
- *     karena label "Total Saldo" sudah muncul di kartu dompet & panel Overview —
- *     mengulangnya di header cuma menambah teks tanpa menambah pengertian.
+ *   · penegas cakupan total saldo tidak lagi ditulis di layar karena label
+ *     "Total Saldo" sudah muncul di kartu dompet & panel Overview — mengulangnya
+ *     di header cuma menambah teks tanpa menambah pengertian.
  */
 export const HOME_TOTAL_COPY = {
   /** chip di header: SELALU jumlah seluruh dompet (konteks tidak menyaringnya) */
   walletsChip: (count: number) => `${count} dompet`,
   /** chip kedua: jumlah catatan transaksi yang tampil di ringkasan */
   transactionsChip: (count: number) => `${count} transaksi`,
-  /**
-   * Baris kecil "Dompet Pribadi: Rp 1.800.000" — sejak paket 64 TIDAK LAGI
-   * dipakai di header Dashboard (terlalu bertele-tele untuk header). Definisi
-   * tetap dipertahankan karena halaman Dompet & Akun memakainya di hero-nya
-   * untuk keperluan yang sama: menjelaskan SUBTOTAL konteks, supaya user tidak
-   * menyimpulkan totalnya salah. Satu definisi ⇒ kalimatnya tidak bercabang.
-   */
-  contextLine: (contextLabel: string, amount: string) => `Dompet ${contextLabel}: ${amount}`,
-  /** penegas cakupan — dibaca berdampingan dengan baris konteks di atas */
-  scopeNote: 'Total Saldo = semua dompet',
 } as const
 
 /** Copy tombol & baris keadaan kosong kartu dompet Home (paket 58 — 58.7).
@@ -242,15 +243,15 @@ export const HOME_TOTAL_COPY = {
 export const HOME_WALLET_STACK_COPY = {
   addTitle: 'Tambah Dompet',
   addSubtitle: 'Bank, e-wallet, atau tunai',
-  emptyLine: 'Belum ada dompet, tambah satu dulu biar saldomu kebaca 🌱',
+  emptyLine: 'Belum ada dompet, tambah satu dulu biar saldomu kebaca 🧩',
 } as const
 
 /** Copy slot nudge AI Coach di Home (paket 58 — 58.4). Dipindah dari JSX
  *  `daily-nudge.tsx`; pemicunya kini data nyata: "belum ada catatan hari ini"
  *  dibaca dari ledger, bukan konstanta. */
 export const HOME_NUDGE_COPY = {
-  coachLabel: 'AI Coach',
-  title: 'Hari ini belum ada catatan nih 🌿',
+  coachLabel: 'Minca',
+  title: 'Hari ini belum ada catatan nih 🧩',
   cta: 'Catat sekarang',
   dismissLabel: 'Tutup pengingat hari ini',
 } as const

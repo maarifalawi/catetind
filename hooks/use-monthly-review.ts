@@ -1,15 +1,20 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
+  buildMonthlyRecap,
   monthKeyOf,
+  previousMonthKey,
   readMonthlyReviewState,
+  readSavedTargetFor,
   shouldShowMonthlyReview,
   todayIso,
   writeMonthlyReviewMarker,
   writeSavedTarget,
+  type MonthlyRecap,
   type SavedMonthlyTarget,
 } from '@/lib/data/monthly-review'
+import { recordedTransactions, useMoneyStore } from '@/lib/money/store'
 
 /**
  * Trigger + penyimpanan Monthly Review & Target Setup (inventaris #i).
@@ -37,6 +42,12 @@ export function useMonthlyReview({
    */
   auto = true,
 }: { auto?: boolean } = {}) {
+  /* Catatan NYATA dari store uang — sumber recap bulan lalu. Dulu recap memakai
+     12 transaksi contoh Agustus 2026 yang tampil untuk semua akun; sekarang
+     angkanya hanya bisa berasal dari catatan user sendiri. */
+  const snapshot = useMoneyStore()
+  const recorded = useMemo(() => recordedTransactions(snapshot), [snapshot])
+
   const [open, setOpen] = useState(false)
   /** target terakhir yang tersimpan (bulan mana pun — pembandingnya `monthKey`) */
   const [saved, setSaved] = useState<SavedMonthlyTarget | null>(null)
@@ -45,15 +56,28 @@ export function useMonthlyReview({
   /** true setelah penanda dibaca — dipakai kartu Target (Home & /history) supaya
    *  nominalnya tidak berkedip dari "belum ada" ke angka tersimpan */
   const [ready, setReady] = useState(false)
+  /** recap bulan LALU dari catatan nyata; label kosong hanya di render pertama
+   *  (modal belum terbuka), lalu diisi efek di bawah */
+  const [recap, setRecap] = useState<MonthlyRecap>(() => buildMonthlyRecap([], 0, ''))
 
   useEffect(() => {
     const iso = todayIso()
     const key = monthKeyOf(iso)
     const state = readMonthlyReviewState(key)
-
+    const prevKey = previousMonthKey(key)
     setMonthKey(key)
     setSaved(state.saved)
     setReady(true)
+    /* Hitung recap SEKALI di sini supaya frame pertama saat modal auto-terbuka
+       (tanggal 1–3) sudah menyebut bulan yang benar. Efek di bawah menjaganya
+       tetap segar saat store uang selesai hidrasi / catatan berubah. */
+    setRecap(
+      buildMonthlyRecap(
+        recorded.filter((tx) => tx.date.startsWith(prevKey)),
+        readSavedTargetFor(prevKey)?.amount ?? 0,
+        prevKey,
+      ),
+    )
 
     /* `closed` bulan ini → jangan muncul lagi; `undefined` = belum pernah dibuka.
        `auto: false` (mis. /history) melewati pemeriksaan ini sepenuhnya: modalnya
@@ -63,6 +87,19 @@ export function useMonthlyReview({
        kunjungan halaman, dan `auto` milik konsumen tidak berubah saat runtime */
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  /* Recap dihitung ulang setiap store uang berubah (hidrasi awal, catatan baru,
+     edit, hapus). Bulan yang direkap = bulan SEBELUM bulan berjalan; targetnya
+     dibaca dari riwayat target (`readSavedTargetFor`), bukan dari satu nilai
+     terakhir — supaya target bulan lalu tetap benar setelah user menyimpan
+     target bulan ini. */
+  useEffect(() => {
+    if (!monthKey) return
+    const prevKey = previousMonthKey(monthKey)
+    const prevTxs = recorded.filter((tx) => tx.date.startsWith(prevKey))
+    const prevTarget = readSavedTargetFor(prevKey)?.amount ?? 0
+    setRecap(buildMonthlyRecap(prevTxs, prevTarget, prevKey))
+  }, [monthKey, recorded])
 
   /** pintu masuk manual: kartu Target di Home */
   const openModal = useCallback(() => setOpen(true), [])
@@ -94,5 +131,5 @@ export function useMonthlyReview({
   /** true = target yang tersimpan memang milik bulan yang sedang berjalan */
   const savedThisMonth = saved !== null && monthKey !== '' && saved.month === monthKey
 
-  return { open, saved, savedThisMonth, monthKey, ready, openModal, close, saveTarget }
+  return { open, saved, savedThisMonth, monthKey, ready, recap, openModal, close, saveTarget }
 }

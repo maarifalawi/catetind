@@ -28,9 +28,6 @@ export function matchesDeleteKeyword(value: string): boolean {
 
 export const RETENTION_POLICY = {
   title: 'Apa yang terjadi saat dihapus',
-  /* AUDIT "CLEAN UI" (paket 63): summary dulu dua kalimat; cukup satu baris.
-     Detail tiap poin pindah ke balik disclosure di panel (InfoNote). */
-  summary: 'Semua data di perangkat ini dihapus, dan nggak ada salinan di tempat lain.',
   detailLabel: 'Detail',
   points: [
     {
@@ -57,9 +54,14 @@ export const RETENTION_POLICY = {
 } as const
 
 export const DELETE_ACCOUNT_COPY = {
-  /* kartu di panel Keamanan & Privasi */
+  /* kartu di panel Keamanan & Privasi
+   *  `cardBody` DIHAPUS (revisi pemilik repo): kalimat "Menghapus SEMUA datamu di
+   *  perangkat ini. Nggak bisa dibatalkan." hanya mengulang judul kartu ("Hapus
+   *  Akun"), tombolnya (`Hapus Akun Saya`), dan daftar 4 poin retensi tepat di
+   *  atasnya. Konsekuensinya tetap disampaikan lengkap — dan di tempat yang lebih
+   *  tepat — oleh dua lapis dialog konfirmasi di bawah (tulis `HAPUS AKUN`, lalu
+   *  konfirmasi terakhir). */
   cardTitle: 'Hapus Akun',
-  cardBody: 'Menghapus SEMUA datamu di perangkat ini. Nggak bisa dibatalkan.',
   cardCta: 'Hapus Akun Saya',
   /* lapis 1 — penjelasan + tulis kata kunci */
   dialogOneTitle: 'Hapus semua data di perangkat ini?',
@@ -101,9 +103,7 @@ export const DELETE_ACCOUNT_COPY = {
    paling gampang diperiksa user (inbox-nya kosong). */
 
 export const EXPORT_DATA_COPY = {
-  eyebrow: 'Export Data',
   title: 'Export Data Saya',
-  desc: 'Unduh seluruh catatanmu sebagai satu file JSON.',
   cardTitle: 'Isi filenya apa saja?',
   includes: [
     'Dompet & saldo',

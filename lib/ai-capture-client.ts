@@ -18,6 +18,7 @@
    bundel klien. */
 
 import { AI_CAPTURE_COPY } from './ai-chat'
+import { localISODate } from './time'
 import type { CaptureSource, ExtractedTransaction } from './transaction-ai'
 
 /** batas sisi terpanjang foto struk setelah dinormalkan (piksel) */
@@ -156,7 +157,15 @@ export async function requestTextTransaction(
     const res = await fetch('/api/parse-voice', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ transcript, source }),
+      body: JSON.stringify({
+        transcript,
+        source,
+        /* TANGGAL LOKAL PERANGKAT ikut dikirim: route berjalan di server (UTC),
+           jadi tanpa ini "hari ini" bisa meleset satu hari untuk WIB/WITA/WIT
+           pada jam 00:00–07:00 — dan catatan yang dibuat pagi hari akan
+           bertanggal kemarin. */
+        today: localISODate(),
+      }),
       signal,
     })
     const payload: unknown = res.ok ? await res.json() : null

@@ -1,84 +1,141 @@
 'use client'
 
+import { useMemo, useState } from 'react'
+import { Download, Mail } from 'lucide-react'
 import { formatIDR } from '@/lib/data/pricing'
-import type { AdminRevenueBlock, AdminSnapshot } from '@/lib/admin/types'
+import type { AdminRevenueBlock, AdminSnapshot, AdminUserRow } from '@/lib/admin/types'
 import {
   AdminBar,
+  AdminEmpty,
   AdminList,
   AdminListRow,
   AdminMeta,
+  AdminPill,
   AdminSection,
-  daysLabel,
+  AdminStat,
   formatDate,
+  formatMonth,
   formatNumber,
   formatPercent,
 } from './admin-ui'
 
-/* ── TAB RINGKASAN: SATU LAYAR, EMPAT KEPUTUSAN ──────────────────────────────
-   Yang ingin dijawab layar ini cuma empat, dan urutannya mengikuti uang:
+/* ── TAB RINGKASAN: UANG, USER, PAKET, DAN SIAPA YANG BELUM BAYAR ────────────
+   Permintaan pemilik produk: "dashboard admin lebih ke berapa pendapatan sama
+   total user aja, sama pembagian dia subs paket apa". Jadi tab ini hanya
+   menjawab empat hal, berurutan sesuai kepentingan bisnis:
 
-     1. Uang masuk       → dari mana pendapatannya (paket vs kuota AI);
-     2. Paket aktif      → bauran pelanggan;
-     3. Corong & Fitur   → di mana orang berhenti / fitur mana yang dipakai;
-     4. Perlu perhatian  → paket yang mau habis / baru habis.
+     1. PENDAPATAN      → total, bulan ini, hari ini (+ rincian paket vs AI);
+     2. TOTAL USER      → terdaftar, berlangganan, belum berlangganan;
+     3. PEMBAGIAN PAKET → akun per paket (lifetime vs 30 hari);
+     4. BELUM BERLANGGANAN → daftar EMAIL siap follow-up.
 
-   Tidak ada paragraf penjelas di sini: konteks yang penting hidup sebagai
-   tooltip ⓘ (`note`) dan keterangan satu baris (`AdminMeta`). Semua angka
-   datang dari `snapshot` yang dihitung server (`lib/admin/snapshot.ts`) —
-   komponen ini tidak menghitung ulang apa pun, supaya layar dan CSV tidak
-   pernah berbeda.
+   Corong aktivasi & adopsi fitur DIHAPUS dari tab ini: keduanya bukan angka
+   uang maupun angka pelanggan, dan membuat layar tidak lagi "satu pandang".
+   Datanya tetap hidup di tab User & Pembayaran.
+
+   Semua angka datang dari `snapshot` yang dihitung server
+   (`lib/admin/snapshot.ts`); komponen ini tidak menghitung ulang apa pun,
+   supaya layar dan CSV tidak pernah berbeda.
    ────────────────────────────────────────────────────────────────────────── */
 
-/** tabel uang masuk: sumber uang dipisah, total di kanan (kolom angka rata) */
-function MoneyTable({ revenue }: { revenue: AdminRevenueBlock }) {
-  const rows = [
-    {
-      label: 'Hari ini',
-      plan: revenue.subscription.today,
-      addon: revenue.addon.today,
-      total: revenue.total.today,
-    },
-    {
-      label: 'Bulan ini',
-      plan: revenue.subscription.thisMonth,
-      addon: revenue.addon.thisMonth,
-      total: revenue.total.thisMonth,
-    },
-    {
-      label: 'Total',
-      plan: revenue.subscription.allTime,
-      addon: revenue.addon.allTime,
-      total: revenue.total.allTime,
-    },
-  ]
+/* ── PENDAPATAN: TOTAL, PER BULAN, DAN FILTER BULAN ─────────────────────────
+   Keluhan pemilik produk: tab ini hanya menampilkan "bulan ini", sehingga
+   pertanyaan wajar seperti "pendapatan bulan lalu berapa?" dan "total
+   penjualan sampai sekarang berapa?" tidak bisa dijawab dari layar.
+
+   Sekarang satu panel menjawab ketiganya:
+     · `Semua bulan` (default) → total penjualan sepanjang waktu,
+     · pilih bulan tertentu → angka bulan itu (paket / token AI / transaksi),
+     · tabel riwayat → semua bulan yang punya penjualan, urut terbaru.
+   Angkanya datang dari `revenue.months` yang dihitung server (`snapshot.ts`),
+   jadi filter ini tidak menghitung ulang apa pun di browser. */
+
+const SELECT_STYLE =
+  'rounded-xl bg-cream px-3 py-2 text-[13px] font-semibold text-forest ring-1 ring-soil/[0.12] outline-none transition-colors hover:bg-sage/40 focus-visible:ring-2 focus-visible:ring-forest/30'
+
+function RevenuePanel({ revenue }: { revenue: AdminRevenueBlock }) {
+  const [scope, setScope] = useState<'all' | string>('all')
+  const month = scope === 'all' ? null : (revenue.months.find((row) => row.month === scope) ?? null)
+
+  const plan = month ? month.subscription : revenue.subscription.allTime
+  const addon = month ? month.addon : revenue.addon.allTime
+  const total = month ? month.total : revenue.total.allTime
+  const count = month ? month.settledCount : revenue.settledCount
+  const scopeLabel = month ? formatMonth(month.month) : 'Total penjualan'
 
   return (
     <>
-      <table className="w-full text-[12px] tabular-nums">
+      <div className="grid grid-cols-3 gap-3">
+        <AdminStat
+          label={scopeLabel}
+          value={formatIDR(total)}
+          hint={`${formatNumber(count)} transaksi lunas`}
+        />
+        <AdminStat label="Paket" value={formatIDR(plan)} />
+        <AdminStat label="Token AI" value={formatIDR(addon)} />
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-soil/[0.06] pt-3">
+        <label
+          htmlFor="pendapatan-bulan"
+          className="text-[12px] font-medium uppercase tracking-[0.12em] text-forest-muted"
+        >
+          Filter bulan
+        </label>
+        <select
+          id="pendapatan-bulan"
+          value={scope}
+          onChange={(event) => setScope(event.target.value)}
+          className={SELECT_STYLE}
+        >
+          <option value="all">Semua bulan · {formatIDR(revenue.total.allTime)}</option>
+          {revenue.months.map((row) => (
+            <option key={row.month} value={row.month}>
+              {formatMonth(row.month)} · {formatIDR(row.total)}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <table className="mt-3 w-full text-[13.5px] tabular-nums">
         <thead>
-          <tr className="text-[10px] uppercase tracking-[0.12em] text-forest/40">
-            <th className="pb-1.5 text-left font-medium">&nbsp;</th>
+          <tr className="text-[11.5px] uppercase tracking-[0.12em] text-forest-muted">
+            <th className="pb-1.5 text-left font-medium">Bulan</th>
             <th className="pb-1.5 text-right font-medium">Paket</th>
             <th className="pb-1.5 text-right font-medium">AI</th>
+            <th className="pb-1.5 text-right font-medium">Lunas</th>
             <th className="pb-1.5 text-right font-medium">Total</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-soil/[0.06]">
-          {rows.map((row) => (
-            <tr key={row.label}>
-              <td className="py-1.5 text-forest/60">{row.label}</td>
-              <td className="py-1.5 text-right text-forest/50">{formatIDR(row.plan)}</td>
-              <td className="py-1.5 text-right text-forest/50">{formatIDR(row.addon)}</td>
-              <td className="py-1.5 text-right font-semibold text-forest">
-                {formatIDR(row.total)}
-              </td>
-            </tr>
-          ))}
+          {revenue.months.map((row) => {
+            const active = scope === row.month
+            return (
+              <tr key={row.month} className={active ? 'bg-sage/35' : undefined}>
+                <td className="py-1.5 text-forest-muted">
+                  <button
+                    type="button"
+                    onClick={() => setScope(active ? 'all' : row.month)}
+                    className="text-left font-medium text-forest transition-colors hover:text-forest-soft"
+                    aria-pressed={active}
+                  >
+                    {formatMonth(row.month)}
+                  </button>
+                </td>
+                <td className="py-1.5 text-right text-forest-muted">{formatIDR(row.subscription)}</td>
+                <td className="py-1.5 text-right text-forest-muted">{formatIDR(row.addon)}</td>
+                <td className="py-1.5 text-right text-forest-muted">{formatNumber(row.settledCount)}</td>
+                <td className="py-1.5 text-right font-semibold text-forest">
+                  {formatIDR(row.total)}
+                </td>
+              </tr>
+            )
+          })}
         </tbody>
       </table>
       <AdminMeta className="mt-2">
-        Rata-rata {formatIDR(revenue.averageTransaction)} ·{' '}
-        {formatNumber(revenue.settledCount)} transaksi lunas
+        Rata-rata {formatIDR(revenue.averageTransaction)} · {formatNumber(revenue.settledCount)}{' '}
+        transaksi lunas sepanjang waktu
       </AdminMeta>
     </>
   )
@@ -95,8 +152,8 @@ function PlanMix({ snapshot }: { snapshot: AdminSnapshot }) {
           return (
             <div key={tier.planId}>
               <div className="flex items-baseline justify-between gap-2">
-                <p className="truncate text-[12.5px] font-medium text-forest">{tier.label}</p>
-                <p className="shrink-0 text-[11.5px] tabular-nums text-forest/50">
+                <p className="truncate text-[14px] font-medium text-forest">{tier.label}</p>
+                <p className="shrink-0 text-[13px] tabular-nums text-forest-muted">
                   <span className="font-semibold text-forest">{formatNumber(tier.total)}</span> ·{' '}
                   {formatPercent(share)}
                 </p>
@@ -119,144 +176,132 @@ function PlanMix({ snapshot }: { snapshot: AdminSnapshot }) {
   )
 }
 
-function Funnel({ snapshot }: { snapshot: AdminSnapshot }) {
-  const { stages, biggestDrop } = snapshot.funnel
-  const registered = stages[0]?.count ?? 0
-
-  return (
-    <>
-      <ol className="space-y-2.5">
-        {stages.map((stage, index) => {
-          const width = registered > 0 ? (stage.count / registered) * 100 : 0
-          const leak = biggestDrop?.id === stage.id
-          return (
-            <li key={stage.id}>
-              <div className="flex items-baseline justify-between gap-2">
-                <p className="truncate text-[12.5px] font-medium text-forest">
-                  <span className="mr-1.5 tabular-nums text-forest/30">{index + 1}</span>
-                  {stage.label}
-                </p>
-                <p className="shrink-0 text-[11.5px] tabular-nums text-forest/50">
-                  <span className="font-semibold text-forest">{formatNumber(stage.count)}</span>
-                  {index > 0 && <> · {formatPercent(stage.conversionFromPrevious)}</>}
-                </p>
-              </div>
-              <div className="mt-1">
-                <AdminBar
-                  percent={width}
-                  tone={leak ? 'plum' : index === stages.length - 1 ? 'mint' : 'forest'}
-                  label={`${stage.label}: ${stage.count} akun`}
-                />
-              </div>
-            </li>
-          )
-        })}
-      </ol>
-      {biggestDrop && (
-        <AdminMeta className="mt-2 text-plum-deep">
-          Turun terbesar: {biggestDrop.label} · {formatNumber(biggestDrop.droppedBefore)} berhenti
-        </AdminMeta>
-      )}
-    </>
-  )
-}
-
-function Features({ snapshot }: { snapshot: AdminSnapshot }) {
-  return (
-    <div className="space-y-2.5">
-      {snapshot.featureAdoption.map((feature) => (
-        <div key={feature.id}>
-          <div className="flex items-baseline justify-between gap-2">
-            <p className="truncate text-[12.5px] font-medium text-forest">{feature.label}</p>
-            <p className="shrink-0 text-[11.5px] tabular-nums text-forest/50">
-              <span className="font-semibold text-forest">{formatNumber(feature.users)}</span> ·{' '}
-              {formatPercent(feature.sharePercent)}
-            </p>
-          </div>
-          <div className="mt-1">
-            <AdminBar
-              percent={feature.sharePercent}
-              tone={feature.users > 0 ? 'mint' : 'thistle'}
-              label={`${feature.label}: ${feature.users} akun`}
-            />
-          </div>
-        </div>
-      ))}
-    </div>
-  )
-}
-
 /**
- * Daftar "yang harus disentuh hari ini": paket yang berakhir ≤ 7 hari lagi dan
- * yang baru habis ≤ 14 hari lalu. Digabung, dipotong 5 baris — angka lengkapnya
- * ada di tab Langganan.
+ * Akun TERDAFTAR yang belum punya paket aktif — daftar follow-up.
+ *
+ * Sumbernya `snapshot.users` (dibaca server dari `auth.users` +
+ * `user_subscriptions`), jadi ini email SUNGGUHAN, bukan contoh. Urutannya
+ * pendaftar terbaru dulu: mereka yang paling mungkin masih hangat dihubungi.
  */
-function Attention({ snapshot }: { snapshot: AdminSnapshot }) {
-  const { expiringSoon, expiredRecently } = snapshot.expiryRadar
-  const entries = [
-    ...expiringSoon.map((entry) => ({ entry, expired: false })),
-    ...expiredRecently.map((entry) => ({ entry, expired: true })),
-  ]
-  if (entries.length === 0) return null
+function NonSubscribers({ users }: { users: AdminUserRow[] }) {
+  const pending = useMemo(
+    () =>
+      users
+        .filter((user) => !user.plan.active)
+        .sort(
+          (a, b) =>
+            (Date.parse(b.createdAt ?? '') || 0) - (Date.parse(a.createdAt ?? '') || 0),
+        ),
+    [users],
+  )
 
-  const shown = entries.slice(0, 5)
-  const rest = entries.length - shown.length
+  const emails = pending.map((user) => user.email).filter(Boolean)
 
   return (
     <AdminSection
-      title="Perlu perhatian"
-      note="Paket berakhir ≤ 7 hari lagi atau baru habis ≤ 14 hari lalu."
+      title="Belum berlangganan"
+      note="Semua akun terdaftar yang belum punya paket aktif. Emailnya bisa langsung dipakai untuk follow-up."
+      action={
+        emails.length > 0 ? (
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <a
+              href="/api/admin/export?type=unsubscribed"
+              className="inline-flex items-center gap-1.5 rounded-full bg-cream px-2.5 py-1.5 text-[12.5px] font-semibold text-forest ring-1 ring-soil/[0.08] transition-colors hover:bg-sage/60"
+              title="Unduh daftar email yang belum berlangganan (CSV)"
+            >
+              <Download className="size-3.5" aria-hidden strokeWidth={2} />
+              CSV
+            </a>
+            <a
+              href={`mailto:?bcc=${encodeURIComponent(emails.join(','))}`}
+              className="inline-flex items-center gap-1.5 rounded-full bg-cream px-2.5 py-1.5 text-[12.5px] font-semibold text-forest ring-1 ring-soil/[0.08] transition-colors hover:bg-sage/60"
+            >
+              <Mail className="size-3.5" aria-hidden strokeWidth={2} />
+              Email semua ({formatNumber(emails.length)})
+            </a>
+          </div>
+        ) : null
+      }
     >
-      <AdminList>
-        {shown.map(({ entry, expired }) => (
-          <AdminListRow
-            key={`${entry.userId}-${entry.expiresAt}`}
-            left={entry.name || entry.email || entry.userId}
-            meta={
-              <span className={expired ? 'text-plum-deep' : undefined}>
-                {entry.planLabel} · {daysLabel(entry.daysLeft)}
-              </span>
-            }
-            right={formatDate(entry.expiresAt)}
-          />
-        ))}
-      </AdminList>
-      {rest > 0 && <AdminMeta className="mt-2">+{formatNumber(rest)} lainnya di tab Langganan</AdminMeta>}
+      {pending.length === 0 ? (
+        <AdminEmpty>Semua akun terdaftar sudah berlangganan.</AdminEmpty>
+      ) : (
+        <AdminList className="max-h-[420px] overflow-y-auto">
+          {pending.map((user) => (
+            <AdminListRow
+              key={user.id}
+              left={<span className="font-normal text-forest">{user.email || '—'}</span>}
+              meta={
+                <>
+                  Daftar {formatDate(user.createdAt)} · {formatNumber(user.transactionCount)}{' '}
+                  catatan
+                  {user.onboardingCompleted ? '' : ' · onboarding belum selesai'}
+                </>
+              }
+              right={
+                user.plan.period === null ? (
+                  <AdminPill tone="cantelope">Belum pernah bayar</AdminPill>
+                ) : (
+                  <AdminPill tone="plum">Tidak aktif</AdminPill>
+                )
+              }
+            />
+          ))}
+        </AdminList>
+      )}
     </AdminSection>
   )
 }
 
 export function AdminOverview({ snapshot }: { snapshot: AdminSnapshot }) {
+  const { revenue, users, growth } = snapshot
+  const subscribed = users.filter((user) => user.plan.active).length
+  const notSubscribed = users.length - subscribed
+  const subscribedShare = users.length > 0 ? (subscribed / users.length) * 100 : 0
+
   return (
     <div className="space-y-3">
       <div className="grid gap-3 lg:grid-cols-2">
         <AdminSection
-          title="Uang masuk"
-          note="Hanya transaksi lunas. Paket langganan dan kuota AI dipisah supaya terlihat dari mana uangnya datang."
+          title="Pendapatan"
+          note="Hanya transaksi lunas. Paket langganan dan kuota AI dipisah supaya terlihat dari mana uangnya datang. Pilih bulan di filter untuk melihat pendapatan bulan sebelumnya; tanpa filter, angkanya total sepanjang waktu."
         >
-          <MoneyTable revenue={snapshot.revenue} />
+          <RevenuePanel revenue={revenue} />
         </AdminSection>
+
         <AdminSection
-          title="Paket aktif"
-          note="30 hari = baris prabayar lama; produk yang dijual sekarang hanya akses selamanya. Persentase dari seluruh akun terdaftar."
+          title="Total user"
+          note="Jumlah akun terdaftar (auth.users). Berlangganan = punya paket yang benar-benar aktif sekarang."
         >
-          <PlanMix snapshot={snapshot} />
+          <div className="grid grid-cols-3 gap-3">
+            <AdminStat
+              label="Terdaftar"
+              value={formatNumber(users.length)}
+              hint={`+${formatNumber(growth.users.last30)} / 30 hr`}
+            />
+            <AdminStat
+              label="Berlangganan"
+              value={formatNumber(subscribed)}
+              hint={`${formatPercent(subscribedShare)} dari akun`}
+            />
+            <AdminStat label="Belum" value={formatNumber(notSubscribed)} hint="perlu follow-up" />
+          </div>
+          {snapshot.limits.usersTruncated && (
+            <AdminMeta className="mt-3">
+              Data menyentuh batas baca — angka bisa terpotong.
+            </AdminMeta>
+          )}
         </AdminSection>
       </div>
 
-      <div className="grid gap-3 lg:grid-cols-2">
-        <AdminSection title="Corong aktivasi" note="Berapa akun yang bertahan di setiap langkah.">
-          <Funnel snapshot={snapshot} />
-        </AdminSection>
-        <AdminSection
-          title="Fitur terpakai"
-          note="Jumlah akun yang memakai tiap fitur utama — hitungan aktivitas, bukan isi catatan."
-        >
-          <Features snapshot={snapshot} />
-        </AdminSection>
-      </div>
+      <AdminSection
+        title="Pembagian paket"
+        note="30 hari = baris prabayar lama; produk yang dijual sekarang hanya akses selamanya. Persentase dari seluruh akun terdaftar."
+      >
+        <PlanMix snapshot={snapshot} />
+      </AdminSection>
 
-      <Attention snapshot={snapshot} />
+      <NonSubscribers users={users} />
     </div>
   )
 }

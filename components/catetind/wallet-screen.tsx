@@ -29,8 +29,8 @@ import { AddWalletSheet } from './add-wallet-sheet'
 import { TransferFlow } from './transfer-flow'
 import { usePrivacy } from './privacy-provider'
 import { LockedAmount } from './locked-amount'
+import { BatikCloth } from './batik-cloth'
 import {
-  ContactlessIcon,
   MaskedAmount,
   WALLET_TYPE_LABEL,
   WalletArtDefs,
@@ -521,9 +521,10 @@ export function WalletScreen() {
 
   return (
     <ScreenShell>
-      {/* motif batik muka kartu — definisinya pindah ke wallet-card-face.tsx
-          supaya halaman Dompet Detail memakai motif yang SAMA PERSIS, bukan
-          salinan yang cepat atau lambat berbeda */}
+      {/* DEFINISI CORAK BATIK — dibuat sekali untuk SEMUA muka kartu di halaman
+          ini (kartu ke-1, ke-2, ke-3, … memakai `url(#wallet-art-…)` yang
+          sama). Tanpa blok ini pattern-nya tidak ada di DOM dan kartu tampil
+          polos. */}
       <WalletArtDefs />
       {/* LAYAR PENUH — sengaja TIDAK dibungkus container sempit di tengah.
           Konten dipecah jadi grid 12 kolom dengan ritme yang sama seperti
@@ -569,11 +570,21 @@ export function WalletScreen() {
               "Aset Ditahan" TIDAK lagi di dalam frame ini — semuanya pindah ke
               kartu terang tersendiri di bawah (`xl:col-span-8`). */}
           <section className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-forest-soft via-forest to-evergreen-deep p-5 text-cream shadow-[0_30px_70px_-30px_rgba(0,0,0,0.8)] sm:p-6 xl:col-span-12 xl:p-8">
+            {/* ── KAIN BATIK (revisi 11 Nov 2026) ─────────────────────────────
+                Motif & scrim yang SAMA PERSIS dengan hero /budget lewat
+                `BatikCloth`: kawung di seluruh bidang + sabuk parang di kaki
+                kartu + tepi kain. Sebelumnya hero ini hanya bertekstur titik,
+                jadi terasa datar dibanding kartu dompet di bawahnya.
+                Dua scrim lokal menggelapkan HANYA area label & nominal supaya
+                angka tetap tajam; sisi kanan kartu tetap terbuka untuk motif. */}
+            <BatikCloth id="wallet-hero-batik" />
+            <span aria-hidden className="batik-scrim-title pointer-events-none absolute inset-0" />
+            <span aria-hidden className="batik-scrim-amount pointer-events-none absolute inset-0" />
             {/* ornamen kaca kecil di pojok — menyeimbangkan label di kiri atas
                 tanpa menambah teks */}
             <span
               aria-hidden
-              className="pointer-events-none absolute top-5 right-5 flex size-10 items-center justify-center rounded-full bg-cream/10 text-cream/70 ring-1 ring-inset ring-cream/15 backdrop-blur-sm"
+              className="pointer-events-none absolute top-5 right-5 flex size-10 items-center justify-center rounded-full bg-cream/10 text-cream ring-1 ring-inset ring-cream/15 backdrop-blur-sm"
             >
               <WalletIcon className="size-[18px]" strokeWidth={2} />
             </span>
@@ -595,15 +606,8 @@ export function WalletScreen() {
               aria-hidden
               className="pointer-events-none absolute -bottom-28 -left-20 size-64 rounded-full bg-mint-soft/15 blur-3xl"
             />
-            {/* motif batik kawung sebagai tekstur premium — memudar dari kiri atas
-                supaya nominal di kanan tetap bersih (pattern-nya sama dengan kartu) */}
-            <svg
-              aria-hidden
-              className="absolute inset-0 h-full w-full [mask-image:radial-gradient(120%_120%_at_14%_-12%,black_6%,transparent_68%)]"
-            >
-              <rect width="100%" height="100%" fill="url(#wallet-art-kawung)" />
-            </svg>
-            {/* edge light + tekstur titik supaya muka kartu tidak terasa flat */}
+            {/* edge light supaya muka kartu tidak terasa flat (tekstur titik
+                lama DICABUT — sekarang kain batik yang menjadi teksturnya) */}
             <div
               aria-hidden
               className="pointer-events-none absolute inset-0 rounded-[2rem] ring-1 ring-inset ring-cream/10"
@@ -615,17 +619,13 @@ export function WalletScreen() {
               aria-hidden
               className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-cream/45 to-transparent"
             />
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-0 rounded-[2rem] opacity-[0.05] [background-image:radial-gradient(rgba(255,255,255,0.9)_1px,transparent_1.2px)] [background-size:10px_10px]"
-            />
 
             {/* hero murni nominal: label, angka raksasa, lalu baris konteks */}
             <div className="relative">
               <span
                 className={cn(
                   AMOUNT_LABEL,
-                  'inline-flex items-center gap-2 rounded-full bg-cream/[0.08] px-2.5 py-1.5 text-cream/55 ring-1 ring-inset ring-cream/10',
+                  'inline-flex items-center gap-2 rounded-full bg-cream/[0.08] px-2.5 py-1.5 text-cream-muted ring-1 ring-inset ring-cream/10',
                 )}
               >
                 <span className="relative flex size-1.5">
@@ -645,19 +645,9 @@ export function WalletScreen() {
                 />
               </div>
 
-              {/* Baris "Total Saldo semua dompet · N dompet aktif" DIHAPUS
-                  (permintaan pemilik produk). Cakupan totalnya TETAP dikatakan di
-                  kepala panel "Komposisi" di kartu bawah lewat
-                  `WALLET_TOTAL_COPY.compositionAccounts()`. */}
-              {/* ── BARIS KONTEKS (paket 47) ────────────────────────────────
-                  Persis pola Home: total di atas TIDAK mengecil saat konteks
-                  aktif (kanon #1), sementara daftar kartu & log pindah dana
-                  mengikuti konteks. Nominalnya lewat `money()` supaya tombol
-                  mata tetap berlaku. */}
-              <p className="mt-3 text-[12px] font-medium text-cream/55">
-                {HOME_TOTAL_COPY.contextLine(CONTEXT_LABEL[context], money(contextTotal))}
-                <span className="text-cream/30"> · {HOME_TOTAL_COPY.scopeNote}</span>
-              </p>
+              {/* Baris keterangan konteks DIHAPUS (Operasi Sapu Bersih Teks).
+                  Cakupan total cukup dikatakan sekali di kepala panel
+                  "Komposisi" lewat `WALLET_TOTAL_COPY.compositionAccounts()`. */}
             </div>
           </section>
 
@@ -999,21 +989,14 @@ export function WalletScreen() {
                         <p className="truncate font-display text-[16.5px] font-medium tracking-tight">
                           {wallet.name}
                         </p>
-                        {/* ikon contactless HANYA untuk kartu bank — benda aslinya
-                            (uang kertas & saldo e-wallet) tidak punya RFID */}
-                        {wallet.type === 'Bank' && (
-                          <ContactlessIcon className="size-4 shrink-0 text-cream/55" />
-                        )}
+                        {/* SAPU BERSIH IKON HIASAN (sesi 3): contactless dicabut. */}
                       </div>
-                      {/* nomor akun tersamarkan — HANYA kartu bank yang punya nomor.
-                          e-wallet & tunai tidak dipaksa memakai nomor seri. */}
-                      {wallet.type === 'Bank' && wallet.number && (
-                        <p className="mt-1.5 truncate text-[11.5px] font-medium tracking-[0.2em] text-cream/60 tabular-nums">
-                          {wallet.number}
-                        </p>
-                      )}
+                      {/* PERMUKAAN KARTU BERSIH: nomor akun tersamarkan
+                          (•••• 1234) SENGAJA TIDAK ditampilkan lagi. Kartu
+                          dompet hanya memuat corak batik, nama dompet, jenis,
+                          dan nominal saldo. */}
                       {/* jenis akun sebagai pil kaca, bukan teks polos */}
-                      <span className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-cream/20 px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-[0.1em] text-cream/90 ring-1 ring-inset ring-cream/30 backdrop-blur-[2px]">
+                      <span className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-cream/20 px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-[0.1em] text-cream ring-1 ring-inset ring-cream/30 backdrop-blur-[2px]">
                         <span aria-hidden className="size-1.5 rounded-full bg-cream/70" />
                         {WALLET_TYPE_LABEL[wallet.type]}
                       </span>
@@ -1077,7 +1060,7 @@ export function WalletScreen() {
                         transition={{ duration: 0.7, delay: 0.25 + i * 0.07, ease: EASE }}
                       />
                     </span>
-                    <span className="shrink-0 text-[11px] font-medium tabular-nums text-cream/70">
+                    <span className="shrink-0 text-[11px] font-medium tabular-nums text-cream">
                       {shares[i]}% dari total
                     </span>
                   </div>
@@ -1338,7 +1321,7 @@ function LiquidityPill({
             ? 'bg-cream/70 text-forest'
             : isLiquid
               ? 'bg-mint/25 text-mint'
-              : 'bg-cream/10 text-cream/60',
+              : 'bg-cream/10 text-cream-muted',
         )}
       >
         <Icon className="size-4" strokeWidth={2.4} />
@@ -1350,8 +1333,8 @@ function LiquidityPill({
             light
               ? 'text-forest-muted'
               : isLiquid
-                ? 'text-mint/70'
-                : 'text-cream/45',
+                ? 'text-mint'
+                : 'text-cream-muted',
           )}
         >
           {label}

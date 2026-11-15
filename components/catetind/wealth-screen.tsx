@@ -49,7 +49,6 @@ import {
   DEBT_EDIT_TOAST,
   DELETE_ASSET_TOAST,
   DELETE_DEBT_TOAST,
-  EMPTY_INVESTASI_COPY,
   EMPTY_INVESTASI_CTA,
   EMPTY_INVESTASI_TITLE,
   PRICE_UPDATE_COPY,
@@ -610,19 +609,15 @@ export function WealthScreen() {
             belum ada aset sama sekali, tampilkan kartu onboarding yang
             menjelaskan dengan bahasa "mulai dari yang kecil". */}
         {investments.length === 0 && physicalAssets.length === 0 && (
-          <div className="mt-5 flex flex-col gap-3 rounded-[1.5rem] bg-gradient-to-br from-sage/50 to-cream p-4 ring-1 ring-forest/10 sm:flex-row sm:items-center sm:justify-between lg:mt-6">
+          <div data-catetind-empty className="mt-5 flex flex-col gap-3 rounded-[1.5rem] bg-gradient-to-br from-sage/50 to-cream p-4 ring-1 ring-forest/10 sm:flex-row sm:items-center sm:justify-between lg:mt-6">
             <div className="min-w-0">
               <p className="text-[14px] font-medium text-forest">{WEALTH_ONBOARD_COPY.title}</p>
-              <p className="mt-1 text-[13px] leading-relaxed text-forest/60">
-                {WEALTH_ONBOARD_COPY.body}
-              </p>
             </div>
             <button
               type="button"
               onClick={() => setShowAddInvestment(true)}
               className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-forest px-4 py-2.5 text-[13.5px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-95"
             >
-              <Plus className="size-3.5" strokeWidth={2.8} aria-hidden />
               {WEALTH_ONBOARD_COPY.cta}
             </button>
           </div>
@@ -883,7 +878,7 @@ function WealthPanel({
     <div className="flex h-full flex-col rounded-[2rem] bg-cream p-4 ring-1 ring-soil/12 sm:p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[11.5px] font-medium uppercase tracking-[0.2em] text-forest/40">
+          <p className="text-[11.5px] font-medium uppercase tracking-[0.2em] text-forest-muted">
             {label}
           </p>
           <p className="mt-1.5 truncate font-display text-[1.7rem] font-semibold leading-none tracking-tight text-forest tabular-nums sm:text-[1.95rem]">
@@ -941,7 +936,7 @@ function PanelToggle({
             onClick={() => onChange(option.id)}
             className={cn(
               'relative flex flex-1 items-center justify-center rounded-full px-3 py-2 text-[13.5px] font-medium transition-colors duration-200',
-              isActive ? 'text-cream' : 'text-forest/55 hover:text-forest',
+              isActive ? 'text-cream' : 'text-forest-muted hover:text-forest',
             )}
           >
             {isActive && (
@@ -974,22 +969,18 @@ function EmptyInvestasi({
   contextLine?: string
 }) {
   return (
-    <div className="flex flex-col items-center rounded-[1.75rem] border-2 border-dashed border-forest/15 bg-cream/50 px-6 py-12 text-center">
+    <div data-catetind-empty className="flex flex-col items-center rounded-[1.75rem] border-2 border-dashed border-forest/15 bg-cream/50 px-6 py-12 text-center">
       <span aria-hidden className="text-[30px]">
-        🌱
+        🧩
       </span>
       <h2 className="mt-3 font-display text-[17px] font-semibold tracking-tight text-forest">
         {contextLine ?? EMPTY_INVESTASI_TITLE}
       </h2>
-      <p className="mt-1.5 max-w-sm text-[14px] leading-relaxed text-forest/55">
-        {contextLine ? CONTEXT_EMPTY_COPY.investments.body : EMPTY_INVESTASI_COPY}
-      </p>
       <button
         type="button"
         onClick={onAdd}
         className="mt-5 inline-flex h-11 items-center gap-2 rounded-2xl bg-forest px-5 text-[14.5px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
       >
-        <Plus className="size-4" strokeWidth={2.6} />
         {contextLine ? CONTEXT_EMPTY_COPY.investments.cta : EMPTY_INVESTASI_CTA}
       </button>
     </div>

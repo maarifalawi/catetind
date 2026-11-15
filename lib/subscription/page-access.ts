@@ -67,7 +67,14 @@ export const PAGE_ACCESS: PageAccessRule[] = [
      adalah nilai utama Paket Waras — lihat `PLANS[].features`. */
   { path: '/calendar', label: 'Kalender Cashflow', capability: 'cashflow-calendar' },
   { path: '/wealth', label: 'Kekayaan & Hutang', capability: 'wealth-tracking' },
-  { path: '/joint', label: 'Joint Wallet', capability: 'joint-wallet' },
+  /* `/joint` TIDAK dikunci di lapis halaman. Alasannya produk, bukan teknis:
+     orang yang DIUNDANG (akun gratis) harus selalu bisa membuka halaman ini
+     untuk memasukkan kode undangan. Setelah ia menjadi anggota aktif, seluruh
+     fitur Dompet Bersama terbuka untuknya tanpa membeli paket sendiri —
+     yang berlangganan cukup PEMBUAT dompet. Aksi "Buat Dompet" tetap memakai
+     gerbang `joint-wallet` di dalam halaman (`LockedFeatureNote`), jadi paket
+     gratis tidak mendapat fitur berbayar tanpa undangan. */
+  { path: '/joint', label: 'Joint Wallet', capability: null },
   { path: '/referral', label: 'Ajak Teman', capability: null },
   { path: '/help', label: 'Pusat Bantuan', capability: null },
   { path: '/install', label: 'Panduan Install', capability: null },

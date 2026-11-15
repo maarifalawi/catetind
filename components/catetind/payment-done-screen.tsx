@@ -226,7 +226,7 @@ export function PaymentDoneScreen({ orderId, failed }: { orderId: string | null;
               </p>
             )}
             {state === 'active' && (
-              <p className="mt-3 text-[12.5px] text-forest/45">{PAY_DONE_COPY.autoRedirectNote}</p>
+              <p className="mt-3 text-[12.5px] text-forest-muted">{PAY_DONE_COPY.autoRedirectNote}</p>
             )}
 
             <div className="mt-8 flex flex-col items-center justify-center gap-2 landing-tab:flex-row">

@@ -108,7 +108,7 @@ export function BudgetZoneA({
               <p className="text-[14.5px] font-medium tracking-tight text-forest">
                 {BUDGET_ZONE_A_COPY.sweepTitle}
               </p>
-              <p className="mt-1 text-[13px] leading-relaxed text-forest/55">
+              <p className="mt-1 text-[13px] leading-relaxed text-forest-muted">
                 {BUDGET_ZONE_A_COPY.sweepLead}{' '}
                 <b className="font-semibold text-forest tabular-nums">
                   {maskNominal(sweepTotal, masked)}
@@ -156,7 +156,7 @@ export function BudgetZoneA({
                   <span
                     className={cn(
                       'relative z-10',
-                      active ? 'text-cream' : 'text-forest/50 hover:text-forest',
+                      active ? 'text-cream' : 'text-forest-muted hover:text-forest',
                     )}
                   >
                     {tab.label}
@@ -170,18 +170,18 @@ export function BudgetZoneA({
             <div className="mt-4 rounded-2xl bg-sage/25 p-3.5 ring-1 ring-soil/[0.04]">
               <div className="flex items-center gap-4">
                 <div className="min-w-0 flex-1">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-forest/40">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-forest-muted">
                     {BUDGET_ZONE_A_COPY.summaryLead}
                   </p>
                   <p className="mt-1.5 flex items-baseline gap-1.5 tabular-nums">
                     <span className="text-[24px] font-semibold leading-none tracking-tight text-forest">
                       {maskNominal(totals.spent, masked)}
                     </span>
-                    <span className="text-[12px] font-medium text-forest/35">
+                    <span className="text-[12px] font-medium text-forest-muted">
                       / {maskNominal(totals.limit, masked)}
                     </span>
                   </p>
-                  <p className="mt-1.5 text-[11.5px] font-medium text-forest/40">
+                  <p className="mt-1.5 text-[11.5px] font-medium text-forest-muted">
                     {window.rangeLabel}
                   </p>
                 </div>
@@ -206,13 +206,8 @@ export function BudgetZoneA({
         </div>
 
         {budgets.length === 0 ? (
-          <div className="border-t border-soil/8 px-5 py-9 text-center">
-            <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-sage/50 text-[22px]">
-              ☕
-            </span>
-            <p className="mx-auto mt-3 max-w-[19rem] text-[13.5px] leading-relaxed text-forest/55">
-              {BUDGET_ZONE_A_COPY.emptyBody}
-            </p>
+          <div data-catetind-empty className="flex flex-col items-center border-t border-soil/8 px-5 py-7 text-center">
+            <p className="text-[13.5px] font-medium text-forest">{BUDGET_ZONE_A_COPY.emptyTitle}</p>
           </div>
         ) : (
           <div className="divide-y divide-soil/8 border-t border-soil/8 px-4">
@@ -261,7 +256,7 @@ export function BudgetZoneA({
           satu-satunya sinyal "perlu perhatian" di Zona A. */}
       {overBudget.length > 0 && (
         <div className="flex flex-col gap-3 rounded-[1.5rem] bg-plum/[0.06] p-4 ring-1 ring-plum/15 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-[13.5px] leading-relaxed text-forest/65">
+          <p className="text-[13.5px] leading-relaxed text-forest-soft">
             {BUDGET_ZONE_A_COPY.overLead(overBudget.length, overBudget[0].category)}
           </p>
           <button
@@ -284,10 +279,10 @@ export function BudgetZoneA({
             <Lightbulb className="size-4" strokeWidth={2.2} aria-hidden />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-forest/40">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-forest-muted">
               {BUDGET_SUGGEST_COPY.title}
             </p>
-            <p className="mt-1 text-[13.5px] leading-relaxed text-forest/65">
+            <p className="mt-1 text-[13.5px] leading-relaxed text-forest-soft">
               {BUDGET_SUGGEST_COPY.body(suggestion.category)}
             </p>
             <button

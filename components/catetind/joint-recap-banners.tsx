@@ -55,7 +55,7 @@ export function JointPushBanner({
               <span className="rounded-full bg-hud-amber/25 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-hud-terracotta">
                 Push
               </span>
-              <span className="text-[11.5px] font-medium text-forest/40">Pengeluaran besar</span>
+              <span className="text-[11.5px] font-medium text-forest-muted">Pengeluaran besar</span>
             </p>
             <p className="mt-1 text-[14px] font-medium leading-snug text-forest">
               {who.avatar} {who.name} barusan catat {tx.description}{' '}
@@ -75,7 +75,7 @@ export function JointPushBanner({
             type="button"
             onClick={onDismiss}
             aria-label="Tutup notifikasi"
-            className="flex size-7 shrink-0 items-center justify-center rounded-full text-forest/35 transition-colors hover:bg-soil/[0.11] hover:text-forest/60"
+            className="flex size-7 shrink-0 items-center justify-center rounded-full text-forest-muted transition-colors hover:bg-soil/[0.11] hover:text-forest-muted"
           >
             <X className="size-3.5" strokeWidth={2.4} />
           </button>

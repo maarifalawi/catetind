@@ -81,7 +81,7 @@ function SyncButton({
       aria-label={label}
     >
       <RefreshCw
-        className={cn('size-3', busy === orderId && 'animate-spin')}
+        className={cn('size-3.5', busy === orderId && 'animate-spin')}
         aria-hidden
         strokeWidth={1.8}
       />
@@ -139,7 +139,7 @@ export function AdminPaymentsTable({
   return (
     <div className="space-y-3">
       <AdminSection>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-5 sm:grid-cols-4">
           <AdminStat
             label="Lunas"
             value={formatNumber(summary.settledCount)}
@@ -166,7 +166,7 @@ export function AdminPaymentsTable({
             {summary.byMethod.slice(0, 6).map((method) => (
               <span
                 key={method.method}
-                className="inline-flex items-center gap-1 rounded-full bg-sage/50 px-2 py-0.5 text-[10.5px] tabular-nums text-forest/60"
+                className="inline-flex items-center gap-1 rounded-full bg-sage/50 px-2 py-0.5 text-[12px] tabular-nums text-forest-muted"
                 title={formatIDR(method.amount)}
               >
                 {method.label}
@@ -188,9 +188,9 @@ export function AdminPaymentsTable({
                 {mismatches.slice(0, 5).map((entry) => (
                   <li key={entry.userId} className="py-2">
                     <div className="flex items-baseline justify-between gap-2">
-                      <p className="flex min-w-0 items-center gap-1.5 text-[12.5px] font-medium text-forest">
+                      <p className="flex min-w-0 items-center gap-1.5 text-[14px] font-medium text-forest">
                         <AlertTriangle
-                          className="size-3 shrink-0 text-plum"
+                          className="size-3.5 shrink-0 text-plum"
                           aria-hidden
                           strokeWidth={2}
                         />
@@ -199,7 +199,7 @@ export function AdminPaymentsTable({
                       <AdminPill tone="plum">{entry.reason}</AdminPill>
                     </div>
                     <p
-                      className="mt-0.5 truncate text-[10.5px] tabular-nums text-forest/45"
+                      className="mt-0.5 truncate text-[12px] tabular-nums text-forest-muted"
                       title={entry.detail}
                     >
                       {entry.orderId} · dibayar {formatDateTime(entry.paidAt)}
@@ -211,7 +211,7 @@ export function AdminPaymentsTable({
                         onClick={() => void repair(entry.userId)}
                         className={ADMIN_PRIMARY_BUTTON}
                       >
-                        <Wrench className="size-3" aria-hidden strokeWidth={2} />
+                        <Wrench className="size-3.5" aria-hidden strokeWidth={2} />
                         {busy === `repair-${entry.userId}` ? 'Memperbaiki…' : 'Perbaiki'}
                       </button>
                       <SyncButton orderId={entry.orderId} busy={busy} onRun={(id) => void sync(id)} />
@@ -239,10 +239,10 @@ export function AdminPaymentsTable({
                     className="flex items-center justify-between gap-2 py-2"
                   >
                     <div className="min-w-0">
-                      <p className="truncate text-[12.5px] font-medium text-forest">
+                      <p className="truncate text-[14px] font-medium text-forest">
                         {entry.name || entry.email || entry.userId}
                       </p>
-                      <p className="truncate text-[10.5px] tabular-nums text-forest/45">
+                      <p className="truncate text-[12px] tabular-nums text-forest-muted">
                         {formatIDR(entry.amount)} · {entry.status} · {formatDateTime(entry.createdAt)}
                       </p>
                     </div>
@@ -275,17 +275,17 @@ export function AdminPaymentsTable({
                 onClick={() => setFilter(item.id)}
                 aria-pressed={active}
                 className={cn(
-                  'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors',
+                  'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12.5px] font-medium transition-colors',
                   active
                     ? 'bg-forest text-cream'
-                    : 'bg-sage/50 text-forest/60 hover:bg-sage hover:text-forest',
+                    : 'bg-sage/50 text-forest-muted hover:bg-sage hover:text-forest',
                 )}
               >
                 {item.label}
                 <span
                   className={cn(
-                    'text-[10px] tabular-nums',
-                    active ? 'text-cream/70' : 'text-forest/35',
+                    'text-[11.5px] tabular-nums',
+                    active ? 'text-cream' : 'text-forest-muted',
                   )}
                 >
                   {formatNumber(count)}
@@ -304,9 +304,9 @@ export function AdminPaymentsTable({
           </div>
         ) : (
           <div className="-mx-1 mt-2 overflow-x-auto px-1">
-            <table className="w-full min-w-[680px] border-separate border-spacing-y-1 text-left">
+            <table className="w-full min-w-[760px] border-separate border-spacing-y-1 text-left">
               <thead>
-                <tr className="text-[10px] uppercase tracking-[0.12em] text-forest/40">
+                <tr className="text-[11.5px] uppercase tracking-[0.12em] text-forest-muted">
                   <th className="px-2 pb-1 font-medium">User</th>
                   <th className="px-2 pb-1 font-medium">Tanggal</th>
                   <th className="px-2 pb-1 font-medium">Status</th>
@@ -319,27 +319,27 @@ export function AdminPaymentsTable({
               <tbody>
                 {shown.map((payment) => (
                   <tr key={payment.orderId} className="bg-sage/25 align-top">
-                    <td className="max-w-[240px] rounded-l-xl px-2 py-2">
-                      <p className="truncate text-[12.5px] font-medium text-forest">
+                    <td className="max-w-[300px] rounded-l-xl px-2.5 py-2.5">
+                      <p className="truncate text-[14px] font-medium text-forest">
                         {payment.name || 'Tanpa nama'}
                       </p>
-                      <p className="truncate text-[10.5px] text-forest/45">{payment.email || '—'}</p>
+                      <p className="truncate text-[12px] text-forest-muted">{payment.email || '—'}</p>
                     </td>
-                    <td className="px-2 py-2 text-[11.5px] tabular-nums text-forest/55">
+                    <td className="px-2.5 py-2.5 text-[13px] tabular-nums text-forest-muted">
                       {formatDateTime(payment.paidAt ?? payment.createdAt)}
                     </td>
-                    <td className="px-2 py-2" title={payment.status}>
+                    <td className="px-2.5 py-2.5" title={payment.status}>
                       {statusPill(payment.status)}
                     </td>
-                    <td className="px-2 py-2 text-right">
-                      <p className="text-[12px] font-semibold tabular-nums text-forest">
+                    <td className="px-2.5 py-2.5 text-right">
+                      <p className="text-[13.5px] font-semibold tabular-nums text-forest">
                         {formatIDR(payment.amount)}
                       </p>
-                      <p className="truncate text-[10.5px] text-forest/45">
+                      <p className="truncate text-[12px] text-forest-muted">
                         {purposeLabel(payment)} · {payment.methodLabel}
                       </p>
                     </td>
-                    <td className="rounded-r-xl px-2 py-2 text-right">
+                    <td className="rounded-r-xl px-2.5 py-2.5 text-right">
                       <SyncButton
                         orderId={payment.orderId}
                         busy={busy}

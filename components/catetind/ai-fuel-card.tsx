@@ -5,14 +5,13 @@ import { ArrowRight, Lock } from 'lucide-react'
 import {
   AI_FUEL_COPY,
   AI_QUOTA_EXHAUSTED_COPY,
-  AI_QUOTA_RESET_FALLBACK,
   AI_UNLIMITED_BADGE,
+  formatTokens,
   planQuota,
 } from '@/lib/ai-quota'
 import { capabilityUnlockedBy, formatIDR } from '@/lib/data/pricing'
 import { capabilityUpgradeOffer, nextTier, upgradeHighlights } from '@/lib/data/upgrade'
 import { useAiQuota } from '@/hooks/use-ai-quota'
-import { useAiQuotaReset } from '@/hooks/use-ai-quota-reset'
 import { useSubscriptionGate } from './subscription-gate-provider'
 import { useUpgradeGate } from './upgrade-gate-provider'
 import { NavTooltip } from './nav-tooltip'
@@ -25,7 +24,7 @@ import { NavTooltip } from './nav-tooltip'
     2. ANGKA  → satu nilai besar: "23% sisa" (atau "Tanpa batas").
     3. MAKNA  → terjemahan angkanya, satu baris: "≈ 718 catatan AI lagi".
     4. GARIS  → satu hairline 3px, tanpa kilau.
-    5. EKOR   → voice + reset dalam SATU baris kecil, tanpa ikon.
+    5. EKOR   → voice + aturan kuota dalam SATU baris kecil, tanpa ikon.
 
    Yang sengaja TIDAK ada di kartu ini: paragraf fair-use, rincian token mentah,
    dan tautan "Top up" terpisah — SELURUH kartu sudah menuju /settings/billing,
@@ -40,26 +39,70 @@ export function AiFuelCard({ collapsed }: { collapsed: boolean }) {
      dan angkanya BENAR-BENAR turun setiap kali user memakai AI. */
   const quota = useAiQuota()
   const recordsLeft = quota.recordsLeft
-  /* tanggal reset NYATA (paket 86): dibaca setelah mount lewat hook. Selama
-     belum terbaca kita menyebut keadaannya apa adanya (`AI_QUOTA_RESET_FALLBACK`)
-     alih-alih memajang tanggal mock yang tidak pernah berubah. */
-  const reset = useAiQuotaReset()
-  const resetDaysLabel = reset ? `${reset.daysUntil} hari lagi` : AI_QUOTA_RESET_FALLBACK
   /* Paket aktif dibaca dari gerbang global — labenya sama dengan /settings/billing
      & /checkout, dan kuota yang berlaku ditentukan `planQuota()` (paket tanpa AI
      tidak punya kuota sama sekali; Paket Sultan tanpa batas). */
-  const { plan, planId, planKnown, isLifetime } = useSubscriptionGate()
+  const { plan, planId, planKnown, planReady, isLifetime } = useSubscriptionGate()
   const { openUpgrade } = useUpgradeGate()
   const pq = planQuota(planId)
-  const planName = plan?.name ?? 'Belum ada paket'
+  /* TIGA KEADAAN NAMA PAKET (paket 104): "belum terbaca" (backend belum
+     menjawab) ≠ "belum ada paket" (user memang belum beli). Dulu keduanya
+     memakai satu kalimat cadangan, jadi kartu sempat menuduh user belum punya
+     paket lalu berubah sendiri begitu jawaban server datang. */
+  const planName = plan?.name ?? (planKnown ? AI_FUEL_COPY.planMissing : AI_FUEL_COPY.planUnknown)
 
   /* satu label untuk tooltip (collapsed) & pembaca layar — versi ringkas dari
      isi kartu, bukan daftar angka mentah. */
   const summary = pq.unlimited
-    ? `${AI_FUEL_COPY.cardTitle} ${planName}: ${AI_UNLIMITED_BADGE} · ${quota.voiceCallsRemaining} panggilan`
+    ? `${AI_FUEL_COPY.cardTitle} ${planName}: ${AI_UNLIMITED_BADGE}`
     : `${AI_FUEL_COPY.cardTitle} ${planName}: ${quota.remainingPct}% ${AI_FUEL_COPY.remainingLabel} · ${AI_FUEL_COPY.recordsLeft(
         recordsLeft,
-      )} · ${quota.voiceCallsRemaining} panggilan · Reset ${resetDaysLabel}`
+      )} · ${quota.voiceCallsRemaining} panggilan`
+
+  /* ── PAKET BELUM SELESAI DIBACA (paket 104) ────────────────────────────────
+     `/api/subscription` dibaca setelah mount, dan selama itu `planId` masih
+     `null` → `planQuota(null)` bilang "tidak ada AI" dan angkanya masih angka
+     perangkat. Hasilnya kartu berkedip: "Belum ada paket / 100% sisa / 150
+     panggilan" sekejap, lalu berubah jadi "Paket Sultan / Tanpa batas". Pemilik
+     produk membacanya sebagai "kok beda-beda tiap login".
+
+     Karena itu kartu menunggu dulu: satu keadaan netral yang mengaku belum tahu,
+     tanpa satu pun angka yang nanti berubah. Tingginya dibuat sama dengan kartu
+     akhirnya supaya sidebar tidak melompat. */
+  if (!planReady) {
+    if (collapsed) {
+      return (
+        <span
+          aria-busy
+          aria-label={AI_FUEL_COPY.readingPlan}
+          className="mt-4 flex size-11 shrink-0 items-center justify-center rounded-2xl bg-cream text-[13px] font-medium text-forest-muted ring-1 ring-ink/[0.06]"
+        >
+          …
+        </span>
+      )
+    }
+
+    return (
+      <div
+        aria-busy
+        aria-label={AI_FUEL_COPY.readingPlan}
+        className="mt-4 block w-full shrink-0 rounded-[1.35rem] bg-cream p-4 ring-1 ring-ink/[0.06]"
+      >
+        <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-forest-muted">
+          {AI_FUEL_COPY.cardTitle}
+        </span>
+        <span className="mt-2 block text-[13.5px] font-medium leading-none text-forest-muted">
+          {AI_FUEL_COPY.readingPlan}
+        </span>
+        <span className="mt-3 block h-[3px] w-full overflow-hidden rounded-full bg-ink/[0.08]">
+          <span className="block h-full w-1/3 rounded-full bg-forest/25" />
+        </span>
+        <span aria-hidden className="mt-3 block text-[12px] font-medium text-forest-muted">
+          &nbsp;
+        </span>
+      </div>
+    )
+  }
 
   /* PAKET TANPA AI (paket 84, diperkuat paket 100): kartu tidak menampilkan
      tangki kosong. Dulu isinya cuma "AI belum aktif di paketmu" — user tidak
@@ -209,19 +252,39 @@ export function AiFuelCard({ collapsed }: { collapsed: boolean }) {
         </>
       )}
 
-      {/* 5 · EKOR — voice + reset dalam SATU baris kecil, tanpa ikon.
-          Saat kuota benar-benar habis, "Kuota habis" menggantikan "Reset" supaya
-          keadaan itu terbaca tanpa menambah baris/paragraf baru. */}
+      {/* 5 · EKOR — voice + aturan kuota dalam SATU baris kecil, tanpa ikon.
+          PAKET TANPA BATAS (paket 104) memakai kalimatnya sendiri: angka
+          panggilan sisa adalah milik paket BERKUOTA, jadi memasangnya di bawah
+          "Tanpa batas" membuat satu kartu membantah dirinya sendiri.
+          Sejak kuota dasar TIDAK di-refill, ekornya menyebut aturan itu apa
+          adanya (tidak ada tanggal reset yang bisa dijanjikan). */}
       <span className="mt-3 flex flex-wrap items-center gap-x-1.5 text-[12px] font-medium tabular-nums text-forest-muted">
-        <span>{quota.voiceCallsRemaining} panggilan</span>
-        <span aria-hidden className="text-forest/25">
-          ·
-        </span>
-        <span>
-          {!pq.unlimited && quota.exhausted
-            ? `${AI_QUOTA_EXHAUSTED_COPY.badge} · Reset ${resetDaysLabel}`
-            : `Reset ${resetDaysLabel}`}
-        </span>
+        {pq.unlimited ? (
+          <span>{AI_FUEL_COPY.unlimitedTail}</span>
+        ) : (
+          <>
+            <span>{quota.voiceCallsRemaining} panggilan</span>
+            <span aria-hidden className="text-forest-muted">
+              ·
+            </span>
+            <span>
+              {quota.exhausted
+                ? AI_QUOTA_EXHAUSTED_COPY.badge
+                : AI_FUEL_COPY.baseTail}
+            </span>
+            {/* Token tambahan NYATA (top-up dibayar atau bonus dari admin) —
+                ditampilkan hanya kalau ada, supaya user melihat bahwa bensin
+                ekstra yang ia punya memang tercatat di akunnya. */}
+            {quota.addon.purchasedTokens > 0 && (
+              <>
+                <span aria-hidden className="text-forest-muted">
+                  ·
+                </span>
+                <span>+{formatTokens(quota.addon.purchasedTokens)} token</span>
+              </>
+            )}
+          </>
+        )}
       </span>
     </Link>
   )

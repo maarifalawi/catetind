@@ -118,7 +118,7 @@ export type PeriodMode = 'standard' | 'payday'
 
 /**
  * Nada dasar sebuah sel (SATU latar per sel, prioritas: defisit → surplus →
- * tagihan tetap → biasa). Penanda lain (🌱 hari bersih) MENEMPEL di atas nada
+ * tagihan tetap → biasa). Penanda lain (🧩 hari bersih) MENEMPEL di atas nada
  * ini, bukan menggantikannya.
  *
  * PAKET 56: 'planned' bukan lagi "hari masa depan berisi ramalan" — ia berarti
@@ -157,7 +157,7 @@ export interface CalendarCell {
   /** semua uang tercatat di tanggal ini — tidak ada daftar kedua untuk ramalan */
   entries: CalendarEntry[]
   tone: CalendarTone
-  /** true = hari itu NOL belanja variabel → benih 🌱 (gamifikasi) */
+  /** true = hari itu NOL belanja variabel → kepingan aman 🧩 (gamifikasi) */
   cleanDay: boolean
   /** panjang rentetan hari bersih yang berakhir di tanggal ini */
   streak: number
@@ -562,7 +562,7 @@ const SAVING_SERIES = {
   scope: 'pribadi' as BudgetScope,
 }
 
-/** hari yang SENGAJA dibuat nol belanja variabel → memunculkan rentetan 🌱 */
+/** hari yang SENGAJA dibuat nol belanja variabel → memunculkan rentetan 🧩 */
 const CLEAN_WINDOWS: [string, string][] = [
   ['2026-07-11', '2026-07-12'],
   ['2026-08-30', '2026-08-31'],
@@ -1017,12 +1017,12 @@ export const CALENDAR_LOOK_CELL: Record<CalendarLook, string> = {
   deficit: 'bg-hud-terracotta/75 text-cream',
   surplus: 'bg-forest/80 text-cream',
   clean: 'bg-mint/40 text-forest',
-  spend: 'bg-forest/15 text-forest/70',
-  planned: 'bg-ink/[0.06] text-forest/55',
+  spend: 'bg-forest/15 text-forest-soft',
+  planned: 'bg-ink/[0.06] text-forest-muted',
   /* H7-4 — abu-abu netral untuk tanggal yang BELUM berjalan: tidak hijau,
      tidak krem "berisi"; memang belum terjadi. */
-  upcoming: 'bg-soil/[0.07] text-forest/35',
-  empty: 'bg-cream text-forest/40',
+  upcoming: 'bg-soil/[0.07] text-forest-muted',
+  empty: 'bg-cream text-forest-muted',
 }
 
 /**

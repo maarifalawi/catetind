@@ -130,7 +130,7 @@ const html = `<!doctype html>
       <span class="chip">Voice note</span>
       <span class="chip">Scan struk</span>
       <span class="chip">Jatah harian</span>
-      <span class="chip">AI Coach</span>
+      <span class="chip">Minca</span>
       <span class="domain">catetind.com</span>
     </div>
   </div>

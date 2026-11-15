@@ -72,7 +72,6 @@ export function EditTransactionSheet({
       open={tx !== null}
       onClose={onClose}
       title={EDIT_TRANSACTION_COPY.title(data?.name ?? '')}
-      description={EDIT_TRANSACTION_COPY.description}
     >
       <TransactionInputEngine
         active={tx !== null}

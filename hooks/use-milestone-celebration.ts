@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import {
-  MILESTONE_STATE,
+  EMPTY_MILESTONE_STATE,
   bestMilestone,
   pendingMilestone,
   readSeenMilestones,
@@ -32,8 +32,12 @@ export function useMilestoneCelebration(
    * State tanaman/streak (di produksi: `user_plant`). WAJIB berupa konstanta
    * modul atau nilai yang stabil — kalau objeknya dibuat ulang tiap render,
    * `replay` ikut dibuat ulang (tidak fatal, tapi tidak perlu).
+   *
+   * DEFAULT = `EMPTY_MILESTONE_STATE` (nol). Dulu default-nya `MILESTONE_STATE`
+   * (streak 7 hari contoh), sehingga layar yang lupa mengoper state merayakan
+   * pencapaian yang tidak pernah terjadi — termasuk akun yang baru dibuat.
    */
-  state: MilestoneState = MILESTONE_STATE,
+  state: MilestoneState = EMPTY_MILESTONE_STATE,
   {
     /**
      * `true`  = periksa begitu halaman dibuka (Home: streak 7/14/21/30).
@@ -48,13 +52,27 @@ export function useMilestoneCelebration(
    *  menahan render supaya tidak berkedip (pola `monthly.ready`) */
   const [ready, setReady] = useState(false)
 
+  /**
+   * Sidik state: efek di bawah dijalankan ulang HANYA kalau angka nyatanya
+   * berubah. Dulu daftar dependensinya kosong (`[]`), jadi state yang baru
+   * terhidrasi dari ledger setelah mount tidak pernah dievaluasi — dan
+   * satu-satunya angka yang sempat dipakai adalah seed.
+   */
+  const signature = `${state.streakDays}|${state.activeDays}|${state.plantStage}|${
+    state.targetAchieved ? 1 : 0
+  }`
+
   useEffect(() => {
-    if (auto) setMilestone(pendingMilestone(state, readSeenMilestones()))
+    if (auto) {
+      /* belum ada data nyata → tidak ada yang dirayakan (bukan seed) */
+      const hasData = state.activeDays > 0 || state.targetAchieved === true
+      setMilestone(hasData ? pendingMilestone(state, readSeenMilestones()) : null)
+    }
     setReady(true)
-    /* sengaja jalan sekali saat mount: penanda hanya perlu dibaca sekali per
-       kunjungan halaman, dan `state` di repo ini konstanta mock */
+    /* `state` dibaca lewat `signature`: objek state boleh dibuat ulang tiap
+       render tanpa memicu perayaan berulang. */
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [auto, signature])
 
   /**
    * Tutup perayaan — dipakai tombol "Lanjut", tap backdrop, dan auto-dismiss.

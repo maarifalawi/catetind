@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Activity, Sparkles } from 'lucide-react'
+import { Activity } from 'lucide-react'
 import { TransactionBottomSheet } from '@/components/dashboard/transaction-bottom-sheet'
 import {
   HEALTH_CARD_COPY,
@@ -63,11 +63,10 @@ export function FinancialHealthCard({
 
   const ready = state === 'ready'
   const title = ready ? HEALTH_CARD_COPY.readyTitle : HEALTH_CARD_COPY.calibratingTitle
-  /* Kartu "ready" sengaja tidak punya subjudul — judulnya sudah menyebut apa
-     yang diukur, dan pemilik produk meminta keterangan "Dihitung dari
-     catatanmu sendiri" tidak ditampilkan lagi. Subjudul kalibrasi tetap ada
-     karena ia menjelaskan MENGAPA skornya belum muncul. */
-  const subtitle = ready ? null : HEALTH_CARD_COPY.calibratingSubtitle
+  /* Tanpa subjudul: judul sudah menyebut apa yang diukur, dan kalimat pengantar
+     di bawah judul hanya menambah tinggi kartu. */
+  const subtitle = null
+  void subtitle
 
   return (
     <section className="flex h-full flex-col rounded-[2rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] ring-1 ring-soil/12 sm:p-6">
@@ -78,11 +77,10 @@ export function FinancialHealthCard({
           </span>
           <div>
             <h2 className="font-display text-[16px] font-semibold tracking-tight text-forest">{title}</h2>
-            {subtitle && <p className="text-[12.5px] text-forest/45">{subtitle}</p>}
+            {subtitle && <p className="text-[12.5px] text-forest-muted">{subtitle}</p>}
           </div>
         </div>
-        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-cream px-2.5 py-1 text-[11.5px] font-medium uppercase tracking-[0.1em] text-forest/45 ring-1 ring-soil/12">
-          <Sparkles className="size-3 text-forest" strokeWidth={2.4} />
+        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-cream px-2.5 py-1 text-[11.5px] font-medium uppercase tracking-[0.1em] text-forest-muted ring-1 ring-soil/12">
           {ready ? HEALTH_CARD_COPY.badgeAi : HEALTH_CARD_COPY.badgeCoach}
         </span>
       </div>
@@ -166,7 +164,7 @@ function ScoreGauge({ score, rate }: { score: number; rate: number }) {
           <span className="font-display text-[3.25rem] font-semibold leading-none tracking-tight text-forest tabular-nums">
             {score}
           </span>
-          <span className="mt-0.5 text-[12px] font-medium uppercase tracking-[0.18em] text-forest/35">
+          <span className="mt-0.5 text-[12px] font-medium uppercase tracking-[0.18em] text-forest-muted">
             {HEALTH_CARD_COPY.outOf}
           </span>
         </div>
@@ -184,10 +182,10 @@ function ScoreGauge({ score, rate }: { score: number; rate: number }) {
 
       {/* kalimat hasil + dasar hitungannya: angkanya dari catatan user, bukan
           contoh — dan "apa yang diukur" ditulis supaya skornya tidak misterius */}
-      <p className="mt-3 max-w-[26rem] text-center text-[14px] leading-relaxed text-forest/60">
+      <p className="mt-3 max-w-[26rem] text-center text-[14px] leading-relaxed text-forest-muted">
         {HEALTH_CARD_COPY.verdict(rate)}
       </p>
-      <p className="mt-1.5 max-w-[26rem] text-center text-[12px] leading-relaxed text-forest/40">
+      <p className="mt-1.5 max-w-[26rem] text-center text-[12px] leading-relaxed text-forest-muted">
         {HEALTH_CARD_COPY.measured(rate)}
       </p>
     </div>
@@ -205,40 +203,31 @@ function UnlockProgress({ total }: { total: number }) {
 
   return (
     <div className="mt-4 flex flex-1 flex-col justify-center">
-      <p className="text-[14.5px] leading-relaxed text-forest/60">{HEALTH_CARD_COPY.learning}</p>
-
-      {/* bar progres: gradien brand + kilau berjalan */}
+      {/* bar progres: satu warna token, tanpa kilau dekoratif */}
       <div
         role="progressbar"
         aria-valuemin={0}
         aria-valuemax={goal}
         aria-valuenow={done}
         aria-label={HEALTH_CARD_COPY.progressA11y(done, goal)}
-        className="relative mt-4 h-3 w-full overflow-hidden rounded-full bg-sage/45 ring-1 ring-inset ring-forest/5"
+        className="h-1.5 w-full overflow-hidden rounded-full bg-sage/45"
       >
         <motion.div
-          className="relative h-full overflow-hidden rounded-full bg-gradient-to-r from-forest via-forest-soft to-mint"
+          className="h-full rounded-full bg-forest"
           initial={{ width: 0 }}
           animate={{ width: `${pct}%` }}
           transition={{ duration: 0.95, ease: EASE, delay: 0.15 }}
-        >
-          {/* kilau shimmer — kelas di globals.css (hormat prefers-reduced-motion) */}
-          <span aria-hidden className="progress-shimmer" />
-        </motion.div>
+        />
       </div>
 
       <div className="mt-3 flex items-center justify-between gap-3">
-        <span className="text-[12.5px] font-medium tabular-nums text-forest/45">
+        <span className="text-[12.5px] font-medium tabular-nums text-forest-muted">
           {HEALTH_CARD_COPY.progressLabel(done, goal)}
         </span>
         <span className="font-display text-[16px] font-semibold tabular-nums text-forest">
           {HEALTH_CARD_COPY.progressPercent(pct)}
         </span>
       </div>
-
-      <p className="mt-2 text-[14px] font-medium leading-relaxed text-forest/70">
-        {HEALTH_CARD_COPY.remaining(remaining)}
-      </p>
     </div>
   )
 }
@@ -257,7 +246,7 @@ function NoIncomeBlock() {
       <p className="font-display text-[15px] font-medium tracking-tight text-forest">
         {HEALTH_CARD_COPY.noIncomeTitle}
       </p>
-      <p className="text-[13.5px] leading-relaxed text-forest/65">{HEALTH_CARD_COPY.noIncomeBody}</p>
+      <p className="text-[13.5px] leading-relaxed text-forest-soft">{HEALTH_CARD_COPY.noIncomeBody}</p>
       <div className="mt-1 flex items-center gap-2">
         <TransactionBottomSheet
           defaultType="income"
@@ -266,7 +255,6 @@ function NoIncomeBlock() {
               type="button"
               className="inline-flex h-10 items-center gap-1.5 rounded-full bg-forest px-4 text-[13.5px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.98]"
             >
-              <Sparkles className="size-3.5" strokeWidth={2.4} aria-hidden />
               {HEALTH_CARD_COPY.noIncomeCta}
             </button>
           }

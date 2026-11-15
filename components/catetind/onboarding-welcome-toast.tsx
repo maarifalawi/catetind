@@ -36,7 +36,7 @@ export function OnboardingWelcomeToast() {
 
     toast.success('Setup selesai! Selamat datang di CatetInd 🎉', {
       description:
-        'Dompet & transaksi pertamamu sudah masuk. Yuk lanjut catat hari ini 🌿',
+        'Dompet & transaksi pertamamu sudah masuk. Yuk lanjut catat hari ini 🧩',
       duration: 4200,
     })
   }, [pathname])

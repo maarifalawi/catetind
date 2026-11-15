@@ -5,18 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
-  ArrowLeft,
-  ArrowLeftRight,
-  Plus,
-  Pencil,
-  ReceiptText,
-  SlidersHorizontal,
-  Sparkles,
-  Sprout,
-  Trash2,
-  TrendingUp,
-  Wallet as WalletIcon,
-} from 'lucide-react'
+  ArrowLeft, ArrowLeftRight, Plus, Pencil, ReceiptText, SlidersHorizontal, Trash2, TrendingUp, Wallet as WalletIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { ScreenShell } from './screen-shell'
 import { GlobalPrivacyToggle } from './global-privacy-toggle'
@@ -27,7 +16,6 @@ import { AddWalletSheet } from './add-wallet-sheet'
 import { setWalletTheme, useWalletThemePrefs } from '@/hooks/use-wallet-theme'
 import { TransferFlow } from './transfer-flow'
 import {
-  ContactlessIcon,
   MaskedAmount,
   WALLET_TYPE_LABEL,
   WalletArtDefs,
@@ -460,7 +448,7 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
           <p className="mt-5 font-display text-xl font-medium tracking-tight text-forest">
             {WALLET_DETAIL_COPY.notFoundTitle}
           </p>
-          <p className="mt-2 text-[14px] leading-relaxed text-forest/55">
+          <p className="mt-2 text-[14px] leading-relaxed text-forest-muted">
             {WALLET_DETAIL_COPY.notFoundHint}
           </p>
           <Link
@@ -477,7 +465,9 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
 
   return (
     <ScreenShell>
-      {/* definisi motif batik — dibuat sekali, dipakai muka kartu hero */}
+      {/* DEFINISI CORAK BATIK — dipakai muka kartu hero dompet ini lewat
+          `url(#wallet-art-…)`, jadi motifnya sama persis dengan kartu di
+          /wallet dan deck Dashboard. */}
       <WalletArtDefs />
 
       <div className="w-full">
@@ -504,9 +494,8 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
               <h1 className="truncate font-display text-[20px] font-semibold tracking-tight text-forest lg:text-[22px]">
                 {wallet.name}
               </h1>
-              <p className="truncate text-[12px] text-forest/45">
+              <p className="truncate text-[12px] text-forest-muted">
                 {WALLET_TYPE_LABEL[wallet.type]}
-                {wallet.number ? ` · ${wallet.number}` : ''}
               </p>
             </div>
           </div>
@@ -533,21 +522,14 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
                     <p className="truncate font-display text-[18px] font-medium tracking-tight sm:text-[20px]">
                       {wallet.name}
                     </p>
-                    {/* ikon contactless hanya untuk kartu bank — benda aslinya
-                        (uang kertas & saldo e-wallet) tidak punya RFID */}
-                    {wallet.type === 'Bank' && (
-                      <ContactlessIcon className="size-4 shrink-0 text-cream/55" />
-                    )}
+                    {/* SAPU BERSIH IKON HIASAN (sesi 3): ikon contactless dicabut. */}
                   </div>
-                  <span className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-cream/20 px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-[0.1em] text-cream/90 ring-1 ring-inset ring-cream/30 backdrop-blur-[2px]">
+                  <span className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-cream/20 px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-[0.1em] text-cream ring-1 ring-inset ring-cream/30 backdrop-blur-[2px]">
                     <span aria-hidden className="size-1.5 rounded-full bg-cream/70" />
                     {WALLET_TYPE_LABEL[wallet.type]}
                   </span>
-                  {wallet.number && wallet.type === 'Bank' && (
-                    <p className="mt-2 truncate text-[11.5px] font-medium tracking-[0.2em] text-cream/60 tabular-nums">
-                      {wallet.number}
-                    </p>
-                  )}
+                  {/* PERMUKAAN KARTU BERSIH: nomor rekening masking (•••• 1234)
+                      tidak lagi dicetak di muka kartu. */}
                 </div>
                 <WalletTypeMark wallet={wallet} chipId={`wallet-detail-chip-${wallet.id}`} />
               </div>
@@ -582,7 +564,7 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
             ) : txs.length > 0 ? (
               /* ada catatan, tapi tidak satu pun di 30 hari terakhir → dikatakan,
                  bukan dihilangkan diam-diam dari layar */
-              <section className="rounded-[1.75rem] bg-cream p-5 text-[13.5px] leading-relaxed text-forest/60 shadow-[0_18px_40px_-34px_rgba(0,0,0,0.55)] ring-1 ring-soil/10">
+              <section className="rounded-[1.75rem] bg-cream p-5 text-[13.5px] leading-relaxed text-forest-muted shadow-[0_18px_40px_-34px_rgba(0,0,0,0.55)] ring-1 ring-soil/10">
                 {WALLET_PERIOD_COPY.emptyWindow(WALLET_DETAIL_WINDOW_DAYS)}
               </section>
             ) : null}
@@ -620,16 +602,16 @@ export function WalletDetailScreen({ walletId }: { walletId: string }) {
                       dalam pill netral (tinta + tanda −/+), bukan merah untuk
                       net minus — saldo turun bukan pelanggaran. */}
                   <div className="flex items-center gap-2.5">
-                    <p className="shrink-0 text-[12px] font-medium uppercase tracking-[0.12em] text-forest/45">
+                    <p className="shrink-0 text-[12px] font-medium uppercase tracking-[0.12em] text-forest-muted">
                       {group.label}
                     </p>
                     <span className="h-px min-w-4 flex-1 bg-soil/[0.09]" aria-hidden />
                     {group.moved > 0 && (
-                      <span className="shrink-0 text-[12px] font-medium tabular-nums text-forest/40">
+                      <span className="shrink-0 text-[12px] font-medium tabular-nums text-forest-muted">
                         ⇄ {maskMoney(group.moved, masked)}
                       </span>
                     )}
-                    <span className="shrink-0 rounded-full bg-sage/60 px-2.5 py-0.5 text-[12.5px] font-semibold tabular-nums text-forest/75">
+                    <span className="shrink-0 rounded-full bg-sage/60 px-2.5 py-0.5 text-[12.5px] font-semibold tabular-nums text-forest-soft">
                       {netLabel(group.net, masked)}
                     </span>
                   </div>
@@ -890,7 +872,7 @@ function IconAction({
         'flex size-11 shrink-0 items-center justify-center rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 active:scale-95',
         tone === 'danger'
           ? 'text-plum hover:bg-plum/12 focus-visible:ring-plum/40'
-          : 'text-forest/70 hover:bg-sage/70 hover:text-forest focus-visible:ring-forest/25',
+          : 'text-forest-soft hover:bg-sage/70 hover:text-forest focus-visible:ring-forest/25',
       )}
     >
       {children}
@@ -926,7 +908,7 @@ function PeriodSummaryCard({
         <h2 className="font-display text-[16.5px] font-semibold tracking-tight text-forest">
           {WALLET_PERIOD_COPY.title}
         </h2>
-        <span className="ml-auto min-w-0 truncate text-[11.5px] tabular-nums text-forest/40">
+        <span className="ml-auto min-w-0 truncate text-[11.5px] tabular-nums text-forest-muted">
           {WALLET_PERIOD_COPY.windowHint(summary.fromLabel, summary.toLabel, summary.count)}
         </span>
       </div>
@@ -970,7 +952,7 @@ function PeriodSummaryCard({
 function PeriodStat({ label, value, tone }: { label: string; value: string; tone: string }) {
   return (
     <div className="min-w-0 px-3 first:pl-0 last:pr-0">
-      <dt className="text-[11px] font-medium uppercase tracking-[0.1em] text-forest/40">
+      <dt className="text-[11px] font-medium uppercase tracking-[0.1em] text-forest-muted">
         {label}
       </dt>
       <dd className={cn('mt-1 truncate text-[14.5px] font-semibold tabular-nums', tone)}>{value}</dd>
@@ -993,13 +975,12 @@ function PatientInsightCard({ count }: { count: number }) {
     <section className="rounded-[1.75rem] bg-cream p-5 shadow-[0_18px_40px_-34px_rgba(0,0,0,0.55)] ring-1 ring-soil/10">
       <div className="flex items-start gap-3">
         <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sage via-cream to-mint-soft text-forest ring-1 ring-forest/10">
-          <Sparkles className="size-[18px]" strokeWidth={2.2} />
-        </span>
+          </span>
         <div className="min-w-0">
           <h2 className="font-display text-[15.5px] font-semibold tracking-tight text-forest">
             {WALLET_PATIENT_COPY.title}
           </h2>
-          <p className="mt-1 text-[13.5px] leading-relaxed text-forest/60">
+          <p className="mt-1 text-[13.5px] leading-relaxed text-forest-muted">
             {WALLET_PATIENT_COPY.body}
           </p>
         </div>
@@ -1026,7 +1007,7 @@ function PatientInsightCard({ count }: { count: number }) {
           {WALLET_PATIENT_COPY.progress(count)}
         </span>
       </div>
-      <p className="mt-2 text-[12px] text-forest/40">
+      <p className="mt-2 text-[12px] text-forest-muted">
         {WALLET_PATIENT_COPY.progressHint(INSIGHT_MIN_TRANSACTIONS - progress)}
       </p>
     </section>
@@ -1036,19 +1017,11 @@ function PatientInsightCard({ count }: { count: number }) {
 /** empty state nurturing: dompet ini belum punya satu catatan pun */
 function EmptyTransactions({ walletName, walletId }: { walletName: string; walletId: string }) {
   return (
-    <div className="mt-4 flex flex-col items-center rounded-[1.75rem] border-2 border-dashed border-forest/15 bg-cream/50 px-6 py-10 text-center">
-      {/* ilustrasi sederhana dari ikon yang sudah dipakai empty state app
-          (bukan aset gambar terpisah yang harus dimuat) */}
-      <div
-        className="flex size-16 items-center justify-center rounded-2xl border-2 border-dashed border-forest/20 bg-cream/60"
-        aria-hidden
-      >
-        <Sprout className="size-7 text-forest/45" strokeWidth={1.8} />
-      </div>
+    <div data-catetind-empty className="mt-4 flex flex-col items-center rounded-[1.75rem] border-2 border-dashed border-forest/15 bg-cream/50 px-6 py-10 text-center">
       <p className="mt-4 max-w-xs text-[14.5px] font-medium leading-relaxed text-forest">
         {WALLET_EMPTY_COPY.body}
       </p>
-      <p className="mt-1.5 max-w-xs text-[12.5px] leading-relaxed text-forest/45">
+      <p className="mt-1.5 max-w-xs text-[12.5px] leading-relaxed text-forest-muted">
         {WALLET_EMPTY_COPY.hint}
       </p>
       <div className="mt-5">

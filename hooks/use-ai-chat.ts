@@ -28,8 +28,7 @@ const makeId = () => `msg-${++nextId}`
  * `lib/ai/engine.ts`). Fungsi ini jadi JARING AMAN: dipakai saat provider tak
  * bisa dihubungi (tanpa kunci / kuota penyedia penuh / jaringan mati). Karena itu
  * ia hanya menjawab pertanyaan yang jawabannya ada di data lokal, dan setiap
- * jawabannya membawa penanda `ruleBased: true` — widget mencetak label
- * "belum pakai model" dari penanda itu, jadi user tahu ini bukan balasan model.
+ * jawabannya membawa penanda `ruleBased: true`.
  *
  * Pertanyaan yang TIDAK bisa dijawab dari data lokal jatuh ke
  * `AI_NOT_CONNECTED_REPLY`: jujur soal keadaan hari ini + tombol "Hubungkan AI".

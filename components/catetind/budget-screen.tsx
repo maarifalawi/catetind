@@ -41,6 +41,7 @@ import {
   computeDailyHud,
   earnedInWindow,
   FUND_CONTRIBUTE_INSUFFICIENT_COPY,
+  FUND_CONTRIBUTE_WALLET_GONE_COPY,
   maskNominal,
   periodFromTab,
   periodIncome,
@@ -63,11 +64,19 @@ import {
   addFund,
   contributeToFund,
   deleteFund,
+  fundById,
+  getFundsSnapshot,
   restoreFund,
   sweepIntoFund,
   useLiveFunds,
 } from '@/lib/money/funds-store'
-import { getMoneySnapshot, recordedTransactions, useMoneyStore, walletFundsCheckById } from '@/lib/money/store'
+import {
+  getMoneySnapshot,
+  recordedTransactions,
+  useMoneyStore,
+  walletFundsCheckById,
+  walletNameOfId,
+} from '@/lib/money/store'
 import { readBudgets, writeBudgets } from '@/lib/budget-storage'
 import { useUserMoneySettings } from '@/lib/user-money-settings'
 import { dayOfMonth } from '@/lib/time'
@@ -83,7 +92,7 @@ import { useTodayISO } from '@/lib/use-today-iso'
    Prinsip utamanya PROGRESSIVE DISCLOSURE — layar utama sengaja cuma memuat
    hal yang sedang relevan. Sisanya muncul lewat kondisi (dry spell, sapu
    bersih, nudge, over budget), mikro-UI (ghost pacing line), atau bottom sheet
-   (tambah budget, tanam celengan, setor, sapu bersih).
+   (tambah budget, buat celengan, setor, sapu bersih).
 
    Layout: mobile satu kolom dengan tab zona (biar tidak jadi scroll panjang),
    desktop dua kolom (kiri Zona A, kanan Zona B) karena ruangnya cukup.
@@ -101,7 +110,7 @@ export function BudgetScreen({
 }: {
   initialAddCategory?: string
   /** `?tanam=1` dari Home (tombol `+` di kartu Tabungan Impian, paket 29):
-   *  halaman membuka Zona Celengan + sheet "Tanam Celengan Baru" sejak render
+   *  halaman membuka Zona Celengan + sheet "Buat Celengan Baru" sejak render
    *  pertama, jadi satu tap dari Home langsung mendarat di formnya. */
   initialPlantGoal?: boolean
 }) {
@@ -452,7 +461,7 @@ export function BudgetScreen({
     setShowAddBudget(true)
   }
 
-  /** 4C — celengan baru selalu mulai dari benih 🌱 (ditulis lewat store, jadi
+  /** 4C — celengan baru selalu mulai dari benih 🧩 (ditulis lewat store, jadi
    *  ia langsung muncul juga di Home & bisa dibuka halaman detailnya) */
   function handleSaveGoal(
     data: Omit<SinkingFundItem, 'id' | 'current' | 'stage' | 'contributedThisMonth'>,
@@ -476,7 +485,11 @@ export function BudgetScreen({
        tidak cukup (uang setoran benar-benar keluar dari dompet) vs celengannya
        sudah dihapus. Dulu keduanya jatuh ke kalimat "celengan sudah tidak ada",
        jadi user yang saldonya kurang diberi tahu hal yang salah. */
-    const walletName = walletSourceName(walletId)
+    /* Nama dompet dibaca dari LEDGER HIDUP lebih dulu (paket 104): dompet buatan
+       user tidak ada di tabel sumber statis, dan dulu namanya muncul sebagai
+       "Dompet" di kalimat saldo. */
+    const walletName =
+      walletNameOfId(getMoneySnapshot(), walletId) || walletSourceName(walletId)
     const funds = walletFundsCheckById(getMoneySnapshot(), walletId, amount)
     if (funds.known && !funds.sufficient) {
       toast.error(FUND_CONTRIBUTE_INSUFFICIENT_COPY.title, {
@@ -485,11 +498,21 @@ export function BudgetScreen({
       return
     }
     const result = contributeToFund(fundId, amount, walletId)
-    /* store menolak (celengan sudah dihapus / nominal tidak sah) → tutup sheet &
-       katakan apa adanya; jangan tinggalkan user menebak kenapa tidak terjadi apa-apa */
+    /* store menolak → tutup sheet & katakan apa adanya; jangan tinggalkan user
+       menebak kenapa tidak terjadi apa-apa. DUA sebab diucapkan dengan DUA
+       kalimat: celengannya memang sudah hilang, atau DOMPET yang dipilih sudah
+       tidak ada. Dulu semuanya jatuh ke "celengan sudah tidak ada", padahal
+       celengannya jelas ada di layar — dan itu yang membuat pemilik produk
+       mengira app-nya rusak. */
     if (!result) {
       setContributeTarget(null)
-      toast(FUND_DELETE_COPY.goneNote)
+      if (fundById(getFundsSnapshot(), fundId)) {
+        toast.error(FUND_CONTRIBUTE_WALLET_GONE_COPY.title, {
+          description: FUND_CONTRIBUTE_WALLET_GONE_COPY.body,
+        })
+      } else {
+        toast(FUND_DELETE_COPY.goneNote)
+      }
       return
     }
     setContributeTarget(null)
@@ -500,7 +523,7 @@ export function BudgetScreen({
        ledger, sehingga SEMUA pemanggilnya otomatis tercatat di Riwayat &
        menggerakkan saldo dompet. UI tinggal memberi tahu user. */
     toast.success(FUND_DETAIL_COPY.setToastTitle(money(amount), result.fund.name), {
-      description: FUND_DETAIL_COPY.setToastHint(walletSourceName(walletId)),
+      description: FUND_DETAIL_COPY.setToastHint(walletName),
     })
   }
 
@@ -598,7 +621,7 @@ export function BudgetScreen({
           {/* caption konteks: HANYA keluarga & bersama (paket 78) — konteks pribadi
               tidak merender paragraf apa pun, jadi judulnya langsung di atas */}
           {scopeCaption ? (
-            <p className="text-[14px] font-medium text-forest/45">{scopeCaption}</p>
+            <p className="text-[14px] font-medium text-forest-muted">{scopeCaption}</p>
           ) : null}
           <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-forest lg:text-4xl">
             {BUDGET_PAGE_COPY.title}
@@ -666,7 +689,7 @@ export function BudgetScreen({
                 {BUDGET_PAGE_COPY.zoneBudget}
               </h2>
               <span
-                className="rounded-full bg-sage/50 px-2 py-0.5 text-[11.5px] font-semibold text-forest/55 tabular-nums"
+                className="rounded-full bg-sage/50 px-2 py-0.5 text-[11.5px] font-semibold text-forest-muted tabular-nums"
                 aria-label={BUDGET_PAGE_COPY.budgetPeriodCount(period.label)}
               >
                 {periodBudgets.length}
@@ -700,7 +723,7 @@ export function BudgetScreen({
               <h2 className="font-display text-[18px] font-semibold tracking-tight text-forest">
                 {BUDGET_PAGE_COPY.zoneGoals}
               </h2>
-              <span className="rounded-full bg-sage/50 px-2 py-0.5 text-[11.5px] font-semibold text-forest/55 tabular-nums">
+              <span className="rounded-full bg-sage/50 px-2 py-0.5 text-[11.5px] font-semibold text-forest-muted tabular-nums">
                 {visibleFunds.length}
               </span>
             </div>
@@ -797,7 +820,6 @@ export function BudgetScreen({
             overlayLabel={FUND_DELETE_COPY.overlay}
             title={FUND_DELETE_COPY.title}
             body={FUND_DELETE_COPY.body(pendingFundDelete.name)}
-            note={fundDeleteNote(pendingFundDelete, masked)}
             safety={FUND_DELETE_COPY.safety(UNDO_WINDOW_MS / 1000)}
             cancelLabel={FUND_DELETE_COPY.cancel}
             confirmLabel={FUND_DELETE_COPY.confirm}
@@ -874,7 +896,7 @@ function ZoneTabs({ value, onChange }: { value: ZoneTab; onChange: (value: ZoneT
                 transition={{ type: 'spring', stiffness: 520, damping: 38 }}
               />
             )}
-            <span className={cn('relative z-10', active ? 'text-mint' : 'text-forest/45 hover:text-forest')}>
+            <span className={cn('relative z-10', active ? 'text-mint' : 'text-forest-muted hover:text-forest')}>
               {tab.label}
             </span>
           </button>

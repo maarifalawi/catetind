@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
 
   if (!allowAiCall(callerId)) {
     return NextResponse.json(
-      { ok: false, reason: 'rate-limit', error: 'Kebanyakan permintaan sekaligus, tunggu sebentar ya 🌿' },
+      { ok: false, reason: 'rate-limit', error: 'Kebanyakan permintaan sekaligus, tunggu sebentar ya 🧩' },
       { status: 429 },
     )
   }
@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({
     ok: true,
-    transaction: normalizeExtraction(source, result.value, today),
+    transaction: normalizeExtraction(source, result.value, today, transcript),
     model: AI_ENGINE_ID,
   })
 }

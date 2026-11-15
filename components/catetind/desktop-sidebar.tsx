@@ -20,6 +20,8 @@ import { AiFuelCard } from './ai-fuel-card'
 import { LogoWordmark } from './logo-wordmark'
 import { NavTooltip } from './nav-tooltip'
 import { NavLockBadge } from './nav-lock-badge'
+import { LogoutButton } from './logout-action'
+import { useMobileNav } from './mobile-nav-drawer'
 
 /* ── CATATAN: ENTRI /family DIHAPUS — KEPUTUSAN SADAR (task 06) ───────────────
    Dulu grup `Aset & Bersama` punya satu entri menu menuju halaman bernama
@@ -84,6 +86,14 @@ export function DesktopSidebar({
    * sheet membuka langkah 1 (pemilih dompet) — bukan menebak dompet konteks.
    */
   const [transferOpen, setTransferOpen] = useState(false)
+  /**
+   * Di DRAWER mobile, sheet Pindah Dana TIDAK boleh hidup di dalam sidebar:
+   * drawer ditutup lebih dulu, jadi komponen ini (beserta state-nya) ikut
+   * ter-unmount dan sheet langsung hilang. Provider nav menyediakan
+   * `requestTransfer()` yang menutup drawer lalu membuka sheet yang di-host
+   * di luar drawer.
+   */
+  const mobileNav = useMobileNav()
   const [collapsedState, setCollapsed] = useState(false)
   /** di drawer mobile selalu expanded — tombol collapse memang khusus desktop */
   const collapsed = variant === 'drawer' ? false : collapsedState
@@ -169,7 +179,7 @@ export function DesktopSidebar({
           aria-label={collapsed ? 'Buka sidebar' : 'Tutup sidebar'}
           title={collapsed ? 'Buka sidebar  [  ]' : 'Tutup sidebar  [  ]'}
           className={cn(
-            'flex size-8 shrink-0 items-center justify-center rounded-full text-forest/40 ring-1 ring-ink/[0.08] transition-all duration-200 hover:bg-cream hover:text-forest active:scale-95',
+            'flex size-8 shrink-0 items-center justify-center rounded-full text-forest-muted ring-1 ring-ink/[0.08] transition-all duration-200 hover:bg-cream hover:text-forest active:scale-95',
             /* tombol collapse/rangkai adalah afordans desktop — di drawer mobile
                tidak relevan (drawer selalu expanded) */
             variant === 'drawer' && 'hidden',
@@ -189,7 +199,11 @@ export function DesktopSidebar({
       <button
         type="button"
         onClick={() =>
-          inputLocked ? toast(FEATURE_LOCK_COPY.inputHint) : setAddOpen(true)
+          inputLocked
+            ? toast(FEATURE_LOCK_COPY.inputHint)
+            : variant === 'drawer'
+              ? mobileNav.requestAdd()
+              : setAddOpen(true)
         }
         aria-disabled={inputLocked || undefined}
         aria-label={inputLocked ? FEATURE_LOCK_COPY.addAria : undefined}
@@ -197,7 +211,7 @@ export function DesktopSidebar({
         className={cn(
           'group/item relative mt-6 flex items-center justify-center gap-2 rounded-full transition-all duration-300',
           inputLocked
-            ? 'cursor-not-allowed bg-ink/[0.07] text-forest/35'
+            ? 'cursor-not-allowed bg-ink/[0.07] text-forest-muted'
             : 'bg-forest text-cream hover:bg-forest-soft active:scale-[0.97]',
           collapsed ? 'mx-auto size-11' : 'w-full py-3 text-[15px] font-semibold',
         )}
@@ -313,7 +327,9 @@ export function DesktopSidebar({
               {section.label === 'Kelola Uang' && (
                 <button
                   type="button"
-                  onClick={() => setTransferOpen(true)}
+                  onClick={() =>
+                    variant === 'drawer' ? mobileNav.requestTransfer() : setTransferOpen(true)
+                  }
                   title={TRANSFER_DOOR_COPY.menuHint}
                   className={cn(
                     'group/item relative flex w-full items-center text-[14px] font-medium text-forest-muted transition-all duration-200 hover:bg-ink/[0.03] hover:text-forest',
@@ -389,14 +405,13 @@ export function DesktopSidebar({
           {collapsed && (
             <div className="mx-3 mb-2 h-px bg-ink/[0.07]" aria-hidden />
           )}
-          {/* Keluar — dulu tombol MATI (tidak ada onClick). Route-nya sudah ada
-              sejak lama (`/settings/logout` → panel konfirmasi keluar), jadi
-              yang kurang cuma tautannya; sekarang ia jadi link seperti item
-              navigasi lain di sidebar ini. */}
-          <Link
-            href="/settings/logout"
+          {/* Keluar — dulu tautan ke `/settings/logout` (halaman perantara).
+              Revisi pemilik produk: klik di sini LANGSUNG membuka dialog
+              "yakin mau keluar?", tanpa halaman yang harus dibaca dulu. */}
+          <LogoutButton
+            label="Keluar"
             className={cn(
-              'group/item relative flex w-full items-center text-[14px] font-medium text-forest-muted transition-all duration-200 hover:bg-plum/15 hover:text-plum',
+              'group/item relative flex w-full items-center text-left text-[14px] font-medium text-forest-muted transition-all duration-200 hover:bg-plum/15 hover:text-plum',
               collapsed
                 ? 'justify-center rounded-2xl px-0 py-2.5'
                 : 'gap-3.5 rounded-full px-3.5 py-2.5',
@@ -412,7 +427,7 @@ export function DesktopSidebar({
               Keluar
             </span>
             {collapsed && <NavTooltip label="Keluar" />}
-          </Link>
+          </LogoutButton>
         </div>
       </nav>
 
@@ -461,11 +476,17 @@ export function DesktopSidebar({
       </div>
 
       {/* modal input transaksi versi WEB (inventaris 97a) — shell dialog yang
-          membungkus engine yang sama dengan bottom sheet mobile */}
-      <TransactionWebModal open={addOpen} onOpenChange={setAddOpen} />
+          membungkus engine yang sama dengan bottom sheet mobile. Di DRAWER,
+          modal ini di-host MobileNavDrawer supaya tidak ikut ter-unmount. */}
+      {variant === 'fixed' && (
+        <TransactionWebModal open={addOpen} onOpenChange={setAddOpen} />
+      )}
 
-      {/* alur pindah dana (paket 55) — sumber dompet asalnya dipilih di sheet */}
-      <TransferFlow open={transferOpen} onOpenChange={setTransferOpen} />
+      {/* alur pindah dana (paket 55) — sumber dompet asalnya dipilih di sheet.
+          Di DRAWER, sheet-nya di-host MobileNavDrawer (lihat catatan state). */}
+      {variant === 'fixed' && (
+        <TransferFlow open={transferOpen} onOpenChange={setTransferOpen} />
+      )}
     </aside>
   )
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { Sparkles, X } from 'lucide-react'
+import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { CELEBRATION_COPY } from '@/lib/data/milestones'
 import { HOME_PLANT_COPY } from '@/lib/data/home'
@@ -16,8 +16,8 @@ type PlantState = {
 const STAGES: PlantStage[] = [1, 2, 3, 4]
 
 /**
- * Plant Detail View (inventaris modal j, Domain 3B):
- * animasi tanaman + breakdown stats. Framing selalu positif -
+ * Puzzle Detail View (inventaris modal j, Domain 3B):
+ * papan puzzle + breakdown stats. Framing selalu positif -
  * TIDAK ada angka streak tertulis ("kamu skip Y hari" dilarang, baris 1780).
  *
  * Sejak paket Milestone Celebration (inventaris #k) modal ini juga jadi SATU
@@ -48,7 +48,7 @@ export function PlantDetailModal({
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="Detail tanaman"
+        aria-label="Detail puzzle"
                 className="w-full max-w-sm rounded-3xl bg-cream p-6 shadow-[0_20px_60px_-12px_rgba(0,0,0,0.15)] ring-1 ring-soil/12"
         onClick={(e) => e.stopPropagation()}
       >
@@ -66,7 +66,8 @@ export function PlantDetailModal({
           </button>
         </div>
 
-        {/* tanaman besar */}
+        {/* papan puzzle besar — `progress` diteruskan supaya jumlah kepingan
+            di modal SAMA dengan kartu di Dashboard (satu sumber, bukan dua) */}
         <div className="relative mt-2 flex justify-center rounded-2xl bg-gradient-to-b from-sage/60 to-cream py-4 ring-1 ring-soil/8">
           <span
             aria-hidden
@@ -74,12 +75,13 @@ export function PlantDetailModal({
           />
           <PlantIllustration
             stage={plant.stage}
+            progress={plant.hp}
             wilted={plant.wilted}
             className="relative w-40"
           />
         </div>
 
-        {/* progres tahap - dots Benih -> Berbunga */}
+        {/* progres tahap - dots tahap 1 → 4 */}
         <div className="mt-5">
           <div className="flex items-center justify-between">
             {STAGES.map((s) => (
@@ -95,7 +97,7 @@ export function PlantDetailModal({
                 <span
                   className={cn(
                     'text-[11px] font-medium',
-                    s === plant.stage ? 'text-forest' : 'text-forest/40',
+                    s === plant.stage ? 'text-forest' : 'text-forest-muted',
                   )}
                 >
                   {STAGE_NAMES[s]}
@@ -141,7 +143,6 @@ export function PlantDetailModal({
             title={CELEBRATION_COPY.replayHint}
             className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-cream text-[14.5px] font-medium text-forest ring-1 ring-soil/12 transition-colors hover:bg-sage/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/25 active:scale-[0.99] motion-reduce:transition-none"
           >
-            <Sparkles className="size-4 text-forest" strokeWidth={2.4} aria-hidden />
             {CELEBRATION_COPY.replayLabel}
           </button>
         )}
@@ -159,7 +160,7 @@ function StatRow({
 }) {
   return (
     <div className="flex items-center justify-between gap-3 text-sm">
-      <span className="text-forest/55">{label}</span>
+      <span className="text-forest-muted">{label}</span>
       {children}
     </div>
   )

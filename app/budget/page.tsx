@@ -6,7 +6,7 @@ import { BUDGET_ADD_PARAM, BUDGET_PLANT_PARAM, categoryOptionOf, flagParamOf } f
 export const metadata: Metadata = {
   title: 'Budget & Target | CatetInd',
   description:
-    'Atur limit pengeluaran per kategori dan tumbuhkan celengan impian: jatah harian, pacing ideal, sapu bersih sisa budget, dan sinking fund dengan metafora tanaman.',
+    'Atur limit pengeluaran per kategori dan susun celengan impian: jatah harian, pacing ideal, sapu bersih sisa budget, dan sinking fund dengan metafora puzzle.',
 }
 
 /**
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
  *     komponen halaman tetap menerima nilai yang sudah pasti ada di
  *     `BUDGET_CATEGORY_OPTIONS`.
  *   • `?tanam=1` — jalur pintas dari tombol `+` di kartu "Tabungan Impian" Home
- *     (paket 29): Zona B terbuka bersama sheet "Tanam Celengan Baru", jadi satu
+ *     (paket 29): Zona B terbuka bersama sheet "Buat Celengan Baru", jadi satu
  *     tap dari Home langsung mendarat di formnya — bukan di daftar yang harus
  *     dicari dulu.
  *

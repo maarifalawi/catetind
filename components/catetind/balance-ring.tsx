@@ -74,7 +74,7 @@ export function BalanceRing({
           >
             {money(amount)}
           </span>
-          <span className="mt-1.5 max-w-full truncate text-[12.5px] text-forest/45">{caption}</span>
+          <span className="mt-1.5 max-w-full truncate text-[12.5px] text-forest-muted">{caption}</span>
           {trend && (
             <span className="mt-2 rounded-full bg-forest px-2 py-0.5 text-[11px] font-medium text-mint">
               {trend}

@@ -79,21 +79,18 @@ export function OnboardingStepIncome({
 
   return (
     <div>
-      <OnboardingStepHeader
-        badge="Opsional"
-        title="Berapa pemasukan bulananmu?"
-        subtitle="Gak perlu persis, dan boleh dikosongkan kalau belum ada penghasilan tetap. Bisa diisi kapan aja nanti."
-      />
+      <OnboardingStepHeader badge="Opsional" title="Berapa pemasukan bulananmu?" />
 
       {/* ── nominal raksasa (center) ─────────────────────────────────────
           Prefix "Rp" dirender terpisah + spacer kembar di kanan supaya angka
           benar-benar center. Placeholder "5.000.000" tampil utuh saat kosong
           (Rp dari prefix + 5.000.000 dari placeholder) — sengaja TIDAK kosong
-          supaya user punya jangkar angka. */}
-      <div className="mt-9 flex w-full items-baseline justify-center gap-1.5">
+          supaya user punya jangkar angka. Cangkang garis putus-putus menandai
+          bahwa ini TEMPAT MENGISI (placeholder miring = contoh, bukan isi). */}
+      <div className="mt-9 flex w-full items-baseline justify-center gap-1.5 rounded-2xl border-2 border-dashed border-oat px-3 py-2 transition-colors focus-within:border-mint">
         <span
           aria-hidden
-          className="w-7 shrink-0 text-right text-lg font-medium text-forest/25"
+          className="w-7 shrink-0 text-right text-lg font-medium text-forest-muted"
         >
           Rp
         </span>
@@ -112,13 +109,13 @@ export function OnboardingStepIncome({
           placeholder="5.000.000"
           aria-label="Pemasukan bulanan (opsional)"
           className={cn(
-            'min-w-0 flex-1 bg-transparent text-center font-medium leading-none tracking-[-0.04em] text-forest tabular-nums outline-none placeholder:text-forest/[0.14]',
+            'min-w-0 flex-1 bg-transparent text-center font-medium leading-none tracking-[-0.04em] text-forest tabular-nums outline-none',
             incomeDisplay.length <= 7 ? 'text-[2.7rem]' : 'text-[2.15rem]',
           )}
         />
         <span aria-hidden className="w-7 shrink-0" />
       </div>
-      <p className="mt-3 text-center text-[13.5px] leading-relaxed text-forest/40">
+      <p className="mt-3 text-center text-[13.5px] leading-relaxed text-forest-muted">
         Kosongkan aja kalau belum ada, nanti bisa diisi di Pengaturan.
       </p>
 
@@ -144,7 +141,7 @@ export function OnboardingStepIncome({
                     <div className="flex items-baseline justify-between gap-3">
                       <span className="text-[14.5px] font-medium tracking-[-0.01em] text-forest">
                         {split.label}{' '}
-                        <span className="text-forest/35">
+                        <span className="text-forest-muted">
                           {Math.round(split.percent * 100)}%
                         </span>
                       </span>
@@ -164,7 +161,7 @@ export function OnboardingStepIncome({
                 ))}
               </div>
 
-              <p className="mt-4 text-[12.5px] leading-relaxed text-forest/40">
+              <p className="mt-4 text-[12.5px] leading-relaxed text-forest-muted">
                 Saran awal aja, bisa diubah kapan aja di halaman Budget.
               </p>
             </div>
@@ -175,9 +172,6 @@ export function OnboardingStepIncome({
       {/* ── dompet pertama (WAJIB — ini yang membuka Step 3) ───────────── */}
       <section className="mt-10">
         <OnboardLabel>Dompet pertama</OnboardLabel>
-        <p className="mt-2 text-[14px] leading-relaxed text-forest/45">
-          Pilih satu dulu biar transaksi pertamamu punya tempat menempel.
-        </p>
 
         {/* ghost card 1 ketukan — gulir horizontal dengan snap; padding samping
             negatif supaya kartu bisa "keluar" dari kolom konten 480px */}
@@ -212,7 +206,7 @@ export function OnboardingStepIncome({
                 <span
                   className={cn(
                     'text-[13px] font-medium tracking-[-0.01em]',
-                    active ? 'text-forest' : 'text-forest/50',
+                    active ? 'text-forest' : 'text-forest-muted',
                   )}
                 >
                   {pick.name}
@@ -242,15 +236,15 @@ export function OnboardingStepIncome({
               <div className={cn('mt-3 px-4 py-4 ring-1 ring-ink/[0.06]', ONBOARD_CARD)}>
                 <label
                   htmlFor="onboarding-wallet-balance"
-                  className="block text-[13.5px] font-medium tracking-[-0.01em] text-forest/45"
+                  className="block text-[13.5px] font-medium tracking-[-0.01em] text-forest-muted"
                 >
                   Saldo {walletName} sekarang
                 </label>
 
-                <div className="mt-2.5 flex w-full items-baseline gap-1.5">
+                <div className="mt-2.5 flex w-full items-baseline gap-1.5 rounded-2xl border-2 border-dashed border-oat px-3 py-2 transition-colors focus-within:border-mint">
                   <span
                     aria-hidden
-                    className="w-7 shrink-0 text-right text-base font-medium text-forest/25"
+                    className="w-7 shrink-0 text-right text-base font-medium text-forest-muted"
                   >
                     Rp
                   </span>
@@ -269,7 +263,7 @@ export function OnboardingStepIncome({
                     enterKeyHint="next"
                     placeholder="1.000.000"
                     aria-label={'Saldo ' + walletName + ' kamu sekarang berapa?'}
-                    className="min-w-0 flex-1 bg-transparent text-center text-[1.7rem] font-medium leading-none tracking-[-0.03em] text-forest tabular-nums outline-none placeholder:text-forest/[0.14]"
+                    className="min-w-0 flex-1 bg-transparent text-center text-[1.7rem] font-medium leading-none tracking-[-0.03em] text-forest tabular-nums outline-none"
                   />
                   <span aria-hidden className="w-7 shrink-0" />
                 </div>
@@ -278,7 +272,7 @@ export function OnboardingStepIncome({
           )}
         </AnimatePresence>
 
-        <p className="mt-3 text-[13px] leading-relaxed text-forest/35">
+        <p className="mt-3 text-[13px] leading-relaxed text-forest-muted">
           Saldo boleh 0 kalau dompetnya baru dibuat.
         </p>
       </section>

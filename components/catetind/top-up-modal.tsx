@@ -1,13 +1,12 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Check, LoaderCircle, Lock, Sparkles, X } from 'lucide-react'
+import { Check, LoaderCircle, Lock, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock'
 import { formatIDR } from '@/lib/weekly-recap'
 import {
   AI_ADDON_PACKAGES,
-  AI_RESET_RULE_COPY,
   AI_TOPUP_COPY,
   formatTokens,
   planQuota,
@@ -116,6 +115,12 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
         amount?: number
         expiresAt?: string | null
         instructions?: ActiveInvoice['instructions']
+        /* Halaman pembayaran Midtrans (Snap): token untuk di-EMBED di kartu,
+           redirect sebagai jalan keluar kalau iframe diblokir. Tanpa ketiganya,
+           kartu pembayaran tidak punya apa pun untuk digambar. */
+        redirectUrl?: string | null
+        token?: string | null
+        snap?: ActiveInvoice['snap']
         error?: string
       } | null
       if (!res.ok || !data?.ok || !data.orderId) {
@@ -129,6 +134,9 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
         amount: data.amount ?? pkg.price,
         expiresAt: data.expiresAt ?? null,
         instructions: data.instructions ?? null,
+        redirectUrl: data.redirectUrl ?? null,
+        token: data.token ?? null,
+        snap: data.snap ?? null,
       })
     } catch {
       setError(AI_TOPUP_COPY.notConfigured)
@@ -171,7 +179,6 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
           role="dialog"
           aria-modal="true"
           aria-labelledby="topup-title"
-          aria-describedby="topup-desc"
           tabIndex={-1}
           className={cn(
             'pointer-events-auto flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-[2rem] bg-cream shadow-[0_-24px_60px_-24px_rgba(0,0,0,0.55)] ring-1 ring-soil/12 outline-none transition-[transform,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform lg:max-w-lg lg:rounded-[2rem] lg:shadow-[0_28px_70px_-24px_rgba(0,0,0,0.5)]',
@@ -186,18 +193,11 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
           {/* header — tetap diam, tidak ikut scroll */}
           <div className="flex shrink-0 items-start gap-3 px-5 pt-4 sm:px-6">
             <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-mint text-forest">
-              <Sparkles className="size-5" strokeWidth={2.2} />
-            </span>
+              </span>
             <div className="min-w-0 flex-1">
               <h2 id="topup-title" className="text-xl font-medium tracking-tight text-forest">
                 {AI_TOPUP_COPY.title}
               </h2>
-              <p
-                id="topup-desc"
-                className="mt-0.5 text-[14px] leading-relaxed break-words text-forest/55"
-              >
-                {AI_TOPUP_COPY.description}
-              </p>
             </div>
             <button
               type="button"
@@ -291,7 +291,7 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
                     <span
                       className={cn(
                         'text-[11px] font-medium',
-                        onAccent ? 'text-forest/60' : 'text-forest/40',
+                        onAccent ? 'text-forest-muted' : 'text-forest-muted',
                       )}
                     >
                       {AI_TOPUP_COPY.onceLabel}
@@ -300,7 +300,7 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
                     <span
                       className={cn(
                         'mt-2.5 block text-[12px] font-medium',
-                        onAccent ? 'text-forest' : 'text-forest/80',
+                        onAccent ? 'text-forest' : 'text-forest',
                       )}
                     >
                       +{formatTokens(pkg.tokens)} token AI
@@ -308,7 +308,7 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
                     <span
                       className={cn(
                         'mt-0.5 block text-[11px] leading-relaxed',
-                        onAccent ? 'text-forest/60' : 'text-forest/45',
+                        onAccent ? 'text-forest-muted' : 'text-forest-muted',
                       )}
                     >
                       {pkg.note}
@@ -317,10 +317,6 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
                 )
               })}
             </div>
-
-            <p className="mt-3 mb-1 text-[12px] leading-relaxed text-forest/40">
-              {AI_RESET_RULE_COPY}
-            </p>
           </div>
 
           {/* footer — total, CTA, trust badge */}
@@ -331,13 +327,13 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
               </p>
             )}
             <div className="flex items-center justify-between gap-3 text-sm">
-              <span className="min-w-0 truncate text-forest/55">
+              <span className="min-w-0 truncate text-forest-muted">
                 {selected ? selected.name : AI_TOPUP_COPY.emptySelection}
               </span>
               <span
                 className={cn(
                   'shrink-0 font-medium tabular-nums',
-                  selected ? 'text-forest' : 'text-forest/35',
+                  selected ? 'text-forest' : 'text-forest-muted',
                 )}
               >
                 {selected ? formatIDR(selected.price) : '-'}
@@ -352,7 +348,7 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
                 'mt-3 flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-medium transition-colors',
                 selectedPackage && !paying
                   ? 'bg-forest text-mint hover:bg-forest-soft active:scale-[0.99]'
-                  : 'cursor-not-allowed bg-ink/[0.07] text-forest/35',
+                  : 'cursor-not-allowed bg-ink/[0.07] text-forest-muted',
               )}
             >
               {paying ? (
@@ -365,7 +361,7 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
               )}
             </button>
 
-            <p className="mt-3 flex items-center justify-center gap-1.5 text-[12px] text-forest/45">
+            <p className="mt-3 flex items-center justify-center gap-1.5 text-[12px] text-forest-muted">
               <Lock className="size-3 shrink-0" strokeWidth={2.4} />
               {AI_TOPUP_COPY.trustNote}
             </p>

@@ -69,7 +69,6 @@ komentar arah produksi di titik integrasi).
 | 16 | **Share Preview (Public)** | `/share/[id]` | `/share/[id]` | ⚠️ | Pratinjau kartu ada; **generator gambar** (untuk OG/IG Story) belum (`share/[id]/page.tsx:50`). |
 | 17 | **Profil & Akun** | `/app/settings/profile` | `/settings/profile` 🧩 | ✅ | Route sendiri (`settings-panel-account.tsx`); di mobile dibuka dari indeks `/settings`. |
 | 18 | **Langganan & Billing** | `/app/settings/billing` | `/settings/billing` | ⚠️ | `billing-panel.tsx` + Fuel Gauge; kartu paket & jalur upgrade nyata (paket 84). Kuota AI kini per paket (`planQuota()`): tier 1 tanpa AI, tier 2 berkuota, tier 3 tanpa batas. Top up token AI kini **nyata** (Midtrans Core API + `ai_addons`, paket 85) dan band Top-Up hanya tampil untuk paket berkuota. |
-| 19 | **Tampilan & Tema** | `/app/settings/appearance` | `/settings/appearance` | ✅ | `settings-panel-preferences.tsx`. |
 | 20 | **Kustomisasi Kategori** | `/app/settings/categories` | `/settings/categories` | ✅ | idem. |
 | 21 | **AI Preferences** | `/app/settings/ai` | `/settings/ai` | ✅ | idem (+ `lib/ai-prefs.ts`). |
 | 22 | **Notifikasi** | `/app/settings/notifications` | `/settings/notifications` | ✅ | `notification-settings.tsx` + Web Push (`lib/use-push-notifications.ts`). |
@@ -368,7 +367,7 @@ pnpm theme:audit ; pnpm exec tsc --noEmit ; pnpm build
 
 | Celah | Status | Bukti |
 |---|---|---|
-| **§9.5 AI (chat/OCR/voice)** | ✅ Tutup | Mesin AI nyata (Gemini, server-only `lib/ai/provider.ts`): `/api/ai/text`, `/api/ai/ocr`, `/api/parse-voice`, `/api/ai/categorize`. Capture memakai route asli; gagal provider → jatuh **jujur** ke aturan lokal (label "belum pakai model"). |
+| **§9.5 AI (chat/OCR/voice)** | ✅ Tutup | Mesin AI nyata (Gemini, server-only `lib/ai/provider.ts`): `/api/ai/text`, `/api/ai/ocr`, `/api/parse-voice`, `/api/ai/categorize`. Capture memakai route asli; gagal provider → jatuh **jujur** ke aturan lokal (tanpa label teknis di bubble; banner status hanya muncul saat server belum punya kunci). |
 | **§9.4 Harga real-time** | ➖ Ditutup (paket 84) | Harga tidak lagi bergerak: 3 tier akses selamanya di `lib/data/pricing.ts`; `GET /api/price` + `pricing_state` dihapus supaya tidak ada endpoint harga yang menganggur. |
 | **§9.6 Generator gambar share** | ✅ Tutup | `next/og`: `app/share/[id]/opengraph-image.tsx` + `twitter-image.tsx` (1200×630) + `GET /api/share/[id]/image` (Story 1080×1920). Tombol **"Share Report"** di panel rekap (Web Share files → fallback unduh). Privacy-safe (nol rupiah). |
 | **§9.3/9.7/9.9 Pembayaran/reward/live-feed** | ✅ Checkout + **top-up** + reward NYATA | `lib/payments/*` + `/api/payment/charge` + `/api/payment/status` + `/api/payment/webhook` (verifikasi SHA512, 403/503 fail-closed; pemenuhan lewat RPC). Top-up token masih rail; **upgrade sudah nyata** (bayar selisih); renewal/cancel dihapus. `/api/referral/reward` (503), `/api/pricing/recent-purchases` (`{items:[],firstHere:true}`). |

@@ -16,13 +16,13 @@
 export const NOT_FOUND_EYEBROW = 'Kode 404'
 
 /** H1 hangat: metafora kebun milik produk, bukan "Page Not Found" */
-export const NOT_FOUND_TITLE = 'Halaman ini nggak ada di kebun kita 🌱'
+export const NOT_FOUND_TITLE = 'Halaman ini nggak ada di kebun kita 🧩'
 
 /** SATU baris: sebabnya + penenangnya, tanpa paragraf kedua */
 export const NOT_FOUND_BODY = 'Tautannya mungkin salah ketik atau sudah pindah, datamu aman.'
 
-/** label ilustrasi tanaman kecil di kepala halaman (dekoratif, tetap punya makna) */
-export const NOT_FOUND_ART_LABEL = 'Tunas kecil di pot, tanaman CatetInd masih tumbuh'
+/** label ilustrasi papan puzzle kecil di kepala halaman (dekoratif, tetap punya makna) */
+export const NOT_FOUND_ART_LABEL = 'Papan puzzle dengan beberapa kepingan terpasang'
 
 /** CTA utama — satu tombol, satu arah: pulang ke Dashboard */
 export const NOT_FOUND_HOME_CTA = 'Balik ke Beranda'

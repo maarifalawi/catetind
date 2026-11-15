@@ -10,7 +10,7 @@
         tidak pernah diambil dari sumber data keuangan (`buildSharePayload()`
         memilih field satu per satu; tidak boleh `...spread` objek keuangan).
      2. JUJUR (PRD 5174–5177 & 572) — kalau datanya masih tipis, kartu ditampilkan
-        apa adanya sebagai "masih tumbuh". Tidak ada pencapaian, testimoni, atau
+        apa adanya sebagai "masih disusun". Tidak ada pencapaian, testimoni, atau
         angka sosial yang dikarang.
 
    Semua angka + copy tinggal di sini (file MURNI, tanpa React) supaya bisa
@@ -25,10 +25,11 @@
 import { SITE_DOMAIN, SITE_ORIGIN } from '../site'
 
 /**
- * Tahap tanaman yang boleh tampil di kartu publik. Nilainya SENGAJA identik
+ * Tahap puzzle yang boleh tampil di kartu publik. Nilainya SENGAJA identik
  * dengan `PlantStage` di `components/catetind/plant-illustration.tsx`
- * (1 Benih … 4 Berbunga), tapi ditulis ulang di sini supaya lapis data tidak
- * pernah mengimpor komponen UI — dan supaya perubahan visual tanaman tidak
+ * (1 Awal tersusun … 4 Puzzle lengkap), tapi ditulis ulang di sini supaya lapis
+ * data tidak pernah mengimpor komponen UI — dan supaya perubahan visual papan
+ * puzzle tidak mengubah bentuk data yang beredar di kartu share — dan tidak
  * diam-diam mengubah kontrak publik halaman ini.
  */
 export type SharePlantStage = 1 | 2 | 3 | 4
@@ -64,7 +65,7 @@ export interface ShareCard {
  * penting bisa direview tanpa menebak URL:
  *   • `rina-sep`  → kartu penuh (data sudah melewati ambang insight)
  *   • `dimas-okt` → kartu tipis (di bawah `SHARE_MIN_TRANSACTIONS`) → tampil
- *                   apa adanya sebagai "masih tumbuh"
+ *                   apa adanya sebagai "masih disusun"
  * Angka `totalTransactions` dimasukkan apa adanya: 87 & 5 adalah jumlah CATATAN,
  * bukan rupiah — satu-satunya keluarga angka yang diizinkan PRD 6575.
  */
@@ -146,7 +147,7 @@ export const SHARE_ACTION_TITLE = 'CatetInd | Kartu Pencapaian'
  * yang pertama dibaca orang tetap terasa hangat, bukan seperti laporan.
  */
 export function buildShareActionText(id: string): string {
-  return `Aku lagi rajin nyatat di CatetInd 🌱 Ini kartu pencapaianku bulan ini: ${buildShareLinkText(id)}`
+  return `Aku lagi rajin nyatat di CatetInd 🧩 Ini kartu pencapaianku bulan ini: ${buildShareLinkText(id)}`
 }
 
 export interface SharePayload {
@@ -236,7 +237,7 @@ export function shareHeadline(ownerName: string): string {
 }
 
 export const SHARE_PAGE_SUBHEAD =
-  'Kartu ini bukan laporan keuangan, hanya jumlah catatan, hari konsisten, dan tahap tanamannya.'
+  'Kartu ini bukan laporan keuangan, hanya jumlah catatan, hari konsisten, dan tahap puzzle-nya.'
 
 /** label kecil di dalam kartu, sebelum baris pencapaian */
 export function shareCardLead(ownerName: string): string {
@@ -244,15 +245,15 @@ export function shareCardLead(ownerName: string): string {
 }
 
 /**
- * Caption di bawah tanaman. Emoji dipakai hemat sebagai penanda nada
- * (CONTEXT-WAJIB §4), dan setiap tahap punya kalimatnya sendiri supaya tanaman
- * tidak pernah terasa seperti hiasan statis.
+ * Caption di bawah papan puzzle. Emoji dipakai hemat sebagai penanda nada
+ * (CONTEXT-WAJIB §4), dan setiap tahap punya kalimatnya sendiri supaya papan
+ * puzzle tidak pernah terasa seperti hiasan statis.
  */
 export const SHARE_STAGE_CAPTION: Record<SharePlantStage, string> = {
-  1: 'Benihnya baru mulai disiram 🌱',
-  2: 'Tunasku mulai tumbuh 🌿',
-  3: 'Tanamanku makin rimbun 🌿',
-  4: 'Pohon keuanganku udah berbunga! 🌸',
+  1: 'Puzzle-ku baru beberapa keping 🧩',
+  2: 'Puzzle-ku setengah jalan 🧩',
+  3: 'Puzzle-ku hampir lengkap 🧩',
+  4: 'Puzzle keuanganku udah lengkap! 🧩',
 }
 
 /** footer kecil di dalam kartu — alamat yang bisa diketik manual */
@@ -265,7 +266,7 @@ export const SHARE_CARD_DOMAIN = SITE_DOMAIN
 
 /** lapis 1 — di bawah kartu, satu baris, menjelaskan isi kartu */
 export const SHARE_CARD_PRIVACY_LINE =
-  'Yang tampil di kartu ini cuma jumlah catatan, hari konsisten, dan tahap tanaman, tanpa nominal, kategori, atau nama merchant.'
+  'Yang tampil di kartu ini cuma jumlah catatan, hari konsisten, dan tahap puzzle, tanpa nominal, kategori, atau nama merchant.'
 
 /** lapis 2 — PRD 6633, VERBATIM, jangan diedit gayanya */
 export const SHARE_PRIVACY_NOTE =
@@ -281,21 +282,21 @@ export function shareVisitorPledge(ownerName: string): string {
 export const SHARE_CTA = 'Mau kayak gini? Gabung CatetInd'
 /** route yang ADA di repo ini (`app/checkout/page.tsx`) — jangan ganti tanpa route-nya */
 export const SHARE_CTA_HREF = '/checkout'
-export const SHARE_CTA_HINT = 'Empat tap buat nyatat, satu tanaman buat nemenin konsistenmu.'
+export const SHARE_CTA_HINT = 'Empat tap buat nyatat, satu puzzle buat nemenin konsistenmu.'
 
 /** kartu ajakan untuk pengunjung yang belum kenal CatetInd (bukan hard-sell) */
-export const SHARE_INVITE_TITLE = 'Tanaman kamu mulai dari benih 🌱'
+export const SHARE_INVITE_TITLE = 'Puzzle kamu mulai dari keping pertama 🧩'
 export const SHARE_INVITE_BODY =
-  'Nyatat pengeluaran cukup 4 tap. Tiap kali kamu konsisten, tanamanmu tumbuh, dan kartu seperti di atas dibuat otomatis dari catatanmu.'
+  'Nyatat pengeluaran cukup 4 tap. Tiap kali kamu konsisten, satu kepingan puzzle-mu terpasang, dan kartu seperti di atas dibuat otomatis dari catatanmu.'
 
 
 /** satu kalimat nurturing untuk CTA kartu yang datanya masih tipis */
 export const SHARE_THIN_CTA_HINT =
   'Mulai dari sedikit juga jalan, kok. Yang penting catatannya mulai jalan.'
 
-/* ── STATE "MASIH TUMBUH" (PRD 5174–5177 & 572) ───────────────────────────── */
+/* ── STATE "MASIH DISUSUN" (PRD 5174–5177 & 572) ───────────────────────────── */
 
-export const SHARE_GROWING_TITLE = 'Kartu ini masih tumbuh 🌱'
+export const SHARE_GROWING_TITLE = 'Kartu ini masih disusun 🧩'
 
 /** apa adanya: sebut jumlahnya, jangan dibulatkan jadi pencapaian palsu */
 export function shareGrowingNote(card: ShareCard): string {
@@ -304,13 +305,13 @@ export function shareGrowingNote(card: ShareCard): string {
 
 /* ── STATE "KARTU TIDAK ADA" (inventaris #16: hangat, bukan 404 kaku) ─────── */
 
-export const SHARE_UNAVAILABLE_TITLE = 'Kartu ini sudah tidak tersedia atau tautannya salah 🌱'
+export const SHARE_UNAVAILABLE_TITLE = 'Kartu ini sudah tidak tersedia atau tautannya salah 🧩'
 export const SHARE_UNAVAILABLE_BODY =
   'Mungkin tautannya terpotong saat dikirim, atau pemiliknya sudah menghapus kartunya. Nggak ada yang rusak, kamu tetap bisa kenalan sama CatetInd di bawah.'
 /** CTA pulang ke beranda (bukan halaman error) */
 export const SHARE_UNAVAILABLE_CTA = 'Balik ke Beranda'
 export const SHARE_UNAVAILABLE_CTA_HREF = '/'
-export const SHARE_UNAVAILABLE_ART_LABEL = 'Tunas kecil di pot, tanaman CatetInd masih tumbuh'
+export const SHARE_UNAVAILABLE_ART_LABEL = 'Papan puzzle dengan beberapa kepingan terpasang'
 
 /* ── PANEL BAGIKAN DI DALAM APP (trigger dari Rekap Mingguan) ──────────────── */
 
@@ -325,8 +326,8 @@ export const SHARE_PANEL_COPY = {
   /** toast + status inline — pola sama dengan serah-terima /install */
   status: {
     copied: 'Link kartu tersalin!',
-    shared: 'Kartu terkirim! 🌿',
-    downloaded: 'Gambar kartu tersimpan di perangkatmu 🌿',
+    shared: 'Kartu terkirim! 🧩',
+    downloaded: 'Gambar kartu tersimpan di perangkatmu 🧩',
     failed: 'Gagal menyalin, salin link-nya manual ya',
   },
   /** pola JOIN_PREVIEW_COPY: pratinjau halaman yang dilihat orang lain */
@@ -338,16 +339,16 @@ export const SHARE_PANEL_COPY = {
    Kartu yang sama dengan `share-achievement-card.tsx`, dibangkitkan server-side
    (`next/og` `ImageResponse`) untuk pratinjau tautan (OG/Twitter) dan untuk
    tombol "Share Report". Isinya HANYA yang boleh publik: nama panggilan, bulan,
-   jumlah catatan, hari konsisten, milestone, tahap tanaman — nol angka rupiah
+   jumlah catatan, hari konsisten, milestone, tahap puzzle — nol angka rupiah
    (PRD 6572–6576). Semua teks di gambar tinggal di sini, bukan di komponen. */
 
 export const SHARE_IMAGE_COPY = {
   brand: 'CatetInd',
   eyebrow: 'Kartu pencapaian',
   /** pengingat singkat di kaki gambar (bukan ajakan jualan) */
-  footer: 'Catat 4 tap, tumbuh tiap hari',
-  /** dipakai versi Story di bawah tanaman */
-  storyFooter: 'Tanaman kamu mulai dari benih 🌱',
+  footer: 'Catat 4 tap, keping demi keping',
+  /** dipakai versi Story di bawah papan puzzle */
+  storyFooter: 'Puzzle kamu mulai dari keping pertama 🧩',
 } as const
 
 /** route gambar Story 1080×1920 (dipakai tombol "Share Report") */
@@ -373,7 +374,7 @@ export const SHARE_DEMO_COPY = {
 
 export const DEMO_SHARE_STATES: { label: string; id: string }[] = [
   { label: 'Kartu penuh', id: ACTIVE_SHARE_CARD_ID },
-  { label: 'Masih tumbuh', id: 'dimas-okt' },
+  { label: 'Masih disusun', id: 'dimas-okt' },
   { label: 'Tidak tersedia', id: DEMO_UNKNOWN_SHARE_ID },
 ]
 
@@ -387,14 +388,14 @@ export function shareMetadataTitle(card: ShareCard): string {
 }
 
 export function shareMetadataDescription(card: ShareCard): string {
-  return `Kartu pencapaian ${card.ownerName} di CatetInd: jumlah catatan, hari konsisten, dan tahap tanaman, tanpa satu pun angka rupiah.`
+  return `Kartu pencapaian ${card.ownerName} di CatetInd: jumlah catatan, hari konsisten, dan tahap puzzle, tanpa satu pun angka rupiah.`
 }
 
 /** judul/deskripsi untuk id yang tidak dikenal: sebut apa adanya, jangan mengarang nama */
 export const SHARE_UNKNOWN_METADATA_TITLE = 'Kartu pencapaian | CatetInd'
 
 export const SHARE_UNKNOWN_METADATA_DESCRIPTION =
-  'Kartu pencapaian CatetInd: jumlah catatan, hari konsisten, dan tahap tanaman, tanpa satu pun angka rupiah.'
+  'Kartu pencapaian CatetInd: jumlah catatan, hari konsisten, dan tahap puzzle, tanpa satu pun angka rupiah.'
 
 
 

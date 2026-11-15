@@ -14,14 +14,26 @@ import { cn } from '@/lib/utils'
    File ini sengaja HANYA berisi bahan presentasional (tanpa state domain),
    supaya panel-panel di `settings-panel-*.tsx` tinggal menyusun isinya. */
 
-/** Kepala satu detail panel: eyebrow kecil + judul + penjelasan satu baris. */
+/** Kepala satu detail panel: judul + penjelasan satu baris.
+ *
+ *  EYEBROW DIHAPUS (revisi pemilik repo). Dulu setiap panel memasang label kecil
+ *  di atas judul — dan karena labelnya disalin dari judulnya sendiri, halaman
+ *  menampilkan hal yang sama dua kali:
+ *
+ *      PROFIL & AKUN          ← eyebrow kecil, huruf kapital
+ *      Profil & Akun          ← judul asli
+ *
+ *  Hal yang sama terjadi di Langganan (`Langganan` → `Langganan & Billing`),
+ *  Notifikasi, Keamanan, AI Preferences, dan Export Data. Sekarang yang tampil
+ *  HANYA judul (baris tebal) — satu kalimat per kepala, tanpa pengulangan.
+ *  Prop `eyebrow` sengaja TIDAK dipertahankan sebagai prop opsional: kalau
+ *  dibiarkan, ia akan dipakai lagi oleh panel berikutnya dan duplikatnya
+ *  kembali. */
 export function SettingsPanel({
-  eyebrow,
   title,
   desc,
   children,
 }: {
-  eyebrow: string
   title: string
   desc?: string
   children: ReactNode
@@ -29,14 +41,11 @@ export function SettingsPanel({
   return (
     <section className="flex w-full min-w-0 flex-col gap-4">
       <header className="min-w-0">
-        <p className="text-[11.5px] font-medium tracking-[0.16em] text-forest/40 uppercase">
-          {eyebrow}
-        </p>
-        <h2 className="mt-1.5 font-display text-xl font-medium tracking-tight text-forest sm:text-2xl">
+        <h2 className="font-display text-xl font-medium tracking-tight text-forest sm:text-2xl">
           {title}
         </h2>
         {desc && (
-          <p className="mt-1.5 max-w-2xl text-[14px] leading-relaxed text-forest/55">{desc}</p>
+          <p className="mt-1.5 max-w-2xl text-[14px] leading-relaxed text-forest-muted">{desc}</p>
         )}
       </header>
       {children}
@@ -82,7 +91,7 @@ export function SettingsCard({
                 {title}
               </h3>
             )}
-            {desc && <p className="mt-1 text-[13.5px] leading-relaxed text-forest/55">{desc}</p>}
+            {desc && <p className="mt-1 text-[13.5px] leading-relaxed text-forest-muted">{desc}</p>}
           </div>
           {action}
         </div>
@@ -108,7 +117,7 @@ export function SettingsRow({
     <div className={cn('flex items-center gap-4 py-3.5 first:pt-0 last:pb-0', className)}>
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-forest">{label}</p>
-        {helper && <p className="mt-0.5 text-xs leading-relaxed text-forest/50">{helper}</p>}
+        {helper && <p className="mt-0.5 text-xs leading-relaxed text-forest-muted">{helper}</p>}
       </div>
       {children}
     </div>
@@ -129,9 +138,9 @@ export function TonePill({
 }) {
   const TONES = {
     positive: 'bg-mint/30 text-forest',
-    warning: 'bg-hud-amber/30 text-forest/70',
+    warning: 'bg-hud-amber/30 text-forest-soft',
     danger: 'bg-plum/20 text-plum',
-    neutral: 'bg-sage text-forest/60',
+    neutral: 'bg-sage text-forest-muted',
   } as const
 
   return (
@@ -201,7 +210,7 @@ export function ToggleRow({
     <div className="flex items-center gap-4 py-3.5 first:pt-0 last:pb-0">
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-forest">{label}</p>
-        {helper && <p className="mt-0.5 text-xs leading-relaxed text-forest/50">{helper}</p>}
+        {helper && <p className="mt-0.5 text-xs leading-relaxed text-forest-muted">{helper}</p>}
       </div>
       <Toggle checked={checked} onToggle={onToggle} label={label} disabled={disabled} />
     </div>
@@ -237,7 +246,7 @@ export function Segmented<T extends string>({
             onClick={() => onChange(option.id)}
             className={cn(
               'inline-flex flex-1 items-center justify-center gap-1.5 rounded-[0.9rem] px-3.5 py-2 text-[13.5px] font-medium transition-colors sm:flex-none sm:rounded-full',
-              active ? 'bg-cream text-forest shadow-sm' : 'text-forest/55 hover:text-forest',
+              active ? 'bg-cream text-forest shadow-sm' : 'text-forest-muted hover:text-forest',
             )}
           >
             {option.emoji && <span aria-hidden>{option.emoji}</span>}
@@ -255,7 +264,7 @@ export function SettingsInput({ className, ...props }: ComponentProps<'input'>) 
     <input
       {...props}
       className={cn(
-        'w-full rounded-2xl bg-cream px-4 py-3 text-sm text-forest ring-1 ring-soil/12 outline-none transition-shadow placeholder:text-forest/30 focus:ring-2 focus:ring-forest/30 disabled:cursor-not-allowed disabled:bg-sage/40 disabled:text-forest/45',
+        'w-full rounded-2xl bg-cream px-4 py-3 text-sm text-forest ring-1 ring-soil/12 outline-none transition-shadow placeholder:text-forest-muted focus:ring-2 focus:ring-forest/30 disabled:cursor-not-allowed disabled:bg-sage/40 disabled:text-forest-muted',
         className,
       )}
     />
@@ -278,12 +287,12 @@ export function SettingsField({
     <div className="flex flex-col gap-1.5">
       <label
         htmlFor={htmlFor}
-        className="text-[12px] font-medium tracking-[0.08em] text-forest/45 uppercase"
+        className="text-[12px] font-medium tracking-[0.08em] text-forest-muted uppercase"
       >
         {label}
       </label>
       {children}
-      {note && <p className="text-[12.5px] leading-relaxed text-forest/45">{note}</p>}
+      {note && <p className="text-[12.5px] leading-relaxed text-forest-muted">{note}</p>}
     </div>
   )
 }

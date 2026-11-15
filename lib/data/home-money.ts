@@ -220,7 +220,7 @@ export const HOME_MONEY_COPY = {
   chartRhythmLabel: 'Irama pekan',
   /** satu-satunya kalimat di kartu saat belum ada pemasukan (pengeluaran saja) */
   chartNoIncome:
-    'Belum ada pemasukan di periode ini, catat pemasukan dulu biar arus uangnya kebaca 🌱',
+    'Belum ada pemasukan di periode ini, catat pemasukan dulu biar arus uangnya kebaca 🧩',
   /** judul + EMPTY STATE Arus Uang (58.1) */
   chartTitle: 'Arus Uang',
   chartEmptyTitle: 'Arus uangmu belum tergambar',
@@ -244,7 +244,7 @@ export const HOME_MONEY_COPY = {
   /** EMPTY STATE Transaksi Terakhir (58.1) */
   txnTitle: 'Transaksi Terakhir',
   txnEmptyTitle: 'Belum ada catatan',
-  txnEmptyBody: 'Catat yang pertama yuk! 🌱',
+  txnEmptyBody: 'Catat yang pertama yuk! 🧩',
   txnEmptyCta: '+ Catat Transaksi',
   /** tautan "Lihat Riwayat" di dalam empty state (route nyata: /history) */
   historyLink: 'Lihat Riwayat',
@@ -427,7 +427,7 @@ export const HOME_CASHFLOW_BAR = {
   insideLabelClass: 'text-forest',
   topInsideLabelClass: 'text-cream',
   /** persen untuk batang PENDEK: mengambang tepat di atas batangnya */
-  outsideLabelClass: 'text-forest/55',
+  outsideLabelClass: 'text-forest-muted',
   /** ambang tinggi (%) — di bawah ini angka tidak muat dicetak di dalam batang */
   insideMinPct: 26,
   /** animasi tumbuh dari dasar (keyframe `bar-grow`) — dihormati motion-reduce */

@@ -155,7 +155,12 @@ export function isPaymentMethodActive(id: unknown): id is PaymentMethodId {
 export function snapEnabledPayments(method: PaymentMethodDefinition): string[] {
   switch (method.id) {
     case 'qris':
-      return ['other_qris', 'gopay']
+      /* SATU kanal saja (revisi 4 Nov 2026): dulu `['other_qris','gopay']`, dan
+         halaman Snap karena itu menampilkan DUA pilihan QRIS ("GoPay QRIS" dan
+         "QRIS") padahal user sudah memilih QRIS di langkah pertama — persis
+         keluhan "harus milih lagi yang mana". Dengan satu kanal, Snap langsung
+         membuka instruksi QR-nya, tanpa pemilihan kedua. */
+      return ['other_qris']
     case 'gopay':
       return ['gopay']
     case 'bni-va':

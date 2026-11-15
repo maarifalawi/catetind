@@ -57,10 +57,12 @@ describe('requestTextTransaction', () => {
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
     expect(url).toBe('/api/parse-voice')
     expect(init.method).toBe('POST')
-    expect(JSON.parse(String(init.body))).toEqual({
-      transcript: 'beli kopi 25 ribu',
-      source: 'voice',
-    })
+    const body = JSON.parse(String(init.body)) as Record<string, unknown>
+    expect(body.transcript).toBe('beli kopi 25 ribu')
+    expect(body.source).toBe('voice')
+    /* TANGGAL LOKAL ikut dikirim: route berjalan di server (UTC), jadi tanpa ini
+       catatan yang dibuat pagi hari (WIB/WITA/WIT) bisa bertanggal kemarin. */
+    expect(body.today).toMatch(/^\d{4}-\d{2}-\d{2}$/)
   })
 
   it('provider menolak (403) → null, supaya pemanggil memakai aturan lokal', async () => {

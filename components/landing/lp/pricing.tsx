@@ -1,6 +1,15 @@
-﻿import Link from 'next/link'
-import { ArrowRight, Check, Minus, ShieldCheck, Star } from 'lucide-react'
-import { LP_PRICING, formatIDR, lpPlanPrice, type LandingTier } from '@/lib/data/landing'
+﻿'use client'
+
+import { useState } from 'react'
+import Link from 'next/link'
+import { ArrowRight, Check, Minus, ShieldCheck } from 'lucide-react'
+import {
+  LP_PRICING,
+  formatIDR,
+  lpPlanPrice,
+  type LandingTier,
+  type LpPricingMode,
+} from '@/lib/data/landing'
 import { cn } from '@/lib/utils'
 import { BatikBackdrop } from './batik-backdrop'
 import { LandingReveal } from './reveal'
@@ -9,9 +18,12 @@ import { LandingReveal } from './reveal'
    Tiga kartu, satu periode: akses selamanya (sekali bayar). Struktur harga
    mengikuti psikologi "anchor + hero + premium":
 
-     Catet Aja (Rp1)    → pintu masuk uji coba, fitur AI dikunci
-     Waras (129rb)      → kartu hero: +128.999 untuk semua fitur AI
+     Catet Aja (99rb)   → pintu masuk, fitur AI dikunci
+     Waras (129rb)      → kartu hero: +30rb untuk semua fitur AI
      Sultan (299rb)     → plafon harga, membuat Waras terasa murah
+
+   CATATAN: harga rilis 15 Nov 2026 = 99rb / 129rb / 299rb (lihat `PLANS` di
+   `lib/data/pricing.ts`). Angka yang diiklankan = angka yang ditagih Midtrans.
 
    ATURAN YANG MENGIKAT:
      · nominal TIDAK ditulis di JSX — `lpPlanPrice()` membaca `PLANS` dari
@@ -26,6 +38,10 @@ import { LandingReveal } from './reveal'
    Minus, ArrowRight, Star, ShieldCheck. */
 
 export function LandingPricingLp() {
+  /* DUA periode dijual: 30 hari (bulanan) & akses selamanya. Pilihan user
+     mengubah nominal DAN tautan checkout sekaligus, jadi angka yang diiklankan
+     mustahil berbeda dari yang ditagih. */
+  const [mode, setMode] = useState<LpPricingMode>(LP_PRICING.defaultMode)
   return (
     <section
       id="pricing"
@@ -48,12 +64,37 @@ export function LandingPricingLp() {
               {LP_PRICING.titleAfter}
             </h2>
           </LandingReveal>
+
+          {/* saklar periode — tiga kartu di bawahnya mengikuti pilihan ini */}
+          <div
+            role="group"
+            aria-label={LP_PRICING.toggleAria}
+            className="flex items-center justify-center gap-1 rounded-full bg-sage/60 p-1 ring-1 ring-soil/10"
+          >
+            {LP_PRICING.modes.map((entry) => (
+              <button
+                key={entry.id}
+                type="button"
+                data-catetind-periode={entry.id}
+                aria-pressed={mode === entry.id}
+                onClick={() => setMode(entry.id)}
+                className={cn(
+                  'rounded-full px-4 py-2 text-[13px] leading-none font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/30',
+                  mode === entry.id
+                    ? 'bg-forest text-cream'
+                    : 'text-forest hover:bg-sage focus-visible:bg-sage',
+                )}
+              >
+                {entry.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 items-stretch gap-6 pt-4 landing:grid-cols-3 landing:gap-5">
           {LP_PRICING.tiers.map((tier, index) => (
             <LandingReveal key={tier.id} y={32} delay={index * 0.1} className="h-full">
-              <PricingCard tier={tier} />
+              <PricingCard tier={tier} mode={mode} />
             </LandingReveal>
           ))}
         </div>
@@ -69,9 +110,9 @@ export function LandingPricingLp() {
   )
 }
 
-function PricingCard({ tier }: { tier: LandingTier }) {
+function PricingCard({ tier, mode }: { tier: LandingTier; mode: LpPricingMode }) {
   const recommended = Boolean(tier.recommended)
-  const price = lpPlanPrice(tier.id, 'lifetime')
+  const price = lpPlanPrice(tier.id, mode)
 
   const ctaClass = cn(
     'group mt-6 flex h-12 w-full items-center justify-between gap-3 rounded-full pr-1.5 pl-5 text-[14px] font-medium leading-[1.5] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 motion-reduce:transition-none',
@@ -83,6 +124,8 @@ function PricingCard({ tier }: { tier: LandingTier }) {
   return (
     <article
       aria-labelledby={`plan-${tier.id}-name`}
+      data-catetind-paket={tier.id}
+      data-catetind-periode-aktif={mode}
       className={cn(
         'relative flex h-full flex-col rounded-[28px] p-6 pt-8 landing:p-8',
         recommended
@@ -105,7 +148,6 @@ function PricingCard({ tier }: { tier: LandingTier }) {
 
       {recommended && tier.badge ? (
         <span className="absolute -top-3.5 left-1/2 z-20 inline-flex -translate-x-1/2 items-center gap-1.5 whitespace-nowrap rounded-full bg-daisy px-3.5 py-1.5 text-[11.5px] font-semibold leading-none text-forest shadow-sm ring-1 ring-ink/5">
-          <Star className="size-3.5 fill-forest" strokeWidth={1.8} aria-hidden />
           {tier.badge}
         </span>
       ) : null}
@@ -119,7 +161,7 @@ function PricingCard({ tier }: { tier: LandingTier }) {
               : 'bg-sage text-forest',
           )}
         >
-          {LP_PRICING.priceBadge}
+          {LP_PRICING.modeBadge[mode]}
         </span>
 
         <h3
@@ -139,7 +181,7 @@ function PricingCard({ tier }: { tier: LandingTier }) {
               recommended ? 'text-cream-muted' : 'text-forest-muted',
             )}
           >
-            {LP_PRICING.priceUnit}
+            {LP_PRICING.priceUnits[mode]}
           </span>
         </p>
 
@@ -153,9 +195,11 @@ function PricingCard({ tier }: { tier: LandingTier }) {
         </p>
 
         <Link
-          href={LP_PRICING.checkoutHref(tier.id, 'lifetime')}
+          href={LP_PRICING.checkoutHref(tier.id, mode)}
           className={ctaClass}
-          aria-label={`${tier.ctaLabel}, ${formatIDR(price)} sekali bayar, akses selamanya`}
+          aria-label={`${tier.ctaLabel}, ${formatIDR(price)} ${
+            mode === 'monthly' ? 'per 30 hari' : 'sekali bayar, akses selamanya'
+          }`}
         >
           <span>{tier.ctaLabel}</span>
           <span
@@ -195,7 +239,7 @@ function PricingCard({ tier }: { tier: LandingTier }) {
                         ? 'bg-cream/10 text-mint'
                         : 'bg-sage text-forest'
                       : recommended
-                        ? 'bg-cream/5 text-cream/35'
+                        ? 'bg-cream/5 text-cream-muted'
                         : 'bg-sage/60 text-forest-muted/50',
                   )}
                 >
@@ -210,7 +254,7 @@ function PricingCard({ tier }: { tier: LandingTier }) {
                     'text-[13.5px] leading-[1.55]',
                     feature.included
                       ? recommended
-                        ? 'text-cream/90'
+                        ? 'text-cream'
                         : 'text-forest'
                       : recommended
                         ? 'text-cream-muted'

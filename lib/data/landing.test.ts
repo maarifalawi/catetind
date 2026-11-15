@@ -155,7 +155,7 @@ describe('HERO_DEVICE — satu cerita angka di seluruh hero', () => {
     expect(float('jatah')?.value).toBe(HERO_HUD.amount)
     expect(float('masuk')?.value).toBe(`+${formatIDR(HERO_DEVICE_MONTHLY_SUMMARY.income)}`)
     expect(float('keluar')?.value).toBe(`-${formatIDR(HERO_DEVICE_MONTHLY_SUMMARY.spending)}`)
-    expect(float('tanaman')?.value).toBe(HERO_HUD.plantLabel)
+    expect(float('puzzle')?.value).toBe(HERO_HUD.plantLabel)
   })
 
   it('kalimat pembaca layar memuat angka yang sama dengan yang digambar', () => {
@@ -175,17 +175,20 @@ describe('HERO_DEVICE — satu cerita angka di seluruh hero', () => {
    copy template Inggris (termasuk nama "Makro") yang lolos ke layar. */
 
 describe('LP_PRICING — harga yang diiklankan = harga yang ditagih', () => {
-  it('default mode = lifetime dan hanya lifetime yang dijual', () => {
+  it('default mode = lifetime dan DUA periode dijual (30 hari + selamanya)', () => {
     expect(LP_PRICING.defaultMode).toBe('lifetime')
-    expect(LP_PRICING.modes.map((entry) => entry.id)).toEqual(['lifetime'])
+    expect(LP_PRICING.modes.map((entry) => entry.id)).toEqual(['monthly', 'lifetime'])
+    expect(LP_PRICING.modes.map((entry) => entry.label)).toEqual(['30 Hari', 'Akses Selamanya'])
     expect(LP_PRICING.savingsLabel).toBe('Paling hemat')
   })
 
-  it('harga lifetime landing = PLANS[].lifetime', () => {
+  it('harga monthly & lifetime landing = PLANS yang sama dengan checkout', () => {
     for (const plan of PLANS) {
       expect(lpPlanPrice(plan.id, 'lifetime')).toBe(plan.lifetime)
+      expect(lpPlanPrice(plan.id, 'monthly')).toBe(plan.monthly)
     }
-    expect(PLANS.map((plan) => plan.lifetime)).toEqual([109_000, 129_000, 299_000])
+    /* Harga rilis 15 Nov 2026: Catet Aja Rp99.000, Waras Rp129.000 */
+    expect(PLANS.map((plan) => plan.lifetime)).toEqual([99_000, 129_000, 299_000])
   })
 
   it('tidak ada daftar harga kedua di LP_PRICING', () => {
@@ -347,7 +350,7 @@ describe('LP_FAQ — kategori nyata, bukan tab kosong', () => {
     for (const id of [
       'buat-siapa',
       'beda-app-lain',
-      'harus-paham-keuangan',
+      'perlu-paham-keuangan',
       'versi-gratis',
       'pwa',
       'bank-sync',
@@ -434,7 +437,7 @@ describe('LP_CONTACT — tiga field, WhatsApp utama + email fallback', () => {
 describe('LP_HERO — satu janji, CTA jujur, tanpa bukti sosial karangan', () => {
   it('headline memuat "catet keuangan", tanpa titik & tanpa latar highlight', () => {
     const headline = `${LP_HERO.headlineBefore}${LP_HERO.headlineEmphasis}${LP_HERO.headlineAfter}`
-    expect(headline).toBe('Aplikasi catet keuangan buat lo yang males nyatet')
+    expect(headline).toBe('Aplikasi catet keuangan buat kamu yang males nyatet')
     /* frasa kunci halaman utama — H1 satu-satunya di `/` */
     expect(headline).toContain('catet keuangan')
     expect(headline.endsWith('.')).toBe(false)
@@ -531,7 +534,7 @@ describe('LP_* — tidak ada sisa copy template Inggris / nama Makro', () => {
     expect(serialized).not.toContain(phrase)
   })
 
-  it('copy landing bebas em-dash, "lu", dan "kamu"', () => {
+  it('copy landing bebas em-dash, "lu", dan "lo" — menyapa dengan "kamu"', () => {
     const copy = JSON.stringify({
       hero: LP_HERO,
       nav: LP_NAV,
@@ -543,7 +546,8 @@ describe('LP_* — tidak ada sisa copy template Inggris / nama Makro', () => {
     })
     expect(copy).not.toContain('—')
     expect(copy).not.toMatch(/\blu\b/i)
-    expect(copy).not.toMatch(/\bkamu\b/i)
+    expect(copy).not.toMatch(/\blo\b/i)
+    expect(copy).toMatch(/\bkamu\b/i)
   })
 })
 
@@ -677,7 +681,7 @@ describe('notifikasi pembelian', () => {
 
   it('pembelian Catet Aja tidak pernah masuk notifikasi', () => {
     const items = purchaseNotificationsFromPurchases(
-      [{ name: 'Sinta', price: 109_000, at: '2026-10-19T11:58:00Z' }],
+      [{ name: 'Sinta', price: 99_000, at: '2026-10-19T11:58:00Z' }],
       Date.parse('2026-10-19T12:00:00Z'),
     )
     expect(items).toEqual([])
@@ -687,7 +691,7 @@ describe('notifikasi pembelian', () => {
     const now = Date.parse('2026-10-19T12:00:00Z')
     const items = purchaseNotificationsFromPurchases(
       [
-        { name: 'Rina', price: 129000, at: '2026-10-19T11:58:00Z' },
+        { name: 'Rina', price: 129_000, at: '2026-10-19T11:58:00Z' },
         { name: 'Budi', price: 555000, at: '2026-10-19T11:50:00Z' },
       ],
       now,
@@ -750,7 +754,7 @@ describe('LANDING_META — metadata halaman utama', () => {
   it('judul & deskripsi persis seperti yang dipakai layout dan landing', () => {
     expect(LANDING_META.title).toBe('CatetInd — Aplikasi Catet Keuangan 4 Detik, Tanpa Ribet')
     expect(LANDING_META.description).toBe(
-      'Aplikasi keuangan buat lo yang males nyatet. Voice note atau foto struk, 4 detik beres. Biar tau duit ke mana dan gaji ga cuma numpang lewat.',
+      'Aplikasi keuangan buat kamu yang males nyatet. Voice note atau foto struk, 4 detik beres. Biar tau duit ke mana dan gaji ga cuma numpang lewat.',
     )
     /* judul ideal ≤ 60 karakter, deskripsi ≤ 160 — batas tampil di hasil Google */
     expect(LANDING_META.title.length).toBeLessThanOrEqual(60)
@@ -800,7 +804,7 @@ describe('LANDING_SOFTWARE_APP — JSON-LD SoftwareApplication', () => {
   it('featureList memuat empat fitur utama yang juga jadi H2', () => {
     const features = LANDING_SOFTWARE_APP.featureList
     expect(features).toHaveLength(5)
-    for (const keyword of ['voice note', 'struk', 'jatah jajan harian', 'AI Coach']) {
+    for (const keyword of ['voice note', 'struk', 'jatah jajan harian', 'Minca']) {
       expect(features.some((feature) => feature.toLowerCase().includes(keyword.toLowerCase()))).toBe(
         true,
       )
@@ -817,7 +821,7 @@ describe('LANDING_SOFTWARE_APP — JSON-LD SoftwareApplication', () => {
     expect(offers.offerCount).toBe(PLANS.length)
     expect(Number(offers.lowPrice)).toBe(Math.min(...prices))
     expect(Number(offers.highPrice)).toBe(Math.max(...prices))
-    expect(offers.lowPrice).toBe('109000')
+    expect(offers.lowPrice).toBe('99000')
     expect(offers.highPrice).toBe('299000')
   })
 
@@ -843,7 +847,7 @@ describe('LP_MISSION — judul tiap fitur memuat kata kuncinya', () => {
     ['voice note', 'voice note'],
     ['scan struk', 'scan struk'],
     ['jatah harian', 'jatah jajan harian'],
-    ['AI Coach', 'ai coach'],
+    ['Minca', 'minca'],
   ])('ada H2 fitur yang menyebut "%s"', (_label, keyword) => {
     expect(titles.some((title) => title.includes(keyword))).toBe(true)
   })

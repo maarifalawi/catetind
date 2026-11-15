@@ -51,6 +51,25 @@ export function moneyStateKey(userId: string | null | undefined): string {
 }
 /** key state celengan impian — store kedua di database yang SAMA (paket 46) */
 export const FUNDS_STATE_KEY = 'funds'
+
+/**
+ * Key per AKUN untuk store yang lahir sebelum pemisahan cache per akun
+ * (celengan, kekayaan, tagihan, kantong bersama, aset fisik).
+ *
+ * Kenapa perlu: satu browser boleh dipakai beberapa akun. Sebelum ini kelima
+ * store itu memakai SATU key global (`funds`, `wealth`, …), jadi akun B yang
+ * baru masuk di perangkat yang sama langsung mewarisi celengan/tagihan akun A —
+ * persis kebocoran yang dilaporkan pemilik produk ("tabungan impian akun lama
+ * muncul di akun baru"). Bentuk key-nya sengaja SAMA dengan snapshot uang
+ * (`snapshot:<userId>`): satu pola, satu cara membaca.
+ */
+export function accountStateKey(base: string, userId: string | null | undefined): string {
+  /* Tanpa sesi (anon) key lama DIPERTAHANKAN: data anonim yang sudah ada di
+     perangkat tidak boleh jadi yatim hanya karena pemisahan ini, dan test yang
+     mengunci nama key tetap sah. Yang dipisah adalah akun yang benar-benar
+     login — di situlah kebocoran antar-akun terjadi. */
+  return userId ? `${base}:${userId}` : base
+}
 /** key state kekayaan (hutang/piutang/investasi) — store ketiga, database yang SAMA (paket 50) */
 export const WEALTH_STATE_KEY = 'wealth'
 /** key state tagihan rutin — store keempat, database yang SAMA (paket 51) */
@@ -120,6 +139,29 @@ export function saveDeviceState<T>(key: string, state: T): void {
       /* gagal menyimpan bukan alasan menghentikan user — state di layar sudah sah */
     }
   })
+}
+
+/**
+ * Penjaga "cache akun terakhir" untuk store yang dipisah per akun.
+ *
+ * Kalau sesi klien Supabase tidak terbaca sesaat setelah refresh (cookie sesi
+ * sah di middleware, tetapi klien browser belum/tidak bisa membacanya),
+ * `browserUserId()` menjawab `null` dan hidrasi akan membaca key anonim yang
+ * kosong — data yang baru dibuat seolah hilang. Fungsi ini mengingat id akun
+ * terakhir di perangkat dan memakainya HANYA ketika sesi benar-benar kosong.
+ * Sesi yang ada selalu menang, jadi berganti akun tetap membaca key akun baru.
+ */
+export async function resolveDeviceOwner(
+  baseKey: string,
+  sessionId: string | null,
+): Promise<string | null> {
+  const memoryKey = `${baseKey}:owner`
+  if (sessionId) {
+    saveDeviceState<string>(memoryKey, sessionId)
+    return sessionId
+  }
+  const remembered = await loadDeviceState<string>(memoryKey)
+  return remembered ? remembered : null
 }
 
 export function loadMoneyState<T>(userId?: string | null): Promise<T | null> {

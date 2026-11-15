@@ -36,14 +36,39 @@ export type LedgerMemberId = string
  * Sekarang bentuk datanya sendiri yang memaksa benar.
  */
 export type SplitSpec =
-  | { type: 'equal' }
+  | {
+      type: 'equal'
+      /**
+       * Anggota yang IKUT menanggung. Kosong/null = SEMUA anggota (perilaku
+       * lama). Di dompet 3–4 orang, "Bagi Rata" sering hanya untuk sebagian
+       * orang (mis. 3 dari 4 ikut makan malam), dan daftar ini yang membuat
+       * porsi tiap perangkat identik setelah dibaca ulang dari server.
+       */
+      participants?: LedgerMemberId[]
+    }
   | { type: 'percentage'; percents: Record<LedgerMemberId, number> }
   | { type: 'nominal'; amounts: Record<LedgerMemberId, number> }
   | { type: 'single_payer'; payerId: LedgerMemberId }
 
+/**
+ * Jenis baris buku besar bersama.
+ *
+ *   · `expense` (default) — uang KELUAR untuk belanja bersama → menimbulkan
+ *     kewajiban sesuai `split`;
+ *   · `income` — uang MASUK ke kas bersama (setoran/talangan, mis. kembalian
+ *     patungan atau titipan). Ia TIDAK menimbulkan kewajiban siapa pun: porsi
+ *     semua anggota nol, jadi orang yang menyetorkannya otomatis "menalangi"
+ *     sebesar nominal itu (`net` bertambah). Tanpa jenis ini, pemasukan yang
+ *     diinput user selalu tercatat sebagai pengeluaran — bug yang dilaporkan
+ *     pemilik produk.
+ */
+export type LedgerKind = 'expense' | 'income'
+
 /** satu baris buku besar dompet bersama */
 export interface LedgerTx {
   id: string
+  /** jenis baris; kosong = `expense` (data lama) */
+  kind?: LedgerKind
   /** kantong yang KELUAR uang — bukan "siapa yang mengetik catatannya" */
   payerId: LedgerMemberId
   /** siapa yang mengetik catatan (dipakai untuk izin/privasi, bukan uang) */
@@ -158,11 +183,24 @@ export function sharesOf(tx: LedgerTx, members: LedgerMemberId[]): Record<Ledger
   const out: Record<LedgerMemberId, number> = {}
   for (const id of roster) out[id] = 0
 
+  /* PEMASUKAN bersama tidak menimbulkan kewajiban: tidak ada yang perlu
+     menanggungnya. Nominalnya tetap dihitung di sisi `paid` oleh
+     `ledgerTotals()`, sehingga penyetornya berhak menerima (net positif). */
+  if (tx.kind === 'income') return out
+
   switch (tx.split.type) {
     case 'equal': {
-      const others = roster.filter((id) => id !== tx.payerId)
-      const each = Math.floor(amount / roster.length)
+      /* Peserta = irisan daftar pilihan dengan roster. Kalau daftarnya kosong
+         atau tidak ada satu pun yang sah, SEMUA anggota ikut (data lama yang
+         tidak punya `participants` tetap berperilaku sama seperti dulu). */
+      const selected = tx.split.participants
+      const chosen =
+        selected && selected.length > 0 ? roster.filter((id) => selected.includes(id)) : roster
+      const participants = chosen.length > 0 ? chosen : roster
+      const others = participants.filter((id) => id !== tx.payerId)
+      const each = Math.floor(amount / participants.length)
       for (const id of others) out[id] = each
+      /* sisa pembulatan = beban pihak yang menalangi (aturan lama dipertahankan) */
       out[tx.payerId] = amount - each * others.length
       return out
     }
@@ -203,22 +241,59 @@ export function isTreatShares(shares: Record<LedgerMemberId, number>): boolean {
   return Object.values(shares).some((share) => share === 0)
 }
 
-/** validasi bentuk split sebelum disimpan (dipakai form & test) */
-export function isValidSplit(split: SplitSpec, members: LedgerMemberId[]): boolean {
+/** validasi bentuk split sebelum disimpan (dipakai form, store & test).
+ *
+ *  `total` opsional: kalau diisi, mode `nominal` wajib berjumlah TEPAT sebesar
+ *  nominal transaksi. Tanpa `total`, yang diperiksa hanya bentuknya (dipakai
+ *  pemanggil lama yang belum tahu nominalnya).
+ */
+export function isValidSplit(
+  split: SplitSpec,
+  members: LedgerMemberId[],
+  total?: number,
+): boolean {
   switch (split.type) {
-    case 'equal':
-      return members.length > 0
+    case 'equal': {
+      if (members.length === 0) return false
+      const participants = split.participants
+      if (!participants || participants.length === 0) return true
+      /* peserta harus anggota yang sah, tanpa duplikat, minimal satu orang */
+      const unique = new Set(participants)
+      if (unique.size !== participants.length) return false
+      return participants.every((id) => members.includes(id))
+    }
     case 'percentage': {
       const values = members.map((id) => split.percents[id] ?? 0)
       return values.every((value) => value >= 0) && Math.round(values.reduce((a, b) => a + b, 0)) === 100
     }
-    case 'nominal':
-      return members.every((id) => (split.amounts[id] ?? 0) >= 0)
+    case 'nominal': {
+      if (!members.every((id) => (split.amounts[id] ?? 0) >= 0)) return false
+      if (total === undefined) return true
+      const sum = members.reduce((acc, id) => acc + Math.round(split.amounts[id] ?? 0), 0)
+      return sum === Math.max(0, Math.round(total))
+    }
     case 'single_payer':
       return members.includes(split.payerId)
     default:
       return false
   }
+}
+
+/**
+ * Anggota yang benar-benar menanggung satu split — dipakai UI untuk menulis
+ * "3 dari 4 orang ikut" tanpa menyalin aturan yang sama di komponen.
+ * Mode selain `equal` dianggap seluruh roster (porsi 0 tetap ditampilkan oleh
+ * label persen/nominal).
+ */
+export function splitParticipantsOf(
+  split: SplitSpec,
+  members: LedgerMemberId[],
+): LedgerMemberId[] {
+  if (split.type !== 'equal') return members
+  const selected = split.participants
+  if (!selected || selected.length === 0) return members
+  const filtered = members.filter((id) => selected.includes(id))
+  return filtered.length > 0 ? filtered : members
 }
 
 /* ── 3. AGREGAT BUKU BESAR ──────────────────────────────────────────────── */

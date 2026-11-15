@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Bot, CalendarPlus, Crown, RefreshCw, RotateCcw, X } from 'lucide-react'
+import { Bot, CalendarPlus, RefreshCw, RotateCcw, X } from 'lucide-react'
 import { PLANS, type PlanId } from '@/lib/data/pricing'
 import { ADMIN_ACTION_ERRORS } from '@/lib/admin/actions'
 import type { AdminBillingPeriod, AdminUserRow } from '@/lib/admin/types'
@@ -17,7 +17,7 @@ import { AdminPill, formatDate, formatNumber } from './admin-ui'
      1. Beri/ubah paket manual (30 hari atau selamanya) — untuk kreator, penguji,
         atau penyelesaian keluhan;
      2. Perpanjang masa aktif (7 / 30 / 90 hari);
-     3. Kelola kuota AI: bonus token atau reset pemakaian bulan berjalan.
+     3. Kelola kuota AI: bonus token atau reset pemakaian (semua bulan).
 
    Semuanya dikirim ke `/api/admin/action`, divalidasi ulang di server
    (`parseAdminAction`), dan hanya ditulis setelah admin diverifikasi. Layar ini
@@ -27,10 +27,10 @@ import { AdminPill, formatDate, formatNumber } from './admin-ui'
 const DAY_OPTIONS = [7, 30, 90] as const
 
 const FIELD_CLASS =
-  'mt-1 w-full rounded-xl bg-cream px-3 py-2 text-[12.5px] text-forest ring-1 ring-soil/[0.08] outline-none transition focus:ring-2 focus:ring-forest/25'
+  'mt-1 w-full rounded-xl bg-cream px-3 py-2 text-[14px] text-forest ring-1 ring-soil/[0.08] outline-none transition focus:ring-2 focus:ring-forest/25'
 
 const BUTTON_CLASS =
-  'inline-flex items-center justify-center gap-1.5 rounded-xl bg-forest px-3.5 py-2 text-[12px] font-semibold text-cream transition-colors hover:bg-forest-soft disabled:cursor-not-allowed disabled:bg-ink/[0.07] disabled:text-forest/35'
+  'inline-flex items-center justify-center gap-1.5 rounded-xl bg-forest px-3.5 py-2 text-[13.5px] font-semibold text-cream transition-colors hover:bg-forest-soft disabled:cursor-not-allowed disabled:bg-ink/[0.07] disabled:text-forest-muted'
 
 const CARD_CLASS = 'rounded-xl bg-cream/70 p-3 ring-1 ring-soil/[0.06]'
 
@@ -80,18 +80,18 @@ export function AdminUserActions({
     <div className="rounded-2xl bg-sage/40 p-3 ring-1 ring-soil/[0.06]">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[13px] font-semibold text-forest">
+          <p className="text-[14.5px] font-semibold text-forest">
             Kelola {user.name || user.email || user.id}
           </p>
-          <p className="mt-0.5 truncate text-[12px] text-forest/55">{user.email || 'tanpa email'}</p>
+          <p className="mt-0.5 truncate text-[13.5px] text-forest-muted">{user.email || 'tanpa email'}</p>
         </div>
         <button
           type="button"
           onClick={onClose}
           aria-label="Tutup panel tindakan"
-          className="rounded-full p-1.5 text-forest/50 transition-colors hover:bg-forest/10 hover:text-forest"
+          className="rounded-full p-1.5 text-forest-muted transition-colors hover:bg-forest/10 hover:text-forest"
         >
-          <X className="size-4" aria-hidden />
+          <X className="size-4.5" aria-hidden />
         </button>
       </div>
 
@@ -111,11 +111,11 @@ export function AdminUserActions({
       <div className="mt-3 grid gap-3 lg:grid-cols-3">
         {/* 1 — UBAH / BERI PAKET */}
         <div className={CARD_CLASS}>
-          <p className="flex items-center gap-1.5 text-[12px] font-semibold text-forest">
-            <Crown className="size-3.5" aria-hidden /> Beri / ubah paket
+          <p className="flex items-center gap-1.5 text-[13.5px] font-semibold text-forest">
+            Beri / ubah paket
           </p>
           <div className="mt-2 space-y-2">
-            <label className="block text-[11px] text-forest/55">
+            <label className="block text-[12.5px] text-forest-muted">
               Paket
               <select
                 value={planId}
@@ -129,7 +129,7 @@ export function AdminUserActions({
                 ))}
               </select>
             </label>
-            <label className="block text-[11px] text-forest/55">
+            <label className="block text-[12.5px] text-forest-muted">
               Durasi
               <select
                 value={period}
@@ -154,13 +154,13 @@ export function AdminUserActions({
         {/* 2 — PERPANJANG MASA AKTIF */}
         <div className={CARD_CLASS}>
           <p
-            className="flex items-center gap-1.5 text-[12px] font-semibold text-forest"
+            className="flex items-center gap-1.5 text-[13.5px] font-semibold text-forest"
             title="Menumpuk dari sisa hari. Tidak berlaku untuk akses selamanya."
           >
-            <CalendarPlus className="size-3.5" aria-hidden strokeWidth={1.8} /> Perpanjang
+            <CalendarPlus className="size-4" aria-hidden strokeWidth={1.8} /> Perpanjang
           </p>
           <div className="mt-2 space-y-2">
-            <label className="block text-[11px] text-forest/55">
+            <label className="block text-[12.5px] text-forest-muted">
               Tambah
               <select
                 value={days}
@@ -187,11 +187,11 @@ export function AdminUserActions({
 
         {/* 3 — KUOTA AI */}
         <div className={CARD_CLASS}>
-          <p className="flex items-center gap-1.5 text-[12px] font-semibold text-forest">
-            <Bot className="size-3.5" aria-hidden strokeWidth={1.8} /> Kuota AI
+          <p className="flex items-center gap-1.5 text-[13.5px] font-semibold text-forest">
+            <Bot className="size-4" aria-hidden strokeWidth={1.8} /> Kuota AI
           </p>
           <div className="mt-2 space-y-2">
-            <label className="block text-[11px] text-forest/55">
+            <label className="block text-[12.5px] text-forest-muted">
               Bonus token
               <input
                 type="number"
@@ -219,14 +219,14 @@ export function AdminUserActions({
                     setConfirmReset(false)
                     void run('reset', { action: 'ai-reset', userId: user.id })
                   }}
-                  className="flex-1 rounded-xl bg-plum px-2 py-2 text-[11px] font-semibold text-cream transition-colors hover:bg-plum-deep"
+                  className="flex-1 rounded-xl bg-plum px-2 py-2 text-[12.5px] font-semibold text-cream transition-colors hover:bg-plum-deep"
                 >
                   Yakin, reset
                 </button>
                 <button
                   type="button"
                   onClick={() => setConfirmReset(false)}
-                  className="flex-1 rounded-xl bg-ink/[0.06] px-2 py-2 text-[11px] font-semibold text-forest transition-colors hover:bg-ink/10"
+                  className="flex-1 rounded-xl bg-ink/[0.06] px-2 py-2 text-[12.5px] font-semibold text-forest transition-colors hover:bg-ink/10"
                 >
                   Batal
                 </button>
@@ -236,9 +236,9 @@ export function AdminUserActions({
                 type="button"
                 disabled={busy !== null}
                 onClick={() => setConfirmReset(true)}
-                className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-ink/[0.06] px-3 py-2 text-[11px] font-semibold text-forest transition-colors hover:bg-ink/10"
+                className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-ink/[0.06] px-3 py-2 text-[12.5px] font-semibold text-forest transition-colors hover:bg-ink/10"
               >
-                <RotateCcw className="size-3" aria-hidden /> Reset pemakaian bulan ini
+                <RotateCcw className="size-3.5" aria-hidden /> Reset pemakaian AI
               </button>
             )}
           </div>
@@ -250,13 +250,13 @@ export function AdminUserActions({
           type="button"
           disabled={busy !== null}
           onClick={() => void run('repair', { action: 'repair-plan', userId: user.id })}
-          className="inline-flex items-center gap-1.5 rounded-xl bg-cream px-3 py-2 text-[11px] font-semibold text-forest ring-1 ring-soil/[0.08] transition-colors hover:bg-sage/60 disabled:cursor-not-allowed disabled:text-forest/35"
+          className="inline-flex items-center gap-1.5 rounded-xl bg-cream px-3 py-2 text-[12.5px] font-semibold text-forest ring-1 ring-soil/[0.08] transition-colors hover:bg-sage/60 disabled:cursor-not-allowed disabled:text-forest-muted"
           title="Menulis ulang hak akses ke user_subscriptions dari baris pembelian yang lunas."
         >
-          <RefreshCw className="size-3" aria-hidden strokeWidth={1.8} />
+          <RefreshCw className="size-3.5" aria-hidden strokeWidth={1.8} />
           {busy === 'repair' ? 'Menyinkronkan…' : 'Sinkron dari pembayaran lunas'}
         </button>
-        <span className="text-[10.5px] text-forest/35">ditulis ke tabel yang sama dengan aplikasi</span>
+        <span className="text-[12px] text-forest-muted">ditulis ke tabel yang sama dengan aplikasi</span>
       </div>
     </div>
   )

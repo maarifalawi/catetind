@@ -24,7 +24,7 @@ import { BudgetSheet } from './budget-sheet'
 /** selisih nilai → teks + warna (naik = forest, turun = terracotta, stabil = netral) */
 function diffOf(asset: PhysicalAsset): { text: string; tone: string } {
   const diff = asset.currentValue - asset.purchasePrice
-  if (diff === 0) return { text: PHYSICAL_TAB_COPY.flatLabel, tone: 'text-forest/45' }
+  if (diff === 0) return { text: PHYSICAL_TAB_COPY.flatLabel, tone: 'text-forest-muted' }
   const sign = diff > 0 ? '+' : '−'
   const label = diff > 0 ? PHYSICAL_TAB_COPY.gainLabel : PHYSICAL_TAB_COPY.lossLabel
   return {
@@ -51,22 +51,15 @@ export function WealthProperti({
 
   if (assets.length === 0) {
     return (
-      <div className="flex flex-col items-center rounded-[1.75rem] border-2 border-dashed border-forest/25 bg-cream px-6 py-12 text-center">
-        <span aria-hidden className="flex size-12 items-center justify-center rounded-2xl bg-sage/60 text-forest">
-          <Home className="size-6" strokeWidth={2} />
-        </span>
-        <h2 className="mt-3 font-display text-[18px] font-semibold tracking-tight text-forest">
+      <div data-catetind-empty className="flex flex-col items-center rounded-2xl border-2 border-dashed border-forest/25 bg-cream px-6 py-8 text-center">
+        <h2 className="font-display text-[16px] font-semibold tracking-tight text-forest">
           {PHYSICAL_TAB_COPY.emptyTitle}
         </h2>
-        <p className="mt-2 max-w-sm text-[14px] leading-relaxed text-forest/55">
-          {PHYSICAL_TAB_COPY.emptyBody}
-        </p>
         <button
           type="button"
           onClick={onAdd}
           className="mt-5 inline-flex h-11 items-center gap-1.5 rounded-full bg-forest px-5 text-[14px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.98] motion-reduce:transition-none"
         >
-          <Plus className="size-4" strokeWidth={2.6} aria-hidden />
           {PHYSICAL_TAB_COPY.emptyCta}
         </button>
       </div>
@@ -82,7 +75,7 @@ export function WealthProperti({
         open={pendingDelete !== null}
         onClose={() => setPendingDeleteState(null)}
         title={PHYSICAL_TAB_COPY.delete.title}
-        description={pendingDelete ? PHYSICAL_TAB_COPY.delete.body(pendingDelete.name) : undefined}
+        description={undefined}
         footer={
           <div className="flex gap-2">
             <button
@@ -105,7 +98,7 @@ export function WealthProperti({
           </div>
         }
       >
-        <p className="text-[13.5px] leading-relaxed text-forest/55">{PHYSICAL_TAB_COPY.blurb}</p>
+        {null}
       </BudgetSheet>
     </section>
   )
@@ -137,7 +130,7 @@ function PhysicalList({
                 <p className="truncate font-display text-[16px] font-medium tracking-tight text-forest">
                   {asset.name}
                 </p>
-                <p className="mt-0.5 text-[12.5px] font-medium text-forest/45">
+                <p className="mt-0.5 text-[12.5px] font-medium text-forest-muted">
                   {physicalCategoryLabel(asset.category)}
                 </p>
               </div>
@@ -146,7 +139,7 @@ function PhysicalList({
                   type="button"
                   onClick={() => onEdit(asset)}
                   aria-label={`Edit ${asset.name}`}
-                  className="flex size-8 items-center justify-center rounded-full bg-soil/[0.08] text-forest/60 transition-colors hover:bg-sage hover:text-forest"
+                  className="flex size-8 items-center justify-center rounded-full bg-soil/[0.08] text-forest-muted transition-colors hover:bg-sage hover:text-forest"
                 >
                   <Pencil className="size-3.5" strokeWidth={2.4} aria-hidden />
                 </button>
@@ -164,10 +157,10 @@ function PhysicalList({
             {/* nominal jadi fokus utama (rata kanan, tabular), label sekunder redup */}
             <div className="mt-3 flex items-end justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-[11.5px] font-medium uppercase tracking-[0.14em] text-forest/35">
+                <p className="text-[11.5px] font-medium uppercase tracking-[0.14em] text-forest-muted">
                   {PHYSICAL_TAB_COPY.purchaseLabel}
                 </p>
-                <p className="mt-1 truncate text-[13.5px] font-medium tabular-nums text-forest/55">
+                <p className="mt-1 truncate text-[13.5px] font-medium tabular-nums text-forest-muted">
                   {maskMoney(asset.purchasePrice, masked)}
                 </p>
               </div>

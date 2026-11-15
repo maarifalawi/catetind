@@ -64,7 +64,7 @@ export default async function RegisteredPage({
         <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight text-forest lg:text-4xl">
           {REGISTERED_COPY.title}
         </h1>
-        <p className="mt-3 text-[15px] leading-relaxed text-forest/60">{body}</p>
+        <p className="mt-3 text-[15px] leading-relaxed text-forest-muted">{body}</p>
 
         <section className="mt-8 rounded-[1.5rem] bg-sage/40 p-5 text-left ring-1 ring-soil/10">
           <h2 className="text-[14px] font-medium text-forest">
@@ -72,7 +72,7 @@ export default async function RegisteredPage({
           </h2>
           <ul className="mt-3 flex flex-col gap-2">
             {REGISTERED_COPY.nextSteps.map((step) => (
-              <li key={step} className="flex items-start gap-2.5 text-[13.5px] leading-relaxed text-forest/65">
+              <li key={step} className="flex items-start gap-2.5 text-[13.5px] leading-relaxed text-forest-soft">
                 <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-forest" strokeWidth={2.6} aria-hidden />
                 {step}
               </li>
@@ -93,7 +93,7 @@ export default async function RegisteredPage({
         </Link>
 
         {plan && (
-          <p className="mt-2.5 text-[13px] leading-relaxed text-forest/50">
+          <p className="mt-2.5 text-[13px] leading-relaxed text-forest-muted">
             {REGISTERED_COPY.ctaPayHint}
           </p>
         )}

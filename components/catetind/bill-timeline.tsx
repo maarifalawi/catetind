@@ -143,7 +143,7 @@ export function BillTimeline({
               key={weekday}
               className={cn(
                 'pb-1 text-center text-[11px] font-medium uppercase tracking-[0.08em]',
-                index >= 5 ? 'text-forest/25' : 'text-forest/35',
+                index >= 5 ? 'text-forest-muted' : 'text-forest-muted',
               )}
             >
               {weekday}
@@ -188,7 +188,7 @@ export function BillTimeline({
                           ? hasOverdue
                             ? 'bg-plum/[0.09] text-forest'
                             : 'bg-daisy/[0.13] text-forest'
-                          : 'bg-cream text-forest/40',
+                          : 'bg-cream text-forest-muted',
                         day.isToday && 'ring-2 ring-inset ring-forest/30',
                         open && 'ring-2 ring-inset ring-forest/70',
                       )}

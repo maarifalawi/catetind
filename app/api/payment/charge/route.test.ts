@@ -10,12 +10,25 @@ vi.mock('@/lib/payments/methods', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/payments/methods')>()
   return { ...actual, isPaymentMethodActive: vi.fn(() => true) }
 })
-vi.mock('@/lib/payments/midtrans', () => ({
-  midtransConfigured: vi.fn(),
-  createSnapCharge: vi.fn(),
-  fetchTransactionStatus: vi.fn(),
-  cancelTransaction: vi.fn(),
-}))
+/* Modul provider di-mock, tetapi `isDuplicateOrderIdError` memakai
+   implementasi ASLI (predikat murni atas pesan provider) — supaya test di bawah
+   benar-benar menguji keputusan "pesan ini berarti order_id sudah terpakai". */
+vi.mock('@/lib/payments/midtrans', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/payments/midtrans')>()
+  return {
+    ...actual,
+    midtransConfigured: vi.fn(),
+    createSnapCharge: vi.fn(),
+    fetchTransactionStatus: vi.fn(),
+    cancelTransaction: vi.fn(),
+    /* konfigurasi `snap.js` untuk EMBED halaman pembayaran di kartu checkout —
+       route menyertakannya di setiap balasan yang membawa token Snap. */
+    snapClientConfig: vi.fn(() => ({
+      clientKey: 'client-key-palsu',
+      scriptUrl: 'https://app.snap/snap.js',
+    })),
+  }
+})
 vi.mock('@/lib/supabase/rest', () => ({ restFetch: vi.fn(), restRpc: vi.fn() }))
 vi.mock('@/lib/subscription/plan', () => ({ readCallerPlan: vi.fn() }))
 
@@ -238,17 +251,28 @@ describe('POST /api/payment/charge', () => {
     expect(intent.finishUrl).toContain('http://localhost:3000/checkout/selesai?order_id=')
   })
 
-  const DISCOUNTED = applyReferralDiscount(HERO_PLAN.lifetime)
+  /* Diskon teman diuji pada paket dengan nominal besar: 10% dari Rp299.000 =
+     Rp269.100 — nominalnya benar-benar BERBEDA dari harga penuh (uang rupiah
+     bulat, pembulatan tidak bisa menyamakan keduanya). */
+  const DISCOUNT_PLAN = PLANS[2]
+  const DISCOUNTED = applyReferralDiscount(DISCOUNT_PLAN.lifetime)
+  const DISCOUNT_OFFER = {
+    purpose: 'subscribe',
+    planId: DISCOUNT_PLAN.id,
+    period: 'lifetime',
+    amount: DISCOUNTED,
+    method: 'qris',
+  } as const
   const REFERRAL = 'RINA-X7K'
 
   it('nominal diskon TANPA kode → 422 (diskon tidak boleh hanya dari angka)', async () => {
-    const res = await POST(request({ ...OFFER, amount: DISCOUNTED }))
+    const res = await POST(request(DISCOUNT_OFFER))
     expect(res.status).toBe(422)
     expect(charge).not.toHaveBeenCalled()
   })
 
   it('kode yang bentuknya tidak wajar → 422 tanpa menyentuh database', async () => {
-    const res = await POST(request({ ...OFFER, amount: DISCOUNTED, code: 'x' }))
+    const res = await POST(request({ ...DISCOUNT_OFFER, code: 'x' }))
     expect(res.status).toBe(422)
     expect(rpc).not.toHaveBeenCalled()
     expect(charge).not.toHaveBeenCalled()
@@ -256,7 +280,7 @@ describe('POST /api/payment/charge', () => {
 
   it('kode tidak ada di database → 422 (diskon tidak dipakai)', async () => {
     rpc.mockResolvedValueOnce({ ok: true, status: 200, data: null })
-    const res = await POST(request({ ...OFFER, amount: DISCOUNTED, code: REFERRAL }))
+    const res = await POST(request({ ...DISCOUNT_OFFER, code: REFERRAL }))
     expect(res.status).toBe(422)
     expect(charge).not.toHaveBeenCalled()
     expect(insertCalls()).toHaveLength(0)
@@ -264,13 +288,13 @@ describe('POST /api/payment/charge', () => {
 
   it('kode milik akun sendiri → 422 (tidak boleh mengajak diri sendiri)', async () => {
     rpc.mockResolvedValueOnce({ ok: true, status: 200, data: USER.id })
-    const res = await POST(request({ ...OFFER, amount: DISCOUNTED, code: REFERRAL }))
+    const res = await POST(request({ ...DISCOUNT_OFFER, code: REFERRAL }))
     expect(res.status).toBe(422)
     expect(charge).not.toHaveBeenCalled()
   })
 
   it('diskon dengan kode sah → expected_amount = nominal DIBayar & kode tercatat', async () => {
-    const res = await POST(request({ ...OFFER, amount: DISCOUNTED, code: REFERRAL }))
+    const res = await POST(request({ ...DISCOUNT_OFFER, code: REFERRAL }))
     expect(res.status).toBe(200)
 
     const [intent] = charge.mock.calls[0] as [{ amount: number }]
@@ -300,7 +324,7 @@ describe('POST /api/payment/charge', () => {
         ? { ok: true, status: 200, data: 'referrer-uuid' }
         : { ok: true, status: 200, data: false },
     )
-    const res = await POST(request({ ...OFFER, amount: DISCOUNTED, code: REFERRAL }))
+    const res = await POST(request({ ...DISCOUNT_OFFER, code: REFERRAL }))
     expect(res.status).toBe(422)
     expect(charge).not.toHaveBeenCalled()
     expect(insertCalls()).toHaveLength(0)
@@ -523,6 +547,67 @@ describe('POST /api/payment/charge', () => {
     expect(cancel).not.toHaveBeenCalled()
   })
 
+  it('tagihan lama sudah KEDALUWARSA di provider: order BARU, bukan order_id yang sama', async () => {
+    rest.mockImplementation(async (_path: string, options: { method?: string }) =>
+      options?.method === 'POST'
+        ? { ok: true, status: 201, data: null }
+        : { ok: true, status: 200, data: [{ order_id: 'subscribe-a1b2c3d4-1', expected_amount: HERO_PLAN.lifetime, referral_code: null }] },
+    )
+    /* Midtrans sudah menyatakan tagihan itu mati: `order_id`-nya tidak boleh
+       ditokenkan lagi, jadi route harus membuat order baru - bukan meneruskan
+       `order_id has already been taken` ke layar user. */
+    status.mockResolvedValue({
+      ok: true,
+      value: { ...PENDING_STATUS.value, state: 'expired', transactionStatus: 'expire', instructions: null },
+    })
+
+    const res = await POST(request(OFFER))
+    const body = await res.json()
+    expect(res.status).toBe(200)
+    expect(body.ok).toBe(true)
+    expect(cancel).toHaveBeenCalledWith('subscribe-a1b2c3d4-1')
+    expect(insertCalls()).toHaveLength(1)
+    expect(body.orderId).not.toBe('subscribe-a1b2c3d4-1')
+    expect(body.reused).toBeUndefined()
+  })
+
+  it('provider menolak karena order_id sudah terpakai: order baru, pesan provider tidak ke user', async () => {
+    rest.mockImplementation(async (_path: string, options: { method?: string }) =>
+      options?.method === 'POST'
+        ? { ok: true, status: 201, data: null }
+        : { ok: true, status: 200, data: [{ order_id: 'subscribe-a1b2c3d4-1', expected_amount: HERO_PLAN.lifetime, referral_code: null }] },
+    )
+    /* status provider tidak terbaca (404) -> jalur pakai-ulang tetap dicoba,
+       lalu Snap menolak dengan pesan duplikat yang asli. */
+    status.mockResolvedValue({ ok: false, reason: 'not-found', status: 404, message: 'belum ada' })
+    charge
+      .mockResolvedValueOnce({
+        ok: false,
+        reason: 'provider',
+        status: 406,
+        message: 'transaction_details.order_id has already been taken',
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        value: {
+          state: 'pending',
+          method: 'qris',
+          token: 'snap-token-2',
+          redirectUrl: 'https://app.sandbox.midtrans.com/snap/v1/transactions/snap-token-2',
+          expiresAt: '2026-10-10T21:15:45.000Z',
+        },
+      })
+
+    const res = await POST(request(OFFER))
+    const body = await res.json()
+    expect(res.status).toBe(200)
+    expect(body.ok).toBe(true)
+    expect(body.orderId).toMatch(/^subscribe-a1b2c3d4-/)
+    expect(body.orderId).not.toBe('subscribe-a1b2c3d4-1')
+    expect(charge).toHaveBeenCalledTimes(2)
+    expect(insertCalls()).toHaveLength(1)
+  })
+
   it('order pending yang sudah DIBAYAR → dilaporkan settled, tanpa tagihan kedua', async () => {
     rest.mockImplementation(async (_path: string, options: { method?: string }) =>
       options?.method === 'POST'
@@ -655,7 +740,12 @@ describe('POST /api/payment/charge · purpose topup', () => {
     expect(options.body.expected_amount).toBe(SEDANG_PKG.price)
     expect(options.body.addon_package_id).toBe(SEDANG_PKG.id)
     expect(options.body.addon_tokens).toBe(SEDANG_PKG.tokens)
-    expect(options.body.tier_name).toBeNull()
+    /* REGRESI (11 Nov 2026): top-up pernah menulis `tier_name: null` padahal
+       kolom database `not null` → baris `purchases` ditolak dan pembayaran
+       tidak pernah sampai ke Midtrans ("Tagihan tidak bisa dicatat"). Nilainya
+       sekarang paket yang sedang dimiliki pembeli. */
+    expect(options.body.tier_name).toBe('waras')
+    expect(options.body.tier_name).not.toBeNull()
   })
 
   it('nominal diskon top-up TANPA kode → 422', async () => {

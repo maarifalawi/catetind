@@ -20,19 +20,19 @@ export const OFFLINE_COPY = {
   pendingBadge: (pending: number) => `${pending.toLocaleString('id-ID')} nunggu`,
   pendingTitle: 'Ada catatan yang belum diproses',
   pendingBody: (pending: number) =>
-    `${pending.toLocaleString('id-ID')} catatan masih nunggu di perangkat ini.`,
+    `${pending.toLocaleString('id-ID')} catatan masih nunggu dikirim ke server dari perangkat ini.`,
   /** tombol proses ulang — benar-benar jalan (`flushPendingSync`), bukan pajangan */
   pendingCta: 'Proses sekarang',
   /** nada saat antrean berhasil diproses */
-  syncedTitle: 'Semua catatan sudah diproses 🌿',
+  syncedTitle: 'Semua catatan sudah diproses 🧩',
   syncedBody: (processed: number) =>
     `${processed.toLocaleString('id-ID')} catatan selesai diproses.`,
   dismissLabel: 'Tutup info offline',
   /** BARIS SINGKAT yang selalu tampak — penjaga janji "tersinkron" */
-  honestySummary: 'Tanpa server, "tersinkron" = tersimpan di perangkat ini.',
-  /** detail teknis, dibuka hanya kalau user minta */
+  honestySummary: 'Catatan tersimpan di perangkat ini, lalu dikirim ke akunmu di server.',
+  /** detail, dibuka hanya kalau user minta */
   honestyBody:
-    'Selama app ini belum punya backend, semua catatan tinggal di perangkatmu (IndexedDB). Nggak ada satu pun yang dikirim ke mana pun, kirimannya baru jalan begitu online.',
+    'Catatan yang baru dibuat langsung disimpan di perangkat ini supaya tidak hilang saat sinyal putus, lalu dikirim ke server milik akunmu. Baris yang masih menunggu dikirim ulang otomatis begitu koneksi stabil — jadi tidak ada catatan yang cuma tinggal di HP.',
   honestyLabel: 'Maksudnya?',
   /** toast setelah menyimpan saat perangkat OFFLINE — jangan mengaku "kecatat & terkirim" */
   savedOfflineTitle: 'Tersimpan di perangkat 📴',

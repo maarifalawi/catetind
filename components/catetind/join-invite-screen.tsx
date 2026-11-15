@@ -266,6 +266,18 @@ function ValidInviteView({
      bukan nama karangan ("Jon"). */
   const inviter = invite.inviterName
   const inviterLabel = inviter ?? 'Pasanganmu'
+  const [copied, setCopied] = useState(false)
+
+  async function copyCode() {
+    try {
+      await navigator.clipboard.writeText(code)
+      setCopied(true)
+      toast.success('Kode undangan tersalin')
+      window.setTimeout(() => setCopied(false), 1800)
+    } catch {
+      toast.error('Gagal menyalin otomatis, salin manual dari kotak kode ya.')
+    }
+  }
   const ctaHint = preview
     ? JOIN_CLAIM_COPY.previewNote
     : demo
@@ -276,176 +288,75 @@ function ValidInviteView({
 
   return (
     <>
-      <div className="mx-auto w-full max-w-[480px] px-6 pt-10 pb-56 lg:max-w-[560px] lg:pt-16 lg:pb-52">
-        {/* 1. header personal: pengundang dulu, baru aplikasinya */}
-        <header>
-          <LogoWordmark className="h-6" />
-          <p className="mt-6 text-[12px] font-medium tracking-[0.16em] text-forest/40 uppercase">
-            {JOIN_COPY.eyebrow}
+      {/* satu kartu fokus di tengah: nama dompet, pengundang, kode, aksi */}
+      <div className="mx-auto flex min-h-[70dvh] w-full max-w-[440px] flex-col justify-center px-5 py-10">
+        <section className="rounded-2xl bg-cream p-5 text-center ring-1 ring-soil/12">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-forest-muted">
+            Undangan Dompet Bersama
           </p>
-
-          <div className="mt-4 flex items-center gap-3.5">
-            <span
-              aria-hidden
-              className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-hud-sage/25 text-forest ring-1 ring-hud-sage/50"
-            >
-              <ShieldCheck className="size-6" strokeWidth={2.2} />
-            </span>
-            <div className="min-w-0">
-              <p className="font-display text-xl font-medium tracking-tight text-forest">{inviterLabel}</p>
-              <p className="mt-0.5 text-[12.5px] leading-relaxed text-forest/50">
-                {JOIN_COPY.walletLabel}:{' '}
-                <b className="font-medium text-forest/70">{invite.walletName}</b>
-              </p>
-            </div>
-          </div>
-
-          <h1 className="mt-4 font-display text-3xl font-semibold tracking-tight text-forest lg:text-4xl">
-            {JOIN_COPY.headline(inviter)}
+          <h1 className="mt-1 font-display text-2xl font-semibold tracking-tight text-forest">
+            {invite.walletName}
           </h1>
-          <p className="mt-2.5 text-[14px] leading-relaxed text-forest/55">{JOIN_COPY.subtitle}</p>
-          <details className="mt-2">
-            <summary className="w-fit cursor-pointer text-[13.5px] font-medium text-forest/65 underline decoration-dotted underline-offset-4 marker:content-none hover:text-forest">
-              {JOIN_COPY.learnMore}
-            </summary>
-            <p className="mt-2 text-[13.5px] leading-relaxed text-forest/55">
-              {JOIN_COPY.learnMoreLead}
-            </p>
-            <ul className="mt-2 space-y-1.5">
-              {JOIN_COPY.learnMoreBullets.map((bullet) => (
-                <li key={bullet} className="flex items-start gap-2 text-[13.5px] leading-relaxed text-forest/60">
-                  <span aria-hidden className="mt-0.5 text-forest">
-                    &#10003;
-                  </span>
-                  <span>{bullet}</span>
-                </li>
-              ))}
-            </ul>
-          </details>
-        </header>
-        {/* 2. tiga manfaat, bukan daftar fitur */}
-        <section className="mt-6 rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12">
-          <h2 className="font-display text-[16px] font-medium tracking-tight text-forest">
-            {JOIN_COPY.benefitsTitle}
-          </h2>
-          <ul className="mt-3.5 space-y-3.5">
-            {JOIN_COPY.benefits.map((benefit) => (
-              <li key={benefit.title} className="flex items-start gap-3">
-                <span
-                  aria-hidden
-                  className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-sage text-base"
-                >
-                  {benefit.emoji}
-                </span>
-                <span className="min-w-0">
-                  <span className="block text-[14px] font-medium text-forest">{benefit.title}</span>
-                  <span className="mt-0.5 block text-[13px] leading-relaxed text-forest/55">
-                    {benefit.desc}
-                  </span>
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
+          <p className="mt-1 text-[13.5px] text-forest-muted">Diundang oleh {inviterLabel}</p>
 
-        {/* 3. jaminan privasi 2D.1 - SEBELUM tombol, bukan catatan kaki */}
-        <section className="mt-4 rounded-[1.75rem] bg-mint/25 p-5 ring-1 ring-forest/10">
-          <div className="flex items-start gap-3">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-cream text-forest">
-              <ShieldCheck className="size-4" strokeWidth={2.2} aria-hidden />
-            </span>
-            <div className="min-w-0">
-              <h2 className="font-display text-[16px] font-medium tracking-tight text-forest">
-                {JOIN_COPY.privacyTitle}
-              </h2>
-              <p className="mt-1 text-[13.5px] leading-relaxed text-forest/65">
-                {JOIN_COPY.privacyBody}
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-3.5 space-y-1.5 border-t border-forest/10 pt-3">
-            <p className="flex items-start gap-2 text-[12.5px] leading-relaxed text-forest/60">
-              <ShieldCheck
-                className="mt-0.5 size-3.5 shrink-0 text-forest"
-                strokeWidth={2.4}
-                aria-hidden
-              />
-              <span>{JOIN_COPY.referralNote(inviterLabel)}</span>
+          <div className="mt-5 flex items-stretch gap-2">
+            <p className="flex min-w-0 flex-1 items-center justify-center rounded-xl bg-sage/40 px-3 py-3 font-display text-xl font-semibold tracking-[0.18em] text-forest">
+              {code}
             </p>
-            {/* masa berlaku = informasi, bukan hitungan mundur: nol urgensi buatan */}
-            <p className="flex items-start gap-2 text-[12px] leading-relaxed text-forest/45">
-              <Lock className="mt-0.5 size-3 shrink-0" strokeWidth={2.4} aria-hidden />
-              <span>{invite.validUntilLabel}</span>
-            </p>
-          </div>
-        </section>
-
-        {/* pratinjau pengundang: kode TIDAK dibakar oleh tombol di halaman ini */}
-        {preview && (
-          <section className="mt-4 rounded-[1.75rem] bg-hud-amber/20 p-5 ring-1 ring-hud-amber/50">
-            <p className="text-[12px] font-medium tracking-[0.16em] text-forest/45 uppercase">
-              {JOIN_CLAIM_COPY.previewBadge}
-            </p>
-            <p className="mt-1 text-[13px] leading-relaxed text-forest/60">{JOIN_CLAIM_COPY.previewNote}</p>
-          </section>
-        )}
-      </div>
-      {/* 4. CTA sticky di zona ibu jari */}
-      <div className="fixed inset-x-0 bottom-0 z-40 bg-gradient-to-t from-canvas via-canvas/95 to-transparent pt-10 pb-[max(1rem,env(safe-area-inset-bottom))]">
-        <div className="mx-auto w-full max-w-[480px] px-6 lg:max-w-[560px]">
-          {preview ? (
-            <Link href="/joint" className={CTA_CLASS}>
-              <span className="text-[16.5px] font-medium tracking-[-0.01em]">
-                {JOIN_CLAIM_COPY.previewCta}
-              </span>
-              <span className={CTA_ICON_CLASS}>
-                <ArrowRight className="size-[18px]" strokeWidth={2.4} aria-hidden />
-              </span>
-            </Link>
-          ) : signedIn || demo ? (
             <button
               type="button"
-              onClick={onClaim}
-              disabled={claiming}
-              className={cn(CTA_CLASS, claiming && 'opacity-70')}
+              onClick={copyCode}
+              aria-label="Salin kode undangan"
+              className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-forest text-cream transition-colors hover:bg-forest-soft active:scale-95"
             >
-              <span className="text-[16.5px] font-medium tracking-[-0.01em]">
+              {copied ? (
+                <Check className="size-5" strokeWidth={2.6} aria-hidden />
+              ) : (
+                <Copy className="size-5" strokeWidth={2.2} aria-hidden />
+              )}
+            </button>
+          </div>
+
+          <div className="mt-4">
+            {preview ? (
+              <Link
+                href="/joint"
+                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-forest px-5 text-[14px] font-medium text-cream transition-colors hover:bg-forest-soft"
+              >
+                {JOIN_CLAIM_COPY.previewCta}
+                <ArrowRight className="size-4" strokeWidth={2.4} aria-hidden />
+              </Link>
+            ) : signedIn || demo ? (
+              <button
+                type="button"
+                onClick={onClaim}
+                disabled={claiming}
+                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-forest px-5 text-[14px] font-medium text-cream transition-colors hover:bg-forest-soft disabled:opacity-70"
+              >
                 {claiming ? JOIN_CLAIM_COPY.connecting : JOIN_COPY.ctaJoin}
-              </span>
-              <span className={CTA_ICON_CLASS}>
                 {claiming ? (
                   <Loader2
-                    className="size-[18px] animate-spin motion-reduce:animate-none"
+                    className="size-4 animate-spin motion-reduce:animate-none"
                     strokeWidth={2.4}
                     aria-hidden
                   />
                 ) : (
-                  <ArrowRight className="size-[18px]" strokeWidth={2.4} aria-hidden />
+                  <ArrowRight className="size-4" strokeWidth={2.4} aria-hidden />
                 )}
-              </span>
-            </button>
-          ) : (
-            /* belum masuk: kode undangan DIBawa ke /login lewat `next`, jadi
-               setelah verifikasi user kembali ke sini dan auto-join berjalan */
-            <Link href={buildLoginHref(buildJoinClaimHref(code))} className={CTA_CLASS}>
-              <span className="text-[16.5px] font-medium tracking-[-0.01em]">{JOIN_COPY.ctaJoin}</span>
-              <span className={CTA_ICON_CLASS}>
-                <ArrowRight className="size-[18px]" strokeWidth={2.4} aria-hidden />
-              </span>
-            </Link>
-          )}
-          <p className="mt-2.5 text-center text-[12px] leading-relaxed text-forest/50">{ctaHint}</p>
-          <Link
-            href="/app"
-            className="mt-1.5 block text-center text-[13px] font-medium text-forest/60 underline underline-offset-2 hover:text-forest"
-          >
-            {JOIN_COPY.ctaLater}
-          </Link>
-          <p className="mt-1 text-center text-[11.5px] leading-relaxed text-forest/35">
-            {JOIN_COPY.ctaLaterHint}
-          </p>
-        </div>
+              </button>
+            ) : (
+              <Link
+                href={buildLoginHref(buildJoinClaimHref(code))}
+                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-forest px-5 text-[14px] font-medium text-cream transition-colors hover:bg-forest-soft"
+              >
+                {JOIN_COPY.ctaJoin}
+                <ArrowRight className="size-4" strokeWidth={2.4} aria-hidden />
+              </Link>
+            )}
+          </div>
+
+          <p className="mt-2 text-[11.5px] text-forest-muted">{invite.validUntilLabel}</p>
+        </section>
       </div>
     </>
   )
@@ -472,7 +383,7 @@ function ClaimingView() {
         <h1 className="mt-4 font-display text-2xl font-semibold tracking-tight text-forest">
           {JOIN_CLAIM_COPY.connecting}
         </h1>
-        <p className="mt-2 text-[13.5px] leading-relaxed text-forest/55">
+        <p className="mt-2 text-[13.5px] leading-relaxed text-forest-muted">
           {JOIN_CLAIM_COPY.connectingHint}
         </p>
       </section>
@@ -504,7 +415,7 @@ function InvalidInviteView({ invite }: { invite: InvalidInvite }) {
     <div className="mx-auto flex min-h-screen w-full max-w-[480px] flex-col px-6 pt-10 pb-16 lg:max-w-[560px] lg:pt-16">
       <header>
         <LogoWordmark className="h-6" />
-        <p className="mt-6 text-[12px] font-medium tracking-[0.16em] text-forest/40 uppercase">
+        <p className="mt-6 text-[12px] font-medium tracking-[0.16em] text-forest-muted uppercase">
           {JOIN_COPY.eyebrow}
         </p>
       </header>
@@ -517,7 +428,7 @@ function InvalidInviteView({ invite }: { invite: InvalidInvite }) {
         <h1 className="mt-3 font-display text-2xl font-semibold tracking-tight text-forest lg:text-3xl">
           {copy.title}
         </h1>
-        <p className="mt-2 text-[14px] leading-relaxed text-forest/60">{copy.body}</p>
+        <p className="mt-2 text-[14px] leading-relaxed text-forest-muted">{copy.body}</p>
       </section>
 
       {/* jalan keluar utama: pesan siap-tempel (aksi nyata, bukan tombol mati) */}
@@ -525,9 +436,9 @@ function InvalidInviteView({ invite }: { invite: InvalidInvite }) {
         <h2 className="font-display text-[16px] font-medium tracking-tight text-forest">
           {askAgainLead(invite.inviterName)}
         </h2>
-        <p className="mt-1 text-[13px] leading-relaxed text-forest/60">{ASK_AGAIN_COPY.hint}</p>
+        <p className="mt-1 text-[13px] leading-relaxed text-forest-muted">{ASK_AGAIN_COPY.hint}</p>
 
-        <p className="mt-3 rounded-2xl bg-cream px-3.5 py-3 text-[13px] leading-relaxed text-forest/70 italic ring-1 ring-soil/8">
+        <p className="mt-3 rounded-2xl bg-cream px-3.5 py-3 text-[13px] leading-relaxed text-forest-soft italic ring-1 ring-soil/8">
           &ldquo;{buildAskAgainMessage(invite.inviterName)}&rdquo;
         </p>
 
@@ -560,7 +471,7 @@ function InvalidInviteView({ invite }: { invite: InvalidInvite }) {
         >
           {JOIN_COPY.ctaLater}
         </Link>
-        <p className="mt-2 text-center text-[11.5px] leading-relaxed text-forest/35">
+        <p className="mt-2 text-center text-[11.5px] leading-relaxed text-forest-muted">
           {JOIN_COPY.ctaLaterHint}
         </p>
       </div>
@@ -600,7 +511,7 @@ function JoinedView({ walletName, onRestart }: { walletName: string; onRestart: 
         <h1 className="mt-4 font-display text-3xl font-semibold tracking-tight text-forest lg:text-4xl">
           {JOIN_SUCCESS_COPY.title(walletName)}
         </h1>
-        <p className="mt-2.5 text-[14px] leading-relaxed text-forest/60">{JOIN_SUCCESS_COPY.body}</p>
+        <p className="mt-2.5 text-[14px] leading-relaxed text-forest-muted">{JOIN_SUCCESS_COPY.body}</p>
       </section>
 
       <Link
@@ -616,7 +527,7 @@ function JoinedView({ walletName, onRestart }: { walletName: string; onRestart: 
       </Link>
 
       {/* jujur: keanggotaan ditulis SERVER, bukan oleh tombol di perangkat ini */}
-      <p className="mt-3 rounded-2xl bg-sage/60 px-3.5 py-3 text-[12.5px] leading-relaxed text-forest/60 ring-1 ring-soil/8">
+      <p className="mt-3 rounded-2xl bg-sage/60 px-3.5 py-3 text-[12.5px] leading-relaxed text-forest-muted ring-1 ring-soil/8">
         Kamu sudah tercatat sebagai anggota dompet ini. Buka halaman Dompet Bersama
         untuk mulai mencatat bareng.
       </p>
@@ -624,7 +535,7 @@ function JoinedView({ walletName, onRestart }: { walletName: string; onRestart: 
       <button
         type="button"
         onClick={onRestart}
-        className="mt-4 text-center text-[12.5px] font-medium text-forest/45 underline underline-offset-2 transition-colors hover:text-forest"
+        className="mt-4 text-center text-[12.5px] font-medium text-forest-muted underline underline-offset-2 transition-colors hover:text-forest"
       >
         {JOIN_SUCCESS_COPY.restart}
       </button>

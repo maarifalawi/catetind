@@ -80,8 +80,8 @@ export const MONEY_TONE: Record<
 > = {
   income: { text: 'text-forest', dot: 'bg-forest', label: 'Pemasukan' },
   expense: { text: 'text-hud-terracotta', dot: 'bg-hud-terracotta', label: 'Pengeluaran' },
-  saving: { text: 'text-forest/55', dot: 'bg-ink/30', label: 'Pindah dana' },
-  transfer: { text: 'text-forest/55', dot: 'bg-ink/30', label: 'Pindah dana' },
+  saving: { text: 'text-forest-muted', dot: 'bg-ink/30', label: 'Pindah dana' },
+  transfer: { text: 'text-forest-muted', dot: 'bg-ink/30', label: 'Pindah dana' },
 }
 
 /** urutan legenda: masuk → keluar → netral */
@@ -221,14 +221,11 @@ export function healthScoreBand(score: number): { min: number; label: string; ch
 export const HEALTH_CARD_COPY = {
   readyTitle: 'Skor Kewarasan Finansial',
   calibratingTitle: 'Kalibrasi Profil AI',
-  calibratingSubtitle: 'AI Coach sedang menyelaraskan polamu',
   /** badge kanan atas kartu */
   badgeAi: 'AI',
-  badgeCoach: 'AI Coach',
-  learning: 'AI sedang mempelajari polamu...',
+  badgeCoach: 'Minca',
   progressLabel: (done: number, goal: number) => `${done}/${goal} transaksi`,
   progressPercent: (pct: number) => `Kalibrasi ${pct}%`,
-  remaining: (remaining: number) => `${remaining} transaksi lagi buat kalibrasi profilmu`,
   progressA11y: (done: number, goal: number) =>
     `Kalibrasi profil AI: ${done} dari ${goal} transaksi terkumpul`,
   /** cukup catatan TAPI belum ada pemasukan — jelaskan kenapa skornya belum ada */
@@ -251,8 +248,16 @@ export const HEALTH_CARD_COPY = {
 
 /** copy blok pengganti saat BELUM ADA satu catatan pun (kartu hero & insight) */
 export const HISTORY_NO_DATA_COPY = {
-  title: 'Belum ada satu catatan pun di sini',
-  body: 'Skor kewarasan, insight AI, dan pola pengeluaran baru bisa dihitung setelah ada catatan pertama. Skor contoh tidak kami tampilkan, angka di halaman ini selalu dari catatanmu.',
+  /* NADA (revisi ToV): keadaan kosong bukan kesalahan user, jadi kalimatnya
+     berupa AJAKAN ramah yang dibuka dengan kemungkinan paling manusiawi —
+     "beneran nggak jajan apa-apa, atau lupa nyatet?" — bukan perintah
+     "Tidak ada data".
+
+     Sisa kalimatnya tetap jujur dan penting: skor contoh TIDAK dipajang, karena
+     angka karangan di halaman analitik adalah jenis kebohongan yang paling
+     merusak kepercayaan. */
+  title: 'Belum ada catatan nih',
+  body: 'Seharian ini beneran belum jajan apa-apa, atau lupa nyatet? Catat satu aja dulu — skor kewarasan, insight, dan pola pengeluaran langsung bisa dihitung. Nggak ada skor contoh di sini, semua angka datang dari catatanmu.',
   cta: 'Catat Sekarang',
 } as const
 
@@ -747,7 +752,7 @@ export function buildHistoryInsights(
         eyebrow: 'Savings Rate',
         copy:
           rate >= 0
-            ? `Kamu berhasil sisihkan ${rate}% dari pemasukan bulan ini! 🌿`
+            ? `Kamu berhasil sisihkan ${rate}% dari pemasukan bulan ini! 🧩`
             : `Pengeluaran bulan ini ${Math.abs(rate)}% lebih besar dari pemasukanmu, belum ada yang tersisih.`,
         tone: rate >= 0 ? 'good' : 'alert',
         actions: [
@@ -780,8 +785,7 @@ export const INSIGHT_CARD_COPY = {
   title: 'Insight AI',
   found: (count: number) => `${count} temuan`,
   waiting: 'Menunggu data',
-  /** belum ada satu pun insight yang lolos ambang — kalimat nurturing, bukan klaim */
-  learning: 'Aku masih belajar polamu. Terus catat ya 📊',
+  /** belum ada satu pun insight yang lolos ambang — kartu cukup diam */
 } as const
 
 /** nominal rupiah dengan privasi: `Rp 25.000` atau `Rp •••••••` */
@@ -1001,10 +1005,10 @@ export const DELETE_TRANSACTION_TOAST = {
   description: 'Transaksi sudah keluar dari riwayat.',
   /** label aksi di toast (Sonner) — jaring pengaman 5 detik (PRD 2251) */
   undo: 'Undo',
-  undoneTitle: 'Catatan dikembalikan 🌿',
+  undoneTitle: 'Catatan dikembalikan 🧩',
   undoneDescription: 'Catatan itu balik ke tempatnya semula.',
   /** jaring pengaman tetap jujur kalau tombol Undo ditekan setelah jendelanya tutup */
-  expired: 'Jendela Undo-nya sudah lewat, catatannya bisa dicatat ulang kapan aja 🌿',
+  expired: 'Jendela Undo-nya sudah lewat, catatannya bisa dicatat ulang kapan aja 🧩',
 } as const
 
 /* ── HAPUS SEMUA RIWAYAT (paket 59 · item 59.2) ───────────────────────────────
@@ -1041,7 +1045,7 @@ export const HISTORY_CLEAR_ALL_TOAST = {
   title: (count: number) => `${count} catatan dihapus`,
   description: 'Riwayat, laporan, dan insight ikut kosong. Saldo dompet tidak berubah.',
   undo: 'Undo',
-  undoneTitle: 'Semua catatan dikembalikan 🌿',
+  undoneTitle: 'Semua catatan dikembalikan 🧩',
   undoneDescription: 'Catatan yang tadi dihapus balik ke tempatnya semula.',
 } as const
 
@@ -1072,7 +1076,7 @@ export const TRANSACTION_INPUT_COPY = {
   amountFraction:
     'Angkanya masih ambigu. Kalau maksudnya 1,5 juta, tulis "1,5jt"; kalau 1.500, tulis "1500".',
   /** guard saat nominal masih kosong / nol */
-  amountNeeded: 'Isi nominalnya dulu ya 🌿',
+  amountNeeded: 'Isi nominalnya dulu ya 🧩',
 
   /* ── ANTI DOUBLE-TAP (paket 42 · audit Stage 5 #1) ──────────────────────────
      Kunci submit membuat tombolnya benar-benar mati selama satu siklus simpan —
@@ -1098,7 +1102,7 @@ export const TRANSACTION_INPUT_COPY = {
    * berbeda diam-diam di kemudian hari.
    */
   /** toast pengaman saat Enter ditekan padahal kategori belum dipilih.
-   *  Kalimat panjang "Pilih kategori dulu ya 🌿 Cuma kategori yang kamu pilih
+   *  Kalimat panjang "Pilih kategori dulu ya 🧩 Cuma kategori yang kamu pilih
    *  yang disimpan." DIHAPUS atas permintaan pemilik produk — guard-nya tetap
    *  ada, tapi cukup satu kalimat pendek tanpa mengulang aturan. */
   categoryNeeded: 'Kategorinya belum dipilih.',
@@ -1110,13 +1114,27 @@ export const TRANSACTION_INPUT_COPY = {
      form, dan saldo tiap dompet ditampilkan apa adanya di dalamnya. */
   /** label field dompet di form TAMBAH (mode edit pakai `EDIT_TRANSACTION_COPY`) */
   walletLabel: 'Sumber Dompet',
+  /**
+   * Placeholder kolom catatan. Dulu "Catatan (Opsional)" — benar, tapi tidak
+   * membantu: user harus mengarang sendiri bentuk catatan yang berguna. Sekarang
+   * placeholder-nya memberi CONTOH NYATA yang bikin senyum, jadi orang langsung
+   * paham bahwa kolom ini tempat menulis apa yang sebenarnya terjadi
+   * ("kopi susu gula aren", bukan "pengeluaran konsumsi").
+   *
+   * Sengaja pendek (≤ 30 karakter): di layar 375 px kolomnya hanya selebar
+   * setengah kartu, dan placeholder panjang akan terpotong ellipsis — teks yang
+   * hilang di tengah lebih buruk daripada tidak ada contoh sama sekali.
+   */
+  notePlaceholder: 'Misal: kopi susu gula aren',
+  /** a11y label kolom catatan (placeholder tidak dibacakan dua kali) */
+  noteLabel: 'Catatan transaksi (opsional)',
   /** opsi kosong di pemilih — bukan dompet, jadi tidak boleh jadi nilai tersimpan */
   walletPlaceholder: 'Pilih dompet…',
   /* `walletHint` ("Saldo dompet inilah yang bergerak…") DIHAPUS atas permintaan
      pemilik produk. Petunjuk hanya muncul saat memang ada yang perlu dikatakan:
      dompet belum dipilih, atau saldonya tidak cukup. */
   /** petunjuk + toast saat user belum memilih dompet */
-  walletNeeded: 'Pilih dompetnya dulu ya 🌿 Biar jelas uangnya keluar dari mana.',
+  walletNeeded: 'Pilih dompetnya dulu ya 🧩 Biar jelas uangnya keluar dari mana.',
   /** judul sheet pemilih dompet */
   walletSheetTitle: 'Pilih Dompet',
   /** a11y trigger & tombol tutup pemilih dompet */
@@ -1159,13 +1177,13 @@ export const TRANSACTION_INPUT_COPY = {
      (a) apa yang baru saja dibaca AI, dan (b) apa yang harus user cek — termasuk
      saat totalnya benar-benar tidak terbaca. Nominalnya sendiri tetap
      dikonfirmasi lewat chip `amountConfirm` yang sudah ada. */
-  aiScanFilled: 'Struknya kebaca. Cek nominal & kategorinya sebelum simpan ya 🌿',
-  aiVoiceFilled: 'Ucapannya kebaca. Cek dulu sebelum simpan ya 🌿',
+  aiScanFilled: 'Struknya kebaca. Cek nominal & kategorinya sebelum simpan ya 🧩',
+  aiVoiceFilled: 'Ucapannya kebaca. Cek dulu sebelum simpan ya 🧩',
   /** total tidak terbaca → form TIDAK diisi angka karangan; user yang mengisi */
   aiScanAmountMissing:
-    'Struknya kebaca, tapi totalnya belum jelas. Isi nominalnya manual dulu ya 🌿',
+    'Struknya kebaca, tapi totalnya belum jelas. Isi nominalnya manual dulu ya 🧩',
   aiVoiceAmountMissing:
-    'Aku belum nemu nominalnya di ucapanmu. Isi manual dulu ya, atau coba ngomong lagi 🌿',
+    'Aku belum nemu nominalnya di ucapanmu. Isi manual dulu ya, atau coba ngomong lagi 🧩',
 } as const
 
 /* ── OPSI FIELD DI MODE EDIT ─────────────────────────────────────────────────
@@ -1282,17 +1300,14 @@ export const TRANSACTION_WALLET_OPTIONS = ['BCA', 'GoPay', 'OVO', 'Tunai'] as co
    input?". Sheet-nya sudah terisi (pre-filled); copy-nya cukup menegaskan itu. */
 export const EDIT_TRANSACTION_COPY = {
   title: (name: string) => `Edit ${name}`,
-  description: 'Ubah yang keliru aja, sisanya tetap seperti semula.',
   /** label tiga field detail yang HANYA muncul di mode edit */
   categoryLabel: 'Kategori',
   walletLabel: 'Dompet',
   dateLabel: 'Tanggal',
-  /** hasil edit langsung terasa di layar lain — sebut supaya tidak "sunyi" */
-  hint: 'Perubahan langsung tampil di riwayat, total harian, dan dompetnya.',
 } as const
 
 export const UPDATE_TRANSACTION_TOAST = {
-  title: 'Catatan diperbarui 🌿',
+  title: 'Catatan diperbarui 🧩',
   description: 'Versi barunya sudah dipakai di riwayat & total harian.',
 } as const
 
@@ -1418,23 +1433,23 @@ export const TRANSACTION_INSUFFICIENT_FUNDS_COPY = {
    imbalan yang tidak selalu sama = variable reward (PRD 1819–1823). */
 export const TRANSACTION_SUCCESS_CHEER: Record<TransactionType, readonly string[]> = {
   expense: [
-    'Sip, {amount} dicatat! 🌿',
+    'Sip, {amount} dicatat! 🧩',
     'Mantap, pengeluaran kopi masih aman! 🎉',
     'Beres, {amount} kecatat rapi ✨',
-    'Catat 1, aman 1, {amount} tersimpan 🌱',
+    'Catat 1, aman 1, {amount} tersimpan 🧩',
   ],
   income: [
-    'Asik, {amount} masuk! 🌿',
+    'Asik, {amount} masuk! 🧩',
     'Mantap, pemasukan {amount} nambah! 🎉',
     'Yeay, {amount} udah kecatat ✨',
   ],
   saving: [
-    'Sip, nabung {amount} lagi! 🌱',
+    'Sip, nabung {amount} lagi! 🧩',
     'Tabungan nambah {amount} 🎉',
     'Mantap, {amount} disisihkan buat masa depan ✨',
   ],
   transfer: [
-    'Oke, {amount} dipindahin! 🌿',
+    'Oke, {amount} dipindahin! 🧩',
     'Transfer {amount} kecatat 🎉',
     'Sip, {amount} pindah dompet ✨',
   ],

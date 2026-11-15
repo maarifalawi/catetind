@@ -10,7 +10,8 @@ import {
 } from '@/lib/supabase/physical-remote'
 import { randomUuid } from '@/lib/supabase/uuid'
 import { subscribePhysicalChanges, type WealthRealtimeHandle } from '@/lib/supabase/realtime'
-import { PHYSICAL_STATE_KEY, loadDeviceState, saveDeviceState } from './idb'
+import { PHYSICAL_STATE_KEY, accountStateKey, loadDeviceState, resolveDeviceOwner, saveDeviceState } from './idb'
+import { browserUserId } from '@/lib/supabase/client'
 
 /* ── SATU STORE ASET FISIK / PROPERTI (paket 63) ─────────────────────────────
    Tab "Properti & Aset Fisik" di `/wealth` — pola yang sama dengan
@@ -59,6 +60,8 @@ const EMPTY_SNAPSHOT: PhysicalSnapshot = Object.freeze({ assets: [], removedIds:
 let live: PhysicalSnapshot = SERVER_SNAPSHOT
 let accountPurged = false
 let hydrateStarted = false
+/** akun pemilik cache perangkat ini — cache aset fisik DIPISAH per akun */
+let deviceOwnerUserId: string | null | undefined = undefined
 let nextId = 1
 const listeners = new Set<() => void>()
 
@@ -75,7 +78,7 @@ export function getServerPhysicalSnapshot(): PhysicalSnapshot {
 }
 
 function persist(snapshot: PhysicalSnapshot): void {
-  saveDeviceState<PersistedPhysical>(PHYSICAL_STATE_KEY, {
+  saveDeviceState<PersistedPhysical>(accountStateKey(PHYSICAL_STATE_KEY, deviceOwnerUserId), {
     version: 1,
     assets: snapshot.assets,
     removedIds: snapshot.removedIds,
@@ -91,7 +94,9 @@ function commit(next: PhysicalSnapshot): void {
 async function hydrate(): Promise<void> {
   if (hydrateStarted) return
   hydrateStarted = true
-  const stored = await loadDeviceState<PersistedPhysical>(PHYSICAL_STATE_KEY)
+  const userId = await resolveDeviceOwner(PHYSICAL_STATE_KEY, (await browserUserId()) ?? null)
+  deviceOwnerUserId = userId
+  const stored = await loadDeviceState<PersistedPhysical>(accountStateKey(PHYSICAL_STATE_KEY, userId))
   if (accountPurged) return
   const assets = stored && Array.isArray(stored.assets) ? stored.assets : []
   const removedIds = stored && Array.isArray(stored.removedIds) ? stored.removedIds : []

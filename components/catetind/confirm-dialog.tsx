@@ -98,11 +98,11 @@ export function ConfirmDialog({
           {title}
         </h2>
         {body && (
-          <p className="mt-1.5 text-[13.5px] leading-relaxed text-forest/55">{body}</p>
+          <p className="mt-1.5 text-[13.5px] leading-relaxed text-forest-muted">{body}</p>
         )}
 
         {note && (
-          <p className="mt-3 rounded-2xl bg-soil/[0.1] px-3.5 py-2.5 text-[12.5px] leading-relaxed text-forest/60">
+          <p className="mt-3 rounded-2xl bg-soil/[0.1] px-3.5 py-2.5 text-[12.5px] leading-relaxed text-forest-muted">
             {note}
           </p>
         )}

@@ -22,12 +22,32 @@ export function ServiceWorkerRegistration() {
     if (!('serviceWorker' in navigator)) return
 
     if (process.env.NODE_ENV !== 'production') {
-      /* dev: jangan tinggalkan SW lama yang menahan chunk basi di Cache Storage */
+      /* dev: jangan tinggalkan SW lama yang menahan chunk basi di Cache Storage.
+         Yang dibuang HANYA registrasi lain (mis. `sw.js` produksi dari sesi
+         sebelumnya). SW push dev dibiarkan hidup supaya subscription perangkat
+         tidak ikut dicabut setiap kali halaman dimuat ulang. */
       void navigator.serviceWorker
         .getRegistrations()
-        .then((regs) => Promise.all(regs.map((reg) => reg.unregister())))
+        .then((regs) =>
+          Promise.all(
+            regs
+              .filter(
+                (reg) =>
+                  !reg.active?.scriptURL.endsWith('/sw-push-dev.js') &&
+                  !reg.installing?.scriptURL.endsWith('/sw-push-dev.js') &&
+                  !reg.waiting?.scriptURL.endsWith('/sw-push-dev.js'),
+              )
+              .map((reg) => reg.unregister()),
+          ),
+        )
+        /* Push butuh service worker. Di dev kita daftarkan SW khusus push
+           (`public/sw-push-dev.js`: hanya handler `push` + `notificationclick`,
+           TANPA handler `fetch`), jadi (a) chunk dev tetap selalu segar dan
+           (b) `navigator.serviceWorker.ready` resolve → tombol "Aktifkan
+           Notifikasi" tidak lagi berputar selamanya di localhost. */
+        .then(() => navigator.serviceWorker.register('/sw-push-dev.js'))
         .catch(() => {
-          /* diabaikan — tidak ada yang bisa dipulihkan dari sini */
+          /* diabaikan — tanpa SW, tombol aktivasi akan memberi tahu user */
         })
       if ('caches' in window) {
         void caches

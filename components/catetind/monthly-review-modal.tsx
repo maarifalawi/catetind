@@ -29,7 +29,6 @@ import { usePrivacy } from './privacy-provider'
 import { useSubscriptionGate } from './subscription-gate-provider'
 import { SubscriptionLockNote } from './subscription-lock-note'
 import {
-  MONTHLY_RECAP,
   MONTHLY_REVIEW_COPY as COPY,
   TARGET_MAX,
   TARGET_MIN,
@@ -86,7 +85,7 @@ export function MonthlyReviewModal({
   open,
   monthKey,
   saved,
-  recap = MONTHLY_RECAP,
+  recap,
   onClose,
   onSave,
 }: {
@@ -95,8 +94,8 @@ export function MonthlyReviewModal({
   monthKey: string
   /** target terakhir yang disimpan user (null = belum pernah) */
   saved: SavedMonthlyTarget | null
-  /** recap bulan lalu (default: mock dari lib/data/monthly-review.ts) */
-  recap?: MonthlyRecap
+  /** recap bulan lalu dari CATATAN NYATA user (dihitung `useMonthlyReview()`) */
+  recap: MonthlyRecap
   /** tutup modal — apa pun alasannya, bulan ini tidak ditagih lagi */
   onClose: () => void
   /** simpan target bulan ini (localStorage diurus hook, bukan modal) */
@@ -190,7 +189,7 @@ export function MonthlyReviewModal({
   }
 
   /**
-   * "Let's go! 🌿" — target disimpan lewat hook (localStorage bukan urusan modal).
+   * "Let's go! 🧩" — target disimpan lewat hook (localStorage bukan urusan modal).
    * Toast-nya menyebut angka + celengan yang dipilih, plus jalan pintas SETOR ke
    * /budget: modal ini sengaja TIDAK meniru logika setoran yang sudah ada di sana.
    */
@@ -318,7 +317,7 @@ export function MonthlyReviewModal({
                   'flex min-w-0 items-center justify-center gap-1.5 rounded-full px-2 py-2 text-[12.5px] font-medium whitespace-nowrap transition-colors duration-200',
                   active
                     ? 'bg-forest font-medium text-mint'
-                    : 'text-forest/55 hover:bg-cream/70 hover:text-forest',
+                    : 'text-forest-muted hover:bg-cream/70 hover:text-forest',
                 )}
               >
                 {item.icon}
@@ -387,7 +386,7 @@ export function MonthlyReviewModal({
             type="button"
             onClick={onClose}
             aria-label={COPY.skipA11y}
-            className="shrink-0 rounded-full px-3 py-3 text-[13px] font-medium text-forest/45 transition-colors hover:text-forest/70"
+            className="shrink-0 rounded-full px-3 py-3 text-[13px] font-medium text-forest-muted transition-colors hover:text-forest-soft"
           >
             {COPY.skip}
           </button>
@@ -409,7 +408,7 @@ export function MonthlyReviewModal({
             className={cn(
               'flex-1 rounded-full py-3.5 text-sm font-medium transition-colors',
               isLastPanel && inputLocked
-                ? 'cursor-not-allowed bg-ink/[0.07] text-forest/35'
+                ? 'cursor-not-allowed bg-ink/[0.07] text-forest-muted'
                 : 'bg-forest text-mint hover:bg-forest-soft active:scale-[0.98]',
             )}
           >
@@ -431,14 +430,14 @@ export function MonthlyReviewModal({
 /** label mikro bergaya dashboard (mis. "PEMASUKAN") */
 function MicroLabel({ children }: { children: ReactNode }) {
   return (
-    <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-forest/40">{children}</p>
+    <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-forest-muted">{children}</p>
   )
 }
 
 /** chip meta kecil (bulan, jumlah transaksi) */
 function MetaTag({ icon, children }: { icon: ReactNode; children: ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-cream px-2.5 py-1 text-[12px] font-medium text-forest/60 ring-1 ring-soil/12">
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-cream px-2.5 py-1 text-[12px] font-medium text-forest-muted ring-1 ring-soil/12">
       {icon}
       {children}
     </span>
@@ -476,10 +475,10 @@ function StatTile({
         >
           {icon}
         </span>
-        <span className="text-[12px] font-medium text-forest/50">{label}</span>
+        <span className="text-[12px] font-medium text-forest-muted">{label}</span>
       </div>
       <p className="mt-2 text-[18px] font-medium tabular-nums text-forest">{value}</p>
-      {hint && <p className="mt-1 text-[12px] leading-relaxed text-forest/45">{hint}</p>}
+      {hint && <p className="mt-1 text-[12px] leading-relaxed text-forest-muted">{hint}</p>}
     </div>
   )
 }
@@ -500,7 +499,9 @@ function RecapPanel({ recap }: { recap: MonthlyRecap }) {
     Math.round((recap.transactionCount / TARGET_TRANSACTION_THRESHOLD) * 100),
   )
   const targetPct =
-    recap.target > 0 ? Math.min(100, Math.round((recap.savedLastMonth / recap.target) * 100)) : 0
+    recap.targetKnown && recap.target > 0
+      ? Math.min(100, Math.round((recap.savedLastMonth / recap.target) * 100))
+      : 0
 
   return (
     <div className="space-y-3.5">
@@ -509,10 +510,10 @@ function RecapPanel({ recap }: { recap: MonthlyRecap }) {
           {COPY.recapTitle(recap.monthLabel)}
         </h3>
         <div className="flex flex-wrap items-center gap-1.5">
-          <MetaTag icon={<Calendar className="size-3.5 text-forest/55" strokeWidth={2.2} />}>
+          <MetaTag icon={<Calendar className="size-3.5 text-forest-muted" strokeWidth={2.2} />}>
             {recap.monthLabel}
           </MetaTag>
-          <MetaTag icon={<ReceiptText className="size-3.5 text-forest/55" strokeWidth={2.2} />}>
+          <MetaTag icon={<ReceiptText className="size-3.5 text-forest-muted" strokeWidth={2.2} />}>
             {COPY.metaTransactions(recap.transactionCount)}
           </MetaTag>
         </div>
@@ -550,49 +551,53 @@ function RecapPanel({ recap }: { recap: MonthlyRecap }) {
           </div>
 
           {/* arti angkanya dijelaskan, tidak dibiarkan misterius */}
-          <p className="px-1 text-[12px] leading-relaxed text-forest/45">
+          <p className="px-1 text-[12px] leading-relaxed text-forest-muted">
             {COPY.savingsRateCaption}
             {recap.setAside > 0 && ` ${COPY.setAsideNote(money(recap.setAside))}`}
           </p>
 
-          {/* status target bulan lalu — ✅ atau ⏳, dua-duanya tanpa menyalahkan */}
-          <div className="rounded-2xl bg-cream p-4 ring-1 ring-soil/12">
-            <MicroLabel>{COPY.targetTitle}</MicroLabel>
-            <div className="mt-2 flex items-start gap-2.5">
-              <span
-                className={cn(
-                  'flex size-7 shrink-0 items-center justify-center rounded-full',
-                  recap.targetAchieved ? 'bg-mint/25 text-forest' : 'bg-sage text-forest',
-                )}
-              >
-                {recap.targetAchieved ? (
-                  <Check className="size-3.5" strokeWidth={3} />
-                ) : (
-                  <Clock className="size-3.5" strokeWidth={2.4} />
-                )}
-              </span>
-              <div className="min-w-0">
-                <p className="text-[14px] font-medium leading-snug text-forest">
-                  {recap.targetAchieved
-                    ? COPY.targetAchieved(money(recap.target))
-                    : COPY.targetMissed(money(recap.target), targetPct)}
-                </p>
-                <p className="mt-1 text-[12px] leading-relaxed text-forest/45">
-                  {recap.targetAchieved ? COPY.targetAchievedCaption : COPY.targetMissedCaption}
-                </p>
+          {/* status target bulan lalu — ✅ atau ⏳, dua-duanya tanpa menyalahkan.
+              Kalau user belum pernah menyimpan target untuk bulan itu, kartunya
+              TIDAK ditampilkan sama sekali: "Rp 0" akan jadi klaim palsu. */}
+          {recap.targetKnown && (
+            <div className="rounded-2xl bg-cream p-4 ring-1 ring-soil/12">
+              <MicroLabel>{COPY.targetTitle}</MicroLabel>
+              <div className="mt-2 flex items-start gap-2.5">
+                <span
+                  className={cn(
+                    'flex size-7 shrink-0 items-center justify-center rounded-full',
+                    recap.targetAchieved ? 'bg-mint/25 text-forest' : 'bg-sage text-forest',
+                  )}
+                >
+                  {recap.targetAchieved ? (
+                    <Check className="size-3.5" strokeWidth={3} />
+                  ) : (
+                    <Clock className="size-3.5" strokeWidth={2.4} />
+                  )}
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[14px] font-medium leading-snug text-forest">
+                    {recap.targetAchieved
+                      ? COPY.targetAchieved(money(recap.target))
+                      : COPY.targetMissed(money(recap.target), targetPct)}
+                  </p>
+                  <p className="mt-1 text-[12px] leading-relaxed text-forest-muted">
+                    {recap.targetAchieved ? COPY.targetAchievedCaption : COPY.targetMissedCaption}
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
-          {/* snapshot tanaman — tanpa angka level/streak (kanon Domain 3B) */}
+          {/* snapshot papan puzzle — tanpa angka level/streak (kanon Domain 3B) */}
           <div className="flex items-center gap-4 rounded-2xl bg-cream p-4 ring-1 ring-soil/12">
             <div className="w-16 shrink-0">
-              <PlantIllustration stage={recap.plantStage} />
+              <PlantIllustration stage={recap.puzzleStage} />
             </div>
             <div className="min-w-0">
-              <MicroLabel>{COPY.plantTitle}</MicroLabel>
-              <p className="mt-1 text-[13.5px] leading-relaxed text-forest/60">
-                {COPY.plantCaption(STAGE_NAMES[recap.plantStage])}
+              <MicroLabel>{COPY.puzzleTitle}</MicroLabel>
+              <p className="mt-1 text-[13.5px] leading-relaxed text-forest-muted">
+                {COPY.puzzleCaption(STAGE_NAMES[recap.puzzleStage])}
               </p>
             </div>
           </div>
@@ -606,13 +611,13 @@ function RecapPanel({ recap }: { recap: MonthlyRecap }) {
             </span>
             <div className="min-w-0">
               <p className="text-[14px] font-medium text-forest">{COPY.patientTitle}</p>
-              <p className="mt-1 text-[13px] leading-relaxed text-forest/60">{COPY.patientBody}</p>
+              <p className="mt-1 text-[13px] leading-relaxed text-forest-muted">{COPY.patientBody}</p>
             </div>
           </div>
 
           {/* progress unlock — engagement yang jujur: menambah catatan, bukan menebak */}
           <div className="mt-3.5">
-            <div className="flex items-center justify-between gap-2 text-[12px] font-medium text-forest/55">
+            <div className="flex items-center justify-between gap-2 text-[12px] font-medium text-forest-muted">
               <span className="tabular-nums">{readiness.progressLabel}</span>
               <span className="tabular-nums">{progressPct}%</span>
             </div>
@@ -630,7 +635,7 @@ function RecapPanel({ recap }: { recap: MonthlyRecap }) {
               />
             </div>
             {readiness.reasonLabel && (
-              <p className="mt-2 text-[12px] leading-relaxed text-forest/50">
+              <p className="mt-2 text-[12px] leading-relaxed text-forest-muted">
                 {readiness.reasonLabel}
               </p>
             )}
@@ -694,7 +699,7 @@ function TargetPanel({
           size="lg"
           hint={provenanceHint}
         />
-        <p className="mt-1.5 text-[12px] leading-relaxed text-forest/45">{COPY.targetQuestionHint}</p>
+        <p className="mt-1.5 text-[12px] leading-relaxed text-forest-muted">{COPY.targetQuestionHint}</p>
         {/* pembaca layar menerima nominalnya sebagai kalimat utuh (angka di input
             terbaca satu-satu digit, jadi tidak berguna) */}
         <p className="sr-only" aria-live="polite">
@@ -723,7 +728,7 @@ function TargetPanel({
         <button
           type="button"
           onClick={onReset}
-          className="flex items-center gap-1 rounded-full px-3 py-2 text-[12.5px] font-medium text-forest/50 transition-colors hover:text-forest"
+          className="flex items-center gap-1 rounded-full px-3 py-2 text-[12.5px] font-medium text-forest-muted transition-colors hover:text-forest"
         >
           <RotateCcw className="size-3.5" strokeWidth={2.4} />
           {COPY.stepReset}
@@ -743,7 +748,7 @@ function TargetPanel({
       {funds.length > 0 && (
         <section className="rounded-2xl bg-cream p-4 ring-1 ring-soil/12">
           <p className="text-[14px] font-medium text-forest">{COPY.fundTitle}</p>
-          <p className="mt-0.5 text-[12px] leading-relaxed text-forest/45">{COPY.fundCaption}</p>
+          <p className="mt-0.5 text-[12px] leading-relaxed text-forest-muted">{COPY.fundCaption}</p>
 
           <div role="radiogroup" aria-label={COPY.fundTitle} className="mt-3 space-y-2">
             {funds.map(({ fund, monthly, percent }) => {
@@ -774,7 +779,7 @@ function TargetPanel({
                     <span
                       className={cn(
                         'mt-0.5 block text-[12px] tabular-nums',
-                        active ? 'text-mint/70' : 'text-forest/45',
+                        active ? 'text-mint' : 'text-forest-muted',
                       )}
                     >
                       {COPY.fundProgress(percent)}
@@ -802,7 +807,7 @@ function TargetPanel({
                 'flex w-full items-center gap-2.5 rounded-2xl px-3.5 py-2.5 text-left text-[13.5px] font-medium transition-colors',
                 fundId === null
                   ? 'bg-sage/70 text-forest'
-                  : 'bg-cream text-forest/50 ring-1 ring-soil/14 hover:text-forest',
+                  : 'bg-cream text-forest-muted ring-1 ring-soil/14 hover:text-forest',
               )}
             >
               <Sprout className="size-4 shrink-0" strokeWidth={2.2} />
@@ -811,7 +816,7 @@ function TargetPanel({
           </div>
 
           {/* jujur soal batas: modal ini memutuskan, setorannya di /budget */}
-          <p className="mt-3 text-[12px] leading-relaxed text-forest/45">{COPY.fundSetorHint}</p>
+          <p className="mt-3 text-[12px] leading-relaxed text-forest-muted">{COPY.fundSetorHint}</p>
         </section>
       )}
     </div>

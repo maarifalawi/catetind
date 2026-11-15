@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-  AI_ADDON_TOKENS_ALLOTMENT,
   AI_BASE_QUOTA,
   AI_BASE_TOKENS_TOTAL,
   AI_SEED_USAGE_CALLS,
@@ -112,18 +111,29 @@ describe('pemakaian AI benar-benar menggerakkan meter', () => {
 })
 
 describe('state KUOTA HABIS + degradasi', () => {
-  it('kuota dasar habis TAPI tangki add-on masih ada → belum "habis"', () => {
-    /* 1.000 kategorisasi ekstra = 280.000 token: 137.480 dipakai menutup kuota
-       dasar, sisanya (142.520) diambil dari jatah add-on 150.000 — jadi kuota
-       dasar habis tapi tangki masih menyisakan 7.480 token. */
+  it('kuota dasar habis TANPA token tambahan → benar-benar habis', () => {
+    /* 1.000 kategorisasi ekstra = 280.000 token; sisanya setelah kuota dasar
+       (142.520) adalah limpahan yang HARUS dibayar dari tangki add-on. Tangki
+       bawaan sudah 0 (bukan lagi jatah karangan 150.000), jadi tanpa top-up
+       keadaan "habis" itu nyata. */
     const calls = { ...AI_SEED_USAGE_CALLS, categorize: AI_SEED_USAGE_CALLS.categorize + 1_000 }
     const habisDasar = aiQuotaSnapshot(calls, 0)
 
     expect(habisDasar.baseTokensRemaining).toBe(0)
     expect(habisDasar.remainingPct).toBe(0)
     expect(habisDasar.addon.overflowTokens).toBe(142_520)
-    expect(habisDasar.addon.tokensRemaining).toBe(AI_ADDON_TOKENS_ALLOTMENT - 142_520)
-    expect(habisDasar.exhausted).toBe(false)
+    expect(habisDasar.addon.tokensRemaining).toBe(0)
+    expect(habisDasar.exhausted).toBe(true)
+  })
+
+  it('token tambahan NYATA (top-up/bonus admin) menutup limpahan itu', () => {
+    /* angka yang sama, tapi akun ini punya 200.000 token tercatat di
+       `ai_addons` — tangki menutup 142.520 limpahan dan menyisakan 57.480. */
+    const calls = { ...AI_SEED_USAGE_CALLS, categorize: AI_SEED_USAGE_CALLS.categorize + 1_000 }
+    const denganTopUp = aiQuotaSnapshot(calls, 200_000)
+
+    expect(denganTopUp.addon.tokensRemaining).toBe(200_000 - 142_520)
+    expect(denganTopUp.exhausted).toBe(false)
   })
 
   it('dua kolam habis → exhausted: voice & OCR berhenti, sisanya dijelaskan copy', () => {

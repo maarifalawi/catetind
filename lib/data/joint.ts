@@ -132,6 +132,18 @@ export type JointTransaction = {
   id: string
   /** id baris `joint_transactions` di Supabase (uuid) — `undefined` = belum dikirim (paket 64) */
   remoteId?: string
+  /**
+   * true = baris ini BELUM sampai ke server (kirim gagal / belum ada sesi saat
+   * disimpan) sehingga hanya ada di perangkat ini.
+   *
+   * Kenapa ditandai, bukan disembunyikan: tanpa tanda ini, catatan yang gagal
+   * terkirim terlihat sama persis dengan catatan yang sudah tersinkron — user
+   * mengira pasangannya sudah melihatnya padahal tidak (temuan "halaman join
+   * ngga sync: di akun pertama ada transaksi, di akun kedua kosong"). Store
+   * mencoba mengirim ulang otomatis; chip di timeline menyebut keadaannya apa
+   * adanya selama masih menunggu.
+   */
+  pendingSync?: boolean
   /** PEMBUAT catatan (dipakai untuk privasi & "siapa yang mengetik") */
   userId: string
   /**
@@ -180,6 +192,15 @@ export type JointTransaction = {
   /** true = baris PEMBUKA bulan: sisa bulan lalu yang dibawa (Stage 2 #5) */
   isOpening?: boolean
   /**
+   * Jenis catatan: `expense` (bawaan) atau `income`.
+   *
+   * Dulu form tambah menerima tipe "Pemasukan" dari Transaction Input Engine
+   * tetapi store membuangnya, sehingga pemasukan yang diinput user selalu
+   * tampil & terhitung sebagai PENGELUARAN. Sekarang jenisnya ikut tersimpan
+   * dan dibaca mesin ledger (`lib/data/joint-ledger.ts`).
+   */
+  kind?: 'expense' | 'income'
+  /**
    * id baris kas di dompet PRIBADI yang lahir bersama catatan ini (opsional).
    *
    * Diisi hanya kalau user memilih "Sumber Dana" saat mencatat. Fungsinya satu:
@@ -190,6 +211,16 @@ export type JointTransaction = {
   cashRowId?: string
   /** metode transfer di baris settlement (BCA/GoPay/Cash) */
   settlementMethod?: string
+  /**
+   * BULAN yang diselesaikan baris settle (`YYYY-MM`) — bukan tanggal transfer.
+   *
+   * Sejak settle mencatat waktu SUNGGUHAN (11 Nov), tanggal baris tidak lagi
+   * selalu berada di bulan yang diselesaikan (bulan lama bisa disettle
+   * belakangan). Kunci anti-dobel (`jointRowKey`) butuh BULAN, bukan tanggal:
+   * tanpa field ini penanda bulan & baris server yang menceritakan transfer yang
+   * sama akan dianggap dua baris berbeda.
+   */
+  settlementMonth?: string
   /** baru masuk dari partner (mock Realtime) → animasi slide-in + badge "Baru" */
   justArrived?: boolean
 }
@@ -207,6 +238,9 @@ export const JOINT_ADDED_TOAST = 'Catatan bareng tersimpan 💚'
  *  Dipakai form DAN store (`addJointTransaction`) supaya tidak ada dua versi
  *  kalimat untuk keadaan yang sama. */
 export const JOINT_DEFAULT_DESCRIPTION = 'Pengeluaran Bareng'
+
+/** deskripsi cadangan untuk PEMASUKAN bersama (uang masuk, bukan belanja) */
+export const JOINT_DEFAULT_INCOME_DESCRIPTION = 'Pemasukan Bersama'
 
 /** kategori cadangan catatan bareng saat user belum memilih kategori
  *  (paket 54 memindahkan pemilih kategori ke user; sebelum itu nilainya tetap). */
@@ -229,12 +263,15 @@ export type JointWallet = {
   created?: boolean
 }
 
-/** label + hint tiap mode pembagian di Split Bill Sheet (Section 6A) */
-export const SPLIT_MODES: { id: JointSplitType; label: string; hint: string }[] = [
-  { id: 'equal', label: 'Bagi Rata', hint: '50 / 50, paling sering dipakai' },
-  { id: 'percentage', label: 'Persentase', hint: 'Geser slider, sisi lain ikut menyesuaikan' },
-  { id: 'nominal', label: 'Nominal Custom', hint: 'Isi satu sisi, sisanya dihitung otomatis' },
-  { id: 'single_payer', label: 'Yang Ini Gue Yang Bayar', hint: '100% ditanggung satu orang' },
+/** label tiap mode pembagian di Split Bill Sheet (Section 6A).
+ *  Keterangan panjang per mode DIHAPUS atas permintaan pemilik produk: pil
+ *  mode + kendali di bawahnya sudah menjelaskan sendiri, dan paragraf hint
+ *  membuat sheet terasa penuh. */
+export const SPLIT_MODES: { id: JointSplitType; label: string }[] = [
+  { id: 'equal', label: 'Bagi Rata' },
+  { id: 'percentage', label: 'Persentase' },
+  { id: 'nominal', label: 'Nominal Custom' },
+  { id: 'single_payer', label: 'Yang Ini Gue Yang Bayar' },
 ]
 
 /** quick-pick persentase (Section 6A) */
@@ -385,6 +422,23 @@ export const REALTIME_ARRIVAL: JointTransaction = {
 /* ── LABEL BULAN (mock: September 2026) ──────────────────────────────────── */
 export const JOINT_MONTH_LABEL = 'September 2026'
 
+/**
+ * Batas anggota satu kantong bersama.
+ *
+ * Undangan TIDAK lagi sekali pakai (migrasi `20261110120000_catetind_joint_multi_member.sql`):
+ * orang ketiga & keempat boleh memakai kode yang sama sampai kedaluwarsa. Batas
+ * ini menjaga buku besar tetap bisa dibaca (dan mencegah tautan disalahgunakan
+ * sebagai grup tak terbatas) — bukan karena mesinnya hanya sanggup dua orang.
+ */
+export const JOINT_MAX_MEMBERS = 8
+
+/** `2026-09` → "September 2026" (label bulan yang SEDANG dilihat halaman) */
+export function jointMonthLabel(monthKey: string): string {
+  const [year, month] = monthKey.split('-').map(Number)
+  if (!year || !month || month < 1 || month > 12) return ''
+  return `${MONTHS_LONG[month - 1]} ${year}`
+}
+
 /* ── HITUNGAN SETTLEMENT (Section 3) ─────────────────────────────────────── */
 /** ambang "perlu settle" — di atas ini baru muncul ajakan transfer (kanon 2D.3) */
 export const SETTLEMENT_THRESHOLD = 100000
@@ -442,6 +496,49 @@ export type SettlementState = {
   settled: boolean
   /** bulan yang dihitung (`YYYY-MM`) — settlement tidak lagi kumulatif */
   month: string
+  /** total PEMASUKAN bersama bulan ini (tidak menambah "pengeluaran") */
+  totalIncome: number
+  /** posisi tiap anggota kantong (2 orang ATAU lebih) */
+  members: JointSettlementMember[]
+  /** rencana transfer untuk melunasi bulan ini (bisa lebih dari satu) */
+  transfers: JointSettlementTransfer[]
+}
+
+/**
+ * Satu anggota di dalam rekap bersama. Kantong ini TIDAK lagi terbatas dua
+ * orang: undangan yang sama boleh dipakai orang ketiga, keempat, dst.
+ */
+export type JointSettlementMember = {
+  person: JointPerson
+  /** uang yang keluar dari kantongnya untuk PENGELUARAN bulan ini */
+  paid: number
+  /** uang yang ia setor sebagai PEMASUKAN bersama bulan ini */
+  income: number
+  /** kewajiban seharusnya (dibaca dari rasio pembagian) */
+  owed: number
+  /** `paid + income − owed`; > 0 berhak menerima, < 0 harus transfer */
+  net: number
+  /**
+   * KONTRIBUSI setelah pelunasan (dasar bar kontribusi).
+   *
+   * `paid` hanya melihat siapa yang menyerahkan uang di kasir. Setelah satu
+   * pihak mentransfer pelunasan (settle), bebannya berpindah: pengirim
+   * menambah kontribusi, penerima menguranginya. Contoh: A menalangi
+   * Rp 1.300.000 bagi rata, lalu B settle Rp 650.000 → kontribusi A dan B
+   * masing-masing Rp 650.000 (50%–50%), bukan lagi 100%–0%.
+   */
+  contribution: number
+  /** porsi kontribusi (persen, dibulatkan) — dipakai label bar */
+  contributionPct: number
+  /** porsi belanja bulan ini (persen, dibulatkan) */
+  pct: number
+}
+
+/** satu instruksi transfer: siapa membayar siapa, berapa */
+export type JointSettlementTransfer = {
+  from: JointPerson
+  to: JointPerson
+  amount: number
 }
 
 /** dua anggota dompet bersama — dipakai mesin ledger sebagai daftar peserta */
@@ -483,6 +580,7 @@ export function splitSpecOf(tx: JointTransaction): SplitSpec {
 export function toLedgerTx(tx: JointTransaction): LedgerTx {
   return {
     id: tx.id,
+    kind: tx.kind === 'income' ? 'income' : undefined,
     /* kantong yang keluar uang: eksplisit, fallback ke pembuat catatan (data lama) */
     payerId: tx.paidByUserId ?? tx.userId,
     createdByUserId: tx.userId,
@@ -494,9 +592,17 @@ export function toLedgerTx(tx: JointTransaction): LedgerTx {
   }
 }
 
+/** true = baris PEMASUKAN bersama (uang masuk, bukan belanja) */
+export function isIncomeTx(tx: JointTransaction): boolean {
+  return tx.kind === 'income'
+}
+
 /**
  * Agregat ledger untuk daftar transaksi UI (opsional disaring per bulan).
  * Dipakai test & halaman yang butuh "siapa berhak menerima berapa".
+ *
+ * `members` bisa diisi roster SUNGGUHAN kantong (2 orang atau lebih); kalau
+ * kosong, dipakai roster contoh (`JOINT_MEMBERS`) supaya test/seed tetap sah.
  *
  * `privatePolicy` ikut diteruskan supaya keputusan produk (`PRIVATE_EXPENSE_POLICY`
  * di `joint-ledger.ts`) berlaku di SELURUH angka halaman ini — bukan cuma di satu
@@ -504,12 +610,16 @@ export function toLedgerTx(tx: JointTransaction): LedgerTx {
  */
 export function ledgerTotalsOf(
   transactions: JointTransaction[],
-  { month, privatePolicy }: { month?: string; privatePolicy?: PrivateExpensePolicy } = {},
+  {
+    month,
+    privatePolicy,
+    members,
+  }: { month?: string; privatePolicy?: PrivateExpensePolicy; members?: string[] } = {},
 ): LedgerTotals {
   const scoped = month ? transactions.filter((tx) => withinMonth(tx.date, month)) : transactions
   return ledgerTotals(
     scoped.map(toLedgerTx),
-    JOINT_MEMBERS,
+    members && members.length > 0 ? members : JOINT_MEMBERS,
     privatePolicy ? { privatePolicy } : {},
   )
 }
@@ -530,6 +640,8 @@ export function countsForSettlement(
   tx: JointTransaction,
   { privatePolicy = PRIVATE_EXPENSE_POLICY }: { privatePolicy?: PrivateExpensePolicy } = {},
 ): boolean {
+  /* pemasukan bukan beban: tidak pernah menaikkan timbangan pengeluaran */
+  if (isIncomeTx(tx)) return false
   if (tx.isPrivate && privatePolicy === 'excluded') return false
   return !isTreat(tx) || Boolean(tx.isPrivate)
 }
@@ -551,8 +663,20 @@ export function isSettlementTx(tx: JointTransaction): boolean {
 
 export function paidBy(transactions: JointTransaction[], userId: string): number {
   return transactions
-    .filter((tx) => !isSettlementTx(tx) && pocketOf(tx) === userId)
+    .filter((tx) => !isSettlementTx(tx) && !isIncomeTx(tx) && pocketOf(tx) === userId)
     .reduce((sum, tx) => sum + tx.amount, 0)
+}
+
+/** uang yang MASUK ke kas bersama dari kantong satu orang bulan ini */
+export function incomeBy(transactions: JointTransaction[], userId: string): number {
+  return transactions
+    .filter((tx) => isIncomeTx(tx) && pocketOf(tx) === userId)
+    .reduce((sum, tx) => sum + tx.amount, 0)
+}
+
+/** seluruh pemasukan bersama (semua anggota) */
+export function totalIncomeOf(transactions: JointTransaction[]): number {
+  return transactions.filter(isIncomeTx).reduce((sum, tx) => sum + tx.amount, 0)
 }
 
 /** Berat panci timbangan satu orang: pengeluaran patungan saja.
@@ -564,7 +688,13 @@ export function weighedPaidBy(
   { privatePolicy = PRIVATE_EXPENSE_POLICY }: { privatePolicy?: PrivateExpensePolicy } = {},
 ): number {
   return transactions
-    .filter((tx) => !isSettlementTx(tx) && pocketOf(tx) === userId && countsForSettlement(tx, { privatePolicy }))
+    .filter(
+      (tx) =>
+        !isSettlementTx(tx) &&
+        !isIncomeTx(tx) &&
+        pocketOf(tx) === userId &&
+        countsForSettlement(tx, { privatePolicy }),
+    )
     .reduce((sum, tx) => sum + tx.amount, 0)
 }
 
@@ -574,15 +704,22 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 /**
- * Satu-satunya sumber kebenaran untuk Balance Scale, stats row, dan modal
- * settlement. Dua lapisan angka (lihat MODEL AKUNTANSI di kepala file):
+ * Satu-satunya sumber kebenaran untuk kartu settlement, total bersama, dan
+ * modal rekap. Dua lapisan angka (lihat MODEL AKUNTANSI di kepala file):
  *   • `myTotalSpent`/`partnerTotalSpent`/`totalSpent`  → seluruh catatan
- *     (hero + Card Stats + timeline).
+ *     (hero + timeline). Pemasukan TIDAK ikut: ia bukan pengeluaran.
  *   • `myWeighedSpent`/`partnerWeighedSpent`/`difference` → yang benar-benar
  *     ditimbang (patungan saja; traktiran keluar, privat tetap masuk —
  *     kecuali `privatePolicy: 'excluded'`, lihat `joint-ledger.ts`).
- * `settled: true` memaksa scale kembali rata (0°) — dipakai setelah user
- * menekan "Tandai Sudah Settle" supaya animasi pegasnya jalan ke level.
+ * `settled: true` memaksa skala kembali rata (0°) — dipakai setelah user
+ * menekan "Tandai Sudah Settle".
+ *
+ * ROSTER NYATA (perbaikan penting): dulu fungsi ini selalu memakai
+ * `JOINT_ME`/`JOINT_PARTNER` (id contoh `user_a`/`user_b`). Akibatnya di akun
+ * sungguhan — yang catatannya memakai uuid — total selalu Rp 0, dan kartu
+ * status menampilkan nama karangan "Jon"/"Dany". Sekarang pemanggil mengirim
+ * `members` + `people` + `viewerId`, jadi angkanya menempel ke orang yang benar
+ * dan kartu ini juga mendukung kantong 3–4 orang.
  */
 export function computeSettlement(
   transactions: JointTransaction[],
@@ -590,21 +727,57 @@ export function computeSettlement(
     settled = false,
     month = JOINT_MONTH_KEY,
     privatePolicy = PRIVATE_EXPENSE_POLICY,
-  }: { settled?: boolean; month?: string; privatePolicy?: PrivateExpensePolicy } = {},
+    members,
+    people,
+    viewerId,
+  }: {
+    settled?: boolean
+    month?: string
+    privatePolicy?: PrivateExpensePolicy
+    /** roster sungguhan (uuid). Kosong = roster contoh dua orang. */
+    members?: string[]
+    /** tampilan tiap anggota (nama/avatar/warna) — dipakai di kartu */
+    people?: JointPerson[]
+    /** id pemilik sesi; menentukan `my*` dan arah transfer yang disorot */
+    viewerId?: string
+  } = {},
 ): SettlementState {
-  /* Penyaringan bulan (audit #7): dulu settlement membaca SELURUH catatan
-     selamanya sementara copy-nya bilang "bulan depan mulai dari nol". */
-  const scoped = transactions.filter((tx) => withinMonth(tx.date, month))
+  /* roster: anggota sungguhan kalau ada, kalau tidak roster contoh (seed/test) */
+  const roster = members && members.length > 0 ? members : JOINT_MEMBERS
+  const viewer = viewerId ?? roster[0] ?? JOINT_ME.id
+  const partnerId = roster.find((id) => id !== viewer) ?? null
+  const me = personOf(viewer, people)
+  const partner = personOf(partnerId ?? viewer, people)
 
-  /* lapisan 1 — seluruh catatan: berapa uang yang keluar dari tiap kantong */
-  const myTotalSpent = paidBy(scoped, JOINT_ME.id)
-  const partnerTotalSpent = paidBy(scoped, JOINT_PARTNER.id)
-  const totalSpent = myTotalSpent + partnerTotalSpent
+  /* Penyaringan bulan (audit #7): dulu settlement membaca SELURUH catatan
+     selamanya sementara copy-nya bilang "bulan depan mulai dari nol".
+
+     Baris SETTLE punya satu pengecualian: yang menentukan bulannya adalah
+     `settlementMonth` (bulan yang diselesaikan), bukan `date` (waktu tombol
+     ditekan). Bulan lama yang baru disettle sekarang tanggalnya jatuh di bulan
+     berikutnya — menyaringnya dengan `date` membuat transfer itu hilang dari
+     hitungan, persis bug "sudah settle tapi masih kelihatan berutang".
+     Pengecualian ini TIDAK membuat baris settle terhitung di dua bulan: ia
+     hanya cocok dengan SATU nilai `settlementMonth`. */
+  const scoped = transactions.filter(
+    (tx) =>
+      withinMonth(tx.date, month) ||
+      (Boolean(tx.isSettlement) && tx.settlementMonth === month),
+  )
+
+  /* lapisan 1 — seluruh PENGELUARAN: berapa uang yang keluar dari tiap kantong */
+  const myTotalSpent = paidBy(scoped, viewer)
+  const partnerTotalSpent = partnerId ? paidBy(scoped, partnerId) : 0
+  const totalSpent = roster.reduce((sum, id) => sum + paidBy(scoped, id), 0)
+  const totalIncome = totalIncomeOf(scoped)
 
   /* lapisan 2 — hanya pengeluaran patungan yang naik ke timbangan */
-  const myWeighedSpent = weighedPaidBy(scoped, JOINT_ME.id, { privatePolicy })
-  const partnerWeighedSpent = weighedPaidBy(scoped, JOINT_PARTNER.id, { privatePolicy })
-  const weighedTotal = myWeighedSpent + partnerWeighedSpent
+  const myWeighedSpent = weighedPaidBy(scoped, viewer, { privatePolicy })
+  const partnerWeighedSpent = partnerId ? weighedPaidBy(scoped, partnerId, { privatePolicy }) : 0
+  const weighedTotal = roster.reduce(
+    (sum, id) => sum + weighedPaidBy(scoped, id, { privatePolicy }),
+    0,
+  )
   /* selisih total vs yang ditimbang = traktiran (bukan utang pasangan) */
   const treatTotal = totalSpent - weighedTotal
 
@@ -612,19 +785,74 @@ export function computeSettlement(
      ditanggung (dibaca dari rasio split). Inilah angka yang menentukan arah &
      nominal transfer; sebelumnya arah dibaca dari "siapa bayar lebih banyak"
      sehingga split 60/40 tidak berpengaruh sama sekali. */
-  const totals = ledgerTotals(scoped.map(toLedgerTx), JOINT_MEMBERS, { privatePolicy })
-  const myNet = totals.net[JOINT_ME.id] ?? 0
-  const partnerNet = totals.net[JOINT_PARTNER.id] ?? 0
+  const totals = ledgerTotals(scoped.map(toLedgerTx), roster, { privatePolicy })
+  const myNet = totals.net[viewer] ?? 0
+  const partnerNet = partnerId ? (totals.net[partnerId] ?? 0) : 0
+
+  /* posisi tiap anggota — dipakai kartu settle & modal rekap (2 orang atau lebih) */
+  /* ── KONTRIBUSI SETELAH PELUNASAN ─────────────────────────────────────────
+     Bar kontribusi tidak boleh berhenti pada "siapa yang bayar di kasir":
+     settle memindahkan beban. Baris settle (`isSettlement`) yang PAID BY satu
+     anggota menambah kontribusinya, dan penerima manfaatnya (split
+     `single_payer`) dikurangi sebesar itu. Baris PEMBUKA bulan (`isOpening`)
+     tidak dihitung — ia saldo awal, bukan transfer yang terjadi bulan ini. */
+  const moved = new Map<string, number>()
+  for (const tx of scoped) {
+    if (!isSettlementTx(tx) || tx.isOpening) continue
+    const sender = pocketOf(tx)
+    moved.set(sender, (moved.get(sender) ?? 0) + tx.amount)
+    const beneficiary = tx.split?.type === 'single_payer' ? tx.split.payerId : ''
+    if (beneficiary) moved.set(beneficiary, (moved.get(beneficiary) ?? 0) - tx.amount)
+  }
+  const contributions = roster.map((id) =>
+    Math.max(0, paidBy(scoped, id) + (moved.get(id) ?? 0)),
+  )
+  const contributionTotal = contributions.reduce((sum, value) => sum + value, 0)
+
+  const memberRows: JointSettlementMember[] = roster.map((id, index) => {
+    const paid = paidBy(scoped, id)
+    return {
+      person: personOf(id, people),
+      paid,
+      income: incomeBy(scoped, id),
+      owed: totals.owed[id] ?? 0,
+      net: totals.net[id] ?? 0,
+      contribution: contributions[index] ?? 0,
+      contributionPct:
+        contributionTotal === 0
+          ? 0
+          : Math.round(((contributions[index] ?? 0) / contributionTotal) * 100),
+      pct: totalSpent === 0 ? 0 : Math.round((paid / totalSpent) * 100),
+    }
+  })
+  const transfers = planTransfers(memberRows)
 
   const difference = Math.abs(myNet)
   const iAmOwed = myNet > 0
+  /* lawan bicara yang paling relevan untuk PEMILIK SESI (dipakai kartu satu
+     transfer & modal). Kalau ia berutang: pemberi pinjaman terbesar. Kalau ia
+     berhak menerima: peminjam terbesar. Kalau impas: anggota lain pertama. */
+  const myTransfer = transfers.find((row) => row.from.id === viewer)
+  const toMe = transfers.find((row) => row.to.id === viewer)
+  const whoOwes = iAmOwed ? (toMe?.from ?? partner) : me
+  const whoIsOwed = iAmOwed ? me : (myTransfer?.to ?? partner)
 
-  /* spec Section 3: tiltDeg = (net aku − net partner) / total yang ditimbang × 24,
+  /* tiltDeg = (net aku − net lawan) / total yang ditimbang × 24,
      dijepit ±12° supaya beda sekecil apa pun tetap terbaca dan beda besar tidak
      bikin beam jungkir. Dihitung dari NET: positif = panci AKU turun (aku
      menalangi lebih dari porsiku / berhak menerima). */
   const rawTilt = weighedTotal === 0 ? 0 : ((myNet - partnerNet) / weighedTotal) * 24
-  const tiltDeg = settled ? 0 : clamp(rawTilt, -12, 12)
+  /**
+   * `settled` hanya berarti "bulan ini PERNAH disettle" — bukan "sekarang impas".
+   *
+   * Dulu penanda settle memaksa `level: 'equal'` dan palang 0°, sehingga catatan
+   * yang ditambahkan SETELAH settle (mis. belanja 100 jt sehari kemudian) tetap
+   * tampil "Semua Impas / Bulan ini sudah ditutup" padahal selisihnya puluhan
+   * juta. Yang menentukan impas hanya ANGKA: `difference` (= |net| yang sudah
+   * memperhitungkan transfer settle).
+   */
+  const balanced = difference < RUPIAH_EPSILON
+  const tiltDeg = balanced ? 0 : clamp(rawTilt, -12, 12)
 
   const myPct = totalSpent === 0 ? 0 : Math.round((myTotalSpent / totalSpent) * 100)
 
@@ -640,34 +868,80 @@ export function computeSettlement(
     treatTotal,
     myNet,
     partnerNet,
-    myOwed: totals.owed[JOINT_ME.id] ?? 0,
-    partnerOwed: totals.owed[JOINT_PARTNER.id] ?? 0,
+    myOwed: totals.owed[viewer] ?? 0,
+    partnerOwed: partnerId ? (totals.owed[partnerId] ?? 0) : 0,
     difference,
-    /* SATU transfer menyelesaikan bulan ini — bukan setengah selisih lagi */
+    /* SATU transfer menyelesaikan bagian PEMILIK SESI — bukan setengah selisih */
     settlementAmount: difference,
-    whoOwes: iAmOwed ? JOINT_PARTNER : JOINT_ME,
-    whoIsOwed: iAmOwed ? JOINT_ME : JOINT_PARTNER,
+    whoOwes,
+    whoIsOwed,
     tiltDeg,
-    /* settled dipaksa rata supaya animasi "kembali level" terjadi */
-    level:
-      settled || difference < RUPIAH_EPSILON
-        ? 'equal'
-        : difference > SETTLEMENT_THRESHOLD
-          ? 'settle'
-          : 'close',
+    /* impas HANYA kalau angkanya nol — penanda settle tidak boleh menutupi
+       selisih yang lahir dari catatan setelahnya */
+    level: balanced ? 'equal' : difference > SETTLEMENT_THRESHOLD ? 'settle' : 'close',
     settled,
     month,
+    totalIncome,
+    members: memberRows,
+    transfers,
   }
+}
+
+/** tampilan satu anggota: dari daftar orang kalau ada, kalau tidak persona contoh */
+function personOf(id: string, people?: JointPerson[]): JointPerson {
+  const found = people?.find((person) => person.id === id)
+  if (found) return found
+  if (id === JOINT_ME.id) return JOINT_ME
+  if (id === JOINT_PARTNER.id) return JOINT_PARTNER
+  return { ...JOINT_PARTNER, id, name: 'Anggota' }
+}
+
+/**
+ * Rencana transfer paling ringkas (greedy): debitur terbesar membayar kreditur
+ * terbesar sampai semua net nol. Untuk dua orang hasilnya persis satu transfer
+ * penuh seperti sebelumnya; untuk 3–4 orang hasilnya maksimal `n − 1` transfer
+ * dan TIDAK ada rupiah yang hilang (`Σ transfer` = `Σ net positif`).
+ */
+function planTransfers(rows: JointSettlementMember[]): JointSettlementTransfer[] {
+  const debtors = rows
+    .filter((row) => row.net < -RUPIAH_EPSILON)
+    .map((row) => ({ person: row.person, remaining: -row.net }))
+    .sort((a, b) => b.remaining - a.remaining)
+  const creditors = rows
+    .filter((row) => row.net > RUPIAH_EPSILON)
+    .map((row) => ({ person: row.person, remaining: row.net }))
+    .sort((a, b) => b.remaining - a.remaining)
+
+  const out: JointSettlementTransfer[] = []
+  let i = 0
+  let j = 0
+  while (i < debtors.length && j < creditors.length) {
+    const pay = Math.min(debtors[i].remaining, creditors[j].remaining)
+    if (pay > RUPIAH_EPSILON) {
+      out.push({ from: debtors[i].person, to: creditors[j].person, amount: pay })
+    }
+    debtors[i].remaining -= pay
+    creditors[j].remaining -= pay
+    if (debtors[i].remaining <= RUPIAH_EPSILON) i += 1
+    if (creditors[j].remaining <= RUPIAH_EPSILON) j += 1
+  }
+  return out
 }
 
 /**
  * Kanon PRD A7 + audit #6: ajakan settle (banner cokelat + tombol transfer)
  * BARU boleh muncul kalau selisih > Rp100.000. Selama statusnya "Gak perlu
- * settle" (atau sudah ditandai settle) sistem harus diam — dua pesan yang
- * bertabrakan di satu layar bikin user kehilangan kepercayaan ke angkanya.
+ * settle" sistem harus diam — dua pesan yang bertabrakan di satu layar bikin
+ * user kehilangan kepercayaan ke angkanya.
+ *
+ * Penanda settle TIDAK lagi mematikan ajakan ini: bulan yang sudah settle lalu
+ * ditambah catatan baru punya selisih BARU yang tetap harus bisa dibayar.
+ * Kalau `settled` ikut dicek di sini, tombol "Settle sisa" hilang dari modal —
+ * persis yang dilaporkan pemilik produk (11 Nov 2026): angka Rp 52.560.000
+ * tampil tanpa satu pun tombol.
  */
 export function shouldPromptSettlement(settlement: SettlementState): boolean {
-  return !settlement.settled && settlement.level === 'settle'
+  return settlement.level === 'settle'
 }
 
 /* ── JENDELA REKAP (Section 10) ──────────────────────────────────────────── */
@@ -781,13 +1055,67 @@ export function moneyLabel(value: number, masked: boolean): string {
 /** Label pembagian kecil di tiap kartu timeline: "Bagi rata" · "60/40" · "Jon yang bayar".
  *  Sejak Stage 2 label ini SELALU dibaca dari `SplitSpec` (`splitSpecOf`), jadi
  *  tidak ada lagi pembacaan `tx.splits` — persen dan rupiah hidup di field yang
- *  berbeda dan tidak mungkin lagi tertukar di layar. */
-export function splitLabel(tx: JointTransaction, masked = false): string {
+ *  berbeda dan tidak mungkin lagi tertukar di layar.
+ *
+ *  `people` boleh diisi roster sungguhan (2 orang atau lebih); kalau kosong
+ *  dipakai dua persona contoh supaya pemanggil lama tetap jalan. */
+export function splitLabel(tx: JointTransaction, masked = false, people?: JointPerson[]): string {
   /* baris settlement bukan pembagian: labelnya menyebut metode transfernya */
   if (tx.isSettlement) {
     return tx.settlementMethod ? `${SETTLE_TRANSFER_PREFIX}${tx.settlementMethod}` : SETTLE_ENTRY_LABEL
   }
-  return splitSpecLabel(splitSpecOf(tx), JOINT_ME, JOINT_PARTNER, masked)
+  if (isIncomeTx(tx)) return 'Pemasukan bersama'
+  const roster = people && people.length > 0 ? people : JOINT_MEMBERS.map((id) => personOf(id))
+  return splitSpecLabelFor(splitSpecOf(tx), roster, masked)
+}
+
+/** label untuk roster bebas (2 orang atau lebih) */
+export function splitSpecLabelFor(
+  split: SplitSpec,
+  people: JointPerson[],
+  masked = false,
+): string {
+  switch (split.type) {
+    case 'percentage': {
+      const slices = people
+        .filter((person) => (split.percents[person.id] ?? 0) > 0)
+        .map((person) => `${split.percents[person.id] ?? 0}`)
+      if (slices.length === 0) return '0%'
+      /* dua orang: "60/40" (bahasa lama, dipakai juga oleh halaman lain);
+         lebih dari dua: diberi tanda persen supaya jelas ini rasio */
+      return people.length > 2 ? `${slices.join('/')}%` : slices.join('/')
+    }
+    case 'nominal': {
+      const slices = people
+        .filter((person) => (split.amounts[person.id] ?? 0) > 0)
+        .map((person) => moneyLabel(split.amounts[person.id] ?? 0, masked))
+      return slices.length > 0 ? slices.join(' · ') : moneyLabel(0, masked)
+    }
+    case 'single_payer': {
+      const bearer = people.find((person) => person.id === split.payerId)
+      return bearer ? `${bearer.name} yang bayar` : 'Satu orang yang bayar'
+    }
+    default:
+      /* bagi rata: sebut porsinya kalau anggotanya bukan dua orang, dan sebut
+         peserta yang ikut kalau memang hanya sebagian anggota (mis. 3 dari 4) */
+      {
+        const selected = split.type === 'equal' ? split.participants : undefined
+        const participants =
+          selected && selected.length > 0
+            ? people.filter((person) => selected.includes(person.id))
+            : people
+        const count = participants.length > 0 ? participants.length : people.length
+        if (selected && selected.length > 0 && count < people.length) {
+          const each = Math.floor(100 / count)
+          return `Bagi rata ${count} dari ${people.length} orang (${each}% × ${count})`
+        }
+        if (people.length > 2) {
+          const each = Math.floor(100 / people.length)
+          return `Bagi rata (${each}% × ${people.length} orang)`
+        }
+        return 'Bagi rata'
+      }
+  }
 }
 
 /**
@@ -800,21 +1128,7 @@ export function splitSpecLabel(
   partner: JointPerson,
   masked = false,
 ): string {
-  switch (split.type) {
-    case 'percentage': {
-      const mine = split.percents[me.id] ?? 50
-      return `${mine}/${100 - mine}`
-    }
-    case 'nominal': {
-      const mine = split.amounts[me.id] ?? 0
-      const theirs = split.amounts[partner.id] ?? 0
-      return `${moneyLabel(mine, masked)} · ${moneyLabel(theirs, masked)}`
-    }
-    case 'single_payer':
-      return split.payerId === partner.id ? `${partner.name} yang bayar` : `${me.name} yang bayar`
-    default:
-      return 'Bagi rata'
-  }
+  return splitSpecLabelFor(split, [me, partner], masked)
 }
 
 export type JointCategorySlice = { category: string; amount: number; pct: number }
@@ -845,6 +1159,8 @@ export function categoryBreakdown(
   const scoped = transactions.filter(
     (tx) =>
       !isSettlementTx(tx) &&
+      /* pemasukan bukan belanja → tidak punya irisan kategori pengeluaran */
+      !isIncomeTx(tx) &&
       (userId === undefined || tx.userId === userId) &&
       /* catatan privat orang lain: isinya BUKAN hak viewer — sembunyikan total */
       !isHiddenFrom(toLedgerTx(tx), viewerId),
@@ -930,8 +1246,9 @@ export function categoryLabel(category: string): string {
    Sekarang kode dibuat per wallet & divalidasi sungguhan di
    `lib/data/joint-invite.ts` + `lib/invite-store.ts`. Yang tinggal di sini cuma
    copy masa berlaku supaya kalimatnya tetap satu sumber. */
-/** copy masa berlaku kode — hanya boleh tampil untuk kode yang MEMANG divalidasi 24 jam & 1x pakai */
-export const INVITE_VALIDITY_COPY = 'Kode berlaku 24 jam. Cuma bisa dipakai 1x.'
+/** copy masa berlaku kode — kode TIDAK lagi sekali pakai: orang ketiga &
+ *  keempat boleh memakai tautan yang sama sampai kedaluwarsa */
+export const INVITE_VALIDITY_COPY = 'Kode berlaku 24 jam. Bisa dipakai beberapa orang.'
 
 /* ── COPY YANG DIPAKAI BERSAMA ───────────────────────────────────────────── */
 /** peringatan saat toggle privasi transaksi dinyalakan (Section 9).
@@ -951,15 +1268,101 @@ export const PRIVATE_CATEGORY_NOTE =
  *  bilang "timbangan menimbang pengeluaran patungan" tanpa menyebut net. */
 export const SETTLEMENT_SCOPE_COPY =
   'Panci menunjukkan posisi bersih (kewajiban yang sudah dibayar − porsi yang seharusnya) dari pengeluaran patungan. Traktiran tidak ikut ditimbang; nominal transaksi 🔒 Privat tetap dihitung.'
-/** versi pendek untuk ruang sempit (di dalam modal rekap) */
-export const SETTLEMENT_SCOPE_SHORT =
-  'Panci = posisi bersih (bayar − kewajiban) · traktiran tidak ditimbang · nominal 🔒 Privat tetap dihitung.'
 /** tooltip transaksi privat milik sendiri (Section 5B) */
 export const PRIVATE_OWNER_HINT = 'Transaksi ini disembunyikan dari pasanganmu'
-/** pengingat bahwa aplikasi ini cuma mencatat, bukan memindahkan uang */
-export const SETTLEMENT_DISCLAIMER =
-  'Ini cuma pencatatan, bukan transfer uang asli. Transfernya manual via BCA/GoPay/cash ya 😊'
 export const SETTLED_TOAST = 'Settled! Bulan depan mulai dari nol ⚖️💚'
+
+/* ── COPY HAPUS DOMPET BERSAMA ───────────────────────────────────────────────
+   Hapus dompet adalah aksi MERUSAK (baris dompet + seluruh catatan di dalamnya
+   ikut terhapus lewat cascade), jadi kalimatnya harus menyebut akibatnya, bukan
+   cuma "Hapus?". */
+export const JOINT_WALLET_DELETE_COPY = {
+  action: 'Hapus dompet bersama',
+  title: 'Hapus dompet bersama ini?',
+  cancel: 'Batal',
+  confirm: 'Ya, hapus dompet',
+  overlay: 'Konfirmasi hapus dompet bersama',
+} as const
+
+/* ── PEMILIK SENDIRIAN SETELAH ANGGOTA TERAKHIR KELUAR (sesi 5) ─────────────
+   Sebelum ini layar langsung jatuh ke "Mau mulai dari mana?", sehingga pemilik
+   yang masih punya dompet + riwayat tidak bisa mengundang lagi maupun
+   menghapusnya dari layar itu. Panel ini menjaga dompetnya tetap terlihat. */
+export const JOINT_SOLO_OWNER_COPY = {
+  eyebrow: 'Dompet bersama',
+  title: 'Kamu sekarang sendirian di dompet ini',
+  body: 'Anggota lain sudah keluar. Undang lagi lewat kode, atau hapus dompetnya kalau memang sudah selesai.',
+  invite: 'Bagikan kode undangan',
+  remove: JOINT_WALLET_DELETE_COPY.action,
+} as const
+
+/* ── COPY KELOLA ANGGOTA (3–4 orang) ────────────────────────────────────────
+   Dompet bersama sekarang berisi lebih dari dua orang. Dua aksi yang saling
+   berlawanan harus dibedakan tegas: "Keluar" (anggota, hanya dirinya) dan
+   "Keluarkan" (pemilik, orang lain). Keduanya memakai `ConfirmDialog`, karena
+   keanggotaan menentukan siapa yang bisa membaca catatan bersama. */
+export const JOINT_MEMBER_LIST_TITLE = 'Anggota dompet'
+export const JOINT_MEMBER_OWNER_BADGE = 'Pemilik'
+export const JOINT_MEMBER_ME_BADGE = 'Kamu'
+
+export const JOINT_LEAVE_COPY = {
+  action: 'Keluar dari dompet bersama',
+  title: 'Keluar dari dompet bersama ini?',
+  body: 'Kamu tidak akan bisa melihat atau mencatat di dompet ini lagi. Catatan yang sudah ada tetap menjadi milik anggota lain.',
+  note: 'Dompet & catatan bareng TIDAK terhapus — hanya keanggotaanmu yang dilepas.',
+  cancel: 'Batal',
+  confirm: 'Ya, keluar',
+  overlay: 'Konfirmasi keluar dari dompet bersama',
+} as const
+
+export const JOINT_REMOVE_MEMBER_COPY = {
+  action: (name: string) => `Keluarkan ${name}`,
+  title: (name: string) => `Keluarkan ${name} dari dompet bersama?`,
+  body: (name: string) =>
+    `${name} tidak akan bisa membuka dompet ini lagi. Riwayat catatan yang pernah ia buat tetap tampil rapi untuk semua anggota.`,
+  note: 'Undangan baru bisa diberikan lagi kapan saja lewat kode undangan.',
+  cancel: 'Batal',
+  confirm: 'Ya, keluarkan',
+  overlay: 'Konfirmasi keluarkan anggota',
+} as const
+
+/* ── COPY PELUNASAN PER PASANGAN ─────────────────────────────────────────────
+   Grup 3–4 orang bisa punya lebih dari satu transfer (B→A dan C→A). Melunasi
+   satu baris TIDAK boleh menutup utang anggota lain, jadi tombolnya per baris —
+   dengan "lunasi semua" tetap tersedia sebagai jalan pintas. */
+export const JOINT_SETTLE_ROW_ACTION = 'Lunasi'
+export const JOINT_SETTLE_ROW_HINT = 'Tandai transfer ini sudah diterima.'
+export const JOINT_SETTLE_ALL_LABEL = 'Lunasi semua transfer'
+export const JOINT_SETTLE_ALL_HINT =
+  'Mencatat setiap baris transfer sebagai pelunasan terpisah — utang tiap pasangan tetap bisa ditelusuri.'
+export const JOINT_SETTLE_ROW_TOAST = (from: string, to: string) =>
+  `Pelunasan ${from} → ${to} dicatat`
+export const JOINT_SETTLE_ROW_FAIL = 'Pelunasan gagal dicatat, coba lagi ya'
+/* ── SISA SETELAH SETTLE ──────────────────────────────────────────────────────
+   Bulan yang sudah di-settle TIDAK terkunci dari catatan baru. Kalau catatan
+   baru membuat posisi tidak seimbang lagi, selisihnya adalah utang BARU dan
+   harus bisa dilunasi — tanpa menghapus penanda settle yang sudah terjadi. */
+export const JOINT_SETTLE_REMAINDER_LABEL = 'Settle sisa'
+export const JOINT_SETTLE_REMAINDER_TOAST = 'Sisa settle tercatat'
+
+/* ── COPY PEMBAGIAN FLEKSIBEL (3–4 orang) ──────────────────────────────────── */
+export const JOINT_SPLIT_PARTICIPANTS_LABEL = 'Siapa saja yang ikut?'
+export const JOINT_SPLIT_PARTICIPANTS_HINT =
+  'Centang anggota yang ikut menanggung. Yang tidak dicentang porsinya 0.'
+export const JOINT_SPLIT_PERCENT_LABEL = 'Persentase tiap orang'
+export const JOINT_SPLIT_PERCENT_HINT = 'Total persentase harus tepat 100%.'
+export const JOINT_SPLIT_NOMINAL_LABEL = 'Nominal tiap orang'
+export const JOINT_SPLIT_NOMINAL_HINT = 'Total nominal harus tepat sama dengan nominal transaksi.'
+export const JOINT_SPLIT_TOTAL_LABEL = 'Total'
+export const JOINT_SPLIT_MISMATCH = (total: string) => `Belum pas — totalnya harus ${total}.`
+
+/* ── CARD PEMASUKAN BERSAMA ──────────────────────────────────────────────────
+   Pemasukan bersama BUKAN pengeluaran negatif: ia uang yang MASUK ke kas
+   bersama dan hanya menambah talangan penyetornya. Karena itu kartunya
+   terpisah, dengan tanda `+` dan warna hijau. */
+export const JOINT_INCOME_CARD_LABEL = 'Pemasukan Bersama'
+export const JOINT_EXPENSE_CARD_LABEL = 'Pengeluaran Bersama'
+export const JOINT_INCOME_CARD_EMPTY = 'Belum ada pemasukan bersama bulan ini.'
 
 /* ── BAHASA "NET" DI LAYAR (audit fintech Stage 2 #1) ──────────────────────
    Mesin ledger sudah bicara NET (`bayar − kewajiban`) sejak Stage 1, tapi
@@ -979,11 +1382,6 @@ export const NET_TRANSFER_COPY = 'harus transfer'
 /** arti net nol */
 export const NET_IMPAS_COPY = 'udah impas'
 
-/** judul blok net di modal rekap */
-export const NET_SECTION_TITLE = 'Posisi bersih (bayar − kewajiban)'
-/** row "satu transfer menyelesaikan bulan ini" di modal rekap */
-export const SETTLE_ONE_TRANSFER_LABEL = 'Satu transfer'
-export const SETTLE_ONE_TRANSFER_HINT = 'Satu transfer penuh langsung menyelesaikan bulan ini.'
 /** label baris sisa bulan lalu yang dibawa */
 export const SETTLE_CARRY_ROW_LABEL = 'Sisa bulan lalu dibawa'
 
@@ -1076,7 +1474,6 @@ export const SETTLE_TRANSFER_PREFIX = 'Transfer '
  *  `paidByUserId`, jadi catatan yang uangnya keluar dari kantong pasangan tidak
  *  lagi tercatat sebagai pengeluaran pencatat. */
 export const PAID_BY_LABEL = 'Siapa yang nalangin?'
-export const PAID_BY_HINT = 'Uangnya keluar dari kantong siapa, bukan siapa yang mengetik.'
 export const PAID_BY_ME_LABEL = 'Aku'
 
 /** jam mock baris settlement — deterministik, pola tanggal/jam mock repo ini */
@@ -1099,6 +1496,23 @@ export interface JointSettlementRecord {
    *  hilang diam-diam saat penanda bulan berganti. */
   carryOver: number
   /**
+   * KAPAN settle-nya benar-benar terjadi (`YYYY-MM-DD` + `HH:MM`), bukan tanggal
+   * karangan. Dulu baris timeline selalu bertanggal `1 <bulan>` jam `20:30`
+   * karena dua konstanta mock — user yang baru menekan tombol hari ini melihat
+   * "1 Nov" dan mengira tanggalnya tidak tersinkron.
+   *
+   * Opsional supaya data lama (tanpa kolom ini) tetap terbaca: kalau kosong,
+   * `buildSettlementEntry()` memakai perilaku lama sebagai cadangan.
+   */
+  settledAt?: string
+  settledTime?: string
+  /**
+   * true = penanda ini BELUM sampai ke server (mis. sedang offline). Record
+   * seperti ini tidak boleh ditimpa bacaan server saat hidrasi, dan dikirim
+   * ulang oleh `retryPendingJointRows()`.
+   */
+  pendingSync?: boolean
+  /**
    * Dompet PRIBADI yang dipakai saat settle (opsional) + id baris kasnya.
    *
    * Settle yang menyentuh dompet berarti uang benar-benar berpindah: pengirim
@@ -1111,26 +1525,48 @@ export interface JointSettlementRecord {
 }
 
 /**
- * Baris ledger dari penanda settle. Tanggalnya ditaruh di bulan record supaya
- * net-nya ikut dihitung pada bulan itu, dan id-nya diturunkan dari record —
- * jadi memanggilnya dua kali tidak pernah menggandakan barisnya.
+ * Baris ledger dari penanda settle. Tanggalnya memakai WAKTU SUNGGUHAN settle
+ * (`settledAt`/`settledTime`); kalau data lama belum punya kolom itu, perilaku
+ * lama dipakai sebagai cadangan (tanggal di bulan record + jam mock).
+ *
+ * `nameOf` = penerjemah id anggota → nama panggilan. Tanpa itu, deskripsinya
+ * TIDAK menyebut nama siapa pun: `jointNameOf()` hanya boleh hidup di
+ * test/demo, dan dulu nama contohnya ("Jon") benar-benar muncul di produksi.
+ *
+ * Id-nya diturunkan dari record, jadi memanggilnya dua kali tidak pernah
+ * menggandakan barisnya.
  */
 export function buildSettlementEntry(
   record: JointSettlementRecord,
-  { date }: { date?: string } = {},
+  {
+    date,
+    nameOf,
+  }: {
+    date?: string
+    nameOf?: (userId: string) => string | undefined
+  } = {},
 ): JointTransaction {
-  const iso = date ?? (record.month === JOINT_MONTH_KEY ? JOINT_TODAY_ISO : `${record.month}-01`)
+  const iso =
+    date ??
+    record.settledAt ??
+    (record.month === JOINT_MONTH_KEY ? JOINT_TODAY_ISO : `${record.month}-01`)
+  const recipient = nameOf?.(record.to)?.trim()
   return {
     id: `settle-${record.month}-${record.from}-${record.to}`,
     userId: record.from,
     paidByUserId: record.from,
-    description: `Settle ${monthLabelOf(record.month)}, transfer ke ${jointNameOf(record.to)}`,
+    description: recipient
+      ? `Settle ${monthLabelOf(record.month)}, transfer ke ${recipient}`
+      : `Settle ${monthLabelOf(record.month)}`,
     amount: Math.max(0, Math.round(record.amount)),
     category: SETTLEMENT_CATEGORY,
     date: iso,
-    time: SETTLE_ENTRY_TIME,
+    time: record.settledTime ?? SETTLE_ENTRY_TIME,
     split: { type: 'single_payer', payerId: record.to },
     isSettlement: true,
+    /* BULAN yang diselesaikan — dipakai kunci anti-dobel & pengunci hapus;
+       tanggal barisnya sendiri adalah waktu tombol ditekan. */
+    settlementMonth: record.month,
     settlementMethod: record.method,
   }
 }
@@ -1156,6 +1592,7 @@ export function buildCarryOverEntry(
     split: { type: 'single_payer', payerId: previous.from },
     isSettlement: true,
     isOpening: true,
+    settlementMonth: month,
   }
 }
 
@@ -1163,17 +1600,20 @@ export function buildCarryOverEntry(
  * Semua entri ledger yang lahir dari penanda settle tersimpan (fungsi MURNI —
  * bisa diuji tanpa browser): pembuka dari sisa bulan lalu + baris settle bulan
  * ini.
+ *
+ * `nameOf` dioper supaya deskripsi memakai nama SUNGGUHAN (bukan nama contoh).
  */
 export function settlementEntriesFor(
   records: Record<string, JointSettlementRecord>,
   month: string,
+  { nameOf }: { nameOf?: (userId: string) => string | undefined } = {},
 ): JointTransaction[] {
   const entries: JointTransaction[] = []
   const previous = records[previousMonthKey(month)]
   const carry = previous ? buildCarryOverEntry(previous, month) : null
   if (carry) entries.push(carry)
   const current = records[month]
-  if (current) entries.push(buildSettlementEntry(current))
+  if (current) entries.push(buildSettlementEntry(current, { nameOf }))
   return entries
 }
 
@@ -1295,10 +1735,14 @@ export const JOINT_DELETE_COPY = {
   toastTitle: 'Catatan bareng dihapus',
   toastDescription: (description: string) => `${description} keluar dari buku besar bersama.`,
   toastUndo: 'Undo',
-  toastUndoneTitle: 'Catatan dikembalikan 🌿',
+  toastUndoneTitle: 'Catatan dikembalikan 🧩',
   toastUndoneDescription: 'Timbangan & posisi bersihnya kembali ke angka sebelum dihapus.',
   toastExpired:
-    'Jendela Undo-nya sudah lewat, catatannya bisa kamu tambahkan lagi kalau memang masih perlu 🌿',
+    'Jendela Undo-nya sudah lewat, catatannya bisa kamu tambahkan lagi kalau memang masih perlu 🧩',
+  /** server menolak / belum menerima: baris sengaja TIDAK dihapus di layar ini */
+  toastFailedTitle: 'Belum bisa dihapus',
+  toastFailedDescription:
+    'Server belum menerima penghapusan ini, jadi catatan itu tetap ada di semua perangkat. Coba lagi sebentar ya.',
 } as const
 
 

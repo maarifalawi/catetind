@@ -34,12 +34,15 @@ export interface ActiveInvoice {
   /** instruksi QR/VA dari Core API (jalur lama) — Snap tidak mengirimnya */
   instructions: PaymentInstructions | null
   /**
-   * Halaman pembayaran Midtrans (Snap). Kalau ada, kartu menampilkan SATU aksi
-   * utama menuju halaman itu; statusnya tetap dibaca dari server.
+   * Halaman pembayaran Midtrans (Snap). Sejak revisi ini halamannya DI-EMBED
+   * di kartu (`snap.embed(token, { embedId })`), jadi `redirectUrl` hanya
+   * dipakai sebagai jalan keluar kalau iframe diblokir browser/jaringan.
    */
   redirectUrl?: string | null
-  /** token Snap — dicadangkan untuk `snap.js` (popup) kalau nanti dipakai */
+  /** token Snap — dipakai `snap.js` untuk menggambar instruksi bayar */
   token?: string | null
+  /** konfigurasi `snap.js` dari server (client key + URL skrip sesuai mode) */
+  snap?: { clientKey: string; scriptUrl: string } | null
 }
 
 type CardState = PaymentState | 'checking'
@@ -50,6 +53,83 @@ function formatRemaining(ms: number): string {
   const minutes = Math.floor(total / 60)
   const seconds = total % 60
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+}
+
+/* ── SNAP DI DALAM HALAMAN INI (bukan tab baru) ──────────────────────────────
+   Keluhan pemilik produk: memilih QRIS lalu menekan "Bayar" membuka halaman
+   Midtrans di TAB BARU, dan di sana user harus memilih metode LAGI. Dua
+   langkah tambahan untuk satu niat yang sudah jelas.
+
+   `snap.js` bisa menggambar halaman pembayarannya langsung di elemen halaman
+   kita — tetapi lewat API `snap.embed(token, { embedId })`, BUKAN
+   `snap.pay()`. `snap.pay()` hanya menerima opsi popup; menyelipkan `embedId`
+   di sana ditolak oleh skripnya sendiri (`Unsupported option embedId`), dan
+   itulah sebabnya kartu ini dulu selalu berakhir dengan pesan "instruksi bayar
+   tidak bisa ditampilkan" + tautan tab baru — di localhost MAUPUN produksi.
+   Jadi: satu klik → instruksi QRIS/VA muncul di kartu ini juga. Metode sudah
+   terkunci dari server (`enabled_payments`, lihat `snapEnabledPayments`), jadi
+   tidak ada pemilihan kedua. `redirectUrl` tetap disediakan sebagai jalan
+   keluar kalau iframe diblokir (mode privat/kebijakan jaringan kantor). */
+const SNAP_EMBED_ID = 'catetind-snap-embed'
+const SNAP_SCRIPT_ID = 'catetind-snap-script'
+
+interface SnapGlobal {
+  /** gambar halaman pembayaran DI DALAM elemen ber-`embedId` (mode embedded) */
+  embed: (token: string, options: Record<string, unknown>) => void
+  /** tutup halaman yang sedang tampil → state kembali `initialized` */
+  hide: () => void
+}
+
+/* `snap.embed()` menolak dipanggil selagi halaman sebelumnya masih tampil
+   ("Invalid state transition from PopupInView"), sedangkan kartu ini dipasang
+   ulang setiap kali user menekan "Ganti metode" lalu "Bayar sekarang". Token
+   yang sedang terpasang karena itu dicatat di tingkat MODUL: sebelum
+   menggambar yang baru, yang lama ditutup dulu. */
+let embeddedSnapToken: string | null = null
+
+/** gambar halaman pembayaran Snap di dalam kartu (menggantikan yang lama) */
+function embedSnapInCard(snap: SnapGlobal, token: string, options: Record<string, unknown>) {
+  if (embeddedSnapToken !== null) {
+    try {
+      snap.hide()
+    } catch {
+      /* state-nya sudah bersih; `embed` di bawah yang menentukan hasilnya */
+    }
+    embeddedSnapToken = null
+  }
+  snap.embed(token, options)
+  embeddedSnapToken = token
+}
+
+function snapGlobal(): SnapGlobal | null {
+  if (typeof window === 'undefined') return null
+  const holder = window as unknown as { snap?: SnapGlobal }
+  return holder.snap ?? null
+}
+
+/** muat `snap.js` sekali per halaman; `false` = skrip tidak bisa dipakai */
+function loadSnapScript(scriptUrl: string, clientKey: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (typeof window === 'undefined') return resolve(false)
+    if (snapGlobal()) return resolve(true)
+
+    const existing = document.getElementById(SNAP_SCRIPT_ID) as HTMLScriptElement | null
+    if (existing) {
+      existing.addEventListener('load', () => resolve(Boolean(snapGlobal())))
+      existing.addEventListener('error', () => resolve(false))
+      return
+    }
+
+    const script = document.createElement('script')
+    script.id = SNAP_SCRIPT_ID
+    script.src = scriptUrl
+    /* client key memang publik (dipakai snap.js); server key TIDAK pernah ke sini */
+    script.setAttribute('data-client-key', clientKey)
+    script.async = true
+    script.onload = () => resolve(Boolean(snapGlobal()))
+    script.onerror = () => resolve(false)
+    document.body.appendChild(script)
+  })
 }
 
 /** nilai yang bisa disalin — polanya sama dengan referral-screen (`navigator.clipboard` + toast) */
@@ -69,7 +149,7 @@ function CopyField({ label, value, large = false }: { label: string; value: stri
   return (
     <div className="flex items-center justify-between gap-3 rounded-2xl bg-canvas px-4 py-3 ring-1 ring-soil/12">
       <div className="min-w-0">
-        <p className="text-[11.5px] font-medium tracking-[0.14em] text-forest/40 uppercase">{label}</p>
+        <p className="text-[11.5px] font-medium tracking-[0.14em] text-forest-muted uppercase">{label}</p>
         <p
           className={`mt-1 truncate font-display font-semibold tabular-nums text-forest ${
             large ? 'text-[20px] landing-tab:text-[22px]' : 'text-[17px]'
@@ -161,12 +241,53 @@ export function PaymentInstructionCard({
   const dead = state === 'expired' || state === 'failed' || (timeUp && state !== 'settled')
   const settled = state === 'settled'
   const instructions = invoice.instructions
-  /* Halaman pembayaran Snap (kalau ada). Satu aksi utama menuju ke sana; status
-     tetap dibaca dari server, jadi kartu ini tidak pernah "mengarang lunas". */
+  /* Halaman pembayaran Snap (kalau ada). Sejak revisi ini ia DI-EMBED di kartu;
+     `redirectUrl` cuma jalan keluar kalau iframe diblokir. Status tetap dibaca
+     dari server, jadi kartu ini tidak pernah "mengarang lunas". */
   const snapRedirect = invoice.redirectUrl ?? null
-  const openSnap = useCallback(() => {
-    if (snapRedirect) window.location.assign(snapRedirect)
-  }, [snapRedirect])
+  const snapToken = invoice.token ?? null
+  const snapScriptUrl = invoice.snap?.scriptUrl ?? null
+  const snapClientKey = invoice.snap?.clientKey ?? null
+  const snapEmbed = Boolean(snapToken && snapScriptUrl && snapClientKey)
+  const [embedState, setEmbedState] = useState<'idle' | 'loading' | 'ready' | 'blocked'>('idle')
+
+  /* Muat `snap.js` lalu gambar halaman pembayarannya di elemen `SNAP_EMBED_ID`.
+     Kalau skripnya tidak bisa dimuat (diblokir), kartu memberi tahu apa adanya
+     dan menyisakan tautan "buka di tab baru" — bukan layar buntu. */
+  useEffect(() => {
+    if (dead || settled) return
+    if (!snapToken || !snapScriptUrl || !snapClientKey) return
+    let cancelled = false
+    setEmbedState('loading')
+
+    void (async () => {
+      const loaded = await loadSnapScript(snapScriptUrl, snapClientKey)
+      if (cancelled) return
+      const snap = snapGlobal()
+      if (!loaded || !snap) {
+        setEmbedState('blocked')
+        return
+      }
+      try {
+        embedSnapInCard(snap, snapToken, {
+          embedId: SNAP_EMBED_ID,
+          /* ketiga callback hanya memicu baca status ke server; keputusan
+             "lunas" tetap milik server, bukan milik Snap di browser */
+          onSuccess: () => void check(),
+          onPending: () => void check(),
+          onError: () => void check(),
+          onClose: () => void check(),
+        })
+        if (!cancelled) setEmbedState('ready')
+      } catch {
+        if (!cancelled) setEmbedState('blocked')
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [dead, settled, snapToken, snapScriptUrl, snapClientKey, check])
 
   const statusLabel = settled
     ? PAY_CARD_COPY.statusSettled
@@ -199,10 +320,10 @@ export function PaymentInstructionCard({
 
       {/* nominal + hitungan mundur dalam satu baris (hemat teks, mata langsung ke angka) */}
       <div className="mt-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-t border-soil/12 pt-3.5">
-        <span className="text-[13.5px] text-forest/50">{PAY_CARD_COPY.totalLabel}</span>
+        <span className="text-[13.5px] text-forest-muted">{PAY_CARD_COPY.totalLabel}</span>
         <span className="flex items-baseline gap-3">
           {live && remaining !== null && (
-            <span className="font-medium tabular-nums text-forest/45">
+            <span className="font-medium tabular-nums text-forest-muted">
               {formatRemaining(remaining)}
             </span>
           )}
@@ -231,30 +352,78 @@ export function PaymentInstructionCard({
         </div>
       )}
 
-      {live && snapRedirect && (
+      {/* Cadangan: kalau konfigurasi `snap.js` belum ada di server (client key
+          kosong), kartu tetap memberi JALAN keluar ke halaman pembayaran —
+          bukan layar buntu tanpa tombol. */}
+      {live && !snapEmbed && snapRedirect && (
         <div className="mt-4 rounded-2xl bg-canvas px-4 py-4 ring-1 ring-soil/12">
           <p className="text-[13.5px] font-medium text-forest">{PAY_CARD_COPY.snapTitle}</p>
-          <p className="mt-1 text-[12.5px] leading-relaxed text-forest/55">
-            {PAY_CARD_COPY.snapBody}
-          </p>
-          <div className="mt-3.5 flex flex-col gap-2 landing-tab:flex-row">
-            <button
-              type="button"
-              onClick={openSnap}
+          <div className="mt-3 flex flex-col gap-2 landing-tab:flex-row">
+            <a
+              href={snapRedirect}
               className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-forest px-6 text-[14px] font-medium text-cream transition-colors duration-200 hover:bg-forest-soft motion-reduce:transition-none landing-tab:min-w-[220px]"
             >
               <ExternalLink className="size-4" strokeWidth={2.4} aria-hidden />
               {PAY_CARD_COPY.snapCta}
-            </button>
+            </a>
             <button
               type="button"
               onClick={() => void check()}
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-full px-5 text-[14px] font-medium text-forest/70 ring-1 ring-soil/16 transition-colors duration-200 hover:text-forest motion-reduce:transition-none"
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-full px-5 text-[14px] font-medium text-forest-soft ring-1 ring-soil/16 transition-colors duration-200 hover:text-forest motion-reduce:transition-none"
             >
               <RefreshCw className="size-4" strokeWidth={2.4} aria-hidden />
               {PAY_CARD_COPY.snapChecking}
             </button>
           </div>
+        </div>
+      )}
+
+      {live && snapEmbed && (
+        <div className="mt-4 overflow-hidden rounded-2xl bg-canvas ring-1 ring-soil/12">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-soil/12 px-4 py-3">
+            <div className="min-w-0">
+              <p className="text-[13.5px] font-medium text-forest">{PAY_CARD_COPY.snapTitle}</p>
+              <p className="mt-0.5 text-[12.5px] leading-relaxed text-forest-muted">
+                {PAY_CARD_COPY.snapBody}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => void check()}
+              className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-[12.5px] font-medium text-forest-soft ring-1 ring-soil/16 transition-colors duration-200 hover:text-forest motion-reduce:transition-none"
+            >
+              <RefreshCw className="size-3.5" strokeWidth={2.4} aria-hidden />
+              {PAY_CARD_COPY.snapChecking}
+            </button>
+          </div>
+
+          {embedState === 'loading' && (
+            <p className="px-4 py-6 text-center text-[13px] text-forest-muted" role="status">
+              {PAY_CARD_COPY.snapLoading}
+            </p>
+          )}
+          {embedState === 'blocked' && (
+            <p className="px-4 py-4 text-[12.5px] leading-relaxed text-forest-muted" role="status">
+              {PAY_CARD_COPY.snapBlocked}
+            </p>
+          )}
+
+          {/* di sinilah snap.js menggambar halaman pembayarannya */}
+          <div id={SNAP_EMBED_ID} className="min-h-[420px] w-full bg-cream" />
+
+          {snapRedirect && (
+            <div className="border-t border-soil/12 px-4 py-3">
+              <a
+                href={snapRedirect}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-forest-muted underline decoration-soil/40 underline-offset-4 transition-colors hover:text-forest"
+              >
+                <ExternalLink className="size-3.5" strokeWidth={2.2} aria-hidden />
+                {PAY_CARD_COPY.snapCta}
+              </a>
+            </div>
+          )}
         </div>
       )}
 
@@ -270,14 +439,14 @@ export function PaymentInstructionCard({
               height={220}
               className="mt-4 size-[210px] rounded-2xl bg-cream object-contain p-3 ring-1 ring-soil/12 landing-tab:size-[220px]"
             />
-            <p className="mt-3 text-[12.5px] leading-relaxed text-forest/50">{methodCopy.hint}</p>
+            <p className="mt-3 text-[12.5px] leading-relaxed text-forest-muted">{methodCopy.hint}</p>
           </div>
         </div>
       )}
 
       {live && instructions?.channel === 'qris' && instructions.qrString && (
         <div className="mt-3">
-          <p className="mb-2 text-[12.5px] text-forest/45">{PAY_CARD_COPY.qrStringLabel}</p>
+          <p className="mb-2 text-[12.5px] text-forest-muted">{PAY_CARD_COPY.qrStringLabel}</p>
           <CopyField label={methodCopy.label} value={instructions.qrString} />
         </div>
       )}
@@ -289,7 +458,7 @@ export function PaymentInstructionCard({
             value={instructions.vaNumber}
             large
           />
-          <p className="mt-2.5 text-[12.5px] text-forest/45">{PAY_CARD_COPY.vaHint}</p>
+          <p className="mt-2.5 text-[12.5px] text-forest-muted">{PAY_CARD_COPY.vaHint}</p>
         </div>
       )}
 
@@ -304,7 +473,7 @@ export function PaymentInstructionCard({
             {PAY_CARD_COPY.ewalletCta}
             <ExternalLink className="size-4" strokeWidth={2.4} aria-hidden />
           </a>
-          <p className="mt-2.5 text-[12.5px] text-forest/45">{PAY_CARD_COPY.ewalletHint}</p>
+          <p className="mt-2.5 text-[12.5px] text-forest-muted">{PAY_CARD_COPY.ewalletHint}</p>
         </div>
       )}
 
@@ -314,7 +483,7 @@ export function PaymentInstructionCard({
             <CopyField label={PAY_CARD_COPY.billerLabel} value={instructions.billerCode} />
             <CopyField label={PAY_CARD_COPY.billKeyLabel} value={instructions.billKey} large />
           </div>
-          <p className="mt-2.5 text-[12.5px] text-forest/45">{PAY_CARD_COPY.billHint}</p>
+          <p className="mt-2.5 text-[12.5px] text-forest-muted">{PAY_CARD_COPY.billHint}</p>
         </div>
       )}
 
@@ -339,7 +508,7 @@ export function PaymentInstructionCard({
                 ? PAY_CARD_COPY.expiredTitle
                 : PAY_CARD_COPY.failedTitle}
             </strong>{' '}
-            <span className="font-normal text-forest/60">
+            <span className="font-normal text-forest-muted">
               {timeUp || state === 'expired'
                 ? PAY_CARD_COPY.expiredBody
                 : PAY_CARD_COPY.failedBody}
@@ -357,7 +526,7 @@ export function PaymentInstructionCard({
             <button
               type="button"
               onClick={onSwitchMethod}
-              className="inline-flex h-12 items-center justify-center rounded-full px-6 text-[14.5px] font-medium text-forest/70 ring-1 ring-soil/16 transition-colors duration-200 hover:text-forest motion-reduce:transition-none"
+              className="inline-flex h-12 items-center justify-center rounded-full px-6 text-[14.5px] font-medium text-forest-soft ring-1 ring-soil/16 transition-colors duration-200 hover:text-forest motion-reduce:transition-none"
             >
               {PAY_CARD_COPY.switchMethodLabel}
             </button>
@@ -367,21 +536,21 @@ export function PaymentInstructionCard({
 
       {live && (
         <div className="mt-4 flex items-center justify-between gap-3 border-t border-soil/12 pt-3.5">
-          <span className="flex items-center gap-2 text-[12.5px] text-forest/45">
+          <span className="flex items-center gap-2 text-[12.5px] text-forest-muted">
             <span className="size-1.5 animate-pulse rounded-full bg-forest/40" aria-hidden />
-            {snapRedirect ? PAY_CARD_COPY.snapWaiting : PAY_CARD_COPY.waitingTitle}
+            {snapEmbed || snapRedirect ? PAY_CARD_COPY.snapWaiting : PAY_CARD_COPY.waitingTitle}
           </span>
           <button
             type="button"
             onClick={onSwitchMethod}
-            className="text-[12.5px] font-medium text-forest/60 underline decoration-soil/40 underline-offset-4 transition-colors duration-200 hover:text-forest"
+            className="text-[12.5px] font-medium text-forest-muted underline decoration-soil/40 underline-offset-4 transition-colors duration-200 hover:text-forest"
           >
             {PAY_CARD_COPY.switchMethodLabel}
           </button>
         </div>
       )}
 
-      <p className="mt-3 text-[11.5px] tabular-nums text-forest/35">
+      <p className="mt-3 text-[11.5px] tabular-nums text-forest-muted">
         {PAY_CARD_COPY.orderLabel} {invoice.orderId}
       </p>
     </section>

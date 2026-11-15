@@ -302,7 +302,7 @@ export function dueContext(
   if (status === 'due_today') return { text: 'Jatuh tempo HARI INI', className: 'text-hud-amber' }
   return {
     text: `Tgl ${dueDay} · ${daysUntil(bill, currentDay, daysInMonth)} hari lagi`,
-    className: 'text-forest/45',
+    className: 'text-forest-muted',
   }
 }
 
@@ -328,7 +328,7 @@ export function paidBills(bills: Bill[]): Bill[] {
 
 export const BILL_FILTERS: { id: BillFilter; label: string }[] = [
   { id: 'semua', label: 'Semua' },
-  { id: 'aktif', label: 'Aktif' },
+  { id: 'aktif', label: 'Belum Bayar' },
   { id: 'telat', label: 'Telat' },
   { id: 'lunas', label: 'Lunas' },
 ]
@@ -531,12 +531,10 @@ export const BILL_REMINDER_OPTIONS: { days: number; label: string }[] = [
 export const BILL_SHEET_COPY = {
   add: {
     title: 'Tambah Tagihan Baru',
-    description: 'Cukup nama & tanggal jatuh tempo dulu, sisanya opsional.',
     submit: 'Simpan Tagihan',
   },
   edit: {
     title: 'Edit Tagihan',
-    description: 'Ubah bagian yang keliru aja, sisanya tetap seperti semula.',
     submit: 'Simpan Perubahan',
   },
 } as const
@@ -546,10 +544,10 @@ export const ADD_BILL_TOAST = {
 } as const
 
 export const UPDATE_BILL_TOAST = {
-  title: 'Tagihan diperbarui 🌿',
+  title: 'Tagihan diperbarui 🧩',
   description: 'Perubahannya langsung tampil di daftar rutinmu.',
   /** jaring pengaman: tagihannya sudah tidak ada (mis. dihapus di tab lain) */
-  expired: 'Tagihannya sudah tidak ada di daftar, jadi tidak ada yang diubah 🌿',
+  expired: 'Tagihannya sudah tidak ada di daftar, jadi tidak ada yang diubah 🧩',
 } as const
 
 /**
@@ -558,9 +556,14 @@ export const UPDATE_BILL_TOAST = {
  * dompet itu sebelum stempelnya naik (satu baris ledger ditulis `markBillPaid()`
  * lebih dulu). Toast "LUNAS!" yang tidak menyebut dari mana uangnya keluar
  * adalah jenis klaim yang justru ditutup paket ini.
+ *
+ * NADA (revisi ToV): membayar tagihan itu melegakan, bukan sekadar status yang
+ * berubah. Kalimatnya sekarang menyebut rasa lega itu — "satu beban hidup kelar"
+ * — sementara fakta nominal & dompetnya tetap di baris pertama supaya tidak ada
+ * klaim yang kabur.
  */
 export const MARK_PAID_TOAST = (name: string, amount: string, walletName: string) =>
-  `${name} ${amount} lunas dari ${walletName} ✅`
+  `Yuhuu, ${name} ${amount} udah dibayar dari ${walletName} ✅`
 
 /* ── KONFIRMASI & UNDO HAPUS TAGIHAN ────────────────────────────────────────
    Menghapus tagihan rutin itu merusak kebiasaan yang sudah jalan (ringkasan &
@@ -581,10 +584,10 @@ export const DELETE_BILL_TOAST = {
   title: 'Tagihan dihapus',
   description: (name: string) => `${name} keluar dari daftar rutinmu.`,
   undo: 'Undo',
-  undoneTitle: 'Tagihan dikembalikan 🌿',
+  undoneTitle: 'Tagihan dikembalikan 🧩',
   undoneDescription: 'Tagihannya balik ke daftar seperti semula.',
   /** jaring pengaman tetap jujur kalau tombol Undo ditekan setelah jendelanya tutup */
-  expired: 'Jendela Undo-nya sudah lewat, tagihannya bisa ditambahkan lagi kapan aja 🌿',
+  expired: 'Jendela Undo-nya sudah lewat, tagihannya bisa ditambahkan lagi kapan aja 🧩',
 } as const
 
 /**
@@ -606,7 +609,7 @@ export const CLEAR_PAID_TOAST = {
   title: (count: number) => `${count} tagihan lunas dibersihkan`,
   description: 'Catatan pembayarannya tetap ada di Riwayat.',
   undo: 'Undo',
-  undoneTitle: 'Tagihan lunas dikembalikan 🌿',
+  undoneTitle: 'Tagihan lunas dikembalikan 🧩',
   undoneDescription: 'Tagihannya balik ke daftar seperti semula.',
   expired: 'Jendela Undo-nya sudah lewat, tagihannya tetap terhapus.',
   failed: 'Tidak ada tagihan lunas yang bisa dibersihkan, daftarnya sudah berubah.',
@@ -650,7 +653,7 @@ export const MARK_PAID_SHEET_COPY = {
   insufficient: (walletName: string) =>
     `Saldo ${walletName} gak cukup untuk ini. Pilih dompet lain atau catat nominal yang lebih kecil.`,
   /** ditolak store (mis. statusnya keburu berubah / dompetnya sudah tidak ada) */
-  rejected: 'Tagihannya belum bisa ditandai lunas sekarang. Buka ulang halamannya ya 🌿',
+  rejected: 'Tagihannya belum bisa ditandai lunas sekarang. Buka ulang halamannya ya 🧩',
   /**
    * Saat sheet DITUTUP tanpa menekan simpan: tidak ada yang dibayar, jadi
    * statusnya sengaja TIDAK berubah. Kalimat ini yang dikatakan ke user — bukan
@@ -661,13 +664,14 @@ export const MARK_PAID_SHEET_COPY = {
 
 /** detail toast setelah baris kasnya benar-benar tertulis */
 export const MARK_PAID_TOAST_EXTRA = {
-  description: 'Saldo dompetnya sudah berkurang & catatannya masuk Riwayat.',
+  description:
+    'Saldo dompetnya sudah berkurang & catatannya masuk Riwayat. Satu beban hidup kelar — tidur malam ini lebih nyenyak 🛌',
   /** tombol batal di toast: membalikkan baris kas yang baru ditulis */
   undo: 'Batal',
   undoneTitle: 'Tanda lunas dibatalkan',
   undoneDescription: 'Catatan pembayarannya ikut dibatalkan, saldo dompetmu kembali seperti semula.',
   /** jaring pengaman kalau tombolnya ditekan setelah jendelanya tutup */
-  expired: 'Jendela batal-nya sudah lewat, catatan pembayarannya tetap ada di Riwayat 🌿',
+  expired: 'Jendela batal-nya sudah lewat, catatan pembayarannya tetap ada di Riwayat 🧩',
 } as const
 
 /**

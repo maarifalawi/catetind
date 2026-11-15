@@ -99,14 +99,35 @@ describe('seedDemoDataOnce', () => {
 
   /* Jalur review desain yang EKSPLISIT (`NEXT_PUBLIC_DEMO_ALLOW_SESSION=1`)
      tetap bisa memaksa persona ditulis di atas state yang ada — itulah gunanya
-     `force`. Tanpa `force`, perilaku defaultnya menolak (test di atas). */
+     `force`. Tanpa `force`, perilaku defaultnya menolak (test di atas).
+
+     CATATAN KENAPA TIDAK `rowsBefore * 2`: `force` menulis persona LAGI, tetapi
+     bukan berarti seluruh isi store berlipat dua.
+       · dompet/celengan/hutang/tagihan yang sudah ada DIPAKAI ULANG (tidak
+         digandakan), jadi baris setoran celengan hanya lahir sekali;
+       · baris pengeluaran demo ditolak `postExpense` kalau saldo dompet sumber
+         belum cukup. Di test, `resetMoneyStore()` memakai `WALLET_SEED` (saldo
+         GoPay 350rb), sedangkan cerita seed butuh ±610rb — jadi panggilan
+         pertama bisa menulis lebih sedikit baris daripada panggilan kedua yang
+         mewarisi sisa saldo + top-up. Jumlah eksaknya karena itu bergantung
+         saldo & tanggal, bukan kontrak.
+     Yang MEMANG dijanjikan fungsi ini — dan yang diuji di sini — adalah: seed
+     kedua BENAR-BENAR menulis catatan baru di atas state lama, tanpa
+     menggandakan entitas domain. */
   it('force (khusus review) tetap boleh menulis ulang di atas state yang ada', () => {
     seedDemoDataOnce()
     const rowsBefore = getMoneySnapshot().rows.length
+    const walletsBefore = getMoneySnapshot().wallets.length
+    const fundsBefore = getFundsSnapshot().funds.length
     resetDemoSeedMarker()
 
     expect(seedDemoDataOnce({ force: true })).toBe(true)
-    expect(getMoneySnapshot().rows.length).toBe(rowsBefore * 2)
+
+    const after = getMoneySnapshot()
+    expect(after.rows.length).toBeGreaterThan(rowsBefore)
+    /* dompet & celengan yang sudah ada dipakai ulang — tidak ada kembaran */
+    expect(after.wallets.length).toBe(walletsBefore)
+    expect(getFundsSnapshot().funds.length).toBe(fundsBefore)
   })
 
   /* Penanda demo sekarang menyimpan VERSI (`2`), bukan boolean. Perangkat yang
@@ -173,7 +194,7 @@ describe('cerita akun demo · anak 20-an, gaji 7,3jt', () => {
     expect(summary.net).toBe(2_120_000)
   })
 
-  it('celengan "Nabung Liburan ke Bali" 25% → tahap Tunas', () => {
+  it('celengan "Nabung Liburan ke Bali" 25% → tahap sprout', () => {
     seedDemoDataOnce()
     const fund = getFundsSnapshot().funds.find((item) => item.name === 'Nabung Liburan ke Bali')
     expect(fund).toBeTruthy()
@@ -181,7 +202,7 @@ describe('cerita akun demo · anak 20-an, gaji 7,3jt', () => {
     expect(fund!.target).toBe(5_000_000)
     expect(fund!.current).toBe(1_250_000)
     expect(fundPercentRounded(fund!)).toBe(25)
-    /* 25% = ambang "Tunas" (24% akan jatuh ke "Benih") */
+    /* 25% = ambang "sprout" (24% akan jatuh ke "seed") */
     expect(plantStageFrom(fund!.current, fund!.target)).toBe('sprout')
     expect(fund!.stage).toBe('sprout')
   })

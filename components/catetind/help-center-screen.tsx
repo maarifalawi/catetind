@@ -5,9 +5,7 @@ import Link from 'next/link'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import {
   ArrowLeft,
-  BookOpen,
   ChevronDown,
-  CircleHelp,
   Lock,
   MessageCircle,
   Search,
@@ -22,6 +20,7 @@ import { cn } from '@/lib/utils'
 import {
   HELP_BACK_TO_QUICK,
   HELP_CONTACT_LABEL,
+  HELP_CONTACT_SECTION_TITLE,
   HELP_CONTACT_SUBJECT,
   HELP_CONTACT_TO,
   HELP_DEFAULT_TITLE,
@@ -48,14 +47,12 @@ import {
   HELP_TOPICS,
   searchHelp,
   topicByLabel,
-  totalHelpArticles,
   type HelpArticle,
   type HelpArticleHit,
   type HelpTopic,
   type QuickAnswer,
 } from '@/lib/data/help'
 import { downloadMoneyExport } from '@/lib/money/export'
-import { MetaChip } from './meta-chip'
 import { ScreenShell } from './screen-shell'
 
 /* ── Pusat Bantuan (/app/help) — inventaris #30 · Domain 4C ──────────────────
@@ -69,18 +66,22 @@ import { ScreenShell } from './screen-shell'
         SENGAJA disembunyikan sampai user menekan 👎. Artinya: user sudah
         membaca dan tetap tidak terbantu baru boleh menghubungi manusia.
 
-   Konsekuensinya: TIDAK ADA tombol kontak di tempat lain di halaman ini. Satu
-   catatan kecil di sidebar hanya memberi tahu DI MANA gerbangnya, tanpa
-   membukanya (lihat HELP_SIDEBAR_NOTE).
+   Konsekuensinya: pintu kontak di dalam artikel TETAP hanya muncul setelah 👎.
+   Satu-satunya pintu lain adalah BLOK DI KAKI HALAMAN ("Masih butuh
+   manusia?") — revisi 11 Nov 2026, menggantikan tombol melayang yang dulu
+   menutupi navigasi bawah. Pintu itu tidak pernah muncul sebagai overlay, jadi
+   halaman ini tetap "cari dulu, baru ngobrol".
 
-   Tata letak: melebar penuh ala desktop (`lg:grid-cols-12`, sidebar 3/12),
-   sama seperti Tagihan, Joint, dan Ajak Teman — bukan kontainer sempit.
+   Tata letak: SATU kolom yang mengalir penuh (judul → pencarian → chip topik →
+   kartu pertanyaan → kaki kontak). Dulu kolom kiri 3/12 memuat daftar topik,
+   tetapi pilihan topiknya cuma chip — kolom itu menyisakan ruang kosong dan
+   membuat chip terpotong di tepi kanan. Sekarang chip MENGALIR di atas konten,
+   tepi kiri-kanannya sejajar dengan kartu, jadi halaman terbaca rapi & simetris
+   di lebar mana pun.
    ────────────────────────────────────────────────────────────────────────── */
 
 /** cubic-bezier khas app: masuk cepat lalu settle lembut */
 const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1]
-
-const TOTAL_ARTICLES = totalHelpArticles()
 
 /** pilihan user di kaki artikel — 👍 puas, 👎 butuh manusia */
 type FeedbackVote = 'up' | 'down'
@@ -192,104 +193,65 @@ export function HelpCenterScreen() {
   return (
     <ScreenShell>
       {/* ── HEADER — resep kanonik H1 yang sama dengan Dashboard & halaman lain ── */}
-      <header className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-forest lg:text-4xl">
-            {HELP_TITLE}
-          </h1>
-          <div className="mt-2 flex flex-wrap items-center gap-2 lg:mt-3">
-            <MetaChip icon={CircleHelp}>{HELP_TOPICS.length} topik</MetaChip>
-            <MetaChip icon={BookOpen}>{TOTAL_ARTICLES} artikel</MetaChip>
-            <MetaChip icon={ShieldCheck} tone="scope">
-              Founder-led support
-            </MetaChip>
-          </div>
-        </div>
+      <header>
+        <h1 className="font-display text-2xl font-semibold tracking-tight text-forest sm:text-3xl">
+          {HELP_TITLE}
+        </h1>
       </header>
 
-      {/* ── 2 KOLOM: sidebar topik (3/12) + konten (9/12) ─────────────────────
-          Melebar penuh, tanpa kontainer sempit: kolom kiri sticky menemani
-          artikel panjang, kolom kanan memakai lebar yang tersedia. */}
-      <div className="mt-5 grid grid-cols-1 gap-5 lg:mt-6 lg:grid-cols-12 lg:gap-6">
-        {/* ── KIRI (3/12) — navigasi topik ───────────────────────────────────
-            Mobile: deret chip yang bisa digeser, sejajar jempol.
-            Desktop: daftar vertikal sticky + catatan kecil soal jalur support. */}
-        <aside className="lg:col-span-3">
-          <div className="lg:sticky lg:top-6">
-            <div className="hide-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5 pb-1 lg:hidden">
-              {HELP_TOPICS.map((topic) => {
-                const active = topic.id === activeTopicId
-                return (
-                  <button
-                    key={topic.id}
-                    type="button"
-                    onClick={() => handleSelectTopic(topic.id)}
-                    aria-pressed={active}
-                    className={cn(
-                      'inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[13.5px] font-medium ring-1 transition-colors',
-                      active
-                        ? 'bg-forest text-cream ring-forest'
-                        : 'bg-cream text-forest/60 ring-soil/12 hover:bg-sage/60 hover:text-forest',
-                    )}
-                  >
-                    <span aria-hidden>{topic.emoji}</span>
-                    {topic.label}
-                  </button>
-                )
-              })}
-            </div>
+      <div className="mt-4">
+        <SearchBar query={query} onChange={setQuery} />
+      </div>
 
-            <nav aria-label="Topik bantuan" className="hidden lg:block">
-              <p className="px-3 text-[11.5px] font-medium uppercase tracking-[0.14em] text-forest/40">
-                {HELP_SIDEBAR_TITLE}
-              </p>
-              <ul className="mt-3 space-y-0.5">
-                {HELP_TOPICS.map((topic) => {
-                  const active = topic.id === activeTopicId
-                  return (
-                    <li key={topic.id}>
-                      <button
-                        type="button"
-                        onClick={() => handleSelectTopic(topic.id)}
-                        aria-current={active ? 'true' : undefined}
-                        className={cn(
-                          'flex w-full items-center gap-2.5 border-l-[3px] py-2.5 pr-2 pl-3 text-left text-[14.5px] transition-colors',
-                          active
-                            ? 'border-forest bg-sage/60 font-medium text-forest'
-                            : 'border-transparent text-forest/55 hover:border-soil/15 hover:bg-sage/40 hover:text-forest',
-                        )}
-                      >
-                        <span aria-hidden className="text-[16px] leading-none">
-                          {topic.emoji}
-                        </span>
-                        <span className="min-w-0 flex-1">{topic.label}</span>
-                        <span className="shrink-0 text-[11.5px] tabular-nums text-forest/35">
-                          {topic.articles.length}
-                        </span>
-                      </button>
-                    </li>
-                  )
-                })}
-              </ul>
-            </nav>
-          </div>
-        </aside>
+      {/* ── TOPIK + ISI — satu kolom, keduanya sejajar tepi ──────────────────────
+          `mt-5` (bukan `mt-4`) memberi jeda yang sama dengan jarak judul →
+          pencarian, jadi ritme vertikal halaman ini seragam dari atas ke bawah. */}
+      <div className="mt-5 flex flex-col gap-5">
+        {/* ── TOPIK — deret chip yang MENGALIR ────────────────────────────────
+            Revisi 11 Nov 2026 (pemilik produk): deret chip dulu dipaksa satu
+            baris dengan `overflow-x-auto` + margin negatif, sehingga chip
+            terakhir terpotong di tepi kanan dan stroke pilnya ikut hilang.
+            Sekarang chip MENGALIR ke baris berikutnya: setiap pil utuh, tepi
+            kiri-kanan sejajar dengan kartu di bawahnya, dan tidak ada geseran
+            tersembunyi. Label grup (`role="group"`) tetap sama supaya pembaca
+            layar mendengar konteks yang sama seperti sebelumnya. */}
+        <div role="group" aria-label={HELP_SIDEBAR_TITLE} className="flex flex-wrap gap-2">
+          {HELP_TOPICS.map((topic) => {
+            const active = topic.id === activeTopicId
+            return (
+              <button
+                key={topic.id}
+                type="button"
+                onClick={() => handleSelectTopic(topic.id)}
+                aria-pressed={active}
+                className={cn(
+                  'inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-[13.5px] font-medium ring-1 transition-colors focus-visible:ring-2 focus-visible:ring-forest/40 focus-visible:ring-offset-2 focus-visible:outline-none',
+                  active
+                    ? 'bg-forest text-cream ring-forest'
+                    : 'bg-cream text-forest-muted ring-soil/12 hover:bg-sage/60 hover:text-forest',
+                )}
+              >
+                <span aria-hidden>{topic.emoji}</span>
+                {topic.label}
+              </button>
+            )
+          })}
+        </div>
 
-        {/* ── KANAN (9/12) — pencarian + isi ─────────────────────────────────── */}
-        <div ref={contentRef} className="flex min-w-0 flex-col gap-4 lg:col-span-9 lg:gap-5">
-          {/* 2B — pencarian besar & menonjol */}
-          <SearchBar query={query} onChange={setQuery} />
+        {/* ── ISI — hasil pencarian → topik aktif → konten default ───────────── */}
+        <div ref={contentRef} className="flex min-w-0 flex-col gap-4">
+          {/* pencarian sudah dipindah ke atas (di bawah judul) */}
           {/* H11-1 (audit UI/UX): saran pencarian muncul saat user mulai
               mengetik — diambil dari pertanyaan populer yang NYATA. */}
           {query.trim().length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-[12px] font-medium text-forest/40">{HELP_SUGGEST_LABEL}</span>
+              <span className="text-[12px] font-medium text-forest-muted">{HELP_SUGGEST_LABEL}</span>
               {HELP_QUICK_ANSWERS.slice(0, 3).map((item) => (
                 <button
                   key={item.id}
                   type="button"
                   onClick={() => setQuery(item.question)}
-                  className="rounded-full bg-cream px-2.5 py-1 text-[12.5px] font-medium text-forest/65 ring-1 ring-soil/12 transition-colors hover:bg-sage/60 hover:text-forest"
+                  className="rounded-full bg-cream px-2.5 py-1 text-[12.5px] font-medium text-forest-soft ring-1 ring-soil/12 transition-colors hover:bg-sage/60 hover:text-forest"
                 >
                   {item.question}
                 </button>
@@ -331,12 +293,38 @@ export function HelpCenterScreen() {
         </div>
       </div>
 
-      {/* ── KAKI HALAMAN: bukti tertulisnya, bukan cuma janji di halaman ini ─────
-          Topik "Keamanan & Privasi" di atas adalah klaim. Kebijakan Privasi
-          adalah versi tertulis dari klaim itu — dan satu-satunya tautan ke sana
-          yang bisa ditempuh orang TANPA masuk ke Pengaturan lebih dulu. */}
-      <footer className="mt-6 border-t border-soil/12 pt-5 lg:mt-8">
-        <p className="text-[13.5px] leading-relaxed text-forest/60">{HELP_LEGAL_NOTE}</p>
+      {/* ── KAKI HALAMAN ─────────────────────────────────────────────────────
+          Dua hal, dua baris, urutannya sengaja:
+
+            1. PINTU KONTAK — dulu tombol MELAYANG (`fixed bottom-24 right-4`)
+               yang menutupi tombol Catat transaksi di navigasi bawah dan ikut
+               menempel di atas konten saat halaman digulir. Sekarang ia blok
+               biasa di kaki halaman: tetap mudah ditemukan, tidak menghalangi
+               apa pun.
+            2. DOKUMEN RESMI — versi tertulis dari klaim "data kamu aman" di
+               atas, dan satu-satunya tautan ke sana yang bisa ditempuh orang
+               TANPA masuk ke Pengaturan lebih dulu. */}
+      <footer className="mt-8 border-t border-soil/12 pt-6 lg:mt-10">
+        <div className="flex flex-col gap-4 rounded-[1.75rem] bg-sage/45 p-5 ring-1 ring-soil/10 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:p-6">
+          <div className="min-w-0">
+            <p className="font-display text-[16.5px] font-semibold tracking-tight text-forest">
+              {HELP_CONTACT_SECTION_TITLE}
+            </p>
+            <p className="mt-1 text-[13px] leading-relaxed text-forest-muted">
+              {HELP_SUPPORT_FOOTNOTE}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleContactFounder}
+            className="inline-flex h-11 w-full shrink-0 items-center justify-center gap-2 rounded-full bg-forest px-5 text-[13.5px] font-medium text-cream transition-colors hover:bg-forest-soft focus-visible:ring-2 focus-visible:ring-forest/40 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.99] sm:w-auto"
+          >
+            <MessageCircle className="size-4" strokeWidth={2.4} aria-hidden />
+            {HELP_CONTACT_LABEL}
+          </button>
+        </div>
+
+        <p className="mt-6 text-[13.5px] leading-relaxed text-forest-muted">{HELP_LEGAL_NOTE}</p>
         <ul className="mt-3 flex flex-wrap gap-2">
           {HELP_LEGAL_LINKS.map((link) => (
             <li key={link.href}>
@@ -351,17 +339,6 @@ export function HelpCenterScreen() {
           ))}
         </ul>
       </footer>
-      {/* H11-4 (audit UI/UX): pintu kontak cepat di pojok kanan bawah. Kanon
-          "jangan ngarang" menahan kami dari menciptakan kanal WhatsApp/IG yang
-          belum ada — yang dipakai jalur kontak NYATA halaman ini (founder). */}
-      <button
-        type="button"
-        onClick={handleContactFounder}
-        className="fixed bottom-24 right-4 z-40 inline-flex items-center gap-2 rounded-full bg-forest px-4 py-3 text-[13.5px] font-medium text-cream shadow-[0_18px_40px_-18px_rgba(0,0,0,0.9)] transition-colors hover:bg-forest-soft active:scale-95 lg:bottom-8 lg:right-8"
-      >
-        <MessageCircle className="size-4" strokeWidth={2.4} aria-hidden />
-        {HELP_CONTACT_LABEL}
-      </button>
     </ScreenShell>
   )
 }
@@ -376,21 +353,21 @@ export function HelpCenterScreen() {
 function SearchBar({ query, onChange }: { query: string; onChange: (value: string) => void }) {
   return (
     <label className="flex h-14 items-center gap-3 rounded-2xl bg-cream px-4 ring-1 ring-soil/12 transition-shadow focus-within:ring-2 focus-within:ring-forest/30 lg:h-16 lg:px-5">
-      <Search className="size-5 shrink-0 text-forest/35" strokeWidth={2.2} aria-hidden />
+      <Search className="size-5 shrink-0 text-forest-muted" strokeWidth={2.2} aria-hidden />
       <input
         type="search"
         value={query}
         onChange={(event) => onChange(event.target.value)}
         placeholder={HELP_SEARCH_PLACEHOLDER}
         aria-label={HELP_SEARCH_LABEL}
-        className="w-full bg-transparent text-[16px] text-forest outline-none placeholder:text-forest/35 lg:text-base"
+        className="w-full bg-transparent text-[16px] text-forest outline-none placeholder:text-forest-muted lg:text-base"
       />
       {query && (
         <button
           type="button"
           onClick={() => onChange('')}
           aria-label="Hapus pencarian"
-          className="flex size-7 shrink-0 items-center justify-center rounded-full text-forest/40 transition-colors hover:bg-sage/60 hover:text-forest"
+          className="flex size-7 shrink-0 items-center justify-center rounded-full text-forest-muted transition-colors hover:bg-sage/60 hover:text-forest"
         >
           <X className="size-4" strokeWidth={2.4} />
         </button>
@@ -450,9 +427,9 @@ function QuickAnswerSection({
         {title}
       </h2>
       {blurb && (
-        <p className="mt-1.5 max-w-2xl text-[14.5px] leading-relaxed text-forest/55">{blurb}</p>
+        <p className="mt-1.5 max-w-2xl text-[14.5px] leading-relaxed text-forest-muted">{blurb}</p>
       )}
-      <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:gap-5 xl:grid-cols-3">
+      <div className="mt-4 grid items-stretch gap-4 sm:grid-cols-2 lg:gap-5 xl:grid-cols-3">
         {items.map((item) => (
           <QuickAnswerCard
             key={item.id}
@@ -488,38 +465,51 @@ function QuickAnswerCard({
   return (
     <div
       className={cn(
-        'relative rounded-[1.75rem] bg-cream transition-shadow',
-        item.mostAsked && 'sm:col-span-2 xl:col-span-2',
+        'relative flex h-full flex-col rounded-[1.75rem] transition-shadow',
+        item.mostAsked ? 'bg-gradient-to-br from-cream via-cream to-sage/60' : 'bg-cream',
         open
           ? 'shadow-[0_18px_40px_-34px_rgba(0,0,0,0.55)] ring-2 ring-forest/25'
-          : 'ring-1 ring-soil/12',
+          : item.mostAsked
+            ? 'ring-1 ring-forest/20'
+            : 'ring-1 ring-soil/12',
       )}
     >
-      {/* H11-3 (audit UI/UX): kartu keamanan/privasi ditandai lebih menonjol. */}
-      {item.mostAsked && (
-        <span className="absolute right-4 top-4 rounded-full bg-forest px-2.5 py-1 text-[11px] font-medium text-cream">
-          {HELP_MOST_ASKED_BADGE}
-        </span>
-      )}
       <button
         type="button"
         onClick={onToggle}
         aria-expanded={open}
-        className="flex w-full items-start gap-3 p-5 text-left sm:p-6"
+        className="flex w-full flex-1 items-start gap-3 p-5 text-left sm:p-6"
       >
         <span className="min-w-0 flex-1">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-sage/70 px-2.5 py-0.5 text-[11.5px] font-medium text-forest ring-1 ring-forest/10">
-            {item.topic}
+          {/* H11-3 (audit UI/UX): kartu keamanan/privasi ditandai lebih
+              menonjol. Badge-nya sekarang duduk SEBARIS dengan chip topik —
+              dulu `absolute right-4 top-4` sehingga ia menutupi chevron dan
+              satu-satunya kartu yang paling penting justru kehilangan tanda
+              "bisa dibuka". Semua kartu kini punya susunan yang sama:
+              topik (+ badge) → pertanyaan → chevron. */}
+          <span className="flex flex-wrap items-center gap-1.5">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-sage/70 px-2.5 py-0.5 text-[11.5px] font-medium text-forest ring-1 ring-forest/10">
+              {item.topic}
+            </span>
           </span>
           <span className="mt-2 block font-display text-[16.5px] leading-snug font-medium tracking-tight text-forest sm:text-base">
             {item.question}
           </span>
+          {/* Badge ditaruh DI BAWAH pertanyaan, bukan di samping chip topik:
+              label topik "Dompet Kita (Joint Wallet)" + badge tidak muat satu
+              baris di kolom 1/3, sehingga pertanyaan kartu ini turun sendirian
+              dan barisnya tidak sejajar dengan kartu tetangga. */}
+          {item.mostAsked && (
+            <span className="mt-2 inline-flex items-center rounded-full bg-forest/10 px-2 py-0.5 text-[11px] font-medium text-forest ring-1 ring-forest/15">
+              {HELP_MOST_ASKED_BADGE}
+            </span>
+          )}
         </span>
         <ChevronDown
           aria-hidden
           strokeWidth={2.4}
           className={cn(
-            'mt-1 size-4 shrink-0 text-forest/35 transition-transform duration-300',
+            'mt-1 size-4 shrink-0 text-forest-muted transition-transform duration-300',
             open && 'rotate-180',
           )}
         />
@@ -527,12 +517,12 @@ function QuickAnswerCard({
 
       <Reveal show={open}>
         <div className="px-5 pb-5 sm:px-6 sm:pb-6">
-          <p className="text-[14.5px] leading-relaxed text-forest/70">{item.answer}</p>
+          <p className="text-[14.5px] leading-relaxed text-forest-soft">{item.answer}</p>
           {topic && (
             <button
               type="button"
               onClick={() => onOpenTopic(item)}
-              className="mt-3 inline-flex items-center gap-1.5 text-[13px] font-medium text-forest/75 underline-offset-4 transition-colors hover:text-forest hover:underline"
+              className="mt-3 inline-flex items-center gap-1.5 text-[13px] font-medium text-forest-soft underline-offset-4 transition-colors hover:text-forest hover:underline"
             >
               {HELP_OPEN_TOPIC}: {topic.label}
               <ArrowLeft className="size-3.5 rotate-180" strokeWidth={2.4} aria-hidden />
@@ -574,7 +564,7 @@ function TopicArticles({
             <h2 className="font-display text-2xl font-medium tracking-tight text-forest">
               {topic.label}
             </h2>
-            <p className="mt-1 max-w-2xl text-[14.5px] leading-relaxed text-forest/55">
+            <p className="mt-1 max-w-2xl text-[14.5px] leading-relaxed text-forest-muted">
               {topic.blurb}
             </p>
           </div>
@@ -583,7 +573,7 @@ function TopicArticles({
         <button
           type="button"
           onClick={onBack}
-          className="inline-flex shrink-0 items-center gap-1.5 text-[12.5px] font-medium text-forest/70 underline-offset-4 transition-colors hover:text-forest hover:underline"
+          className="inline-flex shrink-0 items-center gap-1.5 text-[12.5px] font-medium text-forest-soft underline-offset-4 transition-colors hover:text-forest hover:underline"
         >
           <ArrowLeft className="size-3.5" strokeWidth={2.4} aria-hidden />
           {HELP_BACK_TO_QUICK}
@@ -643,7 +633,7 @@ function ArticleCard({
             >
               {index + 1}
             </span>
-            <span className="text-[15px] leading-relaxed text-forest/75">{step}</span>
+            <span className="text-[15px] leading-relaxed text-forest-soft">{step}</span>
           </li>
         ))}
       </ol>
@@ -663,9 +653,9 @@ function ArticleCard({
 function ProTipCallout({ children }: { children: ReactNode }) {
   return (
     <div className="mt-4 flex items-start gap-3 rounded-2xl bg-sage/70 px-4 py-3.5 ring-1 ring-forest/10">
-      <p className="text-[13.5px] leading-relaxed text-forest/75">
+      <p className="text-[13.5px] leading-relaxed text-forest-soft">
         <span className="font-medium text-forest">{HELP_PRO_TIP_LABEL}</span>
-        <span aria-hidden className="mx-1.5 text-forest/30">
+        <span aria-hidden className="mx-1.5 text-forest-muted">
           ·
         </span>
         {children}
@@ -706,7 +696,7 @@ function FeedbackStrip({
         </p>
       ) : (
         <div className="flex flex-wrap items-center justify-between gap-2.5">
-          <p className="text-[14px] font-medium text-forest/60">{HELP_FEEDBACK_QUESTION}</p>
+          <p className="text-[14px] font-medium text-forest-muted">{HELP_FEEDBACK_QUESTION}</p>
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -716,7 +706,7 @@ function FeedbackStrip({
                 'inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-[13.5px] font-medium ring-1 transition-colors active:scale-95',
                 upvoted
                   ? 'bg-mint/40 text-forest ring-forest/20'
-                  : 'bg-cream text-forest/60 ring-soil/12 hover:bg-sage/60 hover:text-forest',
+                  : 'bg-cream text-forest-muted ring-soil/12 hover:bg-sage/60 hover:text-forest',
               )}
             >
               <ThumbsUp className="size-3.5" strokeWidth={2.2} aria-hidden />
@@ -730,7 +720,7 @@ function FeedbackStrip({
                 'inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-[13.5px] font-medium ring-1 transition-colors active:scale-95',
                 downvoted
                   ? 'bg-plum/15 text-plum ring-plum/25'
-                  : 'bg-cream text-forest/60 ring-soil/12 hover:bg-sage/60 hover:text-forest',
+                  : 'bg-cream text-forest-muted ring-soil/12 hover:bg-sage/60 hover:text-forest',
               )}
             >
               <ThumbsDown className="size-3.5" strokeWidth={2.2} aria-hidden />
@@ -773,7 +763,7 @@ function SupportPanel() {
     <div className="flex flex-col gap-3 pt-4">
       <div className="flex items-start gap-3 rounded-2xl bg-sage/70 px-4 py-3.5 ring-1 ring-forest/10">
         <Lock className="mt-0.5 size-4 shrink-0 text-forest" strokeWidth={2.2} aria-hidden />
-        <p className="text-[13.5px] leading-relaxed text-forest/75">{HELP_PRIVACY_SHIELD}</p>
+        <p className="text-[13.5px] leading-relaxed text-forest-soft">{HELP_PRIVACY_SHIELD}</p>
       </div>
 
       {/* `sm:grid-cols-2` — di HP dua label panjang lebih enak bertumpuk;
@@ -795,7 +785,7 @@ function SupportPanel() {
         </Button>
       </div>
 
-      <p className="text-[12.5px] leading-relaxed text-forest/50">{HELP_SUPPORT_FOOTNOTE}</p>
+      <p className="text-[12.5px] leading-relaxed text-forest-muted">{HELP_SUPPORT_FOOTNOTE}</p>
     </div>
   )
 }
@@ -803,7 +793,7 @@ function SupportPanel() {
 
 /** label kecil pemisah antar kelompok hasil di halaman hasil pencarian */
 const RESULT_GROUP_LABEL =
-  'text-[11.5px] font-medium uppercase tracking-[0.14em] text-forest/40'
+  'text-[11.5px] font-medium uppercase tracking-[0.14em] text-forest-muted'
 
 /**
  * Hasil pencarian: pertanyaan populer yang cocok, lalu artikelnya. Semua hasil
@@ -837,14 +827,14 @@ function SearchResults({
         <h2 className="font-display text-2xl font-medium tracking-tight text-forest lg:text-[28px]">
           {HELP_RESULT_TITLE}
         </h2>
-        <p aria-live="polite" className="text-[13px] text-forest/45">
+        <p aria-live="polite" className="text-[13px] text-forest-muted">
           {empty
             ? '0 hasil'
             : `${articles.length} artikel · ${quickAnswers.length} pertanyaan populer`}
         </p>
       </div>
-      <p className="mt-1 text-[14px] text-forest/55">
-        Hasil buat <span className="font-medium text-forest/75">“{query}”</span>
+      <p className="mt-1 text-[14px] text-forest-muted">
+        Hasil buat <span className="font-medium text-forest-soft">“{query}”</span>
       </p>
 
       {empty ? (
@@ -907,7 +897,7 @@ function EmptyResults() {
       <h3 className="mt-3 font-display text-[18px] font-semibold tracking-tight text-forest sm:text-lg">
         {HELP_EMPTY_TITLE}
       </h3>
-      <p className="mt-2 max-w-2xl text-[14.5px] leading-relaxed text-forest/60">
+      <p className="mt-2 max-w-2xl text-[14.5px] leading-relaxed text-forest-muted">
         {HELP_EMPTY_BLURB}
       </p>
     </div>

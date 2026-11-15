@@ -131,7 +131,7 @@ export const SECURITY_DOC: LegalDocument = {
       {
         href: '/terms',
         label: 'Syarat & Ketentuan',
-        desc: 'Aturan main layanan: batas AI Coach, paket akses selamanya, dan kuota token.',
+        desc: 'Aturan main layanan: batas Minca, paket akses selamanya, dan kuota token.',
       },
       {
         href: '/settings/security',

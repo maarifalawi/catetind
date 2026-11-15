@@ -101,7 +101,7 @@ export function AddPhysicalAssetSheet({
     >
       <div className="space-y-4">
         <label className="block">
-          <span className="mb-1 block text-[12px] font-medium uppercase tracking-wide text-forest/45">
+          <span className="mb-1 block text-[12px] font-medium uppercase tracking-wide text-forest-muted">
             {PHYSICAL_TAB_COPY.form.name}
           </span>
           <input
@@ -117,7 +117,7 @@ export function AddPhysicalAssetSheet({
         </label>
 
         <div>
-          <span className="mb-1 block text-[12px] font-medium uppercase tracking-wide text-forest/45">
+          <span className="mb-1 block text-[12px] font-medium uppercase tracking-wide text-forest-muted">
             {PHYSICAL_TAB_COPY.form.category}
           </span>
           <ChoicePills
@@ -151,7 +151,7 @@ export function AddPhysicalAssetSheet({
         />
 
         <label className="block">
-          <span className="mb-1 block text-[12px] font-medium uppercase tracking-wide text-forest/45">
+          <span className="mb-1 block text-[12px] font-medium uppercase tracking-wide text-forest-muted">
             {PHYSICAL_TAB_COPY.form.note}
           </span>
           <textarea

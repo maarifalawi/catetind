@@ -18,6 +18,7 @@ import {
   walletFundsCheckById,
   walletSeedOf,
 } from '@/lib/money/store'
+import { syncBudgetThresholds } from '@/lib/money/budget-alerts'
 import type { HistoryTransaction } from '@/lib/data/history'
 
 /* ── useTransactionSubmit — satu pintu "catat transaksi baru" (paket 33) ──────
@@ -161,6 +162,8 @@ export function useTransactionSubmit(
          menyimpan tidak mengubah status jaringan (paket 42) */
       const offline = !readOnline()
       const transaction = recordDraftTransaction(draft, walletName)
+      /* BUDGET → LONCENG: hanya pengeluaran yang bisa menyentuh limit kategori */
+      if (draft.type === 'expense') syncBudgetThresholds()
       closePanel()
 
       /* OFFLINE: jangan menembak pujian sukses yang sama seperti saat online.

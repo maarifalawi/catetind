@@ -9,7 +9,7 @@
                                                  yang sama (ToS mengikuti PRD)
      • lib/data/referral.ts                    → memakai ulang `remainingPercent`
 
-   Kanon angkanya: PRD 4774–4802 (Base Quota · Add-on Paket · Reset bulanan) dan
+   Kanon angkanya: PRD 4774–4802 (Base Quota · Add-on Paket) dan
    PRD 4892–4933 (AI Usage Meter "Fuel Gauge"). Tabel di bawah adalah SALINAN
    PERSIS tabel PRD; totalnya TIDAK ditulis manual, tapi DITURUNKAN dengan
    `reduce` — jadi tidak mungkin lagi sidebar bilang "4,99 jt token" sementara
@@ -181,8 +181,20 @@ export function aiUsageById(rows: AiUsageRow[]): Record<AiQuotaActivityId, AiUsa
   >
 }
 
-/** jatah token add-on bawaan (mock) — tidak hangus saat reset (PRD 4802) */
-export const AI_ADDON_TOKENS_ALLOTMENT = 150_000
+/**
+ * Jatah token add-on BAWAAN.
+ *
+ * 0 SEJAK audit data (4 November 2026): dulu 150.000, dan itu berarti setiap
+ * akun mendapat "tangki" gratis yang tidak pernah dibayar siapa pun. Akibatnya
+ * dua hal yang dilarang produk ini:
+ *   · kuota tidak pernah benar-benar habis, sehingga peringatan "habis" tidak
+ *     bisa dipercaya;
+ *   · bonus token dari admin (atau top-up yang dibayar) tercampur dengan jatah
+ *     karangan itu — user tidak bisa tahu token mana yang nyata.
+ * Tangki add-on sekarang HANYA berisi token yang benar-benar tercatat di
+ * `ai_addons` (top-up dibayar atau bonus yang diberikan admin).
+ */
+export const AI_ADDON_TOKENS_ALLOTMENT = 0
 
 /* ── 4. TANGKI ADD-ON (jatah bawaan + pembelian sesi − limpahan pemakaian) ────
    Prompt 24: tombol "Beli Add-On →" di Home harus benar-benar MENAMBAH kuota.
@@ -306,7 +318,7 @@ export interface AiAddonPackage {
   id: AiAddonPackageId
   name: string
   price: number
-  /** token tambahan yang masuk ke tangki — TIDAK hangus saat reset bulanan */
+  /** token tambahan yang masuk ke tangki — TIDAK hangus walau bulan berganti */
   tokens: number
   /** setara panggilan (kanon PRD 4794–4796) biar user bisa hitung sendiri */
   note: string
@@ -338,130 +350,72 @@ export const AI_ADDON_PACKAGES: AiAddonPackage[] = [
   },
 ]
 
-/* ── 6. ATURAN RESET (kanon PRD 4800–4802) ──────────────────────────────────
-   Reset BULANAN tanggal 1, BUKAN rolling 30 hari: lebih gampang dijelaskan dan
-   ikut siklus tagihan. Yang di-reset cuma kuota dasar; token add-on berlaku
-   sampai benar-benar terpakai. */
-export const AI_RESET_RULE_COPY =
-  'Kuota dasar di-reset tanggal 1 tiap bulan. Token add-on tidak hangus.'
+/* ── 6. ATURAN KUOTA DASAR (keputusan produk: TANPA REFILL) ──────────────────
+   Kuota dasar diberikan SEKALI, di bulan pertama paket aktif. Tidak ada reset
+   tanggal 1 dan tidak ada pengisian ulang otomatis: kalau habis, user memakai
+   token AI tambahan (yang tidak hangus) untuk melanjutkan.
 
-/* Tanggal reset TIDAK lagi konstanta mock (paket 86). Dulu label tanggal &
-   sisa hari dipatok ke dua string tetap ('2026-10-01' / '2026-09-27'), jadi di
-   produksi user melihat "reset 1 Oktober 2026" selamanya. Sekarang keduanya
-   DITURUNKAN dari satu fungsi murni ber-argumen `Date` — lihat `aiQuotaResetInfo`
-   di bawah — sehingga tanggalnya NYATA (awal bulan depan) tapi tetap bisa diuji
-   tanpa jam mesin dan tetap bebas hydration mismatch (komponen mengisinya lewat
-   `useAiQuotaReset()` SETELAH mount). */
+   TEKSNYA TIDAK LAGI DI UI (revisi pemilik repo): kalimat panjang ini dulu
+   dicetak dua kali — di modal Top Up dan di kartu Bahan Bakar AI. Keduanya
+   dicabut supaya layar jual tidak terbaca seperti dokumen. Aturannya TIDAK
+   hilang: ia tinggal di `lib/legal/privacy.ts` §6b ("Kuota AI & cara
+   mematikannya") dan `lib/legal/terms.ts` §7 ("Kuota & Token AI") — tempat user
+   memang mencarinya, dan `lib/ai-quota.test.ts` sekarang menjaga KEDUA dokumen
+   itu supaya tidak pernah menjanjikan reset otomatis. */
 
-const RESET_MONTHS_LONG = [
-  'Januari',
-  'Februari',
-  'Maret',
-  'April',
-  'Mei',
-  'Juni',
-  'Juli',
-  'Agustus',
-  'September',
-  'Oktober',
-  'November',
-  'Desember',
-]
-
-/** `'2026-10-01'` → `'1 Oktober 2026'` (ditulis manual, bebas locale mesin) */
-export function indonesianDateLabel(iso: string): string {
-  const [year, month, day] = iso.split('-').map(Number)
-  const label = RESET_MONTHS_LONG[month - 1] ?? iso
-  return `${day} ${label} ${year}`
-}
-
-/** jarak hari bulat antara dua tanggal lokal — bebas timezone */
-export function daysUntil(fromIso: string, toIso: string): number {
-  const [fromYear, fromMonth, fromDay] = fromIso.split('-').map(Number)
-  const [toYear, toMonth, toDay] = toIso.split('-').map(Number)
-  const from = Date.UTC(fromYear, fromMonth - 1, fromDay)
-  const to = Date.UTC(toYear, toMonth - 1, toDay)
-  return Math.max(0, Math.round((to - from) / 86_400_000))
-}
-
-/* ── 6b. TANGGAL RESET NYATA (paket 86) ──────────────────────────────────────
-   Satu sumber, dua turunan: `iso` (tanggal), `label` (ditulis Indonesia), dan
-   `daysUntil` (sisa hari) SEMUANYA lahir dari fungsi murni ini, jadi tidak
-   mungkin lagi label berkata "1 Oktober" sementara hitungan harinya milik bulan
-   lain. Argumennya `Date` NYATA, tapi fungsinya murni — bisa diuji dengan
-   tanggal apa pun tanpa menyentuh jam mesin (pola yang sama dengan `daysUntil`).
-   Komponen membacanya lewat `useAiQuotaReset()` SESUDAH mount supaya HTML server
-   & render pertama client tetap identik (bebas hydration mismatch, §8). */
-
-/** label netral saat tanggal belum terbaca (render pertama, sebelum mount) */
-export const AI_QUOTA_RESET_FALLBACK = 'awal bulan depan'
-
-export interface AiQuotaReset {
-  /** tanggal reset berikutnya `YYYY-MM-DD` (awal bulan depan, waktu lokal) */
-  iso: string
-  /** label panjang, mis. "1 November 2026" */
-  label: string
-  /** sisa hari menuju reset (0 = hari ini) */
-  daysUntil: number
-  /** kunci bulan berjalan `YYYY-MM` — kunci baris yang SAMA dengan `ai_usage` */
-  monthKey: string
-}
-
-/** `Date` → `YYYY-MM-DD` waktu LOKAL (bukan UTC), supaya batas bulan ikut user */
+/* `Date` → `YYYY-MM-DD` waktu LOKAL (bukan UTC), supaya batas bulan ikut user */
 function localISODateOnly(date: Date): string {
   const month = `${date.getMonth() + 1}`.padStart(2, '0')
   const day = `${date.getDate()}`.padStart(2, '0')
   return `${date.getFullYear()}-${month}-${day}`
 }
 
-/** `Date` → `YYYY-MM` (kunci bulan `ai_usage`). SATU definisi — dipakai juga
+/** `Date` → `YYYY-MM` (kunci baris `ai_usage`). SATU definisi — dipakai juga
  *  oleh `lib/supabase/ai-usage-remote.ts` supaya kuncinya tidak pernah beda. */
 export function monthKeyOf(date: Date): string {
   return localISODateOnly(date).slice(0, 7)
 }
 
-/**
- * Info reset kuota dasar dari waktu NYATA: reset = tanggal 1 BULAN DEPAN
- * (kanon PRD 4800–4802). Selisih harinya memakai pembanding tanggal-lokal
- * (`daysUntil`), jadi tidak goyah karena UTC seperti selisih jam.
- */
-export function aiQuotaResetInfo(now: Date): AiQuotaReset {
-  const todayIso = localISODateOnly(now)
-  const reset = new Date(now.getFullYear(), now.getMonth() + 1, 1)
-  const iso = localISODateOnly(reset)
-  return {
-    iso,
-    label: indonesianDateLabel(iso),
-    daysUntil: daysUntil(todayIso, iso),
-    monthKey: monthKeyOf(now),
-  }
-}
-
 /* ── 7. COPY HALAMAN BILLING & KARTU SIDEBAR ────────────────────────────────
-   Judul kartu + kalimat aturan reset dipakai di lebih dari satu komponen, jadi
+   Judul kartu + kalimat aturan kuota dasar dipakai di lebih dari satu komponen, jadi
    ditulis sekali di sini (aturan repo: copy user-facing bukan string di JSX). */
 
 export const AI_FUEL_COPY = {
   cardTitle: 'Bahan Bakar AI',
   /** label pendamping angka besar — selalu "sisa", tidak pernah "terpakai" */
   remainingLabel: 'sisa',
+  /* ── NAMA PAKET: TIGA KEADAAN, TIGA KALIMAT (paket 104) ───────────────────
+     Dulu satu kalimat cadangan ('Belum ada paket') dipakai untuk dua keadaan
+     yang berbeda: "backend belum menjawab" dan "user memang belum beli".
+     Akibatnya kartu sempat menuduh user belum punya paket selagi
+     `/api/subscription` masih terbang, lalu berubah sendiri setelah jawabannya
+     datang — kartu yang berubah cerita tanpa sebab. */
+  planUnknown: 'Paket belum terbaca',
+  planMissing: 'Belum ada paket',
+  /** keadaan SEBELUM paket selesai dibaca — kartu menunggu, bukan menebak */
+  readingPlan: 'Membaca paket…',
+  /**
+   * EKOR KARTU UNTUK PAKET TANPA BATAS. Menggantikan "N panggilan · sisa hari":
+   * dua fakta itu milik paket BERKUOTA, jadi memasangnya di bawah "Tanpa batas"
+   * membuat satu kartu bercerita dua hal yang saling membantah.
+   */
+  unlimitedTail: 'Voice & scan ikut tanpa batas · tanpa hitungan kuota',
   baseLabel: 'Kuota dasar',
+  /** ekor kartu: aturan kuota dasar yang sebenarnya (tanpa refill otomatis) */
+  baseTail: 'kuota dasar · tanpa isi ulang otomatis',
   addonLabel: 'Token tambahan',
   detailLabel: 'Rincian pemakaian',
-  resetLabel: 'Reset kuota dasar',
-  resetRule: AI_RESET_RULE_COPY,
   /** baris rincian per aktivitas, mis. "44 dari 200 sisa" */
   callsRemaining: (remaining: number, total: number) => `${remaining} dari ${total} sisa`,
   /** nilai yang user rasakan, mis. "≈ 718 catatan AI lagi" */
   recordsLeft: (records: number) => `≈ ${records.toLocaleString('id-ID')} catatan AI lagi`,
   addonBandBadge: 'AI Token Add-on',
-  addonBandTitle: 'Wah, AI Coach kamu udah kerja keras bulan ini!',
+  addonBandTitle: 'Wah, Minca kamu udah kerja keras bulan ini!',
   addonBandCta: 'Beli Kuota Tambahan',
 } as const
 
 export const AI_TOPUP_COPY = {
   title: 'Top Up AI Token',
-  description: 'Tambah napas AI biar pencatatanmu tetap otomatis ⚡',
   packageLegend: 'Pilih paket top up AI token',
   bestBadge: 'Paling Laris',
   onceLabel: 'sekali bayar',
@@ -505,7 +459,7 @@ export const AI_GAUGE_BANNER_COPY = {
    mencatat adalah alasan app ini ada:
      · kategorisasi MANUAL tetap jalan penuh (engine input tidak dikunci);
      · voice & OCR dimatikan, dan dikatakan kenapa + apa penggantinya;
-     · user dikasih satu jalan keluar: reset tanggal 1 atau top up token.
+     · user dikasih satu jalan keluar: tambah token AI.
 
    Copy-nya di sini (bukan di komponen) karena tiga permukaan berbeda memakainya:
    engine input (`transaction-input-engine.tsx`), widget AI Coach, dan banner Home. */
@@ -513,18 +467,17 @@ export const AI_GAUGE_BANNER_COPY = {
    Dipakai bersama oleh engine input, widget AI Coach, dan banner Home. */
 export const AI_QUOTA_EXHAUSTED_COPY = {
   /** judul banner Home saat kolam dasar & add-on dua-duanya habis */
-  bannerTitle: 'Kuota AI bulan ini habis',
+  bannerTitle: 'Kuota AI habis',
   badge: 'Kuota habis',
   /** penjelasan panjang (banner Home / kartu Billing) */
   body:
-    'Catat manual tetap jalan penuh, nominal, catatan, kategori, semuanya bisa kamu isi sendiri. Voice & scan struk nyala lagi setelah reset tanggal 1 atau setelah top up token.',
+    'Catat manual tetap jalan penuh, nominal, catatan, kategori, semuanya bisa kamu isi sendiri. Voice & scan struk nyala lagi setelah kamu tambah token AI.',
   /** alasan tombol voice dimatikan (engine input & widget AI Coach) */
-  voiceOff: 'Input suara sedang mati karena kuota AI habis. Catat manual tetap bisa, kok 🌿',
+  voiceOff: 'Input suara sedang mati karena kuota AI habis. Catat manual tetap bisa, kok 🧩',
   /** alasan tombol scan struk dimatikan */
-  ocrOff: 'Scan struk sedang mati karena kuota AI habis. Isi nominalnya manual dulu ya 🌿',
-  /** satu baris di gauge: menyebut sisa + jalan keluarnya, tanpa nada menuduh */
-  gaugeNote: (resetDate: string) =>
-    `Kuota AI habis, reset ${resetDate}, atau tambah token kalau mau lanjut sekarang.`,
+  ocrOff: 'Scan struk sedang mati karena kuota AI habis. Isi nominalnya manual dulu ya 🧩',
+  /** satu baris di gauge: menyebut keadaan + jalan keluarnya, tanpa nada menuduh */
+  gaugeNote: 'Kuota AI habis. Tambah token AI kalau mau lanjut sekarang.',
   /** label pembaca layar untuk bar yang benar-benar kosong */
   progressLabel: 'Kuota AI habis',
 } as const
@@ -560,13 +513,11 @@ export function planQuota(planId: PlanId | null | undefined): PlanQuota {
 /** label pendek untuk paket tanpa batas (dipakai kartu sidebar & Billing) */
 export const AI_UNLIMITED_BADGE = 'Tanpa batas'
 
-/** label batas kuota untuk paket yang TIDAK dibatasi (dipakai kartu & ToS) */
-export const AI_UNLIMITED_NOTE =
-  'Tanpa batas kuota. Fair-use berlaku: dipakai wajar ya, kalau pemakaiannya ekstrem, kami hubungi dulu, bukan memotong diam-diam.'
+/** badge untuk paket yang TIDAK dibatasi (dipakai kartu kuota) */
 
 /** kartu kuota saat paket TIDAK punya AI sama sekali (Paket Catet Aja) */
 export const AI_PLAN_LOCKED_COPY = {
   cardTitle: 'AI belum aktif di paketmu',
-  body: 'Paket Catet Aja fokus ke pencatatan manual. AI Coach, scan struk, dan voice input aktif mulai Paket Waras.',
+  body: 'Paket Catet Aja fokus ke pencatatan manual. Minca, scan struk, dan voice input aktif mulai Paket Waras.',
 } as const
 

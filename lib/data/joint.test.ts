@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+﻿import { describe, expect, it } from 'vitest'
 import {
   INITIAL_JOINT_TRANSACTIONS,
   JOINT_ME,
@@ -278,4 +278,107 @@ describe('PRIVATE_EXPENSE_POLICY mengubah angka settlement (bisa dibalik satu ba
     expect(countsForSettlement(privat, { privatePolicy: 'excluded' })).toBe(false)
   })
 })
+describe('computeSettlement · kantong 3–4 orang', () => {
+  const A = 'anggota-a'
+  const B = 'anggota-b'
+  const C = 'anggota-c'
+  const people = [
+    { id: A, name: 'Kamu', avatar: '🧑', tint: 'bg-sage', dot: 'bg-sage', rail: 'border-sage' },
+    { id: B, name: 'Alawi', avatar: '👩', tint: 'bg-hud-amber', dot: 'bg-hud-amber', rail: 'border-hud-amber' },
+    { id: C, name: 'Budi', avatar: '🧔', tint: 'bg-sage', dot: 'bg-sage', rail: 'border-sage' },
+  ]
+  const roster = [A, B, C]
+  const txs: JointTransaction[] = [
+    {
+      id: 'tiga-1',
+      userId: A,
+      paidByUserId: A,
+      description: 'Makan bertiga',
+      amount: 300_000,
+      category: 'Makanan',
+      date: JOINT_TODAY_ISO,
+      time: '12:00',
+      split: { type: 'equal' },
+    },
+  ]
+
+  it('membagi rata ke SEMUA anggota dan memakai NAMA sungguhan', () => {
+    const settlement = computeSettlement(txs, {
+      month: JOINT_MONTH_KEY,
+      members: roster,
+      people,
+      viewerId: A,
+    })
+
+    expect(settlement.totalSpent).toBe(300_000)
+    expect(settlement.members).toHaveLength(3)
+    /* tiap orang menanggung 100.000, bukan 150.000 (bagi dua) */
+    expect(settlement.members.map((row) => row.owed)).toEqual([100_000, 100_000, 100_000])
+    /* nama datang dari roster, BUKAN konstanta contoh Jon/Dany */
+    expect(settlement.members.map((row) => row.person.name)).toEqual(['Kamu', 'Alawi', 'Budi'])
+    expect(settlement.whoIsOwed.name).toBe('Kamu')
+    expect(settlement.whoOwes.name).toBe('Alawi')
+  })
+
+  it('rencana transfer menutup SEMUA posisi (maks n−1 transfer) tanpa rupiah hilang', () => {
+    const settlement = computeSettlement(txs, {
+      month: JOINT_MONTH_KEY,
+      members: roster,
+      people,
+      viewerId: A,
+    })
+
+    expect(settlement.transfers).toHaveLength(2)
+    expect(settlement.transfers.every((row) => row.to.id === A)).toBe(true)
+    expect(settlement.transfers.reduce((sum, row) => sum + row.amount, 0)).toBe(200_000)
+    expect(settlement.members.reduce((sum, row) => sum + row.net, 0)).toBe(0)
+  })
+})
+
+describe('pemasukan bersama tidak dihitung sebagai pengeluaran', () => {
+  const A = JOINT_ME.id
+  const B = JOINT_PARTNER.id
+  const expense: JointTransaction = {
+    id: 'masuk-1',
+    userId: A,
+    paidByUserId: A,
+    description: 'Belanja bareng',
+    amount: 100_000,
+    category: 'Makanan',
+    date: JOINT_TODAY_ISO,
+    time: '10:00',
+    split: { type: 'equal' },
+  }
+  const income: JointTransaction = {
+    id: 'masuk-2',
+    userId: B,
+    paidByUserId: B,
+    kind: 'income',
+    description: 'Talangan kas bersama',
+    amount: 50_000,
+    category: 'Lainnya',
+    date: JOINT_TODAY_ISO,
+    time: '11:00',
+    split: { type: 'equal' },
+  }
+
+  it('totalSpent hanya berisi pengeluaran; income punya angka sendiri', () => {
+    const settlement = computeSettlement([expense, income], { month: JOINT_MONTH_KEY })
+
+    expect(settlement.totalSpent).toBe(100_000)
+    expect(settlement.totalIncome).toBe(50_000)
+    expect(settlement.myTotalSpent).toBe(100_000)
+    expect(settlement.partnerTotalSpent).toBe(0)
+  })
+
+  it('talangan masuk ke posisi bersih penyetornya (bukan jadi beban)', () => {
+    const settlement = computeSettlement([expense, income], { month: JOINT_MONTH_KEY })
+
+    /* tanpa income: A +50.000, B −50.000. Income 50.000 dari B menutup utangnya. */
+    expect(settlement.myNet).toBe(50_000)
+    expect(settlement.partnerNet).toBe(0)
+    expect(settlement.partnerOwed).toBe(50_000)
+  })
+})
+
 

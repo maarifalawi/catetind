@@ -140,7 +140,7 @@ export function WealthInvestasi({
               ada di kepala kartu panel (wealth-screen), jadi tidak diduplikasi
               di sini. */}
           <div className="flex items-center justify-between gap-3">
-            <p className="text-[12px] font-medium uppercase tracking-[0.16em] text-forest/40">
+            <p className="text-[12px] font-medium uppercase tracking-[0.16em] text-forest-muted">
               {investments.length} aset
             </p>
             <button
@@ -148,7 +148,7 @@ export function WealthInvestasi({
               onClick={() => setDetailOpen((prev) => !prev)}
               aria-expanded={detailOpen}
               aria-label="Lipat atau buka daftar aset"
-              className="flex size-8 items-center justify-center rounded-full text-forest/40 outline-none transition-colors hover:bg-sage hover:text-forest focus-visible:ring-2 focus-visible:ring-forest/30"
+              className="flex size-8 items-center justify-center rounded-full text-forest-muted outline-none transition-colors hover:bg-sage hover:text-forest focus-visible:ring-2 focus-visible:ring-forest/30"
             >
               <ChevronDown
                 className={cn(
@@ -282,7 +282,7 @@ function AssetCard({
                 {asset.name}
               </span>
               <span className="mt-1 flex flex-wrap items-center gap-1.5">
-                <span className="shrink-0 rounded-full bg-ink/[0.05] px-1.5 py-0.5 text-[10.5px] font-medium uppercase tracking-wide text-forest/50">
+                <span className="shrink-0 rounded-full bg-ink/[0.05] px-1.5 py-0.5 text-[10.5px] font-medium uppercase tracking-wide text-forest-muted">
                   {asset.symbol}
                 </span>
                 {/* badge konteks uang aset ini (paket 47) — aset yang muncul di
@@ -290,7 +290,7 @@ function AssetCard({
                 <span className="shrink-0 rounded-full bg-sage/70 px-1.5 py-0.5 text-[10.5px] font-medium uppercase tracking-wide text-forest ring-1 ring-inset ring-forest/10">
                   {CONTEXT_LABEL[asset.scope]}
                 </span>
-                <span className="truncate text-[12.5px] text-forest/50 tabular-nums">
+                <span className="truncate text-[12.5px] text-forest-muted tabular-nums">
                   {formatAssetQuantity(asset)}
                 </span>
               </span>
@@ -302,8 +302,8 @@ function AssetCard({
             <ChevronRight
               aria-hidden
               className={cn(
-                'size-4 shrink-0 text-forest/25 transition-all duration-300 group-hover:translate-x-0.5 group-hover:text-forest/60',
-                expanded && 'rotate-90 text-forest/70',
+                'size-4 shrink-0 text-forest-muted transition-all duration-300 group-hover:translate-x-0.5 group-hover:text-forest-muted',
+                expanded && 'rotate-90 text-forest-soft',
               )}
               strokeWidth={2.4}
             />
@@ -313,12 +313,12 @@ function AssetCard({
               kiri = modal + umur harga (+ pintu Update Harga), kanan = hasil. */}
           <span className="mt-3 flex items-end justify-between gap-3">
             <span className="min-w-0">
-              <span className="block truncate text-[11.5px] text-forest/40 tabular-nums">
+              <span className="block truncate text-[11.5px] text-forest-muted tabular-nums">
                 Avg {maskMoney(asset.avgBuyPrice, masked)}
               </span>
               {/* "Terakhir diperbarui" per aset — satu-satunya tempat stempel harga
                   yang sah, karena jadwal update tiap aset berbeda (audit #4) */}
-              <span className="mt-0.5 block text-[11px] leading-snug text-forest/35 tabular-nums">
+              <span className="mt-0.5 block text-[11px] leading-snug text-forest-muted tabular-nums">
                 {priceUpdatedLabel(formatPriceStamp(asset.lastUpdate))}
               </span>
               {/* pintu UPDATE HARGA yang SELALU ada (bukan hanya saat harga basi):
@@ -376,7 +376,7 @@ function AssetCard({
             onClick={onEdit}
             aria-label={WEALTH_ROW_ACTION.editAria(asset.name)}
             title={WEALTH_ROW_ACTION.edit}
-            className="flex size-8 items-center justify-center rounded-full bg-soil/[0.08] text-forest/60 transition-colors hover:bg-sage hover:text-forest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/30"
+            className="flex size-8 items-center justify-center rounded-full bg-soil/[0.08] text-forest-muted transition-colors hover:bg-sage hover:text-forest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/30"
           >
             <Pencil className="size-3.5" strokeWidth={2.4} aria-hidden />
           </button>
@@ -404,7 +404,7 @@ function AssetCard({
             className="overflow-hidden"
           >
             <div className="mt-2 rounded-[1.35rem] bg-cream/70 px-3.5 py-3.5 ring-1 ring-inset ring-soil/8">
-              <p className="flex items-center gap-1.5 text-[11.5px] font-medium uppercase tracking-[0.14em] text-forest/40">
+              <p className="flex items-center gap-1.5 text-[11.5px] font-medium uppercase tracking-[0.14em] text-forest-muted">
                 <History className="size-3.5" strokeWidth={2.6} />
                 {ASSET_HISTORY_TITLE}
               </p>
@@ -414,11 +414,11 @@ function AssetCard({
                   baris di ledger TIDAK dibiarkan menampilkan daftar kosong —
                   user diberi tahu apa adanya + jalan keluarnya. */}
               {history.length === 0 ? (
-                <div className="mt-2.5 rounded-2xl bg-cream px-3.5 py-3 ring-1 ring-inset ring-soil/8">
-                  <p className="text-[12.5px] font-medium leading-relaxed text-forest/60">
+                <div data-catetind-empty className="mt-2.5 rounded-2xl bg-cream px-3.5 py-3 ring-1 ring-inset ring-soil/8">
+                  <p className="text-[12.5px] font-medium leading-relaxed text-forest-muted">
                     {ASSET_HISTORY_EMPTY}
                   </p>
-                  <p className="mt-1 text-[11.5px] leading-relaxed text-forest/40">
+                  <p className="mt-1 text-[11.5px] leading-relaxed text-forest-muted">
                     {ASSET_HISTORY_EMPTY_HINT}
                   </p>
                 </div>
@@ -437,11 +437,11 @@ function AssetCard({
                         >
                           {tx.side === 'buy' ? 'Beli' : 'Jual'}
                         </span>
-                        <span className="min-w-0 flex-1 truncate text-forest/60 tabular-nums">
+                        <span className="min-w-0 flex-1 truncate text-forest-muted tabular-nums">
                           {formatShortDate(tx.date)} · {formatNumber(tx.quantity, 6)}{' '}
                           {meta.unit || asset.symbol}
                         </span>
-                        <span className="shrink-0 font-medium text-forest/70 tabular-nums">
+                        <span className="shrink-0 font-medium text-forest-soft tabular-nums">
                           {maskMoney(tx.price, masked)}
                         </span>
                       </li>

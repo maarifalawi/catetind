@@ -265,11 +265,7 @@ export function SecuritySettingsPanel() {
   }
 
   return (
-    <SettingsPanel
-      eyebrow="Keamanan"
-      title="Keamanan & Privasi"
-      desc="Kunci app di perangkat ini, plus jalan keluar yang jelas kalau kamu mau pergi."
-    >
+    <SettingsPanel title="Keamanan & Privasi">
       {/* ── KUNCI APP ────────────────────────────────────────────────────── */}
       <SettingsCard title="Kunci Aplikasi">
         <div className="mt-2 divide-y divide-soil/10">
@@ -325,19 +321,15 @@ export function SecuritySettingsPanel() {
         )}
 
         {!biometricAvailable && (
-          <p className="mt-3 flex items-start gap-2 rounded-2xl bg-sage/50 px-4 py-3 text-[12.5px] leading-relaxed text-forest/55">
-            <Fingerprint className="mt-0.5 size-3.5 shrink-0 text-forest/40" aria-hidden />
+          <p className="mt-3 flex items-start gap-2 rounded-2xl bg-sage/50 px-4 py-3 text-[12.5px] leading-relaxed text-forest-muted">
+            <Fingerprint className="mt-0.5 size-3.5 shrink-0 text-forest-muted" aria-hidden />
             {LOCK_SETTINGS_COPY.biometricUnsupported}
           </p>
         )}
       </SettingsCard>
 
       {/* ── ZONA BERBAHAYA ───────────────────────────────────────────────── */}
-      <SettingsCard
-        tone="danger"
-        title="Zona Berbahaya"
-        desc={RETENTION_POLICY.summary}
-      >
+      <SettingsCard tone="danger" title="Zona Berbahaya">
         {/* KEBIJAKAN RETENSI — ditulis di UI, bukan disembunyikan di komentar kode.
             User yang mau menghapus akun berhak tahu apa yang hilang, apa yang
             tersisa, dan apakah ada salinan di tempat lain (di demo ini: tidak ada). */}
@@ -364,10 +356,7 @@ export function SecuritySettingsPanel() {
           })}
         </ul>
 
-        <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
-          <p className="min-w-0 text-[13.5px] leading-relaxed text-forest/55">
-            {DELETE_ACCOUNT_COPY.cardBody}
-          </p>
+        <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end sm:gap-6">
           <button
             type="button"
             onClick={openDeleteDialog}
@@ -387,7 +376,7 @@ export function SecuritySettingsPanel() {
           sudah tidak berlaku. Labelnya diambil dari file datanya masing-masing
           supaya satu dokumen tidak pernah disebut dengan dua nama berbeda
           (dipakai juga di kaki Pusat Bantuan). */}
-      <SettingsCard title={PRIVACY_LINK_COPY.cardTitle} desc={PRIVACY_LINK_COPY.hint}>
+      <SettingsCard title={PRIVACY_LINK_COPY.cardTitle}>
         {/* dua dokumen, dua tombol — dibungkus flex supaya tetap satu baris di
             desktop dan bertumpuk dengan rapi di 375 px */}
         <div className="mt-4 flex flex-wrap gap-2">
@@ -408,9 +397,6 @@ export function SecuritySettingsPanel() {
             <ArrowUpRight className="size-4" strokeWidth={2.4} aria-hidden />
           </Link>
         </div>
-        <p className="mt-3 text-[12.5px] leading-relaxed text-forest/55">
-          {PRIVACY_LINK_COPY.pairNote}
-        </p>
       </SettingsCard>
 
       {/* ── DIALOG: buat / ubah / matikan PIN ───────────────────────────────
@@ -545,7 +531,7 @@ export function SecuritySettingsPanel() {
                 <Download className="size-3.5" strokeWidth={2.4} aria-hidden />
                 {DELETE_ACCOUNT_COPY.downloadFirstCta}
               </button>
-              <p className="mt-2 text-[12.5px] leading-relaxed text-forest/50">
+              <p className="mt-2 text-[12.5px] leading-relaxed text-forest-muted">
                 {DELETE_ACCOUNT_COPY.downloadFirstHint}
               </p>
             </div>
@@ -658,11 +644,7 @@ export function DataExportSettingsPanel() {
   }
 
   return (
-    <SettingsPanel
-      eyebrow={EXPORT_DATA_COPY.eyebrow}
-      title={EXPORT_DATA_COPY.title}
-      desc={EXPORT_DATA_COPY.desc}
-    >
+    <SettingsPanel title={EXPORT_DATA_COPY.title}>
       <SettingsCard title={EXPORT_DATA_COPY.cardTitle}>
         <div className="mt-3 flex items-start gap-3.5">
           <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-sage text-forest">
@@ -670,7 +652,7 @@ export function DataExportSettingsPanel() {
           </span>
           <ul className="min-w-0 flex flex-col gap-1.5">
             {EXPORT_DATA_COPY.includes.map((item) => (
-              <li key={item} className="flex items-start gap-2 text-[14px] leading-relaxed text-forest/60">
+              <li key={item} className="flex items-start gap-2 text-[14px] leading-relaxed text-forest-muted">
                 <span aria-hidden className="mt-[7px] size-1.5 shrink-0 rounded-full bg-forest/40" />
                 <span>{item}</span>
               </li>
@@ -678,7 +660,7 @@ export function DataExportSettingsPanel() {
           </ul>
         </div>
 
-        <p className="mt-3 flex items-start gap-2 text-[12.5px] leading-relaxed text-forest/45">
+        <p className="mt-3 flex items-start gap-2 text-[12.5px] leading-relaxed text-forest-muted">
           <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-forest" strokeWidth={2.2} aria-hidden />
           {EXPORT_DATA_COPY.metadataNote}
         </p>
@@ -706,9 +688,9 @@ export function DataExportSettingsPanel() {
             {EXPORT_DATA_COPY.emailDemoBadge}
           </span>
         </p>
-        <p className="mt-2 text-[14px] leading-relaxed text-forest/60">{EXPORT_DATA_COPY.emailBody}</p>
+        <p className="mt-2 text-[14px] leading-relaxed text-forest-muted">{EXPORT_DATA_COPY.emailBody}</p>
 
-        <p className="mt-3 inline-flex items-center gap-1.5 text-[12.5px] text-forest/45">
+        <p className="mt-3 inline-flex items-center gap-1.5 text-[12.5px] text-forest-muted">
           <Mail className="size-3.5 shrink-0" strokeWidth={2.2} aria-hidden />
           {EXPORT_DATA_COPY.emailTargetLabel}: {user?.email ?? EMAIL_UNKNOWN}
         </p>

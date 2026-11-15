@@ -1,33 +1,10 @@
-'use client'
+﻿'use client'
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ChangeEvent,
-  type KeyboardEvent,
-  type ReactNode,
-} from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent, type ReactNode, } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { toast } from 'sonner'
 import {
-  ArrowLeftRight,
-  Camera,
-  Check,
-  Lock,
-  Mic,
-  PiggyBank,
-  ScanLine,
-  Sparkles,
-  Tag,
-  TrendingDown,
-  TrendingUp,
-  Wallet,
-  X,
-  type LucideIcon,
-} from 'lucide-react'
+  ArrowLeftRight, Camera, Check, Lock, Mic, PiggyBank, ScanLine, Tag, TrendingDown, TrendingUp, Wallet, X, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { newClientTxId } from '@/lib/client-tx'
 import { AI_QUOTA_EXHAUSTED_COPY } from '@/lib/ai-quota'
@@ -40,6 +17,12 @@ import {
 import { amountInputFont } from '@/lib/typography'
 import { useAiQuota } from '@/hooks/use-ai-quota'
 import { FEATURE_LOCK_COPY } from '@/lib/data/upgrade'
+import {
+  shouldResetTransactionForm,
+  transactionFormOpenKey,
+  transactionFormResume,
+  type TransactionFormResume,
+} from '@/lib/data/transaction-form-reset'
 import { useSubscriptionGate } from '@/components/catetind/subscription-gate-provider'
 import { useUpgradeGate } from '@/components/catetind/upgrade-gate-provider'
 import { SubscriptionLockNote } from '@/components/catetind/subscription-lock-note'
@@ -309,9 +292,11 @@ export function TransactionInputEngine({
   sourceLabel,
   sourceId,
   extraFields,
-  onAmountChange,
+  onDraftChange,
+  resumeDraft,
   onTransferRequest,
   types = ALL_TYPE_IDS,
+  bypassPlanGate = false,
 }: {
   /** panel sedang terbuka — pemicu reset form + auto-focus (bekerja baik saat
       engine di-unmount maupun dibiarkan ter-mount oleh shell yang inert) */
@@ -344,9 +329,28 @@ export function TransactionInputEngine({
   /** opsional: field tambahan khusus konteks (dipakai halaman Joint Wallet
       untuk pemilih split & toggle privasi) — dirender di bawah tombol Catat */
   extraFields?: ReactNode
-  /** opsional: laporan nominal yang sedang diketik (dipakai Split Bill Sheet
-      supaya tahu total yang dibagi) */
-  onAmountChange?: (amount: number) => void
+  /**
+   * opsional: isian yang DIPULIHKAN saat panel dibuka (bukan form kosong).
+   *
+   * Dipakai halaman Dompet Bersama: user membuka "Atur Pembagian" — yang
+   * menutup sheet ini sebentar karena dua Drawer tidak boleh hidup bersamaan —
+   * lalu kembali. Tanpa draft ini, effect reset mengosongkan nominal, catatan,
+   * dan kategori yang barusan diketik. Shell lain tidak mengirimnya, jadi
+   * perilakunya persis seperti sebelumnya.
+   */
+  resumeDraft?: TransactionFormResume | null
+  /**
+   * opsional: kabari shell setiap isian berubah (nominal, catatan, kategori,
+   * tipe). Shell yang menyimpannya bisa memulangkan isian itu lewat
+   * `resumeDraft` — jadi yang diketik user tidak hilang saat ia mampir ke
+   * langkah lain di alur yang sama.
+   */
+  onDraftChange?: (draft: {
+    amount: number
+    note: string
+    category: string
+    type: TransactionTypeId
+  }) => void
   /**
    * Pintu "Pindah Dana" (paket 70). Dikirim = pill Pindah Dana ikut tampil di
    * baris tipe, dan menekannya HANYA memanggil callback ini — shell yang menutup
@@ -379,6 +383,14 @@ export function TransactionInputEngine({
    * reset form.
    */
   types?: readonly TransactionTypeId[]
+  /**
+   * true = jangan tahan tombol simpan karena paket.
+   *
+   * Dipakai Dompet Bersama: anggota yang DIUNDANG (akun gratis) wajib bisa
+   * mencatat selama dompetnya aktif — yang berlangganan cukup pembuat dompet.
+   * Fitur AI (scan/voice) TETAP mengikuti paket karena itu bukan fitur dompet.
+   */
+  bypassPlanGate?: boolean
 }) {
   const isDialog = layout === 'dialog'
   const isEdit = initial !== null
@@ -387,6 +399,12 @@ export function TransactionInputEngine({
      kalender, edit transaksi), supaya nol titik yang bisa terlewat. Form-nya
      tetap bisa dibuka & dibaca — yang berhenti hanya penyimpanannya. */
   const { inputLocked, planKnown, canUse } = useSubscriptionGate()
+  /**
+   * Kunci input yang BERLAKU di form ini. `bypassPlanGate` dipakai Dompet
+   * Bersama: anggota gratis yang diundang tetap bisa mencatat (pembuat dompet
+   * yang berlangganan). Fitur AI tidak ikut dibuka — lihat `captureLocked`.
+   */
+  const planLocked = inputLocked && !bypassPlanGate
   /* PINTU OCR & VOICE ADALAH FITUR BERBAYAR (paket 84, diperketat di paket
      100): dulu keduanya cuma membaca `inputLocked` + kuota, sehingga paket
      Catet Aja tetap bisa "scan struk" dan "input suara" — dulu bahkan lewat
@@ -527,6 +545,35 @@ export function TransactionInputEngine({
   const showTransferDoor = !isEdit && Boolean(onTransferRequest)
   const typeColumnCount = visibleTypes.length + (showTransferDoor ? 1 : 0)
 
+  /* ── DRAFT UNTUK SHELL (opsional) ───────────────────────────────────────────
+     Halaman Dompet Bersama perlu tahu isian yang sedang berjalan supaya bisa
+     memulangkannya saat sheet ini dibuka lagi (mis. setelah mampir ke "Atur
+     Pembagian"). Nilai terakhir disimpan di ref supaya `reportDraft` punya
+     identitas stabil dan tidak memaksa `applyExtraction` di bawah ikut berubah
+     di setiap ketikan. */
+  const draftStateRef = useRef({ amountText, note, category, typeId })
+  draftStateRef.current = { amountText, note, category, typeId }
+  const reportDraft = useCallback(
+    (patch: {
+      amount?: number
+      note?: string
+      category?: string
+      type?: TransactionTypeId
+    }) => {
+      if (!onDraftChange) return
+      const current = draftStateRef.current
+      onDraftChange({
+        /* field yang tidak disebut di `patch` dibaca dari isian terakhir —
+           pemanggil yang cuma mengubah satu field tidak perlu mengirim semua */
+        amount: patch.amount ?? parseAmountInput(current.amountText).amount ?? 0,
+        note: patch.note ?? current.note,
+        category: patch.category ?? current.category,
+        type: patch.type ?? current.typeId,
+      })
+    },
+    [onDraftChange],
+  )
+
   /* ── HASIL AI → ISI FORM (paket 101) ────────────────────────────────────────
      Satu fungsi untuk KETIGA sumber (struk, ucapan, dan nanti ketikan), supaya
      aturan "apa yang boleh diisi AI" tidak berbeda antar pintu:
@@ -554,15 +601,24 @@ export function TransactionInputEngine({
            ("2.000.000"), jadi chip konfirmasi muncul dari jalur yang sudah ada */
         setAmountText(parseAmountInput(String(extracted.amount)).display)
         setAmountSettled(true)
-        onAmountChange?.(extracted.amount)
       } else {
         setAmountText('')
         setAmountSettled(false)
-        onAmountChange?.(0)
       }
 
       if (prefs.autoNaming && extracted.name) setNote(extracted.name)
       if (prefs.autoCategory && extracted.category) setCategory(extracted.category)
+      /* hasil AI juga dilaporkan sebagai draft shell: kalau user langsung mampir
+         ke "Atur Pembagian" lalu kembali, nominal & catatan hasil scan/ucapan
+         tidak ikut hilang */
+      reportDraft({
+        amount: extracted.amount > 0 ? extracted.amount : 0,
+        ...(prefs.autoNaming && extracted.name ? { note: extracted.name } : {}),
+        ...(prefs.autoCategory && extracted.category ? { category: extracted.category } : {}),
+        ...(offeredTypes.some((item) => item.id === extracted.type)
+          ? { type: extracted.type }
+          : {}),
+      })
 
       if (kind === 'voice' && extracted.wallet) {
         const choice = captureWalletChoice(walletSnapshot, context, extracted.wallet)
@@ -592,7 +648,7 @@ export function TransactionInputEngine({
       setMode('manual')
       amountRef.current?.focus()
     },
-    [context, offeredTypes, onAmountChange, walletSnapshot],
+    [context, offeredTypes, walletSnapshot, reportDraft],
   )
 
   /**
@@ -801,12 +857,37 @@ export function TransactionInputEngine({
      nominal (user langsung bisa mengetik tanpa tap tambahan); mode edit = form
      TERISI dari data lamanya dan TANPA auto-focus, karena yang perlu dibetulkan
      belum tentu nominalnya — memaksa keyboard numerik terbuka di mode edit
-     justru menambah langkah (harus ditutup dulu sebelum mengubah kategori). */
+     justru menambah langkah (harus ditutup dulu sebelum mengubah kategori).
+
+     KAPAN TIDAK RESET (temuan pemilik produk, 11 Nov 2026): render ulang biasa
+     BUKAN pembukaan baru. Dulu effect ini mengosongkan nominal & catatan setiap
+     kali salah satu dependensinya berganti IDENTITAS — dan di halaman Dompet
+     Bersama itu terjadi di setiap digit: `onDraftChange` memperbarui state
+     induk → induk render ulang → `types={['expense','income']}` (array literal)
+     dianggap array baru → reset → isian user terhapus sendiri.
+     Sekarang reset dijaga oleh KUNCI PEMBUKAAN (`'new'` / `'edit:<id>'`): hanya
+     kunci yang berbeda yang mengosongkan form, jadi prop yang berubah identitas
+     (array, callback, objek `initial` baru dari store) tidak menyentuh isian. */
+  const openKey = transactionFormOpenKey(active, initial?.id)
+  /** kunci pembukaan yang terakhir dipakai me-reset (null = panel tertutup) */
+  const lastOpenKey = useRef<string | null>(null)
+  /**
+   * DRAFT milik shell (opsional), dibaca SAAT RESET saja.
+   *
+   * Disimpan di ref, bukan jadi dependensi effect: nilai ini berubah di setiap
+   * ketikan (shell menyimpannya), dan kalau ia masuk daftar dependensi, effect
+   * reset akan jalan terus — persis bug yang ditutup paket 103.
+   */
+  const resumeRef = useRef(resumeDraft)
+  resumeRef.current = resumeDraft
   useEffect(() => {
     if (!active) {
+      lastOpenKey.current = null
       cancelAiWork()
       return
     }
+    if (!shouldResetTransactionForm(lastOpenKey.current, openKey)) return
+    lastOpenKey.current = openKey
     /* tipe awal: tipe data lama (mode edit) atau default shell. Kalau default
        shell tidak ditawarkan di panel ini (mis. kalender yang cuma punya
        pemasukan & pengeluaran), pakai tipe pertama yang memang ada — panel
@@ -814,15 +895,18 @@ export function TransactionInputEngine({
     const starterType = offeredTypes.some((item) => item.id === defaultType)
       ? defaultType
       : offeredTypes[0].id
-    setTypeId(initial?.type ?? starterType)
+    /* ISIAN AWAL: mode edit → data lamanya; mode tambah → draft yang dititipkan
+       shell (kalau ada), kalau tidak ada ya form kosong seperti biasa. */
+    const resumed = transactionFormResume(initial ? null : resumeRef.current, starterType)
+    setTypeId(initial?.type ?? resumed.type)
     /* nominal dari data lama diformat ribuan ("1.500.000") supaya bisa dibaca
        sekilas, persis seperti yang tampil setelah user mengetiknya sendiri */
-    setAmountText(initial ? parseAmountInput(String(initial.amount)).display : '')
+    setAmountText(initial ? parseAmountInput(String(initial.amount)).display : resumed.amountText)
     /* panel baru dibuka = belum ada masalah nominal yang perlu diumumkan; pesan
        /chip konfirmasi hanya muncul setelah user blur atau menekan Catat (paket 44) */
     setAmountSettled(false)
-    setNote(initial?.name ?? '')
-    setCategory(initial?.category ?? '')
+    setNote(initial?.name ?? resumed.note)
+    setCategory(initial?.category ?? resumed.category)
     /* mode TAMBAH: dompet mulai dari dompet DEFAULT konteks uang aktif (dulu
        nilai ini tidak pernah tampil di form - paket 69). Konteks yang belum
        punya dompet menjawab '', dan pemilihnya yang meminta user memilih; mode
@@ -845,10 +929,13 @@ export function TransactionInputEngine({
     /* kunci idempotensi BARU tiap panel dibuka; di mode edit dibiarkan kosong
        karena mode edit tidak pernah menulis baris baru (lihat `useTransactionSubmit`) */
     clientTxId.current = initial ? '' : newClientTxId()
-    if (initial) return
+    /* Mode edit tidak pernah auto-focus; form yang isinya DIPULIHKAN juga tidak,
+       karena keyboard yang muncul sendiri menutupi tombol "Catat" dan user
+       datang ke sini untuk melanjutkan, bukan mengetik ulang. */
+    if (initial || !resumed.focusAmount) return
     const id = window.setTimeout(() => amountRef.current?.focus(), 110)
     return () => window.clearTimeout(id)
-  }, [active, cancelAiWork, defaultType, initial, offeredTypes])
+  }, [active, cancelAiWork, defaultType, initial, offeredTypes, openKey])
 
   /* buang timer kunci & permintaan AI saat unmount supaya tidak setState di
      komponen yang sudah mati */
@@ -879,10 +966,9 @@ export function TransactionInputEngine({
     setAmountSettled(false)
     /* user mulai membetulkan angkanya = peringatan AI yang lama sudah tidak perlu */
     setAiNotice(null)
-    /* laporan ke shell luar (opsional) — dipakai Split Bill Sheet halaman Joint
-       Wallet untuk tahu total yang sedang dibagi, tanpa mengubah perilaku
-       shell lama yang tidak mengirim prop ini. */
-    onAmountChange?.(next.amount ?? 0)
+    /* laporan ke shell luar (opsional) — dipakai halaman Joint Wallet: total
+       yang sedang dibagi DAN draft yang harus dipulihkan saat form dibuka lagi */
+    reportDraft({ amount: next.amount ?? 0 })
   }
 
   /**
@@ -1038,7 +1124,7 @@ export function TransactionInputEngine({
          3. tombolnya `disabled` selama `submitting` (umpan balik visual). */
     if (submitLock.current || submitting) return
 
-    if (inputLocked) {
+    if (planLocked) {
       toast(FEATURE_LOCK_COPY.inputHint)
       return
     }
@@ -1172,6 +1258,7 @@ export function TransactionInputEngine({
                 setMode('manual')
                 setAiNotice(null)
                 amountRef.current?.focus()
+                reportDraft({ type: item.id })
               }}
               aria-pressed={active}
               className={cn(
@@ -1182,7 +1269,7 @@ export function TransactionInputEngine({
                   : 'gap-1 rounded-2xl px-1 py-2.5',
                 active
                   ? cn('font-medium ring-1', item.active)
-                  : 'bg-soil/[0.09] font-medium text-forest/45 hover:bg-soil/[0.09]',
+                  : 'bg-soil/[0.09] font-medium text-forest-muted hover:bg-soil/[0.09]',
               )}
             >
               <Icon
@@ -1217,7 +1304,7 @@ export function TransactionInputEngine({
               'flex flex-col items-center justify-center',
               'transition-all duration-150 active:scale-[0.96]',
               isDialog ? 'gap-1.5 rounded-2xl px-2 py-3.5' : 'gap-1 rounded-2xl px-1 py-2.5',
-              'bg-soil/[0.09] font-medium text-forest/45 hover:bg-soil/[0.09]',
+              'bg-soil/[0.09] font-medium text-forest-muted hover:bg-soil/[0.09]',
             )}
           >
             <ArrowLeftRight className={isDialog ? 'size-5' : 'size-[18px]'} strokeWidth={2.1} />
@@ -1265,7 +1352,13 @@ export function TransactionInputEngine({
                   chip bantuan di bawahnya ikut naik-turun tiap digit. */}
               <div
                 className={cn(
-                  'flex w-full items-center justify-center gap-2',
+                  /* CANGKANG FIELD (keluhan "placeholder terbaca seperti teks
+                     biasa"): field ini dulu benar-benar telanjang — hanya angka
+                     melayang tanpa batas, jadi tidak terlihat sebagai tempat
+                     mengisi. Garis putus-putus adalah idiom "isi di sini" yang
+                     sudah dipakai `sync-balance-modal`, dan berubah jadi mint
+                     saat fokus. */
+                  'flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-oat px-3 transition-colors focus-within:border-mint',
                   isDialog ? 'min-h-[3.25rem]' : 'min-h-[2.75rem] sm:min-h-[3.25rem]',
                 )}
               >
@@ -1275,7 +1368,7 @@ export function TransactionInputEngine({
                     /* bobot prefix sengaja setara nominal (semibold, bukan bold):
                        angka di sampingnya kini semibold, dan prefix yang lebih
                        tebal dari nominalnya justru bikin mata tertarik ke "Rp" */
-                    'w-9 shrink-0 text-right font-medium text-forest/25',
+                    'w-9 shrink-0 text-right font-medium text-forest-muted',
                     isDialog ? 'text-2xl' : 'text-xl',
                   )}
                 >
@@ -1310,7 +1403,6 @@ export function TransactionInputEngine({
                        input yang sedang diketik harus terasa ringan sementara
                        identitas angka app ini semibold. */
                     'min-w-0 flex-1 bg-transparent text-center text-forest outline-none',
-                    'placeholder:text-forest/15',
                     amountFont,
                   )}
                 />
@@ -1346,7 +1438,7 @@ export function TransactionInputEngine({
                   )}
                 >
                   {TRANSACTION_INPUT_COPY.amountConfirm(amount)}
-                  <span className="font-medium text-forest/55">
+                  <span className="font-medium text-forest-muted">
                     {TRANSACTION_INPUT_COPY.amountConfirmHint}
                   </span>
                 </p>
@@ -1354,7 +1446,7 @@ export function TransactionInputEngine({
                 <p
                   id="tx-amount-help"
                   className={cn(
-                    'mt-2.5 text-center leading-relaxed text-forest/40',
+                    'mt-2.5 text-center leading-relaxed text-forest-muted',
                     isDialog ? 'text-[13px]' : 'text-[12px]',
                   )}
                 >
@@ -1370,7 +1462,7 @@ export function TransactionInputEngine({
                 <p
                   role="status"
                   className={cn(
-                    'mt-2.5 max-w-[20rem] rounded-2xl bg-hud-amber/15 px-3 py-2 text-center leading-relaxed text-forest/70 ring-1 ring-hud-amber/25',
+                    'mt-2.5 max-w-[20rem] rounded-2xl bg-hud-amber/15 px-3 py-2 text-center leading-relaxed text-forest-soft ring-1 ring-hud-amber/25',
                     isDialog ? 'text-[13px]' : 'text-[12px]',
                   )}
                 >
@@ -1399,7 +1491,7 @@ export function TransactionInputEngine({
                           {fixedCategory.category}
                         </span>
                       </p>
-                      <p className="mt-1.5 text-[12px] leading-relaxed text-forest/45">
+                      <p className="mt-1.5 text-[12px] leading-relaxed text-forest-muted">
                         {fixedCategory.reason}
                       </p>
                     </div>
@@ -1416,6 +1508,7 @@ export function TransactionInputEngine({
                           onChange={(next) => {
                             setCategory(next)
                             setAiNotice(null)
+                            reportDraft({ category: next })
                           }}
                           variant={typeId === 'income' ? 'income' : 'expense'}
                           invalid={showCategoryNeeded}
@@ -1444,7 +1537,7 @@ export function TransactionInputEngine({
                         </span>
                       </p>
                       {showFundsShort && (
-                        <p className="mt-1.5 text-[12px] font-medium leading-relaxed text-forest/70">
+                        <p className="mt-1.5 text-[12px] font-medium leading-relaxed text-forest-soft">
                           {typeId === 'saving'
                             ? TRANSACTION_INSUFFICIENT_FUNDS_COPY.savingBody(decidedWallet)
                             : TRANSACTION_INSUFFICIENT_FUNDS_COPY.body(decidedWallet)}
@@ -1471,7 +1564,7 @@ export function TransactionInputEngine({
                       {(showWalletNeeded || showFundsShort) && (
                         <p
                           id="tx-wallet-help"
-                          className="mt-1.5 text-[12px] font-medium leading-relaxed text-forest/70"
+                          className="mt-1.5 text-[12px] font-medium leading-relaxed text-forest-soft"
                         >
                           {showWalletNeeded
                             ? TRANSACTION_INPUT_COPY.walletNeeded
@@ -1489,15 +1582,18 @@ export function TransactionInputEngine({
                 onChange={(event) => {
                   setNote(event.target.value)
                   setAiNotice(null)
+                  reportDraft({ note: event.target.value })
                 }}
-                placeholder="Catatan (Opsional)"
-                aria-label="Catatan transaksi (opsional)"
-                className="mt-4 h-12 w-full rounded-2xl bg-soil/[0.09] px-4 text-[14.5px] font-medium text-forest outline-none ring-1 ring-transparent transition-all placeholder:text-forest/30 focus:bg-cream focus:ring-forest/15"
+                placeholder={TRANSACTION_INPUT_COPY.notePlaceholder}
+                aria-label={TRANSACTION_INPUT_COPY.noteLabel}
+                className="mt-4 h-12 w-full rounded-2xl bg-soil/[0.09] px-4 text-[14.5px] font-medium text-forest outline-none ring-1 ring-transparent transition-all placeholder:text-forest-muted focus:bg-cream focus:ring-forest/15"
               />
               {/* H3-4 (audit UI/UX) sempat menambahkan dorongan "Tambah 1 kata
                   aja…" di bawah field catatan. Baris itu DIHAPUS atas permintaan
-                  pemilik produk: placeholder "Catatan (Opsional)" sudah cukup
-                  menjelaskan, dan form yang lebih ringkas lebih penting. */}
+                  pemilik produk: placeholder sudah cukup menjelaskan, dan form yang
+                  lebih ringkas lebih penting. Sejak revisi ToV, placeholder-nya
+                  memberi CONTOH NYATA (`notePlaceholder` di `lib/data/history.ts`)
+                  supaya kolom ini tidak terasa seperti formulir pajak. */}
 
               {/* ── MODE EDIT: tiga field detail yang nilainya SUDAH ADA ────────
                   Di mode tambah, kategori/dompet/tanggal tidak ditentukan AI:
@@ -1552,9 +1648,6 @@ export function TransactionInputEngine({
                       />
                     </EditField>
                   </div>
-                  <p className="mt-2 text-[12px] leading-relaxed text-forest/45">
-                    {EDIT_TRANSACTION_COPY.hint}
-                  </p>
                 </div>
               )}
             </motion.div>
@@ -1573,10 +1666,9 @@ export function TransactionInputEngine({
                 <span className="absolute inset-0 animate-ping rounded-full bg-mint/40" />
               </span>
               <p className="mt-4 flex items-center gap-1.5 text-sm font-medium text-forest">
-                <Sparkles className="size-4 text-forest" strokeWidth={2.4} />
                 {AI_CAPTURE_COPY.readingTitle}
               </p>
-              <p className="mt-1 text-xs text-forest/45">{AI_CAPTURE_COPY.readingHint}</p>
+              <p className="mt-1 text-xs text-forest-muted">{AI_CAPTURE_COPY.readingHint}</p>
             </motion.div>
           )}
 
@@ -1613,10 +1705,10 @@ export function TransactionInputEngine({
               {/* Transkrip interim ditampilkan SEBELUM diproses (PRD 516). Kalau
                   belum ada suara, yang tampil contoh ucapan — bukan kalimat palsu
                   seolah AI sudah mendengar sesuatu. */}
-              <p className="mt-1 text-xs text-forest/45" aria-live="polite">
+              <p className="mt-1 text-xs text-forest-muted" aria-live="polite">
                 {voice.transcript.trim() || AI_CAPTURE_COPY.voiceExample}
               </p>
-              <p className="mt-1 text-[11.5px] text-forest/35">
+              <p className="mt-1 text-[11.5px] text-forest-muted">
                 {AI_CAPTURE_COPY.listeningFinishHint}
               </p>
             </motion.div>
@@ -1634,13 +1726,12 @@ export function TransactionInputEngine({
               className="flex flex-col items-center text-center"
             >
               <span className="relative flex size-14 items-center justify-center rounded-full bg-sage text-forest">
-                <Sparkles className="size-6" strokeWidth={2} />
                 <span className="absolute inset-0 animate-ping rounded-full bg-mint/40" />
               </span>
               <p className="mt-4 text-sm font-medium text-forest">
                 {AI_CAPTURE_COPY.parsingVoiceTitle}
               </p>
-              <p className="mt-1 text-xs text-forest/45">{AI_CAPTURE_COPY.parsingHint}</p>
+              <p className="mt-1 text-xs text-forest-muted">{AI_CAPTURE_COPY.parsingHint}</p>
             </motion.div>
           )}
         </AnimatePresence>
@@ -1693,12 +1784,12 @@ export function TransactionInputEngine({
               ? 'h-14 gap-2 rounded-2xl px-5 text-[14px] font-medium max-lg:px-3.5'
               : 'size-14 rounded-full',
             quotaExhausted && !ocrLocked
-              ? 'cursor-not-allowed bg-soil/[0.07] text-forest/30 ring-1 ring-soil/12'
+              ? 'cursor-not-allowed bg-soil/[0.07] text-forest-muted ring-1 ring-soil/12'
               : ocrLocked
-                ? 'bg-soil/[0.07] text-forest/45 ring-1 ring-soil/12 hover:bg-soil/[0.12]'
+                ? 'bg-soil/[0.07] text-forest-muted ring-1 ring-soil/12 hover:bg-soil/[0.12]'
                 : mode === 'ocr'
                   ? 'bg-forest text-cream'
-                  : 'bg-soil/[0.1] text-forest/70 ring-1 ring-soil/12 hover:bg-soil/[0.1]',
+                  : 'bg-soil/[0.1] text-forest-soft ring-1 ring-soil/12 hover:bg-soil/[0.1]',
           )}
         >
           {ocrLocked ? (
@@ -1736,9 +1827,9 @@ export function TransactionInputEngine({
                · `submitting`   → satu simpanan sedang jalan ("Menyimpan…")
                · belum ada kategori (paket 54) → petunjuk "Pilih kategori dulu"
                  tepat di bawah pemilihnya (`tx-category-help`) */
-          disabled={inputLocked || submitting || categoryChoice.needsChoice || walletNeeded}
+          disabled={planLocked || submitting || categoryChoice.needsChoice || walletNeeded}
           aria-disabled={
-            inputLocked || submitting || categoryChoice.needsChoice || walletNeeded || undefined
+            planLocked || submitting || categoryChoice.needsChoice || walletNeeded || undefined
           }
           aria-describedby={
             categoryChoice.needsChoice
@@ -1749,8 +1840,8 @@ export function TransactionInputEngine({
           }
           className={cn(
             'flex h-14 flex-1 items-center justify-center gap-2 rounded-2xl text-base font-medium transition-all duration-150',
-            inputLocked || submitting || categoryChoice.needsChoice || walletNeeded
-              ? 'cursor-not-allowed bg-ink/[0.07] text-forest/35'
+            planLocked || submitting || categoryChoice.needsChoice || walletNeeded
+              ? 'cursor-not-allowed bg-ink/[0.07] text-forest-muted'
               : 'bg-forest text-cream shadow-[0_14px_28px_-14px_rgba(0,0,0,0.7)] hover:bg-forest-soft active:scale-[0.98]',
           )}
         >
@@ -1788,14 +1879,14 @@ export function TransactionInputEngine({
               ? 'h-14 gap-2 rounded-2xl px-5 text-[14px] font-medium max-lg:px-3.5'
               : 'size-14 rounded-full',
             quotaExhausted && !voiceLocked
-              ? 'cursor-not-allowed bg-soil/[0.07] text-forest/30 ring-1 ring-soil/12'
+              ? 'cursor-not-allowed bg-soil/[0.07] text-forest-muted ring-1 ring-soil/12'
               : voiceLocked
-                ? 'bg-soil/[0.07] text-forest/45 ring-1 ring-soil/12 hover:bg-soil/[0.12]'
+                ? 'bg-soil/[0.07] text-forest-muted ring-1 ring-soil/12 hover:bg-soil/[0.12]'
                 : mode === 'voice'
                   ? 'bg-forest text-cream'
                   : mode === 'parsing'
                     ? 'bg-forest/70 text-cream'
-                    : 'bg-soil/[0.1] text-forest/70 ring-1 ring-soil/12 hover:bg-soil/[0.1]',
+                    : 'bg-soil/[0.1] text-forest-soft ring-1 ring-soil/12 hover:bg-soil/[0.1]',
           )}
         >
           {voiceLocked ? (
@@ -1822,7 +1913,7 @@ export function TransactionInputEngine({
       </div>
 
       {/* penjelasan kenapa tombol Catat mati — hanya saat paket belum aktif */}
-      {inputLocked && (
+      {planLocked && (
         <SubscriptionLockNote className={isDialog ? 'mt-3' : 'mt-2.5'} />
       )}
 
@@ -1834,7 +1925,7 @@ export function TransactionInputEngine({
           id="tx-ai-locked"
           role="status"
           className={cn(
-            'flex flex-wrap items-center gap-x-1.5 gap-y-1 rounded-2xl bg-sage/40 px-3.5 py-2.5 leading-relaxed text-forest/70 ring-1 ring-soil/12',
+            'flex flex-wrap items-center gap-x-1.5 gap-y-1 rounded-2xl bg-sage/40 px-3.5 py-2.5 leading-relaxed text-forest-soft ring-1 ring-soil/12',
             isDialog ? 'mt-3 text-[13.5px]' : 'mt-2.5 text-[12.5px]',
           )}
         >
@@ -1863,31 +1954,17 @@ export function TransactionInputEngine({
           id="tx-ai-off"
           role="status"
           className={cn(
-            'rounded-2xl bg-hud-amber/15 px-3.5 py-2.5 leading-relaxed text-forest/65 ring-1 ring-hud-amber/25',
+            'rounded-2xl bg-hud-amber/15 px-3.5 py-2.5 leading-relaxed text-forest-soft ring-1 ring-hud-amber/25',
             isDialog ? 'mt-3 text-[13.5px]' : 'mt-2.5 text-[12.5px]',
           )}
         >
-          <span className="mr-1.5 inline-flex items-center rounded-full bg-hud-amber/40 px-2 py-0.5 text-[11px] font-medium tracking-[0.08em] text-forest/70 uppercase">
+          <span className="mr-1.5 inline-flex items-center rounded-full bg-hud-amber/40 px-2 py-0.5 text-[11px] font-medium tracking-[0.08em] text-forest-soft uppercase">
             {AI_QUOTA_EXHAUSTED_COPY.badge}
           </span>
           {AI_QUOTA_EXHAUSTED_COPY.body}
         </p>
       )}
 
-      {/* petunjuk pintasan keyboard — cuma relevan di web */}
-      {isDialog && (
-        <p className="mt-4 text-center text-[12.5px] text-forest/35">
-          Tekan{' '}
-          <kbd className="rounded-md bg-soil/[0.11] px-1.5 py-0.5 font-sans text-[11.5px] font-medium text-forest/50">
-            Enter
-          </kbd>{' '}
-          buat simpan ·{' '}
-          <kbd className="rounded-md bg-soil/[0.11] px-1.5 py-0.5 font-sans text-[11.5px] font-medium text-forest/50">
-            Esc
-          </kbd>{' '}
-          buat tutup
-        </p>
-      )}
     </div>
   )
 }
@@ -1898,7 +1975,7 @@ export function TransactionInputEngine({
 function EditField({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label className="block text-left">
-      <span className="mb-1 block text-[12px] font-medium text-forest/50">{label}</span>
+      <span className="mb-1 block text-[12px] font-medium text-forest-muted">{label}</span>
       {children}
     </label>
   )

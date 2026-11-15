@@ -57,7 +57,6 @@ export function WealthDeleteDialog({
           <b className="font-medium text-forest tabular-nums">{amountLabel}</b> {tail}
         </>
       }
-      note={copy.cashNote}
       safety={copy.safety}
       cancelLabel={copy.cancel}
       confirmLabel={copy.confirm}

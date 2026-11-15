@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import {
   memo,
@@ -31,45 +31,45 @@ import { type DeckSelection, type Wallet, type WalletArt, type WalletDraft } fro
 import { applyWalletDeckTheme } from '@/lib/data/wallet-themes'
 import { setWalletTheme, useWalletThemePrefs } from '@/hooks/use-wallet-theme'
 
-const TAP_THRESHOLD = 10 // px — gerakan di bawah ini dianggap tap, bukan drag
-const DRAG_START = 14 // px — gerakan horizontal yang mengubah tekanan jadi swipe
-const DRAG_INTENT = 1.4 // rasio |dx| / |dy| — drag baru mulai kalau niatnya horizontal
-const DRAG_MAX = 150 // px — batas geser kartu depan, supaya kartu tidak keluar panel
+const TAP_THRESHOLD = 10 // px â€” gerakan di bawah ini dianggap tap, bukan drag
+const DRAG_START = 14 // px â€” gerakan horizontal yang mengubah tekanan jadi swipe
+const DRAG_INTENT = 1.4 // rasio |dx| / |dy| â€” drag baru mulai kalau niatnya horizontal
+const DRAG_MAX = 150 // px â€” batas geser kartu depan, supaya kartu tidak keluar panel
 const DRAG_RUBBER = 0.26 // faktor gerakan setelah melewati DRAG_MAX (terasa "direm")
-const SWIPE_THRESHOLD = 90 // px — lepas melewati ini memutar deck
+const SWIPE_THRESHOLD = 90 // px â€” lepas melewati ini memutar deck
 /* Transisi antar kartu = VERTIKAL. Kartu depan "diselipkan" kembali ke dalam
    kantong dompet (turun + memudar cepat), sementara kartu berikutnya naik dari
    bawah deck. Tidak ada lagi kartu yang terbang 680px ke kiri, jadi animasinya
-   tidak pernah melintasi — apalagi menutupi — teks di sidebar, dan tidak ada
+   tidak pernah melintasi â€” apalagi menutupi â€” teks di sidebar, dan tidak ada
    momen layar kosong di tengah transisi. */
-const EXIT_TUCK = 96 // px — jarak turun kartu yang keluar sebelum rotasi di-commit
+const EXIT_TUCK = 96 // px â€” jarak turun kartu yang keluar sebelum rotasi di-commit
 const EXIT_FADE = 2.6 // pengali kekakuan pegas opacity saat kartu sedang keluar
 
 // Deck slot-based: SEMUA kartu dirender full-size menumpuk; tiap kartu menempati
 // "slot" (0 = depan). Satu rAF loop menggerakkan tiap kartu ke slot targetnya dengan
-// spring physics (posisi + velocity) — gerakan terasa fisik, settle tegas, dan
+// spring physics (posisi + velocity) â€” gerakan terasa fisik, settle tegas, dan
 // konsisten di semua refresh rate. Tumpukan bergerak seperti kaskade pegas.
 const MAX_VISIBLE = 4 // slot terdalam yang masih terlihat mengintip di atas kartu depan
-const SLOT_STEP = 30 // px — jarak vertikal antar slot (makin dalam makin naik)
+const SLOT_STEP = 30 // px â€” jarak vertikal antar slot (makin dalam makin naik)
 const SLOT_SCALE = 0.045 // pengurangan scale per slot
-const ENTER_RISE = 170 // px — kartu baru / kartu yang di-swipe naik dari bawah sejauh ini
-// tinggi kartu responsif via CSS var --card-h di scene (mobile 176px, sm+ 192px) —
+const ENTER_RISE = 170 // px â€” kartu baru / kartu yang di-swipe naik dari bawah sejauh ini
+// tinggi kartu responsif via CSS var --card-h di scene (mobile 176px, sm+ 192px) â€”
 // nilai ini dipakai sebagai fallback inline style supaya engine & layout tetap sinkron.
-// H2-1 (audit UI/UX): kartu diperkecil lagi ±30% (272 → 192) supaya "Jatah Hari
+// H2-1 (audit UI/UX): kartu diperkecil lagi Â±30% (272 â†’ 192) supaya "Jatah Hari
 // Ini" (fitur killer) kelihatan tanpa harus menggulir. Saldo dompet sifatnya
 // pasif, jadi ruang vertikalnya diserahkan ke Jatah Hari Ini & Tanaman.
-const CARD_H = 192 // px — tinggi kartu di layar sm ke atas
+const CARD_H = 192 // px â€” tinggi kartu di layar sm ke atas
 
 // geometri sleeve dompet di sekeliling tumpukan
-const SLEEVE_X = 14 // px — sleeve lebih lebar dari kartu di tiap sisi
-const SLEEVE_TOP = 18 // px — sleeve menjulang di atas kartu depan
-const SLEEVE_BOTTOM = 26 // px — kedalaman kantong di bawah kartu depan
-const LIP_OVERLAP = 18 // px — seberapa jauh bibir kantong menutupi tepi bawah kartu
+const SLEEVE_X = 14 // px â€” sleeve lebih lebar dari kartu di tiap sisi
+const SLEEVE_TOP = 18 // px â€” sleeve menjulang di atas kartu depan
+const SLEEVE_BOTTOM = 26 // px â€” kedalaman kantong di bawah kartu depan
+const LIP_OVERLAP = 18 // px â€” seberapa jauh bibir kantong menutupi tepi bawah kartu
 
 /**
- * Ruang intipan tumpukan DI ATAS kartu depan — sejak paket 95 nilainya
+ * Ruang intipan tumpukan DI ATAS kartu depan â€” sejak paket 95 nilainya
  * MENGIKUTI JUMLAH KARTU, bukan selalu ruang untuk 4 kartu (`MAX_VISIBLE`).
- * Dulu 1 dompet pun menyisakan ±128px kosong di atas kartunya; sekarang
+ * Dulu 1 dompet pun menyisakan Â±128px kosong di atas kartunya; sekarang
  * `scenePadFor()` mengembalikan hanya sebesar intipan yang benar-benar ada.
  * Panjang scene terpendek (1 kartu) tetap menyisakan bibir sleeve penuh.
  */
@@ -83,18 +83,18 @@ function scenePadFor(cardCount: number): number {
 // (<1 = overshoot halus & hidup, 1 = tanpa overshoot)
 const SPR_X = { k: 340, z: 0.82 } // kartu terbang keluar / snap balik ke tengah
 const SPR_X_DRAG = { k: 950, z: 1.05 } // saat drag: tracking jari nyaris 1:1
-const SPR_SLOT = { k: 250, z: 0.88 } // naik-turun slot — kaskade pegas
+const SPR_SLOT = { k: 250, z: 0.88 } // naik-turun slot â€” kaskade pegas
 const SPR_RISE = { k: 220, z: 0.95 } // deal-in dari bawah deck
 const SPR_OPACITY = { k: 320, z: 1 } // fade tanpa overshoot
-const FLICK_VELOCITY = 550 // px/s — lepas secepat ini dihitung swipe walau jarak kurang
+const FLICK_VELOCITY = 550 // px/s â€” lepas secepat ini dihitung swipe walau jarak kurang
 
 type DeckEntry = { type: 'all' } | { type: 'wallet'; wallet: Wallet } | { type: 'add' }
 
-/** key stabil per kartu — wajib konsisten saat deck diputar supaya state animasinya nyambung */
+/** key stabil per kartu â€” wajib konsisten saat deck diputar supaya state animasinya nyambung */
 const entryKey = (entry: DeckEntry) =>
   entry.type === 'all' ? 'all' : entry.type === 'wallet' ? entry.wallet.id : 'add'
 
-/** variasi tempo per kartu (0.92 – 1.10), stabil dari hash key — kaskade konsisten, bukan acak */
+/** variasi tempo per kartu (0.92 â€“ 1.10), stabil dari hash key â€” kaskade konsisten, bukan acak */
 const tempoOf = (key: string) => {
   let h = 0
   for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) | 0
@@ -104,11 +104,11 @@ const tempoOf = (key: string) => {
 /** spring 1 dimensi: posisi + velocity */
 type Spring = { p: number; v: number }
 
-/** keadaan visual satu kartu — tiap properti adalah spring yang diintegrasi tiap frame */
+/** keadaan visual satu kartu â€” tiap properti adalah spring yang diintegrasi tiap frame */
 type Visual = {
-  x: Spring // px — geser horizontal (drag / terbang keluar)
-  slot: Spring // float — posisi slot saat ini (bisa di antara dua slot)
-  rise: Spring // px — offset ke bawah; >0 saat kartu sedang naik dari bawah deck
+  x: Spring // px â€” geser horizontal (drag / terbang keluar)
+  slot: Spring // float â€” posisi slot saat ini (bisa di antara dua slot)
+  rise: Spring // px â€” offset ke bawah; >0 saat kartu sedang naik dari bawah deck
   opacity: Spring // 0..1
 }
 
@@ -123,7 +123,7 @@ const makeVisual = (slot: number): Visual => ({
 
 /** integrasi semi-implicit Euler + settle detection: snap saat benar-benar diam,
  *  jadi tidak ada tail merayap seperti exponential lerp. Mengembalikan `true`
- *  kalau spring ini SUDAH diam — dipakai engine untuk tahu kapan seluruh deck
+ *  kalau spring ini SUDAH diam â€” dipakai engine untuk tahu kapan seluruh deck
  *  tenang sehingga rAF loop boleh berhenti (idle-stop). */
 const integrate = (
   s: Spring,
@@ -153,7 +153,7 @@ const faceOf = (
    * kartu memakai resep bawaan (`faceClass`/`bandClass`/`glowClass`) persis
    * seperti sebelumnya. Dilewatkan sebagai ARGUMEN (bukan dibaca di dalam) karena
    * fungsi ini hidup di luar komponen sementara deck merender banyak kartu dalam
-   * satu loop — hook tidak boleh dipanggil di sini.
+   * satu loop â€” hook tidak boleh dipanggil di sini.
    */
   themeId: string | null = null,
 ): { face: string; swatch: string; glow: string; art: WalletArt } =>
@@ -174,7 +174,20 @@ const faceOf = (
         art: 'kawung',
       }
 
-/** Dibungkus `memo` — deck ini hanya menerima `onOpen` (yang di HomeScreen
+/** motif yang punya definisi pattern di dalam scene deck (`card-art-…`) */
+const CARD_ARTS: readonly WalletArt[] = ['kawung', 'mendung', 'parang', 'rings']
+
+/**
+ * motif aman per kartu. Nilai di luar daftar (data lama / tema tak dikenal)
+ * jatuh ke kawung — tanpa ini `url(#card-art-undefined)` = lapisan kosong, dan
+ * kartu tersebut tampil tanpa batik sama sekali.
+ */
+function artOf(art: WalletArt | string | undefined): WalletArt {
+  return CARD_ARTS.includes(art as WalletArt) ? (art as WalletArt) : 'kawung'
+}
+
+
+/** Dibungkus `memo` â€” deck ini hanya menerima `onOpen` (yang di HomeScreen
  *  sudah distabilkan dengan useCallback), jadi klik buka/tutup popup tidak
  *  memicu re-render pohon kartu yang berat ini. PENTING: engine rAF-nya memang
  *  menggerakkan kartu lewat DOM langsung (bukan state), jadi skip re-render
@@ -185,32 +198,32 @@ export const WalletCardStack = memo(function WalletCardStack({
   /**
    * Dipanggil saat kartu depan di-tap / di-Enter. Payload-nya pilihan kartu
    * yang sedang aktif, supaya panel "Your Balance Overview" menampilkan saldo
-   * kartu yang dipencet (kartu A → detail A, kartu B → detail B) — bukan selalu
+   * kartu yang dipencet (kartu A â†’ detail A, kartu B â†’ detail B) â€” bukan selalu
    * total gabungan semua dompet.
    */
   onOpen?: (selection: DeckSelection) => void
 }) {
-  /* Deck dompet dari SATU store uang — bukan salinan daftar dompet di state
+  /* Deck dompet dari SATU store uang â€” bukan salinan daftar dompet di state
      halaman ini. Sebelum paket 40 deck menghitung totalnya sendiri (Rp 4.309.573)
      sementara halaman Dompet & Kekayaan memakai angka lain; sekarang ketiganya
-     membaca `opening + Σ baris ledger` yang sama, dan dompet yang ditambahkan
+     membaca `opening + Î£ baris ledger` yang sama, dan dompet yang ditambahkan
      dari deck ini pun ikut muncul di `/wallet`. */
   const snapshot = useMoneyStore()
-  /* ── SATU PENYARING DENGAN /wallet (audit "8 vs 3 Wallet Paradox") ──────────
+  /* â”€â”€ SATU PENYARING DENGAN /wallet (audit "8 vs 3 Wallet Paradox") â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
      Dulu deck ini MEMAKSA 'all' sementara halaman Dompet & Akun menyaring
      konteks uang yang sedang aktif (`useMoneyContext`). Dua halaman membaca
-     store yang SAMA tapi menampilkan jumlah dompet berbeda — persis keluhan
+     store yang SAMA tapi menampilkan jumlah dompet berbeda â€” persis keluhan
      "Dashboard 8, /wallet 3". Sekarang keduanya memakai konteks global yang
      sama, jadi jumlah kartunya mustahil berbeda. Total saldo tetap `cashTotal`
-     (seluruh dompet) — konteks menyaring DAFTAR, bukan total (paket 44). */
+     (seluruh dompet) â€” konteks menyaring DAFTAR, bukan total (paket 44). */
   const { context } = useMoneyContext()
   const wallets = useMemo(() => homeWallets(snapshot, context), [snapshot, context])
-  /* jumlah SEMUA dompet hidup — index resep warna kartu preview modal Tambah
+  /* jumlah SEMUA dompet hidup â€” index resep warna kartu preview modal Tambah
      Dompet (bukan jumlah yang tersaring, supaya warnanya tetap unik) */
   const allWalletCount = useMemo(() => homeWallets(snapshot, 'all').length, [snapshot])
-  /* sensor nominal global — saldo di muka kartu ikut tombol mata di header */
+  /* sensor nominal global â€” saldo di muka kartu ikut tombol mata di header */
   const { money } = usePrivacy()
-  // rotasi deck — urutan melingkar tanpa akhir; swipe kartu depan = pindah ke belakang
+  // rotasi deck â€” urutan melingkar tanpa akhir; swipe kartu depan = pindah ke belakang
   const [rot, setRot] = useState(0)
   /* modal Tambah Dompet (audit "Add Wallet Bypass"): kartu "+" membuka FORM,
      bukan menambah dompet diam-diam */
@@ -219,7 +232,7 @@ export const WalletCardStack = memo(function WalletCardStack({
   // deck: kartu agregat dulu, lalu tiap dompet, terakhir kartu "tambah dompet".
   // PAKET 58 (58.7): keadaan 0 dompet = kartu "Tambah Dompet" sebagai
   // SATU-SATUNYA kartu. Kartu agregat "Semua Dompet" sengaja tidak dirender saat
-  // kosong — "Rp 0" bukan ringkasan apa pun (dan Home tidak boleh memajang angka
+  // kosong â€” "Rp 0" bukan ringkasan apa pun (dan Home tidak boleh memajang angka
   // contoh). Kalimat pengantar keadaan kosong menempel di muka kartu itu.
   const deck = useMemo<DeckEntry[]>(
     () => [
@@ -230,21 +243,21 @@ export const WalletCardStack = memo(function WalletCardStack({
     [wallets],
   )
 
-  // urutan tampil = deck yang diputar: 1 2 3 4 → swipe → 2 3 4 1 (kartunya tidak hilang)
+  // urutan tampil = deck yang diputar: 1 2 3 4 â†’ swipe â†’ 2 3 4 1 (kartunya tidak hilang)
   const order = useMemo(() => {
     const len = deck.length
     const k = ((rot % len) + len) % len
     return [...deck.slice(k), ...deck.slice(0, k)]
   }, [deck, rot])
 
-  /* PAKET 95 — tinggi scene & semua geometri kantong memakai SATU angka ini,
+  /* PAKET 95 â€” tinggi scene & semua geometri kantong memakai SATU angka ini,
      turunan dari jumlah kartu: 1 dompet = pekat (tanpa space kosong), 3 dompet =
      ruang intipan secukupnya. `deck.length` (bukan hasil `order`) supaya nilainya
      tidak berubah saat deck diputar. */
   const scenePad = scenePadFor(deck.length)
 
   /**
-   * TOTAL SALDO deck = `cashTotal(snapshot)` — SATU definisi untuk seluruh app
+   * TOTAL SALDO deck = `cashTotal(snapshot)` â€” SATU definisi untuk seluruh app
    * (paket 44). Sebelumnya baris ini menjumlahkan sendiri daftar yang sedang
    * dipakai component ini; sekarang angkanya datang dari helper yang sama dengan
    * hero `/wallet` dan kas likuid Kekayaan, jadi mustahil ada dua "Total Saldo":
@@ -252,8 +265,8 @@ export const WalletCardStack = memo(function WalletCardStack({
    * semuanya membaca angka ini.
    */
   const totalBalance = useMemo(() => cashTotal(snapshot), [snapshot])
-  /* TEMA KARTU (paket 77): peta `walletId → themeId` dari perangkat, dibaca DI
-     SINI (bukan di `faceOf`) karena deck merender banyak kartu dalam satu loop —
+  /* TEMA KARTU (paket 77): peta `walletId â†’ themeId` dari perangkat, dibaca DI
+     SINI (bukan di `faceOf`) karena deck merender banyak kartu dalam satu loop â€”
      satu pembacaan untuk seluruh deck, lalu dioper sebagai argumen per kartu.
      Dompet tanpa tema tidak berubah sedikit pun (kartu bawaan apa adanya). */
   const themePrefs = useWalletThemePrefs()
@@ -266,7 +279,7 @@ export const WalletCardStack = memo(function WalletCardStack({
   const visuals = useRef(new Map<string, Visual>()) // keadaan visual per kartu (by key)
   const els = useRef(new Map<string, HTMLDivElement>()) // elemen DOM per kartu (by key)
   const rafRef = useRef(0)
-  /* isi `tick` engine — disimpan di ref supaya `startEngine` (dipanggil dari
+  /* isi `tick` engine â€” disimpan di ref supaya `startEngine` (dipanggil dari
      handler interaksi) bisa menghidupkan lagi loop yang sudah idle */
   const tickRef = useRef<(now: number) => void>(() => {})
   const pressStart = useRef<{ x: number; y: number } | null>(null)
@@ -278,14 +291,14 @@ export const WalletCardStack = memo(function WalletCardStack({
   const hoverCard = useRef(false)
   const pressCard = useRef(false)
   const boost = useRef(1) // scale halus kartu depan saat hover/press
-  const keyboardNav = useRef(false) // true saat deck dikendalikan keyboard → fokus dijaga
-  const lastT = useRef(0) // timestamp frame terakhir — sumber dt untuk spring
+  const keyboardNav = useRef(false) // true saat deck dikendalikan keyboard â†’ fokus dijaga
+  const lastT = useRef(0) // timestamp frame terakhir â€” sumber dt untuk spring
   const flick = useRef({ x: 0, t: 0, v: 0 }) // tracker velocity jari saat drag (EMA)
-  /* pilihan kartu depan — dibaca callback lewat ref supaya handler tap/Enter
+  /* pilihan kartu depan â€” dibaca callback lewat ref supaya handler tap/Enter
      tidak perlu dibuat ulang tiap render (lihat pola orderRef di atas) */
   const selectionRef = useRef<DeckSelection>({ type: 'all', total: 0 })
 
-  /** ambil/buat keadaan visual kartu — dipanggil juga saat render supaya snapshot konsisten */
+  /** ambil/buat keadaan visual kartu â€” dipanggil juga saat render supaya snapshot konsisten */
   const ensureVisual = (key: string, slot: number) => {
     let v = visuals.current.get(key)
     if (!v) {
@@ -298,7 +311,7 @@ export const WalletCardStack = memo(function WalletCardStack({
   /** Menyalakan kembali engine rAF. Loop-nya berhenti sendiri saat seluruh
    *  spring sudah settle (lihat `moving` di dalam tick) supaya halaman tidak
    *  terus membayar style recalc + re-raster selama deck diam; setiap interaksi
-   *  yang mengubah target memanggil fungsi ini. Idempoten — aman dipanggil
+   *  yang mengubah target memanggil fungsi ini. Idempoten â€” aman dipanggil
    *  berkali-kali, termasuk saat loop sedang jalan. */
   const startEngine = useCallback(() => {
     if (rafRef.current !== 0) return
@@ -329,7 +342,7 @@ export const WalletCardStack = memo(function WalletCardStack({
   }, [startEngine])
 
   /** ke kartu sebelumnya: kartu yang di belakang disiapkan tersembunyi di bawah
-   *  deck, lalu spring menaikkannya ke slot depan — semua gerakan vertikal */
+   *  deck, lalu spring menaikkannya ke slot depan â€” semua gerakan vertikal */
   const startPrev = useCallback((count: number) => {
     if (swipe.current === 'exiting' || count < 1) return
     dragX.current = 0
@@ -363,7 +376,7 @@ export const WalletCardStack = memo(function WalletCardStack({
     [startNext, startPrev],
   )
 
-  // lompat ke kartu tertentu lewat dots — pilih arah putaran terpendek
+  // lompat ke kartu tertentu lewat dots â€” pilih arah putaran terpendek
   const goToKey = useCallback(
     (key: string) => {
       const o = orderRef.current
@@ -375,10 +388,10 @@ export const WalletCardStack = memo(function WalletCardStack({
     [startNext, startPrev],
   )
 
-  /* ── Tambah Dompet = FORM, bukan mutasi diam-diam (audit "Add Wallet Bypass")
+  /* â”€â”€ Tambah Dompet = FORM, bukan mutasi diam-diam (audit "Add Wallet Bypass")
      Dulu kartu "+" memanggil `addPoolWallet()`: SATU tap langsung membuat dompet
      contoh dari pool demo (nama, jenis, & saldo dipilih kode) tanpa user pernah
-     melihat atau menyetujuinya — itu yang membuat jumlah dompet membengkak dan
+     melihat atau menyetujuinya â€” itu yang membuat jumlah dompet membengkak dan
      tidak sinkron dengan /wallet. Sekarang kartu "+" membuka `AddWalletSheet`
      (form yang SAMA dengan halaman Dompet & Akun), dan store baru menulis setelah
      user mengisi Nama, Jenis Akun, dan Saldo Awal. */
@@ -388,7 +401,7 @@ export const WalletCardStack = memo(function WalletCardStack({
     setAddOpen(true)
   }, [])
 
-  /** simpan dompet baru — SATU jalur tulis (`addWalletAccount`), sama dengan /wallet */
+  /** simpan dompet baru â€” SATU jalur tulis (`addWalletAccount`), sama dengan /wallet */
   const handleAddWalletSave = useCallback(
     (draft: WalletDraft) => {
       const account = addWalletAccount({
@@ -396,7 +409,7 @@ export const WalletCardStack = memo(function WalletCardStack({
         type: draft.type,
         number: draft.number,
         opening: draft.balance,
-        /* konteks yang sedang aktif — dompet baru langsung muncul di daftar ini */
+        /* konteks yang sedang aktif â€” dompet baru langsung muncul di daftar ini */
         context,
       })
       if (!account) {
@@ -405,12 +418,12 @@ export const WalletCardStack = memo(function WalletCardStack({
         return
       }
       /* tema kartu yang dipilih di sheet disimpan setelah store memberi id
-         (paket 77) — sama seperti jalur di /wallet, ia preferensi TAMPILAN, bukan
+         (paket 77) â€” sama seperti jalur di /wallet, ia preferensi TAMPILAN, bukan
          bagian dari uang/ledger */
       setWalletTheme(account.id, draft.themeId ?? null)
       setAddOpen(false) // tutup seketika; animasi keluar jalan di background
       goAfterAdd.current = account.id
-      // kartu baru di-"deal" masuk dari bawah deck — engine harus hidup untuk itu
+      // kartu baru di-"deal" masuk dari bawah deck â€” engine harus hidup untuk itu
       startEngine()
       toast.success(ADD_WALLET_SHEET_COPY.toastTitle, {
         description: ADD_WALLET_SHEET_COPY.toastDescription(account.name),
@@ -427,14 +440,14 @@ export const WalletCardStack = memo(function WalletCardStack({
       goToKey(key)
     }
   }, [order, goToKey])
-  /* ===== engine: satu rAF loop — semua kartu digerakkan spring physics per frame.
+  /* ===== engine: satu rAF loop â€” semua kartu digerakkan spring physics per frame.
      useLayoutEffect (bukan useEffect) supaya frame pertama menulis keadaan awal
-     spring SEBELUM paint pertama — HTML server tidak sempat menampilkan tumpukan
+     spring SEBELUM paint pertama â€” HTML server tidak sempat menampilkan tumpukan
      kartu tanpa transform. ===== */
   useLayoutEffect(() => {
     const tick = (now: number) => {
       /* frame ini sudah "diambil". Kalau di akhir frame tidak ada yang bergerak,
-         loop sengaja TIDAK dijadwalkan ulang (lihat blok idle-stop di bawah) —
+         loop sengaja TIDAK dijadwalkan ulang (lihat blok idle-stop di bawah) â€”
          jadi `rafRef.current === 0` berarti engine sedang berhenti. */
       rafRef.current = 0
 
@@ -507,7 +520,7 @@ export const WalletCardStack = memo(function WalletCardStack({
         }
 
         // ---- spring per kartu: tempo unik & stabil tiap kartu; makin dalam slotnya
-        // makin lembut pegasnya — tumpukan bergerak kaskade, settle-nya tetap tegas ----
+        // makin lembut pegasnya â€” tumpukan bergerak kaskade, settle-nya tetap tegas ----
         const depth = Math.min(Math.max(v.slot.p, 0), MAX_VISIBLE)
         const tempo = tempoOf(key)
         const kSlot = SPR_SLOT.k * tempo * Math.max(0.62, 1 - depth * 0.06)
@@ -522,7 +535,7 @@ export const WalletCardStack = memo(function WalletCardStack({
         const opStill = integrate(v.opacity, tOp, opK, SPR_OPACITY.z, dt, 0.002, 0.02)
         if (!(xStill && slotStill && riseStill && opStill)) moving = true
         // ---- tulis ke DOM sekali per frame (React tidak boleh menyentuh properti
-        //      ini — lihat catatan di blok render) ----
+        //      ini â€” lihat catatan di blok render) ----
         const el = els.current.get(key)
         if (el) {
           const ty = -depth * SLOT_STEP + v.rise.p
@@ -531,8 +544,8 @@ export const WalletCardStack = memo(function WalletCardStack({
           el.style.transform = `translate3d(${v.x.p.toFixed(1)}px, ${ty.toFixed(1)}px, 0) scale(${s.toFixed(3)}) rotate(${twist.toFixed(2)}deg)`
           el.style.opacity = Math.max(0, v.opacity.p).toFixed(3)
           /* z-index & filter hanya ditulis kalau nilainya BENAR-BENAR berubah.
-             `filter` tidak bisa di-composite seperti transform — tiap perubahan
-             memaksa kartu di-raster ulang — jadi shading slot di-kuantisasi ke
+             `filter` tidak bisa di-composite seperti transform â€” tiap perubahan
+             memaksa kartu di-raster ulang â€” jadi shading slot di-kuantisasi ke
              langkah 0.05 (hanya 4 nilai untuk 4 slot). Bedanya tak terlihat,
              tapi memangkas puluhan raster per transisi deck. */
           const z = isExiting ? 60 : 50 - Math.round(v.slot.p * 10)
@@ -548,9 +561,9 @@ export const WalletCardStack = memo(function WalletCardStack({
         }
       }
 
-      // kartu keluar sudah masuk kantong & hampir tak terlihat → commit rotasi. Kartu
+      // kartu keluar sudah masuk kantong & hampir tak terlihat â†’ commit rotasi. Kartu
       // TIDAK hilang: diteleport ke bawah deck pada slot tujuan barunya, lalu spring
-      // biasa menaikkannya ke belakang tumpukan — naik dari bawah, tanpa pop
+      // biasa menaikkannya ke belakang tumpukan â€” naik dari bawah, tanpa pop
       if (swipe.current === 'exiting' && exiting) {
         const ev = visuals.current.get(exiting)
         const nearlyHidden = ev ? ev.opacity.p < 0.06 : false
@@ -568,16 +581,16 @@ export const WalletCardStack = memo(function WalletCardStack({
           ev.opacity.p = 0
           ev.opacity.v = 0
           if (delta) setRot((r) => r + delta)
-          /* kartu ini baru diteleport ke bawah deck → frame berikutnya WAJIB
+          /* kartu ini baru diteleport ke bawah deck â†’ frame berikutnya WAJIB
              jalan supaya ia dianimasikan naik ke slot barunya */
           moving = true
         }
       }
 
-      /* idle-stop: semua spring diam & tidak ada kartu yang sedang keluar →
+      /* idle-stop: semua spring diam & tidak ada kartu yang sedang keluar â†’
          jangan jadwalkan frame lagi. Engine ini hidup di halaman yang sama
          dengan popup; kalau rAF-nya jalan terus tanpa henti, tiap frame ia
-         menulis transform ke 4+ kartu (style recalc + re-raster) — beban yang
+         menulis transform ke 4+ kartu (style recalc + re-raster) â€” beban yang
          terus menggerus frame budget animasi buka/tutup popup. Dinyalakan lagi
          lewat startEngine() dari tiap interaksi. */
       if (moving) rafRef.current = requestAnimationFrame(tick)
@@ -592,7 +605,7 @@ export const WalletCardStack = memo(function WalletCardStack({
     return () => {
       cancelAnimationFrame(rafRef.current)
       /* WAJIB direset: kalau tidak, id frame lama yang sudah dibatalkan masih
-         dianggap "loop sedang jalan" — di dev StrictMode (effect dipasang dua
+         dianggap "loop sedang jalan" â€” di dev StrictMode (effect dipasang dua
          kali) startEngine() lalu menolak menyalakan engine dan deck membeku. */
       rafRef.current = 0
     }
@@ -608,7 +621,7 @@ export const WalletCardStack = memo(function WalletCardStack({
          Tanpa cek ini, drag pelan yang agak miring membuat kartu "gemetar"
          antara mengikuti jari dan menggulir halaman. */
       if (Math.abs(dx) < Math.abs(dy) * DRAG_INTENT) return
-      // mulai swipe — kunci pointer supaya drag tetap terlacak di luar kartu
+      // mulai swipe â€” kunci pointer supaya drag tetap terlacak di luar kartu
       swipe.current = 'dragging'
       try {
         sceneRef.current?.setPointerCapture(e.pointerId)
@@ -621,14 +634,14 @@ export const WalletCardStack = memo(function WalletCardStack({
          tidak pernah keluar dari panelnya sendiri (mis. menutupi sidebar) */
       const over = Math.abs(dx) - DRAG_MAX
       dragX.current = over > 0 ? Math.sign(dx) * (DRAG_MAX + over * DRAG_RUBBER) : dx
-      // lacak velocity jari (EMA) — dipakai untuk flick & momentum kartu keluar
+      // lacak velocity jari (EMA) â€” dipakai untuk flick & momentum kartu keluar
       const now = performance.now()
       const ms = Math.max(1, now - flick.current.t)
       const inst = ((e.clientX - flick.current.x) / ms) * 1000
       flick.current.v = flick.current.v * 0.6 + inst * 0.4
       flick.current.x = e.clientX
       flick.current.t = now
-      // target kartu berubah mengikuti jari → pastikan engine hidup
+      // target kartu berubah mengikuti jari â†’ pastikan engine hidup
       startEngine()
     }
   }, [startEngine])
@@ -663,13 +676,13 @@ export const WalletCardStack = memo(function WalletCardStack({
         const dx = e.clientX - start.x
         const fv = flick.current.v
         dragX.current = 0
-        // threshold jarak ATAU velocity — flick cepat tetap dianggap swipe
+        // threshold jarak ATAU velocity â€” flick cepat tetap dianggap swipe
         if (dx <= -SWIPE_THRESHOLD || fv <= -FLICK_VELOCITY) step(1) // kartu depan pindah ke belakang
         else if (dx >= SWIPE_THRESHOLD || fv >= FLICK_VELOCITY) step(-1) // kartu belakang maju ke depan
         return
       }
 
-      // tap → buka overview, atau tambah dompet di kartu "+".
+      // tap â†’ buka overview, atau tambah dompet di kartu "+".
       // (Dulu di sini ada penjaga `[data-card-action]` untuk tombol Pemasukan/
       // Pengeluaran di muka kartu. Tombol itu sudah dihapus demi Single Entry
       // Point, jadi sekarang seluruh area kartu aman untuk tap.)
@@ -684,7 +697,7 @@ export const WalletCardStack = memo(function WalletCardStack({
   )
 
   const resetPointer = useCallback(() => {
-    // swipe batal (pointer keluar/dibatalkan) → kartu snap kembali ke tengah
+    // swipe batal (pointer keluar/dibatalkan) â†’ kartu snap kembali ke tengah
     if (swipe.current === 'dragging') swipe.current = 'idle'
     dragX.current = 0
     flick.current.v = 0
@@ -692,7 +705,7 @@ export const WalletCardStack = memo(function WalletCardStack({
     hoverCard.current = false
     pressStart.current = null
     activePointer.current = null
-    startEngine() // hover/press berakhir → boost & posisi kartu di-settle-kan
+    startEngine() // hover/press berakhir â†’ boost & posisi kartu di-settle-kan
   }, [startEngine])
 
   const handleKeyDown = useCallback(
@@ -718,7 +731,7 @@ export const WalletCardStack = memo(function WalletCardStack({
   const activeEntry = order[0] ?? deck[0]
   const frontKey = entryKey(activeEntry)
 
-  /* sinkronkan pilihan kartu depan ke ref — dipakai saat user tap / Enter */
+  /* sinkronkan pilihan kartu depan ke ref â€” dipakai saat user tap / Enter */
   selectionRef.current =
     activeEntry.type === 'wallet'
       ? { type: 'wallet', wallet: activeEntry.wallet }
@@ -729,7 +742,7 @@ export const WalletCardStack = memo(function WalletCardStack({
     if (keyboardNav.current) els.current.get(frontKey)?.focus({ preventScroll: true })
   }, [frontKey])
 
-  // label untuk screen reader — diumumkan tiap kartu berganti (ikut tersensor
+  // label untuk screen reader â€” diumumkan tiap kartu berganti (ikut tersensor
   // saat Global Eye aktif, supaya pembaca layar tidak membocorkan nominal)
   const srLabel =
     activeEntry.type === 'all'
@@ -759,23 +772,41 @@ export const WalletCardStack = memo(function WalletCardStack({
     badge: ReactNode
     name: string
     sub: string
-    /** nominal saldo (Rp) — satu-satunya angka di kartu */
+    /** nominal saldo (Rp) â€” satu-satunya angka di kartu */
     amount: number
   }) => {
     const face = faceOf(entry, entry.type === 'wallet' ? themePrefs[entry.wallet.id] ?? null : null)
+    const art = artOf(face.art)
     return (
-      <div className="relative h-full overflow-hidden rounded-[1.75rem] border border-cream/10 bg-forest text-cream shadow-sm">
+      <div
+        data-catetind-kartu-dompet
+        data-wallet-id={entry.type === 'wallet' ? entry.wallet.id : 'semua-dompet'}
+        className="relative h-full overflow-hidden rounded-[1.75rem] border border-cream/10 bg-forest text-cream shadow-sm"
+      >
         {/* dasar gradient vivid khas dompet */}
         <div aria-hidden className={cn('absolute inset-0 bg-gradient-to-br', face.face)} />
-        {/* aksen seni per dompet: motif batik/geometris terpusat di kanan atas,
-            memudar ke arah teks saldo supaya tetap terbaca */}
+        {/* CORAK BATIK per dompet — kawung/mendung/parang/rings sesuai tema,
+            dipasang di SELURUH muka kartu (memudar dari kanan atas supaya nama
+            & saldo tetap tajam). Karena tiap kartu di deck memakai pola yang
+            sama-sama terdefinisi, corak ini muncul di kartu ke-1, ke-2, ke-3,
+            dst. — bukan hanya kartu depan. */}
         <svg
           aria-hidden
-          className="absolute inset-0 h-full w-full [mask-image:radial-gradient(135%_125%_at_88%_-12%,black_22%,transparent_72%)]"
+          data-catetind-batik
+          className="pointer-events-none absolute inset-0 h-full w-full [mask-image:radial-gradient(170%_150%_at_92%_-16%,black_22%,transparent_88%)]"
         >
-          <rect width="100%" height="100%" fill={`url(#card-art-${face.art})`} />
+          <rect width="100%" height="100%" fill={`url(#card-art-${art})`} />
         </svg>
-        {/* aurora di-tint warna dompet: terang di kanan atas, gelap di kiri bawah → kedalaman */}
+        {/* SABUK PARANG di kaki kartu — motif yang sama untuk semua jenis
+            dompet (bank, e-wallet, tunai), jadi tidak ada kartu yang polos. */}
+        <svg
+          aria-hidden
+          data-catetind-batik
+          className="pointer-events-none absolute inset-0 h-full w-full [mask-image:linear-gradient(to_top,black_0%,black_18%,transparent_50%)]"
+        >
+          <rect width="100%" height="100%" fill="url(#card-art-parang)" />
+        </svg>
+        {/* aurora di-tint warna dompet: terang di kanan atas, gelap di kiri bawah â†’ kedalaman */}
         <div
           aria-hidden
           className={cn('absolute -right-16 -top-24 h-64 w-64 rounded-full blur-3xl', face.glow)}
@@ -795,8 +826,8 @@ export const WalletCardStack = memo(function WalletCardStack({
           className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-cream/40 to-transparent"
         />
 
-        {/* TIGA blok isi — identitas (kiri atas) → NOMINAL (tengah) → baris bawah
-            (chip EMV di kiri + brand mark di kanan) — DISEBAR rata vertikal
+        {/* TIGA blok isi â€” identitas (kiri atas) â†’ NOMINAL (tengah) â†’ baris bawah
+            (chip EMV di kiri + brand mark di kanan) â€” DISEBAR rata vertikal
             dengan `justify-between`.
             Sebelumnya nominal di-`mt-auto` ke tepi bawah kartu, jadi ia jatuh
             persis di atas bibir kantong (`LIP_OVERLAP` = 18px) sementara paruh
@@ -817,13 +848,13 @@ export const WalletCardStack = memo(function WalletCardStack({
               </span>
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium">{name}</p>
-                <p className="truncate text-xs text-cream/60">{sub}</p>
+                <p className="truncate text-xs text-cream-muted">{sub}</p>
               </div>
             </div>
             {badge}
           </div>
 
-          {/* NOMINAL — baris sendiri di TENGAH kartu (hasil sebar rata induk),
+          {/* NOMINAL â€” baris sendiri di TENGAH kartu (hasil sebar rata induk),
               bukan lagi ditempel ke tepi bawah. Satu-satunya angka di kartu;
               `leading-none` + token bersama `AMOUNT_XL` supaya tinggi barisnya
               sama di semua kartu deck ini.
@@ -838,17 +869,17 @@ export const WalletCardStack = memo(function WalletCardStack({
               KOREKSI OPTIS ke atas (permintaan pemilik produk: angka nominal
               kartu "dibuat sedikit lebih ke atas"): sebar rata `justify-between`
               menaruh angka di TITIK TENGAH GEOMETRIS kartu, padahal bibir
-              kantong menutupi LIP_OVERLAP = 18px di tepi bawah — bidang yang
+              kantong menutupi LIP_OVERLAP = 18px di tepi bawah â€” bidang yang
               benar-benar TERLIHAT tingginya cuma `--card-h - 18px`, dan titik
-              tengahnya ±9px lebih tinggi. Tanpa koreksi, angka terbaca sedikit
+              tengahnya Â±9px lebih tinggi. Tanpa koreksi, angka terbaca sedikit
               "turun" dari pusat pandangan. `-translate-y-2` (8px, dibulatkan
               dari 9px) menaikkannya ke pusat bidang yang terlihat. Dipakai
               `translate`, BUKAN margin: pembagian ruang tiga blok tetap utuh,
               jadi kepala kartu & baris bawah tidak ikut bergeser. */}
           <p className={cn(AMOUNT_XL, '-translate-y-2 leading-none')}>{money(amount)}</p>
 
-          {/* BARIS BAWAH kartu — kiri: chip EMV + ikon contactless (detil benda
-              fisik kartu); kanan: brand mark CatetInd (wordmark `cətet`, PUTIH).
+          {/* BARIS BAWAH kartu â€” kiri: chip EMV + ikon contactless (detil benda
+              fisik kartu); kanan: brand mark CatetInd (wordmark `cÉ™tet`, PUTIH).
 
               Mark-nya SENGAJA duduk di baris ini, bukan di pojok kanan-bawah
               kartu: `pb-7` di induk = 28px sedangkan bibir kantong menutupi
@@ -866,26 +897,26 @@ export const WalletCardStack = memo(function WalletCardStack({
               <span className="absolute inset-x-1 top-1/2 h-px -translate-y-1/2 bg-soil/20" />
               <span className="absolute left-1/2 top-1/2 h-3 w-4 -translate-x-1/2 -translate-y-1/2 rounded-[4px] border border-soil/25" />
             </span>
-            <Wifi className="size-4 rotate-90 text-cream/50" strokeWidth={2.25} aria-hidden />
+            <Wifi className="size-4 rotate-90 text-cream-muted" strokeWidth={2.25} aria-hidden />
 
-            {/* BRAND MARK CatetInd — wordmark `cətet` PUTIH di ujung KANAN baris
+            {/* BRAND MARK CatetInd â€” wordmark `cÉ™tet` PUTIH di ujung KANAN baris
                 bawah SETIAP muka kartu: kartu agregat "Semua Dompet" maupun
-                tiap dompet (BCA, GoPay, …). Dulu hanya kartu agregat yang
+                tiap dompet (BCA, GoPay, â€¦). Dulu hanya kartu agregat yang
                 punya; yang di kartu dompet masih lambang jaringan bank di
                 kanan ATAS, jadi satu kartu tetap satu logo di kanan bawah
                 (keputusan pemilik produk: "semuanya").
 
                 WARNANYA PUTIH (permintaan pemilik produk; sebelumnya emas
                 `bg-daisy` `#ecd768`): bentuknya diambil dari ALPHA wordmark
-                putih master `public/Dashboard-putih.png` (1779×490 — bentuk &
-                cakupan sama dengan `Dashboard.png`, hanya 2× resolusi) lewat
+                putih master `public/Dashboard-putih.png` (1779Ã—490 â€” bentuk &
+                cakupan sama dengan `Dashboard.png`, hanya 2Ã— resolusi) lewat
                 `mask-image`, lalu diisi token `cream` yang nilainya memang
                 PUTIH RATA `#ffffff` (kelas putih bawaan Tailwind sengaja TIDAK
-                dipakai — penjaga palet menandainya sebagai warna di luar
+                dipakai â€” penjaga palet menandainya sebagai warna di luar
                 palet). Jadi warnanya persis token, bukan hasil kira-kira
                 filter, dan tidak ada elemen raster tambahan per kartu.
                 Ukuran tetap sama seperti sebelumnya (`h-2.5` = 10px, rasio
-                aset 1779×490 → lebar ±36px). */}
+                aset 1779Ã—490 â†’ lebar Â±36px). */}
             <span
               role="img"
               aria-label="CatetInd"
@@ -897,12 +928,8 @@ export const WalletCardStack = memo(function WalletCardStack({
       </div>
     )
   }
-  const networkBadge = (network: string) => (
-    <span className="shrink-0 rounded-full border border-cream/20 bg-cream/[0.1] px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.14em] text-cream/75 backdrop-blur">
-      {network}
-    </span>
-  )
-
+  /* Badge jaringan kartu (VISA/DEBIT/E-WALLET) SENGAJA TIDAK ADA LAGI:
+     permukaan kartu hanya memuat corak batik, nama dompet, dan saldo. */
   const addFace = (
     <div className="relative flex h-full flex-col items-center justify-center overflow-hidden rounded-[1.75rem] border-2 border-dashed border-forest/20 bg-cream p-6 text-center">
       <div
@@ -917,11 +944,11 @@ export const WalletCardStack = memo(function WalletCardStack({
         <Plus className="size-5" strokeWidth={2.5} />
       </span>
       <p className="relative mt-3 text-sm font-medium text-forest">{HOME_WALLET_STACK_COPY.addTitle}</p>
-      <p className="relative mt-1 text-xs text-forest/45">{HOME_WALLET_STACK_COPY.addSubtitle}</p>
-      {/* keadaan 0 dompet (58.7): kartu ini satu-satunya + kalimat jujur —
+      <p className="relative mt-1 text-xs text-forest-muted">{HOME_WALLET_STACK_COPY.addSubtitle}</p>
+      {/* keadaan 0 dompet (58.7): kartu ini satu-satunya + kalimat jujur â€”
           dulu deck tetap menampilkan kartu agregat "Rp 0" di sebelahnya */}
       {wallets.length === 0 && (
-        <p className="relative mt-2 max-w-[15rem] text-[12px] leading-relaxed text-forest/45">
+        <p className="relative mt-2 max-w-[15rem] text-[12px] leading-relaxed text-forest-muted">
           {HOME_WALLET_STACK_COPY.emptyLine}
         </p>
       )}
@@ -939,8 +966,8 @@ export const WalletCardStack = memo(function WalletCardStack({
       {/* scene: tinggi fix = 1 kartu + ruang intipan tumpukan; tinggi kartu responsif
           lewat --card-h (mobile lebih pendek + kartu sengaja diperkecil supaya
           kolom Jatah Hari Ini / Tanaman dapat porsi visual lebih besar) */}
-      {/* isolate: scene jadi stacking context sendiri — z-index internal kartu/lip
-          (50–70) tidak bocor ke root & tidak menembus overlay global (AI Chat, dll.) */}
+      {/* isolate: scene jadi stacking context sendiri â€” z-index internal kartu/lip
+          (50â€“70) tidak bocor ke root & tidak menembus overlay global (AI Chat, dll.) */}
       <div
         ref={sceneRef}
         className="relative isolate select-none [touch-action:pan-y] [--card-h:176px] sm:[--card-h:192px] xl:[--card-h:218px]"
@@ -952,42 +979,61 @@ export const WalletCardStack = memo(function WalletCardStack({
         onPointerLeave={resetPointer}
         onPointerCancel={resetPointer}
       >
-        {/* definisi motif aksen kartu — didefinisikan sekali, dipakai ulang tiap kartu via url(#…) */}
-        <svg aria-hidden className="absolute size-0">
+        {/* CORAK BATIK — definisi motif dibuat SEKALI di sini, lalu dipakai
+            setiap kartu lewat `url(#card-art-…)`. Empat motif punya bentuk
+            asli batik (kawung bermahkota mlinjon, mega mendung berlapis,
+            parang berpita ganda, rings ber-cecek emas) supaya kartu dompet
+            terasa kain cap, bukan gradien polos. */}
+        <svg aria-hidden data-catetind-batik className="pointer-events-none absolute size-0">
           <defs>
-            {/* batik kawung: lingkaran-lingkaran saling beririsan */}
-            <pattern id="card-art-kawung" width="72" height="72" patternUnits="userSpaceOnUse">
-              <g fill="none" stroke="white" strokeOpacity="0.1" strokeWidth="1.6">
-                <circle cx="36" cy="36" r="26" />
-                <circle cx="0" cy="0" r="26" />
-                <circle cx="72" cy="0" r="26" />
-                <circle cx="0" cy="72" r="26" />
-                <circle cx="72" cy="72" r="26" />
+            <g id="card-art-kawung-unit">
+              {[0, 90, 180, 270].map((angle) => (
+                <g key={angle} transform={`rotate(${angle})`}>
+                  <ellipse cx="0" cy="-18" rx="8.2" ry="13" />
+                  <ellipse cx="0" cy="-18" rx="4.1" ry="7" />
+                </g>
+              ))}
+              <circle cx="0" cy="0" r="1.5" fill="white" fillOpacity="0.4" stroke="none" />
+            </g>
+            <pattern id="card-art-kawung" width="62" height="62" patternUnits="userSpaceOnUse">
+              <g fill="none" stroke="white" strokeOpacity="0.15" strokeWidth="1.15">
+                {[
+                  [31, 31],
+                  [0, 0],
+                  [62, 0],
+                  [0, 62],
+                  [62, 62],
+                ].map(([x, y]) => (
+                  <use key={`${x}-${y}`} href="#card-art-kawung-unit" x={x} y={y} />
+                ))}
               </g>
-              <circle cx="36" cy="36" r="5" fill="white" fillOpacity="0.1" />
             </pattern>
-            {/* batik mega mendung: lengkung awan berlapis */}
+
             <pattern id="card-art-mendung" width="90" height="44" patternUnits="userSpaceOnUse">
-              <g fill="none" stroke="white">
-                <path d="M0 44 Q22.5 8 45 44 Q67.5 8 90 44" strokeOpacity="0.12" strokeWidth="1.8" />
-                <path d="M0 36 Q22.5 16 45 36 Q67.5 16 90 36" strokeOpacity="0.07" strokeWidth="1.4" />
+              <g fill="none" stroke="white" strokeLinecap="round">
+                <path d="M0 36 Q11 12 22 36 Q33 12 44 36 Q55 12 66 36 Q77 12 90 36" strokeOpacity="0.16" strokeWidth="1.8" />
+                <path d="M0 27 Q11 3 22 27 Q33 3 44 27 Q55 3 66 27 Q77 3 90 27" strokeOpacity="0.1" strokeWidth="1.5" />
+                <path d="M0 18 Q11 -6 22 18 Q33 -6 44 18 Q55 -6 66 18 Q77 -6 90 18" strokeOpacity="0.07" strokeWidth="1.3" />
               </g>
             </pattern>
-            {/* batik parang: gelombang diagonal berirama */}
+
             <pattern
               id="card-art-parang"
-              width="48"
-              height="48"
+              width="50"
+              height="50"
               patternUnits="userSpaceOnUse"
               patternTransform="rotate(45)"
             >
-              <g fill="none" stroke="white">
-                <path d="M0 12 Q24 2 48 12" strokeOpacity="0.11" strokeWidth="1.8" />
-                <path d="M0 24 Q24 14 48 24" strokeOpacity="0.07" strokeWidth="1.4" />
-                <path d="M0 36 Q24 26 48 36" strokeOpacity="0.11" strokeWidth="1.8" />
+              <g fill="none" stroke="white" strokeOpacity="0.14" strokeWidth="1.8" strokeLinecap="round">
+                <path d="M-25 13 Q-12.5 3 0 13 T25 13 T50 13" />
+                <path d="M-25 33 Q-12.5 23 0 33 T25 33 T50 33" />
+              </g>
+              <g className="text-daisy" fill="currentColor" stroke="none" opacity="0.45">
+                <path d="M12 20 16 26 12 32 8 26Z" />
+                <path d="M37 40 41 46 37 52 33 46Z" />
               </g>
             </pattern>
-            {/* rings: garis kontur topografi konsentris */}
+
             <pattern id="card-art-rings" width="150" height="150" patternUnits="userSpaceOnUse">
               <g fill="none" stroke="white" strokeWidth="1.6">
                 <circle cx="150" cy="0" r="34" strokeOpacity="0.13" />
@@ -995,17 +1041,21 @@ export const WalletCardStack = memo(function WalletCardStack({
                 <circle cx="150" cy="0" r="90" strokeOpacity="0.08" />
                 <circle cx="150" cy="0" r="118" strokeOpacity="0.06" />
               </g>
+              <g fill="white" fillOpacity="0.16" stroke="none">
+                <circle cx="26" cy="112" r="1.1" />
+                <circle cx="78" cy="48" r="1" />
+              </g>
             </pattern>
           </defs>
         </svg>
 
-        {/* glow ambient di belakang kartu — kesan lembut & hidup di atas kanvas cream */}
+        {/* glow ambient di belakang kartu â€” kesan lembut & hidup di atas kanvas cream */}
         <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 top-10">
           <div className="absolute inset-x-2 bottom-0 h-36 rounded-[50%] bg-mint/25 blur-[70px]" />
           <div className="absolute left-4 top-4 h-28 w-40 rounded-[50%] bg-sage/80 blur-[60px]" />
         </div>
 
-        {/* sleeve dompet: panel kulit forest di belakang tumpukan — kartu-kartu terlihat
+        {/* sleeve dompet: panel kulit forest di belakang tumpukan â€” kartu-kartu terlihat
             menyembul keluar dari kantongnya; jahitan dashed + bayangan dalam untuk kedalaman */}
         <div
           aria-hidden
@@ -1021,17 +1071,17 @@ export const WalletCardStack = memo(function WalletCardStack({
           <div className="absolute inset-0 rounded-[2.25rem] [background-image:radial-gradient(rgba(255,255,255,0.045)_1px,transparent_1.5px)] [background-size:9px_9px]" />
           {/* jahitan mengikuti bibir sleeve */}
           <div className="absolute inset-2.5 rounded-[1.9rem] border-2 border-dashed border-cream/[0.13]" />
-          {/* bayangan dalam di mulut kantong — kesan kartu masuk ke dalam */}
+          {/* bayangan dalam di mulut kantong â€” kesan kartu masuk ke dalam */}
           <div className="absolute inset-x-0 top-0 h-28 rounded-t-[2.25rem] bg-gradient-to-b from-soil/40 via-soil/15 to-transparent" />
           {/* highlight rim atas kulit */}
           <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-cream/30 to-transparent" />
         </div>
 
         {/* SEMUA kartu dirender full-size menumpuk. transform / opacity / z-index /
-            filter di bawah ini HANYA nilai awal per slot — setelah frame pertama,
+            filter di bawah ini HANYA nilai awal per slot â€” setelah frame pertama,
             engine rAF yang memegang properti itu sepenuhnya. React sengaja tidak
             ikut menulisnya supaya re-render (mis. saat deck diputar) tidak pernah
-            "menyentak" kartu yang sedang beranimasi → tidak ada kedipan/blank. */}
+            "menyentak" kartu yang sedang beranimasi â†’ tidak ada kedipan/blank. */}
         {order.map((entry, i) => {
           const key = entryKey(entry)
           ensureVisual(key, i)
@@ -1053,7 +1103,7 @@ export const WalletCardStack = memo(function WalletCardStack({
                   /* Kartu yang baru ter-mount (ganti konteks Pribadi/Joint, dompet
                      baru) harus di-"deal" masuk dari bawah deck. Engine yang
                      sedang idle tidak akan menyadari kartu baru ini, jadi
-                     dinyalakan di sini — sama seperti perilaku loop yang dulu
+                     dinyalakan di sini â€” sama seperti perilaku loop yang dulu
                      selalu jalan. */
                   startEngine()
                 } else {
@@ -1085,7 +1135,7 @@ export const WalletCardStack = memo(function WalletCardStack({
                       entry,
                       /* kanan ATAS kartu agregat sengaja KOSONG: ia bukan
                          rekening bank mana pun, jadi tidak ada badge jaringan di
-                         situ. Brand mark-nya ada di kanan BAWAH — dan itu sudah
+                         situ. Brand mark-nya ada di kanan BAWAH â€” dan itu sudah
                          dipasang `cardFace` sendiri untuk SEMUA muka kartu,
                          jadi tidak lagi dikirim dari sini */
                       badge: null,
@@ -1097,16 +1147,20 @@ export const WalletCardStack = memo(function WalletCardStack({
                     })
                   : cardFace({
                       entry,
-                      badge: networkBadge(entry.wallet.network),
+                      /* permukaan kartu BERSIH (permintaan produk): tanpa kode
+                         kartu, tanpa nomor rekening masking (•••• 1234), dan
+                         tanpa badge jaringan. Yang tampil hanya corak batik,
+                         identitas dompet, dan nominal saldo. */
+                      badge: null,
                       name: entry.wallet.name,
-                      sub: `${entry.wallet.holder} · ${entry.wallet.number}`,
+                      sub: entry.wallet.holder,
                       amount: entry.wallet.balance,
                     })}
             </div>
           )
         })}
 
-        {/* bibir kantong (cover): menutupi tepi bawah kartu depan — ilusi kartu
+        {/* bibir kantong (cover): menutupi tepi bawah kartu depan â€” ilusi kartu
             benar-benar dimasukkan ke dompet. z-70 supaya kartu yang di-swipe keluar
             meluncur di BELAKANG bibir, seperti ditarik dari kantong */}
         <div
@@ -1125,7 +1179,7 @@ export const WalletCardStack = memo(function WalletCardStack({
           <div className="absolute inset-0 rounded-b-[2.25rem] rounded-t-[0.85rem] bg-gradient-to-b from-forest-soft via-forest to-evergreen-deep shadow-[0_20px_40px_-14px_rgba(0,0,0,0.6)] ring-1 ring-cream/10">
             {/* tekstur kulit */}
             <div className="absolute inset-0 rounded-[inherit] [background-image:radial-gradient(rgba(255,255,255,0.045)_1px,transparent_1.5px)] [background-size:9px_9px]" />
-            {/* rim atas bibir — tepi kulit yang menahan kartu */}
+            {/* rim atas bibir â€” tepi kulit yang menahan kartu */}
             <div className="absolute inset-x-5 top-0 h-[3px] rounded-full bg-gradient-to-r from-transparent via-cream/35 to-transparent" />
             {/* jahitan flap */}
             <div className="absolute inset-x-6 top-3.5 border-t-2 border-dashed border-cream/[0.13]" />
@@ -1133,7 +1187,7 @@ export const WalletCardStack = memo(function WalletCardStack({
         </div>
       </div>
 
-      {/* dots + chevron — tap untuk lompat ke kartu tertentu (urutan tetap, deck berputar).
+      {/* dots + chevron â€” tap untuk lompat ke kartu tertentu (urutan tetap, deck berputar).
           Jarak besar dari scene: bibir dompet menjulur SLEEVE_BOTTOM px ke bawah kartu */}
       <div className="mt-12 flex items-center justify-center gap-3">
         <button
@@ -1160,7 +1214,7 @@ export const WalletCardStack = memo(function WalletCardStack({
                   'flex size-4 items-center justify-center rounded-full border border-dashed transition-colors',
                   isActive
                     ? 'border-forest text-forest'
-                    : 'border-ink/20 text-forest/40 hover:border-forest/50 hover:text-forest/60',
+                    : 'border-ink/20 text-forest-muted hover:border-forest/50 hover:text-forest-muted',
                 )}
               >
                 <Plus className="size-2.5" strokeWidth={2.5} />
@@ -1192,7 +1246,7 @@ export const WalletCardStack = memo(function WalletCardStack({
       </div>
     </div>
 
-    {/* modal Tambah Dompet (audit "Add Wallet Bypass") — form kanon yang SAMA
+    {/* modal Tambah Dompet (audit "Add Wallet Bypass") â€” form kanon yang SAMA
         dengan /wallet; `cardIndex` = posisi dompet baru untuk resep warnanya */}
     <AddWalletSheet
       open={addOpen}

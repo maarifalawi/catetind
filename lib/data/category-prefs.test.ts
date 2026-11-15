@@ -98,15 +98,18 @@ describe('copy hapus kategori', () => {
     expect(CATEGORY_PREFS_COPY.deleteConfirm).toBe('Hapus')
   })
 
-  it('menjelaskan alasan kategori bawaan tidak bisa dihapus (temuan audit #10)', () => {
-    const explain = CATEGORY_PREFS_COPY.defaultExplain(DEFAULT_CATEGORIES.length)
-    expect(explain).toMatch(/nggak bisa dihapus/)
-    expect(explain).toMatch(/sembunyikan/)
-  })
-
   it('tidak lagi menjanjikan hal yang tidak terjadi (kategori ikut ke form catat)', () => {
-    /* kalimat lama: "Atur kategori apa saja yang muncul saat kamu mencatat transaksi" */
-    expect(CATEGORY_PREFS_COPY.desc).not.toMatch(/muncul saat kamu mencatat/)
-    expect(CATEGORY_PREFS_COPY.storageNote).toMatch(/masih memakai daftar baku app/)
+    /* Kalimat lama: "Atur kategori apa saja yang muncul saat kamu mencatat
+       transaksi" — janji yang tidak benar karena pemilih kategori di form masih
+       memakai daftar baku app.
+
+       Revisi pemilik repo: `desc` dan `storageNote` DICABUT dari halaman
+       Pengaturan → Kategori, jadi test ini tidak lagi memeriksa dua kalimat itu.
+       Yang dijaga sekarang adalah hal yang lebih penting: TIDAK ADA satu pun teks
+       kategori yang mengklaim kategori buatan user sudah muncul di form catat
+       transaksi. Kalau klaim itu dibuat lagi (di field mana pun), test gagal. */
+    const allCopy = JSON.stringify(CATEGORY_PREFS_COPY)
+    expect(allCopy).not.toMatch(/muncul saat kamu mencatat/)
+    expect(allCopy).not.toMatch(/pemilih kategori di form/i)
   })
 })

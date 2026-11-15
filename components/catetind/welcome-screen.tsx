@@ -87,7 +87,7 @@ export function WelcomeScreen() {
           <LogoWordmark className="h-6 lg:h-7" tone="light" />
           <Link
             href={WELCOME_LINKS.login}
-            className="rounded-full px-4 py-2 text-[14px] font-medium text-cream/70 ring-1 ring-cream/15 transition-colors duration-200 hover:bg-cream/10 hover:text-cream motion-reduce:transition-none"
+            className="rounded-full px-4 py-2 text-[14px] font-medium text-cream ring-1 ring-cream/15 transition-colors duration-200 hover:bg-cream/10 hover:text-cream motion-reduce:transition-none"
           >
             {WELCOME_COPY.loginLink}
           </Link>
@@ -95,7 +95,7 @@ export function WelcomeScreen() {
 
         {/* ── 2. hero: satu janji, tiga tarikan napas ───────────────────────── */}
         <section className="mt-14 lg:mt-20">
-          <p className="text-[12px] font-medium tracking-[0.18em] text-cream/45 uppercase">
+          <p className="text-[12px] font-medium tracking-[0.18em] text-cream-muted uppercase">
             {WELCOME_COPY.eyebrow}
           </p>
           <h1 className="mt-4 font-display text-[2.6rem] leading-[1.04] font-semibold tracking-[-0.03em] text-cream lg:text-[5rem]">
@@ -105,7 +105,7 @@ export function WelcomeScreen() {
               </span>
             ))}
           </h1>
-          <p className="mt-6 max-w-xl text-[15.5px] leading-relaxed text-cream/60 lg:text-[17px]">
+          <p className="mt-6 max-w-xl text-[15.5px] leading-relaxed text-cream-muted lg:text-[17px]">
             {WELCOME_COPY.subtitle}
           </p>
         </section>
@@ -164,7 +164,7 @@ export function WelcomeScreen() {
               {WELCOME_COPY.ctaPrimary}
             </span>
           </Link>
-          <p className="mt-3 text-[12.5px] leading-relaxed text-cream/45">{WELCOME_COPY.ctaNote}</p>
+          <p className="mt-3 text-[12.5px] leading-relaxed text-cream-muted">{WELCOME_COPY.ctaNote}</p>
 
           <ul className="mt-6 flex flex-wrap gap-2">
             {WELCOME_TRUST_CHIPS.map((chip) => {
@@ -172,7 +172,7 @@ export function WelcomeScreen() {
               return (
                 <li
                   key={chip.id}
-                  className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12.5px] font-medium text-cream/65 ring-1 ring-cream/12"
+                  className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12.5px] font-medium text-cream ring-1 ring-cream/12"
                 >
                   <Icon className="size-3.5 text-mint" strokeWidth={2.4} aria-hidden />
                   {chip.label}
@@ -182,7 +182,7 @@ export function WelcomeScreen() {
           </ul>
 
           <div className="mt-10 flex flex-col gap-4 border-t border-cream/10 pt-6 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-[13.5px] text-cream/55">
+            <p className="text-[13.5px] text-cream-muted">
               {WELCOME_COPY.loginLead}{' '}
               <Link
                 href={WELCOME_LINKS.login}
@@ -191,18 +191,18 @@ export function WelcomeScreen() {
                 {WELCOME_COPY.loginLink}
               </Link>
             </p>
-            <ul className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[12.5px] text-cream/40">
+            <ul className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[12.5px] text-cream-muted">
               {WELCOME_LEGAL_LINKS.map((link) => (
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="transition-colors hover:text-cream/70 motion-reduce:transition-none"
+                    className="transition-colors hover:text-cream motion-reduce:transition-none"
                   >
                     {link.label}
                   </Link>
                 </li>
               ))}
-              <li className="text-cream/30">{WELCOME_COPY.legalNote}</li>
+              <li className="text-cream-muted">{WELCOME_COPY.legalNote}</li>
             </ul>
           </div>
         </footer>

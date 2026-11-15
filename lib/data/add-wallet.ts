@@ -28,7 +28,14 @@ export const ADD_WALLET_SHEET_COPY = {
   brandLabel: 'Pilih bank atau e-wallet',
   brandNone: 'Lainnya',
   nameLabel: 'Nama akun',
-  namePlaceholder: 'Contoh: BCA Tabungan, GoPay, Dompet Tunai',
+  /**
+   * Contoh nama dompet dibuat RELATABLE (revisi ToV): "Uang Pegangan" adalah
+   * istilah yang benar-benar dipakai anak kos — uang yang dibawa harian —
+   * disusul nama bank & e-wallet yang sudah dikenal. Contoh lama
+   * ("BCA Tabungan, GoPay, Dompet Tunai") benar, tapi terasa seperti formulir
+   * bank; yang baru terasa seperti daftar dompet orang sungguhan.
+   */
+  namePlaceholder: 'Contoh: Uang Pegangan, BCA, GoPay',
   numberLabel: '4 angka terakhir',
   numberPlaceholder: '0849',
   numberHint: 'Cuma buat pajangan di kartunya, nomor aslinya nggak perlu diketik.',
@@ -37,10 +44,10 @@ export const ADD_WALLET_SHEET_COPY = {
   /* `previewBalanceLabel: 'Saldo'` DIHAPUS di paket 77: label mikro "Saldo" di
      pratinjau (dan di semua muka kartu) dibuang karena mengulang hal yang sudah
      jelas — lihat catatan panjangnya di `wallet-card-face.tsx` / `wallet-screen.tsx`. */
-  submit: 'Simpan Dompet 🌿',
+  submit: 'Simpan Dompet 🧩',
   /** store menolak: nama kosong / sudah dipakai dompet lain */
-  rejected: 'Nama dompet wajib diisi dan tidak boleh sama dengan dompet lain.',
-  toastTitle: 'Dompet baru siap 🌿',
+  rejected: 'Nama dompet perlu diisi dan tidak boleh sama dengan dompet lain.',
+  toastTitle: 'Dompet baru siap 🧩',
   toastDescription: (name: string) => `${name} langsung ikut kehitung di Total Saldo.`,
 } as const
 
@@ -57,7 +64,8 @@ export const EDIT_WALLET_SHEET_COPY = {
   /** nama kartu saat field nama dikosongkan sementara */
   previewFallbackName: 'Dompet',
   nameLabel: 'Nama akun',
-  namePlaceholder: 'Contoh: BCA Tabungan, GoPay, Dompet Tunai',
+  /** sama dengan mode tambah: contoh nama yang benar-benar dipakai orang */
+  namePlaceholder: 'Contoh: Uang Pegangan, BCA, GoPay',
   numberLabel: '4 angka terakhir',
   numberPlaceholder: '0849',
   numberHint: 'Cuma buat pajangan di kartunya, nomor aslinya nggak perlu diketik.',
@@ -67,7 +75,7 @@ export const EDIT_WALLET_SHEET_COPY = {
   balanceNote: 'Saldo tidak diubah dari sini. Pakai “Sesuaikan Saldo” di halaman dompet.',
   submit: 'Simpan Perubahan',
   /** penolakan store: nama kosong / sudah dipakai dompet lain */
-  rejected: 'Nama dompet wajib diisi dan tidak boleh sama dengan dompet lain.',
+  rejected: 'Nama dompet perlu diisi dan tidak boleh sama dengan dompet lain.',
   toastTitle: 'Dompet diperbarui',
   toastDescription: (name: string) => `Kartu & nama barunya langsung berlaku: ${name}.`,
 } as const
@@ -81,12 +89,10 @@ export const TRANSFER_SHEET_COPY = {
    * menemukan aksi yang sama persis di semua pintu.
    */
   title: 'Pindah Dana',
-  description: 'Dua saldo ikut menyesuaikan sekaligus, nggak ada yang dobel.',
   /** dompet asal sudah DIPUTUSKAN pintu masuknya (kartu / dompet detail) */
   fromLabel: 'Dari dompet ini',
   /** dompet asal belum diketahui (pintu “Lainnya”) → langkah 1 = memilih */
   fromPickLabel: 'Dari dompet mana?',
-  fromPickHint: 'Ketuk dompet yang saldonya mau dipindah, sisanya tinggal dua langkah.',
   /** tombol kecil di kartu asal: user tetap boleh membetulkan pilihannya */
   changeFrom: 'Ganti dompet asal',
   toLabel: 'Ke dompet mana?',
@@ -116,11 +122,9 @@ export const TRANSFER_SHEET_COPY = {
   emptyBalance: (sourceName: string) =>
     `${sourceName} lagi kosong, jadi belum ada yang bisa dipindah. Isi saldonya dulu lewat “Sesuaikan Saldo” di halaman dompetnya.`,
   /** jaring aman kalau dompetnya cuma satu (pindah dana butuh dua sisi) */
-  needSecond: 'Pindah dana butuh minimal dua dompet. Tambah dompet baru dulu ya 🌱',
   /** empty state jujur (bukan sheet kosong) + CTA yang benar-benar menutupinya */
   needSecondTitle: 'Butuh satu dompet lagi',
   needSecondCta: 'Tambah dompet',
-  needSecondCtaHint: 'Dompet baru langsung bisa jadi tujuan pindah dana.',
   /**
    * Badge konteks (paket 47) saat dompet tujuan berada di konteks uang lain.
    * Pindah antar konteks itu SAH (uangnya tetap milik user yang sama, dan Total
@@ -138,7 +142,7 @@ export const TRANSFER_SHEET_COPY = {
    * gagal diam-diam.
    */
   failed: 'Pindah dananya belum jadi, cek lagi saldo dompet asalnya ya.',
-  toastTitle: 'Pindah dana beres 🌿',
+  toastTitle: 'Pindah dana beres 🧩',
   /**
    * Nominal datang sebagai LABEL yang sudah lewat sensor tombol mata
    * (`money(amount)` dari `PrivacyProvider` di pemanggil), bukan angka mentah —
@@ -166,7 +170,7 @@ export const TRANSFER_SHEET_COPY = {
    */
   cancelRefused: (toName: string, balanceLabel: string) =>
     `Saldo ${toName} tinggal ${balanceLabel}, sedangkan uang pindahnya lebih besar dari itu, sudah kepakai ya. Sesuaikan dulu saldo dompet itu, baru batalkan.`,
-  cancelToastTitle: 'Pindah dana dibatalkan, uangnya balik 🌿',
+  cancelToastTitle: 'Pindah dana dibatalkan, uangnya balik 🧩',
   cancelToastDescription: (fromName: string, toName: string) =>
     `${fromName} dan ${toName} kembali seperti sebelum pindah. Jejak pembatalannya tercatat di Riwayat.`,
   /**

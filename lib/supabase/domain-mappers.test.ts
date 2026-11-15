@@ -272,5 +272,22 @@ describe('celengan', () => {
       contributed_at: '2026-09-01',
     })
   })
+
+  it('penarikan celengan: arah `out` bertahan lewat penanda client_tx_id', () => {
+    const withdraw: GoalContributionDbRow = {
+      id: '22222222-2222-2222-2222-222222222222',
+      goal_id: UUID,
+      amount: 100_000,
+      contributed_at: '2026-09-02',
+      wallet_id: 'bca',
+      client_tx_id: 'out:22222222-2222-2222-2222-222222222222',
+    }
+    /* dibaca kembali sebagai penarikan, bukan setoran baru */
+    expect(toFundContribution(withdraw)).toMatchObject({ amount: 100_000, direction: 'out' })
+    /* dan ditulis kembali dengan penanda yang sama (tidak hilang saat upsert) */
+    expect(toGoalContributionDbRow(toFundContribution(withdraw), UUID, 'uuid-out')).toMatchObject({
+      client_tx_id: 'out:uuid-out',
+    })
+  })
 })
 

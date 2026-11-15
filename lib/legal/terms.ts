@@ -14,8 +14,8 @@
      1. Yang WAJIB PERSIS dari PRD ditulis persis (lihat penanda "verbatim" di
         tiap bagian) — terutama 4 poin "CatetInd BUKAN" (PRD 5085–5089), karena
         itulah batas legalnya terhadap OJK.
-     2. Angka ditulis dalam bahasa manusia, tidak disembunyikan: siklus reset
-        kuota AI dan aturan token add-on disebut terang-terangan.
+     2. Angka ditulis dalam bahasa manusia, tidak disembunyikan: aturan kuota
+        dasar sekali pakai dan aturan token add-on disebut terang-terangan.
      3. Nominal harga TIDAK ditulis di sini. Satu-satunya sumber harga app ini
         adalah `lib/data/pricing.ts` (dipakai /checkout & /settings/billing),
         jadi menyalin angkanya ke dokumen ini cuma menciptakan daftar harga
@@ -62,7 +62,7 @@ export const TERMS_VERSION_LABEL = 'Versi 1.0'
  */
 export const TERMS_LINK_COPY = {
   label: 'Syarat & Ketentuan',
-  hint: 'Aturan main layanan ini: batas AI Coach, cara kerja paket akses selamanya, dan apa yang tetap jadi milikmu.',
+  hint: 'Aturan main layanan ini: batas Minca, cara kerja paket akses selamanya, dan apa yang tetap jadi milikmu.',
 } as const
 
 export const TERMS_DOC: LegalDocument = {
@@ -88,7 +88,7 @@ export const TERMS_DOC: LegalDocument = {
       bullets: [
         'CatetInd adalah alat pencatatan keuangan pribadi dengan fitur edukasi berbasis AI. Ia membantu kamu belajar mengelola uang, bukan mengelola uangmu, dan bukan memberi keputusan keuangan untukmu.',
         'Langganan bersifat PRABAYAR dan berlaku SELAMANYA: kamu membayar satu kali untuk paketmu, dan tidak ada tagihan berkala di sistem kami, kapan pun.',
-        'Paket Catet Aja tidak memuat fitur AI. Fitur AI (AI Coach, scan struk, input suara, laporan AI) dan Joint Wallet aktif mulai Paket Waras; kuota AI tanpa batas ada di Paket Sultan. Paket yang sudah dibayar TIDAK dibatasi waktu dan tidak pernah ditagih lagi.',
+        'Paket Catet Aja tidak memuat fitur AI. Fitur AI (Minca, scan struk, input suara, laporan AI) dan Joint Wallet aktif mulai Paket Waras; kuota AI tanpa batas ada di Paket Sultan. Paket yang sudah dibayar TIDAK dibatasi waktu dan tidak pernah ditagih lagi.',
         'Data keuanganmu milikmu. Kamu bisa mengekspornya jadi satu file JSON atau menghapus akunmu sendiri, tanpa perlu menghubungi siapa pun.',
       ],
       note: {
@@ -160,15 +160,15 @@ export const TERMS_DOC: LegalDocument = {
       },
     },
 
-    /* ── 5. BATAS AI COACH ──────────────────────────────────────────────────
+    /* ── 5. BATAS MINCA ─────────────────────────────────────────────────────
        Verbatim: daftar "bisa / TIDAK bisa" PRD 5106–5114 + perilaku disclaimer
        otomatis 5119–5125 + larangan keras 5066–5070. */
     {
       id: 'ai-batas',
-      title: 'Batas Minca, AI Coach',
+      title: 'Batas Minca',
       paragraphs: [
         'Minca adalah AI Financial Coach di CatetInd | teman belajar keuangan, bukan penasihat. Ia bekerja dengan batas yang sengaja dipasang, dan batas itu kami sebut di sini supaya kamu tidak perlu menemukannya sendiri lewat coba-coba.',
-        'Saat pertama kamu membuka AI Coach, Minca memperkenalkan dua daftar ini:',
+        'Saat pertama kamu membuka Minca, ia memperkenalkan dua daftar ini:',
       ],
       bullets: [
         /* VERBATIM PRD 5107–5109 */
@@ -197,7 +197,7 @@ export const TERMS_DOC: LegalDocument = {
         'Karena itu TIDAK ADA masa aktif, tanggal berakhir, masa tenggang, atau perpanjangan untuk ketiga paket ini. Kalau kamu mau fitur paket yang lebih tinggi, yang kamu bayar adalah SELISIH harganya, bukan harga penuh dari nol. Selisih itu dihitung dari daftar harga yang sama yang kamu lihat di halaman pembelian, dan selalu ditampilkan sebelum kamu menekan tombol bayar.',
       ],
       bullets: [
-        'Daftar paketnya: Paket Catet Aja (pencatatan manual), Paket Waras (AI Coach, scan struk, input suara, laporan AI, Joint Wallet), dan Paket Sultan (semua fitur Waras plus AI tanpa batas kuota dan prioritas dukungan). Nominal rupiahnya tampil dari sumber yang sama di halaman pembelian maupun di Pengaturan → Langganan.',
+        'Daftar paketnya: Paket Catet Aja (pencatatan manual), Paket Waras (Minca, scan struk, input suara, laporan AI, Joint Wallet), dan Paket Sultan (semua fitur Waras plus AI tanpa batas kuota dan prioritas dukungan). Nominal rupiahnya tampil dari sumber yang sama di halaman pembelian maupun di Pengaturan → Langganan.',
         'Upgrade tersedia kapan saja, dan hanya untuk naik ke paket yang LEBIH TINGGI. Downgrade tidak kami tawarkan karena tidak ada pengembalian uang (refund), dan kami tidak mau menagihmu untuk akses yang lebih sedikit.',
         'Bonus dari mengajak teman berbentuk tambahan Token AI, bukan tambahan hari: sejak akses berlaku selamanya, tidak ada masa aktif yang bisa ditambahi.',
         'Fitur berbayar benar-benar TERKUNCI di paket yang tidak memuatnya. Permintaan ke fitur itu ditolak di sisi server, bukan sekadar tombolnya disembunyikan, dan app menunjukkan ajakan upgrade beserta selisihnya.',
@@ -224,16 +224,16 @@ export const TERMS_DOC: LegalDocument = {
         'Ini rinciannya, tanpa angka yang disembunyikan:',
       ],
       bullets: [
-        'Kuota dasar per bulan sekitar 601.500 token, setara kurang lebih 1.265 panggilan: kategorisasi & penamaan 800 panggilan, chat 200, pindai struk (OCR) 100, input suara 150, apresiasi AI 10, dan recap mingguan 5.',
-        'Kuota dasar di-reset setiap tanggal 1, bukan dihitung bergulir 30 hari. Sisa kuota bulan lalu tidak menumpuk ke bulan baru.',
-        'Kalau kuotanya habis, fitur AI berhenti sampai bulan berganti atau sampai kamu mengisi ulang. Mencatat manual TIDAK terbatas, app tetap berfungsi penuh tanpa AI.',
+        'Kuota dasar sekali pakai sekitar 601.500 token, setara kurang lebih 1.265 panggilan: kategorisasi & penamaan 800 panggilan, chat 200, pindai struk (OCR) 100, input suara 150, apresiasi AI 10, dan recap mingguan 5.',
+        'Kuota dasar hanya diberikan SEKALI di bulan pertama paket aktif dan TIDAK diisi ulang otomatis setiap bulan. Sisa kuota tidak kembali penuh saat bulan berganti.',
+        'Kalau kuotanya habis, fitur AI berhenti sampai kamu menambah token. Mencatat manual TIDAK terbatas, app tetap berfungsi penuh tanpa AI.',
         'Isi ulang (add-on) tersedia dalam tiga ukuran: 200.000 token, 400.000 token, dan 800.000 token. Harganya tampil apa adanya sebelum kamu membayar, dan tidak ada harga berbeda di halaman lain.',
-        'Token isi ulang TIDAK hangus saat bulan berganti, ia berlaku sampai benar-benar terpakai. Yang di-reset bulanan hanya kuota dasarnya.',
+        'Token isi ulang TIDAK hangus dan berlaku sampai benar-benar terpakai — inilah cara melanjutkan AI setelah kuota dasar habis.',
         'Sisa kuotamu bisa dilihat kapan saja di Pengaturan → Langganan, di kartu "Bahan Bakar AI". Framingnya sisa bahan bakar, bukan hitungan mundur, kami sengaja tidak memakai warna alarm untuk hal ini.',
       ],
       note: {
         label: 'REVIEW LEGAL, rincian yang belum diputuskan',
-        body: 'Angka kuota, siklus reset, dan aturan "token isi ulang tidak hangus" sudah final. Yang belum diputuskan: cara menghitung kuota kalau kamu naik paket di tengah bulan, dan pemakaian dari dua perangkat sekaligus. Dua hal itu sengaja belum kami tulis di sini, lebih baik kosong dan bisa ditanyakan lewat Pusat Bantuan daripada tegas tapi salah.',
+        body: 'Angka kuota, aturan "kuota dasar sekali pakai", dan aturan "token isi ulang tidak hangus" sudah final. Yang belum diputuskan: cara menghitung kuota kalau kamu naik paket di tengah bulan, dan pemakaian dari dua perangkat sekaligus. Dua hal itu sengaja belum kami tulis di sini, lebih baik kosong dan bisa ditanyakan lewat Pusat Bantuan daripada tegas tapi salah.',
         tone: 'review',
       },
     },

@@ -282,7 +282,7 @@ export const WALLET_PATIENT_COPY = {
 } as const
 
 export const WALLET_EMPTY_COPY = {
-  body: 'Belum ada catatan di dompet ini 🌱 Yuk catat yang pertama.',
+  body: 'Belum ada catatan di dompet ini 🧩 Yuk catat yang pertama.',
   hint: 'Satu catatan sudah cukup bikin dompet ini mulai terbaca.',
 } as const
 
@@ -458,10 +458,10 @@ export const WALLET_DELETE_TOAST = {
     'Saldo dompet ini tidak lagi ikut dihitung. Catatan lamanya tetap ada di Riwayat.',
   /** label aksi di toast (Sonner) — jaring pengaman 5 detik (PRD 2251) */
   undo: 'Undo',
-  undoneTitle: 'Dompet dikembalikan 🌿',
+  undoneTitle: 'Dompet dikembalikan 🧩',
   undoneDescription: 'Dompetnya balik ke daftar beserta saldonya.',
   /** jaring pengaman tetap jujur kalau Undo ditekan setelah jendelanya tutup */
-  expired: 'Jendela Undo-nya sudah lewat, dompetnya bisa ditambahkan lagi kapan aja 🌿',
+  expired: 'Jendela Undo-nya sudah lewat, dompetnya bisa ditambahkan lagi kapan aja 🧩',
 } as const
 
 /**

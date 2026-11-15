@@ -18,87 +18,91 @@
   </noscript>
   <![endif]-->
   <style>
-    /* Semua gaya WAJIB ada inline; blok ini hanya penyempurna untuk client
-       yang mendukung <style> (Gmail app/web, Apple Mail, Outlook app modern).
-       Outlook desktop 2016-2021 memakai fallback inline + VML di bawah. */
+    /* Semua gaya WAJIB inline; blok ini hanya penyempurna untuk client yang
+       mendukung <style> (Gmail app/web, Apple Mail, Outlook app modern).
+       Outlook desktop 2016–2021 memakai fallback inline + VML di bawah. */
     body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
     table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; border-collapse: collapse; }
     a { text-decoration: none; }
     a[x-apple-data-detectors] { color: inherit !important; text-decoration: none !important; }
     #outlook a { padding: 0; }
+    img { border: 0; outline: none; text-decoration: none; -ms-interpolation-mode: bicubic; }
     @media only screen and (max-width: 620px) {
       .wrap { width: 100% !important; max-width: 100% !important; }
-      .card-pad { padding-left: 24px !important; padding-right: 24px !important; }
-      .card-pad-top { padding-top: 32px !important; }
-      .otp-box { font-size: 34px !important; letter-spacing: 10px !important; text-indent: 10px !important; }
-      .btn { display: block !important; width: 100% !important; padding-left: 12px !important; padding-right: 12px !important; font-size: 14px !important; }
-      .h1 { font-size: 24px !important; }
+      .pad { padding-left: 24px !important; padding-right: 24px !important; }
+      .pad-top { padding-top: 30px !important; }
+      .otp { font-size: 32px !important; letter-spacing: 9px !important; text-indent: 9px !important; }
+      .btn { display: block !important; width: 100% !important; padding-left: 10px !important; padding-right: 10px !important; font-size: 14px !important; }
+      .h1 { font-size: 22px !important; }
     }
   </style>
 </head>
-<body style="margin:0; padding:0; width:100%; background-color:#f8faf8;">
-  <!-- preheader: teks cuplikan di inbox, tidak terlihat di badan email -->
-  <div style="display:none; font-size:1px; color:#f8faf8; line-height:1px; max-height:0; max-width:0; opacity:0; overflow:hidden; mso-hide:all;">
-    Kode masuk CatetInd lo: {{ .Token }} &mdash; berlaku 10 menit.
+<body style="margin:0; padding:0; width:100%; background-color:#f6f7f4;">
+  <!-- preheader: cuplikan di inbox, tidak terlihat di badan email -->
+  <div style="display:none; font-size:1px; color:#f6f7f4; line-height:1px; max-height:0; max-width:0; opacity:0; overflow:hidden; mso-hide:all;">
+    {{ .Token }} &mdash; kode masuk CatetInd, berlaku 10 menit.
   </div>
 
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%; background-color:#f8faf8;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%; background-color:#f6f7f4;">
     <tr>
-      <td align="center" style="padding:32px 16px;">
-        <table role="presentation" class="wrap" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px; max-width:600px;">
+      <td align="center" style="padding:36px 20px;">
+        <table role="presentation" class="wrap" width="560" cellpadding="0" cellspacing="0" border="0" style="width:560px; max-width:560px;">
 
-          <!-- Brand: teks wordmark + titik hijau (tanpa gambar, jadi tidak
-               pernah diblokir client yang mematikan gambar). -->
+          <!-- Logo RESMI (public/Dashboard.png) — bukan teks yang disusun dari
+               font biasa. Rasio aset 890×245, jadi 118×33 tidak mendistorsi.
+               `alt` tetap "cetind" supaya masih terbaca saat gambar diblokir. -->
           <tr>
-            <td align="left" style="padding:0 0 16px 4px; font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:22px; line-height:1.2; font-weight:700; letter-spacing:-0.02em; color:#28382c;">
-              c&#601;tet<span style="color:#65a30d;">.</span>
+            <td align="left" style="padding:0 0 20px 2px;">
+              <a href="https://catetind.com" target="_blank" rel="noopener">
+                <img src="https://catetind.com/Dashboard.png" width="118" height="33" alt="cetind" style="display:block; width:118px; height:33px; border:0;">
+              </a>
             </td>
           </tr>
 
-          <!-- Card utama -->
+          <!-- Kartu utama: satu judul, satu kalimat, satu kode, satu tombol. -->
           <tr>
-            <td style="background-color:#ffffff; border:1px solid #e5e7eb; border-radius:24px;">
+            <td style="background-color:#ffffff; border:1px solid #e8ebe6; border-radius:20px;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
-
                 <tr>
-                  <td class="card-pad card-pad-top" style="padding:40px 40px 0 40px;">
-                    <h1 class="h1" style="margin:0 0 10px 0; font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:26px; line-height:1.3; font-weight:700; letter-spacing:-0.02em; color:#28382c;">
-                      Yuk masuk ke akun lo &#10024;
+                  <td class="pad pad-top" style="padding:38px 38px 0 38px;">
+                    <h1 class="h1" style="margin:0; font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:23px; line-height:1.35; font-weight:700; letter-spacing:-0.02em; color:#202b23;">
+                      Kode masuk lo
                     </h1>
-                    <p style="margin:0; font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:15px; line-height:1.65; color:#6b7280;">
-                      Ini kode masuk CatetInd lo. Ketik di halaman login, atau langsung lewat tombol di bawah.
+                    <p style="margin:8px 0 0 0; font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:15px; line-height:1.6; color:#667085;">
+                      Ketik 6 angka ini di halaman login CatetInd. Berlaku 10 menit.
                     </p>
                   </td>
                 </tr>
 
-                <!-- Kotak OTP: monospace, letter-spacing lebar, border aksen -->
                 <tr>
-                  <td class="card-pad" style="padding:28px 40px 0 40px;">
-                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%; background-color:#f3f6f3; border:1px solid #cfe3bd; border-radius:16px;">
+                  <td class="pad" style="padding:24px 38px 0 38px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%; background-color:#f5f8f2; border:1px solid #e2ebdb; border-radius:14px;">
                       <tr>
-                        <td class="otp-box" align="center" style="padding:22px 10px; font-family:ui-monospace,'SFMono-Regular','SF Mono',Menlo,Consolas,'Liberation Mono',monospace; font-size:40px; line-height:1; font-weight:700; letter-spacing:14px; text-indent:14px; color:#28382c; white-space:nowrap;">
+                        <td class="otp" align="center" style="padding:20px 10px; font-family:ui-monospace,'SFMono-Regular','SF Mono',Menlo,Consolas,'Liberation Mono',monospace; font-size:38px; line-height:1; font-weight:700; letter-spacing:12px; text-indent:12px; color:#28382c; white-space:nowrap;">
                           {{ .Token }}
                         </td>
                       </tr>
                     </table>
                   </td>
                 </tr>
-                <!-- Tombol magic link: pill hijau tua. VML khusus Outlook
-                     desktop supaya sudutnya tetap bulat di sana. -->
+
+
+                <!-- Tombol pintasan: pill hijau tua. VML khusus Outlook desktop
+                     supaya sudutnya tetap bulat di sana. -->
                 <tr>
-                  <td class="card-pad" align="center" style="padding:24px 40px 0 40px;">
+                  <td class="pad" align="center" style="padding:18px 38px 0 38px;">
                     <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center">
                       <tr>
                         <td align="center" bgcolor="#28382c" style="border-radius:999px;">
                           <!--[if mso]>
-                          <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{{ .ConfirmationURL }}" style="height:48px; v-text-anchor:middle; width:340px;" arcsize="50%" stroke="f" fillcolor="#28382c">
+                          <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{{ .ConfirmationURL }}" style="height:46px; v-text-anchor:middle; width:220px;" arcsize="50%" stroke="f" fillcolor="#28382c">
                             <w:anchorlock/>
-                            <center style="color:#ffffff; font-family:Arial,sans-serif; font-size:15px; font-weight:bold;">Atau Langsung Masuk ke CatetInd &#10132;</center>
+                            <center style="color:#ffffff; font-family:Arial,sans-serif; font-size:14px; font-weight:bold;">Masuk otomatis</center>
                           </v:roundrect>
                           <![endif]-->
                           <!--[if !mso]><!-->
-                          <a class="btn" href="{{ .ConfirmationURL }}" target="_blank" rel="noopener" style="display:inline-block; padding:15px 26px; border-radius:999px; background-color:#28382c; font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:15px; line-height:1.3; font-weight:600; color:#ffffff; text-decoration:none;">
-                            Atau Langsung Masuk ke CatetInd &#10132;
+                          <a class="btn" href="{{ .ConfirmationURL }}" target="_blank" rel="noopener" style="display:inline-block; padding:14px 28px; border-radius:999px; background-color:#28382c; font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px; line-height:1.3; font-weight:600; color:#ffffff; text-decoration:none;">
+                            Masuk otomatis
                           </a>
                           <!--<![endif]-->
                         </td>
@@ -107,40 +111,26 @@
                   </td>
                 </tr>
 
-                <!-- Catatan keamanan -->
+                <!-- Satu baris catatan keamanan. Tanpa bold & tanpa kotak kedua:
+                     dua penekanan sekaligus membuat email terbaca seperti
+                     peringatan bank, padahal isinya cuma info. -->
                 <tr>
-                  <td class="card-pad" style="padding:24px 40px 0 40px;">
-                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%; background-color:#f8faf8; border:1px solid #e5e7eb; border-radius:14px;">
-                      <tr>
-                        <td style="padding:14px 16px; font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:13px; line-height:1.65; color:#6b7280;">
-                          <strong style="color:#28382c;">Kode ini cuma berlaku 10 menit.</strong>
-                          Kalau lo ga ngerasa minta kode ini, abaikan aja ya. Akun lo tetap aman kok.
-                        </td>
-                      </tr>
-                    </table>
+                  <td class="pad" style="padding:22px 38px 34px 38px; font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:12.5px; line-height:1.65; color:#98a2b3;">
+                    Bukan lo yang minta kode ini? Abaikan aja, akun lo tetap aman.
                   </td>
                 </tr>
-
-                <tr>
-                  <td class="card-pad" style="padding:28px 40px 0 40px;">
-                    <div style="height:1px; background-color:#e5e7eb; font-size:0; line-height:0;">&nbsp;</div>
-                  </td>
-                </tr>
-
-                <tr>
-                  <td class="card-pad" style="padding:16px 40px 36px 40px; font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:12px; line-height:1.6; color:#9ca3af;">
-                    CatetInd &middot; <a href="https://catetind.com" target="_blank" rel="noopener" style="color:#65a30d; text-decoration:none;">catetind.com</a>
-                  </td>
-                </tr>
-
               </table>
             </td>
           </tr>
 
-          <!-- Footer -->
+          <!-- Footer: alamat situs + slogan brand, satu blok tenang. -->
           <tr>
-            <td align="center" style="padding:20px 8px 0 8px; font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:12px; line-height:1.6; color:#9ca3af;">
-              &copy; 2026 CatetInd. Asisten keuangan pribadi lo.
+            <td align="center" style="padding:22px 8px 0 8px; font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:12px; line-height:1.7; color:#98a2b3;">
+              <a href="https://catetind.com" target="_blank" rel="noopener" style="color:#5b7a4f; text-decoration:none;">catetind.com</a>
+              <br>
+              Aplikasi catet keuangan buat lo yang males nyatet.
+              <br>
+              &copy; 2026 CatetInd
             </td>
           </tr>
 

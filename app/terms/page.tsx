@@ -28,7 +28,7 @@ import { SITE_ORIGIN } from '@/lib/site'
 export const metadata: Metadata = {
   title: 'Syarat & Ketentuan | CatetInd',
   description:
-    'Aturan main CatetInd dalam bahasa manusia: batas AI Coach, langganan prabayar tanpa auto-renew, grace period 7 hari, kuota token AI, dan janji bahwa datamu tidak pernah dihapus.',
+    'Aturan main CatetInd dalam bahasa manusia: batas Minca, langganan prabayar tanpa auto-renew, grace period 7 hari, kuota token AI, dan janji bahwa datamu tidak pernah dihapus.',
   alternates: { canonical: `${SITE_ORIGIN}/terms` },
 }
 

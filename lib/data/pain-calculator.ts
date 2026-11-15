@@ -44,7 +44,7 @@ export const PAIN_CALCULATOR_DEFAULTS = {
 export const PAIN_CALCULATOR_COPY = {
   eyebrow: 'Hitung Sendiri',
   titleLead: 'Ke mana',
-  titleEmphasis: 'gaji lo',
+  titleEmphasis: 'gaji kamu',
   titleTail: 'pergi?',
   salaryLabel: 'Gaji Bulanan',
   leakLabel: 'Uang Gaib / Bulan',
@@ -80,17 +80,17 @@ export const PAIN_ROAST = {
   safe: {
     tone: 'safe',
     emoji: '🟢',
-    message: 'Masih aman, tapi jangan lengah!',
+    message: 'Masih aman. Pelan-pelan aja.',
   },
   warning: {
     tone: 'warning',
     emoji: '🟡',
-    message: 'Bocor halus terdeteksi! Gaji lo mulai terancam.',
+    message: 'Bocor halus terdeteksi. Gaji kamu mulai menipis.',
   },
   danger: {
     tone: 'danger',
     emoji: '🔴',
-    message: 'DARURAT! Gaji lo cuma numpang lewat buat foya-foya gaib.',
+    message: 'Gaji kamu hampir habis buat jajan kecil. Masih bisa dirapikan, kok.',
   },
 } as const
 

@@ -320,26 +320,77 @@ export function consumeInviteIn(
 
 export const INVITE_CODE_COPY = {
   title: 'Bagikan kode ini 💌',
-  /** pengantar personal — nama dompetnya ikut supaya jelas kode ini untuk dompet apa */
-  lead: (partnerName: string, walletName: string) =>
-    `${partnerName} tinggal masukin kodenya buat gabung ke ${walletName}.`,
-  /** label masa berlaku — angka nyata dari record (bukan klaim kosong) */
-  expiresAt: (label: string) => `Berlaku sampai ${label}.`,
   /** satu kode aktif per dompet: membuat kode baru = mencabut yang lama */
   refresh: 'Buat kode baru',
-  refreshHint: 'Kode lama langsung tidak berlaku, satu dompet, satu kode aktif.',
   /** status kode yang sudah tidak bisa dipakai (dipakai / lewat 24 jam) */
   invalidNote: 'Kode ini sudah nggak bisa dipakai. Buat kode baru di bawah ya 👇',
   /** umpan balik setelah menekan "Buat kode baru" */
-  refreshedToast: 'Kode baru siap 🌿',
-  /** kode benar-benar tercatat di `invite_codes` (paket 100) — bisa dipakai
-   *  pasangan di perangkat mana pun, bukan cuma di perangkat pembuatnya */
-  serverSyncedNote: 'Kode ini tersimpan di server, jadi bisa dipakai dari perangkat mana pun.',
+  refreshedToast: 'Kode baru siap 🧩',
   /** RPC pembuatan kode gagal (tanpa sesi/backend): katakan apa adanya, jangan
    *  biarkan user membagikan tautan yang tidak akan bisa dibuka orang lain */
   offlineNote:
     'Kode ini belum tersambung ke server, jadi baru bisa dibuka di perangkat ini. Coba buat ulang sebentar ya.',
+  /** kode SEDANG dikirim ke `invite_codes` — jangan tawarkan bagikan dulu */
+  syncingNote: 'Menyiapkan kode di server…',
+  /** pengiriman ke server GAGAL: tawarkan percobaan ulang, bukan kode yang tidak bisa dipakai */
+  syncFailedNote: 'Kode belum tercatat di server, jadi belum bisa dipakai pasanganmu.',
+  syncRetry: 'Coba simpan ke server lagi',
+  syncFailedToast: 'Kode belum tersimpan di server',
 } as const
+
+/* ── PILIHAN DI HALAMAN /joint: BUAT ATAU GABUNG ─────────────────────────────
+   Sebelum ini `/joint` hanya menawarkan SATU jalan: membuat dompet baru. Orang
+   yang DIUNDANG (sisi B) tidak punya tempat memasukkan kode sama sekali —
+   satu-satunya jalan adalah membuka tautan `/join/<kode>` dari chat. Kalau
+   undangannya dikirim sebagai KODE saja (bukan tautan), akun kedua buntu dan
+   mengira fitur join-nya tidak ada.
+
+   Dua copy di bawah menutupnya: yang mengajak membuat, yang diundang
+   menempelkan kode. Keduanya menulis ke server lewat RPC yang sama
+   (`catetind_ensure_joint_pocket` / `catetind_accept_invite`) — tidak ada
+   simulasi keanggotaan di perangkat. */
+export const JOIN_CODE_COPY = {
+  choiceEyebrow: 'Dompet bersama',
+  choiceTitle: 'Mau mulai dari mana?',
+  /* SAPU BERSIH TEKS BASA-BASI (sesi 3): paragraf pengantar di bawah judul
+     dihapus. Kartu cukup judul + label/input + satu tombol aksi. */
+  choiceBody: '',
+  createTitle: 'Buat dompet baru',
+  createBody: '',
+  createCta: 'Buat Dompet',
+  joinTitle: 'Gabung pakai kode',
+  joinBody: '',
+  joinCta: 'Gabung Dompet',
+  formTitle: 'Masukkan kode undangan',
+  inputLabel: 'Kode undangan',
+  inputPlaceholder: 'Contoh: H9FKJF',
+  submit: 'Gabung Sekarang',
+  submitting: 'Menghubungkan…',
+  back: 'Kembali',
+  lengthError: 'Kode undangan harus 6 karakter.',
+  joinedToast: (walletName: string) => `Kamu gabung ke ${walletName} 💚`,
+  memberToast: 'Kamu memang sudah anggota dompet ini.',
+  /** kode yang dimasukkan adalah kode buatan sendiri: JANGAN klaim berhasil gabung */
+  ownCodeTitle: 'Itu kode undanganmu sendiri',
+  ownCodeBody: 'Bagikan kode ini ke pasanganmu — mereka yang memasukkan kode untuk gabung.',
+  /** akun yang SEDANG login — kasus "satu browser = satu sesi" jadi langsung kelihatan */
+  ownCodeAccount: (email: string) => `Kamu sedang masuk sebagai ${email}.`,
+  /** tautan sekunder di Pengaturan → Dompet Bersama (sisi B) */
+  settingsJoinLink: 'Punya kode dari pasangan? Gabung di sini',
+} as const
+
+/**
+ * Query string `/joint?kode=1` — pintu masuk langsung ke form "Gabung pakai
+ * kode". Dipakai tautan dari Pengaturan supaya orang yang diundang tidak perlu
+ * mencari tombolnya sendiri (keluhan nyata: "input kodenya di mana?").
+ */
+export const JOINT_JOIN_PARAM = 'kode'
+
+/** true = nilai query menandakan niat gabung (`?kode=1`, bukan `?kode=<isi>`) */
+export function isJoinIntentParam(value: string | string[] | undefined): boolean {
+  const raw = Array.isArray(value) ? value[0] : value
+  return raw === '1' || raw === 'true' || raw === 'yes'
+}
 
 /** `https://catetind.com/join/<kode>` — bentuk absolute untuk dibagikan lewat chat
  *  (domain diambil dari `lib/site.ts`; dulu file ini menulis `catetind.app`
@@ -448,8 +499,12 @@ export const JOIN_COPY = {
   /** penjelas singkat: apa yang terjadi setelah gabung, tanpa istilah teknis.
    *  H9-1 (audit UI/UX): dipendekkan jadi SATU kalimat; detailnya pindah ke
    *  `learnMoreBody` di balik "Pelajari lebih lanjut". */
-  subtitle:
-    'Satu buku besar untuk kalian berdua: siapa nalangin apa, berapa yang perlu diimpasin.',
+  /* NADA (revisi ToV): halaman undangan Dompet Bersama ini dibaca oleh ORANG
+     YANG BARU PERTAMA KALI membuka link — sering tanpa konteks apa pun selain
+     "ada link dari pacar". Karena itu pembukanya memakai alasan yang paling
+     manusiawi (biar nggak ada drama siapa yang bayar), bukan istilah akuntansi.
+     Detailnya tetap jujur & lengkap di balik "Pelajari lebih lanjut". */
+  subtitle: 'Biar nggak ada drama siapa bayar makan malam: patungan bareng tanpa rasa canggung.',
   /** H9-1 — label disclosure detail */
   learnMore: 'Pelajari lebih lanjut',
   /** H9-1 + H9-4 — detail + tiga bullet singkat di balik disclosure */
@@ -505,8 +560,8 @@ export const INVALID_INVITE_COPY: Record<
   },
   used: {
     emoji: '✅',
-    title: 'Tautan ini sudah dipakai',
-    body: 'Undangan ini sekali pakai, jadi sudah nggak bisa dibuka lagi. Kalau memang mau gabung, minta link baru ya.',
+    title: 'Tautan ini sudah tidak berlaku',
+    body: 'Tautan undangan lama sudah ditutup. Minta tautan baru dari anggota dompetnya ya — satu tautan baru bisa dipakai beberapa orang.',
   },
   unknown: {
     emoji: '🧐',
@@ -588,6 +643,4 @@ export const JOIN_PREVIEW_COPY = {
   /** belum ada kode aktif untuk dompet ini — jangan tampilkan tautan palsu */
   emptyLead: 'Belum ada kode undangan aktif untuk dompet ini.',
   emptyCta: 'Buat kode di halaman Dompet Bersama',
-  emptyHint:
-    'Kode undangannya cuma berlaku 24 jam sejak dibuat, jadi halaman pratinjaunya muncul setelah kodenya ada.',
 } as const

@@ -112,7 +112,10 @@ export function paymentsCsv(payments: readonly AdminPaymentView[]): string {
 }
 
 /** nama file unduhan: `catetind-user-2026-11-01.csv` */
-export function csvFileName(kind: 'user' | 'pembayaran', now = new Date()): string {
+export function csvFileName(
+  kind: 'user' | 'pembayaran' | 'belum-berlangganan',
+  now = new Date(),
+): string {
   const iso = `${now.getFullYear()}-${`${now.getMonth() + 1}`.padStart(2, '0')}-${`${now.getDate()}`.padStart(2, '0')}`
   return `catetind-${kind}-${iso}.csv`
 }

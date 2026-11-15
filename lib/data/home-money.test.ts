@@ -163,7 +163,7 @@ describe('distributionSegments — turunan dari pengeluaran NYATA (58.2)', () =>
   })
 })
 
-describe('activeLedgerDays — hari aktif tanaman dari LEDGER, bukan angka 21 (58.3)', () => {
+describe('activeLedgerDays — hari aktif puzzle dari LEDGER, bukan angka 21 (58.3)', () => {
   it('menghitung TANGGAL unik bulan berjalan (dua catatan sehari = 1 hari)', () => {
     const days = activeLedgerDays(
       [

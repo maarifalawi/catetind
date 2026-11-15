@@ -221,7 +221,6 @@ export function AddDebtSheet({
       open={open}
       onClose={onClose}
       title={copy.title}
-      description={copy.description}
       footer={<SheetSubmit onClick={submit} disabled={!ready} gate>{copy.submit}</SheetSubmit>}
     >
       {/* ── arah ─────────────────────────────────────────────────────────── */}
@@ -251,7 +250,7 @@ export function AddDebtSheet({
             value={name}
             onChange={(event) => setName(event.target.value)}
             placeholder="Nama teman/keluarga"
-            className="mt-2 w-full rounded-2xl bg-cream px-4 py-3 text-[16px] font-medium text-forest outline-none ring-1 ring-soil/16 transition-shadow placeholder:font-medium placeholder:text-forest/25 focus:ring-2 focus:ring-forest/35"
+            className="mt-2 w-full rounded-2xl bg-cream px-4 py-3 text-[16px] font-medium text-forest outline-none ring-1 ring-soil/16 transition-shadow placeholder:font-medium placeholder:text-forest-muted focus:ring-2 focus:ring-forest/35"
           />
         </label>
       </RevealStep>
@@ -282,9 +281,7 @@ export function AddDebtSheet({
               <span className="font-medium text-hud-terracotta">
                 {DEBT_SHEET_FIELD_COPY.overPrincipal}
               </span>
-            ) : (
-              DEBT_SHEET_FIELD_COPY.remainingHint
-            )
+            ) : undefined
           }
         />
       )}
@@ -300,13 +297,13 @@ export function AddDebtSheet({
             <DateField value={date} onChange={setDate} label="Tanggal (opsional)" allowFuture={false} />
           )}
           <label className="block">
-            <span className="text-[13.5px] font-medium text-forest/70">Catatan (opsional)</span>
+            <span className="text-[13.5px] font-medium text-forest-soft">Catatan (opsional)</span>
             <textarea
               value={note}
               onChange={(event) => setNote(event.target.value)}
               rows={3}
               placeholder="Misal: makan siang kemarin"
-              className="mt-2 w-full resize-none rounded-2xl bg-cream px-4 py-3 text-[14px] leading-relaxed text-forest outline-none ring-1 ring-soil/16 transition-shadow placeholder:text-forest/25 focus:ring-2 focus:ring-forest/35"
+              className="mt-2 w-full resize-none rounded-2xl bg-cream px-4 py-3 text-[14px] leading-relaxed text-forest outline-none ring-1 ring-soil/16 transition-shadow placeholder:text-forest-muted focus:ring-2 focus:ring-forest/35"
             />
           </label>
         </div>
@@ -316,7 +313,7 @@ export function AddDebtSheet({
       <div className="mt-5 flex items-center justify-between gap-3 rounded-2xl bg-cream/70 px-4 py-3.5 ring-1 ring-soil/12">
         <span className="pr-2 text-[14px] font-medium leading-snug text-forest">
           Ini pinjaman platform/berbunga
-          <span className="mt-0.5 block text-[12px] font-medium text-forest/45">
+          <span className="mt-0.5 block text-[12px] font-medium text-forest-muted">
             Kredivo, SPayLater, KTA, pakai tenor & cicilan
           </span>
         </span>
@@ -343,7 +340,7 @@ export function AddDebtSheet({
                       'shrink-0 rounded-full px-3.5 py-2 text-[13.5px] font-medium transition-all duration-200 active:scale-95',
                       active
                         ? 'bg-forest text-mint shadow-[0_10px_22px_-14px_rgba(0,0,0,0.75)]'
-                        : 'bg-cream text-forest/60 ring-1 ring-soil/14 hover:bg-cream hover:text-forest',
+                        : 'bg-cream text-forest-muted ring-1 ring-soil/14 hover:bg-cream hover:text-forest',
                     )}
                   >
                     {option}
@@ -359,25 +356,25 @@ export function AddDebtSheet({
                 onChange={(event) => setCustomProvider(event.target.value)}
                 placeholder="Tulis nama provider…"
                 aria-label="Nama provider lainnya"
-                className="mt-2 w-full rounded-2xl bg-cream px-4 py-3 text-[15px] font-medium text-forest outline-none ring-1 ring-soil/16 transition-shadow placeholder:font-medium placeholder:text-forest/25 focus:ring-2 focus:ring-forest/35"
+                className="mt-2 w-full rounded-2xl bg-cream px-4 py-3 text-[15px] font-medium text-forest outline-none ring-1 ring-soil/16 transition-shadow placeholder:font-medium placeholder:text-forest-muted focus:ring-2 focus:ring-forest/35"
               />
             </RevealStep>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
-              <span className="text-[13.5px] font-medium text-forest/70">Tenor (bulan)</span>
+              <span className="text-[13.5px] font-medium text-forest-soft">Tenor (bulan)</span>
               <input
                 value={tenor}
                 onChange={(event) => setTenor(event.target.value.replace(/\D/g, '').slice(0, 3))}
                 inputMode="numeric"
                 placeholder="6"
                 aria-label="Tenor dalam bulan"
-                className="mt-2 w-full rounded-2xl bg-cream px-4 py-3 text-[16px] font-medium tabular-nums text-forest outline-none ring-1 ring-soil/16 transition-shadow placeholder:font-medium placeholder:text-forest/25 focus:ring-2 focus:ring-forest/35"
+                className="mt-2 w-full rounded-2xl bg-cream px-4 py-3 text-[16px] font-medium tabular-nums text-forest outline-none ring-1 ring-soil/16 transition-shadow placeholder:font-medium placeholder:text-forest-muted focus:ring-2 focus:ring-forest/35"
               />
             </label>
             <label className="block">
-              <span className="text-[13.5px] font-medium text-forest/70">Jatuh tempo (1–31)</span>
+              <span className="text-[13.5px] font-medium text-forest-soft">Jatuh tempo (1–31)</span>
               <input
                 value={dueDate}
                 onChange={(event) => setDueDate(event.target.value.replace(/\D/g, '').slice(0, 2))}
@@ -385,7 +382,7 @@ export function AddDebtSheet({
                 placeholder="10"
                 aria-label="Tanggal jatuh tempo"
                 className={cn(
-                  'mt-2 w-full rounded-2xl bg-cream px-4 py-3 text-[16px] font-medium tabular-nums text-forest outline-none ring-1 transition-shadow placeholder:font-medium placeholder:text-forest/25 focus:ring-2',
+                  'mt-2 w-full rounded-2xl bg-cream px-4 py-3 text-[16px] font-medium tabular-nums text-forest outline-none ring-1 transition-shadow placeholder:font-medium placeholder:text-forest-muted focus:ring-2',
                   dueDateInvalid
                     ? 'ring-hud-terracotta/50 focus:ring-hud-terracotta/60'
                     : 'ring-soil/16 focus:ring-forest/35',
@@ -402,25 +399,25 @@ export function AddDebtSheet({
           />
 
           <label className="block">
-            <span className="text-[13.5px] font-medium text-forest/70">Bunga (%, opsional)</span>
+            <span className="text-[13.5px] font-medium text-forest-soft">Bunga (%, opsional)</span>
             <input
               value={interest}
               onChange={(event) => setInterest(sanitizeDecimal(event.target.value, 2))}
               inputMode="decimal"
               placeholder="2,95"
               aria-label="Bunga per bulan"
-              className="mt-2 w-full rounded-2xl bg-cream px-4 py-3 text-[16px] font-medium tabular-nums text-forest outline-none ring-1 ring-soil/16 transition-shadow placeholder:font-medium placeholder:text-forest/25 focus:ring-2 focus:ring-forest/35"
+              className="mt-2 w-full rounded-2xl bg-cream px-4 py-3 text-[16px] font-medium tabular-nums text-forest outline-none ring-1 ring-soil/16 transition-shadow placeholder:font-medium placeholder:text-forest-muted focus:ring-2 focus:ring-forest/35"
             />
           </label>
 
           <label className="block">
-            <span className="text-[13.5px] font-medium text-forest/70">Catatan (opsional)</span>
+            <span className="text-[13.5px] font-medium text-forest-soft">Catatan (opsional)</span>
             <textarea
               value={note}
               onChange={(event) => setNote(event.target.value)}
               rows={3}
               placeholder="Misal: buat beli HP baru"
-              className="mt-2 w-full resize-none rounded-2xl bg-cream px-4 py-3 text-[14px] leading-relaxed text-forest outline-none ring-1 ring-soil/16 transition-shadow placeholder:text-forest/25 focus:ring-2 focus:ring-forest/35"
+              className="mt-2 w-full resize-none rounded-2xl bg-cream px-4 py-3 text-[14px] leading-relaxed text-forest outline-none ring-1 ring-soil/16 transition-shadow placeholder:text-forest-muted focus:ring-2 focus:ring-forest/35"
             />
           </label>
         </div>

@@ -66,8 +66,10 @@ describe('katalog metode bayar', () => {
     expect(isPaymentMethodActive(null)).toBe(false)
   })
 
-  it('enabled_payments Snap per metode (QRIS = other_qris + gopay)', () => {
-    expect(snapEnabledPayments(paymentMethod('qris')!)).toEqual(['other_qris', 'gopay'])
+  it('enabled_payments Snap per metode (QRIS = satu kanal QRIS)', () => {
+    /* Satu kanal saja: dua kanal QRIS membuat halaman Snap menampilkan dua
+       pilihan QRIS padahal user sudah memilihnya di langkah pertama. */
+    expect(snapEnabledPayments(paymentMethod('qris')!)).toEqual(['other_qris'])
     expect(snapEnabledPayments(paymentMethod('gopay')!)).toEqual(['gopay'])
     expect(snapEnabledPayments(paymentMethod('bni-va')!)).toEqual(['bni_va'])
     expect(snapEnabledPayments(paymentMethod('bri-va')!)).toEqual(['bri_va'])

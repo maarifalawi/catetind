@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ArrowRight, CheckCircle2, LifeBuoy, Mail, MessageCircle, Sparkles } from 'lucide-react'
+import { ArrowRight, CheckCircle2, LifeBuoy, Mail, MessageCircle } from 'lucide-react'
 import { LP_CONTACT, type LpContactHelpCard } from '@/lib/data/landing'
 import { LandingContactForm } from './contact-form'
 import { LandingReveal } from './reveal'
@@ -32,8 +32,7 @@ export function LandingContactLp() {
             <LandingReveal y={24} delay={0} className="inline-flex">
               <span className="inline-flex w-fit items-center gap-2 rounded-full bg-canvas py-0.5 pr-4 pl-0.5 ring-1 ring-soil/10">
                 <span className="flex size-6 items-center justify-center rounded-full bg-sage">
-                  <Sparkles className="size-3.5 text-forest" aria-hidden />
-                </span>
+                  </span>
                 <span className="text-[14px] leading-[1.5] text-forest">
                   {LP_CONTACT.eyebrow}
                 </span>

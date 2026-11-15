@@ -11,17 +11,19 @@ import {
   monthKeyOf,
   type Bill,
 } from '@/lib/data/bills'
-import { localISODate } from '@/lib/time'
+import { dayOfMonth, localISODate } from '@/lib/time'
 import { scopedItems } from '@/lib/data/money-context'
-import { BILLS_STATE_KEY, loadDeviceState, saveDeviceState } from './idb'
+import { BILLS_STATE_KEY, accountStateKey, loadDeviceState, saveDeviceState } from './idb'
+import { browserUserId } from '@/lib/supabase/client'
 import { deleteRemoteBill, pushBillToServer, readRemoteBills } from '@/lib/supabase/bills-remote'
 import { subscribeTables } from '@/lib/supabase/realtime'
 import { randomUuid } from '@/lib/supabase/uuid'
+import { notifyBillCreated, notifyBillDue, notifyBillPaid } from './notification-events'
 import {
   getMoneySnapshot,
+  hideRow,
   postBalanceAdjustment,
   postExpense,
-  removeRow,
   walletBalance,
   walletIdOfName,
   type MoneyRow,
@@ -133,7 +135,46 @@ const EMPTY_SNAPSHOT: BillsSnapshot = Object.freeze({
 let live: BillsSnapshot = SERVER_SNAPSHOT
 let accountPurged = false
 let hydrateStarted = false
+/** akun pemilik cache perangkat ini — cache tagihan DIPISAH per akun */
+let deviceOwnerUserId: string | null | undefined = undefined
 const listeners = new Set<() => void>()
+
+/* ── PEMILIK CACHE TERAKHIR (perbaikan "tagihan hilang saat refresh") ────────
+   Cache tagihan disimpan per AKUN (`bills:<userId>`). Kalau sesi klien Supabase
+   tidak terbaca sesaat setelah refresh (cookie sesi sah di middleware, tetapi
+   klien browser belum/tidak bisa membacanya), `browserUserId()` menjawab
+   `null`, sehingga hidrasi membaca key anonim yang kosong — tagihan yang baru
+   dibuat seolah hilang padahal barisnya masih ada di key akun.
+
+   Kunci kecil ini hanya menyimpan "id akun terakhir yang memakai perangkat
+   ini" supaya hidrasi tetap menemukan key yang benar saat sesi klien kosong.
+   Sesi yang benar-benar ada SELALU menang, jadi berganti akun tetap membaca
+   key akun yang baru. */
+const LAST_OWNER_KEY = 'bills:owner'
+
+function rememberOwner(userId: string | null): void {
+  saveDeviceState<string>(LAST_OWNER_KEY, userId ?? '')
+}
+
+async function resolveOwner(): Promise<string | null> {
+  const sessionId = await browserUserId()
+  if (sessionId) {
+    rememberOwner(sessionId)
+    return sessionId
+  }
+  const remembered = await loadDeviceState<string>(LAST_OWNER_KEY)
+  return remembered ? remembered : null
+}
+
+/**
+ * Notifikasi jatuh tempo dihitung dari daftar yang BARU SAJA dimuat — bukan
+ * hanya saat halaman Tagihan dibuka. Dengan begitu lonceng tetap memberi tahu
+ * H-3 / H-1 / hari H walau user mendarat di Dashboard.
+ */
+function syncDueNotifications(bills: readonly Bill[]): void {
+  const iso = localISODate()
+  notifyBillDue(bills, { todayDay: dayOfMonth(iso), monthKey: monthKeyOf(iso) })
+}
 
 export function getBillsSnapshot(): BillsSnapshot {
   return live
@@ -164,7 +205,7 @@ function emit(): void {
 }
 
 function persist(snapshot: BillsState): void {
-  saveDeviceState<PersistedBills>(BILLS_STATE_KEY, {
+  saveDeviceState<PersistedBills>(accountStateKey(BILLS_STATE_KEY, deviceOwnerUserId), {
     version: BILLS_STATE_VERSION,
     bills: snapshot.bills,
     removedIds: [...snapshot.removedIds],
@@ -335,7 +376,9 @@ async function hydrateBillsStore(): Promise<void> {
   if (hydrateStarted) return
   hydrateStarted = true
 
-  const persisted = await loadDeviceState<PersistedBills>(BILLS_STATE_KEY)
+  const userId = await resolveOwner()
+  deviceOwnerUserId = userId
+  const persisted = await loadDeviceState<PersistedBills>(accountStateKey(BILLS_STATE_KEY, userId))
   accountPurged = persisted?.purged === true
   live = mergeBillsState(persisted)
   hydratedOnce = true
@@ -348,6 +391,7 @@ async function hydrateBillsStore(): Promise<void> {
   live = mergeWithRemoteBills(remote, live, persisted)
   persist(live)
   emit()
+  syncDueNotifications(live.bills)
   /* baris perangkat yang belum pernah terkirim dinaikkan sekali di sini */
   for (const bill of live.bills) {
     if (!bill.remoteId) await ensureBillOnServer(bill.id)
@@ -368,15 +412,16 @@ export async function refreshBillsFromServer(): Promise<boolean> {
   const remote = await readRemoteBills()
   if (!remote) return false
 
-  const pending = live.bills.filter((bill) => !bill.remoteId)
-  const merged = new Map<string, Bill>()
-  for (const bill of pending) merged.set(`local:${bill.id}`, bill)
-  for (const bill of remote) {
-    merged.set(bill.remoteId ? `remote:${bill.remoteId}` : `id:${bill.id}`, bill)
-  }
-  live = { ...live, bills: [...merged.values()], hydrated: true }
+  /* Rekonsiliasi memakai fungsi gabung yang SAMA dengan hidrasi. Versi lama
+     menyusun daftar sendiri dan mencampur kunci `remote:<remoteId>` dengan
+     `local:<id lokal>`, sehingga baris yang sudah terkirim muncul DUA kali
+     (satu dari server, satu dari antrean lokal). `mergeWithRemoteBills` juga
+     menahan baris lokal yang belum terkirim — tidak ada yang hilang saat
+     koneksi pulih. */
+  live = mergeWithRemoteBills(remote, live)
   persist(live)
   emit()
+  syncDueNotifications(live.bills)
 
   for (const bill of live.bills) if (!bill.remoteId) await ensureBillOnServer(bill.id)
   return true
@@ -421,6 +466,7 @@ export function addBill(input: NewBillInput): Bill {
   }
   commit({ ...live, bills: [...live.bills, bill], hydrated: true })
   void ensureBillOnServer(bill.id)
+  notifyBillCreated(bill.name)
   return bill
 }
 
@@ -566,6 +612,7 @@ export function markBillPaid(
     hydrated: true,
   })
   void ensureBillOnServer(updated.id)
+  notifyBillPaid(updated.name)
 
   return {
     bill: updated,
@@ -593,14 +640,16 @@ export interface BillUnpaidResult {
  * Salah tekan → cabut stempel LUNAS **dan kembalikan uangnya**. Dua langkah,
  * karena satu langkah tidak cukup:
  *
- *   1. `removeRow(paidRowId)` — baris pembayarannya hilang dari SEMUA pembaca
- *      (Riwayat, Home, `/wallet`, `/wallet/[id]`). Ini yang diminta paket 51:
- *      membalikkan barisnya, bukan cuma stempelnya.
- *   2. Koreksi saldo (`postBalanceAdjustment`) — `removeRow` HANYA menyembunyikan
- *      barisnya dan TIDAK mengembalikan saldo (kanon store uang: "yang dihapus
- *      barisnya, bukan uangnya" — `lib/money/store.test.ts`). Kalau langkah ini
- *      dilewati, saldo dompet user tetap berkurang untuk pembayaran yang ia
- *      batalkan, dan tidak ada baris yang bisa menjelaskannya. Baris koreksinya
+ *   1. `hideRow(paidRowId)` — baris pembayarannya hilang dari SEMUA pembaca
+ *      (Riwayat, Home, `/wallet`, `/wallet/[id]`) tetapi TETAP ada di server.
+ *      Ini yang diminta paket 51: membalikkan barisnya, bukan cuma stempelnya.
+ *      Sengaja BUKAN `removeRow()`: penghapusan server + koreksi +500.000 di
+ *      bawah akan mengembalikan uangnya DUA kali (uji `qa:bills` menangkapnya di
+ *      `wallet_balances`). Pasangan −500.000/+500.000 di server justru yang
+ *      membuat pembatalan ini seimbang & bisa diaudit.
+ *   2. Koreksi saldo (`postBalanceAdjustment`) — tombstone hanya menyembunyikan
+ *      barisnya; saldo klien dihitung dari baris (termasuk yang di-tombstone),
+ *      jadi pengembaliannya ditulis di sini. Baris koreksinya
  *      memakai nama sendiri ("Batal bayar <tagihan>"), bukan copy koreksi bawaan,
  *      supaya Riwayat bisa menjelaskan kenapa saldonya naik kembali.
  *
@@ -617,7 +666,7 @@ export function unmarkBillPaid(id: string, dateISO: string = localISODate()): Bi
 
   let reversal: MoneyRow | null = null
   if (row) {
-    removeRow(row.id)
+    hideRow(row.id)
     reversal = postBalanceAdjustment({
       walletId: row.walletId,
       /* saldo setelah pembayaran + nominal yang dibatalkan = saldo sebelum bayar */

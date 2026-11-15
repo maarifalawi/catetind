@@ -668,14 +668,57 @@ body {
   animation: bubble-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
-/* ayunan lembut tanaman di homescreen — transform-origin di-set inline (pangkal batang) */
-@keyframes plant-sway {
+/* kepingan puzzle baru "nempel" ke papan — dipakai `puzzle-piece-enter` di
+   plant-illustration.tsx. `transform-box: fill-box` WAJIB untuk SVG: tanpa itu
+   transform-origin `center` dihitung dari viewBox, bukan dari kepingannya. */
+@keyframes puzzle-snap {
+  0% {
+    opacity: 0;
+    transform: scale(1.16) rotate(-4deg);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(0.98) rotate(1deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+.puzzle-piece-enter {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: puzzle-snap 520ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .puzzle-piece-enter {
+    animation: none;
+  }
+}
+
+/* Ayunan lembut untuk kartu/ikon mengambang (dulu bernama `plant-sway` dan
+   dipakai di halaman undangan Joint Wallet). Nama tanaman dibuang karena
+   metaforanya sudah pindah ke puzzle; gerakannya tetap sama supaya dua ikon di
+   halaman undangan tidak terasa kaku. */
+@keyframes float-sway {
   0%,
   100% {
     transform: rotate(-1.6deg);
   }
   50% {
     transform: rotate(1.6deg);
+  }
+}
+
+.float-sway {
+  animation: float-sway 5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .float-sway {
+    animation: none;
   }
 }
 
@@ -728,7 +771,7 @@ body {
 
    Sengaja BUKAN "semua animasi": daftarnya cuma elemen dekoratif latar. Penanda
    `[class*=…]` dipakai karena animasinya ditulis sebagai utility Tailwind
-   (`animate-ping`, `animate-[plant-sway_…]`). Ruang lingkup dibatasi ke
+   (`animate-ping`, `animate-[…]`). Ruang lingkup dibatasi ke
    `[data-catetind-page-root]` supaya animasi di dalam panel/sheet — slide-in
    overlay, titik mengetik, denyut scan struk yang di-render lewat PORTAL ke
    <body> — TIDAK ikut berhenti; justru dialah yang sedang berinteraksi user.
@@ -736,20 +779,36 @@ body {
    tanpa perlu `!important`.) */
 body[data-catetind-sheet-open='true'] [data-catetind-page-root] :is(
     [class*='animate-ping'],
-    [class*='plant-sway'],
+    [class*='puzzle-piece'],
+    [class*='float-sway'],
     .progress-shimmer
   ),
 body[data-catetind-overlay-open='true'] [data-catetind-page-root] :is(
     [class*='animate-ping'],
-    [class*='plant-sway'],
+    [class*='puzzle-piece'],
+    [class*='float-sway'],
     .progress-shimmer
   ),
 body[data-scroll-locked] [data-catetind-page-root] :is(
     [class*='animate-ping'],
-    [class*='plant-sway'],
+    [class*='puzzle-piece'],
+    [class*='float-sway'],
     .progress-shimmer
   ) {
   animation-play-state: paused;
+}
+
+/* ── PLACEHOLDER = PETUNJUK, BUKAN ISI ───────────────────────────────────────
+   Placeholder harus TERBACA sebagai area mengisi: huruf TEGAK (bukan miring),
+   bobot normal, dan warna lebih redup daripada teks yang diketik user. Aturan
+   ini global supaya seluruh input/textarea memakai bahasa yang sama. */
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--color-forest-muted);
+  font-style: normal;
+  font-weight: 400;
+  opacity: 0.72;
 }
 
 /* ── Transaction Input Engine (Vaul bottom sheet, inventaris 97a/b/c) ─────────
@@ -884,32 +943,30 @@ body[data-catetind-sheet-open='true'] [data-catetind-page-root] {
 }
 
 
-/* ── Upacara Tanaman onboarding (inventaris #10, section 4C) ────────────────
-   Tetes air jatuh bergantian menyiram benih pertama user. Elemennya di-
-   absolute-kan di atas pot (onboarding-plant-ceremony.tsx) dan delay tiap
-   tetes di-set inline supaya terlihat mengalir, bukan berkedip bareng. */
-@keyframes water-drop {
-  0% {
-    opacity: 0;
-    transform: translateY(-6px) scale(0.85);
-  }
-  25% {
-    opacity: 0.9;
-  }
+/* ── Upacara Puzzle onboarding (inventaris #10, section 4C) ──────────────────
+   Dulu blok ini berisi `water-drop`: tetes air yang menyiram benih pertama.
+   Karena metaforanya berganti jadi puzzle, tetesan itu DICABUT (tidak ada yang
+   menyiram kepingan) dan diganti satu denyut halo lembut di belakang papan
+   puzzle — dijalankan `onboarding-puzzle-glow` di onboarding-plant-ceremony.tsx. */
+@keyframes onboarding-puzzle-glow {
+  0%,
   100% {
-    opacity: 0;
-    transform: translateY(26px) scale(1);
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.06);
   }
 }
 
-.water-drop {
-  animation: water-drop 1.6s ease-in infinite;
+.onboarding-puzzle-glow {
+  animation: onboarding-puzzle-glow 2.8s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .water-drop {
+  .onboarding-puzzle-glow {
     animation: none;
-    opacity: 0;
   }
 }
 
@@ -1047,5 +1104,39 @@ body[data-catetind-sheet-open='true'] [data-catetind-page-root] {
     transparent 74%
   );
   mask-image: radial-gradient(62% 42% at 100% 0%, #000 0%, rgba(0, 0, 0, 0.45) 34%, transparent 74%);
+}
+
+/* ── Kartu hero ber-batik · dua scrim lokal di atas kain ─────────────────────
+   Revisi 11 Nov 2026 (pemilik produk): "batiknya masih kurang, terus teksnya
+   jadi ngga terlalu keliatan". Dua hal itu jangan diselesaikan dengan menutup
+   seluruh kartu memakai lapisan gelap — caranya justru membuat batik hilang.
+
+   Solusinya: gelapkan HANYA area tempat teks duduk, bentuknya radial lembut
+   yang menyatu dengan kain:
+
+     · amount → pojok kiri bawah (nominal besar)
+     · title  → pojok kiri atas (judul + label)
+
+   Dipakai `BatikCloth` di dua tempat: hero /budget ("Jatah Hari Ini") dan hero
+   /wallet ("Total Saldo"). Sisi kanan kartu dan tepi bawah (sabuk parang)
+   tetap terbuka, jadi motif kawung/parang benar-benar terlihat. Warnanya
+   evergreen-deep, bukan hitam, supaya masih terasa satu keluarga dengan
+   permukaan forest. */
+.batik-scrim-amount {
+  background: radial-gradient(
+    120% 135% at 12% 96%,
+    rgba(31, 40, 35, 0.94) 0%,
+    rgba(31, 40, 35, 0.62) 36%,
+    rgba(31, 40, 35, 0) 70%
+  );
+}
+
+.batik-scrim-title {
+  background: radial-gradient(
+    88% 120% at 0% 0%,
+    rgba(31, 40, 35, 0.82) 0%,
+    rgba(31, 40, 35, 0.4) 44%,
+    rgba(31, 40, 35, 0) 70%
+  );
 }
 

@@ -89,9 +89,6 @@ export function contextOptionsFor(
  */
 export const CONTEXT_SETTINGS_COPY = {
   title: 'Konteks Uang',
-  /* H12-3 (audit UI/UX): kalimat lama ("Yang tidak dipakai tidak muncul di
-     pemilih konteks") harus dibaca dua kali; disederhanakan. */
-  desc: 'Matikan konteks yang ngga kamu pakai biar ngga muncul di app, Pribadi selalu aktif.',
   /** keterangan satu baris per konteks */
   itemHelper: {
     pribadi: 'Uangmu sendiri. Selalu aktif, jadi pemilih konteks tidak muncul kalau cuma ini.',
@@ -201,14 +198,14 @@ export function scopedItems<T extends { scope: BudgetScope }>(
 export const CONTEXT_EMPTY_COPY = {
   /** /wallet — konteks tanpa dompet (mis. Bersama sebelum user menambah dompet) */
   wallet: {
-    title: (label: string) => `Belum ada dompet di konteks ${label} 🌱`,
+    title: (label: string) => `Belum ada dompet di konteks ${label} 🧩`,
     body:
       'Dompet dipisah per konteks supaya laporan pribadi dan keluarga tidak bercampur. Dompet yang kamu tambah di sini langsung ikut dihitung di Total Saldo.',
     cta: (label: string) => `Tambah dompet ${label.toLowerCase()}`,
   },
   /** /history — tidak ada catatan di konteks ini */
   history: {
-    title: (label: string) => `Belum ada catatan di konteks ${label} 🌱`,
+    title: (label: string) => `Belum ada catatan di konteks ${label} 🧩`,
     body:
       'Catatan yang kamu buat sekarang masuk ke konteks yang sedang aktif. Catatan lama tetap aman di konteksnya masing-masing, pindah konteks untuk melihatnya.',
     cta: 'Catat Sekarang',
@@ -216,15 +213,11 @@ export const CONTEXT_EMPTY_COPY = {
   /** /calendar — periode yang dibaca tidak punya entri di konteks ini */
   calendar: {
     title: (label: string) => `Kalender konteks ${label} masih kosong`,
-    body:
-      'Catat pengeluaran atau pemasukan di tanggal yang kamu pilih, angkanya langsung masuk ke konteks ini.',
     cta: 'Catat di tanggal ini',
   },
   /** /bills — konteks tanpa tagihan rutin */
   bills: {
     title: (label: string) => `Belum ada tagihan rutin di konteks ${label} 📋`,
-    body:
-      'Kos, langganan, cicilan, tagihan yang kamu simpan di sini ikut konteks yang sedang aktif, jadi jatah harianmu tetap akurat.',
     cta: 'Tambah tagihan',
   },
   /** /wealth tab Investasi — tidak ada aset di konteks ini */

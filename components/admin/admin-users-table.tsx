@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { Search } from 'lucide-react'
 import {
+  aiQuotaOf,
   countByFilter,
   daysUntil,
   matchesUserFilter,
@@ -52,7 +53,7 @@ function PlanCell({ user, nowMs }: { user: AdminUserRow; nowMs: number }) {
     return (
       <div className="space-y-1">
         <AdminPill tone="thistle">Tanpa paket</AdminPill>
-        {user.plan.period && <p className="text-[10.5px] text-plum-deep">tidak aktif</p>}
+        {user.plan.period && <p className="text-[12px] text-plum-deep">tidak aktif</p>}
       </div>
     )
   }
@@ -62,7 +63,7 @@ function PlanCell({ user, nowMs }: { user: AdminUserRow; nowMs: number }) {
       <AdminPill tone={user.plan.isLifetime ? 'mint' : 'forest'}>
         {planLabelOf(user.plan.planId)}
       </AdminPill>
-      <p className="text-[10.5px] leading-snug tabular-nums text-forest/45">
+      <p className="text-[12px] leading-snug tabular-nums text-forest-muted">
         {user.plan.isLifetime
           ? 'selamanya'
           : user.plan.expiresAt
@@ -70,6 +71,34 @@ function PlanCell({ user, nowMs }: { user: AdminUserRow; nowMs: number }) {
             : 'tanpa tanggal'}
       </p>
     </div>
+  )
+}
+
+/* ── SEL "SISA AI" — berapa persen kuota AI akun ini yang masih tersisa ───────
+   Permintaan pemilik repo: di dashboard admin bisa terlihat sisa kuota AI tiap
+   user, dalam bentuk PERSEN saja.
+
+   Tiga bentuk, tiga arti (lihat `aiQuotaOf` di `lib/admin/filters.ts`):
+     ·  —  → paket tanpa AI (angka apa pun akan menyesatkan)
+     ·  ∞  → paket tanpa batas
+     · 78% → sisa kuota dasar paket berkuota
+   Warnanya memakai palet status kanon yang sama dengan Daily HUD (mint aman,
+   hud-amber mendekati batas, plum lewat batas) — tidak ada warna baru. */
+function AiQuotaCell({ user }: { user: AdminUserRow }) {
+  const quota = aiQuotaOf(user)
+
+  if (quota.kind === 'none') {
+    return <span className="text-[13.5px] text-forest-muted">—</span>
+  }
+  if (quota.kind === 'unlimited') {
+    return <span className="text-[13.5px] font-medium text-forest">∞</span>
+  }
+
+  const tone = quota.pct >= 50 ? 'mint' : quota.pct >= 20 ? 'cantelope' : 'plum'
+  return (
+    <AdminPill tone={tone}>
+      <span className="tabular-nums">{quota.pct}%</span>
+    </AdminPill>
   )
 }
 
@@ -105,7 +134,7 @@ export function AdminUsersTable({
       <div className="flex flex-col gap-2.5">
         <div className="relative">
           <Search
-            className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-forest/35"
+            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-forest-muted"
             aria-hidden
             strokeWidth={1.8}
           />
@@ -115,7 +144,7 @@ export function AdminUsersTable({
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Cari nama atau email…"
             aria-label="Cari user berdasarkan nama atau email"
-            className="w-full rounded-xl bg-sage/40 py-2 pl-9 pr-3 text-[12.5px] text-forest ring-1 ring-soil/[0.07] outline-none transition placeholder:text-forest/35 focus:ring-2 focus:ring-forest/20"
+            className="w-full rounded-xl bg-sage/40 py-2 pl-9 pr-3 text-[14px] text-forest ring-1 ring-soil/[0.07] outline-none transition placeholder:text-forest-muted focus:ring-2 focus:ring-forest/20"
           />
         </div>
 
@@ -129,17 +158,17 @@ export function AdminUsersTable({
                 onClick={() => setFilter(item.id)}
                 aria-pressed={active}
                 className={cn(
-                  'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors',
+                  'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12.5px] font-medium transition-colors',
                   active
                     ? 'bg-forest text-cream'
-                    : 'bg-sage/50 text-forest/60 hover:bg-sage hover:text-forest',
+                    : 'bg-sage/50 text-forest-muted hover:bg-sage hover:text-forest',
                 )}
               >
                 {item.label}
                 <span
                   className={cn(
-                    'text-[10px] tabular-nums',
-                    active ? 'text-cream/70' : 'text-forest/35',
+                    'text-[11.5px] tabular-nums',
+                    active ? 'text-cream' : 'text-forest-muted',
                   )}
                 >
                   {formatNumber(counts[item.id])}
@@ -165,18 +194,27 @@ export function AdminUsersTable({
         </div>
       ) : (
         <div className="-mx-1 mt-2 overflow-x-auto px-1">
-          <table className="w-full min-w-[680px] border-separate border-spacing-y-1 text-left">
+          <table className="w-full min-w-[820px] border-separate border-spacing-y-1 text-left">
             <thead>
-              <tr className="text-[10px] uppercase tracking-[0.12em] text-forest/40">
-                <th className="px-2 pb-1 font-medium">User</th>
-                <th className="px-2 pb-1 font-medium">Paket</th>
-                <th className="px-2 pb-1 text-right font-medium" title="dompet / transaksi">
+              <tr className="text-[11.5px] uppercase tracking-[0.12em] text-forest-muted">
+                <th className="px-2.5 pb-1.5 font-medium">User</th>
+                <th className="px-2.5 pb-1.5 font-medium">Paket</th>
+                <th className="px-2.5 pb-1.5 text-right font-medium" title="dompet / transaksi">
                   Aktivitas
                 </th>
-                <th className="px-2 pb-1 text-right font-medium" title="panggilan AI bulan ini">
+                <th className="px-2.5 pb-1.5 text-right font-medium" title="panggilan AI bulan ini">
                   AI
                 </th>
-                <th className="px-2 pb-1 text-right font-medium">
+                {/* Kolom baru: sisa kuota AI dalam persen. Angkanya turunan dari
+                    `aiCallsThisMonth` vs kuota dasar kanon (`aiQuotaOf`), bukan
+                    kolom server baru — pagar privasi `lib/admin/columns.ts` tetap. */}
+                <th
+                  className="px-2.5 pb-1.5 text-right font-medium"
+                  title="sisa kuota dasar AI bulan berjalan"
+                >
+                  Sisa AI
+                </th>
+                <th className="px-2.5 pb-1.5 text-right font-medium">
                   <span className="sr-only">Aksi</span>
                 </th>
               </tr>
@@ -184,43 +222,46 @@ export function AdminUsersTable({
             <tbody>
               {shown.map((user) => (
                 <tr key={user.id} className="bg-sage/25 align-top">
-                  <td className="max-w-[280px] rounded-l-xl px-2 py-2">
-                    <p className="flex items-center gap-1.5 text-[12.5px] font-medium text-forest">
+                  <td className="max-w-[340px] rounded-l-xl px-2.5 py-2.5">
+                    <p className="flex items-center gap-1.5 text-[14px] font-medium text-forest">
                       <span className="truncate">{user.name || 'Tanpa nama'}</span>
                       {!user.onboardingCompleted && (
                         <AdminPill tone="cantelope">belum onboarding</AdminPill>
                       )}
                     </p>
-                    <p className="truncate text-[10.5px] tabular-nums text-forest/45">
+                    <p className="truncate text-[12px] tabular-nums text-forest-muted">
                       {user.email || user.id} · aktif {formatRelative(user.lastActiveAt, nowMs)}
                     </p>
                   </td>
-                  <td className="px-2 py-2">
+                  <td className="px-2.5 py-2.5">
                     <PlanCell user={user} nowMs={nowMs} />
                   </td>
                   <td
-                    className="px-2 py-2 text-right text-[12px] font-semibold tabular-nums text-forest"
+                    className="px-2.5 py-2.5 text-right text-[13.5px] font-semibold tabular-nums text-forest"
                     title={`${formatNumber(user.walletCount)} dompet · ${formatNumber(
                       user.transactionCount,
                     )} transaksi`}
                   >
                     {formatNumber(user.walletCount)}
-                    <span className="font-normal text-forest/25"> / </span>
+                    <span className="font-normal text-forest-muted"> / </span>
                     {formatNumber(user.transactionCount)}
                   </td>
-                  <td className="px-2 py-2 text-right text-[12px] tabular-nums text-forest/55">
+                  <td className="px-2.5 py-2.5 text-right text-[13.5px] tabular-nums text-forest-muted">
                     {formatNumber(user.aiCallsThisMonth)}
                   </td>
-                  <td className="rounded-r-xl px-2 py-2 text-right">
+                  <td className="px-2.5 py-2.5 text-right">
+                    <AiQuotaCell user={user} />
+                  </td>
+                  <td className="rounded-r-xl px-2.5 py-2.5 text-right">
                     <button
                       type="button"
                       onClick={() => setSelectedId(selectedId === user.id ? null : user.id)}
                       aria-expanded={selectedId === user.id}
                       className={cn(
-                        'rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors',
+                        'rounded-full px-2.5 py-1 text-[12.5px] font-semibold transition-colors',
                         selectedId === user.id
                           ? 'bg-forest text-cream'
-                          : 'bg-cream text-forest/70 ring-1 ring-soil/[0.08] hover:bg-sage/60 hover:text-forest',
+                          : 'bg-cream text-forest-soft ring-1 ring-soil/[0.08] hover:bg-sage/60 hover:text-forest',
                       )}
                     >
                       {selectedId === user.id ? 'Tutup' : 'Kelola'}

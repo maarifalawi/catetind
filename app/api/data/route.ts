@@ -24,6 +24,7 @@ const TABLES = new Set([
   'wallets',
   'ledger_rows',
   'bills',
+  'notifications',
   'goals',
   'goal_contributions',
   'user_settings',
@@ -149,6 +150,38 @@ export async function POST(req: NextRequest) {
         .update(scopedPatch)
         .eq('user_id', userId)
         .match(match)
+        .select('*')
+      if (error) return NextResponse.json({ error: error.message }, { status: 502 })
+      return NextResponse.json({ data: data ?? [] })
+    }
+
+    /* ── UPDATE/DELETE SELURUH BARIS MILIK SESI (`match` tidak diperlukan) ──
+       Dipakai lonceng notifikasi ("Tandai semua dibaca" & "Bersihkan"). Dulu
+       dua aksi itu hanya lewat klien browser; saat klien itu tidak punya sesi
+       (cookie httpOnly / chunk hilang), keduanya diam-diam TIDAK menyentuh
+       server dan daftar yang sudah dibersihkan hidup lagi di perangkat lain.
+       Filter `user_id` tetap dari sesi — body tidak bisa menyentuh akun lain. */
+    if (op === 'updateAll') {
+      const patch = isPlainObject(body.patch) ? body.patch : null
+      if (!patch || Object.keys(patch).length === 0) {
+        return NextResponse.json({ error: 'updateAll butuh patch.' }, { status: 400 })
+      }
+      const scopedPatch = { ...patch }
+      delete scopedPatch.user_id
+      const { data, error } = await client
+        .from(table)
+        .update(scopedPatch)
+        .eq('user_id', userId)
+        .select('*')
+      if (error) return NextResponse.json({ error: error.message }, { status: 502 })
+      return NextResponse.json({ data: data ?? [] })
+    }
+
+    if (op === 'deleteAll') {
+      const { data, error } = await client
+        .from(table)
+        .delete()
+        .eq('user_id', userId)
         .select('*')
       if (error) return NextResponse.json({ error: error.message }, { status: 502 })
       return NextResponse.json({ data: data ?? [] })

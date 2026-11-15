@@ -37,7 +37,7 @@ export function Toaster() {
             '[&_[data-icon]_svg]:size-[18px]',
           ].join(' '),
           title: 'text-[14.5px] font-medium leading-snug text-forest',
-          description: 'mt-0.5 text-xs leading-relaxed text-forest/55',
+          description: 'mt-0.5 text-xs leading-relaxed text-forest-muted',
           content: 'flex min-w-0 flex-1 flex-col',
           loading: 'text-forest',
           /* Tombol aksi di dalam toast (mis. "Undo" setelah menghapus) WAJIB
@@ -51,7 +51,7 @@ export function Toaster() {
           ].join(' '),
           cancelButton: [
             'ml-auto shrink-0 rounded-xl bg-cream px-3 py-2',
-            'text-[13px] font-medium text-forest/70 ring-1 ring-soil/12 transition-colors hover:bg-sage/60',
+            'text-[13px] font-medium text-forest-soft ring-1 ring-soil/12 transition-colors hover:bg-sage/60',
           ].join(' '),
         },
       }}

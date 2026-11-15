@@ -29,6 +29,7 @@ import {
   type HistoryTransaction,
 } from './data/history'
 import { postTransaction, toHistoryTransaction } from './money/store'
+import { notifyExpense, notifyIncome, notifySaving } from './money/notification-events'
 import type { TransactionType } from './types'
 
 /** yang dikirim pemanggil — id, jam, dan badge ✨ ditentukan di store */
@@ -107,6 +108,14 @@ export function recordTransaction(input: NewTransactionInput): HistoryTransactio
 
   /* penulisan ditolak (nominal tidak sah) → jangan mengaku kecatat */
   if (!row) throw new Error('Catatan tidak tersimpan: nominalnya tidak sah.')
+
+  /* LONCENG: setiap transaksi kas yang BENAR-BENAR tertulis meninggalkan satu
+     item. Dipanggil setelah `row` ada, jadi penolakan di atas tidak pernah
+     memunculkan notifikasi palsu. Nominal tidak ikut (privacy). */
+  const label = input.category || TRANSACTION_FALLBACK_CATEGORY
+  if (input.type === 'income') notifyIncome(label)
+  else if (input.type === 'saving') notifySaving(label)
+  else if (input.type === 'expense') notifyExpense(label)
 
   return toHistoryTransaction(row)
 }

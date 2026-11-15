@@ -270,7 +270,7 @@ export const DEBT_CASH_COPY = {
     amountLabel: 'Nominal diterima',
     walletLabel: 'Dompet tujuan',
     submit: 'Simpan Penerimaan',
-    toastTitle: (name: string) => `Pelunasan dari ${name} dicatat! 🌿`,
+    toastTitle: (name: string) => `Pelunasan dari ${name} dicatat! 🧩`,
     toastShrinking: 'Piutangmu langsung berkurang.',
     toastSettled: 'Piutang ini lunas! 🎉',
   },

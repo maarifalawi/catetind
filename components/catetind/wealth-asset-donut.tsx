@@ -55,7 +55,7 @@ export function WealthAssetDonut({
         <h3 className="font-display text-[14.5px] font-semibold tracking-tight text-forest">
           Alokasi Aset
         </h3>
-        <span className="text-[11.5px] font-medium uppercase tracking-[0.16em] text-forest/35">
+        <span className="text-[11.5px] font-medium uppercase tracking-[0.16em] text-forest-muted">
           {slices.length} jenis
         </span>
       </div>
@@ -115,14 +115,14 @@ export function WealthAssetDonut({
               <span className="mt-1 font-display text-[22px] font-semibold leading-none tracking-tight text-forest tabular-nums">
                 {active.pct}%
               </span>
-              <span className="mt-1 text-[11.5px] font-medium text-forest/45">{active.label}</span>
+              <span className="mt-1 text-[11.5px] font-medium text-forest-muted">{active.label}</span>
             </motion.span>
           ) : (
             <>
               <span className="font-display text-[26px] font-semibold leading-none tracking-tight text-forest tabular-nums">
                 {investments.length}
               </span>
-              <span className="mt-1 text-[11.5px] font-medium uppercase tracking-[0.16em] text-forest/40">
+              <span className="mt-1 text-[11.5px] font-medium uppercase tracking-[0.16em] text-forest-muted">
                 aset
               </span>
             </>
@@ -156,7 +156,7 @@ function DonutTooltip({
       <p className="mt-1 text-[13.5px] font-semibold tabular-nums">
         {maskMoney(slice.value, masked)}
       </p>
-      <p className="text-[11.5px] text-cream/60 tabular-nums">{slice.pct}% dari portofolio</p>
+      <p className="text-[11.5px] text-cream-muted tabular-nums">{slice.pct}% dari portofolio</p>
     </div>
   )
 }

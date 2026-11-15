@@ -83,7 +83,12 @@ export function MarkBillPaidSheet({
       onClose={onClose}
       title={bill ? MARK_PAID_SHEET_COPY.title(bill.name) : MARK_PAID_SHEET_COPY.title('')}
       footer={
-        <SheetSubmit onClick={submit} disabled={submitDisabled} gate>
+        <SheetSubmit
+          onClick={submit}
+          disabled={submitDisabled}
+          gate
+          submitAttrs={{ 'data-catetind-bill-pay-submit': 'true' }}
+        >
           {MARK_PAID_SHEET_COPY.submit}
         </SheetSubmit>
       }

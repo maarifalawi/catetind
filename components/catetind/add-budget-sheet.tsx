@@ -150,7 +150,6 @@ export function AddBudgetSheet({
       open={open}
       onClose={onClose}
       title={existing ? BUDGET_EDIT_COPY.title : BUDGET_ADD_COPY.title}
-      description={existing ? BUDGET_EDIT_COPY.description : undefined}
       footer={
         <SheetSubmit onClick={submit} disabled={!ready} gate>
           {existing ? BUDGET_EDIT_COPY.submit : BUDGET_ADD_COPY.submit}
@@ -176,7 +175,7 @@ export function AddBudgetSheet({
                 'flex items-center gap-2 rounded-2xl px-3 py-2.5 text-left text-[13.5px] font-medium transition-all duration-200 active:scale-95',
                 active
                   ? 'bg-forest text-mint ring-2 ring-forest'
-                  : 'bg-cream text-forest/70 ring-1 ring-soil/14 hover:bg-cream hover:text-forest',
+                  : 'bg-cream text-forest-soft ring-1 ring-soil/14 hover:bg-cream hover:text-forest',
               )}
             >
               <span className="text-[17px] leading-none">{option.icon}</span>
@@ -195,7 +194,6 @@ export function AddBudgetSheet({
             onDigitsChange={setDigits}
             placeholder="Rp 500.000"
             inputRef={amountRef}
-            hint={existing ? BUDGET_EDIT_COPY.hint : BUDGET_ADD_COPY.amountHint}
           />
         </div>
       </RevealStep>

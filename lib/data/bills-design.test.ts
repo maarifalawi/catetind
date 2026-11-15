@@ -16,7 +16,7 @@ import { CURRENT_DAY, INITIAL_BILLS, TODAY_ISO } from '@/lib/data/bills'
 const render = (element: ReturnType<typeof createElement>) => renderToStaticMarkup(element)
 
 describe('redesain Tagihan Rutin (render nyata)', () => {
-  it('ringkasan hanya memuat nominal, progres, dan satu baris status', () => {
+  it('ringkasan hanya memuat total, progres tipis, dan jumlah lunas/belum', () => {
     const html = render(
       createElement(BillsOverview, {
         bills: INITIAL_BILLS,
@@ -24,13 +24,13 @@ describe('redesain Tagihan Rutin (render nyata)', () => {
         currentDay: CURRENT_DAY,
       }),
     )
-    expect(html).toContain('Belum dibayar')
-    expect(html).toContain('2 dari 6 tagihan belum lunas')
-    expect(html).toContain('Total ')
+    expect(html).toContain('Total bulan ini')
+    expect(html).toContain('Lunas 4')
+    expect(html).toContain('Belum 2')
+    /* teks panjang yang dihapus Operasi Sapu Bersih tidak boleh kembali */
+    expect(html).not.toContain('tagihan belum lunas')
     expect(html).not.toContain('Gaji terpakai')
-    expect(html).not.toContain('dari pemasukan')
     expect(html).not.toContain('Jatah harian')
-    expect(html).not.toContain('Dibayar ')
   })
 
   it('kalender 14 hari: tanggal + titik, tanpa legenda/pratinjau', () => {
@@ -90,7 +90,7 @@ describe('redesain Tagihan Rutin (render nyata)', () => {
     expect(overdueHtml).not.toContain('ring-plum')
   })
 
-  it('saat semua lunas, ringkasan memakai kalimat pendek', () => {
+  it('saat semua lunas, ringkasan hanya berubah angka — tanpa kalimat tambahan', () => {
     const html = render(
       createElement(BillsOverview, {
         bills: INITIAL_BILLS.map((bill) => ({ ...bill, isPaidThisMonth: true })),
@@ -98,7 +98,9 @@ describe('redesain Tagihan Rutin (render nyata)', () => {
         currentDay: CURRENT_DAY,
       }),
     )
-    expect(html).toContain('Udah lunas semua')
+    expect(html).toContain('Lunas 6')
+    expect(html).toContain('Belum 0')
+    expect(html).not.toContain('Udah lunas semua')
     expect(html).not.toContain('Semua tagihan bulan ini lunas')
   })
 })

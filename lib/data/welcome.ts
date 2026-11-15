@@ -36,7 +36,7 @@ export const WELCOME_COPY = {
   /** pintu kedua di kanan atas bar brand */
   loginLead: 'Sudah punya akun?',
   loginLink: 'Masuk',
-  legalNote: 'Dibuat di Jakarta 🌿',
+  legalNote: 'Dibuat di Jakarta 🧩',
 } as const
 
 /**

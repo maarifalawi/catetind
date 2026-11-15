@@ -1169,13 +1169,11 @@ export const SNOWBALL_PROGRESS_ARIA = 'Progres pelunasan hutang platform'
  * lagi setiap kali membuka tab.
  */
 export const PERSONAL_EMPTY_LINE = {
-  hutang: 'Belum ada hutang personal aktif 🌿',
-  piutang: 'Belum ada piutang aktif 🌿',
+  hutang: 'Belum ada hutang personal aktif 🧩',
+  piutang: 'Belum ada piutang aktif 🧩',
 } as const
 
 export const EMPTY_INVESTASI_TITLE = 'Belum punya catatan investasi'
-export const EMPTY_INVESTASI_COPY =
-  'Saham, reksadana, crypto, emas, catat di sini agar Net Worth akurat.'
 export const EMPTY_INVESTASI_CTA = 'Tambah Investasi Pertama'
 
 export const EMPTY_HUTANG_TITLE = 'Gak ada hutang aktif'
@@ -1331,7 +1329,6 @@ export const PIUTANG_ZERO_LINE = '🎉 Piutang: Rp 0, Bersih!'
    dengan bahasa kecil-dulu, sesuai contoh audit. */
 export const WEALTH_ONBOARD_COPY = {
   title: 'Semua asetmu, dari yang kecil',
-  body: 'Halaman ini buat track semua aset kamu, dari tabungan Rp 500.000 sampai motor. Mulai dari yang kecil dulu!',
   cta: 'Catat aset pertama',
 } as const
 
@@ -1425,19 +1422,19 @@ export const DELETE_DEBT_TOAST = {
   title: 'Catatan hutang dihapus',
   description: (name: string) => `${name} keluar dari daftar hutangmu.`,
   undo: 'Undo',
-  undoneTitle: 'Catatan dikembalikan 🌿',
+  undoneTitle: 'Catatan dikembalikan 🧩',
   undoneDescription: 'Catatannya balik ke daftar, riwayat pembayarannya ikut utuh.',
   expired:
-    'Jendela Undo-nya sudah lewat, catatannya bisa kamu tambahkan lagi kalau memang masih perlu 🌿',
+    'Jendela Undo-nya sudah lewat, catatannya bisa kamu tambahkan lagi kalau memang masih perlu 🧩',
 } as const
 
 export const DELETE_ASSET_TOAST = {
   title: 'Aset dihapus',
   description: (name: string) => `${name} keluar dari portofolio.`,
   undo: 'Undo',
-  undoneTitle: 'Aset dikembalikan 🌿',
+  undoneTitle: 'Aset dikembalikan 🧩',
   undoneDescription: 'Nilainya balik ke portofolio & Net Worth seperti semula.',
-  expired: 'Jendela Undo-nya sudah lewat, asetnya bisa kamu tambahkan lagi kapan aja 🌿',
+  expired: 'Jendela Undo-nya sudah lewat, asetnya bisa kamu tambahkan lagi kapan aja 🧩',
 } as const
 
 /* ── TAB PROPERTI / ASET FISIK (paket 63) ────────────────────────────────────
@@ -1448,11 +1445,9 @@ export const DELETE_ASSET_TOAST = {
 
 export const PHYSICAL_TAB_COPY = {
   title: 'Properti & Aset Fisik',
-  blurb: 'Rumah, tanah, kendaraan, logam mulia, nilainya kamu isi sendiri.',
   totalLabel: 'Total nilai aset fisik',
   addLabel: 'Tambah Aset',
   emptyTitle: 'Belum ada aset fisik tercatat',
-  emptyBody: 'Catat rumah, kendaraan, atau barang berharga biar Total Kekayaan akurat.',
   emptyCta: 'Tambah Aset Pertama',
   gainLabel: 'Naik',
   lossLabel: 'Turun',
@@ -1472,8 +1467,8 @@ export const PHYSICAL_TAB_COPY = {
     note: 'Catatan (opsional)',
     save: 'Simpan',
     cancel: 'Batal',
-    needName: 'Isi nama asetnya dulu ya 🌿',
-    needValue: 'Isi nilai sekarangnya dulu ya 🌿',
+    needName: 'Isi nama asetnya dulu ya 🧩',
+    needValue: 'Isi nilai sekarangnya dulu ya 🧩',
   },
   delete: {
     title: 'Hapus aset ini?',
@@ -1487,9 +1482,9 @@ export const PHYSICAL_TAB_COPY = {
     edited: 'Aset diperbarui',
     deleted: (name: string) => `${name} dihapus dari daftar.`,
     undo: 'Undo',
-    restoredTitle: 'Aset dikembalikan 🌿',
+    restoredTitle: 'Aset dikembalikan 🧩',
     restoredBody: 'Nilainya balik ke Total Kekayaan seperti semula.',
-    undoExpired: 'Jendela Undo-nya sudah lewat, asetnya bisa kamu tambahkan lagi kapan aja 🌿',
+    undoExpired: 'Jendela Undo-nya sudah lewat, asetnya bisa kamu tambahkan lagi kapan aja 🧩',
   },
 } as const
 

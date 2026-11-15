@@ -42,10 +42,10 @@ const LEVEL_CLASS: Record<HeatmapDay['level'], string> = {
 
 /** warna angka hari agar tetap kontras di tiap tingkat warna sel */
 const LEVEL_TEXT_CLASS: Record<HeatmapDay['level'], string> = {
-  0: 'text-forest/30',
-  1: 'text-forest/45',
-  2: 'text-forest/75',
-  3: 'text-cream/90',
+  0: 'text-forest-muted',
+  1: 'text-forest-muted',
+  2: 'text-forest-soft',
+  3: 'text-cream',
 }
 
 /* H3-2 (audit UI/UX): legenda dulu terlalu kecil & cuma kata ("Sedikit",
@@ -94,34 +94,21 @@ export function SpendingHeatmap({
   const totalSpend = days.reduce((sum, day) => sum + day.total, 0)
   const activeDays = days.filter((day) => day.total > 0).length
 
-  /* H3-2 — legenda dengan ambang RUPIAH nyata, diturunkan dari hari terboros. */
-  const legend = useMemo<{ level: HeatmapDay['level']; label: string }[]>(() => {
-    const low = Math.round(peak.total * 0.3)
-    const high = Math.round(peak.total * 0.62)
-    return [
-      { level: 0, label: 'Rp 0' },
-      { level: 1, label: `< ${maskMoney(low, masked)}` },
-      { level: 2, label: `${maskMoney(low, masked)}–${maskMoney(high, masked)}` },
-      { level: 3, label: `> ${maskMoney(high, masked)}` },
-    ]
-  }, [peak.total, masked])
-
   return (
     <section className="rounded-[2rem] bg-cream p-5 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] ring-1 ring-soil/12 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-2.5">
           <span className="flex size-9 items-center justify-center rounded-full bg-sage text-forest">
-            <Flame className="size-[18px]" strokeWidth={2.2} />
-          </span>
+            </span>
           <div>
             <h2 className="font-display text-[16px] font-semibold tracking-tight text-forest">
               Kapan Kamu Sering Boros?
             </h2>
             {/* ringkasan singkat: berapa hari benar-benar ada pengeluaran */}
-            <p className="text-[12.5px] text-forest/45">{activeDays} hari ada pengeluaran</p>
+            <p className="text-[12.5px] text-forest-muted">{activeDays} hari ada pengeluaran</p>
           </div>
         </div>
-        <span className="rounded-full bg-cream px-3 py-1.5 text-[12.5px] font-medium text-forest/60 tabular-nums ring-1 ring-soil/12">
+        <span className="rounded-full bg-cream px-3 py-1.5 text-[12.5px] font-medium text-forest-muted tabular-nums ring-1 ring-soil/12">
           {maskMoney(totalSpend, masked)} / {DAYS} hari
         </span>
       </div>
@@ -138,7 +125,7 @@ export function SpendingHeatmap({
           {HEATMAP_WEEKDAYS.map((label) => (
             <span
               key={label}
-              className="pb-1 text-center text-[11px] font-medium uppercase tracking-[0.08em] text-forest/35"
+              className="pb-1 text-center text-[11px] font-medium uppercase tracking-[0.08em] text-forest-muted"
             >
               {label}
             </span>
@@ -184,7 +171,7 @@ export function SpendingHeatmap({
                       )}
                     >
                       <span className="block whitespace-nowrap">{formatDayLabel(day.date)}</span>
-                      <span className="block whitespace-nowrap text-[11px] font-medium text-cream/70">
+                      <span className="block whitespace-nowrap text-[11px] font-medium text-cream">
                         {maskMoney(day.total, masked)}
                         {day.date === peak.date ? ' · terboros' : ''}
                       </span>
@@ -203,24 +190,6 @@ export function SpendingHeatmap({
             </div>
           ))}
         </div>
-      </div>
-
-      {/* H3-2 — legenda skala warna DIPERBESAR + angka nyata (dulu cuma kata,
-          kecil). Contoh: "🟩 < Rp 50.000" ala permintaan audit. */}
-      <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-[13.5px] font-medium text-forest/60">
-        <span className="text-forest/45">Skala</span>
-        {legend.map(({ level, label }) => (
-          <span key={level} className="inline-flex items-center gap-2">
-            <span
-              aria-hidden
-              className={cn(
-                'size-4 rounded-md ring-1 ring-inset ring-soil/16',
-                LEVEL_CLASS[level],
-              )}
-            />
-            {label}
-          </span>
-        ))}
       </div>
     </section>
   )

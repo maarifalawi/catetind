@@ -1,6 +1,6 @@
 import { memo, useMemo } from 'react'
 import Link from 'next/link'
-import { CircleDashed, HandCoins, Settings2, Sparkles } from 'lucide-react'
+import { Settings2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { TransactionBottomSheet } from '@/components/dashboard/transaction-bottom-sheet'
 import { usePrivacy } from './privacy-provider'
@@ -27,7 +27,6 @@ import { useTodayISO } from '@/lib/use-today-iso'
 import { openAICoachWithSeed } from '@/lib/ai-chat-bus'
 import { formatIDR } from '@/lib/wallets'
 import { LockedAmount } from './locked-amount'
-import { HudMeter } from './hud-meter'
 
 /* ── Kartu Jatah Hari Ini (Home) ─────────────────────────────────────────────
    Angkanya TIDAK ditulis di kartu ini: semuanya datang dari `computeDailyHud()`
@@ -122,23 +121,17 @@ export const DailyHudCard = memo(function DailyHudCard() {
 
   return (
     <section
+      data-catetind-jatah="hari-ini"
       aria-label={HOME_HUD_COPY.title}
       /* `flex-1` (bukan `h-full`): kartu ini hidup di dalam sel grid yang
          `flex flex-col` bersama `DailyNudge`, jadi ia harus TUMBUH mengisi sisa
          tinggi sel — pasangan ROW 3 (bento 50/50) jadi sama tinggi dengan
          "Distribusi Pengeluaran" tanpa satu piksel ruang mati. */
-      className="flex flex-1 flex-col rounded-[2rem] bg-cream p-4 ring-1 ring-soil/12 sm:p-5"
+      className="flex flex-1 flex-col rounded-2xl bg-cream p-4 ring-1 ring-soil/12 sm:p-5"
     >
       {/* header — konsisten dengan kartu lain */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="flex size-7 items-center justify-center rounded-full bg-sage text-forest">
-            <HandCoins className="size-3.5" strokeWidth={2.4} />
-          </span>
-          <div>
-            <p className="text-sm font-medium text-forest">{HOME_HUD_COPY.title}</p>
-          </div>
-        </div>
+        <p className="text-[13px] font-medium text-forest-muted">{HOME_HUD_COPY.title}</p>
         <span
           className={cn(
             'rounded-full px-2 py-0.5 text-[11px] font-medium',
@@ -153,16 +146,12 @@ export const DailyHudCard = memo(function DailyHudCard() {
 
       {!configured ? (
         /* ── BELUM DIATUR — paling jujur: jangan tampilkan angka contoh ──── */
-        <div className="mt-5 flex flex-col items-center rounded-2xl bg-cream px-6 py-8 text-center ring-1 ring-soil/8">
-          <span className="flex size-12 items-center justify-center rounded-full bg-cream text-forest ring-1 ring-soil/12">
-            <CircleDashed className="size-6" strokeWidth={1.8} />
-          </span>
-          <p className="mt-4 text-base font-medium text-forest">{HUD_COPY.notConfiguredTitle}</p>
-          <p className="mt-1.5 text-sm leading-relaxed text-forest/50">{HUD_COPY.notConfiguredBody}</p>
+        <div className="mt-4 flex flex-col items-center rounded-2xl bg-cream px-6 py-6 text-center ring-1 ring-soil/8">
+          <p className="text-[14px] font-medium text-forest">{HUD_COPY.notConfiguredTitle}</p>
           <Link
             href={MONEY_SETTINGS_HREF}
             aria-label={HUD_COPY.notConfiguredA11y}
-            className="mt-5 flex items-center gap-2 rounded-full bg-forest px-5 py-2.5 text-[14px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.97]"
+            className="mt-4 flex items-center gap-2 rounded-full bg-forest px-4 py-2 text-[13px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.97]"
           >
             <Settings2 className="size-4" strokeWidth={2.4} aria-hidden />
             {HUD_COPY.notConfiguredCta}
@@ -170,17 +159,14 @@ export const DailyHudCard = memo(function DailyHudCard() {
         </div>
       ) : !income.hasIncome ? (
         /* ── Dry Spell (PRD 2B.3) — pemasukan belum masuk di periode ini ── */
-        <div className="mt-5 flex flex-col items-center rounded-2xl bg-cream px-6 py-8 text-center ring-1 ring-soil/8">
-          <span className="flex size-12 items-center justify-center rounded-full bg-cream text-forest ring-1 ring-soil/12">
-            <CircleDashed className="size-6" strokeWidth={1.8} />
-          </span>
-          <p className="mt-4 text-base font-medium text-forest">{HUD_COPY.drySpellTitle}</p>
+        <div className="mt-4 flex flex-col items-center rounded-2xl bg-cream px-6 py-6 text-center ring-1 ring-soil/8">
+          <p className="text-[14px] font-medium text-forest">{HUD_COPY.drySpellTitle}</p>
           <TransactionBottomSheet
             defaultType="income"
             trigger={
               <button
                 type="button"
-                className="mt-5 flex items-center gap-2 rounded-full bg-forest px-5 py-2.5 text-[14px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.97]"
+                className="mt-4 flex items-center gap-2 rounded-full bg-forest px-4 py-2 text-[13px] font-medium text-cream transition-colors hover:bg-forest-soft active:scale-[0.97]"
               >
                 {HUD_COPY.drySpellCta}
               </button>
@@ -191,7 +177,7 @@ export const DailyHudCard = memo(function DailyHudCard() {
         /* ── Jatah ditahan (audit UX #2) — jangan pernah "Rp 0" tanpa sebab */
         <div className="mt-5 rounded-2xl bg-hud-terracotta/[0.08] px-4 py-6 text-center ring-1 ring-hud-terracotta/20">
           <p className="text-base font-medium text-hud-terracotta">{HUD_COPY.shortfallBadge}</p>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-forest/60">{HUD_COPY.shortfallBody}</p>
+          <p className="mt-1.5 text-[13px] leading-relaxed text-forest-muted">{HUD_COPY.shortfallBody}</p>
         </div>
       ) : (
         /* ── HUD PADAT (58.5 · 66): angka utama + bar progres ────────────────
@@ -204,40 +190,55 @@ export const DailyHudCard = memo(function DailyHudCard() {
         <>
           {/* ── ANGKA UTAMA = FOKUS TIPOGRAFI KARTU (mandat bento 68) ─────────
               Sisa jatah HARI INI dibesarkan (40px, semibold, tracking rapat) dan
-              ditempatkan di ruang yang tumbuh (`flex-1 justify-center`), jadi ia
-              jadi satu-satunya pusat pandang kartu — bukan bar atau ring. */}
+              ditempatkan di ruang yang tumbuh (`flex-1`), jadi ia jadi
+              satu-satunya pusat pandang kartu — bukan bar atau ring. */}
           <div className="mt-4 flex flex-1 flex-col justify-center">
             <p className="text-[40px] font-semibold leading-none tracking-tight text-forest tabular-nums">
               <LockedAmount value={formatIDR(hud.remainingToday)} masked={masked} />
             </p>
           </div>
 
-          {/* ── METER SEGMEN (h-2 · paket 76) ────────────────────────────────
-              Bar kontinu h-3 diganti bar SEGMEN h-2 — SATU komponen (`HudMeter`)
-              yang JUGA dipakai kartu /budget, jadi dua permukaan menggambar
-              meter yang sama dari angka yang sama (`hudMeter(todayUsedPct)`).
-              Persen tetap turun ke baris tipis di bawah supaya meternya bersih. */}
+          {/* ── SATU BILAH PROGRES TIPIS + SATU BARIS KONTEKS ────────────────
+              Mandat "Jatah Hari Ini" minimalis: angka besar di atas, satu bar
+              ramping, lalu satu keterangan super singkat (sisa hari menuju
+              gajian). Kotak-kotak kecil "Keluar hari ini" dan "Sisa periode"
+              DICABUT — dua angka pendukung itu hanya menambah kepadatan visual
+              tanpa mengubah keputusan user di layar ini. */}
           <div className="mt-5">
-            <HudMeter usedPct={usedPct} ariaLabel={HOME_HUD_COPY.title} />
-            <p className="mt-2 text-[12px] font-medium text-forest/45 tabular-nums">
-              {Math.round(usedPct * 100)}% {HOME_HUD_COPY.usedCaption}
+            <div
+              role="progressbar"
+              aria-label={HOME_HUD_COPY.title}
+              aria-valuenow={Math.min(100, Math.round(usedPct * 100))}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              className="h-1.5 w-full overflow-hidden rounded-full bg-soil/[0.07]"
+            >
+              <span
+                className={cn(
+                  'block h-full rounded-full transition-[width] duration-500 motion-reduce:transition-none',
+                  status === 'over' ? 'bg-hud-terracotta' : 'bg-forest',
+                )}
+                style={{ width: `${Math.min(100, Math.max(usedPct * 100, 1))}%` }}
+              />
+            </div>
+            <p className="mt-2 text-[12px] font-medium text-forest-muted">
+              {hud.daysLeft} {HOME_HUD_COPY.daysLeftSuffix}
             </p>
           </div>
 
           {/* kalimat status: hanya saat statusnya perlu dibicarakan (chip status
               selalu tampil di header) */}
           {status !== 'onTrack' && (
-            <p className="mt-2 text-[13px] font-medium leading-snug text-forest/70">{STATUS.copy}</p>
+            <p className="mt-2 text-[12.5px] font-medium leading-snug text-forest-soft">{STATUS.copy}</p>
           )}
 
-          {/* kompromi DIAN: CTA ke AI Coach saat over — tanpa intimidasi */}
+          {/* CTA ke AI Coach saat over — tanpa ikon hiasan */}
           {status === 'over' && (
             <button
               type="button"
               onClick={() => openAICoachWithSeed(SPENDING_REVIEW_COPY.coachSeed)}
-              className="mt-2 flex w-fit items-center gap-1.5 rounded-full bg-hud-terracotta/10 px-3 py-1.5 text-[13px] font-medium text-hud-terracotta transition-colors hover:bg-hud-terracotta/20"
+              className="mt-2 flex w-fit items-center rounded-full bg-hud-terracotta/10 px-3 py-1.5 text-[12.5px] font-medium text-hud-terracotta transition-colors hover:bg-hud-terracotta/20"
             >
-              <Sparkles className="size-3.5" strokeWidth={2.2} aria-hidden />
               {HOME_HUD_COPY.reviewCta}
             </button>
           )}

@@ -5,7 +5,9 @@ import {
   cancelTransaction,
   createSnapCharge,
   fetchTransactionStatus,
+  isDuplicateOrderIdError,
   midtransConfigured,
+  snapClientConfig,
 } from '@/lib/payments/midtrans'
 import type { PaymentInstructions, PaymentPurpose, PaymentState } from '@/lib/payments/types'
 import {
@@ -23,7 +25,8 @@ import {
    Route MEMBACA dari sana — harga dari klien hanya dipakai untuk DICEK. */
 import { AI_ADDON_PACKAGES, planQuota } from '@/lib/ai-quota'
 import { readCallerPlan } from '@/lib/subscription/plan'
-import { restFetch, restRpc } from '@/lib/supabase/rest'
+import { hasSupabaseServiceRole, supabaseServiceKey } from '@/lib/supabase/config'
+import { restConfigured, restFetch, restRpc } from '@/lib/supabase/rest'
 
 /* ── POST /api/payment/charge (paket 83 · SNAP sejak 30 Okt 2026) ────────────
    Membuat TAGIHAN lewat Midtrans Snap (`POST /snap/v1/transactions`) lalu
@@ -43,13 +46,19 @@ import { restFetch, restRpc } from '@/lib/supabase/rest'
    user sebelum provider dipanggil — itulah satu-satunya cara webhook (yang tidak
    membawa sesi) memetakan notifikasi ke pemiliknya.
 
-   Idempotensi: token Snap dibuat per percobaan dan `order_id` yang SAMA boleh
-   di-token ulang (diuji langsung ke produksi: 201 dua kali). Jadi order pending
-   yang niatnya masih sama (nominal + kode teman) DIPAKAI ULANG — tidak ada baris
-   `purchases` kedua, dan user mendapat halaman pembayaran baru:
+   Idempotensi: token Snap dibuat per percobaan dan `order_id` yang masih
+   HIDUP boleh di-token ulang. Yang TIDAK boleh: memakai ulang `order_id` yang
+   transaksinya sudah mati (kedaluwarsa/dibatalkan/dibayar) — Snap menolak
+   dengan `transaction_details.order_id has already been taken`, dan itulah
+   pesan yang dulu muncul di layar user. Karena itu:
+     · order pending yang niatnya masih sama (nominal + kode teman) DIPAKAI
+       ULANG — user mendapat halaman pembayaran baru tanpa baris `purchases`
+       kedua;
      · sudah dibayar tapi webhook belum mencatat → dilaporkan `settled`, TIDAK
        ada tagihan kedua (mencegah bayar dua kali);
-     · niat berubah (nominal/kode) → tagihan lama dibatalkan, order baru dibuat. */
+     · tagihan lama sudah mati di provider, ATAU provider tetap menolak karena
+       `order_id` sudah terpakai → tagihan lama ditutup, order BARU dibuat
+       (`releaseStaleOrder()` + langkah 2). */
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -107,6 +116,44 @@ async function findPendingOrder(
   const res = await restFetch<PendingRow[]>(`purchases?${query.toString()}`, { accessToken: token })
   if (!res.ok || !Array.isArray(res.data)) return null
   return res.data[0] ?? null
+}
+
+/**
+ * Tutup tagihan lama yang sudah TIDAK bisa dipakai lagi, supaya user tidak
+ * mentok di pesan provider.
+ *
+ * Midtrans hanya mengizinkan satu transaksi hidup per `order_id`: setelah
+ * transaksinya kedaluwarsa/dibatalkan/dibayar, Snap menolak token baru untuk id
+ * yang sama (`transaction_details.order_id has already been taken`). Maka
+ * tagihannya dibatalkan di provider (best effort — yang sudah mati membalas
+ * 4xx, dan itu bukan kegagalan), lalu barisnya ditandai `expire` lewat RPC yang
+ * SAMA dengan webhook kalau provider memang menyatakan tagihan itu mati.
+ *
+ * Kenapa menandai `expire` aman: RPC `catetind_fulfill_purchase` hanya menulis
+ * `status` untuk status non-settlement, dan notifikasi settlement yang datang
+ * belakangan tetap memenuhi order itu (titik awalnya boleh status apa pun).
+ * Uang yang sudah masuk karena itu tidak pernah hilang gara-gara penandaan ini.
+ * Kalau kunci peran server tidak ada, baris dibiarkan `pending` — rekonsiliasi
+ * (`/api/payment/reconcile`) tetap bisa menemukannya.
+ */
+async function releaseStaleOrder(orderId: string, { markExpired }: { markExpired: boolean }): Promise<void> {
+  await cancelTransaction(orderId)
+  if (!markExpired || !hasSupabaseServiceRole() || !restConfigured()) return
+  const serviceKey = supabaseServiceKey()
+  await restRpc(
+    'catetind_fulfill_purchase',
+    {
+      p_order_id: orderId,
+      /* label generik untuk "tagihan ini sudah tidak bisa dipakai" — nilai yang
+         dikenali filter admin (`lib/admin/filters.ts`) sebagai gagal */
+      p_status: 'expire',
+      p_amount: 0,
+      p_payment_method: null,
+      p_midtrans_tx_id: null,
+    },
+    serviceKey,
+    serviceKey,
+  )
 }
 
 /**
@@ -317,6 +364,14 @@ export async function POST(req: NextRequest) {
   let addonPackageId: string | null = null
   let addonTokens = 0
   let addonName: string | null = null
+  /**
+   * Paket yang dimiliki pembeli top-up. Baris `purchases` WAJIB punya
+   * `tier_name` (kolomnya `not null`), sedangkan top-up bukan pembelian tier —
+   * dulu route menulis `null` di sini dan seluruh top-up gagal dengan
+   * "Tagihan tidak bisa dicatat, jadi pembayaran belum dibuat." tanpa Midtrans
+   * pernah dipanggil. Nilai ini juga yang dipakai webhook saat membaca konteks.
+   */
+  let topupPlanId: PlanId | null = null
 
   /* ── Top up token AI: server MEMBACA harga dari lib/ai-quota.ts ──
      Token AI hanya dijual untuk paket yang BERKUOTA (Paket Waras): Paket Catet
@@ -339,6 +394,7 @@ export async function POST(req: NextRequest) {
     }
     /* hanya paket berkuota yang boleh menambah token (kalau paketnya terbaca) */
     const topupCaller = await readCallerPlan(auth.token)
+    topupPlanId = topupCaller.planId
     if (topupCaller.configured) {
       const quota = planQuota(topupCaller.active ? topupCaller.planId : null)
       if (!quota.aiEnabled || quota.unlimited) {
@@ -483,10 +539,15 @@ export async function POST(req: NextRequest) {
   /* ── 1. Order pending yang cocok: cukup diberi TOKEN SNAP BARU ─────────────
      Sejak pindah ke Snap, tagihan tidak lagi "hidup" di sisi kita: transaksi
      baru lahir saat user membuka halaman pembayaran. Token dibuat per
-     percobaan, dan `order_id` yang SAMA boleh di-token ulang (diuji langsung
-     ke produksi: 201 dua kali). Jadi order pending yang niatnya masih sama
-     dipakai ulang — satu baris `purchases`, webhook tetap mengenali ordernya —
-     sementara user mendapat halaman pembayaran yang baru. */
+     percobaan, dan `order_id` yang transaksinya MASIH HIDUP boleh di-token
+     ulang. Jadi order pending yang niatnya masih sama dipakai ulang — satu
+     baris `purchases`, webhook tetap mengenali ordernya — sementara user
+     mendapat halaman pembayaran yang baru.
+
+     Batasnya: `order_id` yang transaksinya sudah MATI (kedaluwarsa/dibatalkan/
+     dibayar) tidak boleh dipakai lagi; Snap menjawab
+     `transaction_details.order_id has already been taken`. Dua jalur di bawah
+     menanganinya tanpa memunculkan pesan provider ke user. */
   if (plan) {
     const existing = await findPendingOrder(auth.token, { planId: plan.id, purpose, period })
     const existingOrderId = existing?.order_id ?? null
@@ -515,35 +576,56 @@ export async function POST(req: NextRequest) {
           instructions: null,
           redirectUrl: null,
           token: null,
+          snap: null,
           note: 'Pembayaran sebelumnya sudah diterima provider, langganan sedang diaktifkan.',
         })
       }
 
-      if (sameOffer) {
+      /* Provider bilang tagihan lama sudah mati: `order_id`-nya tidak bisa
+         ditokenkan lagi, jadi jangan dicoba. Tutup barisnya (aman — kalau
+         ternyata sudah dibayar, notifikasi settlement tetap memenuhinya) dan
+         biarkan langkah 2 membuat order baru. */
+      const deadAtProvider =
+        previous.ok && (previous.value.state === 'expired' || previous.value.state === 'failed')
+
+      if (sameOffer && !deadAtProvider) {
         const snap = await createSnapCharge(snapIntent(existingOrderId), method)
-        if (!snap.ok) {
+        if (snap.ok) {
+          return NextResponse.json({
+            ok: true,
+            orderId: existingOrderId,
+            method: method.id,
+            amount,
+            state: snap.value.state satisfies PaymentState,
+            expiresAt: snap.value.expiresAt,
+            redirectUrl: snap.value.redirectUrl,
+            token: snap.value.token,
+            /* konfigurasi `snap.js` → halaman pembayaran di-EMBED di kartu
+               checkout (tanpa tab baru). `null` = client key belum diisi. */
+            snap: snapClientConfig(),
+            instructions: null,
+            reused: true,
+          })
+        }
+
+        /* Status provider tidak terbaca, tetapi Snap TETAP menolak karena
+           `order_id`-nya sudah terpakai. Itu bukan pesan untuk user — jalan
+           keluarnya sama: order baru. Barisnya sengaja TIDAK ditandai
+           `expire`, supaya rekonsiliasi masih bisa memeriksanya kalau
+           ternyata pembayarannya sudah masuk. */
+        if (!isDuplicateOrderIdError(snap.message)) {
           return NextResponse.json(
             { ok: false, reason: snap.reason, error: snap.message },
             { status: snap.status },
           )
         }
-        return NextResponse.json({
-          ok: true,
-          orderId: existingOrderId,
-          method: method.id,
-          amount,
-          state: snap.value.state satisfies PaymentState,
-          expiresAt: snap.value.expiresAt,
-          redirectUrl: snap.value.redirectUrl,
-          token: snap.value.token,
-          instructions: null,
-          reused: true,
-        })
+        await releaseStaleOrder(existingOrderId, { markExpired: false })
+      } else {
+        /* Tagihan lama tidak mewakili niat pembayaran yang sekarang (nominal
+           atau kode berubah), atau sudah mati di provider — tutup supaya tidak
+           ada dua tagihan hidup, lalu buat order baru di langkah 2. */
+        await releaseStaleOrder(existingOrderId, { markExpired: deadAtProvider })
       }
-
-      /* tagihan lama tidak mewakili niat pembayaran yang sekarang (nominal atau
-         kode berubah) — batalkan supaya tidak ada dua tagihan hidup. */
-      await cancelTransaction(existingOrderId)
     }
   }
 
@@ -560,7 +642,11 @@ export async function POST(req: NextRequest) {
     body: {
       order_id: orderId,
       status: 'pending',
-      tier_name: plan?.id ?? null,
+      /* Top-up bukan pembelian tier, tetapi kolomnya `not null` — nilai yang
+         ditulis adalah paket yang SEDANG dimiliki pembeli (bukan karangan).
+         `null` di sini pernah membuat SEMUA top-up gagal sebelum Midtrans
+         dipanggil ("Tagihan tidak bisa dicatat"). */
+      tier_name: plan?.id ?? topupPlanId ?? null,
       billing_period: period,
       /* dipakai webhook: niat pembayaran (subscribe/upgrade/topup) + nominal
          yang BENAR-BENAR ditagih + jumlah token (top-up) + kode teman */
@@ -603,8 +689,11 @@ export async function POST(req: NextRequest) {
        `/checkout/selesai?order_id=…`. */
     redirectUrl: snap.value.redirectUrl,
     token: snap.value.token,
+    /* konfigurasi `snap.js` → halaman pembayaran di-EMBED di kartu checkout
+       (tanpa tab baru). `null` = client key belum diisi di environment. */
+    snap: snapClientConfig(),
     /* Snap tidak memberi instruksi QR/VA untuk digambar di app — jangan
-       mengarang. UI menampilkan tombol menuju halaman pembayaran. */
+       mengarang. Yang ditampilkan adalah halaman Snap yang di-embed itu. */
     instructions: null satisfies PaymentInstructions | null,
   })
 }

@@ -1,7 +1,12 @@
 'use client'
 
-import type { JointTransaction, JointWallet } from '@/lib/data/joint'
-import { JOINT_DEFAULT_CATEGORY, splitSpecOf } from '@/lib/data/joint'
+import type { JointSettlementRecord, JointTransaction, JointWallet } from '@/lib/data/joint'
+import {
+  DEFAULT_SETTLEMENT_METHOD,
+  JOINT_DEFAULT_CATEGORY,
+  SETTLEMENT_METHODS,
+  splitSpecOf,
+} from '@/lib/data/joint'
 import { browserSupabase } from './client'
 import { toJointTransaction, toSplitColumns, type JointTransactionDbRow } from './mappers'
 import { isUuid } from './uuid'
@@ -37,6 +42,13 @@ export interface RemoteJointWallet {
   wallet: JointWallet
   /** id user pemanggil — dipakai memutuskan isi catatan privat siapa yang boleh tampil */
   viewerId: string
+  /**
+   * PEMILIK dompet menurut server (`owner_id`). `null`/kosong = tidak terbaca
+   * (backend lama / tanpa sesi). Dipakai UI untuk memutuskan siapa yang boleh
+   * menghapus dompet & mengeluarkan anggota; server tetap penentu akhir lewat
+   * RLS/RPC.
+   */
+  ownerId?: string | null
   /** id anggota (pemilik + `joint_members`), unik, urut kali pertama terlihat */
   members: string[]
   /**
@@ -47,6 +59,18 @@ export interface RemoteJointWallet {
   memberNames: Record<string, string>
   /** catatan yang sudah ada di server, terbaru dulu (pola urut store) */
   rows: JointTransaction[]
+  /**
+   * PENANDA SETTLE per bulan (`YYYY-MM` → record) dari tabel
+   * `joint_settlements`.
+   *
+   * Tanpa ini, "bulan ini sudah settle" hanya hidup di perangkat yang menekan
+   * tombolnya: akun pasangan tetap melihat "Belum Impas / Settle Sekarang"
+   * selamanya. Isinya adalah kesepakatan bersama, jadi tempatnya di server.
+   *
+   * `null`/tidak diisi = bacaan settle gagal / backend lama → penanda yang sudah
+   * ada di perangkat DIPERTAHANKAN (jangan dianggap "belum settle").
+   */
+  settlements?: Record<string, JointSettlementRecord> | null
 }
 
 /* ── BACA SEMUA BARIS, BUKAN 200 TERBARU ──────────────────────────────────────
@@ -70,15 +94,48 @@ export async function readRemoteJointWallet(): Promise<RemoteJointWallet | null>
     if (!viewerId) return null
 
     /* Dompet paling awal dibuat dipilih supaya hasilnya deterministik kalau
-       kelak satu akun punya lebih dari satu dompet bersama. */
+       kelak satu akun punya lebih dari satu dompet bersama.
+       PRIORITAS ANGGOTA UNDANGAN: kalau akun ini punya dompet sendiri (mis.
+       sisa percobaan lama) DAN juga diundang ke dompet orang lain, yang dibuka
+       adalah dompet UNDANGAN — kalau tidak, anggota gratis yang diundang tidak
+       pernah melihat dompet yang baru ia masuki. */
     const { data: walletRows, error: walletError } = await client
       .from('joint_wallets')
       .select('id,name,created_at,owner_id')
       .order('created_at', { ascending: true })
-      .limit(1)
+      .limit(20)
     if (walletError) return null
 
-    const raw = ((walletRows ?? []) as WalletRow[])[0]
+    const candidates = (walletRows ?? []) as WalletRow[]
+    /**
+     * Pilih dompet yang paling "hidup": jumlah anggota TERBANYAK. Ini menutup
+     * kasus nyata anggota undangan yang masih punya dompet lamanya sendiri
+     * (kosong, 1 anggota) — tanpa aturan ini, dompet yang baru ia masuki tidak
+     * pernah terbuka karena dompet lamanya lebih dulu dibuat.
+     * Seri → dompet yang BUKAN miliknya didahulukan (undangan), lalu yang
+     * paling awal dibuat supaya hasilnya deterministik.
+     */
+    let raw = candidates[0]
+    if (candidates.length > 1) {
+      const ids = candidates.map((row) => row.id)
+      const { data: memberRows } = await client
+        .from('joint_members')
+        .select('joint_wallet_id')
+        .in('joint_wallet_id', ids)
+      const counts = new Map<string, number>()
+      for (const row of (memberRows ?? []) as { joint_wallet_id?: string }[]) {
+        const id = row.joint_wallet_id
+        if (!id) continue
+        counts.set(id, (counts.get(id) ?? 0) + 1)
+      }
+      raw = [...candidates].sort((a, b) => {
+        const diff = (counts.get(b.id) ?? 0) - (counts.get(a.id) ?? 0)
+        if (diff !== 0) return diff
+        const ownedA = a.owner_id === viewerId ? 1 : 0
+        const ownedB = b.owner_id === viewerId ? 1 : 0
+        return ownedA - ownedB
+      })[0]
+    }
     if (!raw?.id) return null
 
     /* anggota & baris dibaca paralel; barisnya bertahap (lihat catatan di atas) */
@@ -109,6 +166,7 @@ export async function readRemoteJointWallet(): Promise<RemoteJointWallet | null>
     }
 
     const membersRes = await membersPromise
+    const settlements = await readRemoteSettlements(raw.id)
 
     const members: string[] = []
     const memberIds = [
@@ -133,9 +191,11 @@ export async function readRemoteJointWallet(): Promise<RemoteJointWallet | null>
         createdAt: (raw.created_at ?? '').slice(0, 10),
       },
       viewerId,
+      ownerId: raw.owner_id ?? null,
       members,
       memberNames: await readMemberNames(raw.id, viewerId),
       rows,
+      settlements,
     }
   } catch {
     return null
@@ -159,19 +219,174 @@ async function readMemberNames(
     const { data, error } = await client.rpc('catetind_joint_roster', { p_wallet: walletId })
     if (error || !data) return {}
     const out: Record<string, string> = {}
+    let others = 0
     for (const raw of data as { roster_user_id?: string; roster_nickname?: string }[]) {
       const id = raw.roster_user_id
       if (!id) continue
       const name = (raw.roster_nickname ?? '').trim()
       /* pemilik sesi selalu "Kamu" — itu yang dibaca user tentang dirinya di
          buku besar bersama, bukan nama panggilan yang ia isi saat daftar */
-      out[id] = id === viewerId ? 'Kamu' : name || 'Pasangan'
+      if (id === viewerId) {
+        out[id] = 'Kamu'
+        continue
+      }
+      /* anggota lain TANPA nama panggilan: yang kedua tetap "Pasangan" (bahasa
+         lama), yang ketiga & seterusnya "Anggota N" — jangan sampai tiga orang
+         di satu layar sama-sama bernama "Pasangan". */
+      others += 1
+      out[id] = name || (others === 1 ? 'Pasangan' : `Anggota ${others + 1}`)
     }
     return out
   } catch {
     return {}
   }
 }
+
+/* ── PENANDA SETTLE DI SERVER ────────────────────────────────────────────────
+   Dulu "bulan ini sudah settle" hanya ditulis ke IndexedDB perangkat yang
+   menekan tombolnya (`recordSettlement()`), jadi akun pasangan TIDAK PERNAH
+   melihatnya dan terus diminta menekan "Settle Sekarang" untuk bulan yang sama.
+
+   Tabel `joint_settlements` (migrasi `20261111140000_...`) menyimpan SATU baris
+   per dompet+bulan; RLS membatasinya ke anggota, dan tabelnya ikut publication
+   realtime. Bentuknya sengaja bukan baris `joint_transactions`: settle bukan
+   pengeluaran, dan `carry_over`/`method` tidak punya kolom di sana.
+   ────────────────────────────────────────────────────────────────────────── */
+
+interface JointSettlementRow {
+  month_key?: string | null
+  from_user_id?: string | null
+  to_user_id?: string | null
+  amount?: number | string | null
+  method?: string | null
+  carry_over?: number | string | null
+  settled_at?: string | null
+}
+
+/** `timestamptz` → tanggal & jam LOKAL perangkat (yang dibaca user) */
+function localMoment(iso: string | null | undefined): { date: string; time: string } {
+  if (!iso) return { date: '', time: '' }
+  const parsed = new Date(iso)
+  if (Number.isNaN(parsed.getTime())) return { date: iso.slice(0, 10), time: '' }
+  const pad = (value: number) => String(value).padStart(2, '0')
+  return {
+    date: `${parsed.getFullYear()}-${pad(parsed.getMonth() + 1)}-${pad(parsed.getDate())}`,
+    time: `${pad(parsed.getHours())}:${pad(parsed.getMinutes())}`,
+  }
+}
+
+/** satu baris tabel → `[bulan, record]`; `null` = bentuknya tidak sah */
+function toJointSettlement(row: JointSettlementRow): [string, JointSettlementRecord] | null {
+  const month = (row.month_key ?? '').trim()
+  if (!/^\d{4}-\d{2}$/.test(month)) return null
+  const from = row.from_user_id ?? ''
+  const to = row.to_user_id ?? ''
+  if (!from || !to || from === to) return null
+  const method =
+    SETTLEMENT_METHODS.find((item) => item === row.method) ?? DEFAULT_SETTLEMENT_METHOD
+  const moment = localMoment(row.settled_at)
+  const record: JointSettlementRecord = {
+    month,
+    from,
+    to,
+    amount: Math.max(0, Math.round(Number(row.amount) || 0)),
+    method,
+    carryOver: Math.max(0, Math.round(Number(row.carry_over) || 0)),
+    ...(moment.date ? { settledAt: moment.date } : {}),
+    ...(moment.time ? { settledTime: moment.time } : {}),
+  }
+  return [month, record]
+}
+
+/**
+ * Baca penanda settle kantong ini.
+ *
+ * `null` = tabelnya TIDAK BISA DIBACA (backend lama / jaringan) — pemanggil
+ * mempertahankan penanda yang sudah ada di perangkat. `{}` = benar-benar belum
+ * ada settle. Perbedaan ini penting: kalau kegagalan dibaca sebagai "kosong",
+ * satu gangguan jaringan akan menghapus status "sudah settle" di layar.
+ */
+async function readRemoteSettlements(
+  walletId: string,
+): Promise<Record<string, JointSettlementRecord> | null> {
+  const client = browserSupabase()
+  if (!client) return null
+  try {
+    const { data, error } = await client
+      .from('joint_settlements')
+      .select('month_key,from_user_id,to_user_id,amount,method,carry_over,settled_at')
+      .eq('joint_wallet_id', walletId)
+    if (error) return null
+    const out: Record<string, JointSettlementRecord> = {}
+    for (const raw of (data ?? []) as JointSettlementRow[]) {
+      const mapped = toJointSettlement(raw)
+      if (mapped) out[mapped[0]] = mapped[1]
+    }
+    return out
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Tulis/ubah penanda settle satu bulan. Upsert pada `(joint_wallet_id,
+ * month_key)` → menekan tombol dua kali tidak pernah membuat dua baris.
+ * `false` = tidak ada sesi/backend atau server menolak; pemanggil menandai
+ * record sebagai `pendingSync` dan mengirim ulang nanti.
+ */
+export async function pushJointSettlement(
+  record: JointSettlementRecord,
+  input: { walletId: string; viewerId: string },
+): Promise<boolean> {
+  const client = browserSupabase()
+  if (!client) return false
+  if (!isUuid(input.walletId) || !isUuid(input.viewerId)) return false
+  if (!isUuid(record.from) || !isUuid(record.to)) return false
+  try {
+    const moment = record.settledAt
+      ? new Date(`${record.settledAt}T${record.settledTime ?? '00:00'}:00`)
+      : new Date()
+    const settledAt = Number.isNaN(moment.getTime()) ? new Date().toISOString() : moment.toISOString()
+    const { error } = await client.from('joint_settlements').upsert(
+      {
+        joint_wallet_id: input.walletId,
+        month_key: record.month,
+        from_user_id: record.from,
+        to_user_id: record.to,
+        amount: Math.max(0, Math.round(record.amount)),
+        method: record.method,
+        carry_over: Math.max(0, Math.round(record.carryOver)),
+        settled_at: settledAt,
+        created_by_user_id: input.viewerId,
+      },
+      { onConflict: 'joint_wallet_id,month_key' },
+    )
+    return !error
+  } catch {
+    return false
+  }
+}
+
+/** Cabut penanda settle satu bulan di server (dipakai "Batalkan settle"). */
+export async function deleteRemoteJointSettlement(
+  walletId: string,
+  month: string,
+): Promise<boolean> {
+  const client = browserSupabase()
+  if (!client) return false
+  if (!isUuid(walletId) || !/^\d{4}-\d{2}$/.test(month)) return false
+  try {
+    const { error } = await client
+      .from('joint_settlements')
+      .delete()
+      .eq('joint_wallet_id', walletId)
+      .eq('month_key', month)
+    return !error
+  } catch {
+    return false
+  }
+}
+
 
 /* ── KANTONG BERSAMA DI SERVER (paket 100) ──────────────────────────────────
    `createJointPocket()` di store hanya menamai kantong di PERANGKAT. Akibatnya
@@ -239,11 +454,111 @@ export async function deleteRemoteJointMembership(
   const client = browserSupabase()
   if (!client) return false
   try {
-    const { error } = await client
+    const { data, error } = await client
       .from('joint_members')
       .delete()
       .eq('joint_wallet_id', jointWalletId)
       .eq('user_id', userId)
+      .select('user_id')
+    return !error && Array.isArray(data) && data.length > 0
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Status akses pemanggil terhadap satu dompet menurut SERVER.
+ *
+ *   · `'owner'` / `'member'` → dompet masih ada & ia berhak membukanya;
+ *   · `'none'`               → dompet sudah DIHAPUS pemilik atau ia sudah
+ *                              DIKELUARKAN (dua hal yang bagi perangkat tampak
+ *                              sama: "tidak ada dompet");
+ *   · `null`                 → tidak bisa diperiksa (tanpa sesi / RPC belum ada).
+ *
+ * `null` sengaja TIDAK diperlakukan sebagai `'none'`: backend yang tidak bisa
+ * dihubungi tidak boleh membuat perangkat menghapus data user.
+ */
+export async function readRemoteJointAccess(
+  jointWalletId: string,
+): Promise<'owner' | 'member' | 'none' | null> {
+  const client = browserSupabase()
+  if (!client || !isUuid(jointWalletId)) return null
+  try {
+    const { data, error } = await client.rpc('catetind_joint_access', { p_wallet: jointWalletId })
+    if (error) return null
+    const value = typeof data === 'string' ? data : null
+    return value === 'owner' || value === 'member' || value === 'none' ? value : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * PEMILIK mengeluarkan satu anggota (`catetind_remove_joint_member`).
+ *
+ * RPC-nya memeriksa kepemilikan di server; `false` = bukan pemilik / anggota
+ * tidak ada / tanpa sesi. Riwayat catatan anggota itu TIDAK disentuh: baris
+ * `joint_transactions` menyimpan `user_id` sebagai uuid, dan saat namanya tidak
+ * lagi ada di roster, UI memakai sebutan netral (bukan nama contoh).
+ */
+export async function removeRemoteJointMember(
+  jointWalletId: string,
+  userId: string,
+): Promise<boolean> {
+  const client = browserSupabase()
+  if (!client || !isUuid(jointWalletId) || !isUuid(userId)) return false
+  try {
+    const { data, error } = await client.rpc('catetind_remove_joint_member', {
+      p_wallet: jointWalletId,
+      p_user: userId,
+    })
+    if (error) return false
+    return data === true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * HAPUS DOMPET BERSAMA di server (bukan sekadar keluar).
+ *
+ * `joint_wallets` punya `on delete cascade` ke `joint_members` &
+ * `joint_transactions`, jadi satu delete di sini membersihkan seluruh isi
+ * dompet. RLS `joint_wallets_owner_delete` membatasi operasi ini untuk PEMILIK;
+ * anggota biasa yang mencoba akan mendapat 0 baris terhapus (tanpa error) —
+ * karena itu pemanggil TIDAK boleh mengklaim "sudah terhapus di server" hanya
+ * dari `true`. `false` = tidak ada sesi/backend, atau server menolak.
+ */
+export async function deleteRemoteJointWallet(jointWalletId: string): Promise<boolean> {
+  const client = browserSupabase()
+  if (!client) return false
+  try {
+    const { data, error } = await client
+      .from('joint_wallets')
+      .delete()
+      .eq('id', jointWalletId)
+      .select('id')
+    return !error && Array.isArray(data) && data.length > 0
+  } catch {
+    return false
+  }
+}
+
+/** Simpan nama dompet bersama ke server (nama yang diubah user tidak boleh
+ *  hanya berubah di perangkat ini). */
+export async function updateRemoteJointWalletName(
+  jointWalletId: string,
+  name: string,
+): Promise<boolean> {
+  const client = browserSupabase()
+  if (!client) return false
+  const trimmed = name.trim()
+  if (!jointWalletId || !trimmed) return false
+  try {
+    const { error } = await client
+      .from('joint_wallets')
+      .update({ name: trimmed })
+      .eq('id', jointWalletId)
     return !error
   } catch {
     return false
@@ -257,7 +572,15 @@ export async function pushJointTransactionToServer(
   const client = browserSupabase()
   if (!client) return false
   try {
-    const cols = toSplitColumns(splitSpecOf(row))
+    const split = splitSpecOf(row)
+    const cols = toSplitColumns(split)
+    /* Penerima manfaat pelunasan = pihak yang porsinya 100% (`single_payer`).
+       Disimpan EKSPLISIT supaya perangkat anggota lain tidak perlu menebak, dan
+       supaya RLS bisa memastikan penerimanya memang anggota dompet. */
+    const beneficiary =
+      row.isSettlement && split.type === 'single_payer' && isUuid(split.payerId)
+        ? split.payerId
+        : null
     const { error } = await client.from('joint_transactions').insert({
       id: input.remoteId,
       joint_wallet_id: input.walletId,
@@ -271,11 +594,25 @@ export async function pushJointTransactionToServer(
       split_type: cols.split_type,
       split_percents: cols.split_percents,
       split_amounts: cols.split_amounts,
-      bearer_id: row.payerId && isUuid(row.payerId) ? row.payerId : null,
+      /* Peserta mode Bagi Rata — tanpa kolom ini, perangkat anggota lain
+         membagi ke SEMUA orang sementara penginput membagi ke sebagian */
+      split_members: cols.split_members,
+      bearer_id:
+        split.type === 'single_payer' && isUuid(split.payerId)
+          ? split.payerId
+          : row.payerId && isUuid(row.payerId)
+            ? row.payerId
+            : null,
+      settle_to_user_id: beneficiary,
       is_private: row.isPrivate === true,
       private_for_user: row.isPrivate ? (row.privateForUser ?? input.viewerId) : null,
       is_settlement: row.isSettlement === true,
-      month_key: (row.date || '').slice(0, 7) || '1970-01',
+      /* jenis baris: pemasukan bersama TIDAK boleh tersimpan sebagai pengeluaran
+         (kolom `kind` datang dari migrasi multi-member) */
+      kind: row.kind === 'income' ? 'income' : 'expense',
+      /* bulan yang DISELESAIKAN untuk baris settle (bisa beda dari tanggal
+         transfer); untuk catatan biasa tetap bulan tanggalnya */
+      month_key: row.settlementMonth ?? ((row.date || '').slice(0, 7) || '1970-01'),
       client_tx_id: input.remoteId,
     })
     return !error || error.code === '23505'
@@ -284,13 +621,85 @@ export async function pushJointTransactionToServer(
   }
 }
 
-/** hapus satu catatan di server (hapus lokal sudah ditangani tombstone store) */
+/**
+ * Ubah baris yang SUDAH ada di server (pembagian, kantong pembayar, jenis).
+ *
+ * Sebelum ini `syncJointRow()` selalu INSERT; baris dengan `remoteId` lalu
+ * ditolak unique constraint (`23505`) dan dianggap "berhasil", sehingga
+ * perubahan pembagian hanya hidup di perangkat pengubah — persis yang membuat
+ * angka antar-perangkat berbeda. Kolom `user_id`/`client_tx_id` TIDAK ikut
+ * diubah: penulis asli & kunci idempotensi harus tetap.
+ */
+export async function updateJointTransactionOnServer(
+  row: JointTransaction,
+  remoteId: string,
+): Promise<boolean> {
+  const client = browserSupabase()
+  if (!client || !isUuid(remoteId)) return false
+  try {
+    const split = splitSpecOf(row)
+    const cols = toSplitColumns(split)
+    const beneficiary =
+      row.isSettlement && split.type === 'single_payer' && isUuid(split.payerId)
+        ? split.payerId
+        : null
+    const { data, error } = await client
+      .from('joint_transactions')
+      .update({
+        paid_by_user_id: row.paidByUserId && isUuid(row.paidByUserId) ? row.paidByUserId : undefined,
+        description: row.description,
+        amount: Math.max(0, Math.round(row.amount)),
+        category: row.category || JOINT_DEFAULT_CATEGORY,
+        date: row.date || null,
+        time_label: row.time || '00:00',
+        split_type: cols.split_type,
+        split_percents: cols.split_percents,
+        split_amounts: cols.split_amounts,
+        split_members: cols.split_members,
+        bearer_id:
+          split.type === 'single_payer' && isUuid(split.payerId)
+            ? split.payerId
+            : row.payerId && isUuid(row.payerId)
+              ? row.payerId
+              : null,
+        settle_to_user_id: beneficiary,
+        is_private: row.isPrivate === true,
+        private_for_user: row.isPrivate ? (row.privateForUser ?? null) : null,
+        is_settlement: row.isSettlement === true,
+        kind: row.kind === 'income' ? 'income' : 'expense',
+        month_key: row.settlementMonth ?? ((row.date || '').slice(0, 7) || '1970-01'),
+      })
+      .eq('id', remoteId)
+      .select('id')
+    return !error && Array.isArray(data) && data.length > 0
+  } catch {
+    return false
+  }
+}
+
+/**
+ * HAPUS satu catatan di server.
+ *
+ * Versi lama hanya memeriksa `error`. Di Postgres + RLS, DELETE yang ditolak
+ * TIDAK menghasilkan error — hasilnya 0 baris. Akibatnya penghapusan yang
+ * ditolak dilaporkan "berhasil", barisnya hilang di perangkat ini saja, dan
+ * anggota lain (atau refresh berikutnya) tetap melihat catatan yang sama —
+ * persis keluhan "di akun kedua transaksinya masih ada".
+ *
+ * Pola `.select('id')` + cek jumlah baris dipakai juga oleh
+ * `deleteRemoteJointWallet` & `deleteRemoteJointMembership`: satu-satunya bukti
+ * "benar-benar terhapus" adalah baris yang dikembalikan server.
+ */
 export async function deleteRemoteJointTransaction(remoteId: string): Promise<boolean> {
   const client = browserSupabase()
-  if (!client) return false
+  if (!client || !isUuid(remoteId)) return false
   try {
-    const { error } = await client.from('joint_transactions').delete().eq('id', remoteId)
-    return !error
+    const { data, error } = await client
+      .from('joint_transactions')
+      .delete()
+      .eq('id', remoteId)
+      .select('id')
+    return !error && Array.isArray(data) && data.length > 0
   } catch {
     return false
   }

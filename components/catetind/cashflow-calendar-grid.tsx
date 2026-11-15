@@ -72,10 +72,10 @@ export function CashflowCalendarGrid({
           <h2 className="font-display text-[17px] font-semibold tracking-tight text-forest sm:text-[18px]">
             {label}
           </h2>
-          <span aria-hidden className="text-[12.5px] font-medium text-forest/25">
+          <span aria-hidden className="text-[12.5px] font-medium text-forest-muted">
             ·
           </span>
-          <p className="text-[12.5px] font-medium text-forest/50">
+          <p className="text-[12.5px] font-medium text-forest-muted">
             Net{' '}
             <span
               className={cn(
@@ -94,7 +94,7 @@ export function CashflowCalendarGrid({
             type="button"
             onClick={() => onShift(-1)}
             aria-label="Periode sebelumnya"
-            className="flex size-8 items-center justify-center rounded-full text-forest/45 transition-colors hover:bg-sage/60 hover:text-forest active:scale-95"
+            className="flex size-8 items-center justify-center rounded-full text-forest-muted transition-colors hover:bg-sage/60 hover:text-forest active:scale-95"
           >
             <ChevronLeft className="size-4" strokeWidth={2.6} />
           </button>
@@ -102,7 +102,7 @@ export function CashflowCalendarGrid({
             type="button"
             onClick={() => onShift(1)}
             aria-label="Periode berikutnya"
-            className="flex size-8 items-center justify-center rounded-full text-forest/45 transition-colors hover:bg-sage/60 hover:text-forest active:scale-95"
+            className="flex size-8 items-center justify-center rounded-full text-forest-muted transition-colors hover:bg-sage/60 hover:text-forest active:scale-95"
           >
             <ChevronRight className="size-4" strokeWidth={2.6} />
           </button>
@@ -125,7 +125,7 @@ export function CashflowCalendarGrid({
                 onClick={() => onModeChange(option.id)}
                 className={cn(
                   'rounded-full px-3 py-1 text-[12.5px] font-medium transition-colors duration-200 active:scale-95',
-                  active ? 'bg-forest text-mint' : 'text-forest/50 hover:text-forest',
+                  active ? 'bg-forest text-mint' : 'text-forest-muted hover:text-forest',
                 )}
               >
                 <span>{option.label}</span>
@@ -137,7 +137,7 @@ export function CashflowCalendarGrid({
         <button
           type="button"
           onClick={onToday}
-          className="h-7 shrink-0 rounded-full px-3 text-[12.5px] font-medium text-forest/55 transition-colors hover:bg-sage/50 hover:text-forest active:scale-95"
+          className="h-7 shrink-0 rounded-full px-3 text-[12.5px] font-medium text-forest-muted transition-colors hover:bg-sage/50 hover:text-forest active:scale-95"
         >
           Hari Ini
         </button>
@@ -155,7 +155,7 @@ export function CashflowCalendarGrid({
               key={day}
               className={cn(
                 'pb-1 text-center text-[11px] font-medium uppercase tracking-[0.08em]',
-                index >= 5 ? 'text-forest/25' : 'text-forest/35',
+                index >= 5 ? 'text-forest-muted' : 'text-forest-muted',
               )}
             >
               {day}

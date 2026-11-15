@@ -25,7 +25,7 @@ const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1]
 type InfoNoteTone = 'default' | 'calm' | 'warn'
 
 const TONE_STYLE: Record<InfoNoteTone, { wrap: string; icon: string }> = {
-  default: { wrap: 'bg-cream ring-soil/12', icon: 'text-forest/45' },
+  default: { wrap: 'bg-cream ring-soil/12', icon: 'text-forest-muted' },
   calm: { wrap: 'bg-sage/60 ring-forest/10', icon: 'text-forest' },
   warn: { wrap: 'bg-hud-amber/20 ring-hud-amber/35', icon: 'text-hud-terracotta' },
 }
@@ -89,7 +89,7 @@ export function InfoNote({
           {summary && (
             <span
               className={cn(
-                'block text-forest/55',
+                'block text-forest-muted',
                 compact ? 'text-[12px] leading-snug' : 'text-[13px] leading-relaxed',
                 title && 'mt-0.5',
               )}
@@ -99,7 +99,7 @@ export function InfoNote({
           )}
           <span
             className={cn(
-              'mt-1 inline-flex items-center gap-1 font-medium text-forest/70 transition-colors group-hover/note:text-forest',
+              'mt-1 inline-flex items-center gap-1 font-medium text-forest-soft transition-colors group-hover/note:text-forest',
               compact ? 'text-[12px]' : 'text-[12.5px]',
             )}
           >
@@ -127,7 +127,7 @@ export function InfoNote({
             <div className="pt-1 pl-[26px]">
               <div
                 className={cn(
-                  'border-t border-soil/10 pt-2.5 leading-relaxed text-forest/55',
+                  'border-t border-soil/10 pt-2.5 leading-relaxed text-forest-muted',
                   compact ? 'text-[12.5px]' : 'text-[13px]',
                 )}
               >

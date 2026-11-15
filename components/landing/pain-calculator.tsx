@@ -118,7 +118,7 @@ export function LandingPainCalculator() {
               <div>
                 <label
                   htmlFor="pain-salary"
-                  className="text-[13px] leading-[1.5] font-medium text-forest/55"
+                  className="text-[13px] leading-[1.5] font-medium text-forest-muted"
                 >
                   {COPY.salaryLabel}
                 </label>
@@ -141,7 +141,7 @@ export function LandingPainCalculator() {
               <div>
                 <label
                   htmlFor="pain-leak"
-                  className="text-[13px] leading-[1.5] font-medium text-forest/55"
+                  className="text-[13px] leading-[1.5] font-medium text-forest-muted"
                 >
                   {COPY.leakLabel}
                 </label>
@@ -166,7 +166,7 @@ export function LandingPainCalculator() {
           {/* ── KANAN: hasil — sekat sendiri di mobile ──────────────────── */}
           <div className="flex flex-col justify-center border-t border-soil/10 bg-sage/20 p-5 sm:p-7 landing-tab:border-t-0 landing-tab:border-l landing-tab:bg-transparent landing-tab:p-10">
             <div className="flex flex-col items-center text-center">
-              <p className="text-[10.5px] leading-[1.5] font-medium tracking-[0.18em] text-forest/45 uppercase">
+              <p className="text-[10.5px] leading-[1.5] font-medium tracking-[0.18em] text-forest-muted uppercase">
                 {COPY.resultLabel}
               </p>
 
@@ -191,7 +191,7 @@ export function LandingPainCalculator() {
                         'inline-flex min-h-9 items-center justify-center rounded-full px-3 py-1.5 text-[12px] leading-[1.5] font-medium whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40 motion-reduce:transition-none landing-tab:px-4 landing-tab:text-[13px]',
                         active
                           ? 'bg-forest text-cream'
-                          : 'text-forest/60 hover:text-forest',
+                          : 'text-forest-muted hover:text-forest',
                       )}
                     >
                       {item.label}
@@ -233,7 +233,7 @@ export function LandingPainCalculator() {
           </div>
         </LandingReveal>
 
-        <p className="mt-6 text-center text-[11px] leading-[1.5] text-forest/35">
+        <p className="mt-6 text-center text-[11px] leading-[1.5] text-forest-muted">
           {COPY.disclaimer}
         </p>
       </div>

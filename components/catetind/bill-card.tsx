@@ -168,7 +168,7 @@ export function BillCard({
       <div className="flex items-stretch gap-2">
         {/* pembungkus kartu: area aksi tersingkap DIKLIP di sini supaya tingginya
             persis setinggi permukaan kartu. Tombol aksi tetap ada DI LUAR. */}
-        <div className="relative min-h-[64px] min-w-0 flex-1 overflow-hidden rounded-2xl">
+        <div className="relative min-h-[56px] min-w-0 flex-1 overflow-hidden rounded-xl">
           {/* aksi KIRI — sage, tersingkap saat geser KANAN. Tidak dirender untuk
               baris lunas: baris itu tidak bisa digeser, jadi teks "Lunas" di
               dalamnya tidak perlu ada sama sekali. */}
@@ -200,6 +200,7 @@ export function BillCard({
               <button
                 type="button"
                 aria-label={BILL_CARD_ACTION_COPY.editA11y(bill.name)}
+                data-catetind-bill-edit={bill.name}
                 onClick={() => {
                   setDx(0)
                   onEdit(bill)
@@ -212,6 +213,7 @@ export function BillCard({
               <button
                 type="button"
                 aria-label={BILL_CARD_ACTION_COPY.deleteA11y(bill.name)}
+                data-catetind-bill-delete={bill.name}
                 onClick={() => {
                   setDx(0)
                   onDelete(bill)
@@ -234,7 +236,7 @@ export function BillCard({
             onClick={onClick}
             aria-label={`${bill.name}, ${maskMoney(bill.amount, masked)}. ${metaLine}.`}
             className={cn(
-              'group relative flex w-full cursor-pointer touch-pan-y items-center gap-2.5 rounded-2xl px-3.5 py-3 text-left outline-none',
+              'group relative flex w-full cursor-pointer touch-pan-y items-center gap-2 rounded-xl px-3 py-2.5 text-left outline-none',
               'transition-[background-color,box-shadow,opacity] duration-200 animate-[row-in_0.5s_ease_backwards]',
               ROW_TINT[status],
               highlighted && 'ring-2 ring-inset ring-forest/25',
@@ -308,8 +310,9 @@ export function BillCard({
             type="button"
             onClick={() => onMarkPaid(bill)}
             aria-label={BILL_CARD_ACTION_COPY.markPaidA11y(bill.name)}
+            data-catetind-bill-pay={bill.name}
             title={BILL_CARD_ACTION_COPY.markPaid}
-            className="inline-flex h-9 shrink-0 items-center gap-1.5 self-center whitespace-nowrap rounded-full bg-forest pl-3 pr-2.5 text-cream transition-colors hover:bg-forest-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/30 active:scale-95"
+            className="inline-flex h-8 shrink-0 items-center gap-1 self-center whitespace-nowrap rounded-full bg-forest pl-2.5 pr-2 text-cream transition-colors hover:bg-forest-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/30 active:scale-95"
           >
             <span className="text-[11px] font-semibold leading-none">
               {status === 'overdue' ? 'Bayar Sekarang' : 'Bayar'}
@@ -322,6 +325,7 @@ export function BillCard({
             type="button"
             onClick={() => onUnmarkPaid(bill)}
             aria-label={BILL_CARD_ACTION_COPY.unmarkPaidA11y(bill.name)}
+            data-catetind-bill-unmark={bill.name}
             title={BILL_CARD_ACTION_COPY.unmarkPaid}
             className="relative flex size-8 shrink-0 items-center justify-center self-center rounded-full text-forest-muted ring-1 ring-inset ring-soil/12 transition-colors after:absolute after:-inset-2 after:content-[''] hover:bg-sage/50 hover:text-forest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/30 active:scale-95"
           >

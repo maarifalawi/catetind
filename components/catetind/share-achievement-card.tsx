@@ -50,7 +50,7 @@ export function ShareAchievementCard({
       {/* kepala — wordmark di kiri (pemiliknya jelas), bulan di kanan */}
       <header className="flex items-center justify-between gap-3">
         <LogoWordmark tone="light" className="h-4" />
-        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-cream/15 px-2.5 py-1 text-[11.5px] font-medium text-cream/85">
+        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-cream/15 px-2.5 py-1 text-[11.5px] font-medium text-cream">
           <CalendarDays className="size-3" strokeWidth={2.4} aria-hidden />
           {card.monthLabel}
         </span>
@@ -72,7 +72,7 @@ export function ShareAchievementCard({
                 <span
                   className={cn(
                     'flex size-6 shrink-0 items-center justify-center rounded-full',
-                    stillGrowing ? 'bg-cream/12 text-cream/60' : 'bg-mint/25 text-mint',
+                    stillGrowing ? 'bg-cream/12 text-cream-muted' : 'bg-mint/25 text-mint',
                   )}
                 >
                   <Icon className="size-3.5" strokeWidth={2.4} aria-hidden />
@@ -92,7 +92,7 @@ export function ShareAchievementCard({
             {extra.map((milestone) => (
               <li
                 key={milestone}
-                className="rounded-full bg-mint/20 px-2.5 py-1 text-[12px] font-medium text-cream/85"
+                className="rounded-full bg-mint/20 px-2.5 py-1 text-[12px] font-medium text-cream"
               >
                 + {milestone}
               </li>
@@ -107,7 +107,7 @@ export function ShareAchievementCard({
           stage={card.plantStage}
           className="mx-auto w-[116px] motion-reduce:[&_g]:animate-none"
         />
-        <p className="mt-1 text-center text-[13px] font-medium text-forest/70">
+        <p className="mt-1 text-center text-[13px] font-medium text-forest-soft">
           {SHARE_STAGE_CAPTION[card.plantStage]}
         </p>
       </div>
@@ -116,7 +116,7 @@ export function ShareAchievementCard({
         <p className="font-display text-[16px] font-medium tracking-tight text-mint">
           {SHARE_HASHTAG}
         </p>
-        <p className="font-mono text-[11.5px] text-cream/50">{SHARE_CARD_DOMAIN}</p>
+        <p className="font-mono text-[11.5px] text-cream-muted">{SHARE_CARD_DOMAIN}</p>
       </footer>
     </article>
   )

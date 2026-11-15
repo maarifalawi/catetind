@@ -563,7 +563,7 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
               onClick={() => setTab(item.id)}
               className={cn(
                 'flex flex-1 items-center justify-center rounded-full px-4 py-2 text-[13.5px] font-medium transition-colors duration-200 active:scale-95 lg:flex-none',
-                active ? 'bg-forest text-cream' : 'text-forest/55 hover:text-forest',
+                active ? 'bg-forest text-cream' : 'text-forest-muted hover:text-forest',
               )}
             >
               {item.label}
@@ -591,12 +591,12 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
             className="flex size-14 items-center justify-center rounded-2xl border-2 border-dashed border-forest/20 bg-cream/60"
             aria-hidden
           >
-            <Sprout className="size-6 text-forest/45" strokeWidth={1.8} />
+            <Sprout className="size-6 text-forest-muted" strokeWidth={1.8} />
           </span>
           <h2 className="mt-4 font-display text-[17px] font-semibold tracking-tight text-forest">
             {HISTORY_NO_DATA_COPY.title}
           </h2>
-          <p className="mt-2 max-w-md text-[14px] leading-relaxed text-forest/60">
+          <p className="mt-2 max-w-md text-[14px] leading-relaxed text-forest-muted">
             {HISTORY_NO_DATA_COPY.body}
           </p>
           <div className="mt-5">
@@ -624,7 +624,7 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
       <div className={cn(tab !== 'riwayat' && 'hidden')}>
       <section className="mt-5 rounded-[1.75rem] bg-cream p-3 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] ring-1 ring-soil/12 sm:p-3.5 lg:mt-6">
         <div className="flex items-center justify-between gap-2 px-1 pb-2">
-          <span className="inline-flex items-center gap-1.5 text-[11.5px] font-medium uppercase tracking-[0.14em] text-forest/40">
+          <span className="inline-flex items-center gap-1.5 text-[11.5px] font-medium uppercase tracking-[0.14em] text-forest-muted">
             <SlidersHorizontal className="size-3.5" strokeWidth={2.4} aria-hidden />
             Filter Global
           </span>
@@ -633,7 +633,7 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
             <button
               type="button"
               onClick={resetFilters}
-              className="inline-flex items-center gap-1 rounded-full bg-cream px-2.5 py-1 text-[12px] font-medium text-forest/55 ring-1 ring-soil/8 transition-colors hover:bg-sage/60 hover:text-forest active:scale-95"
+              className="inline-flex items-center gap-1 rounded-full bg-cream px-2.5 py-1 text-[12px] font-medium text-forest-muted ring-1 ring-soil/8 transition-colors hover:bg-sage/60 hover:text-forest active:scale-95"
             >
               <RotateCcw className="size-3" strokeWidth={2.4} aria-hidden />
               Reset
@@ -644,21 +644,21 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
         {/* pencarian: placeholder adalah CONTOH PROMPT, bukan "Cari catatan",
             supaya user tahu search-nya bisa bahasa sehari-hari */}
         <label className="flex h-11 min-w-0 items-center gap-2.5 rounded-full bg-cream/80 px-4 ring-1 ring-inset ring-soil/8 transition-shadow focus-within:bg-cream focus-within:ring-2 focus-within:ring-forest/20">
-          <Search className="size-4 shrink-0 text-forest/35" aria-hidden />
+          <Search className="size-4 shrink-0 text-forest-muted" aria-hidden />
           <input
             type="search"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder='Cari "pengeluaran kopi bulan lalu"…'
             aria-label="Cari catatan dengan bahasa sehari-hari"
-            className="w-full bg-transparent text-[14.5px] text-forest outline-none placeholder:text-forest/35"
+            className="w-full bg-transparent text-[14.5px] text-forest outline-none placeholder:text-forest-muted"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery('')}
               aria-label="Hapus pencarian"
-              className="flex size-6 shrink-0 items-center justify-center rounded-full text-forest/40 transition-colors hover:bg-sage/60 hover:text-forest"
+              className="flex size-6 shrink-0 items-center justify-center rounded-full text-forest-muted transition-colors hover:bg-sage/60 hover:text-forest"
             >
               <X className="size-3.5" strokeWidth={2.4} />
             </button>
@@ -682,12 +682,12 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
                   'inline-flex shrink-0 items-center gap-1.5 rounded-full py-2 pl-3.5 pr-3 text-[13.5px] font-medium transition-all duration-200 active:scale-95',
                   active
                     ? 'bg-forest text-cream shadow-[0_10px_22px_-16px_rgba(0,0,0,0.9)]'
-                    : 'bg-cream text-forest/55 ring-1 ring-soil/10 hover:bg-sage/60 hover:text-forest',
+                    : 'bg-cream text-forest-muted ring-1 ring-soil/10 hover:bg-sage/60 hover:text-forest',
                 )}
               >
                 {active ? (selected?.label ?? row.label) : row.label}
                 <ChevronDown
-                  className={cn('size-3.5', active ? 'text-cream/70' : 'text-forest/35')}
+                  className={cn('size-3.5', active ? 'text-cream' : 'text-forest-muted')}
                   strokeWidth={2.6}
                 />
               </button>
@@ -729,7 +729,7 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
             <span className="min-w-0 flex-1 text-[14.5px] font-medium">
               Recap mingguan siap
             </span>
-            <span aria-hidden className="pr-1 text-cream/60">
+            <span aria-hidden className="pr-1 text-cream-muted">
               →
             </span>
           </button>
@@ -737,7 +737,7 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
             type="button"
             onClick={() => setRecapDismissed(true)}
             aria-label="Tutup banner rekap mingguan"
-            className="flex size-8 shrink-0 items-center justify-center rounded-full text-cream/60 transition-colors hover:bg-cream/10 hover:text-cream"
+            className="flex size-8 shrink-0 items-center justify-center rounded-full text-cream-muted transition-colors hover:bg-cream/10 hover:text-cream"
           >
             <X className="size-3.5" strokeWidth={2.6} />
           </button>
@@ -771,7 +771,7 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
             </span>
             <div>
               <h2 className="font-display text-[16px] font-semibold tracking-tight text-forest">Catatan</h2>
-              <p className="text-[12.5px] text-forest/45">
+              <p className="text-[12.5px] text-forest-muted">
                 {summary.count} transaksi
                 {allGroups.length > 0 ? ` · ${allGroups.length} hari` : ''}
               </p>
@@ -785,7 +785,7 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
               dampaknya, bukan labelnya. */}
           <div className="flex flex-wrap items-center justify-end gap-2">
             {(activeFilterCount > 0 || searchQuery) && (
-              <span className="rounded-full bg-cream px-3 py-1.5 text-[12.5px] font-medium tabular-nums text-forest/60 ring-1 ring-soil/12">
+              <span className="rounded-full bg-cream px-3 py-1.5 text-[12.5px] font-medium tabular-nums text-forest-muted ring-1 ring-soil/12">
                 {summary.count} dari {contextCount}
               </span>
             )}
@@ -821,12 +821,12 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
                     Semua angka polos berwarna, tanpa pill — jadi mata membaca
                     kolom angka yang lurus, bukan deretan chip. */}
                 <div className="flex items-center gap-2.5">
-                  <p className="shrink-0 text-[12px] font-medium uppercase tracking-[0.12em] text-forest/45">
+                  <p className="shrink-0 text-[12px] font-medium uppercase tracking-[0.12em] text-forest-muted">
                     {group.label}
                   </p>
                   <span className="h-px min-w-4 flex-1 bg-soil/[0.09]" aria-hidden />
                   {group.moved > 0 && (
-                    <span className="shrink-0 text-[12px] font-medium tabular-nums text-forest/40">
+                    <span className="shrink-0 text-[12px] font-medium tabular-nums text-forest-muted">
                       ⇄ {maskMoney(group.moved, isMasked)}
                     </span>
                   )}
@@ -837,7 +837,7 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
                         ? 'text-hud-terracotta'
                         : group.net > 0
                           ? 'text-forest'
-                          : 'text-forest/35',
+                          : 'text-forest-muted',
                     )}
                   >
                     {netLabel(group.net, isMasked)}
@@ -966,7 +966,7 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
                         'flex w-full items-center justify-between gap-3 rounded-2xl px-3.5 py-3 text-left text-[15px] transition-colors',
                         isActive
                           ? 'bg-forest/[0.06] font-medium text-forest'
-                          : 'font-medium text-forest/65 hover:bg-cream',
+                          : 'font-medium text-forest-soft hover:bg-cream',
                       )}
                     >
                       {opt.label}
@@ -1072,6 +1072,7 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
         open={monthly.open}
         monthKey={monthly.monthKey}
         saved={monthly.saved}
+        recap={monthly.recap}
         onClose={monthly.close}
         onSave={monthly.saveTarget}
       />
@@ -1099,20 +1100,14 @@ function EmptyState({
   contextLabel?: string
 }) {
   return (
-    <div className="mt-4 flex flex-col items-center rounded-[1.75rem] border-2 border-dashed border-forest/15 bg-cream/50 px-6 py-12 text-center">
-      <div
-        className="flex size-16 items-center justify-center rounded-2xl border-2 border-dashed border-forest/20 bg-cream/60"
-        aria-hidden
-      >
-        <Sprout className="size-7 text-forest/45" strokeWidth={1.8} />
-      </div>
+    <div data-catetind-empty className="mt-4 flex flex-col items-center rounded-[1.75rem] border-2 border-dashed border-forest/15 bg-cream/50 px-6 py-12 text-center">
       <p className="mt-4 max-w-xs text-[14.5px] font-medium leading-relaxed text-forest">
         {emptyContext && contextLabel
           ? CONTEXT_EMPTY_COPY.history.title(contextLabel)
-          : 'Belum ada catatan di sini 🌱'}
+          : 'Belum ada catatan di sini 🧩'}
       </p>
       {emptyContext && (
-        <p className="mt-1.5 max-w-sm text-[13.5px] leading-relaxed text-forest/55">
+        <p className="mt-1.5 max-w-sm text-[13.5px] leading-relaxed text-forest-muted">
           {CONTEXT_EMPTY_COPY.history.body}
         </p>
       )}
@@ -1131,7 +1126,7 @@ function EmptyState({
           <button
             type="button"
             onClick={onReset}
-            className="inline-flex h-11 items-center rounded-2xl bg-cream px-4 text-[14.5px] font-medium text-forest/70 ring-1 ring-soil/12 transition-colors hover:bg-sage/50"
+            className="inline-flex h-11 items-center rounded-2xl bg-cream px-4 text-[14.5px] font-medium text-forest-soft ring-1 ring-soil/12 transition-colors hover:bg-sage/50"
           >
             Reset
           </button>

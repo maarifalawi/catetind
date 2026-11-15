@@ -1,45 +1,6 @@
 'use client'
 
-import {
-  Baby,
-  BookOpen,
-  BrushCleaning,
-  Bus,
-  Car,
-  Cat,
-  Church,
-  Clapperboard,
-  Coffee,
-  CreditCard,
-  Dog,
-  Droplet,
-  Dumbbell,
-  Fuel,
-  Gamepad2,
-  GraduationCap,
-  Headphones,
-  HeartPulse,
-  Hospital,
-  House,
-  Laptop,
-  Landmark,
-  MoonStar,
-  Music2,
-  Palette,
-  Pill,
-  Plane,
-  ReceiptText,
-  School,
-  ShoppingCart,
-  Smartphone,
-  Sparkles,
-  Stethoscope,
-  Tv,
-  UtensilsCrossed,
-  Wifi,
-  Zap,
-  type LucideIcon,
-} from 'lucide-react'
+import { Baby, BookOpen, BrushCleaning, Bus, Car, Cat, Church, Clapperboard, Coffee, CreditCard, Dog, Droplet, Dumbbell, Fuel, Gamepad2, GraduationCap, Headphones, HeartPulse, Hospital, House, Laptop, Landmark, MoonStar, Music2, Palette, Pill, Plane, ReceiptText, School, ShoppingCart, Smartphone, Stethoscope, Tv, UtensilsCrossed, Wifi, Zap, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Bill } from '@/lib/data/bills'
 
@@ -71,7 +32,7 @@ const EMOJI_ICONS: Record<string, LucideIcon> = {
   '🏋': Dumbbell,
   '📚': BookOpen,
   '🚗': Car,
-  '✨': Sparkles,
+  '✨': ReceiptText,
   '🛒': ShoppingCart,
   '🧾': ReceiptText,
   '🎮': Gamepad2,
@@ -125,7 +86,7 @@ const CATEGORY_ICONS: Record<string, LucideIcon> = {
   Transportasi: Car,
   Kesehatan: HeartPulse,
   Pendidikan: GraduationCap,
-  Lainnya: Sparkles,
+  Lainnya: ReceiptText,
 }
 
 function normalizeEmoji(emoji?: string): string {

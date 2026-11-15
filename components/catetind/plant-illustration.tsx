@@ -1,111 +1,155 @@
 import { cn } from '@/lib/utils'
 import { PLANT_SLEEP_COPY } from '@/lib/data/upgrade'
 
-/* tahap pertumbuhan tanaman - kanon Domain 3B */
+/* ── PUZZLE KEUANGAN — METAFORA PENGGANTI TANAMAN (revisi pemilik produk) ────
+   Dulu komponen ini menggambar tanaman yang tumbuh dari benih → berbunga.
+   Sekarang yang digambar adalah PAPAN PUZZLE 4×3 = 12 KEPINGAN: tiap kemajuan
+   memasang satu keping, dan "puzzle lengkap" = target tercapai.
+
+   Nama file & nama ekspor SENGAJA dipertahankan (`PlantIllustration`,
+   `PlantStage`, `plant-*`) supaya seluruh pemanggil (Dashboard, Tabungan Impian,
+   detail celengan, rekap mingguan/bulanan, perayaan, kartu share, 404) tidak
+   perlu diubah sekaligus — yang berubah adalah ISI & bahasanya. Kalau nanti mau
+   rename total ke `Puzzle*`, itu pekerjaan terpisah yang mekanis.
+
+   TIGA KEPUTUSAN TEKNIS:
+
+   1. BENTUK KEPINGAN DETERMINISTIK. Tonjolan/lekuk tiap sisi internal diambil
+      dari tabel konstanta (`V_SIGN`/`H_SIGN`), BUKAN `Math.random()`. Server dan
+      browser harus menghasilkan `d` yang identik, kalau tidak React melaporkan
+      hydration mismatch. Koordinat dibulatkan 3 desimal karena alasan yang sama.
+   2. TANPA FILE ASET. Semua kepingan digambar dari satu fungsi `edgePath()`
+      (kurva jigsaw klasik) + `piecePath()`; tidak ada `<image>` maupun SVG
+      eksternal, jadi tidak ada request tambahan.
+   3. TETAP TURUNAN, BUKAN ANGKA PAJANGAN. `progress` (persen celengan) yang
+      menentukan jumlah kepingan; `stage` hanya dipakai saat pemanggil tidak
+      punya persen (mis. rekap mingguan/bulanan).
+
+   STATE (analog state tanaman lama, supaya tidak ada perilaku yang hilang):
+     · `wilted`   = progres rendah (dulu "tanaman layu") → kepingan terpasang
+                    dipudarkan & kontrasnya diturunkan;
+     · `sleeping` = paket belum aktif ("puzzle menunggu") → grayscale + garis
+                    putus-putus, TANPA nada menghukum (PRD 4542).
+   ────────────────────────────────────────────────────────────────────────── */
+
+/* tahap kepingan puzzle — kanon Domain 3B */
 export type PlantStage = 1 | 2 | 3 | 4
 
 export const STAGE_NAMES: Record<PlantStage, string> = {
-  1: 'Benih',
-  2: 'Tunas',
-  3: 'Tanaman Muda',
-  4: 'Berbunga',
+  1: 'Awal tersusun',
+  2: 'Setengah jalan',
+  3: 'Hampir lengkap',
+  4: 'Puzzle lengkap',
 }
 
-/* ── HELAI DAUN (dipakai berulang di tahap 2–4) ──────────────────────────────
-   Badan daun + tulang tengah tipis. `deep` memakai gradien lebih tua supaya
-   daun di lapis bawah terasa punya kedalaman — bukan tumpukan bentuk yang rata. */
-function Leaf({ d, vein, deep = false }: { d: string; vein: string; deep?: boolean }) {
-  return (
-    <g>
-      <path d={d} fill={deep ? 'url(#catetindLeafDeep)' : 'url(#catetindLeaf)'} />
-      <path
-        d={vein}
-        fill="none"
-        stroke="#1f2823"
-        strokeWidth="0.9"
-        strokeOpacity="0.3"
-        strokeLinecap="round"
-      />
-    </g>
-  )
+/* ── GEOMETRI PAPAN ─────────────────────────────────────────────────────────
+   Grid 4×3 (12 keping) — SAMA dengan referensi pemilik produk. Ukuran sel 60
+   dipilih supaya `viewBox` tetap kecil (240×180) tetapi kurvanya tetap mulus
+   saat diperbesar di kartu Dashboard. */
+export const PUZZLE_COLS = 4
+export const PUZZLE_ROWS = 3
+export const PUZZLE_TOTAL = PUZZLE_COLS * PUZZLE_ROWS
+const CELL = 60
+const BOARD_W = PUZZLE_COLS * CELL
+const BOARD_H = PUZZLE_ROWS * CELL
+
+/** arah tonjolan tiap sisi INTERNAL vertikal: +1 = menonjol ke kanan */
+const V_SIGN: ReadonlyArray<ReadonlyArray<1 | -1>> = [
+  [1, -1, 1],
+  [-1, 1, -1],
+  [1, 1, -1],
+]
+
+/** arah tonjolan tiap sisi INTERNAL horizontal: +1 = menonjol ke bawah */
+const H_SIGN: ReadonlyArray<ReadonlyArray<1 | -1>> = [
+  [1, -1, 1, -1],
+  [-1, 1, -1, 1],
+]
+
+/** jumlah kepingan yang terpasang untuk tiap tahap (3 · 6 · 9 · 12) */
+export function piecesForStage(stage: PlantStage): number {
+  return Math.min(PUZZLE_TOTAL, stage * 3)
 }
 
-/* ── BUNGA BERLAPIS (tahap 4) ────────────────────────────────────────────────
-   Dua lapis kelopak (belakang lebih pucat, depan lebih pekat) + inti dengan
-   serbuk sari. Jumlah kelopak bisa 5 atau 6 supaya tiap kuntum tidak identik —
-   tanaman asli tidak pernah simetris sempurna. */
-function Bloom({
-  cx,
-  cy,
-  scale = 1,
-  rotation = 0,
-  petals = 6,
-}: {
-  cx: number
-  cy: number
-  scale?: number
-  rotation?: number
-  petals?: number
-}) {
-  const angles = Array.from({ length: petals }, (_, i) => (360 / petals) * i)
-  return (
-    <g transform={`translate(${cx} ${cy}) rotate(${rotation}) scale(${scale})`}>
-      {angles.map((deg) => (
-        <ellipse
-          key={`back-${deg}`}
-          cx="0"
-          cy="-11.5"
-          rx="6.6"
-          ry="11.5"
-          fill="url(#catetindPetalBack)"
-          transform={`rotate(${deg})`}
-        />
-      ))}
-      {angles.map((deg) => (
-        <ellipse
-          key={`front-${deg}`}
-          cx="0"
-          cy="-8.6"
-          rx="5"
-          ry="8.8"
-          fill="url(#catetindPetal)"
-          transform={`rotate(${deg + 180 / petals})`}
-        />
-      ))}
-      <circle r="5.6" fill="url(#catetindCore)" />
-      {angles.map((deg) => (
-        <circle
-          key={`pollen-${deg}`}
-          /* koordinat dibulatkan ke 3 desimal — Math.sin/cos bisa menghasilkan
-             digit terakhir yang berbeda antara server & browser, dan itu memicu
-             hydration mismatch pada atribut SVG. */
-          cx={Math.round(Math.cos((deg * Math.PI) / 180) * 3200) / 1000}
-          cy={Math.round(Math.sin((deg * Math.PI) / 180) * 3200) / 1000}
-          r="1"
-          fill="#ffffff"
-          opacity="0.9"
-        />
-      ))}
-      <circle r="1.9" fill="#ffffff" opacity="0.65" />
-    </g>
-  )
+/** persen progres (0–100) → jumlah kepingan terpasang, dibulatkan */
+export function piecesForProgress(percent: number): number {
+  const clamped = Math.min(100, Math.max(0, percent))
+  return Math.round((clamped / 100) * PUZZLE_TOTAL)
+}
+
+/** bulatkan ke 3 desimal: angka panjang bikin `d` berbeda antar-render */
+function r3(value: number): number {
+  return Math.round(value * 1000) / 1000
 }
 
 /**
- * SVG tanaman (resolusi CANDRA: animasi penuh hanya di-lazy-load di detail view
- * — home pakai SVG ringan + sway CSS, tanpa Lottie).
+ * Satu sisi kepingan: garis lurus (sisi tepi papan) atau kurva jigsaw.
  *
- * `wilted`   = state Tanaman Layu (HP ≤ 20): daun desaturated & merunduk.
- * `sleeping` = state VI "Tanaman Menunggu" (inventaris 137 · PRD 4542), dipakai
- *              saat paket user belum aktif: greyscale + mata tertutup + ayunan
- *              berhenti. Ini SENGAJA berbeda dari `wilted`: layu = butuh dirawat,
- *              menunggu = belum mulai — tidak ada rasa bersalah yang perlu
- *              dipasang. (Sebelum paket 84 state ini berarti "masa aktif habis";
- *              keadaan itu sudah tidak ada karena semua paket akses selamanya.)
+ * `sign` = arah tonjolan terhadap arah gambar: `1` menonjol KELUAR, `-1` masuk
+ * (lekuk), `0` lurus. Normal keluar dihitung `(uy, -ux)` karena semua kepingan
+ * digambar searah jarum jam.
+ */
+function edgePath(
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  sign: 1 | -1 | 0,
+): string {
+  if (sign === 0) return `L ${r3(x1)} ${r3(y1)}`
+
+  const dx = x1 - x0
+  const dy = y1 - y0
+  const len = Math.hypot(dx, dy)
+  const ux = dx / len
+  const uy = dy / len
+  const nx = uy * sign
+  const ny = -ux * sign
+
+  /** titik pada sisi: `t` = posisi memanjang (0–1), `n` = tinggi tonjolan */
+  const at = (t: number, n: number) =>
+    `${r3(x0 + ux * len * t + nx * len * n)} ${r3(y0 + uy * len * t + ny * len * n)}`
+
+  /* kurva jigsaw klasik: leher sempit → kepala melebar → leher lagi */
+  return [
+    `L ${at(0.34, 0)}`,
+    `C ${at(0.42, 0.02)} ${at(0.33, 0.1)} ${at(0.38, 0.16)}`,
+    `C ${at(0.44, 0.24)} ${at(0.56, 0.24)} ${at(0.62, 0.16)}`,
+    `C ${at(0.67, 0.1)} ${at(0.58, 0.02)} ${at(0.66, 0)}`,
+    `L ${r3(x1)} ${r3(y1)}`,
+  ].join(' ')
+}
+
+/** path tertutup satu kepingan (baris, kolom) — searah jarum jam dari kiri-atas */
+function piecePath(row: number, col: number): string {
+  const x0 = col * CELL
+  const y0 = row * CELL
+  const x1 = x0 + CELL
+  const y1 = y0 + CELL
+
+  /* sisi papan (tepi luar) selalu lurus; sisi internal memakai tonjolan yang
+     SAMA dengan kepingan tetangganya, hanya arahnya dibalik. */
+  const top: 1 | -1 | 0 = row === 0 ? 0 : ((-H_SIGN[row - 1][col]) as 1 | -1)
+  const right: 1 | -1 | 0 = col === PUZZLE_COLS - 1 ? 0 : V_SIGN[row][col]
+  const bottom: 1 | -1 | 0 = row === PUZZLE_ROWS - 1 ? 0 : H_SIGN[row][col]
+  const left: 1 | -1 | 0 = col === 0 ? 0 : ((-V_SIGN[row][col - 1]) as 1 | -1)
+
+  return [
+    `M ${x0} ${y0}`,
+    edgePath(x0, y0, x1, y0, top),
+    edgePath(x1, y0, x1, y1, right),
+    edgePath(x1, y1, x0, y1, bottom),
+    edgePath(x0, y1, x0, y0, left),
+    'Z',
+  ].join(' ')
+}
+
+/**
+ * Papan puzzle — dipakai di SEMUA tempat yang dulu memakai ilustrasi tanaman.
  *
- * Semua warna diambil dari palet kanon (mint/forest/plum/cantelope/olive), tanpa
- * hex di luar palet. Gradien memakai id TETAP: tiap instance menggambar definisi
- * yang identik, jadi beberapa tanaman di satu halaman tetap sewarna.
+ * `progress` OPSIONAL (0–100). Tanpa `progress`, jumlah kepingan mengikuti
+ * `stage` (3/6/9/12). Dengan `progress`, kepingan bertambah tiap ~8%, jadi
+ * celengan 20% dan 80% benar-benar terlihat berbeda — bukan empat wujud diskret.
  */
 export function PlantIllustration({
   stage,
@@ -115,262 +159,22 @@ export function PlantIllustration({
   className,
 }: {
   stage: PlantStage
-  /**
-   * PROGRES CELENGAN (0–100), OPSIONAL.
-   *
-   * Tanaman dulu hanya punya EMPAT wujud diskret (benih → tunas → muda →
-   * berbunga), jadi celengan 20% dan 80% bisa tampak hampir sama — terutama di
-   * kartu kecil. Dengan `progress`, dua hal terjadi sekaligus:
-   *
-   *   1. tahapnya DITURUNKAN dari progres (bukan dari field `stage` yang bisa
-   *      tertinggal), dan
-   *   2. seluruh tanaman diskalakan kontinu dari 0,55× ke 1× (titik tumbuh di
-   *      bibir pot), jadi 20% benar-benar terlihat lebih kecil & lebih muda
-   *      daripada 80%.
-   *
-   * Tanpa `progress`, perilakunya persis seperti sebelumnya — semua pemanggil
-   * lama tidak berubah.
-   */
+  /** progres celengan 0–100 (opsional) — menentukan jumlah kepingan */
   progress?: number
   wilted?: boolean
-  /** true = mode "menunggu paket aktif" (tanpa angka HP) */
+  /** true = mode "menunggu paket aktif" (tanpa angka apa pun) */
   sleeping?: boolean
   className?: string
 }) {
-  /* progres dijepit 0–100; `null` = komponen memakai `stage` apa adanya */
-  const clamped = progress == null ? null : Math.min(100, Math.max(0, progress))
-  const resolvedStage: PlantStage =
-    clamped == null
-      ? stage
-      : clamped >= 75
-        ? 4
-        : clamped >= 50
-          ? 3
-          : clamped >= 25
-            ? 2
-            : 1
-  /* 0% → 0.55× (kecambah mungil) · 100% → 1× (tanaman penuh) */
-  const growth = clamped == null ? 1 : 0.55 + 0.45 * (clamped / 100)
-  const label = sleeping
-    ? PLANT_SLEEP_COPY.aria
-    : `Tanaman tahap ${STAGE_NAMES[resolvedStage]}${
-        clamped == null ? '' : `, progres ${Math.round(clamped)}%`
-      }${wilted ? ' (layu)' : ''}`
-
-  return (
-    <svg
-      viewBox="0 0 200 220"
-      className={cn('h-auto w-full', sleeping && 'grayscale', className)}
-      role="img"
-      aria-label={label}
-    >
-      {/* Gradien tanaman hidup SEKALI di <PlantArtDefs/> (root layout). Dulu
-          tiap instance menulis <defs> sendiri dengan id yang sama; saat beberapa
-          tanaman ada di halaman dan salah satunya di section tersembunyi,
-          browser memakai definisi pertama yang tidak terlihat dan pot/daun
-          tanaman lain kehilangan gradien. Lihat plant-art-defs.tsx. */}
-
-      {/* halo mint lembut di belakang tanaman + bayangan tanah */}
-      <ellipse cx="100" cy="118" rx="86" ry="98" fill="url(#catetindGlow)" />
-      <ellipse cx="100" cy="212" rx="52" ry="7" fill="#000000" opacity="0.1" />
-
-      {/* seluruh tanaman berayun dari pangkal pot; `wilted` membuatnya merunduk */}
-      <g
-        className={cn(!wilted && !sleeping && 'animate-[plant-sway_5s_ease-in-out_infinite]')}
-        style={{ transformOrigin: '100px 176px' }}
-      >
-        <g
-          className={cn(wilted && 'translate-y-1 rotate-[3deg] opacity-75 saturate-50')}
-          style={{ transformOrigin: '100px 170px' }}
-        >
-          {/* SKALA PERTUMBUHAN KONTINU (lihat `progress` di atas). Transform-nya
-              CSS, bukan atribut, supaya bisa dianimasikan halus ketika user
-              menyetor — 20% dan 80% jadi terbaca beda tinggi & rimbunnya. */}
-          <g
-            className="transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
-            style={{ transform: `scale(${growth})`, transformOrigin: '100px 172px' }}
-          >
-          {/* ── TAHAP 1 · BENIH ──────────────────────────────────────────────
-              gundukan tanah + biji dengan tunas mungil yang baru pecah keluar */}
-          {resolvedStage === 1 && (
-            <g>
-              <path d="M70 168 Q100 145 130 168 Z" fill="#73533c" />
-              <path d="M77 168 Q100 152 123 168 Z" fill="#73533c" />
-              <ellipse cx="100" cy="159.5" rx="7" ry="5.4" fill="#b89191" />
-              <ellipse cx="100" cy="159.5" rx="7" ry="5.4" fill="url(#catetindSheen)" />
-              <path
-                d="M100 157 c 0 -5.4 -3.6 -8.6 -9 -9.6 c 1 5.4 4.4 8.6 9 9.6 Z"
-                fill="url(#catetindLeaf)"
-              />
-            </g>
-          )}
-
-          {/* ── TAHAP 2 · TUNAS ───────────────────────────────────────────── */}
-          {resolvedStage === 2 && (
-            <g>
-              <path
-                d="M100 170 C 100 161 100 152 100 143"
-                fill="none"
-                stroke="url(#catetindStem)"
-                strokeWidth="4.4"
-                strokeLinecap="round"
-              />
-              <Leaf
-                d="M100 148 C 88 146 79 138 76 127 C 89 129 97 138 100 146 Z"
-                vein="M100 146 C 92 143 84 136 78 129"
-              />
-              <Leaf
-                d="M100 148 C 112 146 121 138 124 127 C 111 129 103 138 100 146 Z"
-                vein="M100 146 C 108 143 116 136 122 129"
-              />
-              <ellipse cx="100" cy="140" rx="3.3" ry="5.2" fill="url(#catetindLeaf)" />
-            </g>
-          )}
-
-          {/* ── BATANG (tahap 3–4) ────────────────────────────────────────── */}
-          {resolvedStage >= 3 && (
-            <path
-              d={resolvedStage === 4 ? 'M100 172 C 102 148 98 112 100 82' : 'M100 172 C 101 152 99 128 100 104'}
-              fill="none"
-              stroke="url(#catetindStem)"
-              strokeWidth="5"
-              strokeLinecap="round"
-            />
-          )}
-          {/* ── TAHAP 3–4 · DEDAUNAN (empat lapis, makin ke atas makin muda) ── */}
-          {resolvedStage >= 3 && (
-            <g style={{ transformOrigin: '100px 150px' }}>
-              <Leaf
-                d="M100 152 C 80 150 64 139 58 119 C 79 122 94 133 100 148 Z"
-                vein="M100 148 C 88 144 72 134 61 123"
-                deep
-              />
-              <Leaf
-                d="M100 152 C 120 150 136 139 142 119 C 121 122 106 133 100 148 Z"
-                vein="M100 148 C 112 144 128 134 139 123"
-                deep
-              />
-              <Leaf
-                d="M100 132 C 85 130 73 121 68 106 C 84 109 96 118 100 129 Z"
-                vein="M100 129 C 91 125 80 118 71 109"
-              />
-              <Leaf
-                d="M100 132 C 115 130 127 121 132 106 C 116 109 104 118 100 129 Z"
-                vein="M100 129 C 109 125 120 118 129 109"
-              />
-              <Leaf
-                d="M100 114 C 90 112 82 105 79 93 C 90 96 98 103 100 111 Z"
-                vein="M100 111 C 94 108 87 102 82 96"
-              />
-              <Leaf
-                d="M100 114 C 110 112 118 105 121 93 C 110 96 102 103 100 111 Z"
-                vein="M100 111 C 106 108 113 102 118 96"
-              />
-              {/* sulur keriting kecil — sentuhan hidup yang tidak kaku */}
-              <path
-                d="M124 116 C 133 112 136 103 131 96"
-                fill="none"
-                stroke="#91bb9e"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-                opacity="0.8"
-              />
-            </g>
-          )}
-
-          {/* ── TAHAP 3 · KUNCUP & DAUN PUCUK (belum berbunga) ────────────── */}
-          {resolvedStage === 3 && (
-            <g>
-              <path
-                d="M100 107 c -3.4 0 -6 -3.1 -6 -6.8 c 0 -3.9 2.7 -7 6 -7 c 3.3 0 6 3.1 6 7 c 0 3.7 -2.6 6.8 -6 6.8 Z"
-                fill="url(#catetindLeafDeep)"
-              />
-              <path
-                d="M100 107 v-9.4"
-                stroke="#1f2823"
-                strokeWidth="0.9"
-                strokeOpacity="0.35"
-                strokeLinecap="round"
-              />
-              <ellipse cx="86" cy="110" rx="2.6" ry="4.4" fill="#91bb9e" transform="rotate(-24 86 110)" />
-              <ellipse cx="114" cy="112" rx="2.4" ry="4" fill="#91bb9e" transform="rotate(22 114 112)" />
-            </g>
-          )}
-
-          {/* ── TAHAP 4 · BERBUNGA (kuntum berlapis + serbuk sari) ────────── */}
-          {resolvedStage === 4 && (
-            <g>
-              {/* dua daun tambahan di bawah supaya terasa rimbun, bukan sebatang */}
-              <Leaf
-                d="M100 162 C 86 160 74 152 70 140 C 84 142 95 150 100 158 Z"
-                vein="M100 158 C 92 154 82 147 74 142"
-                deep
-              />
-              <Leaf
-                d="M100 162 C 114 160 126 152 130 140 C 116 142 105 150 100 158 Z"
-                vein="M100 158 C 108 154 118 147 126 142"
-                deep
-              />
-              {/* satu kuntum utama + dua kuntum samping (ukuran & kelopak beda) */}
-              <Bloom cx={100} cy={76} scale={1.15} />
-              <Bloom cx={71} cy={101} scale={0.8} rotation={-14} petals={5} />
-              <Bloom cx={129} cy={96} scale={0.72} rotation={16} petals={5} />
-              {/* kuncup yang belum mekar */}
-              <ellipse cx="86" cy="82" rx="3.4" ry="5.6" fill="url(#catetindPetalBack)" transform="rotate(-18 86 82)" />
-              <ellipse cx="119" cy="70" rx="3" ry="5" fill="url(#catetindPetalBack)" transform="rotate(20 119 70)" />
-              {/* serbuk sari beterbangan halus */}
-              <circle cx="56" cy="66" r="1.6" fill="#ffb885" opacity="0.7" />
-              <circle cx="146" cy="78" r="1.3" fill="#ffb885" opacity="0.6" />
-              <circle cx="86" cy="44" r="1.5" fill="#ecd768" opacity="0.75" />
-              <circle cx="122" cy="52" r="1.2" fill="#ecd768" opacity="0.6" />
-              <circle cx="68" cy="124" r="1.2" fill="#91bb9e" opacity="0.7" />
-              <circle cx="134" cy="118" r="1.1" fill="#91bb9e" opacity="0.6" />
-            </g>
-          )}
-          </g>
-
-        </g>
-      </g>
-
-      {/* ── POT (digambar SETELAH tanaman: batang keluar dari balik bibirnya) ── */}
-      <g>
-        <path
-          d="M63 176 h74 l-7.8 29 a7 7 0 0 1 -6.9 4.9 H77.7 a7 7 0 0 1 -6.9 -4.9 Z"
-          fill="url(#catetindPot)"
-        />
-        {/* kilau vertikal tipis di badan pot */}
-        <path d="M74 180 l-3.4 24 a4 4 0 0 0 2 2 l3 -26 Z" fill="#ffffff" opacity="0.08" />
-        {/* bibir pot + highlight atasnya */}
-        <rect x="56" y="166" width="88" height="14" rx="7" fill="url(#catetindPotRim)" />
-        <rect x="61" y="167.6" width="78" height="3.6" rx="1.8" fill="#ffffff" opacity="0.22" />
-        {/* garis mint tipis sebagai aksen brand */}
-        <path
-          d="M70 189 q30 9 60 0"
-          fill="none"
-          stroke="#91bb9e"
-          strokeWidth="2.2"
-          strokeLinecap="round"
-          opacity="0.6"
-        />
-        <path
-          d="M79 197 q21 6 42 0"
-          fill="none"
-          stroke="#91bb9e"
-          strokeWidth="1.6"
-          strokeLinecap="round"
-          opacity="0.35"
-        />
-      </g>
-
-      {/* wajah tidur di pot (state VI) — dua mata tertutup, tanpa senyum lebar.
-          Warnanya memakai evergreen yang SUDAH ada di ilustrasi ini (bukan hex
-          baru) dan posisinya di pot supaya geometri tanaman tidak berubah. */}
-      {sleeping && (
-        <g stroke="#45594e" strokeWidth="2.2" strokeLinecap="round" fill="none" aria-hidden>
-          <path d="M82 190 q5 5 10 0" />
-          <path d="M108 190 q5 5 10 0" />
-        </g>
-      )}
-    </svg>
-  )
+  /* ── SAPU BERSIH SVG HIASAN (keputusan produk, sesi 3) ───────────────────────
+     Ilustrasi tanaman/puzzle adalah HIASAN: tidak bisa ditekan, tidak dibaca
+     sebagai angka, dan dulu membawa kalimat gamifikasi yang dilarang. Seluruh
+     bentuk SVG-nya dicabut. API komponen (nama, props) dipertahankan supaya
+     10+ pemanggil tidak perlu diubah dan tata letak tetap diatur pemanggil. */
+  void stage
+  void progress
+  void wilted
+  void sleeping
+  void className
+  return null
 }

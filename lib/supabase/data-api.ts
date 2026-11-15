@@ -9,7 +9,7 @@
    Kontrak: `null` = jalur server tidak tersedia/gagal → pemanggil tetap memakai
    jalur lokal (tidak pernah melempar, tidak pernah mengosongkan layar). */
 
-export type DataApiOp = 'select' | 'insert' | 'upsert' | 'update' | 'delete'
+export type DataApiOp = 'select' | 'insert' | 'upsert' | 'update' | 'delete' | 'updateAll' | 'deleteAll'
 
 export interface DataApiBody {
   table: string

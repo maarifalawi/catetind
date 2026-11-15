@@ -38,9 +38,9 @@ import { refreshReferral, useReferral } from '@/lib/money/referral-store'
 /* ── Ajak Teman (/referral) — SATU PEKERJAAN: membuat user menekan Bagikan.
    Konten dibaca sebagai satu alur dari atas ke bawah:
 
-     1. Reward Lo        — apa yang user dapat
-     2. Link Referral Lo — tinggal salin / bagikan
-     3. Pencapaian Lo    — tiga angka + total reward dalam SATU blok
+     1. Reward Kamu        — apa yang user dapat
+     2. Link Referral Kamu — tinggal salin / bagikan
+     3. Pencapaian Kamu    — tiga angka + total reward dalam SATU blok
      4. Riwayat Teman    — dikelompokkan per status
      5. Cara kerja       — accordion tertutup default
 
@@ -63,7 +63,7 @@ import { refreshReferral, useReferral } from '@/lib/money/referral-store'
 const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1]
 
 /** label kecil di atas judul kartu — satu gaya untuk semua kartu halaman ini */
-const CARD_EYEBROW = 'text-[11px] font-medium uppercase tracking-[0.14em] text-forest/40'
+const CARD_EYEBROW = 'text-[11px] font-medium uppercase tracking-[0.14em] text-forest-muted'
 
 /**
  * `2026-09-15` → `15 Sep 2026`. `timeZone: 'UTC'` supaya tanggal dari server
@@ -186,7 +186,7 @@ export function ReferralScreen() {
               mati). Isinya menjelaskan kenapa angkanya kosong, bukan
               menampilkan angka contoh. */}
           {REFERRAL_SHOWS_DEMO_NOTICE && (
-            <p className="flex flex-wrap items-center gap-2 rounded-2xl bg-hud-amber/15 px-3.5 py-2.5 text-[13px] leading-relaxed text-forest/70 ring-1 ring-hud-amber/30">
+            <p className="flex flex-wrap items-center gap-2 rounded-2xl bg-hud-amber/15 px-3.5 py-2.5 text-[13px] leading-relaxed text-forest-soft ring-1 ring-hud-amber/30">
               <span className="rounded-full bg-hud-amber/40 px-2 py-0.5 text-[11.5px] font-medium tracking-wide text-forest">
                 {REFERRAL_DEMO_NOTICE.badge}
               </span>
@@ -208,7 +208,7 @@ export function ReferralScreen() {
               />
 
               {notConfigured && (
-                <p className="rounded-2xl bg-soil/[0.06] px-3.5 py-2.5 text-[13px] leading-relaxed text-forest/60">
+                <p className="rounded-2xl bg-soil/[0.06] px-3.5 py-2.5 text-[13px] leading-relaxed text-forest-muted">
                   {REFERRAL_EMPTY_COPY.notConfigured}
                 </p>
               )}
@@ -237,14 +237,14 @@ export function ReferralScreen() {
 export function RewardCard({ reward }: { reward: RewardCopy }) {
   return (
     <section className="rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12 sm:p-6">
-      <p className={CARD_EYEBROW}>Reward Lo</p>
+      <p className={CARD_EYEBROW}>Reward Kamu</p>
       <p className="mt-2 font-display text-[22px] font-semibold leading-snug tracking-tight text-forest sm:text-[26px]">
         {reward.lead}{' '}
         <span className="font-medium">{reward.highlight}</span>
       </p>
-      <p className="mt-3 flex items-start gap-2 border-t border-soil/12 pt-3.5 text-[13.5px] leading-relaxed text-forest/65">
+      <p className="mt-3 flex items-start gap-2 border-t border-soil/12 pt-3.5 text-[13.5px] leading-relaxed text-forest-soft">
         <HeartHandshake
-          className="mt-0.5 size-4 shrink-0 text-forest/70"
+          className="mt-0.5 size-4 shrink-0 text-forest-soft"
           strokeWidth={2.2}
           aria-hidden
         />
@@ -278,7 +278,7 @@ export function ShareCard({
   return (
     <section className="rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12 sm:p-6">
       <div className="flex items-center justify-between gap-2">
-        <p className={CARD_EYEBROW}>Link Referral Lo</p>
+        <p className={CARD_EYEBROW}>Link Referral Kamu</p>
 
         {/* 3E — segel privasi dipindah ke tooltip. `title` tetap jadi cadangan
             native; hover/focus menampilkan kalimat lengkapnya. */}
@@ -286,7 +286,7 @@ export function ShareCard({
           tabIndex={0}
           aria-describedby="referral-privacy-tip"
           title={REFERRAL_PRIVACY_PLEDGE}
-          className="group relative inline-flex size-6 shrink-0 cursor-help items-center justify-center rounded-full text-forest/35 outline-none transition-colors hover:text-forest/60 focus-visible:ring-2 focus-visible:ring-forest/25"
+          className="group relative inline-flex size-6 shrink-0 cursor-help items-center justify-center rounded-full text-forest-muted outline-none transition-colors hover:text-forest-muted focus-visible:ring-2 focus-visible:ring-forest/25"
         >
           <Info className="size-3.5" strokeWidth={2.4} aria-hidden />
           <span
@@ -299,7 +299,7 @@ export function ShareCard({
         </span>
       </div>
 
-      <p className="mt-3 truncate rounded-xl bg-soil/[0.06] px-3.5 py-3 font-mono text-[14px] text-forest/70">
+      <p className="mt-3 truncate rounded-xl bg-soil/[0.06] px-3.5 py-3 font-mono text-[14px] text-forest-soft">
         {referralLink ?? REFERRAL_EMPTY_COPY.noCode}
       </p>
 
@@ -312,7 +312,7 @@ export function ShareCard({
           className={cn(
             'inline-flex h-11 items-center justify-center gap-2 rounded-xl px-3 text-[13.5px] font-medium transition-colors',
             disabled
-              ? 'cursor-not-allowed bg-ink/[0.05] text-forest/30'
+              ? 'cursor-not-allowed bg-ink/[0.05] text-forest-muted'
               : 'bg-sage text-forest hover:bg-sage/70 active:scale-[0.97]',
           )}
         >
@@ -330,7 +330,7 @@ export function ShareCard({
           className={cn(
             'inline-flex h-11 items-center justify-center gap-2 rounded-xl px-3 text-[13.5px] font-medium transition-colors',
             disabled
-              ? 'cursor-not-allowed bg-ink/[0.05] text-forest/30'
+              ? 'cursor-not-allowed bg-ink/[0.05] text-forest-muted'
               : 'bg-forest text-cream hover:bg-forest-soft active:scale-[0.97]',
           )}
         >
@@ -346,8 +346,8 @@ export function ShareCard({
 function LoadingCard() {
   return (
     <section className="rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12 sm:p-6">
-      <p className={CARD_EYEBROW}>Pencapaian Lo</p>
-      <p className="mt-3 text-[14px] text-forest/50">Memuat angka referral...</p>
+      <p className={CARD_EYEBROW}>Pencapaian Kamu</p>
+      <p className="mt-3 text-[14px] text-forest-muted">Memuat angka referral...</p>
     </section>
   )
 }
@@ -356,8 +356,8 @@ function LoadingCard() {
 function LoadFailedCard({ onRetry }: { onRetry: () => void }) {
   return (
     <section className="rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12 sm:p-6">
-      <p className={CARD_EYEBROW}>Pencapaian Lo</p>
-      <p className="mt-3 text-[14px] leading-relaxed text-forest/60">
+      <p className={CARD_EYEBROW}>Pencapaian Kamu</p>
+      <p className="mt-3 text-[14px] leading-relaxed text-forest-muted">
         {REFERRAL_EMPTY_COPY.loadFailed}
       </p>
       <button
@@ -401,7 +401,7 @@ export function AchievementCard({
       aria-label="Pencapaian referral"
       className="rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12 sm:p-6"
     >
-      <p className={CARD_EYEBROW}>Pencapaian Lo</p>
+      <p className={CARD_EYEBROW}>Pencapaian Kamu</p>
 
       <div className="mt-4 grid grid-cols-3 gap-3">
         {stats.map(({ id, label, value }) => (
@@ -409,7 +409,7 @@ export function AchievementCard({
             <p className="font-display text-[28px] font-semibold leading-none tracking-tight tabular-nums text-forest sm:text-[32px]">
               {value}
             </p>
-            <p className="mt-1.5 text-[11.5px] font-medium leading-tight text-forest/45 sm:text-[12.5px]">
+            <p className="mt-1.5 text-[11.5px] font-medium leading-tight text-forest-muted sm:text-[12.5px]">
               {label}
             </p>
           </div>
@@ -417,7 +417,7 @@ export function AchievementCard({
       </div>
 
       <div className="mt-4 flex items-center justify-between gap-3 border-t border-soil/12 pt-4">
-        <span className="flex min-w-0 items-center gap-2 text-[13.5px] text-forest/55">
+        <span className="flex min-w-0 items-center gap-2 text-[13.5px] text-forest-muted">
           <Gift className="size-4 shrink-0" strokeWidth={2.2} aria-hidden />
           Total Reward
         </span>
@@ -460,7 +460,7 @@ export function FriendHistoryCard({ friends }: { friends: ReferralFriend[] }) {
       </div>
 
       {groups.length === 0 ? (
-        <p className="mt-4 text-[14px] leading-relaxed text-forest/50">
+        <p data-catetind-empty className="mt-4 text-[14px] leading-relaxed text-forest-muted">
           {REFERRAL_EMPTY_COPY.noFriends}
         </p>
       ) : (
@@ -486,7 +486,7 @@ export function FriendHistoryCard({ friends }: { friends: ReferralFriend[] }) {
                     <span
                       className={cn(
                         'min-w-0 truncate text-[14px] font-medium',
-                        group.converted ? 'text-forest' : 'text-forest/55',
+                        group.converted ? 'text-forest' : 'text-forest-muted',
                       )}
                     >
                       {friend.name}
@@ -494,7 +494,7 @@ export function FriendHistoryCard({ friends }: { friends: ReferralFriend[] }) {
                     <span
                       className={cn(
                         'shrink-0 text-[12.5px] tabular-nums',
-                        group.converted ? 'text-forest/50' : 'text-forest/40',
+                        group.converted ? 'text-forest-muted' : 'text-forest-muted',
                       )}
                     >
                       {formatJoinedAt(friend.joinedAt)}
@@ -533,14 +533,14 @@ function HowItWorksCard({ open, onToggle }: { open: boolean; onToggle: () => voi
             <span className="block font-display text-[16px] font-medium tracking-tight text-forest">
               Bagaimana cara kerjanya?
             </span>
-            <span className="mt-0.5 block text-[12.5px] text-forest/45">
+            <span className="mt-0.5 block text-[12.5px] text-forest-muted">
               3 langkah, tanpa proses klaim
             </span>
           </span>
         </span>
         <ChevronDown
           className={cn(
-            'size-4 shrink-0 text-forest/35 transition-transform duration-300',
+            'size-4 shrink-0 text-forest-muted transition-transform duration-300',
             open && 'rotate-180',
           )}
           strokeWidth={2.4}
@@ -564,7 +564,7 @@ function HowItWorksCard({ open, onToggle }: { open: boolean; onToggle: () => voi
                   <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-sage text-[12px] font-semibold tabular-nums text-forest">
                     {index + 1}
                   </span>
-                  <p className="text-[13.5px] leading-relaxed text-forest/65">{step}</p>
+                  <p className="text-[13.5px] leading-relaxed text-forest-soft">{step}</p>
                 </li>
               ))}
             </ol>

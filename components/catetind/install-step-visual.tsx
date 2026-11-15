@@ -97,20 +97,14 @@ export function InstallStepVisual({
   visual: InstallVisualKey
   className?: string
 }) {
-  const Diagram = DIAGRAMS[visual]
-
+  void visual
+  /* ── SAPU BERSIH SVG HIASAN (sesi 3) ─────────────────────────────────────────
+     Diagram perangkat (SVG) adalah ilustrasi dekoratif. Panduan install kini
+     memakai langkah bernomor 1-2-3 + satu kalimat keterangan, tanpa gambar. */
   return (
-    <figure className={cn('rounded-2xl bg-sage/50 px-3 py-3 ring-1 ring-forest/10', className)}>
-      {/* warna strok utama mewarisi `text-forest` dari figura ini */}
-      <div className="mx-auto w-full max-w-[320px] text-forest">
-        <svg viewBox="0 0 320 88" className="h-auto w-full" aria-hidden>
-          <Diagram />
-        </svg>
-      </div>
-      <figcaption className="mt-2 text-center text-[12px] leading-snug text-forest/50">
-        {VISUAL_CAPTION[visual]}
-      </figcaption>
-    </figure>
+    <p className={cn('mt-1 text-[12px] leading-snug text-forest-muted', className)}>
+      {VISUAL_CAPTION[visual]}
+    </p>
   )
 }
 

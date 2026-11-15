@@ -2,6 +2,7 @@
 
 import { browserSupabase } from './supabase/client'
 import { buildVerifyHref } from './data/auth'
+import { releaseAccount } from './account-scope'
 
 /* ── SESI DARI SISI CLIENT (paket 45: SUPABASE AUTH, BUKAN MOCK) ─────────────
    Versi paket 39 meminta cookie ke `POST /api/session` — endpoint demo yang
@@ -185,9 +186,18 @@ export async function completeMagicLink(code: string): Promise<AuthResult> {
 }
 
 /** Akhiri sesi: server mencabut token Supabase lalu menghapus cookie-nya. */
-export async function endSession(): Promise<boolean> {
+export async function endSession(ownerHint: string | null = null): Promise<boolean> {
   try {
     const res = await fetch('/api/session', { method: 'DELETE' })
+    /* CAKUPAN AKUN DILEPAS SETELAH server mengakhiri sesi.
+       `releaseAccount()` memarkir seluruh penyimpanan browser milik akun ini
+       (`catet-#<userId>`) dan mengosongkan penanda sesi tab, sehingga akun
+       berikutnya yang masuk di browser yang sama tidak mewarisi apa pun.
+       Dikerjakan di sini — bukan hanya di panel Keluar — supaya SEMUA jalur
+       keluar (panel, kunci aplikasi, penghapusan akun) memakai aturan yang
+       sama. Kalau server menolak, penyimpanan TIDAK disentuh: user masih
+       masuk, jadi datanya harus tetap di tempatnya. */
+    if (res.ok) releaseAccount(ownerHint)
     return res.ok
   } catch {
     return false

@@ -11,13 +11,13 @@ import {
   Download,
   Lock,
   LogOut,
-  Palette,
   Tag,
   User,
   type LucideIcon,
 } from 'lucide-react'
 import { ScreenShell } from './screen-shell'
 import { NavLockBadge } from './nav-lock-badge'
+import { LogoutButton } from './logout-action'
 import { useSubscriptionGate } from './subscription-gate-provider'
 import { pageLockText, pageUnlockPlan } from '@/lib/subscription/page-access'
 import { cn } from '@/lib/utils'
@@ -43,7 +43,6 @@ import { cn } from '@/lib/utils'
 export type SettingsSectionId =
   | 'profile'
   | 'billing'
-  | 'appearance'
   | 'categories'
   | 'ai'
   | 'notifications'
@@ -76,13 +75,6 @@ export const SETTINGS_MENU: SettingsMenuItem[] = [
     icon: CreditCard,
     title: 'Langganan',
     desc: 'Status & kuota AI',
-  },
-  {
-    id: 'appearance',
-    href: '/settings/appearance',
-    icon: Palette,
-    title: 'Tampilan',
-    desc: 'Terang / gelap',
   },
   {
     id: 'categories',
@@ -120,17 +112,16 @@ export const SETTINGS_MENU: SettingsMenuItem[] = [
     desc: 'Unduh semua data kamu',
   },
   /* H12-5 (audit UI/UX): entri Keluar DIHAPUS dari menu sidebar pengaturan —
-     ia dipindah ke paling bawah HALAMAN (lihat SETTINGS_LOGOUT_ITEM di bawah). */
+     ia dipindah ke paling bawah HALAMAN (lihat tombol di akhir shell). */
 ]
 
-/** H12-5 (audit UI/UX): tombol Keluar dipindah ke paling bawah HALAMAN pengaturan,
- *  bukan lagi entri menu sidebar, dan bergaya merah/destructive. Rutenya tetap
- *  `/settings/logout` (halaman konfirmasi yang sudah ada). */
-export const SETTINGS_LOGOUT_ITEM = {
-  href: '/settings/logout',
-  title: 'Keluar',
-  desc: 'Akhiri sesi ini',
-} as const
+/* H12-5 (audit UI/UX): tombol Keluar ada di paling bawah HALAMAN pengaturan,
+   bukan entri menu sidebar, dan bergaya merah/destructive.
+
+   REVISI PEMILIK PRODUK: dulu tombol ini menautkan ke `/settings/logout` —
+   satu halaman perantara berisi penjelasan + tombol konfirmasi. Sekarang klik
+   Keluar LANGSUNG memunculkan dialog "yakin mau keluar?" (`LogoutButton` di
+   `logout-action.tsx`); tidak ada halaman yang harus dibaca lebih dulu. */
 
 /** Section aktif dari URL: `/settings` → profil, `/settings/<id>` → id itu,
  *  dan `/settings/logout` → logout (rute konfirmasi yang bukan item menu). */
@@ -165,13 +156,15 @@ export function SettingsShell({ children }: { children: ReactNode }) {
   return (
     <ScreenShell>
       {/* ── HEADER — resep kanonik H1 yang sama dengan Dashboard & halaman lain */}
-      <header className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-forest lg:text-4xl">
-            Pengaturan
-          </h1>
-        </div>
-      </header>
+      {isIndex && (
+        <header className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-forest lg:text-4xl">
+              Pengaturan
+            </h1>
+          </div>
+        </header>
+      )}
 
       <div className="mt-5 grid grid-cols-1 gap-5 lg:mt-6 lg:grid-cols-12 lg:gap-6">
         {/* ── KIRI (3/12) — daftar menu, sticky ─────────────────────────────
@@ -179,10 +172,7 @@ export function SettingsShell({ children }: { children: ReactNode }) {
             kembali). Desktop: selalu tampil menemani panel yang panjang. */}
         <aside className={cn('min-w-0 lg:col-span-3', !isIndex && 'hidden lg:block')}>
           <div className="lg:sticky lg:top-6">
-            <p className="px-3 text-[11.5px] font-medium tracking-[0.14em] text-forest/40 uppercase">
-              Menu Pengaturan
-            </p>
-            <nav aria-label="Menu pengaturan" className="mt-2">
+            <nav aria-label="Menu pengaturan">
               <ul className="space-y-0.5">
                 {SETTINGS_MENU.map((item) => {
                   const active = item.id === activeId
@@ -231,7 +221,7 @@ export function SettingsShell({ children }: { children: ReactNode }) {
                                 ? 'font-medium text-plum'
                                 : active
                                   ? 'font-medium text-forest'
-                                  : 'font-medium text-forest/60',
+                                  : 'font-medium text-forest-muted',
                             )}
                           >
                             {item.title}
@@ -242,7 +232,7 @@ export function SettingsShell({ children }: { children: ReactNode }) {
                               />
                             )}
                           </span>
-                          <span className="mt-0.5 block text-[12px] leading-snug text-forest/45">
+                          <span className="mt-0.5 block text-[12px] leading-snug text-forest-muted">
                             {item.desc}
                           </span>
                         </span>
@@ -261,7 +251,7 @@ export function SettingsShell({ children }: { children: ReactNode }) {
           {!isIndex && (
             <Link
               href="/settings"
-              className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-forest/50 transition-colors hover:text-forest lg:hidden"
+              className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-forest-muted transition-colors hover:text-forest lg:hidden"
             >
               <ChevronLeft className="size-4" strokeWidth={2.4} aria-hidden />
               Pengaturan
@@ -272,16 +262,16 @@ export function SettingsShell({ children }: { children: ReactNode }) {
       </div>
 
       {/* H12-5 (audit UI/UX): Keluar ada di PALING BAWAH halaman pengaturan,
-          dengan gaya destructive (plum), jauh dari menu biasa. */}
+          dengan gaya destructive (plum), jauh dari menu biasa. Klik = dialog
+          konfirmasi langsung (bukan halaman perantara). */}
       {activeId !== 'logout' && (
         <div className="mt-8 border-t border-plum/20 pt-5">
-          <Link
-            href={SETTINGS_LOGOUT_ITEM.href}
+          <LogoutButton
             className="flex w-full items-center justify-center gap-2 rounded-2xl border border-plum/30 bg-plum/10 px-5 py-3.5 text-[14.5px] font-medium text-plum transition-colors hover:bg-plum/20 active:scale-[0.99]"
           >
             <LogOut className="size-4" strokeWidth={2.4} aria-hidden />
-            {SETTINGS_LOGOUT_ITEM.title}, {SETTINGS_LOGOUT_ITEM.desc}
-          </Link>
+            Keluar
+          </LogoutButton>
         </div>
       )}
     </ScreenShell>

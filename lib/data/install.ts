@@ -26,7 +26,6 @@ import { SITE_DOMAIN, siteUrl } from '../site'
 export const INSTALL_HERO = {
   badge: 'Gratis · Tanpa App Store',
   title: 'Install CatetInd di HP Kamu',
-  subtitle: 'Biar nyatet pengeluaran secepat buka Instagram.',
 } as const
 
 /** 3 alasan install — manfaat yang bisa dibuktikan user, bukan jargon teknis */
@@ -58,6 +57,37 @@ export const INSTALL_IOS_PANEL_NOTE =
 export function INSTALL_IOS_CTA(stepCount: number): string {
   return `Di iPhone: tap Share di Safari, ikuti ${stepCount} langkah 👇`
 }
+
+/* ── COPY TOMBOL INSTALL 1-KLIK (install-cta.tsx) ────────────────────────────
+   Kenapa tidak semua perangkat mendapat tombol install otomatis — dan kenapa
+   kalimatnya dibedakan per perangkat, bukan satu kalimat generik:
+
+     · Android (Chrome, Edge, Samsung Internet) & desktop Chrome/Edge
+       Browser-browser ini memicu `beforeinstallprompt`, jadi dialog install
+       native bisa dibuka SATU klik dari tombol kita.
+     · iPhone / iPad (Safari maupun browser lain di iOS)
+       Apple TIDAK menyediakan API install apa pun; semua browser di iOS wajib
+       memakai WebKit, jadi tidak ada event yang bisa ditahan. Satu-satunya
+       jalan: Share → "Tambahkan ke Layar Utama". Kalimatnya menjelaskan batas
+       platform, bukan menyalahkan browser user.
+     · Android dari browser non-Chromium (Firefox/Opera) atau in-app browser
+       (Instagram/TikTok) — event juga tidak datang; arahkan ke Chrome atau ke
+       langkah manual. */
+export const INSTALL_CTA_COPY = {
+  /** setelah user menutup dialog install native tanpa memasang */
+  dismissed:
+    'Oke, install-nya di-nanti dulu. Kamu bisa install kapan saja lewat langkah manual di bawah 👇',
+  /** browser belum/tidak menawarkan dialog install — copy sesuai perangkat */
+  unavailable: (device: DeviceType): string => {
+    if (device === 'ios') {
+      return 'Di iPhone & iPad, install otomatis memang belum bisa — Apple belum membuka tombolnya untuk browser apa pun. Tenang, ada 3 langkah manual di bawah 👇'
+    }
+    if (device === 'android') {
+      return 'Browser ini belum menawarkan tombol install otomatis. Buka catetind.com di Chrome untuk install 1 klik, atau ikuti langkah manual di bawah 👇'
+    }
+    return 'Browser ini belum menawarkan tombol install otomatis. Buka di Chrome atau Edge untuk install 1 klik, atau ikuti langkah manual di bawah 👇'
+  },
+} as const
 
 /** penutup halaman — jalan terakhir kalau panduan tetap tidak cukup */
 export const INSTALL_HELP_FOOTER = {

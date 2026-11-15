@@ -1,6 +1,6 @@
 'use client'
 
-import { CalendarDays, Sparkles, TrendingUp } from 'lucide-react'
+import { CalendarDays, TrendingUp } from 'lucide-react'
 import { BudgetSheet, SheetSubmit } from './budget-sheet'
 import { cn } from '@/lib/utils'
 import {
@@ -98,14 +98,12 @@ export function SpendingReviewSheet({
       open={open}
       onClose={onClose}
       title={SPENDING_REVIEW_COPY.title}
-      description={SPENDING_REVIEW_COPY.description}
       footer={
         <div>
           <SheetSubmit onClick={onContinueChat}>
-            <Sparkles className="size-4" strokeWidth={2.2} aria-hidden />
             {SPENDING_REVIEW_COPY.coachCta}
           </SheetSubmit>
-          <p className="mt-2 text-center text-[11.5px] leading-relaxed text-forest/40">
+          <p className="mt-2 text-center text-[11.5px] leading-relaxed text-forest-muted">
             {SPENDING_REVIEW_COPY.coachHint}
           </p>
         </div>
@@ -128,13 +126,13 @@ export function SpendingReviewSheet({
       >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-[12.5px] font-medium text-forest/50">
+            <p className="text-[12.5px] font-medium text-forest-muted">
               {SPENDING_REVIEW_COPY.spentLabel}
             </p>
             <p className="mt-1 text-[26px] font-semibold leading-none tracking-tight text-forest tabular-nums">
               {maskNominal(review.spentToday, masked)}
             </p>
-            <p className="mt-1.5 text-[12.5px] font-medium text-forest/50">
+            <p className="mt-1.5 text-[12.5px] font-medium text-forest-muted">
               {SPENDING_REVIEW_COPY.budgetLead}{' '}
               <b className="font-medium text-forest tabular-nums">
                 {maskNominal(review.dailyBudget, masked)}
@@ -174,13 +172,13 @@ export function SpendingReviewSheet({
           </>
         ) : (
           /* jatah ditahan: jangan gambar bar 0% yang terbaca "aman" */
-          <p className="mt-3 rounded-xl bg-hud-amber/12 px-3 py-2 text-[12.5px] leading-relaxed text-forest/60">
+          <p className="mt-3 rounded-xl bg-hud-amber/12 px-3 py-2 text-[12.5px] leading-relaxed text-forest-muted">
             {SPENDING_REVIEW_COPY.heldPace}
           </p>
         )}
 
         {/* meta — sisa jatah hari ini, sisa hari periode, jumlah catatan */}
-        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-soil/12 pt-2.5 text-[12px] text-forest/55">
+        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-soil/12 pt-2.5 text-[12px] text-forest-muted">
           <span>
             {SPENDING_REVIEW_COPY.remainingLead}{' '}
             <b className="font-medium text-forest tabular-nums">
@@ -207,13 +205,13 @@ export function SpendingReviewSheet({
             <TrendingUp className="size-4" strokeWidth={2.4} aria-hidden />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-[11.5px] font-medium text-forest/45">
+            <p className="text-[11.5px] font-medium text-forest-muted">
               {SPENDING_REVIEW_COPY.topTitle}
             </p>
             <p className="mt-0.5 truncate text-[14.5px] font-medium tracking-tight text-forest">
               {topCategory.category}
             </p>
-            <p className="text-[11.5px] text-forest/45">
+            <p className="text-[11.5px] text-forest-muted">
               {SPENDING_REVIEW_COPY.topShare(topCategory.pct)}
             </p>
           </div>
@@ -229,7 +227,7 @@ export function SpendingReviewSheet({
           <p className="text-[14px] font-medium leading-snug text-forest">
             {SPENDING_REVIEW_COPY.thinTitle}
           </p>
-          <p className="mt-1 text-[13px] leading-relaxed text-forest/55">
+          <p className="mt-1 text-[13px] leading-relaxed text-forest-muted">
             {SPENDING_REVIEW_COPY.thinBody}
           </p>
           {/* progres menuju ambang — engagement tanpa klaim palsu (PRD 2A.5) */}
@@ -240,11 +238,11 @@ export function SpendingReviewSheet({
                 style={{ width: `${(review.noteCount / SPENDING_REVIEW_MIN_NOTES) * 100}%` }}
               />
             </div>
-            <span className="shrink-0 text-[11.5px] font-medium text-forest/45 tabular-nums">
+            <span className="shrink-0 text-[11.5px] font-medium text-forest-muted tabular-nums">
               {SPENDING_REVIEW_COPY.thinProgress(review.noteCount)}
             </span>
           </div>
-          <p className="mt-2 text-[11.5px] leading-relaxed text-forest/40">
+          <p className="mt-2 text-[11.5px] leading-relaxed text-forest-muted">
             {SPENDING_REVIEW_COPY.thinHint}
           </p>
         </section>
@@ -253,7 +251,7 @@ export function SpendingReviewSheet({
       {/* 4. Catatan hari ini — bukti angka di atas, bukan opini */}
       {shownNotes.length > 0 && (
         <section aria-label={SPENDING_REVIEW_COPY.notesTitle} className="mt-4">
-          <p className="text-[11.5px] font-medium uppercase tracking-wider text-forest/40">
+          <p className="text-[11.5px] font-medium uppercase tracking-wider text-forest-muted">
             {SPENDING_REVIEW_COPY.notesTitle}
           </p>
           <ul className="mt-2 space-y-1.5 pb-1">
@@ -266,17 +264,17 @@ export function SpendingReviewSheet({
                   <span className="block truncate text-[13.5px] font-medium text-forest">
                     {note.name}
                   </span>
-                  <span className="block text-[11px] text-forest/40">
+                  <span className="block text-[11px] text-forest-muted">
                     {note.category} · {note.time} · {note.wallet}
                   </span>
                 </span>
-                <span className="shrink-0 text-[13px] font-medium text-forest/70 tabular-nums">
+                <span className="shrink-0 text-[13px] font-medium text-forest-soft tabular-nums">
                   {maskNominal(note.amount, masked)}
                 </span>
               </li>
             ))}
             {hiddenNotes > 0 && (
-              <li className="px-1 text-[11.5px] text-forest/40">
+              <li className="px-1 text-[11.5px] text-forest-muted">
                 {SPENDING_REVIEW_COPY.notesMore(hiddenNotes)}
               </li>
             )}

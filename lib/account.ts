@@ -37,6 +37,7 @@ import { getBillsSnapshot, liveBills, purgeBillsStore } from './money/bills-stor
 import { getJointSnapshot, jointNotes, purgeJointStore } from './money/joint-store'
 import { getFundsSnapshot, purgeFundsStore } from './money/funds-store'
 import { getWealthSnapshot, purgeWealthStore } from './money/wealth-store'
+import { purgeNotifications } from './money/notification-store'
 import { purgePhysicalStore } from './money/physical-store'
 import { getMoneySnapshot, purgeMoneyStore } from './money/store'
 import { resetReferralStore } from './money/referral-store'
@@ -198,6 +199,9 @@ export async function purgeDeviceData(): Promise<PurgeReport> {
      memory JUGA, supaya daftar contoh tidak muncul kembali di `/bills` sampai
      user refresh (temuan E laporan 46, paket 51). */
   purgeBillsStore()
+  /* Notifikasi juga milik akun — dikosongkan di memory supaya lonceng tidak
+     sempat menampilkan aktivitas akun yang baru saja dihapus. */
+  purgeNotifications()
   /* Kantong bersama juga hidup di database yang sama (key `joint`) — dikosongkan
      di memory JUGA, dan langganan realtime-nya dilepas. Tanpa langkah ini,
      kantong contoh & catatan WiFi muncul kembali di `/joint` sampai user refresh

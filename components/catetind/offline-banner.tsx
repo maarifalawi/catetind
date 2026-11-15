@@ -1,11 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { CloudOff, Info, RefreshCw, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { InfoNote } from './info-note'
 import { OFFLINE_COPY } from '@/lib/data/offline'
+import { isOnboardingRoute } from '@/lib/onboarding'
 import { readOnline, subscribeConnection, syncConnection } from '@/lib/connection'
 import { flushPendingSync, pendingSyncCount, useMoneyStore } from '@/lib/money/store'
 
@@ -34,6 +36,7 @@ import { flushPendingSync, pendingSyncCount, useMoneyStore } from '@/lib/money/s
 export function OfflineBanner() {
   /* angka antrean hidup di snapshot uang — satu sumber dengan baris ledger */
   const snapshot = useMoneyStore()
+  const pathname = usePathname()
   /** status sebenarnya baru dibaca SETELAH mount: server & render pertama client
    *  sama-sama menganggap online, jadi tidak ada hydration mismatch */
   const [online, setOnline] = useState(true)
@@ -81,6 +84,13 @@ export function OfflineBanner() {
 
   if (!mounted) return null
 
+  /* LAYAR SETUP: tidak ada banner sama sekali — termasuk status sinkronisasi.
+     Transaksi pertama di langkah 3 lahir di layar itu, dan strip "1 catatan
+     masih nunggu" di atas form yang baru selesai diisi terbaca sebagai data sisa
+     akun lain. Antreannya sendiri tetap dikirim (dan dicoba ulang otomatis oleh
+     store); user tidak perlu memproses apa pun sebelum dashboard dibuka. */
+  if (isOnboardingRoute(pathname)) return null
+
   const pending = pendingSyncCount(snapshot)
   /* tidak ada yang perlu dikatakan: online & antrean kosong */
   if (dismissed || (online && pending === 0)) return null
@@ -91,10 +101,12 @@ export function OfflineBanner() {
       aria-live="polite"
       className={cn(
         'sticky top-0 z-[46] w-full px-4 py-2.5 ring-1 ring-inset backdrop-blur-md',
-        /* margin (bukan padding) supaya kotaknya benar-benar MULAI di kanan
-           sidebar desktop — pola yang sama dengan `subscription-banner.tsx` */
-        'transition-[margin-left] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none',
-        'lg:ml-[var(--catet-sidebar-w,280px)]',
+        /* Sama dengan `subscription-banner`: lebar dihitung dari sisa layar
+           setelah sidebar, TIDAK lagi `w-full` + margin kiri 296px — kombinasi
+           itu mendorong tombol tutup keluar viewport (dan memunculkan scroll
+           horizontal di seluruh app). */
+        'lg:w-[calc(100%_-_var(--catet-sidebar-w,280px))] lg:ml-[var(--catet-sidebar-w,280px)]',
+        'transition-[margin-left,width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none',
         online ? 'bg-sage/90 ring-soil/12' : 'bg-hud-amber/20 ring-hud-amber/35',
       )}
     >
@@ -116,12 +128,12 @@ export function OfflineBanner() {
           <p className="text-[14px] font-medium text-forest">
             {online ? OFFLINE_COPY.pendingTitle : OFFLINE_COPY.offlineTitle}
             {pending > 0 && (
-              <span className="ml-2 rounded-full bg-cream/80 px-2 py-0.5 text-[11.5px] font-medium tabular-nums text-forest/60">
+              <span className="ml-2 rounded-full bg-cream/80 px-2 py-0.5 text-[11.5px] font-medium tabular-nums text-forest-muted">
                 {OFFLINE_COPY.pendingBadge(pending)}
               </span>
             )}
           </p>
-          <p className="mt-0.5 text-[12.5px] leading-relaxed text-forest/55">
+          <p className="mt-0.5 text-[12.5px] leading-relaxed text-forest-muted">
             {online ? OFFLINE_COPY.pendingBody(pending) : OFFLINE_COPY.offlineBody(pending)}
           </p>
           {/* AUDIT "CLEAN UI" (paket 63): batas jujurnya tetap ada, tapi tidak
@@ -164,7 +176,7 @@ export function OfflineBanner() {
           type="button"
           aria-label={OFFLINE_COPY.dismissLabel}
           onClick={() => setDismissed(true)}
-          className="flex size-8 shrink-0 items-center justify-center rounded-full text-forest/40 transition-colors hover:bg-soil/10 hover:text-forest"
+          className="flex size-8 shrink-0 items-center justify-center rounded-full text-forest-muted transition-colors hover:bg-soil/10 hover:text-forest"
         >
           <X className="size-3.5" strokeWidth={2.4} />
         </button>

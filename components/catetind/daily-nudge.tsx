@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState, useSyncExternalStore } from 'react'
-import { Sparkles, Sprout, X } from 'lucide-react'
+import { Puzzle, X } from 'lucide-react'
 import { TransactionWebModal } from '@/components/dashboard/transaction-web-modal'
 import { DEMO_MODE } from '@/lib/demo'
 import { cn } from '@/lib/utils'
@@ -89,16 +89,11 @@ export function DailyNudge() {
         )}
       >
         <span className="relative flex size-9 shrink-0 items-center justify-center rounded-full bg-cream text-forest ring-1 ring-soil/12">
-          <Sprout className="size-4" strokeWidth={2.4} aria-hidden />
-          <Sparkles
-            className="absolute -right-0.5 -top-0.5 size-3 text-mint"
-            strokeWidth={2.6}
-            aria-hidden
-          />
-        </span>
+          <Puzzle className="size-4" strokeWidth={2.4} aria-hidden />
+          </span>
 
         <div className="min-w-0 flex-1">
-          <p className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.14em] text-forest/60">
+          <p className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.14em] text-forest-muted">
             {HOME_NUDGE_COPY.coachLabel}
           </p>
           <p className="mt-1 text-[14.5px] font-medium leading-snug text-forest">
@@ -117,7 +112,7 @@ export function DailyNudge() {
           type="button"
           onClick={dismiss}
           aria-label={HOME_NUDGE_COPY.dismissLabel}
-          className="flex size-7 shrink-0 items-center justify-center rounded-full text-forest/35 transition-colors hover:bg-soil/8 hover:text-forest"
+          className="flex size-7 shrink-0 items-center justify-center rounded-full text-forest-muted transition-colors hover:bg-soil/8 hover:text-forest"
         >
           <X className="size-3.5" strokeWidth={2.4} aria-hidden />
         </button>

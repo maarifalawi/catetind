@@ -18,6 +18,7 @@ import {
   type AdminPlanTierBreakdown,
   type AdminPurchaseRecord,
   type AdminRevenueBlock,
+  type AdminRevenueMonth,
   type AdminSnapshot,
   type AdminUserRow,
 } from './types'
@@ -296,6 +297,7 @@ export function revenueBlock(
   const subscription = emptyPeriod()
   const addon = emptyPeriod()
   const total = emptyPeriod()
+  const byMonth = new Map<string, AdminRevenueMonth>()
   let settledCount = 0
 
   for (const purchase of purchases) {
@@ -306,6 +308,33 @@ export function revenueBlock(
     addToPeriod(bucket, amount, paidAt, now)
     addToPeriod(total, amount, paidAt, now)
     settledCount += 1
+
+    /* rincian per bulan — sumber filter "pendapatan bulan mana" di Ringkasan.
+       `paidAt` yang tidak terbaca dilewati (tanggalnya memang tidak diketahui,
+       bukan dipaksa masuk bulan berjalan). */
+    const paidTime = timeOf(paidAt)
+    if (paidTime === null) continue
+    const month = localISODate(new Date(paidTime)).slice(0, 7)
+    const row =
+      byMonth.get(month) ?? { month, subscription: 0, addon: 0, total: 0, settledCount: 0 }
+    if (purchase.purpose === 'topup') row.addon += amount
+    else row.subscription += amount
+    row.total += amount
+    row.settledCount += 1
+    byMonth.set(month, row)
+  }
+
+  /* bulan berjalan selalu ada di daftar filter (walau belum ada penjualan),
+     supaya "bulan ini: Rp 0" bisa dibaca sebagai fakta, bukan bulan yang hilang */
+  const nowMonth = localISODate(now).slice(0, 7)
+  if (!byMonth.has(nowMonth)) {
+    byMonth.set(nowMonth, {
+      month: nowMonth,
+      subscription: 0,
+      addon: 0,
+      total: 0,
+      settledCount: 0,
+    })
   }
 
   const paidUsers = users.filter((user) => user.plan.active && user.plan.planId !== null).length
@@ -319,6 +348,9 @@ export function revenueBlock(
     paidAccountPercent: roundPercent(paidUsers, users.length),
     paidUsers,
     totalUsers: users.length,
+    months: [...byMonth.values()]
+      .sort((a, b) => (a.month < b.month ? 1 : -1))
+      .slice(0, 24),
   }
 }
 

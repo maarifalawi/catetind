@@ -33,7 +33,17 @@ import {
    halaman pengaturan dikecualikan supaya user baru tetap bisa keluar atau
    menghapus akunnya tanpa dipenjara di layar setup. */
 
-const ESCAPE_ROUTES = ['/settings/logout', '/settings/data']
+/* ── RUTE YANG TIDAK BOLEH DIPAKSA ONBOARDING ─────────────────────────────────
+   Dua halaman pengaturan supaya user baru tetap bisa keluar atau menghapus
+   akunnya tanpa dipenjara di layar setup.
+
+   `/joint` WAJIB ikut (temuan uji tempur nyata): anggota yang DIUNDANG ke dompet
+   bersama boleh akun gratis, dan akun gratis tidak bisa membuka
+   `/app/onboarding` (gerbang paket mengalihkannya ke `/checkout`). Tanpa
+   pengecualian ini, gerbang memantulkan mereka dari `/joint` ke halaman setup,
+   lalu halaman setup memantulkan lagi ke `/checkout` — anggota yang sudah punya
+   kode undangan jadi tidak pernah bisa memasukkan kodenya. */
+const ESCAPE_ROUTES = ['/settings/logout', '/settings/data', '/joint']
 
 function isEscapeRoute(pathname: string): boolean {
   return ESCAPE_ROUTES.some(

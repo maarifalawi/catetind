@@ -56,7 +56,7 @@ export function IncomeCard({ stats }: { stats: HomeIncomeStats }) {
           </span>
           <span className="text-[14px] font-medium text-forest">{HOME_INCOME_COPY.label}</span>
         </span>
-        <span className="rounded-full bg-sage px-2.5 py-1 text-[11.5px] font-medium text-forest/55">
+        <span className="rounded-full bg-sage px-2.5 py-1 text-[11.5px] font-medium text-forest-muted">
           {stats.monthLabel}
         </span>
       </div>
@@ -79,12 +79,12 @@ export function IncomeCard({ stats }: { stats: HomeIncomeStats }) {
               {up ? '+' : ''}
               {stats.changePct}%
             </span>
-            <span className="text-[12px] text-forest/45">{HOME_INCOME_COPY.vsLastMonth}</span>
+            <span className="text-[12px] text-forest-muted">{HOME_INCOME_COPY.vsLastMonth}</span>
           </span>
         ) : (
           /* belum ada pembanding (bulan lalu Rp 0): sebut pembandingnya, bukan
              persen karangan */
-          <span className="pb-0.5 text-[12px] text-forest/45">{HOME_INCOME_COPY.vsLastMonth}</span>
+          <span className="pb-0.5 text-[12px] text-forest-muted">{HOME_INCOME_COPY.vsLastMonth}</span>
         )}
       </div>
 
@@ -117,7 +117,7 @@ export function IncomeCard({ stats }: { stats: HomeIncomeStats }) {
                   key={point.key}
                   className={cn(
                     'flex-1 text-center text-[10.5px] font-medium',
-                    point.active ? 'text-forest' : 'text-forest/35',
+                    point.active ? 'text-forest' : 'text-forest-muted',
                   )}
                 >
                   {point.label}
@@ -129,7 +129,7 @@ export function IncomeCard({ stats }: { stats: HomeIncomeStats }) {
           /* saat belum ada pemasukan, yang muncul penjelasan jujur, bukan bar contoh */
           <div className="rounded-2xl bg-sage/50 px-4 py-5 text-center">
             <p className="text-[13.5px] font-medium text-forest">{HOME_INCOME_COPY.emptyTitle}</p>
-            <p className="mt-1 text-[12px] text-forest/50">{HOME_INCOME_COPY.emptyHint}</p>
+            <p className="mt-1 text-[12px] text-forest-muted">{HOME_INCOME_COPY.emptyHint}</p>
           </div>
         )}
       </div>

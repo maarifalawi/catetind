@@ -1,23 +1,20 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import Link from 'next/link'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowRight, Check, Copy, ExternalLink, HeartHandshake, RefreshCw, Share2, Wallet } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, Copy, HeartHandshake, RefreshCw, Share2, Wallet } from 'lucide-react'
 import { toast } from 'sonner'
 import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock'
-import { INVITE_VALIDITY_COPY, type JointPerson } from '@/lib/data/joint'
+import { type JointPerson } from '@/lib/data/joint'
 import {
   INVITE_CODE_COPY,
-  JOIN_PREVIEW_COPY,
+  JOIN_CODE_COPY,
   buildInviteShareText,
-  buildJoinHref,
-  inviteExpiryLabel,
   type InviteRecord,
 } from '@/lib/data/joint-invite'
-import { activeInviteFor, createInvite, resolveInvite } from '@/lib/invite-store'
+import { activeInviteFor, adoptInviteFromServer, createInvite, resolveInvite } from '@/lib/invite-store'
 import { refreshRemoteJoint } from '@/lib/money/joint-store'
-import { createInviteRemote } from '@/lib/supabase/invite-remote'
+import { activeInviteRemote, createInviteRemote } from '@/lib/supabase/invite-remote'
 import { ensureJointPocketRemote } from '@/lib/supabase/joint-remote'
 
 /* -- Invite Partner Flow (Section 8) -----------------------------------------
@@ -39,16 +36,30 @@ const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1]
 export function JointInviteFlow({
   defaultWalletName,
   onCreated,
+  onBack,
 }: {
   defaultWalletName: string
   /** CTA ditekan: nama dompet disimpan & modal kode undangan dibuka */
   onCreated: (walletName: string) => void
+  /** kembali ke pilihan "Buat / Gabung" (opsional — dipakai `/joint`) */
+  onBack?: () => void
 }) {
   const [walletName, setWalletName] = useState(defaultWalletName)
   const ready = walletName.trim().length > 0
 
   return (
     <div className="flex flex-col items-center px-1 py-6 text-center">
+      {onBack ? (
+        <button
+          type="button"
+          onClick={onBack}
+          className="mb-1 inline-flex w-fit items-center gap-1.5 self-start text-[12.5px] font-medium text-forest-muted transition-colors hover:text-forest"
+        >
+          <ArrowLeft className="size-3.5" strokeWidth={2.4} aria-hidden />
+          {JOIN_CODE_COPY.back}
+        </button>
+      ) : null}
+
       {/* Ilustrasi: dua kartu dompet berhadapan dengan satu hati di tengah.
           Bukan lagi emoji placeholder - bentuknya vektor (lucide) sehingga
           ikut warna token, tajam di semua ukuran, dan tidak terlihat seperti
@@ -56,7 +67,7 @@ export function JointInviteFlow({
       <div className="relative flex h-[132px] w-full max-w-[280px] items-center justify-center">
         <span
           aria-hidden
-          className="absolute left-[12%] top-1/2 flex size-12 -translate-y-1/2 items-center justify-center rounded-2xl bg-cream text-forest ring-1 ring-hud-sage/50 animate-[plant-sway_5s_ease-in-out_infinite]"
+          className="absolute left-[12%] top-1/2 flex size-12 -translate-y-1/2 items-center justify-center rounded-2xl bg-cream text-forest ring-1 ring-hud-sage/50 float-sway"
         >
           <Wallet className="size-5" strokeWidth={2.2} />
         </span>
@@ -70,7 +81,7 @@ export function JointInviteFlow({
         </motion.span>
         <span
           aria-hidden
-          className="absolute right-[12%] top-1/2 flex size-12 -translate-y-1/2 items-center justify-center rounded-2xl bg-cream text-forest ring-1 ring-hud-amber/50 animate-[plant-sway_5s_ease-in-out_infinite]"
+          className="absolute right-[12%] top-1/2 flex size-12 -translate-y-1/2 items-center justify-center rounded-2xl bg-cream text-forest ring-1 ring-hud-amber/50 float-sway"
         >
           <Wallet className="size-5" strokeWidth={2.2} />
         </span>
@@ -81,19 +92,17 @@ export function JointInviteFlow({
       </div>
 
       <h2 className="mt-5 font-display text-[22px] font-semibold leading-tight tracking-tight text-forest">
-        Mulai Bangun Masa Depan Bareng {'\u{1F49A}'}
+        Mulai Bangun Masa Depan Bareng
       </h2>
-      <p className="mt-2 max-w-[380px] text-[14px] leading-relaxed text-forest/55">
-        Ajak pasanganmu gabung ke dompet bersama. Kelola pengeluaran bareng tanpa drama.
-      </p>
+      {/* SAPU BERSIH TEKS BASA-BASI (sesi 3): paragraf pengantar dihapus. */}
 
       <label className="mt-6 block w-full max-w-[380px] text-left">
-        <span className="text-[13.5px] font-medium text-forest/70">Kasih nama dompet kalian</span>
+        <span className="text-[13.5px] font-medium text-forest-soft">Kasih nama dompet kalian</span>
         <input
           value={walletName}
           onChange={(event) => setWalletName(event.target.value)}
           placeholder="Dompet Kita {'\u{1F49A}'}"
-          className="mt-2 w-full rounded-2xl bg-cream px-4 py-3.5 text-[16px] font-medium text-forest outline-none ring-1 ring-soil/16 transition-shadow placeholder:font-medium placeholder:text-forest/25 focus:ring-2 focus:ring-forest/35"
+          className="mt-2 w-full rounded-2xl bg-cream px-4 py-3.5 text-[16px] font-medium text-forest outline-none ring-1 ring-soil/16 transition-shadow placeholder:font-medium placeholder:text-forest-muted focus:ring-2 focus:ring-forest/35"
         />
       </label>
 
@@ -104,7 +113,7 @@ export function JointInviteFlow({
         className={
           ready
             ? 'mt-4 inline-flex h-12 w-full max-w-[380px] items-center justify-center gap-2 rounded-2xl bg-forest text-[15px] font-medium text-mint shadow-[0_16px_32px_-20px_rgba(0,0,0,0.95)] transition-colors hover:bg-forest-soft active:scale-[0.99]'
-            : 'mt-4 inline-flex h-12 w-full max-w-[380px] cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-ink/[0.07] text-[15px] font-medium text-forest/35'
+            : 'mt-4 inline-flex h-12 w-full max-w-[380px] cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-ink/[0.07] text-[15px] font-medium text-forest-muted'
         }
       >
         Buat Dompet &amp; Ajak Pasangan
@@ -128,7 +137,6 @@ export function JointInviteCodeModal({
   walletId,
   walletName,
   me,
-  partner,
 }: {
   open: boolean
   onClose: () => void
@@ -137,7 +145,6 @@ export function JointInviteCodeModal({
   walletName: string
   /** peserta SUNGGUHAN (nama dari store), bukan identitas contoh */
   me: JointPerson
-  partner: JointPerson
 }) {
   const [waiting, setWaiting] = useState(false)
   /**
@@ -162,22 +169,27 @@ export function JointInviteCodeModal({
   useBodyScrollLock(open, true)
 
   /**
-   * Kirim kode yang SAMA ke server. Dompet server dipastikan lebih dulu
-   * (`catetind_ensure_joint_pocket`, idempoten): RPC pembuatan kode menolak
-   * pemanggil yang bukan anggota, sementara pemilik dompet yang dibuat di
-   * perangkat belum punya baris `joint_wallets` maupun `joint_members`.
+   * Kirim kode ke server setelah dompet server dipastikan ada (idempoten).
+   *
+   * `catetind_create_invite` MENCABUT kode aktif sebelumnya, jadi fungsi ini
+   * hanya dipanggil untuk kode yang memang baru (atau saat pengiriman gagal lalu
+   * diulang). Saat modal dibuka, kode yang sudah aktif di server dipakai ulang.
    */
   const syncInvite = useCallback(
     async (code: string) => {
       const pocket = await ensureJointPocketRemote(walletName)
       if (!pocket) {
         setServerSynced(false)
-        return
+        return false
       }
       const created = await createInviteRemote(pocket.id, code)
       setServerSynced(Boolean(created))
-      /* id dompet uuid dari server dipakai /joint & realtime setelah ini */
-      if (created) void refreshRemoteJoint()
+      if (created) {
+        adoptInviteFromServer(code, pocket.id, Date.parse(created.expiresAt))
+        /* id dompet uuid dari server dipakai /joint & realtime setelah ini */
+        void refreshRemoteJoint()
+      }
+      return Boolean(created)
     },
     [walletName],
   )
@@ -185,24 +197,80 @@ export function JointInviteCodeModal({
   useEffect(() => {
     if (!open) return
     setServerSynced(null)
-    const current = activeInviteFor(walletId) ?? createInvite(walletId)
-    setInvite(current)
-    void syncInvite(current.code)
-  }, [open, walletId, syncInvite])
+    let cancelled = false
+
+    void (async () => {
+      /* 1. dompet di server dipastikan ada — RPC pembuatan kode menolak pemanggil
+         yang belum punya baris `joint_wallets`/`joint_members` */
+      const pocket = await ensureJointPocketRemote(walletName)
+      if (cancelled) return
+      if (!pocket) {
+        setServerSynced(false)
+        setInvite(activeInviteFor(walletId) ?? createInvite(walletId))
+        return
+      }
+
+      /* 2. kode yang MASIH BERLAKU di server dipakai ulang. Membuat kode baru di
+         sini akan mencabut kode yang sudah dikirim ke pasangan (mis. `H9FKJF`). */
+      const active = await activeInviteRemote(pocket.id)
+      if (cancelled) return
+      if (active) {
+        const adopted = adoptInviteFromServer(active.code, pocket.id, Date.parse(active.expiresAt))
+        setInvite(adopted ?? activeInviteFor(walletId) ?? createInvite(walletId))
+        setServerSynced(true)
+        void refreshRemoteJoint()
+        return
+      }
+
+      /* 3. belum ada kode aktif MILIK AKUN INI di server: buat kode BARU.
+         JANGAN memakai ulang kode sisa localStorage di sini. Kode itu bisa
+         milik akun lain di browser yang sama, dan `catetind_create_invite`
+         versi lama memindahkan `created_by` ke akun pengirim — akibatnya
+         pembuat aslinya ditolak dengan "Itu kode undanganmu sendiri". Kode
+         yang benar-benar hidup sudah ditangani langkah 2 (dibaca dari server). */
+      const local = createInvite(walletId)
+      setInvite(local)
+      const created = await createInviteRemote(pocket.id, local.code)
+      if (cancelled) return
+      setServerSynced(Boolean(created))
+      if (created) {
+        adoptInviteFromServer(local.code, pocket.id, Date.parse(created.expiresAt))
+        void refreshRemoteJoint()
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [open, walletId, walletName])
 
   /* status dibaca ulang dari store: kode bisa sudah dipakai/kedaluwarsa setelah
      modal terbuka (mis. pasangan menekan "gabung" di tab lain) */
   const status = invite ? resolveInvite(invite.code).status : 'unknown'
   const usable = status === 'valid'
+  /**
+   * Kode boleh DIBAGIKAN hanya kalau benar-benar tercatat di `invite_codes`.
+   *
+   * Sebelum ini kode lokal tetap tampil + tombol Bagikan/Salin hidup walau
+   * pengiriman ke server gagal — user membagikan tautan yang pasti dijawab
+   * "Kodenya nggak ketemu" di perangkat pasangannya. Saklar ini menutupnya:
+   * gagal kirim = tidak ada tombol bagikan, yang ada tombol coba lagi.
+   */
+  const shareable = Boolean(invite && usable && serverSynced === true)
 
   function refreshCode() {
     const next = createInvite(walletId)
     setInvite(next)
     setServerSynced(null)
     void syncInvite(next.code)
-    toast.success(INVITE_CODE_COPY.refreshedToast, {
-      description: INVITE_CODE_COPY.refreshHint,
-    })
+    toast.success(INVITE_CODE_COPY.refreshedToast)
+  }
+
+  /** kirim ULANG kode yang sama ke server setelah pengiriman pertama gagal */
+  function retrySync() {
+    if (!invite) return
+    setServerSynced(null)
+    void syncInvite(invite.code)
   }
 
   useEffect(() => {
@@ -218,7 +286,7 @@ export function JointInviteCodeModal({
    *  Pengecekan pakai `typeof` (bukan `'share' in navigator`) supaya TypeScript
    *  tidak mempersempit tipe `navigator` menjadi `never` di cabang fallback. */
   async function handleShare() {
-    if (!invite || !usable) return
+    if (!invite || !shareable) return
     const text = buildInviteShareText(me.name, invite.code, walletName)
     const canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function'
     try {
@@ -236,7 +304,7 @@ export function JointInviteCodeModal({
   }
 
   async function handleCopyCode() {
-    if (!invite) return
+    if (!invite || !shareable) return
     try {
       await navigator.clipboard.writeText(invite.code)
       toast.success('Kode tersalin!')
@@ -277,9 +345,7 @@ export function JointInviteCodeModal({
               <h2 className="font-display text-xl font-semibold tracking-tight text-forest">
                 {INVITE_CODE_COPY.title}
               </h2>
-              <p className="mt-1 text-[13.5px] leading-relaxed text-forest/55">
-                {INVITE_CODE_COPY.lead(partner.name, walletName)}
-              </p>
+              <p className="mt-1 text-[13px] text-forest-muted">{walletName}</p>
               {/* Kode undangan SUNGGUHAN milik dompet ini (paket 39) - bukan
                   konstanta global. Masa berlaku & sekali pakainya nyata, dan
                   baris di bawah hanya muncul saat statusnya memang `valid`. */}
@@ -290,35 +356,28 @@ export function JointInviteCodeModal({
                 >
                   {invite?.code ?? '\u2022\u2022\u2022\u2022\u2022\u2022'}
                 </p>
-                {invite && usable ? (
-                  <>
-                    <p className="mt-2.5 text-[12.5px] text-forest/45">{INVITE_VALIDITY_COPY}</p>
-                    <p className="mt-1 text-[12px] text-forest/40">
-                      {INVITE_CODE_COPY.expiresAt(inviteExpiryLabel(invite))}
-                    </p>
-                    {/* jujur soal jangkauan kode: tercatat di server = bisa
-                        dibuka pasangan di perangkat mana pun */}
-                    {serverSynced !== null && (
-                      <p className="mt-2 text-[11.5px] leading-relaxed text-forest/40">
-                        {serverSynced
-                          ? INVITE_CODE_COPY.serverSyncedNote
-                          : INVITE_CODE_COPY.offlineNote}
-                      </p>
-                    )}
-                  </>
-                ) : (
-                  <p className="mt-2.5 text-[12.5px] text-forest/45">{INVITE_CODE_COPY.invalidNote}</p>
-                )}
+                {!invite || !usable ? (
+                  <p className="mt-2.5 text-[12.5px] text-forest-muted">{INVITE_CODE_COPY.invalidNote}</p>
+                ) : serverSynced === false ? (
+                  <button
+                    type="button"
+                    onClick={retrySync}
+                    className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-sage/60 px-3 py-1.5 text-[12px] font-medium text-forest transition-colors hover:bg-sage"
+                  >
+                    <RefreshCw className="size-3" strokeWidth={2.4} aria-hidden />
+                    {INVITE_CODE_COPY.syncRetry}
+                  </button>
+                ) : null}
               </div>
 
               <button
                 type="button"
                 onClick={handleShare}
-                disabled={!invite || !usable}
+                disabled={!shareable}
                 className={
-                  invite && usable
+                  shareable
                     ? 'mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-forest text-[15px] font-medium text-mint shadow-[0_16px_32px_-20px_rgba(0,0,0,0.95)] transition-colors hover:bg-forest-soft active:scale-[0.99]'
-                    : 'mt-4 inline-flex h-12 w-full cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-ink/[0.07] text-[15px] font-medium text-forest/35'
+                    : 'mt-4 inline-flex h-12 w-full cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-ink/[0.07] text-[15px] font-medium text-forest-muted'
                 }
               >
                 <Share2 className="size-4" strokeWidth={2.4} />
@@ -327,84 +386,21 @@ export function JointInviteCodeModal({
               <button
                 type="button"
                 onClick={handleCopyCode}
-                disabled={!invite}
+                disabled={!shareable}
                 className="mt-2 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-cream text-[14.5px] font-medium text-forest ring-1 ring-soil/16 transition-colors hover:bg-cream active:scale-[0.99] disabled:opacity-55"
               >
                 <Copy className="size-4" strokeWidth={2.4} />
                 Salin Kode
               </button>
 
-              {/* satu kode aktif per dompet - jalur pemulihan kalau kodenya sudah
-                  dipakai atau lewat 24 jam (jangan ada layar buntu) */}
-              <div className="mt-3 rounded-2xl bg-sage/40 px-4 py-3">
-                <button
-                  type="button"
-                  onClick={refreshCode}
-                  className="inline-flex items-center gap-2 text-[13.5px] font-medium text-forest underline decoration-dotted underline-offset-4 transition-colors hover:text-forest"
-                >
-                  <RefreshCw className="size-3.5" strokeWidth={2.4} aria-hidden />
-                  {INVITE_CODE_COPY.refresh}
-                </button>
-                <p className="mt-1 text-[11.5px] leading-relaxed text-forest/50">
-                  {INVITE_CODE_COPY.refreshHint}
-                </p>
-              </div>
-
-
-              {/* indikator menunggu - muncul setelah link dibagikan */}
-              <AnimatePresence initial={false}>
-                {waiting && (
-                  <motion.div
-                    key="waiting"
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.3, ease: EASE }}
-                    className="overflow-hidden"
-                  >
-                    <div className="mt-4 flex flex-col items-center rounded-[1.5rem] bg-hud-sage/15 px-4 py-4 ring-1 ring-hud-sage/35">
-                      <motion.span
-                        aria-hidden
-                        animate={{ scale: [1, 1.2, 1] }}
-                        transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
-                        className="text-[26px]"
-                      >
-                        {'\u{1F49A}'}
-                      </motion.span>
-                      <p className="mt-2 text-[13.5px] font-medium text-forest">
-                        Menunggu pasanganmu bergabung...
-                      </p>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              <p className="mt-4 text-center text-[12px] leading-relaxed text-forest/40">
-                Pasanganmu harus punya akun CatetInd. Kalau belum, mereka bisa daftar lewat link ini
-                dan dapat diskon referral! ----
-              </p>
-
-              {/* jalur NYATA ke halaman yang dibuka pasangan (/join/[code]) -
-                  memakai KODE YANG BARU DIBUAT di atas, supaya user A melihat
-                  halaman yang benar-benar akan diterima pasangannya.
-                  Tombol simulasi penggabungan sudah dihapus: keanggotaan hanya
-                  lahir dari server (pasangan menekan Gabung Dompet Ini di
-                  perangkatnya sendiri), lalu sampai ke sini lewat langganan
-                  realtime. */}
-              {invite && (
-                <p className="mt-4 border-t border-soil/12 pt-3.5 text-center">
-                  <Link
-                    href={buildJoinHref(invite.code)}
-                    className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-forest/55 underline underline-offset-4 transition-colors hover:text-forest"
-                  >
-                    <ExternalLink className="size-3.5" strokeWidth={2.4} aria-hidden />
-                    {JOIN_PREVIEW_COPY.linkLabel}
-                  </Link>
-                  <span className="mt-1 block text-[11.5px] leading-relaxed text-forest/35">
-                    {JOIN_PREVIEW_COPY.hint}
-                  </span>
-                </p>
-              )}
+              <button
+                type="button"
+                onClick={refreshCode}
+                className="mt-3 inline-flex items-center gap-1.5 text-[12.5px] font-medium text-forest-muted transition-colors hover:text-forest"
+              >
+                <RefreshCw className="size-3.5" strokeWidth={2.4} aria-hidden />
+                {INVITE_CODE_COPY.refresh}
+              </button>
             </motion.div>
           </div>
         </motion.div>
@@ -490,7 +486,7 @@ export function JointJoinedCelebration({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.85, duration: 0.35 }}
-            className="mt-2 text-[14px] leading-relaxed text-forest/55"
+            className="mt-2 text-[14px] leading-relaxed text-forest-muted"
           >
             Dompet bersama kalian aktif. Saldo dimulai dari Rp 0.
           </motion.p>

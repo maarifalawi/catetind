@@ -63,6 +63,7 @@ export function OnboardingStepFirstTransaction({
   note,
   onNoteChange,
   onSubmit,
+  onSkip,
   done,
   onReminderChange,
 }: {
@@ -74,6 +75,16 @@ export function OnboardingStepFirstTransaction({
   onNoteChange: (value: string) => void
   /** Enter / "done" di keyboard numerik = simpan */
   onSubmit: () => void
+  /**
+   * Lewati langkah ini → langsung selesai onboarding.
+   *
+   * Kenapa harus ada: tidak semua orang yang baru daftar sudah punya
+   * pengeluaran untuk dicatat (mis. baru bikin akun, uangnya masih di rekening
+   * orang tua, atau memang sedang tidak ada transaksi hari ini). Memaksa satu
+   * catatan karangan demi lolos setup = data palsu di akun user sejak menit
+   * pertama — dan Dashboard yang menganggapnya nyata.
+   */
+  onSkip: () => void
   /** true setelah transaksi pertama tersimpan → form diganti upacara tanaman */
   done: boolean
   /** naik ke flow supaya pilihan izin notifikasi ikut tersimpan */
@@ -106,7 +117,7 @@ export function OnboardingStepFirstTransaction({
     <div>
       <OnboardingStepHeader
         title="Catat transaksi pertamamu"
-        subtitle="Bisa yang tadi pagi, kemarin, atau kapan aja. Cukup beberapa ketuk."
+        badge="Bisa dilewati"
       />
 
       {/* ── pemilih tipe (segmented, satu warna aktif) ─────────────────── */}
@@ -129,7 +140,7 @@ export function OnboardingStepFirstTransaction({
                 'flex flex-1 flex-col items-center gap-1 rounded-[0.9rem] py-2 transition-all duration-200',
                 active
                   ? 'bg-cream text-forest shadow-[0_1px_3px_rgba(0,0,0,0.12)]'
-                  : 'text-forest/45 hover:text-forest/70',
+                  : 'text-forest-muted hover:text-forest-soft',
               )}
             >
               <Icon className="size-[17px]" strokeWidth={2} />
@@ -141,11 +152,17 @@ export function OnboardingStepFirstTransaction({
         })}
       </div>
 
-      {/* ── nominal raksasa (center) ───────────────────────────────────── */}
-      <div className="mt-7 flex w-full items-baseline justify-center gap-1.5">
+      {/* ── nominal raksasa (center) ─────────────────────────────────────
+          Prefix "Rp" dirender terpisah + spacer kembar di kanan supaya angka
+          benar-benar center. Placeholder "0" tampil utuh saat kosong (Rp dari
+          prefix + 0 dari placeholder) — sengaja TIDAK kosong supaya user punya
+          jangkar angka. Cangkang garis putus-putus menandai bahwa ini TEMPAT
+          MENGISI, bukan angka yang sudah terisi (keluhan "placeholder terbaca
+          seperti teks biasa"). */}
+      <div className="mt-7 flex w-full items-baseline justify-center gap-1.5 rounded-2xl border-2 border-dashed border-oat px-3 py-2 transition-colors focus-within:border-mint">
         <span
           aria-hidden
-          className="w-7 shrink-0 text-right text-lg font-medium text-forest/25"
+          className="w-7 shrink-0 text-right text-lg font-medium text-forest-muted"
         >
           Rp
         </span>
@@ -161,7 +178,7 @@ export function OnboardingStepFirstTransaction({
           placeholder="0"
           aria-label="Nominal transaksi pertama"
           className={cn(
-            'min-w-0 flex-1 bg-transparent text-center font-medium leading-none tracking-[-0.04em] text-forest tabular-nums outline-none placeholder:text-forest/[0.14]',
+            'min-w-0 flex-1 bg-transparent text-center font-medium leading-none tracking-[-0.04em] text-forest tabular-nums outline-none',
             display.length <= 7 ? 'text-[2.7rem]' : 'text-[2.15rem]',
           )}
         />
@@ -169,19 +186,39 @@ export function OnboardingStepFirstTransaction({
       </div>
 
       {/* ── catatan (opsional) ─────────────────────────────────────────── */}
-      <input
-        value={note}
-        onChange={(event) => onNoteChange(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter') {
-            event.preventDefault()
-            onSubmit()
-          }
-        }}
-        placeholder="Contoh: Kopi Kenangan pagi tadi"
-        aria-label="Catatan transaksi (opsional)"
-        className="mt-8 h-14 w-full rounded-[1.35rem] bg-cream px-4 text-[15px] font-medium tracking-[-0.01em] text-forest outline-none ring-1 ring-ink/[0.06] transition-all placeholder:text-forest/30 focus:ring-forest/25"
-      />
+      <label className="mt-8 block" htmlFor="onboarding-first-note">
+        {/* Label kecil di atas field: placeholder saja tidak cukup untuk
+            membedakan "tempat menulis" dari tulisan yang sudah terisi. */}
+        <span className="text-[12px] font-medium tracking-[0.16em] text-forest-muted uppercase">
+          Keterangan (opsional)
+        </span>
+        <input
+          id="onboarding-first-note"
+          value={note}
+          onChange={(event) => onNoteChange(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault()
+              onSubmit()
+            }
+          }}
+          placeholder="Contoh: Kopi Kenangan pagi tadi"
+          aria-label="Catatan transaksi (opsional)"
+          /* Placeholder sengaja dibuat LEBIH LEMBUT dari teks yang diketik
+             (miring + warna pudar + bobot normal) supaya tidak terbaca sebagai
+             isian jadi — ia contoh, bukan keterangan transaksi. */
+          className="mt-2 h-14 w-full rounded-[1.35rem] bg-cream px-4 text-[15px] font-medium tracking-[-0.01em] text-forest outline-none ring-1 ring-ink/[0.06] transition-all placeholder:font-normal placeholder:text-forest-muted/75 focus:ring-forest/25"
+        />
+      </label>
+
+      {/* jalan keluar yang jujur: tidak semua orang punya transaksi hari ini */}
+      <button
+        type="button"
+        onClick={onSkip}
+        className="mx-auto mt-5 block rounded-full px-3 py-1.5 text-[14px] font-medium text-forest-muted transition-colors hover:bg-ink/[0.04] hover:text-forest"
+      >
+        Lewati dulu, catat nanti
+      </button>
     </div>
   )
 }

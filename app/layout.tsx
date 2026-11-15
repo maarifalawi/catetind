@@ -1,6 +1,7 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import localFont from 'next/font/local'
+import { AccountScope } from '@/components/catetind/account-scope'
 import { AIChatWidget } from '@/components/catetind/ai-chat-widget'
 import { AppLockProvider } from '@/components/catetind/app-lock-provider'
 import { DemoSeedGate } from '@/components/catetind/demo-seed-gate'
@@ -192,6 +193,12 @@ export default function RootLayout({
         {/* Global Privacy Toggle (Sensor Layar): satu state `masked` untuk
             SEMUA nominal di seluruh app. Provider ada di root supaya halaman
             mana pun bisa membaca status yang sama dengan tombol mata di header. */}
+        {/* ── CAKUPAN AKUN ──────────────────────────────────────────────────
+            Semua provider di bawah ini membaca penyimpanan browser yang
+            dipisah per akun. Gerbang ini menetapkan akun aktif LEBIH DULU
+            (parkir/pulih kunci `catet*`), dan menahan render app sampai
+            cakupannya pasti — lihat `lib/account-scope.ts`. */}
+        <AccountScope>
         {/* Konteks Uang Global (Pribadi/Keluarga/Bersama) — dulu toggle ini
             ditaruh di body halaman Budget (audit UX #6). Sekarang satu provider
             di root: Sidebar desktop & header mobile membaca nilai yang sama. */}
@@ -256,6 +263,7 @@ export default function RootLayout({
             </SubscriptionGateProvider>
           </PrivacyProvider>
         </MoneyContextProvider>
+        </AccountScope>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

@@ -24,7 +24,14 @@ import {
   planDebtSettlement,
   settlementCounterparty,
 } from '@/lib/data/wealth-cash'
-import { WEALTH_STATE_KEY, loadDeviceState, saveDeviceState } from './idb'
+import {
+  WEALTH_STATE_KEY,
+  accountStateKey,
+  loadDeviceState,
+  resolveDeviceOwner,
+  saveDeviceState,
+} from './idb'
+import { browserUserId } from '@/lib/supabase/client'
 import {
   deleteRemoteDebt,
   deleteRemoteInvestment,
@@ -167,6 +174,8 @@ const EMPTY_SNAPSHOT: WealthSnapshot = Object.freeze({
 let live: WealthSnapshot = SERVER_SNAPSHOT
 let accountPurged = false
 let hydrateStarted = false
+/** akun pemilik cache perangkat ini — cache kekayaan DIPISAH per akun */
+let deviceOwnerUserId: string | null | undefined = undefined
 let hydratedOnce = false
 const listeners = new Set<() => void>()
 
@@ -198,7 +207,7 @@ function emit(): void {
 }
 
 function persist(snapshot: WealthState): void {
-  saveDeviceState<PersistedWealth>(WEALTH_STATE_KEY, {
+  saveDeviceState<PersistedWealth>(accountStateKey(WEALTH_STATE_KEY, deviceOwnerUserId), {
     version: WEALTH_STATE_VERSION,
     investments: snapshot.investments,
     debts: snapshot.debts,
@@ -469,9 +478,14 @@ export function mergeWithRemoteWealth(
   })
   const payments = combineRemote(remote.payments, payById, SEED_PAYMENTS, (row) => {
     const local = payByRemote.get(row.id) ?? payById.get(row.id)
+    /* `debtId` dari server berupa uuid baris `debts`; di perangkat baris yang
+       sama bisa punya id domain (`debt-…`) karena hutang dibuat lokal lebih
+       dulu. Terjemahkan supaya riwayat pembayaran tetap menempel ke kartu
+       hutangnya setelah reload. */
+    const debtId = debtByRemote.get(row.debtId)?.id ?? row.debtId
     return local
-      ? { ...row, id: local.id, walletName: local.walletName || row.walletName, remoteId: row.id }
-      : { ...row, remoteId: row.id }
+      ? { ...row, id: local.id, debtId, walletName: local.walletName || row.walletName, remoteId: row.id }
+      : { ...row, debtId, remoteId: row.id }
   })
   const assetTransactions = combineRemote(
     remote.assetTransactions,
@@ -522,8 +536,17 @@ async function ensureDebtOnServer(debtId: string): Promise<boolean> {
 async function ensurePaymentOnServer(paymentId: string): Promise<boolean> {
   const payment = live.payments.find((row) => row.id === paymentId)
   if (!payment) return false
+  /* `debt_payments.debt_id` menunjuk uuid baris `debts`, sedangkan id domain
+     hutang buatan perangkat berbentuk `debt-…`. Tanpa penerjemahan lewat
+     `remoteId`, INSERT ditolak foreign key (HTTP 400) dan pembayaran hanya
+     hidup di perangkat — sementara ledger & saldo dompet sudah bergerak. */
+  const debt = live.debts.find((row) => row.id === payment.debtId)
+  if (!debt) return false
+  if (!debt.remoteId && !(await ensureDebtOnServer(debt.id))) return false
+  const remoteDebtId = live.debts.find((row) => row.id === debt.id)?.remoteId
+  if (!remoteDebtId) return false
   const remoteId = payment.remoteId ?? randomUuid()
-  if (!(await pushPaymentToServer(payment, remoteId))) return false
+  if (!(await pushPaymentToServer({ ...payment, debtId: remoteDebtId }, remoteId))) return false
   if (payment.remoteId !== remoteId) {
     live = {
       ...live,
@@ -588,7 +611,9 @@ async function hydrateWealthStore(): Promise<void> {
   if (hydrateStarted) return
   hydrateStarted = true
 
-  const persisted = await loadDeviceState<PersistedWealth>(WEALTH_STATE_KEY)
+  const userId = await resolveDeviceOwner(WEALTH_STATE_KEY, (await browserUserId()) ?? null)
+  deviceOwnerUserId = userId
+  const persisted = await loadDeviceState<PersistedWealth>(accountStateKey(WEALTH_STATE_KEY, userId))
   accountPurged = persisted?.purged === true
   live = mergeWealthState(persisted)
   hydratedOnce = true

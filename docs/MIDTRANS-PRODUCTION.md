@@ -40,8 +40,10 @@ Catatan penting:
   lupa diisi, tagihan akan dikirim ke sandbox dan ditolak provider (`401`).
 - `MIDTRANS_SERVER_KEY` **hanya** dibaca di server (`lib/payments/midtrans.ts`).
   Jangan pernah memberinya awalan `NEXT_PUBLIC_`.
-- `MIDTRANS_CLIENT_KEY` tidak dipakai alur Core API di app ini (tidak ada
-  `window.snap.pay`), tetapi tetap didaftarkan supaya nilainya tercatat.
+- `MIDTRANS_CLIENT_KEY` **dipakai** browser: `snap.js` memuatnya untuk menggambar
+  halaman pembayaran DI DALAM kartu checkout (`snap.embed(token, { embedId })`).
+  Ia memang kunci publik (bukan rahasia); `MIDTRANS_SERVER_KEY` tetap hanya di
+  server. Tanpa kunci ini kartu jatuh ke tautan "Buka di tab baru".
 
 ## 2. URL untuk Dashboard Midtrans
 
@@ -141,9 +143,11 @@ CIMB Niaga VA aktif di dashboard tetapi belum punya metode di aplikasi ini.
 1. `/checkout/bayar` → pilih metode → `POST /api/payment/charge`.
 2. Route menulis baris `purchases` **pending** atas nama user, lalu membuat token
    Snap (`enabled_payments` sesuai metode) dan membalas `redirectUrl` + `token`.
-3. UI menampilkan **satu aksi utama** “Buka halaman pembayaran” (menuju
-   `redirect_url`) + tombol “Cek status pembayaran”; status dipoll dari
-   `/api/payment/status`.
+3. UI **menanamkan** halaman pembayaran itu di kartu checkout
+   (`snap.embed(token, { embedId })`, bukan `snap.pay()` yang menolak opsi
+   `embedId`), jadi instruksi QRIS/VA muncul di tempat user menekan “Bayar”.
+   Tautan “Buka di tab baru” hanya jalan keluar kalau iframe diblokir browser.
+   Status tetap dipoll dari `/api/payment/status`.
 4. Setelah bayar, `callbacks.finish` mengembalikan user ke
    `/checkout/selesai?order_id=…`; webhook Midtrans (payload & tanda tangan yang
    sama) memenuhi langganan lewat `catetind_fulfill_purchase`.
@@ -151,10 +155,28 @@ CIMB Niaga VA aktif di dashboard tetapi belum punya metode di aplikasi ini.
 ### Order pending dipakai ulang, bukan ditagih dua kali
 
 Token Snap dibuat per percobaan. Kalau user menekan bayar lagi untuk niat yang
-sama (nominal + kode teman sama), route membuat **token baru untuk `order_id`
-yang sama** — baris `purchases` tetap satu, dan webhook tetap mengenali ordernya.
-Kalau order itu ternyata sudah dibayar (webhook belum sempat mencatat), route
-melaporkan `settled` dan **tidak** membuat tagihan kedua.
+sama (nominal + kode teman sama) dan transaksi `order_id` itu **masih hidup**,
+route membuat **token baru untuk `order_id` yang sama** — baris `purchases`
+tetap satu, dan webhook tetap mengenali ordernya. Kalau order itu ternyata sudah
+dibayar (webhook belum sempat mencatat), route melaporkan `settled` dan
+**tidak** membuat tagihan kedua.
+
+Batasnya: `order_id` yang transaksinya sudah **mati** (kedaluwarsa/dibatalkan/
+dibayar) tidak bisa ditokenkan lagi — Snap membalas `406`
+`transaction_details.order_id has already been taken`. Route menanganinya
+sendiri, bukan meneruskan pesan itu ke user:
+
+- status provider `expire`/`cancel`/`deny` → tagihan lama ditutup
+  (`cancelTransaction` + baris ditandai `expire` lewat RPC yang sama dengan
+  webhook), lalu **order baru** dibuat;
+- status provider tidak terbaca tetapi Snap tetap menolak dengan pesan duplikat
+  → tagihan lama dibatalkan, **order baru** dibuat, barisnya dibiarkan
+  `pending` supaya `/api/payment/reconcile` masih bisa memeriksanya kalau
+  ternyata uangnya sudah masuk.
+
+Penandaan `expire` tidak pernah menghilangkan uang: notifikasi `settlement` yang
+datang belakangan tetap memenuhi order itu (RPC menerima status apa pun sebagai
+titik awal).
 
 ### Lifecycle status
 
@@ -174,8 +196,8 @@ Midtrans (token belum dibuka). Itu **bukan** error:
 2. Dashboard Midtrans Production → Configuration → keempat URL terisi.
 3. Deploy ulang (variabel env baru hanya terbaca setelah redeploy).
 4. Uji transaksi kecil (mis. QRIS Rp1.000) lewat aplikasi:
-   - `/checkout/bayar` → pilih metode → “Buka halaman pembayaran” membuka
-     halaman Snap pada metode itu (bukan daftar semua kanal);
+   - `/checkout/bayar` → pilih metode → instruksi QRIS/VA **langsung muncul di
+     kartu** (halaman Snap di-embed, bukan tab baru) pada metode yang dipilih;
    - setelah dibayar, `callbacks.finish` membawa user ke
      `/checkout/selesai?order_id=…`;
    - `POST /api/payment/webhook` menerima notifikasi dan membalas `ok: true`;
@@ -184,9 +206,12 @@ Midtrans (token belum dibuka). Itu **bukan** error:
      true untuk pembelian lifetime).
 5. Kalau webhook membalas `403`: kunci `MIDTRANS_SERVER_KEY` masih kunci
    sandbox / ada spasi tambahan di env.
-6. Kalau “Buka halaman pembayaran” membalas halaman Snap yang kosong/kanal tidak
-   tersedia: kanal itu belum aktif di *Payment Methods* dashboard, atau
-   `enabled_payments`-nya salah — periksa `snapEnabledPayments()`.
+6. Kalau kartu checkout menampilkan “instruksi bayar tidak bisa ditampilkan”
+   (tautan “Buka di tab baru”), berarti `snap.js`/iframe-nya diblokir —
+   periksa konsol browser, pemblokir iklan/ekstensi, dan `MIDTRANS_CLIENT_KEY`.
+   Kalau halaman Snap-nya kosong/kanal tidak tersedia: kanal itu belum aktif di
+   *Payment Methods* dashboard, atau `enabled_payments`-nya salah — periksa
+   `snapEnabledPayments()`.
 
 ## 6. Login reviewer
 

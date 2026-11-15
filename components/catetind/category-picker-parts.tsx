@@ -88,7 +88,7 @@ export function SearchField({
   return (
     <div className={cn('relative', className)} role="search">
       <Search
-        className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-forest/35"
+        className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-forest-muted"
         aria-hidden
       />
       <input
@@ -102,14 +102,14 @@ export function SearchField({
         spellCheck={false}
         enterKeyHint="search"
         inputMode="search"
-        className="h-11 w-full rounded-2xl bg-soil/[0.09] pr-11 pl-10 text-[14px] font-medium text-forest outline-none ring-1 ring-transparent transition-all placeholder:text-forest/35 focus:bg-cream focus:ring-forest/15 [&::-webkit-search-cancel-button]:hidden"
+        className="h-11 w-full rounded-2xl bg-soil/[0.09] pr-11 pl-10 text-[14px] font-medium text-forest outline-none ring-1 ring-transparent transition-all placeholder:text-forest-muted focus:bg-cream focus:ring-forest/15 [&::-webkit-search-cancel-button]:hidden"
       />
       {value.length > 0 && (
         <button
           type="button"
           onClick={() => onChange('')}
           aria-label={CATEGORY_PICKER_COPY.searchClear}
-          className="absolute top-1/2 right-2.5 flex size-7 -translate-y-1/2 items-center justify-center rounded-full bg-soil/10 text-forest/60 transition-colors hover:bg-soil/15"
+          className="absolute top-1/2 right-2.5 flex size-7 -translate-y-1/2 items-center justify-center rounded-full bg-soil/10 text-forest-muted transition-colors hover:bg-soil/15"
         >
           <X className="size-3.5" />
         </button>

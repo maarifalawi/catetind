@@ -122,24 +122,19 @@ export function withCapturePrefs(
 }
 
 /* ── COPY SAKLAR (tinggal di sini, bukan di JSX — aturan repo) ───────────────
-   Kalimatnya menyebut batasnya apa adanya: dua saklar ini berlaku di jalur AI
-   capture (struk & suara), sedangkan catatan manual selalu memakai kategori
-   pilihan user. Halaman Pengaturan jadi tidak menjanjikan kontrol yang tidak
-   ada — dan setelah paket 54 janji itu benar-benar bisa ditepati. */
+   KALIMAT PENJELAS DIHAPUS (revisi pemilik repo). Dulu tiap saklar membawa satu
+   paragraf cakupan (hanya berlaku untuk scan struk & input suara) ditambah satu
+   catatan penutup tentang jalur manual — tiga kalimat untuk dua switch, dan semuanya mengulang
+   hal yang sama. Yang tersisa hanya label; perilakunya tidak berubah sama sekali
+   (lihat `withCapturePrefs` di atas), dan penjelasan lengkapnya tetap ada di
+   `/terms` & `/privacy`. */
 export const AI_PREFS_COPY = {
   toggles: {
     autoCategory: {
       label: 'Kategorisasi Otomatis oleh AI',
-      helper:
-        'Khusus scan struk & input suara: kategori diisi Minca dari hasil bacaannya. Kalau dimatikan, kamu yang pilih kategorinya di kartu konfirmasi.',
     },
     autoNaming: {
       label: 'Penamaan Otomatis Transaksi',
-      helper:
-        'Khusus scan struk & input suara: nama catatan dirapikan Minca (misal "indmrt" → "Indomaret"). Kalau dimatikan, nama kamu isi sendiri.',
     },
   },
-  /** batas yang wajib disebut: apa yang TIDAK diubah dua saklar ini */
-  manualScopeNote:
-    'Catatan yang kamu input manual selalu pakai kategori yang kamu pilih sendiri, dua saklar ini tidak mengubahnya.',
 } as const

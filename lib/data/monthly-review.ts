@@ -27,28 +27,16 @@ import { localISODate, type HistoryTransaction } from './history'
  * Tidak ada React di sini (aturan CONTEXT §2): komponen hanya merender.
  */
 
-/* ── MOCK: TRANSAKSI BULAN LALU (Agustus 2026) ───────────────────────────────
-   Di produksi ini hasil query `transactions` untuk bulan sebelumnya. Bentuknya
-   sengaja sama dengan `HistoryTransaction` supaya nanti cuma sumbernya yang
-   diganti (tidak ada tabel baru yang perlu diciptakan).
+/* ── SUMBER DATA RECAP: TRANSAKSI NYATA BULAN LALU ───────────────────────────
+   Dulu file ini memuat 12 transaksi contoh Agustus 2026 + target Rp 3.000.000,
+   dan modal menampilkannya untuk SETIAP akun — pemilik produk melaporkannya
+   sebagai "ngga ada gua ngisi pemasukan 7,5 jt" (temuan seed data).
 
-   Isinya diatur supaya MEMENUHI ambang PRD 582 (10 transaksi + 1 pemasukan +
-   2 minggu): 12 transaksi, 1 pemasukan, rentang 1–28 Agustus → state "siap"
-   bisa ditinjau. Lihat `DEMO_THIN_DATA` di bawah untuk meninjau state sabar. */
-export const LAST_MONTH_TRANSACTIONS: HistoryTransaction[] = [
-  { id: 1, name: 'Setor Celengan Dana Darurat', amount: 1_500_000, type: 'saving', category: 'Dana Darurat', wallet: 'BCA', date: '2026-08-28', time: '10:15', aiGenerated: false },
-  { id: 2, name: 'Gaji Agustus', amount: 7_500_000, type: 'income', category: 'Gaji Utama', wallet: 'BCA', date: '2026-08-25', time: '09:00', aiGenerated: false },
-  { id: 3, name: 'Sepatu Lari', amount: 450_000, type: 'expense', category: 'Belanja', wallet: 'BCA', date: '2026-08-22', time: '19:40', aiGenerated: true },
-  { id: 4, name: 'Makan Siang Kantor', amount: 620_000, type: 'expense', category: 'Makanan', wallet: 'OVO', date: '2026-08-20', time: '12:30', aiGenerated: true },
-  { id: 5, name: 'Kopi & Boba Sebulan', amount: 246_000, type: 'expense', category: 'Makanan', wallet: 'GoPay', date: '2026-08-18', time: '16:20', aiGenerated: true },
-  { id: 6, name: 'Nonton Bioskop', amount: 120_000, type: 'expense', category: 'Hiburan', wallet: 'BCA', date: '2026-08-16', time: '20:10', aiGenerated: true },
-  { id: 7, name: 'Grab & Gojek Sebulan', amount: 420_000, type: 'expense', category: 'Transportasi', wallet: 'GoPay', date: '2026-08-12', time: '08:05', aiGenerated: true },
-  { id: 8, name: 'Kuota & Listrik', amount: 268_000, type: 'expense', category: 'Tagihan', wallet: 'BCA', date: '2026-08-09', time: '21:00', aiGenerated: true },
-  { id: 9, name: 'Netflix', amount: 54_000, type: 'expense', category: 'Hiburan', wallet: 'BCA', date: '2026-08-05', time: '20:00', aiGenerated: true },
-  { id: 10, name: 'Spotify Premium', amount: 59_900, type: 'expense', category: 'Hiburan', wallet: 'OVO', date: '2026-08-05', time: '20:05', aiGenerated: true },
-  { id: 11, name: 'Belanja Bulanan Superindo', amount: 850_000, type: 'expense', category: 'Makanan', wallet: 'Tunai', date: '2026-08-03', time: '17:25', aiGenerated: true },
-  { id: 12, name: 'Bayar Kos Agustus', amount: 1_500_000, type: 'expense', category: 'Tagihan', wallet: 'BCA', date: '2026-08-01', time: '09:30', aiGenerated: false },
-]
+   Sekarang recap DITURUNKAN dari catatan milik user sendiri: hook
+   `useMonthlyReview()` menyaring `recordedTransactions()` ke bulan sebelumnya,
+   lalu memanggil `buildMonthlyRecap()`. Tidak ada lagi nominal karangan: kalau
+   user belum punya catatan bulan lalu, panel menampilkan kartu sabar.
+   ────────────────────────────────────────────────────────────────────────── */
 
 /* ── AMBANG DATA MINIMUM (PRD 574–582 · non-negotiable) ──────────────────────
    Savings rate = 10 transaksi + minimal 1 pemasukan, periode ≥ 2 minggu.
@@ -72,24 +60,10 @@ export const TARGET_STEP_LARGE = 500_000
  *  Rp 500.000) — sengaja kecil supaya terasa bisa dicapai, bukan menakutkan */
 export const STARTER_TARGET = 500_000
 
-/* Target yang DIPILIH user bulan lalu (mock). `targetAchieved` dihitung dari
-   perbandingan angka ini dengan yang benar-benar disisihkan — jadi status ✅/⏳
-   tidak pernah ditulis tangan. Di produksi: kolom `amount` di tabel
-   `monthly_targets` untuk bulan sebelumnya. */
-export const LAST_MONTH_TARGET = 3_000_000
-
-/** snapshot tanaman bulan lalu (mock habit loop Domain 3B). ANGKA level/streak
- *  tidak pernah ditampilkan — yang tampil cuma tahapnya (kanon: streak tersembunyi). */
-export const MONTHLY_PLANT_STAGE: RecapPlantStage = 3
-
 /* ── PENANDA DEMO ────────────────────────────────────────────────────────────
-   1. `DEMO_THIN_DATA` memakai subset 6 transaksi pertama supaya state "aku
-      masih belajar" (kartu sabar + progress) bisa ditinjau. Cara ini jujur:
-      yang dipakai memang data yang lebih tipis, bukan angka yang dipalsukan.
-   2. `DEMO_DAY_OVERRIDE` mematok tanggal ke-2 supaya jendela trigger 1–3 tetap
-      bisa ditinjau padahal tanggal sistem sudah lewat. `null` = perilaku
-      produksi (tanggal sistem apa adanya); logic trigger-nya tidak berubah. */
-export const DEMO_THIN_DATA = false
+   `DEMO_DAY_OVERRIDE` mematok tanggal ke-2 supaya jendela trigger 1–3 tetap
+   bisa ditinjau padahal tanggal sistem sudah lewat. `null` = perilaku
+   produksi (tanggal sistem apa adanya); logic trigger-nya tidak berubah. */
 /* Saklar tanggal ikut `NEXT_PUBLIC_DEMO` (paket 42): di produksi jendela
    trigger recap dibaca dari tanggal sistem apa adanya. Sebelumnya angka 2
    dipatok keras, jadi recap bisa muncul di luar jendela 1–3 di rilis nyata. */
@@ -97,10 +71,10 @@ export const DEMO_DAY_OVERRIDE: number | null = DEMO_MODE ? 2 : null
 
 /* ── BENTUK DATA RECAP ─────────────────────────────────────────────────────── */
 
-/** tahap tanaman versi data (1..4 sama dengan `PlantStage` di plant-illustration).
+/** tahap papan puzzle versi data (1..4 sama dengan `PlantStage` di plant-illustration).
  *  Sengaja didefinisikan ulang di lapis data: `lib/` tidak boleh mengimpor
  *  `components/` supaya tetap bebas React. */
-export type RecapPlantStage = 1 | 2 | 3 | 4
+export type RecapPuzzleStage = 1 | 2 | 3 | 4
 
 export interface MonthlyRecap {
   /** `Agustus 2026` — diturunkan dari tanggal transaksi, bukan ditulis tangan */
@@ -114,7 +88,7 @@ export interface MonthlyRecap {
    *  pembagian dari data tipis. */
   savingsRate: number | null
   targetAchieved: boolean
-  plantStage: RecapPlantStage
+  puzzleStage: RecapPuzzleStage
   /* — tambahan wajib untuk gerbang ambang & prefill target — */
   /** jumlah transaksi bulan itu (dipakai progress "[7/10 transaksi]") */
   transactionCount: number
@@ -127,15 +101,19 @@ export interface MonthlyRecap {
   setAside: number
   /** target bulan itu, dipakai untuk status ✅/⏳ dan prefill panel 2 */
   target: number
+  /** false = user belum pernah menyimpan target untuk bulan itu → kartu status
+   *  target disembunyikan, bukan menampilkan "0% dari Rp 0" */
+  targetKnown: boolean
 }
-
-/** sumber data recap: penuh, atau subset tipis saat `DEMO_THIN_DATA` dinyalakan */
-const RECAP_SOURCE = DEMO_THIN_DATA
-  ? LAST_MONTH_TRANSACTIONS.slice(0, 6)
-  : LAST_MONTH_TRANSACTIONS
 
 /**
  * Ubah daftar transaksi bulan lalu + target bulan itu → bentuk yang dipakai UI.
+ *
+ * `monthKey` WAJIB diisi di jalur produksi (`YYYY-MM`): label bulannya datang
+ * dari bulan yang sedang direkap, bukan dari tanggal transaksi terbaru — kalau
+ * user hanya punya 2 catatan tanggal 3, labelnya tetap "Oktober 2026" dan
+ * panel sabar tetap menyebut bulan yang benar. Parameter ketiga opsional supaya
+ * pemanggil lama tetap jalan.
  *
  * Catatan penting soal `totalExpense`: `summarizeTransactions()` di
  * `lib/data/history.ts` memasukkan setoran tabungan ke kolom pengeluaran (dipakai
@@ -147,6 +125,7 @@ const RECAP_SOURCE = DEMO_THIN_DATA
 export function buildMonthlyRecap(
   txs: HistoryTransaction[],
   target: number,
+  monthKey?: string,
 ): MonthlyRecap {
   const sumOf = (type: HistoryTransaction['type']) =>
     txs.filter((tx) => tx.type === type).reduce((sum, tx) => sum + tx.amount, 0)
@@ -157,6 +136,10 @@ export function buildMonthlyRecap(
   const savedLastMonth = totalIncome - totalExpense
   const incomeCount = txs.filter((tx) => tx.type === 'income').length
   const weeksCovered = coveredWeeks(txs)
+  const activeDays = new Set(txs.map((tx) => tx.date)).size
+  /* target 0 = user memang belum pernah menyimpan target untuk bulan itu.
+     0 bukan target "harus hemat Rp 0", jadi status ✅/⏳ tidak boleh dikarang. */
+  const targetKnown = target > 0
 
   const enoughData =
     txs.length >= TARGET_TRANSACTION_THRESHOLD &&
@@ -164,15 +147,16 @@ export function buildMonthlyRecap(
     weeksCovered >= TARGET_MIN_WEEKS
 
   return {
-    monthLabel: monthLabelOf(txs),
+    monthLabel: monthKey ? monthLabelOfKey(monthKey) : monthLabelOf(txs),
     totalIncome,
     totalExpense,
     savingsRate:
       enoughData && totalIncome > 0
         ? Math.round((savedLastMonth / totalIncome) * 100)
         : null,
-    targetAchieved: savedLastMonth >= target,
-    plantStage: MONTHLY_PLANT_STAGE,
+    targetAchieved: targetKnown && savedLastMonth >= target,
+    targetKnown,
+    puzzleStage: recapPuzzleStage(activeDays),
     transactionCount: txs.length,
     incomeCount,
     weeksCovered,
@@ -180,6 +164,22 @@ export function buildMonthlyRecap(
     setAside,
     target,
   }
+}
+
+/**
+ * Tahap papan puzzle BULANAN dari jumlah tanggal unik yang ada catatannya.
+ *
+ * Ambangnya sengaja lebih longgar dari `weeklyPuzzleStage()` (yang memakai
+ * porsi 1/3/5 dari 7 hari): satu bulan punya ~30 hari, jadi "rajin" berarti lebih
+ * banyak hari aktif. Dipakai panel recap bulan lalu supaya tahap papannya
+ * benar-benar berasal dari kebiasaan mencatat user, bukan konstanta `3` seperti
+ * sebelumnya.
+ */
+export function recapPuzzleStage(activeDays: number): RecapPuzzleStage {
+  if (activeDays >= 21) return 4 // tahap 4 · puzzle lengkap
+  if (activeDays >= 14) return 3 // tahap 3 · hampir lengkap
+  if (activeDays >= 7) return 2 // tahap 2 · setengah jalan
+  return 1 // tahap 1 · awal tersusun
 }
 
 /* ── BANTUAN TANGGAL (logika murni · tanpa `Date` yang tidak deterministik) ──
@@ -202,6 +202,18 @@ export function previousMonthKey(key: string): string {
 export function monthLabelOf(txs: HistoryTransaction[]): string {
   const newest = txs.reduce((max, tx) => (tx.date > max ? tx.date : max), '')
   const [year, month] = newest.split('-').map(Number)
+  if (!year || !month) return ''
+  return new Intl.DateTimeFormat('id-ID', {
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(new Date(Date.UTC(year, month - 1, 1)))
+}
+
+/** `2026-10` → `Oktober 2026` — label dari KUNCI bulan (dipakai recap nyata
+ *  supaya bulannya tetap benar walau catatannya kosong/tipis) */
+export function monthLabelOfKey(monthKey: string): string {
+  const [year, month] = monthKey.split('-').map(Number)
   if (!year || !month) return ''
   return new Intl.DateTimeFormat('id-ID', {
     month: 'long',
@@ -239,7 +251,7 @@ export function todayIso(): string {
  *
  * @param dismissedFor label bulan yang sudah ditutup user (`undefined` = belum
  *   pernah). Sekali ditutup, bulan itu tidak akan menagih lagi — baik user
- *   menekan "Let's go! 🌿" maupun "Skip, nanti aja" (PRD: "satu kali sampai
+ *   menekan "Let's go! 🧩" maupun "Skip, nanti aja" (PRD: "satu kali sampai
  *   di-dismiss"). Jalan buka ulang manual disediakan kartu target di Home.
  */
 export function shouldShowMonthlyReview(
@@ -326,12 +338,22 @@ export function suggestedTarget(recap: MonthlyRecap): TargetSuggestion {
 }
 
 /** target yang tersimpan terakhir (bisa bulan lalu, bisa bulan ini) */
-export interface SavedMonthlyTarget {
-  /** `YYYY-MM` bulan saat target ini disimpan */
-  month: string
+export interface SavedTargetEntry {
   amount: number
   /** celengan yang mau ditambah bulan itu (null = user tidak memilih celengan) */
   fundId: number | null
+}
+
+export interface SavedMonthlyTarget extends SavedTargetEntry {
+  /** `YYYY-MM` bulan saat target ini disimpan */
+  month: string
+  /**
+   * Riwayat target per bulan (`YYYY-MM` → nominal). Dipakai panel recap untuk
+   * menampilkan target BULAN LALU yang sebenarnya — sebelumnya hanya satu target
+   * terakhir yang disimpan, jadi begitu user menyimpan target bulan ini, target
+   * bulan lalu hilang dan status ✅/⏳ tidak bisa dihitung lagi.
+   */
+  history?: Record<string, SavedTargetEntry>
 }
 
 /** asal angka yang muncul di panel 2 — dipakai untuk menjelaskan ke user */
@@ -425,12 +447,6 @@ export function fundNameOf(
   return funds.find((fund) => fund.id === fundId)?.name ?? null
 }
 
-/** recap bulan lalu yang dipakai modal (satu sumber, dihitung sekali di modul) */
-export const MONTHLY_RECAP: MonthlyRecap = buildMonthlyRecap(
-  RECAP_SOURCE,
-  LAST_MONTH_TARGET,
-)
-
 /* ── PENANDA & TARGET TERSIMPAN (localStorage) ──────────────────────────────
    Dua penanda kecil, keduanya dibaca SETELAH mount (efek) supaya HTML server
    dan client identik — pola yang sama dengan `lib/data/renewal.ts`.
@@ -493,6 +509,23 @@ export function writeMonthlyReviewMarker(
   return next
 }
 
+/** riwayat target yang disimpan masuk akal (bulan `YYYY-MM`, nominal > 0) */
+function readTargetHistory(raw: unknown): Record<string, SavedTargetEntry> {
+  if (!raw || typeof raw !== 'object') return {}
+  const out: Record<string, SavedTargetEntry> = {}
+  for (const [month, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (!/^\d{4}-\d{2}$/.test(month)) continue
+    if (!value || typeof value !== 'object') continue
+    const entry = value as Partial<SavedTargetEntry>
+    if (typeof entry.amount !== 'number' || !Number.isFinite(entry.amount)) continue
+    out[month] = {
+      amount: clampTarget(entry.amount),
+      fundId: typeof entry.fundId === 'number' ? entry.fundId : null,
+    }
+  }
+  return out
+}
+
 /** target terakhir yang disimpan user (null = belum pernah / data rusak) */
 export function readSavedTarget(): SavedMonthlyTarget | null {
   if (typeof window === 'undefined') return null
@@ -505,17 +538,59 @@ export function readSavedTarget(): SavedMonthlyTarget | null {
       month: parsed.month,
       amount: clampTarget(parsed.amount),
       fundId: typeof parsed.fundId === 'number' ? parsed.fundId : null,
+      history: readTargetHistory(parsed.history),
     }
   } catch {
     return null
   }
 }
 
+/**
+ * Target yang tersimpan untuk SATU bulan (`YYYY-MM`).
+ *
+ * Urutannya: riwayat per bulan → target terakhir kalau bulannya cocok. `null`
+ * berarti user memang belum pernah menyimpan target untuk bulan itu; pemanggil
+ * TIDAK boleh menggantinya dengan angka karangan.
+ */
+export function readSavedTargetFor(monthKey: string): SavedMonthlyTarget | null {
+  const saved = readSavedTarget()
+  if (!saved) return null
+  const entry = saved.history?.[monthKey]
+  if (entry) return { month: monthKey, ...entry }
+  if (saved.month === monthKey) {
+    return { month: saved.month, amount: saved.amount, fundId: saved.fundId }
+  }
+  return null
+}
+
 export function writeSavedTarget(target: SavedMonthlyTarget): void {
   try {
+    const previous = readSavedTarget()
+    const history: Record<string, SavedTargetEntry> = { ...(previous?.history ?? {}) }
+    /* target TERAKHIR ikut disimpan ke riwayat sebelum ditimpa — kalau belum ada
+       riwayat (data lama), target bulan lalu tetap bisa dibaca recap. */
+    if (previous) {
+      history[previous.month] = { amount: previous.amount, fundId: previous.fundId }
+    }
+    history[target.month] = {
+      amount: clampTarget(target.amount),
+      fundId: target.fundId,
+    }
+    /* simpan 24 bulan terakhir saja — cukup untuk recap & audit, tidak tumbuh
+       selamanya di localStorage */
+    const limited = Object.fromEntries(
+      Object.entries(history)
+        .sort(([a], [b]) => (a < b ? 1 : -1))
+        .slice(0, 24),
+    )
     window.localStorage.setItem(
       TARGET_STORE_KEY,
-      JSON.stringify({ ...target, amount: clampTarget(target.amount) }),
+      JSON.stringify({
+        month: target.month,
+        amount: clampTarget(target.amount),
+        fundId: target.fundId,
+        history: limited,
+      }),
     )
   } catch {
     /* storage diblokir — target tetap terpakai di sesi ini (state hook) */
@@ -541,7 +616,7 @@ export function readMonthlyReviewState(monthKey: string): {
 
 export const MONTHLY_REVIEW_COPY = {
   /* — kepala modal — */
-  title: 'Bulan baru, lembaran baru 🌱',
+  title: 'Bulan baru, lembaran baru 🧩',
   /** pembaca layar untuk wadah dialog */
   dialogLabel: 'Monthly Review & Target Setup',
   close: 'Tutup rutinitas bulanan',
@@ -564,20 +639,19 @@ export const MONTHLY_REVIEW_COPY = {
   /* status target bulan lalu — dua-duanya hangat, tidak ada yang menghakimi */
   targetTitle: 'Target bulan lalu',
   targetAchieved: (amountLabel: string) => `Tercapai ✅, target ${amountLabel} aman.`,
-  targetAchievedCaption: 'Tanamanmu ikut berbunga karena ini 🌸',
+  targetAchievedCaption: 'Puzzle-mu ikut lengkap karena ini 🧩',
   targetMissed: (amountLabel: string, pct: number) =>
     `Belum sampai ${amountLabel}, tapi kamu udah jalan ${pct}%-nya ⏳`,
   targetMissedCaption: 'Nggak apa-apa, yang penting catatannya jalan terus.',
 
-  /* snapshot tanaman (angka level/streak tidak pernah ditampilkan) */
-  plantTitle: 'Tanamanmu bulan lalu',
-  plantCaption: (stageName: string) =>
-    `Sampai tahap ${stageName}, tumbuh karena kamu rutin nyatet.`,
+  /* snapshot papan puzzle (angka level/streak tidak pernah ditampilkan) */
+  puzzleTitle: 'Puzzle-mu bulan lalu',
+  puzzleCaption: (stageName: string) =>
+    `Sampai tahap ${stageName}, tersusun karena kamu rutin nyatet.`,
 
   /* — kartu sabar (data < ambang, PRD 571–586) — */
-  patientTitle: 'Aku masih belajar pola keuanganmu 📊',
-  patientBody:
-    'Bulan lalu catatannya masih tipis, jadi aku belum bisa kasih ringkasan angka yang bisa dipercaya. Terus catat ya, nanti ringkasannya beneran berguna.',
+  patientTitle: 'Ringkasan belum siap',
+  patientBody: 'Catatan bulan lalu masih tipis. Aku rangkum nanti ya.',
   patientProgress: (count: number, threshold: number) =>
     `[${count}/${threshold} transaksi] untuk unlock ringkasan`,
   patientReasonTransactions:
@@ -586,7 +660,7 @@ export const MONTHLY_REVIEW_COPY = {
     'Belum ada pemasukan yang tercatat bulan lalu, jadi persentase hemat belum bisa dihitung.',
   patientReasonWeeks:
     'Catatannya baru sepanjang satu minggu, jadi belum bisa dibilang pola bulanan.',
-  patientSkipHint: 'Kamu tetap bisa set target bulan ini kok 🌱',
+  patientSkipHint: 'Kamu tetap bisa set target bulan ini kok 🧩',
 
   /* — panel 2: set target — */
   targetQuestion: 'Mau coba hemat berapa?',
@@ -620,13 +694,13 @@ export const MONTHLY_REVIEW_COPY = {
   /* — CTA (zona ibu jari, PRD 2141–2145) — */
   next: 'Lanjut atur target',
   back: 'Lihat recap lagi',
-  submit: "Let's go! 🌿",
+  submit: "Let's go! 🧩",
   skip: 'Skip, nanti aja',
   /** nama aksesibel tombol skip — menegaskan tidak ada konsekuensi buruk */
   skipA11y: 'Tutup tanpa set target. Bisa dibuka lagi kapan aja dari kartu Target di Home',
 
   /* — konfirmasi setelah tersimpan — */
-  savedToastTitle: 'Target bulan ini tersimpan 🌿',
+  savedToastTitle: 'Target bulan ini tersimpan 🧩',
   savedToastBody: (amountLabel: string) =>
     `${amountLabel}, bisa diubah kapan aja dari kartu Target di Home.`,
   savedToastFundBody: (amountLabel: string, fundName: string) =>
