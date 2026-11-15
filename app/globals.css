@@ -1050,6 +1050,68 @@ body[data-catetind-sheet-open='true'] [data-catetind-page-root] {
   }
 }
 
+/* ── Landing · animasi masuk tanpa JavaScript (pengganti `motion.div`) ───────
+   Sebelumnya `LandingReveal` merender `motion.div` dengan `initial` opacity 0,
+   sehingga HTML `/` dari server membawa `style="opacity:0"` di 18 elemen:
+   hero baru terlihat setelah ±2 MB chunk JS selesai diunduh DAN framer-motion
+   hydrate. Di koneksi lambat itu = layar putih beberapa detik.
+
+   Sekarang angka Framer yang sama (lihat komentar di
+   components/landing/lp/reveal.tsx) dijalankan CSS. Custom property di bawah
+   diisi per elemen oleh komponen:
+
+     --lr-y      jarak geser awal (48/72/128px)
+     --lr-scale  skala awal (0.9 untuk mockup hero)
+     --lr-skew   skewY awal (1deg untuk heading)
+     --lr-delay  jeda mulai (0/.2/.4/.6 detik)
+
+   `both` = elemen memakai keadaan `from` selama jeda (sama seperti framer), jadi
+   tidak ada kedipan "sudah terlihat lalu melompat". Animasi mulai dari frame
+   pertama; kalau JS gagal dimuat konten tetap muncul. */
+
+@keyframes landing-reveal-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--lr-y, 0px)) scale(var(--lr-scale, 1))
+      skewY(var(--lr-skew, 0deg));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1) skewY(0deg);
+  }
+}
+
+/* navbar turun dari atas (dulu spring awal y: -80) */
+@keyframes landing-nav-in {
+  from {
+    opacity: 0;
+    transform: translateY(-80px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.landing-reveal {
+  animation: landing-reveal-in 720ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--lr-delay, 0ms);
+}
+
+.landing-nav-reveal {
+  animation: landing-nav-in 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* hormati permintaan gerak minimal — konten LANGSUNG tampil, bukan opacity 0 */
+@media (prefers-reduced-motion: reduce) {
+  .landing-reveal,
+  .landing-nav-reveal {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
 .landing-marquee-mask {
   -webkit-mask-image: linear-gradient(to right, transparent, black 12%, black 88%, transparent);
   mask-image: linear-gradient(to right, transparent, black 12%, black 88%, transparent);

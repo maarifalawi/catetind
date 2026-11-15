@@ -83,6 +83,31 @@ export function LandingHeroLp() {
         </LandingReveal>
       </div>
 
+      {/* ── PRELOAD VISUAL HERO (LCP) ───────────────────────────────────────────
+          Tanpa ini browser baru mulai mengunduh gambar hero setelah CSS & elemen
+          `<picture>` dievaluasi — padahal inilah elemen terbesar di layar
+          pertama. `media` dipasang supaya HP TIDAK pernah mengunduh board
+          desktop 1600px (dan sebaliknya). React 19 mengangkat `<link>` ini ke
+          `<head>`, jadi urutannya tidak bergantung posisi di JSX.
+
+          Kenapa bukan `next/image priority`: repo memakai
+          `images.unoptimized`, dan `<picture>` dibutuhkan supaya WebP dipilih
+          per breakpoint (lihat komentar di bawah). */}
+      <link
+        rel="preload"
+        as="image"
+        href={LP_HERO.boardImageWebp}
+        media="(min-width: 1200px)"
+        fetchPriority="high"
+      />
+      <link
+        rel="preload"
+        as="image"
+        href={LP_HERO.phoneImageWebp}
+        media="(max-width: 1199.98px)"
+        fetchPriority="high"
+      />
+
       {/* visual: desktop board / mobile layar ponsel.
           `<picture>` + `source media` dipakai supaya mobile TIDAK mengunduh
           GAMBARDEPAN.png (display:none tetap mengunduh gambar di <img> biasa). */}

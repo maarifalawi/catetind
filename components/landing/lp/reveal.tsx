@@ -1,7 +1,4 @@
-'use client'
-
-import { motion, useReducedMotion } from 'framer-motion'
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 
 /* ── REVEAL LANDING (meniru "appear animation" Framer) ───────────────────────
    Export Framer menyimpan animasi masuk di `script[type="framer/appear"]`.
@@ -17,10 +14,24 @@ import type { ReactNode } from 'react'
      social proof     opacity .001, y 96, delay .6
      mockup           opacity .001, y 128, scale .9, delay .6
 
-   Semuanya `once` (tidak diulang saat digulir balik) dan dimatikan untuk
-   pengguna dengan `prefers-reduced-motion`. Komponen ini SATU-SATUNYA tempat
-   angka itu hidup, jadi section berikutnya tinggal memanggil `<LandingReveal
-   y={…} delay={…}>` dan tidak menulis ulang konfigurasi animasi. */
+   ── KENAPA BUKAN `motion.div` LAGI (perbaikan kecepatan muat landing) ──────
+   Versi lama merender `motion.div` dengan `initial={{ opacity: 0, … }}`. Artinya
+   HTML dari server SUDAH membawa `style="opacity:0"` untuk setiap elemen hero
+   (terukur: 18 elemen di `https://catetind.com/`), sehingga pengunjung melihat
+   layar putih sampai seluruh chunk JS selesai diunduh + framer-motion hydrate +
+   spring 1 detik selesai. Di koneksi lambat itu berarti beberapa detik kosong.
+
+   Sekarang animasi yang sama dikerjakan CSS (app/globals.css →
+   `landing-reveal-in`): mulai dari frame pertama, tidak menunggu JS, dan tetap
+   berjalan kalau JS gagal dimuat. Komponen ini jadi server component biasa —
+   framer-motion tidak lagi ikut ke bundle hero/nav.
+
+   TRADE-OFF yang disengaja: dulu section di bawah lipatan baru beranimasi saat
+   digulir (`whileInView`). Tanpa JS itu tidak mungkin; animasi mulai saat
+   halaman tampil dan selesai dalam ~0,8 detik, jadi saat pengunjung menggulir
+   section sudah tampil penuh (tidak pernah ada section kosong). Angka Framer di
+   atas tetap satu-satunya sumber kebenaran, dan `prefers-reduced-motion`
+   dihormati lewat media query di globals.css. */
 
 export type LandingRevealProps = {
   children: ReactNode
@@ -36,14 +47,11 @@ export type LandingRevealProps = {
   /**
    * `load`  → animasi jalan begitu halaman tampil (hero & navbar; di export
    *           Framer semua elemen hero memakai appear-on-load);
-   * `view`  → animasi jalan saat elemen masuk viewport (section di bawah lipatan).
-   * Default `view` karena mayoritas section memakai itu.
+   * `view`  → section di bawah lipatan. Keduanya CSS, jadi tidak ada lagi
+   *           perbedaan waktu mulai yang bergantung pada hidrasi JS.
    */
   trigger?: 'load' | 'view'
 }
-
-/** transisi spring Framer: `type: spring, bounce: 0.2, duration: 1` */
-export const LANDING_SPRING = { type: 'spring', bounce: 0.2, duration: 1 } as const
 
 export function LandingReveal({
   children,
@@ -54,33 +62,23 @@ export function LandingReveal({
   skewY = 0,
   trigger = 'view',
 }: LandingRevealProps) {
-  const reduceMotion = useReducedMotion()
-
-  if (reduceMotion) {
-    return <div className={className}>{children}</div>
-  }
-
-  const hidden = { opacity: 0, y, scale, skewY }
-  const shown = { opacity: 1, y: 0, scale: 1, skewY: 0 }
-  const transition = { ...LANDING_SPRING, delay }
-
-  if (trigger === 'load') {
-    return (
-      <motion.div className={className} initial={hidden} animate={shown} transition={transition}>
-        {children}
-      </motion.div>
-    )
-  }
+  /* Custom property, bukan `transform` langsung: keyframe butuh nilai awal yang
+     berbeda per elemen, dan cara ini membuat keyframe-nya tetap satu (di
+     app/globals.css → `landing-reveal-in`) untuk semua pemakai. */
+  const style = {
+    '--lr-y': `${y}px`,
+    '--lr-scale': String(scale),
+    '--lr-skew': `${skewY}deg`,
+    '--lr-delay': `${Math.round(delay * 1000)}ms`,
+  } as CSSProperties
 
   return (
-    <motion.div
-      className={className}
-      initial={hidden}
-      whileInView={shown}
-      viewport={{ once: true, amount: 0.15 }}
-      transition={transition}
+    <div
+      className={className ? `landing-reveal ${className}` : 'landing-reveal'}
+      data-reveal-trigger={trigger}
+      style={style}
     >
       {children}
-    </motion.div>
+    </div>
   )
 }

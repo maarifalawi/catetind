@@ -919,10 +919,17 @@ export const LANDING_DEFAULT_PERIOD: BillingPeriod = 'lifetime'
    (234). Seed 234 tetap dipakai `/api/landing/stats`; hero sengaja memakai
    label statis supaya tidak berubah-ubah saat angka riil masih kecil.
 
-   Avatar memakai LIMA file lokal yang sudah disiapkan desainer
-   (`public/AVA 1.png` … `public/AVA 5.png`) — bukan foto stok pihak ketiga.
-   Tidak ada `tone` warna-warni lagi: bingkai avatar digambar komponen sebagai
-   outline gelap tipis supaya lima foto terlihat satu keluarga. */
+   Avatar memakai LIMA file lokal foto pengguna asli (sumber: `public/AVA 1.png`
+   … `public/AVA 5.png`) — bukan foto stok pihak ketiga.
+
+   PAKET PERFORMA: yang dikirim ke browser adalah varian WebP 96px
+   (`public/avatars/ava-N.webp`, digenerate `pnpm landing:webp`). Sebelumnya
+   halaman mengunduh PNG mentah 255–483 KB untuk lima foto yang dirender
+   28–36 px — total 1,88 MB hanya untuk ticker avatar, dan `<img loading="eager">`
+   membuat React mem-preload kelimanya di `<head>` sehingga berebut bandwidth
+   dengan gambar hero (LCP). Varian 96px cukup untuk layar 3× (avatar 36px) dan
+   totalnya di bawah 40 KB. File PNG asli tetap disimpan sebagai sumber
+   regenerasi, pola yang sama dengan `logoAI.png`. */
 export const LP_LIVE_SUBSCRIBERS = {
   /** seed database untuk `/api/landing/stats` (tidak ditampilkan di hero) */
   startCount: 234,
@@ -932,11 +939,11 @@ export const LP_LIVE_SUBSCRIBERS = {
   /** kalimat setelah angka — mis. "1.000+ orang udah pake" */
   labelTail: 'orang udah pake',
   avatarPool: [
-    { src: '/AVA 1.png' },
-    { src: '/AVA 2.png' },
-    { src: '/AVA 3.png' },
-    { src: '/AVA 4.png' },
-    { src: '/AVA 5.png' },
+    { src: '/avatars/ava-1.webp' },
+    { src: '/avatars/ava-2.webp' },
+    { src: '/avatars/ava-3.webp' },
+    { src: '/avatars/ava-4.webp' },
+    { src: '/avatars/ava-5.webp' },
   ],
 } as const
 
@@ -1531,7 +1538,10 @@ export const LP_MISSION = {
       title: 'Catet 4 detik lewat voice note atau scan struk',
       body: 'Tinggal ngomong atau foto struk',
       annotation: 'Voice & scan',
-      image: '/Dialog - Catat transaksi.png',
+      /* WebP 1280px hasil `pnpm landing:webp` — PNG aslinya 78–348 KB dan
+         diunduh penuh walau kartu hanya dirender ~600 px. Rasio aspek identik,
+         jadi `imageWidth/imageHeight` di bawah tetap nilai sumbernya. */
+      image: '/landing/dialog-catat-transaksi-1280.webp',
       imageWidth: 1760,
       imageHeight: 1551,
       imageSide: 'right',
@@ -1541,7 +1551,7 @@ export const LP_MISSION = {
       title: 'Tau jatah jajan harian kamu tiap pagi',
       body: 'Otomatis ngitung jatah aman harian biar akhir bulan ga sekarat',
       annotation: 'HUD & radar',
-      image: '/Section.png',
+      image: '/landing/section-jatah-harian-1280.webp',
       imageWidth: 1600,
       imageHeight: 1822,
       imageSide: 'left',
@@ -1551,7 +1561,7 @@ export const LP_MISSION = {
       title: 'Tanya Minca sebelum checkout',
       body: 'Konsultasi jatah jajan real-time dari data asli kamu, tanpa nyalahin',
       annotation: 'Minca',
-      image: '/Dialog - AI Coach CatetInd.png',
+      image: '/landing/dialog-ai-coach-1280.webp',
       imageWidth: 1760,
       imageHeight: 1700,
       imageSide: 'right',
@@ -1561,7 +1571,7 @@ export const LP_MISSION = {
       title: 'Tau pasti duit kamu lari ke mana',
       body: 'Liat pos boncos dari printilan kecil sampe gede.',
       annotation: 'Progres nyata',
-      image: '/Pengeluaran Bulan ini.png',
+      image: '/landing/pengeluaran-bulan-ini-1280.webp',
       imageWidth: 1600,
       imageHeight: 1735,
       imageSide: 'left',

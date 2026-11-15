@@ -7,17 +7,21 @@ import { cn } from '@/lib/utils'
 
 /* ── BUKTI SOSIAL HERO ───────────────────────────────────────────────────────
    Satu blok kecil di samping CTA:
-     · LIMA avatar lokal `public/AVA 1.png` … `AVA 5.png` (bukan foto stok
-       pihak ketiga), berderet dengan outline GELAP TIPIS — bukan halo warna.
-       Stroke memakai border 1px DI DALAM kotak avatar (bukan ring di luar),
-       jadi tidak mungkin terpotong oleh `overflow-hidden` ancestor;
+     · LIMA avatar lokal (varian WebP 96px dari `public/AVA 1.png` … `AVA 5.png`,
+       lihat `LP_LIVE_SUBSCRIBERS.avatarPool`), berderet dengan outline GELAP
+       TIPIS — bukan halo warna. Stroke memakai border 1px DI DALAM kotak avatar
+       (bukan ring di luar), jadi tidak mungkin terpotong oleh `overflow-hidden`
+       ancestor;
      · label publik `1.000+ orang udah pake` — angka statis, supaya hero tidak
        pernah menampilkan seed database 234;
      · siluet `UserRound` di belakang foto: kalau file gagal dimuat, lingkaran
        tetap rapi (tidak ada ikon gambar rusak).
 
-   Client hanya karena fallback `onError` butuh state. Tidak ada fetch/realtime
-   di sini; `GET /api/landing/stats` tetap tersedia untuk kebutuhan lain. */
+   PERFORMA: `loading="lazy"` + `fetchPriority="low"` SENGAJA dipakai. Foto ini
+   dirender 28–36 px, jadi tidak boleh berada di jalur kritis: versi lama
+   (`loading="eager"`) membuat React 19 menaruh lima `<link rel=preload
+   as=image>` di `<head>` untuk PNG 255–483 KB — 1,88 MB yang berebut bandwidth
+   dengan gambar hero (kandidat LCP). */
 
 const NUMBER = new Intl.NumberFormat('id-ID')
 
@@ -58,9 +62,10 @@ export function LandingLiveSubscribers({ className }: { className?: string }) {
                   <img
                     src={avatar.src}
                     alt=""
-                    width={72}
-                    height={72}
-                    loading="eager"
+                    width={96}
+                    height={96}
+                    loading="lazy"
+                    fetchPriority="low"
                     decoding="async"
                     onError={() => markAvatarFailed(avatar.src)}
                     className="absolute inset-0 size-full object-cover"

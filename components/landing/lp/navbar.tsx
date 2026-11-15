@@ -7,7 +7,6 @@ import { LP_NAV, LP_NAV_LINKS, lpHref } from '@/lib/data/landing'
 import { cn } from '@/lib/utils'
 import { LandingButton } from './button'
 import { LogoWordmark } from '@/components/catetind/logo-wordmark'
-import { LANDING_SPRING } from './reveal'
 
 /* ── NAVBAR LANDING LP ───────────────────────────────────────────────────────
    Perilaku yang disalin dari export Framer:
@@ -151,12 +150,12 @@ export function LandingNavbarLp({ basePath = '' }: { basePath?: string }) {
         ref={headerRef}
         className="fixed inset-x-0 top-0 z-50 w-full px-5 pt-4 landing:px-10 landing:pt-5"
       >
-        <motion.div
-          initial={reduceMotion ? false : { opacity: 0, y: -80 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={LANDING_SPRING}
+        {/* `landing-nav-reveal` = animasi turun-dari-atas ala export Framer, tapi
+            dikerjakan CSS (app/globals.css). Dulu `motion.div` dengan `initial`
+            opacity 0, sehingga nav ikut kosong sampai JS hydrate. */}
+        <div
           className={cn(
-            'mx-auto flex h-14 w-full max-w-[1200px] items-center transition-[background-color,box-shadow,color] duration-300 motion-reduce:transition-none',
+            'landing-nav-reveal mx-auto flex h-14 w-full max-w-[1200px] items-center transition-[background-color,box-shadow,color] duration-300 motion-reduce:transition-none',
             floating
               ? 'rounded-[24px] pr-1 pl-4 shadow-landing-nav landing:px-5'
               : 'rounded-none px-0 shadow-none',
@@ -252,7 +251,7 @@ export function LandingNavbarLp({ basePath = '' }: { basePath?: string }) {
               <MenuIcon open={menuOpen} />
             </button>
           </div>
-        </motion.div>
+        </div>
       </header>
 
       {/* panel menu mobile — satu surface tambahan, dimulai DI BAWAH header */}

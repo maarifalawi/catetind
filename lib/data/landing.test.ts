@@ -280,6 +280,11 @@ describe('LP_MISSION — anchor & aset', () => {
         decodeURIComponent(src.replace(/^\//, '')),
       )
       expect(fs.existsSync(file), `${src} tidak ada`).toBe(true)
+      /* Gambar kartu dirender ~600 px; yang dikirim harus varian WebP yang
+         sudah diperkecil (PNG sumbernya 78–348 KB). Lihat `pnpm landing:webp`. */
+      expect(src.endsWith('.webp'), `${src} bukan varian WebP`).toBe(true)
+      const kb = fs.statSync(file).size / 1024
+      expect(kb, `${src} terlalu besar (${Math.round(kb)} KB)`).toBeLessThan(120)
     }
 
     /* width/height dari markup export dipakai supaya layout tidak melompat */
@@ -576,14 +581,14 @@ describe('LP_LIVE_SUBSCRIBERS', () => {
     expect(LP_LIVE_SUBSCRIBERS.startCount).toBe(234)
   })
 
-  it('avatar memakai lima file lokal AVA 1–AVA 5, bukan foto stok', () => {
+  it('avatar memakai lima file WebP lokal 96px, bukan foto stok / PNG mentah', () => {
     const sources = LP_LIVE_SUBSCRIBERS.avatarPool.map((avatar) => avatar.src)
     expect(sources).toEqual([
-      '/AVA 1.png',
-      '/AVA 2.png',
-      '/AVA 3.png',
-      '/AVA 4.png',
-      '/AVA 5.png',
+      '/avatars/ava-1.webp',
+      '/avatars/ava-2.webp',
+      '/avatars/ava-3.webp',
+      '/avatars/ava-4.webp',
+      '/avatars/ava-5.webp',
     ])
 
     for (const avatar of LP_LIVE_SUBSCRIBERS.avatarPool) {
@@ -593,6 +598,12 @@ describe('LP_LIVE_SUBSCRIBERS', () => {
         decodeURIComponent(avatar.src.replace(/^\//, '')),
       )
       expect(fs.existsSync(file), `${avatar.src} tidak ada`).toBe(true)
+      /* Ukuran ikut dijaga: avatar dirender 28–36 px, jadi berkas 100 KB lebih
+         berarti hero kehilangan bandwidth tanpa alasan. Batas 10 KB memberi
+         ruang untuk avatar baru yang lebih detail tanpa membuka pintu ke PNG
+         mentah 255–483 KB seperti sebelumnya. */
+      const kb = fs.statSync(file).size / 1024
+      expect(kb, `${avatar.src} terlalu besar (${Math.round(kb)} KB)`).toBeLessThan(10)
       /* bingkai avatar kini outline gelap tipis di komponen — data tidak
          membawa warna halo lagi */
       expect('tone' in avatar).toBe(false)
