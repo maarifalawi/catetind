@@ -3,6 +3,7 @@ import dynamic from 'next/dynamic'
 import { LandingFooterLp } from '@/components/landing/lp/footer'
 import { LandingHeroLp } from '@/components/landing/lp/hero'
 import { LandingNavbarLp } from '@/components/landing/lp/navbar'
+import { LandingPurchaseToastsLazy } from '@/components/landing/lp/purchase-toasts-lazy'
 import { LandingSectionDivider } from '@/components/landing/lp/section-divider'
 import {
   LANDING_META,
@@ -44,9 +45,6 @@ const LandingPricingLp = dynamic(() =>
 )
 const LandingFaqLp = dynamic(() =>
   import('@/components/landing/lp/faq').then((m) => m.LandingFaqLp),
-)
-const LandingPurchaseToasts = dynamic(() =>
-  import('@/components/landing/lp/purchase-toasts').then((m) => m.LandingPurchaseToasts),
 )
 
 export const metadata: Metadata = {
@@ -109,8 +107,10 @@ export default function LandingPage() {
       <LandingPricingLp />
       <LandingSectionDivider marker={LANDING_SECTION_MARKERS.faq} />
       <LandingFaqLp />
-      {/* notifikasi pembelian bergiliran (kanan/kiri bawah) — hanya di landing */}
-      <LandingPurchaseToasts />
+      {/* notifikasi pembelian bergiliran (kanan/kiri bawah) — hanya di landing.
+          Dimuat SETELAH interaksi pertama / 6 detik idle: dekoratif, jadi tidak
+          boleh ikut jalur kritis (lihat purchase-toasts-lazy.tsx). */}
+      <LandingPurchaseToastsLazy />
       <LandingFooterLp />
     </main>
   )

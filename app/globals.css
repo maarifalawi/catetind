@@ -1102,6 +1102,87 @@ body[data-catetind-sheet-open='true'] [data-catetind-page-root] {
   animation: landing-nav-in 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* umpan pembeli (kiri/kanan bawah) — masuk, keluar, dan bilah waktu memakai
+   CSS; dulu tiga animasi ini berasal dari framer-motion dan membuat pustaka
+   224 KB ikut ke bundel landing. */
+@keyframes landing-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes landing-toast-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+}
+
+@keyframes landing-toast-progress {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+.landing-toast {
+  animation: landing-toast-in 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.landing-toast[data-closing='true'] {
+  animation: landing-toast-out 200ms ease-in both;
+}
+
+.landing-toast-progress {
+  animation-name: landing-toast-progress;
+  animation-timing-function: linear;
+  animation-fill-mode: both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-toast,
+  .landing-toast[data-closing='true'] {
+    animation: none;
+  }
+  .landing-toast-progress {
+    display: none;
+  }
+}
+
+/* panel FAQ landing — tinggi dianimasikan lewat trik grid `0fr → 1fr`
+   (didukung Chrome 107+, Safari 16+, Firefox 120+; di browser lama panel
+   langsung terbuka/tertutup tanpa animasi — tetap benar). */
+.landing-faq-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows 280ms ease-in-out,
+    opacity 280ms ease-in-out;
+}
+
+.landing-faq-panel[data-open='true'] {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-faq-panel {
+    transition: none;
+  }
+}
+
 /* panel menu mobile landing — muncul dari atas 8px (dulu framer-motion).
    Hanya dirender saat menu dibuka, jadi keyframe ini tidak pernah jalan di
    muat pertama dan pustaka animasi tidak perlu ikut ke bundel navbar. */

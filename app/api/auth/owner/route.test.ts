@@ -19,7 +19,8 @@ vi.mock('@/lib/supabase/config', () => ({
 }))
 vi.mock('@/lib/supabase/server', () => ({ serverSupabase: vi.fn() }))
 
-import { POST, resetOwnerAttemptsForTest } from './route'
+import { POST } from './route'
+import { resetOwnerAttempts } from '@/lib/auth/owner-attempts'
 import { createClient } from '@supabase/supabase-js'
 import { hasSupabaseConfig, hasSupabaseServiceRole } from '@/lib/supabase/config'
 import { serverSupabase } from '@/lib/supabase/server'
@@ -64,7 +65,7 @@ beforeEach(() => {
   delete process.env.OWNER_TEST_NICKNAME
   delete process.env.OWNER_TEST_LOGIN_ENABLED
 
-  resetOwnerAttemptsForTest()
+  resetOwnerAttempts()
 
   create.mockReset()
   createUser.mockReset()

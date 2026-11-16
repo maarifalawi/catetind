@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { allowAttempt, callerKey } from '@/lib/auth/owner-attempts'
 import {
   OWNER_CREDENTIALS_MESSAGE,
   OWNER_DISABLED_MESSAGE,
@@ -53,42 +54,10 @@ export const dynamic = 'force-dynamic'
 
 /** maksimum percobaan per IP dalam satu jendela waktu — kode tetap hanya 6
  *  angka, jadi batas ketat inilah yang membuatnya tidak bisa ditebak */
-const ATTEMPT_LIMIT = 10
-const ATTEMPT_WINDOW_MS = 10 * 60 * 1000
-/** batas kasar supaya Map tidak tumbuh tanpa henti di proses yang hidup lama */
-const ATTEMPT_KEYS_LIMIT = 500
-
-const attempts = new Map<string, number[]>()
-
-function callerKey(request: NextRequest): string {
-  const forwarded = request.headers.get('x-forwarded-for') ?? ''
-  const first = forwarded.split(',')[0]?.trim()
-  return first || request.headers.get('x-real-ip')?.trim() || 'unknown'
-}
-
-/** catat percobaan; `false` = sudah lewat batas */
-function allowAttempt(key: string, now = Date.now()): boolean {
-  const recent = (attempts.get(key) ?? []).filter((time) => now - time < ATTEMPT_WINDOW_MS)
-  if (recent.length >= ATTEMPT_LIMIT) {
-    attempts.set(key, recent)
-    return false
-  }
-  recent.push(now)
-  attempts.set(key, recent)
-  if (attempts.size > ATTEMPT_KEYS_LIMIT) {
-    attempts.forEach((times, entry) => {
-      const fresh = times.filter((time) => now - time < ATTEMPT_WINDOW_MS)
-      if (fresh.length === 0) attempts.delete(entry)
-      else attempts.set(entry, fresh)
-    })
-  }
-  return true
-}
-
-/** hanya untuk test: kosongkan penghitung percobaan */
-export function resetOwnerAttemptsForTest(): void {
-  attempts.clear()
-}
+/* ── PEMBATAS PERCOBAAN ─────────────────────────────────────────────────────
+   Penghitungnya hidup di `lib/auth/owner-attempts.ts`: file `route` hanya boleh
+   mengekspor handler + opsi segmen, jadi helper reset untuk tes tidak bisa
+   tinggal di sini (validator webpack menolaknya). */
 
 function fail(message: string, status: number) {
   return NextResponse.json({ ok: false, error: message }, { status })

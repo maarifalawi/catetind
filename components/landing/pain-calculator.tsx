@@ -9,7 +9,7 @@ import {
   type KeyboardEvent,
   type MouseEvent,
 } from 'react'
-import { animate, useInView, useReducedMotion } from 'framer-motion'
+import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion'
 import { ArrowRight, Calculator } from 'lucide-react'
 import {
   DEFAULT_PAIN_RESULT_TAB,
@@ -35,13 +35,14 @@ import { LandingReveal } from './lp/reveal'
 
    Hanya satu angka hasil yang tampil pada satu waktu. Tab mengganti angka
    (1 tahun / 5 tahun / diinvestasikan) tanpa memuat ulang apa pun; hitungan
-   tetap client-side lewat useMemo, dan count-up memakai Framer Motion. */
+   tetap client-side lewat useMemo, dan count-up memakai requestAnimationFrame
+   (bukan framer-motion — pustaka itu tidak boleh masuk bundel landing). */
 
 const COPY = PAIN_CALCULATOR_COPY
 const DEFAULTS = PAIN_CALCULATOR_DEFAULTS
 
 export function LandingPainCalculator() {
-  const reduceMotion = useReducedMotion()
+  const reduceMotion = usePrefersReducedMotion()
   const [salary, setSalary] = useState<number>(DEFAULTS.salary)
   const [leak, setLeak] = useState<number>(DEFAULTS.defaultLeak)
   const [tab, setTab] = useState<PainResultTabId>(DEFAULT_PAIN_RESULT_TAB)
@@ -244,14 +245,38 @@ export function LandingPainCalculator() {
 /* ── COUNT-UP ANGKA ─────────────────────────────────────────────────────────
    Render server = angka akhir (terbaca tanpa JS), lalu saat masuk viewport
    berdetak dari 0. Perubahan slider menyambung dari angka yang sedang tampil.
-   `prefers-reduced-motion` → langsung lompat ke nilai akhir. */
+   `prefers-reduced-motion` → langsung lompat ke nilai akhir.
+
+   DULU memakai framer-motion (`useInView` + `animate`), dan itu menyeret
+   seluruh pustaka animasi ke landing. Sekarang: IntersectionObserver +
+   requestAnimationFrame dengan easing kubik yang sama (ease-out). */
 function AnimatedRupiah({ value, className }: { value: number; className?: string }) {
   const ref = useRef<HTMLSpanElement>(null)
-  const inView = useInView(ref, { once: true, amount: 0.4 })
-  const reduceMotion = useReducedMotion()
+  const reduceMotion = usePrefersReducedMotion()
+  const [inView, setInView] = useState(false)
   const [display, setDisplay] = useState(value)
   const shownRef = useRef(value)
   const startedRef = useRef(false)
+
+  /* "sekali terlihat" — observer langsung dilepas supaya tidak ada beban sisa */
+  useEffect(() => {
+    const node = ref.current
+    if (!node || typeof IntersectionObserver === 'undefined') {
+      setInView(true)
+      return
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setInView(true)
+          observer.disconnect()
+        }
+      },
+      { threshold: 0.4 },
+    )
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [])
 
   useEffect(() => {
     if (!inView) return
@@ -264,18 +289,26 @@ function AnimatedRupiah({ value, className }: { value: number; className?: strin
     const firstRun = !startedRef.current
     const from = firstRun ? 0 : shownRef.current
     startedRef.current = true
+    const duration = firstRun ? 900 : 450
+    const start = performance.now()
+    let frame = 0
 
-    const controls = animate(from, value, {
-      duration: firstRun ? 0.9 : 0.45,
-      ease: 'easeOut',
-      onUpdate: (latest) => {
-        const rounded = Math.round(latest)
-        shownRef.current = rounded
-        setDisplay(rounded)
-      },
-    })
+    const tick = (now: number) => {
+      const progress = Math.min(1, (now - start) / duration)
+      const eased = 1 - Math.pow(1 - progress, 3)
+      const current = Math.round(from + (value - from) * eased)
+      shownRef.current = current
+      setDisplay(current)
+      if (progress < 1) {
+        frame = requestAnimationFrame(tick)
+      } else {
+        shownRef.current = value
+        setDisplay(value)
+      }
+    }
 
-    return () => controls.stop()
+    frame = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(frame)
   }, [inView, value, reduceMotion])
 
   return (

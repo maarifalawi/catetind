@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
-import { motion, useReducedMotion } from 'framer-motion'
 import { ChevronDown, CircleHelp, MessageCircle, Plus } from 'lucide-react'
 import { LP_FAQ, type LpFaqCategoryId, type LpFaqItem } from '@/lib/data/landing'
 import { cn } from '@/lib/utils'
@@ -295,7 +294,6 @@ function FaqRow({
   open: boolean
   onToggle: () => void
 }) {
-  const reduceMotion = useReducedMotion()
   const triggerId = `landing-faq-trigger-${item.id}`
   const panelId = `landing-faq-panel-${item.id}`
 
@@ -336,21 +334,24 @@ function FaqRow({
       </button>
 
       {/* Panel SELALU ada di DOM supaya `aria-controls` tidak menunjuk elemen
-          yang hilang saat tertutup; tinggi 0 + aria-hidden menyembunyikannya. */}
-      <motion.div
+          yang hilang saat tertutup; tinggi 0 (grid `0fr`) + aria-hidden
+          menyembunyikannya. Animasi tinggi memakai trik grid `0fr → 1fr`
+          (app/globals.css → `.landing-faq-panel`) sehingga TIDAK perlu
+          framer-motion — pustaka itu dulu menyeret ±224 KB ke bundel landing. */}
+      <div
         id={panelId}
         role="region"
         aria-labelledby={triggerId}
         aria-hidden={!open}
-        initial={false}
-        animate={{ height: open ? 'auto' : 0, opacity: open ? 1 : 0 }}
-        transition={reduceMotion ? { duration: 0 } : { duration: 0.28, ease: 'easeInOut' }}
-        className="overflow-hidden"
+        data-open={open ? 'true' : 'false'}
+        className="landing-faq-panel overflow-hidden"
       >
-        <p className="max-w-[680px] px-6 pb-6 pr-16 text-[16px] leading-[1.6] text-forest-muted landing-tab:px-7 landing-tab:pb-7">
-          {item.answer}
-        </p>
-      </motion.div>
+        <div className="min-h-0 overflow-hidden">
+          <p className="max-w-[680px] px-6 pb-6 pr-16 text-[16px] leading-[1.6] text-forest-muted landing-tab:px-7 landing-tab:pb-7">
+            {item.answer}
+          </p>
+        </div>
+      </div>
     </div>
   )
 }

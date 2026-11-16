@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { BadgeCheck, ShoppingBag, X } from 'lucide-react'
 import {
   LP_PURCHASE_NOTIF as COPY,
@@ -108,8 +107,8 @@ function rememberSeen(seen: Set<string>, key: string) {
 }
 
 export function LandingPurchaseToasts() {
-  const reduceMotion = useReducedMotion()
   const [current, setCurrent] = useState<PurchaseNotification | null>(null)
+  const [closing, setClosing] = useState(false)
   const [dismissed, setDismissed] = useState(false)
   const [ready, setReady] = useState(false)
 
@@ -187,6 +186,7 @@ export function LandingPurchaseToasts() {
     if (!ready || dismissed) return
     let cancelled = false
     let hideId = 0
+    let closeId = 0
     let nextId = 0
 
     const pick = (): PurchaseNotification | null => {
@@ -236,8 +236,11 @@ export function LandingPurchaseToasts() {
 
       lastHandleRef.current = item.handle
       sessionSet(LAST_KEY, item.handle)
+      setClosing(false)
       setCurrent(item)
-      hideId = window.setTimeout(() => setCurrent(null), COPY.visibleMs)
+      /* animasi keluar dikerjakan CSS: `data-closing` 200 ms sebelum unmount */
+      hideId = window.setTimeout(() => setClosing(true), COPY.visibleMs)
+      closeId = window.setTimeout(() => setCurrent(null), COPY.visibleMs + 200)
 
       const gap =
         Math.random() < COPY.longGapChance
@@ -251,6 +254,7 @@ export function LandingPurchaseToasts() {
     return () => {
       cancelled = true
       window.clearTimeout(hideId)
+      window.clearTimeout(closeId)
       window.clearTimeout(nextId)
     }
   }, [ready, dismissed])
@@ -263,17 +267,13 @@ export function LandingPurchaseToasts() {
 
   return (
     <div className="pointer-events-none fixed inset-x-3 bottom-4 z-50 flex justify-center landing:inset-x-auto landing:bottom-6 landing:left-6 landing:justify-start">
-      <AnimatePresence>
-        {current && !dismissed ? (
-          <motion.div
+      {current && !dismissed ? (
+          <div
             key={`${current.id}-${shownRef.current}`}
             role="status"
             aria-live="polite"
-            initial={reduceMotion ? false : { opacity: 0, y: 18, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 10, scale: 0.98 }}
-            transition={{ type: 'spring', bounce: 0.22, duration: 0.55 }}
-            className="pointer-events-auto relative flex w-full max-w-[360px] items-center gap-3 overflow-hidden rounded-2xl border border-soil/10 bg-canvas/95 p-3 pr-2.5 shadow-landing-pop backdrop-blur-xl"
+            data-closing={closing ? 'true' : 'false'}
+            className="landing-toast pointer-events-auto relative flex w-full max-w-[360px] items-center gap-3 overflow-hidden rounded-2xl border border-soil/10 bg-canvas/95 p-3 pr-2.5 shadow-landing-pop backdrop-blur-xl"
           >
             <span
               className={cn(
@@ -312,18 +312,13 @@ export function LandingPurchaseToasts() {
               <X className="size-3.5" strokeWidth={2.4} aria-hidden />
             </button>
 
-            {reduceMotion ? null : (
-              <motion.span
-                aria-hidden
-                initial={{ scaleX: 1 }}
-                animate={{ scaleX: 0 }}
-                transition={{ duration: COPY.visibleMs / 1000, ease: 'linear' }}
-                className="absolute inset-x-0 bottom-0 h-0.5 origin-left bg-mint"
-              />
-            )}
-          </motion.div>
+            <span
+              aria-hidden
+              style={{ animationDuration: `${COPY.visibleMs}ms` }}
+              className="landing-toast-progress absolute inset-x-0 bottom-0 h-0.5 origin-left bg-mint"
+            />
+          </div>
         ) : null}
-      </AnimatePresence>
     </div>
   )
 }
