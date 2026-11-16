@@ -46,3 +46,9 @@ qa-shots/
 
 # Metadata folder Windows yang ikut tersalin saat repo diunduh ke Desktop.
 desktop.ini
+
+# artefak pengukuran lokal (lighthouse/json sementara)
+tmp-*.json
+tmp-*.log
+tmp-*.mjs
+tmp-*.txt
