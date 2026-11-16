@@ -72,10 +72,21 @@ export function LandingReveal({
     '--lr-delay': `${Math.round(delay * 1000)}ms`,
   } as CSSProperties
 
+  /* HERO/NAVBAR (`trigger="load"`) TIDAK memudar, hanya bergeser.
+     Alasannya bukan selera: Chrome TIDAK menghitung elemen ber-opacity 0 sebagai
+     kandidat Largest Contentful Paint. Selama hero memudar dari 0, LCP halaman
+     ini jatuh ke elemen kecil yang kebetulan mengecat terakhir (sebelumnya logo
+     navbar, lalu avatar 36 px) — LCP jadi 5–6 detik padahal teks + gambar hero
+     sudah terlihat ±1 detik. Dengan `data-lr-fade="false"` hero dicat OPAQUE
+     sejak frame pertama; animasi geser tetap ada dan LCP mengikuti elemen yang
+     benar. Section di bawah lipatan tetap memudar seperti sebelumnya. */
+  const fade = trigger !== 'load'
+
   return (
     <div
       className={className ? `landing-reveal ${className}` : 'landing-reveal'}
       data-reveal-trigger={trigger}
+      data-lr-fade={fade ? 'true' : 'false'}
       style={style}
     >
       {children}

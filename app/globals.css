@@ -1093,9 +1093,28 @@ body[data-catetind-sheet-open='true'] [data-catetind-page-root] {
   }
 }
 
+@keyframes landing-reveal-slide {
+  from {
+    transform: translateY(var(--lr-y, 0px)) scale(var(--lr-scale, 1))
+      skewY(var(--lr-skew, 0deg));
+  }
+  to {
+    transform: translateY(0) scale(1) skewY(0deg);
+  }
+}
+
 .landing-reveal {
   animation: landing-reveal-in 720ms cubic-bezier(0.22, 1, 0.36, 1) both;
   animation-delay: var(--lr-delay, 0ms);
+}
+
+/* Hero & navbar: HANYA geser, tanpa fade. Chrome tidak menghitung elemen
+   ber-opacity 0 sebagai kandidat LCP, jadi memudarkan hero membuat LCP halaman
+   jatuh ke elemen kecil yang mengecat terakhir (lihat catatan di
+   components/landing/lp/reveal.tsx). */
+.landing-reveal[data-lr-fade='false'] {
+  animation-name: landing-reveal-slide;
+  opacity: 1;
 }
 
 .landing-nav-reveal {
