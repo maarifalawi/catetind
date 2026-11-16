@@ -71,3 +71,71 @@ Catatan jujur: Turbopack (Next 16) tetap mengirim sebagian chunk bersama di `<sc
 
 `next/font/local` dengan `display: 'swap'` (teks tampil seketika memakai fallback), `preload: true`, `fallback: ['system-ui','Segoe UI','Arial','Helvetica','sans-serif']`, dan `adjustFontFallback: 'Arial'`. Satu berkas variable `wght 100–900` (subset latin, 72 KB) tetap menjadi satu-satunya typeface — tidak ada permintaan ke Google Fonts.
 
+
+---
+
+## 6. Gerbang kualitas & pengujian browser
+
+| Gerbang | Hasil |
+|---|---|
+| `pnpm exec tsc --noEmit` | bersih (0 error) |
+| `pnpm test` | **153 berkas · 2.076 tes lolos** (termasuk 6 tes baru `app/layout-isolation.test.ts`) |
+| `node scripts/theme/audit-palette.mjs` | 707 berkas, 0 warna di luar palet |
+| `node scripts/theme/audit-text-contrast.mjs` | 651 berkas, 0 teks < 60% opacity |
+| `node scripts/tools/audit-copy.mjs` | 477 berkas, 79 kalimat terlarang → 0 kemunculan |
+| `pnpm build` | sukses; `/` tetap `○ (Static)` |
+| `node scripts/qa/audit.mjs` (19 halaman × HP+desktop, akun berbayar & gratis) | **206/206 lolos · 0 gagal** |
+| `node scripts/qa/navigation.mjs` (**baru**) | **29/29 lolos** |
+
+`scripts/qa/navigation.mjs` mengunci hal-hal yang paling mudah rusak oleh pemindahan folder:
+
+| Cek | Hasil |
+|---|---|
+| 11 halaman publik dijawab < 400 (`/`, `/login`, `/contact`, `/bantuan`, `/changelog`, `/privacy`, `/terms`, `/security`, `/welcome`, `/checkout`, `/registered`) | lolos |
+| **0** panggilan `/api/session`, `/api/data`, `/api/onboarding` saat landing anonim dibuka | lolos |
+| 14 tautan internal yang ditemukan di halaman publik semuanya hidup (< 400) | lolos |
+| landing → CTA “Cobain” → `/checkout?period=lifetime&plan=waras` | lolos |
+| landing → “Masuk” → `/login` | lolos |
+| `/wallet` tanpa sesi → `/login?next=/wallet` | lolos |
+| URL tak dikenal anonim → `/login` (gerbang sesi, bukan 404) | lolos |
+| `/app`, `/wallet`, `/bills`, `/joint`, `/settings` dengan sesi berbayar → terbuka + `data-catetind-page-root` ada | lolos (5/5) |
+| `/admin` dengan akun non-admin → dialihkan ke `/app` (bukan 500/kosong) | lolos |
+| 404 untuk pengguna bersesi → status **404**, tanpa cangkang app | lolos |
+
+---
+
+## 7. Lighthouse Mobile — sebelum vs sesudah
+
+Metode: Lighthouse 12, `--form-factor=mobile --throttling-method=simulate` (metode yang sama dengan PageSpeed Insights), dijalankan **ke `https://catetind.com/`**. Empat run sesudah perbaikan diambil berurutan dengan pembersihan proses Chrome antar-run.
+
+| Metrik | Sebelum (15 Nov, `783fba6`) | Sesudah run 1 | run 2 | run 3 | run 4 | **Median** |
+|---|---|---|---|---|---|---|
+| Performance score | **57** | 76 | 77 | **97** | 68 | **76,5** |
+| FCP | 3.290 ms | 1.975 | 3.667 | **1.369** | 3.799 | 2.821 ms |
+| LCP | 6.577 ms | 4.595 | 3.804 | **2.494** | 4.678 | 4.200 ms |
+| TBT | 262 ms | 267 | 148 | **56** | 152 | **150 ms** |
+| CLS | 0 | 0 | 0,047 | 0 | 0,047 | 0,024 |
+| Speed Index | 9.421 ms | 3.078 | 4.445 | **1.483** | 6.646 | 3.762 ms |
+| Berat halaman | 916 KB | 832 | 833 | 833 | 833 | **833 KB** |
+| JS transfer | 542 KB | — | — | — | — | **496 KB** |
+| Elemen LCP | logo navbar (`/Dashboard.png`) | gambar hero | h1 | h1 | h1 | — |
+
+**Cara membaca angka ini dengan jujur.** Mesin uji ini (VM Windows tanpa GPU, jaringan kantor yang dipakai bersama proses `npx`/install) menghasilkan **varians besar antar-run**: FCP 1,4 s – 3,8 s untuk halaman yang sama. Skor 97 muncul saat jaringan+menganggur; 68 saat jaringan sedang sibuk. Yang bisa disimpulkan dengan aman:
+
+- **TBT turun drastis** (262 → median 150 ms, terbaik 56 ms) — cangkang app tidak lagi dihidrasi di landing.
+- **Elemen LCP sudah benar** (h1 / gambar hero, bukan lagi logo 24 px atau avatar 36 px).
+- **LCP terbaik 2,5 s** dan **Speed Index terbaik 1,5 s** pada run yang jaringannya sehat.
+- Skor median di mesin ini 76,5; **run bersih 97**. Diukur dari Indonesia (TTFB ke `sin1` ±50–150 ms, bukan 770–850 ms seperti dari VM ini) angka riil seharusnya berada di antara keduanya — untuk angka resmi, jalankan PageSpeed Insights pada `https://catetind.com/`.
+
+### Sisa hambatan struktural (bukan bug, tapi batas Next 16)
+
+Graf impor landing sudah bersih: 27 berkas yang terjangkau dari `app/page.tsx` + `app/layout.tsx` **tidak menyentuh `framer-motion`, `@supabase`, `vaul`, atau `recharts`** (diverifikasi skrip penelusuran impor). Tetap saja HTML landing memuat 26 chunk / 1.638 KB mentah (496 KB terkirim) karena **Next 16 mengirim chunk klien bersama ke semua rute**: chunk framer-motion 123 KB ikut diunduh juga oleh `/privacy` dan `/terms` yang tidak punya satu pun komponen klien. Itulah sebabnya pemisahan layout menurunkan *eksekusi* (0 request sesi, TBT anjlok) tetapi tidak banyak menurunkan *byte*.
+
+Untuk menembus median 85+ secara konsisten, langkah berikutnya adalah mengecilkan JS bersama itu sendiri:
+
+1. cabut framer-motion dari seluruh komponen app (±32 berkas memakainya: bill-card, bills-screen, budget-*, wealth-*, weekly-recap, transaction-input-engine, …) dan ganti dengan keyframes CSS seperti yang sudah dilakukan di landing; atau
+2. pindahkan `AIChatWidget`, `MobileBottomNav`, dan sheet-sheet berat ke `next/dynamic` di dalam `app/(app)/layout.tsx` supaya tidak ikut graf klien awal; dan/atau
+3. evaluasi build webpack (`next build --webpack`) yang memecah per-entry — sudah dicoba, build-nya lolos setelah `lib/auth/owner-attempts.ts` dipisah, tetapi hasil chunk-nya sama besarnya (36 chunk / 1.551 KB), jadi tidak dipakai.
+
+Catatan teknis kecil yang ikut diperbaiki: `resetOwnerAttemptsForTest` dulu diekspor dari `app/api/auth/owner/route.ts`. File `route` hanya boleh mengekspor handler + opsi segmen; helper itu dipindah ke `lib/auth/owner-attempts.ts` (bersama penghitungnya) dan tes mengimpornya dari sana.
+
