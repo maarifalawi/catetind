@@ -59,12 +59,20 @@ const SHORTCUT_ICON: Record<string, LucideIcon> = {
   '/': Home,
 }
 
-export function NotFoundScreen() {
-  return (
-    <ScreenShell>
-      {/* kolom 3–11: mengikuti grid app, tapi sengaja lapang supaya terasa jeda */}
-      <div className="grid grid-cols-1 lg:grid-cols-12">
-        <div className="lg:col-span-8 lg:col-start-3">
+export function NotFoundScreen({ withShell = true }: { withShell?: boolean } = {}) {
+  /* `panel` = isi halaman tanpa chrome; `withShell` (default true) membungkusnya
+     dengan ScreenShell — pola yang sama dengan `SegmentErrorScreen`.
+
+     Halaman 404 AKAR memakai `withShell={false}`: sejak paket 108 layout akar
+     tidak lagi memasang SubscriptionGate/UpgradeGate, sehingga ScreenShell akan
+     melempar "useSubscriptionGate harus dipakai di dalam
+     <SubscriptionGateProvider>". 404 juga halaman PUBLIK — pengunjung anonim
+     tidak perlu (dan tidak boleh) mengunduh cangkang app hanya untuk membaca
+     "halaman tidak ditemukan". */
+  const panel = (
+    /* kolom 3–11: mengikuti grid app, tapi sengaja lapang supaya terasa jeda */
+    <div className="grid grid-cols-1 lg:grid-cols-12">
+      <div className="lg:col-span-8 lg:col-start-3">
           {/* ── 1. KEPALA — tenangkan dulu, jelaskan kemudian ─────────────── */}
           <header className="flex flex-col items-center text-center">
             {/* `role="img"` di pembungkus = satu pengumuman bermakna untuk
@@ -150,6 +158,10 @@ export function NotFoundScreen() {
           </div>
         </div>
       </div>
-    </ScreenShell>
   )
+
+  if (!withShell) {
+    return <div className="w-full px-5 py-10 sm:px-8 lg:py-16">{panel}</div>
+  }
+  return <ScreenShell>{panel}</ScreenShell>
 }

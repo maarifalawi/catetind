@@ -97,6 +97,8 @@ export function LandingHeroLp() {
         rel="preload"
         as="image"
         href={LP_HERO.boardImageWebp}
+        imageSrcSet={LP_HERO.boardImageSrcSet}
+        imageSizes={LP_HERO.boardImageSizes}
         media="(min-width: 1200px)"
         fetchPriority="high"
       />
@@ -104,6 +106,8 @@ export function LandingHeroLp() {
         rel="preload"
         as="image"
         href={LP_HERO.phoneImageWebp}
+        imageSrcSet={LP_HERO.phoneImageSrcSet}
+        imageSizes={LP_HERO.phoneImageSizes}
         media="(max-width: 1199.98px)"
         fetchPriority="high"
       />
@@ -122,10 +126,15 @@ export function LandingHeroLp() {
           <source
             media="(min-width: 1200px)"
             type="image/webp"
-            srcSet={LP_HERO.boardImageWebp}
+            srcSet={LP_HERO.boardImageSrcSet}
+            sizes={LP_HERO.boardImageSizes}
           />
           <source media="(min-width: 1200px)" srcSet={LP_HERO.boardImage} />
-          <source type="image/webp" srcSet={LP_HERO.phoneImageWebp} />
+          <source
+            type="image/webp"
+            srcSet={LP_HERO.phoneImageSrcSet}
+            sizes={LP_HERO.phoneImageSizes}
+          />
           <img
             src={LP_HERO.phoneImage}
             alt={LP_HERO.visualAlt}

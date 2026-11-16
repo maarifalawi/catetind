@@ -1,13 +1,9 @@
 import type { Metadata } from 'next'
-import { LandingFaqLp } from '@/components/landing/lp/faq'
+import dynamic from 'next/dynamic'
 import { LandingFooterLp } from '@/components/landing/lp/footer'
 import { LandingHeroLp } from '@/components/landing/lp/hero'
-import { LandingMissionLp } from '@/components/landing/lp/mission'
 import { LandingNavbarLp } from '@/components/landing/lp/navbar'
-import { LandingPricingLp } from '@/components/landing/lp/pricing'
-import { LandingPurchaseToasts } from '@/components/landing/lp/purchase-toasts'
 import { LandingSectionDivider } from '@/components/landing/lp/section-divider'
-import { LandingPainCalculator } from '@/components/landing/pain-calculator'
 import {
   LANDING_META,
   LANDING_SECTION_MARKERS,
@@ -23,6 +19,35 @@ import {
    lama sekarang 301 ke sini. */
 
 export const revalidate = 3600
+
+/* ── SECTION DI BAWAH LIPATAN = CHUNK TERPISAH ───────────────────────────────
+   Hero + navbar tetap di bundle awal (keduanya terlihat di frame pertama).
+   Sisanya baru berguna setelah pengunjung menggulir, jadi kodenya dipecah:
+
+     · Kalkulator Uang Gaib  → framer-motion (animate/useInView)
+     · Daftar harga          → useState (pilih paket)
+     · FAQ lipat             → framer-motion (AnimatePresence)
+     · Umpan pembeli         → framer-motion + fetch /api/pricing/recent-purchases
+
+   `next/dynamic` di Server Component tetap **di-SSR** (HTML lengkap untuk
+   mesin pencari & tanpa layout shift), tetapi chunk JS-nya tidak lagi ikut ke
+   bundel awal — jadi framer-motion (±50 KB gzip) keluar dari jalur kritis dan
+   TBT turun. Ini yang membuat skrip awal landing hanya berisi navbar + hero. */
+const LandingPainCalculator = dynamic(() =>
+  import('@/components/landing/pain-calculator').then((m) => m.LandingPainCalculator),
+)
+const LandingMissionLp = dynamic(() =>
+  import('@/components/landing/lp/mission').then((m) => m.LandingMissionLp),
+)
+const LandingPricingLp = dynamic(() =>
+  import('@/components/landing/lp/pricing').then((m) => m.LandingPricingLp),
+)
+const LandingFaqLp = dynamic(() =>
+  import('@/components/landing/lp/faq').then((m) => m.LandingFaqLp),
+)
+const LandingPurchaseToasts = dynamic(() =>
+  import('@/components/landing/lp/purchase-toasts').then((m) => m.LandingPurchaseToasts),
+)
 
 export const metadata: Metadata = {
   title: LANDING_META.title,

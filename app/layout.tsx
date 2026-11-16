@@ -1,27 +1,44 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import localFont from 'next/font/local'
-import { AccountScope } from '@/components/catetind/account-scope'
-import { AIChatWidget } from '@/components/catetind/ai-chat-widget'
-import { AppLockProvider } from '@/components/catetind/app-lock-provider'
-import { DemoSeedGate } from '@/components/catetind/demo-seed-gate'
-import { SettingsSync } from '@/components/catetind/settings-sync'
-import { OnboardingGate } from '@/components/catetind/onboarding-gate'
-import { OnboardingWelcomeToast } from '@/components/catetind/onboarding-welcome-toast'
-import { MobileBottomNav } from '@/components/MobileBottomNav'
-import { MoneyContextProvider } from '@/components/catetind/money-context-provider'
-import { OfflineBanner } from '@/components/catetind/offline-banner'
-import { PlantArtDefs } from '@/components/catetind/plant-art-defs'
-import { PrivacyProvider } from '@/components/catetind/privacy-provider'
-import { ServiceWorkerRegistration } from '@/components/catetind/service-worker-registration'
-import { SmoothScrollProvider } from '@/components/catetind/smooth-scroll-provider'
-import { SubscriptionBanner } from '@/components/catetind/subscription-banner'
-import { SubscriptionGateProvider } from '@/components/catetind/subscription-gate-provider'
-import { UpgradeGateProvider } from '@/components/catetind/upgrade-gate-provider'
-import { Toaster } from '@/components/ui/toaster'
 import { LANDING_META } from '@/lib/data/landing'
 import { SITE_ORIGIN } from '@/lib/site'
 import './globals.css'
+
+/* ── LAYOUT AKAR — KERANGKA DOKUMEN SAJA (TANPA CANGKANG APLIKASI) ───────────
+   Layout ini HANYA memasang <html>/<body>, font, metadata, dan Analytics.
+   Sebelum paket 108 ia juga memasang seluruh cangkang app:
+
+     AccountScope → MoneyContextProvider → PrivacyProvider →
+     SubscriptionGateProvider → UpgradeGateProvider → AppLockProvider →
+     OnboardingGate → (DemoSeedGate, SettingsSync, SubscriptionBanner,
+     OfflineBanner, MobileBottomNav, AIChatWidget, Toaster,
+     OnboardingWelcomeToast, SmoothScrollProvider, ServiceWorkerRegistration)
+
+   Akibatnya SETIAP halaman publik — termasuk landing — mengunduh 2 MB JS
+   (28 chunk, termasuk @supabase 254 KB) dan menembak `/api/session` +
+   `/api/data` yang dijawab 401 untuk pengunjung anonim. Lighthouse mobile
+   landing tertahan di skor 57 karena itu.
+
+   SEKARANG pemisahannya fisik (bukan `if (pathname)`):
+     • `app/(public)/layout.tsx` — halaman publik non-landing (login, kontak,
+       bantuan, legal, checkout, undangan). Isinya cuma <Toaster/> (sonner),
+       karena halaman-halaman itu memang memanggil `toast()`.
+     • `app/(app)/layout.tsx`    — seluruh cangkang app di atas, dipasang
+       HANYA untuk rute aplikasi (dashboard, dompet, tagihan, pengaturan,
+       admin, …).
+     • `app/page.tsx` (landing)  — memakai layout INI saja: nol provider, nol
+       panggilan sesi, nol request 401.
+
+   KONSEKUENSI YANG DITERIMA: gulir halus (Lenis) dan registrasi service worker
+   kini hanya hidup di halaman app. Halaman publik memakai gulir native — lebih
+   ringan dan di HP memang sudah 1:1 (Lenis pun sebelumnya dimatikan di
+   perangkat sentuh).
+
+   JANGAN menambahkan provider/preferensi app ke file ini lagi: satu impor
+   `@/components/catetind/*` yang berat akan menyeret seluruh app ke landing.
+   Ada tes penjaga di `app/layout-isolation.test.ts`. */
+
 
 /* ── TIPOGRAFI — HANYA SATU FONT DI SELURUH SISTEM: INTER DISPLAY ────────────
    Inter DIBUNDEL DI REPO (`app/fonts/inter-latin-variable.woff2`, satu berkas
@@ -52,7 +69,15 @@ const interDisplay = localFont({
   variable: '--font-inter',
   weight: '100 900',
   style: 'normal',
+  /* `swap` = teks tampil SEKARANG dengan font cadangan, berkas Inter menyusul.
+     Tidak ada layar kosong menunggu font (FOIT). Next tetap menyuntikkan
+     `@font-face` fallback ber-`size-adjust` supaya lebar huruf tidak melompat
+     saat Inter tiba — CLS tetap 0. */
   display: 'swap',
+  preload: true,
+  /* Daftar cadangan eksplisit: system-ui di Android/Windows, lalu Arial. */
+  fallback: ['system-ui', 'Segoe UI', 'Arial', 'Helvetica', 'sans-serif'],
+  adjustFontFallback: 'Arial',
 })
 
 /* ── SATU FONT UNTUK SELURUH SISTEM (termasuk landing) ───────────────────────
@@ -155,117 +180,30 @@ export const viewport: Viewport = {
   interactiveWidget: 'resizes-content',
 }
 
+
+/* ── BODY ROOT — SENGAJA TANPA SATU PUN PROVIDER APP ─────────────────────────
+   `light` mengunci palet terang (lihat viewport.colorScheme). `suppressHydration-
+   Warning` adalah perisai ekstensi browser (custom cursor / penerjemah) yang
+   menyuntikkan atribut ke <html>/<body> sebelum React hydrate; itu bukan bug
+   aplikasi, markup kita sama.
+
+   Yang TIDAK boleh kembali ke sini: AccountScope, MoneyContextProvider,
+   PrivacyProvider, SubscriptionGateProvider, UpgradeGateProvider,
+   AppLockProvider, OnboardingGate, MobileBottomNav, AIChatWidget, SettingsSync,
+   SmoothScrollProvider, ServiceWorkerRegistration, Toaster app. Semuanya hidup
+   di `app/(app)/layout.tsx`. */
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
   return (
-    /* `light` mengunci palet terang: app/globals.css punya blok
-       `@media (prefers-color-scheme: dark) { :root:not(.light) { … } }`.
-       Kanvas halaman sudah eksplisit putih (`bg-canvas`), jadi tanpa kelas ini
-       perangkat bermode gelap akan mendapat kanvas putih + permukaan shadcn
-       gelap — tidak konsisten. Sesuai `viewport.colorScheme: 'light'`. */
-    /* ── `suppressHydrationWarning` = PERISAI EKSTENSI BROWSER ─────────────────
-       Ekstensi “custom cursor” (mis. yang menulis `data-cc-prev-cursor`) dan
-       penerjemah halaman menyuntikkan atribut/`style` ke <html> & <body> SEBELUM
-       React hydrate. Server tidak mungkin mengirim atribut itu, jadi React
-       melaporkan “tree hydrated but some attributes … didn't match”.
-
-       Itu bukan bug aplikasi: markup kita memang sama. Menambahkan prop ini
-       membuat React tidak membandingkan atribut pada dua elemen itu (isi &
-       komponen di dalamnya TETAP diperiksa), sehingga error console hilang
-       tanpa mematikan pemeriksaan hydration untuk seluruh app.
-
-       JANGAN dihapus juga saat ada yang melihat diff atribut di DevTools —
-       selisihnya berasal dari ekstensi di browser pengunjung, bukan dari HTML
-       yang kita render. */
     <html lang="id" className={`light ${interDisplay.variable}`} suppressHydrationWarning>
       <body className="font-sans antialiased" suppressHydrationWarning>
-        {/* Gradien tanaman (SVG) — satu definisi untuk seluruh app. Wajib di
-            root supaya tanaman di halaman/tab mana pun memakai definisi yang
-            sama, termasuk saat section lain sedang `display:none`. */}
-        <PlantArtDefs />
-        <ServiceWorkerRegistration />
-        {/* Smooth scroll global (Lenis) — dipasang di root layout supaya
-            gulir terasa halus di SEMUA halaman, bukan cuma dashboard */}
-        <SmoothScrollProvider />
-        {/* Global Privacy Toggle (Sensor Layar): satu state `masked` untuk
-            SEMUA nominal di seluruh app. Provider ada di root supaya halaman
-            mana pun bisa membaca status yang sama dengan tombol mata di header. */}
-        {/* ── CAKUPAN AKUN ──────────────────────────────────────────────────
-            Semua provider di bawah ini membaca penyimpanan browser yang
-            dipisah per akun. Gerbang ini menetapkan akun aktif LEBIH DULU
-            (parkir/pulih kunci `catet*`), dan menahan render app sampai
-            cakupannya pasti — lihat `lib/account-scope.ts`. */}
-        <AccountScope>
-        {/* Konteks Uang Global (Pribadi/Keluarga/Bersama) — dulu toggle ini
-            ditaruh di body halaman Budget (audit UX #6). Sekarang satu provider
-            di root: Sidebar desktop & header mobile membaca nilai yang sama. */}
-        <MoneyContextProvider>
-          <PrivacyProvider>
-            {/* Gerbang Langganan Global (Grace Period / Post-Grace — inventaris
-                state III/IV & PRD 4534–4547). Satu provider di root memegang
-                status "boleh catat atau tidak" supaya FAB, tombol Tambah sidebar,
-                engine input, dan semua sheet tambah membaca fakta yang sama.
-                Banner-nya ditaruh paling atas supaya langsung terlihat di halaman
-                app mana pun (dan menyembunyikan diri di halaman publik/pre-app). */}
-            <SubscriptionGateProvider>
-              {/* Gerbang upgrade global: halaman terkunci tidak dirender; klik
-                  menu atau URL langsung memunculkan SATU popup upgrade yang
-                  sama (dipakai sidebar, drawer, menu Pengaturan, & ScreenShell). */}
-              <UpgradeGateProvider>
-                {/* Gerbang Kunci Perangkat (paket 39): kalau PIN app aktif &
-                    belum dibuka, provider ini MENGGANTIKAN seluruh isi app —
-                    termasuk bottom nav, tombol mata, toast, dan AI chat — dengan
-                    layar kunci. Dulu toggle PIN di Pengaturan cuma `useState`
-                    yang tidak dibaca siapa pun. */}
-                <AppLockProvider>
-                  {/* ── WRAPPER LATAR APLIKASI (`data-catetind-page-root`) ──────
-                      Selagi bottom sheet terbuka, wrapper ini diberi `inert` +
-                      `pointer-events: none` oleh `useSheetBackgroundIsolation`
-                      (hooks/use-sheet-viewport-cage.ts) supaya seluruh halaman,
-                      navigasi, banner, dan tombol mengapung di belakangnya
-                      benar-benar mati — tidak ada elemen sticky/fixed latar (mis.
-                      CTA "Daftar & mulai" di /checkout) yang ikut bergeser dan
-                      bocor saat keyboard HP terbuka. Vaul merender sheet-nya lewat
-                      PORTAL ke <body>, jadi sheet ada DI LUAR wrapper ini dan
-                      tetap interaktif. */}
-                  <OnboardingGate>
-                    <div data-catetind-page-root>
-                      {/* Gerbang seed demo (paket 65): menulis data contoh lewat store
-                          HANYA saat NEXT_PUBLIC_DEMO=1 — di produksi ia no-op. */}
-                      <DemoSeedGate />
-                      {/* Sinkron pengaturan uang & limit budget dari akun
-                          (paket 13): tanpa ini, pindah perangkat = Jatah Hari
-                          Ini kembali "belum diatur" & limit kategori hilang. */}
-                      <SettingsSync />
-                      <SubscriptionBanner />
-                      {/* Banner Offline & Antrean Lokal (paket 42) — di bawah banner
-                          langganan supaya saat keduanya tampil user melihat dua-duanya.
-                          Menyembunyikan diri sendiri kalau online & antrean kosong. */}
-                      <OfflineBanner />
-                      {children}
-                      <MobileBottomNav />
-                      {/* Floating AI Chat — AI Coach CatetInd (Domain 4B); state percakapan
-                          persisten lintas halaman karena layout tidak unmount saat navigasi */}
-                      <AIChatWidget />
-                    </div>
-                  </OnboardingGate>
-
-                  {/* Toast SENGAJA di luar wrapper inert: notifikasi (mis. "tersalin")
-                      harus tetap bisa diklik walau ada sheet terbuka. */}
-                  <Toaster />
-                  {/* Toast "Setup selesai!" — sekali jalan tepat setelah onboarding */}
-                  <OnboardingWelcomeToast />
-                </AppLockProvider>
-              </UpgradeGateProvider>
-            </SubscriptionGateProvider>
-          </PrivacyProvider>
-        </MoneyContextProvider>
-        </AccountScope>
+        {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>
   )
 }
+

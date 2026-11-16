@@ -44,7 +44,10 @@ describe('Install — spanduk ajakan pasang di layar utama', () => {
   })
 
   it('metadatanya ikut jujur — tanpa tawaran bonus', () => {
-    const page = readFileSync(new URL('../../app/install/page.tsx', import.meta.url), 'utf8')
+    const page = readFileSync(
+      new URL('../../app/(app)/install/page.tsx', import.meta.url),
+      'utf8',
+    )
 
     expect(page).not.toMatch(/bonus/i)
     expect(page).toMatch(/layar utama/i)

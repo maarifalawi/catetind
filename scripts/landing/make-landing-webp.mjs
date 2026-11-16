@@ -29,6 +29,24 @@ const PUBLIC_DIR = path.join(process.cwd(), 'public')
 
 /** @type {{ src: string, out: string, width: number, quality: number }[]} */
 const JOBS = [
+  /* ── visual hero ────────────────────────────────────────────────────────────
+     Desktop board dirender maksimal 1200 px; ponsel/tablet SELALU 333 px
+     (kelas `w-[333px]` di hero.tsx). Karena itu varian 1200/480/768 sudah
+     cukup — sebelumnya ponsel tetap mengunduh 1000 px (107 KB) untuk kotak
+     333 px, dan tablet ikut. `srcSet` di hero.tsx memilih yang pas. */
+  { src: '/GAMBARDEPAN.png', out: 'public/GAMBARDEPAN-1200.webp', width: 1200, quality: 0.82 },
+  {
+    src: '/landing/XR2qVbJABSACTzUQSOelrYLkws0.png',
+    out: 'public/landing/XR2qVbJABSACTzUQSOelrYLkws0-480.webp',
+    width: 480,
+    quality: 0.82,
+  },
+  {
+    src: '/landing/XR2qVbJABSACTzUQSOelrYLkws0.png',
+    out: 'public/landing/XR2qVbJABSACTzUQSOelrYLkws0-768.webp',
+    width: 768,
+    quality: 0.82,
+  },
   /* avatar hero — 96 px cukup untuk layar 3× (avatar terbesar 36 px) */
   { src: '/AVA 1.png', out: 'public/avatars/ava-1.webp', width: 96, quality: 0.86 },
   { src: '/AVA 2.png', out: 'public/avatars/ava-2.webp', width: 96, quality: 0.86 },

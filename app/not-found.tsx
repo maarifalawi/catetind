@@ -10,11 +10,16 @@ import { NotFoundScreen } from '@/components/catetind/not-found-screen'
  * menimpa judul merek dengan judul teknis — dan itu bertentangan dengan nada
  * halaman ini, yang justru ingin terasa tenang, bukan seperti sistem berteriak.
  * Permintaan halaman tetap dijawab dengan status 404 HTTP yang benar oleh Next.
+ *
+ * `withShell={false}` (paket 108): layout akar tidak lagi memasang provider app,
+ * jadi ScreenShell tidak boleh dipakai di sini. 404 juga halaman publik —
+ * jangan sampai pengunjung anonim mengunduh cangkang app hanya untuk membaca
+ * "halaman tidak ditemukan".
  */
 export default function NotFoundPage() {
   return (
     <PhoneStage>
-      <NotFoundScreen />
+      <NotFoundScreen withShell={false} />
     </PhoneStage>
   )
 }

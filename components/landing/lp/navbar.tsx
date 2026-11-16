@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import { motion, useReducedMotion } from 'framer-motion'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { LP_NAV, LP_NAV_LINKS, lpHref } from '@/lib/data/landing'
 import { cn } from '@/lib/utils'
@@ -43,7 +42,6 @@ export function LandingNavbarLp({ basePath = '' }: { basePath?: string }) {
   const [scrolled, setScrolled] = useState(false)
   const [onDark, setOnDark] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
-  const reduceMotion = useReducedMotion()
 
   const menuButtonRef = useRef<HTMLButtonElement>(null)
   const headerRef = useRef<HTMLElement>(null)
@@ -264,15 +262,16 @@ export function LandingNavbarLp({ basePath = '' }: { basePath?: string }) {
             onClick={() => setMenuOpen(false)}
             className="fixed inset-0 z-30 cursor-default bg-forest/25"
           />
-          <motion.div
+          {/* Panel menu: animasi masuknya CSS (`landing-menu-in`), bukan
+              framer-motion. Dengan begitu navbar landing tidak lagi menyeret
+              pustaka animasi ke bundel awal — panel ini pun hanya dirender
+              setelah tombol menu ditekan (tidak ada di HTML awal). */}
+          <div
             ref={panelRef}
             id="landing-nav-menu"
             role="dialog"
             aria-label={LP_NAV.menuNavAria}
-            initial={reduceMotion ? false : { opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={reduceMotion ? { duration: 0 } : { duration: 0.2, ease: 'easeOut' }}
-            className="fixed inset-x-0 top-[80px] z-40 px-5 landing:top-[84px] landing:px-10"
+            className="landing-menu-in fixed inset-x-0 top-[80px] z-40 px-5 landing:top-[84px] landing:px-10"
           >
             <div className="mx-auto flex w-full max-w-[1200px] flex-col rounded-[24px] bg-canvas px-5 pb-8 pt-5 shadow-landing-pop">
               <nav
@@ -312,7 +311,7 @@ export function LandingNavbarLp({ basePath = '' }: { basePath?: string }) {
                 </Link>
               </div>
             </div>
-          </motion.div>
+          </div>
         </>
       )}
     </>

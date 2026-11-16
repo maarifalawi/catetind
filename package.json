@@ -30,6 +30,7 @@
     "supabase:grant": "node scripts/supabase/grant-akses.mjs",
     "supabase:purge-akun": "node scripts/supabase/purge-akun.mjs",
     "qa:audit": "node scripts/qa/audit.mjs",
+    "qa:navigation": "node scripts/qa/navigation.mjs",
     "qa:crud": "node scripts/qa/crud.mjs",
     "qa:money": "node scripts/qa/money-flow.mjs",
     "qa:offline": "node scripts/qa/offline-flow.mjs",

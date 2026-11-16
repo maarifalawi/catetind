@@ -1343,15 +1343,28 @@ export const LP_HERO = {
   /** paket + periode SAMA dengan default section harga (satu pintu masuk) */
   ctaHref: buildCheckoutHref(LANDING_DEFAULT_PLAN_ID, LANDING_DEFAULT_PERIOD),
   /* aset visual hero (dekoratif → ringkasannya di `visualAlt`) */
-  /* Desktop memakai GAMBARDEPAN; mobile memakai phoneImage. Versi WebP
-     dihasilkan `scripts/landing/make-hero-webp.mjs` (canvas Chromium) supaya
-     hero tidak mengunduh PNG 3,9 MB. */
+  /* Desktop memakai GAMBARDEPAN; ponsel/tablet memakai phoneImage. Semua
+     varian WebP dihasilkan `scripts/landing/make-landing-webp.mjs` (canvas
+     Chromium) supaya hero tidak pernah mengunduh PNG 3,9 MB.
+
+     RESPONSIF (paket 108): hero ponsel SELALU dirender 333 px (kelas
+     `w-[333px]`), jadi ponsel tidak boleh lagi mengunduh berkas 1000 px.
+     `phoneImageSrcSet` menawarkan 480w / 768w / 1000w dan browser memilih
+     sesuai DPR; `phoneImageSizes` memberi tahu lebar tampil sebenarnya supaya
+     pemilihan itu tepat (bukan 100vw). Desktop memakai board dengan 1200w /
+     1600w karena lebarnya dibatasi `max-w-[1200px]`. */
   boardImage: '/GAMBARDEPAN.png',
   boardImageWebp: '/GAMBARDEPAN-1600.webp',
+  boardImageSrcSet: '/GAMBARDEPAN-1200.webp 1200w, /GAMBARDEPAN-1600.webp 1600w',
+  boardImageSizes: '(min-width: 1200px) 1200px, 100vw',
   boardWidth: 5255,
   boardHeight: 4104,
   phoneImage: '/landing/XR2qVbJABSACTzUQSOelrYLkws0.png',
   phoneImageWebp: '/landing/XR2qVbJABSACTzUQSOelrYLkws0-1000.webp',
+  phoneImageSrcSet:
+    '/landing/XR2qVbJABSACTzUQSOelrYLkws0-480.webp 480w, /landing/XR2qVbJABSACTzUQSOelrYLkws0-768.webp 768w, /landing/XR2qVbJABSACTzUQSOelrYLkws0-1000.webp 1000w',
+  /** lebar tampil ponsel = 333 px (bukan 100vw) → varian terkecil yang cukup */
+  phoneImageSizes: '333px',
   phoneWidth: 1960,
   phoneHeight: 4104,
   visualAlt:

@@ -25,7 +25,7 @@ const AREA_FILES = [
   'lib/data/referral.ts',
   'components/catetind/referral-screen.tsx',
   'lib/data/changelog.ts',
-  'app/changelog/page.tsx',
+  'app/(public)/changelog/page.tsx',
   'lib/data/landing.ts',
 ]
 
