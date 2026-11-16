@@ -70,4 +70,33 @@ Bukti tangkapan layar (folder `qa-shots/`, gitignored): `perf-hero-nojs.png` (he
 
 Langkah berikutnya yang disarankan: pindahkan cangkang itu ke `app/(app)/layout.tsx` (route group) sehingga `/`, `/contact`, `/checkout`, `/login` hanya memuat bundle landing. Itu perubahan routing yang lebih besar, jadi dipisahkan dari paket ini agar tidak mencampur perbaikan cepat dengan refactor.
 
-Animasi CSS mulai pada frame pertama dan tetap berjalan walau chunk JS gagal dimuat. `whileInView` (dulu dipakai section di bawah lipatan) mustahil tanpa JS; karena durasinya ~0,8 detik, section sudah tampil penuh saat pengunjung menggulir — tidak ada lagi section kosong saat JS telat. `prefers-reduced-motion` dipindahkan dari hook React ke media query, jadi tidak bergantung pada hidrasi.
+---
+
+## 5. Kondisi setelah deploy (Lighthouse mobile, `--throttling-method=simulate`)
+
+Diukur pada `https://catetind.com/` setelah commit `783fba6` live:
+
+| Metrik | Nilai | Catatan |
+|---|---|---|
+| Performance score | **57** | naik dari kondisi sebelumnya yang hero-nya tidak pernah terlihat sebelum JS selesai |
+| FCP | 3,3 s | |
+| LCP | 6,6 s | elemen LCP: **logo navbar** `/Dashboard.png`, bukan hero — artinya hero h1 sudah dicat lebih awal |
+| TBT | 262 ms | |
+| CLS | **0** | tidak ada layout shift |
+| Speed Index | 9,4 s | |
+| TTFB | 83 ms | server cepat; masalahnya di unduhan aset |
+| Berat halaman | 916 KB | gambar hanya ±115 KB, sisanya JS/CSS |
+| `unused-javascript` | 121 KiB | |
+| bootup / main-thread | 953 ms / 2.885 ms | |
+
+Semua 28 chunk JS selesai diunduh pada ±3–4,2 s di simulasi 4G — itulah yang menahan skor. Jadi:
+
+- **Beres:** halaman tidak lagi putih menunggu JS (dibuktikan dengan memblokir 27 request JS: hero & navbar opacity 1, gambar hero termuat).
+- **Belum beres:** halaman belum “enteng”. Cangkang app di `app/layout.tsx` (±542 KB JS) masih ikut ke landing dan menjadi jalur kritis.
+
+### Catatan metodologi
+
+Angka wall-clock dari Playwright di mesin ini TIDAK dipakai: renderer headless di VM sering tidak memproduksi frame, sehingga `paint`/LCP terbaca 0 dan emulasi CDP sempat melaporkan “CSS 1 KB butuh 15 s” (mustahil). Angka final diambil dari Lighthouse `simulate`, metode yang sama dengan PageSpeed Insights.
+
+Langkah berikutnya untuk mengejar skor 85+: keluarkan cangkang app dari bundle landing (route group `app/(app)/layout.tsx`), lalu ukur ulang dengan perintah yang sama.
+
