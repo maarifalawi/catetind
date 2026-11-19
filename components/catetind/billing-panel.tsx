@@ -10,6 +10,7 @@ import {
   LIFETIME_LABEL,
   PLANS,
   buildCheckoutHref,
+  buildUpgradeHref,
   formatIDR,
   priceFor,
 } from '@/lib/data/pricing'
@@ -136,7 +137,9 @@ function CurrentPlanCard() {
      dengan yang dipakai kunci fitur di seluruh app. Kalau paketnya belum bisa
      dibaca, kartu ini jujur berkata "belum ada paket"; tidak ada paket karangan. */
   const { plan, planId, expiresAt, isLifetime, billingPeriod, expired } = useSubscriptionGate()
-  const monthly = billingPeriod !== 'lifetime'
+  /* `isLifetime` juga jadi penentu supaya pemilik akses selamanya tidak pernah
+     jatuh ke copy pelanggan lama 30 hari walau `billingPeriod` kosong/terlambat. */
+  const monthly = !isLifetime && billingPeriod !== 'lifetime'
   const higherLifetime = PLANS.filter(
     (item) =>
       priceFor(item, {
@@ -158,6 +161,12 @@ function CurrentPlanCard() {
       : monthly
         ? BILLING_COPY.activeMonthlyBody
         : null
+
+  /* Tier lifetime berikutnya — HANYA untuk pemilik lifetime. Pemilik lifetime
+     di puncak tidak melihat tombol apa pun, dan yang masih bisa naik melihat
+     NAMA tier tujuan ("Upgrade ke Sultan"), bukan lagi label generik yang
+     membingungkan karena aksesnya memang sudah lifetime. */
+  const lifetimeUpgradeTarget = isLifetime ? (higherLifetime[0] ?? null) : null
 
   return (
     <section className="flex flex-col rounded-[1.75rem] bg-cream p-5 ring-1 ring-soil/12 sm:p-6">
@@ -209,13 +218,21 @@ function CurrentPlanCard() {
       <div className="mt-auto flex flex-col gap-2 pt-5">
         {/* Tidak ada tombol perpanjang: paket 30 hari sudah tidak dijual.
             Pelanggan lama diarahkan ke lifetime (selisih/harga penuh dari server). */}
-        {planId && (monthly || higherLifetime.length > 0) && (
+        {planId && (monthly || lifetimeUpgradeTarget) && (
           <Link
-            href={buildCheckoutHref(planId, 'lifetime')}
+            href={
+              lifetimeUpgradeTarget
+                ? buildUpgradeHref(lifetimeUpgradeTarget.id, planId, 'lifetime')
+                : buildCheckoutHref(planId, 'lifetime')
+            }
             className="flex w-full items-center justify-center gap-2 rounded-2xl bg-forest py-3.5 text-sm font-medium text-mint transition-colors hover:bg-forest-soft active:scale-[0.99]"
           >
             <RefreshCw className="size-4" strokeWidth={2.4} />
-            {monthly ? BILLING_COPY.legacyUpgradeLabel : BILLING_COPY.upgradeLifetimeLabel}
+            {monthly
+              ? BILLING_COPY.legacyUpgradeLabel
+              : lifetimeUpgradeTarget
+                ? BILLING_COPY.upgradePlanLabel(lifetimeUpgradeTarget.name)
+                : BILLING_COPY.choosePlanLabel}
           </Link>
         )}
 

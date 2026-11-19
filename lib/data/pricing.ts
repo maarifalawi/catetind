@@ -578,7 +578,8 @@ export const BILLING_COPY = {
   periodLabel: 'Periode',
   lifetimePeriod: 'Akses selamanya',
   monthlyPeriod: 'Paket lama 30 hari',
-  upgradeLifetimeLabel: 'Upgrade ke Lifetime',
+  upgradePlanLabel: (planName: string) =>
+    `Upgrade ke ${planName.replace(/^paket\s+/i, '').trim()}`,
   legacyUpgradeLabel: 'Lanjut ke Lifetime',
   choosePlanLabel: 'Lihat paket',
   readOnlyNote:

@@ -51,7 +51,7 @@ describe('purchaseLabelOf()', () => {
 
   it('top up token memakai nama add-on yang benar-benar dibeli', () => {
     expect(purchaseLabelOf({ purpose: 'topup', addon_package_id: 'sedang' })).toBe(
-      'Top Up AI Token - Paket Sedang',
+      'Top Up AI Token - Reguler',
     )
     /* add-on tak dikenal tidak boleh menampilkan "undefined" */
     expect(purchaseLabelOf({ purpose: 'topup', addon_package_id: 'hilang' })).toBe(

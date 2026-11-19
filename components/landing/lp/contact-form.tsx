@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils'
    DEMO tanpa backend email/WhatsApp Business, jadi submit TIDAK berpura-pura
    mengirim ke server:
 
-     · utama    → membuka `https://wa.me/6281775777778?text=…` berisi isi form;
+     · utama    → membuka `https://wa.me/6281908444468?text=…` berisi isi form;
      · cadangan → `mailto:halo@catetind.com` dengan subject + body yang sama.
 
    Catatan di bawah tombol menjelaskan aplikasi mana yang akan terbuka — bukan

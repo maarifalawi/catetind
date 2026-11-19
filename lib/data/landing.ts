@@ -66,9 +66,9 @@ export const LANDING_LOGIN_HREF = '/login'
    Satu sumber nomor/email supaya tidak ada nomor lokal di `href` dan tidak ada
    `support@` lama yang lolos ke produk. */
 export const LP_WHATSAPP = {
-  display: '0817-7577-7778',
-  e164: '6281775777778',
-  href: 'https://wa.me/6281775777778',
+  display: '0819-0844-4468',
+  e164: '6281908444468',
+  href: 'https://wa.me/6281908444468',
   prefill: 'Halo Minca, mau tanya-tanya soal CatetInd dong!',
 } as const
 
@@ -1905,8 +1905,7 @@ export const LP_CONTACT = {
     submit: 'Kirim lewat WhatsApp',
     secondaryLabel: 'Kirim lewat email',
     /* catatan setelah submit: jujur soal aplikasi yang terbuka, bukan toast palsu */
-    afterSubmitNote:
-      'WhatsApp/email app kamu akan terbuka dengan isi pesan ini. Kalau tidak ada aplikasinya, salin manual ke 0817-7577-7778 atau halo@catetind.com.',
+    afterSubmitNote: `WhatsApp/email app kamu akan terbuka dengan isi pesan ini. Kalau tidak ada aplikasinya, salin manual ke ${LP_WHATSAPP.display} atau ${LP_SUPPORT_EMAIL}.`,
     mailtoSubject: 'Pertanyaan dari halaman kontak CatetInd',
     supportEmail: LP_SUPPORT_EMAIL,
     whatsappDisplay: LP_WHATSAPP.display,

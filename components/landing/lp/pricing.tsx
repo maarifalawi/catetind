@@ -142,9 +142,17 @@ function PricingCard({ tier, mode }: { tier: LandingTier; mode: LpPricingMode })
             <span className="absolute inset-0 bg-gradient-to-tr from-evergreen-deeper/85 via-transparent to-evergreen-light/10" />
             <span className="absolute -top-24 right-0 size-64 rounded-full bg-mint/15 blur-3xl" />
           </span>
-          <BatikBackdrop id={`landing-batik-${tier.id}`} className="opacity-90" />
+          <BatikBackdrop id={`landing-batik-${tier.id}`} tone="cream" className="opacity-90" />
         </>
       ) : null}
+
+      {recommended ? null : (
+        <BatikBackdrop
+          id={`landing-batik-${tier.id}`}
+          tone="forest"
+          className="opacity-60"
+        />
+      )}
 
       {recommended && tier.badge ? (
         <span className="absolute -top-3.5 left-1/2 z-20 inline-flex -translate-x-1/2 items-center gap-1.5 whitespace-nowrap rounded-full bg-daisy px-3.5 py-1.5 text-[11.5px] font-semibold leading-none text-forest shadow-sm ring-1 ring-ink/5">

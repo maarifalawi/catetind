@@ -748,6 +748,30 @@ describe('POST /api/payment/charge · purpose topup', () => {
     expect(options.body.tier_name).not.toBeNull()
   })
 
+  /* SETIAP kartu yang tampil di modal harus menagih nominal yang SAMA PERSIS.
+     Angka di layar & angka di Midtrans sama-sama membaca `AI_ADDON_PACKAGES`,
+     dan test ini memastikan rantainya tidak putus di route. */
+  it.each(AI_ADDON_PACKAGES)(
+    'tagihan $name menagih nominal yang sama persis ($price)',
+    async (pkg) => {
+      owned('waras')
+      const res = await POST(
+        request({ purpose: 'topup', packageId: pkg.id, amount: pkg.price, method: 'qris' }),
+      )
+      expect(res.status).toBe(200)
+
+      const [intent] = charge.mock.calls[0] as [{ amount: number }]
+      expect(intent.amount).toBe(pkg.price)
+      expect((await res.json()).amount).toBe(pkg.price)
+
+      const [, options] = insertCalls()[0] as [
+        string,
+        { body: { expected_amount: number } },
+      ]
+      expect(options.body.expected_amount).toBe(pkg.price)
+    },
+  )
+
   it('nominal diskon top-up TANPA kode → 422', async () => {
     owned('waras')
     const res = await POST(request({ ...TOPUP, amount: applyReferralDiscount(SEDANG_PKG.price) }))

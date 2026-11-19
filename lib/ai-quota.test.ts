@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
+  AI_ADDON_DEFAULT_PACKAGE_ID,
+  AI_ADDON_PACKAGES,
   AI_BASE_TOKENS_TOTAL,
   AI_GAUGE_BANNER_COPY,
   AI_SEED_USAGE_CALLS,
+  AI_TOPUP_COPY,
   aiQuotaSnapshot,
   complementaryPct,
   monthKeyOf,
@@ -37,6 +40,47 @@ function legalText(doc: typeof TERMS_DOC): string {
   }
   return parts.join(' ').toLowerCase()
 }
+
+describe('paket top up AI · tiga pilihan kanon (revisi 17 Nov 2026)', () => {
+  it('nama, harga, dan deskripsi satu baris persis seperti keputusan produk', () => {
+    expect(
+      AI_ADDON_PACKAGES.map((pkg) => ({
+        id: pkg.id,
+        name: pkg.name,
+        price: pkg.price,
+        description: pkg.description,
+      })),
+    ).toEqual([
+      { id: 'receh', name: 'Santai', price: 19_000, description: '~150x pakai · Cukup 1 bulan' },
+      { id: 'sedang', name: 'Reguler', price: 34_000, description: '~350x pakai · Aman 3 bulan' },
+      {
+        id: 'gede',
+        name: 'Full Tank',
+        price: 39_000,
+        description: '~800x pakai · Puas 6 bulan (cuma Rp 6rb/bln)',
+      },
+    ])
+  })
+
+  it('badge hanya di Full Tank + Full Tank jadi pilihan default', () => {
+    expect(AI_ADDON_PACKAGES.filter((pkg) => pkg.best).map((pkg) => pkg.id)).toEqual(['gede'])
+    expect(AI_ADDON_DEFAULT_PACKAGE_ID).toBe('gede')
+    expect(AI_TOPUP_COPY.bestBadge).toBe('Paling Worth It')
+  })
+
+  it('token di balik layar tetap diberikan sesuai tingkatan', () => {
+    expect(AI_ADDON_PACKAGES.map((pkg) => pkg.tokens)).toEqual([200_000, 400_000, 800_000])
+  })
+
+  it('CTA membawa nominal kartu terpilih & teks teknis lama tidak ada lagi', () => {
+    expect(AI_TOPUP_COPY.payCta('Rp 39.000')).toBe('Isi Sekarang · Rp 39.000')
+    expect(AI_TOPUP_COPY).not.toHaveProperty('onceLabel')
+    expect(AI_TOPUP_COPY).not.toHaveProperty('trustNote')
+    expect(AI_TOPUP_COPY).not.toHaveProperty('emptySelection')
+    expect(JSON.stringify(AI_TOPUP_COPY)).not.toContain('Bayar Sekarang')
+    expect(JSON.stringify(AI_TOPUP_COPY)).not.toContain('sekali bayar')
+  })
+})
 
 describe('kuota dasar AI · tanpa refill otomatis', () => {
   it('monthKeyOf menulis bulan dua digit (kunci baris ai_usage)', () => {

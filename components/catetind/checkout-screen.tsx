@@ -515,13 +515,21 @@ function OfferOption({
               aria-hidden
               className="pointer-events-none absolute inset-0 bg-gradient-to-br from-evergreen-deep/75 via-forest/10 to-evergreen-deeper/85"
             />
-            <BatikBackdrop id={`checkout-batik-${plan.id}`} className="opacity-90" />
+            <BatikBackdrop id={`checkout-batik-${plan.id}`} tone="cream" className="opacity-90" />
             <span
               aria-hidden
               className="pointer-events-none absolute -top-24 left-1/2 size-64 -translate-x-1/2 rounded-full bg-mint/15 blur-3xl"
             />
           </>
         ) : null}
+
+        {active ? null : (
+          <BatikBackdrop
+            id={`checkout-batik-${plan.id}`}
+            tone="forest"
+            className="opacity-60"
+          />
+        )}
 
         <span className="relative z-10 flex flex-1 flex-col">
           <span className="flex items-start justify-between gap-3">

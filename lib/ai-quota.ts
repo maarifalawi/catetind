@@ -308,9 +308,10 @@ export function aiQuotaSnapshot(
    (paket 42), bukan konstanta. */
 export const AI_VOICE_SECONDS_PER_CALL = 30
 
-/* ── 5. ADD-ON PAKET (kanon PRD 4790–4798) ──────────────────────────────────
-   Nama sengaja kasual ("Receh/Sedang/Gede") — bukan "Basic/Pro/Enterprise" —
-   sesuai tone Gen-Z. `best` = decoy yang di-highlight penuh di modal top-up. */
+/* ── 5. ADD-ON PAKET (revisi 17 Nov 2026) ───────────────────────────────────
+   Tiga pilihan kasual "Santai / Reguler / Full Tank" — bukan
+   "Basic/Pro/Enterprise" — sesuai tone Gen-Z. `best` = paket yang di-highlight
+   penuh di modal top-up (Full Tank) dan dipilih otomatis saat modal dibuka. */
 
 export type AiAddonPackageId = 'receh' | 'sedang' | 'gede'
 
@@ -320,35 +321,46 @@ export interface AiAddonPackage {
   price: number
   /** token tambahan yang masuk ke tangki — TIDAK hangus walau bulan berganti */
   tokens: number
-  /** setara panggilan (kanon PRD 4794–4796) biar user bisa hitung sendiri */
-  note: string
+  /** satu baris manfaat yang tampil di kartu — tanpa angka token teknis */
+  description: string
   best?: boolean
 }
 
+/**
+ * ID paket SENGAJA tidak berubah (`receh`/`sedang`/`gede`) meskipun namanya
+ * berganti: baris `purchases.addon_package_id` yang sudah tercatat memakai ID
+ * ini untuk memetakan riwayat pembelian. Nama & harga boleh berubah, ID tidak.
+ *
+ * Token di balik layar tetap diberikan sesuai tingkatan (200rb/400rb/800rb)
+ * saat pembayaran lunas; kartu di layar hanya menampilkan manfaat satu baris.
+ */
 export const AI_ADDON_PACKAGES: AiAddonPackage[] = [
   {
     id: 'receh',
-    name: 'Paket Receh',
+    name: 'Santai',
     price: 19_000,
     tokens: 200_000,
-    note: '≈ 50 chat + 20 OCR + 100 kategorisasi',
+    description: '~150x pakai · Cukup 1 bulan',
   },
   {
     id: 'sedang',
-    name: 'Paket Sedang',
-    price: 29_000,
+    name: 'Reguler',
+    price: 34_000,
     tokens: 400_000,
-    note: '≈ 100 chat + 40 OCR + 200 kategorisasi',
-    best: true,
+    description: '~350x pakai · Aman 3 bulan',
   },
   {
     id: 'gede',
-    name: 'Paket Gede',
-    price: 49_000,
+    name: 'Full Tank',
+    price: 39_000,
     tokens: 800_000,
-    note: '≈ 200 chat + 80 OCR + 400 kategorisasi',
+    description: '~800x pakai · Puas 6 bulan (cuma Rp 6rb/bln)',
+    best: true,
   },
 ]
+
+/** paket yang terpilih otomatis saat modal Top Up dibuka (Paling Worth It) */
+export const AI_ADDON_DEFAULT_PACKAGE_ID: AiAddonPackageId = 'gede'
 
 /* ── 6. ATURAN KUOTA DASAR (keputusan produk: TANPA REFILL) ──────────────────
    Kuota dasar diberikan SEKALI, di bulan pertama paket aktif. Tidak ada reset
@@ -417,12 +429,10 @@ export const AI_FUEL_COPY = {
 export const AI_TOPUP_COPY = {
   title: 'Top Up AI Token',
   packageLegend: 'Pilih paket top up AI token',
-  bestBadge: 'Paling Laris',
-  onceLabel: 'sekali bayar',
-  emptySelection: 'Belum ada paket dipilih',
-  payCta: 'Bayar Sekarang',
+  bestBadge: 'Paling Worth It',
+  /** CTA utama: nominal kartu terpilih ikut tercetak, mis. "Isi Sekarang · Rp 39.000" */
+  payCta: (priceLabel?: string) => (priceLabel ? `Isi Sekarang · ${priceLabel}` : 'Isi Sekarang'),
   payingCta: 'Memproses…',
-  trustNote: 'Bayar sekali. Tanpa perpanjangan otomatis.',
   closeLabel: 'Tutup',
   backdropLabel: 'Tutup top up AI token',
   /** dipakai modal saat /api/payment/charge belum tersedia / menolak */

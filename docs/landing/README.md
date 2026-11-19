@@ -79,7 +79,7 @@ menyimpan keputusan produk, cara kerja alat screenshot/audit, dan sisa risiko.
 
 - Email global: **`halo@catetind.com`** (`support@catetind.com` sudah tidak
   dipakai di kode/legal/help/landing).
-- WhatsApp: **`0817-7577-7778`** → `https://wa.me/6281775777778`.
+- WhatsApp: **`0819-0844-4468`** → `https://wa.me/6281908444468`.
 - Prefill: `Halo Minca, mau tanya-tanya soal CatetInd dong!`.
 - WhatsApp tampil di `/contact`, kartu FAQ, dan footer.
 - Form kontak sekarang 3 field: Nama, Kontak, Pesan. Submit utama membuka

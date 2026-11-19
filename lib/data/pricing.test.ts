@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   ALL_CAPABILITIES,
+  BILLING_COPY,
   CHECKOUT_PATH,
   HERO_PLAN,
   LIFETIME_LABEL,
@@ -282,5 +283,26 @@ describe('bentuk tautan — periode selalu lifetime', () => {
       expect(href).not.toContain('monthly')
       expect(href).not.toContain('annual')
     }
+  })
+})
+
+/* ── LABEL UPGRADE DI PANEL BILLING ──────────────────────────────────────────
+   Bug yang dikunci di sini: pemilik akses LIFETIME masih melihat tombol
+   "Upgrade ke Lifetime" — kalimat yang membingungkan karena aksesnya memang
+   sudah lifetime. Label sekarang menyebut TIER tujuan, dan tombol hanya muncul
+   bila masih ada tier yang lebih tinggi. */
+describe('BILLING_COPY · ajakan upgrade', () => {
+  it('frasa "Upgrade ke Lifetime" tidak lagi ada untuk pemilik lifetime', () => {
+    expect(BILLING_COPY).not.toHaveProperty('upgradeLifetimeLabel')
+    expect(JSON.stringify(BILLING_COPY)).not.toContain('Upgrade ke Lifetime')
+  })
+
+  it('label lifetime menyebut nama tier tujuan (tanpa kata "Paket")', () => {
+    expect(BILLING_COPY.upgradePlanLabel('Paket Sultan')).toBe('Upgrade ke Sultan')
+    expect(BILLING_COPY.upgradePlanLabel('Waras')).toBe('Upgrade ke Waras')
+  })
+
+  it('pelanggan lama 30 hari tetap diarahkan ke Lifetime', () => {
+    expect(BILLING_COPY.legacyUpgradeLabel).toBe('Lanjut ke Lifetime')
   })
 })

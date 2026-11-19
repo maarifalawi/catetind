@@ -1,14 +1,14 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Check, LoaderCircle, Lock, X } from 'lucide-react'
+import { LoaderCircle, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock'
 import { formatIDR } from '@/lib/weekly-recap'
 import {
+  AI_ADDON_DEFAULT_PACKAGE_ID,
   AI_ADDON_PACKAGES,
   AI_TOPUP_COPY,
-  formatTokens,
   planQuota,
   type AiAddonPackageId,
 } from '@/lib/ai-quota'
@@ -17,11 +17,12 @@ import { useSubscriptionGate } from './subscription-gate-provider'
 
 /* ── Add-on AI Token (Domain 5C) ───────────────────────────────────────────────
    Paket, harga, token, dan seluruh copy-nya tinggal di `lib/ai-quota.ts`:
-   granularitasnya sengaja kecil & bahasanya kasual ("Receh / Sedang / Gede") —
-   penamaan kanon PRD 4790–4798, bukan "Basic/Pro/Enterprise". Modal ini tidak
-   menyimpan nominal apa pun, jadi harga di halaman lain tidak bisa berbeda.
+   tiga pilihan kasual "Santai / Reguler / Full Tank" (revisi 17 Nov 2026,
+   menggantikan "Receh / Sedang / Gede"). Modal ini tidak menyimpan nominal apa
+   pun, jadi harga di layar selalu sama dengan yang ditagih server.
 
-   PAKET 85 — PEMBAYARAN NYATA (bukan lagi simulasi). "Bayar Sekarang" memanggil
+   PAKET 85 — PEMBAYARAN NYATA (bukan lagi simulasi). Tombol "Isi Sekarang"
+   memanggil
    `POST /api/payment/charge` dengan `purpose: 'topup'`; server membaca harga dari
    `lib/ai-quota.ts`, menulis baris `purchases`, lalu mengembalikan INSTRUKSI BAYAR
    yang digambar `payment-instruction-card.tsx` (komponen yang sama dengan checkout
@@ -34,12 +35,13 @@ import { useSubscriptionGate } from './subscription-gate-provider'
 
 /**
  * Modal Top Up AI Token — bottom sheet di mobile, dialog tengah di desktop.
- * Mulai TANPA paket terpilih supaya state "disabled" tombol Bayar Sekarang
- * kelihatan jelas (selectedPackage === null).
+ * Saat dibuka, paket DEFAULT = Full Tank ("Paling Worth It") sesuai keputusan
+ * produk 17 Nov 2026, jadi CTA langsung membawa nominal yang paling untung.
  */
 export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  /** paket yang dipilih user — ini yang bikin tombol Bayar Sekarang aktif */
-  const [selectedPackage, setSelectedPackage] = useState<AiAddonPackageId | null>(null)
+  /** paket yang dipilih user — default Full Tank saat modal dibuka */
+  const [selectedPackage, setSelectedPackage] =
+    useState<AiAddonPackageId>(AI_ADDON_DEFAULT_PACKAGE_ID)
   const [paying, setPaying] = useState(false)
   /* tagihan aktif dari `/api/payment/charge` — begitu ada, modal menampilkan
      INSTRUKSI BAYAR (bukan lagi simulasi timer) */
@@ -78,6 +80,8 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
     if (!open) return
     setInvoice(null)
     setError(null)
+    /* setiap kali modal dibuka, kembali ke paket default (Full Tank) */
+    setSelectedPackage(AI_ADDON_DEFAULT_PACKAGE_ID)
   }, [open])
 
   const selected = AI_ADDON_PACKAGES.find((pkg) => pkg.id === selectedPackage) ?? null
@@ -93,7 +97,7 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
    * yang belum benar-benar dibayar.
    */
   const handlePay = useCallback(async () => {
-    if (!selectedPackage || paying) return
+    if (paying) return
     const pkg = AI_ADDON_PACKAGES.find((item) => item.id === selectedPackage)
     if (!pkg) return
     setPaying(true)
@@ -242,7 +246,7 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
                     onClick={() => setSelectedPackage(pkg.id)}
                     className={cn(
                       'relative flex flex-col rounded-2xl p-3.5 text-left transition-all duration-200',
-                      /* Paket Paling Laris: fill accent color + border tebal biar paling menonjol */
+                      /* Paket Paling Worth It: fill accent color + border tebal biar paling menonjol */
                       onAccent
                         ? 'bg-mint ring-2 ring-forest shadow-[0_14px_28px_-16px_rgba(0,0,0,0.55)]'
                         : 'bg-cream ring-1 ring-soil/12 hover:ring-forest/25',
@@ -257,61 +261,16 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
                     )}
 
                     <span className="flex items-start justify-between gap-2">
-                      <span
-                        className={cn(
-                          'text-[14px] font-medium leading-snug',
-                          onAccent ? 'text-forest' : 'text-forest',
-                        )}
-                      >
+                      <span className="text-[14px] font-medium leading-snug text-forest">
                         {pkg.name}
                       </span>
-                      <span
-                        className={cn(
-                          'mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border transition-colors',
-                          active
-                            ? 'border-forest bg-forest text-mint'
-                            : onAccent
-                              ? 'border-forest/40 bg-cream/60 text-transparent'
-                              : 'border-ink/20 bg-cream text-transparent',
-                        )}
-                        aria-hidden
-                      >
-                        <Check className="size-2.5" strokeWidth={3.6} />
+                      <span className="shrink-0 text-[15px] font-semibold leading-snug tabular-nums text-forest">
+                        {formatIDR(pkg.price)}
                       </span>
                     </span>
 
-                    <span
-                      className={cn(
-                        'mt-2 text-lg font-medium tracking-tight tabular-nums',
-                        onAccent ? 'text-forest' : 'text-forest',
-                      )}
-                    >
-                      {formatIDR(pkg.price)}
-                    </span>
-                    <span
-                      className={cn(
-                        'text-[11px] font-medium',
-                        onAccent ? 'text-forest-muted' : 'text-forest-muted',
-                      )}
-                    >
-                      {AI_TOPUP_COPY.onceLabel}
-                    </span>
-
-                    <span
-                      className={cn(
-                        'mt-2.5 block text-[12px] font-medium',
-                        onAccent ? 'text-forest' : 'text-forest',
-                      )}
-                    >
-                      +{formatTokens(pkg.tokens)} token AI
-                    </span>
-                    <span
-                      className={cn(
-                        'mt-0.5 block text-[11px] leading-relaxed',
-                        onAccent ? 'text-forest-muted' : 'text-forest-muted',
-                      )}
-                    >
-                      {pkg.note}
+                    <span className="mt-1.5 block text-[11.5px] leading-relaxed text-forest-muted">
+                      {pkg.description}
                     </span>
                   </button>
                 )
@@ -319,34 +278,20 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
             </div>
           </div>
 
-          {/* footer — total, CTA, trust badge */}
+          {/* footer — CTA dengan nominal kartu terpilih */}
           <div className="shrink-0 border-t border-soil/12 px-5 pt-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:px-6 lg:pb-5">
             {error && (
               <p className="mb-3 rounded-2xl bg-plum/10 px-3.5 py-2.5 text-[12.5px] leading-relaxed text-forest ring-1 ring-plum/20">
                 {error}
               </p>
             )}
-            <div className="flex items-center justify-between gap-3 text-sm">
-              <span className="min-w-0 truncate text-forest-muted">
-                {selected ? selected.name : AI_TOPUP_COPY.emptySelection}
-              </span>
-              <span
-                className={cn(
-                  'shrink-0 font-medium tabular-nums',
-                  selected ? 'text-forest' : 'text-forest-muted',
-                )}
-              >
-                {selected ? formatIDR(selected.price) : '-'}
-              </span>
-            </div>
-
             <button
               type="button"
               onClick={handlePay}
-              disabled={!selectedPackage || paying}
+              disabled={paying}
               className={cn(
-                'mt-3 flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-medium transition-colors',
-                selectedPackage && !paying
+                'mt-0 flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-medium transition-colors',
+                !paying
                   ? 'bg-forest text-mint hover:bg-forest-soft active:scale-[0.99]'
                   : 'cursor-not-allowed bg-ink/[0.07] text-forest-muted',
               )}
@@ -357,14 +302,9 @@ export function TopUpModal({ open, onClose }: { open: boolean; onClose: () => vo
                   {AI_TOPUP_COPY.payingCta}
                 </>
               ) : (
-                AI_TOPUP_COPY.payCta
+                AI_TOPUP_COPY.payCta(selected ? formatIDR(selected.price) : undefined)
               )}
             </button>
-
-            <p className="mt-3 flex items-center justify-center gap-1.5 text-[12px] text-forest-muted">
-              <Lock className="size-3 shrink-0" strokeWidth={2.4} />
-              {AI_TOPUP_COPY.trustNote}
-            </p>
           </div>
             </>
           )}

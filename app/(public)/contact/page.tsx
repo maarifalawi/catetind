@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { LandingContactLp } from '@/components/landing/lp/contact'
 import { LandingFooterLp } from '@/components/landing/lp/footer'
 import { LandingNavbarLp } from '@/components/landing/lp/navbar'
+import { LP_SUPPORT_EMAIL, LP_WHATSAPP } from '@/lib/data/landing'
 import { SITE_ORIGIN } from '@/lib/site'
 
 /* ── /contact ────────────────────────────────────────────────────────────────
@@ -13,8 +14,7 @@ import { SITE_ORIGIN } from '@/lib/site'
 
 export const metadata: Metadata = {
   title: 'Kontak | CatetInd',
-  description:
-    'Tanya langsung ke tim CatetInd soal fitur, privasi, pembayaran, atau apa pun sebelum mulai nyatet. WhatsApp 0817-7577-7778 atau email halo@catetind.com.',
+  description: `Tanya langsung ke tim CatetInd soal fitur, privasi, pembayaran, atau apa pun sebelum mulai nyatet. WhatsApp ${LP_WHATSAPP.display} atau email ${LP_SUPPORT_EMAIL}.`,
   alternates: { canonical: `${SITE_ORIGIN}/contact` },
 }
 

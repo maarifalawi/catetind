@@ -393,10 +393,10 @@ describe('LP_CONTACT — tiga field, WhatsApp utama + email fallback', () => {
   })
 
   it('nomor WhatsApp memakai format internasional di href', () => {
-    expect(LP_WHATSAPP.display).toBe('0817-7577-7778')
-    expect(LP_WHATSAPP.e164).toBe('6281775777778')
-    expect(LP_WHATSAPP.href).toBe('https://wa.me/6281775777778')
-    expect(LP_WHATSAPP.href).not.toContain('wa.me/0817')
+    expect(LP_WHATSAPP.display).toBe('0819-0844-4468')
+    expect(LP_WHATSAPP.e164).toBe('6281908444468')
+    expect(LP_WHATSAPP.href).toBe('https://wa.me/6281908444468')
+    expect(LP_WHATSAPP.href).not.toContain('wa.me/0819')
     expect(LP_WHATSAPP.prefill).toContain('Minca')
   })
 
