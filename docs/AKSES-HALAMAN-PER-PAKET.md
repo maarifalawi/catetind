@@ -62,6 +62,23 @@ Catatan: `/join/[code]` adalah **landing undangan** Joint Wallet. Siapa pun bole
 membuka tautannya; halaman Joint Wallet-nya sendiri (`/joint`) tetap terkunci
 untuk paket yang tidak punya `joint-wallet`.
 
+## 1b. Preview desain — DEV SAJA
+
+`/preview-onboarding` merender layar `/app/onboarding` **tanpa sesi**, supaya
+desainnya bisa ditinjau tanpa membuat akun atau membuka akun pemilik. Gerbangnya
+satu berkas: `lib/preview-routes.ts`.
+
+| Keadaan | Yang terjadi |
+|---|---|
+| `next dev` / `vitest` (`NODE_ENV` ≠ `production`) | rute terbuka, tidak lewat gerbang sesi |
+| `next build` / `next start` (`NODE_ENV` = `production`) | middleware **tidak** mengecualikannya (307 → `/login?next=…`) **dan** halamannya memanggil `notFound()` (404) |
+
+Rute ini **bukan** anggota `PUBLIC_ROUTES` — daftar itu dipakai gerbang provider
+klien, sementara preview hidup di grup `(public)` tanpa provider app. Preview
+juga tidak memberi akses data: apa pun yang diisi tinggal di perangkat, dan
+`POST /api/onboarding` dijawab 401 tanpa sesi. Dua test penjaga:
+`lib/preview-routes.test.ts` dan `lib/session-gate.test.ts`.
+
 ## 2. Matriks halaman app
 
 | Halaman | Rute | Catet Aja | Waras | Sultan | Aturan |

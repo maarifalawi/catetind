@@ -7,7 +7,7 @@
  * logikanya), supaya kalau suatu saat ada jalan pintas demo/env yang
  * ditambahkan lagi, test ini gagal sebelum user menemukannya.
  */
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 import { middleware } from '../middleware'
 
@@ -64,5 +64,31 @@ describe('middleware — gerbang sesi', () => {
 
     expect(response.status).toBe(200)
     expect(passesThrough(response)).toBe(true)
+  })
+
+  /* ── SATU-SATUNYA PENGECUALIAN GERBANG SESI: PREVIEW DESAIN ────────────────
+     `/preview-onboarding` merender layar onboarding tanpa sesi untuk review
+     desain (lihat `lib/preview-routes.ts`). Dua test di bawah mengunci janjinya:
+     terbuka saat dev/test, DAN tertutup begitu `NODE_ENV=production` — supaya
+     tidak pernah ada layar app yang bisa dibuka anonim di build produksi. */
+  it('/preview-onboarding terbuka di luar produksi (dev & test)', async () => {
+    const response = await middleware(request('/preview-onboarding'))
+
+    expect(response.status).toBe(200)
+    expect(passesThrough(response)).toBe(true)
+  })
+
+  it('/preview-onboarding TERTUTUP saat NODE_ENV=production', async () => {
+    vi.stubEnv('NODE_ENV', 'production')
+    try {
+      const response = await middleware(request('/preview-onboarding'))
+
+      expect(response.status).toBe(307)
+      expect(response.headers.get('location')).toBe(
+        'http://localhost:3000/login?next=%2Fpreview-onboarding',
+      )
+    } finally {
+      vi.unstubAllEnvs()
+    }
   })
 })

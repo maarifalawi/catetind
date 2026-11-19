@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { isPreviewRoute, previewEnabled } from '@/lib/preview-routes'
 import { isPublicRoute } from '@/lib/public-routes'
 import {
   PAYWALL_PATH,
@@ -112,6 +113,17 @@ export async function middleware(request: NextRequest) {
      ke `/`, bukan 307 ke `/login?next=…`. Tidak dimasukkan ke
      `PUBLIC_ROUTES` karena ia bukan halaman — hanya redirect. */
   if (pathname === '/preview-landing') return NextResponse.next()
+
+  /* ── RUTE PREVIEW DESAIN — DEV SAJA ────────────────────────────────────────
+     `/preview-onboarding` merender layar onboarding TANPA sesi supaya bisa
+     ditinjau tanpa akun. Ini SATU-SATUNYA pengecualian gerbang sesi, dan ia
+     hanya hidup di luar produksi: `previewEnabled()` membaca `NODE_ENV` yang
+     di-inline `'production'` saat `next build`, jadi di build produksi cabang
+     ini tidak pernah diambil — permintaan tetap jatuh ke gerbang sesi di bawah
+     (307 ke `/login?next=…`). Halaman preview-nya sendiri juga memanggil
+     `notFound()` sebagai pertahanan kedua. Lihat `lib/preview-routes.ts`. */
+  if (previewEnabled() && isPreviewRoute(pathname)) return NextResponse.next()
+
   if (isPublicRoute(pathname)) return NextResponse.next()
 
   const session = await hasVerifiedSession(request)
