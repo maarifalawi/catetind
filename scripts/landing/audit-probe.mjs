@@ -316,7 +316,7 @@ for (const width of widths) {
       ['nav-inner', 'header nav'],
       ['hero-text', '#hero > div.relative.z-10'],
       ['pain-inner', '#pain-calculator > div'],
-      ['pain-panel', '#pain-calculator .rounded-\\[24px\\]'],
+      ['pain-panel', '#pain-calculator .rounded-\\[26px\\]'],
       ['mission-inner', '#mission > div'],
       ['mission-card', '#mission article'],
       ['pricing-inner', '#pricing > div'],

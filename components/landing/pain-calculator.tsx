@@ -10,28 +10,39 @@ import {
   type MouseEvent,
 } from 'react'
 import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion'
-import { ArrowRight, Calculator } from 'lucide-react'
+import { ArrowRight, Calculator, Pencil } from 'lucide-react'
 import {
   DEFAULT_PAIN_RESULT_TAB,
   PAIN_CALCULATOR_COPY,
   PAIN_CALCULATOR_DEFAULTS,
   PAIN_RESULT_TABS,
   clampLeak,
-  clampSalary,
+  clampLeakSlider,
   computeGaibResult,
+  formatCompactIDR,
   formatIDR,
+  formatLeakInput,
+  formatLeakTyping,
+  investmentGainBadge,
+  parseLeakInput,
   resultAmountForTab,
   resultCaptionForTab,
   type PainResultTabId,
 } from '@/lib/data/pain-calculator'
 import { cn } from '@/lib/utils'
+import { BatikBackdrop } from './lp/batik-backdrop'
 import { LandingReveal } from './lp/reveal'
 
 /* ── KALKULATOR UANG GAIB (SECTION 2) ────────────────────────────────────────
-   Dua kolom dengan satu garis pemisah tipis:
+   Dua kolom: kiri terang untuk mengatur angka, kanan panel gelap untuk hasil.
 
-     kiri  → judul + dua slider (gaji & uang gaib)
+     kiri  → judul + SATU kontrol: "Uang Gaib / Bulan"
+             (angka bisa diketik manual + slider sampai Rp 5 juta)
      kanan → tab rentang + SATU angka besar + CTA
+
+   Slider GAJI sudah dihapus: section ini soal kebocoran, bukan soal besar
+   kecilnya pemasukan. Nominal di atas Rp 5 juta tetap bisa dimasukkan lewat
+   input manual, jadi tidak ada user yang "kehabisan" batas.
 
    Hanya satu angka hasil yang tampil pada satu waktu. Tab mengganti angka
    (1 tahun / 5 tahun / diinvestasikan) tanpa memuat ulang apa pun; hitungan
@@ -43,8 +54,10 @@ const DEFAULTS = PAIN_CALCULATOR_DEFAULTS
 
 export function LandingPainCalculator() {
   const reduceMotion = usePrefersReducedMotion()
-  const [salary, setSalary] = useState<number>(DEFAULTS.salary)
   const [leak, setLeak] = useState<number>(DEFAULTS.defaultLeak)
+  /* `draft` = teks mentah selama field angka sedang diketik. Saat null, field
+     menampilkan bentuk kanon `formatLeakInput(leak)`. */
+  const [draft, setDraft] = useState<string | null>(null)
   const [tab, setTab] = useState<PainResultTabId>(DEFAULT_PAIN_RESULT_TAB)
   const tabRefs = useRef<Record<PainResultTabId, HTMLButtonElement | null>>({
     yearly: null,
@@ -52,7 +65,7 @@ export function LandingPainCalculator() {
     invested: null,
   })
 
-  const result = useMemo(() => computeGaibResult(salary, leak), [salary, leak])
+  const result = useMemo(() => computeGaibResult(leak), [leak])
   const amount = resultAmountForTab(tab, result)
   const caption = resultCaptionForTab(tab, result)
   const formattedAmount = formatIDR(amount)
@@ -60,6 +73,35 @@ export function LandingPainCalculator() {
      dari kolom kanan — heuristik berbasis jumlah karakter, bukan tebak-tebakan */
   const compactAmount = formattedAmount.length > 13
   const activeTab = PAIN_RESULT_TABS.find((item) => item.id === tab) ?? PAIN_RESULT_TABS[0]
+
+  /* slider tidak pernah melewati batas atasnya, walau nominal manual lebih besar */
+  const sliderValue = clampLeakSlider(leak)
+  const inputValue = draft ?? formatLeakInput(leak)
+
+  /** geser slider → batas 5jt, sekaligus menutup mode ketik manual */
+  function handleSliderChange(next: number) {
+    setDraft(null)
+    setLeak(clampLeakSlider(next))
+  }
+
+  /** ketik manual → angka bebas sampai batas manual (bukan batas slider) */
+  function handleLeakTyping(raw: string) {
+    /* `formatLeakTyping` memberi titik ribuan SELAMA mengetik; huruf/koma
+       (singkatan "2jt", "1,5jt") dibiarkan utuh supaya bisa diselesaikan, dan
+       blur yang merapikannya jadi angka penuh. */
+    const clean = raw.replace(/[^\d.,a-zA-Z]/g, '').slice(0, 24)
+    const display = formatLeakTyping(clean)
+    const parsed = parseLeakInput(display)
+    if (parsed === null) {
+      setDraft(display)
+      return
+    }
+    const next = clampLeak(parsed)
+    setLeak(next)
+    /* kalau ketikan melewati batas manual, field ikut menampilkan angka yang
+       benar-benar dipakai hasil — jangan sampai ada dua nominal berbeda. */
+    setDraft(next !== parsed ? formatLeakInput(next) : display)
+  }
 
   /** panah kiri/kanan memindah tab — pola yang sama dengan toggle pricing */
   function handleTabKeyDown(event: KeyboardEvent<HTMLDivElement>) {
@@ -92,82 +134,93 @@ export function LandingPainCalculator() {
       aria-labelledby="pain-calculator-title"
       className="w-full scroll-mt-24 bg-canvas px-5 py-16 landing-tab:px-10 landing:py-24"
     >
-      <div className="mx-auto w-full max-w-[1200px]">
+      <div className="mx-auto w-full max-w-[1120px]">
         <LandingReveal
           y={32}
-          className="flex flex-col overflow-hidden rounded-[28px] bg-canvas shadow-landing-hairline ring-1 ring-soil/10 landing-tab:grid landing-tab:grid-cols-2"
+          className="grid overflow-hidden rounded-[26px] bg-canvas shadow-landing-card ring-1 ring-soil/10 landing-tab:grid-cols-[1.06fr_1fr] landing-tab:rounded-[32px]"
         >
-          {/* ── KIRI: penanda + judul + dua slider ─────────────────────── */}
-          <div className="flex flex-col p-5 sm:p-7 landing:p-10">
-            <span className="inline-flex w-fit items-center gap-2 rounded-full bg-sage py-0.5 pr-4 pl-0.5">
-              <span className="flex size-6 items-center justify-center rounded-full bg-canvas">
+          {/* ── KIRI: penanda + judul + SATU kontrol (bocor halus) ────────── */}
+          <div className="flex flex-col justify-center p-6 text-center sm:p-8 landing:p-12 landing-tab:text-left">
+            <span className="mx-auto inline-flex w-fit items-center gap-2 rounded-full bg-sage/70 py-1 pr-3.5 pl-1 ring-1 ring-soil/5 landing-tab:mx-0">
+              <span className="flex size-6 items-center justify-center rounded-full bg-canvas ring-1 ring-soil/5">
                 <Calculator className="size-3.5 text-forest" aria-hidden />
               </span>
-              <span className="text-[14px] leading-[1.5] text-forest">
+              <span className="text-[12.5px] leading-[1.5] font-medium text-forest">
                 {COPY.eyebrow}
               </span>
             </span>
 
             <h2
               id="pain-calculator-title"
-              className="mt-5 max-w-[360px] font-display text-[clamp(34px,6vw,64px)] leading-[1.05] font-medium tracking-[-0.045em] text-forest"
+              className="mx-auto mt-6 max-w-[380px] font-display text-[clamp(34px,6vw,56px)] leading-[1.03] font-medium tracking-[-0.045em] text-forest landing-tab:mx-0"
             >
               {COPY.titleLead} {COPY.titleEmphasis} {COPY.titleTail}
             </h2>
 
-            <div className="mt-8 flex flex-col gap-10 landing-tab:mt-10 landing:gap-12">
-              <div>
-                <label
-                  htmlFor="pain-salary"
-                  className="text-[13px] leading-[1.5] font-medium text-forest-muted"
-                >
-                  {COPY.salaryLabel}
-                </label>
-                <p className="mt-2 font-display text-[clamp(30px,7.5vw,52px)] leading-none font-medium tracking-[-0.045em] text-forest tabular-nums landing-tab:text-[clamp(30px,4.6vw,44px)] landing:text-[clamp(40px,3.8vw,52px)]">
-                  {formatIDR(salary)}
-                </p>
-                <RangeSlider
-                  id="pain-salary"
-                  label={COPY.salaryLabel}
-                  value={salary}
-                  min={DEFAULTS.salaryMin}
-                  max={DEFAULTS.salaryMax}
-                  step={DEFAULTS.salaryStep}
-                  valueText={formatIDR(salary)}
-                  onChange={(next) => setSalary(clampSalary(next))}
-                  className="mt-4"
+            <div className="mt-9">
+              <label
+                htmlFor="pain-leak"
+                className="text-[11px] leading-[1.5] font-medium tracking-[0.16em] text-forest-muted uppercase"
+              >
+                {COPY.leakLabel}
+              </label>
+
+              {/* Angka besar = field yang bisa diketik langsung. Ring & latar
+                  sage menandai area sentuh tanpa garis tebal. */}
+              <div className="mt-3 flex items-center gap-3 rounded-2xl bg-sage/40 px-4 py-3.5 ring-1 ring-inset ring-soil/5 transition-[background-color,box-shadow] duration-200 focus-within:bg-sage/60 focus-within:ring-forest/25 motion-reduce:transition-none">
+                <input
+                  id="pain-leak"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  value={inputValue}
+                  onChange={(event) => handleLeakTyping(event.target.value)}
+                  onBlur={() => setDraft(null)}
+                  onFocus={(event) => event.currentTarget.select()}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') event.currentTarget.blur()
+                  }}
+                  aria-label={COPY.leakInputAria}
+                  className="w-full min-w-0 bg-transparent text-center font-display text-[clamp(28px,7.4vw,44px)] leading-none font-medium tracking-[-0.045em] text-forest tabular-nums outline-none landing-tab:text-left"
                 />
+                <span
+                  aria-hidden
+                  className="flex size-8 shrink-0 items-center justify-center rounded-full bg-canvas text-forest-muted ring-1 ring-soil/5"
+                >
+                  <Pencil className="size-3.5" />
+                </span>
               </div>
 
-              <div>
-                <label
-                  htmlFor="pain-leak"
-                  className="text-[13px] leading-[1.5] font-medium text-forest-muted"
-                >
-                  {COPY.leakLabel}
-                </label>
-                <p className="mt-2 font-display text-[clamp(30px,7.5vw,52px)] leading-none font-medium tracking-[-0.045em] text-forest tabular-nums landing-tab:text-[clamp(30px,4.6vw,44px)] landing:text-[clamp(40px,3.8vw,52px)]">
-                  {formatIDR(leak)}
-                </p>
-                <RangeSlider
-                  id="pain-leak"
-                  label={COPY.leakLabel}
-                  value={leak}
-                  min={DEFAULTS.leakMin}
-                  max={DEFAULTS.leakMax}
-                  step={DEFAULTS.leakStep}
-                  valueText={formatIDR(leak)}
-                  onChange={(next) => setLeak(clampLeak(next))}
-                  className="mt-4"
-                />
+              <RangeSlider
+                id="pain-leak-slider"
+                label={COPY.leakLabel}
+                value={sliderValue}
+                min={DEFAULTS.leakMin}
+                max={DEFAULTS.leakMax}
+                step={DEFAULTS.leakStep}
+                valueText={formatIDR(sliderValue)}
+                onChange={handleSliderChange}
+                className="mt-4"
+              />
+
+              <div className="flex items-center justify-between text-[11.5px] leading-none text-forest-muted tabular-nums">
+                <span>{formatCompactIDR(DEFAULTS.leakMin)}</span>
+                <span>{formatCompactIDR(DEFAULTS.leakMax)}</span>
               </div>
             </div>
           </div>
 
-          {/* ── KANAN: hasil — sekat sendiri di mobile ──────────────────── */}
-          <div className="flex flex-col justify-center border-t border-soil/10 bg-sage/20 p-5 sm:p-7 landing-tab:border-t-0 landing-tab:border-l landing-tab:bg-transparent landing-tab:p-10">
-            <div className="flex flex-col items-center text-center">
-              <p className="text-[10.5px] leading-[1.5] font-medium tracking-[0.18em] text-forest-muted uppercase">
+          {/* ── KANAN: hasil di atas bidang gelap ber-corak batik ─────────── */}
+          <div className="relative flex flex-col justify-center gap-10 overflow-hidden bg-gradient-to-br from-evergreen-deep via-forest to-evergreen-deep p-6 text-center text-cream sm:p-8 landing:p-12 landing-tab:text-left">
+            {/* corak batik resmi landing (empat motif, mask radial ke tengah) */}
+            <BatikBackdrop id="pain-result-batik" tone="cream" className="opacity-60" />
+            <span
+              aria-hidden
+              className="pointer-events-none absolute -top-24 -right-20 size-64 rounded-full bg-mint/15 blur-3xl"
+            />
+
+            <div className="relative flex flex-col">
+              <p className="text-[10.5px] leading-[1.5] font-medium tracking-[0.18em] text-cream-muted uppercase">
                 {COPY.resultLabel}
               </p>
 
@@ -175,7 +228,7 @@ export function LandingPainCalculator() {
                 role="group"
                 aria-label={COPY.tabsAria}
                 onKeyDown={handleTabKeyDown}
-                className="mt-3 inline-flex items-center gap-1 rounded-full bg-sage/70 p-1"
+                className="mx-auto mt-4 inline-flex w-fit items-center gap-1 rounded-full bg-cream/10 p-1 ring-1 ring-cream/15 landing-tab:mx-0"
               >
                 {PAIN_RESULT_TABS.map((item) => {
                   const active = item.id === tab
@@ -189,10 +242,10 @@ export function LandingPainCalculator() {
                       aria-pressed={active}
                       onClick={() => setTab(item.id)}
                       className={cn(
-                        'inline-flex min-h-9 items-center justify-center rounded-full px-3 py-1.5 text-[12px] leading-[1.5] font-medium whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40 motion-reduce:transition-none landing-tab:px-4 landing-tab:text-[13px]',
+                        'inline-flex min-h-9 items-center justify-center rounded-full px-3 py-1.5 text-[12px] leading-[1.5] font-medium whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream/70 motion-reduce:transition-none landing-tab:px-4 landing-tab:text-[13px]',
                         active
-                          ? 'bg-forest text-cream'
-                          : 'text-forest-muted hover:text-forest',
+                          ? 'bg-cream text-forest'
+                          : 'text-cream/75 hover:text-cream',
                       )}
                     >
                       {item.label}
@@ -205,38 +258,47 @@ export function LandingPainCalculator() {
                   berubah tiap frame saat count-up berjalan. */}
               <p aria-live="polite" className="sr-only">
                 {activeTab.label}: {formattedAmount}. {caption}
+                {tab === 'invested' && result.investmentGain > 0
+                  ? ` ${investmentGainBadge(result.investmentGain)}.`
+                  : ''}
               </p>
 
-              <div className="mt-8 flex w-full flex-col items-center landing:mt-10">
+              <div className="mt-9">
                 <AnimatedRupiah
                   value={amount}
                   className={cn(
-                    'block font-display leading-[0.95] font-medium tracking-[-0.055em] whitespace-nowrap text-forest tabular-nums',
+                    'block text-center font-display leading-[0.95] font-medium tracking-[-0.055em] whitespace-nowrap text-cream tabular-nums landing-tab:text-left',
                     compactAmount
-                      ? 'text-[clamp(26px,9.5vw,42px)] landing-tab:text-[clamp(36px,4.8vw,56px)] landing:text-[clamp(56px,4.6vw,64px)]'
-                      : 'text-[clamp(30px,11vw,50px)] landing-tab:text-[clamp(42px,5.8vw,60px)] landing:text-[clamp(64px,5.8vw,80px)]',
+                      ? 'text-[clamp(24px,9vw,40px)] landing-tab:text-[clamp(32px,4.4vw,46px)] landing:text-[clamp(44px,4vw,52px)]'
+                      : 'text-[clamp(30px,11vw,50px)] landing-tab:text-[clamp(40px,5.4vw,56px)] landing:text-[clamp(56px,5.4vw,68px)]',
                   )}
                 />
-                <p className="mt-3 max-w-[380px] text-balance text-[13px] leading-[1.5] text-forest-muted sm:text-[14px]">
+                <p className="mx-auto mt-3 max-w-[340px] text-balance text-center text-[13px] leading-[1.6] text-cream-muted sm:text-[14px] landing-tab:mx-0 landing-tab:text-left">
                   {caption}
                 </p>
+                {tab === 'invested' && result.investmentGain > 0 ? (
+                  <p className="mx-auto mt-2 max-w-[340px] text-balance text-center text-[12px] leading-[1.6] text-cream-muted landing-tab:mx-0 landing-tab:text-left">
+                    {investmentGainBadge(result.investmentGain)}
+                  </p>
+                ) : null}
               </div>
+            </div>
 
+            <div className="relative">
               <Link
                 href="#pricing"
                 onClick={handleCtaClick}
-                className="mt-7 inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-forest px-6 py-2.5 text-[14px] font-medium text-cream transition-all duration-200 hover:scale-[1.02] hover:bg-forest-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40 focus-visible:ring-offset-2 motion-reduce:transition-none motion-reduce:hover:scale-100"
+                className="group inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-cream px-6 py-3 text-[14px] font-medium text-forest transition-colors duration-200 hover:bg-cream-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream/70 focus-visible:ring-offset-2 focus-visible:ring-offset-forest motion-reduce:transition-none"
               >
                 {COPY.cta}
-                <ArrowRight className="size-4" aria-hidden />
+                <ArrowRight
+                  className="size-4 transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transition-none"
+                  aria-hidden
+                />
               </Link>
             </div>
           </div>
         </LandingReveal>
-
-        <p className="mt-6 text-center text-[11px] leading-[1.5] text-forest-muted">
-          {COPY.disclaimer}
-        </p>
       </div>
     </section>
   )
@@ -319,9 +381,9 @@ function AnimatedRupiah({ value, className }: { value: number; className?: strin
 }
 
 /* ── RANGE RUPIAH ───────────────────────────────────────────────────────────
-   Range native (keyboard + tap target besar) dengan trek tipis 3px. Thumb
-   dibuat TERANG (canvas + cincin soil) supaya terbaca sebagai pegangan di
-   atas bagian trek yang sudah terisi — persis referensi desain. */
+   Range native (keyboard + tap target besar) dengan trek ramping 4px. Thumb
+   dibuat TERANG dengan cincin forest supaya terbaca sebagai pegangan di atas
+   bagian trek yang sudah terisi — bersih, tanpa bayangan berlebih. */
 function RangeSlider({
   id,
   label,
@@ -345,7 +407,7 @@ function RangeSlider({
 }) {
   const percent =
     max > min ? Math.min(100, Math.max(0, ((value - min) / (max - min)) * 100)) : 0
-  /* Trek tetap 3px (sleek), tapi AREA SENTUH 44px: input transparan setinggi
+  /* Trek tetap ramping, tapi AREA SENTUH 44px: input transparan setinggi
      h-11 menumpuk di atas trek supaya tetap nyaman digeser satu jempol. */
   const track = `linear-gradient(to right, var(--color-forest) 0%, var(--color-forest) ${percent}%, var(--color-sage) ${percent}%, var(--color-sage) 100%)`
 
@@ -361,11 +423,11 @@ function RangeSlider({
         onChange={(event) => onChange(Number(event.target.value))}
         aria-label={label}
         aria-valuetext={valueText}
-        className="relative z-10 h-11 w-full cursor-pointer appearance-none rounded-full bg-transparent outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-forest/35 focus-visible:ring-offset-2 [&::-moz-range-thumb]:size-[18px] [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border [&::-moz-range-thumb]:border-soil/20 [&::-moz-range-thumb]:bg-canvas [&::-moz-range-thumb]:shadow-landing-thumb [&::-moz-range-track]:h-[3px] [&::-moz-range-track]:rounded-full [&::-moz-range-track]:bg-transparent [&::-webkit-slider-runnable-track]:bg-transparent [&::-webkit-slider-thumb]:size-[18px] [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-soil/20 [&::-webkit-slider-thumb]:bg-canvas [&::-webkit-slider-thumb]:shadow-landing-thumb"
+        className="relative z-10 h-11 w-full cursor-pointer appearance-none rounded-full bg-transparent outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-forest/35 focus-visible:ring-offset-2 [&::-moz-range-thumb]:size-5 [&::-moz-range-thumb]:cursor-grab [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-forest [&::-moz-range-thumb]:bg-canvas [&::-moz-range-thumb]:shadow-landing-thumb [&::-moz-range-track]:h-1 [&::-moz-range-track]:rounded-full [&::-moz-range-track]:bg-transparent [&::-webkit-slider-runnable-track]:bg-transparent [&::-webkit-slider-thumb]:size-5 [&::-webkit-slider-thumb]:cursor-grab [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-forest [&::-webkit-slider-thumb]:bg-canvas [&::-webkit-slider-thumb]:shadow-landing-thumb"
       />
       <span
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-1/2 z-0 h-[3px] -translate-y-1/2 rounded-full"
+        className="pointer-events-none absolute inset-x-0 top-1/2 z-0 h-1 -translate-y-1/2 rounded-full"
         style={{ background: track }}
       />
     </div>

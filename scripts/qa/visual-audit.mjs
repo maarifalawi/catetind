@@ -519,9 +519,14 @@ await publicPage.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' })
 await publicPage.waitForTimeout(1500)
 const ranges = publicPage.locator('input[type="range"]')
 const rangeCount = await ranges.count()
-record('publik', 'Landing: Kalkulator Uang Gaib punya slider', rangeCount >= 2, `${rangeCount} slider`)
+record('publik', 'Landing: Kalkulator Uang Gaib punya slider', rangeCount >= 1, `${rangeCount} slider`)
+/* Section ini sekarang cuma punya SATU slider (uang gaib, maks 5jt) + input
+   manual. Nominal di atas batas slider tetap harus bisa diketik. */
+const manualInputs = publicPage.locator('#pain-calculator input[inputmode="numeric"]')
+const manualInputCount = await manualInputs.count()
+record('publik', 'Landing: Kalkulator Uang Gaib punya input manual', manualInputCount >= 1, `${manualInputCount} input`)
 if (rangeCount >= 1) {
-  for (const index of [0, 1]) {
+  for (let index = 0; index < Math.min(rangeCount, 2); index++) {
     const slider = ranges.nth(index)
     if (!(await slider.isVisible().catch(() => false))) continue
     await slider.evaluate((node) => {
