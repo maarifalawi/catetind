@@ -514,15 +514,28 @@ export interface SnapCharge {
  * Apakah pesan provider berarti "order_id ini sudah dipakai transaksi lain"?
  *
  * Midtrans hanya mengizinkan satu transaksi hidup per `order_id`. Setelah
- * transaksi lama kedaluwarsa/dibatalkan/dibayar, `POST /snap/v1/transactions`
- * dengan id yang sama ditolak `406` dengan pesan persis
- * `transaction_details.order_id has already been taken`. Pemanggil memakai
- * pemeriksaan ini untuk memutuskan "buat order baru", bukan meneruskan pesan
- * provider mentah ke layar user.
+ * transaksi lama dibuat/diambil alih halaman pembayaran, `POST
+ * /snap/v1/transactions` dengan id yang sama ditolak `406` dengan pesan
+ * `transaction_details.order_id has already been taken`.
+ *
+ * ⚠️ PESAN PROVIDER TIDAK SELALU BAHASA INGGRIS. Di produksi Snap membalas
+ * dalam bahasa Indonesia: `transaction_details.order_id sudah digunakan`.
+ * Versi pertama fungsi ini hanya mengenali kalimat Inggris, jadi pesan mentah
+ * itu lolos ke layar user ("Pembayaran tidak dimulai. transaction_details.
+ * order_id sudah digunakan") setiap kali ia menekan "Bayar sekarang" untuk
+ * kedua kalinya — padahal jalan keluarnya sudah ada: buat order baru.
+ * Karena itu kedua bahasa dikenali di sini, satu tempat.
  */
 export function isDuplicateOrderIdError(message: string | null | undefined): boolean {
   if (!message) return false
-  return /order[_\s-]?id.{0,40}already.{0,12}taken/i.test(message)
+  const text = message.toLowerCase()
+  if (!text.includes('order')) return false
+  /* Inggris: "order_id has already been taken" / "order_id has been taken" */
+  if (/order[_\s-]?id.{0,40}already.{0,20}taken/.test(text)) return true
+  if (/order[_\s-]?id.{0,40}has been taken/.test(text)) return true
+  /* Indonesia (balasan Snap produksi): "order_id sudah digunakan/dipakai" */
+  if (/order[_\s-]?id.{0,40}(sudah|telah).{0,20}(digunakan|dipakai|terpakai)/.test(text)) return true
+  return false
 }
 
 /**

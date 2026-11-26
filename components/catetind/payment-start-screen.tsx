@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, ArrowRight, BadgeCheck, Info, ShieldCheck, Tag } from 'lucide-react'
 import { PaymentInstructionCard, type ActiveInvoice } from './payment-instruction-card'
+import { cn } from '@/lib/utils'
 import {
   PAY_METHOD_COPY,
   PAY_START_COPY,
@@ -323,7 +324,23 @@ export function PaymentStartScreen({
 
         {/* desktop: ringkasan di kiri (sticky) + pembayaran di kanan; ponsel menumpuk */}
         <div className="mt-8 grid w-full grid-cols-1 gap-6 lg:mt-10 lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start lg:gap-8">
-          <aside className="min-w-0 lg:sticky lg:top-24">{summary}</aside>
+          {/* Ponsel: begitu tagihan aktif (QRIS/VA tampil), ringkasan dipadatkan
+              jadi SATU baris — supaya instruksi bayarnya dapat layar penuh, bukan
+              didorong ke bawah oleh kartu ringkasan. Desktop tidak berubah:
+              ringkasan lengkap tetap di kiri. */}
+          {invoice && (
+            <div className="flex items-center justify-between gap-3 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/12 lg:hidden">
+              <span className="min-w-0 truncate text-[13.5px] font-medium text-forest">
+                {plan.name}
+              </span>
+              <span className="font-display text-[18px] leading-none font-semibold tabular-nums text-forest">
+                {formatIDR(total)}
+              </span>
+            </div>
+          )}
+          <aside className={cn('min-w-0 lg:sticky lg:top-24', invoice && 'hidden lg:block')}>
+            {summary}
+          </aside>
 
           <div className="min-w-0">
             {session === 'guest' ? (

@@ -70,6 +70,22 @@ try {
 
   await warasPage.goto(`${BASE}/checkout?plan=waras&period=lifetime`, { waitUntil: 'networkidle' })
   await warasPage.waitForTimeout(800)
+  /* Navbar sadar-sesi: user yang sudah masuk TIDAK boleh ditawari "Masuk" lagi
+     (keluhan pemilik produk: posisinya sudah login, tombol Masuk masih di kanan
+     atas). Halaman checkout membaca sesi di server dan mengoper `signedIn`.
+     Konteks QA ini selebar 390px (mode ponsel), jadi tombolnya ada di dalam
+     menu — diuji lewat panel menu, bukan teks header yang memang kosong. */
+  await warasPage.locator('[data-landing-menu]').click()
+  await warasPage.waitForTimeout(400)
+  const menuText = (await warasPage.locator('#landing-nav-menu').innerText()).replace(/\s+/g, ' ')
+  record(
+    'navbar',
+    'menu ponsel user yang sudah masuk menampilkan "Dashboard", bukan "Masuk"',
+    menuText.includes('Dashboard') && !menuText.includes('Masuk'),
+    menuText.slice(0, 140),
+  )
+  await warasPage.locator('[data-landing-menu]').click()
+  await warasPage.waitForTimeout(300)
   record('layout', 'checkout (paket dimiliki) tanpa gulir horizontal', (await horizontalOverflow(warasPage)) <= 0)
   let body = await warasPage.locator('body').innerText()
   record('checkout', 'paket yang dimiliki ditandai "Ini paketmu sekarang."', body.includes('Ini paketmu sekarang.'), body.slice(0, 180))

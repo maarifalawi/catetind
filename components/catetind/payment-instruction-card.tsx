@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { CheckCircle2, Clock, Copy, ExternalLink, Info, RefreshCw, XCircle } from 'lucide-react'
+import { CheckCircle2, Clock, Copy, ExternalLink, Info, RefreshCw, X, XCircle } from 'lucide-react'
 import { toast } from 'sonner'
+import { cn } from '@/lib/utils'
 import { PAY_CARD_COPY, PAY_METHOD_COPY, formatIDR } from '@/lib/data/pricing'
 import type { PaymentMethodId } from '@/lib/payments/methods'
 import type { PaymentInstructions, PaymentState } from '@/lib/payments/types'
@@ -250,6 +251,29 @@ export function PaymentInstructionCard({
   const snapClientKey = invoice.snap?.clientKey ?? null
   const snapEmbed = Boolean(snapToken && snapScriptUrl && snapClientKey)
   const [embedState, setEmbedState] = useState<'idle' | 'loading' | 'ready' | 'blocked'>('idle')
+  /**
+   * QRIS = SATU LAYAR. Halaman QR dari provider hidup di iframe lintas origin,
+   * jadi tampilannya tidak bisa dirapikan dari sini — yang kami rapikan adalah
+   * BINGKAINYA: begitu tagihan QRIS jadi, QR langsung tampil besar di satu
+   * layar (nominal + hitungan mundur + tutup), bukan sebagai kotak sempit di
+   * dalam kartu yang ikut menggulir.
+   */
+  const [qrFull, setQrFull] = useState(() => invoice.method === 'qris')
+
+  /* mode penuh = lapisan sendiri: kunci gulir latar + Escape menutup */
+  useEffect(() => {
+    if (!qrFull) return
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setQrFull(false)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', onKeyDown)
+    }
+  }, [qrFull])
 
   /* Muat `snap.js` lalu gambar halaman pembayarannya di elemen `SNAP_EMBED_ID`.
      Kalau skripnya tidak bisa dimuat (diblokir), kartu memberi tahu apa adanya
@@ -378,7 +402,125 @@ export function PaymentInstructionCard({
         </div>
       )}
 
-      {live && snapEmbed && (
+      {/* ── QRIS: SATU LAYAR, QR BESAR ───────────────────────────────────────
+          Halaman QR dari provider hidup di iframe lintas origin, jadi isinya
+          tidak bisa di-restyle. Yang bisa (dan memang) dirapikan adalah
+          BINGKAINYA: QRIS tidak lagi tampil sebagai kotak sempit berisi teks
+          panjang di dalam kartu — ia jadi satu layar fokus: nominal + sisa
+          waktu di atas, QR mengisi layar, dua tombol di bawah (cek status &
+          tutup). Semua elemen tetap berada di DOM saat mode berubah; kalau
+          container iframe-nya sampai dipasang ulang, QR yang sudah dibuat
+          provider ikut hilang dan user harus memindai ulang. */}
+      {live && snapEmbed && invoice.method === 'qris' && (
+        <div
+          className={cn(
+            'mt-4',
+            qrFull && 'fixed inset-0 z-[90] flex flex-col overflow-y-auto bg-canvas p-4 landing:p-6',
+          )}
+          role={qrFull ? 'dialog' : undefined}
+          aria-modal={qrFull || undefined}
+          aria-label={qrFull ? PAY_CARD_COPY.qrisFullAria : undefined}
+        >
+          {/* bar kepala — hanya tampak di mode penuh */}
+          <div
+            className={cn(
+              'mx-auto w-full max-w-[720px] items-center justify-between gap-3 pb-3',
+              qrFull ? 'flex' : 'hidden',
+            )}
+          >
+            <div className="min-w-0">
+              <p className="text-[11.5px] font-medium tracking-[0.16em] text-forest-muted uppercase">
+                {methodCopy.label}
+              </p>
+              <p className="mt-1 flex items-baseline gap-2">
+                <span className="font-display text-[22px] leading-none font-semibold tracking-[-0.02em] tabular-nums text-forest">
+                  {formatIDR(invoice.amount)}
+                </span>
+                {remaining !== null && (
+                  <span className="text-[13px] font-medium tabular-nums text-forest-muted">
+                    {formatRemaining(remaining)}
+                  </span>
+                )}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setQrFull(false)}
+              aria-label={PAY_CARD_COPY.qrisFullClose}
+              className="flex size-10 shrink-0 items-center justify-center rounded-full text-forest ring-1 ring-soil/15 transition-colors duration-200 hover:bg-sage/60 motion-reduce:transition-none"
+            >
+              <X className="size-4" strokeWidth={2.4} aria-hidden />
+            </button>
+          </div>
+
+          {/* di sinilah QR digambar provider — satu-satunya isi layar */}
+          <div
+            id={SNAP_EMBED_ID}
+            className={cn(
+              'mx-auto w-full overflow-hidden rounded-[20px] bg-canvas ring-1 ring-soil/12',
+              qrFull
+                ? 'min-h-[480px] max-w-[720px] flex-1'
+                : 'h-[560px] max-w-[460px] landing:h-[640px]',
+            )}
+          />
+
+          {embedState === 'loading' && (
+            <p
+              className="mx-auto mt-3 max-w-[720px] text-center text-[13px] text-forest-muted"
+              role="status"
+            >
+              {PAY_CARD_COPY.snapLoading}
+            </p>
+          )}
+          {embedState === 'blocked' && (
+            <p
+              className="mx-auto mt-3 max-w-[720px] text-center text-[12.5px] leading-relaxed text-forest-muted"
+              role="status"
+            >
+              {PAY_CARD_COPY.snapBlocked}
+            </p>
+          )}
+
+          {/* satu baris kendali: petunjuk singkat + cek status + buka/tutup penuh */}
+          <div className="mx-auto mt-3 flex w-full max-w-[720px] flex-wrap items-center justify-between gap-2">
+            <p className="min-w-0 flex-1 text-[12.5px] leading-relaxed text-forest-muted">
+              {methodCopy.hint}
+            </p>
+            <span className="flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                onClick={() => void check()}
+                className="inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[12.5px] font-medium text-forest-soft ring-1 ring-soil/16 transition-colors duration-200 hover:text-forest motion-reduce:transition-none"
+              >
+                <RefreshCw className="size-3.5" strokeWidth={2.4} aria-hidden />
+                {PAY_CARD_COPY.snapChecking}
+              </button>
+              <button
+                type="button"
+                onClick={() => setQrFull((value) => !value)}
+                className="inline-flex h-9 items-center rounded-full bg-forest px-3.5 text-[12.5px] font-medium text-cream transition-colors duration-200 hover:bg-forest-soft motion-reduce:transition-none"
+              >
+                {qrFull ? PAY_CARD_COPY.qrisFullClose : PAY_CARD_COPY.qrisFullOpen}
+              </button>
+            </span>
+          </div>
+
+          {snapRedirect && (
+            <a
+              href={snapRedirect}
+              target="_blank"
+              rel="noreferrer"
+              className="mx-auto mt-2 inline-flex w-full max-w-[720px] items-center gap-1.5 text-[12px] text-forest-muted underline decoration-soil/40 underline-offset-4 transition-colors hover:text-forest"
+            >
+              <ExternalLink className="size-3.5" strokeWidth={2.2} aria-hidden />
+              {PAY_CARD_COPY.snapCta}
+            </a>
+          )}
+        </div>
+      )}
+
+
+      {live && snapEmbed && invoice.method !== 'qris' && (
         <div className="mt-4 overflow-hidden rounded-2xl bg-canvas ring-1 ring-soil/12">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-soil/12 px-4 py-3">
             <div className="min-w-0">
@@ -408,8 +550,10 @@ export function PaymentInstructionCard({
             </p>
           )}
 
-          {/* di sinilah snap.js menggambar halaman pembayarannya */}
-          <div id={SNAP_EMBED_ID} className="min-h-[420px] w-full bg-cream" />
+          {/* di sinilah snap.js menggambar halaman pembayarannya. Tingginya
+              sengaja besar: iframe Snap memakai `height:100%` (min 560px), jadi
+              kotak yang pendek membuat instruksi VA/QR-nya menggulir sendiri. */}
+          <div id={SNAP_EMBED_ID} className="h-[560px] w-full bg-cream landing:h-[680px]" />
 
           {snapRedirect && (
             <div className="border-t border-soil/12 px-4 py-3">

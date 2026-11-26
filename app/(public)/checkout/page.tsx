@@ -130,7 +130,7 @@ export default async function CheckoutPage({
 
   return (
     <main id="top" className="w-full bg-canvas font-sans text-forest">
-      <LandingNavbarLp basePath="/" />
+      <LandingNavbarLp basePath="/" signedIn={signedIn} />
       <CheckoutScreen
         initialPlanId={plan ? (plan as PlanId) : undefined}
         initialReferralCode={kode || null}

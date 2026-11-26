@@ -751,6 +751,15 @@ export const PAY_CARD_COPY = {
   qrisScanTitle: 'Scan QR',
   qrAlt: 'Kode QRIS untuk pembayaranmu',
   qrStringLabel: 'Atau tempel kode ini:',
+  /* ── QRIS SATU LAYAR (revisi desain) ───────────────────────────────────────
+     Keluhan pemilik produk: kotak QRIS bawaan halaman pembayaran terasa ribet —
+     teks panjang, tombol ganda, dan QR-nya kecil di dalam iframe yang ikut
+     menggulir. Sekarang QRIS punya tampilan sendiri: satu layar penuh berisi
+     QR besar + nominal + tombol keluar, tanpa blok penjelasan yang menduplikasi
+     instruksi provider. */
+  qrisFullAria: 'QRIS pembayaran',
+  qrisFullOpen: 'Perbesar QR',
+  qrisFullClose: 'Tutup',
   vaLabel: 'Nomor Virtual Account',
   vaHint: 'Transfer tepat sesuai nominal.',
   billerLabel: 'Kode perusahaan',

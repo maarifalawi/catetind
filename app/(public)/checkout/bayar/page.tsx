@@ -77,7 +77,7 @@ export default async function CheckoutPayPage({
 
   return (
     <main id="top" className="w-full bg-canvas font-sans text-forest">
-      <LandingNavbarLp basePath="/" />
+      <LandingNavbarLp basePath="/" signedIn={Boolean(session)} />
       <PaymentStartScreen
         plan={plan}
         ownedPlanId={ownedPlanId}

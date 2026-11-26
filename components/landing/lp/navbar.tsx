@@ -38,7 +38,20 @@ import { LogoWordmark } from '@/components/catetind/logo-wordmark'
 
 const NAV_BAND_Y = 40
 
-export function LandingNavbarLp({ basePath = '' }: { basePath?: string }) {
+export function LandingNavbarLp({
+  basePath = '',
+  signedIn = false,
+}: {
+  basePath?: string
+  /**
+   * true = cookie sesi terbaca SERVER. Tombol sekunder di kanan berganti dari
+   * "Masuk" menjadi "Dashboard": user yang sudah masuk tidak boleh ditawari
+   * login lagi (dan tidak ada dua tautan login di satu layar).
+   * Halaman yang tidak membaca sesi (landing, kontak, bantuan) membiarkannya
+   * `false` — navbar tidak menebak dari cookie klien.
+   */
+  signedIn?: boolean
+}) {
   const [scrolled, setScrolled] = useState(false)
   const [onDark, setOnDark] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -210,8 +223,10 @@ export function LandingNavbarLp({ basePath = '' }: { basePath?: string }) {
               Dua aksi ini punya tinggi dan radius yang sama (44px, pill) supaya
               tidak ada tombol yang terlihat "setengah jadi" di samping CTA. */}
           <div className="flex h-14 flex-1 items-center justify-end gap-2 landing:w-[236px] landing:flex-none">
+            {/* Sudah masuk → "Dashboard" (bukan "Masuk"). Satu tautan saja:
+                menawarkan login ke user yang sudah login adalah jalan buntu. */}
             <Link
-              href={lpHref(LP_NAV.loginHref, basePath)}
+              href={signedIn ? LP_NAV.dashboardHref : lpHref(LP_NAV.loginHref, basePath)}
               className={cn(
                 'hidden h-11 items-center justify-center rounded-full px-4 text-[14px] leading-[1.5] font-medium ring-1 transition-colors focus-visible:outline-none focus-visible:ring-2 landing:inline-flex',
                 dark
@@ -219,7 +234,7 @@ export function LandingNavbarLp({ basePath = '' }: { basePath?: string }) {
                   : 'text-forest ring-soil/15 hover:bg-sage/60 focus-visible:ring-forest/40',
               )}
             >
-              {LP_NAV.loginLabel}
+              {signedIn ? LP_NAV.dashboardLabel : LP_NAV.loginLabel}
             </Link>
 
             <LandingButton
@@ -303,11 +318,11 @@ export function LandingNavbarLp({ basePath = '' }: { basePath?: string }) {
                 </LandingButton>
 
                 <Link
-                  href={lpHref(LP_NAV.loginHref, basePath)}
+                  href={signedIn ? LP_NAV.dashboardHref : lpHref(LP_NAV.loginHref, basePath)}
                   onClick={() => setMenuOpen(false)}
                   className="inline-flex h-12 w-full items-center justify-center rounded-full text-[15px] leading-[1.5] font-medium text-forest ring-1 ring-soil/15 transition-colors hover:bg-sage/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40"
                 >
-                  {LP_NAV.loginLabel}
+                  {signedIn ? LP_NAV.dashboardLabel : LP_NAV.loginLabel}
                 </Link>
               </div>
             </div>

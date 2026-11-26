@@ -644,14 +644,26 @@ describe('createSnapCharge', () => {
    baru" alih-alih menampilkan pesan provider ke user.
    ------------------------------------------------------------------------- */
 describe('isDuplicateOrderIdError', () => {
-  it('mengenali pesan Snap yang asli', () => {
+  it('mengenali pesan Snap yang asli (Inggris)', () => {
     expect(isDuplicateOrderIdError('transaction_details.order_id has already been taken')).toBe(true)
     expect(isDuplicateOrderIdError('ORDER_ID HAS ALREADY BEEN TAKEN')).toBe(true)
+    expect(isDuplicateOrderIdError('transaction_details.order_id has been taken')).toBe(true)
+  })
+
+  /* Regresi produksi: Snap bisa membalas dalam BAHASA INDONESIA. Dulu pesan ini
+     lolos ke layar user saat ia menekan "Bayar sekarang" kedua kalinya, padahal
+     jalan keluarnya (order baru) sudah ada di route. */
+  it('mengenali pesan Snap yang sudah dilokalkan ke bahasa Indonesia', () => {
+    expect(isDuplicateOrderIdError('transaction_details.order_id sudah digunakan')).toBe(true)
+    expect(isDuplicateOrderIdError('transaction_details.order_id telah digunakan')).toBe(true)
+    expect(isDuplicateOrderIdError('transaction_details.order_id sudah dipakai')).toBe(true)
+    expect(isDuplicateOrderIdError('ORDER_ID SUDAH TERPAKAI')).toBe(true)
   })
 
   it('pesan lain tidak dianggap duplikat', () => {
     expect(isDuplicateOrderIdError('402 Payment channel is not activated')).toBe(false)
     expect(isDuplicateOrderIdError('Access denied due to unauthorized transaction')).toBe(false)
+    expect(isDuplicateOrderIdError('transaction_details.order_id is invalid')).toBe(false)
     expect(isDuplicateOrderIdError('')).toBe(false)
     expect(isDuplicateOrderIdError(null)).toBe(false)
     expect(isDuplicateOrderIdError(undefined)).toBe(false)

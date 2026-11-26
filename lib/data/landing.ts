@@ -905,6 +905,13 @@ export const LP_NAV = {
   /** tombol sekunder di header — sengaja terpisah dari daftar link */
   loginLabel: 'Masuk',
   loginHref: '/login',
+  /* Sudah masuk = tombol "Masuk" TIDAK boleh tetap tampil (keluhan pemilik
+     produk: posisinya sudah login, tapi header masih menawarkan "Masuk").
+     Halaman yang tahu status sesi (checkout & halaman bayar, keduanya dibaca
+     server) mengoper `signedIn` ke navbar, dan tombolnya berganti jadi
+     pintasan ke dashboard — bukan link login kedua. */
+  dashboardLabel: 'Dashboard',
+  dashboardHref: '/app',
 } as const
 
 /* ── SATU PINTU MASUK: PAKET + PERIODE DEFAULT ───────────────────────────────
