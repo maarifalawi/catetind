@@ -1,6 +1,7 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
+import dynamic from 'next/dynamic'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Drawer } from 'vaul'
 import {
@@ -16,6 +17,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { ScreenShell } from './screen-shell'
+import { SkeletonCard } from './screen-skeleton'
 import { GlobalPrivacyToggle } from './global-privacy-toggle'
 import { ContextMenu } from './context-menu'
 import { useMoneyContext } from './money-context-provider'
@@ -24,12 +26,7 @@ import { FinancialHealthCard } from './financial-health-card'
 import { InsightCards } from './insight-cards'
 import { SpendingHeatmap } from './spending-heatmap'
 import { HistoryTransactionRow } from './history-transaction-row'
-import { TransactionDetailSheet } from './transaction-detail-sheet'
-import { ConfirmDeleteDialog, TransactionActionsSheet } from './transaction-actions'
 import { ConfirmDialog } from './confirm-dialog'
-import { EditTransactionSheet } from './edit-transaction-sheet'
-import { WeeklyRecapModal } from './weekly-recap-modal'
-import { MonthlyReviewModal } from './monthly-review-modal'
 /* H3-5: MonthlyTargetCard dipindah ke Dashboard — impor di sini dihapus. */
 import { TransactionBottomSheet } from '@/components/dashboard/transaction-bottom-sheet'
 import { useMonthlyReview } from '@/hooks/use-monthly-review'
@@ -74,7 +71,6 @@ import {
   filterHistoryTransactions,
   financialHealthScore,
   groupTransactionsByDate,
-  latestTransactions,
   localISODate,
   maskMoney,
   type HistoryTab,
@@ -95,6 +91,59 @@ import {
    Privasi: satu state `isMasked` mengunci SEMUA nominal di halaman ini. */
 
 const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1]
+
+/* ── KOMPONEN BERAT DIMUAT SAAT DIBUTUHKAN (paket 110) ───────────────────────
+   Sebelumnya keempat berkas ini ikut bundel & hidrasi awal halaman Riwayat:
+     · WeeklyRecapModal  (menghitung `useWeeklyRecap()` bahkan saat tertutup),
+     · MonthlyReviewModal (DOM modal penuh + `useLiveFunds()` saat tertutup),
+     · detail / aksi / edit transaksi.
+   Halaman Riwayat jadi lebih lambat dibuka daripada halaman lain padahal
+   modal-modal itu hanya dipakai setelah user menekan sesuatu. Sekarang
+   chunk-nya dipisah (`next/dynamic`) dan komponennya baru di-mount saat memang
+   dibutuhkan; `warmLazySheets()` memuat chunk-nya setelah halaman idle supaya
+   pembukaan pertama tetap instan. */
+const WeeklyRecapModal = dynamic(
+  () => import('./weekly-recap-modal').then((mod) => mod.WeeklyRecapModal),
+  { ssr: false },
+)
+const MonthlyReviewModal = dynamic(
+  () => import('./monthly-review-modal').then((mod) => mod.MonthlyReviewModal),
+  { ssr: false },
+)
+const TransactionDetailSheet = dynamic(
+  () => import('./transaction-detail-sheet').then((mod) => mod.TransactionDetailSheet),
+  { ssr: false },
+)
+const TransactionActionsSheet = dynamic(
+  () => import('./transaction-actions').then((mod) => mod.TransactionActionsSheet),
+  { ssr: false },
+)
+const ConfirmDeleteDialog = dynamic(
+  () => import('./transaction-actions').then((mod) => mod.ConfirmDeleteDialog),
+  { ssr: false },
+)
+const EditTransactionSheet = dynamic(
+  () => import('./edit-transaction-sheet').then((mod) => mod.EditTransactionSheet),
+  { ssr: false },
+)
+
+/** panaskan chunk sheet setelah halaman selesai interaktif, bukan di jalur kritis */
+function warmLazySheets(): () => void {
+  if (typeof window === 'undefined') return () => {}
+  const warm = () => {
+    void import('./weekly-recap-modal')
+    void import('./monthly-review-modal')
+    void import('./transaction-detail-sheet')
+    void import('./transaction-actions')
+    void import('./edit-transaction-sheet')
+  }
+  if (typeof window.requestIdleCallback === 'function') {
+    const id = window.requestIdleCallback(warm, { timeout: 2500 })
+    return () => window.cancelIdleCallback?.(id)
+  }
+  const timer = window.setTimeout(warm, 2000)
+  return () => window.clearTimeout(timer)
+}
 
 /* ── FILTER BAR (1 baris, hemat teks) ────────────────────────────────────────
    Dulu tiap filter punya satu BARIS pill sendiri (Waktu / Wallet / Tipe /
@@ -184,6 +233,13 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
   const undoTimer = useRef<number | null>(null)
   const [recapOpen, setRecapOpen] = useState(false)
   const [recapDismissed, setRecapDismissed] = useState(false)
+  /** tab aktif — dideklarasikan di sini supaya perhitungan turunan bisa TIDAK
+   *  dikerjakan untuk panel yang sedang tidak terlihat. */
+  const [tab, setTab] = useState<HistoryTab>('riwayat')
+  /** true setelah modal pernah dibuka: komponen berat tetap ter-mount supaya
+   *  animasi tutupnya utuh, tetapi TIDAK ikut hidrasi awal halaman. */
+  const [recapMounted, setRecapMounted] = useState(false)
+  const [monthlyMounted, setMonthlyMounted] = useState(false)
   /** banner rekap hanya Jumat–Minggu; dihitung di client supaya HTML server
    *  dan client identik (pola yang sama dengan WeeklyRecapBanner di Home) */
   const [recapWindow, setRecapWindow] = useState(false)
@@ -196,8 +252,22 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
      `catet-ind-monthly-target`), jadi target yang disimpan di sini langsung
      terbaca kartu Target di Home — bukan store/context kedua.
      `auto: false` = ritual tanggal 1–3 tetap milik Home: di halaman riwayat,
-     modal ini hanya terbuka karena aksi user (kartu Target atau CTA recap). */
-  const monthly = useMonthlyReview({ auto: false })
+     modal ini hanya terbuka karena aksi user (kartu Target atau CTA recap).
+     `recapOnDemand: true` = jangan menghitung recap bulan lalu sebelum modalnya
+     dibuka; sebelumnya perhitungan itu berjalan setiap store berubah. */
+  const monthly = useMonthlyReview({ auto: false, recapOnDemand: true })
+  /** true = snapshot uang masih dibaca dari perangkat/jaringan. Isi halaman
+   *  diganti kerangka supaya user tidak melihat "0 catatan" palsu. */
+  const hydrating = !snapshot.hydrated
+
+  useEffect(() => {
+    if (recapOpen) setRecapMounted(true)
+  }, [recapOpen])
+  useEffect(() => {
+    if (monthly.open) setMonthlyMounted(true)
+  }, [monthly.open])
+  /** muat chunk sheet setelah halaman idle (bukan saat hidrasi awal) */
+  useEffect(() => warmLazySheets(), [])
 
   /* Catatan sesi dari store uang (bukan bus lagi) — lihat `useMoneyStore` di
      atas. Baris yang sudah dihapus (tombstone) juga tersaring dari mock
@@ -246,29 +316,38 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
     () => transactions.filter((tx) => matchesContext(tx.context, context)),
     [transactions, context],
   )
+  /* Pencarian memakai nilai TERTUNDA: kolom input tetap responsif, sementara
+     filter/group/insight dihitung setelah React punya waktu — penting saat
+     ledger berisi ribuan baris. */
+  const deferredQuery = useDeferredValue(searchQuery)
   const filtered = useMemo(
-    () => filterHistoryTransactions(visibleTransactions, activeFilters, searchQuery, today),
-    [visibleTransactions, activeFilters, searchQuery, today],
+    () => filterHistoryTransactions(visibleTransactions, activeFilters, deferredQuery, today),
+    [visibleTransactions, activeFilters, deferredQuery, today],
   )
   /*
    * DAFTAR CATATAN DIPOTONG 10 BARIS (permintaan pemilik produk).
    *
-   * Urutannya tidak boleh berubah gara-gara pemotongan, jadi kelompokkan dulu
-   * (fungsi yang sama dengan tampilan), RATAKAN sesuai urutan tampil (hari
-   * terbaru → jam terbaru), baru ambil 10 pertama. Pengelompokan ulang
-   * dilakukan atas baris yang terlihat saja supaya total/net harian di kepala
-   * grup tidak menghitung baris yang belum ditampilkan.
+   * Urutannya tidak boleh berubah gara-gara pemotongan, jadi kelompokkan DULU
+   * sekali (fungsi yang sama dengan tampilan), ratakan sesuai urutan tampil
+   * (hari terbaru → jam terbaru), lalu ambil 10 pertama. Dulu `filtered`
+   * dikelompokkan tiga kali (jumlah hari, pemotongan, lalu tampilan); sekarang
+   * hasil kelompok pertama dipakai untuk ketiganya.
    */
   const allGroups = useMemo(() => groupTransactionsByDate(filtered, today), [filtered, today])
-  const listedTransactions = useMemo(
-    () =>
-      latestTransactions(
-        filtered,
-        today,
-        showAllTransactions ? filtered.length : HISTORY_PAGE_SIZE,
-      ),
-    [filtered, today, showAllTransactions],
-  )
+  const dayCount = allGroups.length
+  const listedTransactions = useMemo(() => {
+    const limit = showAllTransactions ? filtered.length : HISTORY_PAGE_SIZE
+    if (limit <= 0) return [] as ContextTransaction[]
+    const out: ContextTransaction[] = []
+    for (const group of allGroups) {
+      for (const tx of group.items) {
+        if (out.length >= limit) break
+        out.push(tx)
+      }
+      if (out.length >= limit) break
+    }
+    return out
+  }, [allGroups, filtered.length, showAllTransactions])
   const groups = useMemo(
     () => groupTransactionsByDate(listedTransactions, today),
     [listedTransactions, today],
@@ -288,13 +367,22 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
        · `healthScore`       = rasio pemasukan vs pengeluaran, `null` kalau belum
                                bisa dihitung (data < 30 atau belum ada pemasukan);
        · `insights`          = kartu AI yang angkanya dari catatan KONTEKS AKTIF
-                               (ambangnya di `buildHistoryInsights`). */
+                               (ambangnya di `buildHistoryInsights`).
+     Hanya dihitung saat tab Insight terlihat — tab Riwayat tidak membutuhkannya,
+     dan perhitungan ini menyapu SELURUH catatan. */
   const totalTransactions = recordedTxs.length
-  const healthScore = useMemo(() => financialHealthScore(transactions), [transactions])
-  const savingsRate = useMemo(() => savingsRatePct(transactions), [transactions])
+  const showInsight = tab === 'insight'
+  const healthScore = useMemo(
+    () => (showInsight ? financialHealthScore(transactions) : null),
+    [showInsight, transactions],
+  )
+  const savingsRate = useMemo(
+    () => (showInsight ? savingsRatePct(transactions) : null),
+    [showInsight, transactions],
+  )
   const insights = useMemo(
-    () => buildHistoryInsights(visibleTransactions, today),
-    [visibleTransactions, today],
+    () => (showInsight ? buildHistoryInsights(visibleTransactions, today) : []),
+    [showInsight, visibleTransactions, today],
   )
 
   const activeFilterCount =
@@ -518,9 +606,8 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
 
   /* H3-1 (audit UI/UX) — halaman dipecah jadi dua tab supaya tidak menumpuk
      semua di satu gulungan panjang: "Riwayat" (heatmap + catatan) dan "Insight"
-     (skor + insight AI). Kedua isi tetap ter-render; yang berpindah hanya mana
-     yang TAMPIL, jadi tidak ada data yang hilang antar tab. */
-  const [tab, setTab] = useState<HistoryTab>('riwayat')
+     (skor + insight AI). State tab-nya hidup lebih atas (dekat state lain) supaya
+     perhitungan turunan bisa dilewati saat panelnya tidak terlihat. */
 
   /** nomor baris global supaya animasi masuk tetap berurutan antar grup */
   let rowIndex = 0
@@ -571,6 +658,26 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
           )
         })}
       </div>
+
+      {/* ── KERANGKA SAAT DATA MASIH DIHIDRASI (paket 110) ────────────────────
+         Sebelumnya halaman sempat menampilkan "Belum ada catatan / 0 transaksi"
+         selama snapshot uang dibaca, lalu isinya berubah — terbaca sebagai
+         halaman lambat yang "memuat dua kali". Header & tab tetap tampil; yang
+         menunggu hanya isi. `hidden` dipakai supaya kerangka tidak menambah
+         tinggi permanen setelah data siap. */}
+      {hydrating && (
+        <div
+          data-catetind-skeleton
+          className="mt-5 space-y-4 lg:mt-6"
+          aria-busy="true"
+          aria-live="polite"
+        >
+          <SkeletonCard lines={3} />
+          <SkeletonCard lines={4} />
+          <SkeletonCard lines={2} />
+        </div>
+      )}
+      <div className={cn(hydrating && 'hidden')}>
 
       {/* ── 0 CATATAN = TIDAK ADA YANG DIKLAIM (paket 59 · 59.1) ────────────
          Kartu ini duduk di LUAR kedua panel tab supaya tab Insight tidak pernah
@@ -701,7 +808,7 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
           skor → insight. Pola mengikuti konteks aktif (paket 47). */}
       {/* hanya ada pola kalau ada pengeluaran NYATA di konteks ini — kalau tidak,
           heatmap dibiarkan tidak muncul (jangan gambar pola dari data kosong) */}
-      {visibleTransactions.some((tx) => tx.type === 'expense') && (
+      {tab === 'riwayat' && visibleTransactions.some((tx) => tx.type === 'expense') && (
         <div className="mt-5 lg:mt-6">
           <SpendingHeatmap masked={isMasked} transactions={visibleTransactions} today={today} />
         </div>
@@ -773,7 +880,7 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
               <h2 className="font-display text-[16px] font-semibold tracking-tight text-forest">Catatan</h2>
               <p className="text-[12.5px] text-forest-muted">
                 {summary.count} transaksi
-                {allGroups.length > 0 ? ` · ${allGroups.length} hari` : ''}
+                {dayCount > 0 ? ` · ${dayCount} hari` : ''}
               </p>
             </div>
           </div>
@@ -913,7 +1020,7 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
           Skor dihitung dari SELURUH catatan (metrik global user), sedangkan
           insight lahir dari catatan KONTEKS AKTIF — konteks yang datanya tipis
           tidak diberi klaim sama sekali. */}
-      {totalTransactions > 0 && (
+      {tab === 'insight' && totalTransactions > 0 && (
         <div className="mt-5 grid grid-cols-1 gap-5 lg:mt-6 lg:grid-cols-12 lg:gap-6">
           <div className="lg:col-span-5">
             <FinancialHealthCard
@@ -927,6 +1034,7 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
           </div>
         </div>
       )}
+      </div>
       </div>
 
       {/* ── SHEET OPSI FILTER ───────────────────────────────────────────────────
@@ -992,31 +1100,37 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
           teks instruksi manual "Geser: kanan Edit · kiri Hapus" yang dihapus —
           kontrolnya sekarang benar-benar bisa ditekan, bukan hafalan gesture.
           Wujudnya dipakai bersama halaman Dompet Detail (transaction-actions). */}
-      <TransactionActionsSheet
-        tx={menuTx}
-        masked={isMasked}
-        onClose={() => setMenuTx(null)}
-        onOpenDetail={menuOpenDetail}
-        onEdit={menuEdit}
-        onDelete={menuDelete}
-      />
+      {menuTx && (
+        <TransactionActionsSheet
+          tx={menuTx}
+          masked={isMasked}
+          onClose={() => setMenuTx(null)}
+          onOpenDetail={menuOpenDetail}
+          onEdit={menuEdit}
+          onDelete={menuDelete}
+        />
+      )}
 
       {/* detail transaksi — modal (desktop) / bottom sheet (mobile) */}
-      <TransactionDetailSheet
-        tx={selectedTransaction}
-        masked={isMasked}
-        onClose={() => setSelectedTransaction(null)}
-        onEdit={handleEdit}
-        onDelete={setPendingDelete}
-      />
+      {selectedTransaction && (
+        <TransactionDetailSheet
+          tx={selectedTransaction}
+          masked={isMasked}
+          onClose={() => setSelectedTransaction(null)}
+          onEdit={handleEdit}
+          onDelete={setPendingDelete}
+        />
+      )}
 
       {/* sheet EDIT transaksi (paket 03) — engine yang sama dengan tombol "+",
           tapi terbuka sudah terisi data catatan ini */}
-      <EditTransactionSheet
-        tx={editingTx}
-        onSave={handleSaveEdit}
-        onClose={() => setEditingTx(null)}
-      />
+      {editingTx && (
+        <EditTransactionSheet
+          tx={editingTx}
+          onSave={handleSaveEdit}
+          onClose={() => setEditingTx(null)}
+        />
+      )}
 
       {/* konfirmasi hapus */}
       <AnimatePresence>
@@ -1059,23 +1173,27 @@ export function HistoryScreen({ initialQuery }: { initialQuery?: string }) {
       {/* Rekap Mingguan 5 slide (inventaris g). `onSetTarget` WAJIB & diisi
           (paket 32): CTA "Atur target nabung" di slide Rencana Minggu Depan
           membuka modal target di bawah — recap ditutup dulu oleh handler. */}
-      <WeeklyRecapModal
-        open={recapOpen}
-        onClose={() => setRecapOpen(false)}
-        onSetTarget={handleSetRecapTarget}
-      />
+      {recapMounted && (
+        <WeeklyRecapModal
+          open={recapOpen}
+          onClose={() => setRecapOpen(false)}
+          onSetTarget={handleSetRecapTarget}
+        />
+      )}
 
       {/* Modal Monthly Review & Target Setup (inventaris #i) — komponen yang SAMA
           dengan Home, bukan modal kedua. Di sini `open` hanya bisa jadi true dari
           aksi user (`auto: false`): kartu Target di atas atau CTA recap. */}
-      <MonthlyReviewModal
-        open={monthly.open}
-        monthKey={monthly.monthKey}
-        saved={monthly.saved}
-        recap={monthly.recap}
-        onClose={monthly.close}
-        onSave={monthly.saveTarget}
-      />
+      {monthlyMounted && (
+        <MonthlyReviewModal
+          open={monthly.open}
+          monthKey={monthly.monthKey}
+          saved={monthly.saved}
+          recap={monthly.recap}
+          onClose={monthly.close}
+          onSave={monthly.saveTarget}
+        />
+      )}
     </ScreenShell>
   )
 }

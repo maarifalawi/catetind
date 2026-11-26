@@ -1,12 +1,13 @@
 import type { Metadata } from 'next'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { after } from 'next/server'
 import { CheckoutScreen } from '@/components/catetind/checkout-screen'
 import { LandingNavbarLp } from '@/components/landing/lp/navbar'
 import { LandingPurchaseToasts } from '@/components/landing/lp/purchase-toasts'
 import { safeNextPath } from '@/lib/data/auth'
 import type { PlanId } from '@/lib/data/pricing'
-import { readCallerPlan } from '@/lib/subscription/plan'
+import { readCallerPlan, type CallerPlan } from '@/lib/subscription/plan'
 import { reconcileCallerPurchases } from '@/lib/subscription/reconcile'
 import { readSupabaseSession } from '@/lib/supabase/session-cookie'
 import { SITE_ORIGIN } from '@/lib/site'
@@ -83,14 +84,33 @@ export default async function CheckoutPage({
      dibuka — di sinilah user yang ingin UPGRADE memilih paket yang lebih tinggi.
      Anonim juga tidak disentuh: tanpa sesi, `readSupabaseSession` = null. */
   const session = readSupabaseSession((await cookies()).toString())
+  let caller: CallerPlan | null = null
   if (session) {
-    let caller = await readCallerPlan(session.accessToken)
+    caller = await readCallerPlan(session.accessToken)
     let justFulfilled = false
 
     if (!caller.active) {
-      const reconciled = await reconcileCallerPurchases(session.accessToken)
-      justFulfilled = reconciled.fulfilled.length > 0
-      if (justFulfilled) caller = await readCallerPlan(session.accessToken)
+      if (lanjut) {
+        /* Jalur PEMULIHAN (paket 99): middleware mengirim user ke sini karena
+           paketnya belum terbaca aktif. Keputusan redirect butuh hasil
+           rekonsiliasi SEKARANG, jadi di sini memang ditunggu. */
+        const reconciled = await reconcileCallerPurchases(session.accessToken)
+        justFulfilled = reconciled.fulfilled.length > 0
+        if (justFulfilled) caller = await readCallerPlan(session.accessToken)
+      } else {
+        /* BUKAN jalur pemulihan: jangan menahan render halaman harga.
+           Rekonsiliasi tetap berjalan, tetapi SETELAH response terkirim —
+           sebelumnya hingga 8 panggilan status Midtrans berurutan membuat klik
+           "Pesan" terasa diam beberapa detik sebelum halaman tampil. */
+        const token = session.accessToken
+        after(async () => {
+          try {
+            await reconcileCallerPurchases(token)
+          } catch {
+            /* best effort: kegagalan provider bukan alasan menggagalkan halaman */
+          }
+        })
+      }
     }
 
     if (caller.active && (justFulfilled || lanjut)) {
@@ -98,12 +118,25 @@ export default async function CheckoutPage({
     }
   }
 
+  /* Paket yang dimiliki diteruskan ke layar checkout supaya:
+       · harga tiap kartu memakai `priceFor()` (selisih upgrade, bukan harga penuh);
+       · CTA tidak lagi berbunyi "Daftar & mulai" untuk user yang sudah masuk;
+       · paket yang sudah aktif TIDAK menawarkan pembelian yang pasti dilempar
+         balik oleh `/checkout/bayar` (penyebab tab bolak-balik).
+     `failed` dibaca sebagai "tidak tahu" — jangan menuduh paket user. */
+  const signedIn = Boolean(session)
+  const ownedPlanId = caller && !caller.failed ? caller.planId : null
+  const ownedIsLifetime = Boolean(caller?.active && caller.isLifetime)
+
   return (
     <main id="top" className="w-full bg-canvas font-sans text-forest">
       <LandingNavbarLp basePath="/" />
       <CheckoutScreen
         initialPlanId={plan ? (plan as PlanId) : undefined}
         initialReferralCode={kode || null}
+        signedIn={signedIn}
+        ownedPlanId={ownedPlanId}
+        ownedIsLifetime={ownedIsLifetime}
       />
       {/* social proof pembelian juga tampil di checkout (tanpa menutupi ringkasan) */}
       <LandingPurchaseToasts />

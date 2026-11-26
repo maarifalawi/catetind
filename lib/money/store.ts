@@ -1179,6 +1179,22 @@ export async function hydrateMoneyStore(): Promise<void> {
      SEBELUM merge, dan ikut ke setiap penulisan berikutnya (`commit`) */
   accountPurged = persisted?.purged === true
 
+  /* ── CACHE DIPUBLIKASIKAN DULU (paket 110) ────────────────────────────────
+     Sebelum ini snapshot cache baru di-`commit` SETELAH `readRemoteMoney()`
+     selesai — padahal bacaan itu menarik seluruh ledger (dipaginasi 500 baris
+     BERURUTAN) + dompet + saldo + migrasi. Di jaringan ponsel itu berarti
+     beberapa detik layar kosong/seed, dan halaman yang isinya seluruhnya dari
+     snapshot ini (Riwayat & Insight, Budget & Target) terasa "lambat" padahal
+     datanya sudah ada di perangkat.
+
+     Sekarang cache diterbitkan LEBIH DULU (stale-while-revalidate), lalu server
+     tetap menjadi sumber otoritatif saat jawabannya tiba. `mergeWithRemote()`
+     di bawah sudah menerima `live` yang berisi baris cache + antrean offline,
+     jadi tidak ada baris ganda dan tombstone tetap berlaku. */
+  if (persisted) {
+    commitSafely(mergeMoneySnapshot(persisted), persisted)
+  }
+
   if (!accountPurged) {
     const remote = await readRemoteMoney()
     if (remote) {

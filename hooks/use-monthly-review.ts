@@ -41,7 +41,17 @@ export function useMonthlyReview({
    *           targetnya tetap ada — jadi ritual bulanannya tetap milik Home.
    */
   auto = true,
-}: { auto?: boolean } = {}) {
+  /**
+   * `true` = recap bulan lalu hanya dihitung saat modalnya memang dibuka.
+   *
+   * /history memakai ini (paket 110): halamannya TIDAK menampilkan recap kecuali
+   * user membuka modal, tetapi hook ini dulu menghitung ulang seluruh transaksi
+   * bulan lalu setiap store berubah — kerja yang tidak pernah dilihat user.
+   * Home tetap `false` karena modalnya bisa terbuka sendiri tanggal 1–3 dan
+   * frame pertamanya harus sudah berisi angka.
+   */
+  recapOnDemand = false,
+}: { auto?: boolean; recapOnDemand?: boolean } = {}) {
   /* Catatan NYATA dari store uang — sumber recap bulan lalu. Dulu recap memakai
      12 transaksi contoh Agustus 2026 yang tampil untuk semua akun; sekarang
      angkanya hanya bisa berasal dari catatan user sendiri. */
@@ -70,14 +80,18 @@ export function useMonthlyReview({
     setReady(true)
     /* Hitung recap SEKALI di sini supaya frame pertama saat modal auto-terbuka
        (tanggal 1–3) sudah menyebut bulan yang benar. Efek di bawah menjaganya
-       tetap segar saat store uang selesai hidrasi / catatan berubah. */
-    setRecap(
-      buildMonthlyRecap(
-        recorded.filter((tx) => tx.date.startsWith(prevKey)),
-        readSavedTargetFor(prevKey)?.amount ?? 0,
-        prevKey,
-      ),
-    )
+       tetap segar saat store uang selesai hidrasi / catatan berubah.
+       Pemakai `recapOnDemand` (mis. /history) melewati langkah ini: recap baru
+       dihitung ketika modalnya benar-benar dibuka. */
+    if (!recapOnDemand || auto) {
+      setRecap(
+        buildMonthlyRecap(
+          recorded.filter((tx) => tx.date.startsWith(prevKey)),
+          readSavedTargetFor(prevKey)?.amount ?? 0,
+          prevKey,
+        ),
+      )
+    }
 
     /* `closed` bulan ini → jangan muncul lagi; `undefined` = belum pernah dibuka.
        `auto: false` (mis. /history) melewati pemeriksaan ini sepenuhnya: modalnya
@@ -89,17 +103,19 @@ export function useMonthlyReview({
   }, [])
 
   /* Recap dihitung ulang setiap store uang berubah (hidrasi awal, catatan baru,
-     edit, hapus). Bulan yang direkap = bulan SEBELUM bulan berjalan; targetnya
-     dibaca dari riwayat target (`readSavedTargetFor`), bukan dari satu nilai
-     terakhir — supaya target bulan lalu tetap benar setelah user menyimpan
-     target bulan ini. */
+     edit, hapus) — KECUALI pemakai `recapOnDemand` yang modalnya masih tertutup:
+     tidak ada yang membacanya, jadi jangan menyapu seluruh transaksi. Bulan yang
+     direkap = bulan SEBELUM bulan berjalan; targetnya dibaca dari riwayat target
+     (`readSavedTargetFor`), bukan dari satu nilai terakhir — supaya target bulan
+     lalu tetap benar setelah user menyimpan target bulan ini. */
   useEffect(() => {
     if (!monthKey) return
+    if (recapOnDemand && !open) return
     const prevKey = previousMonthKey(monthKey)
     const prevTxs = recorded.filter((tx) => tx.date.startsWith(prevKey))
     const prevTarget = readSavedTargetFor(prevKey)?.amount ?? 0
     setRecap(buildMonthlyRecap(prevTxs, prevTarget, prevKey))
-  }, [monthKey, recorded])
+  }, [monthKey, recorded, open, recapOnDemand])
 
   /** pintu masuk manual: kartu Target di Home */
   const openModal = useCallback(() => setOpen(true), [])

@@ -68,6 +68,9 @@ export function PaymentStartScreen({
   ownedPlanId,
   ownedIsLifetime,
   isUpgrade,
+  alreadyOwned = false,
+  topOwned = false,
+  signedIn,
   referralCode,
   sandbox,
 }: {
@@ -78,12 +81,29 @@ export function PaymentStartScreen({
   ownedIsLifetime: boolean
   /** true = ini upgrade lifetime, bukan pembelian pertama (mengubah copy) */
   isUpgrade: boolean
+  /**
+   * true = paket yang diminta sudah dimiliki (tier sama/lebih tinggi).
+   * Halaman ini TIDAK me-redirect seperti dulu; ia menjelaskan keadaannya di
+   * tempat supaya tab tidak bolak-balik dan tidak ada tagihan yang tidak perlu.
+   */
+  alreadyOwned?: boolean
+  /** true = paket yang dimiliki adalah tier tertinggi di katalog */
+  topOwned?: boolean
+  /**
+   * true/false = server SUDAH membaca cookie sesi; `undefined` = belum diketahui
+   * (dipakai untuk tidak menampilkan kartu "Masuk dulu" sebelum jawabannya ada).
+   */
+  signedIn?: boolean
   referralCode: string | null
   /** true = server memakai kredensial Midtrans sandbox (bukan uang sungguhan) */
   sandbox: boolean
 }) {
   const router = useRouter()
-  const [session, setSession] = useState<'checking' | 'guest' | 'ready'>('checking')
+  const [session, setSession] = useState<'checking' | 'guest' | 'ready'>(() => {
+    if (signedIn === true) return 'ready'
+    if (signedIn === false) return 'guest'
+    return 'checking'
+  })
   /** kode yang BENAR-BENAR ada di database - bukan sekadar bentuknya wajar */
   const [verifiedCode, setVerifiedCode] = useState<string | null>(null)
   /** metode yang sedang dipilih user (dari katalog `lib/payments/methods.ts`) */
@@ -105,6 +125,9 @@ export function PaymentStartScreen({
   const premiumBadge = SEKALI_BAYAR_BADGE
 
   useEffect(() => {
+    /* Server sudah melihat cookie sesi → tidak perlu round-trip tambahan
+       (dan tidak ada kedipan kartu "Masuk dulu ya" sebelum jawabannya tiba). */
+    if (signedIn === true) return
     let active = true
     fetchSessionUser()
       .then((user) => {
@@ -116,7 +139,7 @@ export function PaymentStartScreen({
     return () => {
       active = false
     }
-  }, [])
+  }, [signedIn])
 
   useEffect(() => {
     /* kode baru (atau kode dihapus) = diskon lama tidak berlaku sampai
@@ -160,8 +183,9 @@ export function PaymentStartScreen({
 
   const handlePay = useCallback(async () => {
     /* Tanpa kanal aktif tidak ada yang bisa ditagih — tombolnya juga tidak
-       dirender, jadi cabang ini hanya jaring aman. */
-    if (paying || !method) return
+       dirender, jadi cabang ini hanya jaring aman. Paket yang sudah dimiliki
+       tidak pernah ditagih (halaman ini menampilkan kartu keadaan, bukan tombol). */
+    if (paying || !method || alreadyOwned) return
     setPaying(true)
     setError(null)
     setNotice(null)
@@ -215,7 +239,7 @@ export function PaymentStartScreen({
     } finally {
       setPaying(false)
     }
-  }, [paying, total, plan, isUpgrade, method, router, verifiedCode])
+  }, [paying, total, plan, isUpgrade, method, router, verifiedCode, alreadyOwned])
   /* ringkasan pembelian - kolom KIRI di desktop (sticky), di atas cara bayar di ponsel */
   const summary = (
     <section className="rounded-[24px] bg-cream p-5 shadow-landing-hairline ring-1 ring-soil/12 landing:p-6">
@@ -252,7 +276,7 @@ export function PaymentStartScreen({
           {PAY_START_COPY.totalLabel}
         </span>
         <span className="font-display text-[24px] leading-none font-semibold tracking-[-0.02em] tabular-nums text-forest">
-          {formatIDR(total)}
+          {alreadyOwned ? PAY_START_COPY.totalOwnedLabel : formatIDR(total)}
         </span>
       </div>
 
@@ -317,6 +341,40 @@ export function PaymentStartScreen({
                   {PAY_START_COPY.loginCta}
                   <ArrowRight className="size-4" strokeWidth={2.4} aria-hidden />
                 </Link>
+              </section>
+            ) : alreadyOwned ? (
+              /* Paket yang diminta sudah dimiliki → TIDAK ada tagihan, TIDAK ada
+                 redirect. Halaman ini yang menjelaskan keadaannya. */
+              <section
+                className="rounded-[24px] bg-cream p-5 shadow-landing-hairline ring-1 ring-soil/12 landing:p-6"
+                role="status"
+              >
+                <h2 className="font-display text-[18px] font-medium tracking-tight text-forest">
+                  {topOwned ? PAY_START_COPY.topOwnedTitle : PAY_START_COPY.ownedTitle}
+                </h2>
+                <p className="mt-1.5 text-[13.5px] leading-relaxed text-forest-muted">
+                  {topOwned ? PAY_START_COPY.topOwnedBody : PAY_START_COPY.ownedBody}
+                </p>
+                <div className="mt-4 flex flex-col gap-2 landing-tab:flex-row">
+                  <Link
+                    href="/app"
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-forest px-5 text-[14px] font-medium text-cream landing-tab:min-w-[200px]"
+                  >
+                    {PAY_START_COPY.ownedCta}
+                    <ArrowRight className="size-4" strokeWidth={2.4} aria-hidden />
+                  </Link>
+                  {!topOwned && (
+                    <Link
+                      /* Tanpa `plan=` supaya halaman checkout memilih paket SATU
+                         TINGKAT DI ATAS paket yang dimiliki (default di
+                         `CheckoutScreen`), bukan paket yang sudah aktif. */
+                      href={buildCheckoutHref(null, 'lifetime', referralCode)}
+                      className="inline-flex h-11 items-center justify-center rounded-full px-5 text-[14px] font-medium text-forest-soft ring-1 ring-soil/16 transition-colors hover:text-forest"
+                    >
+                      {PAY_START_COPY.ownedOtherCta}
+                    </Link>
+                  )}
+                </div>
               </section>
             ) : invoice ? (
               /* Tagihan sudah dibuat -> instruksinya tampil di dalam app */

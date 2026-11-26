@@ -9,6 +9,7 @@ import { MobileBottomNav } from '@/components/MobileBottomNav'
 import { MoneyContextProvider } from '@/components/catetind/money-context-provider'
 import { OfflineBanner } from '@/components/catetind/offline-banner'
 import { PrivacyProvider } from '@/components/catetind/privacy-provider'
+import { RouteWarmup } from '@/components/catetind/route-warmup'
 import { ServiceWorkerRegistration } from '@/components/catetind/service-worker-registration'
 import { SmoothScrollProvider } from '@/components/catetind/smooth-scroll-provider'
 import { SubscriptionBanner } from '@/components/catetind/subscription-banner'
@@ -84,6 +85,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                           (paket 13): tanpa ini, pindah perangkat = Jatah Hari
                           Ini kembali "belum diatur" & limit kategori hilang. */}
                       <SettingsSync />
+                      {/* Panaskan rute Riwayat & Budget setelah idle (paket 110). */}
+                      <RouteWarmup />
                       <SubscriptionBanner />
                       {/* Banner Offline & Antrean Lokal (paket 42) — di bawah
                           banner langganan supaya saat keduanya tampil user

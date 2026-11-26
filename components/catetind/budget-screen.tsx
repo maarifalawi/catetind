@@ -1,20 +1,17 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
 import { PiggyBank, Target as TargetIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { ScreenShell } from './screen-shell'
+import { SkeletonCard } from './screen-skeleton'
 import { MetaChip } from './meta-chip'
 import { BudgetZoneA } from './budget-zone-a'
 import { BudgetZoneB } from './budget-zone-b'
 import { DailyHudSummary } from './daily-hud-summary'
-import { AddBudgetSheet } from './add-budget-sheet'
-import { AddGoalSheet } from './add-goal-sheet'
-import { ContributeSheet } from './contribute-sheet'
-import { SweepSheet } from './sweep-sheet'
-import { SpendingReviewSheet } from './spending-review-sheet'
 import { ConfirmDialog } from './confirm-dialog'
 import { ContextMenu } from './context-menu'
 import { GlobalPrivacyToggle } from './global-privacy-toggle'
@@ -104,6 +101,62 @@ type ZoneTab = 'budget' | 'goals'
  *  (`SHEET_EASE` di budget-sheet.tsx, ±0,3 detik) — lihat handleContinueToCoach */
 const COACH_HANDOFF_MS = 320
 
+/* ── SHEET DIMUAT SAAT DIBUTUHKAN (paket 110) ────────────────────────────────
+   Lima sheet ini dulu ikut bundel + hidrasi awal halaman Budget, padahal
+   semuanya hanya dibuka lewat aksi user. Chunk-nya sekarang dipisah, dan
+   komponennya baru di-mount ketika memang terbuka. `warmLazySheets()` memuat
+   chunk setelah halaman idle supaya pembukaan pertama tidak menunggu. */
+const AddBudgetSheet = dynamic(
+  () => import('./add-budget-sheet').then((mod) => mod.AddBudgetSheet),
+  { ssr: false },
+)
+const AddGoalSheet = dynamic(
+  () => import('./add-goal-sheet').then((mod) => mod.AddGoalSheet),
+  { ssr: false },
+)
+const ContributeSheet = dynamic(
+  () => import('./contribute-sheet').then((mod) => mod.ContributeSheet),
+  { ssr: false },
+)
+const SweepSheet = dynamic(
+  () => import('./sweep-sheet').then((mod) => mod.SweepSheet),
+  { ssr: false },
+)
+const SpendingReviewSheet = dynamic(
+  () => import('./spending-review-sheet').then((mod) => mod.SpendingReviewSheet),
+  { ssr: false },
+)
+
+function warmLazySheets(): () => void {
+  if (typeof window === 'undefined') return () => {}
+  const warm = () => {
+    void import('./add-budget-sheet')
+    void import('./add-goal-sheet')
+    void import('./contribute-sheet')
+    void import('./sweep-sheet')
+    void import('./spending-review-sheet')
+  }
+  if (typeof window.requestIdleCallback === 'function') {
+    const id = window.requestIdleCallback(warm, { timeout: 2500 })
+    return () => window.cancelIdleCallback?.(id)
+  }
+  const timer = window.setTimeout(warm, 2000)
+  return () => window.clearTimeout(timer)
+}
+
+/**
+ * `true` setelah sebuah sheet PERNAH dibuka. Dipakai untuk menunda mount
+ * komponen berat tanpa memotong animasi tutupnya: begitu terbuka sekali,
+ * komponennya tetap ter-mount dan `open` yang mengatur tampil/animasinya.
+ */
+function useLatch(open: boolean): boolean {
+  const [mounted, setMounted] = useState(open)
+  useEffect(() => {
+    if (open) setMounted(true)
+  }, [open])
+  return mounted
+}
+
 export function BudgetScreen({
   initialAddCategory,
   initialPlantGoal = false,
@@ -145,6 +198,12 @@ export function BudgetScreen({
   const [showReview, setShowReview] = useState(false)
   /** celengan yang sedang menerima setoran (null = sheet tertutup) */
   const [contributeTarget, setContributeTarget] = useState<SinkingFundItem | null>(null)
+  /* Mount-tertunda untuk sheet berat — lihat `useLatch` di atas. */
+  const addBudgetMounted = useLatch(showAddBudget)
+  const addGoalMounted = useLatch(showAddGoal)
+  const contributeMounted = useLatch(contributeTarget !== null)
+  const sweepMounted = useLatch(showSweepModal)
+  const reviewMounted = useLatch(showReview)
   /* ── HAPUS = KONFIRMASI + UNDO (paket 60) ────────────────────────────────
      Dua aksi merusak yang baru punya pintu di paket ini: mencabut budget
      kategori (60.1) dan mencabut celengan (60.2). Keduanya tidak langsung
@@ -211,6 +270,11 @@ export function BudgetScreen({
   const settings = useUserMoneySettings()
   /* baris ledger NYATA — satu-satunya sumber uang keluar periode ini */
   const snapshot = useMoneyStore()
+  /* true = snapshot uang masih dibaca. Isi halaman diganti kerangka supaya
+     user tidak melihat angka nol sesaat lalu berubah (paket 110). */
+  const hydrating = !snapshot.hydrated
+  /** muat chunk sheet setelah halaman idle, bukan di jalur kritis hidrasi */
+  useEffect(() => warmLazySheets(), [])
   const ledger = useMemo(() => recordedTransactions(snapshot), [snapshot])
   /** hari ke berapa hari ini (status "telat" celengan & sapu bersih) */
   const currentDay = today ? dayOfMonth(today, CURRENT_DAY) : CURRENT_DAY
@@ -653,6 +717,18 @@ export function BudgetScreen({
         <ZoneTabs value={activeTab} onChange={handleZoneTab} />
       </div>
 
+      {hydrating ? (
+        <div
+          data-catetind-skeleton
+          className="mt-6 space-y-4 lg:mt-8"
+          aria-busy="true"
+          aria-live="polite"
+        >
+          <SkeletonCard lines={3} />
+          <SkeletonCard lines={4} />
+        </div>
+      ) : (
+        <>
       {/* ── JATAH HARI INI — kartu super-hero full-width (audit #3) ──────────
           Membentang SEBELUM halaman terbelah dua kolom: metrik global tidak
           boleh dikurung di dalam kolom "Budget Kategori". */}
@@ -739,55 +815,67 @@ export function BudgetScreen({
           </section>
         </motion.div>
       </AnimatePresence>
+        </>
+      )}
 
       {/* ── BOTTOM SHEET (mobile) / DIALOG (desktop) ─────────────────────── */}
-      <AddBudgetSheet
-        open={showAddBudget}
-        onClose={handleCloseAddBudget}
-        scope={context}
-        initialPeriod={periodFromTab(periodTab)}
-        initialCategory={prefilledCategory}
-        /* daftar yang SAMA dengan yang dibaca kartu kategori (tersaring konteks):
-           dari sini sheet tahu kategori mana yang sudah punya limit → mode
-           "Atur Ulang Limit", jadi baris ganda tidak mungkin lahir (paket 28) */
-        existingBudgets={visibleBudgets}
-        onSave={handleSaveBudget}
-      />
-      <AddGoalSheet
-        open={showAddGoal}
-        onClose={() => setShowAddGoal(false)}
-        scope={context}
-        onSave={handleSaveGoal}
-      />
-      <ContributeSheet
-        fund={contributeTarget}
-        open={contributeTarget !== null}
-        onClose={() => setContributeTarget(null)}
-        onContribute={handleContribute}
-        masked={masked}
-      />
-      <SweepSheet
-        open={showSweepModal}
-        onClose={() => setShowSweepModal(false)}
-        budgets={periodBudgets}
-        funds={funds}
-        masked={masked}
-        onConfirm={handleSweep}
-      />
+      {addBudgetMounted && (
+        <AddBudgetSheet
+          open={showAddBudget}
+          onClose={handleCloseAddBudget}
+          scope={context}
+          initialPeriod={periodFromTab(periodTab)}
+          initialCategory={prefilledCategory}
+          /* daftar yang SAMA dengan yang dibaca kartu kategori (tersaring konteks):
+             dari sini sheet tahu kategori mana yang sudah punya limit → mode
+             "Atur Ulang Limit", jadi baris ganda tidak mungkin lahir (paket 28) */
+          existingBudgets={visibleBudgets}
+          onSave={handleSaveBudget}
+        />
+      )}
+      {addGoalMounted && (
+        <AddGoalSheet
+          open={showAddGoal}
+          onClose={() => setShowAddGoal(false)}
+          scope={context}
+          onSave={handleSaveGoal}
+        />
+      )}
+      {contributeMounted && (
+        <ContributeSheet
+          fund={contributeTarget}
+          open={contributeTarget !== null}
+          onClose={() => setContributeTarget(null)}
+          onContribute={handleContribute}
+          masked={masked}
+        />
+      )}
+      {sweepMounted && (
+        <SweepSheet
+          open={showSweepModal}
+          onClose={() => setShowSweepModal(false)}
+          budgets={periodBudgets}
+          funds={funds}
+          masked={masked}
+          onConfirm={handleSweep}
+        />
+      )}
       {/* Panel review hari ini — dibuka dua CTA over-budget (prompt 19).
           Menerima `hud`/`period`/`income` yang SAMA dengan kartu di atasnya,
           jadi angka panel tidak mungkin beda dari layar ini. */}
-      <SpendingReviewSheet
-        open={showReview}
-        onClose={() => setShowReview(false)}
-        hud={hud}
-        window={period}
-        income={income}
-        masked={masked}
-        txs={ledger}
-        todayISO={todayIso}
-        onContinueChat={handleContinueToCoach}
-      />
+      {reviewMounted && (
+        <SpendingReviewSheet
+          open={showReview}
+          onClose={() => setShowReview(false)}
+          hud={hud}
+          window={period}
+          income={income}
+          masked={masked}
+          txs={ledger}
+          todayISO={todayIso}
+          onContinueChat={handleContinueToCoach}
+        />
+      )}
 
       {/* ── KONFIRMASI HAPUS (paket 60) ──────────────────────────────────────
           Dua dialog, dua kalimat jujur yang berbeda — dan keduanya memakai

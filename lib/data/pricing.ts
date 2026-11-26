@@ -182,6 +182,36 @@ export function isDowngradeOrSame(plan: PlanDefinition, ownedPlanId?: PlanId | n
   return rankOf(ownedPlanId) >= plan.rank
 }
 
+/** true = paket ini peringkat tertinggi di katalog (tidak ada upgrade di atasnya) */
+export function isTopTier(planId: PlanId | null | undefined): boolean {
+  const rank = rankOf(planId)
+  if (rank === 0) return false
+  return rank >= Math.max(...PLANS.map((plan) => plan.rank))
+}
+
+/**
+ * Keadaan penawaran satu paket dilihat dari paket yang SUDAH dimiliki.
+ *
+ *   · `buy`     — belum punya lifetime (atau belum pernah beli) → harga penuh;
+ *   · `upgrade` — sudah lifetime di tier lebih rendah → yang dibayar selisih;
+ *   · `owned`   — tier yang sama ATAU lebih rendah → tidak ada yang perlu dibayar.
+ *
+ * Dipakai halaman checkout & halaman bayar supaya keduanya tidak pernah
+ * menjelaskan keadaan paket dengan dua cara berbeda. Aturannya memakai
+ * `rankOf()`/`priceFor()` — sumber yang sama dengan verifikasi nominal di
+ * `/api/payment/charge`.
+ */
+export type PlanOfferState = 'buy' | 'upgrade' | 'owned'
+
+export function planOfferState(
+  plan: PlanDefinition,
+  ownedPlanId: PlanId | null | undefined,
+  ownedIsLifetime: boolean,
+): PlanOfferState {
+  if (!ownedIsLifetime || rankOf(ownedPlanId) === 0) return 'buy'
+  return rankOf(ownedPlanId) >= plan.rank ? 'owned' : 'upgrade'
+}
+
 /**
  * Konteks harga. Sengaja objek eksplisit (bukan parameter posisi) supaya tidak
  * mungkin tertukar antara "periode" dan "paket yang dimiliki".
@@ -531,6 +561,28 @@ export const CHECKOUT_COPY = {
   summaryDiscount: 'Diskon teman',
   summaryTotal: 'Total bayar',
   cta: 'Daftar & mulai',
+  /* ── CTA per keadaan akun (paket 110) ──────────────────────────────────────
+     Sebelumnya satu label "Daftar & mulai" dipakai untuk SEMUA orang — termasuk
+     user yang sudah masuk dan sudah punya paket. Kliknya lalu dilempar balik
+     oleh `/checkout/bayar` (redirect), sehingga tab terlihat bolak-balik dan
+     halaman pembayaran tidak pernah terbuka. Label di bawah membedakan tiga
+     keadaan nyata; pemilihnya `planOfferState()`. */
+  /** sudah login, belum punya paket lifetime → lanjut ke halaman bayar */
+  ctaPay: 'Lanjut ke pembayaran',
+  /** sudah punya paket lebih rendah → yang dibayar selisih (`priceFor`) */
+  ctaUpgrade: (amount: string) => `Upgrade — bayar ${amount}`,
+  /** paket yang sedang dipilih sudah dimiliki (tier sama/lebih rendah) */
+  ctaOwned: 'Buka dashboard',
+  /** keterangan di bawah ringkasan saat paket yang dipilih sudah aktif */
+  summaryOwned: 'Sudah aktif',
+  /** catatan pada paket yang lebih rendah dari paket yang dimiliki */
+  includedNote: 'Sudah termasuk di paketmu.',
+  /** catatan pada paket upgrade — nominal dari `priceFor()`, bukan angka tulis tangan */
+  upgradeNote: (amount: string) => `Cukup tambah ${amount} untuk upgrade.`,
+  /** panel saat user sudah di tier tertinggi (tidak ada yang bisa dibeli) */
+  topOwnedTitle: 'Kamu sudah di paket tertinggi 🎉',
+  topOwnedBody: 'Semua fitur CatetInd sudah terbuka untukmu. Nggak ada yang perlu ditambah.',
+  ctaDashboard: 'Buka dashboard',
 } as const
 
 /* ── COPY UPGRADE (ajakan dari dalam app) ────────────────────────────────────
@@ -668,6 +720,19 @@ export const PAY_START_COPY = {
   notConfigured: 'Pembayaran belum bisa dimulai. Coba lagi sebentar ya.',
   failedTitle: 'Pembayaran tidak bisa dimulai',
   retryLabel: 'Coba lagi',
+  /* ── PAKET SUDAH DIMILIKI (paket 110) ──────────────────────────────────────
+     Halaman ini DULU me-redirect user ke `/checkout` ketika paketnya sudah
+     sama/lebih tinggi. Bagi user dengan paket aktif itu berarti tab berpindah
+     bolak-balik dan tidak pernah sampai ke halaman pembayaran. Sekarang halaman
+     ini menjelaskan keadaannya di tempat — tanpa redirect, tanpa tagihan. */
+  ownedTitle: 'Paket ini sudah kamu miliki',
+  ownedBody: 'Aksesnya aktif, jadi nggak ada yang perlu dibayar lagi. Kamu bisa langsung memakai aplikasinya.',
+  ownedCta: 'Masuk ke dashboard',
+  ownedOtherCta: 'Lihat paket upgrade',
+  topOwnedTitle: 'Kamu sudah di paket tertinggi 🎉',
+  topOwnedBody: 'Semua fitur CatetInd sudah terbuka untukmu. Nggak ada yang perlu ditambah.',
+  /** label total di ringkasan saat paketnya sudah aktif (bukan "Rp 0") */
+  totalOwnedLabel: 'Sudah aktif',
 } as const
 
 /* ── KARTU PEMBAYARAN (instruksi yang tampil setelah "Bayar sekarang") ───────

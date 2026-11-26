@@ -18,9 +18,11 @@ import {
   capabilitiesOf,
   capabilityUnlockedBy,
   isDowngradeOrSame,
+  isTopTier,
   isValidOfferAmount,
   lockedCapabilitiesFor,
   planById,
+  planOfferState,
   priceFor,
   upgradeDiff,
 } from './pricing'
@@ -304,5 +306,51 @@ describe('BILLING_COPY · ajakan upgrade', () => {
 
   it('pelanggan lama 30 hari tetap diarahkan ke Lifetime', () => {
     expect(BILLING_COPY.legacyUpgradeLabel).toBe('Lanjut ke Lifetime')
+  })
+})
+
+/* ── KEADAAN PENAWARAN (paket 110) ──────────────────────────────────────────
+   Halaman checkout & halaman bayar memakai SATU fungsi ini untuk memutuskan
+   "beli / upgrade / sudah dimiliki". Bug yang ditutup: akun dengan paket aktif
+   tetap ditawari pembelian, lalu `/checkout/bayar` me-redirect balik ke
+   `/checkout` - tab terlihat bolak-balik dan halaman bayar tidak pernah terbuka. */
+describe('planOfferState - beli / upgrade / sudah dimiliki', () => {
+  it('belum punya lifetime -> beli harga penuh', () => {
+    expect(planOfferState(WARAS!, null, false)).toBe('buy')
+    expect(planOfferState(WARAS!, 'catet-aja', false)).toBe('buy')
+  })
+
+  it('lifetime tier lebih rendah -> upgrade', () => {
+    expect(planOfferState(WARAS!, 'catet-aja', true)).toBe('upgrade')
+    expect(planOfferState(SULTAN!, 'waras', true)).toBe('upgrade')
+  })
+
+  it('tier sama -> sudah dimiliki (tidak ada tagihan)', () => {
+    expect(planOfferState(WARAS!, 'waras', true)).toBe('owned')
+    expect(planOfferState(SULTAN!, 'sultan', true)).toBe('owned')
+  })
+
+  it('tier yang lebih rendah TIDAK ditawarkan sebagai pembelian', () => {
+    expect(planOfferState(CATET_AJA!, 'waras', true)).toBe('owned')
+    expect(planOfferState(CATET_AJA!, 'sultan', true)).toBe('owned')
+  })
+
+  it('harga yang menyertai keadaan itu selalu dari priceFor()', () => {
+    expect(priceFor(WARAS!, { period: 'lifetime' })).toBe(WARAS!.lifetime)
+    expect(priceFor(WARAS!, { period: 'lifetime', ownedPlanId: 'catet-aja', ownedIsLifetime: true })).toBe(
+      WARAS!.lifetime - CATET_AJA!.lifetime,
+    )
+    expect(priceFor(WARAS!, { period: 'lifetime', ownedPlanId: 'waras', ownedIsLifetime: true })).toBe(0)
+    expect(priceFor(WARAS!, { period: 'lifetime', ownedPlanId: 'sultan', ownedIsLifetime: true })).toBe(0)
+  })
+})
+
+describe('isTopTier - hanya tier tertinggi', () => {
+  it('sultan = puncak, catet-aja/waras/null bukan', () => {
+    expect(isTopTier('sultan')).toBe(true)
+    expect(isTopTier('waras')).toBe(false)
+    expect(isTopTier('catet-aja')).toBe(false)
+    expect(isTopTier(null)).toBe(false)
+    expect(isTopTier(undefined)).toBe(false)
   })
 })

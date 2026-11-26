@@ -55,6 +55,17 @@ export interface RemoteMoney {
 const REMOTE_PAGE_SIZE = 500
 /** batas keras: 5000 baris ≈ beberapa tahun pencatatan harian */
 const REMOTE_ROW_MAX = 5_000
+/**
+ * Kolom yang BENAR-BENAR dibaca `toMoneyRow()` — bukan `select('*')`.
+ *
+ * `ledger_rows` menyimpan kolom milik akun (`user_id`) dan kolom audit lain
+ * yang tidak dipakai layar. Mengirimnya hanya menambah byte & waktu parse di
+ * ponsel, sementara halaman Riwayat/Budget menunggu seluruh bacaan ini.
+ */
+const LEDGER_COLUMNS =
+  'id,wallet_id,type,amount,date,note,category,counter_wallet_id,client_tx_id,ai_generated,time_label,seq'
+/** berapa halaman diunduh bersamaan — cukup untuk memangkas RTT, tidak membanjiri Supabase */
+const REMOTE_PAGE_CONCURRENCY = 4
 
 function toMoneyRow(db: LedgerDbRow, walletNames: Map<string, string>): MoneyRow {
   const base = toLedgerRow(db)
@@ -76,24 +87,61 @@ function toMoneyRow(db: LedgerDbRow, walletNames: Map<string, string>): MoneyRow
  * Urutannya (`date` lalu `seq`, dua-duanya menurun) SAMA untuk setiap halaman —
  * tanpa urutan yang stabil, `range` bisa mengembalikan baris yang sama dua kali
  * dan melewatkan baris lain.
+ *
+ * ── HALAMAN PERTAMA → SISA HALAMAN PARALEL (paket 110) ─────────────────────
+ * Dulu seluruh halaman diambil BERURUTAN: akun dengan 5.000 baris = 10 round-trip
+ * ke Supabase sebelum Riwayat/Budget bisa menampilkan apa pun. Sekarang halaman
+ * pertama (yang juga memberi `count`) diambil sendiri, lalu sisa halaman
+ * diunduh beberapa sekaligus. Urutan hasil tetap persis sama karena setiap
+ * halaman punya sort yang deterministik dan digabung sesuai urutan range.
  */
 async function readAllLedgerRows(
   client: NonNullable<ReturnType<typeof browserSupabase>>,
 ): Promise<LedgerDbRow[] | null> {
-  const all: LedgerDbRow[] = []
-  for (let from = 0; from < REMOTE_ROW_MAX; from += REMOTE_PAGE_SIZE) {
-    const to = Math.min(from + REMOTE_PAGE_SIZE, REMOTE_ROW_MAX) - 1
-    const { data, error } = await client
+  const readPage = (from: number, to: number, withCount = false) =>
+    client
       .from('ledger_rows')
-      .select('*')
+      .select(LEDGER_COLUMNS, withCount ? { count: 'exact' } : undefined)
       .order('date', { ascending: false })
       .order('seq', { ascending: false })
       .range(from, to)
-    if (error) return null
-    const page = (data ?? []) as LedgerDbRow[]
-    all.push(...page)
-    /* halaman terakhir: sisa kurang dari satu halaman penuh */
-    if (page.length < REMOTE_PAGE_SIZE) break
+
+  const first = await readPage(0, REMOTE_PAGE_SIZE - 1, true)
+  if (first.error) return null
+  const firstPage = (first.data ?? []) as LedgerDbRow[]
+  const all: LedgerDbRow[] = [...firstPage]
+
+  /* `count` = jumlah baris SETELAH RLS, jadi aman dipakai untuk menentukan sisa
+     halaman. Kalau backend tidak mengirimnya, jalur cadangannya berurutan
+     sampai satu halaman pendek — perilaku lama, hanya untuk keadaan itu. */
+  if (firstPage.length < REMOTE_PAGE_SIZE) return all
+  if (first.count === null) {
+    for (let from = REMOTE_PAGE_SIZE; from < REMOTE_ROW_MAX; from += REMOTE_PAGE_SIZE) {
+      const to = Math.min(from + REMOTE_PAGE_SIZE, REMOTE_ROW_MAX) - 1
+      const page = await readPage(from, to)
+      if (page.error) return null
+      const rows = (page.data ?? []) as LedgerDbRow[]
+      all.push(...rows)
+      if (rows.length < REMOTE_PAGE_SIZE) break
+    }
+    return all
+  }
+
+  const total = Math.min(first.count, REMOTE_ROW_MAX)
+  if (total <= REMOTE_PAGE_SIZE) return all
+
+  const ranges: { from: number; to: number }[] = []
+  for (let from = REMOTE_PAGE_SIZE; from < total; from += REMOTE_PAGE_SIZE) {
+    ranges.push({ from, to: Math.min(from + REMOTE_PAGE_SIZE, REMOTE_ROW_MAX) - 1 })
+  }
+
+  for (let offset = 0; offset < ranges.length; offset += REMOTE_PAGE_CONCURRENCY) {
+    const batch = ranges.slice(offset, offset + REMOTE_PAGE_CONCURRENCY)
+    const results = await Promise.all(batch.map((range) => readPage(range.from, range.to)))
+    for (const page of results) {
+      if (page.error) return null
+      all.push(...((page.data ?? []) as LedgerDbRow[]))
+    }
   }
   return all
 }

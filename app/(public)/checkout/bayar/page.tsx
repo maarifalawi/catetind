@@ -3,7 +3,7 @@ import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { LandingNavbarLp } from '@/components/landing/lp/navbar'
 import { PaymentStartScreen } from '@/components/catetind/payment-start-screen'
-import { PLANS, rankOf, type PlanId } from '@/lib/data/pricing'
+import { PLANS, isTopTier, rankOf, type PlanId } from '@/lib/data/pricing'
 import { midtransIsProduction } from '@/lib/payments/midtrans'
 import { readCallerPlan } from '@/lib/subscription/plan'
 import { readSupabaseSession } from '@/lib/supabase/session-cookie'
@@ -60,12 +60,16 @@ export default async function CheckoutPayPage({
   const ownedIsLifetime = caller?.isLifetime === true
 
   /* Satu periode: lifetime. Kalau paket lifetime yang sama/lebih tinggi sudah
-     dimiliki, tidak ada yang perlu dibayar — kembalikan ke halaman paket.
-     Pelanggan lama (monthly) tetap boleh membeli lifetime; nominalnya harga
-     penuh lifetime, bukan perpanjangan 30 hari. */
-  if (ownedIsLifetime && rankOf(ownedPlanId) >= plan.rank) {
-    redirect('/checkout')
-  }
+     dimiliki, tidak ada yang perlu dibayar.
+
+     DULU di sini ada `redirect('/checkout')`. Bagi user yang sudah punya paket,
+     itu berarti: /checkout → klik CTA → /checkout/bayar → redirect balik ke
+     /checkout → klik lagi → … (tab terlihat bolak-balik, halaman pembayaran
+     tidak pernah terbuka). Sekarang keadaan itu RENDERED di tempat — halaman
+     menjelaskan paketnya sudah aktif dan menyediakan jalan ke Dashboard /
+     halaman paket, tanpa tagihan dan tanpa redirect. */
+  const alreadyOwned = ownedIsLifetime && rankOf(ownedPlanId) >= plan.rank
+  const topOwned = ownedIsLifetime && isTopTier(ownedPlanId)
 
   const code = first(params.kode).toUpperCase()
   const isUpgrade =
@@ -79,6 +83,9 @@ export default async function CheckoutPayPage({
         ownedPlanId={ownedPlanId}
         ownedIsLifetime={ownedIsLifetime}
         isUpgrade={isUpgrade}
+        alreadyOwned={alreadyOwned}
+        topOwned={topOwned}
+        signedIn={Boolean(session)}
         referralCode={code || null}
         sandbox={!midtransIsProduction()}
       />

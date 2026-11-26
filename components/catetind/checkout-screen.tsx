@@ -15,11 +15,16 @@ import {
   buildCheckoutHref,
   buildPayHref,
   formatIDR,
+  isTopTier,
   isValidReferralCode,
-  offerPrice,
+  planOfferState,
+  priceFor,
+  rankOf,
   type PlanDefinition,
   type PlanId,
+  type PlanOfferState,
 } from '@/lib/data/pricing'
+import { nextTier } from '@/lib/data/upgrade'
 import { RegistrationSheet, type RegistrationOutcome, type RegistrationResult } from './registration-sheet'
 import { fetchSessionUser, registerAccount } from '@/lib/session-client'
 import { buildVerifyHref } from '@/lib/data/auth'
@@ -53,6 +58,9 @@ type OfferId = PlanId
 export function CheckoutScreen({
   initialPlanId,
   initialReferralCode,
+  signedIn = false,
+  ownedPlanId = null,
+  ownedIsLifetime = false,
 }: {
   /**
    * Pilihan awal dari query `/checkout?plan=…&kode=…`.
@@ -65,11 +73,26 @@ export function CheckoutScreen({
    */
   initialPlanId?: PlanId
   initialReferralCode?: string | null
+  /** true = cookie sesi sah terbaca SERVER (bukan tebakan klien) */
+  signedIn?: boolean
+  /** paket lifetime yang sudah dimiliki (dari `readCallerPlan` di server) */
+  ownedPlanId?: PlanId | null
+  /** true = paket yang dimiliki memang lifetime & aktif */
+  ownedIsLifetime?: boolean
 } = {}) {
-  /** paket terpilih — default paket hero (Waras), yaitu rekomendasi produk */
-  const [offerId, setOfferId] = useState<OfferId>(() =>
-    initialPlanId && PLANS.some((item) => item.id === initialPlanId) ? initialPlanId : HERO_PLAN.id,
-  )
+  /* Default pilihan:
+       · query `?plan=` menang (user datang dengan niat tertentu);
+       · sudah punya paket → paket SATU TINGKAT DI ATASNYA, supaya halaman ini
+         menawarkan sesuatu yang benar-benar bisa dibeli;
+       · belum punya / sudah di puncak → paket hero (rekomendasi produk). */
+  const [offerId, setOfferId] = useState<OfferId>(() => {
+    if (initialPlanId && PLANS.some((item) => item.id === initialPlanId)) return initialPlanId
+    if (ownedIsLifetime && ownedPlanId) {
+      const upgrade = nextTier(ownedPlanId)
+      if (upgrade) return upgrade.id
+    }
+    return HERO_PLAN.id
+  })
   /** kode teman: input mentah, kode yang sudah diverifikasi, dan status error */
   const [codeInput, setCodeInput] = useState(() => initialReferralCode?.trim().toUpperCase() ?? '')
   const [appliedCode, setAppliedCode] = useState<string | null>(null)
@@ -138,13 +161,38 @@ export function CheckoutScreen({
 
   const plan: PlanDefinition = PLANS.find((item) => item.id === offerId) ?? HERO_PLAN
 
-  /* Satu-satunya periode yang dijual: akses selamanya. Tidak ada state periode
-     dan tidak ada toggle — jadi tidak mungkin checkout mengirim `monthly`. */
-  const listPrice = offerPrice(plan, { period: 'lifetime' })
-  const discount = appliedCode ? listPrice - applyReferralDiscount(listPrice) : 0
-  const total = listPrice - discount
+  /* Keadaan penawaran & nominal — SATU sumber dengan server:
+       · `planOfferState()` menentukan apakah ini pembelian, upgrade, atau paket
+         yang sudah dimiliki;
+       · `priceFor()` menghasilkan harga penuh / SELISIH upgrade / 0.
+     Sebelumnya kartu menampilkan harga penuh (`offerPrice` tanpa konteks paket),
+     sehingga user yang upgrade melihat angka berbeda di halaman bayar. */
+  const offerState: PlanOfferState = planOfferState(plan, ownedPlanId, ownedIsLifetime)
+  const payable = priceFor(plan, { period: 'lifetime', ownedPlanId, ownedIsLifetime })
+  const discount = appliedCode && payable > 0 ? payable - applyReferralDiscount(payable) : 0
+  const total = Math.max(0, payable - discount)
+  const accountTopTier = ownedIsLifetime && isTopTier(ownedPlanId)
   const offerName = plan.name
   const periodShort = CHECKOUT_COPY.periodShortLifetime
+  /** true = CTA sedang menyiapkan navigasi (mencegah klik berulang) */
+  const [starting, setStarting] = useState(false)
+
+  /** catatan kecil di kartu paket — keadaan nyata, bukan hiasan */
+  const offerNote = offerNoteFor(plan)
+  function offerNoteFor(item: PlanDefinition): string | null {
+    const state = planOfferState(item, ownedPlanId, ownedIsLifetime)
+    if (state === 'owned') {
+      return rankOf(ownedPlanId) === item.rank
+        ? CHECKOUT_COPY.currentPlanNote
+        : CHECKOUT_COPY.includedNote
+    }
+    if (state === 'upgrade') {
+      const base = priceFor(item, { period: 'lifetime', ownedPlanId, ownedIsLifetime })
+      const amount = appliedCode && base > 0 ? base - applyReferralDiscount(base) : base
+      return CHECKOUT_COPY.upgradeNote(formatIDR(amount))
+    }
+    return null
+  }
 
   /**
    * Tombol "Pakai" TIDAK boleh percaya bentuk kode saja. Kode diperiksa ke
@@ -240,20 +288,44 @@ export function CheckoutScreen({
   }
 
   /**
-   * CTA utama: kalau user SUDAH masuk, langsung ke halaman bayar (paket dan
-   * kode teman yang sedang dipilih). Kalau belum, buka sheet registrasi —
-   * `/api/payment/charge` memang butuh sesi (identitas dari cookie).
+   * CTA utama. Tiga keadaan nyata, tiga tujuan berbeda:
+   *
+   *   · paket yang dipilih SUDAH dimiliki → Dashboard. Dulu jalurnya tetap ke
+   *     `/checkout/bayar`, yang langsung me-redirect balik ke sini — tab
+   *     terlihat bolak-balik dan halaman bayar tidak pernah terbuka;
+   *   · sudah masuk (server sudah memastikan) + belum punya paket/upgrade →
+   *     halaman bayar, TANPA round-trip `/api/session` tambahan;
+   *   · belum masuk → sheet registrasi, karena `/api/payment/charge` memakai
+   *     identitas dari cookie sesi.
    */
   function handleStart() {
+    if (starting) return
+
+    if (offerState === 'owned') {
+      router.push('/app')
+      return
+    }
+
+    const payHref = buildPayHref(offerId, 'lifetime', appliedCode)
+    if (signedIn) {
+      router.push(payHref)
+      return
+    }
+
+    /* Server tidak melihat sesi (mis. cookie baru ditulis di tab lain).
+       Tetap periksa sekali, tetapi dengan penanda sibuk supaya klik berulang
+       tidak menumpuk navigasi. */
+    setStarting(true)
     void fetchSessionUser()
       .then((user) => {
         if (user) {
-          router.push(buildPayHref(offerId, 'lifetime', appliedCode))
+          router.push(payHref)
           return
         }
         setRegistrationOpen(true)
       })
       .catch(() => setRegistrationOpen(true))
+      .finally(() => setStarting(false))
   }
 
   return (
@@ -298,6 +370,8 @@ export function CheckoutScreen({
                     <OfferOption
                       plan={item}
                       active={item.id === offerId}
+                      state={planOfferState(item, ownedPlanId, ownedIsLifetime)}
+                      note={offerNoteFor(item)}
                       onSelect={() => setOfferId(item.id)}
                     />
                   </li>
@@ -325,6 +399,17 @@ export function CheckoutScreen({
                   {CHECKOUT_COPY.summaryTitle}
                 </h2>
 
+                {accountTopTier && (
+                  <div className="mt-3 rounded-2xl bg-mint/25 px-3.5 py-3 ring-1 ring-forest/10">
+                    <p className="text-[13.5px] font-medium text-forest">
+                      {CHECKOUT_COPY.topOwnedTitle}
+                    </p>
+                    <p className="mt-1 text-[12.5px] leading-relaxed text-forest-muted">
+                      {CHECKOUT_COPY.topOwnedBody}
+                    </p>
+                  </div>
+                )}
+
                 <dl className="mt-3 space-y-2 text-[13.5px]">
                   <div className="flex items-start justify-between gap-3">
                     <dt className="text-forest-muted">{CHECKOUT_COPY.summaryPlan}</dt>
@@ -344,7 +429,8 @@ export function CheckoutScreen({
                   )}
                 </dl>
 
-                {/* kode teman — opsional, satu baris input */}
+                {/* kode teman — opsional, hanya saat ada yang benar-benar dibayar */}
+                {offerState !== 'owned' && (
                 <div className="mt-4 border-t border-soil/12 pt-4">
                   <label
                     htmlFor="checkout-referral"
@@ -417,25 +503,50 @@ export function CheckoutScreen({
                     ) : null}
                   </div>
                 </div>
+                )}
 
                 {/* total — satu angka besar, harga coret hanya kalau ada diskon */}
                 <div className="mt-4 flex items-baseline justify-between gap-3 border-t border-soil/12 pt-4">
                   <span className="text-[13.5px] font-medium text-forest-muted">
                     {CHECKOUT_COPY.summaryTotal}
                   </span>
-                  <span className="flex flex-wrap items-baseline justify-end gap-x-2 gap-y-1">
-                    {discount > 0 && (
-                      <span className="text-[13px] font-medium tabular-nums text-forest-muted line-through">
-                        {formatIDR(listPrice)}
-                      </span>
-                    )}
-                    <span className="font-display text-[28px] leading-none font-semibold tracking-[-0.03em] tabular-nums text-forest">
-                      {formatIDR(total)}
+                  {offerState === 'owned' ? (
+                    <span className="font-display text-[22px] leading-none font-semibold tracking-[-0.02em] text-forest">
+                      {CHECKOUT_COPY.summaryOwned}
                     </span>
-                  </span>
+                  ) : (
+                    <span className="flex flex-wrap items-baseline justify-end gap-x-2 gap-y-1">
+                      {discount > 0 && (
+                        <span className="text-[13px] font-medium tabular-nums text-forest-muted line-through">
+                          {formatIDR(payable)}
+                        </span>
+                      )}
+                      <span className="font-display text-[28px] leading-none font-semibold tracking-[-0.03em] tabular-nums text-forest">
+                        {formatIDR(total)}
+                      </span>
+                    </span>
+                  )}
                 </div>
 
-                <CheckoutCta onStart={handleStart} className="mt-4" disabled={checkingCode} />
+                {offerState === 'owned' && offerNote && (
+                  <p className="mt-2 text-[12.5px] leading-relaxed text-forest-muted">{offerNote}</p>
+                )}
+
+                <CheckoutCta
+                  onStart={handleStart}
+                  className="mt-4"
+                  disabled={checkingCode || starting}
+                  busy={starting}
+                  label={
+                    offerState === 'owned'
+                      ? CHECKOUT_COPY.ctaOwned
+                      : signedIn
+                        ? offerState === 'upgrade'
+                          ? CHECKOUT_COPY.ctaUpgrade(formatIDR(total))
+                          : CHECKOUT_COPY.ctaPay
+                        : CHECKOUT_COPY.cta
+                  }
+                />
               </div>
             </aside>
           </div>
@@ -472,14 +583,21 @@ export function CheckoutScreen({
 function OfferOption({
   plan,
   active,
+  state,
+  note,
   onSelect,
 }: {
   plan: PlanDefinition
   active: boolean
+  /** keadaan paket dilihat dari paket yang sudah dimiliki (`planOfferState`) */
+  state: PlanOfferState
+  /** keterangan keadaan (paket aktif / sudah termasuk / selisih upgrade) */
+  note: string | null
   onSelect: () => void
 }) {
   const price = plan.lifetime
   const unit = CHECKOUT_COPY.priceUnitLifetime
+  const owned = state === 'owned'
 
   return (
     <button
@@ -550,10 +668,12 @@ function OfferOption({
                 'flex size-6 shrink-0 items-center justify-center rounded-full border transition-colors',
                 active
                   ? 'border-cream bg-cream text-forest shadow-sm'
-                  : 'border-soil/20 bg-canvas text-transparent group-hover:border-forest/40',
+                  : owned
+                    ? 'border-forest/35 bg-sage text-forest'
+                    : 'border-soil/20 bg-canvas text-transparent group-hover:border-forest/40',
               )}
             >
-              <Check className="size-3.5" strokeWidth={3.4} />
+              {active || owned ? <Check className="size-3.5" strokeWidth={3.4} /> : null}
             </span>
           </span>
 
@@ -586,6 +706,18 @@ function OfferOption({
           >
             {plan.subtitle}
           </span>
+
+          {note && (
+            <span
+              className={cn(
+                'mt-2 flex items-start gap-1.5 rounded-xl px-2.5 py-2 text-[12.5px] leading-[1.45] font-medium',
+                active ? 'bg-cream/10 text-cream' : 'bg-sage/60 text-forest',
+              )}
+            >
+              <Info className="mt-[2px] size-3.5 shrink-0" strokeWidth={2.4} aria-hidden />
+              <span>{note}</span>
+            </span>
+          )}
 
           <span
             className={cn(
@@ -634,11 +766,17 @@ function CheckoutCta({
   onStart,
   className,
   disabled = false,
+  busy = false,
+  label = CHECKOUT_COPY.cta,
 }: {
   onStart: () => void
   className?: string
-  /** true = kode teman masih diperiksa; jangan lanjut dengan harga yang belum final */
+  /** true = kode teman masih diperiksa / CTA sedang menyiapkan navigasi */
   disabled?: boolean
+  /** true = tombol sedang bekerja — label & spinner memberi tahu, bukan diam */
+  busy?: boolean
+  /** label per keadaan akun (lihat `CHECKOUT_COPY.cta*`) */
+  label?: string
 }) {
   return (
     <div className={className}>
@@ -646,11 +784,19 @@ function CheckoutCta({
         type="button"
         onClick={onStart}
         disabled={disabled}
+        aria-busy={busy}
         className="group flex h-14 w-full items-center justify-between gap-3 rounded-full bg-forest pr-2 pl-6 text-cream shadow-landing-cta transition-colors duration-200 hover:bg-forest-soft active:scale-[0.98] disabled:cursor-wait disabled:opacity-60 motion-reduce:transition-none"
       >
-        <span className="text-[16.5px] font-medium tracking-[-0.01em]">{CHECKOUT_COPY.cta}</span>
+        <span className="text-[16.5px] font-medium tracking-[-0.01em]">{label}</span>
         <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-cream text-forest transition-colors duration-200 group-hover:bg-mint">
-          <ArrowRight className="size-[18px]" strokeWidth={2.4} aria-hidden />
+          {busy ? (
+            <span
+              aria-hidden
+              className="size-4 animate-spin rounded-full border-2 border-forest/30 border-t-forest motion-reduce:animate-none"
+            />
+          ) : (
+            <ArrowRight className="size-[18px]" strokeWidth={2.4} aria-hidden />
+          )}
         </span>
       </button>
     </div>

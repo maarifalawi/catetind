@@ -42,6 +42,8 @@
     "qa:ai": "node scripts/qa/ai-flow.mjs",
     "qa:settings": "node scripts/qa/settings-flow.mjs",
     "qa:snap": "node scripts/qa/snap-flow.mjs",
+    "qa:plan": "node scripts/qa/plan-state.mjs",
+    "qa:perf": "node scripts/qa/perf-tabs.mjs",
     "qa:admin": "node scripts/qa/admin-flow.mjs",
     "qa:isolation": "node scripts/qa/isolation.mjs",
     "qa:cleanup": "node scripts/qa/cleanup.mjs",
