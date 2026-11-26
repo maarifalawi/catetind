@@ -758,7 +758,10 @@ export const PAY_CARD_COPY = {
      QR besar + nominal + tombol keluar, tanpa blok penjelasan yang menduplikasi
      instruksi provider. */
   qrisFullAria: 'QRIS pembayaran',
-  qrisFullClose: 'Tutup',
+  /* Tombol keluar layar QRIS = PANAH, bukan X: tombol X kecil di dalam kotak QR
+     adalah milik Midtrans, dan dua ikon "tutup" di satu layar membuat user
+     menebak bedanya. Panah berarti "kembali ke daftar metode". */
+  qrisBackLabel: 'Kembali ke pilihan metode',
   vaLabel: 'Nomor Virtual Account',
   vaHint: 'Transfer tepat sesuai nominal.',
   billerLabel: 'Kode perusahaan',

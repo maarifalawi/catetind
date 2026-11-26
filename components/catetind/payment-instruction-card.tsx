@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { CheckCircle2, Clock, Copy, ExternalLink, Info, RefreshCw, X, XCircle } from 'lucide-react'
+import { CheckCircle2, Clock, Copy, ExternalLink, Info, RefreshCw, XCircle, ArrowLeft } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { PAY_CARD_COPY, PAY_METHOD_COPY, formatIDR } from '@/lib/data/pricing'
@@ -87,11 +87,24 @@ interface SnapGlobal {
    yang sedang terpasang karena itu dicatat di tingkat MODUL: sebelum
    menggambar yang baru, yang lama ditutup dulu. */
 let embeddedSnapToken: string | null = null
+/**
+ * Kapan terakhir kita MENUTUP halaman Snap sendiri (`snap.hide()`), bukan user.
+ *
+ * `snap.hide()` memicu `onClose` yang sama dengan tombol X di dalam iframe
+ * (terbukti dari `snap.js`: `case "hide": … w.onClose && w.onClose(), A.hide()`).
+ * Tanpa penanda ini, saat sebuah kartu baru menggambar QR-nya dan menutup token
+ * lama, handler `onClose` milik kartu lama akan dianggap "user menutup" lalu
+ * mengembalikan layar QRIS yang BARU ke daftar metode — QR yang baru hilang.
+ * Jendela 1,5 detik cukup: event `hide` dari iframe tiba lewat postMessage,
+ * bukan detik yang sama.
+ */
+let programmaticSnapHideAt = 0
 
 /** gambar halaman pembayaran Snap di dalam kartu (menggantikan yang lama) */
 function embedSnapInCard(snap: SnapGlobal, token: string, options: Record<string, unknown>) {
   if (embeddedSnapToken !== null) {
     try {
+      programmaticSnapHideAt = Date.now()
       snap.hide()
     } catch {
       /* state-nya sudah bersih; `embed` di bawah yang menentukan hasilnya */
@@ -191,16 +204,19 @@ export function PaymentInstructionCard({
 
   const methodCopy = PAY_METHOD_COPY[invoice.method]
 
-  const check = useCallback(async () => {
+  const check = useCallback(async (): Promise<PaymentState> => {
     try {
       const res = await fetch(
         `/api/payment/status?order_id=${encodeURIComponent(invoice.orderId)}&method=${invoice.method}`,
         { cache: 'no-store' },
       )
       const data = (await res.json().catch(() => null)) as { state?: PaymentState } | null
-      setState(data?.state ?? 'unknown')
+      const next = data?.state ?? 'unknown'
+      setState(next)
+      return next
     } catch {
       setState('unknown')
+      return 'unknown'
     }
   }, [invoice.orderId, invoice.method])
 
@@ -252,6 +268,25 @@ export function PaymentInstructionCard({
   const snapEmbed = Boolean(snapToken && snapScriptUrl && snapClientKey)
   const [embedState, setEmbedState] = useState<'idle' | 'loading' | 'ready' | 'blocked'>('idle')
 
+  /* Dua jalan keluar dari layar QRIS, satu tujuan (daftar metode):
+       · tombol panah milik kita, dan
+       · tombol X DI DALAM iframe Snap — `snap.js` meneruskannya sebagai
+         `onClose` lalu menyembunyikan iframe-nya sendiri. Tanpa penanganan di
+         sini, layar kita tetap terbuka dengan kotak kosong. */
+  const switchRef = useRef(onSwitchMethod)
+  useEffect(() => {
+    switchRef.current = onSwitchMethod
+  }, [onSwitchMethod])
+
+  const handleSnapClose = useCallback(() => {
+    /* diabaikan kalau yang menutup adalah kita sendiri (menggambar token baru) */
+    if (Date.now() - programmaticSnapHideAt < 1_500) return
+    void check().then((next) => {
+      /* sudah lunas → biarkan efek redirect yang memindahkan user ke halaman selesai */
+      if (next !== 'settled') switchRef.current()
+    })
+  }, [check])
+
   /* Muat `snap.js` lalu gambar halaman pembayarannya di elemen `SNAP_EMBED_ID`.
      Kalau skripnya tidak bisa dimuat (diblokir), kartu memberi tahu apa adanya
      dan menyisakan tautan "buka di tab baru" — bukan layar buntu. */
@@ -259,6 +294,8 @@ export function PaymentInstructionCard({
     if (dead || settled) return
     if (!snapToken || !snapScriptUrl || !snapClientKey) return
     let cancelled = false
+    /** true setelah iframe BENAR-BENAR dipasang oleh `snap.embed()` */
+    let embeddedHere = false
     setEmbedState('loading')
 
     void (async () => {
@@ -277,18 +314,38 @@ export function PaymentInstructionCard({
           onSuccess: () => void check(),
           onPending: () => void check(),
           onError: () => void check(),
-          onClose: () => void check(),
+          /* tombol X milik Snap = keluar dari layar QRIS (lihat handleSnapClose) */
+          onClose: handleSnapClose,
         })
         if (!cancelled) setEmbedState('ready')
+        embeddedHere = true
       } catch {
         if (!cancelled) setEmbedState('blocked')
       }
     })()
 
+    /* ── TOMBOL X DI DALAM IFRAME SNAP ────────────────────────────────────────
+       Di mode embed, X milik Midtrans melepas iframe-nya dari DOM
+       (`snap.js → detach()`) TANPA memanggil `onClose`. Dibuktikan di uji
+       browser: iframe hilang, layar QRIS kita tetap terbuka dengan kotak
+       kosong. Karena itu kepergian iframe dari container kita dipantau
+       langsung — kalau hilang dan itu bukan ulah kita sendiri, layar ditutup
+       rapi lewat `handleSnapClose()` yang mengecek status lebih dulu. */
+    const container = document.getElementById(SNAP_EMBED_ID)
+    const observer = new MutationObserver(() => {
+      /* belum ada iframe yang kita pasang → perubahan ini bukan "user menutup" */
+      if (!embeddedHere || cancelled || !container) return
+      if (container.querySelector('iframe')) return
+      if (Date.now() - programmaticSnapHideAt < 1_500) return
+      handleSnapClose()
+    })
+    if (container) observer.observe(container, { childList: true })
+
     return () => {
       cancelled = true
+      observer.disconnect()
     }
-  }, [dead, settled, snapToken, snapScriptUrl, snapClientKey, check])
+  }, [dead, settled, snapToken, snapScriptUrl, snapClientKey, check, handleSnapClose])
 
   const statusLabel = settled
     ? PAY_CARD_COPY.statusSettled
@@ -323,10 +380,6 @@ export function PaymentInstructionCard({
    * status" memang tidak dibutuhkan.
    */
   const qrisStage = live && snapEmbed && invoice.method === 'qris'
-  const switchRef = useRef(onSwitchMethod)
-  useEffect(() => {
-    switchRef.current = onSwitchMethod
-  }, [onSwitchMethod])
   useEffect(() => {
     if (!qrisStage) return
     const previousOverflow = document.body.style.overflow
@@ -347,40 +400,48 @@ export function PaymentInstructionCard({
         role="dialog"
         aria-modal="true"
         aria-label={PAY_CARD_COPY.qrisFullAria}
-        className="fixed inset-0 z-[90] flex flex-col overflow-y-auto bg-canvas p-4 landing:p-6"
+        className="fixed inset-0 z-[90] overflow-y-auto bg-canvas"
       >
-        <div className="mx-auto flex w-full max-w-[720px] items-center justify-between gap-3 pb-3">
-          <div className="min-w-0">
-            <p className="text-[11.5px] font-medium tracking-[0.16em] text-forest-muted uppercase">
-              {methodCopy.label}
-            </p>
-            <p className="mt-1 flex items-baseline gap-2">
-              <span className="font-display text-[22px] leading-none font-semibold tracking-[-0.02em] tabular-nums text-forest">
-                {formatIDR(invoice.amount)}
-              </span>
-              {remaining !== null && (
-                <span className="text-[13px] font-medium tabular-nums text-forest-muted">
-                  {formatRemaining(remaining)}
+        <div className="mx-auto w-full max-w-[720px] px-4 pt-4 pb-6 landing:px-6 landing:pt-6">
+          <div className="flex items-center justify-between gap-3 pb-3">
+            <div className="min-w-0">
+              <p className="text-[11.5px] font-medium tracking-[0.16em] text-forest-muted uppercase">
+                {methodCopy.label}
+              </p>
+              <p className="mt-1 flex items-baseline gap-2">
+                <span className="font-display text-[22px] leading-none font-semibold tracking-[-0.02em] tabular-nums text-forest">
+                  {formatIDR(invoice.amount)}
                 </span>
-              )}
-            </p>
+                {remaining !== null && (
+                  <span className="text-[13px] font-medium tabular-nums text-forest-muted">
+                    {formatRemaining(remaining)}
+                  </span>
+                )}
+              </p>
+            </div>
+            {/* PANAH, bukan X: X kecil di dalam kotak QR milik Midtrans, dan dua
+                ikon "tutup" di satu layar membuat user menebak bedanya. Panah =
+                kembali ke daftar metode (tagihannya tetap hidup). */}
+            <button
+              type="button"
+              onClick={onSwitchMethod}
+              aria-label={PAY_CARD_COPY.qrisBackLabel}
+              className="flex size-10 shrink-0 items-center justify-center rounded-full text-forest ring-1 ring-soil/15 transition-colors duration-200 hover:bg-sage/60 motion-reduce:transition-none"
+            >
+              <ArrowLeft className="size-4" strokeWidth={2.4} aria-hidden />
+            </button>
           </div>
-          {/* satu-satunya tombol: kembali ke pilihan metode (tagihannya tetap hidup) */}
-          <button
-            type="button"
-            onClick={onSwitchMethod}
-            aria-label={PAY_CARD_COPY.qrisFullClose}
-            className="flex size-10 shrink-0 items-center justify-center rounded-full text-forest ring-1 ring-soil/15 transition-colors duration-200 hover:bg-sage/60 motion-reduce:transition-none"
-          >
-            <X className="size-4" strokeWidth={2.4} aria-hidden />
-          </button>
-        </div>
 
-        {/* QR dari provider — satu-satunya isi layar */}
-        <div
-          id={SNAP_EMBED_ID}
-          className="mx-auto min-h-[480px] w-full max-w-[720px] flex-1 overflow-hidden rounded-[20px] bg-canvas ring-1 ring-soil/12"
-        />
+          {/* QR dari provider — satu-satunya isi layar.
+              TINGGI DIPAKU, bukan `flex-1`: halaman QRIS Snap lebih tinggi dari
+              layar ponsel, jadi kotak yang mengikuti tinggi layar memotong
+              tombol paling bawah (keluhan "kadang kepotong"). Dengan tinggi tetap
+              yang cukup, seluruh halaman provider tampil utuh dan yang menggulir
+              adalah HALAMAN KITA, bukan iframe-nya. */}
+          <div
+            id={SNAP_EMBED_ID}
+            className="h-[940px] w-full overflow-hidden rounded-[20px] bg-canvas ring-1 ring-soil/12 landing:h-[880px]"
+          />
 
         {embedState === 'loading' && (
           <p
@@ -410,6 +471,7 @@ export function PaymentInstructionCard({
             )}
           </div>
         )}
+        </div>
       </div>
     )
   }
