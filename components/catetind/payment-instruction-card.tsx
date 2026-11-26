@@ -332,17 +332,28 @@ export function PaymentInstructionCard({
        langsung — kalau hilang dan itu bukan ulah kita sendiri, layar ditutup
        rapi lewat `handleSnapClose()` yang mengecek status lebih dulu. */
     const container = document.getElementById(SNAP_EMBED_ID)
+    let closeTimer = 0
     const observer = new MutationObserver(() => {
       /* belum ada iframe yang kita pasang → perubahan ini bukan "user menutup" */
       if (!embeddedHere || cancelled || !container) return
       if (container.querySelector('iframe')) return
       if (Date.now() - programmaticSnapHideAt < 1_500) return
-      handleSnapClose()
+      /* Iframe bisa DILEPAS SESAAAT lalu dipasang lagi: tombol "Download QRIS"
+         dan "Check status" membuat halaman Snap menggambar ulang dirinya. Jadi
+         tunggu dulu 0,8 detik — kalau iframe-nya kembali, ini bukan "user
+         menutup" dan layar QRIS tidak boleh ikut tertutup. */
+      window.clearTimeout(closeTimer)
+      closeTimer = window.setTimeout(() => {
+        if (cancelled || !container) return
+        if (container.querySelector('iframe')) return
+        handleSnapClose()
+      }, 800)
     })
     if (container) observer.observe(container, { childList: true })
 
     return () => {
       cancelled = true
+      window.clearTimeout(closeTimer)
       observer.disconnect()
     }
   }, [dead, settled, snapToken, snapScriptUrl, snapClientKey, check, handleSnapClose])
@@ -433,14 +444,13 @@ export function PaymentInstructionCard({
           </div>
 
           {/* QR dari provider — satu-satunya isi layar.
-              TINGGI DIPAKU, bukan `flex-1`: halaman QRIS Snap lebih tinggi dari
-              layar ponsel, jadi kotak yang mengikuti tinggi layar memotong
-              tombol paling bawah (keluhan "kadang kepotong"). Dengan tinggi tetap
-              yang cukup, seluruh halaman provider tampil utuh dan yang menggulir
-              adalah HALAMAN KITA, bukan iframe-nya. */}
+              TINGGI DIPAKU ±660px: halaman QRIS Snap tingginya ~640px (diukur
+              di 360/390/768/1440), jadi kotak setinggi layar menyisakan ruang
+              kosong besar di bawah, sedangkan kotak `flex-1` yang lebih pendek
+              memotong tombol paling bawah. Angka ini = konten + sedikit napas. */}
           <div
             id={SNAP_EMBED_ID}
-            className="h-[940px] w-full overflow-hidden rounded-[20px] bg-canvas ring-1 ring-soil/12 landing:h-[880px]"
+            className="h-[660px] w-full overflow-hidden rounded-[20px] bg-canvas ring-1 ring-soil/12 landing:h-[672px]"
           />
 
         {embedState === 'loading' && (
