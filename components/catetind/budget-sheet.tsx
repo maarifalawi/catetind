@@ -485,14 +485,8 @@ export function useFocusOnOpen(
  *  (halaman publik), serta "lanjut ngobrol sama Minca" di review pengeluaran.
  *  Kuncinya diambil dari provider global, jadi tidak ada boolean yang perlu
  *  dioper berlapis-lapis dari halaman. */
-export function SheetSubmit({
-  children,
-  onClick,
-  disabled,
-  className,
-  gate = false,
-  submitAttrs,
-}: {
+/** properti tombol aksi utama sheet (dipakai kedua jalur di bawah) */
+interface SheetSubmitProps {
   children: ReactNode
   onClick: () => void
   disabled?: boolean
@@ -504,9 +498,40 @@ export function SheetSubmit({
    * Hanya dilewatkan apa adanya — tidak mengubah perilaku tombol.
    */
   submitAttrs?: Record<string, string>
-}) {
+}
+
+export function SheetSubmit(props: SheetSubmitProps) {
+  /* `gate` = tombol ini MENAMBAH data keuangan, jadi ia ikut terkunci saat masa
+     aktif langganan habis (task 23). Opt-in, bukan default: `SheetSubmit` juga
+     dipakai alur yang HARUS tetap jalan — registrasi & pembayaran di `/checkout`
+     (halaman publik), serta "lanjut ngobrol sama Minca" di review pengeluaran.
+
+     KENAPA DUA KOMPONEN: halaman publik sengaja TIDAK memasang
+     `SubscriptionGateProvider` (lihat `app/(public)/layout.tsx`). Kalau hook-nya
+     dipanggil tanpa syarat, membuka sheet registrasi di `/checkout` langsung
+     melempar "useSubscriptionGate harus dipakai di dalam
+     <SubscriptionGateProvider>" dan seluruh halaman diganti layar "Halaman ini
+     berhenti di tengah jalan" — persis bug yang dilaporkan pemilik produk.
+     Jadi hanya jalur bergerbang yang menyentuh context; jalur bebas gerbang
+     tidak pernah menyentuhnya (dan tetap jalan di halaman publik). */
+  return props.gate ? <GatedSheetSubmit {...props} /> : <SheetSubmitButton {...props} locked={false} />
+}
+
+/** jalur bergerbang — WAJIB berada di dalam `SubscriptionGateProvider` (halaman app) */
+function GatedSheetSubmit(props: SheetSubmitProps) {
   const { inputLocked } = useSubscriptionGate()
-  const locked = gate && inputLocked
+  return <SheetSubmitButton {...props} locked={inputLocked} />
+}
+
+/** tampilan tombol — satu gaya untuk semua alur; tidak menyentuh context apa pun */
+function SheetSubmitButton({
+  children,
+  onClick,
+  disabled,
+  className,
+  submitAttrs,
+  locked,
+}: SheetSubmitProps & { locked: boolean }) {
   const inert = Boolean(disabled) || locked
 
   return (

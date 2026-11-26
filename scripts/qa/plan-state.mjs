@@ -148,6 +148,47 @@ try {
   )
   await lowerPage.screenshot({ path: path.join(SHOTS, 'plan-upgrade-catet-aja.png'), fullPage: true })
   await lowerContext.close()
+
+  /* ── 3 · PENGUNJUNG ANONIM: CTA MEMBUKA SHEET REGISTRASI ────────────────
+     Regresi yang dikunci (dilaporkan pemilik produk): `/checkout` adalah
+     halaman PUBLIK — `app/(public)/layout.tsx` sengaja TIDAK memasang provider
+     app. Dulu `SheetSubmit` memanggil `useSubscriptionGate()` tanpa syarat,
+     sehingga begitu sheet registrasi dibuka, React melempar
+     "useSubscriptionGate harus dipakai di dalam <SubscriptionGateProvider>"
+     dan SELURUH halaman diganti layar "Halaman ini berhenti di tengah jalan".
+
+     Uji ini menekan CTA-nya sungguhan (bukan sekadar memuat halaman), karena
+     bug-nya hanya muncul setelah sheet dirender. */
+  const guestContext = await browser.newContext({
+    viewport: { width: 1440, height: 900 },
+    locale: 'id-ID',
+    timezoneId: 'Asia/Jakarta',
+  })
+  const guestPage = await guestContext.newPage()
+  const guestErrors = []
+  guestPage.on('pageerror', (err) => guestErrors.push(String(err)))
+  await guestPage.goto(`${BASE}/checkout?plan=waras&period=lifetime`, { waitUntil: 'networkidle' })
+  await guestPage.getByRole('button', { name: /Daftar & mulai/i }).first().click()
+  await guestPage.waitForTimeout(1800)
+  const guestBody = await guestPage.locator('body').innerText()
+  const registrationSheet = await guestPage
+    .getByRole('dialog')
+    .filter({ hasText: 'Daftar CatetInd' })
+    .count()
+  record(
+    'checkout',
+    'pengunjung anonim: CTA membuka sheet registrasi tanpa error boundary',
+    registrationSheet > 0 && !guestBody.includes('Halaman ini berhenti'),
+    guestBody.slice(0, 180),
+  )
+  record(
+    'checkout',
+    'pengunjung anonim: tidak ada error SubscriptionGateProvider',
+    !guestErrors.some((text) => text.includes('SubscriptionGateProvider')),
+    guestErrors.slice(0, 2).join(' | '),
+  )
+  await guestPage.screenshot({ path: path.join(SHOTS, 'plan-guest-registration-sheet.png') })
+  await guestContext.close()
 } catch (error) {
   record('alur', 'skrip berjalan sampai selesai', false, String(error).slice(0, 500))
 } finally {
