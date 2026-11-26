@@ -241,7 +241,7 @@ export function PaymentStartScreen({
       setPaying(false)
     }
   }, [paying, total, plan, isUpgrade, method, router, verifiedCode, alreadyOwned])
-  /* ringkasan pembelian - kolom KIRI di desktop (sticky), di atas cara bayar di ponsel */
+  /* Ringkasan pembelian - kolom KIRI di desktop (sticky), di atas cara bayar di ponsel */
   const summary = (
     <section className="rounded-[24px] bg-cream p-5 shadow-landing-hairline ring-1 ring-soil/12 landing:p-6">
       <p className="text-[12px] font-medium tracking-[0.16em] text-forest-muted uppercase">
@@ -324,11 +324,12 @@ export function PaymentStartScreen({
 
         {/* desktop: ringkasan di kiri (sticky) + pembayaran di kanan; ponsel menumpuk */}
         <div className="mt-8 grid w-full grid-cols-1 gap-6 lg:mt-10 lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start lg:gap-8">
-          {/* Ponsel: begitu tagihan aktif (QRIS/VA tampil), ringkasan dipadatkan
-              jadi SATU baris — supaya instruksi bayarnya dapat layar penuh, bukan
-              didorong ke bawah oleh kartu ringkasan. Desktop tidak berubah:
-              ringkasan lengkap tetap di kiri. */}
-          {invoice && (
+          {/* Ponsel: begitu tagihan aktif (VA/e-wallet), ringkasan dipadatkan
+              jadi SATU baris — supaya instruksi bayarnya dapat layar penuh.
+              QRIS TIDAK memakai ringkasan sama sekali: kartunya digantikan satu
+              layar QR (nominal + sisa waktu sudah ada di sana), jadi menampilkan
+              ringkasan di belakangnya berarti informasi dobel. */}
+          {invoice && invoice.method !== 'qris' && (
             <div className="flex items-center justify-between gap-3 rounded-2xl bg-cream px-4 py-3 ring-1 ring-soil/12 lg:hidden">
               <span className="min-w-0 truncate text-[13.5px] font-medium text-forest">
                 {plan.name}
@@ -338,9 +339,11 @@ export function PaymentStartScreen({
               </span>
             </div>
           )}
-          <aside className={cn('min-w-0 lg:sticky lg:top-24', invoice && 'hidden lg:block')}>
-            {summary}
-          </aside>
+          {invoice?.method === 'qris' ? null : (
+            <aside className={cn('min-w-0 lg:sticky lg:top-24', invoice && 'hidden lg:block')}>
+              {summary}
+            </aside>
+          )}
 
           <div className="min-w-0">
             {session === 'guest' ? (

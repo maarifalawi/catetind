@@ -758,7 +758,6 @@ export const PAY_CARD_COPY = {
      QR besar + nominal + tombol keluar, tanpa blok penjelasan yang menduplikasi
      instruksi provider. */
   qrisFullAria: 'QRIS pembayaran',
-  qrisFullOpen: 'Perbesar QR',
   qrisFullClose: 'Tutup',
   vaLabel: 'Nomor Virtual Account',
   vaHint: 'Transfer tepat sesuai nominal.',
