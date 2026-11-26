@@ -86,3 +86,45 @@ export const SEGMENT_ERROR_ACTIONS = {
   safeTitle: 'Kenapa aman?',
   safeLabel: 'Baca alasannya',
 } as const
+
+/* ── KEGAGALAN MEMUAT ASET (CHUNK) — PENYEBAB LAYAR INI DI CHECKOUT ──────────
+   Kasus nyata yang dilaporkan pemilik produk: `/checkout?period=lifetime&plan=waras`
+   menampilkan layar ini padahal SERVER-nya sehat (HTML 200, tanpa error).
+
+   Yang terjadi bukan bug halaman: SATU berkas JS milik rute itu gagal dimuat —
+   `ChunkLoadError: Failed to load chunk /_next/static/chunks/….js`. Pemicunya
+   bisa (a) tab lama yang dibuka sebelum deploy baru (nama chunk ber-hash sudah
+   tidak ada di server), (b) dokumen lama yang disajikan service worker saat
+   jaringan gagal sesaat, atau (c) request chunk yang diputus jaringan/adblock.
+
+   Untuk kegagalan seperti ini `reset()` TIDAK MENOLONG: ia menggambar ulang
+   pohon yang sama dan meminta chunk dengan URL lama yang memang sudah 404 —
+   tombol "Muat ulang" terasa tidak bekerja dan user tersangkut. Yang benar
+   adalah reload dokumen (`window.location.reload()`), karena itu mengambil HTML
+   baru beserta nama chunk yang baru. Itulah yang dipicu `isStaleAssetError()`.
+
+   Batas jujur: reload hanya ditawarkan/dijalankan sekali per jendela waktu
+   (`STALE_ASSET_RELOAD_WINDOW_MS`), supaya kalau jaringannya memang mati total
+   layar ini tidak berputar-putar me-reload selamanya. */
+const STALE_ASSET_PATTERN =
+  /chunkloaderror|loading chunk .* failed|failed to fetch dynamically imported module|error loading dynamically imported module|importing a module script failed/i
+
+/** kunci `sessionStorage` penjaga reload otomatis (satu kali per tab per jendela) */
+export const STALE_ASSET_RELOAD_GUARD_KEY = 'catetind:stale-asset-reload-at'
+
+/** jarak minimum antar-reload otomatis; di bawah ini layar error ditampilkan */
+export const STALE_ASSET_RELOAD_WINDOW_MS = 15_000
+
+/**
+ * true = error ini kegagalan MEMUAT BERKAS (chunk/dynamic import), bukan
+ * kegagalan render komponen. Hanya jenis ini yang aman & berguna di-reload.
+ */
+export function isStaleAssetError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false
+  const { name, message } = error as { name?: unknown; message?: unknown }
+  const text = `${typeof name === 'string' ? name : ''} ${
+    typeof message === 'string' ? message : ''
+  }`.trim()
+  if (!text) return false
+  return STALE_ASSET_PATTERN.test(text)
+}

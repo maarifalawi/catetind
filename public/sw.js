@@ -29,7 +29,14 @@
    `/history`) dan mengidentifikasi pesan dengan `tag` — perubahan SW ini tidak
    menyentuh aset, tetapi versi cache tetap dinaikkan supaya PWA ter-install
    segera memakai SW baru (browser memeriksa isi file SW setiap kali app dibuka). */
-const CACHE_VERSION = 'catetind-shell-v4'
+/* v5: nama cache dinaikkan setelah deploy checkout/paket 110. Dokumen HTML lama
+   yang tersimpan di cache v4 (mis. `/checkout?period=lifetime&plan=waras` dari
+   build sebelumnya) akan diminta ulang saat jaringan gagal sesaat, dan nama
+   chunk ber-hash di dalamnya sudah tidak ada di server — hasilnya
+   `ChunkLoadError` + layar "Halaman ini berhenti di tengah jalan". Menaikkan
+   versi membuat cache lama dihapus di `activate` dan shell `/` diambil ulang
+   dari build yang sedang aktif. */
+const CACHE_VERSION = 'catetind-shell-v5'
 /** dokumen yang disiapkan supaya app setidaknya bisa DIBUKA saat benar-benar offline */
 const SHELL_DOCUMENT = '/'
 /** aset ber-hash: aman disajikan dari cache lalu diperbarui di belakang */

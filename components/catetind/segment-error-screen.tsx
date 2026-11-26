@@ -12,6 +12,9 @@ import { downloadMoneyExport } from '@/lib/money/export'
 import {
   SEGMENT_ERROR_ACTIONS,
   SEGMENT_ERROR_COPY,
+  STALE_ASSET_RELOAD_GUARD_KEY,
+  STALE_ASSET_RELOAD_WINDOW_MS,
+  isStaleAssetError,
   type SegmentErrorArea,
 } from '@/lib/data/segment-error'
 
@@ -29,6 +32,9 @@ import {
         `/settings/data` (`lib/money/export.ts`) dan membacanya dari store, bukan
         dari komponen yang error — jadi kegagalan render tidak menghalangi user
         mengambil catatannya.
+     3. Kalau yang gagal adalah MEMUAT BERKAS (chunk), layar ini reload dokumen
+        sekali secara otomatis — `reset()` tidak akan pernah berhasil untuk kasus
+        itu. Lihat `isStaleAssetError()` di `lib/data/segment-error.ts`.
 
    `error.digest` sengaja TIDAK ditampilkan di layar (bahasa mesin bukan bahasa
    user); ia dicatat ke konsol supaya bisa dicocokkan dengan log produksi. */
@@ -46,11 +52,46 @@ export function SegmentErrorScreen({
   withShell?: boolean
 }) {
   const copy = SEGMENT_ERROR_COPY[area]
+  /**
+   * Error ini kegagalan MEMUAT BERKAS (chunk/`dynamic import`), bukan kegagalan
+   * render. Bedanya penting: `reset()` menggambar ulang pohon yang sama dan
+   * meminta chunk dengan URL lama yang sudah 404, jadi tombolnya terasa tidak
+   * bekerja. Untuk jenis ini satu-satunya obat adalah reload dokumen.
+   */
+  const staleAsset = isStaleAssetError(error)
 
   useEffect(() => {
     /* jejak teknis: satu baris di konsol, tanpa kode error di layar user */
     console.error(`[CatetInd] error segment "${area}":`, error)
   }, [area, error])
+
+  /**
+   * PEMULIHAN OTOMATIS untuk chunk yang gagal dimuat: reload sekali, lalu user
+   * mendarat di halaman yang benar tanpa harus menekan apa pun. Dijaga
+   * `sessionStorage` per jendela waktu supaya jaringan yang benar-benar mati
+   * tidak membuat tab berputar-putar me-reload selamanya.
+   */
+  useEffect(() => {
+    if (!staleAsset) return
+    try {
+      const last = Number(window.sessionStorage.getItem(STALE_ASSET_RELOAD_GUARD_KEY) ?? 0)
+      if (Number.isFinite(last) && Date.now() - last < STALE_ASSET_RELOAD_WINDOW_MS) return
+      window.sessionStorage.setItem(STALE_ASSET_RELOAD_GUARD_KEY, String(Date.now()))
+    } catch {
+      /* storage diblokir (mode privat ketat): jangan reload tanpa penjaga */
+      return
+    }
+    window.location.reload()
+  }, [staleAsset])
+
+  /** "Muat ulang": reload dokumen untuk kegagalan aset, `reset()` untuk sisanya */
+  function handleReload() {
+    if (staleAsset) {
+      window.location.reload()
+      return
+    }
+    reset()
+  }
 
   /**
    * Unduh ekspor dari layar error. `fetchSessionUser()` dibungkus try/catch lewat
@@ -89,7 +130,7 @@ export function SegmentErrorScreen({
         <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:items-center">
           <button
             type="button"
-            onClick={reset}
+            onClick={handleReload}
             className="inline-flex items-center justify-center gap-2 rounded-2xl bg-forest px-5 py-3 text-sm font-medium text-mint transition-colors hover:bg-forest-soft active:scale-[0.99]"
           >
             <RefreshCw className="size-4" strokeWidth={2.4} aria-hidden />
