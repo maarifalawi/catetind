@@ -29,9 +29,10 @@
    SELURUH TEKS DI FILE INI BELUM LEWAT TINJAUAN HUKUM. Yang perlu diputuskan
    advokat sebelum publikasi: (a) rumusan batas tanggung jawab/ganti rugi,
    (b) sanksi untuk pelanggaran aturan akun, (c) badan hukum + pengadilan yang
-   berwenang, (d) cakupan garansi uang kembali untuk token add-on yang sudah
-   terpakai sebagian. Poin yang memang belum bisa dijawab sekarang DITAMPILKAN
-   ke pembaca sebagai kotak "REVIEW LEGAL" (`note.tone: 'review'`).
+   berwenang, (d) penanganan kendala teknis pembayaran (salah nominal atau
+   terbayar ganda) untuk token add-on yang sudah terpakai sebagian. Poin yang
+   memang belum bisa dijawab sekarang DITAMPILKAN ke pembaca sebagai kotak
+   "REVIEW LEGAL" (`note.tone: 'review'`).
 
    ── CATATAN BAHASA (penting, jangan "diperbaiki") ─────────────────────────
    Kata "saran" dan "rekomendasi" HANYA boleh muncul di dalam kalimat
@@ -252,11 +253,12 @@ export const TERMS_DOC: LegalDocument = {
         'Setiap paket dibayar SEKALI untuk akses selamanya. Tidak ada periode bulanan/tahunan, jadi tidak ada penagihan berulang yang harus dihitung ulang.',
         'Naik ke paket yang lebih tinggi cukup membayar SELISIH dari harga paket yang sedang kamu miliki. Sistem menghitungnya sendiri dari daftar harga resmi, dan angkanya tampil sebelum kamu membayar.',
         'Downgrade tidak kami tawarkan: tidak ada pengembalian uang, dan kami tidak mau menagihmu untuk akses yang lebih sedikit.',
-        'Garansi uang kembali: kalau dalam 30 hari kamu merasa CatetInd bukan untukmu, kirim email ke halo@catetind.com dengan alasan singkat dan kami proses pengembaliannya dalam 3–5 hari kerja. Tanpa pertanyaan yang aneh-aneh.',
+        'Pembelian paket bersifat final: sekali bayar untuk akses selamanya, tanpa auto-debit, jadi tidak ada tagihan berulang yang perlu dibatalkan.',
+        'Kalau ada kendala teknis, misalnya salah nominal atau terbayar ganda (double charge), kirim bukti bayar bagian yang bermasalah ke halo@catetind.com. Tim kami cek dan bantu selesaikan sampai jelas.',
       ],
       note: {
-        label: 'REVIEW LEGAL, cakupan garansi',
-        body: 'Poin garansi di atas adalah janji publik, jadi kami tulis apa adanya, bukan "syarat & ketentuan berlaku" yang kabur. Yang belum diputuskan: perlakuan untuk pembelian token AI isi ulang yang sudah terpakai sebagian, dan untuk upgrade yang sedang berjalan saat garansi diklaim. Dua kasus itu masih ditinjau kasus per kasus sampai ada aturan tertulisnya.',
+        label: 'REVIEW LEGAL, kendala pembayaran',
+        body: 'Pembelian paket bersifat final dan tidak ada auto-debit. Yang belum diputuskan: perlakuan untuk pembelian token AI isi ulang yang sudah terpakai sebagian, dan untuk upgrade yang sedang berjalan saat ada kendala teknis. Dua kasus itu masih ditinjau kasus per kasus sampai ada aturan tertulisnya.',
         tone: 'review',
       },
     },

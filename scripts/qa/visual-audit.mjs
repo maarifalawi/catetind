@@ -360,9 +360,26 @@ const rowMetrics = await page.evaluate(() => {
   const rows = Array.from(document.querySelectorAll('main li')).filter(
     (node) => node.getBoundingClientRect().height > 40,
   )
-  const rects = rows.map((node) => node.getBoundingClientRect())
-  const gaps = rects.slice(1, 4).map((rect, index) => Math.round(rect.top - rects[index].bottom))
-  return { count: rects.length, heights: rects.slice(0, 3).map((rect) => Math.round(rect.height)), gaps }
+  const rects = rows.map((node) => ({
+    parent: node.parentElement,
+    rect: node.getBoundingClientRect(),
+  }))
+  /* Jarak hanya diukur ANTAR baris di daftar yang SAMA. Halaman Tagihan
+     mengelompokkan baris (mis. "Telat" lalu "Belum jatuh tempo"): judul
+     kelompok memang memisahkan dua <ul>, jadi jarak lintas kelompok BUKAN
+     celah mubazir. Versi lama membandingkan semua <li> berurutan, sehingga
+     satu tagihan yang telat membuat cek ini gagal padahal barisnya rapat. */
+  const gaps = []
+  for (let index = 1; index < rects.length; index += 1) {
+    if (rects[index].parent !== rects[index - 1].parent) continue
+    gaps.push(Math.round(rects[index].rect.top - rects[index - 1].rect.bottom))
+    if (gaps.length === 3) break
+  }
+  return {
+    count: rects.length,
+    heights: rects.slice(0, 3).map((row) => Math.round(row.rect.height)),
+    gaps,
+  }
 })
 record(
   'redesign',

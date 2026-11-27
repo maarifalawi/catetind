@@ -53,9 +53,14 @@ const JOBS = [
   { src: '/AVA 3.png', out: 'public/avatars/ava-3.webp', width: 96, quality: 0.86 },
   { src: '/AVA 4.png', out: 'public/avatars/ava-4.webp', width: 96, quality: 0.86 },
   { src: '/AVA 5.png', out: 'public/avatars/ava-5.webp', width: 96, quality: 0.86 },
-  /* kartu fitur landing — 1280 px = ±2× lebar kartu desktop */
+  /* kartu fitur landing — 1280 px = ±2× lebar kartu desktop.
+
+     DUA sumber di bawah adalah PNG yang SUDAH dikoreksi teksnya oleh
+     `scripts/landing/make-dialog-preview.mjs` (tombol "Catet" dan kata ganti
+     "kamu/aku" di bubble Minca). Jangan dikembalikan ke PNG tangkapan asli:
+     teks aslinya masih "Catat"/"lo/gue" dan akan muncul lagi di landing. */
   {
-    src: '/Dialog - Catat transaksi.png',
+    src: '/landing/catat-transaksi-preview.png',
     out: 'public/landing/dialog-catat-transaksi-1280.webp',
     width: 1280,
     quality: 0.82,
@@ -67,7 +72,7 @@ const JOBS = [
     quality: 0.82,
   },
   {
-    src: '/Dialog - AI Coach CatetInd.png',
+    src: '/landing/minca-chat-preview.png',
     out: 'public/landing/dialog-ai-coach-1280.webp',
     width: 1280,
     quality: 0.82,

@@ -56,7 +56,7 @@ export const PAIN_CALCULATOR_COPY = {
   results: {
     investedNote: 'Asumsi 5% p.a. · 60 bulan',
   },
-  cta: 'Mulai Catat Sekarang',
+  cta: 'Mulai Catet Sekarang',
 } as const
 
 /* ── TAB HASIL ──────────────────────────────────────────────────────────────
@@ -295,47 +295,49 @@ export function yearlyEquivalent(amount: number): string {
   ])}`
 }
 
-/** padanan dunia nyata untuk bencana 5 tahun — dari jutaan sampai miliaran */
+/** padanan dunia nyata untuk bencana 5 tahun — dari jutaan sampai miliaran.
+ *  Gaya bahasa: satu tarikan napas, istilah yang dipakai anak muda, bukan
+ *  bahasa brosur properti. Ambang nominalnya TIDAK berubah. */
 export function fiveYearEquivalent(amount: number): string {
   const fiveYear = Math.max(0, Math.round(amount))
   if (fiveYear === 0) return 'Belum ada yang bocor. Jaga terus!'
 
   if (fiveYear < 10_000_000) {
-    return 'Setara solo trip liburan impian ke Bali atau Labuan Bajo'
+    return 'Setara liburan ke Bali atau Labuan Bajo, pulang bawa cerita.'
   }
   if (fiveYear < 25_000_000) {
-    return 'Setara 1 unit motor Honda BeAT baru cash atau liburan seminggu ke Jepang'
+    return 'Setara motor baru cash atau seminggu jalan-jalan di Jepang.'
   }
   if (fiveYear < 50_000_000) {
-    return 'Setara uang muka (DP) mobil baru atau 1 laptop kerja spek pro impian'
+    return 'Setara DP mobil pertama atau laptop pro buat kerja.'
   }
   if (fiveYear < 100_000_000) {
-    return 'Setara uang muka (DP) dan biaya KPR rumah komersial pertama atau modal resepsi pernikahan idaman'
+    return 'Setara DP rumah pertama, modal nikah tenang, atau dana darurat 1 tahun penuh.'
   }
   if (fiveYear < 180_000_000) {
-    return 'Setara 1 unit mobil baru cash (Daihatsu Ayla) tanpa cicilan atau modal bisnis serius'
+    return 'Setara mobil LCGC cash (Daihatsu Ayla) atau modal bisnis serius.'
   }
   if (fiveYear < 300_000_000) {
     /* nominal rumah diturunkan dari konstanta, bukan diketik ulang */
     const rumahJuta = PAIN_REFERENCE_PRICES.rumahSubsidi / 1_000_000
-    return `Setara 1 unit rumah subsidi Jabodetabek cash (Rp ${rumahJuta} juta) bebas utang KPR`
+    return `Setara rumah subsidi cash (Rp ${rumahJuta} juta), bebas KPR.`
   }
   if (fiveYear < 500_000_000) {
-    return 'Setara 1 unit mobil keluarga baru (Avanza atau Xpander) cash'
+    return 'Setara mobil keluarga baru cash: Avanza atau Xpander.'
   }
   if (fiveYear < 1_000_000_000) {
-    return 'Setara 1 unit SUV gagah (Pajero Sport atau Fortuner) cash atau renovasi rumah total'
+    return 'Setara SUV baru cash atau renovasi rumah total.'
   }
   if (fiveYear < 2_500_000_000) {
-    return 'Setara 1 unit mobil listrik mewah (Ioniq 6 atau Mercedes-Benz) atau 1 unit apartemen di pusat kota'
+    return 'Setara mobil listrik mewah atau apartemen di pusat kota.'
   }
   if (fiveYear < 5_000_000_000) {
-    return 'Setara rumah mewah di kawasan mandiri elit atau modal pensiun dini seumur hidup'
+    return 'Setara rumah mewah, atau modal pensiun dini seumur hidup.'
   }
   if (fiveYear < 10_000_000_000) {
-    return 'Setara villa mewah pribadi di Bali atau 1 unit mobil sport idaman'
+    return 'Setara villa pribadi di Bali atau mobil sport idaman.'
   }
-  return 'Setara kebebasan finansial total sekeluarga seumur hidup'
+  return 'Setara bebas finansial sekeluarga, seumur hidup.'
 }
 
 /* ── LENCANA BUNGA MAJEMUK ──────────────────────────────────────────────────

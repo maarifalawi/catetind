@@ -1,13 +1,16 @@
 import { LP_HERO } from '@/lib/data/landing'
-import { LandingHeroCta } from './hero-cta'
+import { LandingLiveSubscribers } from './live-subscribers'
 import { LandingReveal } from './reveal'
 
 /* ── HERO LANDING ────────────────────────────────────────────────────────────
    Port dari export Framer dengan Design System CatetInd (Earth Pastel + Inter):
    latar putih (`bg-canvas`), teks `forest`, aksen Sage/Mint/Daisy.
-   CTA hero mempertahankan BENTUK export Framer (kotak panah putih + avatar
-   ticker) tapi warnanya memakai palet brand Evergreen, bukan charcoal; lihat
-   `hero-cta.tsx` untuk nilai-nilai yang diambil dari computed style.
+
+   CTA hero DIHAPUS (permintaan pemilik produk). Bukti sosial — deretan lima
+   avatar + label "1.000+ orang udah pake" — sekarang duduk sendiri di bawah
+   subheadline, di tengah kolom teks, supaya komposisinya seimbang tanpa tombol
+   di sebelahnya. Section harga tetap jadi satu-satunya pintu beli di halaman
+   ini, dan navbar tetap punya tombol "Pilih Paket".
 
    Susunan:
      section        bg-canvas, padding 0 20 (40 tablet+)
@@ -15,7 +18,7 @@ import { LandingReveal } from './reveal'
      pill eyebrow   bg-canvas + ring halus, ikon 24
      h1             40/56/64px — "males" semibold + italic, tanpa latar highlight
      sub            16/18, max-w 540
-     CTA dock       tombol brand + label publik 1.000+ + 5 avatar lokal, sejajar
+     social proof   lima avatar + label publik, di tengah
      visual         1200×840 object-contain (mobile: layar ponsel)
 
    Animasi stagger tetap memakai `LandingReveal` (data framer/appear). */
@@ -73,13 +76,13 @@ export function LandingHeroLp() {
               {LP_HERO.subheadline}
             </p>
           </LandingReveal>
-        </LandingReveal>
 
-        {/* CTA + bukti sosial — SATU BARIS di semua layar, komposisinya persis
-            export Framer: tombol brand + kotak panah putih di kiri, lalu lima
-            avatar dan label di kanan. */}
-        <LandingReveal y={80} delay={0.6} trigger="load" className="w-full">
-          <LandingHeroCta />
+          {/* Bukti sosial — satu blok di tengah, tepat di bawah subheadline.
+              Tidak ada tombol CTA di sini: section harga yang menjadi pintu
+              beli, jadi hero berhenti pada janji + bukti. */}
+          <LandingReveal y={80} delay={0.6} trigger="load" className="w-full">
+            <LandingLiveSubscribers className="items-center" />
+          </LandingReveal>
         </LandingReveal>
       </div>
 

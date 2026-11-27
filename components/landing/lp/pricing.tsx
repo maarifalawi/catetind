@@ -7,6 +7,7 @@ import {
   LP_PRICING,
   formatIDR,
   lpPlanPrice,
+  lpTierTagline,
   type LandingTier,
   type LpPricingMode,
 } from '@/lib/data/landing'
@@ -199,7 +200,7 @@ function PricingCard({ tier, mode }: { tier: LandingTier; mode: LpPricingMode })
             recommended ? 'text-cream-muted' : 'text-forest-muted',
           )}
         >
-          {tier.tagline}
+          {lpTierTagline(tier, mode)}
         </p>
 
         <Link
@@ -265,8 +266,8 @@ function PricingCard({ tier, mode }: { tier: LandingTier; mode: LpPricingMode })
                         ? 'text-cream'
                         : 'text-forest'
                       : recommended
-                        ? 'text-cream-muted'
-                        : 'text-forest-muted/60',
+                        ? 'text-cream-muted line-through decoration-cream/40'
+                        : 'text-forest-muted/60 line-through decoration-forest/30',
                   )}
                 >
                   {feature.label}

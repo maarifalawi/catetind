@@ -3,6 +3,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { PLANS } from './pricing'
 import {
+  FAQ_ITEMS,
   HERO_DEVICE,
   HERO_DEVICE_ARIA,
   HERO_DEVICE_FLOAT,
@@ -33,6 +34,7 @@ import {
   liveFeedFromPurchases,
   lpHref,
   lpPlanPrice,
+  lpTierTagline,
   purchaseNotificationsFromPurchases,
   randomPurchasePackageName,
   relativeFeedTime,
@@ -236,16 +238,82 @@ describe('LP_PRICING — copy & struktur kartu versi baru', () => {
     expect(LP_PRICING.tiers[1].badge).toContain('98% User')
   })
 
-  it('Sultan tidak menduplikasi Joint Wallet yang sudah ada di Waras', () => {
+  it('Sultan tidak menduplikasi Dompet Bersama yang sudah ada di Waras', () => {
     const sultan = LP_PRICING.tiers.find((tier) => tier.id === 'sultan')
-    expect(sultan?.features.some((feature) => /joint wallet/i.test(feature.label))).toBe(false)
+    expect(sultan?.features.some((feature) => /dompet bersama/i.test(feature.label))).toBe(false)
     const waras = LP_PRICING.tiers.find((tier) => tier.id === 'waras')
-    expect(waras?.features.some((feature) => /joint wallet/i.test(feature.label))).toBe(true)
+    expect(waras?.features.some((feature) => /dompet bersama/i.test(feature.label))).toBe(true)
   })
 
   it('baris trust menyebut Midtrans dan tanpa akses m-Banking', () => {
     expect(LP_PRICING.trustNote).toContain('Midtrans')
     expect(LP_PRICING.trustNote).toMatch(/m-Banking/i)
+  })
+
+  it('tagline Waras menyebut selisih yang DIHITUNG dari PLANS, bukan angka tulis tangan', () => {
+    const waras = LP_PRICING.tiers.find((tier) => tier.id === 'waras')
+    expect(waras).toBeDefined()
+    if (!waras) return
+
+    for (const mode of ['monthly', 'lifetime'] as const) {
+      const diffRb = Math.round(
+        (lpPlanPrice('waras', mode) - lpPlanPrice('catet-aja', mode)) / 1000,
+      )
+      expect(diffRb).toBe(30)
+      expect(lpTierTagline(waras, mode)).toBe(
+        `Nambah ${diffRb}rb aja, gak perlu capek ngetik karena semua diberesin AI.`,
+      )
+    }
+  })
+
+  it('kartu Catet Aja memakai kata "catet", dengan empat fitur AI yang dicoret', () => {
+    const catetAja = LP_PRICING.tiers.find((tier) => tier.id === 'catet-aja')
+    expect(catetAja).toBeDefined()
+    if (!catetAja) return
+
+    const copy = JSON.stringify(catetAja)
+    expect(copy).toContain('masih sanggup ketik manual satu-satu')
+    expect(copy).toContain('Catet pengeluaran & pemasukan manual')
+    expect(copy).not.toMatch(/\bcatat\b/i)
+
+    /* Fitur AI memang TIDAK termasuk: barisnya harus `included: false` supaya
+       kartu menampilkannya sebagai coretan, bukan centang. */
+    const excluded = catetAja.features.filter((feature) => !feature.included)
+    expect(excluded.map((feature) => feature.label)).toEqual([
+      'Catet 4 detik lewat suara, tanpa ngetik',
+      'Foto struk langsung jadi catatan',
+      'Tanya Minca AI sebelum jajan',
+      'Dompet Bersama pasangan / teman',
+    ])
+  })
+
+  it('kartu Waras & Sultan menyebut fitur yang dijual di copy-nya', () => {
+    const waras = LP_PRICING.tiers.find((tier) => tier.id === 'waras')
+    const sultan = LP_PRICING.tiers.find((tier) => tier.id === 'sultan')
+    expect(waras?.features.every((feature) => feature.included)).toBe(true)
+    expect(sultan?.features.every((feature) => feature.included)).toBe(true)
+
+    const warasCopy = JSON.stringify(waras)
+    for (const phrase of [
+      'Semua fitur di Paket Catet Aja',
+      'Catet 4 detik lewat suara, tanpa ngetik',
+      'Foto struk langsung jadi catatan rapi',
+      'Tanya Minca AI sebelum checkout',
+      'Deteksi otomatis pos bocor halus',
+      'Dompet Bersama pasangan / teman',
+    ]) {
+      expect(warasCopy).toContain(phrase)
+    }
+
+    const sultanCopy = JSON.stringify(sultan)
+    for (const phrase of [
+      'Semua fitur lengkap di Paket Waras',
+      'Pakai Minca AI, Suara & Foto Struk tanpa batas',
+      'Dapet semua fitur baru lebih dulu',
+      'Chat bantuan & request fitur langsung via WhatsApp',
+    ]) {
+      expect(sultanCopy).toContain(phrase)
+    }
   })
 })
 
@@ -370,6 +438,15 @@ describe('LP_FAQ — kategori nyata, bukan tab kosong', () => {
     expect(LP_FAQ.contact.emailHref).toBe(`mailto:${LP_SUPPORT_EMAIL}`)
     expect(LP_FAQ.contact.emailLabel).toContain(LP_SUPPORT_EMAIL)
   })
+
+  it('tidak menjanjikan garansi uang kembali 30 hari (produk tidak punya refund)', () => {
+    const copy = JSON.stringify({ legacy: FAQ_ITEMS, lp: LP_FAQ, pricing: LP_PRICING })
+    expect(copy).not.toMatch(/garansi/i)
+    expect(copy).not.toMatch(/uang kembali/i)
+    expect(copy).not.toMatch(/refund 30 hari/i)
+    /* kebijakan yang benar tetap disebut: sekali bayar & tanpa auto-debit */
+    expect(JSON.stringify(LP_FAQ)).toMatch(/tanpa auto-debit/i)
+  })
 })
 
 describe('LP_CONTACT — tiga field, WhatsApp utama + email fallback', () => {
@@ -452,12 +529,19 @@ describe('LP_HERO — satu janji, CTA jujur, tanpa bukti sosial karangan', () =>
     )
   })
 
-  it('CTA hero memakai label "Cobain" dan paket + periode default section harga', () => {
-    expect(LP_HERO.ctaLabel).toBe('Cobain')
-    expect(LP_HERO.ctaHref).toBe(
-      `/checkout?period=${LP_PRICING.defaultMode}&plan=${LP_PRICING.tiers[1].id}`,
-    )
+  it('hero tanpa CTA: tombol "Cobain" dihapus, badge privasi + paket default harga', () => {
+    /* Permintaan pemilik produk: CTA hero dihapus supaya bukti sosial duduk
+       tenang di bawah subheadline. Yang dikunci: tidak ada sisa label/link CTA
+       lama, badge atas menyebut privasi, dan paket default tetap satu pintu
+       dengan section harga. */
+    expect('ctaLabel' in LP_HERO).toBe(false)
+    expect('ctaHref' in LP_HERO).toBe(false)
+    expect(LP_HERO.eyebrow).toBe('100% Privat · Tanpa Akses M-Banking')
     expect(LP_PRICING.defaultMode).toBe(LANDING_DEFAULT_PERIOD)
+    expect(LP_PRICING.defaultMode).toBe('lifetime')
+    expect(LP_PRICING.modes.find((entry) => entry.id === LP_PRICING.defaultMode)?.label).toBe(
+      'Akses Selamanya',
+    )
     expect(LP_NAV.ctaLabel).toBe('Pilih Paket')
   })
 
@@ -563,7 +647,7 @@ describe('LANDING_SECTION_MARKERS', () => {
   it('memberi nomor urut dan label pendek untuk tiap batas section', () => {
     expect(Object.values(LANDING_SECTION_MARKERS)).toEqual([
       { index: '01', label: 'Kalkulator' },
-      { index: '02', label: 'Misi' },
+      { index: '02', label: 'Fitur' },
       { index: '03', label: 'Harga' },
       { index: '04', label: 'FAQ' },
     ])

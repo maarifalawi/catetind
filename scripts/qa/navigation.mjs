@@ -11,8 +11,8 @@
  *   1. Setiap tautan internal pada halaman publik (landing, login, kontak,
  *      bantuan, changelog, legal, welcome, checkout, daftar, 404) dijawab
  *      < 400 — tidak ada rute mati.
- *   2. Alur nyata tanpa sesi: landing → CTA → /checkout, landing → Masuk →
- *      /login, dan rute app tanpa sesi dialihkan ke /login?next=…
+ *   2. Alur nyata tanpa sesi: landing → "Pilih Paket" → /checkout, landing →
+ *      Masuk → /login, dan rute app tanpa sesi dialihkan ke /login?next=…
  *   3. Halaman depan anonim: 0 permintaan /api/session & /api/data (tidak ada
  *      401 di jaringan) — bukti cangkang app tidak lagi ikut.
  *   4. Dengan sesi berbayar: Dashboard, Dompet, Tagihan, Dompet Bersama,
@@ -131,9 +131,13 @@ try {
 
   /* ── 3. Alur nyata tanpa sesi ────────────────────────────────────────────── */
   await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' })
-  await page.getByRole('link', { name: /Cobain/i }).first().click()
+  /* CTA hero ("Cobain") sudah dihapus; pintu beli di landing adalah tombol
+     navbar "Pilih Paket" yang menuju section harga. */
+  await page.getByRole('link', { name: /^Pilih Paket/i }).first().click()
+  await page.waitForTimeout(800)
+  await page.locator('#pricing a[href*="/checkout"]').first().click()
   await page.waitForURL('**/checkout**', { timeout: 30_000 }).catch(() => {})
-  record('alur', 'landing → CTA → /checkout', new URL(page.url()).pathname === '/checkout', page.url())
+  record('alur', 'landing → Pilih Paket → /checkout', new URL(page.url()).pathname === '/checkout', page.url())
 
   await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' })
   await page.getByRole('link', { name: /^Masuk/i }).first().click()

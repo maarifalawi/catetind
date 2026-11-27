@@ -84,7 +84,7 @@ export const LP_SUPPORT_MAILTO = `mailto:${LP_SUPPORT_EMAIL}`
    berubah menjadi menu kedua. Semua teks tetap di file data, bukan di JSX. */
 export const LANDING_SECTION_MARKERS = {
   calculator: { index: '01', label: 'Kalkulator' },
-  mission: { index: '02', label: 'Misi' },
+  mission: { index: '02', label: 'Fitur' },
   pricing: { index: '03', label: 'Harga' },
   faq: { index: '04', label: 'FAQ' },
 } as const
@@ -737,11 +737,28 @@ export interface LandingTier {
   price: number
   periodLabel: string
   tagline: string
+  /**
+   * Tagline khusus per periode. Dipakai kartu harga: deskripsi Paket Waras
+   * menyebut SELISIH harga terhadap Paket Catet Aja, dan selisih itu berbeda
+   * antara tab 30 Hari dan Akses Selamanya. Nilainya DITURUNKAN dari `PLANS`
+   * (lihat `warasUpgradeRb()`), jadi angka di copy tidak bisa melenceng dari
+   * harga yang benar-benar ditagih.
+   */
+  taglines?: Partial<Record<LpPricingMode, string>>
   badge?: string
   /** kartu yang ditonjolkan sebagai rekomendasi */
   recommended?: boolean
   ctaLabel: string
   features: LandingTierFeature[]
+}
+
+/**
+ * Selisih harga Paket Waras terhadap Paket Catet Aja pada periode aktif,
+ * dalam ribuan rupiah. Satu sumber untuk copy kartu: kalau harga di `PLANS`
+ * berubah, kalimat "Nambah Xrb" ikut berubah — tidak ada hitungan tangan.
+ */
+function warasUpgradeRb(mode: LpPricingMode): number {
+  return Math.round((lpPlanPrice('waras', mode) - lpPlanPrice('catet-aja', mode)) / 1000)
 }
 
 /** harga & nama paket DIBACA dari satu sumber (PLANS) — tidak ada angka tulis tangan di sini */
@@ -757,48 +774,55 @@ export const LANDING_TIERS: LandingTier[] = [
   landingTier(
     'catet-aja',
     {
-      tagline: 'Buat yang mau catat rapi dulu, tanpa fitur AI.',
+      tagline: 'Buat yang masih sanggup ketik manual satu-satu, tanpa AI.',
       ctaLabel: 'Pilih Paket Catet Aja',
       features: [
-        { label: 'Catat pemasukan & pengeluaran manual', included: true },
-        { label: 'Kategori bawaan & custom', included: true },
-        { label: 'Dashboard & laporan keuangan dasar', included: true },
-        { label: 'Multi dompet & kantong', included: true },
-        { label: 'Budgeting & target nabung', included: true },
-        { label: 'Minca & Laporan AI', included: false },
-        { label: 'Scan struk & Voice input', included: false },
+        { label: 'Catet pengeluaran & pemasukan manual', included: true },
+        { label: 'Hitung otomatis jatah jajan harian', included: true },
+        { label: 'Pisahin saldo dompet & celengan', included: true },
+        { label: 'Catet jadwal tagihan & cicilan', included: true },
+        /* Empat baris di bawah sengaja DICORET: ini yang bikin Paket Waras
+           terasa cuma nambah sedikit, bukan paket lain yang setara. */
+        { label: 'Catet 4 detik lewat suara, tanpa ngetik', included: false },
+        { label: 'Foto struk langsung jadi catatan', included: false },
+        { label: 'Tanya Minca AI sebelum jajan', included: false },
+        { label: 'Dompet Bersama pasangan / teman', included: false },
       ],
     },
   ),
   landingTier(
     'waras',
     {
-      tagline: 'Nambah 20rb dari paket biasa, dapet AI Minca & semua fitur lengkap.',
+      /* Selisih DIHITUNG dari PLANS (`warasUpgradeRb`), jadi kalau harga berubah
+         kalimatnya ikut berubah. Tanpa em-dash (aturan copy landing). */
+      tagline: `Nambah ${warasUpgradeRb('lifetime')}rb aja, gak perlu capek ngetik karena semua diberesin AI.`,
+      taglines: {
+        monthly: `Nambah ${warasUpgradeRb('monthly')}rb aja, gak perlu capek ngetik karena semua diberesin AI.`,
+        lifetime: `Nambah ${warasUpgradeRb('lifetime')}rb aja, gak perlu capek ngetik karena semua diberesin AI.`,
+      },
       badge: 'Paling Dipilih (98% User)',
       recommended: true,
       ctaLabel: 'Amankan Paket Waras',
       features: [
-        { label: 'Semua fitur Paket Catet Aja', included: true },
-        { label: 'Minca (Kuota melimpah tiap bulan)', included: true },
-        { label: 'Scan struk belanja otomatis (OCR AI)', included: true },
-        { label: 'Input kilat lewat Suara (Voice Note)', included: true },
-        { label: 'Jatah jajan harian & radar bocor halus', included: true },
-        { label: 'Laporan analisis AI mingguan & bulanan', included: true },
-        { label: 'Joint Wallet (Dompet Bersama Pasangan)', included: true },
+        { label: 'Semua fitur di Paket Catet Aja', included: true },
+        { label: 'Catet 4 detik lewat suara, tanpa ngetik', included: true },
+        { label: 'Foto struk langsung jadi catatan rapi', included: true },
+        { label: 'Tanya Minca AI sebelum checkout', included: true },
+        { label: 'Deteksi otomatis pos bocor halus', included: true },
+        { label: 'Dompet Bersama pasangan / teman', included: true },
       ],
     },
   ),
   landingTier(
     'sultan',
     {
-      tagline: 'AI tanpa batas buat yang mau paling maksimal.',
+      tagline: 'Bebas pakai AI sepuasnya buat yang mau terima beres terus.',
       ctaLabel: 'Pilih Paket Sultan',
       features: [
-        { label: 'Semua fitur Paket Waras', included: true },
-        { label: 'Minca UNLIMITED (Tanpa batas kuota)', included: true },
-        { label: 'Akses lebih awal ke fitur baru (VIP Beta)', included: true },
-        { label: 'Prioritas Support langsung via WhatsApp', included: true },
-        { label: 'Badge eksklusif "Sultan" di profil', included: true },
+        { label: 'Semua fitur lengkap di Paket Waras', included: true },
+        { label: 'Pakai Minca AI, Suara & Foto Struk tanpa batas', included: true },
+        { label: 'Dapet semua fitur baru lebih dulu', included: true },
+        { label: 'Chat bantuan & request fitur langsung via WhatsApp', included: true },
       ],
     },
   ),
@@ -816,43 +840,43 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'no-trial',
     question: 'Kenapa gak ada trial / versi gratis dulu?',
     answer:
-      'Kekhawatiranmu masuk akal. Kebanyakan app keuangan kasih trial karena mereka gak yakin kamu akan stay. Kami yakin, makanya kami kasih yang lebih baik: garansi uang kembali 100% dalam 30 hari. Kalau dalam 30 hari CatetInd gak bantu kamu, uangmu balik tanpa drama. Jadi kamu tetap bisa coba tanpa risiko, bedanya, kamu langsung dapet semua fitur dari hari pertama.',
+      'Sengaja ngga ada. Justru karena berbayar, CatetInd 100% bebas iklan sampah dan data kamu ngga pernah dijual ke pihak ketiga. Paketnya sekali bayar buat akses selamanya, tanpa tagihan bulanan dan tanpa auto-debit, jadi kamu langsung dapet semua fitur dari hari pertama.',
   },
   {
     id: 'no-bank-sync',
     question: 'Kenapa gak auto-sync rekening bank?',
     answer:
-      "Bank-sync berarti kamu perlu kasih akses kredensial perbankanmu ke pihak ketiga. Di Indonesia, belum ada regulasi open banking yang matang. Kami pilih jalur yang lebih aman: 100% input manual + AI yang membantu. Scan struk 5 detik, voice input 'beli indomaret 25rb' langsung tercatat. Privasi kamu lebih penting dari kenyamanan 10 detik.",
+      "Bank-sync berarti kamu memberi akses kredensial perbankanmu ke pihak ketiga, dan itu terlalu berisiko. CatetInd pilih jalur yang lebih aman: catet manual yang cepat, dibantu AI. Foto struk atau bilang 'beli indomaret 25rb', langsung rapi. Privasi kamu lebih penting daripada hemat 10 detik.",
   },
   {
     id: 'harga',
-    question: 'Kok mahal buat app catatan keuangan?',
+    question: 'Kok mahal buat app catet keuangan?',
     answer:
-      `Dari Pain Calculator tadi, rata-rata first-jobber 'kehilangan' Rp1.5 juta per bulan tanpa tracking. ${PRICE_RANGE_LABEL} itu kurang dari 20% uang yang biasa kamu buang dalam 1 bulan. Dan itu sekali bayar, bukan langganan bulanan. Kalau CatetInd bantu kamu hemat Rp200.000 saja di bulan pertama, kamu sudah balik modal.`,
+      `Rata-rata orang kehilangan Rp1,5 juta per bulan cuma karena ngga rajin nyatet. Sekali bayar ${PRICE_RANGE_LABEL} buat akses selamanya itu cuma seharga beberapa gelas kopi, tapi bisa nyelametin ratusan ribu sampai jutaan uang yang biasa bocor tiap bulan. Kalau bantu kamu ngerem jajan Rp200.000 aja, langsung balik modal.`,
   },
   {
     id: 'beda-paket',
     question: 'Bedanya Paket Catet Aja, Waras, dan Sultan apa?',
     answer:
-      `Simpel: Paket Catet Aja (${formatIDR(PLANS[0].lifetime)}) = catat manual tanpa AI. Paket Waras (${formatIDR(PLANS[1].lifetime)}) = semua fitur termasuk Minca, scan struk, dan voice input dengan kuota bulanan. Paket Sultan (${formatIDR(PLANS[2].lifetime)}) = sama seperti Waras tapi AI-nya unlimited tanpa batas kuota. Semua sekali bayar untuk akses selamanya, dan naik paket cukup bayar selisihnya.`,
+      `Simpel: Paket Catet Aja (${formatIDR(PLANS[0].lifetime)}) buat catet manual tanpa AI. Paket Waras (${formatIDR(PLANS[1].lifetime)}) nambah Minca AI, catet lewat suara, foto struk, dan Dompet Bersama. Paket Sultan (${formatIDR(PLANS[2].lifetime)}) dapet semua fitur Waras dengan AI tanpa batas. Semua sekali bayar buat akses selamanya, dan naik paket cukup bayar selisihnya.`,
   },
   {
     id: 'kuota-ai',
     question: 'Gimana kalau kuota AI habis?',
     answer:
-      'Kuota AI bulananmu cukup besar, 80% user gak akan pernah menyentuh batas. Tapi kalau kamu power user, kamu bisa upgrade ke Paket Sultan untuk AI unlimited. Kamu bisa cek sisa kuota kapan aja di Settings, dan kami kasih notifikasi saat tinggal 30%.',
+      'Kuota AI di Paket Waras udah lega buat pemakaian harian. Kalau habis, kamu bisa isi ulang kapan aja, ajak teman buat dapet bonus kuota, atau naik ke Paket Sultan biar tanpa batas.',
   },
   {
     id: 'midtrans-refund',
-    question: 'Aman gak bayar lewat Midtrans? Gimana kebijakan refund?',
+    question: 'Aman gak bayar lewat Midtrans?',
     answer:
-      'Midtrans itu payment gateway yang dipakai Tokopedia, Bukalapak, dan Gojek, jadi keamanannya sudah level enterprise. Data kartu/e-wallet kamu diproses langsung oleh Midtrans, bukan oleh kami. Soal refund: garansi uang kembali 100% dalam 30 hari. Tinggal email ke halo@catetind.com, dan kami proses dalam 3-5 hari kerja.',
+      'Aman banget. Pembayaran diproses resmi lewat Midtrans (dipakai Gojek & Tokopedia) via QRIS, GoPay, ShopeePay, OVO, atau Virtual Account. CatetInd ngga nyimpan data kartu dan ngga pakai auto-debit. Pembelian bersifat final; kalau ada kendala teknis seperti salah nominal atau terbayar ganda, tim kami bantu cek lewat WhatsApp atau halo@catetind.com.',
   },
   {
     id: 'data',
     question: 'Dataku bakal aman terus nggak?',
     answer:
-      'Data kamu TIDAK PERNAH dihapus. Semua catatan keuangan kamu tetap tersimpan aman dan bisa kamu akses kapan aja. Karena paketnya akses selamanya, nggak ada tanggal berakhir yang bikin fitur mendadak mati. Dan ingat: CatetInd TIDAK pernah menagih diam-diam.',
+      'Data kamu ngga pernah dihapus, termasuk kalau masa aktif paket 30 hari habis. Kamu tetap bisa buka dan ekspor semua catetan keuangan kapan aja. CatetInd juga ngga pernah menagih diam-diam.',
   },
 ]
 
@@ -1331,7 +1355,10 @@ export function purchaseNotificationsFromPurchases(
 }
 
 export const LP_HERO = {
-  eyebrow: 'Kenalin, CatetInd',
+  /* Badge di atas H1: janji privasi yang bisa dicek di repo (tanpa akses
+     rekening bank), bukan salam perkenalan. CTA hero sudah dihapus, jadi badge
+     ini yang menjawab "ini aman nggak?" sebelum user membaca subheadline. */
+  eyebrow: '100% Privat · Tanpa Akses M-Banking',
   /* SATU janji di headline yang langsung menyapa kebiasaan target: males
      nyatet. Kata "males" dipisah supaya komponen bisa menebalkan + memiringkan
      HANYA kata itu (jangkar visual), tanpa memecah kalimat jadi dua baris
@@ -1346,9 +1373,6 @@ export const LP_HERO = {
   headlineEmphasis: 'males',
   headlineAfter: ' nyatet',
   subheadline: 'Cuma butuh 4 detik. Tinggal kirim voice note atau foto struk',
-  ctaLabel: 'Cobain',
-  /** paket + periode SAMA dengan default section harga (satu pintu masuk) */
-  ctaHref: buildCheckoutHref(LANDING_DEFAULT_PLAN_ID, LANDING_DEFAULT_PERIOD),
   /* aset visual hero (dekoratif → ringkasannya di `visualAlt`) */
   /* Desktop memakai GAMBARDEPAN; ponsel/tablet memakai phoneImage. Semua
      varian WebP dihasilkan `scripts/landing/make-landing-webp.mjs` (canvas
@@ -1393,7 +1417,7 @@ export const LP_FOOTER = {
   brand: {
     name: 'CatetInd',
     tagline:
-      'Asisten pencatatan keuangan pribadi anti-ribet. 100% privat tanpa akses rekening bank.',
+      'Aplikasi catet keuangan buat yang males nyatet. 100% privat tanpa pernah minta akses rekening bank.',
     disclaimer:
       '*CatetInd adalah aplikasi pencatatan keuangan pribadi & budgeting harian. Minca AI bukan penasihat keuangan berlisensi atau anjuran investasi resmi.',
     homeLabel: 'CatetInd, kembali ke beranda',
@@ -1542,7 +1566,7 @@ export interface LpMissionCard {
 export const LP_MISSION = {
   heading: 'Bebas jajan apa aja, yang penting kamu tau ke mana uang kamu lari.',
   benefits: [
-    { icon: 'time', title: 'Gak Buang Waktu', detail: 'Empat detik kelar' },
+    { icon: 'time', title: 'Gak Buang Waktu', detail: '4 detik beres' },
     { icon: 'ai', title: 'Biar AI Mikir', detail: 'Kamu terima beres' },
     { icon: 'aware', title: 'Sadar Sebelum Habis', detail: 'Keliatan semua bocornya' },
   ],
@@ -1556,7 +1580,7 @@ export const LP_MISSION = {
     {
       id: 'card-1',
       title: 'Catet 4 detik lewat voice note atau scan struk',
-      body: 'Tinggal ngomong atau foto struk',
+      body: 'Tanpa ketik manual, AI langsung rapihin ke kategori yang pas.',
       annotation: 'Voice & scan',
       /* WebP 1280px hasil `pnpm landing:webp` — PNG aslinya 78–348 KB dan
          diunduh penuh walau kartu hanya dirender ~600 px. Rasio aspek identik,
@@ -1570,7 +1594,7 @@ export const LP_MISSION = {
       id: 'card-2',
       title: 'Tau jatah jajan harian kamu tiap pagi',
       body: 'Otomatis ngitung jatah aman harian biar akhir bulan ga sekarat',
-      annotation: 'HUD & radar',
+      annotation: 'Jatah harian',
       image: '/landing/section-jatah-harian-1280.webp',
       imageWidth: 1600,
       imageHeight: 1822,
@@ -1579,7 +1603,7 @@ export const LP_MISSION = {
     {
       id: 'card-3',
       title: 'Tanya Minca sebelum checkout',
-      body: 'Konsultasi jatah jajan real-time dari data asli kamu, tanpa nyalahin',
+      body: 'Tanya dulu aman atau ngga sebelum jajan. Jawabannya jujur dari sisa saldo kamu, tanpa ceramah.',
       annotation: 'Minca',
       image: '/landing/dialog-ai-coach-1280.webp',
       imageWidth: 1760,
@@ -1589,8 +1613,8 @@ export const LP_MISSION = {
     {
       id: 'card-4',
       title: 'Tau pasti duit kamu lari ke mana',
-      body: 'Liat pos boncos dari printilan kecil sampe gede.',
-      annotation: 'Progres nyata',
+      body: 'Langsung kelihatan duit kamu abis di kopi, ojol, atau tagihan rutin.',
+      annotation: 'Anti uang gaib',
       image: '/landing/pengeluaran-bulan-ini-1280.webp',
       imageWidth: 1600,
       imageHeight: 1735,
@@ -1678,6 +1702,14 @@ export function lpPlanPrice(id: LandingTierId, mode: LpPricingMode = 'lifetime')
   return mode === 'monthly' ? plan.monthly : plan.lifetime
 }
 
+/**
+ * Tagline kartu untuk periode aktif. Tagline per-periode ada di
+ * `LandingTier.taglines`; kalau tidak ada, pakai `tagline` biasa.
+ */
+export function lpTierTagline(tier: LandingTier, mode: LpPricingMode = 'lifetime'): string {
+  return tier.taglines?.[mode] ?? tier.tagline
+}
+
 
 /* ── SECTION #faq ───────────────────────────────────────────────────────────
    KATEGORI PERTANYAAN (Milestone C) — 4 kategori, 11 pertanyaan yang SEMUA
@@ -1696,7 +1728,7 @@ export function lpPlanPrice(id: LandingTierId, mode: LpPricingMode = 'lifetime')
      · sekali bayar    → PLANS[].lifetime (tanpa auto-debit di halaman utama)
      · PWA              → app/manifest.ts + /install
      · tanpa bank-sync  → FAQ_ITEMS "no-bank-sync"
-     · Midtrans/refund  → FAQ_ITEMS "midtrans-refund"
+     · Midtrans        → FAQ_ITEMS "midtrans-refund" (pembelian final, tanpa janji refund)
 
    Kartu "Let's connect" memakai email support yang benar-benar ada di repo
    (`FOOTER_COPY.contact`). Nomor WhatsApp tidak dikarang karena belum ada di
@@ -1718,8 +1750,8 @@ export interface LpFaqItem {
 
 export const LP_FAQ = {
   eyebrow: 'FAQ',
-  titleBefore: 'Jawaban yang sering ',
-  titleEmphasis: 'ditanya',
+  titleBefore: 'Yang sering ',
+  titleEmphasis: 'ditanyain',
   /** a11y: nama rail desktop + dropdown mobile */
   categoryRailLabel: 'Kategori pertanyaan',
   categorySelectLabel: 'Pilih kategori pertanyaan',
@@ -1735,77 +1767,77 @@ export const LP_FAQ = {
       category: 'umum',
       question: 'CatetInd itu sebenernya buat siapa sih?',
       answer:
-        'Buat kamu yang ngerasa duit sering ngilang tanpa jejak. Karyawan, anak kos, freelancer, atau pasangan muda, semua cocok.',
+        'Buat kamu yang males nyatet keuangan tapi capek gaji cuma numpang lewat. Mau anak kos, karyawan, freelancer, sampai pasangan yang mau patungan, semuanya cocok.',
     },
     {
       id: 'beda-app-lain',
       category: 'umum',
-      question: 'Bedanya sama aplikasi catatan keuangan lain apa?',
+      question: 'Bedanya sama aplikasi catet keuangan lain atau Excel apa?',
       answer:
-        'App lain bikin nyatet kerasa kayak ngerjain PR. CatetInd cukup voice note atau foto struk, 4 detik kelar.',
+        'Excel dan aplikasi lain ribetnya kayak ngerjain PR, perlu buka tabel dan ketik manual satu-satu. Di CatetInd, kamu cukup ngomong 4 detik atau foto struk, langsung rapi sendiri.',
     },
     {
       id: 'perlu-paham-keuangan',
       category: 'umum',
       question: 'Perlu ngerti keuangan dulu ngga sebelum pake ini?',
       answer:
-        'Ngga perlu ngerti istilah keuangan. Kamu tinggal catat, sisanya dihitung dan diringkas sistem.',
+        'Sama sekali ngga perlu. Ngga ada istilah akuntansi yang bikin pusing. Kamu tinggal catet kayak ngobrol biasa, jatah jajan harian dan rekapnya langsung dihitungin otomatis.',
     },
     {
       id: 'versi-gratis',
       category: 'harga',
       question: 'Ada versi gratis ngga?',
       answer:
-        'Ngga ada versi gratis. Paket dibeli sekali untuk akses selamanya, tanpa auto-debit dan tanpa tagihan bulanan.',
+        'Ngga ada. Karena berbayar, CatetInd 100% bebas iklan sampah dan data kamu ngga pernah dijual ke pihak ketiga. Kamu bisa pilih paket 30 hari buat coba dulu atau langsung sekali bayar buat akses selamanya.',
     },
     {
       id: 'harga',
       category: 'harga',
-      question: 'Kok mahal buat app catatan keuangan?',
+      question: 'Kok mahal buat app catet keuangan?',
       answer:
-        `Sekali bayar ${PRICE_RANGE_LABEL} untuk akses selamanya, tanpa tagihan bulanan. Kalau bantu kamu hemat Rp200.000 saja, kamu sudah balik modal.`,
+        `Sekali bayar ${PRICE_RANGE_LABEL} buat akses selamanya, cuma seharga beberapa gelas kopi, tapi nyelametin ratusan ribu sampai jutaan uang kamu yang biasa bocor tiap bulan. Bantu kamu ngerem jajan Rp200.000 aja udah langsung balik modal.`,
     },
     {
       id: 'beda-paket',
       category: 'harga',
       question: 'Bedanya Paket Catet Aja, Waras, dan Sultan apa?',
       answer:
-        `Catet Aja buat catat manual, Waras nambah Minca, scan struk, dan voice input, Sultan AI-nya unlimited. Semua bisa sekali bayar, dan upgrade lifetime cukup bayar selisih.`,
+        'Catet Aja buat yang mau ketik manual tanpa AI. Paket Waras (paling dipilih) udah dapet Minca AI, catet lewat suara, foto struk, dan Dompet Bersama. Paket Sultan dapet semua fitur Waras dengan kuota AI tanpa batas. Kalau mau naik paket, cukup bayar selisihnya aja.',
     },
     {
       id: 'pwa',
       category: 'fitur',
       question: 'Ini aplikasi web atau perlu di-download?',
       answer:
-        'Bisa di-install langsung di HP tanpa memenuhi memori App Store atau Play Store. Buka lewat browser, lalu pilih Add to Home Screen.',
+        "Ngga perlu download bergiga-giga dari App Store atau Play Store. Tinggal buka dari browser HP atau laptop, pilih 'Add to Home Screen' (Tambah ke Layar Utama), langsung terpasang kayak aplikasi biasa dan hemat memori.",
     },
     {
       id: 'kuota-ai',
       category: 'fitur',
       question: 'Gimana kalau kuota AI habis?',
       answer:
-        'Kuota AI Waras cukup buat pemakaian harian. Kalau kamu power user, upgrade ke Sultan buat AI tanpa batas.',
+        'Kuota AI di Paket Waras udah lega banget buat pemakaian harian. Kalau habis, kamu bisa isi ulang kapan aja, ajak teman buat dapet bonus kuota, atau naik ke Paket Sultan biar tanpa batas.',
     },
     {
       id: 'bank-sync',
       category: 'privasi',
       question: 'CatetInd connect ke rekening bank otomatis ngga?',
       answer:
-        'Ngga connect ke rekening bank, dan ini disengaja. Input manual, scan struk, dan voice input lebih aman daripada kasih akses perbankan ke pihak ketiga.',
+        'Sengaja ngga. Kami ngga pernah minta login atau PIN m-banking kamu karena terlalu berisiko buat keamanan rekeningmu. Cukup pakai suara atau foto struk, tetep 4 detik beres tapi rekening kamu 100% aman.',
     },
     {
       id: 'midtrans-refund',
       category: 'privasi',
       question: 'Aman gak bayar lewat Midtrans?',
       answer:
-        'Midtrans dipakai Tokopedia, Bukalapak, dan Gojek, jadi pembayarannya aman. Paketnya sekali bayar untuk akses selamanya, tanpa auto-debit.',
+        'Aman banget. Pembayaran diproses resmi lewat Midtrans (sistem pembayaran yang dipakai Gojek & Tokopedia) via QRIS, GoPay, ShopeePay, OVO, atau Virtual Account. Tanpa simpan data kartu dan tanpa auto-debit.',
     },
     {
       id: 'data',
       category: 'privasi',
       question: 'Dataku bakal aman terus nggak?',
       answer:
-        'Data kamu ngga pernah dihapus, termasuk saat masa aktif habis. Kamu tetap bisa baca dan ekspor semua catatan.',
+        'Aman dan ngga pernah dihapus, termasuk saat masa aktif paket 30 hari habis. Kamu tetap bisa buka dan ekspor semua catatan keuanganmu kapan aja.',
     },
   ] satisfies readonly LpFaqItem[],
   /** a11y: label tombol akordeon — pertanyaan ikut dibacakan */
@@ -1815,7 +1847,7 @@ export const LP_FAQ = {
     pillLabel: 'Ngobrol langsung',
     eyebrow: 'Masih ada yang bikin ragu?',
     title: 'Tanya apa aja, dibalas langsung sama tim kita',
-    ctaLabel: 'Chat Minca di WhatsApp',
+    ctaLabel: 'Chat Tim di WhatsApp',
     href: LP_WHATSAPP_HREF_WITH_TEXT,
     emailLabel: `Atau email ${LP_SUPPORT_EMAIL}`,
     emailHref: LP_SUPPORT_MAILTO,

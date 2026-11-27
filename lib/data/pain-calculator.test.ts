@@ -322,85 +322,79 @@ describe('yearlyEquivalent()', () => {
 })
 
 describe('fiveYearEquivalent()', () => {
-  it('di bawah 10jt → solo trip Bali atau Labuan Bajo', () => {
+  it('di bawah 10jt → liburan Bali atau Labuan Bajo', () => {
     expect(fiveYearEquivalent(9_999_999)).toBe(
-      'Setara solo trip liburan impian ke Bali atau Labuan Bajo',
+      'Setara liburan ke Bali atau Labuan Bajo, pulang bawa cerita.',
     )
   })
 
-  it('10jt–24,999jt → BeAT cash atau liburan seminggu ke Jepang', () => {
-    const expected =
-      'Setara 1 unit motor Honda BeAT baru cash atau liburan seminggu ke Jepang'
+  it('10jt–24,999jt → motor baru cash atau seminggu di Jepang', () => {
+    const expected = 'Setara motor baru cash atau seminggu jalan-jalan di Jepang.'
     expect(fiveYearEquivalent(10_000_000)).toBe(expected)
     expect(fiveYearEquivalent(24_999_999)).toBe(expected)
   })
 
-  it('25jt–49,999jt → DP mobil baru atau laptop kerja spek pro', () => {
-    const expected = 'Setara uang muka (DP) mobil baru atau 1 laptop kerja spek pro impian'
+  it('25jt–49,999jt → DP mobil pertama atau laptop pro', () => {
+    const expected = 'Setara DP mobil pertama atau laptop pro buat kerja.'
     expect(fiveYearEquivalent(25_000_000)).toBe(expected)
     expect(fiveYearEquivalent(49_999_999)).toBe(expected)
   })
 
-  it('50jt–99,999jt → DP + biaya KPR rumah komersial atau modal resepsi', () => {
+  it('50jt–99,999jt → DP rumah, modal nikah, atau dana darurat setahun', () => {
     const expected =
-      'Setara uang muka (DP) dan biaya KPR rumah komersial pertama atau modal resepsi pernikahan idaman'
+      'Setara DP rumah pertama, modal nikah tenang, atau dana darurat 1 tahun penuh.'
     expect(fiveYearEquivalent(50_000_000)).toBe(expected)
     expect(fiveYearEquivalent(90_000_000)).toBe(expected)
     expect(fiveYearEquivalent(99_999_999)).toBe(expected)
   })
 
   it('100jt–179,999jt → mobil LCGC cash atau modal bisnis serius', () => {
-    const expected =
-      'Setara 1 unit mobil baru cash (Daihatsu Ayla) tanpa cicilan atau modal bisnis serius'
+    const expected = 'Setara mobil LCGC cash (Daihatsu Ayla) atau modal bisnis serius.'
     expect(fiveYearEquivalent(100_000_000)).toBe(expected)
     expect(fiveYearEquivalent(179_999_999)).toBe(expected)
   })
 
-  it('180jt–299,999jt → rumah subsidi Jabodetabek cash, nominal dari konstanta', () => {
-    const expected =
-      'Setara 1 unit rumah subsidi Jabodetabek cash (Rp 185 juta) bebas utang KPR'
+  it('180jt–299,999jt → rumah subsidi cash, nominal dari konstanta', () => {
+    const expected = 'Setara rumah subsidi cash (Rp 185 juta), bebas KPR.'
     expect(fiveYearEquivalent(180_000_000)).toBe(expected)
     expect(fiveYearEquivalent(299_999_999)).toBe(expected)
     expect(expected).toContain(`${PAIN_REFERENCE_PRICES.rumahSubsidi / 1_000_000} juta`)
   })
 
   it('300jt–499,999jt → mobil keluarga baru cash', () => {
-    const expected = 'Setara 1 unit mobil keluarga baru (Avanza atau Xpander) cash'
+    const expected = 'Setara mobil keluarga baru cash: Avanza atau Xpander.'
     expect(fiveYearEquivalent(300_000_000)).toBe(expected)
     expect(fiveYearEquivalent(499_999_999)).toBe(expected)
   })
 
-  it('500jt–999,999jt → SUV gagah cash atau renovasi rumah total', () => {
-    const expected =
-      'Setara 1 unit SUV gagah (Pajero Sport atau Fortuner) cash atau renovasi rumah total'
+  it('500jt–999,999jt → SUV baru cash atau renovasi rumah total', () => {
+    const expected = 'Setara SUV baru cash atau renovasi rumah total.'
     expect(fiveYearEquivalent(500_000_000)).toBe(expected)
     expect(fiveYearEquivalent(999_999_999)).toBe(expected)
   })
 
   it('1M–2,499M → mobil listrik mewah atau apartemen di pusat kota', () => {
-    const expected =
-      'Setara 1 unit mobil listrik mewah (Ioniq 6 atau Mercedes-Benz) atau 1 unit apartemen di pusat kota'
+    const expected = 'Setara mobil listrik mewah atau apartemen di pusat kota.'
     expect(fiveYearEquivalent(1_000_000_000)).toBe(expected)
     expect(fiveYearEquivalent(2_499_999_999)).toBe(expected)
   })
 
-  it('2,5M–4,999M → rumah mewah kawasan elit atau pensiun dini', () => {
-    const expected =
-      'Setara rumah mewah di kawasan mandiri elit atau modal pensiun dini seumur hidup'
+  it('2,5M–4,999M → rumah mewah atau pensiun dini', () => {
+    const expected = 'Setara rumah mewah, atau modal pensiun dini seumur hidup.'
     expect(fiveYearEquivalent(2_500_000_000)).toBe(expected)
     expect(fiveYearEquivalent(4_999_999_999)).toBe(expected)
   })
 
-  it('5M–9,999M → villa mewah Bali atau mobil sport idaman', () => {
-    const expected = 'Setara villa mewah pribadi di Bali atau 1 unit mobil sport idaman'
+  it('5M–9,999M → villa Bali atau mobil sport idaman', () => {
+    const expected = 'Setara villa pribadi di Bali atau mobil sport idaman.'
     expect(fiveYearEquivalent(5_000_000_000)).toBe(expected)
     /* 6 miliar = input manual maksimum 100jt/bulan × 60 bulan */
     expect(fiveYearEquivalent(6_000_000_000)).toBe(expected)
     expect(fiveYearEquivalent(9_999_999_999)).toBe(expected)
   })
 
-  it('10M ke atas → kebebasan finansial total sekeluarga seumur hidup', () => {
-    const expected = 'Setara kebebasan finansial total sekeluarga seumur hidup'
+  it('10M ke atas → bebas finansial sekeluarga', () => {
+    const expected = 'Setara bebas finansial sekeluarga, seumur hidup.'
     expect(fiveYearEquivalent(10_000_000_000)).toBe(expected)
     expect(fiveYearEquivalent(50_000_000_000)).toBe(expected)
   })
@@ -482,7 +476,7 @@ describe('resultCaptionForTab()', () => {
 
   it('5 tahun memakai padanan lima tahunan', () => {
     expect(resultCaptionForTab('fiveYear', result)).toBe(
-      'Setara uang muka (DP) dan biaya KPR rumah komersial pertama atau modal resepsi pernikahan idaman',
+      'Setara DP rumah pertama, modal nikah tenang, atau dana darurat 1 tahun penuh.',
     )
   })
 
@@ -493,7 +487,7 @@ describe('resultCaptionForTab()', () => {
     expect(PAIN_CALCULATOR_COPY.results.investedNote).toContain('5%')
   })
 
-  it('copy CTA mengikuti referensi desain', () => {
-    expect(PAIN_CALCULATOR_COPY.cta).toBe('Mulai Catat Sekarang')
+  it('copy CTA memakai "Catet", bukan "Catat"', () => {
+    expect(PAIN_CALCULATOR_COPY.cta).toBe('Mulai Catet Sekarang')
   })
 })

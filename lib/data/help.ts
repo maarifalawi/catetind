@@ -27,7 +27,7 @@ import { SITE_DOMAIN } from '../site'
 export interface HelpArticle {
   /** id stabil — dipakai sebagai key React & penanda state feedback per artikel */
   id: string
-  /** mis. "Cara Catat Transaksi dalam 4 Tap" */
+  /** mis. "Cara Catet Transaksi dalam 4 Tap" */
   title: string
   /** langkah bernomor, ditulis dengan suara Minca (nomornya digambar oleh <ol>) */
   steps: string[]
@@ -69,8 +69,8 @@ export const HELP_TOPICS: HelpTopic[] = [
         id: 'mulai-puzzle',
         title: 'Puzzle Kamu Ngapain Sih?',
         steps: [
-          'Dia bukan hiasan, dia ringkasan visual kebiasaan catat kamu.',
-          'Catat tiap hari → satu kepingan kepasang, dari kosong sampai penuh 🧩',
+          'Dia bukan hiasan, dia ringkasan visual kebiasaan nyatet kamu.',
+          'Nyatet tiap hari → satu kepingan kepasang, dari kosong sampai penuh 🧩',
           'Skip beberapa hari → progresnya berhenti sebentar. Nggak rusak, cuma jeda.',
           'Makin lengkap puzzle-mu, makin tajam saran yang aku kasih.',
         ],
@@ -81,13 +81,13 @@ export const HELP_TOPICS: HelpTopic[] = [
   },
   {
     id: 'catat-transaksi',
-    label: 'Catat Transaksi',
+    label: 'Catet Transaksi',
     emoji: '✍️',
     blurb: 'Empat tap, lalu balik ke hidupmu. Segitu doang.',
     articles: [
       {
         id: 'catat-4-tap',
-        title: 'Cara Catat Transaksi dalam 4 Tap',
+        title: 'Cara Catet Transaksi dalam 4 Tap',
         steps: [
           'Tap tombol + gede di tengah bawah',
           'Masukin angkanya (nggak perlu ketik "Rp")',
@@ -95,7 +95,7 @@ export const HELP_TOPICS: HelpTopic[] = [
           'Done! Cuma 4 tap.',
         ],
         proTip:
-          'Ketik aja "kopi 25rb" di kolom catatan. Aku pecah sendiri jadi nominal + kategori, kamu nggak perlu pindah field.',
+          'Ketik aja "kopi 25rb" di kolom catetan. Aku pecah sendiri jadi nominal + kategori, kamu nggak perlu pindah field.',
       },
       {
         id: 'catat-koreksi-ai',
@@ -111,9 +111,9 @@ export const HELP_TOPICS: HelpTopic[] = [
       },
       {
         id: 'catat-offline',
-        title: 'Catat Pas Nggak Ada Sinyal, Bisa?',
+        title: 'Catet Pas Nggak Ada Sinyal, Bisa?',
         steps: [
-          'Bisa banget. Catat kayak biasa, aku simpan dulu di HP kamu.',
+          'Bisa banget. Catet kayak biasa, aku simpan dulu di HP kamu.',
           'Transaksinya muncul dengan ikon jam kecil ⏳ artinya masih ngantri kirim.',
           'Begitu sinyal balik, semuanya otomatis terkirim. Kamu nggak perlu ngapa-ngapain.',
           'Kalau setelah 5 menit masih gagal, aku kasih tanda + tombol "Coba Lagi".',
@@ -236,10 +236,10 @@ export const HELP_TOPICS: HelpTopic[] = [
           'Buka Dompet Kita → lihat widget "siapa utang siapa" di halaman itu.',
           'Kalau angkanya beda dengan hitunganmu, cek daftar transaksinya.',
           'Transaksi privat tetap dihitung, cuma nama itemnya disamarkan, nominalnya tetap bisa kamu cek.',
-          'Ada yang salah catat? Tap transaksinya → Edit. Angka settlement ikut berubah otomatis.',
+          'Ada yang salah catet? Tap transaksinya → Edit. Angka settlement ikut berubah otomatis.',
         ],
         proTip:
-          'Setelah Lunas, semua catatannya tetap ada. Riwayat nggak pernah dihapus, cuma ditandai selesai.',
+          'Setelah Lunas, semua catetannya tetap ada. Riwayat nggak pernah dihapus, cuma ditandai selesai.',
       },
     ],
   },
@@ -251,7 +251,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     articles: [
       {
         id: 'kekayaan-aset',
-        title: 'Catat Investasi & Aset Pertama',
+        title: 'Catet Investasi & Aset Pertama',
         steps: [
           'Buka Kekayaan & Hutang → tab Investasi → "Tambah Investasi".',
           'Pilih jenisnya: reksadana, saham, emas, atau properti.',
@@ -271,7 +271,7 @@ export const HELP_TOPICS: HelpTopic[] = [
           'Nyalain Debt Snowball: aku urutin dari hutang terkecil biar kamu cepat dapat kemenangan pertama.',
         ],
         proTip:
-          'Hutang ke teman juga boleh dicatat di sini. Nyatet bukan berarti kamu lagi kenapa-napa, cuma biar nggak lupa.',
+          'Hutang ke teman juga boleh dicatet di sini. Nyatet bukan berarti kamu lagi kenapa-napa, cuma biar nggak lupa.',
       },
       {
         id: 'kekayaan-networth',
@@ -388,10 +388,10 @@ export const HELP_TOPICS: HelpTopic[] = [
           'Buka Pengaturan → Langganan.',
           'Tap tombol "Upgrade paket", lalu pilih paket tujuan.',
           'Yang kamu bayar cuma SELISIH harganya, bukan harga penuh dari nol.',
-          'Setelah pembayaran tercatat, fitur paket barunya langsung terbuka dan berlaku selamanya.',
+          'Setelah pembayaran masuk, fitur paket barunya langsung terbuka dan berlaku selamanya.',
         ],
         proTip:
-          'Nggak ada perpanjangan dan nggak ada tagihan berkala: paket itu sekali bayar untuk akses selamanya. Turun paket (downgrade) nggak ditawarin karena nggak ada pengembalian uang.',
+          'Nggak ada perpanjangan dan nggak ada tagihan berkala: paket itu sekali bayar untuk akses selamanya. Turun paket (downgrade) nggak ditawarin karena pembelian bersifat final.',
       },
       {
         id: 'langganan-metode',
@@ -409,13 +409,13 @@ export const HELP_TOPICS: HelpTopic[] = [
         id: 'langganan-refund',
         title: 'Refund & Salah Bayar',
         steps: [
-          'Kelewat bayar dua kali? Duitnya nggak hilang, ada garansi uang kembali 100% dalam 30 hari.',
-          'Kalau mau dikembalikan: klik 👎 di bawah artikel ini, terus pilih "Hubungi Founder".',
-          'Sertakan screenshot bukti bayarnya. Nggak ada data transaksi yang perlu kamu bocorin ke kami 🙂',
-          'Yang menangani langsung founder, bukan tim CS berlapis.',
+          'Pembelian paket CatetInd bersifat final: sekali bayar untuk akses selamanya, tanpa auto-debit dan tanpa perpanjangan otomatis. Jadi nggak ada tagihan berulang yang perlu dibatalkan.',
+          'Kalau ada kendala teknis, misalnya salah nominal atau terbayar ganda (double charge), kabarin kami lewat WhatsApp atau email halo@catetind.com.',
+          'Sertakan screenshot bukti bayar bagian yang bermasalah aja. Kami nggak butuh akses ke data transaksi pribadimu.',
+          'Tim kami cek ke catatan pembayaran dan bantu selesaikan sampai jelas, tanpa muter-muter.',
         ],
         proTip:
-          'Cukup screenshot bagian yang bermasalah. Jangan kirim data yang nggak perlu, sekecil apa pun itu.',
+          'Simpan bukti pembayaran sampai aksesmu aktif. Kalau akses belum kebuka, kirim buktinya ke kami lewat WhatsApp atau email.',
       },
     ],
   },
@@ -438,36 +438,36 @@ export const HELP_QUICK_ANSWERS: QuickAnswer[] = [
     id: 'saldo-sinkron',
     question: 'Kok saldo aku kayaknya nggak sinkron?',
     answer:
-      'Tenang, ini biasanya karena ada transaksi yang belum ke-sync (misal kamu tadi offline). Coba tarik ke bawah buat refresh. Kalau masih beda, cek di Riwayat, mungkin ada yang kedobel atau belum tercatat.',
-    topic: 'Catat Transaksi',
+      'Tenang, biasanya karena ada catatan yang belum ke-sync waktu kamu offline. Coba tarik layar ke bawah buat refresh. Kalau masih beda, cek di Riwayat, mungkin ada catatan yang kedobel atau belum masuk.',
+    topic: 'Catet Transaksi',
   },
   {
     id: 'dompet-banyak-orang',
     mostAsked: true,
     question: 'Dompet Kita bisa dipakai berapa orang?',
     answer:
-      'Bisa lebih dari dua orang — ajak teman kos atau tim trip dengan satu kode yang sama (berlaku 24 jam). Setiap pengeluaran dibagi rata ke semua anggota, atau pilih siapa yang menalangi. Dompet bisa kamu hapus kapan aja dari ikon tempat sampah di halaman Dompet Kita.',
+      'Bisa lebih dari dua orang. Ajak pasangan, teman kos, atau tim liburan pakai satu kode undangan 6 karakter yang sama. Tagihan bisa dibagi pakai 5 cara (bagi rata, porsi, persen, nominal, atau traktir), dan pelunasannya dihitung otomatis per pasangan.',
     topic: 'Dompet Kita (Joint Wallet)',
   },
   {
     id: 'stop-langganan',
     question: 'Kalau aku mau berhenti pakai, gimana? Ribet nggak?',
     answer:
-      'Nggak ribet sama sekali, dan yang penting: TIDAK ADA yang perlu dibatalkan. CatetInd nggak punya langganan bulanan, auto-debit, atau perpanjangan otomatis, karena paketnya sekali bayar untuk akses selamanya. Mau berhenti pakai? Tinggal berhenti. Datamu tetap bisa di-export kapan aja, dan akunmu bisa kamu hapus sendiri dari Pengaturan.',
+      'Nggak ribet sama sekali, karena TIDAK ADA langganan auto-debit yang perlu dibatalkan. CatetInd nggak pernah motong saldo diam-diam. Datamu tetap bisa di-export kapan aja, dan akun bisa kamu hapus sendiri langsung dari Pengaturan.',
     topic: 'Paket & Pembayaran',
   },
   {
     id: 'aman-data',
     question: 'Aman nggak sih data keuangan aku di sini?',
     answer:
-      'Super aman. Bahkan tim CatetInd sendiri, termasuk founder, TIDAK BISA melihat data transaksi kamu. Ini bukan janji marketing, ini arsitektur database-nya yang memang nggak memungkinkan. Nggak ada endpoint, nggak ada admin panel yang bisa intip data individual.',
+      'Aman banget. Bahkan tim CatetInd sendiri nggak bisa ngintip isi catatan pribadi kamu karena aksesnya dikunci langsung untuk akunmu sendiri. Kami juga nggak pernah minta akses login m-banking kamu.',
     topic: 'Keamanan & Privasi',
   },
   {
     id: 'token-habis',
     question: 'Token AI aku habis, beli lagi di mana?',
     answer:
-      'Buka Settings → AI Token → Pilih paket isi ulang. Atau lebih hemat: ajak 1 teman pakai link referral kamu di halaman "Ajak Teman", dan kamu langsung dapat Token AI gratis 1 bulan!',
+      'Buka Pengaturan -> Kuota AI -> pilih paket isi ulang, atau naik ke Paket Sultan biar tanpa batas. Mau gratis? Ajak teman pakai kode referral kamu di halaman Ajak Teman buat dapet bonus kuota AI!',
     topic: 'Minca',
   },
 ]
@@ -637,7 +637,7 @@ export const PUBLIC_HELP_COPY = {
   subtitle:
     'Semua jawaban di bawah ini bisa dibaca tanpa akun. Kalau masih mentok, kabarin kami, balasan datang dari manusia, bukan bot.',
   description:
-    'Pusat Bantuan CatetInd: jawaban singkat soal paket, pencatatan, AI, dan privasi, bisa dibaca tanpa akun. Masih bingung? WhatsApp atau email tim CatetInd.',
+    'Pusat Bantuan CatetInd: jawaban singkat soal paket, nyatet keuangan, AI, dan privasi, bisa dibaca tanpa akun. Masih bingung? WhatsApp atau email tim CatetInd.',
   meta: `${totalHelpArticles()} artikel · ${HELP_TOPICS.length} topik`,
   searchLabel: HELP_SEARCH_LABEL,
   searchPlaceholder: HELP_SEARCH_PLACEHOLDER,
